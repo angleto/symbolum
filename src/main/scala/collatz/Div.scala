@@ -45,7 +45,19 @@ final case class Div(exprs: Array[Expr]) extends Expr {
     }
   }
 
-  override def toString: String =
-    exprs.map(e => showWithParens(e, this)).mkString(" / ")
+  override def toString: String = {
+    if (exprs.length == 2) {
+      val num = exprs(0)
+      val den = exprs(1)
+
+      // For cleaner output, add parentheses to denominators when needed
+      val numStr = if (num.precedence < this.precedence) s"($num)" else num.toString
+      val denStr = if (den.precedence <= this.precedence) s"($den)" else den.toString
+
+      s"$numStr/$denStr"
+    } else {
+      exprs.map(e => showWithParens(e, this)).mkString(" / ")
+    }
+  }
 }
 

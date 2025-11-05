@@ -33,6 +33,7 @@ final case class Neg(expr: Expr) extends Expr {
     val s = expr.simplify
     s match {
       case Num(n, d) => Num(-n, d)
+      case Neg(inner) => inner  // double negative: --x = x
       case _ => Neg(s)
     }
   }

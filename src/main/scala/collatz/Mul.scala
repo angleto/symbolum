@@ -147,6 +147,17 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
     }
   }
 
-  override def toString: String =
-    exprs.map(e => showWithParens(e, this)).mkString(" * ")
+  override def toString: String = {
+    // Group numeric coefficients first for cleaner output
+    val (nums, others) = exprs.partition(_.isInstanceOf[Num])
+
+    val parts = if (nums.nonEmpty) {
+      // Show numeric coefficients first (without extra parens)
+      nums.map(_.toString) ++ others.map(e => showWithParens(e, this))
+    } else {
+      exprs.map(e => showWithParens(e, this))
+    }
+
+    parts.mkString(" * ")
+  }
 }

@@ -68,38 +68,57 @@ final case class Add(exprs: Array[Expr]) extends Expr {
   def simplify: Expr = {
     val simplified = exprs.map(_.simplify)
     val zero = Num(0)
-    val noZeros = simplified.filterNot(_ == zero)
 
-    /* first of all: does it look like a pure sum of fractions that can be
-       merged into ONE fraction?                                          */
+    /* Flatten nested additions: Add(a, Add(b, c)) => Add(a, b, c) */
+    val flattened = simplified.flatMap {
+      case Add(innerExprs) => innerExprs
+      case other => Array(other)
+    }
+
+    val noZeros = flattened.filterNot(_ == zero)
+
+    /* Disabled automatic fraction merging - keep fractions symbolic
+       User can explicitly call mergeFractions if needed
     mergeFractions(noZeros) match {
-      case Some(merged) => merged // great!
-      case None => // fallback
-        /* collect all numeric literals (might have different denominators)
-           and everything else                                              */
-        val (nums, others) = noZeros.partition(_.isInstanceOf[Num])
+      case Some(merged) => merged
+      case None => // fallback */
 
-        /* sum up numeric literals with identical denominators ------------ */
-        val numericSum: Array[Expr] =
-          nums
-            .collect { case Num(n, d) => (n, d) }
-            .groupBy(_._2) // group by denominator
-            .map { case (den, pairs) =>
-              val sumNum = pairs.map(_._1).sum
-              Num(sumNum, den).simplify
-            }
-            .toArray
+    /* collect all numeric literals (might have different denominators)
+       and everything else                                              */
+    val (nums, others) = noZeros.partition(_.isInstanceOf[Num])
 
-        val combined: Array[Expr] = numericSum ++ others
-
-        combined.length match {
-          case 0 => Num(0)
-          case 1 => combined(0)
-          case _ => Add(combined)
+    /* sum up numeric literals with identical denominators ------------ */
+    val numericSum: Array[Expr] =
+      nums
+        .collect { case Num(n, d) => (n, d) }
+        .groupBy(_._2) // group by denominator
+        .map { case (den, pairs) =>
+          val sumNum = pairs.map(_._1).sum
+          Num(sumNum, den).simplify
         }
+        .toArray
+
+    val combined: Array[Expr] = numericSum ++ others
+
+    combined.length match {
+      case 0 => Num(0)
+      case 1 => combined(0)
+      case _ => Add(combined)
     }
   }
 
-  override def toString: String =
-    exprs.map(e => showWithParens(e, this)).mkString(" + ")
+  override def toString: String = {
+    if (exprs.isEmpty) return "0"
+
+    val first = showWithParens(exprs.head, this)
+    val rest = exprs.tail.map {
+      case Neg(inner) => s"- ${showWithParens(inner, this)}"
+      case Num(n, d) if n < 0 =>
+        val positive = Num(-n, d)
+        s"- ${showWithParens(positive, this)}"
+      case e => s"+ ${showWithParens(e, this)}"
+    }
+
+    (first +: rest).mkString(" ")
+  }
 }

@@ -26,9 +26,19 @@ final case class Num(numerator: Double, denominator: Double = 1.0)
       Num(numerator / g, denominator / g)
     }
 
-  override def toString: String =
-    if (denominator == 1.0)
-      s"$numerator"
-    else
-      s"$numerator/$denominator"
+  override def toString: String = {
+    def isWhole(d: Double): Boolean = (d % 1.0) == 0.0
+
+    if (denominator == 1.0) {
+      if (isWhole(numerator))
+        s"${numerator.toInt}"
+      else
+        s"$numerator"
+    } else {
+      if (isWhole(numerator) && isWhole(denominator))
+        s"${numerator.toInt}/${denominator.toInt}"
+      else
+        s"$numerator/$denominator"
+    }
+  }
 }
