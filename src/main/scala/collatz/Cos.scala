@@ -29,6 +29,8 @@ final case class Neg(expr: Expr) extends Expr {
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Neg(expr.replaceSymbol(sym, repl))
 
+  override def expand: Expr = Neg(expr.expand).simplify
+
   def simplify: Expr = {
     val s = expr.simplify
     s match {

@@ -10,6 +10,12 @@ final case class Div(exprs: Array[Expr]) extends Expr {
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Div(exprs.map(_.replaceSymbol(sym, repl)))
 
+  override def expand: Expr = {
+    // Expand children and simplify
+    val expandedChildren = exprs.map(_.expand)
+    Div(expandedChildren).simplify
+  }
+
   /* helper – build a simplified product --------------------------------- */
   private def prod(xs: Seq[Expr]): Expr = xs.length match {
     case 0 => Num(1)
