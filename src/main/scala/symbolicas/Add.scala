@@ -108,6 +108,54 @@ final case class Add(exprs: Array[Expr]) extends Expr {
   }
 
   /* -------------------------------------------------------------------------
+   * Factor common denominators: a/d + b/d → (a + b)/d
+   * Recognizes denominators in Num(a, d), Mul([Num(a, d), ...]), Div([num, den])
+   * ----------------------------------------------------------------------- */
+  private def factorCommonDenominator(terms: Seq[Expr])(implicit config: SimplificationConfig): Option[Expr] = {
+    if (terms.length < 2) return None
+
+    // Extract numerator and denominator from a term
+    // Returns Some((numerator, denominator_value)) or None
+    def extractDenominator(e: Expr): Option[(Expr, Double)] = e match {
+      case Num(n, d) if d != 1.0 => Some((Num(n), d))
+
+      case Mul(Array(Num(n, d), rest @ _*)) if d != 1.0 && rest.nonEmpty =>
+        val numerator = if (rest.length == 1) {
+          Mul(Array(Num(n), rest.head))
+        } else {
+          Mul(Array(Num(n)) ++ rest)
+        }
+        Some((numerator, d))
+
+      case Div(Array(num, Num(denN, denD))) =>
+        val denValue = denN / denD
+        Some((num, denValue))
+
+      case _ => None
+    }
+
+    // Try to extract denominators from all terms
+    val extracted = terms.map(extractDenominator)
+
+    // Only proceed if all terms have denominators
+    if (!extracted.forall(_.isDefined)) return None
+
+    val pairs = extracted.map(_.get)
+    val denominators = pairs.map(_._2)
+
+    // Check if all denominators are the same
+    val firstDen = denominators.head
+    val tolerance = 1e-10
+    if (!denominators.forall(d => math.abs(d - firstDen) < tolerance)) return None
+
+    // All denominators are the same! Factor it out
+    val numerators = pairs.map(_._1)
+    val combinedNumerator = Add(numerators.toArray).simplify(config)
+
+    Some(Div(Array(combinedNumerator, Num(firstDen))).simplify(config))
+  }
+
+  /* -------------------------------------------------------------------------
    * Factor common terms: a*b + a*c → a*(b + c)
    * This is a simplified version - looks for common factors in products
    * ----------------------------------------------------------------------- */
@@ -203,6 +251,15 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       collectLikeTerms(noZeros)(config).toArray
     } else {
       noZeros
+    }
+
+    /* Factor common denominators if enabled */
+    /* This should happen before factorCommonTerms for better simplification */
+    if (config.isEnabled(MergeFractionsCommonDenom) && afterLikeTerms.length > 1) {
+      factorCommonDenominator(afterLikeTerms)(config) match {
+        case Some(factored) => return factored
+        case None => // continue
+      }
     }
 
     /* Factor common terms if enabled */
