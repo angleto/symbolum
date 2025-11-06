@@ -40,13 +40,38 @@ final case class Div(exprs: Array[Expr]) extends Expr {
       case Array(Div(Array(num, den1)), den2) if config.isEnabled(FlattenOperations) =>
         Div(Array(num, prod(Seq(den1, den2))(config))).simplify(config)
 
-      /* 3) fully numeric -> calculate immediately ----------------------- */
+      /* 3) a / (b / c) -> (a * c) / b ----------------------------------- */
+      case Array(num, Div(Array(den1, den2))) if config.isEnabled(FlattenOperations) =>
+        Div(Array(prod(Seq(num, den2))(config), den1)).simplify(config)
+
+      /* 4) fully numeric -> calculate immediately ----------------------- */
       case Array(Num(an, ad), Num(bn, bd)) if config.isEnabled(CombineNumericLiterals) =>
         Num(an * bd, ad * bn).simplify(config)
 
-      /* 4) divide by one ------------------------------------------------- */
+      /* 5) divide by one ------------------------------------------------- */
       case Array(a, Num(1, 1)) if config.isEnabled(RemoveIdentity) =>
         a
+
+      /* 6) If numerator is Add with all Divs of same denom, simplify --- */
+      case Array(Add(addTerms), den) if config.isEnabled(MergeFractionsCommonDenom) =>
+        // Check if all terms in the Add are Divs with the same denominator
+        val allDivs = addTerms.forall(_.isInstanceOf[Div])
+        if (allDivs && addTerms.length > 1) {
+          val divTerms = addTerms.collect { case Div(Array(n, d)) => (n, d) }
+          val denominators = divTerms.map(_._2.toString).toSet
+
+          if (denominators.size == 1) {
+            // All have same denominator, so (a/d + b/d + ...) / den = (a + b + ...) / (d * den)
+            val commonDenom = divTerms.head._2
+            val numerators = divTerms.map(_._1)
+            val sumNumerators = Add(numerators).simplify(config)
+            Div(Array(sumNumerators, prod(Seq(commonDenom, den))(config))).simplify(config)
+          } else {
+            Div(Array(Add(addTerms), den))
+          }
+        } else {
+          Div(Array(Add(addTerms), den))
+        }
 
       /* default ---------------------------------------------------------- */
       case Array(a, b) =>
