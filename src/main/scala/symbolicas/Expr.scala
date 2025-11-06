@@ -27,7 +27,7 @@ trait Expr {
   def simplify(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr
 
   /**
-   * Full simplification: repeatedly apply simplify+expand until fixpoint.
+   * Full simplification: repeatedly apply expand+simplify until fixpoint.
    * This ensures complete optimization of the expression.
    * @param config Simplification configuration controlling which rules to apply
    * @param maxIter Maximum iterations (default 100)
@@ -35,21 +35,30 @@ trait Expr {
   def fullSimplify(implicit config: SimplificationConfig = SimplificationConfig.Default,
                    maxIter: Int = 100): Expr = {
     @tailrec
-    def loop(expr: Expr, iterationsLeft: Int): Expr = {
-      if (iterationsLeft <= 0) return expr // safety limit
+    def loop(expr: Expr, iterationsLeft: Int, previousStr: String): Expr = {
+      if (iterationsLeft <= 0) {
+        // Safety limit reached - return what we have
+        return expr
+      }
 
-      val step1 = expr.simplify(config)
-      val step2 = step1.expand(config)
-      val step3 = step2.simplify(config)
+      // Apply expand → simplify → simplify again
+      val step1 = expr.expand(config)
+      val step2 = step1.simplify(config)
+      val step3 = step2.simplify(config)  // Double simplify to catch cascading simplifications
+
+      val currentStr = step3.toString
 
       // Check if we've reached a fixpoint
-      if (step3.toString == expr.toString) {
+      if (currentStr == previousStr) {
         step3
       } else {
-        loop(step3, iterationsLeft - 1)
+        loop(step3, iterationsLeft - 1, currentStr)
       }
     }
-    loop(this, maxIter)
+
+    // Initial pass: simplify first to normalize the input
+    val initial = this.simplify(config)
+    loop(initial, maxIter, initial.toString)
   }
 
   /* -------- helper for pretty printing ------------------------------------ */
