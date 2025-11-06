@@ -46,7 +46,12 @@ final case class Neg(expr: Expr) extends Expr {
       case Neg(inner) =>
         Neg(inner)  // keep double negative if rule disabled
 
-      /* Push negation into Mul: --(a * b * ...) → (-a) * b * ... */
+      /* Push negation into Add: -(a + b + c) → (-a) + (-b) + (-c) */
+      case Add(exprs) =>
+        val negatedTerms = exprs.map(e => Neg(e).simplify(config))
+        Add(negatedTerms).simplify(config)
+
+      /* Push negation into Mul: -(a * b * ...) → (-a) * b * ... */
       case Mul(exprs) =>
         val (nums, others) = exprs.partition(_.isInstanceOf[Num])
         if (nums.nonEmpty) {
@@ -62,7 +67,9 @@ final case class Neg(expr: Expr) extends Expr {
       case Div(Array(num, den)) =>
         Div(Array(Neg(num).simplify(config), den)).simplify(config)
 
-      case _ => Neg(s)
+      /* For anything else, convert to multiplication by -1 */
+      case other =>
+        Mul(Array(Num(-1), other)).simplify(config)
     }
   }
 
