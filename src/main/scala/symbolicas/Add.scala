@@ -215,7 +215,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
             .groupBy(_._2) // group by denominator
             .map { case (den, pairs) =>
               val sumNum = pairs.map(_._1).sum
-              Num(sumNum, den).simplify(config)
+              Num(sumNum, den).simplify(config): Expr
             }
             .toArray
             .filterNot(_ == zero)
