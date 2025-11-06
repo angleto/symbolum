@@ -1,4 +1,4 @@
-package collatz
+package symbolicas
 
 object TestCollatzSeries {
   def main(args: Array[String]): Unit = {
