@@ -12,8 +12,6 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Mul(exprs.map(_.replaceSymbol(sym, repl)))
 
-  override def expand: Expr = expand(SimplificationConfig.Default)
-
   override def expand(implicit config: SimplificationConfig): Expr = {
     val children: Array[Expr] = exprs.map(_.expand(config))
 

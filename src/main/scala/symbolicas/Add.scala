@@ -146,8 +146,6 @@ final case class Add(exprs: Array[Expr]) extends Expr {
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Add(exprs.map(_.replaceSymbol(sym, repl)))
 
-  override def expand: Expr = expand(SimplificationConfig.Default)
-
   override def expand(implicit config: SimplificationConfig): Expr = {
     // Expand all child expressions and flatten any nested additions
     val expandedChildren = exprs.map(_.expand(config))

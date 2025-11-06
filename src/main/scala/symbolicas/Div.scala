@@ -12,12 +12,6 @@ final case class Div(exprs: Array[Expr]) extends Expr {
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Div(exprs.map(_.replaceSymbol(sym, repl)))
 
-  override def expand: Expr = {
-    // Expand children and simplify
-    val expandedChildren = exprs.map(_.expand)
-    Div(expandedChildren).simplify
-  }
-
   override def expand(implicit config: SimplificationConfig): Expr = {
     // Expand children and simplify
     val expandedChildren = exprs.map(_.expand(config))

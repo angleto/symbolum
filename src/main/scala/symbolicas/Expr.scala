@@ -13,23 +13,17 @@ trait Expr {
   /** Replace a given symbol by another expression */
   def replaceSymbol(sym: String, repl: Expr): Expr
 
-  /** Expand – currently a stub for future work */
-  def expand: Expr = this
-
-  /** Expand with configuration */
-  def expand(implicit config: SimplificationConfig): Expr = expand
+  /**
+   * Expand – distributes products over sums
+   * @param config Simplification configuration controlling which rules to apply (defaults to Default)
+   */
+  def expand(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr = this
 
   /**
    * Algebraic simplification (single pass) with configurable rules.
-   * @param config Simplification configuration controlling which rules to apply
+   * @param config Simplification configuration controlling which rules to apply (defaults to Default)
    */
-  def simplify(implicit config: SimplificationConfig): Expr
-
-  /**
-   * Algebraic simplification with default configuration.
-   * For backward compatibility.
-   */
-  final def simplify: Expr = simplify(SimplificationConfig.Default)
+  def simplify(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr
 
   /**
    * Full simplification: repeatedly apply simplify+expand until fixpoint.

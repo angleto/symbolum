@@ -14,8 +14,6 @@ final case class Cos(expr: Expr) extends Expr {
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Cos(expr.replaceSymbol(sym, repl))
 
-  override def expand: Expr = Cos(expr.expand)
-
   override def expand(implicit config: SimplificationConfig): Expr = Cos(expr.expand(config))
 
   def simplify(implicit config: SimplificationConfig): Expr = Cos(expr.simplify(config))
@@ -32,8 +30,6 @@ final case class Neg(expr: Expr) extends Expr {
 
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Neg(expr.replaceSymbol(sym, repl))
-
-  override def expand: Expr = Neg(expr.expand).simplify
 
   override def expand(implicit config: SimplificationConfig): Expr =
     Neg(expr.expand(config)).simplify(config)
