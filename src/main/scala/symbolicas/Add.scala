@@ -63,14 +63,24 @@ final case class Add(exprs: Array[Expr]) extends Expr {
   /* -------------------------------------------------------------------------
    * Collect like terms: x + 2*x + 3*y → 3*x + 3*y
    * Look for terms that differ only by a numeric coefficient
+   * IMPORTANT: Preserves fraction representation
    * ----------------------------------------------------------------------- */
   private def collectLikeTerms(terms: Seq[Expr])(implicit config: SimplificationConfig): Seq[Expr] = {
     // Extract coefficient and base for each term
-    def extractCoeffAndBase(e: Expr): (Double, Expr) = e match {
-      case Num(n, d) => (n/d, Num(1))
-      case Mul(Array(Num(n, d), rest @ _*)) if rest.nonEmpty =>
-        (n/d, if (rest.length == 1) rest.head else Mul(rest.toArray))
-      case other => (1.0, other)
+    // Returns Num to preserve fractions, not Double
+    def extractCoeffAndBase(e: Expr): (Num, Expr) = e match {
+      case n @ Num(_, _) => (n, Num(1))
+      case Mul(Array(n @ Num(_, _), rest @ _*)) if rest.nonEmpty =>
+        (n, if (rest.length == 1) rest.head else Mul(rest.toArray))
+      case other => (Num(1), other)
+    }
+
+    // Helper to add two Num values as fractions
+    def addFractions(a: Num, b: Num): Num = {
+      // a/b + c/d = (ad + bc) / bd
+      val newNum = a.numerator * b.denominator + b.numerator * a.denominator
+      val newDen = a.denominator * b.denominator
+      Num(newNum, newDen)
     }
 
     // Group terms by their base expression (as string for simplicity)
@@ -79,20 +89,20 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       base.toString
     }
 
-    // For each group, sum up coefficients
+    // For each group, sum up coefficients as fractions
     grouped.map { case (_, group) =>
       val coeffsAndBases = group.map(extractCoeffAndBase)
-      val totalCoeff = coeffsAndBases.map(_._1).sum
+      val totalCoeff = coeffsAndBases.map(_._1).reduce(addFractions).simplify(config)
       val base = coeffsAndBases.head._2
 
       if (base == Num(1)) {
-        Num(totalCoeff)
-      } else if (totalCoeff == 1.0) {
+        totalCoeff
+      } else if (totalCoeff == Num(1)) {
         base
-      } else if (totalCoeff == 0.0) {
+      } else if (totalCoeff == Num(0)) {
         Num(0)
       } else {
-        Mul(Array(Num(totalCoeff), base)).simplify(config)
+        Mul(Array(totalCoeff, base)).simplify(config)
       }
     }.toSeq
   }
@@ -228,9 +238,21 @@ final case class Add(exprs: Array[Expr]) extends Expr {
           case _ => Add(combined)
         }
       } else {
-        // Just sum all numerics into one
-        val numSum = nums.collect { case Num(n, d) => n/d }.sum
-        val combined: Array[Expr] = (if (numSum != 0.0) Array[Expr](Num(numSum)) else Array.empty[Expr]) ++ others
+        // Just sum all numerics into one - preserve fractions
+        val numSum = if (nums.nonEmpty) {
+          nums.collect { case n @ Num(_, _) => n }
+            .reduce { (a, b) =>
+              // Add fractions: a/b + c/d = (ad + bc) / bd
+              val newNum = a.numerator * b.denominator + b.numerator * a.denominator
+              val newDen = a.denominator * b.denominator
+              Num(newNum, newDen)
+            }
+            .simplify(config)
+        } else {
+          Num(0)
+        }
+
+        val combined: Array[Expr] = (if (numSum != Num(0)) Array[Expr](numSum) else Array.empty[Expr]) ++ others
 
         combined.length match {
           case 0 => Num(0)
@@ -256,6 +278,15 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       case Num(n, d) if n < 0 =>
         val positive = Num(-n, d)
         s"- ${showWithParens(positive, this)}"
+      case Mul(Array(Num(n, d), rest @ _*)) if n < 0 && rest.nonEmpty =>
+        // Handle negative coefficient in multiplication: -2*x becomes "- 2*x"
+        val positiveCoeff = Num(-n, d)
+        val positiveMul = if (rest.length == 1) {
+          Mul(Array(positiveCoeff, rest.head))
+        } else {
+          Mul(Array(positiveCoeff) ++ rest)
+        }
+        s"- ${showWithParens(positiveMul, this)}"
       case e => s"+ ${showWithParens(e, this)}"
     }
 
