@@ -1,5 +1,7 @@
 package symbolicas
 
+import SimplificationRule._
+
 /* ------------------------------------------------------------------------- */
 final case class Div(exprs: Array[Expr]) extends Expr {
   override val precedence: Int = 2
@@ -16,38 +18,47 @@ final case class Div(exprs: Array[Expr]) extends Expr {
     Div(expandedChildren).simplify
   }
 
-  /* helper – build a simplified product --------------------------------- */
-  private def prod(xs: Seq[Expr]): Expr = xs.length match {
-    case 0 => Num(1)
-    case 1 => xs.head
-    case _ => Mul(xs.toArray).simplify
+  override def expand(implicit config: SimplificationConfig): Expr = {
+    // Expand children and simplify
+    val expandedChildren = exprs.map(_.expand(config))
+    Div(expandedChildren).simplify(config)
   }
 
-  def simplify: Expr = {
+  /* helper – build a simplified product --------------------------------- */
+  private def prod(xs: Seq[Expr])(implicit config: SimplificationConfig): Expr = xs.length match {
+    case 0 => Num(1)
+    case 1 => xs.head
+    case _ => Mul(xs.toArray).simplify(config)
+  }
+
+  def simplify(implicit config: SimplificationConfig): Expr = {
     /* simplify every child first ---------------------------------------- */
-    val children = exprs.map(_.simplify)
+    val children = exprs.map(_.simplify(config))
 
     /* 1)   a / b / c / d   ->   a / (b * c * d) ------------------------- */
-    if (children.length > 2)
-      Div(Array(children.head, prod(children.tail))).simplify
+    if (config.isEnabled(FlattenOperations) && children.length > 2)
+      return Div(Array(children.head, prod(children.tail)(config))).simplify(config)
 
     /* now at most two operands ------------------------------------------ */
     children match {
       /* 2) (a / b) / c  ->  a / (b * c) --------------------------------- */
-      case Array(Div(Array(num, den1)), den2) =>
-        Div(Array(num, prod(Seq(den1, den2)))).simplify
+      case Array(Div(Array(num, den1)), den2) if config.isEnabled(FlattenOperations) =>
+        Div(Array(num, prod(Seq(den1, den2))(config))).simplify(config)
 
       /* 3) fully numeric -> calculate immediately ----------------------- */
-      case Array(Num(an, ad), Num(bn, bd)) =>
-        Num(an * bd, ad * bn).simplify
+      case Array(Num(an, ad), Num(bn, bd)) if config.isEnabled(CombineNumericLiterals) =>
+        Num(an * bd, ad * bn).simplify(config)
 
       /* 4) divide by one ------------------------------------------------- */
-      case Array(a, Num(1, 1)) =>
+      case Array(a, Num(1, 1)) if config.isEnabled(RemoveIdentity) =>
         a
 
       /* default ---------------------------------------------------------- */
       case Array(a, b) =>
         Div(Array(a, b))
+
+      case _ =>
+        Div(children)
     }
   }
 

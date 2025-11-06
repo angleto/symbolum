@@ -1,4 +1,4 @@
-package symbolicas;
+package symbolicas
 
 /* ----------------------------------------------------------------------------
  * Atomic expressions
@@ -14,7 +14,7 @@ final case class Var(name: String) extends Expr {
     def replaceSymbol(sym: String, repl:Expr): Expr =
             if (name == sym) repl else this
 
-    def simplify: Var = this
+    def simplify(implicit config: SimplificationConfig): Var = this
 
     override def toString: String = name
 }
