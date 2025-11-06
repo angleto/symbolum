@@ -213,9 +213,46 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       }
     }
 
+    /* Merge divisions with common denominators ---------------------------- */
+    /* Transform: Div([a, c]) + Div([b, c]) → Div([Add([a, b]), c])        */
+    val afterDivMerge: Array[Expr] = if (config.isEnabled(MergeFractionsCommonDenom)) {
+      val (divs, nonDivs) = afterLikeTerms.partition(_.isInstanceOf[Div])
+
+      if (divs.length >= 2) {
+        // Group divisions by their denominator (as string for simplicity)
+        val grouped = divs.collect { case Div(Array(num, den)) => (num, den) }
+          .groupBy(_._2.toString)
+
+        val mergedDivs = grouped.flatMap { case (_, pairs) =>
+          if (pairs.length == 1) {
+            // Single div with this denominator, keep as-is
+            val (num, den) = pairs.head
+            Some(Div(Array(num, den)))
+          } else {
+            // Multiple divs with same denominator, merge them
+            val den = pairs.head._2  // All have same denominator
+            val numerators = pairs.map(_._1)
+            val mergedNumerator = Add(numerators.toArray).simplify(config)
+
+            // Only create a Div if the numerator is non-zero
+            mergedNumerator match {
+              case Num(0, _) => None
+              case _ => Some(Div(Array(mergedNumerator, den)).simplify(config))
+            }
+          }
+        }.toArray
+
+        mergedDivs ++ nonDivs
+      } else {
+        afterLikeTerms
+      }
+    } else {
+      afterLikeTerms
+    }
+
     /* Combine numeric literals */
     if (config.isEnabled(CombineNumericLiterals)) {
-      val (nums, others) = afterLikeTerms.partition(_.isInstanceOf[Num])
+      val (nums, others) = afterDivMerge.partition(_.isInstanceOf[Num])
 
       /* For common denominator merging */
       if (config.isEnabled(MergeFractionsCommonDenom) && nums.nonEmpty) {
@@ -261,10 +298,10 @@ final case class Add(exprs: Array[Expr]) extends Expr {
         }
       }
     } else {
-      afterLikeTerms.length match {
+      afterDivMerge.length match {
         case 0 => Num(0)
-        case 1 => afterLikeTerms(0)
-        case _ => Add(afterLikeTerms)
+        case 1 => afterDivMerge(0)
+        case _ => Add(afterDivMerge)
       }
     }
   }

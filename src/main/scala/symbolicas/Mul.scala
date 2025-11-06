@@ -123,9 +123,36 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
       return Num(0.0)
     }
 
+    /* Merge numeric factors with divisions ------------------------------ */
+    /* Transform: Num(a) * Div([b, c]) → Div([Mul([Num(a), b]), c])      */
+    /* This allows 3 * (x/2) to become (3*x)/2 for better simplification */
+    val withMergedDivs = if (config.isEnabled(FlattenOperations)) {
+      val (nums, nonNums) = withoutOnes.partition(_.isInstanceOf[Num])
+      val (divs, others) = nonNums.partition(_.isInstanceOf[Div])
+
+      if (nums.nonEmpty && divs.nonEmpty) {
+        // Multiply all numeric factors
+        val numProduct = if (nums.length == 1) nums.head else Mul(nums).simplify(config)
+
+        // For each Div, merge the numeric product into its numerator
+        val mergedDivs = divs.map {
+          case Div(Array(num, den)) =>
+            Div(Array(Mul(Array(numProduct, num)).simplify(config), den))
+          case d => d  // shouldn't happen
+        }
+
+        // Return merged divs plus other factors
+        mergedDivs ++ others
+      } else {
+        withoutOnes
+      }
+    } else {
+      withoutOnes
+    }
+
     /* Try product-to-sum transformation for cosines ------------------- */
     if (config.isEnabled(ProductOfCosToSumOfCos)) {
-      productToSumCosines(withoutOnes)(config) match {
+      productToSumCosines(withMergedDivs)(config) match {
         case Some((transformed, remaining)) =>
           // Multiply with remaining factors and recursively simplify
           if (remaining.isEmpty)
@@ -152,7 +179,7 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
     }
 
     /* split into numeric and symbolic parts ----------------------------- */
-    val (nums, others) = withoutOnes.partition(_.isInstanceOf[Num])
+    val (nums, others) = withMergedDivs.partition(_.isInstanceOf[Num])
 
     val numericPart = if (config.isEnabled(CombineNumericLiterals) && nums.nonEmpty) {
       val (numProd, denProd) =
