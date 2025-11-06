@@ -39,10 +39,29 @@ final case class Neg(expr: Expr) extends Expr {
     val s = expr.simplify(config)
     s match {
       case Num(n, d) => Num(-n, d)
+
       case Neg(inner) if config.isEnabled(SimplifyDoubleNegative) =>
         inner  // double negative: --x = x
+
       case Neg(inner) =>
         Neg(inner)  // keep double negative if rule disabled
+
+      /* Push negation into Mul: --(a * b * ...) → (-a) * b * ... */
+      case Mul(exprs) =>
+        val (nums, others) = exprs.partition(_.isInstanceOf[Num])
+        if (nums.nonEmpty) {
+          // Negate all numeric factors
+          val negatedNums = nums.collect { case Num(n, d) => Num(-n, d) }
+          Mul(negatedNums ++ others).simplify(config)
+        } else {
+          // No numeric factors, add -1
+          Mul(Array[Expr](Num(-1)) ++ exprs).simplify(config)
+        }
+
+      /* Push negation into Div: -(a/b) → (-a)/b */
+      case Div(Array(num, den)) =>
+        Div(Array(Neg(num).simplify(config), den)).simplify(config)
+
       case _ => Neg(s)
     }
   }
