@@ -158,6 +158,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
   /* -------------------------------------------------------------------------
    * Factor common terms: a*b + a*c → a*(b + c)
    * This is a simplified version - looks for common factors in products
+   * NOTE: Disabled when it would create large nested blocks (for Collatz-style expressions)
    * ----------------------------------------------------------------------- */
   private def factorCommonTerms(terms: Seq[Expr])(implicit config: SimplificationConfig): Expr = {
     if (terms.length < 2) return Add(terms.toArray)
@@ -193,8 +194,19 @@ final case class Add(exprs: Array[Expr]) extends Expr {
         }
       }
 
-      // Build: commonFactor * (remainder1 + remainder2 + ...)
-      Mul(Array(commonFactor, Add(remainders.toArray))).simplify(config)
+      // IMPORTANT: Don't factor if DistributeProduct is enabled and we'd create
+      // a nested block with an Add inside a Mul. This prevents oscillation between
+      // expansion and factoring, and creates the flat sum structure users want for
+      // Collatz-style expressions: cos(A)*B + cos(A)*C + cos(A)*D + ...
+      // instead of: cos(A)*(B + C + D + ...)
+      if (config.isEnabled(DistributeProduct) && remainders.length > 1) {
+        // Keep the expanded form - don't factor when it would create Mul(factor, Add(...))
+        Add(terms.toArray)
+      } else {
+        // Build: commonFactor * (remainder1 + remainder2 + ...)
+        // Only when we have a single remainder (so no Add is created)
+        Mul(Array(commonFactor, Add(remainders.toArray))).simplify(config)
+      }
     }
   }
 
