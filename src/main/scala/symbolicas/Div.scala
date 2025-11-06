@@ -1,4 +1,4 @@
-package collatz
+package symbolicas
 
 /* ------------------------------------------------------------------------- */
 final case class Div(exprs: Array[Expr]) extends Expr {

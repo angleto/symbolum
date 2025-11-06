@@ -1,4 +1,4 @@
-package collatz
+package symbolicas
 
 import scala.math._
 

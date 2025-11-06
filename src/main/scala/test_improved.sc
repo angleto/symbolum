@@ -1,5 +1,5 @@
-import collatz.{Expr, Num, Var, Add, Sub, Mul, Div, Cos, Neg}
-import collatz.Dsl
+import symbolicas.{Expr, Num, Var, Add, Sub, Mul, Div, Cos, Neg}
+import symbolicas.Dsl
 import Dsl.{ExprOps, intToNum, doubleToNum, cos, pi}
 
 // Test basic simplifications

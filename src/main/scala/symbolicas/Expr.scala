@@ -1,4 +1,4 @@
-package collatz ;
+package symbolicas ;
 
 import scala.annotation.tailrec ;
 import scala.language.implicitConversions ;

@@ -141,17 +141,18 @@ The original system had several issues:
 ## Usage Examples
 
 ### Basic Usage
+
 ```scala
-import collatz.Dsl._
+import symbolicas.Dsl._
 
 val n = Var("n")
-val expr = n + 1 - 2*n + 3
+val expr = n + 1 - 2 * n + 3
 
 // Old way
 val result1 = expr.simplify.expand.simplify.expand.simplify
 
 // New way
-val result2 = expr.fullSimplify  // Much cleaner!
+val result2 = expr.fullSimplify // Much cleaner!
 ```
 
 ### Collatz Expressions

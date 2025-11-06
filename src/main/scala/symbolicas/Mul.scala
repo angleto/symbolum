@@ -1,4 +1,4 @@
-package collatz ;
+package symbolicas ;
 
 /* ------------------------------------------------------------------------- */
 final case class Mul(exprs: Array[Expr]) extends Expr {
