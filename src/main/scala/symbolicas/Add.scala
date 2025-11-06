@@ -1,6 +1,7 @@
 package symbolicas
 
 import scala.annotation.tailrec
+import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
 /* ============================================================================

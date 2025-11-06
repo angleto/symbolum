@@ -2,6 +2,7 @@ package symbolicas
 
 import scala.annotation.tailrec
 import scala.language.implicitConversions
+import symbolicas.SimplificationConfig
 
 trait Expr {
   /** Precedence used only for pretty printing */

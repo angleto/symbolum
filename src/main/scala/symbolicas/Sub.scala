@@ -1,8 +1,9 @@
 package symbolicas
 
-/* ------------------------------------------------------------------------- */
-
 import scala.Array
+import symbolicas.SimplificationConfig
+
+/* ------------------------------------------------------------------------- */
 
 final case class Sub(exprs: Array[Expr]) extends Expr {
     override val precedence: Int = 1

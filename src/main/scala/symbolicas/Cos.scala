@@ -1,5 +1,6 @@
 package symbolicas
 
+import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
 /* ============================================================================
