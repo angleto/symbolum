@@ -123,6 +123,18 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
       return Num(0.0)
     }
 
+    /* AGGRESSIVE EXPANSION: If we have a product with an Add term, expand it immediately
+     * This prevents large nested blocks like: cos(A) * (B + C + D + ...)
+     * We want: cos(A) * B + cos(A) * C + cos(A) * D + ...
+     * This is crucial for breaking down large collatz expressions */
+    if (config.isEnabled(DistributeProduct)) {
+      val hasAdd = withoutOnes.exists(_.isInstanceOf[Add])
+      if (hasAdd && withoutOnes.length > 1) {
+        // Expand this product immediately and return the expanded form
+        return Mul(withoutOnes).expand(config)
+      }
+    }
+
     /* Merge numeric factors with divisions ------------------------------ */
     /* Transform: Num(a) * Div([b, c]) → Div([Mul([Num(a), b]), c])      */
     /* This allows 3 * (x/2) to become (3*x)/2 for better simplification */
