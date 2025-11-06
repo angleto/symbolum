@@ -189,8 +189,8 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     }
 
     /* Collect like terms if enabled */
-    val afterLikeTerms = if (config.isEnabled(CollectLikeTerms)) {
-      collectLikeTerms(noZeros)(config)
+    val afterLikeTerms: Array[Expr] = if (config.isEnabled(CollectLikeTerms)) {
+      collectLikeTerms(noZeros)(config).toArray
     } else {
       noZeros
     }
@@ -198,7 +198,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     /* Factor common terms if enabled */
     if (config.isEnabled(FactorCommonTerms) && afterLikeTerms.length > 1) {
       val factored = factorCommonTerms(afterLikeTerms)(config)
-      if (factored != Add(afterLikeTerms.toArray)) {
+      if (factored != Add(afterLikeTerms)) {
         return factored
       }
     }
@@ -230,19 +230,19 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       } else {
         // Just sum all numerics into one
         val numSum = nums.collect { case Num(n, d) => n/d }.sum
-        val combined = (if (numSum != 0.0) Seq(Num(numSum)) else Seq()) ++ others
+        val combined: Array[Expr] = (if (numSum != 0.0) Array[Expr](Num(numSum)) else Array.empty[Expr]) ++ others
 
         combined.length match {
           case 0 => Num(0)
           case 1 => combined(0)
-          case _ => Add(combined.toArray)
+          case _ => Add(combined)
         }
       }
     } else {
       afterLikeTerms.length match {
         case 0 => Num(0)
         case 1 => afterLikeTerms(0)
-        case _ => Add(afterLikeTerms.toArray)
+        case _ => Add(afterLikeTerms)
       }
     }
   }

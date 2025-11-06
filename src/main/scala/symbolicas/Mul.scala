@@ -166,7 +166,7 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
     }
 
     val combined: Array[Expr] =
-      (if (numericPart == one) nums else Array(numericPart)) ++ others
+      (if (numericPart == one) nums else Array[Expr](numericPart)) ++ others
 
     combined.length match {
       case 0 => Num(1.0)
