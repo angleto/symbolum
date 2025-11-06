@@ -215,34 +215,104 @@ final case class Add(exprs: Array[Expr]) extends Expr {
 
     /* Merge divisions with common denominators ---------------------------- */
     /* Transform: Div([a, c]) + Div([b, c]) → Div([Add([a, b]), c])        */
+    /* Also handles mixed Div and Num by finding LCD                       */
     val afterDivMerge: Array[Expr] = if (config.isEnabled(MergeFractionsCommonDenom)) {
       val (divs, nonDivs) = afterLikeTerms.partition(_.isInstanceOf[Div])
+      val (nums, others) = nonDivs.partition(_.isInstanceOf[Num])
 
-      if (divs.length >= 2) {
-        // Group divisions by their denominator (as string for simplicity)
-        val grouped = divs.collect { case Div(Array(num, den)) => (num, den) }
-          .groupBy(_._2.toString)
+      // Convert Num to Div for uniform handling (only if we have Divs to merge with)
+      val numsAsDivs = if (divs.nonEmpty && nums.nonEmpty) {
+        nums.collect {
+          case Num(n, d) => Div(Array(Num(n), Num(d)))
+        }
+      } else {
+        Array.empty[Expr]
+      }
 
-        val mergedDivs = grouped.flatMap { case (_, pairs) =>
-          if (pairs.length == 1) {
-            // Single div with this denominator, keep as-is
-            val (num, den) = pairs.head
-            Some(Div(Array(num, den)))
-          } else {
-            // Multiple divs with same denominator, merge them
-            val den = pairs.head._2  // All have same denominator
-            val numerators = pairs.map(_._1)
-            val mergedNumerator = Add(numerators.toArray).simplify(config)
+      val allDivs = divs ++ numsAsDivs
 
-            // Only create a Div if the numerator is non-zero
-            mergedNumerator match {
-              case Num(0, _) => None
-              case _ => Some(Div(Array(mergedNumerator, den)).simplify(config))
+      if (allDivs.length >= 2) {
+        // Extract all (numerator, denominator) pairs
+        val divPairs = allDivs.collect { case Div(Array(num, den)) => (num, den) }
+
+        // Helper to compute GCD and LCM
+        def gcdDouble(a: Double, b: Double): Double = {
+          val tolerance = 1e-10
+          if (math.abs(b) < tolerance) math.abs(a)
+          else gcdDouble(b, a % b)
+        }
+
+        def lcmDouble(a: Double, b: Double): Double = {
+          if (a == 0.0 || b == 0.0) 0.0
+          else math.abs(a * b) / gcdDouble(a, b)
+        }
+
+        // Extract denominator values (assuming they're Num)
+        val denValues = divPairs.map(_._2).collect {
+          case Num(n, d) => n / d
+        }
+
+        if (denValues.nonEmpty && denValues.length == divPairs.length) {
+          // All denominators are numeric, we can find LCD
+          val lcd = denValues.reduce(lcmDouble)
+
+          // Convert all divs to have LCD as denominator
+          val normalizedPairs = divPairs.map { case (num, den) =>
+            den match {
+              case Num(dn, dd) =>
+                val denValue = dn / dd
+                val multiplier = lcd / denValue
+                val newNum = if (multiplier == 1.0) {
+                  num
+                } else {
+                  Mul(Array(Num(multiplier), num)).simplify(config)
+                }
+                (newNum, Num(lcd))
+              case _ => (num, den)  // Can't normalize non-numeric denominator
             }
           }
-        }.toArray
 
-        mergedDivs ++ nonDivs
+          // Group by denominator
+          val grouped = normalizedPairs.groupBy(_._2.toString)
+
+          val mergedDivs = grouped.flatMap { case (_, pairs) =>
+            if (pairs.length == 1) {
+              val (num, den) = pairs.head
+              Some(Div(Array(num, den)))
+            } else {
+              val den = pairs.head._2
+              val numerators = pairs.map(_._1)
+              val mergedNumerator = Add(numerators.toArray).simplify(config)
+
+              mergedNumerator match {
+                case Num(0, _) => None
+                case _ => Some(Div(Array(mergedNumerator, den)).simplify(config))
+              }
+            }
+          }.toArray
+
+          mergedDivs ++ others ++ (if (numsAsDivs.isEmpty) nums else Array.empty[Expr])
+        } else {
+          // Some denominators are not numeric, fall back to grouping by exact match
+          val grouped = divPairs.groupBy(_._2.toString)
+          val mergedDivs = grouped.flatMap { case (_, pairs) =>
+            if (pairs.length == 1) {
+              val (num, den) = pairs.head
+              Some(Div(Array(num, den)))
+            } else {
+              val den = pairs.head._2
+              val numerators = pairs.map(_._1)
+              val mergedNumerator = Add(numerators.toArray).simplify(config)
+              mergedNumerator match {
+                case Num(0, _) => None
+                case _ => Some(Div(Array(mergedNumerator, den)).simplify(config))
+              }
+            }
+          }.toArray
+          mergedDivs ++ others ++ (if (numsAsDivs.isEmpty) nums else Array.empty[Expr])
+        }
+      } else if (allDivs.length == 1) {
+        allDivs ++ others ++ (if (numsAsDivs.isEmpty) nums else Array.empty[Expr])
       } else {
         afterLikeTerms
       }

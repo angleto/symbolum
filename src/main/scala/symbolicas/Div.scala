@@ -14,9 +14,22 @@ final case class Div(exprs: Array[Expr]) extends Expr {
     Div(exprs.map(_.replaceSymbol(sym, repl)))
 
   override def expand(implicit config: SimplificationConfig): Expr = {
-    // Expand children and simplify
+    // Expand children first
     val expandedChildren = exprs.map(_.expand(config))
-    Div(expandedChildren).simplify(config)
+
+    // If numerator is an Add and denominator is simple, distribute
+    expandedChildren match {
+      case Array(Add(addTerms), den) if config.isEnabled(DistributeProduct) =>
+        // Distribute: (a + b + c) / d → a/d + b/d + c/d
+        // This allows further simplification by merging common denominators
+        val distributedTerms = addTerms.map { term =>
+          Div(Array(term, den)).simplify(config)
+        }
+        Add(distributedTerms).simplify(config)
+
+      case _ =>
+        Div(expandedChildren).simplify(config)
+    }
   }
 
   /* helper – build a simplified product --------------------------------- */
