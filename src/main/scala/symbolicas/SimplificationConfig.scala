@@ -90,7 +90,8 @@ object SimplificationConfig {
     MergeFractionsCommonDenom,
     SimplifyDoubleNegative,
     SimplifyFractions,
-    CollectLikeTerms
+    CollectLikeTerms,
+    DistributeProduct  // CRITICAL: Must distribute a*(b+c) → a*b + a*c
   )
 
   /** All available rules */
