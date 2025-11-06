@@ -123,18 +123,41 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
       return Num(0.0)
     }
 
-    /* Merge numeric factors with divisions ------------------------------ */
-    /* Transform: Num(a) * Div([b, c]) → Div([Mul([Num(a), b]), c])      */
-    /* This allows 3 * (x/2) to become (3*x)/2 for better simplification */
+    /* Merge numeric factors with divisions and merge multiple Divs ----- */
+    /* Transform: Num(a) * Div([b, c]) → Div([a*b, c])                   */
+    /* Transform: Div([a, b]) * Div([c, d]) → Div([a*c, b*d])            */
     val withMergedDivs = if (config.isEnabled(FlattenOperations)) {
       val (nums, nonNums) = withoutOnes.partition(_.isInstanceOf[Num])
       val (divs, others) = nonNums.partition(_.isInstanceOf[Div])
 
-      if (nums.nonEmpty && divs.nonEmpty) {
-        // Multiply all numeric factors
+      if (divs.length >= 2) {
+        // Multiple divisions: merge them all into one
+        val divPairs = divs.collect { case Div(Array(n, d)) => (n, d) }
+        val allNumerators = divPairs.map(_._1)
+        val allDenominators = divPairs.map(_._2)
+
+        val combinedNum = if (allNumerators.length == 1) {
+          allNumerators.head
+        } else {
+          Mul(allNumerators.toArray).simplify(config)
+        }
+
+        val combinedDen = if (allDenominators.length == 1) {
+          allDenominators.head
+        } else {
+          Mul(allDenominators.toArray).simplify(config)
+        }
+
+        val mergedDiv = Div(Array(combinedNum, combinedDen)).simplify(config)
+
+        // Combine with nums and others
+        val result = Array(mergedDiv) ++ nums ++ others
+        if (result.length == 1) return result.head
+        result
+      } else if (nums.nonEmpty && divs.nonEmpty) {
+        // Single division with numeric factors: merge into numerator
         val numProduct = if (nums.length == 1) nums.head else Mul(nums).simplify(config)
 
-        // For each Div, merge the numeric product into its numerator
         val mergedDivs = divs.map {
           case Div(Array(num, den)) =>
             Div(Array(Mul(Array(numProduct, num)).simplify(config), den))

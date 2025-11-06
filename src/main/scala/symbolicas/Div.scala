@@ -65,7 +65,53 @@ final case class Div(exprs: Array[Expr]) extends Expr {
       case Array(a, Num(1, 1)) if config.isEnabled(RemoveIdentity) =>
         a
 
-      /* 6) If numerator is Add with all Divs of same denom, simplify --- */
+      /* 5b) Merge Num in numerator with Num denominator ---------------- */
+      /* Div([Mul([Num(a,b), rest...]), Num(c,d)]) → Div([Mul([rest...]), Num(a*d, b*c)]) */
+      case Array(Mul(factors), den @ Num(_, _)) if config.isEnabled(CombineNumericLiterals) =>
+        val (nums, others) = factors.partition(_.isInstanceOf[Num])
+        if (nums.nonEmpty) {
+          // Merge all Num factors in numerator
+          val numProduct = nums.collect { case n: Num => n }
+            .reduce((a, b) => Num(a.numerator * b.numerator, a.denominator * b.denominator))
+          // Now divide this Num by the denominator Num
+          val mergedFraction = Div(Array(numProduct, den)).simplify(config)
+
+          if (others.isEmpty) {
+            mergedFraction
+          } else if (others.length == 1 && mergedFraction == Num(1)) {
+            others.head
+          } else if (mergedFraction == Num(1)) {
+            Mul(others).simplify(config)
+          } else {
+            Mul(Array(mergedFraction) ++ others).simplify(config)
+          }
+        } else {
+          Div(Array(Mul(factors), den))
+        }
+
+      /* 6) If denominator is a product with numeric factors, merge them - */
+      /* This handles cases where Mul creates Div with complex denom      */
+      case Array(num, Mul(factors)) if config.isEnabled(FlattenOperations) =>
+        // If the numerator is also a Mul, we might be able to cancel factors
+        // But for now, just ensure numeric factors in denominator are merged
+        val (numFactors, symbolicFactors) = factors.partition(_.isInstanceOf[Num])
+        if (numFactors.length >= 2) {
+          val mergedNumDen = numFactors.collect { case n: Num => n }
+            .reduce((a, b) => Num(a.numerator * b.numerator, a.denominator * b.denominator))
+            .simplify(config)
+          val newDen = if (symbolicFactors.isEmpty) {
+            mergedNumDen
+          } else if (symbolicFactors.length == 1) {
+            Mul(Array(mergedNumDen, symbolicFactors.head)).simplify(config)
+          } else {
+            Mul(Array(mergedNumDen) ++ symbolicFactors).simplify(config)
+          }
+          Div(Array(num, newDen)).simplify(config)
+        } else {
+          Div(Array(num, Mul(factors)))
+        }
+
+      /* 7) If numerator is Add with all Divs of same denom, simplify --- */
       case Array(Add(addTerms), den) if config.isEnabled(MergeFractionsCommonDenom) =>
         // Check if all terms in the Add are Divs with the same denominator
         val allDivs = addTerms.forall(_.isInstanceOf[Div])
