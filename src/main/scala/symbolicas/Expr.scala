@@ -41,23 +41,28 @@ trait Expr {
         return expr
       }
 
-      // Apply expand → simplify → simplify again
+      // Multi-pass aggressive simplification for deeply nested expressions:
+      // expand → simplify → expand → simplify → simplify
       val step1 = expr.expand(config)
       val step2 = step1.simplify(config)
-      val step3 = step2.simplify(config)  // Double simplify to catch cascading simplifications
+      val step3 = step2.expand(config)  // Second expand catches newly exposed structure
+      val step4 = step3.simplify(config)
+      val step5 = step4.simplify(config)  // Triple simplify catches all cascading effects
 
-      val currentStr = step3.toString
+      val currentStr = step5.toString
 
       // Check if we've reached a fixpoint
       if (currentStr == previousStr) {
-        step3
+        step5
       } else {
-        loop(step3, iterationsLeft - 1, currentStr)
+        loop(step5, iterationsLeft - 1, currentStr)
       }
     }
 
-    // Initial pass: simplify first to normalize the input
-    val initial = this.simplify(config)
+    // Initial multi-pass to normalize deeply nested input
+    val step0 = this.simplify(config)
+    val step1 = step0.expand(config)
+    val initial = step1.simplify(config)
     loop(initial, maxIter, initial.toString)
   }
 

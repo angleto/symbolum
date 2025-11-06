@@ -382,9 +382,11 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     val first = showWithParens(exprs.head, this)
     val rest = exprs.tail.map {
       case Neg(inner) => s"- ${showWithParens(inner, this)}"
+
       case Num(n, d) if n < 0 =>
         val positive = Num(-n, d)
         s"- ${showWithParens(positive, this)}"
+
       case Mul(Array(Num(n, d), rest @ _*)) if n < 0 && rest.nonEmpty =>
         // Handle negative coefficient in multiplication: -2*x becomes "- 2*x"
         val positiveCoeff = Num(-n, d)
@@ -394,6 +396,45 @@ final case class Add(exprs: Array[Expr]) extends Expr {
           Mul(Array(positiveCoeff) ++ rest)
         }
         s"- ${showWithParens(positiveMul, this)}"
+
+      case Div(Array(Num(n, d), den)) if n < 0 =>
+        // Handle negative numerator in division: -a/b becomes "- a/b"
+        val positiveNum = Num(-n, d)
+        s"- ${showWithParens(Div(Array(positiveNum, den)), this)}"
+
+      case Div(Array(Mul(Array(Num(n, d), rest @ _*)), den)) if n < 0 && rest.nonEmpty =>
+        // Handle negative coefficient in numerator: (-2*x)/y becomes "- (2*x)/y"
+        val positiveCoeff = Num(-n, d)
+        val positiveMul = if (rest.length == 1) {
+          Mul(Array(positiveCoeff, rest.head))
+        } else {
+          Mul(Array(positiveCoeff) ++ rest)
+        }
+        s"- ${showWithParens(Div(Array(positiveMul, den)), this)}"
+
+      case Div(Array(Add(addTerms), den)) =>
+        // Check if all terms in numerator are negative - if so, factor out the negative
+        val allNegative = addTerms.forall {
+          case Num(n, _) => n < 0
+          case Mul(Array(Num(n, _), _ @ _*)) => n < 0
+          case _ => false
+        }
+
+        if (allNegative && addTerms.length > 1) {
+          // Factor out -1 from all terms
+          val positiveTerms = addTerms.map {
+            case Num(n, d) => Num(-n, d)
+            case Mul(Array(Num(n, d), rest @ _*)) =>
+              if (rest.length == 1) Mul(Array(Num(-n, d), rest.head))
+              else Mul(Array(Num(-n, d)) ++ rest)
+            case other => other
+          }
+          val positiveAdd = Add(positiveTerms)
+          s"- ${showWithParens(Div(Array(positiveAdd, den)), this)}"
+        } else {
+          s"+ ${showWithParens(Div(Array(Add(addTerms), den)), this)}"
+        }
+
       case e => s"+ ${showWithParens(e, this)}"
     }
 
