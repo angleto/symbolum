@@ -6,5 +6,3 @@ lazy val root = (project in file("."))
   .settings(
     name := "symbolicas"
   )
-
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0"

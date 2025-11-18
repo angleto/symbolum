@@ -7,8 +7,14 @@ import SimplificationRule._
 final case class Div(exprs: Array[Expr]) extends Expr {
   override val precedence: Int = 2
 
-  def eval(vars: Map[String, Double]): Double =
-    exprs.map(_.eval(vars)).reduce(_ / _)
+  def eval(vars: Map[String, Double]): Double = {
+    val values = exprs.map(_.eval(vars))
+    values.tail.foreach { divisor =>
+      if (divisor == 0.0)
+        throw new ArithmeticException("Division by zero")
+    }
+    values.reduce(_ / _)
+  }
 
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Div(exprs.map(_.replaceSymbol(sym, repl)))
