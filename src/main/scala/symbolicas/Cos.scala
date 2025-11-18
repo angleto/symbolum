@@ -4,37 +4,89 @@ import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
 /* ============================================================================
- * unary composites
+ * Unary composites - Trigonometric Functions
  * ========================================================================== */
 final case class Cos(expr: Expr) extends Expr {
   override val precedence: Int = 4
 
+  /**
+   * Evaluate this cosine expression numerically.
+   * @param vars mapping from variable names to their numeric values
+   * @return the cosine of the evaluated inner expression
+   */
   def eval(vars: Map[String, Double]): Double =
     math.cos(expr.eval(vars))
 
+  /**
+   * Replace all occurrences of a symbol with another expression.
+   * @param sym the symbol name to replace
+   * @param repl the expression to substitute
+   * @return a new Cos expression with substitutions applied
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Cos(expr.replaceSymbol(sym, repl))
 
+  /**
+   * Expand this cosine expression by expanding its inner expression.
+   * @param config simplification configuration
+   * @return cos of expanded inner expression
+   */
   override def expand(implicit config: SimplificationConfig): Expr = Cos(expr.expand(config))
 
+  /**
+   * Simplify this cosine expression by simplifying its inner expression.
+   * @param config simplification configuration
+   * @return cos of simplified inner expression
+   */
   def simplify(implicit config: SimplificationConfig): Expr = Cos(expr.simplify(config))
 
   override def toString: String = s"cos($expr)"
 }
 
-/* ------------------------------------------------------------------------- */
+/* ============================================================================
+ * Unary composites - Negation
+ * ========================================================================== */
 final case class Neg(expr: Expr) extends Expr {
   override val precedence: Int = 3
 
+  /**
+   * Evaluate this negation expression numerically.
+   * @param vars mapping from variable names to their numeric values
+   * @return the negative of the evaluated inner expression
+   */
   def eval(vars: Map[String, Double]): Double =
     -expr.eval(vars)
 
+  /**
+   * Replace all occurrences of a symbol with another expression.
+   * @param sym the symbol name to replace
+   * @param repl the expression to substitute
+   * @return a new Neg expression with substitutions applied
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Neg(expr.replaceSymbol(sym, repl))
 
+  /**
+   * Expand this negation expression by expanding the inner expression first.
+   * @param config simplification configuration
+   * @return negation of expanded inner expression, then simplified
+   */
   override def expand(implicit config: SimplificationConfig): Expr =
     Neg(expr.expand(config)).simplify(config)
 
+  /**
+   * Simplify this negation expression using algebraic rules.
+   *
+   * Simplification rules:
+   *   - Negate numeric literals: -(5) → -5
+   *   - Remove double negatives: -(-x) → x
+   *   - Distribute into additions: -(a + b) → -a + -b
+   *   - Distribute into multiplications: -(a * b) → -a * b
+   *   - Distribute into divisions: -(a/b) → (-a)/b
+   *
+   * @param config simplification configuration
+   * @return simplified expression
+   */
   def simplify(implicit config: SimplificationConfig): Expr = {
     val s = expr.simplify(config)
     s match {

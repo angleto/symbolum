@@ -3,16 +3,38 @@ package symbolicas
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
-/* ------------------------------------------------------------------------- */
+/* ============================================================================
+ * n-ary composites - Multiplication
+ * ========================================================================== */
 final case class Mul(exprs: Array[Expr]) extends Expr {
   override val precedence: Int = 2
 
+  /**
+   * Evaluate this multiplication expression numerically.
+   * @param vars mapping from variable names to their numeric values
+   * @return the numeric product of all factors
+   */
   def eval(vars: Map[String, Double]): Double =
     exprs.map(_.eval(vars)).product
 
+  /**
+   * Replace all occurrences of a symbol with another expression.
+   * @param sym the symbol name to replace
+   * @param repl the expression to substitute
+   * @return a new Mul expression with substitutions applied
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Mul(exprs.map(_.replaceSymbol(sym, repl)))
 
+  /**
+   * Expand this multiplication expression by distributing products over sums.
+   *
+   * Distribution: (a + b) * c → a*c + b*c
+   * Product-to-sum for cosines: cos(A) * cos(B) → 1/2 * [cos(A-B) + cos(A+B)]
+   *
+   * @param config simplification configuration (controls which rules apply)
+   * @return expanded expression
+   */
   override def expand(implicit config: SimplificationConfig): Expr = {
     val children: Array[Expr] = exprs.map(_.expand(config))
 
@@ -63,7 +85,12 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
     Add(distributedTerms).simplify(config)
   }
 
-  /* Product-to-sum for cosines: cos(A) * cos(B) = 1/2 * [cos(A-B) + cos(A+B)] */
+  /**
+   * Product-to-sum transformation for cosines.
+   * Uses the identity: cos(A) * cos(B) = 1/2 * [cos(A-B) + cos(A+B)]
+   *
+   * @return Some((transformed_expression, remaining_factors)) if transformation applied, None otherwise
+   */
   private def productToSumCosines(factors: Array[Expr])(implicit config: SimplificationConfig): Option[(Expr, Array[Expr])] = {
     // Find the first pair of Cos terms
     val cosIndices = factors.zipWithIndex.collect {
@@ -97,11 +124,26 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
     }
   }
 
+  /**
+   * Simplify this multiplication expression using algebraic rules.
+   *
+   * Simplification pipeline:
+   *   1. Simplify all child expressions
+   *   2. Flatten nested multiplications: (a * b) * c → a * b * c
+   *   3. Remove identity elements: a * 1 → a
+   *   4. Handle zeros: a * 0 → 0
+   *   5. Merge numeric factors with divisions: 3 * (x/2) → (3*x)/2
+   *   6. Apply product-to-sum for cosines (if enabled)
+   *   7. Combine numeric literals: 2 * 3 * x → 6 * x
+   *
+   * @param config simplification configuration controlling which rules to apply
+   * @return simplified expression
+   */
   def simplify(implicit config: SimplificationConfig): Expr = {
     val simplified = exprs.map(_.simplify(config))
     val one = Num(1.0)
 
-    /* flatten nested multiplications ------------------------------------ */
+    /* Flatten nested multiplications: (a * b) * c → a * b * c */
     val flattened = if (config.isEnabled(FlattenOperations)) {
       simplified.flatMap {
         case Mul(innerExprs) => innerExprs

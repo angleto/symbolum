@@ -1,7 +1,6 @@
 package symbolicas
 
-import scala.annotation.tailrec
-import symbolicas.{SimplificationConfig, SimplificationRule}
+import symbolicas.{SimplificationConfig, SimplificationRule, MathUtils}
 import SimplificationRule._
 
 final case class Num(numerator: Double, denominator: Double = 1.0)
@@ -13,34 +12,33 @@ final case class Num(numerator: Double, denominator: Double = 1.0)
 
   def replaceSymbol(sym: String, repl: Expr): Expr = this
 
-  /* gcd on doubles – good enough for the use-case "integers stored as double" */
-  private def gcd(a: Double, b: Double): Double = {
-    @tailrec def loop(x: Double, y: Double): Double =
-      if (y == 0) x else loop(y, x % y)
-
-    loop(a.abs, b.abs)
-  }
-
+  /**
+   * Simplify this numeric literal by reducing the fraction to lowest terms.
+   * Uses GCD to eliminate common factors from numerator and denominator.
+   *
+   * Examples:
+   *   - Num(6, 9) → Num(2, 3)
+   *   - Num(4, 2) → Num(2, 1)
+   *   - Num(5, 1) → Num(5, 1) (already simplified)
+   */
   def simplify(implicit config: SimplificationConfig): Num = {
     if (denominator == 1.0) this
     else if (config.isEnabled(SimplifyFractions)) {
-      val g = gcd(numerator, denominator)
-      Num(numerator / g, denominator / g)
+      val (simplifiedNum, simplifiedDen) = MathUtils.simplifyFraction(numerator, denominator)
+      Num(simplifiedNum, simplifiedDen)
     } else {
       this
     }
   }
 
   override def toString: String = {
-    def isWhole(d: Double): Boolean = (d % 1.0) == 0.0
-
     if (denominator == 1.0) {
-      if (isWhole(numerator))
+      if (MathUtils.isWhole(numerator))
         s"${numerator.toInt}"
       else
         s"$numerator"
     } else {
-      if (isWhole(numerator) && isWhole(denominator))
+      if (MathUtils.isWhole(numerator) && MathUtils.isWhole(denominator))
         s"${numerator.toInt}/${denominator.toInt}"
       else
         s"$numerator/$denominator"

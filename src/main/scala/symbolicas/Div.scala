@@ -3,16 +3,39 @@ package symbolicas
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
-/* ------------------------------------------------------------------------- */
+/* ============================================================================
+ * n-ary composites - Division
+ * ========================================================================== */
 final case class Div(exprs: Array[Expr]) extends Expr {
   override val precedence: Int = 2
 
+  /**
+   * Evaluate this division expression numerically.
+   * @param vars mapping from variable names to their numeric values
+   * @return the numeric quotient of all terms
+   */
   def eval(vars: Map[String, Double]): Double =
     exprs.map(_.eval(vars)).reduce(_ / _)
 
+  /**
+   * Replace all occurrences of a symbol with another expression.
+   * @param sym the symbol name to replace
+   * @param repl the expression to substitute
+   * @return a new Div expression with substitutions applied
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Div(exprs.map(_.replaceSymbol(sym, repl)))
 
+  /**
+   * Expand this division expression.
+   * Distributes division over addition in the numerator.
+   *
+   * Example: (a + b) / c → a/c + b/c
+   * This allows further simplification by merging common denominators later.
+   *
+   * @param config simplification configuration (controls which rules apply)
+   * @return expanded expression
+   */
   override def expand(implicit config: SimplificationConfig): Expr = {
     // Expand children first
     val expandedChildren = exprs.map(_.expand(config))
@@ -32,13 +55,29 @@ final case class Div(exprs: Array[Expr]) extends Expr {
     }
   }
 
-  /* helper – build a simplified product --------------------------------- */
+  /**
+   * Helper function to build a simplified product from a sequence of expressions.
+   * Handles edge cases for empty, single, and multiple factors.
+   */
   private def prod(xs: Seq[Expr])(implicit config: SimplificationConfig): Expr = xs.length match {
     case 0 => Num(1)
     case 1 => xs.head
     case _ => Mul(xs.toArray).simplify(config)
   }
 
+  /**
+   * Simplify this division expression using algebraic rules.
+   *
+   * Simplification rules:
+   *   1. Flatten chained divisions: a / b / c → a / (b * c)
+   *   2. Handle nested divisions: (a/b)/c → a/(b*c), a/(b/c) → (a*c)/b
+   *   3. Combine numeric literals: 6/2 → 3
+   *   4. Remove identity: a/1 → a
+   *   5. Simplify sums in numerator with common denominators
+   *
+   * @param config simplification configuration controlling which rules to apply
+   * @return simplified expression
+   */
   def simplify(implicit config: SimplificationConfig): Expr = {
     /* simplify every child first ---------------------------------------- */
     val children = exprs.map(_.simplify(config))

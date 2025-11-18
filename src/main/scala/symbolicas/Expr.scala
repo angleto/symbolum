@@ -4,25 +4,47 @@ import scala.annotation.tailrec
 import scala.language.implicitConversions
 import symbolicas.SimplificationConfig
 
+/**
+ * Base trait for all symbolic expressions.
+ * Provides core operations: evaluation, symbol replacement, expansion, and simplification.
+ */
 trait Expr {
-  /** Precedence used only for pretty printing */
+  /**
+   * Precedence level for pretty printing with parentheses.
+   * Lower values bind less tightly (require more parentheses).
+   */
   def precedence: Int = 10
 
-  /** Evaluate numerically */
+  /**
+   * Evaluate this expression numerically given variable values.
+   * @param variables mapping from variable names to their numeric values
+   * @return the numeric result of evaluating this expression
+   */
   def eval(variables: Map[String, Double]): Double
 
-  /** Replace a given symbol by another expression */
+  /**
+   * Replace all occurrences of a symbol with another expression.
+   * @param sym the symbol name to replace
+   * @param repl the expression to substitute
+   * @return a new expression with substitutions applied
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr
 
   /**
-   * Expand – distributes products over sums
+   * Expand this expression by distributing products over sums.
+   * Default implementation returns the expression unchanged (identity).
+   *
    * @param config Simplification configuration controlling which rules to apply (defaults to Default)
+   * @return expanded expression
    */
   def expand(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr = this
 
   /**
    * Algebraic simplification (single pass) with configurable rules.
+   * Each expression type implements its own simplification strategy.
+   *
    * @param config Simplification configuration controlling which rules to apply (defaults to Default)
+   * @return simplified expression
    */
   def simplify(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr
 
