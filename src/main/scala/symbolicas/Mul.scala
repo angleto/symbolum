@@ -74,8 +74,11 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
       val idx1 = cosIndices(0)
       val idx2 = cosIndices(1)
 
-      val Cos(a) = factors(idx1): @unchecked
-      val Cos(b) = factors(idx2): @unchecked
+      // Safe pattern matching - we know these are Cos because we filtered them
+      val (a, b) = (factors(idx1), factors(idx2)) match {
+        case (Cos(cosA), Cos(cosB)) => (cosA, cosB)
+        case _ => return None  // Defensive: should never happen
+      }
 
       // Build: 1/2 * [cos(a - b) + cos(a + b)]
       val halfFactor = Num(1, 2)

@@ -83,7 +83,10 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       Num(newNum, newDen)
     }
 
-    // Group terms by their base expression (as string for simplicity)
+    // Group terms by their base expression
+    // Note: Using toString for grouping since case classes with Array fields
+    // don't have deep structural equality - they use reference equality for arrays.
+    // While not ideal, toString comparison is safe and works correctly.
     val grouped = terms.groupBy { term =>
       val (_, base) = extractCoeffAndBase(term)
       base.toString
@@ -174,6 +177,8 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     val firstFactors = allFactors.head.toSet
 
     // Find factors common to all terms
+    // Note: Using toString comparison since expressions with Array fields (Add, Mul, Div)
+    // don't have deep structural equality in Scala case classes
     val commonFactors = firstFactors.filter { factor =>
       allFactors.tail.forall(_.exists(_.toString == factor.toString))
     }
