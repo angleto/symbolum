@@ -63,21 +63,24 @@ trait Expr {
         return expr
       }
 
-      // Multi-pass aggressive simplification for deeply nested expressions:
-      // expand → simplify → expand → simplify → simplify
+      // Ultra-aggressive multi-pass for deeply nested expressions:
+      // expand → simplify → expand → simplify → expand → simplify → simplify
+      // The triple expand ensures distribution of products over sums at all nesting levels
       val step1 = expr.expand(config)
       val step2 = step1.simplify(config)
       val step3 = step2.expand(config)  // Second expand catches newly exposed structure
       val step4 = step3.simplify(config)
-      val step5 = step4.simplify(config)  // Triple simplify catches all cascading effects
+      val step5 = step4.expand(config)  // Third expand for deeply nested Mul(Cos(...), Add(...))
+      val step6 = step5.simplify(config)
+      val step7 = step6.simplify(config)  // Double simplify for cascading effects
 
-      val currentStr = step5.toString
+      val currentStr = step7.toString
 
       // Check if we've reached a fixpoint
       if (currentStr == previousStr) {
-        step5
+        step7
       } else {
-        loop(step5, iterationsLeft - 1, currentStr)
+        loop(step7, iterationsLeft - 1, currentStr)
       }
     }
 
