@@ -1,9 +1,23 @@
 package symbolicas
 
-import scala.annotation.tailrec
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
+/**
+ * Represents a numeric literal with optional fractional representation.
+ *
+ * Internally stores values as numerator/denominator to preserve exact fractions
+ * and avoid floating-point precision issues during symbolic computation.
+ *
+ * @param numerator the numerator value
+ * @param denominator the denominator value (defaults to 1.0 for whole numbers)
+ *
+ * @example {{{
+ * val half = Num(1, 2)        // represents 1/2
+ * val three = Num(3)          // represents 3
+ * val twoThirds = Num(2, 3)   // represents 2/3
+ * }}}
+ */
 final case class Num(numerator: Double, denominator: Double = 1.0)
   extends Expr {
 
@@ -13,34 +27,32 @@ final case class Num(numerator: Double, denominator: Double = 1.0)
 
   def replaceSymbol(sym: String, repl: Expr): Expr = this
 
-  /* gcd on doubles – good enough for the use-case "integers stored as double" */
-  private def gcd(a: Double, b: Double): Double = {
-    @tailrec def loop(x: Double, y: Double): Double =
-      if (y == 0) x else loop(y, x % y)
-
-    loop(a.abs, b.abs)
-  }
-
+  /**
+   * Simplifies the fraction to lowest terms if SimplifyFractions rule is enabled.
+   *
+   * Uses GCD to reduce the fraction. For example, 4/6 becomes 2/3.
+   *
+   * @param config simplification configuration
+   * @return simplified numeric expression
+   */
   def simplify(implicit config: SimplificationConfig): Num = {
     if (denominator == 1.0) this
     else if (config.isEnabled(SimplifyFractions)) {
-      val g = gcd(numerator, denominator)
-      Num(numerator / g, denominator / g)
+      val (simpleNum, simpleDen) = MathUtils.simplifyFraction(numerator, denominator)
+      Num(simpleNum, simpleDen)
     } else {
       this
     }
   }
 
   override def toString: String = {
-    def isWhole(d: Double): Boolean = (d % 1.0) == 0.0
-
     if (denominator == 1.0) {
-      if (isWhole(numerator))
+      if (MathUtils.isWhole(numerator))
         s"${numerator.toInt}"
       else
         s"$numerator"
     } else {
-      if (isWhole(numerator) && isWhole(denominator))
+      if (MathUtils.isWhole(numerator) && MathUtils.isWhole(denominator))
         s"${numerator.toInt}/${denominator.toInt}"
       else
         s"$numerator/$denominator"

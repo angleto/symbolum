@@ -4,9 +4,44 @@ import scala.annotation.tailrec
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
-/* ============================================================================
- * n-ary composites - Addition
- * ========================================================================== */
+/**
+ * Represents n-ary addition of expressions.
+ *
+ * Addition is commutative and associative, with 0 as the identity element.
+ * This class handles sums of multiple terms with sophisticated simplification
+ * including like term collection, fraction merging, and common factor extraction.
+ *
+ * == Simplification Features ==
+ *
+ * The Add class implements numerous algebraic simplifications (when enabled):
+ *  - '''Identity removal''': Remove 0 terms
+ *  - '''Flattening''': Convert Add(a, Add(b, c)) → Add(a, b, c)
+ *  - '''Like term collection''': x + 2*x → 3*x
+ *  - '''Fraction merging''': 1/2 + 1/3 → 5/6 (via LCD)
+ *  - '''Common denominator factoring''': a/d + b/d → (a+b)/d
+ *  - '''Common term factoring''': a*b + a*c → a*(b+c)
+ *  - '''Numeric literal combination''': 2 + 3 → 5
+ *
+ * @param exprs array of expressions to add
+ *
+ * @example {{{
+ * import symbolicas._
+ * import symbolicas.Dsl._
+ *
+ * val x = Var("x")
+ *
+ * // Simple addition
+ * val sum1 = Add(Array(x, Num(1)))  // x + 1
+ *
+ * // Multiple terms
+ * val sum2 = Add(Array(x, Num(2), x, Num(3)))  // x + 2 + x + 3
+ * sum2.simplify()  // 2*x + 5
+ *
+ * // Fraction merging
+ * val sum3 = Add(Array(Num(1,2), Num(1,3)))  // 1/2 + 1/3
+ * sum3.simplify()  // 5/6
+ * }}}
+ */
 final case class Add(exprs: Array[Expr]) extends Expr {
   override val precedence: Int = 1
 
@@ -15,21 +50,13 @@ final case class Add(exprs: Array[Expr]) extends Expr {
    * ----------------------------------------------------------------------- */
   private def mergeFractionsLCD(terms: Seq[Expr])(implicit config: SimplificationConfig): Option[Expr] = {
 
-    /* helpers -------------------------------------------------------------- */
-    def isWhole(d: Double): Boolean = (d % 1.0) == 0.0
-
-    @tailrec
-    def gcd(a: Int, b: Int): Int = if (b == 0) a.abs else gcd(b, a % b)
-
-    def lcm(a: Int, b: Int): Int = (a / gcd(a, b)) * b
-
     /* Attempt to peel "numerator / integerDenominator" out of a term        */
     def asFraction(e: Expr): Option[(Expr, Int)] = e match {
-      case Num(num, den) if isWhole(den) =>
+      case Num(num, den) if MathUtils.isWhole(den) =>
         Some((Num(num).simplify(config), den.toInt))
 
       case Div(Array(numExpr, Num(denNum, denDen)))
-        if denDen == 1.0 && isWhole(denNum) =>
+        if denDen == 1.0 && MathUtils.isWhole(denNum) =>
         Some((numExpr, denNum.toInt))
 
       case _ => None
@@ -42,7 +69,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     if (extracted.forall(_.isDefined) && terms.length > 1) {
       val fracs = extracted.map(_.get)
       val denominators = fracs.map(_._2)
-      val commonDenominator = denominators.reduce(lcm)
+      val commonDenominator = denominators.reduce(MathUtils.lcmInt)
 
       if (commonDenominator == 1) {
         None // nothing to do
@@ -215,13 +242,38 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     }
   }
 
-  /* ---------------- public part ------------------------------------------ */
+  /* ---------------- public API ------------------------------------------- */
+
+  /**
+   * Evaluate this sum numerically.
+   *
+   * @param vars map from variable names to numeric values
+   * @return sum of all term evaluations
+   */
   def eval(vars: Map[String, Double]): Double =
     exprs.map(_.eval(vars)).sum
 
+  /**
+   * Replace a symbol throughout this sum.
+   *
+   * @param sym variable name to replace
+   * @param repl replacement expression
+   * @return new sum with substitution applied to all terms
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
     Add(exprs.map(_.replaceSymbol(sym, repl)))
 
+  /**
+   * Expand this addition expression.
+   *
+   * Recursively expands all child expressions and flattens nested additions.
+   * This transforms Add(a, Add(b, c)) into Add(a, b, c).
+   *
+   * The result is always simplified after expansion.
+   *
+   * @param config simplification configuration
+   * @return expanded and simplified expression
+   */
   override def expand(implicit config: SimplificationConfig): Expr = {
     // Expand all child expressions and flatten any nested additions
     val expandedChildren = exprs.map(_.expand(config))
@@ -232,6 +284,22 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     Add(flattened).simplify(config)
   }
 
+  /**
+   * Simplify this sum using enabled simplification rules.
+   *
+   * Applies various algebraic simplifications in a carefully ordered sequence:
+   *  1. Flatten nested additions (if FlattenOperations enabled)
+   *  2. Remove zero terms (if RemoveIdentity enabled)
+   *  3. Merge fractions via LCD (if MergeFractionsLCD enabled)
+   *  4. Collect like terms (if CollectLikeTerms enabled)
+   *  5. Factor common denominators (if MergeFractionsCommonDenom enabled)
+   *  6. Factor common terms (if FactorCommonTerms enabled)
+   *  7. Merge divisions with common denominators
+   *  8. Combine numeric literals (if CombineNumericLiterals enabled)
+   *
+   * @param config simplification configuration controlling which rules apply
+   * @return simplified expression
+   */
   def simplify(implicit config: SimplificationConfig): Expr = {
     val simplified = exprs.map(_.simplify(config))
     val zero = Num(0)
@@ -309,18 +377,6 @@ final case class Add(exprs: Array[Expr]) extends Expr {
         // Extract all (numerator, denominator) pairs
         val divPairs = allDivs.collect { case Div(Array(num, den)) => (num, den) }
 
-        // Helper to compute GCD and LCM
-        def gcdDouble(a: Double, b: Double): Double = {
-          val tolerance = 1e-10
-          if (math.abs(b) < tolerance) math.abs(a)
-          else gcdDouble(b, a % b)
-        }
-
-        def lcmDouble(a: Double, b: Double): Double = {
-          if (a == 0.0 || b == 0.0) 0.0
-          else math.abs(a * b) / gcdDouble(a, b)
-        }
-
         // Extract denominator values (assuming they're Num)
         val denValues = divPairs.map(_._2).collect {
           case Num(n, d) => n / d
@@ -328,7 +384,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
 
         if (denValues.nonEmpty && denValues.length == divPairs.length) {
           // All denominators are numeric, we can find LCD
-          val lcd = denValues.reduce(lcmDouble)
+          val lcd = denValues.reduce(MathUtils.lcmDouble)
 
           // Convert all divs to have LCD as denominator
           val normalizedPairs = divPairs.map { case (num, den) =>
