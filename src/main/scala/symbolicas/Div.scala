@@ -3,33 +3,75 @@ package symbolicas
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
-/* ------------------------------------------------------------------------- */
-final case class Div(exprs: Array[Expr]) extends Expr {
+/**
+ * Division expression.
+ *
+ * Represents a chain of divisions: a / b / c / ...
+ * Multi-operand divisions are flattened to a / (b * c * d) during simplification.
+ *
+ * @param operands Vector of expressions (dividend and divisors)
+ * @throws IllegalArgumentException if operands has fewer than 2 elements
+ *
+ * @example {{{
+ *   Div(Vector(Num(6), Num(2)))      // 6 / 2 → 3
+ *   Div(Vector(Num(1, 2), Num(1, 3)))  // (1/2) / (1/3) → 3/2
+ *   Div(Vector(a, b, c))             // a / b / c → a / (b * c)
+ * }}}
+ */
+final case class Div(operands: Vector[Expr]) extends Expr {
+  require(operands.length >= 2,
+    s"Division requires at least 2 operands (dividend and divisor), got ${operands.length}")
+
   override val precedence: Int = 2
 
-  def eval(vars: Map[String, Double]): Double = {
-    val values = exprs.map(_.eval(vars))
+  /**
+   * Evaluates division by computing a / b / c / ... = a / (b * c * ...)
+   *
+   * @param variables Map of variable names to values
+   * @return Numerical result of the division
+   * @throws DivisionByZeroError if any divisor evaluates to zero
+   */
+  def eval(variables: Map[String, Double]): Double = {
+    val values = operands.map(_.eval(variables))
     values.tail.foreach { divisor =>
       if (divisor == 0.0)
-        throw new ArithmeticException("Division by zero")
+        throw DivisionByZeroError(this.toString)
     }
     values.reduce(_ / _)
   }
 
+  /**
+   * Applies symbol replacement to all operands.
+   *
+   * @param sym Symbol to replace
+   * @param repl Replacement expression
+   * @return Division with replaced operands
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
-    Div(exprs.map(_.replaceSymbol(sym, repl)))
+    Div(operands.map(_.replaceSymbol(sym, repl)))
 
+  /**
+   * Expands the division expression.
+   *
+   * If the numerator is an Add and distribution is enabled, distributes:
+   * (a + b + c) / d → a/d + b/d + c/d
+   *
+   * @param config Simplification configuration
+   * @return Expanded expression
+   *
+   * @note Time Complexity: O(n) where n is total number of nodes
+   */
   override def expand(implicit config: SimplificationConfig): Expr = {
     // Expand children first
-    val expandedChildren = exprs.map(_.expand(config))
+    val expandedChildren = operands.map(_.expand(config))
 
     // If numerator is an Add and denominator is simple, distribute
     expandedChildren match {
-      case Array(Add(addTerms), den) if config.isEnabled(DistributeProduct) =>
+      case Vector(Add(addTerms), denominator) if config.isEnabled(DistributeProduct) =>
         // Distribute: (a + b + c) / d → a/d + b/d + c/d
         // This allows further simplification by merging common denominators
         val distributedTerms = addTerms.map { term =>
-          Div(Array(term, den)).simplify(config)
+          Div(Vector(term, denominator)).simplify(config)
         }
         Add(distributedTerms).simplify(config)
 
@@ -38,128 +80,163 @@ final case class Div(exprs: Array[Expr]) extends Expr {
     }
   }
 
-  /* helper – build a simplified product --------------------------------- */
-  private def prod(xs: Seq[Expr])(implicit config: SimplificationConfig): Expr = xs.length match {
-    case 0 => Num(1)
-    case 1 => xs.head
-    case _ => Mul(xs.toArray).simplify(config)
-  }
+  /**
+   * Helper to build a simplified product from a sequence of expressions.
+   *
+   * @param expressions Expressions to multiply
+   * @param config Simplification configuration
+   * @return Product expression (or single element if only one)
+   */
+  private def buildProduct(expressions: Seq[Expr])(implicit config: SimplificationConfig): Expr =
+    expressions.length match {
+      case 0 => Num(1)
+      case 1 => expressions.head
+      case _ => Mul(expressions.toVector).simplify(config)
+    }
 
+  /**
+   * Simplifies the division expression.
+   *
+   * Transformations applied:
+   * 1. Flatten multi-operand divisions: a / b / c → a / (b * c)
+   * 2. Nested divisions: (a / b) / c → a / (b * c)
+   * 3. Inverted divisions: a / (b / c) → (a * c) / b
+   * 4. Numeric divisions: (a/b) / (c/d) → (a*d) / (b*c)
+   * 5. Division by one: a / 1 → a
+   * 6. Merge numeric factors
+   *
+   * @param config Simplification configuration
+   * @return Simplified expression
+   *
+   * @note Time Complexity: O(n) where n is the number of operands
+   */
   def simplify(implicit config: SimplificationConfig): Expr = {
-    /* simplify every child first ---------------------------------------- */
-    val children = exprs.map(_.simplify(config))
+    /* Simplify every child first */
+    val simplifiedOperands = operands.map(_.simplify(config))
 
-    /* 1)   a / b / c / d   ->   a / (b * c * d) ------------------------- */
-    if (config.isEnabled(FlattenOperations) && children.length > 2)
-      return Div(Array(children.head, prod(children.tail)(config))).simplify(config)
+    /* 1) Flatten multi-operand: a / b / c / d → a / (b * c * d) */
+    if (config.isEnabled(FlattenOperations) && simplifiedOperands.length > 2) {
+      val numerator = simplifiedOperands.head
+      val denominatorProduct = buildProduct(simplifiedOperands.tail)(config)
+      return Div(Vector(numerator, denominatorProduct)).simplify(config)
+    }
 
-    /* now at most two operands ------------------------------------------ */
-    children match {
-      /* 2) (a / b) / c  ->  a / (b * c) --------------------------------- */
-      case Array(Div(Array(num, den1)), den2) if config.isEnabled(FlattenOperations) =>
-        Div(Array(num, prod(Seq(den1, den2))(config))).simplify(config)
+    /* Now we have at most two operands */
+    simplifiedOperands match {
+      /* 2) Nested division in numerator: (a / b) / c → a / (b * c) */
+      case Vector(Div(Vector(innerNum, innerDen)), outerDen) if config.isEnabled(FlattenOperations) =>
+        val newDenominator = buildProduct(Seq(innerDen, outerDen))(config)
+        Div(Vector(innerNum, newDenominator)).simplify(config)
 
-      /* 3) a / (b / c) -> (a * c) / b ----------------------------------- */
-      case Array(num, Div(Array(den1, den2))) if config.isEnabled(FlattenOperations) =>
-        Div(Array(prod(Seq(num, den2))(config), den1)).simplify(config)
+      /* 3) Nested division in denominator: a / (b / c) → (a * c) / b */
+      case Vector(numerator, Div(Vector(innerDen1, innerDen2))) if config.isEnabled(FlattenOperations) =>
+        val newNumerator = buildProduct(Seq(numerator, innerDen2))(config)
+        Div(Vector(newNumerator, innerDen1)).simplify(config)
 
-      /* 4) fully numeric -> calculate immediately ----------------------- */
-      case Array(Num(an, ad), Num(bn, bd)) if config.isEnabled(CombineNumericLiterals) =>
-        Num(an * bd, ad * bn).simplify(config)
+      /* 4) Both operands are Num: compute directly using fraction division */
+      case Vector(dividend: Num, divisor: Num) if config.isEnabled(CombineNumericLiterals) =>
+        Num.divideFractions(dividend, divisor).simplify(config)
 
-      /* 5) divide by one ------------------------------------------------- */
-      case Array(a, Num(1, 1)) if config.isEnabled(RemoveIdentity) =>
-        a
+      /* 5) Division by one */
+      case Vector(numerator, Num(1, 1)) if config.isEnabled(RemoveIdentity) =>
+        numerator
 
-      /* 5b) Merge Num in numerator with Num denominator ---------------- */
-      /* Div([Mul([Num(a,b), rest...]), Num(c,d)]) → Div([Mul([rest...]), Num(a*d, b*c)]) */
-      case Array(Mul(factors), den @ Num(_, _)) if config.isEnabled(CombineNumericLiterals) =>
-        val (nums, others) = factors.partition(_.isInstanceOf[Num])
-        if (nums.nonEmpty) {
-          // Merge all Num factors in numerator
-          val numProduct = nums.collect { case n: Num => n }
-            .reduce((a, b) => Num(a.numerator * b.numerator, a.denominator * b.denominator))
-          // Now divide this Num by the denominator Num
-          val mergedFraction = Div(Array(numProduct, den)).simplify(config)
+      /* 6) Numerator is Mul with Num factors, denominator is Num: merge them */
+      case Vector(Mul(factors), denominator: Num) if config.isEnabled(CombineNumericLiterals) =>
+        val (numFactors, symbolicFactors) = factors.partition(_.isInstanceOf[Num])
+        if (numFactors.nonEmpty) {
+          // Merge all Num factors in numerator using multiplyFractions
+          val numeratorProduct = numFactors.collect { case n: Num => n }
+            .reduce(Num.multiplyFractions)
 
-          if (others.isEmpty) {
+          // Divide the merged numerator by the denominator
+          val mergedFraction = Num.divideFractions(numeratorProduct, denominator).simplify(config)
+
+          if (symbolicFactors.isEmpty) {
             mergedFraction
-          } else if (others.length == 1 && mergedFraction == Num(1)) {
-            others.head
           } else if (mergedFraction == Num(1)) {
-            Mul(others).simplify(config)
+            // Coefficient is 1, return just the symbolic part
+            if (symbolicFactors.length == 1) symbolicFactors.head
+            else Mul(symbolicFactors).simplify(config)
           } else {
-            Mul(Array(mergedFraction) ++ others).simplify(config)
+            // Both numeric and symbolic parts remain
+            Mul(mergedFraction +: symbolicFactors).simplify(config)
           }
         } else {
-          Div(Array(Mul(factors), den))
+          Div(Vector(Mul(factors), denominator))
         }
 
-      /* 6) If denominator is a product with numeric factors, merge them - */
-      /* This handles cases where Mul creates Div with complex denom      */
-      case Array(num, Mul(factors)) if config.isEnabled(FlattenOperations) =>
-        // If the numerator is also a Mul, we might be able to cancel factors
-        // But for now, just ensure numeric factors in denominator are merged
+      /* 7) Denominator is Mul with multiple Num factors: merge them */
+      case Vector(numerator, Mul(factors)) if config.isEnabled(FlattenOperations) =>
         val (numFactors, symbolicFactors) = factors.partition(_.isInstanceOf[Num])
         if (numFactors.length >= 2) {
-          val mergedNumDen = numFactors.collect { case n: Num => n }
-            .reduce((a, b) => Num(a.numerator * b.numerator, a.denominator * b.denominator))
+          val mergedDenominator = numFactors.collect { case n: Num => n }
+            .reduce(Num.multiplyFractions)
             .simplify(config)
-          val newDen = if (symbolicFactors.isEmpty) {
-            mergedNumDen
+
+          val newDenominator = if (symbolicFactors.isEmpty) {
+            mergedDenominator
           } else if (symbolicFactors.length == 1) {
-            Mul(Array(mergedNumDen, symbolicFactors.head)).simplify(config)
+            Mul(Vector(mergedDenominator, symbolicFactors.head)).simplify(config)
           } else {
-            Mul(Array(mergedNumDen) ++ symbolicFactors).simplify(config)
+            Mul(mergedDenominator +: symbolicFactors).simplify(config)
           }
-          Div(Array(num, newDen)).simplify(config)
+          Div(Vector(numerator, newDenominator)).simplify(config)
         } else {
-          Div(Array(num, Mul(factors)))
+          Div(Vector(numerator, Mul(factors)))
         }
 
-      /* 7) If numerator is Add with all Divs of same denom, simplify --- */
-      case Array(Add(addTerms), den) if config.isEnabled(MergeFractionsCommonDenom) =>
-        // Check if all terms in the Add are Divs with the same denominator
+      /* 8) Numerator is Add of Divs with same denominator: ((a/d + b/d + ...) / e) → (a+b+...) / (d*e) */
+      case Vector(Add(addTerms), outerDenominator) if config.isEnabled(MergeFractionsCommonDenom) =>
         val allDivs = addTerms.forall(_.isInstanceOf[Div])
         if (allDivs && addTerms.length > 1) {
-          val divTerms = addTerms.collect { case Div(Array(n, d)) => (n, d) }
-          val denominators = divTerms.map(_._2.toString).toSet
+          val divTerms = addTerms.collect { case Div(Vector(n, d)) => (n, d) }
 
-          if (denominators.size == 1) {
-            // All have same denominator, so (a/d + b/d + ...) / den = (a + b + ...) / (d * den)
-            val commonDenom = divTerms.head._2
+          // Check if all have the same denominator (using structural equality from Vector)
+          val firstDenominator = divTerms.head._2
+          val allSameDenominator = divTerms.tail.forall(_._2 == firstDenominator)
+
+          if (allSameDenominator) {
+            // All have same denominator: (a/d + b/d + ...) / e = (a+b+...) / (d*e)
             val numerators = divTerms.map(_._1)
-            val sumNumerators = Add(numerators).simplify(config)
-            Div(Array(sumNumerators, prod(Seq(commonDenom, den))(config))).simplify(config)
+            val sumOfNumerators = Add(numerators).simplify(config)
+            val combinedDenominator = buildProduct(Seq(firstDenominator, outerDenominator))(config)
+            Div(Vector(sumOfNumerators, combinedDenominator)).simplify(config)
           } else {
-            Div(Array(Add(addTerms), den))
+            Div(Vector(Add(addTerms), outerDenominator))
           }
         } else {
-          Div(Array(Add(addTerms), den))
+          Div(Vector(Add(addTerms), outerDenominator))
         }
 
-      /* default ---------------------------------------------------------- */
-      case Array(a, b) =>
-        Div(Array(a, b))
+      /* Default: no simplification possible */
+      case Vector(numerator, denominator) =>
+        Div(Vector(numerator, denominator))
 
       case _ =>
-        Div(children)
+        Div(simplifiedOperands)
     }
   }
 
   override def toString: String = {
-    if (exprs.length == 2) {
-      val num = exprs(0)
-      val den = exprs(1)
+    if (operands.length == 2) {
+      val numerator = operands(0)
+      val denominator = operands(1)
 
       // For cleaner output, add parentheses to denominators when needed
-      val numStr = if (num.precedence < this.precedence) s"($num)" else num.toString
-      val denStr = if (den.precedence <= this.precedence) s"($den)" else den.toString
+      val numeratorStr = if (numerator.precedence < this.precedence)
+        s"($numerator)"
+      else
+        numerator.toString
 
-      s"$numStr/$denStr"
+      val denominatorStr = if (denominator.precedence <= this.precedence)
+        s"($denominator)"
+      else
+        denominator.toString
+
+      s"$numeratorStr/$denominatorStr"
     } else {
-      exprs.map(e => showWithParens(e, this)).mkString(" / ")
+      operands.map(e => showWithParens(e, this)).mkString(" / ")
     }
   }
 }
-

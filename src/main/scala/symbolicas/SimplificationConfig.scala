@@ -47,6 +47,7 @@ object SimplificationRule extends Enumeration {
 }
 
 import SimplificationRule._
+import symbolicas.NumericConstants._
 
 /**
  * Configuration for simplification operations.
@@ -55,10 +56,14 @@ import SimplificationRule._
  * Rules are applied in the order specified in the list.
  *
  * @param enabledRules Ordered list of enabled simplification rules
+ * @param maxExpansionTerms Maximum number of terms allowed after expansion (prevents combinatorial explosion)
  */
 case class SimplificationConfig(
-  enabledRules: List[SimplificationRule] = SimplificationConfig.DefaultRules
+  enabledRules: List[SimplificationRule] = SimplificationConfig.DefaultRules,
+  maxExpansionTerms: Int = DEFAULT_MAX_EXPANSION_TERMS
 ) {
+
+  require(maxExpansionTerms > 0, s"maxExpansionTerms must be positive, got $maxExpansionTerms")
 
   /** Check if a rule is enabled */
   def isEnabled(rule: SimplificationRule): Boolean = enabledRules.contains(rule)
