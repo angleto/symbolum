@@ -55,7 +55,7 @@ import symbolicas.NumericConstants._
  *
  * @see [[SimplificationConfig]] for controlling which simplification rules are applied
  */
-trait Expr {
+sealed trait Expr {
   /**
    * Precedence level for pretty printing.
    *
@@ -65,10 +65,20 @@ trait Expr {
    * Precedence levels:
    *  - 1: Addition, Subtraction
    *  - 2: Multiplication, Division
-   *  - 3: Negation
-   *  - 4: Atomic expressions (Num, Var, Cos)
+   *  - 3: Negation, Power
+   *  - 4: Atomic expressions (Num, Var, Cos, Sin, Tan, Exp, Log)
    */
   def precedence: Int = 10
+
+  /**
+   * Structural hash code for fast equality and fixpoint detection.
+   *
+   * This hash is computed lazily and cached for performance.
+   * Enables O(1) comparison instead of O(n) string comparison in fullSimplify.
+   *
+   * @return Hash code based on expression structure
+   */
+  lazy val structuralHash: Int = this.hashCode
 
   /**
    * Evaluate the expression numerically given variable assignments.
@@ -192,7 +202,7 @@ trait Expr {
   def fullSimplify(implicit config: SimplificationConfig = SimplificationConfig.Default,
                    maxIter: Int = MAX_ITERATIONS): Expr = {
     @tailrec
-    def loop(expr: Expr, iterationsLeft: Int, previousStr: String): Expr = {
+    def loop(expr: Expr, iterationsLeft: Int, previousHash: Int): Expr = {
       if (iterationsLeft <= 0) {
         // Safety limit reached - return what we have
         return expr
@@ -209,13 +219,13 @@ trait Expr {
       val step6 = step5.simplify(config)
       val step7 = step6.simplify(config)  // Double simplify for cascading effects
 
-      val currentStr = step7.toString
+      val currentHash = step7.structuralHash
 
-      // Check if we've reached a fixpoint
-      if (currentStr == previousStr) {
+      // Check if we've reached a fixpoint using structural hash (O(1) instead of O(n))
+      if (currentHash == previousHash) {
         step7
       } else {
-        loop(step7, iterationsLeft - 1, currentStr)
+        loop(step7, iterationsLeft - 1, currentHash)
       }
     }
 
@@ -223,7 +233,7 @@ trait Expr {
     val step0 = this.simplify(config)
     val step1 = step0.expand(config)
     val initial = step1.simplify(config)
-    loop(initial, maxIter, initial.toString)
+    loop(initial, maxIter, initial.structuralHash)
   }
 
   /* -------- helper for pretty printing ------------------------------------ */

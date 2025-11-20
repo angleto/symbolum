@@ -6,24 +6,6 @@ import SimplificationRule._
 import NumericConstants._
 
 /**
- * Addition expression.
- *
- * Represents an n-ary sum: a + b + c + ...
- * Supports fraction merging, like term collection, and common factor extraction.
- *
- * @param terms Vector of expressions to add
- * @throws IllegalArgumentException if terms is empty
- *
- * @example {{{
- *   Add(Vector(Var("x"), Num(2)))           // x + 2
- *   Add(Vector(Num(1, 2), Num(1, 3)))       // 1/2 + 1/3
- *   Add(Vector(Var("x"), Mul(Vector(Num(2), Var("x")))))  // x + 2*x → 3*x (when simplified)
- * }}}
- */
-final case class Add(terms: Vector[Expr]) extends Expr {
-  require(terms.nonEmpty, "Addition requires at least one term")
-
-/**
  * Represents n-ary addition of expressions.
  *
  * Addition is commutative and associative, with 0 as the identity element.
@@ -41,7 +23,8 @@ final case class Add(terms: Vector[Expr]) extends Expr {
  *  - '''Common term factoring''': a*b + a*c → a*(b+c)
  *  - '''Numeric literal combination''': 2 + 3 → 5
  *
- * @param exprs array of expressions to add
+ * @param terms Vector of expressions to add
+ * @throws IllegalArgumentException if terms is empty
  *
  * @example {{{
  * import symbolicas._
@@ -50,18 +33,20 @@ final case class Add(terms: Vector[Expr]) extends Expr {
  * val x = Var("x")
  *
  * // Simple addition
- * val sum1 = Add(Array(x, Num(1)))  // x + 1
+ * val sum1 = Add(Vector(x, Num(1)))  // x + 1
  *
  * // Multiple terms
- * val sum2 = Add(Array(x, Num(2), x, Num(3)))  // x + 2 + x + 3
+ * val sum2 = Add(Vector(x, Num(2), x, Num(3)))  // x + 2 + x + 3
  * sum2.simplify()  // 2*x + 5
  *
  * // Fraction merging
- * val sum3 = Add(Array(Num(1,2), Num(1,3)))  // 1/2 + 1/3
+ * val sum3 = Add(Vector(Num(1,2), Num(1,3)))  // 1/2 + 1/3
  * sum3.simplify()  // 5/6
  * }}}
  */
-final case class Add(exprs: Array[Expr]) extends Expr {
+final case class Add(terms: Vector[Expr]) extends Expr {
+  require(terms.nonEmpty, "Addition requires at least one term")
+
   override val precedence: Int = 1
 
   /* -------------------------------------------------------------------------
@@ -74,7 +59,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       case Num(num, den) if MathUtils.isWhole(den) =>
         Some((Num(num).simplify(config), den.toInt))
 
-      case Div(Array(numExpr, Num(denNum, denDen)))
+      case Div(Vector(numExpr, Num(denNum, denDen)))
         if denDen == 1.0 && MathUtils.isWhole(denNum) =>
         Some((numExpr, denNum.toInt))
 
@@ -85,7 +70,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
 
     /* Only proceed if we succeeded for every single term and we really
        *have* at least two fractions                                    */
-    if (extracted.forall(_.isDefined) && terms.length > 1) {
+    if (extracted.forall(_.isDefined) && termSeq.length > 1) {
       val fracs = extracted.map(_.get)
       val denominators = fracs.map(_._2)
       val commonDenominator = denominators.reduce(MathUtils.lcmInt)
@@ -94,7 +79,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
         None // nothing to do
       } else {
         /* Scale every numerator to match the common denominator */
-        val scaledNumerators = fractions.map { case (numeratorExpr, denom) =>
+        val scaledNumerators = fracs.map { case (numeratorExpr, denom) =>
           val scaleFactor = commonDenominator / denom
           if (scaleFactor == 1) numeratorExpr
           else Mul(Vector(numeratorExpr, Num(scaleFactor))).simplify(config)
@@ -243,7 +228,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
    * @return sum of all term evaluations
    */
   def eval(vars: Map[String, Double]): Double =
-    exprs.map(_.eval(vars)).sum
+    terms.map(_.eval(vars)).sum
 
   /**
    * Replace a symbol throughout this sum.
@@ -253,7 +238,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
    * @return new sum with substitution applied to all terms
    */
   def replaceSymbol(sym: String, repl: Expr): Expr =
-    Add(exprs.map(_.replaceSymbol(sym, repl)))
+    Add(terms.map(_.replaceSymbol(sym, repl)))
 
   /**
    * Expand this addition expression.
@@ -367,16 +352,16 @@ final case class Add(exprs: Array[Expr]) extends Expr {
 
       if (allDivisions.length >= 2) {
         // Extract all (numerator, denominator) pairs
-        val divPairs = allDivs.collect { case Div(Array(num, den)) => (num, den) }
+        val divPairs = allDivisions.collect { case Div(Vector(num, den)) => (num, den) }
 
         // Extract denominator values (assuming they're Num)
-        val denominatorValues = divisionPairs.map(_._2).collect {
+        val denominatorValues = divPairs.map(_._2).collect {
           case Num(numerator, denominator) => numerator / denominator
         }
 
-        if (denominatorValues.nonEmpty && denominatorValues.length == divisionPairs.length) {
+        if (denominatorValues.nonEmpty && denominatorValues.length == divPairs.length) {
           // All denominators are numeric, we can find LCD
-          val lcd = denValues.reduce(MathUtils.lcmDouble)
+          val lcd = denominatorValues.reduce(MathUtils.lcmDouble)
 
           // Convert all divs to have LCD as denominator
           val normalizedPairs = divPairs.map { case (num, den) =>
@@ -387,10 +372,10 @@ final case class Add(exprs: Array[Expr]) extends Expr {
                 val newNum = if (multiplier == 1.0) {
                   num
                 } else {
-                  Mul(Vector(Num(multiplier), numerator)).simplify(config)
+                  Mul(Vector(Num(multiplier), num)).simplify(config)
                 }
-                (newNumerator, Num(lcd))
-              case _ => (numerator, denominator)  // Can't normalize non-numeric denominator
+                (newNum, Num(lcd))
+              case _ => (num, den)  // Can't normalize non-numeric denominator
             }
           }
 
