@@ -2,39 +2,62 @@
   <!-- Background circle -->
   <circle cx="200" cy="200" r="180" fill="#2E3440" stroke="#4C566A" stroke-width="4"/>
 
-  <!-- Main Sigma symbol (Σ) with gradient -->
+  <!-- Gradients -->
   <defs>
-    <linearGradient id="symbolGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="sigmaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#88C0D0;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#5E81AC;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="integralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#BF616A;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#D08770;stop-opacity:1" />
     </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <!-- Stylized Sigma (Σ) for symbolic mathematics -->
-  <path d="M 140 120 L 260 120 L 200 200 L 260 280 L 140 280 L 140 260 L 220 260 L 170 200 L 220 140 L 140 140 Z"
-        fill="url(#symbolGradient)"
+  <!-- Sigma Symbol (Σ) - correctly oriented -->
+  <path d="M 130 100 L 250 100 L 190 200 L 250 300 L 130 300 L 130 280 L 210 280 L 160 200 L 210 120 L 130 120 Z"
+        fill="url(#sigmaGradient)"
         stroke="#ECEFF4"
         stroke-width="3"
-        stroke-linejoin="round"/>
+        stroke-linejoin="round"
+        opacity="0.95"/>
 
-  <!-- Mathematical accent elements -->
-  <!-- Integral symbol (∫) - smaller, as accent -->
-  <path d="M 280 160 Q 285 150 290 145 Q 295 140 300 140 Q 302 140 302 142 L 302 230 Q 302 235 305 238 Q 308 240 312 240"
-        stroke="url(#accentGradient)"
-        stroke-width="4"
+  <!-- Integral Symbol (∫) - interwoven with Sigma -->
+  <path d="M 240 120 Q 250 110 260 105 Q 270 100 280 100 Q 285 100 285 105 Q 285 110 285 115
+           L 285 285 Q 285 290 288 293 Q 291 296 295 298 Q 300 300 305 300"
+        stroke="url(#integralGradient)"
+        stroke-width="12"
         fill="none"
-        stroke-linecap="round"/>
+        stroke-linecap="round"
+        opacity="0.95"
+        filter="url(#glow)"/>
 
-  <!-- Derivative notation (d/dx) - as small accent -->
-  <text x="95" y="250" font-family="Times New Roman, serif" font-size="32" fill="url(#accentGradient)" font-style="italic">∂</text>
+  <!-- Integral hook at top -->
+  <path d="M 280 100 Q 275 95 270 93 Q 265 91 260 92"
+        stroke="url(#integralGradient)"
+        stroke-width="12"
+        fill="none"
+        stroke-linecap="round"
+        opacity="0.95"/>
 
-  <!-- Small dots representing variables/terms -->
-  <circle cx="290" cy="260" r="4" fill="#A3BE8C"/>
-  <circle cx="305" cy="270" r="4" fill="#A3BE8C"/>
-  <circle cx="100" cy="165" r="4" fill="#EBCB8B"/>
-  <circle cx="85" cy="175" r="4" fill="#EBCB8B"/>
+  <!-- Integral hook at bottom -->
+  <path d="M 305 300 Q 310 302 315 305 Q 320 308 323 313"
+        stroke="url(#integralGradient)"
+        stroke-width="12"
+        fill="none"
+        stroke-linecap="round"
+        opacity="0.95"/>
+
+  <!-- Accent elements - mathematical dots/terms -->
+  <circle cx="110" cy="150" r="5" fill="#A3BE8C" opacity="0.8"/>
+  <circle cx="95" cy="165" r="5" fill="#A3BE8C" opacity="0.8"/>
+  <circle cx="330" cy="250" r="5" fill="#EBCB8B" opacity="0.8"/>
+  <circle cx="345" cy="265" r="5" fill="#EBCB8B" opacity="0.8"/>
 </svg>
