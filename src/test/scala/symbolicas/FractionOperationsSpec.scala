@@ -2,7 +2,7 @@ package symbolicas
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import symbolicas.{Expr, Num, Var, Add, Mul, Div, Neg, SimplificationConfig}
+import symbolicas.{Expr, Num, Var, Add, Mul, Div, Neg, Pow, Cos, SimplificationConfig}
 import symbolicas.Dsl
 import Dsl.{ExprOps, intToNum, doubleToNum, cos, pi}
 
@@ -219,5 +219,80 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
     // Expected: n/2
     result should be (a[Div])
+  }
+
+  "Negative numerator simplification" should "factor out negative from simple expression" in {
+    val n = Var("n")
+    // Test: (-1 - 1 * n)/8 should simplify to -(1 + n)/8
+    val test = Div(Vector(
+      Add(Vector(Num(-1), Mul(Vector(Num(-1), n)))),
+      Num(8)
+    ))
+    val result = test.fullSimplify
+
+    // Expected: -1 * (1 + n)/8
+    result should be (a[Mul])
+    val mulExpr = result.asInstanceOf[Mul]
+    mulExpr.factors should have length 2
+    mulExpr.factors.head should equal (Num(-1))
+    mulExpr.factors(1) should be (a[Div])
+  }
+
+  it should "factor out negative from expression with multiple terms" in {
+    val n = Var("n")
+    // Test: (-2 - 3*n)/4 should simplify to -(2 + 3*n)/4
+    val test = Div(Vector(
+      Add(Vector(Num(-2), Mul(Vector(Num(-3), n)))),
+      Num(4)
+    ))
+    val result = test.fullSimplify
+
+    // Expected: -1 * (2 + 3*n)/4
+    result should be (a[Mul])
+    val mulExpr = result.asInstanceOf[Mul]
+    mulExpr.factors.head should equal (Num(-1))
+    mulExpr.factors(1) should be (a[Div])
+  }
+
+  it should "factor out negative from expression with polynomial" in {
+    val n = Var("n")
+    // Test: (-1 - 2*n - 3*n^2)/6 should simplify to -(1 + 2*n + 3*n^2)/6
+    val test = Div(Vector(
+      Add(Vector(
+        Num(-1),
+        Mul(Vector(Num(-2), n)),
+        Mul(Vector(Num(-3), Pow(n, Num(2))))
+      )),
+      Num(6)
+    ))
+    val result = test.fullSimplify
+
+    // Expected: -1 * (1 + 2*n + 3*n^2)/6
+    result should be (a[Mul])
+    val mulExpr = result.asInstanceOf[Mul]
+    mulExpr.factors.head should equal (Num(-1))
+  }
+
+  it should "not factor out when not all terms are negative" in {
+    val n = Var("n")
+    // Test: (-1 + 2*n)/8 should NOT be factored (mixed signs)
+    val test = Div(Vector(
+      Add(Vector(Num(-1), Mul(Vector(Num(2), n)))),
+      Num(8)
+    ))
+    val result = test.fullSimplify
+
+    // Expected: Should remain as division (not wrapped in Mul with -1)
+    result should be (a[Div])
+  }
+
+  it should "simplify single negative number in numerator" in {
+    val n = Var("n")
+    // Test: (-3)/4 should remain as Num(-3, 4) after full simplification
+    val test = Div(Vector(Num(-3), Num(4)))
+    val result = test.fullSimplify
+
+    // This should just be a Num with negative numerator
+    result should equal (Num(-3, 4))
   }
 }

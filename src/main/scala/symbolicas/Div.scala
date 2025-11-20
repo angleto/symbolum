@@ -95,6 +95,46 @@ final case class Div(operands: Vector[Expr]) extends Expr {
     }
 
   /**
+   * Helper to check if an expression has a negative coefficient.
+   *
+   * @param expr Expression to check
+   * @return True if the expression has a negative leading coefficient
+   */
+  private def hasNegativeCoefficient(expr: Expr): Boolean = expr match {
+    case Num(n, _) if n < 0 => true
+    case Mul(factors) if factors.nonEmpty =>
+      factors.head match {
+        case Num(n, _) if n < 0 => true
+        case _ => false
+      }
+    case _ => false
+  }
+
+  /**
+   * Helper to negate an expression by flipping the sign of its coefficient.
+   *
+   * @param expr Expression to negate
+   * @param config Simplification configuration
+   * @return Expression with negated coefficient
+   */
+  private def negateCoefficient(expr: Expr)(implicit config: SimplificationConfig): Expr = expr match {
+    case Num(n, d) => Num(-n, d)
+    case Mul(factors) if factors.nonEmpty =>
+      factors.head match {
+        case Num(n, d) =>
+          val negatedNum = Num(-n, d)
+          if (factors.tail.isEmpty) negatedNum
+          else Mul(negatedNum +: factors.tail).simplify(config)
+        case _ =>
+          // No numeric coefficient, prepend -1
+          Mul(Num(-1) +: factors).simplify(config)
+      }
+    case _ =>
+      // No numeric coefficient, multiply by -1
+      Mul(Vector(Num(-1), expr)).simplify(config)
+  }
+
+  /**
    * Simplifies the division expression.
    *
    * Transformations applied:
@@ -104,6 +144,7 @@ final case class Div(operands: Vector[Expr]) extends Expr {
    * 4. Numeric divisions: (a/b) / (c/d) → (a*d) / (b*c)
    * 5. Division by one: a / 1 → a
    * 6. Merge numeric factors
+   * 7. Factor negative numerators: (-a - b) / c → -(a + b) / c
    *
    * @param config Simplification configuration
    * @return Simplified expression
@@ -207,6 +248,19 @@ final case class Div(operands: Vector[Expr]) extends Expr {
           }
         } else {
           Div(Vector(Add(addTerms), outerDenominator))
+        }
+
+      /* 9) Numerator is Add with all negative terms: factor out -1 */
+      case Vector(Add(addTerms), denominator) if config.isEnabled(CombineNumericLiterals) =>
+        // Check if all terms have negative coefficients
+        if (addTerms.nonEmpty && addTerms.forall(hasNegativeCoefficient)) {
+          // Factor out -1 from all terms
+          val negatedTerms = addTerms.map(negateCoefficient)
+          val positiveNumerator = Add(negatedTerms).simplify
+          // Return -(positive_numerator / denominator)
+          Mul(Vector(Num(-1), Div(Vector(positiveNumerator, denominator)))).simplify
+        } else {
+          Div(Vector(Add(addTerms), denominator))
         }
 
       /* Default: no simplification possible */
