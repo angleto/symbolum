@@ -129,13 +129,13 @@ class ConfigurationSpec extends AnyFlatSpec with Matchers {
 
   "Collatz0 configuration" should "produce clean output" in {
     val n = Var("n")
-    val collatz1 = Add(Array(
+    val collatz1 = Add(Vector(
       n,
       Num(1, 4),
-      Mul(Array(
+      Mul(Vector(
         Num(-1),
-        Div(Array(Add(Array(Mul(Array(Num(2), n)), Num(1))), Num(4))),
-        Cos(Mul(Array(n, pi)))
+        Div(Vector(Add(Vector(Mul(Vector(Num(2), n)), Num(1))), Num(4))),
+        Cos(Mul(Vector(n, pi)))
       ))
     ))
 
@@ -148,7 +148,7 @@ class ConfigurationSpec extends AnyFlatSpec with Matchers {
 
   it should "apply distribution" in {
     val n = Var("n")
-    val expr = Mul(Array(Num(2), Add(Array(n, Num(1)))))
+    val expr = Mul(Vector(Num(2), Add(Vector(n, Num(1)))))
 
     val simplified = expr.fullSimplify(SimplificationConfig.Collatz0)
 
