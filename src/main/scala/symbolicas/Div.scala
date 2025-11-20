@@ -244,10 +244,28 @@ final case class Div(operands: Vector[Expr]) extends Expr {
             val combinedDenominator = buildProduct(Seq(firstDenominator, outerDenominator))(config)
             Div(Vector(sumOfNumerators, combinedDenominator)).simplify(config)
           } else {
-            Div(Vector(Add(addTerms), outerDenominator))
+            // Not all same denominator, check for negative numerators before returning
+            if (config.isEnabled(CombineNumericLiterals) && addTerms.nonEmpty && addTerms.forall(hasNegativeCoefficient)) {
+              // Factor out -1 from all terms
+              val negatedTerms = addTerms.map(negateCoefficient)
+              val positiveNumerator = Add(negatedTerms).simplify
+              // Return -(positive_numerator / denominator)
+              Mul(Vector(Num(-1), Div(Vector(positiveNumerator, outerDenominator)))).simplify
+            } else {
+              Div(Vector(Add(addTerms), outerDenominator))
+            }
           }
         } else {
-          Div(Vector(Add(addTerms), outerDenominator))
+          // Not all Divs, check for negative numerators before returning
+          if (config.isEnabled(CombineNumericLiterals) && addTerms.nonEmpty && addTerms.forall(hasNegativeCoefficient)) {
+            // Factor out -1 from all terms
+            val negatedTerms = addTerms.map(negateCoefficient)
+            val positiveNumerator = Add(negatedTerms).simplify
+            // Return -(positive_numerator / denominator)
+            Mul(Vector(Num(-1), Div(Vector(positiveNumerator, outerDenominator)))).simplify
+          } else {
+            Div(Vector(Add(addTerms), outerDenominator))
+          }
         }
 
       /* 9) Numerator is Add with all negative terms: factor out -1 */
