@@ -1,0 +1,42 @@
+<svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo with text version -->
+  <defs>
+    <linearGradient id="symbolGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#88C0D0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5E81AC;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#88C0D0;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#5E81AC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#81A1C1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="200" fill="#2E3440" rx="10"/>
+
+  <!-- Icon part - Sigma symbol -->
+  <g transform="translate(30, 30)">
+    <circle cx="70" cy="70" r="65" fill="#3B4252" stroke="#4C566A" stroke-width="2"/>
+    <path d="M 45 45 L 95 45 L 70 70 L 95 95 L 45 95 L 45 88 L 83 88 L 61 70 L 83 52 L 45 52 Z"
+          fill="url(#symbolGradient2)"
+          stroke="#ECEFF4"
+          stroke-width="2"
+          stroke-linejoin="round"/>
+  </g>
+
+  <!-- Text "SYMBOLICAS" -->
+  <text x="180" y="115"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="52"
+        font-weight="bold"
+        fill="url(#textGradient)"
+        letter-spacing="2">SYMBOLICAS</text>
+
+  <!-- Subtitle -->
+  <text x="182" y="145"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        fill="#88C0D0"
+        letter-spacing="3">COMPUTER ALGEBRA SYSTEM</text>
+</svg>
