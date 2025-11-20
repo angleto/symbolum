@@ -17,14 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Equation solver (Solve):** Linear and quadratic equation solving with symbolic coefficients
 - **Expression cache (ExprCache):** Hash consing for memory optimization (50-90% reduction)
 - **Structural hash:** Lazy-evaluated hash for O(1) equality comparison
+- **Approximate equality:** Tolerance-based comparison for robust fixpoint detection with floating-point values
 
 ### Changed
-- **Performance:** 100x faster fixpoint detection using structural hash instead of string comparison
 - **Expr trait:** Now sealed for exhaustive pattern matching
 - **DSL enhancements:** Added `^` power operator, sin(), tan(), exp(), log() functions
 - **NumericConstants:** Added constant for natural base e
 
 ### Fixed
+- **Critical:** Fixed hash collision bug in fullSimplify() fixpoint detection that could terminate prematurely
+  - Replaced hash-based comparison with proper structural equality
+  - Added approxEqual() for tolerance-based comparison to handle floating-point precision
+  - See docs/history/v4.0/BUGFIX_SIMPLIFICATION.md for details
+- **Critical:** Fixed Mul.simplify() losing symbolic factors when no numeric coefficients present
+  - Bug caused expressions like `n * pi` to incorrectly simplify to `1`
+  - Affected all pure symbolic multiplication (e.g., `x * y`, `a * b * c`)
+  - See docs/history/v4.0/BUGFIX_MUL_SIMPLIFY.md for details
 - **Critical:** Fixed duplicate class definition in Add.scala
 - **Critical:** Fixed variable name inconsistencies causing compilation errors
 - **Critical:** Resolved Array vs Vector type mismatches
