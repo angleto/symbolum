@@ -62,11 +62,11 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute cos * (sum)" in {
     val n = Var("n")
-    val a = Var("a")
+    val varA = Var("a")
     val b = Var("b")
     val test = Mul(Vector(
       Cos(Mul(Vector(n, pi))),
-      Add(Vector(a, b))
+      Add(Vector(varA, b))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -118,17 +118,17 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "distribute nested Mul-Add" in {
-    val a = Var("a")
+    val varA = Var("a")
     val b = Var("b")
     val d = Var("d")
     val e = Var("e")
 
     val test = Mul(Vector(
-      Cos(a),
+      Cos(varA),
       Add(Vector(
         b,
         Mul(Vector(
-          Cos(Cos(a)),
+          Cos(Cos(varA)),
           Add(Vector(d, e))
         ))
       ))
