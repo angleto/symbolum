@@ -2,62 +2,19 @@
   <!-- Background circle -->
   <circle cx="200" cy="200" r="180" fill="#2E3440" stroke="#4C566A" stroke-width="4"/>
 
-  <!-- Gradients -->
+  <!-- Gradient for Sigma -->
   <defs>
     <linearGradient id="sigmaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#88C0D0;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#81A1C1;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#5E81AC;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="integralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#BF616A;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#D08770;stop-opacity:1" />
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
 
-  <!-- Sigma Symbol (Σ) - correctly oriented -->
-  <path d="M 130 100 L 250 100 L 190 200 L 250 300 L 130 300 L 130 280 L 210 280 L 160 200 L 210 120 L 130 120 Z"
+  <!-- Greek Uppercase Sigma (Σ) -->
+  <path d="M 110 90 L 290 90 L 290 115 L 160 115 L 240 200 L 160 285 L 290 285 L 290 310 L 110 310 L 110 280 L 210 280 L 140 200 L 210 120 L 110 120 Z"
         fill="url(#sigmaGradient)"
         stroke="#ECEFF4"
-        stroke-width="3"
-        stroke-linejoin="round"
-        opacity="0.95"/>
-
-  <!-- Integral Symbol (∫) - interwoven with Sigma -->
-  <path d="M 240 120 Q 250 110 260 105 Q 270 100 280 100 Q 285 100 285 105 Q 285 110 285 115
-           L 285 285 Q 285 290 288 293 Q 291 296 295 298 Q 300 300 305 300"
-        stroke="url(#integralGradient)"
-        stroke-width="12"
-        fill="none"
-        stroke-linecap="round"
-        opacity="0.95"
-        filter="url(#glow)"/>
-
-  <!-- Integral hook at top -->
-  <path d="M 280 100 Q 275 95 270 93 Q 265 91 260 92"
-        stroke="url(#integralGradient)"
-        stroke-width="12"
-        fill="none"
-        stroke-linecap="round"
-        opacity="0.95"/>
-
-  <!-- Integral hook at bottom -->
-  <path d="M 305 300 Q 310 302 315 305 Q 320 308 323 313"
-        stroke="url(#integralGradient)"
-        stroke-width="12"
-        fill="none"
-        stroke-linecap="round"
-        opacity="0.95"/>
-
-  <!-- Accent elements - mathematical dots/terms -->
-  <circle cx="110" cy="150" r="5" fill="#A3BE8C" opacity="0.8"/>
-  <circle cx="95" cy="165" r="5" fill="#A3BE8C" opacity="0.8"/>
-  <circle cx="330" cy="250" r="5" fill="#EBCB8B" opacity="0.8"/>
-  <circle cx="345" cy="265" r="5" fill="#EBCB8B" opacity="0.8"/>
+        stroke-width="4"
+        stroke-linejoin="round"/>
 </svg>
