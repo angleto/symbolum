@@ -1,10 +1,16 @@
-# Symbolicas
+<p align="center">
+  <img src="logo-text.svg" alt="Symbolicas Logo" width="600"/>
+</p>
 
-A **production-ready Scala Computer Algebra System (CAS)** for symbolic mathematics with calculus, equation solving, and advanced simplification.
+<p align="center">
+  <strong>A production-ready Scala Computer Algebra System (CAS) for symbolic mathematics with calculus, equation solving, and advanced simplification.</strong>
+</p>
 
-[![Scala Version](https://img.shields.io/badge/scala-3.3.5-red.svg)](https://www.scala-lang.org/)
-[![Version](https://img.shields.io/badge/version-4.0.0--SNAPSHOT-blue.svg)](CHANGELOG.md)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://www.scala-lang.org/"><img src="https://img.shields.io/badge/scala-3.3.5-red.svg" alt="Scala Version"/></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-4.0.0--SNAPSHOT-blue.svg" alt="Version"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"/></a>
+</p>
 
 ## Overview
 
