@@ -2,6 +2,7 @@ package symbolicas
 
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
+import scala.util.boundary
 
 /**
  * Equation solver for symbolic expressions.
@@ -177,55 +178,57 @@ object Solve {
    */
   private def extractQuadraticCoefficients(expr: Expr, variable: String)
                                           (implicit config: SimplificationConfig): Option[(Expr, Expr, Expr)] = {
-    val simplified = expr.simplify(config).expand(config).simplify(config)
+    boundary {
+      val simplified = expr.simplify(config).expand(config).simplify(config)
 
-    // Collect terms by degree
-    val terms = simplified match {
-      case Add(ts) => ts
-      case other => Vector(other)
-    }
+      // Collect terms by degree
+      val terms = simplified match {
+        case Add(ts) => ts
+        case other => Vector(other)
+      }
 
-    var a: Expr = Num(0)  // coefficient of x^2
-    var b: Expr = Num(0)  // coefficient of x
-    var c: Expr = Num(0)  // constant term
+      var a: Expr = Num(0)  // coefficient of x^2
+      var b: Expr = Num(0)  // coefficient of x
+      var c: Expr = Num(0)  // constant term
 
-    for (term <- terms) {
-      term match {
-        // x^2 term
-        case Pow(Var(v), Num(2, _)) if v == variable =>
-          a = Add(Vector(a, Num(1))).simplify(config)
+      for (term <- terms) {
+        term match {
+          // x^2 term
+          case Pow(Var(v), Num(2, _)) if v == variable =>
+            a = Add(Vector(a, Num(1))).simplify(config)
 
-        case Mul(factors) if factors.exists {
-          case Pow(Var(v), Num(2, _)) if v == variable => true
-          case _ => false
-        } =>
-          val coeff = factors.filterNot {
+          case Mul(factors) if factors.exists {
             case Pow(Var(v), Num(2, _)) if v == variable => true
             case _ => false
-          }
-          val coeffExpr = if (coeff.isEmpty) Num(1) else if (coeff.length == 1) coeff.head else Mul(coeff).simplify(config)
-          a = Add(Vector(a, coeffExpr)).simplify(config)
+          } =>
+            val coeff = factors.filterNot {
+              case Pow(Var(v), Num(2, _)) if v == variable => true
+              case _ => false
+            }
+            val coeffExpr = if (coeff.isEmpty) Num(1) else if (coeff.length == 1) coeff.head else Mul(coeff).simplify(config)
+            a = Add(Vector(a, coeffExpr)).simplify(config)
 
-        // x term
-        case Var(v) if v == variable =>
-          b = Add(Vector(b, Num(1))).simplify(config)
+          // x term
+          case Var(v) if v == variable =>
+            b = Add(Vector(b, Num(1))).simplify(config)
 
-        case Mul(Vector(coeff, Var(v))) if v == variable =>
-          b = Add(Vector(b, coeff)).simplify(config)
+          case Mul(Vector(coeff, Var(v))) if v == variable =>
+            b = Add(Vector(b, coeff)).simplify(config)
 
-        case Mul(Vector(Var(v), coeff)) if v == variable =>
-          b = Add(Vector(b, coeff)).simplify(config)
+          case Mul(Vector(Var(v), coeff)) if v == variable =>
+            b = Add(Vector(b, coeff)).simplify(config)
 
-        // Constant term
-        case _ if !containsVariable(term, variable) =>
-          c = Add(Vector(c, term)).simplify(config)
+          // Constant term
+          case _ if !containsVariable(term, variable) =>
+            c = Add(Vector(c, term)).simplify(config)
 
-        case _ =>
-          return None  // Term has degree > 2 or unsupported form
+          case _ =>
+            boundary.break(None)  // Term has degree > 2 or unsupported form
+        }
       }
-    }
 
-    Some((a, b, c))
+      Some((a, b, c))
+    }
   }
 
   /**
