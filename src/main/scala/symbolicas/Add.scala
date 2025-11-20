@@ -101,7 +101,7 @@ final case class Add(terms: Vector[Expr]) extends Expr {
     def extractCoeffAndBase(e: Expr): (Num, Expr) = e match {
       case n @ Num(_, _) => (n, Num(1))
       case Mul(Vector(n: Num, rest @ _*)) if rest.nonEmpty =>
-        (n, if (rest.length == 1) rest.head else Mul(rest))
+        (n, if (rest.length == 1) rest.head else Mul(rest.toVector))
       case other => (Num(1), other)
     }
 

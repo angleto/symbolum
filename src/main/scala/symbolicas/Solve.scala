@@ -58,11 +58,11 @@ object Solve {
         val solution = Div(Vector(Neg(const).simplify(config), coeff)).simplify(config)
         Some(List(solution))
 
-      case (Some(Num(0)), Some(Num(0))) =>
+      case (Some(Num(0, _)), Some(Num(0, _))) =>
         // 0 = 0: infinite solutions (special case)
         None  // Cannot represent infinite solutions
 
-      case (Some(Num(0)), Some(_)) =>
+      case (Some(Num(0, _)), Some(_)) =>
         // b = 0 where b ≠ 0: no solution
         Some(List())
 
@@ -89,7 +89,10 @@ object Solve {
         (Some(Num(1)), Some(Num(0)))
 
       // Constant: c => 0*x + c
-      case Num(_, _) | Var(v) if v != variable =>
+      case Num(_, _) =>
+        (Some(Num(0)), Some(expr))
+
+      case Var(v) if v != variable =>
         (Some(Num(0)), Some(expr))
 
       // ax where a is constant
@@ -189,15 +192,15 @@ object Solve {
     for (term <- terms) {
       term match {
         // x^2 term
-        case Pow(Var(v), Num(2)) if v == variable =>
+        case Pow(Var(v), Num(2, _)) if v == variable =>
           a = Add(Vector(a, Num(1))).simplify(config)
 
         case Mul(factors) if factors.exists {
-          case Pow(Var(v), Num(2)) if v == variable => true
+          case Pow(Var(v), Num(2, _)) if v == variable => true
           case _ => false
         } =>
           val coeff = factors.filterNot {
-            case Pow(Var(v), Num(2)) if v == variable => true
+            case Pow(Var(v), Num(2, _)) if v == variable => true
             case _ => false
           }
           val coeffExpr = if (coeff.isEmpty) Num(1) else if (coeff.length == 1) coeff.head else Mul(coeff).simplify(config)

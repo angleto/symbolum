@@ -134,16 +134,16 @@ final case class Integral(
 
     // If definite integral, apply fundamental theorem of calculus
     (antiderivative, lowerBound, upperBound) match {
-      case (Some(F), Some(a), Some(b)) =>
+      case (Some(antider), Some(a), Some(b)) =>
         // F(b) - F(a)
         Sub(Vector(
-          F.replaceSymbol(variable, b).simplify(config),
-          F.replaceSymbol(variable, a).simplify(config)
+          antider.replaceSymbol(variable, b).simplify(config),
+          antider.replaceSymbol(variable, a).simplify(config)
         )).simplify(config)
 
-      case (Some(F), None, None) =>
+      case (Some(antider), None, None) =>
         // Indefinite integral: return antiderivative
-        F
+        antider
 
       case _ =>
         // Cannot compute: keep as symbolic integral
@@ -214,7 +214,7 @@ final case class Integral(
         Some(Exp(Var(v)))
 
       // ∫ 1/x dx = log(x)
-      case Div(Vector(Num(1), Var(v))) if v == variable =>
+      case Div(Vector(Num(1, _), Var(v))) if v == variable =>
         Some(Log(Var(v)))
 
       // Cannot integrate

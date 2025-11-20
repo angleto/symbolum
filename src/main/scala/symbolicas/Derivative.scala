@@ -125,7 +125,16 @@ final case class Derivative(expression: Expr, variable: String) extends Expr {
         // General case: d/dx(f^g) = f^g * (g' * log(f) + g * f'/f)
         // Special case when exponent is constant: d/dx(f^n) = n * f^(n-1) * f'
         exponent match {
-          case Num(_, _) | Var(v) if v != variable =>
+          case Num(_, _) =>
+            // Exponent is constant with respect to variable
+            val basePrime = Derivative(base, variable).simplify(config)
+            Mul(Vector(
+              exponent,
+              Pow(base, Sub(Vector(exponent, Num(1))).simplify(config)).simplify(config),
+              basePrime
+            )).simplify(config)
+
+          case Var(v) if v != variable =>
             // Exponent is constant with respect to variable
             val basePrime = Derivative(base, variable).simplify(config)
             Mul(Vector(
