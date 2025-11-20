@@ -333,7 +333,13 @@ final case class Mul(factors: Vector[Expr]) extends Expr {
 
     /* Build final result */
     val combinedFactors: Vector[Expr] =
-      if (numericPart == one) numericFactors else Vector(numericPart) ++ symbolicFactors
+      if (numericPart == one) {
+        // No numeric factors to combine, keep both numeric and symbolic factors
+        numericFactors ++ symbolicFactors
+      } else {
+        // Combined numeric factors into numericPart, add symbolic factors
+        Vector(numericPart) ++ symbolicFactors
+      }
 
     combinedFactors.length match {
       case 0 => Num(1.0)
