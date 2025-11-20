@@ -19,9 +19,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   "Fraction factoring" should "handle simple common denominator in Add" in {
     val n = Var("n")
-    val test = Add(Array(
+    val test = Add(Vector(
       Num(-7, 32),
-      Mul(Array(Num(-9, 32), n))
+      Mul(Vector(Num(-9, 32), n))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -32,9 +32,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "merge fractions that need Mul merging first" in {
     val n = Var("n")
-    val test = Add(Array(
+    val test = Add(Vector(
       Num(-7, 32),
-      Mul(Array(Num(-9, 2), n, Num(1, 16)))
+      Mul(Vector(Num(-9, 2), n, Num(1, 16)))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -44,11 +44,11 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify fractions in cosine arguments" in {
     val n = Var("n")
-    val test = cos(Mul(Array(
+    val test = cos(Mul(Vector(
       pi,
-      Add(Array(
+      Add(Vector(
         Num(5, 4),
-        Mul(Array(Num(9), n, Num(1, 4)))
+        Mul(Vector(Num(9), n, Num(1, 4)))
       ))
     )))
     val result = test.fullSimplify(SimplificationConfig.Default)
@@ -59,9 +59,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "factor multiple terms with common denominator" in {
     val n = Var("n")
-    val test = Add(Array(
+    val test = Add(Vector(
       Num(1, 4),
-      Mul(Array(Num(3, 4), n)),
+      Mul(Vector(Num(3, 4), n)),
       Num(-5, 4)
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
@@ -73,9 +73,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "handle mixed Div and fractional Num" in {
     val n = Var("n")
-    val test = Add(Array(
+    val test = Add(Vector(
       Num(1, 4),
-      Div(Array(Mul(Array(Num(3), n)), Num(4)))
+      Div(Vector(Mul(Vector(Num(3), n)), Num(4)))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -86,7 +86,7 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   "Nested divisions" should "simplify expr/16/2 to expr/32" in {
     val n = Var("n")
-    val test = Div(Array(Div(Array(n, Num(16))), Num(2)))
+    val test = Div(Vector(Div(Vector(n, Num(16))), Num(2)))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
     // Expected: n/32
@@ -96,8 +96,8 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify complex numerator with nested division" in {
     val n = Var("n")
-    val test = Div(Array(
-      Div(Array(Add(Array(Mul(Array(Num(9), n)), Num(7))), Num(16))),
+    val test = Div(Vector(
+      Div(Vector(Add(Vector(Mul(Vector(Num(9), n)), Num(7))), Num(16))),
       Num(2)
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
@@ -108,8 +108,8 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify negative numerator with nested division" in {
     val n = Var("n")
-    val test = Div(Array(
-      Div(Array(Add(Array(Mul(Array(Num(-9), n)), Num(-7))), Num(16))),
+    val test = Div(Vector(
+      Div(Vector(Add(Vector(Mul(Vector(Num(-9), n)), Num(-7))), Num(16))),
       Num(2)
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
@@ -119,9 +119,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "simplify multiplication of fractions" in {
-    val test = Mul(Array(
+    val test = Mul(Vector(
       Num(1, 2),
-      Div(Array(Num(2), Num(2)))
+      Div(Vector(Num(2), Num(2)))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -131,9 +131,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "merge Num * Div denominators" in {
     val n = Var("n")
-    val test = Mul(Array(
+    val test = Mul(Vector(
       Num(1, 2),
-      Div(Array(n, Num(16)))
+      Div(Vector(n, Num(16)))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -144,9 +144,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute division over addition" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(
-        Div(Array(Neg(n), Num(16))),
+    val test = Div(Vector(
+      Add(Vector(
+        Div(Vector(Neg(n), Num(16))),
         Num(-1, 8)
       )),
       Num(2)
@@ -159,7 +159,7 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify multiple nested divisions" in {
     val n = Var("n")
-    val test = Div(Array(n, Num(2), Num(4), Num(8)))
+    val test = Div(Vector(n, Num(2), Num(4), Num(8)))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
     // Expected: n/64
@@ -169,8 +169,8 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify Div * Div multiplication" in {
     val n = Var("n")
-    val test = Mul(Array(
-      Div(Array(Add(Array(n, Num(1))), Num(16))),
+    val test = Mul(Vector(
+      Div(Vector(Add(Vector(n, Num(1))), Num(16))),
       Num(1, 2)
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
@@ -180,14 +180,14 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
   }
 
   "Fraction addition" should "add fractions with same denominator" in {
-    val test = Add(Array(Num(1, 4), Num(1, 4)))
+    val test = Add(Vector(Num(1, 4), Num(1, 4)))
     val result = test.simplify
 
     result should equal (Num(1, 2))
   }
 
   it should "handle fraction subtraction" in {
-    val test = Add(Array(Num(3, 4), Num(-1, 4)))
+    val test = Add(Vector(Num(3, 4), Num(-1, 4)))
     val result = test.simplify
 
     result should equal (Num(1, 2))
@@ -195,9 +195,9 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "add fractions with variables" in {
     val n = Var("n")
-    val test = Add(Array(
-      Div(Array(Mul(Array(Num(3), n)), Num(2))),
-      Div(Array(Num(1), Num(2)))
+    val test = Add(Vector(
+      Div(Vector(Mul(Vector(Num(3), n)), Num(2))),
+      Div(Vector(Num(1), Num(2)))
     ))
     val result = test.fullSimplify
 
@@ -206,7 +206,7 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
   }
 
   "Fraction multiplication" should "multiply simple fractions" in {
-    val test = Mul(Array(Num(2, 3), Num(3, 4)))
+    val test = Mul(Vector(Num(2, 3), Num(3, 4)))
     val result = test.simplify
 
     result should equal (Num(1, 2))
@@ -214,7 +214,7 @@ class FractionOperationsSpec extends AnyFlatSpec with Matchers {
 
   it should "multiply fraction with variable" in {
     val n = Var("n")
-    val test = Mul(Array(Num(2), Div(Array(n, Num(4)))))
+    val test = Mul(Vector(Num(2), Div(Vector(n, Num(4)))))
     val result = test.fullSimplify
 
     // Expected: n/2

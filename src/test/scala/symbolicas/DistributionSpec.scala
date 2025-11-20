@@ -19,7 +19,7 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   "Distribution" should "distribute simple multiplication" in {
     val n = Var("n")
-    val test = Mul(Array(Num(2), Add(Array(n, Num(1)))))
+    val test = Mul(Vector(Num(2), Add(Vector(n, Num(1)))))
     val result = test.fullSimplify
 
     // Should be 2*n + 2
@@ -28,7 +28,7 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute fraction over sum" in {
     val n = Var("n")
-    val test = Mul(Array(Div(Array(Num(1), Num(2))), Add(Array(n, Num(1)))))
+    val test = Mul(Vector(Div(Vector(Num(1), Num(2))), Add(Vector(n, Num(1)))))
     val result = test.fullSimplify
 
     // Should be n/2 + 1/2 or (n + 1)/2
@@ -37,9 +37,9 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute nested sums" in {
     val n = Var("n")
-    val innerSum = Add(Array(n, Num(1)))
-    val middleSum = Add(Array(innerSum, Num(2)))
-    val test = Mul(Array(Num(2), middleSum))
+    val innerSum = Add(Vector(n, Num(1)))
+    val middleSum = Add(Vector(innerSum, Num(2)))
+    val test = Mul(Vector(Num(2), middleSum))
     val result = test.fullSimplify
 
     // Should be distributed
@@ -48,10 +48,10 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute complex expression like Collatz" in {
     val n = Var("n")
-    val sum1 = Add(Array(n, Num(1)))
-    val sum2 = Add(Array(Mul(Array(Num(2), n)), Num(3)))
-    val bigSum = Add(Array(sum1, sum2))
-    val test = Mul(Array(Div(Array(Num(1), Num(2))), Cos(Mul(Array(n, pi))), bigSum))
+    val sum1 = Add(Vector(n, Num(1)))
+    val sum2 = Add(Vector(Mul(Vector(Num(2), n)), Num(3)))
+    val bigSum = Add(Vector(sum1, sum2))
+    val test = Mul(Vector(Div(Vector(Num(1), Num(2))), Cos(Mul(Vector(n, pi))), bigSum))
     val result = test.fullSimplify
 
     // Should be distributed into separate terms
@@ -64,9 +64,9 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
     val n = Var("n")
     val a = Var("a")
     val b = Var("b")
-    val test = Mul(Array(
-      Cos(Mul(Array(n, pi))),
-      Add(Array(a, b))
+    val test = Mul(Vector(
+      Cos(Mul(Vector(n, pi))),
+      Add(Vector(a, b))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -78,9 +78,9 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
     val x = Var("x")
     val y = Var("y")
     val z = Var("z")
-    val test = Mul(Array(
+    val test = Mul(Vector(
       Num(2),
-      Add(Array(x, y, z))
+      Add(Vector(x, y, z))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -90,9 +90,9 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute 1/2 * (n + 1)" in {
     val n = Var("n")
-    val test = Mul(Array(
+    val test = Mul(Vector(
       Num(1, 2),
-      Add(Array(n, Num(1)))
+      Add(Vector(n, Num(1)))
     ))
     val result = test.fullSimplify(SimplificationConfig.Default)
 
@@ -102,10 +102,10 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute cos(n/2*pi) * (multiple terms)" in {
     val n = Var("n")
-    val test = Mul(Array(
-      Cos(Mul(Array(Div(Array(n, Num(2))), pi))),
-      Add(Array(
-        Mul(Array(Num(-1, 8), n)),
+    val test = Mul(Vector(
+      Cos(Mul(Vector(Div(Vector(n, Num(2))), pi))),
+      Add(Vector(
+        Mul(Vector(Num(-1, 8), n)),
         Num(-1, 16),
         Num(1, 8)
       ))
@@ -123,13 +123,13 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
     val d = Var("d")
     val e = Var("e")
 
-    val test = Mul(Array(
+    val test = Mul(Vector(
       Cos(a),
-      Add(Array(
+      Add(Vector(
         b,
-        Mul(Array(
+        Mul(Vector(
           Cos(Cos(a)),
-          Add(Array(d, e))
+          Add(Vector(d, e))
         ))
       ))
     ))
@@ -141,7 +141,7 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   "Quick distribution test" should "distribute 2 * (n + 1)" in {
     val n = Var("n")
-    val test = Mul(Array(Num(2), Add(Array(n, Num(1)))))
+    val test = Mul(Vector(Num(2), Add(Vector(n, Num(1)))))
     val result = test.fullSimplify
 
     // Expected: 2 * n + 2
@@ -150,7 +150,7 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute 1/2 * (n + 1) correctly" in {
     val n = Var("n")
-    val test = Mul(Array(Div(Array(Num(1), Num(2))), Add(Array(n, Num(1)))))
+    val test = Mul(Vector(Div(Vector(Num(1), Num(2))), Add(Vector(n, Num(1)))))
     val result = test.fullSimplify
 
     // Expected: n/2 + 1/2 OR (n + 1)/2
@@ -159,9 +159,9 @@ class DistributionSpec extends AnyFlatSpec with Matchers {
 
   it should "distribute nested sums correctly" in {
     val n = Var("n")
-    val innerSum = Add(Array(n, Num(1)))
-    val middleSum = Add(Array(innerSum, Num(2)))
-    val test = Mul(Array(Num(2), middleSum))
+    val innerSum = Add(Vector(n, Num(1)))
+    val middleSum = Add(Vector(innerSum, Num(2)))
+    val test = Mul(Vector(Num(2), middleSum))
     val result = test.fullSimplify
 
     // Expected: 2 * n + 6

@@ -28,7 +28,7 @@ class BasicSimplificationSpec extends AnyFlatSpec with Matchers {
   it should "handle addition with negative correctly" in {
     val x = Var("x")
     val y = Var("y")
-    val test = Add(Array(x, Neg(y)))
+    val test = Add(Vector(x, Neg(y)))
     val simplified = test.simplify
 
     // Should be x - y, not x + (-y)
@@ -38,7 +38,7 @@ class BasicSimplificationSpec extends AnyFlatSpec with Matchers {
   it should "flatten nested additions" in {
     val x = Var("x")
     val y = Var("y")
-    val test = Add(Array(x, Add(Array(y, Num(5)))))
+    val test = Add(Vector(x, Add(Vector(y, Num(5)))))
     val simplified = test.simplify
 
     // Should be flattened
@@ -46,14 +46,14 @@ class BasicSimplificationSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "merge fractions with same denominator" in {
-    val test = Add(Array(Num(1, 4), Num(1, 4)))
+    val test = Add(Vector(Num(1, 4), Num(1, 4)))
     val simplified = test.simplify
 
     simplified should equal (Num(1, 2))
   }
 
   it should "handle negative fractions" in {
-    val test = Add(Array(Num(3, 4), Num(-1, 4)))
+    val test = Add(Vector(Num(3, 4), Num(-1, 4)))
     val simplified = test.simplify
 
     simplified should equal (Num(1, 2))
@@ -61,7 +61,7 @@ class BasicSimplificationSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify complex multiplication with fractions" in {
     val n = Var("n")
-    val test = Mul(Array(Num(-1), Div(Array(Mul(Array(Num(2), n, Num(1))), Num(4))), cos(Mul(Array(n, pi)))))
+    val test = Mul(Vector(Num(-1), Div(Vector(Mul(Vector(Num(2), n, Num(1))), Num(4))), cos(Mul(Vector(n, pi)))))
     val simplified = test.fullSimplify
 
     // Should not have duplicate signs
@@ -94,7 +94,7 @@ class BasicSimplificationSpec extends AnyFlatSpec with Matchers {
   "Product to sum" should "handle cosine products" in {
     val x = Var("x")
     val y = Var("y")
-    val test = Mul(Array(cos(x), cos(y)))
+    val test = Mul(Vector(cos(x), cos(y)))
     val expanded = test.expand
 
     // Should complete without error
@@ -102,14 +102,14 @@ class BasicSimplificationSpec extends AnyFlatSpec with Matchers {
   }
 
   "Numeric literals" should "combine correctly" in {
-    val test = Add(Array(Num(1), Num(2)))
+    val test = Add(Vector(Num(1), Num(2)))
     val simplified = test.simplify
 
     simplified should equal (Num(3))
   }
 
   it should "multiply correctly" in {
-    val test = Mul(Array(Num(2), Num(3)))
+    val test = Mul(Vector(Num(2), Num(3)))
     val simplified = test.simplify
 
     simplified should equal (Num(6))

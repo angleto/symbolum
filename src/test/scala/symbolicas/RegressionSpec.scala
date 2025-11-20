@@ -24,7 +24,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Negation" should "simplify simple negation -(2*n)" in {
     val n = Var("n")
-    val test = Neg(Mul(Array(Num(2), n)))
+    val test = Neg(Mul(Vector(Num(2), n)))
     val result = test.fullSimplify
 
     result.toString should include ("-2")
@@ -37,7 +37,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "handle negation in addition n + -(2*n)" in {
     val n = Var("n")
-    val test = Add(Array(n, Neg(Mul(Array(Num(2), n)))))
+    val test = Add(Vector(n, Neg(Mul(Vector(Num(2), n)))))
     val result = test.fullSimplify
 
     result.toString should include ("-")
@@ -56,7 +56,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify negation of addition -(n + 2)" in {
     val n = Var("n")
-    val test = Neg(Add(Array(n, Num(2))))
+    val test = Neg(Add(Vector(n, Num(2))))
     val result = test.fullSimplify
 
     result.toString should not include ("+ -")
@@ -65,7 +65,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
   }
 
   "Fractions" should "simplify (1 + 1)/2 to 1" in {
-    val test = Div(Array(Add(Array(Num(1), Num(1))), Num(2)))
+    val test = Div(Vector(Add(Vector(Num(1), Num(1))), Num(2)))
     val result = test.fullSimplify
 
     result should equal (Num(1))
@@ -73,7 +73,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify (3*n + 1)/2" in {
     val n = Var("n")
-    val test = Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2)))
+    val test = Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2)))
     val result = test.fullSimplify
 
     result should be (a[Div])
@@ -88,7 +88,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify nested fraction ((3*n + 1)/2 + 1)/2" in {
     val n = Var("n")
-    val test = Div(Array(Add(Array(Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2))), Num(1))), Num(2)))
+    val test = Div(Vector(Add(Vector(Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2))), Num(1))), Num(2)))
     val result = test.fullSimplify
 
     result.toString should include ("(3")
@@ -100,9 +100,9 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify very nested fraction (3 * (3*n + 1)/2 + 1)/2" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(
-        Mul(Array(Num(3), Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2))))),
+    val test = Div(Vector(
+      Add(Vector(
+        Mul(Vector(Num(3), Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2))))),
         Num(1)
       )),
       Num(2)
@@ -118,7 +118,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Addition with different denominators" should "find common denominator n/2 + 1/4" in {
     val n = Var("n")
-    val test = Add(Array(Div(Array(n, Num(2))), Div(Array(Num(1), Num(4)))))
+    val test = Add(Vector(Div(Vector(n, Num(2))), Div(Vector(Num(1), Num(4)))))
     val result = test.fullSimplify
 
     result.toString should include ("/4")
@@ -126,7 +126,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Multiplication with fraction" should "simplify 2 * (n/4)" in {
     val n = Var("n")
-    val test = Mul(Array(Num(2), Div(Array(n, Num(4)))))
+    val test = Mul(Vector(Num(2), Div(Vector(n, Num(4)))))
     val result = test.fullSimplify
 
     result.toString should include ("n")
@@ -136,7 +136,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Cosine" should "simplify cos(n * pi)" in {
     val n = Var("n")
-    val test = Cos(Mul(Array(n, pi)))
+    val test = Cos(Mul(Vector(n, pi)))
     val result = test.fullSimplify
 
     result.toString should include ("cos")
@@ -148,7 +148,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify negated fraction coefficient -(1/4 * cos(n*pi))" in {
     val n = Var("n")
-    val test = Neg(Mul(Array(Div(Array(Num(1), Num(4))), Cos(Mul(Array(n, pi))))))
+    val test = Neg(Mul(Vector(Div(Vector(Num(1), Num(4))), Cos(Mul(Vector(n, pi))))))
     val result = test.fullSimplify
 
     result.toString should include ("-")
@@ -161,7 +161,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Collatz1 term" should "simplify -((2*n + 1)/4 * cos(n*pi))" in {
     val n = Var("n")
-    val collatz1_term = Neg(Mul(Array(Div(Array(Add(Array(Mul(Array(Num(2), n)), Num(1))), Num(4))), Cos(Mul(Array(n, pi))))))
+    val collatz1_term = Neg(Mul(Vector(Div(Vector(Add(Vector(Mul(Vector(Num(2), n)), Num(1))), Num(4))), Cos(Mul(Vector(n, pi))))))
     val result = collatz1_term.fullSimplify
 
     result.toString should include ("-")
@@ -179,7 +179,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
   }
 
   "Sum of fractions" should "simplify 1/4 + 1/2 + 1/4 to 1" in {
-    val test = Add(Array(Div(Array(Num(1), Num(4))), Div(Array(Num(1), Num(2))), Div(Array(Num(1), Num(4)))))
+    val test = Add(Vector(Div(Vector(Num(1), Num(4))), Div(Vector(Num(1), Num(2))), Div(Vector(Num(1), Num(4)))))
     val result = test.fullSimplify
 
     result should equal (Num(1))
@@ -187,10 +187,10 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "combine fraction addition with variables n/4 + n/4 + n/2" in {
     val n = Var("n")
-    val test = Add(Array(
-      Div(Array(n, Num(4))),
-      Div(Array(n, Num(4))),
-      Div(Array(n, Num(2)))
+    val test = Add(Vector(
+      Div(Vector(n, Num(4))),
+      Div(Vector(n, Num(4))),
+      Div(Vector(n, Num(2)))
     ))
     val result = test.fullSimplify
 
@@ -200,14 +200,14 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
   }
 
   "Critical arithmetic" should "simplify 1 + 1 to 2" in {
-    val test = Add(Array(Num(1), Num(1)))
+    val test = Add(Vector(Num(1), Num(1)))
     val result = test.fullSimplify
 
     result should equal (Num(2))
   }
 
   it should "simplify (1 + 1) / 2 to 1" in {
-    val test = Div(Array(Add(Array(Num(1), Num(1))), Num(2)))
+    val test = Div(Vector(Add(Vector(Num(1), Num(1))), Num(2)))
     val result = test.fullSimplify
 
     result should equal (Num(1))
@@ -215,15 +215,15 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "combine n + n to 2 * n" in {
     val n = Var("n")
-    val test = Add(Array(n, n))
+    val test = Add(Vector(n, n))
     val result = test.fullSimplify
 
-    result should equal (Mul(Array(Num(2), n)))
+    result should equal (Mul(Vector(Num(2), n)))
   }
 
   "Critical fraction simplification" should "simplify (3*n + 1) / 2" in {
     val n = Var("n")
-    val test = Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2)))
+    val test = Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2)))
     val result = test.fullSimplify
 
     result should be (a[Div])
@@ -233,8 +233,8 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify (1 + 3*n/2) / 2 to (3*n + 2) / 4" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(Num(1), Div(Array(Mul(Array(Num(3), n)), Num(2))))),
+    val test = Div(Vector(
+      Add(Vector(Num(1), Div(Vector(Mul(Vector(Num(3), n)), Num(2))))),
       Num(2)
     ))
     val result = test.fullSimplify
@@ -247,9 +247,9 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify deeply nested (3 * (3*n + 1)/2 + 1) / 2 to (9*n + 5) / 4" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(
-        Mul(Array(Num(3), Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2))))),
+    val test = Div(Vector(
+      Add(Vector(
+        Mul(Vector(Num(3), Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2))))),
         Num(1)
       )),
       Num(2)
@@ -264,11 +264,11 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify triple nested ((3*(3*n+1)/2 + 1)/2 + 1) / 2" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(
-        Div(Array(
-          Add(Array(
-            Mul(Array(Num(3), Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2))))),
+    val test = Div(Vector(
+      Add(Vector(
+        Div(Vector(
+          Add(Vector(
+            Mul(Vector(Num(3), Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2))))),
             Num(1)
           )),
           Num(2)
@@ -287,7 +287,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Negative number handling" should "not have + - in (-1 + -3*n/2)" in {
     val n = Var("n")
-    val test = Add(Array(Num(-1), Mul(Array(Num(-3), Div(Array(n, Num(2)))))))
+    val test = Add(Vector(Num(-1), Mul(Vector(Num(-3), Div(Vector(n, Num(2)))))))
     val result = test.fullSimplify
 
     result.toString should not include ("+ -")
@@ -296,7 +296,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "not have + - in (-1 + -2*n/4)" in {
     val n = Var("n")
-    val test = Add(Array(Num(-1), Mul(Array(Num(-2), Div(Array(n, Num(4)))))))
+    val test = Add(Vector(Num(-1), Mul(Vector(Num(-2), Div(Vector(n, Num(4)))))))
     val result = test.fullSimplify
 
     result.toString should not include ("+ -")
@@ -305,15 +305,15 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Complex fraction operations" should "simplify 2 * (n/4) to n/2" in {
     val n = Var("n")
-    val test = Mul(Array(Num(2), Div(Array(n, Num(4)))))
+    val test = Mul(Vector(Num(2), Div(Vector(n, Num(4)))))
     val result = test.fullSimplify
 
-    result should equal (Div(Array(n, Num(2))))
+    result should equal (Div(Vector(n, Num(2))))
   }
 
   it should "simplify 3 * ((3*n+1)/2) to (9*n+3)/2" in {
     val n = Var("n")
-    val test = Mul(Array(Num(3), Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2)))))
+    val test = Mul(Vector(Num(3), Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2)))))
     val result = test.fullSimplify
 
     result.toString should include ("/2")
@@ -324,7 +324,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify n/2 + n/4 to (3*n)/4" in {
     val n = Var("n")
-    val test = Add(Array(Div(Array(n, Num(2))), Div(Array(n, Num(4)))))
+    val test = Add(Vector(Div(Vector(n, Num(2))), Div(Vector(n, Num(4)))))
     val result = test.fullSimplify
 
     result.toString should include ("3")
@@ -337,10 +337,10 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Real world Collatz" should "simplify collatz1 term correctly" in {
     val n = Var("n")
-    val collatz1_manual = Add(Array(
+    val collatz1_manual = Add(Vector(
       n,
       Num(1, 4),
-      Mul(Array(Num(-1), Div(Array(Add(Array(Mul(Array(Num(2), n)), Num(1))), Num(4))), Cos(Mul(Array(n, pi)))))
+      Mul(Vector(Num(-1), Div(Vector(Add(Vector(Mul(Vector(Num(2), n)), Num(1))), Num(4))), Cos(Mul(Vector(n, pi)))))
     ))
     val result = collatz1_manual.fullSimplify
 
@@ -351,7 +351,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Comprehensive sign normalization" should "handle n + Neg(2*n)" in {
     val n = Var("n")
-    val test = Add(Array(n, Neg(Mul(Array(Num(2), n)))))
+    val test = Add(Vector(n, Neg(Mul(Vector(Num(2), n)))))
     val result = test.fullSimplify
 
     result.toString should not include ("+ -")
@@ -360,7 +360,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "handle n + (-2)*n" in {
     val n = Var("n")
-    val test = Add(Array(n, Mul(Array(Num(-2), n))))
+    val test = Add(Vector(n, Mul(Vector(Num(-2), n))))
     val result = test.fullSimplify
 
     result.toString should not include ("+ -")
@@ -368,9 +368,9 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Comprehensive nested fractions" should "simplify (3 * (3*n + 1)/2 + 1)/2 to (9*n + 5)/4" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(
-        Mul(Array(Num(3), Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2))))),
+    val test = Div(Vector(
+      Add(Vector(
+        Mul(Vector(Num(3), Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2))))),
         Num(1)
       )),
       Num(2)
@@ -382,8 +382,8 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify (1 + 3*n/2)/2" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(Num(1), Mul(Array(Num(3), n)), Div(Array(Num(1), Num(2))))),
+    val test = Div(Vector(
+      Add(Vector(Num(1), Mul(Vector(Num(3), n)), Div(Vector(Num(1), Num(2))))),
       Num(2)
     ))
     val result = test.fullSimplify
@@ -394,8 +394,8 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Comprehensive cosine argument simplification" should "simplify cos((1 + 3*n/2)/2)" in {
     val n = Var("n")
-    val test = Cos(Div(Array(
-      Add(Array(Num(1), Mul(Array(Num(3), n)), Div(Array(Num(1), Num(2))))),
+    val test = Cos(Div(Vector(
+      Add(Vector(Num(1), Mul(Vector(Num(3), n)), Div(Vector(Num(1), Num(2))))),
       Num(2)
     )))
     val result = test.fullSimplify
@@ -405,9 +405,9 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify cos((3*n + 1)/4 * pi)" in {
     val n = Var("n")
-    val test = Cos(Mul(Array(
-      Div(Array(
-        Add(Array(Mul(Array(Num(3), n)), Num(1))),
+    val test = Cos(Mul(Vector(
+      Div(Vector(
+        Add(Vector(Mul(Vector(Num(3), n)), Num(1))),
         Num(4)
       )),
       pi
@@ -419,9 +419,9 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Comprehensive fraction addition" should "simplify (3*n)/2 + 1/2 to (3*n + 1)/2" in {
     val n = Var("n")
-    val test = Add(Array(
-      Div(Array(Mul(Array(Num(3), n)), Num(2))),
-      Div(Array(Num(1), Num(2)))
+    val test = Add(Vector(
+      Div(Vector(Mul(Vector(Num(3), n)), Num(2))),
+      Div(Vector(Num(1), Num(2)))
     ))
     val result = test.fullSimplify
 
@@ -430,10 +430,10 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   it should "simplify (3*n)/4 + 1/4 + 2/4 to (3*n + 3)/4" in {
     val n = Var("n")
-    val test = Add(Array(
-      Div(Array(Mul(Array(Num(3), n)), Num(4))),
-      Div(Array(Num(1), Num(4))),
-      Div(Array(Num(2), Num(4)))
+    val test = Add(Vector(
+      Div(Vector(Mul(Vector(Num(3), n)), Num(4))),
+      Div(Vector(Num(1), Num(4))),
+      Div(Vector(Num(2), Num(4)))
     ))
     val result = test.fullSimplify
 
@@ -442,9 +442,9 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Comprehensive division distribution" should "simplify ((9*n)/2 + 1)/2 to (9*n + 2)/4" in {
     val n = Var("n")
-    val test = Div(Array(
-      Add(Array(
-        Div(Array(Mul(Array(Num(9), n)), Num(2))),
+    val test = Div(Vector(
+      Add(Vector(
+        Div(Vector(Mul(Vector(Num(9), n)), Num(2))),
         Num(1)
       )),
       Num(2)
@@ -456,9 +456,9 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Comprehensive deep nesting" should "fully simplify deeply nested expressions" in {
     val n = Var("n")
-    val innerExpr = Div(Array(Add(Array(Mul(Array(Num(3), n)), Num(1))), Num(2)))
-    val middleExpr = Div(Array(Add(Array(Mul(Array(Num(3), innerExpr)), Num(1))), Num(2)))
-    val outerExpr = Div(Array(Add(Array(middleExpr, Num(1))), Num(2)))
+    val innerExpr = Div(Vector(Add(Vector(Mul(Vector(Num(3), n)), Num(1))), Num(2)))
+    val middleExpr = Div(Vector(Add(Vector(Mul(Vector(Num(3), innerExpr)), Num(1))), Num(2)))
+    val outerExpr = Div(Vector(Add(Vector(middleExpr, Num(1))), Num(2)))
     val result = outerExpr.fullSimplify
 
     // Should be fully simplified without nested fractions
@@ -468,7 +468,7 @@ class RegressionSpec extends AnyFlatSpec with Matchers {
 
   "Comprehensive numeric coefficients" should "simplify 3 * (2*n/4) to (3*n)/2" in {
     val n = Var("n")
-    val test = Mul(Array(Num(3), Div(Array(Mul(Array(Num(2), n)), Num(4)))))
+    val test = Mul(Vector(Num(3), Div(Vector(Mul(Vector(Num(2), n)), Num(4)))))
     val result = test.fullSimplify
 
     result should be (a[Div])
