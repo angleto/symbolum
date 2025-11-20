@@ -6,73 +6,188 @@ import symbolicas.SimplificationConfig
 import symbolicas.NumericConstants._
 
 /**
- * Base trait for all symbolic expressions.
+ * Base trait for all symbolic algebraic expressions.
  *
- * This is a sealed trait, meaning all implementations must be in this file or package.
- * This enables exhaustive pattern matching with compiler verification.
+ * This trait defines the core operations supported by the symbolic algebra system:
+ * - Numeric evaluation
+ * - Symbol substitution
+ * - Algebraic expansion
+ * - Algebraic simplification
  *
- * All expressions are immutable and support the following operations:
- * - eval: Numerical evaluation with variable substitution
- * - simplify: Single-pass algebraic simplification
- * - expand: Distribution of products over sums
- * - fullSimplify: Iterative simplification to fixpoint
- * - replaceSymbol: Symbol substitution
+ * == Expression Types ==
  *
- * @note Thread Safety: All expressions are immutable and thread-safe.
- * @note Implementations: Add, Mul, Div, Sub, Num, Var, Cos, Neg
+ * The expression hierarchy includes:
+ *  - '''Atomic expressions''': [[Num]] (numeric literals), [[Var]] (variables)
+ *  - '''Unary operations''': [[Neg]] (negation), [[Cos]] (cosine)
+ *  - '''N-ary operations''': [[Add]] (addition), [[Sub]] (subtraction), [[Mul]] (multiplication), [[Div]] (division)
+ *
+ * == Simplification Architecture ==
+ *
+ * The simplification system uses a configurable rule-based approach:
+ *
+ *  1. '''Single-pass simplification''' ([[simplify]]): Applies enabled rules once
+ *  2. '''Expansion''' ([[expand]]): Distributes products over sums (a*(b+c) → a*b + a*c)
+ *  3. '''Full simplification''' ([[fullSimplify]]): Multi-pass expansion and simplification until fixpoint
+ *
+ * Each expression type implements these methods according to its semantics.
+ *
+ * == Design Patterns ==
+ *
+ * '''Expand Pattern''': Most implementations follow this pattern:
+ * {{{
+ *   override def expand(implicit config: SimplificationConfig): Expr = {
+ *     val expandedChildren = children.map(_.expand(config))
+ *     // ... apply expansion transformation ...
+ *     result.simplify(config)  // Always simplify after expansion
+ *   }
+ * }}}
+ *
+ * '''Simplify Pattern''': Implementations check enabled rules and apply transformations:
+ * {{{
+ *   def simplify(implicit config: SimplificationConfig): Expr = {
+ *     if (config.isEnabled(SomeRule)) {
+ *       // ... apply transformation ...
+ *     } else {
+ *       // ... keep original form ...
+ *     }
+ *   }
+ * }}}
+ *
+ * @see [[SimplificationConfig]] for controlling which simplification rules are applied
  */
-sealed trait Expr {
-  /** Precedence used only for pretty printing */
+trait Expr {
+  /**
+   * Precedence level for pretty printing.
+   *
+   * Lower values bind less tightly and require more parentheses.
+   * Used only for display purposes, not for evaluation.
+   *
+   * Precedence levels:
+   *  - 1: Addition, Subtraction
+   *  - 2: Multiplication, Division
+   *  - 3: Negation
+   *  - 4: Atomic expressions (Num, Var, Cos)
+   */
   def precedence: Int = 10
 
   /**
-   * Evaluate numerically.
+   * Evaluate the expression numerically given variable assignments.
    *
-   * @param variables Map of variable names to their numerical values
-   * @return Numerical result of evaluation
-   * @throws ExpressionError if a required variable is undefined or if division by zero occurs
+   * @param variables map from variable names to their numeric values
+   * @return the numeric result of evaluation
+   * @throws Exception if a required variable is not defined
+   *
+   * @example {{{
+   * val expr = Add(Array(Var("x"), Num(1)))  // x + 1
+   * expr.eval(Map("x" -> 5.0))  // returns 6.0
+   * }}}
    */
   def eval(variables: Map[String, Double]): Double
 
   /**
-   * Replace a given symbol by another expression.
+   * Replace all occurrences of a variable with another expression.
    *
-   * @param sym Symbol name to replace
-   * @param repl Replacement expression
-   * @return New expression with symbol replaced
+   * @param sym the variable name to replace
+   * @param repl the replacement expression
+   * @return new expression with substitution applied
+   *
+   * @example {{{
+   * val expr = Add(Array(Var("x"), Var("y")))  // x + y
+   * expr.replaceSymbol("x", Num(3))  // returns: 3 + y
+   * }}}
    */
   def replaceSymbol(sym: String, repl: Expr): Expr
 
   /**
-   * Expand – distributes products over sums.
+   * Expand the expression by distributing products over sums.
    *
-   * @param config Simplification configuration controlling which rules to apply (defaults to Default)
-   * @return Expanded expression
+   * This operation recursively applies algebraic expansion rules:
+   *  - Product distribution: a*(b+c) → a*b + a*c
+   *  - Trigonometric identities: cos(A)*cos(B) → (1/2)*(cos(A-B) + cos(A+B))
+   *  - Flattening nested operations
    *
-   * @note Time Complexity: O(n) for most expressions, O(k^n) for cartesian product expansion
+   * The expansion behavior is controlled by the configuration, particularly:
+   *  - [[SimplificationRule.DistributeProduct]]
+   *  - [[SimplificationRule.ProductOfCosToSumOfCos]]
+   *
+   * Default implementation returns the expression unchanged (suitable for atomic expressions).
+   *
+   * @param config simplification configuration controlling which expansion rules to apply
+   * @return expanded expression
+   *
+   * @example {{{
+   * val expr = Mul(Array(Var("a"), Add(Array(Var("b"), Var("c")))))  // a*(b+c)
+   * expr.expand()  // returns: a*b + a*c
+   * }}}
    */
   def expand(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr = this
 
   /**
-   * Algebraic simplification (single pass) with configurable rules.
+   * Perform single-pass algebraic simplification with configurable rules.
    *
-   * @param config Simplification configuration controlling which rules to apply (defaults to Default)
-   * @return Simplified expression
+   * This method applies enabled simplification rules once to produce a simpler
+   * equivalent expression. The specific transformations depend on the expression
+   * type and enabled rules.
    *
-   * @note Time Complexity: Varies by expression type, typically O(n) to O(n log n)
+   * Common simplifications include:
+   *  - Removing identity elements (0 for addition, 1 for multiplication)
+   *  - Combining numeric literals
+   *  - Collecting like terms
+   *  - Simplifying fractions
+   *  - Flattening nested operations
+   *  - Eliminating double negatives
+   *
+   * This is abstract and must be implemented by each expression type.
+   *
+   * @param config simplification configuration controlling which rules to apply
+   * @return simplified expression
+   *
+   * @example {{{
+   * val expr = Add(Array(Num(0), Var("x")))  // 0 + x
+   * expr.simplify()  // returns: x
+   * }}}
    */
   def simplify(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr
 
   /**
-   * Full simplification: repeatedly apply expand+simplify until fixpoint.
-   * This ensures complete optimization of the expression.
+   * Perform full simplification with multi-pass expansion and simplification until fixpoint.
    *
-   * @param config Simplification configuration controlling which rules to apply
-   * @param maxIter Maximum iterations (default from NumericConstants.MAX_ITERATIONS)
-   * @return Fully simplified expression
+   * This is the most aggressive simplification strategy, designed to handle deeply
+   * nested expressions that require multiple rounds of expansion and simplification
+   * to reach optimal form.
    *
-   * @note Time Complexity: O(k * f(n)) where k is iterations to fixpoint, f(n) is simplify cost
-   * @note Guaranteed to terminate due to maxIter limit
+   * == Algorithm ==
+   *
+   * The algorithm uses an ultra-aggressive multi-pass strategy:
+   *
+   *  1. Initial normalization: simplify → expand → simplify
+   *  2. Iterative refinement loop (until fixpoint or max iterations):
+   *     - expand → simplify → expand → simplify → expand → simplify → simplify
+   *     - The triple expand-simplify pattern captures deeply nested structures
+   *     - Double simplify at the end handles cascading effects
+   *  3. Convergence detection via string comparison
+   *
+   * This pattern is particularly effective for:
+   *  - Deeply nested Mul(Cos(...), Add(...)) structures
+   *  - Collatz sequence expressions
+   *  - Complex fraction simplifications
+   *
+   * == Fixpoint Detection ==
+   *
+   * The algorithm compares the string representation of successive iterations.
+   * If two consecutive iterations produce the same string, a fixpoint has been reached.
+   *
+   * @param config simplification configuration controlling which rules to apply
+   * @param maxIter maximum iterations to prevent infinite loops (default 100)
+   * @return fully simplified expression
+   *
+   * @example {{{
+   * val expr = Mul(Array(Var("a"), Add(Array(Var("b"), Var("c")))))  // a*(b+c)
+   * expr.fullSimplify()  // returns: a*b + a*c (fully expanded and simplified)
+   * }}}
+   *
+   * @note This operation can be expensive for very large expressions.
+   *       Consider using [[simplify]] or [[expand]] individually if performance is critical.
    */
   def fullSimplify(implicit config: SimplificationConfig = SimplificationConfig.Default,
                    maxIter: Int = MAX_ITERATIONS): Expr = {

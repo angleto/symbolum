@@ -1,34 +1,26 @@
 package symbolicas
 
-import scala.annotation.tailrec
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import symbolicas.NumericConstants._
 import SimplificationRule._
 
 /**
- * Numeric literal expression with fraction support.
+ * Represents a numeric literal with optional fractional representation.
  *
- * Represents a rational number as numerator/denominator.
- * Both values are stored as doubles but are typically integer values.
+ * Internally stores values as numerator/denominator to preserve exact fractions
+ * and avoid floating-point precision issues during symbolic computation.
  *
- * @param numerator The numerator of the fraction
- * @param denominator The denominator of the fraction (must be non-zero)
- *
- * @throws IllegalArgumentException if denominator is zero, NaN, or infinite
- * @throws IllegalArgumentException if numerator is NaN or infinite
+ * @param numerator the numerator value
+ * @param denominator the denominator value (defaults to 1.0 for whole numbers)
  *
  * @example {{{
- *   Num(3)        // Represents 3
- *   Num(1, 2)     // Represents 1/2
- *   Num(4, 6)     // Can be simplified to 2/3
+ * val half = Num(1, 2)        // represents 1/2
+ * val three = Num(3)          // represents 3
+ * val twoThirds = Num(2, 3)   // represents 2/3
  * }}}
  */
-final case class Num(numerator: Double, denominator: Double = 1.0) extends Expr {
-  require(!numerator.isNaN, s"Numerator cannot be NaN")
-  require(!numerator.isInfinity, s"Numerator cannot be infinite")
-  require(!denominator.isNaN, s"Denominator cannot be NaN")
-  require(!denominator.isInfinity, s"Denominator cannot be infinite")
-  require(denominator != 0.0, s"Denominator cannot be zero")
+final case class Num(numerator: Double, denominator: Double = 1.0)
+  extends Expr {
 
   override val precedence: Int = 4
 
@@ -37,19 +29,18 @@ final case class Num(numerator: Double, denominator: Double = 1.0) extends Expr 
   def replaceSymbol(sym: String, repl: Expr): Expr = this
 
   /**
-   * Simplifies this numeric fraction by dividing by GCD.
+   * Simplifies the fraction to lowest terms if SimplifyFractions rule is enabled.
    *
-   * @param config Simplification configuration
-   * @return Simplified Num with reduced fraction
+   * Uses GCD to reduce the fraction. For example, 4/6 becomes 2/3.
    *
-   * @note Time Complexity: O(log(min(n, d))) where n is numerator, d is denominator
-   * @note Space Complexity: O(1)
+   * @param config simplification configuration
+   * @return simplified numeric expression
    */
   def simplify(implicit config: SimplificationConfig): Num = {
     if (denominator == 1.0) this
     else if (config.isEnabled(SimplifyFractions)) {
-      val g = Num.gcd(numerator, denominator)
-      Num(numerator / g, denominator / g)
+      val (simpleNum, simpleDen) = MathUtils.simplifyFraction(numerator, denominator)
+      Num(simpleNum, simpleDen)
     } else {
       this
     }
@@ -57,12 +48,12 @@ final case class Num(numerator: Double, denominator: Double = 1.0) extends Expr 
 
   override def toString: String = {
     if (denominator == 1.0) {
-      if (Num.isWhole(numerator))
+      if (MathUtils.isWhole(numerator))
         s"${numerator.toInt}"
       else
         s"$numerator"
     } else {
-      if (Num.isWhole(numerator) && Num.isWhole(denominator))
+      if (MathUtils.isWhole(numerator) && MathUtils.isWhole(denominator))
         s"${numerator.toInt}/${denominator.toInt}"
       else
         s"$numerator/$denominator"

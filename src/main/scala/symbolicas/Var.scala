@@ -3,54 +3,63 @@ package symbolicas
 import symbolicas.SimplificationConfig
 
 /**
- * Variable expression.
+ * Represents a symbolic variable in algebraic expressions.
  *
- * Represents a symbolic variable such as 'x', 'n', 'pi', etc.
+ * Variables are atomic expressions that stand for unknown or parameterized values.
+ * They can be evaluated numerically by providing a value mapping, or manipulated
+ * symbolically through algebraic operations.
  *
- * @param name The name of the variable
- * @throws IllegalArgumentException if name is empty or contains only whitespace
+ * Variables cannot be simplified further - they are already in simplest form.
+ *
+ * @param name the variable identifier (e.g., "x", "n", "alpha")
  *
  * @example {{{
- *   Var("x")    // Variable x
- *   Var("n")    // Variable n
- *   Var("pi")   // Constant pi (conventionally)
+ * val x = Var("x")
+ * val expr = Add(Array(x, Num(1)))  // represents: x + 1
+ *
+ * // Evaluate with x = 5
+ * expr.eval(Map("x" -> 5.0))  // returns 6.0
+ *
+ * // Substitute x with another expression
+ * val y = Var("y")
+ * expr.replaceSymbol("x", Mul(Array(Num(2), y)))  // returns: 2*y + 1
  * }}}
  */
 final case class Var(name: String) extends Expr {
   require(name.nonEmpty, "Variable name cannot be empty")
   require(name.trim.nonEmpty, "Variable name cannot be only whitespace")
 
-  override val precedence: Int = 4
-
-  /**
-   * Evaluates the variable by looking up its value in the variable map.
-   *
-   * @param variables Map of variable names to values
-   * @return The numeric value assigned to this variable
-   * @throws UndefinedVariableError if the variable is not defined in the map
-   */
-  def eval(variables: Map[String, Double]): Double =
-    variables.getOrElse(name,
-      throw UndefinedVariableError(name, variables.keySet)
+    /**
+     * Evaluate this variable numerically.
+     *
+     * @param vars map from variable names to values
+     * @return the numeric value assigned to this variable
+     * @throws Exception if this variable is not defined in the map
+     */
+    def eval(vars: Map[String, Double]): Double =
+            vars.getOrElse(name,
+            throw new Exception(s"Variable $name not defined")
     )
 
-  /**
-   * Replaces this variable if its name matches the target symbol.
-   *
-   * @param sym Symbol name to replace
-   * @param repl Replacement expression
-   * @return The replacement expression if name matches sym, otherwise this variable
-   */
-  def replaceSymbol(sym: String, repl: Expr): Expr =
-    if (name == sym) repl else this
+    /**
+     * Replace this variable if it matches the given symbol.
+     *
+     * @param sym the variable name to replace
+     * @param repl the replacement expression
+     * @return `repl` if this variable's name matches `sym`, otherwise `this`
+     */
+    def replaceSymbol(sym: String, repl:Expr): Expr =
+            if (name == sym) repl else this
 
-  /**
-   * Variables are already in simplest form.
-   *
-   * @param config Simplification configuration (unused for variables)
-   * @return This variable unchanged
-   */
-  def simplify(implicit config: SimplificationConfig): Var = this
+    /**
+     * Simplify this variable.
+     *
+     * Variables are already in simplest form, so this returns the variable unchanged.
+     *
+     * @param config simplification configuration (ignored for variables)
+     * @return this variable
+     */
+    def simplify(implicit config: SimplificationConfig): Var = this
 
   override def toString: String = name
 }

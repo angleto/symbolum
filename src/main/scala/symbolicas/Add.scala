@@ -23,6 +23,45 @@ import NumericConstants._
 final case class Add(terms: Vector[Expr]) extends Expr {
   require(terms.nonEmpty, "Addition requires at least one term")
 
+/**
+ * Represents n-ary addition of expressions.
+ *
+ * Addition is commutative and associative, with 0 as the identity element.
+ * This class handles sums of multiple terms with sophisticated simplification
+ * including like term collection, fraction merging, and common factor extraction.
+ *
+ * == Simplification Features ==
+ *
+ * The Add class implements numerous algebraic simplifications (when enabled):
+ *  - '''Identity removal''': Remove 0 terms
+ *  - '''Flattening''': Convert Add(a, Add(b, c)) → Add(a, b, c)
+ *  - '''Like term collection''': x + 2*x → 3*x
+ *  - '''Fraction merging''': 1/2 + 1/3 → 5/6 (via LCD)
+ *  - '''Common denominator factoring''': a/d + b/d → (a+b)/d
+ *  - '''Common term factoring''': a*b + a*c → a*(b+c)
+ *  - '''Numeric literal combination''': 2 + 3 → 5
+ *
+ * @param exprs array of expressions to add
+ *
+ * @example {{{
+ * import symbolicas._
+ * import symbolicas.Dsl._
+ *
+ * val x = Var("x")
+ *
+ * // Simple addition
+ * val sum1 = Add(Array(x, Num(1)))  // x + 1
+ *
+ * // Multiple terms
+ * val sum2 = Add(Array(x, Num(2), x, Num(3)))  // x + 2 + x + 3
+ * sum2.simplify()  // 2*x + 5
+ *
+ * // Fraction merging
+ * val sum3 = Add(Array(Num(1,2), Num(1,3)))  // 1/2 + 1/3
+ * sum3.simplify()  // 5/6
+ * }}}
+ */
+final case class Add(exprs: Array[Expr]) extends Expr {
   override val precedence: Int = 1
 
   /* -------------------------------------------------------------------------
@@ -30,27 +69,26 @@ final case class Add(terms: Vector[Expr]) extends Expr {
    * ----------------------------------------------------------------------- */
   private def mergeFractionsLCD(termSeq: Seq[Expr])(implicit config: SimplificationConfig): Option[Expr] = {
 
-    /* Attempt to extract numerator and integer denominator from a term */
+    /* Attempt to peel "numerator / integerDenominator" out of a term        */
     def asFraction(e: Expr): Option[(Expr, Int)] = e match {
-      case Num(numerator, denominator) if Num.isWhole(denominator) =>
-        Some((Num(numerator).simplify(config), denominator.toInt))
+      case Num(num, den) if MathUtils.isWhole(den) =>
+        Some((Num(num).simplify(config), den.toInt))
 
-      case Div(Vector(numeratorExpr, Num(denNumerator, denDenominator)))
-        if denDenominator == 1.0 && Num.isWhole(denNumerator) =>
-        Some((numeratorExpr, denNumerator.toInt))
+      case Div(Array(numExpr, Num(denNum, denDen)))
+        if denDen == 1.0 && MathUtils.isWhole(denNum) =>
+        Some((numExpr, denNum.toInt))
 
       case _ => None
     }
 
     val extracted = termSeq.map(asFraction)
 
-    /* Only proceed if we succeeded for every single term and have at least two fractions */
-    if (extracted.forall(_.isDefined) && termSeq.length > 1) {
-      val fractions = extracted.map(_.get)
-      val denominators = fractions.map(_._2)
-
-      // Use Num.lcm for Int denominators (convert to Double for compatibility)
-      val commonDenominator = denominators.reduce((a, b) => Num.lcm(a.toDouble, b.toDouble).toInt)
+    /* Only proceed if we succeeded for every single term and we really
+       *have* at least two fractions                                    */
+    if (extracted.forall(_.isDefined) && terms.length > 1) {
+      val fracs = extracted.map(_.get)
+      val denominators = fracs.map(_._2)
+      val commonDenominator = denominators.reduce(MathUtils.lcmInt)
 
       if (commonDenominator == 1) {
         None // nothing to do
@@ -196,32 +234,37 @@ final case class Add(terms: Vector[Expr]) extends Expr {
     }
   }
 
-  /* ---------------- Public API -------------------------------------------- */
+  /* ---------------- public API ------------------------------------------- */
 
   /**
-   * Evaluates by summing all terms.
+   * Evaluate this sum numerically.
    *
-   * @param variables Map of variable names to values
-   * @return Sum of all term evaluations
+   * @param vars map from variable names to numeric values
+   * @return sum of all term evaluations
    */
-  def eval(variables: Map[String, Double]): Double =
-    terms.map(_.eval(variables)).sum
+  def eval(vars: Map[String, Double]): Double =
+    exprs.map(_.eval(vars)).sum
 
   /**
-   * Applies symbol replacement to all terms.
+   * Replace a symbol throughout this sum.
    *
-   * @param sym Symbol to replace
-   * @param repl Replacement expression
-   * @return Addition with replaced terms
+   * @param sym variable name to replace
+   * @param repl replacement expression
+   * @return new sum with substitution applied to all terms
    */
   def replaceSymbol(sym: String, repl: Expr): Expr =
-    Add(terms.map(_.replaceSymbol(sym, repl)))
+    Add(exprs.map(_.replaceSymbol(sym, repl)))
 
   /**
-   * Expands all child expressions and flattens nested additions.
+   * Expand this addition expression.
    *
-   * @param config Simplification configuration
-   * @return Expanded expression
+   * Recursively expands all child expressions and flattens nested additions.
+   * This transforms Add(a, Add(b, c)) into Add(a, b, c).
+   *
+   * The result is always simplified after expansion.
+   *
+   * @param config simplification configuration
+   * @return expanded and simplified expression
    */
   override def expand(implicit config: SimplificationConfig): Expr = {
     // Expand all child expressions
@@ -237,13 +280,20 @@ final case class Add(terms: Vector[Expr]) extends Expr {
   }
 
   /**
-   * Simplifies the addition expression.
+   * Simplify this sum using enabled simplification rules.
    *
-   * This is a complex method applying multiple transformations in sequence.
-   * See IMPROVEMENT_PLAN.md for refactoring suggestions.
+   * Applies various algebraic simplifications in a carefully ordered sequence:
+   *  1. Flatten nested additions (if FlattenOperations enabled)
+   *  2. Remove zero terms (if RemoveIdentity enabled)
+   *  3. Merge fractions via LCD (if MergeFractionsLCD enabled)
+   *  4. Collect like terms (if CollectLikeTerms enabled)
+   *  5. Factor common denominators (if MergeFractionsCommonDenom enabled)
+   *  6. Factor common terms (if FactorCommonTerms enabled)
+   *  7. Merge divisions with common denominators
+   *  8. Combine numeric literals (if CombineNumericLiterals enabled)
    *
-   * @param config Simplification configuration
-   * @return Simplified expression
+   * @param config simplification configuration controlling which rules apply
+   * @return simplified expression
    */
   def simplify(implicit config: SimplificationConfig): Expr = {
     val simplifiedTerms = terms.map(_.simplify(config))
@@ -317,7 +367,7 @@ final case class Add(terms: Vector[Expr]) extends Expr {
 
       if (allDivisions.length >= 2) {
         // Extract all (numerator, denominator) pairs
-        val divisionPairs = allDivisions.collect { case Div(Vector(num, den)) => (num, den) }
+        val divPairs = allDivs.collect { case Div(Array(num, den)) => (num, den) }
 
         // Extract denominator values (assuming they're Num)
         val denominatorValues = divisionPairs.map(_._2).collect {
@@ -326,16 +376,16 @@ final case class Add(terms: Vector[Expr]) extends Expr {
 
         if (denominatorValues.nonEmpty && denominatorValues.length == divisionPairs.length) {
           // All denominators are numeric, we can find LCD
-          val lcd = denominatorValues.reduce(Num.lcm)
+          val lcd = denValues.reduce(MathUtils.lcmDouble)
 
-          // Convert all divisions to have LCD as denominator
-          val normalizedPairs = divisionPairs.map { case (numerator, denominator) =>
-            denominator match {
-              case Num(denNumerator, denDenominator) =>
-                val denominatorValue = denNumerator / denDenominator
-                val multiplier = lcd / denominatorValue
-                val newNumerator = if (multiplier == 1.0) {
-                  numerator
+          // Convert all divs to have LCD as denominator
+          val normalizedPairs = divPairs.map { case (num, den) =>
+            den match {
+              case Num(dn, dd) =>
+                val denValue = dn / dd
+                val multiplier = lcd / denValue
+                val newNum = if (multiplier == 1.0) {
+                  num
                 } else {
                   Mul(Vector(Num(multiplier), numerator)).simplify(config)
                 }
