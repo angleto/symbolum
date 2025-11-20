@@ -247,10 +247,10 @@ final case class Div(operands: Vector[Expr]) extends Expr {
             // Not all same denominator, check for negative numerators before returning
             if (config.isEnabled(CombineNumericLiterals) && addTerms.nonEmpty && addTerms.forall(hasNegativeCoefficient)) {
               // Factor out -1 from all terms
-              val negatedTerms = addTerms.map(negateCoefficient)
-              val positiveNumerator = Add(negatedTerms).simplify
+              val negatedTerms = addTerms.map(negateCoefficient(_)(config))
+              val positiveNumerator = Add(negatedTerms).simplify(config)
               // Return -(positive_numerator / denominator)
-              Mul(Vector(Num(-1), Div(Vector(positiveNumerator, outerDenominator)))).simplify
+              Mul(Vector(Num(-1), Div(Vector(positiveNumerator, outerDenominator)))).simplify(config)
             } else {
               Div(Vector(Add(addTerms), outerDenominator))
             }
@@ -259,10 +259,10 @@ final case class Div(operands: Vector[Expr]) extends Expr {
           // Not all Divs, check for negative numerators before returning
           if (config.isEnabled(CombineNumericLiterals) && addTerms.nonEmpty && addTerms.forall(hasNegativeCoefficient)) {
             // Factor out -1 from all terms
-            val negatedTerms = addTerms.map(negateCoefficient)
-            val positiveNumerator = Add(negatedTerms).simplify
+            val negatedTerms = addTerms.map(negateCoefficient(_)(config))
+            val positiveNumerator = Add(negatedTerms).simplify(config)
             // Return -(positive_numerator / denominator)
-            Mul(Vector(Num(-1), Div(Vector(positiveNumerator, outerDenominator)))).simplify
+            Mul(Vector(Num(-1), Div(Vector(positiveNumerator, outerDenominator)))).simplify(config)
           } else {
             Div(Vector(Add(addTerms), outerDenominator))
           }
@@ -273,10 +273,10 @@ final case class Div(operands: Vector[Expr]) extends Expr {
         // Check if all terms have negative coefficients
         if (addTerms.nonEmpty && addTerms.forall(hasNegativeCoefficient)) {
           // Factor out -1 from all terms
-          val negatedTerms = addTerms.map(negateCoefficient)
-          val positiveNumerator = Add(negatedTerms).simplify
+          val negatedTerms = addTerms.map(negateCoefficient(_)(config))
+          val positiveNumerator = Add(negatedTerms).simplify(config)
           // Return -(positive_numerator / denominator)
-          Mul(Vector(Num(-1), Div(Vector(positiveNumerator, denominator)))).simplify
+          Mul(Vector(Num(-1), Div(Vector(positiveNumerator, denominator)))).simplify(config)
         } else {
           Div(Vector(Add(addTerms), denominator))
         }
