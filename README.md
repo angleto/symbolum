@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/angleto/symbolicas/actions/workflows/ci.yml"><img src="https://github.com/angleto/symbolicas/actions/workflows/ci.yml/badge.svg" alt="CI Status"/></a>
   <a href="https://www.scala-lang.org/"><img src="https://img.shields.io/badge/scala-3.3.5-red.svg" alt="Scala Version"/></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-4.0.0--SNAPSHOT-blue.svg" alt="Version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"/></a>
