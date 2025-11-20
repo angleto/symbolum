@@ -96,12 +96,13 @@ object ExprCache {
    */
   def printStats(): Unit = {
     val (h, m, size, rate) = stats
-    println(s"""
+    val hitRatePercent = rate * 100
+    println(f"""
       |ExprCache Statistics:
       |  Hits: $h
       |  Misses: $m
       |  Size: $size
-      |  Hit Rate: ${(rate * 100).formatted("%.2f")}%
+      |  Hit Rate: $hitRatePercent%.2f%%
       |""".stripMargin)
   }
 }
