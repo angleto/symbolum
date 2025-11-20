@@ -3,57 +3,18 @@
   <defs>
     <linearGradient id="iconSigmaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#88C0D0;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#81A1C1;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#5E81AC;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="iconIntegralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#BF616A;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#D08770;stop-opacity:1" />
-    </linearGradient>
-    <filter id="iconGlow">
-      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
 
   <!-- Background -->
   <rect width="200" height="200" fill="#2E3440" rx="20"/>
 
-  <!-- Sigma Symbol (Σ) - correctly oriented -->
-  <path d="M 45 55 L 155 55 L 100 100 L 155 145 L 45 145 L 45 130 L 130 130 L 80 100 L 130 70 L 45 70 Z"
+  <!-- Greek Uppercase Sigma (Σ) -->
+  <path d="M 40 45 L 160 45 L 160 60 L 75 60 L 125 100 L 75 140 L 160 140 L 160 155 L 40 155 L 40 138 L 110 138 L 65 100 L 110 62 L 40 62 Z"
         fill="url(#iconSigmaGrad)"
         stroke="#ECEFF4"
         stroke-width="3"
-        stroke-linejoin="round"
-        opacity="0.95"/>
-
-  <!-- Integral Symbol (∫) - interwoven on right side -->
-  <path d="M 145 65 Q 152 58 159 55 Q 166 52 173 52 Q 176 52 176 55
-           L 176 135 Q 176 138 178 140 Q 180 142 183 143"
-        stroke="url(#iconIntegralGrad)"
-        stroke-width="8"
-        fill="none"
-        stroke-linecap="round"
-        opacity="0.95"
-        filter="url(#iconGlow)"/>
-
-  <!-- Integral hooks -->
-  <path d="M 173 52 Q 170 50 167 49"
-        stroke="url(#iconIntegralGrad)"
-        stroke-width="8"
-        fill="none"
-        stroke-linecap="round"
-        opacity="0.95"/>
-
-  <path d="M 183 143 Q 186 144 189 146"
-        stroke="url(#iconIntegralGrad)"
-        stroke-width="8"
-        fill="none"
-        stroke-linecap="round"
-        opacity="0.95"/>
-
-  <!-- Small accent dot -->
-  <circle cx="30" cy="85" r="5" fill="#A3BE8C" opacity="0.8"/>
+        stroke-linejoin="round"/>
 </svg>
