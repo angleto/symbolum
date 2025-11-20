@@ -401,7 +401,7 @@ final case class Add(terms: Vector[Expr]) extends Expr {
           mergedDivisions ++ others ++ (if (numericsAsDivs.isEmpty) numerics else Vector.empty[Expr])
         } else {
           // Some denominators are not numeric, fall back to grouping by exact match
-          val grouped = divisionPairs.groupBy(_._2)
+          val grouped = divPairs.groupBy(_._2)
           val mergedDivisions = grouped.flatMap { case (_, pairs) =>
             if (pairs.length == 1) {
               val (numerator, denominator) = pairs.head

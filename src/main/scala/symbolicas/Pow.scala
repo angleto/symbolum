@@ -66,7 +66,7 @@ final case class Pow(base: Expr, exponent: Expr) extends Expr {
 
     (expandedBase, expandedExponent) match {
       // Binomial expansion for (a+b)^n where n is small positive integer
-      case (Add(terms), Num(n)) if n == n.toInt && n > 0 && n <= 10 && config.isEnabled(DistributeProduct) =>
+      case (Add(terms), Num(n, _)) if n == n.toInt && n > 0 && n <= 10 && config.isEnabled(DistributeProduct) =>
         binomialExpansion(terms, n.toInt)(config)
 
       // Distribute power over multiplication: (a*b)^n → a^n * b^n
@@ -160,19 +160,19 @@ final case class Pow(base: Expr, exponent: Expr) extends Expr {
 
     (simplifiedBase, simplifiedExponent) match {
       // x^0 → 1 (for any non-zero x)
-      case (_, Num(0)) => Num(1)
+      case (_, Num(0, _)) => Num(1)
 
       // x^1 → x
-      case (b, Num(1)) => b
+      case (b, Num(1, _)) => b
 
       // 0^x → 0 (for positive x)
-      case (Num(0), Num(e)) if e > 0 => Num(0)
+      case (Num(0, _), Num(e, _)) if e > 0 => Num(0)
 
       // 1^x → 1
-      case (Num(1), _) => Num(1)
+      case (Num(1, _), _) => Num(1)
 
       // Numeric: a^b where both are numbers
-      case (Num(b), Num(e)) if config.isEnabled(CombineNumericLiterals) =>
+      case (Num(b, _), Num(e, _)) if config.isEnabled(CombineNumericLiterals) =>
         // Only compute if exponent is reasonable
         if (e.abs <= 100 && e == e.toInt) {
           val result = math.pow(b, e)
@@ -197,11 +197,11 @@ final case class Pow(base: Expr, exponent: Expr) extends Expr {
         Mul(poweredFactors).simplify(config)
 
       // Negative exponent: a^(-b) → 1/(a^b)
-      case (b, Num(e)) if e < 0 =>
+      case (b, Num(e, _)) if e < 0 =>
         Div(Vector(Num(1), Pow(b, Num(-e)).simplify(config))).simplify(config)
 
       // Fractional exponent on numeric: sqrt, etc.
-      case (Num(b), Num(e)) if b >= 0 =>
+      case (Num(b, _), Num(e, _)) if b >= 0 =>
         val result = math.pow(b, e)
         if (!result.isNaN && !result.isInfinite) Num(result)
         else Pow(Num(b), Num(e))

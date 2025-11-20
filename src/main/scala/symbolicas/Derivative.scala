@@ -69,9 +69,9 @@ final case class Derivative(expression: Expr, variable: String) extends Expr {
   def simplify(implicit config: SimplificationConfig): Expr = {
     val simplifiedExpr = expression.simplify(config)
 
-    simplifiedExpr match {
+    simplifiedExpr match{
       // Constant rule: d/dx(c) = 0
-      case Num(_) => Num(0)
+      case Num(_, _) => Num(0)
 
       // Variable rules
       case Var(name) if name == variable => Num(1)  // d/dx(x) = 1
@@ -125,7 +125,7 @@ final case class Derivative(expression: Expr, variable: String) extends Expr {
         // General case: d/dx(f^g) = f^g * (g' * log(f) + g * f'/f)
         // Special case when exponent is constant: d/dx(f^n) = n * f^(n-1) * f'
         exponent match {
-          case Num(_) | Var(v) if v != variable =>
+          case Num(_, _) | Var(v) if v != variable =>
             // Exponent is constant with respect to variable
             val basePrime = Derivative(base, variable).simplify(config)
             Mul(Vector(

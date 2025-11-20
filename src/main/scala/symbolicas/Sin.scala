@@ -66,10 +66,10 @@ final case class Sin(argument: Expr) extends Expr {
 
     simplifiedArg match {
       // sin(0) = 0
-      case Num(0) => Num(0)
+      case Num(0, _) => Num(0)
 
       // sin(numeric) = evaluate
-      case Num(x) if config.isEnabled(CombineNumericLiterals) =>
+      case Num(x, _) if config.isEnabled(CombineNumericLiterals) =>
         Num(math.sin(x))
 
       // sin(-x) = -sin(x) (odd function)
@@ -77,7 +77,7 @@ final case class Sin(argument: Expr) extends Expr {
         Neg(Sin(inner).simplify(config)).simplify(config)
 
       // sin(Sub(...)) with single negative term
-      case Sub(Vector(Num(0), inner)) =>
+      case Sub(Vector(Num(0, _), inner)) =>
         Neg(Sin(inner).simplify(config)).simplify(config)
 
       // Default: keep as Sin with simplified argument

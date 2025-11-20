@@ -95,13 +95,13 @@ final case class Log(argument: Expr) extends Expr {
 
     simplifiedArg match {
       // log(1) = 0
-      case Num(1) => Num(0)
+      case Num(1, _) => Num(0)
 
       // log(e) = 1 (where e ≈ 2.71828)
-      case Num(x) if math.abs(x - math.E) < 1e-10 => Num(1)
+      case Num(x, _) if math.abs(x - math.E) < 1e-10 => Num(1)
 
       // log(numeric) = evaluate (only for positive numbers)
-      case Num(x) if x > 0 && config.isEnabled(CombineNumericLiterals) =>
+      case Num(x, _) if x > 0 && config.isEnabled(CombineNumericLiterals) =>
         Num(math.log(x))
 
       // log(exp(x)) = x

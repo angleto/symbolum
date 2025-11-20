@@ -80,10 +80,10 @@ final case class Exp(argument: Expr) extends Expr {
 
     simplifiedArg match {
       // exp(0) = 1
-      case Num(0) => Num(1)
+      case Num(0, _) => Num(1)
 
       // exp(numeric) = evaluate
-      case Num(x) if config.isEnabled(CombineNumericLiterals) =>
+      case Num(x, _) if config.isEnabled(CombineNumericLiterals) =>
         Num(math.exp(x))
 
       // exp(log(x)) = x
@@ -91,10 +91,10 @@ final case class Exp(argument: Expr) extends Expr {
         inner
 
       // exp(k * log(x)) = x^k
-      case Mul(Vector(Num(k), Log(inner))) =>
+      case Mul(Vector(Num(k, _), Log(inner))) =>
         Pow(inner, Num(k)).simplify(config)
 
-      case Mul(Vector(Log(inner), Num(k))) =>
+      case Mul(Vector(Log(inner), Num(k, _))) =>
         Pow(inner, Num(k)).simplify(config)
 
       // Default: keep as Exp with simplified argument
