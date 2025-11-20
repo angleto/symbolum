@@ -257,6 +257,7 @@ trait Expr {
     def loop(expr: Expr, iterationsLeft: Int, previousExpr: Expr): Expr = {
       if (iterationsLeft <= 0) {
         // Safety limit reached - return what we have
+        println(s"[fullSimplify] MAX_ITERATIONS reached, returning: $expr")
         return expr
       }
 
@@ -271,6 +272,12 @@ trait Expr {
       val step6 = step5.simplify(config)
       val step7 = step6.simplify(config)  // Double simplify for cascading effects
 
+      // Debug logging
+      if (iterationsLeft == maxIter) {
+        println(s"[fullSimplify] Initial: $expr")
+        println(s"[fullSimplify] After 7 steps: $step7")
+      }
+
       // Check if we've reached a fixpoint using structural equality
       // CRITICAL FIX: Use structural equality instead of hash comparison to avoid
       // hash collisions that cause premature termination and incorrect simplifications
@@ -279,6 +286,7 @@ trait Expr {
       // issues that can prevent fixpoint detection when expressions are mathematically
       // equivalent but have tiny numerical differences due to floating-point arithmetic
       if (step7 == previousExpr || step7.approxEqual(previousExpr)) {
+        println(s"[fullSimplify] Fixpoint reached after ${maxIter - iterationsLeft + 1} iterations: $step7")
         step7
       } else {
         loop(step7, iterationsLeft - 1, step7)
@@ -289,6 +297,8 @@ trait Expr {
     val step0 = this.simplify(config)
     val step1 = step0.expand(config)
     val initial = step1.simplify(config)
+    println(s"[fullSimplify] Starting fullSimplify on: $this")
+    println(s"[fullSimplify] After initial normalization: $initial")
     loop(initial, maxIter, initial)
   }
 
