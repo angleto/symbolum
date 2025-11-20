@@ -55,7 +55,7 @@ import symbolicas.NumericConstants._
  *
  * @see [[SimplificationConfig]] for controlling which simplification rules are applied
  */
-sealed trait Expr {
+trait Expr {
   /**
    * Precedence level for pretty printing.
    *
