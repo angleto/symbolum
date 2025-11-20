@@ -71,10 +71,13 @@ trait Expr {
   def precedence: Int = 10
 
   /**
-   * Structural hash code for fast equality and fixpoint detection.
+   * Structural hash code for fast comparisons.
    *
    * This hash is computed lazily and cached for performance.
-   * Enables O(1) comparison instead of O(n) string comparison in fullSimplify.
+   * Currently used for hash consing and fast set/map operations.
+   *
+   * @note Not used for fixpoint detection in fullSimplify due to potential hash collisions
+   *       that could cause incorrect simplifications. Structural equality is used instead.
    *
    * @return Hash code based on expression structure
    */
@@ -175,7 +178,7 @@ trait Expr {
    *     - expand → simplify → expand → simplify → expand → simplify → simplify
    *     - The triple expand-simplify pattern captures deeply nested structures
    *     - Double simplify at the end handles cascading effects
-   *  3. Convergence detection via string comparison
+   *  3. Convergence detection via structural equality comparison
    *
    * This pattern is particularly effective for:
    *  - Deeply nested Mul(Cos(...), Add(...)) structures
@@ -184,15 +187,15 @@ trait Expr {
    *
    * == Fixpoint Detection ==
    *
-   * The algorithm compares the string representation of successive iterations.
-   * If two consecutive iterations produce the same string, a fixpoint has been reached.
+   * The algorithm uses structural equality (`==`) to detect fixpoints.
+   * If two consecutive iterations produce structurally equal expressions, a fixpoint has been reached.
    *
    * @param config simplification configuration controlling which rules to apply
    * @param maxIter maximum iterations to prevent infinite loops (default 100)
    * @return fully simplified expression
    *
    * @example {{{
-   * val expr = Mul(Array(Var("a"), Add(Array(Var("b"), Var("c")))))  // a*(b+c)
+   * val expr = Mul(Vector(Var("a"), Add(Vector(Var("b"), Var("c")))))  // a*(b+c)
    * expr.fullSimplify()  // returns: a*b + a*c (fully expanded and simplified)
    * }}}
    *
@@ -202,7 +205,7 @@ trait Expr {
   def fullSimplify(implicit config: SimplificationConfig = SimplificationConfig.Default,
                    maxIter: Int = MAX_ITERATIONS): Expr = {
     @tailrec
-    def loop(expr: Expr, iterationsLeft: Int, previousHash: Int): Expr = {
+    def loop(expr: Expr, iterationsLeft: Int, previousExpr: Expr): Expr = {
       if (iterationsLeft <= 0) {
         // Safety limit reached - return what we have
         return expr
@@ -219,13 +222,13 @@ trait Expr {
       val step6 = step5.simplify(config)
       val step7 = step6.simplify(config)  // Double simplify for cascading effects
 
-      val currentHash = step7.structuralHash
-
-      // Check if we've reached a fixpoint using structural hash (O(1) instead of O(n))
-      if (currentHash == previousHash) {
+      // Check if we've reached a fixpoint using structural equality
+      // CRITICAL FIX: Use structural equality instead of hash comparison to avoid
+      // hash collisions that cause premature termination and incorrect simplifications
+      if (step7 == previousExpr) {
         step7
       } else {
-        loop(step7, iterationsLeft - 1, currentHash)
+        loop(step7, iterationsLeft - 1, step7)
       }
     }
 
@@ -233,7 +236,7 @@ trait Expr {
     val step0 = this.simplify(config)
     val step1 = step0.expand(config)
     val initial = step1.simplify(config)
-    loop(initial, maxIter, initial.structuralHash)
+    loop(initial, maxIter, initial)
   }
 
   /* -------- helper for pretty printing ------------------------------------ */
