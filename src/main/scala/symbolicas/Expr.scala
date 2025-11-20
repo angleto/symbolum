@@ -294,11 +294,13 @@ trait Expr {
     }
 
     // Initial multi-pass to normalize deeply nested input
-    val step0 = this.simplify(config)
-    val step1 = step0.expand(config)
-    val initial = step1.simplify(config)
     println(s"[fullSimplify] Starting fullSimplify on: $this")
-    println(s"[fullSimplify] After initial normalization: $initial")
+    val step0 = this.simplify(config)
+    println(s"[fullSimplify] After step0 (simplify): $step0")
+    val step1 = step0.expand(config)
+    println(s"[fullSimplify] After step1 (expand): $step1")
+    val initial = step1.simplify(config)
+    println(s"[fullSimplify] After initial normalization (simplify again): $initial")
     loop(initial, maxIter, initial)
   }
 
