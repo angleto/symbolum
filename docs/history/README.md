@@ -34,6 +34,12 @@ Major quality transformation to "masterpiece" status:
 - **CODE_QUALITY_ASSESSMENT.md** - Code quality analysis before v3.0
 - **REFACTORING_SUMMARY.md** - Refactoring and documentation work
 
+### v4.0/
+Production-ready CAS with calculus, solving, and critical bugfixes:
+- **V4.0_RELEASE_NOTES.md** - Comprehensive release notes for v4.0
+- **BUGFIX_SIMPLIFICATION.md** - Critical hash collision fix in fullSimplify()
+- **BUGFIX_MUL_SIMPLIFY.md** - Critical fix for Mul.simplify() losing symbolic factors
+
 ## Current Documentation
 
 For current version (v4.0), see:
@@ -47,8 +53,15 @@ For current version (v4.0), see:
 ## Version Timeline
 
 ```
-v1.0 (Initial) → v2.0 (Config System) → v3.0 (Quality) → v4.0 (Production CAS)
+v1.0 (2025-11-17) → v2.0 (2025-11-18) → v3.0 (2025-11-19) → v4.0 (2025-11-20)
+  Initial           Config System         Quality            Production CAS
 ```
+
+**Key Milestones:**
+- **v1.0:** Basic symbolic algebra with simplification and expansion
+- **v2.0:** Configurable rule-based simplification system (12 independent rules)
+- **v3.0:** Array→Vector migration, sealed traits, custom exceptions, input validation
+- **v4.0:** Complete CAS with Power, Trig (Sin/Tan), Exp/Log, Calculus (Derivative/Integral), Equation Solving
 
 ## Note
 
