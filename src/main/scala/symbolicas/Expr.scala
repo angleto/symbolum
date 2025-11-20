@@ -3,6 +3,7 @@ package symbolicas
 import scala.annotation.tailrec
 import scala.language.implicitConversions
 import symbolicas.SimplificationConfig
+import symbolicas.NumericConstants._
 
 /**
  * Base trait for all symbolic algebraic expressions.
@@ -189,7 +190,7 @@ trait Expr {
    *       Consider using [[simplify]] or [[expand]] individually if performance is critical.
    */
   def fullSimplify(implicit config: SimplificationConfig = SimplificationConfig.Default,
-                   maxIter: Int = 100): Expr = {
+                   maxIter: Int = MAX_ITERATIONS): Expr = {
     @tailrec
     def loop(expr: Expr, iterationsLeft: Int, previousStr: String): Expr = {
       if (iterationsLeft <= 0) {

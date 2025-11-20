@@ -3,125 +3,225 @@ package symbolicas
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
-/* ------------------------------------------------------------------------- */
-final case class Mul(exprs: Array[Expr]) extends Expr {
+/**
+ * Multiplication expression.
+ *
+ * Represents an n-ary product: a * b * c * ...
+ * Supports distribution over sums and product-to-sum transformations for cosines.
+ *
+ * @param factors Vector of expressions to multiply
+ * @throws IllegalArgumentException if factors is empty
+ *
+ * @example {{{
+ *   Mul(Vector(Num(2), Var("x")))             // 2 * x
+ *   Mul(Vector(Num(1, 2), Num(1, 3)))         // (1/2) * (1/3) → 1/6
+ *   Mul(Vector(a, Add(Vector(b, c))))         // a * (b + c) → a*b + a*c (when expanded)
+ * }}}
+ */
+final case class Mul(factors: Vector[Expr]) extends Expr {
+  require(factors.nonEmpty, "Multiplication requires at least one factor")
+
   override val precedence: Int = 2
 
-  def eval(vars: Map[String, Double]): Double =
-    exprs.map(_.eval(vars)).product
+  /**
+   * Evaluates by multiplying all factors.
+   *
+   * @param variables Map of variable names to values
+   * @return Product of all factor evaluations
+   */
+  def eval(variables: Map[String, Double]): Double =
+    factors.map(_.eval(variables)).product
 
+  /**
+   * Applies symbol replacement to all factors.
+   *
+   * @param sym Symbol to replace
+   * @param repl Replacement expression
+   * @return Multiplication with replaced factors
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
-    Mul(exprs.map(_.replaceSymbol(sym, repl)))
+    Mul(factors.map(_.replaceSymbol(sym, repl)))
 
+  /**
+   * Expands the multiplication by distributing over sums.
+   *
+   * For example: a * (b + c) → a*b + a*c
+   *
+   * @param config Simplification configuration (includes expansion limits)
+   * @return Expanded expression
+   * @throws ExpansionLimitExceededError if expansion would exceed maxExpansionTerms
+   *
+   * @note Time Complexity: O(k^n) where k is average terms per Add, n is number of Adds
+   * @note This is the critical method that needs expansion limiting to prevent OOM
+   */
   override def expand(implicit config: SimplificationConfig): Expr = {
-    val children: Array[Expr] = exprs.map(_.expand(config))
+    val expandedFactors: Vector[Expr] = factors.map(_.expand(config))
 
-    // First try product-to-sum if enabled
+    // First try product-to-sum transformation if enabled
     if (config.isEnabled(ProductOfCosToSumOfCos)) {
-      productToSumCosines(children)(config) match {
+      productToSumCosines(expandedFactors)(config) match {
         case Some((transformed, remaining)) =>
           if (remaining.isEmpty)
             transformed.expand(config)
           else
             Mul(transformed +: remaining).expand(config)
         case None =>
-          expandDistribute(children)(config)
+          expandDistribute(expandedFactors)(config)
       }
     } else {
-      expandDistribute(children)(config)
+      expandDistribute(expandedFactors)(config)
     }
   }
 
-  private def expandDistribute(children: Array[Expr])(implicit config: SimplificationConfig): Expr = {
-    // Continue with normal expansion
-    val termSets: Array[Array[Expr]] = children.map {
-      case Add(ts) => ts
-      case other => Array(other)
+  /**
+   * Distributes products over sums with expansion limit checking.
+   *
+   * Transforms: (a+b) * (c+d) → a*c + a*d + b*c + b*d
+   *
+   * @param expandedFactors Factors that have already been expanded
+   * @param config Simplification configuration
+   * @return Distributed expression or unexpanded Mul if limit would be exceeded
+   * @throws ExpansionLimitExceededError if expansion would exceed maxExpansionTerms
+   *
+   * @note Prevents combinatorial explosion by checking term count before expanding
+   */
+  private def expandDistribute(expandedFactors: Vector[Expr])(implicit config: SimplificationConfig): Expr = {
+    // Convert each factor to a set of terms (Add becomes multiple terms, others become single term)
+    val termSets: Vector[Vector[Expr]] = expandedFactors.map {
+      case Add(terms) => terms
+      case other => Vector(other)
     }
 
     val hasAddition = termSets.exists(_.length > 1)
     if (!hasAddition || !config.isEnabled(DistributeProduct))
-      return Mul(children).simplify(config)
+      return Mul(expandedFactors).simplify(config)
 
-    /* cartesian product ------------------------------------------------ */
-    def cartesian[T](xss: List[List[T]]): List[List[T]] = xss match {
-      case Nil => List(Nil)
-      case h :: t =>
-        for {
-          x <- h
-          xs <- cartesian(t)
-        } yield x :: xs
+    /* CRITICAL: Check expansion limit before computing cartesian product */
+    val estimatedTerms = termSets.map(_.length.toLong).product
+
+    if (estimatedTerms > config.maxExpansionTerms) {
+      // Expansion would exceed limit - return unexpanded form
+      throw ExpansionLimitExceededError(estimatedTerms, config.maxExpansionTerms)
     }
 
-    val combos: List[List[Expr]] =
-      cartesian(termSets.map(_.toList).toList)
+    /* Safe to expand - compute cartesian product */
+    val combinations: List[List[Expr]] = cartesianProduct(termSets.map(_.toList).toList)
 
-    /* build a product for every combination, simplify it -------------- */
-    val distributedTerms: Array[Expr] =
-      combos.map { factors => Mul(factors.toArray).simplify(config) }.toArray
+    /* Build a product for every combination and simplify */
+    val distributedTerms: Vector[Expr] =
+      combinations.map { factorList =>
+        Mul(factorList.toVector).simplify(config)
+      }.toVector
 
     Add(distributedTerms).simplify(config)
   }
 
-  /* Product-to-sum for cosines: cos(A) * cos(B) = 1/2 * [cos(A-B) + cos(A+B)] */
-  private def productToSumCosines(factors: Array[Expr])(implicit config: SimplificationConfig): Option[(Expr, Array[Expr])] = {
+  /**
+   * Computes the cartesian product of lists.
+   *
+   * For example: [[a,b], [c,d]] → [[a,c], [a,d], [b,c], [b,d]]
+   *
+   * @param lists List of lists to compute cartesian product of
+   * @return All combinations
+   *
+   * @note Time Complexity: O(product of list lengths)
+   */
+  private def cartesianProduct[T](lists: List[List[T]]): List[List[T]] = lists match {
+    case Nil => List(Nil)
+    case head :: tail =>
+      for {
+        element <- head
+        rest <- cartesianProduct(tail)
+      } yield element :: rest
+  }
+
+  /**
+   * Applies product-to-sum transformation for cosines.
+   *
+   * Transforms: cos(A) * cos(B) → (1/2) * [cos(A-B) + cos(A+B)]
+   *
+   * @param factors Factors to search for cosine pair
+   * @param config Simplification configuration
+   * @return Some((transformed, remaining)) if a pair was found, None otherwise
+   *
+   * @note Only transforms the first pair found, allowing iterative application
+   */
+  private def productToSumCosines(factors: Vector[Expr])(implicit config: SimplificationConfig):
+      Option[(Expr, Vector[Expr])] = {
     // Find the first pair of Cos terms
-    val cosIndices = factors.zipWithIndex.collect {
+    val cosineIndices = factors.zipWithIndex.collect {
       case (Cos(_), idx) => idx
     }
 
-    if (cosIndices.length >= 2) {
-      val idx1 = cosIndices(0)
-      val idx2 = cosIndices(1)
+    if (cosineIndices.length >= 2) {
+      val index1 = cosineIndices(0)
+      val index2 = cosineIndices(1)
 
       // Safe pattern matching - we know these are Cos because we filtered them
-      val (a, b) = (factors(idx1), factors(idx2)) match {
-        case (Cos(cosA), Cos(cosB)) => (cosA, cosB)
+      val (argA, argB) = (factors(index1), factors(index2)) match {
+        case (Cos(a), Cos(b)) => (a, b)
         case _ => return None  // Defensive: should never happen
       }
 
-      // Build: 1/2 * [cos(a - b) + cos(a + b)]
-      val halfFactor = Num(1, 2)
-      val diff = Sub(Array(a, b)).simplify(config)
-      val sum = Add(Array(a, b)).simplify(config)
-      val cosSum = Add(Array(
-        Cos(diff),
+      // Build: 1/2 * [cos(A - B) + cos(A + B)]
+      val halfCoefficient = Num(1, 2)
+      val difference = Sub(Vector(argA, argB)).simplify(config)
+      val sum = Add(Vector(argA, argB)).simplify(config)
+      val cosineSum = Add(Vector(
+        Cos(difference),
         Cos(sum)
       ))
 
       // Keep all other factors except the two cosines we used
       val remainingFactors = factors.zipWithIndex.collect {
-        case (e, i) if i != idx1 && i != idx2 => e
+        case (expr, i) if i != index1 && i != index2 => expr
       }
 
-      Some((Mul(Array(halfFactor, cosSum)).simplify(config), remainingFactors))
+      Some((Mul(Vector(halfCoefficient, cosineSum)).simplify(config), remainingFactors))
     } else {
       None
     }
   }
 
+  /**
+   * Simplifies the multiplication expression.
+   *
+   * Transformations applied:
+   * 1. Flatten nested multiplications: Mul(a, Mul(b, c)) → Mul(a, b, c)
+   * 2. Remove identity elements (1)
+   * 3. Check for zero (short-circuit to 0)
+   * 4. Aggressively expand products containing sums
+   * 5. Merge divisions
+   * 6. Apply product-to-sum for cosines
+   * 7. Combine numeric factors
+   *
+   * @param config Simplification configuration
+   * @return Simplified expression
+   *
+   * @note Time Complexity: O(n) where n is the number of factors
+   */
   def simplify(implicit config: SimplificationConfig): Expr = {
-    val simplified = exprs.map(_.simplify(config))
+    val simplifiedFactors = factors.map(_.simplify(config))
     val one = Num(1.0)
 
-    /* flatten nested multiplications ------------------------------------ */
+    /* Flatten nested multiplications: Mul(a, Mul(b, c)) → Mul(a, b, c) */
     val flattened = if (config.isEnabled(FlattenOperations)) {
-      simplified.flatMap {
-        case Mul(innerExprs) => innerExprs
-        case other => Array(other)
+      simplifiedFactors.flatMap {
+        case Mul(innerFactors) => innerFactors
+        case other => Vector(other)
       }
     } else {
-      simplified
+      simplifiedFactors
     }
 
-    /* remove useless factors -------------------------------------------- */
+    /* Remove identity elements (1) */
     val withoutOnes = if (config.isEnabled(RemoveIdentity)) {
       flattened.filterNot(_ == one)
     } else {
       flattened
     }
 
-    // Check for zero
+    /* Check for zero - short circuit */
     if (withoutOnes.contains(Num(0.0))) {
       return Num(0.0)
     }
@@ -129,58 +229,61 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
     /* AGGRESSIVE EXPANSION: If we have a product with an Add term, expand it immediately
      * This prevents large nested blocks like: cos(A) * (B + C + D + ...)
      * We want: cos(A) * B + cos(A) * C + cos(A) * D + ...
-     * This is crucial for breaking down large collatz expressions */
+     * This is crucial for breaking down large Collatz expressions */
     if (config.isEnabled(DistributeProduct)) {
-      val hasAdd = withoutOnes.exists(_.isInstanceOf[Add])
-      if (hasAdd && withoutOnes.length > 1) {
+      val containsAdd = withoutOnes.exists(_.isInstanceOf[Add])
+      if (containsAdd && withoutOnes.length > 1) {
         // Expand this product immediately and return the expanded form
+        // This may throw ExpansionLimitExceededError if too many terms
         return Mul(withoutOnes).expand(config)
       }
     }
 
-    /* Merge numeric factors with divisions ------------------------------ */
-    /* Transform: Num(a) * Div([b, c]) → Div([Mul([Num(a), b]), c])      */
+    /* Merge numeric factors with divisions */
+    /* Transform: Num(a) * Div(b, c) → Div(Mul(Num(a), b), c) */
     /* This allows 3 * (x/2) to become (3*x)/2 for better simplification */
     val withMergedDivs = if (config.isEnabled(FlattenOperations)) {
-      val (nums, nonNums) = withoutOnes.partition(_.isInstanceOf[Num])
-      val (divs, others) = nonNums.partition(_.isInstanceOf[Div])
+      val (numFactors, nonNumFactors) = withoutOnes.partition(_.isInstanceOf[Num])
+      val (divisions, otherFactors) = nonNumFactors.partition(_.isInstanceOf[Div])
 
-      if (divs.length >= 2) {
+      if (divisions.length >= 2) {
         // Multiple divisions: merge them all into one
-        val divPairs = divs.collect { case Div(Array(n, d)) => (n, d) }
-        val allNumerators = divPairs.map(_._1)
-        val allDenominators = divPairs.map(_._2)
+        val divisionPairs = divisions.collect { case Div(Vector(numerator, denominator)) => (numerator, denominator) }
+        val allNumerators = divisionPairs.map(_._1)
+        val allDenominators = divisionPairs.map(_._2)
 
-        val combinedNum = if (allNumerators.length == 1) {
+        val combinedNumerator = if (allNumerators.length == 1) {
           allNumerators.head
         } else {
-          Mul(allNumerators.toArray).simplify(config)
+          Mul(allNumerators).simplify(config)
         }
 
-        val combinedDen = if (allDenominators.length == 1) {
+        val combinedDenominator = if (allDenominators.length == 1) {
           allDenominators.head
         } else {
-          Mul(allDenominators.toArray).simplify(config)
+          Mul(allDenominators).simplify(config)
         }
 
-        val mergedDiv = Div(Array(combinedNum, combinedDen)).simplify(config)
+        val mergedDivision = Div(Vector(combinedNumerator, combinedDenominator)).simplify(config)
 
-        // Combine with nums and others
-        val result = Array(mergedDiv) ++ nums ++ others
+        // Combine with numeric factors and other factors
+        val result = mergedDivision +: (numFactors ++ otherFactors)
         if (result.length == 1) return result.head
         result
-      } else if (nums.nonEmpty && divs.nonEmpty) {
-        // Single division with numeric factors: merge into numerator
-        val numProduct = if (nums.length == 1) nums.head else Mul(nums).simplify(config)
 
-        val mergedDivs = divs.map {
-          case Div(Array(num, den)) =>
-            Div(Array(Mul(Array(numProduct, num)).simplify(config), den))
-          case d => d  // shouldn't happen
+      } else if (numFactors.nonEmpty && divisions.nonEmpty) {
+        // Single division with numeric factors: merge into numerator
+        val numericProduct = if (numFactors.length == 1) numFactors.head else Mul(numFactors).simplify(config)
+
+        val mergedDivisions = divisions.map {
+          case Div(Vector(numerator, denominator)) =>
+            Div(Vector(Mul(Vector(numericProduct, numerator)).simplify(config), denominator))
+          case d => d  // Defensive: shouldn't happen
         }
 
-        // Return merged divs plus other factors
-        mergedDivs ++ others
+        // Return merged divisions plus other factors
+        mergedDivisions ++ otherFactors
+
       } else {
         withoutOnes
       }
@@ -188,7 +291,7 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
       withoutOnes
     }
 
-    /* Try product-to-sum transformation for cosines ------------------- */
+    /* Try product-to-sum transformation for cosines */
     if (config.isEnabled(ProductOfCosToSumOfCos)) {
       productToSumCosines(withMergedDivs)(config) match {
         case Some((transformed, remaining)) =>
@@ -200,12 +303,12 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
             // The transformed is "1/2 * (cos(a-b) + cos(a+b))"
             // We want remaining * 1/2 * (cos(a-b) + cos(a+b))
             transformed match {
-              case Mul(Array(halfFactor, sumExpr)) =>
+              case Mul(Vector(halfCoefficient, sumExpr)) =>
                 // Combine remaining factors with the half factor
-                val allCoeffs = halfFactor +: remaining
-                val finalCoeff = if (allCoeffs.length == 1) allCoeffs(0)
-                else Mul(allCoeffs).simplify(config)
-                return Mul(Array(finalCoeff, sumExpr)).simplify(config)
+                val allCoefficients = halfCoefficient +: remaining
+                val finalCoefficient = if (allCoefficients.length == 1) allCoefficients(0)
+                else Mul(allCoefficients).simplify(config)
+                return Mul(Vector(finalCoefficient, sumExpr)).simplify(config)
               case _ =>
                 return Mul(transformed +: remaining).simplify(config)
             }
@@ -216,39 +319,38 @@ final case class Mul(exprs: Array[Expr]) extends Expr {
       }
     }
 
-    /* split into numeric and symbolic parts ----------------------------- */
-    val (nums, others) = withMergedDivs.partition(_.isInstanceOf[Num])
+    /* Split into numeric and symbolic parts */
+    val (numericFactors, symbolicFactors) = withMergedDivs.partition(_.isInstanceOf[Num])
 
-    val numericPart = if (config.isEnabled(CombineNumericLiterals) && nums.nonEmpty) {
-      val (numProd, denProd) =
-        nums.collect { case Num(n, d) => (n, d) }
-          .foldLeft((1.0, 1.0)) { case ((an, ad), (bn, bd)) =>
-            (an * bn, ad * bd)
-          }
-      Num(numProd, denProd).simplify(config)
+    /* Combine all numeric factors using multiplyFractions */
+    val numericPart = if (config.isEnabled(CombineNumericLiterals) && numericFactors.nonEmpty) {
+      numericFactors.collect { case n: Num => n }
+        .reduce(Num.multiplyFractions)
+        .simplify(config)
     } else {
       one
     }
 
-    val combined: Array[Expr] =
-      (if (numericPart == one) nums else Array[Expr](numericPart)) ++ others
+    /* Build final result */
+    val combinedFactors: Vector[Expr] =
+      if (numericPart == one) numericFactors else Vector(numericPart) ++ symbolicFactors
 
-    combined.length match {
+    combinedFactors.length match {
       case 0 => Num(1.0)
-      case 1 => combined(0)
-      case _ => Mul(combined)
+      case 1 => combinedFactors(0)
+      case _ => Mul(combinedFactors)
     }
   }
 
   override def toString: String = {
     // Group numeric coefficients first for cleaner output
-    val (nums, others) = exprs.partition(_.isInstanceOf[Num])
+    val (numericFactors, symbolicFactors) = factors.partition(_.isInstanceOf[Num])
 
-    val parts = if (nums.nonEmpty) {
+    val parts = if (numericFactors.nonEmpty) {
       // Show numeric coefficients first (without extra parens)
-      nums.map(_.toString) ++ others.map(e => showWithParens(e, this))
+      numericFactors.map(_.toString) ++ symbolicFactors.map(e => showWithParens(e, this))
     } else {
-      exprs.map(e => showWithParens(e, this))
+      factors.map(e => showWithParens(e, this))
     }
 
     parts.mkString(" * ")

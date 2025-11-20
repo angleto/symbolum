@@ -1,8 +1,27 @@
 package symbolicas
 
 import scala.annotation.tailrec
-import symbolicas.{SimplificationConfig, SimplificationRule}
+import symbolicas.{SimplificationConfig, SimplificationRule, Num, NumericConstants}
 import SimplificationRule._
+import NumericConstants._
+
+/**
+ * Addition expression.
+ *
+ * Represents an n-ary sum: a + b + c + ...
+ * Supports fraction merging, like term collection, and common factor extraction.
+ *
+ * @param terms Vector of expressions to add
+ * @throws IllegalArgumentException if terms is empty
+ *
+ * @example {{{
+ *   Add(Vector(Var("x"), Num(2)))           // x + 2
+ *   Add(Vector(Num(1, 2), Num(1, 3)))       // 1/2 + 1/3
+ *   Add(Vector(Var("x"), Mul(Vector(Num(2), Var("x")))))  // x + 2*x → 3*x (when simplified)
+ * }}}
+ */
+final case class Add(terms: Vector[Expr]) extends Expr {
+  require(terms.nonEmpty, "Addition requires at least one term")
 
 /**
  * Represents n-ary addition of expressions.
@@ -46,9 +65,9 @@ final case class Add(exprs: Array[Expr]) extends Expr {
   override val precedence: Int = 1
 
   /* -------------------------------------------------------------------------
-   * Try to merge a sum of "fractions" into a single common denominator
+   * Try to merge a sum of "fractions" into a single common denominator using LCD
    * ----------------------------------------------------------------------- */
-  private def mergeFractionsLCD(terms: Seq[Expr])(implicit config: SimplificationConfig): Option[Expr] = {
+  private def mergeFractionsLCD(termSeq: Seq[Expr])(implicit config: SimplificationConfig): Option[Expr] = {
 
     /* Attempt to peel "numerator / integerDenominator" out of a term        */
     def asFraction(e: Expr): Option[(Expr, Int)] = e match {
@@ -62,7 +81,7 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       case _ => None
     }
 
-    val extracted = terms.map(asFraction)
+    val extracted = termSeq.map(asFraction)
 
     /* Only proceed if we succeeded for every single term and we really
        *have* at least two fractions                                    */
@@ -74,170 +93,143 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       if (commonDenominator == 1) {
         None // nothing to do
       } else {
-        /* scale every numerator so that it matches the common denominator    */
-        val scaledNumerators = fracs.map { case (numExpr, den) =>
-          val factor = commonDenominator / den
-          if (factor == 1) numExpr
-          else Mul(Array(numExpr, Num(factor))).simplify(config)
+        /* Scale every numerator to match the common denominator */
+        val scaledNumerators = fractions.map { case (numeratorExpr, denom) =>
+          val scaleFactor = commonDenominator / denom
+          if (scaleFactor == 1) numeratorExpr
+          else Mul(Vector(numeratorExpr, Num(scaleFactor))).simplify(config)
         }
 
-        val combinedNumerator = Add(scaledNumerators.toArray).simplify(config)
-        Some(Div(Array(combinedNumerator, Num(commonDenominator))).simplify(config))
+        val combinedNumerator = Add(scaledNumerators.toVector).simplify(config)
+        Some(Div(Vector(combinedNumerator, Num(commonDenominator))).simplify(config))
       }
     } else None
   }
 
   /* -------------------------------------------------------------------------
    * Collect like terms: x + 2*x + 3*y → 3*x + 3*y
-   * Look for terms that differ only by a numeric coefficient
-   * IMPORTANT: Preserves fraction representation
+   * IMPORTANT: Preserves fraction representation using Num.addFractions
    * ----------------------------------------------------------------------- */
-  private def collectLikeTerms(terms: Seq[Expr])(implicit config: SimplificationConfig): Seq[Expr] = {
-    // Extract coefficient and base for each term
-    // Returns Num to preserve fractions, not Double
+  private def collectLikeTerms(termSeq: Seq[Expr])(implicit config: SimplificationConfig): Seq[Expr] = {
+
+    /* Extract coefficient and base for each term */
     def extractCoeffAndBase(e: Expr): (Num, Expr) = e match {
       case n @ Num(_, _) => (n, Num(1))
-      case Mul(Array(n @ Num(_, _), rest @ _*)) if rest.nonEmpty =>
-        (n, if (rest.length == 1) rest.head else Mul(rest.toArray))
+      case Mul(Vector(n: Num, rest @ _*)) if rest.nonEmpty =>
+        (n, if (rest.length == 1) rest.head else Mul(rest))
       case other => (Num(1), other)
     }
 
-    // Helper to add two Num values as fractions
-    def addFractions(a: Num, b: Num): Num = {
-      // a/b + c/d = (ad + bc) / bd
-      val newNum = a.numerator * b.denominator + b.numerator * a.denominator
-      val newDen = a.denominator * b.denominator
-      Num(newNum, newDen)
-    }
-
     // Group terms by their base expression
-    // Note: Using toString for grouping since case classes with Array fields
-    // don't have deep structural equality - they use reference equality for arrays.
-    // While not ideal, toString comparison is safe and works correctly.
-    val grouped = terms.groupBy { term =>
-      val (_, base) = extractCoeffAndBase(term)
-      base.toString
+    // With Vector, we now have structural equality!
+    val grouped = termSeq.groupBy { term =>
+      extractCoeffAndBase(term)._2
     }
 
-    // For each group, sum up coefficients as fractions
-    grouped.map { case (_, group) =>
-      val coeffsAndBases = group.map(extractCoeffAndBase)
-      val totalCoeff = coeffsAndBases.map(_._1).reduce(addFractions).simplify(config)
-      val base = coeffsAndBases.head._2
+    // For each group, sum up coefficients using Num.addFractions
+    grouped.map { case (base, group) =>
+      val coefficientsAndBases = group.map(extractCoeffAndBase)
+      val totalCoefficient = coefficientsAndBases.map(_._1).reduce(Num.addFractions).simplify(config)
 
       if (base == Num(1)) {
-        totalCoeff
-      } else if (totalCoeff == Num(1)) {
+        totalCoefficient
+      } else if (totalCoefficient == Num(1)) {
         base
-      } else if (totalCoeff == Num(0)) {
+      } else if (totalCoefficient == Num(0)) {
         Num(0)
       } else {
-        Mul(Array(totalCoeff, base)).simplify(config)
+        Mul(Vector(totalCoefficient, base)).simplify(config)
       }
     }.toSeq
   }
 
   /* -------------------------------------------------------------------------
    * Factor common denominators: a/d + b/d → (a + b)/d
-   * Recognizes denominators in Num(a, d), Mul([Num(a, d), ...]), Div([num, den])
    * ----------------------------------------------------------------------- */
-  private def factorCommonDenominator(terms: Seq[Expr])(implicit config: SimplificationConfig): Option[Expr] = {
-    if (terms.length < 2) return None
+  private def factorCommonDenominator(termSeq: Seq[Expr])(implicit config: SimplificationConfig): Option[Expr] = {
+    if (termSeq.length < 2) return None
 
-    // Extract numerator and denominator from a term
-    // Returns Some((numerator, denominator_value)) or None
+    /* Extract numerator and denominator from a term */
     def extractDenominator(e: Expr): Option[(Expr, Double)] = e match {
-      case Num(n, d) if d != 1.0 => Some((Num(n), d))
+      case Num(numerator, denominator) if denominator != 1.0 => Some((Num(numerator), denominator))
 
-      case Mul(Array(Num(n, d), rest @ _*)) if d != 1.0 && rest.nonEmpty =>
-        val numerator = if (rest.length == 1) {
-          Mul(Array(Num(n), rest.head))
+      case Mul(Vector(Num(numerator, denominator), rest @ _*)) if denominator != 1.0 && rest.nonEmpty =>
+        val numeratorExpr = if (rest.length == 1) {
+          Mul(Vector(Num(numerator), rest.head))
         } else {
-          Mul(Array(Num(n)) ++ rest)
+          Mul(Vector(Num(numerator)) ++ rest)
         }
-        Some((numerator, d))
+        Some((numeratorExpr, denominator))
 
-      case Div(Array(num, Num(denN, denD))) =>
-        val denValue = denN / denD
-        Some((num, denValue))
+      case Div(Vector(numerator, Num(denNumerator, denDenominator))) =>
+        val denominatorValue = denNumerator / denDenominator
+        Some((numerator, denominatorValue))
 
       case _ => None
     }
 
     // Try to extract denominators from all terms
-    val extracted = terms.map(extractDenominator)
-
-    // Only proceed if all terms have denominators
+    val extracted = termSeq.map(extractDenominator)
     if (!extracted.forall(_.isDefined)) return None
 
     val pairs = extracted.map(_.get)
     val denominators = pairs.map(_._2)
 
-    // Check if all denominators are the same
-    val firstDen = denominators.head
-    val tolerance = 1e-10
-    if (!denominators.forall(d => math.abs(d - firstDen) < tolerance)) return None
+    // Check if all denominators are the same (within tolerance)
+    val firstDenominator = denominators.head
+    if (!denominators.forall(d => math.abs(d - firstDenominator) < TOLERANCE)) return None
 
     // All denominators are the same! Factor it out
     val numerators = pairs.map(_._1)
-    val combinedNumerator = Add(numerators.toArray).simplify(config)
+    val combinedNumerator = Add(numerators.toVector).simplify(config)
 
-    Some(Div(Array(combinedNumerator, Num(firstDen))).simplify(config))
+    Some(Div(Vector(combinedNumerator, Num(firstDenominator))).simplify(config))
   }
 
   /* -------------------------------------------------------------------------
    * Factor common terms: a*b + a*c → a*(b + c)
-   * This is a simplified version - looks for common factors in products
-   * NOTE: Disabled when it would create large nested blocks (for Collatz-style expressions)
+   * NOTE: Disabled when it would create large nested blocks (for Collatz expressions)
    * ----------------------------------------------------------------------- */
-  private def factorCommonTerms(terms: Seq[Expr])(implicit config: SimplificationConfig): Expr = {
-    if (terms.length < 2) return Add(terms.toArray)
+  private def factorCommonTerms(termSeq: Seq[Expr])(implicit config: SimplificationConfig): Expr = {
+    if (termSeq.length < 2) return Add(termSeq.toVector)
 
-    // Helper to get factors of a term
+    /* Get factors of a term */
     def getFactors(e: Expr): Seq[Expr] = e match {
-      case Mul(factors) => factors.toSeq
+      case Mul(factors) => factors
       case other => Seq(other)
     }
 
     // Find common factors across all terms
-    val allFactors = terms.map(getFactors)
-    val firstFactors = allFactors.head.toSet
+    val allFactorSets = termSeq.map(getFactors)
+    val firstFactors = allFactorSets.head.toSet
 
-    // Find factors common to all terms
-    // Note: Using toString comparison since expressions with Array fields (Add, Mul, Div)
-    // don't have deep structural equality in Scala case classes
+    // With Vector, we now have proper structural equality!
     val commonFactors = firstFactors.filter { factor =>
-      allFactors.tail.forall(_.exists(_.toString == factor.toString))
+      allFactorSets.tail.forall(_.exists(_ == factor))
     }
 
     if (commonFactors.isEmpty) {
-      Add(terms.toArray)
+      Add(termSeq.toVector)
     } else {
       // Extract one common factor
       val commonFactor = commonFactors.head
 
       // Remove common factor from each term
-      val remainders = terms.map { term =>
-        val factors = getFactors(term).filterNot(_.toString == commonFactor.toString)
+      val remainders = termSeq.map { term =>
+        val factors = getFactors(term).filterNot(_ == commonFactor)
         factors.length match {
           case 0 => Num(1)
           case 1 => factors.head
-          case _ => Mul(factors.toArray)
+          case _ => Mul(factors.toVector)
         }
       }
 
-      // IMPORTANT: Don't factor if DistributeProduct is enabled and we'd create
-      // a nested block with an Add inside a Mul. This prevents oscillation between
-      // expansion and factoring, and creates the flat sum structure users want for
-      // Collatz-style expressions: cos(A)*B + cos(A)*C + cos(A)*D + ...
-      // instead of: cos(A)*(B + C + D + ...)
+      // IMPORTANT: Don't factor if DistributeProduct is enabled and we'd create a nested block
+      // This prevents oscillation between expansion and factoring
       if (config.isEnabled(DistributeProduct) && remainders.length > 1) {
-        // Keep the expanded form - don't factor when it would create Mul(factor, Add(...))
-        Add(terms.toArray)
+        Add(termSeq.toVector)
       } else {
-        // Build: commonFactor * (remainder1 + remainder2 + ...)
-        // Only when we have a single remainder (so no Add is created)
-        Mul(Array(commonFactor, Add(remainders.toArray))).simplify(config)
+        Mul(Vector(commonFactor, Add(remainders.toVector))).simplify(config)
       }
     }
   }
@@ -275,12 +267,15 @@ final case class Add(exprs: Array[Expr]) extends Expr {
    * @return expanded and simplified expression
    */
   override def expand(implicit config: SimplificationConfig): Expr = {
-    // Expand all child expressions and flatten any nested additions
-    val expandedChildren = exprs.map(_.expand(config))
+    // Expand all child expressions
+    val expandedChildren = terms.map(_.expand(config))
+
+    // Flatten any nested additions
     val flattened = expandedChildren.flatMap {
-      case Add(innerExprs) => innerExprs
-      case other => Array(other)
+      case Add(innerTerms) => innerTerms
+      case other => Vector(other)
     }
+
     Add(flattened).simplify(config)
   }
 
@@ -301,17 +296,17 @@ final case class Add(exprs: Array[Expr]) extends Expr {
    * @return simplified expression
    */
   def simplify(implicit config: SimplificationConfig): Expr = {
-    val simplified = exprs.map(_.simplify(config))
+    val simplifiedTerms = terms.map(_.simplify(config))
     val zero = Num(0)
 
     /* Flatten nested additions: Add(a, Add(b, c)) => Add(a, b, c) */
     val flattened = if (config.isEnabled(FlattenOperations)) {
-      simplified.flatMap {
-        case Add(innerExprs) => innerExprs
-        case other => Array(other)
+      simplifiedTerms.flatMap {
+        case Add(innerTerms) => innerTerms
+        case other => Vector(other)
       }
     } else {
-      simplified
+      simplifiedTerms
     }
 
     /* Remove zeros */
@@ -332,14 +327,13 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     }
 
     /* Collect like terms if enabled */
-    val afterLikeTerms: Array[Expr] = if (config.isEnabled(CollectLikeTerms)) {
-      collectLikeTerms(noZeros)(config).toArray
+    val afterLikeTerms: Vector[Expr] = if (config.isEnabled(CollectLikeTerms)) {
+      collectLikeTerms(noZeros)(config).toVector
     } else {
       noZeros
     }
 
     /* Factor common denominators if enabled */
-    /* This should happen before factorCommonTerms for better simplification */
     if (config.isEnabled(MergeFractionsCommonDenom) && afterLikeTerms.length > 1) {
       factorCommonDenominator(afterLikeTerms)(config) match {
         case Some(factored) => return factored
@@ -355,34 +349,32 @@ final case class Add(exprs: Array[Expr]) extends Expr {
       }
     }
 
-    /* Merge divisions with common denominators ---------------------------- */
-    /* Transform: Div([a, c]) + Div([b, c]) → Div([Add([a, b]), c])        */
-    /* Also handles mixed Div and Num by finding LCD                       */
-    val afterDivMerge: Array[Expr] = if (config.isEnabled(MergeFractionsCommonDenom)) {
-      val (divs, nonDivs) = afterLikeTerms.partition(_.isInstanceOf[Div])
-      val (nums, others) = nonDivs.partition(_.isInstanceOf[Num])
+    /* Merge divisions with common denominators (complex logic continues here) */
+    val afterDivMerge: Vector[Expr] = if (config.isEnabled(MergeFractionsCommonDenom)) {
+      val (divisions, nonDivisions) = afterLikeTerms.partition(_.isInstanceOf[Div])
+      val (numerics, others) = nonDivisions.partition(_.isInstanceOf[Num])
 
       // Convert Num to Div for uniform handling (only if we have Divs to merge with)
-      val numsAsDivs = if (divs.nonEmpty && nums.nonEmpty) {
-        nums.collect {
-          case Num(n, d) => Div(Array(Num(n), Num(d)))
+      val numericsAsDivs = if (divisions.nonEmpty && numerics.nonEmpty) {
+        numerics.collect {
+          case Num(numerator, denominator) => Div(Vector(Num(numerator), Num(denominator)))
         }
       } else {
-        Array.empty[Expr]
+        Vector.empty[Expr]
       }
 
-      val allDivs = divs ++ numsAsDivs
+      val allDivisions = divisions ++ numericsAsDivs
 
-      if (allDivs.length >= 2) {
+      if (allDivisions.length >= 2) {
         // Extract all (numerator, denominator) pairs
         val divPairs = allDivs.collect { case Div(Array(num, den)) => (num, den) }
 
         // Extract denominator values (assuming they're Num)
-        val denValues = divPairs.map(_._2).collect {
-          case Num(n, d) => n / d
+        val denominatorValues = divisionPairs.map(_._2).collect {
+          case Num(numerator, denominator) => numerator / denominator
         }
 
-        if (denValues.nonEmpty && denValues.length == divPairs.length) {
+        if (denominatorValues.nonEmpty && denominatorValues.length == divisionPairs.length) {
           // All denominators are numeric, we can find LCD
           val lcd = denValues.reduce(MathUtils.lcmDouble)
 
@@ -395,54 +387,54 @@ final case class Add(exprs: Array[Expr]) extends Expr {
                 val newNum = if (multiplier == 1.0) {
                   num
                 } else {
-                  Mul(Array(Num(multiplier), num)).simplify(config)
+                  Mul(Vector(Num(multiplier), numerator)).simplify(config)
                 }
-                (newNum, Num(lcd))
-              case _ => (num, den)  // Can't normalize non-numeric denominator
+                (newNumerator, Num(lcd))
+              case _ => (numerator, denominator)  // Can't normalize non-numeric denominator
             }
           }
 
-          // Group by denominator
-          val grouped = normalizedPairs.groupBy(_._2.toString)
+          // Group by denominator (now we have structural equality with Vector!)
+          val grouped = normalizedPairs.groupBy(_._2)
 
-          val mergedDivs = grouped.flatMap { case (_, pairs) =>
+          val mergedDivisions = grouped.flatMap { case (_, pairs) =>
             if (pairs.length == 1) {
-              val (num, den) = pairs.head
-              Some(Div(Array(num, den)))
+              val (numerator, denominator) = pairs.head
+              Some(Div(Vector(numerator, denominator)))
             } else {
-              val den = pairs.head._2
+              val denominator = pairs.head._2
               val numerators = pairs.map(_._1)
-              val mergedNumerator = Add(numerators.toArray).simplify(config)
+              val mergedNumerator = Add(numerators).simplify(config)
 
               mergedNumerator match {
                 case Num(0, _) => None
-                case _ => Some(Div(Array(mergedNumerator, den)).simplify(config))
+                case _ => Some(Div(Vector(mergedNumerator, denominator)).simplify(config))
               }
             }
-          }.toArray
+          }.toVector
 
-          mergedDivs ++ others ++ (if (numsAsDivs.isEmpty) nums else Array.empty[Expr])
+          mergedDivisions ++ others ++ (if (numericsAsDivs.isEmpty) numerics else Vector.empty[Expr])
         } else {
           // Some denominators are not numeric, fall back to grouping by exact match
-          val grouped = divPairs.groupBy(_._2.toString)
-          val mergedDivs = grouped.flatMap { case (_, pairs) =>
+          val grouped = divisionPairs.groupBy(_._2)
+          val mergedDivisions = grouped.flatMap { case (_, pairs) =>
             if (pairs.length == 1) {
-              val (num, den) = pairs.head
-              Some(Div(Array(num, den)))
+              val (numerator, denominator) = pairs.head
+              Some(Div(Vector(numerator, denominator)))
             } else {
-              val den = pairs.head._2
+              val denominator = pairs.head._2
               val numerators = pairs.map(_._1)
-              val mergedNumerator = Add(numerators.toArray).simplify(config)
+              val mergedNumerator = Add(numerators).simplify(config)
               mergedNumerator match {
                 case Num(0, _) => None
-                case _ => Some(Div(Array(mergedNumerator, den)).simplify(config))
+                case _ => Some(Div(Vector(mergedNumerator, denominator)).simplify(config))
               }
             }
-          }.toArray
-          mergedDivs ++ others ++ (if (numsAsDivs.isEmpty) nums else Array.empty[Expr])
+          }.toVector
+          mergedDivisions ++ others ++ (if (numericsAsDivs.isEmpty) numerics else Vector.empty[Expr])
         }
-      } else if (allDivs.length == 1) {
-        allDivs ++ others ++ (if (numsAsDivs.isEmpty) nums else Array.empty[Expr])
+      } else if (allDivisions.length == 1) {
+        allDivisions ++ others ++ (if (numericsAsDivs.isEmpty) numerics else Vector.empty[Expr])
       } else {
         afterLikeTerms
       }
@@ -452,22 +444,22 @@ final case class Add(exprs: Array[Expr]) extends Expr {
 
     /* Combine numeric literals */
     if (config.isEnabled(CombineNumericLiterals)) {
-      val (nums, others) = afterDivMerge.partition(_.isInstanceOf[Num])
+      val (numerics, others) = afterDivMerge.partition(_.isInstanceOf[Num])
 
       /* For common denominator merging */
-      if (config.isEnabled(MergeFractionsCommonDenom) && nums.nonEmpty) {
-        val numericSum: Array[Expr] =
-          nums
-            .collect { case Num(n, d) => (n, d) }
+      if (config.isEnabled(MergeFractionsCommonDenom) && numerics.nonEmpty) {
+        val numericSum: Vector[Expr] =
+          numerics
+            .collect { case Num(numerator, denominator) => (numerator, denominator) }
             .groupBy(_._2) // group by denominator
-            .map { case (den, pairs) =>
-              val sumNum = pairs.map(_._1).sum
-              Num(sumNum, den).simplify(config): Expr
+            .map { case (denominator, pairs) =>
+              val sumNumerator = pairs.map(_._1).sum
+              Num(sumNumerator, denominator).simplify(config): Expr
             }
-            .toArray
+            .toVector
             .filterNot(_ == zero)
 
-        val combined: Array[Expr] = numericSum ++ others
+        val combined: Vector[Expr] = numericSum ++ others
 
         combined.length match {
           case 0 => Num(0)
@@ -475,21 +467,17 @@ final case class Add(exprs: Array[Expr]) extends Expr {
           case _ => Add(combined)
         }
       } else {
-        // Just sum all numerics into one - preserve fractions
-        val numSum = if (nums.nonEmpty) {
-          nums.collect { case n @ Num(_, _) => n }
-            .reduce { (a, b) =>
-              // Add fractions: a/b + c/d = (ad + bc) / bd
-              val newNum = a.numerator * b.denominator + b.numerator * a.denominator
-              val newDen = a.denominator * b.denominator
-              Num(newNum, newDen)
-            }
+        // Just sum all numerics using Num.addFractions
+        val numericSum = if (numerics.nonEmpty) {
+          numerics.collect { case n: Num => n }
+            .reduce(Num.addFractions)
             .simplify(config)
         } else {
           Num(0)
         }
 
-        val combined: Array[Expr] = (if (numSum != Num(0)) Array[Expr](numSum) else Array.empty[Expr]) ++ others
+        val combined: Vector[Expr] =
+          (if (numericSum != Num(0)) Vector[Expr](numericSum) else Vector.empty[Expr]) ++ others
 
         combined.length match {
           case 0 => Num(0)
@@ -506,63 +494,65 @@ final case class Add(exprs: Array[Expr]) extends Expr {
     }
   }
 
+  /**
+   * Pretty-prints the addition with proper sign handling.
+   *
+   * Displays negative terms with minus signs instead of "+ -".
+   */
   override def toString: String = {
-    if (exprs.isEmpty) return "0"
+    if (terms.isEmpty) return "0"
 
-    val first = showWithParens(exprs.head, this)
-    val rest = exprs.tail.map {
+    val first = showWithParens(terms.head, this)
+    val rest = terms.tail.map {
       case Neg(inner) => s"- ${showWithParens(inner, this)}"
 
-      case Num(n, d) if n < 0 =>
-        val positive = Num(-n, d)
+      case Num(numerator, denominator) if numerator < 0 =>
+        val positive = Num(-numerator, denominator)
         s"- ${showWithParens(positive, this)}"
 
-      case Mul(Array(Num(n, d), rest @ _*)) if n < 0 && rest.nonEmpty =>
-        // Handle negative coefficient in multiplication: -2*x becomes "- 2*x"
-        val positiveCoeff = Num(-n, d)
+      case Mul(Vector(Num(numerator, denominator), rest @ _*)) if numerator < 0 && rest.nonEmpty =>
+        val positiveCoefficient = Num(-numerator, denominator)
         val positiveMul = if (rest.length == 1) {
-          Mul(Array(positiveCoeff, rest.head))
+          Mul(Vector(positiveCoefficient, rest.head))
         } else {
-          Mul(Array(positiveCoeff) ++ rest)
+          Mul(Vector(positiveCoefficient) ++ rest)
         }
         s"- ${showWithParens(positiveMul, this)}"
 
-      case Div(Array(Num(n, d), den)) if n < 0 =>
-        // Handle negative numerator in division: -a/b becomes "- a/b"
-        val positiveNum = Num(-n, d)
-        s"- ${showWithParens(Div(Array(positiveNum, den)), this)}"
+      case Div(Vector(Num(numerator, denominator), den)) if numerator < 0 =>
+        val positiveNumerator = Num(-numerator, denominator)
+        s"- ${showWithParens(Div(Vector(positiveNumerator, den)), this)}"
 
-      case Div(Array(Mul(Array(Num(n, d), rest @ _*)), den)) if n < 0 && rest.nonEmpty =>
-        // Handle negative coefficient in numerator: (-2*x)/y becomes "- (2*x)/y"
-        val positiveCoeff = Num(-n, d)
+      case Div(Vector(Mul(Vector(Num(numerator, denominator), rest @ _*)), den)) if numerator < 0 && rest.nonEmpty =>
+        val positiveCoefficient = Num(-numerator, denominator)
         val positiveMul = if (rest.length == 1) {
-          Mul(Array(positiveCoeff, rest.head))
+          Mul(Vector(positiveCoefficient, rest.head))
         } else {
-          Mul(Array(positiveCoeff) ++ rest)
+          Mul(Vector(positiveCoefficient) ++ rest)
         }
-        s"- ${showWithParens(Div(Array(positiveMul, den)), this)}"
+        s"- ${showWithParens(Div(Vector(positiveMul, den)), this)}"
 
-      case Div(Array(Add(addTerms), den)) =>
-        // Check if all terms in numerator are negative - if so, factor out the negative
+      case Div(Vector(Add(addTerms), den)) =>
+        // Check if all terms in numerator are negative
         val allNegative = addTerms.forall {
           case Num(n, _) => n < 0
-          case Mul(Array(Num(n, _), _ @ _*)) => n < 0
+          case Mul(Vector(Num(n, _), _ @ _*)) => n < 0
           case _ => false
         }
 
         if (allNegative && addTerms.length > 1) {
           // Factor out -1 from all terms
           val positiveTerms = addTerms.map {
-            case Num(n, d) => Num(-n, d)
-            case Mul(Array(Num(n, d), rest @ _*)) =>
-              if (rest.length == 1) Mul(Array(Num(-n, d), rest.head))
-              else Mul(Array(Num(-n, d)) ++ rest)
+            case Num(numerator, denominator) => Num(-numerator, denominator)
+            case Mul(Vector(Num(numerator, denominator), rest @ _*)) =>
+              if (rest.length == 1) Mul(Vector(Num(-numerator, denominator), rest.head))
+              else Mul(Vector(Num(-numerator, denominator)) ++ rest)
             case other => other
           }
           val positiveAdd = Add(positiveTerms)
-          s"- ${showWithParens(Div(Array(positiveAdd, den)), this)}"
+          s"- ${showWithParens(Div(Vector(positiveAdd, den)), this)}"
         } else {
-          s"+ ${showWithParens(Div(Array(Add(addTerms), den)), this)}"
+          s"+ ${showWithParens(Div(Vector(Add(addTerms), den)), this)}"
         }
 
       case e => s"+ ${showWithParens(e, this)}"

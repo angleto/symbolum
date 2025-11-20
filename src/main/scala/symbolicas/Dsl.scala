@@ -10,10 +10,10 @@ object Dsl {
   implicit def doubleToNum(d: Double): Expr = Num(d)
 
   implicit class ExprOps(val self: Expr) extends AnyVal {
-    def +(others: Expr*): Expr = Add(self +: others.toArray)
-    def -(others: Expr*): Expr = Sub(self +: others.toArray)
-    def *(others: Expr*): Expr = Mul(self +: others.toArray)
-    def /(others: Expr*): Expr = Div(self +: others.toArray)
+    def +(others: Expr*): Expr = Add(self +: others.toVector)
+    def -(others: Expr*): Expr = Sub(self +: others.toVector)
+    def *(others: Expr*): Expr = Mul(self +: others.toVector)
+    def /(others: Expr*): Expr = Div(self +: others.toVector)
 
     // unary minus
     def unary_- : Expr = Neg(self)

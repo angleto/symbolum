@@ -26,7 +26,8 @@ import symbolicas.SimplificationConfig
  * }}}
  */
 final case class Var(name: String) extends Expr {
-    override val precedence: Int = 4
+  require(name.nonEmpty, "Variable name cannot be empty")
+  require(name.trim.nonEmpty, "Variable name cannot be only whitespace")
 
     /**
      * Evaluate this variable numerically.
@@ -60,6 +61,5 @@ final case class Var(name: String) extends Expr {
      */
     def simplify(implicit config: SimplificationConfig): Var = this
 
-    override def toString: String = name
+  override def toString: String = name
 }
-

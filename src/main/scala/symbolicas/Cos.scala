@@ -3,42 +3,128 @@ package symbolicas
 import symbolicas.{SimplificationConfig, SimplificationRule}
 import SimplificationRule._
 
-/* ============================================================================
- * unary composites
- * ========================================================================== */
-final case class Cos(expr: Expr) extends Expr {
+/**
+ * Cosine function expression.
+ *
+ * Represents cos(expr) for any expression expr.
+ *
+ * @param argument The argument to the cosine function
+ *
+ * @example {{{
+ *   Cos(Var("x"))                    // cos(x)
+ *   Cos(Mul(Vector(Var("n"), Num(2))))  // cos(2*n)
+ * }}}
+ */
+final case class Cos(argument: Expr) extends Expr {
   override val precedence: Int = 4
 
-  def eval(vars: Map[String, Double]): Double =
-    math.cos(expr.eval(vars))
+  /**
+   * Evaluates the cosine of the argument.
+   *
+   * @param variables Map of variable names to values
+   * @return cos(argument.eval(variables))
+   */
+  def eval(variables: Map[String, Double]): Double =
+    math.cos(argument.eval(variables))
 
+  /**
+   * Applies symbol replacement to the argument.
+   *
+   * @param sym Symbol to replace
+   * @param repl Replacement expression
+   * @return Cos with replaced argument
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
-    Cos(expr.replaceSymbol(sym, repl))
+    Cos(argument.replaceSymbol(sym, repl))
 
-  override def expand(implicit config: SimplificationConfig): Expr = Cos(expr.expand(config))
+  /**
+   * Expands the argument.
+   *
+   * @param config Simplification configuration
+   * @return Cos with expanded argument
+   */
+  override def expand(implicit config: SimplificationConfig): Expr =
+    Cos(argument.expand(config))
 
-  def simplify(implicit config: SimplificationConfig): Expr = Cos(expr.simplify(config))
+  /**
+   * Simplifies the argument.
+   *
+   * @param config Simplification configuration
+   * @return Cos with simplified argument
+   *
+   * @note Time Complexity: O(n) where n is the size of the argument expression
+   */
+  def simplify(implicit config: SimplificationConfig): Expr =
+    Cos(argument.simplify(config))
 
-  override def toString: String = s"cos($expr)"
+  override def toString: String = s"cos($argument)"
 }
 
-/* ------------------------------------------------------------------------- */
-final case class Neg(expr: Expr) extends Expr {
+/**
+ * Negation expression.
+ *
+ * Represents -expr for any expression expr.
+ * Negation is pushed into sub-expressions during simplification for cleaner output.
+ *
+ * @param argument The expression to negate
+ *
+ * @example {{{
+ *   Neg(Num(5))              // -5 (simplified to Num(-5))
+ *   Neg(Neg(Var("x")))       // --x (simplified to x)
+ *   Neg(Add(Vector(a, b)))   // -(a + b) (simplified to -a + -b)
+ * }}}
+ */
+final case class Neg(argument: Expr) extends Expr {
   override val precedence: Int = 3
 
-  def eval(vars: Map[String, Double]): Double =
-    -expr.eval(vars)
+  /**
+   * Evaluates the negation.
+   *
+   * @param variables Map of variable names to values
+   * @return -argument.eval(variables)
+   */
+  def eval(variables: Map[String, Double]): Double =
+    -argument.eval(variables)
 
+  /**
+   * Applies symbol replacement to the argument.
+   *
+   * @param sym Symbol to replace
+   * @param repl Replacement expression
+   * @return Negation with replaced argument
+   */
   def replaceSymbol(sym: String, repl: Expr): Expr =
-    Neg(expr.replaceSymbol(sym, repl))
+    Neg(argument.replaceSymbol(sym, repl))
 
+  /**
+   * Expands the argument and simplifies the negation.
+   *
+   * @param config Simplification configuration
+   * @return Expanded and simplified negation
+   */
   override def expand(implicit config: SimplificationConfig): Expr =
-    Neg(expr.expand(config)).simplify(config)
+    Neg(argument.expand(config)).simplify(config)
 
+  /**
+   * Simplifies negation by pushing it into sub-expressions.
+   *
+   * Transformations applied:
+   * - Double negative elimination: --x → x
+   * - Negation of numbers: -(5) → -5
+   * - Distribution into sums: -(a + b) → -a + -b
+   * - Distribution into products: -(a * b) → (-a) * b
+   * - Distribution into divisions: -(a/b) → (-a)/b
+   *
+   * @param config Simplification configuration
+   * @return Simplified expression with negation pushed inward
+   *
+   * @note Time Complexity: O(n) where n is the size of the expression
+   */
   def simplify(implicit config: SimplificationConfig): Expr = {
-    val s = expr.simplify(config)
-    s match {
-      case Num(n, d) => Num(-n, d)
+    val simplified = argument.simplify(config)
+    simplified match {
+      case Num(numerator, denominator) =>
+        Num(-numerator, denominator)
 
       case Neg(inner) if config.isEnabled(SimplifyDoubleNegative) =>
         inner  // double negative: --x = x
@@ -60,19 +146,19 @@ final case class Neg(expr: Expr) extends Expr {
           Mul(negatedNums ++ others).simplify(config)
         } else {
           // No numeric factors, add -1
-          Mul(Array[Expr](Num(-1)) ++ exprs).simplify(config)
+          Mul(Num(-1) +: exprs).simplify(config)
         }
 
       /* Push negation into Div: -(a/b) → (-a)/b */
-      case Div(Array(num, den)) =>
-        Div(Array(Neg(num).simplify(config), den)).simplify(config)
+      case Div(Vector(numerator, denominator)) =>
+        Div(Vector(Neg(numerator).simplify(config), denominator)).simplify(config)
 
       /* For anything else, convert to multiplication by -1 */
       case other =>
-        Mul(Array(Num(-1), other)).simplify(config)
+        Mul(Vector(Num(-1), other)).simplify(config)
     }
   }
 
   override def toString: String =
-    s"-${showWithParens(expr, this)}"
+    s"-${showWithParens(argument, this)}"
 }
