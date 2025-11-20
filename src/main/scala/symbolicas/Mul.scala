@@ -277,7 +277,8 @@ final case class Mul(factors: Vector[Expr]) extends Expr {
 
         val mergedDivisions = divisions.map {
           case Div(Vector(numerator, denominator)) =>
-            Div(Vector(Mul(Vector(numericProduct, numerator)).simplify(config), denominator))
+            // Simplify the Div after merging to apply negative fraction simplification
+            Div(Vector(Mul(Vector(numericProduct, numerator)).simplify(config), denominator)).simplify(config)
           case d => d  // Defensive: shouldn't happen
         }
 
