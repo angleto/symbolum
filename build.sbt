@@ -2,6 +2,8 @@ ThisBuild / version := "4.0.0-SNAPSHOT"
 
 ThisBuild / scalaVersion := "3.3.5"
 
+ThisBuild / organization := "io.github.angleto"
+
 lazy val root = (project in file("."))
   .settings(
     name := "symbolicas",
@@ -24,5 +26,41 @@ lazy val root = (project in file("."))
 
     // Test configuration
     Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
-    Test / parallelExecution := false
+    Test / parallelExecution := false,
+
+    // Publishing configuration
+    publishMavenStyle := true,
+
+    // GitHub Packages configuration
+    publishTo := Some(
+      "GitHub Package Registry" at "https://maven.pkg.github.com/angleto/symbolicas"
+    ),
+
+    credentials += Credentials(
+      "GitHub Package Registry",
+      "maven.pkg.github.com",
+      "angleto",
+      sys.env.getOrElse("GITHUB_TOKEN", "")
+    ),
+
+    // Project metadata
+    licenses := Seq("MIT" -> url("https://opensource.org/licenses/MIT")),
+    homepage := Some(url("https://github.com/angleto/symbolicas")),
+    scmInfo := Some(
+      ScmInfo(
+        url("https://github.com/angleto/symbolicas"),
+        "scm:git:git@github.com:angleto/symbolicas.git"
+      )
+    ),
+    developers := List(
+      Developer(
+        id = "angleto",
+        name = "angleto",
+        email = "",
+        url = url("https://github.com/angleto")
+      )
+    ),
+
+    // POM settings
+    pomIncludeRepository := { _ => false }
   )
