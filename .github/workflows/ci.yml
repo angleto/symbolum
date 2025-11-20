@@ -1,10 +1,12 @@
 name: CI
 
 on:
-  push:
-    branches: [ main, master, develop, 'claude/**' ]
-  pull_request:
-    branches: [ main, master, develop ]
+  workflow_dispatch:  # Only allow manual runs
+  # Automatic triggers disabled to avoid GitHub Actions billing
+  # push:
+  #   branches: [ main, master, develop, 'claude/**' ]
+  # pull_request:
+  #   branches: [ main, master, develop ]
 
 jobs:
   test:
