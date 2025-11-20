@@ -84,6 +84,55 @@ trait Expr {
   lazy val structuralHash: Int = this.hashCode
 
   /**
+   * Check if this expression is structurally equivalent to another expression
+   * using tolerance-based comparison for numeric values.
+   *
+   * This is more robust than `==` for fixpoint detection because it handles
+   * floating-point precision issues that can occur during simplification.
+   *
+   * @param other the expression to compare with
+   * @return true if expressions are structurally equivalent within tolerance
+   */
+  def approxEqual(other: Expr): Boolean = (this, other) match {
+    case (Num(an, ad), Num(bn, bd)) =>
+      // Compare fractions with tolerance: a/b ≈ c/d iff |a*d - b*c| < ε*b*d
+      math.abs(an * bd - bn * ad) < TOLERANCE * math.abs(ad * bd)
+
+    case (Var(an), Var(bn)) => an == bn
+
+    case (Add(aterms), Add(bterms)) =>
+      aterms.length == bterms.length &&
+      aterms.zip(bterms).forall { case (x, y) => x.approxEqual(y) }
+
+    case (Sub(aexprs), Sub(bexprs)) =>
+      aexprs.length == bexprs.length &&
+      aexprs.zip(bexprs).forall { case (x, y) => x.approxEqual(y) }
+
+    case (Mul(afactors), Mul(bfactors)) =>
+      afactors.length == bfactors.length &&
+      afactors.zip(bfactors).forall { case (x, y) => x.approxEqual(y) }
+
+    case (Div(aoperands), Div(boperands)) =>
+      aoperands.length == boperands.length &&
+      aoperands.zip(boperands).forall { case (x, y) => x.approxEqual(y) }
+
+    case (Pow(abase, aexp), Pow(bbase, bexp)) =>
+      abase.approxEqual(bbase) && aexp.approxEqual(bexp)
+
+    case (Cos(aarg), Cos(barg)) => aarg.approxEqual(barg)
+    case (Sin(aarg), Sin(barg)) => aarg.approxEqual(barg)
+    case (Tan(aarg), Tan(barg)) => aarg.approxEqual(barg)
+    case (Exp(aarg), Exp(barg)) => aarg.approxEqual(barg)
+    case (Log(aarg), Log(barg)) => aarg.approxEqual(barg)
+    case (Neg(aarg), Neg(barg)) => aarg.approxEqual(barg)
+
+    case (Derivative(aexpr, avar), Derivative(bexpr, bvar)) =>
+      avar == bvar && aexpr.approxEqual(bexpr)
+
+    case _ => this == other  // Fall back to structural equality for other types
+  }
+
+  /**
    * Evaluate the expression numerically given variable assignments.
    *
    * @param variables map from variable names to their numeric values
@@ -225,7 +274,11 @@ trait Expr {
       // Check if we've reached a fixpoint using structural equality
       // CRITICAL FIX: Use structural equality instead of hash comparison to avoid
       // hash collisions that cause premature termination and incorrect simplifications
-      if (step7 == previousExpr) {
+      //
+      // ROBUSTNESS: Use approxEqual as a fallback to handle floating-point precision
+      // issues that can prevent fixpoint detection when expressions are mathematically
+      // equivalent but have tiny numerical differences due to floating-point arithmetic
+      if (step7 == previousExpr || step7.approxEqual(previousExpr)) {
         step7
       } else {
         loop(step7, iterationsLeft - 1, step7)

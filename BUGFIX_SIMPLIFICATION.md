@@ -235,15 +235,67 @@ If performance becomes an issue, consider:
 
 However, these optimizations should only be considered if profiling shows fixpoint detection is a bottleneck, which is unlikely.
 
+## Additional Enhancement: Floating-Point Tolerance in Fixpoint Detection
+
+**Date**: 2025-11-20 (follow-up enhancement)
+
+### The Enhancement
+
+While the hash collision bug was fixed by using structural equality, a subtle issue was identified: exact structural equality (`==`) for case classes with `Double` fields can fail when floating-point arithmetic introduces tiny precision differences.
+
+**Problem Scenario:**
+```scala
+// Iteration 1 produces: Num(0.3333333333333333, 1.0)
+// Iteration 2 produces: Num(0.33333333333333337, 1.0)  // Tiny difference!
+// These are NOT equal via ==, so fixpoint is not detected
+// Algorithm continues until MAX_ITERATIONS, potentially returning incomplete simplification
+```
+
+### The Solution
+
+Added `approxEqual` method to `Expr` trait that uses tolerance-based comparison for numeric values:
+
+```scala
+def approxEqual(other: Expr): Boolean = (this, other) match {
+  case (Num(an, ad), Num(bn, bd)) =>
+    // Compare fractions with tolerance: a/b ≈ c/d iff |a*d - b*c| < ε*b*d
+    math.abs(an * bd - bn * ad) < TOLERANCE * math.abs(ad * bd)
+  // ... other cases ...
+}
+```
+
+Updated fixpoint detection to use hybrid approach:
+```scala
+if (step7 == previousExpr || step7.approxEqual(previousExpr)) {
+  step7
+}
+```
+
+### Benefits
+
+1. **Primary Check**: Fast exact equality (`==`) still used first
+2. **Fallback**: Tolerance-based comparison prevents false negatives
+3. **Robustness**: Handles floating-point precision issues gracefully
+4. **Correctness**: Never misses a fixpoint due to floating-point differences
+
+### Testing
+
+Created `FullSimplifyFixSpec.scala` with tests for:
+- Correct handling of Collatz expressions
+- Detection of approximate equality with floating-point differences
+- Fixpoint termination even with precision issues
+- Verification that buggy outputs (5/4 + n, 2, etc.) are not produced
+
 ## References
 
 - **Original Bug Report**: test.sc output showing incorrect simplifications
 - **V4.0 Release Notes**: Documented the (broken) structuralHash optimization
 - **Pigeonhole Principle**: Proves hash collisions are inevitable
 - **Scala Case Class Equality**: Uses structural equality for `==` operator
+- **Floating-Point Arithmetic**: IEEE 754 precision limitations
 
 ---
 
-**Status**: ✅ RESOLVED
+**Status**: ✅ RESOLVED + ENHANCED
 **Fix Verified**: Yes, all tests pass
 **Production Ready**: Yes, safe to deploy
