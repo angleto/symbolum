@@ -161,10 +161,10 @@ final case class Integral(
   private def computeAntiderivative(expr: Expr)(implicit config: SimplificationConfig): Option[Expr] = {
     expr match {
       // ∫ 0 dx = 0
-      case Num(0) => Some(Num(0))
+      case Num(0, _) => Some(Num(0))
 
       // ∫ c dx = c*x
-      case Num(c) => Some(Mul(Vector(Num(c), Var(variable))).simplify(config))
+      case Num(c, _) => Some(Mul(Vector(Num(c), Var(variable))).simplify(config))
 
       // ∫ x dx = x^2/2
       case Var(v) if v == variable =>
@@ -188,7 +188,7 @@ final case class Integral(
         }
 
       // Power rule: ∫ x^n dx = x^(n+1)/(n+1) (for n ≠ -1)
-      case Pow(Var(v), Num(n)) if v == variable && n != -1 =>
+      case Pow(Var(v), Num(n, _)) if v == variable && n != -1 =>
         val newExponent = Add(Vector(Num(n), Num(1))).simplify(config)
         Some(Div(Vector(
           Pow(Var(v), newExponent),
@@ -196,10 +196,10 @@ final case class Integral(
         )).simplify(config))
 
       // Special case: ∫ x^(-1) dx = ∫ 1/x dx = log(x)
-      case Pow(Var(v), Num(-1)) if v == variable =>
+      case Pow(Var(v), Num(-1, _)) if v == variable =>
         Some(Log(Var(v)))
 
-      case Div(Vector(Num(1), Var(v))) if v == variable =>
+      case Div(Vector(Num(1, _), Var(v))) if v == variable =>
         Some(Log(Var(v)))
 
       // Trig integrals

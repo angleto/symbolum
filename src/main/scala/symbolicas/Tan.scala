@@ -75,10 +75,10 @@ final case class Tan(argument: Expr) extends Expr {
 
     simplifiedArg match {
       // tan(0) = 0
-      case Num(0) => Num(0)
+      case Num(0, _) => Num(0)
 
       // tan(numeric) = evaluate
-      case Num(x) if config.isEnabled(CombineNumericLiterals) =>
+      case Num(x, _) if config.isEnabled(CombineNumericLiterals) =>
         Num(math.tan(x))
 
       // tan(-x) = -tan(x) (odd function)
@@ -86,7 +86,7 @@ final case class Tan(argument: Expr) extends Expr {
         Neg(Tan(inner).simplify(config)).simplify(config)
 
       // tan(Sub(...)) with single negative term
-      case Sub(Vector(Num(0), inner)) =>
+      case Sub(Vector(Num(0, _), inner)) =>
         Neg(Tan(inner).simplify(config)).simplify(config)
 
       // Default: keep as Tan with simplified argument

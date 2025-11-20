@@ -48,7 +48,7 @@ final case class Var(name: String) extends Expr {
      * @param repl the replacement expression
      * @return `repl` if this variable's name matches `sym`, otherwise `this`
      */
-    def replaceSymbol(sym: String, repl:Expr): Expr =
+    def replaceSymbol(sym: String, repl: Expr): Expr =
             if (name == sym) repl else this
 
     /**

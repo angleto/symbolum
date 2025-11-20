@@ -89,7 +89,7 @@ object Solve {
         (Some(Num(1)), Some(Num(0)))
 
       // Constant: c => 0*x + c
-      case Num(_) | Var(v) if v != variable =>
+      case Num(_, _) | Var(v) if v != variable =>
         (Some(Num(0)), Some(expr))
 
       // ax where a is constant
@@ -243,11 +243,11 @@ object Solve {
     )).simplify(config)
 
     discriminant match {
-      case Num(d) if d < 0 =>
+      case Num(d, _) if d < 0 =>
         // No real solutions
         List()
 
-      case Num(0) =>
+      case Num(0, _) =>
         // One solution: -b / (2a)
         val solution = Div(Vector(
           Neg(b).simplify(config),
@@ -255,7 +255,7 @@ object Solve {
         )).simplify(config)
         List(solution)
 
-      case Num(d) if d > 0 =>
+      case Num(d, _) if d > 0 =>
         // Two solutions: (-b ± √d) / (2a)
         val sqrtD = Pow(Num(d), Num(0.5)).simplify(config)
         val twoA = Mul(Vector(Num(2), a)).simplify(config)
@@ -324,7 +324,7 @@ object Solve {
   private def containsVariable(expr: Expr, variable: String): Boolean = {
     expr match {
       case Var(v) => v == variable
-      case Num(_) => false
+      case Num(_, _) => false
       case Add(terms) => terms.exists(containsVariable(_, variable))
       case Sub(terms) => terms.exists(containsVariable(_, variable))
       case Mul(factors) => factors.exists(containsVariable(_, variable))
