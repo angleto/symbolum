@@ -92,6 +92,39 @@ Summary of findings, limitations, and future research directions.
 - Future directions
 - Practical applications
 
+### [PROOF_ATTEMPTS.md](PROOF_ATTEMPTS.md)
+Systematic exploration of various proof approaches for the Collatz conjecture.
+
+**Key Topics**:
+- Descent guarantee analysis
+- Modular arithmetic approaches
+- Cycle existence analysis
+- Class-specific proofs
+- Why standard approaches fail
+- Fundamental obstacles
+
+### [PROOF_EXPLORATION_SUMMARY.md](PROOF_EXPLORATION_SUMMARY.md)
+Comprehensive summary of proof exploration efforts and honest assessment of results.
+
+**Key Topics**:
+- Executive summary of all approaches
+- Partial results proven
+- Why we cannot prove the full conjecture
+- What we've accomplished
+- Honest assessment of progress
+- Future research directions
+
+### [RIGOROUS_PARTIAL_RESULTS.md](RIGOROUS_PARTIAL_RESULTS.md)
+Rigorously proven mathematical theorems related to the Collatz conjecture.
+
+**Key Topics**:
+- No period-1 fixed points (proven)
+- Powers of 2 convergence (proven)
+- Reduction to odd numbers (proven)
+- Coefficient bounds (proven)
+- What remains unproven
+- Clear distinction between proven and conjectured
+
 ## Key Results
 
 ### ✓ Verified
@@ -108,6 +141,12 @@ Summary of findings, limitations, and future research directions.
 2. **Unique Cycle**: Haven't proven 1-4-2-1 is the only cycle
 3. **Non-Divergence**: Haven't proven sequences don't grow unboundedly
 4. **Finite Stopping Time**: Haven't proven τ(n) < ∞ for all n
+
+**Important Note**: After systematic exploration of multiple proof approaches (see PROOF_ATTEMPTS.md and PROOF_EXPLORATION_SUMMARY.md), we conclude that the full Collatz conjecture remains unproven. However, we have proven several partial results (see RIGOROUS_PARTIAL_RESULTS.md) including:
+- No period-1 fixed points exist
+- Powers of 2 converge in exactly k steps
+- The problem reduces to proving convergence for odd numbers only
+- All rational coefficients have bounded denominators
 
 ## Implementation
 
