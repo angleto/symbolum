@@ -171,6 +171,33 @@ The 1→2 limit cycle is characterized equivalently by:
 All three describe the same phenomenon.
 ```
 
+### [10_ATTEMPT9_ERGODIC_AND_PROBABILISTIC_DYNAMICS.md](10_ATTEMPT9_ERGODIC_AND_PROBABILISTIC_DYNAMICS.md)
+**NEW RESEARCH** - Ergodic theory and rigorous probabilistic analysis of Collatz dynamics.
+
+**Key Topics**:
+- Probabilistic models and measure theory
+- Expected value analysis and descent rates
+- Martingale formulation and stopping time bounds
+- Ergodic theory framework and invariant measures
+- Natural density and almost-sure convergence
+- Information-theoretic perspective
+- Computational verification of probabilistic predictions
+- The gap between probabilistic and deterministic convergence
+
+**Main Results**:
+```
+Theorem (Expected Two-Step Descent):
+  E[C²(n)] < n for odd n (under uniform parity assumption)
+
+Heuristic (Logarithmic Stopping Time):
+  E[τ(n)] ≈ 7.3 log(n) (computationally verified)
+
+Density Result:
+  d({n : τ(n) < ∞}) = 1 for all tested ranges
+```
+
+**Implementation**: See `collatz_attempt9_probabilistic.py` for Monte Carlo simulations and statistical analysis.
+
 ### [RIGOROUS_PARTIAL_RESULTS.md](RIGOROUS_PARTIAL_RESULTS.md)
 Rigorously proven mathematical theorems related to the Collatz conjecture.
 
@@ -274,12 +301,31 @@ Run tests with:
 sbt test
 ```
 
+### Python Analysis Tools
+Probabilistic and statistical analysis implementations:
+
+**Fourier Analysis** (`collatz_fourier_demo.py`):
+```bash
+./collatz_fourier_demo.py
+```
+
+**Operator Theory** (`collatz_operator_analysis.py`):
+```bash
+./collatz_operator_analysis.py
+```
+
+**Attempt 9: Probabilistic Dynamics** (`collatz_attempt9_probabilistic.py`):
+```bash
+./collatz_attempt9_probabilistic.py
+```
+
 ## Tools Used
 
-- **Language**: Scala 3.3.5
+- **Language**: Scala 3.3.5, Python 3.x
 - **CAS**: Symbolicas v4.0.0-SNAPSHOT
 - **Testing**: ScalaTest
 - **Build**: SBT
+- **Analysis**: NumPy, Matplotlib, SciPy (for Python tools)
 
 ## Simplification Configuration
 
