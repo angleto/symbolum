@@ -140,6 +140,7 @@ These are **temporal development phases** building on each other:
 | **Attempt 3** | Synthesis | [ATTEMPT3_COMPREHENSIVE_SUMMARY.md](ATTEMPT3_COMPREHENSIVE_SUMMARY.md) | 3-framework integration |
 | **Attempt 4** | 6 Frameworks | [ATTEMPT4_COMPREHENSIVE_ANALYSIS.md](ATTEMPT4_COMPREHENSIVE_ANALYSIS.md) | Convergent evidence |
 | **Attempt 5** | Information Theory | [ATTEMPT5_RESULTS_SUMMARY.md](ATTEMPT5_RESULTS_SUMMARY.md) | Novel Lyapunov function |
+| **Attempt 10** | Martingale-Ergodic | [13_MARTINGALE_ERGODIC_FRAMEWORK.md](13_MARTINGALE_ERGODIC_FRAMEWORK.md) | Unified probabilistic framework |
 | **Attempt 7** | Computational | [ATTEMPT7_COMPREHENSIVE_RESULTS.md](ATTEMPT7_COMPREHENSIVE_RESULTS.md) | 1000-value validation |
 
 ---
@@ -192,32 +193,43 @@ See [ATTEMPT7_COMPREHENSIVE_RESULTS.md](ATTEMPT7_COMPREHENSIVE_RESULTS.md)
 
 From **[RESEARCH_ATTEMPTS_RATIONALIZED.md](RESEARCH_ATTEMPTS_RATIONALIZED.md)**:
 
-### Top 3 (Highest Promise for Future Proof)
+### Top 4 (Highest Promise for Future Proof)
 
-1. **Approach 8 (Operator Theory)** ⭐⭐⭐⭐⭐
+1. **Attempt 10 (Martingale-Ergodic Framework)** ⭐⭐⭐⭐⭐ **NEW**
+   - Combines information theory + operator theory + probability theory
+   - Supermartingale construction (requires weight optimization)
+   - Azuma-Hoeffding concentration bounds
+   - Path to almost-sure convergence
+
+2. **Approach 8 (Operator Theory)** ⭐⭐⭐⭐⭐
    - Most rigorous framework
    - Identifies obstacles precisely
    - Extensible (weighted norms, ergodic theory)
 
-2. **Attempt 5 (Information Theory)** ⭐⭐⭐⭐⭐
+3. **Attempt 5 (Information Theory)** ⭐⭐⭐⭐⭐
    - Novel Lyapunov-like function (entropy)
    - 100% empirical consistency
    - Martingale proof pathway
 
-3. **Approach 9 (Unified Framework)** ⭐⭐⭐⭐⭐
+4. **Approach 9 (Unified Framework)** ⭐⭐⭐⭐⭐
    - Proven equivalences
    - Foundation for future work
    - Clear identification of gaps
 
 ### Recommendation
 
-**Focus future research on**: Operator theory + Information theory
+**Focus future research on**: Martingale-Ergodic Framework (Attempt 10)
 
-**Path forward**:
-- Weighted operator spaces
-- Martingale convergence proofs
-- Ergodic theory with infinite measures
-- Almost-sure convergence theorems
+**This combines the best of all previous approaches**:
+- Supermartingale convergence (martingale theory)
+- Information entropy as Lyapunov function (information theory)
+- Operator spectral properties (operator theory)
+- Birkhoff ergodic theorem (ergodic theory)
+
+**Next steps**:
+- Optimize weights (α, β, γ) for supermartingale property
+- Formalize probability measure rigorously
+- Complete almost-sure convergence proof
 
 ---
 
@@ -254,6 +266,7 @@ From **[RESEARCH_ATTEMPTS_RATIONALIZED.md](RESEARCH_ATTEMPTS_RATIONALIZED.md)**:
 - `collatz_fourier_demo.py` - Fourier analysis
 - `collatz_operator_analysis.py` - Operator spectral analysis
 - `collatz_information_theory.py` - Entropy and information metrics
+- `collatz_martingale_analysis.py` - **NEW**: Martingale-ergodic framework
 - `research_attempt7_analysis.py` - Large-scale statistical validation
 
 ---
@@ -283,12 +296,15 @@ python3 collatz_information_theory.py
 - Universal limit cycle with spectral signature
 - Parity-dependent dynamics
 - Logarithmic average complexity
+- **NEW**: Probabilistic descent (mean log-ratio < 0)
+- **NEW**: Entropy convergence to maximum (H → 1)
 
 **Why it's hard**:
 - Expansion-contraction mixing
 - Transcendental algebraic terms
-- No global Lyapunov function
+- No simple global Lyapunov function
 - Spectral radius ρ = 1 (not < 1)
+- **NEW**: Supermartingale requires careful weight optimization
 
 ### About Mathematics
 
