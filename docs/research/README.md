@@ -14,7 +14,35 @@ This directory contains comprehensive research on the Collatz conjecture using t
 
 **Status**: Unsolved since 1937
 
-## Research Documents
+## Quick Start Guides
+
+### **NEW** → [RESEARCH_ATTEMPTS_INDEX.md](RESEARCH_ATTEMPTS_INDEX.md) ★
+**Complete index of all 9 research attempts** with quick reference table, detailed descriptions, and chronological development. Start here for an overview of the entire research program.
+
+**Key Contents**:
+- Quick reference table of all 9 attempts
+- Detailed description of each approach
+- **Attempt 8 (Operator Theory)** highlighted
+- Chronological development
+- Three pillars: Symbolic (1), Fourier (7), Operator (8)
+- Assessment and future directions
+
+### **NEW** → [ATTEMPT8_OPERATOR_THEORY_RESULTS.md](ATTEMPT8_OPERATOR_THEORY_RESULTS.md) ★★
+**Comprehensive summary of Attempt 8: Operator Theory Approach**. This document provides a complete analysis of the operator-theoretic research attempt, including all proven results, what was not proven, novel contributions, and fundamental obstacles identified.
+
+**Key Contents**:
+- Research goal and methodology
+- Key theorems proven (eigenvalues, expected contraction, etc.)
+- What was NOT proven (full conjecture remains open)
+- Novel contributions and insights
+- Fundamental obstacles (contraction-expansion dichotomy)
+- Connection to Fourier analysis (Attempt 7)
+- Computational verification results
+- Honest assessment and future directions
+
+---
+
+## Core Research Documents
 
 ### [01_OVERVIEW.md](01_OVERVIEW.md)
 Introduction to the research approach, methodology, and goals. Start here for context.
@@ -133,8 +161,8 @@ Comprehensive summary of proof exploration efforts and honest assessment of resu
 - Honest assessment of progress
 - Future research directions
 
-### [08_OPERATOR_THEORY_APPROACH.md](08_OPERATOR_THEORY_APPROACH.md)
-Advanced operator-theoretic framework using Koopman operators and spectral analysis.
+### [08_OPERATOR_THEORY_APPROACH.md](08_OPERATOR_THEORY_APPROACH.md) ★
+**Attempt 8**: Advanced operator-theoretic framework using Koopman operators and spectral analysis.
 
 **Key Topics**:
 - Collatz as an operator on function spaces
@@ -150,6 +178,8 @@ Advanced operator-theoretic framework using Koopman operators and spectral analy
 Expected 2-step contraction: ≈ 0.75
 Spectral radius: ρ = 1 (periodic, not contractive)
 ```
+
+**See also**: [ATTEMPT8_OPERATOR_THEORY_RESULTS.md](ATTEMPT8_OPERATOR_THEORY_RESULTS.md) for comprehensive summary
 
 ### [09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md](09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md)
 Synthesis of all approaches with strongest provable results stated rigorously.
@@ -182,15 +212,36 @@ Rigorously proven mathematical theorems related to the Collatz conjecture.
 - What remains unproven
 - Clear distinction between proven and conjectured
 
+## Research Program Structure
+
+This research program consists of **9 major attempts** to prove or analyze the Collatz conjecture:
+
+1. **Attempt 1**: Symbolic Representation (closed-form formulas)
+2. **Attempt 2**: Binomial Series (iteration formulas)
+3. **Attempt 3**: Modular Arithmetic (parity analysis)
+4. **Attempt 4**: Cycle Analysis (fixed points)
+5. **Attempt 5**: Class-Specific Proofs (infinite classes)
+6. **Attempt 6**: Stopping Time Bounds (computational)
+7. **Attempt 7**: Fourier Analysis (spectral simplification) ★
+8. **Attempt 8**: Operator Theory (eigenvalue structure) ★★
+9. **Attempt 9**: Unified Framework (synthesis) ★★★
+
+**Three Pillars**: Attempts 1 (Symbolic), 7 (Fourier), and 8 (Operator) provide complementary perspectives that are unified in Attempt 9.
+
+See [RESEARCH_ATTEMPTS_INDEX.md](RESEARCH_ATTEMPTS_INDEX.md) for complete details.
+
+---
+
 ## Key Results
 
-### ✓ Verified
+### ✓ Verified Across All Attempts
 
 1. **Mathematical Correctness**: Both symbolic and binomial formulas produce correct results
 2. **Numerical Accuracy**: Agreement with direct computation to floating-point precision
 3. **Symbolic Soundness**: Simplification preserves mathematical meaning
 4. **Idempotency**: Simplification reaches stable fixpoint
 5. **Large-Scale Testing**: Thousands of test cases pass
+6. **Limit Cycle Characterization**: Complete understanding from three perspectives (Symbolic, Fourier, Operator)
 
 ### ✗ Not Proven
 
@@ -251,12 +302,19 @@ Run tests with:
 sbt test
 ```
 
-## Tools Used
+## Computational Tools
 
+### Scala/Symbolicas (Main CAS)
 - **Language**: Scala 3.3.5
 - **CAS**: Symbolicas v4.0.0-SNAPSHOT
 - **Testing**: ScalaTest
 - **Build**: SBT
+- **Location**: `src/test/scala/symbolicas/CollatzSpec.scala`
+
+### Python Analysis Scripts
+- **collatz_fourier_demo.py**: Fourier analysis and visualization (Attempt 7)
+- **collatz_operator_analysis.py**: Operator spectral analysis (Attempt 8)
+- Both scripts provide computational verification of theoretical results
 
 ## Simplification Configuration
 
@@ -329,23 +387,38 @@ Includes:
 
 ## How to Use This Research
 
-### For Understanding
-1. Read documents in order (01 through 06)
-2. Examine code examples
-3. Run tests to verify results
-4. Experiment with the tools
+### For Understanding the Research Program
+1. **Start**: Read [RESEARCH_ATTEMPTS_INDEX.md](RESEARCH_ATTEMPTS_INDEX.md) for overview
+2. **Focus on Attempt 8**: Read [ATTEMPT8_OPERATOR_THEORY_RESULTS.md](ATTEMPT8_OPERATOR_THEORY_RESULTS.md)
+3. **Deep Dive**: Read documents 01-09 in order
+4. **Synthesis**: Read [09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md](09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md)
+
+### For Understanding Specific Approaches
+- **Symbolic**: Documents 01, 02, 04
+- **Computational**: Documents 03, 05
+- **Fourier**: Document 07 + `collatz_fourier_demo.py`
+- **Operator**: Document 08 + [ATTEMPT8_OPERATOR_THEORY_RESULTS.md](ATTEMPT8_OPERATOR_THEORY_RESULTS.md) + `collatz_operator_analysis.py`
+- **Unified**: Document 09
+
+### For Verification
+1. Run Scala tests: `sbt test`
+2. Run Python demos: `./collatz_fourier_demo.py` and `./collatz_operator_analysis.py`
+3. Examine test outputs and results
+4. Compare theoretical predictions to computational results
 
 ### For Extension
-1. Study the implementations
-2. Identify areas for improvement
-3. Implement enhancements
-4. Contribute back
+1. Study the frameworks (especially Attempts 7-9)
+2. Understand the fundamental obstacles identified in Attempt 8
+3. Explore future directions listed in ATTEMPT8_OPERATOR_THEORY_RESULTS.md
+4. Implement new approaches building on existing foundation
+5. Contribute back
 
 ### For Education
-1. Use as a case study in symbolic mathematics
-2. Demonstrate CAS capabilities
-3. Teach testing and verification
-4. Illustrate research methodology
+1. Use as a case study in multi-perspective mathematical research
+2. Demonstrate how different approaches (symbolic, Fourier, operator) unify
+3. Teach honest assessment: partial results vs. full proof
+4. Illustrate research methodology and rigorous thinking
+5. Show computational verification of theoretical results
 
 ## Contributing
 
