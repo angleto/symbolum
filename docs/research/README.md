@@ -29,7 +29,7 @@ Then Theorem D.2 applies → descent within 3 more steps
 
 **Theorem G (Universal Descent)**: **100% of all positive integers** proven to descend deterministically!
 
-**Documents**:
+**Proof Documents**:
 - **[19_COMPLETE_UNIVERSAL_DESCENT_PROOF.md](19_COMPLETE_UNIVERSAL_DESCENT_PROOF.md)** 🏆 **COMPLETE PROOF - 100%!**
 - **[18_RIGOROUS_PROOF_THEOREM_E.md](18_RIGOROUS_PROOF_THEOREM_E.md)** 🎯 Theorem E rigorous proof
 - **[17_COMPLETE_PROOF_100_PERCENT.md](17_COMPLETE_PROOF_100_PERCENT.md)** 🎓 Path to full proof
@@ -38,6 +38,11 @@ Then Theorem D.2 applies → descent within 3 more steps
 - **[ABSOLUTE_PROOF_SESSION_NOV22.md](ABSOLUTE_PROOF_SESSION_NOV22.md)** - First 50%
 - **[15_MULTI_STEP_DESCENT_THEORY.md](15_MULTI_STEP_DESCENT_THEORY.md)** - Rigorous proofs
 - **[14_ABSOLUTE_PROOF_STRATEGIES.md](14_ABSOLUTE_PROOF_STRATEGIES.md)** - Survey
+
+**Verification Documents** (for peer review):
+- **[PROOF_VERIFICATION_DOCUMENT.md](PROOF_VERIFICATION_DOCUMENT.md)** 📋 **START HERE FOR VERIFICATION**
+- **[PROOF_DEPENDENCY_STRUCTURE.md](PROOF_DEPENDENCY_STRUCTURE.md)** 🔗 Logical structure and dependencies
+- **[PEER_REVIEW_GUIDE.md](PEER_REVIEW_GUIDE.md)** ✅ Systematic review checklist (3-4 hours)
 
 **Coverage Progress**:
 | Residue Class | Status | Descent Steps | Coverage | Theorem |
@@ -61,22 +66,39 @@ Then Theorem D.2 applies → descent within 3 more steps
 
 ## Quick Start
 
-### New Here? Start With These
+### For Verifying the Proof (Peer Reviewers)
 
-1. **[RESEARCH_ATTEMPTS_RATIONALIZED.md](RESEARCH_ATTEMPTS_RATIONALIZED.md)** ⭐ **START HERE**
+1. **[PROOF_VERIFICATION_DOCUMENT.md](PROOF_VERIFICATION_DOCUMENT.md)** 📋 **START HERE**
+   - Complete proof in verification-ready format
+   - All theorems and lemmas with complete proofs
+   - Verification checklist included
+
+2. **[PROOF_DEPENDENCY_STRUCTURE.md](PROOF_DEPENDENCY_STRUCTURE.md)** 🔗
+   - Visual dependency graph
+   - Logical flow and critical path
+   - Estimated verification time: 2-3 hours
+
+3. **[PEER_REVIEW_GUIDE.md](PEER_REVIEW_GUIDE.md)** ✅
+   - Step-by-step verification instructions
+   - Common pitfalls to check
+   - Review report template
+
+### For Understanding the Research Journey
+
+1. **[19_COMPLETE_UNIVERSAL_DESCENT_PROOF.md](19_COMPLETE_UNIVERSAL_DESCENT_PROOF.md)** 🏆 **COMPLETE PROOF**
+   - Comprehensive proof document
+   - Full exposition with context
+   - Novel contributions explained
+
+2. **[RESEARCH_ATTEMPTS_RATIONALIZED.md](RESEARCH_ATTEMPTS_RATIONALIZED.md)** ⭐
    - Clarifies the research structure
    - Ranks all approaches by mathematical promise
    - Provides roadmap for understanding the work
 
-2. **[09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md](09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md)** ⭐⭐
+3. **[09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md](09_UNIFIED_FRAMEWORK_AND_STRONGEST_RESULTS.md)** ⭐⭐
    - Synthesis of all approaches
    - Strongest provable results
    - Precise identification of remaining gaps
-
-3. **[08_OPERATOR_THEORY_APPROACH.md](08_OPERATOR_THEORY_APPROACH.md)** ⭐⭐⭐
-   - Most sophisticated mathematical framework
-   - Identifies fundamental obstacles
-   - Highest promise for future proof
 
 ---
 
