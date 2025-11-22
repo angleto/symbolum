@@ -171,6 +171,33 @@ The 1→2 limit cycle is characterized equivalently by:
 All three describe the same phenomenon.
 ```
 
+### [10_ATTEMPT5_INFORMATION_THEORETIC_APPROACH.md](10_ATTEMPT5_INFORMATION_THEORETIC_APPROACH.md)
+**NEW**: Novel information-theoretic and stochastic framework for analyzing Collatz sequences.
+
+**Key Topics**:
+- Shannon entropy of parity strings as convergence metric
+- Probabilistic descent bounds via log-ratio analysis
+- Compressibility as a measure of information content
+- Stochastic modeling with concentration inequalities
+- Martingale approaches and almost-sure convergence
+- Empirical validation across diverse starting values
+
+**Main Results**:
+```
+• All tested sequences show NEGATIVE mean log-ratios (descent)
+• Shannon entropy converges to 1.0 (limit cycle signature)
+• Expected descent factor E[C(n)/n] < 1 (probabilistic model)
+• Compressibility increases (information content decreases)
+• Strong probabilistic evidence for convergence
+```
+
+**Status**: Strongest probabilistic evidence yet; deterministic proof remains open.
+
+**Computational Artifacts**:
+- `collatz_information_theory.py`: Full implementation
+- Visualizations: `attempt5_single_analysis.png`, `attempt5_aggregate_analysis.png`
+- Results summary: `ATTEMPT5_RESULTS_SUMMARY.md`
+
 ### [RIGOROUS_PARTIAL_RESULTS.md](RIGOROUS_PARTIAL_RESULTS.md)
 Rigorously proven mathematical theorems related to the Collatz conjecture.
 
