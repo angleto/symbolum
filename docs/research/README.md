@@ -92,6 +92,25 @@ Summary of findings, limitations, and future research directions.
 - Future directions
 - Practical applications
 
+### [07_FOURIER_SERIES_APPROACH.md](07_FOURIER_SERIES_APPROACH.md)
+Novel approach using Fourier analysis to study convergence to the 1↔2 oscillation.
+
+**Key Topics**:
+- Fourier series representation of the Collatz sequence
+- Frequency domain analysis of convergence
+- Characterization of the 1→2→1 limit cycle
+- Spectral simplification as a convergence metric
+- Theoretical predictions vs. computational results
+- Connection to existing symbolic methods
+
+**Main Result**:
+```
+For the limit oscillation (1↔2):
+- DC component (f=0): magnitude = 1.5 (average value)
+- Fundamental (f=π): magnitude = 0.5 (oscillation amplitude)
+- All other frequencies: magnitude ≈ 0
+```
+
 ### [PROOF_ATTEMPTS.md](PROOF_ATTEMPTS.md)
 Systematic exploration of various proof approaches for the Collatz conjecture.
 
@@ -243,6 +262,8 @@ Includes:
 - Multiple mathematical lenses reveal different properties
 - Tools enable exploration beyond brute force
 - Proof remains elusive but progress is possible
+- Fourier analysis reveals the limit cycle's universal structure
+- Convergence can be characterized as spectral simplification
 
 ## Future Directions
 
@@ -251,12 +272,16 @@ Includes:
 - Deeper pattern analysis
 - Alternative representations (matrix, generating functions)
 - Visualization tools
+- Fourier analysis of transient dynamics
+- Real-time spectrum visualization
 
 ### Medium-Term
 - Probabilistic analysis
 - Modular arithmetic approaches
 - Asymptotic analysis
 - Complex analytic methods
+- Spectral analysis of the Collatz operator
+- Wavelet transforms for time-frequency analysis
 
 ### Long-Term
 - Partial proofs for specific classes
