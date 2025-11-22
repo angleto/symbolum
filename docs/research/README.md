@@ -92,7 +92,7 @@ Summary of findings, limitations, and future research directions.
 - Future directions
 - Practical applications
 
-### [07_FOURIER_SERIES_APPROACH.md](07_FOURIER_SERIES_APPROACH.md)
+### [07_FOURIER_SERIES_APPROACH.md](07_FOURIER_SERIES_APPROACH.md) ⭐ **ATTEMPT 6**
 Novel approach using Fourier analysis to study convergence to the 1↔2 oscillation.
 
 **Key Topics**:
@@ -181,6 +181,30 @@ Rigorously proven mathematical theorems related to the Collatz conjecture.
 - Coefficient bounds (proven)
 - What remains unproven
 - Clear distinction between proven and conjectured
+
+### [ATTEMPT6_RESULTS.md](ATTEMPT6_RESULTS.md) ⭐ **NEW**
+Complete documentation of Attempt 6 (Fourier Series Approach) with explicit identification.
+
+**Key Topics**:
+- Identification of Attempt 6 as Fourier Series Analysis
+- Mathematical framework and theorems proven
+- Computational verification results
+- Connection to Operator Theory (Attempt 7)
+- Novel contributions and limitations
+- Comparison with previous attempts
+- Future research directions
+
+### [RESEARCH_SYNTHESIS_AND_IMPROVEMENTS.md](RESEARCH_SYNTHESIS_AND_IMPROVEMENTS.md) ⭐ **NEW**
+Comprehensive synthesis of all research approaches with improvements and Attempt 6 identification.
+
+**Key Topics**:
+- Complete research timeline (Attempts 1-8)
+- Multi-lens framework showing all connections
+- Enhanced cross-approach synthesis
+- Rigorous stratification of proven vs. conjectured results
+- Novel insights from multi-perspective view
+- Computational improvements and tools
+- Detailed recommendations for future work
 
 ## Key Results
 
