@@ -44,6 +44,11 @@ Then Theorem D.2 applies → descent within 3 more steps
 - **[PROOF_DEPENDENCY_STRUCTURE.md](PROOF_DEPENDENCY_STRUCTURE.md)** 🔗 Logical structure and dependencies
 - **[PEER_REVIEW_GUIDE.md](PEER_REVIEW_GUIDE.md)** ✅ Systematic review checklist (3-4 hours)
 
+**Next Steps** (ongoing work):
+- **[20_LEAN_FORMALIZATION_PLAN.md](20_LEAN_FORMALIZATION_PLAN.md)** 🔧 Lean 4 formalization plan
+- **[21_FROM_DESCENT_TO_CONVERGENCE.md](21_FROM_DESCENT_TO_CONVERGENCE.md)** 🎯 Path to full Collatz proof
+- **[../../lean_collatz/](../../lean_collatz/)** 💻 Lean 4 formalization (in progress)
+
 **Coverage Progress**:
 | Residue Class | Status | Descent Steps | Coverage | Theorem |
 |---------------|--------|---------------|----------|---------|
@@ -431,9 +436,28 @@ This research represents **major breakthrough progress**:
 
 ## Future Directions
 
-### Immediate (Next 6 months)
+### Immediate (Next 3 months) - **ACTIVE WORK**
 
-1. **Operator theory depth**: Weighted norms, ergodic formulation
+1. **Lean 4 formalization**: Machine-verified proof of universal descent
+   - Status: In progress (`lean_collatz/` directory)
+   - Plan: See [20_LEAN_FORMALIZATION_PLAN.md](20_LEAN_FORMALIZATION_PLAN.md)
+   - Timeline: 12 weeks
+   - Current: Theorem B formalized ✅
+
+2. **Extend to full convergence**: Prove all sequences reach 1
+   - Status: Research plan complete
+   - Plan: See [21_FROM_DESCENT_TO_CONVERGENCE.md](21_FROM_DESCENT_TO_CONVERGENCE.md)
+   - Approach: Iterated descent + bounded trajectories
+   - Timeline: 8-12 weeks
+
+### Short-term (3-6 months)
+
+3. **Peer review and publication**: Submit universal descent proof
+   - Prepare journal article
+   - Seek expert review
+   - Present at conferences
+
+4. **Operator theory depth**: Weighted norms, ergodic formulation
 2. **Information theory extension**: Martingale proofs, concentration inequalities
 3. **Computational scaling**: n > 10^6 validation
 
