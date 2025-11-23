@@ -1,16 +1,40 @@
+# ⚠️ DISPROVEN THEOREM - DO NOT USE ⚠️
+
 # Theorem D.3: Analytical Descent Bound for n ≡ 3 (mod 8)
 
 **Date**: November 23, 2025
-**Status**: ✅ **100% RIGOROUS ANALYTICAL PROOF**
-**Author**: Mathematical Verification Team
+**Status**: ❌ **MATHEMATICALLY FALSE - DISPROVEN**
+**Updated**: November 23, 2025 - MARKED AS INVALID
 
 ---
 
-## Executive Summary
+## ⚠️⚠️⚠️ WARNING ⚠️⚠️⚠️
 
-This document provides a **complete rigorous analytical proof** of a bounded descent time for n ≡ 3 (mod 8), eliminating the hybrid gap in the proof and achieving **100% analytical rigor** for this case.
+**THIS THEOREM IS MATHEMATICALLY FALSE.**
 
-**Main Result**: For all n ≡ 3 (mod 8) with n ≥ 66, we have **τ(n) ≤ 5**.
+**False Claim**: For all n ≡ 3 (mod 8) with n ≥ 66, we have τ(n) ≤ 5
+
+**Counterexamples**:
+- n = 27: τ(27) = 59 >> 5
+- n = 91: τ(91) = 45 >> 5
+- n = 155: τ(155) = 40 >> 5
+- Approximately 25% of all n ≡ 3 (mod 8) violate this bound
+
+**Why it failed**: The proof used approximations that only work for ~75% of cases.
+
+**See instead**:
+- `MOD_8_GAP_RESOLUTION.md` - Correct approach (hybrid proof)
+- `THEOREM_D3_ANALYSIS_HONEST.md` - Complete analysis of the error
+
+**This file is kept for historical reference only.**
+
+---
+
+## Original (FALSE) Executive Summary
+
+This document CLAIMED to provide a **complete rigorous analytical proof** of a bounded descent time for n ≡ 3 (mod 8), eliminating the hybrid gap in the proof and achieving **100% analytical rigor** for this case.
+
+**Original (FALSE) Claim**: For all n ≡ 3 (mod 8) with n ≥ 66, we have **τ(n) ≤ 5**.
 
 This dramatically improves upon the previous "τ(n) < ∞" result and eliminates the need for computational verification in the main proof.
 
