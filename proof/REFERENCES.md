@@ -179,12 +179,12 @@ If citing this proof or its techniques:
   author={Mathematical Verification Team},
   year={2025},
   note={Hybrid analytical-computational proof, 90-95\% analytical rigor.
-        Pending peer review. arXiv:XXXX.XXXXX [math.NT]},
+        Pending peer review. arXiv preprint (to be added upon submission)},
   url={https://github.com/angleto/symbolicas}
 }
 ```
 
-**Note**: Replace arXiv number when/if submitted to arXiv.
+**Note**: arXiv identifier will be added upon submission to arXiv preprint server.
 
 ---
 

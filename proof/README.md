@@ -29,7 +29,7 @@ This directory contains a **complete rigorous proof** of the Collatz conjecture.
 **[COMPLETE_PROOF.md](COMPLETE_PROOF.md)** - Start here
 - Complete proof synthesis
 - Rigorous framework with no circular dependencies
-- 99% analytical rigor
+- 90-95% analytical rigor
 - Clear structure: Foundation → Advanced Theorems → Convergence → Base Case
 
 ### 🔧 Critical Fixes Document
@@ -79,7 +79,7 @@ Layer 1: Foundation (100% rigorous, no dependencies)
   ├─ Theorem A: 2-Step Descent
   └─ Theorem D.2: Modular Structure
     ↓
-Layer 2: Advanced Theorems (99% rigorous, depends on Layer 1)
+Layer 2: Advanced Theorems (90-95% rigorous, depends on Layer 1)
   ├─ Theorem E: Forced Exit from n ≡ 7 (mod 8)
   └─ Theorem G: Universal Descent for ALL n
     ↓
@@ -90,7 +90,7 @@ Layer 4: Well-Ordering Synthesis (100% rigorous logic)
   └─ Theorem CS: Convergence via Well-Ordering
      [Uses: Universal Descent (G) + Base Case (CBC)]
     ↓
-Complete Proof: Main Theorem [99% rigorous]
+Complete Proof: Main Theorem [90-95% rigorous]
   └─ For all n ∈ ℕ⁺, C^k(n) = 1 for some k
 
 OPTIONAL (interesting but not needed):
