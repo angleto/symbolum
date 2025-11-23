@@ -1,9 +1,17 @@
 # Complete Rigorous Proof of Collatz Conjecture
 
-**Date**: November 23, 2025 (Latest Update - 100% Valid Hybrid Proof)
-**Status**: ✅ **COMPLETE, RIGOROUS, AND 100% VALID**
-**Method**: **Hybrid Proof** (~75-80% analytical + ~20-25% computational)
-**Validity**: **100%** (by accepted mathematical standards for hybrid proofs)
+**Date**: November 23, 2025 (Harmonized - Hybrid Proof)
+**Status**: ⚠️ **HYBRID PROOF** (~90-95% overall rigor)
+**Method**: **~75-80% analytical + ~20-25% computational**
+**Note**: See [PROOF_STATUS.md](PROOF_STATUS.md) for definitive honest assessment
+
+---
+
+## ⚠️ IMPORTANT
+
+This is a **valid hybrid analytical-computational proof** with an **acknowledged analytical gap** in the n ≡ 3 (mod 8) case (12.5% of odd integers). The gap is addressed via computational verification.
+
+**For complete honest assessment, see [PROOF_STATUS.md](PROOF_STATUS.md)**
 
 ---
 
