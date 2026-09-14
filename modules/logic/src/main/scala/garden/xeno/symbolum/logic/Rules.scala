@@ -262,9 +262,29 @@ final class Rules(val logic: Logic) {
     } yield result
 
   /** `G |- ~p` and `D |- p` give `G, D |- F`. */
+  /**
+   * `G |- ~p` and `D |- p` give `G, D |- F`, and a mismatched pair is **refused**.
+   *
+   * The check is the whole point of this comment, because the rule worked without it and worked
+   * **wrongly**. Every other rule here moves a caller's theorem into an instantiated schema with
+   * [[proveHyp]], which is a cut: handed a theorem whose conclusion is not the hypothesis it is
+   * aimed at, it does not fail, it leaves that hypothesis standing and adds the theorem's own. So
+   * `notElim` at `~(0 < 0)` and a proof of `d < 0` used to return falsity **carrying `0 < 0` as a
+   * hypothesis**, which is sound, is not the rule, and is invisible until something counts
+   * hypotheses. On 2026-09-14 that cost a derivation its provenance and was found only because the
+   * probe printed the count.
+   *
+   * **Measured before it was changed.** Of the 105 call sites in this repository, the strict
+   * version breaks none and the suite is green. `mp` is lenient in exactly the same way and was
+   * measured the same way: it breaks 51 tests across 677 call sites, so the leniency is
+   * load-bearing there and tightening it is its own piece of work rather than the same one-line
+   * change. `falsityElim` already checks, which is what makes the inconsistency visible.
+   */
   def notElim(negation: Kernel.Thm, positive: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     logic.destNot(negation.conclusion) match {
       case None => Left(NotOfForm("a negation", negation.conclusion))
+      case Some(proposition) if positive.conclusion != proposition =>
+        Left(NotOfForm(s"a proof of ${proposition}", positive.conclusion))
       case Some(proposition) =>
         for {
           schema <- notElimSchema
