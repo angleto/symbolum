@@ -80,6 +80,44 @@ class PrimesSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * The side condition on the irrationality is real, and this is the witness that it is.
+   *
+   * `!p q. ZERO < q ==> ~(p * p = 2 * (q * q))` carries a hypothesis, and a reader is entitled to
+   * ask whether it is there because the proof wanted it or because the statement needs it. It is
+   * the second, and at `q = ZERO` the equation has a solution: `ZERO * ZERO = 2 * (ZERO * ZERO)`,
+   * both sides being zero. So the theorem without its condition is false, not merely unproved.
+   *
+   * That equation is proved here rather than asserted, by the semiring procedure over `num`, which
+   * is the same instrument the descent itself uses and costs the same two axioms.
+   */
+  it should "carry a hypothesis that cannot be dropped, and the zero case is why" in {
+    val semiring = force(Semiring.construct(chain.peano))
+    val zero = term("ZERO")
+    val two = term("SUC (SUC ZERO)")
+
+    def applied(head: Term, arguments: List[Term]): Term =
+      force(LogicError.lift(Term.appAll(head, arguments)))
+    val times = force(LogicError.lift(primes.theory.constant(
+      Peano.Multiplication, Type.fun(numbers, Type.fun(numbers, numbers)))))
+    def mul(a: Term, b: Term): Term = applied(times, List(a, b))
+
+    val solved = force(semiring.prove(mul(zero, zero), mul(two, mul(zero, zero))))
+    solved.hypotheses shouldBe empty
+    Derivation.axiomsOf(solved) should have size 2
+
+    // And the theorem, at a positive denominator, says the opposite of that shape.
+    val one = term("SUC ZERO")
+    val refused = force(
+      rules
+        .specAll(force(primes.fact(Primes.SquareNotDouble)), List(one, one))
+        .flatMap(rules.mp(_, force(rules.spec(zero, force(chain.peano.fact(Peano.SuccessorPositive))))))
+    )
+    refused.hypotheses shouldBe empty
+    refused.conclusion shouldBe proposition(
+      "~(NUM_MUL (SUC ZERO) (SUC ZERO) = NUM_MUL (SUC (SUC ZERO)) (NUM_MUL (SUC ZERO) (SUC ZERO)))")
+  }
+
+  /**
    * A prime above a concrete number, taken out of the existential and read.
    *
    * The point is that the theorem is usable and not only true: what comes back is opened, its two

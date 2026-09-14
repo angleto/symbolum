@@ -247,8 +247,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 396 with the three multiplicative lemmas the irrationality of the square root of two needed
     // and `Peano` did not have, though it had all three additive counterparts. Each binds three
     // variables of a kind, so both of `CLAUDE.md`'s figures move by three as well.
-    library.entries.size shouldBe 396
-    library.names.distinct.size shouldBe 393
+    // 398 with two being prime and with no square being twice a square, which is the arithmetic
+    // content of the irrationality of the square root of two. `CLAUDE.md`'s two figures move by
+    // ONE each, not two: `NUM_PRIME_TWO` binds nothing at all, being a claim about one number.
+    library.entries.size shouldBe 398
+    library.names.distinct.size shouldBe 395
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

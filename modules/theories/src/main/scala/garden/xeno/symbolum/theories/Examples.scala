@@ -49,6 +49,8 @@ object Examples {
   val Chosen: Vector[(String, Vector[String])] = Vector(
     "Number theory" -> Vector(
       "NUM_PRIME_UNBOUNDED",
+      "NUM_SQUARE_NOT_DOUBLE",
+      "NUM_PRIME_TWO",
       "NUM_PRIME_FACTOR",
       "NUM_BEZOUT",
       "NUM_EUCLID",

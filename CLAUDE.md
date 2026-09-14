@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 396 lemmas, 248 have two or more leading quantifiers and **225 of
+caller meant: of the library's 398 lemmas, 249 have two or more leading quantifiers and **226 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -337,8 +337,12 @@ in it, because it declares nothing. It is one of three now: `Primes` and `Deduct
 2026-09-14.
 
 **`Primes` holds theorems about the primes that are results rather than infrastructure**, and today
-that is Euclid's: `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
-primes" says in a logic with no notion of an infinite set. It is not in `Modular` because of one
+that is two. Euclid's, `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
+primes" says in a logic with no notion of an infinite set. And `NUM_SQUARE_NOT_DOUBLE`, that no
+square is twice a square at a positive denominator, which is the arithmetic content of the
+irrationality of the square root of two and is **not** that sentence: there is no square root on the
+reals here, so the classical statement cannot be written and the name does not pretend otherwise.
+`PrimesSpec` asserts that its hypothesis cannot be dropped, by proving the equation at zero. It is not in `Modular` because of one
 constant: the proof runs through `n! + 1` and the factorial is defined in `Coding`, which is built
 **over** `Modular`. Putting it in `Coding` instead would have made that file's own first sentence
 false, since `Coding` says it is the bottom of the Goedel numbering and this is not that.

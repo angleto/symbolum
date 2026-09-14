@@ -131,7 +131,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 216 with Euclid's theorem and its prime-factor lemma. ONE and not two: Euclid carries no
     // hypothesis at all, so there is nothing in it for this source to drop.
     // 221 with the three multiplicative lemmas, whose five hypotheses reach no rediscovery either.
-    propose.weakenings.size shouldBe 221
+    // 222 with the irrationality's one hypothesis; two being prime carries none.
+    propose.weakenings.size shouldBe 222
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

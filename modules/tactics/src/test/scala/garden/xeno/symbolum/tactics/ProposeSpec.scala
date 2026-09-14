@@ -183,7 +183,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the factor lemma carries `SUC ZERO < n` and Euclid carries nothing, so two lemmas are one
     // proposal. A bucket that counted lemmas would have said two.
     // 221 with the three multiplicative lemmas: one hypothesis, two and two.
-    proposals.size shouldBe 221
+    // 222, and the one is worth reading beside the entry above: two lemmas arrived and only one
+    // carries an arrow, because `NUM_PRIME_TWO` is a claim about a single number.
+    proposals.size shouldBe 222
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -745,7 +747,19 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 54 with the identity, whose single premise dropped leaves `!p. NUM_PROV (p ==> p)`: nothing
     // on the left of an arrow, and no model with a reading of `NUM_PROV`. Its own sibling is the
     // control, since the syllogism's five all land in `open` for having four premises left.
-    unreadable shouldBe 54
+    // 55 with the irrationality's, whose residue is `!p q. ~(p * p = 2 * (q * q))`. It was DERIVED
+    // as `decidedFalse` and measured here, and the derivation recorded both candidates before the
+    // run, which is the only reason the answer is informative rather than a correction.
+    //
+    // The residue IS false, at `p = q = ZERO`, and the model computes `NUM_MUL` and equality. What
+    // the derivation got wrong is the order: refutation does not happen beside the address, it
+    // happens through it, so a goal nothing can address is never put to the sampler at all. The
+    // conclusion here is a NEGATION, which the minimal propositional fragment declines, so the
+    // address is `Nobody` and the standing is `Unreadable` with the point never looked for.
+    //
+    // That is the difference between "false and known to be" and "false and nobody asked", and
+    // this bucket is where the second lives. It is the fifth reading error recorded here.
+    unreadable shouldBe 55
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -934,7 +948,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 104 with the three multiplicative lemmas' five, every one of which names `NUM_MUL` and most
     // of which name a comparison beside it. The largest single move this figure has taken, and the
     // plainest: these are lemmas about arithmetic rather than about codes of arithmetic.
-    aboutNumbers.size shouldBe 104
+    // 105 with the irrationality's, which names `NUM_MUL`. Worth one line because it moved while
+    // `decidedFalse` did not: this figure counts what a proposal is ABOUT and that one counts what
+    // was settled, so an unreadable claim about arithmetic moves this and nothing else.
+    aboutNumbers.size shouldBe 105
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

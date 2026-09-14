@@ -815,6 +815,19 @@ object Modular {
   val PrimeFactor: String = "NUM_PRIME_FACTOR"
 
   /**
+   * `|- NUM_PRIME (SUC (SUC ZERO))`
+   *
+   * Two is prime, which nothing had needed until the irrationality of its square root. It is the
+   * only concrete number this development says anything about, and it is here rather than beside
+   * its consumer because being prime is this development's own predicate.
+   *
+   * The proof is an enumeration and reads as one: a divisor of two is at most two, so it is below
+   * two or equal to it; below two it is below one or equal to one; below one it is below zero,
+   * which nothing is, or zero, which divides only zero. Four cases and no induction.
+   */
+  val PrimeTwo: String = "NUM_PRIME_TWO"
+
+  /**
    * `|- !p a b. NUM_PRIME p ==> NUM_DIVIDES p (NUM_MUL a b) ==> NUM_DIVIDES p a \/ NUM_DIVIDES p b`
    *
    * Euclid's lemma, which is the point of the three above it. The proof is the classical one and it
@@ -953,6 +966,7 @@ object Modular {
     PrimeDivisor -> "!p:num d:num. NUM_PRIME p ==> NUM_DIVIDES d p ==> d = SUC ZERO \\/ d = p",
     PrimeFactor ->
       "!n:num. NUM_LT (SUC ZERO) n ==> (?p:num. NUM_PRIME p /\\ NUM_DIVIDES p n)",
+    PrimeTwo -> "NUM_PRIME (SUC (SUC ZERO))",
     Euclid ->
       ("!p:num a:num b:num. NUM_PRIME p ==> NUM_DIVIDES p (NUM_MUL a b) ==> " +
         "NUM_DIVIDES p a \\/ NUM_DIVIDES p b"),
@@ -1183,6 +1197,7 @@ object Modular {
       )
       primeFactor <- everyNumberAboveOneHasAPrimeFactor(
         vocabulary, primeDefinition, reflexivity, transitivity, bound, byZero)
+      primeTwo <- twoIsPrime(vocabulary, primeDefinition, bound, byZero)
 
       // The connectives against the finished signature, which is also the assertion that nothing
       // was defined into a side branch: `Logic.over` checks the extension rather than assuming it.
@@ -1242,6 +1257,7 @@ object Modular {
         PrimeAboveOne -> primeAbove,
         PrimeDivisor -> primeDivisor,
         PrimeFactor -> primeFactor,
+        PrimeTwo -> primeTwo,
         Euclid -> euclid,
         GcdSym -> gcdSymmetric,
         ModOfCong -> modOfCong
@@ -5259,6 +5275,121 @@ object Modular {
       tail <- logic.mkDisj(rest._1, rest._2).flatMap(t => LogicError.lift(Kernel.assume(t)))
       inner <- rules.disjElim(tail, fromEqual, fromAbove)
       result <- rules.disjElim(cases, belowOne, inner)
+    } yield result
+  }
+
+  /**
+   * [[PrimeTwo]], by walking the four numbers a divisor of two could be.
+   *
+   * Nothing here is an induction and nothing is a search: `NUM_DIVIDES_LE` bounds the divisor,
+   * `NUM_LE_CASES` and `NUM_LT_SUC_CASES` peel the bound one successor at a time, and the two ends
+   * are closed by `NUM_NOT_LT_ZERO` and by zero dividing only zero.
+   */
+  private def twoIsPrime(
+    vocabulary: Vocabulary,
+    primeDefinition: Kernel.Thm,
+    bound: Kernel.Thm,
+    byZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = vocabulary.logic
+    val rules = vocabulary.rules
+    val d = Term.variable("d", Modular.numbers)
+
+    for {
+      unit <- vocabulary.one
+      two <- vocabulary.next(unit)
+      zeroTerm = vocabulary.zeroTerm
+
+      notZero <- twoIsNotZero(vocabulary, two, unit)
+
+      dividesTwo <- vocabulary.dividing(d, two).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      isOne <- LogicError.lift(Term.eq(d, unit))
+      isTwo <- LogicError.lift(Term.eq(d, two))
+      goal <- logic.mkDisj(isOne, isTwo)
+
+      atMostTwo <- rules
+        .specAll(bound, List(d, two))
+        .flatMap(rules.mp(_, dividesTwo))
+        .flatMap(eitherOrAbsurd(vocabulary, _, notZero))
+
+      belowOrEqual <- vocabulary.fact(Peano.BelowOrEqual)
+      split <- rules.specAll(belowOrEqual, List(d, two)).flatMap(rules.mp(_, atMostTwo))
+      splitParts <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+
+      peelOne <- vocabulary.fact(Peano.BelowSuccessorCases)
+      peeled <- LogicError
+        .lift(Kernel.assume(splitParts._1))
+        .flatMap(assumed => rules.specAll(peelOne, List(unit, d)).flatMap(rules.mp(_, assumed)))
+      peeledParts <- logic
+        .destDisj(peeled.conclusion)
+        .toRight(NotOfForm("a disjunction", peeled.conclusion))
+
+      inner <- LogicError
+        .lift(Kernel.assume(peeledParts._1))
+        .flatMap(assumed => rules.specAll(peelOne, List(zeroTerm, d)).flatMap(rules.mp(_, assumed)))
+      innerParts <- logic
+        .destDisj(inner.conclusion)
+        .toRight(NotOfForm("a disjunction", inner.conclusion))
+
+      notBelowZero <- vocabulary.fact(Peano.NotBelowZero)
+      fromBelowZero <- LogicError
+        .lift(Kernel.assume(innerParts._1))
+        .flatMap(assumed => rules.spec(d, notBelowZero).flatMap(rules.notElim(_, assumed)))
+        .flatMap(rules.falsityElim(goal, _))
+      fromZero <- for {
+        assumed <- LogicError.lift(Kernel.assume(innerParts._2))
+        carried <- Conv
+          .apTerm(vocabulary.dividesConstant, assumed)
+          .flatMap(Conv.apThm(_, two))
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, dividesTwo)))
+        collapsed <- rules
+          .spec(two, byZero)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, carried)))
+        absurd <- rules.notElim(notZero, collapsed)
+        reached <- rules.falsityElim(goal, absurd)
+      } yield reached
+      belowOne <- rules.disjElim(inner, fromBelowZero, fromZero)
+
+      fromOne <- LogicError.lift(Kernel.assume(peeledParts._2)).flatMap(rules.disjIntro1(isTwo, _))
+      belowTwo <- rules.disjElim(peeled, belowOne, fromOne)
+      fromTwo <- LogicError.lift(Kernel.assume(splitParts._2)).flatMap(rules.disjIntro2(isOne, _))
+      trivial <- rules.disjElim(split, belowTwo, fromTwo)
+
+      onlyTrivial <- vocabulary
+        .dividing(d, two)
+        .flatMap(rules.disch(_, trivial))
+        .flatMap(rules.gen(d, _))
+      belowSuccessor <- vocabulary.fact(Peano.BelowSuccessor)
+      aboveOne <- rules.spec(unit, belowSuccessor)
+      unfolded <- Conv.unfold(primeDefinition, List(two))
+      isPrime <- rules
+        .conjIntro(aboveOne, onlyTrivial)
+        .flatMap(pair => Conv.sym(unfolded).flatMap(e => LogicError.lift(Kernel.eqMp(e, pair))))
+      result <- vocabulary.checked(Modular.PrimeTwo, isPrime)
+    } yield result
+  }
+
+  /** `~(SUC (SUC ZERO) = ZERO)`, which the enumeration above closes two of its cases with. */
+  private def twoIsNotZero(
+    vocabulary: Vocabulary,
+    two: Term,
+    unit: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = vocabulary.rules
+
+    for {
+      positive <- vocabulary.fact(Peano.SuccessorPositive).flatMap(rules.spec(unit, _))
+      isZero <- LogicError.lift(Term.eq(two, vocabulary.zeroTerm))
+      assumed <- LogicError.lift(Kernel.assume(isZero))
+      partial <- LogicError.lift(Term.app(vocabulary.strict, vocabulary.zeroTerm))
+      moved <- Conv
+        .apTerm(partial, assumed)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, positive)))
+      never <- vocabulary.fact(Peano.StrictIrreflexive).flatMap(rules.spec(vocabulary.zeroTerm, _))
+      absurd <- rules.notElim(never, moved)
+      result <- rules.notIntro(isZero, absurd)
     } yield result
   }
 
