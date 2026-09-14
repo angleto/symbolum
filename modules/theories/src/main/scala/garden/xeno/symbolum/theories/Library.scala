@@ -271,7 +271,8 @@ object Library {
         // `docs/lemmas.md` does not mention, which has happened twice.
         collect("Numbering", chain.numbering.facts) ++
         collect("Language", chain.language.facts) ++
-        collect("Provability", chain.provability.facts)
+        collect("Provability", chain.provability.facts) ++
+        collect("Deduction", chain.deduction.facts)
     )
 
   /** A library over developments a caller names itself. */

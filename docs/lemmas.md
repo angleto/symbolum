@@ -90,6 +90,11 @@ they have least appetite for working out how it is produced.
   NUM_PROD_SUC             !x:num -> num. !y:num. NUM_PROD x (SUC y) = NUM_MUL (NUM_PROD x y) (x y)
   NUM_PROD_ZERO            !x:num -> num. NUM_PROD x 0 = SUC 0
 
+## Deduction
+
+  NUM_PROV_SELF            !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))
+  NUM_PROV_SYLL            !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
+
 ## Divisibility
 
   DIVIDES_ELIM             !x:real. !y:real. Divides x y ==> (?z:real. y = x * z)

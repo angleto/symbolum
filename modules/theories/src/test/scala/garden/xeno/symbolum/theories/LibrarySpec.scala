@@ -34,7 +34,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.product.facts.size + chain.word.facts.size + chain.matrix.facts.size +
       chain.rotation.facts.size + chain.magnitude.facts.size + chain.coding.facts.size +
       chain.numbering.facts.size + chain.language.facts.size +
-      chain.provability.facts.size
+      chain.provability.facts.size + chain.deduction.facts.size
 
     library.entries.size shouldBe expected
 
@@ -235,8 +235,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 389 with the closure under generalisation, the other rule of the embedded theory's Hilbert
     // system. One fact and no constant, and it moves both of `CLAUDE.md`'s figures because it
     // binds an index and a formula, two of a kind.
-    library.entries.size shouldBe 389
-    library.names.distinct.size shouldBe 386
+    // 391 with `Deduction`, the twenty-third link and the first whose product is derivations of
+    // the embedded theory rather than definitions of it. Two facts and no constant, so the register
+    // does not move; `CLAUDE.md`'s two figures move by ONE each and not by two, because the
+    // identity binds a single formula and only the syllogism binds three of a kind.
+    library.entries.size shouldBe 391
+    library.names.distinct.size shouldBe 388
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

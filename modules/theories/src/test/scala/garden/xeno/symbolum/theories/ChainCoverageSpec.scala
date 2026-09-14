@@ -74,6 +74,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Numbering" -> InTheChain,
     "Language" -> InTheChain,
     "Provability" -> InTheChain,
+    "Deduction" -> InTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,
     "Magnitude" -> InTheChain,

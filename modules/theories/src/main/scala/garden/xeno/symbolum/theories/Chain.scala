@@ -182,7 +182,16 @@ final class Chain private (
   /** The embedded theory's own language, coded as numbers. */
   val language: Language,
   /** What that language can prove, which is the last thing before the diagonal. */
-  val provability: Provability
+  val provability: Provability,
+  /**
+   * Derivations of the embedded theory, which is the first link whose product is not a definition.
+   *
+   * `docs/adr/0013` decided that a development producing object-level derivations is its own piece
+   * of work rather than a helper inside whichever development first needs one, and this is it. It
+   * declares no type and no constant, so [[widest]] does **not** move to it: the last link and the
+   * widest signature stopped being the same thing when this landed.
+   */
+  val deduction: Deduction
 ) {
 
   /**
@@ -319,6 +328,12 @@ object Chain {
       // in it declares a constructor or a predicate of the object syntax, and it is a separate
       // development for that reason rather than because `Language.scala` was getting long.
       provability <- Provability.construct(language, language.theory, language.notation)
+
+      // Beside the extension order rather than in it, the way `bounded` is: it declares nothing and
+      // extends nothing, and what it produces is derivations of the embedded theory. It is a field
+      // here rather than a development sitting outside because `Library.of` collects the chain's
+      // developments, and a fact reachable from no library is in no document either.
+      deduction <- Deduction.construct(provability)
     } yield new Chain(
       classical,
       naturals,
@@ -341,6 +356,7 @@ object Chain {
       coding,
       numbering,
       language,
-      provability
+      provability,
+      deduction
     )
 }

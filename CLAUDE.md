@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 389 lemmas, 244 have two or more leading quantifiers and **221 of
+caller meant: of the library's 391 lemmas, 245 have two or more leading quantifiers and **222 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -602,8 +602,29 @@ conclusion's and one associativity is what happens in between. The route through
 `NUM_LT_NOT_LE` reaches the same place, is longer, and makes a classical case split out of a
 statement about a difference.
 
-What is above that is not written: the diagonal lemma, and the object-level derivations D1, D2 and
-D3 that G2 needs. `docs/adr/0013` says why the last of those is
+**`Deduction` is where derivations OF the embedded theory are built, and it is the first link that
+declares nothing.** `docs/adr/0013` decided that a development whose product is object-level
+derivations is its own piece of work rather than a helper inside whichever development first needs
+one, and this is that development. No type, no constant, no definition, no axiom: `Chain.widest`
+therefore stays at `Provability`, and the last link and the widest signature stopped being the same
+thing when this landed. `DeductionSpec` asserts the theory it hands on is the one it was given,
+constant for constant, so a definition arriving here goes red rather than passing unnoticed.
+
+It holds two schemes, each proved once for **every** formula rather than at a code. `NUM_PROV_SELF`,
+that PA proves `p ==> p`, which is three lines because the system has no reflexivity for implication
+and getting there from weakening and distribution is the standard exercise. And `NUM_PROV_SYLL`,
+that provable `p ==> q` and provable `q ==> r` give provable `p ==> r`, which is the rule every
+derivation of any length is made of.
+
+**What is not written, and the distance is worth stating rather than discovering.** The deduction
+theorem, which is what makes object-level derivations tractable and which needs a notion of
+derivation-from-hypotheses that `NUM_PROV` does not have: it takes a formula, not a set. And above
+that, the thing Goedel's argument actually needs, which is `Prov` as a formula **of the object
+language** with one free variable rather than as the predicate `NUM_PROV` of the ambient logic.
+**D1, D2 and D3 are statements about that formula, so not one of the three can be stated yet.**
+
+What is above that is not written: that object-level `Prov`, the deduction theorem, the diagonal
+lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last of those is
 its own piece of work rather than a helper inside this one, and it is the part most likely to be
 underestimated.
 

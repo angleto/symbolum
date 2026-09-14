@@ -176,7 +176,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 209 with the closure under generalisation, which has one hypothesis. Derived from the
     // arithmetic of hypotheses this time and right, which is the correction the entry above is
     // about: the question is how many arrows a lemma carries, never what it is about.
-    proposals.size shouldBe 209
+    // 215 with `Deduction`'s two, and the six is the clearest case yet of why this bucket counts
+    // arrows rather than lemmas: the identity carries one hypothesis and the syllogism carries
+    // five, so two lemmas are six proposals.
+    proposals.size shouldBe 215
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -572,7 +575,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and that is a shape a procedure takes even though nothing here can settle it. The control is
     // in the entry above: what lands in `unreadable` instead is a surviving premise nothing takes
     // the shape of, a negation, and neither of these is one.
-    open shouldBe 157
+    // 162 with the syllogism's five. Dropping any one of its five premises leaves four standing,
+    // so an implication survives every time, and what survives is a `NUM_FORM` or a `NUM_PROV`
+    // applied to a code, which is a shape a procedure takes even though nothing here settles it.
+    open shouldBe 162
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -712,7 +718,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `!i p. NUM_PROV (NUM_CODE 8 (NUM_PAIR i p))`: nothing left on the left of an arrow, and no
     // model with a reading of `NUM_PROV`. Its sibling's two went to `open` instead, because each
     // of those keeps one of two premises; this one has a single premise and keeps none.
-    unreadable shouldBe 53
+    // 54 with the identity, whose single premise dropped leaves `!p. NUM_PROV (p ==> p)`: nothing
+    // on the left of an arrow, and no model with a reading of `NUM_PROV`. Its own sibling is the
+    // control, since the syllogism's five all land in `open` for having four premises left.
+    unreadable shouldBe 54
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

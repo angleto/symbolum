@@ -123,7 +123,8 @@ object Reach {
         "Coding" -> chain.coding.facts,
         "Numbering" -> chain.numbering.facts,
         "Language" -> chain.language.facts,
-        "Provability" -> chain.provability.facts
+        "Provability" -> chain.provability.facts,
+        "Deduction" -> chain.deduction.facts
       )
     )
 
