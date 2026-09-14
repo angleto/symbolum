@@ -585,7 +585,7 @@ Test coverage includes:
 | [SIMPLIFICATION_CONFIG_GUIDE.md](SIMPLIFICATION_CONFIG_GUIDE.md) | The algebra half's rule set and how to configure it |
 | [TESTING.md](TESTING.md) | Running the suite, measuring coverage, and where the tests live |
 | [CLAUDE.md](CLAUDE.md) | The short orientation for anyone, or anything, resuming work here |
-| [docs/logo.md](docs/logo.md) | The mark above, why it is made of those eleven operators and not others, and the check that tells a correct copy from a corrupted one |
+| [docs/logo.md](docs/logo.md) | The mark above, why it is made of those eleven operators and not others, and the three checks that tell a correct copy from a corrupted one |
 
 API documentation is the Scaladoc in the source. It is unusually long on purpose: where a design
 decision is not obvious, the comment carries the measurement or the failure that decided it.
