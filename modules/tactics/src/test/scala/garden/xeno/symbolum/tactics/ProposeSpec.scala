@@ -182,7 +182,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 216 with Euclid's theorem and its prime-factor lemma, and the one is the arithmetic again:
     // the factor lemma carries `SUC ZERO < n` and Euclid carries nothing, so two lemmas are one
     // proposal. A bucket that counted lemmas would have said two.
-    proposals.size shouldBe 216
+    // 221 with the three multiplicative lemmas: one hypothesis, two and two.
+    proposals.size shouldBe 221
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -347,7 +348,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // written in a constant the model computes, so the sampler finds a point. It is the only one of
     // the three this commit adds that lands here: the other two drop a premise of `NUM_PROV_MP` and
     // their residues are about codes, which is the split the entry two above already describes.
-    decidedFalse shouldBe 63
+    // 68 with the three multiplicative lemmas `Peano` had the additive versions of and not
+    // these: monotonicity, strict monotonicity at a positive factor, and cancellation by
+    // one. Every one of their five residues is false and is written entirely in `NUM_MUL`,
+    // `NUM_LE`, `NUM_LT` and equality, all of which `Model.Numbers` computes exactly, so all
+    // five land here rather than in either bucket of the unsettled.
+    decidedFalse shouldBe 68
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -412,7 +418,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 60, with the bucket above as usual.
     // 61, with the bucket above as usual: the cancellation's residue is a comparison of two
     // naturals and `Model.Numbers` is exact there, so the point comes back with the refutation.
-    withAPoint shouldBe 61
+    // 66, with the bucket above by five as usual: every one of the five residues is a comparison
+    // or an equation between naturals, and `Model.Numbers` is exact on those.
+    withAPoint shouldBe 66
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -923,7 +931,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the split the entry above is about seen once more: the closure's two residues name
     // `NUM_PROV`, `NUM_CODE` and `NUM_PAIR`, and a tag from five up is built from `NUM_ONE` and the
     // two bit constructors, so not one constant of the naturals appears in either.
-    aboutNumbers.size shouldBe 99
+    // 104 with the three multiplicative lemmas' five, every one of which names `NUM_MUL` and most
+    // of which name a comparison beside it. The largest single move this figure has taken, and the
+    // plainest: these are lemmas about arithmetic rather than about codes of arithmetic.
+    aboutNumbers.size shouldBe 104
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -967,7 +978,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 42 with the cancellation's weakening, which moves this figure and `decidedFalse` together
     // rather than splitting them: the residue is false, and `NUM_LE` is both a constant the model
     // computes and a shape the procedures take.
-    after shouldBe 42
+    // 47, moving with `decidedFalse` by five rather than splitting from it.
+    after shouldBe 47
   }
 
   /* ------------------------------------------------------ the false positive it produced */

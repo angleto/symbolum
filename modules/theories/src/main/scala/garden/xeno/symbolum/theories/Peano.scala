@@ -557,6 +557,44 @@ object Peano {
   val AddCancelsOrder: String = "NUM_ADD_LE_CANCEL"
 
   /**
+   * `|- !p m n. NUM_LE m n ==> NUM_LE (NUM_MUL p m) (NUM_MUL p n)`
+   *
+   * [[AddMonotone]] for the other operation, and it costs the same three lines for the same reason:
+   * `NUM_LE m n` is `?d. m + d = n`, so `p * n` is `p * m + p * d` by one distribution and the
+   * difference the conclusion wants is `p * d`. **No side condition**, because `p` may be zero and
+   * the conclusion is then `0 <= 0`.
+   */
+  val MulMonotone: String = "NUM_MUL_MONOTONE"
+
+  /**
+   * `|- !p m n. NUM_LT ZERO p ==> NUM_LT m n ==> NUM_LT (NUM_MUL p m) (NUM_MUL p n)`
+   *
+   * The same for the strict order, and here the side condition is real: at `p = ZERO` both sides
+   * are zero and nothing is below itself.
+   *
+   * It is longer than its non-strict sibling and not by much. `NUM_LT m n` is `NUM_LE (SUC m) n`,
+   * so the witness gives `p * n = p * SUC m + p * d`, and `NUM_MUL_SUC` turns the first summand
+   * into `p * m + p`. What remains is to see `p` as `SUC c`, which the witness of `ZERO < p`
+   * supplies, and then `p * m + SUC c` is `SUC (p * m) + c` by the two recurrences of addition.
+   */
+  val MulStrictlyMonotone: String = "NUM_MUL_LT_MONOTONE"
+
+  /**
+   * `|- !p m n. NUM_LT ZERO p ==> NUM_MUL p m = NUM_MUL p n ==> m = n`
+   *
+   * A positive factor cancels, which [[AddCancelsLeft]] does for addition with no side condition at
+   * all. The condition cannot be dropped: `ZERO * m = ZERO * n` says nothing about `m` and `n`.
+   *
+   * Derived from [[MulStrictlyMonotone]] under trichotomy rather than by an induction of its own:
+   * if the two differ then one is strictly below the other, the products are then strictly ordered,
+   * and the assumed equation makes one of them strictly below itself.
+   *
+   * The first consumer is the irrationality of the square root of two, where the descent turns
+   * `NUM_MUL 2 (NUM_MUL k k) = NUM_MUL 2 (NUM_MUL q q)` into the equation between the squares.
+   */
+  val MulCancelsLeft: String = "NUM_MUL_CANCEL_LEFT"
+
+  /**
    * `|- !n. NUM_LE n ZERO ==> n = ZERO`
    *
    * The converse of [[ZeroIsLeast]] at the bottom of the order, and it is not the same statement:
@@ -978,6 +1016,13 @@ object Peano {
       "!p:num m:num n:num. NUM_LT m n ==> NUM_LT (NUM_ADD p m) (NUM_ADD p n)",
     AddCancelsOrder ->
       "!p:num m:num n:num. NUM_LE (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LE m n",
+    MulMonotone ->
+      "!p:num m:num n:num. NUM_LE m n ==> NUM_LE (NUM_MUL p m) (NUM_MUL p n)",
+    MulStrictlyMonotone ->
+      ("!p:num m:num n:num. NUM_LT ZERO p ==> NUM_LT m n ==> " +
+        "NUM_LT (NUM_MUL p m) (NUM_MUL p n)"),
+    MulCancelsLeft ->
+      "!p:num m:num n:num. NUM_LT ZERO p ==> NUM_MUL p m = NUM_MUL p n ==> m = n",
     BelowExcludesAtMost -> "!m:num n:num. NUM_LT m n ==> ~(NUM_LE n m)",
     AtMostSum -> "!m:num n:num. NUM_LE m (NUM_ADD m n)",
     BelowThenAtMost ->
@@ -2300,6 +2345,12 @@ object Peano {
         nonStrictDefinition,
         arithmetic(AddAssociative)
       )
+      mulMonotone <- multiplicationIsMonotone(
+        logic, theory, notation, nonStrictDefinition, arithmetic(Distributive))
+      mulStrictlyMonotone <- multiplicationIsStrictlyMonotone(
+        logic, theory, notation, nonStrictDefinition, strictDefinition, arithmetic)
+      mulCancelsLeft <- multiplicationCancels(
+        logic, theory, notation, mulStrictlyMonotone, trichotomy, strictIrreflexive)
       addCancelsOrder <- additionCancelsTheOrder(
         logic,
         theory,
@@ -2376,6 +2427,9 @@ object Peano {
         AddMonotone -> addMonotone,
         AddStrictlyMonotone -> addStrictlyMonotone,
         AddCancelsOrder -> addCancelsOrder,
+        MulMonotone -> mulMonotone,
+        MulStrictlyMonotone -> mulStrictlyMonotone,
+        MulCancelsLeft -> mulCancelsLeft,
         BelowExcludesAtMost -> belowExcludesAtMost,
         AtMostSum -> atMostSum,
         BelowThenAtMost -> belowThenAtMost,
@@ -3497,6 +3551,313 @@ object Peano {
       discharged <- rules.disch(premise, carried)
       general <- rules.genAll(discharged, List(p, m, n))
       result <- checked(theory, notation, AddMonotone, general)
+    } yield result
+  }
+
+  /**
+   * [[MulMonotone]], which is [[additionIsMonotone]] with the distribution in place of the
+   * associativity.
+   *
+   * The same shape and the same length: the premise's witness `d` gives `p * n = p * m + p * d`,
+   * so `p * d` is the difference the conclusion asks for.
+   */
+  private def multiplicationIsMonotone(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    nonStrictDefinition: Kernel.Thm,
+    distributive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val arithmeticType = Type.fun(numbers, Type.fun(numbers, numbers))
+    val p = Term.variable("p", numbers)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      times <- LogicError.lift(theory.constant(Multiplication, arithmeticType))
+
+      premise <- LogicError.lift(Term.appAll(atMostConstant, List(m, n)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      opened <- Conv
+        .unfold(nonStrictDefinition, List(m, n))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, assumed)))
+
+      left <- LogicError.lift(Term.appAll(times, List(p, m)))
+      right <- LogicError.lift(Term.appAll(times, List(p, n)))
+      unfoldedWanted <- Conv.unfold(nonStrictDefinition, List(left, right))
+      body <- rightOf(unfoldedWanted)
+      predicate <- logic
+        .destExistsPredicate(body)
+        .toRight(NotOfForm("an existential", body))
+
+      inner <- logic
+        .destExistsPredicate(opened.conclusion)
+        .toRight(NotOfForm("an existential", opened.conclusion))
+      difference = Conv.freshVariable("d", numbers, Set(p, m, n))
+      applied <- LogicError.lift(Term.app(inner, difference))
+      contraction <- Conv.betaRoot(applied)
+      instance <- rightOf(contraction)
+      held <- LogicError.lift(Kernel.assume(instance))
+
+      spread <- rules.specAll(distributive, List(p, m, difference))
+      partial <- LogicError.lift(Term.app(times, p))
+      carried <- Conv.apTerm(partial, held)
+      reached <- Conv.sym(spread).flatMap(Conv.trans(_, carried))
+      product <- LogicError.lift(Term.appAll(times, List(p, difference)))
+      witnessed <- rules.existsIntro(predicate, product, reached)
+      closed <- rules.existsElim(opened, difference, witnessed)
+
+      back <- Conv.sym(unfoldedWanted)
+      result <- LogicError.lift(Kernel.eqMp(back, closed))
+      discharged <- rules.disch(premise, result)
+      general <- rules.genAll(discharged, List(p, m, n))
+      checked <- checked(theory, notation, MulMonotone, general)
+    } yield checked
+  }
+
+  /**
+   * [[MulStrictlyMonotone]], by carrying the witness across the two recurrences of addition.
+   *
+   * `NUM_LT m n` unfolds twice, to `?d. SUC m + d = n`, and the same for `ZERO < p`, which gives a
+   * `c` with `SUC ZERO + c = p` and so `p = SUC c`. From there the arithmetic is one chain:
+   *
+   * {{{
+   * SUC (p * m) + (c + p * d)
+   *   = (SUC (p * m) + c) + p * d     associativity
+   *   = (p * SUC m) + p * d           the chain below, which is the whole lemma
+   *   = p * (SUC m + d)               distribution
+   *   = p * n                         the premise's witness
+   * }}}
+   *
+   * and the middle step is `SUC (p * m) + c = SUC (p * m + c) = p * m + SUC c = p * m + p`, which
+   * `NUM_MUL_SUC` turns into `p * SUC m`.
+   */
+  private def multiplicationIsStrictlyMonotone(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    nonStrictDefinition: Kernel.Thm,
+    strictDefinition: Kernel.Thm,
+    arithmetic: String => Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val arithmeticType = Type.fun(numbers, Type.fun(numbers, numbers))
+    val p = Term.variable("p", numbers)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    /** A theorem of `a < b` opened into the existential the two definitions give. */
+    def opened(held: Kernel.Thm, a: Term, b: Term, successor: Term => Term)
+      : Either[LogicError, Kernel.Thm] =
+      for {
+        strict <- Conv
+          .unfold(strictDefinition, List(a, b))
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, held)))
+        result <- Conv
+          .unfold(nonStrictDefinition, List(successor(a), b))
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, strict)))
+      } yield result
+
+    for {
+      belowConstant <- LogicError.lift(theory.constant(StrictOrder, relation))
+      times <- LogicError.lift(theory.constant(Multiplication, arithmeticType))
+      plus <- LogicError.lift(theory.constant(Addition, arithmeticType))
+      successorConstant <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers)))
+      zeroTerm <- Parser.term(theory, notation, "ZERO", numbers)
+
+      successor = (subject: Term) =>
+        Term.app(successorConstant, subject).getOrElse(subject)
+
+      positiveTerm <- LogicError.lift(Term.appAll(belowConstant, List(zeroTerm, p)))
+      positive <- LogicError.lift(Kernel.assume(positiveTerm))
+      premise <- LogicError.lift(Term.appAll(belowConstant, List(m, n)))
+      held <- LogicError.lift(Kernel.assume(premise))
+
+      positiveWitness <- opened(positive, zeroTerm, p, successor)
+      openedPremise <- opened(held, m, n, successor)
+
+      product <- LogicError.lift(Term.appAll(times, List(p, m)))
+      target <- LogicError.lift(Term.appAll(times, List(p, n)))
+      wantedStrict <- Conv.unfold(strictDefinition, List(product, target))
+      wantedAtMost <- Conv.unfold(nonStrictDefinition, List(successor(product), target))
+      body <- rightOf(wantedAtMost)
+      predicate <- logic
+        .destExistsPredicate(body)
+        .toRight(NotOfForm("an existential", body))
+
+      witnessed <- withTwoDifferences(
+        logic, theory, arithmetic, openedPremise, positiveWitness, predicate,
+        times, plus, successorConstant, zeroTerm, p, m, n)
+
+      asAtMost <- Conv
+        .sym(wantedAtMost)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, witnessed)))
+      asStrict <- Conv
+        .sym(wantedStrict)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, asAtMost)))
+      discharged <- rules.disch(premise, asStrict).flatMap(rules.disch(positiveTerm, _))
+      general <- rules.genAll(discharged, List(p, m, n))
+      result <- checked(theory, notation, MulStrictlyMonotone, general)
+    } yield result
+  }
+
+  /** The chain [[multiplicationIsStrictlyMonotone]]'s docstring writes out, with both witnesses. */
+  private def withTwoDifferences(
+    logic: Logic,
+    theory: Theory,
+    arithmetic: String => Kernel.Thm,
+    premise: Kernel.Thm,
+    positive: Kernel.Thm,
+    predicate: Term,
+    times: Term,
+    plus: Term,
+    successorConstant: Term,
+    zeroTerm: Term,
+    p: FVar,
+    m: FVar,
+    n: FVar
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    def open(existential: Kernel.Thm, name: String, taken: Set[FVar])(
+      reach: (FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        inner <- logic
+          .destExistsPredicate(existential.conclusion)
+          .toRight(NotOfForm("an existential", existential.conclusion))
+        fresh = Conv.freshVariable(
+          name, numbers, taken ++ Term.freeVariables(existential.conclusion))
+        applied <- LogicError.lift(Term.app(inner, fresh))
+        contraction <- Conv.betaRoot(applied)
+        body <- rightOf(contraction)
+        assumed <- LogicError.lift(Kernel.assume(body))
+        reached <- reach(fresh, assumed)
+        result <- rules.existsElim(existential, fresh, reached)
+      } yield result
+
+    open(premise, "d", Set(p, m, n)) { (d, instance) =>
+      open(positive, "c", Set(p, m, n, d)) { (c, atC) =>
+        for {
+          product <- LogicError.lift(Term.appAll(times, List(p, m)))
+          successorOfM <- LogicError.lift(Term.app(successorConstant, m))
+          successorOfProduct <- LogicError.lift(Term.app(successorConstant, product))
+          productOfD <- LogicError.lift(Term.appAll(times, List(p, d)))
+
+          // `p = SUC c`, read back off the witness of `ZERO < p`.
+          stepped <- rules.specAll(arithmetic(SuccessorPlus), List(zeroTerm, c))
+          leftZero <- rules
+            .spec(c, arithmetic(ZeroPlus))
+            .flatMap(Conv.apTerm(successorConstant, _))
+          isSuccessor <- Conv
+            .sym(atC)
+            .flatMap(reversed => Conv.trans(stepped, leftZero).flatMap(Conv.trans(reversed, _)))
+
+          // `SUC (p * m) + c = p * SUC m`.
+          first <- rules.specAll(arithmetic(SuccessorPlus), List(product, c))
+          second <- rules.specAll(arithmetic(AddAtSuccessor), List(product, c)).flatMap(Conv.sym)
+          partialSum <- LogicError.lift(Term.app(plus, product))
+          third <- Conv.sym(isSuccessor).flatMap(Conv.apTerm(partialSum, _))
+          fourth <- rules.specAll(arithmetic(MulAtSuccessor), List(p, m)).flatMap(Conv.sym)
+          middle <- Conv
+            .trans(third, fourth)
+            .flatMap(tail => Conv.trans(second, tail).flatMap(Conv.trans(first, _)))
+
+          regrouped <- rules
+            .specAll(arithmetic(AddAssociative), List(successorOfProduct, c, productOfD))
+            .flatMap(Conv.sym)
+          spread <- Conv.apTerm(plus, middle).flatMap(Conv.apThm(_, productOfD))
+          distributed <- rules
+            .specAll(arithmetic(Distributive), List(p, successorOfM, d))
+            .flatMap(Conv.sym)
+          partialProduct <- LogicError.lift(Term.app(times, p))
+          carried <- Conv.apTerm(partialProduct, instance)
+
+          reached <- Conv
+            .trans(distributed, carried)
+            .flatMap(tail => Conv.trans(spread, tail).flatMap(Conv.trans(regrouped, _)))
+          difference <- LogicError.lift(Term.appAll(plus, List(c, productOfD)))
+          result <- rules.existsIntro(predicate, difference, reached)
+        } yield result
+      }
+    }
+  }
+
+  /** [[MulCancelsLeft]]: trichotomy, and either order makes a product strictly below itself. */
+  private def multiplicationCancels(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    strictlyMonotone: Kernel.Thm,
+    trichotomy: Kernel.Thm,
+    strictIrreflexive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val arithmeticType = Type.fun(numbers, Type.fun(numbers, numbers))
+    val p = Term.variable("p", numbers)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      belowConstant <- LogicError.lift(theory.constant(StrictOrder, relation))
+      times <- LogicError.lift(theory.constant(Multiplication, arithmeticType))
+      zeroTerm <- Parser.term(theory, notation, "ZERO", numbers)
+
+      positiveTerm <- LogicError.lift(Term.appAll(belowConstant, List(zeroTerm, p)))
+      positive <- LogicError.lift(Kernel.assume(positiveTerm))
+      left <- LogicError.lift(Term.appAll(times, List(p, m)))
+      right <- LogicError.lift(Term.appAll(times, List(p, n)))
+      premise <- LogicError.lift(Term.eq(left, right))
+      held <- LogicError.lift(Kernel.assume(premise))
+      target <- LogicError.lift(Term.eq(m, n))
+
+      cases <- rules.specAll(trichotomy, List(m, n))
+      first <- logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      rest <- logic.destDisj(first._2).toRight(NotOfForm("a disjunction", first._2))
+
+      /* One order refuted: the products are strictly ordered and the equation identifies them. */
+      refuted = (assumed: Term, lower: Term, upper: Term, fixed: Term, forwards: Boolean) =>
+        for {
+          order <- LogicError.lift(Kernel.assume(assumed))
+          strict <- rules
+            .specAll(strictlyMonotone, List(p, lower, upper))
+            .flatMap(rules.mp(_, positive))
+            .flatMap(rules.mp(_, order))
+          equation <- if (forwards) Right(held) else Conv.sym(held)
+          moved <- Conv
+            .apTerm(belowConstant, equation)
+            .flatMap(Conv.apThm(_, fixed))
+            .flatMap(step => LogicError.lift(Kernel.eqMp(step, strict)))
+          never <- rules.spec(fixed, strictIrreflexive)
+          absurd <- rules.notElim(never, moved)
+          reached <- rules.falsityElim(target, absurd)
+        } yield reached
+
+      fromBelow <- refuted(first._1, m, n, right, true)
+      fromEqual <- LogicError.lift(Kernel.assume(rest._1))
+      fromAbove <- refuted(rest._2, n, m, left, false)
+
+      tail <- logic
+        .mkDisj(rest._1, rest._2)
+        .flatMap(subject => LogicError.lift(Kernel.assume(subject)))
+      inner <- rules.disjElim(tail, fromEqual, fromAbove)
+      settled <- rules.disjElim(cases, fromBelow, inner)
+
+      discharged <- rules.disch(premise, settled).flatMap(rules.disch(positiveTerm, _))
+      general <- rules.genAll(discharged, List(p, m, n))
+      result <- checked(theory, notation, MulCancelsLeft, general)
     } yield result
   }
 

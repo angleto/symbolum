@@ -244,8 +244,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // turned out not to have: `NUM_PRIME_DIVISOR` is a letter away and says the other direction.
     // Neither of `CLAUDE.md`'s figures moves, because both bind a single variable, which this file
     // has called the rarest kind of addition twice before and is the third time.
-    library.entries.size shouldBe 393
-    library.names.distinct.size shouldBe 390
+    // 396 with the three multiplicative lemmas the irrationality of the square root of two needed
+    // and `Peano` did not have, though it had all three additive counterparts. Each binds three
+    // variables of a kind, so both of `CLAUDE.md`'s figures move by three as well.
+    library.entries.size shouldBe 396
+    library.names.distinct.size shouldBe 393
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

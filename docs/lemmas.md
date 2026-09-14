@@ -357,7 +357,10 @@ they have least appetite for working out how it is produced.
   NUM_LT_TOTAL             !x:num. !y:num. NUM_LT x y \/ x = y \/ NUM_LT y x
   NUM_LT_TRANS             !x:num. !y:num. !z:num. NUM_LT x y /\ NUM_LT y z ==> NUM_LT x z
   NUM_MUL_ASSOC            !x:num. !y:num. !z:num. NUM_MUL (NUM_MUL x y) z = NUM_MUL x (NUM_MUL y z)
+  NUM_MUL_CANCEL_LEFT      !x:num. !y:num. !z:num. NUM_LT 0 x ==> NUM_MUL x y = NUM_MUL x z ==> y = z
   NUM_MUL_DISTRIBUTE       !x:num. !y:num. !z:num. NUM_MUL x (NUM_ADD y z) = NUM_ADD (NUM_MUL x y) (NUM_MUL x z)
+  NUM_MUL_LT_MONOTONE      !x:num. !y:num. !z:num. NUM_LT 0 x ==> NUM_LT y z ==> NUM_LT (NUM_MUL x y) (NUM_MUL x z)
+  NUM_MUL_MONOTONE         !x:num. !y:num. !z:num. NUM_LE y z ==> NUM_LE (NUM_MUL x y) (NUM_MUL x z)
   NUM_MUL_ONE              !x:num. NUM_MUL x (SUC 0) = x
   NUM_MUL_POSITIVE         !x:num. !y:num. NUM_LT 0 x ==> NUM_LT 0 y ==> NUM_LT 0 (NUM_MUL x y)
   NUM_MUL_SUC              !x:num. !y:num. NUM_MUL x (SUC y) = NUM_ADD (NUM_MUL x y) x
