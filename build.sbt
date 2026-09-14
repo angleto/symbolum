@@ -18,7 +18,12 @@
 //     tactics  -> theories, core
 //     examples -> tactics
 //
-// Every module in that graph now exists.
+// Every module in that graph now exists. `mark` is beside it rather than in it: it depends on
+// nothing, it is not depended on, and what it does is write `docs/logo.svg` from the character art
+// in `docs/logo.md` and assert the three things that document asks of a copy. It is a module rather
+// than a file in `examples` for one reason, which is that `examples` depends on `tactics`: a check
+// over two files under `docs/` that could only run after the prover compiled would stop running on
+// exactly the days the prover is broken.
 //
 // `examples` depended on `core` alone until 2026-09-13, which made it the algebra half's
 // demonstration directory and nothing else: a demonstration of the proof half had nowhere to
@@ -183,7 +188,7 @@ lazy val publishSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, kernel, checker, logic, theories, tactics, examples)
+  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark)
   .settings(
     name := "symbolum-root",
     publish / skip := true
@@ -372,5 +377,19 @@ lazy val examples = (project in file("modules/examples"))
     // No floor, stated rather than set to zero: these are demonstrations that print expressions,
     // every function they call is covered by `core`'s suite, and a threshold here would be
     // satisfied by asserting that printing does not throw.
+    coverageFailOnMinimum := false
+  )
+
+// The mark, and the checks `docs/logo.md` describes. Depends on nothing, is depended on by nothing,
+// and is not published: it is a documentation tool that happens to be written in the language the
+// repository already builds.
+lazy val mark = (project in file("modules/mark"))
+  .settings(commonSettings)
+  .settings(
+    name := "symbolum-mark",
+    publish / skip := true,
+    // No floor, stated rather than set to zero, for the reason `examples` gives and one of its own:
+    // everything here is exercised by `MarkSpec` against the committed files, so the number this
+    // would gate is a property of two documents rather than of the code.
     coverageFailOnMinimum := false
   )

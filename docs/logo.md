@@ -12,29 +12,29 @@ update it.*
 ## The art
 
 ```
-                |-!?~/\\/==><                                              =>=\->|
-           -!?~/\\/==><=>=\->|-!?~                                     /\\/==><=>=\
-        ->|-!?~/\\/==><=>=\->|-!?~/\\                              /==><=>=\->|-
-      !?~/\\/==><=>=\->|-!?~/\\/==><=>=                        \->|-!?~/\\/=
-    =><=>=\->|-!?~/\\/==><=>=\->|-!?~/\\/=                 =><=>=\->|-!?
-   ~/\\/==><=>=\->          |-!?   ~/\\/==><=          >=\->|-!?~/\\
-  /==><=>=\->|                -!?    ~/\\/==><=>   =\->|-!?~/\\/
- ==><=>=\->|                    -!?~     /\\/==><=>=\->|-!?~/
-\\/==><=>=\                       ->|-!    ?~/\\/==><=>=
-\->|-!?~/\                          \/==>     <=>=\-
->|-!?~/\\/                           ==><=
->=\->|-!?~                           /\\/==
-><=>=\->|-                          !?~/\\/=
-=><=>=\->|                         -!?~/\\/==
-><=>=\->|-!                       ?~/\\/==><=
- >=\->|-!?~/                     \\/==><=>=\
-  ->|-!?~/\\/=                 =><=>=\->|-!
-   ?~/\\/==><=>=\-         >|-!?~/\\/==><=
-    >=\->|-!?~/\\/==><=>=\->|-!?~/\\/==><
-      =>=\->|-!?~/\\/==><=>=\->|-!?~/\\
-        /==><=>=\->|-!?~/\\/==><=>=\-
-           >|-!?~/\\/==><=>=\->|-!
-                ?~/\\/==><=>=
+                |-!?~/\\/==><                                              =>=
+           \->|-!?~/\\/==><=>=\->|                                     -!?~/\\/
+        ==><=>=\->|-!?~/\\/==><=>=\->                              |-!?~/\\/==><
+      =>=\->|-!?~/\\/==><=>=\->|-!?~/\\                        /==><=>=\->|-
+    !?~/\\/==><=>=\->|-!?~/\\/==><=>=\->|-                 !?~/\\/==><=>
+   =\->|-!?~/\\/==          ><=>   =\->|-!?~/          \\/==><=>=\->
+  |-!?~/\\/==>                <=>    =\->|-!?~/\   \/==><=>=\->|
+ -!?~/\\/==>                    <=>=     \->|-!?~/\\/==><=>=\
+->|-!?~/\\/                       ==><=    >=\->|-!?~/\\
+/==><=>=\-                          >|-!?     ~/\\/=
+=><=>=\->|                           -!?~/
+\\/==><=>=                           \->|-!
+?~/\\/==><                          =>=\->|-
+!?~/\\/==>                         <=>=\->|-!
+?~/\\/==><=                       >=\->|-!?~/
+ \\/==><=>=\                     ->|-!?~/\\/
+  ==><=>=\->|-                 !?~/\\/==><=
+   >=\->|-!?~/\\/=         =><=>=\->|-!?~/
+    \\/==><=>=\->|-!?~/\\/==><=>=\->|-!?~
+      /\\/==><=>=\->|-!?~/\\/==><=>=\->
+        |-!?~/\\/==><=>=\->|-!?~/\\/=
+           =><=>=\->|-!?~/\\/==><=
+                >=\->|-!?~/\\
 ```
 
 ## Why these characters
@@ -62,7 +62,7 @@ instead.
 **The stream is continuous and it advances only over the cells that are filled.** It does not
 restart at each row, and it skips the counter and the slot rather than counting them. That is what
 makes the figure read as text poured into a letter rather than as a repeated motif, and it is also
-the check: fill the visible cells in reading order with the stream above, and every one of the 662
+the check: fill the visible cells in reading order with the stream above, and every one of the 654
 cells must land on the character it already has. A single cell wrong anywhere and the last row
 stops matching.
 
@@ -73,14 +73,18 @@ must stay open: when it closes it leaves sealed pockets of three and two cells, 
 rather than as drawing. That is not hypothetical. It is what the first hand-drawn version of this
 figure did, and filling those five cells is the only edit made to it.
 
-Run all three before trusting a copy that has been through an editor, a chat window or a clipboard.
-Backslashes are what get eaten.
+All three are asserted by `MarkSpec`, so they run on every `sbt test` rather than when somebody
+remembers them. Run them by eye anyway on a copy that has been through an editor, a chat window or a
+clipboard, because such a copy is usually not in this repository yet. Backslashes are what get
+eaten.
 
 ## Why it is this big, which is the decision rather than an accident
 
-Twenty-three rows by eighty-three columns, so it does **not** fit an eighty-column terminal. That is
-bought rather than overlooked, and what it buys has changed: it used to be the bend in the tail, and
-it is now the closure.
+Twenty-three rows by eighty columns, which is the widest a figure can be and still be pasted into
+an eighty-column terminal. The last three columns were bought back rather than spent: the mark was
+eighty-three columns when it was drawn, and the V's right arm is cut three columns shorter than it
+was for no reason except that one. What the size itself buys has changed: it used to be the bend in
+the tail, and it is now the closure.
 
 The stroke is five rows where it is at full weight, and that is a measurement rather than an
 intention: five cells at the top of the circle and five at the bottom, ten columns on the left
@@ -145,8 +149,19 @@ character grid, which is that the eye can see where it is.
 ## `logo.svg`
 
 The same grid, one `<text>` element per visible run, monospace. It is a transcription of the art
-above rather than a redrawing: row *n* of the file is row *n* of the art, so the two cannot drift
-without it being visible in a diff.
+above rather than a redrawing: row *n* of the file is row *n* of the art.
+
+**It is generated.** `sbt "mark/runMain garden.xeno.symbolum.mark.Mark"` writes it from the art, and
+`MarkSpec` fails when the committed drawing is not what that command would write, naming the
+command. This paragraph used to end "so the two cannot drift without it being visible in a diff",
+which was true and was not a check: a diff is something a person has to read, and the moment
+somebody edits one cell of the art is the moment they have least appetite for finding out how the
+drawing is produced. The predictable outcome is a hand-edited `<text>` element, and from there the
+drawing stops being a transcription and becomes a copy that resembles one.
+
+The generator refuses rather than writing when the art fails any of the three checks above. A
+drawing of a broken figure would put the defect in two files instead of one, and the second is the
+file nobody reads.
 
 ## The colour, which is the one thing a static file gets wrong
 
@@ -163,9 +178,10 @@ from a light desktop gets the grey, which is the reason the grey is not one of t
 
 ## What is not here
 
-A size that fits a terminal. The eighty-column version is a separate mask and not a scaling of this
-one, and the section on the size says what a scaling loses: the thinned stroke and the slot beside
-it are three columns each, so they go under a cell before the frame does. A smaller mark can have
-this closure only if it is drawn again at that size, with the stroke thinner in proportion, and a
-thinner stroke on a coarser grid is a different argument from this one rather than the same figure
-smaller. The SVG scales freely, so this is a terminal-only gap.
+A version smaller than this one. A size that fits a terminal is what this section used to name and
+the mark now is one, at exactly eighty columns; below that nothing exists, and the section on the
+size says what a scaling would lose. The thinned stroke and the slot beside it are three columns
+each, so a reduction loses the closure before it loses anything a reader would call the figure. A
+smaller mark can have this closure only by being drawn again at that size with the stroke thinner in
+proportion, and a thinner stroke on a coarser grid is a different argument rather than the same
+figure smaller. The SVG scales freely and is not affected.

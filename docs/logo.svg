@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 842 472" width="842" height="472" role="img" aria-label="Symbolum">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 812 472" width="812" height="472" role="img" aria-label="Symbolum">
   <title>Symbolum</title>
   <!-- Inside an <img> this file gets no colour from the page around it, so `currentColor`
        alone resolves to black and the mark is black on black wherever the page is dark.
@@ -14,52 +14,52 @@
   </style>
   <g class="ink" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" letter-spacing="0" xml:space="preserve">
     <text x="166" y="21.6" textLength="130" lengthAdjust="spacingAndGlyphs">|-!?~/\\/==&gt;&lt;</text>
-    <text x="756" y="21.6" textLength="70" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|</text>
-    <text x="116" y="41.6" textLength="230" lengthAdjust="spacingAndGlyphs">-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~</text>
-    <text x="716" y="41.6" textLength="120" lengthAdjust="spacingAndGlyphs">/\\/==&gt;&lt;=&gt;=\</text>
-    <text x="86" y="61.6" textLength="290" lengthAdjust="spacingAndGlyphs">-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\</text>
-    <text x="676" y="61.6" textLength="130" lengthAdjust="spacingAndGlyphs">/==&gt;&lt;=&gt;=\-&gt;|-</text>
-    <text x="66" y="81.6" textLength="330" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=</text>
-    <text x="636" y="81.6" textLength="130" lengthAdjust="spacingAndGlyphs">\-&gt;|-!?~/\\/=</text>
-    <text x="46" y="101.6" textLength="380" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/=</text>
-    <text x="596" y="101.6" textLength="130" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!?</text>
-    <text x="36" y="121.6" textLength="150" lengthAdjust="spacingAndGlyphs">~/\\/==&gt;&lt;=&gt;=\-&gt;</text>
-    <text x="286" y="121.6" textLength="40" lengthAdjust="spacingAndGlyphs">|-!?</text>
-    <text x="356" y="121.6" textLength="100" lengthAdjust="spacingAndGlyphs">~/\\/==&gt;&lt;=</text>
-    <text x="556" y="121.6" textLength="130" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/\\</text>
-    <text x="26" y="141.6" textLength="120" lengthAdjust="spacingAndGlyphs">/==&gt;&lt;=&gt;=\-&gt;|</text>
-    <text x="306" y="141.6" textLength="30" lengthAdjust="spacingAndGlyphs">-!?</text>
-    <text x="376" y="141.6" textLength="110" lengthAdjust="spacingAndGlyphs">~/\\/==&gt;&lt;=&gt;</text>
-    <text x="516" y="141.6" textLength="130" lengthAdjust="spacingAndGlyphs">=\-&gt;|-!?~/\\/</text>
-    <text x="16" y="161.6" textLength="110" lengthAdjust="spacingAndGlyphs">==&gt;&lt;=&gt;=\-&gt;|</text>
-    <text x="326" y="161.6" textLength="40" lengthAdjust="spacingAndGlyphs">-!?~</text>
-    <text x="416" y="161.6" textLength="200" lengthAdjust="spacingAndGlyphs">/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/</text>
-    <text x="6" y="181.6" textLength="110" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=\</text>
-    <text x="346" y="181.6" textLength="50" lengthAdjust="spacingAndGlyphs">-&gt;|-!</text>
-    <text x="436" y="181.6" textLength="130" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;=&gt;=</text>
-    <text x="6" y="201.6" textLength="100" lengthAdjust="spacingAndGlyphs">\-&gt;|-!?~/\</text>
-    <text x="366" y="201.6" textLength="50" lengthAdjust="spacingAndGlyphs">\/==&gt;</text>
-    <text x="466" y="201.6" textLength="60" lengthAdjust="spacingAndGlyphs">&lt;=&gt;=\-</text>
-    <text x="6" y="221.6" textLength="100" lengthAdjust="spacingAndGlyphs">&gt;|-!?~/\\/</text>
-    <text x="376" y="221.6" textLength="50" lengthAdjust="spacingAndGlyphs">==&gt;&lt;=</text>
-    <text x="6" y="241.6" textLength="100" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~</text>
-    <text x="376" y="241.6" textLength="60" lengthAdjust="spacingAndGlyphs">/\\/==</text>
-    <text x="6" y="261.6" textLength="100" lengthAdjust="spacingAndGlyphs">&gt;&lt;=&gt;=\-&gt;|-</text>
-    <text x="366" y="261.6" textLength="80" lengthAdjust="spacingAndGlyphs">!?~/\\/=</text>
-    <text x="6" y="281.6" textLength="100" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|</text>
-    <text x="356" y="281.6" textLength="100" lengthAdjust="spacingAndGlyphs">-!?~/\\/==</text>
-    <text x="6" y="301.6" textLength="110" lengthAdjust="spacingAndGlyphs">&gt;&lt;=&gt;=\-&gt;|-!</text>
-    <text x="346" y="301.6" textLength="110" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;=</text>
-    <text x="16" y="321.6" textLength="110" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/</text>
-    <text x="336" y="321.6" textLength="110" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=\</text>
-    <text x="26" y="341.6" textLength="120" lengthAdjust="spacingAndGlyphs">-&gt;|-!?~/\\/=</text>
-    <text x="316" y="341.6" textLength="120" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!</text>
-    <text x="36" y="361.6" textLength="150" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;=&gt;=\-</text>
-    <text x="276" y="361.6" textLength="150" lengthAdjust="spacingAndGlyphs">&gt;|-!?~/\\/==&gt;&lt;=</text>
-    <text x="46" y="381.6" textLength="370" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;</text>
-    <text x="66" y="401.6" textLength="330" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\</text>
-    <text x="86" y="421.6" textLength="290" lengthAdjust="spacingAndGlyphs">/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-</text>
-    <text x="116" y="441.6" textLength="230" lengthAdjust="spacingAndGlyphs">&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!</text>
-    <text x="166" y="461.6" textLength="130" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;=&gt;=</text>
+    <text x="756" y="21.6" textLength="30" lengthAdjust="spacingAndGlyphs">=&gt;=</text>
+    <text x="116" y="41.6" textLength="230" lengthAdjust="spacingAndGlyphs">\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|</text>
+    <text x="716" y="41.6" textLength="80" lengthAdjust="spacingAndGlyphs">-!?~/\\/</text>
+    <text x="86" y="61.6" textLength="290" lengthAdjust="spacingAndGlyphs">==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;</text>
+    <text x="676" y="61.6" textLength="130" lengthAdjust="spacingAndGlyphs">|-!?~/\\/==&gt;&lt;</text>
+    <text x="66" y="81.6" textLength="330" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\</text>
+    <text x="636" y="81.6" textLength="130" lengthAdjust="spacingAndGlyphs">/==&gt;&lt;=&gt;=\-&gt;|-</text>
+    <text x="46" y="101.6" textLength="380" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-</text>
+    <text x="596" y="101.6" textLength="130" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;&lt;=&gt;</text>
+    <text x="36" y="121.6" textLength="150" lengthAdjust="spacingAndGlyphs">=\-&gt;|-!?~/\\/==</text>
+    <text x="286" y="121.6" textLength="40" lengthAdjust="spacingAndGlyphs">&gt;&lt;=&gt;</text>
+    <text x="356" y="121.6" textLength="100" lengthAdjust="spacingAndGlyphs">=\-&gt;|-!?~/</text>
+    <text x="556" y="121.6" textLength="130" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=\-&gt;</text>
+    <text x="26" y="141.6" textLength="120" lengthAdjust="spacingAndGlyphs">|-!?~/\\/==&gt;</text>
+    <text x="306" y="141.6" textLength="30" lengthAdjust="spacingAndGlyphs">&lt;=&gt;</text>
+    <text x="376" y="141.6" textLength="110" lengthAdjust="spacingAndGlyphs">=\-&gt;|-!?~/\</text>
+    <text x="516" y="141.6" textLength="130" lengthAdjust="spacingAndGlyphs">\/==&gt;&lt;=&gt;=\-&gt;|</text>
+    <text x="16" y="161.6" textLength="110" lengthAdjust="spacingAndGlyphs">-!?~/\\/==&gt;</text>
+    <text x="326" y="161.6" textLength="40" lengthAdjust="spacingAndGlyphs">&lt;=&gt;=</text>
+    <text x="416" y="161.6" textLength="200" lengthAdjust="spacingAndGlyphs">\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\</text>
+    <text x="6" y="181.6" textLength="110" lengthAdjust="spacingAndGlyphs">-&gt;|-!?~/\\/</text>
+    <text x="346" y="181.6" textLength="50" lengthAdjust="spacingAndGlyphs">==&gt;&lt;=</text>
+    <text x="436" y="181.6" textLength="130" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/\\</text>
+    <text x="6" y="201.6" textLength="100" lengthAdjust="spacingAndGlyphs">/==&gt;&lt;=&gt;=\-</text>
+    <text x="366" y="201.6" textLength="50" lengthAdjust="spacingAndGlyphs">&gt;|-!?</text>
+    <text x="466" y="201.6" textLength="60" lengthAdjust="spacingAndGlyphs">~/\\/=</text>
+    <text x="6" y="221.6" textLength="100" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|</text>
+    <text x="376" y="221.6" textLength="50" lengthAdjust="spacingAndGlyphs">-!?~/</text>
+    <text x="6" y="241.6" textLength="100" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=</text>
+    <text x="376" y="241.6" textLength="60" lengthAdjust="spacingAndGlyphs">\-&gt;|-!</text>
+    <text x="6" y="261.6" textLength="100" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;</text>
+    <text x="366" y="261.6" textLength="80" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|-</text>
+    <text x="6" y="281.6" textLength="100" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;</text>
+    <text x="356" y="281.6" textLength="100" lengthAdjust="spacingAndGlyphs">&lt;=&gt;=\-&gt;|-!</text>
+    <text x="6" y="301.6" textLength="110" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;=</text>
+    <text x="346" y="301.6" textLength="110" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/</text>
+    <text x="16" y="321.6" textLength="110" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=\</text>
+    <text x="336" y="321.6" textLength="110" lengthAdjust="spacingAndGlyphs">-&gt;|-!?~/\\/</text>
+    <text x="26" y="341.6" textLength="120" lengthAdjust="spacingAndGlyphs">==&gt;&lt;=&gt;=\-&gt;|-</text>
+    <text x="316" y="341.6" textLength="120" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;&lt;=</text>
+    <text x="36" y="361.6" textLength="150" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/\\/=</text>
+    <text x="276" y="361.6" textLength="150" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!?~/</text>
+    <text x="46" y="381.6" textLength="370" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~</text>
+    <text x="66" y="401.6" textLength="330" lengthAdjust="spacingAndGlyphs">/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;</text>
+    <text x="86" y="421.6" textLength="290" lengthAdjust="spacingAndGlyphs">|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/=</text>
+    <text x="116" y="441.6" textLength="230" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=</text>
+    <text x="166" y="461.6" textLength="130" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/\\</text>
   </g>
 </svg>
