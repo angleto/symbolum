@@ -258,6 +258,7 @@ they have least appetite for working out how it is produced.
   NUM_ONE_DIVIDES          !x:num. NUM_DIVIDES (SUC 0) x
   NUM_PRIME_ABOVE_ONE      !x:num. NUM_PRIME x ==> NUM_LT (SUC 0) x
   NUM_PRIME_DIVISOR        !x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \/ y = x
+  NUM_PRIME_FACTOR         !x:num. NUM_LT (SUC 0) x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)
   NUM_ZERO_DIVIDES         !x:num. NUM_DIVIDES 0 x = (x = 0)
 
 ## Natural
@@ -410,6 +411,10 @@ they have least appetite for working out how it is produced.
   ADD_POSITIVE             !x:real. !y:real. 0 < x ==> 0 < y ==> 0 < x + y
   POSITIVE_NOT_ZERO        !x:real. 0 < x ==> ~(x = 0)
   ZERO_LT_ONE              0 < 1
+
+## Primes
+
+  NUM_PRIME_UNBOUNDED      !x:num. ?y:num. NUM_PRIME y /\ NUM_LT x y
 
 ## Product
 

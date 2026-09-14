@@ -45,6 +45,273 @@ of work per theorem, and nothing below suggests the next one will be faster.
 
 ## Number theory
 
+# NUM_PRIME_UNBOUNDED
+
+$$\forall x \colon \mathbb{N}.\ \exists y \colon \mathbb{N}.\ \mathrm{prime}(y) \land x < y$$
+
+```
+!x:num. ?y:num. NUM_PRIME y /\ NUM_LT x y
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+2 axioms reached, 0 of them named below, and 67 named facts in all.
+
+| what | where |
+|---|---|
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_FACT_DIVIDES` | Coding |
+| `NUM_FACT_POSITIVE` | Coding |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `NUM_DIVIDES_ONE` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_SUMMAND` | Modular |
+| `NUM_DIVIDES_TRANS` | Modular |
+| `NUM_DIVIDES_ZERO` | Modular |
+| `NUM_PRIME_ABOVE_ONE` | Modular |
+| `NUM_PRIME_FACTOR` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_CANCEL_LEFT` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_LT_MONOTONE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+23501 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 7344 | 31.2% |
+| EqualityElimination | 4863 | 20.7% |
+| Reflexivity | 1974 | 8.4% |
+| Instantiation | 1939 | 8.3% |
+| Antisymmetry | 1883 | 8.0% |
+| Transitivity | 1724 | 7.3% |
+| BetaStep | 1426 | 6.1% |
+| TypeInstantiation | 781 | 3.3% |
+| Assumption | 773 | 3.3% |
+| Abstraction | 770 | 3.3% |
+| Definition | 20 | 0.1% |
+| TypeDefinition | 2 | 0.0% |
+| Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. ?y:num. NUM_PRIME y /\ NUM_LT x y"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_PRIME_UNBOUNDED"
+```
+
+From Scala it is `Primes`'s, under the name `NUM_PRIME_UNBOUNDED`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# NUM_PRIME_FACTOR
+
+$$\forall x \colon \mathbb{N}.\ \mathrm{suc}(0) < x \Rightarrow \left( \exists y \colon \mathbb{N}.\ \mathrm{prime}(y) \land y \mid x \right)$$
+
+```
+!x:num. NUM_LT (SUC 0) x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+2 axioms reached, 0 of them named below, and 42 named facts in all.
+
+| what | where |
+|---|---|
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_TRANS` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+15433 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 5068 | 32.8% |
+| EqualityElimination | 3064 | 19.9% |
+| Antisymmetry | 1298 | 8.4% |
+| Instantiation | 1266 | 8.2% |
+| Reflexivity | 1203 | 7.8% |
+| Transitivity | 1039 | 6.7% |
+| BetaStep | 844 | 5.5% |
+| Abstraction | 608 | 3.9% |
+| Assumption | 552 | 3.6% |
+| TypeInstantiation | 468 | 3.0% |
+| Definition | 19 | 0.1% |
+| TypeDefinition | 2 | 0.0% |
+| Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_LT (SUC 0) x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_PRIME_FACTOR"
+```
+
+From Scala it is `Modular`'s, under the name `NUM_PRIME_FACTOR`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
 # NUM_BEZOUT
 
 $$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \lnot \left( x = 0 \right) \lor \lnot \left( y = 0 \right) \Rightarrow \left( \exists z \colon \mathbb{N}.\ \exists u \colon \mathbb{N}.\ x \cdot z = y \cdot u + \gcd(x, y) \lor y \cdot z = x \cdot u + \gcd(x, y) \right)$$

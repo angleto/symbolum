@@ -34,7 +34,8 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.product.facts.size + chain.word.facts.size + chain.matrix.facts.size +
       chain.rotation.facts.size + chain.magnitude.facts.size + chain.coding.facts.size +
       chain.numbering.facts.size + chain.language.facts.size +
-      chain.provability.facts.size + chain.deduction.facts.size
+      chain.provability.facts.size + chain.deduction.facts.size +
+      chain.primes.facts.size
 
     library.entries.size shouldBe expected
 
@@ -239,8 +240,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // the embedded theory rather than definitions of it. Two facts and no constant, so the register
     // does not move; `CLAUDE.md`'s two figures move by ONE each and not by two, because the
     // identity binds a single formula and only the syllogism binds three of a kind.
-    library.entries.size shouldBe 391
-    library.names.distinct.size shouldBe 388
+    // 393 with Euclid's theorem and the lemma it needed, `NUM_PRIME_FACTOR`, which the library
+    // turned out not to have: `NUM_PRIME_DIVISOR` is a letter away and says the other direction.
+    // Neither of `CLAUDE.md`'s figures moves, because both bind a single variable, which this file
+    // has called the rarest kind of addition twice before and is the third time.
+    library.entries.size shouldBe 393
+    library.names.distinct.size shouldBe 390
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

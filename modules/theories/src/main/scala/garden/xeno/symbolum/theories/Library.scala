@@ -272,6 +272,7 @@ object Library {
         collect("Numbering", chain.numbering.facts) ++
         collect("Language", chain.language.facts) ++
         collect("Provability", chain.provability.facts) ++
+        collect("Primes", chain.primes.facts) ++
         collect("Deduction", chain.deduction.facts)
     )
 

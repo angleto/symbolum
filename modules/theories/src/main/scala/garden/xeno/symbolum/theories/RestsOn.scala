@@ -124,6 +124,7 @@ object Reach {
         "Numbering" -> chain.numbering.facts,
         "Language" -> chain.language.facts,
         "Provability" -> chain.provability.facts,
+        "Primes" -> chain.primes.facts,
         "Deduction" -> chain.deduction.facts
       )
     )

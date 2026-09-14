@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 391 lemmas, 245 have two or more leading quantifiers and **222 of
+caller meant: of the library's 393 lemmas, 245 have two or more leading quantifiers and **222 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -332,8 +332,25 @@ antisymmetry that is false over a field, congruences with their compatibility wi
 multiplication, division with remainder in both halves, `NUM_DIV` and `NUM_MOD` as functions that
 denote and are total, the greatest common divisor, Bezout, and Euclid's lemma with a definition of
 prime. `Bounded` discharges `!i. i < k ==> P i` at a concrete bound by proving the instances and
-assembling them, and is the one development that sits beside the chain's extension order rather than
-in it, because it declares nothing.
+assembling them, and was the one development that sat beside the chain's extension order rather than
+in it, because it declares nothing. It is one of three now: `Primes` and `Deduction` joined it on
+2026-09-14.
+
+**`Primes` holds theorems about the primes that are results rather than infrastructure**, and today
+that is Euclid's: `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
+primes" says in a logic with no notion of an infinite set. It is not in `Modular` because of one
+constant: the proof runs through `n! + 1` and the factorial is defined in `Coding`, which is built
+**over** `Modular`. Putting it in `Coding` instead would have made that file's own first sentence
+false, since `Coding` says it is the bottom of the Goedel numbering and this is not that.
+
+**What proving it cost was one missing lemma, and that is the whole reason to prove such things
+here.** `NUM_PRIME_FACTOR`, that every number above one **has** a prime factor, did not exist.
+`NUM_PRIME_DIVISOR` is a letter away and says the opposite direction, that a prime's divisors are
+one and itself, which is the definition unfolded. Nothing had ever needed the existence, so nothing
+had noticed. It is in `Modular` beside the name it is confused with, and the route is the **least**
+divisor above one rather than the textbook induction: the least one is prime for free, and the
+induction would want a negation pushed through a universal quantifier, which this logic has no law
+for.
 
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is

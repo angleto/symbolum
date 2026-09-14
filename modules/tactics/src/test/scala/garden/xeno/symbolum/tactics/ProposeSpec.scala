@@ -179,7 +179,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 215 with `Deduction`'s two, and the six is the clearest case yet of why this bucket counts
     // arrows rather than lemmas: the identity carries one hypothesis and the syllogism carries
     // five, so two lemmas are six proposals.
-    proposals.size shouldBe 215
+    // 216 with Euclid's theorem and its prime-factor lemma, and the one is the arithmetic again:
+    // the factor lemma carries `SUC ZERO < n` and Euclid carries nothing, so two lemmas are one
+    // proposal. A bucket that counted lemmas would have said two.
+    proposals.size shouldBe 216
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -578,7 +581,20 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 162 with the syllogism's five. Dropping any one of its five premises leaves four standing,
     // so an implication survives every time, and what survives is a `NUM_FORM` or a `NUM_PROV`
     // applied to a code, which is a shape a procedure takes even though nothing here settles it.
-    open shouldBe 162
+    // 163 with the prime-factor lemma's, and it is worth more than the number. It was DERIVED as
+    // `unreadable` and measured here, from the rule this file keeps restating: the single premise
+    // is dropped, so nothing survives on the left of an arrow, which is the shape the entries above
+    // say lands there. That derivation was wrong, and the reason is that the rule is a shadow of
+    // the real criterion rather than the criterion. What decides the bucket is `Prove.addressOf`:
+    // it strips EVERY antecedent, asks whether the conclusion is an order or an equation between
+    // reals, and where nothing answers it asks whether the minimal propositional fragment can read
+    // the goal at all. Here the residue `!n. ?p. NUM_PRIME p /\ NUM_DIVIDES p n` is read
+    // propositionally, so the address is not `Nobody` and the standing is `Open`.
+    //
+    // The surviving-premise rule is a good predictor and is not the rule. This is the fourth
+    // reading error recorded in this file and the first where the rule itself, rather than a
+    // careless application of it, is what misled.
+    open shouldBe 163
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

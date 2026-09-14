@@ -177,6 +177,13 @@ final class Chain private (
   val magnitude: Magnitude,
   /** The bottom of the Goedel numbering: the factorial and the Chinese remainder theorem. */
   val coding: Coding,
+  /**
+   * Theorems about the primes that are results rather than infrastructure.
+   *
+   * It sits above [[coding]] and not in [[modular]] for one reason: Euclid's theorem is proved from
+   * the factorial, which `Coding` defines. Like [[deduction]] it declares nothing.
+   */
+  val primes: Primes,
   /** The Goedel numbering of the object language, starting at the pairing. */
   val numbering: Numbering,
   /** The embedded theory's own language, coded as numbers. */
@@ -314,6 +321,10 @@ object Chain {
       // rather than be noticed.
       coding <- Coding.construct(modular, magnitude.theory, magnitude.notation)
 
+      // Beside the extension order, like `bounded` and `deduction`: it declares nothing and is a
+      // field here so that `Library.of` reaches its facts.
+      primes <- Primes.construct(coding)
+
       // The last link since 2026-09-14, and the first one that is about a language rather than
       // about numbers: `docs/adr/0014` decides that a term of the embedded theory IS a number, so
       // the arithmetisation extends the arithmetic rather than sitting beside it.
@@ -354,6 +365,7 @@ object Chain {
       successor,
       magnitude,
       coding,
+      primes,
       numbering,
       language,
       provability,

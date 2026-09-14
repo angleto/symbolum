@@ -794,6 +794,27 @@ object Modular {
   val PrimeDivisor: String = "NUM_PRIME_DIVISOR"
 
   /**
+   * `|- !n. NUM_LT (SUC ZERO) n ==> ?p. NUM_PRIME p /\ NUM_DIVIDES p n`
+   *
+   * Every number above one **has** a prime factor, which is the half of the subject
+   * [[PrimeDivisor]] reads as if it said and does not: that one says a prime's divisors are one and
+   * itself, and is the definition unfolded in one direction. The two names are a letter apart and
+   * the statements point opposite ways, which is why this docstring says so rather than leaving a
+   * reader to compare them.
+   *
+   * It was missing until 2026-09-14 and was found by trying to state Euclid's theorem, which cannot
+   * be proved without it.
+   *
+   * **The route is the least divisor above one, not an induction.** `NUM_LEAST` over
+   * `\d. SUC ZERO < d /\ NUM_DIVIDES d n` gives a smallest such divisor, and it is prime for free:
+   * a divisor of it above one would divide `n` as well, by transitivity, and be smaller, which the
+   * minimality refuses. The induction the textbook uses would work too and wants the negation
+   * pushed through a universal quantifier, which this logic has no law for; taking the least one
+   * asks for nothing that is not here.
+   */
+  val PrimeFactor: String = "NUM_PRIME_FACTOR"
+
+  /**
    * `|- !p a b. NUM_PRIME p ==> NUM_DIVIDES p (NUM_MUL a b) ==> NUM_DIVIDES p a \/ NUM_DIVIDES p b`
    *
    * Euclid's lemma, which is the point of the three above it. The proof is the classical one and it
@@ -930,6 +951,8 @@ object Modular {
         "NUM_DIVIDES d a /\\ NUM_DIVIDES d b ==> NUM_DIVIDES d (NUM_GCD a b)"),
     PrimeAboveOne -> "!p:num. NUM_PRIME p ==> NUM_LT (SUC ZERO) p",
     PrimeDivisor -> "!p:num d:num. NUM_PRIME p ==> NUM_DIVIDES d p ==> d = SUC ZERO \\/ d = p",
+    PrimeFactor ->
+      "!n:num. NUM_LT (SUC ZERO) n ==> (?p:num. NUM_PRIME p /\\ NUM_DIVIDES p n)",
     Euclid ->
       ("!p:num a:num b:num. NUM_PRIME p ==> NUM_DIVIDES p (NUM_MUL a b) ==> " +
         "NUM_DIVIDES p a \\/ NUM_DIVIDES p b"),
@@ -1158,6 +1181,8 @@ object Modular {
       euclid <- euclidsLemma(
         vocabulary, primeAbove, primeDivisor, bezout, summand, multiple, introduction, gcdLeft, gcdRight
       )
+      primeFactor <- everyNumberAboveOneHasAPrimeFactor(
+        vocabulary, primeDefinition, reflexivity, transitivity, bound, byZero)
 
       // The connectives against the finished signature, which is also the assertion that nothing
       // was defined into a side branch: `Logic.over` checks the extension rather than assuming it.
@@ -1216,6 +1241,7 @@ object Modular {
         GcdDivides -> gcdDivides,
         PrimeAboveOne -> primeAbove,
         PrimeDivisor -> primeDivisor,
+        PrimeFactor -> primeFactor,
         Euclid -> euclid,
         GcdSym -> gcdSymmetric,
         ModOfCong -> modOfCong
@@ -4972,6 +4998,270 @@ object Modular {
   }
 
   /** `|- ~(p = ZERO)`, from a number above one. */
+  /**
+   * [[PrimeFactor]], by taking the least divisor above one and showing it has no others.
+   *
+   * `NUM_LEAST` over `\d. SUC ZERO < d /\ NUM_DIVIDES d n` needs the property inhabited, and `n`
+   * itself inhabits it. What comes back is a smallest `m` with those two, and the whole content of
+   * the lemma is that `m` is prime, which [[everyDivisorOfTheLeastIsTrivial]] does.
+   *
+   * Split in two because the inner half is where the work is: the outer one opens an existential,
+   * folds the definition of prime and closes another, and reads as those three things only when the
+   * case analysis is somewhere else.
+   */
+  private def everyNumberAboveOneHasAPrimeFactor(
+    vocabulary: Vocabulary,
+    primeDefinition: Kernel.Thm,
+    reflexivity: Kernel.Thm,
+    transitivity: Kernel.Thm,
+    bound: Kernel.Thm,
+    byZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = vocabulary.logic
+    val rules = vocabulary.rules
+    val n = Term.variable("n", Modular.numbers)
+
+    for {
+      unit <- vocabulary.one
+      aboveOne <- vocabulary.belowTerm(unit, n)
+      held <- LogicError.lift(Kernel.assume(aboveOne))
+
+      subject = Conv.freshVariable("d", Modular.numbers, Set(n))
+      dividesN <- vocabulary.dividing(subject, n)
+      aboveOneToo <- vocabulary.belowTerm(unit, subject)
+      body <- logic.mkConj(aboveOneToo, dividesN)
+      property <- LogicError.lift(Term.abs(subject, body))
+
+      // `n` divides itself and is above one, so something has the property.
+      existential <- logic.mkExists(subject, body)
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      itself <- rules.spec(n, reflexivity)
+      inhabited <- rules.conjIntro(held, itself).flatMap(rules.existsIntro(predicate, n, _))
+
+      leastPrinciple <- vocabulary.fact(Peano.LeastNumber)
+      instance <- rules.spec(property, leastPrinciple)
+      reduced <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      least <- rules.mp(reduced, inhabited)
+
+      inner <- logic
+        .destExistsPredicate(least.conclusion)
+        .toRight(NotOfForm("an existential", least.conclusion))
+      m = Conv.freshVariable("m", Modular.numbers, Set(n) ++ Term.freeVariables(least.conclusion))
+      applied <- LogicError.lift(Term.app(inner, m))
+      contraction <- Conv.betaRoot(applied)
+      opened <- vocabulary.rightOf(contraction)
+      atM <- LogicError.lift(Kernel.assume(opened))
+
+      holds <- rules.conjElim1(atM)
+      isLeast <- rules.conjElim2(atM)
+      aboveOneAtM <- rules.conjElim1(holds)
+      dividesAtM <- rules.conjElim2(holds)
+
+      trivial <- everyDivisorOfTheLeastIsTrivial(
+        vocabulary, isLeast, aboveOneAtM, dividesAtM, transitivity, bound, byZero, m, n)
+      unfolded <- Conv.unfold(primeDefinition, List(m))
+      isPrime <- rules
+        .conjIntro(aboveOneAtM, trivial)
+        .flatMap(pair => Conv.sym(unfolded).flatMap(e => LogicError.lift(Kernel.eqMp(e, pair))))
+
+      witness = Conv.freshVariable("p", Modular.numbers, Set(n, m))
+      primeTerm <- vocabulary.isPrime(witness)
+      dividesTerm <- vocabulary.dividing(witness, n)
+      wantedBody <- logic.mkConj(primeTerm, dividesTerm)
+      wanted <- logic.mkExists(witness, wantedBody)
+      wantedPredicate <- logic
+        .destExistsPredicate(wanted)
+        .toRight(NotOfForm("an existential", wanted))
+      found <- rules
+        .conjIntro(isPrime, dividesAtM)
+        .flatMap(rules.existsIntro(wantedPredicate, m, _))
+      closed <- rules.existsElim(least, m, found)
+      general <- rules.disch(aboveOne, closed).flatMap(rules.gen(n, _))
+      result <- vocabulary.checked(Modular.PrimeFactor, general)
+    } yield result
+  }
+
+  /**
+   * The least divisor above one has no divisor but one and itself, which is what makes it prime.
+   *
+   * Given `d | m`, the excluded middle on `d = SUC ZERO` settles one branch at once. The other
+   * proves `d = m` by contradiction, and everything in that branch exists to put `d` into the
+   * property `m` is least for: `d | m | n` gives `d | n`; `d | m` with `m` not zero gives `d <= m`,
+   * and `d` not `m` sharpens it to `d < m`; and `d` is above one because it is neither zero, since
+   * zero divides only zero, nor one, which is the branch's own assumption. Minimality then refuses
+   * exactly the pair that has just been assembled.
+   */
+  private def everyDivisorOfTheLeastIsTrivial(
+    vocabulary: Vocabulary,
+    isLeast: Kernel.Thm,
+    aboveOneAtM: Kernel.Thm,
+    dividesAtM: Kernel.Thm,
+    transitivity: Kernel.Thm,
+    bound: Kernel.Thm,
+    byZero: Kernel.Thm,
+    m: Term,
+    n: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = vocabulary.logic
+    val rules = vocabulary.rules
+    val d = Conv.freshVariable("d", Modular.numbers, Term.freeVariables(n) ++ Term.freeVariables(m))
+
+    for {
+      unit <- vocabulary.one
+      middle <- vocabulary.peano.naturals.classical.fact(Classical.ExcludedMiddle)
+      doubleNegation <- vocabulary.peano.naturals.classical.fact(Classical.DoubleNegation)
+
+      dividesM <- vocabulary.dividing(d, m)
+      assumedDivides <- LogicError.lift(Kernel.assume(dividesM))
+      isOne <- LogicError.lift(Term.eq(d, unit))
+      isM <- LogicError.lift(Term.eq(d, m))
+      goal <- logic.mkDisj(isOne, isM)
+
+      split <- rules.spec(isOne, middle)
+      parts <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      whenOne <- LogicError
+        .lift(Kernel.assume(parts._1))
+        .flatMap(rules.disjIntro1(isM, _))
+
+      notOne <- LogicError.lift(Kernel.assume(parts._2))
+      notM <- logic.mkNot(isM)
+      assumedNotM <- LogicError.lift(Kernel.assume(notM))
+
+      // `d | m` and `m | n`, so `d` divides `n` as well.
+      dividesN <- rules
+        .specAll(transitivity, List(d, m, n))
+        .flatMap(rules.mp(_, assumedDivides))
+        .flatMap(rules.mp(_, dividesAtM))
+
+      // `d <= m`, and then `d < m`, since `m` is not zero and `d` is not `m`.
+      notZero <- aboveOneIsNotZero(vocabulary, aboveOneAtM, m)
+      cases <- rules.specAll(bound, List(d, m)).flatMap(rules.mp(_, assumedDivides))
+      atMostM <- eitherOrAbsurd(vocabulary, cases, notZero)
+      belowOrEqual <- vocabulary.fact(Peano.BelowOrEqual)
+      split2 <- rules.specAll(belowOrEqual, List(d, m)).flatMap(rules.mp(_, atMostM))
+      belowM <- eitherOrAbsurd(vocabulary, split2, assumedNotM)
+
+      aboveOneAtD <- neitherZeroNorOne(vocabulary, notOne, assumedDivides, notZero, byZero, d, m)
+
+      // Which is the property `m` was chosen least for, at something below `m`.
+      refused <- rules
+        .spec(d, isLeast)
+        .flatMap(rules.mp(_, belowM))
+        .flatMap(refusal =>
+          Conv
+            .betaNormalise(refusal.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, refusal)))
+        )
+      absurd <- rules.conjIntro(aboveOneAtD, dividesN).flatMap(rules.notElim(refused, _))
+
+      negated <- rules.notIntro(notM, absurd)
+      equalsM <- rules.spec(isM, doubleNegation).flatMap(rules.mp(_, negated))
+      whenNotOne <- rules.disjIntro2(isOne, equalsM)
+
+      settled <- rules.disjElim(split, whenOne, whenNotOne)
+      result <- rules.disch(dividesM, settled).flatMap(rules.gen(d, _))
+    } yield result
+  }
+
+  /**
+   * A disjunction whose right half is refuted, which is how three of the steps above narrow.
+   *
+   * `d <= m \/ m = 0` against `~(m = 0)`, and `d < m \/ d = m` against `~(d = m)`: the same shape
+   * twice, and writing it once is what keeps the two readable where they are used.
+   */
+  private def eitherOrAbsurd(
+    vocabulary: Vocabulary,
+    cases: Kernel.Thm,
+    refuted: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = vocabulary.rules
+
+    for {
+      parts <- vocabulary.logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      left <- LogicError.lift(Kernel.assume(parts._1))
+      right <- LogicError.lift(Kernel.assume(parts._2))
+      absurd <- rules.notElim(refuted, right)
+      elsewhere <- rules.falsityElim(parts._1, absurd)
+      result <- rules.disjElim(cases, left, elsewhere)
+    } yield result
+  }
+
+  /**
+   * A divisor that is neither one nor zero is above one, by trichotomy against one.
+   *
+   * Zero is ruled out by the divisor's own dividend: zero divides only zero, and the dividend here
+   * is not zero. Below one is ruled out the same way, since the only number below one is zero.
+   */
+  private def neitherZeroNorOne(
+    vocabulary: Vocabulary,
+    notOne: Kernel.Thm,
+    dividesM: Kernel.Thm,
+    notZero: Kernel.Thm,
+    byZero: Kernel.Thm,
+    d: Term,
+    m: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = vocabulary.logic
+    val rules = vocabulary.rules
+
+    for {
+      unit <- vocabulary.one
+      target <- vocabulary.belowTerm(unit, d)
+      trichotomy <- vocabulary.fact(Peano.Trichotomy)
+      cases <- rules.specAll(trichotomy, List(d, unit))
+      first <- logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      rest <- logic.destDisj(first._2).toRight(NotOfForm("a disjunction", first._2))
+
+      // Below one means zero, and zero divides only zero.
+      belowSuccessor <- vocabulary.fact(Peano.BelowSuccessorCases)
+      notBelowZero <- vocabulary.fact(Peano.NotBelowZero)
+      peeled <- LogicError
+        .lift(Kernel.assume(first._1))
+        .flatMap(assumed => rules.specAll(belowSuccessor, List(vocabulary.zeroTerm, d))
+          .flatMap(rules.mp(_, assumed)))
+      peeledParts <- logic
+        .destDisj(peeled.conclusion)
+        .toRight(NotOfForm("a disjunction", peeled.conclusion))
+      fromBelowZero <- LogicError
+        .lift(Kernel.assume(peeledParts._1))
+        .flatMap(assumed => rules.spec(d, notBelowZero).flatMap(rules.notElim(_, assumed)))
+        .flatMap(rules.falsityElim(target, _))
+      fromZero <- for {
+        assumed <- LogicError.lift(Kernel.assume(peeledParts._2))
+        carried <- Conv
+          .apTerm(vocabulary.dividesConstant, assumed)
+          .flatMap(Conv.apThm(_, m))
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, dividesM)))
+        isZero <- rules
+          .spec(m, byZero)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, carried)))
+        absurd <- rules.notElim(notZero, isZero)
+        reached <- rules.falsityElim(target, absurd)
+      } yield reached
+      belowOne <- rules.disjElim(peeled, fromBelowZero, fromZero)
+
+      fromEqual <- LogicError
+        .lift(Kernel.assume(rest._1))
+        .flatMap(rules.notElim(notOne, _))
+        .flatMap(rules.falsityElim(target, _))
+      fromAbove <- LogicError.lift(Kernel.assume(rest._2))
+
+      tail <- logic.mkDisj(rest._1, rest._2).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      inner <- rules.disjElim(tail, fromEqual, fromAbove)
+      result <- rules.disjElim(cases, belowOne, inner)
+    } yield result
+  }
+
   private def aboveOneIsNotZero(
     vocabulary: Vocabulary,
     above: Kernel.Thm,

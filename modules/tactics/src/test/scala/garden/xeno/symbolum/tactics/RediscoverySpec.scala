@@ -128,7 +128,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // none of which reaches a rediscovery either.
     // 209 with the closure under generalisation's one, which reaches no rediscovery either.
     // 215 with `Deduction`'s two, whose six hypotheses between them reach no rediscovery either.
-    propose.weakenings.size shouldBe 215
+    // 216 with Euclid's theorem and its prime-factor lemma. ONE and not two: Euclid carries no
+    // hypothesis at all, so there is nothing in it for this source to drop.
+    propose.weakenings.size shouldBe 216
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

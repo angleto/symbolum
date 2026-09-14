@@ -11,8 +11,8 @@ package garden.xeno.symbolum.theories
  *
  * == Why the list is written by hand and the pages are not ==
  *
- * [[Chosen]] is a curated list and has to be: `docs/lemmas.md` already prints all 391 entries, and
- * a document that printed a page for each would be the same listing at forty times the length. What
+ * [[Chosen]] is a curated list and has to be: `docs/lemmas.md` already prints every entry the
+ * library holds, and a document with a page for each would be that listing many times over. What
  * belongs here is the handful somebody would show a reader who asked what the system can do, which
  * is a judgement and is therefore written down where it can be argued with rather than derived from
  * a rule nobody agreed.
@@ -48,6 +48,8 @@ object Examples {
    */
   val Chosen: Vector[(String, Vector[String])] = Vector(
     "Number theory" -> Vector(
+      "NUM_PRIME_UNBOUNDED",
+      "NUM_PRIME_FACTOR",
       "NUM_BEZOUT",
       "NUM_EUCLID",
       "NUM_PRIME_DIVISOR",
