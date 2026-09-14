@@ -1,0 +1,31 @@
+# The attestations behind docs/reading-register.md.
+#
+# This file is written by hand and is the only part of the register that is. The table in
+# docs/reading-register.md is generated from the code by
+#
+#     sbt "theories/runMain garden.xeno.symbolum.theories.Register"
+#
+# and every statement in it reads NOT READ until a line here says otherwise. The generator folds
+# these lines into the table, which is why a reading survives a regeneration and why nothing is ever
+# recorded by editing the generated block.
+#
+# Format, one reading per line:
+#
+#     key | read by | when | against which source
+#
+# The key is the one the table prints in its first column, copied exactly. All four fields must be
+# filled: an attestation with no source is a claim that the statement was read against nothing, and
+# the parser refuses the line by number rather than printing the row as unread. A key that appears
+# twice is refused for the same reason.
+#
+# The source is what the statement was checked against, precisely enough that a second reader can
+# get the same book to the same page: "Rudin, Principles of Mathematical Analysis, 3rd ed., 1.12"
+# rather than "a textbook". A statement checked against another proof assistant is a legitimate
+# source and should say which and which file: "HOL Light, class.ml, SELECT_AX".
+#
+# Renaming a statement orphans its attestation, deliberately: a renamed axiom is a changed axiom
+# until somebody says otherwise, so it goes back to NOT READ. The orphaned line is not silently
+# dropped, RegisterSpec fails naming it, and whoever made the rename decides whether to re-key the
+# line or to read the new statement.
+#
+# There are no lines below this one. Nothing has been read.

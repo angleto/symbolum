@@ -1,0 +1,6043 @@
+package garden.xeno.symbolum.theories
+
+import garden.xeno.symbolum.kernel.*
+import garden.xeno.symbolum.logic.*
+
+/**
+ * Arithmetic on the naturals: addition, multiplication, the order, and the map into the reals.
+ *
+ * `Natural` carves `num` out of an infinite type and derives Peano's axioms; what it leaves is a
+ * type with zero, a successor, induction and a case split and **nothing to compute with**. Until
+ * this file, `+`, `*`, `<=` and `<` existed over the reals and nowhere else, so an index written
+ * as `i + 1` and a bound written as `i < n` could not be stated over the naturals: a development
+ * that wanted either had to put its indices in the reals and say nothing about them being whole.
+ *
+ * This is Peano arithmetic in the usual sense, which is what the name says: the two operations and
+ * the order over the type whose axioms `Natural` proved. The axioms are not here, and that boundary
+ * is the reason for two files rather than one: nothing below is assumed, and nothing here is
+ * either.
+ *
+ * == Everything is defined, and the two operations by recursion ==
+ *
+ * `NUM_ADD` and `NUM_MUL` are definitions built on `Recursion.theorem`, each recursing on its
+ * **second** argument:
+ *
+ * {{{
+ *   |- !m. NUM_ADD m ZERO = m           |- !m. NUM_MUL m ZERO = ZERO
+ *   |- !m n. NUM_ADD m (SUC n) = SUC (NUM_ADD m n)
+ *   |- !m n. NUM_MUL m (SUC n) = NUM_ADD (NUM_MUL m n) m
+ * }}}
+ *
+ * The second argument rather than the first, and it is not a free choice. HOL Light recurses
+ * addition on the first; both orientations were worked out step by step before either was written,
+ * and on that one the step of right distributivity comes out as `(m * p + p) + n * p` against
+ * `m * p + (n * p + p)`, which differ by a commutation, so the sums have to be sorted before they
+ * meet. Recursing on the second argument makes distributivity, the associativity of both
+ * operations and the unit laws close by rewriting alone, and pushes the one step that needs sorting
+ * down to a single lemma, [[Peano.SuccessorTimes]]. That the sorting is load-bearing there and
+ * nowhere else is checked by `PeanoSpec` rather than claimed here: the same induction refuses
+ * without it, and the refusal prints the two forms that did not meet.
+ *
+ * `NUM_LE` is the existential a reader would write, and `NUM_LT` is one successor along it:
+ *
+ * {{{
+ *   NUM_LE m n  =  ?d. NUM_ADD m d = n
+ *   NUM_LT m n  =  NUM_LE (SUC m) n
+ * }}}
+ *
+ * Defining `<` through `<=` rather than as `m <= n /\ ~(m = n)` is what makes `m < SUC m`
+ * reflexivity rather than a second induction, and it is what lets one function decide a bound
+ * either way: a gap of `ZERO` is an equation and a gap of `SUC j` is the strict order, which is
+ * what `splitOnGap` below does and where trichotomy comes from.
+ *
+ * `real_of_num` is the last definition and the reason the rest is worth having: an index over `num`
+ * meets the arithmetic `Ring` and `Linarith` decide only through it. It is a homomorphism for both
+ * operations, and both halves are proved rather than assumed.
+ *
+ * **And for the order, since 2026-09-11**, which is the half that makes the embedding usable rather
+ * than merely present. Until then a development could carry an index into the reals and know
+ * nothing about it there: `real_of_num i` is an atom to `LINARITH`, and an atom with no fact
+ * attached is an unknown real. A claim about an index nearly always carries a bound on it, and the
+ * bound was a fact about `num` that nothing over the reals could read. [[Peano.EmbedsNonNegative]],
+ * [[Peano.EmbedsOrder]] and [[Peano.EmbedsStrictOrder]] are the three that carry it across, and the
+ * last of them carries the **integrality** with it: `i < k` over the naturals becomes
+ * `real_of_num i + 1 <= real_of_num k` and not merely `<`, because there is nothing between a
+ * natural and its successor and that is the one place the fact is worth anything.
+ *
+ * == The subtraction here is truncated, and a reader who forgets that will write a false lemma ==
+ *
+ * `PRE` and `NUM_SUB` are the last two definitions, by the same recursion as the rest:
+ *
+ * {{{
+ *   |- PRE ZERO = ZERO                  |- !m. NUM_SUB m ZERO = m
+ *   |- !n. PRE (SUC n) = n              |- !m n. NUM_SUB m (SUC n) = PRE (NUM_SUB m n)
+ * }}}
+ *
+ * `num` is closed under neither, and the two equations above are how a **total** function on it is
+ * made to look like one that is not. `PRE ZERO` is `ZERO` because a recursion has to say what it
+ * does at zero and there is no number below it, and `NUM_SUB` inherits that one step at a time:
+ * subtracting past the bottom stops there rather than going anywhere. So `NUM_SUB m n` is `ZERO`
+ * whenever `m <= n`, which [[Peano.SubIsZero]] states as a theorem rather than as a warning here,
+ * and `NUM_SUB (NUM_ADD m n) n = m` ([[Peano.SumMinus]]) holds with no hypothesis while its
+ * converse [[Peano.MinusThenPlus]] needs one.
+ *
+ * **That hypothesis is the thing to carry away.** `NUM_ADD (NUM_SUB m n) n = m` is false at
+ * `m = ZERO, n = SUC ZERO`, and so is `real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n`:
+ * the left side is `0` and the right is `-1`. Both are stated under `NUM_LE n m` and are false
+ * without it, which is why neither is written the way a reader expecting the integers would write
+ * it. `SubtractionSpec` puts the two counterexamples to the kernel rather than leaving them here.
+ *
+ * [[Peano.EmbedsDifference]] is the one that pays for the rest, for the reason the order lemmas
+ * above pay for themselves: a difference of two indices is an index, and until it can be written as
+ * a difference of two reals it is an atom that `RING` and `LINARITH` know nothing about.
+ *
+ * == What it does not cover ==
+ *
+ * **Division with a remainder and the numerals were both missing, and neither is now.** The
+ * remainder went to `Modular`, where divisibility on `num` lives. The numerals are declared below,
+ * since 2026-09-12: `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1`, all defined, no axiom. What a consumer
+ * meets instead is the seam between the two spellings, and it is worth knowing before writing a
+ * statement: `2` is `NUM_BIT0 NUM_ONE` and every recurrence in this file is stated at `SUC n`, so
+ * a number written as a numeral hooks none of them until `Successor` opens it.
+ *
+ * **No definition by well-founded recursion.** The least-number principle is here since
+ * 2026-09-11, [[Peano.LeastNumber]], and it is what an argument by descent needs; what is still not
+ * here is a definition that recurses on it, which needs more than the principle: a recursion
+ * theorem for a well-founded relation, in the shape `Recursion.theorem` has for the successor.
+ *
+ * **No OPERATOR notation.** A `Notation` maps a symbol to one constant, and the reals already own
+ * `+`, `*`, `<` and `<=`; two entries for one symbol would make the first shadow the second, so a
+ * natural number's operations are read and printed as the applications they are. Overloading a
+ * symbol by the type of its arguments is a change to the notation layer and to every consumer of
+ * it, which is a larger decision than this file.
+ *
+ * **The numerals are the exception, and the exception is instructive about the rule.** Since
+ * 2026-09-12 this development declares a second numeral encoding and a digit string reads at
+ * either type. That is a change to the notation layer, and the reason it was affordable while
+ * overloading `+` is not: a digit string is not a symbol the table maps to one constant, so two
+ * encodings do not shadow each other, and the type is decided by unification rather than by which
+ * entry was found first. What made the operators a larger decision is exactly what numerals do not
+ * have: `+` would have to be resolved by the types of its arguments **before** those types are
+ * known, since they are what the operator is being applied to. [[NumeralOne]] carries the rest.
+ *
+ * **Nothing here is a decision procedure.** Every fact below is a theorem, and a goal that is an
+ * instance of one is closed by the rewriter or by hand. `Ring` decides the reals and there is no
+ * counterpart for `num`; what there is instead is `real_of_num`, which carries a goal over to the
+ * side that has one.
+ */
+final class Peano private (
+  val naturals: Natural,
+  val ring: Ring,
+  val theory: Theory,
+  val notation: Notation,
+  /**
+   * The connectives, read against **this** signature rather than a narrower one.
+   *
+   * Held rather than rebuilt because a rule that has to construct a quantifier asks a theory for
+   * the quantifier at that type, and the logic a consumer is likeliest to have to hand is the one
+   * over the reals, which has never heard of `num`. `Chain` exposes its own for the same reason.
+   */
+  val logic: Logic,
+  val definitions: Map[String, Kernel.Thm],
+  val facts: Map[String, Kernel.Thm]
+) extends Signature {
+
+  /** The reals this development embeds the naturals into. */
+  val reals: RealTheory = ring.reals
+
+  /** The equation defining `name`, as proved when the constant was introduced. */
+  def definition(name: String): Either[LogicError, Kernel.Thm] =
+    definitions.get(name).toRight(MissingDefinition(name))
+
+  /**
+   * The three lemmas that carry a numeral of `num` across `real_of_num`, as one named set.
+   *
+   * A rewrite with these takes `real_of_num` through every bit of a numeral and lands on the real
+   * numeral with the same digits: [[Peano.EmbedsNumeralBit0]] and [[Peano.EmbedsNumeralBit1]] step
+   * through the chain and [[Peano.EmbedsNumeralOne]] closes it. `ZERO` needs no entry, since
+   * [[Peano.EmbedsZero]] already carries it and is not specific to the encoding.
+   *
+   * **It is a named set rather than three lemmas a caller collects, and that is the point of the
+   * method.** The consumer that asked for numerals on `num` was offered the tactic and declined it,
+   * correctly, for having no consumer yet; what it asked for instead was this, so that the first
+   * caller does not assemble a rule set of its own and the second does not assemble a different
+   * one. `Series.EmbeddingStatements` is the same argument one floor up.
+   *
+   * What it does not do: it is a rule set and not a tactic. Nothing applies it for you, and a goal
+   * mixing a numeral with arithmetic still needs the rewrite driven and then closed.
+   */
+  def numeralsCrossing: Either[LogicError, Vector[Kernel.Thm]] =
+    Vector(
+      Peano.EmbedsNumeralBit0,
+      Peano.EmbedsNumeralBit1,
+      Peano.EmbedsNumeralOne
+    ).foldLeft(Right(Vector.empty): Either[LogicError, Vector[Kernel.Thm]]) { (acc, name) =>
+      for {
+        collected <- acc
+        theorem <- fact(name)
+      } yield collected :+ theorem
+    }
+
+  /** A derived fact of this development, by name. */
+  def fact(name: String): Either[LogicError, Kernel.Thm] =
+    facts.get(name).toRight(MissingDefinition(name))
+
+}
+
+object Peano {
+
+  /* ------------------------------------------------------------------- names */
+
+  /** `NUM_ADD m n` is `m + n`, recursing on `n`. */
+  val Addition: String = "NUM_ADD"
+
+  /** `NUM_MUL m n` is `m * n`, recursing on `n`. */
+  val Multiplication: String = "NUM_MUL"
+
+  /** `NUM_LE m n` is `?d. NUM_ADD m d = n`. */
+  val NonStrictOrder: String = "NUM_LE"
+
+  /** `NUM_LT m n` is `NUM_LE (SUC m) n`. */
+  val StrictOrder: String = "NUM_LT"
+
+  /** The embedding into the reals, by which an index meets the arithmetic the tactics decide. */
+  val Embedding: String = "real_of_num"
+
+  /**
+   * `PRE n` is the number below `n`, and `PRE ZERO` is `ZERO`.
+   *
+   * Named `PRE` and not `NUM_PRE`, which is the question `docs/naming.md` leaves open for a new
+   * constant and answers by pointing at its neighbours: the naturals prefix the operations they
+   * share a name with over the reals, `NUM_ADD` against `+` and `NUM_LE` against `<=`, and leave
+   * unprefixed the ones nothing else has. `SUC` is unprefixed for that reason and this is its
+   * partner. The **facts** about it carry `NUM_` like every other fact here, exactly as `SUC`'s do.
+   */
+  val Predecessor: String = "PRE"
+
+  /**
+   * `NUM_SUB m n` is `m - n` truncated at zero, recursing on `n`.
+   *
+   * Prefixed where `PRE` is not, by the same reading: the reals own a `sub` and this is not it.
+   */
+  val Subtraction: String = "NUM_SUB"
+
+  /** `|- !m. NUM_ADD m ZERO = m`, the first of addition's two recurrences. */
+  val AddAtZero: String = "NUM_ADD_ZERO"
+
+  /** `|- !m n. NUM_ADD m (SUC n) = SUC (NUM_ADD m n)`, the second. */
+  val AddAtSuccessor: String = "NUM_ADD_SUC"
+
+  /** `|- !n. NUM_ADD ZERO n = n`, which is the first recurrence read from the other side. */
+  val ZeroPlus: String = "NUM_ZERO_ADD"
+
+  /** `|- !m n. NUM_ADD (SUC m) n = SUC (NUM_ADD m n)`, the lemma commutativity needs. */
+  val SuccessorPlus: String = "NUM_SUC_ADD"
+
+  /** `|- !m n p. NUM_ADD (NUM_ADD m n) p = NUM_ADD m (NUM_ADD n p)` */
+  val AddAssociative: String = "NUM_ADD_ASSOC"
+
+  /** `|- !m n. NUM_ADD m n = NUM_ADD n m` */
+  val AddCommutative: String = "NUM_ADD_SYM"
+
+  /** `|- !m n p. NUM_ADD m (NUM_ADD n p) = NUM_ADD n (NUM_ADD m p)`, which sorts a sum. */
+  val AddExchange: String = "NUM_ADD_EXCHANGE"
+
+  /**
+   * `|- !m n. NUM_ADD m (SUC n) = NUM_ADD (SUC m) n`, which moves a successor across a sum.
+   *
+   * The lemma the order is decided by, and the only place it is used: a difference of `SUC j`
+   * between two numbers is a difference of `j` between the successor of the first and the second,
+   * which is exactly the step from `m <= n` to `m < n`.
+   */
+  val Shift: String = "NUM_ADD_SHIFT"
+
+  /** `|- !m. NUM_MUL m ZERO = ZERO`, the first of multiplication's two recurrences. */
+  val MulAtZero: String = "NUM_MUL_ZERO"
+
+  /** `|- !m n. NUM_MUL m (SUC n) = NUM_ADD (NUM_MUL m n) m`, the second. */
+  val MulAtSuccessor: String = "NUM_MUL_SUC"
+
+  /** `|- !n. NUM_MUL ZERO n = ZERO` */
+  val ZeroTimes: String = "NUM_ZERO_MUL"
+
+  /**
+   * `|- !n. NUM_MUL n (SUC ZERO) = n`, the unit in the spelling the recurrences produce.
+   *
+   * Not `NUM_ONE`, which is a different term with the same value: a lemma stated at the numeral
+   * would hook nothing the recurrences build. [[NumeralOneIsSuccessorOfZero]] is the bridge and
+   * `Successor` is what walks it for a caller holding the other spelling.
+   */
+  val TimesOne: String = "NUM_MUL_ONE"
+
+  /** `|- !m n p. NUM_MUL m (NUM_ADD n p) = NUM_ADD (NUM_MUL m n) (NUM_MUL m p)` */
+  val Distributive: String = "NUM_MUL_DISTRIBUTE"
+
+  /** `|- !m n p. NUM_MUL (NUM_MUL m n) p = NUM_MUL m (NUM_MUL n p)` */
+  val MulAssociative: String = "NUM_MUL_ASSOC"
+
+  /** `|- !m n. NUM_MUL (SUC m) n = NUM_ADD (NUM_MUL m n) n`, the one step that needs sorting. */
+  val SuccessorTimes: String = "NUM_SUC_MUL"
+
+  /** `|- !m n. NUM_MUL m n = NUM_MUL n m` */
+  val MulCommutative: String = "NUM_MUL_SYM"
+
+  /** `NUM_POW m n` is `m^n`, recursing on `n` exactly as [[Multiplication]] does. */
+  val Exponentiation: String = "NUM_POW"
+
+  /** `|- !m. NUM_POW m ZERO = SUC ZERO`, the first of exponentiation's two recurrences. */
+  val PowAtZero: String = "NUM_POW_ZERO"
+
+  /** `|- !m n. NUM_POW m (SUC n) = NUM_MUL (NUM_POW m n) m`, the second. */
+  val PowAtSuccessor: String = "NUM_POW_SUC"
+
+  /**
+   * `|- !m n p. NUM_POW m (NUM_ADD n p) = NUM_MUL (NUM_POW m n) (NUM_POW m p)`
+   *
+   * The law every consumer of a power actually reaches for, and the reason this development
+   * exists at all rather than callers writing `NUM_MUL` chains: an exponent that is a sum is
+   * what an induction produces, and without this it cannot be taken apart.
+   */
+  val PowAddsExponents: String = "NUM_POW_ADD"
+
+  /** `|- !n. NUM_POW (SUC ZERO) n = SUC ZERO`, the unit base. */
+  val OneToAnyPower: String = "NUM_POW_ONE"
+
+  /**
+   * `|- !m. NUM_MUL m (SUC (SUC ZERO)) = NUM_ADD m m`
+   *
+   * Doubling, written once. A two is `SUC (SUC ZERO)` here rather than `2`, because that is the
+   * spelling multiplication's own recurrence produces and a statement written at the numeral would
+   * hook nothing; a caller who wants `2n = n + n` either writes this out or unfolds multiplication
+   * twice at the site.
+   * With [[PowAtSuccessor]] it is also what says `2^(n+1) = 2^n + 2^n`, which is the shape any
+   * argument that splits a range in half needs.
+   */
+  val TimesTwo: String = "NUM_MUL_TWO"
+
+  /** `|- !n m. NUM_ADD m n = m ==> n = ZERO`, cancellation, and the order rests on it. */
+  val AddCancels: String = "NUM_ADD_CANCEL"
+
+  /**
+   * `|- !x y a. NUM_ADD a x = NUM_ADD a y ==> x = y`
+   *
+   * Cancellation proper, where [[AddCancels]] is the special case at `y = ZERO`. It was not here
+   * until 2026-09-11 and the gap showed where such gaps always show: `Modular.DivisionUnique`
+   * cannot take a step without it, and neither can anything else that reads two decompositions of
+   * one number against each other.
+   *
+   * Quantified `!x y a.` rather than `!a x y.`, which a reader would not choose, for the reason
+   * [[AddCancels]] gives in the same words: the induction is on `a` and the driver inducts on the
+   * **last** quantifier of the statement it is given.
+   */
+  val AddCancelsLeft: String = "NUM_ADD_CANCEL_LEFT"
+
+  /** `|- !m n. NUM_ADD m n = ZERO ==> m = ZERO` */
+  val SumIsZero: String = "NUM_ADD_EQ_ZERO"
+
+  /** `|- !n. NUM_LE n n` */
+  val Reflexive: String = "NUM_LE_REFL"
+
+  /** `|- !n. NUM_LE ZERO n` */
+  val ZeroIsLeast: String = "NUM_ZERO_LE"
+
+  /** `|- !n. NUM_LE n (SUC n)` */
+  val AtMostSuccessor: String = "NUM_LE_SUC"
+
+  /** `|- !m n p. NUM_LE m n /\ NUM_LE n p ==> NUM_LE m p` */
+  val Transitive: String = "NUM_LE_TRANS"
+
+  /**
+   * `|- !m n. NUM_LE m n /\ NUM_LE n m ==> m = n`
+   *
+   * The step that makes a bounded quantification usable: a claim proved for every `i <= n` and for
+   * every `n <= i` is a claim about `i = n`, and without this it is two claims that never meet.
+   */
+  val AntiSymmetric: String = "NUM_LE_ANTISYM"
+
+  /** `|- !n. NUM_LT n (SUC n)` */
+  val BelowSuccessor: String = "NUM_LT_SUC"
+
+  /** `|- !m n. NUM_LE m n \/ NUM_LE n m`, the order is total. */
+  val Total: String = "NUM_LE_TOTAL"
+
+  /**
+   * `|- !m n. NUM_LT m n \/ m = n \/ NUM_LT n m`
+   *
+   * Trichotomy, which is what makes a case analysis on two numbers exhaustive. The reals have it
+   * as an axiom (`LT_TOTAL`); here it is a theorem, and it is the deepest one in the file: the
+   * order is shown total by an induction, and then each half is split on whether its witness is
+   * zero.
+   */
+  val Trichotomy: String = "NUM_LT_TOTAL"
+
+  /**
+   * `|- !n. ~(SUC n = n)`
+   *
+   * Not one of Peano's axioms and not a corollary of the successor's injectivity.
+   * `NUM_SUC_NOT_ZERO` is about zero and this is about every number, and the step from one to the
+   * other goes through [[AddCancels]]: `n + SUC ZERO = SUC n`, so a number equal to its own
+   * successor is a number to which `SUC ZERO` may be added without changing it.
+   */
+  val SuccessorNotSelf: String = "NUM_SUC_NOT_SELF"
+
+  /** `|- !n. ~(NUM_LT n n)`, from [[AntiSymmetric]] and [[SuccessorNotSelf]]. */
+  val StrictIrreflexive: String = "NUM_LT_IRREFL"
+
+  /**
+   * `|- !m n p. NUM_LT m n /\ NUM_LT n p ==> NUM_LT m p`
+   *
+   * Transitivity of the STRICT order, which the non-strict one had and this did not. It is two
+   * steps of [[Transitive]] once `NUM_LT m n` is read as what it is defined to be,
+   * `NUM_LE (SUC m) n`: from `SUC m <= n`, `n <= SUC n` and `SUC n <= p`, transitivity twice.
+   *
+   * It was missing until 2026-09-12 and the consumer that found it wanted the one-step
+   * corollary `m < n ==> m < SUC n`, which is this with [[BelowSuccessor]]: a bounded induction
+   * whose hypothesis quantifies over the indices below `n` has to re-derive that hypothesis at
+   * `n` from the one at `SUC n`, and there was no lemma that did it.
+   */
+  val StrictTransitive: String = "NUM_LT_TRANS"
+
+  /**
+   * `|- !n. NUM_LT ZERO (SUC n)`
+   *
+   * The strict counterpart of [[ZeroIsLeast]], and the fact a consumer needs to discharge a
+   * hypothesis of the form `NUM_LT ZERO n`. A concrete modulus or bound is written as a successor
+   * here, since that is the spelling the order's lemmas are stated in, and until this lemma existed
+   * nothing outside a development could
+   * produce that hypothesis at all: a lemma whose guard nobody can discharge is a lemma nobody can
+   * use. `ModularSpec` checks it by using it rather than by saying so.
+   */
+  val SuccessorPositive: String = "NUM_ZERO_LT_SUC"
+
+  /**
+   * `|- !m n. NUM_LT ZERO m ==> NUM_LT ZERO n ==> NUM_LT ZERO (NUM_MUL m n)`
+   *
+   * A product of positives is positive, which this file did not hold until 2026-09-14 and which is
+   * the ordinary shape of a gap here: the multiplication facts are about multiplication and the
+   * order facts are about the order, and nothing had needed a statement that is about both.
+   *
+   * It is proved by making the product a **successor** rather than by any argument about order.
+   * Both factors are successors, because a positive number is, and then `NUM_MUL_SUC` and
+   * `NUM_ADD_SUC` between them put the successor on the outside; [[SuccessorPositive]] does the
+   * rest. There is no cancellation and no case on the order anywhere in it.
+   */
+  val MulPositive: String = "NUM_MUL_POSITIVE"
+
+  /**
+   * `|- !m n. NUM_LE m n ==> NUM_LT m n \/ m = n`
+   *
+   * [[splitOnGap]] as a disjunction, which is the same argument and is derived from it rather than
+   * beside it: a gap of `ZERO` is an equation and a gap of `SUC j` is the strict order. The private
+   * function stays because both its callers build something of their own out of each half and would
+   * otherwise take the disjunction apart again; this is what a caller that is **not** building both
+   * halves wants.
+   */
+  val BelowOrEqual: String = "NUM_LE_CASES"
+
+  /** `|- !i. ~(NUM_LT i ZERO)`, nothing is below zero. */
+  val NotBelowZero: String = "NUM_NOT_LT_ZERO"
+
+  /**
+   * `|- !m n. NUM_LT m n ==> NUM_LE m n`
+   *
+   * One step of transitivity through [[AtMostSuccessor]], and the `_OF_X` name `docs/naming.md`
+   * gives as its own example of the convention. It is the lemma every case analysis that ends in a
+   * non-strict bound needs, and there was none until 2026-09-11: the two orders were related only
+   * by the definition, which turns `NUM_LT m n` into `NUM_LE (SUC m) n` and moves the successor to
+   * the wrong side.
+   */
+  val AtMostFromBelow: String = "NUM_LE_OF_LT"
+
+  /**
+   * `|- !m n p. NUM_LE m n /\ NUM_LT n p ==> NUM_LT m p`
+   *
+   * The transitivity that mixes the two orders, which neither [[Transitive]] nor
+   * [[StrictTransitive]] covers and which a reader assumes is there. It was not until 2026-09-14,
+   * and what found that is a consumer reaching for it twice in one derivation and having to build
+   * the argument inline both times.
+   *
+   * Two lines and no induction: [[BelowOrEqual]] splits the non-strict half into a strict one and
+   * an equation, the first goes through [[StrictTransitive]] and the second is a congruence.
+   *
+   * **The other mixing was recorded here as deliberately absent, and the sentence lasted an hour.**
+   * It said `NUM_LT m n /\ NUM_LE n p ==> NUM_LT m p` was equally true and that nothing had wanted
+   * it, so adding it would be a lemma no call site names. `Numbering`'s injectivity wanted it the
+   * same morning, which is why [[BelowThenAtMost]] is beside this one. The claim was true when it
+   * was written and it was a claim about the **future**, which is the kind this file should not
+   * make: "nothing wants it yet" is a measurement and "nothing will" is not.
+   */
+  val AtMostThenBelow: String = "NUM_LE_LT_TRANS"
+
+  /**
+   * `|- !m n p. NUM_LT m n /\ NUM_LE n p ==> NUM_LT m p`
+   *
+   * The other mixing, and it is not [[AtMostThenBelow]] turned round: that one splits the
+   * non-strict half into two cases, and this one needs no split at all. [[StrictOrder]] is defined
+   * as `NUM_LE (SUC m) n`, so the premise **is** `SUC m <= n`, and [[Transitive]] against `n <= p`
+   * gives `SUC m <= p`, which is the conclusion with the constant folded back.
+   */
+  val BelowThenAtMost: String = "NUM_LT_LE_TRANS"
+
+  /**
+   * `|- !P. (!n. (!m. NUM_LT m n ==> P m) ==> P n) ==> (!n. P n)`
+   *
+   * Course-of-values induction: to prove a claim at `n` you may assume it at every smaller number.
+   * What [[Natural.Induction]] is to a recursion on the predecessor, this is to a recursion on
+   * anything smaller, which is what `Descent` builds and what every function over coded syntax uses.
+   * Its consumers are one level up: a claim about a term's code is proved from the same claim about
+   * the codes inside it, and those are smaller numbers rather than predecessors.
+   *
+   * **It is derived without the least number principle and without any classical step**, which is
+   * not the usual route and is worth the sentence. The usual one supposes the claim fails
+   * somewhere, takes a least counterexample by [[LeastNumber]], and contradicts the hypothesis;
+   * that needs "not everywhere" to give "somewhere not", which is classical. Instead the ordinary
+   * induction is run over `!m. NUM_LT m n ==> P m`, whose base is that nothing is below zero and
+   * whose step is [[BelowSuccessorCases]], and the conclusion is read off at `SUC n`.
+   */
+  val StrongInduction: String = "NUM_STRONG_INDUCTION"
+
+  /**
+   * `|- !p m n. NUM_LE m n ==> NUM_LE (NUM_ADD p m) (NUM_ADD p n)`
+   *
+   * Addition preserves the order, which is the second thing a reader assumes is here and was not.
+   * `MONOTONE` rather than a new spelling, because `POWER_MONOTONE` and `SUM_MONOTONE` already use
+   * it and `docs/naming.md` allows one spelling per concept.
+   *
+   * It is three lines, and the reason is what [[NonStrictOrder]] is defined as: `NUM_LE m n` is
+   * `?d. m + d = n`, so the witness that makes the premise true is the witness that makes the
+   * conclusion true, and what happens in between is one associativity.
+   */
+  val AddMonotone: String = "NUM_ADD_MONOTONE"
+
+  /**
+   * `|- !p m n. NUM_LT m n ==> NUM_LT (NUM_ADD p m) (NUM_ADD p n)`
+   *
+   * [[AddMonotone]] for the strict order, and a consequence of it rather than a second induction:
+   * shifting keeps `NUM_LE`, and the two sides cannot become equal because addition cancels on the
+   * left. The first consumer is `Provability`, where a derivation's steps are moved along a
+   * sequence and every bound on an earlier step has to move with them.
+   */
+  val AddStrictlyMonotone: String = "NUM_ADD_LT_MONOTONE"
+
+  /**
+   * `|- !m n. NUM_LT m n ==> ~(NUM_LE n m)`
+   *
+   * The two orders disagreeing, which is the thing a case split on `NUM_LE m n \/ NUM_LE n m`
+   * needs in order to be a case split rather than two overlapping cases. Derived: `n <= m` with
+   * `m < n` gives `n < n` through [[AtMostThenBelow]], and nothing is below itself.
+   */
+  val BelowExcludesAtMost: String = "NUM_LT_NOT_LE"
+
+  /**
+   * `|- !m n. NUM_LE m (NUM_ADD m n)`
+   *
+   * A summand is at most the sum, which on `num` holds with no side condition because there are no
+   * negative numbers. It is [[AddMonotone]] at zero, and the only reason it is a lemma is that
+   * placing an index inside a concatenated sequence asks for it four times.
+   */
+  val AtMostSum: String = "NUM_LE_ADD"
+
+  /**
+   * `|- !n. NUM_LE n ZERO ==> n = ZERO`
+   *
+   * The converse of [[ZeroIsLeast]] at the bottom of the order, and it is not the same statement:
+   * that one says zero is below everything, this one says nothing but zero is below zero. One use
+   * of [[SumIsZero]] under the existential the order unfolds to.
+   */
+  val AtMostZero: String = "NUM_LE_ZERO"
+
+  /**
+   * `|- !n i. NUM_LT i (SUC n) ==> NUM_LT i n \/ i = n`
+   *
+   * Peeling the top index off a range, which is a different question from the one trichotomy
+   * answers: that compares two numbers and says which way they go. `Bounded` walks a bounded
+   * universal one step at a time with this and nothing else, and it is the induction step of
+   * [[LeastNumber]].
+   *
+   * Quantified `!n i.` rather than `!i n.`: the bound is what a caller holds fixed while the index
+   * moves, so it is the argument that is specialised first.
+   */
+  val BelowSuccessorCases: String = "NUM_LT_SUC_CASES"
+
+  /**
+   * `|- !P:num->bool. (?n. P n) ==> (?m. P m /\ (!k. NUM_LT k m ==> ~(P k)))`
+   *
+   * The least-number principle: a property that holds somewhere holds first somewhere. The only
+   * statement in this file that quantifies over a **predicate**, which this logic can say because
+   * it is higher order by construction, and it is here rather than in `Natural` for the reason the
+   * order lemmas above are: it is about `NUM_LT`, which `Natural` has never heard of.
+   *
+   * It is what turns an ordinary induction into a descent. `Natural` derives `NUM_INDUCTION` and
+   * nothing that lets a proof say "take the smallest such", so every argument wanting a minimal
+   * counterexample had to be rewritten as an induction on a bound first. `Modular`'s docstring
+   * named it as the missing piece under both the uniqueness of division with remainder and a
+   * greatest common divisor.
+   */
+  val LeastNumber: String = "NUM_LEAST"
+
+  /**
+   * `|- !P:num->bool. (?n. P n) /\ (?b. !k. P k ==> NUM_LE k b) ==>
+   * (?m. P m /\ (!k. P k ==> NUM_LE k m))`
+   *
+   * The dual of [[LeastNumber]], and it is not symmetric with it: a non-empty set of naturals
+   * always has a least element and has a greatest **only if it is bounded**, which is the second
+   * hypothesis and the whole difference between the two.
+   *
+   * It is derived from [[LeastNumber]] rather than by a second induction, applied to "n is an upper
+   * bound of `P`". The least upper bound is the greatest element, and the step that says so is a
+   * proof by contradiction: an upper bound at which `P` fails is either `ZERO`, and then `P` fails
+   * everywhere against the non-emptiness, or a successor, and then its predecessor is a smaller
+   * upper bound, which the minimality forbids.
+   *
+   * What it is for: a greatest common divisor. `Modular.DividesBound` says a divisor of a non-zero
+   * number is no larger than it, which is the bound this asks for, and the common divisors of a
+   * pair are non-empty because one divides everything.
+   */
+  val GreatestBounded: String = "NUM_GREATEST"
+
+  /** `|- real_of_num ZERO = 0` */
+  val EmbedsZero: String = "NUM_REAL_ZERO"
+
+  /** `|- !n. real_of_num (SUC n) = real_of_num n + 1` */
+  val EmbedsSuccessor: String = "NUM_REAL_SUC"
+
+  /** `|- !m n. real_of_num (NUM_ADD m n) = real_of_num m + real_of_num n` */
+  val EmbedsSum: String = "NUM_REAL_ADD"
+
+  /** `|- !m n. real_of_num (NUM_MUL m n) = real_of_num m * real_of_num n` */
+  val EmbedsProduct: String = "NUM_REAL_MUL"
+
+  /**
+   * `|- !n. 0 <= real_of_num n`
+   *
+   * The first of the three that say the embedding respects the **order** and not only the two
+   * operations, which it did not until 2026-09-11. Until then a development could carry an index
+   * into the reals and then know nothing about it: `LINARITH` reads `real_of_num n` as an atom, and
+   * an atom with no fact attached is an unknown real that may be anything.
+   */
+  val EmbedsNonNegative: String = "NUM_REAL_NONNEG"
+
+  /**
+   * `|- !m n. NUM_LE m n ==> real_of_num m <= real_of_num n`
+   *
+   * The order half of the homomorphism, and the one a consumer reaches for. A claim about an index
+   * nearly always carries a bound on it, `i < k` or `m <= n`, and before this the bound was a fact
+   * about `num` that no procedure over the reals could use. Now it crosses, and the arithmetic on
+   * the other side is decided rather than assumed.
+   *
+   * Proved from the definition rather than by induction: `NUM_LE m n` **is** `?d. m + d = n`, so
+   * embedding the witness equation with [[EmbedsSum]] gives `real_of_num m + real_of_num d` for
+   * `real_of_num n`, and [[EmbedsNonNegative]] at the witness is the rest.
+   */
+  val EmbedsOrder: String = "NUM_REAL_LE"
+
+  /**
+   * `|- !m n. NUM_LT m n ==> real_of_num m + 1 <= real_of_num n`
+   *
+   * The strict order, and the shape it comes out in is the useful one rather than the pretty one.
+   * `real_of_num m < real_of_num n` would be the obvious statement and is weaker: the naturals have
+   * no room between `m` and `m + 1`, so a strict bound on them is a **gap of one** on the reals, and
+   * that is what a procedure needs to close `i < k ==> real_of_num i + 1 <= real_of_num k`. Saying
+   * only `<` would throw the integrality away at the border, which is the one place it is worth
+   * anything.
+   *
+   * One line from [[EmbedsOrder]]: `NUM_LT m n` is `NUM_LE (SUC m) n` by definition, and
+   * [[EmbedsSuccessor]] rewrites the left-hand side.
+   */
+  val EmbedsStrictOrder: String = "NUM_REAL_LT"
+
+  /**
+   * `|- !m n. real_of_num m = real_of_num n ==> m = n`
+   *
+   * The embedding in the other direction, and the lemma that makes it usable as more than a
+   * one-way trip: without it a fact proved about `real_of_num l` and `real_of_num r` stays a fact
+   * about the reals. It rests on [[EmbedsStrictOrder]] carrying the **integrality**: two distinct
+   * naturals are a whole unit apart on the reals, so their images cannot coincide, which is what
+   * makes this provable rather than merely plausible.
+   *
+   * `Modular.identity` is what it was wanted for: an equation between naturals is decided by
+   * embedding both sides, letting `RING` close it over the reals, and coming back across this. That
+   * is the arrangement `docs/adr/0003` describes one level down, and it stands in for the `RING`
+   * this side does not have.
+   */
+  val EmbedsInjectively: String = "NUM_REAL_INJECTIVE"
+
+  /**
+   * `|- !x:real. ?y:num. x < real_of_num y`: no real is above every natural.
+   *
+   * **The first thing in this repository that uses `COMPLETENESS`.** The sixteen axioms of the
+   * reals have been in `Real.scala` since the beginning and fifteen of them have been worked; the
+   * sixteenth had never been read by anything, which is a fact about the development rather than
+   * about the axiom, and it is the one that separates an ordered field from the reals.
+   *
+   * == Why it has to be proved rather than assumed, and why it is not obvious ==
+   *
+   * An ordered field need not be Archimedean: the rational functions ordered by behaviour at
+   * infinity are a counterexample, and there `x` is above every natural. So this is not a fact
+   * about order and arithmetic that was waiting to be written down; it is where the completeness
+   * of the reals is spent, and no amount of `LINARITH` reaches it.
+   *
+   * The argument is the standard one and its shape is worth keeping in view, because the step a
+   * reader expects is the one that is not here. Suppose some `y` is above every natural. Then the
+   * image of `num` is non-empty and bounded, so `COMPLETENESS` gives it a least upper bound `s`.
+   * Now `s - 1` is an upper bound **as well**: every natural `n` has a successor in the image, so
+   * `real_of_num n + 1 <= s` by [[EmbedsSuccessor]], so `real_of_num n <= s - 1`. Leastness then
+   * gives `s <= s - 1`, which `LINARITH` turns into falsity.
+   *
+   * **No negated universal is pushed through a quantifier anywhere in it**, which is what makes it
+   * writable here: this logic has De Morgan for the connectives and nothing for the quantifiers,
+   * and the textbook phrasing — "`s - 1` is not an upper bound, so take a natural above it" —
+   * needs exactly that. Turning the step around so that `s - 1` *is* shown to be an upper bound
+   * costs nothing and avoids the lemma that does not exist.
+   *
+   * What is classical about it is one thing and it is named: the conclusion is reached by
+   * `Classical.contradiction` from the assumption that no natural passes `y`. That is the choice
+   * axiom's bill, through the excluded middle, and it is the same bill `Natural` already pays.
+   */
+  val Archimedean: String = "NUM_ARCHIMEDES"
+
+  /** The greatest natural not above a real, named by choice. */
+  val Floor: String = "NUM_FLOOR"
+
+  /** The least natural not below a real, named the same way. */
+  val Ceiling: String = "NUM_CEIL"
+
+  /**
+   * `|- !x:real. 0 <= x ==> real_of_num (NUM_FLOOR x) <= x`
+   *
+   * == Why the hypothesis is there, and why it is written rather than worked around ==
+   *
+   * `NUM_FLOOR` lands in `num`, and `num` has no negative numbers: the floor of `-1/2` is `-1` and
+   * there is nothing here for it to be. So the characterisation holds where the argument is
+   * non-negative and says so. **The alternative was not a better constant, it was a worse claim.**
+   * A `NUM_FLOOR` that quietly returned something at a negative argument would be right above zero
+   * and silently wrong below it, which is exactly the failure a reader cannot see.
+   *
+   * The honest version of this constant wants the integers, which `docs/adr/0007` puts after this
+   * point: `floor : real -> int` characterised for every real, with no hypothesis at all. Until
+   * they exist, what a caller gets is this, with the condition on the left of the arrow where it
+   * can be read. `select` says nothing about what `NUM_FLOOR x` is when the predicate holds of
+   * nothing, so at a negative argument the term denotes and these lemmas decline to say what.
+   */
+  val FloorAtMost: String = "NUM_FLOOR_LE"
+
+  /** `|- !x:real. 0 <= x ==> x < real_of_num (NUM_FLOOR x) + 1`, the other half of the floor. */
+  val FloorAbove: String = "NUM_FLOOR_LT"
+
+  /** `|- !x:real. 0 <= x ==> x <= real_of_num (NUM_CEIL x)`, and [[FloorAtMost]]'s note applies. */
+  val CeilingAtLeast: String = "NUM_CEIL_LE"
+
+  /** `|- !x:real. 0 <= x ==> real_of_num (NUM_CEIL x) < x + 1`, the other half of the ceiling. */
+  val CeilingBelow: String = "NUM_CEIL_LT"
+
+  /** `|- PRE ZERO = ZERO`, the first of the predecessor's two recurrences. */
+  val PreAtZero: String = "NUM_PRE_ZERO"
+
+  /** `|- !n. PRE (SUC n) = n`, the second. */
+  val PreAtSuccessor: String = "NUM_PRE_SUC"
+
+  /** `|- !m. NUM_SUB m ZERO = m`, the first of subtraction's two recurrences. */
+  val SubAtZero: String = "NUM_SUB_ZERO"
+
+  /** `|- !m n. NUM_SUB m (SUC n) = PRE (NUM_SUB m n)`, the second. */
+  val SubAtSuccessor: String = "NUM_SUB_SUC"
+
+  /** `|- !n. NUM_SUB ZERO n = ZERO`, the first recurrence read from the other side. */
+  val ZeroMinus: String = "NUM_ZERO_SUB"
+
+  /** `|- !m n. NUM_SUB (SUC m) (SUC n) = NUM_SUB m n`, which is what cancels a step off both. */
+  val SubSuccessors: String = "NUM_SUB_SUC_SUC"
+
+  /** `|- !n. NUM_SUB n n = ZERO` */
+  val SubSelf: String = "NUM_SUB_REFL"
+
+  /** `|- !m n. NUM_SUB (NUM_ADD m n) n = m`, and it needs no hypothesis: nothing was truncated. */
+  val SumMinus: String = "NUM_ADD_SUB"
+
+  /**
+   * `|- !m n. NUM_SUB m (NUM_ADD m n) = ZERO`, which is the truncation itself.
+   *
+   * Written with the sum on the right rather than as a bound, because that is the form an
+   * induction can be run on: `NUM_LE` is an existential and there is nothing in it to recurse on.
+   * [[SubIsZero]] is this with the witness put back inside the quantifier.
+   */
+  val Truncates: String = "NUM_SUB_TRUNCATES"
+
+  /** `|- !m n. NUM_LE m n ==> NUM_SUB m n = ZERO` */
+  val SubIsZero: String = "NUM_SUB_EQ_ZERO"
+
+  /** `|- !n. NUM_LE (PRE n) n`, which holds at `ZERO` only because `PRE ZERO` is `ZERO`. */
+  val PredecessorBelow: String = "NUM_PRE_LE"
+
+  /** `|- !m n. NUM_LE (NUM_SUB m n) m` */
+  val SubBelow: String = "NUM_SUB_LE"
+
+  /**
+   * `|- !m n. NUM_LE n m ==> NUM_ADD (NUM_SUB m n) n = m`
+   *
+   * The converse of [[SumMinus]], and the hypothesis is not decoration: at `m = ZERO` and
+   * `n = SUC ZERO` the left side is `SUC ZERO` and the right is `ZERO`.
+   */
+  val MinusThenPlus: String = "NUM_SUB_ADD"
+
+  /**
+   * `|- !m n. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n`
+   *
+   * The lemma the rest of the subtraction is for. `real_of_num (NUM_SUB m n)` is an atom to every
+   * procedure over the reals, and an atom with no fact attached is an unknown real; this says which
+   * real it is, and then an index written as a difference meets the arithmetic the tactics decide.
+   *
+   * Stated under the same hypothesis as [[MinusThenPlus]] and false without it, which is the one
+   * mistake a reader who expects the integers' subtraction will make: at `m = ZERO, n = SUC ZERO`
+   * the left side is `0` and the right is `-1`.
+   */
+  val EmbedsDifference: String = "NUM_REAL_SUB"
+
+  /* ------------------------------------------------------------ partial sums */
+
+  /**
+   * `NUM_SUM f n` is `f ZERO + ... + f (n - 1)` at the naturals, recursing on `n`.
+   *
+   * The same operator `Series.Sum` is, one type down, and the duplication is not avoidable by
+   * making either polymorphic: `Sum` adds with `+` and this one adds with `NUM_ADD`, which are two
+   * constants. It is here rather than beside `Sum` for the reason `Chain.peano` gives: a constant
+   * declared after a definition cannot appear inside it, and the successor equation below names
+   * `NUM_ADD`, so the definition has to be made over a theory that already holds it.
+   *
+   * == What it is for, which is an exponent ==
+   *
+   * A partial sum that is an INDEX rather than a quantity. `Sum` cannot be it: `Power b n` takes a
+   * `num` exponent, so a development writing 2^{a_1 + ... + a_j} has no term for the exponent and
+   * must declare the partial sums as opaque constants and assume their recurrences instead. That is
+   * what documents/02 of the collatz repository does for the run-length decomposition, and the five
+   * assumed equations there are what this removes.
+   */
+  val PartialSum: String = "NUM_SUM"
+
+  /** `|- !f. NUM_SUM f ZERO = ZERO` */
+  val PartialSumAtZero: String = "NUM_SUM_ZERO"
+
+  /** `|- !f n. NUM_SUM f (SUC n) = NUM_ADD (NUM_SUM f n) (f n)` */
+  val PartialSumAtSuccessor: String = "NUM_SUM_SUC"
+
+  /**
+   * `|- !f g n. (!i. NUM_LT i n ==> f i = g i) ==> NUM_SUM f n = NUM_SUM g n`
+   *
+   * Congruence ON A RANGE, and stated that way the FIRST time rather than after a consumer meets
+   * the wall. `Series.CongruenceBelow` is the same lemma at the reals and carries the count of how
+   * this goes wrong: four lemmas in this library quantify a hypothesis over the whole type under a
+   * conclusion whose object has a bound, none of them has a consumer, and the prediction recorded
+   * there is that the first real consumer of any of the four meets the same wall and gets a bounded
+   * twin rather than a correction. An unconditional `NUM_SUM_CONGRUENCE` would have been the fifth,
+   * and a summand that agrees only where the sum looks -- which is what every argument about a
+   * family indexed below a bound produces -- could not use it.
+   */
+  val PartialSumCongruenceBelow: String = "NUM_SUM_CONGRUENCE_BELOW"
+
+  /* ----------------------------------------------------------------- numerals */
+
+  /**
+   * `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1`: the binary encoding of a numeral at `num`.
+   *
+   * The reals have had one since they were written, and until 2026-09-12 it was the only one, so
+   * `Parser` decided a numeral's type from the declared type of `1` and its docstring said why:
+   * *"numerals here belong to one theory and one type, and a polymorphic numeral would need the
+   * elaborator to decide which."* What that cost a consumer is one line: `Power 2 3` could not be
+   * written, because `Power : real -> num -> real` wants a real base and a natural exponent, and
+   * one digit string cannot be both. The exponent had to be spelled `SUC (SUC (SUC ZERO))`, and an
+   * index written as an expression -- which is most of them -- had to be spelled that way
+   * throughout.
+   *
+   * So there are two encodings now, and the elaborator decides: a numeral takes a metavariable and
+   * is expanded once unification has said what type its context forced it to. **`ZERO` is the
+   * numeral zero of this encoding rather than a fourth constant beside it**, which is what keeps
+   * `0:num` and `ZERO` the same term; a separate `NUM_ZERO` would print more tidily and would put
+   * every lemma about `ZERO` out of reach of every statement written with `0`.
+   *
+   * `NUM_ONE` is the one thing the encoding needs that `num` did not have. A numeral's chain of
+   * bits ends at a **constant**, because that is what [[garden.xeno.symbolum.logic.NumeralNotation]] matches
+   * on, and `SUC ZERO` is an application. It is defined, not declared, so it costs no axiom;
+   * [[NumeralOneIsSuccessorOfZero]] is the equation that says so and is what a rewrite uses to get
+   * back to the successor form the rest of this file is written in.
+   */
+  val NumeralOne: String = "NUM_ONE"
+
+  /** `NUM_BIT0 n` is `NUM_ADD n n`; [[NumeralOne]] carries the whole decision. */
+  val NumeralBit0: String = "NUM_BIT0"
+
+  /** `NUM_BIT1 n` is `SUC (NUM_ADD n n)`; [[NumeralOne]] carries the whole decision. */
+  val NumeralBit1: String = "NUM_BIT1"
+
+  /** `|- NUM_ONE = SUC ZERO`, the definition, which is how a numeral re-enters the successor form. */
+  val NumeralOneIsSuccessorOfZero: String = "NUM_ONE_SUC"
+
+  /** `|- !n. NUM_BIT0 n = NUM_ADD n n`, the even digit as the doubling it is. */
+  val NumeralBit0Doubles: String = "NUM_BIT0_ADD"
+
+  /** `|- !n. NUM_BIT1 n = SUC (NUM_ADD n n)`, the odd digit. */
+  val NumeralBit1Doubles: String = "NUM_BIT1_SUC"
+
+  /**
+   * `|- real_of_num NUM_ONE = 1`, and the two below it: the encodings agree across the embedding.
+   *
+   * These three are the payload rather than the definitions. A `num` numeral that could not be
+   * carried to the real of the same value would be a second spelling and nothing more; with them, a
+   * rewrite takes `real_of_num` through any numeral's bits and lands on the real numeral with the
+   * same digits, which is what every statement mixing an index with an arithmetic fact needs.
+   */
+  val EmbedsNumeralOne: String = "NUM_REAL_ONE"
+
+  /** `|- !n. real_of_num (NUM_BIT0 n) = BIT0 (real_of_num n)`. */
+  val EmbedsNumeralBit0: String = "NUM_REAL_BIT0"
+
+  /** `|- !n. real_of_num (NUM_BIT1 n) = BIT1 (real_of_num n)`. */
+  val EmbedsNumeralBit1: String = "NUM_REAL_BIT1"
+
+  /* -------------------------------------------------------------- statements */
+
+  /**
+   * Everything this development proves, as the text a person checks it by.
+   *
+   * The same discipline `Real.Axioms` follows for the axioms and for the same reason: a statement
+   * is checked by reading it, and builder calls are not read. Every theorem below is compared
+   * against its entry here before it is recorded, so a derivation that reaches something else is a
+   * refusal rather than a fact under the wrong name.
+   *
+   * Two of them are quantified in an order a reader would not choose. [[AddCancels]] is stated
+   * `!n m.` because the induction is on `m`, and the driver inducts on the **last** quantifier of
+   * the statement it is given.
+   */
+  val Statements: Vector[(String, String)] = Vector(
+    AddAtZero -> "!m:num. NUM_ADD m ZERO = m",
+    AddAtSuccessor -> "!m:num n:num. NUM_ADD m (SUC n) = SUC (NUM_ADD m n)",
+    ZeroPlus -> "!n:num. NUM_ADD ZERO n = n",
+    SuccessorPlus -> "!m:num n:num. NUM_ADD (SUC m) n = SUC (NUM_ADD m n)",
+    AddAssociative -> "!m:num n:num p:num. NUM_ADD (NUM_ADD m n) p = NUM_ADD m (NUM_ADD n p)",
+    AddCommutative -> "!m:num n:num. NUM_ADD m n = NUM_ADD n m",
+    AddExchange -> "!m:num n:num p:num. NUM_ADD m (NUM_ADD n p) = NUM_ADD n (NUM_ADD m p)",
+    Shift -> "!m:num n:num. NUM_ADD m (SUC n) = NUM_ADD (SUC m) n",
+    MulAtZero -> "!m:num. NUM_MUL m ZERO = ZERO",
+    MulAtSuccessor -> "!m:num n:num. NUM_MUL m (SUC n) = NUM_ADD (NUM_MUL m n) m",
+    ZeroTimes -> "!n:num. NUM_MUL ZERO n = ZERO",
+    TimesOne -> "!n:num. NUM_MUL n (SUC ZERO) = n",
+    Distributive ->
+      "!m:num n:num p:num. NUM_MUL m (NUM_ADD n p) = NUM_ADD (NUM_MUL m n) (NUM_MUL m p)",
+    MulAssociative -> "!m:num n:num p:num. NUM_MUL (NUM_MUL m n) p = NUM_MUL m (NUM_MUL n p)",
+    SuccessorTimes -> "!m:num n:num. NUM_MUL (SUC m) n = NUM_ADD (NUM_MUL m n) n",
+    MulCommutative -> "!m:num n:num. NUM_MUL m n = NUM_MUL n m",
+    PowAtZero -> "!m:num. NUM_POW m ZERO = SUC ZERO",
+    PowAtSuccessor -> "!m:num n:num. NUM_POW m (SUC n) = NUM_MUL (NUM_POW m n) m",
+    PowAddsExponents ->
+      "!m:num n:num p:num. NUM_POW m (NUM_ADD n p) = NUM_MUL (NUM_POW m n) (NUM_POW m p)",
+    OneToAnyPower -> "!n:num. NUM_POW (SUC ZERO) n = SUC ZERO",
+    TimesTwo -> "!m:num. NUM_MUL m (SUC (SUC ZERO)) = NUM_ADD m m",
+    AddCancels -> "!n:num m:num. NUM_ADD m n = m ==> n = ZERO",
+    AddCancelsLeft -> "!x:num y:num a:num. NUM_ADD a x = NUM_ADD a y ==> x = y",
+    SumIsZero -> "!m:num n:num. NUM_ADD m n = ZERO ==> m = ZERO",
+    Reflexive -> "!n:num. NUM_LE n n",
+    ZeroIsLeast -> "!n:num. NUM_LE ZERO n",
+    AtMostSuccessor -> "!n:num. NUM_LE n (SUC n)",
+    Transitive -> "!m:num n:num p:num. NUM_LE m n /\\ NUM_LE n p ==> NUM_LE m p",
+    StrictTransitive -> "!m:num n:num p:num. NUM_LT m n /\\ NUM_LT n p ==> NUM_LT m p",
+    AntiSymmetric -> "!m:num n:num. NUM_LE m n /\\ NUM_LE n m ==> m = n",
+    BelowSuccessor -> "!n:num. NUM_LT n (SUC n)",
+    Total -> "!m:num n:num. NUM_LE m n \\/ NUM_LE n m",
+    Trichotomy -> "!m:num n:num. NUM_LT m n \\/ m = n \\/ NUM_LT n m",
+    SuccessorNotSelf -> "!n:num. ~(SUC n = n)",
+    StrictIrreflexive -> "!n:num. ~(NUM_LT n n)",
+    SuccessorPositive -> "!n:num. NUM_LT ZERO (SUC n)",
+    MulPositive ->
+      "!m:num n:num. NUM_LT ZERO m ==> NUM_LT ZERO n ==> NUM_LT ZERO (NUM_MUL m n)",
+    BelowOrEqual -> "!m:num n:num. NUM_LE m n ==> NUM_LT m n \\/ m = n",
+    NotBelowZero -> "!i:num. ~(NUM_LT i ZERO)",
+    AtMostFromBelow -> "!m:num n:num. NUM_LT m n ==> NUM_LE m n",
+    AtMostThenBelow ->
+      "!m:num n:num p:num. NUM_LE m n /\\ NUM_LT n p ==> NUM_LT m p",
+    AddMonotone ->
+      "!p:num m:num n:num. NUM_LE m n ==> NUM_LE (NUM_ADD p m) (NUM_ADD p n)",
+    AddStrictlyMonotone ->
+      "!p:num m:num n:num. NUM_LT m n ==> NUM_LT (NUM_ADD p m) (NUM_ADD p n)",
+    BelowExcludesAtMost -> "!m:num n:num. NUM_LT m n ==> ~(NUM_LE n m)",
+    AtMostSum -> "!m:num n:num. NUM_LE m (NUM_ADD m n)",
+    BelowThenAtMost ->
+      "!m:num n:num p:num. NUM_LT m n /\\ NUM_LE n p ==> NUM_LT m p",
+    StrongInduction ->
+      ("!P:num->bool. (!n:num. (!m:num. NUM_LT m n ==> P m) ==> P n) ==> " +
+        "(!n:num. P n)"),
+    AtMostZero -> "!n:num. NUM_LE n ZERO ==> n = ZERO",
+    BelowSuccessorCases -> "!n:num i:num. NUM_LT i (SUC n) ==> NUM_LT i n \\/ i = n",
+    LeastNumber ->
+      ("!P:num->bool. (?n:num. P n) ==> " +
+        "(?m:num. P m /\\ (!k:num. NUM_LT k m ==> ~(P k)))"),
+    GreatestBounded ->
+      ("!P:num->bool. (?n:num. P n) /\\ (?b:num. !k:num. P k ==> NUM_LE k b) ==> " +
+        "(?m:num. P m /\\ (!k:num. P k ==> NUM_LE k m))"),
+    EmbedsZero -> "real_of_num ZERO = 0",
+    EmbedsSuccessor -> "!n:num. real_of_num (SUC n) = real_of_num n + 1",
+    EmbedsSum -> "!m:num n:num. real_of_num (NUM_ADD m n) = real_of_num m + real_of_num n",
+    EmbedsProduct -> "!m:num n:num. real_of_num (NUM_MUL m n) = real_of_num m * real_of_num n",
+    EmbedsNonNegative -> "!n:num. 0 <= real_of_num n",
+    EmbedsOrder -> "!m:num n:num. NUM_LE m n ==> real_of_num m <= real_of_num n",
+    EmbedsStrictOrder -> "!m:num n:num. NUM_LT m n ==> real_of_num m + 1 <= real_of_num n",
+    EmbedsInjectively -> "!m:num n:num. real_of_num m = real_of_num n ==> m = n",
+    Archimedean -> "!x:real. ?n:num. x < real_of_num n",
+    FloorAtMost -> "!x:real. 0 <= x ==> real_of_num (NUM_FLOOR x) <= x",
+    FloorAbove -> "!x:real. 0 <= x ==> x < real_of_num (NUM_FLOOR x) + 1",
+    CeilingAtLeast -> "!x:real. 0 <= x ==> x <= real_of_num (NUM_CEIL x)",
+    CeilingBelow -> "!x:real. 0 <= x ==> real_of_num (NUM_CEIL x) < x + 1",
+    PreAtZero -> "PRE ZERO = ZERO",
+    PreAtSuccessor -> "!n:num. PRE (SUC n) = n",
+    SubAtZero -> "!m:num. NUM_SUB m ZERO = m",
+    SubAtSuccessor -> "!m:num n:num. NUM_SUB m (SUC n) = PRE (NUM_SUB m n)",
+    ZeroMinus -> "!n:num. NUM_SUB ZERO n = ZERO",
+    SubSuccessors -> "!m:num n:num. NUM_SUB (SUC m) (SUC n) = NUM_SUB m n",
+    SubSelf -> "!n:num. NUM_SUB n n = ZERO",
+    SumMinus -> "!m:num n:num. NUM_SUB (NUM_ADD m n) n = m",
+    Truncates -> "!m:num n:num. NUM_SUB m (NUM_ADD m n) = ZERO",
+    SubIsZero -> "!m:num n:num. NUM_LE m n ==> NUM_SUB m n = ZERO",
+    PredecessorBelow -> "!n:num. NUM_LE (PRE n) n",
+    SubBelow -> "!m:num n:num. NUM_LE (NUM_SUB m n) m",
+    MinusThenPlus -> "!m:num n:num. NUM_LE n m ==> NUM_ADD (NUM_SUB m n) n = m",
+    EmbedsDifference ->
+      "!m:num n:num. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n",
+    PartialSumAtZero -> "!f:num -> num. NUM_SUM f ZERO = ZERO",
+    PartialSumAtSuccessor ->
+      "!f:num -> num. !n:num. NUM_SUM f (SUC n) = NUM_ADD (NUM_SUM f n) (f n)",
+    PartialSumCongruenceBelow ->
+      ("!f:num -> num. !g:num -> num. !n:num. " +
+        "(!i:num. NUM_LT i n ==> f i = g i) ==> NUM_SUM f n = NUM_SUM g n"),
+    NumeralOneIsSuccessorOfZero -> "NUM_ONE = SUC ZERO",
+    NumeralBit0Doubles -> "!n:num. NUM_BIT0 n = NUM_ADD n n",
+    NumeralBit1Doubles -> "!n:num. NUM_BIT1 n = SUC (NUM_ADD n n)",
+    EmbedsNumeralOne -> "real_of_num NUM_ONE = 1",
+    EmbedsNumeralBit0 -> "!n:num. real_of_num (NUM_BIT0 n) = BIT0 (real_of_num n)",
+    EmbedsNumeralBit1 -> "!n:num. real_of_num (NUM_BIT1 n) = BIT1 (real_of_num n)"
+  )
+
+  private val statements: Map[String, String] = Statements.toMap
+
+  /* ------------------------------------------------------------ construction */
+
+  /** The standard development, over the chain that has both types in one signature. */
+  lazy val standard: Peano =
+    construct(Chain.standard.naturals, Chain.standard.ring).fold(
+      error => throw new IllegalStateException(s"the arithmetic of the naturals does not build: ${error.message}"),
+      identity
+    )
+
+  /**
+   * The development over the naturals and the reals of a chain of one's own.
+   *
+   * Both are needed and the second is not decoration: `real_of_num` cannot be stated without a
+   * signature holding both types, and the two homomorphism lemmas are proved by an induction whose
+   * step is a ring identity, so the tactic that decides those has to be to hand. `Chain` is what
+   * builds the pair in the order that works.
+   */
+  def construct(naturals: Natural, ring: Ring): Either[LogicError, Peano] =
+    construct(naturals, ring, ring.reals.theory)
+
+  /**
+   * The same, for a caller that has already built the order facts.
+   *
+   * `Chain` builds an `Order` before this line and would otherwise pay for a second one. The order
+   * is here at all because of the three lemmas that carry a bound on an index into the reals: they
+   * are closed by `LINARITH`, which is built over an order, and there is no counterpart to it over
+   * `num` to close them with instead.
+   */
+  def construct(naturals: Natural, ring: Ring, order: Order): Either[LogicError, Peano] =
+    construct(naturals, ring, ring.reals.theory, order)
+
+  /**
+   * The same, extending a theory that already holds something else.
+   *
+   * `Chain` does not use it any more and it is not dead: it is what a caller with a development of
+   * its own over the reals reaches for, and the parameter is the reason the chain could be built
+   * either way round while the question of which was open. `Series` is now built over **this**
+   * rather than the other way about, because a constant declared after a definition cannot appear
+   * inside it: see `Chain.peano` for the whole of that argument.
+   */
+  def construct(naturals: Natural, ring: Ring, base: Theory): Either[LogicError, Peano] =
+    Order.construct(ring).flatMap(construct(naturals, ring, base, _))
+
+  /** The same again, over a theory and an order the caller holds. */
+  def construct(
+    naturals: Natural,
+    ring: Ring,
+    base: Theory,
+    bounds: Order
+  ): Either[LogicError, Peano] = {
+    val notation = ring.reals.notation
+
+    for {
+      linarith <- Linarith.construct(bounds)
+      logic <- naturals.classical.logic.over(base)
+      recursion <- naturals.recursion
+      induction <- naturals.fact(Natural.Induction)
+      driver = Induct(logic, ring, induction)
+
+      sums <- addition(logic, driver, naturals, base, notation, recursion)
+      (withAddition, additionDefinition, addFacts) = sums
+
+      products <- multiplication(logic, driver, naturals, withAddition, notation, recursion, addFacts)
+      (withMultiplication, multiplicationDefinition, mulFacts) = products
+
+      // After multiplication, because its step multiplies by the base, and before the order,
+      // because nothing in the order knows about it.
+      powers <- exponentiation(
+        logic, driver, naturals, withMultiplication, notation, recursion, mulFacts ++ addFacts)
+      (withPowers, exponentiationDefinition, powFacts) = powers
+
+      ordered <- order(logic, withPowers, notation, addFacts ++ mulFacts, naturals, driver)
+      (withOrder, orderDefinitions, orderFacts) = ordered
+
+      embedded <- embedding(
+        logic,
+        driver,
+        linarith,
+        naturals,
+        withOrder,
+        notation,
+        recursion,
+        addFacts ++ mulFacts,
+        orderDefinitions,
+        orderFacts(Trichotomy)
+      )
+      (withEmbedding, embeddingDefinition, embeddingFacts) = embedded
+
+      // Last, because it is the only stage that needs every earlier one: the recurrences for the
+      // rewriting, the order for the two lemmas that carry a hypothesis, `RING` for the identity
+      // the embedding lemma turns on, and `real_of_num` itself.
+      subtracted <- subtraction(
+        logic,
+        driver,
+        ring,
+        naturals,
+        withEmbedding,
+        notation,
+        recursion,
+        addFacts,
+        orderDefinitions,
+        orderFacts,
+        embeddingFacts(EmbedsSum)
+      )
+      (withSubtraction, subtractionDefinitions, subtractionFacts) = subtracted
+
+      // After everything, because its step adds and its congruence compares: `NUM_ADD` for the
+      // recursion and `NUM_LT` with the two lemmas that lift an index to below a successor.
+      summed <- partialSums(
+        logic, driver, naturals, withSubtraction, notation, recursion, orderFacts)
+      (withPartialSums, partialSumDefinition, partialSumFacts) = summed
+
+      // Last of all, because the three lemmas that make the encoding worth having are about
+      // `real_of_num` and one of them is about a successor.
+      spelt <- numerals(
+        logic, ring, withPartialSums, notation, addFacts, embeddingFacts)
+      (withNumerals, spelled, numeralDefinitions, numeralFacts) = spelt
+
+      // The connectives against the finished signature, which is wider than the one the
+      // derivations above were run against: `Logic.over` checks the extension rather than
+      // assuming it, so this is also the assertion that nothing was defined into a side branch.
+      overNumerals <- naturals.classical.logic.over(withNumerals)
+
+      // Last, and over the finished signature, because these two are the only derivations in this
+      // file that reason classically: `Classical.contradiction` and `Classical.cases` want the
+      // connectives, and the steps above were checked against a narrower theory.
+      realTrichotomy <- ring.reals.axiom("LT_TOTAL")
+      realCompleteness <- ring.reals.axiom("COMPLETENESS")
+      embedsSuccessorFact <- embeddingFacts
+        .get(EmbedsSuccessor)
+        .toRight(MissingDefinition(EmbedsSuccessor))
+      embedsZeroFact <- embeddingFacts.get(EmbedsZero).toRight(MissingDefinition(EmbedsZero))
+      archimedes <- archimedean(
+        overNumerals,
+        naturals.classical,
+        linarith,
+        withNumerals,
+        spelled,
+        realTrichotomy,
+        realCompleteness,
+        embedsSuccessorFact
+      ).flatMap(checked(withNumerals, spelled, Archimedean, _))
+
+      // And the floor, which is what the Archimedean property was wanted for: it is the only thing
+      // that says the search for a natural past a real terminates at all.
+      leastFact <- orderFacts.get(LeastNumber).toRight(MissingDefinition(LeastNumber))
+      belowSuccessorFact <- orderFacts.get(BelowSuccessor).toRight(MissingDefinition(BelowSuccessor))
+      zeroOrSuccessor <- naturals.fact(Natural.ZeroOrSuccessor)
+      leCases <- bounds.fact(Order.LeCases)
+      bounded <- floors(
+        overNumerals,
+        naturals.classical,
+        linarith,
+        withNumerals,
+        spelled,
+        archimedes,
+        leastFact,
+        zeroOrSuccessor,
+        belowSuccessorFact,
+        embedsZeroFact,
+        embedsSuccessorFact,
+        realTrichotomy,
+        leCases
+      )
+      (withFloors, floorDefinitions, floorFacts) = bounded
+
+      // The connectives against the finished signature, which is wider than the one the derivations
+      // above were run against: `Logic.over` checks the extension rather than assuming it, so this
+      // is also the assertion that nothing was defined into a side branch.
+      widest <- naturals.classical.logic.over(withFloors)
+    } yield new Peano(
+      naturals,
+      ring,
+      withFloors,
+      spelled,
+      widest,
+      Map(
+        Addition -> additionDefinition,
+        Multiplication -> multiplicationDefinition,
+        Exponentiation -> exponentiationDefinition,
+        Embedding -> embeddingDefinition,
+        PartialSum -> partialSumDefinition
+      ) ++ orderDefinitions ++ subtractionDefinitions ++ numeralDefinitions ++ floorDefinitions,
+      addFacts ++ mulFacts ++ powFacts ++ orderFacts ++ embeddingFacts ++ subtractionFacts ++
+        partialSumFacts ++ numeralFacts ++ floorFacts ++ Map(Archimedean -> archimedes)
+    )
+  }
+
+  /**
+   * The floor and the ceiling, named by choice, with the two facts each one is for.
+   *
+   * == The existence proof, which is the whole of it ==
+   *
+   * [[Archimedean]] puts a natural past `x` and [[LeastNumber]] takes the first one. That first one
+   * is not zero, because `x` is not below zero, so it is a successor, and its predecessor is the
+   * floor: nothing below the first passes `x`, so the predecessor does not, and the trichotomy
+   * turns that into `real_of_num p <= x`. The other half is the first one itself, written as one
+   * more by [[EmbedsSuccessor]]. The ceiling then comes from the floor by a case split on whether
+   * the floor is exactly `x`, which is `Classical.cases` and two linear steps.
+   *
+   * == Why `select` and not a definition by recursion ==
+   *
+   * Between a proof that something exists and a term naming it stands the choice operator and
+   * nothing else, which is the argument `Magnitude` makes for `max` and it is the same here.
+   * `Kernel.defineConstant` wants a closed term; a witness pulled out of an existential is a
+   * variable. So the bill is choice, which this development already pays through `Natural`, and it
+   * is **no new axiom**: both constants are definitions and the count stays at nineteen.
+   *
+   * == What the condition costs, and where it goes when the integers arrive ==
+   *
+   * Both characterisations carry `0 <= x`, for the reason [[FloorAtMost]] gives: `num` has no
+   * negative numbers and a constant that answered anyway would be silently wrong below zero. The
+   * hypothesis is written rather than avoided, and `select` leaves the term denoting something
+   * unspecified there rather than leaving it undefined.
+   */
+  private def floors(
+    logic: Logic,
+    classical: Classical,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    archimedes: Kernel.Thm,
+    leastNumber: Kernel.Thm,
+    zeroOrSuccessor: Kernel.Thm,
+    belowSuccessor: Kernel.Thm,
+    embedsZero: Kernel.Thm,
+    embedsSuccessor: Kernel.Thm,
+    trichotomy: Kernel.Thm,
+    leCases: Kernel.Thm
+  ): Either[LogicError, (Theory, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] = {
+    val rules = logic.rules
+    val values = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    val x: FVar = Term.variable("x", values)
+    val m: FVar = Term.variable("m", numbers)
+    val p: FVar = Term.variable("p", numbers)
+
+    def proposition(at: Theory, text: String): Either[LogicError, Term] =
+      Parser.proposition(at, notation, text)
+
+    def expression(at: Theory, text: String, ty: Type): Either[LogicError, Term] =
+      Parser.term(at, notation, text, ty)
+
+    def assume(term: Term): Either[LogicError, Kernel.Thm] = LogicError.lift(Kernel.assume(term))
+
+    def carrying(equation: Kernel.Thm, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Rewrite.Rule.of(logic, equation).flatMap(rule => Rewrite.inTheorem(Vector(rule), theorem))
+
+    def folding(equation: Kernel.Thm, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv.sym(equation).flatMap(carrying(_, theorem))
+
+    for {
+      nonNegative <- proposition(theory, "0 <= x")
+      assumed <- assume(nonNegative)
+
+      /* ------------------------------------------------- a natural the floor could be */
+      target <- proposition(theory, "?n:num. real_of_num n <= x /\\ x < real_of_num n + 1")
+      targetPredicate <- logic
+        .destExistsPredicate(target)
+        .toRight(NotOfForm("an existential", target))
+
+      passes <- rules.spec(x, archimedes)
+      passing <- expression(theory, "\\n:num. x < real_of_num n", Type.fun(numbers, Type.Bool))
+      atPassing <- rules.spec(passing, leastNumber)
+      reduction <- Conv.betaNormalise(atPassing.conclusion)
+      reduced <- LogicError.lift(Kernel.eqMp(reduction, atPassing))
+      first <- rules.mp(reduced, passes)
+
+      firstBodyStatement <- proposition(
+        theory,
+        "x < real_of_num m /\\ (!k:num. NUM_LT k m ==> ~(x < real_of_num k))"
+      )
+      firstBody <- assume(firstBodyStatement)
+      passesAtFirst <- rules.conjElim1(firstBody)
+      noneBelowFirst <- rules.conjElim2(firstBody)
+
+      // The first one is not zero: `x` is not below zero and `real_of_num 0` is zero.
+      isZeroStatement <- proposition(theory, "m = 0:num")
+      fromZero <- for {
+        isZero <- assume(isZeroStatement)
+        carried <- carrying(isZero, passesAtFirst)
+        grounded <- carrying(embedsZero, carried)
+        impossible <- proposition(theory, "!a:real. 0 <= a ==> a < 0 ==> F")
+          .flatMap(linarith.prove)
+        falsity <- rules
+          .spec(x, impossible)
+          .flatMap(rules.mp(_, assumed))
+          .flatMap(rules.mp(_, grounded))
+        anything <- rules.falsityElim(target, falsity)
+      } yield anything
+
+      // So it is a successor, and the predecessor is the floor.
+      isSuccessorStatement <- proposition(theory, "m = SUC p")
+      fromSuccessor <- for {
+        isSuccessor <- assume(isSuccessorStatement)
+        passesAtSuccessor <- carrying(isSuccessor, passesAtFirst)
+        noneBelowSuccessor <- carrying(isSuccessor, noneBelowFirst)
+
+        atPredecessor <- rules.spec(p, belowSuccessor)
+        notPassing <- rules.spec(p, noneBelowSuccessor).flatMap(rules.mp(_, atPredecessor))
+
+        embedded <- expression(theory, "real_of_num p", values)
+        three <- rules.specAll(trichotomy, List(x, embedded))
+        atMostStatement <- proposition(theory, "real_of_num p <= x")
+        fromBelow <- proposition(theory, "x < real_of_num p")
+          .flatMap(assume)
+          .flatMap(rules.notElim(notPassing, _))
+          .flatMap(rules.falsityElim(atMostStatement, _))
+        fromEqual <- for {
+          linear <- proposition(theory, "!a:real b:real. a = b ==> b <= a").flatMap(linarith.prove)
+          equality <- proposition(theory, "x = real_of_num p").flatMap(assume)
+          instance <- rules.specAll(linear, List(x, embedded))
+          applied <- rules.mp(instance, equality)
+        } yield applied
+        fromAbove <- for {
+          linear <- proposition(theory, "!a:real b:real. b < a ==> b <= a").flatMap(linarith.prove)
+          strict <- proposition(theory, "real_of_num p < x").flatMap(assume)
+          instance <- rules.specAll(linear, List(x, embedded))
+          applied <- rules.mp(instance, strict)
+        } yield applied
+        tail <- proposition(theory, "x = real_of_num p \\/ real_of_num p < x").flatMap(assume)
+        fromTail <- rules.disjElim(tail, fromEqual, fromAbove)
+        atMost <- rules.disjElim(three, fromBelow, fromTail)
+
+        atPredecessorSuccessor <- rules.spec(p, embedsSuccessor)
+        shifted <- carrying(atPredecessorSuccessor, passesAtSuccessor)
+        both <- rules.conjIntro(atMost, shifted)
+        witnessed <- rules.existsIntro(targetPredicate, p, both)
+        closed <- rules.disch(isSuccessorStatement, witnessed)
+      } yield closed
+
+      successorExistsStatement <- proposition(theory, "?p:num. m = SUC p")
+      successorExists <- assume(successorExistsStatement)
+      fromSuccessorClosed <- assume(isSuccessorStatement)
+        .flatMap(rules.mp(fromSuccessor, _))
+        .flatMap(rules.existsElim(successorExists, p, _))
+
+      atFirst <- rules.spec(m, zeroOrSuccessor)
+      split <- rules.disjElim(atFirst, fromZero, fromSuccessorClosed)
+      exists <- rules.existsElim(first, m, split)
+
+      /* ------------------------------------------------------- the floor, named */
+      floorBody <- expression(
+        theory,
+        "\\x:real. select (\\n:num. real_of_num n <= x /\\ x < real_of_num n + 1)",
+        Type.fun(values, numbers)
+      )
+      floorDefined <- LogicError.lift(Kernel.defineConstant(theory, Floor, floorBody))
+      (withFloor, floorDefinition) = floorDefined
+      floorUnfolded <- Conv.unfold(floorDefinition, List(x))
+      floorChosen <- classical.witness(exists)
+      floorReduced <- Conv
+        .betaRoot(floorChosen.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, floorChosen)))
+      floorFolded <- folding(floorUnfolded, floorReduced)
+      floorAtMostAtX <- rules.conjElim1(floorFolded)
+      floorAboveAtX <- rules.conjElim2(floorFolded)
+      floorAtMost <- rules
+        .disch(nonNegative, floorAtMostAtX)
+        .flatMap(rules.gen(x, _))
+        .flatMap(checked(withFloor, notation, FloorAtMost, _))
+      floorAbove <- rules
+        .disch(nonNegative, floorAboveAtX)
+        .flatMap(rules.gen(x, _))
+        .flatMap(checked(withFloor, notation, FloorAbove, _))
+
+      /* ---------------------------------------------------- the ceiling, from it */
+      ceilingTarget <- proposition(
+        withFloor,
+        "?n:num. x <= real_of_num n /\\ real_of_num n < x + 1"
+      )
+      ceilingPredicate <- logic
+        .destExistsPredicate(ceilingTarget)
+        .toRight(NotOfForm("an existential", ceilingTarget))
+      floorIndex <- expression(withFloor, "NUM_FLOOR x", numbers)
+      successorIndex <- expression(withFloor, "SUC (NUM_FLOOR x)", numbers)
+      embeddedFloor <- expression(withFloor, "real_of_num (NUM_FLOOR x)", values)
+      exactStatement <- proposition(withFloor, "real_of_num (NUM_FLOOR x) = x")
+
+      whenExact <- for {
+        exact <- assume(exactStatement)
+        linear <- proposition(withFloor, "!a:real b:real. a = b ==> b <= a /\\ a < b + 1")
+          .flatMap(linarith.prove)
+        instance <- rules.specAll(linear, List(embeddedFloor, x))
+        both <- rules.mp(instance, exact)
+        witnessed <- rules.existsIntro(ceilingPredicate, floorIndex, both)
+      } yield witnessed
+
+      exactNegation <- logic.mkNot(exactStatement)
+      whenNotExact <- for {
+        notExact <- assume(exactNegation)
+        strictStatement <- proposition(withFloor, "real_of_num (NUM_FLOOR x) < x")
+        cases <- rules.specAll(leCases, List(embeddedFloor, x)).flatMap(rules.mp(_, floorAtMostAtX))
+        fromStrict <- assume(strictStatement)
+        fromExact <- assume(exactStatement)
+          .flatMap(rules.notElim(notExact, _))
+          .flatMap(rules.falsityElim(strictStatement, _))
+        strict <- rules.disjElim(cases, fromStrict, fromExact)
+        linear <- proposition(
+          withFloor,
+          "!a:real b:real. a < b ==> b < a + 1 ==> b <= a + 1 /\\ a + 1 < b + 1"
+        ).flatMap(linarith.prove)
+        instance <- rules.specAll(linear, List(embeddedFloor, x))
+        both <- rules.mp(instance, strict).flatMap(rules.mp(_, floorAboveAtX))
+        atSuccessor <- rules.spec(floorIndex, embedsSuccessor)
+        written <- folding(atSuccessor, both)
+        witnessed <- rules.existsIntro(ceilingPredicate, successorIndex, written)
+      } yield witnessed
+
+      ceilingExists <- classical.cases(exactStatement, whenExact, whenNotExact)
+      ceilingBody <- expression(
+        withFloor,
+        "\\x:real. select (\\n:num. x <= real_of_num n /\\ real_of_num n < x + 1)",
+        Type.fun(values, numbers)
+      )
+      ceilingDefined <- LogicError.lift(Kernel.defineConstant(withFloor, Ceiling, ceilingBody))
+      (withCeiling, ceilingDefinition) = ceilingDefined
+      ceilingUnfolded <- Conv.unfold(ceilingDefinition, List(x))
+      ceilingChosen <- classical.witness(ceilingExists)
+      ceilingReduced <- Conv
+        .betaRoot(ceilingChosen.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, ceilingChosen)))
+      ceilingFolded <- folding(ceilingUnfolded, ceilingReduced)
+      ceilingAtLeast <- rules
+        .conjElim1(ceilingFolded)
+        .flatMap(rules.disch(nonNegative, _))
+        .flatMap(rules.gen(x, _))
+        .flatMap(checked(withCeiling, notation, CeilingAtLeast, _))
+      ceilingBelow <- rules
+        .conjElim2(ceilingFolded)
+        .flatMap(rules.disch(nonNegative, _))
+        .flatMap(rules.gen(x, _))
+        .flatMap(checked(withCeiling, notation, CeilingBelow, _))
+    } yield (
+      withCeiling,
+      Map(Floor -> floorDefinition, Ceiling -> ceilingDefinition),
+      Map(
+        FloorAtMost -> floorAtMost,
+        FloorAbove -> floorAbove,
+        CeilingAtLeast -> ceilingAtLeast,
+        CeilingBelow -> ceilingBelow
+      )
+    )
+  }
+
+  /**
+   * `|- !x:real. ?n:num. x < real_of_num n`, and it is where `COMPLETENESS` is spent.
+   *
+   * The plan is in [[Archimedean]]'s comment. What the code adds is the bookkeeping: the predicate
+   * is `\x. ?n. x = real_of_num n`, which is the image of `num` written as a set, and the three
+   * things `COMPLETENESS` wants of it are that it is inhabited, that the assumed `y` bounds it, and
+   * then that `s - 1` bounds it too.
+   *
+   * Each of the four arithmetic steps is `LINARITH`'s and is asked for once as a fact about
+   * arbitrary reals, then specialised. Asking at the images instead would be the same work and a
+   * second place for the shape to drift, which is the arrangement [[crossesBack]] already uses.
+   */
+  private def archimedean(
+    logic: Logic,
+    classical: Classical,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    trichotomy: Kernel.Thm,
+    completeness: Kernel.Thm,
+    embedsSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val values = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    val n: FVar = Term.variable("n", numbers)
+    val k: FVar = Term.variable("k", numbers)
+    val x: FVar = Term.variable("x", values)
+    val y: FVar = Term.variable("y", values)
+    val s: FVar = Term.variable("s", values)
+
+    def proposition(text: String): Either[LogicError, Term] =
+      Parser.proposition(theory, notation, text)
+
+    def expression(text: String, ty: Type): Either[LogicError, Term] =
+      Parser.term(theory, notation, text, ty)
+
+    def predicateOf(term: Term): Either[LogicError, Term] =
+      logic.destExistsPredicate(term).toRight(NotOfForm("an existential", term))
+
+    for {
+      // The assumption everything below is under, and the one `Classical.contradiction` discharges.
+      goal <- proposition("?n:num. y < real_of_num n")
+      negation <- logic.mkNot(goal)
+      assumed <- LogicError.lift(Kernel.assume(negation))
+
+      // Under it, no embedded natural passes `y`, so every one of them is at most `y`. The
+      // trichotomy supplies the three cases and the first is closed by the assumption itself.
+      belowStatement <- proposition("y < real_of_num n")
+      below <- LogicError.lift(Kernel.assume(belowStatement))
+      goalPredicate <- predicateOf(goal)
+      witnessed <- rules.existsIntro(goalPredicate, n, below)
+      clash <- rules.notElim(assumed, witnessed)
+      notBelow <- rules.notIntro(belowStatement, clash)
+
+      embedded <- expression("real_of_num n", values)
+      cases <- rules.specAll(trichotomy, List(y, embedded))
+      atMostStatement <- proposition("real_of_num n <= y")
+
+      fromBelow <- LogicError
+        .lift(Kernel.assume(belowStatement))
+        .flatMap(rules.notElim(notBelow, _))
+        .flatMap(rules.falsityElim(atMostStatement, _))
+
+      fromEqual <- for {
+        linear <- proposition("!a:real b:real. a = b ==> b <= a").flatMap(linarith.prove)
+        equality <- proposition("y = real_of_num n").flatMap(t => LogicError.lift(Kernel.assume(t)))
+        instance <- rules.specAll(linear, List(y, embedded))
+        applied <- rules.mp(instance, equality)
+      } yield applied
+
+      fromAbove <- for {
+        linear <- proposition("!a:real b:real. b < a ==> b <= a").flatMap(linarith.prove)
+        strict <- proposition("real_of_num n < y").flatMap(t => LogicError.lift(Kernel.assume(t)))
+        instance <- rules.specAll(linear, List(y, embedded))
+        applied <- rules.mp(instance, strict)
+      } yield applied
+
+      tail <- proposition("y = real_of_num n \\/ real_of_num n < y")
+        .flatMap(t => LogicError.lift(Kernel.assume(t)))
+      fromTail <- rules.disjElim(tail, fromEqual, fromAbove)
+      atMost <- rules.disjElim(cases, fromBelow, fromTail)
+      boundedByY <- rules.gen(n, atMost)
+
+      // The image is inhabited, by zero and nothing cleverer.
+      inhabitedStatement <- proposition("?x:real. ?y:num. x = real_of_num y")
+      inhabitedPredicate <- predicateOf(inhabitedStatement)
+      zero <- expression("real_of_num 0", values)
+      atZeroStatement <- proposition("?y:num. real_of_num 0 = real_of_num y")
+      atZeroPredicate <- predicateOf(atZeroStatement)
+      zeroIndex <- expression("0", numbers)
+      atZero <- rules.existsIntro(atZeroPredicate, zeroIndex, Kernel.refl(zero))
+      inhabited <- rules.existsIntro(inhabitedPredicate, zero, atZero)
+
+      // `y` bounds it: a member is an embedded natural, and those are all below `y`.
+      memberStatement <- proposition("?z:num. x = real_of_num z")
+      member <- LogicError.lift(Kernel.assume(memberStatement))
+      witnessEquation <- proposition("x = real_of_num k")
+      embeddedK <- expression("real_of_num k", values)
+      carry <- proposition("!a:real b:real c:real. a = b /\\ b <= c ==> a <= c")
+        .flatMap(linarith.prove)
+      atK <- rules.spec(k, boundedByY)
+      carriedAtK <- for {
+        equation <- LogicError.lift(Kernel.assume(witnessEquation))
+        instance <- rules.specAll(carry, List(x, embeddedK, y))
+        both <- rules.conjIntro(equation, atK)
+        applied <- rules.mp(instance, both)
+      } yield applied
+      carried <- rules.existsElim(member, k, carriedAtK)
+      bounds <- rules.disch(memberStatement, carried).flatMap(rules.gen(x, _))
+      boundedStatement <- proposition("?x:real. !y:real. (?z:num. y = real_of_num z) ==> y <= x")
+      boundedPredicate <- predicateOf(boundedStatement)
+      boundedAbove <- rules.existsIntro(boundedPredicate, y, bounds)
+
+      // So there is a least upper bound. `spec` leaves the predicate applied rather than
+      // substituted, which is what `Rules.spec` documents, so the instance is normalised before
+      // anything is read off it.
+      image <- expression("\\x:real. ?n:num. x = real_of_num n", Type.fun(values, Type.Bool))
+      atImage <- rules.spec(image, completeness)
+      reduction <- Conv.betaNormalise(atImage.conclusion)
+      instance <- LogicError.lift(Kernel.eqMp(reduction, atImage))
+      premises <- rules.conjIntro(inhabited, boundedAbove)
+      supremum <- rules.mp(instance, premises)
+
+      // And `s - 1` bounds the image too, which is the step that avoids the missing lemma: every
+      // member has a successor in the image, and the successor is at most `s`.
+      supremumStatement <- proposition(
+        "(!y:real. (?z:num. y = real_of_num z) ==> y <= s) /\\ " +
+          "(!y:real. (!z:real. (?u:num. z = real_of_num u) ==> z <= y) ==> s <= y)"
+      )
+      supremumBody <- LogicError.lift(Kernel.assume(supremumStatement))
+      isUpperBound <- rules.conjElim1(supremumBody)
+      isLeast <- rules.conjElim2(supremumBody)
+
+      successorStatement <- proposition("?z:num. real_of_num (SUC k) = real_of_num z")
+      successorPredicate <- predicateOf(successorStatement)
+      embeddedSuccessor <- expression("real_of_num (SUC k)", values)
+      successorIndex <- expression("SUC k", numbers)
+      successorInImage <- rules.existsIntro(
+        successorPredicate,
+        successorIndex,
+        Kernel.refl(embeddedSuccessor)
+      )
+      successorAtMost <- rules
+        .spec(embeddedSuccessor, isUpperBound)
+        .flatMap(rules.mp(_, successorInImage))
+      atKSuccessor <- rules.spec(k, embedsSuccessor)
+      shifted <- Rewrite.Rule
+        .of(logic, atKSuccessor)
+        .flatMap(rule => Rewrite.inTheorem(Vector(rule), successorAtMost))
+
+      step <- proposition("!a:real b:real c:real. a + 1 <= b /\\ c = a ==> c <= b - 1")
+        .flatMap(linarith.prove)
+      loweredAtK <- for {
+        equation <- LogicError.lift(Kernel.assume(witnessEquation))
+        instance2 <- rules.specAll(step, List(embeddedK, s, x))
+        both <- rules.conjIntro(shifted, equation)
+        applied <- rules.mp(instance2, both)
+      } yield applied
+      lowered <- rules.existsElim(member, k, loweredAtK)
+      lowerBound <- rules.disch(memberStatement, lowered).flatMap(rules.gen(x, _))
+
+      // Leastness then says `s <= s - 1`, and that is falsity in one linear step.
+      lessOne <- expression("s - 1", values)
+      atLessOne <- rules.spec(lessOne, isLeast).flatMap(rules.mp(_, lowerBound))
+      impossible <- proposition("!a:real. a <= a - 1 ==> F").flatMap(linarith.prove)
+      falsity <- rules.spec(s, impossible).flatMap(rules.mp(_, atLessOne))
+
+      withoutSupremum <- rules.existsElim(supremum, s, falsity)
+      reached <- classical.contradiction(goal, withoutSupremum)
+      result <- rules.gen(y, reached)
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LE m n ==> real_of_num m <= real_of_num n`, from the definition of the order.
+   *
+   * `NUM_LE m n` **is** `?d. NUM_ADD m d = n`, which is why this is not an induction: open the
+   * existential, embed the witness equation with [[EmbedsSum]], and what is left is
+   * `a + b = c` with `0 <= b`, which is linear in three atoms and goes to `LINARITH`.
+   *
+   * The three atoms are applications of `real_of_num`, and that they are usable as atoms at all is
+   * a fact about the procedure rather than about this file: it reads an applied constant of type
+   * `real` as an unknown and decides over it. A development that had to abstract each one to a
+   * fresh variable first would be working around a restriction that is not there.
+   */
+  private def crossesOrder(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    orderDefinitions: Map[String, Kernel.Thm],
+    embedsSum: Kernel.Thm,
+    embedsNonNegative: Kernel.Thm,
+    m: FVar,
+    n: FVar,
+    gap: FVar
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val values = TyApp(Real.TypeName, Nil)
+
+    for {
+      definition <- orderDefinitions
+        .get(NonStrictOrder)
+        .toRight(MissingDefinition(NonStrictOrder))
+      unfolded <- Conv.unfold(definition, List(m, n))
+
+      order <- LogicError.lift(
+        theory
+          .constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+          .flatMap(constant => Term.appAll(constant, List(m, n)))
+      )
+      assumed <- LogicError.lift(Kernel.assume(order))
+      existential <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+
+      plus <- LogicError.lift(theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers))))
+      reaching <- LogicError.lift(Term.appAll(plus, List(m, gap)).flatMap(Term.eq(_, n)))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      embedding <- LogicError.lift(theory.constant(Embedding, Type.fun(numbers, values)))
+      carried <- Conv.apTerm(embedding, reaches)
+      homomorphism <- rules.specAll(embedsSum, List(m, gap))
+      equation <- Conv.sym(homomorphism).flatMap(Conv.trans(_, carried))
+
+      atGap <- rules.spec(gap, embedsNonNegative)
+      shape <- Parser.proposition(theory, notation, "!a:real b:real c:real. 0 <= b /\\ a + b = c ==> a <= c")
+      linear <- linarith.prove(shape)
+      instances <- LogicError.lift(
+        List(m, gap, n).foldLeft[Either[KernelError, List[Term]]](Right(Nil)) { (acc, argument) =>
+          for {
+            done <- acc
+            applied <- Term.app(embedding, argument)
+          } yield done :+ applied
+        }
+      )
+      instanced <- rules.specAll(linear, instances)
+      both <- rules.conjIntro(atGap, equation)
+      bounded <- rules.mp(instanced, both)
+
+      withoutWitness <- rules.existsElim(existential, gap, bounded)
+      discharged <- rules.disch(order, withoutWitness)
+      result <- rules.genAll(discharged, List(m, n))
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LT m n ==> real_of_num m + 1 <= real_of_num n`, one step from the other one.
+   *
+   * `NUM_LT m n` is `NUM_LE (SUC m) n` by definition, so the non-strict lemma at `(SUC m, n)` is
+   * already the answer with the left-hand side written as `real_of_num (SUC m)`; rewriting it with
+   * [[EmbedsSuccessor]] is the whole of the rest. That the gap is exactly one, rather than merely
+   * positive, is the fact worth having and is what defining `<` through `<=` bought.
+   */
+  private def crossesStrictly(
+    logic: Logic,
+    theory: Theory,
+    orderDefinitions: Map[String, Kernel.Thm],
+    embedsSuccessor: Kernel.Thm,
+    embedsOrder: Kernel.Thm,
+    statement: Term,
+    m: FVar,
+    n: FVar
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    for {
+      definition <- orderDefinitions.get(StrictOrder).toRight(MissingDefinition(StrictOrder))
+      unfolded <- Conv.unfold(definition, List(m, n))
+
+      strict <- LogicError.lift(
+        theory
+          .constant(StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+          .flatMap(constant => Term.appAll(constant, List(m, n)))
+      )
+      assumed <- LogicError.lift(Kernel.assume(strict))
+      asNonStrict <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+
+      successor <- LogicError.lift(theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers)))
+      next <- LogicError.lift(Term.app(successor, m))
+      crossed <- rules.specAll(embedsOrder, List(next, n)).flatMap(rules.mp(_, asNonStrict))
+
+      rule <- Rewrite.Rule.of(logic, embedsSuccessor)
+      rewritten <- Rewrite.rewrite(Vector(rule), crossed.conclusion)
+      opened <- LogicError.lift(Kernel.eqMp(rewritten, crossed))
+
+      discharged <- rules.disch(strict, opened)
+      result <- rules.genAll(discharged, List(m, n))
+
+      // The statement as it is written down, rather than something that follows from it: the
+      // rewriter decides the shape of the left-hand side and the table decides what this file
+      // claims, and the two have to be the same claim.
+      _ <-
+        if (result.conclusion == statement) Right(())
+        else Left(NotOfForm("the statement as the table writes it", result.conclusion))
+    } yield result
+  }
+
+  /* --------------------------------------------------------------- addition */
+
+  /**
+   * Addition, its two recurrences, and the facts a consumer of a sum asks for.
+   *
+   * All but one of them close by rewriting: the recurrences go in as rules, the induction
+   * hypothesis joins them inside the step, and both sides of the goal reach the same term. Which
+   * lemma each step needs is the interesting part:
+   *
+   *  - [[ZeroPlus]] and [[SuccessorPlus]] need only the two recurrences. They are the mirror image
+   *    of the recursion, and they exist because the recursion happens on one argument and half the
+   *    uses are on the other.
+   *  - [[AddAssociative]] needs the two recurrences.
+   *  - [[AddCommutative]] needs both of the first two, one for its base and one for its step, and
+   *    that is why they come first. The step is `m + SUC n = SUC (m + n) = SUC (n + m) = SUC n + m`,
+   *    where the first equality is a recurrence, the second is the hypothesis, and the third is
+   *    [[SuccessorPlus]] read backwards, which the rewriter does by bringing both sides to the
+   *    same form rather than by reversing anything.
+   *  - [[AddExchange]] is derived by hand instead: it is a rewrite that holds in both directions,
+   *    so it cannot be reached by rewriting to a normal form, and it is three named steps.
+   *  - [[Shift]] needs no induction at all: both sides reach `SUC (m + n)`, one by a recurrence
+   *    and the other by [[SuccessorPlus]].
+   */
+  private def addition(
+    logic: Logic,
+    driver: Induct,
+    naturals: Natural,
+    base: Theory,
+    notation: Notation,
+    recursion: Kernel.Thm
+  ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+
+    for {
+      defined <- Recursion.define(
+        logic,
+        naturals,
+        base,
+        notation,
+        recursion,
+        Addition,
+        numbers,
+        "m:num",
+        "\\v:num. \\i:num. SUC v",
+        Some(m)
+      )
+      (theory, definition, atZero, atSuccessor) = defined
+
+      addAtZero <- checked(theory, notation, AddAtZero, atZero)
+      addAtSuccessor <- checked(theory, notation, AddAtSuccessor, atSuccessor)
+      recurrences = Vector(addAtZero, addAtSuccessor)
+
+      zeroPlus <- byInduction(driver, theory, notation, ZeroPlus, recurrences)
+      successorPlus <- byInduction(driver, theory, notation, SuccessorPlus, recurrences)
+      associative <- byInduction(driver, theory, notation, AddAssociative, recurrences)
+      commutative <- byInduction(
+        driver,
+        theory,
+        notation,
+        AddCommutative,
+        recurrences ++ Vector(zeroPlus, successorPlus)
+      )
+      exchange <- exchanged(logic, theory, notation, associative, commutative)
+      shift <- byRewriting(logic, theory, notation, Shift, recurrences :+ successorPlus)
+    } yield (
+      theory,
+      definition,
+      Map(
+        AddAtZero -> addAtZero,
+        AddAtSuccessor -> addAtSuccessor,
+        ZeroPlus -> zeroPlus,
+        SuccessorPlus -> successorPlus,
+        AddAssociative -> associative,
+        AddCommutative -> commutative,
+        AddExchange -> exchange,
+        Shift -> shift
+      )
+    )
+  }
+
+  /**
+   * `|- !m n p. NUM_ADD m (NUM_ADD n p) = NUM_ADD n (NUM_ADD m p)`, by hand and not by rewriting.
+   *
+   * `m + (n + p) = (m + n) + p = (n + m) + p = n + (m + p)`: associativity backwards, commutativity
+   * under the outer sum, associativity forwards. It is the rule that sorts a sum, so it cannot be
+   * proved by sorting one; a rewriter given commutativity rewrites its own output for ever.
+   */
+  private def exchanged(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    associative: Kernel.Thm,
+    commutative: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val p = Term.variable("p", numbers)
+
+    for {
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      grouped <- rules.specAll(associative, List(m, n, p))
+      ungrouped <- Conv.sym(grouped)
+      swapped <- rules.specAll(commutative, List(m, n))
+      underneath <- Conv.apTerm(plus, swapped).flatMap(Conv.apThm(_, p))
+      regrouped <- rules.specAll(associative, List(n, m, p))
+
+      whole <- Conv
+        .trans(ungrouped, underneath)
+        .flatMap(Conv.trans(_, regrouped))
+        .flatMap(rules.genAll(_, List(m, n, p)))
+      result <- checked(theory, notation, AddExchange, whole)
+    } yield result
+  }
+
+  /* --------------------------------------------------------- multiplication */
+
+  /**
+   * Multiplication, its two recurrences, and what follows from them.
+   *
+   * All but one of them close by rewriting with the recurrences of both operations and the
+   * associativity of addition. [[SuccessorTimes]] is the exception and it is where the sorting
+   * comes in: its step reaches `SUC (m * k + (k + m))` on one side and `SUC (m * k + (m + k))` on
+   * the other, which differ by one commutation. Commutativity and [[AddExchange]] are handed to
+   * the same conversion as **ordered** rules, firing only where they make the term smaller in
+   * `Term.ordering`, so a sum sorts instead of oscillating. That is `Arithmetic`'s arrangement for
+   * the ring, one operation smaller.
+   *
+   * [[MulCommutative]] then needs [[SuccessorTimes]] for its step and [[ZeroTimes]] for its base,
+   * which is the whole reason those two come before it.
+   */
+  private def multiplication(
+    logic: Logic,
+    driver: Induct,
+    naturals: Natural,
+    base: Theory,
+    notation: Notation,
+    recursion: Kernel.Thm,
+    addFacts: Map[String, Kernel.Thm]
+  ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val recurrences = Vector(addFacts(AddAtZero), addFacts(AddAtSuccessor))
+    val sorting = Vector(addFacts(AddCommutative), addFacts(AddExchange))
+
+    for {
+      defined <- Recursion.define(
+        logic,
+        naturals,
+        base,
+        notation,
+        recursion,
+        Multiplication,
+        numbers,
+        "ZERO",
+        "\\v:num. \\i:num. NUM_ADD v (m:num)",
+        Some(m)
+      )
+      (theory, definition, atZero, atSuccessor) = defined
+
+      mulAtZero <- checked(theory, notation, MulAtZero, atZero)
+      mulAtSuccessor <- checked(theory, notation, MulAtSuccessor, atSuccessor)
+
+      arithmetic = recurrences ++ Vector(mulAtZero, mulAtSuccessor, addFacts(AddAssociative))
+
+      zeroTimes <- byInduction(driver, theory, notation, ZeroTimes, arithmetic)
+      timesOne <- byRewriting(logic, theory, notation, TimesOne, arithmetic :+ addFacts(ZeroPlus))
+      distributive <- byInduction(driver, theory, notation, Distributive, arithmetic)
+      associative <- byInduction(
+        driver,
+        theory,
+        notation,
+        MulAssociative,
+        arithmetic :+ distributive
+      )
+      successorTimes <- byInduction(
+        driver,
+        theory,
+        notation,
+        SuccessorTimes,
+        arithmetic,
+        sorting
+      )
+      commutative <- byInduction(
+        driver,
+        theory,
+        notation,
+        MulCommutative,
+        arithmetic ++ Vector(zeroTimes, successorTimes)
+      )
+    } yield (
+      theory,
+      definition,
+      Map(
+        MulAtZero -> mulAtZero,
+        MulAtSuccessor -> mulAtSuccessor,
+        ZeroTimes -> zeroTimes,
+        TimesOne -> timesOne,
+        Distributive -> distributive,
+        MulAssociative -> associative,
+        SuccessorTimes -> successorTimes,
+        MulCommutative -> commutative
+      )
+    )
+  }
+
+  /**
+   * Exponentiation, and the one law that is the reason for having it.
+   *
+   * The same shape as [[multiplication]] one level up: recursion on the exponent, with the step
+   * multiplying by the base rather than adding it, and the base case `SUC ZERO` rather than
+   * `ZERO` because the unit is one, written in the spelling the recursion produces.
+   *
+   * [[PowAddsExponents]] is what a consumer wants, and it is the only one here that costs an
+   * induction of its own. It is an induction on `p` whose step needs associativity of
+   * multiplication, and it is the natural-number twin of `Series.POWER_ADD`: a development that
+   * has the real one and not this one can take apart an exponent it has embedded and not one it
+   * is still counting with, which is the position this was added from. The bridge between the
+   * two, `real_of_num (NUM_POW m n) = Power (real_of_num m) n`, is NOT here: `Power` belongs to
+   * `Series`, which is above this file, so the bridge belongs there with it.
+   */
+  private def exponentiation(
+    logic: Logic,
+    driver: Induct,
+    naturals: Natural,
+    base: Theory,
+    notation: Notation,
+    recursion: Kernel.Thm,
+    mulFacts: Map[String, Kernel.Thm]
+  ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+
+    for {
+      defined <- Recursion.define(
+        logic,
+        naturals,
+        base,
+        notation,
+        recursion,
+        Exponentiation,
+        numbers,
+        "SUC ZERO",
+        "\\v:num. \\i:num. NUM_MUL v (m:num)",
+        Some(m)
+      )
+      (theory, definition, atZero, atSuccessor) = defined
+
+      powAtZero <- checked(theory, notation, PowAtZero, atZero)
+      powAtSuccessor <- checked(theory, notation, PowAtSuccessor, atSuccessor)
+
+      // The ADDITION recurrences are in here and not only multiplication's, because the
+      // exponent on the left of [[PowAddsExponents]] is a SUM and the induction has to open it.
+      // Without `NUM_ADD m ZERO = m` and `NUM_ADD ZERO n = n` the base case leaves
+      // `NUM_POW m (NUM_ADD n ZERO)` against `NUM_ADD ZERO (NUM_POW m n)`, which is how the
+      // omission announced itself.
+      arithmetic = Vector(
+        powAtZero,
+        powAtSuccessor,
+        mulFacts(MulAtZero),
+        mulFacts(MulAtSuccessor),
+        mulFacts(TimesOne),
+        mulFacts(MulAssociative),
+        mulFacts(AddAtZero),
+        mulFacts(ZeroPlus),
+        mulFacts(AddAtSuccessor))
+
+      // `m^(n+p) = m^n * m^p` by induction on `p`: the step unfolds both sides to a product and
+      // associativity is what brings the two together. The addition recurrence has to be in the
+      // rules as well, since the exponent on the left is a sum that the step has to open.
+      addsExponents <- byInduction(
+        driver,
+        theory,
+        notation,
+        PowAddsExponents,
+        arithmetic)
+      oneToAnyPower <- byInduction(driver, theory, notation, OneToAnyPower, arithmetic)
+      // Not an induction: two unfoldings of multiplication and the unit, then reflexivity.
+      timesTwo <- byRewriting(logic, theory, notation, TimesTwo, arithmetic)
+    } yield (
+      theory,
+      definition,
+      Map(
+        PowAtZero -> powAtZero,
+        PowAtSuccessor -> powAtSuccessor,
+        PowAddsExponents -> addsExponents,
+        OneToAnyPower -> oneToAnyPower,
+        TimesTwo -> timesTwo
+      )
+    )
+  }
+
+  /* ------------------------------------------------------------------ order */
+
+  /**
+   * The order, defined as the existential a reader would write, and the six facts it carries.
+   *
+   * `m <= n` is `?d. m + d = n`, so every fact about it is a witness: reflexivity is `ZERO`,
+   * `0 <= n` is `n`, `m <= SUC m` is `SUC ZERO`, and transitivity is the sum of the two witnesses
+   * it was given. That is the whole of why this definition was chosen over `~(n < m)`: the
+   * existential is what a proof about it opens, and each of these is one line of arithmetic under
+   * that opening.
+   *
+   * Antisymmetry is the one that costs something, and what it costs is two lemmas about addition
+   * that nothing else here needed: `m + n = m` forces `n = ZERO`, by induction on `m` through the
+   * injectivity of the successor, and `m + n = ZERO` forces `m = ZERO`, by an induction whose step
+   * is the successor never being zero. Those two are where the axiom of infinity finally reaches
+   * the order.
+   *
+   * Totality and trichotomy are the deep pair and they come last, in that order: the order is
+   * shown total by an induction, and then trichotomy is that with each half split on whether its
+   * witness is zero. `Natural`'s case analysis on a number is what both splits are, and
+   * `splitOnGap` is the step they share.
+   */
+  private def order(
+    logic: Logic,
+    base: Theory,
+    notation: Notation,
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural,
+    driver: Induct
+  ): Either[LogicError, (Theory, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+
+    for {
+      nonStrictBody <- Parser.term(base, notation, "\\m:num. \\n:num. ?d:num. NUM_ADD m d = n")
+      nonStrict <- LogicError.lift(Kernel.defineConstant(base, NonStrictOrder, nonStrictBody))
+      (withNonStrict, nonStrictDefinition) = nonStrict
+
+      strictBody <- Parser.term(withNonStrict, notation, "\\m:num. \\n:num. NUM_LE (SUC m) n")
+      strict <- LogicError.lift(Kernel.defineConstant(withNonStrict, StrictOrder, strictBody))
+      (theory, strictDefinition) = strict
+
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      successorOfN <- LogicError.lift(Term.app(successor, n))
+      one <- LogicError.lift(Term.app(successor, zero))
+
+      // Reflexivity: nothing has to be added to reach yourself.
+      atZeroOfN <- rules.spec(n, arithmetic(AddAtZero))
+      reflexiveAt <- atMost(logic, nonStrictDefinition, n, n, zero, atZeroOfN)
+      reflexive <- rules.gen(n, reflexiveAt).flatMap(checked(theory, notation, Reflexive, _))
+
+      // Zero is least: what has to be added is the number itself.
+      zeroPlusN <- rules.spec(n, arithmetic(ZeroPlus))
+      leastAt <- atMost(logic, nonStrictDefinition, zero, n, n, zeroPlusN)
+      least <- rules.gen(n, leastAt).flatMap(checked(theory, notation, ZeroIsLeast, _))
+
+      // One step up: `n + SUC ZERO = SUC n`, which is the second recurrence and then the first.
+      throughSuccessor <- rules.specAll(arithmetic(AddAtSuccessor), List(n, zero))
+      insideSuccessor <- Conv.apTerm(successor, atZeroOfN)
+      plusOne <- Conv.trans(throughSuccessor, insideSuccessor)
+      belowAt <- atMost(logic, nonStrictDefinition, n, successorOfN, one, plusOne)
+      below <- rules.gen(n, belowAt).flatMap(checked(theory, notation, AtMostSuccessor, _))
+
+      transitive <- transitivity(logic, theory, notation, nonStrictDefinition, arithmetic)
+      strictTransitive <- strictTransitivity(
+        logic, theory, notation, strictDefinition, transitive, below)
+
+      cancels <- cancellation(driver, theory, notation, arithmetic, naturals)
+      cancelsLeft <- leftCancellation(driver, theory, notation, arithmetic, naturals)
+      sumIsZero <- sumVanishes(driver, theory, notation, arithmetic, naturals)
+      antiSymmetric <- antisymmetry(
+        logic,
+        theory,
+        notation,
+        nonStrictDefinition,
+        arithmetic,
+        (cancels, sumIsZero)
+      )
+
+      // `n < SUC n` is `SUC n <= SUC n`, which is reflexivity. That is what defining the strict
+      // order through the non-strict one buys, and the reason it is defined that way round.
+      strictAt <- Conv.unfold(strictDefinition, List(n, successorOfN))
+      reflexiveAtSuccessor <- rules.spec(successorOfN, reflexive)
+      strictly <- Conv
+        .sym(strictAt)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, reflexiveAtSuccessor)))
+      belowSuccessor <- rules.gen(n, strictly).flatMap(checked(theory, notation, BelowSuccessor, _))
+
+      reached = Map(ZeroIsLeast -> least, AtMostSuccessor -> below, Transitive -> transitive)
+      total <- totality(
+        driver,
+        theory,
+        notation,
+        (nonStrictDefinition, strictDefinition),
+        arithmetic,
+        reached,
+        naturals
+      )
+      trichotomy <- trichotomous(
+        logic,
+        theory,
+        notation,
+        (nonStrictDefinition, strictDefinition),
+        arithmetic,
+        naturals,
+        total
+      )
+
+      // The strict order's own facts, which until 2026-09-11 were derived by two consumers instead:
+      // `Modular` held four of them and `Bounded` two, both because this file was being changed
+      // elsewhere the hour they were written. None of the six mentions anything either of those
+      // defines, and a fact held outside the chain's developments is a fact `docs/lemmas.md` does
+      // not list, `Library.of` collecting the chain and neither of them being in it.
+      successorNotSelf <- successorIsNotItself(
+        logic,
+        theory,
+        notation,
+        arithmetic,
+        cancels,
+        naturals
+      )
+      strictIrreflexive <- strictlyIrreflexive(
+        logic,
+        theory,
+        notation,
+        strictDefinition,
+        antiSymmetric,
+        below,
+        successorNotSelf
+      )
+      belowOrEqual <- belowOrEqualTo(
+        logic,
+        theory,
+        notation,
+        (nonStrictDefinition, strictDefinition),
+        arithmetic,
+        naturals
+      )
+      successorPositive <- successorIsPositive(
+        logic,
+        theory,
+        notation,
+        (nonStrictDefinition, strictDefinition),
+        arithmetic
+      )
+      mulPositive <- productIsPositive(
+        logic,
+        theory,
+        notation,
+        naturals,
+        arithmetic,
+        successorPositive,
+        strictIrreflexive
+      )
+      notBelowZero <- nothingIsBelowZero(
+        logic,
+        theory,
+        notation,
+        (nonStrictDefinition, strictDefinition),
+        sumIsZero,
+        naturals
+      )
+      belowSuccessorCases <- belowSuccessorSplits(
+        logic,
+        theory,
+        notation,
+        (nonStrictDefinition, strictDefinition),
+        arithmetic,
+        naturals
+      )
+
+      atMostFromBelow <- atMostFromStrictlyBelow(
+        logic,
+        theory,
+        notation,
+        strictDefinition,
+        transitive,
+        below
+      )
+      atMostZero <- atMostZeroIsZero(
+        logic,
+        theory,
+        notation,
+        nonStrictDefinition,
+        sumIsZero
+      )
+      atMostThenBelow <- atMostThenStrictlyBelow(
+        logic,
+        theory,
+        notation,
+        belowOrEqual,
+        strictTransitive
+      )
+      belowThenAtMost <- strictlyBelowThenAtMost(
+        logic,
+        theory,
+        notation,
+        strictDefinition,
+        transitive
+      )
+      strongInduction <- courseOfValues(
+        logic,
+        theory,
+        notation,
+        naturals,
+        notBelowZero,
+        belowSuccessorCases,
+        belowSuccessor
+      )
+      addMonotone <- additionIsMonotone(
+        logic,
+        theory,
+        notation,
+        nonStrictDefinition,
+        arithmetic(AddAssociative)
+      )
+      belowExcludesAtMost <- strictExcludesNonStrict(
+        logic, theory, notation, atMostThenBelow, strictIrreflexive)
+      atMostSum <- summandIsAtMostTheSum(
+        logic, theory, notation, addMonotone, least, arithmetic(AddAtZero))
+      addStrictlyMonotone <- additionIsStrictlyMonotone(
+        logic,
+        theory,
+        notation,
+        addMonotone,
+        atMostFromBelow,
+        belowOrEqual,
+        cancelsLeft,
+        strictIrreflexive
+      )
+
+      // Last of the order, because they are the only two over a predicate the caller supplies
+      // rather than facts about two numbers.
+      leastPrinciple <- leastNumber(
+        logic,
+        driver,
+        theory,
+        notation,
+        naturals,
+        belowSuccessor,
+        notBelowZero,
+        belowSuccessorCases
+      )
+      greatestPrinciple <- greatestBounded(
+        logic,
+        theory,
+        notation,
+        naturals,
+        leastPrinciple,
+        belowSuccessor,
+        reflexive,
+        belowOrEqual,
+        belowSuccessorCases,
+        atMostFromBelow,
+        atMostZero
+      )
+    } yield (
+      theory,
+      Map(NonStrictOrder -> nonStrictDefinition, StrictOrder -> strictDefinition),
+      Map(
+        Reflexive -> reflexive,
+        ZeroIsLeast -> least,
+        AtMostSuccessor -> below,
+        Transitive -> transitive,
+        StrictTransitive -> strictTransitive,
+        AddCancels -> cancels,
+        AddCancelsLeft -> cancelsLeft,
+        SumIsZero -> sumIsZero,
+        AntiSymmetric -> antiSymmetric,
+        BelowSuccessor -> belowSuccessor,
+        Total -> total,
+        Trichotomy -> trichotomy,
+        SuccessorNotSelf -> successorNotSelf,
+        StrictIrreflexive -> strictIrreflexive,
+        BelowOrEqual -> belowOrEqual,
+        SuccessorPositive -> successorPositive,
+        MulPositive -> mulPositive,
+        NotBelowZero -> notBelowZero,
+        BelowSuccessorCases -> belowSuccessorCases,
+        AtMostFromBelow -> atMostFromBelow,
+        AtMostThenBelow -> atMostThenBelow,
+        AddMonotone -> addMonotone,
+        AddStrictlyMonotone -> addStrictlyMonotone,
+        BelowExcludesAtMost -> belowExcludesAtMost,
+        AtMostSum -> atMostSum,
+        BelowThenAtMost -> belowThenAtMost,
+        StrongInduction -> strongInduction,
+        AtMostZero -> atMostZero,
+        LeastNumber -> leastPrinciple,
+        GreatestBounded -> greatestPrinciple
+      )
+    )
+  }
+
+  /**
+   * `|- !m n. NUM_LE m n \/ NUM_LE n m`, by induction on the second.
+   *
+   * The base is `0 <= m`. The step has the two cases the hypothesis gives: if `m <= k` then
+   * `m <= SUC k` by transitivity through `k <= SUC k`, and if `k <= m` then the witness of that
+   * decides which way the new pair goes, which is what `splitOnGap` is for. Zero witness means
+   * `k` is `m`, and then `m <= SUC k` is `k <= SUC k` with one name rewritten; a witness of
+   * `SUC j` means `SUC k <= m`, with `j` as the new witness.
+   *
+   * This is the induction trichotomy rests on, and it is the only place in the file where the case
+   * split on a number is used twice over: once on the hypothesis and once on a witness.
+   */
+  private def totality(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    definitions: (Kernel.Thm, Kernel.Thm),
+    arithmetic: Map[String, Kernel.Thm],
+    reached: Map[String, Kernel.Thm],
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = driver.logic
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val (nonStrict, strict) = definitions
+
+    for {
+      statement <- stated(theory, notation, Total)
+      cases <- naturals.fact(Natural.ZeroOrSuccessor)
+      relation <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      result <- driver.proveBy(
+        statement,
+        goal =>
+          for {
+            sides <- logic.destDisj(goal).toRight(NotOfForm("a disjunction", goal))
+            number <- sides._1 match {
+              case App(App(_, left), _) => Right(left)
+              case other => Left(NotOfForm("a bound on a number", other))
+            }
+            least <- rules.spec(number, reached(ZeroIsLeast))
+            injected <- rules.disjIntro2(sides._1, least)
+          } yield injected,
+        opened =>
+          val goal = opened.goal
+          val hypothesis = opened.hypothesis
+          for {
+            sides <- logic.destDisj(goal).toRight(NotOfForm("a disjunction", goal))
+            (left, right) = sides
+            pieces <- left match {
+              case App(App(_, subject), App(_, step)) => Right((subject, step))
+              case other => Left(NotOfForm("a bound below a successor", other))
+            }
+            (subject, step) = pieces
+            successorOfStep <- LogicError.lift(Term.app(successor, step))
+
+            halves <- logic
+              .destDisj(hypothesis.conclusion)
+              .toRight(NotOfForm("a disjunction", hypothesis.conclusion))
+            (below, above) = halves
+
+            // `subject <= step`, so `subject <= SUC step` through `step <= SUC step`.
+            assumedBelow <- LogicError.lift(Kernel.assume(below))
+            upward <- rules.spec(step, reached(AtMostSuccessor))
+            pair <- rules.conjIntro(assumedBelow, upward)
+            chained <- rules
+              .specAll(reached(Transitive), List(subject, step, successorOfStep))
+              .flatMap(rules.mp(_, pair))
+            firstCase <- rules.disjIntro1(right, chained)
+
+            // `step <= subject`, and then it depends on the witness.
+            assumedAbove <- LogicError.lift(Kernel.assume(above))
+            secondCase <- splitOnGap(
+              logic,
+              theory,
+              nonStrict,
+              strict,
+              arithmetic(Shift),
+              arithmetic(AddAtZero),
+              cases,
+              step,
+              subject,
+              assumedAbove,
+              equal =>
+                for {
+                  atStep <- rules.spec(step, reached(AtMostSuccessor))
+                  carried <- Conv.apTerm(relation, equal).flatMap(Conv.apThm(_, successorOfStep))
+                  moved <- LogicError.lift(Kernel.eqMp(carried, atStep))
+                  injected <- rules.disjIntro1(right, moved)
+                } yield injected,
+              strictly =>
+                for {
+                  unfolded <- Conv.unfold(strict, List(step, subject))
+                  plain <- LogicError.lift(Kernel.eqMp(unfolded, strictly))
+                  injected <- rules.disjIntro2(left, plain)
+                } yield injected
+            )
+
+            decided <- rules.disjElim(hypothesis, firstCase, secondCase)
+          } yield decided
+      )
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LT m n \/ m = n \/ NUM_LT n m`.
+   *
+   * Totality gives one of the two bounds, and `splitOnGap` turns whichever it gives into the
+   * strict bound or the equation, according to whether its witness is zero. The two branches are
+   * the same argument with the roles swapped, which is why they are two calls of one function and
+   * differ only in which disjunct they inject into.
+   */
+  private def trichotomous(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definitions: (Kernel.Thm, Kernel.Thm),
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural,
+    total: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (nonStrict, strict) = definitions
+
+    for {
+      statement <- stated(theory, notation, Trichotomy)
+      cases <- naturals.fact(Natural.ZeroOrSuccessor)
+
+      // The variables the statement quantifies over, so that what is generalised at the end is
+      // what was written rather than something equal to it.
+      stripped <- Logic.stripForall(statement)
+      subject <- stripped._1.headOption.toRight(NotOfForm("a claim about two numbers", statement))
+      other <- stripped._1.lift(1).toRight(NotOfForm("a claim about two numbers", statement))
+      goal = stripped._2
+
+      sides <- logic.destDisj(goal).toRight(NotOfForm("a disjunction", goal))
+      (strictlyBelow, rest) = sides
+      tail <- logic.destDisj(rest).toRight(NotOfForm("a disjunction", rest))
+      (equalPart, strictlyAbove) = tail
+
+      bounded <- rules.specAll(total, List(subject, other))
+      halves <- logic
+        .destDisj(bounded.conclusion)
+        .toRight(NotOfForm("a disjunction", bounded.conclusion))
+      (below, above) = halves
+
+      assumedBelow <- LogicError.lift(Kernel.assume(below))
+      firstCase <- splitOnGap(
+        logic,
+        theory,
+        nonStrict,
+        strict,
+        arithmetic(Shift),
+        arithmetic(AddAtZero),
+        cases,
+        subject,
+        other,
+        assumedBelow,
+        equal =>
+          for {
+            middle <- rules.disjIntro1(strictlyAbove, equal)
+            injected <- rules.disjIntro2(strictlyBelow, middle)
+          } yield injected,
+        strictly => rules.disjIntro1(rest, strictly)
+      )
+
+      assumedAbove <- LogicError.lift(Kernel.assume(above))
+      secondCase <- splitOnGap(
+        logic,
+        theory,
+        nonStrict,
+        strict,
+        arithmetic(Shift),
+        arithmetic(AddAtZero),
+        cases,
+        other,
+        subject,
+        assumedAbove,
+        equal =>
+          for {
+            flipped <- Conv.sym(equal)
+            middle <- rules.disjIntro1(strictlyAbove, flipped)
+            injected <- rules.disjIntro2(strictlyBelow, middle)
+          } yield injected,
+        strictly =>
+          for {
+            middle <- rules.disjIntro2(equalPart, strictly)
+            injected <- rules.disjIntro2(strictlyBelow, middle)
+          } yield injected
+      )
+
+      decided <- rules.disjElim(bounded, firstCase, secondCase)
+      result <- rules
+        .genAll(decided, List(subject, other))
+        .flatMap(checked(theory, notation, Trichotomy, _))
+    } yield result
+  }
+
+  /**
+   * Decide a non-strict bound by its witness, and hand the caller whichever half it turned out to
+   * be.
+   *
+   * `left <= right` says some `d` closes the gap. The case split on a number says `d` is `ZERO` or
+   * a successor, and those are the two halves of `<=`: a zero gap means `left = right`, and a gap
+   * of `SUC j` means `SUC left + j = right`, which is `left < right` with `j` as the witness. That
+   * second step is the whole use of [[Shift]].
+   *
+   * The two continuations rather than a disjunction, because both callers want to build something
+   * of their own out of each half and a disjunction would have to be taken apart again by each of
+   * them. Both have to return the same proposition, which the case analysis checks: a caller whose
+   * two branches prove different things is refused rather than given the first.
+   */
+  private def splitOnGap(
+    logic: Logic,
+    theory: Theory,
+    nonStrict: Kernel.Thm,
+    strict: Kernel.Thm,
+    shift: Kernel.Thm,
+    addAtZero: Kernel.Thm,
+    cases: Kernel.Thm,
+    left: Term,
+    right: Term,
+    evidence: Kernel.Thm,
+    fromEqual: Kernel.Thm => Either[LogicError, Kernel.Thm],
+    fromBelow: Kernel.Thm => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    // Fresh with respect to the hypotheses as well as the conclusion: a witness that collided with
+    // a variable of an assumption would narrow the case to where the two are equal, and would not
+    // be refused anywhere.
+    val avoid = evidence.hypotheses.foldLeft(
+      Term.freeVariables(evidence.conclusion) ++ Term.freeVariables(left) ++ Term.freeVariables(right)
+    )((found, hypothesis) => found ++ Term.freeVariables(hypothesis))
+    val difference = Conv.freshVariable("d", numbers, avoid)
+    val step = Conv.freshVariable("j", numbers, avoid + difference)
+
+    for {
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      from <- LogicError.lift(Term.app(plus, left))
+
+      opened <- gap(logic, nonStrict, left, right, evidence)
+      reaching <- LogicError.lift(Term.app(from, difference).flatMap(Term.eq(_, right)))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      split <- rules.spec(difference, cases)
+      branches <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (isZero, isSuccessor) = branches
+
+      // A gap of zero: `left + d = left`, so `left` is `right`.
+      assumedZero <- LogicError.lift(Kernel.assume(isZero))
+      carried <- Conv.apTerm(from, assumedZero)
+      unit <- rules.spec(left, addAtZero)
+      toLeft <- Conv.trans(carried, unit)
+      equal <- Conv.sym(toLeft).flatMap(Conv.trans(_, reaches))
+      zeroBranch <- fromEqual(equal)
+
+      // A gap of `SUC j`: `SUC left + j = right`, so `left` is strictly below `right`.
+      assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+      successorOfStep <- LogicError.lift(Term.app(successor, step))
+      isStep <- LogicError.lift(Term.eq(difference, successorOfStep))
+      assumedStep <- LogicError.lift(Kernel.assume(isStep))
+      carriedStep <- Conv.apTerm(from, assumedStep)
+      shifted <- rules.specAll(shift, List(left, step))
+      toShift <- Conv.trans(carriedStep, shifted)
+      reachesRight <- Conv.sym(toShift).flatMap(Conv.trans(_, reaches))
+      successorOfLeft <- LogicError.lift(Term.app(successor, left))
+      bounded <- atMost(logic, nonStrict, successorOfLeft, right, step, reachesRight)
+      unfolded <- Conv.unfold(strict, List(left, right))
+      strictly <- Conv
+        .sym(unfolded)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, bounded)))
+      reached <- fromBelow(strictly)
+      successorBranch <- rules.existsElim(assumedSuccessor, step, reached)
+
+      decided <- rules.disjElim(split, zeroBranch, successorBranch)
+      result <- rules.existsElim(opened, difference, decided)
+    } yield result
+  }
+
+  /* ------------------------------------------ the strict order's own six facts */
+
+  /**
+   * `|- !n. ~(SUC n = n)`.
+   *
+   * `n + SUC ZERO = SUC n` is the second recurrence and then the first, so a number equal to its
+   * own successor is a number to which `SUC ZERO` may be added without changing it, and
+   * [[AddCancels]] says such an addend is `ZERO`. `NUM_SUC_NOT_ZERO` at `ZERO` closes it.
+   *
+   * It goes through cancellation rather than through the successor's injectivity, which is the
+   * thing a reader expects and which does not work: injectivity takes `SUC m = SUC n` down to
+   * `m = n` and says nothing about a number and its own successor.
+   */
+  private def successorIsNotItself(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    arithmetic: Map[String, Kernel.Thm],
+    cancels: Kernel.Thm,
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+
+    for {
+      notZero <- naturals.fact(Natural.SuccessorNotZero)
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      one <- LogicError.lift(Term.app(successor, zero))
+      successorOfN <- LogicError.lift(Term.app(successor, n))
+
+      target <- LogicError.lift(Term.eq(successorOfN, n))
+      assumed <- LogicError.lift(Kernel.assume(target))
+
+      atSuccessor <- rules.specAll(arithmetic(AddAtSuccessor), List(n, zero))
+      atZero <- rules.spec(n, arithmetic(AddAtZero))
+      inside <- Conv.apTerm(successor, atZero)
+      plusOne <- Conv.trans(atSuccessor, inside)
+
+      reached <- Conv.trans(plusOne, assumed)
+      vanishes <- rules.specAll(cancels, List(one, n)).flatMap(rules.mp(_, reached))
+      never <- rules.spec(zero, notZero)
+      absurd <- rules.notElim(never, vanishes)
+      denied <- rules.notIntro(target, absurd)
+      general <- rules.gen(n, denied)
+      result <- checked(theory, notation, SuccessorNotSelf, general)
+    } yield result
+  }
+
+  /**
+   * `|- !n. ~(NUM_LT n n)`.
+   *
+   * `NUM_LT n n` **is** `NUM_LE (SUC n) n` by definition, and `NUM_LE n (SUC n)` is already a fact,
+   * so antisymmetry gives `SUC n = n` and [[successorIsNotItself]] denies it.
+   */
+  private def strictlyIrreflexive(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    strict: Kernel.Thm,
+    antiSymmetric: Kernel.Thm,
+    atMostSuccessor: Kernel.Thm,
+    successorNotSelf: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+
+    for {
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      successorOfN <- LogicError.lift(Term.app(successor, n))
+
+      unfolded <- Conv.unfold(strict, List(n, n))
+      target <- leftOf(unfolded)
+      assumed <- LogicError.lift(Kernel.assume(target))
+      bounded <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+
+      other <- rules.spec(n, atMostSuccessor)
+      pair <- rules.conjIntro(bounded, other)
+      equal <- rules.specAll(antiSymmetric, List(successorOfN, n)).flatMap(rules.mp(_, pair))
+
+      never <- rules.spec(n, successorNotSelf)
+      absurd <- rules.notElim(never, equal)
+      denied <- rules.notIntro(target, absurd)
+      general <- rules.gen(n, denied)
+      result <- checked(theory, notation, StrictIrreflexive, general)
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LE m n ==> NUM_LT m n \/ m = n`.
+   *
+   * [[splitOnGap]] with the two continuations being the two injections, which is all it is: the
+   * private function decides a non-strict bound by its witness and hands each half over, and this
+   * puts the halves back into a disjunction.
+   *
+   * That it is [[splitOnGap]] and not a second argument was worth measuring, because `Modular`
+   * proved the same statement a different way while this file was being changed elsewhere: from
+   * trichotomy, with the third case refuted by [[strictlyIrreflexive]]. Both are correct and both
+   * reach the identical term, which is how the two were compared. Counted on 2026-09-11 with
+   * `Derivation.size`: 8379 inferences through the gap and 13385 through trichotomy. The difference
+   * is [[Trichotomy]] itself, 11044 on its own and the deepest theorem in the file, which a question
+   * about one pair does not need.
+   */
+  private def belowOrEqualTo(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definitions: (Kernel.Thm, Kernel.Thm),
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (nonStrict, strict) = definitions
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      cases <- naturals.fact(Natural.ZeroOrSuccessor)
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      lessThan <- LogicError.lift(theory.constant(StrictOrder, relation))
+
+      premise <- LogicError.lift(Term.appAll(atMostConstant, List(m, n)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      strictly <- LogicError.lift(Term.appAll(lessThan, List(m, n)))
+      equal <- LogicError.lift(Term.eq(m, n))
+
+      decided <- splitOnGap(
+        logic,
+        theory,
+        nonStrict,
+        strict,
+        arithmetic(Shift),
+        arithmetic(AddAtZero),
+        cases,
+        m,
+        n,
+        assumed,
+        proved => rules.disjIntro2(strictly, proved),
+        proved => rules.disjIntro1(equal, proved)
+      )
+
+      discharged <- rules.disch(premise, decided)
+      general <- rules.genAll(discharged, List(m, n))
+      result <- checked(theory, notation, BelowOrEqual, general)
+    } yield result
+  }
+
+
+  /**
+   * [[MulPositive]]: a product of positives is a successor, and a successor is positive.
+   *
+   * Neither factor can be zero, so `Natural.ZeroOrSuccessor` makes each one a successor; then
+   * `m * SUC n'` is `m * n' + m` by [[MulAtSuccessor]] and `m` is itself `SUC m'`, so
+   * [[AddAtSuccessor]] pulls the successor outside and [[SuccessorPositive]] closes it.
+   *
+   * The route through successors rather than through the order is what keeps it short. Arguing it
+   * as an order fact would want cancellation or a case split on which factor is larger, and neither
+   * is needed: what is being shown is that the product is not zero, and "is a successor" is the
+   * strongest way to say that here.
+   */
+  private def productIsPositive(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    naturals: Natural,
+    arithmetic: Map[String, Kernel.Thm],
+    successorPositive: Kernel.Thm,
+    strictIrreflexive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      times <- LogicError.lift(
+        theory.constant(Multiplication, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      strict <- LogicError.lift(theory.constant(StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool))))
+
+      positiveM <- LogicError.lift(Term.appAll(strict, List(zero, m)))
+      positiveN <- LogicError.lift(Term.appAll(strict, List(zero, n)))
+      product <- LogicError.lift(Term.appAll(times, List(m, n)))
+      goal <- LogicError.lift(Term.appAll(strict, List(zero, product)))
+      assumedM <- LogicError.lift(Kernel.assume(positiveM))
+      assumedN <- LogicError.lift(Kernel.assume(positiveN))
+
+      cases <- naturals.fact(Natural.ZeroOrSuccessor)
+      atSuccessor <- arithmetic.get(MulAtSuccessor).toRight(MissingDefinition(MulAtSuccessor))
+      addAtSuccessor <- arithmetic.get(AddAtSuccessor).toRight(MissingDefinition(AddAtSuccessor))
+
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      belowZero <- LogicError.lift(Term.app(strict, zero))
+
+      reached <- asSuccessor(
+        logic, cases, strictIrreflexive, assumedM, m, zero, belowZero, goal, Set(m, n)
+      ) { (leftInner, leftIs) =>
+          asSuccessor(
+            logic, cases, strictIrreflexive, assumedN, n, zero, belowZero, goal, Set(m, n, leftInner)
+          ) { (rightInner, rightIs) =>
+              for {
+                // `m * n = m * SUC n' = m * n' + m`
+                timesM <- LogicError.lift(Term.app(times, m))
+                opened <- Conv.apTerm(timesM, rightIs)
+                stepped <- rules.specAll(atSuccessor, List(m, rightInner))
+                asProduct <- Conv.trans(opened, stepped)
+
+                // `m * n' + m = m * n' + SUC m' = SUC (m * n' + m')`
+                scaled <- LogicError.lift(Term.appAll(times, List(m, rightInner)))
+                plusScaled <- LogicError.lift(Term.app(plus, scaled))
+                tail <- Conv.apTerm(plusScaled, leftIs)
+                asSum <- rules.specAll(addAtSuccessor, List(scaled, leftInner))
+                whole <- Conv.trans(asProduct, tail).flatMap(Conv.trans(_, asSum))
+
+                inside <- Term
+                  .destEq(whole.conclusion)
+                  .map(_._2)
+                  .toRight(NotOfForm("an equation", whole.conclusion))
+                argument <- inside match {
+                  case App(_, value) => Right(value)
+                  case other => Left(NotOfForm("a successor", other))
+                }
+                positive <- rules.spec(argument, successorPositive)
+                back <- Conv.sym(whole)
+                carried <- Conv.apTerm(belowZero, back)
+                result <- LogicError.lift(Kernel.eqMp(carried, positive))
+              } yield result
+          }
+      }
+
+      dischargedN <- rules.disch(positiveN, reached)
+      dischargedM <- rules.disch(positiveM, dischargedN)
+      general <- rules.genAll(dischargedM, List(m, n))
+      _ <-
+        if (general.hypotheses.isEmpty) Right(())
+        else Left(NotOfForm("a theorem with nothing assumed", general.conclusion))
+    } yield general
+  }
+
+  /**
+   * A positive number is a successor, and the caller gets the predecessor and the equation.
+   *
+   * `Natural.ZeroOrSuccessor` offers zero or a successor; the zero arm is refuted by the positivity
+   * the caller holds, since it would make `ZERO` below itself.
+   */
+  private def asSuccessor(
+    logic: Logic,
+    cases: Kernel.Thm,
+    strictIrreflexive: Kernel.Thm,
+    positive: Kernel.Thm,
+    subject: Term,
+    zero: Term,
+    belowZero: Term,
+    goal: Term,
+    avoid: Set[FVar]
+  )(
+    reach: (FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      split <- rules.spec(subject, cases)
+      arms <- logic.destDisj(split.conclusion).toRight(NotOfForm("a disjunction", split.conclusion))
+      (isZero, isSuccessor) = arms
+
+      refuted <- for {
+        assumed <- LogicError.lift(Kernel.assume(isZero))
+        carried <- Conv.apTerm(belowZero, assumed)
+        absurd <- LogicError.lift(Kernel.eqMp(carried, positive))
+        never <- rules.spec(zero, strictIrreflexive)
+        contradiction <- rules.notElim(never, absurd)
+        anything <- rules.falsityElim(goal, contradiction)
+      } yield anything
+
+      taken <- withPredecessor(logic, isSuccessor, avoid)(reach)
+      result <- rules.disjElim(split, refuted, taken)
+    } yield result
+  }
+
+  /** Open `?y. subject = SUC y` and hand the predecessor and the equation over. */
+  private def withPredecessor(
+    logic: Logic,
+    existential: Term,
+    avoid: Set[FVar]
+  )(
+    reach: (FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    for {
+      assumedExists <- LogicError.lift(Kernel.assume(existential))
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      // Avoiding the caller's variables and not only this existential's: the two factors are
+      // opened one inside the other, so a name chosen against the inner statement alone collides
+      // with the outer predecessor and the elimination refuses with "k occurs free".
+      variable = Conv.freshVariable("k", numbers, avoid ++ Term.freeVariables(existential))
+      applied <- LogicError.lift(Term.app(predicate, variable))
+      contraction <- Conv.betaRoot(applied)
+      instance <- Term
+        .destEq(contraction.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", contraction.conclusion))
+      assumed <- LogicError.lift(Kernel.assume(instance))
+      reached <- reach(variable, assumed)
+      result <- rules.existsElim(assumedExists, variable, reached)
+    } yield result
+  }
+
+  /**
+   * `|- !n. NUM_LT ZERO (SUC n)`.
+   *
+   * `NUM_LT ZERO (SUC n)` is `NUM_LE (SUC ZERO) (SUC n)` by definition, and `n` closes that gap:
+   * `SUC ZERO + n = SUC n` is [[SuccessorPlus]] and then [[ZeroPlus]] under a successor. One
+   * witness and nothing else, which is what defining the strict order through the non-strict one
+   * buys everywhere else in this file too.
+   */
+  private def successorIsPositive(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definitions: (Kernel.Thm, Kernel.Thm),
+    arithmetic: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (nonStrict, strict) = definitions
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+
+    for {
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      one <- LogicError.lift(Term.app(successor, zero))
+      successorOfN <- LogicError.lift(Term.app(successor, n))
+
+      fromSuccessor <- rules.specAll(arithmetic(SuccessorPlus), List(zero, n))
+      fromZero <- rules.spec(n, arithmetic(ZeroPlus))
+      inside <- Conv.apTerm(successor, fromZero)
+      reaches <- Conv.trans(fromSuccessor, inside)
+
+      bounded <- atMost(logic, nonStrict, one, successorOfN, n, reaches)
+      unfolded <- Conv.unfold(strict, List(zero, successorOfN))
+      strictly <- Conv
+        .sym(unfolded)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, bounded)))
+      general <- rules.gen(n, strictly)
+      result <- checked(theory, notation, SuccessorPositive, general)
+    } yield result
+  }
+
+  /**
+   * `|- !i. ~(NUM_LT i ZERO)`.
+   *
+   * `NUM_LT i ZERO` unfolds twice to `?d. NUM_ADD (SUC i) d = ZERO`, and [[SumIsZero]] turns any
+   * witness of that into `SUC i = ZERO`, which `NUM_SUC_NOT_ZERO` refuses. Open the existential,
+   * contradict, close.
+   */
+  private def nothingIsBelowZero(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definitions: (Kernel.Thm, Kernel.Thm),
+    sumIsZero: Kernel.Thm,
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (nonStrict, strict) = definitions
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val i = Term.variable("i", numbers)
+
+    for {
+      successorNotZero <- naturals.fact(Natural.SuccessorNotZero)
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      successorOfI <- LogicError.lift(Term.app(successor, i))
+      from <- LogicError.lift(Term.app(plus, successorOfI))
+
+      unfolded <- Conv.unfold(strict, List(i, zero))
+      guard <- leftOf(unfolded)
+      assumed <- LogicError.lift(Kernel.assume(guard))
+      bounded <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+      existential <- gap(logic, nonStrict, successorOfI, zero, bounded)
+
+      difference = Conv.freshVariable("d", numbers, Term.freeVariables(guard))
+      sum <- LogicError.lift(Term.app(from, difference))
+      reaching <- LogicError.lift(Term.eq(sum, zero))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      isZero <- rules
+        .specAll(sumIsZero, List(successorOfI, difference))
+        .flatMap(rules.mp(_, reaches))
+      never <- rules.spec(i, successorNotZero)
+      absurd <- rules.notElim(never, isZero)
+      closed <- rules.existsElim(existential, difference, absurd)
+
+      negated <- rules.notIntro(guard, closed)
+      general <- rules.gen(i, negated)
+      result <- checked(theory, notation, NotBelowZero, general)
+    } yield result
+  }
+
+  /**
+   * `|- !n i. NUM_LT i (SUC n) ==> NUM_LT i n \/ i = n`.
+   *
+   * `NUM_LT i (SUC n)` is `?d. NUM_ADD (SUC i) d = SUC n`, and the case split on `d` is the whole
+   * argument. A gap of `ZERO` gives `SUC i = SUC n`, so `i = n` by injectivity. A gap of `SUC j`
+   * gives `SUC (NUM_ADD (SUC i) j) = SUC n` through [[AddAtSuccessor]], so
+   * `NUM_ADD (SUC i) j = n` by the same injectivity, and that is `NUM_LE (SUC i) n` with `j` as its
+   * witness, which is `NUM_LT i n`.
+   *
+   * [[Shift]] does not appear, which is worth a line because [[splitOnGap]] is the same shape and
+   * needs it. There the gap is opened on `NUM_LE left right` and a successor has to be moved across
+   * the sum to reach a strict bound; here the sum already carries the successor on the left, and
+   * what moves is the one on the right, which is what the recurrence says directly.
+   */
+  private def belowSuccessorSplits(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definitions: (Kernel.Thm, Kernel.Thm),
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (nonStrict, strict) = definitions
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+
+    for {
+      injective <- naturals.fact(Natural.SuccessorInjective)
+      cases <- naturals.fact(Natural.ZeroOrSuccessor)
+
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      lessThan <- LogicError.lift(theory.constant(StrictOrder, relation))
+      successorOfN <- LogicError.lift(Term.app(successor, n))
+      successorOfI <- LogicError.lift(Term.app(successor, i))
+      from <- LogicError.lift(Term.app(plus, successorOfI))
+
+      unfolded <- Conv.unfold(strict, List(i, successorOfN))
+      guard <- leftOf(unfolded)
+      assumed <- LogicError.lift(Kernel.assume(guard))
+      bounded <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+      existential <- gap(logic, nonStrict, successorOfI, successorOfN, bounded)
+
+      strictlyBelow <- LogicError.lift(Term.appAll(lessThan, List(i, n)))
+      equalTo <- LogicError.lift(Term.eq(i, n))
+
+      // Fresh against the hypothesis as well as the conclusion, for the reason [[splitOnGap]]
+      // gives: a witness colliding with a variable already in play would narrow the case to where
+      // the two are equal, and would be refused nowhere.
+      avoid = Term.freeVariables(guard) ++ Term.freeVariables(strictlyBelow)
+      difference = Conv.freshVariable("d", numbers, avoid)
+      step = Conv.freshVariable("j", numbers, avoid + difference)
+
+      sum <- LogicError.lift(Term.app(from, difference))
+      reaching <- LogicError.lift(Term.eq(sum, successorOfN))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      split <- rules.spec(difference, cases)
+      branches <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (isZero, isSuccessor) = branches
+
+      // A gap of zero: `SUC i + ZERO` is `SUC i`, so the two successors are equal.
+      assumedZero <- LogicError.lift(Kernel.assume(isZero))
+      carried <- Conv.apTerm(from, assumedZero)
+      unit <- rules.spec(successorOfI, arithmetic(AddAtZero))
+      toSuccessor <- Conv.trans(carried, unit)
+      sameSuccessor <- Conv.sym(toSuccessor).flatMap(Conv.trans(_, reaches))
+      equal <- rules.specAll(injective, List(i, n)).flatMap(rules.mp(_, sameSuccessor))
+      zeroBranch <- rules.disjIntro2(strictlyBelow, equal)
+
+      // A gap of `SUC j`: the successor comes out of the sum, and `j` is the witness one down.
+      assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+      successorOfStep <- LogicError.lift(Term.app(successor, step))
+      isStep <- LogicError.lift(Term.eq(difference, successorOfStep))
+      assumedStep <- LogicError.lift(Kernel.assume(isStep))
+      carriedStep <- Conv.apTerm(from, assumedStep)
+      recurrence <- rules.specAll(arithmetic(AddAtSuccessor), List(successorOfI, step))
+      toStep <- Conv.trans(carriedStep, recurrence)
+      sameStep <- Conv.sym(toStep).flatMap(Conv.trans(_, reaches))
+      shorter <- LogicError.lift(Term.app(from, step))
+      reachesN <- rules.specAll(injective, List(shorter, n)).flatMap(rules.mp(_, sameStep))
+
+      atMostN <- atMost(logic, nonStrict, successorOfI, n, step, reachesN)
+      unfoldedAtN <- Conv.unfold(strict, List(i, n))
+      strictly <- Conv
+        .sym(unfoldedAtN)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, atMostN)))
+      injected <- rules.disjIntro1(equalTo, strictly)
+      successorBranch <- rules.existsElim(assumedSuccessor, step, injected)
+
+      decided <- rules.disjElim(split, zeroBranch, successorBranch)
+      closed <- rules.existsElim(existential, difference, decided)
+      implied <- rules.disch(guard, closed)
+      general <- rules.gen(i, implied).flatMap(rules.gen(n, _))
+      result <- checked(theory, notation, BelowSuccessorCases, general)
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LT m n ==> NUM_LE m n`.
+   *
+   * `NUM_LT m n` **is** `NUM_LE (SUC m) n`, so the successor is on the wrong side and one step of
+   * transitivity through `NUM_LE m (SUC m)` puts it back.
+   */
+  private def atMostFromStrictlyBelow(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    strict: Kernel.Thm,
+    transitive: Kernel.Thm,
+    atMostSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      successorOfM <- LogicError.lift(Term.app(successor, m))
+
+      unfolded <- Conv.unfold(strict, List(m, n))
+      premise <- leftOf(unfolded)
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      bounded <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+
+      upward <- rules.spec(m, atMostSuccessor)
+      pair <- rules.conjIntro(upward, bounded)
+      chained <- rules
+        .specAll(transitive, List(m, successorOfM, n))
+        .flatMap(rules.mp(_, pair))
+
+      discharged <- rules.disch(premise, chained)
+      general <- rules.genAll(discharged, List(m, n))
+      result <- checked(theory, notation, AtMostFromBelow, general)
+    } yield result
+  }
+
+  /**
+   * `|- !n. NUM_LE n ZERO ==> n = ZERO`.
+   *
+   * The bound unfolds to `?d. NUM_ADD n d = ZERO`, and [[SumIsZero]] reads the answer off any
+   * witness of it.
+   */
+  /**
+   * [[AtMostThenBelow]]: at most, then strictly below, is strictly below.
+   *
+   * [[BelowOrEqual]] turns `m <= n` into `m < n` or `m = n`. The first branch is
+   * [[StrictTransitive]]; the second carries the equation into `n < p` under a fixed context, which
+   * is a congruence rather than a rewrite because `m` and `n` both occur elsewhere in the goal.
+   */
+  /**
+   * [[AddMonotone]], by carrying the witness of the order across one associativity.
+   *
+   * `NUM_LE m n` is `?d. m + d = n` and nothing else, so the derivation opens that `d`, rewrites
+   * `(p + m) + d` into `p + (m + d)`, and puts the same `d` back. No induction and no case split:
+   * the order on `num` is a statement about a difference, and a common summand does not touch it.
+   */
+  /**
+   * [[BelowThenAtMost]], by unfolding the strict order and never making a case split.
+   *
+   * `NUM_LT m n` is `NUM_LE (SUC m) n` by definition, so the premise is already a non-strict
+   * comparison and [[Transitive]] takes it the rest of the way. It is shorter than
+   * [[AtMostThenBelow]] for that reason and not by luck: the definition puts the successor on the
+   * side this one needs it on.
+   */
+  private def strictlyBelowThenAtMost(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    strictDefinition: Kernel.Thm,
+    transitive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val p = Term.variable("p", numbers)
+
+    for {
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      lessThan <- LogicError.lift(theory.constant(StrictOrder, relation))
+      successorConstant <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      strictly <- LogicError.lift(Term.appAll(lessThan, List(m, n)))
+      atMost <- LogicError.lift(Term.appAll(atMostConstant, List(n, p)))
+      premise <- logic.mkConj(strictly, atMost)
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      strictHalf <- rules.conjElim1(assumed)
+      atMostHalf <- rules.conjElim2(assumed)
+
+      opened <- Conv
+        .unfold(strictDefinition, List(m, n))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, strictHalf)))
+      successor <- LogicError.lift(Term.app(successorConstant, m))
+      chained <- rules
+        .conjIntro(opened, atMostHalf)
+        .flatMap(pair =>
+          rules.specAll(transitive, List(successor, n, p)).flatMap(rules.mp(_, pair))
+        )
+      folded <- Conv
+        .unfold(strictDefinition, List(m, p))
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, chained)))
+
+      discharged <- rules.disch(premise, folded)
+      general <- rules.genAll(discharged, List(m, n, p))
+      result <- checked(theory, notation, BelowThenAtMost, general)
+    } yield result
+  }
+
+  /**
+   * [[StrongInduction]], by ordinary induction over "every number below this one".
+   *
+   * The predicate inducted on is not the caller's: it is `\n. !m. NUM_LT m n ==> P m`, whose base
+   * holds because nothing is below zero and whose step needs only that below a successor is below
+   * or equal. The caller's claim comes out at the end by reading that predicate at `SUC n`, where
+   * `n` itself is one of the numbers below.
+   *
+   * `Induct.proveBy` cannot run it, for the reason `Language`'s numerals meet: the hypothesis has
+   * to be quantified over the other variable, and that driver leaves the others free.
+   */
+  private def courseOfValues(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    naturals: Natural,
+    notBelowZero: Kernel.Thm,
+    belowSuccessorCases: Kernel.Thm,
+    belowSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val claim = Term.variable("P", Type.fun(numbers, Type.Bool))
+    val index = Term.variable("n", numbers)
+
+    for {
+      lessThan <- LogicError.lift(
+        theory.constant(StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      successorConstant <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      /* The step the caller hands over, assumed once. */
+      atIndex <- LogicError.lift(Term.app(claim, index))
+      belowIndex = Conv.freshVariable("m", numbers, Set(claim, index))
+      belowTerm <- LogicError.lift(Term.appAll(lessThan, List(belowIndex, index)))
+      atBelow <- LogicError.lift(Term.app(claim, belowIndex))
+      inner <- logic.mkImp(belowTerm, atBelow)
+      everyBelow <- logic.mkForall(belowIndex, inner)
+      stepBody <- logic.mkImp(everyBelow, atIndex)
+      stepTerm <- logic.mkForall(index, stepBody)
+      assumedStep <- LogicError.lift(Kernel.assume(stepTerm))
+
+      /* The predicate actually inducted on, which is not the caller's. */
+      carrier <- LogicError.lift(Term.abs(index, everyBelow))
+      induction <- naturals.fact(Natural.Induction)
+      instance <- rules.spec(carrier, induction)
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      premises <- logic
+        .destImp(opened.conclusion)
+        .toRight(NotOfForm("an implication", opened.conclusion))
+      halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
+      (baseTerm, stepTermOfInduction) = halves
+
+      /* Nothing is below zero. */
+      base <- for {
+        stripped <- Logic.stripForall(baseTerm)
+        variable <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every number", baseTerm))
+        body <- logic.destImp(stripped._2).toRight(NotOfForm("an implication", stripped._2))
+        assumed <- LogicError.lift(Kernel.assume(body._1))
+        never <- rules.spec(variable, notBelowZero)
+        contradiction <- rules.notElim(never, assumed)
+        anything <- rules.falsityElim(body._2, contradiction)
+        result <- rules.disch(body._1, anything).flatMap(rules.gen(variable, _))
+      } yield result
+
+      /* Below a successor is below or equal, and equal is where the caller's step is spent. */
+      step <- for {
+        stripped <- Logic.stripForall(stepTermOfInduction)
+        variable <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every number", stepTermOfInduction))
+        parts <- logic.destImp(stripped._2).toRight(NotOfForm("an implication", stripped._2))
+        assumedBelow <- LogicError.lift(Kernel.assume(parts._1))
+        innerStripped <- Logic.stripForall(parts._2)
+        target <- innerStripped._1.headOption
+          .toRight(NotOfForm("a claim about every number", parts._2))
+        body <- logic.destImp(innerStripped._2).toRight(NotOfForm("an implication", innerStripped._2))
+        assumedTarget <- LogicError.lift(Kernel.assume(body._1))
+
+        cases <- rules
+          .specAll(belowSuccessorCases, List(variable, target))
+          .flatMap(rules.mp(_, assumedTarget))
+        split <- logic.destDisj(cases.conclusion).toRight(NotOfForm("a disjunction", cases.conclusion))
+
+        fromBelow <- LogicError
+          .lift(Kernel.assume(split._1))
+          .flatMap(held => rules.spec(target, assumedBelow).flatMap(rules.mp(_, held)))
+
+        fromEqual <- for {
+          assumedEqual <- LogicError.lift(Kernel.assume(split._2))
+          here <- rules.spec(variable, assumedStep).flatMap(rules.mp(_, assumedBelow))
+          backwards <- Conv.sym(assumedEqual)
+          carried <- Conv
+            .apTerm(claim, backwards)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, here)))
+        } yield carried
+
+        settled <- rules.disjElim(cases, fromBelow, fromEqual)
+        result <- rules
+          .disch(body._1, settled)
+          .flatMap(rules.gen(target, _))
+          .flatMap(rules.disch(parts._1, _))
+          .flatMap(rules.gen(variable, _))
+      } yield result
+
+      everywhere <- rules.conjIntro(base, step).flatMap(rules.mp(opened, _))
+
+      /* The caller's claim, read off at the successor where the number itself sits below. */
+      successorOfIndex <- LogicError.lift(Term.app(successorConstant, index))
+      atSuccessor <- rules.spec(successorOfIndex, everywhere)
+      reaches <- rules.spec(index, belowSuccessor)
+      here <- rules.spec(index, atSuccessor).flatMap(rules.mp(_, reaches))
+      general <- rules.gen(index, here)
+      discharged <- rules.disch(stepTerm, general).flatMap(rules.gen(claim, _))
+      result <- checked(theory, notation, StrongInduction, discharged)
+    } yield result
+  }
+
+  private def additionIsMonotone(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    nonStrictDefinition: Kernel.Thm,
+    associative: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val arithmeticType = Type.fun(numbers, Type.fun(numbers, numbers))
+    val p = Term.variable("p", numbers)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      plus <- LogicError.lift(theory.constant(Addition, arithmeticType))
+
+      premise <- LogicError.lift(Term.appAll(atMostConstant, List(m, n)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      opened <- Conv
+        .unfold(nonStrictDefinition, List(m, n))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, assumed)))
+
+      shifted <- LogicError.lift(Term.appAll(plus, List(p, m)))
+      target <- LogicError.lift(Term.appAll(plus, List(p, n)))
+      wanted <- LogicError.lift(Term.appAll(atMostConstant, List(shifted, target)))
+      unfoldedWanted <- Conv.unfold(nonStrictDefinition, List(shifted, target))
+      body <- Term
+        .destEq(unfoldedWanted.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", unfoldedWanted.conclusion))
+      predicate <- logic
+        .destExistsPredicate(body)
+        .toRight(NotOfForm("an existential", body))
+
+      witnessed <- withDifference(logic, plus, associative, opened, p, m, predicate)
+      back <- Conv.sym(unfoldedWanted)
+      carried <- LogicError.lift(Kernel.eqMp(back, witnessed))
+      _ <-
+        if (carried.conclusion == wanted) Right(())
+        else Left(NotOfForm("the order it was asked for", carried.conclusion))
+      discharged <- rules.disch(premise, carried)
+      general <- rules.genAll(discharged, List(p, m, n))
+      result <- checked(theory, notation, AddMonotone, general)
+    } yield result
+  }
+
+  /** [[BelowExcludesAtMost]]: assume the other order and the strict one becomes reflexive. */
+  private def strictExcludesNonStrict(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    atMostThenBelow: Kernel.Thm,
+    strictIrreflexive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val left = Term.variable("m", numbers)
+    val right = Term.variable("n", numbers)
+
+    for {
+      below <- LogicError.lift(
+        theory.constant(StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      atMost <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      premise <- LogicError.lift(Term.appAll(below, List(left, right)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      other <- LogicError.lift(Term.appAll(atMost, List(right, left)))
+      otherAssumed <- LogicError.lift(Kernel.assume(other))
+      chained <- rules.conjIntro(otherAssumed, assumed)
+      reflexive <- rules
+        .specAll(atMostThenBelow, List(right, left, right))
+        .flatMap(rules.mp(_, chained))
+      absurd <- rules.spec(right, strictIrreflexive).flatMap(rules.notElim(_, reflexive))
+      refused <- rules.notIntro(other, absurd)
+      discharged <- rules.disch(premise, refused)
+      general <- rules.genAll(discharged, List(left, right))
+      result <- checked(theory, notation, BelowExcludesAtMost, general)
+    } yield result
+  }
+
+  /** [[AtMostSum]]: [[AddMonotone]] at zero, with the identity rewritten away. */
+  private def summandIsAtMostTheSum(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    addMonotone: Kernel.Thm,
+    zeroIsLeast: Kernel.Thm,
+    addAtZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val left = Term.variable("m", numbers)
+    val right = Term.variable("n", numbers)
+
+    for {
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      atMost <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      atZero <- rules.spec(right, zeroIsLeast)
+      shifted <- rules
+        .specAll(addMonotone, List(left, zero, right))
+        .flatMap(rules.mp(_, atZero))
+      identity <- rules.spec(left, addAtZero)
+      sum <- LogicError.lift(Term.appAll(plus, List(left, right)))
+      moved <- Conv
+        .apTerm(atMost, identity)
+        .flatMap(Conv.apThm(_, sum))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, shifted)))
+      general <- rules.genAll(moved, List(left, right))
+      result <- checked(theory, notation, AtMostSum, general)
+    } yield result
+  }
+
+  /**
+   * [[AddStrictlyMonotone]], out of the published facts and without touching a definition.
+   *
+   * The shift keeps `NUM_LE`, so what is left is to rule out equality, and addition cancelling on
+   * the left turns that into `m = n` against `m < n`. Derived rather than proved by induction
+   * because every piece of it is already a lemma: an induction here would be a second proof of
+   * things this file has proved twice already.
+   */
+  private def additionIsStrictlyMonotone(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    addMonotone: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm,
+    belowOrEqual: Kernel.Thm,
+    addCancelsLeft: Kernel.Thm,
+    strictIrreflexive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val shift = Term.variable("p", numbers)
+    val left = Term.variable("m", numbers)
+    val right = Term.variable("n", numbers)
+
+    for {
+      below <- LogicError.lift(
+        theory.constant(StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      premise <- LogicError.lift(Term.appAll(below, List(left, right)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      shiftedLeft <- LogicError.lift(Term.appAll(plus, List(shift, left)))
+      shiftedRight <- LogicError.lift(Term.appAll(plus, List(shift, right)))
+      goal <- LogicError.lift(Term.appAll(below, List(shiftedLeft, shiftedRight)))
+
+      atMost <- rules.specAll(atMostFromBelow, List(left, right)).flatMap(rules.mp(_, assumed))
+      shifted <- rules
+        .specAll(addMonotone, List(shift, left, right))
+        .flatMap(rules.mp(_, atMost))
+      split <- rules
+        .specAll(belowOrEqual, List(shiftedLeft, shiftedRight))
+        .flatMap(rules.mp(_, shifted))
+
+      parts <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (strict, equal) = parts
+
+      // The equal case: cancelling the shift gives `m = n`, and `m < n` then reads `m < m`.
+      sameAssumed <- LogicError.lift(Kernel.assume(equal))
+      same <- rules
+        .specAll(addCancelsLeft, List(left, right, shift))
+        .flatMap(rules.mp(_, sameAssumed))
+      headed <- LogicError.lift(Term.app(below, left))
+      reflexive <- Conv
+        .apTerm(headed, same)
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, assumed)))
+      absurd <- rules
+        .spec(left, strictIrreflexive)
+        .flatMap(rules.notElim(_, reflexive))
+      anyway <- rules.falsityElim(goal, absurd)
+
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      settled <- rules.disjElim(split, strictAssumed, anyway)
+      discharged <- rules.disch(premise, settled)
+      general <- rules.genAll(discharged, List(shift, left, right))
+      result <- checked(theory, notation, AddStrictlyMonotone, general)
+    } yield result
+  }
+
+  /** Open `?d. m + d = n`, shift both sides by `p`, and put the same `d` back. */
+  private def withDifference(
+    logic: Logic,
+    plus: Term,
+    associative: Kernel.Thm,
+    existential: Kernel.Thm,
+    shift: Term,
+    lower: Term,
+    predicate: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    for {
+      inner <- logic
+        .destExistsPredicate(existential.conclusion)
+        .toRight(NotOfForm("an existential", existential.conclusion))
+      difference = Conv.freshVariable(
+        "d",
+        numbers,
+        Term.freeVariables(existential.conclusion) ++ Term.freeVariables(predicate)
+      )
+      applied <- LogicError.lift(Term.app(inner, difference))
+      contraction <- Conv.betaRoot(applied)
+      instance <- Term
+        .destEq(contraction.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", contraction.conclusion))
+      assumed <- LogicError.lift(Kernel.assume(instance))
+
+      // `(p + m) + d = p + (m + d) = p + n`, the second step being the witness itself.
+      regrouped <- rules.specAll(associative, List(shift, lower, difference))
+      shiftedRight <- LogicError
+        .lift(Term.app(plus, shift))
+        .flatMap(Conv.apTerm(_, assumed))
+      reached <- Conv.trans(regrouped, shiftedRight)
+      witnessed <- rules.existsIntro(predicate, difference, reached)
+      result <- rules.existsElim(existential, difference, witnessed)
+    } yield result
+  }
+
+  private def atMostThenStrictlyBelow(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    belowOrEqual: Kernel.Thm,
+    strictTransitive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val p = Term.variable("p", numbers)
+
+    for {
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      lessThan <- LogicError.lift(theory.constant(StrictOrder, relation))
+
+      atMost <- LogicError.lift(Term.appAll(atMostConstant, List(m, n)))
+      strictly <- LogicError.lift(Term.appAll(lessThan, List(n, p)))
+      premise <- logic.mkConj(atMost, strictly)
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      atMostHalf <- rules.conjElim1(assumed)
+      strictHalf <- rules.conjElim2(assumed)
+
+      cases <- rules.specAll(belowOrEqual, List(m, n)).flatMap(rules.mp(_, atMostHalf))
+      split <- logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      (below, equal) = split
+
+      fromBelow <- for {
+        assumedBelow <- LogicError.lift(Kernel.assume(below))
+        pair <- rules.conjIntro(assumedBelow, strictHalf)
+        settled <- rules.specAll(strictTransitive, List(m, n, p)).flatMap(rules.mp(_, pair))
+      } yield settled
+
+      fromEqual <- for {
+        assumedEqual <- LogicError.lift(Kernel.assume(equal))
+        backwards <- Conv.sym(assumedEqual)
+        carried <- Conv.apTerm(lessThan, backwards).flatMap(Conv.apThm(_, p))
+        settled <- LogicError.lift(Kernel.eqMp(carried, strictHalf))
+      } yield settled
+
+      reached <- rules.disjElim(cases, fromBelow, fromEqual)
+      discharged <- rules.disch(premise, reached)
+      general <- rules.genAll(discharged, List(m, n, p))
+      result <- checked(theory, notation, AtMostThenBelow, general)
+    } yield result
+  }
+
+  private def atMostZeroIsZero(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    nonStrict: Kernel.Thm,
+    sumIsZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val n = Term.variable("n", numbers)
+
+    for {
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      from <- LogicError.lift(Term.app(plus, n))
+
+      premise <- LogicError.lift(Term.appAll(atMostConstant, List(n, zero)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      existential <- gap(logic, nonStrict, n, zero, assumed)
+
+      difference = Conv.freshVariable("d", numbers, Term.freeVariables(premise))
+      sum <- LogicError.lift(Term.app(from, difference))
+      reaching <- LogicError.lift(Term.eq(sum, zero))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+      isZero <- rules.specAll(sumIsZero, List(n, difference)).flatMap(rules.mp(_, reaches))
+
+      closed <- rules.existsElim(existential, difference, isZero)
+      discharged <- rules.disch(premise, closed)
+      general <- rules.gen(n, discharged)
+      result <- checked(theory, notation, AtMostZero, general)
+    } yield result
+  }
+
+  /* ------------------------------------------------- the least-number principle */
+
+  /**
+   * `|- !P. (?n. P n) ==> (?m. P m /\ (!k. NUM_LT k m ==> ~(P k)))`.
+   *
+   * Ordinary induction proves nothing about `P` directly: the statement is not of the form `!n. Q
+   * n` for any `Q` built out of `P`. What is, is the **auxiliary**
+   *
+   * {{{
+   *   !n. (?j. NUM_LT j n /\ P j) ==> (?m. P m /\ (!k. NUM_LT k m ==> ~(P k)))
+   * }}}
+   *
+   * which says that a witness below any bound produces a least one, and that is an induction on
+   * the bound. The bound is **strict** and that is the choice worth recording: with `NUM_LE` the
+   * base case has `P ZERO` still to deal with, and with `NUM_LT` it is vacuous by
+   * [[nothingIsBelowZero]] and costs nothing. `Modular`'s docstring proposed the non-strict form;
+   * this is the same argument with the cheaper base.
+   *
+   * The step is where the classical case split is, on whether anything below the **old** bound
+   * satisfies `P`. If something does, the induction hypothesis answers and the new bound is not
+   * looked at. If nothing does, then the witness the new bound supplies can only be the old bound
+   * itself, by [[belowSuccessorSplits]], and that same absence is exactly the minimality the
+   * conclusion asks for: nothing below it satisfies `P`, and the proof of that is one instance of
+   * the negated existential.
+   *
+   * Finally `?n. P n` is turned into a bounded one by [[BelowSuccessor]]: `n < SUC n`, so the
+   * auxiliary at `SUC n` applies.
+   */
+  private def leastNumber(
+    logic: Logic,
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    naturals: Natural,
+    belowSuccessor: Kernel.Thm,
+    notBelowZero: Kernel.Thm,
+    belowSuccessorCases: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+
+    for {
+      statement <- stated(theory, notation, LeastNumber)
+      stripped <- Logic.stripForall(statement)
+      predicate <- stripped._1.headOption
+        .toRight(NotOfForm("a claim about a predicate", statement))
+      halves <- logic
+        .destImp(stripped._2)
+        .toRight(NotOfForm("an implication", stripped._2))
+      (somewhere, conclusion) = halves
+
+      excludedMiddle <- naturals.classical.fact(Classical.ExcludedMiddle)
+      lessThan <- LogicError.lift(theory.constant(StrictOrder, relation))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      taken = Term.freeVariables(statement)
+      bound = Conv.freshVariable("n", numbers, taken)
+      index = Conv.freshVariable("j", numbers, taken + bound)
+      belowBound <- LogicError.lift(Term.appAll(lessThan, List(index, bound)))
+      holdsThere <- LogicError.lift(Term.app(predicate, index))
+      together <- logic.mkConj(belowBound, holdsThere)
+      someBelow <- logic.mkExists(index, together)
+      auxiliaryBody <- logic.mkImp(someBelow, conclusion)
+      auxiliary <- logic.mkForall(bound, auxiliaryBody)
+
+      descent <- driver.proveBy(
+        auxiliary,
+        goal => nothingBelowZeroIsLeast(logic, notBelowZero, goal),
+        step =>
+          oneBoundHigher(logic, excludedMiddle, belowSuccessorCases, lessThan, predicate, step)
+      )
+
+      // `?n. P n` is not yet a bounded claim, and `n < SUC n` is what makes it one.
+      chosen <- logic
+        .destExistsPredicate(somewhere)
+        .toRight(NotOfForm("an existential quantification", somewhere))
+      assumed <- LogicError.lift(Kernel.assume(somewhere))
+      found = Conv.freshVariable("n", numbers, taken ++ Term.freeVariables(conclusion))
+      applied <- LogicError.lift(Term.app(chosen, found))
+      contraction <- Conv.betaRoot(applied)
+      instance <- rightOf(contraction)
+      assumedInstance <- LogicError.lift(Kernel.assume(instance))
+
+      successorOfFound <- LogicError.lift(Term.app(successor, found))
+      atBound <- rules.spec(successorOfFound, descent)
+      guarded <- logic
+        .destImp(atBound.conclusion)
+        .toRight(NotOfForm("an implication", atBound.conclusion))
+      bounded <- logic
+        .destExistsPredicate(guarded._1)
+        .toRight(NotOfForm("an existential quantification", guarded._1))
+      aboveFound <- rules.spec(found, belowSuccessor)
+      pair <- rules.conjIntro(aboveFound, assumedInstance)
+      introduced <- rules.existsIntro(bounded, found, pair)
+      reached <- rules.mp(atBound, introduced)
+
+      closed <- rules.existsElim(assumed, found, reached)
+      discharged <- rules.disch(somewhere, closed)
+      general <- rules.gen(predicate, discharged)
+      result <- checked(theory, notation, LeastNumber, general)
+    } yield result
+  }
+
+  /**
+   * The base of [[leastNumber]]: nothing is below `ZERO`, so the antecedent cannot hold.
+   *
+   * The one place the choice of a strict bound pays. With `NUM_LE` in the auxiliary this case would
+   * have `P ZERO` in hand and would have to build the conclusion from it.
+   */
+  private def nothingBelowZeroIsLeast(
+    logic: Logic,
+    notBelowZero: Kernel.Thm,
+    goal: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      halves <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+      (antecedent, conclusion) = halves
+      assumed <- LogicError.lift(Kernel.assume(antecedent))
+      predicate <- logic
+        .destExistsPredicate(antecedent)
+        .toRight(NotOfForm("an existential quantification", antecedent))
+      domain <- Type
+        .destFun(Term.typeOf(predicate))
+        .map(_._1)
+        .toRight(NotOfForm("a predicate", predicate))
+
+      index = Conv.freshVariable(
+        "j",
+        domain,
+        Term.freeVariables(antecedent) ++ Term.freeVariables(conclusion)
+      )
+      applied <- LogicError.lift(Term.app(predicate, index))
+      contraction <- Conv.betaRoot(applied)
+      instance <- rightOf(contraction)
+      assumedInstance <- LogicError.lift(Kernel.assume(instance))
+
+      belowZero <- rules.conjElim1(assumedInstance)
+      never <- rules.spec(index, notBelowZero)
+      absurd <- rules.notElim(never, belowZero)
+      anything <- rules.falsityElim(conclusion, absurd)
+      closed <- rules.existsElim(assumed, index, anything)
+      result <- rules.disch(antecedent, closed)
+    } yield result
+  }
+
+  /**
+   * The step of [[leastNumber]], and the only classical case split in this file.
+   *
+   * On whether anything below the **old** bound satisfies `P`. If something does, the induction
+   * hypothesis is the answer outright and the new bound never has to be looked at. If nothing does,
+   * the negated existential is worth more than it looks: it is simultaneously what forces the
+   * witness to be the old bound and what proves that bound minimal.
+   */
+  private def oneBoundHigher(
+    logic: Logic,
+    excludedMiddle: Kernel.Thm,
+    belowSuccessorCases: Kernel.Thm,
+    lessThan: Term,
+    predicate: FVar,
+    step: Induct.Step
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      halves <- logic.destImp(step.goal).toRight(NotOfForm("an implication", step.goal))
+      (antecedent, conclusion) = halves
+      assumed <- LogicError.lift(Kernel.assume(antecedent))
+
+      prior <- logic
+        .destImp(step.hypothesis.conclusion)
+        .toRight(NotOfForm("an implication", step.hypothesis.conclusion))
+      (below, _) = prior
+
+      assumedBelow <- LogicError.lift(Kernel.assume(below))
+      fromHypothesis <- rules.mp(step.hypothesis, assumedBelow)
+
+      denied <- logic.mkNot(below)
+      assumedDenial <- LogicError.lift(Kernel.assume(denied))
+      fromDenial <- boundIsItselfLeast(
+        logic,
+        belowSuccessorCases,
+        lessThan,
+        predicate,
+        step.variable,
+        antecedent,
+        below,
+        conclusion,
+        assumed,
+        assumedDenial
+      )
+
+      middle <- rules.spec(below, excludedMiddle)
+      decided <- rules.disjElim(middle, fromHypothesis, fromDenial)
+      result <- rules.disch(antecedent, decided)
+    } yield result
+  }
+
+  /**
+   * The half of [[oneBoundHigher]] where nothing below the old bound satisfies `P`.
+   *
+   * The witness the new bound supplies is below `SUC n`, so by [[belowSuccessorSplits]] it is below
+   * `n` or it **is** `n`. The first is refused by the very assumption this branch is under. The
+   * second gives `P n`, and the same assumption, specialised at an arbitrary `k`, is the minimality
+   * clause: if some `k` below `n` satisfied `P` then something below `n` would.
+   */
+  private def boundIsItselfLeast(
+    logic: Logic,
+    belowSuccessorCases: Kernel.Thm,
+    lessThan: Term,
+    predicate: FVar,
+    bound: FVar,
+    antecedent: Term,
+    below: Term,
+    conclusion: Term,
+    assumed: Kernel.Thm,
+    denial: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      wider <- logic
+        .destExistsPredicate(antecedent)
+        .toRight(NotOfForm("an existential quantification", antecedent))
+      narrower <- logic
+        .destExistsPredicate(below)
+        .toRight(NotOfForm("an existential quantification", below))
+      least <- logic
+        .destExistsPredicate(conclusion)
+        .toRight(NotOfForm("an existential quantification", conclusion))
+      domain <- Type
+        .destFun(Term.typeOf(wider))
+        .map(_._1)
+        .toRight(NotOfForm("a predicate", wider))
+
+      taken = Term.freeVariables(antecedent) ++ Term.freeVariables(conclusion) + bound
+      index = Conv.freshVariable("j", domain, taken)
+      other = Conv.freshVariable("k", domain, taken + index)
+
+      applied <- LogicError.lift(Term.app(wider, index))
+      contraction <- Conv.betaRoot(applied)
+      instance <- rightOf(contraction)
+      assumedInstance <- LogicError.lift(Kernel.assume(instance))
+      strictlyBelow <- rules.conjElim1(assumedInstance)
+      holds <- rules.conjElim2(assumedInstance)
+
+      split <- rules
+        .specAll(belowSuccessorCases, List(bound, index))
+        .flatMap(rules.mp(_, strictlyBelow))
+      branches <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (isBelow, isBound) = branches
+
+      // Below the old bound: the assumption this branch is under says there is no such thing.
+      assumedIsBelow <- LogicError.lift(Kernel.assume(isBelow))
+      pairBelow <- rules.conjIntro(assumedIsBelow, holds)
+      witnessed <- rules.existsIntro(narrower, index, pairBelow)
+      contradicted <- rules.notElim(denial, witnessed)
+      belowCase <- rules.falsityElim(conclusion, contradicted)
+
+      // The old bound itself: `P` holds there, and nothing below it satisfies `P` for the same
+      // reason the first branch was impossible.
+      assumedIsBound <- LogicError.lift(Kernel.assume(isBound))
+      carried <- Conv.apTerm(predicate, assumedIsBound)
+      atBound <- LogicError.lift(Kernel.eqMp(carried, holds))
+
+      otherBelow <- LogicError.lift(Term.appAll(lessThan, List(other, bound)))
+      assumedOtherBelow <- LogicError.lift(Kernel.assume(otherBelow))
+      holdsAtOther <- LogicError.lift(Term.app(predicate, other))
+      assumedHoldsAtOther <- LogicError.lift(Kernel.assume(holdsAtOther))
+      pairOther <- rules.conjIntro(assumedOtherBelow, assumedHoldsAtOther)
+      witnessedOther <- rules.existsIntro(narrower, other, pairOther)
+      contradictedOther <- rules.notElim(denial, witnessedOther)
+      deniedAtOther <- rules.notIntro(holdsAtOther, contradictedOther)
+      impliedAtOther <- rules.disch(otherBelow, deniedAtOther)
+      minimal <- rules.gen(other, impliedAtOther)
+
+      together <- rules.conjIntro(atBound, minimal)
+      boundCase <- rules.existsIntro(least, bound, together)
+
+      decided <- rules.disjElim(split, belowCase, boundCase)
+      result <- rules.existsElim(assumed, index, decided)
+    } yield result
+  }
+
+  /* --------------------------------------------- the greatest bounded element */
+
+  /**
+   * `|- !P. (?n. P n) /\ (?b. !k. P k ==> NUM_LE k b) ==> (?m. P m /\ (!k. P k ==> NUM_LE k m))`.
+   *
+   * From [[leastNumber]] and not from a second induction. "`n` is an upper bound of `P`" is itself
+   * a predicate on numbers, the second hypothesis says something satisfies it, and the **least**
+   * thing that does is the greatest element of `P`. That is the whole argument, and the only part
+   * of it that is not immediate is that `P` holds at that least upper bound.
+   *
+   * It is proved by contradiction, and the case split is on the bound rather than on `P`. If the
+   * least upper bound is `ZERO` and `P` fails there, then every witness of the first hypothesis is
+   * at most `ZERO` and so **is** `ZERO` by [[atMostZeroIsZero]], which is the failure again. If it
+   * is `SUC j` and `P` fails there, then `j` is an upper bound too: anything satisfying `P` is at
+   * most `SUC j`, is therefore below `SUC j` or equal to it, and cannot be equal to it because `P`
+   * fails there. And `j` is below `SUC j`, so the minimality forbids it being an upper bound.
+   *
+   * The asymmetry with [[leastNumber]] is the second hypothesis and it is the mathematics rather
+   * than a limitation: a non-empty set of naturals always has a least element, and has a greatest
+   * one only if it is bounded.
+   */
+  private def greatestBounded(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    naturals: Natural,
+    least: Kernel.Thm,
+    belowSuccessor: Kernel.Thm,
+    reflexive: Kernel.Thm,
+    belowOrEqual: Kernel.Thm,
+    belowSuccessorCases: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm,
+    atMostZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+
+    for {
+      statement <- stated(theory, notation, GreatestBounded)
+      stripped <- Logic.stripForall(statement)
+      predicate <- stripped._1.headOption
+        .toRight(NotOfForm("a claim about a predicate", statement))
+      halves <- logic
+        .destImp(stripped._2)
+        .toRight(NotOfForm("an implication", stripped._2))
+      (hypotheses, conclusion) = halves
+      parts <- logic.destConj(hypotheses).toRight(NotOfForm("a conjunction", hypotheses))
+      (somewhere, boundedAbove) = parts
+
+      cases <- naturals.fact(Natural.ZeroOrSuccessor)
+      doubleNegation <- naturals.classical.fact(Classical.DoubleNegation)
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      lessThan <- LogicError.lift(theory.constant(StrictOrder, relation))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      assumedHypotheses <- LogicError.lift(Kernel.assume(hypotheses))
+      assumedSomewhere <- rules.conjElim1(assumedHypotheses)
+      assumedBounded <- rules.conjElim2(assumedHypotheses)
+
+      // `NUM_LEAST` at "is an upper bound of `P`". The specialisation leaves the predicate applied
+      // rather than substituted, which is what `Rules.spec` documents, so the conclusion is
+      // normalised before anything is read off it.
+      upperBound <- logic
+        .destExistsPredicate(boundedAbove)
+        .toRight(NotOfForm("an existential quantification", boundedAbove))
+      instance <- rules.spec(upperBound, least)
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      leastBound <- rules.mp(opened, assumedBounded)
+
+      taken = Term.freeVariables(statement) ++ Term.freeVariables(conclusion)
+      top = Conv.freshVariable("m", numbers, taken)
+      found = Conv.freshVariable("n", numbers, taken + top)
+      step = Conv.freshVariable("j", numbers, taken + top + found)
+      other = Conv.freshVariable("k", numbers, taken + top + found + step)
+
+      leastPredicate <- logic
+        .destExistsPredicate(leastBound.conclusion)
+        .toRight(NotOfForm("an existential quantification", leastBound.conclusion))
+      appliedTop <- LogicError.lift(Term.app(leastPredicate, top))
+      contractionTop <- Conv.betaRoot(appliedTop)
+      instanceAtTop <- rightOf(contractionTop)
+      assumedAtTop <- LogicError.lift(Kernel.assume(instanceAtTop))
+      isBound <- rules.conjElim1(assumedAtTop)
+      minimal <- rules.conjElim2(assumedAtTop)
+
+      holdsAtTop <- LogicError.lift(Term.app(predicate, top))
+      denialAtTop <- logic.mkNot(holdsAtTop)
+      assumedDenial <- LogicError.lift(Kernel.assume(denialAtTop))
+
+      split <- rules.spec(top, cases)
+      branches <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (isZero, isSuccessor) = branches
+
+      zeroCase <- noWitnessBelowZero(
+        logic,
+        atMostZero,
+        atMostConstant,
+        predicate,
+        somewhere,
+        isZero,
+        top,
+        found,
+        isBound,
+        assumedSomewhere,
+        assumedDenial
+      )
+
+      successorCase <- predecessorIsAlsoAnUpperBound(
+        logic,
+        belowSuccessor,
+        reflexive,
+        belowOrEqual,
+        belowSuccessorCases,
+        atMostFromBelow,
+        atMostConstant,
+        lessThan,
+        successor,
+        predicate,
+        isSuccessor,
+        top,
+        step,
+        other,
+        isBound,
+        minimal,
+        assumedDenial
+      )
+
+      absurd <- rules.disjElim(split, zeroCase, successorCase)
+      doubled <- rules.notIntro(denialAtTop, absurd)
+      atTop <- rules.spec(holdsAtTop, doubleNegation).flatMap(rules.mp(_, doubled))
+
+      together <- rules.conjIntro(atTop, isBound)
+      greatest <- logic
+        .destExistsPredicate(conclusion)
+        .toRight(NotOfForm("an existential quantification", conclusion))
+      reached <- rules.existsIntro(greatest, top, together)
+
+      closed <- rules.existsElim(leastBound, top, reached)
+      discharged <- rules.disch(hypotheses, closed)
+      general <- rules.gen(predicate, discharged)
+      result <- checked(theory, notation, GreatestBounded, general)
+    } yield result
+  }
+
+  /**
+   * The first half of [[greatestBounded]]'s contradiction: the least upper bound is `ZERO`.
+   *
+   * Then every witness of the non-emptiness is at most `ZERO` and so is `ZERO` itself, which is the
+   * bound, so `P` holds there after all.
+   */
+  private def noWitnessBelowZero(
+    logic: Logic,
+    atMostZero: Kernel.Thm,
+    atMostConstant: Term,
+    predicate: FVar,
+    somewhere: Term,
+    isZero: Term,
+    top: FVar,
+    found: FVar,
+    isBound: Kernel.Thm,
+    assumedSomewhere: Kernel.Thm,
+    assumedDenial: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      assumedZero <- LogicError.lift(Kernel.assume(isZero))
+      chosen <- logic
+        .destExistsPredicate(somewhere)
+        .toRight(NotOfForm("an existential quantification", somewhere))
+      applied <- LogicError.lift(Term.app(chosen, found))
+      contraction <- Conv.betaRoot(applied)
+      instance <- rightOf(contraction)
+      assumedFound <- LogicError.lift(Kernel.assume(instance))
+
+      bounded <- rules.spec(found, isBound).flatMap(rules.mp(_, assumedFound))
+      from <- LogicError.lift(Term.app(atMostConstant, found))
+      carried <- Conv.apTerm(from, assumedZero)
+      atZero <- LogicError.lift(Kernel.eqMp(carried, bounded))
+      foundIsZero <- rules.spec(found, atMostZero).flatMap(rules.mp(_, atZero))
+
+      foundIsTop <- Conv.sym(assumedZero).flatMap(Conv.trans(foundIsZero, _))
+      carriedPredicate <- Conv.apTerm(predicate, foundIsTop)
+      holds <- LogicError.lift(Kernel.eqMp(carriedPredicate, assumedFound))
+      absurd <- rules.notElim(assumedDenial, holds)
+      result <- rules.existsElim(assumedSomewhere, found, absurd)
+    } yield result
+  }
+
+  /**
+   * The second half: the least upper bound is `SUC j`, and then `j` is an upper bound as well.
+   *
+   * Anything satisfying `P` is at most `SUC j`, hence below it or equal to it by [[BelowOrEqual]],
+   * and equal is impossible because `P` fails at the bound by assumption. Below `SUC j` is below
+   * `j` or equal to `j` by [[BelowSuccessorCases]], and both give `NUM_LE k j`. So `j` is an upper
+   * bound below the least one, which is the contradiction.
+   */
+  private def predecessorIsAlsoAnUpperBound(
+    logic: Logic,
+    belowSuccessor: Kernel.Thm,
+    reflexive: Kernel.Thm,
+    belowOrEqual: Kernel.Thm,
+    belowSuccessorCases: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm,
+    atMostConstant: Term,
+    lessThan: Term,
+    successor: Term,
+    predicate: FVar,
+    isSuccessor: Term,
+    top: FVar,
+    step: FVar,
+    other: FVar,
+    isBound: Kernel.Thm,
+    minimal: Kernel.Thm,
+    assumedDenial: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+      shape <- logic
+        .destExistsPredicate(isSuccessor)
+        .toRight(NotOfForm("an existential quantification", isSuccessor))
+      applied <- LogicError.lift(Term.app(shape, step))
+      contraction <- Conv.betaRoot(applied)
+      isStep <- rightOf(contraction)
+      assumedStep <- LogicError.lift(Kernel.assume(isStep))
+      successorOfStep <- LogicError.lift(Term.app(successor, step))
+
+      holdsAtOther <- LogicError.lift(Term.app(predicate, other))
+      assumedHoldsAtOther <- LogicError.lift(Kernel.assume(holdsAtOther))
+      goal <- LogicError.lift(Term.appAll(atMostConstant, List(other, step)))
+
+      bounded <- rules.spec(other, isBound).flatMap(rules.mp(_, assumedHoldsAtOther))
+      from <- LogicError.lift(Term.app(atMostConstant, other))
+      carried <- Conv.apTerm(from, assumedStep)
+      belowTheSuccessor <- LogicError.lift(Kernel.eqMp(carried, bounded))
+
+      decided <- rules
+        .specAll(belowOrEqual, List(other, successorOfStep))
+        .flatMap(rules.mp(_, belowTheSuccessor))
+      halves <- logic
+        .destDisj(decided.conclusion)
+        .toRight(NotOfForm("a disjunction", decided.conclusion))
+      (strictlyBelow, equalToSuccessor) = halves
+
+      // Equal to the bound: `P` fails there and holds here, which is the same number.
+      assumedEqual <- LogicError.lift(Kernel.assume(equalToSuccessor))
+      otherIsTop <- Conv.sym(assumedStep).flatMap(Conv.trans(assumedEqual, _))
+      carriedPredicate <- Conv.apTerm(predicate, otherIsTop)
+      holdsAtBound <- LogicError.lift(Kernel.eqMp(carriedPredicate, assumedHoldsAtOther))
+      contradicted <- rules.notElim(assumedDenial, holdsAtBound)
+      equalCase <- rules.falsityElim(goal, contradicted)
+
+      // Below the bound: one step down, and either half of that is the bound one lower.
+      assumedStrictly <- LogicError.lift(Kernel.assume(strictlyBelow))
+      peeled <- rules
+        .specAll(belowSuccessorCases, List(step, other))
+        .flatMap(rules.mp(_, assumedStrictly))
+      peeledHalves <- logic
+        .destDisj(peeled.conclusion)
+        .toRight(NotOfForm("a disjunction", peeled.conclusion))
+      (belowStep, equalToStep) = peeledHalves
+
+      assumedBelowStep <- LogicError.lift(Kernel.assume(belowStep))
+      fromStrict <- rules
+        .specAll(atMostFromBelow, List(other, step))
+        .flatMap(rules.mp(_, assumedBelowStep))
+
+      assumedEqualToStep <- LogicError.lift(Kernel.assume(equalToStep))
+      reflexiveAtStep <- rules.spec(step, reflexive)
+      carriedOrder <- Conv.apTerm(atMostConstant, assumedEqualToStep)
+      atStep <- Conv.apThm(carriedOrder, step)
+      fromEqual <- Conv
+        .sym(atStep)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, reflexiveAtStep)))
+
+      strictCase <- rules.disjElim(peeled, fromStrict, fromEqual)
+      reached <- rules.disjElim(decided, strictCase, equalCase)
+      implied <- rules.disch(holdsAtOther, reached)
+      upperAtStep <- rules.gen(other, implied)
+
+      // And it is below the least upper bound, which is what forbids it being one.
+      atItsSuccessor <- rules.spec(step, belowSuccessor)
+      strictlyFrom <- LogicError.lift(Term.app(lessThan, step))
+      carriedStrict <- Conv.apTerm(strictlyFrom, assumedStep)
+      stepBelowTop <- Conv
+        .sym(carriedStrict)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, atItsSuccessor)))
+      denied <- rules.spec(step, minimal).flatMap(rules.mp(_, stepBelowTop))
+      absurd <- rules.notElim(denied, upperAtStep)
+      result <- rules.existsElim(assumedSuccessor, step, absurd)
+    } yield result
+  }
+
+  /**
+   * `|- !m n p. NUM_LE m n /\ NUM_LE n p ==> NUM_LE m p`.
+   *
+   * The witness is the sum of the two given, and the arithmetic is one use of associativity:
+   * `m + (d + e) = (m + d) + e = n + e = p`. Both existentials are opened before the witness is
+   * built and closed after, which is the order the side condition on eliminating one forces: the
+   * variable it names may not appear in what is proved, and `NUM_LE m p` mentions neither.
+   */
+  /**
+   * `|- !m n p. NUM_LT m n /\ NUM_LT n p ==> NUM_LT m p`, from the non-strict transitivity.
+   *
+   * `NUM_LT a b` IS `NUM_LE (SUC a) b`, so unfolding the three occurrences turns the goal into
+   * `SUC m <= n` and `SUC n <= p` therefore `SUC m <= p`, and the bridge between them is
+   * `n <= SUC n`. Two applications of [[Transitive]] and no induction: the strict order is not
+   * a second order here, it is the non-strict one shifted by a successor, and every fact about
+   * it that does not mention the shift should come out this way.
+   *
+   * The two successor terms are read OFF the unfolded hypotheses rather than built here. Built
+   * here they would be correct and would still be a second copy of something the theorem
+   * already contains, and a second copy is what drifts.
+   */
+  private def strictTransitivity(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    strictDefinition: Kernel.Thm,
+    transitive: Kernel.Thm,
+    atMostSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    def argumentsOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      theorem.conclusion match {
+        case App(App(_, left), right) => Right((left, right))
+        case other                    => Left(NotOfForm("an order statement", other))
+      }
+
+    def instantiate(theorem: Kernel.Thm, arguments: List[Term]): Either[LogicError, Kernel.Thm] =
+      arguments.foldLeft[Either[LogicError, Kernel.Thm]](Right(theorem)) { (soFar, argument) =>
+        soFar.flatMap(rules.spec(argument, _))
+      }
+
+    for {
+      statement <- stated(theory, notation, StrictTransitive)
+      stripped <- Logic.stripForall(statement)
+      (variables, body) = stripped
+      first <- variables.lift(0).toRight(NotOfForm("three numbers", body))
+      second <- variables.lift(1).toRight(NotOfForm("three numbers", body))
+      third <- variables.lift(2).toRight(NotOfForm("three numbers", body))
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premise, conclusion) = parts
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      unfold <- Rewrite.Rule.of(logic, strictDefinition)
+      lower <- rules.conjElim1(assumed)
+      upper <- rules.conjElim2(assumed)
+      lowerLe <- Rewrite
+        .rewrite(Vector(unfold), lower.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, lower)))
+      upperLe <- Rewrite
+        .rewrite(Vector(unfold), upper.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, upper)))
+
+      lowerSides <- argumentsOf(lowerLe)   // (SUC m, n)
+      upperSides <- argumentsOf(upperLe)   // (SUC n, p)
+      bridge <- rules.spec(second, atMostSuccessor)   // n <= SUC n
+
+      toSuccessor <- rules
+        .conjIntro(lowerLe, bridge)
+        .flatMap(pair =>
+          instantiate(transitive, List(lowerSides._1, second, upperSides._1))
+            .flatMap(rules.mp(_, pair)))
+      reaching <- rules
+        .conjIntro(toSuccessor, upperLe)
+        .flatMap(pair =>
+          instantiate(transitive, List(lowerSides._1, upperSides._1, third))
+            .flatMap(rules.mp(_, pair)))
+
+      asStrict <- Rewrite
+        .rewrite(Vector(unfold), conclusion)
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, reaching)))
+      discharged <- rules.disch(premise, asStrict)
+      general <- rules.genAll(discharged, List(first, second, third))
+      result <- checked(theory, notation, StrictTransitive, general)
+    } yield result
+  }
+
+  private def transitivity(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definition: Kernel.Thm,
+    arithmetic: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val p = Term.variable("p", numbers)
+    val d = Term.variable("d", numbers)
+    val e = Term.variable("e", numbers)
+
+    for {
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      belowN <- Parser.proposition(theory, notation, "NUM_LE (m:num) (n:num)")
+      belowP <- Parser.proposition(theory, notation, "NUM_LE (n:num) (p:num)")
+      both <- logic.mkConj(belowN, belowP)
+      assumed <- LogicError.lift(Kernel.assume(both))
+      first <- rules.conjElim1(assumed)
+      second <- rules.conjElim2(assumed)
+
+      firstGap <- gap(logic, definition, m, n, first)
+      secondGap <- gap(logic, definition, n, p, second)
+
+      reachesN <- LogicError.lift(
+        Term.appAll(plus, List(m, d)).flatMap(Term.eq(_, n)).flatMap(Kernel.assume)
+      )
+      reachesP <- LogicError.lift(
+        Term.appAll(plus, List(n, e)).flatMap(Term.eq(_, p)).flatMap(Kernel.assume)
+      )
+
+      grouped <- rules.specAll(arithmetic(AddAssociative), List(m, d, e))
+      ungrouped <- Conv.sym(grouped)
+      carried <- Conv.apTerm(plus, reachesN).flatMap(Conv.apThm(_, e))
+      whole <- Conv.trans(ungrouped, carried).flatMap(Conv.trans(_, reachesP))
+
+      witness <- LogicError.lift(Term.appAll(plus, List(d, e)))
+      reaches <- atMost(logic, definition, m, p, witness, whole)
+
+      withoutE <- rules.existsElim(secondGap, e, reaches)
+      withoutD <- rules.existsElim(firstGap, d, withoutE)
+      result <- rules
+        .disch(both, withoutD)
+        .flatMap(rules.genAll(_, List(m, n, p)))
+        .flatMap(checked(theory, notation, Transitive, _))
+    } yield result
+  }
+
+  /**
+   * `|- !n m. NUM_ADD m n = m ==> n = ZERO`, by induction on `m`.
+   *
+   * Cancellation, and the goal is an implication rather than an equation, so the rewriting driver
+   * cannot close either half: both are written out. The base is `ZERO + n = ZERO` read against
+   * `ZERO + n = n`, and the step takes `SUC k + n = SUC k` to `SUC (k + n) = SUC k` and then to
+   * `k + n = k` by the injectivity of the successor, which is where the hypothesis applies.
+   *
+   * **The variables are taken off the goal rather than named here**, and that is not a shortcut:
+   * the driver opens the quantifier itself, so the variable the step is about is fresh and a caller
+   * cannot name it. `n` is the left side of what is to be proved in both halves, and `k` is the
+   * argument of the successor the premise equates to.
+   */
+  private def cancellation(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = driver.logic
+    val rules = logic.rules
+
+    def halves(goal: Term): Either[LogicError, (Term, Term, Term)] =
+      for {
+        parts <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+        (premise, conclusion) = parts
+        sides <- Term.destEq(conclusion).toRight(NotOfForm("an equation", conclusion))
+      } yield (premise, conclusion, sides._1)
+
+    for {
+      statement <- stated(theory, notation, AddCancels)
+      injective <- naturals.fact(Natural.SuccessorInjective)
+
+      result <- driver.proveBy(
+        statement,
+        goal =>
+          for {
+            parts <- halves(goal)
+            (premise, _, number) = parts
+            assumed <- LogicError.lift(Kernel.assume(premise))
+            unit <- rules.spec(number, arithmetic(ZeroPlus))
+            reversed <- Conv.sym(unit)
+            reached <- Conv.trans(reversed, assumed)
+            discharged <- rules.disch(premise, reached)
+          } yield discharged,
+        opened =>
+          val goal = opened.goal
+          val hypothesis = opened.hypothesis
+          for {
+            parts <- halves(goal)
+            (premise, _, number) = parts
+            sides <- Term.destEq(premise).toRight(NotOfForm("an equation", premise))
+            step <- sides._2 match {
+              case App(_, argument) => Right(argument)
+              case other => Left(NotOfForm("a successor", other))
+            }
+
+            assumed <- LogicError.lift(Kernel.assume(premise))
+            moved <- rules.specAll(arithmetic(SuccessorPlus), List(step, number))
+            reversed <- Conv.sym(moved)
+            equalSuccessors <- Conv.trans(reversed, assumed)
+
+            // `k + n`, taken off the recurrence rather than rebuilt, so that what injectivity is
+            // pointed at is the term that is actually under the successor.
+            stepped <- rightOf(moved)
+            inside <- stepped match {
+              case App(_, argument) => Right(argument)
+              case other => Left(NotOfForm("a successor", other))
+            }
+            smaller <- rules
+              .specAll(injective, List(inside, step))
+              .flatMap(rules.mp(_, equalSuccessors))
+            reached <- rules.mp(hypothesis, smaller)
+            discharged <- rules.disch(premise, reached)
+          } yield discharged
+      )
+    } yield result
+  }
+
+  /**
+   * `|- !x y a. NUM_ADD a x = NUM_ADD a y ==> x = y`, by induction on `a`.
+   *
+   * The induction is on the summand being cancelled and not on either of the two being compared,
+   * which is what makes it three lines a side: at `ZERO` the recurrence [[ZeroPlus]] removes the
+   * summand outright, and at `SUC a` the recurrence [[SuccessorPlus]] lifts both sides to
+   * successors, whose injectivity takes one step off and leaves the hypothesis to apply.
+   *
+   * It is not derived from [[AddCancels]] and could not be: that one has `ZERO` on the right of its
+   * conclusion, and the step from it to this is exactly the induction below.
+   */
+  private def leftCancellation(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = driver.logic
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    /** The premise, and the two numbers the conclusion compares. */
+    def parts(goal: Term): Either[LogicError, (Term, Term, Term)] =
+      for {
+        implication <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+        (premise, conclusion) = implication
+        sides <- Term.destEq(conclusion).toRight(NotOfForm("an equation", conclusion))
+      } yield (premise, sides._1, sides._2)
+
+    for {
+      statement <- stated(theory, notation, AddCancelsLeft)
+      injective <- naturals.fact(Natural.SuccessorInjective)
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      result <- driver.proveBy(
+        statement,
+        goal =>
+          for {
+            split <- parts(goal)
+            (premise, left, right) = split
+            assumed <- LogicError.lift(Kernel.assume(premise))
+            atLeft <- rules.spec(left, arithmetic(ZeroPlus))
+            atRight <- rules.spec(right, arithmetic(ZeroPlus))
+            reached <- Conv
+              .sym(atLeft)
+              .flatMap(Conv.trans(_, assumed))
+              .flatMap(Conv.trans(_, atRight))
+            discharged <- rules.disch(premise, reached)
+          } yield discharged,
+        opened =>
+          for {
+            split <- parts(opened.goal)
+            (premise, left, right) = split
+            assumed <- LogicError.lift(Kernel.assume(premise))
+
+            atLeft <- rules.specAll(arithmetic(SuccessorPlus), List(opened.variable, left))
+            atRight <- rules.specAll(arithmetic(SuccessorPlus), List(opened.variable, right))
+            equalSuccessors <- Conv
+              .sym(atLeft)
+              .flatMap(Conv.trans(_, assumed))
+              .flatMap(Conv.trans(_, atRight))
+
+            insideLeft <- LogicError.lift(Term.appAll(plus, List(opened.variable, left)))
+            insideRight <- LogicError.lift(Term.appAll(plus, List(opened.variable, right)))
+            smaller <- rules
+              .specAll(injective, List(insideLeft, insideRight))
+              .flatMap(rules.mp(_, equalSuccessors))
+
+            reached <- rules.mp(opened.hypothesis, smaller)
+            discharged <- rules.disch(premise, reached)
+          } yield discharged
+      )
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_ADD m n = ZERO ==> m = ZERO`, by induction on `n`.
+   *
+   * An induction whose step never uses its hypothesis: `m + SUC k = SUC (m + k)` is a successor,
+   * a successor is never zero, and there is nothing to prove about a case that cannot arise. The
+   * base is the first recurrence, where `m + ZERO = ZERO` says `m = ZERO` directly.
+   */
+  private def sumVanishes(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = driver.logic
+    val rules = logic.rules
+
+    for {
+      statement <- stated(theory, notation, SumIsZero)
+      notZero <- naturals.fact(Natural.SuccessorNotZero)
+
+      result <- driver.proveBy(
+        statement,
+        goal =>
+          for {
+            parts <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+            (premise, _) = parts
+            sides <- Term.destEq(premise).toRight(NotOfForm("an equation", premise))
+            number <- sides._1 match {
+              case App(App(_, left), _) => Right(left)
+              case other => Left(NotOfForm("a sum", other))
+            }
+            assumed <- LogicError.lift(Kernel.assume(premise))
+            unit <- rules.spec(number, arithmetic(AddAtZero))
+            reversed <- Conv.sym(unit)
+            reached <- Conv.trans(reversed, assumed)
+            discharged <- rules.disch(premise, reached)
+          } yield discharged,
+        opened =>
+          val goal = opened.goal
+          for {
+            parts <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+            (premise, conclusion) = parts
+            sides <- Term.destEq(premise).toRight(NotOfForm("an equation", premise))
+            pieces <- sides._1 match {
+              case App(App(_, left), App(_, step)) => Right((left, step))
+              case other => Left(NotOfForm("a sum with a successor on its right", other))
+            }
+            (number, step) = pieces
+
+            assumed <- LogicError.lift(Kernel.assume(premise))
+            moved <- rules.specAll(arithmetic(AddAtSuccessor), List(number, step))
+            reversed <- Conv.sym(moved)
+            successorIsZero <- Conv.trans(reversed, assumed)
+
+            stepped <- rightOf(moved)
+            inside <- stepped match {
+              case App(_, argument) => Right(argument)
+              case other => Left(NotOfForm("a successor", other))
+            }
+            never <- rules.spec(inside, notZero)
+            absurd <- rules.notElim(never, successorIsZero)
+            anything <- rules.falsityElim(conclusion, absurd)
+            discharged <- rules.disch(premise, anything)
+          } yield discharged
+      )
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LE m n /\ NUM_LE n m ==> m = n`.
+   *
+   * Both witnesses are opened, and together they give `m + (d + e) = m`. Cancellation turns that
+   * into `d + e = ZERO`, the second lemma turns that into `d = ZERO`, and then `n`, which is
+   * `m + d`, is `m + ZERO`, which is `m`.
+   */
+  private def antisymmetry(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definition: Kernel.Thm,
+    arithmetic: Map[String, Kernel.Thm],
+    lemmas: (Kernel.Thm, Kernel.Thm)
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val d = Term.variable("d", numbers)
+    val e = Term.variable("e", numbers)
+    val (cancels, sumIsZero) = lemmas
+
+    for {
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      belowN <- Parser.proposition(theory, notation, "NUM_LE (m:num) (n:num)")
+      belowM <- Parser.proposition(theory, notation, "NUM_LE (n:num) (m:num)")
+      both <- logic.mkConj(belowN, belowM)
+      assumed <- LogicError.lift(Kernel.assume(both))
+      first <- rules.conjElim1(assumed)
+      second <- rules.conjElim2(assumed)
+
+      firstGap <- gap(logic, definition, m, n, first)
+      secondGap <- gap(logic, definition, n, m, second)
+
+      reachesN <- LogicError.lift(
+        Term.appAll(plus, List(m, d)).flatMap(Term.eq(_, n)).flatMap(Kernel.assume)
+      )
+      reachesM <- LogicError.lift(
+        Term.appAll(plus, List(n, e)).flatMap(Term.eq(_, m)).flatMap(Kernel.assume)
+      )
+
+      // `m + (d + e) = (m + d) + e = n + e = m`
+      grouped <- rules.specAll(arithmetic(AddAssociative), List(m, d, e))
+      ungrouped <- Conv.sym(grouped)
+      carried <- Conv.apTerm(plus, reachesN).flatMap(Conv.apThm(_, e))
+      whole <- Conv.trans(ungrouped, carried).flatMap(Conv.trans(_, reachesM))
+
+      witness <- LogicError.lift(Term.appAll(plus, List(d, e)))
+      vanishes <- rules.specAll(cancels, List(witness, m)).flatMap(rules.mp(_, whole))
+      firstVanishes <- rules.specAll(sumIsZero, List(d, e)).flatMap(rules.mp(_, vanishes))
+
+      // `n = m + d = m + ZERO = m`, and then the other way round.
+      from <- LogicError.lift(Term.app(plus, m))
+      atWitness <- Conv.apTerm(from, firstVanishes)
+      unit <- rules.spec(m, arithmetic(AddAtZero))
+      reachesItself <- Conv.trans(atWitness, unit)
+      fromN <- Conv.sym(reachesN)
+      equal <- Conv.trans(fromN, reachesItself).flatMap(Conv.sym)
+
+      withoutE <- rules.existsElim(secondGap, e, equal)
+      withoutD <- rules.existsElim(firstGap, d, withoutE)
+      result <- rules
+        .disch(both, withoutD)
+        .flatMap(rules.genAll(_, List(m, n)))
+        .flatMap(checked(theory, notation, AntiSymmetric, _))
+    } yield result
+  }
+
+  /**
+   * `|- NUM_LE left right`, from a proof that `left + witness = right`.
+   *
+   * The definition unfolded, the existential introduced at the witness, and the definition folded
+   * back. Written once because every fact about the order below is this and one equation.
+   */
+  private def atMost(
+    logic: Logic,
+    definition: Kernel.Thm,
+    left: Term,
+    right: Term,
+    witness: Term,
+    evidence: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      unfolded <- Conv.unfold(definition, List(left, right))
+      body <- rightOf(unfolded)
+      predicate <- logic.destExistsPredicate(body).toRight(NotOfForm("an existential", body))
+      witnessed <- logic.rules.existsIntro(predicate, witness, evidence)
+      result <- Conv
+        .sym(unfolded)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, witnessed)))
+    } yield result
+
+  /** `G |- ?d. left + d = right`, from `G |- NUM_LE left right`: the same step the other way. */
+  private def gap(
+    logic: Logic,
+    definition: Kernel.Thm,
+    left: Term,
+    right: Term,
+    theorem: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      unfolded <- Conv.unfold(definition, List(left, right))
+      result <- LogicError.lift(Kernel.eqMp(unfolded, theorem))
+    } yield result
+
+  /* -------------------------------------------------------------- embedding */
+
+  /**
+   * `real_of_num`, and the two homomorphism lemmas that make it worth having.
+   *
+   * The definition is the same recursion the operations were built by, at the reals rather than at
+   * the naturals: zero goes to zero and a successor adds one. What that buys is the two lemmas
+   * below, and they are what lets a development state an index over `num` and still hand the
+   * arithmetic to a tactic that decides the reals:
+   *
+   * {{{
+   *   |- !m n. real_of_num (NUM_ADD m n) = real_of_num m + real_of_num n
+   *   |- !m n. real_of_num (NUM_MUL m n) = real_of_num m * real_of_num n
+   * }}}
+   *
+   * Both are one induction whose step is a **ring** identity, so they go through `Induct`'s own
+   * driver rather than through the rewriting one used above: the goal is an equation between reals,
+   * `Ring` closes it, and `real_of_num m` is an atom it cannot take apart, which is the right
+   * reading of the image of a variable. The product needs the sum lemma as a rewrite on the way,
+   * because `m * SUC n` is a sum before it is anything else.
+   */
+  private def embedding(
+    logic: Logic,
+    driver: Induct,
+    linarith: Linarith,
+    naturals: Natural,
+    base: Theory,
+    notation: Notation,
+    recursion: Kernel.Thm,
+    arithmetic: Map[String, Kernel.Thm],
+    orderDefinitions: Map[String, Kernel.Thm],
+    trichotomy: Kernel.Thm
+  ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
+    val values = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val rules = logic.rules
+    val m: FVar = Term.variable("m", numbers)
+    val n: FVar = Term.variable("n", numbers)
+    val gap: FVar = Term.variable("d", numbers)
+
+    for {
+      defined <- Recursion.define(
+        logic,
+        naturals,
+        base,
+        notation,
+        recursion,
+        Embedding,
+        values,
+        "0",
+        "\\v:real. \\i:num. v + 1",
+        None
+      )
+      (theory, definition, atZero, atSuccessor) = defined
+
+      embedsZero <- checked(theory, notation, EmbedsZero, atZero)
+      embedsSuccessor <- checked(theory, notation, EmbedsSuccessor, atSuccessor)
+
+      sumStatement <- stated(theory, notation, EmbedsSum)
+      embedsSum <- driver.prove(
+        sumStatement,
+        Vector(
+          embedsZero,
+          embedsSuccessor,
+          arithmetic(AddAtZero),
+          arithmetic(AddAtSuccessor)
+        )
+      )
+
+      productStatement <- stated(theory, notation, EmbedsProduct)
+      embedsProduct <- driver.prove(
+        productStatement,
+        Vector(
+          embedsZero,
+          embedsSuccessor,
+          embedsSum,
+          arithmetic(MulAtZero),
+          arithmetic(MulAtSuccessor)
+        )
+      )
+      // The three that carry the order across, and the only place in this file where a decision
+      // procedure closes a step. Everything above is an equation and the rewriter settles it; these
+      // are inequalities, and there is no `RING` for an order.
+      nonNegativeStatement <- stated(theory, notation, EmbedsNonNegative)
+      embedsNonNegative <- driver.proveAssuming(
+        nonNegativeStatement,
+        Vector(embedsZero, embedsSuccessor)
+      )(linarith.prove)
+
+      embedsOrder <- crossesOrder(
+        logic,
+        linarith,
+        theory,
+        notation,
+        orderDefinitions,
+        embedsSum,
+        embedsNonNegative,
+        m,
+        n,
+        gap
+      )
+
+      strictStatement <- stated(theory, notation, EmbedsStrictOrder)
+      embedsStrictOrder <- crossesStrictly(
+        logic,
+        theory,
+        orderDefinitions,
+        embedsSuccessor,
+        embedsOrder,
+        strictStatement,
+        m,
+        n
+      )
+
+      embedsInjectively <- crossesBack(
+        logic,
+        linarith,
+        theory,
+        notation,
+        trichotomy,
+        embedsStrictOrder,
+        m,
+        n
+      )
+    } yield (
+      theory,
+      definition,
+      Map(
+        EmbedsZero -> embedsZero,
+        EmbedsSuccessor -> embedsSuccessor,
+        EmbedsSum -> embedsSum,
+        EmbedsProduct -> embedsProduct,
+        EmbedsNonNegative -> embedsNonNegative,
+        EmbedsOrder -> embedsOrder,
+        EmbedsStrictOrder -> embedsStrictOrder,
+        EmbedsInjectively -> embedsInjectively
+      )
+    )
+  }
+
+  /**
+   * `|- !m n. real_of_num m = real_of_num n ==> m = n`.
+   *
+   * [[EmbedsStrictOrder]] carries a strict bound across as a **gap of one**, and that is what makes
+   * this provable rather than merely plausible: two distinct naturals are a whole unit apart on the
+   * reals, so their images cannot coincide. Trichotomy supplies the three cases, the middle one is
+   * the conclusion, and the outer two are closed by `LINARITH` against the assumed equation.
+   *
+   * The linear step is asked for once, as a fact about two arbitrary reals, and specialised twice.
+   * Asking it twice at the images would be the same work and a second place for the shape to drift.
+   */
+  private def crossesBack(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    trichotomy: Kernel.Thm,
+    strictly: Kernel.Thm,
+    m: FVar,
+    n: FVar
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val values = TyApp(Real.TypeName, Nil)
+
+    for {
+      embedding <- LogicError.lift(theory.constant(Embedding, Type.fun(numbers, values)))
+
+      // `x = y` and a gap of one between them cannot both hold, which is linear in two unknowns.
+      impossible <- Parser
+        .proposition(theory, notation, "!x:real y:real. x = y /\\ x + 1 <= y ==> F")
+        .flatMap(linarith.prove)
+
+      embeddedM <- LogicError.lift(Term.app(embedding, m))
+      embeddedN <- LogicError.lift(Term.app(embedding, n))
+      premise <- LogicError.lift(Term.eq(embeddedM, embeddedN))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      goal <- LogicError.lift(Term.eq(m, n))
+
+      split <- rules.specAll(trichotomy, List(m, n))
+      branches <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (isBelow, rest) = branches
+      tail <- logic.destDisj(rest).toRight(NotOfForm("a disjunction", rest))
+      (isEqual, isAbove) = tail
+
+      belowCase <- refutedByTheGap(logic, theory, impossible, strictly, isBelow, m, n, goal, assumed)
+      equalCase <- LogicError.lift(Kernel.assume(isEqual))
+
+      flipped <- Conv.sym(assumed)
+      aboveCase <- refutedByTheGap(logic, theory, impossible, strictly, isAbove, n, m, goal, flipped)
+
+      upper <- LogicError
+        .lift(Kernel.assume(rest))
+        .flatMap(rules.disjElim(_, equalCase, aboveCase))
+      decided <- rules.disjElim(split, belowCase, upper)
+
+      discharged <- rules.disch(premise, decided)
+      general <- rules.genAll(discharged, List(m, n))
+      result <- checked(theory, notation, EmbedsInjectively, general)
+    } yield result
+  }
+
+  /**
+   * One of the two outer cases of [[crossesBack]]: a strict bound, refuted by the equation.
+   *
+   * The two differ only in which way round the pair goes and which orientation of the assumed
+   * equation is handed over, which is why they are one function called twice rather than a copy.
+   */
+  private def refutedByTheGap(
+    logic: Logic,
+    theory: Theory,
+    impossible: Kernel.Thm,
+    strictly: Kernel.Thm,
+    disjunct: Term,
+    lower: Term,
+    upper: Term,
+    goal: Term,
+    equation: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val values = TyApp(Real.TypeName, Nil)
+
+    for {
+      embedding <- LogicError.lift(theory.constant(Embedding, Type.fun(numbers, values)))
+      assumed <- LogicError.lift(Kernel.assume(disjunct))
+      bound <- rules.specAll(strictly, List(lower, upper)).flatMap(rules.mp(_, assumed))
+
+      embeddedLower <- LogicError.lift(Term.app(embedding, lower))
+      embeddedUpper <- LogicError.lift(Term.app(embedding, upper))
+      instance <- rules.specAll(impossible, List(embeddedLower, embeddedUpper))
+      pair <- rules.conjIntro(equation, bound)
+      absurd <- rules.mp(instance, pair)
+      result <- rules.falsityElim(goal, absurd)
+    } yield result
+  }
+
+  /* ------------------------------------------------------------ subtraction */
+
+  /**
+   * The predecessor, the truncated difference, and the nine facts a consumer of one needs.
+   *
+   * Two definitions rather than one, and the first is not a convenience: `NUM_SUB` recurses on its
+   * second argument like the other two operations, so its step has to say what one more subtracted
+   * unit does to a number, and that **is** the predecessor. Defining the difference directly would
+   * mean writing the same case split inside it and then having no name for it.
+   *
+   * Six of the nine close by rewriting and three are written out, and which is which is the useful
+   * part:
+   *
+   *  - [[ZeroMinus]], [[SubSuccessors]], [[SubSelf]], [[SumMinus]] and [[Truncates]] are
+   *    inductions the rewriter settles. The rule sets are **not** the union of everything proved so
+   *    far and that is deliberate: [[SubAtSuccessor]] is left out of the last three, because it
+   *    unfolds `NUM_SUB m (SUC n)` at the node where [[SubSuccessors]] or the induction hypothesis
+   *    was the rule that had to fire, and a rewriter that has taken the redex apart cannot put it
+   *    back. Measured: with it in the set, [[SubSelf]]'s step stops at
+   *    `PRE (NUM_SUB (SUC k) k)` against `ZERO`.
+   *  - [[SubIsZero]] and [[MinusThenPlus]] carry a hypothesis, so they are not equations and the
+   *    driver cannot take them. Both are the same three lines: open `NUM_LE`, rewrite the witness
+   *    equation into the goal, and close with one of the two inductions above.
+   *  - [[PredecessorBelow]] is a case split rather than an induction, and [[SubBelow]] is an
+   *    induction whose step is a transitivity. Neither is an equation either.
+   */
+  private def subtraction(
+    logic: Logic,
+    driver: Induct,
+    ring: Ring,
+    naturals: Natural,
+    base: Theory,
+    notation: Notation,
+    recursion: Kernel.Thm,
+    addition: Map[String, Kernel.Thm],
+    orderDefinitions: Map[String, Kernel.Thm],
+    orderFacts: Map[String, Kernel.Thm],
+    embedsSum: Kernel.Thm
+  ): Either[LogicError, (Theory, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+
+    for {
+      // `PRE` takes the recursion's step function to its *index*, which is the number one below the
+      // successor it is being asked about. That is the whole definition.
+      predecessor <- Recursion.define(
+        logic,
+        naturals,
+        base,
+        notation,
+        recursion,
+        Predecessor,
+        numbers,
+        "ZERO",
+        "\\v:num. \\i:num. i",
+        None
+      )
+      (withPredecessor, predecessorDefinition, preZero, preSuccessor) = predecessor
+
+      preAtZero <- checked(withPredecessor, notation, PreAtZero, preZero)
+      preAtSuccessor <- checked(withPredecessor, notation, PreAtSuccessor, preSuccessor)
+
+      defined <- Recursion.define(
+        logic,
+        naturals,
+        withPredecessor,
+        notation,
+        recursion,
+        Subtraction,
+        numbers,
+        "m:num",
+        "\\v:num. \\i:num. PRE v",
+        Some(m)
+      )
+      (theory, subtractionDefinition, subZero, subSuccessor) = defined
+
+      subAtZero <- checked(theory, notation, SubAtZero, subZero)
+      subAtSuccessor <- checked(theory, notation, SubAtSuccessor, subSuccessor)
+
+      recurrences = Vector(subAtZero, subAtSuccessor, preAtZero, preAtSuccessor)
+
+      zeroMinus <- byInduction(driver, theory, notation, ZeroMinus, recurrences)
+
+      // The one place the hypothesis has to be tried before the recurrences. Both sides of the step
+      // are `NUM_SUB` at a successor, so `NUM_SUB_SUC` matches at the very node the hypothesis was
+      // for, and the two normal forms come out as `PRE (PRE (NUM_SUB (SUC m) k))` against
+      // `PRE (NUM_SUB m k)`. `Induct.settle` puts the hypothesis first for the same reason and says
+      // so at more length.
+      subSuccessors <- byInduction(
+        driver,
+        theory,
+        notation,
+        SubSuccessors,
+        recurrences,
+        hypothesisFirst = true
+      )
+
+      subSelf <- byInduction(driver, theory, notation, SubSelf, Vector(subAtZero, subSuccessors))
+
+      sumMinus <- byInduction(
+        driver,
+        theory,
+        notation,
+        SumMinus,
+        Vector(addition(AddAtZero), addition(AddAtSuccessor), subAtZero, subSuccessors)
+      )
+
+      truncates <- byInduction(
+        driver,
+        theory,
+        notation,
+        Truncates,
+        Vector(
+          addition(AddAtZero),
+          addition(AddAtSuccessor),
+          subAtSuccessor,
+          preAtZero,
+          subSelf
+        )
+      )
+
+      subIsZero <- vanishes(logic, theory, notation, orderDefinitions, truncates)
+      predecessorBelow <- belowItsSuccessor(
+        logic,
+        theory,
+        notation,
+        naturals,
+        (preAtZero, preAtSuccessor),
+        orderFacts
+      )
+      subBelow <- differenceBelow(
+        driver,
+        theory,
+        notation,
+        (subAtZero, subAtSuccessor),
+        predecessorBelow,
+        orderFacts
+      )
+      minusThenPlus <- restores(logic, theory, notation, orderDefinitions, addition, sumMinus)
+
+      differenceStatement <- stated(theory, notation, EmbedsDifference)
+      embedsDifference <- crossesDifference(
+        logic,
+        ring,
+        theory,
+        notation,
+        embedsSum,
+        minusThenPlus,
+        differenceStatement
+      )
+    } yield (
+      theory,
+      Map(Predecessor -> predecessorDefinition, Subtraction -> subtractionDefinition),
+      Map(
+        PreAtZero -> preAtZero,
+        PreAtSuccessor -> preAtSuccessor,
+        SubAtZero -> subAtZero,
+        SubAtSuccessor -> subAtSuccessor,
+        ZeroMinus -> zeroMinus,
+        SubSuccessors -> subSuccessors,
+        SubSelf -> subSelf,
+        SumMinus -> sumMinus,
+        Truncates -> truncates,
+        SubIsZero -> subIsZero,
+        PredecessorBelow -> predecessorBelow,
+        SubBelow -> subBelow,
+        MinusThenPlus -> minusThenPlus,
+        EmbedsDifference -> embedsDifference
+      )
+    )
+  }
+
+  /**
+   * `|- !m n. NUM_LE m n ==> NUM_SUB m n = ZERO`, from [[Truncates]] and the witness.
+   *
+   * `NUM_LE m n` **is** `?d. NUM_ADD m d = n`, so the bound is exactly the permission to write `n`
+   * as a sum starting at `m`, and [[Truncates]] is the same claim about that sum. Nothing here is
+   * an induction: the induction was done on the sum, where there was something to recurse on.
+   */
+  private def vanishes(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    orderDefinitions: Map[String, Kernel.Thm],
+    truncates: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val d = Term.variable("d", numbers)
+
+    for {
+      definition <- orderDefinitions.get(NonStrictOrder).toRight(MissingDefinition(NonStrictOrder))
+      minus <- LogicError.lift(
+        theory.constant(Subtraction, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      below <- Parser.proposition(theory, notation, "NUM_LE (m:num) (n:num)")
+      assumed <- LogicError.lift(Kernel.assume(below))
+      opened <- gap(logic, definition, m, n, assumed)
+
+      reaching <- LogicError.lift(Term.appAll(plus, List(m, d)).flatMap(Term.eq(_, n)))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      // `m - n = m - (m + d) = ZERO`
+      fromM <- LogicError.lift(Term.app(minus, m))
+      rewritten <- Conv.sym(reaches).flatMap(Conv.apTerm(fromM, _))
+      atSum <- rules.specAll(truncates, List(m, d))
+      whole <- Conv.trans(rewritten, atSum)
+
+      withoutWitness <- rules.existsElim(opened, d, whole)
+      result <- rules
+        .disch(below, withoutWitness)
+        .flatMap(rules.genAll(_, List(m, n)))
+        .flatMap(checked(theory, notation, SubIsZero, _))
+    } yield result
+  }
+
+  /**
+   * `|- !n. NUM_LE (PRE n) n`, by the case split on a number and not by an induction.
+   *
+   * There is nothing to induct on: the claim at `SUC k` says nothing about the claim at `k`. What
+   * decides it is which of the two shapes `n` has, and the two answers are already theorems —
+   * `ZERO` is below everything, and `k` is below `SUC k`.
+   *
+   * It is also where `PRE ZERO = ZERO` earns the choice made for it. A predecessor that refused at
+   * zero would make this statement unwritable rather than false, and every consumer of
+   * [[SubBelow]] would carry a side condition it cannot discharge.
+   */
+  private def belowItsSuccessor(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    naturals: Natural,
+    recurrences: (Kernel.Thm, Kernel.Thm),
+    orderFacts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+    val (preAtZero, preAtSuccessor) = recurrences
+
+    for {
+      cases <- naturals.fact(Natural.ZeroOrSuccessor)
+      split <- rules.spec(n, cases)
+      branches <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (isZero, isSuccessor) = branches
+
+      relation <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      predecessor <- LogicError.lift(theory.constant(Predecessor, Type.fun(numbers, numbers)))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      // `n = ZERO`: the predecessor is `ZERO` as well, and `ZERO` is below everything.
+      assumedZero <- LogicError.lift(Kernel.assume(isZero))
+      predecessorIsZero <- Conv.apTerm(predecessor, assumedZero).flatMap(Conv.trans(_, preAtZero))
+      leastAtN <- rules.spec(n, orderFacts(ZeroIsLeast))
+      sameClaim <- Conv.apTerm(relation, predecessorIsZero).flatMap(Conv.apThm(_, n))
+      zeroBranch <- Conv
+        .sym(sameClaim)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, leastAtN)))
+
+      // `n = SUC k`: the predecessor is `k`, and `k <= SUC k` is already a fact.
+      assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+      step = Conv.freshVariable("k", numbers, Term.freeVariables(isSuccessor) + n)
+      successorOfStep <- LogicError.lift(Term.app(successor, step))
+      isStep <- LogicError.lift(Term.eq(n, successorOfStep))
+      assumedStep <- LogicError.lift(Kernel.assume(isStep))
+      atStep <- rules.spec(step, preAtSuccessor)
+      predecessorIsStep <- Conv.apTerm(predecessor, assumedStep).flatMap(Conv.trans(_, atStep))
+      belowSuccessor <- rules.spec(step, orderFacts(AtMostSuccessor))
+      onTheLeft <- Conv.apTerm(relation, predecessorIsStep).flatMap(Conv.apThm(_, n))
+      fromStep <- LogicError.lift(Term.app(relation, step))
+      onTheRight <- Conv.apTerm(fromStep, assumedStep)
+      sameClaimAtStep <- Conv.trans(onTheLeft, onTheRight)
+      reached <- Conv
+        .sym(sameClaimAtStep)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, belowSuccessor)))
+      successorBranch <- rules.existsElim(assumedSuccessor, step, reached)
+
+      decided <- rules.disjElim(split, zeroBranch, successorBranch)
+      result <- rules
+        .gen(n, decided)
+        .flatMap(checked(theory, notation, PredecessorBelow, _))
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LE (NUM_SUB m n) m`, by induction on what is taken away.
+   *
+   * The base is the first recurrence and reflexivity. The step is the second recurrence and one
+   * transitivity: `m - SUC k` is `PRE (m - k)`, which is below `m - k` by [[PredecessorBelow]],
+   * which is below `m` by the hypothesis.
+   *
+   * `Induct.afterRewriting` rather than a hand-built conversion, because the goal is a bound and
+   * not an equation: the rewriting brings the goal to the shape the two facts are about and carries
+   * the result back, and a rule set that had not finished is reported as that rather than as a
+   * false bound.
+   */
+  private def differenceBelow(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    recurrences: (Kernel.Thm, Kernel.Thm),
+    predecessorBelow: Kernel.Thm,
+    orderFacts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = driver.logic
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val (subAtZero, subAtSuccessor) = recurrences
+
+    for {
+      statement <- stated(theory, notation, SubBelow)
+      predecessor <- LogicError.lift(theory.constant(Predecessor, Type.fun(numbers, numbers)))
+      atZero <- Rewrite.Rule.of(logic, subAtZero)
+      atSuccessor <- Rewrite.Rule.of(logic, subAtSuccessor)
+
+      result <- driver.proveBy(
+        statement,
+        goal =>
+          Induct.afterRewriting(Vector(atZero), goal) { rewritten =>
+            for {
+              subject <- rewritten match {
+                case App(App(_, left), _) => Right(left)
+                case other => Left(NotOfForm("a bound on a number", other))
+              }
+              reflexive <- rules.spec(subject, orderFacts(Reflexive))
+            } yield reflexive
+          },
+        opened =>
+          for {
+            sides <- opened.hypothesis.conclusion match {
+              case App(App(_, left), right) => Right((left, right))
+              case other => Left(NotOfForm("a bound on a number", other))
+            }
+            (difference, subject) = sides
+            reached <- Induct.afterRewriting(Vector(atSuccessor), opened.goal) { _ =>
+              for {
+                smaller <- LogicError.lift(Term.app(predecessor, difference))
+                dropped <- rules.spec(difference, predecessorBelow)
+                pair <- rules.conjIntro(dropped, opened.hypothesis)
+                chained <- rules
+                  .specAll(orderFacts(Transitive), List(smaller, difference, subject))
+                  .flatMap(rules.mp(_, pair))
+              } yield chained
+            }
+          } yield reached
+      )
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LE n m ==> NUM_ADD (NUM_SUB m n) n = m`, the converse of [[SumMinus]].
+   *
+   * The witness of `n <= m` is the answer: `n + d = m`, so `d + n = m` by commutativity, so
+   * `m - n = (d + n) - n = d` by [[SumMinus]], and `(m - n) + n` is `d + n`, which is `m`.
+   *
+   * The commutation is there because [[SumMinus]] is stated with what is taken away on the right of
+   * the sum and `NUM_LE` puts its witness on the right of the other one. Stating the two to agree
+   * would save this step and cost it at every other call site, since `m + d = n` is the form the
+   * order unfolds to everywhere else in the file.
+   */
+  private def restores(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    orderDefinitions: Map[String, Kernel.Thm],
+    addition: Map[String, Kernel.Thm],
+    sumMinus: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val d = Term.variable("d", numbers)
+
+    for {
+      definition <- orderDefinitions.get(NonStrictOrder).toRight(MissingDefinition(NonStrictOrder))
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      minus <- LogicError.lift(
+        theory.constant(Subtraction, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      below <- Parser.proposition(theory, notation, "NUM_LE (n:num) (m:num)")
+      assumed <- LogicError.lift(Kernel.assume(below))
+      opened <- gap(logic, definition, n, m, assumed)
+
+      reaching <- LogicError.lift(Term.appAll(plus, List(n, d)).flatMap(Term.eq(_, m)))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      swapped <- rules.specAll(addition(AddCommutative), List(n, d))
+      sorted <- Conv.sym(swapped).flatMap(Conv.trans(_, reaches))
+
+      cancelled <- rules.specAll(sumMinus, List(d, n))
+      carried <- Conv.sym(sorted).flatMap(Conv.apTerm(minus, _)).flatMap(Conv.apThm(_, n))
+      difference <- Conv.trans(carried, cancelled)
+
+      restored <- Conv.apTerm(plus, difference).flatMap(Conv.apThm(_, n))
+      whole <- Conv.trans(restored, sorted)
+
+      withoutWitness <- rules.existsElim(opened, d, whole)
+      result <- rules
+        .disch(below, withoutWitness)
+        .flatMap(rules.genAll(_, List(m, n)))
+        .flatMap(checked(theory, notation, MinusThenPlus, _))
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n`.
+   *
+   * [[MinusThenPlus]] under the same hypothesis says `(m - n) + n = m` over the naturals;
+   * [[EmbedsSum]] carries that to `A + B = C` over the reals, where `A` is the image of the
+   * difference and the other two are the images of `m` and `n`. What is left is `A = C - B`, and it
+   * is reached by rewriting `C` back into `A + B` and handing `(A + B) - B = A` to `RING`.
+   *
+   * `RING` rather than `LINARITH`, which is the procedure the three order lemmas above use. The
+   * residue here is an **equation** between ring expressions in three atoms, which is what `RING`
+   * decides; sending it to `LINARITH` would be asking a procedure for inequalities to settle an
+   * identity, and the three atoms are applications of `real_of_num` that neither takes apart.
+   */
+  private def crossesDifference(
+    logic: Logic,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    embedsSum: Kernel.Thm,
+    minusThenPlus: Kernel.Thm,
+    statement: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val values = TyApp(Real.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      below <- Parser.proposition(theory, notation, "NUM_LE (n:num) (m:num)")
+      assumed <- LogicError.lift(Kernel.assume(below))
+      reaches <- rules.specAll(minusThenPlus, List(m, n)).flatMap(rules.mp(_, assumed))
+
+      embedding <- LogicError.lift(theory.constant(Embedding, Type.fun(numbers, values)))
+      minus <- LogicError.lift(
+        theory.constant(Subtraction, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      realPlus <- LogicError.lift(
+        theory.constant(Real.Addition, Type.fun(values, Type.fun(values, values)))
+      )
+      realMinus <- LogicError.lift(
+        theory.constant(Real.Subtraction, Type.fun(values, Type.fun(values, values)))
+      )
+
+      taken <- LogicError.lift(Term.appAll(minus, List(m, n)))
+      carried <- Conv.apTerm(embedding, reaches)
+      homomorphism <- rules.specAll(embedsSum, List(taken, n))
+      equation <- Conv.sym(homomorphism).flatMap(Conv.trans(_, carried))
+
+      left <- LogicError.lift(Term.app(embedding, taken))
+      subtracted <- LogicError.lift(Term.app(embedding, n))
+      whole <- LogicError.lift(Term.app(embedding, m))
+      sum <- LogicError.lift(Term.appAll(realPlus, List(left, subtracted)))
+      shrunk <- LogicError.lift(Term.appAll(realMinus, List(sum, subtracted)))
+      identity <- LogicError.lift(Term.eq(shrunk, left)).flatMap(ring.prove)
+
+      back <- Conv.sym(equation)
+      asDifference <- Conv.apTerm(realMinus, back).flatMap(Conv.apThm(_, subtracted))
+      reached <- Conv.trans(asDifference, identity).flatMap(Conv.sym)
+
+      result <- rules.disch(below, reached).flatMap(rules.genAll(_, List(m, n)))
+
+      // The statement as the table writes it rather than something that follows from it, for the
+      // reason `crossesStrictly` gives: `RING` decides the shape of what comes back and the table
+      // decides what this file claims.
+      _ <-
+        if (result.conclusion == statement) Right(())
+        else Left(NotOfForm("the statement as the table writes it", result.conclusion))
+    } yield result
+  }
+
+  /* ------------------------------------------------------------ partial sums */
+
+  /**
+   * [[PartialSum]], its two recurrences and its bounded congruence.
+   *
+   * Last of the stages and it needs three of the earlier ones: `NUM_ADD` for the step of the
+   * recursion, `NUM_LT` for the bound of the congruence, and the two order facts that lift an index
+   * from below a number to below its successor.
+   *
+   * The congruence is the only part that is not the recursion, and it is [[congruenceOnARange]],
+   * which is `Series`'s proof of the same lemma at the reals with one difference: there the step
+   * closes an equation between REALS and goes to the linear reader, and here the equation is
+   * between naturals, where no decision procedure applies. It closes by rewriting instead, with the
+   * induction hypothesis and the agreement at the top index as the two rules, and demands that the
+   * two sides reach the same term. That demand is the point rather than a formality: `Rewrite`
+   * hands back the theorem it had when the step limit ran out, so without it an exhausted rewrite
+   * and a false identity are the same object.
+   */
+  private def partialSums(
+    logic: Logic,
+    driver: Induct,
+    naturals: Natural,
+    base: Theory,
+    notation: Notation,
+    recursion: Kernel.Thm,
+    orderFacts: Map[String, Kernel.Thm]
+  ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val f = Term.variable("f", Type.fun(numbers, numbers))
+
+    for {
+      defined <- Recursion.define(
+        logic,
+        naturals,
+        base,
+        notation,
+        recursion,
+        PartialSum,
+        numbers,
+        "ZERO",
+        "\\v:num. \\i:num. NUM_ADD v ((f:num -> num) i)",
+        Some(f)
+      )
+      (theory, definition, sumZero, sumSuccessor) = defined
+
+      atZero <- checked(theory, notation, PartialSumAtZero, sumZero)
+      atSuccessor <- checked(theory, notation, PartialSumAtSuccessor, sumSuccessor)
+
+      strictTransitive <- orderFacts.get(StrictTransitive).toRight(MissingDefinition(StrictTransitive))
+      belowSuccessor <- orderFacts.get(BelowSuccessor).toRight(MissingDefinition(BelowSuccessor))
+      congruence <- congruenceOnARange(
+        logic, driver, theory, notation, atZero, atSuccessor, strictTransitive, belowSuccessor)
+    } yield (
+      theory,
+      definition,
+      Map(
+        PartialSumAtZero -> atZero,
+        PartialSumAtSuccessor -> atSuccessor,
+        PartialSumCongruenceBelow -> congruence
+      )
+    )
+  }
+
+  /**
+   * The binary numerals of `num`: three definitions, their equations, and the three that cross.
+   *
+   * Last, and it has to be: [[EmbedsNumeralOne]] and the two below it mention `real_of_num`, the
+   * bits are defined through `NUM_ADD`, and the odd bit is a successor. So it needs the addition,
+   * the embedding and the two recurrences the embedding proves, which is everything the stages
+   * above produce.
+   *
+   * The notation comes back out with the encoding added to it, rather than being added by the
+   * caller, because a notation naming constants that do not exist is a notation that reads `3` and
+   * then fails at the theory. The parser filters by what the theory declares, so the two would not
+   * actually break; they would just be a pair a reader has to check agrees, and returning them
+   * together removes the question.
+   */
+  private def numerals(
+    logic: Logic,
+    ring: Ring,
+    base: Theory,
+    notation: Notation,
+    arithmetic: Map[String, Kernel.Thm],
+    embedding: Map[String, Kernel.Thm]
+  ): Either[LogicError, (Theory, Notation, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+
+    for {
+      oneBody <- Parser.term(base, notation, "SUC ZERO")
+      defineOne <- LogicError.lift(Kernel.defineConstant(base, NumeralOne, oneBody))
+      (withOne, oneDefinition) = defineOne
+
+      bit0Body <- Parser.term(withOne, notation, "\\n:num. NUM_ADD n n")
+      defineBit0 <- LogicError.lift(Kernel.defineConstant(withOne, NumeralBit0, bit0Body))
+      (withBit0, bit0Definition) = defineBit0
+
+      bit1Body <- Parser.term(withBit0, notation, "\\n:num. SUC (NUM_ADD n n)")
+      defineBit1 <- LogicError.lift(Kernel.defineConstant(withBit0, NumeralBit1, bit1Body))
+      (theory, bit1Definition) = defineBit1
+
+      // From here on the notation reads a digit string at `num` as well as at `real`. It is
+      // extended after the three constants exist and not before, which is what makes the pair
+      // consistent by construction rather than by inspection.
+      spelled = notation.withNumerals(
+        Natural.NumberZero, NumeralOne, NumeralBit0, NumeralBit1)
+
+      oneIsSuccessor <- checked(theory, spelled, NumeralOneIsSuccessorOfZero, oneDefinition)
+
+      bit0At <- Conv.unfold(bit0Definition, List(n))
+      bit0Doubles <- rules
+        .gen(n, bit0At)
+        .flatMap(checked(theory, spelled, NumeralBit0Doubles, _))
+
+      bit1At <- Conv.unfold(bit1Definition, List(n))
+      bit1Doubles <- rules
+        .gen(n, bit1At)
+        .flatMap(checked(theory, spelled, NumeralBit1Doubles, _))
+
+      // `real_of_num NUM_ONE` rewrites to `0 + 1` and stops: the rules here are recurrences and
+      // `0 + 1 = 1` is not one of them, it is an identity of the field. So the rewrite settles the
+      // left side and `RING` settles what is left, which is the same division of labour
+      // `EmbedsDifference` above already uses.
+      embedsZero <- embedding.get(EmbedsZero).toRight(MissingDefinition(EmbedsZero))
+      embedsSuccessor <- embedding.get(EmbedsSuccessor).toRight(MissingDefinition(EmbedsSuccessor))
+      embedsSum <- embedding.get(EmbedsSum).toRight(MissingDefinition(EmbedsSum))
+
+      bit0Real <- ring.reals.definition(Real.Bit0)
+      bit1Real <- ring.reals.definition(Real.Bit1)
+
+      embedsOne <- carriedAcross(
+        logic,
+        ring,
+        theory,
+        spelled,
+        EmbedsNumeralOne,
+        Vector(oneIsSuccessor, embedsSuccessor, embedsZero)
+      )
+      embedsBit0 <- byRewriting(
+        logic, theory, spelled, EmbedsNumeralBit0, Vector(bit0Doubles, embedsSum, bit0Real))
+      embedsBit1 <- byRewriting(
+        logic,
+        theory,
+        spelled,
+        EmbedsNumeralBit1,
+        Vector(bit1Doubles, embedsSuccessor, embedsSum, bit1Real)
+      )
+    } yield (
+      theory,
+      spelled,
+      Map(
+        NumeralOne -> oneDefinition,
+        NumeralBit0 -> bit0Definition,
+        NumeralBit1 -> bit1Definition
+      ),
+      Map(
+        NumeralOneIsSuccessorOfZero -> oneIsSuccessor,
+        NumeralBit0Doubles -> bit0Doubles,
+        NumeralBit1Doubles -> bit1Doubles,
+        EmbedsNumeralOne -> embedsOne,
+        EmbedsNumeralBit0 -> embedsBit0,
+        EmbedsNumeralBit1 -> embedsBit1
+      )
+    )
+  }
+
+  /**
+   * An unquantified equation whose left side rewrites to something `RING` can finish against.
+   *
+   * [[byRewriting]] is the usual route and it is the one the two bit lemmas take: both sides
+   * normalise to the same term and there is nothing left to decide. [[EmbedsNumeralOne]] does not,
+   * and the reason is worth the separate method rather than a fallback that hides it. Its left side
+   * normalises to `0 + 1` and its right side is `1`; the rules here are recurrences and `0 + 1 = 1`
+   * is not one of them, it is an identity of the field. So the rewriting settles what it can and
+   * `RING` decides the residue, which is the same division of labour [[EmbedsDifference]] already
+   * uses and is a decision procedure rather than a second guess.
+   *
+   * Asking `RING` the **original** statement instead would fail and is worth recording as the first
+   * thing tried: `real_of_num NUM_ONE` is an atom to a procedure that decides the reals, so the
+   * question it would answer is whether an unknown equals one, and the answer to that is no.
+   */
+  private def carriedAcross(
+    logic: Logic,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    name: String,
+    rewrites: Vector[Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      statement <- stated(theory, notation, name)
+      sides <- Term.destEq(statement).toRight(NotOfForm("an equation", statement))
+      rules <- Rewrite.Rule.all(logic, rewrites)
+      normalised <- Rewrite.rewrite(rules, sides._1)
+      residue <- rightOf(normalised)
+      closing <- LogicError.lift(Term.eq(residue, sides._2)).flatMap(ring.prove)
+      proved <- Conv.trans(normalised, closing)
+      result <- checked(theory, notation, name, proved)
+    } yield result
+
+  /**
+   * [[PartialSumCongruenceBelow]] by induction on the bound, with the implication carried through.
+   *
+   * The base is `NUM_SUM f ZERO = NUM_SUM g ZERO`, which is the zero recurrence twice and does not
+   * use the hypothesis at all: it is discharged from a proof that did not assume it, which is the
+   * honest reading of an empty range.
+   *
+   * The step cannot be a rewrite of the goal, because the induction hypothesis is itself an
+   * implication and has to be taken apart. Assume the agreement below `SUC v`; every index below
+   * `v` is below `SUC v`, by [[StrictTransitive]] with [[BelowSuccessor]], so the agreement below
+   * `v` follows and the hypothesis applies; the agreement AT `v` is the same assumption used once
+   * more, at the index the successor added. What is left is
+   * `NUM_ADD (NUM_SUM f v) (f v) = NUM_ADD (NUM_SUM g v) (g v)` under two equations, which is a
+   * rewrite to a common term and not an arithmetic fact.
+   */
+  private def congruenceOnARange(
+    logic: Logic,
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm,
+    strictTransitive: Kernel.Thm,
+    belowSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    /** The head of `NUM_LT a b`, read off a statement that uses it rather than rebuilt. */
+    def strictlyBelow(sample: Term): Either[LogicError, Term] = sample match {
+      case App(App(head, _), _) => Right(head)
+      case other => Left(NotOfForm("an order statement", other))
+    }
+
+    for {
+      statement <- stated(theory, notation, PartialSumCongruenceBelow)
+      stripped <- Logic.stripForall(statement)
+      (outer, inner) = stripped
+      summands = outer.take(2).toList
+      left <- outer.lift(0).toRight(NotOfForm("two summands", inner))
+      right <- outer.lift(1).toRight(NotOfForm("two summands", inner))
+      bound <- outer.lift(2).toRight(NotOfForm("a bound to induct on", inner))
+      // `stripForall` takes ALL of them and the driver wants a claim about every number, so the
+      // bound goes back on; the two summands stay free and are generalised at the end.
+      overEveryBound <- logic.mkForall(bound, inner)
+
+      proved <- driver.proveBy(
+        overEveryBound,
+        goal =>
+          for {
+            parts <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+            unfoldLeft <- rules.spec(left, atZero)
+            unfoldRight <- rules.spec(right, atZero)
+            conversions <- normalisation(logic, Vector(unfoldLeft, unfoldRight), Vector.empty)
+            base <- Rewrite.proveEquation(logic, conversions._1, parts._2)
+            result <- rules.disch(parts._1, base)
+          } yield result,
+        step =>
+          for {
+            goalParts <- logic.destImp(step.goal).toRight(NotOfForm("an implication", step.goal))
+            (agreesBelowSuccessor, equalSums) = goalParts
+            assumed <- LogicError.lift(Kernel.assume(agreesBelowSuccessor))
+
+            // `v < SUC v`, which is what lifts an index from below v to below its successor
+            atTheVariable <- rules.spec(step.variable, belowSuccessor)
+
+            // rebuild `u < v` for a fresh u, with the order constant taken from the statement
+            openedPremise <- Logic.stripForall(agreesBelowSuccessor)
+            innerParts <- logic
+              .destImp(openedPremise._2)
+              .toRight(NotOfForm("a bounded agreement", openedPremise._2))
+            below <- strictlyBelow(innerParts._1)
+            index <- openedPremise._1.lift(0).toRight(NotOfForm("one index", openedPremise._2))
+            smallerTerm <- LogicError.lift(Term.app(below, index).flatMap(Term.app(_, step.variable)))
+            smaller <- LogicError.lift(Kernel.assume(smallerTerm))
+
+            // u < v and v < SUC v give u < SUC v, and the assumption then gives f u = g u. The
+            // successor is read off `v < SUC v` rather than built.
+            successor <- atTheVariable.conclusion match {
+              case App(App(_, _), above) => Right(above)
+              case other => Left(NotOfForm("an order statement", other))
+            }
+            liftedAt <- rules
+              .spec(index, strictTransitive)
+              .flatMap(rules.spec(step.variable, _))
+              .flatMap(rules.spec(successor, _))
+            chained <- rules.conjIntro(smaller, atTheVariable).flatMap(rules.mp(liftedAt, _))
+            agreementAt <- rules.spec(index, assumed).flatMap(rules.mp(_, chained))
+            agreesBelow <- rules.disch(smallerTerm, agreementAt).flatMap(rules.gen(index, _))
+
+            // the induction hypothesis applies, and the top index is the assumption once more
+            sumsBelow <- rules.mp(step.hypothesis, agreesBelow)
+            top <- rules.spec(step.variable, assumed).flatMap(rules.mp(_, atTheVariable))
+
+            // the successor recurrence on both sides, and the two equations above close what is
+            // left by rewriting to a common term
+            unfoldLeft <- rules.spec(left, atSuccessor).flatMap(rules.spec(step.variable, _))
+            unfoldRight <- rules.spec(right, atSuccessor).flatMap(rules.spec(step.variable, _))
+            conversions <- normalisation(
+              logic, Vector(unfoldLeft, unfoldRight, sumsBelow, top), Vector.empty)
+            settled <- Rewrite.proveEquation(logic, conversions._1, equalSums)
+            result <- rules.disch(agreesBelowSuccessor, settled)
+          } yield result
+      )
+      general <- rules.genAll(proved, summands)
+    } yield general
+  }
+
+  /* ---------------------------------------------------------------- drivers */
+
+  /**
+   * The statement named, proved by induction, with both halves closed by rewriting.
+   *
+   * `plain` are the equations that may fire anywhere: the recurrences of whatever the statement
+   * mentions and the facts already proved. `sorting` are the ones that hold in both directions and
+   * may fire only where they make the term smaller, which is how a sum is ordered without a rule
+   * rewriting its own output for ever. The induction hypothesis joins `plain` inside the step and
+   * nowhere else.
+   *
+   * The comparison is between two normal forms and it has to be exact: if the rules do not bring
+   * the two sides of the step together, this refuses instead of trying something else, and
+   * `Rewrite.proveWith` distinguishes a difference that is about the identity from one that is
+   * about the step limit.
+   *
+   * == Where the induction hypothesis goes in the list, and when it matters ==
+   *
+   * Last by default and **first** when `hypothesisFirst` is set. `Rewrite.stepConv` is a depth
+   * conversion over `firstConv`, so at any one node the first rule that applies wins, and the two
+   * orders differ exactly where a recurrence and the hypothesis both match the same node. Every
+   * lemma above this line is one where they do not, and the default is the order those were proved
+   * in.
+   *
+   * [[SubSuccessors]] is the one where they do: its step is `NUM_SUB (SUC m) (SUC (SUC k))` against
+   * `NUM_SUB m (SUC k)`, [[SubAtSuccessor]] matches the inner `NUM_SUB (SUC m) (SUC k)` that the
+   * hypothesis was for, and with the recurrence first the two sides stop at
+   * `PRE (PRE (NUM_SUB (SUC m) k))` and `PRE (NUM_SUB m k)`. `Induct.settle` reaches the same
+   * conclusion from a different consumer and its comment is the longer version of this one.
+   */
+  /**
+   * Prove a listed statement by induction from a fixed set of rewrite rules.
+   *
+   * **The rules a law needs are decided by the terms in it, not by the operation it is about.**
+   * That sounds like nothing and costs an hour. `NUM_POW_ADD`, which is a law about
+   * exponentiation, has an exponent that is a SUM, so the induction opens `NUM_ADD` and needs
+   * addition's recurrences in its rule set; given only multiplication's, its base case comes
+   * back as
+   *
+   * {{{
+   *   NUM_POW x (NUM_ADD y ZERO)     against     NUM_ADD ZERO (NUM_POW x y)
+   * }}}
+   *
+   * which is the two sides each rewritten as far as the rules allow and no further. A goal pair
+   * of that shape is not a false statement; it is a missing rule, and which rule is missing can
+   * be read straight off the two terms that failed to meet.
+   */
+  private def byInduction(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    name: String,
+    plain: Vector[Kernel.Thm],
+    sorting: Vector[Kernel.Thm] = Vector.empty,
+    hypothesisFirst: Boolean = false
+  ): Either[LogicError, Kernel.Thm] = {
+    def withHypothesis(hypothesis: Kernel.Thm): Vector[Kernel.Thm] =
+      if (hypothesisFirst) hypothesis +: plain else plain :+ hypothesis
+
+    for {
+      statement <- stated(theory, notation, name)
+      proved <- driver.proveBy(
+        statement,
+        goal => settle(driver.logic, plain, sorting, goal),
+        opened => settle(driver.logic, withHypothesis(opened.hypothesis), sorting, opened.goal)
+      )
+    } yield proved
+  }
+
+  /**
+   * The statement named, proved by rewriting alone, for the facts that need no induction.
+   *
+   * `NUM_MUL n (SUC ZERO) = n` is the whole of what this is for: both recurrences apply to it and
+   * what is left is a unit law already proved, so an induction would be a step with nothing in it.
+   */
+  private def byRewriting(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    name: String,
+    plain: Vector[Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      statement <- stated(theory, notation, name)
+      conversions <- normalisation(logic, plain, Vector.empty)
+      proved <- Rewrite.proveEquation(logic, conversions._1, statement)
+      result <- checked(theory, notation, name, proved)
+    } yield result
+
+  /** Prove an equation by bringing both of its sides to the same normal form. */
+  private def settle(
+    logic: Logic,
+    plain: Vector[Kernel.Thm],
+    sorting: Vector[Kernel.Thm],
+    goal: Term
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      conversions <- normalisation(logic, plain, sorting)
+      sides <- Term.destEq(goal).toRight(NotOfForm("an equation", goal))
+      proved <- Rewrite.proveWith(conversions._1, sides._1, sides._2, Some(conversions._2))
+    } yield proved
+
+  /**
+   * The conversion, repeated and once, from the two kinds of rule.
+   *
+   * Both are returned because the caller needs both: the repeated one normalises, and the single
+   * pass is what the question "had the rewriting finished" has to be asked with. Asking the
+   * repeated one gives a wrong answer where two rules undo each other, which `Rewrite.stepConv`
+   * says at more length.
+   *
+   * == Why the sorting is by `Term.ordering` and not by `Arithmetic.ringOrder` ==
+   *
+   * `Arithmetic.ringOrder` exists because over the reals the sorting has a second job: it has to
+   * put a term next to its own negation, so that the two are neighbours and one rule cancels them.
+   * Sorting a ring expression by the kernel's own order breaks that silently, which is why the
+   * warning about it is written where it is.
+   *
+   * Nothing here cancels. There is no negation over `num` and no inverse, and the subtraction this
+   * file defines is not one either: `NUM_SUB` is truncated, `m - m` reaches `ZERO` by its own lemma
+   * rather than by two terms meeting and annihilating, and no rule below ever puts a term next to
+   * anything it cancels against. So what the ordered rules have to do is only to make a sum's
+   * summands land in one arrangement, and any total order does that. `Term.ordering` is one, it is
+   * the kernel's and needs no argument of its own, and the termination argument is the one
+   * `Arithmetic` gives: the unconditional rules
+   * strictly reduce how much structure is left to expand, and the ordered ones leave the size of
+   * the term alone while strictly decreasing a total order on the finitely many terms of that size.
+   */
+  private def normalisation(
+    logic: Logic,
+    plain: Vector[Kernel.Thm],
+    sorting: Vector[Kernel.Thm]
+  ): Either[LogicError, (Rewrite.Conversion, Rewrite.Conversion)] =
+    for {
+      unconditional <- Rewrite.Rule.all(logic, plain)
+      ordered <- Rewrite.Rule.all(logic, sorting)
+    } yield {
+      val once = Rewrite.depthConv(
+        Rewrite.firstConv(
+          unconditional.map(Rewrite.rewriteConv) ++
+            ordered.map(rule => Rewrite.orderedRewriteConv(rule, Term.ordering)) :+
+            Rewrite.betaConv
+        )
+      )
+
+      (Rewrite.repeatConv(once), once)
+    }
+
+  /** Carry an equation into a term that mentions its left side, as `Series` does. */
+  /** The statement named, read from the text this file writes it by. */
+  private def stated(
+    theory: Theory,
+    notation: Notation,
+    name: String
+  ): Either[LogicError, Term] =
+    statements.get(name) match {
+      case None => Left(MissingDefinition(name))
+      case Some(text) => Parser.proposition(theory, notation, text)
+    }
+
+  /**
+   * The theorem, if it is the statement as written.
+   *
+   * Every fact of this development goes through here. A derivation that reaches something else is
+   * a refusal and not a fact under the wrong name, which is the mistake this catches: a recurrence
+   * whose quantifiers came out in the other order, or a lemma about the variable the driver chose
+   * rather than the one the statement names, are both true theorems and neither is the one asked
+   * for.
+   */
+  private def checked(
+    theory: Theory,
+    notation: Notation,
+    name: String,
+    theorem: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      statement <- stated(theory, notation, name)
+      result <-
+        if (theorem.conclusion == statement) Right(theorem)
+        else Left(NotOfForm(s"$name as it is written", theorem.conclusion))
+    } yield result
+
+  private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+    Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))
+
+  private def leftOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+    Term.destEq(theorem.conclusion).map(_._1).toRight(NotOfForm("an equation", theorem.conclusion))
+}

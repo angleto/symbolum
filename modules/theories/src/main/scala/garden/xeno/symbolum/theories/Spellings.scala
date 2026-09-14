@@ -1,0 +1,187 @@
+package garden.xeno.symbolum.theories
+
+import garden.xeno.symbolum.logic.*
+
+/**
+ * How every constant of the widest signature is set in print.
+ *
+ * `Latex` is the mechanism and this is the table: one row per constant, and the rows are what makes
+ * a generated page look like mathematics instead of like a transcript. Measured on 2026-09-13 over
+ * the library's 278 statements: 82 constants appear in them, 22 carry a notation entry and are
+ * spelled by the symbols `Latex.standard` gives those, and **60 carry none** and are spelled here.
+ * 231 of the 278 name at least one of the 60, which is why the table is not optional decoration.
+ *
+ * == One table, and what that costs ==
+ *
+ * `Notation` is extended by each development as it declares its constants, and this is not: it is
+ * assembled in one place over the whole chain. The reason is what a reader does with it. A spelling
+ * is a claim about how a constant is written **in the literature**, and the question a reader asks
+ * of it is "are these the symbols the books use", which is asked of the table as a page and not of
+ * sixty call sites in ten files. `docs/reading-register.md` already lists every constant one per
+ * row for the same reason.
+ *
+ * The cost is that a development added later does not carry its own spellings, and a constant with
+ * no row here would silently print as its own name in roman. `LatexSpec` is the guard: it fails
+ * when a constant of the signature has no row **and** when a row names a constant the signature
+ * does not have, so the table cannot drift in either direction.
+ *
+ * == Three decisions a reader should be able to disagree with ==
+ *
+ * **The embedding of the naturals into the reals is visible.** `real_of_num n` is set as
+ * `n_{\mathbb{R}}` and not as `n`. Every book writes it as `n`, and that is exactly the problem:
+ * `real_of_num n` and a real variable `n` would then print alike while being different terms of
+ * different types, and a page whose whole purpose is to be believed must not hide the one step
+ * where a natural becomes a real.
+ *
+ * **`SUC` is `\mathrm{suc}` and not `n + 1`.** They are equal and they are not the same term, and
+ * every recurrence over `num` in this library is stated at `SUC n`: a reader comparing the page
+ * against the code would find `+1` in one and `SUC` in the other.
+ *
+ * **`WORD_LENGTH` is not the absolute value's bars.** `\lvert w \rvert` is what a book writes for
+ * the length of a word, and `abs` already has those bars here; two constants sharing a spelling is
+ * the one ambiguity this table can introduce on its own, so the length is written `\mathrm{len}`.
+ */
+object Spellings {
+
+  /** The precedence of a relation, matching the notation's `<` and `<=`. */
+  private val Relation: Int = 50
+
+  /** The precedence of addition, and of subtraction, matching the notation's. */
+  private val Additive: Int = 60
+
+  /** The precedence of multiplication, matching the notation's. */
+  private val Multiplicative: Int = 70
+
+  /**
+   * The whole chain's table.
+   *
+   * Grouped the way the developments are, so that a reader checking it against
+   * `docs/lemmas.md` reads it in the order the library is listed.
+   */
+  val standard: Latex =
+    Latex.standard
+      /* ----------------------------------------------------------- the reals */
+      // `operator` and not `delimited` for the four rows below and for `NUM_CONG`: a delimited
+      // template must carry marks around its placeholders, and a postfix carries none, so
+      // `inv (a + b)` set as `a + b^{-1}`, the inverse of a sum as a sum with an inverse in it.
+      // Found by a peer session reading the output of two of them, and by the check in `LatexSpec`
+      // for the other three, which is the guard that came out of it.
+      .operator("inv", 1, "#1^{-1}", Multiplicative + 5)
+      .delimited("abs", 1, "\\lvert #1 \\rvert")
+      .delimited("max", 2, "\\max(#1, #2)")
+      .delimited("min", 2, "\\min(#1, #2)")
+      .delimited("sgn", 1, "\\operatorname{sgn}(#1)")
+      .operator("Power", 2, "#1^{#2}", Multiplicative + 5)
+      .operator("Divides", 2, "#1 \\mid #2", Relation)
+      .binding("Sum", "\\sum_{#b < #2} #1")
+      .binding("Prod", "\\prod_{#b < #2} #1")
+      /* -------------------------------------------------------- the naturals */
+      .delimited("SUC", 1, "\\mathrm{suc}(#1)")
+      .delimited("PRE", 1, "\\mathrm{pred}(#1)")
+      .operator("NUM_ADD", 2, "#1 + #2", Additive)
+      .operator("NUM_SUB", 2, "#1 \\mathbin{\\dot-} #2", Additive)
+      .operator("NUM_MUL", 2, "#1 \\cdot #2", Multiplicative)
+      .operator("NUM_POW", 2, "#1^{#2}", Multiplicative + 5)
+      .operator("NUM_LE", 2, "#1 \\le #2", Relation)
+      .operator("NUM_LT", 2, "#1 < #2", Relation)
+      .operator("real_of_num", 1, "#1_{\\mathbb{R}}", Multiplicative + 5)
+      .binding("NUM_SUM", "\\sum_{#b < #2} #1")
+      .binding("NUM_PROD", "\\prod_{#b < #2} #1")
+      /* ------------------------------------------------- number theory on num */
+      .operator("NUM_DIVIDES", 2, "#1 \\mid #2", Relation)
+      .operator("NUM_DIV", 2, "#1 \\operatorname{div} #2", Multiplicative)
+      .operator("NUM_MOD", 2, "#1 \\bmod #2", Multiplicative)
+      .delimited("NUM_GCD", 2, "\\gcd(#1, #2)")
+      // `operator` and not `delimited`, which is the constructor a postfix asks for and the one
+      // this table's own contract refuses: a delimited template has to carry the marks around its
+      // arguments, and `#1!` carries none, so `NUM_FACT (NUM_ADD a b)` would print `a + b!`. As an
+      // operator the context brackets it, which is how `Power` handles the same shape. Tighter than
+      // multiplication, like a power.
+      .operator("NUM_FACT", 1, "#1!", Multiplicative + 5)
+      // `delimited`, because a three-argument function has no infix reading at all and the
+      // contract that refuses `NUM_FACT` here is the one that admits this: the template carries
+      // its own marks around every argument, so nothing outside it can bind tighter.
+      .delimited("NUM_BETA", 3, "\\beta(#1, #2, #3)")
+      /* ------------------------------------------------- the arithmetisation */
+      // The triangular numbers are written as the sum they are rather than with a binomial,
+      // because the definition here is the recursion and not the closed form: setting them as
+      // `\\binom{n+1}{2}` would print a division this development deliberately never performs.
+      .operator("NUM_TRI", 1, "T_{#1}", Multiplicative + 5)
+      .delimited("NUM_PAIR", 2, "\\langle #1, #2 \\rangle")
+      // Delimited and not a pair of angle brackets again: a code IS a pair, with a tag and a
+      // successor around it, and setting the two the same way would hide the one difference a
+      // reader of a coded term needs to see.
+      .delimited("NUM_CODE", 2, "\\lceil #1, #2 \\rceil")
+      // The four projections. The pair's are the usual projections and the code's are named, so
+      // that a reader of a coded formula can see which of the two shapes is being opened.
+      .delimited("NUM_FST", 1, "\\pi_1(#1)")
+      .delimited("NUM_SND", 1, "\\pi_2(#1)")
+      .delimited("NUM_TAG", 1, "\\operatorname{tag}(#1)")
+      .delimited("NUM_PAYLOAD", 1, "\\operatorname{arg}(#1)")
+      // A predicate and not an operator: `NUM_TERM n` says a number codes a term, and setting
+      // it as a relation would suggest it relates two things.
+      .delimited("NUM_TERM", 1, "\\operatorname{Tm}(#1)")
+      .delimited("NUM_FORM", 1, "\\operatorname{Fm}(#1)")
+      // The object language's numeral for a meta-level number, set with the corner quotes the
+      // literature uses for a code, because that is what it is.
+      .delimited("NUM_NUMERAL", 1, "\\ulcorner #1 \\urcorner")
+      // `operator` and not `delimited`, for the reason `NUM_FACT` gives four rows up and which the
+      // guard caught here: a delimited template has to carry its own marks around EVERY argument,
+      // and `#3` sits outside the brackets. As an operator the context brackets it.
+      .operator("NUM_SUBST_TERM", 3, "#3[#1 := #2]", Multiplicative + 5)
+      .operator("NUM_SUBST_FORM", 3, "#3[#1 := #2]", Multiplicative + 5)
+      .delimited("NUM_FREE_TERM", 2, "\\operatorname{free}(#1, #2)")
+      .delimited("NUM_FREE_FORM", 2, "\\operatorname{free}(#1, #2)")
+      .delimited("NUM_CLOSED", 1, "\\operatorname{closed}(#1)")
+      .delimited("NUM_LOGIC", 1, "\\operatorname{Log}(#1)")
+      .delimited("NUM_STEP", 3, "\\operatorname{step}(#1, #2, #3)")
+      .delimited("NUM_PROOF", 2, "\\operatorname{Prf}(#1, #2)")
+      .delimited("NUM_PROV", 1, "\\operatorname{Prov}(#1)")
+      .delimited("NUM_PA", 1, "\\operatorname{PA}(#1)")
+      // The modulus is the FIRST argument, and this row had it last until the rendering was read
+      // against `Modular`'s own docstring: "`NUM_CONG k m n`", and "`NUM_CONG k` takes its modulus
+      // first, and that is the useful currying". The wrong order set beautifully and said something
+      // else, which is the failure this table can produce on its own and no test here can catch.
+      .operator("NUM_CONG", 3, "#2 \\equiv #3 \\pmod{#1}", Relation)
+      .delimited("NUM_PRIME", 1, "\\mathrm{prime}(#1)")
+      .delimited("NUM_FLOOR", 1, "\\lfloor #1 \\rfloor")
+      .delimited("NUM_CEIL", 1, "\\lceil #1 \\rceil")
+      /* ------------------------------------------------------------ the pair */
+      // Angle brackets rather than round ones, so that `FST (PAIR x y)` sets as
+      // `\pi_1(\langle x, y \rangle)` and not as `\pi_1((x, y))`, where the reader has to decide
+      // which of the two pairs of brackets is the projection's.
+      .delimited("PAIR", 2, "\\langle #1, #2 \\rangle")
+      .delimited("FST", 1, "\\pi_{1}(#1)")
+      .delimited("SND", 1, "\\pi_{2}(#1)")
+      .delimited("mk_prod", 1, "\\mathrm{mk\\_prod}(#1)")
+      .delimited("dest_prod", 3, "\\mathrm{dest\\_prod}(#1, #2, #3)")
+      .delimited("mk_pair", 4, "\\mathrm{mk\\_pair}(#1, #2, #3, #4)")
+      /* ------------------------------------------------------------ the word */
+      .delimited("WORD_LENGTH", 1, "\\mathrm{len}(#1)")
+      // The index is bracketed where it is a sum, which is redundant inside the square brackets
+      // and never wrong: one row carries one precedence for all of its places.
+      .operator("WORD_NTH", 2, "#1[#2]", Multiplicative + 5)
+      .delimited("WORD_MAKE", 2, "\\mathrm{word}(#1, #2)")
+      .delimited("WORD_ROTATE", 2, "\\mathrm{rot}_{#1}(#2)")
+      .delimited("WORD_PAD", 0, "\\square")
+      .delimited("mk_word", 1, "\\mathrm{mk\\_word}(#1)")
+      .delimited("dest_word", 1, "\\mathrm{dest\\_word}(#1)")
+      /* ---------------------------------------------------------- the matrix */
+      .delimited("MAT2", 4, "\\begin{pmatrix} #1 & #2 \\\\ #3 & #4 \\end{pmatrix}")
+      .delimited("MAT_ID", 0, "I")
+      .delimited("MAT_DET", 1, "\\det(#1)")
+      .operator("MAT_TRANSPOSE", 1, "#1^{\\mathsf{T}}", Multiplicative + 5)
+      .operator("MAT_ADD", 2, "#1 + #2", Additive)
+      .operator("MAT_MUL", 2, "#1 \\cdot #2", Multiplicative)
+      .operator("MAT_SMUL", 2, "#1 \\cdot #2", Multiplicative)
+      .delimited("MAT_E11", 1, "(#1)_{11}")
+      .delimited("MAT_E12", 1, "(#1)_{12}")
+      .delimited("MAT_E21", 1, "(#1)_{21}")
+      .delimited("MAT_E22", 1, "(#1)_{22}")
+      /* ------------------------------------------ what the type definitions left */
+      .delimited("IND_0", 0, "\\mathbb{I}_{0}")
+      .delimited("IND_SUC", 1, "\\mathrm{ind\\_suc}(#1)")
+      .delimited("NUM_REP", 1, "\\mathrm{num\\_rep}(#1)")
+      .delimited("mk_num", 1, "\\mathrm{mk\\_num}(#1)")
+      .delimited("dest_num", 1, "\\mathrm{dest\\_num}(#1)")
+}

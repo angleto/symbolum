@@ -1,0 +1,410 @@
+package garden.xeno.symbolum.logic
+
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import garden.xeno.symbolum.kernel.*
+
+/**
+ * The rewriting combinators, on equations assumed rather than proved.
+ *
+ * Assuming an equation gives a theorem like any other, and rewriting with it produces a theorem
+ * that carries the assumption. That is the property to watch in the first test: a rewrite does not
+ * quietly drop what it depended on.
+ *
+ * The variables here are called `u` and `w` rather than `a` and `b` because ScalaTest's matchers
+ * already define values with those names, and shadowing them is a compile error rather than a
+ * confusion.
+ */
+class RewriteSpec extends AnyFlatSpec with Matchers {
+
+
+  /**
+   * Abstraction, forced.
+   *
+   * `Term.abs` refuses a body that is not locally closed, since 2026-09-10, so it returns a
+   * refusal like `app` and `eq` do. Every body below is built out of variables and constants a
+   * line or two above and none of them can be open, so forcing here is reading the signature and
+   * not ignoring it. A test that meant to hand it an open body says so by calling `Term.abs`
+   * directly and looking at the `Left`.
+   */
+  private def lam(variable: FVar, body: Term): Term =
+    Term.abs(variable, body).fold(error => fail(s"unexpected refusal: $error"), identity)
+
+  private val logic = Logic.standard
+  private val alpha = TyVar("A")
+
+  private val u = Term.variable("a", alpha)
+  private val w = Term.variable("b", alpha)
+  private val f = Term.variable("f", Type.fun(alpha, alpha))
+
+  private def force[E, T](result: Either[E, T]): T =
+    result.fold(error => fail(s"expected success, got $error"), identity)
+
+  private def assumedRule(left: Term, right: Term): Rewrite.Rule =
+    force(Rewrite.Rule.of(logic, force(Kernel.assume(force(Term.eq(left, right))))))
+
+  private def rightOf(theorem: Kernel.Thm): Term =
+    Term.destEq(theorem.conclusion).map(_._2).getOrElse(fail("expected an equation"))
+
+  "Rewriting at the root" should "replace the term and keep what it assumed" in {
+    val rule = assumedRule(u, w)
+    val theorem = force(Rewrite.rewriteConv(rule)(u))
+
+    theorem.conclusion shouldBe force(Term.eq(u, w))
+    theorem.hypotheses shouldBe List(force(Term.eq(u, w)))
+  }
+
+  it should "leave a term no rule matches alone" in {
+    val rule = assumedRule(u, w)
+    val theorem = force(Rewrite.rewriteConv(rule)(w))
+
+    Rewrite.changed(theorem) shouldBe false
+  }
+
+  /* ------------------------------------------------- what a pass over nothing costs */
+
+  "A pass that changes nothing" should "build no proof of it" in {
+    // The repair of 2026-09-11, and the measurement it is worth is in `CostCorpusSpec`: about a
+    // third of every proof in somebody else's corpus was a rewriting pass reporting, in primitive
+    // inferences, that it had done nothing. A congruence over two identities is the identity on the
+    // application, and a chain through an identity is the other step; both were being built.
+    val rule = assumedRule(u, w)
+    val term = force(Term.app(f, w))
+    val theorem = force(Rewrite.depthConv(Rewrite.rewriteConv(rule))(term))
+
+    Rewrite.changed(theorem) shouldBe false
+    Rewrite.idle(theorem) shouldBe true
+
+    // One node, and it is the reflexivity the caller asked for rather than a congruence and two
+    // chains that arrive at the same place.
+    Derivation.size(theorem) shouldBe 1
+  }
+
+  it should "be the same theorem it was before, and not merely a theorem like it" in {
+    // What makes the repair safe: the conclusion is what the congruence would have concluded and
+    // the hypotheses are what it would have carried. Nothing above is an optimisation of the
+    // answer, only of the work.
+    val rule = assumedRule(u, w)
+    val term = force(Term.app(f, force(Term.app(f, w))))
+    val theorem = force(Rewrite.rewrite(Vector(rule), term))
+
+    theorem.conclusion shouldBe force(Term.eq(term, term))
+    theorem.hypotheses shouldBe empty
+  }
+
+  "A pass that changes one leaf of many" should "pay for that leaf and not for the rest" in {
+    // The other half of the claim. A term where one rule fires once still needs a congruence up
+    // every level from the leaf to the root, and that is the cost of saying where the change was;
+    // what it no longer needs is a congruence across the parts that did not change.
+    val rule = assumedRule(u, w)
+    val deep = force(Term.app(f, force(Term.app(f, force(Term.app(f, u))))))
+    val theorem = force(Rewrite.rewrite(Vector(rule), deep))
+
+    Rewrite.changed(theorem) shouldBe true
+    rightOf(theorem) shouldBe force(Term.app(f, force(Term.app(f, force(Term.app(f, w))))))
+
+    // Three congruences, the instance of the rule, and the chains that put them together. The
+    // number is pinned because the point of the change is that it is a function of the depth of
+    // the change rather than of the size of the term.
+    Derivation.size(theorem) should be < 20
+  }
+
+  "An identity step" should "be told from a step that merely looks like one" in {
+    // `idle` is deliberately narrower than `changed`: the same object on both sides, and nothing
+    // assumed. A step that rewrote a term into something structurally equal is not idle, and a
+    // step that changed nothing while resting on an assumption is not either, because dropping the
+    // assumption would make the finished theorem claim to rest on less than it does.
+    val reflexivity = Kernel.refl(u)
+    Rewrite.idle(reflexivity) shouldBe true
+    Rewrite.changed(reflexivity) shouldBe false
+
+    val assumed = force(Kernel.assume(force(Term.eq(u, u))))
+    Rewrite.changed(assumed) shouldBe false
+    Rewrite.idle(assumed) shouldBe false
+
+    val moved = force(Rewrite.rewriteConv(assumedRule(u, w))(u))
+    Rewrite.idle(moved) shouldBe false
+  }
+
+  "Rewriting at depth" should "reach inside an application" in {
+    val rule = assumedRule(u, w)
+    val theorem = force(Rewrite.depthConv(Rewrite.rewriteConv(rule))(force(Term.app(f, u))))
+
+    rightOf(theorem) shouldBe force(Term.app(f, w))
+  }
+
+  it should "reach under a binder and put the binder back" in {
+    val rule = assumedRule(u, w)
+    val abstraction = lam(Term.variable("z", alpha), force(Term.app(f, u)))
+    val theorem = force(Rewrite.depthConv(Rewrite.rewriteConv(rule))(abstraction))
+
+    rightOf(theorem) shouldBe lam(Term.variable("z", alpha), force(Term.app(f, w)))
+  }
+
+  it should "reach under a binder even when the rewrite brings its own hypothesis" in {
+    // The variable that opens the binder is chosen before the conversion runs, so it can collide
+    // with a variable in the hypothesis the conversion attaches. The second attempt knows the
+    // hypotheses and avoids them. Same shape as the defect an audit probe found in conjIntro.
+    val v = Term.variable("v", alpha)
+    val rule = assumedRule(u, v)
+    val abstraction = lam(Term.variable("z", alpha), force(Term.app(f, u)))
+
+    val theorem = force(Rewrite.depthConv(Rewrite.rewriteConv(rule))(abstraction))
+
+    rightOf(theorem) shouldBe lam(Term.variable("z", alpha), force(Term.app(f, v)))
+    theorem.hypotheses shouldBe List(force(Term.eq(u, v)))
+  }
+
+  "A quantified theorem" should "become a rule over the variables it quantified" in {
+    // `!x. f x = x` rather than `!x. x = x`, which is what this read until 2026-09-12. The two make
+    // the same point about the plumbing and only one of them is a rule: a left side that is one of
+    // the rule's own variables matches every subterm there is, and `Rule.of` refuses that shape
+    // since the day a lemma of it ran a suite for an hour. The refusal is asserted below.
+    val x = Term.variable("x", alpha)
+    val body = force(Term.eq(force(Term.app(f, x)), x))
+    val quantified = force(Kernel.assume(force(logic.mkForall(x, body))))
+    val rule = force(Rewrite.Rule.of(logic, quantified))
+
+    rule.variables should have size 1
+    Term.typeOf(rule.lhs) shouldBe alpha
+  }
+
+  it should "be refused when its left side is one of those variables, rather than diverging" in {
+    // Measured rather than argued. `NUM_DIV_MOD` was first stated as `m = n * (m DIV n) + m MOD n`,
+    // `Novelty` turns every equation in the library into a rule, and the rewriter then replaced
+    // every term with a larger one containing it: the suite did not fail, it ran for an hour on a
+    // term that doubled every step and was killed. A step limit cannot help, because the size grows
+    // by a factor per step rather than by a term.
+    //
+    // Both halves of the refusal are here. The second is the rule whose right side asks for
+    // something matching cannot determine.
+    val x = Term.variable("x", alpha)
+    val growing = force(logic.mkForall(x, force(Term.eq(x, force(Term.app(f, x))))))
+    Rewrite.Rule.of(logic, force(Kernel.assume(growing))).isLeft shouldBe true
+
+    val y = Term.variable("y", alpha)
+    val undetermined = force(
+      logic.mkForall(x, force(logic.mkForall(y, force(Term.eq(force(Term.app(f, x)), y)))))
+    )
+    Rewrite.Rule.of(logic, force(Kernel.assume(undetermined))).isLeft shouldBe true
+  }
+
+  it should "then apply at every instance of its pattern" in {
+    // `!x. f x = x` assumed as a whole rather than generalised from an assumption about one x:
+    // generalising over a variable that is free in a hypothesis is exactly what the kernel's
+    // abstraction rule refuses, and rightly.
+    val x = Term.variable("x", alpha)
+    val statement = force(logic.mkForall(x, force(Term.eq(force(Term.app(f, x)), x))))
+    val rule = force(Rewrite.Rule.of(logic, force(Kernel.assume(statement))))
+
+    val nested = force(Term.app(f, force(Term.app(f, u))))
+    val theorem = force(Rewrite.rewrite(Vector(rule), nested))
+
+    rightOf(theorem) shouldBe u
+    theorem.hypotheses shouldBe List(statement)
+  }
+
+  "Repeating a conversion" should "stop when nothing changes" in {
+    val rule = assumedRule(u, w)
+    val theorem = force(Rewrite.repeatConv(Rewrite.rewriteConv(rule))(u))
+
+    rightOf(theorem) shouldBe w
+  }
+
+  it should "stop at the limit rather than run forever" in {
+    // Two rules that undo each other: rewriting alternates for as long as it is allowed to. The
+    // theorem it returns is still an equation between the term it started from and the one it
+    // reached, which is true whichever way the alternation stopped.
+    val there = assumedRule(u, w)
+    val back = assumedRule(w, u)
+    val alternating = Rewrite.firstConv(Vector(there, back).map(Rewrite.rewriteConv))
+    val theorem = force(Rewrite.repeatConv(alternating, 7)(u))
+
+    Term.destEq(theorem.conclusion).map(_._1) shouldBe Some(u)
+    rightOf(theorem) should (equal(u) or equal(w))
+  }
+
+  "Beta conversion" should "contract a redex found while rewriting" in {
+    val identity = lam(u, u)
+    val redex = force(Term.app(identity, w))
+    val theorem = force(Rewrite.betaConv(redex))
+
+    rightOf(theorem) shouldBe w
+  }
+
+  "Proving by rewriting" should "join two sides that reach the same form" in {
+    val rule = assumedRule(u, w)
+    val theorem = force(Rewrite.prove(Vector(rule), force(Term.app(f, u)), force(Term.app(f, w))))
+
+    theorem.conclusion shouldBe force(Term.eq(force(Term.app(f, u)), force(Term.app(f, w))))
+  }
+
+  it should "refuse when the two sides do not meet" in {
+    val rule = assumedRule(u, w)
+    val other = Term.variable("c", alpha)
+
+    // Both sides reach a normal form and the normal forms differ, so the identity is the thing at
+    // fault. That is what `NotEqualTo` means, and the test below is the case it must not cover.
+    //
+    // It carries the two terms rather than a printed sentence, which is the point of the case: the
+    // layer that raises it knows the connectives and not the arithmetic, so a term printed here
+    // would be printed with a notation that does not know `+`. The surface renders them instead.
+    // What it carries is the two normal forms, not the two inputs: the left side was rewritten on
+    // the way. Asserting they differ is asserting the whole meaning of the case, since two normal
+    // forms that met would not be a refusal at all.
+    Rewrite.prove(Vector(rule), u, other) match {
+      case Left(NotEqualTo(wanted, found)) => wanted should not be found
+      case unexpected => fail(s"expected the two normal forms to be carried, got $unexpected")
+    }
+  }
+
+  it should "say it ran out of steps rather than blame the identity" in {
+    // Two rules that undo each other, so the rewriting alternates until the limit and stops at a
+    // waypoint rather than at a normal form. The two sides then differ exactly as they do when the
+    // identity is false, and the two findings must not arrive wearing the same `Left`: one says
+    // raise the limit, the other says stop believing the claim.
+    val there = assumedRule(u, w)
+    val back = assumedRule(w, u)
+    val other = Term.variable("c", alpha)
+
+    Rewrite.prove(Vector(there, back), u, other, 7).left.map(_.getClass) shouldBe
+      Left(classOf[NotNormalised])
+  }
+
+  it should "say so at any limit, and not only at an odd one" in {
+    // What that assertion missed until 2026-09-10. The finished-or-not question was asked with the
+    // **repeated** conversion, so a pair of rules that undo each other came back where it started
+    // whenever the limit was even, `changed` was false, and the term was declared finished when the
+    // rewriting had not finished at all. `DefaultLimit` is 200 and even, so the shape a caller
+    // actually meets was the one this reported wrongly; the line above passed on its choice of 7.
+    val there = assumedRule(u, w)
+    val back = assumedRule(w, u)
+    val other = Term.variable("c", alpha)
+
+    Vector(6, 7, 8, Rewrite.DefaultLimit).foreach { limit =>
+      withClue(s"at a limit of $limit: ") {
+        Rewrite.prove(Vector(there, back), u, other, limit).left.map(_.getClass) shouldBe
+          Left(classOf[NotNormalised])
+      }
+    }
+  }
+
+  /* ------------------------------------------ the boundary the compiler cannot check */
+
+  /**
+   * Every call of `Rewrite.rewrite` in the repository, with what each one does about the limit.
+   *
+   * An entry is a claim that this call site does not read a later failure as a statement about the
+   * mathematics. The scan below fails on a call site that is not listed, so a new one has to be
+   * thought about once rather than found later.
+   */
+  private val ReviewedCallSites: Map[String, String] = Map(
+    "Induct.scala" ->
+      "asks `finished` after the closer refuses, which is where this guard was first written",
+    "Family.scala" ->
+      "asks `finished` when the sample is not a number, and says which of the two it was",
+    "Recursion.scala" ->
+      ("one rule carrying `select ... = name` into the step the recursion theorem produced; it " +
+        "replaces one chosen term by one constant and cannot loop, and what comes back is handed " +
+        "to `Conv.trans`, which refuses unless the two sides meet, so a limit that ran out is a " +
+        "refusal about the rewriting and never a claim about the recurrence. The two copies of " +
+        "this carry, one in `Peano` and one in `Series`, were joined here on 2026-09-12"),
+    "Algebraic.scala" ->
+      ("one call, carrying the assumed defining equations of the radicals into the certificate " +
+        "the untrusted half produced. Each rule replaces a product of variables by a numeral, so " +
+        "every step makes the term smaller and it cannot loop. What comes back is handed to " +
+        "`RING` as `that = 0`, which is refused unless every defining factor has actually " +
+        "collapsed, so a limit that ran out is a refusal about the certificate and never a claim " +
+        "about the polynomial"),
+    "Peano.scala" ->
+      ("two, and neither reads a normal form on trust. One rule carrying the successor equation " +
+        "of the embedding into a crossed order, which replaces a constant and cannot loop, and " +
+        "whose caller then requires the result to be the statement the table writes; and the " +
+        "recurrences carried into the left side of a written statement, whose residue is handed " +
+        "to `RING` and rejoined by `Conv.trans`, so the rewriting settles what it can and a " +
+        "decision procedure settles the rest"),
+    "Series.scala" ->
+      ("two hand-written induction steps, and both refuse by naming the rewriting. The base of " +
+        "the bounded congruence requires the two sides it is left with to be the SAME TERM and " +
+        "says `an empty range on both sides` otherwise; the step of `SUM_SWAP` compares what the " +
+        "rewriting left against a separately derived instance and says `the step as the " +
+        "rewriting left it` rather than blaming the identity"),
+    "Modular.scala" ->
+      ("three rules carrying definitions of multiplication and addition at zero and one, to " +
+        "bring a division witness to a closed form; the caller then destructures the result and " +
+        "requires the two sides to be the SAME TERM, refusing `two sides the arithmetic brings " +
+        "together` otherwise, so a limit that ran out is a refusal about the rewriting and never " +
+        "a statement about the quotient"),
+    "Successor.scala" ->
+      ("two, and both ask `finished` and refuse by naming the rewriting rather than the number. " +
+        "One opens a numeral of `num` into its successors, one opens a power at a written " +
+        "exponent over a variable base; both rule sets strictly reduce the encoding, so neither " +
+        "can loop, and how long each walk is was measured rather than assumed: `k + 2` steps at " +
+        "every exponent read, which is where the ceiling comes from. Reaching it is a " +
+        "`NotNormalised` about the walk, and a caller that got one would be reading a refusal " +
+        "and never a claim about the power"),
+    "Matrix.scala" ->
+      ("four calls, and none of them reads what comes back as a normal form on trust. Two require " +
+        "it to be `MAT2` applied to four terms and refuse by naming the term they stopped at, so " +
+        "a limit that ran out is reported as the rewriting rather than as the mathematics; one " +
+        "compares it against a named variable; one is joined to a separately derived equation by " +
+        "`Conv.trans`, which refuses unless the two meet. The component equations that then reach " +
+        "`Ring` ask `finished` on the failing path, which is `Induct`'s arrangement reused")
+  )
+
+  "Every caller of the rewriter" should "have been asked what it does when the limit runs out" in {
+    // The census the card asked for, as a scan rather than as a reading somebody did once. The
+    // defect is that `rewrite` hands back the theorem it had when the step limit ran out, so a rule
+    // set that does not settle looks exactly like a false identity; it was closed in
+    // `Rewrite.prove`, came back the same day in `Induct.settle`, and came back again in `Family`
+    // on the day this list was written. It will come back in the next place that does this.
+    val roots = Vector("kernel", "logic", "theories", "tactics", "core", "checker")
+
+    val callers = roots.flatMap { module =>
+      val directory = java.nio.file.Paths.get(s"modules/$module/src/main")
+      if (!java.nio.file.Files.exists(directory)) Vector.empty
+      else {
+        val stream = java.nio.file.Files.walk(directory)
+        try
+          stream
+            .filter(path => path.toString.endsWith(".scala"))
+            .toArray
+            .toVector
+            .map(_.asInstanceOf[java.nio.file.Path])
+            .filter { path =>
+              val text = new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
+              text.contains("Rewrite.rewrite(") ||
+              (path.getFileName.toString == "Rewrite.scala" && false)
+            }
+            .map(_.getFileName.toString)
+        finally stream.close()
+      }
+    }.distinct.sorted
+
+    withClue(s"call sites: ${callers.mkString(", ")}\n") {
+      callers.filterNot(ReviewedCallSites.contains) shouldBe empty
+    }
+
+    // And it is not passing because it read nothing: the two that carry the guard are in it.
+    callers should contain("Induct.scala")
+    callers should contain("Family.scala")
+
+    val stale = ReviewedCallSites.keys.toVector.filterNot(callers.contains)
+    withClue(s"reviewed and no longer a call site: ${stale.mkString(", ")}\n") {
+      stale shouldBe empty
+    }
+  }
+
+  it should "tell a normal form from a term the rewriter stopped at" in {
+    // The question underneath both tests above, asked directly. `repeatConv` returns a true theorem
+    // either way, so this is the only thing that separates them.
+    val settling = Rewrite.repeatConv(Rewrite.rewriteConv(assumedRule(u, w)))
+    val alternating = Rewrite.repeatConv(
+      Rewrite.firstConv(Vector(assumedRule(u, w), assumedRule(w, u)).map(Rewrite.rewriteConv)),
+      7
+    )
+
+    force(Rewrite.atFixedPoint(settling, w)) shouldBe true
+    force(Rewrite.atFixedPoint(alternating, u)) shouldBe false
+  }
+}

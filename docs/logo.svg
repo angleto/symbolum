@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 862 472" width="862" height="472" role="img" aria-label="Symbolum">
+  <title>Symbolum</title>
+  <!-- Inside an <img> this file gets no colour from the page around it, so `currentColor`
+       alone resolves to black and the mark is black on black wherever the page is dark.
+       The attribute stays, because it is the right answer when the file is inlined; the
+       rule below is what answers when it is not. -->
+  <style>
+    /* The bare value is a mid grey rather than either extreme, because a media query that
+       does not resolve has to leave the mark legible on a white page AND on a black one.
+       The two below are the good answer where the preference is expressed. */
+    .ink { fill: #7d8590; }
+    @media (prefers-color-scheme: light) { .ink { fill: #1f2328; } }
+    @media (prefers-color-scheme: dark)  { .ink { fill: #e6edf3; } }
+  </style>
+  <g class="ink" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17" letter-spacing="0" xml:space="preserve">
+    <text x="166" y="21.6" textLength="130" lengthAdjust="spacingAndGlyphs">|-!?~/\\/==&gt;&lt;</text>
+    <text x="836" y="21.6" textLength="20" lengthAdjust="spacingAndGlyphs">=&gt;</text>
+    <text x="116" y="41.6" textLength="230" lengthAdjust="spacingAndGlyphs">=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;</text>
+    <text x="796" y="41.6" textLength="60" lengthAdjust="spacingAndGlyphs">|-!?~/</text>
+    <text x="86" y="61.6" textLength="350" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!</text>
+    <text x="756" y="61.6" textLength="100" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;</text>
+    <text x="66" y="81.6" textLength="460" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-</text>
+    <text x="696" y="81.6" textLength="160" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;&lt;=&gt;=\-</text>
+    <text x="46" y="101.6" textLength="810" lengthAdjust="spacingAndGlyphs">&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?</text>
+    <text x="36" y="121.6" textLength="820" lengthAdjust="spacingAndGlyphs">~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/=</text>
+    <text x="26" y="141.6" textLength="810" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;</text>
+    <text x="16" y="161.6" textLength="160" lengthAdjust="spacingAndGlyphs">=\-&gt;|-!?~/\\/==&gt;</text>
+    <text x="286" y="161.6" textLength="510" lengthAdjust="spacingAndGlyphs">&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/</text>
+    <text x="6" y="181.6" textLength="150" lengthAdjust="spacingAndGlyphs">\\/==&gt;&lt;=&gt;=\-&gt;|-</text>
+    <text x="306" y="181.6" textLength="450" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/</text>
+    <text x="6" y="201.6" textLength="130" lengthAdjust="spacingAndGlyphs">==&gt;&lt;=&gt;=\-&gt;|-!</text>
+    <text x="326" y="201.6" textLength="130" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;=&gt;=</text>
+    <text x="526" y="201.6" textLength="170" lengthAdjust="spacingAndGlyphs">\-&gt;|-!?~/\\/==&gt;&lt;=</text>
+    <text x="6" y="221.6" textLength="130" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/\\</text>
+    <text x="326" y="221.6" textLength="130" lengthAdjust="spacingAndGlyphs">/==&gt;&lt;=&gt;=\-&gt;|-</text>
+    <text x="6" y="241.6" textLength="130" lengthAdjust="spacingAndGlyphs">!?~/\\/==&gt;&lt;=&gt;</text>
+    <text x="326" y="241.6" textLength="140" lengthAdjust="spacingAndGlyphs">=\-&gt;|-!?~/\\/=</text>
+    <text x="6" y="261.6" textLength="130" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!?</text>
+    <text x="326" y="261.6" textLength="130" lengthAdjust="spacingAndGlyphs">~/\\/==&gt;&lt;=&gt;=\</text>
+    <text x="6" y="281.6" textLength="130" lengthAdjust="spacingAndGlyphs">-&gt;|-!?~/\\/==</text>
+    <text x="326" y="281.6" textLength="130" lengthAdjust="spacingAndGlyphs">&gt;&lt;=&gt;=\-&gt;|-!?~</text>
+    <text x="6" y="301.6" textLength="150" lengthAdjust="spacingAndGlyphs">/\\/==&gt;&lt;=&gt;=\-&gt;|</text>
+    <text x="306" y="301.6" textLength="150" lengthAdjust="spacingAndGlyphs">-!?~/\\/==&gt;&lt;=&gt;=</text>
+    <text x="16" y="321.6" textLength="160" lengthAdjust="spacingAndGlyphs">\-&gt;|-!?~/\\/==&gt;&lt;</text>
+    <text x="286" y="321.6" textLength="160" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|-!?~/\\/=</text>
+    <text x="26" y="341.6" textLength="410" lengthAdjust="spacingAndGlyphs">=&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;</text>
+    <text x="36" y="361.6" textLength="390" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=</text>
+    <text x="46" y="381.6" textLength="370" lengthAdjust="spacingAndGlyphs">&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;</text>
+    <text x="66" y="401.6" textLength="330" lengthAdjust="spacingAndGlyphs">=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\</text>
+    <text x="86" y="421.6" textLength="290" lengthAdjust="spacingAndGlyphs">/==&gt;&lt;=&gt;=\-&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-</text>
+    <text x="116" y="441.6" textLength="230" lengthAdjust="spacingAndGlyphs">&gt;|-!?~/\\/==&gt;&lt;=&gt;=\-&gt;|-!</text>
+    <text x="166" y="461.6" textLength="130" lengthAdjust="spacingAndGlyphs">?~/\\/==&gt;&lt;=&gt;=</text>
+  </g>
+</svg>

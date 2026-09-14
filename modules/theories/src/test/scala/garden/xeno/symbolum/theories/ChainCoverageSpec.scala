@@ -1,0 +1,195 @@
+package garden.xeno.symbolum.theories
+
+import java.nio.file.{Files, Paths}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import scala.jdk.CollectionConverters.*
+
+/**
+ * Every file of this module is accounted for, so a development nobody assembled cannot stay quiet.
+ *
+ * Twice in two days a development was built, proved, green and **invisible**: `Magnitude` on
+ * 2026-09-13 held seventeen facts that were in no library and in no document, and `Coding` held
+ * `NUM_FACT` and four more the same evening. Neither was a broken test. `LibrarySpec` compares the
+ * library against a sum over the developments `Library.of` names, and `RegisterSpec` against what
+ * the chain assembles, so both are green **by construction** on anything outside the chain, and
+ * outside the chain is exactly where the defect lives. `LibrarySpec`'s own comment says it: *"the
+ * sum above is what would have caught it had anybody added `Magnitude` to the list; nothing catches
+ * a development nobody ever put on either"*.
+ *
+ * == Why this is a file listing and not a search for a call ==
+ *
+ * The obvious guard greps for `defineConstant` and asks which of those files `Chain` names. It was
+ * tried on 2026-09-13 and it fails in **both** directions, which is the measurement that decided
+ * the shape here. It accuses `Recursion`, whose `Kernel.defineConstant` declares the **caller's**
+ * constant and none of its own, and `Register`, which names the method in a docstring. And it
+ * **misses `Coding`**, the one real case, because `Coding` introduces `NUM_FACT` through
+ * `Recursion.define` rather than through a call of its own.
+ *
+ * A guard with two false positives is disabled by somebody who decides. A guard that misses the
+ * only true case is green for ever and nobody decides anything, which is worse, and that is the
+ * one a search for the call gives.
+ *
+ * == The population comes from the directory ==
+ *
+ * The thing being defended against is a development **nobody put on any list**, so a list is the
+ * one place the population cannot come from. It is read off the directory, and [[Accounted]] has to
+ * cover it exactly: a file with no entry fails, and an entry naming no file fails. A list that must
+ * cover an enumerated population cannot go quiet; a list that **is** the population can.
+ *
+ * What this does not do, stated so nobody reads it as more: it does not check that a development in
+ * the chain is **collected** by `Library.of`, which is `LibrarySpec`'s sum, nor that what it
+ * declares reaches `Chain.widest`, which is `ChainSpec`'s. It checks that somebody classified the
+ * file, which is the step that was skipped both times.
+ */
+class ChainCoverageSpec extends AnyFlatSpec with Matchers {
+
+  /** What a file is, and there are only three answers. */
+  enum Standing {
+
+    /** `Chain.construct` builds it, so its facts and constants are assembled. */
+    case InTheChain
+
+    /** It declares no constant and holds no fact of its own: a procedure, a driver, a schema. */
+    case DeclaresNothing
+
+    /** Not a development: a generator, a document, an interface, a table, a tactic over the reals. */
+    case NotADevelopment
+  }
+
+  import Standing.*
+
+  /**
+   * Every file under `modules/theories/src/main`, with what it is.
+   *
+   * Written by hand on purpose: the entry is the place a reader says why a file is outside the
+   * chain, and the two defects this exists for are both a file that was never asked the question.
+   * A new development lands here red, with a message naming it, and the author chooses one of three
+   * answers rather than discovering months later that nothing ever looked.
+   */
+  private val Accounted: Map[String, Standing] = Map(
+    "Arithmetic" -> InTheChain,
+    "Bounded" -> InTheChain,
+    "Coding" -> InTheChain,
+    "Numbering" -> InTheChain,
+    "Language" -> InTheChain,
+    "Provability" -> InTheChain,
+    "Divisibility" -> InTheChain,
+    "Induct" -> InTheChain,
+    "Magnitude" -> InTheChain,
+    "Matrix" -> InTheChain,
+    "Modular" -> InTheChain,
+    "Natural" -> InTheChain,
+    "Order" -> InTheChain,
+    "Peano" -> InTheChain,
+    "Product" -> InTheChain,
+    "Real" -> InTheChain,
+    "Ring" -> InTheChain,
+    "Rotation" -> InTheChain,
+    "Series" -> InTheChain,
+    "Successor" -> InTheChain,
+    "Word" -> InTheChain,
+
+    // Beside the chain and correctly so: each produces a theorem or a procedure on request and
+    // introduces no constant, which is the reason `Bounded`'s own docstring gives for sitting where
+    // it does. `Coding` was put here by mistake for a few hours and is the reason this file exists:
+    // it introduces `NUM_FACT`, so the reason that covers these three never covered it.
+    "Descent" -> DeclaresNothing,
+    "Recursion" -> DeclaresNothing,
+    "Semiring" -> DeclaresNothing,
+
+    "Certificate" -> NotADevelopment,
+    "Chain" -> NotADevelopment,
+    "Coefficient" -> NotADevelopment,
+    "Counterpart" -> NotADevelopment,
+    "Essay" -> NotADevelopment,
+    "Farkas" -> NotADevelopment,
+    "Field" -> NotADevelopment,
+    "Foundation" -> NotADevelopment,
+    "Generated" -> NotADevelopment,
+    "Guide" -> NotADevelopment,
+    "Lemmas" -> NotADevelopment,
+    "Library" -> NotADevelopment,
+    "Linarith" -> NotADevelopment,
+    "LinearForm" -> NotADevelopment,
+    "Numeral" -> NotADevelopment,
+    "Polynomial" -> NotADevelopment,
+    "Positivity" -> NotADevelopment,
+    "Register" -> NotADevelopment,
+    "RestsOn" -> NotADevelopment,
+    "Signature" -> NotADevelopment,
+    "Spellings" -> NotADevelopment
+  )
+
+  private val directory =
+    Paths.get("modules/theories/src/main/scala/garden/xeno/symbolum/theories")
+
+  private val onDisk: Set[String] = {
+    val stream = Files.list(directory)
+    try
+      stream
+        .iterator()
+        .asScala
+        .map(_.getFileName.toString)
+        .filter(_.endsWith(".scala"))
+        .map(_.dropRight(".scala".length))
+        .toSet
+    finally stream.close()
+  }
+
+  "Every file of this module" should "be accounted for, and the accounting name a file" in {
+    onDisk should not be empty
+
+    val unaccounted = (onDisk -- Accounted.keySet).toVector.sorted
+    withClue(
+      s"a development nobody classified is how `Magnitude` and `Coding` went missing; say what " +
+        s"${unaccounted.mkString(", ")} is, in `Accounted`:\n"
+    )(unaccounted shouldBe empty)
+
+    val stale = (Accounted.keySet -- onDisk).toVector.sorted
+    withClue(s"`Accounted` names files that are gone: ${stale.mkString(", ")}\n")(stale shouldBe empty)
+  }
+
+  it should "agree with `Chain` about which developments it builds" in {
+    val source = Files.readString(directory.resolve("Chain.scala"))
+    val built = "<- ([A-Z][A-Za-z]*)\\.construct".r
+      .findAllMatchIn(source)
+      .map(_.group(1))
+      .toSet
+
+    // Read off `Chain.scala` rather than off the `Chain` value, because what is being checked is
+    // that the classification above and the construction agree, and a classification checked
+    // against the thing it classifies would be checking itself.
+    val claimed = Accounted.collect { case (name, InTheChain) => name }.toSet
+
+    withClue(s"claimed in the chain but not built by it: ${(claimed -- built).toVector.sorted}\n")(
+      (claimed -- built) shouldBe empty
+    )
+    withClue(s"built by the chain but not claimed: ${(built -- claimed).toVector.sorted}\n")(
+      (built -- claimed) shouldBe empty
+    )
+  }
+
+  /**
+   * The three beside the chain declare nothing, which is the reason they are allowed to be there.
+   *
+   * Asserted rather than described, because it is the reason `Coding` did not qualify and nobody
+   * noticed. A development that starts declaring a constant fails here and has to move.
+   */
+  it should "hold nothing of its own in what sits beside the chain" in {
+    val chain = Chain.standard
+    val assembled = chain.widest.theory.constants.keySet
+
+    val descent = Descent.construct(chain.peano, chain.induct)
+    descent.isRight shouldBe true
+
+    val semiring = Semiring.construct(chain.peano)
+    semiring.isRight shouldBe true
+
+    // Neither builds a theory of its own, so there is nothing for the chain to be missing. Stated
+    // as what is assembled rather than as what they hold, so the assertion fails if either ever
+    // gains a signature.
+    assembled should contain("NUM_FACT")
+    assembled should contain("abs")
+  }
+}

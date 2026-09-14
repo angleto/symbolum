@@ -1,0 +1,1288 @@
+package garden.xeno.symbolum.theories
+
+import garden.xeno.symbolum.kernel.*
+import garden.xeno.symbolum.logic.*
+
+/**
+ * The order facts that need more than the order axioms, and the order of the numerals.
+ *
+ * The five order axioms say how `<` behaves under addition and multiplication and that it is a
+ * total order, and every one of them is conditional or relational: none of them asserts that any
+ * particular number is below any other. So the theory can state `0 < 1` from the first day and
+ * cannot prove it, and until it does there is no inequality between two numerals anywhere in the
+ * development, which is what [[Linarith]] means when it refuses a goal for wanting a multiplier.
+ *
+ * That is the gap [[Positivity]] exists to close, and this file builds on it. `0 < 1` is the first
+ * stone and [[Positivity.positive]] carries it up the binary encoding to `0 < n` for every numeral;
+ * [[Order.less]], here, compares two arbitrary numerals by proving their difference positive, which
+ * is the one step of that chain that wants the collecting ring normal form.
+ *
+ * == What else is here ==
+ *
+ * The order lemmas that need more than one axiom and are wanted in more than one place: moving an
+ * inequality to and from the form `0 < e`, which is the form [[Linarith]] works in; cancelling a
+ * positive factor, which is what makes a rational multiplier usable without ever writing one down;
+ * multiplying both sides of an inequality by something positive; and the positivity of an inverse,
+ * which is the only fact here that mentions `inv` and the one any ratio between two measured
+ * quantities needs.
+ *
+ * Two more that the axioms leave out and that every bound wants: that a square is at least zero,
+ * which is what an extremal argument reaches for and which `LT_MUL` does not give because it is
+ * silent about a factor that is negative or zero; and that two inequalities can be added, which
+ * `LT_ADD` does not give because it adds the same term to both sides of one of them.
+ *
+ * == Why the cost follows the digits ==
+ *
+ * `positive` recurses on the bits rather than counting up, because `BIT0 k` is `k + k` and `BIT1 k`
+ * is `(k + k) + 1` by definition and a sum of positives is positive. So `0 < 1000000` costs twenty
+ * steps and not a million, which is the same distinction the collecting ring normal form is built
+ * on: the length of a numeral, not its value.
+ *
+ * == Why it sits above [[Ring]], and why three of its facts do not ==
+ *
+ * [[Order.less]] proves `m < n` by proving `n - m` positive and adding `m` back, and the identity
+ * it hands the ring is between two arbitrary numerals: through the expanding normal form that
+ * costs what the value of the numeral costs, not what its length costs. So this file wants the
+ * collecting form and therefore sits above [[Ring]]. The chain is
+ * `Real -> Arithmetic -> Positivity -> Polynomial -> Ring -> Order`, and [[Linarith]] is the
+ * consumer this is for.
+ *
+ * The three facts about the sign of a numeral run the other way and are declared in [[Positivity]],
+ * below the ring, because the ring normal form needs one of them: a rational coefficient is a
+ * numeral over a numeral, and cancelling that denominator needs `~(n = 0)`. They are cited here,
+ * not derived a second time.
+ */
+final class Order private (val ring: Ring, val facts: Map[String, Kernel.Thm]) {
+
+  val reals: RealTheory = ring.reals
+
+  private val rules = reals.logic.rules
+
+  /** The fact named, as a theorem with no hypotheses. */
+  def fact(name: String): Either[LogicError, Kernel.Thm] =
+    facts.get(name).toRight(MissingDefinition(name))
+
+  /** `|- 0 < 1` */
+  def zeroLessOne: Either[LogicError, Kernel.Thm] = fact(Order.ZeroLessOne)
+
+  /** `|- !x y. 0 < x ==> 0 < y ==> 0 < x + y` */
+  def addPositive: Either[LogicError, Kernel.Thm] = fact(Order.AddPositive)
+
+  /** `|- !x y. x < y ==> 0 < y - x` */
+  def moveToZero: Either[LogicError, Kernel.Thm] = fact(Order.MoveToZero)
+
+  /** `|- !x y. 0 < y - x ==> x < y` */
+  def moveFromZero: Either[LogicError, Kernel.Thm] = fact(Order.MoveFromZero)
+
+  /** `|- !x. 0 < x ==> ~(x = 0)` */
+  def nonZero: Either[LogicError, Kernel.Thm] = fact(Order.NonZero)
+
+  /** `|- !c x. 0 < c ==> 0 < c * x ==> 0 < x` */
+  def cancelPositive: Either[LogicError, Kernel.Thm] = fact(Order.CancelPositive)
+
+  /** `|- !c x y. 0 < c ==> x < y ==> x * c < y * c` */
+  def multiplyBoth: Either[LogicError, Kernel.Thm] = fact(Order.MultiplyBoth)
+
+  /** `|- !x. 0 < x ==> 0 < inv x` */
+  def inversePositive: Either[LogicError, Kernel.Thm] = fact(Order.InversePositive)
+
+  /** `|- !x y. x < y ==> x <= y` */
+  def leOfLt: Either[LogicError, Kernel.Thm] = fact(Order.LeOfLt)
+
+  /** `|- !x y. x = y ==> x <= y` */
+  def leOfEq: Either[LogicError, Kernel.Thm] = fact(Order.LeOfEq)
+
+  /** `|- !x y. x <= y ==> x < y \/ x = y` */
+  def leCases: Either[LogicError, Kernel.Thm] = fact(Order.LeCases)
+
+  /** `|- !x y. 0 <= x ==> 0 < y ==> 0 < x + y` */
+  def addNonNegativePositive: Either[LogicError, Kernel.Thm] = fact(Order.AddNonNegativePositive)
+
+  /** `|- !x y. 0 <= x ==> 0 <= y ==> 0 <= x + y` */
+  def addNonNegatives: Either[LogicError, Kernel.Thm] = fact(Order.AddNonNegatives)
+
+  /** `|- !c x. 0 < c ==> 0 <= x ==> 0 <= c * x` */
+  def multiplyNonNegative: Either[LogicError, Kernel.Thm] = fact(Order.MultiplyNonNegative)
+
+  /** `|- !c x. 0 <= c ==> 0 <= x ==> 0 <= c * x` */
+  def multiplyNonNegatives: Either[LogicError, Kernel.Thm] = fact(Order.MultiplyNonNegatives)
+
+  /** `|- !c x. 0 < c ==> 0 <= c * x ==> 0 <= x` */
+  def cancelNonNegative: Either[LogicError, Kernel.Thm] = fact(Order.CancelNonNegative)
+
+  /** `|- !x y. x <= y ==> 0 <= y - x` */
+  def leToZero: Either[LogicError, Kernel.Thm] = fact(Order.LeToZero)
+
+  /** `|- !x y. 0 <= y - x ==> x <= y` */
+  def leFromZero: Either[LogicError, Kernel.Thm] = fact(Order.LeFromZero)
+
+  /** `|- !x y. x <= y ==> y <= x ==> x = y` */
+  def antisymmetric: Either[LogicError, Kernel.Thm] = fact(Order.Antisymmetric)
+
+  /** `|- !x. 0 <= x * x` */
+  def squareNonNegative: Either[LogicError, Kernel.Thm] = fact(Order.SquareNonNegative)
+
+  /** `|- !x y z w. x <= y ==> z <= w ==> x + z <= y + w` */
+  def addLe: Either[LogicError, Kernel.Thm] = fact(Order.AddLe)
+
+  /**
+   * `|- 0 < n`, for a numeral above zero.
+   *
+   * Zero and below are refused rather than attempted: `0 < 0` is false, and there is no numeral
+   * below zero to be handed one.
+   */
+  def positive(value: BigInt): Either[LogicError, Kernel.Thm] = ring.positivity.positive(value)
+
+  /**
+   * `|- m < n`, for numerals with `m` below `n`.
+   *
+   * The difference is worked out on the numerals before anything is proved, so what the ring step
+   * sees is an identity between numerals rather than a cancellation: `0 < n - m` from [[positive]],
+   * then `n - m` added to nothing and `m` added to both sides, which is the order axiom.
+   */
+  def less(left: BigInt, right: BigInt): Either[LogicError, Kernel.Thm] =
+    if (left < 0)
+      reals.term(left.toString).flatMap(found => Left(NotOfForm("a numeral", found)))
+    else if (right <= left)
+      reals
+        .term(right.toString)
+        .flatMap(found => Left(NotOfForm(s"a numeral above $left", found)))
+    else
+      for {
+        gap <- positive(right - left)
+        difference <- Numeral.of(reals, right - left)
+        below <- Numeral.of(reals, left)
+        zero <- reals.term("0")
+
+        // `!x y z. x < y ==> x + z < y + z`, at `0`, the difference, and the smaller numeral.
+        addition <- reals
+          .axiom("LT_ADD")
+          .flatMap(rules.spec(zero, _))
+          .flatMap(rules.spec(difference, _))
+          .flatMap(rules.spec(below, _))
+        shifted <- rules.mp(addition, gap)
+
+        absorbs <- ring.prove(s"0 + $left = $left")
+        sums <- ring.prove(s"${right - left} + $left = $right")
+        result <- Conv.rewriteSides(absorbs, sums, shifted)
+      } yield result
+
+}
+
+object Order {
+
+  /**
+   * The strict order's vocabulary, which is declared where `<` is first reasoned about.
+   *
+   * Exported rather than redefined: [[Positivity]] sits below this file because the ring normal
+   * form needs a numeral to be non-zero, and it takes `<` down with it. Callers keep writing
+   * `Order.destLess`, which is where they look for it, and there is still one declaration.
+   */
+  export Positivity.{destLess, lessThanConstant}
+
+  /** `|- 0 < 1` */
+  val ZeroLessOne: String = Positivity.ZeroLessOne
+
+  /** `|- !x y. 0 < x ==> 0 < y ==> 0 < x + y` */
+  val AddPositive: String = Positivity.AddPositive
+
+  /** `|- !x y. x < y ==> 0 < y - x` */
+  val MoveToZero: String = "LT_TO_ZERO"
+
+  /** `|- !x y. 0 < y - x ==> x < y` */
+  val MoveFromZero: String = "LT_FROM_ZERO"
+
+  /** `|- !x. 0 < x ==> ~(x = 0)` */
+  val NonZero: String = Positivity.NonZero
+
+  /** `|- !c x. 0 < c ==> 0 < c * x ==> 0 < x` */
+  val CancelPositive: String = "CANCEL_POSITIVE"
+
+  /** `|- !c x y. 0 < c ==> x < y ==> x * c < y * c` */
+  val MultiplyBoth: String = "LT_MUL_BOTH"
+
+  /** `|- !x. 0 < x ==> 0 < inv x` */
+  val InversePositive: String = "INV_POSITIVE"
+
+  /** `|- !x y. x < y ==> x <= y` */
+  val LeOfLt: String = "LE_OF_LT"
+
+  /** `|- !x y. x = y ==> x <= y` */
+  val LeOfEq: String = "LE_OF_EQ"
+
+  /** `|- !x y. x <= y ==> x < y \/ x = y` */
+  val LeCases: String = "LE_CASES"
+
+  /** `|- !x y. 0 <= x ==> 0 < y ==> 0 < x + y` */
+  val AddNonNegativePositive: String = "ADD_NONNEG_LT"
+
+  /** `|- !x y. 0 <= x ==> 0 <= y ==> 0 <= x + y` */
+  val AddNonNegatives: String = "ADD_NONNEG"
+
+  /** `|- !c x. 0 < c ==> 0 <= x ==> 0 <= c * x` */
+  val MultiplyNonNegative: String = "MUL_NONNEG"
+
+  /**
+   * `|- !c x. 0 <= c ==> 0 <= x ==> 0 <= c * x`.
+   *
+   * The name is `MUL_NONNEG_BOTH` and not `MUL_NONNEG` because the latter is taken by the mixed
+   * lemma above. The addition pair names itself the other way round, `ADD_NONNEG_LT` for the mixed
+   * one and `ADD_NONNEG` for this shape, so the two families disagree; swapping the multiplication
+   * pair over would be the tidier scheme and would change what an existing name denotes, which is
+   * a decision rather than a rename.
+   */
+  val MultiplyNonNegatives: String = "MUL_NONNEG_BOTH"
+
+  /** `|- !c x. 0 < c ==> 0 <= c * x ==> 0 <= x` */
+  val CancelNonNegative: String = "CANCEL_NONNEG"
+
+  /** `|- !x y. x <= y ==> 0 <= y - x` */
+  val LeToZero: String = "LE_TO_ZERO"
+
+  /** `|- !x y. 0 <= y - x ==> x <= y` */
+  val LeFromZero: String = "LE_FROM_ZERO"
+
+  /** `|- !x y. x <= y ==> y <= x ==> x = y` */
+  val Antisymmetric: String = "LE_ANTISYMMETRIC"
+
+  /**
+   * `|- !x. 0 <= x * x`.
+   *
+   * The fact every extremal argument reaches for, and the cheapest one on this list that the order
+   * axioms do not hand over: `LT_MUL` gives a positive product from two positive factors and says
+   * nothing about a factor that is negative or zero, so the sign of a square is a case analysis and
+   * not an instance.
+   *
+   * It is non-strict and cannot be strict. `0 < x * x` is false at zero, and the statement that
+   * holds for every real is this one; a caller who has `~(x = 0)` gets the strict form from
+   * [[LeCases]] and this, and nothing here does it for them.
+   */
+  val SquareNonNegative: String = "SQUARE_NONNEG"
+
+  /**
+   * `|- !x y z w. x <= y ==> z <= w ==> x + z <= y + w`.
+   *
+   * Addition is monotone in both arguments at once, which `LT_ADD` does not say: the axiom adds the
+   * *same* term to both sides of one inequality, and adding two inequalities together is two of
+   * those steps or one of these. It is what every bound built out of parts wants, `Magnitude`'s
+   * triangle inequality being the first consumer here, and the name follows [[AddNonNegatives]]
+   * rather than [[MultiplyBoth]]: `_BOTH` in this file means both sides of one inequality, and this
+   * is both inequalities.
+   */
+  val AddLe: String = "ADD_LE"
+
+  private val real: Type = TyApp(Real.TypeName, Nil)
+  private val relation: Type = Type.fun(real, Type.fun(real, Type.Bool))
+  private val binary: Type = Type.fun(real, Type.fun(real, real))
+
+  /** Built once over the standard ring. */
+  lazy val standard: Order =
+    construct(Ring.standard).fold(
+      error => throw new IllegalStateException(s"the order facts do not build: ${error.message}"),
+      identity
+    )
+
+  /**
+   * Every fact in one pass, each derivation taking the ones before it as arguments.
+   *
+   * They are passed in rather than fetched because that is what makes each derivation readable on
+   * its own: the signature says what it rests on, and a lemma that grew a dependency cannot hide
+   * it in a lookup.
+   */
+  def construct(ring: Ring): Either[LogicError, Order] = {
+    val reals = ring.reals
+
+    for {
+      zeroLeft <- ring.arithmetic.lemma(Arithmetic.ZeroOnTheLeft)
+      unit <- ring.positivity.zeroLessOne
+      sum <- ring.positivity.addPositive
+      toZero <- moveToZero(reals)
+      fromZero <- moveFromZero(ring, zeroLeft)
+      notZero <- ring.positivity.nonZero
+      cancel <- cancelPositive(ring, sum)
+      both <- multiplyBoth(ring, toZero, fromZero)
+      inverse <- inversePositive(ring, unit, notZero, cancel)
+
+      ofLt <- leOfLt(reals)
+      ofEq <- leOfEq(reals)
+      cases <- leCases(reals)
+      addWithPositive <- addNonNegativePositive(ring, cases, sum)
+      addBoth <- addNonNegatives(ring, cases, ofLt, addWithPositive)
+      timesNonNegative <- multiplyNonNegative(ring, cases, ofLt, ofEq)
+      timesNonNegatives <- multiplyNonNegatives(ring, cases, ofEq, timesNonNegative)
+      cancelWeak <- cancelNonNegative(ring, ofLt, ofEq, addWithPositive)
+      weakToZero <- leToZero(ring, cases, ofLt, ofEq, toZero)
+      weakFromZero <- leFromZero(ring, cases, ofLt, ofEq, fromZero)
+      antisymmetry <- antisymmetric(reals, cases)
+      square <- squareNonNegative(ring, ofLt, ofEq)
+      sumOfBounds <- addLe(ring, weakToZero, weakFromZero, addBoth)
+    } yield new Order(
+      ring,
+      Map(
+        ZeroLessOne -> unit,
+        AddPositive -> sum,
+        MoveToZero -> toZero,
+        MoveFromZero -> fromZero,
+        NonZero -> notZero,
+        CancelPositive -> cancel,
+        MultiplyBoth -> both,
+        InversePositive -> inverse,
+        LeOfLt -> ofLt,
+        LeOfEq -> ofEq,
+        LeCases -> cases,
+        AddNonNegativePositive -> addWithPositive,
+        AddNonNegatives -> addBoth,
+        MultiplyNonNegative -> timesNonNegative,
+        MultiplyNonNegatives -> timesNonNegatives,
+        CancelNonNegative -> cancelWeak,
+        LeToZero -> weakToZero,
+        LeFromZero -> weakFromZero,
+        Antisymmetric -> antisymmetry,
+        SquareNonNegative -> square,
+        AddLe -> sumOfBounds
+      )
+    )
+  }
+
+  /* ------------------------------------------------------------------ lemmas */
+
+  /**
+   * `|- !x y. x < y ==> 0 < y - x`.
+   *
+   * Adding `-x` to both sides is the order axiom; what is left is to see that `x + -x` is zero and
+   * that `y + -x` is what `y - x` abbreviates.
+   */
+  def moveToZero(reals: RealTheory): Either[LogicError, Kernel.Thm] = {
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      ltAdd <- reals.axiom("LT_ADD")
+      inverse <- reals.axiom("ADD_INVERSE")
+      subtraction <- reals.definition(Real.Subtraction)
+
+      negated <- reals.term("-x:real")
+      premise <- reals.proposition("x:real < y:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      instance <- rules.specAll(ltAdd, List(x, y, negated))
+      applied <- rules.mp(instance, assumed)
+
+      inverseAtX <- rules.spec(x, inverse)
+      unfolded <- Conv.unfold(subtraction, List(y, x))
+      folded <- Conv.sym(unfolded)
+
+      rules0 <- Rewrite.Rule.all(reals.logic, Vector(inverseAtX, folded))
+      moved <- Rewrite.inTheorem(rules0, applied)
+
+      discharged <- rules.disch(premise, moved)
+      general <- rules.genAll(discharged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x y. 0 < y - x ==> x < y`, the way back.
+   *
+   * The same axiom with `x` added to both sides, and then the ring tactic to see that
+   * `(y - x) + x` is `y`.
+   */
+  def moveFromZero(ring: Ring, zeroLeft: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      ltAdd <- reals.axiom("LT_ADD")
+
+      zero <- reals.term("0")
+      difference <- reals.term("y:real - x:real")
+      premise <- reals.proposition("0 < y:real - x:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      instance <- rules.specAll(ltAdd, List(zero, difference, x))
+      applied <- rules.mp(instance, assumed)
+
+      restored <- ring.prove("(y:real - x:real) + x = y")
+      zeroAtX <- rules.spec(x, zeroLeft)
+
+      rules0 <- Rewrite.Rule.all(reals.logic, Vector(zeroAtX, restored))
+      moved <- Rewrite.inTheorem(rules0, applied)
+
+      discharged <- rules.disch(premise, moved)
+      general <- rules.genAll(discharged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !c x. 0 < c ==> 0 < c * x ==> 0 < x`.
+   *
+   * Cancelling a positive factor, by cases on trichotomy at `0` and `x`:
+   *
+   *  - `0 < x` is the goal;
+   *  - `0 = x` makes `c * x` zero, and `0 < 0` is refused by irreflexivity;
+   *  - `x < 0` makes `-x` positive, so `c * -x` is positive too, and adding it to `c * x` gives
+   *    `0 < 0` again.
+   *
+   * It is what lets a rational multiplier be used without one ever being written down. A
+   * certificate cleared of its denominators proves the goal multiplied by a positive numeral, and
+   * this takes the numeral back off, with no `inv` anywhere, which matters because the ring
+   * normalisation refuses `inv` by construction.
+   */
+  def cancelPositive(ring: Ring, addPositive: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val c = Term.variable("c", real)
+    val x = Term.variable("x", real)
+
+    for {
+      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
+      ltAdd <- reals.axiom("LT_ADD")
+      ltMul <- reals.axiom("LT_MUL")
+      trichotomy <- reals.axiom("LT_TOTAL")
+
+      zero <- reals.term("0")
+      goal <- reals.proposition("0 < x:real")
+      product <- reals.term("c:real * x:real")
+      never <- rules.spec(zero, irreflexive)
+
+      positiveFactor <- reals.proposition("0 < c:real")
+      factorAssumed <- LogicError.lift(Kernel.assume(positiveFactor))
+      positiveProduct <- reals.proposition("0 < c:real * x:real")
+      productAssumed <- LogicError.lift(Kernel.assume(positiveProduct))
+
+      cases <- rules.specAll(trichotomy, List(zero, x))
+
+      // The first branch is the goal.
+      first <- LogicError.lift(Kernel.assume(goal))
+
+      // The second makes the product zero.
+      equated <- reals.proposition("0 = x:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      reversed <- Conv.sym(equatedAssumed)
+      toZero <- Rewrite.Rule.all(reals.logic, Vector(reversed))
+      atZero <- Rewrite.inTheorem(toZero, productAssumed)
+      productIsZero <- ring.prove("c:real * 0 = 0")
+      collapse <- Rewrite.Rule.all(reals.logic, Vector(productIsZero))
+      absurdSecond <- Rewrite.inTheorem(collapse, atZero)
+      contradictionSecond <- rules.notElim(never, absurdSecond)
+      second <- rules.falsityElim(goal, contradictionSecond)
+
+      // The third makes `-x` positive, and then the other product with it.
+      belowZero <- reals.proposition("x:real < 0")
+      belowAssumed <- LogicError.lift(Kernel.assume(belowZero))
+      negated <- reals.term("-x:real")
+      shifted <- rules.specAll(ltAdd, List(x, zero, negated))
+        .flatMap(rules.mp(_, belowAssumed))
+      cancels <- ring.prove("x:real + -x = 0")
+      absorbs <- ring.prove("0 + -x:real = -x")
+      positiveNegation <- Conv.rewriteSides(cancels, absorbs, shifted)
+
+      otherProduct <- rules.specAll(ltMul, List(c, negated))
+      bothPositive <- rules.conjIntro(factorAssumed, positiveNegation)
+      negativePart <- rules.mp(otherProduct, bothPositive)
+      otherSide <- destLess(reals, negativePart.conclusion).map(_._2)
+
+      summed <- rules.specAll(addPositive, List(product, otherSide))
+        .flatMap(rules.mp(_, productAssumed))
+        .flatMap(rules.mp(_, negativePart))
+      sumIsZero <- ring.prove("c:real * x + c * -x = 0")
+      vanishes <- Rewrite.Rule.all(reals.logic, Vector(sumIsZero))
+      absurdThird <- Rewrite.inTheorem(vanishes, summed)
+      contradictionThird <- rules.notElim(never, absurdThird)
+      third <- rules.falsityElim(goal, contradictionThird)
+
+      tail <- reals
+        .proposition("0 = x:real \\/ x:real < 0")
+        .flatMap(term => LogicError.lift(Kernel.assume(term)))
+      fromTail <- rules.disjElim(tail, second, third)
+      result <- rules.disjElim(cases, first, fromTail)
+
+      innerDischarged <- rules.disch(positiveProduct, result)
+      outerDischarged <- rules.disch(positiveFactor, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(c, x))
+    } yield general
+  }
+
+  /**
+   * `|- !c x y. 0 < c ==> x < y ==> x * c < y * c`.
+   *
+   * Multiplying an inequality by something positive. The difference `y - x` is positive, the
+   * product of two positives is positive by the axiom, and `(y - x) * c` is `y * c - x * c` by
+   * ring reasoning, which is the difference of the goal.
+   *
+   * Curried rather than stated with a conjunction, so that a caller who has only the positivity
+   * can instantiate it and keep the rest.
+   */
+  def multiplyBoth(
+    ring: Ring,
+    toZero: Kernel.Thm,
+    fromZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val c = Term.variable("c", real)
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      ltMul <- reals.axiom("LT_MUL")
+
+      positiveFactor <- reals.proposition("0 < c:real")
+      factorAssumed <- LogicError.lift(Kernel.assume(positiveFactor))
+      premise <- reals.proposition("x:real < y:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      difference <- rules.specAll(toZero, List(x, y)).flatMap(rules.mp(_, assumed))
+      gap <- destLess(reals, difference.conclusion).map(_._2)
+
+      product <- rules.specAll(ltMul, List(gap, c))
+      bothPositive <- rules.conjIntro(difference, factorAssumed)
+      scaled <- rules.mp(product, bothPositive)
+
+      distributed <- ring.prove("(y:real - x:real) * c:real = y * c - x * c")
+      spread <- Rewrite.Rule.all(reals.logic, Vector(distributed))
+      onGoal <- Rewrite.inTheorem(spread, scaled)
+
+      left <- reals.term("x:real * c:real")
+      right <- reals.term("y:real * c:real")
+      result <- rules.specAll(fromZero, List(left, right)).flatMap(rules.mp(_, onGoal))
+
+      innerDischarged <- rules.disch(premise, result)
+      outerDischarged <- rules.disch(positiveFactor, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(c, x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x. 0 < x ==> 0 < inv x`.
+   *
+   * The inverse of a positive is positive, and the derivation is three steps once the pieces are
+   * there: a positive number is not zero, so `MUL_INVERSE` applies and `x * inv x` is `1`, so
+   * `0 < x * inv x` because `0 < 1`, and the positive factor cancels.
+   *
+   * It is the fact any ratio between two measured quantities needs, and it is the only one here
+   * that mentions `inv` at all. Neither [[Ring]] nor [[Linarith]] can produce it: the first
+   * refuses `inv` because `MUL_INVERSE` carries a side condition, and the second treats `inv x` as
+   * an atom it knows nothing about.
+   */
+  def inversePositive(
+    ring: Ring,
+    unit: Kernel.Thm,
+    notZero: Kernel.Thm,
+    cancel: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+
+    for {
+      mulInverse <- reals.axiom("MUL_INVERSE")
+
+      premise <- reals.proposition("0 < x:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      distinct <- rules.spec(x, notZero).flatMap(rules.mp(_, assumed))
+      inverts <- rules.spec(x, mulInverse).flatMap(rules.mp(_, distinct))
+
+      backwards <- Conv.sym(inverts)
+      toProduct <- Rewrite.Rule.all(reals.logic, Vector(backwards))
+      positiveProduct <- Rewrite.inTheorem(toProduct, unit)
+
+      inverse <- reals.term("inv (x:real)")
+      result <- rules.specAll(cancel, List(x, inverse))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(rules.mp(_, positiveProduct))
+
+      discharged <- rules.disch(premise, result)
+      general <- rules.gen(x, discharged)
+    } yield general
+  }
+
+  /* ------------------------------------------------- the non-strict order */
+
+  /**
+   * `|- x <= y = (x < y \/ x = y)`, at two given terms.
+   *
+   * The definition read forwards, and the only thing there is to read: `<=` carries no axiom, so
+   * every fact below is this disjunction plus the strict order.
+   */
+  private def unfoldLe(
+    reals: RealTheory,
+    left: Term,
+    right: Term
+  ): Either[LogicError, Kernel.Thm] =
+    reals.definition(Real.NonStrictOrder).flatMap(Conv.unfold(_, List(left, right)))
+
+  /** `|- !x y. x < y ==> x <= y` */
+  def leOfLt(reals: RealTheory): Either[LogicError, Kernel.Thm] = {
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      premise <- reals.proposition("x:real < y:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      equated <- reals.proposition("x:real = y:real")
+      disjunction <- rules.disjIntro1(equated, assumed)
+
+      unfolded <- unfoldLe(reals, x, y)
+      backwards <- Conv.sym(unfolded)
+      result <- LogicError.lift(Kernel.eqMp(backwards, disjunction))
+
+      discharged <- rules.disch(premise, result)
+      general <- rules.genAll(discharged, List(x, y))
+    } yield general
+  }
+
+  /** `|- !x y. x = y ==> x <= y` */
+  def leOfEq(reals: RealTheory): Either[LogicError, Kernel.Thm] = {
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      premise <- reals.proposition("x:real = y:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      strict <- reals.proposition("x:real < y:real")
+      disjunction <- rules.disjIntro2(strict, assumed)
+
+      unfolded <- unfoldLe(reals, x, y)
+      backwards <- Conv.sym(unfolded)
+      result <- LogicError.lift(Kernel.eqMp(backwards, disjunction))
+
+      discharged <- rules.disch(premise, result)
+      general <- rules.genAll(discharged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x y. x <= y ==> x < y \/ x = y`.
+   *
+   * The way into a case analysis on a non-strict hypothesis, and every lemma below starts with it.
+   */
+  def leCases(reals: RealTheory): Either[LogicError, Kernel.Thm] = {
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      premise <- reals.proposition("x:real <= y:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      unfolded <- unfoldLe(reals, x, y)
+      result <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+
+      discharged <- rules.disch(premise, result)
+      general <- rules.genAll(discharged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x y. 0 <= x ==> 0 < y ==> 0 < x + y`.
+   *
+   * Something that may be zero added to something that is not. The branch where it is zero is a
+   * rewrite rather than an argument: the sum is the second one there, and the second premise is
+   * the goal.
+   */
+  def addNonNegativePositive(
+    ring: Ring,
+    cases: Kernel.Thm,
+    addPositive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      zero <- reals.term("0")
+      sum <- reals.term("x:real + y:real")
+
+      first <- reals.proposition("0 <= x:real")
+      firstAssumed <- LogicError.lift(Kernel.assume(first))
+      second <- reals.proposition("0 < y:real")
+      secondAssumed <- LogicError.lift(Kernel.assume(second))
+
+      split <- rules.specAll(cases, List(zero, x)).flatMap(rules.mp(_, firstAssumed))
+
+      strict <- reals.proposition("0 < x:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      whenPositive <- rules.specAll(addPositive, List(x, y))
+        .flatMap(rules.mp(_, strictAssumed))
+        .flatMap(rules.mp(_, secondAssumed))
+
+      equated <- reals.proposition("0 = x:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      reversed <- Conv.sym(equatedAssumed)
+      shifted <- rewriteTerm(reals, reversed, sum)
+      collapses <- ring.prove("0 + y:real = y")
+      isSecond <- Conv.trans(shifted, collapses)
+      backwards <- Conv.sym(isSecond)
+      whenZero <- Conv.rewriteRight(secondAssumed, backwards)
+
+      result <- rules.disjElim(split, whenPositive, whenZero)
+
+      innerDischarged <- rules.disch(second, result)
+      outerDischarged <- rules.disch(first, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x y. 0 <= x ==> 0 <= y ==> 0 <= x + y`.
+   *
+   * One case analysis rather than two, because the branch where the second is positive is the
+   * lemma above with its arguments the other way round.
+   */
+  def addNonNegatives(
+    ring: Ring,
+    cases: Kernel.Thm,
+    ofLt: Kernel.Thm,
+    addNonNegative: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      zero <- reals.term("0")
+      sum <- reals.term("x:real + y:real")
+
+      first <- reals.proposition("0 <= x:real")
+      firstAssumed <- LogicError.lift(Kernel.assume(first))
+      second <- reals.proposition("0 <= y:real")
+      secondAssumed <- LogicError.lift(Kernel.assume(second))
+
+      split <- rules.specAll(cases, List(zero, y)).flatMap(rules.mp(_, secondAssumed))
+
+      strict <- reals.proposition("0 < y:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      positive <- rules.specAll(addNonNegative, List(x, y))
+        .flatMap(rules.mp(_, firstAssumed))
+        .flatMap(rules.mp(_, strictAssumed))
+      whenPositive <- rules.specAll(ofLt, List(zero, sum)).flatMap(rules.mp(_, positive))
+
+      equated <- reals.proposition("0 = y:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      reversed <- Conv.sym(equatedAssumed)
+      shifted <- rewriteTerm(reals, reversed, sum)
+      collapses <- ring.prove("x:real + 0 = x")
+      isFirst <- Conv.trans(shifted, collapses)
+      backwards <- Conv.sym(isFirst)
+      whenZero <- Conv.rewriteRight(firstAssumed, backwards)
+
+      result <- rules.disjElim(split, whenPositive, whenZero)
+
+      innerDischarged <- rules.disch(second, result)
+      outerDischarged <- rules.disch(first, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(x, y))
+    } yield general
+  }
+
+  /** `|- !c x. 0 < c ==> 0 <= x ==> 0 <= c * x` */
+  def multiplyNonNegative(
+    ring: Ring,
+    cases: Kernel.Thm,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val c = Term.variable("c", real)
+    val x = Term.variable("x", real)
+
+    for {
+      ltMul <- reals.axiom("LT_MUL")
+      zero <- reals.term("0")
+      product <- reals.term("c:real * x:real")
+
+      factor <- reals.proposition("0 < c:real")
+      factorAssumed <- LogicError.lift(Kernel.assume(factor))
+      second <- reals.proposition("0 <= x:real")
+      secondAssumed <- LogicError.lift(Kernel.assume(second))
+
+      split <- rules.specAll(cases, List(zero, x)).flatMap(rules.mp(_, secondAssumed))
+
+      strict <- reals.proposition("0 < x:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      positive <- rules.specAll(ltMul, List(c, x))
+        .flatMap(instance => rules.conjIntro(factorAssumed, strictAssumed).flatMap(rules.mp(instance, _)))
+      whenPositive <- rules.specAll(ofLt, List(zero, product)).flatMap(rules.mp(_, positive))
+
+      equated <- reals.proposition("0 = x:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      reversed <- Conv.sym(equatedAssumed)
+      shifted <- rewriteTerm(reals, reversed, product)
+      collapses <- ring.prove("c:real * 0 = 0")
+      isZero <- Conv.trans(shifted, collapses)
+      backwards <- Conv.sym(isZero)
+      whenZero <- rules.specAll(ofEq, List(zero, product)).flatMap(rules.mp(_, backwards))
+
+      result <- rules.disjElim(split, whenPositive, whenZero)
+
+      innerDischarged <- rules.disch(second, result)
+      outerDischarged <- rules.disch(factor, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(c, x))
+    } yield general
+  }
+
+  /**
+   * `|- !c x. 0 <= c ==> 0 <= x ==> 0 <= c * x`.
+   *
+   * The one the order facts did not have. `Linarith` multiplies a strict fact by a non-strict one
+   * and used to leave two non-strict ones alone, and that was this lemma missing rather than a move
+   * missing: nothing else about the procedure had to change once it existed.
+   *
+   * It splits on the first hypothesis and not the second, which is what keeps it to one case
+   * analysis. `0 < c` hands the goal to [[multiplyNonNegative]] as it stands, and `0 = c` makes the
+   * product zero, where what is left is that zero is at least zero.
+   */
+  def multiplyNonNegatives(
+    ring: Ring,
+    cases: Kernel.Thm,
+    ofEq: Kernel.Thm,
+    timesNonNegative: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val c = Term.variable("c", real)
+    val x = Term.variable("x", real)
+
+    for {
+      zero <- reals.term("0")
+      product <- reals.term("c:real * x:real")
+
+      first <- reals.proposition("0 <= c:real")
+      firstAssumed <- LogicError.lift(Kernel.assume(first))
+      second <- reals.proposition("0 <= x:real")
+      secondAssumed <- LogicError.lift(Kernel.assume(second))
+
+      split <- rules.specAll(cases, List(zero, c)).flatMap(rules.mp(_, firstAssumed))
+
+      strict <- reals.proposition("0 < c:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      whenPositive <- rules
+        .specAll(timesNonNegative, List(c, x))
+        .flatMap(rules.mp(_, strictAssumed))
+        .flatMap(rules.mp(_, secondAssumed))
+
+      equated <- reals.proposition("0 = c:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      reversed <- Conv.sym(equatedAssumed)
+      shifted <- rewriteTerm(reals, reversed, product)
+      collapses <- ring.prove("0 * x:real = 0")
+      isZero <- Conv.trans(shifted, collapses)
+      backwards <- Conv.sym(isZero)
+      whenZero <- rules.specAll(ofEq, List(zero, product)).flatMap(rules.mp(_, backwards))
+
+      result <- rules.disjElim(split, whenPositive, whenZero)
+
+      innerDischarged <- rules.disch(second, result)
+      outerDischarged <- rules.disch(first, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(c, x))
+    } yield general
+  }
+
+  /**
+   * `|- !c x. 0 < c ==> 0 <= c * x ==> 0 <= x`.
+   *
+   * The non-strict twin of [[cancelPositive]], and the reason a goal that is not strict can still
+   * be proved from a certificate with denominators in it. Trichotomy again, and again only the
+   * third case is an argument: `x < 0` makes `c * -x` positive, and adding that to something that
+   * is at least zero gives `0 < 0`.
+   */
+  def cancelNonNegative(
+    ring: Ring,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm,
+    addNonNegative: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val c = Term.variable("c", real)
+    val x = Term.variable("x", real)
+
+    for {
+      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
+      ltAdd <- reals.axiom("LT_ADD")
+      ltMul <- reals.axiom("LT_MUL")
+      trichotomy <- reals.axiom("LT_TOTAL")
+
+      zero <- reals.term("0")
+      product <- reals.term("c:real * x:real")
+      goal <- reals.proposition("0 <= x:real")
+      never <- rules.spec(zero, irreflexive)
+
+      factor <- reals.proposition("0 < c:real")
+      factorAssumed <- LogicError.lift(Kernel.assume(factor))
+      second <- reals.proposition("0 <= c:real * x:real")
+      secondAssumed <- LogicError.lift(Kernel.assume(second))
+
+      cases <- rules.specAll(trichotomy, List(zero, x))
+
+      strict <- reals.proposition("0 < x:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      first <- rules.specAll(ofLt, List(zero, x)).flatMap(rules.mp(_, strictAssumed))
+
+      equated <- reals.proposition("0 = x:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      second0 <- rules.specAll(ofEq, List(zero, x)).flatMap(rules.mp(_, equatedAssumed))
+
+      belowZero <- reals.proposition("x:real < 0")
+      belowAssumed <- LogicError.lift(Kernel.assume(belowZero))
+      negated <- reals.term("-x:real")
+      shifted <- rules.specAll(ltAdd, List(x, zero, negated))
+        .flatMap(rules.mp(_, belowAssumed))
+      cancels <- ring.prove("x:real + -x = 0")
+      absorbs <- ring.prove("0 + -x:real = -x")
+      positiveNegation <- Conv.rewriteSides(cancels, absorbs, shifted)
+
+      otherProduct <- rules.specAll(ltMul, List(c, negated))
+      bothPositive <- rules.conjIntro(factorAssumed, positiveNegation)
+      negativePart <- rules.mp(otherProduct, bothPositive)
+      otherSide <- destLess(reals, negativePart.conclusion).map(_._2)
+
+      summed <- rules.specAll(addNonNegative, List(product, otherSide))
+        .flatMap(rules.mp(_, secondAssumed))
+        .flatMap(rules.mp(_, negativePart))
+      sumIsZero <- ring.prove("c:real * x + c * -x = 0")
+      absurd <- Conv.rewriteRight(summed, sumIsZero)
+      contradiction <- rules.notElim(never, absurd)
+      third <- rules.falsityElim(goal, contradiction)
+
+      tail <- reals
+        .proposition("0 = x:real \\/ x:real < 0")
+        .flatMap(term => LogicError.lift(Kernel.assume(term)))
+      fromTail <- rules.disjElim(tail, second0, third)
+      result <- rules.disjElim(cases, first, fromTail)
+
+      innerDischarged <- rules.disch(second, result)
+      outerDischarged <- rules.disch(factor, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(c, x))
+    } yield general
+  }
+
+  /** `|- !x y. x <= y ==> 0 <= y - x` */
+  def leToZero(
+    ring: Ring,
+    cases: Kernel.Thm,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm,
+    toZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      zero <- reals.term("0")
+      difference <- reals.term("y:real - x:real")
+
+      premise <- reals.proposition("x:real <= y:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      split <- rules.specAll(cases, List(x, y)).flatMap(rules.mp(_, assumed))
+
+      strict <- reals.proposition("x:real < y:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      positive <- rules.specAll(toZero, List(x, y)).flatMap(rules.mp(_, strictAssumed))
+      whenStrict <- rules.specAll(ofLt, List(zero, difference)).flatMap(rules.mp(_, positive))
+
+      equated <- reals.proposition("x:real = y:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      shifted <- rewriteTerm(reals, equatedAssumed, difference)
+      collapses <- ring.prove("y:real - y = 0")
+      isZero <- Conv.trans(shifted, collapses)
+      backwards <- Conv.sym(isZero)
+      whenEqual <- rules.specAll(ofEq, List(zero, difference)).flatMap(rules.mp(_, backwards))
+
+      result <- rules.disjElim(split, whenStrict, whenEqual)
+
+      discharged <- rules.disch(premise, result)
+      general <- rules.genAll(discharged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x y. 0 <= y - x ==> x <= y`, the way back.
+   *
+   * The branch where the difference is zero is the one worth reading: it adds `x` to both sides of
+   * `0 = y - x` by congruence and lets the ring tactic see that the two sides are `x` and `y`.
+   */
+  def leFromZero(
+    ring: Ring,
+    cases: Kernel.Thm,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm,
+    fromZero: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      zero <- reals.term("0")
+      difference <- reals.term("y:real - x:real")
+      plus <- LogicError.lift(reals.theory.constant(Real.Addition, binary))
+
+      premise <- reals.proposition("0 <= y:real - x:real")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      split <- rules.specAll(cases, List(zero, difference)).flatMap(rules.mp(_, assumed))
+
+      strict <- reals.proposition("0 < y:real - x:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      lessThan <- rules.specAll(fromZero, List(x, y)).flatMap(rules.mp(_, strictAssumed))
+      whenStrict <- rules.specAll(ofLt, List(x, y)).flatMap(rules.mp(_, lessThan))
+
+      equated <- reals.proposition("0 = y:real - x:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      onLeft <- LogicError.lift(Kernel.mkComb(Conv.refl(plus), equatedAssumed))
+      added <- LogicError.lift(Kernel.mkComb(onLeft, Conv.refl(x)))
+      absorbs <- ring.prove("0 + x:real = x")
+      restores <- ring.prove("(y:real - x:real) + x = y")
+      backwards <- Conv.sym(absorbs)
+      equal <- Conv.trans(backwards, added).flatMap(Conv.trans(_, restores))
+      whenEqual <- rules.specAll(ofEq, List(x, y)).flatMap(rules.mp(_, equal))
+
+      result <- rules.disjElim(split, whenStrict, whenEqual)
+
+      discharged <- rules.disch(premise, result)
+      general <- rules.genAll(discharged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x y. x <= y ==> y <= x ==> x = y`.
+   *
+   * Antisymmetry, and the only way an equality is ever concluded from inequalities: it is what lets
+   * a goal like `v0 + 5 + (v1 - 3) = 10` be proved by bounding it on both sides. Two case analyses,
+   * where three of the four branches hand back an equality that is already there and the fourth,
+   * `x < y` with `y < x`, closes by transitivity and irreflexivity.
+   */
+  def antisymmetric(
+    reals: RealTheory,
+    cases: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
+      transitive <- reals.axiom("LT_TRANSITIVE")
+
+      goal <- reals.proposition("x:real = y:real")
+      first <- reals.proposition("x:real <= y:real")
+      firstAssumed <- LogicError.lift(Kernel.assume(first))
+      second <- reals.proposition("y:real <= x:real")
+      secondAssumed <- LogicError.lift(Kernel.assume(second))
+
+      split <- rules.specAll(cases, List(x, y)).flatMap(rules.mp(_, firstAssumed))
+      other <- rules.specAll(cases, List(y, x)).flatMap(rules.mp(_, secondAssumed))
+
+      // `x = y` is the goal.
+      equated <- LogicError.lift(Kernel.assume(goal))
+
+      // `x < y`, and then the second premise decides it.
+      below <- reals.proposition("x:real < y:real")
+      belowAssumed <- LogicError.lift(Kernel.assume(below))
+
+      above <- reals.proposition("y:real < x:real")
+      aboveAssumed <- LogicError.lift(Kernel.assume(above))
+      cycle <- rules.specAll(transitive, List(x, y, x))
+      both <- rules.conjIntro(belowAssumed, aboveAssumed)
+      absurd <- rules.mp(cycle, both)
+      never <- rules.spec(x, irreflexive)
+      contradiction <- rules.notElim(never, absurd)
+      fromCycle <- rules.falsityElim(goal, contradiction)
+
+      reversed <- reals.proposition("y:real = x:real")
+      reversedAssumed <- LogicError.lift(Kernel.assume(reversed))
+      fromReversed <- Conv.sym(reversedAssumed)
+
+      whenBelow <- rules.disjElim(other, fromCycle, fromReversed)
+      result <- rules.disjElim(split, whenBelow, equated)
+
+      innerDischarged <- rules.disch(second, result)
+      outerDischarged <- rules.disch(first, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(x, y))
+    } yield general
+  }
+
+  /**
+   * `|- !x y z w. x <= y ==> z <= w ==> x + z <= y + w`.
+   *
+   * Both inequalities are moved to the form `0 <= e`, where adding them is [[addNonNegatives]] and
+   * nothing else, and the sum is moved back. The one step that is not bookkeeping is the ring
+   * identity `(y - x) + (w - z) = (y + w) - (x + z)`, which is where "the difference of the sums is
+   * the sum of the differences" is actually used; every other line is [[leToZero]] and
+   * [[leFromZero]] carrying the statement in and out of that form.
+   *
+   * Four variables, so the printer's fourth name appears: it names binders `x, y, z, u, v, w` by
+   * depth, and what prints is `!x. !y. !z. !u.`
+   */
+  def addLe(
+    ring: Ring,
+    weakToZero: Kernel.Thm,
+    weakFromZero: Kernel.Thm,
+    addNonNegatives: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+    val z = Term.variable("z", real)
+    val w = Term.variable("w", real)
+
+    for {
+      first <- reals.proposition("x:real <= y:real")
+      firstAssumed <- LogicError.lift(Kernel.assume(first))
+      second <- reals.proposition("z:real <= w:real")
+      secondAssumed <- LogicError.lift(Kernel.assume(second))
+
+      leftGap <- rules.specAll(weakToZero, List(x, y)).flatMap(rules.mp(_, firstAssumed))
+      rightGap <- rules.specAll(weakToZero, List(z, w)).flatMap(rules.mp(_, secondAssumed))
+
+      leftDifference <- reals.term("y:real - x:real")
+      rightDifference <- reals.term("w:real - z:real")
+      summed <- rules
+        .specAll(addNonNegatives, List(leftDifference, rightDifference))
+        .flatMap(rules.mp(_, leftGap))
+        .flatMap(rules.mp(_, rightGap))
+
+      rearranged <- ring.prove(
+        "(y:real - x:real) + (w:real - z:real) = (y + w) - (x + z)"
+      )
+      onGoal <- Conv.rewriteRight(summed, rearranged)
+
+      left <- reals.term("x:real + z:real")
+      right <- reals.term("y:real + w:real")
+      result <- rules.specAll(weakFromZero, List(left, right)).flatMap(rules.mp(_, onGoal))
+
+      innerDischarged <- rules.disch(second, result)
+      outerDischarged <- rules.disch(first, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(x, y, z, w))
+    } yield general
+  }
+
+  /* ------------------------------------------------------------- the square */
+
+  /**
+   * `|- !x. 0 <= x * x`.
+   *
+   * Trichotomy at `0` and `x`, and this is the shape [[cancelPositive]] reads as the worked
+   * example, with one difference: no branch is a contradiction, so all three of them prove the
+   * goal rather than two of them refusing their own case.
+   *
+   *  - `0 < x` is `LT_MUL` at `x` and `x`, and the goal is the weaker of the two;
+   *  - `0 = x` makes the product zero, and zero is at least zero;
+   *  - `x < 0` makes `-x` positive, `LT_MUL` at `-x` and `-x` gives `0 < -x * -x`, and `-x * -x`
+   *    is `x * x` by ring reasoning, so the *negative* case is where the product is strictly
+   *    positive and the *zero* case is the only one that needs `<=` at all.
+   *
+   * The third branch is the one to read twice, because it is the step nothing below the order can
+   * take: `LT_MUL` says a product of positives is positive and says nothing about a product of
+   * negatives, and turning the second into the first is `LT_ADD` moving `x < 0` to `0 < -x` and
+   * then one ring identity. That is the same move [[cancelPositive]] and [[cancelNonNegative]]
+   * make, and it is the whole content of "the square of a negative is positive".
+   */
+  def squareNonNegative(
+    ring: Ring,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val x = Term.variable("x", real)
+
+    for {
+      ltAdd <- reals.axiom("LT_ADD")
+      ltMul <- reals.axiom("LT_MUL")
+      trichotomy <- reals.axiom("LT_TOTAL")
+
+      zero <- reals.term("0")
+      square <- reals.term("x:real * x")
+
+      cases <- rules.specAll(trichotomy, List(zero, x))
+
+      // `0 < x`: the axiom, at the same factor twice.
+      strict <- reals.proposition("0 < x:real")
+      strictAssumed <- LogicError.lift(Kernel.assume(strict))
+      positive <- rules
+        .specAll(ltMul, List(x, x))
+        .flatMap(instance =>
+          rules.conjIntro(strictAssumed, strictAssumed).flatMap(rules.mp(instance, _))
+        )
+      first <- rules.specAll(ofLt, List(zero, square)).flatMap(rules.mp(_, positive))
+
+      // `0 = x`: the product is zero, and the goal is an equality read as an inequality.
+      equated <- reals.proposition("0 = x:real")
+      equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+      reversed <- Conv.sym(equatedAssumed)
+      shifted <- rewriteTerm(reals, reversed, square)
+      collapses <- ring.prove("0 * 0 = 0")
+      isZero <- Conv.trans(shifted, collapses)
+      backwards <- Conv.sym(isZero)
+      second <- rules.specAll(ofEq, List(zero, square)).flatMap(rules.mp(_, backwards))
+
+      // `x < 0`: `-x` is positive, and its square is the same term.
+      belowZero <- reals.proposition("x:real < 0")
+      belowAssumed <- LogicError.lift(Kernel.assume(belowZero))
+      negated <- reals.term("-x:real")
+      moved <- rules.specAll(ltAdd, List(x, zero, negated)).flatMap(rules.mp(_, belowAssumed))
+      cancels <- ring.prove("x:real + -x = 0")
+      absorbs <- ring.prove("0 + -x:real = -x")
+      positiveNegation <- Conv.rewriteSides(cancels, absorbs, moved)
+
+      negatedSquare <- rules
+        .specAll(ltMul, List(negated, negated))
+        .flatMap(instance =>
+          rules.conjIntro(positiveNegation, positiveNegation).flatMap(rules.mp(instance, _))
+        )
+      sameSquare <- ring.prove("-x:real * -x = x * x")
+      onGoal <- Conv.rewriteRight(negatedSquare, sameSquare)
+      third <- rules.specAll(ofLt, List(zero, square)).flatMap(rules.mp(_, onGoal))
+
+      tail <- reals
+        .proposition("0 = x:real \\/ x:real < 0")
+        .flatMap(term => LogicError.lift(Kernel.assume(term)))
+      fromTail <- rules.disjElim(tail, second, third)
+      result <- rules.disjElim(cases, first, fromTail)
+
+      general <- rules.gen(x, result)
+    } yield general
+  }
+
+  /* ----------------------------------------------------------------- helpers */
+
+  /** The two sides of `a <= b`. */
+  def destLessEqual(reals: Signature, term: Term): Either[LogicError, (Term, Term)] = term match {
+    case App(App(Const(Real.NonStrictOrder, _), left), right) => Right((left, right))
+    case other => Left(NotOfForm("a non-strict inequality", other))
+  }
+
+  /** The two sides of an inequality of either kind, and whether it was the strict one. */
+  def destOrder(reals: Signature, term: Term): Option[(Term, Term, Boolean)] = term match {
+    case App(App(Const(Real.Order, _), left), right) => Some((left, right, true))
+    case App(App(Const(Real.NonStrictOrder, _), left), right) => Some((left, right, false))
+    case _ => None
+  }
+
+  /** The `<=` constant. */
+  def lessEqualConstant(reals: Signature): Either[LogicError, Term] =
+    LogicError.lift(reals.theory.constant(Real.NonStrictOrder, relation))
+
+  /** `|- t = t'`, by one pass of rewriting with an equation. */
+  private def rewriteTerm(
+    reals: Signature,
+    equation: Kernel.Thm,
+    term: Term
+  ): Either[LogicError, Kernel.Thm] =
+    Rewrite.Rule
+      .of(reals.logic, equation)
+      .flatMap(rule => Rewrite.depthConv(Rewrite.rewriteConv(rule))(term))
+
+}

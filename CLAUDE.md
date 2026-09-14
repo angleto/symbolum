@@ -1,0 +1,598 @@
+# Symbolum
+
+## What this is
+
+A computer algebra system that is also a proof assistant, in one repository, and the relationship
+between the two is the whole design. The algebra side is fast and knows a lot; several of its
+rewrites are valid only under hypotheses it does not record. The proof side is slow and knows
+almost nothing; what it produces is certain. They are joined so that the first proposes and the
+second checks, which is the arrangement `docs/adr/0003` describes.
+
+**The thing a newcomer gets wrong:** assuming `modules/core` is trusted because it is the oldest and
+largest part. It is not trusted at all. Nothing it says is believed anywhere in the proof side, and
+that is deliberate: it is what lets it stay fast and heuristic.
+
+## Running it
+
+- **Tests:** `sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
+  statements to the whole tactic surface and most of **that** is the eighteen it attempts and cannot
+  settle. That cost is the prover's rather than the test's, and it is tracked.
+
+  **The number that used to be here is gone rather than corrected.** It said forty seconds, against
+  eleven before the corpus landed, and by 2026-09-14 a run was taking a hundred and ten on a quiet
+  machine and twelve minutes on a busy one. A wall clock depends on the machine and on what else is
+  running, so unlike every other figure in this repository it cannot be generated from the code
+  either: there is no source of truth for it to be read off. What the sentence was for survives
+  without it, which is that the cost is concentrated in one suite and why that suite is not
+  excluded. This is the third of the three repairs `Generated.scala` lists, and it records that this
+  one is met most often and chosen least. It is **not** excluded here, on purpose: a corpus that runs only when
+  somebody remembers to ask for it has stopped being a measurement, and the figures in
+  `docs/evaluation.md` are meant to fail rather than go quietly stale.
+
+  It was two minutes for most of 2026-09-11, and the minute and a half that went is worth a line:
+  `Abduce` was running a quadratic comparison over candidates it should never have compared, which
+  it reached by misreading "the satisfiability question was not settled" as "the premises hold up".
+  A suite that got slower is how that was found.
+- **One module:** `sbt kernel/test`, `sbt theories/test`, and so on
+- **One suite:** `sbt "core/testOnly garden.xeno.symbolum.CanonicalFormSpec"`
+- **Coverage, with the floors enforced:** `sbt clean coverage test coverageReport`. This one
+  **skips the corpus measurements**, which `sbt test` does not: the two ask different questions, and
+  `ReachSpec` exercises the same lines as the other corpus suites while costing more than the rest
+  of the build put together. `build.sbt` and `garden.xeno.symbolum.tactics.Corpus` carry the argument.
+
+  **`clean` is not optional and the gate will not tell you.** The report is built from what the
+  instrumented compiler saw, so on an incremental build it covers only the files that were
+  recompiled. Run twice a commit apart on 2026-09-13, the second report held **two files**:
+  `theories` read 172 statements at 100.00% against 22663 at 97.56%, and the gate **passed**,
+  because 100 is above the floor. Read the statement count beside the rate, and run it in a
+  worktree that has never been built or after `clean`. There is no check for this, and `build.sbt`
+  says why there cannot easily be one.
+- **A console with the algebra loaded:** `sbt core/console`
+- **Asking the prover one thing, without writing Scala:**
+  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole
+  tactic surface over the widest signature the chain assembles, so a claim about `num` is one it can
+  take, and prints what `Cost` reports: the outcome, the price, the axioms, what it rests on, and
+  where it fails if it fails. `|` separates two claims; the claim is **not** quoted, because `sbt`
+  hands the arguments over already split and the shell's quotes are gone by then.
+- **Looking for a lemma, by name or by shape:**
+  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SUM"`, or
+  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Find x:real + y:real = y + x"`. It puts the query to all
+  three of the library's questions, the name, the constant and the shape, and prints each answer
+  under its own heading including the empty ones, because a reader shown two answers to three
+  questions cannot tell which was empty and which was never asked. A bare identifier reads as a
+  boolean **variable** and a variable pattern matches every lemma there is, so that one is refused
+  by shape rather than answered with the whole library.
+- **Working on a theory interactively, in a browser:**
+  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Notebook"`, then open `http://127.0.0.1:8642`. A column
+  of cells over one `Session`: `declare`, `define`, `assume`, `prove`, `ask`, `find`, `show`. The
+  chain is built once when it starts, a few seconds, and each question after that is milliseconds.
+
+  **A session holds exactly one theory, and that is the whole safety argument rather than a
+  convenience.** The falsity `SoundnessAttackSpec` derives needs *two* theories that each declare
+  one name, and a notebook whose cells re-run in any order is that caller by construction. So the
+  transcript is append-only: going back to a cell discards everything after it, and a second
+  `declare p` is refused by the kernel's own `AlreadyDeclared` because there is one theory to
+  declare into. `assume` is in the language, because the promise here is accounting rather than
+  purity: every theorem downstream of an assumption carries it, printed on the page, through
+  `Derivation.foreignTo` against the chain.
+
+  What it cannot do yet, named rather than left to be discovered: **nothing can spend an assumption
+  except the assumption itself.** No tactic searches over an assumed constant, deliberately, for
+  the reason the domain-theory paragraph below gives, so a session's own axiom reaches a conclusion
+  only through a hand derivation, and the command for that (`derive`, over the `Recorder` in
+  `modules/logic`) is not written. It is listening on loopback with no authentication: a
+  single-user tool, not a service.
+- **Regenerating `docs/lemmas.md`:** `sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
+  replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
+  compares the file against the code and fails naming this command, which is the point: the document
+  breaks exactly when somebody adds a lemma.
+- **Regenerating `docs/reading-register.md`:**
+  `sbt "theories/runMain garden.xeno.symbolum.theories.Register"`. The same arrangement as the lemmas, for the
+  three things nothing but a reader checks: every axiom, every defined constant and every row of the
+  precedence table, each with whether somebody has read it, when, and against which source.
+  Everything says **NOT READ**, because nothing has been. The attestations are written by hand in
+  `docs/reading-register-attestations.txt` and are folded in by the generator, so a reading survives
+  the regeneration and nothing is ever recorded by editing the generated block. `RegisterSpec` fails
+  when a statement has no row and names this command. It checks nothing about whether a statement is
+  **right**, and the document says why a test that appeared to would be worse than none.
+
+## Layout
+
+Dependencies point one way, and the direction is the correctness argument rather than tidiness:
+
+```
+kernel    -> (nothing)      the trusted base
+checker   -> kernel         a second reading of a proof, as text or in this process
+logic     -> kernel         connectives, derived rules, rewriting, parser, printer
+theories  -> logic          the naturals, the reals, numerals, arithmetic, RING, LINARITH
+core      -> (nothing)      the computer algebra system, published as garden.xeno:symbolum-core
+tactics   -> theories, core the lowest module that sees both halves
+examples  -> tactics        runnable demonstrations of either half, not published
+```
+
+`kernel` declaring no dependency is what makes the trusted base something you can point at rather
+than describe, and a test in `modules/kernel/src/test` asserts it cannot see the algebra side.
+
+`tactics` was **the only** module seeing both halves until 2026-09-13, and that sentence was worth
+correcting rather than preserving: what the split enforces is that nothing **below** `tactics` sees
+`core`, and `examples` is above it. It depended on `core` alone, which made it the algebra's
+demonstration directory by accident of the graph, and a demonstration of the proof half had nowhere
+to live. `WhatAClaimCosts` is the first one that does.
+
+## The trusted base, exactly
+
+Everything this system asks anyone to believe, and no one development is asked for all of it:
+
+1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1200 lines. The
+   directory also holds a printer, the refusal surface and the proof record, which are not counted
+   and cannot construct a theorem, which a test checks rather than claims. `Kernel.Thm` is a class
+   with a private constructor rather than an opaque type, which erases to what it wraps:
+   `TrustBoundaryTwinSpec` casts the underlying pair and gets a `ClassCastException` where it used
+   to get a theorem out of nothing. Ten primitive inference rules construct a theorem, and three
+   theory extensions also do: defining a constant, defining a type, and asserting an axiom. Only
+   the last of those adds to what has to be believed. Term constructors are `private[kernel]`, so a
+   term exists only because a checking constructor built it and is well-typed by construction. Type
+   constructors are not private, because naming a type proves nothing: a type entering the system
+   from outside is checked by `Theory.checkType`.
+2. **The sixteen axioms in `modules/theories/.../Real.scala`**, which state a complete ordered
+   field. `RealSpec` asserts the theory holds exactly those and in that order.
+3. **Three axioms added on 2026-09-10**: a choice operator and eta in
+   `modules/logic/.../Classical.scala`, and infinity in `modules/theories/.../Natural.scala`. The
+   first two are asked of the formalism rather than of a domain, and the third of a type nothing
+   else interprets. `docs/adr/0007` is the record of choice and of infinity, `docs/adr/0009` of
+   eta. They are what the naturals are built from, and the naturals are **defined**: the type `num`
+   costs no axiom of its own. **The excluded middle is not among them**: it is derived from choice
+   alone, in 829 steps, and three places in the repository said the opposite until `docs/adr/0009`
+   measured it. Which of the axioms a session pays for depends on what it builds on, and
+   `NaturalSpec` measures each case: sixteen over the reals alone, three over the naturals alone,
+   nineteen for a development holding both, which is what `Chain.standard` assembles and `ChainSpec`
+   asserts. `docs/adr/0007` decides that the reals will be constructed rather than axiomatised, so
+   this count goes up before it comes down: the sixteen become theorems at the end of that work and
+   what is left is the foundation. A session in the middle sees a larger trusted base than the one
+   before it, and that is the decision rather than a defect.
+
+Everything else is proved. The connectives are definitional extensions, the numerals are
+definitions, and every arithmetic lemma is derived. If a change makes the axiom count move, it is
+either deliberate and needs a record in `docs/adr/`, or it is a defect.
+
+## Conventions here
+
+**Add a lemma by proving it, not by asserting it.** `Kernel.assertAxiom` exists and is named so that
+it reads as what it is at the call site. Reach for `Arithmetic`, `Ring`, or a hand derivation
+first; the file already contains a dozen worked examples of what a hand derivation looks like.
+
+**A case split about a proposition is `Classical.cases`, not `LT_TOTAL`.** Until 2026-09-10 the
+theory of the reals was the only supplier of a disjunction here, so a proof by cases could only be
+about an order. `Classical.standard` now has the excluded middle, `cases`, `contradiction` and
+`ext`, and a development that wants them takes the extension rather than the bare `Logic.standard`.
+
+**A function defined by cases is written with `COND`, which `Classical` defines.** Until 2026-09-12
+there was no conditional constant anywhere in the chain, so a definition by cases had nothing at all
+to write its cases with. `COND p a b` is `select (\x. (p ==> x = a) /\ (~p ==> x = b))` and costs no
+axiom, which is why the count of nineteen above did not move when it landed; what it costs is a
+constant in the signature and a row in `docs/reading-register.md`. It lives in
+`modules/logic/.../Classical.scala` rather than in a development, because a constant defined in a
+development is unreachable from every link below it. It has **no spelling of its own**: it is
+written `COND p a b`, and `if p then a else b` would be a change to the parser and the printer
+rather than a row in the precedence table. Its first use outside the file that defines it is
+`Rotation`, where it is what lets a caller hand `WORD_MAKE` a function that is already padded.
+
+**A numeral belongs to the type its context forces, and there are two.** Until 2026-09-12 a digit
+string was always a `real`, because `Parser` decided from the declared type of `1`; `Power 2 3`
+could not be written, since `Power : real -> num -> real` wants a real base and a natural exponent.
+`Peano` now declares a second encoding (`NUM_ONE`, `NUM_BIT0`, `NUM_BIT1`, all defined, no axiom)
+and the elaborator decides: a numeral takes a metavariable and is expanded once unification has
+said what its surroundings required. Three consequences a reader meets immediately:
+
+- **`ZERO` prints as `0`**, because `ZERO` is the encoding's zero rather than a fourth constant
+  beside it. `0:num` and `ZERO` are the same term, which is what keeps every lemma about `ZERO`
+  reachable from a statement written with `0`. `SUC ZERO` and `NUM_ONE` are still different terms
+  with the same value; `NUM_ONE_SUC` is the bridge, and `Successor` is what walks it.
+- **A numeral nothing determines is refused** where the theory reads two, and taken where it reads
+  one. The escape is `2:num` or `2:real`, which the parser did not read before.
+- **A caller that knows the type says so in the call, not in the text**: `Signature.term(text,
+  expected)` rather than an annotation inside the string. The measurement is in `Parser.term`'s
+  docstring: of seven refusals across a consumer's 630 hand-written texts, all seven were
+  unambiguous to the caller, and the text is the thing a reader compares against the informal claim.
+
+**A numeral reaches a recurrence only through `Successor`, and until 2026-09-13 it did not reach
+one at all.** Every recurrence over `num` is stated at `SUC n`, and `2:num` is `NUM_BIT0 NUM_ONE`,
+so nothing written as a numeral hooked anything: `Power x 2 = x * x` was not provable, and
+`Bounded.prove` still takes a bound spelled `SUC (SUC ZERO)` and refuses one spelled `2`. The
+driver is `chain.successor`; `spell` puts a numeral into the successor form and `expand` opens a
+power at a written exponent. It is **aimed** rather than a rule set turned loose, because the five
+rules over a whole goal would open every numeral of `num` in it and a modulus of ten thousand
+becomes a term with ten thousand nodes, and it derives each expansion over a **variable** base
+because otherwise a numeral inside the base is opened too. A caller whose claim is not about a
+power does the same thing in two lines with `spell` and `Kernel.eqMp`, which is what `Bounded`
+needs and why the spelling is published as an equation rather than as a term.
+
+**The algebra side has known conditionally-valid rewrites**, and they are not defects there: a
+simplifier that carried every side condition would be unusable. `ValuePreservationSpec` pins them
+by example, with the value each one changes. Do not build anything that trusts them.
+
+**An assertion is only as good as the thought somebody gave to what would make it empty.** Half the
+guards here rest on that and none of them used to say it. `RestsOnSpec` asserts that the reach
+report's library holds names the searchable one does not, and on 2026-09-12 that is what refused a
+change which would have made the assertion **vacuous rather than false**: adding the classical
+axioms to `Library.of` would have emptied the difference it checks, and an empty difference passes.
+`ProposeSpec`'s buckets are the same discipline from the other side, since a bucket that quietly
+stopped receiving anything would read as a clean result. When writing a guard, ask what input makes
+it trivially true, and assert against that too.
+
+**A tactic that cannot settle a goal must refuse.** `Ring` and `Linarith` are decision procedures
+for small fragments and they say so by failing on the rest; `Translate` refuses what the theory has
+no constant for, by name. A tactic that guessed would be worse than one that stops.
+
+**Specialise a library lemma by the instance you want, not by position.** The order a lemma's
+quantifiers are written in is not part of any contract: it follows from how the lemma was derived,
+and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the binders of `SUM_SUC`,
+`POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
+stopped only because the two arguments had different types. Where two leading quantifiers share a
+type the reversal is invisible and what comes out is a theorem that is true and is not the one the
+caller meant: of the library's 386 lemmas, 241 have two or more leading quantifiers and **218 of
+those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
+instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
+where the caller's argument is a lambda and the instance carries a redex, which is a **different
+theorem** and therefore a different operation. Neither protects the positional call sites that
+remain.
+
+That count is of binders sharing a type anywhere in the prefix, and the obvious next thought, that
+only adjacent ones are realistically swapped and so the real number is smaller, is wrong and was
+measured on 2026-09-13: of the sites a whole suite run reaches, 204 specialise a lemma with two
+alike binders and 202 of those have two alike and adjacent (measured before `Magnitude` joined the
+chain, which added nine alike-binder lemmas and no call sites). A lemma with three binders of one type
+has adjacency anyway. The narrow reading and the broad one are the same number.
+
+**The order the rewriting sorts by is not the kernel's.** `Arithmetic.ringOrder` compares by the
+term under any negations first, so that a term ends up next to its own negation and the two cancel.
+Changing it to the obvious structural order breaks cancellation silently.
+
+**A model answers at a point, and `None` is not `false`.** `Evaluate` returns nothing where the
+model has nothing to say: a constant nobody interpreted, `inv 0`, a quantifier over the reals.
+Every caller skips such a point rather than counting it. `Refutation` keeps seven answers apart for
+the same reason: a point found by sampling, a point found by solving, no witness at the points that
+answered, no point that answered at all, a decision that the premises cannot all hold, a decision
+that the claim cannot be refuted, and a refusal because sampling cannot settle a question of that
+shape. Collapsing any two of them turns "I could
+not ask" into "I asked and it was fine", which is the one way this machinery can mislead.
+`docs/adr/0005` has the rest, including what changed on 2026-09-05 and what it did not change.
+
+**A probe goes in `scratch/`, never under `modules/`.** That directory is ignored by git and is in
+no sbt source set, and it exists because the alternative happened: a session left a throwaway spec
+under `modules/` and the next run of `sbt test` on this shared checkout failed for somebody else
+with an error about a file they had never seen. If you are delegating to an agent, repeat this in
+the briefing: a rule in this file does not reach an agent the project did not write.
+
+**Property tests carry their sample count and the measurement that chose it.** They exist to probe
+the design, not only to guard against regressions, so a new invariant belongs in one of them rather
+than in another example.
+
+## Where this is going
+
+The goal is exploration: proposing identities quickly and having each one certified, so that a long
+symbolic development does not rest on a step that was only conditionally true. `modules/tactics`
+is where that loop lives.
+
+The mathematics the proof side can reach is still small. The type-definition rule landed on
+2026-09-10 and the naturals with it: `num` is a defined type in
+`modules/theories/.../Natural.scala`, carved out of an infinite one as the smallest inductive
+subset, with zero, a successor, and **induction, Peano's other axioms and the recursion theorem all
+derived** rather than assumed. `Series` builds finite sums on the recursion theorem, with linearity,
+the telescoping sum and summation by parts. `Peano` adds the arithmetic, the two orders, the
+embedding into the reals, and since 2026-09-11 the predecessor and a truncated subtraction, which is
+the only subtraction `num` can have and which the file says of itself in its first paragraph.
+
+**The sixteenth axiom of the reals is read by exactly one thing, and it arrived on 2026-09-13.**
+`COMPLETENESS` had never been used: fifteen of the sixteen were worked and the one that separates an
+ordered field from the reals was not. `Peano.NUM_ARCHIMEDES` is what spends it, and it has to be
+proved rather than assumed because an ordered field need not be Archimedean. What it bought
+immediately is `NUM_FLOOR` and `NUM_CEIL`, named by choice and costing no axiom. Both carry `0 <= x`
+as a written hypothesis rather than a hidden one: `num` has no negative numbers, so a floor that
+answered below zero would be right above it and silently wrong under it, and the version with no
+condition at all wants the integers, which `docs/adr/0007` puts later.
+
+**`defineType` has three uses now and they were all built the same way.** `num`, then `prod` in
+`Product.scala`, carved out of `'a -> 'b -> bool` the way `pair.ml` does it, then `word` in
+`Word.scala`, a length and a padded function held together in a pair. The second and third exist
+because lists, matrices and index types were all one missing primitive, and it was the pair.
+
+`Rotation` needs two others at once: `Word` for the type it rebuilds and `Modular` for the
+`NUM_MOD` inside its own definition. That is why it is not in `Word.scala`: `Word.standard` is built
+below `Modular` and cannot state a rotation at all, so a rotation living there would build in the
+chain and refuse beside it.
+
+It was the last link and `Chain.widest` until 2026-09-13. **This sentence has now named the wrong
+development twice**: first for four hours, then for a day, while it said `Magnitude` and the field
+said `Coding`. So it no longer names one. Which development is last changes whenever a link is
+added, five times in two days, and `Chain.widest` is the one place worth reading for it. What a
+wrong name costs is what the first correction recorded: a reader of it would have gone looking for
+`max` in `Rotation`'s signature.
+
+Number theory on `num` is `Modular`, a link in the chain since 2026-09-12: divisibility with the
+antisymmetry that is false over a field, congruences with their compatibility with addition and
+multiplication, division with remainder in both halves, `NUM_DIV` and `NUM_MOD` as functions that
+denote and are total, the greatest common divisor, Bezout, and Euclid's lemma with a definition of
+prime. `Bounded` discharges `!i. i < k ==> P i` at a concrete bound by proving the instances and
+assembling them, and is the one development that sits beside the chain's extension order rather than
+in it, because it declares nothing.
+
+**The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
+`docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
+coded by the **beta function** rather than by iterated pairing or by a product of prime powers, on
+the criterion that decoding has to be one remainder and therefore Delta-0. What that decision needed
+in front of it was not there: the factorial and the fact that every `d <= k` divides `k!`; Gauss's
+lemma for a divisor that is merely coprime rather than prime, which `NUM_EUCLID` does not cover; and
+the Chinese remainder theorem, which `Modular` has for no moduli at all. All three are there now,
+the last over `n` moduli and not only two, and `NUM_BETA_SEQUENCE` is what they were for: every
+finite stretch of every sequence of naturals is `NUM_BETA a b i` for two numbers. A theory that
+cannot say "sequence" can talk about sequences.
+
+None of it moves the trusted base. Every lemma in that file costs the **two** axioms the naturals
+cost, choice and infinity, and `CodingSpec` asserts that as an equality against what each one
+inherits rather than as a ceiling.
+
+**The arithmetisation is `Numbering`, and it starts at the pairing.** `docs/adr/0014` decides what
+a term and a formula of the embedded theory **are**: numbers, with being one a predicate on `num`,
+no datatype and no new type. A constructor of fixed arity codes its arguments with `NUM_PAIR`, which
+is Cantor's pairing written on the triangular numbers so that no division appears; a sequence of
+unbounded length is coded by the beta function, as `docs/adr/0013` decided. That record also answers
+the question a reader arrives with, which is why both are here: **a pair is not a sequence**, and
+what 0013 rejected was iterating the pairing rather than the pairing.
+
+The fact the whole construction exists for is that both components of a pair are **at most** the
+pair. That is what lets `Descent` define a predicate by recursion on a code, and it is what will let
+the object theory quantify over sub-codes boundedly, which is what Delta-0 means. The bound is not
+strict and `NumberingSpec` derives the number that makes the strict version false rather than
+asserting it: `NUM_PAIR 0 0` is `0`. A constructor gets the strict bound back by tagging its code,
+which is one step and is also derived there.
+
+**The embedded language starts at `Language`, and `NUM_TERM` is the first predicate of it.**
+`NUM_TERM n` says `n` codes a term of PA, and it is defined by recursion **on the number** through
+`Descent`, because a term's arguments have smaller codes than the term. A code is `NUM_CODE t p`;
+the tags `0` to `4` are a variable, zero, the successor, addition and multiplication, and tags from
+`5` are left for the formulas.
+
+The price is not the definition, it is the **admissibility condition** `Descent` asks for, that the
+step gives the same answer to two functions agreeing below the index. It holds because every
+application of the function inside the step is at an argument the step's own equation bounds, and
+proving that is most of the file. `NUM_CODE_LT_RIGHT` bounds the payload and the pairing bounds each
+component of it, which is `docs/adr/0014`'s sentence about the bound being the construction's reason
+being spent.
+
+`LanguageSpec` asserts that the predicate **refuses**, which is the half that says it is a term
+predicate rather than a non-constant one: a code with an unrecognised tag and a code for zero with
+the wrong payload are both derived to be non-terms. Both need two numerals of `num` to differ, which
+nothing here could say until `Successor.distinct`, and that procedure exists because of those two
+assertions rather than the other way round.
+
+**`NUM_FORM` is beside it and the language is complete.** Tags `5` to `8` are an equality of two
+terms, a negation, an implication and a universal quantifier over a variable index. Four connectives
+and not six: disjunction, conjunction and the existential are abbreviations **in the object
+language** rather than syntax, and giving each a tag would mean proving every clause of `Prov` four
+more times for nothing.
+
+Two things about it are worth knowing before reading the file. The equality clause asks for two
+**terms**, which is the one place the two predicates meet, and it is a side condition rather than a
+recursion: `NUM_TERM` is already defined when the formulas are, so that clause costs the
+admissibility proof nothing. And the quantifier recurses on the **second** component of its payload
+alone, because the first is an index and not a code, which is why the clause descriptor the two
+predicates share has four entries rather than three.
+
+`LanguageSpec` asserts the two refusals that say the language discriminates: a **term is not a
+formula**, which is what keeping the tag ranges disjoint buys, and an equality whose arguments are
+not terms is not a formula, which is the side condition being load-bearing rather than decorative.
+Without the second, the predicate would accept any pair at all under tag five and every other test
+in the file would still pass.
+
+**`NUM_NUMERAL` is the bridge between the two levels**, and it is the first place a number becomes
+a term about that number: `NUM_NUMERAL n` is the code of `S` applied `n` times to zero. A primitive
+recursion and not a course-of-values one, because the numeral for `SUC n` is built from the numeral
+for `n` and nothing smaller. Every numeral is a term, and distinct numbers get distinct numerals,
+which is what makes it a numbering of numbers rather than a function into codes.
+
+Its injectivity is the one induction in the file that `Induct.proveBy` cannot run, and the reason is
+worth knowing before meeting it: that driver inducts on the last leading quantifier and leaves the
+others **free**, so the hypothesis it gives back is about the same other argument as the goal. This
+proof needs the claim at a different one, so it runs `Natural.Induction` directly over a predicate
+whose other argument is quantified **inside**.
+
+**The four projections are what a function over codes needs and a predicate over them does not.**
+`NUM_TERM` never takes a code apart: it says a code **is** `NUM_CODE t p` for some `t` and `p` and
+works under the existential. A function has to produce an answer built from the parts, so it has to
+name them, and `NUM_FST`, `NUM_SND`, `NUM_TAG` and `NUM_PAYLOAD` are those names. Each is chosen by
+`select` the way `NUM_GCD` is, and what pins the choice down is the injectivity of the constructor
+it undoes; at a number not of that shape the choice falls somewhere and nothing is provable about
+it, which is the silence `NUM_GCD ZERO ZERO` already leaves.
+
+**`NUM_SUBST_TERM i t s` is the first function over codes**, and what the projections were built
+for. The thing to understand before reading it is that its guards are **equations about `s`** and
+not about its tag. `NUM_TAG s = 2` would be the natural way to write "the tag is two", and the
+recursion would not be admissible with it: at a number that is not a code, `NUM_TAG s` is a choice
+that could fall on two, and then the branch recurses at `NUM_PAYLOAD s`, which nothing bounds.
+Written as `s = NUM_CODE 2 (NUM_PAYLOAD s)` the guard says the shape, the constructor's two bounds
+bound the parts, and the recursion descends.
+
+It is **blind to capture**, and that is sound here rather than overlooked: what Goedel's argument
+substitutes is a numeral, which is closed. An open term would need a freshness condition this
+development has not got and no consumer wants.
+
+`NUM_SUBST_FORM` is beside it and the pair is complete. Two of its four clauses are worth knowing.
+The **equality** clause calls the term substitution and does not recurse, so it costs the
+admissibility proof nothing, exactly as `NUM_FORM`'s equality clause costs its own nothing. The
+**quantifier** clause compares the bound index with the one being replaced and leaves the formula
+alone where they agree, which is what makes it a substitution for a **free** variable; the
+comparison is between two variables, so it stays a conditional in the published statement and the
+caller decides it.
+
+**`Peano.NUM_STRONG_INDUCTION` is what the level above needs and what `Natural.Induction` is not.**
+To prove a claim at `n` it lets you assume it at every smaller number, which is what a fact about a
+term's code needs: the codes inside it are smaller numbers rather than predecessors. It is derived
+**without** the least number principle and without a classical step, which is not the usual route:
+the usual one takes a least counterexample and needs "not everywhere" to give "somewhere not". This
+one runs the ordinary induction over `!m. NUM_LT m n ==> P m` and reads the conclusion off at
+`SUC n`.
+
+Its first consumer is `NUM_SUBST_TERM_TERM`, that substituting a term into a term gives a term.
+Ordinary induction cannot reach it: the claim at a code follows from the claim at the codes
+**inside** it, and `NUM_CODE 3 (NUM_PAIR a b)` has `a` and `b` below it by the pairing's bound and
+the constructor's, neither of which is its predecessor.
+
+`NUM_SUBST_FORM_FORM` is the same for formulas, and it is what the induction scheme of PA needs
+before that scheme can be stated: every instance of it is a formula built by substituting into
+another one, and a scheme whose instances might not be formulas is not a scheme. Two of its clauses
+differ from the terms'. The **equality** clause asks nothing of the induction hypothesis, because
+its arguments are terms and what keeps a term a term is a finished lemma. The **quantifier** clause
+is the one with a conditional, and where the index matches the formula comes back untouched.
+
+**`NUM_PA` is the axioms of PA, and it is a plain definition after five that were recursions.**
+An axiom is one of six fixed codes or an instance of one scheme, so what defines it is a
+disjunction; nothing here descends into a code. Robinson's seventh, that every non-zero number is a
+successor, is absent and not missing: it follows from the scheme, which is what makes this PA and
+`docs/adr/0013`'s decision.
+
+What that buys is a measurement rather than a convenience: all eight of its facts cost **zero
+axioms**, where everything else in the development costs the naturals' two. Membership is settled
+by unfolding a definition and picking a disjunct, and that is the same fact as "PA is recursively
+axiomatised" seen from the inside. `LanguageSpec` asserts the split in both directions, since a
+fact that quietly stopped spending the recursion would be as much a defect as one that started.
+
+`NUM_PA_FORM` is the ninth and the obligation the set owes: an axiom is a formula. It costs the
+two, and the pair is the split the paragraph above describes seen in one place. What makes it
+worth deriving rather than assuming is that the six codes are nests six deep, so this is the one
+claim about them a reader cannot check by eye. It is also where the refusal comes from:
+`~(NUM_PA (NUM_CODE 1 0))` is the contrapositive against a code already known not to be a formula,
+three lines rather than the seventy the term and formula refusals cost.
+
+The codes and their well-formedness proofs come off **one** tree. The six were written through
+text-building functions first, which is fine until something has to prove a code is a formula, and
+then the grammar is written twice: once as text and once as a composition of the introduction
+rules. `Obj` is the tree, `render` gives the text a reader checks by eye, and the prover walks the
+same tree. A constructor added without a case in the prover does not compile.
+
+**`NUM_FREE_TERM` and `NUM_FREE_FORM` say where a variable occurs**, and they are the first
+recursions here that answer with a **proposition** rather than a code. They exist because two of
+the logical axioms cannot be stated without them: specialisation asks that what is substituted be
+closed, and the quantifier's axiom asks that the index not occur in the antecedent. Both are
+conditions on occurrence, and nothing in this development could say one.
+
+They are also what the substitution's blindness to capture is measured against. `NUM_SUBST_TERM`
+replaces every occurrence without asking whether the replacement is captured, which is sound for a
+closed replacement and for nothing else; until these landed, "closed" was said in a docstring
+rather than stated.
+
+Nothing new was needed to build them. The substitutions were already a recursion over codes with
+parameters and guards that are equations about the code, and the only thing specific to them was
+the type of the answer. `defineShaped` and `shapedIsAdmissible` take that type now, and the
+substitutions come out at the same inference counts they had before, which is how the change was
+checked.
+
+**`NUM_LOGIC` is first-order logic with equality, and every one of its eight is a scheme**, where
+PA had six fixed codes and one. Three propositional (weakening, distribution, contraposition, which
+with modus ponens give the deduction theorem and make the system classical); three about the
+quantifier (specialisation, its distribution over an implication, and generalising a formula the
+index does not occur in); and two about equality. Two and not six, because reflexivity and one
+replacement scheme give symmetry, transitivity and the congruence of every function symbol, so
+writing `x = y ==> S x = S y` and its siblings as axioms would be writing down consequences.
+Conjunction, disjunction and the existential get nothing because they have no tags: they are
+abbreviations in the object language, which is `NUM_FORM`'s decision being spent.
+
+**`NUM_CLOSED t` is what the substitution's blindness to capture costs, written down.** Three of
+the schemes substitute, and each says its replacement is closed. That is **stronger** than the
+textbook condition, which asks only that the term be substitutable, and the difference is a real
+loss: the object system cannot instantiate a universal at a variable. What is not lost is Goedel's
+argument, which substitutes numerals, and a numeral is closed. Lifting it wants a substitutability
+predicate, which is a recursion over the formula this development has not got.
+
+A scheme is a value rather than text. `Scheme` carries its binders, its conditions and its tree,
+and the two shapes it is read in come off it: the existentially quantified disjunct inside the
+definition, and the universally quantified statement a caller wants. `schemeMembership` walks from
+the second to the first once for all nine schemes there are, and `everyMemberIsAFormula` proves
+`NUM_PA_FORM` and `NUM_LOGIC_FORM` with the same walk. Both were bespoke for PA first and both come
+out at the same inference counts after the generalisation, which is how it was checked.
+
+**`Provability` is what the embedded theory can prove, and it is a development of its own** rather
+than more of `Language`, because it is about that language rather than part of it: nothing in it
+declares a constructor or a predicate of the object syntax. It is `Chain.widest` since 2026-09-14.
+
+**Not one of its three definitions is a recursion**, and that is the whole return on
+`docs/adr/0013`. A derivation is a finite sequence of formulas, and a definition that had to walk
+one would recurse on the length. The beta function removes that: a sequence is two numbers,
+`NUM_BETA a b j` is its `j`th entry, and quantifying over the entries is quantifying over an index.
+So `NUM_STEP`, `NUM_PROOF` and `NUM_PROV` are formulas with their subjects free, exactly as
+`NUM_PA` and `NUM_LOGIC` are, and all three cost no axiom.
+
+A proof carries the index of its **last step**, not its length. Writing the length instead would
+put `0 < k` and a `k - 1` into every statement about a proof, and subtraction on `num` is
+truncated, so that is a guard and an asymmetry bought for nothing.
+
+Two rules of inference, modus ponens and generalisation, which with the eight schemes are a
+complete Hilbert system. Each rule needs a step **earlier** than the one it justifies, and that
+bound is the only thing making a derivation well founded. `ProvabilitySpec` is what says so:
+at index zero neither rule can apply, so the four-way disjunction collapses to the two axiom
+clauses. Drop either bound and every formula becomes provable while every other test still passes.
+
+What is there and what is not. The predicate is **inhabited**: every axiom is provable, by the
+derivation that is one line long, and that is the first thing anywhere to spend
+`NUM_BETA_SEQUENCE`. What is not there is closure under the rules, `NUM_PROV (p ==> q)` and
+`NUM_PROV p` giving `NUM_PROV q`, which is the second of Goedel's derivability conditions and needs
+two derivations concatenated into one sequence.
+
+**`NUM_STEP_SHIFT` is the hard part of closure under the rules**, and it landed before the
+closure itself. To put two derivations end to end their steps are renumbered, and a step's
+justification names earlier steps **by index**, so every one of those indices moves too. The lemma
+says a justified step survives the move, and what makes it work is that the bounds move with them:
+`x < j` gives `c + x < c + j`. That is `Peano.NUM_ADD_LT_MONOTONE`, the first thing `Provability`
+has needed from `Peano` that was not already there, and it is derived from the non-strict version
+rather than by a second induction.
+
+One lemma and not two. The first block of a concatenation keeps its numbering and the second does
+not, and the unshifted case is this lemma at a shift of zero; `ProvabilitySpec` derives it that way
+rather than stating it, which is the assertion that the general lemma really covers the special
+case. The agreement it asks for is only up to `m`, which is the whole point: a concatenated
+sequence does not agree with either half past that half's own last step.
+
+`Peano` gained two order facts for the concatenation that is not written yet: `NUM_LT_NOT_LE`,
+that the strict order excludes the other one, which is what makes a case split on `NUM_LE m n \/
+NUM_LE n m` a split rather than two overlapping cases; and `NUM_LE_ADD`, that a summand is at most
+its sum, which holds on `num` with no side condition because there are no negative numbers. Both
+are general and both are stated with their intended consumer named, so that a reader meeting a
+lemma with no caller knows it is owed rather than stranded.
+
+What is above that is not written: closure under the rules itself; the diagonal lemma; and the
+object-level derivations D1, D2 and D3 that G2 needs. `docs/adr/0013` says why the last of those is
+its own piece of work rather than a helper inside this one, and it is the part most likely to be
+underestimated.
+
+What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
+**compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's
+algorithm is a definition by well-founded recursion, which this system does not have; then the
+integers and the rationals, and then the reals as a construction rather than an assumption. `docs/adr/0007` is the order and `docs/adr/0006` is the rule that
+unlocked it. `docs/adr/0004` records why the reals were axiomatised rather than constructed, and the
+same reasoning does not extend to the naturals.
+
+**A theory of a domain that is not mathematics is a theory like any other, and one exists as a
+test rather than as a description.** `DomainTheorySpec` declares a type and five constants nothing
+else has, asserts the four sentences of the engineering handbook's admission criterion as axioms,
+and derives a claim about them by hand. What it is for is the accounting rather than the proof: the
+conclusion rests on **one** of the four axioms asserted, and on **no foundational axiom at all**,
+neither choice nor infinity nor any of the reals. Which of the assumptions a conclusion actually
+spends is the question worth asking about a claim of the world, and `Derivation.axiomsOf` answers
+it; `Derivation.foreignTo` says which belong to the domain and which to the foundation under it.
+
+What a domain does **not** get is automation. `Ring` and `Linarith` decide fragments of the reals
+and have nothing to say about an arbitrary axiom, so a domain claim is a hand derivation out of the
+derived rules. The promise is accounting, not search, and the test says so where a reader meets it.
+Such a theory sits beside the chain and must stay there: two theories that axiomatise one name are
+the case `docs/adr/0008` leaves open, and `SoundnessAttackSpec` still derives `|- F` from it.
+
+## Working agreements
+
+**Verify before recording as done.** A tactic is built when it has proved something end to end, not
+when it compiles and its unit tests pass.
+
+**Stale references are worse than missing ones.** When something moves, the references move in the
+same change: a document naming a file that is gone gets consulted and believed.
+
+**Ask before anything irreversible or outward-facing.** Approval for one action is not approval for
+the next.
