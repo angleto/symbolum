@@ -17,9 +17,9 @@ update it.*
         ==><=>=\->|-!?~/\\/==><=>=\->                              |-!?~/\\/==><
       =>=\->|-!?~/\\/==><=>=\->|-!?~/\\                        /==><=>=\->|-
     !?~/\\/==><=>=\->|-!?~/\\/==><=>=\->|-                 !?~/\\/==><=>
-   =\->|-!?~/\\/==          ><=>   =\->|-!?~/          \\/==><=>=\->
+   =\->|-!?~/\\/==         ><=>    =\->|-!?~/          \\/==><=>=\->
   |-!?~/\\/==>                <=>    =\->|-!?~/\   \/==><=>=\->|
- -!?~/\\/==>                    <=>=     \->|-!?~/\\/==><=>=\
+ -!?~/\\/==>                    <=>=    \->|-!?~/\\/==><=>=\
 ->|-!?~/\\/                       ==><=    >=\->|-!?~/\\
 /==><=>=\-                          >|-!?     ~/\\/=
 =><=>=\->|                           -!?~/
@@ -68,7 +68,7 @@ stops matching.
 
 **Two further checks are about the shape rather than the text, and the stream cannot see either.**
 The mark is **one** connected region, and it encloses **exactly one** empty region, the counter, of
-270 cells. The slot that separates the folded tip from the bar's left arm is open at the bottom and
+269 cells. The slot that separates the folded tip from the bar's left arm is open at the bottom and
 must stay open: when it closes it leaves sealed pockets of three and two cells, which read as dirt
 rather than as drawing. That is not hypothetical. It is what the first hand-drawn version of this
 figure did, and filling those five cells is the only edit made to it.
@@ -119,13 +119,30 @@ the top, where the circle's band and the arm meet, and open at the bottom. Close
 merges with the arm and the fold is invisible, which is what every earlier attempt at this closure
 did.
 
-**The mask is placed cell by cell, and is not the output of a formula.** That is a finding rather
-than a preference. A fold drawn as a spiral wants four to five times the stroke's own width of clear
-counter to turn in; this counter is thirteen rows across against a five-row stroke, which is two and
-a half. Generating the fold from an arc plus a swept band was tried in six shapes, and each one
-either hid the fold under the bar, opened the counter to the outside, or left holes of one and two
-cells where the stroke pinched. The grid is coarse enough that the last three cells of the tip are a
-drawing decision and not a sampling of a curve.
+The **terminal** is a straight band and not an arc, which is the one thing about the figure that
+looks like a compromise and is not. At this resolution the last four cells of a curve and of a
+straight line are the same four cells, and the straight one is two numbers where the curve was five.
+
+**The figure is a description and the art is its rasterisation.** That was not true when it was
+drawn: the mask was placed cell by cell, because a fold drawn as a spiral wants four to five times
+the stroke's own width of clear counter to turn in and this one has two and a half, and six
+parametric shapes tried at the time each hid the fold under the bar, opened the counter, or left
+holes of one and two cells where the stroke pinched. What answered was the straight terminal above.
+`Figure` in `modules/mark` is the description, in radii rather than in cells, and `Figure.at(rows)`
+is the art at a size.
+
+It reproduces the drawing **within four cells**: the terminal's run at row five and the bar's run at
+row seven each sit one column further right in the hand-drawn version than in this one. Those four
+are the price of having one source instead of two, and they are written here rather than absorbed
+quietly, because somebody comparing this figure against the one in an older commit will find exactly
+that difference and deserves to know it was paid on purpose.
+
+**Not every size holds.** The slot is three columns at the reference and it is what a rasterisation
+loses first, so the command refuses rather than writing a figure whose checks fail: at twenty-six
+rows the counter leaks away entirely and at forty-six a pocket seals, while twenty, twenty-three and
+thirty-three hold. `MarkSpec` asserts all five of those. `sbt "mark/runMain
+garden.xeno.symbolum.mark.Mark 33"` prints a size and writes nothing, because another size is a
+thing to look at before it is a thing to commit.
 
 ## Shapes drawn and rejected
 
@@ -151,9 +168,9 @@ character grid, which is that the eye can see where it is.
 The same grid, one `<text>` element per visible run, monospace. It is a transcription of the art
 above rather than a redrawing: row *n* of the file is row *n* of the art.
 
-**It is generated.** `sbt "mark/runMain garden.xeno.symbolum.mark.Mark"` writes it from the art, and
-`MarkSpec` fails when the committed drawing is not what that command would write, naming the
-command. This paragraph used to end "so the two cannot drift without it being visible in a diff",
+**Both files are generated.** `sbt "mark/runMain garden.xeno.symbolum.mark.Mark"` writes the art
+into the block above from the description, and this drawing from the art; `MarkSpec` fails when
+either committed file is not what that command would write, naming the command. This paragraph used to end "so the two cannot drift without it being visible in a diff",
 which was true and was not a check: a diff is something a person has to read, and the moment
 somebody edits one cell of the art is the moment they have least appetite for finding out how the
 drawing is produced. The predictable outcome is a hand-edited `<text>` element, and from there the
@@ -178,10 +195,12 @@ from a light desktop gets the grey, which is the reason the grey is not one of t
 
 ## What is not here
 
-A version smaller than this one. A size that fits a terminal is what this section used to name and
-the mark now is one, at exactly eighty columns; below that nothing exists, and the section on the
-size says what a scaling would lose. The thinned stroke and the slot beside it are three columns
-each, so a reduction loses the closure before it loses anything a reader would call the figure. A
-smaller mark can have this closure only by being drawn again at that size with the stroke thinner in
-proportion, and a thinner stroke on a coarser grid is a different argument rather than the same
-figure smaller. The SVG scales freely and is not affected.
+A way to know which sizes hold without drawing them. The description is resolution-independent and
+the rasterisation is not: whether the slot survives a given grid is decided by where the cell centres
+happen to fall, and the only instrument for that is the three checks above, run on the result. So the
+command draws and then reports, and this document names the five sizes somebody has measured rather
+than a rule.
+
+This section used to say that no size but one existed at all, and before that that no size fitting a
+terminal existed. Both are answered, and what replaced them is a smaller claim honestly: the mark has
+sizes, and which ones is a question you ask by asking.

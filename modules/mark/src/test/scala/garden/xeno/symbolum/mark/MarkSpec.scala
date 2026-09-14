@@ -38,6 +38,30 @@ class MarkSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  "the committed art" should "be what the description draws at the reference size" in {
+    withClue(s"regenerate with ${Mark.Command}; ") {
+      rows shouldBe Figure.at(Figure.Reference)
+    }
+  }
+
+  /**
+   * The claim that the figure now has a size at all, and the claim that it does not have every size.
+   *
+   * Both are asserted because both are load-bearing. The first is the whole reason the description
+   * exists; the second is why the command refuses rather than writing whatever it drew. Twenty-six
+   * rows is the size where the counter leaks, not an arbitrary one, and if a change makes it hold,
+   * this fails and the sentence in `docs/logo.md` is what has to move.
+   */
+  "the figure" should "hold together at other sizes" in {
+    Mark.complaints(Figure.at(33)) shouldBe empty
+    Mark.complaints(Figure.at(20)) shouldBe empty
+  }
+
+  it should "not hold at every size, and say so rather than draw it" in {
+    Mark.complaints(Figure.at(26)) should not be empty
+    Mark.complaints(Figure.at(46)) should not be empty
+  }
+
   /**
    * The one that catches an edit to either file alone.
    *

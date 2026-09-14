@@ -50,17 +50,19 @@ object Mark {
   /** A filled cell, by row and column, counting from the top left of the art. */
   type Cell = (Int, Int)
 
-  private val ArtBlock: Regex = raw"(?s)## The art\n\n```\n(.*?)\n```".r
+  private val ArtBlock: Regex = raw"(?s)## The art\n\n```\n.*?\n```".r
+
+  private val ArtBody: Regex = raw"(?s)## The art\n\n```\n(.*?)\n```".r
 
   /**
-   * The art, as the rows of the fenced block under the heading.
+   * The art as the document holds it, which is what the checks are run against.
    *
    * Refused by name rather than guessed at. This reads somebody's document to write over another
    * file, and a heading that has moved is a reason to stop rather than to take the first fenced
    * block in the file.
    */
   def art(markdown: String): Vector[String] =
-    ArtBlock.findFirstMatchIn(markdown) match {
+    ArtBody.findFirstMatchIn(markdown) match {
       case Some(m) => m.group(1).split("\n", -1).toVector
       case None =>
         sys.error(s"$Document has no fenced block under a `## The art` heading; refusing to write $Drawing")
@@ -194,21 +196,47 @@ object Mark {
     (head +: body :+ "  </g>" :+ "</svg>" :+ "").mkString("\n")
   }
 
+  /** What the three checks say about a figure, in the words the failure needs. */
+  def complaints(rows: Vector[String]): Vector[String] = {
+    val faults = streamFaults(rows)
+    val holes = counters(rows)
+    Vector(
+      Option.when(faults.nonEmpty)(s"the stream does not cover the art: ${faults.length} cells, first ${faults.head}"),
+      Option.when(pieces(rows) != 1)(s"the mark is in ${pieces(rows)} pieces"),
+      Option.when(holes.length != 1)(s"the mark encloses ${holes.length} empty regions, sizes $holes")
+    ).flatten
+  }
+
+  /** The art block of the document, replaced in place. The prose around it is left alone. */
+  def withArt(markdown: String, rows: Vector[String]): String =
+    ArtBlock.replaceFirstIn(markdown,
+      java.util.regex.Matcher.quoteReplacement("## The art\n\n```\n" + rows.mkString("\n") + "\n```"))
+
   /**
-   * Write the drawing, refusing if the art does not hold up.
+   * Write both files from the description, refusing if what it draws does not hold up.
+   *
+   * With a size in rows, print that one instead and write nothing: another size is a thing to look
+   * at before it is a thing to commit, and the reference size is the only one either file holds.
    *
    * A generator that emitted a drawing of a broken figure would put the defect in two files instead
    * of one, and the second is the file nobody reads.
    */
   def main(args: Array[String]): Unit = {
-    val rows = art(new String(Files.readAllBytes(Paths.get(Document)), "UTF-8"))
-    val faults = streamFaults(rows)
-    val holes = counters(rows)
-    require(faults.isEmpty, s"the stream does not cover the art: ${faults.length} cells, first ${faults.head}")
-    require(pieces(rows) == 1, s"the mark is in ${pieces(rows)} pieces")
-    require(holes.length == 1, s"the mark encloses ${holes.length} empty regions, sizes $holes")
-    Files.write(Paths.get(Drawing), svg(rows).getBytes("UTF-8"))
-    println(s"$Drawing written: ${height(rows)} rows by ${width(rows)} columns, " +
-      s"${cells(rows).size} cells, one counter of ${holes.head}")
+    val size = args.headOption.map(_.toInt).getOrElse(Figure.Reference)
+    val rows = Figure.at(size)
+    val bad = complaints(rows)
+    if (size != Figure.Reference) {
+      rows.foreach(println)
+      println(s"${height(rows)} rows by ${width(rows)} columns, ${cells(rows).size} cells")
+      if (bad.isEmpty) println("holds: one region, one counter, the stream covers it")
+      else bad.foreach(c => println(s"does NOT hold: $c"))
+    } else {
+      require(bad.isEmpty, bad.mkString("; "))
+      val markdown = new String(Files.readAllBytes(Paths.get(Document)), "UTF-8")
+      Files.write(Paths.get(Document), withArt(markdown, rows).getBytes("UTF-8"))
+      Files.write(Paths.get(Drawing), svg(rows).getBytes("UTF-8"))
+      println(s"$Document and $Drawing written: ${height(rows)} rows by ${width(rows)} columns, " +
+        s"${cells(rows).size} cells, one counter of ${counters(rows).head}")
+    }
   }
 }

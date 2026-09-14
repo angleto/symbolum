@@ -86,13 +86,18 @@ that is deliberate: it is what lets it stay fast and heuristic.
   replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
   compares the file against the code and fails naming this command, which is the point: the document
   breaks exactly when somebody adds a lemma.
-- **Regenerating `docs/logo.svg`:** `sbt "mark/runMain garden.xeno.symbolum.mark.Mark"`. The character
-  art in `docs/logo.md` is the source and the drawing is written from it, so an edit to one cell of
-  the art is a regeneration rather than a hand-edited `<text>` element. It **refuses** rather than
-  writing when the art fails one of the three checks that document describes: that the operator
-  stream covers every filled cell in reading order, that the mark is one connected region, and that
-  it encloses exactly one empty one. `MarkSpec` runs the same three and compares the committed
-  drawing against the art, failing and naming this command.
+- **Regenerating the mark:** `sbt "mark/runMain garden.xeno.symbolum.mark.Mark"`. It writes **both**
+  the character art in `docs/logo.md` and `docs/logo.svg`, from the description in
+  `garden.xeno.symbolum.mark.Figure`, which is in radii rather than in cells. It **refuses** rather
+  than writing when what it draws fails one of the three checks that document describes: that the
+  operator stream covers every filled cell in reading order, that the mark is one connected region,
+  and that it encloses exactly one empty one. `MarkSpec` runs the same three and compares both
+  committed files against the description, failing and naming this command.
+
+  **With a size in rows it prints instead of writing**, which is the point of the description:
+  `sbt "mark/runMain garden.xeno.symbolum.mark.Mark 33"`. Not every size holds, and the ones nobody
+  has measured are a question rather than a gap: twenty, twenty-three and thirty-three hold,
+  twenty-six leaks its counter and forty-six seals a pocket, and `MarkSpec` asserts all five.
 - **Regenerating `docs/reading-register.md`:**
   `sbt "theories/runMain garden.xeno.symbolum.theories.Register"`. The same arrangement as the lemmas, for the
   three things nothing but a reader checks: every axiom, every defined constant and every row of the
@@ -115,7 +120,7 @@ theories  -> logic          the naturals, the reals, numerals, arithmetic, RING,
 core      -> (nothing)      the computer algebra system, published as garden.xeno:symbolum-core
 tactics   -> theories, core the lowest module that sees both halves
 examples  -> tactics        runnable demonstrations of either half, not published
-mark      -> (nothing)      writes docs/logo.svg from the art in docs/logo.md, and checks it
+mark      -> (nothing)      the figure, the art and the drawing written from it, and its checks
 ```
 
 `mark` is beside that graph rather than in it: nothing depends on it and it depends on nothing. It
