@@ -71,6 +71,7 @@ object Essay {
       restsOn(signature, library, theorem),
       derivation(signature, library, script),
       cost(theorem),
+      reproduce(signature, library, name, theorem),
       checked(script)
     )
 
@@ -115,6 +116,88 @@ object Essay {
            |```""".stripMargin
     }
   }
+
+  /**
+   * How to get this theorem back, which is the section a reader asks for first.
+   *
+   * Three routes and they answer different questions: put the claim to the whole tactic surface and
+   * watch it be settled, look the lemma up by name, or reach it from Scala. The first is the one
+   * that matters, because it is the only one where the reader's own machine does the work rather
+   * than being told what somebody else's did.
+   *
+   * **The claim printed here is the legible form and not the set one**, and that is the whole
+   * reason this section costs nothing: every statement in the library is printed and read back
+   * through the same signature, and `NotationRoundTripSpec` asserts it of all of them. So the line
+   * below is generated rather than transcribed, and a reader who pastes it gets the same term.
+   * A statement that does **not** read back is the one case where the route is withheld instead of
+   * printed wrong.
+   *
+   * **The two commands are string literals here and cannot be anything else**, because `Ask` and
+   * `Find` live in `modules/tactics` and this file is in `modules/theories`, which is below it.
+   * A literal naming another module's entry point is exactly the kind of copy that goes stale, so
+   * `EssayCommandSpec` in `tactics` asserts these two against `Ask.Command` and `Find.Command`:
+   * the agreement is checked from the one module that can see both.
+   */
+  private def reproduce(
+    signature: Signature,
+    library: Library,
+    name: String,
+    theorem: Kernel.Thm
+  ): String = {
+    val heading = "## How to get it"
+
+    val held = library.named(name).headOption.map(_.development)
+    val fromScala = held match {
+      case Some(development) =>
+        s"From Scala it is `$development`'s, under the name `$name`. Specialise it with " +
+          "`Rules.specTo`, which takes the instance wanted and finds the instantiation by " +
+          "matching: the order the binders were written in is not part of any contract here."
+      case None =>
+        "It is in no development this page can name, which is a defect in the page rather than " +
+          "in the theorem."
+    }
+
+    signature.readable(theorem.conclusion) match {
+      case Some(pair) =>
+        s"""$heading
+           |
+           |Put the claim to the prover, which settles it from the whole tactic surface:
+           |
+           |```
+           |$AskCommand ${pair.legible}"
+           |```
+           |
+           |The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+           |shell's quotes are gone before the command sees them.
+           |
+           |Look it up instead, by name or by shape:
+           |
+           |```
+           |$FindCommand $name"
+           |```
+           |
+           |$fromScala""".stripMargin
+
+      case None =>
+        s"""$heading
+           |
+           |This statement does not read back through the signature it is printed in, so no line
+           |that a reader could paste is published for it. `$FindCommand $name"` reaches it by name.
+           |
+           |$fromScala""".stripMargin
+    }
+  }
+
+  /**
+   * How `Ask` is invoked, as this page prints it.
+   *
+   * A copy of `Ask.Command` with the placeholder dropped, because `modules/theories` is below
+   * `modules/tactics` and cannot read the real one. `EssayCommandSpec` asserts the agreement.
+   */
+  val AskCommand: String = "sbt \"tactics/runMain garden.xeno.symbolum.tactics.Ask"
+
+  /** How `Find` is invoked, on the same terms and checked by the same spec. */
+  val FindCommand: String = "sbt \"tactics/runMain garden.xeno.symbolum.tactics.Find"
 
   private def restsOn(signature: Signature, library: Library, theorem: Kernel.Thm): String = {
     val axioms = Derivation.axiomsOf(theorem)

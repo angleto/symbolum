@@ -150,6 +150,25 @@ obtained.
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
 
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. NUM_MUL x z = NUM_ADD (NUM_MUL y u) (NUM_GCD x y) \/ NUM_MUL y z = NUM_ADD (NUM_MUL x u) (NUM_GCD x y))"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_BEZOUT"
+```
+
+From Scala it is `Modular`'s, under the name `NUM_BEZOUT`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
 ## What on this page is checked
 
 - The statement, in both forms, is rendered from the theorem. The second form was read back
@@ -273,6 +292,25 @@ obtained.
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
 
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_MUL y z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_EUCLID"
+```
+
+From Scala it is `Modular`'s, under the name `NUM_EUCLID`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
 ## What on this page is checked
 
 - The statement, in both forms, is rendered from the theorem. The second form was read back
@@ -327,6 +365,25 @@ obtained.
 | Instantiation | 7 | 3.3% |
 | Definition | 5 | 2.3% |
 | TypeInstantiation | 3 | 1.4% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \/ y = x"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_PRIME_DIVISOR"
+```
+
+From Scala it is `Modular`'s, under the name `NUM_PRIME_DIVISOR`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -475,6 +532,25 @@ obtained.
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
 
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num -> num. !z:num. (!u:num. NUM_LT u z ==> NUM_LT 0 (x u)) ==> (!u:num. !v:num. NUM_LT u z /\ NUM_LT v z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. NUM_LT v z ==> NUM_CONG (x v) u (y v))"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_CRT"
+```
+
+From Scala it is `Coding`'s, under the name `NUM_CRT`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
 ## What on this page is checked
 
 - The statement, in both forms, is rendered from the theorem. The second form was read back
@@ -575,6 +651,25 @@ obtained.
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
 
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_LT 0 x /\ NUM_LE x y ==> NUM_DIVIDES x (NUM_FACT y)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_FACT_DIVIDES"
+```
+
+From Scala it is `Coding`'s, under the name `NUM_FACT_DIVIDES`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
 ## What on this page is checked
 
 - The statement, in both forms, is rendered from the theorem. The second form was read back
@@ -653,6 +748,25 @@ obtained.
 | Definition | 16 | 0.2% |
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> bool. (!y:num. (!z:num. NUM_LT z y ==> x z) ==> x y) ==> (!y:num. x y)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_STRONG_INDUCTION"
+```
+
+From Scala it is `Peano`'s, under the name `NUM_STRONG_INDUCTION`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -756,6 +870,25 @@ obtained.
 | Axiom | 17 | 0.1% |
 | Definition | 16 | 0.1% |
 | TypeDefinition | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. ?y:num. x < real_of_num y"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_ARCHIMEDES"
+```
+
+From Scala it is `Peano`'s, under the name `NUM_ARCHIMEDES`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -985,6 +1118,25 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 | Axiom | 11 | 0.1% |
 | Definition | 10 | 0.1% |
 
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. !y:real. abs (x + y) <= abs x + abs y"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find ABS_TRIANGLE"
+```
+
+From Scala it is `Magnitude`'s, under the name `ABS_TRIANGLE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
 ## What on this page is checked
 
 - The statement, in both forms, is rendered from the theorem. The second form was read back
@@ -1156,6 +1308,25 @@ obtained.
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
 
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num. ?z:num. ?u:num. !v:num. NUM_LT v y ==> NUM_BETA z u v = x v"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_BETA_SEQUENCE"
+```
+
+From Scala it is `Coding`'s, under the name `NUM_BETA_SEQUENCE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
 ## What on this page is checked
 
 - The statement, in both forms, is rendered from the theorem. The second form was read back
@@ -1296,6 +1467,25 @@ obtained.
 | Definition | 31 | 0.1% |
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_PA x ==> NUM_FORM x"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_PA_FORM"
+```
+
+From Scala it is `Language`'s, under the name `NUM_PA_FORM`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -1477,6 +1667,25 @@ obtained.
 | Definition | 31 | 0.1% |
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV x ==> NUM_PROV y"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_PROV_MP"
+```
+
+From Scala it is `Provability`'s, under the name `NUM_PROV_MP`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -1669,6 +1878,25 @@ obtained.
 | Definition | 36 | 0.1% |
 | TypeDefinition | 2 | 0.0% |
 | Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which settles it from the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_PROV_SELF"
+```
+
+From Scala it is `Deduction`'s, under the name `NUM_PROV_SELF`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
