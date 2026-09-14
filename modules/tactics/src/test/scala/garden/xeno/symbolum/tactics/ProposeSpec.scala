@@ -166,7 +166,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 200 with the two facts that say the proof predicate is inhabited, one hypothesis each.
     // 204 with the shift lemma's three hypotheses and the monotonicity's one.
     // 205, and only one of the two facts added produces anything: `NUM_LE_ADD` has no hypothesis.
-    proposals.size shouldBe 205
+    // 208 with the closure under modus ponens and the cancellation it needed. THREE and not two,
+    // and the session that added them derived this figure as UNCHANGED, on the reasoning that
+    // neither lemma is about the reals and neither is reachable from a proposal. That is not what
+    // this bucket counts. It walks the whole library and counts hypotheses, so a lemma is reached
+    // whatever it is about: the cancellation drops its one comparison and the closure drops each
+    // of its two, and the wrong derivation was about the generator's reach rather than its
+    // subject. The three figures below moved with it and the same derivation missed all three.
+    proposals.size shouldBe 208
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -327,7 +334,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // days has been unreadable instead, because its residues name predicates on codes.
     // 62 with the weakening of `NUM_LT_NOT_LE`, whose residue `!m n. ~(NUM_LE n m)` is false and
     // written in a constant the model computes.
-    decidedFalse shouldBe 62
+    // 63 with the weakening of `NUM_ADD_LE_CANCEL`, whose residue `!p m n. NUM_LE m n` is false and
+    // written in a constant the model computes, so the sampler finds a point. It is the only one of
+    // the three this commit adds that lands here: the other two drop a premise of `NUM_PROV_MP` and
+    // their residues are about codes, which is the split the entry two above already describes.
+    decidedFalse shouldBe 63
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -390,7 +401,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 59, with the bucket above as usual, and the monotonicity's residue is a comparison of two
     // naturals, which `Model.Numbers` is exact on.
     // 60, with the bucket above as usual.
-    withAPoint shouldBe 60
+    // 61, with the bucket above as usual: the cancellation's residue is a comparison of two
+    // naturals and `Model.Numbers` is exact there, so the point comes back with the refutation.
+    withAPoint shouldBe 61
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -551,7 +564,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // conclusion-reading error this file has recorded three times, made a fourth time.
     // 155 with the shift lemma's three. Each drops one of three premises and keeps two, and one
     // of the two kept is always an order or an equation the procedures take the shape of.
-    open shouldBe 155
+    // 157 with the closure lemma's two. Each drops one of `NUM_PROV (p ==> q)` and `NUM_PROV p` and
+    // keeps the other, so an implication survives whose premise is a predicate applied to a code,
+    // and that is a shape a procedure takes even though nothing here can settle it. The control is
+    // in the entry above: what lands in `unreadable` instead is a surviving premise nothing takes
+    // the shape of, a negation, and neither of these is one.
+    open shouldBe 157
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -869,7 +887,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_LE` and `NUM_ADD`. Four names on the list where the previous twenty-one had none, which
     // is the difference between a claim about arithmetic and a claim about codes of arithmetic.
     // 98 with that one, which names `NUM_LE`.
-    aboutNumbers.size shouldBe 98
+    // 99 with the cancellation's, which names `NUM_LE`. One of the three and not three, and this is
+    // the split the entry above is about seen once more: the closure's two residues name
+    // `NUM_PROV`, `NUM_CODE` and `NUM_PAIR`, and a tag from five up is built from `NUM_ONE` and the
+    // two bit constructors, so not one constant of the naturals appears in either.
+    aboutNumbers.size shouldBe 99
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -910,7 +932,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // does not have to.
     // 40 with the monotonicity's weakening, refuted at a point like the thirty-nine before it.
     // 41, with the bucket above as usual.
-    after shouldBe 41
+    // 42 with the cancellation's weakening, which moves this figure and `decidedFalse` together
+    // rather than splitting them: the residue is false, and `NUM_LE` is both a constant the model
+    // computes and a shape the procedures take.
+    after shouldBe 42
   }
 
   /* ------------------------------------------------------ the false positive it produced */

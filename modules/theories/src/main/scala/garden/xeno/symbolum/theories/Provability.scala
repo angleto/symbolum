@@ -30,9 +30,11 @@ import garden.xeno.symbolum.logic.*
  *
  * What is here and what is not, dated rather than left to be found. The predicate is **inhabited**:
  * every axiom is provable, which is the one-step derivation and this file's first consumer of
- * `NUM_BETA_SEQUENCE`. What is not here is closure under the rules, `NUM_PROV (p ==> q)` and
- * `NUM_PROV p` giving `NUM_PROV q`, which is the second of Goedel's derivability conditions and
- * needs two derivations concatenated into one sequence.
+ * `NUM_BETA_SEQUENCE`. It is **closed under modus ponens** since 2026-09-14, which is the first
+ * thing here that puts two derivations into one sequence. What is not here is closure under the
+ * other rule, `NUM_PROV p` giving
+ * `NUM_PROV (NUM_CODE 8 (NUM_PAIR i p))`. That one is shorter rather than similar: there is one
+ * derivation, it keeps its numbering, and the appended line needs no shift at all.
  */
 final class Provability private (
   val language: Language,
@@ -79,12 +81,46 @@ object Provability {
   val ProvableLogic: String = "NUM_PROV_LOGIC"
 
   /**
+   * The embedded theory is closed under modus ponens.
+   *
+   * `|- !p q. NUM_PROV (NUM_CODE 7 (NUM_PAIR p q)) ==> NUM_PROV p ==> NUM_PROV q`
+   *
+   * The first thing here that puts two derivations together rather than exhibiting one.
+   *
+   * **It is not D2 and the difference matters.** Goedel's second derivability condition is a
+   * theorem **of PA**, `Prov(p ==> q) ==> Prov p ==> Prov q` written in the object language and
+   * derived inside it, which `docs/adr/0013` records as its own piece of work. This is the same
+   * shape one level up: an implication of the ambient logic about the `NUM_PROV` predicate, which
+   * says the coded predicate behaves like a theory rather than like a set of axioms. It is what
+   * that object-level derivation will have to formalise, and it is what every meta-level argument
+   * about the embedded theory chains with, but a reader who takes it for D2 will think the hard
+   * part is done.
+   *
+   * Given a derivation of `p ==> q` ending at
+   * index `k1` and one of `p` ending at `k2`, the sequence it builds is the first block unchanged,
+   * the second block shifted by `SUC k1`, and `q` appended at `SUC (SUC k1 + k2)`, justified by
+   * modus ponens from index `k1` and index `SUC k1 + k2`.
+   *
+   * **The sequence is a conditional on the index and not a concatenation of anything**, because a
+   * sequence here is a function `num -> num` reached through [[Coding.BetaSequence]], and there is
+   * nothing to append to. So the whole derivation is three evaluations of `COND` and the arithmetic
+   * that decides which branch each index takes, which is where its length goes.
+   *
+   * What it does **not** do, and the reason is worth having in front of a reader who arrives
+   * looking for D1: it says nothing about generalisation, the other rule of the Hilbert system.
+   * That closure is not written and is the shorter half of this one, not another copy of it: one
+   * derivation keeps its numbering, so [[StepShift]] is not needed and neither is the arithmetic
+   * of where the join falls.
+   */
+  val ModusPonens: String = "NUM_PROV_MP"
+
+  /**
    * A justified step stays justified when the sequence it lives in is moved along.
    *
    * `|- !a b c u v m j. (!i. i <= m ==> NUM_BETA a b (c + i) = NUM_BETA u v i) ==> j <= m ==>
    * NUM_STEP u v j ==> NUM_STEP a b (c + j)`
    *
-   * The lemma the second derivability condition is built from, and the only hard thing in it. To
+   * The lemma [[ModusPonens]] is built from, and the only hard thing in it. To
    * put two derivations end to end their steps have to be renumbered, and a step's justification
    * names **earlier steps by index**, so every one of those indices moves too. What makes it work
    * is that the bounds move with them: `x < j` gives `c + x < c + j`, which is why
@@ -128,6 +164,9 @@ object Provability {
     ProvableCases -> "!n:num. NUM_PROV n = (?d:num. NUM_PROOF d n)",
     ProvablePeano -> "!n:num. NUM_PA n ==> NUM_PROV n",
     ProvableLogic -> "!n:num. NUM_LOGIC n ==> NUM_PROV n",
+    ModusPonens ->
+      ("!p:num q:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR p q)) ==> " +
+        "NUM_PROV p ==> NUM_PROV q"),
     StepShift ->
       ("!a:num b:num c:num u:num v:num m:num j:num. " +
         "(!i:num. NUM_LE i m ==> NUM_BETA a b (NUM_ADD c i) = NUM_BETA u v i) ==> " +
@@ -188,6 +227,7 @@ object Provability {
       fromLogic <- inhabited(language, theory, notation, logic, facts, Language.LogicName, 1,
         ProvableLogic)
       shifted <- stepsShift(language, theory, notation, logic, facts)
+      joined <- closedUnderModusPonens(language, theory, notation, logic, facts, shifted)
     } yield new Provability(
       language,
       theory,
@@ -202,6 +242,7 @@ object Provability {
         .updated(ProvablePeano, fromPeano)
         .updated(ProvableLogic, fromLogic)
         .updated(StepShift, shifted)
+        .updated(ModusPonens, joined)
     )
 
   /**
@@ -441,6 +482,512 @@ object Provability {
       case refused: RefusedHere => Left(refused.error)
     }
   }
+
+  /**
+   * [[ModusPonens]], by building the sequence that holds both derivations and one step more.
+   *
+   * Write `c` for `SUC k1` and `L` for `c + k2`, where `k1` and `k2` are the last indices of the
+   * derivation of `p ==> q` and of the derivation of `p`. The sequence is
+   *
+   * {{{
+   * \i. COND (i <= k1) (NUM_BETA a1 b1 i)
+   *          (COND (i <= L) (NUM_BETA a2 b2 (i - c)) q)
+   * }}}
+   *
+   * taken up to `SUC (SUC L)` so that the index `SUC L`, where `q` sits, is inside the range
+   * [[Coding.BetaSequence]] answers for.
+   *
+   * **It is a conditional on the index rather than a concatenation**, and there is no other option:
+   * a sequence here is two numbers read through the beta function, so nothing can be appended to
+   * anything. Three evaluations of `COND` come out of that, one per block and one for the appended
+   * line, and each is an arithmetic fact about where an index sits rather than anything about
+   * derivations. That arithmetic is most of the method.
+   *
+   * The two blocks then transfer through [[StepShift]], at a shift of zero and at a shift of `c`,
+   * which is the one lemma this needs and the reason it is stated with a shift.
+   *
+   * **The last case of the assembly is where the shift is undone.** An index `j` above `k1` and at
+   * most `L` is the second block's index `j - c`, and saying so needs `c + (j - c) = j`, which is
+   * `Peano.NUM_SUB_ADD` against `c <= j`, and `j - c <= k2`, which is `Peano.NUM_ADD_LE_CANCEL`
+   * against `j <= L`. The second of those did not exist before this: nothing cancelled a summand
+   * out of a comparison, only out of an equation.
+   *
+   * Written in direct style with the refusal carried out by an exception, for the reason
+   * [[stepsShift]] gives: the derivation is a tree of independent obligations rather than a
+   * sequence, and a `for` comprehension over `Either` turns "which obligation failed" into "which
+   * binding came first".
+   */
+  private def closedUnderModusPonens(
+    language: Language,
+    theory: Theory,
+    notation: Notation,
+    logic: Logic,
+    facts: Map[String, Kernel.Thm],
+    stepShift: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
+    val chain = language.numbering
+    val classical = chain.peano.naturals.classical
+
+    def force[T](result: Either[LogicError, T]): T =
+      result.fold(error => throw new RefusedHere(error), identity)
+
+    try {
+      def app(head: Term, args: List[Term]): Term = force(LogicError.lift(Term.appAll(head, args)))
+      def text(source: String): Term = force(Parser.term(theory, notation, source, numbers))
+      def fact(name: String): Kernel.Thm = force(chain.peano.fact(name))
+
+      val betaConstant = force(LogicError.lift(theory.constant(Coding.BetaName,
+        Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers))))))
+      val plus = force(LogicError.lift(theory.constant(Peano.Addition, arithmetic)))
+      val minus = force(LogicError.lift(theory.constant(Peano.Subtraction, arithmetic)))
+      val atMostConstant = force(LogicError.lift(theory.constant(Peano.NonStrictOrder, relation)))
+      val successorConstant = force(LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))))
+      val conditional = force(LogicError.lift(theory.constant(Classical.Conditional,
+        Type.fun(Type.Bool, Type.fun(numbers, Type.fun(numbers, numbers))))))
+      val pairConstant = force(LogicError.lift(theory.constant(Numbering.PairName, arithmetic)))
+      val codeConstant = force(LogicError.lift(theory.constant(Numbering.CodeName, arithmetic)))
+      val stepConstant = force(LogicError.lift(theory.constant(StepName,
+        Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, Type.Bool))))))
+      val provableConstant = force(LogicError.lift(
+        theory.constant(ProvableName, Type.fun(numbers, Type.Bool))))
+
+      def beta(a: Term, b: Term, i: Term): Term = app(betaConstant, List(a, b, i))
+      def add(x: Term, y: Term): Term = app(plus, List(x, y))
+      def subtract(x: Term, y: Term): Term = app(minus, List(x, y))
+      def atMost(x: Term, y: Term): Term = app(atMostConstant, List(x, y))
+      def successor(x: Term): Term = app(successorConstant, List(x))
+      def cond(guard: Term, yes: Term, no: Term): Term =
+        app(conditional, List(guard, yes, no))
+      def pair(x: Term, y: Term): Term = app(pairConstant, List(x, y))
+      val implies = app(codeConstant, List(text("7")))
+      val zero = text("ZERO")
+
+      def destCond(subject: Term): (Term, Term, Term) = subject match {
+        case App(App(App(head, guard), yes), no) if head == conditional => (guard, yes, no)
+        case other => throw new RefusedHere(NotOfForm("a conditional", other))
+      }
+
+      /* ------------------------------------------------------- order, assembled */
+
+      def transitive(first: Kernel.Thm, second: Kernel.Thm, x: Term, y: Term, z: Term): Kernel.Thm =
+        force(rules.conjIntro(first, second).flatMap(both =>
+          rules.specAll(fact(Peano.Transitive), List(x, y, z)).flatMap(rules.mp(_, both))))
+
+      /** `x <= y` and `y < z` give `x < z`. */
+      def thenBelow(first: Kernel.Thm, second: Kernel.Thm, x: Term, y: Term, z: Term): Kernel.Thm =
+        force(rules.conjIntro(first, second).flatMap(both =>
+          rules.specAll(fact(Peano.AtMostThenBelow), List(x, y, z)).flatMap(rules.mp(_, both))))
+
+      /** `x < y` and `y <= z` give `x < z`. */
+      def belowThen(first: Kernel.Thm, second: Kernel.Thm, x: Term, y: Term, z: Term): Kernel.Thm =
+        force(rules.conjIntro(first, second).flatMap(both =>
+          rules.specAll(fact(Peano.BelowThenAtMost), List(x, y, z)).flatMap(rules.mp(_, both))))
+
+      def reflexive(x: Term): Kernel.Thm = force(rules.spec(x, fact(Peano.Reflexive)))
+      def belowSuccessor(x: Term): Kernel.Thm = force(rules.spec(x, fact(Peano.BelowSuccessor)))
+      def atMostSuccessor(x: Term): Kernel.Thm = force(rules.spec(x, fact(Peano.AtMostSuccessor)))
+      def atMostSum(x: Term, y: Term): Kernel.Thm =
+        force(rules.specAll(fact(Peano.AtMostSum), List(x, y)))
+      def fromBelow(held: Kernel.Thm, x: Term, y: Term): Kernel.Thm =
+        force(rules.specAll(fact(Peano.AtMostFromBelow), List(x, y)).flatMap(rules.mp(_, held)))
+      def notAtMost(held: Kernel.Thm, x: Term, y: Term): Kernel.Thm =
+        force(rules.specAll(fact(Peano.BelowExcludesAtMost), List(x, y)).flatMap(rules.mp(_, held)))
+      def addMonotone(held: Kernel.Thm, p: Term, x: Term, y: Term): Kernel.Thm =
+        force(rules.specAll(fact(Peano.AddMonotone), List(p, x, y)).flatMap(rules.mp(_, held)))
+      def cancel(held: Kernel.Thm, p: Term, x: Term, y: Term): Kernel.Thm =
+        force(rules.specAll(fact(Peano.AddCancelsOrder), List(p, x, y)).flatMap(rules.mp(_, held)))
+
+      /** From `x = y`, that `x <= y`, through the order being reflexive. */
+      def atMostByEquation(equation: Kernel.Thm, x: Term): Kernel.Thm =
+        force(Conv.apTerm(app(atMostConstant, List(x)), equation)
+          .flatMap(step => LogicError.lift(Kernel.eqMp(step, reflexive(x)))))
+
+      /* ------------------------------------------------ opening and injecting */
+
+      /** `?x. body` at an argument, beta-reduced. */
+      def instantiate(existential: Term, argument: Term): Term = {
+        val inner = logic.destExistsPredicate(existential)
+          .getOrElse(throw new RefusedHere(NotOfForm("an existential", existential)))
+        val applied = app(inner, List(argument))
+        force(rightOf(force(Conv.betaRoot(applied))))
+      }
+
+      def open(existential: Kernel.Thm, name: String, taken: Set[FVar])(
+        reach: (FVar, Kernel.Thm) => Kernel.Thm
+      ): Kernel.Thm = {
+        val predicate = logic.destExistsPredicate(existential.conclusion)
+          .getOrElse(throw new RefusedHere(NotOfForm("an existential", existential.conclusion)))
+        val fresh = Conv.freshVariable(
+          name, numbers, taken ++ Term.freeVariables(existential.conclusion))
+        val body = force(rightOf(force(Conv.betaRoot(app(predicate, List(fresh))))))
+        val instance = force(LogicError.lift(Kernel.assume(body)))
+        force(rules.existsElim(existential, fresh, reach(fresh, instance)))
+      }
+
+      def disjunctsOf(subject: Term, count: Int): Vector[Term] =
+        if (count == 1) Vector(subject)
+        else {
+          val (first, rest) = logic.destDisj(subject)
+            .getOrElse(throw new RefusedHere(NotOfForm("a disjunction", subject)))
+          first +: disjunctsOf(rest, count - 1)
+        }
+
+      def nestOf(run: Vector[Term]): Term =
+        run.toList.reverse match {
+          case Nil => throw new RefusedHere(MissingDefinition("at least one disjunct"))
+          case last :: rest =>
+            rest.foldLeft(last)((carried, one) => force(logic.mkDisj(one, carried)))
+        }
+
+      def injected(parts: Vector[Term], which: Int, proof: Kernel.Thm): Kernel.Thm = {
+        val entered =
+          if (which == parts.size - 1) proof
+          else force(rules.disjIntro1(nestOf(parts.drop(which + 1)), proof))
+        (0 until which).reverse.foldLeft(entered)((carried, before) =>
+          force(rules.disjIntro2(parts(before), carried)))
+      }
+
+      /* ------------------------------------------------------ what is read off */
+
+      def published(name: String): Kernel.Thm =
+        force(facts.get(name).toRight(MissingDefinition(name)))
+
+      val provableCases = published(ProvableCases)
+      val proofCases = published(ProofCases)
+      val stepCases = published(StepCases)
+      val betaSequence = force(chain.coding.fact(Coding.BetaSequence))
+      val condTrue = Kernel.instType(Map(Classical.TypeVariable -> numbers),
+        force(classical.fact(Classical.CondTrue)))
+      val condFalse = Kernel.instType(Map(Classical.TypeVariable -> numbers),
+        force(classical.fact(Classical.CondFalse)))
+
+      val p = Term.variable("p", numbers)
+      val q = Term.variable("q", numbers)
+      val implication = app(implies, List(pair(p, q)))
+
+      /* ------------------------------------------------------- the concatenation */
+
+      def join(
+        k1: Term, a1: Term, b1: Term, lastOne: Kernel.Thm, stepsOne: Kernel.Thm,
+        k2: Term, a2: Term, b2: Term, lastTwo: Kernel.Thm, stepsTwo: Kernel.Thm,
+        taken: Set[FVar]
+      ): Kernel.Thm = {
+        val c = successor(k1)
+        val last = add(c, k2)
+        val after = successor(last)
+        val afterAfter = successor(after)
+
+        // k1 < c <= L <= SUC L, assembled once and used throughout.
+        val k1BelowShift = belowSuccessor(k1)
+        val lastAtMostAfter = atMostSuccessor(last)
+        val lastBelowAfter = belowSuccessor(last)
+        val k1AtMostLast = transitive(atMostSuccessor(k1), atMostSum(c, k2), k1, c, last)
+        val k1AtMostAfter = transitive(k1AtMostLast, lastAtMostAfter, k1, last, after)
+        val k1BelowAfter = thenBelow(k1AtMostLast, lastBelowAfter, k1, last, after)
+
+        val index = Conv.freshVariable("i", numbers, taken)
+        val sequence = force(LogicError.lift(Term.abs(index,
+          cond(atMost(index, k1), beta(a1, b1, index),
+            cond(atMost(index, last), beta(a2, b2, subtract(index, c)), q)))))
+
+        val taking = force(rules.specAll(betaSequence, List(sequence, afterAfter)))
+        val normalised = force(Conv.betaNormalise(taking.conclusion)
+          .flatMap(step => LogicError.lift(Kernel.eqMp(step, taking))))
+
+        open(normalised, "a", taken) { (wideA, atA) =>
+          open(atA, "b", taken + wideA) { (wideB, agreement) =>
+            val here = taken + wideA + wideB
+
+            /** The sequence's value at an index shown to be at most `SUC L`. */
+            def valueAt(at: Term, small: Kernel.Thm): Kernel.Thm = {
+              val strict = thenBelow(small, belowSuccessor(after), at, after, afterAfter)
+              force(rules.spec(at, agreement).flatMap(rules.mp(_, strict)))
+            }
+
+            /** One `COND` evaluated, by whichever of the two rules the guard supports. */
+            def branch(value: Kernel.Thm, guard: Kernel.Thm, holds: Boolean): Kernel.Thm = {
+              val (asked, yes, no) = destCond(force(rightOf(value)))
+              val rule = if (holds) condTrue else condFalse
+              val evaluated =
+                force(rules.specAll(rule, List(asked, yes, no)).flatMap(rules.mp(_, guard)))
+              force(Conv.trans(value, evaluated))
+            }
+
+            /* Below the join the first block is read off unchanged. */
+            val agreeFirst = {
+              val i = Conv.freshVariable("i", numbers, here)
+              val boundTerm = atMost(i, k1)
+              val bounded = force(LogicError.lift(Kernel.assume(boundTerm)))
+              val small = transitive(bounded, k1AtMostAfter, i, k1, after)
+              val value = branch(valueAt(i, small), bounded, holds = true)
+              force(rules.disch(boundTerm, value).flatMap(rules.gen(i, _)))
+            }
+
+            /* Above it the second block is, at an index shifted by `c`. */
+            val agreeSecond = {
+              val i = Conv.freshVariable("i", numbers, here)
+              val boundTerm = atMost(i, k2)
+              val bounded = force(LogicError.lift(Kernel.assume(boundTerm)))
+              val at = add(c, i)
+              val inRange = addMonotone(bounded, c, i, k2)
+              val small = transitive(inRange, lastAtMostAfter, at, last, after)
+              val notFirst =
+                notAtMost(belowThen(k1BelowShift, atMostSum(c, i), k1, c, at), k1, at)
+              val inner = branch(branch(valueAt(at, small), notFirst, holds = false),
+                inRange, holds = true)
+              // `(c + i) - c = i`, by commuting the sum the subtraction undoes.
+              val commuted = force(rules.specAll(fact(Peano.AddCommutative), List(c, i)))
+              val reduced = force(Conv.apThm(force(Conv.apTerm(minus, commuted)), c)
+                .flatMap(Conv.trans(_, force(rules.specAll(fact(Peano.SumMinus), List(i, c))))))
+              val moved = force(Conv.apTerm(app(betaConstant, List(a2, b2)), reduced))
+              force(rules.disch(boundTerm, force(Conv.trans(inner, moved)))
+                .flatMap(rules.gen(i, _)))
+            }
+
+            /* At the appended index both guards fail and the value is the conclusion. */
+            val valueLast = branch(
+              branch(valueAt(after, reflexive(after)), notAtMost(k1BelowAfter, k1, after),
+                holds = false),
+              notAtMost(lastBelowAfter, last, after), holds = false)
+
+            /* Each block's steps survive the move, at a shift of zero and at a shift of `c`. */
+            val blockFirst = {
+              val j = Conv.freshVariable("j", numbers, here)
+              val boundTerm = atMost(j, k1)
+              val bounded = force(LogicError.lift(Kernel.assume(boundTerm)))
+              val shifted = {
+                val i = Conv.freshVariable("i", numbers, here)
+                val innerBound = atMost(i, k1)
+                val innerHeld = force(LogicError.lift(Kernel.assume(innerBound)))
+                val value = force(rules.spec(i, agreeFirst).flatMap(rules.mp(_, innerHeld)))
+                val identity = force(rules.spec(i, fact(Peano.ZeroPlus)))
+                val moved = force(Conv.apTerm(app(betaConstant, List(wideA, wideB)), identity))
+                force(rules.disch(innerBound, force(Conv.trans(moved, value)))
+                  .flatMap(rules.gen(i, _)))
+              }
+              val source = force(rules.spec(j, stepsOne).flatMap(rules.mp(_, bounded)))
+              val moved = force(rules
+                .specAll(stepShift, List(wideA, wideB, zero, a1, b1, k1, j))
+                .flatMap(rules.mp(_, shifted))
+                .flatMap(rules.mp(_, bounded))
+                .flatMap(rules.mp(_, source)))
+              val identity = force(rules.spec(j, fact(Peano.ZeroPlus)))
+              val placed = force(Conv.apTerm(app(stepConstant, List(wideA, wideB)), identity)
+                .flatMap(step => LogicError.lift(Kernel.eqMp(step, moved))))
+              force(rules.disch(boundTerm, placed).flatMap(rules.gen(j, _)))
+            }
+
+            val blockSecond = {
+              val i = Conv.freshVariable("i", numbers, here)
+              val boundTerm = atMost(i, k2)
+              val bounded = force(LogicError.lift(Kernel.assume(boundTerm)))
+              val source = force(rules.spec(i, stepsTwo).flatMap(rules.mp(_, bounded)))
+              val moved = force(rules
+                .specAll(stepShift, List(wideA, wideB, c, a2, b2, k2, i))
+                .flatMap(rules.mp(_, agreeSecond))
+                .flatMap(rules.mp(_, bounded))
+                .flatMap(rules.mp(_, source)))
+              force(rules.disch(boundTerm, moved).flatMap(rules.gen(i, _)))
+            }
+
+            /* The appended step, justified by modus ponens from `k1` and from `L`. */
+            val blockLast = {
+              val atFirstEnd = force(Conv.trans(
+                branch(valueAt(k1, k1AtMostAfter), reflexive(k1), holds = true), lastOne))
+              val atSecondEnd = force(Conv.trans(
+                force(rules.spec(k2, agreeSecond).flatMap(rules.mp(_, reflexive(k2)))), lastTwo))
+              val rebuilt = force(LogicError.lift(Kernel.mkComb(
+                force(Conv.apTerm(pairConstant, force(Conv.sym(atSecondEnd)))),
+                force(Conv.sym(valueLast)))))
+              val justified =
+                force(Conv.trans(atFirstEnd, force(Conv.apTerm(implies, rebuilt))))
+
+              val target = force(rules.specAll(stepCases, List(wideA, wideB, after)))
+              val parts = disjunctsOf(force(rightOf(target)), 4)
+              val conjoined = force(rules.conjIntro(k1BelowAfter,
+                force(rules.conjIntro(lastBelowAfter, justified))))
+              val underRight = force(rules.existsIntro(
+                logic.destExistsPredicate(instantiate(parts(2), k1))
+                  .getOrElse(throw new RefusedHere(NotOfForm("an existential", parts(2)))),
+                last, conjoined))
+              val underLeft = force(rules.existsIntro(
+                logic.destExistsPredicate(parts(2))
+                  .getOrElse(throw new RefusedHere(NotOfForm("an existential", parts(2)))),
+                k1, underRight))
+              force(Conv.sym(target).flatMap(step =>
+                LogicError.lift(Kernel.eqMp(step, injected(parts, 2, underLeft)))))
+            }
+
+            /* Every index at most `SUC L` falls to one of the three. */
+            val everyStep = {
+              val j = Conv.freshVariable("j", numbers, here)
+              val boundTerm = atMost(j, after)
+              val bounded = force(LogicError.lift(Kernel.assume(boundTerm)))
+
+              /** From `j = t` and the step at `t`, the step at `j`. */
+              def stepAt(equation: Kernel.Thm, held: Kernel.Thm): Kernel.Thm =
+                force(Conv.apTerm(app(stepConstant, List(wideA, wideB)), equation)
+                  .flatMap(Conv.sym)
+                  .flatMap(step => LogicError.lift(Kernel.eqMp(step, held))))
+
+              /** From `j <= L`, by where `j` sits relative to `k1`. */
+              def withinBlocks(atMostLast: Kernel.Thm): Kernel.Thm = {
+                val trichotomy = force(rules.specAll(fact(Peano.Trichotomy), List(j, k1)))
+                val parts = disjunctsOf(trichotomy.conclusion, 3)
+
+                val fromBelowFirst = {
+                  val held = force(LogicError.lift(Kernel.assume(parts(0))))
+                  force(rules.spec(j, blockFirst).flatMap(rules.mp(_, fromBelow(held, j, k1))))
+                }
+                val fromEqual = {
+                  val held = force(LogicError.lift(Kernel.assume(parts(1))))
+                  force(rules.spec(j, blockFirst).flatMap(rules.mp(_, atMostByEquation(held, j))))
+                }
+                val fromAbove = {
+                  val held = force(LogicError.lift(Kernel.assume(parts(2))))
+                  // `k1 < j` IS `SUC k1 <= j` by definition, which is `c <= j`.
+                  val reached = force(Conv
+                    .unfold(force(chain.peano.definition(Peano.StrictOrder)), List(k1, j))
+                    .flatMap(step => LogicError.lift(Kernel.eqMp(step, held))))
+                  val difference = subtract(j, c)
+                  val rebuilt = force(rules.specAll(fact(Peano.MinusThenPlus), List(j, c))
+                    .flatMap(rules.mp(_, reached)))
+                  val placed = force(Conv.trans(
+                    force(rules.specAll(fact(Peano.AddCommutative), List(c, difference))), rebuilt))
+                  val shiftedBound = force(
+                    Conv.apThm(force(Conv.apTerm(atMostConstant, placed)), last)
+                      .flatMap(Conv.sym)
+                      .flatMap(step => LogicError.lift(Kernel.eqMp(step, atMostLast))))
+                  val within = cancel(shiftedBound, c, difference, k2)
+                  val moved = force(
+                    rules.spec(difference, blockSecond).flatMap(rules.mp(_, within)))
+                  stepAt(force(Conv.sym(placed)), moved)
+                }
+
+                val tail = force(LogicError.lift(Kernel.assume(
+                  force(logic.mkDisj(parts(1), parts(2))))))
+                force(rules.disjElim(trichotomy, fromBelowFirst,
+                  force(rules.disjElim(tail, fromEqual, fromAbove))))
+              }
+
+              val split = force(rules.specAll(fact(Peano.BelowOrEqual), List(j, after))
+                .flatMap(rules.mp(_, bounded)))
+              val splitParts = disjunctsOf(split.conclusion, 2)
+
+              val strictCase = {
+                val held = force(LogicError.lift(Kernel.assume(splitParts(0))))
+                val peeled = force(rules.specAll(fact(Peano.BelowSuccessorCases), List(last, j))
+                  .flatMap(rules.mp(_, held)))
+                val peeledParts = disjunctsOf(peeled.conclusion, 2)
+                val fromStrict = withinBlocks(
+                  fromBelow(force(LogicError.lift(Kernel.assume(peeledParts(0)))), j, last))
+                val fromEqual = withinBlocks(atMostByEquation(
+                  force(LogicError.lift(Kernel.assume(peeledParts(1)))), j))
+                force(rules.disjElim(peeled, fromStrict, fromEqual))
+              }
+              val equalCase =
+                stepAt(force(LogicError.lift(Kernel.assume(splitParts(1)))), blockLast)
+
+              val reached = force(rules.disjElim(split, strictCase, equalCase))
+              force(rules.disch(boundTerm, reached).flatMap(rules.gen(j, _)))
+            }
+
+            /* The sequence is a derivation of `q`, so `q` is provable. */
+            val code = pair(after, pair(wideA, wideB))
+            val proofAt = force(rules.specAll(proofCases, List(code, q)))
+            val body = force(rightOf(proofAt))
+            val atLength = instantiate(body, after)
+            val atFirst = instantiate(atLength, wideA)
+            val conjoined = force(rules.conjIntro(valueLast, everyStep)
+              .flatMap(rules.conjIntro(Conv.refl(code), _)))
+
+            def under(existential: Term, witness: Term, proof: Kernel.Thm): Kernel.Thm =
+              force(rules.existsIntro(
+                logic.destExistsPredicate(existential)
+                  .getOrElse(throw new RefusedHere(NotOfForm("an existential", existential))),
+                witness, proof))
+
+            val isProof = force(Conv.sym(proofAt).flatMap(step => LogicError.lift(Kernel.eqMp(
+              step,
+              under(body, after, under(atLength, wideA, under(atFirst, wideB, conjoined)))))))
+
+            val provableAt = force(rules.spec(q, provableCases))
+            force(Conv.sym(provableAt).flatMap(step => LogicError.lift(Kernel.eqMp(
+              step, under(force(rightOf(provableAt)), code, isProof)))))
+          }
+        }
+      }
+
+      /* --------------------------------------------- the two derivations, opened */
+
+      val premiseOne = app(provableConstant, List(implication))
+      val premiseTwo = app(provableConstant, List(p))
+      val assumedOne = force(LogicError.lift(Kernel.assume(premiseOne)))
+      val assumedTwo = force(LogicError.lift(Kernel.assume(premiseTwo)))
+
+      /** `NUM_PROV n` opened into the derivation it claims exists. */
+      def asExistential(held: Kernel.Thm, subject: Term): Kernel.Thm =
+        force(rules.spec(subject, provableCases)
+          .flatMap(step => LogicError.lift(Kernel.eqMp(step, held))))
+
+      /** A derivation's last line and the justification of every step in it. */
+      def parts(held: Kernel.Thm): (Kernel.Thm, Kernel.Thm) = {
+        val rest = force(rules.conjElim2(held))
+        (force(rules.conjElim1(rest)), force(rules.conjElim2(rest)))
+      }
+
+      val settled = open(asExistential(assumedOne, implication), "d1", Set(p, q)) { (d1, holdsOne) =>
+        val casesOne = force(rules.specAll(proofCases, List(d1, implication))
+          .flatMap(step => LogicError.lift(Kernel.eqMp(step, holdsOne))))
+        open(casesOne, "k1", Set(p, q, d1)) { (k1, atK1) =>
+          open(atK1, "a1", Set(p, q, d1, k1)) { (a1, atA1) =>
+            open(atA1, "b1", Set(p, q, d1, k1, a1)) { (b1, atB1) =>
+              val (lastOne, stepsOne) = parts(atB1)
+              val outer = asExistential(assumedTwo, p)
+              open(outer, "d2", Set(p, q, d1, k1, a1, b1)) { (d2, holdsTwo) =>
+                val casesTwo = force(rules.specAll(proofCases, List(d2, p))
+                  .flatMap(step => LogicError.lift(Kernel.eqMp(step, holdsTwo))))
+                open(casesTwo, "k2", Set(p, q, d1, k1, a1, b1, d2)) { (k2, atK2) =>
+                  open(atK2, "a2", Set(p, q, d1, k1, a1, b1, d2, k2)) { (a2, atA2) =>
+                    open(atA2, "b2", Set(p, q, d1, k1, a1, b1, d2, k2, a2)) { (b2, atB2) =>
+                      val (lastTwo, stepsTwo) = parts(atB2)
+                      join(k1, a1, b1, lastOne, stepsOne, k2, a2, b2, lastTwo, stepsTwo,
+                        Set(p, q, d1, k1, a1, b1, d2, k2, a2, b2))
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      val closed = force(rules.disch(premiseTwo, settled)
+        .flatMap(rules.disch(premiseOne, _))
+        .flatMap(rules.genAll(_, List(p, q))))
+
+      val wanted = force(
+        Statements
+          .collectFirst { case (name, source) if name == ModusPonens => source }
+          .toRight(MissingDefinition(ModusPonens))
+          .flatMap(Parser.proposition(theory, notation, _))
+      )
+
+      if (closed.conclusion == wanted) Right(closed)
+      else Left(NotOfForm(s"the statement published for $ModusPonens", closed.conclusion))
+    } catch {
+      case refused: RefusedHere => Left(refused.error)
+    }
+  }
+
+  /** An equation's right-hand side, which this file reads off a dozen theorems. */
+  private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+    Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))
 
   /** Carry a refusal out of the derivation above, which is written in direct style. */
   private final class RefusedHere(val error: LogicError) extends RuntimeException

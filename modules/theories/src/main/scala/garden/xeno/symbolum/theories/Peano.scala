@@ -538,6 +538,25 @@ object Peano {
   val AtMostSum: String = "NUM_LE_ADD"
 
   /**
+   * `|- !p m n. NUM_LE (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LE m n`
+   *
+   * [[AddMonotone]] read backwards, and the only one of the pair a consumer could not assemble
+   * from what was here: `NUM_ADD_CANCEL_LEFT` cancels a summand out of an **equation** and there
+   * was nothing that cancelled one out of a comparison.
+   *
+   * It is the same three lines as [[AddMonotone]] and for the same reason, which is what
+   * [[NonStrictOrder]] is: `NUM_LE m n` is `?d. m + d = n`, so the witness the premise carries is
+   * the witness the conclusion wants and the summand comes off by the equational cancellation in
+   * between. The route through [[Trichotomy]] and [[BelowExcludesAtMost]] reaches the same place
+   * and is longer, and it makes a classical case split out of a statement about a difference.
+   *
+   * The first consumer is `Provability`, where two derivations are concatenated: an index `j`
+   * inside the second block is `c + (j - c)`, and what says the part after the shift is within
+   * that block's own bound is this lemma against the bound on `j`.
+   */
+  val AddCancelsOrder: String = "NUM_ADD_LE_CANCEL"
+
+  /**
    * `|- !n. NUM_LE n ZERO ==> n = ZERO`
    *
    * The converse of [[ZeroIsLeast]] at the bottom of the order, and it is not the same statement:
@@ -957,6 +976,8 @@ object Peano {
       "!p:num m:num n:num. NUM_LE m n ==> NUM_LE (NUM_ADD p m) (NUM_ADD p n)",
     AddStrictlyMonotone ->
       "!p:num m:num n:num. NUM_LT m n ==> NUM_LT (NUM_ADD p m) (NUM_ADD p n)",
+    AddCancelsOrder ->
+      "!p:num m:num n:num. NUM_LE (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LE m n",
     BelowExcludesAtMost -> "!m:num n:num. NUM_LT m n ==> ~(NUM_LE n m)",
     AtMostSum -> "!m:num n:num. NUM_LE m (NUM_ADD m n)",
     BelowThenAtMost ->
@@ -2279,6 +2300,14 @@ object Peano {
         nonStrictDefinition,
         arithmetic(AddAssociative)
       )
+      addCancelsOrder <- additionCancelsTheOrder(
+        logic,
+        theory,
+        notation,
+        nonStrictDefinition,
+        arithmetic(AddAssociative),
+        cancelsLeft
+      )
       belowExcludesAtMost <- strictExcludesNonStrict(
         logic, theory, notation, atMostThenBelow, strictIrreflexive)
       atMostSum <- summandIsAtMostTheSum(
@@ -2346,6 +2375,7 @@ object Peano {
         AtMostThenBelow -> atMostThenBelow,
         AddMonotone -> addMonotone,
         AddStrictlyMonotone -> addStrictlyMonotone,
+        AddCancelsOrder -> addCancelsOrder,
         BelowExcludesAtMost -> belowExcludesAtMost,
         AtMostSum -> atMostSum,
         BelowThenAtMost -> belowThenAtMost,
@@ -3470,6 +3500,63 @@ object Peano {
     } yield result
   }
 
+  /**
+   * [[AddCancelsOrder]], by taking the difference back out of the shifted comparison.
+   *
+   * [[additionIsMonotone]] read backwards and the same length. The premise carries a `d` with
+   * `(p + m) + d = p + n`; one associativity regroups that into `p + (m + d) = p + n`;
+   * [[AddCancelsLeft]] takes `p` off both sides and what is left, `m + d = n`, is the conclusion's
+   * own witness. No induction and no case split, for the reason the sibling gives.
+   *
+   * The route a reader expects is the other one, through [[Trichotomy]] and
+   * [[BelowExcludesAtMost]]: suppose `n < m`, shift it, and contradict the premise. That works and
+   * was rejected here for being longer and for making a classical case split out of a statement
+   * about a difference, which is all this is.
+   */
+  private def additionCancelsTheOrder(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    nonStrictDefinition: Kernel.Thm,
+    associative: Kernel.Thm,
+    cancelsLeft: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val relation = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+    val arithmeticType = Type.fun(numbers, Type.fun(numbers, numbers))
+    val p = Term.variable("p", numbers)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      atMostConstant <- LogicError.lift(theory.constant(NonStrictOrder, relation))
+      plus <- LogicError.lift(theory.constant(Addition, arithmeticType))
+
+      shifted <- LogicError.lift(Term.appAll(plus, List(p, m)))
+      target <- LogicError.lift(Term.appAll(plus, List(p, n)))
+      premise <- LogicError.lift(Term.appAll(atMostConstant, List(shifted, target)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      opened <- Conv
+        .unfold(nonStrictDefinition, List(shifted, target))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, assumed)))
+
+      unfoldedWanted <- Conv.unfold(nonStrictDefinition, List(m, n))
+      body <- rightOf(unfoldedWanted)
+      predicate <- logic
+        .destExistsPredicate(body)
+        .toRight(NotOfForm("an existential", body))
+
+      witnessed <- withoutTheSummand(
+        logic, plus, associative, cancelsLeft, opened, p, m, n, predicate)
+      back <- Conv.sym(unfoldedWanted)
+      carried <- LogicError.lift(Kernel.eqMp(back, witnessed))
+      discharged <- rules.disch(premise, carried)
+      general <- rules.genAll(discharged, List(p, m, n))
+      result <- checked(theory, notation, AddCancelsOrder, general)
+    } yield result
+  }
+
   /** [[BelowExcludesAtMost]]: assume the other order and the strict one becomes reflexive. */
   private def strictExcludesNonStrict(
     logic: Logic,
@@ -3654,6 +3741,57 @@ object Peano {
         .flatMap(Conv.apTerm(_, assumed))
       reached <- Conv.trans(regrouped, shiftedRight)
       witnessed <- rules.existsIntro(predicate, difference, reached)
+      result <- rules.existsElim(existential, difference, witnessed)
+    } yield result
+  }
+
+  /**
+   * The difference of a shifted comparison is the difference of the plain one.
+   *
+   * [[withDifference]] in the other direction: that one puts a witness under a shift, this one
+   * takes the shift off the witness. Written as its own method for the same reason, which is that
+   * the opening of the existential is where a free variable escapes if the conclusion is handed
+   * back out instead of being reached inside.
+   */
+  private def withoutTheSummand(
+    logic: Logic,
+    plus: Term,
+    associative: Kernel.Thm,
+    cancelsLeft: Kernel.Thm,
+    existential: Kernel.Thm,
+    shift: Term,
+    lower: Term,
+    upper: Term,
+    predicate: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    for {
+      inner <- logic
+        .destExistsPredicate(existential.conclusion)
+        .toRight(NotOfForm("an existential", existential.conclusion))
+      difference = Conv.freshVariable(
+        "d",
+        numbers,
+        Term.freeVariables(existential.conclusion) ++ Term.freeVariables(predicate)
+      )
+      applied <- LogicError.lift(Term.app(inner, difference))
+      contraction <- Conv.betaRoot(applied)
+      instance <- Term
+        .destEq(contraction.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", contraction.conclusion))
+      assumed <- LogicError.lift(Kernel.assume(instance))
+
+      // `p + (m + d) = (p + m) + d = p + n`, and then `p` comes off both ends.
+      regrouped <- rules.specAll(associative, List(shift, lower, difference))
+      reached <- Conv.sym(regrouped).flatMap(Conv.trans(_, assumed))
+      carried <- LogicError.lift(Term.appAll(plus, List(lower, difference)))
+      cancelled <- rules
+        .specAll(cancelsLeft, List(carried, upper, shift))
+        .flatMap(rules.mp(_, reached))
+      witnessed <- rules.existsIntro(predicate, difference, cancelled)
       result <- rules.existsElim(existential, difference, witnessed)
     } yield result
   }

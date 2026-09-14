@@ -107,6 +107,113 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * A theorem of the embedded theory that is not one of its axioms, derived end to end.
+   *
+   * Until `NUM_PROV_MP` landed, every formula this predicate was known to hold of was an axiom of
+   * one of the two sets, because the only two inhabitation lemmas say exactly that. So the
+   * assertion with teeth about closure is not that it holds, which the statement check above
+   * already covers, but that it **produces something new**: `A ==> A'` where `A` is the axiom
+   * `!v0. ~(S v0 = 0)` and `A'` is `B ==> A` for a second axiom `B`, obtained by weakening `A` and
+   * discharging it against itself.
+   *
+   * The composition is the point. Three general facts and two concrete membership facts have to
+   * meet: `NUM_PA_FORM` to know the codes are formulas, `NUM_LOGIC_WEAKEN` to get the implication,
+   * `NUM_PROV_LOGIC` and `NUM_PROV_PA` to get both premises provable, and closure to discharge.
+   *
+   * **The two axioms are different on purpose.** `A ==> (A ==> A)` would be symmetric, and a
+   * version of closure that read the pair backwards, concluding the antecedent rather than the
+   * consequent, would pass against it. With `A ==> (B ==> A)` the two answers are different terms,
+   * and the specialisation below is written as the instance it wants rather than by position, so a
+   * statement with the pair reversed refuses here rather than proving the other thing.
+   *
+   * What is **not** asserted, because it costs more than it is worth here: that `B ==> A` is not
+   * itself an axiom of either set. `NUM_PA_CASES` is six codes six deep and a scheme, and refuting
+   * membership in it is the seventy-line shape `LanguageSpec` pays for the term and formula
+   * refusals. That it is not an axiom is an observation about the tags, not a theorem here.
+   */
+  it should "derive a formula the two axiom sets do not hold, which is what closure is for" in {
+    val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
+
+    def constant(name: String, ty: Type): Term =
+      force(LogicError.lift(provability.theory.constant(name, ty)))
+
+    val pairing = constant(Numbering.PairName, arithmetic)
+    val coding = constant(Numbering.CodeName, arithmetic)
+
+    def applied(head: Term, arguments: List[Term]): Term =
+      force(LogicError.lift(Term.appAll(head, arguments)))
+
+    def implies(left: Term, right: Term): Term =
+      applied(coding, List(term("7"), applied(pairing, List(left, right))))
+
+    def predicate(name: String)(subject: Term): Term =
+      applied(constant(name, Type.fun(numbers, Type.Bool)), List(subject))
+
+    val isFormula = predicate(Language.FormulaName)
+    val isLogical = predicate(Language.LogicName)
+    val isProvable = predicate(Provability.ProvableName)
+
+    /** The code a concrete membership fact is about. */
+    def codeOf(member: Kernel.Thm): Term = member.conclusion match {
+      case App(_, argument) => argument
+      case other => fail(s"a claim about a code was expected, found $other")
+    }
+
+    val firstAxiom = force(chain.language.fact("NUM_PA_SUC_NOT_ZERO"))
+    val secondAxiom = force(chain.language.fact("NUM_PA_ADD_ZERO"))
+    val first = codeOf(firstAxiom)
+    val second = codeOf(secondAxiom)
+    first should not be second
+
+    val areFormulas = force(chain.language.fact(Language.AxiomFormula))
+    def formula(member: Kernel.Thm, code: Term): Kernel.Thm =
+      force(rules.spec(code, areFormulas).flatMap(rules.mp(_, member)))
+
+    // `A ==> (B ==> A)`, which is weakening at the two codes and in that order.
+    val weakened = implies(first, implies(second, first))
+    val logical = force(
+      rules
+        .specTo(
+          force(chain.language.fact("NUM_LOGIC_WEAKEN")),
+          force(logic.mkImp(
+            isFormula(first),
+            force(logic.mkImp(isFormula(second), isLogical(weakened)))))
+        )
+        .flatMap(rules.mp(_, formula(firstAxiom, first)))
+        .flatMap(rules.mp(_, formula(secondAxiom, second)))
+    )
+
+    val premise = force(
+      rules
+        .spec(weakened, force(provability.fact(Provability.ProvableLogic)))
+        .flatMap(rules.mp(_, logical))
+    )
+    val antecedent = force(
+      rules
+        .spec(first, force(provability.fact(Provability.ProvablePeano)))
+        .flatMap(rules.mp(_, firstAxiom))
+    )
+
+    val conclusion = implies(second, first)
+    val discharged = force(
+      rules
+        .specTo(
+          force(provability.fact(Provability.ModusPonens)),
+          force(logic.mkImp(
+            isProvable(weakened),
+            force(logic.mkImp(isProvable(first), isProvable(conclusion)))))
+        )
+        .flatMap(rules.mp(_, premise))
+        .flatMap(rules.mp(_, antecedent))
+    )
+
+    discharged.hypotheses shouldBe empty
+    discharged.conclusion shouldBe isProvable(conclusion)
+    discharged.conclusion should not be isProvable(first)
+    Derivation.axiomsOf(discharged) should have size 2
+  }
+
+  /**
    * The shift at zero is the transfer, which is the claim the lemma is stated once for.
    *
    * `NUM_STEP_SHIFT` says a justified step survives its sequence being renumbered. Two derivations

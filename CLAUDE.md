@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 386 lemmas, 241 have two or more leading quantifiers and **218 of
+caller meant: of the library's 388 lemmas, 243 have two or more leading quantifiers and **220 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -552,12 +552,22 @@ clauses. Drop either bound and every formula becomes provable while every other 
 
 What is there and what is not. The predicate is **inhabited**: every axiom is provable, by the
 derivation that is one line long, and that is the first thing anywhere to spend
-`NUM_BETA_SEQUENCE`. What is not there is closure under the rules, `NUM_PROV (p ==> q)` and
-`NUM_PROV p` giving `NUM_PROV q`, which is the second of Goedel's derivability conditions and needs
-two derivations concatenated into one sequence.
+`NUM_BETA_SEQUENCE`. Since 2026-09-14 it is also **closed under modus ponens**, `NUM_PROV (p ==> q)`
+and `NUM_PROV p` giving `NUM_PROV q`, which is the first thing here to put two derivations into one
+sequence. What is not there is closure under the other rule, generalisation, and that one is the
+shorter half rather than a second copy of this one: a single derivation keeps its numbering, so
+nothing is shifted and the appended line is justified from the index below it.
 
-**`NUM_STEP_SHIFT` is the hard part of closure under the rules**, and it landed before the
-closure itself. To put two derivations end to end their steps are renumbered, and a step's
+**That closure is not D2, and this file said it was.** Goedel's second derivability condition is a
+theorem **of PA**, the implication written in the object language and derived inside it, which
+`docs/adr/0013` states in as many words and lists among the object-level work it calls a piece of
+its own. What landed is the same shape one level up: an implication of the ambient logic about the
+`NUM_PROV` predicate, saying that the coded predicate behaves like a theory rather than like a set
+of axioms. It is what the object-level derivation will have to formalise and what every meta-level
+argument about the embedded theory chains with. Read as D2 it makes the remaining work look done.
+
+**`NUM_STEP_SHIFT` is the hard part of that closure**, and it landed before the closure itself.
+To put two derivations end to end their steps are renumbered, and a step's
 justification names earlier steps **by index**, so every one of those indices moves too. The lemma
 says a justified step survives the move, and what makes it work is that the bounds move with them:
 `x < j` gives `c + x < c + j`. That is `Peano.NUM_ADD_LT_MONOTONE`, the first thing `Provability`
@@ -570,14 +580,23 @@ rather than stating it, which is the assertion that the general lemma really cov
 case. The agreement it asks for is only up to `m`, which is the whole point: a concatenated
 sequence does not agree with either half past that half's own last step.
 
-`Peano` gained two order facts for the concatenation that is not written yet: `NUM_LT_NOT_LE`,
-that the strict order excludes the other one, which is what makes a case split on `NUM_LE m n \/
-NUM_LE n m` a split rather than two overlapping cases; and `NUM_LE_ADD`, that a summand is at most
-its sum, which holds on `num` with no side condition because there are no negative numbers. Both
-are general and both are stated with their intended consumer named, so that a reader meeting a
-lemma with no caller knows it is owed rather than stranded.
+`Peano` gained three order facts for that concatenation. `NUM_LT_NOT_LE`, that the strict order
+excludes the other one, which is what makes a case split on `NUM_LE m n \/ NUM_LE n m` a split
+rather than two overlapping cases; `NUM_LE_ADD`, that a summand is at most its sum, which holds on
+`num` with no side condition because there are no negative numbers; and `NUM_ADD_LE_CANCEL`, which
+is `NUM_ADD_MONOTONE` read backwards.
 
-What is above that is not written: closure under the rules itself; the diagonal lemma; and the
+The third is worth a line, because it is the one obligation the written plan for the closure had
+not accounted for and it was invisible until the derivation reached for it. An index `j` past the
+join is the second block's index `j - c`, and saying that `j - c` is inside that block's own bound
+means cancelling `c` out of `j <= c + k2`. Nothing did. `NUM_ADD_CANCEL_LEFT` cancels a summand out
+of an **equation**, which reads like the same fact and is not one. It costs three lines for the
+reason `NUM_ADD_MONOTONE` does: `NUM_LE m n` **is** `?d. m + d = n`, so the premise's witness is the
+conclusion's and one associativity is what happens in between. The route through trichotomy and
+`NUM_LT_NOT_LE` reaches the same place, is longer, and makes a classical case split out of a
+statement about a difference.
+
+What is above that is not written: closure under generalisation; the diagonal lemma; and the
 object-level derivations D1, D2 and D3 that G2 needs. `docs/adr/0013` says why the last of those is
 its own piece of work rather than a helper inside this one, and it is the part most likely to be
 underestimated.

@@ -124,7 +124,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 200 with the proof predicate's two, neither of which reaches a rediscovery either.
     // 204 with the shift lemma's three and the monotonicity's one, none reaching a rediscovery.
     // 205 with the one the two order facts produce between them.
-    propose.weakenings.size shouldBe 205
+    // 208 with the closure under modus ponens and the cancellation it needed, three between them,
+    // none of which reaches a rediscovery either.
+    propose.weakenings.size shouldBe 208
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

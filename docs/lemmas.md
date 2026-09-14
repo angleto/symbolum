@@ -316,6 +316,7 @@ they have least appetite for working out how it is produced.
   NUM_ADD_CANCEL_LEFT      !x:num. !y:num. !z:num. NUM_ADD z x = NUM_ADD z y ==> x = y
   NUM_ADD_EQ_ZERO          !x:num. !y:num. NUM_ADD x y = 0 ==> x = 0
   NUM_ADD_EXCHANGE         !x:num. !y:num. !z:num. NUM_ADD x (NUM_ADD y z) = NUM_ADD y (NUM_ADD x z)
+  NUM_ADD_LE_CANCEL        !x:num. !y:num. !z:num. NUM_LE (NUM_ADD x y) (NUM_ADD x z) ==> NUM_LE y z
   NUM_ADD_LT_MONOTONE      !x:num. !y:num. !z:num. NUM_LT y z ==> NUM_LT (NUM_ADD x y) (NUM_ADD x z)
   NUM_ADD_MONOTONE         !x:num. !y:num. !z:num. NUM_LE y z ==> NUM_LE (NUM_ADD x y) (NUM_ADD x z)
   NUM_ADD_SHIFT            !x:num. !y:num. NUM_ADD x (SUC y) = NUM_ADD (SUC x) y
@@ -421,6 +422,7 @@ they have least appetite for working out how it is produced.
   NUM_PROOF_CASES          !x:num. !y:num. NUM_PROOF x y = (?z:num. ?u:num. ?v:num. x = NUM_PAIR z (NUM_PAIR u v) /\ NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP u v w))
   NUM_PROV_CASES           !x:num. NUM_PROV x = (?y:num. NUM_PROOF y x)
   NUM_PROV_LOGIC           !x:num. NUM_LOGIC x ==> NUM_PROV x
+  NUM_PROV_MP              !x:num. !y:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV x ==> NUM_PROV y
   NUM_PROV_PA              !x:num. NUM_PA x ==> NUM_PROV x
   NUM_STEP_CASES           !x:num. !y:num. !z:num. NUM_STEP x y z = (NUM_PA (NUM_BETA x y z) \/ NUM_LOGIC (NUM_BETA x y z) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_LT v z /\ NUM_BETA x y u = NUM_CODE 7 (NUM_PAIR (NUM_BETA x y v) (NUM_BETA x y z))) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_BETA x y z = NUM_CODE 8 (NUM_PAIR v (NUM_BETA x y u))))
   NUM_STEP_SHIFT           !x:num. !y:num. !z:num. !u:num. !v:num. !w:num. !x1:num. (!y1:num. NUM_LE y1 w ==> NUM_BETA x y (NUM_ADD z y1) = NUM_BETA u v y1) ==> NUM_LE x1 w ==> NUM_STEP u v x1 ==> NUM_STEP x y (NUM_ADD z x1)
