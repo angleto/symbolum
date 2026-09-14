@@ -173,7 +173,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // whatever it is about: the cancellation drops its one comparison and the closure drops each
     // of its two, and the wrong derivation was about the generator's reach rather than its
     // subject. The three figures below moved with it and the same derivation missed all three.
-    proposals.size shouldBe 208
+    // 209 with the closure under generalisation, which has one hypothesis. Derived from the
+    // arithmetic of hypotheses this time and right, which is the correction the entry above is
+    // about: the question is how many arrows a lemma carries, never what it is about.
+    proposals.size shouldBe 209
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -705,7 +708,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // each and so leave nothing, and `NUM_LOGIC_VACUOUS`'s first, which leaves a negation.
     // 52 with those two, whose residue is `!n. NUM_PROV n` both times: nothing left on the left
     // of an arrow, and no model with a reading of `NUM_PROV`.
-    unreadable shouldBe 52
+    // 53 with the closure under generalisation, whose residue is
+    // `!i p. NUM_PROV (NUM_CODE 8 (NUM_PAIR i p))`: nothing left on the left of an arrow, and no
+    // model with a reading of `NUM_PROV`. Its sibling's two went to `open` instead, because each
+    // of those keeps one of two premises; this one has a single premise and keeps none.
+    unreadable shouldBe 53
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

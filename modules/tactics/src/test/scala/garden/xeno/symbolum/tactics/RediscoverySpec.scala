@@ -126,7 +126,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 205 with the one the two order facts produce between them.
     // 208 with the closure under modus ponens and the cancellation it needed, three between them,
     // none of which reaches a rediscovery either.
-    propose.weakenings.size shouldBe 208
+    // 209 with the closure under generalisation's one, which reaches no rediscovery either.
+    propose.weakenings.size shouldBe 209
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

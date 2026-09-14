@@ -421,6 +421,7 @@ they have least appetite for working out how it is produced.
 
   NUM_PROOF_CASES          !x:num. !y:num. NUM_PROOF x y = (?z:num. ?u:num. ?v:num. x = NUM_PAIR z (NUM_PAIR u v) /\ NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP u v w))
   NUM_PROV_CASES           !x:num. NUM_PROV x = (?y:num. NUM_PROOF y x)
+  NUM_PROV_GEN             !x:num. !y:num. NUM_PROV y ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR x y))
   NUM_PROV_LOGIC           !x:num. NUM_LOGIC x ==> NUM_PROV x
   NUM_PROV_MP              !x:num. !y:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV x ==> NUM_PROV y
   NUM_PROV_PA              !x:num. NUM_PA x ==> NUM_PROV x

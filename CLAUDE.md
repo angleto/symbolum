@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 388 lemmas, 243 have two or more leading quantifiers and **220 of
+caller meant: of the library's 389 lemmas, 244 have two or more leading quantifiers and **221 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -552,11 +552,17 @@ clauses. Drop either bound and every formula becomes provable while every other 
 
 What is there and what is not. The predicate is **inhabited**: every axiom is provable, by the
 derivation that is one line long, and that is the first thing anywhere to spend
-`NUM_BETA_SEQUENCE`. Since 2026-09-14 it is also **closed under modus ponens**, `NUM_PROV (p ==> q)`
-and `NUM_PROV p` giving `NUM_PROV q`, which is the first thing here to put two derivations into one
-sequence. What is not there is closure under the other rule, generalisation, and that one is the
-shorter half rather than a second copy of this one: a single derivation keeps its numbering, so
-nothing is shifted and the appended line is justified from the index below it.
+`NUM_BETA_SEQUENCE`. Since 2026-09-14 it is **closed under both rules of inference**: under modus
+ponens, `NUM_PROV (p ==> q)` and `NUM_PROV p` giving `NUM_PROV q`, which is the first thing here to
+put two derivations into one sequence; and under generalisation, `NUM_PROV p` giving
+`NUM_PROV (NUM_CODE 8 (NUM_PAIR i p))`, which is the same construction with one block instead of
+two. Those two rules with the eight schemes are the whole Hilbert system, so what the predicate
+holds of is closed under everything the embedded theory can do.
+
+The second is the short half rather than a second copy of the first, and the difference is one
+sentence: a single derivation keeps its numbering, so nothing is shifted and none of the arithmetic
+of where a join falls appears. They are written over one toolkit for that reason, which
+`Provability.closures` explains, and the second landed as that toolkit plus forty lines.
 
 **That closure is not D2, and this file said it was.** Goedel's second derivability condition is a
 theorem **of PA**, the implication written in the object language and derived inside it, which
@@ -596,8 +602,8 @@ conclusion's and one associativity is what happens in between. The route through
 `NUM_LT_NOT_LE` reaches the same place, is longer, and makes a classical case split out of a
 statement about a difference.
 
-What is above that is not written: closure under generalisation; the diagonal lemma; and the
-object-level derivations D1, D2 and D3 that G2 needs. `docs/adr/0013` says why the last of those is
+What is above that is not written: the diagonal lemma, and the object-level derivations D1, D2 and
+D3 that G2 needs. `docs/adr/0013` says why the last of those is
 its own piece of work rather than a helper inside this one, and it is the part most likely to be
 underestimated.
 

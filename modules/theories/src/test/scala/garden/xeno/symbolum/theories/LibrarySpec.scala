@@ -232,8 +232,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // them: one binds three variables of a kind and the other binds two. The second was not in the
     // plan for the first. `NUM_ADD_CANCEL_LEFT` cancels a summand out of an EQUATION and nothing
     // cancelled one out of an order, which only showed when the derivation reached for it.
-    library.entries.size shouldBe 388
-    library.names.distinct.size shouldBe 385
+    // 389 with the closure under generalisation, the other rule of the embedded theory's Hilbert
+    // system. One fact and no constant, and it moves both of `CLAUDE.md`'s figures because it
+    // binds an index and a formula, two of a kind.
+    library.entries.size shouldBe 389
+    library.names.distinct.size shouldBe 386
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

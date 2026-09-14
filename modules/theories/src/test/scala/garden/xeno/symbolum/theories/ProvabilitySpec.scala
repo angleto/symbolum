@@ -37,6 +37,93 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
   private def proposition(text: String): Term =
     force(Parser.proposition(provability.theory, provability.notation, text))
 
+  /* The object language, as terms, because three tests below build codes by hand. */
+
+  private val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
+
+  private def constant(name: String, ty: Type): Term =
+    force(LogicError.lift(provability.theory.constant(name, ty)))
+
+  private def applied(head: Term, arguments: List[Term]): Term =
+    force(LogicError.lift(Term.appAll(head, arguments)))
+
+  private val pairing = constant(Numbering.PairName, arithmetic)
+  private val coding = constant(Numbering.CodeName, arithmetic)
+
+  private def implies(left: Term, right: Term): Term =
+    applied(coding, List(term("7"), applied(pairing, List(left, right))))
+
+  private def forAll(index: Term, body: Term): Term =
+    applied(coding, List(term("8"), applied(pairing, List(index, body))))
+
+  private def predicate(name: String)(subject: Term): Term =
+    applied(constant(name, Type.fun(numbers, Type.Bool)), List(subject))
+
+  private val isFormula = predicate(Language.FormulaName)
+  private val isLogical = predicate(Language.LogicName)
+  private val isProvable = predicate(Provability.ProvableName)
+
+  /** The code a concrete membership fact is about. */
+  private def codeOf(member: Kernel.Thm): Term = member.conclusion match {
+    case App(_, argument) => argument
+    case other => fail(s"a claim about a code was expected, found $other")
+  }
+
+  private lazy val firstAxiom = force(chain.language.fact("NUM_PA_SUC_NOT_ZERO"))
+  private lazy val secondAxiom = force(chain.language.fact("NUM_PA_ADD_ZERO"))
+  private lazy val first = codeOf(firstAxiom)
+  private lazy val second = codeOf(secondAxiom)
+
+  private def formula(member: Kernel.Thm, code: Term): Kernel.Thm =
+    force(
+      rules
+        .spec(code, force(chain.language.fact(Language.AxiomFormula)))
+        .flatMap(rules.mp(_, member))
+    )
+
+  /**
+   * `NUM_PROV (B ==> A)` for the two axioms `A` and `B`, by weakening `A` and discharging it.
+   *
+   * Held here rather than inside one test because two of them want it: the first asks what it is,
+   * the second generalises it. `A ==> (B ==> A)` is an instance of `NUM_LOGIC_WEAKEN`, so it is
+   * provable, `A` is provable because it is an axiom, and modus ponens leaves `B ==> A`.
+   */
+  private lazy val discharged: Kernel.Thm = {
+    val weakened = implies(first, implies(second, first))
+    val logical = force(
+      rules
+        .specTo(
+          force(chain.language.fact("NUM_LOGIC_WEAKEN")),
+          force(logic.mkImp(
+            isFormula(first),
+            force(logic.mkImp(isFormula(second), isLogical(weakened)))))
+        )
+        .flatMap(rules.mp(_, formula(firstAxiom, first)))
+        .flatMap(rules.mp(_, formula(secondAxiom, second)))
+    )
+    val premise = force(
+      rules
+        .spec(weakened, force(provability.fact(Provability.ProvableLogic)))
+        .flatMap(rules.mp(_, logical))
+    )
+    val antecedent = force(
+      rules
+        .spec(first, force(provability.fact(Provability.ProvablePeano)))
+        .flatMap(rules.mp(_, firstAxiom))
+    )
+    force(
+      rules
+        .specTo(
+          force(provability.fact(Provability.ModusPonens)),
+          force(logic.mkImp(
+            isProvable(weakened),
+            force(logic.mkImp(isProvable(first), isProvable(implies(second, first))))))
+        )
+        .flatMap(rules.mp(_, premise))
+        .flatMap(rules.mp(_, antecedent))
+    )
+  }
+
   "Provability" should "be the statements this development publishes" in {
     Provability.Statements.foreach { case (name, text) =>
       val theorem = force(provability.fact(name))
@@ -68,7 +155,13 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
       }
     }
 
-    Vector(Provability.ProvablePeano, Provability.ProvableLogic).foreach { name =>
+    Vector(
+      Provability.ProvablePeano,
+      Provability.ProvableLogic,
+      Provability.StepShift,
+      Provability.ModusPonens,
+      Provability.Generalisation
+    ).foreach { name =>
       withClue(s"$name: ") {
         Derivation.axiomsOf(force(provability.fact(name))) should have size 2
       }
@@ -132,85 +225,52 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
    * refusals. That it is not an axiom is an observation about the tags, not a theorem here.
    */
   it should "derive a formula the two axiom sets do not hold, which is what closure is for" in {
-    val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
-
-    def constant(name: String, ty: Type): Term =
-      force(LogicError.lift(provability.theory.constant(name, ty)))
-
-    val pairing = constant(Numbering.PairName, arithmetic)
-    val coding = constant(Numbering.CodeName, arithmetic)
-
-    def applied(head: Term, arguments: List[Term]): Term =
-      force(LogicError.lift(Term.appAll(head, arguments)))
-
-    def implies(left: Term, right: Term): Term =
-      applied(coding, List(term("7"), applied(pairing, List(left, right))))
-
-    def predicate(name: String)(subject: Term): Term =
-      applied(constant(name, Type.fun(numbers, Type.Bool)), List(subject))
-
-    val isFormula = predicate(Language.FormulaName)
-    val isLogical = predicate(Language.LogicName)
-    val isProvable = predicate(Provability.ProvableName)
-
-    /** The code a concrete membership fact is about. */
-    def codeOf(member: Kernel.Thm): Term = member.conclusion match {
-      case App(_, argument) => argument
-      case other => fail(s"a claim about a code was expected, found $other")
-    }
-
-    val firstAxiom = force(chain.language.fact("NUM_PA_SUC_NOT_ZERO"))
-    val secondAxiom = force(chain.language.fact("NUM_PA_ADD_ZERO"))
-    val first = codeOf(firstAxiom)
-    val second = codeOf(secondAxiom)
     first should not be second
 
-    val areFormulas = force(chain.language.fact(Language.AxiomFormula))
-    def formula(member: Kernel.Thm, code: Term): Kernel.Thm =
-      force(rules.spec(code, areFormulas).flatMap(rules.mp(_, member)))
-
-    // `A ==> (B ==> A)`, which is weakening at the two codes and in that order.
-    val weakened = implies(first, implies(second, first))
-    val logical = force(
-      rules
-        .specTo(
-          force(chain.language.fact("NUM_LOGIC_WEAKEN")),
-          force(logic.mkImp(
-            isFormula(first),
-            force(logic.mkImp(isFormula(second), isLogical(weakened)))))
-        )
-        .flatMap(rules.mp(_, formula(firstAxiom, first)))
-        .flatMap(rules.mp(_, formula(secondAxiom, second)))
-    )
-
-    val premise = force(
-      rules
-        .spec(weakened, force(provability.fact(Provability.ProvableLogic)))
-        .flatMap(rules.mp(_, logical))
-    )
-    val antecedent = force(
-      rules
-        .spec(first, force(provability.fact(Provability.ProvablePeano)))
-        .flatMap(rules.mp(_, firstAxiom))
-    )
-
-    val conclusion = implies(second, first)
-    val discharged = force(
-      rules
-        .specTo(
-          force(provability.fact(Provability.ModusPonens)),
-          force(logic.mkImp(
-            isProvable(weakened),
-            force(logic.mkImp(isProvable(first), isProvable(conclusion)))))
-        )
-        .flatMap(rules.mp(_, premise))
-        .flatMap(rules.mp(_, antecedent))
-    )
-
     discharged.hypotheses shouldBe empty
-    discharged.conclusion shouldBe isProvable(conclusion)
+    discharged.conclusion shouldBe isProvable(implies(second, first))
     discharged.conclusion should not be isProvable(first)
     Derivation.axiomsOf(discharged) should have size 2
+  }
+
+  /**
+   * The two rules compose, which is what being closed under the system means.
+   *
+   * `NUM_PROV_MP` and `NUM_PROV_GEN` are each checked against their statement above, and each
+   * used once below that. Neither says the two work together, and a derivation reached by one
+   * rule has to be usable by the other or the predicate is closed under each rule separately and
+   * under the system not at all. So this generalises what modus ponens produced: `!i. (B ==> A)`
+   * is a theorem of the embedded theory that needs both rules and is an axiom of neither set.
+   *
+   * **The index reaches the code, which is the second assertion and not decoration.** Generalising
+   * at `0` and at `1` gives different terms, so a closure that dropped the index, or bound the
+   * wrong one of the pair, would produce the same answer twice and fail here. It is the same
+   * discrimination the test above makes for the implication's two sides, done for the quantifier's
+   * two arguments.
+   *
+   * Nothing is asked of the index and nothing should be: the object language's quantifier binds
+   * an index whether or not it occurs in the formula, and here it does not occur, which is the
+   * vacuous case being a theorem rather than an oversight.
+   */
+  it should "close under both rules, which with the eight schemes is the whole system" in {
+    val conclusion = implies(second, first)
+
+    def generalisedAt(index: Term): Kernel.Thm =
+      force(
+        rules
+          .specTo(
+            force(provability.fact(Provability.Generalisation)),
+            force(logic.mkImp(isProvable(conclusion), isProvable(forAll(index, conclusion))))
+          )
+          .flatMap(rules.mp(_, discharged))
+      )
+
+    val atZero = generalisedAt(term("0"))
+    atZero.hypotheses shouldBe empty
+    atZero.conclusion shouldBe isProvable(forAll(term("0"), conclusion))
+    Derivation.axiomsOf(atZero) should have size 2
+
+    generalisedAt(term("1")).conclusion should not be atZero.conclusion
   }
 
   /**
