@@ -104,6 +104,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Coefficient" -> NotADevelopment,
     "Counterpart" -> NotADevelopment,
     "Essay" -> NotADevelopment,
+    "Examples" -> NotADevelopment,
     "Farkas" -> NotADevelopment,
     "Field" -> NotADevelopment,
     "Foundation" -> NotADevelopment,

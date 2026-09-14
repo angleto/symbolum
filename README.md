@@ -313,6 +313,7 @@ modules/core        the computer algebra system, published as garden.xeno:symbol
 modules/tactics     the bridge: the algebra system as an oracle whose answers the kernel checks
 modules/examples    runnable demonstrations, not published
 docs/architecture.md   the correctness argument, and where a change is dangerous
+docs/examples.md       what has been proved, and how far the asked-for areas are
 docs/proving.md        how to state and prove things
 docs/evaluation.md     benchmarks, measurements, and where a language model fits
 docs/numerics.md       the two capabilities that rest on a numeric library, and what that costs
@@ -577,6 +578,7 @@ Test coverage includes:
 
 | Document | What is in it |
 |---|---|
+| [docs/examples.md](docs/examples.md) | A dozen results the system has proved, each as a page carrying its statement, what it rests on and what it cost; and a table of the areas that have been asked for, with the distance to each measured rather than estimated |
 | [docs/proving.md](docs/proving.md) | The guide to the proof assistant: stating something, proving it, and what the tactics decide |
 | [docs/architecture.md](docs/architecture.md) | The trust boundary, the module graph, the kernel's ten rules, and where a change is dangerous |
 | [docs/evaluation.md](docs/evaluation.md) | Where the system stands against the benchmarks, what can be measured today, where a language model fits and where it must not, and the order to build in |
