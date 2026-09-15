@@ -716,10 +716,16 @@ that, the thing Goedel's argument actually needs, which is `Prov` as a formula *
 language** with one free variable rather than as the predicate `NUM_PROV` of the ambient logic.
 **D1, D2 and D3 are statements about that formula, so not one of the three can be stated yet.**
 
-What is above that is not written: discharging the freeness condition at a concrete code, that
-object-level `Prov`, the diagonal lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last
-of those is its own piece of work rather than a helper inside this one, and it is the part most
-likely to be underestimated.
+What is above that is not written: that object-level `Prov`, the diagonal lemma, and then D1, D2
+and D3. `docs/adr/0013` says why the last of those is its own piece of work rather than a helper
+inside this one, and it is the part most likely to be underestimated.
+
+**Discharging the freeness condition at a concrete code was a fourth entry on that list until
+2026-09-15**, fifteen lines below the paragraph that says `Language.notFreeIn` does it and
+`DeductionSpec` spends it on an actual axiom of PA. The change that built it left the list alone.
+A list of what is missing is the one kind of list that goes stale silently: every other figure
+here is pinned by a test that fails when it moves, and nothing fails when an item on this one
+gets built.
 
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants
