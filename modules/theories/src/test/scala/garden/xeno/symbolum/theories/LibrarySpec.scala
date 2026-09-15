@@ -269,8 +269,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // or none, `exp 0 = 1` binding nothing at all. The definitional figure does not move for the
     // reason four paragraphs up: `Library.of` collects `facts` and not `definitions`, so the six
     // new constants reach the reading register and not this count.
-    library.entries.size shouldBe 416
-    library.names.distinct.size shouldBe 413
+    // 417 with the closure of the numerals, which is one fact and is the first thing the library
+    // says is closed at all. Neither of `CLAUDE.md`'s figures moves: it binds a single variable,
+    // which this file has called the rarest kind of addition and is now the fourth time.
+    library.entries.size shouldBe 417
+    library.names.distinct.size shouldBe 414
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

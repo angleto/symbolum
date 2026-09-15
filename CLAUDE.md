@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 416 lemmas, 258 have two or more leading quantifiers and **234 of
+caller meant: of the library's 417 lemmas, 258 have two or more leading quantifiers and **234 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -536,12 +536,26 @@ writing `x = y ==> S x = S y` and its siblings as axioms would be writing down c
 Conjunction, disjunction and the existential get nothing because they have no tags: they are
 abbreviations in the object language, which is `NUM_FORM`'s decision being spent.
 
-**`NUM_CLOSED t` is what the substitution's blindness to capture costs, written down.** Three of
-the schemes substitute, and each says its replacement is closed. That is **stronger** than the
-textbook condition, which asks only that the term be substitutable, and the difference is a real
-loss: the object system cannot instantiate a universal at a variable. What is not lost is Goedel's
-argument, which substitutes numerals, and a numeral is closed. Lifting it wants a substitutability
-predicate, which is a recursion over the formula this development has not got.
+**`NUM_CLOSED t` is what the substitution's blindness to capture costs, written down.** **Two** of
+the eight schemes carry it, specialisation once and replacement twice; this sentence said three
+until 2026-09-15, which was three occurrences of the condition counted as three schemes. PA's
+induction scheme substitutes as well and needs no condition, putting `0` and `S i` where `i` stood:
+neither can capture, the first having no variables at all and the second only the one being
+replaced. The condition is **stronger** than the textbook one, which asks merely that the term be
+substitutable, and the difference is a real loss: the object system cannot instantiate a universal
+at a variable. What is not lost is Goedel's argument, which substitutes numerals. Lifting the
+restriction wants a substitutability predicate, which is a recursion over the formula this
+development has not got.
+
+**And until 2026-09-15 nothing could discharge the condition**, which is a defect that fails no
+test: a scheme whose side condition is unmeetable is a theorem, and the eight were all provable
+while two of them were usable at exactly one term. That term was the object language's zero, closed
+by fifteen lines walking the freeness clauses inside `LanguageSpec`, in the test that needed an
+instance of specialisation and had nowhere else to get one. `NUM_NUMERAL_CLOSED` is the family
+those lines were an instance of, and the family is what the next step needs rather than the
+instance: Goedel's argument substitutes the numeral **of** a number, and there is one of those per
+number, so a development that can close the numeral of zero and no other cannot state that PA
+proves anything about its own arithmetic.
 
 A scheme is a value rather than text. `Scheme` carries its binders, its conditions and its tree,
 and the two shapes it is read in come off it: the existentially quantified disjunct inside the

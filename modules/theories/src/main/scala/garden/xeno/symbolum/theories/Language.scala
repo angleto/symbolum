@@ -353,6 +353,30 @@ object Language {
   val NumeralIsTerm: String = "NUM_NUMERAL_TERM"
 
   /**
+   * `|- !n. NUM_CLOSED (NUM_NUMERAL n)`. Being a term is not enough: three schemes want this one.
+   *
+   * [[ClosedName]] is the condition `NUM_LOGIC_SPECIALISE` and `NUM_LOGIC_REPLACE` carry, and the
+   * library stated no closure at all until this landed. What that cost is easy to miss, because
+   * the two are theorems either way: a scheme whose side condition nothing can discharge is
+   * provable and unusable, and those two were in exactly that position at every term but one.
+   * `LanguageSpec` had discharged it once, at the object language's zero, by walking the freeness
+   * clauses by hand inside the test that needed an instance of specialisation.
+   *
+   * A family and not another instance, which is the difference that matters to what comes next.
+   * Goedel's argument substitutes the numeral of a number, and there is one of those per number;
+   * a development that can close the numeral of `0` and no other cannot state that PA proves its
+   * own arithmetic, which is the first brick of Sigma-1 completeness. The zero's case is now a
+   * corollary of this one, [[NumeralAtZero]] being the equation between them.
+   *
+   * The proof is the induction the numeral's own recurrence asks for, and neither case reaches for
+   * anything but a freeness clause. What is worth knowing is that the predicate does refuse: a
+   * variable's own code is not closed, `NUM_FREE_TERM i (NUM_CODE 0 i)` being `i = i`, and
+   * `LanguageSpec` derives that beside this so a freeness predicate that quietly went vacuous would
+   * fail a test rather than make this one easier.
+   */
+  val NumeralIsClosed: String = "NUM_NUMERAL_CLOSED"
+
+  /**
    * `|- !m n. NUM_NUMERAL m = NUM_NUMERAL n ==> m = n`
    *
    * Distinct numbers get distinct numerals, without which the object language could not tell two
@@ -721,9 +745,16 @@ object Language {
    * `NUM_CLOSED t` says no index occurs in the term `t`, which is what the substitution needs.
    *
    * `NUM_SUBST_TERM` is blind to capture and is therefore sound where what it puts in has nothing
-   * to capture. Three of the logical schemes substitute, and this is the condition each of them
-   * carries. It is a constant rather than a written-out quantifier because it appears in three
-   * places and because a reader meeting it in the register should meet it under a name.
+   * to capture. **Two** of the logical schemes carry it, `NUM_LOGIC_SPECIALISE` once and
+   * `NUM_LOGIC_REPLACE` twice, and it is a constant rather than a written-out quantifier because
+   * of those three occurrences and because a reader meeting it in the register should meet it
+   * under a name. This sentence said three schemes until 2026-09-15, which is an occurrence count
+   * read as a scheme count, and `CLAUDE.md` carried the same mistake in the same words.
+   *
+   * **A third scheme substitutes and does not need the condition**, which is worth knowing before
+   * a reader concludes one was forgotten: PA's induction scheme puts `0` and `S i` where `i`
+   * stood. The first is closed, and the second can capture nothing, because the only index it
+   * mentions is the one being replaced and the substitution stops at a quantifier binding that.
    *
    * **It is stronger than the usual condition and the difference is a real cost.** The textbook
    * scheme asks that `t` be *substitutable* for the index in the formula, which permits a `t` with
@@ -1020,6 +1051,7 @@ object Language {
     NumeralAtZero -> "NUM_NUMERAL ZERO = NUM_CODE 1 0",
     NumeralAtSuccessor -> "!n:num. NUM_NUMERAL (SUC n) = NUM_CODE 2 (NUM_NUMERAL n)",
     NumeralIsTerm -> "!n:num. NUM_TERM (NUM_NUMERAL n)",
+    NumeralIsClosed -> "!n:num. NUM_CLOSED (NUM_NUMERAL n)",
     NumeralInjective ->
       "!m:num n:num. NUM_NUMERAL m = NUM_NUMERAL n ==> m = n",
     SubstituteVariable ->
@@ -1378,6 +1410,17 @@ object Language {
                 logicVocabulary, logicCases, logicalSchemes.size, at, scheme, logicHead)
             } yield found.updated(scheme.name, proved)
         }
+      // After the closure predicate and not beside the numerals, which is where the other numeral
+      // facts are: `NUM_CLOSED` is defined here, so the statement cannot be parsed any earlier.
+      numeralIsClosed <- everyNumeralIsClosed(
+        logicVocabulary,
+        driver,
+        numeralAtZero,
+        numeralAtSuccessor,
+        freeZero,
+        freeSuccessor,
+        closedCases
+      )
       logicFormula <- everyMemberIsAFormula(
         logicVocabulary.copy(facts = logicVocabulary.facts ++ introductions),
         logicCases,
@@ -1419,6 +1462,7 @@ object Language {
         NumeralAtZero -> numeralAtZero,
         NumeralAtSuccessor -> numeralAtSuccessor,
         NumeralIsTerm -> numeralIsTerm,
+        NumeralIsClosed -> numeralIsClosed,
         NumeralInjective -> numeralInjective,
         SubstituteVariable -> substituteVariable,
         SubstituteZero -> substituteZero,
@@ -2461,6 +2505,123 @@ object Language {
         if (proved.hypotheses.isEmpty) Right(())
         else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
       result <- vocabulary.checked(NumeralIsTerm, proved)
+    } yield result
+  }
+
+  /**
+   * [[NumeralIsClosed]], by the induction the numeral's own recurrence asks for.
+   *
+   * Both cases go through [[ClosedCases]] rather than around it: the predicate is unfolded to
+   * `!k. ~(NUM_FREE_TERM k t)`, the quantified claim is proved for one freshened index, and the
+   * equation is read backwards. That is three lines of plumbing at each end and is why the proof
+   * itself is one freeness clause per case.
+   *
+   * The base is [[FreeZero]], that no index occurs in the code of the object language's zero,
+   * carried across [[NumeralAtZero]]. The step is [[FreeSuccessor]], that an index occurs in the
+   * code of a successor exactly where it occurs in what the successor is of, carried across
+   * [[NumeralAtSuccessor]] and closed by the hypothesis at the same index. Nothing here is about
+   * coding, in the way that [[NumeralIsTerm]]'s proof is not: a tower of successors over zero
+   * mentions no variable because neither of the two things it is built from does.
+   */
+  private def everyNumeralIsClosed(
+    vocabulary: Vocabulary,
+    driver: Induct,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm,
+    freeInZero: Kernel.Thm,
+    freeInSuccessor: Kernel.Thm,
+    closedCases: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = vocabulary.rules
+    val numbers = vocabulary.numbers
+
+    /** The argument of a one-place claim, which is the term whose closure is at stake. */
+    def argumentOf(claim: Term): Either[LogicError, Term] = claim match {
+      case App(_, argument) => Right(argument)
+      case other => Left(NotOfForm("a claim about one term", other))
+    }
+
+    /** From `X = F`, that `~X`. */
+    def notFromFalsity(equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        subject <- Term.destEq(equation.conclusion).map(_._1).toRight(
+          NotOfForm("an equation", equation.conclusion))
+        assumed <- LogicError.lift(Kernel.assume(subject))
+        falsity <- LogicError.lift(Kernel.eqMp(equation, assumed))
+        refused <- rules.notIntro(subject, falsity)
+      } yield refused
+
+    /** From `X = Y` and `~Y`, that `~X`. */
+    def notAcross(equation: Kernel.Thm, held: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        negation <- LogicError.lift(
+          vocabulary.theory.constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)))
+        lifted <- Conv.apTerm(negation, equation)
+        reversed <- Conv.sym(lifted)
+        result <- LogicError.lift(Kernel.eqMp(reversed, held))
+      } yield result
+
+    /** From `!k. ~(NUM_FREE_TERM k t)`, that `NUM_CLOSED t`. */
+    def closedFrom(subject: Term, nothingFree: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      rules
+        .spec(subject, closedCases)
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, nothingFree)))
+
+    /** From `NUM_CLOSED t`, that `!k. ~(NUM_FREE_TERM k t)`, which is the hypothesis opened up. */
+    def nothingFreeIn(proved: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        subject <- argumentOf(proved.conclusion)
+        equation <- rules.spec(subject, closedCases)
+        opened <- LogicError.lift(Kernel.eqMp(equation, proved))
+      } yield opened
+
+    /** `NUM_FREE_TERM k`, the head an occurrence equation is rewritten under. */
+    def occurrenceOf(index: Term): Either[LogicError, Term] =
+      LogicError
+        .lift(vocabulary.theory.constant(
+          FreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))))
+        .flatMap(free => LogicError.lift(Term.app(free, index)))
+
+    for {
+      statement <- vocabulary.statement(NumeralIsClosed)
+      proved <- driver.proveBy(
+        statement,
+        goal =>
+          for {
+            subject <- argumentOf(goal)
+            index = Conv.freshVariable("k", numbers, Term.freeVariables(goal))
+            head <- occurrenceOf(index)
+            carried <- Conv.apTerm(head, atZero)
+            clause <- rules.spec(index, freeInZero)
+            opened <- Conv.trans(carried, clause)
+            nowhere <- notFromFalsity(opened)
+            everywhere <- rules.gen(index, nowhere)
+            result <- closedFrom(subject, everywhere)
+          } yield result,
+        step =>
+          for {
+            subject <- argumentOf(step.goal)
+            // The hypothesis is `NUM_CLOSED (NUM_NUMERAL k)`, so its argument is the numeral the
+            // successor's clause has to be read at.
+            inner <- argumentOf(step.hypothesis.conclusion)
+            index = Conv.freshVariable("k", numbers, Term.freeVariables(step.goal))
+            head <- occurrenceOf(index)
+            recurrence <- rules.spec(step.variable, atSuccessor)
+            carried <- Conv.apTerm(head, recurrence)
+            clause <- rules.specAll(freeInSuccessor, List(index, inner))
+            opened <- Conv.trans(carried, clause)
+            assumed <- nothingFreeIn(step.hypothesis)
+            held <- rules.spec(index, assumed)
+            nowhere <- notAcross(opened, held)
+            everywhere <- rules.gen(index, nowhere)
+            result <- closedFrom(subject, everywhere)
+          } yield result
+      )
+      _ <-
+        if (proved.hypotheses.isEmpty) Right(())
+        else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
+      result <- vocabulary.checked(NumeralIsClosed, proved)
     } yield result
   }
 

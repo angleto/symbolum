@@ -52,6 +52,10 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   private def proposition(text: String): Term =
     force(Parser.proposition(language.theory, language.notation, text))
 
+  private val closedPredicate: Term = force(
+    LogicError.lift(language.theory.constant(Language.ClosedName, Type.fun(numbers, Type.Bool)))
+  )
+
   "The term predicate" should "be the statements this development publishes" in {
     Language.Statements.foreach { case (name, text) =>
       val theorem = force(language.fact(name))
@@ -155,21 +159,18 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
     val variable = term("NUM_CODE 0 0")
     val claim = term("NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))")
 
-    // The object language's zero is closed: no index occurs in it, one index at a time.
-    val atIndex = force(rules.spec(term("k"), force(language.fact(Language.FreeZero))))
-    val occurs = Term.destEq(atIndex.conclusion).map(_._1).getOrElse(fail("an equation"))
-    val nowhere = force(
-      LogicError
-        .lift(Kernel.assume(occurs))
-        .flatMap(assumed => LogicError.lift(Kernel.eqMp(atIndex, assumed)))
-        .flatMap(rules.notIntro(occurs, _))
-        .flatMap(rules.gen(Term.variable("k", numbers), _))
-    )
+    // The object language's zero is the numeral of zero, and the library states that every numeral
+    // is closed. This was fifteen lines walking the freeness clauses by hand until
+    // `NUM_NUMERAL_CLOSED` landed, and the walk was a second derivation of what is now held: it is
+    // deleted rather than kept beside the fact, because two derivations of one claim drift.
     val closed = force(
-      rules
-        .spec(zeroCode, force(language.fact(Language.ClosedCases)))
-        .flatMap(Conv.sym)
-        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, nowhere)))
+      Conv
+        .apTerm(closedPredicate, force(language.fact(Language.NumeralAtZero)))
+        .flatMap(equation =>
+          rules
+            .spec(term("0"), force(language.fact(Language.NumeralIsClosed)))
+            .flatMap(atZero => LogicError.lift(Kernel.eqMp(equation, atZero)))
+        )
     )
     closed.hypotheses shouldBe empty
     closed.conclusion shouldBe proposition("NUM_CLOSED (NUM_CODE 1 0)")
@@ -201,6 +202,60 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
         "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))))))"
     )
     Derivation.axiomsOf(instance) should have size 2
+  }
+
+  /**
+   * The closure of the numerals is a family, and the predicate it is about refuses.
+   *
+   * The test above spends `NUM_NUMERAL_CLOSED` at one number, which is the instance that existed
+   * before it as a hand walk. What the fact is actually for is every other number: Goedel's
+   * argument substitutes the numeral OF a number, so a development that can close the numeral of
+   * zero and no other cannot state that PA proves anything about its own arithmetic. Three
+   * numerals are closed here, at a numeral two deep and at a variable, and the second is the one
+   * that says the fact is general rather than a nest of instances.
+   *
+   * **And the half without which the first is worth nothing.** `NUM_CLOSED` is `NUM_FREE_TERM`
+   * holding nowhere, so a freeness predicate that had quietly gone vacuous would make every claim
+   * above provable and every one of them uninteresting. What rules that out is a code that is
+   * derivably NOT closed, and the smallest is a variable's own: `NUM_FREE_TERM i (NUM_CODE 0 i)`
+   * is `i = i`, so the one index that could occur in it does. Nothing consumes this, which is why
+   * it is asserted here rather than published as a lemma.
+   */
+  it should "close every numeral and refuse a code that is open" in {
+    val everyNumeral = force(language.fact(Language.NumeralIsClosed))
+
+    val twoDeep = force(rules.spec(term("SUC (SUC ZERO)"), everyNumeral))
+    twoDeep.hypotheses shouldBe empty
+    twoDeep.conclusion shouldBe proposition("NUM_CLOSED (NUM_NUMERAL (SUC (SUC ZERO)))")
+
+    val atAnyNumber = force(rules.spec(term("n"), everyNumeral))
+    atAnyNumber.hypotheses shouldBe empty
+    atAnyNumber.conclusion shouldBe proposition("NUM_CLOSED (NUM_NUMERAL n)")
+
+    // It costs the naturals' two and nothing more, which is what every fact of this development
+    // that spends the recursion costs. The spec above asserts that split over the whole file.
+    Derivation.axiomsOf(everyNumeral) should have size 2
+
+    // A variable's own code is open at its own index, so the predicate is not the constant one.
+    val index = term("i")
+    val variableCode = term("NUM_CODE 0 i")
+    val claimed = force(LogicError.lift(Term.app(closedPredicate, variableCode)))
+    val assumed = force(LogicError.lift(Kernel.assume(claimed)))
+    val occurs = force(
+      Conv
+        .sym(force(rules.specAll(force(language.fact(Language.FreeVariable)), List(index, index))))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, Kernel.refl(index))))
+    )
+    val open = force(
+      rules
+        .spec(variableCode, force(language.fact(Language.ClosedCases)))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, assumed)))
+        .flatMap(nowhere => rules.spec(index, nowhere))
+        .flatMap(rules.notElim(_, occurs))
+        .flatMap(rules.notIntro(claimed, _))
+    )
+    open.hypotheses shouldBe empty
+    open.conclusion shouldBe proposition("~(NUM_CLOSED (NUM_CODE 0 i))")
   }
 
   /**

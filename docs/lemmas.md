@@ -140,6 +140,7 @@ they have least appetite for working out how it is produced.
   NUM_LOGIC_UNIVERSAL      !x:num. !y:num. !z:num. NUM_FORM y ==> NUM_FORM z ==> NUM_LOGIC (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y z)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR x y)) (NUM_CODE 8 (NUM_PAIR x z))))))
   NUM_LOGIC_VACUOUS        !x:num. !y:num. NUM_FORM y ==> ~(NUM_FREE_FORM x y) ==> NUM_LOGIC (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 8 (NUM_PAIR x y))))
   NUM_LOGIC_WEAKEN         !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_LOGIC (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y x))))
+  NUM_NUMERAL_CLOSED       !x:num. NUM_CLOSED (NUM_NUMERAL x)
   NUM_NUMERAL_INJECTIVE    !x:num. !y:num. NUM_NUMERAL x = NUM_NUMERAL y ==> x = y
   NUM_NUMERAL_SUC          !x:num. NUM_NUMERAL (SUC x) = NUM_CODE 2 (NUM_NUMERAL x)
   NUM_NUMERAL_TERM         !x:num. NUM_TERM (NUM_NUMERAL x)
