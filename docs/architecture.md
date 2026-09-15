@@ -108,8 +108,13 @@ that directory the algebra's, so the proof half had no demonstration anywhere an
 that day could not be compiled there. Reading `tactics` as *the only* module seeing both halves
 had been a description of the graph mistaken for the constraint: the constraint is about what is
 **below** `tactics`, which is where a theorem is constructed, and `examples` is above it and
-constructs none. `kernel`, `logic` and `theories` still cannot see `core`, and `IsolationSpec`
-still asserts it.
+constructs none. `kernel`, `logic` and `theories` still cannot see `core`, and **what stops them is
+the module graph** rather than a test: none of the three declares that dependency, so a reference to
+`core` in any of them does not compile. `IsolationSpec` asserts the kernel's case on top of that, by
+trying to compile a reference to the algebra system and to the logic above it, and it asserts only
+the kernel's. That is not a gap to be filled by writing two more: a dependency a build file does not
+declare is a stronger guarantee than a test that nothing is imported, and the spec exists because
+the kernel is the one module where a reader wants the boundary asserted rather than inferred.
 
 **Two edges are not in that picture because they exist only at test scope**, and neither reaches
 anything published: the checker's tests depend on `theories`, since a checker that knows no
