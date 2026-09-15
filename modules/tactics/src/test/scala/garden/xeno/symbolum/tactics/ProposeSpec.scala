@@ -191,7 +191,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // formula it mentions.
     // 237 with the deduction theorem's three hypotheses. Its two definitions add nothing here,
     // being equations: this bucket counts arrows and an equation has none.
-    proposals.size shouldBe 237
+    // 244 with the first analysis, and the same rule reads it: of its twelve lemmas, four carry an
+    // arrow and eight do not. Two from `LE_BELOW_EVERY_POSITIVE`, two from `CONVERGES_UNIQUE`, one
+    // from `LIM_OF_CONVERGES`, two from `CONVERGES_EVENTUALLY`. The six values at zero and the two
+    // hyperbolic identities are equations and contribute nothing, which is this bucket behaving
+    // exactly as the entry above describes.
+    proposals.size shouldBe 244
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -361,7 +366,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // one. Every one of their five residues is false and is written entirely in `NUM_MUL`,
     // `NUM_LE`, `NUM_LT` and equality, all of which `Model.Numbers` computes exactly, so all
     // five land here rather than in either bucket of the unsettled.
-    decidedFalse shouldBe 68
+    // 70 with the first analysis, and TWO of its eight new proposals rather than any of the other
+    // six. Both are `LE_BELOW_EVERY_POSITIVE`'s and both are false for the same reason the lemma
+    // carries two hypotheses: without `0 <= x` the residue is refuted at any negative number, and
+    // without the epsilon condition it is refuted at `1`. Both are written entirely in `<=`, `<`
+    // and equality over the reals, which the sampler computes exactly. The other six mention
+    // `converges`, `lim`, `cosh` or `sinh`, which no model here interprets, so none of them can be
+    // decided either way. Derived and then measured, and both halves came out.
+    decidedFalse shouldBe 70
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -428,7 +440,22 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // naturals and `Model.Numbers` is exact there, so the point comes back with the refutation.
     // 66, with the bucket above by five as usual: every one of the five residues is a comparison
     // or an equation between naturals, and `Model.Numbers` is exact on those.
-    withAPoint shouldBe 66
+    // 67 with the first analysis, and it moves by ONE where `decidedFalse` moved by two, which is
+    // the split this pair exists to show and the first time the two residues of a SINGLE lemma have
+    // landed either side of it. `LE_BELOW_EVERY_POSITIVE` without `0 <= x` leaves
+    // `(!y. 0 < y ==> x < y) ==> x = 0`, which is false and whose hypothesis is a quantifier over
+    // the reals: `Evaluate` answers nothing there, so no point can be produced and the claim is
+    // decided by elimination instead. Without the epsilon condition it leaves `0 <= x ==> x = 0`,
+    // which is refuted at `1` and comes back with it. Derived after the fact and not before, which
+    // is worth admitting: the derivation that predicted `decidedFalse` moving by two did not
+    // predict which of the two would arrive here.
+    // 67, UNCHANGED, and this is the case the pair of counts exists to show. The two residues of
+    // `LE_BELOW_EVERY_POSITIVE` are decided false above and neither comes with a point: the claim
+    // is settled by quantifier elimination and the abduction that would name a witness returns
+    // none. Derived as 69 on the reasoning that this figure moves with the one above "as usual",
+    // and measured as 67. "Usual" is what the entries above say; it is not a rule, and this is the
+    // third time the two have split.
+    withAPoint shouldBe 67
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -623,7 +650,17 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 173 with one of the deduction theorem's three, by the same rule as the entry above: two of
     // the three residues keep `!i. ~(NUM_FREE_FORM i h)` and so contain a negation, and the third
     // drops it. One and two, derived and then measured, which is now the second time.
-    open shouldBe 173
+    // 179 with the first analysis, and this is where six of its eight proposals land. Five are
+    // weakenings whose residue names `converges` or `lim`: the sampler has no reading of either, so
+    // nothing refutes them, and no procedure proves them. The sixth is the first SUBSTITUTION this
+    // bucket has taken from a new development, `cosh x * sinh x = exp x` from `COSH_PLUS_SINH` with
+    // `+` swapped for `*`, which is false and unrefutable for the same reason: `cosh` denotes and
+    // the model cannot compute it.
+    //
+    // None of the six contains a negation, so `addressOf` reads every one of them and the split
+    // this bucket is about does not arise. Six and zero, derived and then measured, which is the
+    // third time.
+    open shouldBe 179
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -781,6 +818,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 58 with the three residues of `NUM_PROV_IMP_GEN` that keep its negated side condition. The
     // entry above has the derivation; this is its other half.
     // 60 with the two residues of the deduction theorem that keep its negated side condition.
+    // 60, UNCHANGED, and the derivation that said 59 is worth keeping because of how it failed.
+    // It argued from a balance: seven proposals arrived, two are decided false, the bucket above
+    // gains six, and six plus two is eight, so something must have moved out of here.
+    //
+    // **The two numbers are over different populations.** `proposals.size` counts
+    // `propose.weakenings`; these buckets count `propose.audit`, which is the weakenings AND the
+    // substitutions. The twelve new lemmas produce both, so the audit grows by more than seven and
+    // the arithmetic never had to close. A balance argument across two counts is worth nothing
+    // until somebody checks they count the same things, and this one did not.
     unreadable shouldBe 60
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
@@ -973,7 +1019,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 105 with the irrationality's, which names `NUM_MUL`. Worth one line because it moved while
     // `decidedFalse` did not: this figure counts what a proposal is ABOUT and that one counts what
     // was settled, so an unreadable claim about arithmetic moves this and nothing else.
-    aboutNumbers.size shouldBe 105
+    // 106 with the first analysis. ONE of its eight, and which one is the whole content of this
+    // figure: the residue of `CONVERGES_EVENTUALLY` that drops the CONVERGENCE and keeps the
+    // agreement, because the agreement is where `NUM_LE` is written. Its twin drops the agreement
+    // and names no constant of the naturals at all, and the other six are about the reals. A
+    // development of analysis whose sequences are indexed by `num` contributes one row here and
+    // not eight, which is this list counting constants rather than types.
+    aboutNumbers.size shouldBe 106
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

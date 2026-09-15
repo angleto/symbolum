@@ -135,7 +135,13 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 234 with the deduction theorem's three rules, whose twelve hypotheses between them reach no
     // rediscovery either.
     // 237 with the deduction theorem's three; its two definitions are equations and carry none.
-    propose.weakenings.size shouldBe 237
+    // 244 with the first analysis, and the seven are DERIVED before they were measured: four of the
+    // twelve lemmas that landed carry an arrow at all, and they carry two, two, one and two.
+    // `LE_BELOW_EVERY_POSITIVE` has `0 <= x` and the epsilon condition, `CONVERGES_UNIQUE` has a
+    // convergence apiece, `LIM_OF_CONVERGES` has one, and `CONVERGES_EVENTUALLY` has the agreement
+    // and the convergence. The other eight carry none: `exp 0 = 1` and its five siblings are
+    // equations, and so are the two hyperbolic identities.
+    propose.weakenings.size shouldBe 244
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -174,7 +180,17 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // by a generator swapping an operator. Worth a line because it is the only evidence in this
     // file that the source's idea of a plausible mutation and a writer's coincide at all, and
     // the denominator grew by one while the numerator did not, which is the direction it may go.
-    propose.mutable.size shouldBe 72
+    // 73 with the first analysis, and ONE of its twelve rather than the two a reader would count
+    // off the statements. `COSH_PLUS_SINH` writes `+` outside a lambda and is reachable.
+    // `LE_BELOW_EVERY_POSITIVE` writes `<=` and looks reachable and is not: `Propose.swapped`
+    // strips the LEADING quantifiers and then refuses at any `Abs`, and that lemma's body carries
+    // `!e. 0 < e ==> x < e`, which is a lambda under the binder. The same rule excludes
+    // `CONVERGES_CONSTANT`, whose sequence is a lambda, and `CONVERGES_EVENTUALLY`, whose
+    // agreement is quantified inside. The rest write none of the four operators at all.
+    //
+    // Derived that way first and measured after, and the derivation was WRONG until the reason was
+    // read off `swapped` rather than off the statements: two, and then one.
+    propose.mutable.size shouldBe 73
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
