@@ -343,14 +343,48 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "refuses the rule against its published statement rather than publishing a code nobody " +
         "can read"),
     "Recorder.scala" ->
-      ("one, and the only entry here that CANNOT be answered where the call is. The rules are a " +
+      ("one, and the only entry here whose answer is not in the file it is about. The rules are a " +
         "parameter, `equations: Vector[Kernel.Thm]`, so what a step limit means depends on the " +
         "caller's rule set and no reading of this file settles it. What this file owes instead is " +
         "that the step it records is the step that was taken: it hands the equations and a " +
         "`detail` naming them to `step`, so a walk that ran out is recorded as the rewriting it " +
-        "actually did and a reader of the proof can see which rules were offered. Answering it " +
-        "properly is a question about the callers, one level out, and is not this file's to " +
-        "answer"),
+        "actually did and a reader of the proof can see which rules were offered. The question " +
+        "one level out is answered by the third door below and by `Magnitude.scala`'s entry, " +
+        "which is the caller. Only `rewriteIn` is a walk: `Recorder.rewrite` is `depthConv` on " +
+        "its own, one traversal of a finite term, and `rewriteSides`, `rewriteRight` and " +
+        "`replace` are single kernel applications with no limit between them"),
+    // The file the third door exists for, and the only caller that reaches the rewriter through
+    // `Recorder` rather than directly. It holds ZERO `Rewrite.rewrite(` and zero
+    // `Rewrite.inTheorem(`, so it was invisible to this scan while the scan read two doors, which
+    // is the hole `Recorder.scala`'s entry declined to fill and could not fill from where it sits.
+    "Magnitude.scala" ->
+      ("eight through `Recorder.rewriteIn`, and none of them can reach the limit. The equations " +
+        "are read off the recorded steps of `Magnitude.standard` rather than off how they are " +
+        "built, which is what makes them seven and not eight: 34 recorded steps over 17 scripts " +
+        "carry seven distinct rules, and 1169 and 1172 share one. Three fold a constant the same " +
+        "expression has just defined, `select (\\y. ...) -> sgn x`, `select (\\z. ...) -> max x y` " +
+        "and `max x (-x) -> abs x`: a constant cannot occur in its own body, so the body is gone " +
+        "after one pass. Two rewrite with the branch equation of `MAX_CASES`, `max x y -> x` and " +
+        "`max x y -> y`, whose right side is a variable that cannot contain the left. Three have " +
+        "a closed right side: `abs x -> 0` twice, and `x -> 0` in `notBesideZero`. " +
+        "**That last one is the one whose argument differs**, and it is why `every rule shrinks " +
+        "the term` is not what this entry says: its LEFT side is a bare variable, so it matches " +
+        "every subterm of type real rather than reducing anything. It terminates because its " +
+        "right side is closed, so nothing it produces can match it again. " +
+        "And the second half, because `cannot` is a reading and the first half rests on it: " +
+        "three of the eight are refused at the call site if the rule had not fired, by " +
+        "`Conv.trans` inside `chain`, by `modusPonens` against a stated antecedent, and by " +
+        "`contradiction` against a negation. The other five publish, and what catches those is " +
+        "`MagnitudeSpec`, which compares EVERY published fact's conclusion against a written " +
+        "statement in the theory's own notation, so a fold that had not fired reads `select ...` " +
+        "where the text says `abs` and fails naming the fact: 17 accessors published and 17 " +
+        "pinned, with nothing on either side of the difference. " +
+        "**What this measures and what it does not.** It measures the equations these eight " +
+        "sites ARE handed in `Magnitude.standard`, which is the only construction that exists. " +
+        "`lesserCases` and the sign lemmas take theirs as a parameter, so the orientation of a " +
+        "rule is a property of the call and not of this file, which is this census's own point " +
+        "one level further in. That no caller could ever hand a looping one is not measured and " +
+        "is not claimed"),
     "Induct.scala" ->
       "asks `finished` after the closer refuses, which is where this guard was first written",
     "Family.scala" ->
@@ -457,6 +491,14 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
               // which is the defect this list is about arriving by a second door. Twenty call
               // sites across ten files were unread until a session adding one of its own noticed.
               text.contains("Rewrite.inTheorem(") ||
+              // `Recorder.rewriteIn` since 2026-09-15, and it is a door rather than a call site
+              // dressed up as one: it takes its rules as a PARAMETER, so `Recorder.scala` can say
+              // what it records and cannot say what an exhausted limit means, and its own entry
+              // above declined to. A caller reaching the rewriter through it was invisible here.
+              // `Magnitude.scala` is that caller and holds zero calls at either of the two doors
+              // above, which is how eight sites in the shared recording layer went unread while
+              // this scan reported itself complete.
+              text.contains(".rewriteIn(") ||
               (path.getFileName.toString == "Rewrite.scala" && false)
             }
             .map(_.getFileName.toString)
@@ -476,6 +518,11 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     // no `Rewrite.rewrite(` in it at all and seven calls to `inTheorem`, so it is in this list
     // only while the scan reads both, and it is the file that disappears first if one is dropped.
     callers should contain("Order.scala")
+
+    // And the third door, by the same test: `Magnitude.scala` calls the rewriter zero times
+    // directly and eight times through `Recorder`, so it is in this list only while the scan reads
+    // `.rewriteIn(` and it is the file that disappears first if that door is dropped.
+    callers should contain("Magnitude.scala")
 
     val stale = ReviewedCallSites.keys.toVector.filterNot(callers.contains)
     withClue(s"reviewed and no longer a call site: ${stale.mkString(", ")}\n") {
