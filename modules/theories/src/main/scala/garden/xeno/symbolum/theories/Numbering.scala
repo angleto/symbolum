@@ -245,7 +245,7 @@ object Numbering {
 
       logic <- coding.logic.over(theory)
       induction <- peano.naturals.fact(Natural.Induction)
-      driver = Induct(logic, coding.modular.ring, induction)
+      driver = Induct.overNaturals(logic, induction)
 
       vocabulary <- Vocabulary.of(coding, theory, notation, logic)
       zeroChecked <- vocabulary.checked(TriangleAtZero, atZero)

@@ -4,7 +4,7 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * A statement about every natural number, proved by induction with a rewrite and a ring identity.
+ * A statement about every natural number, proved by induction with a rewrite and a closer.
  *
  * The shape is always the same and it was written out by hand seven times in one consumer's file
  * before it was written once here. Point 2 of the card that asked for it lists the steps, and the
@@ -18,7 +18,10 @@ import garden.xeno.symbolum.logic.*
  *
  * Fixing both once is most of what this is for. What it does otherwise is short: strip the leading
  * quantifiers that are not the number, instantiate induction at the predicate, rewrite each half
- * with the equations it was given, and hand what is left to `Ring`.
+ * with the equations it was given, and hand what is left to the closer it was built with.
+ *
+ * **That closer was a `Ring` until 2026-09-15 and is now a parameter**, which is what lets this
+ * driver be built below the reals. The field comment on it carries the measurement.
  *
  * == The separation that makes it work ==
  *
@@ -37,7 +40,23 @@ import garden.xeno.symbolum.logic.*
  */
 final class Induct private (
   val logic: Logic,
-  val ring: Ring,
+  /**
+   * What finishes a goal the rewriting did not, and a parameter rather than a held `Ring`.
+   *
+   * It was a `Ring` until 2026-09-15, which made this driver unbuildable below the reals: four
+   * developments that are entirely about `num`, `Modular`, `Coding`, `Numbering` and `Language`,
+   * each thread a `Ring` through their own construction for no other purpose than to hand it here,
+   * and every one of them uses [[proveBy]] alone and never reaches the closer at all.
+   *
+   * The measurement that turned that from a suspicion into a fact: `Ring.prove` refuses a goal of
+   * type `num` **by type**, including one whose two sides are identical, so it never closed a step
+   * about the naturals and could not have. `Peano`'s own stages take the induction skeleton from
+   * [[proveBy]] and close with a normaliser of their own.
+   *
+   * So a caller over the reals passes `ring.prove` and a caller over `num` passes what it has,
+   * which today is nothing: see [[Induct.overNaturals]] and the refusal it carries.
+   */
+  val closer: Term => Either[LogicError, Kernel.Thm],
   val induction: Kernel.Thm
 ) {
 
@@ -70,7 +89,7 @@ final class Induct private (
     )
 
   /**
-   * Rewrite a goal with the rules given and close what is left with `Ring`.
+   * Rewrite a goal with the rules given and close what is left with this driver's closer.
    *
    * Public because it is what a caller writing its own step wants to reach for, and because the
    * default step is one line of it: there is no reason to make somebody re-derive it in order to
@@ -131,7 +150,7 @@ final class Induct private (
     goal: Term,
     extra: Vector[Rewrite.Rule]
   ): Either[LogicError, Kernel.Thm] =
-    Induct.afterRewriting(extra ++ equations, goal)(ring.prove)
+    Induct.afterRewriting(extra ++ equations, goal)(closer)
 
   /**
    * The same driver where the step is an **inequality**, which `Ring` cannot close and `settle`
@@ -304,9 +323,32 @@ object Induct {
     for {
       logic <- naturals.classical.logic.over(ring.reals.theory)
       induction <- naturals.fact(Natural.Induction)
-    } yield new Induct(logic, ring, induction)
+    } yield new Induct(logic, ring.prove, induction)
 
-  /** Over a logic and an induction theorem chosen by the caller. */
+  /** Over a logic and an induction theorem chosen by the caller, closing with `Ring`. */
   def apply(logic: Logic, ring: Ring, induction: Kernel.Thm): Induct =
-    new Induct(logic, ring, induction)
+    new Induct(logic, ring.prove, induction)
+
+  /** The same, for a caller that holds a closer of its own rather than a `Ring`. */
+  def withCloser(
+    logic: Logic,
+    closer: Term => Either[LogicError, Kernel.Thm],
+    induction: Kernel.Thm
+  ): Induct =
+    new Induct(logic, closer, induction)
+
+  /**
+   * The driver over `num` alone, which has no algebraic closer and says so.
+   *
+   * Every consumer of this driver below the reals uses [[Induct.proveBy]] and writes its own two
+   * halves, so the closer is never reached; what this refuses to do is let a caller believe
+   * otherwise. Handing it `Ring.prove` would be worse than refusing: `Ring` refuses a goal of type
+   * `num` by type, so [[settle]] would fail on every step with a message about the wrong thing.
+   *
+   * When a decision procedure for the identities of `num` can be built below the reals, it goes
+   * here and this factory stops refusing. `Semiring` is that procedure and cannot be used: it is
+   * built **over** `Peano`, so a `Peano` built over it is a cycle.
+   */
+  def overNaturals(logic: Logic, induction: Kernel.Thm): Induct =
+    new Induct(logic, goal => Left(NoCloser(goal, "the induction driver over num")), induction)
 }

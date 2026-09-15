@@ -2535,7 +2535,7 @@ object Modular {
       atSuccessor <- vocabulary.fact(Peano.AddAtSuccessor)
       atZeroOfMul <- vocabulary.fact(Peano.MulAtSuccessor)
       induction <- vocabulary.naturalFact(Natural.Induction)
-      driver = Induct(logic, vocabulary.ring, induction)
+      driver = Induct.overNaturals(logic, induction)
 
       proved <- driver.proveBy(
         statement,

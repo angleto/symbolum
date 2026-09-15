@@ -255,6 +255,30 @@ final case class Undetermined(variable: FVar) extends LogicError {
 }
 
 /**
+ * A driver was asked to finish a goal and holds no procedure that could.
+ *
+ * Its own case, for the reason [[NotNormalised]] is its own case: "the closer looked and could not"
+ * and "there was nothing to look with" read alike at a call site and imply opposite moves. The
+ * first is a fact about the goal, and the second is a fact about how the driver was built, so it is
+ * the caller's configuration that is wrong and not the mathematics.
+ *
+ * It exists because a driver over `num` alone has no algebraic closer and must not be given one it
+ * cannot honour. `Ring` decides identities of the reals and refuses a goal of type `num` by type,
+ * so a driver below the reals that carried `Ring.prove` would refuse every goal with a message
+ * about the wrong thing.
+ *
+ * [[LogicError.Standing.Unread]] and not `Exhausted`: nothing searched and stopped, nothing was
+ * asked at all.
+ */
+final case class NoCloser(goal: Term, driver: String) extends LogicError {
+  def message: String =
+    s"$driver was built with no closer, so nothing was asked about $goal: " +
+      "what the rewriting left is undecided rather than unprovable"
+
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+/**
  * A theorem was specialised at fewer arguments than it has leading quantifiers.
  *
  * Its own refusal rather than a [[NotOfForm]], and the two numbers are carried as numbers rather

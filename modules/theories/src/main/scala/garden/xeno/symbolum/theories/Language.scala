@@ -1360,7 +1360,7 @@ object Language {
       (theory, formulaSubstituteDefinition, formulaSubstituteNamed) = withFormulaSubstitution
       logic <- numbering.logic.over(theory)
       induction <- numbering.peano.naturals.fact(Natural.Induction)
-      driver = Induct(logic, numbering.peano.ring, induction)
+      driver = Induct.overNaturals(logic, induction)
 
       definition = termDefinition
       vocabulary <- Vocabulary.of(numbering, theory, notation, logic)

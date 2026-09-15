@@ -346,6 +346,11 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       MissingHypothesis(x, "eliminating an existential"),
       Undetermined(Term.variable("y", realType)),
       PartialInstance(5, 4, x),
+      // The driver below the reals, which holds no closer and says so. It is in the census as a
+      // `ReportADefect` rather than a limit: the two refusals above it are procedures that looked
+      // and could not, and this one is a driver built with nothing to look with, so no restatement
+      // of the goal and no raised limit reaches it.
+      NoCloser(x, "the induction driver over num"),
       // Both arms of the one refusal that carries another: a caller's procedure that refused, and a
       // caller's procedure that returned something else. The remedy is read off the inner reason, so
       // the branch is only worth running when the two inner reasons take different arms there.

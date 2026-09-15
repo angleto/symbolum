@@ -1101,6 +1101,30 @@ object Peano {
    * step is a ring identity, so the tactic that decides those has to be to hand. `Chain` is what
    * builds the pair in the order that works.
    */
+  /**
+   * The arithmetic of `num` alone, over a theory that has never heard of `real`.
+   *
+   * `docs/adr/0016`'s phase 0, as something a test can point at. What comes back is the seven
+   * stages that name no real, built over `naturals.theory`, which declares `num` and the logic and
+   * nothing else: no type `real`, no `+`, no `<`, no `real_of_num`.
+   *
+   * It is not what the chain builds. The chain still puts this development over the reals, because
+   * nothing below them needs it there yet and moving it is churn until the construction wants it.
+   * What this is for is the assertion `PeanoSpec` makes with it: that the 74 facts are **buildable**
+   * below the reals rather than merely free of them, which is the difference between a measurement
+   * of the derivations as they stand and a fact about what they depend on.
+   *
+   * The two notations differ and the difference is not cosmetic. Over the reals the numerals are
+   * read at `real` until [[numerals]] widens the table to read them at `num` as well; here there is
+   * no `real` to read them at, so a digit string is a natural from the first stage. Nothing in
+   * these seven statements is ambiguous either way, which is itself part of what is being asserted.
+   */
+  def arithmetic(
+    naturals: Natural
+  ): Either[LogicError, (Theory, Notation, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] =
+    arithmeticStages(naturals, naturals.theory, naturals.notation)
+      .map(stages => (stages.theory, stages.notation, stages.definitions, stages.facts))
+
   def construct(naturals: Natural, ring: Ring): Either[LogicError, Peano] =
     construct(naturals, ring, ring.reals.theory)
 
@@ -1138,32 +1162,40 @@ object Peano {
 
     for {
       linarith <- Linarith.construct(bounds)
-      logic <- naturals.classical.logic.over(base)
-      recursion <- naturals.recursion
+      stages <- arithmeticStages(naturals, base, notation)
+      logic = stages.logic
+      recursion = stages.recursion
+
+      // A driver of its own, and the reason is the whole point of the split. The stages above ran
+      // on `stages.driver`, which has no closer because nothing about `num` needs one; the stages
+      // below are about the reals and their steps end in ring identities, so they need `Ring`.
+      // Handing them the closerless one refuses with the goal named, which is how this line came
+      // to be written: `real_of_num x = real_of_num x + 0` is a step of the embedding.
       induction <- naturals.fact(Natural.Induction)
       driver = Induct(logic, ring, induction)
+      addFacts = stages.addFacts
+      mulFacts = stages.mulFacts
+      orderDefinitions = stages.orderDefinitions
+      orderFacts = stages.orderFacts
+      subtractionFacts = stages.subtractionFacts
+      numeralFacts = stages.numeralFacts
+      withNumerals = stages.theory
+      spelled = stages.notation
 
-      sums <- addition(logic, driver, naturals, base, notation, recursion)
-      (withAddition, additionDefinition, addFacts) = sums
+      // ---- and from here the reals are needed, and were not above ----
 
-      products <- multiplication(logic, driver, naturals, withAddition, notation, recursion, addFacts)
-      (withMultiplication, multiplicationDefinition, mulFacts) = products
-
-      // After multiplication, because its step multiplies by the base, and before the order,
-      // because nothing in the order knows about it.
-      powers <- exponentiation(
-        logic, driver, naturals, withMultiplication, notation, recursion, mulFacts ++ addFacts)
-      (withPowers, exponentiationDefinition, powFacts) = powers
-
-      ordered <- order(logic, withPowers, notation, addFacts ++ mulFacts, naturals, driver)
-      (withOrder, orderDefinitions, orderFacts) = ordered
-
+      // `notation` and NOT `spelled`, which is the one thing the reorder is not free in. `spelled`
+      // reads a digit string at `num` as well as at `real`, and these statements are about the
+      // reals and carry bare numerals: `real_of_num ZERO = 0` with both readings available is the
+      // refusal `docs/adr/0012` promises, "the type of the numeral 0 is not determined". The
+      // statements are right and the reader was wrong, so the reader narrows rather than the text
+      // gaining annotations, which is what that record asks for.
       embedded <- embedding(
         logic,
         driver,
         linarith,
         naturals,
-        withOrder,
+        withNumerals,
         notation,
         recursion,
         addFacts ++ mulFacts,
@@ -1172,40 +1204,35 @@ object Peano {
       )
       (withEmbedding, embeddingDefinition, embeddingFacts) = embedded
 
-      // Last, because it is the only stage that needs every earlier one: the recurrences for the
-      // rewriting, the order for the two lemmas that carry a hypothesis, `RING` for the identity
-      // the embedding lemma turns on, and `real_of_num` itself.
-      subtracted <- subtraction(
+      // The two facts that were inside a pure stage until the split: a difference carried across
+      // the embedding, and the three numerals carried across it.
+      minusThenPlusFact <- subtractionFacts
+        .get(MinusThenPlus)
+        .toRight(MissingDefinition(MinusThenPlus))
+      embedsDifference <- subtractionEmbedded(
+        logic, ring, withEmbedding, spelled, embeddingFacts(EmbedsSum), minusThenPlusFact)
+
+      oneIsSuccessorFact <- numeralFacts
+        .get(NumeralOneIsSuccessorOfZero)
+        .toRight(MissingDefinition(NumeralOneIsSuccessorOfZero))
+      bit0DoublesFact <- numeralFacts
+        .get(NumeralBit0Doubles)
+        .toRight(MissingDefinition(NumeralBit0Doubles))
+      bit1DoublesFact <- numeralFacts
+        .get(NumeralBit1Doubles)
+        .toRight(MissingDefinition(NumeralBit1Doubles))
+      numeralEmbeddingFacts <- numeralsEmbedded(
         logic,
-        driver,
         ring,
-        naturals,
         withEmbedding,
-        notation,
-        recursion,
-        addFacts,
-        orderDefinitions,
-        orderFacts,
-        embeddingFacts(EmbedsSum)
+        spelled,
+        embeddingFacts,
+        oneIsSuccessorFact,
+        bit0DoublesFact,
+        bit1DoublesFact
       )
-      (withSubtraction, subtractionDefinitions, subtractionFacts) = subtracted
 
-      // After everything, because its step adds and its congruence compares: `NUM_ADD` for the
-      // recursion and `NUM_LT` with the two lemmas that lift an index to below a successor.
-      summed <- partialSums(
-        logic, driver, naturals, withSubtraction, notation, recursion, orderFacts)
-      (withPartialSums, partialSumDefinition, partialSumFacts) = summed
-
-      // Last of all, because the three lemmas that make the encoding worth having are about
-      // `real_of_num` and one of them is about a successor.
-      spelt <- numerals(
-        logic, ring, withPartialSums, notation, addFacts, embeddingFacts)
-      (withNumerals, spelled, numeralDefinitions, numeralFacts) = spelt
-
-      // The connectives against the finished signature, which is wider than the one the
-      // derivations above were run against: `Logic.over` checks the extension rather than
-      // assuming it, so this is also the assertion that nothing was defined into a side branch.
-      overNumerals <- naturals.classical.logic.over(withNumerals)
+      overNumerals <- naturals.classical.logic.over(withEmbedding)
 
       // Last, and over the finished signature, because these two are the only derivations in this
       // file that reason classically: `Classical.contradiction` and `Classical.cases` want the
@@ -1220,12 +1247,12 @@ object Peano {
         overNumerals,
         naturals.classical,
         linarith,
-        withNumerals,
+        withEmbedding,
         spelled,
         realTrichotomy,
         realCompleteness,
         embedsSuccessorFact
-      ).flatMap(checked(withNumerals, spelled, Archimedean, _))
+      ).flatMap(checked(withEmbedding, spelled, Archimedean, _))
 
       // And the floor, which is what the Archimedean property was wanted for: it is the only thing
       // that says the search for a natural past a real terminates at all.
@@ -1237,7 +1264,7 @@ object Peano {
         overNumerals,
         naturals.classical,
         linarith,
-        withNumerals,
+        withEmbedding,
         spelled,
         archimedes,
         leastFact,
@@ -1260,17 +1287,121 @@ object Peano {
       withFloors,
       spelled,
       widest,
+      stages.definitions ++ Map(Embedding -> embeddingDefinition) ++ floorDefinitions,
+      stages.facts ++ embeddingFacts ++ numeralEmbeddingFacts ++ floorFacts ++
+        Map(Archimedean -> archimedes, EmbedsDifference -> embedsDifference)
+    )
+  }
+
+  /**
+   * What every stage that names no real produces, held together rather than returned as a tuple.
+   *
+   * Seventeen values was past the point where a tuple is readable, and the fields are what
+   * [[Peano.construct]] threads into the stages that do name a real.
+   */
+  private final case class Arithmetic(
+    theory: Theory,
+    notation: Notation,
+    logic: Logic,
+    driver: Induct,
+    recursion: Kernel.Thm,
+    addFacts: Map[String, Kernel.Thm],
+    mulFacts: Map[String, Kernel.Thm],
+    orderDefinitions: Map[String, Kernel.Thm],
+    orderFacts: Map[String, Kernel.Thm],
+    subtractionFacts: Map[String, Kernel.Thm],
+    numeralFacts: Map[String, Kernel.Thm],
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm]
+  )
+
+  /**
+   * Every stage that names no real, over whatever theory the caller has.
+   *
+   * `docs/adr/0016`'s phase 0 in one signature. These seven stages were measured on 2026-09-15:
+   * not one node of any of the 74 facts they produce mentions a real, in a conclusion or in a
+   * hypothesis. So they take a `base` and a `notation` and ask for nothing else, and in particular
+   * for **no `Ring`**. The driver is [[Induct.overNaturals]], whose closer refuses by name, because
+   * `Ring.prove` refuses a goal of type `num` by type and so never closed one of these.
+   *
+   * [[Peano.arithmetic]] calls it over a theory that has never heard of `real`, which is what makes
+   * the split a fact about the theory rather than a reading of the statements. [[Peano.construct]]
+   * calls it over the reals' theory, which is what the chain still does, and runs the stages that
+   * do name a real on top of it.
+   */
+  private def arithmeticStages(
+    naturals: Natural,
+    base: Theory,
+    notation: Notation
+  ): Either[LogicError, Arithmetic] =
+    for {
+      logic <- naturals.classical.logic.over(base)
+      recursion <- naturals.recursion
+      induction <- naturals.fact(Natural.Induction)
+      driver = Induct.overNaturals(logic, induction)
+
+      sums <- addition(logic, driver, naturals, base, notation, recursion)
+      (withAddition, additionDefinition, addFacts) = sums
+
+      products <- multiplication(logic, driver, naturals, withAddition, notation, recursion, addFacts)
+      (withMultiplication, multiplicationDefinition, mulFacts) = products
+
+      // After multiplication, because its step multiplies by the base, and before the order,
+      // because nothing in the order knows about it.
+      powers <- exponentiation(
+        logic, driver, naturals, withMultiplication, notation, recursion, mulFacts ++ addFacts)
+      (withPowers, exponentiationDefinition, powFacts) = powers
+
+      ordered <- order(logic, withPowers, notation, addFacts ++ mulFacts, naturals, driver)
+      (withOrder, orderDefinitions, orderFacts) = ordered
+
+      // The four pure stages are finished and the theory under them names no real. Everything
+      // from here down does, and the order is `docs/adr/0016`'s phase 0: the stages that can be
+      // stated below the reals run first, and the split of this file follows the split of this
+      // comprehension rather than the other way round.
+      subtracted <- subtraction(
+        logic,
+        driver,
+        naturals,
+        withOrder,
+        notation,
+        recursion,
+        addFacts,
+        orderDefinitions,
+        orderFacts
+      )
+      (withSubtraction, subtractionDefinitions, subtractionFacts) = subtracted
+
+      // Its step adds and its congruence compares: `NUM_ADD` for the recursion and `NUM_LT` with
+      // the two lemmas that lift an index to below a successor.
+      summed <- partialSums(
+        logic, driver, naturals, withSubtraction, notation, recursion, orderFacts)
+      (withPartialSums, partialSumDefinition, partialSumFacts) = summed
+
+      // The last of the pure stages: three definitions and three doubling lemmas, no real.
+      spelt <- numerals(logic, withPartialSums, notation, addFacts)
+      (withNumerals, spelled, numeralDefinitions, numeralFacts) = spelt
+    } yield Arithmetic(
+      withNumerals,
+      spelled,
+      logic,
+      driver,
+      recursion,
+      addFacts,
+      mulFacts,
+      orderDefinitions,
+      orderFacts,
+      subtractionFacts,
+      numeralFacts,
       Map(
         Addition -> additionDefinition,
         Multiplication -> multiplicationDefinition,
         Exponentiation -> exponentiationDefinition,
-        Embedding -> embeddingDefinition,
         PartialSum -> partialSumDefinition
-      ) ++ orderDefinitions ++ subtractionDefinitions ++ numeralDefinitions ++ floorDefinitions,
-      addFacts ++ mulFacts ++ powFacts ++ orderFacts ++ embeddingFacts ++ subtractionFacts ++
-        partialSumFacts ++ numeralFacts ++ floorFacts ++ Map(Archimedean -> archimedes)
+      ) ++ orderDefinitions ++ subtractionDefinitions ++ numeralDefinitions,
+      addFacts ++ mulFacts ++ powFacts ++ orderFacts ++ subtractionFacts ++ partialSumFacts ++
+        numeralFacts
     )
-  }
 
   /**
    * The floor and the ceiling, named by choice, with the two facts each one is for.
@@ -5585,15 +5716,13 @@ object Peano {
   private def subtraction(
     logic: Logic,
     driver: Induct,
-    ring: Ring,
     naturals: Natural,
     base: Theory,
     notation: Notation,
     recursion: Kernel.Thm,
     addition: Map[String, Kernel.Thm],
     orderDefinitions: Map[String, Kernel.Thm],
-    orderFacts: Map[String, Kernel.Thm],
-    embedsSum: Kernel.Thm
+    orderFacts: Map[String, Kernel.Thm]
   ): Either[LogicError, (Theory, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] = {
     val numbers = TyApp(Natural.TypeName, Nil)
     val m = Term.variable("m", numbers)
@@ -5695,17 +5824,6 @@ object Peano {
         orderFacts
       )
       minusThenPlus <- restores(logic, theory, notation, orderDefinitions, addition, sumMinus)
-
-      differenceStatement <- stated(theory, notation, EmbedsDifference)
-      embedsDifference <- crossesDifference(
-        logic,
-        ring,
-        theory,
-        notation,
-        embedsSum,
-        minusThenPlus,
-        differenceStatement
-      )
     } yield (
       theory,
       Map(Predecessor -> predecessorDefinition, Subtraction -> subtractionDefinition),
@@ -5722,11 +5840,39 @@ object Peano {
         SubIsZero -> subIsZero,
         PredecessorBelow -> predecessorBelow,
         SubBelow -> subBelow,
-        MinusThenPlus -> minusThenPlus,
-        EmbedsDifference -> embedsDifference
+        MinusThenPlus -> minusThenPlus
       )
     )
   }
+
+  /**
+   * `NUM_REAL_SUB`, the one fact of the subtraction that cannot be stated without the reals.
+   *
+   * Split out of [[subtraction]] on 2026-09-15, which is `docs/adr/0016`'s phase 0: what is left
+   * above is thirteen facts about `PRE` and `NUM_SUB` that name no real, and this is the
+   * fourteenth, which does. The seam was already there and was not visible: `ring` and `embedsSum`
+   * were parameters of the whole stage and were read by these two lines alone.
+   */
+  private def subtractionEmbedded(
+    logic: Logic,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    embedsSum: Kernel.Thm,
+    minusThenPlus: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      differenceStatement <- stated(theory, notation, EmbedsDifference)
+      embedsDifference <- crossesDifference(
+        logic,
+        ring,
+        theory,
+        notation,
+        embedsSum,
+        minusThenPlus,
+        differenceStatement
+      )
+    } yield embedsDifference
 
   /**
    * `|- !m n. NUM_LE m n ==> NUM_SUB m n = ZERO`, from [[Truncates]] and the witness.
@@ -6126,11 +6272,9 @@ object Peano {
    */
   private def numerals(
     logic: Logic,
-    ring: Ring,
     base: Theory,
     notation: Notation,
-    arithmetic: Map[String, Kernel.Thm],
-    embedding: Map[String, Kernel.Thm]
+    arithmetic: Map[String, Kernel.Thm]
   ): Either[LogicError, (Theory, Notation, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] = {
     val rules = logic.rules
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -6167,6 +6311,40 @@ object Peano {
         .gen(n, bit1At)
         .flatMap(checked(theory, spelled, NumeralBit1Doubles, _))
 
+    } yield (
+      theory,
+      spelled,
+      Map(
+        NumeralOne -> oneDefinition,
+        NumeralBit0 -> bit0Definition,
+        NumeralBit1 -> bit1Definition
+      ),
+      Map(
+        NumeralOneIsSuccessorOfZero -> oneIsSuccessor,
+        NumeralBit0Doubles -> bit0Doubles,
+        NumeralBit1Doubles -> bit1Doubles
+      )
+    )
+  }
+
+  /**
+   * The three lemmas that carry a numeral of `num` across `real_of_num`.
+   *
+   * The other half of [[numerals]], split from it on 2026-09-15 for `docs/adr/0016`'s phase 0. The
+   * encoding above is three definitions and three doubling lemmas and names no real; these three
+   * are what make it worth having on a goal about the reals, and they cannot be stated below them.
+   */
+  private def numeralsEmbedded(
+    logic: Logic,
+    ring: Ring,
+    theory: Theory,
+    spelled: Notation,
+    embedding: Map[String, Kernel.Thm],
+    oneIsSuccessor: Kernel.Thm,
+    bit0Doubles: Kernel.Thm,
+    bit1Doubles: Kernel.Thm
+  ): Either[LogicError, Map[String, Kernel.Thm]] =
+    for {
       // `real_of_num NUM_ONE` rewrites to `0 + 1` and stops: the rules here are recurrences and
       // `0 + 1 = 1` is not one of them, it is an identity of the field. So the rewrite settles the
       // left side and `RING` settles what is left, which is the same division of labour
@@ -6195,24 +6373,11 @@ object Peano {
         EmbedsNumeralBit1,
         Vector(bit1Doubles, embedsSuccessor, embedsSum, bit1Real)
       )
-    } yield (
-      theory,
-      spelled,
-      Map(
-        NumeralOne -> oneDefinition,
-        NumeralBit0 -> bit0Definition,
-        NumeralBit1 -> bit1Definition
-      ),
-      Map(
-        NumeralOneIsSuccessorOfZero -> oneIsSuccessor,
-        NumeralBit0Doubles -> bit0Doubles,
-        NumeralBit1Doubles -> bit1Doubles,
-        EmbedsNumeralOne -> embedsOne,
-        EmbedsNumeralBit0 -> embedsBit0,
-        EmbedsNumeralBit1 -> embedsBit1
-      )
+    } yield Map(
+      EmbedsNumeralOne -> embedsOne,
+      EmbedsNumeralBit0 -> embedsBit0,
+      EmbedsNumeralBit1 -> embedsBit1
     )
-  }
 
   /**
    * An unquantified equation whose left side rewrites to something `RING` can finish against.

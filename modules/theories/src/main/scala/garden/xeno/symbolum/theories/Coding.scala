@@ -379,7 +379,7 @@ object Coding {
 
       logic <- modular.logic.over(theory)
       induction <- peano.naturals.fact(Natural.Induction)
-      driver = Induct(logic, modular.ring, induction)
+      driver = Induct.overNaturals(logic, induction)
 
       vocabulary <- Vocabulary.of(modular, theory, notation, logic)
       zeroChecked <- vocabulary.checked(FactorialAtZero, atZero)

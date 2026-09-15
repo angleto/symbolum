@@ -339,6 +339,14 @@ object Remedy {
     case NotNormalised(term) =>
       RaiseALimit("the rewriting step limit", s"${write(term, reals)}, which still changes")
 
+    // A defect and not a limit, which is the whole reason `NoCloser` is its own refusal. The two
+    // above are procedures that looked and could not; this one is a driver that was built with
+    // nothing to look with, so no restatement of the goal and no raised limit reaches it. What is
+    // wrong is the code that assembled the driver, and the message names it so that a reader
+    // knows which of the two to go and change.
+    case NoCloser(_, driver) =>
+      ReportADefect(s"$driver was asked to finish a goal and holds no procedure that could")
+
     // The same shape one procedure over, and the reason `BoundReached` is its own case: a search
     // that stopped and a claim that does not follow look identical and imply opposite moves. The
     // limit is named because there is more than one of them and they are reached by different
