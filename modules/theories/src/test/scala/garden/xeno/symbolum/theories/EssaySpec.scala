@@ -3,6 +3,8 @@ package garden.xeno.symbolum.theories
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import garden.xeno.symbolum.logic.*
+import java.nio.file.{Files, Path, Paths}
+import scala.jdk.CollectionConverters.*
 
 /**
  * What a generated page says, and what it must not be able to say.
@@ -118,5 +120,86 @@ class EssaySpec extends AnyFlatSpec with Matchers {
       case Left(reason) => reason should include("NO_SUCH_LEMMA")
       case Right(_) => fail("a page was produced for a lemma that does not exist")
     }
+  }
+
+  /* ------------------------------------ what a change to the rendering has to regenerate */
+
+  /**
+   * Every site that renders a page, and what it does with the result.
+   *
+   * The distinction is the one nothing stated until 2026-09-15: `Session` consumes the
+   * **renderer** and leaves nothing behind, while `Theorems` and `Examples` consume the
+   * **rendering** into a committed document. A change to the prose in `Essay.reproduce` moves
+   * exactly the second kind, and that day one of the two was regenerated and the other was not.
+   * `ExamplesSpec` went red on the shared branch, and the repair was swept into an unrelated
+   * commit by the next session to regenerate its documents, so the account of why that file moved
+   * is in a commit message about operator overloading.
+   *
+   * Nothing in `Essay.scala` named the set. Its docstring named `Session` and `Notebook`, which
+   * are the consumers a reader meets and the two that do **not** have to be regenerated, so the
+   * one fact a caller needed was the one absent.
+   */
+  private val Renderers: Map[String, String] = Map(
+    "Theorems.scala" ->
+      "writes docs/theorems.md, and regenerating it is part of any change to the rendering",
+    "Examples.scala" ->
+      "writes docs/examples.md, on the same terms and by a command of its own",
+    "Session.scala" ->
+      "renders on demand for the `show` cell, into a reply, and leaves nothing behind"
+  )
+
+  /** Every `.scala` under a module's `src/main`, which is the population the census reads. */
+  private def mainSources: Vector[Path] = {
+    val modules = {
+      val stream = Files.list(Paths.get("modules"))
+      try stream.iterator().asScala.toVector
+      finally stream.close()
+    }
+
+    modules.flatMap { module =>
+      val root = module.resolve("src/main")
+      if (!Files.exists(root)) Vector.empty
+      else {
+        val stream = Files.walk(root)
+        try stream.iterator().asScala.toVector.filter(_.toString.endsWith(".scala"))
+        finally stream.close()
+      }
+    }
+  }
+
+  private def renderingSites: Vector[String] =
+    mainSources
+      .filterNot(_.getFileName.toString == "Essay.scala")
+      .filter(path => Files.readString(path).contains("Essay.of("))
+      .map(_.getFileName.toString)
+      .distinct
+      .sorted
+
+  "The sites that render a page" should "be the ones named here, and no others" in {
+    // Both directions, because each catches a different thing. A site that appears and is not in
+    // the map is a consumer nobody classified, and if it writes a document it has joined the
+    // regeneration set silently. An entry in the map that matches nothing is a sentence describing
+    // a file that has stopped rendering, which is how a census turns into decoration.
+    val found = renderingSites
+
+    withClue(s"rendering and not classified: ${found.filterNot(Renderers.contains).mkString(", ")}\n") {
+      found.filterNot(Renderers.contains) shouldBe empty
+    }
+
+    val stale = Renderers.keys.toVector.sorted.filterNot(found.contains)
+    withClue(s"classified and no longer rendering: ${stale.mkString(", ")}\n") {
+      stale shouldBe empty
+    }
+  }
+
+  it should "be read off a scan that found something, which is how this passes for free" in {
+    // The failure a census like this has is finding nothing: a wrong working directory, a build
+    // that moved the sources, a walk that returns an empty stream. Then every assertion above is
+    // green about a population of zero. A floor rather than a count, since files are added daily;
+    // measured at 154 on 2026-09-15, by this walk and by `find` independently. The figure written
+    // here first was 124 and was not measured at all, which is the defect this file spent the
+    // evening on, one level down.
+    mainSources.size should be >= 80
+    renderingSites should not be empty
   }
 }

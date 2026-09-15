@@ -138,6 +138,13 @@ object Essay {
    * A statement that does **not** read back is the one case where the route is withheld instead of
    * printed wrong.
    *
+   * **Two documents render through this method, and a change to its prose moves both.**
+   * `docs/theorems.md` and `docs/examples.md`, written by [[Theorems]] and [[Examples]]. `Session`
+   * and `Notebook` consume the renderer and leave nothing behind, so they are not in that set and
+   * naming them is what this file used to do instead. The set is pinned by `EssaySpec` rather than
+   * written here twice: on 2026-09-15 this prose changed, one of the two was regenerated, and the
+   * other took the build red on a shared branch.
+   *
    * **The two commands are string literals here and cannot be anything else**, because `Ask` and
    * `Find` live in `modules/tactics` and this file is in `modules/theories`, which is below it.
    * A literal naming another module's entry point is exactly the kind of copy that goes stale, so
