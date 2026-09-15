@@ -102,11 +102,13 @@ theorem, which wants the Cauchy product. The pair arrives with the same silence 
 
 **Assert a characterising axiom for each function.** One line each, and every fact about them would
 follow the same day. It loses because the trusted base is the thing this repository asks to be
-believed and these four are constructible from what is already in it, which is what `PRF-01` and
-`docs/adr/0007` are about. There is a second reason that is worse and less obvious: a set of axioms
-pinning `sin` and `cos` **uniquely** is not short, and a set that is subtly too weak is
-unfalsifiable from inside the system. A wrong axiom about a constructed object is a theorem that
-somebody eventually contradicts; a wrong axiom about an assumed one is a theory nobody can refute.
+believed and these four are constructible from what is already in it: a result is added by proving
+it and never by asserting it, which is this repository's own first convention, and `docs/adr/0007`
+is what commits the axiom count to coming down. There is a second reason that is worse and less
+obvious: a set of axioms pinning `sin` and `cos` **uniquely** is not short, and a set that is
+subtly too weak is unfalsifiable from inside the system. A wrong axiom about a constructed object
+is a theorem that somebody eventually contradicts; a wrong axiom about an assumed one is a theory
+nobody can refute.
 
 **Define each by `select` over a characterising predicate**, for instance `exp` as the function
 satisfying `f 0 = 1` and `f (x + y) = f x * f y`. This costs no axiom either, so it is the

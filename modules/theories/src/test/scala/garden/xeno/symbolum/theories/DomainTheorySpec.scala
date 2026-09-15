@@ -74,13 +74,12 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
   )
 
   /**
-   * The criterion as `why/00-conventions.md` states it, in four sentences.
+   * The criterion as the practice this repository is developed under states it, in four sentences.
    *
-   * The first three are the bases it gives, and the register keeps the third visibly separate from
-   * the other two on purpose, because a corpus rule and an instruction rule fail differently. The
-   * fourth is the direction the prose means by "is admitted **when**": without it the three say
-   * only that a candidate meeting one of them qualifies, and nothing at all follows about one that
-   * meets none.
+   * The first three are the bases it gives, and it keeps the third visibly separate from the other
+   * two on purpose, because a corpus rule and an instruction rule fail differently. The fourth is
+   * the direction the prose means by "is admitted **when**": without it the three say only that a
+   * candidate meeting one of them qualifies, and nothing at all follows about one that meets none.
    */
   private val criterion: Vector[String] = Vector(
     "!r:candidate. TwoIndependent r ==> Admitted r",

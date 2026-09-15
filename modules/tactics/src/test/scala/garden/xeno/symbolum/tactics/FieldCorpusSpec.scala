@@ -247,7 +247,8 @@ class FieldCorpusSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The written exception list, in the shape TST-09 asks for, and it is empty.
+   * The written exception list, which is where a failing case goes when the prover is not fixed
+   * instead, and it is empty.
    *
    * Line 94, `2 * x ^ 3 * 2 / (24 * x) = x ^ 2 / 6`, was its one member for a few hours on
    * 2026-09-09: it is read, it is a field goal, and its denominator is a product, so settling it

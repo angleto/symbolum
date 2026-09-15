@@ -325,7 +325,8 @@ class LinarithCorpusSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The written exception list, in the shape TST-09 asks for, and it is empty.
+   * The written exception list, which is where a failing case goes when the prover is not fixed
+   * instead, and it is empty.
    *
    * It is worth keeping empty rather than deleting, because what it records is not the entries but
    * the discipline: the suite fails on an entry that has stopped failing as well as on one that has

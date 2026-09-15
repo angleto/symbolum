@@ -67,8 +67,9 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
    * The printed form is what the assertion is against rather than the term, because what is being
    * checked is a translation: `Sum f n` is the first `n` terms indexed from zero, so the exponential
    * is `\sum_{i<n} x^i / i!` and the sine's exponent is `2k + 1`. A reader comparing these four
-   * lines with a textbook is doing the only check that matters here, and `FRM-01` is why they are
-   * printed rather than assembled.
+   * lines with a textbook is doing the only check that matters here, and a definition has to be
+   * checkable that way by somebody who did not write it, which is why they are printed rather than
+   * assembled.
    */
   "Each constant" should "be defined as the series it is published as" in {
     val expected = Map(

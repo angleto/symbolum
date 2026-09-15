@@ -105,8 +105,8 @@ class PerronSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks
 
   "A nilpotent matrix" should "come back with an eigenvalue of zero and not with a refusal" in {
     // [[0, 1], [0, 0]] is triangular, so its eigenvalues are both zero: the growth rate really is
-    // nothing. That is a computation that succeeded, and NUM-02 is exactly this distinction. A
-    // caller that folds it into "no answer" has thrown away a result.
+    // nothing. That is a computation that SUCCEEDED, and an absent answer is never the same thing
+    // as a negative one. A caller that folds it into "no answer" has thrown away a result.
     val found = dominant(Perron.of(Vector(Vector(0.0, 1.0), Vector(0.0, 0.0))))
 
     found.eigenvalue shouldBe 0.0

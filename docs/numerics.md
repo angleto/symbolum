@@ -139,14 +139,14 @@ argument error for, so anything else is a mistake in this repository and turning
 
 ## The outcomes, and the two obligations they answer
 
-`NUM-01`, agreement in numbers is reported as agreement in numbers and never as a proof. Both files
+**Agreement in numbers is reported as agreement in numbers and never as a proof.** Both files
 say it in their first paragraphs, and the surfaces carry it: `Spectrum.Bins.agreesWith` returns the
 largest difference bin by bin and has **no opinion about where the tolerance is**, because the
 answer depends on `n` and on the size of the largest bin; `Perron.Dominant.residual` is the largest
 entry of `A v - lambda v` and is an observation about how well the numbers satisfy the equation,
 which is not the same act as proving that they do.
 
-`NUM-02`, an absent answer is never reported as a negative one. The outcomes are kept apart the way
+**An absent answer is never reported as a negative one.** The outcomes are kept apart the way
 `Refutation` keeps its seven apart:
 
 | `Spectrum` | |

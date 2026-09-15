@@ -366,8 +366,9 @@ object Algebraic {
    * Signed terms as one expression, with subtraction rather than a negated summand.
    *
    * `x * x - 2` and `x * x + (neg 2)` are the same term to the prover and not to a reader, and a
-   * reader comparing the claim against `x^2 - 2` is the only check `FRM-01`'s obligation has. The
-   * leading term keeps `neg`, since there is nothing for it to be subtracted from.
+   * reader who did not write the translation comparing it against `x^2 - 2` is the only check a
+   * formal statement of an informal claim ever gets. The leading term keeps `neg`, since there is
+   * nothing for it to be subtracted from.
    */
   def signedSum(terms: Vector[(Int, String)]): String =
     terms.zipWithIndex

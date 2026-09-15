@@ -58,9 +58,10 @@ import garden.xeno.symbolum.logic.*
  *
  * `docs/adr/0017` is the decision and the alternatives it rejects. The short form: a characterising
  * axiom for each of these would add four to the trusted base and it would be the first time this
- * repository asserted something about a domain it could construct instead, which is exactly what
- * `PRF-01` and `docs/adr/0007` are about. The cost of the construction is that the facts arrive
- * slowly; the cost of the axiom is that they arrive untrue-until-checked and nobody ever checks.
+ * repository asserted something about a domain it could construct instead, where the standing rule
+ * is that a result is added by proving it; `docs/adr/0007` is what commits the axiom count to
+ * coming down. The cost of the construction is that the facts arrive slowly; the cost of the axiom
+ * is that they arrive untrue-until-checked and nobody ever checks.
  *
  * == The sine's series is written with `0 - 1` and not with `-1` ==
  *

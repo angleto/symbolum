@@ -166,8 +166,8 @@ class RingCorpusSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The written exception list, which is what TST-09's discipline asks for instead of relaxing the
-   * assertion above.
+   * The written exception list, which is what a failing adversarial case gets instead of a relaxed
+   * assertion: the prover is fixed, or the case is written down here with its reason.
    *
    * It held two entries, both the same goal `x/2 + x/2 = x`, stated twice in the corpus. They
    * arrived on 2026-09-09 when the reader learned to read a quotient, and they left later the same
