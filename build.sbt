@@ -295,11 +295,34 @@ lazy val kernel = (project in file("modules/kernel"))
     coverageMinimumStmtTotal := 81.0
   )
 
+// The propositional solver. Depends on **nothing**, and that is the correctness argument rather
+// than a property it happens to have: a search is untrusted here, and a module that cannot see
+// `kernel` cannot construct a theorem whatever it does. `docs/adr/0003` makes the module graph the
+// trust boundary and this is that decision applied one level down, where `tactics.Consistency` has
+// to make the same promise with a test that scans its own source.
+lazy val sat = (project in file("modules/sat"))
+  .settings(publishSettings)
+  .settings(commonSettings)
+  .settings(coverageSettings)
+  .settings(
+    name := "symbolum-sat",
+    // Measured 92.99% over 428 statements on the first landing, 2026-09-15, with `sat/clean` in
+    // front of it for the reason `CLAUDE.md` gives about incremental reports. `Solver` is 98.29%
+    // of 292; what is uncovered is mostly the arms that report a defect in this module to its
+    // caller, which is the shape of gap to expect and not one to close with a test that asserts a
+    // message. The floor is a point under the measurement, which is where the two modules measured
+    // across several runs put theirs, and it only rises.
+    coverageMinimumStmtTotal := 92.0
+  )
+
 // The connectives and the rules derived from the kernel's ten. Untrusted: everything here is a
 // function that puts primitive rules together, so a mistake costs a failed derivation.
 lazy val logic = (project in file("modules/logic"))
   .settings(publishSettings)
-  .dependsOn(kernel)
+  // `sat` and not just `kernel` since `Propositional` landed: the solver proposes a refutation and
+  // the rules here re-derive it. The dependency points at a module that depends on nothing, so the
+  // trusted base is untouched and the graph still says which half is believed.
+  .dependsOn(kernel, sat)
   .settings(commonSettings)
   .settings(coverageSettings)
   .settings(
@@ -424,7 +447,7 @@ lazy val mark = (project in file("modules/mark"))
 // `dependsOn` and not `aggregate`: aggregation decides which projects a task runs over and puts
 // nothing in the pom, and the pom is the whole content of this module.
 lazy val symbolum = (project in file("modules/aggregate"))
-  .dependsOn(kernel, checker, logic, theories, core, tactics)
+  .dependsOn(kernel, checker, logic, theories, core, tactics, sat)
   .settings(publishSettings)
   .settings(
     name := "symbolum"

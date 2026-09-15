@@ -115,13 +115,22 @@ Dependencies point one way, and the direction is the correctness argument rather
 ```
 kernel    -> (nothing)      the trusted base
 checker   -> kernel         a second reading of a proof, as text or in this process
-logic     -> kernel         connectives, derived rules, rewriting, parser, printer
+sat       -> (nothing)      a conflict-driven solver and the refutations it produces
+logic     -> kernel, sat    connectives, derived rules, rewriting, parser, printer
 theories  -> logic          the naturals, the reals, numerals, arithmetic, RING, LINARITH
 core      -> (nothing)      the computer algebra system, published as garden.xeno:symbolum-core
 tactics   -> theories, core the lowest module that sees both halves
 examples  -> tactics        runnable demonstrations of either half, not published
 mark      -> (nothing)      the figure, the art and the drawing written from it, and its checks
 ```
+
+`sat` depending on nothing is the same kind of statement as `kernel` depending on nothing, read from
+the other end. A search is untrusted here, and a module that cannot see `kernel` cannot construct a
+theorem whatever it does, which `modules/sat/src/test/.../IsolationSpec` asserts. It is worth having
+as a module rather than as a file under `tactics` because that is the difference between a property
+and a convention: `tactics.Consistency` makes the same promise about itself with a test that scans
+its own source for the name of an inference rule, and its comment says why a runtime check was not
+available to it.
 
 `mark` is beside that graph rather than in it: nothing depends on it and it depends on nothing. It
 is a module and not a file in `examples` for one reason, which is that `examples` depends on

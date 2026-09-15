@@ -92,12 +92,13 @@ Four properties hold the boundary in place, each asserted by a test rather than 
 ```
 kernel    -> (nothing)          the trusted base
 checker   -> kernel             a second reading of a proof, as text or in this process
-logic     -> kernel             connectives, derived rules, rewriting, parser, printer
+sat       -> (nothing)          a conflict-driven solver and the refutations it produces
+logic     -> kernel, sat        connectives, derived rules, rewriting, parser, printer
 theories  -> logic              the reals, numerals, arithmetic, RING, LINARITH
 core      -> (nothing)          the computer algebra system
 tactics   -> theories, core     the lowest module that sees both halves
 examples  -> tactics            runnable demonstrations of either half
-aggregate -> the six above      no source: a pom, so one coordinate resolves the whole system
+aggregate -> the seven above    no source: a pom, so one coordinate resolves the whole system
 dist      -> tactics, examples  the tarball a person installs, and the only module that is not a
                                 library and not a demonstration
 ```
@@ -105,7 +106,14 @@ dist      -> tactics, examples  the tarball a person installs, and the only modu
 The last two are what the system ships as, and they are two artifacts rather than one read two
 ways: the six library modules go to a registry under their own coordinates for a build tool to
 resolve, and the distribution carries every jar with a launcher per entry point for a person to
-run. `mark` is in neither, for the reason it is beside the graph rather than in it: it regenerates
+run.
+
+`sat` is the second module depending on nothing, and the reason is the first one read backwards.
+`kernel` depends on nothing so that what has to be believed can be pointed at; `sat` depends on
+nothing so that what must **not** be believed cannot reach it. A solver that cannot see `kernel`
+cannot construct a theorem, which is this document's own division enforced by the build rather than
+by a reviewer, and `logic.Propositional` is the joint: it takes the refutation the solver found and
+re-derives every resolution step through the rules. `mark` is in neither, for the reason it is beside the graph rather than in it: it regenerates
 two files under `docs/` and is of no use to anybody who did not clone this repository. `build.sbt`
 carries the argument at each of them.
 

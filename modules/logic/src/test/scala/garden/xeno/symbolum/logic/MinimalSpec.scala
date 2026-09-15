@@ -109,4 +109,23 @@ class MinimalSpec extends AnyFlatSpec with Matchers {
   "A goal that is not a proposition" should "be refused before anything is spent" in {
     minimal.reads(Term.variable("x", TyVar("A"))) shouldBe false
   }
+
+  "This search" should "explore a failing alternative and recover, which is a choice point" in {
+    // The README said of the whole tactic surface that there was "no choice point anywhere", and
+    // that was false while it stood: `Prove` routes a propositional goal here, and `branching` tries
+    // the left disjunct of a disjunctive goal before the right one.
+    //
+    // Asserted as the pair rather than as one goal, and the pair is the whole argument. The first
+    // says the left alternative is not reachable from the hypothesis; the second says a proof comes
+    // back anyway. Together they say the left alternative was tried, failed, and was backed out of,
+    // which no single assertion here can say. A test on the second alone would pass on a search that
+    // had never looked at the left.
+    minimal.prove(all(List(p, q), imp(p, q))).isLeft shouldBe true
+    proved(all(List(p, q), imp(p, disj(q, p))))
+
+    // And one level deeper, so that the recovery is from a branch that failed after descending
+    // rather than at once.
+    minimal.prove(all(List(p, q, r), imp(p, conj(q, r)))).isLeft shouldBe true
+    proved(all(List(p, q, r), imp(p, disj(conj(q, r), p))))
+  }
 }
