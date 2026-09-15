@@ -170,8 +170,11 @@ rule with the useful half removed.
 ## What the rule must refuse, and the tests that say so
 
 Enumerated here because the card assigns this list to a second reader, and because a rule of this
-kind is defined as much by what it turns away as by what it produces. Each row becomes a case in
-`SoundnessAttackSpec` beside the existing ones.
+kind is defined as much by what it turns away as by what it produces. The rows are executed in
+`TypeDefinitionSpec`, in `modules/kernel`, and four of them again in `SoundnessAttackSpec`, which
+is in `modules/theories` and therefore sees the rule from above the trusted base. This sentence
+named only the second of those until 2026-09-15, which sent a reader to the file holding the
+smaller half of the corpus.
 
 | The attack | Why it must be refused | What a wrong answer would cost |
 |---|---|---|
@@ -189,3 +192,35 @@ reader, and the 2026-09-03 defect is the standing evidence that a corpus of atta
 what it contains. And it is not a substitute for the must-accept case above it: the rule has to
 define a type somebody can then use, and the first thing to try it on is the naturals it exists
 for.
+
+**And what the list turned out not to contain, measured on 2026-09-15.** Two cases were added
+beside it, and both are about a property this record states in prose and nothing executed.
+
+The first is the one this file names in the sentence about `Term.typeVariables`: the arity is read
+from the type of every subterm of `P` rather than from `P`'s own type, "and a version doing the
+latter would let a type variable escape". That was asserted and never run. Writing the weaker
+reading into the rule and running `modules/kernel` fails **one** of the 99 assertions there and it
+is the new one; the case that looks as though it covers this, "take its arity from the predicate's
+type variables, not from the caller", passes under the escape, because its predicate carries `A`
+in its own type and the two readings agree there. What the escape costs is a falsity and not a
+looser type: with the arity read as zero the new type and its two constants carry no type
+variable while the characterisation still names the predicate's, so `instType` yields two
+characterisations of one type at two instances, and taking `r` to be a witness of one inside the
+other equates two terms the theory keeps apart.
+
+The second is `abs` and `rep` given the **same** name. The fifth and sixth rows above are both
+about a name the theory already holds, and this is the shape where it holds neither. It is refused,
+because the two declarations are chained so the second meets what the first added, and the case is
+about **which** refusal rather than whether there is one. The prediction written here first was that
+a rule declaring both constants against the theory the type operator produced would accept it. That
+was wrong, and running it is what said so: written that way it still refuses, three steps later and
+with `NotAnInstance(both, ind -> sub, sub -> ind)`, when the rule looks its own `rep` up at the type
+it expects. So what the rearrangement costs is not a type built over one constant standing for two,
+it is a caller who wrote one name twice and is answered with a mismatch between two types it never
+wrote. Like the first case, that variant fails the new assertion and no other, 98 of 99 green.
+
+Neither finding is a defect in the rule, and that is the point worth carrying: the rule was right
+both times and the corpus could not have said so, in one case about a property this record asserts
+in prose and in the other about the refusal a caller hears. It is the same lesson as the paragraph
+above it, arrived at from the other side: a corpus proves only what it contains, and an assertion
+proves only what would make it fail.

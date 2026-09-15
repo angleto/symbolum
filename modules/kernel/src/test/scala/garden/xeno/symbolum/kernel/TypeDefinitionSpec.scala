@@ -103,6 +103,60 @@ class TypeDefinitionSpec extends AnyFlatSpec with Matchers {
     extended.typeOperators.get("poly") shouldBe Some(1)
   }
 
+  it should "read the arity from every subterm of the predicate, not from the predicate's own type" in {
+    // The escape `docs/adr/0006` names in as many words, and nothing pinned it until 2026-09-15:
+    // the arity is read through `Term.typeVariables`, "which walks the type of every subterm rather
+    // than only the predicate's own type, and a version doing the latter would let a type variable
+    // escape". The record asserted that and no assertion executed it.
+    //
+    // Measured rather than argued, on 2026-09-15, by writing the weaker reading into the rule and
+    // running the module: `parameters = Type.variables(Term.typeOf(predicate)).toList.sorted` fails
+    // **this case and no other**, 98 of 99 green. So the arity case above cannot pin the property
+    // and neither could anything else here: its predicate carries `A` in its own type, where the
+    // two readings agree.
+    //
+    // What the escape would cost, which is why this is a soundness case and not a tidiness one:
+    // with the arity read as zero, `sub`, `abs` and `rep` carry no type variable while the
+    // characterisation still names `g` and `c`, so `instType` gives two characterisations of ONE
+    // type at two instances of `B`, each saying it is in bijection with a different singleton.
+    // Taking `r` to be one witness in the other instance equates two terms the theory keeps apart.
+    val beta = TyVar("B")
+    val (start, _, _) = base
+
+    val theory = force(
+      for {
+        withG <- start.declareConstant("g", Type.fun(beta, ind))
+        withC <- withG.declareConstant("c", beta)
+      } yield withC
+    )
+
+    val g = force(theory.constant("g", Type.fun(beta, ind)))
+    val c = force(theory.constant("c", beta))
+    val argument = force(Term.app(g, c))
+
+    // `|- g c = g c` is `P (g c)` with `P` the term `(= (g c))`, whose own type is `ind -> bool`
+    // and whose subterms carry `B`. The same reading of `|- w = w` that the refusal case below
+    // keeps as a comment, used here for the opposite purpose.
+    val witness = Kernel.refl(argument)
+    val predicate = witness.conclusion match {
+      case App(fn, _) => fn
+      case other => fail(s"expected an application, got $other")
+    }
+
+    // The two readings measured side by side, which is what makes the assertions below capable of
+    // failing: an implementation reading only the predicate's own type sees nothing here.
+    Type.variables(Term.typeOf(predicate)) shouldBe empty
+    Term.typeVariables(predicate) shouldBe Set("B")
+
+    val (extended, (_, characterises)) =
+      force(Kernel.defineType(theory, "sub", "abs", "rep", witness))
+
+    extended.typeOperators.get("sub") shouldBe Some(1)
+    extended.constants.get("abs") shouldBe Some(Type.fun(ind, TyApp("sub", List(beta))))
+    extended.constants.get("rep") shouldBe Some(Type.fun(TyApp("sub", List(beta)), ind))
+    Term.typeVariables(characterises.conclusion) shouldBe Set("B")
+  }
+
   /* ------------------------------------------------------------------- what it refuses */
 
   "A witness that holds only under an assumption" should "be refused" in {
@@ -185,6 +239,29 @@ class TypeDefinitionSpec extends AnyFlatSpec with Matchers {
     Kernel.defineType(theory, "sub", "abs", "w", witness) match {
       case Left(AlreadyDeclared(name)) => name shouldBe "w"
       case other => fail(s"expected a refusal about the representation, got $other")
+    }
+  }
+
+  "One name given for both constants" should "be refused" in {
+    // Not a row of the record's table, and it is the shape the table's fifth and sixth rows do not
+    // cover: both of those are about a name the THEORY already holds, and here the theory holds
+    // neither. It is refused because the two declarations are chained, so the second meets what the
+    // first added.
+    //
+    // What the assertion is really about is WHICH refusal, and that was measured on 2026-09-15
+    // rather than predicted: the prediction was that a rule declaring both constants against the
+    // theory the type operator produced would accept this, and it does not. Written that way it
+    // still refuses, and it refuses with `NotAnInstance(both, ind -> sub, sub -> ind)`, raised
+    // three steps later when the rule looks its own `rep` up at the type it expects. So the hazard
+    // is not a type built over one constant standing for two; it is a caller who wrote one name
+    // twice and is answered with a mismatch between two types it never wrote. That variant fails
+    // this case and no other, 98 of 99 green, which is the same measurement the arity case above
+    // carries and the reason both are here.
+    val (theory, witness, _, _) = witnessed
+
+    Kernel.defineType(theory, "sub", "both", "both", witness) match {
+      case Left(AlreadyDeclared(name)) => name shouldBe "both"
+      case other => fail(s"expected a refusal about the second name, got $other")
     }
   }
 
