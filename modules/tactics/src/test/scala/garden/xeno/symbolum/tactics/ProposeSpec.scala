@@ -204,7 +204,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 256 with the monotone convergence theorem's six, by the same count the entry in
     // `RediscoverySpec` derives: one arrow each for `NOT_FORALL`, the two negated comparisons and
     // `MONOTONE_LE`, and two for `MONOTONE_CONVERGES`.
-    proposals.size shouldBe 256
+    // 274 with the three rules of the embedded theory's equality, whose antecedents are five,
+    // eight and five: each asks its terms to be terms and to be closed before it asks anything
+    // about provability, and transitivity asks it of three terms rather than two.
+    proposals.size shouldBe 274
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -702,7 +705,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `MONOTONE_CONVERGES`, each missing one of its two hypotheses. All three quantify over a
     // SEQUENCE, and no model here interprets a function variable, so nothing refutes them; none
     // carries a negation, so `addressOf` reads them. Three and zero, derived and then measured.
-    open shouldBe 187
+    //
+    // 205 with all EIGHTEEN weakenings of the three equality rules, and the pair below is why
+    // that was derived rather than assumed after the last round got it wrong. Every residue
+    // concludes `NUM_PROV` of a code, which the model cannot compute, so none is refutable; and
+    // not one of the eighteen antecedents is a negation, so `addressOf` reads every one of them.
+    // The bucket below does not move, which is the measurement that says the negation is what
+    // sends a residue there and not the shape of the conclusion.
+    open shouldBe 205
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

@@ -90,7 +90,114 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
    * reflexivity and one replacement scheme, and nothing has yet derived symmetry, transitivity or
    * congruence out of them. That is the next development and it belongs in this file.
    */
-  it should "prove its own arithmetic at a numeral, which nothing could state before" in {
+  /**
+   * The equality rules turned on something the object theory actually proved.
+   *
+   * A rule that has been derived and never applied is not built, and these three are easy to
+   * derive in a way that no caller can use: every one of them asks `NUM_CLOSED` of BOTH sides, and
+   * before today nothing could discharge such a condition at all. So this runs symmetry on the one
+   * object theorem there is, `numeral m + 0 = numeral m`, and gets `numeral m = numeral m + 0`.
+   *
+   * The work is not the rule, it is the closure of the left side. `NUM_NUMERAL_CLOSED` closes a
+   * numeral and nothing closes a SUM of one with zero, so it is derived here, one index at a time,
+   * out of the freeness clause for a sum and the two closures underneath it. That is the first
+   * compound closed term anywhere here, and it is the shape every further object derivation needs.
+   */
+  it should "carry an object theorem across its own equality" in {
+    val language = chain.language
+    val numeral = term("NUM_NUMERAL m")
+    val zeroCode = term("NUM_CODE 1 0")
+    val sum = term("NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 1 0))")
+
+    // `numeral m + 0` is a term.
+    val sumIsTerm = force(
+      rules
+        .specAll(force(language.fact(Language.TermSum)), List(numeral, zeroCode))
+        .flatMap(rules.mp(_, force(rules.spec(term("m"), force(language.fact(Language.NumeralIsTerm))))))
+        .flatMap(rules.mp(_, force(language.fact(Language.TermZero))))
+    )
+
+    // And it is closed: at any index, neither half is free in it.
+    val index = Term.variable("k", numbers)
+    val closedNumeral = force(
+      rules
+        .spec(numeral, force(language.fact(Language.ClosedCases)))
+        .flatMap(equation =>
+          LogicError.lift(Kernel.eqMp(
+            equation,
+            force(rules.spec(term("m"), force(language.fact(Language.NumeralIsClosed)))))))
+        .flatMap(rules.spec(index, _))
+    )
+    val notInZero = force(
+      rules
+        .spec(index, force(language.fact(Language.FreeZero)))
+        .flatMap(equation =>
+          LogicError
+            .lift(Kernel.assume(Term.destEq(equation.conclusion).map(_._1).getOrElse(fail("an equation"))))
+            .flatMap(assumedFree => LogicError.lift(Kernel.eqMp(equation, assumedFree)))
+            .flatMap(rules.notIntro(
+              Term.destEq(equation.conclusion).map(_._1).getOrElse(fail("an equation")), _)))
+    )
+    val neitherHalf = force(
+      rules
+        .conjIntro(closedNumeral, notInZero)
+        .flatMap(both =>
+          force(chain.classical.fact(Classical.DeMorganDisjunction)) match {
+            case law =>
+              rules
+                .specAll(law, List(
+                  force(logic.destNot(closedNumeral.conclusion).toRight(NotOfForm("a negation", closedNumeral.conclusion))),
+                  force(logic.destNot(notInZero.conclusion).toRight(NotOfForm("a negation", notInZero.conclusion)))))
+                .flatMap(Conv.sym)
+                .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, both)))
+          })
+    )
+    val sumIsClosed = force(
+      rules
+        .specAll(force(language.fact(Language.FreeSum)), List(index, numeral, zeroCode))
+        .flatMap(clause =>
+          LogicError
+            .lift(language.theory.constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)))
+            .flatMap(negation => Conv.apTerm(negation, clause))
+            .flatMap(Conv.sym)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, neitherHalf))))
+        .flatMap(rules.gen(index, _))
+        .flatMap(nowhere =>
+          rules
+            .spec(sum, force(language.fact(Language.ClosedCases)))
+            .flatMap(Conv.sym)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, nowhere))))
+    )
+    sumIsClosed.hypotheses shouldBe empty
+    sumIsClosed.conclusion shouldBe proposition(
+      "NUM_CLOSED (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 1 0)))")
+
+    // The object theorem this file already reaches, turned around.
+    val forwards = provesNumeralAddition
+    val backwards = force(
+      rules
+        .specAll(force(deduction.fact(Deduction.Symmetry)), List(sum, numeral))
+        .flatMap(rules.mp(_, sumIsTerm))
+        .flatMap(rules.mp(_, force(rules.spec(term("m"), force(language.fact(Language.NumeralIsTerm))))))
+        .flatMap(rules.mp(_, sumIsClosed))
+        .flatMap(rules.mp(_, force(rules.spec(term("m"), force(language.fact(Language.NumeralIsClosed))))))
+        .flatMap(rules.mp(_, forwards))
+    )
+
+    backwards.hypotheses shouldBe empty
+    backwards.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL m) " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 1 0)))))")
+    Derivation.axiomsOf(backwards) should have size 2
+  }
+
+  /**
+   * `|- NUM_PROV (code of numeral m + 0 = numeral m)`, derived once and asserted by two tests.
+   *
+   * Shared rather than repeated because the second test carries it across the object theory's own
+   * equality, and a second copy of a derivation is the thing this repository deletes on sight.
+   */
+  private lazy val provesNumeralAddition: Kernel.Thm = {
     val language = chain.language
     val numeral = term("NUM_NUMERAL m")
     val index = term("0")
@@ -146,12 +253,20 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
         .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised)))
     )
 
+
+    reached
+  }
+
+  it should "prove its own arithmetic at a numeral, which nothing could state before" in {
+    val reached = provesNumeralAddition
     reached.hypotheses shouldBe empty
     reached.conclusion shouldBe proposition(
       "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
         "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 1 0))) (NUM_NUMERAL m)))")
     Derivation.axiomsOf(reached) should have size 2
   }
+
+
 
   /**
    * What a derivation of the embedded theory costs, which is what everything above it costs.

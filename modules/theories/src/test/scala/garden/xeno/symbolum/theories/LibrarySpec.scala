@@ -290,8 +290,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // three was right about the tree it was taken on, which is what makes the failure quiet. The
     // baseline on a shared checkout is `git show HEAD:<path>` and nothing else: the number in the
     // working tree can be somebody else's prediction, or your own.
-    library.entries.size shouldBe 424
-    library.names.distinct.size shouldBe 421
+    // 427 with the three rules of the embedded theory's equality, symmetry, transitivity and the
+    // congruence of the successor. `Language` has said since it was written that two equality
+    // axioms suffice because those three are consequences; they are derived rather than asserted
+    // now. Both of `CLAUDE.md`'s figures move by three, since each binds two or three terms.
+    library.entries.size shouldBe 427
+    library.names.distinct.size shouldBe 424
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

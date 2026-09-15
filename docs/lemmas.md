@@ -98,7 +98,10 @@ they have least appetite for working out how it is produced.
   NUM_PROV_IMP_MP          !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y z)))) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
   NUM_PROV_SELF            !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))
   NUM_PROV_SPECIALISE      !x:num. !y:num. !z:num. NUM_FORM z ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR x z)) ==> NUM_PROV (NUM_SUBST_FORM x y z)
+  NUM_PROV_SUC_CONG        !x:num. !y:num. NUM_TERM x ==> NUM_TERM y ==> NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 x) (NUM_CODE 2 y)))
   NUM_PROV_SYLL            !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
+  NUM_PROV_SYMM            !x:num. !y:num. NUM_TERM x ==> NUM_TERM y ==> NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR y x))
+  NUM_PROV_TRANS           !x:num. !y:num. !z:num. NUM_TERM x ==> NUM_TERM y ==> NUM_TERM z ==> NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_CLOSED z ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x z))
   NUM_PROV_WEAKEN          !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_PROV y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))
 
 ## Divisibility
