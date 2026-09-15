@@ -92,8 +92,12 @@ they have least appetite for working out how it is produced.
 
 ## Deduction
 
+  NUM_PROV_DEDUCTION       !x:num. !y:num. NUM_FORM x ==> (!z:num. ~(NUM_FREE_FORM z x)) ==> NUM_PROV_FROM x y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))
+  NUM_PROV_IMP_GEN         !x:num. !y:num. !z:num. NUM_FORM y ==> NUM_FORM z ==> ~(NUM_FREE_FORM x y) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 8 (NUM_PAIR x z))))
+  NUM_PROV_IMP_MP          !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y z)))) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
   NUM_PROV_SELF            !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))
   NUM_PROV_SYLL            !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
+  NUM_PROV_WEAKEN          !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_PROV y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))
 
 ## Divisibility
 
@@ -436,11 +440,13 @@ they have least appetite for working out how it is produced.
 
   NUM_PROOF_CASES          !x:num. !y:num. NUM_PROOF x y = (?z:num. ?u:num. ?v:num. x = NUM_PAIR z (NUM_PAIR u v) /\ NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP u v w))
   NUM_PROV_CASES           !x:num. NUM_PROV x = (?y:num. NUM_PROOF y x)
+  NUM_PROV_FROM_CASES      !x:num. !y:num. NUM_PROV_FROM x y = (?z:num. ?u:num. ?v:num. NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP_FROM x u v w))
   NUM_PROV_GEN             !x:num. !y:num. NUM_PROV y ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR x y))
   NUM_PROV_LOGIC           !x:num. NUM_LOGIC x ==> NUM_PROV x
   NUM_PROV_MP              !x:num. !y:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV x ==> NUM_PROV y
   NUM_PROV_PA              !x:num. NUM_PA x ==> NUM_PROV x
   NUM_STEP_CASES           !x:num. !y:num. !z:num. NUM_STEP x y z = (NUM_PA (NUM_BETA x y z) \/ NUM_LOGIC (NUM_BETA x y z) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_LT v z /\ NUM_BETA x y u = NUM_CODE 7 (NUM_PAIR (NUM_BETA x y v) (NUM_BETA x y z))) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_BETA x y z = NUM_CODE 8 (NUM_PAIR v (NUM_BETA x y u))))
+  NUM_STEP_FROM_CASES      !x:num. !y:num. !z:num. !u:num. NUM_STEP_FROM x y z u = (NUM_FORM (NUM_BETA y z u) /\ (NUM_STEP y z u \/ NUM_BETA y z u = x))
   NUM_STEP_SHIFT           !x:num. !y:num. !z:num. !u:num. !v:num. !w:num. !x1:num. (!y1:num. NUM_LE y1 w ==> NUM_BETA x y (NUM_ADD z y1) = NUM_BETA u v y1) ==> NUM_LE x1 w ==> NUM_STEP u v x1 ==> NUM_STEP x y (NUM_ADD z x1)
 
 ## Real, assumed

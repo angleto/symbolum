@@ -137,6 +137,10 @@ object Spellings {
       .delimited("NUM_STEP", 3, "\\operatorname{step}(#1, #2, #3)")
       .delimited("NUM_PROOF", 2, "\\operatorname{Prf}(#1, #2)")
       .delimited("NUM_PROV", 1, "\\operatorname{Prov}(#1)")
+      // The two the deduction theorem needed. `step` and `Prov` with the hypothesis in front of a
+      // turnstile, which is how a derivation from an assumption is written everywhere else.
+      .delimited("NUM_STEP_FROM", 4, "\\operatorname{step}_{#1}(#2, #3, #4)")
+      .delimited("NUM_PROV_FROM", 2, "\\operatorname{Prov}_{#1}(#2)")
       .delimited("NUM_PA", 1, "\\operatorname{PA}(#1)")
       // The modulus is the FIRST argument, and this row had it last until the rendering was read
       // against `Modular`'s own docstring: "`NUM_CONG k m n`", and "`NUM_CONG k` takes its modulus

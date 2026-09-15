@@ -250,8 +250,17 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 398 with two being prime and with no square being twice a square, which is the arithmetic
     // content of the irrationality of the square root of two. `CLAUDE.md`'s two figures move by
     // ONE each, not two: `NUM_PRIME_TWO` binds nothing at all, being a claim about one number.
-    library.entries.size shouldBe 398
-    library.names.distinct.size shouldBe 395
+    // 401 with the three rules the deduction theorem needs: weakening under a hypothesis, modus
+    // ponens under one, and generalisation under one. Each binds two or three variables of a kind,
+    // so both of `CLAUDE.md`'s figures move by three as well.
+    // 404 with the deduction theorem and the two definitions it needed. It is the first addition
+    // in a while to DECLARE anything: `NUM_STEP_FROM` and `NUM_PROV_FROM` are constants, so the
+    // reading register moves by two rows where nothing else recently has. The definitional figure
+    // below does NOT move, and the reason is worth knowing: `Library.of` collects each
+    // development's `facts` and not its `definitions`, so a constant defined in `Provability`
+    // reaches the register and not the library.
+    library.entries.size shouldBe 404
+    library.names.distinct.size shouldBe 401
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

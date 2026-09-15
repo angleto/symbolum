@@ -116,6 +116,46 @@ object Provability {
    */
   val ModusPonens: String = "NUM_PROV_MP"
 
+  /** `NUM_STEP_FROM h a b j` says the `j`th entry is a justified step, or is `h` itself. */
+  val StepFromName: String = "NUM_STEP_FROM"
+
+  /**
+   * `|- !h a b j. NUM_STEP_FROM h a b j = (NUM_FORM (NUM_BETA a b j) /\ (NUM_STEP a b j \/ ...))`
+   *
+   * Derivability from one extra assumption, which is what the deduction theorem is about. A step is
+   * justified as before, or it **is** the assumption, and that is the whole difference.
+   *
+   * **It carries `NUM_FORM` where [[StepCases]] does not, and that is a decision rather than an
+   * oversight.** The three rules `Deduction` assembles the deduction theorem from each need their
+   * formulas to be formulas, because every scheme of `NUM_LOGIC` carries that side condition. Two
+   * ways to supply it: invert `NUM_FORM_CASES` at tags seven and eight, which is two lemmas of
+   * seventy lines and is the general fix; or ask it of the derivation, which is one conjunct here.
+   * This takes the second, so the theorem's hypothesis is stronger than the textbook's by exactly
+   * "and every line is a formula", which a caller building a derivation can always supply and
+   * usually has in hand.
+   *
+   * What it leaves behind is worth writing down: **`NUM_STEP` does not require a step to be a
+   * formula**, so `NUM_PROV` could in principle hold of a code that is not one. Nothing here shows
+   * it does, and the pairing's bound makes the obvious route impossible, but it has not been ruled
+   * out and the inversion lemmas are what would settle it.
+   */
+  val StepFromCases: String = "NUM_STEP_FROM_CASES"
+
+  /** `NUM_PROV_FROM h n` says `n` is derivable from the axioms together with `h`. */
+  val ProvableFromName: String = "NUM_PROV_FROM"
+
+  /**
+   * `|- !h n. NUM_PROV_FROM h n = (?k a b. NUM_BETA a b k = n /\ (!j. j <= k ==> ...))`
+   *
+   * **Two definitions here and three for [[ProvableName]]**, and the missing one is [[ProofName]].
+   * That exists because `NUM_PROV n` quantifies over a derivation as a single number, which the
+   * pairing supplies; nothing will ever quantify over a derivation-from-a-hypothesis that way,
+   * because this predicate is a convenience of the ambient logic and is not the thing Goedel's
+   * argument arithmetises. So the three numbers are quantified directly and there is no code for
+   * them.
+   */
+  val ProvableFromCases: String = "NUM_PROV_FROM_CASES"
+
   /**
    * The embedded theory is closed under generalisation.
    *
@@ -172,6 +212,12 @@ object Provability {
   }
 
   /** A proof's three parts: the shape of the code, its last line, and every step justified. */
+  /** A step of a derivation that may also use `h`, with the four subjects free. */
+  private def stepFromBody(h: String, a: String, b: String, at: String): String = {
+    val here = s"NUM_BETA $a $b $at"
+    s"NUM_FORM ($here) /\\ (NUM_STEP $a $b $at \\/ $here = $h)"
+  }
+
   private def proofBody(proof: String, claim: String): String =
     s"?k:num. ?a:num. ?b:num. $proof = NUM_PAIR k (NUM_PAIR a b) /\\ " +
       s"NUM_BETA a b k = $claim /\\ (!j:num. NUM_LE j k ==> NUM_STEP a b j)"
@@ -187,6 +233,11 @@ object Provability {
         "NUM_PROV p ==> NUM_PROV q"),
     Generalisation ->
       "!i:num p:num. NUM_PROV p ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR i p))",
+    StepFromCases ->
+      s"!h:num a:num b:num j:num. NUM_STEP_FROM h a b j = (${stepFromBody("h", "a", "b", "j")})",
+    ProvableFromCases ->
+      ("!h:num n:num. NUM_PROV_FROM h n = (?k:num. ?a:num. ?b:num. NUM_BETA a b k = n /\\ " +
+        "(!j:num. NUM_LE j k ==> NUM_STEP_FROM h a b j))"),
     StepShift ->
       ("!a:num b:num c:num u:num v:num m:num j:num. " +
         "(!i:num. NUM_LE i m ==> NUM_BETA a b (NUM_ADD c i) = NUM_BETA u v i) ==> " +
@@ -234,13 +285,38 @@ object Provability {
         "\\n:num. ?d:num. NUM_PROOF d n",
         List("n")
       )
-      (theory, provableDefinition, provableCases) = withProvable
+      (provableTheory, provableDefinition, provableCases) = withProvable
+      provableLogic <- language.logic.over(provableTheory)
+
+      withStepFrom <- Language.defineByCases(
+        provableTheory,
+        notation,
+        provableLogic,
+        StepFromName,
+        s"\\h:num. \\a:num. \\b:num. \\j:num. ${stepFromBody("h", "a", "b", "j")}",
+        List("h", "a", "b", "j")
+      )
+      (stepFromTheory, stepFromDefinition, stepFromCases) = withStepFrom
+      stepFromLogic <- language.logic.over(stepFromTheory)
+
+      withProvableFrom <- Language.defineByCases(
+        stepFromTheory,
+        notation,
+        stepFromLogic,
+        ProvableFromName,
+        ("\\h:num. \\n:num. ?k:num. ?a:num. ?b:num. NUM_BETA a b k = n /\\ " +
+          "(!j:num. NUM_LE j k ==> NUM_STEP_FROM h a b j)"),
+        List("h", "n")
+      )
+      (theory, provableFromDefinition, provableFromCases) = withProvableFrom
       logic <- language.logic.over(theory)
 
       facts = Map(
         StepCases -> stepCases,
         ProofCases -> proofCases,
-        ProvableCases -> provableCases
+        ProvableCases -> provableCases,
+        StepFromCases -> stepFromCases,
+        ProvableFromCases -> provableFromCases
       )
       fromPeano <- inhabited(language, theory, notation, logic, facts, Language.AxiomName, 0,
         ProvablePeano)
@@ -257,7 +333,9 @@ object Provability {
       Map(
         StepName -> stepDefinition,
         ProofName -> proofDefinition,
-        ProvableName -> provableDefinition
+        ProvableName -> provableDefinition,
+        StepFromName -> stepFromDefinition,
+        ProvableFromName -> provableFromDefinition
       ),
       facts
         .updated(ProvablePeano, fromPeano)

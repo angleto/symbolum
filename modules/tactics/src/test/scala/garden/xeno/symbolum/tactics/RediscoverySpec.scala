@@ -132,7 +132,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // hypothesis at all, so there is nothing in it for this source to drop.
     // 221 with the three multiplicative lemmas, whose five hypotheses reach no rediscovery either.
     // 222 with the irrationality's one hypothesis; two being prime carries none.
-    propose.weakenings.size shouldBe 222
+    // 234 with the deduction theorem's three rules, whose twelve hypotheses between them reach no
+    // rediscovery either.
+    // 237 with the deduction theorem's three; its two definitions are equations and carry none.
+    propose.weakenings.size shouldBe 237
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

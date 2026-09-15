@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 398 lemmas, 249 have two or more leading quantifiers and **226 of
+caller meant: of the library's 404 lemmas, 255 have two or more leading quantifiers and **232 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -631,15 +631,36 @@ therefore stays at `Provability`, and the last link and the widest signature sto
 thing when this landed. `DeductionSpec` asserts the theory it hands on is the one it was given,
 constant for constant, so a definition arriving here goes red rather than passing unnoticed.
 
-It holds two schemes, each proved once for **every** formula rather than at a code. `NUM_PROV_SELF`,
+It holds five schemes, each proved once for **every** formula rather than at a code. `NUM_PROV_SELF`,
 that PA proves `p ==> p`, which is three lines because the system has no reflexivity for implication
-and getting there from weakening and distribution is the standard exercise. And `NUM_PROV_SYLL`,
+and getting there from weakening and distribution is the standard exercise. `NUM_PROV_SYLL`,
 that provable `p ==> q` and provable `q ==> r` give provable `p ==> r`, which is the rule every
-derivation of any length is made of.
+derivation of any length is made of. And three more that exist for one purpose: they are what the
+**deduction theorem** is assembled from, one per way a step can be justified. `NUM_PROV_WEAKEN` for
+the axiom cases, `NUM_PROV_IMP_MP` for the modus ponens case, and `NUM_PROV_IMP_GEN` for the
+generalisation case, which carries `~(NUM_FREE_FORM i h)` because without it the rule is false.
 
-**What is not written, and the distance is worth stating rather than discovering.** The deduction
-theorem, which is what makes object-level derivations tractable and which needs a notion of
-derivation-from-hypotheses that `NUM_PROV` does not have: it takes a formula, not a set. And above
+**The deduction theorem is proved**, and it is what makes building object derivations tractable: to
+get `h ==> p` you assume `h` and work forwards. `Provability` gained `NUM_STEP_FROM` and
+`NUM_PROV_FROM` for it, two definitions rather than three, because nothing will ever quantify over a
+derivation-from-a-hypothesis as a single number the way `NUM_PROOF` exists to allow. The proof is
+strong induction on the step index and its five cases are five one-liners, which is the return on
+proving the four rules separately first.
+
+Two conditions on the hypothesis and they differ in kind: that it is a formula, which every scheme
+of `NUM_LOGIC` asks; and that no index occurs free in it, which is the restriction the textbook
+statement carries and without which the theorem is false. The second is spent in exactly one place,
+`NUM_LOGIC_VACUOUS` inside `NUM_PROV_IMP_GEN`.
+
+**`NUM_STEP_FROM` asks that a step be a formula and `NUM_STEP` does not**, which is a decision and
+is recorded where it is made. The three rules each need their formulas to be formulas, and the
+alternative was inverting `NUM_FORM_CASES` at two tags, which is the general fix and is two lemmas
+of seventy lines. What it leaves behind is worth knowing: **nothing rules out `NUM_PROV` holding of
+a code that is not a formula**, and those inversion lemmas are what would settle it.
+
+**What is not written.** Nothing can discharge `!i. ~(NUM_FREE_FORM i h)` at a concrete code, so the
+deduction theorem applies today only to a hypothesis nobody can name. Doing it means walking a code
+through the freeness clauses to its leaves, and that is the next thing this layer needs. And above
 that, the thing Goedel's argument actually needs, which is `Prov` as a formula **of the object
 language** with one free variable rather than as the predicate `NUM_PROV` of the ambient logic.
 **D1, D2 and D3 are statements about that formula, so not one of the three can be stated yet.**

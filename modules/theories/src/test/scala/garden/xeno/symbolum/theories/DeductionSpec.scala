@@ -98,6 +98,305 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * A derivation from a hypothesis, built and then consumed by the deduction theorem.
+   *
+   * The statement check above says `NUM_PROV_DEDUCTION` is what it claims. What it cannot say is
+   * that anything satisfies its middle premise, and a theorem whose hypothesis nothing inhabits is
+   * true and useless. So this builds the smallest derivation-from-`h` there is, the one line that
+   * **is** `h`, and runs the theorem on it.
+   *
+   * The line costs what every inhabitation in `Provability` costs: `NUM_BETA_SEQUENCE` turns the
+   * constant sequence at `h` into two numbers, and the step is justified by the clause that
+   * distinguishes `NUM_STEP_FROM` from `NUM_STEP`, namely that the entry is the hypothesis.
+   *
+   * **What comes out is `NUM_PROV (h ==> h)`, which `NUM_PROV_SELF` already gives**, and that is
+   * the point rather than a weakness: the two routes agree, and the one through the deduction
+   * theorem exercises the definitions, the induction and the hypothesis case, none of which the
+   * direct route touches.
+   *
+   * **The conditions stay as hypotheses and cannot yet be discharged at a code.** `NUM_FORM h` is
+   * easy for a concrete `h`. `!i. ~(NUM_FREE_FORM i h)` is not: discharging it means walking a
+   * particular code through the freeness clauses down to its leaves, and nothing here does that.
+   * Until something does, this theorem applies to a hypothesis nobody can name, which is the next
+   * thing the layer needs and is recorded rather than left to be discovered.
+   */
+  it should "consume a derivation from a hypothesis, which is the premise nothing else inhabits" in {
+    val h = Term.variable("h", numbers)
+    val formulaH = force(LogicError.lift(Kernel.assume(isFormula(h))))
+    val zero = term("ZERO")
+    val one = term("SUC ZERO")
+
+    val betaConstant = constant(Coding.BetaName,
+      Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers))))
+    def beta(a: Term, b: Term, j: Term): Term = applied(betaConstant, List(a, b, j))
+
+    // The sequence whose only entry is `h`, taken up to one.
+    val constantSequence = force(LogicError.lift(Term.abs(Term.variable("j", numbers), h)))
+    val taken = force(
+      rules.specAll(force(chain.coding.fact(Coding.BetaSequence)), List(constantSequence, one)))
+    val opened = force(
+      Conv.betaNormalise(taken.conclusion)
+        .flatMap(step => LogicError.lift(Kernel.eqMp(step, taken))))
+
+    def openOne(existential: Kernel.Thm, name: String, avoid: Set[FVar])(
+      reach: (FVar, Kernel.Thm) => Kernel.Thm
+    ): Kernel.Thm = {
+      val inner = logic.destExistsPredicate(existential.conclusion)
+        .getOrElse(fail("an existential was expected"))
+      val fresh = Conv.freshVariable(
+        name, numbers, avoid ++ Term.freeVariables(existential.conclusion))
+      val body = Term
+        .destEq(force(Conv.betaRoot(applied(inner, List(fresh)))).conclusion)
+        .map(_._2)
+        .getOrElse(fail("an equation was expected"))
+      force(rules.existsElim(existential, fresh,
+        reach(fresh, force(LogicError.lift(Kernel.assume(body))))))
+    }
+
+    val notFreeTerm = {
+      val i = Conv.freshVariable("i", numbers, Set(h))
+      val free = applied(
+        constant(Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))),
+        List(i, h))
+      force(logic.mkForall(i, force(logic.mkNot(free))))
+    }
+    val notFree = force(LogicError.lift(Kernel.assume(notFreeTerm)))
+
+    val reached = openOne(opened, "a", Set(h)) { (a, atA) =>
+      openOne(atA, "b", Set(h, a)) { (b, atB) =>
+        // The entry at zero is `h`, since zero is below one.
+        val here = force(
+          rules
+            .spec(zero, atB)
+            .flatMap(rules.mp(_, force(
+              rules.spec(zero, force(chain.peano.fact(Peano.SuccessorPositive)))))))
+
+        // So the step at zero is justified by being the hypothesis, and it is a formula.
+        val stepCases = force(
+          rules.specAll(force(chain.provability.fact(Provability.StepFromCases)),
+            List(h, a, b, zero)))
+        val body = Term.destEq(stepCases.conclusion).map(_._2).getOrElse(fail("an equation"))
+        val (formulaPart, choice) = logic.destConj(body).getOrElse(fail("a conjunction"))
+        val (_, isHypothesis) = logic.destDisj(choice).getOrElse(fail("a disjunction"))
+
+        val formulaHere = force(
+          Conv
+            .apTerm(constant(Language.FormulaName, Type.fun(numbers, Type.Bool)), here)
+            .flatMap(Conv.sym)
+            .flatMap(step => LogicError.lift(Kernel.eqMp(step, formulaH))))
+        val justified = force(
+          rules
+            .conjIntro(formulaHere, force(rules.disjIntro2(
+              logic.destDisj(choice).map(_._1).getOrElse(fail("a disjunction")), here)))
+            .flatMap(pair => Conv.sym(stepCases)
+              .flatMap(step => LogicError.lift(Kernel.eqMp(step, pair)))))
+
+        // Every index at most zero is zero, so that one step is the whole derivation.
+        val marker = Term.variable("j", numbers)
+        val boundTerm = proposition("NUM_LE j ZERO")
+        val bounded = force(LogicError.lift(Kernel.assume(boundTerm)))
+        val isZero = force(
+          rules
+            .spec(marker, force(chain.peano.fact(Peano.AtMostZero)))
+            .flatMap(rules.mp(_, bounded)))
+        val everyStep = force(
+          Conv
+            .apThm(
+              force(Conv.apTerm(
+                constant(Provability.StepFromName,
+                  Type.fun(numbers, Type.fun(numbers, Type.fun(numbers,
+                    Type.fun(numbers, Type.Bool))))),
+                Conv.refl(h))),
+              a)
+            .flatMap(_ => Conv.apTerm(
+              applied(
+                constant(Provability.StepFromName,
+                  Type.fun(numbers, Type.fun(numbers, Type.fun(numbers,
+                    Type.fun(numbers, Type.Bool))))),
+                List(h, a, b)),
+              isZero))
+            .flatMap(Conv.sym)
+            .flatMap(step => LogicError.lift(Kernel.eqMp(step, justified)))
+            .flatMap(rules.disch(boundTerm, _))
+            .flatMap(rules.gen(marker, _)))
+
+        val fromCases = force(
+          rules.specAll(force(chain.provability.fact(Provability.ProvableFromCases)), List(h, h)))
+        val fromBody = Term.destEq(fromCases.conclusion).map(_._2).getOrElse(fail("an equation"))
+
+        def instantiate(existential: Term, argument: Term): Term = {
+          val inner = logic.destExistsPredicate(existential).getOrElse(fail("an existential"))
+          Term
+            .destEq(force(Conv.betaRoot(applied(inner, List(argument)))).conclusion)
+            .map(_._2)
+            .getOrElse(fail("an equation"))
+        }
+        val atLength = instantiate(fromBody, zero)
+        val atFirst = instantiate(atLength, a)
+
+        def under(existential: Term, witness: Term, proof: Kernel.Thm): Kernel.Thm =
+          force(rules.existsIntro(
+            logic.destExistsPredicate(existential).getOrElse(fail("an existential")),
+            witness, proof))
+
+        val derivation = force(
+          rules
+            .conjIntro(here, everyStep)
+            .map(pair => under(fromBody, zero, under(atLength, a, under(atFirst, b, pair))))
+            .flatMap(packed => Conv.sym(fromCases)
+              .flatMap(step => LogicError.lift(Kernel.eqMp(step, packed)))))
+
+        force(
+          rules
+            .specTo(
+              force(deduction.fact(Deduction.DeductionTheorem)),
+              imply(isFormula(h), imply(notFreeTerm,
+                imply(applied(
+                  constant(Provability.ProvableFromName,
+                    Type.fun(numbers, Type.fun(numbers, Type.Bool))),
+                  List(h, h)), isProvable(imp(h, h))))))
+            .flatMap(rules.mp(_, formulaH))
+            .flatMap(rules.mp(_, notFree))
+            .flatMap(rules.mp(_, derivation)))
+      }
+    }
+
+    reached.conclusion shouldBe isProvable(imp(h, h))
+    reached.hypotheses should contain theSameElementsAs Vector(isFormula(h), notFreeTerm)
+    Derivation.axiomsOf(reached) should have size 2
+  }
+
+  /**
+   * The deduction theorem's rules, composed into something neither gives alone.
+   *
+   * `NUM_PROV_WEAKEN` and `NUM_PROV_IMP_MP` are checked against their statements above. What that
+   * does not say is that they fit together, which is the only reason either exists: the deduction
+   * theorem's induction applies the first at its axiom cases and the second at its modus ponens
+   * case, and if the shapes did not meet the induction would not close.
+   *
+   * So this does one step of that induction by hand. `A ==> (C ==> A)` is weakening and therefore
+   * provable; carried under `B` it is `B ==> (A ==> (C ==> A))`. `A` is an axiom, so `B ==> A` is
+   * provable the same way. Modus ponens under the hypothesis `B` then detaches `A` and leaves
+   * `B ==> (C ==> A)`, which is not an axiom of either set and is not reachable by weakening alone.
+   *
+   * The three codes are distinct axioms, so a rule that returned one of its arguments rather than
+   * their composition has three wrong answers available and the assertion below rejects them.
+   *
+   * What is **not** asserted here, and it is the third rule: `NUM_PROV_IMP_GEN` is not exercised at
+   * a concrete code, because its side condition is `~(NUM_FREE_FORM i h)` and discharging that for
+   * a particular `h` means walking the code through the freeness clauses. The rule is checked
+   * against its statement like the others; that its side condition is satisfiable at a real code is
+   * work the deduction theorem itself will have to do.
+   */
+  it should "compose weakening with modus ponens under a hypothesis, which is one step of the induction" in {
+    val axioms = Vector("NUM_PA_SUC_NOT_ZERO", "NUM_PA_ADD_ZERO", "NUM_PA_MUL_ZERO")
+      .map(name => force(chain.language.fact(name)))
+
+    def codeOf(member: Kernel.Thm): Term = member.conclusion match {
+      case App(_, argument) => argument
+      case other => fail(s"a claim about a code was expected, found $other")
+    }
+
+    val Vector(first, second, third) = axioms.map(codeOf)
+    Vector(first, second, third).distinct should have size 3
+
+    val areFormulas = force(chain.language.fact(Language.AxiomFormula))
+    def formula(member: Kernel.Thm): Kernel.Thm =
+      force(rules.spec(codeOf(member), areFormulas).flatMap(rules.mp(_, member)))
+
+    def provableAxiom(member: Kernel.Thm): Kernel.Thm =
+      force(
+        rules
+          .spec(codeOf(member), force(chain.provability.fact(Provability.ProvablePeano)))
+          .flatMap(rules.mp(_, member))
+      )
+
+    def carriedUnder(hypothesis: Term, held: Kernel.Thm, subject: Term, form: Kernel.Thm)
+      : Kernel.Thm =
+      force(
+        rules
+          .specTo(
+            force(deduction.fact(Deduction.Weaken)),
+            imply(
+              isFormula(hypothesis),
+              imply(isFormula(subject), imply(isProvable(subject), isProvable(imp(hypothesis, subject))))))
+          .flatMap(rules.mp(_, formula(axioms(1))))
+          .flatMap(rules.mp(_, form))
+          .flatMap(rules.mp(_, held))
+      )
+
+    // `A ==> (C ==> A)` is weakening, hence provable.
+    val weakened = imp(first, imp(third, first))
+    val weakeningIsLogical = force(
+      rules
+        .specTo(
+          force(chain.language.fact("NUM_LOGIC_WEAKEN")),
+          imply(isFormula(first), imply(isFormula(third), isLogical(weakened))))
+        .flatMap(rules.mp(_, formula(axioms(0))))
+        .flatMap(rules.mp(_, formula(axioms(2))))
+    )
+    val weakeningIsProvable = force(
+      rules
+        .spec(weakened, force(chain.provability.fact(Provability.ProvableLogic)))
+        .flatMap(rules.mp(_, weakeningIsLogical))
+    )
+
+    val formulaOfWeakened = force(
+      rules
+        .specTo(
+          force(chain.language.fact("NUM_FORM_IMP")),
+          imply(
+            isFormula(first),
+            imply(isFormula(imp(third, first)), isFormula(weakened))))
+        .flatMap(rules.mp(_, formula(axioms(0))))
+        .flatMap(rules.mp(_, force(
+          rules
+            .specTo(
+              force(chain.language.fact("NUM_FORM_IMP")),
+              imply(isFormula(third), imply(isFormula(first), isFormula(imp(third, first)))))
+            .flatMap(rules.mp(_, formula(axioms(2))))
+            .flatMap(rules.mp(_, formula(axioms(0)))))))
+    )
+
+    val underB = carriedUnder(second, weakeningIsProvable, weakened, formulaOfWeakened)
+    val antecedent = carriedUnder(second, provableAxiom(axioms(0)), first, formula(axioms(0)))
+
+    val detached = force(
+      rules
+        .specTo(
+          force(deduction.fact(Deduction.ImplicationModusPonens)),
+          imply(
+            isFormula(second),
+            imply(
+              isFormula(first),
+              imply(
+                isFormula(imp(third, first)),
+                imply(
+                  isProvable(imp(second, imp(first, imp(third, first)))),
+                  imply(
+                    isProvable(imp(second, first)),
+                    isProvable(imp(second, imp(third, first)))))))))
+        .flatMap(rules.mp(_, formula(axioms(1))))
+        .flatMap(rules.mp(_, formula(axioms(0))))
+        .flatMap(rules.mp(_, force(
+          rules
+            .specTo(
+              force(chain.language.fact("NUM_FORM_IMP")),
+              imply(isFormula(third), imply(isFormula(first), isFormula(imp(third, first)))))
+            .flatMap(rules.mp(_, formula(axioms(2))))
+            .flatMap(rules.mp(_, formula(axioms(0)))))))
+        .flatMap(rules.mp(_, underB))
+        .flatMap(rules.mp(_, antecedent))
+    )
+
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe isProvable(imp(second, imp(third, first)))
+    detached.conclusion should not be isProvable(imp(second, first))
+    detached.conclusion should not be isProvable(weakened)
+    Derivation.axiomsOf(detached) should have size 2
+  }
+
+  /**
    * Three axioms chained into one implication, which is the assertion that the layer is usable.
    *
    * `B` is provable because it is an axiom, so weakening gives `NUM_PROV (A ==> B)`; the same for

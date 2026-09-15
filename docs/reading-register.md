@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (90)
+## The definitions (92)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -212,9 +212,11 @@ axiom mentioning it means.
 | `definition NUM_PROD` | NUM_PROD = \x:num -> num. select (\y:num -> num. y 0 = SUC 0 /\ (!z:num. y (SUC z) = NUM_MUL (y z) (x z))) | **NOT READ** |  |  |
 | `definition NUM_PROOF` | NUM_PROOF = \x:num. \y:num. ?z:num. ?u:num. ?v:num. x = NUM_PAIR z (NUM_PAIR u v) /\ NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP u v w) | **NOT READ** |  |  |
 | `definition NUM_PROV` | NUM_PROV = \x:num. ?y:num. NUM_PROOF y x | **NOT READ** |  |  |
+| `definition NUM_PROV_FROM` | NUM_PROV_FROM = \x:num. \y:num. ?z:num. ?u:num. ?v:num. NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP_FROM x u v w) | **NOT READ** |  |  |
 | `definition NUM_REP` | NUM_REP = \x:ind. !y:ind -> bool. y IND_0 /\ (!z:ind. y z ==> y (IND_SUC z)) ==> y x | **NOT READ** |  |  |
 | `definition NUM_SND` | NUM_SND = \x:num. select (\y:num. ?z:num. x = NUM_PAIR z y) | **NOT READ** |  |  |
 | `definition NUM_STEP` | NUM_STEP = \x:num. \y:num. \z:num. NUM_PA (NUM_BETA x y z) \/ NUM_LOGIC (NUM_BETA x y z) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_LT v z /\ NUM_BETA x y u = NUM_CODE 7 (NUM_PAIR (NUM_BETA x y v) (NUM_BETA x y z))) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_BETA x y z = NUM_CODE 8 (NUM_PAIR v (NUM_BETA x y u))) | **NOT READ** |  |  |
+| `definition NUM_STEP_FROM` | NUM_STEP_FROM = \x:num. \y:num. \z:num. \u:num. NUM_FORM (NUM_BETA y z u) /\ (NUM_STEP y z u \/ NUM_BETA y z u = x) | **NOT READ** |  |  |
 | `definition NUM_SUB` | NUM_SUB = \x:num. select (\y:num -> num. y 0 = x /\ (!z:num. y (SUC z) = PRE (y z))) | **NOT READ** |  |  |
 | `definition NUM_SUBST_FORM` | NUM_SUBST_FORM = \x:num. \y:num. select (\z:num -> num. !u:num. z u = COND (u = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 5 (NUM_PAIR (NUM_SUBST_TERM x y (NUM_FST (NUM_PAYLOAD u))) (NUM_SUBST_TERM x y (NUM_SND (NUM_PAYLOAD u))))) (COND (u = NUM_CODE 6 (NUM_PAYLOAD u)) (NUM_CODE 6 (z (NUM_PAYLOAD u))) (COND (u = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 7 (NUM_PAIR (z (NUM_FST (NUM_PAYLOAD u))) (z (NUM_SND (NUM_PAYLOAD u))))) (COND (u = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (COND (NUM_FST (NUM_PAYLOAD u) = x) u (NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (z (NUM_SND (NUM_PAYLOAD u)))))) u)))) | **NOT READ** |  |  |
 | `definition NUM_SUBST_TERM` | NUM_SUBST_TERM = \x:num. \y:num. select (\z:num -> num. !u:num. z u = COND (u = NUM_CODE 0 (NUM_PAYLOAD u)) (COND (NUM_PAYLOAD u = x) y u) (COND (u = NUM_CODE 2 (NUM_PAYLOAD u)) (NUM_CODE 2 (z (NUM_PAYLOAD u))) (COND (u = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 3 (NUM_PAIR (z (NUM_FST (NUM_PAYLOAD u))) (z (NUM_SND (NUM_PAYLOAD u))))) (COND (u = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 4 (NUM_PAIR (z (NUM_FST (NUM_PAYLOAD u))) (z (NUM_SND (NUM_PAYLOAD u))))) u)))) | **NOT READ** |  |  |

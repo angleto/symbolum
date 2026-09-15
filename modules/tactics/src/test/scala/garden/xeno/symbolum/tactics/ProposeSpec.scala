@@ -185,7 +185,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 221 with the three multiplicative lemmas: one hypothesis, two and two.
     // 222, and the one is worth reading beside the entry above: two lemmas arrived and only one
     // carries an arrow, because `NUM_PRIME_TWO` is a claim about a single number.
-    proposals.size shouldBe 222
+    // 234 with the deduction theorem's three rules: three hypotheses, five and four. The largest
+    // single move this figure has taken, and it is the shape rather than the size, the same way the
+    // logical axioms' was: a rule stated over provability facts carries a side condition per
+    // formula it mentions.
+    // 237 with the deduction theorem's three hypotheses. Its two definitions add nothing here,
+    // being equations: this bucket counts arrows and an equation has none.
+    proposals.size shouldBe 237
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -604,7 +610,20 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // The surviving-premise rule is a good predictor and is not the rule. This is the fourth
     // reading error recorded in this file and the first where the rule itself, rather than a
     // careless application of it, is what misled.
-    open shouldBe 163
+    // 172 with nine of the deduction theorem's twelve, and **the split was derived before it was
+    // measured**, which is the first time that has worked on this pair of buckets. The rule used is
+    // the one the entry below records: what decides the address is `Prove.addressOf`, which strips
+    // every antecedent and, where nothing answers the conclusion, asks whether the minimal
+    // propositional fragment reads the whole goal. It declines a goal containing a negation.
+    //
+    // `NUM_PROV_IMP_GEN` carries `~(NUM_FREE_FORM i h)`. Three of its four residues still carry that
+    // negation and land in `unreadable`; the fourth drops the negation itself and is read, so it
+    // lands here. Weakening's three and the modus ponens rule's five carry no negation and are all
+    // here. Nine and three, derived and then measured.
+    // 173 with one of the deduction theorem's three, by the same rule as the entry above: two of
+    // the three residues keep `!i. ~(NUM_FREE_FORM i h)` and so contain a negation, and the third
+    // drops it. One and two, derived and then measured, which is now the second time.
+    open shouldBe 173
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -759,7 +778,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     //
     // That is the difference between "false and known to be" and "false and nobody asked", and
     // this bucket is where the second lives. It is the fifth reading error recorded here.
-    unreadable shouldBe 55
+    // 58 with the three residues of `NUM_PROV_IMP_GEN` that keep its negated side condition. The
+    // entry above has the derivation; this is its other half.
+    // 60 with the two residues of the deduction theorem that keep its negated side condition.
+    unreadable shouldBe 60
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
