@@ -151,7 +151,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // sits under `!m n`, and only the antecedents in front of the leading quantifiers are peeled.
     // 274 with the three equality rules' eighteen.
     // 285 with the eleven the object theory's addition brought.
-    propose.weakenings.size shouldBe 285
+    // 289 con i quattro dei due lemmi recuperati.
+    propose.weakenings.size shouldBe 289
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

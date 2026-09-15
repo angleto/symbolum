@@ -287,6 +287,7 @@ they have least appetite for working out how it is produced.
   NUM_PRIME_ABOVE_ONE      !x:num. NUM_PRIME x ==> NUM_LT (SUC 0) x
   NUM_PRIME_DIVISOR        !x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \/ y = x
   NUM_PRIME_FACTOR         !x:num. NUM_LT (SUC 0) x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)
+  NUM_PRIME_POW_CANCEL     !x:num. !y:num. !z:num. !u:num. NUM_PRIME x ==> ~(NUM_DIVIDES x y) ==> NUM_DIVIDES (NUM_POW x u) (NUM_MUL y z) ==> NUM_DIVIDES (NUM_POW x u) z
   NUM_PRIME_TWO            NUM_PRIME (SUC (SUC 0))
   NUM_ZERO_DIVIDES         !x:num. NUM_DIVIDES 0 x = (x = 0)
 
@@ -402,6 +403,7 @@ they have least appetite for working out how it is produced.
   NUM_ONE_SUC              1 = SUC 0
   NUM_POW_ADD              !x:num. !y:num. !z:num. NUM_POW x (NUM_ADD y z) = NUM_MUL (NUM_POW x y) (NUM_POW x z)
   NUM_POW_ONE              !x:num. NUM_POW (SUC 0) x = SUC 0
+  NUM_POW_POSITIVE         !x:num. !y:num. NUM_LT 0 x ==> NUM_LT 0 (NUM_POW x y)
   NUM_POW_SUC              !x:num. !y:num. NUM_POW x (SUC y) = NUM_MUL (NUM_POW x y) x
   NUM_POW_ZERO             !x:num. NUM_POW x 0 = SUC 0
   NUM_PRE_LE               !x:num. NUM_LE (PRE x) x

@@ -305,6 +305,25 @@ object Peano {
   val OneToAnyPower: String = "NUM_POW_ONE"
 
   /**
+   * `|- !m n. NUM_LT ZERO m ==> NUM_LT ZERO (NUM_POW m n)`
+   *
+   * A positive base stays positive at every exponent, which every other operation here has had
+   * since the order landed and exponentiation has not: `NUM_MUL_POSITIVE` is beside it and
+   * `NUM_POW` had nothing. The side condition cannot go, since `NUM_POW ZERO (SUC n)` is zero,
+   * and it is not needed at the exponent zero, where the value is one whatever the base.
+   *
+   * **It is derived after the order and not with the other three**, which is the only thing
+   * about it worth a sentence. [[exponentiation]] runs before [[order]], deliberately, because
+   * nothing in the order knows about powers; so this cannot be proved there, and the order block
+   * is not given the power recurrences. One induction with the two of them in one place is what
+   * it costs, and the place is the assembly.
+   *
+   * Its first consumer is [[Modular.PrimePowCancel]], whose step cancels a power of the prime
+   * off an equation and needs it non-zero to do so.
+   */
+  val PowPositive: String = "NUM_POW_POSITIVE"
+
+  /**
    * `|- !m. NUM_MUL m (SUC (SUC ZERO)) = NUM_ADD m m`
    *
    * Doubling, written once. A two is `SUC (SUC ZERO)` here rather than `2`, because that is the
@@ -991,6 +1010,7 @@ object Peano {
     PowAddsExponents ->
       "!m:num n:num p:num. NUM_POW m (NUM_ADD n p) = NUM_MUL (NUM_POW m n) (NUM_POW m p)",
     OneToAnyPower -> "!n:num. NUM_POW (SUC ZERO) n = SUC ZERO",
+    PowPositive -> "!m:num n:num. NUM_LT ZERO m ==> NUM_LT ZERO (NUM_POW m n)",
     TimesTwo -> "!m:num. NUM_MUL m (SUC (SUC ZERO)) = NUM_ADD m m",
     AddCancels -> "!n:num m:num. NUM_ADD m n = m ==> n = ZERO",
     AddCancelsLeft -> "!x:num y:num a:num. NUM_ADD a x = NUM_ADD a y ==> x = y",
@@ -1357,6 +1377,11 @@ object Peano {
       ordered <- order(logic, withPowers, notation, addFacts ++ mulFacts, naturals, driver)
       (withOrder, orderDefinitions, orderFacts) = ordered
 
+      // HERE AND NOT IN EITHER BLOCK, for the reason [[PowPositive]] gives: the powers are built
+      // before the order and the order is not given them, so the one induction that needs both
+      // recurrences and both sign lemmas has to happen where both are in hand.
+      powPositive <- powerIsPositive(driver, withOrder, notation, powFacts, orderFacts)
+
       // The four pure stages are finished and the theory under them names no real. Everything
       // from here down does, and the order is `docs/adr/0016`'s phase 0: the stages that can be
       // stated below the reals run first, and the split of this file follows the split of this
@@ -1402,7 +1427,7 @@ object Peano {
         PartialSum -> partialSumDefinition
       ) ++ orderDefinitions ++ subtractionDefinitions ++ numeralDefinitions,
       addFacts ++ mulFacts ++ powFacts ++ orderFacts ++ subtractionFacts ++ partialSumFacts ++
-        numeralFacts
+        numeralFacts ++ Map(PowPositive -> powPositive)
     )
 
   /* --------------------------------------------------------------- addition */
@@ -5588,6 +5613,62 @@ object Peano {
    * of that shape is not a false statement; it is a missing rule, and which rule is missing can
    * be read straight off the two terms that failed to meet.
    */
+  /**
+   * `!m n. ZERO < m ==> ZERO < NUM_POW m n`, by induction on the exponent.
+   *
+   * The base is `NUM_POW m ZERO = SUC ZERO` and a successor is positive; the step is
+   * `NUM_POW m (SUC n) = NUM_MUL (NUM_POW m n) m` and a product of positives is positive. The
+   * hypothesis carries the same side condition as the conclusion, so the step discharges it once
+   * and uses it twice: on the induction hypothesis and on the base of the power.
+   */
+  private def powerIsPositive(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    powFacts: Map[String, Kernel.Thm],
+    orderFacts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = driver.logic
+    val rules = logic.rules
+    for {
+      statement <- stated(theory, notation, PowPositive)
+      atZero <- powFacts.get(PowAtZero).toRight(MissingDefinition(PowAtZero))
+      atSuccessor <- powFacts.get(PowAtSuccessor).toRight(MissingDefinition(PowAtSuccessor))
+      successorPositive <-
+        orderFacts.get(SuccessorPositive).toRight(MissingDefinition(SuccessorPositive))
+      mulPositive <- orderFacts.get(MulPositive).toRight(MissingDefinition(MulPositive))
+      recurrences <- Rewrite.Rule.all(logic, Vector(atZero, atSuccessor))
+      proved <- driver.proveBy(
+        statement,
+        goal =>
+          Induct.afterRewriting(recurrences, goal) { rewritten =>
+            for {
+              body <- logic.destImp(rewritten).toRight(NotOfForm("an implication", rewritten))
+              positive <- rules.specTo(successorPositive, body._2)
+              out <- rules.disch(body._1, positive)
+            } yield out
+          },
+        opened =>
+          Induct.afterRewriting(recurrences, opened.goal) { rewritten =>
+            for {
+              body <- logic.destImp(rewritten).toRight(NotOfForm("an implication", rewritten))
+              (positiveBase, conclusion) = body
+              assumed <- LogicError.lift(Kernel.assume(positiveBase))
+              atThisExponent <- rules.mp(opened.hypothesis, assumed)
+              inner <- logic.mkImp(positiveBase, conclusion)
+              instance <- logic.mkImp(atThisExponent.conclusion, inner)
+              both <- rules.specTo(mulPositive, instance)
+              once <- rules.mp(both, atThisExponent)
+              twice <- rules.mp(once, assumed)
+              out <- rules.disch(positiveBase, twice)
+            } yield out
+          }
+      )
+      result <- checked(theory, notation, PowPositive, proved)
+    } yield result
+  }
+
+
   private[theories] def byInduction(
     driver: Induct,
     theory: Theory,

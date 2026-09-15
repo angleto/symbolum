@@ -298,8 +298,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // closure introduction rules, which are what a compound closed term needs, and PA's two
     // addition axioms at closed terms rather than at variables. `CLAUDE.md`'s two figures move by
     // FOUR rather than by seven, which was derived: three of the seven bind one variable or none.
-    library.entries.size shouldBe 434
-    library.names.distinct.size shouldBe 431
+    // 436 con i due lemmi del ramo `prime-power-cancellation`, rimasto indietro 24 commit e
+    // recuperato il 2026-09-15: la positivita' della potenza e la cancellazione di una potenza di
+    // primo. Entrambe le cifre di `CLAUDE.md` si muovono di due, legando l'uno due variabili e
+    // l'altro quattro, tutte dello stesso tipo.
+    library.entries.size shouldBe 436
+    library.names.distinct.size shouldBe 433
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

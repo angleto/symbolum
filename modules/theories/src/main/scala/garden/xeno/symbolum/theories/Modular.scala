@@ -861,6 +861,31 @@ object Modular {
    * `NUM_GCD (m i) (m j) = SUC ZERO` at **every** ordered pair while
    * `Coding.ModuliCoprime` proves it for `i < j` alone.
    */
+  /**
+   * `|- !p x y t. NUM_PRIME p ==> ~(NUM_DIVIDES p x) ==> NUM_DIVIDES (NUM_POW p t) (NUM_MUL x y)
+   * ==> NUM_DIVIDES (NUM_POW p t) y`
+   *
+   * A factor coprime to a prime cancels against **every power** of that prime, which is
+   * [[Euclid]] iterated and is the form a consumer of Euclid's lemma usually wants: the single
+   * factor is the case `t = SUC ZERO`.
+   *
+   * **The induction keeps `x` and `y` fixed**, and that is the whole reason it is one induction
+   * rather than a descent. The step takes `NUM_POW p t` from `NUM_POW p (SUC t)` by transitivity,
+   * so the hypothesis applies at the SAME `y` and gives `y = NUM_POW p t * z`; the assumed
+   * divisibility then reads `NUM_POW p t * (x * z) = NUM_POW p t * (p * k)`, and
+   * [[Peano.MulCancelsLeft]] takes the power off both sides, which is where
+   * [[Peano.PowPositive]] is spent. What is left is `p` dividing `x * z`, and [[Euclid]] with the
+   * hypothesis on `x` puts it on `z`. A step that used the hypothesis at `y` halved would need
+   * the two factors inside the quantifier and would not be a call of the induction driver at
+   * all.
+   *
+   * **The hypothesis is `~(NUM_DIVIDES p x)` and not a greatest common divisor**, which is the
+   * shape [[Euclid]] hands back and costs a consumer nothing: at a prime the two say the same
+   * thing, and stating it this way keeps the lemma one modus ponens away from Euclid instead of
+   * one gcd computation away.
+   */
+  val PrimePowCancel: String = "NUM_PRIME_POW_CANCEL"
+
   val GcdSym: String = "NUM_GCD_SYM"
 
   /**
@@ -971,6 +996,9 @@ object Modular {
     Euclid ->
       ("!p:num a:num b:num. NUM_PRIME p ==> NUM_DIVIDES p (NUM_MUL a b) ==> " +
         "NUM_DIVIDES p a \\/ NUM_DIVIDES p b"),
+    PrimePowCancel ->
+      ("!p:num x:num y:num t:num. NUM_PRIME p ==> ~(NUM_DIVIDES p x) ==> " +
+        "NUM_DIVIDES (NUM_POW p t) (NUM_MUL x y) ==> NUM_DIVIDES (NUM_POW p t) y"),
     GcdSym -> "!a:num b:num. NUM_GCD a b = NUM_GCD b a",
     ModOfCong ->
       "!m:num a:num s:num. NUM_CONG m a s ==> NUM_LT s m ==> NUM_MOD a m = s"
@@ -1199,6 +1227,8 @@ object Modular {
       primeFactor <- everyNumberAboveOneHasAPrimeFactor(
         vocabulary, primeDefinition, reflexivity, transitivity, bound, byZero)
       primeTwo <- twoIsPrime(vocabulary, primeDefinition, bound, byZero)
+      primePowCancel <- aPrimePowerCancelsACoprimeFactor(
+        vocabulary, euclid, primeAbove, introduction, elimination, transitivity, byOne)
 
       // The connectives against the finished signature, which is also the assertion that nothing
       // was defined into a side branch: `Logic.over` checks the extension rather than assuming it.
@@ -1260,6 +1290,7 @@ object Modular {
         PrimeFactor -> primeFactor,
         PrimeTwo -> primeTwo,
         Euclid -> euclid,
+        PrimePowCancel -> primePowCancel,
         GcdSym -> gcdSymmetric,
         ModOfCong -> modOfCong
       )
@@ -2075,6 +2106,237 @@ object Modular {
   }
 
   /** `|- !a. NUM_DIVIDES (SUC ZERO) a`, with `a` itself as the witness. */
+  /**
+   * [[PrimePowCancel]]: one induction on the exponent, with both factors held fixed.
+   *
+   * The two witnesses the step opens are named for what they are rather than for a letter: `part`
+   * is what the induction hypothesis leaves of `y`, `block` is what the assumed divisibility
+   * leaves of `x * y`, and `sliver` is what Euclid leaves of `part`. Three nested existential
+   * eliminations is what a divisibility argument costs in a logic with no choice on the side.
+   */
+  private def aPrimePowerCancelsACoprimeFactor(
+    vocabulary: Vocabulary,
+    euclid: Kernel.Thm,
+    primeAbove: Kernel.Thm,
+    introduction: Kernel.Thm,
+    elimination: Kernel.Thm,
+    transitivity: Kernel.Thm,
+    byOne: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = vocabulary.logic
+    val rules = logic.rules
+    val times = vocabulary.times
+    val divides = vocabulary.dividesConstant
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    def apply2(f: Term, a: Term, b: Term): Either[LogicError, Term] =
+      LogicError.lift(Term.app(f, a)).flatMap(g => LogicError.lift(Term.app(g, b)))
+
+    /** `NUM_DIVIDES a b` from a witness equation `b = NUM_MUL a k`. */
+    def dividesFrom(witness: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        sides <- Term.destEq(witness.conclusion)
+          .toRight(NotOfForm("an equation", witness.conclusion))
+        divisor <- sides._2 match {
+          case App(App(_, a), _) => Right(a)
+          case other => Left(NotOfForm("NUM_MUL a k", other))
+        }
+        target <- apply2(divides, divisor, sides._1)
+        instance <- logic.mkImp(witness.conclusion, target)
+        intro <- rules.specTo(introduction, instance)
+        out <- rules.mp(intro, witness)
+      } yield out
+
+    /** `?k. b = NUM_MUL a k` from `NUM_DIVIDES a b`. */
+    def witnessOf(holds: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        parts <- holds.conclusion match {
+          case App(App(_, a), b) => Right((a, b))
+          case other => Left(NotOfForm("NUM_DIVIDES a b", other))
+        }
+        (a, b) = parts
+        k = Conv.freshVariable("k", numbers, Term.freeVariables(holds.conclusion))
+        product <- apply2(times, a, k)
+        body <- LogicError.lift(Term.eq(b, product))
+        existential <- logic.mkExists(k, body)
+        instance <- logic.mkImp(holds.conclusion, existential)
+        elim <- rules.specTo(elimination, instance)
+        out <- rules.mp(elim, holds)
+      } yield out
+
+    def withWitness(existential: Kernel.Thm, name: String)(
+      use: (FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        predicate <- logic.destExistsPredicate(existential.conclusion)
+          .toRight(NotOfForm("an existential", existential.conclusion))
+        domain <- Type.destFun(Term.typeOf(predicate)).map(_._1)
+          .toRight(NotOfForm("a predicate", predicate))
+        avoid = Term.freeVariables(existential.conclusion) ++ Term.freeVariables(predicate)
+        chosen = Conv.freshVariable(name, domain, avoid)
+        applied <- LogicError.lift(Term.app(predicate, chosen))
+        contraction <- Conv.betaRoot(applied)
+        reduced <- Term.destEq(contraction.conclusion).map(_._2)
+          .toRight(NotOfForm("an equation", contraction.conclusion))
+        assumed <- LogicError.lift(Kernel.assume(reduced))
+        body <- use(chosen, assumed)
+        out <- rules.existsElim(existential, chosen, body)
+      } yield out
+
+    for {
+      statement <- vocabulary.statement(PrimePowCancel)
+      atZero <- vocabulary.fact(Peano.PowAtZero)
+      atSuccessor <- vocabulary.fact(Peano.PowAtSuccessor)
+      powPositive <- vocabulary.fact(Peano.PowPositive)
+      mulCancels <- vocabulary.fact(Peano.MulCancelsLeft)
+      successorPositive <- vocabulary.fact(Peano.SuccessorPositive)
+      strictTransitive <- vocabulary.fact(Peano.StrictTransitive)
+      induction <- vocabulary.naturalFact(Natural.Induction)
+      driver = Induct(logic, vocabulary.ring, induction)
+      recurrences <- Rewrite.Rule.all(logic, Vector(atZero, atSuccessor))
+
+      proved <- driver.proveBy(
+        statement,
+        goal =>
+          Induct.afterRewriting(recurrences, goal) { rewritten =>
+            for {
+              first <- logic.destImp(rewritten).toRight(NotOfForm("an implication", rewritten))
+              second <- logic.destImp(first._2).toRight(NotOfForm("an implication", first._2))
+              third <- logic.destImp(second._2).toRight(NotOfForm("an implication", second._2))
+              trivial <- rules.specTo(byOne, third._2)
+              a <- rules.disch(third._1, trivial)
+              b <- rules.disch(second._1, a)
+              out <- rules.disch(first._1, b)
+            } yield out
+          },
+        opened =>
+          Induct.afterRewriting(recurrences, opened.goal) { rewritten =>
+            for {
+              first <- logic.destImp(rewritten).toRight(NotOfForm("an implication", rewritten))
+              (isPrime, afterPrime) = first
+              second <- logic.destImp(afterPrime).toRight(NotOfForm("an implication", afterPrime))
+              (notDividesX, afterNot) = second
+              third <- logic.destImp(afterNot).toRight(NotOfForm("an implication", afterNot))
+              (dividesProduct, conclusion) = third
+              hPrime <- LogicError.lift(Kernel.assume(isPrime))
+              hNot <- LogicError.lift(Kernel.assume(notDividesX))
+              hDivides <- LogicError.lift(Kernel.assume(dividesProduct))
+
+              prime <- isPrime match {
+                case App(_, value) => Right(value)
+                case other => Left(NotOfForm("NUM_PRIME p", other))
+              }
+              parts <- conclusion match {
+                case App(App(_, b), value) => Right((b, value))
+                case other => Left(NotOfForm("NUM_DIVIDES b y", other))
+              }
+              (bigger, y) = parts
+              power <- bigger match {
+                case App(App(_, q), _) => Right(q)
+                case other => Left(NotOfForm("NUM_POW p t * p", other))
+              }
+              product <- dividesProduct match {
+                case App(App(_, _), value) => Right(value)
+                case other => Left(NotOfForm("NUM_DIVIDES b (x * y)", other))
+              }
+              x <- product match {
+                case App(App(_, value), _) => Right(value)
+                case other => Left(NotOfForm("NUM_MUL x y", other))
+              }
+
+              // `ZERO < NUM_POW p t`, which the cancellation needs of the factor it removes.
+              one <- LogicError.lift(Term.app(vocabulary.successor, vocabulary.zeroTerm))
+              oneBelow <- vocabulary.belowTerm(one, prime)
+              aboveInstance <- logic.mkImp(isPrime, oneBelow)
+              above <- rules.specTo(primeAbove, aboveInstance)
+              oneBelowPrime <- rules.mp(above, hPrime)
+              positiveOne <- rules.spec(vocabulary.zeroTerm, successorPositive)
+              bounds <- rules.conjIntro(positiveOne, oneBelowPrime)
+              zeroBelowPrime <- vocabulary.belowTerm(vocabulary.zeroTerm, prime)
+              transitiveInstance <- logic.mkImp(bounds.conclusion, zeroBelowPrime)
+              chained <- rules.specTo(strictTransitive, transitiveInstance)
+              positivePrime <- rules.mp(chained, bounds)
+              zeroBelowPower <- vocabulary.belowTerm(vocabulary.zeroTerm, power)
+              positiveInstance <- logic.mkImp(positivePrime.conclusion, zeroBelowPower)
+              positiveAt <- rules.specTo(powPositive, positiveInstance)
+              positivePower <- rules.mp(positiveAt, positivePrime)
+
+              // the smaller power divides the larger, hence divides the product
+              smaller <- dividesFrom(Conv.refl(bigger))
+              reaches <- apply2(divides, power, product)
+              middle <- logic.mkImp(dividesProduct, reaches)
+              chainInstance <- logic.mkImp(smaller.conclusion, middle)
+              transitive <- rules.specTo(transitivity, chainInstance)
+              throughBigger <- rules.mp(transitive, smaller).flatMap(rules.mp(_, hDivides))
+              byHypothesis <- rules.mp(opened.hypothesis, hPrime).flatMap(rules.mp(_, hNot))
+                .flatMap(rules.mp(_, throughBigger))
+
+              outer <- witnessOf(byHypothesis)
+              result <- withWitness(outer, "part") { (z, hy) =>
+                for {
+                  scaled <- LogicError.lift(Term.app(times, x))
+                  shifted <- Conv.apTerm(scaled, hy)
+                  inside <- apply2(times, power, z)
+                  left <- apply2(times, x, inside)
+                  crossed <- apply2(times, x, z)
+                  right <- apply2(times, power, crossed)
+                  regrouped <- vocabulary.semiring.prove(left, right)
+                  asProduct <- Conv.trans(shifted, regrouped)
+                  inner <- witnessOf(hDivides)
+                  deeper <- withWitness(inner, "block") { (k, hk) =>
+                    for {
+                      raised <- Conv.sym(asProduct).flatMap(Conv.trans(_, hk))
+                      timesK <- apply2(times, bigger, k)
+                      inBlock <- apply2(times, prime, k)
+                      regroupedRight <- apply2(times, power, inBlock)
+                      opened <- vocabulary.semiring.prove(timesK, regroupedRight)
+                      together <- Conv.trans(raised, opened)
+                      cancelledForm <- LogicError.lift(Term.eq(crossed, inBlock))
+                      cancelInner <- logic.mkImp(together.conclusion, cancelledForm)
+                      cancelInstance <- logic.mkImp(positivePower.conclusion, cancelInner)
+                      cancels <- rules.specTo(mulCancels, cancelInstance)
+                      cancelled <- rules.mp(cancels, positivePower).flatMap(rules.mp(_, together))
+                      dividesCrossed <- dividesFrom(cancelled)
+                      dividesX <- apply2(divides, prime, x)
+                      dividesZ <- apply2(divides, prime, z)
+                      either <- logic.mkDisj(dividesX, dividesZ)
+                      euclidInner <- logic.mkImp(dividesCrossed.conclusion, either)
+                      euclidInstance <- logic.mkImp(isPrime, euclidInner)
+                      split <- rules.specTo(euclid, euclidInstance)
+                      cases <- rules.mp(split, hPrime).flatMap(rules.mp(_, dividesCrossed))
+                      leftCase <- LogicError.lift(Kernel.assume(dividesX))
+                        .flatMap(rules.notElim(hNot, _))
+                        .flatMap(rules.falsityElim(dividesZ, _))
+                      rightCase <- LogicError.lift(Kernel.assume(dividesZ))
+                      onZ <- rules.disjElim(cases, leftCase, rightCase)
+                      last <- witnessOf(onZ)
+                      out <- withWitness(last, "sliver") { (w, hz) =>
+                        for {
+                          byPower <- LogicError.lift(Term.app(times, power))
+                          lifted <- Conv.apTerm(byPower, hz)
+                          reached <- Conv.trans(hy, lifted)
+                          sliverIn <- apply2(times, prime, w)
+                          nested <- apply2(times, power, sliverIn)
+                          flat <- apply2(times, bigger, w)
+                          grouped <- vocabulary.semiring.prove(nested, flat)
+                          exact <- Conv.trans(reached, grouped)
+                          out <- dividesFrom(exact)
+                        } yield out
+                      }
+                    } yield out
+                  }
+                } yield deeper
+              }
+              a <- rules.disch(dividesProduct, result)
+              b <- rules.disch(notDividesX, a)
+              out <- rules.disch(isPrime, b)
+            } yield out
+          }
+      )
+      result <- vocabulary.checked(PrimePowCancel, proved)
+    } yield result
+  }
+
   private def oneDividesEverything(
     vocabulary: Vocabulary,
     introduction: Kernel.Thm

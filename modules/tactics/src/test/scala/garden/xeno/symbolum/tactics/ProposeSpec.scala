@@ -209,7 +209,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // about provability, and transitivity asks it of three terms rather than two.
     // 285 with PA's own addition on numerals and the six facts under it. Eleven and not fourteen:
     // the theorem itself has no hypothesis to drop, and neither has `NUM_CLOSED_ZERO`.
-    proposals.size shouldBe 285
+    // 289 con i due lemmi recuperati dal ramo `prime-power-cancellation`: uno e tre antecedenti.
+    proposals.size shouldBe 289
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -722,7 +723,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // hypothesis, so dropping it leaves a residue with no antecedent at all, where the sum's rule
     // has two and its residues keep one. Derived as eleven here and measured as ten, and the
     // eleventh was found by printing the standings rather than by the suite.
-    open shouldBe 215
+    //
+    // 216 con UNO dei quattro nuovi residui, e gli altri tre sono in `unreadable` sotto. E' la
+    // stessa regola delle due volte precedenti, vista adesso su un terzo campione: il residuo che
+    // resta qui e' quello di `NUM_PRIME_POW_CANCEL` che lascia cadere `~(NUM_DIVIDES p x)`, cioe'
+    // l'unico dei quattro che non porta una negazione fra gli antecedenti ne' resta senza
+    // antecedenti. Vale anche la meta' negativa: la positivita' della potenza indebolita e' FALSA
+    // a `m = ZERO` e il modello sa calcolarla, eppure `decidedFalse` non si muove, perche' la
+    // refutazione passa PER l'indirizzo e un residuo illeggibile non arriva mai al campionatore.
+    open shouldBe 216
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -896,7 +905,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // naturals. Everything else this bucket holds is a claim about a `num` the arithmetic cannot
     // take; this one is a claim about nothing in particular.
     // 63 with the one weakening above that keeps no antecedent.
-    unreadable shouldBe 63
+    // 66 con gli altri tre: due tengono `~(NUM_DIVIDES p x)` e uno, quello della positivita',
+    // non tiene nessun antecedente.
+    unreadable shouldBe 66
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1103,7 +1114,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // constants rather than subject matter: of the seven facts that landed, that one alone writes
     // the object zero as `NUM_CODE 1 0`, and the `0` in it is `ZERO`. The theorem that names
     // `NUM_ADD` outright contributes nothing, having no hypothesis to drop.
-    aboutNumbers.size shouldBe 110
+    // 113 con tre dei quattro: il residuo della positivita' nomina `NUM_LT` e `ZERO`, e due dei
+    // tre della cancellazione tengono l'antecedente che scrive `NUM_MUL`. Il terzo lascia cadere
+    // proprio quello e non nomina nessuna delle tredici costanti di questa lista.
+    aboutNumbers.size shouldBe 113
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
