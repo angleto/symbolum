@@ -96,6 +96,60 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     readme should not include "val expr = x * x + 2 * x + 1"
   }
 
+  /**
+   * The front page's row about proof search, asserted by running the search rather than by reading.
+   *
+   * It said "no clause queue, no given-clause loop, no choice point anywhere" until 2026-09-15, and
+   * the third of those was false: `Prove` routes a propositional goal to `Minimal`, and `Minimal`
+   * backtracks. The same clause was in `docs/evaluation.md` twice, which is why the repair moved
+   * three cells and not one.
+   *
+   * A negative absolute claim about the code is the worst kind of sentence to leave unchecked,
+   * because a reader does not go and verify one. This repository's own rule is that a stale
+   * reference is worse than a missing one; this is that rule where the document names no file and
+   * denies a property instead.
+   *
+   * == What makes a guard like this vacuous, which is the thing to get right ==
+   *
+   * A test that searched `README.md` for a string would pass whatever the code did, and would BE
+   * the defect it is correcting written as a test. So the property is exercised first and the
+   * document is compared against what happened: the row and the code go red together.
+   *
+   * What it does NOT cover, said rather than left to be assumed: "no clause queue" and "no
+   * given-clause loop" are absences, and a test cannot exhibit one. They are read by a person.
+   */
+  "The README row about proof search" should "hold of the search the tactics actually run" in {
+    val logic = Logic.standard
+    val minimal = Minimal.standard
+    val readme = read("README.md")
+
+    val p = Term.variable("p", Type.Bool)
+    val q = Term.variable("q", Type.Bool)
+    def imp(left: Term, right: Term): Term = force(logic.mkImp(left, right))
+    def disj(left: Term, right: Term): Term = force(logic.mkDisj(left, right))
+    def all(variables: List[FVar], body: Term): Term =
+      variables.foldRight(body)((variable, inner) => force(logic.mkForall(variable, inner)))
+
+    // The choice point, exercised rather than asserted. The left alternative of the disjunction is
+    // `q`, which does not follow from `p`, and the goal is proved anyway: the failed branch was
+    // explored and the search resumed. The first line is what makes the second one evidence.
+    minimal.prove(all(List(p, q), imp(p, q))).isLeft shouldBe true
+    minimal.prove(all(List(p, q), imp(p, disj(q, p)))).isRight shouldBe true
+
+    // And it is a search that does not settle the fragment a classical reader would expect, which
+    // is the half of the row a document of this repository does not leave out. `MinimalSpec` owns
+    // this witness; it is repeated here because the README sentence is about it.
+    minimal.prove(all(List(p, q), imp(imp(imp(p, q), p), p))).isLeft shouldBe true
+
+    readme should include("a search with backtracking over the negation-free fragment")
+    readme should include("incomplete for classical propositional logic")
+
+    // The sentence that was there, in the two places that carried it, so that it cannot come back
+    // by anybody rewriting the row from memory.
+    readme should not include "no choice point anywhere"
+    read("docs/evaluation.md") should not include "no choice point anywhere"
+  }
+
   "The README solving examples" should "produce the stated roots" in {
     import garden.xeno.symbolum.Dsl.*
 
