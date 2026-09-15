@@ -113,8 +113,7 @@ final class Propositional private (
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
     decide(goal) match {
       case Verdict.Proved(theorem) => Right(theorem)
-      case Verdict.Countermodel(assignment) =>
-        Left(NotOfForm(s"a goal that holds; it fails at ${showAssignment(assignment)}", goal))
+      case Verdict.Countermodel(assignment) => Left(SkeletonFailsAt(goal, assignment))
       case Verdict.Undecided(why) => Left(NotOfForm(why, goal))
       case Verdict.Refused(why) => Left(NotOfForm(why, goal))
     }
@@ -393,9 +392,6 @@ final class Propositional private (
       } yield theorem
     }
   }
-
-  private def showAssignment(assignment: Vector[(Term, Boolean)]): String =
-    assignment.map { case (atom, value) => s"${Printer.show(atom)} := $value" }.mkString(", ")
 }
 
 object Propositional {

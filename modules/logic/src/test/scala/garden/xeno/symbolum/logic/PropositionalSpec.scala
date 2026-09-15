@@ -106,6 +106,38 @@ class PropositionalSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "hand the atoms to `prove` as terms rather than written into a sentence" in {
+    // The half of the notation boundary that lives on this side. This file is in `modules/logic`,
+    // which knows no notation and must not learn one, and while the refusal carried its atoms as
+    // prose it rendered them here with the kernel's printer: a reader who wrote `x = 99` was shown
+    // `(x = (BIT1 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 1)))))))`. What this asserts is that the pairs
+    // survive as terms, which is what leaves the rendering to a surface that has a theory.
+    // `RemedySpec` asserts the other half, that the surface then uses it.
+    val goal = read("!p:bool. !q:bool. (p \\/ q) ==> (p /\\ q)")
+
+    propositional.prove(goal) match {
+      case Left(SkeletonFailsAt(refused, assignment)) =>
+        refused shouldBe goal
+        assignment should have length 2
+        assignment.map(_._2).toSet shouldBe Set(true, false)
+        all(assignment.map(pair => Term.typeOf(pair._1))) shouldBe Type.Bool
+      case other => fail(s"expected the skeleton to fail, got $other")
+    }
+  }
+
+  it should "not let a countermodel read as a decision against the claim" in {
+    // `Decided` was the first answer and the test above the second-most convincing argument for it:
+    // the search runs to the end of its fragment, exactly as `Linarith` does. What refutes it is
+    // the test two above this one, where a goal that HOLDS comes back with a countermodel because
+    // the reason it holds lives inside an atom. Filed as `Decided`, `LogicError.decided` would
+    // answer yes about a theorem, which is the one merge `LogicError.Standing` exists to prevent.
+    val holds = read("!p:bool. !q:bool. (p = q) ==> (q = p)")
+
+    withClue("this goal is true and its skeleton is not: ") {
+      LogicError.decided(propositional.prove(holds)) shouldBe false
+    }
+  }
+
   "the cheaper procedure" should "stay the right address for a goal both can take" in {
     val text = "!p:bool. !q:bool. (p /\\ q) ==> (q /\\ p)"
     val here = proved(text)

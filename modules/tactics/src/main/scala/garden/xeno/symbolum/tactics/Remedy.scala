@@ -312,6 +312,22 @@ object Remedy {
 
     case NotOfForm(expected, _) => RestateTheProblem(expected)
 
+    // The atoms are written here and nowhere else, which is the whole of the repair this case
+    // arrived with. `Propositional` is in `modules/logic` and knows no notation, so while it wrote
+    // the assignment into a sentence itself the reader got the kernel's encoding: `x = 99` came
+    // back as `(x = (BIT1 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 1)))))))`. It carries the pairs now, and
+    // this is the only place that has a theory to render them against.
+    //
+    // `RestateTheProblem` and not `Settled`, which is where `DoesNotFollow` goes: the atoms are
+    // uninterpreted, so what failed is the skeleton and restating the goal is exactly the move that
+    // can change the answer. The refusal's own documentation carries why that is not a decision.
+    case SkeletonFailsAt(_, assignment) =>
+      RestateTheProblem(
+        "a goal that holds; its propositional skeleton fails at " +
+          assignment.map { case (atom, value) => s"${write(atom, reals)} := $value" }
+            .mkString(", ")
+      )
+
     // `Settled` rather than `RestateTheProblem`, which is what this arrived as while it was a
     // `NotOfForm`, and the difference is the whole of the case. Restating is how to find out
     // something nobody knows; here the procedure has been to the end of its fragment and the answer

@@ -92,6 +92,56 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     Remedy.of(NotLegible(x, Some(x))) shouldBe a[ReportADefect]
   }
 
+  /* ------------------------------------------ the notation boundary, by the case that crossed it */
+
+  /**
+   * The atoms of a propositional countermodel, written in the reader's notation.
+   *
+   * The measurement that opened the card: `!x:real. 1 < x ==> 0 < x \/ x = 99` came back telling
+   * whoever wrote `99` that it fails at `(x = (BIT1 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 1)))))))`. It
+   * happened because `Propositional` is in `modules/logic`, which has no notation to render with,
+   * and it rendered anyway, into the prose of a `NotOfForm` where nothing downstream could reach
+   * the term again.
+   *
+   * Both directions are asserted and the second is what makes the first worth anything. A message
+   * that had simply stopped naming the atom would pass "does not say BIT1" while telling the reader
+   * less than before, so the same refusal is put to the mapping **without** a theory, where the
+   * kernel's printer is all there is and the encoding is the right answer.
+   */
+  "A propositional countermodel" should "name its atoms in the theory's notation" in {
+    val ninetyNine = force(reals.term("x:real = 99"))
+    val positive = force(reals.term("0:real < x"))
+    val goal = force(reals.term("!x:real. 1 < x ==> 0 < x \\/ x = 99"))
+    val refusal = SkeletonFailsAt(goal, Vector(positive -> false, ninetyNine -> false))
+
+    val written = Remedy.of(reals, refusal).message
+    withClue(s"with the theory: $written\n") {
+      written should include("99")
+      written should not include "BIT1"
+    }
+  }
+
+  it should "fall back to the kernel's printer where the caller has no theory" in {
+    val ninetyNine = force(reals.term("x:real = 99"))
+    val refusal = SkeletonFailsAt(ninetyNine, Vector(ninetyNine -> false))
+
+    val written = Remedy.of(refusal).message
+    withClue(s"without a theory: $written\n") {
+      // The encoding, and it is the right answer here: nobody said which notation to use. This is
+      // what says the assertion above measured the theory and not the atom having been dropped.
+      written should include("BIT1")
+    }
+  }
+
+  it should "send a countermodel to a restatement and not to a decision" in {
+    // `DoesNotFollow` goes to `Settled`, because a linear search that finished has an answer that
+    // no rephrasing changes. This one is the opposite: the atoms are uninterpreted, so restating
+    // the goal is exactly the move that can change the answer, and `PropositionalSpec` holds the
+    // goal that is true and fails here.
+    val atom = force(reals.term("0:real < x"))
+    Remedy.of(reals, SkeletonFailsAt(atom, Vector(atom -> false))) shouldBe a[RestateTheProblem]
+  }
+
   /**
    * The agreement `Remedy`'s own comment claims, asserted rather than described.
    *
@@ -336,6 +386,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     everyKernelRefusal.map(FromKernel.apply) ++ Vector(
       NotOfForm("an implication", x),
       DoesNotFollow(x, "LINARITH"),
+      // Two atoms and not one, because the remedy joins them and a single pair would run a
+      // `mkString` over a vector of length one without ever exercising the separator.
+      SkeletonFailsAt(x, Vector(x -> true, Term.variable("y", realType) -> false)),
       NotNormalised(x),
       BoundReached("Linarith.Facts", 76, 48, x),
       NotEqualTo(x, Term.variable("y", realType)),

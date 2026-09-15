@@ -93,6 +93,52 @@ final case class DoesNotFollow(goal: Term, procedure: String) extends LogicError
 }
 
 /**
+ * A classical propositional search finished and the goal's skeleton is falsifiable, with the
+ * assignment that falsifies it.
+ *
+ * Its own case rather than a [[NotOfForm]] with the atoms written into the sentence, and the
+ * argument is [[NotEqualTo]]'s in a second costume: an error carries values and the surface renders
+ * them, because only the caller knows which notation its reader is using. `Propositional` lives in
+ * `modules/logic`, which knows no notation at all, and rendered the atoms itself with the kernel's
+ * printer, so somebody who asked about `x = 99` was shown
+ * `(x = (BIT1 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 1)))))))` and somebody who wrote `1 < x` was shown
+ * `((< 1) x)`. What allowed it is that `expected` is a `String`: the field's type does not tell a
+ * writer that a term does not belong there, and it was the second refusal in one day whose content
+ * was prose where it should have been a value.
+ *
+ * == Why `Unread`, which was not the first answer ==
+ *
+ * `Decided`, by analogy with [[DoesNotFollow]] and [[NotEqualTo]]: a procedure that searched its
+ * own fragment to the end, with what lies outside the fragment standing in as unknown. The goal
+ * that produced the defect refutes that reading. `!x:real. 1 < x ==> 0 < x \/ x = 99` is **true**,
+ * and it is what arrives here, because the atoms are uninterpreted and the skeleton `A ==> B \/ C`
+ * is falsifiable whatever the atoms mean. Filed as `Decided`, `LogicError.decided` would answer yes
+ * about a theorem, which is the one merge this classification exists to prevent.
+ *
+ * `Unread` is what it carries, and the question that classification is asked -- was anything
+ * learned about the goal -- is answered rightly by it: the search ran on the skeleton, and the
+ * skeleton is not the goal. What is true and is not settled here is that the causes `Unread` lists
+ * do not include this one. The three standings have no case for a procedure that decided a fragment
+ * too coarse to bear on the claim, and adding a fourth is its own piece of work.
+ *
+ * `goal` is carried whole, before the leading quantifiers come off, because that is what the caller
+ * asked and what it has to restate.
+ */
+final case class SkeletonFailsAt(goal: Term, assignment: Vector[(Term, Boolean)])
+    extends LogicError {
+
+  // The kernel's printer by way of `toString`, which is the last resort every case here falls back
+  // to and is not the defect this case was split out of: a `message` is read where nobody supplied
+  // a theory, and `Remedy` renders the same pairs in the reader's notation where somebody did.
+  def message: String =
+    s"the propositional skeleton of $goal fails at " +
+      assignment.map { case (atom, value) => s"$atom := $value" }.mkString(", ") +
+      ": the atoms are uninterpreted, so this is about the skeleton and not about the goal"
+
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+/**
  * The rewriter stopped before it had finished, so the two sides not meeting says nothing.
  *
  * Distinct from [[NotOfForm]] on purpose, and the distinction is the whole reason this exists. Two
