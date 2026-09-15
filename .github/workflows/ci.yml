@@ -29,11 +29,13 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'sbt'
 
-      - name: Setup Coursier
-        run: |
-          curl -fL https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz | gzip -d > cs
-          chmod +x cs
-          ./cs setup --yes --jvm system
+      # `cs setup` reports success and leaves sbt unreachable: it puts the binary on the PATH by
+      # writing a shell profile, and a workflow step starts a shell that reads none, so the step
+      # after this one died with exit code 127. Every run this repository ever recorded failed that
+      # way, and the commit that introduced the Coursier installation is called "Fix CI test
+      # failures by using Coursier for SBT installation", which no run has ever confirmed.
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Verify SBT installation
         run: sbt --version
@@ -55,9 +57,12 @@ jobs:
       - name: Run tests
         run: sbt test
 
-      - name: Check formatting
-        run: sbt scalafmtCheckAll || echo "Scalafmt not configured, skipping"
-        continue-on-error: true
+      # There was a formatting step here and it checked nothing. `scalafmtCheckAll` is not a task
+      # this build defines: there is no scalafmt plugin in `project/plugins.sbt` and no
+      # `.scalafmt.conf`, so sbt failed, `|| echo` swallowed the failure, and `continue-on-error`
+      # swallowed it again. What it produced was a green tick in the job list for a check that could
+      # not run and could not fail. Adding scalafmt is a decision about the source; pretending to
+      # check it is not, so the step is gone rather than disabled.
 
   build:
     name: Build artifact
@@ -75,13 +80,14 @@ jobs:
           java-version: '11'
           cache: 'sbt'
 
-      # The runner image carries no sbt. The test job installs it through Coursier; this job did
-      # not, and failed at its first step for as long as it existed.
-      - name: Setup Coursier
-        run: |
-          curl -fL https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz | gzip -d > cs
-          chmod +x cs
-          ./cs setup --yes --jvm system
+      # The runner image carries no sbt. This job had no installation at all until somebody noticed
+      # and copied the test job's, which is the same repair applied twice to an installation that
+      # does not work; see the note in the test job.
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Verify SBT installation
+        run: sbt --version
 
       - name: Build package
         run: sbt package
