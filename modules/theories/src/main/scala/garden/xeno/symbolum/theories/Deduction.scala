@@ -18,9 +18,10 @@ import garden.xeno.symbolum.logic.*
  * helper inside whichever development first needed one. This file is the beginning of that layer.
  *
  * **It is the first link that declares nothing**, which is what "the product is derivations" means
- * concretely: no type, no constant, no definition, no axiom. `Chain.widest` therefore stays at
- * [[Provability]], and a reader who expects the last link to be the widest signature should read
- * that field rather than assume it moved.
+ * concretely: no type, no constant, no definition, no axiom, so it does not **become** the widest
+ * signature. A reader who expects the last link to be the widest one should read `Chain.widest`
+ * rather than assume, here or anywhere: which development is widest changes whenever a link
+ * declaring a constant is added, and naming it in prose has gone stale three times already.
  *
  * == What is here ==
  *

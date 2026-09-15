@@ -1038,4 +1038,133 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
     )
     Derivation.axiomsOf(kept) should have size 2
   }
+  /**
+   * The freeness condition discharged at a code, which is what it was missing.
+   *
+   * `Deduction`'s deduction theorem asks `!i. ~(NUM_FREE_FORM i h)` of its hypothesis, and until
+   * `notFreeIn` existed nothing could supply that for any particular `h`: the theorem was proved
+   * and applied to no formula anybody could name. So the assertion here is not that the walk
+   * works, it is that **the two meet**: what comes out of the walk is exactly what the theorem
+   * asks for, at all six of the axioms with a fixed code.
+   *
+   * The two doubly-quantified axioms are the ones worth having in the list. A code with one binder
+   * exercises the quantifier clause once and could pass while the inequality it carries went
+   * nowhere; with two, the inner walk has to find the right one of two inequalities at each
+   * variable, and `NUM_PA_SUC_INJECTIVE` mentions both.
+   */
+  "The freeness of a closed code" should "be decided, which is what the deduction theorem needs" in {
+    val named = Vector(
+      "NUM_PA_SUC_NOT_ZERO",
+      "NUM_PA_SUC_INJECTIVE",
+      "NUM_PA_ADD_ZERO",
+      "NUM_PA_ADD_SUC",
+      "NUM_PA_MUL_ZERO",
+      "NUM_PA_MUL_SUC"
+    )
+
+    named.foreach { name =>
+      val member = force(language.fact(name))
+      val code = member.conclusion match {
+        case App(_, argument) => argument
+        case other => fail(s"a claim about a code was expected, found $other")
+      }
+
+      withClue(s"$name: ") {
+        val proved = force(language.notFreeIn(code))
+        proved.hypotheses shouldBe empty
+        Derivation.axiomsOf(proved) should have size 2
+
+        // The shape the deduction theorem asks for, built independently and compared.
+        val marker = Conv.freshVariable("i", numbers, Term.freeVariables(code))
+        val free = force(LogicError.lift(Term.appAll(
+          force(LogicError.lift(language.theory.constant(
+            Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))))),
+          List(marker, code))))
+        proved.conclusion shouldBe force(logic.mkForall(marker, force(logic.mkNot(free))))
+      }
+    }
+  }
+
+  /**
+   * The shapes the axioms do not exercise, which is where the walk could have been wrong.
+   *
+   * All six axioms above bind index zero, and most of them bind it once. That leaves the case the
+   * implementation is least obviously right about: the bound indices are carried as a **list** and
+   * looked up with `find`, which returns the first match, so a shadowed index is where "first" and
+   * "innermost" could come apart. They do not, because the list is prepended to on the way down,
+   * and this is the assertion that says so rather than the reading.
+   *
+   * The other three are the neighbouring shapes: two distinct binders with the variable under the
+   * outer one, the same with it under the inner one, and a quantifier binding an index its body
+   * never mentions. None of the four appears in any code this repository builds today, which is
+   * exactly why they are here: a walk verified only on the codes it was written for is verified
+   * against its author's expectations.
+   */
+  it should "hold where a binder is shadowed, and where a binder binds nothing" in {
+    val shapes = Vector(
+      "the same index bound twice" ->
+        ("NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 0 " +
+          "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))))))"),
+      "two binders, the outer one binding it" ->
+        ("NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 " +
+          "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))))))"),
+      "two binders, the inner one binding it" ->
+        ("NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 " +
+          "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 1 0))))))"),
+      "a binder its body never mentions" ->
+        "NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 1 0))))"
+    )
+
+    shapes.foreach { case (what, source) =>
+      withClue(s"$what: ") {
+        val code = force(Parser.term(language.theory, language.notation, source, numbers))
+        val proved = force(language.notFreeIn(code))
+        proved.hypotheses shouldBe empty
+        Derivation.axiomsOf(proved) should have size 2
+      }
+    }
+  }
+
+  /**
+   * And one that is closed in one half and not in the other, which a coarser walk would accept.
+   *
+   * `(!v0. v0 = 0) ==> (v0 = 0)` binds the variable on the left and leaves it free on the right.
+   * A walk that collected binders anywhere in the code rather than along the path to each variable
+   * would call this closed. It is not, and the refusal names the index.
+   */
+  it should "refuse where a variable is bound in one half and free in the other" in {
+    val code = force(Parser.term(language.theory, language.notation,
+      ("NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR 0 " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))))) " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))))"),
+      numbers))
+
+    language.notFreeIn(code).isLeft shouldBe true
+  }
+
+  /**
+   * A code that is not closed is refused, and the refusal names the index.
+   *
+   * The one case the walk can fail on, and the reason it must: `NUM_CODE 0 0` inside no quantifier
+   * is the variable `v0` occurring free, the claim is **false** of such a code, and returning
+   * anything at all would be worse than refusing. A procedure that answered here would be the one
+   * way this machinery could mislead.
+   */
+  it should "be refused where the code has a variable nothing binds" in {
+    val open = force(Parser.term(
+      language.theory, language.notation,
+      "NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0)))", numbers))
+
+    language.notFreeIn(open).isLeft shouldBe true
+
+    // And the same code under a quantifier binding that index is accepted, which is what makes the
+    // refusal above about the freeness rather than about the shape.
+    val closed = force(Parser.term(
+      language.theory, language.notation,
+      "NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0)))))",
+      numbers))
+
+    force(language.notFreeIn(closed)).hypotheses shouldBe empty
+  }
+
 }

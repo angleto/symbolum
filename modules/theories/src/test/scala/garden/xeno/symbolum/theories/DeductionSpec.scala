@@ -94,41 +94,42 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   it should "extend the theory it was built over by nothing at all" in {
     deduction.theory.constants shouldBe chain.provability.theory.constants
     deduction.theory.axioms shouldBe chain.provability.theory.axioms
-    chain.widest.theory.constants shouldBe chain.provability.theory.constants
   }
 
   /**
-   * A derivation from a hypothesis, built and then consumed by the deduction theorem.
+   * The deduction theorem at a concrete formula, with nothing left assumed.
    *
-   * The statement check above says `NUM_PROV_DEDUCTION` is what it claims. What it cannot say is
-   * that anything satisfies its middle premise, and a theorem whose hypothesis nothing inhabits is
-   * true and useless. So this builds the smallest derivation-from-`h` there is, the one line that
-   * **is** `h`, and runs the theorem on it.
+   * Both of its conditions are discharged here rather than carried: `NUM_FORM h` from
+   * `NUM_PA_FORM`, and `!i. ~(NUM_FREE_FORM i h)` from `Language.notFreeIn`, which walks the code.
+   * The second is why this test can exist at all. Until that walk landed, the theorem was proved
+   * and applied to no formula anybody could name, and this file said so where this docstring now
+   * says the opposite.
    *
-   * The line costs what every inhabitation in `Provability` costs: `NUM_BETA_SEQUENCE` turns the
-   * constant sequence at `h` into two numbers, and the step is justified by the clause that
-   * distinguishes `NUM_STEP_FROM` from `NUM_STEP`, namely that the entry is the hypothesis.
+   * The derivation it consumes is the smallest there is, the one line that **is** `h`, built from
+   * `NUM_BETA_SEQUENCE` the way every inhabitation in `Provability` is. What comes out is
+   * `NUM_PROV (h ==> h)` with **no hypotheses**, which is the whole point: a closed theorem about a
+   * particular formula of the embedded theory, reached through the deduction theorem rather than
+   * around it.
    *
-   * **What comes out is `NUM_PROV (h ==> h)`, which `NUM_PROV_SELF` already gives**, and that is
-   * the point rather than a weakness: the two routes agree, and the one through the deduction
-   * theorem exercises the definitions, the induction and the hypothesis case, none of which the
-   * direct route touches.
-   *
-   * **The conditions stay as hypotheses and cannot yet be discharged at a code.** `NUM_FORM h` is
-   * easy for a concrete `h`. `!i. ~(NUM_FREE_FORM i h)` is not: discharging it means walking a
-   * particular code through the freeness clauses down to its leaves, and nothing here does that.
-   * Until something does, this theorem applies to a hypothesis nobody can name, which is the next
-   * thing the layer needs and is recorded rather than left to be discovered.
+   * `NUM_PROV_SELF` gives the same conclusion directly, and the agreement is the assertion rather
+   * than a redundancy: this route exercises both definitions, the induction and the hypothesis
+   * case, and the direct one touches none of them.
    */
-  it should "consume a derivation from a hypothesis, which is the premise nothing else inhabits" in {
-    val h = Term.variable("h", numbers)
-    val formulaH = force(LogicError.lift(Kernel.assume(isFormula(h))))
+  it should "apply at a concrete formula, with both of its conditions discharged" in {
+    val axiom = force(chain.language.fact("NUM_PA_SUC_NOT_ZERO"))
+    val h = axiom.conclusion match {
+      case App(_, argument) => argument
+      case other => fail(s"a claim about a code was expected, found $other")
+    }
+
+    val formulaH = force(
+      rules
+        .spec(h, force(chain.language.fact(Language.AxiomFormula)))
+        .flatMap(rules.mp(_, axiom)))
+    val notFree = force(chain.language.notFreeIn(h))
+
     val zero = term("ZERO")
     val one = term("SUC ZERO")
-
-    val betaConstant = constant(Coding.BetaName,
-      Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers))))
-    def beta(a: Term, b: Term, j: Term): Term = applied(betaConstant, List(a, b, j))
 
     // The sequence whose only entry is `h`, taken up to one.
     val constantSequence = force(LogicError.lift(Term.abs(Term.variable("j", numbers), h)))
@@ -153,17 +154,8 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
         reach(fresh, force(LogicError.lift(Kernel.assume(body))))))
     }
 
-    val notFreeTerm = {
-      val i = Conv.freshVariable("i", numbers, Set(h))
-      val free = applied(
-        constant(Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool))),
-        List(i, h))
-      force(logic.mkForall(i, force(logic.mkNot(free))))
-    }
-    val notFree = force(LogicError.lift(Kernel.assume(notFreeTerm)))
-
-    val reached = openOne(opened, "a", Set(h)) { (a, atA) =>
-      openOne(atA, "b", Set(h, a)) { (b, atB) =>
+    val reached = openOne(opened, "a", Set.empty) { (a, atA) =>
+      openOne(atA, "b", Set(a)) { (b, atB) =>
         // The entry at zero is `h`, since zero is below one.
         val here = force(
           rules
@@ -176,8 +168,7 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
           rules.specAll(force(chain.provability.fact(Provability.StepFromCases)),
             List(h, a, b, zero)))
         val body = Term.destEq(stepCases.conclusion).map(_._2).getOrElse(fail("an equation"))
-        val (formulaPart, choice) = logic.destConj(body).getOrElse(fail("a conjunction"))
-        val (_, isHypothesis) = logic.destDisj(choice).getOrElse(fail("a disjunction"))
+        val (_, choice) = logic.destConj(body).getOrElse(fail("a conjunction"))
 
         val formulaHere = force(
           Conv
@@ -201,20 +192,13 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
             .flatMap(rules.mp(_, bounded)))
         val everyStep = force(
           Conv
-            .apThm(
-              force(Conv.apTerm(
-                constant(Provability.StepFromName,
-                  Type.fun(numbers, Type.fun(numbers, Type.fun(numbers,
-                    Type.fun(numbers, Type.Bool))))),
-                Conv.refl(h))),
-              a)
-            .flatMap(_ => Conv.apTerm(
+            .apTerm(
               applied(
                 constant(Provability.StepFromName,
                   Type.fun(numbers, Type.fun(numbers, Type.fun(numbers,
                     Type.fun(numbers, Type.Bool))))),
                 List(h, a, b)),
-              isZero))
+              isZero)
             .flatMap(Conv.sym)
             .flatMap(step => LogicError.lift(Kernel.eqMp(step, justified)))
             .flatMap(rules.disch(boundTerm, _))
@@ -250,7 +234,7 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
           rules
             .specTo(
               force(deduction.fact(Deduction.DeductionTheorem)),
-              imply(isFormula(h), imply(notFreeTerm,
+              imply(isFormula(h), imply(notFree.conclusion,
                 imply(applied(
                   constant(Provability.ProvableFromName,
                     Type.fun(numbers, Type.fun(numbers, Type.Bool))),
@@ -261,9 +245,17 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
       }
     }
 
+    reached.hypotheses shouldBe empty
     reached.conclusion shouldBe isProvable(imp(h, h))
-    reached.hypotheses should contain theSameElementsAs Vector(isFormula(h), notFreeTerm)
     Derivation.axiomsOf(reached) should have size 2
+
+    // The direct route agrees, which is what makes this a check of the long one.
+    val direct = force(
+      rules
+        .specTo(force(deduction.fact(Deduction.SelfImplication)),
+          imply(isFormula(h), isProvable(imp(h, h))))
+        .flatMap(rules.mp(_, formulaH)))
+    direct.conclusion shouldBe reached.conclusion
   }
 
   /**

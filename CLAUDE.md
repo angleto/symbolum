@@ -552,7 +552,7 @@ out at the same inference counts after the generalisation, which is how it was c
 
 **`Provability` is what the embedded theory can prove, and it is a development of its own** rather
 than more of `Language`, because it is about that language rather than part of it: nothing in it
-declares a constructor or a predicate of the object syntax. It is `Chain.widest` since 2026-09-14.
+declares a constructor or a predicate of the object syntax.
 
 **Not one of its three definitions is a recursion**, and that is the whole return on
 `docs/adr/0013`. A derivation is a finite sequence of formulas, and a definition that had to walk
@@ -626,10 +626,12 @@ statement about a difference.
 **`Deduction` is where derivations OF the embedded theory are built, and it is the first link that
 declares nothing.** `docs/adr/0013` decided that a development whose product is object-level
 derivations is its own piece of work rather than a helper inside whichever development first needs
-one, and this is that development. No type, no constant, no definition, no axiom: `Chain.widest`
-therefore stays at `Provability`, and the last link and the widest signature stopped being the same
-thing when this landed. `DeductionSpec` asserts the theory it hands on is the one it was given,
-constant for constant, so a definition arriving here goes red rather than passing unnoticed.
+one, and this is that development. No type, no constant, no definition, no axiom, so it **does not
+become** the widest signature: the last link and the widest signature stopped being the same thing
+when this landed. Which development is widest is `Chain.widest` and is written nowhere else, for
+the reason the note four hundred lines above gives. `DeductionSpec` asserts the theory it hands on
+is the one it was given, constant for constant, so a definition arriving here goes red rather than
+passing unnoticed.
 
 It holds five schemes, each proved once for **every** formula rather than at a code. `NUM_PROV_SELF`,
 that PA proves `p ==> p`, which is three lines because the system has no reflexivity for implication
@@ -658,9 +660,17 @@ alternative was inverting `NUM_FORM_CASES` at two tags, which is the general fix
 of seventy lines. What it leaves behind is worth knowing: **nothing rules out `NUM_PROV` holding of
 a code that is not a formula**, and those inversion lemmas are what would settle it.
 
-**What is not written.** Nothing can discharge `!i. ~(NUM_FREE_FORM i h)` at a concrete code, so the
-deduction theorem applies today only to a hypothesis nobody can name. Doing it means walking a code
-through the freeness clauses to its leaves, and that is the next thing this layer needs. And above
+**And the condition is dischargeable**, which it was not for the first hours of the theorem's life.
+`Language.notFreeIn` walks a concrete code through the nine freeness clauses and returns
+`!i. ~(NUM_FREE_FORM i c)`, so `DeductionSpec` applies the theorem to an actual axiom of PA with
+**nothing** left assumed. The only case it can fail on is a variable no enclosing quantifier binds,
+which is a code that is not closed, and it refuses there by naming the index.
+
+The quantifier is the only interesting clause, and the bookkeeping is the whole of it: descending
+past `!b. ...` carries `~(b = i)` down, and `NUM_FREE_TERM i (NUM_CODE 0 b)` is `b = i`, so the
+inequality carried down is exactly what refuses the variable at the bottom. Shadowing works because
+the list is prepended to, and `LanguageSpec` asserts that rather than leaving it to a reading: none
+of the codes this repository builds binds one index twice. And above
 that, the thing Goedel's argument actually needs, which is `Prov` as a formula **of the object
 language** with one free variable rather than as the predicate `NUM_PROV` of the ambient logic.
 **D1, D2 and D3 are statements about that formula, so not one of the three can be stated yet.**

@@ -60,9 +60,189 @@ final class Language private (
 
   def fact(name: String): Either[LogicError, Kernel.Thm] =
     facts.get(name).toRight(MissingDefinition(name))
+
+  /**
+   * `|- !i. ~(NUM_FREE_FORM i c)` for a concrete closed code, by walking it.
+   *
+   * The condition `Deduction`'s deduction theorem asks of its hypothesis, and until this existed
+   * nothing could discharge it at a code: the theorem was proved and applied to no formula anybody
+   * could name. That is the gap this closes, and it is the reason the method is here rather than
+   * beside its consumer, since `NUM_FREE_FORM` is this development's.
+   *
+   * **Nine clauses decide it and there is no search.** Four over formulas and five over terms, each
+   * an equation this development publishes, applied to the shape the code actually has. The
+   * recursion is over the Scala term, so what it costs is the size of the code and nothing else.
+   *
+   * **The quantifier is the only interesting case.** `NUM_FREE_FORM i (!b. body)` is
+   * `COND (b = i) F (NUM_FREE_FORM i body)`, so the walk splits on whether the index being asked
+   * about is the one bound here. If it is, the answer is falsity outright. If it is not, the walk
+   * descends into the body **carrying that inequality**, which is what lets a variable inside be
+   * refused later: `NUM_FREE_TERM i (NUM_CODE 0 b)` is `b = i`, and the inequality is exactly its
+   * negation. A code with two quantifiers carries two, and that is the whole bookkeeping.
+   *
+   * **It refuses rather than guesses**, and the case it refuses on is the one that matters: a
+   * variable no enclosing quantifier binds. Such a code is not closed and the claim is false of it,
+   * so returning anything would be worse than refusing. The refusal names the index.
+   */
+  def notFreeIn(code: Term): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
+    val classical = numbering.peano.naturals.classical
+
+    def force[T](result: Either[LogicError, T]): T =
+      result.fold(error => throw new Language.RefusedWalking(error), identity)
+
+    def applied(head: Term, arguments: List[Term]): Term =
+      force(LogicError.lift(Term.appAll(head, arguments)))
+    def digits(source: String): Term = force(Parser.term(theory, notation, source, numbers))
+
+    val pairing = force(LogicError.lift(theory.constant(Numbering.PairName, arithmetic)))
+    val coding = force(LogicError.lift(theory.constant(Numbering.CodeName, arithmetic)))
+    val formulaFree = force(LogicError.lift(theory.constant(
+      Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool)))))
+    val negation =
+      force(LogicError.lift(theory.constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool))))
+
+    val condTrue = Kernel.instType(Map(Classical.TypeVariable -> Type.Bool),
+      force(classical.fact(Classical.CondTrue)))
+    val condFalse = Kernel.instType(Map(Classical.TypeVariable -> Type.Bool),
+      force(classical.fact(Classical.CondFalse)))
+    val deMorgan = force(classical.fact(Classical.DeMorganDisjunction))
+    val middle = force(classical.fact(Classical.ExcludedMiddle))
+
+    def clause(name: String): Kernel.Thm = force(fact(name))
+    def assumeThat(subject: Term): Kernel.Thm = force(LogicError.lift(Kernel.assume(subject)))
+
+    def destCode(subject: Term): (Term, Term) = subject match {
+      case App(App(head, tag), payload) if head == coding => (tag, payload)
+      case other => throw new Language.RefusedWalking(NotOfForm("a code", other))
+    }
+    def destPair(subject: Term): (Term, Term) = subject match {
+      case App(App(head, left), right) if head == pairing => (left, right)
+      case other => throw new Language.RefusedWalking(NotOfForm("a pair", other))
+    }
+
+    /** From `X = F`, that `~X`. */
+    def notFromFalsity(equation: Kernel.Thm): Kernel.Thm = {
+      val subject = Term
+        .destEq(equation.conclusion)
+        .map(_._1)
+        .getOrElse(throw new Language.RefusedWalking(
+          NotOfForm("an equation", equation.conclusion)))
+      force(rules.notIntro(subject,
+        force(LogicError.lift(Kernel.eqMp(equation, assumeThat(subject))))))
+    }
+
+    /** From `X = Y` and `~Y`, that `~X`. */
+    def notAcross(equation: Kernel.Thm, held: Kernel.Thm): Kernel.Thm =
+      force(Conv.apTerm(negation, equation)
+        .flatMap(Conv.sym)
+        .flatMap(step => LogicError.lift(Kernel.eqMp(step, held))))
+
+    /** From `~A` and `~B`, that `~(A \/ B)`. */
+    def neither(left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm = {
+      def subjectOf(theorem: Kernel.Thm): Term = logic
+        .destNot(theorem.conclusion)
+        .getOrElse(throw new Language.RefusedWalking(
+          NotOfForm("a negation", theorem.conclusion)))
+      val instance = force(rules.specAll(deMorgan, List(subjectOf(left), subjectOf(right))))
+      force(rules.conjIntro(left, right)
+        .flatMap(both => Conv.sym(instance)
+          .flatMap(step => LogicError.lift(Kernel.eqMp(step, both)))))
+    }
+
+    def bothParts(
+      index: Term, bound: List[(Term, Kernel.Thm)], payload: Term, name: String,
+      walk: (Term, List[(Term, Kernel.Thm)], Term) => Kernel.Thm
+    ): Kernel.Thm = {
+      val (left, right) = destPair(payload)
+      notAcross(
+        force(rules.specAll(clause(name), List(index, left, right))),
+        neither(walk(index, bound, left), walk(index, bound, right)))
+    }
+
+    def inTerm(index: Term, bound: List[(Term, Kernel.Thm)], subject: Term): Kernel.Thm = {
+      val (tag, payload) = destCode(subject)
+
+      if (tag == digits("0"))
+        bound.find(_._1 == payload) match {
+          case Some((_, notEqual)) =>
+            notAcross(
+              force(rules.specAll(clause(Language.FreeVariable), List(index, payload))),
+              notEqual)
+          case None =>
+            throw new Language.RefusedWalking(NotOfForm(
+              s"a closed code; the variable at index $payload is bound by nothing", subject))
+        }
+      else if (tag == digits("1"))
+        notFromFalsity(force(rules.spec(index, clause(Language.FreeZero))))
+      else if (tag == digits("2"))
+        notAcross(
+          force(rules.specAll(clause(Language.FreeSuccessor), List(index, payload))),
+          inTerm(index, bound, payload))
+      else if (tag == digits("3"))
+        bothParts(index, bound, payload, Language.FreeSum, inTerm)
+      else if (tag == digits("4"))
+        bothParts(index, bound, payload, Language.FreeProduct, inTerm)
+      else
+        throw new Language.RefusedWalking(NotOfForm("a term's tag", tag))
+    }
+
+    def inFormula(index: Term, bound: List[(Term, Kernel.Thm)], subject: Term): Kernel.Thm = {
+      val (tag, payload) = destCode(subject)
+
+      if (tag == digits("5")) {
+        val (left, right) = destPair(payload)
+        notAcross(
+          force(rules.specAll(clause(Language.FormulaFreeEquality), List(index, left, right))),
+          neither(inTerm(index, bound, left), inTerm(index, bound, right)))
+      } else if (tag == digits("6"))
+        notAcross(
+          force(rules.specAll(clause(Language.FormulaFreeNegation), List(index, payload))),
+          inFormula(index, bound, payload))
+      else if (tag == digits("7"))
+        bothParts(index, bound, payload, Language.FormulaFreeImplication, inFormula)
+      else if (tag == digits("8")) {
+        val (bindsAt, body) = destPair(payload)
+        val equation = force(rules.specAll(
+          clause(Language.FormulaFreeUniversal), List(index, bindsAt, body)))
+        val guard = force(LogicError.lift(Term.eq(bindsAt, index)))
+        val inner = applied(formulaFree, List(index, body))
+        val split = force(rules.spec(guard, middle))
+        val (whenSame, whenOther) = logic
+          .destDisj(split.conclusion)
+          .getOrElse(throw new Language.RefusedWalking(
+            NotOfForm("a disjunction", split.conclusion)))
+
+        val fromSame = notFromFalsity(force(Conv.trans(equation,
+          force(rules.specAll(condTrue, List(guard, logic.falsity, inner))
+            .flatMap(rules.mp(_, assumeThat(whenSame)))))))
+        val fromOther = {
+          val held = assumeThat(whenOther)
+          notAcross(
+            force(Conv.trans(equation,
+              force(rules.specAll(condFalse, List(guard, logic.falsity, inner))
+                .flatMap(rules.mp(_, held))))),
+            inFormula(index, (bindsAt, held) :: bound, body))
+        }
+        force(rules.disjElim(split, fromSame, fromOther))
+      } else
+        throw new Language.RefusedWalking(NotOfForm("a formula's tag", tag))
+    }
+
+    try {
+      val index = Conv.freshVariable("i", numbers, Term.freeVariables(code))
+      rules.gen(index, inFormula(index, Nil, code))
+    } catch { case refused: Language.RefusedWalking => Left(refused.error) }
+  }
 }
 
 object Language {
+
+  /** Carry a refusal out of [[Language.notFreeIn]], which walks a code in direct style. */
+  private final class RefusedWalking(val error: LogicError) extends RuntimeException
+
 
   /** `NUM_TERM n` says `n` codes a term of the embedded theory. */
   val TermName: String = "NUM_TERM"
