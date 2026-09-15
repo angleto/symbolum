@@ -231,5 +231,104 @@ class ParserSpec extends AnyFlatSpec with Matchers {
     message should include("annotate it")
     message should not include "The names whose type is still open"
   }
+  /* ------------------------------------------- one symbol, more than one constant */
+
+  /**
+   * The overloading of `docs/adr/0018`, tested where the mechanism is rather than where the chain
+   * assembles it.
+   *
+   * Built by hand from two ground types and two constants, which is what the case needs and is the
+   * reason this belongs here: `Peano` and `Real` are a **use** of this, and a test that could only
+   * reach it through them would be asserting that the chain is wired rather than that the parser
+   * resolves. It also means the three refusals can be fired at all, and two of the three had never
+   * been fired by anything when they landed.
+   */
+  private lazy val overloaded: (Theory, Notation) = {
+    val real = TyApp("real", Nil)
+    val numbers = TyApp("num", Nil)
+    val binaryReal = Type.fun(real, Type.fun(real, real))
+    val binaryNum = Type.fun(numbers, Type.fun(numbers, numbers))
+    val built = force(
+      theory
+        .declareTypeOperator("real", 0)
+        .flatMap(_.declareTypeOperator("num", 0))
+        .flatMap(_.declareConstant("real_add", binaryReal))
+        .flatMap(_.declareConstant("num_add", binaryNum))
+    )
+    val notation = Notation.standard
+      .withInfix("+", "real_add", 60)
+      .withInfix("+", "num_add", 60)
+    (built, notation)
+  }
+
+  "A symbol standing for two constants" should "resolve to the one its arguments settle" in {
+    val (built, notation) = overloaded
+    val real = TyApp("real", Nil)
+    val numbers = TyApp("num", Nil)
+
+    // Asserted by taking the term apart rather than by reading it back, for the reason the numerals
+    // are: a round trip would pass on a parser that resolved to the wrong candidate and printed it
+    // under the same symbol.
+    val atReal = force(Parser.term(built, notation, "(x:real) + y:real"))
+    val atNum = force(Parser.term(built, notation, "(x:num) + y:num"))
+
+    Term.typeOf(atReal) shouldBe real
+    Term.typeOf(atNum) shouldBe numbers
+    atReal should not be atNum
+  }
+
+  it should "settle the result from the arguments, which needs one metavariable and not three" in {
+    // The anti-unification's whole point. With `?a -> ?b -> ?c` the two arguments would fix `?a`
+    // and `?b` and leave the result open, and the term would be refused for an undetermined type it
+    // plainly has. This is the assertion that fails if that shape is ever weakened.
+    val (built, notation) = overloaded
+    Term.typeOf(force(Parser.term(built, notation, "(x:num) + y"))) shouldBe TyApp("num", Nil)
+  }
+
+  it should "be refused where nothing determines it, naming both types" in {
+    val (built, notation) = overloaded
+    val refusal = Parser.term(built, notation, "x + y")
+    refusal.isLeft shouldBe true
+
+    val message = refusal.fold(_.message, _ => "")
+    info(message)
+    message should include("not determined")
+    message should include("real")
+    message should include("num")
+  }
+
+  it should "be refused at a type no candidate is declared at, naming the types there are" in {
+    // `+` is `?a -> ?a -> ?a` over these two, so two booleans settle the shape at `bool`, which is
+    // neither. Before overloading this was a unification failure inside an application; it names
+    // the operator now.
+    val (built, notation) = overloaded
+    val refusal = Parser.term(built, notation, "(p:bool) + q:bool")
+    refusal.isLeft shouldBe true
+    refusal.fold(_.message, _ => "") should include("+")
+  }
+
+  it should "say the notation is unavailable where the theory declares no candidate at all" in {
+    // The notation carries both spellings and this theory declares neither, which is what a text
+    // put to the wrong signature looks like. `theory` is the bare logic, without the two constants
+    // `overloaded` adds.
+    val (_, notation) = overloaded
+    val refusal = Parser.term(theory, notation, "(x:real) + y:real")
+    refusal.isLeft shouldBe true
+    refusal.fold(_.message, _ => "") should include("+")
+  }
+
+  it should "read unannotated where only one of the candidates is declared" in {
+    // One candidate is not a choice, and this is what keeps every development built below the
+    // naturals reading exactly as it did before overloading existed. Without it the refusal tests
+    // above would pass against a parser that had stopped resolving anything.
+    val real = TyApp("real", Nil)
+    val (_, notation) = overloaded
+    val realsOnly = force(
+      theory
+        .declareTypeOperator("real", 0)
+        .flatMap(_.declareConstant("real_add", Type.fun(real, Type.fun(real, real))))
+    )
+    Term.typeOf(force(Parser.term(realsOnly, notation, "(x:real) + y"))) shouldBe real
+  }
 
 }

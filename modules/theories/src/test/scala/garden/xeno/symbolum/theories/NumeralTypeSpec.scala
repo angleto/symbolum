@@ -250,4 +250,64 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
     val stalled = force(Rewrite.rewrite(partial, term("real_of_num (12:num)")))
     Term.destEq(stalled.conclusion).map(_._2) should not be Some(term("12:real"))
   }
+  /* -------------------------------------- the operator's three, which are the numeral's three */
+
+  /**
+   * `docs/adr/0018` says the operator's refusals are "the numeral's three, in the same words", and
+   * until this was written **two of the three had never been fired**. The overloading landed with a
+   * suite that was green because the case each of those branches is for was one no test asked for,
+   * which is the shape this file's own header calls a test that would pass on a broken checker.
+   *
+   * Paired the same way as the numerals above: each refusal sits beside a reading that must still
+   * work, so a parser that had simply stopped reading `+` would fail the second half rather than go
+   * on passing the first.
+   */
+  "An operator nothing determines" should "be refused where the signature reads two, and named" in {
+    val refusal = widest.proposition("0 < 1")
+    refusal.isLeft shouldBe true
+
+    val message = refusal.fold(_.message, _ => "")
+    message should include("not determined")
+    message should include("<")
+    message should include("real")
+    message should include("num")
+  }
+
+  it should "read once one side is told, which is what says the refusal was about the ambiguity" in {
+    widest.proposition("(0:real) < 1").isRight shouldBe true
+    widest.proposition("(0:num) < 1").isRight shouldBe true
+  }
+
+  it should "read unannotated where the signature offers one candidate" in {
+    // The reals alone declare one `<`, so there is no choice to protect anybody from and the text
+    // reads exactly as it did before overloading existed. This is what keeps a development built
+    // below `Peano` working, and it is the half that would go quiet if the collapse-to-one case in
+    // `Parser.overloaded` were ever lost.
+    reals.proposition("0 < 1").isRight shouldBe true
+  }
+
+  "An operator at a type no candidate is declared at" should "be refused naming the types there are" in {
+    // The third refusal, and the one a wrong claim actually meets. `<` is `?a -> ?a -> bool` over
+    // its candidates, so two booleans settle the shape at `bool`, which is neither `real` nor `num`.
+    // Before overloading this was a unification failure deep inside an application; now it names the
+    // operator and says where it does exist.
+    val refusal = widest.proposition("(x:bool) < y:bool")
+    refusal.isLeft shouldBe true
+
+    val message = refusal.fold(_.message, _ => "")
+    message should include("<")
+    message should include("real")
+    message should include("num")
+  }
+
+  "An operator no candidate of which the theory declares" should "say the notation is unavailable" in {
+    // The first refusal. The notation is the chain's, so `+` carries two candidates, and the theory
+    // is the bare logic, which declares neither: the symbol lexes, the reader builds the overloaded
+    // node, and the elaborator finds nothing to choose between. A reader who meets this has put a
+    // text to the wrong signature, which is the one diagnosis the message can offer.
+    val refusal =
+      Parser.proposition(Logic.standard.theory, widest.notation, "(x:real) + y:real = y + x")
+    refusal.isLeft shouldBe true
+    refusal.fold(_.message, _ => "") should include("+")
+  }
 }
