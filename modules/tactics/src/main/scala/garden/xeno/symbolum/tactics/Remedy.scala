@@ -39,8 +39,8 @@ import garden.xeno.symbolum.theories.{Counterpart, Natural, RealTheory, Signatur
  *
  * Everything `modules/tactics` hands a caller: `TacticError` with the `LogicError` and
  * `KernelError` underneath it, and the answers this module's own procedures give, which are
- * `Refutation.Outcome`, `Quantified.Verdict`, `CollatzScreen.Verdict`, `Discovery.Outcome` and
- * `Ledger.Verdict`.
+ * `Refutation.Outcome`, `Quantified.Verdict`, `CollatzScreen.Verdict`, `Discovery.Outcome`,
+ * `Chaining.Outcome` and `Ledger.Verdict`.
  *
  * `Check.Verdict` is outside it, and not by choice. `modules/checker` reads a proof a second time
  * and depends on the kernel; `modules/tactics` depends on the theories and on the algebra system
@@ -566,6 +566,37 @@ object Remedy {
    * gets the answer that absence gets, and more points really will not help: the screen stops at
    * the first such point rather than skipping it.
    */
+  /**
+   * What to do about a goal put to the chaining search over the library.
+   *
+   * The three answers are three different next steps and that is why the outcome carries a value
+   * rather than a sentence. A bound reached is a budget and reads as [[RaiseALimit]]; everything
+   * inside the bounds tried and nothing reaching the goal is not a budget at all, and the honest
+   * next step is that the development does not hold the lemma, which is [[ExtendTheTheory]].
+   *
+   * **The second of those is the one worth getting right.** A search that ran out of budget and a
+   * search that finished and found nothing say opposite things about whether asking again could
+   * help, and merging them would tell a caller to raise a limit that is not what stopped it. That
+   * is the merge this file's comment about `Quantified.Verdict` describes from the other side: that
+   * verdict carries prose, so its budget case cannot be told from its shape case here at all.
+   */
+  def of(outcome: Chaining.Outcome): Remedy = outcome match {
+    case Chaining.Outcome.Proved(theorem, lemmas) =>
+      Settled(s"proved by chaining ${lemmas.length} lemma(s): ${lemmas.mkString(", ")}")
+
+    case Chaining.Outcome.Depleted(Chaining.Bound.Lemmas, at) =>
+      RaiseALimit("lemmas chained", at.toString)
+
+    case Chaining.Outcome.Depleted(Chaining.Bound.Expansions, at) =>
+      RaiseALimit("lemma expansions in one question", at.toString)
+
+    case Chaining.Outcome.NoRoute =>
+      ExtendTheTheory(
+        "a lemma this development holds whose conclusion is this goal, or which owes only what the " +
+          "procedures decide; every one it holds was tried"
+      )
+  }
+
   def of(verdict: CollatzScreen.Verdict): Remedy = verdict match {
     case CollatzScreen.Disagrees(n, expected, got) =>
       Settled(

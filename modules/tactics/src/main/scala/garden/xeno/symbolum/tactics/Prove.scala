@@ -27,6 +27,14 @@ import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, LinearFor
  * furthest" would need a measure of progress that neither procedure reports, and inventing one
  * would put a guess in the one place this repository is careful not to guess.
  *
+ * == The one thing asked after everything else ==
+ *
+ * Since 2026-09-15 a goal none of the procedures settle and no single lemma states is put to
+ * `Chaining`, which is backward chaining over the library with the obligations of a match becoming
+ * subgoals and each subgoal offered back to everything above. It can only add a theorem: its failure
+ * leaves the refusal the shape rule chose, because it recognises no shape and so has no claim on the
+ * message.
+ *
  * == What it does not do ==
  *
  * It does not try harder than the procedures do. A goal both could take is offered to both, and if
@@ -98,7 +106,17 @@ final class Prove private (
   def apply(goal: Term): Either[TacticError, Kernel.Thm] =
     held(goal) match {
       case Some(theorem) => Right(theorem)
-      case None => decided(goal)
+      case None =>
+        decided(goal) match {
+          case Right(theorem) => Right(theorem)
+          // Asked last, and its failure changes no refusal. The rule this class is about is that the
+          // procedure whose fragment recognises the goal's shape is the one whose refusal is
+          // reported, and chaining recognises no fragment: it either reaches the goal or does not,
+          // so it can add a theorem and must not take a message away from the procedure that had
+          // something to say. `Chaining.prove` names its own bound to a caller that asks it
+          // directly, which `chained` deliberately does not turn into a refusal here.
+          case Left(refusal) => chained(goal).toRight(refusal)
+        }
     }
 
   /**
@@ -109,6 +127,64 @@ final class Prove private (
    * next one may match and owe none. The order among those that owe nothing does not matter, since
    * each is a proof of the same goal.
    */
+  /**
+   * What this prover settles **without** chaining: the scan, then the decision procedures.
+   *
+   * The two steps [[apply]] takes before it reaches `Chaining`, published because two callers need
+   * them and neither can get at them otherwise.
+   *
+   * A caller that wants the cheap answer is one: chaining is bounded but not free, and a consumer
+   * asking many goals it expects to be refused pays for a search every time.
+   *
+   * The other is a test of `Chaining` itself, and it is the one that forced this method to exist.
+   * `Chaining` takes its leaf as an argument, and the obvious leaf to hand it in a test is this
+   * prover — which now **contains** a `Chaining`, so what is measured is two searches nested, at
+   * twice the depth asked for. Two assertions about the depth bound passed for the wrong reason that
+   * way and two others failed for it; what they were reading was the leaf's own search, not the
+   * bound under test.
+   */
+  def directly(goal: Term): Either[TacticError, Kernel.Thm] =
+    held(goal).map(Right(_)).getOrElse(decided(goal))
+
+  /**
+   * The library searched rather than scanned: a lemma that owes an obligation, and the obligation
+   * proved by everything above.
+   *
+   * [[held]] is the scan and takes only what owes nothing, for the reason its own comment gives.
+   * This is what makes the ones it turns away usable, and it is the first thing here that puts two
+   * lemmas together. `Chaining` carries the loop, the index and the bounds; what is passed in is the
+   * leaf, which is this class's own two steps, so a subgoal of a chained proof is offered to RING,
+   * to LINARITH, to the propositional fragment and to the scan before anything recurses.
+   *
+   * `None` where there is no library, which is the same real configuration [[library]] describes.
+   */
+  private def chained(goal: Term): Option[Kernel.Thm] =
+    searchFor(goal) match {
+      case Some(Chaining.Outcome.Proved(theorem, _)) => Some(theorem)
+      case _ => None
+    }
+
+  /**
+   * The chaining search over this prover's own leaf, with what it found or the bound it reached.
+   *
+   * Public because two callers cannot get at it otherwise and both are ones this repository cares
+   * about. A measurement wants to know **which** lemmas were chained, and the theorem does not say:
+   * `Derivation.restingOn` answers a coarser question and a search that used one lemma and a search
+   * that used two are the claim being made and its negation. And a session that wants to know
+   * whether it was the bound that stopped it, rather than the absence of a route, has nowhere else
+   * to ask: [[apply]] deliberately reports the procedure's refusal and not this one, for the reason
+   * its own comment gives.
+   *
+   * `None` where there is no library, which is the configuration [[library]] describes rather than a
+   * degraded one.
+   */
+  def searchFor(goal: Term): Option[Chaining.Outcome] =
+    chaining.map(search => search.prove(goal, target => held(target).orElse(decided(target).toOption)))
+
+  /** Built once, because the index over the library is what makes a question milliseconds. */
+  private val chaining: Option[Chaining] =
+    library.map { case (lemmas, logic) => Chaining(logic, lemmas) }
+
   private def held(goal: Term): Option[Kernel.Thm] =
     library.flatMap { case (lemmas, logic) =>
       lemmas.entries.view
