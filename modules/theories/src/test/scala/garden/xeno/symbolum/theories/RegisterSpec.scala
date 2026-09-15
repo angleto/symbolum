@@ -124,7 +124,12 @@ class RegisterSpec extends AnyFlatSpec with Matchers {
     val notation = chain.widest.notation
     val listed = Register.notationRows(chain).map(_.key).toSet
 
-    notation.infix.foreach(operator => listed should contain(s"notation infix ${operator.symbol}"))
+    // `via ${constant}` since `docs/adr/0018`: one symbol may stand for more than one constant,
+    // so the key that used to be the symbol alone is now two statements under one name. The
+    // numerals' row three lines down has carried its own discriminator since the day `num` got
+    // numerals, and this is the same fix arriving at the operators.
+    notation.infix.foreach(operator =>
+      listed should contain(s"notation infix ${operator.symbol} via ${operator.constant}"))
     notation.prefix.foreach(operator => listed should contain(s"notation prefix ${operator.symbol}"))
     notation.binders.foreach(binder => listed should contain(s"notation binder ${binder.symbol}"))
     // One row per encoding, named by its `one`. A single flat "notation numerals" label put two

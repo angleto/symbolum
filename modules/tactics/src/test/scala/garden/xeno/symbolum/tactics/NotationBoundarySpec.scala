@@ -206,6 +206,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.TypeOnly, "a type with no numerals at it, and an occurs check"),
     ("Parser.scala", "if (undetermined.size == 1) \"\" else \"s\"") -> (Verdict.Text, "a plural"),
     ("Parser.scala", "name") -> (Verdict.Name, "a constant the theory does not declare"),
+    // Both from `docs/adr/0018`: a symbol may stand for more than one constant, and when the type
+    // settles at none of them or at nothing, the refusal names the symbol. It is the symbol as
+    // written in the claim, which is a spelling of the reader's own notation rather than a term
+    // crossing a boundary, so it is a `Name` for the same reason the constant above is.
+    ("Parser.scala", "symbol") -> (Verdict.Name, "the operator symbol a claim was written with"),
     ("Parser.scala", "notation.numerals.map(_.one).mkString(\" and no \")") ->
       (Verdict.Name, "the names of the numeral encodings this theory has"),
     ("Parser.scala", "open.mkString(\", \")") ->

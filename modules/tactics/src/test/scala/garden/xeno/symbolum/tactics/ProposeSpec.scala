@@ -225,7 +225,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
 
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Substituted)
     proposals.map(_.change).distinct.sorted shouldBe
-      Vector("* became +", "+ became *", "< became le", "le became <")
+      Vector(
+        "real_add became real_mul", "real_le became real_lt",
+        "real_lt became real_le", "real_mul became real_add"
+      )
   }
 
   "Hiding half the library from the generator" should "let it find some of what was hidden" in {

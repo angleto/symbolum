@@ -660,11 +660,20 @@ object Arithmetic {
    * `Term.ordering` settles it by **rank first** (a variable ranks below an application) and, at
    * equal rank, by the constant's **name**. So where `A` is a variable the sum outranks it and the
    * rule fires; where `A` is itself a product, both are applications and the answer comes from
-   * comparing the two head constants by name. Here they are `*` and `+`, and `*` precedes `+` in
-   * ASCII, so the sum wins and flattening works. Over `num` they are `NUM_ADD` and `NUM_MUL`, the
-   * comparison comes out the other way, and associativity **stops flattening wherever the left
-   * summand is a product**. What that produces is not a wrong theorem but two different normal
-   * forms for two equal sums, and a refusal that reads as though the identity were false.
+   * comparing the two head constants, and the product has to come first or associativity **stops
+   * flattening wherever the left summand is a product**. What that produces is not a wrong theorem
+   * but two different normal forms for two equal sums, and a refusal that reads as though the
+   * identity were false. `Semiring.order` is what `num` uses instead, and the paragraph below says
+   * why a development that copies this one will get the accident rather than the reason.
+   *
+   * **That the product comes first is stated here and was inherited from ASCII until 2026-09-15.**
+   * The constants were literally named `*` and `+`, and `*` precedes `+` in ASCII, so the order
+   * this needs fell out of the spelling. `docs/adr/0018` renamed them `real_mul` and `real_add`,
+   * which reverses that comparison, and the effect was exactly the one the paragraph above
+   * predicts for `num`: one corpus entry in `PolynomialSpec` reached two normal forms by two
+   * routes, and **nothing else in the suite noticed**. So the ranking is written down. It is not a
+   * repair of the rename: an order a canonical form depends on cannot be a property of how two
+   * constants happen to be spelled, and the next rename would have found this again.
    *
    * `Semiring.order` is what `num` uses instead: size first, inside the recursion. This order is
    * for the reals, where there is cancellation to arrange; a development that copies it because it
@@ -698,7 +707,20 @@ object Arithmetic {
         val byBinder = Type.ordering.compare(leftType, rightType)
         if (byBinder != 0) byBinder else compare(leftBody, rightBody)
 
+      // The ring's two operations are ranked here rather than compared by name, which is what the
+      // paragraph above is about: the product must precede the sum for flattening to terminate,
+      // and that is a fact about the algebra rather than about either constant's spelling.
+      case (Const(leftName, _), Const(rightName, _)) if operationRank(leftName) != operationRank(rightName) =>
+        operationRank(leftName).compare(operationRank(rightName))
+
       case _ => Term.ordering.compare(left, right)
+    }
+
+    /** Products first, then sums, then everything else by name, as `Term.ordering` would. */
+    private def operationRank(name: String): Int = name match {
+      case Real.Multiplication => 0
+      case Real.Addition => 1
+      case _ => 2
     }
 
     @annotation.tailrec

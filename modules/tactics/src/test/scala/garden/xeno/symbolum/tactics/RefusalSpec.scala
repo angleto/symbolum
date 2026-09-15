@@ -176,27 +176,32 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
 
   /* ----------------------------------------- a claim that reaches no procedure at all */
 
-  "A claim about the naturals written with the reals' symbols" should "name the constant to write" in {
-    // The one refusal on this list that belongs to the reader rather than to a tactic, and it is
-    // here because the list is about the shapes a caller actually writes. `!n:num. n + 0 = n` is the
-    // first claim anybody makes about the naturals, and until 2026-09-12 the whole of the answer was
-    // "real and num cannot be the same type": true, and it names neither the owner of `+` nor
-    // `NUM_ADD`, so `CLAUDE.md`'s sentence about a claim over `num` being one `Ask` can take read as
-    // false.
+  "A claim about the naturals written with the reals' symbols" should "no longer be a refusal" in {
+    // **This entry asserted a refusal until `docs/adr/0018` and now asserts a proof, and it is kept
+    // rather than deleted because the reversal is the thing worth pinning.** `!n:num. n + 0 = n` is
+    // the first claim anybody makes about the naturals. Until 2026-09-12 the whole of the answer
+    // was "real and num cannot be the same type": true, naming neither the owner of `+` nor
+    // `NUM_ADD`. The repair then was to improve the refusal, on the ground `Peano` wrote down, that
+    // a `Notation` maps a symbol to one constant and the reals already own `+`.
     //
-    // `Peano` decides under "No notation" that `num` gets none, because a `Notation` maps a symbol
-    // to one constant and the reals already own `+`. That decision stands and is not reopened here;
-    // what changes is where it is paid for, which is the refusal rather than the notation layer.
+    // That ground is gone. A symbol stands for more than one constant and the elaborator picks by
+    // the type unification settles, so the claim reads as written and the prover settles it. A
+    // reader following `CLAUDE.md`'s sentence about a claim over `num` being one `Ask` now gets
+    // what that sentence promises.
     //
-    // Asserted against the **text** and not against the class, which is the opposite of
-    // `RemedySpec`'s rule and is the point: the class was already right. This was a `TypeError`
-    // before and is a `TypeError` now, and a session reading it as one learned nothing it did not
-    // already know.
+    // The list this entry is on is about the shapes a caller actually writes, and this shape is
+    // still the first one written; what it demonstrates is no longer a refusal worth improving but
+    // a refusal that was removed at its cause. `Counterpart` kept the row for `-`, whose two
+    // readings really are different operations, and `CounterpartSpec` is where the surviving half
+    // is asserted.
     val page = Ask.of("!n:num. n + 0 = n")
 
-    page should startWith("unreadable: !n:num. n + 0 = n")
-    page should include("real and num cannot be the same type")
-    page should include("NUM_ADD")
+    // `!x:num.` and not `!n:num.` in the first line: a bound name is not part of a term, so the
+    // page prints the printer's name and says so on its last line. The claim as the reader wrote it
+    // is echoed there, which is what this asserts rather than reaching for the printer's spelling.
+    page should startWith("Proved: !x:num. x + 0 = x")
+    page should include("as asked: !n:num. n + 0 = n")
+    page should not include "real and num cannot be the same type"
   }
 
   it should "say nothing of the sort about a claim that mentions no natural number" in {

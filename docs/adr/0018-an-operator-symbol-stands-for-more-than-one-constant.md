@@ -113,9 +113,23 @@ one type had the symbols and becomes a trap the moment two do: a reader meeting 
 constants, in `docs/reading-register.md` or in a refusal, cannot tell whether it is a spelling or a
 name. The four become `real_add`, `real_mul`, `real_lt` and `real_le` in the same change. It is
 cheap and it was measured: 83 call sites reach them through `Real.Addition` and its siblings and
-therefore do not change, no code anywhere writes the literal `"+"` as a constant name, and the axiom
-texts are in concrete syntax and are spelled by the notation. Four `val`s and two regenerated
-documents.
+therefore do not change, and the axiom texts are in concrete syntax and are spelled by the notation.
+Four `val`s and two regenerated documents.
+
+**Three of the four carry the defect and the fourth does not**, which was measured while building
+this and is worth correcting here rather than leaving the paragraph above to be believed.
+`NonStrictOrder` was already `"le"`, a word: nobody could have mistaken it for a notation. It is
+renamed for uniformity of the four, and 14 of the 83 call sites counted above are its. **And two
+constants this record never looked at have exactly the defect it argues from**: `Zero` is `"0"` and
+`One` is `"1"`, so the reals' zero is a constant named `0` where `num`'s is `ZERO`. They are
+deliberately **not** renamed here. They belong to [`0012`](0012-a-numeral-belongs-to-the-type-its-context-forces.md),
+and taking them in passing would settle the interaction of two records in one commit.
+
+**The claim that no code writes `"+"` as a constant name is false by one**, and the one is harmless:
+`RemedySpec` builds `AlreadyDeclared("+")` as a sample refusal in a rendering test, where the string
+is an argument and not a lookup. `Arithmetic` passes `"+"` and `"*"` to `compute`, which was the
+other candidate and is **not** an instance: those reach `reals.term(s"$left $operator $right")` as
+concrete syntax, so they are spellings the notation resolves, which is what this record is about.
 
 **No implicit coercion.** `real_of_num` stays written where a natural is used as a real. Overloading
 decides which constant a symbol names; it does not insert a function nobody wrote, and the four
@@ -124,10 +138,28 @@ decided both at once would be deciding the second one silently.
 
 ## Consequences
 
-**172 statements change their printed form, and `docs/lemmas.md` is regenerated in the same
-change.** That is a large diff in which no statement means anything different, which is the diff
-this repository finds hardest to review and the reason the guard below matters more than the
-reading.
+**138 lines of `docs/lemmas.md` change, and it is regenerated in the same change.** That is a large
+diff in which no statement means anything different, which is the diff this repository finds hardest
+to review and the reason the guard below matters more than the reading.
+
+**This paragraph said 172 until the change was built, and the number was wrong in kind rather than
+stale.** 172 counted the statements naming any of **eight** `NUM_` constants, and this record
+decides that four of those eight are **not** overloaded. Measured against the implementation: of
+436 printed statements, 175 name one of the eight, **135** name one of the four that get a symbol
+and are the ones whose form moves, and the other 40 name only `NUM_SUB`, `NUM_DIV`, `NUM_MOD` or
+`NUM_POW` and are byte-identical. The three lines beyond the 135 are the rename showing up in the
+document's **name** column, where `le`'s definition row becomes `real_le`, and two statements that
+go the other way, described below. The risk measurement under it was taken on the population of
+eight and is right on that population; read as a fraction of what changes it is 9 of 135, not 10 of
+172.
+
+**Two statements get less readable, which is the cost this record did not price.** `ZERO_LT_ONE`
+printed `0 < 1` and now prints `(0:real) < (1:real)`, in both the sections that carry it. Nothing is
+wrong: `0 < 1` no longer reads back, since both the numerals and the order are now two, and
+`Signature.legible` falls to the annotated form exactly as it was built to. It is the mechanism
+working, and it is still a statement a reader now has to read twice. 135 improved against 2 worsened
+is the trade, and it is worth stating in those terms rather than leaving the second number to be
+discovered.
 
 **`NotationRoundTripSpec` is what makes this safe, and it already exists.** It reads every statement
 in `docs/lemmas.md` back and asserts it is the theorem it was printed from, over the whole
@@ -157,6 +189,35 @@ does not know which addition it is. The answer is that the binder is printed, al
 is the same answer the whole system gives for every other polymorphic-looking thing. It is weaker
 than a notation that marks the type in the operator, and that is the trade the first alternative
 below is about.
+
+**Four consequences this record did not foresee, found by building it.** None of them changes the
+decision and all four are things the next overload will meet again.
+
+**The mirror spellings had to come too.** `>` and `>=` are `<` and `<=` read from the other end, so
+overloading the two orders at `num` and not their mirrors would have left `!n:num. n < n` reading
+while `!n:num. n > n` refused. Worse than an asymmetry: `Counterpart` used to answer that refusal
+out of the very rows overloading removes, so this record would have **introduced** a case where a
+reader is refused and given nothing. `Peano` declares both mirrors, at no constant and no axiom.
+
+**`Counterpart` loses four of its five rows and keeps one.** A row whose symbol is overloaded is not
+idle, it is **wrong**: it tells a reader to rewrite a text that now works. What is left is `-`, the
+one symbol whose two readings are different operations, which is this record's own refusal seen from
+the reader's side.
+
+**The reading register's rows were keyed by symbol, so `notation infix +` became two statements
+under one name.** That is the defect the numerals hit when `num` got a second encoding, and the row
+carries `via ${constant}` now for the same reason: a reader cannot attest to a statement that is
+silently two. Nothing was attested, so nothing was lost; the `via` is unconditional so that a future
+overload cannot silently transfer an attestation.
+
+**And the one that would have gone unnoticed.** `Arithmetic.ringOrder` needs the product to sort
+before the sum or associativity stops flattening, and until this change that came out of ASCII,
+because the constants were literally named `*` and `+`. Renaming them to `real_mul` and `real_add`
+reverses the comparison, and the file's own docstring had already written down what that does, in
+the paragraph explaining why `num` uses a different order. **One corpus entry in `PolynomialSpec`
+caught it and nothing else in 800 tests did.** The ranking is now stated in the code rather than
+inherited from spelling, which is the repair the case asks for: an order a canonical form depends on
+cannot be a property of how two constants happen to be spelled.
 
 **The work is a parser change and a table, not a theory change.** No constant is added, no axiom
 moves, nothing becomes provable that was not. Anyone judging it by what the prover can newly reach

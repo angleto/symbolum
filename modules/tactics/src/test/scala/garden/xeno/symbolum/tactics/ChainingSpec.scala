@@ -195,8 +195,8 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     // The defect this file's class comment records, asserted so that it cannot come back silently.
     // With the universals left on, every goal here falls in a bucket nothing is filed under and
     // every assertion above fails with `NoRoute`, which is also what an empty library says.
-    Chaining.headOf(read("!x:real. 0 < x * x + 1")) should not be Some("<")
+    Chaining.headOf(read("!x:real. 0 < x * x + 1")) should not be Some(Real.Order)
     val body = Logic.stripForall(read("!x:real. 0 < x * x + 1")).toOption.map(_._2).get
-    Chaining.headOf(body) shouldBe Some("<")
+    Chaining.headOf(body) shouldBe Some(Real.Order)
   }
 }

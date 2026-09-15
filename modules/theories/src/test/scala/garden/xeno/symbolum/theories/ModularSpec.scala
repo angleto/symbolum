@@ -56,10 +56,9 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     )
 
     modular.show(force(modular.definition(Modular.DividesName)).conclusion) shouldBe
-      "NUM_DIVIDES = (\\x:num. \\y:num. ?z:num. y = NUM_MUL x z)"
+      "NUM_DIVIDES = (\\x:num. \\y:num. ?z:num. y = x * z)"
     modular.show(force(modular.definition(Modular.CongruenceName)).conclusion) shouldBe
-      "NUM_CONG = (\\x:num. \\y:num. \\z:num. ?u:num. ?v:num. " +
-        "NUM_ADD y (NUM_MUL x u) = NUM_ADD z (NUM_MUL x v))"
+      "NUM_CONG = (\\x:num. \\y:num. \\z:num. ?u:num. ?v:num. y + x * u = z + x * v)"
   }
 
   it should "carry every fact without a hypothesis left standing" in {
@@ -129,22 +128,21 @@ class ModularSpec extends AnyFlatSpec with Matchers {
 
   "Divisibility" should "read as the text this development is checked by" in {
     statement(Modular.DividesIntro) shouldBe
-      "!x:num. !y:num. !z:num. y = NUM_MUL x z ==> NUM_DIVIDES x y"
+      "!x:num. !y:num. !z:num. y = x * z ==> NUM_DIVIDES x y"
     statement(Modular.DividesElim) shouldBe
-      "!x:num. !y:num. NUM_DIVIDES x y ==> (?z:num. y = NUM_MUL x z)"
+      "!x:num. !y:num. NUM_DIVIDES x y ==> (?z:num. y = x * z)"
     statement(Modular.DividesRefl) shouldBe "!x:num. NUM_DIVIDES x x"
     statement(Modular.DividesTrans) shouldBe
       "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES y z ==> NUM_DIVIDES x z"
     statement(Modular.DividesMul) shouldBe
-      "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (NUM_MUL y z)"
+      "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (y * z)"
     statement(Modular.DividesAdd) shouldBe
-      "!x:num. !y:num. !z:num. NUM_DIVIDES x y /\\ NUM_DIVIDES x z ==> " +
-        "NUM_DIVIDES x (NUM_ADD y z)"
+      "!x:num. !y:num. !z:num. NUM_DIVIDES x y /\\ NUM_DIVIDES x z ==> NUM_DIVIDES x (y + z)"
     statement(Modular.DividesZero) shouldBe "!x:num. NUM_DIVIDES x 0"
     statement(Modular.OneDivides) shouldBe "!x:num. NUM_DIVIDES (SUC 0) x"
     statement(Modular.ZeroDivides) shouldBe "!x:num. NUM_DIVIDES 0 x = (x = 0)"
     statement(Modular.DividesBound) shouldBe
-      "!x:num. !y:num. NUM_DIVIDES x y ==> NUM_LE x y \\/ y = 0"
+      "!x:num. !y:num. NUM_DIVIDES x y ==> x <= y \\/ y = 0"
   }
 
   "The congruence" should "read as the text this development is checked by" in {
@@ -154,12 +152,12 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     statement(Modular.CongTrans) shouldBe
       "!x:num. !y:num. !z:num. !u:num. NUM_CONG x y z ==> NUM_CONG x z u ==> NUM_CONG x y u"
     statement(Modular.CongAdd) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> " +
-        "NUM_CONG x (NUM_ADD y u) (NUM_ADD z v)"
+      "!x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x " +
+        "(y + u) (z + v)"
     statement(Modular.CongMul) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> " +
-        "NUM_CONG x (NUM_MUL y u) (NUM_MUL z v)"
-    statement(Modular.CongModulus) shouldBe "!x:num. !y:num. NUM_CONG x (NUM_ADD y x) y"
+      "!x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x " +
+        "(y * u) (z * v)"
+    statement(Modular.CongModulus) shouldBe "!x:num. !y:num. NUM_CONG x (y + x) y"
   }
 
   /* ----------------------------------------- what moving to `num` actually bought */
@@ -211,28 +209,29 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // identity decided is the same identity in the same number of unknowns.
     val expanded = force(
       modular.identity(
-        "NUM_MUL (NUM_ADD a:num b:num) (NUM_ADD c:num d:num)",
-        "NUM_ADD (NUM_ADD (NUM_MUL a:num c:num) (NUM_MUL a:num d:num)) " +
-          "(NUM_ADD (NUM_MUL b:num c:num) (NUM_MUL b:num d:num))"
+        // `:num` on each variable's first occurrence since `docs/adr/0018`: `+` and `*` stand
+        // for two constants here and nothing else in these texts says which. One annotation per
+        // name is enough, and the identity is the same one.
+        "(a:num + b:num) * (c:num + d:num)",
+        "a:num * c:num + a * d:num + (b:num * c + b * d)"
       )
     )
 
     modular.show(expanded.conclusion) shouldBe
-      "NUM_MUL (NUM_ADD a b) (NUM_ADD c d) = " +
-        "NUM_ADD (NUM_ADD (NUM_MUL a c) (NUM_MUL a d)) (NUM_ADD (NUM_MUL b c) (NUM_MUL b d))"
+      "(a + b) * (c + d) = a * c + a * d + (b * c + b * d)"
     expanded.hypotheses shouldBe empty
   }
 
   it should "settle a ground claim written in successors, which is what the recurrences hook" in {
     val arithmetic = force(
       modular.identity(
-        "NUM_MUL (SUC (SUC 0)) (SUC (SUC (SUC 0)))",
+        "SUC (SUC 0) * SUC (SUC (SUC 0))",
         "SUC (SUC (SUC (SUC (SUC (SUC 0)))))"
       )
     )
 
     modular.show(arithmetic.conclusion) shouldBe
-      "NUM_MUL (SUC (SUC 0)) (SUC (SUC (SUC 0))) = SUC (SUC (SUC (SUC (SUC (SUC 0)))))"
+      "SUC (SUC 0) * SUC (SUC (SUC 0)) = SUC (SUC (SUC (SUC (SUC (SUC 0)))))"
   }
 
   it should "refuse a claim that is not an identity, and say which two terms differ" in {
@@ -240,7 +239,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // The refusal comes from `Ring` over the embedded terms, so it names the two real forms; that
     // is a worse message than one about naturals and it is the honest one, since the embedded
     // identity is what was actually decided.
-    val refusal = modular.identity("NUM_ADD a:num b:num", "NUM_MUL a:num b:num")
+    val refusal = modular.identity("NUM_ADD a:num b:num", "a:num * b")
 
     refusal.isLeft shouldBe true
     refusal.fold(_.message, theorem => modular.show(theorem.conclusion)) should include("real_of_num")
@@ -254,7 +253,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // produce; `6:num` is a term and is a different one, bridged by `Successor.spell`.
     val theorem = force(
       for {
-        product <- modular.term("NUM_MUL (SUC (SUC 0)) (SUC (SUC (SUC 0)))")
+        product <- modular.term("SUC (SUC 0) * SUC (SUC (SUC 0))")
         equation <- modular.identity(numeral(6), product)
         introduction <- modular.fact(Modular.DividesIntro)
         instance <- rules.specAll(introduction, List(numeral(2), numeral(6), numeral(3)))
@@ -289,8 +288,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     )
 
     modular.show(theorem.conclusion) shouldBe
-      "?x:num. ?y:num. SUC (SUC (SUC (SUC (SUC 0)))) = " +
-        "NUM_ADD (NUM_MUL (SUC (SUC 0)) x) y /\\ NUM_LT y (SUC (SUC 0))"
+      "?x:num. ?y:num. SUC (SUC (SUC (SUC (SUC 0)))) = SUC (SUC 0) * x + y /\\ y < SUC (SUC 0)"
     theorem.hypotheses shouldBe empty
   }
 
@@ -301,14 +299,13 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     val unique = fact(Modular.DivisionUnique)
 
     statement(Modular.DivisionUnique) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. !v:num. " +
-        "NUM_ADD (NUM_MUL x y) z = NUM_ADD (NUM_MUL x u) v /\\ NUM_LT z x /\\ NUM_LT v x ==> " +
-        "y = u /\\ z = v"
+      "!x:num. !y:num. !z:num. !u:num. !v:num. x * y + z = x * u + v /\\ z < x /\\ v < x ==> y = " +
+        "u /\\ z = v"
     unique.hypotheses shouldBe empty
 
     // It needs no hypothesis that the modulus is positive, and that is not an omission: a bound
     // strictly below `x` already says `x` is not `ZERO`.
-    modular.show(unique.conclusion) should not include "NUM_LT 0 x"
+    modular.show(unique.conclusion) should not include "0 < x"
 
     // The two constants were asserted absent here until 2026-09-12, on the ground that nothing in
     // this development needed them. What changed is not this lemma but the consumer: the quotient
@@ -331,7 +328,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
         )
         oneBelowTwo <- rules.spec(numeral(1), belowSuccessor)
         bounds <- rules.conjIntro(oneBelowTwo, oneBelowTwo)
-        left <- modular.term("NUM_ADD (NUM_MUL (SUC (SUC 0)) (SUC (SUC 0))) (SUC 0)")
+        left <- modular.term("SUC (SUC 0) * SUC (SUC 0) + SUC 0")
         equation = Kernel.refl(left)
         premises <- rules.conjIntro(equation, bounds)
         applied <- rules.mp(instance, premises)
@@ -354,7 +351,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
         reflexive <- modular.fact(Modular.CongRefl)
         shifted <- rules.specAll(modulus, List(numeral(2), numeral(3)))
         same <- rules.specAll(reflexive, List(numeral(2), numeral(3)))
-        raised <- modular.term("NUM_ADD (SUC (SUC (SUC 0))) (SUC (SUC 0))")
+        raised <- modular.term("SUC (SUC (SUC 0)) + SUC (SUC 0)")
         instance <- rules.specAll(
           addition,
           List(numeral(2), raised, numeral(3), numeral(3), numeral(3))
@@ -365,9 +362,8 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     )
 
     modular.show(theorem.conclusion) shouldBe
-      "NUM_CONG (SUC (SUC 0)) " +
-        "(NUM_ADD (NUM_ADD (SUC (SUC (SUC 0))) (SUC (SUC 0))) (SUC (SUC (SUC 0)))) " +
-        "(NUM_ADD (SUC (SUC (SUC 0))) (SUC (SUC (SUC 0))))"
+      "NUM_CONG (SUC (SUC 0)) (SUC (SUC (SUC 0)) + SUC (SUC 0) + SUC (SUC (SUC 0))) (SUC (SUC " +
+        "(SUC 0)) + SUC (SUC (SUC 0)))"
     theorem.hypotheses shouldBe empty
   }
 
@@ -409,7 +405,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
 
     modular.show(force(modular.definition(Modular.GcdName)).conclusion) shouldBe
       "NUM_GCD = (\\x:num. \\y:num. select (\\z:num. (NUM_DIVIDES z x /\\ NUM_DIVIDES z y) /\\ " +
-        "(!u:num. NUM_DIVIDES u x /\\ NUM_DIVIDES u y ==> NUM_LE u z)))"
+        "(!u:num. NUM_DIVIDES u x /\\ NUM_DIVIDES u y ==> u <= z)))"
 
     // And it costs no axiom the theory did not already carry, which is the same check the two
     // relations get above: a constant introduced by `select` is a definition and not an assumption.
@@ -449,7 +445,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // its own make every other one divide it. That ground has not moved: the two statements are
     // still different, and the second is a theorem now because Bezout was derived, not because the
     // first implies it. So the assertion becomes the distinction rather than the absence.
-    statement(Modular.GcdGreatest) should include("NUM_LE z (NUM_GCD x y)")
+    statement(Modular.GcdGreatest) should include("z <= NUM_GCD x y")
     statement(Modular.GcdGreatest) should not include "NUM_DIVIDES z (NUM_GCD"
     statement(Modular.GcdDivides) should include("NUM_DIVIDES z (NUM_GCD x y)")
     statement(Modular.GcdDivides) should not include "NUM_LE"
@@ -468,11 +464,11 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // remainder chosen from a predicate of its own would be some remainder, not the one that goes
     // with `NUM_DIV m n`.
     modular.show(force(modular.definition(Modular.DivName)).conclusion) shouldBe
-      "NUM_DIV = (\\x:num. \\y:num. select (\\z:num. " +
-        "(?u:num. x = NUM_ADD (NUM_MUL y z) u /\\ NUM_LT u y) \\/ y = 0 /\\ z = 0))"
+      "NUM_DIV = (\\x:num. \\y:num. select (\\z:num. (?u:num. x = y * z + u /\\ u < y) \\/ y = 0 " +
+        "/\\ z = 0))"
     modular.show(force(modular.definition(Modular.ModName)).conclusion) shouldBe
-      "NUM_MOD = (\\x:num. \\y:num. select (\\z:num. " +
-        "x = NUM_ADD (NUM_MUL y (NUM_DIV x y)) z /\\ NUM_LT z y \\/ y = 0 /\\ z = x))"
+      "NUM_MOD = (\\x:num. \\y:num. select (\\z:num. x = y * NUM_DIV x y + z /\\ z < y \\/ y = 0 " +
+        "/\\ z = x))"
 
     // And the trusted base does not move, which is what "defined" means here.
     modular.theory.axioms shouldBe peano.theory.axioms
@@ -488,7 +484,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // library. That is measured rather than argued, in this file's own history: the first form of
     // this lemma hung a suite for an hour.
     statement(Modular.DivisionAt) shouldBe
-      "!x:num. !y:num. NUM_ADD (NUM_MUL y (NUM_DIV x y)) (NUM_MOD x y) = x"
+      "!x:num. !y:num. y * NUM_DIV x y + NUM_MOD x y = x"
     statement(Modular.DivAtZero) shouldBe "!x:num. NUM_DIV x 0 = 0"
     statement(Modular.ModAtZero) shouldBe "!x:num. NUM_MOD x 0 = x"
 
@@ -507,7 +503,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
   it should "bound the remainder, which is the one thing a modulus of 0 cannot have" in {
     // The guard stays here and no definition could remove it: nothing at all is below `ZERO`.
     statement(Modular.ModBelow) shouldBe
-      "!x:num. !y:num. NUM_LT 0 y ==> NUM_LT (NUM_MOD x y) y"
+      "!x:num. !y:num. 0 < y ==> NUM_MOD x y < y"
   }
 
   it should "determine the pair, which is what makes the two names honest" in {
@@ -515,8 +511,8 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // and a consumer holding a quotient of its own could not conclude it held *the* quotient, which
     // is the whole content of calling either one a function.
     statement(Modular.DivisionDetermined) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. x = NUM_ADD (NUM_MUL y z) u /\\ NUM_LT u y ==> " +
-        "z = NUM_DIV x y /\\ u = NUM_MOD x y"
+      "!x:num. !y:num. !z:num. !u:num. x = y * z + u /\\ u < y ==> z = NUM_DIV x y /\\ u = " +
+        "NUM_MOD x y"
 
     // Five by two, end to end: two and one satisfy the two conditions, so they are the pair the
     // constants name. The point of the probe is that nothing here mentions the definitions.
@@ -525,7 +521,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
         determined <- modular.fact(Modular.DivisionDetermined)
         belowSuccessor <- peano.fact(Peano.BelowSuccessor)
         decomposition <- modular.term(
-          "NUM_ADD (NUM_MUL (SUC (SUC 0)) (SUC (SUC 0))) (SUC 0)"
+          "SUC (SUC 0) * SUC (SUC 0) + SUC 0"
         )
         equation <- modular.identity(numeral(5), decomposition)
         bound <- rules.spec(numeral(1), belowSuccessor)
@@ -559,12 +555,11 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // negatives, so the term that would have been negated moves to the other side, and which one
     // moves depends on the pair. A statement that fixed the side would be false for half of them.
     statement(Modular.BezoutExists) shouldBe
-      "!x:num. !y:num. ?z:num. ?u:num. ?v:num. NUM_DIVIDES z x /\\ NUM_DIVIDES z y /\\ " +
-        "(NUM_MUL x u = NUM_ADD (NUM_MUL y v) z \\/ NUM_MUL y u = NUM_ADD (NUM_MUL x v) z)"
+      "!x:num. !y:num. ?z:num. ?u:num. ?v:num. NUM_DIVIDES z x /\\ NUM_DIVIDES z y /\\ (x * u = y " +
+        "* v + z \\/ y * u = x * v + z)"
     statement(Modular.Bezout) shouldBe
-      "!x:num. !y:num. ~(x = 0) \\/ ~(y = 0) ==> (?z:num. ?u:num. " +
-        "NUM_MUL x z = NUM_ADD (NUM_MUL y u) (NUM_GCD x y) \\/ " +
-        "NUM_MUL y z = NUM_ADD (NUM_MUL x u) (NUM_GCD x y))"
+      "!x:num. !y:num. ~(x = 0) \\/ ~(y = 0) ==> (?z:num. ?u:num. x * z = y * u + NUM_GCD x y \\/ " +
+        "y * z = x * u + NUM_GCD x y)"
 
     // The first is unguarded and the second is not, and that is the difference between a common
     // divisor and *the* greatest one: at the origin the first has `ZERO` for every witness and the
@@ -578,8 +573,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // is `a | x /\\ a | y ==> a | (y - x)`; here the difference cannot be written, so the statement
     // is additive and the proof does what the subtraction would have done.
     statement(Modular.DividesSummand) shouldBe
-      "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (NUM_ADD y z) ==> " +
-        "NUM_DIVIDES x z"
+      "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (y + z) ==> NUM_DIVIDES x z"
   }
 
   it should "make every common divisor divide the greatest one, at a pair a consumer writes" in {
@@ -590,8 +584,8 @@ class ModularSpec extends AnyFlatSpec with Matchers {
         gcdDivides <- modular.fact(Modular.GcdDivides)
         introduction <- modular.fact(Modular.DividesIntro)
 
-        threeTwos <- modular.term("NUM_MUL (SUC (SUC 0)) (SUC (SUC (SUC 0)))")
-        twoTwos <- modular.term("NUM_MUL (SUC (SUC 0)) (SUC (SUC 0))")
+        threeTwos <- modular.term("SUC (SUC 0) * SUC (SUC (SUC 0))")
+        twoTwos <- modular.term("SUC (SUC 0) * SUC (SUC 0)")
         sixIsEven <- modular.identity(numeral(6), threeTwos)
         fourIsEven <- modular.identity(numeral(4), twoTwos)
         dividesSix <- rules
@@ -628,18 +622,17 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // The first conjunct is what keeps one out, which the second alone does not: one is divisible
     // only by one and by itself, and those are the same number there.
     modular.show(force(modular.definition(Modular.PrimeName)).conclusion) shouldBe
-      "NUM_PRIME = (\\x:num. NUM_LT (SUC 0) x /\\ " +
-        "(!y:num. NUM_DIVIDES y x ==> y = SUC 0 \\/ y = x))"
+      "NUM_PRIME = (\\x:num. SUC 0 < x /\\ (!y:num. NUM_DIVIDES y x ==> y = SUC 0 \\/ y = x))"
 
-    statement(Modular.PrimeAboveOne) shouldBe "!x:num. NUM_PRIME x ==> NUM_LT (SUC 0) x"
+    statement(Modular.PrimeAboveOne) shouldBe "!x:num. NUM_PRIME x ==> SUC 0 < x"
     statement(Modular.PrimeDivisor) shouldBe
       "!x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \\/ y = x"
   }
 
   "Euclid's lemma" should "read as the text it is checked by, and apply to a square" in {
     statement(Modular.Euclid) shouldBe
-      "!x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_MUL y z) ==> " +
-        "NUM_DIVIDES x y \\/ NUM_DIVIDES x z"
+      "!x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x y \\/ " +
+        "NUM_DIVIDES x z"
 
     // The use a consumer makes of it first: a prime dividing a square divides the root. Both
     // branches of the disjunction are the same proposition there, so the case analysis collapses,
@@ -649,7 +642,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
         euclid <- modular.fact(Modular.Euclid)
         p <- modular.term("p:num")
         a <- modular.term("a:num")
-        square <- modular.term("NUM_MUL a:num a:num")
+        square <- modular.term("a:num * a")
 
         primeTerm <- modular.prime(p)
         assumedPrime <- LogicError.lift(Kernel.assume(primeTerm))
@@ -671,7 +664,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     )
 
     modular.show(theorem.conclusion) shouldBe
-      "NUM_PRIME p ==> NUM_DIVIDES p (NUM_MUL a a) ==> NUM_DIVIDES p a"
+      "NUM_PRIME p ==> NUM_DIVIDES p (a * a) ==> NUM_DIVIDES p a"
     theorem.hypotheses shouldBe empty
   }
 

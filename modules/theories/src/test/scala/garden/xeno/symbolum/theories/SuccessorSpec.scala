@@ -169,9 +169,9 @@ class SuccessorSpec extends AnyFlatSpec with Matchers {
     // moved and a fragment would pass on a statement about something else. The binder prints as
     // `x` and not as `i`: this logic has no names for bound variables and the printer coins one
     // from the binder's position, which is the same fact `Rules.specTo` exists because of.
-    widest.show(asWritten.conclusion) shouldBe "!x:num. NUM_LT x 4 ==> x = x"
+    widest.show(asWritten.conclusion) shouldBe "!x:num. x < 4 ==> x = x"
     widest.show(inSuccessors.conclusion) shouldBe
-      "!x:num. NUM_LT x (SUC (SUC (SUC (SUC 0)))) ==> x = x"
+      "!x:num. x < SUC (SUC (SUC (SUC 0))) ==> x = x"
     asWritten.hypotheses shouldBe empty
   }
 

@@ -76,12 +76,11 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
       Transcendental.Exponential ->
         "exp = (\\x:real. lim (\\y:num. Sum (\\z:num. Power x z / real_of_num (NUM_FACT z)) y))",
       Transcendental.Sine ->
-        ("sin = (\\x:real. lim (\\y:num. Sum (\\z:num. Power (0 - 1) z * " +
-          "(Power x (NUM_ADD (NUM_MUL 2 z) 1) / " +
-          "real_of_num (NUM_FACT (NUM_ADD (NUM_MUL 2 z) 1)))) y))"),
+        ("sin = (\\x:real. lim (\\y:num. Sum (\\z:num. Power (0 - 1) z * (Power x (2 * z + 1) / " +
+          "real_of_num (NUM_FACT (2 * z + 1)))) y))"),
       Transcendental.Cosine ->
-        ("cos = (\\x:real. lim (\\y:num. Sum (\\z:num. Power (0 - 1) z * " +
-          "(Power x (NUM_MUL 2 z) / real_of_num (NUM_FACT (NUM_MUL 2 z)))) y))"),
+        ("cos = (\\x:real. lim (\\y:num. Sum (\\z:num. Power (0 - 1) z * (Power x (2 * z) / " +
+          "real_of_num (NUM_FACT (2 * z)))) y))"),
       Transcendental.Logarithm -> "ln = (\\x:real. select (\\y:real. exp y = x))",
       Transcendental.HyperbolicSine -> "sinh = (\\x:real. (exp x - exp (0 - x)) / 2)",
       Transcendental.HyperbolicCosine -> "cosh = (\\x:real. (exp x + exp (0 - x)) / 2)"

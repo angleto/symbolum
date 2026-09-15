@@ -224,6 +224,41 @@ said what its surroundings required. Three consequences a reader meets immediate
   docstring: of seven refusals across a consumer's 630 hand-written texts, all seven were
   unambiguous to the caller, and the text is the thing a reader compares against the informal claim.
 
+**An operator symbol stands for more than one constant, and the elaborator picks which.** The
+numerals' rule one level out, landed 2026-09-15 as `docs/adr/0018`. `+`, `*`, `<` and `<=` are
+`num`'s as well as the reals', so `!n:num. n + 0 = n` reads and is proved where until that day it
+was refused with "real and num cannot be the same type". `Notation` gains no types: it hands back
+every candidate for a symbol and the parser, which has the theory, elaborates against the shape the
+candidates share and reads the answer back after unification. Overloaded only where the operation
+is the **same** one: `-` and `/` are truncated and floor over `num`, so they keep the prefix form
+and a reader who writes them is told which constant to reach for.
+
+Four things a reader meets immediately, and the last two are what the change cost rather than what
+it bought:
+
+- **Nothing printed moves for the reals, and 135 of the library's 436 statements move for `num`.**
+  `NUM_DIVISION_UNIQUE` is the one to look at: it was `NUM_ADD (NUM_MUL x y) z = ...` and is
+  `x * y + z = x * u + v /\ z < x /\ v < x ==> y = u /\ z = v`, which is the uniqueness of quotient
+  and remainder as anybody would write it. `docs/reading-register.md` gained more than
+  `docs/lemmas.md` did, and those are the rows nobody has read.
+- **A text whose type nothing determines is refused, and that now includes a text made only of
+  digits.** `0 < 1` at the widest signature is ambiguous in two ways at once and is refused naming
+  both; `(0:real) < 1` reads. The escape `Signature.term(text, expected)` does **not** reach this
+  case when the text is a proposition, because the type a caller can pass is then `bool` and `bool`
+  says nothing about the operands. A caller whose ambiguity is inside an equation annotates in the
+  text, which is what `Algebraic` does when it builds a polynomial out of variable names.
+- **A constant's name is never a symbol any more, and three were.** `Real.Addition` was literally
+  `"+"`. It is `real_add`, with `real_mul` and `real_lt` beside it, and `le` became `real_le` so the
+  four read alike. `Real.Zero` is still `"0"` and `Real.One` still `"1"`: the same defect, left
+  alone on purpose, because they belong to `docs/adr/0012` rather than to this change.
+- **`Arithmetic.ringOrder` needed the product to sort before the sum, and got that from ASCII.**
+  `*` precedes `+` in ASCII and `real_mul` does not precede `real_add`, so the rename reversed a
+  comparison the canonical form depends on, and associativity stopped flattening. **One corpus entry
+  in `PolynomialSpec` caught it and nothing else in 2085 tests did.** The ranking is written down in
+  that file now. Read it before touching any order a normal form depends on: the general lesson is
+  the one the file already carried about `num`, which is that such an order must not be a property
+  of how two constants happen to be spelled.
+
 **A numeral reaches a recurrence only through `Successor`, and until 2026-09-13 it did not reach
 one at all.** Every recurrence over `num` is stated at `SUC n`, and `2:num` is `NUM_BIT0 NUM_ONE`,
 so nothing written as a numeral hooked anything: `Power x 2 = x * x` was not provable, and

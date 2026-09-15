@@ -214,7 +214,7 @@ the writer, and nothing else.
 |---|---|
 | steps, and the distinct terms they are written over | 1132 steps, 2048 terms |
 | the nodes a writer without sharing would have emitted | 40860 nodes, a sharing factor of 20.0 |
-| its size | 66673 characters, 58.9 a step |
+| its size | 66683 characters, 58.9 a step |
 
 <!-- end generated: serialisation -->
 

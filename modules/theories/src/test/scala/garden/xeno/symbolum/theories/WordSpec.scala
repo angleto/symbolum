@@ -130,7 +130,9 @@ class WordSpec extends AnyFlatSpec with Matchers {
 
     val applied = force(LogicError.lift(Term.app(pad, index)))
     val entry = force(Conv.betaRoot(applied))
-    val guard = force(words.proposition("~(NUM_LT (i:num) 0)"))
+    // `i:num`: `<` is two constants here since `docs/adr/0018` and the numeral is two encodings,
+    // so nothing in this text says which order is meant.
+    val guard = force(words.proposition("~(i:num < 0)"))
     val padded = force(rules.disch(guard, entry).flatMap(rules.gen(index, _)))
 
     val length = force(
@@ -150,8 +152,8 @@ class WordSpec extends AnyFlatSpec with Matchers {
     )
 
     words.show(instantiated.conclusion) shouldBe
-      "!x:word(num). !y:word(num). WORD_LENGTH x = WORD_LENGTH y /\\ " +
-        "(!z:num. NUM_LT z (WORD_LENGTH x) ==> WORD_NTH x z = WORD_NTH y z) ==> x = y"
+      "!x:word(num). !y:word(num). WORD_LENGTH x = WORD_LENGTH y /\\ (!z:num. z < WORD_LENGTH x " +
+        "==> WORD_NTH x z = WORD_NTH y z) ==> x = y"
   }
 
   /* ------------------------------------------------- the rotation that is not here */
@@ -190,7 +192,7 @@ class WordSpec extends AnyFlatSpec with Matchers {
     // `select` of the division theorem's own predicate is a closed term this signature accepts, and
     // the parser building it is the proof of that.
     val remainder = words.term(
-      "select (\\r:num. ?q:num. (m:num) = NUM_ADD (NUM_MUL (n:num) q) r /\\ NUM_LT r n)"
+      "select (\\x:num. ?y:num. m = n * y + x /\\ x < n)"
     )
 
     remainder.isRight shouldBe true
@@ -202,9 +204,8 @@ class WordSpec extends AnyFlatSpec with Matchers {
     // **It does now**, proved on the same evening as this file, which is why this assertion is that
     // the lemma is THERE and not that it is missing.
     val uniqueness = words.proposition(
-      "!n:num. !q:num. !r:num. !p:num. !s:num. " +
-        "NUM_ADD (NUM_MUL n q) r = NUM_ADD (NUM_MUL n p) s /\\ NUM_LT r n /\\ NUM_LT s n ==> " +
-        "q = p /\\ r = s"
+      "!x:num. !y:num. !z:num. !u:num. !v:num. x * y + z = x * u + v /\\ z < x /\\ v < x ==> y = " +
+        "u /\\ z = v"
     )
 
     uniqueness.isRight shouldBe true

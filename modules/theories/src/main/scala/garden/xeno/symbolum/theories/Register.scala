@@ -192,8 +192,14 @@ object Register {
       val grouping = if (operator.rightAssociative) "right-associative" else "left-associative"
       val fixed = operator.fixedType.map(ty => s", at the fixed type `${Show.show(ty)}`").getOrElse("")
       val direction = if (operator.flipped) ", read only, never printed" else ""
+      // Named by its symbol AND its constant, which is the numerals' rule two rows down applied
+      // where `docs/adr/0018` made it necessary: one symbol may now stand for more than one
+      // constant, so `notation infix +` is two statements and a reader cannot attest to a
+      // statement that is silently two. Unconditional rather than only where a symbol is
+      // overloaded, because a label that changed the day somebody overloaded its symbol would
+      // carry an existing attestation over to a statement nobody had read.
       Row(
-        s"notation infix ${operator.symbol}",
+        s"notation infix ${operator.symbol} via ${operator.constant}",
         s"$shape, precedence ${operator.precedence}, $grouping$fixed$direction"
       )
     }

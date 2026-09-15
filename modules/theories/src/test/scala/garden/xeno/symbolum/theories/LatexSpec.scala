@@ -142,7 +142,7 @@ class LatexSpec extends AnyFlatSpec with Matchers {
     // The two forms carry different halves of what a reader needs: the printed one says `+` where
     // the legible one says `NUM_ADD`, and the legible one is the text that reads back. Neither is
     // the other's improvement.
-    legible("NUM_ADD_SYM") shouldBe "!x:num. !y:num. NUM_ADD x y = NUM_ADD y x"
+    legible("NUM_ADD_SYM") shouldBe "!x:num. !y:num. x + y = y + x"
     printed("NUM_ADD_SYM") shouldBe
       """\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ x + y = y + x"""
   }

@@ -74,21 +74,21 @@ they have least appetite for working out how it is produced.
 
 ## Coding
 
-  NUM_BETA_SEQUENCE        !x:num -> num. !y:num. ?z:num. ?u:num. !v:num. NUM_LT v y ==> NUM_BETA z u v = x v
-  NUM_BOUNDED_BELOW_LENGTH !x:num -> num. !y:num. ?z:num. !u:num. NUM_LT u y ==> NUM_LE (x u) z
-  NUM_CRT                  !x:num -> num. !y:num -> num. !z:num. (!u:num. NUM_LT u z ==> NUM_LT 0 (x u)) ==> (!u:num. !v:num. NUM_LT u z /\ NUM_LT v z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. NUM_LT v z ==> NUM_CONG (x v) u (y v))
-  NUM_CRT_PAIR             !x:num. !y:num. !z:num. !u:num. NUM_GCD x y = SUC 0 /\ NUM_LT 0 x /\ NUM_LT 0 y ==> (?v:num. NUM_CONG x v z /\ NUM_CONG y v u)
-  NUM_FACT_DIVIDES         !x:num. !y:num. NUM_LT 0 x /\ NUM_LE x y ==> NUM_DIVIDES x (NUM_FACT y)
-  NUM_FACT_POSITIVE        !x:num. NUM_LT 0 (NUM_FACT x)
-  NUM_FACT_SUC             !x:num. NUM_FACT (SUC x) = NUM_MUL (NUM_FACT x) (SUC x)
+  NUM_BETA_SEQUENCE        !x:num -> num. !y:num. ?z:num. ?u:num. !v:num. v < y ==> NUM_BETA z u v = x v
+  NUM_BOUNDED_BELOW_LENGTH !x:num -> num. !y:num. ?z:num. !u:num. u < y ==> x u <= z
+  NUM_CRT                  !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> 0 < x u) ==> (!u:num. !v:num. u < z /\ v < z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. v < z ==> NUM_CONG (x v) u (y v))
+  NUM_CRT_PAIR             !x:num. !y:num. !z:num. !u:num. NUM_GCD x y = SUC 0 /\ 0 < x /\ 0 < y ==> (?v:num. NUM_CONG x v z /\ NUM_CONG y v u)
+  NUM_FACT_DIVIDES         !x:num. !y:num. 0 < x /\ x <= y ==> NUM_DIVIDES x (NUM_FACT y)
+  NUM_FACT_POSITIVE        !x:num. 0 < NUM_FACT x
+  NUM_FACT_SUC             !x:num. NUM_FACT (SUC x) = NUM_FACT x * SUC x
   NUM_FACT_ZERO            NUM_FACT 0 = SUC 0
-  NUM_GAUSS                !x:num. !y:num. !z:num. ~(x = 0) \/ ~(y = 0) ==> NUM_GCD x y = SUC 0 ==> NUM_DIVIDES x (NUM_MUL y z) ==> NUM_DIVIDES x z
-  NUM_GCD_MUL              !x:num. !y:num. !z:num. NUM_LT 0 z ==> NUM_GCD x z = SUC 0 ==> NUM_GCD y z = SUC 0 ==> NUM_GCD (NUM_MUL x y) z = SUC 0
-  NUM_GCD_PROD             !x:num -> num. !y:num. !z:num. NUM_LT 0 y ==> (!u:num. NUM_LT u z ==> NUM_GCD (x u) y = SUC 0) ==> NUM_GCD (NUM_PROD x z) y = SUC 0
-  NUM_GCD_SHIFTED_MULTIPLES !x:num. !y:num. !z:num. NUM_LT y z /\ NUM_DIVIDES (NUM_SUB z y) x ==> NUM_GCD (SUC (NUM_MUL (SUC y) x)) (SUC (NUM_MUL (SUC z) x)) = SUC 0
-  NUM_PROD_DIVIDES         !x:num -> num. !y:num. !z:num. NUM_LT y z ==> NUM_DIVIDES (x y) (NUM_PROD x z)
-  NUM_PROD_POSITIVE        !x:num -> num. !y:num. (!z:num. NUM_LT z y ==> NUM_LT 0 (x z)) ==> NUM_LT 0 (NUM_PROD x y)
-  NUM_PROD_SUC             !x:num -> num. !y:num. NUM_PROD x (SUC y) = NUM_MUL (NUM_PROD x y) (x y)
+  NUM_GAUSS                !x:num. !y:num. !z:num. ~(x = 0) \/ ~(y = 0) ==> NUM_GCD x y = SUC 0 ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x z
+  NUM_GCD_MUL              !x:num. !y:num. !z:num. 0 < z ==> NUM_GCD x z = SUC 0 ==> NUM_GCD y z = SUC 0 ==> NUM_GCD (x * y) z = SUC 0
+  NUM_GCD_PROD             !x:num -> num. !y:num. !z:num. 0 < y ==> (!u:num. u < z ==> NUM_GCD (x u) y = SUC 0) ==> NUM_GCD (NUM_PROD x z) y = SUC 0
+  NUM_GCD_SHIFTED_MULTIPLES !x:num. !y:num. !z:num. y < z /\ NUM_DIVIDES (NUM_SUB z y) x ==> NUM_GCD (SUC (SUC y * x)) (SUC (SUC z * x)) = SUC 0
+  NUM_PROD_DIVIDES         !x:num -> num. !y:num. !z:num. y < z ==> NUM_DIVIDES (x y) (NUM_PROD x z)
+  NUM_PROD_POSITIVE        !x:num -> num. !y:num. (!z:num. z < y ==> 0 < x z) ==> 0 < NUM_PROD x y
+  NUM_PROD_SUC             !x:num -> num. !y:num. NUM_PROD x (SUC y) = NUM_PROD x y * x y
   NUM_PROD_ZERO            !x:num -> num. NUM_PROD x 0 = SUC 0
 
 ## Deduction
@@ -98,7 +98,7 @@ they have least appetite for working out how it is produced.
   NUM_PROV_DEDUCTION       !x:num. !y:num. NUM_FORM x ==> (!z:num. ~(NUM_FREE_FORM z x)) ==> NUM_PROV_FROM x y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))
   NUM_PROV_IMP_GEN         !x:num. !y:num. !z:num. NUM_FORM y ==> NUM_FORM z ==> ~(NUM_FREE_FORM x y) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 8 (NUM_PAIR x z))))
   NUM_PROV_IMP_MP          !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y z)))) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
-  NUM_PROV_NUMERAL_ADD     !x:num. !y:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL x) (NUM_NUMERAL y))) (NUM_NUMERAL (NUM_ADD x y))))
+  NUM_PROV_NUMERAL_ADD     !x:num. !y:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL x) (NUM_NUMERAL y))) (NUM_NUMERAL (x + y))))
   NUM_PROV_SELF            !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))
   NUM_PROV_SPECIALISE      !x:num. !y:num. !z:num. NUM_FORM z ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR x z)) ==> NUM_PROV (NUM_SUBST_FORM x y z)
   NUM_PROV_SUC_CONG        !x:num. !y:num. NUM_TERM x ==> NUM_TERM y ==> NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 x) (NUM_CODE 2 y)))
@@ -189,12 +189,12 @@ they have least appetite for working out how it is produced.
 ## Limit
 
   CONVERGES_CONSTANT       !x:real. converges (\y:num. x) x
-  CONVERGES_EVENTUALLY     !x:num -> real. !y:num -> real. !z:real. !u:num. (!v:num. NUM_LE u v ==> x v = y v) ==> converges x z ==> converges y z
+  CONVERGES_EVENTUALLY     !x:num -> real. !y:num -> real. !z:real. !u:num. (!v:num. u <= v ==> x v = y v) ==> converges x z ==> converges y z
   CONVERGES_UNIQUE         !x:num -> real. !y:real. !z:real. converges x y ==> converges x z ==> y = z
   LE_BELOW_EVERY_POSITIVE  !x:real. 0 <= x ==> (!y:real. 0 < y ==> x < y) ==> x = 0
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
-  MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. NUM_LE y z ==> x y <= x z)
+  MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
 
 ## Magnitude
 
@@ -245,49 +245,49 @@ they have least appetite for working out how it is produced.
 
 ## Modular
 
-  NUM_BEZOUT               !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. NUM_MUL x z = NUM_ADD (NUM_MUL y u) (NUM_GCD x y) \/ NUM_MUL y z = NUM_ADD (NUM_MUL x u) (NUM_GCD x y))
-  NUM_BEZOUT_EXISTS        !x:num. !y:num. ?z:num. ?u:num. ?v:num. NUM_DIVIDES z x /\ NUM_DIVIDES z y /\ (NUM_MUL x u = NUM_ADD (NUM_MUL y v) z \/ NUM_MUL y u = NUM_ADD (NUM_MUL x v) z)
-  NUM_CONG_ADD             !x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x (NUM_ADD y u) (NUM_ADD z v)
+  NUM_BEZOUT               !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. x * z = y * u + NUM_GCD x y \/ y * z = x * u + NUM_GCD x y)
+  NUM_BEZOUT_EXISTS        !x:num. !y:num. ?z:num. ?u:num. ?v:num. NUM_DIVIDES z x /\ NUM_DIVIDES z y /\ (x * u = y * v + z \/ y * u = x * v + z)
+  NUM_CONG_ADD             !x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x (y + u) (z + v)
   NUM_CONG_DIVISOR         !x:num. !y:num. !z:num. !u:num. NUM_DIVIDES y x ==> NUM_CONG x z u ==> NUM_CONG y z u
-  NUM_CONG_ELIM            !x:num. !y:num. !z:num. NUM_CONG x y z ==> (?u:num. ?v:num. NUM_ADD y (NUM_MUL x u) = NUM_ADD z (NUM_MUL x v))
-  NUM_CONG_INTRO           !x:num. !y:num. !z:num. !u:num. !v:num. NUM_ADD y (NUM_MUL x u) = NUM_ADD z (NUM_MUL x v) ==> NUM_CONG x y z
-  NUM_CONG_MODULUS         !x:num. !y:num. NUM_CONG x (NUM_ADD y x) y
-  NUM_CONG_MUL             !x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x (NUM_MUL y u) (NUM_MUL z v)
+  NUM_CONG_ELIM            !x:num. !y:num. !z:num. NUM_CONG x y z ==> (?u:num. ?v:num. y + x * u = z + x * v)
+  NUM_CONG_INTRO           !x:num. !y:num. !z:num. !u:num. !v:num. y + x * u = z + x * v ==> NUM_CONG x y z
+  NUM_CONG_MODULUS         !x:num. !y:num. NUM_CONG x (y + x) y
+  NUM_CONG_MUL             !x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x (y * u) (z * v)
   NUM_CONG_REFL            !x:num. !y:num. NUM_CONG x y y
   NUM_CONG_SYM             !x:num. !y:num. !z:num. NUM_CONG x y z ==> NUM_CONG x z y
   NUM_CONG_TRANS           !x:num. !y:num. !z:num. !u:num. NUM_CONG x y z ==> NUM_CONG x z u ==> NUM_CONG x y u
-  NUM_DIVIDES_ADD          !x:num. !y:num. !z:num. NUM_DIVIDES x y /\ NUM_DIVIDES x z ==> NUM_DIVIDES x (NUM_ADD y z)
+  NUM_DIVIDES_ADD          !x:num. !y:num. !z:num. NUM_DIVIDES x y /\ NUM_DIVIDES x z ==> NUM_DIVIDES x (y + z)
   NUM_DIVIDES_ANTISYM      !x:num. !y:num. NUM_DIVIDES x y /\ NUM_DIVIDES y x ==> x = y
-  NUM_DIVIDES_ELIM         !x:num. !y:num. NUM_DIVIDES x y ==> (?z:num. y = NUM_MUL x z)
-  NUM_DIVIDES_INTRO        !x:num. !y:num. !z:num. y = NUM_MUL x z ==> NUM_DIVIDES x y
-  NUM_DIVIDES_LE           !x:num. !y:num. NUM_DIVIDES x y ==> NUM_LE x y \/ y = 0
-  NUM_DIVIDES_MUL          !x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (NUM_MUL y z)
+  NUM_DIVIDES_ELIM         !x:num. !y:num. NUM_DIVIDES x y ==> (?z:num. y = x * z)
+  NUM_DIVIDES_INTRO        !x:num. !y:num. !z:num. y = x * z ==> NUM_DIVIDES x y
+  NUM_DIVIDES_LE           !x:num. !y:num. NUM_DIVIDES x y ==> x <= y \/ y = 0
+  NUM_DIVIDES_MUL          !x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (y * z)
   NUM_DIVIDES_ONE          !x:num. NUM_DIVIDES x (SUC 0) ==> x = SUC 0
   NUM_DIVIDES_REFL         !x:num. NUM_DIVIDES x x
-  NUM_DIVIDES_SUMMAND      !x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (NUM_ADD y z) ==> NUM_DIVIDES x z
+  NUM_DIVIDES_SUMMAND      !x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (y + z) ==> NUM_DIVIDES x z
   NUM_DIVIDES_TRANS        !x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES y z ==> NUM_DIVIDES x z
   NUM_DIVIDES_ZERO         !x:num. NUM_DIVIDES x 0
-  NUM_DIVISION             !x:num. !y:num. NUM_LT 0 x ==> (?z:num. ?u:num. y = NUM_ADD (NUM_MUL x z) u /\ NUM_LT u x)
-  NUM_DIVISION_UNIQUE      !x:num. !y:num. !z:num. !u:num. !v:num. NUM_ADD (NUM_MUL x y) z = NUM_ADD (NUM_MUL x u) v /\ NUM_LT z x /\ NUM_LT v x ==> y = u /\ z = v
-  NUM_DIV_MOD              !x:num. !y:num. NUM_ADD (NUM_MUL y (NUM_DIV x y)) (NUM_MOD x y) = x
-  NUM_DIV_MOD_BELOW        !x:num. !y:num. NUM_LT x y ==> NUM_DIV x y = 0 /\ NUM_MOD x y = x
-  NUM_DIV_MOD_STEP         !x:num. !y:num. NUM_LT x y ==> NUM_DIV (NUM_ADD y x) y = SUC 0 /\ NUM_MOD (NUM_ADD y x) y = x
-  NUM_DIV_MOD_UNIQUE       !x:num. !y:num. !z:num. !u:num. x = NUM_ADD (NUM_MUL y z) u /\ NUM_LT u y ==> z = NUM_DIV x y /\ u = NUM_MOD x y
+  NUM_DIVISION             !x:num. !y:num. 0 < x ==> (?z:num. ?u:num. y = x * z + u /\ u < x)
+  NUM_DIVISION_UNIQUE      !x:num. !y:num. !z:num. !u:num. !v:num. x * y + z = x * u + v /\ z < x /\ v < x ==> y = u /\ z = v
+  NUM_DIV_MOD              !x:num. !y:num. y * NUM_DIV x y + NUM_MOD x y = x
+  NUM_DIV_MOD_BELOW        !x:num. !y:num. x < y ==> NUM_DIV x y = 0 /\ NUM_MOD x y = x
+  NUM_DIV_MOD_STEP         !x:num. !y:num. x < y ==> NUM_DIV (y + x) y = SUC 0 /\ NUM_MOD (y + x) y = x
+  NUM_DIV_MOD_UNIQUE       !x:num. !y:num. !z:num. !u:num. x = y * z + u /\ u < y ==> z = NUM_DIV x y /\ u = NUM_MOD x y
   NUM_DIV_ZERO             !x:num. NUM_DIV x 0 = 0
-  NUM_EUCLID               !x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_MUL y z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z
+  NUM_EUCLID               !x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z
   NUM_GCD_DIVIDES          !x:num. !y:num. !z:num. ~(x = 0) \/ ~(y = 0) ==> NUM_DIVIDES z x /\ NUM_DIVIDES z y ==> NUM_DIVIDES z (NUM_GCD x y)
   NUM_GCD_DIVIDES_LEFT     !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> NUM_DIVIDES (NUM_GCD x y) x
   NUM_GCD_DIVIDES_RIGHT    !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> NUM_DIVIDES (NUM_GCD x y) y
-  NUM_GCD_GREATEST         !x:num. !y:num. !z:num. ~(x = 0) \/ ~(y = 0) ==> NUM_DIVIDES z x /\ NUM_DIVIDES z y ==> NUM_LE z (NUM_GCD x y)
+  NUM_GCD_GREATEST         !x:num. !y:num. !z:num. ~(x = 0) \/ ~(y = 0) ==> NUM_DIVIDES z x /\ NUM_DIVIDES z y ==> z <= NUM_GCD x y
   NUM_GCD_SYM              !x:num. !y:num. NUM_GCD x y = NUM_GCD y x
-  NUM_MOD_LT               !x:num. !y:num. NUM_LT 0 y ==> NUM_LT (NUM_MOD x y) y
-  NUM_MOD_OF_CONG          !x:num. !y:num. !z:num. NUM_CONG x y z ==> NUM_LT z x ==> NUM_MOD y x = z
+  NUM_MOD_LT               !x:num. !y:num. 0 < y ==> NUM_MOD x y < y
+  NUM_MOD_OF_CONG          !x:num. !y:num. !z:num. NUM_CONG x y z ==> z < x ==> NUM_MOD y x = z
   NUM_MOD_ZERO             !x:num. NUM_MOD x 0 = x
   NUM_ONE_DIVIDES          !x:num. NUM_DIVIDES (SUC 0) x
-  NUM_PRIME_ABOVE_ONE      !x:num. NUM_PRIME x ==> NUM_LT (SUC 0) x
+  NUM_PRIME_ABOVE_ONE      !x:num. NUM_PRIME x ==> SUC 0 < x
   NUM_PRIME_DIVISOR        !x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \/ y = x
-  NUM_PRIME_FACTOR         !x:num. NUM_LT (SUC 0) x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)
-  NUM_PRIME_POW_CANCEL     !x:num. !y:num. !z:num. !u:num. NUM_PRIME x ==> ~(NUM_DIVIDES x y) ==> NUM_DIVIDES (NUM_POW x u) (NUM_MUL y z) ==> NUM_DIVIDES (NUM_POW x u) z
+  NUM_PRIME_FACTOR         !x:num. SUC 0 < x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)
+  NUM_PRIME_POW_CANCEL     !x:num. !y:num. !z:num. !u:num. NUM_PRIME x ==> ~(NUM_DIVIDES x y) ==> NUM_DIVIDES (NUM_POW x u) (y * z) ==> NUM_DIVIDES (NUM_POW x u) z
   NUM_PRIME_TWO            NUM_PRIME (SUC (SUC 0))
   NUM_ZERO_DIVIDES         !x:num. NUM_DIVIDES 0 x = (x = 0)
 
@@ -307,18 +307,18 @@ they have least appetite for working out how it is produced.
 ## Numbering
 
   NUM_CODE_INJECTIVE       !x:num. !y:num. !z:num. !u:num. NUM_CODE x y = NUM_CODE z u ==> x = z /\ y = u
-  NUM_CODE_LT_LEFT         !x:num. !y:num. NUM_LT x (NUM_CODE x y)
-  NUM_CODE_LT_RIGHT        !x:num. !y:num. NUM_LT y (NUM_CODE x y)
+  NUM_CODE_LT_LEFT         !x:num. !y:num. x < NUM_CODE x y
+  NUM_CODE_LT_RIGHT        !x:num. !y:num. y < NUM_CODE x y
   NUM_CODE_NOT_ZERO        !x:num. !y:num. ~(NUM_CODE x y = 0)
   NUM_FST_PAIR             !x:num. !y:num. NUM_FST (NUM_PAIR x y) = x
   NUM_PAIR_INJECTIVE       !x:num. !y:num. !z:num. !u:num. NUM_PAIR x y = NUM_PAIR z u ==> x = z /\ y = u
-  NUM_PAIR_LE_LEFT         !x:num. !y:num. NUM_LE x (NUM_PAIR x y)
-  NUM_PAIR_LE_RIGHT        !x:num. !y:num. NUM_LE y (NUM_PAIR x y)
+  NUM_PAIR_LE_LEFT         !x:num. !y:num. x <= NUM_PAIR x y
+  NUM_PAIR_LE_RIGHT        !x:num. !y:num. y <= NUM_PAIR x y
   NUM_PAYLOAD_CODE         !x:num. !y:num. NUM_PAYLOAD (NUM_CODE x y) = y
   NUM_SND_PAIR             !x:num. !y:num. NUM_SND (NUM_PAIR x y) = y
   NUM_TAG_CODE             !x:num. !y:num. NUM_TAG (NUM_CODE x y) = x
-  NUM_TRI_MONOTONE         !x:num. !y:num. NUM_LE x y ==> NUM_LE (NUM_TRI x) (NUM_TRI y)
-  NUM_TRI_SUC              !x:num. NUM_TRI (SUC x) = NUM_ADD (NUM_TRI x) (SUC x)
+  NUM_TRI_MONOTONE         !x:num. !y:num. x <= y ==> NUM_TRI x <= NUM_TRI y
+  NUM_TRI_SUC              !x:num. NUM_TRI (SUC x) = NUM_TRI x + SUC x
   NUM_TRI_ZERO             NUM_TRI 0 = 0
 
 ## Order
@@ -345,113 +345,113 @@ they have least appetite for working out how it is produced.
   MUL_NONNEG_BOTH          !x:real. !y:real. 0 <= x ==> 0 <= y ==> 0 <= x * y
   POSITIVE_NOT_ZERO        !x:real. 0 < x ==> ~(x = 0)
   SQUARE_NONNEG            !x:real. 0 <= x * x
-  ZERO_LT_ONE              0 < 1
+  ZERO_LT_ONE              (0:real) < (1:real)
 
 ## Peano
 
-  NUM_ADD_ASSOC            !x:num. !y:num. !z:num. NUM_ADD (NUM_ADD x y) z = NUM_ADD x (NUM_ADD y z)
-  NUM_ADD_CANCEL           !x:num. !y:num. NUM_ADD y x = y ==> x = 0
-  NUM_ADD_CANCEL_LEFT      !x:num. !y:num. !z:num. NUM_ADD z x = NUM_ADD z y ==> x = y
-  NUM_ADD_EQ_ZERO          !x:num. !y:num. NUM_ADD x y = 0 ==> x = 0
-  NUM_ADD_EXCHANGE         !x:num. !y:num. !z:num. NUM_ADD x (NUM_ADD y z) = NUM_ADD y (NUM_ADD x z)
-  NUM_ADD_LE_CANCEL        !x:num. !y:num. !z:num. NUM_LE (NUM_ADD x y) (NUM_ADD x z) ==> NUM_LE y z
-  NUM_ADD_LT_MONOTONE      !x:num. !y:num. !z:num. NUM_LT y z ==> NUM_LT (NUM_ADD x y) (NUM_ADD x z)
-  NUM_ADD_MONOTONE         !x:num. !y:num. !z:num. NUM_LE y z ==> NUM_LE (NUM_ADD x y) (NUM_ADD x z)
-  NUM_ADD_SHIFT            !x:num. !y:num. NUM_ADD x (SUC y) = NUM_ADD (SUC x) y
-  NUM_ADD_SUB              !x:num. !y:num. NUM_SUB (NUM_ADD x y) y = x
-  NUM_ADD_SUC              !x:num. !y:num. NUM_ADD x (SUC y) = SUC (NUM_ADD x y)
-  NUM_ADD_SYM              !x:num. !y:num. NUM_ADD x y = NUM_ADD y x
-  NUM_ADD_ZERO             !x:num. NUM_ADD x 0 = x
+  NUM_ADD_ASSOC            !x:num. !y:num. !z:num. x + y + z = x + (y + z)
+  NUM_ADD_CANCEL           !x:num. !y:num. y + x = y ==> x = 0
+  NUM_ADD_CANCEL_LEFT      !x:num. !y:num. !z:num. z + x = z + y ==> x = y
+  NUM_ADD_EQ_ZERO          !x:num. !y:num. x + y = 0 ==> x = 0
+  NUM_ADD_EXCHANGE         !x:num. !y:num. !z:num. x + (y + z) = y + (x + z)
+  NUM_ADD_LE_CANCEL        !x:num. !y:num. !z:num. x + y <= x + z ==> y <= z
+  NUM_ADD_LT_MONOTONE      !x:num. !y:num. !z:num. y < z ==> x + y < x + z
+  NUM_ADD_MONOTONE         !x:num. !y:num. !z:num. y <= z ==> x + y <= x + z
+  NUM_ADD_SHIFT            !x:num. !y:num. x + SUC y = SUC x + y
+  NUM_ADD_SUB              !x:num. !y:num. NUM_SUB (x + y) y = x
+  NUM_ADD_SUC              !x:num. !y:num. x + SUC y = SUC (x + y)
+  NUM_ADD_SYM              !x:num. !y:num. x + y = y + x
+  NUM_ADD_ZERO             !x:num. x + 0 = x
   NUM_ARCHIMEDES           !x:real. ?y:num. x < real_of_num y
-  NUM_BIT0_ADD             !x:num. NUM_BIT0 x = NUM_ADD x x
-  NUM_BIT1_SUC             !x:num. NUM_BIT1 x = SUC (NUM_ADD x x)
+  NUM_BIT0_ADD             !x:num. NUM_BIT0 x = x + x
+  NUM_BIT1_SUC             !x:num. NUM_BIT1 x = SUC (x + x)
   NUM_CEIL_LE              !x:real. 0 <= x ==> x <= real_of_num (NUM_CEIL x)
   NUM_CEIL_LT              !x:real. 0 <= x ==> real_of_num (NUM_CEIL x) < x + 1
   NUM_FLOOR_LE             !x:real. 0 <= x ==> real_of_num (NUM_FLOOR x) <= x
   NUM_FLOOR_LT             !x:real. 0 <= x ==> x < real_of_num (NUM_FLOOR x) + 1
-  NUM_GREATEST             !x:num -> bool. (?y:num. x y) /\ (?y:num. !z:num. x z ==> NUM_LE z y) ==> (?y:num. x y /\ (!z:num. x z ==> NUM_LE z y))
-  NUM_LEAST                !x:num -> bool. (?y:num. x y) ==> (?y:num. x y /\ (!z:num. NUM_LT z y ==> ~(x z)))
-  NUM_LE_ADD               !x:num. !y:num. NUM_LE x (NUM_ADD x y)
-  NUM_LE_ANTISYM           !x:num. !y:num. NUM_LE x y /\ NUM_LE y x ==> x = y
-  NUM_LE_CASES             !x:num. !y:num. NUM_LE x y ==> NUM_LT x y \/ x = y
-  NUM_LE_LT_TRANS          !x:num. !y:num. !z:num. NUM_LE x y /\ NUM_LT y z ==> NUM_LT x z
-  NUM_LE_OF_LT             !x:num. !y:num. NUM_LT x y ==> NUM_LE x y
-  NUM_LE_REFL              !x:num. NUM_LE x x
-  NUM_LE_SUC               !x:num. NUM_LE x (SUC x)
-  NUM_LE_TOTAL             !x:num. !y:num. NUM_LE x y \/ NUM_LE y x
-  NUM_LE_TRANS             !x:num. !y:num. !z:num. NUM_LE x y /\ NUM_LE y z ==> NUM_LE x z
-  NUM_LE_ZERO              !x:num. NUM_LE x 0 ==> x = 0
-  NUM_LT_IRREFL            !x:num. ~(NUM_LT x x)
-  NUM_LT_LE_TRANS          !x:num. !y:num. !z:num. NUM_LT x y /\ NUM_LE y z ==> NUM_LT x z
-  NUM_LT_NOT_LE            !x:num. !y:num. NUM_LT x y ==> ~(NUM_LE y x)
-  NUM_LT_SUC               !x:num. NUM_LT x (SUC x)
-  NUM_LT_SUC_CASES         !x:num. !y:num. NUM_LT y (SUC x) ==> NUM_LT y x \/ y = x
-  NUM_LT_TOTAL             !x:num. !y:num. NUM_LT x y \/ x = y \/ NUM_LT y x
-  NUM_LT_TRANS             !x:num. !y:num. !z:num. NUM_LT x y /\ NUM_LT y z ==> NUM_LT x z
-  NUM_MUL_ASSOC            !x:num. !y:num. !z:num. NUM_MUL (NUM_MUL x y) z = NUM_MUL x (NUM_MUL y z)
-  NUM_MUL_CANCEL_LEFT      !x:num. !y:num. !z:num. NUM_LT 0 x ==> NUM_MUL x y = NUM_MUL x z ==> y = z
-  NUM_MUL_DISTRIBUTE       !x:num. !y:num. !z:num. NUM_MUL x (NUM_ADD y z) = NUM_ADD (NUM_MUL x y) (NUM_MUL x z)
-  NUM_MUL_LT_MONOTONE      !x:num. !y:num. !z:num. NUM_LT 0 x ==> NUM_LT y z ==> NUM_LT (NUM_MUL x y) (NUM_MUL x z)
-  NUM_MUL_MONOTONE         !x:num. !y:num. !z:num. NUM_LE y z ==> NUM_LE (NUM_MUL x y) (NUM_MUL x z)
-  NUM_MUL_ONE              !x:num. NUM_MUL x (SUC 0) = x
-  NUM_MUL_POSITIVE         !x:num. !y:num. NUM_LT 0 x ==> NUM_LT 0 y ==> NUM_LT 0 (NUM_MUL x y)
-  NUM_MUL_SUC              !x:num. !y:num. NUM_MUL x (SUC y) = NUM_ADD (NUM_MUL x y) x
-  NUM_MUL_SYM              !x:num. !y:num. NUM_MUL x y = NUM_MUL y x
-  NUM_MUL_TWO              !x:num. NUM_MUL x (SUC (SUC 0)) = NUM_ADD x x
-  NUM_MUL_ZERO             !x:num. NUM_MUL x 0 = 0
-  NUM_NOT_LT_ZERO          !x:num. ~(NUM_LT x 0)
+  NUM_GREATEST             !x:num -> bool. (?y:num. x y) /\ (?y:num. !z:num. x z ==> z <= y) ==> (?y:num. x y /\ (!z:num. x z ==> z <= y))
+  NUM_LEAST                !x:num -> bool. (?y:num. x y) ==> (?y:num. x y /\ (!z:num. z < y ==> ~(x z)))
+  NUM_LE_ADD               !x:num. !y:num. x <= x + y
+  NUM_LE_ANTISYM           !x:num. !y:num. x <= y /\ y <= x ==> x = y
+  NUM_LE_CASES             !x:num. !y:num. x <= y ==> x < y \/ x = y
+  NUM_LE_LT_TRANS          !x:num. !y:num. !z:num. x <= y /\ y < z ==> x < z
+  NUM_LE_OF_LT             !x:num. !y:num. x < y ==> x <= y
+  NUM_LE_REFL              !x:num. x <= x
+  NUM_LE_SUC               !x:num. x <= SUC x
+  NUM_LE_TOTAL             !x:num. !y:num. x <= y \/ y <= x
+  NUM_LE_TRANS             !x:num. !y:num. !z:num. x <= y /\ y <= z ==> x <= z
+  NUM_LE_ZERO              !x:num. x <= 0 ==> x = 0
+  NUM_LT_IRREFL            !x:num. ~(x < x)
+  NUM_LT_LE_TRANS          !x:num. !y:num. !z:num. x < y /\ y <= z ==> x < z
+  NUM_LT_NOT_LE            !x:num. !y:num. x < y ==> ~(y <= x)
+  NUM_LT_SUC               !x:num. x < SUC x
+  NUM_LT_SUC_CASES         !x:num. !y:num. y < SUC x ==> y < x \/ y = x
+  NUM_LT_TOTAL             !x:num. !y:num. x < y \/ x = y \/ y < x
+  NUM_LT_TRANS             !x:num. !y:num. !z:num. x < y /\ y < z ==> x < z
+  NUM_MUL_ASSOC            !x:num. !y:num. !z:num. x * y * z = x * (y * z)
+  NUM_MUL_CANCEL_LEFT      !x:num. !y:num. !z:num. 0 < x ==> x * y = x * z ==> y = z
+  NUM_MUL_DISTRIBUTE       !x:num. !y:num. !z:num. x * (y + z) = x * y + x * z
+  NUM_MUL_LT_MONOTONE      !x:num. !y:num. !z:num. 0 < x ==> y < z ==> x * y < x * z
+  NUM_MUL_MONOTONE         !x:num. !y:num. !z:num. y <= z ==> x * y <= x * z
+  NUM_MUL_ONE              !x:num. x * SUC 0 = x
+  NUM_MUL_POSITIVE         !x:num. !y:num. 0 < x ==> 0 < y ==> 0 < x * y
+  NUM_MUL_SUC              !x:num. !y:num. x * SUC y = x * y + x
+  NUM_MUL_SYM              !x:num. !y:num. x * y = y * x
+  NUM_MUL_TWO              !x:num. x * SUC (SUC 0) = x + x
+  NUM_MUL_ZERO             !x:num. x * 0 = 0
+  NUM_NOT_LT_ZERO          !x:num. ~(x < 0)
   NUM_ONE_SUC              1 = SUC 0
-  NUM_POW_ADD              !x:num. !y:num. !z:num. NUM_POW x (NUM_ADD y z) = NUM_MUL (NUM_POW x y) (NUM_POW x z)
+  NUM_POW_ADD              !x:num. !y:num. !z:num. NUM_POW x (y + z) = NUM_POW x y * NUM_POW x z
   NUM_POW_ONE              !x:num. NUM_POW (SUC 0) x = SUC 0
-  NUM_POW_POSITIVE         !x:num. !y:num. NUM_LT 0 x ==> NUM_LT 0 (NUM_POW x y)
-  NUM_POW_SUC              !x:num. !y:num. NUM_POW x (SUC y) = NUM_MUL (NUM_POW x y) x
+  NUM_POW_POSITIVE         !x:num. !y:num. 0 < x ==> 0 < NUM_POW x y
+  NUM_POW_SUC              !x:num. !y:num. NUM_POW x (SUC y) = NUM_POW x y * x
   NUM_POW_ZERO             !x:num. NUM_POW x 0 = SUC 0
-  NUM_PRE_LE               !x:num. NUM_LE (PRE x) x
+  NUM_PRE_LE               !x:num. PRE x <= x
   NUM_PRE_SUC              !x:num. PRE (SUC x) = x
   NUM_PRE_ZERO             PRE 0 = 0
-  NUM_REAL_ADD             !x:num. !y:num. real_of_num (NUM_ADD x y) = real_of_num x + real_of_num y
+  NUM_REAL_ADD             !x:num. !y:num. real_of_num (x + y) = real_of_num x + real_of_num y
   NUM_REAL_BIT0            !x:num. real_of_num (NUM_BIT0 x) = BIT0 (real_of_num x)
   NUM_REAL_BIT1            !x:num. real_of_num (NUM_BIT1 x) = BIT1 (real_of_num x)
   NUM_REAL_INJECTIVE       !x:num. !y:num. real_of_num x = real_of_num y ==> x = y
-  NUM_REAL_LE              !x:num. !y:num. NUM_LE x y ==> real_of_num x <= real_of_num y
-  NUM_REAL_LT              !x:num. !y:num. NUM_LT x y ==> real_of_num x + 1 <= real_of_num y
-  NUM_REAL_MUL             !x:num. !y:num. real_of_num (NUM_MUL x y) = real_of_num x * real_of_num y
+  NUM_REAL_LE              !x:num. !y:num. x <= y ==> real_of_num x <= real_of_num y
+  NUM_REAL_LT              !x:num. !y:num. x < y ==> real_of_num x + 1 <= real_of_num y
+  NUM_REAL_MUL             !x:num. !y:num. real_of_num (x * y) = real_of_num x * real_of_num y
   NUM_REAL_NONNEG          !x:num. 0 <= real_of_num x
   NUM_REAL_ONE             real_of_num 1 = 1
-  NUM_REAL_SUB             !x:num. !y:num. NUM_LE y x ==> real_of_num (NUM_SUB x y) = real_of_num x - real_of_num y
+  NUM_REAL_SUB             !x:num. !y:num. y <= x ==> real_of_num (NUM_SUB x y) = real_of_num x - real_of_num y
   NUM_REAL_SUC             !x:num. real_of_num (SUC x) = real_of_num x + 1
   NUM_REAL_ZERO            real_of_num 0 = 0
-  NUM_STRONG_INDUCTION     !x:num -> bool. (!y:num. (!z:num. NUM_LT z y ==> x z) ==> x y) ==> (!y:num. x y)
-  NUM_SUB_ADD              !x:num. !y:num. NUM_LE y x ==> NUM_ADD (NUM_SUB x y) y = x
-  NUM_SUB_EQ_ZERO          !x:num. !y:num. NUM_LE x y ==> NUM_SUB x y = 0
-  NUM_SUB_LE               !x:num. !y:num. NUM_LE (NUM_SUB x y) x
+  NUM_STRONG_INDUCTION     !x:num -> bool. (!y:num. (!z:num. z < y ==> x z) ==> x y) ==> (!y:num. x y)
+  NUM_SUB_ADD              !x:num. !y:num. y <= x ==> NUM_SUB x y + y = x
+  NUM_SUB_EQ_ZERO          !x:num. !y:num. x <= y ==> NUM_SUB x y = 0
+  NUM_SUB_LE               !x:num. !y:num. NUM_SUB x y <= x
   NUM_SUB_REFL             !x:num. NUM_SUB x x = 0
   NUM_SUB_SUC              !x:num. !y:num. NUM_SUB x (SUC y) = PRE (NUM_SUB x y)
   NUM_SUB_SUC_SUC          !x:num. !y:num. NUM_SUB (SUC x) (SUC y) = NUM_SUB x y
-  NUM_SUB_TRUNCATES        !x:num. !y:num. NUM_SUB x (NUM_ADD x y) = 0
+  NUM_SUB_TRUNCATES        !x:num. !y:num. NUM_SUB x (x + y) = 0
   NUM_SUB_ZERO             !x:num. NUM_SUB x 0 = x
-  NUM_SUC_ADD              !x:num. !y:num. NUM_ADD (SUC x) y = SUC (NUM_ADD x y)
-  NUM_SUC_MUL              !x:num. !y:num. NUM_MUL (SUC x) y = NUM_ADD (NUM_MUL x y) y
+  NUM_SUC_ADD              !x:num. !y:num. SUC x + y = SUC (x + y)
+  NUM_SUC_MUL              !x:num. !y:num. SUC x * y = x * y + y
   NUM_SUC_NOT_SELF         !x:num. ~(SUC x = x)
-  NUM_SUM_CONGRUENCE_BELOW !x:num -> num. !y:num -> num. !z:num. (!u:num. NUM_LT u z ==> x u = y u) ==> NUM_SUM x z = NUM_SUM y z
-  NUM_SUM_SUC              !x:num -> num. !y:num. NUM_SUM x (SUC y) = NUM_ADD (NUM_SUM x y) (x y)
+  NUM_SUM_CONGRUENCE_BELOW !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u = y u) ==> NUM_SUM x z = NUM_SUM y z
+  NUM_SUM_SUC              !x:num -> num. !y:num. NUM_SUM x (SUC y) = NUM_SUM x y + x y
   NUM_SUM_ZERO             !x:num -> num. NUM_SUM x 0 = 0
-  NUM_ZERO_ADD             !x:num. NUM_ADD 0 x = x
-  NUM_ZERO_LE              !x:num. NUM_LE 0 x
-  NUM_ZERO_LT_SUC          !x:num. NUM_LT 0 (SUC x)
-  NUM_ZERO_MUL             !x:num. NUM_MUL 0 x = 0
+  NUM_ZERO_ADD             !x:num. 0 + x = x
+  NUM_ZERO_LE              !x:num. 0 <= x
+  NUM_ZERO_LT_SUC          !x:num. 0 < SUC x
+  NUM_ZERO_MUL             !x:num. 0 * x = 0
   NUM_ZERO_SUB             !x:num. NUM_SUB 0 x = 0
 
 ## Positivity
 
   ADD_POSITIVE             !x:real. !y:real. 0 < x ==> 0 < y ==> 0 < x + y
   POSITIVE_NOT_ZERO        !x:real. 0 < x ==> ~(x = 0)
-  ZERO_LT_ONE              0 < 1
+  ZERO_LT_ONE              (0:real) < (1:real)
 
 ## Primes
 
-  NUM_PRIME_UNBOUNDED      !x:num. ?y:num. NUM_PRIME y /\ NUM_LT x y
-  NUM_SQUARE_NOT_DOUBLE    !x:num. !y:num. NUM_LT 0 y ==> ~(NUM_MUL x x = NUM_MUL (SUC (SUC 0)) (NUM_MUL y y))
+  NUM_PRIME_UNBOUNDED      !x:num. ?y:num. NUM_PRIME y /\ x < y
+  NUM_SQUARE_NOT_DOUBLE    !x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))
 
 ## Product
 
@@ -466,16 +466,16 @@ they have least appetite for working out how it is produced.
 
 ## Provability
 
-  NUM_PROOF_CASES          !x:num. !y:num. NUM_PROOF x y = (?z:num. ?u:num. ?v:num. x = NUM_PAIR z (NUM_PAIR u v) /\ NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP u v w))
+  NUM_PROOF_CASES          !x:num. !y:num. NUM_PROOF x y = (?z:num. ?u:num. ?v:num. x = NUM_PAIR z (NUM_PAIR u v) /\ NUM_BETA u v z = y /\ (!w:num. w <= z ==> NUM_STEP u v w))
   NUM_PROV_CASES           !x:num. NUM_PROV x = (?y:num. NUM_PROOF y x)
-  NUM_PROV_FROM_CASES      !x:num. !y:num. NUM_PROV_FROM x y = (?z:num. ?u:num. ?v:num. NUM_BETA u v z = y /\ (!w:num. NUM_LE w z ==> NUM_STEP_FROM x u v w))
+  NUM_PROV_FROM_CASES      !x:num. !y:num. NUM_PROV_FROM x y = (?z:num. ?u:num. ?v:num. NUM_BETA u v z = y /\ (!w:num. w <= z ==> NUM_STEP_FROM x u v w))
   NUM_PROV_GEN             !x:num. !y:num. NUM_PROV y ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR x y))
   NUM_PROV_LOGIC           !x:num. NUM_LOGIC x ==> NUM_PROV x
   NUM_PROV_MP              !x:num. !y:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV x ==> NUM_PROV y
   NUM_PROV_PA              !x:num. NUM_PA x ==> NUM_PROV x
-  NUM_STEP_CASES           !x:num. !y:num. !z:num. NUM_STEP x y z = (NUM_PA (NUM_BETA x y z) \/ NUM_LOGIC (NUM_BETA x y z) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_LT v z /\ NUM_BETA x y u = NUM_CODE 7 (NUM_PAIR (NUM_BETA x y v) (NUM_BETA x y z))) \/ (?u:num. ?v:num. NUM_LT u z /\ NUM_BETA x y z = NUM_CODE 8 (NUM_PAIR v (NUM_BETA x y u))))
+  NUM_STEP_CASES           !x:num. !y:num. !z:num. NUM_STEP x y z = (NUM_PA (NUM_BETA x y z) \/ NUM_LOGIC (NUM_BETA x y z) \/ (?u:num. ?v:num. u < z /\ v < z /\ NUM_BETA x y u = NUM_CODE 7 (NUM_PAIR (NUM_BETA x y v) (NUM_BETA x y z))) \/ (?u:num. ?v:num. u < z /\ NUM_BETA x y z = NUM_CODE 8 (NUM_PAIR v (NUM_BETA x y u))))
   NUM_STEP_FROM_CASES      !x:num. !y:num. !z:num. !u:num. NUM_STEP_FROM x y z u = (NUM_FORM (NUM_BETA y z u) /\ (NUM_STEP y z u \/ NUM_BETA y z u = x))
-  NUM_STEP_SHIFT           !x:num. !y:num. !z:num. !u:num. !v:num. !w:num. !x1:num. (!y1:num. NUM_LE y1 w ==> NUM_BETA x y (NUM_ADD z y1) = NUM_BETA u v y1) ==> NUM_LE x1 w ==> NUM_STEP u v x1 ==> NUM_STEP x y (NUM_ADD z x1)
+  NUM_STEP_SHIFT           !x:num. !y:num. !z:num. !u:num. !v:num. !w:num. !x1:num. (!y1:num. y1 <= w ==> NUM_BETA x y (z + y1) = NUM_BETA u v y1) ==> x1 <= w ==> NUM_STEP u v x1 ==> NUM_STEP x y (z + x1)
 
 ## Real, assumed
 
@@ -501,23 +501,23 @@ they have least appetite for working out how it is produced.
   BIT0                     BIT0 = (\x:real. x + x)
   BIT1                     BIT1 = (\x:real. x + x + 1)
   div                      div = (\x:real. \y:real. x * inv y)
-  le                       le = (\x:real. \y:real. x < y \/ x = y)
+  real_le                  real_le = (\x:real. \y:real. x < y \/ x = y)
   sub                      sub = (\x:real. \y:real. x + -y)
 
 ## Rotation
 
   WORD_ROTATE_LENGTH       !x:num. !y:word('a). WORD_LENGTH (WORD_ROTATE x y) = WORD_LENGTH y
-  WORD_ROTATE_NTH          !x:num. !y:word('a). !z:num. NUM_LT z (WORD_LENGTH y) ==> WORD_NTH (WORD_ROTATE x y) z = WORD_NTH y (NUM_MOD (NUM_ADD z x) (WORD_LENGTH y))
+  WORD_ROTATE_NTH          !x:num. !y:word('a). !z:num. z < WORD_LENGTH y ==> WORD_NTH (WORD_ROTATE x y) z = WORD_NTH y (NUM_MOD (z + x) (WORD_LENGTH y))
   WORD_ROTATE_ZERO         !x:word('a). WORD_ROTATE 0 x = x
 
 ## Series
 
   NUM_REAL_POW             !x:num. !y:num. real_of_num (NUM_POW x y) = Power (real_of_num x) y
-  POWER_ADD                !x:real. !y:num. !z:num. Power x (NUM_ADD y z) = Power x y * Power x z
+  POWER_ADD                !x:real. !y:num. !z:num. Power x (y + z) = Power x y * Power x z
   POWER_MONOTONE           !x:real. !y:real. 0 < x ==> x <= y ==> (!z:num. Power x z <= Power y z)
-  POWER_MUL                !x:real. !y:num. !z:num. Power x (NUM_MUL y z) = Power (Power x y) z
+  POWER_MUL                !x:real. !y:num. !z:num. Power x (y * z) = Power (Power x y) z
   POWER_MULTIPLICATIVE     !x:real. !y:real. !z:num. Power (x * y) z = Power x z * Power y z
-  POWER_NEG_DOUBLE         !x:real. !y:num. Power (0 - x) (NUM_ADD y y) = Power x (NUM_ADD y y)
+  POWER_NEG_DOUBLE         !x:real. !y:num. Power (0 - x) (y + y) = Power x (y + y)
   POWER_ONE                !x:num. Power 1 x = 1
   POWER_POSITIVE           !x:real. 0 < x ==> (!y:num. 0 < Power x y)
   POWER_SUC                !x:real. !y:num. Power x (SUC y) = x * Power x y
@@ -530,15 +530,15 @@ they have least appetite for working out how it is produced.
   SUM_ADD                  !x:num -> real. !y:num -> real. !z:num. Sum (\u:num. x u + y u) z = Sum x z + Sum y z
   SUM_BY_PARTS             !x:num -> real. !y:num -> real. !z:num. Sum (\u:num. x u * (y (SUC u) - y u)) z = x z * y z - x 0 * y 0 - Sum (\u:num. y (SUC u) * (x (SUC u) - x u)) z
   SUM_CONGRUENCE           !x:num -> real. !y:num -> real. (!z:num. x z = y z) ==> (!z:num. Sum x z = Sum y z)
-  SUM_CONGRUENCE_BELOW     !x:num -> real. !y:num -> real. !z:num. (!u:num. NUM_LT u z ==> x u = y u) ==> Sum x z = Sum y z
+  SUM_CONGRUENCE_BELOW     !x:num -> real. !y:num -> real. !z:num. (!u:num. u < z ==> x u = y u) ==> Sum x z = Sum y z
   SUM_CONSTANT             !x:real. !y:num. Sum (\z:num. x) y = real_of_num y * x
   SUM_GEOMETRIC            !x:real. !y:num. (x - 1) * Sum (\z:num. Power x z) y = Power x y - 1
-  SUM_HALVES               !x:num -> real. !y:num. Sum x (NUM_ADD y y) = Sum x y + Sum (\z:num. x (NUM_ADD y z)) y
+  SUM_HALVES               !x:num -> real. !y:num. Sum x (y + y) = Sum x y + Sum (\z:num. x (y + z)) y
   SUM_LINEAR               !x:real. !y:num -> real. !z:num -> real. !u:num. Sum (\v:num. x * y v + z v) u = x * Sum y u + Sum z u
   SUM_MONOTONE             !x:num -> real. !y:num -> real. (!z:num. x z <= y z) ==> (!z:num. Sum x z <= Sum y z)
   SUM_NONNEGATIVE          !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. 0 <= Sum x y)
   SUM_OF_ZERO              !x:num. Sum (\y:num. 0) x = 0
-  SUM_REINDEX              !x:num -> real. !y:num. !z:num. Sum (\u:num. x (NUM_ADD y u)) z = Sum x (NUM_ADD y z) - Sum x y
+  SUM_REINDEX              !x:num -> real. !y:num. !z:num. Sum (\u:num. x (y + u)) z = Sum x (y + z) - Sum x y
   SUM_SHIFT                !x:num -> real. !y:num. Sum (\z:num. x (SUC z)) y = Sum x (SUC y) - x 0
   SUM_SUC                  !x:num -> real. !y:num. Sum x (SUC y) = Sum x y + x y
   SUM_SWAP                 !x:num -> num -> real. !y:num. !z:num. Sum (\u:num. Sum (\v:num. x u v) y) z = Sum (\u:num. Sum (\v:num. x v u) z) y
@@ -558,10 +558,10 @@ they have least appetite for working out how it is produced.
 ## Word
 
   WORD_ABS_REP             mk_word (dest_word (a:word('a))) = (a:word('a))
-  WORD_EXTENSIONALITY      !x:word('a). !y:word('a). WORD_LENGTH x = WORD_LENGTH y /\ (!z:num. NUM_LT z (WORD_LENGTH x) ==> WORD_NTH x z = WORD_NTH y z) ==> x = y
-  WORD_MAKE_LENGTH         !x:num. !y:num -> 'a. (!z:num. ~(NUM_LT z x) ==> y z = WORD_PAD) ==> WORD_LENGTH (WORD_MAKE x y) = x
-  WORD_MAKE_NTH            !x:num. !y:num -> 'a. (!z:num. ~(NUM_LT z x) ==> y z = WORD_PAD) ==> WORD_NTH (WORD_MAKE x y) = y
-  WORD_NTH_PAD             !x:word('a). !y:num. ~(NUM_LT y (WORD_LENGTH x)) ==> WORD_NTH x y = WORD_PAD
-  WORD_REP_ABS             (\x:prod(num, num -> 'a). !y:num. ~(NUM_LT y (FST x)) ==> SND x y = WORD_PAD) r = (dest_word (mk_word r) = r)
+  WORD_EXTENSIONALITY      !x:word('a). !y:word('a). WORD_LENGTH x = WORD_LENGTH y /\ (!z:num. z < WORD_LENGTH x ==> WORD_NTH x z = WORD_NTH y z) ==> x = y
+  WORD_MAKE_LENGTH         !x:num. !y:num -> 'a. (!z:num. ~(z < x) ==> y z = WORD_PAD) ==> WORD_LENGTH (WORD_MAKE x y) = x
+  WORD_MAKE_NTH            !x:num. !y:num -> 'a. (!z:num. ~(z < x) ==> y z = WORD_PAD) ==> WORD_NTH (WORD_MAKE x y) = y
+  WORD_NTH_PAD             !x:word('a). !y:num. ~(y < WORD_LENGTH x) ==> WORD_NTH x y = WORD_PAD
+  WORD_REP_ABS             (\x:prod(num, num -> 'a). !y:num. ~(y < FST x) ==> SND x y = WORD_PAD) r = (dest_word (mk_word r) = r)
 
 <!-- end generated: lemmas -->

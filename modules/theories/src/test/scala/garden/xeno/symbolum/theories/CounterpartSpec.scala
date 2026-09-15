@@ -2,7 +2,7 @@ package garden.xeno.symbolum.theories
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import garden.xeno.symbolum.kernel.Type
+import garden.xeno.symbolum.kernel.{Type, TyApp}
 
 /**
  * The table that answers a claim about `num` written with the reals' symbols.
@@ -33,25 +33,52 @@ class CounterpartSpec extends AnyFlatSpec with Matchers {
   private def leftOf(name: String): Option[Type] =
     widest.theory.constants.get(name).flatMap(Type.destFun).map(_._1)
 
-  "The constants it leaves out" should "be exactly the ones `num` has no counterpart for" in {
-    // Division, and division only. `NUM_DIV` is not a spelling of `/`: it truncates, it is total,
-    // and it comes with `NUM_MOD` beside it, so naming it here would be a refusal proposing a
-    // different claim. Everything else the reals spell infix over their own type is in the table,
-    // and an operator added to the notation later fails here until somebody decides which it is.
+  "The constants it leaves out" should "be the ones a reader needs no help with, and division" in {
+    // The partition this asserts changed shape with `docs/adr/0018` and the assertion is stronger
+    // for it, because there are now two reasons to be absent and they must not be confused.
+    //
+    // A real operator whose symbol `num` shares needs no row: the claim reads as written, and a row
+    // would send a reader to rewrite a text that works. A real operator whose symbol `num` does NOT
+    // share needs one, because the claim refuses and the reader is owed the constant that does the
+    // job. So the two sets below are asserted separately rather than as one difference: a single
+    // `diff` would pass if a symbol quietly stopped being overloaded AND its row were removed at
+    // the same time, which is the one combination that leaves a reader with a refusal and no help.
     val realOwned = notation.infix
       .map(_.constant)
       .distinct
       .filter(name => leftOf(name).contains(Real.realType))
       .toSet
 
-    realOwned.diff(Counterpart.onNum.map(_._1).toSet) shouldBe Set(Real.Division)
+    val sharedWithNum = realOwned.filter(name =>
+      notation
+        .infixesFor(notation.infixOf(name).map(_.symbol).getOrElse(""))
+        .exists(other => leftOf(other.constant).contains(TyApp(Natural.TypeName, Nil)))
+    )
+
+    // Four, and they are the four the record admits.
+    sharedWithNum shouldBe Set(Real.Addition, Real.Multiplication, Real.Order, Real.NonStrictOrder)
+
+    // What is left needs a row, or is division. `NUM_DIV` is not a spelling of `/`: it truncates,
+    // it is total, and it comes with `NUM_MOD` beside it, so naming it here would be a refusal
+    // proposing a different claim.
+    realOwned.diff(sharedWithNum).diff(Counterpart.onNum.map(_._1).toSet) shouldBe Set(Real.Division)
+
+    // And the table holds nothing a symbol already covers, which is the direction that catches a
+    // row left behind rather than one never written.
+    Counterpart.onNum.map(_._1).toSet.intersect(sharedWithNum) shouldBe Set.empty
   }
 
-  "A claim about the naturals spelled with `+`" should "be answered with NUM_ADD" in {
-    val found = Counterpart.spellings(notation, "!n:num. n + 0 = n")
-
-    found.map(_.constant) shouldBe Vector(Peano.Addition, Natural.NumberZero)
-    found.head.instruction should include(Peano.Addition)
+  "A claim about the naturals spelled with `+`" should "need no answer at all" in {
+    // This asserted the opposite until `docs/adr/0018`, and the reversal is the record's whole
+    // return measured at the one place a reader meets it. `!n:num. n + 0 = n` is the first claim
+    // anybody writes about the naturals; it used to be refused with "real and num cannot be the
+    // same type" and this table was how a reader got from there to `NUM_ADD n ZERO`. It reads now.
+    //
+    // Asserted in both halves, because the empty half alone would pass on a table that had stopped
+    // working: the claim parses, AND nothing here proposes a rewrite of it.
+    widest.proposition("!n:num. n + 0 = n").isRight shouldBe true
+    Counterpart.spellings(notation, "!n:num. n + 0 = n").map(_.constant) shouldBe
+      Vector(Natural.NumberZero)
   }
 
   it should "name the numerals too, which is what stops a second refusal" in {
@@ -74,32 +101,43 @@ class CounterpartSpec extends AnyFlatSpec with Matchers {
       .count(_.constant == Natural.NumberZero) shouldBe 1
   }
 
-  it should "reach the flipped spellings, which is why the table is keyed by constant" in {
-    // `>` and `>=` are `<` and `le` read from the other end and are not constants of their own, so
-    // a table of symbols would have carried four entries for two relations and would have gone
-    // stale the day a third spelling arrived.
-    Counterpart.spellings(notation, "!n:num. n > n").map(_.constant) shouldBe
-      Vector(Peano.StrictOrder)
-    Counterpart.spellings(notation, "!n:num. n >= n").map(_.constant) shouldBe
-      Vector(Peano.NonStrictOrder)
+  it should "not be needed for the mirror spellings either, which is why they were declared" in {
+    // `>` and `>=` used to reach this table through `<` and `le`, since they are those two read
+    // from the other end rather than constants of their own. Overloading `<` and `<=` at `num`
+    // took the rows away, and that on its own would have left `!n:num. n < n` reading while
+    // `!n:num. n > n` refused with nothing to say -- an asymmetry a reader meets on their second
+    // line and which `docs/adr/0018` would have INTRODUCED rather than found. `Peano` declares
+    // both mirrors for that reason, at no constant and no axiom.
+    widest.proposition("!n:num. n > n").isRight shouldBe true
+    widest.proposition("!n:num. n >= n").isRight shouldBe true
+    Counterpart.spellings(notation, "!n:num. n > n") shouldBe empty
+    Counterpart.spellings(notation, "!n:num. n >= n") shouldBe empty
   }
 
   it should "reverse the arguments where the spelling is flipped" in {
-    // The half that makes the sentence worth printing. `a > b` builds the term `b < a`, to the node,
-    // so a reader told to write `NUM_LT a b` would state a claim about the other end of the order:
-    // worse than the type error it replaces, and not something the reader could see.
-    Counterpart.spellings(notation, "!n:num. n > n").head.instruction should
-      include(s"`${Peano.StrictOrder} b a`")
-    Counterpart.spellings(notation, "!n:num. n < n").head.instruction should
-      include(s"`${Peano.StrictOrder} a b`")
+    // The half that makes the sentence worth printing, kept alive by the one row that is left.
+    // `a > b` builds the term `b < a`, to the node, so a reader told to write `NUM_LT a b` would
+    // state a claim about the other end of the order: worse than the type error it replaces, and
+    // not something the reader could see. Nothing flipped reaches the table today, so this asserts
+    // the mechanism on the row that does, and the assertion that keeps it honest is the first
+    // line: a table with no flipped entry at all must not read as this test passing.
+    notation.infix.filter(_.flipped).map(_.constant).toSet should contain(Real.Order)
+    Counterpart.spellings(notation, "!n:num. n - 1 = n").head.instruction should
+      include(s"`${Peano.Subtraction} a b`")
   }
 
-  it should "tell `<=` from the `<` inside it" in {
+  it should "tell one symbol from another it occurs inside" in {
     // The reason the scan is a scan and not a `contains` per symbol: `<` occurs inside `<=` and
     // inside `<=>`, so a claim about the non-strict order would have been answered about the strict
     // one, which is a different relation and a worse answer than the type error.
-    Counterpart.spellings(notation, "!n:num. n <= n").map(_.constant) shouldBe
-      Vector(Peano.NonStrictOrder)
+    //
+    // Both orders were overloaded by `docs/adr/0018` and neither reaches this table any more, so
+    // the property is asserted where it can still be seen: `-` occurs inside `->`, and a claim
+    // whose only `-` is the arrow of a function type must not be answered about subtraction.
+    Counterpart.spellings(notation, "!n:num. n - 1 = n").map(_.constant) should
+      contain(Peano.Subtraction)
+    Counterpart.spellings(notation, "!f:num -> num. f 0 = 0").map(_.constant) should
+      not contain Peano.Subtraction
   }
 
   it should "warn where the counterpart is not the same function" in {

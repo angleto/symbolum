@@ -178,6 +178,16 @@ object Parser {
     case Ident(name: String, annotation: Option[Type], position: Int)
     case Apply(fn: Pre, argument: Pre)
     case Lambda(name: String, annotation: Option[Type], body: Pre)
+
+    /**
+     * An operator symbol that more than one constant is written with.
+     *
+     * Not an [[Ident]] with a name chosen here, which is what it was until `docs/adr/0018`: the
+     * name is what this node exists not to decide. `x + y` is `real_add x y` or `NUM_ADD x y`
+     * depending on what `x` and `y` turn out to be, and they are what the operator is being applied
+     * to, so nothing is known about them yet at the point the symbol is read.
+     */
+    case Overloaded(symbol: String, candidates: Vector[String], position: Int)
   }
 
   /** The same shape with a type on every node, before the kernel is asked to build anything. */
@@ -197,6 +207,16 @@ object Parser {
      * place every other type is settled.
      */
     case Numeral(value: BigInt, ty: Type, position: Int)
+
+    /**
+     * An operator symbol with its candidates still open, carrying the shape they share.
+     *
+     * The numeral's case one step further out, and deferred for the same reason and to the same
+     * place. `ty` is the least general type every candidate is an instance of, with a metavariable
+     * wherever they differ, so unifying against it propagates whatever the arguments know without
+     * committing to a candidate. `build` reads it back once unification has run.
+     */
+    case Overloaded(symbol: String, candidates: Vector[String], ty: Type, position: Int)
   }
 
   /* ------------------------------------------------------------------- reading */
@@ -286,9 +306,30 @@ object Parser {
       case _ => None
     }
 
+    /**
+     * The operator node for a symbol, which is one constant or a choice between several.
+     *
+     * The single case is left exactly as it was rather than routed through the plural one, and that
+     * is deliberate: it is every operator in the repository but four, it carries `fixedType`, which
+     * an overload cannot have and which `<=>` uses, and a change that made `p /\ q` take a
+     * different path through the elaborator would have to be argued for on its own.
+     *
+     * Which candidates this theory actually declares is **not** decided here, because this class
+     * has no theory and is not given one: that is the layering `docs/adr/0018` keeps, and the same
+     * one `Notation.withNumerals` refused to break. The reader says "this symbol is a choice", and
+     * the elaborator, which has the theory, says which choice and whether it is one at all.
+     */
     private def infixApplication(operator: Infix, left: Pre, right: Pre): Pre = {
       val (first, second) = if (operator.flipped) (right, left) else (left, right)
-      Pre.Apply(Pre.Apply(Pre.Ident(operator.constant, operator.fixedType, 0), first), second)
+      val candidates = notation
+        .infixesFor(operator.symbol)
+        .filter(candidate => candidate.flipped == operator.flipped)
+        .map(_.constant)
+        .distinct
+      val head =
+        if (candidates.sizeIs > 1) Pre.Overloaded(operator.symbol, candidates, 0)
+        else Pre.Ident(operator.constant, operator.fixedType, 0)
+      Pre.Apply(Pre.Apply(head, first), second)
     }
 
     /** A binder, a prefix operator, or an application. */
@@ -507,7 +548,7 @@ object Parser {
       case Typed.Numeral(_, ty, _) => Vector(ty)
       case Typed.Apply(fn, argument) => numeralTypes(fn) ++ numeralTypes(argument)
       case Typed.Lambda(_, _, body) => numeralTypes(body)
-      case Typed.Free(_, _) | Typed.Constant(_, _) => Vector.empty
+      case Typed.Free(_, _) | Typed.Constant(_, _) | Typed.Overloaded(_, _, _, _) => Vector.empty
     }
 
     /* ---- inference ---- */
@@ -520,6 +561,9 @@ object Parser {
       pre match {
         case Pre.Ident(name, annotation, position) =>
           identifier(name, annotation, position, bound, context)
+
+        case Pre.Overloaded(symbol, candidates, position) =>
+          overloaded(symbol, candidates, position, context)
 
         case Pre.Apply(fn, argument) =>
           infer(fn, bound, context).flatMap { inferredFn =>
@@ -601,6 +645,135 @@ object Parser {
                 .map(next => Inferred(Typed.Free(name, ty), ty, next))
           }
       }
+
+    /**
+     * A symbol several constants are written with, elaborated against the shape they share.
+     *
+     * The three ways this can go are the three the numerals already have, and two of them are
+     * settled here while the third waits for `build`. **No candidate this theory declares** is a
+     * refusal now, because nothing later can supply one. **One candidate** is not a choice and
+     * becomes an ordinary constant, which is what lets the chain's single notation serve a
+     * development built over the reals alone: `+` is declared at both types in the table and at one
+     * type in that theory, and a text there reads exactly as it did before this existed. **More
+     * than one** takes the shared shape and is decided in [[resolveOverload]] after unification.
+     *
+     * The shape is the least general type every candidate is an instance of, which for `+` at
+     * `real -> real -> real` and `num -> num -> num` is `?a -> ?a -> ?a`. Getting the **same**
+     * metavariable into all three positions is what makes this work rather than merely typecheck:
+     * with three independent ones the arguments would settle two positions and leave the result
+     * open, and the term would be refused for an undetermined type it plainly has.
+     */
+    private def overloaded(
+      symbol: String,
+      candidates: Vector[String],
+      position: Int,
+      context: Context
+    ): Either[LogicError, Inferred] = {
+      val declared = candidates.flatMap(name => theory.constants.get(name).map(name -> _))
+      declared match {
+        case Vector() =>
+          Left(TypeError(
+            s"this theory declares no constant the operator $symbol stands for, so that notation " +
+              s"is not available; $symbol is written for " + candidates.mkString(", ")
+          ))
+
+        case Vector((name, schema)) =>
+          val (instance, afterInstance) = instantiate(schema, context)
+          Right(Inferred(Typed.Constant(name, instance), instance, afterInstance))
+
+        case several =>
+          val (shape, afterShape) = generalise(several.map { case (_, ty) => ty }, context)
+          Right(Inferred(
+            Typed.Overloaded(symbol, several.map { case (name, _) => name }, shape, position),
+            shape,
+            afterShape
+          ))
+      }
+    }
+
+    /**
+     * The least general type every one of these is an instance of.
+     *
+     * Anti-unification, and the table it is keyed by is the whole of why it is not a fold over
+     * `if (all agree) that else fresh`: subterms that differ **in the same way** in every position
+     * get the same metavariable, so `real -> real -> real` against `num -> num -> num` comes out
+     * `?a -> ?a -> ?a` and not `?a -> ?b -> ?c`. The second is a correct generalisation and is
+     * useless here, for the reason [[overloaded]] gives.
+     */
+    private def generalise(types: Vector[Type], context: Context): (Type, Context) = {
+      // The substitution and the context are threaded rather than held in a `var`, which is the
+      // repository's rule and is also what makes the metavariable counter's movement readable:
+      // a fresh one is minted exactly where a new pair of differing subterms is met.
+      type State = (Map[Vector[Type], Type], Context)
+
+      def walk(candidates: Vector[Type], state: State): (Type, State) =
+        if (candidates.distinct.sizeIs == 1) (candidates.head, state)
+        else
+          candidates.head match {
+            case TyApp(name, arguments)
+                if candidates.forall {
+                  case TyApp(other, others) => other == name && others.sizeIs == arguments.size
+                  case _ => false
+                } =>
+              val (children, next) = arguments.indices.foldLeft((List.empty[Type], state)) {
+                case ((seen, current), i) =>
+                  val (child, after) = walk(
+                    candidates.map {
+                      case TyApp(_, others) => others(i)
+                      case ty => ty
+                    },
+                    current
+                  )
+                  (seen :+ child, after)
+              }
+              (TyApp(name, children), next)
+
+            case _ =>
+              val (assigned, current) = state
+              assigned.get(candidates) match {
+                case Some(existing) => (existing, state)
+                case None =>
+                  val (variable, after) = fresh(current)
+                  (variable, (assigned.updated(candidates, variable), after))
+              }
+          }
+
+      val (shape, (_, context1)) = walk(types, (Map.empty, context))
+      (shape, context1)
+    }
+
+    /**
+     * Which candidate the settled type names, or a refusal that says why none does.
+     *
+     * The mirror of [[expand]] and refused in the same two ways, because the question is the same
+     * question: a type nothing determined, and a type no candidate is declared at. The second is
+     * the one that catches a real mistake rather than a vague text -- `x:num + y:real` settles the
+     * shape at neither candidate's type and is told so, where before this existed the same text
+     * was a type error about `real` and `num` deep inside an application.
+     */
+    private def resolveOverload(
+      symbol: String,
+      candidates: Vector[String],
+      position: Int,
+      ty: Type
+    ): Either[LogicError, Term] = {
+      val declared = candidates.flatMap(name => theory.constants.get(name).map(name -> _))
+      if (Type.variables(ty).exists(isMetavariable))
+        Left(TypeError(
+          s"the type of the operator $symbol is not determined; annotate one of its arguments, " +
+            "or write it where something says what they are. This theory reads " + symbol +
+            " at: " + declared.map { case (_, at) => Show.show(at) }.mkString(", ")
+        ))
+      else
+        declared.find { case (_, at) => at == ty } match {
+          case Some((name, at)) => LogicError.lift(theory.constant(name, at))
+          case None =>
+            Left(TypeError(
+              s"there is no $symbol at type ${Show.show(ty)}; the ones this theory has are at " +
+                declared.map { case (_, at) => Show.show(at) }.mkString(", ")
+            ))
+        }
+    }
 
     /** Unify against the type the writer annotated, where they annotated one. */
     private def constrain(
@@ -801,6 +974,9 @@ object Parser {
 
         case Typed.Numeral(value, ty, position) =>
           expand(value, position, substitute(ty, context))
+
+        case Typed.Overloaded(symbol, candidates, ty, position) =>
+          resolveOverload(symbol, candidates, position, substitute(ty, context))
       }
 
     /**

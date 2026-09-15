@@ -44,7 +44,7 @@ class ResolvingSpec extends AnyFlatSpec with Matchers {
     // Read back rather than described. The two halves a reader compares with resolution are that a
     // literal other than the pivot carries into the resolvent, and that the resolvent is satisfied.
     val printed = resolving.show(theorem.conclusion)
-    printed should include("NUM_LT")
+    printed should include("<")
     printed should include("==>")
     withClue(s"the statement is $printed: ") {
       printed.count(_ == '?') should be >= 3
@@ -182,10 +182,10 @@ class ResolvingSpec extends AnyFlatSpec with Matchers {
     // derivation of PA; they do not, because proof complexity quantifies over derivations and does
     // not talk about itself. If this ever stops reading, the decision is back open.
     val statements = Vector(
-      "!a:num->bool. !k:num->num. !v:num->num->num. !s:num->num->bool. !j:num. " +
-        "(?i:num. NUM_LT i (k j) /\\ (a (v j i) = s j i)) ==> NUM_LE ZERO (k j)",
-      "!k:num->num. !v:num->num->num. !s:num->num->bool. !j:num. !x:num. !b:bool. " +
-        "(?i:num. NUM_LT i (k j) /\\ v j i = x /\\ s j i = b) ==> NUM_LE ZERO (k j)"
+      "!x:num -> bool. !y:num -> num. !z:num -> num -> num. !u:num -> num -> bool. !v:num. " +
+        "(?w:num. w < y v /\\ x (z v w) = u v w) ==> 0 <= y v",
+      "!x:num -> num. !y:num -> num -> num. !z:num -> num -> bool. !u:num. !v:num. !w:bool. " +
+        "(?x1:num. x1 < x u /\\ y u x1 = v /\\ z u x1 = w) ==> 0 <= x u"
     )
 
     statements.foreach(text => withClue(s"$text: ") { chain.widest.proposition(text).isRight shouldBe true })

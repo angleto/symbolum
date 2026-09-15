@@ -6,23 +6,28 @@ import garden.xeno.symbolum.logic.Notation
 /**
  * What a claim about `num` has to be written with, for a reader who wrote the reals' symbols.
  *
- * `Peano`'s own docstring decides, under the heading **No notation**, that a natural number's
- * operations are read and printed as the applications they are: a `Notation` maps a symbol to one
- * constant, the reals already own `+`, `*`, `<` and `<=`, and overloading a symbol by the types of
- * its arguments is a change to the notation layer and to every consumer of it. That decision stands
- * and nothing here reopens it.
- *
- * What it costs is measured rather than argued. `!n:num. n + 0 = n` is the first claim anybody
- * writes about the naturals, and on 2026-09-12 the whole of the answer was
+ * **This file was written for a decision that has since been reversed, and what is left of it is
+ * the part that decision never covered.** Until `docs/adr/0018` a `Notation` mapped a symbol to one
+ * constant and the reals owned `+`, `*`, `<` and `<=`, so `!n:num. n + 0 = n`, which is the first
+ * claim anybody writes about the naturals, was answered in full with
  *
  * {{{
  *   unreadable: !n:num. n + 0 = n
  *     real and num cannot be the same type
  * }}}
  *
- * which is true, is everything the reader knows, and names neither the owner of `+` nor the
- * constant that does the same job one type over. The claim that works is
- * `!x:num. NUM_ADD x ZERO = x`. This is the table that gets a reader from one to the other.
+ * true, everything the reader knew, and naming neither the owner of `+` nor the constant that does
+ * the same job one type over. This table was how a reader got from that to
+ * `!x:num. NUM_ADD x ZERO = x`. Today the claim reads as written, and the four rows that carried a
+ * reader across are gone: see [[onNum]] for why keeping them would be worse than useless rather
+ * than merely unnecessary.
+ *
+ * What survives is the case overloading refuses. `-` and `/` are **different operations** over
+ * `num`, truncated and floor, so no symbol is going to stand for both and a reader who writes one
+ * still arrives here. That is one row and one gap, and it is the whole of what this file is now
+ * for. It is smaller than it was and it is not empty, which is the outcome the record predicted:
+ * the symbols a reader can be given are given, and the ones that would let a reader write a false
+ * lemma are withheld and explained.
  *
  * == It is keyed by constant, not by symbol ==
  *
@@ -66,13 +71,22 @@ object Counterpart {
    * `CounterpartSpec` asserts every name on both sides is declared by the chain's widest signature,
    * so an entry that goes stale fails there rather than reaching a reader as advice to write a
    * constant that does not exist.
+   *
+   * **It held five until `docs/adr/0018` and holds one, and the four that left are the measure of
+   * what that record bought.** `+`, `*`, `<` and `<=` now stand for the `num` constant as well as
+   * the real one, so `!n:num. n + 0 = n` reads, and advice telling its writer to put `NUM_ADD n 0`
+   * instead would be advice to rewrite something that already works. An entry here is not merely
+   * unnecessary once its symbol is overloaded, it is **wrong**, and wrong in the direction this
+   * table exists to prevent: it sends a reader away from the spelling the library now prints.
+   *
+   * What is left is the one symbol whose two meanings are different operations. `-` at `num` is
+   * truncated, which is why `docs/adr/0018` refuses to overload it and why this row keeps the
+   * caveat it always carried. `/` has never had a row and still does not; `NUM_DIV` is floor
+   * division named by choice, and a reader who writes `x / y` over `num` is told the type error
+   * alone, which is the gap this table had before and keeps.
    */
   val onNum: Vector[(String, String)] = Vector(
-    Real.Addition -> Peano.Addition,
-    Real.Multiplication -> Peano.Multiplication,
-    Real.Subtraction -> Peano.Subtraction,
-    Real.Order -> Peano.StrictOrder,
-    Real.NonStrictOrder -> Peano.NonStrictOrder
+    Real.Subtraction -> Peano.Subtraction
   )
 
   /**

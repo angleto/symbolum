@@ -44,7 +44,13 @@ class FindSpec extends AnyFlatSpec with Matchers {
     // A caller looking for a lemma writes the shape, not an instance. `0 + 1 = 1 + 0` is a true
     // claim and is not a lemma anybody holds, and matching it against commutativity would be the
     // wrong answer to the question that was asked.
-    val page = Find.of("0 + 1 = 1 + 0")
+    //
+    // Annotated since `docs/adr/0018`, and the annotation is carrying weight rather than decorating:
+    // `+` stands for two constants and every leaf here is a digit string, so the bare text is
+    // refused for an undetermined type and the shape question is never asked. That refusal is
+    // correct and is asserted two tests below; what this one is about is what the shape search
+    // says when it DOES run, so the query has to be one it can run on.
+    val page = Find.of("(0:real) + 1 = 1 + 0")
 
     page should include("by shape, matching")
     page should include("nothing")

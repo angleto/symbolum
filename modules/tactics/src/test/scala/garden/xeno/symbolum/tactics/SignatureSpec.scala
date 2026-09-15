@@ -65,12 +65,18 @@ class SignatureSpec extends AnyFlatSpec with Matchers {
     signature.theory.typeOperators.keySet should contain(Real.TypeName)
     signature.notation.numerals should not be empty
     signature.logic.truth.toString should not be empty
-    // `0 < 1` still reads with nothing annotated: `<` is the reals' order, so both numerals are
-    // determined by the term around them. A numeral ALONE is not, and stopped being on 2026-09-12,
-    // when `Series` was pointed at Peano's notation so that it and `Chain.widest` would stop
-    // answering differently about the same digit string. That is the assertion below, in both
-    // directions, so neither half can be mistaken for the interface being broken.
-    signature.proposition("0 < 1").isRight shouldBe true
+    // `0 < 1` is **refused** here, and the reason moved on 2026-09-15 rather than the behaviour
+    // being broken. It used to read with nothing annotated because `<` was the reals' order, so the
+    // operator determined both numerals; `docs/adr/0018` made `<` two constants, and a claim whose
+    // every leaf is a digit string now says nothing about which order or which encoding is meant.
+    //
+    // This is the widest signature, which is the one that has both. The same text over a
+    // development built on the reals alone still reads, because one candidate is not a choice, and
+    // `OrderSpec` is where that is asserted. Both halves are here so that neither the refusal nor
+    // the escape can be mistaken for the interface being broken.
+    signature.proposition("0 < 1").isLeft shouldBe true
+    signature.proposition("(0:real) < 1").isRight shouldBe true
+    signature.proposition("(0:num) < 1").isRight shouldBe true
     signature.term("0").isLeft shouldBe true
     signature.term("0", TyApp(Real.TypeName, Nil)).isRight shouldBe true
     signature.show(signature.term("0", TyApp(Real.TypeName, Nil)).toOption.get) shouldBe "0"

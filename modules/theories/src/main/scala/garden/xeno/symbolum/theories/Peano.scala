@@ -105,12 +105,14 @@ import garden.xeno.symbolum.logic.*
  * here is a definition that recurses on it, which needs more than the principle: a recursion
  * theorem for a well-founded relation, in the shape `Recursion.theorem` has for the successor.
  *
- * **No OPERATOR notation yet, and since 2026-09-15 that is a schedule rather than a decision.**
- * A `Notation` maps a symbol to one constant today, and the reals already own `+`, `*`, `<` and
- * `<=`, so a natural number's operations are read and printed as the applications they are.
- * `docs/adr/0018` is what changes it: a symbol may stand for several constants and the elaborator
- * picks by the type unification settles, but only where the operation is the same one, so `NUM_ADD`
- * and `NUM_MUL` get `+` and `*` while [[Subtraction]] and `NUM_DIV` keep spellings of their own.
+ * **Four of the operations are written infix, and three deliberately are not.** [[Addition]],
+ * [[Multiplication]], [[StrictOrder]] and [[NonStrictOrder]] are read and printed `+`, `*`, `<` and
+ * `<=`, the reals' own marks at the reals' own precedences, which `docs/adr/0018` decided and this
+ * file declares in its numerals stage: a symbol stands for more than one constant and the
+ * elaborator picks by the type unification settles. [[Subtraction]] and `NUM_DIV` keep spellings of
+ * their own because they are not the operations `-` and `/` name over a field, which is the section
+ * below this one; `NUM_POW` keeps its own because it does not share a shape with `Power`, whose
+ * base is a real.
  *
  * **The numerals were the exception, and the exception turned out to be the rule.** Since
  * 2026-09-12 this development declares a second numeral encoding and a digit string reads at
@@ -5428,8 +5430,31 @@ object Peano {
       // From here on the notation reads a digit string at `num` as well as at `real`. It is
       // extended after the three constants exist and not before, which is what makes the pair
       // consistent by construction rather than by inspection.
-      spelled = notation.withNumerals(
-        Natural.NumberZero, NumeralOne, NumeralBit0, NumeralBit1)
+      //
+      // The four operators are added at the same point and for the same reason. They are the four
+      // `docs/adr/0018` admits and not the seven this development has: `NUM_SUB` is truncated and
+      // `NUM_DIV` is floor division, so neither is the operation `-` and `/` name over a field, and
+      // a reader who forgot that would write a lemma that is false at `y > x`. `NUM_POW` is refused
+      // for a second reason, that it does not share a shape with `Power`, which takes a real base.
+      // Those three keep the prefix form and the spellings `Spellings` already gives them.
+      //
+      // The precedences are the reals' own, which is not a convenience: one symbol with two
+      // precedences is an ambiguous grammar rather than an overload, since the reader picks the
+      // precedence before anything is known about types and so cannot pick it per candidate.
+      spelled = notation
+        .withNumerals(Natural.NumberZero, NumeralOne, NumeralBit0, NumeralBit1)
+        .withInfix("+", Addition, Real.AdditionPrecedence)
+        .withInfix("*", Multiplication, Real.MultiplicationPrecedence)
+        .withInfix("<", StrictOrder, Real.OrderPrecedence)
+        .withInfix("<=", NonStrictOrder, Real.OrderPrecedence)
+        // `>` and `>=` are the same two relations read from the other end, so they are declared
+        // here for the reason `Real` declares them: not overloading them would leave `!n:num. n < n`
+        // reading and `!n:num. n > n` refused, an asymmetry a reader meets on their second line and
+        // which this change would have INTRODUCED. `Counterpart` used to answer that refusal and
+        // cannot any more, since the row it answered from is one of the four overloading removed.
+        // No constant and no axiom: `a > b` builds the term `b < a`, to the node.
+        .withFlippedInfix(">", StrictOrder, Real.OrderPrecedence)
+        .withFlippedInfix(">=", NonStrictOrder, Real.OrderPrecedence)
 
       oneIsSuccessor <- checked(theory, spelled, NumeralOneIsSuccessorOfZero, oneDefinition)
 

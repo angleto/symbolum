@@ -88,14 +88,29 @@ object Real {
   val TypeName: String = "real"
   val Zero: String = "0"
   val One: String = "1"
-  val Addition: String = "+"
-  val Multiplication: String = "*"
+
+  /**
+   * The four operations whose symbol used to be their name.
+   *
+   * `Addition` was the string `"+"` until `docs/adr/0018`, so the reals' addition was a constant
+   * **named** `+`, and `*` and `<` the same. That was harmless while one type owned the symbols and
+   * became a trap the moment two did: a reader meeting `+` in a list of constants, in
+   * `docs/reading-register.md` or in a refusal, cannot tell whether it is a spelling or a name.
+   * `NonStrictOrder` was already `"le"` and is renamed only so the four read alike.
+   *
+   * The symbols are unchanged and live where they belong, in the notation below. Nothing a reader
+   * of a statement sees moves: `x + y` still prints `x + y`, because the printer is keyed by
+   * constant and asks the notation what to spell it with.
+   */
+  val Addition: String = "real_add"
+  val Multiplication: String = "real_mul"
+  val Order: String = "real_lt"
+  val NonStrictOrder: String = "real_le"
+
   val Negation: String = "neg"
   val Inverse: String = "inv"
-  val Order: String = "<"
   val Subtraction: String = "sub"
   val Division: String = "div"
-  val NonStrictOrder: String = "le"
   val Bit0: String = "BIT0"
   val Bit1: String = "BIT1"
 
@@ -119,10 +134,17 @@ object Real {
    * `x + y = y + x` has to read as `(x + y) = (y + x)`, so `+` sits above equality; `x + y * z`
    * has to read as `x + (y * z)`, so multiplication sits above addition; and unary negation binds
    * tightest of all so that `-x * y` is `(-x) * y`.
+   *
+   * Three of the four are public since `docs/adr/0018`, and that is the record's shape rather than
+   * a convenience. A symbol carries one precedence however many constants it stands for, because
+   * the reader picks the precedence before anything is known about types and therefore cannot pick
+   * it per candidate. So a development that overloads one of these symbols must declare it at the
+   * precedence written here, and reading it from here is what makes "the same" mechanical instead
+   * of a number copied and left to drift. Negation is not overloaded and stays private.
    */
-  private val OrderPrecedence: Int = 50
-  private val AdditionPrecedence: Int = 60
-  private val MultiplicationPrecedence: Int = 70
+  val OrderPrecedence: Int = 50
+  val AdditionPrecedence: Int = 60
+  val MultiplicationPrecedence: Int = 70
   private val NegationPrecedence: Int = 80
 
   /**
@@ -201,7 +223,7 @@ object Real {
   /** The notation: how each constant is written. */
   def notation: Notation =
     Notation.standard
-      .withInfix(Order, Order, OrderPrecedence)
+      .withInfix("<", Order, OrderPrecedence)
       .withInfix("<=", NonStrictOrder, OrderPrecedence)
       // `>` and `>=` are read and never written. The theory has one order relation and gains no
       // constant here: `a > b` builds the same term as `b < a`, to the node, so every lemma about
@@ -211,9 +233,9 @@ object Real {
       // other way round.
       .withFlippedInfix(">", Order, OrderPrecedence)
       .withFlippedInfix(">=", NonStrictOrder, OrderPrecedence)
-      .withInfix(Addition, Addition, AdditionPrecedence)
+      .withInfix("+", Addition, AdditionPrecedence)
       .withInfix("-", Subtraction, AdditionPrecedence)
-      .withInfix(Multiplication, Multiplication, MultiplicationPrecedence)
+      .withInfix("*", Multiplication, MultiplicationPrecedence)
       .withInfix("/", Division, MultiplicationPrecedence)
       .withPrefix("-", Negation, NegationPrecedence)
       .withNumerals(Zero, One, Bit0, Bit1)

@@ -78,12 +78,23 @@ object Spellings {
       /* -------------------------------------------------------- the naturals */
       .delimited("SUC", 1, "\\mathrm{suc}(#1)")
       .delimited("PRE", 1, "\\mathrm{pred}(#1)")
-      .operator("NUM_ADD", 2, "#1 + #2", Additive)
+      // `NUM_ADD`, `NUM_MUL`, `NUM_LE` and `NUM_LT` had rows here, `#1 + #2`, `#1 \cdot #2`,
+      // `#1 \le #2` and `#1 < #2`, and `docs/adr/0018` removed them by giving the four a notation.
+      // A constant the notation spells falls through to it, so the rows were the same decision
+      // taken twice, and this table is the place where that was visible first: somebody writing it
+      // from the literature gave those four the reals' own marks and deliberately withheld them
+      // from the two below, years of convention ahead of the question being asked.
+      //
+      // Removing them is output-preserving and that was measured rather than assumed: the notation
+      // renders `+` and `<` as themselves and `*` and `<=` through `Latex`'s symbol table as
+      // `\cdot` and `\le`, and `Notation`'s precedences are the same three numbers as `Additive`,
+      // `Multiplicative` and `Relation` below.
+      //
+      // The two that stay are the two the record refuses to overload, and they keep their rows for
+      // exactly that reason: `NUM_SUB` is truncated and `NUM_POW` does not share a shape with
+      // `Power`, so neither has a notation to fall through to.
       .operator("NUM_SUB", 2, "#1 \\mathbin{\\dot-} #2", Additive)
-      .operator("NUM_MUL", 2, "#1 \\cdot #2", Multiplicative)
       .operator("NUM_POW", 2, "#1^{#2}", Multiplicative + 5)
-      .operator("NUM_LE", 2, "#1 \\le #2", Relation)
-      .operator("NUM_LT", 2, "#1 < #2", Relation)
       .operator("real_of_num", 1, "#1_{\\mathbb{R}}", Multiplicative + 5)
       .binding("NUM_SUM", "\\sum_{#b < #2} #1")
       .binding("NUM_PROD", "\\prod_{#b < #2} #1")

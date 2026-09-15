@@ -274,7 +274,7 @@ $$\forall x \colon \mathbb{R}.\ \exists y \colon \mathbb{N}.\ x < y_{\mathbb{R}}
 | `MUL_ONE` | Real, assumed |
 | `MUL_SYM` | Real, assumed |
 | `ONE_NOT_ZERO` | Real, assumed |
-| `le` | Real, defined |
+| `real_le` | Real, defined |
 | `sub` | Real, defined |
 
 2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
@@ -387,7 +387,7 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 | `LT_TRANSITIVE` | Real, assumed |
 | `MUL_ONE` | Real, assumed |
 | `MUL_SYM` | Real, assumed |
-| `le` | Real, defined |
+| `real_le` | Real, defined |
 | `sub` | Real, defined |
 
 1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
@@ -806,7 +806,7 @@ Two numbers' greatest common divisor is a combination of them. The fact every ar
 $$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \lnot \left( x = 0 \right) \lor \lnot \left( y = 0 \right) \Rightarrow \left( \exists z \colon \mathbb{N}.\ \exists u \colon \mathbb{N}.\ x \cdot z = y \cdot u + \gcd(x, y) \lor y \cdot z = x \cdot u + \gcd(x, y) \right)$$
 
 ```
-!x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. NUM_MUL x z = NUM_ADD (NUM_MUL y u) (NUM_GCD x y) \/ NUM_MUL y z = NUM_ADD (NUM_MUL x u) (NUM_GCD x y))
+!x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. x * z = y * u + NUM_GCD x y \/ y * z = x * u + NUM_GCD x y)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -911,7 +911,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. NUM_MUL x z = NUM_ADD (NUM_MUL y u) (NUM_GCD x y) \/ NUM_MUL y z = NUM_ADD (NUM_MUL x u) (NUM_GCD x y))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. x * z = y * u + NUM_GCD x y \/ y * z = x * u + NUM_GCD x y)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -949,7 +949,7 @@ A prime dividing a product divides one of the factors. The step that makes facto
 $$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \forall z \colon \mathbb{N}.\ \mathrm{prime}(x) \Rightarrow x \mid y \cdot z \Rightarrow x \mid y \lor x \mid z$$
 
 ```
-!x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_MUL y z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z
+!x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1057,7 +1057,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_MUL y z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1095,7 +1095,7 @@ The Chinese remainder theorem, over **n** moduli and not only two. It exists bec
 $$\forall x \colon \mathbb{N} \to \mathbb{N}.\ \forall y \colon \mathbb{N} \to \mathbb{N}.\ \forall z \colon \mathbb{N}.\ \left( \forall u \colon \mathbb{N}.\ u < z \Rightarrow 0 < x(u) \right) \Rightarrow \left( \forall u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ u < z \land v < z \land \lnot \left( u = v \right) \Rightarrow \gcd(x(u), x(v)) = \mathrm{suc}(0) \right) \Rightarrow \left( \exists u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ v < z \Rightarrow u \equiv y(v) \pmod{x(v)} \right)$$
 
 ```
-!x:num -> num. !y:num -> num. !z:num. (!u:num. NUM_LT u z ==> NUM_LT 0 (x u)) ==> (!u:num. !v:num. NUM_LT u z /\ NUM_LT v z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. NUM_LT v z ==> NUM_CONG (x v) u (y v))
+!x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> 0 < x u) ==> (!u:num. !v:num. u < z /\ v < z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. v < z ==> NUM_CONG (x v) u (y v))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1227,7 +1227,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num -> num. !z:num. (!u:num. NUM_LT u z ==> NUM_LT 0 (x u)) ==> (!u:num. !v:num. NUM_LT u z /\ NUM_LT v z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. NUM_LT v z ==> NUM_CONG (x v) u (y v))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> 0 < x u) ==> (!u:num. !v:num. u < z /\ v < z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. v < z ==> NUM_CONG (x v) u (y v))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1265,7 +1265,7 @@ There is a prime above every number. That is what "there are infinitely many pri
 $$\forall x \colon \mathbb{N}.\ \exists y \colon \mathbb{N}.\ \mathrm{prime}(y) \land x < y$$
 
 ```
-!x:num. ?y:num. NUM_PRIME y /\ NUM_LT x y
+!x:num. ?y:num. NUM_PRIME y /\ x < y
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1377,7 +1377,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. ?y:num. NUM_PRIME y /\ NUM_LT x y"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. ?y:num. NUM_PRIME y /\ x < y"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1415,7 +1415,7 @@ No square is twice a square at a positive denominator. It is the arithmetic cont
 $$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < y \Rightarrow \lnot \left( x \cdot x = \mathrm{suc}(\mathrm{suc}(0)) \cdot \left( y \cdot y \right) \right)$$
 
 ```
-!x:num. !y:num. NUM_LT 0 y ==> ~(NUM_MUL x x = NUM_MUL (SUC (SUC 0)) (NUM_MUL y y))
+!x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1535,7 +1535,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_LT 0 y ==> ~(NUM_MUL x x = NUM_MUL (SUC (SUC 0)) (NUM_MUL y y))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the

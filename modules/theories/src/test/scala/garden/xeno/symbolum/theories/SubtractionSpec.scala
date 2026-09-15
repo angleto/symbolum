@@ -85,12 +85,12 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
     // put there. Checked at a point as well as read off the statement, because the statement is
     // what a reader trusts and the point is what a consumer meets.
     peano.show(fact(Peano.SumMinus).conclusion) shouldBe
-      "!x:num. !y:num. NUM_SUB (NUM_ADD x y) y = x"
+      "!x:num. !y:num. NUM_SUB (x + y) y = x"
 
     val instance = force(rules.specAll(fact(Peano.SumMinus), List(two, three)))
     instance.hypotheses shouldBe empty
     peano.show(instance.conclusion) shouldBe
-      "NUM_SUB (NUM_ADD (SUC (SUC 0)) (SUC (SUC (SUC 0)))) (SUC (SUC (SUC 0))) = SUC (SUC 0)"
+      "NUM_SUB (SUC (SUC 0) + SUC (SUC (SUC 0))) (SUC (SUC (SUC 0))) = SUC (SUC 0)"
   }
 
   "The law that has one" should "be false at the point its hypothesis excludes" in {
@@ -107,7 +107,7 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
 
     restored.hypotheses shouldBe empty
     peano.show(restored.conclusion) shouldBe
-      "NUM_ADD (NUM_SUB 0 (SUC 0)) (SUC 0) = SUC 0"
+      "NUM_SUB 0 (SUC 0) + SUC 0 = SUC 0"
 
     // And `SUC ZERO` is not `ZERO`, which is the Peano fact rather than an appeal to arithmetic.
     val never = force(rules.spec(zero, force(peano.naturals.fact(Natural.SuccessorNotZero))))
@@ -127,7 +127,7 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
         result <- rules.mp(chained, both)
       } yield result
     )
-    peano.show(bounded.conclusion) shouldBe "NUM_LE (SUC 0) (SUC (SUC (SUC 0)))"
+    peano.show(bounded.conclusion) shouldBe "SUC 0 <= SUC (SUC (SUC 0))"
 
     val restored = force(
       rules.specAll(fact(Peano.MinusThenPlus), List(three, one)).flatMap(rules.mp(_, bounded))
@@ -136,7 +136,7 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
 
     val computed = force(Rewrite.inTheorem(recurrences, restored))
     peano.show(computed.conclusion) shouldBe
-      "NUM_ADD (SUC (SUC 0)) (SUC 0) = SUC (SUC (SUC 0))"
+      "SUC (SUC 0) + SUC 0 = SUC (SUC (SUC 0))"
   }
 
   "The embedding of a difference" should "be false at the point its hypothesis excludes" in {
@@ -195,11 +195,11 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
     // A reader who expects the integers' subtraction is wrong about this file, and the file says so
     // in prose. Prose is not checked; `NUM_SUB_EQ_ZERO` is.
     peano.show(fact(Peano.SubIsZero).conclusion) shouldBe
-      "!x:num. !y:num. NUM_LE x y ==> NUM_SUB x y = 0"
+      "!x:num. !y:num. x <= y ==> NUM_SUB x y = 0"
     peano.show(fact(Peano.Truncates).conclusion) shouldBe
-      "!x:num. !y:num. NUM_SUB x (NUM_ADD x y) = 0"
+      "!x:num. !y:num. NUM_SUB x (x + y) = 0"
     peano.show(fact(Peano.SubBelow).conclusion) shouldBe
-      "!x:num. !y:num. NUM_LE (NUM_SUB x y) x"
+      "!x:num. !y:num. NUM_SUB x y <= x"
   }
 
   "Every fact about the difference" should "rest on nothing this development did not already cost" in {

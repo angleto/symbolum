@@ -79,7 +79,7 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     // whose body is a choice over a predicate, and choice is not something a model of this shape
     // computes. This is the measurement that says so, and it is why `Model.Numbers` is consulted
     // rather than shadowed.
-    chain.reals.definitions.keySet shouldBe Set("BIT0", "BIT1", "div", "le", "sub")
+    chain.reals.definitions.keySet shouldBe Set("BIT0", "BIT1", "div", Real.NonStrictOrder, "sub")
     Model.Numbers.constants.keySet should contain("NUM_ADD")
   }
 

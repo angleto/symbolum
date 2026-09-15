@@ -272,7 +272,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // Stated at `NUM_ADD n n` rather than at a parity predicate, which is why it has no exception
     // at any length: an exponent written as a sum with itself is even by construction.
     series.show(fact(Series.NegatedDouble).conclusion) shouldBe
-      "!x:real. !y:num. Power (0 - x) (NUM_ADD y y) = Power x (NUM_ADD y y)"
+      "!x:real. !y:num. Power (0 - x) (y + y) = Power x (y + y)"
     fact(Series.NegatedDouble).hypotheses shouldBe empty
   }
 
@@ -286,7 +286,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // it. If a later library makes that route work, this goes red and the docstring gets
     // rewritten by whoever it stops.
     val statement = force(series.proposition(
-      "!x:real. !n:num. Power (0 - x) (NUM_ADD n n) = Power x (NUM_ADD n n)"))
+      "!x:real. !y:num. Power (0 - x) (y + y) = Power x (y + y)"))
     val induction = force(naturals.fact(Natural.Induction))
     val driver = Induct(series.logic, ring, induction)
     val sketch = force(Rewrite.Rule.all(series.logic, Vector(
@@ -559,8 +559,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // `Peano`, `NUM_ADD m i` is a term of the theory the sum is defined in, and the induction
     // `SUM_SHIFT`'s note wrote out in advance closes it unchanged.
     series.show(fact(Series.Reindex).conclusion) shouldBe
-      "!x:num -> real. !y:num. !z:num. " +
-        "Sum (\\u:num. x (NUM_ADD y u)) z = Sum x (NUM_ADD y z) - Sum x y"
+      "!x:num -> real. !y:num. !z:num. Sum (\\u:num. x (y + u)) z = Sum x (y + z) - Sum x y"
     fact(Series.Reindex).hypotheses shouldBe empty
   }
 
@@ -581,7 +580,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // whole suite that wanted a partial instance, and it is the measurement that kept the operation.
     val instance = force(rules.specPrefix(fact(Series.Reindex), List(f, one)))
 
-    series.show(instance.conclusion) should include("NUM_ADD (SUC 0)")
+    series.show(instance.conclusion) should include("SUC 0 +")
     instance.hypotheses shouldBe empty
   }
 
@@ -593,7 +592,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // `Power 2 a * Power 2 b` were two terms with no relation, and a development whose exponents
     // are partial sums could not state a single step that moved one.
     series.show(fact(Series.PowerOfSum).conclusion) shouldBe
-      "!x:real. !y:num. !z:num. Power x (NUM_ADD y z) = Power x y * Power x z"
+      "!x:real. !y:num. !z:num. Power x (y + z) = Power x y * Power x z"
     fact(Series.PowerOfSum).hypotheses shouldBe empty
   }
 
@@ -602,11 +601,11 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // this is hand it to the rewriter, and a lemma that prints correctly and does not fire there
     // would pass the test above.
     val rule = force(Rewrite.Rule.of(series.logic, fact(Series.PowerOfSum)))
-    val goal = force(series.term("Power (b:real) (NUM_ADD (m:num) (SUC 0))"))
+    val goal = force(series.term("Power b (m + SUC 0)"))
     val rewritten = force(Rewrite.rewrite(Vector(rule), goal))
 
     series.show(rewritten.conclusion) shouldBe
-      "Power b (NUM_ADD m (SUC 0)) = Power b m * Power b (SUC 0)"
+      "Power b (m + SUC 0) = Power b m * Power b (SUC 0)"
   }
 
   "An exponent that is a product" should "nest, and it wanted the first law and nothing more" in {
@@ -614,7 +613,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // blocked nothing. It costs one line: the step rewrites `NUM_MUL m (SUC n)` into
     // `NUM_ADD (NUM_MUL m n) m`, and from there `POWER_ADD` is exactly what carries it.
     series.show(fact(Series.PowerOfProduct).conclusion) shouldBe
-      "!x:real. !y:num. !z:num. Power x (NUM_MUL y z) = Power (Power x y) z"
+      "!x:real. !y:num. !z:num. Power x (y * z) = Power (Power x y) z"
     fact(Series.PowerOfProduct).hypotheses shouldBe empty
   }
 

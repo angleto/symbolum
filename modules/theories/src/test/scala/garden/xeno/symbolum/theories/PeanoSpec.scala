@@ -39,13 +39,13 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // choice is the file's own and it is what makes distributivity and the two associativities
     // close by rewriting; the price of it is `NUM_ZERO_ADD` and `NUM_SUC_ADD`, which are the same
     // equations from the other side and have to be proved.
-    peano.show(fact(Peano.AddAtZero).conclusion) shouldBe "!x:num. NUM_ADD x 0 = x"
+    peano.show(fact(Peano.AddAtZero).conclusion) shouldBe "!x:num. x + 0 = x"
     peano.show(fact(Peano.AddAtSuccessor).conclusion) shouldBe
-      "!x:num. !y:num. NUM_ADD x (SUC y) = SUC (NUM_ADD x y)"
+      "!x:num. !y:num. x + SUC y = SUC (x + y)"
 
-    peano.show(fact(Peano.MulAtZero).conclusion) shouldBe "!x:num. NUM_MUL x 0 = 0"
+    peano.show(fact(Peano.MulAtZero).conclusion) shouldBe "!x:num. x * 0 = 0"
     peano.show(fact(Peano.MulAtSuccessor).conclusion) shouldBe
-      "!x:num. !y:num. NUM_MUL x (SUC y) = NUM_ADD (NUM_MUL x y) x"
+      "!x:num. !y:num. x * SUC y = x * y + x"
 
     peano.theory.definitions.keySet should contain allOf (
       Peano.Addition, Peano.Multiplication, Peano.NonStrictOrder, Peano.StrictOrder, Peano.EmbeddingName
@@ -57,23 +57,23 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // `ZERO + n = n` for its base and `SUC m + n = SUC (m + n)` for its step, and multiplication
     // needs the same two facts one level up.
     peano.show(fact(Peano.AddCommutative).conclusion) shouldBe
-      "!x:num. !y:num. NUM_ADD x y = NUM_ADD y x"
+      "!x:num. !y:num. x + y = y + x"
     peano.show(fact(Peano.MulCommutative).conclusion) shouldBe
-      "!x:num. !y:num. NUM_MUL x y = NUM_MUL y x"
+      "!x:num. !y:num. x * y = y * x"
     peano.show(fact(Peano.Distributive).conclusion) shouldBe
-      "!x:num. !y:num. !z:num. NUM_MUL x (NUM_ADD y z) = NUM_ADD (NUM_MUL x y) (NUM_MUL x z)"
+      "!x:num. !y:num. !z:num. x * (y + z) = x * y + x * z"
   }
 
   "The order" should "be the existential a reader would write, and the strict one a step along it" in {
     peano.show(force(peano.definition(Peano.NonStrictOrder)).conclusion) shouldBe
-      "NUM_LE = (\\x:num. \\y:num. ?z:num. NUM_ADD x z = y)"
+      "NUM_LE = (\\x:num. \\y:num. ?z:num. x + z = y)"
     peano.show(force(peano.definition(Peano.StrictOrder)).conclusion) shouldBe
-      "NUM_LT = (\\x:num. \\y:num. NUM_LE (SUC x) y)"
+      "NUM_LT = (\\x:num. \\y:num. SUC x <= y)"
 
-    peano.show(fact(Peano.Reflexive).conclusion) shouldBe "!x:num. NUM_LE x x"
+    peano.show(fact(Peano.Reflexive).conclusion) shouldBe "!x:num. x <= x"
     peano.show(fact(Peano.AntiSymmetric).conclusion) shouldBe
-      "!x:num. !y:num. NUM_LE x y /\\ NUM_LE y x ==> x = y"
-    peano.show(fact(Peano.BelowSuccessor).conclusion) shouldBe "!x:num. NUM_LT x (SUC x)"
+      "!x:num. !y:num. x <= y /\\ y <= x ==> x = y"
+    peano.show(fact(Peano.BelowSuccessor).conclusion) shouldBe "!x:num. x < SUC x"
   }
 
   it should "be total, and trichotomous, both derived where the reals assert the second" in {
@@ -82,9 +82,9 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // reached by anything: totality is an induction, and each half of it is then split on whether
     // the witness closing the gap is zero.
     peano.show(fact(Peano.Total).conclusion) shouldBe
-      "!x:num. !y:num. NUM_LE x y \\/ NUM_LE y x"
+      "!x:num. !y:num. x <= y \\/ y <= x"
     peano.show(fact(Peano.Trichotomy).conclusion) shouldBe
-      "!x:num. !y:num. NUM_LT x y \\/ x = y \\/ NUM_LT y x"
+      "!x:num. !y:num. x < y \\/ x = y \\/ y < x"
 
     Vector(Peano.Total, Peano.Trichotomy).foreach { name =>
       withClue(s"$name: ") { fact(name).hypotheses shouldBe empty }
@@ -96,9 +96,9 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     peano.show(fact(Peano.EmbedsSuccessor).conclusion) shouldBe
       "!x:num. real_of_num (SUC x) = real_of_num x + 1"
     peano.show(fact(Peano.EmbedsSum).conclusion) shouldBe
-      "!x:num. !y:num. real_of_num (NUM_ADD x y) = real_of_num x + real_of_num y"
+      "!x:num. !y:num. real_of_num (x + y) = real_of_num x + real_of_num y"
     peano.show(fact(Peano.EmbedsProduct).conclusion) shouldBe
-      "!x:num. !y:num. real_of_num (NUM_MUL x y) = real_of_num x * real_of_num y"
+      "!x:num. !y:num. real_of_num (x * y) = real_of_num x * real_of_num y"
   }
 
   "The Archimedean property" should "rest on completeness, which is what makes it true at all" in {
@@ -171,7 +171,13 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     val x = Term.variable("x", real)
 
     val derived = for {
-      nonNegative <- peano.proposition("0 <= x")
+      // `x:real` and not a bare `x`, because `<=` stands for two constants since `docs/adr/0018`
+      // and `0` for two encodings since `docs/adr/0012`. **`real` and not `num`**, which is the
+      // half worth writing down: this is `NUM_FLOOR`'s hypothesis and `NUM_FLOOR` takes a real, so
+      // the annotation that reads naturally here is the wrong one, and the term it builds has to
+      // be the same one `x` three lines above is a variable of. The printed form asserted in the
+      // row above is unchanged, which is what says the term did not move.
+      nonNegative <- peano.proposition("0 <= x:real")
       assumed <- LogicError.lift(Kernel.assume(nonNegative))
       belowX <- rules.spec(x, fact(Peano.FloorAtMost)).flatMap(rules.mp(_, assumed))
       aboveX <- rules.spec(x, fact(Peano.CeilingAtLeast)).flatMap(rules.mp(_, assumed))
@@ -222,7 +228,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // reads `real_of_num i` as an atom, and an atom with no fact attached is an unknown real.
     val linarith = force(Linarith.construct(force(Order.construct(peano.ring))))
 
-    val goal = force(peano.proposition("!i:num. !k:num. NUM_LT i k ==> real_of_num i < real_of_num k"))
+    val goal = force(peano.proposition("!x:num. !y:num. x < y ==> real_of_num x < real_of_num y"))
     val carried = force(peano.fact(Peano.EmbedsStrictOrder))
 
     // The step the lemma buys: from `real_of_num i + 1 <= real_of_num k`, which is what it gives,
@@ -244,7 +250,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
 
     val proved = force(
       for {
-        assumption <- peano.proposition("NUM_LT (i:num) (k:num)")
+        assumption <- peano.proposition("i:num < k")
         assumed <- LogicError.lift(Kernel.assume(assumption))
         crossed <- rules.specAll(carried, List(i, k)).flatMap(rules.mp(_, assumed))
         left <- LogicError.lift(Term.app(embedding, i))
@@ -264,7 +270,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // and its successor. Reporting only `real_of_num i < real_of_num k` would throw that away at
     // the one place it is worth anything, so the lemma says `+ 1 <=`.
     peano.show(fact(Peano.EmbedsStrictOrder).conclusion) shouldBe
-      "!x:num. !y:num. NUM_LT x y ==> real_of_num x + 1 <= real_of_num y"
+      "!x:num. !y:num. x < y ==> real_of_num x + 1 <= real_of_num y"
   }
 
   "The development" should "add no axiom, which is the whole claim about what it costs" in {
@@ -297,19 +303,19 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // this type arrived on 2026-09-12 and reach these two lemmas only through `Successor`, which
     // is a separate piece of work and is one. The point here is that the two recurrences settle a
     // closed sum by rewriting alone, with nothing assumed.
-    val left = force(peano.term("NUM_ADD (SUC (SUC 0)) (SUC 0)"))
+    val left = force(peano.term("SUC (SUC 0) + SUC 0"))
     val right = force(peano.term("SUC (SUC (SUC 0))"))
     val proved = force(Rewrite.prove(rulesOf(Peano.AddAtZero, Peano.AddAtSuccessor), left, right))
 
     proved.hypotheses shouldBe empty
     peano.show(proved.conclusion) shouldBe
-      "NUM_ADD (SUC (SUC 0)) (SUC 0) = SUC (SUC (SUC 0))"
+      "SUC (SUC 0) + SUC 0 = SUC (SUC (SUC 0))"
   }
 
   it should "refuse a sum that is not the one asked for, rather than rewrite until it agrees" in {
     // The other half of the same machinery, and the half that makes the first half mean something:
     // both sides reach a normal form, the two normal forms differ, and that is a refusal.
-    val left = force(peano.term("NUM_ADD (SUC 0) 0"))
+    val left = force(peano.term("SUC 0 + 0"))
     val right = force(peano.term("SUC (SUC 0)"))
 
     Rewrite.prove(rulesOf(Peano.AddAtZero, Peano.AddAtSuccessor), left, right) should matchPattern {
@@ -378,7 +384,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     )
 
     proved.hypotheses shouldBe empty
-    peano.show(proved.conclusion) shouldBe "NUM_LE 0 (SUC (SUC 0))"
+    peano.show(proved.conclusion) shouldBe "0 <= SUC (SUC 0)"
   }
 
   it should "turn a bound at zero into an equation, which is what a bounded quantifier needs" in {
@@ -390,7 +396,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
 
     val proved = force(
       for {
-        bound <- Parser.proposition(peano.theory, peano.notation, "NUM_LE (n:num) 0")
+        bound <- Parser.proposition(peano.theory, peano.notation, "n:num <= 0")
         assumed <- LogicError.lift(Kernel.assume(bound))
         least <- rules.spec(n, fact(Peano.ZeroIsLeast))
         both <- rules.conjIntro(assumed, least)
@@ -402,7 +408,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     )
 
     proved.hypotheses shouldBe empty
-    peano.show(proved.conclusion) shouldBe "!x:num. NUM_LE x 0 ==> x = 0"
+    peano.show(proved.conclusion) shouldBe "!x:num. x <= 0 ==> x = 0"
   }
 
   "The embedding" should "put a natural number where the tactic that decides the reals can reach it" in {
@@ -444,7 +450,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
         subject <- Parser.term(
           peano.theory,
           peano.notation,
-          "real_of_num (NUM_ADD (NUM_ADD (m:num) (n:num)) (p:num))"
+          "real_of_num (m + n + p)"
         )
         equation <- Rewrite.rewrite(rulesOf(Peano.EmbedsSum), subject)
         result <- Right(equation)
@@ -452,7 +458,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     )
 
     peano.show(proved.conclusion) shouldBe
-      "real_of_num (NUM_ADD (NUM_ADD m n) p) = real_of_num m + real_of_num n + real_of_num p"
+      "real_of_num (m + n + p) = real_of_num m + real_of_num n + real_of_num p"
     proved.hypotheses shouldBe empty
     Term.freeVariables(force(Term.destEq(proved.conclusion).map { case (_, right) => right }.toRight(
       NotOfForm("an equation", proved.conclusion)
@@ -469,7 +475,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
 
     decided.hypotheses shouldBe empty
     peano.show(decided.conclusion) shouldBe
-      "NUM_LT 0 (SUC 0) \\/ 0 = SUC 0 \\/ NUM_LT (SUC 0) 0"
+      "0 < SUC 0 \\/ 0 = SUC 0 \\/ SUC 0 < 0"
   }
 
   "The least-number principle" should "produce a least witness a consumer can use" in {
@@ -501,8 +507,8 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     )
 
     peano.show(opened.conclusion) shouldBe
-      "(?x:num. ?y:num. x = SUC y) ==> " +
-        "(?x:num. (?y:num. x = SUC y) /\\ (!y:num. NUM_LT y x ==> ~(?z:num. y = SUC z)))"
+      "(?x:num. ?y:num. x = SUC y) ==> (?x:num. (?y:num. x = SUC y) /\\ (!y:num. y < x ==> " +
+        "~(?z:num. y = SUC z)))"
     opened.hypotheses shouldBe empty
   }
 
@@ -513,8 +519,8 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     val greatest = fact(Peano.GreatestBounded)
 
     peano.show(greatest.conclusion) shouldBe
-      "!x:num -> bool. (?y:num. x y) /\\ (?y:num. !z:num. x z ==> NUM_LE z y) ==> " +
-        "(?y:num. x y /\\ (!z:num. x z ==> NUM_LE z y))"
+      "!x:num -> bool. (?y:num. x y) /\\ (?y:num. !z:num. x z ==> z <= y) ==> (?y:num. x y /\\ " +
+        "(!z:num. x z ==> z <= y))"
     greatest.hypotheses shouldBe empty
 
     // It is a corollary of the least-number principle rather than a second induction, which the
@@ -536,11 +542,11 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     peano.show(fact(Peano.PartialSumAtZero).conclusion) shouldBe
       "!x:num -> num. NUM_SUM x 0 = 0"
     peano.show(fact(Peano.PartialSumAtSuccessor).conclusion) shouldBe
-      "!x:num -> num. !y:num. NUM_SUM x (SUC y) = NUM_ADD (NUM_SUM x y) (x y)"
+      "!x:num -> num. !y:num. NUM_SUM x (SUC y) = NUM_SUM x y + x y"
 
     peano.show(force(peano.definition(Peano.PartialSum)).conclusion) shouldBe
-      "NUM_SUM = (\\x:num -> num. " +
-        "select (\\y:num -> num. y 0 = 0 /\\ (!z:num. y (SUC z) = NUM_ADD (y z) (x z))))"
+      "NUM_SUM = (\\x:num -> num. select (\\y:num -> num. y 0 = 0 /\\ (!z:num. y (SUC z) = y z + " +
+        "x z)))"
 
     Vector(Peano.PartialSumAtZero, Peano.PartialSumAtSuccessor, Peano.PartialSumCongruenceBelow)
       .foreach(name => fact(name).hypotheses shouldBe empty)
@@ -558,8 +564,8 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // looks -- the ordinary case -- cannot use it at all. `Series.CongruenceBelow` carries the
     // count of four lemmas in this library that still have the unconditional shape.
     peano.show(fact(Peano.PartialSumCongruenceBelow).conclusion) shouldBe
-      "!x:num -> num. !y:num -> num. !z:num. " +
-        "(!u:num. NUM_LT u z ==> x u = y u) ==> NUM_SUM x z = NUM_SUM y z"
+      "!x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u = y u) ==> NUM_SUM x z = " +
+        "NUM_SUM y z"
 
     // And the use that the unconditional form cannot make, which is why this is a test and not an
     // assertion about a string: over an EMPTY range two arbitrary summands have equal sums, and

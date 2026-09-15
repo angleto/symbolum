@@ -225,11 +225,15 @@ final class Algebraic private (val chain: Chain, val arithmetic: Arbitrary, val 
     cofactors: Vector[Polynomial.P]
   ): Either[LogicError, Kernel.Thm] = {
     val variables = names.map(name => Term.variable(name, real))
-    val claim = appliedText(coefficients, names)
+    // `written` and not `names` from here down: these strings are parsed, and a name in a parsed
+    // text has to carry its type since `docs/adr/0018`. `names` stays bare for the variables above
+    // and for `Polynomial.show` where it is read by a person rather than by the parser.
+    val written = spelled(names)
+    val claim = appliedText(coefficients, written)
     val certificate = names.indices
       .map { i =>
-        val powered = Vector.fill(degrees(i))(names(i)).mkString(" * ")
-        s"(${Polynomial.show(cofactors(i), names)}) * (($powered) - ${radicands(i)})"
+        val powered = Vector.fill(degrees(i))(written(i)).mkString(" * ")
+        s"(${Polynomial.show(cofactors(i), written)}) * (($powered) - ${radicands(i)})"
       }
       .mkString(" + ")
 
@@ -266,9 +270,10 @@ final class Algebraic private (val chain: Chain, val arithmetic: Arbitrary, val 
     degrees: Vector[Int],
     radicands: Vector[BigInt]
   ): Either[LogicError, Vector[Term]] =
+    val written = spelled(names)
     names.indices
       .foldLeft(Right(Vector.empty): Either[LogicError, Vector[Term]]) { (acc, i) =>
-        val powered = Vector.fill(degrees(i))(names(i)).mkString(" * ")
+        val powered = Vector.fill(degrees(i))(written(i)).mkString(" * ")
         acc.flatMap(seen => signature.proposition(s"$powered = ${radicands(i)}").map(seen :+ _))
       }
 
@@ -361,6 +366,23 @@ object Algebraic {
   /** The variable a root is written with: `x`, `y`, `z`, then `x4` and upward. */
   def nameOf(index: Int): String =
     if (index < 3) Vector("x", "y", "z")(index) else s"x${index + 1}"
+
+  /**
+   * The same name as it goes into a TEXT, carrying the type it is a variable of.
+   *
+   * Bare until `docs/adr/0018`, and bare worked only because `+`, `*` and `<` belonged to the reals
+   * alone: every text built here is real arithmetic over free variables, so once those symbols
+   * stood for two constants nothing in `(x + y) * (x + y) - 2 = ...` said which, and the whole
+   * certification refused.
+   *
+   * On every occurrence rather than the first, because these texts are assembled from pieces that
+   * do not know what precedes them. And in the text rather than through `Signature.term`'s expected
+   * type, which is the escape that record prefers and which does not reach this case: the texts are
+   * **propositions**, so the type a caller could pass is `bool`, and `bool` says nothing about the
+   * operands. A caller whose ambiguity is inside an equation has to annotate.
+   */
+  private def spelled(names: Vector[String]): Vector[String] =
+    names.map(name => s"$name:${Real.TypeName}")
 
   /**
    * Signed terms as one expression, with subtraction rather than a negated summand.

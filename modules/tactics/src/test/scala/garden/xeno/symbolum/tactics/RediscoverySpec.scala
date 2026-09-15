@@ -47,10 +47,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     recoveries.map(_.reached).distinct.size shouldBe 12
 
     val pairs = recoveries.map(r => (r.proposal.from, r.proposal.change, r.reached)).toSet
-    pairs should contain(("ADD_SYM", "+ became *", "MUL_SYM"))
-    pairs should contain(("MUL_SYM", "* became +", "ADD_SYM"))
-    pairs should contain(("ADD_ASSOC", "+ became *", "MUL_ASSOC"))
-    pairs should contain(("LE_FROM_ZERO", "le became <", "LT_FROM_ZERO"))
+    pairs should contain(("ADD_SYM", "real_add became real_mul", "MUL_SYM"))
+    pairs should contain(("MUL_SYM", "real_mul became real_add", "ADD_SYM"))
+    pairs should contain(("ADD_ASSOC", "real_add became real_mul", "MUL_ASSOC"))
+    pairs should contain(("LE_FROM_ZERO", "real_le became real_lt", "LT_FROM_ZERO"))
   }
 
   it should "reach none of them by dropping a hypothesis, which the file predicted and nobody had measured" in {

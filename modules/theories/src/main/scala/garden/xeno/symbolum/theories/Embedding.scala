@@ -704,7 +704,14 @@ private[theories] object Embedding {
       Conv.sym(equation).flatMap(carrying(_, theorem))
 
     for {
-      nonNegative <- proposition(theory, "0 <= x")
+      // `x:real` and not a bare `x`, because `<=` stands for two constants since `docs/adr/0018`
+      // and `0` for two encodings since `docs/adr/0012`, so `0 <= x` with `x` free determines
+      // nothing and is refused naming both readings. This is the case `docs/adr/0016` predicted
+      // when the numerals widened, met a second time by the operators and answered the same way:
+      // the reader narrows rather than every statement gaining annotations. One of the two names
+      // is enough, and it goes on the variable rather than the numeral because `x` is what the
+      // derivation around it already calls a real.
+      nonNegative <- proposition(theory, "0 <= x:real")
       assumed <- assume(nonNegative)
 
       /* ------------------------------------------------- a natural the floor could be */

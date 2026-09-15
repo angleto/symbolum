@@ -81,6 +81,25 @@ final class Notation private (
   def valueOfNumeral(term: Term): Option[BigInt] =
     numerals.iterator.flatMap(_.valueOf(term)).nextOption()
 
+  /**
+   * Every operator written with this symbol, in the order they were declared.
+   *
+   * Plural because one symbol may stand for more than one constant, which `docs/adr/0018` decides
+   * and the parser resolves: `+` is the reals' addition and `num`'s, and which one a text means is
+   * settled by unification rather than here. This table still has no way to ask what anything
+   * means, which is the property that record keeps: it hands back every candidate, and the caller
+   * that holds a theory is the one that decides.
+   */
+  def infixesFor(symbol: String): Vector[Infix] = infix.filter(_.symbol == symbol)
+
+  /**
+   * The first operator written with this symbol.
+   *
+   * For a caller that wants a symbol's precedence or associativity, which every candidate for one
+   * symbol shares: `Parser` refuses a notation where they do not, because two precedences for one
+   * symbol is an ambiguous grammar rather than an overload. A caller that wants to know which
+   * constant a symbol means cannot use this and wants [[infixesFor]].
+   */
   def infixFor(symbol: String): Option[Infix] = infix.find(_.symbol == symbol)
   def prefixFor(symbol: String): Option[Prefix] = prefix.find(_.symbol == symbol)
   def binderFor(symbol: String): Option[BinderNotation] = binders.find(_.symbol == symbol)
