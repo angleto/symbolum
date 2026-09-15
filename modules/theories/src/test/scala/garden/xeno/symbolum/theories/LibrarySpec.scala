@@ -272,8 +272,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 417 with the closure of the numerals, which is one fact and is the first thing the library
     // says is closed at all. Neither of `CLAUDE.md`'s figures moves: it binds a single variable,
     // which this file has called the rarest kind of addition and is now the fourth time.
-    library.entries.size shouldBe 417
-    library.names.distinct.size shouldBe 414
+    // 418 with specialisation as a rule of the embedded theory rather than a scheme about it.
+    // Both of `CLAUDE.md`'s figures move by one, which is the ordinary case for this development:
+    // it binds an index, a term and a formula, three of a kind.
+    library.entries.size shouldBe 418
+    library.names.distinct.size shouldBe 415
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

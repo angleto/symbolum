@@ -141,7 +141,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // convergence apiece, `LIM_OF_CONVERGES` has one, and `CONVERGES_EVENTUALLY` has the agreement
     // and the convergence. The other eight carry none: `exp 0 = 1` and its five siblings are
     // equations, and so are the two hyperbolic identities.
-    propose.weakenings.size shouldBe 244
+    // 248 with `NUM_PROV_SPECIALISE`'s four, which is the count of its antecedents and was
+    // derived before it was measured.
+    propose.weakenings.size shouldBe 248
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

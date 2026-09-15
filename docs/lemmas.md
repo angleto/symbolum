@@ -96,6 +96,7 @@ they have least appetite for working out how it is produced.
   NUM_PROV_IMP_GEN         !x:num. !y:num. !z:num. NUM_FORM y ==> NUM_FORM z ==> ~(NUM_FREE_FORM x y) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 8 (NUM_PAIR x z))))
   NUM_PROV_IMP_MP          !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y z)))) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
   NUM_PROV_SELF            !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))
+  NUM_PROV_SPECIALISE      !x:num. !y:num. !z:num. NUM_FORM z ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR x z)) ==> NUM_PROV (NUM_SUBST_FORM x y z)
   NUM_PROV_SYLL            !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
   NUM_PROV_WEAKEN          !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_PROV y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))
 

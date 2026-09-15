@@ -196,7 +196,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // from `LIM_OF_CONVERGES`, two from `CONVERGES_EVENTUALLY`. The six values at zero and the two
     // hyperbolic identities are equations and contribute nothing, which is this bucket behaving
     // exactly as the entry above describes.
-    proposals.size shouldBe 244
+    // 248 with `NUM_PROV_SPECIALISE`, and four is the whole of it: one lemma with four
+    // antecedents, the formula, the term, its closure and the provability of the quantified
+    // formula. The rule the entry above states reads it exactly, a side condition per thing it
+    // mentions.
+    proposals.size shouldBe 248
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -654,7 +658,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // None of the six contains a negation, so `addressOf` reads every one of them and the split
     // this bucket is about does not arise. Six and zero, derived and then measured, which is the
     // third time.
-    open shouldBe 179
+    //
+    // 183 with the four weakenings of `NUM_PROV_SPECIALISE`, and this bucket taking all four was
+    // derived against the alternative rather than assumed: the residues differ only in which
+    // condition is missing, and each has the same conclusion, `NUM_PROV (NUM_SUBST_FORM i t p)`.
+    // That is an atom the model cannot compute, so nothing refutes it, and it carries no negation,
+    // so `addressOf` reads it. The candidate written down beside this one was that an atomic
+    // `NUM_PROV` would be declined the way a negation is and the four would land in `unreadable`;
+    // that was measured and is false, and `unreadable` did not move.
+    open shouldBe 183
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
