@@ -272,7 +272,7 @@ object Model {
         onWholePair((left, right) => Some(Whole(if (left <= right) BigInt(0) else left - right))),
       Peano.NonStrictOrder -> onWholePair((left, right) => Some(Truth(left <= right))),
       Peano.StrictOrder -> onWholePair((left, right) => Some(Truth(left < right))),
-      Peano.Embedding -> onWhole(n => finite(n.toDouble)),
+      Peano.EmbeddingName -> onWhole(n => finite(n.toDouble)),
       Series.PowerName -> Mapping(real, {
         case Quantity(base) => Some(onWhole(exponent => raised(base, exponent)))
         case _ => None

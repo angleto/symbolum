@@ -316,13 +316,20 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`RING` as `that = 0`, which is refused unless every defining factor has actually " +
         "collapsed, so a limit that ran out is a refusal about the certificate and never a claim " +
         "about the polynomial"),
-    "Peano.scala" ->
+    // It was `Peano.scala` until 2026-09-15 and is the same two calls: `docs/adr/0016` split the
+    // file and both of them are on the half that names a real. The entry MOVED rather than being
+    // joined by a second, since a reviewed call site that no longer has a call is a reading of
+    // something that is not there.
+    "Embedding.scala" ->
       ("two, and neither reads a normal form on trust. One rule carrying the successor equation " +
         "of the embedding into a crossed order, which replaces a constant and cannot loop, and " +
         "whose caller then requires the result to be the statement the table writes; and the " +
         "recurrences carried into the left side of a written statement, whose residue is handed " +
         "to `RING` and rejoined by `Conv.trans`, so the rewriting settles what it can and a " +
-        "decision procedure settles the rest"),
+        "decision procedure settles the rest. Both end at `Peano.checked`, which compares what " +
+        "came out against the statement written in `Peano.Statements` and refuses with `<name> as " +
+        "it is written` otherwise, so a step limit that ran out is a refusal naming the lemma and " +
+        "never a theorem about a half-rewritten term"),
     "Series.scala" ->
       ("two hand-written induction steps, and both refuse by naming the rewriting. The base of " +
         "the bounded congruence requires the two sides it is left with to be the SAME TERM and " +

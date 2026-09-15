@@ -150,7 +150,7 @@ object Translate {
     /** `real_of_num v` for a variable of type `num`, which is how a natural enters the reals. */
     def embedded(name: String): Either[TacticError, Term] =
       for {
-        operator <- constant(Peano.Embedding, Type.fun(natural, real))
+        operator <- constant(Peano.EmbeddingName, Type.fun(natural, real))
         result <- TacticError.lift(LogicError.lift(
           Term.app(operator, Term.variable(name, natural))
         ))

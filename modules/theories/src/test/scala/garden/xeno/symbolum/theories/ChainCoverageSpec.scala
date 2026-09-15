@@ -98,6 +98,16 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // introduces no constant, which is the reason `Bounded`'s own docstring gives for sitting where
     // it does. `Coding` was put here by mistake for a few hours and is the reason this file exists:
     // it introduces `NUM_FACT`, so the reason that covers these three never covered it.
+    // Not a development: HALF of one. `docs/adr/0016`'s phase 0 split `Peano` by whether a stage
+    // can be stated without the reals, and this file is the seventeen that cannot, `real_of_num`
+    // and the floor among them. `InTheChain` was written here first and the test below refused it,
+    // correctly: the constants are declared into `Peano`'s theory and the facts are published in
+    // `Peano.facts`, so what reaches `Chain.widest` and `Library.of` does so as `Peano`'s and this
+    // file is a field of nothing. When the chain is reordered at `docs/adr/0016`'s phase 5 and
+    // these become a development above `Order`, this entry becomes `InTheChain` and `Chain` gains
+    // the field that makes it true.
+    "Embedding" -> NotADevelopment,
+
     "Descent" -> DeclaresNothing,
     "Recursion" -> DeclaresNothing,
     "Semiring" -> DeclaresNothing,

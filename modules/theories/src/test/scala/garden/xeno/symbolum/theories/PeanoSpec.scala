@@ -48,7 +48,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
       "!x:num. !y:num. NUM_MUL x (SUC y) = NUM_ADD (NUM_MUL x y) x"
 
     peano.theory.definitions.keySet should contain allOf (
-      Peano.Addition, Peano.Multiplication, Peano.NonStrictOrder, Peano.StrictOrder, Peano.Embedding
+      Peano.Addition, Peano.Multiplication, Peano.NonStrictOrder, Peano.StrictOrder, Peano.EmbeddingName
     )
   }
 
@@ -238,7 +238,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     val embedding = force(
       LogicError.lift(
         peano.theory
-          .constant(Peano.Embedding, Type.fun(TyApp(Natural.TypeName, Nil), TyApp(Real.TypeName, Nil)))
+          .constant(Peano.EmbeddingName, Type.fun(TyApp(Natural.TypeName, Nil), TyApp(Real.TypeName, Nil)))
       )
     )
 

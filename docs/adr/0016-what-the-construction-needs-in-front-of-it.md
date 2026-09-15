@@ -77,7 +77,18 @@ axiom a caller can apply, and `CompletenessSpec` applies it to a concrete goal t
 
 **The construction of the reals is preceded by a split of `Peano`, and the split is its own piece
 of work.** The 74 facts that name no real become a development below `Real` in the chain, and the
-17 that do become one above `Order`. What decides which side a fact falls on is its statement and
+17 that do become one above `Order`.
+
+**The file is split now and the class at phase 5, which is one decision and not an unfinished
+half.** `Embedding.scala` holds the stages that cannot be stated without the reals, `Peano.scala`
+holds the rest, and `Peano.construct` calls across. Splitting the class as well would move 78 call
+sites from `peano.fact(Peano.EmbedsSum)` onto a second development, and every one of them would
+move **again** when the chain is reordered and these stages are constructed after `Ring` instead of
+inside `Peano`. A split done twice is not twice as good. What the file split pays at once is that a
+reader opening `Peano.scala` meets `num` and nothing else, and that a lemma about the reals added
+to the wrong half shows up in a diff rather than in six thousand lines; what makes the boundary a
+fact rather than a convention is not the file but `Peano.arithmetic` building the 74 where `real`
+is not declared. What decides which side a fact falls on is its statement and
 not what it rests on: `NUM_REAL_ZERO` costs no axiom of the reals and still cannot be stated
 without them.
 

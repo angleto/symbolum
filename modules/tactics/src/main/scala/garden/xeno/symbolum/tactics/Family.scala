@@ -239,7 +239,7 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
 
     for {
       embedding <- signature.theory
-        .constant(Peano.Embedding, Type.fun(natural, real))
+        .constant(Peano.EmbeddingName, Type.fun(natural, real))
         .left
         .map(_.message)
       embedded <- Term.app(embedding, index).left.map(_.message)

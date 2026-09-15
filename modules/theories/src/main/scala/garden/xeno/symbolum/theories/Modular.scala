@@ -298,7 +298,7 @@ final class Modular private (
       rules <- embeddingRules
       injective <- peano.fact(Peano.EmbedsInjectively)
       embedding <- LogicError.lift(
-        theory.constant(Peano.Embedding, Type.fun(Modular.numbers, Modular.values))
+        theory.constant(Peano.EmbeddingName, Type.fun(Modular.numbers, Modular.values))
       )
       embeddedLeft <- LogicError.lift(Term.app(embedding, left))
       embeddedRight <- LogicError.lift(Term.app(embedding, right))
