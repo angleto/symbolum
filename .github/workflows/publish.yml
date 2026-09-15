@@ -42,17 +42,18 @@ jobs:
           java-version: '11'
           cache: 'sbt'
 
-      # The same installation `ci.yml` uses, and for the same reason it uses it. This file installed
-      # sbt from the scala-sbt apt repository with `apt-key add`, which `ci.yml` abandoned in a
-      # commit called "Fix CI test failures by using Coursier for SBT installation": `apt-key` is
-      # deprecated and is gone from current runner images, so the step dies before the build starts.
-      # The fix was applied to one of the two workflows and not the other, which is how a repository
-      # ends up with a release path nobody has exercised failing in a way its CI already fixed.
-      - name: Setup Coursier
-        run: |
-          curl -fL https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz | gzip -d > cs
-          chmod +x cs
-          ./cs setup --yes --jvm system
+      # The official action, after two installations that did not work and one that was believed to.
+      #
+      # This file installed sbt from the scala-sbt apt repository through `apt-key add`, which is
+      # deprecated and gone from current runner images. `ci.yml` had already replaced that with
+      # Coursier, in a commit called "Fix CI test failures by using Coursier for SBT installation",
+      # so copying `ci.yml` looked like taking the repaired version. It is not repaired: run
+      # 34941864795 installed Coursier successfully and then died on `sbt --version` with exit code
+      # 127. `cs setup` puts sbt on the PATH by writing a shell profile, and a workflow step does
+      # not read one, so sbt does not exist in the step after the one that installed it. Every CI
+      # run in this repository has failed the same way and nobody had read the reason.
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Verify SBT installation
         run: sbt --version
