@@ -136,7 +136,8 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Register" -> NotADevelopment,
     "RestsOn" -> NotADevelopment,
     "Signature" -> NotADevelopment,
-    "Spellings" -> NotADevelopment
+    "Spellings" -> NotADevelopment,
+    "Theorems" -> NotADevelopment
   )
 
   private val directory =
