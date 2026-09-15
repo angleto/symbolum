@@ -29,7 +29,7 @@ update it.*
 | | What it does | Is it trusted? |
 |---|---|---|
 | **Algebra** — `modules/core` | Simplifies, expands, differentiates, integrates, solves. Fast, heuristic, and wrong in ways this repository has measured. | **No.** Nothing it says is believed anywhere on the proof side. |
-| **Proof** — `modules/kernel`, `modules/logic`, `modules/theories` | States and proves theorems in higher-order logic, over the naturals and over the reals. Slow, narrow, and certain. | The kernel is, and the axioms of whichever development you build on, which the table below counts. Nothing else in the repository is. |
+| **Proof** — `modules/kernel`, `modules/logic`, `modules/theories` | States and proves theorems in higher-order logic, over the naturals and over the reals. Slow, narrow, and certain. | **Two things:** the kernel, and the axioms of whichever development you build on. The table below counts those axioms. Nothing else in this repository is trusted. |
 | **The bridge** — `modules/tactics` | The algebra proposes an answer; the proof side certifies it or refuses. | It is the only module that sees both halves, which is why the boundary is drawn where it is. |
 
 The arrangement is the point. A simplifier that carried every side condition would be unusable, so
