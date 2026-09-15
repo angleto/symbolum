@@ -159,7 +159,7 @@ object Relation {
 
   /* ------------------------------------------------------------------------- LLL */
 
-  /** The Lovász constant, as the textbooks take it. Three quarters. */
+  /** The Lovász constant, as the textbooks take it. Three quarters. allow-non-english: a name. */
   private val Delta: Ratio = Ratio(3, 4)
 
   /**
@@ -216,7 +216,7 @@ object Relation {
    *
    * A swap steps `k` back down, which is why this cannot be a fold: the index is not a range being
    * walked but a state of its own, and the loop terminates on the Lovász condition rather than on
-   * having run out of rows.
+   * having run out of rows. allow-non-english: a surname.
    */
   @tailrec
   private def sweep(work: Work, k: Int, n: Int): Work =
