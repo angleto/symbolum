@@ -410,6 +410,41 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  "Every module directory" should "be aggregated by the root, or its suite does not run" in {
+    // What this probes, and it is not tidiness. `sbt test` runs the projects the root aggregates and
+    // nothing tells anybody about one it does not: `sat` landed on 2026-09-15 without its name on
+    // that line and the whole suite went green over a module whose sixteen tests were never
+    // executed. The figure reported for it that hour came from running `sat/test` by hand, which is
+    // a different claim from "the gate covers it" and reads identically.
+    //
+    // Read from the directories rather than from a list written here, for the reason the verdict
+    // census one file over is read from the sources: a list in a test is one more place to forget.
+    val build = read("build.sbt")
+    val aggregated = "\\.aggregate\\(([^)]*)\\)".r
+      .findFirstMatchIn(build)
+      .map(_.group(1).split(",").map(_.trim).toSet)
+      .getOrElse(Set.empty)
+
+    val directories = java.nio.file.Files
+      .list(locate("build.sbt").getParent.resolve("modules"))
+      .filter(java.nio.file.Files.isDirectory(_))
+      .map[String](_.getFileName.toString)
+      .toArray
+      .map(_.toString)
+      .toSet
+
+    // `aggregate` is a directory holding no source: it is the pom that names the others, and it is
+    // in the list under the name the build gives it rather than the name on disk.
+    val missing = directories -- aggregated - "aggregate"
+    withClue(s"module directories the root does not aggregate, so their tests never run: ${missing.mkString(", ")}\n") {
+      missing shouldBe empty
+    }
+
+    // The half that can go empty: a regex that matched nothing would report no module missing.
+    aggregated should contain("sat")
+    aggregated.size should be > 8
+  }
+
   "The library modules" should "publish under their own coordinates, which five of them did not" in {
     // Until 2026-09-15 `publish / skip := true` sat on all five prover modules and only `core`
     // could ship, on the argument that a published artifact is a promise and the surface is still

@@ -213,7 +213,12 @@ lazy val publishSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark, symbolum, dist)
+  // `sat` has to be named here or its suite does not run. It landed on 2026-09-15 without this line
+  // and `sbt test` passed for an hour over a module whose sixteen tests nobody executed, which is
+  // the failure "a suite that is configured but not executed does not exist" names exactly.
+  // `DocumentationSpec` asserts the list against the directories now, so the next module is a
+  // decision rather than an omission.
+  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark, sat, symbolum, dist)
   .settings(
     name := "symbolum-root",
     publish / skip := true
