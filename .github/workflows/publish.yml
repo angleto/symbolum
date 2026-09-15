@@ -69,22 +69,37 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-
 
-      # A release carries a name, and a name is applied to something that passed its gates and is
-      # reproducible from a commit anybody can name. dynver writes the distance, the hash and a
-      # dirty marker into the version of anything that is not exactly a tag, so the check is one
-      # string comparison: a version holding `+` is not a release and this refuses to publish it
-      # rather than putting `7.0.0+3-1a2b3c4` on a registry where somebody can depend on it.
-      - name: Read the version from the tag, and refuse an untagged commit
+      # A release carries a name, and a name belongs to something reproducible from a commit anybody
+      # can name. The version is read from git rather than parsed out of sbt's output, because the
+      # first version of this step did the latter: `sbt -error 'print version' | tail -1` returned an
+      # ANSI escape sequence, the `+` test below passed on it because an escape sequence contains no
+      # `+`, and the release step then tried to open a file named after it. A guard that reads the
+      # wrong thing and passes is worse than no guard, and that one reached a release.
+      #
+      # `git describe --exact-match` is the same fact dynver reads, so the version this names and the
+      # version the artifacts carry agree by construction. Where they would not, the distribution
+      # step below fails on a missing file, which is the agreement being checked rather than assumed.
+      - name: Read the version from the tag, and refuse anything that is not one
         id: version
         run: |
-          VERSION="$(sbt -batch -error 'print version' | tail -1 | tr -d '[:space:]')"
-          echo "Version from git describe: $VERSION"
+          set -euo pipefail
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::the checked-out tree is dirty, so this build is reproducible by nobody."
+            exit 1
+          fi
+          VERSION="$(git describe --tags --exact-match 2>/dev/null || true)"
+          if [ -z "$VERSION" ]; then
+            echo "::error::this commit is not exactly a tag, so it has no release name."
+            exit 1
+          fi
           case "$VERSION" in
-            *+*)
-              echo "::error::$VERSION is not a release: this commit is not exactly a tag, or the tree is dirty."
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              echo "::error::$VERSION is not a release tag: three numbers, and no leading v."
               exit 1
               ;;
           esac
+          echo "Version from the tag: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Run tests
