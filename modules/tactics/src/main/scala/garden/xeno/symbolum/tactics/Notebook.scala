@@ -64,21 +64,9 @@ object Notebook {
     val session = new AtomicReference[Session](Session.standard)
     println(f"ready in ${(System.nanoTime() - started) / 1000000000.0}%.1f s")
 
-    val server = HttpServer.create(new InetSocketAddress(Host, port), 0)
-    server.createContext("/", exchange => root(exchange, session))
-    server.createContext("/run", exchange => run(exchange, session))
-    server.createContext("/truncate", exchange => truncate(exchange, session))
+    val server = serve(port, session)
 
-    // A pool rather than `null`, which is the default and runs every exchange on the accepting
-    // thread. A browser keeps a connection open and asks for more than the page (a favicon at
-    // least), so one thread serialises those behind each other and the tab sits there loading. It
-    // did, on the first version of this file, and the symptom was a page that answered `curl`
-    // perfectly and would not finish rendering in Chrome. Four is a single user's page, not a
-    // capacity estimate.
-    server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(4))
-    server.start()
-
-    println(s"open http://$Host:$port")
+    println(s"open http://$Host:${server.getAddress.getPort}")
     println("this is a single-user tool on loopback with no authentication; do not expose the port")
     println("ctrl-c to stop")
 
@@ -93,6 +81,47 @@ object Notebook {
       stopped.countDown()
     }))
     stopped.await()
+  }
+
+  /**
+   * The server, listening, for a caller that decides when to stop it.
+   *
+   * Out of [[main]] so that it can be driven, and that is not a testing convenience. The three
+   * endpoints below are private and reachable only through a running server, so until this existed
+   * the one surface in this project that speaks to a browser was the one nothing exercised, and two
+   * of its behaviours are there because of failures this file records: the 404 on an unknown path,
+   * and the thread pool. Neither is worth asserting against a fake exchange, because both are about
+   * what a client on the other end of a socket receives.
+   *
+   * **Port 0 asks the operating system for a free one**, which is what a test wants and what a
+   * person never types. The answer is `getAddress.getPort` and not the argument, which is the one
+   * thing a caller passing 0 must not forget.
+   *
+   * **It receives the session rather than owning it, and that is a decision.** The alternative is
+   * for this to build `Session.standard` itself, which would stop a caller handing it a session
+   * some other caller had already advanced. It does not, for two reasons that are about where the
+   * safety property lives. The append-only single-theory transcript is `Session`'s: `run` appends,
+   * `truncate` discards after a point, and a second `declare` of one name is refused by the kernel,
+   * none of which depends on who built the session. And an already-advanced session is not a shape
+   * the running server cannot reach -- it is what every request after the first one meets, since
+   * the reference this is handed is the same one the handlers update. What owning the session would
+   * buy is that `main` could not be given the wrong chain, and `main` does not take one.
+   *
+   * A pool rather than `null`, which is the default and runs every exchange on the accepting
+   * thread. A browser keeps a connection open and asks for more than the page (a favicon at
+   * least), so one thread serialises those behind each other and the tab sits there loading. It
+   * did, on the first version of this file, and the symptom was a page that answered `curl`
+   * perfectly and would not finish rendering in Chrome. Four is a single user's page, not a
+   * capacity estimate.
+   */
+  def serve(port: Int, session: AtomicReference[Session]): HttpServer = {
+    val server = HttpServer.create(new InetSocketAddress(Host, port), 0)
+    server.createContext("/", exchange => root(exchange, session))
+    server.createContext("/run", exchange => run(exchange, session))
+    server.createContext("/truncate", exchange => truncate(exchange, session))
+    server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(4))
+    server.start()
+    server
   }
 
   /* ------------------------------------------------------------------ the endpoints */
