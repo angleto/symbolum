@@ -207,7 +207,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 274 with the three rules of the embedded theory's equality, whose antecedents are five,
     // eight and five: each asks its terms to be terms and to be closed before it asks anything
     // about provability, and transitivity asks it of three terms rather than two.
-    proposals.size shouldBe 274
+    // 285 with PA's own addition on numerals and the six facts under it. Eleven and not fourteen:
+    // the theorem itself has no hypothesis to drop, and neither has `NUM_CLOSED_ZERO`.
+    proposals.size shouldBe 285
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -712,7 +714,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // not one of the eighteen antecedents is a negation, so `addressOf` reads every one of them.
     // The bucket below does not move, which is the measurement that says the negation is what
     // sends a residue there and not the shape of the conclusion.
-    open shouldBe 205
+    //
+    // 215 with ten of the eleven, and the eleventh is the sharpest thing this pair of buckets has
+    // shown. It is `NUM_CLOSED_SUC`'s only weakening, `!s. NUM_CLOSED (NUM_CODE 2 s)`, and it goes
+    // to `unreadable` while `NUM_CLOSED_ADD`'s two stay here. The three conclude the same SHAPE,
+    // `NUM_CLOSED` of a code, and differ in one thing: the successor's rule has a single
+    // hypothesis, so dropping it leaves a residue with no antecedent at all, where the sum's rule
+    // has two and its residues keep one. Derived as eleven here and measured as ten, and the
+    // eleventh was found by printing the standings rather than by the suite.
+    open shouldBe 215
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -885,7 +895,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // predicate variable at a type variable, and the procedures here read the reals and the
     // naturals. Everything else this bucket holds is a claim about a `num` the arithmetic cannot
     // take; this one is a claim about nothing in particular.
-    unreadable shouldBe 62
+    // 63 with the one weakening above that keeps no antecedent.
+    unreadable shouldBe 63
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1088,7 +1099,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // keeps `!n. s n <= s (SUC n)` and so names `SUC`. Its twin drops that hypothesis instead and
     // names none, which is this list counting constants rather than types: every one of the three
     // is a claim about a sequence indexed by `num`.
-    aboutNumbers.size shouldBe 108
+    // 110 with `NUM_PROV_ADD_ZERO`'s two, and two out of eleven is this figure counting
+    // constants rather than subject matter: of the seven facts that landed, that one alone writes
+    // the object zero as `NUM_CODE 1 0`, and the `0` in it is `ZERO`. The theorem that names
+    // `NUM_ADD` outright contributes nothing, having no hypothesis to drop.
+    aboutNumbers.size shouldBe 110
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

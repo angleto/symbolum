@@ -255,6 +255,52 @@ object Deduction {
    */
   val SuccessorCongruence: String = "NUM_PROV_SUC_CONG"
 
+  /**
+   * PA's first axiom for addition, at any closed term rather than at a variable.
+   *
+   * `NUM_PA_ADD_ZERO` says `!v0. v0 + 0 = v0` and is a fact about a code; this is that axiom put
+   * to work, which is a different thing and is what every arithmetic derivation actually reaches
+   * for. One specialisation and the substitution computed.
+   */
+  val AdditionAtZero: String = "NUM_PROV_ADD_ZERO"
+
+  /**
+   * PA's second axiom for addition, at two closed terms.
+   *
+   * The same as [[AdditionAtZero]] with one more quantifier, and the extra quantifier is the whole
+   * difference: the first substitution has to descend UNDER a binder for another index, and the
+   * second has to pass over the term the first put in. The second is where
+   * [[Language.SubstituteIdle]] is spent, and it is the reason that lemma had to be about every
+   * closed term: what the first substitution leaves behind is an arbitrary `t`, not a numeral.
+   */
+  val AdditionAtSuccessor: String = "NUM_PROV_ADD_SUC"
+
+  /**
+   * PA proves its own addition on numerals, which is the first brick of Sigma-1 completeness.
+   *
+   * `|- !m n. NUM_PROV (code of "numeral m + numeral n = numeral (m + n)")`
+   *
+   * This is the embedded theory proving a general fact about itself rather than one instance of
+   * one axiom, and it is the first statement here of that kind. The meta level knows `m + n`
+   * because `Peano` computes it; the object level has to DERIVE the corresponding equation, and
+   * the two are connected by nothing except this theorem.
+   *
+   * The induction is on `n` at the meta level and its two cases are the object theory's two
+   * addition axioms. The base is [[AdditionAtZero]] at the numeral of `m`, with
+   * `NUM_NUMERAL_ZERO` and `NUM_ADD_ZERO` turning what it gives into what was wanted. The step is
+   * [[AdditionAtSuccessor]] followed by the hypothesis under [[SuccessorCongruence]], joined by
+   * [[Transitivity]]: `t + S u` is provably `S (t + u)`, the hypothesis makes `t + u` provably the
+   * numeral, and the successor carries across.
+   *
+   * **Every piece of it is something that did not exist this morning**, which is worth recording
+   * because the theorem itself is three lines of mathematics. The schemes needed a closed term and
+   * nothing was closed; instantiating one left a substitution nothing could compute; the equality
+   * needed symmetry and congruence and had only reflexivity and replacement; and the step needs
+   * closure of a SUM of two numerals, which wanted the four closure introduction rules. The
+   * statement is short and the layer beneath it is the work.
+   */
+  val NumeralAddition: String = "NUM_PROV_NUMERAL_ADD"
+
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
     Weaken ->
@@ -289,7 +335,19 @@ object Deduction {
     SuccessorCongruence ->
       ("!t:num u:num. NUM_TERM t ==> NUM_TERM u ==> NUM_CLOSED t ==> NUM_CLOSED u ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> " +
-        "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 t) (NUM_CODE 2 u)))")
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 t) (NUM_CODE 2 u)))"),
+    AdditionAtZero ->
+      ("!t:num. NUM_TERM t ==> NUM_CLOSED t ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR t (NUM_CODE 1 0))) t))"),
+    AdditionAtSuccessor ->
+      ("!t:num u:num. NUM_TERM t ==> NUM_CLOSED t ==> NUM_TERM u ==> NUM_CLOSED u ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR t (NUM_CODE 2 u))) " +
+        "(NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR t u)))))"),
+    NumeralAddition ->
+      ("!m:num n:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_NUMERAL n))) " +
+        "(NUM_NUMERAL (NUM_ADD m n))))")
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -315,7 +373,11 @@ object Deduction {
             Symmetry -> builder.checked(Symmetry, builder.symmetry),
             Transitivity -> builder.checked(Transitivity, builder.transitivity),
             SuccessorCongruence ->
-              builder.checked(SuccessorCongruence, builder.successorCongruence)
+              builder.checked(SuccessorCongruence, builder.successorCongruence),
+            AdditionAtZero -> builder.checked(AdditionAtZero, builder.additionAtZero),
+            AdditionAtSuccessor ->
+              builder.checked(AdditionAtSuccessor, builder.additionAtSuccessor),
+            NumeralAddition -> builder.checked(NumeralAddition, builder.numeralAddition)
           )
         )
       )
@@ -399,6 +461,17 @@ object Deduction {
 
     private val five = force(Parser.term(theory, notation, "5", numbers))
     private val two = force(Parser.term(theory, notation, "2", numbers))
+    private val three = force(Parser.term(theory, notation, "3", numbers))
+    private val oneTag = force(Parser.term(theory, notation, "1", numbers))
+    private val substituteSum = force(language.fact(Language.SubstituteSum))
+    private val substituteZero = force(language.fact(Language.SubstituteZero))
+    private val substituteUniversal =
+      force(language.fact(Language.FormulaSubstituteUniversal))
+    private val formulaOfUniversal = force(language.fact(Language.FormulaUniversal))
+    private val sumIsTerm = force(language.fact(Language.TermSum))
+    private val zeroIsTerm = force(language.fact(Language.TermZero))
+    private val peanoIsProvable = force(provability.fact(Provability.ProvablePeano))
+    private lazy val specialisingRule = checked(Specialisation, specialisation)
     private val successorIsTerm = force(language.fact(Language.TermSuccessor))
     private val substituteSuccessor = force(language.fact(Language.SubstituteSuccessor))
     private val zeroTag = force(Parser.term(theory, notation, "0", numbers))
@@ -412,6 +485,59 @@ object Deduction {
 
     /** The object language's successor, as a code. */
     private def objSucc(inner: Term): Term = applied(coding, List(two, inner))
+
+    /** The object language's sum, as a code. */
+    private def objSum(left: Term, right: Term): Term =
+      applied(coding, List(three, applied(pairing, List(left, right))))
+
+    /** The object language's zero, as a code. */
+    private val objZero: Term = applied(coding, List(oneTag, zeroTag))
+
+    /** `NUM_PROV` of what an axiom of PA says, which is one step. */
+    private def provesAxiom(name: String): Kernel.Thm = {
+      val membership = force(language.fact(name))
+      val code = membership.conclusion match {
+        case App(_, argument) => argument
+        case other => throw new RefusedHere(NotOfForm("a membership", other))
+      }
+      force(rules.spec(code, peanoIsProvable).flatMap(rules.mp(_, membership)))
+    }
+
+    /**
+     * A provable quantified formula instantiated at a closed term, with the substitution computed.
+     *
+     * The rule is [[Specialisation]] and the rest is arithmetic on codes: without `computed` the
+     * conclusion carries a `NUM_SUBST_FORM` and says nothing a reader can check.
+     */
+    private def atClosedTerm(
+      provable: Kernel.Thm, index: Term, replacement: Term, body: Term,
+      bodyIsFormula: Kernel.Thm, replacementIsTerm: Kernel.Thm, replacementIsClosed: Kernel.Thm,
+      computed: Kernel.Thm
+    ): Kernel.Thm = {
+      val specialised = force(
+        rules
+          .specAll(specialisingRule, List(index, replacement, body))
+          .flatMap(rules.mp(_, bodyIsFormula))
+          .flatMap(rules.mp(_, replacementIsTerm))
+          .flatMap(rules.mp(_, replacementIsClosed))
+          .flatMap(rules.mp(_, provable))
+      )
+      force(
+        Conv
+          .apTerm(provableConstant, computed)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised)))
+      )
+    }
+
+    /** An axiom of PA with its outermost quantifier instantiated at a closed term. */
+    private def axiomAt(
+      name: String, index: Term, replacement: Term, body: Term,
+      bodyIsFormula: Kernel.Thm, replacementIsTerm: Kernel.Thm, replacementIsClosed: Kernel.Thm,
+      computed: Kernel.Thm
+    ): Kernel.Thm =
+      atClosedTerm(
+        provesAxiom(name), index, replacement, body,
+        bodyIsFormula, replacementIsTerm, replacementIsClosed, computed)
 
     /** What substituting under a successor gives, with the inside already settled. */
     private def acrossSuccessor(
@@ -503,21 +629,111 @@ object Deduction {
       force(Conv.trans(clause, taken))
     }
 
+    /**
+     * What substituting into a two-argument constructor gives, with both sides already settled.
+     *
+     * The equality of formulas and the sum of terms differ only in which clause and which tag they
+     * are handed, so they are one function. The rebuilding is a congruence in both arguments of the
+     * pairing, which is why it is `mkComb` over an `apTerm` rather than two `apTerm`s.
+     */
+    private def acrossBinary(
+      clause: Kernel.Thm, tag: Term,
+      index: Term, replacement: Term, left: Term, right: Term,
+      leftDone: Kernel.Thm, rightDone: Kernel.Thm
+    ): Kernel.Thm = {
+      val instance = force(rules.specAll(clause, List(index, replacement, left, right)))
+      force(Conv.trans(instance, pairCongruence(tag, leftDone, rightDone)))
+    }
+
+    /** `NUM_CODE k (NUM_PAIR a b) = NUM_CODE k (NUM_PAIR a' b')` from the two components. */
+    private def pairCongruence(tag: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm = {
+      val paired = force(
+        Conv
+          .apTerm(pairing, left)
+          .flatMap(half => LogicError.lift(Kernel.mkComb(half, right))))
+      force(Conv.apTerm(applied(coding, List(tag)), paired))
+    }
+
+    /** `NUM_CODE k a = NUM_CODE k a'` from the one component. */
+    private def codeCongruence(tag: Term, inner: Kernel.Thm): Kernel.Thm =
+      force(Conv.apTerm(applied(coding, List(tag)), inner))
+
     /** What substituting into an equality gives, with both sides already settled. */
     private def acrossEquality(
       index: Term, replacement: Term, left: Term, right: Term,
       leftDone: Kernel.Thm, rightDone: Kernel.Thm
-    ): Kernel.Thm = {
-      val clause =
-        force(rules.specAll(substituteEquality, List(index, replacement, left, right)))
-      val paired = force(
-        Conv
-          .apTerm(pairing, leftDone)
-          .flatMap(half => LogicError.lift(Kernel.mkComb(half, rightDone)))
+    ): Kernel.Thm =
+      acrossBinary(substituteEquality, five, index, replacement, left, right, leftDone, rightDone)
+
+    /** The same for a sum of two terms. */
+    private def acrossSum(
+      index: Term, replacement: Term, left: Term, right: Term,
+      leftDone: Kernel.Thm, rightDone: Kernel.Thm
+    ): Kernel.Thm =
+      acrossBinary(substituteSum, three, index, replacement, left, right, leftDone, rightDone)
+
+    /**
+     * `NUM_SUBST_TERM i r (NUM_CODE 0 j) = NUM_CODE 0 j`, where `j` is some other index.
+     *
+     * The companion of [[filled]]: that one is the variable the substitution is FOR, this one is
+     * every other variable. The guard is decided by `Successor.distinct`, which is why the two
+     * indices have to be numerals rather than variables.
+     */
+    private def missed(index: Term, replacement: Term, other: Term): Kernel.Thm = {
+      val clause = force(rules.specAll(substituteVariable, List(index, replacement, other)))
+      val apart = force(language.successor.distinct(other, index))
+      val guard = force(LogicError.lift(Term.eq(other, index)))
+      val scheme = Kernel.instType(
+        Map(Classical.TypeVariable -> numbers), force(classical.fact(Classical.CondFalse)))
+      val taken = force(
+        rules
+          .specAll(scheme, List(guard, replacement, objVar(other)))
+          .flatMap(rules.mp(_, apart))
       )
-      val lifted = force(Conv.apTerm(applied(coding, List(five)), paired))
-      force(Conv.trans(clause, lifted))
+      force(Conv.trans(clause, taken))
     }
+
+    /**
+     * What substituting under a quantifier binding some OTHER index gives.
+     *
+     * The clause leaves the formula alone where the two indices agree and descends where they do
+     * not, so this is the second branch with the guard decided. A quantifier binding the index
+     * being replaced needs the first branch and no caller here wants it.
+     */
+    private def acrossUniversal(
+      index: Term, replacement: Term, bound: Term, body: Term, bodyDone: Kernel.Thm
+    ): Kernel.Thm = {
+      val clause = force(
+        rules.specAll(substituteUniversal, List(index, replacement, bound, body)))
+      val apart = force(language.successor.distinct(bound, index))
+      val guard = force(LogicError.lift(Term.eq(bound, index)))
+      val unchanged = applied(coding, List(eight, applied(pairing, List(bound, body))))
+      val descended = applied(coding, List(eight, applied(pairing, List(
+        bound,
+        applied(
+          constant(Language.FormulaSubstituteName,
+            Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers)))),
+          List(index, replacement, body))))))
+      val scheme = Kernel.instType(
+        Map(Classical.TypeVariable -> numbers), force(classical.fact(Classical.CondFalse)))
+      val taken = force(
+        rules
+          .specAll(scheme, List(guard, unchanged, descended))
+          .flatMap(rules.mp(_, apart))
+      )
+      val moved = force(Conv.trans(clause, taken))
+      val lifted = force(
+        Conv
+          .apTerm(pairing, Conv.refl(bound))
+          .flatMap(_ => Conv.apTerm(force(LogicError.lift(Term.app(pairing, bound))), bodyDone))
+          .flatMap(inner => Conv.apTerm(applied(coding, List(eight)), inner))
+      )
+      force(Conv.trans(moved, lifted))
+    }
+
+    /** `NUM_SUBST_TERM i r (NUM_CODE 1 0) = NUM_CODE 1 0`: the object zero is untouched. */
+    private def zeroStays(index: Term, replacement: Term): Kernel.Thm =
+      force(rules.specAll(substituteZero, List(index, replacement)))
     private val isTerm = predicate(Language.TermName)
     private val isClosed = predicate(Language.ClosedName)
     private val substituting = force(LogicError.lift(theory.constant(
@@ -848,6 +1064,294 @@ object Deduction {
           .flatMap(rules.disch(isTerm(t), _))
           .flatMap(rules.genAll(_, List(t, u)))
       )
+    }
+
+    /** [[AdditionAtZero]]. One specialisation of `NUM_PA_ADD_ZERO`, with the substitution done. */
+    lazy val additionAtZero: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val index = zeroTag
+      val termT = assumed(isTerm(t))
+      val closedT = assumed(isClosed(t))
+
+      val variable = objVar(index)
+      val variableIsATerm = force(rules.spec(index, variableIsTerm))
+      val body = objEq(objSum(variable, objZero), variable)
+      val bodyIsFormula = force(
+        rules
+          .specAll(formulaOfEquality, List(objSum(variable, objZero), variable))
+          .flatMap(rules.mp(_, force(
+            rules
+              .specAll(sumIsTerm, List(variable, objZero))
+              .flatMap(rules.mp(_, variableIsATerm))
+              .flatMap(rules.mp(_, zeroIsTerm)))))
+          .flatMap(rules.mp(_, variableIsATerm))
+      )
+
+      val computed = acrossEquality(
+        index, t, objSum(variable, objZero), variable,
+        acrossSum(index, t, variable, objZero, filled(index, t), zeroStays(index, t)),
+        filled(index, t))
+
+      val reached = axiomAt(
+        "NUM_PA_ADD_ZERO", index, t, body, bodyIsFormula, termT, closedT, computed)
+
+      force(
+        rules
+          .disch(isClosed(t), reached)
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.gen(t, _))
+      )
+    }
+
+    /** [[AdditionAtSuccessor]]. Two specialisations, one under a binder and one over a term. */
+    lazy val additionAtSuccessor: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val u = Term.variable("u", numbers)
+      val outer = zeroTag
+      val inner = oneTag
+      val termT = assumed(isTerm(t))
+      val closedT = assumed(isClosed(t))
+      val termU = assumed(isTerm(u))
+      val closedU = assumed(isClosed(u))
+
+      val first = objVar(outer)
+      val second = objVar(inner)
+      val firstIsTerm = force(rules.spec(outer, variableIsTerm))
+      val secondIsTerm = force(rules.spec(inner, variableIsTerm))
+
+      def succOf(x: Term, isTermThm: Kernel.Thm): Kernel.Thm =
+        force(rules.spec(x, successorIsTerm).flatMap(rules.mp(_, isTermThm)))
+      def sumOf(a: Term, b: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm =
+        force(
+          rules
+            .specAll(sumIsTerm, List(a, b))
+            .flatMap(rules.mp(_, left))
+            .flatMap(rules.mp(_, right)))
+      def equalityOf(a: Term, b: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm =
+        force(
+          rules
+            .specAll(formulaOfEquality, List(a, b))
+            .flatMap(rules.mp(_, left))
+            .flatMap(rules.mp(_, right)))
+
+      // The axiom's innermost formula, `v0 + S v1 = S (v0 + v1)`.
+      val leftSide = objSum(first, objSucc(second))
+      val rightSide = objSucc(objSum(first, second))
+      val core = objEq(leftSide, rightSide)
+      val coreIsFormula = equalityOf(
+        leftSide, rightSide,
+        sumOf(first, objSucc(second), firstIsTerm, succOf(second, secondIsTerm)),
+        succOf(objSum(first, second), sumOf(first, second, firstIsTerm, secondIsTerm)))
+
+      val body = applied(coding, List(eight, applied(pairing, List(inner, core))))
+      val bodyIsFormula = force(
+        rules
+          .specAll(formulaOfUniversal, List(inner, core))
+          .flatMap(rules.mp(_, coreIsFormula)))
+
+      // First: `v0` becomes `t`, which means going under the binder for `v1`.
+      val coreAtT = acrossEquality(
+        outer, t, leftSide, rightSide,
+        acrossSum(
+          outer, t, first, objSucc(second),
+          filled(outer, t), acrossSuccessor(outer, t, second, missed(outer, t, inner))),
+        acrossSuccessor(
+          outer, t, objSum(first, second),
+          acrossSum(outer, t, first, second, filled(outer, t), missed(outer, t, inner))))
+      val underBinder = acrossUniversal(outer, t, inner, core, coreAtT)
+
+      val once = axiomAt(
+        "NUM_PA_ADD_SUC", outer, t, body, bodyIsFormula, termT, closedT, underBinder)
+
+      // Second: `v1` becomes `u`, and `t` has to come back untouched, which is idleness.
+      val leftAtT = objSum(t, objSucc(second))
+      val rightAtT = objSucc(objSum(t, second))
+      val coreAtTIsFormula = equalityOf(
+        leftAtT, rightAtT,
+        sumOf(t, objSucc(second), termT, succOf(second, secondIsTerm)),
+        succOf(objSum(t, second), sumOf(t, second, termT, secondIsTerm)))
+
+      val stays = idle(inner, u, t, termT, closedT)
+      val coreAtU = acrossEquality(
+        inner, u, leftAtT, rightAtT,
+        acrossSum(
+          inner, u, t, objSucc(second),
+          stays, acrossSuccessor(inner, u, second, filled(inner, u))),
+        acrossSuccessor(
+          inner, u, objSum(t, second),
+          acrossSum(inner, u, t, second, stays, filled(inner, u))))
+
+      val reached = atClosedTerm(
+        once, inner, u, objEq(leftAtT, rightAtT), coreAtTIsFormula, termU, closedU, coreAtU)
+
+      force(
+        rules
+          .disch(isClosed(u), reached)
+          .flatMap(rules.disch(isTerm(u), _))
+          .flatMap(rules.disch(isClosed(t), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.genAll(_, List(t, u)))
+      )
+    }
+
+    /** [[NumeralAddition]]. Induction on `n`, whose two cases are the object theory's two axioms. */
+    lazy val numeralAddition: Kernel.Thm = {
+      val peanoTheory = language.numbering.peano
+      val driver = Induct.overNaturals(
+        logic, force(peanoTheory.naturals.fact(Natural.Induction)))
+
+      val numeralConstant = constant(Language.NumeralName, Type.fun(numbers, numbers))
+      def numeral(x: Term): Term = applied(numeralConstant, List(x))
+      def numeralIsATerm(x: Term): Kernel.Thm =
+        force(rules.spec(x, force(language.fact(Language.NumeralIsTerm))))
+      def numeralIsAClosed(x: Term): Kernel.Thm =
+        force(rules.spec(x, force(language.fact(Language.NumeralIsClosed))))
+
+      def sumIsATerm(a: Term, b: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm =
+        force(
+          rules.specAll(sumIsTerm, List(a, b)).flatMap(rules.mp(_, left)).flatMap(rules.mp(_, right)))
+      def sumIsAClosed(a: Term, b: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm =
+        force(
+          rules
+            .specAll(force(language.fact(Language.ClosedSum)), List(a, b))
+            .flatMap(rules.mp(_, left))
+            .flatMap(rules.mp(_, right)))
+      def succIsATerm(a: Term, inner: Kernel.Thm): Kernel.Thm =
+        force(rules.spec(a, successorIsTerm).flatMap(rules.mp(_, inner)))
+      def succIsAClosed(a: Term, inner: Kernel.Thm): Kernel.Thm =
+        force(
+          rules
+            .spec(a, force(language.fact(Language.ClosedSuccessor)))
+            .flatMap(rules.mp(_, inner)))
+
+      /** Carry a theorem about `NUM_PROV` backwards along an equation between codes. */
+      def backwards(equation: Kernel.Thm, proved: Kernel.Thm): Kernel.Thm =
+        force(
+          Conv
+            .sym(equation)
+            .flatMap(reversed => Conv.apTerm(provableConstant, reversed))
+            .flatMap(reversed => LogicError.lift(Kernel.eqMp(reversed, proved))))
+
+      val statement = force(
+        Parser.proposition(theory, notation, Statements.toMap.apply(NumeralAddition)))
+
+      force(driver.proveBy(
+        statement,
+        goal => {
+          // `m` is the quantifier the driver left free. It is read off the goal's free variables
+          // rather than by taking the term apart, because a numeral is itself an application and
+          // a pattern that walks the code has to know the shape of `5` as well as of the sum.
+          val subject: Term = Term.freeVariables(goal).toList match {
+            case one :: Nil => one
+            case other => throw new RefusedHere(
+              NotOfForm("a claim about one free number", goal))
+          }
+          val atZero = force(
+            rules
+              .specAll(checked(AdditionAtZero, additionAtZero), List(numeral(subject)))
+              .flatMap(rules.mp(_, numeralIsATerm(subject)))
+              .flatMap(rules.mp(_, numeralIsAClosed(subject))))
+
+          val zeroIsNumeral = force(language.fact(Language.NumeralAtZero))
+          val summandMoves = pairCongruence(
+            three, Conv.refl(numeral(subject)), zeroIsNumeral)
+          val answerMoves = force(
+            Conv.apTerm(
+              numeralConstant,
+              force(rules.spec(subject, force(peanoTheory.fact(Peano.AddAtZero))))))
+          val bridge = pairCongruence(five, summandMoves, answerMoves)
+          Right(backwards(bridge, atZero))
+        },
+        step => {
+          val k = step.variable
+          val subject: Term = (Term.freeVariables(step.goal) - k).toList match {
+            case one :: Nil => one
+            case other => throw new RefusedHere(
+              NotOfForm("a claim about one free number beside the induction variable", step.goal))
+          }
+          val sumOfNumerals = objSum(numeral(subject), numeral(k))
+          val total = numeral(applied(
+            constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers))),
+            List(subject, k)))
+
+          // `numeral m + S (numeral k)` is provably `S (numeral m + numeral k)`.
+          val axiom = force(
+            rules
+              .specAll(
+                checked(AdditionAtSuccessor, additionAtSuccessor),
+                List(numeral(subject), numeral(k)))
+              .flatMap(rules.mp(_, numeralIsATerm(subject)))
+              .flatMap(rules.mp(_, numeralIsAClosed(subject)))
+              .flatMap(rules.mp(_, numeralIsATerm(k)))
+              .flatMap(rules.mp(_, numeralIsAClosed(k))))
+
+          // The hypothesis, with a successor around both sides.
+          val lifted = force(
+            rules
+              .specAll(
+                checked(SuccessorCongruence, successorCongruence), List(sumOfNumerals, total))
+              .flatMap(rules.mp(_, sumIsATerm(
+                numeral(subject), numeral(k),
+                numeralIsATerm(subject), numeralIsATerm(k))))
+              .flatMap(rules.mp(_, numeralIsATerm(applied(
+                constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers))),
+                List(subject, k)))))
+              .flatMap(rules.mp(_, sumIsAClosed(
+                numeral(subject), numeral(k),
+                numeralIsAClosed(subject), numeralIsAClosed(k))))
+              .flatMap(rules.mp(_, numeralIsAClosed(applied(
+                constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers))),
+                List(subject, k)))))
+              .flatMap(rules.mp(_, step.hypothesis)))
+
+          val chained = force(
+            rules
+              .specAll(
+                checked(Transitivity, transitivity),
+                List(objSum(numeral(subject), objSucc(numeral(k))),
+                  objSucc(sumOfNumerals), objSucc(total)))
+              .flatMap(rules.mp(_, sumIsATerm(
+                numeral(subject), objSucc(numeral(k)),
+                numeralIsATerm(subject), succIsATerm(numeral(k), numeralIsATerm(k)))))
+              .flatMap(rules.mp(_, succIsATerm(sumOfNumerals, sumIsATerm(
+                numeral(subject), numeral(k), numeralIsATerm(subject), numeralIsATerm(k)))))
+              .flatMap(rules.mp(_, succIsATerm(total, numeralIsATerm(applied(
+                constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers))),
+                List(subject, k))))))
+              .flatMap(rules.mp(_, sumIsAClosed(
+                numeral(subject), objSucc(numeral(k)),
+                numeralIsAClosed(subject), succIsAClosed(numeral(k), numeralIsAClosed(k)))))
+              .flatMap(rules.mp(_, succIsAClosed(sumOfNumerals, sumIsAClosed(
+                numeral(subject), numeral(k), numeralIsAClosed(subject), numeralIsAClosed(k)))))
+              .flatMap(rules.mp(_, succIsAClosed(total, numeralIsAClosed(applied(
+                constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers))),
+                List(subject, k))))))
+              .flatMap(rules.mp(_, axiom))
+              .flatMap(rules.mp(_, lifted)))
+
+          // What the numerals of `SUC k` and of `m + SUC k` are, so the goal is the code above.
+          val numeralOfSuccessor = force(
+            rules.spec(k, force(language.fact(Language.NumeralAtSuccessor))))
+          val totalMoves = force(
+            Conv
+              .apTerm(
+                numeralConstant,
+                force(rules.specAll(force(peanoTheory.fact(Peano.AddAtSuccessor)), List(subject, k))))
+              .flatMap(equation =>
+                Conv.trans(
+                  equation,
+                  force(rules.spec(
+                    applied(
+                      constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers))),
+                      List(subject, k)),
+                    force(language.fact(Language.NumeralAtSuccessor)))))))
+          val bridge = pairCongruence(
+            five,
+            pairCongruence(three, Conv.refl(numeral(subject)), numeralOfSuccessor),
+            totalMoves)
+          Right(backwards(bridge, chained))
+        }
+      ))
     }
 
     /** [[Syllogism]]. Weaken the second implication under `p`, distribute, detach twice. */

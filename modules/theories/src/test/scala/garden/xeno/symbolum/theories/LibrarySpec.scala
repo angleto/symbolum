@@ -294,8 +294,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // congruence of the successor. `Language` has said since it was written that two equality
     // axioms suffice because those three are consequences; they are derived rather than asserted
     // now. Both of `CLAUDE.md`'s figures move by three, since each binds two or three terms.
-    library.entries.size shouldBe 427
-    library.names.distinct.size shouldBe 424
+    // 434 with PA proving its own addition on numerals and the six facts under it: the four
+    // closure introduction rules, which are what a compound closed term needs, and PA's two
+    // addition axioms at closed terms rather than at variables. `CLAUDE.md`'s two figures move by
+    // FOUR rather than by seven, which was derived: three of the seven bind one variable or none.
+    library.entries.size shouldBe 434
+    library.names.distinct.size shouldBe 431
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

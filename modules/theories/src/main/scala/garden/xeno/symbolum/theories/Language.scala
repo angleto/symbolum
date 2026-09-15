@@ -933,6 +933,31 @@ object Language {
   /** `|- !t. NUM_CLOSED t = (!k. ~(NUM_FREE_TERM k t))`. */
   val ClosedCases: String = "NUM_CLOSED_CASES"
 
+  /**
+   * The four introduction rules for closure, mirroring the five for [[TermName]].
+   *
+   * There is no rule for a variable and that is the point: a variable's own code is the one term
+   * shape that is never closed, which `LanguageSpec` derives. The other four say that closure is
+   * built the way a term is, so a caller holding closed pieces gets a closed whole without walking
+   * the freeness clauses again.
+   *
+   * They arrived with the arithmetic rather than with [[ClosedName]] itself, because until
+   * something had to close a COMPOUND term nothing needed them: the first consumer is the
+   * induction step of `numeral m + numeral n = numeral (m + n)`, where the successor's congruence
+   * asks closure of a sum of two numerals. Before that the only closed thing anybody wanted was a
+   * numeral, and [[NumeralIsClosed]] answers that on its own.
+   */
+  val ClosedZero: String = "NUM_CLOSED_ZERO"
+
+  /** `|- !s. NUM_CLOSED s ==> NUM_CLOSED (NUM_CODE 2 s)`. */
+  val ClosedSuccessor: String = "NUM_CLOSED_SUC"
+
+  /** `|- !a b. NUM_CLOSED a ==> NUM_CLOSED b ==> NUM_CLOSED (NUM_CODE 3 (NUM_PAIR a b))`. */
+  val ClosedSum: String = "NUM_CLOSED_ADD"
+
+  /** `|- !a b. NUM_CLOSED a ==> NUM_CLOSED b ==> NUM_CLOSED (NUM_CODE 4 (NUM_PAIR a b))`. */
+  val ClosedProduct: String = "NUM_CLOSED_MUL"
+
   /* ------------------------------------------------------------------ the logical axioms */
 
   /**
@@ -1282,6 +1307,14 @@ object Language {
       ("!i:num j:num p:num. NUM_FREE_FORM i (NUM_CODE 8 (NUM_PAIR j p)) = " +
         "COND (j = i) F (NUM_FREE_FORM i p)"),
     ClosedCases -> "!t:num. NUM_CLOSED t = (!k:num. ~(NUM_FREE_TERM k t))",
+    ClosedZero -> "NUM_CLOSED (NUM_CODE 1 0)",
+    ClosedSuccessor -> "!s:num. NUM_CLOSED s ==> NUM_CLOSED (NUM_CODE 2 s)",
+    ClosedSum ->
+      ("!a:num b:num. NUM_CLOSED a ==> NUM_CLOSED b ==> " +
+        "NUM_CLOSED (NUM_CODE 3 (NUM_PAIR a b))"),
+    ClosedProduct ->
+      ("!a:num b:num. NUM_CLOSED a ==> NUM_CLOSED b ==> " +
+        "NUM_CLOSED (NUM_CODE 4 (NUM_PAIR a b))"),
     LogicCases -> {
       val disjuncts = logicalSchemes.map(scheme => s"(${scheme.disjunct("n:num")})")
       s"!n:num. NUM_LOGIC n = (${disjuncts.mkString(" \\/ ")})"
@@ -1604,6 +1637,16 @@ object Language {
         }
       // After the closure predicate and not beside the numerals, which is where the other numeral
       // facts are: `NUM_CLOSED` is defined here, so the statement cannot be parsed any earlier.
+      closures <- closureRules(
+        logicVocabulary,
+        closedCases,
+        Map(
+          FreeZero -> freeZero,
+          FreeSuccessor -> freeSuccessor,
+          FreeSum -> freeSum,
+          FreeProduct -> freeProduct
+        )
+      )
       numeralIsClosed <- everyNumeralIsClosed(
         logicVocabulary,
         driver,
@@ -1656,6 +1699,10 @@ object Language {
         NumeralAtSuccessor -> numeralAtSuccessor,
         NumeralIsTerm -> numeralIsTerm,
         NumeralIsClosed -> numeralIsClosed,
+        ClosedZero -> closures(ClosedZero),
+        ClosedSuccessor -> closures(ClosedSuccessor),
+        ClosedSum -> closures(ClosedSum),
+        ClosedProduct -> closures(ClosedProduct),
         NumeralInjective -> numeralInjective,
         SubstituteVariable -> substituteVariable,
         SubstituteZero -> substituteZero,
@@ -2700,6 +2747,152 @@ object Language {
         else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
       result <- vocabulary.checked(NumeralIsTerm, proved)
     } yield result
+  }
+
+  /**
+   * The four closure introduction rules, out of the freeness clauses they correspond to.
+   *
+   * Each is the same three moves: unfold [[ClosedCases]] on the goal, freshen an index and prove
+   * nothing is free at it, and read the freeness clause backwards. Where the clause answers with a
+   * disjunction the two premises are joined by De Morgan, which is the only difference between the
+   * unary rules and the binary ones.
+   */
+  private def closureRules(
+    vocabulary: Vocabulary,
+    closedCases: Kernel.Thm,
+    clauses: Map[String, Kernel.Thm]
+  ): Either[LogicError, Map[String, Kernel.Thm]] = {
+    val rules = vocabulary.rules
+    val logic = vocabulary.logic
+    val numbers = vocabulary.numbers
+    val classical = vocabulary.numbering.peano.naturals.classical
+    val theory = vocabulary.theory
+
+    def negationHead: Either[LogicError, Term] =
+      LogicError.lift(theory.constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)))
+
+    /** From `X = Y` and `~Y`, that `~X`. */
+    def backAcross(equation: Kernel.Thm, held: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        negation <- negationHead
+        lifted <- Conv.apTerm(negation, equation)
+        reversed <- Conv.sym(lifted)
+        result <- LogicError.lift(Kernel.eqMp(reversed, held))
+      } yield result
+
+    /** From `NUM_CLOSED s`, that `~(NUM_FREE_TERM k s)` at one index. */
+    def nowhereAt(subject: Term, closed: Kernel.Thm, index: Term): Either[LogicError, Kernel.Thm] =
+      rules
+        .spec(subject, closedCases)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, closed)))
+        .flatMap(rules.spec(index, _))
+
+    /** From `!k. ~(NUM_FREE_TERM k s)`, that `NUM_CLOSED s`. */
+    def closedFrom(subject: Term, nowhere: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      rules
+        .spec(subject, closedCases)
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, nowhere)))
+
+    def unary(
+      name: String, clause: String, built: Term => Either[LogicError, Term]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        statement <- vocabulary.statement(name)
+        stripped <- Logic.stripForall(statement)
+        subject <- stripped._1.headOption.toRight(NotOfForm("a claim about a code", statement))
+        parts <- logic.destImp(stripped._2).toRight(NotOfForm("an implication", stripped._2))
+        closed <- LogicError.lift(Kernel.assume(parts._1))
+        whole <- built(subject)
+        index = Conv.freshVariable("k", numbers, Term.freeVariables(statement))
+        inside <- nowhereAt(subject, closed, index)
+        equation <- rules.specAll(clauses(clause), List(index, subject))
+        outside <- backAcross(equation, inside)
+        everywhere <- rules.gen(index, outside)
+        reached <- closedFrom(whole, everywhere)
+        discharged <- rules.disch(parts._1, reached).flatMap(rules.gen(subject, _))
+      } yield discharged
+
+    def binary(
+      name: String, clause: String, built: (Term, Term) => Either[LogicError, Term]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        statement <- vocabulary.statement(name)
+        stripped <- Logic.stripForall(statement)
+        left <- stripped._1.headOption.toRight(NotOfForm("a claim about a code", statement))
+        right <- stripped._1.drop(1).headOption
+          .toRight(NotOfForm("a claim about two codes", statement))
+        first <- logic.destImp(stripped._2).toRight(NotOfForm("an implication", stripped._2))
+        leftClosed <- LogicError.lift(Kernel.assume(first._1))
+        second <- logic.destImp(first._2).toRight(NotOfForm("an implication", first._2))
+        rightClosed <- LogicError.lift(Kernel.assume(second._1))
+        whole <- built(left, right)
+        index = Conv.freshVariable("k", numbers, Term.freeVariables(statement))
+        leftInside <- nowhereAt(left, leftClosed, index)
+        rightInside <- nowhereAt(right, rightClosed, index)
+        both <- rules.conjIntro(leftInside, rightInside)
+        leftTerm <- logic.destNot(leftInside.conclusion)
+          .toRight(NotOfForm("a negation", leftInside.conclusion))
+        rightTerm <- logic.destNot(rightInside.conclusion)
+          .toRight(NotOfForm("a negation", rightInside.conclusion))
+        law <- classical.fact(Classical.DeMorganDisjunction)
+        joined <- rules
+          .specAll(law, List(leftTerm, rightTerm))
+          .flatMap(Conv.sym)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, both)))
+        equation <- rules.specAll(clauses(clause), List(index, left, right))
+        outside <- backAcross(equation, joined)
+        everywhere <- rules.gen(index, outside)
+        reached <- closedFrom(whole, everywhere)
+        discharged <- rules
+          .disch(second._1, reached)
+          .flatMap(rules.disch(first._1, _))
+          .flatMap(rules.genAll(_, List(left, right)))
+      } yield discharged
+
+    for {
+      zeroStatement <- vocabulary.statement(ClosedZero)
+      zeroSubject <- zeroStatement match {
+        case App(_, argument) => Right(argument)
+        case other => Left(NotOfForm("a claim about one code", other))
+      }
+      index = Conv.freshVariable("k", numbers, Term.freeVariables(zeroStatement))
+      atZero <- rules.spec(index, clauses(FreeZero))
+      subject <- Term.destEq(atZero.conclusion).map(_._1)
+        .toRight(NotOfForm("an equation", atZero.conclusion))
+      assumedFree <- LogicError.lift(Kernel.assume(subject))
+      toFalsity <- LogicError.lift(Kernel.eqMp(atZero, assumedFree))
+      refused <- rules.notIntro(subject, toFalsity)
+      everywhere <- rules.gen(index, refused)
+      zero <- closedFrom(zeroSubject, everywhere)
+      _ <- vocabulary.checked(ClosedZero, zero)
+
+      successor <- unary(ClosedSuccessor, FreeSuccessor, inner =>
+        Parser.term(vocabulary.theory, vocabulary.notation, "2", numbers)
+          .flatMap(tag => vocabulary.coded(tag, inner)))
+      _ <- vocabulary.checked(ClosedSuccessor, successor)
+
+      sum <- binary(ClosedSum, FreeSum, (a, b) =>
+        for {
+          tag <- Parser.term(vocabulary.theory, vocabulary.notation, "3", numbers)
+          paired <- vocabulary.paired(a, b)
+          coded <- vocabulary.coded(tag, paired)
+        } yield coded)
+      _ <- vocabulary.checked(ClosedSum, sum)
+
+      product <- binary(ClosedProduct, FreeProduct, (a, b) =>
+        for {
+          tag <- Parser.term(vocabulary.theory, vocabulary.notation, "4", numbers)
+          paired <- vocabulary.paired(a, b)
+          coded <- vocabulary.coded(tag, paired)
+        } yield coded)
+      _ <- vocabulary.checked(ClosedProduct, product)
+    } yield Map(
+      ClosedZero -> zero,
+      ClosedSuccessor -> successor,
+      ClosedSum -> sum,
+      ClosedProduct -> product
+    )
   }
 
   /**

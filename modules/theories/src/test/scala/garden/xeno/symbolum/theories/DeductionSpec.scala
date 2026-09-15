@@ -103,6 +103,32 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
    * out of the freeness clause for a sum and the two closures underneath it. That is the first
    * compound closed term anywhere here, and it is the shape every further object derivation needs.
    */
+  /**
+   * The object theory's addition on numerals, and what it costs.
+   *
+   * `NUM_PROV_NUMERAL_ADD` is the first general statement here about what PA proves, as against a
+   * statement about one instance of one axiom, and the two things worth asserting about it are
+   * that it holds at a pair of concrete numbers and that it costs what everything else here costs.
+   * The second is the one with teeth: an object-level theorem that had started spending an axiom
+   * of the reals would be a defect in the construction rather than in the proof, and `docs/adr`
+   * records that the whole point of building the arithmetic over `num` is that it does not.
+   */
+  it should "prove its own addition on numerals, at two axioms and no more" in {
+    val theorem = force(deduction.fact(Deduction.NumeralAddition))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+
+    // At two concrete numbers, the statement is about the numerals of those numbers and of the
+    // sum the META level computes. Nothing here evaluates `NUM_ADD`: that the two levels agree is
+    // what the theorem says, not something the statement assumes.
+    val instance = force(rules.specAll(theorem, List(term("SUC ZERO"), term("SUC (SUC ZERO)"))))
+    instance.hypotheses shouldBe empty
+    instance.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_NUMERAL (SUC (SUC ZERO))))) " +
+        "(NUM_NUMERAL (NUM_ADD (SUC ZERO) (SUC (SUC ZERO))))))")
+  }
+
   it should "carry an object theorem across its own equality" in {
     val language = chain.language
     val numeral = term("NUM_NUMERAL m")

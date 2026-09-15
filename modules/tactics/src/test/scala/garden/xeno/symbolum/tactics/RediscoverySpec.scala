@@ -150,7 +150,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // of `MONOTONE_LE` is not among them and that is the peeling rule rather than an oversight: it
     // sits under `!m n`, and only the antecedents in front of the leading quantifiers are peeled.
     // 274 with the three equality rules' eighteen.
-    propose.weakenings.size shouldBe 274
+    // 285 with the eleven the object theory's addition brought.
+    propose.weakenings.size shouldBe 285
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

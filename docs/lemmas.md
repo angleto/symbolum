@@ -93,9 +93,12 @@ they have least appetite for working out how it is produced.
 
 ## Deduction
 
+  NUM_PROV_ADD_SUC         !x:num. !y:num. NUM_TERM x ==> NUM_CLOSED x ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR x (NUM_CODE 2 y))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR x y)))))
+  NUM_PROV_ADD_ZERO        !x:num. NUM_TERM x ==> NUM_CLOSED x ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR x (NUM_CODE 1 0))) x))
   NUM_PROV_DEDUCTION       !x:num. !y:num. NUM_FORM x ==> (!z:num. ~(NUM_FREE_FORM z x)) ==> NUM_PROV_FROM x y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))
   NUM_PROV_IMP_GEN         !x:num. !y:num. !z:num. NUM_FORM y ==> NUM_FORM z ==> ~(NUM_FREE_FORM x y) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 8 (NUM_PAIR x z))))
   NUM_PROV_IMP_MP          !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y z)))) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x z))
+  NUM_PROV_NUMERAL_ADD     !x:num. !y:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL x) (NUM_NUMERAL y))) (NUM_NUMERAL (NUM_ADD x y))))
   NUM_PROV_SELF            !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))
   NUM_PROV_SPECIALISE      !x:num. !y:num. !z:num. NUM_FORM z ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 8 (NUM_PAIR x z)) ==> NUM_PROV (NUM_SUBST_FORM x y z)
   NUM_PROV_SUC_CONG        !x:num. !y:num. NUM_TERM x ==> NUM_TERM y ==> NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 x) (NUM_CODE 2 y)))
@@ -119,7 +122,11 @@ they have least appetite for working out how it is produced.
 
 ## Language
 
+  NUM_CLOSED_ADD           !x:num. !y:num. NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_CLOSED (NUM_CODE 3 (NUM_PAIR x y))
   NUM_CLOSED_CASES         !x:num. NUM_CLOSED x = (!y:num. ~(NUM_FREE_TERM y x))
+  NUM_CLOSED_MUL           !x:num. !y:num. NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_CLOSED (NUM_CODE 4 (NUM_PAIR x y))
+  NUM_CLOSED_SUC           !x:num. NUM_CLOSED x ==> NUM_CLOSED (NUM_CODE 2 x)
+  NUM_CLOSED_ZERO          NUM_CLOSED (NUM_CODE 1 0)
   NUM_FORM_ALL             !x:num. !y:num. NUM_FORM y ==> NUM_FORM (NUM_CODE 8 (NUM_PAIR x y))
   NUM_FORM_CASES           !x:num. NUM_FORM x = (?y:num. ?z:num. x = NUM_CODE y z /\ (y = 5 /\ (?u:num. ?v:num. z = NUM_PAIR u v /\ NUM_TERM u /\ NUM_TERM v) \/ y = 6 /\ NUM_FORM z \/ y = 7 /\ (?u:num. ?v:num. z = NUM_PAIR u v /\ NUM_FORM u /\ NUM_FORM v) \/ y = 8 /\ (?u:num. ?v:num. z = NUM_PAIR u v /\ NUM_FORM v)))
   NUM_FORM_EQ              !x:num. !y:num. NUM_TERM x ==> NUM_TERM y ==> NUM_FORM (NUM_CODE 5 (NUM_PAIR x y))
