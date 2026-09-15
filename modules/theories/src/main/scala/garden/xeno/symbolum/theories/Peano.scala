@@ -105,20 +105,22 @@ import garden.xeno.symbolum.logic.*
  * here is a definition that recurses on it, which needs more than the principle: a recursion
  * theorem for a well-founded relation, in the shape `Recursion.theorem` has for the successor.
  *
- * **No OPERATOR notation.** A `Notation` maps a symbol to one constant, and the reals already own
- * `+`, `*`, `<` and `<=`; two entries for one symbol would make the first shadow the second, so a
- * natural number's operations are read and printed as the applications they are. Overloading a
- * symbol by the type of its arguments is a change to the notation layer and to every consumer of
- * it, which is a larger decision than this file.
+ * **No OPERATOR notation yet, and since 2026-09-15 that is a schedule rather than a decision.**
+ * A `Notation` maps a symbol to one constant today, and the reals already own `+`, `*`, `<` and
+ * `<=`, so a natural number's operations are read and printed as the applications they are.
+ * `docs/adr/0018` is what changes it: a symbol may stand for several constants and the elaborator
+ * picks by the type unification settles, but only where the operation is the same one, so `NUM_ADD`
+ * and `NUM_MUL` get `+` and `*` while [[Subtraction]] and `NUM_DIV` keep spellings of their own.
  *
- * **The numerals are the exception, and the exception is instructive about the rule.** Since
+ * **The numerals were the exception, and the exception turned out to be the rule.** Since
  * 2026-09-12 this development declares a second numeral encoding and a digit string reads at
- * either type. That is a change to the notation layer, and the reason it was affordable while
- * overloading `+` is not: a digit string is not a symbol the table maps to one constant, so two
- * encodings do not shadow each other, and the type is decided by unification rather than by which
- * entry was found first. What made the operators a larger decision is exactly what numerals do not
- * have: `+` would have to be resolved by the types of its arguments **before** those types are
- * known, since they are what the operator is being applied to. [[NumeralOne]] carries the rest.
+ * either type, and what stood here was a reason that could not extend to the operators: `+` would
+ * have to be resolved by the types of its arguments **before** those types are known, since they
+ * are what the operator is being applied to. That sentence described resolving eagerly, which is
+ * not what the numerals do either. A numeral takes a metavariable, unification runs, and the
+ * encoding is read back afterwards; an operator whose candidates share a shape, `t -> t -> t` for
+ * `+` and `t -> t -> bool` for `<=`, is deferred the same way. `docs/adr/0018` carries the
+ * measurement, and [[NumeralOne]] carries the rest.
  *
  * **Nothing here is a decision procedure.** Every fact below is a theorem, and a goal that is an
  * instance of one is closed by the rewriter or by hand. `Ring` decides the reals and there is no

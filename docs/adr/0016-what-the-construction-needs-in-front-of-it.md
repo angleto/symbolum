@@ -164,7 +164,10 @@ the reals own `+`, `*`, `<` and `<=`; `Peano`'s own docstring calls overloading 
 arguments a change to the notation layer and to every consumer of it, and defers it. With the
 integers and the rationals arriving, a user who writes `x + y` over the rationals has no way to say
 so, and the deferral stops being affordable. That is a record of its own and it comes **before** the
-integers, not after them.
+integers, not after them. It is
+[`0018`](0018-an-operator-symbol-stands-for-more-than-one-constant.md), written the same day as
+this one: a symbol may stand for several constants and the elaborator picks, but only where the
+operation is the same one, so `-` and `/` on `num` keep a spelling of their own.
 
 ## Consequences
 
