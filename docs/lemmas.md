@@ -162,6 +162,7 @@ they have least appetite for working out how it is produced.
   NUM_SUBST_FORM_NOT       !x:num. !y:num. !z:num. NUM_SUBST_FORM x y (NUM_CODE 6 z) = NUM_CODE 6 (NUM_SUBST_FORM x y z)
   NUM_SUBST_TERM_ADD       !x:num. !y:num. !z:num. !u:num. NUM_SUBST_TERM x y (NUM_CODE 3 (NUM_PAIR z u)) = NUM_CODE 3 (NUM_PAIR (NUM_SUBST_TERM x y z) (NUM_SUBST_TERM x y u))
   NUM_SUBST_TERM_MUL       !x:num. !y:num. !z:num. !u:num. NUM_SUBST_TERM x y (NUM_CODE 4 (NUM_PAIR z u)) = NUM_CODE 4 (NUM_PAIR (NUM_SUBST_TERM x y z) (NUM_SUBST_TERM x y u))
+  NUM_SUBST_TERM_NOT_FREE  !x:num. !y:num. !z:num. NUM_TERM z ==> ~(NUM_FREE_TERM x z) ==> NUM_SUBST_TERM x y z = z
   NUM_SUBST_TERM_SUC       !x:num. !y:num. !z:num. NUM_SUBST_TERM x y (NUM_CODE 2 z) = NUM_CODE 2 (NUM_SUBST_TERM x y z)
   NUM_SUBST_TERM_TERM      !x:num. !y:num. !z:num. NUM_TERM z ==> NUM_TERM y ==> NUM_TERM (NUM_SUBST_TERM x y z)
   NUM_SUBST_TERM_VAR       !x:num. !y:num. !z:num. NUM_SUBST_TERM x y (NUM_CODE 0 z) = COND (z = x) y (NUM_CODE 0 z)

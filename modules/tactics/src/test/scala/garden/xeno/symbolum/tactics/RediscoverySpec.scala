@@ -143,7 +143,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // equations, and so are the two hyperbolic identities.
     // 248 with `NUM_PROV_SPECIALISE`'s four, which is the count of its antecedents and was
     // derived before it was measured.
-    propose.weakenings.size shouldBe 248
+    // 250 with the idleness of the substitution's two.
+    propose.weakenings.size shouldBe 250
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

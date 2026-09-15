@@ -200,7 +200,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // antecedents, the formula, the term, its closure and the provability of the quantified
     // formula. The rule the entry above states reads it exactly, a side condition per thing it
     // mentions.
-    proposals.size shouldBe 248
+    // 250 with the idleness of the substitution, which carries two antecedents.
+    proposals.size shouldBe 250
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -666,7 +667,17 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // so `addressOf` reads it. The candidate written down beside this one was that an atomic
     // `NUM_PROV` would be declined the way a negation is and the four would land in `unreadable`;
     // that was measured and is false, and `unreadable` did not move.
-    open shouldBe 183
+    //
+    // 184 with ONE of the idleness lemma's two weakenings, and the split between them is the
+    // whole content of this pair of buckets. Both residues have the SAME conclusion once the
+    // antecedents are stripped, `NUM_SUBST_TERM i t s = s`, so a reading that looked only at the
+    // conclusion would have to put them in one bucket; they are in different ones. The one that
+    // keeps `NUM_TERM s` is here and the one that keeps `~(NUM_FREE_TERM i s)` is `unreadable`
+    // below, which says the propositional fragment reads the WHOLE goal and declines a negation
+    // wherever it stands, antecedent included. Derived as two in this bucket and measured as one,
+    // and the second was found by printing the standings rather than by the suite, because the
+    // assertion below aborts on this one first and its own move was masked.
+    open shouldBe 184
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -833,7 +844,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // substitutions. The twelve new lemmas produce both, so the audit grows by more than seven and
     // the arithmetic never had to close. A balance argument across two counts is worth nothing
     // until somebody checks they count the same things, and this one did not.
-    unreadable shouldBe 60
+    // 61 with the other of the two, for the reason the entry above gives.
+    unreadable shouldBe 61
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

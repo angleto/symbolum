@@ -627,6 +627,31 @@ object Language {
   val SubstituteKeepsTerms: String = "NUM_SUBST_TERM_TERM"
 
   /**
+   * `|- !i t s. NUM_TERM s ==> ~(NUM_FREE_TERM i s) ==> NUM_SUBST_TERM i t s = s`
+   *
+   * Substituting for a variable that does not occur changes nothing. It reads as something the
+   * library must already have had and did not: until this landed, every fact about the two
+   * substitutions was either a clause of their definitions or the statement that they preserve
+   * well-formedness, and nothing at all said when a substitution does not move.
+   *
+   * **What wanted it is the object theory's equality**, and the shape of the need is worth stating
+   * because it is not obvious from the name. `NUM_LOGIC_REPLACE` is the only scheme that can give
+   * symmetry, transitivity or congruence, and each of those is obtained by choosing a formula with
+   * a hole: symmetry takes `v_i = t` and needs its two instances to be `t = t` and `u = t`. Getting
+   * there means substituting into a formula that MENTIONS the closed term `t`, and the walk stops
+   * dead at `t` unless something says the substitution leaves it alone. [[substituteIn]] cannot
+   * help, because it computes at a concrete code and `t` here is a variable standing for any closed
+   * term.
+   *
+   * So the rules of equality are stated over arbitrary closed terms rather than over numerals, and
+   * this is the fact that buys the difference. Numerals would have been the cheaper lemma, one
+   * induction on `NUM_NUMERAL` rather than a course-of-values induction over every code, and it
+   * would have been enough for Goedel's argument alone and for nothing else the object theory has
+   * to do.
+   */
+  val SubstituteIdle: String = "NUM_SUBST_TERM_NOT_FREE"
+
+  /**
    * `|- !i t p. NUM_FORM p ==> NUM_TERM t ==> NUM_FORM (NUM_SUBST_FORM i t p)`
    *
    * Substituting a term into a formula gives a formula, which is what the induction scheme of PA
@@ -1222,6 +1247,9 @@ object Language {
     SubstituteKeepsTerms ->
       ("!i:num t:num s:num. NUM_TERM s ==> NUM_TERM t ==> " +
         "NUM_TERM (NUM_SUBST_TERM i t s)"),
+    SubstituteIdle ->
+      ("!i:num t:num s:num. NUM_TERM s ==> ~(NUM_FREE_TERM i s) ==> " +
+        "NUM_SUBST_TERM i t s = s"),
     FormulaSubstituteKeepsFormulas ->
       ("!i:num t:num p:num. NUM_FORM p ==> NUM_TERM t ==> " +
         "NUM_FORM (NUM_SUBST_FORM i t p)"),
@@ -1397,7 +1425,7 @@ object Language {
       substituteKeepsTerms <- keepsWellFormed(
         vocabulary,
         SubstituteKeepsTerms,
-        vocabulary.predicate,
+        Some(vocabulary.predicate),
         vocabulary.substitute,
         strong,
         cases,
@@ -1429,7 +1457,7 @@ object Language {
       formulaSubstituteKeepsFormulas <- keepsWellFormed(
         vocabulary,
         FormulaSubstituteKeepsFormulas,
-        vocabulary.formula,
+        Some(vocabulary.formula),
         formulaSubstitute,
         strong,
         formulaCases,
@@ -1475,6 +1503,30 @@ object Language {
         freeVocabulary, freeNamed, projections, successor, FreeSum, Type.Bool, free)
       freeProduct <- shapedAt(
         freeVocabulary, freeNamed, projections, successor, FreeProduct, Type.Bool, free)
+
+      substituteIsIdle <- keepsWellFormed(
+        freeVocabulary,
+        SubstituteIdle,
+        None,
+        freeVocabulary.substitute,
+        strong,
+        cases,
+        idleClause(
+          Map(
+            FreeVariable -> freeVariable,
+            FreeSuccessor -> freeSuccessor,
+            FreeSum -> freeSum,
+            FreeProduct -> freeProduct
+          ),
+          Map(
+            SubstituteVariable -> substituteVariable,
+            SubstituteZero -> substituteZero,
+            SubstituteSuccessor -> substituteSuccessor,
+            SubstituteSum -> substituteSum,
+            SubstituteProduct -> substituteProduct
+          )
+        )
+      )
 
       formulaFreeEquality <- shapedAt(
         freeVocabulary, formulaFreeNamed, projections, successor,
@@ -1615,6 +1667,7 @@ object Language {
         FormulaSubstituteImplication -> formulaSubstituteImplication,
         FormulaSubstituteUniversal -> formulaSubstituteUniversal,
         SubstituteKeepsTerms -> substituteKeepsTerms,
+        SubstituteIdle -> substituteIsIdle,
         FormulaSubstituteKeepsFormulas -> formulaSubstituteKeepsFormulas,
         FreeVariable -> freeVariable,
         FreeZero -> freeZero,
@@ -3441,7 +3494,7 @@ object Language {
   private def keepsWellFormed(
     vocabulary: Vocabulary,
     statementName: String,
-    predicate: Term,
+    predicate: Option[Term],
     substitute: Term,
     strong: Kernel.Thm,
     termCases: Kernel.Thm,
@@ -3484,7 +3537,7 @@ object Language {
           inner <- logic.destImp(parts._2).toRight(NotOfForm("an implication", parts._2))
           isTerm <- LogicError.lift(Kernel.assume(inner._1))
           tail <- logic.destImp(inner._2).toRight(NotOfForm("an implication", inner._2))
-          replacementIsTerm <- LogicError.lift(Kernel.assume(tail._1))
+          sideCondition <- LogicError.lift(Kernel.assume(tail._1))
           goal = tail._2
 
           opening <- rules.spec(code, termCases).flatMap(equation =>
@@ -3500,7 +3553,7 @@ object Language {
                 parts <- vocabulary.disjuncts(disjunction.conclusion)
                 site = Site(
                   vocabulary, predicate, substitute, code, tag, payload, index, replacement,
-                  isCode, isTerm, replacementIsTerm, smaller, parts)
+                  isCode, isTerm, sideCondition, smaller, parts)
                 atVariable <- clauseAt(site, 0)
                 atZero <- clauseAt(site, 1)
                 atSuccessor <- clauseAt(site, 2)
@@ -3590,7 +3643,7 @@ object Language {
    */
   private final case class Site(
     vocabulary: Vocabulary,
-    predicate: Term,
+    predicate: Option[Term],
     substitute: Term,
     code: FVar,
     tag: FVar,
@@ -3599,7 +3652,7 @@ object Language {
     replacement: Term,
     isCode: Kernel.Thm,
     subjectIsWellFormed: Kernel.Thm,
-    replacementIsTerm: Kernel.Thm,
+    sideCondition: Kernel.Thm,
     smaller: Kernel.Thm,
     parts: Vector[Term]
   ) {
@@ -3612,9 +3665,19 @@ object Language {
     def substituted(argument: Term): Either[LogicError, Term] =
       LogicError.lift(Term.appAll(substitute, List(index, replacement, argument)))
 
+    /**
+     * The head of the claim, where the claim has one.
+     *
+     * A clause set proving that a predicate survives the substitution needs it; one proving an
+     * **equation** about the substitution has no predicate at all, and calls [[itself]] instead.
+     * That is why it is optional rather than a term every caller must invent.
+     */
+    def claimHead: Either[LogicError, Term] =
+      predicate.toRight(NotOfForm("a claim with a predicate at its head", code))
+
     /** The claim being proved, at a term. */
     def wellFormed(argument: Term): Either[LogicError, Term] =
-      LogicError.lift(Term.app(predicate, argument))
+      claimHead.flatMap(head => LogicError.lift(Term.app(head, argument)))
 
     /** `x < code`, from the shape the case gives. */
     def belowCode(argument: Term, shape: Kernel.Thm): Either[LogicError, Kernel.Thm] =
@@ -3661,11 +3724,94 @@ object Language {
       shape: Kernel.Thm,
       argumentIsWellFormed: Kernel.Thm
     ): Either[LogicError, Kernel.Thm] =
+      inductiveWith(argument, shape, argumentIsWellFormed, sideCondition)
+
+    /**
+     * The same, where the hypothesis's second premise is about the sub-code rather than the code.
+     *
+     * [[inductive]] hands it [[sideCondition]] unchanged, which is right where that condition is
+     * about the **replacement**: `NUM_TERM t` says nothing about which code is being walked. It is
+     * wrong where the condition is about the **subject**, as a freeness condition is: what the
+     * hypothesis wants at a sub-code is that the index is not free in THAT, and the caller is the
+     * only one that can produce it, one freeness clause at a time.
+     */
+    def inductiveWith(
+      argument: Term,
+      shape: Kernel.Thm,
+      argumentIsWellFormed: Kernel.Thm,
+      second: Kernel.Thm
+    ): Either[LogicError, Kernel.Thm] =
       for {
         bound <- belowCode(argument, shape)
         here <- rules.spec(argument, smaller).flatMap(rules.mp(_, bound))
-        result <- rules.mp(here, argumentIsWellFormed).flatMap(rules.mp(_, replacementIsTerm))
+        result <- rules.mp(here, argumentIsWellFormed).flatMap(rules.mp(_, second))
       } yield result
+
+    /** `NUM_FREE_TERM i`, the head a freeness clause is read under. */
+    def freeHead: Either[LogicError, Term] =
+      LogicError
+        .lift(vocabulary.theory.constant(
+          FreeName, Type.fun(vocabulary.numbers, Type.fun(vocabulary.numbers, Type.Bool))))
+        .flatMap(free => LogicError.lift(Term.app(free, index)))
+
+    /** From `X = Y` and `~X`, that `~Y`. */
+    def forwardNot(equation: Kernel.Thm, held: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        negation <- LogicError.lift(
+          vocabulary.theory.constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)))
+        lifted <- Conv.apTerm(negation, equation)
+        result <- LogicError.lift(Kernel.eqMp(lifted, held))
+      } yield result
+
+    /**
+     * What the code's freeness condition says about the inside of this shape.
+     *
+     * [[sideCondition]] is `~(NUM_FREE_TERM i code)`; the shape says what the code is, and the
+     * clause says what freeness in that shape unfolds to. Composing the two carries the condition
+     * inwards, which is the step every inductive case of an idleness proof begins with.
+     */
+    def notInside(shape: Kernel.Thm, clause: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        head <- freeHead
+        carried <- Conv.apTerm(head, shape)
+        joined <- Conv.trans(carried, clause)
+        result <- forwardNot(joined, sideCondition)
+      } yield result
+
+    /** A conditional whose guard is known to fail, taken to its second branch. */
+    def denied(value: Kernel.Thm, denial: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        conditional <- Term
+          .destEq(value.conclusion)
+          .map(_._2)
+          .toRight(NotOfForm("an equation", value.conclusion))
+        split <- conditional match {
+          case App(App(App(_, guard), yes), no) => Right((guard, yes, no))
+          case other => Left(NotOfForm("a conditional", other))
+        }
+        scheme <- classical
+          .fact(Classical.CondFalse)
+          .map(Kernel.instType(Map(Classical.TypeVariable -> vocabulary.numbers), _))
+        taken <- rules
+          .specAll(scheme, List(split._1, split._2, split._3))
+          .flatMap(rules.mp(_, denial))
+        moved <- Conv.trans(value, taken)
+      } yield moved
+
+    /** Put what the hypothesis gave back under the constructor the clause rebuilt. */
+    def underConstructor(value: Kernel.Thm, inner: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        built <- Term
+          .destEq(value.conclusion)
+          .map(_._2)
+          .toRight(NotOfForm("an equation", value.conclusion))
+        head <- built match {
+          case App(applied, _) => Right(applied)
+          case other => Left(NotOfForm("a constructor applied to something", other))
+        }
+        lifted <- Conv.apTerm(head, inner)
+        joined <- Conv.trans(value, lifted)
+      } yield joined
 
     /** The code written with a literal tag, which the substitution's equations are stated at. */
     def atLiteral(tagIs: Kernel.Thm): Either[LogicError, Kernel.Thm] =
@@ -3697,7 +3843,7 @@ object Language {
     def carried(value: Kernel.Thm, proved: Kernel.Thm): Either[LogicError, Kernel.Thm] =
       Conv
         .sym(value)
-        .flatMap(equation => Conv.apTerm(predicate, equation))
+        .flatMap(equation => claimHead.flatMap(head => Conv.apTerm(head, equation)))
         .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, proved)))
 
     /** The subject itself is well formed, carried back along a value that is the subject. */
@@ -3707,9 +3853,19 @@ object Language {
         .flatMap(equation =>
           Conv
             .sym(equation)
-            .flatMap(reversed => Conv.apTerm(predicate, reversed))
+            .flatMap(reversed =>
+              claimHead.flatMap(head => Conv.apTerm(head, reversed)))
             .flatMap(reversed => LogicError.lift(Kernel.eqMp(reversed, subjectIsWellFormed)))
         )
+
+    /**
+     * The equation goal at this shape: what the substitution gives IS the code it was given.
+     *
+     * The counterpart of [[unchanged]] for a clause set whose claim is an equation rather than a
+     * predicate. There is nothing to carry across: the value and the shape meet directly.
+     */
+    def itself(value: Kernel.Thm, shape: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv.trans(value, Conv.sym(shape).getOrElse(shape))
 
     /** A clause whose answer is a conditional, decided both ways. */
     def bothWays(
@@ -3781,7 +3937,7 @@ object Language {
             value <- site.valueAt(shape, equation)
             settled <- site.bothWays(
               value,
-              (moved, _) => site.carried(moved, site.replacementIsTerm),
+              (moved, _) => site.carried(moved, site.sideCondition),
               (moved, _) => site.unchanged(moved, shape)
             )
           } yield settled
@@ -3831,6 +3987,161 @@ object Language {
           } yield settled
       }
     } yield result
+  }
+
+  /**
+   * The four clauses of [[SubstituteIdle]], as a function of the site.
+   *
+   * Every case begins the same way, by carrying the code's freeness condition inwards through the
+   * clause of `NUM_FREE_TERM` that matches the shape, and that is the whole difference from
+   * [[termClause]] beside it: there the second premise of the induction hypothesis is about the
+   * replacement and is passed down untouched, here it is about the subject and has to be rebuilt
+   * at every sub-code.
+   *
+   * The variable case is the one that does not recurse and is where the condition earns its
+   * keep. `NUM_FREE_TERM i (NUM_CODE 0 j)` is `j = i`, so the condition IS the denial of the
+   * substitution's guard, and the conditional goes to its second branch without a case split.
+   * `termClause` splits there because it has no such condition and must handle both answers; this
+   * one cannot reach the first answer at all, which is the content of the lemma seen locally.
+   */
+  private def idleClause(
+    freeness: Map[String, Kernel.Thm],
+    equations: Map[String, Kernel.Thm]
+  )(site: Site, which: Int): Either[LogicError, Kernel.Thm] = {
+    val rules = site.rules
+
+    for {
+      assumed <- LogicError.lift(Kernel.assume(site.parts(which)))
+      result <- which match {
+        case 0 =>
+          for {
+            shape <- site.atLiteral(assumed)
+            equation <- rules.specAll(
+              equations(SubstituteVariable), List(site.index, site.replacement, site.payload))
+            value <- site.valueAt(shape, equation)
+            clause <- rules.specAll(freeness(FreeVariable), List(site.index, site.payload))
+            apart <- site.notInside(shape, clause)
+            taken <- site.denied(value, apart)
+            settled <- site.itself(taken, shape)
+          } yield settled
+
+        case 1 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            payloadIs <- rules.conjElim2(assumed)
+            shape <- site.atLiteralPair(tagIs, payloadIs)
+            equation <- rules.specAll(
+              equations(SubstituteZero), List(site.index, site.replacement))
+            value <- site.valueAt(shape, equation)
+            settled <- site.itself(value, shape)
+          } yield settled
+
+        case 2 =>
+          for {
+            tagIs <- rules.conjElim1(assumed)
+            payloadIsTerm <- rules.conjElim2(assumed)
+            shape <- site.atLiteral(tagIs)
+            equation <- rules.specAll(
+              equations(SubstituteSuccessor),
+              List(site.index, site.replacement, site.payload))
+            value <- site.valueAt(shape, equation)
+            clause <- rules.specAll(freeness(FreeSuccessor), List(site.index, site.payload))
+            inside <- site.notInside(shape, clause)
+            shorter <- site.inductiveWith(site.payload, shape, payloadIsTerm, inside)
+            rebuilt <- site.underConstructor(value, shorter)
+            settled <- site.itself(rebuilt, shape)
+          } yield settled
+
+        case _ =>
+          for {
+            tags <- rules.conjElim1(assumed)
+            arguments <- rules.conjElim2(assumed)
+            split <- site.logic
+              .destDisj(tags.conclusion)
+              .toRight(NotOfForm("a disjunction", tags.conclusion))
+            three <- LogicError
+              .lift(Kernel.assume(split._1))
+              .flatMap(binaryIdleClause(
+                site, arguments, _, equations(SubstituteSum), freeness(FreeSum)))
+            four <- LogicError
+              .lift(Kernel.assume(split._2))
+              .flatMap(binaryIdleClause(
+                site, arguments, _, equations(SubstituteProduct), freeness(FreeProduct)))
+            settled <- rules.disjElim(tags, three, four)
+          } yield settled
+      }
+    } yield result
+  }
+
+  /**
+   * The sum and the product of [[SubstituteIdle]], which differ only in the two facts handed in.
+   *
+   * The freeness clause here answers with a **disjunction**, so the condition carried inwards is
+   * `~(a \/ b)` and De Morgan is what turns it into the two the hypothesis wants. That is the one
+   * step this case has and the successor's does not.
+   */
+  private def binaryIdleClause(
+    site: Site,
+    arguments: Kernel.Thm,
+    tagIs: Kernel.Thm,
+    equation: Kernel.Thm,
+    freenessClause: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = site.rules
+
+    withWitnesses(
+      site.vocabulary,
+      arguments,
+      Set(site.code, site.tag, site.payload) ++ Term.freeVariables(site.index) ++
+        Term.freeVariables(site.replacement)
+    ) { (left, right, atRight) =>
+      for {
+        isPair <- rules.conjElim1(atRight)
+        both <- rules.conjElim2(atRight)
+        leftIsTerm <- rules.conjElim1(both)
+        rightIsTerm <- rules.conjElim2(both)
+        shape <- site.atLiteralPair(tagIs, isPair)
+        instance <- rules.specAll(equation, List(site.index, site.replacement, left, right))
+        value <- site.valueAt(shape, instance)
+
+        clause <- rules.specAll(freenessClause, List(site.index, left, right))
+        neither <- site.notInside(shape, clause)
+        parted <- site.classical
+          .fact(Classical.DeMorganDisjunction)
+          .flatMap(law =>
+            site.logic
+              .destNot(neither.conclusion)
+              .toRight(NotOfForm("a negation", neither.conclusion))
+              .flatMap(inner =>
+                site.logic
+                  .destDisj(inner)
+                  .toRight(NotOfForm("a disjunction", inner))
+                  .flatMap(halves => rules.specAll(law, List(halves._1, halves._2))))
+              .flatMap(instanceOfLaw =>
+                LogicError.lift(Kernel.eqMp(instanceOfLaw, neither))))
+        notLeft <- rules.conjElim1(parted)
+        notRight <- rules.conjElim2(parted)
+
+        leftDone <- site.inductiveWith(left, shape, leftIsTerm, notLeft)
+        rightDone <- site.inductiveWith(right, shape, rightIsTerm, notRight)
+
+        paired <- LogicError
+          .lift(Term.app(site.vocabulary.pair, left))
+          .flatMap(_ => Conv.apTerm(site.vocabulary.pair, leftDone))
+          .flatMap(half => LogicError.lift(Kernel.mkComb(half, rightDone)))
+        built <- Term
+          .destEq(value.conclusion)
+          .map(_._2)
+          .toRight(NotOfForm("an equation", value.conclusion))
+        head <- built match {
+          case App(applied, _) => Right(applied)
+          case other => Left(NotOfForm("a constructor applied to a pair", other))
+        }
+        lifted <- Conv.apTerm(head, paired)
+        joined <- Conv.trans(value, lifted)
+        settled <- site.itself(joined, shape)
+      } yield settled
+    }
   }
 
   /**
@@ -3922,11 +4233,11 @@ object Language {
                 leftDone <- rules
                   .specAll(keepsTerms, List(site.index, site.replacement, left))
                   .flatMap(rules.mp(_, leftIsTerm))
-                  .flatMap(rules.mp(_, site.replacementIsTerm))
+                  .flatMap(rules.mp(_, site.sideCondition))
                 rightDone <- rules
                   .specAll(keepsTerms, List(site.index, site.replacement, right))
                   .flatMap(rules.mp(_, rightIsTerm))
-                  .flatMap(rules.mp(_, site.replacementIsTerm))
+                  .flatMap(rules.mp(_, site.sideCondition))
 
                 // The TERM substitution, not this site's: an equality's arguments are terms and
                 // the clause hands them to the other function. Using the site's own is what the

@@ -275,8 +275,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 418 with specialisation as a rule of the embedded theory rather than a scheme about it.
     // Both of `CLAUDE.md`'s figures move by one, which is the ordinary case for this development:
     // it binds an index, a term and a formula, three of a kind.
-    library.entries.size shouldBe 418
-    library.names.distinct.size shouldBe 415
+    // 419 with the idleness of the substitution, which is one fact and the first thing anywhere
+    // to say when a substitution does NOT move. Both of `CLAUDE.md`'s figures move by one: it
+    // binds an index, a replacement and a subject, three of a kind.
+    library.entries.size shouldBe 419
+    library.names.distinct.size shouldBe 416
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
