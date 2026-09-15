@@ -2,6 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import garden.xeno.symbolum.checker.Check
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 import garden.xeno.symbolum.theories.*
@@ -154,6 +155,39 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     tight.prove(read("!x:real. 0 < x * x + 1"), target => prove.directly(target).toOption) match {
       case Chaining.Outcome.Proved(_, used) => used shouldBe Vector("ADD_NONNEG_LT")
       case other => fail(s"ten expansions must be enough under this order: $other")
+    }
+  }
+
+  "A chained theorem" should "be replayed by the second checker, which is what makes a search believable" in {
+    // The half of the arrangement the rest of this file cannot assert. Everything above checks what
+    // `Chaining` says about its own answer, and `Chaining` is a search: untrusted here by the same
+    // argument that keeps `modules/sat` unable to see the kernel. What makes a chained proof worth
+    // anything is that a second reader walks the derivation and reaches the same sequent from the
+    // same theory, and until this was written nothing did: `Replayed` is the checker's own corpus
+    // and holds no chained proof, and it cannot hold one, because it lives in `modules/checker`
+    // and `Chaining` is two modules above it. The dependency goes the other way — `tactics` takes
+    // `checker % "test->test"` — so the replay of a chained proof belongs here and nowhere else.
+    val (chained2, used) = chained("!x:real. 0 < inv (x * x + 1)")
+    used should have length 2
+
+    val replayed = Check.proof(chained2, chain.widest.theory) match {
+      case Check.Holds(counted, _) => counted
+      // `RestsOnUnvouched` is the verdict worth naming separately in the failure, because it is the
+      // one this test exists for: a search that reached the goal through an axiom the theory does
+      // not assert is a proof of somebody else's theory, and it is not a failed step.
+      case other => fail(s"the checker did not accept a chained proof: $other")
+    }
+
+    // And the count is asserted against the one-lemma proof rather than against a literal, which is
+    // what keeps the assertion from passing on a stub. `ADD_NONNEG_LT` is the second lemma of the
+    // pair above, so its proof is a part of the chained one: a replay that walked the derivation
+    // sees strictly more steps, and a replay that stopped at the top sees the same or fewer.
+    val (oneLemma, alone) = chained("!x:real. 0 < x * x + 1")
+    alone shouldBe Vector("ADD_NONNEG_LT")
+
+    Check.proof(oneLemma, chain.widest.theory) match {
+      case Check.Holds(fewer, _) => replayed should be > fewer
+      case other => fail(s"the checker did not accept the one-lemma proof: $other")
     }
   }
 
