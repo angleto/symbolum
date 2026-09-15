@@ -68,6 +68,92 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * PA proves its own arithmetic at a numeral, which is the first brick of Sigma-1 completeness.
+   *
+   * Every piece of this was in place except two, and both landed on 2026-09-15. The scheme's third
+   * condition is `NUM_CLOSED t`, which nothing in the library could discharge, so
+   * `NUM_LOGIC_SPECIALISE` was a theorem no caller could apply; `NUM_NUMERAL_CLOSED` is what
+   * answers it, and at a numeral rather than at one term, which is what makes the claim here about
+   * every `m`. And the conclusion carried `NUM_SUBST_FORM 0 (NUM_NUMERAL m) <body>` with the
+   * substitution standing, which is a true statement about a number nobody can read as a formula;
+   * `Language.substituteIn` computes it.
+   *
+   * What comes out is `NUM_PROV` of the code of `numeral m + 0 = numeral m`, for a **variable**
+   * `m`, with nothing assumed and at the two axioms the naturals cost. It is the object theory
+   * proving a fact about itself, which is what the whole construction is for, and it is the first
+   * statement anywhere here of that shape.
+   *
+   * **It is not yet Sigma-1 completeness and the gap is worth naming**, since a reader meeting a
+   * theorem about `+` and numerals will reach for that phrase. This is one axiom specialised. The
+   * general `numeral m + numeral n = numeral (m + n)` goes by induction on `n`, and its step needs
+   * the object theory's equality to be transitive and to respect the successor: `NUM_LOGIC` has
+   * reflexivity and one replacement scheme, and nothing has yet derived symmetry, transitivity or
+   * congruence out of them. That is the next development and it belongs in this file.
+   */
+  it should "prove its own arithmetic at a numeral, which nothing could state before" in {
+    val language = chain.language
+    val numeral = term("NUM_NUMERAL m")
+    val index = term("0")
+    val body = term(
+      "NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0))")
+
+    val axiom = force(language.fact("NUM_PA_ADD_ZERO"))
+    val quantified = axiom.conclusion match {
+      case App(_, argument) => argument
+      case other => fail(s"not a membership: $other")
+    }
+
+    // PA proves its own axioms, by the derivation that is one line long.
+    val provesTheAxiom = force(
+      rules
+        .spec(quantified, force(chain.provability.fact(Provability.ProvablePeano)))
+        .flatMap(rules.mp(_, axiom))
+    )
+
+    // The three side conditions. The body is a formula by two introduction rules; the numeral is a
+    // term and is closed, both from the library rather than by hand.
+    val variableIsTerm = force(rules.spec(index, force(language.fact(Language.TermVariable))))
+    val sumIsTerm = force(
+      rules
+        .specAll(force(language.fact(Language.TermSum)),
+          List(term("NUM_CODE 0 0"), term("NUM_CODE 1 0")))
+        .flatMap(rules.mp(_, variableIsTerm))
+        .flatMap(rules.mp(_, force(language.fact(Language.TermZero))))
+    )
+    val bodyIsFormula = force(
+      rules
+        .specAll(force(language.fact(Language.FormulaEquality)),
+          List(term("NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))"), term("NUM_CODE 0 0")))
+        .flatMap(rules.mp(_, sumIsTerm))
+        .flatMap(rules.mp(_, variableIsTerm))
+    )
+
+    val specialised = force(
+      rules
+        .specAll(force(deduction.fact(Deduction.Specialisation)), List(index, numeral, body))
+        .flatMap(rules.mp(_, bodyIsFormula))
+        .flatMap(rules.mp(_, force(rules.spec(term("m"), force(language.fact(Language.NumeralIsTerm))))))
+        .flatMap(rules.mp(_, force(rules.spec(term("m"), force(language.fact(Language.NumeralIsClosed))))))
+        .flatMap(rules.mp(_, provesTheAxiom))
+    )
+
+    // Without this the conclusion is a number nobody can read as a formula.
+    val computed = force(language.substituteIn(index, numeral, body))
+    val provable = constant(Provability.ProvableName, Type.fun(numbers, Type.Bool))
+    val reached = force(
+      Conv
+        .apTerm(provable, computed)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised)))
+    )
+
+    reached.hypotheses shouldBe empty
+    reached.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 1 0))) (NUM_NUMERAL m)))")
+    Derivation.axiomsOf(reached) should have size 2
+  }
+
+  /**
    * What a derivation of the embedded theory costs, which is what everything above it costs.
    *
    * An equality and not a ceiling, the way `CodingSpec` and `LanguageSpec` state theirs. Two is

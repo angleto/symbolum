@@ -259,6 +259,51 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * The substitution is computed at a concrete code, which is what makes two schemes readable.
+   *
+   * `NUM_LOGIC_SPECIALISE` and `NUM_LOGIC_REPLACE` both conclude something containing
+   * `NUM_SUBST_FORM i t p` left standing, and a caller wanted the code that denotes. The three
+   * cases here are the three the guards produce: a body with no binder at all, a quantifier whose
+   * index is the one being replaced, where the formula comes back untouched, and a quantifier over
+   * some other index, where the walk goes under it. The second and third are the same clause with
+   * its conditional decided both ways, and a version that could only do one of them would pass a
+   * test written with only the first.
+   *
+   * The refusal is the fourth case and is the one that says the answer is computed rather than
+   * assumed: an index that is a variable cannot be compared with `0`, so nothing decides the guard
+   * and the result would carry a `COND` nobody can read. It is refused by name rather than handed
+   * back half done.
+   */
+  it should "carry out a substitution at a concrete code, and refuse an index it cannot decide" in {
+    val numeral = term("NUM_NUMERAL m")
+    val body = term(
+      "NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0))")
+
+    // `v0 + 0 = v0` with the numeral of `m` for `v0`.
+    val plain = force(language.substituteIn(term("0"), numeral, body))
+    plain.hypotheses shouldBe empty
+    Term.destEq(plain.conclusion).map(_._2) shouldBe Some(term(
+      "NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 1 0))) (NUM_NUMERAL m))"))
+
+    // The quantifier binds the index being replaced, so the formula is returned untouched.
+    val bound = term("NUM_CODE 8 (NUM_PAIR 0 " +
+      "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0))))")
+    val shadowed = force(language.substituteIn(term("0"), numeral, bound))
+    Term.destEq(shadowed.conclusion).map(_._2) shouldBe Some(bound)
+
+    // It binds another index, so the walk goes under it and replaces inside.
+    val elsewhereBound = term("NUM_CODE 8 (NUM_PAIR 1 " +
+      "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))) (NUM_CODE 0 0))))")
+    val descended = force(language.substituteIn(term("0"), numeral, elsewhereBound))
+    Term.destEq(descended.conclusion).map(_._2) shouldBe Some(term(
+      "NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL m) (NUM_CODE 0 1))) (NUM_NUMERAL m))))"))
+
+    // An index nothing can compare with the one being replaced.
+    language.substituteIn(term("0"), numeral, term("NUM_CODE 0 j")) shouldBe a[Left[?, ?]]
+  }
+
+  /**
    * A term two constructors deep goes through by composing the rules.
    *
    * `0 + v7`, whose code is `NUM_CODE 3 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 0 7))`. Nothing in the

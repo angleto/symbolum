@@ -49,6 +49,7 @@ final class Language private (
   val theory: Theory,
   val notation: Notation,
   val logic: Logic,
+  val successor: Successor,
   val definitions: Map[String, Kernel.Thm],
   val facts: Map[String, Kernel.Thm]
 ) extends Signature {
@@ -84,6 +85,145 @@ final class Language private (
    * variable no enclosing quantifier binds. Such a code is not closed and the claim is false of it,
    * so returning anything would be worse than refusing. The refusal names the index.
    */
+  /**
+   * `|- NUM_SUBST_FORM i t c = c'` for a concrete formula code, by computing the substitution.
+   *
+   * **The conclusion of two of the eight schemes is unreadable without this.** Specialisation and
+   * replacement both produce a code containing `NUM_SUBST_FORM i t p`, left standing, and the
+   * caller wanted the code that substitution denotes: what comes out of `NUM_PROV_SPECIALISE` at
+   * PA's axiom for addition is provability of `NUM_SUBST_FORM 0 (NUM_NUMERAL m) <body>`, and the
+   * claim anyone means by that is provability of the code of `numeral m + 0 = numeral m`. The two
+   * are the same number and nothing said so.
+   *
+   * **It is a rule set rather than a walk, which is the opposite of [[notFreeIn]] and was
+   * measured rather than assumed.** The sibling walks the nine freeness clauses by hand because
+   * its guard compares the index asked about, a variable, with a binder: that is a case split, and
+   * each branch carries a hypothesis down into the recursion. Here every index in the code is a
+   * concrete numeral and so is the one being replaced, so each guard is decided outright and
+   * nothing is carried. What is left is nine equations and a rewriter that already exists. The
+   * walk was written first and abandoned at the measurement: it would have been two hundred lines
+   * to reach what these fifty do.
+   *
+   * Three kinds of rule go in. The nine clauses of the two substitutions, which are equations
+   * already. `COND T a b = a` and `COND F a b = b`, derived here because `COND_TRUE` and
+   * `COND_FALSE` carry their guard as a hypothesis and a rewrite rule is an equation and nothing
+   * else. And one decision per index the code mentions, `(j = i) = T` by reflexivity or
+   * `(j = i) = F` through `Successor.distinct`, which is where a code whose indices are not
+   * numerals is refused and refused by name.
+   *
+   * The result is checked for a residue rather than handed back as it comes: a right side still
+   * carrying a substitution or a conditional means an index went undecided, and returning that
+   * equation would be returning a true statement that does not answer the question.
+   */
+  def substituteIn(
+    index: Term,
+    replacement: Term,
+    code: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val arithmetic = Type.fun(numbers, Type.fun(numbers, numbers))
+    val classical = numbering.peano.naturals.classical
+
+    for {
+      coding <- LogicError.lift(theory.constant(Numbering.CodeName, arithmetic))
+      pairing <- LogicError.lift(theory.constant(Numbering.PairName, arithmetic))
+      variableTag <- Parser.term(theory, notation, "0", numbers)
+      quantifierTag <- Parser.term(theory, notation, "8", numbers)
+
+      /* Every index the code mentions, from the two positions that can carry one. */
+      indices = {
+        def collect(subject: Term): Vector[Term] = subject match {
+          case App(App(head, tag), payload) if head == coding && tag == variableTag =>
+            Vector(payload)
+          case App(App(head, tag), App(App(join, left), right))
+              if head == coding && tag == quantifierTag && join == pairing =>
+            left +: collect(right)
+          case App(left, right) => collect(left) ++ collect(right)
+          case _ => Vector.empty
+        }
+        collect(code).distinct
+      }
+
+      decisions <- indices.foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+        (carried, mentioned) =>
+          for {
+            found <- carried
+            guard <- LogicError.lift(Term.eq(mentioned, index))
+            decided <-
+              if (mentioned == index) rules.eqTruthIntro(Kernel.refl(mentioned))
+              else
+                for {
+                  apart <- successor.distinct(mentioned, index)
+                  assumed <- LogicError.lift(Kernel.assume(guard))
+                  toFalsity <- rules.notElim(apart, assumed)
+                  fromFalsity <- LogicError
+                    .lift(Kernel.assume(logic.falsity))
+                    .flatMap(rules.falsityElim(guard, _))
+                  equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
+                } yield equated
+          } yield found :+ decided
+      }
+
+      conditionals <- Vector(Classical.CondTrue, Classical.CondFalse)
+        .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
+          for {
+            found <- carried
+            truth <- rules.truth
+            held <-
+              if (name == Classical.CondTrue) Right(truth)
+              else
+                LogicError
+                  .lift(Kernel.assume(logic.falsity))
+                  .flatMap(rules.notIntro(logic.falsity, _))
+            guard = if (name == Classical.CondTrue) truth.conclusion else logic.falsity
+            left = Term.variable("a", numbers)
+            right = Term.variable("b", numbers)
+            scheme <- classical
+              .fact(name)
+              .map(Kernel.instType(Map(Classical.TypeVariable -> numbers), _))
+            rule <- rules
+              .specAll(scheme, List(guard, left, right))
+              .flatMap(rules.mp(_, held))
+              .flatMap(rules.genAll(_, List(left, right)))
+          } yield found :+ rule
+        }
+
+      clauses <- Vector(
+        Language.SubstituteVariable, Language.SubstituteZero, Language.SubstituteSuccessor,
+        Language.SubstituteSum, Language.SubstituteProduct,
+        Language.FormulaSubstituteEquality, Language.FormulaSubstituteNegation,
+        Language.FormulaSubstituteImplication, Language.FormulaSubstituteUniversal
+      ).foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
+        carried.flatMap(found => fact(name).map(found :+ _))
+      }
+
+      ruleSet <- Rewrite.Rule.all(logic, clauses ++ conditionals ++ decisions)
+      substituting <- LogicError.lift(theory.constant(
+        Language.FormulaSubstituteName,
+        Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers)))))
+      subject <- LogicError.lift(Term.appAll(substituting, List(index, replacement, code)))
+      equation <- Rewrite.rewrite(ruleSet, subject)
+
+      answer <- Term
+        .destEq(equation.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", equation.conclusion))
+      _ <-
+        if (residue(answer)) Left(NotOfForm("a code with the substitution carried out", answer))
+        else Right(())
+    } yield equation
+  }
+
+  /** Whether a term still carries a substitution or an undecided conditional. */
+  private def residue(subject: Term): Boolean = subject match {
+    case Const(name, _) =>
+      name == Language.FormulaSubstituteName || name == Language.SubstituteName ||
+        name == Classical.Conditional
+    case App(left, right) => residue(left) || residue(right)
+    case _ => false
+  }
+
   def notFreeIn(code: Term): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -1433,6 +1573,7 @@ object Language {
       logicTheory,
       notation,
       logicLogic,
+      successor,
       Map(
         TermName -> definition,
         FormulaName -> formulaDefinition,

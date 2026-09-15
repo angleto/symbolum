@@ -343,6 +343,15 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "every exponent read, which is where the ceiling comes from. Reaching it is a " +
         "`NotNormalised` about the walk, and a caller that got one would be reading a refusal " +
         "and never a claim about the power"),
+    "Language.scala" ->
+      ("one, evaluating `NUM_SUBST_FORM` at a concrete code out of the nine substitution clauses, " +
+        "two derived conditional rules and one decision per index the code mentions. The caller " +
+        "does not read the result as a normal form: it requires the right side to carry no " +
+        "`NUM_SUBST_FORM`, no `NUM_SUBST_TERM` and no `COND`, and refuses by naming the term " +
+        "otherwise. That covers a limit that ran out completely rather than by luck, because " +
+        "every rule strictly removes one of those three and nothing else is rewritten, so a walk " +
+        "that stopped early ALWAYS leaves one standing. A caller that got the refusal is reading " +
+        "a statement about the rewriting and never about the substitution"),
     "Matrix.scala" ->
       ("four calls, and none of them reads what comes back as a normal form on trust. Two require " +
         "it to be `MAT2` applied to four terms and refuse by naming the term they stopped at, so " +

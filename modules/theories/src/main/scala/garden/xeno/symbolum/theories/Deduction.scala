@@ -190,6 +190,27 @@ object Deduction {
    */
   val DeductionTheorem: String = "NUM_PROV_DEDUCTION"
 
+  /**
+   * Specialisation as a rule of the embedded theory rather than as a scheme about it.
+   *
+   * `|- !i t p. NUM_FORM p ==> NUM_TERM t ==> NUM_CLOSED t ==>`
+   * `NUM_PROV (NUM_CODE 8 (NUM_PAIR i p)) ==> NUM_PROV (NUM_SUBST_FORM i t p)`
+   *
+   * `NUM_LOGIC_SPECIALISE` says the implication from the quantified formula to its instance is a
+   * logical axiom. This detaches it, which is the form every derivation actually wants: what a
+   * consumer holds is a proof of `!i. p`, not a proof of an implication it then has to take apart.
+   * Three lines, being the scheme, `NUM_PROV_LOGIC` and one `NUM_PROV_MP`.
+   *
+   * **What it could not be used for until 2026-09-15 is worth recording beside it**, because the
+   * shape of the gap repeats. The scheme's third condition is `NUM_CLOSED t` and nothing in the
+   * library discharged one, so this rule would have been a theorem nobody could apply; that is
+   * `NUM_NUMERAL_CLOSED`'s doing. The condition and the conclusion are the same kind of obstacle
+   * seen from two sides: a side condition nothing can meet stops a caller at the front, and a
+   * conclusion carrying an unevaluated `NUM_SUBST_FORM` stops the next caller at the back.
+   * `Language.substituteIn` is what answers the second.
+   */
+  val Specialisation: String = "NUM_PROV_SPECIALISE"
+
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
     Weaken ->
@@ -209,7 +230,10 @@ object Deduction {
     Syllogism ->
       ("!p:num q:num r:num. NUM_FORM p ==> NUM_FORM q ==> NUM_FORM r ==> " +
         "NUM_PROV (NUM_CODE 7 (NUM_PAIR p q)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR q r)) ==> " +
-        "NUM_PROV (NUM_CODE 7 (NUM_PAIR p r))")
+        "NUM_PROV (NUM_CODE 7 (NUM_PAIR p r))"),
+    Specialisation ->
+      ("!i:num t:num p:num. NUM_FORM p ==> NUM_TERM t ==> NUM_CLOSED t ==> " +
+        "NUM_PROV (NUM_CODE 8 (NUM_PAIR i p)) ==> NUM_PROV (NUM_SUBST_FORM i t p)")
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -230,7 +254,8 @@ object Deduction {
               builder.checked(ImplicationModusPonens, builder.implicationModusPonens),
             ImplicationGeneralisation ->
               builder.checked(ImplicationGeneralisation, builder.implicationGeneralisation),
-            DeductionTheorem -> builder.checked(DeductionTheorem, builder.deductionTheorem)
+            DeductionTheorem -> builder.checked(DeductionTheorem, builder.deductionTheorem),
+            Specialisation -> builder.checked(Specialisation, builder.specialisation)
           )
         )
       )
@@ -301,6 +326,16 @@ object Deduction {
     private val modusPonens = force(provability.fact(Provability.ModusPonens))
     private val generalisation = force(provability.fact(Provability.Generalisation))
     private val vacuous = force(language.fact("NUM_LOGIC_VACUOUS"))
+    private val specialising = force(language.fact("NUM_LOGIC_SPECIALISE"))
+    private val isTerm = predicate(Language.TermName)
+    private val isClosed = predicate(Language.ClosedName)
+    private val substituting = force(LogicError.lift(theory.constant(
+      Language.FormulaSubstituteName,
+      Type.fun(numbers, Type.fun(numbers, Type.fun(numbers, numbers))))))
+
+    /** `NUM_SUBST_FORM i t p`, left standing: evaluating it is `Language.substituteIn`'s work. */
+    private def substituted(index: Term, replacement: Term, formula: Term): Term =
+      applied(substituting, List(index, replacement, formula))
     private val universal = force(language.fact("NUM_LOGIC_UNIVERSAL"))
     private val freeConstant = force(LogicError.lift(theory.constant(
       Language.FormulaFreeName, Type.fun(numbers, Type.fun(numbers, Type.Bool)))))
@@ -429,6 +464,42 @@ object Deduction {
       val reached = detach(imp(p, self), self, middle, second)
 
       force(rules.disch(isFormula(p), reached).flatMap(rules.gen(p, _)))
+    }
+
+    /** [[Specialisation]]. The scheme, made provable, then detached. */
+    lazy val specialisation: Kernel.Thm = {
+      val i = Term.variable("i", numbers)
+      val t = Term.variable("t", numbers)
+      val p = Term.variable("p", numbers)
+      val formula = assumed(isFormula(p))
+      val term = assumed(isTerm(t))
+      val closed = assumed(isClosed(t))
+      val quantified = forAll(i, p)
+      val instance = substituted(i, t, p)
+      val quantifiedIsProvable = assumed(isProvable(quantified))
+
+      val logical = force(
+        rules
+          .specTo(
+            specialising,
+            imply(
+              isFormula(p),
+              imply(isTerm(t), imply(isClosed(t), isLogical(imp(quantified, instance))))))
+          .flatMap(rules.mp(_, formula))
+          .flatMap(rules.mp(_, term))
+          .flatMap(rules.mp(_, closed))
+      )
+      val reached = detach(
+        quantified, instance, axiom(imp(quantified, instance), logical), quantifiedIsProvable)
+
+      force(
+        rules
+          .disch(isProvable(quantified), reached)
+          .flatMap(rules.disch(isClosed(t), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.disch(isFormula(p), _))
+          .flatMap(rules.genAll(_, List(i, t, p)))
+      )
     }
 
     /** [[Syllogism]]. Weaken the second implication under `p`, distribute, detach twice. */
