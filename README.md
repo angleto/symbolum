@@ -142,21 +142,112 @@ end of that guide.
 
 ---
 
+# Getting it
+
+Two artifacts, because a library and an environment are not reached the same way. Until 2026-09-15
+there was one, and it had never been built: `gh api user/packages?package_type=maven` answered `[]`,
+so the installation this file documented could not be performed by anybody.
+
+## The libraries
+
+Six modules publish under their own coordinates, so a development elsewhere depends on the whole
+system or on one link of its chain. The aggregate is all six at once:
+
+```scala
+scalaVersion := "3.3.5"
+
+resolvers += "GitHub Package Registry" at "https://maven.pkg.github.com/angleto/symbolum"
+
+libraryDependencies += "garden.xeno" %% "symbolum" % "7.0.1"
+```
+
+| coordinate | what it is |
+|---|---|
+| `symbolum` | the six below, as one dependency. No code of its own |
+| `symbolum-kernel` | the trusted base: terms, types, theories, the ten primitive rules |
+| `symbolum-checker` | a second reading of a proof, sharing nothing with the kernel |
+| `symbolum-logic` | connectives, derived rules, rewriting, the parser and the printer |
+| `symbolum-theories` | the naturals, the reals, the numerals, `RING`, `LINARITH`, the library |
+| `symbolum-core` | the computer algebra system, which nothing in the proof half believes |
+| `symbolum-tactics` | the lowest module that sees both halves, and where the loop lives |
+
+GitHub Packages authenticates every read, whether or not the package is public, so resolving any of
+these needs a token of your own with `read:packages`:
+
+```scala
+credentials += Credentials(
+  "GitHub Package Registry",
+  "maven.pkg.github.com",
+  "<your github username>",
+  sys.env("GITHUB_TOKEN")
+)
+```
+
+`modules/examples` and `modules/mark` are on no registry, and that is a decision rather than an
+omission: neither is a library. The first exists to be read and run, and the second regenerates two
+files under `docs/`, so anybody who resolved it would get a command that writes into their working
+directory.
+
+## The distribution
+
+What a person installs, as against what a build tool resolves. `symbolum-7.0.1.tgz` is attached to
+the release and carries every module's jar, the runtime classpath, and one launcher for each entry
+point:
+
+```sh
+tar xzf symbolum-7.0.1.tgz
+cd symbolum-7.0.1
+
+bin/symbolum-ask '!x:real. x + 0 = x'    # the claim, its price, and what it rests on
+bin/symbolum-find SUM                    # a lemma by name, by constant or by shape
+bin/symbolum-notebook                    # a theory interactively, at http://127.0.0.1:8642
+bin/symbolum-repl                        # a Scala REPL with the system on the classpath
+bin/symbolum-what-a-claim-costs          # the demonstration of the proof half
+
+bin/symbolum -main <class>               # anything else in the jars
+```
+
+The five named scripts are an allowlist rather than everything the jars can run, and `bin/symbolum`
+is the escape from it. What the allowlist keeps out is the five mains that regenerate documents of
+**this repository**: `Lemmas`, `Register`, `Guide`, `Examples` and `Foundation` resolve `docs/...`
+against the working directory, so a launcher for one of them would write into wherever you unpacked
+the tarball. They are still reachable through `bin/symbolum -main`, which is a different thing from
+being offered.
+
+From a checkout instead of a distribution, each of the five is
+`sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask ..."` and its siblings, which is the spelling
+the rest of this file and [CLAUDE.md](CLAUDE.md) use.
+
+## A REPL without either
+
+Once the libraries are on the registry, `scala-cli` gives the same session with nothing installed:
+
+```sh
+scala-cli repl --dep garden.xeno::symbolum-tactics:7.0.1
+```
+
+It needs a network and `scala-cli`. `bin/symbolum-repl` needs neither, and costs the tarball the
+compiler's own jars. Neither is the better answer in general, which is why both are here.
+
+---
+
 # The computer algebra system
 
-The rest of this file documents the algebra half, which predates the proof half and is published
-on its own as `garden.xeno:symbolum-core`, the only artifact this repository ships.
+The rest of this file documents the algebra half, which predates the proof half and publishes on its
+own as `garden.xeno:symbolum-core`. It is one of the seven coordinates above. Until 2026-09-15 it
+was the only module the build allowed to ship, which is a different thing from having shipped.
 
 ## Quick Start
 
 ### Installation
 
-Add Symbolum to your `build.sbt`:
+This half alone, without the prover. [Getting it](#getting-it) above has the resolver and the
+credentials, which are needed for this coordinate too:
 
 ```scala
 scalaVersion := "3.3.5"
 
-libraryDependencies += "garden.xeno" %% "symbolum-core" % "7.0.0"
+libraryDependencies += "garden.xeno" %% "symbolum-core" % "7.0.1"
 ```
 
 ### Basic Usage
@@ -169,8 +260,12 @@ import garden.xeno.symbolum.Dsl._
 val x = Var("x")
 val n = Var("n")
 
-// Build an expression: 2*n + 3*n - 1
-val expr = 2 * n + 3 * n - 1
+// Build an expression: 2*n + 3*n - 1.
+// The literals are wrapped because a bare `2` to the LEFT of an operator would need two implicit
+// conversions chained, Int to Expr and then Expr to the class carrying the operators, and Scala
+// applies one. To the right of one it needs only the first, which is why `x + 1` below is written
+// as it reads.
+val expr = Num(2) * n + Num(3) * n - Num(1)
 
 // Simplify the expression
 val simplified = expr.simplify()
@@ -489,7 +584,7 @@ val simplified = substituted.fullSimplify()
 ### Numeric Evaluation
 
 ```scala
-val expr = x * x + 2 * x + 1  // x^2 + 2x + 1
+val expr = x * x + Num(2) * x + 1  // x^2 + 2x + 1
 
 // Evaluate at x = 3
 val result = expr.eval(Map("x" -> 3.0))

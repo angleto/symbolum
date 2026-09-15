@@ -66,6 +66,36 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     Dsl.sin(-x).simplify().toString shouldBe "-sin(x)"
   }
 
+  "The README's two assignments" should "be the text the document holds, not a paraphrase of it" in {
+    // The hole this closes, found on 2026-09-15 by compiling the README's own line from a project
+    // outside this repository. The test above evaluates `Num(2) * Var("n") + ...`; the README
+    // printed `2 * n + 3 * n - 1`, which does not compile anywhere, because a bare integer to the
+    // LEFT of an operator wants two implicit conversions chained, Int to Expr and then Expr to the
+    // class carrying the operators, and Scala applies one. The guard was green about a program the
+    // document does not contain, and the first example on the front page did not run.
+    //
+    // The agreement is asserted rather than the text executed: running the block would need a
+    // compiler at test time, and what drifted was the spelling. The two halves together say it,
+    // since the spellings below are compiled by this file and the document is asserted to hold
+    // them character for character.
+    import garden.xeno.symbolum.Dsl.*
+    import scala.language.implicitConversions
+
+    val n = Var("n")
+    val readme = read("README.md")
+
+    (Num(2) * n + Num(3) * n - Num(1)).simplify().toString shouldBe "5 * n - 1"
+    readme should include("val expr = Num(2) * n + Num(3) * n - Num(1)")
+
+    (x * x + Num(2) * x + 1).eval(Map("x" -> 3.0)) shouldBe 16.0
+    readme should include("val expr = x * x + Num(2) * x + 1")
+
+    // What would make that vacuous: the spellings that do not compile sitting somewhere else in
+    // the file while these two pass. Neither string is a substring of its repair.
+    readme should not include "val expr = 2 * n + 3 * n - 1"
+    readme should not include "val expr = x * x + 2 * x + 1"
+  }
+
   "The README solving examples" should "produce the stated roots" in {
     import garden.xeno.symbolum.Dsl.*
 
@@ -326,24 +356,66 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The prover modules" should "be publishable to this machine, which they were not" in {
-    // `publish / skip := true` is deliberate on all five and stays: a published artifact is a
-    // promise and the surface is still moving. What was not deliberate is that sbt delegates
-    // `publishLocal / skip` up to it, so the one line also switched off the local publish and
-    // nothing outside this checkout could depend on the prover at all, including another checkout
-    // on this machine. The only artifact that shipped was `modules/core`, which is the half the
-    // documentation says nothing may believe.
+  "The library modules" should "publish under their own coordinates, which five of them did not" in {
+    // Until 2026-09-15 `publish / skip := true` sat on all five prover modules and only `core`
+    // could ship, on the argument that a published artifact is a promise and the surface is still
+    // moving. What that produced was a README documenting an installation nobody could perform:
+    // `gh api user/packages?package_type=maven` answered `[]` that day, so the one module allowed
+    // to ship had not shipped either.
     //
     // Read from the build rather than asserted through sbt, because what regresses is the line.
     val build = read("build.sbt")
 
-    build should include("lazy val localOnlyPublishing")
-    build should include("publishLocal / skip := false")
-
-    val applied = build.linesIterator.count(_.contains(".settings(localOnlyPublishing)"))
-    withClue("the five prover modules take the local-only publishing settings: ") {
-      applied shouldBe 5
+    val applied = build.linesIterator.count(_.contains(".settings(publishSettings)"))
+    withClue("the six library modules and the aggregate take the publishing settings: ") {
+      applied shouldBe 7
     }
+
+    // The half of the assertion that can go empty. Counting the modules that publish says nothing
+    // about a module that quietly started publishing beside them, and `mark` is the one that would
+    // hurt: it regenerates two files under `docs/`, so a consumer resolving it gets a tool that
+    // writes into their working directory. The count above would not move.
+    // Comment lines dropped first: the paragraph above these settings names the setting it is
+    // about, so a count over the whole file counts a sentence as a module.
+    val skipped = build.linesIterator
+      .map(_.trim)
+      .filterNot(line => line.startsWith("//") || line.startsWith("*"))
+      .count(_.contains("publish / skip := true"))
+    withClue("`root`, `examples`, `mark` and `dist` are the four that do not publish: ") {
+      skipped shouldBe 4
+    }
+  }
+
+  "The distribution" should "carry a launcher for every entry point a person reaches" in {
+    // The other half of what ships, and the half that had no artifact at all: `Ask`, `Find` and
+    // `Notebook` were reachable only as `sbt "tactics/runMain ..."` inside a checkout. The
+    // allowlist is what this pins. Discovery over what `dist` reaches finds every main class in the
+    // graph, including `Lemmas`, `Register` and `Mark`, which write into `docs/` and would write
+    // into a consumer's working directory instead.
+    val build = read("build.sbt")
+
+    val launchers = Vector(
+      "garden.xeno.symbolum.tactics.Ask",
+      "garden.xeno.symbolum.tactics.Find",
+      "garden.xeno.symbolum.tactics.Notebook",
+      "garden.xeno.symbolum.examples.WhatAClaimCosts",
+      "garden.xeno.symbolum.dist.Repl"
+    )
+    launchers.foreach(entry => build should include(s"\"$entry\""))
+
+    // What would make that vacuous: an allowlist that is a superset of the entry points, which is
+    // discovery with extra steps. The five mains that regenerate documents through `Generated` are
+    // named here, so that adding one to the distribution fails rather than passes. `Generated`
+    // resolves `docs/...` against the working directory, so one of these in a tarball is a command
+    // that writes into wherever the person who installed it happened to be standing.
+    val writers = Vector(
+      "garden.xeno.symbolum.theories.Lemmas",
+      "garden.xeno.symbolum.theories.Register",
+      "garden.xeno.symbolum.theories.Guide",
+      "garden.xeno.symbolum.theories.Examples",
+      "garden.xeno.symbolum.theories.Foundation"
+    )
+    writers.foreach(entry => build should not include s"\"$entry\"")
   }
 
   "The guide's cost report" should "be the page the system prints, line for line" in {

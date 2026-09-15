@@ -1,3 +1,10 @@
+# Publishing, and what it refuses to publish.
+#
+# The version is not an input to this workflow. It is read from the git tag by sbt-dynver, which is
+# the same `git describe` the release convention already asks for. Before 2026-09-15 the version was
+# typed into the dispatch form and written into `build.sbt` with `sed`, so what an artifact called
+# itself and what the repository was tagged were two copies of one fact and nothing compared them.
+# The `ref` input below selects a commit, never a version.
 name: Publish Package
 
 on:
@@ -6,8 +13,8 @@ on:
   #   types: [created]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to publish (e.g., 4.0.0)'
+      ref:
+        description: 'Tag to publish (e.g. 7.0.1). Defaults to the current branch tip, which will be refused unless it is exactly a tag.'
         required: false
         default: ''
 
@@ -16,12 +23,17 @@ jobs:
     name: Publish to GitHub Packages
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          # The whole history and every tag: dynver derives the version from `git describe`, and a
+          # shallow clone describes nothing.
+          fetch-depth: 0
 
       - name: Setup JDK 11
         uses: actions/setup-java@v4
@@ -49,26 +61,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sbt-
 
-      - name: Extract version
+      # A release carries a name, and a name is applied to something that passed its gates and is
+      # reproducible from a commit anybody can name. dynver writes the distance, the hash and a
+      # dirty marker into the version of anything that is not exactly a tag, so the check is one
+      # string comparison: a version holding `+` is not a release and this refuses to publish it
+      # rather than putting `7.0.0+3-1a2b3c4` on a registry where somebody can depend on it.
+      - name: Read the version from the tag, and refuse an untagged commit
         id: version
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          elif [ -n "${{ github.event.release.tag_name }}" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            # Remove 'v' prefix if present
-            VERSION="${VERSION#v}"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "version=$(grep 'version :=' build.sbt | sed 's/.*"\(.*\)".*/\1/')" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Update version in build.sbt
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          sed -i "s/ThisBuild \/ version := \".*\"/ThisBuild \/ version := \"$VERSION\"/" build.sbt
-          echo "Updated version to $VERSION"
-          grep "version :=" build.sbt
+          VERSION="$(sbt -batch -error 'print version' | tail -1 | tr -d '[:space:]')"
+          echo "Version from git describe: $VERSION"
+          case "$VERSION" in
+            *+*)
+              echo "::error::$VERSION is not a release: this commit is not exactly a tag, or the tree is dirty."
+              exit 1
+              ;;
+          esac
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Run tests
         run: sbt test
@@ -78,18 +87,55 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sbt publish
 
+      # The other artifact. A tarball is not a maven artifact and does not belong on a maven
+      # registry: it goes on the release, which is where somebody looking for something to install
+      # looks. `--clobber` so that re-running this on the same tag replaces the asset instead of
+      # failing on a name that already exists.
+      - name: Build the distribution
+        run: sbt "dist/Universal/packageZipTarball"
+
+      - name: Attach the distribution to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TARBALL="modules/dist/target/universal/symbolum-${VERSION}.tgz"
+          ls -l "$TARBALL"
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release upload "$VERSION" "$TARBALL" --clobber
+          else
+            echo "::warning::No release named $VERSION, so the distribution was built and not attached."
+          fi
+
       - name: Create package summary
         run: |
-          echo "## Package Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Package**: symbolum-core" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Registry**: GitHub Packages" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Installation" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```scala' >> $GITHUB_STEP_SUMMARY
-          echo 'resolvers += "GitHub Package Registry" at "https://maven.pkg.github.com/${{ github.repository }}"' >> $GITHUB_STEP_SUMMARY
-          echo 'libraryDependencies += "garden.xeno" %% "symbolum-core" % "${{ steps.version.outputs.version }}"' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          VERSION="${{ steps.version.outputs.version }}"
+          {
+            echo "## Published"
+            echo ""
+            echo "- **Version**: $VERSION"
+            echo "- **Registry**: GitHub Packages"
+            echo "- **Repository**: ${{ github.repository }}"
+            echo ""
+            echo "### The libraries"
+            echo ""
+            echo '```scala'
+            echo 'resolvers += "GitHub Package Registry" at "https://maven.pkg.github.com/${{ github.repository }}"'
+            echo ""
+            echo "// Everything, at one coordinate:"
+            echo "libraryDependencies += \"garden.xeno\" %% \"symbolum\" % \"$VERSION\""
+            echo ""
+            echo "// Or one link of the chain:"
+            echo "libraryDependencies += \"garden.xeno\" %% \"symbolum-theories\" % \"$VERSION\""
+            echo '```'
+            echo ""
+            echo "Published modules: symbolum, symbolum-kernel, symbolum-checker, symbolum-logic,"
+            echo "symbolum-theories, symbolum-core, symbolum-tactics."
+            echo ""
+            echo "### The distribution"
+            echo ""
+            echo "\`symbolum-$VERSION.tgz\`, attached to the release when one exists for this tag."
+            echo "It carries every module's jar and a launcher for each entry point:"
+            echo "\`bin/symbolum-ask\`, \`bin/symbolum-find\`, \`bin/symbolum-notebook\`,"
+            echo "\`bin/what-a-claim-costs\`, \`bin/symbolum-repl\`."
+          } >> $GITHUB_STEP_SUMMARY

@@ -32,7 +32,25 @@
 // is about what is *below* `tactics`, and that is unchanged: `kernel`, `logic` and `theories`
 // still cannot see `core`, and `modules/kernel/src/test` still asserts it.
 
-ThisBuild / version := "7.0.0"
+// The version comes from the git tag, through sbt-dynver: exactly the tag on a clean tree at a
+// tagged commit, and the tag with the distance, the hash and a dirty marker anywhere else.
+//
+// What it removes is one fact written twice. This line held `7.0.0` while `git describe` answered
+// `7.0.0-16-g27dd486`, and the publishing workflow reconciled them by rewriting this line with a
+// value typed into a form, so what a published artifact called itself was whatever the person who
+// dispatched the run had typed. The release convention already reads `git describe`; the build now
+// reads the same answer.
+//
+// Tags here are `7.0.1` and never `v7.0.1`, and dynver expects the prefix, so it is switched off.
+ThisBuild / dynverVTagPrefix := false
+
+// And the dirty marker's timestamp is pinned rather than read off the clock, which is a measurement
+// rather than a preference: dynver writes the current minute into the version of any tree that is
+// not exactly a tag, so a second `sbt dist/Universal/packageZipTarball` a minute after the first
+// regenerated every jar, every pom and the API documentation of every module, because every
+// artifact had a new name. What the marker is for is saying that nobody else can reproduce this
+// build, and a fixed date says that as well as a moving one.
+ThisBuild / dynverCurrentDate := new java.util.Date(0)
 
 ThisBuild / scalaVersion := "3.3.5"
 
@@ -134,26 +152,33 @@ lazy val coverageSettings = Seq(
 )
 
 /**
- * Publishable to this machine, and not to anywhere else.
+ * What ships, and as what.
  *
- * `publish / skip := true` is deliberate on the prover modules and stays: a published artifact is a
- * promise, the surface is still moving, and pushing one to a registry is not a decision to take
- * while passing. But sbt delegates `publishLocal / skip` up to `publish / skip`, so that one line
- * was also switching off the local publish, and the consequence was larger than intended:
- * **nothing outside this checkout could depend on the prover at all**, including another checkout
- * on this same machine. The only artifact that shipped was `modules/core`, which is the half the
- * documentation says nothing may believe.
+ * Two kinds of artifact, because a library and an environment are not reached the same way. The
+ * six library modules take these settings and go to the registry under their own coordinates, so a
+ * development elsewhere writes `libraryDependencies += "garden.xeno" %% "symbolum-theories" % ...`
+ * and has the prover; `symbolum` is the aggregate for a consumer who wants all six at one
+ * coordinate. What a person runs is none of those. `dist` builds a tarball carrying the jars, the
+ * runtime classpath and a launcher per entry point, and that is the second kind: a maven
+ * coordinate is consumed by a build tool, never executed by somebody who wants to ask the prover a
+ * question.
  *
- * Setting the more specific scope wins, which was worth measuring rather than believing: an audit
- * on 2026-09-10 recorded that it does not work because the publish task does not read that key.
- * It does. `kernel/publishLocal` writes the jar, the sources, the docs and the POM to
- * `~/.ivy2/local` with the flag set this way, which is how a development in another repository
- * gets to `libraryDependencies += "garden.xeno" %% "symbolum-theories" % version`.
+ * Until 2026-09-15 only `core` had these settings and the five prover modules carried
+ * `publish / skip := true`, on the argument that a published artifact is a promise and that the
+ * prover's surface is still moving. The argument is sound; what it justified was not. The promise
+ * an artifact makes is the one its version number makes, and the convention here already numbers a
+ * moving surface, a new line for every minor. What `skip` produced instead was a README telling a
+ * reader to depend on `garden.xeno %% symbolum-core % 7.0.0` while
+ * `gh api user/packages?package_type=maven` answered `[]`, which it still did on 2026-09-15:
+ * nothing had ever been published anywhere, so the one module allowed to ship had not shipped
+ * either, and the documented installation could not work for anybody.
+ *
+ * `examples` and `mark` stay unpublished, which is a different decision rather than the old one
+ * left standing. Neither is a library. `examples` exists to be read and run, and `mark` regenerates
+ * two files under `docs/`, so a consumer who called it would have it write into whatever directory
+ * they were standing in. Both reach a person through the distribution instead, which is where a
+ * runnable thing belongs.
  */
-lazy val localOnlyPublishing = Seq(
-  publishLocal / skip := false
-)
-
 lazy val publishSettings = Seq(
   publishMavenStyle := true,
 
@@ -188,19 +213,20 @@ lazy val publishSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark)
+  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark, symbolum, dist)
   .settings(
     name := "symbolum-root",
     publish / skip := true
   )
 
-// The one published module, and until 2026-09-14 the only one of the eight whose artifact was not
+// Published, and until 2026-09-15 the only module that was. Until 2026-09-14 it was also the only
+// one of the eight whose artifact was not
 // `<project>-<module>`. It was the bare project name, under a comment saying that was "the
 // coordinates the library already has": nothing had ever been published, `gh api
 // user/packages?package_type=maven` answers `[]`, so there were no such coordinates and nobody
 // depending on them. What the bare name did instead was hand the whole project's name to the half
 // that is trusted by nothing, while `symbolum-kernel` meant the kernel of the whole. The bare
-// name is now unused, and is where an aggregate would go if one is ever published.
+// bare name is the aggregate at the end of this file.
 lazy val core = (project in file("modules/core"))
   .settings(commonSettings)
   .settings(publishSettings)
@@ -252,12 +278,11 @@ lazy val core = (project in file("modules/core"))
 // be built by code that this module cannot see, and this module can see no other module.
 // Not published yet: the surface is still moving, and a published artifact is a promise.
 lazy val kernel = (project in file("modules/kernel"))
-  .settings(localOnlyPublishing)
+  .settings(publishSettings)
   .settings(commonSettings)
   .settings(coverageSettings)
   .settings(
     name := "symbolum-kernel",
-    publish / skip := true,
     // Measured 79.64%. The uncovered part is mostly the printer and the text of the refusals,
     // which is worth knowing: it means the rules themselves are exercised and their messages are
     // not.
@@ -273,13 +298,12 @@ lazy val kernel = (project in file("modules/kernel"))
 // The connectives and the rules derived from the kernel's ten. Untrusted: everything here is a
 // function that puts primitive rules together, so a mistake costs a failed derivation.
 lazy val logic = (project in file("modules/logic"))
-  .settings(localOnlyPublishing)
+  .settings(publishSettings)
   .dependsOn(kernel)
   .settings(commonSettings)
   .settings(coverageSettings)
   .settings(
     name := "symbolum-logic",
-    publish / skip := true,
     // Measured 89.96%, raised with it: the notation and the reader that walks it are exercised
     // by the round-trip property.
     // Raised to 92.00% measured on 2026-09-04, with the schema rules and the new connectives, and
@@ -291,13 +315,12 @@ lazy val logic = (project in file("modules/logic"))
 // The mathematics: the theory of the reals and, later, the numerals. This is where the trusted
 // base grows, so its axiom list is asserted by a test rather than described.
 lazy val theories = (project in file("modules/theories"))
-  .settings(localOnlyPublishing)
+  .settings(publishSettings)
   .dependsOn(logic)
   .settings(commonSettings)
   .settings(coverageSettings)
   .settings(
     name := "symbolum-theories",
-    publish / skip := true,
     // Measured 96.77% on 2026-09-03 and 96.28% on 2026-09-04; the floor stayed a point below.
     // 97.42% on 2026-09-05, and this one is a real rise rather than a sample: the order facts, the
     // certificate search and the exact satisfiability search all arrived with their own suites, and
@@ -318,7 +341,7 @@ lazy val theories = (project in file("modules/theories"))
 // its own, because a checker that called the kernel's would agree with the kernel about exactly the
 // things a second implementation exists to disagree about.
 lazy val checker = (project in file("modules/checker"))
-  .settings(localOnlyPublishing)
+  .settings(publishSettings)
   // The theories only at test scope, and the direction is the point: the checker is a consumer of
   // the kernel's data and knows nothing about the mathematics, while its tests need real proofs to
   // check and the only place real proofs come from is a real development.
@@ -327,13 +350,12 @@ lazy val checker = (project in file("modules/checker"))
   .settings(coverageSettings)
   .settings(
     name := "symbolum-checker",
-    publish / skip := true,
     // Measured 90.60% on the first run, 2026-09-10. The floor is set below it and only rises.
     coverageMinimumStmtTotal := 88.0
   )
 
 lazy val tactics = (project in file("modules/tactics"))
-  .settings(localOnlyPublishing)
+  .settings(publishSettings)
   // The checker's TESTS on this module's test classpath, which is a narrower edge than it looks and
   // is there for one reason: `garden.xeno.symbolum.tactics.Evaluation` regenerates the figures of
   // `docs/evaluation.md`, and two of its three tables are the second reader's own counts over the
@@ -347,7 +369,6 @@ lazy val tactics = (project in file("modules/tactics"))
   .settings(coverageSettings)
   .settings(
     name := "symbolum-tactics",
-    publish / skip := true,
     // Measured 94.07% on 2026-09-04 with the ledger, having climbed through 91.85, 92.44 and 92.76
     // that same day as the evaluator, the model search and the four cases of `Unsettled` arrived
     // (86.89% under its own tests alone on 2026-09-03). The evaluator arrived below the floor at
@@ -391,5 +412,95 @@ lazy val mark = (project in file("modules/mark"))
     // No floor, stated rather than set to zero, for the reason `examples` gives and one of its own:
     // everything here is exercised by `MarkSpec` against the committed files, so the number this
     // would gate is a property of two documents rather than of the code.
+    coverageFailOnMinimum := false
+  )
+
+// One coordinate for all six library modules, for a consumer who wants the system rather than a
+// link in its chain. It holds no source: what it publishes is a pom naming the six as dependencies,
+// and the empty jar sbt writes beside that pom is left alone rather than switched off, because a
+// pom that declares a jar and ships none fails to resolve under some resolvers and an empty jar is
+// a download nobody notices.
+//
+// `dependsOn` and not `aggregate`: aggregation decides which projects a task runs over and puts
+// nothing in the pom, and the pom is the whole content of this module.
+lazy val symbolum = (project in file("modules/aggregate"))
+  .dependsOn(kernel, checker, logic, theories, core, tactics)
+  .settings(publishSettings)
+  .settings(
+    name := "symbolum"
+  )
+
+// The distribution: what a person installs, as against what a build tool resolves.
+//
+// `Ask`, `Find` and `Notebook` were reachable only as `sbt "tactics/runMain ..."` inside a checkout
+// of this repository, so the half of the project that is an environment rather than a library did
+// not ship in any form. This module produces `target/universal/symbolum-<version>.tgz`: every
+// module's jar, the full runtime classpath, and one launcher script per entry point.
+//
+// It is not published to the registry. A tarball is not a maven artifact, and the place for it is
+// a release asset; `publish / skip` says so here rather than leaving it to the workflow.
+lazy val dist = (project in file("modules/dist"))
+  .enablePlugins(JavaAppPackaging)
+  .dependsOn(tactics, examples)
+  .settings(commonSettings)
+  .settings(
+    name := "symbolum-dist",
+    publish / skip := true,
+
+    // The REPL of the distribution needs a compiler to be a REPL, and this is the only place one is
+    // wanted: nothing that ships as a library depends on it. It costs the tarball the compiler's
+    // own jars, which is the trade the alternative avoids -- `scala-cli repl --dep
+    // garden.xeno::symbolum-tactics:<version>` needs no compiler here and no tarball at all, and
+    // needs a network and scala-cli instead. Both are documented in the README; this is the one
+    // that works on a machine with neither.
+    libraryDependencies += "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
+
+    // The launchers, by allowlist rather than by discovery: name what ships, never take whatever is
+    // there. Discovery reaches every main class below this module, and five of them -- `Lemmas`,
+    // `Register`, `Guide`, `Examples` and `Foundation`, all in `theories` -- regenerate documents
+    // of this repository through `Generated`, which resolves `docs/...` against the working
+    // directory. A consumer who ran one from an unpacked tarball would have it write into whatever
+    // directory they were standing in, and the failure would look like a bug in the prover.
+    //
+    // `WhatAClaimCosts` is here because it is the demonstration of the proof half and only prints.
+    // The other three demonstrations print too and are on the classpath, which is part of what a
+    // distribution is; they are not launchers because nobody installs a system to run its tests.
+    //
+    // `mark` is not a dependency of this module and so is in no tarball. It regenerates two files
+    // under `docs/` and is of no use to anybody who did not clone the repository, which is the same
+    // reason it sits beside the module graph rather than in it.
+    Compile / discoveredMainClasses := Seq(
+      "garden.xeno.symbolum.tactics.Ask",
+      "garden.xeno.symbolum.tactics.Find",
+      "garden.xeno.symbolum.tactics.Notebook",
+      "garden.xeno.symbolum.examples.WhatAClaimCosts",
+      "garden.xeno.symbolum.dist.Repl"
+    ),
+
+    // No default main class, which is what makes the script written under the project's own name a
+    // general one: it refuses to start anything until it is given `-main <class>`. That script is
+    // how the three demonstrations and the five document generators stay reachable without a
+    // launcher each, and it is why picking one of the five arbitrarily would have been worse.
+    Compile / mainClass := None,
+
+    // The launcher names. Packaging derives a script name from the main class's simple name, which
+    // gives `bin/ask` and `bin/find`: a distribution whose `bin` somebody puts on their PATH would
+    // shadow `find(1)`. Renaming the mapping renames the command and breaks nothing, because each
+    // script is standalone -- it holds its own main class and the whole classpath as literals, and
+    // finds the distribution by resolving its own path -- so no script names another.
+    Universal / mappings := (Universal / mappings).value.map {
+      case (file, path) if path.startsWith("bin/") && path != "bin/" =>
+        val name = path.stripPrefix("bin/")
+        val renamed =
+          if (name.startsWith("symbolum-dist")) name.replace("symbolum-dist", "symbolum")
+          else s"symbolum-$name"
+        (file, s"bin/$renamed")
+      case entry => entry
+    },
+
+    Universal / packageName := s"symbolum-${version.value}",
+
+    // Demonstrations and a documentation tool, so nothing here is measured against a floor. The
+    // reason `examples` and `mark` give for having none is the reason this module has none.
     coverageFailOnMinimum := false
   )

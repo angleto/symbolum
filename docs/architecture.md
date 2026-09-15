@@ -94,10 +94,20 @@ kernel    -> (nothing)          the trusted base
 checker   -> kernel             a second reading of a proof, as text or in this process
 logic     -> kernel             connectives, derived rules, rewriting, parser, printer
 theories  -> logic              the reals, numerals, arithmetic, RING, LINARITH
-core      -> (nothing)          the computer algebra system, published on its own
+core      -> (nothing)          the computer algebra system
 tactics   -> theories, core     the lowest module that sees both halves
-examples  -> tactics            runnable demonstrations of either half, not published
+examples  -> tactics            runnable demonstrations of either half
+aggregate -> the six above      no source: a pom, so one coordinate resolves the whole system
+dist      -> tactics, examples  the tarball a person installs, and the only module that is not a
+                                library and not a demonstration
 ```
+
+The last two are what the system ships as, and they are two artifacts rather than one read two
+ways: the six library modules go to a registry under their own coordinates for a build tool to
+resolve, and the distribution carries every jar with a launcher per entry point for a person to
+run. `mark` is in neither, for the reason it is beside the graph rather than in it: it regenerates
+two files under `docs/` and is of no use to anybody who did not clone this repository. `build.sbt`
+carries the argument at each of them.
 
 The direction is the enforcement mechanism, not a tidiness preference. `kernel` declaring no
 dependency is what makes an import of the algebra system from the trusted base a compile error
