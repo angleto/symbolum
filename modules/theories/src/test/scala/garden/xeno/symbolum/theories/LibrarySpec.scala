@@ -278,8 +278,20 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 419 with the idleness of the substitution, which is one fact and the first thing anywhere
     // to say when a substitution does NOT move. Both of `CLAUDE.md`'s figures move by one: it
     // binds an index, a replacement and a subject, three of a kind.
-    library.entries.size shouldBe 419
-    library.names.distinct.size shouldBe 416
+    // 424 with the monotone convergence theorem: `NOT_FORALL` in `Classical`, the two negated
+    // comparisons in `Order`, and `MONOTONE_LE` with `MONOTONE_CONVERGES` here. Both of
+    // `CLAUDE.md`'s figures move by TWO and not by five, and which two is the content: only the
+    // pair in `Order` carries two leading quantifiers, and both of theirs are reals.
+    //
+    // **That last figure was written three times before it was right, and never because the five
+    // were miscounted.** It was derived as 422, then 423, then 424, each time by adding five to
+    // the figure a file was carrying: first to another session's uncommitted edit of this one,
+    // then to a line this session had itself rebased onto the wrong predecessor. Every one of the
+    // three was right about the tree it was taken on, which is what makes the failure quiet. The
+    // baseline on a shared checkout is `git show HEAD:<path>` and nothing else: the number in the
+    // working tree can be somebody else's prediction, or your own.
+    library.entries.size shouldBe 424
+    library.names.distinct.size shouldBe 421
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

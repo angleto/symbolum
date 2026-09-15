@@ -83,9 +83,9 @@ import garden.xeno.symbolum.kernel.*
  * and a Scaladoc cannot carry a splice marker without the marker showing up in the rendered page.
  *
  * What is here instead is the division, which `ClassicalSpec` asserts against the derivations
- * themselves: two of the eight reach **no axiom at all** and are collected by this extension rather
+ * themselves: two of the nine reach **no axiom at all** and are collected by this extension rather
  * than bought by it, [[Eta]] pays for [[FunctionExtensionality]], and [[Choice]] pays for the other
- * five. Neither axiom appears in the other's derivations, and the two conditional equations are on
+ * six. Neither axiom appears in the other's derivations, and the two conditional equations are on
  * choice's side of that line: they go to `SELECT` directly and never through the excluded middle,
  * which a case split would have made them pay for twice.
  *
@@ -406,6 +406,22 @@ object Classical {
   /** `|- !p q. (~(p /\ q)) = (~p \/ ~q)`, which holds the direction that needs the classical step. */
   val DeMorganConjunction: String = "DE_MORGAN_CONJUNCTION"
 
+  /**
+   * `|- !P. ~(!x. P x) ==> ?x. ~(P x)`: De Morgan for the universal quantifier.
+   *
+   * The one this logic did not have, and the absence was load-bearing rather than incidental.
+   * `Peano.NUM_ARCHIMEDES` records it in as many words, that the textbook step "`s - 1` is not an
+   * upper bound, so take a natural above it" needs exactly this and that the derivation was turned
+   * around to avoid it. Turning it around works where the witness is not wanted; the monotone
+   * convergence theorem wants the witness, so `Limit` is what finally paid for this.
+   *
+   * It is classical and cannot be otherwise: the proof assumes the existential is false, derives
+   * the universal from it one point at a time through [[DoubleNegation]], and contradicts the
+   * hypothesis. Both uses of double negation are the classical step, and the intuitionistic
+   * direction, `(?x. ~P x) ==> ~(!x. P x)`, is the one nobody needed.
+   */
+  val NotForall: String = "NOT_FORALL"
+
   /** `|- !p a b. p ==> COND p a b = a`, from [[Choice]] alone. */
   val CondTrue: String = "COND_TRUE"
 
@@ -436,6 +452,7 @@ object Classical {
     ExcludedMiddle -> "!p:bool. p \\/ ~p",
     DoubleNegation -> "!p:bool. ~~p ==> p",
     DeMorganConjunction -> "!p:bool. !q:bool. (~(p /\\ q)) = (~p \\/ ~q)",
+    NotForall -> "!P:'a->bool. ~(!x:'a. P x) ==> ?x:'a. ~(P x)",
     CondTrue -> "!p:bool. !a:'a. !b:'a. p ==> COND p a b = a",
     CondFalse -> "!p:bool. !a:'a. !b:'a. ~p ==> COND p a b = b"
   )
@@ -462,10 +479,11 @@ object Classical {
    *
    * **The derivations run here rather than on demand**, so a development that does not build is a
    * refusal from this function and not a `Left` from [[Classical.fact]] months later. The largest
-   * of the eight is 1089 inference steps and they share most of their nodes, which is small enough
+   * of the nine is 1143 inference steps and they share most of their nodes, which is small enough
    * that no development is going to want a variant of this that skips them. That figure said 1275
-   * until 2026-09-12, which is what it was before the two repairs of 2026-09-11; `ClassicalSpec`
-   * now spells it out of the derivations, so it cannot sit here being wrong again.
+   * until 2026-09-12, which is what it was before the two repairs of 2026-09-11, and 1089 until
+   * [[NotForall]] landed on 2026-09-15 and took the top from `DE_MORGAN_CONJUNCTION`;
+   * `ClassicalSpec` spells it out of the derivations, so it cannot sit here being wrong again.
    *
    * **The conditional is defined here, between the axioms and the derivations.** A definition is
    * conservative, so the order costs nothing to the trusted base and buys the two equations below
@@ -534,6 +552,7 @@ object Classical {
       middle <- excludedMiddle(logic, theory, axioms, notFalsity)
       doubleNegation <- doubleNegationElimination(logic, middle)
       deMorganConj <- deMorganConjunction(logic, middle)
+      notForall <- notForallQuantifier(logic, doubleNegation)
       equations <- conditionalEquations(logic, axioms, conditional)
       (condTrue, condFalse) = equations
     } yield Map(
@@ -543,9 +562,67 @@ object Classical {
       ExcludedMiddle -> middle,
       DoubleNegation -> doubleNegation,
       DeMorganConjunction -> deMorganConj,
+      NotForall -> notForall,
       CondTrue -> condTrue,
       CondFalse -> condFalse
     )
+
+  /**
+   * `|- !P. ~(!x. P x) ==> ?x. ~(P x)`, and the shape is the double negation used twice.
+   *
+   * Assume the universal is false and assume the existential is false too. Under both, a point is
+   * enough: `~(P x)` would witness the existential, so `~~(P x)` holds, so `P x` by
+   * [[DoubleNegation]], and the point was arbitrary, so `!x. P x` follows and contradicts the
+   * first assumption. That discharges the second into `~~(?x. ~P x)` and double negation gives the
+   * existential.
+   *
+   * **The generalisation is where this could silently go wrong**, and it is the step to check: `x`
+   * is generalised while two hypotheses are still standing, and it is legitimate only because
+   * neither of them mentions `x`. They are `~(!x. P x)` and `~(?x. ~P x)`, both closed in `x` by
+   * construction, and `Rules.gen` refuses rather than producing a weaker theorem if that ever
+   * stops being true.
+   */
+  private def notForallQuantifier(
+    logic: Logic,
+    doubleNegation: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val element = TyVar(TypeVariable)
+    val predicate = Term.variable("P", Type.fun(element, Type.Bool))
+    val point = Term.variable("x", element)
+
+    for {
+      applied <- LogicError.lift(Term.app(predicate, point))
+      negatedPoint <- logic.mkNot(applied)
+      universal <- logic.mkForall(point, applied)
+      negatedUniversal <- logic.mkNot(universal)
+      existential <- logic.mkExists(point, negatedPoint)
+      negatedExistential <- logic.mkNot(existential)
+
+      assumedNotUniversal <- LogicError.lift(Kernel.assume(negatedUniversal))
+      assumedNotExistential <- LogicError.lift(Kernel.assume(negatedExistential))
+
+      // At an arbitrary point: a counterexample there would witness the existential.
+      existentialPredicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      assumedNegatedPoint <- LogicError.lift(Kernel.assume(negatedPoint))
+      witnessed <- rules.existsIntro(existentialPredicate, point, assumedNegatedPoint)
+      clashAtPoint <- rules.notElim(assumedNotExistential, witnessed)
+      doubledPoint <- rules.notIntro(negatedPoint, clashAtPoint)
+      atPoint <- rules.spec(applied, doubleNegation).flatMap(rules.mp(_, doubledPoint))
+
+      // The point was arbitrary, and neither standing hypothesis mentions it.
+      everywhere <- rules.gen(point, atPoint)
+      clash <- rules.notElim(assumedNotUniversal, everywhere)
+      doubled <- rules.notIntro(negatedExistential, clash)
+      result <- rules
+        .spec(existential, doubleNegation)
+        .flatMap(rules.mp(_, doubled))
+        .flatMap(rules.disch(negatedUniversal, _))
+        .flatMap(rules.gen(predicate, _))
+    } yield result
+  }
 
   /**
    * `|- ~(T = F)`, which is where the excluded middle's contradiction comes from.

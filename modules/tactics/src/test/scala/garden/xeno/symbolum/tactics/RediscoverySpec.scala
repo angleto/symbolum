@@ -144,7 +144,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 248 with `NUM_PROV_SPECIALISE`'s four, which is the count of its antecedents and was
     // derived before it was measured.
     // 250 with the idleness of the substitution's two.
-    propose.weakenings.size shouldBe 250
+    // 256 with the monotone convergence theorem and what it needed. Six, DERIVED before the run:
+    // `NOT_FORALL` carries one arrow, each of the two negated comparisons in `Order` carries one,
+    // `MONOTONE_LE` carries one, and `MONOTONE_CONVERGES` carries two. The inner `NUM_LE m n ==>`
+    // of `MONOTONE_LE` is not among them and that is the peeling rule rather than an oversight: it
+    // sits under `!m n`, and only the antecedents in front of the leading quantifiers are peeled.
+    propose.weakenings.size shouldBe 256
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -193,7 +198,13 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     //
     // Derived that way first and measured after, and the derivation was WRONG until the reason was
     // read off `swapped` rather than off the statements: two, and then one.
-    propose.mutable.size shouldBe 73
+    // 75 with the two negated comparisons, and TWO of the five facts that landed with them. Their
+    // bodies write `<` and `le` and carry no lambda once the leading quantifiers are stripped.
+    // `NOT_FORALL` writes neither and its body is a quantifier; `MONOTONE_LE` and
+    // `MONOTONE_CONVERGES` write `<=` inside `!n. ...`, which is a lambda, so `swapped` refuses at
+    // it. Derived that way and then measured, which is the second time this entry has been able to
+    // predict itself.
+    propose.mutable.size shouldBe 75
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

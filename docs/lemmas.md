@@ -69,6 +69,7 @@ they have least appetite for working out how it is produced.
   DOUBLE_NEGATION          !x:bool. ~(~x) ==> x
   EXCLUDED_MIDDLE          !x:bool. x \/ ~x
   FUNCTION_EXTENSIONALITY  !x:'a -> 'b. !y:'a -> 'b. (!z:'a. x z = y z) ==> x = y
+  NOT_FORALL               !x:'a -> bool. ~(!y:'a. x y) ==> (?y:'a. ~(x y))
   TRUTH_NOT_FALSITY        ~(T = F)
 
 ## Coding
@@ -182,6 +183,8 @@ they have least appetite for working out how it is produced.
   CONVERGES_UNIQUE         !x:num -> real. !y:real. !z:real. converges x y ==> converges x z ==> y = z
   LE_BELOW_EVERY_POSITIVE  !x:real. 0 <= x ==> (!y:real. 0 < y ==> x < y) ==> x = 0
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
+  MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
+  MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. NUM_LE y z ==> x y <= x z)
 
 ## Magnitude
 
@@ -321,9 +324,11 @@ they have least appetite for working out how it is produced.
   LE_FROM_ZERO             !x:real. !y:real. 0 <= y - x ==> x <= y
   LE_OF_EQ                 !x:real. !y:real. x = y ==> x <= y
   LE_OF_LT                 !x:real. !y:real. x < y ==> x <= y
+  LE_OF_NOT_LT             !x:real. !y:real. ~(x < y) ==> y <= x
   LE_TO_ZERO               !x:real. !y:real. x <= y ==> 0 <= y - x
   LT_FROM_ZERO             !x:real. !y:real. 0 < y - x ==> x < y
   LT_MUL_BOTH              !x:real. !y:real. !z:real. 0 < x ==> y < z ==> y * x < z * x
+  LT_OF_NOT_LE             !x:real. !y:real. ~(x <= y) ==> y < x
   LT_TO_ZERO               !x:real. !y:real. x < y ==> 0 < y - x
   MUL_NONNEG               !x:real. !y:real. 0 < x ==> 0 <= y ==> 0 <= x * y
   MUL_NONNEG_BOTH          !x:real. !y:real. 0 <= x ==> 0 <= y ==> 0 <= x * y

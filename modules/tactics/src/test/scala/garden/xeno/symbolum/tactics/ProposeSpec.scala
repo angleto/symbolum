@@ -201,7 +201,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // formula. The rule the entry above states reads it exactly, a side condition per thing it
     // mentions.
     // 250 with the idleness of the substitution, which carries two antecedents.
-    proposals.size shouldBe 250
+    // 256 with the monotone convergence theorem's six, by the same count the entry in
+    // `RediscoverySpec` derives: one arrow each for `NOT_FORALL`, the two negated comparisons and
+    // `MONOTONE_LE`, and two for `MONOTONE_CONVERGES`.
+    proposals.size shouldBe 256
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -378,7 +381,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and equality over the reals, which the sampler computes exactly. The other six mention
     // `converges`, `lim`, `cosh` or `sinh`, which no model here interprets, so none of them can be
     // decided either way. Derived and then measured, and both halves came out.
-    decidedFalse shouldBe 70
+    // 74 with the monotone convergence theorem's neighbourhood, and the four are two pairs. The
+    // weakenings of `LE_OF_NOT_LT` and `LT_OF_NOT_LE` drop the negated hypothesis and leave
+    // `!x y. y <= x` and `!x y. y < x`, which are false and written in nothing but the order. The
+    // substitutions of the same two, with `le` swapped for `<`, leave `~(x < y) ==> y < x`, false
+    // at `x = y`, and both sources produce it, so it is decided twice from two rows.
+    decidedFalse shouldBe 74
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -454,7 +462,19 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // which is refuted at `1` and comes back with it. Derived after the fact and not before, which
     // is worth admitting: the derivation that predicted `decidedFalse` moving by two did not
     // predict which of the two would arrive here.
-    withAPoint shouldBe 67
+    // 69 with the monotone convergence theorem's neighbourhood, and TWO of the four that arrived
+    // in the bucket above rather than all four. The two weakenings, `!x y. y <= x` and
+    // `!x y. y < x`, are comparisons of two arbitrary reals with no hypothesis at all: the sampler
+    // takes them and finds a point. The two substitutions carry a negated hypothesis,
+    // `~(x < y) ==> y < x`, which `addressOf` declines, so they are decided by elimination, which
+    // settles and names no witness.
+    //
+    // **Written here first as 67 and unchanged**, on the reasoning that all four carry a negation
+    // somewhere. Two of them do not: the weakening drops exactly the negated hypothesis, which is
+    // the whole of what makes it readable. Measured at 69, and the wrong derivation is kept
+    // because it is the same mistake this entry has recorded twice before, reading the family
+    // rather than the residue.
+    withAPoint shouldBe 69
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -677,7 +697,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // wherever it stands, antecedent included. Derived as two in this bucket and measured as one,
     // and the second was found by printing the standings rather than by the suite, because the
     // assertion below aborts on this one first and its own move was masked.
-    open shouldBe 184
+    // 187 with the monotone convergence theorem's three: the weakening of `MONOTONE_LE`, which is
+    // `!s m n. NUM_LE m n ==> s m <= s n` and false of a sequence that decreases, and the two of
+    // `MONOTONE_CONVERGES`, each missing one of its two hypotheses. All three quantify over a
+    // SEQUENCE, and no model here interprets a function variable, so nothing refutes them; none
+    // carries a negation, so `addressOf` reads them. Three and zero, derived and then measured.
+    open shouldBe 187
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -845,7 +870,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the arithmetic never had to close. A balance argument across two counts is worth nothing
     // until somebody checks they count the same things, and this one did not.
     // 61 with the other of the two, for the reason the entry above gives.
-    unreadable shouldBe 61
+    // 62 with the weakening of `Classical.NOT_FORALL`, and it is the first entry in this bucket
+    // that is unreadable for a reason of TYPE rather than of shape: `!P. ?x. ~(P x)` is about a
+    // predicate variable at a type variable, and the procedures here read the reals and the
+    // naturals. Everything else this bucket holds is a claim about a `num` the arithmetic cannot
+    // take; this one is a claim about nothing in particular.
+    unreadable shouldBe 62
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1043,7 +1073,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and names no constant of the naturals at all, and the other six are about the reals. A
     // development of analysis whose sequences are indexed by `num` contributes one row here and
     // not eight, which is this list counting constants rather than types.
-    aboutNumbers.size shouldBe 106
+    // 108 with the two residues of the monotone family that keep a constant of the naturals:
+    // `MONOTONE_LE`'s names `NUM_LE`, and the one of `MONOTONE_CONVERGES` that drops the bound
+    // keeps `!n. s n <= s (SUC n)` and so names `SUC`. Its twin drops that hypothesis instead and
+    // names none, which is this list counting constants rather than types: every one of the three
+    // is a claim about a sequence indexed by `num`.
+    aboutNumbers.size shouldBe 108
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1088,7 +1123,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // rather than splitting them: the residue is false, and `NUM_LE` is both a constant the model
     // computes and a shape the procedures take.
     // 47, moving with `decidedFalse` by five rather than splitting from it.
-    after shouldBe 47
+    // 48 with one of the monotone family's two: `MONOTONE_LE`'s weakening is false and written in
+    // `NUM_LE` alone, which `Model.Numbers` computes exactly, so the search finds a point in it.
+    // The other names `SUC` and quantifies over a sequence, which the model has no reading of, so
+    // it counts in the bucket above and not here. One of two, which is this pair of counts doing
+    // what it exists to do.
+    after shouldBe 48
   }
 
   /* ------------------------------------------------------ the false positive it produced */

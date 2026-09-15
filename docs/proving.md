@@ -175,12 +175,13 @@ off the derivations themselves. A change that moves them fails the suite naming 
 | `EXCLUDED_MIDDLE` | `⊢ !p:bool. p \/ ~p` | `SELECT` | 829 |
 | `DOUBLE_NEGATION` | `⊢ !p:bool. ~~p ==> p` | `SELECT` | 940 |
 | `DE_MORGAN_CONJUNCTION` | `⊢ !p:bool. !q:bool. (~(p /\ q)) = (~p \/ ~q)` | `SELECT` | 1089 |
+| `NOT_FORALL` | `⊢ !P:'a->bool. ~(!x:'a. P x) ==> ?x:'a. ~(P x)` | `SELECT` | 1143 |
 | `COND_TRUE` | `⊢ !p:bool. !a:'a. !b:'a. p ==> COND p a b = a` | `SELECT` | 476 |
 | `COND_FALSE` | `⊢ !p:bool. !a:'a. !b:'a. ~p ==> COND p a b = b` | `SELECT` | 476 |
 
 <!-- end generated: classical -->
 
-The last two rows are the conditional, and they are the reason the table has eight. `COND p a b` is
+The last two rows are the conditional, and they are the reason the table has nine. `COND p a b` is
 **defined**, not assumed: `select` names the thing satisfying `(p ==> x = a) /\ (~p ==> x = b)`, and
 something satisfies that whichever way `p` falls, which is the content of the two equations. So the
 chain gained a conditional on 2026-09-12 and the count of nineteen did not move, which `ChainSpec`
@@ -540,6 +541,14 @@ more than one place. Each is proved, and `OrderSpec` prints every one of them:
 | `LE_ANTISYMMETRIC` | `!x y. x <= y ==> y <= x ==> x = y` |
 | `SQUARE_NONNEG` | `!x. 0 <= x * x` |
 | `ADD_LE` | `!x y z u. x <= y ==> z <= u ==> x + z <= y + u` |
+| `LE_OF_NOT_LT` | `!x y. ~(x < y) ==> y <= x` |
+| `LT_OF_NOT_LE` | `!x y. ~(x <= y) ==> y < x` |
+
+The last two turn a negated comparison into a positive one and cost nothing classical, which is
+the thing to know about them: on this order `LT_TOTAL` puts all three cases on the table before
+anything is negated, so the negation only discards one of them. `OrderSpec` asserts that they rest
+on trichotomy and on nothing else, because the natural assumption is that the excluded middle is in
+there somewhere and it is not.
 
 The ten that mention `<=` are all downstream of one thing: `<=` is an abbreviation for
 `x < y \/ x = y` and carries no axiom, so each of them is a case analysis on that disjunction where
@@ -1975,14 +1984,20 @@ cancellation.
    `CONVERGES_EVENTUALLY` settles a sequence that is eventually constant, and no convergence
    theorem is involved anywhere.
 
-   **What is left is convergence itself**, and the order is not a matter of taste. The monotone
-   convergence theorem first, bounded and increasing implies convergent, which is where
-   `COMPLETENESS` is spent a second time; then the comparison test, which `SUM_MONOTONE` and
-   `SUM_GEOMETRIC` are most of, and with it every series here converges everywhere and `exp 1 > 2`
-   becomes a theorem; then the addition theorem through the Cauchy product, of which `SUM_SWAP` is
-   the half that exists, and the Pythagorean identity with it; then continuity and the intermediate
-   value theorem, which is what every fact about `ln` waits on and why that constant has none
-   today.
+   **The monotone convergence theorem landed the same day**, `MONOTONE_CONVERGES`: increasing and
+   bounded above gives convergent, by the least upper bound, and it is where `COMPLETENESS` is
+   spent a second time. It is the first thing in this repository that obtains a limit rather than
+   assuming one, and what it cost in front of it was a rule of the logic rather than a lemma of the
+   analysis: `Classical.NOT_FORALL`, since "otherwise the supremum would not be least" is a negated
+   universal turned into a witness.
+
+   **What is left is convergence of a series**, and the order is not a matter of taste. The
+   comparison test first, which `SUM_MONOTONE` and `SUM_GEOMETRIC` are most of: a series whose
+   partial sums are bounded is a monotone bounded sequence, so the theorem above finishes it, and
+   `exp 1 > 2` becomes a theorem. Then the addition theorem through the Cauchy product, of which
+   `SUM_SWAP` is the half that exists, and the Pythagorean identity with it; then continuity and
+   the intermediate value theorem, which is what every fact about `ln` waits on and why that
+   constant has none today.
 5. **A proof for what `Quantified` decides.** Since 2026-09-10 a quantified linear claim is
    decided, and it is decided rather than proved: the elimination runs on untrusted forms and no
    theorem comes back. Making it produce one wants the density and the unboundedness of the order

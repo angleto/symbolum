@@ -213,6 +213,20 @@ object Order {
   /** `|- !x y. x <= y ==> x < y \/ x = y` */
   val LeCases: String = "LE_CASES"
 
+  /**
+   * `|- !x y. ~(x < y) ==> y <= x`, and it costs nothing classical.
+   *
+   * The obvious reading is that turning a negation into a positive statement is where the excluded
+   * middle is spent, and on this order it is not: `LT_TOTAL` is an axiom, so the three cases are in
+   * hand before anything is negated and the negation only discards one of them. That is why this
+   * pair sits here, with the order's own facts, rather than beside the classical ones. A type whose
+   * order is not total would need the other route and would not get this lemma at all.
+   */
+  val LeOfNotLt: String = "LE_OF_NOT_LT"
+
+  /** `|- !x y. ~(x <= y) ==> y < x`, the same argument at the other relation. */
+  val LtOfNotLe: String = "LT_OF_NOT_LE"
+
   /** `|- !x y. 0 <= x ==> 0 < y ==> 0 < x + y` */
   val AddNonNegativePositive: String = "ADD_NONNEG_LT"
 
@@ -306,6 +320,8 @@ object Order {
       ofLt <- leOfLt(reals)
       ofEq <- leOfEq(reals)
       cases <- leCases(reals)
+      weakFromNegated <- leOfNotLt(reals, ofLt, ofEq)
+      strictFromNegated <- ltOfNotLe(reals, ofLt, ofEq)
       addWithPositive <- addNonNegativePositive(ring, cases, sum)
       addBoth <- addNonNegatives(ring, cases, ofLt, addWithPositive)
       timesNonNegative <- multiplyNonNegative(ring, cases, ofLt, ofEq)
@@ -330,6 +346,8 @@ object Order {
         LeOfLt -> ofLt,
         LeOfEq -> ofEq,
         LeCases -> cases,
+        LeOfNotLt -> weakFromNegated,
+        LtOfNotLe -> strictFromNegated,
         AddNonNegativePositive -> addWithPositive,
         AddNonNegatives -> addBoth,
         MultiplyNonNegative -> timesNonNegative,
@@ -1052,6 +1070,113 @@ object Order {
       discharged <- rules.disch(premise, result)
       general <- rules.genAll(discharged, List(x, y))
     } yield general
+  }
+
+  /**
+   * `|- !x y. ~(x < y) ==> y <= x` and `|- !x y. ~(x <= y) ==> y < x`, from trichotomy.
+   *
+   * One function for the pair because the derivation is the same three-way split twice, with the
+   * middle case going to a different lemma each time: `LE_OF_EQ` where the conclusion is weak,
+   * and the equation refuting the negated hypothesis where it is strict. Writing them apart would
+   * be two copies of the split and one place for it to drift.
+   *
+   * **No classical step anywhere**, which is the fact worth knowing before reaching for these: a
+   * negated comparison becomes a positive one here because `LT_TOTAL` already put all three cases
+   * on the table, so the negation does no work except discard one of them. `Order` sits over the
+   * axiom-free logic deliberately, and these two do not disturb that.
+   */
+  def leOfNotLt(
+    reals: RealTheory,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    fromNegatedComparison(reals, ofLt, ofEq, strict = false)
+
+  /** `|- !x y. ~(x <= y) ==> y < x`, the same split with the strict conclusion. */
+  def ltOfNotLe(
+    reals: RealTheory,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    fromNegatedComparison(reals, ofLt, ofEq, strict = true)
+
+  /**
+   * The split both of the two above are, with the one case that differs decided by `strict`.
+   *
+   * `LT_TOTAL` gives `x < y \/ x = y \/ y < x`. Under the negated hypothesis the first case is
+   * refuted, since `x < y` gives the very comparison assumed absent, directly where it is strict
+   * and through `LE_OF_LT` where it is weak. The third case IS the conclusion where it is strict
+   * and reaches it through `LE_OF_LT` where it is weak. Only the middle case differs in kind: an
+   * equation gives the weak conclusion by `LE_OF_EQ`, and refutes the hypothesis where the
+   * conclusion is strict.
+   */
+  private def fromNegatedComparison(
+    reals: RealTheory,
+    ofLt: Kernel.Thm,
+    ofEq: Kernel.Thm,
+    strict: Boolean
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = reals.logic.rules
+    val logic = reals.logic
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      trichotomy <- reals.axiom("LT_TOTAL")
+
+      absent <- reals.proposition(if (strict) "x:real <= y:real" else "x:real < y:real")
+      goal <- reals.proposition(if (strict) "y:real < x:real" else "y:real <= x:real")
+      negated <- logic.mkNot(absent)
+      assumed <- LogicError.lift(Kernel.assume(negated))
+
+      split <- rules.specAll(trichotomy, List(x, y))
+
+      // `x < y`: the hypothesis says this cannot be, directly or through `LE_OF_LT`.
+      below <- reals.proposition("x:real < y:real")
+      fromBelow <- for {
+        belowAssumed <- LogicError.lift(Kernel.assume(below))
+        present <-
+          if (strict) rules.specAll(ofLt, List(x, y)).flatMap(rules.mp(_, belowAssumed))
+          else Right(belowAssumed)
+        clash <- rules.notElim(assumed, present)
+        anything <- rules.falsityElim(goal, clash)
+      } yield anything
+
+      // `x = y`: the weak conclusion follows, and the strict one refutes the hypothesis instead.
+      equated <- reals.proposition("x:real = y:real")
+      fromEquated <- for {
+        equatedAssumed <- LogicError.lift(Kernel.assume(equated))
+        result <-
+          if (strict)
+            rules
+              .specAll(ofEq, List(x, y))
+              .flatMap(rules.mp(_, equatedAssumed))
+              .flatMap(rules.notElim(assumed, _))
+              .flatMap(rules.falsityElim(goal, _))
+          else
+            Conv
+              .sym(equatedAssumed)
+              .flatMap(reversed => rules.specAll(ofEq, List(y, x)).flatMap(rules.mp(_, reversed)))
+      } yield result
+
+      // `y < x`: the strict conclusion is exactly this, and the weak one is one step from it.
+      above <- reals.proposition("y:real < x:real")
+      fromAbove <- for {
+        aboveAssumed <- LogicError.lift(Kernel.assume(above))
+        result <-
+          if (strict) Right(aboveAssumed)
+          else rules.specAll(ofLt, List(y, x)).flatMap(rules.mp(_, aboveAssumed))
+      } yield result
+
+      tail <- reals.proposition("x:real = y:real \\/ y:real < x:real")
+      tailAssumed <- LogicError.lift(Kernel.assume(tail))
+      fromTail <- rules.disjElim(tailAssumed, fromEquated, fromAbove)
+      settled <- rules.disjElim(split, fromBelow, fromTail)
+      result <- rules
+        .disch(negated, settled)
+        .flatMap(rules.gen(y, _))
+        .flatMap(rules.gen(x, _))
+    } yield result
   }
 
   /**

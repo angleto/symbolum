@@ -79,7 +79,7 @@ class GuideSpec extends AnyFlatSpec with Matchers {
   }
 
   "The table's axiom column" should "say nothing where a derivation reaches no axiom" in {
-    // Not "0", and not an empty cell. Two of the eight are collected by this extension rather than
+    // Not "0", and not an empty cell. Two of the nine are collected by this extension rather than
     // bought by it, and a reader asking what the classical axioms cost has to be able to see that
     // at a glance; `ClassicalSpec` asserts the same division against the derivations.
     val generated = force(Guide.classicalTable(classical))

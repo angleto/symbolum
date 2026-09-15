@@ -86,6 +86,12 @@ final class Limit private (
 
   /** `|- !s t l N. (!n. NUM_LE N n ==> s n = t n) ==> converges s l ==> converges t l` */
   def eventually: Either[LogicError, Kernel.Thm] = fact(Limit.Eventually)
+
+  /** `|- !s. (!n. s n <= s (SUC n)) ==> !m n. NUM_LE m n ==> s m <= s n` */
+  def monotoneBelow: Either[LogicError, Kernel.Thm] = fact(Limit.MonotoneBelow)
+
+  /** `|- !s. (!n. s n <= s (SUC n)) ==> (?b. !n. s n <= b) ==> ?l. converges s l` */
+  def monotoneConverges: Either[LogicError, Kernel.Thm] = fact(Limit.MonotoneConverges)
 }
 
 object Limit {
@@ -137,6 +143,25 @@ object Limit {
   /** `|- !s t l N. (!n. NUM_LE N n ==> s n = t n) ==> converges s l ==> converges t l` */
   val Eventually: String = "CONVERGES_EVENTUALLY"
 
+  /**
+   * `|- !s. (!n. s n <= s (SUC n)) ==> !m n. NUM_LE m n ==> s m <= s n`
+   *
+   * A step at a time gives a step to anywhere, which is the induction nobody states and everybody
+   * uses. It is published beside the theorem below rather than folded into it because it is about
+   * the order and not about convergence: a caller with an increasing sequence and no interest in
+   * its limit wants this one.
+   */
+  val MonotoneBelow: String = "MONOTONE_LE"
+
+  /**
+   * `|- !s. (!n. s n <= s (SUC n)) ==> (?b. !n. s n <= b) ==> ?l. converges s l`
+   *
+   * The monotone convergence theorem, and the first thing in this repository to **prove** that a
+   * sequence converges rather than to take a convergence as a hypothesis. It is where
+   * `COMPLETENESS` is spent the second time, `Peano.NUM_ARCHIMEDES` having been the first.
+   */
+  val MonotoneConverges: String = "MONOTONE_CONVERGES"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -145,7 +170,13 @@ object Limit {
     ValueOfConverges -> "!s:num -> real. !l:real. converges s l ==> lim s = l",
     Eventually ->
       ("!s:num -> real. !t:num -> real. !l:real. !N:num. " +
-        "(!n:num. NUM_LE N n ==> s n = t n) ==> converges s l ==> converges t l")
+        "(!n:num. NUM_LE N n ==> s n = t n) ==> converges s l ==> converges t l"),
+    MonotoneBelow ->
+      ("!s:num -> real. (!n:num. s n <= s (SUC n)) ==> " +
+        "!m:num. !n:num. NUM_LE m n ==> s m <= s n"),
+    MonotoneConverges ->
+      ("!s:num -> real. (!n:num. s n <= s (SUC n)) ==> (?b:real. !n:num. s n <= b) ==> " +
+        "?l:real. converges s l")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -166,6 +197,7 @@ object Limit {
     magnitude: Magnitude,
     peano: Peano,
     reals: RealTheory,
+    induct: Induct,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Limit] = {
@@ -184,7 +216,15 @@ object Limit {
       linarith <- Linarith.construct(magnitude.order)
 
       irreflexive <- reals.axiom("LT_IRREFLEXIVE")
+      completeness <- reals.axiom("COMPLETENESS")
       leCases <- magnitude.order.leCases
+      leOfEq <- magnitude.order.leOfEq
+      notForall <- classical.fact(Classical.NotForall)
+      doubleNegation <- classical.fact(Classical.DoubleNegation)
+      weakFromNegated <- magnitude.order.fact(Order.LeOfNotLt)
+      addAtZero <- peano.fact(Peano.AddAtZero)
+      addAtSuccessor <- peano.fact(Peano.AddAtSuccessor)
+      orderDefinition <- peano.definition(Peano.NonStrictOrder)
       absCases <- magnitude.absCases
       absAbove <- magnitude.absAbove
       absAboveNegation <- magnitude.absAboveNegation
@@ -204,6 +244,14 @@ object Limit {
       value <- valueOfConverges(logic, classical, theory, notation, valueDefinition, unique)
       eventually <- eventuallyEqual(
         logic, theory, notation, convergesDefinition, indices)
+
+      monotoneBelow <- monotoneOrder(
+        logic, linarith, theory, notation, induct, leOfEq, orderDefinition, addAtZero,
+        addAtSuccessor)
+
+      monotoneConverges <- monotoneConvergence(
+        logic, linarith, theory, notation, convergesDefinition, completeness, notForall,
+        doubleNegation, irreflexive, weakFromNegated, bounds, monotoneBelow)
     } yield new Limit(
       magnitude,
       peano,
@@ -215,7 +263,9 @@ object Limit {
         Constant -> constant,
         Unique -> unique,
         ValueOfConverges -> value,
-        Eventually -> eventually
+        Eventually -> eventually,
+        MonotoneBelow -> monotoneBelow,
+        MonotoneConverges -> monotoneConverges
       )
     )
   }
@@ -788,6 +838,400 @@ object Limit {
   ): Either[LogicError, Unit] =
     if (theorem.conclusion == target) Right(())
     else Left(NotOfForm(s"a proof of ${Show.show(notation, target)}", theorem.conclusion))
+
+  /**
+   * `|- !s. (!n. s n <= s (SUC n)) ==> !m n. NUM_LE m n ==> s m <= s n`
+   *
+   * A step at a time gives a step to anywhere. The induction is over the **gap** rather than over
+   * either index: `NUM_LE m n` is `?d. NUM_ADD m d = n` by definition, so what an induction can
+   * reach is `!m d. s m <= s (NUM_ADD m d)`, and the order statement is that with the witness put
+   * back inside the existential.
+   *
+   * `Induct.proveBy` and not `Induct.prove`, because neither half is a rewrite. The base carries
+   * the reflexivity of the order across `NUM_ADD m 0 = m` by congruence, which is `LE_OF_EQ`
+   * applied to an equation rather than a normalisation, and the step chains the hypothesis with
+   * the assumption at one index, which is transitivity over three atoms.
+   */
+  private def monotoneOrder(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    induct: Induct,
+    ofEq: Kernel.Thm,
+    orderDefinition: Kernel.Thm,
+    addAtZero: Kernel.Thm,
+    addAtSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val d = Term.variable("d", numbers)
+
+    for {
+      increasing <- Parser.proposition(theory, notation, "!n:num. (s:num -> real) n <= s (SUC n)")
+      assumed <- LogicError.lift(Kernel.assume(increasing))
+      transitive <- linarith.prove("!a:real. !b:real. !c:real. a <= b ==> b <= c ==> a <= c")
+
+      statement <- Parser.proposition(
+        theory, notation, "!m:num. !d:num. (s:num -> real) m <= s (NUM_ADD m d)")
+
+      // **The variables are read off the goals the driver hands over and never taken from the
+      // scope above.** `Induct.proveBy` opens the induction on its own fresh variables and leaves
+      // the others free as ITS variables, so a base written with the `m` and `d` of this function
+      // proves a statement about two other terms of the same name. What that produces is not a
+      // type error: it is a theorem about the wrong thing, and what refuses it is `gen` reporting
+      // a variable free in a hypothesis, several steps later and about a term nobody wrote.
+      overTheGap <- induct.proveBy(
+        statement,
+        base =>
+          for {
+            indices <- comparisonIndices(base)
+            collapsed <- rules.spec(indices._1, addAtZero)
+            carried <- Conv.sym(collapsed).flatMap(Conv.apTerm(s, _))
+            sides <- destructEquation(carried)
+            result <- rules.specAll(ofEq, List(sides._1, sides._2)).flatMap(rules.mp(_, carried))
+          } yield result,
+        step =>
+          for {
+            indices <- comparisonIndices(step.hypothesis.conclusion)
+            (index, gapSum) = indices
+            opened <- rules.specAll(addAtSuccessor, List(index, argumentOf(gapSum)))
+            sides <- destructEquation(opened)
+            (_, successor) = sides
+            above <- rules.spec(argumentOf(successor), assumed)
+            here <- LogicError.lift(Term.app(s, index))
+            middle <- LogicError.lift(Term.app(s, argumentOf(successor)))
+            top <- LogicError.lift(Term.app(s, successor))
+            chained <- rules
+              .specAll(transitive, List(here, middle, top))
+              .flatMap(rules.mp(_, step.hypothesis))
+              .flatMap(rules.mp(_, above))
+            carried <- Conv.sym(opened).flatMap(Conv.apTerm(s, _))
+            result <- rewriteWith(carried, chained)
+          } yield result
+      )
+
+      below <- Parser.proposition(theory, notation, "NUM_LE (m:num) (n:num)")
+      assumedBelow <- LogicError.lift(Kernel.assume(below))
+      unfolded <- Conv.unfold(orderDefinition, List(m, n)).flatMap(normaliseRight)
+      witness <- LogicError.lift(Kernel.eqMp(unfolded, assumedBelow))
+
+      inner <- Parser.proposition(theory, notation, "NUM_ADD (m:num) (d:num) = n:num")
+      assumedInner <- LogicError.lift(Kernel.assume(inner))
+      atGap <- rules.specAll(overTheGap, List(m, d))
+      carriedInner <- Conv.apTerm(s, assumedInner)
+      atIndex <- rewriteWith(carriedInner, atGap)
+      eliminated <- rules.existsElim(witness, d, atIndex)
+
+      result <- rules
+        .disch(below, eliminated)
+        .flatMap(rules.gen(n, _))
+        .flatMap(rules.gen(m, _))
+        .flatMap(rules.disch(increasing, _))
+        .flatMap(rules.gen(s, _))
+    } yield result
+  }
+
+  /**
+   * `|- !s. (!n. s n <= s (SUC n)) ==> (?b. !n. s n <= b) ==> ?l. converges s l`
+   *
+   * The monotone convergence theorem, and the second time `COMPLETENESS` is spent in this
+   * repository. The argument is the textbook one and every step of it is here: the image of the
+   * sequence is a non-empty set bounded above, so it has a least upper bound; no term passes it;
+   * and past any tolerance one term does, because otherwise the supremum would not be least.
+   *
+   * == The step this logic could not take until today ==
+   *
+   * "Otherwise the supremum would not be least" is a negated universal turned into a witness, and
+   * `Peano.NUM_ARCHIMEDES` records that this logic had no rule for it and that its own derivation
+   * was turned around to avoid needing one. There is no turning this one around: the witness IS
+   * the index the convergence needs. `Classical.NOT_FORALL` is what landed with this theorem, and
+   * the theorem is what paid for it.
+   *
+   * == What the derivation does NOT need, which is worth knowing before reading it ==
+   *
+   * No maximum over indices, because monotonicity carries one index to every later one, which is
+   * [[MonotoneBelow]]. No second case split on the sign of the distance beyond the one `abs`
+   * forces: past the witness the terms sit between the supremum less the tolerance and the
+   * supremum, so both branches are a linear step over three comparisons.
+   */
+  private def monotoneConvergence(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    completeness: Kernel.Thm,
+    notForall: Kernel.Thm,
+    doubleNegation: Kernel.Thm,
+    irreflexive: Kernel.Thm,
+    weakFromNegated: Kernel.Thm,
+    bounds: Bounds,
+    monotoneBelow: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val bound = Term.variable("b", values)
+    val supremum = Term.variable("t", values)
+    val e = Term.variable("e", values)
+    val x = Term.variable("x", values)
+    val n = Term.variable("n", numbers)
+    val k = Term.variable("k", numbers)
+
+    val memberText = "?n:num. x:real = (s:num -> real) n"
+
+    /** `!x. (?n. x = s n) ==> x <= <ceiling>` from `!n. s n <= <ceiling>`. */
+    def upperBoundOf(ceiling: String, everyTerm: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        member <- Parser.proposition(theory, notation, memberText)
+        assumedMember <- LogicError.lift(Kernel.assume(member))
+        witnessEquation <- Parser.proposition(
+          theory, notation, "x:real = (s:num -> real) (k:num)")
+        assumedWitness <- LogicError.lift(Kernel.assume(witnessEquation))
+        ceilingTerm <- Parser.term(theory, notation, ceiling, values)
+        atK <- rules.spec(k, everyTerm)
+        applied <- LogicError.lift(Term.app(s, k))
+        carry <- linarith.prove("!a:real. !b:real. !c:real. a = b ==> b <= c ==> a <= c")
+        atX <- rules
+          .specAll(carry, List(x, applied, ceilingTerm))
+          .flatMap(rules.mp(_, assumedWitness))
+          .flatMap(rules.mp(_, atK))
+        eliminated <- rules.existsElim(assumedMember, k, atX)
+        result <- rules.disch(member, eliminated).flatMap(rules.gen(x, _))
+      } yield result
+
+    for {
+      increasing <- Parser.proposition(theory, notation, "!n:num. (s:num -> real) n <= s (SUC n)")
+      assumedIncreasing <- LogicError.lift(Kernel.assume(increasing))
+      boundedStatement <- Parser.proposition(
+        theory, notation, "?b:real. !n:num. (s:num -> real) n <= b")
+      assumedBounded <- LogicError.lift(Kernel.assume(boundedStatement))
+
+      // The image is inhabited, by the first term and nothing cleverer.
+      inhabitedStatement <- Parser.proposition(
+        theory, notation, "?x:real. ?n:num. x = (s:num -> real) n")
+      inhabitedPredicate <- logic
+        .destExistsPredicate(inhabitedStatement)
+        .toRight(NotOfForm("an existential", inhabitedStatement))
+      first <- Parser.term(theory, notation, "(s:num -> real) 0", values)
+      atFirstStatement <- Parser.proposition(
+        theory, notation, "?n:num. (s:num -> real) 0 = s n")
+      atFirstPredicate <- logic
+        .destExistsPredicate(atFirstStatement)
+        .toRight(NotOfForm("an existential", atFirstStatement))
+      zeroIndex <- Parser.term(theory, notation, "0:num", numbers)
+      atFirst <- rules.existsIntro(atFirstPredicate, zeroIndex, Kernel.refl(first))
+      inhabited <- rules.existsIntro(inhabitedPredicate, first, atFirst)
+
+      // And bounded above, which is the hypothesis with the image wrapped round it.
+      insideBounded <- Parser.proposition(
+        theory, notation, "!n:num. (s:num -> real) n <= b:real")
+      assumedInside <- LogicError.lift(Kernel.assume(insideBounded))
+      boundsTheImage <- upperBoundOf("b:real", assumedInside)
+      boundedAboveStatement <- Parser.proposition(
+        theory,
+        notation,
+        "?y:real. !x:real. (?n:num. x = (s:num -> real) n) ==> x <= y"
+      )
+      boundedAbovePredicate <- logic
+        .destExistsPredicate(boundedAboveStatement)
+        .toRight(NotOfForm("an existential", boundedAboveStatement))
+      boundedAboveAt <- rules.existsIntro(boundedAbovePredicate, bound, boundsTheImage)
+      boundedAbove <- rules.existsElim(assumedBounded, bound, boundedAboveAt)
+
+      // So there is a least upper bound.
+      image <- Parser.term(
+        theory, notation, "\\x:real. ?n:num. x = (s:num -> real) n", Type.fun(values, Type.Bool))
+      atImage <- rules.spec(image, completeness)
+      opened <- Conv
+        .betaNormalise(atImage.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, atImage)))
+      premises <- rules.conjIntro(inhabited, boundedAbove)
+      supremumExists <- rules.mp(opened, premises)
+
+      supremumStatement <- Parser.proposition(
+        theory,
+        notation,
+        "(!x:real. (?n:num. x = (s:num -> real) n) ==> x <= t:real) /\\ " +
+          "(!y:real. (!x:real. (?n:num. x = (s:num -> real) n) ==> x <= y) ==> t <= y)"
+      )
+      assumedSupremum <- LogicError.lift(Kernel.assume(supremumStatement))
+      upper <- rules.conjElim1(assumedSupremum)
+      least <- rules.conjElim2(assumedSupremum)
+
+      // No term passes it.
+      //
+      // **The bound name is `u` and not `n`, and that is not style.** Written `?n. s n = s n` the
+      // binder captures the free index this is about, the predicate becomes `\u. s u = s u`, and
+      // what comes out is a true theorem about the wrong thing. Nothing refuses it at the point it
+      // is built: `Rules.mp` does not compare its antecedent, so the mismatch travels as an extra
+      // hypothesis and surfaces several steps later as a variable free in a hypothesis, naming a
+      // term nobody wrote. The check below is what turns it back into a refusal where it happens.
+      atNStatement <- Parser.proposition(
+        theory, notation, "?u:num. (s:num -> real) (n:num) = s u")
+      atNPredicate <- logic
+        .destExistsPredicate(atNStatement)
+        .toRight(NotOfForm("an existential", atNStatement))
+      applied <- LogicError.lift(Term.app(s, n))
+      isMember <- rules.existsIntro(atNPredicate, n, Kernel.refl(applied))
+      _ <- sameStatement(notation, isMember, atNStatement)
+      belowSupremumAtN <- rules.spec(applied, upper).flatMap(rules.mp(_, isMember))
+      belowSupremum <- rules.gen(n, belowSupremumAtN)
+
+      // The convergence itself, at an arbitrary tolerance.
+      positive <- Parser.proposition(theory, notation, "0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+
+      // Suppose no term passes the supremum less the tolerance.
+      noneStatement <- Parser.proposition(
+        theory, notation, "!n:num. ~(t:real - e:real < (s:num -> real) n)")
+      assumedNone <- LogicError.lift(Kernel.assume(noneStatement))
+      gap <- Parser.term(theory, notation, "t:real - e:real", values)
+      belowGapAtN <- rules
+        .specAll(weakFromNegated, List(gap, applied))
+        .flatMap(rules.mp(_, rules.spec(n, assumedNone).getOrElse(assumedNone)))
+      belowGap <- rules.gen(n, belowGapAtN)
+      gapBoundsTheImage <- upperBoundOf("t:real - e:real", belowGap)
+      leastAtGap <- rules.spec(gap, least).flatMap(rules.mp(_, gapBoundsTheImage))
+      absurd <- linarith
+        .prove("!a:real. !b:real. 0 < b ==> a <= a - b ==> a < a")
+        .flatMap(rules.specAll(_, List(supremum, e)))
+        .flatMap(rules.mp(_, assumedPositive))
+        .flatMap(rules.mp(_, leastAtGap))
+      clash <- rules.spec(supremum, irreflexive).flatMap(rules.notElim(_, absurd))
+      notNone <- rules.notIntro(noneStatement, clash)
+
+      // So one does, and that is the index the convergence wants.
+      predicate <- Parser.term(
+        theory,
+        notation,
+        "\\n:num. ~(t:real - e:real < (s:num -> real) n)",
+        Type.fun(numbers, Type.Bool)
+      )
+      // **`NOT_FORALL` is polymorphic and has to be instantiated at `num` before it can be
+      // specialised**, which is a step a reader of the derivation will not expect because nothing
+      // else here is polymorphic. Without it the refusal is a type error about `'a -> bool` against
+      // `num -> bool`, which names the symptom rather than the omission.
+      atIndices = Kernel.instType(Map(Classical.TypeVariable -> numbers), notForall)
+      passes <- rules
+        .spec(predicate, atIndices)
+        .flatMap(theorem =>
+          Conv
+            .betaNormalise(theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem))))
+        .flatMap(rules.mp(_, notNone))
+
+      doubledStatement <- Parser.proposition(
+        theory, notation, "~(~(t:real - e:real < (s:num -> real) (k:num)))")
+      assumedDoubled <- LogicError.lift(Kernel.assume(doubledStatement))
+      atWitnessStatement <- Parser.proposition(
+        theory, notation, "t:real - e:real < (s:num -> real) (k:num)")
+      atWitness <- rules
+        .spec(atWitnessStatement, doubleNegation)
+        .flatMap(rules.mp(_, assumedDoubled))
+
+      // Past the witness every term sits between the supremum less the tolerance and the supremum.
+      guard <- Parser.proposition(theory, notation, "NUM_LE (k:num) (n:num)")
+      assumedGuard <- LogicError.lift(Kernel.assume(guard))
+      monotone <- rules
+        .spec(s, monotoneBelow)
+        .flatMap(rules.mp(_, assumedIncreasing))
+        .flatMap(rules.specAll(_, List(k, n)))
+        .flatMap(rules.mp(_, assumedGuard))
+
+      atK <- LogicError.lift(Term.app(s, k))
+      difference <- Parser.term(
+        theory, notation, "(s:num -> real) (n:num) - t:real", values)
+      distance <- Parser.term(
+        theory, notation, "abs ((s:num -> real) (n:num) - t:real)", values)
+      split <- rules.spec(difference, bounds.cases)
+
+      plain <- Parser.proposition(
+        theory, notation, "abs ((s:num -> real) (n:num) - t:real) = s n - t")
+      fromPlain <- for {
+        assumed <- LogicError.lift(Kernel.assume(plain))
+        lemma <- linarith.prove(
+          "!g:real. !a:real. !b:real. !e:real. g = a - b ==> a <= b ==> 0 < e ==> g < e")
+        result <- rules
+          .specAll(lemma, List(distance, applied, supremum, e))
+          .flatMap(rules.mp(_, assumed))
+          .flatMap(rules.mp(_, belowSupremumAtN))
+          .flatMap(rules.mp(_, assumedPositive))
+      } yield result
+
+      negated <- Parser.proposition(
+        theory, notation, "abs ((s:num -> real) (n:num) - t:real) = -(s n - t)")
+      fromNegated <- for {
+        assumed <- LogicError.lift(Kernel.assume(negated))
+        lemma <- linarith.prove(
+          "!g:real. !a:real. !b:real. !c:real. !e:real. " +
+            "g = -(a - b) ==> b - e < c ==> c <= a ==> g < e")
+        result <- rules
+          .specAll(lemma, List(distance, applied, supremum, atK, e))
+          .flatMap(rules.mp(_, assumed))
+          .flatMap(rules.mp(_, atWitness))
+          .flatMap(rules.mp(_, monotone))
+      } yield result
+
+      close <- rules.disjElim(split, fromPlain, fromNegated)
+
+      guarded <- rules.disch(guard, close).flatMap(rules.gen(n, _))
+      existential <- Parser.proposition(
+        theory,
+        notation,
+        "?N:num. !n:num. NUM_LE N n ==> abs ((s:num -> real) n - t:real) < e:real"
+      )
+      existentialPredicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      witnessed <- rules.existsIntro(existentialPredicate, k, guarded)
+      atTolerance <- rules.existsElim(passes, k, witnessed)
+
+      body <- rules.disch(positive, atTolerance).flatMap(rules.gen(e, _))
+      unfolded <- Conv.unfold(convergesDefinition, List(s, supremum)).flatMap(normaliseRight)
+      target <- rightOf(unfolded)
+      _ <- sameStatement(notation, body, target)
+      converges <- Conv
+        .sym(unfolded)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, body)))
+
+      answer <- Parser.proposition(theory, notation, "?l:real. converges (s:num -> real) l")
+      answerPredicate <- logic
+        .destExistsPredicate(answer)
+        .toRight(NotOfForm("an existential", answer))
+      someLimit <- rules.existsIntro(answerPredicate, supremum, converges)
+      eliminated <- rules.existsElim(supremumExists, supremum, someLimit)
+
+      result <- rules
+        .disch(boundedStatement, eliminated)
+        .flatMap(rules.disch(increasing, _))
+        .flatMap(rules.gen(s, _))
+    } yield result
+  }
+
+  /** The two sides of an equation a theorem states. */
+  private def destructEquation(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+    Term.destEq(theorem.conclusion).toRight(NotOfForm("an equation", theorem.conclusion))
+
+  /**
+   * The indices two applications of one sequence are compared at.
+   *
+   * `s m <= s (NUM_ADD m d)` gives `m` and `NUM_ADD m d`, which is what an induction step needs in
+   * order to be about the driver's variables rather than about the caller's.
+   */
+  private def comparisonIndices(proposition: Term): Either[LogicError, (Term, Term)] =
+    proposition match {
+      case App(App(_, App(_, left)), App(_, right)) => Right((left, right))
+      case other => Left(NotOfForm("a comparison of two terms of one sequence", other))
+    }
+
+  /** The argument of an application, which is what a successor wraps. */
+  private def argumentOf(term: Term): Term = term match {
+    case App(_, argument) => argument
+    case other => other
+  }
 
   /** Beta-normalise the right side of an equation, keeping it an equation. */
   private def normaliseRight(equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =

@@ -58,7 +58,8 @@ what this trick buys: it says nothing about `exp 1`.
 **What is not provable yet is a list, and it is longer than the definitions suggest.** That
 `exp 1 > 2`, that `exp (x + y) = exp x * exp y`, that `sin` and `cos` satisfy the Pythagorean
 identity, and every fact about `ln`. In the order the work wants them: the monotone convergence
-theorem, which is where `COMPLETENESS` is spent a second time; the comparison test, which
+theorem, which is where `COMPLETENESS` is spent a second time and which landed the same day as this
+record, on 2026-09-15, as `Limit.MONOTONE_CONVERGES`; the comparison test, which
 `SUM_MONOTONE` and `SUM_GEOMETRIC` are most of; the Cauchy product, for which `SUM_SWAP` is the
 half that exists; and the intermediate value theorem, which wants continuity and is what every
 fact about `ln` waits on.

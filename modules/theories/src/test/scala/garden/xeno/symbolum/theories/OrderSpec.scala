@@ -356,4 +356,25 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
       reals.show(theorem.conclusion) shouldBe s"$left < $right"
     }
   }
+
+  /**
+   * A negated comparison becomes a positive one here, and it costs nothing classical.
+   *
+   * The obvious reading of `~(x < y) ==> y <= x` is that turning a negation round is where the
+   * excluded middle is spent. On a total order it is not, and this is the assertion that says so:
+   * both derivations rest on `LT_TOTAL` and on nothing else, so `Order` stays over the axiom-free
+   * logic it is deliberately built on. A derivation that started reaching for `Classical` would
+   * still prove these two and would show here.
+   */
+  "Turning a negated comparison round" should "rest on trichotomy and on nothing else" in {
+    val trichotomy = force(order.ring.arithmetic.reals.axiom("LT_TOTAL")).conclusion
+
+    List(Order.LeOfNotLt, Order.LtOfNotLe).foreach { name =>
+      val proved = force(order.fact(name))
+      withClue(s"$name: ") {
+        Derivation.axiomsOf(proved).toSet shouldBe Set(trichotomy)
+        proved.hypotheses shouldBe empty
+      }
+    }
+  }
 }

@@ -186,6 +186,11 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     sizes(Classical.CondTrue) shouldBe 476
     sizes(Classical.CondFalse) shouldBe 476
 
+    // De Morgan for the universal quantifier, measured when it landed on 2026-09-15. It is above
+    // the excluded middle for the reason the two lines below give: it uses the double negation
+    // twice, and each use carries the whole of that derivation.
+    sizes(Classical.NotForall) shouldBe 1143
+
     // The excluded middle is the expensive one and everything classical below it pays that cost
     // again, which is what saying it is derived rather than asserted means.
     sizes(Classical.DoubleNegation) should be > sizes(Classical.ExcludedMiddle)
@@ -524,8 +529,13 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     }
 
     val classicalFile = read("modules/logic/src/main/scala/garden/xeno/symbolum/logic/Classical.scala")
-    withClue(s"Classical.scala does not say the largest of the eight is $largest steps: ") {
-      classicalFile should include(s"of the eight is $largest inference steps")
+    // The count in that sentence is a WORD and cannot be spliced from the derivations, so it is
+    // pinned here instead: a tenth derived fact fails this line and names the number the three
+    // places in `Classical.scala` that spell it have to be changed to. It said "eight" until
+    // `NOT_FORALL` landed on 2026-09-15.
+    Classical.Statements.size shouldBe 9
+    withClue(s"Classical.scala does not say the largest of the nine is $largest steps: ") {
+      classicalFile should include(s"of the nine is $largest inference steps")
     }
 
     // And the table itself is gone from that file rather than kept in step with the document: two

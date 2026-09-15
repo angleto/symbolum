@@ -72,6 +72,12 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     axioms(Limit.Constant) shouldBe 13
     axioms(Limit.Unique) shouldBe 17
     axioms(Limit.ValueOfConverges) shouldBe 17
+
+    // The monotone convergence theorem and the order fact under it. The second costs fewer than
+    // the convergence facts above and the difference is the whole of what it is: no tolerance is
+    // halved in it, so neither `MUL_INVERSE` nor `ONE_NOT_ZERO` appears.
+    axioms(Limit.MonotoneBelow) shouldBe 11
+    axioms(Limit.MonotoneConverges) shouldBe 15
   }
 
   it should "spend the choice axiom on the value and not on the epsilon principle" in {
@@ -83,6 +89,67 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     // the epsilon principle is a disjunction elimination over `LE_CASES` rather than a
     // contradiction, so nothing classical is reached.
     Derivation.axiomsOf(force(limit.fact(Limit.BelowEveryPositive))) should not contain choice
+  }
+
+  /**
+   * The theorem spends `COMPLETENESS`, which is the claim its own docstring makes.
+   *
+   * Asserted by name rather than left to the count, because the count moving would not say which
+   * axiom arrived and this is the one the theorem is about: an ordered field that is not complete
+   * has bounded increasing sequences that converge to nothing, so a derivation of this that did
+   * **not** reach the sixteenth axiom would be a derivation of something else.
+   */
+  "The monotone convergence theorem" should "be where the sixteenth axiom is spent" in {
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val spent = Derivation.axiomsOf(force(limit.monotoneConverges))
+
+    spent should contain(completeness)
+
+    // And the order fact under it does not, which says the induction is about the order alone.
+    Derivation.axiomsOf(force(limit.monotoneBelow)) should not contain completeness
+  }
+
+  /**
+   * It applies to a sequence somebody can name, which is what says it is not vacuous.
+   *
+   * A theorem whose hypotheses nothing satisfies is provable and useless, and this one takes two.
+   * The constant sequence satisfies both, so the theorem hands back a limit for it, and
+   * `CONVERGES_UNIQUE` says that limit is the constant itself. The demonstration is worth more
+   * than the statement: it is the first time in this repository that a limit is **obtained**
+   * rather than assumed.
+   */
+  it should "apply to a sequence whose hypotheses can be discharged" in {
+    val rules = limit.logic.rules
+    val real = TyApp(Real.TypeName, Nil)
+    val c = Term.variable("c", real)
+    val n = Term.variable("n", TyApp(Natural.TypeName, Nil))
+
+    val constant = force(
+      limit.term("\\n:num. c:real", Type.fun(TyApp(Natural.TypeName, Nil), real)))
+    val specialised = force(rules.spec(constant, force(limit.monotoneConverges)))
+    val opened = force(
+      Conv
+        .betaNormalise(specialised.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised))))
+
+    // Both hypotheses, discharged: the constant sequence does not decrease, and it is its own
+    // bound.
+    val reflexive = force(
+      rules
+        .specAll(force(chain.order.leOfEq), List(c, c))
+        .flatMap(rules.mp(_, Kernel.refl(c))))
+    val everywhere = force(rules.gen(n, reflexive))
+
+    val boundedStatement = proposition("?b:real. !n:num. c:real <= b")
+    val boundedPredicate = force(
+      limit.logic
+        .destExistsPredicate(boundedStatement)
+        .toRight(MissingDefinition("an existential")))
+    val bounded = force(rules.existsIntro(boundedPredicate, c, everywhere))
+
+    val obtained = force(rules.mp(opened, everywhere).flatMap(rules.mp(_, bounded)))
+    obtained.conclusion shouldBe proposition("?l:real. converges (\\n:num. c:real) l")
+    obtained.hypotheses shouldBe empty
   }
 
   "The definition" should "unfold to the epsilon-N statement a reader checks" in {

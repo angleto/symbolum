@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 419 lemmas, 260 have two or more leading quantifiers and **236 of
+caller meant: of the library's 424 lemmas, 262 have two or more leading quantifiers and **238 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -353,8 +353,9 @@ here.** `NUM_PRIME_FACTOR`, that every number above one **has** a prime factor, 
 one and itself, which is the definition unfolded. Nothing had ever needed the existence, so nothing
 had noticed. It is in `Modular` beside the name it is confused with, and the route is the **least**
 divisor above one rather than the textbook induction: the least one is prime for free, and the
-induction would want a negation pushed through a universal quantifier, which this logic has no law
-for.
+induction would want a negation pushed through a universal quantifier, which this logic had no law
+for until `Classical.NOT_FORALL` landed on 2026-09-15; the route is unchanged, since the least
+divisor asks for nothing beyond `NUM_LEAST`.
 
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
@@ -706,14 +707,26 @@ even and odd parts that this repository does not have. `docs/adr/0017` is the de
 axioms, which would have been the first thing this repository asserted about a domain it can
 construct.
 
-**What is proved about them is the value of each at zero and nothing else**, and the reason is worth
-knowing before opening either file: a series at zero stops moving after its first term, so
-`CONVERGES_CONSTANT` with `CONVERGES_EVENTUALLY` settles it and no convergence theorem is involved.
-Nothing here proves that a sequence converges. That is the monotone convergence theorem, which is
-where `COMPLETENESS` is spent a second time and is the next piece of work; until it lands,
-`exp 1 > 2` and `sin x * sin x + cos x * cos x = 1` are **statable and unproved**, which is a
-different answer from the parse error they used to get and is the whole reason to define the
-constants before the analysis rather than after it.
+**What is proved about the six constants is the value of each at zero and, for the hyperbolic pair,
+two identities**, and the reason is worth knowing before opening either file: a series at zero stops
+moving after its first term, so `CONVERGES_CONSTANT` with `CONVERGES_EVENTUALLY` settles it and no
+convergence theorem is involved.
+
+**`MONOTONE_CONVERGES` landed on 2026-09-15 and is the first thing here that obtains a limit rather
+than assuming one.** Increasing and bounded above gives convergent, by the least upper bound, and it
+is where `COMPLETENESS` is spent the second time; `LimitSpec` asserts that by name rather than by a
+count, because a derivation of it that did not reach the sixteenth axiom would be a derivation of
+something else. What it cost in front of it was one missing rule of the logic: the step "otherwise
+the supremum would not be least" is a negated universal turned into a **witness**, and
+`Peano.NUM_ARCHIMEDES` records that this logic had none and that its own derivation was turned
+around to avoid needing one. There is no turning this one around, so `Classical.NOT_FORALL` landed
+with it, along with `Order.LE_OF_NOT_LT` and `LT_OF_NOT_LE`, which cost nothing classical at all:
+on a total order the three cases are on the table before anything is negated.
+
+What is still not proved is that a **series** converges, which is the comparison test and nobody has
+assembled it. So `exp 1 > 2` and `sin x * sin x + cos x * cos x = 1` are **statable and unproved**,
+which is a different answer from the parse error they used to get and is the whole reason to define
+the constants before the analysis rather than after it.
 
 Three things in those derivations were harder than they look and each is recorded where it happens.
 Halving a tolerance is `Linarith`'s, because a numeral denominator is a rational coefficient to it

@@ -370,7 +370,8 @@ object Chain {
       // `magnitude.theory`, where its prerequisites are, for the reason `Rotation.construct`'s
       // comment gives: the extension order and the dependency order are different things, and
       // `widest` is built over the last extension.
-      limit <- Limit.construct(magnitude, peano, reals, provability.theory, provability.notation)
+      limit <- Limit.construct(
+        magnitude, peano, reals, induct, provability.theory, provability.notation)
 
       // The last link since 2026-09-15, and the only one that needs a limit. `docs/adr/0017` is the
       // decision it spends: these four constants are their power series rather than four axioms, so

@@ -741,11 +741,13 @@ object Peano {
    * `real_of_num n + 1 <= s` by [[EmbedsSuccessor]], so `real_of_num n <= s - 1`. Leastness then
    * gives `s <= s - 1`, which `LINARITH` turns into falsity.
    *
-   * **No negated universal is pushed through a quantifier anywhere in it**, which is what makes it
-   * writable here: this logic has De Morgan for the connectives and nothing for the quantifiers,
-   * and the textbook phrasing — "`s - 1` is not an upper bound, so take a natural above it" —
-   * needs exactly that. Turning the step around so that `s - 1` *is* shown to be an upper bound
-   * costs nothing and avoids the lemma that does not exist.
+   * **No negated universal is pushed through a quantifier anywhere in it**, and until 2026-09-15
+   * that was what made it writable at all: this logic had De Morgan for the connectives and
+   * nothing for the quantifiers, and the textbook phrasing, "`s - 1` is not an upper bound, so
+   * take a natural above it", needs exactly that. [[garden.xeno.symbolum.logic.Classical.NotForall]]
+   * exists now, so the obstacle is gone and the route is kept anyway: showing that `s - 1` *is* an
+   * upper bound is the same argument with one fewer lemma in it, and nothing has measured the
+   * alternative.
    *
    * What is classical about it is one thing and it is named: the conclusion is reached by
    * `Classical.contradiction` from the assumption that no natural passes `y`. That is the choice

@@ -809,8 +809,9 @@ object Modular {
    * `\d. SUC ZERO < d /\ NUM_DIVIDES d n` gives a smallest such divisor, and it is prime for free:
    * a divisor of it above one would divide `n` as well, by transitivity, and be smaller, which the
    * minimality refuses. The induction the textbook uses would work too and wants the negation
-   * pushed through a universal quantifier, which this logic has no law for; taking the least one
-   * asks for nothing that is not here.
+   * pushed through a universal quantifier, which this logic had no law for when this was written;
+   * [[garden.xeno.symbolum.logic.Classical.NotForall]] supplies one since 2026-09-15 and the route
+   * here is unchanged, because taking the least divisor asks for nothing beyond `NUM_LEAST`.
    */
   val PrimeFactor: String = "NUM_PRIME_FACTOR"
 
