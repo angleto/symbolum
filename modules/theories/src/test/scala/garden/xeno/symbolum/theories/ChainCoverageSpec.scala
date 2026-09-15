@@ -75,6 +75,9 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Language" -> InTheChain,
     "Provability" -> InTheChain,
     "Deduction" -> InTheChain,
+    // Beside the chain: soundness of a resolution step is a theorem ABOUT a proof system, and the
+    // development declares no type, no constant and no definition. `ResolvingSpec` asserts that.
+    "Resolving" -> DeclaresNothing,
     "Primes" -> InTheChain,
     "Limit" -> InTheChain,
     "Transcendental" -> InTheChain,
