@@ -120,10 +120,16 @@ object Essay {
   /**
    * How to get this theorem back, which is the section a reader asks for first.
    *
-   * Three routes and they answer different questions: put the claim to the whole tactic surface and
-   * watch it be settled, look the lemma up by name, or reach it from Scala. The first is the one
-   * that matters, because it is the only one where the reader's own machine does the work rather
-   * than being told what somebody else's did.
+   * Three routes and they answer different questions: put the claim to the whole tactic surface,
+   * look the lemma up by name, or reach it from Scala. The first is the one a reader tries first,
+   * because it is the only one where their own machine does the work rather than being told what
+   * somebody else's did. It is **not** the one that is guaranteed to arrive: the surface decides a
+   * few fragments and chains library lemmas for the rest, so a theorem obtained by a hand
+   * derivation is one it can refuse. That is why the page carries [[RefusalNotice]], and why
+   * `ShowcaseSpec` in `modules/tactics` **runs** the published claims rather than counting them:
+   * it holds the partition, by name and in both directions, and this docstring deliberately does
+   * not repeat the figure. Measuring it on 2026-09-15 is what produced this paragraph; until then
+   * it said "watch it be settled", and so did the page, to the reader.
    *
    * **The claim printed here is the legible form and not the set one**, and that is the whole
    * reason this section costs nothing: every statement in the library is printed and read back
@@ -161,7 +167,7 @@ object Essay {
       case Some(pair) =>
         s"""$heading
            |
-           |Put the claim to the prover, which settles it from the whole tactic surface:
+           |Put the claim to the prover, which puts it to the whole tactic surface:
            |
            |```
            |$AskCommand ${pair.legible}"
@@ -169,6 +175,8 @@ object Essay {
            |
            |The claim is **not** quoted: `sbt` hands the arguments over already split, so the
            |shell's quotes are gone before the command sees them.
+           |
+           |$RefusalNotice
            |
            |Look it up instead, by name or by shape:
            |
@@ -194,6 +202,34 @@ object Essay {
    * A copy of `Ask.Command` with the placeholder dropped, because `modules/theories` is below
    * `modules/tactics` and cannot read the real one. `EssayCommandSpec` asserts the agreement.
    */
+  /**
+   * What a refusal from the tactic surface means, and what it does not.
+   *
+   * Published as a constant because `ShowcaseSpec` asserts it is on every page, and a sentence
+   * written once in the renderer and once in the test is the copy that drifts.
+   *
+   * **The second half is the part that earns the paragraph, and it is a cost of a repair rather
+   * than of a defect.** `LogicError.SkeletonFailsAt` renders its assignment in the theory's own
+   * notation since 2026-09-15; before that it carried the kernel's encoding and a reader could not
+   * read it at all. Making a refusal legible makes it persuasive, and this one is not evidence
+   * against the claim: the atoms are uninterpreted, so `A ==> B \/ C` is falsifiable whatever they
+   * mean. `LogicError`'s own docstring argues that at length under **Why `Unread`**, with
+   * `!x:real. 1 < x ==> 0 < x \/ x = 99` as the goal that is true and produces a countermodel
+   * anyway, and none of that argument reaches a reader of the page. So the page carries the
+   * conclusion of it.
+   *
+   * Unreadable, the assignment was obviously machine noise. Readable, it is a disproof-shaped
+   * object under a theorem, on a document whose title says these are proved.
+   */
+  val RefusalNotice: String =
+    "**A refusal here is not evidence against the theorem.** The surface decides a few fragments " +
+      "and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one " +
+      "it can refuse, and what it prints then is the obstacle it met rather than a verdict on the " +
+      "claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of " +
+      "the claim's **propositional skeleton**, whose atoms are uninterpreted: " +
+      "`!x:real. 1 < x ==> 0 < x \\/ x = 99` is true and produces one. The theorem is the one the " +
+      "kernel holds, counted above, and the two routes below reach it whatever this one answers."
+
   val AskCommand: String = "sbt \"tactics/runMain garden.xeno.symbolum.tactics.Ask"
 
   /** How `Find` is invoked, on the same terms and checked by the same spec. */

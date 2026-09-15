@@ -96,7 +96,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:bool. x \/ ~x"
@@ -104,6 +104,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:bool. x \/ ~x"
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -179,7 +181,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> bool. x 0 /\ (!y:num. x y ==> x (SUC y)) ==> (!y:num. x y)"
@@ -187,6 +189,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> bool. x 0 /\ (!y
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -303,7 +307,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. ?y:num. x < real_of_num y"
@@ -311,6 +315,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. ?y:num. x < real_
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -552,7 +558,7 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. !y:real. abs (x + y) <= abs x + abs y"
@@ -560,6 +566,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. !y:real. abs (x +
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -654,7 +662,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> real. !y:num. Sum (\z:num. x (SUC z) - x z) y = x y - x 0"
@@ -662,6 +670,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> real. !y:num. Su
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -755,7 +765,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> real. !y:num -> real. !z:num. Sum (\u:num. x u * (y (SUC u) - y u)) z = x z * y z - x 0 * y 0 - Sum (\u:num. y (SUC u) * (x (SUC u) - x u)) z"
@@ -763,6 +773,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> real. !y:num -> 
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -896,7 +908,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. NUM_MUL x z = NUM_ADD (NUM_MUL y u) (NUM_GCD x y) \/ NUM_MUL y z = NUM_ADD (NUM_MUL x u) (NUM_GCD x y))"
@@ -904,6 +916,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. ~(x = 0) \
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -1040,7 +1054,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_MUL y z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z"
@@ -1048,6 +1062,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. !z:num. NU
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -1208,7 +1224,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num -> num. !z:num. (!u:num. NUM_LT u z ==> NUM_LT 0 (x u)) ==> (!u:num. !v:num. NUM_LT u z /\ NUM_LT v z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. NUM_LT v z ==> NUM_CONG (x v) u (y v))"
@@ -1216,6 +1232,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num -> n
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -1356,7 +1374,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. ?y:num. NUM_PRIME y /\ NUM_LT x y"
@@ -1364,6 +1382,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. ?y:num. NUM_PRIME 
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -1512,7 +1532,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_LT 0 y ==> ~(NUM_MUL x x = NUM_MUL (SUC (SUC 0)) (NUM_MUL y y))"
@@ -1520,6 +1540,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_LT 0 y
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
@@ -1738,7 +1760,7 @@ obtained.
 
 ### How to get it
 
-Put the claim to the prover, which settles it from the whole tactic surface:
+Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
 sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_FORM x ==> (!z:num. ~(NUM_FREE_FORM z x)) ==> NUM_PROV_FROM x y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))"
@@ -1746,6 +1768,8 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_FORM x
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
 shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
 
 Look it up instead, by name or by shape:
 
