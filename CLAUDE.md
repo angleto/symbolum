@@ -77,11 +77,13 @@ that is deliberate: it is what lets it stay fast and heuristic.
   `Derivation.foreignTo` against the chain.
 
   What it cannot do yet, named rather than left to be discovered: **nothing can spend an assumption
-  except the assumption itself.** No tactic searches over an assumed constant, deliberately, for
-  the reason the domain-theory paragraph below gives, so a session's own axiom reaches a conclusion
-  only through a hand derivation, and the command for that (`derive`, over the `Recorder` in
-  `modules/logic`) is not written. It is listening on loopback with no authentication: a
-  single-user tool, not a service.
+  except the assumption itself.** No tactic searches over an assumed constant, and the reason is
+  the surface's rather than the domain's: the tactic surface is built over the base chain, so a
+  claim in a vocabulary the session added is one no procedure has a reading of. The domain-theory
+  paragraph below is what says a procedure is not barred from a domain's constants in principle.
+  So a session's own axiom reaches a conclusion only through a hand derivation, and the command
+  for that (`derive`, over the `Recorder` in `modules/logic`) is not written. It is listening on
+  loopback with no authentication: a single-user tool, not a service.
 - **Regenerating `docs/lemmas.md`:** `sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
   replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
   compares the file against the code and fails naming this command, which is the point: the document
@@ -779,19 +781,36 @@ same reasoning does not extend to the naturals.
 test rather than as a description.** `DomainTheorySpec` declares a type and five constants nothing
 else has, asserts as axioms the four sentences of a release gate (a change ships on two reviews, or
 on one review and a green pipeline, or as a revert, and on no other ground), and derives a claim
-about them by hand. The criterion is **invented**, and until 2026-09-15 it was not: it was the
+about them twice, by hand and through a procedure, which is the comparison the paragraph after this
+one is about. The criterion is **invented**, and until 2026-09-15 it was not: it was the
 admission criterion of the practice this repository is developed under, which made a fragment of a
 private document the subject of a public test. The accounting does not depend on whose rule it is,
 because what a derivation spends is fixed by the logical shape; what was given up with the real one
-is the claim that the domain is in daily use, and the file says so. What it is for is the accounting rather than the proof: the
-conclusion rests on **one** of the four axioms asserted, and on **no foundational axiom at all**,
-neither choice nor infinity nor any of the reals. Which of the assumptions a conclusion actually
-spends is the question worth asking about a claim of the world, and `Derivation.axiomsOf` answers
-it; `Derivation.foreignTo` says which belong to the domain and which to the foundation under it.
+is the claim that the domain is in daily use, and the file says so. What it is for is the
+accounting rather than the proof: the conclusion rests on **one** of the four axioms asserted, and
+on **no foundational axiom at all**, neither choice nor infinity nor any of the reals. Which of
+the assumptions a conclusion actually spends is the question worth asking about a claim of the
+world, and `Derivation.axiomsOf` answers it; `Derivation.foreignTo` says which belong to the
+domain and which to the foundation under it.
 
-What a domain does **not** get is automation. `Ring` and `Linarith` decide fragments of the reals
-and have nothing to say about an arbitrary axiom, so a domain claim is a hand derivation out of the
-derived rules. The promise is accounting, not search, and the test says so where a reader meets it.
+**A domain claim was a hand derivation and is no longer necessarily one**, and until 2026-09-15
+this paragraph said it was, in the same words as the header of the file that had already stopped
+being an example of them. `Ring` and `Linarith` decide fragments of the reals and have nothing to
+say about an arbitrary axiom, which is the true half and is what the sentence was built on. What
+reaches a domain is the propositional skeleton: `DomainTheorySpec` settles the same claim a second
+time through `Propositional` and keeps both routes on purpose, because the comparison is the
+finding. Same theorem, same one domain axiom, and **one foundational axiom where the hand
+derivation spends none**, since `Propositional` decides classical validity and closes with double
+negation while the hand derivation is intuitionistic throughout. `Minimal` is the procedure that
+would cost nothing and it refuses anything with a negation in it, which a domain criterion is made
+of, so neither procedure here covers such an argument at its real cost.
+
+The caller still spends the axiom: the instance is specialised and detached by hand, and what the
+procedure gets is a tautology over the domain's constants as atoms, with no meaning given for any
+of them. So the promise is still accounting rather than search, and a route that reaches the
+theorem while moving the accounting has bought fewer lines at a price named in the currency this
+repository exists to report.
+
 Such a theory sits beside the chain and must stay there: two theories that axiomatise one name are
 the case `docs/adr/0008` leaves open, and `SoundnessAttackSpec` still derives `|- F` from it.
 

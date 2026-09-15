@@ -52,11 +52,22 @@ import garden.xeno.symbolum.logic.*
  * The reasoning is propositional over the domain's own assumptions, which is what a reader should
  * be told before being asked to believe anything about a domain.
  *
- * == What it does not show ==
+ * == What automation reaches, which is half of it ==
  *
- * No tactic helped. `Ring` and `Linarith` decide fragments of the reals and have nothing to say
- * here, so the derivation below is by hand out of the derived rules, and the card's third point is
- * confirmed rather than repaired: the promise for a domain is accounting, not automation.
+ * `Ring` and `Linarith` decide fragments of the reals and have nothing to say here, so the
+ * derivation below is by hand out of the derived rules. That was the whole answer once, and this
+ * section said so under the heading "what it does not show" for as long as it took somebody to
+ * read the file downwards: `derivedByTactic` settles the same claim through `Propositional`, and
+ * the sentence "no tactic helped" survived, in the header of the file whose own body refutes it.
+ *
+ * What the procedure reaches is the propositional skeleton and not the domain. The caller
+ * specialises the fourth axiom and detaches by hand, so nothing here searches over an assumption;
+ * what goes to `Propositional` is a tautology whose atoms are the domain's constants, and it is
+ * given no meaning for any of them. It comes back as the same theorem spending the same one domain
+ * axiom, and **one foundational axiom the hand derivation does not spend**, which is asserted below
+ * rather than described. So the promise for a domain is still accounting rather than search: a
+ * route that reaches the theorem while moving the accounting has bought fewer lines at a price
+ * named in the currency this file exists to report.
  *
  * Nor is this a development of the chain, and it must not become one. A theory built beside the
  * chain is the case `docs/adr/0008` warns about, and `SoundnessAttackSpec` still carries the row

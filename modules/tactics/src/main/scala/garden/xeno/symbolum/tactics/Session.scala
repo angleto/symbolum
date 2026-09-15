@@ -421,10 +421,13 @@ object Session {
      *
      * The surface is built over the base chain, so a claim written in a vocabulary the session
      * added is one no tactic has anything to say about, and the refusal says that rather than
-     * reporting a failure that reads like a defect. `docs/architecture.md` and this repository's
-     * own `CLAUDE.md` both state the rule it follows from: a domain gets accounting, not search,
-     * because `Ring` and `Linarith` decide fragments of the reals and have nothing to say about an
-     * arbitrary axiom.
+     * reporting a failure that reads like a defect. That is the whole reason and it is the
+     * surface's rather than the domain's, which is worth saying because this comment used to give
+     * the domain's: that a domain gets accounting and not search, cited to `docs/architecture.md`,
+     * a document that does not contain the word. `DomainTheorySpec` settles a claim about an
+     * invented domain through `Propositional`, so a procedure is not barred from a domain's
+     * constants in principle; what it needs is the axiom instance specialised and detached by the
+     * caller, and over a session that is `derive`, which is not written.
      */
     private def proving(state: State, name: String, claim: String): (Outcome, State) =
       state.proposition(claim) match {
