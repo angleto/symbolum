@@ -777,8 +777,13 @@ same reasoning does not extend to the naturals.
 
 **A theory of a domain that is not mathematics is a theory like any other, and one exists as a
 test rather than as a description.** `DomainTheorySpec` declares a type and five constants nothing
-else has, asserts the four sentences of the engineering handbook's admission criterion as axioms,
-and derives a claim about them by hand. What it is for is the accounting rather than the proof: the
+else has, asserts as axioms the four sentences of a release gate (a change ships on two reviews, or
+on one review and a green pipeline, or as a revert, and on no other ground), and derives a claim
+about them by hand. The criterion is **invented**, and until 2026-09-15 it was not: it was the
+admission criterion of the practice this repository is developed under, which made a fragment of a
+private document the subject of a public test. The accounting does not depend on whose rule it is,
+because what a derivation spends is fixed by the logical shape; what was given up with the real one
+is the claim that the domain is in daily use, and the file says so. What it is for is the accounting rather than the proof: the
 conclusion rests on **one** of the four axioms asserted, and on **no foundational axiom at all**,
 neither choice nor infinity nor any of the reals. Which of the assumptions a conclusion actually
 spends is the question worth asking about a claim of the world, and `Derivation.axiomsOf` answers

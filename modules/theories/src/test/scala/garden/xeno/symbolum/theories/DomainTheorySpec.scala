@@ -24,15 +24,26 @@ import garden.xeno.symbolum.logic.*
  *
  * == The domain, and why this one ==
  *
- * The admission criterion of the engineering handbook's register, which governs this repository and
- * which somebody applied by hand on 2026-09-13 to decide that a candidate rule did not qualify. It
- * is a rule about how rules are admitted, so it is as far from arithmetic as the shelf gets, and it
- * is in daily use rather than invented for a demonstration.
+ * A release gate: a change ships when two people have reviewed it, or when one has and the pipeline
+ * is green, or when it is a revert of something already shipped, and on no other ground. It is a
+ * rule about when work is allowed out, so it is as far from arithmetic as the shelf gets, and its
+ * shape is what makes the accounting below worth reading: three sufficient conditions, the third
+ * failing differently in kind from the other two, and one sentence saying those three are the only
+ * ones there are.
+ *
+ * **The criterion is invented, and that is deliberate rather than a weakness.** Until 2026-09-15
+ * this test asserted the four sentences of a private document's admission criterion, which made a
+ * fragment of that document the subject of a public test. Nothing in the accounting depended on the
+ * sentences being anybody's real rule: what the derivation spends is fixed by the logical shape,
+ * and every criterion of this shape spends the same. What a real one bought was the claim that the
+ * domain is in daily use rather than written for a demonstration, and that claim is given up here
+ * on purpose. A reader who wants to know whether this machinery works on a rule somebody actually
+ * follows should point it at their own, which is the whole use of this file.
  *
  * == What the accounting says, which is the part worth the trouble ==
  *
  * Four axioms are asserted and the conclusion rests on **one**. The three that state when a
- * candidate *is* admitted are not used at all; what the conclusion needs is the converse, the
+ * change *is* admitted are not used at all; what the conclusion needs is the converse, the
  * direction that makes the criterion a gate rather than a sufficiency. A reader would not have
  * guessed that from the four, and it is exactly the question the card says is the useful one about
  * a claim of the world: not "is it a theorem" but "which of my assumptions did it actually spend".
@@ -62,35 +73,37 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
 
   private val classical = Classical.standard
   private val foundation = classical.theory
-  private val candidate = TyApp("candidate", Nil)
+  private val change = TyApp("change", Nil)
 
   /** The domain's own vocabulary: six names, none of which any theory here had. */
   private val declarations: Vector[(String, Type)] = Vector(
-    "TwoIndependent" -> Type.fun(candidate, Type.Bool),
-    "OneOccurrence" -> Type.fun(candidate, Type.Bool),
-    "HasIncident" -> Type.fun(candidate, Type.Bool),
-    "StandingInstruction" -> Type.fun(candidate, Type.Bool),
-    "Admitted" -> Type.fun(candidate, Type.Bool)
+    "TwoReviews" -> Type.fun(change, Type.Bool),
+    "OneReview" -> Type.fun(change, Type.Bool),
+    "PipelineGreen" -> Type.fun(change, Type.Bool),
+    "IsRevert" -> Type.fun(change, Type.Bool),
+    "Ships" -> Type.fun(change, Type.Bool)
   )
 
   /**
-   * The criterion as the practice this repository is developed under states it, in four sentences.
+   * The release gate, in four sentences.
    *
-   * The first three are the bases it gives, and it keeps the third visibly separate from the other
-   * two on purpose, because a corpus rule and an instruction rule fail differently. The fourth is
-   * the direction the prose means by "is admitted **when**": without it the three say only that a
-   * candidate meeting one of them qualifies, and nothing at all follows about one that meets none.
+   * The first three are the grounds it gives, and the third is deliberately unlike the other two: a
+   * revert is not a weaker review, it is a different kind of reason, and the two fail differently.
+   * The fourth is the direction the prose means by "ships **when**": without it the three say only
+   * that a change meeting one of them may ship, and nothing at all follows about one that meets
+   * none. The conclusion below is about a change that meets none, so the fourth is the only one it
+   * can possibly spend, which is the accounting this file exists to show.
    */
   private val criterion: Vector[String] = Vector(
-    "!r:candidate. TwoIndependent r ==> Admitted r",
-    "!r:candidate. OneOccurrence r /\\ HasIncident r ==> Admitted r",
-    "!r:candidate. StandingInstruction r ==> Admitted r",
-    "!r:candidate. Admitted r ==> " +
-      "TwoIndependent r \\/ (OneOccurrence r /\\ HasIncident r) \\/ StandingInstruction r"
+    "!r:change. TwoReviews r ==> Ships r",
+    "!r:change. OneReview r /\\ PipelineGreen r ==> Ships r",
+    "!r:change. IsRevert r ==> Ships r",
+    "!r:change. Ships r ==> " +
+      "TwoReviews r \\/ (OneReview r /\\ PipelineGreen r) \\/ IsRevert r"
   )
 
   private lazy val (theory, axioms) = {
-    val withType = lift(foundation.declareTypeOperator("candidate", 0))
+    val withType = lift(foundation.declareTypeOperator("change", 0))
     val declared = declarations.foldLeft(withType) { (current, entry) =>
       lift(current.declareConstant(entry._1, entry._2))
     }
@@ -108,30 +121,30 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
   private def proposition(text: String): Term =
     force(Parser.proposition(theory, classical.notation, text))
   private def constant(name: String): Term =
-    lift(theory.constant(name, Type.fun(candidate, Type.Bool)))
+    lift(theory.constant(name, Type.fun(change, Type.Bool)))
 
-  /** The claim: a candidate meeting none of the three bases is not admitted. */
+  /** The claim: a change meeting none of the three bases is not admitted. */
   private val statement: String =
-    "!r:candidate. ~(TwoIndependent r) /\\ ~(HasIncident r) /\\ ~(StandingInstruction r) " +
-      "==> ~(Admitted r)"
+    "!r:change. ~(TwoReviews r) /\\ ~(PipelineGreen r) /\\ ~(IsRevert r) " +
+      "==> ~(Ships r)"
 
   /**
    * The derivation, by hand, because nothing here can be asked to find it.
    *
-   * Assume the three negations and suppose the candidate admitted; the fourth axiom gives a
+   * Assume the three negations and suppose the change admitted; the fourth axiom gives a
    * disjunction of three, each of which contradicts one of the three negations. The middle case
-   * needs only the second half of its conjunction, which is the `HasIncident` the caller denied.
+   * needs only the second half of its conjunction, which is the `PipelineGreen` the caller denied.
    */
   private lazy val derived: Kernel.Thm = {
-    val subject = Term.variable("r", candidate)
+    val subject = Term.variable("r", change)
     val antecedent = proposition(
-      "~(TwoIndependent (r:candidate)) /\\ ~(HasIncident r) /\\ ~(StandingInstruction r)"
+      "~(TwoReviews (r:change)) /\\ ~(PipelineGreen r) /\\ ~(IsRevert r)"
     )
-    val admitted = lift(Term.app(constant("Admitted"), subject))
-    val two = lift(Term.app(constant("TwoIndependent"), subject))
-    val one = lift(Term.app(constant("OneOccurrence"), subject))
-    val incident = lift(Term.app(constant("HasIncident"), subject))
-    val standing = lift(Term.app(constant("StandingInstruction"), subject))
+    val admitted = lift(Term.app(constant("Ships"), subject))
+    val two = lift(Term.app(constant("TwoReviews"), subject))
+    val one = lift(Term.app(constant("OneReview"), subject))
+    val incident = lift(Term.app(constant("PipelineGreen"), subject))
+    val standing = lift(Term.app(constant("IsRevert"), subject))
 
     force(for {
       assumed <- LogicError.lift(Kernel.assume(antecedent))
@@ -178,9 +191,9 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
    * really is propositional and the spec above says so of itself.
    */
   private lazy val derivedByTactic: Kernel.Thm = {
-    val subject = Term.variable("r", candidate)
+    val subject = Term.variable("r", change)
     val body = proposition(
-      "~(TwoIndependent (r:candidate)) /\\ ~(HasIncident r) /\\ ~(StandingInstruction r) ==> ~(Admitted r)"
+      "~(TwoReviews (r:change)) /\\ ~(PipelineGreen r) /\\ ~(IsRevert r) ==> ~(Ships r)"
     )
 
     force(for {
@@ -214,7 +227,7 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
   it should "cost one foundational axiom where the hand derivation costs none, and that is the finding" in {
     // **The honest half, and it is a gap rather than a price worth paying quietly.**
     //
-    // The hand derivation spends no foundational axiom at all: assume the subject is admitted, take
+    // The hand derivation spends no foundational axiom at all: assume the subject ships, take
     // the disjunction, contradict each case, conclude the negation. Every step of that is
     // intuitionistic. `Propositional` reaches the same theorem and charges the choice axiom,
     // because it decides classical validity and closes with `DOUBLE_NEGATION`.
@@ -237,7 +250,7 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
   }
 
   "A theory of a domain that is not mathematics" should "be a theory like any other" in {
-    theory.typeOperators.keySet should contain("candidate")
+    theory.typeOperators.keySet should contain("change")
     (theory.constants.keySet -- foundation.constants.keySet) shouldBe declarations.map(_._1).toSet
 
     // Counted, which the card asks for by name. The domain's four sit on top of the foundation's,
@@ -249,8 +262,8 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
 
   it should "settle a claim about that domain, with nothing assumed" in {
     show(derived.conclusion) shouldBe
-      "!x:candidate. ~(TwoIndependent x) /\\ ~(HasIncident x) /\\ ~(StandingInstruction x) " +
-        "==> ~(Admitted x)"
+      "!x:change. ~(TwoReviews x) /\\ ~(PipelineGreen x) /\\ ~(IsRevert x) " +
+        "==> ~(Ships x)"
     derived.hypotheses shouldBe empty
     derived.conclusion shouldBe proposition(statement)
   }
@@ -258,7 +271,7 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
   "The accounting" should "name which assumptions the conclusion actually spent" in {
     // The half the card says is the product, and the half no other system packages. Four axioms
     // were asserted; the conclusion rests on one, and it is the converse rather than any of the
-    // three that say when a candidate qualifies.
+    // three that say when a change qualifies.
     val spent = Derivation.axiomsOf(derived)
     val ours = axioms.map(_.conclusion).toSet
 
@@ -319,27 +332,27 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
    * right there is a refusal, and `Derivation.foreignTo` is the refusal.
    */
   private lazy val (second, secondAxiom) = {
-    val declared = lift(theory.declareConstant("Retired", Type.fun(candidate, Type.Bool)))
-    val text = "!r:candidate. Retired r ==> ~(Admitted r)"
+    val declared = lift(theory.declareConstant("Frozen", Type.fun(change, Type.Bool)))
+    val text = "!r:change. Frozen r ==> ~(Ships r)"
     val proposition = force(Parser.proposition(declared, classical.notation, text))
     val (extended, asserted) = lift(Kernel.assertAxiom(declared, proposition))
     (extended, asserted)
   }
 
   "A second domain built over the first" should "state a claim naming both vocabularies" in {
-    // The composition the card asks for, which is extension and not union. `Retired` is a second
-    // domain's word and `Admitted` is the first's, and the claim below names both because there is
+    // The composition the card asks for, which is extension and not union. `Frozen` is a second
+    // domain's word and `Ships` is the first's, and the claim below names both because there is
     // one signature holding both. Nothing was written to make that possible.
     val across = force(
       Parser.proposition(
         second,
         classical.notation,
-        "!r:candidate. Retired r ==> ~(TwoIndependent r) \\/ ~(StandingInstruction r)"
+        "!r:change. Frozen r ==> ~(TwoReviews r) \\/ ~(IsRevert r)"
       )
     )
 
-    Show.show(classical.notation, across) should include("Retired")
-    Show.show(classical.notation, across) should include("TwoIndependent")
+    Show.show(classical.notation, across) should include("Frozen")
+    Show.show(classical.notation, across) should include("TwoReviews")
 
     // And the first domain's theorem is a theorem of the second, because extension only adds. That
     // is what makes building one over the other a composition rather than a coincidence.
@@ -353,18 +366,18 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     // `|- F` out of it. Nothing here makes that impossible; what `foreignTo` does is let a caller
     // at the boundary find out, and the test is that the sibling's theorem is reported foreign.
     val sibling = {
-      val declared = lift(theory.declareConstant("Retired", Type.fun(candidate, Type.Bool)))
-      val text = "!r:candidate. Retired r ==> Admitted r"
+      val declared = lift(theory.declareConstant("Frozen", Type.fun(change, Type.Bool)))
+      val text = "!r:change. Frozen r ==> Ships r"
       val proposition = force(Parser.proposition(declared, classical.notation, text))
       lift(Kernel.assertAxiom(declared, proposition))
     }
 
     // The two siblings say opposite things about one declared name, and each is consistent alone.
-    Show.show(classical.notation, secondAxiom.conclusion) should include("~(Admitted")
-    Show.show(classical.notation, sibling._2.conclusion) should not include "~(Admitted"
+    Show.show(classical.notation, secondAxiom.conclusion) should include("~(Ships")
+    Show.show(classical.notation, sibling._2.conclusion) should not include "~(Ships"
 
     // Neither is at home in the other, and it is the AXIOM that says so rather than the constant:
-    // `Retired` is declared in both with no origin in either, so nothing on the term tells them
+    // `Frozen` is declared in both with no origin in either, so nothing on the term tells them
     // apart, which is exactly what `Term`'s comment says is right for an uninterpreted name.
     val fromSibling = Derivation.foreignTo(second, sibling._2)
     fromSibling.axioms should have size 1

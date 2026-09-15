@@ -14,9 +14,16 @@ import garden.xeno.symbolum.logic.*
  * declaring a type and a constant costs nothing to believe, and a model's assumptions belong on the
  * left of the turnstile rather than in `assertAxiom`. What it did not have is a worked argument.
  *
- * This is one, and the domain is the one nearest to hand: the tiering rule of the engineering
- * handbook that governs this repository. A tier-two project has a gate; a gate means a review or a
- * signature; either of those is auditable. Therefore a tier-two project is auditable.
+ * This is one, and the domain is a consignment rule: a hazardous shipment carries a manifest; a
+ * manifest means an itemised list or a countersignature; either of those is traceable. Therefore a
+ * hazardous shipment is traceable.
+ *
+ * **The rule is invented, and until 2026-09-15 it was not.** It was the tiering rule of the
+ * practice this repository is developed under, which made a fragment of a private document the
+ * subject of a public test. Nothing here depended on whose rule it was: what the derivation costs
+ * is fixed by the shape, an implication into a disjunction whose two arms reach one conclusion, and
+ * every rule of that shape costs the same. `DomainTheorySpec` was changed the same day for the same
+ * reason and says so in the same words.
  *
  * == What the reader should take from it, in order ==
  *
@@ -25,12 +32,12 @@ import garden.xeno.symbolum.logic.*
  * definitional extensions; and nothing here reaches the sixteen, the choice operator or infinity.
  * `Derivation.axiomsOf` is empty and the test says so.
  *
- * **The case split is done by the machine.** *A gate means a review or a signature* is a
- * disjunction, and the argument has to go both ways round it. That is `Minimal`, on the fragment
+ * **The case split is done by the machine.** *A manifest means an itemised list or a
+ * countersignature* is a disjunction, and the argument has to go both ways round it. That is `Minimal`, on the fragment
  * with no negation in it, and it is why this is automation on a domain and not only bookkeeping.
  *
- * **The declared constants are conservative.** `project`, `tierTwo`, `gated`, `reviewed`, `signed`
- * and `auditable` are declared and never defined, so they prove exactly what their absence proves.
+ * **The declared constants are conservative.** `shipment`, `hazardous`, `manifested`,
+ * `itemised`, `countersigned` and `traceable` are declared and never defined, so they prove exactly what their absence proves.
  * The theory holds no axiom of its own and the argument is entirely in what was assumed.
  *
  * == The limits, which are the interesting half ==
@@ -40,7 +47,7 @@ import garden.xeno.symbolum.logic.*
  * is the untrusted answer and it is not run here.
  *
  * **A declared type cannot be said to be inhabited.** As far as the theory knows there may be no
- * projects at all, and `?p:project. T` is not derivable. Asserting it would be an axiom.
+ * shipments at all, and `?p:shipment. T` is not derivable. Asserting it would be an axiom.
  *
  * **The fragment is propositional.** An argument whose premises quantify over something other than
  * the subject, or that needs a negation, is outside what `Minimal` reaches, and is a hand
@@ -51,13 +58,13 @@ class DomainSpec extends AnyFlatSpec with Matchers {
   private def force[E, T](result: Either[E, T]): T =
     result.fold(error => fail(s"unexpected refusal: $error"), identity)
 
-  private val project: Type = TyApp("project", Nil)
-  private val predicate: Type = Type.fun(project, Type.Bool)
+  private val shipment: Type = TyApp("shipment", Nil)
+  private val predicate: Type = Type.fun(shipment, Type.Bool)
 
   /** The domain: one type and five predicates on it, declared and never defined. */
   private val theory: Theory = force(
-    Vector("tierTwo", "gated", "reviewed", "signed", "auditable")
-      .foldLeft(Logic.standard.theory.declareTypeOperator("project", 0)) { (acc, name) =>
+    Vector("hazardous", "manifested", "itemised", "countersigned", "traceable")
+      .foldLeft(Logic.standard.theory.declareTypeOperator("shipment", 0)) { (acc, name) =>
         acc.flatMap(_.declareConstant(name, predicate))
       }
   )
@@ -65,7 +72,7 @@ class DomainSpec extends AnyFlatSpec with Matchers {
   /**
    * The connectives over the domain, which is the step a domain theory cannot skip.
    *
-   * `Logic.standard` has never heard of `project`, and quantifying over it means asking the theory
+   * `Logic.standard` has never heard of `shipment`, and quantifying over it means asking the theory
    * for the quantifier constant at that type. `Divisibility` documents the same widening for the
    * reals and the reason is identical.
    */
@@ -77,21 +84,23 @@ class DomainSpec extends AnyFlatSpec with Matchers {
   private def read(text: String): Term = force(Parser.proposition(theory, Notation.standard, text))
 
   private val premises = Vector(
-    "!p:project. tierTwo p ==> gated p",
-    "!p:project. gated p ==> reviewed p \\/ signed p",
-    "!p:project. reviewed p ==> auditable p",
-    "!p:project. signed p ==> auditable p"
+    "!p:shipment. hazardous p ==> manifested p",
+    "!p:shipment. manifested p ==> itemised p \\/ countersigned p",
+    "!p:shipment. itemised p ==> traceable p",
+    "!p:shipment. countersigned p ==> traceable p"
   )
 
-  private val claim = "!p:project. tierTwo p ==> auditable p"
+  private val claim = "!p:shipment. hazardous p ==> traceable p"
 
   "An argument from a domain nobody has axiomatised" should "be proved, and cost no axiom at all" in {
-    // The premises are stated at the subject rather than assumed for every project, which is what
+    // The premises are stated at the subject rather than assumed for every shipment, which is what
     // makes this one statement of the fragment: the universals come off, the argument is about one
     // `p`, and the quantifier goes back on at the end.
     val stated =
-      s"!p:project. (tierTwo p ==> gated p) /\\ (gated p ==> reviewed p \\/ signed p) /\\ " +
-        "(reviewed p ==> auditable p) /\\ (signed p ==> auditable p) ==> (tierTwo p ==> auditable p)"
+      s"!p:shipment. (hazardous p ==> manifested p) /\\ " +
+        "(manifested p ==> itemised p \\/ countersigned p) /\\ " +
+        "(itemised p ==> traceable p) /\\ (countersigned p ==> traceable p) " +
+        "==> (hazardous p ==> traceable p)"
 
     val theorem = force(Minimal(domain).prove(read(stated)))
 
@@ -110,28 +119,29 @@ class DomainSpec extends AnyFlatSpec with Matchers {
     // written into the statement. What comes back names them in its own sequent, which is what lets
     // somebody disagree with the model instead of with the system.
     val assumed = premises.map(text => force(Kernel.assume(read(text))))
-    val subject = Term.variable("p", project)
+    val subject = Term.variable("p", shipment)
 
     val instantiated = assumed.map(premise => force(domain.rules.spec(subject, premise)))
 
     val derived = force(
       for {
-        gate <- Right(instantiated(0))
+        carries <- Right(instantiated(0))
         split <- Right(instantiated(1))
-        byReview <- Right(instantiated(2))
+        byList <- Right(instantiated(2))
         bySignature <- Right(instantiated(3))
-        tier <- LogicError.lift(Kernel.assume(at("tierTwo", subject)))
-        gated <- domain.rules.mp(gate, tier)
-        cases <- domain.rules.mp(split, gated)
-        left <- LogicError.lift(Kernel.assume(at("reviewed", subject)))
-        right <- LogicError.lift(Kernel.assume(at("signed", subject)))
-        fromReview <- domain.rules.mp(byReview, left)
+        subjectIsHazardous <- LogicError.lift(Kernel.assume(at("hazardous", subject)))
+        manifested <- domain.rules.mp(carries, subjectIsHazardous)
+        cases <- domain.rules.mp(split, manifested)
+        left <- LogicError.lift(Kernel.assume(at("itemised", subject)))
+        right <- LogicError.lift(Kernel.assume(at("countersigned", subject)))
+        fromList <- domain.rules.mp(byList, left)
         fromSignature <- domain.rules.mp(bySignature, right)
-        result <- domain.rules.disjElim(cases, fromReview, fromSignature)
+        result <- domain.rules.disjElim(cases, fromList, fromSignature)
       } yield result
     )
 
-    // Four premises and the tiering assumption, and nothing else. That list is the model.
+    // Four premises and the assumption that the subject is hazardous, and nothing else. That
+    // list is the model.
     derived.hypotheses.size shouldBe 5
     Derivation.axiomsOf(derived) shouldBe empty
 
@@ -140,8 +150,8 @@ class DomainSpec extends AnyFlatSpec with Matchers {
 
   "A domain argument that needs a negation" should "be refused by name rather than attempted" in {
     // The boundary, and it is where a reader has to stop and derive by hand. `~(waived r)` is the
-    // shape a real handbook rule takes and it is outside the fragment that costs nothing.
-    val withNegation = read("!p:project. ~(gated p) ==> ~(tierTwo p)")
+    // shape a real consignment rule takes and it is outside the fragment that costs nothing.
+    val withNegation = read("!p:shipment. ~(manifested p) ==> ~(hazardous p)")
 
     Minimal(domain).prove(withNegation) match {
       case Right(theorem) => fail(s"the fragment must not reach $theorem")
@@ -158,13 +168,13 @@ class DomainSpec extends AnyFlatSpec with Matchers {
     //
     // What is actually unreachable is **cardinality**. Nothing here says a declared type has two
     // elements, or infinitely many, and that is what the old paragraph was reaching for.
-    val witness = Term.variable("p", project)
+    val witness = Term.variable("p", shipment)
     val predicate = force(Term.abs(witness, domain.truth))
     val trivial = force(domain.rules.truth)
 
     val inhabited = force(domain.rules.existsIntro(predicate, witness, trivial))
 
-    inhabited.conclusion shouldBe read("?p:project. T")
+    inhabited.conclusion shouldBe read("?p:shipment. T")
     inhabited.hypotheses shouldBe empty
     Derivation.axiomsOf(inhabited) shouldBe empty
   }
@@ -172,6 +182,6 @@ class DomainSpec extends AnyFlatSpec with Matchers {
   it should "still be outside the fragment this file's procedure decides" in {
     // `Minimal` is propositional: it has no rule for an existential and says so rather than
     // searching. The two facts above and here are different and a reader must not merge them.
-    Minimal(domain).prove(read("?p:project. T")).isLeft shouldBe true
+    Minimal(domain).prove(read("?p:shipment. T")).isLeft shouldBe true
   }
 }
