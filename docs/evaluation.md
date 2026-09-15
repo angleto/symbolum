@@ -1163,17 +1163,31 @@ had been one question.
 The datum is not the defects. **The datum is the rate**, and it is the only evidence this repository
 has ever had about the soundness of its base. Two things follow from the table as it stands.
 
-The first is that a reading with a *reason of its own* finds things that reading the kernel to read
-it does not. Every row above came from somebody wanting something else: to state a benchmark, to
-separate two readings of a sentence, to compare against another system. The last two rows found
-nothing in the kernel, and that is worth as much as the rows that did.
+The first is that a reading with a *reason of its own* finds things, and six of the seven rows are
+one: somebody wanting to state a benchmark, to separate two readings of a sentence, to compare
+against another system. **The seventh is the exception and it is the informative one.** It was read
+for no other purpose, it is the pass the paragraph below used to be waiting for, and what it found
+was not in the ten rules: it was that the argument *about* the rules claimed more than they do, and
+that the second checker accepted an axiom no theory asserts.
 
 The second is the cadence. **The adversarial reading is redone, and the count per pass is the
-measurement.** If the next pass finds nothing in the kernel, that is the first real evidence this
-repository will have had; one pass at zero is weak evidence and three are not. Until then the honest
-statement is the one at the top of this section: the base is small enough to read, and it has been
-read by its authors, for ten months, a substantial part of that by a model checking its own work.
-`docs/adr/0006` says the same thing about one rule and calls the debt by its name.
+measurement.** Three consecutive passes have now found nothing in the ten rules, and the third of
+them went looking. That is the first evidence of the kind this section was waiting for, and it is
+weaker than the plain count suggests in one direction and stronger in another: weaker because two of
+the three were reading for something else, stronger because the one that was not still moved nothing
+in the rules. What it moved was the sentence describing them, which is the failure this whole
+document is arranged against and is why the row is in the table at its own count rather than at
+zero. The honest statement remains the one at the top of this section: the base is small enough to
+read, and it has been read by its authors, for ten months, a substantial part of that by a model
+checking its own work. `docs/adr/0006` says the same thing about one rule and calls the debt by its
+name.
+
+**This paragraph was written in the future tense and stayed there after the pass it describes had
+landed in the table above it**, saying "if the next pass finds nothing" and "the last two rows found
+nothing in the kernel" when the last row found one. Corrected on 2026-09-15 by the sweep over the
+closed cards, which is the only thing that read the prose against the table it sits under. Nothing
+fails when these two go out of step, and the section immediately below is about exactly that
+distinction.
 
 ## Which figures here are alive, and which are a photograph
 
