@@ -39,6 +39,16 @@ three things a reader would expect to be blockers are not, and that a third nobo
   axioms of the real numbers is formally correct and says something false about what was needed.
   **That motivation for the construction is therefore already discharged**, by other means, and it
   should stop being offered as one.
+
+  What that reading does **not** say is that it cannot come undone, and the first version of this
+  record stopped there, stating a measurement where a guard belongs. Nothing structural protects
+  the property: one derivation below `Language` reaching for `Real` to get an arithmetic fact that
+  `Peano` happens not to have would charge the sixteen again and fail no test. That is not
+  hypothetical in the other direction, where it happened three times in the week this was written,
+  `NUM_ADD_LE_CANCEL` and three multiplicative lemmas being facts nobody noticed were absent until
+  a proof reached for them. `NothingOverNumRestsOnTheRealsSpec` is the paragraph turned into
+  something that fails: seven developments by name, with the calibration that says the check can
+  still see a development which does reach the reals.
 - **`Product` is already below the line.** Its only call of `axiom` is `classical.axiom(Choice)`, so
   the pair type can be built under the reals without a change to it, which matters because the
   integers are carved out of a pair.
