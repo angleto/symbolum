@@ -213,17 +213,19 @@ class RealSpec extends AnyFlatSpec with Matchers {
       .filterNot(naming.contains)
       .sorted
 
-    // One file, and it is the one the old guard drove into a periphrasis. `Register.scala` produces
-    // `docs/reading-register.md` and its docstring explains why that document is worth anything:
-    // because a scan over this operation says an axiom outside the chain's signature would have to
-    // come from one of three named places. It cannot make that argument without naming the
-    // operation, and now it does not have to avoid it.
-    // Two files, and the second arrived on 2026-09-13 by the same route as the first: it has to
-    // name the operation in order to say why the interface it describes is shaped the way it is.
+    // Each of these is here for the same reason, which is that it has to name the operation in
+    // order to make its own argument. How many there are is the list below rather than a number
+    // written beside it.
+    //
+    // `Register.scala` produces `docs/reading-register.md`, and its docstring explains why that
+    // document is worth anything: a scan over this operation says that an axiom outside the chain's
+    // signature would have to come from one of three named places. It is also the file the old
+    // guard drove into fourteen words of periphrasis where an identifier belonged, which is the
+    // defect this second assertion exists to keep repaired.
+    //
     // `Notebook.scala` argues that a cell running arbitrary Scala could reach `Kernel.assertAxiom`
-    // and `Term.variable` unrecorded, which is the reason its command language is small and not
-    // Scala. That argument is unwritable without the name, and the alternative this guard produced
-    // once before was fourteen words of periphrasis where an identifier belonged.
+    // and `Term.variable` unrecorded, which is the reason its command language is small and is not
+    // Scala. That argument is unwritable without the name either.
     mentioning shouldBe Vector(
       "modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Notebook.scala",
       "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Register.scala"
