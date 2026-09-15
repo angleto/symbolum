@@ -215,7 +215,7 @@ before the sum or associativity stops flattening, and until this change that cam
 because the constants were literally named `*` and `+`. Renaming them to `real_mul` and `real_add`
 reverses the comparison, and the file's own docstring had already written down what that does, in
 the paragraph explaining why `num` uses a different order. **One corpus entry in `PolynomialSpec`
-caught it and nothing else in 800 tests did.** The ranking is now stated in the code rather than
+caught it and **no other test in the repository** did.** The ranking is now stated in the code rather than
 inherited from spelling, which is the repair the case asks for: an order a canonical form depends on
 cannot be a property of how two constants happen to be spelled.
 

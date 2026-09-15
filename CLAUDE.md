@@ -254,7 +254,7 @@ it bought:
 - **`Arithmetic.ringOrder` needed the product to sort before the sum, and got that from ASCII.**
   `*` precedes `+` in ASCII and `real_mul` does not precede `real_add`, so the rename reversed a
   comparison the canonical form depends on, and associativity stopped flattening. **One corpus entry
-  in `PolynomialSpec` caught it and nothing else in 2085 tests did.** The ranking is written down in
+  in `PolynomialSpec` caught it and **no other test in the repository** did.** The ranking is written down in
   that file now. Read it before touching any order a normal form depends on: the general lesson is
   the one the file already carried about `num`, which is that such an order must not be a property
   of how two constants happen to be spelled.
