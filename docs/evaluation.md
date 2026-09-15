@@ -155,7 +155,7 @@ order to show the checker one.
 
 |  |  |
 |---|---|
-| theorems replayed here | 10 |
+| theorems replayed here | 11 |
 | wrong claims put to the rule check, in `CheckSpec` | 11 |
 
 | Theorem | Inferences | Axioms reached |
@@ -167,6 +167,7 @@ order to show the checker one.
 | `x < y /\ y < z ==> x < z` | 4122 | 9 |
 | `(x * y) / y = x` | 1757 | 8 |
 | `p /\ q ==> p`, propositional | 199 | **0** |
+| `((p ==> q) ==> p) ==> p`, found by a solver | 1244 | 1 |
 | `ADD_SYM`, an axiom of the reals | 1 | 1 |
 | the successor's properties | 391 | 2 |
 | induction over the naturals | 625 | **0** |

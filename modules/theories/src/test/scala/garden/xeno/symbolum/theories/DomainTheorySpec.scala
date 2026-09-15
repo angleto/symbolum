@@ -163,6 +163,79 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     } yield closed)
   }
 
+  /**
+   * The same statement, found by a procedure instead of written out.
+   *
+   * The hand derivation above is forty lines of `for`-comprehension and it is what this page is
+   * really about: a claim of the world, settled, with its assumptions counted. The question the
+   * card carrying this work asks is whether a machine can do that part, because forty lines per
+   * claim is not an instruction anybody follows.
+   *
+   * It can, and what it costs is measured below rather than described. Three steps: specialise the
+   * fourth axiom at the subject, hand the implication from it to the goal to `Propositional`, and
+   * detach. The domain's five constants are **atoms** to that procedure, which is what makes this
+   * work at all: it is given no meaning for any of them and does not need one, because the argument
+   * really is propositional and the spec above says so of itself.
+   */
+  private lazy val derivedByTactic: Kernel.Thm = {
+    val subject = Term.variable("r", candidate)
+    val body = proposition(
+      "~(TwoIndependent (r:candidate)) /\\ ~(HasIncident r) /\\ ~(StandingInstruction r) ==> ~(Admitted r)"
+    )
+
+    force(for {
+      converse <- rules.specAll(axioms(3), List(subject))
+      bridge <- logic.mkImp(converse.conclusion, body)
+      tautology <- Propositional.over(classical, logic).prove(bridge)
+      applied <- rules.mp(tautology, converse)
+      closed <- rules.gen(subject, applied)
+    } yield closed)
+  }
+
+  "The same claim put to a procedure" should "come back as the same theorem" in {
+    // Not a weaker theorem, not a conditional one, and not one about a different statement: the
+    // conclusion is compared with the hand derivation's rather than with the text, because two
+    // statements that print the same can be different terms.
+    derivedByTactic.conclusion shouldBe derived.conclusion
+    derivedByTactic.hypotheses shouldBe empty
+  }
+
+  it should "spend the same one of the four domain axioms" in {
+    // The accounting the card calls the product, produced by the search instead of by reading a
+    // hand derivation. Same answer: one of the four, and it is the converse.
+    val spent = Derivation.axiomsOf(derivedByTactic)
+    val ours = axioms.map(_.conclusion).toSet
+
+    spent.count(ours.contains) shouldBe 1
+    spent.filter(ours.contains).head shouldBe axioms(3).conclusion
+    axioms.take(3).count(axiom => spent.contains(axiom.conclusion)) shouldBe 0
+  }
+
+  it should "cost one foundational axiom where the hand derivation costs none, and that is the finding" in {
+    // **The honest half, and it is a gap rather than a price worth paying quietly.**
+    //
+    // The hand derivation spends no foundational axiom at all: assume the subject is admitted, take
+    // the disjunction, contradict each case, conclude the negation. Every step of that is
+    // intuitionistic. `Propositional` reaches the same theorem and charges the choice axiom,
+    // because it decides classical validity and closes with `DOUBLE_NEGATION`.
+    //
+    // So neither procedure this repository has covers this argument at its real cost. `Minimal` is
+    // the one that costs nothing and it refuses anything with a negation in it, which this statement
+    // is made of; `Propositional` takes it and overpays. What would close the gap is a decision
+    // procedure for **intuitionistic** propositional logic, negation included — Dyckhoff's
+    // contraction-free calculus is the standard one and it terminates without a depth bound. That is
+    // work of a known shape and it is not done here.
+    //
+    // Asserted rather than written in prose so that the day it stops being true, this goes red.
+    val ours = axioms.map(_.conclusion).toSet
+    val foundational = Derivation.axiomsOf(derivedByTactic).filterNot(ours.contains)
+
+    foundational should have size 1
+    foundational.head shouldBe force(classical.axiom(Classical.Choice)).conclusion
+
+    Derivation.axiomsOf(derived).filterNot(ours.contains) shouldBe empty
+  }
+
   "A theory of a domain that is not mathematics" should "be a theory like any other" in {
     theory.typeOperators.keySet should contain("candidate")
     (theory.constants.keySet -- foundation.constants.keySet) shouldBe declarations.map(_._1).toSet

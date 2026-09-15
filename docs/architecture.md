@@ -104,7 +104,7 @@ dist      -> tactics, examples  the tarball a person installs, and the only modu
 ```
 
 The last two are what the system ships as, and they are two artifacts rather than one read two
-ways: the six library modules go to a registry under their own coordinates for a build tool to
+ways: the seven library modules go to a registry under their own coordinates for a build tool to
 resolve, and the distribution carries every jar with a launcher per entry point for a person to
 run.
 

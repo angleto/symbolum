@@ -212,6 +212,56 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     force(prove(goal)).hypotheses shouldBe empty
   }
 
+  it should "reach the rest of the classical fragment where a chain supplies the axioms for it" in {
+    // The gap this file named when `Propositional` landed and did not close: the procedure existed
+    // and the prover did not route to it, so "proved" and "reachable by asking the prover" were two
+    // claims and only the first was true.
+    //
+    // Peirce's law is the witness because it is exactly the difference. It has no negation in it, so
+    // the free fragment reads it; it is not intuitionistically provable, so the free fragment
+    // refuses it; and `MinimalSpec` asserts that refusal from the other side.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+    val goal = force(wider.reals.proposition("!p:bool. !q:bool. ((p ==> q) ==> p) ==> p"))
+
+    wider.addressOf(goal) shouldBe Prove.Address.Propositional
+    val theorem = force(wider(goal))
+    theorem.conclusion shouldBe goal
+    theorem.hypotheses shouldBe empty
+
+    // What it costs, asserted rather than described: one axiom, the choice operator, spent at the
+    // single classical step of a replay that is otherwise intuitionistic.
+    Derivation.axiomsOf(theorem).size shouldBe 1
+
+    // And the prover without a chain behind it still refuses, which is what makes the `Option` a
+    // real configuration rather than a degraded one: `Order.standard` has never heard of the
+    // classical axioms and a second `Classical` must not be built to fill the gap.
+    Prove.standard(force(Prove.standard.reals.proposition("!p:bool. !q:bool. ((p ==> q) ==> p) ==> p"))).isLeft shouldBe true
+  }
+
+  it should "address a propositional goal with a negation in it, which used to be nobody's" in {
+    // The other half of the widening. `p \\/ ~p` is bare propositional atoms and a negation, so the
+    // free fragment turns it away by naming the negation — the right answer while that fragment was
+    // the only propositional procedure there was, and a goal being told to remove a negation by a
+    // system that can settle it once it is not.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+    val goal = force(wider.reals.proposition("!p:bool. p \\/ ~p"))
+
+    wider.addressOf(goal) shouldBe Prove.Address.Propositional
+    force(wider(goal)).hypotheses shouldBe empty
+  }
+
+  it should "keep an arithmetic denial with the procedure whose message is worth more" in {
+    // The narrowness that makes the widening safe, asserted so it cannot drift. `~(x = 0)` has an
+    // arithmetic atom, so it is not the propositional address however propositional its shape looks,
+    // and the refusal a caller gets is still the one that names what a proof would cost.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+
+    wider.addressOf(force(wider.reals.proposition("!x:real. ~(x = 0)"))) should not be Prove.Address.Propositional
+  }
+
   it should "refuse an unaddressed goal as itself, not as a procedure's complaint" in {
     // The point of the whole file: a goal nobody can take is told so, rather than being handed
     // whichever procedure was asked last and reporting that procedure's shape requirement.

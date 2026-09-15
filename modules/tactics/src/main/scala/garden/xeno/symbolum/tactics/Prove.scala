@@ -74,7 +74,20 @@ final class Prove private (
    * `None` is a development with no library, and it is a real configuration rather than a degraded
    * one: `Prove.construct` over somebody's own order has no facts to look in until they pass some.
    */
-  val library: Option[(Library, Logic)]
+  val library: Option[(Library, Logic)],
+  /**
+   * The classical extension, where the caller holds one, and what it buys is completeness.
+   *
+   * `Option` for the same reason [[library]] is one: an `Order` has never heard of the classical
+   * axioms, so a prover built over somebody's own order has none and says so by doing less. Only
+   * [[Prove.construct]] over a `Chain` can supply it, because only a chain carries one.
+   *
+   * **A second `Classical` must never be built here to fill the gap.** `Classical.construct`
+   * asserts the choice axiom into a theory, so building one over a logic that already has it is
+   * two theories declaring one name, which is the case `docs/adr/0008` leaves open and
+   * `SoundnessAttackSpec` derives `|- F` from. The capability is absent or it is passed in.
+   */
+  val classical: Option[Classical]
 ) {
 
   /**
@@ -225,7 +238,20 @@ final class Prove private (
             }
         }
 
-      case Prove.Address.Propositional => TacticError.lift(minimal.prove(goal))
+      case Prove.Address.Propositional =>
+        minimal.prove(goal) match {
+          case Right(theorem) => Right(theorem)
+          // The refusal that survives is the second one where there is a second procedure, which is
+          // the opposite of this class's usual rule and is right here for the reason that rule is:
+          // `Minimal`'s refusal names the fragment it declines by, and once a wider procedure has
+          // run that message is about the wrong fragment. `Propositional` refuses by exhibiting an
+          // assignment, which is what a caller can act on.
+          case Left(fromMinimal) =>
+            propositional match {
+              case None => Left(FromLogic(fromMinimal))
+              case Some(classicalFragment) => TacticError.lift(classicalFragment.prove(goal))
+            }
+        }
 
       case Prove.Address.Nobody(why) =>
         Left(FromLogic(NotOfForm(why, goal)))
@@ -238,6 +264,22 @@ final class Prove private (
    * connectives are the signature's and the rules come with them.
    */
   private val minimal: Minimal = Minimal(reals.logic)
+
+  /**
+   * The whole classical propositional fragment, decided by a solver and certified, where there is
+   * one to build.
+   *
+   * Asked **after** [[minimal]] and never instead of it, and the order is a measurement rather than
+   * a preference: on the goal both take, `(p /\ q) ==> (q /\ p)`, `Minimal` costs 216 primitive
+   * inferences and **no axiom** while this costs 1242 and the choice axiom. A theorem resting on
+   * nothing is worth more than the same theorem resting on something, so the cheaper address keeps
+   * the goals it can reach.
+   *
+   * What it adds is the rest of the fragment. `Minimal` is an intuitionistic search, so it refuses
+   * classically valid goals with no negation in them at all: Peirce's law is the witness and
+   * `MinimalSpec` holds that boundary from the other side.
+   */
+  private val propositional: Option[Propositional] = classical.map(Propositional(_))
 
   /**
    * What `Field` would charge for this goal, as a refusal, when it can settle it at all.
@@ -314,7 +356,8 @@ object Prove {
       Linarith.standard,
       Field.standard,
       Order.standard.reals,
-      libraryOf(Order.standard)
+      libraryOf(Order.standard),
+      None
     )
 
   /**
@@ -368,7 +411,7 @@ object Prove {
     for {
       linarith <- Linarith.construct(order)
       field <- Field.construct(order.ring.arithmetic)
-    } yield new Prove(order, order.ring, linarith, field, reals, libraryOf(order))
+    } yield new Prove(order, order.ring, linarith, field, reals, libraryOf(order), None)
 
   /**
    * The prover a chain deserves: its widest signature, and everything it holds.
@@ -384,7 +427,9 @@ object Prove {
    * for a goal none of them address.
    */
   def construct(chain: Chain): Either[LogicError, Prove] =
-    construct(chain.order, chain.widest, Library.of(chain))
+    Linarith
+      .construct(chain.order)
+      .flatMap(construct(chain.order, chain.widest, Library.of(chain), _, Some(chain.classical)))
 
   /**
    * The same, with a library the caller assembled rather than the one the order can reach.
@@ -400,7 +445,7 @@ object Prove {
    * the reals, because a lemma about `num` is specialised at `num`.
    */
   def construct(order: Order, reals: Signature, held: Library): Either[LogicError, Prove] =
-    Linarith.construct(order).flatMap(construct(order, reals, held, _))
+    Linarith.construct(order).flatMap(construct(order, reals, held, _, None))
 
   /**
    * The same, with the linear procedure supplied rather than built from the order.
@@ -414,12 +459,13 @@ object Prove {
     order: Order,
     reals: Signature,
     held: Library,
-    linarith: Linarith
+    linarith: Linarith,
+    classical: Option[Classical]
   ): Either[LogicError, Prove] =
     for {
       field <- Field.construct(order.ring.arithmetic)
       logic <- reals.logic.over(reals.theory)
-    } yield new Prove(order, order.ring, linarith, field, reals, Some((held, logic)))
+    } yield new Prove(order, order.ring, linarith, field, reals, Some((held, logic)), classical)
 
   /**
    * The shape test, applied under any leading quantifiers and through any antecedent.
@@ -446,11 +492,18 @@ object Prove {
       case Address.Nobody(why) =>
         val fragment = Minimal(reals.logic)
 
-        if (fragment.reads(goal)) Address.Propositional
-        // Recognised and turned away, which is a better answer than the arithmetic shapes: a goal
-        // with a negation in it is OUT of the fragment that costs no axiom, and a caller told only
-        // the shapes reformulates a statement that has nothing wrong with it.
-        else Address.Nobody(fragment.declines(goal).getOrElse(why))
+        // Either half of the propositional address: what the free fragment reads, and what it
+        // recognises and turns away. The second used to be a refusal naming the negation, and it was
+        // the right answer while the free fragment was the only propositional procedure there was.
+        // It is not any more, and a goal like `p \/ ~p` was being told to remove a negation by a
+        // system that can now settle it.
+        //
+        // **Narrow on purpose, and the narrowness is `Minimal.declines`'s.** It fires only where
+        // every atom is a bare proposition, so nothing arithmetic is taken away from the procedure
+        // whose message is worth more: `~(x = 0)` has an arithmetic atom, is not this address, and
+        // keeps the refusal LINARITH would give it.
+        if (fragment.reads(goal) || fragment.declines(goal).isDefined) Address.Propositional
+        else Address.Nobody(why)
       case other => other
     }
   }

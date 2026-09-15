@@ -81,11 +81,26 @@ import garden.xeno.symbolum.sat.Cnf.Literal
  * `garden.xeno.symbolum.tactics.Consistency` keeps the same two answers apart for the same reason
  * and calls its weak one `NotContradictory`.
  */
-final class Propositional private (val classical: Classical, val conflictLimit: Int) {
+final class Propositional private (
+  val classical: Classical,
+  /**
+   * What it READS a goal in, which need not be the logic the classical facts were proved over.
+   *
+   * The same arrangement `Prove` has between its procedures and its signature, and it is needed for
+   * the same reason. A theory of a domain declares constants `Classical.standard` has never heard
+   * of, so a goal about one can be **built** only against a logic widened to that theory; what is
+   * decided is the propositional skeleton either way, because an atom here is given no meaning at
+   * all.
+   *
+   * Reading wider than the facts were proved in is sound because the only thing taken from
+   * [[classical]] is `DOUBLE_NEGATION`, a theorem about `bool` that says nothing about any domain.
+   */
+  val logic: Logic,
+  val conflictLimit: Int
+) {
 
   import Propositional.*
 
-  private val logic: Logic = classical.logic
   private val rules: Rules = logic.rules
 
   /**
@@ -346,34 +361,32 @@ final class Propositional private (val classical: Classical, val conflictLimit: 
     body: Term,
     negated: Term
   ): Either[LogicError, Kernel.Thm] = {
-    val proved = Array.ofDim[Kernel.Thm](derivation.steps.length)
-    var failure: Option[LogicError] = None
-    var at = 0
+    // Folded rather than looped, because this module is written without a mutable local and
+    // `StyleSpec` asserts it over the sources. The `Either` short-circuits, so a step that cannot be
+    // rebuilt stops the replay at the step that failed rather than at the end of the derivation.
+    val rebuilt = derivation.steps.foldLeft(Right(Vector.empty[Kernel.Thm]): Either[LogicError, Vector[Kernel.Thm]]) {
+      (carried, step) =>
+        carried.flatMap { proved =>
+          val outcome: Either[LogicError, Kernel.Thm] = step match {
+            case Step.Input(index) => clauses(index)._2()
 
-    while (at < derivation.steps.length && failure.isEmpty) {
-      val outcome: Either[LogicError, Kernel.Thm] = derivation.steps(at) match {
-        case Step.Input(index) => clauses(index)._2()
-
-        case Step.Resolve(left, right, pivot) =>
-          // `pivot` is positive by `Solver.resolveStep`, so the right antecedent holds the negative
-          // literal and carries the subformula itself as a hypothesis. Discharging it gives the
-          // negation the left antecedent is assuming, and cutting it in is the resolvent.
-          complementOf(encoding, -pivot).flatMap { held =>
-            rules.notIntro(held, proved(right)).flatMap(rules.proveHyp(_, proved(left)))
+            case Step.Resolve(left, right, pivot) =>
+              // `pivot` is positive by `Solver.resolveStep`, so the right antecedent holds the
+              // negative literal and carries the subformula itself as a hypothesis. Discharging it
+              // gives the negation the left antecedent is assuming, and cutting it in is the
+              // resolvent.
+              complementOf(encoding, -pivot).flatMap { held =>
+                rules.notIntro(held, proved(right)).flatMap(rules.proveHyp(_, proved(left)))
+              }
           }
-      }
 
-      outcome match {
-        case Right(theorem) => proved(at) = theorem
-        case Left(error) => failure = Some(error)
-      }
-      at += 1
+          outcome.map(proved :+ _)
+        }
     }
 
-    failure.toLeft(()).flatMap { _ =>
-      val refutation = proved(derivation.empty)
+    rebuilt.flatMap { proved =>
       for {
-        doubleNegated <- rules.notIntro(negated, refutation)
+        doubleNegated <- rules.notIntro(negated, proved(derivation.empty))
         scheme <- classical.fact(Classical.DoubleNegation)
         instance <- rules.spec(body, scheme)
         theorem <- rules.mp(instance, doubleNegated)
@@ -404,9 +417,20 @@ object Propositional {
   }
 
   /** Over the standard classical logic, which is the least this procedure can be built on. */
-  lazy val standard: Propositional = new Propositional(Classical.standard, Solver.Conflicts)
+  lazy val standard: Propositional = new Propositional(Classical.standard, Classical.standard.logic, Solver.Conflicts)
 
   /** Over a development of one's own, so that its declared predicates are the atoms. */
   def apply(classical: Classical, conflictLimit: Int = Solver.Conflicts): Propositional =
-    new Propositional(classical, conflictLimit)
+    new Propositional(classical, classical.logic, conflictLimit)
+
+  /**
+   * The same, reading in a logic wider than the one the classical facts were proved over.
+   *
+   * The call a theory of a domain needs: its constants are not in `Classical.standard`'s theory, so
+   * a goal naming them cannot be built against that logic at all, and the procedure would refuse a
+   * statement that has nothing wrong with it. `Prove.construct(order, reals)` is the same call one
+   * layer up and its docstring carries the argument.
+   */
+  def over(classical: Classical, logic: Logic, conflictLimit: Int = Solver.Conflicts): Propositional =
+    new Propositional(classical, logic, conflictLimit)
 }

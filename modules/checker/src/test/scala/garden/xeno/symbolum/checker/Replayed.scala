@@ -74,6 +74,31 @@ object Replayed {
     force(garden.xeno.symbolum.logic.Minimal.standard.prove(goal))
   }
 
+  /**
+   * The classical propositional theorem a **solver** found and the rules re-derived.
+   *
+   * The entry this file exists for, read from the other end. Everything else here was proved by a
+   * procedure that builds its theorem as it goes; this one was found by a conflict-driven search in
+   * `modules/sat` that cannot construct a theorem at all, and then re-derived one resolution step at
+   * a time. A second implementation replaying it is the whole argument for that arrangement being
+   * safe: if the replay were wrong, this is where it would show, in a reader that never heard of
+   * the solver.
+   *
+   * Peirce's law rather than something simpler, because it is the goal that separates this
+   * procedure from `Minimal`: no negation in it, classically valid, and intuitionistically out of
+   * reach. The entry above it is the one `Minimal` proves on no axiom at all, so the two sit next
+   * to each other and a reader meets the price of the difference.
+   */
+  private def peirce: Kernel.Thm = {
+    val classical = garden.xeno.symbolum.logic.Classical.standard
+    val goal = force(
+      garden.xeno.symbolum.logic.Parser
+        .proposition(classical.theory, classical.notation, "!p:bool. !q:bool. ((p ==> q) ==> p) ==> p")
+    )
+
+    force(garden.xeno.symbolum.logic.Propositional(classical).prove(goal))
+  }
+
   /** The whole population, built once. */
   lazy val entries: Vector[Entry] = Vector(
     Entry("`0 < 1`", force(Order.standard.zeroLessOne), reals),
@@ -91,6 +116,11 @@ object Replayed {
     ),
     Entry("`(x * y) / y = x`", force(Field.standard.prove("!x:real y:real. (x * y) / y = x")), reals),
     Entry("`p /\\ q ==> p`, propositional", conjunctionElimination, reals),
+    Entry(
+      "`((p ==> q) ==> p) ==> p`, found by a solver",
+      peirce,
+      garden.xeno.symbolum.logic.Classical.standard.theory
+    ),
     Entry("`ADD_SYM`, an axiom of the reals", force(Real.standard.axiom("ADD_SYM")), reals),
     Entry(
       "the successor's properties",

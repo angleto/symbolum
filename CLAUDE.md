@@ -247,6 +247,23 @@ axioms to `Library.of` would have emptied the difference it checks, and an empty
 stopped receiving anything would read as a clean result. When writing a guard, ask what input makes
 it trivially true, and assert against that too.
 
+**A search may add a theorem and must never take a refusal away.** `Prove` asks `Chaining` last, and
+its failure leaves whatever refusal the shape rule chose. The rule that class is about is that the
+procedure whose fragment recognises the goal's shape is the one whose refusal is reported, and a
+search recognises no shape: it either reaches the goal or does not, so it has no claim on the
+message. The one place the order is reversed is the propositional address, where `Minimal` runs
+before `Propositional` and the **second** refusal survives, because the first names a fragment that
+is no longer the only one.
+
+**And the order candidates are tried in is the whole of whether a bounded search works.** Sorting by
+fewest obligations is the obvious order and it is wrong here, measured on 2026-09-15: `DOUBLE_NEGATION`
+matches every goal at all and owes `~~goal`, `LT_FROM_ZERO` owes `0 < goal - 0`, and each owes one
+obligation, so each sorts ahead of the lemma that settles the goal. The lemma that works ranked 4, 5
+and 3 by count and 1, 2 and 0 by the total size of what is owed. At forty expansions the miniF2F
+corpus cost 2.45 times its own baseline and proved nothing new; at ten under the right order it is
+back at baseline and keeps every goal. A candidate whose obligations are smaller than the target is
+making progress and one whose obligations are larger is not.
+
 **A tactic that cannot settle a goal must refuse.** `Ring` and `Linarith` are decision procedures
 for small fragments and they say so by failing on the rest; `Translate` refuses what the theory has
 no constant for, by name. A tactic that guessed would be worse than one that stops.
