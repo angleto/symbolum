@@ -665,10 +665,10 @@ that, the thing Goedel's argument actually needs, which is `Prov` as a formula *
 language** with one free variable rather than as the predicate `NUM_PROV` of the ambient logic.
 **D1, D2 and D3 are statements about that formula, so not one of the three can be stated yet.**
 
-What is above that is not written: that object-level `Prov`, the deduction theorem, the diagonal
-lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last of those is
-its own piece of work rather than a helper inside this one, and it is the part most likely to be
-underestimated.
+What is above that is not written: discharging the freeness condition at a concrete code, that
+object-level `Prov`, the diagonal lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last
+of those is its own piece of work rather than a helper inside this one, and it is the part most
+likely to be underestimated.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's
