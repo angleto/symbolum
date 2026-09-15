@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (92)
+## The definitions (100)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -240,13 +240,21 @@ axiom mentioning it means.
 | `definition ZERO` | ZERO = mk_num IND_0 | **NOT READ** |  |  |
 | `definition \/` | \/ = \x:bool. \y:bool. !z:bool. (x ==> z) ==> (y ==> z) ==> z | **NOT READ** |  |  |
 | `definition abs` | abs = \x:real. max x (-x) | **NOT READ** |  |  |
+| `definition converges` | converges = \x:num -> real. \y:real. !z:real. 0 < z ==> (?u:num. !v:num. NUM_LE u v ==> abs (x v - y) < z) | **NOT READ** |  |  |
+| `definition cos` | cos = \x:real. lim (\y:num. Sum (\z:num. Power (0 - 1) z * (Power x (NUM_MUL 2 z) / real_of_num (NUM_FACT (NUM_MUL 2 z)))) y) | **NOT READ** |  |  |
+| `definition cosh` | cosh = \x:real. (exp x + exp (0 - x)) / 2 | **NOT READ** |  |  |
 | `definition div` | div = \x:real. \y:real. x * inv y | **NOT READ** |  |  |
+| `definition exp` | exp = \x:real. lim (\y:num. Sum (\z:num. Power x z / real_of_num (NUM_FACT z)) y) | **NOT READ** |  |  |
 | `definition le` | le = \x:real. \y:real. x < y \/ x = y | **NOT READ** |  |  |
+| `definition lim` | lim = \x:num -> real. select (\y:real. converges x y) | **NOT READ** |  |  |
+| `definition ln` | ln = \x:real. select (\y:real. exp y = x) | **NOT READ** |  |  |
 | `definition max` | max = \x:real. \y:real. select (\z:real. (z = x \/ z = y) /\ x <= z /\ y <= z) | **NOT READ** |  |  |
 | `definition min` | min = \x:real. \y:real. x + y - max x y | **NOT READ** |  |  |
 | `definition mk_pair` | mk_pair = \x:'a. \y:'b. \z:'a. \u:'b. z = x /\ u = y | **NOT READ** |  |  |
 | `definition real_of_num` | real_of_num = select (\x:num -> real. x 0 = 0 /\ (!y:num. x (SUC y) = x y + 1)) | **NOT READ** |  |  |
 | `definition sgn` | sgn = \x:real. select (\y:real. x < 0 /\ y = -1 \/ x = 0 /\ y = 0 \/ 0 < x /\ y = 1) | **NOT READ** |  |  |
+| `definition sin` | sin = \x:real. lim (\y:num. Sum (\z:num. Power (0 - 1) z * (Power x (NUM_ADD (NUM_MUL 2 z) 1) / real_of_num (NUM_FACT (NUM_ADD (NUM_MUL 2 z) 1)))) y) | **NOT READ** |  |  |
+| `definition sinh` | sinh = \x:real. (exp x - exp (0 - x)) / 2 | **NOT READ** |  |  |
 | `definition sub` | sub = \x:real. \y:real. x + -y | **NOT READ** |  |  |
 | `definition ~` | ~ = \x:bool. x ==> F | **NOT READ** |  |  |
 

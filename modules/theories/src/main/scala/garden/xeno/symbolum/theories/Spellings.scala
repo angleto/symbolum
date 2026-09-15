@@ -182,6 +182,26 @@ object Spellings {
       .delimited("MAT_E12", 1, "(#1)_{12}")
       .delimited("MAT_E21", 1, "(#1)_{21}")
       .delimited("MAT_E22", 1, "(#1)_{22}")
+      /* --------------------------------------------- limits and the series */
+      // Convergence is a relation, because `converges s l` says the sequence approaches the value
+      // and `\to` is what says that; a function-application spelling would hide it. The index
+      // under the arrow is what a book writes and is not here: this arrow has no place to put one,
+      // and inventing a subscript the term does not carry is the failure `NUM_CONG`'s row records.
+      .operator("converges", 2, "#1 \\to #2", Relation)
+      // `operator` and not `delimited`, for the reason `NUM_FACT`'s row gives: a delimited template
+      // must carry its own marks around every argument and `\lim #1` carries none, so
+      // `lim s + 1` would set as the limit of a sum.
+      .operator("lim", 1, "\\lim #1", Multiplicative + 5)
+      // The four transcendental functions, each as an operator tighter than multiplication rather
+      // than as a delimited template: `\\sin(x)` is what a delimited row would give and
+      // `\\sin x + 1` is what the books write, so the argument is bracketed by the context and
+      // only where the context needs it.
+      .operator("exp", 1, "\\exp #1", Multiplicative + 5)
+      .operator("ln", 1, "\\ln #1", Multiplicative + 5)
+      .operator("sin", 1, "\\sin #1", Multiplicative + 5)
+      .operator("cos", 1, "\\cos #1", Multiplicative + 5)
+      .operator("sinh", 1, "\\sinh #1", Multiplicative + 5)
+      .operator("cosh", 1, "\\cosh #1", Multiplicative + 5)
       /* ------------------------------------------ what the type definitions left */
       .delimited("IND_0", 0, "\\mathbb{I}_{0}")
       .delimited("IND_SUC", 1, "\\mathrm{ind\\_suc}(#1)")

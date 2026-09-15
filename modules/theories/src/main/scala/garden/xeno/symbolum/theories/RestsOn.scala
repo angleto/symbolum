@@ -125,7 +125,12 @@ object Reach {
         "Language" -> chain.language.facts,
         "Provability" -> chain.provability.facts,
         "Primes" -> chain.primes.facts,
-        "Deduction" -> chain.deduction.facts
+        "Deduction" -> chain.deduction.facts,
+        // The two of 2026-09-15, added here in the same change that added them to the chain rather
+        // than after `RestsOnSpec` found them missing, which is how `Magnitude` arrived three
+        // paragraphs up.
+        "Limit" -> chain.limit.facts,
+        "Transcendental" -> chain.transcendental.facts
       )
     )
 

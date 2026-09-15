@@ -35,7 +35,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.rotation.facts.size + chain.magnitude.facts.size + chain.coding.facts.size +
       chain.numbering.facts.size + chain.language.facts.size +
       chain.provability.facts.size + chain.deduction.facts.size +
-      chain.primes.facts.size
+      chain.primes.facts.size +
+      // The two of 2026-09-15. This sum is the assertion's whole point and it caught them: they
+      // were added to `Library.of` and not to this list, and what failed was the count rather than
+      // anything about the developments, which is the shape of failure the comment above describes.
+      chain.limit.facts.size + chain.transcendental.facts.size
 
     library.entries.size shouldBe expected
 
@@ -259,8 +263,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // below does NOT move, and the reason is worth knowing: `Library.of` collects each
     // development's `facts` and not its `definitions`, so a constant defined in `Provability`
     // reaches the register and not the library.
-    library.entries.size shouldBe 404
-    library.names.distinct.size shouldBe 401
+    // 416 with the first analysis: five facts about `converges` and `lim`, and seven about the six
+    // transcendental constants. Both of `CLAUDE.md`'s figures move by three and by two rather than
+    // by twelve, which is the measurement rather than a guess: most of the twelve bind one variable
+    // or none, `exp 0 = 1` binding nothing at all. The definitional figure does not move for the
+    // reason four paragraphs up: `Library.of` collects `facts` and not `definitions`, so the six
+    // new constants reach the reading register and not this count.
+    library.entries.size shouldBe 416
+    library.names.distinct.size shouldBe 413
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

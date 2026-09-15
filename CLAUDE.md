@@ -248,7 +248,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 404 lemmas, 255 have two or more leading quantifiers and **232 of
+caller meant: of the library's 416 lemmas, 258 have two or more leading quantifiers and **234 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -679,6 +679,35 @@ What is above that is not written: discharging the freeness condition at a concr
 object-level `Prov`, the diagonal lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last
 of those is its own piece of work rather than a helper inside this one, and it is the part most
 likely to be underestimated.
+
+**The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
+landed on 2026-09-15, both are links in the chain, and between them they declare eight constants
+and no axiom. `converges s l` is the epsilon-N statement written out and `lim s` is choice applied
+to it, pinned by `CONVERGES_UNIQUE` wherever the sequence converges and silent where it does not;
+`exp`, `sin` and `cos` are their power series through that limit, `ln` is the inverse of `exp` named
+by choice, and `sinh` and `cosh` are `(exp x - exp (0 - x)) / 2` and the same sum, which is the one
+pair here that is not a series and is the one thing in `docs/adr/0017` a reader should not skip: what it buys
+is `cosh x + sinh x = exp x` today, and what the series would have cost is a rearrangement into
+even and odd parts that this repository does not have. `docs/adr/0017` is the decision, and what it rejects is four characterising
+axioms, which would have been the first thing this repository asserted about a domain it can
+construct.
+
+**What is proved about them is the value of each at zero and nothing else**, and the reason is worth
+knowing before opening either file: a series at zero stops moving after its first term, so
+`CONVERGES_CONSTANT` with `CONVERGES_EVENTUALLY` settles it and no convergence theorem is involved.
+Nothing here proves that a sequence converges. That is the monotone convergence theorem, which is
+where `COMPLETENESS` is spent a second time and is the next piece of work; until it lands,
+`exp 1 > 2` and `sin x * sin x + cos x * cos x = 1` are **statable and unproved**, which is a
+different answer from the parse error they used to get and is the whole reason to define the
+constants before the analysis rather than after it.
+
+Three things in those derivations were harder than they look and each is recorded where it happens.
+Halving a tolerance is `Linarith`'s, because a numeral denominator is a rational coefficient to it
+and `0 < e ==> 0 < e / 2` is inside the fragment it decides. Putting two indices together is
+`Peano.NUM_LE_ADD` and not a maximum, because `num` has none. And the rewriter is given **two**
+equation sets rather than one: `NUM_ONE_SUC` rewrites the `1` inside a bit encoding, so with it in
+the set the `2` in the cosine's exponent becomes `NUM_BIT0 (SUC ZERO)` and stops matching a lemma
+proved about `Power 0 2`, which is the refusal that produced the split.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's

@@ -172,6 +172,14 @@ they have least appetite for working out how it is produced.
   NUM_TERM_VAR             !x:num. NUM_TERM (NUM_CODE 0 x)
   NUM_TERM_ZERO            NUM_TERM (NUM_CODE 1 0)
 
+## Limit
+
+  CONVERGES_CONSTANT       !x:real. converges (\y:num. x) x
+  CONVERGES_EVENTUALLY     !x:num -> real. !y:num -> real. !z:real. !u:num. (!v:num. NUM_LE u v ==> x v = y v) ==> converges x z ==> converges y z
+  CONVERGES_UNIQUE         !x:num -> real. !y:real. !z:real. converges x y ==> converges x z ==> y = z
+  LE_BELOW_EVERY_POSITIVE  !x:real. 0 <= x ==> (!y:real. 0 < y ==> x < y) ==> x = 0
+  LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
+
 ## Magnitude
 
   ABS_ABOVE                !x:real. x <= abs x
@@ -516,6 +524,16 @@ they have least appetite for working out how it is produced.
   SUM_SWAP                 !x:num -> num -> real. !y:num. !z:num. Sum (\u:num. Sum (\v:num. x u v) y) z = Sum (\u:num. Sum (\v:num. x v u) z) y
   SUM_TELESCOPES           !x:num -> real. !y:num. Sum (\z:num. x (SUC z) - x z) y = x y - x 0
   SUM_ZERO                 !x:num -> real. Sum x 0 = 0
+
+## Transcendental
+
+  COSH_MINUS_SINH          !x:real. cosh x - sinh x = exp (0 - x)
+  COSH_PLUS_SINH           !x:real. cosh x + sinh x = exp x
+  COSH_ZERO                cosh 0 = 1
+  COS_ZERO                 cos 0 = 1
+  EXP_ZERO                 exp 0 = 1
+  SINH_ZERO                sinh 0 = 0
+  SIN_ZERO                 sin 0 = 0
 
 ## Word
 

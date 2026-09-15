@@ -202,11 +202,11 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // distinction `Rotation.construct` records and the one that makes this assertion worth having
     // twice, because the obvious place to put a development is beside what it needs, and the
     // obvious place is a side branch where a constant is unreachable from everything.
-    chain.widest shouldBe chain.provability
-    chain.widest.theory.constants.keySet shouldBe chain.provability.theory.constants.keySet
+    chain.widest shouldBe chain.transcendental
+    chain.widest.theory.constants.keySet shouldBe chain.transcendental.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
-      chain.rotation, chain.magnitude, chain.coding, chain.numbering
+      chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

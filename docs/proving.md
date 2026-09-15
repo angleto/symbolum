@@ -1926,7 +1926,8 @@ cancellation.
    about what `ext` can do and not a measurement of a lemma that got shorter. `Prod` landed the same
    day and did want `PROD_CONGRUENCE`, which is the prediction holding for the last time.
 
-   What is left is sequences and limits, which want the completeness axiom that is already there.
+   Sequences and limits landed on 2026-09-15, in `Limit`, and item 4 below is what they were
+   for.
 3. **The classical axioms, both of them, landed on 2026-09-10.** `Classical.scala` asserts two
    statements and both are HOL Light's, transcribed from `class.ml`:
 
@@ -1962,8 +1963,26 @@ cancellation.
    rather than an axiom, though nothing has yet needed it enough for it to be derived and pinned.
    And the reals are still axiomatised: the sixteen are what `docs/adr/0007` turns into theorems at
    the end of the construction, and that work has not started.
-4. **Trigonometric and exponential functions**, defined rather than assumed, which needs sequences
-   and the completeness axiom that is already there.
+4. **Trigonometric, exponential and logarithmic functions**, defined rather than assumed. The
+   definitions landed on 2026-09-15 and nothing beyond them did. `Limit` declares `converges` and
+   `lim`, both definitions: the first is the epsilon-N statement written out, the second is choice
+   applied to it and is pinned by `CONVERGES_UNIQUE` wherever the sequence converges.
+   `Transcendental` declares `exp`, `sin`, `cos` and `ln`, each its power series through that limit,
+   and `docs/adr/0017` is the decision that they are definitions rather than four new axioms.
+
+   **What is proved of them is the value of each at zero**, and that is reachable only because a
+   series at zero stops moving after its first term: `CONVERGES_CONSTANT` with
+   `CONVERGES_EVENTUALLY` settles a sequence that is eventually constant, and no convergence
+   theorem is involved anywhere.
+
+   **What is left is convergence itself**, and the order is not a matter of taste. The monotone
+   convergence theorem first, bounded and increasing implies convergent, which is where
+   `COMPLETENESS` is spent a second time; then the comparison test, which `SUM_MONOTONE` and
+   `SUM_GEOMETRIC` are most of, and with it every series here converges everywhere and `exp 1 > 2`
+   becomes a theorem; then the addition theorem through the Cauchy product, of which `SUM_SWAP` is
+   the half that exists, and the Pythagorean identity with it; then continuity and the intermediate
+   value theorem, which is what every fact about `ln` waits on and why that constant has none
+   today.
 5. **A proof for what `Quantified` decides.** Since 2026-09-10 a quantified linear claim is
    decided, and it is decided rather than proved: the elimination runs on untrusted forms and no
    theorem comes back. Making it produce one wants the density and the unboundedness of the order

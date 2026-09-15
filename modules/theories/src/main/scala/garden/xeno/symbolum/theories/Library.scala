@@ -273,7 +273,14 @@ object Library {
         collect("Language", chain.language.facts) ++
         collect("Provability", chain.provability.facts) ++
         collect("Primes", chain.primes.facts) ++
-        collect("Deduction", chain.deduction.facts)
+        collect("Deduction", chain.deduction.facts) ++
+        // The two that landed on 2026-09-15, listed here in the same breath as they were written
+        // rather than after somebody noticed: `Magnitude` and `Coding` were each invisible for a
+        // few hours because a development in the chain but not collected here is a development
+        // `docs/lemmas.md` does not mention, and `ChainCoverageSpec` exists because that happened
+        // twice.
+        collect("Limit", chain.limit.facts) ++
+        collect("Transcendental", chain.transcendental.facts)
     )
 
   /** A library over developments a caller names itself. */

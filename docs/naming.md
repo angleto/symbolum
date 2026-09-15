@@ -28,7 +28,7 @@ number appears here, which was also wrong. Three hand-maintained counts inside t
 argues against hand-maintained counts, which is the fourth time this document has recorded that
 shape and the first time it was the passage itself.
 
-    the library holds 404 entries, 401 distinct names, 395 facts and 6 definitional entries
+    the library holds 416 entries, 413 distinct names, 407 facts and 6 definitional entries
 
 Pinning them is the third repair this paragraph has needed and the first that can hold. It said
 120 on 2026-09-11 and 132 later that day, and neither could be reproduced from the library it
@@ -83,7 +83,7 @@ introduced it, and the styles in the chain's widest signature are these:
 | style | constants |
 |---|---|
 | a symbol, printed as itself | `+`, `*`, `<`, `=`, `/\`, `\/`, `==>`, `~`, `!`, `?`, `0`, `1`, `T`, `F` |
-| lowercase | `div`, `inv`, `le`, `neg`, `sub`, `select`, `real_of_num`, `mk_num`, `dest_num` |
+| lowercase | `div`, `inv`, `le`, `neg`, `sub`, `select`, `real_of_num`, `mk_num`, `dest_num`, `converges`, `lim`, `exp`, `ln`, `sin`, `cos`, `sinh`, `cosh` |
 | `UPPER_SNAKE` | `ZERO`, `SUC`, `PRE`, `NUM_ADD`, `NUM_MUL`, `NUM_SUB`, `NUM_LE`, `NUM_LT`, `NUM_REP`, `IND_0`, `IND_SUC`, `BIT0`, `BIT1`, `NUM_DIVIDES`, `NUM_CONG`, `NUM_GCD`, `PAIR`, `FST`, `SND`, `WORD_PAD`, `WORD_LENGTH`, `WORD_NTH`, `WORD_MAKE`, `MAT2`, `MAT_E11`, `MAT_E12`, `MAT_E21`, `MAT_E22`, `MAT_ADD`, `MAT_SMUL`, `MAT_MUL`, `MAT_ID`, `MAT_TRANSPOSE`, `MAT_DET` |
 | `CamelCase` | `Sum`, `Power`, `Prod`, `Divides` |
 
@@ -99,7 +99,10 @@ different case: there the digit is a subscript.
 
 The split follows the development rather than a stated rule: the reals' unsymbolled operations are
 lowercase, the naturals' are upper, and the three operators that bind a function and a length are
-capitalised. That is a **description and not a rule**, which is why `LibrarySpec` checks the fact
+capitalised. The eight that landed on 2026-09-15, `converges` and `lim` with the six transcendental
+functions, are lowercase by that description and by one thing it does not say: `sin` and `exp` are
+written lowercase in every book there is, so a convention that produced `SIN` would be a convention
+arguing with its own subject. That is a **description and not a rule**, which is why `LibrarySpec` checks the fact
 names and not these.
 
 **A type definition names four constants and two facts off the type's own name.** `prod` gives

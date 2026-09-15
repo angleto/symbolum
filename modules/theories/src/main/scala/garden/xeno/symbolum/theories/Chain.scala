@@ -198,7 +198,26 @@ final class Chain private (
    * declares no type and no constant, so [[widest]] does **not** move to it: the last link and the
    * widest signature stopped being the same thing when this landed.
    */
-  val deduction: Deduction
+  val deduction: Deduction,
+  /**
+   * Convergence and the limit of a sequence of reals, and the first analysis in the chain.
+   *
+   * It is above the arithmetisation rather than beside it for the reason every link above [[peano]]
+   * is where it is: it declares `converges` and `lim`, and a constant declared into a side branch
+   * is unreachable from everything. Nothing in `Provability` needs a limit and nothing here needs a
+   * provability predicate, so the order between the two is free and this is second because it was
+   * written second.
+   */
+  val limit: Limit,
+  /**
+   * The exponential, the sine, the cosine and the logarithm, and [[widest]] since 2026-09-15.
+   *
+   * Four constants that are definitions and no axiom, which `docs/adr/0017` decides. It is last
+   * because it is the only link that needs [[limit]], and being last costs nothing: the order above
+   * [[magnitude]] is free, and a development with no dependent belongs where adding it moves
+   * nothing below it.
+   */
+  val transcendental: Transcendental
 ) {
 
   /**
@@ -222,7 +241,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = provability
+  val widest: Signature = transcendental
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -345,6 +364,20 @@ object Chain {
       // here rather than a development sitting outside because `Library.of` collects the chain's
       // developments, and a fact reachable from no library is in no document either.
       deduction <- Deduction.construct(provability)
+
+      // The first analysis this repository has: what a sequence of reals converges to and the value
+      // it converges to, both definitions. It extends `provability.theory` rather than
+      // `magnitude.theory`, where its prerequisites are, for the reason `Rotation.construct`'s
+      // comment gives: the extension order and the dependency order are different things, and
+      // `widest` is built over the last extension.
+      limit <- Limit.construct(magnitude, peano, reals, provability.theory, provability.notation)
+
+      // The last link since 2026-09-15, and the only one that needs a limit. `docs/adr/0017` is the
+      // decision it spends: these four constants are their power series rather than four axioms, so
+      // the trusted base does not move and `TranscendentalSpec` asserts that as an equality rather
+      // than as a ceiling.
+      transcendental <- Transcendental.construct(
+        limit, series, peano, coding, induct, successor, naturals, limit.theory, limit.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -369,6 +402,8 @@ object Chain {
       numbering,
       language,
       provability,
-      deduction
+      deduction,
+      limit,
+      transcendental
     )
 }
