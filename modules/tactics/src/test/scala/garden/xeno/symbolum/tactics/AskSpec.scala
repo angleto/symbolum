@@ -2,6 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import garden.xeno.symbolum.theories.Chain
 
 /**
  * The command line, which is the smallest thing that removes a compilation from a question.
@@ -12,6 +13,9 @@ import org.scalatest.matchers.should.Matchers
  * statement, give back the report as data, without the caller compiling.
  */
 class AskSpec extends AnyFlatSpec with Matchers {
+
+  private def force[E, T](result: Either[E, T]): T =
+    result.fold(error => fail(s"unexpected refusal: $error"), identity)
 
   "A claim the theory can state" should "come back as the page Cost renders" in {
     val page = Ask.of("!x:real. x + 0 = x")
@@ -28,6 +32,40 @@ class AskSpec extends AnyFlatSpec with Matchers {
 
     page should startWith("Proved:")
     page should include("inferences over 2 axioms")
+  }
+
+  "A claim already read" should "be answered from the term, without going through the text" in {
+    // The overload a caller holding a `Term` wants, which nothing reached. Asserted against the
+    // text route rather than against a fixed page, so it stays true when the printer changes.
+    val claim = force(Chain.standard.widest.proposition("!x:real. x + 0 = x"))
+
+    Ask.page(claim) shouldBe Ask.of("!x:real. x + 0 = x")
+  }
+
+  it should "answer a term that is not a claim rather than throwing at it" in {
+    // Written first as `should startWith("refused:")`, on the reading that a term of type `real` is
+    // not a claim and `Cost` refuses it. The run said otherwise: it comes back `Unsettled`, with
+    // the reader's own "restate it as an inequality, an equation between reals, a denial of one, or
+    // a conjunction". So `cost.of` and `cost.render` both succeed on it and the `refused:` branch
+    // under the `fold` is not what a non-proposition reaches.
+    //
+    // **What does reach that branch is not known**, and saying so is the record rather than
+    // contriving an input until something matches: `page` takes a term that has already been read,
+    // which is what removes most of the ways a report fails to build. It is the one statement in
+    // this file nothing here exercises, and a reader looking for the gap should look there.
+    val notAClaim = force(Chain.standard.widest.term("x:real + 0"))
+    val page = Ask.page(notAClaim)
+
+    page should startWith("Unsettled:")
+    page should include("restate it as")
+  }
+
+  "The command line itself" should "answer an empty invocation with how to use it" in {
+    // `main` is what `sbt "tactics/runMain ... Ask"` reaches and nothing exercised it. Both arms:
+    // no claim at all, and a claim that is answered.
+    Ask.claimsIn(Vector.empty) shouldBe empty
+    noException should be thrownBy Ask.main(Array.empty)
+    noException should be thrownBy Ask.main(Array("!x:real.", "x", "+", "0", "=", "x"))
   }
 
   "A claim the theory cannot state" should "say so in its place, and not stop the others" in {

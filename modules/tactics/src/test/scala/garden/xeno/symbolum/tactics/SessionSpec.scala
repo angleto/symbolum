@@ -234,6 +234,120 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     Notebook.render(session) shouldBe page
   }
 
+  /* ------------------------------------------------- the refusal surface of a line */
+
+  /**
+   * Every way a line can fail to be a command, which is the half a person meets most.
+   *
+   * This surface exists to be typed at, so a malformed line is the ordinary case rather than the
+   * exceptional one, and each refusal says how the command is written rather than that it is wrong.
+   * None of these paths was reached by anything: the session's own coverage was 72 uncovered
+   * statements of 355, and most of them are here.
+   */
+  "A line that is not a command" should "be refused saying how the command is written" in {
+    val refusals = Vector(
+      "" -> "an empty line is not a command",
+      "   " -> "an empty line is not a command",
+      "declare p" -> "declare is written",
+      "declare : bool" -> "declare is written",
+      "declare p :" -> "declare is written",
+      "define f" -> "define is written",
+      "assume NAME" -> "assume is written",
+      "prove NAME" -> "prove is written",
+      "ask" -> "ask wants",
+      "find" -> "find wants",
+      "show" -> "show wants"
+    )
+
+    refusals.foreach { case (line, expected) =>
+      withClue(s"`$line`: ") {
+        Session.Command.read(line).left.map(_.take(expected.length)) shouldBe Left(expected)
+      }
+    }
+  }
+
+  it should "be kept in the transcript as the reader typed it" in {
+    // A dropped line makes the transcript a lie, which is why `Unreadable` exists at all; this is
+    // the other end of it, that writing one back gives the line and not a description of it.
+    val session = fresh.run("declare p")
+
+    session.entries.head.outcome shouldBe a[Session.Outcome.Refused]
+    Session.Command.write(session.entries.head.command) shouldBe "declare p"
+    session.transcript shouldBe "declare p"
+  }
+
+  "A command the theory refuses" should "come back refused at each of the four places" in {
+    // One per command that touches the theory, because they fail through four different paths and
+    // a single case would leave three of them unread. The claims are chosen to fail at the reader
+    // rather than at the prover, which is what keeps this test quick.
+    val session = fresh.runAll(
+      Vector(
+        "declare q : nosuchtype",
+        "define f := @@@",
+        "assume A : @@@",
+        "prove B : @@@",
+        "show NO_SUCH_LEMMA"
+      )
+    )
+
+    session.entries.take(4).foreach { entry =>
+      withClue(s"${Session.Command.write(entry.command)}: ") {
+        entry.outcome shouldBe a[Session.Outcome.Refused]
+      }
+    }
+
+    // `show` of a name the library does not hold answers rather than refusing, because `Essay`
+    // reports the absence as its page. The distinction is worth pinning: asking about a lemma that
+    // is not there is a question that was put, not a line that did not read.
+    session.entries(4).outcome shouldBe a[Session.Outcome.Report]
+  }
+
+  /* ---------------------------------------------------------- the session as a reader sees it */
+
+  "The rendered transcript" should "say so when nothing has been run" in {
+    fresh.render shouldBe "nothing run yet"
+  }
+
+  it should "show each of the four outcomes in the shape that outcome has" in {
+    // The text form, which is what a caller with no browser reads, and the counterpart of the
+    // page `Notebook` renders. One session carrying all four, because what is asserted is that
+    // they stay apart: a refusal printed like a result is the same merge one layer out.
+    val session = fresh.runAll(
+      Vector(
+        "declare p : bool",
+        "assume P_HOLDS : p",
+        "find ABS_TRIANGLE",
+        "prove NOPE : !x:real. x @ 0 = x"
+      )
+    )
+
+    val rendered = session.render
+
+    withClue(s"$rendered\n") {
+      rendered should include("[1] declare p : bool")
+      rendered should include("P_HOLDS  |-")
+      rendered should include("ABS_TRIANGLE")
+      rendered should include("refused:")
+      rendered should include("try:")
+    }
+
+    // Numbered from one and in order, which is what makes `back to here` mean anything.
+    rendered.indexOf("[1]") should be < rendered.indexOf("[4]")
+  }
+
+  "What an entry rests on" should "be empty for every outcome that is not a theorem" in {
+    // The `Proved` case walks the derivation; the other three have nothing to walk. Asserted
+    // because an entry that answered with the session's assumptions for a refusal would put them
+    // on a page under something that was never proved.
+    val session = fresh.runAll(Vector("declare p : bool", "find ABS_TRIANGLE", "declare p"))
+
+    session.entries.drop(1).foreach { entry =>
+      withClue(s"${Session.Command.write(entry.command)}: ") {
+        entry.restsOn(session.base) shouldBe empty
+      }
+    }
+  }
+
   "The reading commands" should "answer without touching the theory" in {
     val session = fresh.runAll(Vector("ask !x:real. x + 0 = x", "find ABS_TRIANGLE", "show ABS_TRIANGLE"))
 
