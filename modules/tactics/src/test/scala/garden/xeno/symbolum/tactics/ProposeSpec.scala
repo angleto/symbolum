@@ -449,12 +449,6 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // which is refuted at `1` and comes back with it. Derived after the fact and not before, which
     // is worth admitting: the derivation that predicted `decidedFalse` moving by two did not
     // predict which of the two would arrive here.
-    // 67, UNCHANGED, and this is the case the pair of counts exists to show. The two residues of
-    // `LE_BELOW_EVERY_POSITIVE` are decided false above and neither comes with a point: the claim
-    // is settled by quantifier elimination and the abduction that would name a witness returns
-    // none. Derived as 69 on the reasoning that this figure moves with the one above "as usual",
-    // and measured as 67. "Usual" is what the entries above say; it is not a rule, and this is the
-    // third time the two have split.
     withAPoint shouldBe 67
   }
 
