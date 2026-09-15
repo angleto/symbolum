@@ -299,6 +299,58 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
    * thought about once rather than found later.
    */
   private val ReviewedCallSites: Map[String, String] = Map(
+    // The seven below arrived on 2026-09-15, when the scan was extended to `Rewrite.inTheorem`
+    // and named them. Each is a reading of every call in the file, not of one of them.
+    "Order.scala" ->
+      ("seven, all through `inTheorem`, and this development publishes into a map with no table " +
+        "of written statements, so what makes them safe is TERMINATION rather than a comparison " +
+        "afterwards. Five rule sets strictly reduce: `x + -x = 0`, `0 + x = x`, `(y - x) + x = y`, " +
+        "`c * 0 = 0`, `c * x + c * -x = 0`, and an assumed `x = 0` that puts a constant where a " +
+        "variable was. One GROWS and terminates anyway, `(y - x) * c = y * c - x * c`, because its " +
+        "own right side has no subterm of the shape `(A - B) * C`: the two products under it are " +
+        "at variables. One INVERTS and terminates anyway, `1 = x * inv x`, because its right side " +
+        "contains no `1`. What would catch a short walk even so is `OrderSpec`, which pins the " +
+        "printed form of every fact this file publishes"),
+    "Positivity.scala" ->
+      ("two, one rule each, `0 + y = y` and an assumed `x = 0`, both strictly reducing. Neither " +
+        "result is read as a normal form: one goes to `mp` against an instance of transitivity " +
+        "and the other to `notElim` against `~(0 < 0)`, and both refuse unless the theorem is " +
+        "exactly the shape they expect, so a limit that ran out refuses at the next step"),
+    "Coding.scala" ->
+      ("two, one rule each, replacing a greatest common divisor by the numeral an assumption says " +
+        "it is, which strictly reduces. Both results feed `withTwoWitnesses`, which destructures " +
+        "what it is handed as an existential over a disjunction, so a rule that had not fired " +
+        "leaves the gcd standing and the destructuring refuses by shape"),
+    "Divisibility.scala" ->
+      ("one rule carrying a cancellation into a grouping, and what comes back is joined by " +
+        "`Conv.trans` to an identity derived separately, which refuses unless the two sides meet. " +
+        "The arrangement `Recursion` uses, for the same reason"),
+    "Coefficient.scala" ->
+      ("one, and the only site in this census whose termination rests on a guard in a different " +
+        "function, so it is the one to re-read if either of those moves. The rule is " +
+        "`product -> left * right` over numerals, and its right side would CONTAIN its left if " +
+        "either factor were one, which is a walk that runs to the limit. Neither caller can " +
+        "produce that: the multiplication path splits on `leftBottom == 1` and `rightBottom == 1` " +
+        "before reaching it, and the addition path cannot reach it at all with a unit " +
+        "denominator, because `valueOf` reports a denominator only when it is above one and `add` " +
+        "routes every whole case to another lemma. With both factors above one the product " +
+        "exceeds either, so the right side cannot contain the left. What comes back is then the " +
+        "fact `instantiate` discharges a hypothesis with, and it refuses if it is not the form " +
+        "the lemma asks for"),
+    "Deduction.scala" ->
+      ("one, two substitution rules, and the answer is written at the call site rather than only " +
+        "here: a rewriting that ran out leaves a substitution standing, and `checked` then " +
+        "refuses the rule against its published statement rather than publishing a code nobody " +
+        "can read"),
+    "Recorder.scala" ->
+      ("one, and the only entry here that CANNOT be answered where the call is. The rules are a " +
+        "parameter, `equations: Vector[Kernel.Thm]`, so what a step limit means depends on the " +
+        "caller's rule set and no reading of this file settles it. What this file owes instead is " +
+        "that the step it records is the step that was taken: it hands the equations and a " +
+        "`detail` naming them to `step`, so a walk that ran out is recorded as the rewriting it " +
+        "actually did and a reader of the proof can see which rules were offered. Answering it " +
+        "properly is a question about the callers, one level out, and is not this file's to " +
+        "answer"),
     "Induct.scala" ->
       "asks `finished` after the closer refuses, which is where this guard was first written",
     "Family.scala" ->
@@ -329,7 +381,10 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "decision procedure settles the rest. Both end at `Peano.checked`, which compares what " +
         "came out against the statement written in `Peano.Statements` and refuses with `<name> as " +
         "it is written` otherwise, so a step limit that ran out is a refusal naming the lemma and " +
-        "never a theorem about a half-rewritten term"),
+        "never a theorem about a half-rewritten term. Two more calls go through `inTheorem`, " +
+        "and both pass a SINGLE rule built by `Rule.of` from a derived equation: each firing " +
+        "removes its own left side and the right side does not contain it, so the walk is one " +
+        "pass and the limit is unreachable by construction rather than by a check"),
     "Series.scala" ->
       ("two hand-written induction steps, and both refuse by naming the rewriting. The base of " +
         "the bounded congruence requires the two sides it is left with to be the SAME TERM and " +
@@ -358,14 +413,20 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "otherwise. That covers a limit that ran out completely rather than by luck, because " +
         "every rule strictly removes one of those three and nothing else is rewritten, so a walk " +
         "that stopped early ALWAYS leaves one standing. A caller that got the refusal is reading " +
-        "a statement about the rewriting and never about the substitution"),
+        "a statement about the rewriting and never about the substitution. Two more go through " +
+        "`inTheorem`: one folds a definition body back into its constant, and one applies the " +
+        "four projections to a code just constructed. Every rule in both strictly reduces and " +
+        "none can fire twice"),
     "Matrix.scala" ->
       ("four calls, and none of them reads what comes back as a normal form on trust. Two require " +
         "it to be `MAT2` applied to four terms and refuse by naming the term they stopped at, so " +
         "a limit that ran out is reported as the rewriting rather than as the mathematics; one " +
         "compares it against a named variable; one is joined to a separately derived equation by " +
         "`Conv.trans`, which refuses unless the two meet. The component equations that then reach " +
-        "`Ring` ask `finished` on the failing path, which is `Induct`'s arrangement reused")
+        "`Ring` ask `finished` on the failing path, which is `Induct`'s arrangement reused. A fifth " +
+        "goes through `inTheorem` with a single folding rule, and what comes back is compared " +
+        "against the goal the method was asked for and refused as `NotOfForm` otherwise, which " +
+        "that site's own comment argues for at length")
   )
 
   "Every caller of the rewriter" should "have been asked what it does when the limit runs out" in {
@@ -390,6 +451,12 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
             .filter { path =>
               val text = new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
               text.contains("Rewrite.rewrite(") ||
+              // `inTheorem` since 2026-09-15, and it was the gap this file's own docstring
+              // predicted. It calls `rewrite` with the same default limit and hands the result to
+              // `eqMp`, so a walk that ran out yields a TRUE theorem about a half-rewritten term,
+              // which is the defect this list is about arriving by a second door. Twenty call
+              // sites across ten files were unread until a session adding one of its own noticed.
+              text.contains("Rewrite.inTheorem(") ||
               (path.getFileName.toString == "Rewrite.scala" && false)
             }
             .map(_.getFileName.toString)
@@ -404,6 +471,11 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     // And it is not passing because it read nothing: the two that carry the guard are in it.
     callers should contain("Induct.scala")
     callers should contain("Family.scala")
+
+    // And the second door is not passing because it was quietly closed again. `Order.scala` has
+    // no `Rewrite.rewrite(` in it at all and seven calls to `inTheorem`, so it is in this list
+    // only while the scan reads both, and it is the file that disappears first if one is dropped.
+    callers should contain("Order.scala")
 
     val stale = ReviewedCallSites.keys.toVector.filterNot(callers.contains)
     withClue(s"reviewed and no longer a call site: ${stale.mkString(", ")}\n") {
