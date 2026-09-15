@@ -114,6 +114,60 @@ class ResolvingSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  "A whole derivation" should "be sound, which is what makes this a proof system" in {
+    val theorem = fact(Resolving.DerivationSound)
+    theorem.hypotheses shouldBe empty
+
+    // The shape a reader checks: two antecedents, the inputs satisfied and every step justified,
+    // and a conclusion about every step rather than about one.
+    val logic = resolving.logic
+    def antecedents(term: Term, seen: Int): Int =
+      logic.destImp(term) match {
+        case Some((_, rest)) => antecedents(rest, seen + 1)
+        case None => seen
+      }
+    antecedents(force(Logic.stripForall(theorem.conclusion))._2, 0) shouldBe 2
+  }
+
+  it should "cost the naturals' two, because the induction is a fact about `num`" in {
+    // The pair that says where the cost is. `RES_STEP_SOUND` carries the classical case split and
+    // spends one axiom; this carries strong induction and the transitivity of the order, both facts
+    // about `num`, and spends two. The reasoning did not get harder between them: the difference is
+    // entirely that one of the two looks inside `num` and the other never does.
+    val spent = Derivation.axiomsOf(fact(Resolving.DerivationSound))
+    val step = Derivation.axiomsOf(fact(Resolving.StepSound))
+
+    spent should have size 2
+    spent should contain allElementsOf choice
+    step shouldBe choice
+    (spent -- step) should have size 1
+  }
+
+  "A derivation reaching the empty clause" should "say that NOTHING satisfies the inputs" in {
+    // The statement `modules/sat` makes every time it answers unsatisfiable, and which nothing in
+    // this repository could state until now.
+    val theorem = fact(Resolving.Refutes)
+    theorem.hypotheses shouldBe empty
+
+    // The half that carries the claim: the assignment is quantified **inside** the negation, so the
+    // conclusion is about every assignment and not about one. Without that this would be
+    // `RES_SOUND` read at a point, which is a much weaker thing wearing the same words.
+    val logic = resolving.logic
+    val body = force(Logic.stripForall(theorem.conclusion))._2
+    def conclusionOf(term: Term): Term = logic.destImp(term).map(pair => conclusionOf(pair._2)).getOrElse(term)
+    val negated = logic
+      .destNot(conclusionOf(body))
+      .getOrElse(fail(s"the conclusion must be a negation: ${resolving.show(conclusionOf(body))}"))
+
+    withClue(s"what is denied must itself be an existential over the assignment: ${resolving.show(negated)} ") {
+      logic.destExistsPredicate(negated) should not be empty
+    }
+
+    // And the assignment must not also be bound outside, or the statement is about one after all.
+    force(Logic.stripForall(theorem.conclusion))._1.map(_.ty) should not contain
+      Type.fun(force(Logic.stripForall(theorem.conclusion))._1.last.ty, Type.Bool)
+  }
+
   "This development" should "declare nothing, so it cannot become the widest signature" in {
     // The promise `Deduction` makes and the reason it can be read without checking the chain: a
     // constant arriving here would move the signature, the reading register and three pinned counts.

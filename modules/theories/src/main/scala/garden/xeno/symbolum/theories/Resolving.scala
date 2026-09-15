@@ -156,6 +156,61 @@ object Resolving {
    */
   val EmptyUnsatisfiable: String = "RES_EMPTY_UNSATISFIABLE"
 
+  /**
+   * Soundness of a whole derivation: every clause of it is satisfied wherever the inputs are.
+   *
+   * ```
+   * |- !a k v s inputs m.
+   *      (!j. NUM_LT j inputs ==> (?i. NUM_LT i (k j) /\ (a (v j i) = s j i))) ==>
+   *      (!j. NUM_LT j m ==> <j is an input, or a resolvent of two earlier steps>) ==>
+   *      (!j. NUM_LT j m ==> (?i. NUM_LT i (k j) /\ (a (v j i) = s j i)))
+   * ```
+   *
+   * A derivation is `k`, `v` and `s` read at `m` indices: clause `j` is `k j` literals long and its
+   * `i`th is the variable `v j i` at polarity `s j i`. Step `j` is justified when it is one of the
+   * first `inputs` clauses or when two **earlier** steps resolve to it, and that the two are earlier
+   * is the whole of what makes a derivation well founded, exactly as `Provability.NUM_STEP` needs
+   * its justifications to name earlier steps.
+   *
+   * By strong induction on the step index, which is `Peano.NUM_STRONG_INDUCTION` and is the right
+   * shape for the same reason `Language` needs it: what a step follows from is *some* earlier steps
+   * rather than its predecessor. The step case is a disjunction with two arms, and the second is
+   * [[StepSound]] specialised at `v p`, `s p`, `v q`, `s q` and `v j`, `s j`, which is where the
+   * derivation's three functions become the step lemma's six.
+   *
+   * **It costs two axioms where [[StepSound]] costs one**, and the extra is infinity for the reason
+   * [[EmptyUnsatisfiable]] gives: strong induction and the transitivity of the order are facts about
+   * `num`, and `num` is carved out of an infinite type. The step lemma reaches neither, which is why
+   * the pair is worth reading together.
+   */
+  val DerivationSound: String = "RES_SOUND"
+
+  /**
+   * What a refutation is for: a derivation reaching the empty clause means nothing satisfies the
+   * inputs.
+   *
+   * ```
+   * |- !k v s inputs m.
+   *      (!j. NUM_LT j m ==> <j is an input, or a resolvent of two earlier steps>) ==>
+   *      (?j. NUM_LT j m /\ k j = ZERO) ==>
+   *      ~(?a. !j. NUM_LT j inputs ==> (?i. NUM_LT i (k j) /\ (a (v j i) = s j i)))
+   * ```
+   *
+   * **The assignment is quantified inside the negation and that is the statement rather than a
+   * detail.** [[DerivationSound]] says what one assignment does; this says there is no such
+   * assignment at all, which is the claim `modules/sat` makes every time it answers unsatisfiable
+   * and which nothing here could state until now.
+   *
+   * Three lines over the two theorems above: soundness gives every clause satisfied, the step that
+   * is empty is one of them, and [[EmptyUnsatisfiable]] says nothing satisfies that one.
+   *
+   * This is the property Cook and Reckhow require of a proof system before the size of a proof means
+   * anything, and having it is what makes the next question — how large a refutation of a given
+   * family has to be — a question rather than a category error. It is still not a lower bound, and
+   * nothing here defines width or size.
+   */
+  val Refutes: String = "RES_REFUTES"
+
   /** Over the standard chain. */
   lazy val standard: Resolving =
     construct(Chain.standard).fold(
@@ -180,13 +235,21 @@ object Resolving {
       step <- stepSoundness(signature, logic, rules, classical)
       resolvent <- ofResolvent(signature, logic, rules, step)
       empty <- emptyUnsatisfiable(signature, logic, rules, chain.peano)
+      sound <- derivationSoundness(signature, logic, rules, chain.peano, step)
+      refutes <- refutation(signature, logic, rules, sound, empty)
     } yield new Resolving(
       chain.peano,
       classical,
       signature.theory,
       signature.notation,
       logic,
-      Map(StepSound -> step, StepSoundOfResolvent -> resolvent, EmptyUnsatisfiable -> empty)
+      Map(
+        StepSound -> step,
+        StepSoundOfResolvent -> resolvent,
+        EmptyUnsatisfiable -> empty,
+        DerivationSound -> sound,
+        Refutes -> refutes
+      )
     )
   }
 
@@ -406,6 +469,248 @@ object Resolving {
       discharged <- antecedents.reverse.foldLeft(Right(satisfied): Either[LogicError, Kernel.Thm])(
         (carried, antecedent) => carried.flatMap(rules.disch(antecedent, _))
       )
+      closed <- rules.genAll(discharged, binders.toList)
+    } yield closed
+
+  /** The justification a step carries: it is an input, or two earlier steps resolve to it. */
+  private val Justified: String =
+    "NUM_LT j inputs \\/ (?p:num. ?q:num. ?x:num. NUM_LT p j /\\ NUM_LT q j /\\ " +
+      "(!i:num. NUM_LT i (k p) ==> ~(v p i = x /\\ s p i = T) ==> " +
+      "   (?n:num. NUM_LT n (k j) /\\ v j n = v p i /\\ s j n = s p i)) /\\ " +
+      "(!i:num. NUM_LT i (k q) ==> ~(v q i = x /\\ s q i = F) ==> " +
+      "   (?n:num. NUM_LT n (k j) /\\ v j n = v q i /\\ s j n = s q i)))"
+
+  /** Clause `j` of the derivation, satisfied by the assignment. */
+  private val SatisfiedAt: String = "?i:num. NUM_LT i (k j) /\\ (a (v j i) = s j i)"
+
+  private val SoundStatement: String =
+    "!a:num->bool. !k:num->num. !v:num->num->num. !s:num->num->bool. !inputs:num. !m:num. " +
+      s"(!j:num. NUM_LT j inputs ==> ($SatisfiedAt)) ==> " +
+      s"(!j:num. NUM_LT j m ==> ($Justified)) ==> " +
+      s"(!j:num. NUM_LT j m ==> ($SatisfiedAt))"
+
+  private val RefutesStatement: String =
+    "!k:num->num. !v:num->num->num. !s:num->num->bool. !inputs:num. !m:num. " +
+      s"(!j:num. NUM_LT j m ==> ($Justified)) ==> " +
+      "(?j:num. NUM_LT j m /\\ k j = ZERO) ==> " +
+      "~(?a:num->bool. !j:num. NUM_LT j inputs ==> " +
+      "   (?i:num. NUM_LT i (k j) /\\ (a (v j i) = s j i)))"
+
+  /** The body of a quantification at a chosen variable, with the redex contracted. */
+  private def openAt(logic: Logic, quantified: Term, at: Term): Either[LogicError, Term] =
+    logic
+      .destForallPredicate(quantified)
+      .orElse(logic.destExistsPredicate(quantified))
+      .toRight(NotOfForm("a quantification", quantified))
+      .flatMap(predicate => LogicError.lift(Term.app(predicate, at)).flatMap(Conv.betaRoot))
+      .flatMap(contraction =>
+        Term.destEq(contraction.conclusion).map(_._2).toRight(NotOfForm("an equation", contraction.conclusion))
+      )
+
+  private def reduced(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    Conv.betaNormalise(theorem.conclusion).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+  /**
+   * [[DerivationSound]], by strong induction on the step index.
+   *
+   * The predicate inducted on is the conclusion's own, `\j. NUM_LT j m ==> <clause j is satisfied>`,
+   * read off the statement rather than rebuilt beside it. Its step splits on the justification: an
+   * input is the first antecedent at that index, and a resolvent needs both parents, which are below
+   * `j` and so below `m` by `Peano.NUM_LT_TRANS`, and so satisfied by the induction hypothesis.
+   *
+   * The step lemma is specialised **positionally**, which this repository warns against, and the
+   * warning is answered rather than ignored: the four `num` binders are alike, so a swap would be
+   * invisible in the types. What catches one is the four `Rules.mp` calls below, each of which has
+   * to match an antecedent against a theorem already in hand, and a swapped `n1` and `n2` fails the
+   * first of them. The statement being specialised is also written in this file, twenty lines up.
+   */
+  private def derivationSoundness(
+    signature: Signature,
+    logic: Logic,
+    rules: Rules,
+    peano: Peano,
+    step: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      whole <- signature.proposition(SoundStatement)
+      stripped <- Logic.stripForall(whole)
+      (binders, body) = stripped
+      (antecedents, conclusion) = peel(logic, body, Vector.empty)
+
+      subject = binders(0)
+      lengths = binders(1)
+      variables = binders(2)
+      polarities = binders(3)
+      bound = binders(5)
+
+      inputsSatisfied <- LogicError.lift(Kernel.assume(antecedents(0)))
+      everyStepJustified <- LogicError.lift(Kernel.assume(antecedents(1)))
+
+      predicate <- logic.destForallPredicate(conclusion).toRight(NotOfForm("a universal", conclusion))
+      strong <- peano.fact(Peano.StrongInduction)
+      instance <- rules.spec(predicate, strong).flatMap(reduced)
+      opened <- logic.destImp(instance.conclusion).toRight(NotOfForm("an implication", instance.conclusion))
+      (stepGoal, _) = opened
+
+      avoid = binders.toSet ++ freeIn(inputsSatisfied) ++ freeIn(everyStepJustified)
+      index = Conv.freshVariable("n", Term.typeOf(bound), avoid)
+
+      stepBody <- openAt(logic, stepGoal, index)
+      split <- logic.destImp(stepBody).toRight(NotOfForm("an implication", stepBody))
+      (hypothesisTerm, claimAtIndex) = split
+      hypothesis <- LogicError.lift(Kernel.assume(hypothesisTerm))
+      inner <- logic.destImp(claimAtIndex).toRight(NotOfForm("an implication", claimAtIndex))
+      (belowTerm, satisfiedHere) = inner
+      below <- LogicError.lift(Kernel.assume(belowTerm))
+
+      justifiedHere <- rules.spec(index, everyStepJustified).flatMap(rules.mp(_, below))
+      arms <- logic
+        .destDisj(justifiedHere.conclusion)
+        .toRight(NotOfForm("a disjunction", justifiedHere.conclusion))
+      (isInputTerm, isResolventTerm) = arms
+
+      isInput <- LogicError.lift(Kernel.assume(isInputTerm))
+      fromInputs <- rules.spec(index, inputsSatisfied).flatMap(rules.mp(_, isInput))
+
+      transitive <- peano.fact(Peano.StrictTransitive)
+
+      left = Conv.freshVariable("p", Term.typeOf(bound), avoid + index)
+      afterLeft <- openAt(logic, isResolventTerm, left)
+      right = Conv.freshVariable("q", Term.typeOf(bound), avoid + index + left)
+      afterRight <- openAt(logic, afterLeft, right)
+      pivot = Conv.freshVariable("x", Term.typeOf(bound), avoid + index + left + right)
+      afterPivot <- openAt(logic, afterRight, pivot)
+
+      witnessed <- LogicError.lift(Kernel.assume(afterPivot))
+      leftBelow <- rules.conjElim1(witnessed)
+      afterFirst <- rules.conjElim2(witnessed)
+      rightBelow <- rules.conjElim1(afterFirst)
+      afterSecond <- rules.conjElim2(afterFirst)
+      carriesLeft <- rules.conjElim1(afterSecond)
+      carriesRight <- rules.conjElim2(afterSecond)
+
+      satisfiedLeft <- parentSatisfied(rules, transitive, hypothesis, below, left, leftBelow, index, bound)
+      satisfiedRight <- parentSatisfied(rules, transitive, hypothesis, below, right, rightBelow, index, bound)
+
+      here <- rules.specAll(
+        step,
+        List(
+          subject,
+          applied(variables, left), applied(polarities, left),
+          applied(variables, right), applied(polarities, right),
+          applied(variables, index), applied(polarities, index),
+          applied(lengths, left), applied(lengths, right), applied(lengths, index),
+          pivot
+        )
+      )
+      fromResolution <- rules
+        .mp(here, carriesLeft)
+        .flatMap(rules.mp(_, carriesRight))
+        .flatMap(rules.mp(_, satisfiedLeft))
+        .flatMap(rules.mp(_, satisfiedRight))
+
+      overPivot <- LogicError
+        .lift(Kernel.assume(afterRight))
+        .flatMap(rules.existsElim(_, pivot, fromResolution))
+      overRight <- LogicError
+        .lift(Kernel.assume(afterLeft))
+        .flatMap(rules.existsElim(_, right, overPivot))
+      overLeft <- LogicError
+        .lift(Kernel.assume(isResolventTerm))
+        .flatMap(rules.existsElim(_, left, overRight))
+
+      bothArms <- rules.disjElim(justifiedHere, fromInputs, overLeft)
+      _ <-
+        if (bothArms.conclusion == satisfiedHere) Right(())
+        else Left(NotOfForm("the induction step's own claim", bothArms.conclusion))
+
+      stepProved <- rules
+        .disch(belowTerm, bothArms)
+        .flatMap(rules.disch(hypothesisTerm, _))
+        .flatMap(rules.gen(index, _))
+      inducted <- rules.mp(instance, stepProved)
+
+      discharged <- rules.disch(antecedents(1), inducted).flatMap(rules.disch(antecedents(0), _))
+      closed <- rules.genAll(discharged, binders.toList)
+    } yield closed
+
+  /** A parent below the current step is below the bound, so the induction hypothesis reaches it. */
+  private def parentSatisfied(
+    rules: Rules,
+    transitive: Kernel.Thm,
+    hypothesis: Kernel.Thm,
+    below: Kernel.Thm,
+    parent: FVar,
+    parentBelow: Kernel.Thm,
+    index: FVar,
+    bound: FVar
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      chained <- rules.conjIntro(parentBelow, below)
+      atThree <- rules.specAll(transitive, List(parent: Term, index: Term, bound: Term))
+      parentBelowBound <- rules.mp(atThree, chained)
+      atParent <- rules.spec(parent, hypothesis)
+      satisfied <- rules.mp(atParent, parentBelow).flatMap(rules.mp(_, parentBelowBound))
+    } yield satisfied
+
+  private def applied(fn: FVar, argument: FVar): Term =
+    Term.app(fn, argument).fold(error => throw new IllegalStateException(error.toString), identity)
+
+  /**
+   * [[Refutes]], which is three lines over the two theorems it rests on.
+   *
+   * Soundness gives every clause of the derivation satisfied by an assignment that satisfies the
+   * inputs; the step that is empty is one of those clauses; and [[EmptyUnsatisfiable]] says nothing
+   * satisfies that one. The assignment is introduced by opening the existential inside the negation,
+   * which is what lets the conclusion speak about **every** assignment rather than one.
+   */
+  private def refutation(
+    signature: Signature,
+    logic: Logic,
+    rules: Rules,
+    sound: Kernel.Thm,
+    empty: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      whole <- signature.proposition(RefutesStatement)
+      stripped <- Logic.stripForall(whole)
+      (binders, body) = stripped
+      (antecedents, conclusion) = peel(logic, body, Vector.empty)
+
+      lengths = binders(0)
+      variables = binders(1)
+      polarities = binders(2)
+      inputs = binders(3)
+      bound = binders(4)
+
+      everyStepJustified <- LogicError.lift(Kernel.assume(antecedents(0)))
+      reachesEmpty <- LogicError.lift(Kernel.assume(antecedents(1)))
+      satisfiable <- logic.destNot(conclusion).toRight(NotOfForm("a negation", conclusion))
+      supposed <- LogicError.lift(Kernel.assume(satisfiable))
+
+      subject = Conv.freshVariable("a", Type.fun(Term.typeOf(bound), Type.Bool), binders.toSet)
+      inputsBody <- openAt(logic, satisfiable, subject)
+      inputsSatisfied <- LogicError.lift(Kernel.assume(inputsBody))
+
+      at = Conv.freshVariable("j", Term.typeOf(bound), binders.toSet + subject)
+      emptyBody <- openAt(logic, antecedents(1), at)
+      emptyHere <- LogicError.lift(Kernel.assume(emptyBody))
+      atBelow <- rules.conjElim1(emptyHere)
+      atIsEmpty <- rules.conjElim2(emptyHere)
+
+      here <- rules.specAll(sound, List(subject, lengths, variables, polarities, inputs, bound))
+      everySatisfied <- rules.mp(here, inputsSatisfied).flatMap(rules.mp(_, everyStepJustified))
+      satisfiedThere <- rules.spec(at, everySatisfied).flatMap(rules.mp(_, atBelow))
+
+      nothingSatisfies <- rules
+        .specAll(empty, List(subject, applied(variables, at), applied(polarities, at), applied(lengths, at)))
+        .flatMap(rules.mp(_, atIsEmpty))
+      absurd <- rules.notElim(nothingSatisfies, satisfiedThere)
+
+      overIndex <- rules.existsElim(reachesEmpty, at, absurd)
+      overSubject <- rules.existsElim(supposed, subject, overIndex)
+      negated <- rules.notIntro(satisfiable, overSubject)
+      discharged <- rules.disch(antecedents(1), negated).flatMap(rules.disch(antecedents(0), _))
       closed <- rules.genAll(discharged, binders.toList)
     } yield closed
 
