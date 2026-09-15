@@ -64,8 +64,33 @@ import org.scalatest.matchers.should.Matchers
  */
 class NotationBoundarySpec extends AnyFlatSpec with Matchers {
 
-  private val Modules =
-    Vector("kernel", "logic", "theories", "checker", "core", "sat", "tactics", "mark", "examples")
+  /**
+   * Every module with sources, read off the filesystem rather than written out.
+   *
+   * It was written out until 2026-09-15 and named nine of the ten that have a `src/main`. Both
+   * conclusions below survived the omission, because the module left out holds no `LogicError` and
+   * no `Printer` at all -- which is exactly why nobody would have noticed: a scan that skips a
+   * directory with nothing in it returns the same answer as a scan that reads it, and goes on
+   * returning it after somebody puts something there. The one missed was `dist`, whose single file
+   * is the distribution's REPL, a surface a reader actually types at and the likeliest place for
+   * the next term rendered where the refusal is raised.
+   *
+   * A hand-written list is the defect this whole file is about wearing different clothes: a census
+   * keyed on a spelling of the population rather than on the population.
+   */
+  private def moduleRoots: Vector[Path] = {
+    val modules = Paths.get("modules")
+    val stream = Files.list(modules)
+    try
+      stream
+        .iterator()
+        .asScala
+        .toVector
+        .map(_.resolve("src/main"))
+        .filter(Files.isDirectory(_))
+        .sortBy(_.toString)
+    finally stream.close()
+  }
 
   /**
    * The prose field of each refusal that has one, by its position in the constructor.
@@ -375,17 +400,13 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  private def mainSources(module: String): Vector[Path] = {
-    val root = Paths.get(s"modules/$module/src/main")
-    if (!Files.exists(root)) Vector.empty
-    else {
-      val stream = Files.walk(root)
-      try stream.iterator().asScala.toVector.filter(_.toString.endsWith(".scala"))
-      finally stream.close()
-    }
+  private def mainSources(root: Path): Vector[Path] = {
+    val stream = Files.walk(root)
+    try stream.iterator().asScala.toVector.filter(_.toString.endsWith(".scala"))
+    finally stream.close()
   }
 
-  private lazy val sources: Vector[Path] = Modules.flatMap(mainSources)
+  private lazy val sources: Vector[Path] = moduleRoots.flatMap(mainSources)
 
   private lazy val sites: Vector[Site] =
     sources.filterNot(_.getFileName.toString == "LogicError.scala").flatMap(sitesIn)
@@ -410,7 +431,15 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       literal should be >= 470
     }
 
-    info(s"${all.size} construction sites, $literal of them with literal prose")
+    // And the roots, because the list above is derived now and a derivation can return nothing.
+    // Ten modules carry a `src/main` on 2026-09-15; `aggregate` is an sbt project with no sources
+    // and is not one. A floor rather than an equality: modules are added, and this is not a budget.
+    withClue(s"module roots found: ${moduleRoots.map(_.toString).mkString(", ")}\n") {
+      moduleRoots.size should be >= 10
+    }
+
+    info(s"${all.size} construction sites over ${moduleRoots.size} modules, " +
+      s"$literal of them with literal prose")
   }
 
   it should "split an argument list where the compiler would, on the shapes that break a regex" in {
@@ -457,8 +486,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     val printer = """\bPrinter\b""".r
 
     val found = for {
-      module <- Modules.filterNot(_ == "kernel")
-      path <- mainSources(module)
+      root <- moduleRoots.filterNot(_.startsWith(Paths.get("modules/kernel")))
+      path <- mainSources(root)
       (line, index) <- Files.readString(path).linesIterator.zipWithIndex
       if printer.findFirstIn(line).isDefined
     } yield s"$path:${index + 1}: ${line.trim}"
