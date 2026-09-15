@@ -137,5 +137,6 @@ jobs:
             echo "\`symbolum-$VERSION.tgz\`, attached to the release when one exists for this tag."
             echo "It carries every module's jar and a launcher for each entry point:"
             echo "\`bin/symbolum-ask\`, \`bin/symbolum-find\`, \`bin/symbolum-notebook\`,"
-            echo "\`bin/what-a-claim-costs\`, \`bin/symbolum-repl\`."
+            echo "\`bin/symbolum-repl\`, \`bin/symbolum-what-a-claim-costs\`, and"
+            echo "\`bin/symbolum -main <class>\` for anything else in the jars."
           } >> $GITHUB_STEP_SUMMARY
