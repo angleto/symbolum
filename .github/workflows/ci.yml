@@ -1,12 +1,26 @@
 name: CI
 
+# The triggers name the branches this repository has, which the disabled ones did not: they listed
+# `main`, `master`, `develop` and `claude/**`, and the remote holds exactly one branch, `7.0`. The
+# `claude/**` ones were pull-request branches from 2025-11 and are gone. Uncommenting them would
+# have produced a workflow that is configured to run automatically and never fires, which reads as
+# protection and is not.
+#
+# `[0-9]*.[0-9]*` is a release line: `7.0` today, `7.1` and `8.0` when they exist. A branch that is
+# not a release line is verified by opening a pull request against one, or by dispatching this
+# workflow by hand, and both are cheaper than running the suite on every push to every experiment.
 on:
-  workflow_dispatch:  # Only allow manual runs
-  # Automatic triggers disabled to avoid GitHub Actions billing
-  # push:
-  #   branches: [ main, master, develop, 'claude/**' ]
-  # pull_request:
-  #   branches: [ main, master, develop ]
+  workflow_dispatch:
+  push:
+    branches: [ '[0-9]*.[0-9]*' ]
+  pull_request:
+    branches: [ '[0-9]*.[0-9]*' ]
+
+# Three commits pushed inside a minute would otherwise start three full runs, two of them already
+# obsolete. This keeps the newest and cancels the rest, per branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
