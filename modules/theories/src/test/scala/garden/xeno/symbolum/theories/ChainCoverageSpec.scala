@@ -55,6 +55,21 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
 
     /** Not a development: a generator, a document, an interface, a table, a tactic over the reals. */
     case NotADevelopment
+
+    /**
+     * It declares constants and `Chain.construct` deliberately does **not** build it.
+     *
+     * The fourth answer, added 2026-09-16 with `Collatz`, and the one to think about before
+     * reaching for: a development outside the chain is unreachable from `Ask`, from `Find` and
+     * from the library, which is usually a defect rather than a decision. What makes it a
+     * decision here is that the constants describe **one object of one investigation** rather
+     * than mathematics anyone might want, and the widest signature is what every goal in this
+     * repository is typed against. Eleven rewrite rules of one Collatz encoding do not belong in
+     * the vocabulary a question about the reals is asked in.
+     *
+     * A development taking this standing owes its own spec, because nothing else will build it.
+     */
+    case BesideTheChain
   }
 
   import Standing.*
@@ -84,6 +99,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Inductive" -> InTheChain,
     "Reaching" -> InTheChain,
     "Forward" -> InTheChain,
+    "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,
     "Magnitude" -> InTheChain,

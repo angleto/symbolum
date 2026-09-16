@@ -301,6 +301,16 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
   private val ReviewedCallSites: Map[String, String] = Map(
     // The one of 2026-09-16, and the first whose safety rests on a comparison against WRITTEN
     // statements rather than on termination alone.
+    "Collatz.scala" ->
+      ("four calls. Three unfold a definition of this file's own into the eleven-clause " +
+        "disjunction it stands for, and what comes back is handed straight to a decision " +
+        "procedure or refuted clause by clause, so an exhausted limit shows up as a goal the " +
+        "procedure does not recognise rather than as a theorem about a half-unfolded term. The " +
+        "fourth computes a word's length and IS given a limit it could reach: the rule set walks " +
+        "a sum of `SUC 0`s down to a numeral, so a limit that ran out would leave an addition " +
+        "unevaluated. It is not left to the limit to say so. What the caller does with the " +
+        "answer is ask `NUM_SUC_INJECTIVE` to peel it, and a term still holding a `+` has no " +
+        "successor at its root, so the peeling refuses by name instead of continuing"),
     "Forward.scala" ->
       ("two calls, both `Rewrite.inTheorem` and both moving a theorem between the two spellings " +
         "of one set, `INDUCTIVE op` and `WORD_RFC R`. The rule set each is given is a single " +
