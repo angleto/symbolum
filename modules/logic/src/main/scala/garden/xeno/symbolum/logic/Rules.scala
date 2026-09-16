@@ -379,10 +379,22 @@ final class Rules(val logic: Logic) {
    * probe printed the count.
    *
    * **Measured before it was changed.** Of the 105 call sites in this repository, the strict
-   * version breaks none and the suite is green. `mp` is lenient in exactly the same way and was
-   * measured the same way: it breaks 51 tests across 677 call sites, so the leniency is
-   * load-bearing there and tightening it is its own piece of work rather than the same one-line
-   * change. `falsityElim` already checks, which is what makes the inconsistency visible.
+   * version breaks none and the suite is green.
+   *
+   * [[mp]] was lenient in exactly the same way and was measured the same way: it broke 51 tests
+   * across 677 call sites, so the leniency was load-bearing there and tightening it was its own
+   * piece of work rather than the same one-line change. **That work is done**, in `778f615`, and
+   * it is not the one-line check this rule got: an antecedent differing from the implication's by
+   * a beta redex is reconciled and converted, which is what those 51 tests needed and what a
+   * comparison would have refused. [[provingExactly]] is where it lives. This paragraph said the
+   * work was still outstanding for the day and a half between `acb1844` writing it on 2026-09-14
+   * and `778f615` doing it on 2026-09-16.
+   *
+   * [[falsityElim]] is **not** the third instance of this shape, which the sentence here implied
+   * by putting it beside the two: censused on 2026-09-16, it does not reach [[proveHyp]] at all.
+   * It checks its argument, refuses a conclusion that is not falsity, and goes by `eqMp` and
+   * `spec`. What made the inconsistency visible was a rule that checks sitting beside two that
+   * did not, and both of those check now.
    */
   def notElim(negation: Kernel.Thm, positive: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     logic.destNot(negation.conclusion) match {
