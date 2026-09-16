@@ -123,10 +123,20 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
    * The text of every spec in the repository, which is where "entered by something" is looked for.
    *
    * A walk rather than a list, for the reason `StyleSpec` gives about its own: a list is right on
-   * the day it is written, and a module added later is invisible to it. The suffix is the file
-   * name and not the class, which under-reads by one -- the repository has one suite in a file that
-   * does not end `Spec.scala` -- and that under-reading cannot make this gate pass wrongly, only
-   * fail wrongly, which is the safe direction.
+   * the day it is written, and a module added later is invisible to it. The suffix is the file name
+   * and not the class, so this reads every suite exactly as long as every suite lives in a file
+   * named after it, which is not an assumption made here but an assertion made there: `StyleSpec`
+   * fails when a class the framework will run sits in a file that does not carry its name and end
+   * in `Spec`. A count of suites pinned here instead would be a second site for that one invariant.
+   * And if a suite ever does escape that clause, this walk misses it in the safe direction: a spec
+   * it does not read cannot make the gate pass wrongly, only fail wrongly.
+   *
+   * This paragraph said the repository held one suite outside the convention and that the walk
+   * therefore under-read by one. The number was **zero on the day the sentence was written**, not
+   * made zero afterwards: the file it meant, `NegativeFractionTestSimple.scala`, had been renamed
+   * nine minutes earlier by `13992fe`, which is the commit that added the `StyleSpec` clause above
+   * and is an ancestor of the one that wrote this. A sentence born false is not caught by asking
+   * when it stopped being true.
    */
   private lazy val specs: Vector[String] = {
     val stream = Files.walk(Paths.get("modules"))
