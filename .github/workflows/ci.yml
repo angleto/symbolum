@@ -78,6 +78,28 @@ jobs:
       # not run and could not fail. Adding scalafmt is a decision about the source; pretending to
       # check it is not, so the step is gone rather than disabled.
 
+  # Not `needs: test`, and not a gate. What it reports is somebody else's unlanded work, so a
+  # blocking check on it stops the wrong person, and making it wait for the suite would delay a
+  # warning that has nothing to do with whether this commit is sound.
+  #
+  # `fetch-depth: 0` because the default checkout fetches one commit and no other branch, and the
+  # question is about the other branches. On a pull request the ref is a merge ref rather than a
+  # line, and the branches question is about what has landed rather than about what is proposed, so
+  # it runs on the push and on a manual dispatch.
+  branches:
+    name: Branches carrying work the line does not
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout every branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Report branches left behind
+        run: sh tools/branches-behind.sh "${{ github.ref_name }}"
+
   build:
     name: Build artifact
     runs-on: ubuntu-latest
