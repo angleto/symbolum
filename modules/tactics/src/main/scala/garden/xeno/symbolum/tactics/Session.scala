@@ -449,7 +449,10 @@ object Session {
      * a document that does not contain the word. `DomainTheorySpec` settles a claim about an
      * invented domain through `Propositional`, so a procedure is not barred from a domain's
      * constants in principle; what it needs is the axiom instance specialised and detached by the
-     * caller, and over a session that is `derive`, which is not written.
+     * caller, and over a session that is `derive`, which [[Surface.deriving]] implements further
+     * down this same object. This said "which is not written" for the day after it was written, in
+     * the file that writes it, and what carried it that far is that a sentence with no figure in it
+     * has nothing watching it: the three specs that read `CLAUDE.md` each look for a number.
      */
     private def proving(state: State, name: String, claim: String): (Outcome, State) =
       state.proposition(claim) match {

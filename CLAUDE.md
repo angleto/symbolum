@@ -92,8 +92,13 @@ that is deliberate: it is what lets it stay fast and heuristic.
   by shape rather than answered with the whole library.
 - **Working on a theory interactively, in a browser:**
   `sbt "tactics/runMain garden.xeno.symbolum.tactics.Notebook"`, then open `http://127.0.0.1:8642`. A column
-  of cells over one `Session`: `declare`, `define`, `assume`, `prove`, `ask`, `find`, `show`. The
-  chain is built once when it starts, a few seconds, and each question after that is milliseconds.
+  of cells over one `Session`: `declare`, `define`, `assume`, `prove`, `derive`, `ask`, `find`,
+  `show`. The chain is built once when it starts, a few seconds, and each question after that is
+  milliseconds. `DocumentationSpec` compares that list with `Session.Command.Keywords` in both
+  directions, and it does so because the list stood at seven for the day after `derive` became the
+  eighth: a sentence with no figure in it has nothing watching it, and the paragraph below was
+  rewritten in that time to repair another false sentence about `derive` without anybody rereading
+  this line.
 
   **A session holds exactly one theory, and that is the whole safety argument rather than a
   convenience.** The falsity `SoundnessAttackSpec` derives needs *two* theories that each declare

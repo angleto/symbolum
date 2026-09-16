@@ -258,30 +258,56 @@ class SessionSpec extends AnyFlatSpec with Matchers {
       Vector(
         "declare good : real -> bool",
         "assume RULE : !r:real. good r",
-        "assume PAIR : good 1 /\\ good 2"
+        "assume PAIR : good 1 /\\ good 2",
+        "assume IMP : good 1 ==> good 2"
       )
     )
     val constants = start.state.theory.constants.keySet
     val axioms = start.state.theory.axioms.size
 
+    // Each step cites what the one before it produced, which is what makes this a derivation and
+    // not five independent readings, and it is why the fold below threads the session through.
     val steps = Vector(
       "derive A : specialise RULE at 1",
       "derive B : left PAIR",
       "derive C : right PAIR",
       "derive D : both B C",
-      "derive E : mp RULE B"
+      "derive E : mp IMP A"
     )
 
-    steps.foreach { step =>
-      val after = start.run(step).state
-      withClue(s"$step changed the theory: ") {
-        after.theory.constants.keySet shouldBe constants
-        after.theory.axioms.size shouldBe axioms
+    // **This ran every step from `start` until 2026-09-16, and that made it vacuous on two of the
+    // five.** `D` cites `B` and `C` and `E` cites `A`, none of which `start` holds, so both were
+    // refused with "no fact named B"; a refused step leaves the state untouched by construction,
+    // so the two assertions below passed **without the inference having run at all**. A bad branch
+    // in `both` or in `mp` reaching `declareConstant` is exactly what this test exists to catch and
+    // exactly what it could not have seen. Found by a verification that executed the loop's own
+    // expression rather than reading it.
+    //
+    // Two things repair it and both are needed. The fold, so each step meets the session the
+    // previous one produced. And the outcome asserted **before** the theory is looked at, because
+    // "the theory did not change" is true of a refusal too: without that line this guard stays
+    // green on a `derive` that has stopped working entirely.
+    steps.foldLeft(start) { (session, step) =>
+      val next = session.run(step)
+      val entry = next.entries.last
+
+      withClue(s"$step did not produce a theorem: ${entry.render(next.state)}\n") {
+        entry.outcome shouldBe a[Session.Outcome.Proved]
       }
+      withClue(s"$step changed the theory: ") {
+        next.state.theory.constants.keySet shouldBe constants
+        next.state.theory.axioms.size shouldBe axioms
+      }
+      next
     }
 
-    // And the vocabulary the loop ran over is the published one, so an inference added without a
+    // And the vocabulary the fold ran over is the published one, so an inference added without a
     // case here stops being covered loudly rather than quietly.
+    //
+    // It reads the inference out of the step's own text, which is a weak thing to read and is
+    // sound only because of the line above it: a step asserted `Proved` is one whose inference the
+    // surface actually performed, so a name here that nothing executes cannot reach this
+    // assertion. On its own, which is how it stood, it certified that five names were **mentioned**.
     steps.map(_.split(" : ")(1).takeWhile(_ != ' ')).toSet shouldBe Session.Surface.Inferences.toSet
   }
 

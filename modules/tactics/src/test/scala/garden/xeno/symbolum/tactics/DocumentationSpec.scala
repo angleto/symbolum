@@ -791,6 +791,34 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     read("CLAUDE.md") should include(claim)
   }
 
+  it should "list the notebook's cells as the code publishes them, so an eighth cannot go unlisted" in {
+    // **`derive` landed and this list stayed at seven for a day**, in the paragraph a session reads
+    // before touching the notebook, and three things passed over it without seeing it: a full suite
+    // of 2271, a verification of the card that added the command, and a session that rewrote the
+    // very next paragraph of that file to repair a *different* false sentence about `derive`. That
+    // is where this test comes from rather than a worry about the future: prose with no figure in
+    // it has nothing watching it, and the three specs that open `CLAUDE.md` each look for a number.
+    //
+    // The shape is the one the test below uses on the kernel's directory, pointed at an enumeration
+    // instead: a hand-kept list compared with a live one by equality in both directions, so a
+    // command added without the document moving fails here, and a command removed from the code
+    // while the document still advertises it fails here too. The second direction is not
+    // decoration — a cell a reader is told about and cannot type is the worse of the two.
+    val document = read("CLAUDE.md")
+    val sentence = """of cells over one `Session`:(.*?)\. The chain is built""".r
+      .findFirstMatchIn(document.replace("\n", " "))
+      .map(_.group(1))
+      .getOrElse(fail("CLAUDE.md no longer introduces the notebook's cells; this guard reads that sentence"))
+
+    val listed = """`([a-z]+)`""".r.findAllMatchIn(sentence).map(_.group(1)).toVector
+
+    // The empty case is what would make the equality below pass on a sentence that lists nothing,
+    // and it is reachable: the regular expression above is the only thing tying this to the
+    // document's wording, and prose is what moves here.
+    withClue(s"the sentence this read was `$sentence`: ") { listed should not be empty }
+    listed.sorted shouldBe Session.Command.Keywords.sorted
+  }
+
   it should "classify every file of the kernel, so a new one is a decision and not a default" in {
     // The guard that keeps the split above honest. Excluding a file from the count is a claim that
     // a defect in it cannot produce a false theorem, and a claim like that is made deliberately per
