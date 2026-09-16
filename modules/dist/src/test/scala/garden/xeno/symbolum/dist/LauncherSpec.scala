@@ -38,6 +38,14 @@ import garden.xeno.symbolum.tactics.Find
  * because it is how it produced the smaller number: `Notebook` matches in `StyleSpec` and in
  * `RealSpec`, and both are the string `"Notebook.scala"` in a list of file paths, not a call.
  *
+ * == And the criterion reads code rather than text, which the paragraph above is why ==
+ *
+ * A string comparison over a spec's whole text counts a launcher NAMED in prose as one CALLED, and
+ * this file is where that would happen first: three of the sentences above name a launcher's
+ * `main` and are one character from matching the gate's own criterion. So the comparison is made
+ * against the spec with its comments removed, which is [[code]], and that docstring carries the
+ * measurement, the direction the remaining error can go in, and what it does not cover.
+ *
  * == Two of them cannot be entered, and that is said rather than forced ==
  *
  * `Notebook.main` blocks on a latch so that `sbt runMain` does not take the server down with it,
@@ -150,16 +158,82 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * A spec's text with its comments removed, which is what the criterion is applied to.
+   *
+   * Without this the criterion compares against prose as well as code, so a launcher NAMED in a
+   * comment counts as one CALLED. The direction is what makes it worth ten lines: `unentered`
+   * filters with `exists`, so extra text can only add matches and never remove one, and what the
+   * defect produces is a false green.
+   *
+   * Not hypothetical, which is the measurement that decided it. Counted at `2c30544` and again at
+   * `15fa092` over every `*Spec.scala`: the criterion as the gate spells it, `<Launcher>.main(`,
+   * matches five times and all five are executed calls, so no false match exists today. Spelled
+   * without the parenthesis it matches eight, and the three extra are prose in the block comment
+   * at the top of THIS file. One of them would have cost something: it names `Find`, a launcher
+   * with a real call and no excuse, so a parenthesis in that sentence would have covered it and
+   * left the real call redundant with nothing saying so. The other two name `Notebook` and `Repl`,
+   * which [[CannotBeEntered]] answers before any text is read; they become the same hazard the day
+   * either excuse is removed, which is exactly when somebody is asking why the gate is quiet.
+   * Whoever documents a gate writes the text the gate looks for, and it had happened here before
+   * anybody noticed the criterion could not tell a sentence from a call. `StyleSpec` had already
+   * made the same repair on its own scan, under a test called "be found by a pattern that reads a
+   * declaration and not a mention of one"; this file's criterion was the older mistake sitting one
+   * module away from its correction.
+   *
+   * Both shapes of comment, because the prose is in both and mostly in the first: at `15fa092`, 88
+   * lines of this file began with `*` and 53 with `//`, and all three mentions were in a block. A
+   * ratio rather than a pair, since both numbers move whenever anybody writes a paragraph here,
+   * including this one. An AST would answer completely and wants a parser in a module that reads
+   * files as bytes; this is the answer in between.
+   *
+   * WHAT IT DOES NOT COVER. A line comment's `//`, or a block comment's opening, inside a string
+   * literal is read as a comment and what follows it on that line is removed. That can delete a
+   * real call and report a launcher as unentered, which is a false RED, so the change moves the
+   * failure this criterion can produce from the unsafe direction to the safe one. That is a
+   * property of removing text from an `exists` rather than a hope.
+   *
+   * The literal is common and the hazard is not, and this nearly went in as one sentence saying no
+   * such literal exists. At `15fa092`, 46 string literals in `*Spec.scala` contain `//`, most of
+   * them a URL or this repository's own comment-scanning tests. None puts a launcher's `main(`
+   * after the `//` on the same line, which is the shape that would cost anything; the only line
+   * that does is in the test below, where it is there to be stripped.
+   *
+   * A block comment's opening is spelled out above rather than written, and the reason is the
+   * thing itself: Scala nests block comments, so those two characters inside THIS doc comment open
+   * a second one, the marker below closes that one instead, and the definition underneath is
+   * swallowed until the next closing marker, which is inside the regex. The compiler reported it
+   * as three errors and none of them was here.
+   *
+   * The same two substitutions are in `theories`' `Sources.code` and in `RemedySpec`, and this is
+   * the third. They cannot see each other: three modules' test scopes, and only
+   * `checker % "test->test"` crosses such a boundary today. A census run because three sounded low
+   * found six sites deciding what a comment is, in two shapes that do not agree: these three clean
+   * the text, and `StyleSpec`, `SourceLanguageSpec` and `DocumentationSpec` filter whole lines, so
+   * a trailing `// note` after a call is dropped here and kept there. Which of the two a caller
+   * wants is a question before it is a refactor, and it has a card of its own.
+   */
+  private def code(text: String): String =
+    text.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("(?m)//.*$", " ")
+
+  /**
    * Which of `launchers` no spec enters through `main`, excusing the ones named.
    *
    * A function rather than a block inside the assertion, so that it can be put to an input whose
    * answer is known. The test below does that, and it is what separates "nothing is unentered" from
    * "the scan found nothing", which a green run cannot tell apart.
+   *
+   * `corpus` defaults to the real one and is a parameter for the same reason: until it was, the
+   * demonstration could vary the launchers and the excuses and not the text being searched, which
+   * is where the criterion lives.
    */
-  private def unentered(launchers: Vector[String], excused: Set[String]): Vector[String] =
+  private def unentered(
+      launchers: Vector[String],
+      excused: Set[String],
+      corpus: Vector[String] = specs
+  ): Vector[String] =
     launchers.filterNot { entry =>
       val simple = entry.split('.').last
-      excused.contains(entry) || specs.exists(_.contains(s"$simple.main("))
+      excused.contains(entry) || corpus.exists(text => code(text).contains(s"$simple.main("))
     }
 
   "The distribution's allowlist" should "be read from the build, and be the launchers rather than everything" in {
@@ -202,6 +276,24 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
     // And a launcher that IS entered is not reported, which is the third way the function could be
     // wrong: one that always answers "unentered" would pass the two assertions above.
     unentered(Vector("garden.xeno.symbolum.tactics.Ask"), Set.empty) shouldBe empty
+  }
+
+  it should "read a call and not a sentence about one, which a comparison over the whole text cannot" in {
+    // The fourth way it could be wrong, and the only one that produces a green: the criterion is a
+    // string comparison, so before `code` stripped the comments a launcher named in prose was
+    // excused by that prose. Both shapes are here because the repository writes both, and the
+    // block one is where the three mentions that are one character short of doing it actually sit.
+    val ghost = "garden.xeno.symbolum.nowhere.Ghost"
+    val block = "/** Ghost.main(Array.empty) would hang, so nothing calls it. */\nfinal class X\n"
+    val line = "final class X {\n  // Ghost.main(Array.empty) would hang, so nothing calls it.\n}\n"
+    val call = "final class X {\n  Ghost.main(Array.empty)\n}\n"
+
+    unentered(Vector(ghost), Set.empty, Vector(block)) shouldBe Vector(ghost)
+    unentered(Vector(ghost), Set.empty, Vector(line)) shouldBe Vector(ghost)
+
+    // And the call is still found, which is what a stripper that removed too much would fail. Both
+    // assertions above pass against one that returned the empty string for every input.
+    unentered(Vector(ghost), Set.empty, Vector(call)) shouldBe empty
   }
 
   it should "excuse only launchers it ships, so a stale excuse fails rather than sits" in {
