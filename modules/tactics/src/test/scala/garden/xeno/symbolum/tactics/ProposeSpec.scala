@@ -227,7 +227,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // It was first derived as THIRTEEN by counting those conjuncts, and the entry above about
     // `MONOTONE_CONVERGES` carrying two says why that is wrong -- it is curried twice. Kept beside
     // the right figure because the error was in reading the rule, not in adding up.
-    proposals.size shouldBe 309
+    // 309 with the comparison test, which is curried three times and therefore carries three.
+    // 312 with the algebra of limits' two: `CONVERGES_ADD` is curried twice and `CONVERGES_NEG`
+    // once, so three, derived before the run by the peeling rule this file states and measured
+    // identical. The sum's two leading arrows are the two convergences it takes; the negation's
+    // one is the single convergence it takes.
+    proposals.size shouldBe 312
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -775,7 +780,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 220 with the four of `Inductive` and `Reaching` that land here. Measured, not derived: which
     // bucket a residue lands in depends on whether a procedure has an address for its shape, which
     // is not a property of the lemma the hypothesis was dropped from.
-    open shouldBe 223
+    // 225 with TWO of the three the algebra of limits brought, and the third is in `unreadable`
+    // below. Measured and NOT derived, for the reason the entry above gives about the four of
+    // `Inductive` and `Reaching`: which bucket a residue lands in turns on whether a procedure has
+    // an address for its shape, which is a fact about the procedures and not about the lemma the
+    // hypothesis came off. The count of the residues themselves was derivable and was derived,
+    // three, and it is the split of those three that was not; keeping the two apart is the whole
+    // reason this row says which half was predicted.
+    open shouldBe 225
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -972,7 +984,22 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // settle them. Seven arrived and they split three and four with nothing left over, which is the
     // check the note above asks for: both counts are over the seven this commit added, and `open`
     // moving 216 to 220 is the other half of the same seven.
-    unreadable shouldBe 77
+    //
+    // 78 with ONE of the algebra of limits' three residues, and the split completes the derivation
+    // rather than merely passing. Three residues were derived before the run from the peeling
+    // rule, two landed in `open` above and this is the third, so 2 + 1 = 3 with nothing left over
+    // and neither bucket is standing in for the other. That crossed check is the whole value of
+    // pinning both: which bucket a residue reaches is not derivable, as the entries above say,
+    // but their SUM is, and a residue quietly lost would show up as two counts that no longer add
+    // to the number the rule predicts.
+    //
+    // The one here is the negation's, `converges (\n. -(s n)) (-a)` with its only hypothesis
+    // dropped. It is unreadable for the reason two entries above give and not for `word`'s: a
+    // claim that every sequence's negation converges to `-a` for an unrelated `a` is about
+    // `converges`, and no procedure in this chain has an address for that constant at all. The
+    // sum's two stay in `open` because each keeps the other convergence as an antecedent, so what
+    // is left is still a conditional a procedure will attempt and fail to settle.
+    unreadable shouldBe 78
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

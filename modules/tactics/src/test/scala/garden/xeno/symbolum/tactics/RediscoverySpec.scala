@@ -158,7 +158,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // which are false rather than lemmas somebody forgot to state.
     // 306 with the seven of `Inductive` and `Reaching`; `ProposeSpec`'s entry on the same figure
     // carries the per-lemma derivation and the count it was first wrong by.
-    propose.weakenings.size shouldBe 309
+    // 309 with the comparison test, which is curried three times and therefore carries three.
+    // 312 with the algebra of limits' two: `CONVERGES_ADD` is curried twice and `CONVERGES_NEG`
+    // once, so three, derived before the run by the peeling rule this file states and measured
+    // identical. The sum's two leading arrows are the two convergences it takes; the negation's
+    // one is the single convergence it takes.
+    propose.weakenings.size shouldBe 312
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -98,6 +98,12 @@ final class Limit private (
    * ==> ?l. converges (Sum f) l`
    */
   def comparison: Either[LogicError, Kernel.Thm] = fact(Limit.Comparison)
+
+  /** `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n + t n) (a + b)` */
+  def added: Either[LogicError, Kernel.Thm] = fact(Limit.Added)
+
+  /** `|- !s a. converges s a ==> converges (\n. -(s n)) (-a)` */
+  def negated: Either[LogicError, Kernel.Thm] = fact(Limit.Negated)
 }
 
 object Limit {
@@ -178,6 +184,46 @@ object Limit {
    */
   val Comparison: String = "SUM_COMPARISON"
 
+  /**
+   * `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n + t n) (a + b)`
+   *
+   * The limit of a sum is the sum of the limits, and it is the first fact in this development that
+   * relates **two** convergent sequences to each other. Everything above it takes one sequence and
+   * says something about it alone: that a constant converges, that a limit is unique, that an
+   * increasing bounded sequence has one. A development that cannot add two limits cannot state the
+   * Cauchy product, so this is the piece the analysis was actually short of, and `docs/adr/0017`
+   * does not name it because the thing it names, `SUM_SWAP`, is a different gap.
+   *
+   * The proof is the epsilon argument [[Unique]] already contains, run forwards instead of into a
+   * contradiction: halve the tolerance, take the two indices the halves give, and answer at a
+   * single index above both. `Peano.NUM_LE_ADD` is what "above both" is here and a maximum is not,
+   * for the reason [[Unique]] gives: `num` has no maximum, and the sum of two indices is above each
+   * of them for nothing.
+   *
+   * == Why the triangle inequality is not used, although this is where a reader expects it ==
+   *
+   * `Magnitude.ABS_TRIANGLE` says `abs (x + y) <= abs x + abs y`, and the textbook step is that
+   * inequality applied to `(s n - a) + (t n - b)`. Using it would mean first rewriting
+   * `s n + t n - (a + b)` into that sum **under `abs`**, which is a rewrite of a subterm the
+   * congruence here reaches only through [[rewriteInProposition]], and then a second step to put
+   * the two halves together. What replaces it costs one `Order.ABS_CASES` split and two `Linarith`
+   * calls: in each branch `abs` is gone, and what is left is linear over the eight atoms. The
+   * inequality is not avoided, it is **decided**, which is what having a fragment decider is for.
+   */
+  val Added: String = "CONVERGES_ADD"
+
+  /**
+   * `|- !s a. converges s a ==> converges (\n. -(s n)) (-a)`
+   *
+   * Negation of a sequence, and it is here rather than as the scalar multiple `c = -1` for a reason
+   * that is about the proof and not about generality. `converges (\n. c * s n) (c * a)` divides the
+   * tolerance by `abs c` and therefore has to split on `c = 0` before it can divide at all; the
+   * negation divides by nothing, keeps the same index, and is three lines of `Linarith` over the
+   * same two bounds [[Added]] uses. So the additive group of limits is complete at this cut and the
+   * scalar multiple is left, deliberately, to whoever needs it with its case split.
+   */
+  val Negated: String = "CONVERGES_NEG"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -195,7 +241,12 @@ object Limit {
         "?l:real. converges s l"),
     Comparison ->
       ("!f:num -> real. !g:num -> real. (!n:num. 0 <= f n) ==> (!n:num. f n <= g n) ==> " +
-        "(?b:real. !n:num. Sum g n <= b) ==> ?l:real. converges (Sum f) l")
+        "(?b:real. !n:num. Sum g n <= b) ==> ?l:real. converges (Sum f) l"),
+    Added ->
+      ("!s:num -> real. !t:num -> real. !a:real. !b:real. " +
+        "converges s a ==> converges t b ==> converges (\\n:num. s n + t n) (a + b)"),
+    Negated ->
+      "!s:num -> real. !a:real. converges s a ==> converges (\\n:num. -(s n)) (-a)"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -283,6 +334,11 @@ object Limit {
 
       comparisonTest <- comparison(
         logic, linarith, theory, notation, sumAtSuccessor, sumMonotone, monotoneConverges)
+
+      addedLimits <- convergesAdd(
+        logic, linarith, theory, notation, convergesDefinition, bounds, indices)
+      negatedLimit <- convergesNegated(
+        logic, linarith, theory, notation, convergesDefinition, bounds)
     } yield new Limit(
       magnitude,
       peano,
@@ -297,7 +353,9 @@ object Limit {
         Eventually -> eventually,
         MonotoneBelow -> monotoneBelow,
         MonotoneConverges -> monotoneConverges,
-        Comparison -> comparisonTest
+        Comparison -> comparisonTest,
+        Added -> addedLimits,
+        Negated -> negatedLimit
       )
     )
   }
@@ -384,10 +442,15 @@ object Limit {
       bound <- proposition("!n:num. Sum (g:num -> real) n <= b:real")
       assumedBound <- LogicError.lift(Kernel.assume(bound))
 
-      // A CONJUNCTION and not two arrows, because that is the shape `Linarith.prove` documents:
-      // "!vars. h1 /\ ... /\ hn ==> c". Written curried, what comes back has an antecedent the
-      // `conjIntro` below does not build, and `Rules.mp` refuses it by name -- which is how this
-      // was found rather than by reading the docstring first.
+      // A CONJUNCTION and not two arrows, because of the `conjIntro` below and for no other
+      // reason. This comment said the conjunction was the shape `Linarith.prove` documents and
+      // that a curried goal comes back wrong, and **that is false**: `Linarith.split` peels every
+      // antecedent, not one, and `CurriedGoalSpec` has pinned the two forms as the same goal since
+      // the day a version that peeled exactly one was repaired. What refused the curried attempt
+      // was `Rules.mp`, downstream, against an antecedent this assembly does not build -- a
+      // constraint of the three lines below rather than of the prover. The distinction is worth
+      // the paragraph: a wrong figure gets rechecked by whoever trips on it, and a wrong
+      // constraint gets **obeyed**, so nobody ever discovers it was unnecessary.
       transitivityGoal <- proposition(
         "Sum (f:num -> real) n:num <= Sum (g:num -> real) n /\\ Sum g n <= b:real ==> " +
           "Sum f n <= b")
@@ -746,6 +809,337 @@ object Limit {
         .disch(toB, equal)
         .flatMap(rules.disch(toA, _))
         .flatMap(rules.gen(b, _))
+        .flatMap(rules.gen(a, _))
+        .flatMap(rules.gen(s, _))
+    } yield result
+  }
+
+  /**
+   * `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n + t n) (a + b)`
+   *
+   * The epsilon argument [[uniqueLimit]] runs into a contradiction, run forwards instead. Both
+   * sequences are put inside half the tolerance, the two witnesses are taken out with
+   * `existsElim`, and the index that answers the goal is their **sum**, which is above each of them
+   * by `Peano.NUM_LE_ADD` and needs no maximum that `num` has not got.
+   *
+   * The distance is settled by [[Bounds]] and `Linarith` rather than by the triangle inequality,
+   * and [[Added]]'s note says why at length: inside each branch of `ABS_CASES` the `abs` is gone
+   * and what remains is linear over eight atoms, which is inside the fragment `Linarith` decides.
+   */
+  private def convergesAdd(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    bounds: Bounds,
+    indices: Indices
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val t = Term.variable("t", sequences)
+    val a = Term.variable("a", values)
+    val b = Term.variable("b", values)
+    val e = Term.variable("e", values)
+    val n = Term.variable("n", numbers)
+    val m = Term.variable("m", numbers)
+    val k = Term.variable("k", numbers)
+
+    for {
+      toA <- Parser.proposition(theory, notation, "converges (s:num -> real) (a:real)")
+      toB <- Parser.proposition(theory, notation, "converges (t:num -> real) (b:real)")
+      assumedA <- LogicError.lift(Kernel.assume(toA))
+      assumedB <- LogicError.lift(Kernel.assume(toB))
+
+      unfoldedA <- Conv.unfold(convergesDefinition, List(s, a)).flatMap(normaliseRight)
+      unfoldedB <- Conv.unfold(convergesDefinition, List(t, b)).flatMap(normaliseRight)
+      bodyA <- LogicError.lift(Kernel.eqMp(unfoldedA, assumedA))
+      bodyB <- LogicError.lift(Kernel.eqMp(unfoldedB, assumedB))
+
+      positive <- Parser.proposition(theory, notation, "0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      half <- Parser.term(theory, notation, "e:real / 2", values)
+      halfPositive <- linarith
+        .prove("!e:real. 0 < e ==> 0 < e / 2")
+        .flatMap(rules.spec(e, _))
+        .flatMap(rules.mp(_, assumedPositive))
+
+      nearA <- rules.spec(half, bodyA).flatMap(rules.mp(_, halfPositive))
+      nearB <- rules.spec(half, bodyB).flatMap(rules.mp(_, halfPositive))
+
+      insideA <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE m:num n ==> abs ((s:num -> real) n - (a:real)) < e:real / 2"
+      )
+      insideB <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE k:num n ==> abs ((t:num -> real) n - (b:real)) < e:real / 2"
+      )
+      assumedInsideA <- LogicError.lift(Kernel.assume(insideA))
+      assumedInsideB <- LogicError.lift(Kernel.assume(insideB))
+
+      // One index above both, and it is a sum rather than a maximum because `num` has no maximum.
+      index <- Parser.term(theory, notation, "NUM_ADD m:num k:num", numbers)
+      guard <- Parser.proposition(theory, notation, "NUM_LE (NUM_ADD m:num k:num) n:num")
+      assumedGuard <- LogicError.lift(Kernel.assume(guard))
+
+      aboveM <- rules.specAll(indices.atMostSum, List(m, k))
+      pastM <- rules
+        .conjIntro(aboveM, assumedGuard)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(m, index, n)).flatMap(rules.mp(_, both)))
+
+      aboveK <- for {
+        other <- rules.specAll(indices.atMostSum, List(k, m))
+        swap <- rules.specAll(indices.commutative, List(k, m))
+        carried <- rewriteWith(swap, other)
+      } yield carried
+      pastK <- rules
+        .conjIntro(aboveK, assumedGuard)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(k, index, n)).flatMap(rules.mp(_, both)))
+
+      closeA <- rules.spec(n, assumedInsideA).flatMap(rules.mp(_, pastM))
+      closeB <- rules.spec(n, assumedInsideB).flatMap(rules.mp(_, pastK))
+
+      // The atoms the two branches below are linear over, read rather than built, for the reason
+      // `uniqueLimit` gives: what a reader checks against the case split is a sentence.
+      atS <- Parser.term(theory, notation, "(s:num -> real) (n:num)", values)
+      atT <- Parser.term(theory, notation, "(t:num -> real) (n:num)", values)
+      gapA <- Parser.term(
+        theory, notation, "(s:num -> real) (n:num) - (a:real)", values)
+      gapB <- Parser.term(
+        theory, notation, "(t:num -> real) (n:num) - (b:real)", values)
+      distanceA <- Parser.term(
+        theory, notation, "abs ((s:num -> real) (n:num) - (a:real))", values)
+      distanceB <- Parser.term(
+        theory, notation, "abs ((t:num -> real) (n:num) - (b:real))", values)
+      total <- Parser.term(
+        theory,
+        notation,
+        "(s:num -> real) (n:num) + (t:num -> real) (n:num) - ((a:real) + (b:real))",
+        values
+      )
+      distance <- Parser.term(
+        theory,
+        notation,
+        "abs ((s:num -> real) (n:num) + (t:num -> real) (n:num) - ((a:real) + (b:real)))",
+        values
+      )
+
+      aboveA <- rules.spec(gapA, bounds.above)
+      aboveNegA <- rules.spec(gapA, bounds.aboveNegation)
+      aboveB <- rules.spec(gapB, bounds.above)
+      aboveNegB <- rules.spec(gapB, bounds.aboveNegation)
+
+      split <- rules.spec(total, bounds.cases)
+
+      plain <- Parser.proposition(
+        theory,
+        notation,
+        "abs ((s:num -> real) (n:num) + (t:num -> real) (n:num) - ((a:real) + (b:real))) = " +
+          "(s:num -> real) (n:num) + (t:num -> real) (n:num) - ((a:real) + (b:real))"
+      )
+      fromPlain <- for {
+        assumed <- LogicError.lift(Kernel.assume(plain))
+        lemma <- linarith.prove(
+          "!p:real. !q:real. !x:real. !y:real. !u:real. !v:real. !g:real. !e:real. " +
+            "x - p <= u ==> y - q <= v ==> u < e / 2 ==> v < e / 2 ==> " +
+            "g = x + y - (p + q) ==> g < e"
+        )
+        result <- rules
+          .specAll(lemma, List(a, b, atS, atT, distanceA, distanceB, distance, e))
+          .flatMap(rules.mp(_, aboveA))
+          .flatMap(rules.mp(_, aboveB))
+          .flatMap(rules.mp(_, closeA))
+          .flatMap(rules.mp(_, closeB))
+          .flatMap(rules.mp(_, assumed))
+      } yield result
+
+      negatedCase <- Parser.proposition(
+        theory,
+        notation,
+        "abs ((s:num -> real) (n:num) + (t:num -> real) (n:num) - ((a:real) + (b:real))) = " +
+          "-((s:num -> real) (n:num) + (t:num -> real) (n:num) - ((a:real) + (b:real)))"
+      )
+      fromNegated <- for {
+        assumed <- LogicError.lift(Kernel.assume(negatedCase))
+        lemma <- linarith.prove(
+          "!p:real. !q:real. !x:real. !y:real. !u:real. !v:real. !g:real. !e:real. " +
+            "-(x - p) <= u ==> -(y - q) <= v ==> u < e / 2 ==> v < e / 2 ==> " +
+            "g = -(x + y - (p + q)) ==> g < e"
+        )
+        result <- rules
+          .specAll(lemma, List(a, b, atS, atT, distanceA, distanceB, distance, e))
+          .flatMap(rules.mp(_, aboveNegA))
+          .flatMap(rules.mp(_, aboveNegB))
+          .flatMap(rules.mp(_, closeA))
+          .flatMap(rules.mp(_, closeB))
+          .flatMap(rules.mp(_, assumed))
+      } yield result
+
+      closeGap <- rules.disjElim(split, fromPlain, fromNegated)
+
+      guarded <- rules.disch(guard, closeGap).flatMap(rules.gen(n, _))
+      existential <- Parser.proposition(
+        theory,
+        notation,
+        "?N:num. !n:num. NUM_LE N n ==> " +
+          "abs ((s:num -> real) n + (t:num -> real) n - ((a:real) + (b:real))) < e:real"
+      )
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      witnessed <- rules.existsIntro(predicate, index, guarded)
+
+      withoutB <- rules.existsElim(nearB, k, witnessed)
+      withoutA <- rules.existsElim(nearA, m, withoutB)
+      whole <- rules.disch(positive, withoutA).flatMap(rules.gen(e, _))
+
+      sequence <- Parser.term(
+        theory, notation, "\\n:num. (s:num -> real) n + (t:num -> real) n", sequences)
+      limit <- Parser.term(theory, notation, "(a:real) + (b:real)", values)
+      unfoldedSum <- Conv.unfold(convergesDefinition, List(sequence, limit)).flatMap(normaliseRight)
+      bodySum <- rightOf(unfoldedSum)
+      _ <- sameStatement(notation, whole, bodySum)
+      folded <- Conv
+        .sym(unfoldedSum)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, whole)))
+
+      result <- rules
+        .disch(toB, folded)
+        .flatMap(rules.disch(toA, _))
+        .flatMap(rules.gen(b, _))
+        .flatMap(rules.gen(a, _))
+        .flatMap(rules.gen(t, _))
+        .flatMap(rules.gen(s, _))
+    } yield result
+  }
+
+  /**
+   * `|- !s a. converges s a ==> converges (\n. -(s n)) (-a)`
+   *
+   * The same index answers, and the same tolerance: negating a sequence does not move any distance,
+   * so nothing is halved and nothing is put together. What the two branches of `ABS_CASES` need is
+   * the two bounds the other derivation also uses, and they arrive the other way round, since the
+   * quantity whose sign is split is the negation of the one they bound.
+   */
+  private def convergesNegated(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    bounds: Bounds
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val a = Term.variable("a", values)
+    val e = Term.variable("e", values)
+    val n = Term.variable("n", numbers)
+    val m = Term.variable("m", numbers)
+
+    for {
+      toA <- Parser.proposition(theory, notation, "converges (s:num -> real) (a:real)")
+      assumedA <- LogicError.lift(Kernel.assume(toA))
+      unfoldedA <- Conv.unfold(convergesDefinition, List(s, a)).flatMap(normaliseRight)
+      bodyA <- LogicError.lift(Kernel.eqMp(unfoldedA, assumedA))
+
+      positive <- Parser.proposition(theory, notation, "0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      near <- rules.spec(e, bodyA).flatMap(rules.mp(_, assumedPositive))
+
+      inside <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE m:num n ==> abs ((s:num -> real) n - (a:real)) < e:real"
+      )
+      assumedInside <- LogicError.lift(Kernel.assume(inside))
+
+      guard <- Parser.proposition(theory, notation, "NUM_LE m:num n:num")
+      assumedGuard <- LogicError.lift(Kernel.assume(guard))
+      close <- rules.spec(n, assumedInside).flatMap(rules.mp(_, assumedGuard))
+
+      atS <- Parser.term(theory, notation, "(s:num -> real) (n:num)", values)
+      gap <- Parser.term(theory, notation, "(s:num -> real) (n:num) - (a:real)", values)
+      distanceOf <- Parser.term(
+        theory, notation, "abs ((s:num -> real) (n:num) - (a:real))", values)
+      total <- Parser.term(
+        theory, notation, "-((s:num -> real) (n:num)) - -(a:real)", values)
+      distance <- Parser.term(
+        theory, notation, "abs (-((s:num -> real) (n:num)) - -(a:real))", values)
+
+      above <- rules.spec(gap, bounds.above)
+      aboveNegation <- rules.spec(gap, bounds.aboveNegation)
+      split <- rules.spec(total, bounds.cases)
+
+      plain <- Parser.proposition(
+        theory,
+        notation,
+        "abs (-((s:num -> real) (n:num)) - -(a:real)) = " +
+          "-((s:num -> real) (n:num)) - -(a:real)"
+      )
+      fromPlain <- for {
+        assumed <- LogicError.lift(Kernel.assume(plain))
+        lemma <- linarith.prove(
+          "!p:real. !x:real. !u:real. !g:real. !e:real. " +
+            "-(x - p) <= u ==> u < e ==> g = -x - -p ==> g < e"
+        )
+        result <- rules
+          .specAll(lemma, List(a, atS, distanceOf, distance, e))
+          .flatMap(rules.mp(_, aboveNegation))
+          .flatMap(rules.mp(_, close))
+          .flatMap(rules.mp(_, assumed))
+      } yield result
+
+      negatedCase <- Parser.proposition(
+        theory,
+        notation,
+        "abs (-((s:num -> real) (n:num)) - -(a:real)) = " +
+          "-(-((s:num -> real) (n:num)) - -(a:real))"
+      )
+      fromNegated <- for {
+        assumed <- LogicError.lift(Kernel.assume(negatedCase))
+        lemma <- linarith.prove(
+          "!p:real. !x:real. !u:real. !g:real. !e:real. " +
+            "x - p <= u ==> u < e ==> g = -(-x - -p) ==> g < e"
+        )
+        result <- rules
+          .specAll(lemma, List(a, atS, distanceOf, distance, e))
+          .flatMap(rules.mp(_, above))
+          .flatMap(rules.mp(_, close))
+          .flatMap(rules.mp(_, assumed))
+      } yield result
+
+      closeGap <- rules.disjElim(split, fromPlain, fromNegated)
+
+      guarded <- rules.disch(guard, closeGap).flatMap(rules.gen(n, _))
+      existential <- Parser.proposition(
+        theory,
+        notation,
+        "?N:num. !n:num. NUM_LE N n ==> abs (-((s:num -> real) n) - -(a:real)) < e:real"
+      )
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      witnessed <- rules.existsIntro(predicate, m, guarded)
+      eliminated <- rules.existsElim(near, m, witnessed)
+      whole <- rules.disch(positive, eliminated).flatMap(rules.gen(e, _))
+
+      sequence <- Parser.term(
+        theory, notation, "\\n:num. -((s:num -> real) n)", sequences)
+      limit <- Parser.term(theory, notation, "-(a:real)", values)
+      unfoldedNeg <- Conv.unfold(convergesDefinition, List(sequence, limit)).flatMap(normaliseRight)
+      bodyNeg <- rightOf(unfoldedNeg)
+      _ <- sameStatement(notation, whole, bodyNeg)
+      folded <- Conv
+        .sym(unfoldedNeg)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, whole)))
+
+      result <- rules
+        .disch(toA, folded)
         .flatMap(rules.gen(a, _))
         .flatMap(rules.gen(s, _))
     } yield result

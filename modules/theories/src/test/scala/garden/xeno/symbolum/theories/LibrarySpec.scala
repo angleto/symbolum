@@ -336,8 +336,28 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `REACH` facts have two or more leading binders, and only the five have two of one type,
     // because every `REACH` statement binds the relation and its counted sub-relation at
     // `'a -> 'a -> bool` while `INDUCTIVE_INDUCT` binds an operator and a set, which differ.
-    library.entries.size shouldBe 463
-    library.names.distinct.size shouldBe 460
+    //
+    // **463 with `SUM_COMPARISON`, and this row was missing for the length of one card.** The
+    // count was moved and the derivation was not written, in the file whose whole purpose is that
+    // the derivation exists: the assertion below read 463 while the rows above it stopped at 462,
+    // so the arithmetic that is supposed to reach the figure reached one less than it. A peer
+    // reading the two together is what found it. It is worth more than the missing sentence,
+    // because a pin whose derivation is absent looks exactly like a pin whose derivation is right,
+    // and the check this file performs is the derivation and not the number. `CLAUDE.md`'s two
+    // figures both moved by one: the comparison test binds `f` and `g`, which is two leading
+    // quantifiers, and they are both `num -> real`, which is two of one type.
+    //
+    // 465 with `CONVERGES_ADD` and `CONVERGES_NEG`, the additive half of the algebra of limits,
+    // which is what `Limit` had none of: of its eight facts before these, not one related two
+    // convergent sequences to each other. `CLAUDE.md`'s two figures move by **two and by one**,
+    // and the split is the whole reason to write the row rather than the delta. Both new
+    // statements have two or more leading quantifiers, so the first moves by two. Only the sum has
+    // two of one type, twice over: `s` and `t` are both `num -> real` and `a` and `b` are both
+    // `real`. The negation binds `s` at `num -> real` and `a` at `real` and shares nothing, which
+    // makes it the rarer case this figure exists to count -- a lemma whose binders cannot be
+    // silently transposed, because the kernel's own typing refuses it.
+    library.entries.size shouldBe 465
+    library.names.distinct.size shouldBe 462
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -228,4 +228,106 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     )
     limit.show(value.conclusion) shouldBe "lim (\\x:num. c) = c"
   }
+
+  /**
+   * The additive algebra of limits, which is the half of it that needs no case split.
+   *
+   * Two assertions and they answer different questions. The first is that the sum fact costs
+   * **exactly** what `CONVERGES_UNIQUE` costs, which is not a coincidence and is the reason to
+   * write it as an equality between two measurements rather than as a number: both halve a
+   * tolerance, both reach `abs`, and both put two indices together, so anything that moved one and
+   * not the other would mean one of those three stopped happening. The second is that the negation
+   * costs **strictly less**, and by name rather than by count: what it does not spend is
+   * `MUL_INVERSE` and `ONE_NOT_ZERO`, which are what dividing by two spends, and it does not spend
+   * them because it divides by nothing.
+   *
+   * Written as predictions before the suite was run, which is the discipline this file's figures
+   * are under: a number copied out of a run is a transcription and not a check.
+   */
+  "The algebra of limits" should "cost the halving where it halves and not where it does not" in {
+    def axioms(name: String): Int = Derivation.axiomsOf(force(limit.fact(name))).size
+
+    axioms(Limit.Added) shouldBe axioms(Limit.Unique)
+
+    val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
+    val nonTrivial = force(chain.reals.axiom("ONE_NOT_ZERO")).conclusion
+
+    Derivation.axiomsOf(force(limit.added)) should contain(inverse)
+    Derivation.axiomsOf(force(limit.added)) should contain(nonTrivial)
+
+    Derivation.axiomsOf(force(limit.negated)) should not contain inverse
+    Derivation.axiomsOf(force(limit.negated)) should not contain nonTrivial
+  }
+
+  /**
+   * Neither reaches `COMPLETENESS`, and that is the assertion this pair exists to survive.
+   *
+   * The algebra of limits is arithmetic of an ordered field: a sum of two sequences that each get
+   * close gets close, and nothing about a supremum enters. A derivation of either of these that
+   * went through `MONOTONE_CONVERGES` would reach the sixteenth axiom, would still prove the
+   * statement, and would be a proof of the same sentence for a reason that is not the reason.
+   * `LimitSpec` asserts the positive case for the monotone theorem three assertions above; this is
+   * the same measurement pointed at where the axiom must **not** appear, which is the half that
+   * catches a route changing under a refactoring nobody meant to be about the foundation.
+   */
+  it should "not reach the sixteenth axiom, because no supremum is involved" in {
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+
+    Derivation.axiomsOf(force(limit.added)) should not contain completeness
+    Derivation.axiomsOf(force(limit.negated)) should not contain completeness
+  }
+
+  /**
+   * The two compose, and what comes out is a sequence that is identically zero.
+   *
+   * The assertion that matters here is not that the composite is provable, it is that the two
+   * facts **fit together**: `CONVERGES_ADD` wants two convergent sequences and `CONVERGES_NEG`
+   * produces one, so putting them in series is the first thing in this development that chains one
+   * limit theorem into another. Before them there was nothing to chain, since every fact `Limit`
+   * held took a sequence and said something about it alone.
+   *
+   * It is also the shape the Cauchy product will need and the reason this landed first: that
+   * argument ends by adding and subtracting a quantity, which is these two facts and no others.
+   */
+  it should "compose, so that a sequence and its negation converge together" in {
+    val rules = limit.logic.rules
+    val real = TyApp(Real.TypeName, Nil)
+    val s = Term.variable("s", Type.fun(TyApp(Natural.TypeName, Nil), real))
+    val a = Term.variable("a", real)
+
+    val assumed = force(LogicError.lift(Kernel.assume(proposition("converges (s:num -> real) (a:real)"))))
+
+    // The negation of the sequence, from the fact under test.
+    val negatedSequence = force(
+      rules.specAll(force(limit.negated), List(s, a)).flatMap(rules.mp(_, assumed)))
+
+    // And the two added, which is the second fact taking the first one's output as an input.
+    val together = force(
+      rules
+        .specAll(
+          force(limit.added),
+          List(s, force(limit.term("\\n:num. -((s:num -> real) n)", Type.fun(TyApp(Natural.TypeName, Nil), real))), a, force(limit.term("-(a:real)", real)))
+        )
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(rules.mp(_, negatedSequence)))
+
+    together.hypotheses shouldBe List(proposition("converges (s:num -> real) (a:real)"))
+
+    // **Not beta-normal, and this assertion was written expecting it to be.** Specialising the
+    // sum's `t` at the lambda leaves `(\\y. -(s y)) x` sitting under the binder rather than
+    // `-(s x)`: substitution builds a redex and no rule reduces it on the way past. What came out
+    // was a theorem about the sequence a reader means, printed in a form a reader does not write,
+    // and the first version of this test compared it against the written form and went red. That
+    // is `CLAUDE.md`'s sentence about `specToReduced` met from the other side -- the instance
+    // carrying a redex is a **different term** -- and it is worth a red test rather than a silent
+    // normalisation, because the reduction is a step the caller takes and not one it is given.
+    val reduced = force(
+      Conv
+        .betaNormalise(together.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, together))))
+
+    reduced.conclusion shouldBe
+      proposition(
+        "converges (\\n:num. (s:num -> real) n + -((s:num -> real) n)) ((a:real) + -(a:real))")
+  }
 }
