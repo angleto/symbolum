@@ -280,16 +280,23 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * constants are put to it rather than one, and that is not padding: their two statements have
    * the same right-hand side and the second was written from the first.
    *
-   * **The objection to that, and the measurement that answers it.** One test iterating over both
-   * is one instrument, so it could be agreeing with itself twice rather than reading the pair
-   * twice. What it reads is two facts, and those are not one derivation: withholding
-   * `NUM_ALL_BELOW_CASES` from the rule set kills both `NUM_ALL_BELOW` clauses and leaves both
-   * `NUM_EXISTS_BELOW` ones standing, and withholding `NUM_EXISTS_BELOW_CASES` does exactly the
-   * reverse. The dependency is disjoint, so the two answers coinciding is a conclusion reached
-   * through two different expansions rather than one expansion read twice. Measured outside the
-   * tree on 2026-09-16, for the reason the guard-dropped attack is: the derivation takes the
-   * statement published under a name, and a spec has no way to hand it a rule set with an
-   * equation missing.
+   * **The objection to that, and what answers it.** One test iterating over both is one
+   * instrument, so it could be agreeing with itself twice rather than reading the pair twice. But
+   * the risk was never a shared proof: it is that the second statement is a copy of the first
+   * while the truth differs, and that a test with one expected shape would not see it. **What
+   * catches such a copy is the kernel, and only because each derivation goes through its own
+   * definition.** A wrongly-copied statement fails to derive rather than passing, so the
+   * dependency being disjoint is the premise that argument rests on rather than a fact worth
+   * having for itself; without it, a copy passes.
+   *
+   * It is disjoint, and by the definitions rather than by a run: the right-hand side of
+   * `NUM_ALL_BELOW_CASES` names `NUM_LESS`, and that of `NUM_EXISTS_BELOW_CASES` names `NUM_AND`,
+   * `NUM_EXISTS` and `NUM_LESS`. Neither names the other, one being a tag-8 code over an
+   * implication and the other a negated universal over a conjunction. Withholding one defining
+   * equation from the rule set says the same thing and says it of one afternoon: each pair of
+   * clauses dies without its own `_CASES` and stands without the other's. Both were measured on
+   * 2026-09-16 and the first is the one to read, because it is a property of the two definitions
+   * and not of what a rule set happened to need.
    *
    * The free indices of `!j. j < t ==> p` and of `?j. j < t /\ p` really are the same set, and
    * this is where that is asserted instead of assumed.
