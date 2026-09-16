@@ -18,7 +18,7 @@ import garden.xeno.symbolum.logic.*
  * Each unfolds, by the definitions of the two bits, into an identity of a commutative ring:
  * `BIT1 x * y = BIT0 (x * y) + y` becomes `((x + x) + 1) * y = (x * y + x * y) + y`. Distributing
  * the products over the sums and then sorting both sides brings them to the same term, and that is
- * the proof. [[ringNormalisation]] is that procedure.
+ * the proof. [[normalisation]] is that procedure.
  *
  * Two things it cannot do, and both are done by hand below because they are what it rests on.
  * Exchanging neighbours in a sum is what lets sorting happen at all, and neither axiom gives it

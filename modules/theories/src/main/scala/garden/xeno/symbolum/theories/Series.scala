@@ -358,7 +358,7 @@ object Series {
    * `|- !f n. Sum f (NUM_ADD n n) = Sum f n + Sum (\i. f (NUM_ADD n i)) n`
    *
    * A sum over a range split down the middle: the first half as it stands, the second half
-   * reindexed to start at zero. It is [[Reindexed]] with both arguments the same and the
+   * reindexed to start at zero. It is [[Reindex]] with both arguments the same and the
    * subtraction cleared, which is the one instance of it that anything actually uses, because a
    * range that doubles is what a binary enumeration produces at every step.
    *
@@ -750,7 +750,7 @@ object Series {
     )
   )
 
-  /** [[Halves]], which is [[Reindexed]] at one instance and is not proved by induction. */
+  /** [[Halves]], which is [[Reindex]] at one instance and is not proved by induction. */
   /** [[CongruenceBelow]], whose induction carries an implication and needs its own driver. */
   val CongruenceBelowStatement: String =
     "!f:num -> real. !g:num -> real. !n:num. " +
@@ -1151,7 +1151,7 @@ object Series {
     } yield proved
 
   /**
-   * [[Halves]] from [[Reindexed]]: instantiate both range arguments to the same `n` and clear
+   * [[Halves]] from [[Reindex]]: instantiate both range arguments to the same `n` and clear
    * the subtraction.
    *
    * The clearing is the only step and it is linear in three sums, so it goes to the linear
