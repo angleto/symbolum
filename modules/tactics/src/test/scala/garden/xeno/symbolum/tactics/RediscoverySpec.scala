@@ -152,7 +152,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 274 with the three equality rules' eighteen.
     // 285 with the eleven the object theory's addition brought.
     // 289 with the four from the two recovered lemmas.
-    propose.weakenings.size shouldBe 289
+    // 299 with the concatenation's ten, none of which reaches a rediscovery either, and the
+    // reason is the one the buckets give: eight are about `word` and unreadable to every
+    // procedure here, and the two that are readable leave `!p m n. m < n` and `!m n. n <= m`,
+    // which are false rather than lemmas somebody forgot to state.
+    propose.weakenings.size shouldBe 299
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

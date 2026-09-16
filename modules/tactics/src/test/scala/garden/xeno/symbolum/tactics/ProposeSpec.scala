@@ -211,7 +211,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the theorem itself has no hypothesis to drop, and neither has `NUM_CLOSED_ZERO`.
     // 289 with the two lemmas recovered from the `prime-power-cancellation` branch: one
     // antecedent and three.
-    proposals.size shouldBe 289
+    // 299 with `Concatenation`'s fifteen and the three facts about `num` proved in front of
+    // them. TEN and not eighteen, DERIVED before the run and then measured: eight of the
+    // eighteen are equations and have nothing to drop -- the associativity, both units, both
+    // length laws, the empty word's length, the singleton's entry and `NUM_SUB_SUB` -- and the
+    // other ten carry exactly one antecedent each. No lemma here carries two, which is what a
+    // development whose statements are guarded by a single bound looks like.
+    proposals.size shouldBe 299
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -396,7 +402,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `!x y. y <= x` and `!x y. y < x`, which are false and written in nothing but the order. The
     // substitutions of the same two, with `le` swapped for `<`, leave `~(x < y) ==> y < x`, false
     // at `x = y`, and both sources produce it, so it is decided twice from two rows.
-    decidedFalse shouldBe 74
+    // 76 with the concatenation's ten, and TWO of the ten rather than any of the other eight,
+    // which is the split this figure exists to show. The two are the weakenings of
+    // `NUM_ADD_LT_CANCEL` and `NUM_LE_OF_NOT_LT`: dropping the antecedent leaves `!p m n. m < n`
+    // and `!m n. n <= m`, both false and both written in nothing but the order on `num`, which
+    // the sampler computes exactly. The other eight are about `word`, which no model here
+    // interprets, so not one of them can be decided either way and all eight land in the
+    // bucket below. Derived and then measured, and both halves came out.
+    decidedFalse shouldBe 76
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -484,7 +497,21 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the whole of what makes it readable. Measured at 69, and the wrong derivation is kept
     // because it is the same mistake this entry has recorded twice before, reading the family
     // rather than the residue.
-    withAPoint shouldBe 69
+    // 71 with the concatenation's two, and they are the naturals' twins of the pair two entries
+    // above: `NUM_ADD_LT_CANCEL` and `NUM_LE_OF_NOT_LT` weaken to `!p m n. m < n` and
+    // `!m n. n <= m`, comparisons of two arbitrary numbers with no hypothesis left, so the
+    // sampler takes them and finds a point. The other eight weakenings are about `word` and are
+    // unreadable, so nothing here could have found a witness in them.
+    //
+    // **This entry was not derived in advance and the reason is worth more than the number.** The
+    // change that moved it predicted `decidedFalse` by two and `aboutNumbers` by five, and both
+    // came out; this assertion and the one at the end of the naturals' test were never consulted,
+    // because an earlier assertion in the same test had already failed and ScalaTest stops there.
+    // So a change that moves a count needs as many runs as the deepest test has assertions, and
+    // reading the first failure as the whole of the damage is how two of these were found on a
+    // second pass rather than a first. That is a different mistake from the one recorded above,
+    // which was a wrong derivation; this one is a derivation that was never asked for.
+    withAPoint shouldBe 71
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -911,7 +938,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 63 with the one weakening above that keeps no antecedent.
     // 66 with the other three: two keep `~(NUM_DIVIDES p x)` and one, the positivity's, keeps no
     // antecedent at all.
-    unreadable shouldBe 66
+    // 74 with the concatenation's other eight, and every one of them is unreadable for the
+    // reason `NOT_FORALL` is two entries above: a reason of TYPE rather than of shape. They are
+    // claims about `word('a)`, and the procedures here read the reals and the naturals. Ten
+    // weakenings arrived and they split two and eight with nothing left over, which is the
+    // arithmetic the note above says is worth nothing until somebody checks the two counts are
+    // over the same population. Here they are: both are over the ten this development added.
+    unreadable shouldBe 74
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1121,7 +1154,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 113 with three of the four: the positivity's residue names `NUM_LT` and `ZERO`, and two of
     // the cancellation's three keep the antecedent that writes `NUM_MUL`. The third drops exactly
     // that one and names none of the thirteen constants on this list.
-    aboutNumbers.size shouldBe 113
+    // 118 with five of the concatenation's ten, and which five is again this list counting
+    // CONSTANTS rather than subject matter. All ten are about words indexed by `num`; the five
+    // that count are the ones whose RESIDUE still writes one of the thirteen. `WORD_CONCAT_NTH`
+    // keeps `NUM_LT` and `NUM_SUB` inside its conditional, `WORD_CONCAT_NTH_RIGHT` keeps the
+    // `NUM_ADD` in its index, `WORD_FACTOR_LENGTH` keeps `NUM_LE`, and the two weakenings of the
+    // arithmetic lemmas are `!p m n. m < n` and `!m n. n <= m`. The five that do not: dropping
+    // the bound from `WORD_CONCAT_NTH_LEFT` leaves an equation between two entries, and the
+    // residues of the two factor lemmas, the induction and the suffix name no number at all.
+    aboutNumbers.size shouldBe 118
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1171,7 +1212,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // The other names `SUC` and quantifies over a sequence, which the model has no reading of, so
     // it counts in the bucket above and not here. One of two, which is this pair of counts doing
     // what it exists to do.
-    after shouldBe 48
+    // 50 with the concatenation's two, moving with `decidedFalse` and `withAPoint` together
+    // rather than splitting from either: both residues are false, and both are written in
+    // `NUM_LT` or `NUM_LE` alone, which `Model.Numbers` computes exactly, so each is a constant
+    // the model reads and a shape the procedures take at once. The eight word weakenings split
+    // the other way and completely: none of them is readable, so none reaches this count even
+    // though three of them keep a constant of the naturals in the residue.
+    after shouldBe 50
   }
 
   /* ------------------------------------------------------ the false positive it produced */

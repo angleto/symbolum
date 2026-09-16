@@ -243,7 +243,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Successor.scala", "Natural.TypeName") -> (Verdict.Name, "the name of the type num"),
     ("Successor.scala", "leftValue") -> (Verdict.Number, "a numeral's value, as a BigInt"),
     ("Transcendental.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
-    ("Word.scala", "name") -> (Verdict.Name, "the lemma's published name")
+    ("Word.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    // The same site as the line above, in the development that joined the chain on 2026-09-16:
+    // every published fact is compared against its written text before the development is handed
+    // out, and the refusal names which one did not match.
+    ("Concatenation.scala", "name") -> (Verdict.Name, "the lemma's published name")
   )
 
   /**
