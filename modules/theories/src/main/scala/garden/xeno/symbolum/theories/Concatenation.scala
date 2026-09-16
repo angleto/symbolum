@@ -36,7 +36,7 @@ import garden.xeno.symbolum.logic.*
  * `NUM_LT` and `COND`, and all four are in `Word.standard`'s own signature; this could have lived
  * there and would have built.
  *
- * What decided it instead is size and subject. This is six constants and fifteen derived facts
+ * What decided it instead is size and subject. This is six constants and sixteen derived facts
  * against `Word`'s four and six, and what it is about is an algebra over the type rather than the
  * type. `Rotation`'s one constant and three facts were given a file on a weaker argument than that.
  *
@@ -77,7 +77,7 @@ import garden.xeno.symbolum.logic.*
  * is not the one the caller meant, and the type checker cannot see it.
  *
  * What makes it safe is not care, it is the check at the bottom of [[construct]]: every one of the
- * fifteen facts is compared against the text in [[Statements]] before the development is handed
+ * sixteen facts is compared against the text in [[Statements]] before the development is handed
  * out, and every intermediate step in this file is on a path that ends at one of them. A reversed
  * pair anywhere reaches a conclusion that is not what the text says and the construction refuses.
  * So the guard is the same one `Word` and `Rotation` already carry, and it is named here because a
@@ -147,6 +147,22 @@ object Concatenation {
 
   /** `|- WORD_LENGTH WORD_EMPTY = ZERO`. */
   val EmptyLength: String = "WORD_EMPTY_LENGTH"
+
+  /**
+   * `|- !w. WORD_LENGTH w = ZERO ==> w = WORD_EMPTY`, which is [[EmptyLength]] read backwards.
+   *
+   * Published on 2026-09-16 and derived here since the induction landed, inside its base case: a
+   * word of length zero agrees with `WORD_EMPTY` at every index below zero, of which there are
+   * none, so extensionality settles it from a premise it never reads. It is a fact of its own now
+   * because a second consumer arrived, and a derivation living inside the one proof that first
+   * needed it is a derivation the next caller writes again.
+   *
+   * What wanted it: a step of a rewriting system splits a word into a context, a left-hand side
+   * and a tail, and the argument about the tail divides on whether the tail is there. `NUM_CASES`
+   * answers that about the tail's **length**, and nothing turned a length of zero back into the
+   * empty word, so the case where the rule applies at the very end could not be closed.
+   */
+  val LengthZero: String = "WORD_LENGTH_ZERO"
 
   /** `|- !x. WORD_LENGTH (WORD_SINGLETON x) = SUC ZERO`. */
   val SingletonLength: String = "WORD_SINGLETON_LENGTH"
@@ -301,6 +317,7 @@ object Concatenation {
    */
   val Statements: Vector[(String, String)] = Vector(
     EmptyLength -> "WORD_LENGTH (WORD_EMPTY:word('a)) = ZERO",
+    LengthZero -> "!w:word('a). WORD_LENGTH w = ZERO ==> w = WORD_EMPTY",
     SingletonLength -> "!x:'a. WORD_LENGTH (WORD_SINGLETON x) = SUC ZERO",
     SingletonNth -> "!x:'a. WORD_NTH (WORD_SINGLETON x) ZERO = x",
     Length ->
@@ -406,6 +423,7 @@ object Concatenation {
       numbers <- Numeric.of(peano)
 
       emptyLength <- emptyIsEmpty(logic, theory, emptyDefinition, makeLength, makeNth)
+      lengthZero <- nothingIsEmpty(logic, theory, emptyLength, extensional, numbers)
       singleton <- oneLetter(
         logic, theory, singletonDefinition, makeLength, makeNth, condTrue, condFalse, numbers)
       (singletonLength, singletonNth) = singleton
@@ -438,6 +456,7 @@ object Concatenation {
         theory,
         notation,
         induction,
+        lengthZero,
         (emptyLength, singletonLength, singletonNth),
         (length, nthLeft, nthRight),
         (makeLength, makeNth, extensional, condTrue, condFalse),
@@ -451,6 +470,7 @@ object Concatenation {
 
       facts = Map(
         EmptyLength -> emptyLength,
+        LengthZero -> lengthZero,
         SingletonLength -> singletonLength,
         SingletonNth -> singletonNth,
         Length -> length,
@@ -1137,6 +1157,55 @@ object Concatenation {
     } yield result
   }
 
+  /**
+   * [[LengthZero]], by extensionality over an empty range.
+   *
+   * The second premise of `WORD_EXTENSIONALITY` is an agreement at every index below the length,
+   * and the length is zero, so the range is empty and the branch is closed from the absurdity of
+   * `i < ZERO` rather than from anything about the two words. That is the whole proof, and it is
+   * why the lemma costs nothing beyond what extensionality costs.
+   */
+  private def nothingIsEmpty(
+    logic: Logic,
+    theory: Theory,
+    emptyLength: Kernel.Thm,
+    extensional: Kernel.Thm,
+    numbers: Numeric
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val w = Term.variable("w", Words)
+
+    for {
+      empty <- LogicError.lift(theory.constant(Empty, Words))
+      nthConstant <- LogicError.lift(theory.constant(Word.Nth, nthType))
+      strictOrder <- LogicError.lift(theory.constant(Peano.StrictOrder, orderType))
+      lengthConstant <- LogicError.lift(theory.constant(Word.Length, lengthType))
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, Numbers))
+
+      lengthOfW <- LogicError.lift(Term.app(lengthConstant, w))
+      measured <- LogicError.lift(Term.eq(lengthOfW, zero))
+      assumed <- LogicError.lift(Kernel.assume(measured))
+      lengths <- Conv.sym(emptyLength).flatMap(Conv.trans(assumed, _))
+
+      index = Conv.freshVariable("i", Numbers, Term.freeVariables(w))
+      agreement <- agreesBelow(logic, theory, w, index) { (i, below) =>
+        for {
+          nothing <- rules.spec(i, numbers.notBelowZero)
+          carried <- carryRight(strictOrder, i, assumed, below)
+          absurd <- rules.notElim(nothing, carried)
+          leftEntry <- LogicError.lift(Term.appAll(nthConstant, List(w, i)))
+          rightEntry <- LogicError.lift(Term.appAll(nthConstant, List(empty, i)))
+          wanted <- LogicError.lift(Term.eq(leftEntry, rightEntry))
+          result <- rules.falsityElim(wanted, absurd)
+        } yield result
+      }
+
+      both <- rules.conjIntro(lengths, agreement)
+      equal <- rules.specAll(extensional, List(w, empty)).flatMap(rules.mp(_, both))
+      result <- rules.disch(measured, equal).flatMap(rules.gen(w, _))
+    } yield result
+  }
+
   /* ---------------------------------------------------------------- associativity */
 
   /**
@@ -1650,6 +1719,7 @@ object Concatenation {
     theory: Theory,
     notation: Notation,
     induction: Kernel.Thm,
+    lengthZero: Kernel.Thm,
     small: (Kernel.Thm, Kernel.Thm, Kernel.Thm),
     joins: (Kernel.Thm, Kernel.Thm, Kernel.Thm),
     tools: (Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm),
@@ -1692,7 +1762,7 @@ object Concatenation {
       halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
       (baseTerm, stepTerm) = halves
 
-      base <- atLengthZero(logic, theory, baseTerm, atEmpty, emptyLength, extensional, numbers)
+      base <- atLengthZero(logic, baseTerm, atEmpty, lengthZero)
       step <- atOneMore(
         logic,
         theory,
@@ -1723,15 +1793,18 @@ object Concatenation {
     } yield result
   }
 
-  /** The base: a word of length zero is `WORD_EMPTY`, by extensionality over an empty range. */
+  /**
+   * The base: a word of length zero is `WORD_EMPTY`, so the predicate at the empty word is it.
+   *
+   * The extensionality argument that used to be written out here is [[LengthZero]] since
+   * 2026-09-16, and this is what is left of the base once it is spent: specialise, detach, and
+   * carry the predicate across the equation.
+   */
   private def atLengthZero(
     logic: Logic,
-    theory: Theory,
     baseTerm: Term,
     atEmpty: Kernel.Thm,
-    emptyLength: Kernel.Thm,
-    extensional: Kernel.Thm,
-    numbers: Numeric
+    lengthZero: Kernel.Thm
   ): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
 
@@ -1742,26 +1815,7 @@ object Concatenation {
       (measured, held) = parts
       assumed <- LogicError.lift(Kernel.assume(measured))
 
-      empty <- LogicError.lift(theory.constant(Empty, Words))
-      nthConstant <- LogicError.lift(theory.constant(Word.Nth, nthType))
-      strictOrder <- LogicError.lift(theory.constant(Peano.StrictOrder, orderType))
-      lengths <- Conv.sym(emptyLength).flatMap(Conv.trans(assumed, _))
-
-      index = Conv.freshVariable("i", Numbers, Term.freeVariables(baseTerm))
-      agreement <- agreesBelow(logic, theory, subject, index) { (i, below) =>
-        for {
-          nothing <- rules.spec(i, numbers.notBelowZero)
-          carried <- carryRight(strictOrder, i, assumed, below)
-          absurd <- rules.notElim(nothing, carried)
-          leftEntry <- LogicError.lift(Term.appAll(nthConstant, List(subject, i)))
-          rightEntry <- LogicError.lift(Term.appAll(nthConstant, List(empty, i)))
-          wanted <- LogicError.lift(Term.eq(leftEntry, rightEntry))
-          result <- rules.falsityElim(wanted, absurd)
-        } yield result
-      }
-
-      both <- rules.conjIntro(lengths, agreement)
-      equal <- rules.specAll(extensional, List(subject, empty)).flatMap(rules.mp(_, both))
+      equal <- rules.spec(subject, lengthZero).flatMap(rules.mp(_, assumed))
       transported <- Conv.apTerm(headOfApplication(held), equal)
       reached <- Conv
         .sym(transported)
