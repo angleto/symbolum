@@ -100,14 +100,25 @@ class ReadmeSpec extends AnyFlatSpec with Matchers {
     // The installation fragments. `sbt` is not on this classpath and putting it there to elaborate
     // three lines would be a dependency bought for a test: what these say about the coordinates is
     // read by a person, and `DocumentationSpec` checks separately that the modules publish.
+    //
+    // Each of the three says its own reason rather than pointing at the one above it. That is not
+    // style: the test below asserts a reason is long enough to be one, and the third of these was
+    // "an sbt build fragment, for the reason above", 43 characters, which is a cross-reference and
+    // not a reason. It failed on the first run this file ever had, which is the assertion working
+    // on the person who wrote it.
     "resolvers += \"GitHub Package Registry\"" ->
-      NotRun("an sbt build fragment; `scalaVersion` and `libraryDependencies` are sbt's keys, not " +
-        "names on this classpath, so compiling it would mean depending on sbt from a test"),
+      NotRun("an sbt build fragment declaring a resolver; `resolvers`, `scalaVersion` and " +
+        "`libraryDependencies` are sbt's setting keys and are not names on a test classpath, so " +
+        "compiling this would mean adding sbt itself as a dependency of a test"),
     "sys.env(\"GITHUB_TOKEN\")" ->
-      NotRun("an sbt build fragment, for the reason above, and one that reads an environment " +
-        "variable a test machine has no reason to hold"),
+      NotRun("an sbt build fragment declaring credentials, so sbt's `Credentials` and the keys " +
+        "around it are not on a test classpath; and it reads `GITHUB_TOKEN` from the environment, " +
+        "which a test machine has no reason to hold and which a test must never require"),
     "libraryDependencies += \"garden.xeno\" %% \"symbolum-core\"" ->
-      NotRun("an sbt build fragment, for the reason above"),
+      NotRun("an sbt build fragment declaring a dependency, so `libraryDependencies` and the `%%` " +
+        "operator are sbt's and not on a test classpath. What it asserts is a published " +
+        "coordinate and a version, which no compilation of it here would check either: that is " +
+        "read by a person against the registry"),
 
     // The core's own guide. Every one of these runs as it stands.
     "val expr = Num(2) * n + Num(3) * n - Num(1)" -> Runs(""),

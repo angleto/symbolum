@@ -326,16 +326,18 @@ class StyleSpec extends AnyFlatSpec with Matchers {
   /* ---------------------------------------------------- the scan can see something */
 
   // Floors and not equalities: files and lines are added every day and this is not a size budget.
-  // Measured on 2026-09-16 at 154 files and 43132 lines of code, over every module directory rather
-  // than over six of them; the reading before it, 118 files and 25251 lines on 2026-09-12, is what
-  // the same scan saw of the same tree while four directories were outside it. Half of each is a
-  // floor that a tree which had genuinely lost its sources could not clear.
+  // Two readings with their dates, because one of them is not what it looks like. At `c503d03` on
+  // 2026-09-16 this scan sees 155 files and 44823 lines of code over every module directory; on
+  // 2026-09-12 it saw 118 files and 25251 lines, which is what the same scan saw of the same tree
+  // while four of the ten directories were outside it. Half of each is a floor that a tree which
+  // had genuinely lost its sources could not clear.
   //
-  // Almost none of that difference is the widening, and saying so is the point of writing both
-  // readings down. The four directories that came inside hold 10 files and 746 lines between them;
-  // the other 26 files and 17135 lines are three days of work in modules the scan was already
-  // reading, most of it `theories`, which is 31418 lines on its own. A reader who took the jump as
-  // the size of what had been unscanned would be wrong by a factor of twenty.
+  // **Almost none of that difference is the widening**, and the pair is written down to say so.
+  // The four directories that came inside hold 10 files and 746 lines between them. The rest is
+  // work in modules the scan was already reading: `theories` alone is 33105 lines, having gained
+  // about 1700 on the day this was written. A reader who took the jump as the size of what had been
+  // unscanned would be wrong by a factor of twenty, which is why a figure like this is quoted with
+  // the commit it was taken at rather than as a property of the repository.
   "The scan" should "have found the sources, which is the way a census like this passes for free" in {
     val files = sources
     withClue(s"files found: ${files.size}\n") {
