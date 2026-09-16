@@ -323,6 +323,78 @@ class StyleSpec extends AnyFlatSpec with Matchers {
       finally stream.close()
     }
 
+  /**
+   * Every directory under `modules/` holding test sources, and deliberately not [[modules]].
+   *
+   * That one selects on `src/main`, which is right for a census of the code and wrong here: a
+   * module carrying tests and no main sources would sit outside this walk while looking included,
+   * which is the failure the class comment is about read one level along. There is no such module
+   * today. The point of reading the directory rather than reusing the other list is that there
+   * does not have to be.
+   */
+  private def testSources: Vector[Path] = {
+    val root = this.root.resolve("modules")
+    val stream = Files.list(root)
+    val directories =
+      try stream.iterator().asScala.toVector.filter(Files.isDirectory(_)).map(_.getFileName.toString)
+      finally stream.close()
+
+    directories.sorted
+      .filter(name => Files.isDirectory(root.resolve(name).resolve("src/test")))
+      .flatMap { name =>
+        val walk = Files.walk(root.resolve(name).resolve("src/test"))
+        try walk.iterator().asScala.toVector.filter(_.toString.endsWith(".scala"))
+        finally walk.close()
+      }
+  }
+
+  /**
+   * A top-level class declaration on one line, split into whether it is abstract, its name, and
+   * what it extends. Fed by [[declarations]], which puts a wrapped declaration back on one line
+   * before this ever sees it.
+   *
+   * Anchored to a line on purpose, and it is worth saying why, because the obvious repair for the
+   * wrapped case was to let this pattern read across newlines instead and that repair is wrong.
+   * A cross-line tail has to stop somewhere, `[^{]*` stops at the body, and a declaration with no
+   * body does not have one: `class EmptySpec extends AnyFlatSpec` followed by another declaration
+   * swallows it, and the second suite disappears from both assertions. Measured, four cases, the
+   * cross-line pattern found one declaration where there were two, twice. Joining the
+   * continuation lines first and keeping this pattern simple is correct on all four, and is less
+   * machinery rather than more.
+   *
+   * It does admit one parenthesised parameter list, which nested parentheses defeat. That one is
+   * survivable and stays: such a class has no public zero-argument constructor, so the framework
+   * cannot instantiate it either, and a declaration this misses is not a suite that runs.
+   */
+  private val TopLevelClass =
+    """^(abstract )?(?:final |sealed )*class ([A-Za-z0-9_]+)\s*(?:\([^)]*\))?\s+extends\s+(.*)$""".r
+
+  /**
+   * A file's lines of code with a wrapped declaration put back together.
+   *
+   * A line beginning `extends` or `with` continues the one above it, and nothing else is joined.
+   * That narrowness is the property: two declarations can never merge, because the second begins
+   * with `class`, so the hazard that a cross-line pattern introduces cannot arise here at all.
+   */
+  private def declarations(path: Path): Vector[String] =
+    joinContinuations(codeLines(Files.readString(path)).map(_._2))
+
+  /** Exposed so the probe below exercises the same joining the scan uses, not a copy of it. */
+  private def joined(source: String): Vector[String] =
+    joinContinuations(codeLines(source).map(_._2))
+
+  private def joinContinuations(lines: Vector[String]): Vector[String] =
+    lines.foldLeft(Vector.empty[String]) { (kept, line) =>
+      val trimmed = line.trim
+      if (kept.nonEmpty && (trimmed.startsWith("extends ") || trimmed.startsWith("with ")))
+        kept.init :+ (kept.last.replaceAll("\\s+$", "") + " " + trimmed)
+      else kept :+ line
+    }
+
+  /** The suite styles the framework discovers by, including the `Like` forms nothing here uses yet. */
+  private val SuiteStyle =
+    """\b(?:Any)?(?:FunSuite|FlatSpec|FunSpec|WordSpec|FreeSpec|PropSpec|FeatureSpec)(?:Like)?\b""".r
+
   /* ---------------------------------------------------- the scan can see something */
 
   // Floors and not equalities: files and lines are added every day and this is not a size budget.
@@ -513,6 +585,156 @@ class StyleSpec extends AnyFlatSpec with Matchers {
     val stale = Excused.keys.toVector.sorted.filterNot(sites.contains)
     withClue(s"excused and no longer present: ${stale.mkString(", ")}\n") {
       stale shouldBe empty
+    }
+  }
+
+  /* ------------------------------------------- the suites, and the name they are counted by */
+
+  /**
+   * A suite is found by its class and counted by its file name, and those were different numbers.
+   *
+   * On 2026-09-16 at `fb3f45a` this tree held 169 classes extending a suite style and 168 files
+   * named `*Spec.scala`. The odd one was `NegativeFractionTestSimple.scala` under `core`: a real
+   * `AnyFlatSpec` with three tests, there since the first commit, discovered and run by the
+   * framework and invisible to every count anybody took on the file name. It is renamed in the
+   * change that adds this, so the two numbers agree today and this is what says so tomorrow.
+   *
+   * **The assertion deliberately holds no number.** A count here would be a pin that has to be
+   * moved every time a suite is added, and a pin nobody wants to move is one somebody eventually
+   * updates without reading. The invariant the count stood for is structural instead: a class the
+   * framework will run lives in a file that carries its own name and ends in `Spec`. Nothing to
+   * update, and red on the next exception rather than on the next suite.
+   *
+   * The other way considered was an excused entry, the way [[Excused]] carries a construct that
+   * stays. It was rejected because an excusal records a decision somebody took, and nobody ever
+   * took this one: the file was named that way at the first commit and no argument was ever made
+   * for it.
+   *
+   * == What this does not cover ==
+   *
+   * The obvious answer is wrong and was written here first, so it is worth stating before the real
+   * one: **a suite extending a base class of this repository's own does not escape.** The thought
+   * is that [[SuiteStyle]] reads style names rather than supertypes, because a test cannot see the
+   * classpath the framework scans, so `class FooSpec extends OurBase` matches no style and is not
+   * counted. True, and it is caught by the other end of the same test: a class extending something
+   * unrecognised is exactly what the second assertion refuses, so that file turns this red and asks
+   * the question rather than passing quietly. Checked case by case against the two patterns, not
+   * reasoned about: an unrecognised supertype fails, whether or not the class is named `Spec`; an
+   * **abstract** class extending a style is excluded from the count and not flagged, which is
+   * right, since the framework does not run one.
+   *
+   * There is no such base class today and, measured 2026-09-16, nowhere for one to come from
+   * unseen: no trait and no abstract class in the tree extends a suite style, so there is no
+   * intermediary to inherit from until somebody writes one, and writing one is a visible addition
+   * that lands in the case above.
+   *
+   * What genuinely escapes is narrower. A declaration this pattern does not read at all is neither
+   * counted nor flagged, and the one that matters is a class with constructor parameters, which
+   * [[TopLevelClass]] does not match; that is survivable only because such a class has no public
+   * zero-argument constructor and the framework cannot instantiate it either. And this is a regular
+   * expression over source text where the framework scans compiled classes, so the two can disagree
+   * in principle: what makes that tolerable is that the disagreement shows up as a suite this scan
+   * cannot see, which is the direction the floors below point.
+   *
+   * The floors are the other stated limit. They are half of today's readings and they catch a walk
+   * that finds nothing; they do not catch a walk that finds half the tree, and 90 files would pass
+   * while the tree was broken. Raising them to fit would turn them back into the pin this test
+   * exists to avoid, so the gap is named rather than closed.
+   */
+  "Every suite" should "live in a file that carries its own name and ends in Spec" in {
+    val files = testSources
+
+    // The same vacuity guard the census above carries, for the same reason and against a different
+    // walk: a wrong root or a build that moved the tests returns nothing, and a scan with no
+    // subjects agrees with every assertion under it. 177 files and 169 suites on 2026-09-16 at
+    // `fb3f45a`; half of each, because tests are added daily and this is not a size budget.
+    withClue(s"test source files found: ${files.size}\n") {
+      files.size should be >= 88
+    }
+
+    val declared = for {
+      path <- files
+      line <- declarations(path)
+      declaration <- TopLevelClass.findFirstMatchIn(line)
+      if Option(declaration.group(1)).isEmpty
+      if SuiteStyle.findFirstIn(declaration.group(3)).isDefined
+    } yield (path, declaration.group(2))
+
+    withClue(s"suites found: ${declared.size}\n") {
+      declared.size should be >= 84
+    }
+
+    val misnamed = declared.flatMap { case (path, name) =>
+      val file = path.getFileName.toString
+      Vector(
+        Option.when(file != s"$name.scala")(s"$path declares `$name`, so the file should be $name.scala"),
+        Option.when(!name.endsWith("Spec"))(s"$path declares `$name`, which does not end in Spec")
+      ).flatten
+    }
+
+    withClue(s"${misnamed.size} suite(s) the file name does not find:\n${misnamed.mkString("\n")}\n") {
+      misnamed shouldBe empty
+    }
+
+    info(s"${declared.size} suites over ${files.size} test source files")
+  }
+
+  it should "be found by a pattern that reads a declaration and not a mention of one" in {
+    // The discipline the class comment states: a pattern is pointed at a line it must match and a
+    // line it must not, because a regular expression that has quietly stopped matching makes every
+    // scan under it green.
+    val matched = TopLevelClass.findFirstMatchIn("class ExampleSpec extends AnyFlatSpec with Matchers {")
+    matched.map(_.group(2)) shouldBe Some("ExampleSpec")
+    matched.flatMap(m => SuiteStyle.findFirstIn(m.group(3))) shouldBe Some("AnyFlatSpec")
+
+    // Abstract, which the framework does not run and this therefore lets through.
+    TopLevelClass
+      .findFirstMatchIn("abstract class ExampleBase extends AnyFlatSpec")
+      .flatMap(m => Option(m.group(1))) shouldBe Some("abstract ")
+
+    // The joining, and the three shapes that decided how narrow it had to be. A wrapped
+    // declaration must come back as one; two declarations must stay two whether or not the first
+    // has a body. That last one is what refuted the obvious repair: a pattern reading across
+    // newlines swallowed the declaration below a bodyless one, and the second suite vanished from
+    // both assertions, which is the defect this test exists for arriving by the door marked exit.
+    def namesIn(source: String): Vector[(String, String)] =
+      joined(source).flatMap(TopLevelClass.findFirstMatchIn).map(m => (m.group(2), m.group(3).trim))
+
+    namesIn("class SomethingVeryLongSpec\n    extends AnyFlatSpec\n    with Matchers {") shouldBe
+      Vector(("SomethingVeryLongSpec", "AnyFlatSpec with Matchers {"))
+
+    namesIn("class Alpha extends AnyFlatSpec {\n}\nclass Beta extends Ordering[Int] {") shouldBe
+      Vector(("Alpha", "AnyFlatSpec {"), ("Beta", "Ordering[Int] {"))
+
+    namesIn("class EmptySpec extends AnyFlatSpec\nclass OtherSpec extends AnyFlatSpec {") shouldBe
+      Vector(("EmptySpec", "AnyFlatSpec"), ("OtherSpec", "AnyFlatSpec {"))
+
+    // A class that is not a suite, and a suite style named in prose rather than declared.
+    TopLevelClass
+      .findFirstMatchIn("class Helper extends Ordering[Int] {")
+      .flatMap(m => SuiteStyle.findFirstIn(m.group(3))) shouldBe empty
+    TopLevelClass.findFirstMatchIn("  val note = 1 // every AnyFlatSpec here") shouldBe empty
+
+    // And the property the whole check rests on, asked as a question about the tree rather than as
+    // a list of the styles in it. A list would be a pin again: it goes red the day somebody writes
+    // a perfectly good `AnyFunSuite`, and a pin that fails on a benign change is one people learn
+    // to update without reading. What is actually worth catching is the other direction, a class
+    // this pattern does not recognise as a suite, because that is a suite the count cannot see.
+    //
+    // It is empty today: every top-level class under `src/test` extends a suite style. A helper
+    // class arriving here turns this red, which is the intended cost -- it is a question (is that
+    // a suite?) rather than a free pass, the way a second source-less module directory is above.
+    val unrecognised = for {
+      path <- testSources
+      line <- declarations(path)
+      declaration <- TopLevelClass.findFirstMatchIn(line)
+      if SuiteStyle.findFirstIn(declaration.group(3)).isEmpty
+    } yield s"$path declares `${declaration.group(2)}` extending ${declaration.group(3).trim}"
+
+    withClue(
+      s"top-level classes under src/test this pattern does not read as a suite:\n" +
+        s"${unrecognised.mkString("\n")}\n") {
+      unrecognised shouldBe empty
     }
   }
 }

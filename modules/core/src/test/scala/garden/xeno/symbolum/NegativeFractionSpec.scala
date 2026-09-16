@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
  * out. The canonical form keeps the signs in the numerator and produces the leading minus when
  * printing, so there is nothing left for the two rules to pass back and forth.
  */
-class NegativeFractionTestSimple extends AnyFlatSpec with Matchers {
+class NegativeFractionSpec extends AnyFlatSpec with Matchers {
 
   "A quotient with an all-negative numerator" should "keep its signs in the numerator" in {
     val n = Var("n")
