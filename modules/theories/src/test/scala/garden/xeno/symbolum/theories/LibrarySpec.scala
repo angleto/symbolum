@@ -374,8 +374,20 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // lemmas landed underneath it while the work was in flight. The addend is the thing this ledger
     // records and it did not change; what changed is what it is added to, which is why a rebase
     // takes the base in one piece and re-derives rather than choosing between two numbers.
-    library.entries.size shouldBe 477
-    library.names.distinct.size shouldBe 474
+    //
+    // 489 with the twelve clauses under those same six constants: where an index occurs free in
+    // each, and what a substitution does to it. **The addend is the same twelve as the row above
+    // and the reason is different, which is the thing to read rather than the arithmetic.** That
+    // row added facts because six constants arrived; this one adds none, and the twelve are facts
+    // about constants the library already held. So the definitional entries do not move here for a
+    // second reason on top of the first: there is no new definition at all, not merely none that
+    // `Library.of` collects. Derived from the twelve names before this suite was run, and the
+    // suite returned 489, 486, 480 and 6.
+    //
+    // `CLAUDE.md`'s two figures move by **twelve** again and for the reason they did then: every
+    // one of the twelve binds three or more leading variables and every one of those is a `num`.
+    library.entries.size shouldBe 489
+    library.names.distinct.size shouldBe 486
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

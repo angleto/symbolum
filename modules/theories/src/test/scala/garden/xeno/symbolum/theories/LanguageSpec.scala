@@ -170,6 +170,118 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * The witness index of a comparison is bound by the comparison, which is what its `COND` says.
+   *
+   * `NUM_LESS z s t` codes `?z. s + S z = t`, so `z` occurs in the code and is bound by it. The
+   * expansion puts that occurrence into the answer and the quantifier's own clause takes it back
+   * out, and the two published clauses about `NUM_LESS` are where that happens. Both consequences
+   * below are **false** of the statement with its conditional removed, which is why they are here
+   * rather than in a comment: nothing an equation says about itself distinguishes a guard that
+   * does work from one carried along.
+   */
+  private val witness: FVar = Term.variable("z", numbers)
+  private val leftTerm: FVar = Term.variable("s", numbers)
+  private val rightTerm: FVar = Term.variable("t", numbers)
+
+  /** The rules that decide `z = z`, at one type, for reading a `COND` at a repeated index. */
+  private def atRepeatedIndex(at: Type): Vector[Rewrite.Rule] = {
+    val classical = language.numbering.peano.naturals.classical
+    val conditionals = force(Language.conditionalRules(logic, classical, at))
+    val decided = force(rules.eqTruthIntro(Kernel.refl(witness)))
+
+    force(Rewrite.Rule.all(logic, conditionals :+ decided))
+  }
+
+  it should "leave nothing free at the witness index of a comparison" in {
+    val instance = force(
+      rules.specAll(
+        force(language.fact(Language.LessFree)),
+        List(witness, witness, leftTerm, rightTerm)))
+    val reduced = force(Rewrite.inTheorem(atRepeatedIndex(Type.Bool), instance))
+    val subject = Term.destEq(reduced.conclusion).map(_._1).get
+
+    reduced.conclusion shouldBe force(LogicError.lift(Term.eq(subject, logic.falsity)))
+
+    val absurd = force(
+      LogicError
+        .lift(Kernel.assume(subject))
+        .flatMap(held => LogicError.lift(Kernel.eqMp(reduced, held))))
+    val refused = force(rules.notIntro(subject, absurd))
+
+    refused.hypotheses shouldBe empty
+    refused.conclusion shouldBe proposition("~(NUM_FREE_FORM z (NUM_LESS z s t))")
+  }
+
+  it should "substitute nothing at the witness index of a comparison" in {
+    val replacement: FVar = Term.variable("u", numbers)
+    val instance = force(
+      rules.specAll(
+        force(language.fact(Language.LessSubstitute)),
+        List(witness, replacement, witness, leftTerm, rightTerm)))
+    val reduced = force(Rewrite.inTheorem(atRepeatedIndex(numbers), instance))
+
+    reduced.hypotheses shouldBe empty
+    reduced.conclusion shouldBe proposition(
+      "NUM_SUBST_FORM z u (NUM_LESS z s t) = NUM_LESS z s t")
+  }
+
+  /**
+   * The inner conditional of a bounded quantifier is load-bearing, at numbers that show it.
+   *
+   * `NUM_ALL_BELOW z j t p` reads its bound `t` **under the witness's own quantifier**, so an
+   * index equal to `z` is bound there as well. Taking `z` and the index asked about to be `1`,
+   * with a bound that is the code of the variable `v1` and nothing else, the clause answers about
+   * `p` alone: the bound contributes nothing although `v1` is the only thing in it. The second
+   * assertion is the other half and is what makes the first a finding rather than a tautology --
+   * `NUM_FREE_TERM` says at the same index that the bound **is** about it.
+   *
+   * Without the inner `COND` the clause would answer `T` here whatever `p` is, which is the
+   * perturbation this pair refuses. `LanguageSpec` cannot state the wrong clause and check it
+   * fails, since a statement that is not published has no proof to inspect; a consequence of the
+   * right one that the wrong one contradicts is the available form of that check.
+   */
+  it should "read a bound under the witness that its own comparison binds" in {
+    val body: FVar = Term.variable("p", numbers)
+    val one = term("1")
+    val none = term("0")
+    val bound = term("NUM_CODE 0 1")
+
+    val apart = force(language.successor.distinct(none, one))
+    val guard = force(LogicError.lift(Term.eq(none, one)))
+    val toFalsity = force(
+      LogicError.lift(Kernel.assume(guard)).flatMap(held => rules.notElim(apart, held)))
+    val fromFalsity = force(
+      LogicError.lift(Kernel.assume(logic.falsity)).flatMap(rules.falsityElim(guard, _)))
+    val decidedApart = force(Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity)))
+    val decidedSame = force(rules.eqTruthIntro(Kernel.refl(one)))
+    val classical = language.numbering.peano.naturals.classical
+    val reading = force(
+      Rewrite.Rule.all(
+        logic,
+        force(Language.conditionalRules(logic, classical, Type.Bool)) ++
+          Vector(decidedApart, decidedSame)))
+
+    val instance = force(
+      rules.specAll(
+        force(language.fact(Language.AllBelowFree)),
+        List(one, one, none, bound, body)))
+    val reduced = force(Rewrite.inTheorem(reading, instance))
+
+    reduced.hypotheses shouldBe empty
+    reduced.conclusion shouldBe proposition(
+      "NUM_FREE_FORM 1 (NUM_ALL_BELOW 1 0 (NUM_CODE 0 1) p) = " +
+        "(F \\/ NUM_FREE_FORM 1 p)")
+
+    val aboutTheBound = force(
+      Rewrite.inTheorem(
+        reading,
+        force(rules.specAll(force(language.fact(Language.FreeVariable)), List(one, one)))))
+
+    aboutTheBound.conclusion shouldBe proposition(
+      "NUM_FREE_TERM 1 (NUM_CODE 0 1) = T")
+  }
+
+  /**
    * The seven axioms are seven, and this is the guard the defect that occurred asks for.
    *
    * `NUM_PA` is a right-nested disjunction and a membership proof enters it at its own position,

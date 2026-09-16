@@ -324,7 +324,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 477 lemmas, 304 have two or more leading quantifiers and **278 of
+caller meant: of the library's 489 lemmas, 316 have two or more leading quantifiers and **290 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -672,10 +672,28 @@ Their types differ, so reaching for the wrong one is a type error rather than a 
 something else. That is the defence this repository did not have when `NUM_PRIME_FACTOR` and
 `NUM_PRIME_DIVISOR` were a letter apart.
 
-What is **not** there, named rather than left to be met: where an index occurs free in one of the
-six, and what a substitution does to it. Three of those twelve clauses are not pure rewriting,
-because `NUM_LESS` introduces an occurrence of its own witness that only a case split on `z = i`
-takes back out of the answer.
+**The twelve clauses saying where an index occurs free in one of the six and what a substitution
+does to it landed on 2026-09-16**, so the six are abbreviations something both expands and reasons
+about. Twelve facts, no axiom, no constant: each is proved by rewriting both sides of its published
+statement with the six defining equations and the nine clauses of the family it extends, and
+splitting on a guard only where the two do not meet.
+
+**Seven of the twelve need that split and five do not, and the prediction was three.** What decides
+it is not whether the constant binds an index but whether the published answer carries a `COND` the
+rewriting has to put somewhere. `NUM_FREE_FORM_EXISTS` binds and needs no split, because the
+quantifier's own clause already produces the conditional in the shape that gets published;
+`NUM_SUBST_FORM_EXISTS` needs one, because what comes out of the rewriting is a negation applied to
+a conditional and what a consumer wants is a conditional between two negations. Four of the six
+bind an index and two do not, which is also not the three and three the file said while the twelve
+were names without statements.
+
+The reduced form is what is published rather than what the rewriter produces, and that choice is
+the whole cost. `NUM_LESS z s t` introduces an occurrence of its own witness, so the rewriting
+answers `(NUM_FREE_TERM i s \/ (z = i)) \/ NUM_FREE_TERM i t` where a consumer wants `s` and `t`
+named and nothing else; taking the middle disjunct out is what needs the split, and two units of
+disjunction that nothing in the logic publishes. `LanguageSpec` puts four statements with one guard
+dropped to the same derivation and all four are refused, which is what says the guards are
+load-bearing rather than carried along.
 
 **`NUM_CLOSED t` is what the substitution's blindness to capture costs, written down.** **Two** of
 the eight schemes carry it, specialisation once and replacement twice; this sentence said three

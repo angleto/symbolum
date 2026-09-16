@@ -165,29 +165,7 @@ final class Language private (
           } yield found :+ decided
       }
 
-      conditionals <- Vector(Classical.CondTrue, Classical.CondFalse)
-        .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
-          for {
-            found <- carried
-            truth <- rules.truth
-            held <-
-              if (name == Classical.CondTrue) Right(truth)
-              else
-                LogicError
-                  .lift(Kernel.assume(logic.falsity))
-                  .flatMap(rules.notIntro(logic.falsity, _))
-            guard = if (name == Classical.CondTrue) truth.conclusion else logic.falsity
-            left = Term.variable("a", numbers)
-            right = Term.variable("b", numbers)
-            scheme <- classical
-              .fact(name)
-              .map(Kernel.instType(Map(Classical.TypeVariable -> numbers), _))
-            rule <- rules
-              .specAll(scheme, List(guard, left, right))
-              .flatMap(rules.mp(_, held))
-              .flatMap(rules.genAll(_, List(left, right)))
-          } yield found :+ rule
-        }
+      conditionals <- Language.conditionalRules(logic, classical, numbers)
 
       clauses <- Vector(
         Language.SubstituteVariable, Language.SubstituteZero, Language.SubstituteSuccessor,
@@ -1300,11 +1278,17 @@ object Language {
   /**
    * Where an index occurs free in each of the six, extending the run at [[FormulaFreeEquality]].
    *
-   * The three that bind carry a `COND` and the three that do not carry a disjunction, which is
-   * the same split [[FormulaFreeUniversal]] makes against its three neighbours. In
-   * [[LessFree]] the bound index is the witness, so the `COND` is about `z`; the occurrence of
+   * **Four of the six bind an index and two do not**, which is the split [[FormulaFreeUniversal]]
+   * makes against its three neighbours and is not the three and three this comment claimed while
+   * the six were names without statements. [[AndFree]] and [[OrFree]] answer with a disjunction;
+   * the other four answer with a `COND`, and the two bounded ones with a `COND` inside a `COND`,
+   * because they bind the quantified index and the witness separately.
+   *
+   * In [[LessFree]] the bound index is the witness, so the `COND` is about `z`; the occurrence of
    * `z` that the expansion itself introduces falls away under it, which is why the answer names
-   * only `s` and `t`.
+   * only `s` and `t`. In [[AllBelowFree]] and [[ExistsBelowFree]] the inner `COND` is what says
+   * the bound `t` is read under that same witness: an index equal to `z` is bound there too, and
+   * dropping the inner conditional is the perturbation `LanguageSpec` puts to the derivation.
    */
   val AndFree: String = "NUM_FREE_FORM_AND"
   val OrFree: String = "NUM_FREE_FORM_OR"
@@ -1324,6 +1308,13 @@ object Language {
    * out captured. The substitution this development publishes has always been sound only for a
    * closed replacement, [[NumeralIsClosed]] is what discharges that where Goedel's argument needs
    * it, and these six move the reader's attention to a second index rather than changing the rule.
+   *
+   * Where [[AllBelowSubstitute]] and [[ExistsBelowSubstitute]] carry a `COND` **inside** the
+   * bound rather than around the whole answer, that is the same second index seen from the other
+   * side: the bound is under the witness's own quantifier, so a substitution for the witness
+   * leaves it alone and a substitution for anything else goes in. Hoisting that conditional out
+   * would give a statement of four cases where the answer has two, and the two that differ differ
+   * in one argument.
    */
   val AndSubstitute: String = "NUM_SUBST_FORM_AND"
   val OrSubstitute: String = "NUM_SUBST_FORM_OR"
@@ -1478,7 +1469,50 @@ object Language {
         "NUM_FORM (NUM_ALL_BELOW z i t p)"),
     ExistsBelowFormula ->
       ("!z:num i:num t:num p:num. NUM_TERM t ==> NUM_FORM p ==> " +
-        "NUM_FORM (NUM_EXISTS_BELOW z i t p)")
+        "NUM_FORM (NUM_EXISTS_BELOW z i t p)"),
+    AndFree ->
+      ("!i:num p:num q:num. NUM_FREE_FORM i (NUM_AND p q) = " +
+        "(NUM_FREE_FORM i p \\/ NUM_FREE_FORM i q)"),
+    OrFree ->
+      ("!i:num p:num q:num. NUM_FREE_FORM i (NUM_OR p q) = " +
+        "(NUM_FREE_FORM i p \\/ NUM_FREE_FORM i q)"),
+    ExistsFree ->
+      ("!i:num j:num p:num. NUM_FREE_FORM i (NUM_EXISTS j p) = " +
+        "COND (j = i) F (NUM_FREE_FORM i p)"),
+    LessFree ->
+      ("!i:num z:num s:num t:num. NUM_FREE_FORM i (NUM_LESS z s t) = " +
+        "COND (z = i) F (NUM_FREE_TERM i s \\/ NUM_FREE_TERM i t)"),
+    AllBelowFree ->
+      ("!i:num z:num j:num t:num p:num. NUM_FREE_FORM i (NUM_ALL_BELOW z j t p) = " +
+        "COND (j = i) F (COND (z = i) F (NUM_FREE_TERM i t) \\/ NUM_FREE_FORM i p)"),
+    ExistsBelowFree ->
+      ("!i:num z:num j:num t:num p:num. NUM_FREE_FORM i (NUM_EXISTS_BELOW z j t p) = " +
+        "COND (j = i) F (COND (z = i) F (NUM_FREE_TERM i t) \\/ NUM_FREE_FORM i p)"),
+    AndSubstitute ->
+      ("!i:num t:num p:num q:num. NUM_SUBST_FORM i t (NUM_AND p q) = " +
+        "NUM_AND (NUM_SUBST_FORM i t p) (NUM_SUBST_FORM i t q)"),
+    OrSubstitute ->
+      ("!i:num t:num p:num q:num. NUM_SUBST_FORM i t (NUM_OR p q) = " +
+        "NUM_OR (NUM_SUBST_FORM i t p) (NUM_SUBST_FORM i t q)"),
+    ExistsSubstitute ->
+      ("!i:num t:num j:num p:num. NUM_SUBST_FORM i t (NUM_EXISTS j p) = " +
+        "COND (j = i) (NUM_EXISTS j p) (NUM_EXISTS j (NUM_SUBST_FORM i t p))"),
+    LessSubstitute ->
+      ("!i:num t:num z:num s:num u:num. NUM_SUBST_FORM i t (NUM_LESS z s u) = " +
+        "COND (z = i) (NUM_LESS z s u) " +
+        "(NUM_LESS z (NUM_SUBST_TERM i t s) (NUM_SUBST_TERM i t u))"),
+    AllBelowSubstitute ->
+      ("!i:num t:num z:num j:num u:num p:num. " +
+        "NUM_SUBST_FORM i t (NUM_ALL_BELOW z j u p) = " +
+        "COND (j = i) (NUM_ALL_BELOW z j u p) " +
+        "(NUM_ALL_BELOW z j (COND (z = i) u (NUM_SUBST_TERM i t u)) " +
+        "(NUM_SUBST_FORM i t p))"),
+    ExistsBelowSubstitute ->
+      ("!i:num t:num z:num j:num u:num p:num. " +
+        "NUM_SUBST_FORM i t (NUM_EXISTS_BELOW z j u p) = " +
+        "COND (j = i) (NUM_EXISTS_BELOW z j u p) " +
+        "(NUM_EXISTS_BELOW z j (COND (z = i) u (NUM_SUBST_TERM i t u)) " +
+        "(NUM_SUBST_FORM i t p))")
   ) ++ Axioms.map { case (name, code) => name -> s"NUM_PA ($code)" } ++
     logicalSchemes.map(scheme => scheme.name -> scheme.statement(LogicName))
 
@@ -1849,6 +1883,41 @@ object Language {
               agreed <- connectiveVocabulary.checked(name, theorem)
             } yield found.updated(name, agreed)
         }
+      // The twelve clauses, after the well-formedness rules and for the same reason those come
+      // after the definitions: each is proved by rewriting with the defining equations, so the
+      // six have to be in the theory before any of them can be stated.
+      connectiveClauseFacts <- connectiveClauses(
+        connectiveVocabulary,
+        connectiveCases,
+        Map(
+          FreeVariable -> freeVariable,
+          FreeZero -> freeZero,
+          FreeSuccessor -> freeSuccessor,
+          FreeSum -> freeSum,
+          FreeProduct -> freeProduct,
+          FormulaFreeEquality -> formulaFreeEquality,
+          FormulaFreeNegation -> formulaFreeNegation,
+          FormulaFreeImplication -> formulaFreeImplication,
+          FormulaFreeUniversal -> formulaFreeUniversal,
+          SubstituteVariable -> substituteVariable,
+          SubstituteZero -> substituteZero,
+          SubstituteSuccessor -> substituteSuccessor,
+          SubstituteSum -> substituteSum,
+          SubstituteProduct -> substituteProduct,
+          FormulaSubstituteEquality -> formulaSubstituteEquality,
+          FormulaSubstituteNegation -> formulaSubstituteNegation,
+          FormulaSubstituteImplication -> formulaSubstituteImplication,
+          FormulaSubstituteUniversal -> formulaSubstituteUniversal
+        )
+      )
+      connectiveClausesChecked <- connectiveClauseFacts.toVector
+        .foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(Map.empty)) {
+          case (carried, (name, theorem)) =>
+            for {
+              found <- carried
+              agreed <- connectiveVocabulary.checked(name, theorem)
+            } yield found.updated(name, agreed)
+        }
     } yield new Language(
       numbering,
       connectiveTheory,
@@ -1916,7 +1985,8 @@ object Language {
         .updated(AxiomFormula, axiomFormula)
         .updated(ClosedCases, closedCases)
         .updated(LogicCases, logicCases)
-        .updated(LogicFormula, logicFormula) ++ logicFacts ++ connectiveCases ++ connectiveChecked
+        .updated(LogicFormula, logicFormula) ++ logicFacts ++ connectiveCases ++
+        connectiveChecked ++ connectiveClausesChecked
     )
   }
 
@@ -3108,6 +3178,231 @@ object Language {
           proved <- rule(facts, name, casesName, (binders, held) => build(facts, binders, held))
         } yield found.updated(name, proved)
     }
+  }
+
+  /**
+   * `|- COND T a b = a` and `|- COND F a b = b`, at one type.
+   *
+   * Derived rather than looked up because `COND_TRUE` and `COND_FALSE` carry their guard as a
+   * hypothesis, and a rewrite rule is an equation and nothing else. Here rather than in either
+   * caller because there are two of them and they ask at different types: [[substituteIn]] wants
+   * the conditional between codes, and [[connectiveClauses]] wants it between codes and between
+   * propositions, since a freeness clause answers with one and a substitution clause with the
+   * other.
+   */
+  private[theories] def conditionalRules(
+    logic: Logic,
+    classical: Classical,
+    at: Type
+  ): Either[LogicError, Vector[Kernel.Thm]] = {
+    val rules = logic.rules
+
+    Vector(Classical.CondTrue, Classical.CondFalse)
+      .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
+        for {
+          found <- carried
+          truth <- rules.truth
+          held <-
+            if (name == Classical.CondTrue) Right(truth)
+            else
+              LogicError
+                .lift(Kernel.assume(logic.falsity))
+                .flatMap(rules.notIntro(logic.falsity, _))
+          guard = if (name == Classical.CondTrue) truth.conclusion else logic.falsity
+          left = Term.variable("a", at)
+          right = Term.variable("b", at)
+          scheme <- classical
+            .fact(name)
+            .map(Kernel.instType(Map(Classical.TypeVariable -> at), _))
+          rule <- rules
+            .specAll(scheme, List(guard, left, right))
+            .flatMap(rules.mp(_, held))
+            .flatMap(rules.genAll(_, List(left, right)))
+        } yield found :+ rule
+      }
+  }
+
+  /**
+   * `|- (p \/ F) = p` and `|- (F \/ p) = p`, which nothing in the logic publishes.
+   *
+   * They are here because of one occurrence in one expansion. [[LessName]] codes `?z. s + S z = t`,
+   * so the variable `z` occurs in the code as well as binding it, and the freeness clauses answer
+   * about that occurrence before the quantifier's clause takes it back out: what comes out of the
+   * rewriting is `(NUM_FREE_TERM i s \/ (z = i)) \/ NUM_FREE_TERM i t` and what a consumer wants
+   * names only `s` and `t`. Deciding the guard turns the middle disjunct into `F`, and these two
+   * are what remove it. Both are intuitionistic and cost nothing.
+   */
+  private def disjunctionUnits(logic: Logic): Either[LogicError, Vector[Kernel.Thm]] = {
+    val rules = logic.rules
+    val proposition: FVar = Term.variable("p", Type.Bool)
+
+    def unit(onRight: Boolean): Either[LogicError, Kernel.Thm] =
+      for {
+        whole <-
+          if (onRight) logic.mkDisj(proposition, logic.falsity)
+          else logic.mkDisj(logic.falsity, proposition)
+        assumed <- LogicError.lift(Kernel.assume(whole))
+        here <- LogicError.lift(Kernel.assume(proposition))
+        absurd <- LogicError
+          .lift(Kernel.assume(logic.falsity))
+          .flatMap(rules.falsityElim(proposition, _))
+        forwards <-
+          if (onRight) rules.disjElim(assumed, here, absurd)
+          else rules.disjElim(assumed, absurd, here)
+        backwards <-
+          if (onRight) rules.disjIntro1(logic.falsity, here)
+          else rules.disjIntro2(logic.falsity, here)
+        general <- rules.gen(proposition, Kernel.deductAntisym(backwards, forwards))
+      } yield general
+
+    for {
+      right <- unit(true)
+      left <- unit(false)
+    } yield Vector(right, left)
+  }
+
+  /**
+   * The twelve clauses: where an index occurs free in each of the six, and what a substitution
+   * does to it.
+   *
+   * Each is proved by rewriting both sides of the published statement with the six defining
+   * equations and the nine clauses of the family it extends, and comparing the normal forms. Where
+   * they do not meet, the statement's own answer says why: a `COND` in it is a guard the rewriting
+   * cannot decide, so the derivation assumes the guard and its negation in turn, rewrites again
+   * under each decision, and joins the two branches. Nothing else is tried, and a clause whose
+   * sides do not meet with every guard decided is refused carrying the refusal the rewriting gave.
+   *
+   * **Seven of the twelve need that split and five do not, which is not the division this work was
+   * planned around.** The expectation was three, the constants that bind an index. What decides it
+   * is not binding but whether the published answer carries a conditional the rewriting has to put
+   * somewhere: [[ExistsFree]] binds and needs no split, because the quantifier's own freeness
+   * clause already produces the `COND` in the shape the statement publishes; [[ExistsSubstitute]]
+   * needs one, because the rewriting produces a negation applied to a conditional and a consumer
+   * wants a conditional between two negations, which only a case analysis moves between.
+   *
+   * The guards are read off the statement rather than passed in beside it. A list of them would be
+   * a second place to write down which clauses bind what, and the answer is already in the text
+   * that gets published.
+   */
+  private def connectiveClauses(
+    vocabulary: Vocabulary,
+    cases: Map[String, Kernel.Thm],
+    clauses: Map[String, Kernel.Thm]
+  ): Either[LogicError, Map[String, Kernel.Thm]] = {
+    val rules = vocabulary.rules
+    val logic = vocabulary.logic
+    val classical = vocabulary.numbering.peano.naturals.classical
+
+    /** The condition of every `COND` in a term, outermost first, without repetition. */
+    def guardsIn(subject: Term): Vector[Term] = subject match {
+      case App(App(App(Const(Classical.Conditional, _), condition), left), right) =>
+        (condition +: (guardsIn(left) ++ guardsIn(right))).distinct
+      case App(left, right) => (guardsIn(left) ++ guardsIn(right)).distinct
+      case _ => Vector.empty
+    }
+
+    /** `g |- g = T` and `~g |- g = F`: one guard, read both ways, as a rewrite rule each. */
+    def decide(guard: Term, holds: Boolean): Either[LogicError, Kernel.Thm] =
+      if (holds) LogicError.lift(Kernel.assume(guard)).flatMap(rules.eqTruthIntro)
+      else
+        for {
+          negated <- logic.mkNot(guard)
+          apart <- LogicError.lift(Kernel.assume(negated))
+          assumed <- LogicError.lift(Kernel.assume(guard))
+          toFalsity <- rules.notElim(apart, assumed)
+          fromFalsity <- LogicError
+            .lift(Kernel.assume(logic.falsity))
+            .flatMap(rules.falsityElim(guard, _))
+          equated <- Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity))
+        } yield equated
+
+    def clause(base: Vector[Kernel.Thm], name: String): Either[LogicError, Kernel.Thm] = {
+      def meet(decisions: Vector[Kernel.Thm], left: Term, right: Term) =
+        Rewrite.Rule.all(logic, base ++ decisions).flatMap(Rewrite.prove(_, left, right))
+
+      def split(
+        remaining: List[Term],
+        decisions: Vector[Kernel.Thm],
+        left: Term,
+        right: Term
+      ): Either[LogicError, Kernel.Thm] =
+        meet(decisions, left, right) match {
+          case met @ Right(_) => met
+          case Left(refusal) =>
+            remaining match {
+              case Nil => Left(refusal)
+              case guard :: rest =>
+                for {
+                  held <- decide(guard, true)
+                  positive <- split(rest, decisions :+ held, left, right)
+                  apart <- decide(guard, false)
+                  negative <- split(rest, decisions :+ apart, left, right)
+                  joined <- classical.cases(guard, positive, negative)
+                } yield joined
+            }
+        }
+
+      for {
+        statement <- vocabulary.statement(name)
+        stripped <- Logic.stripForall(statement)
+        (binders, body) = stripped
+        sides <- Term.destEq(body).toRight(NotOfForm("an equation", body))
+        (left, right) = sides
+        proved <- split(guardsIn(right).toList, Vector.empty, left, right)
+        general <- rules.genAll(proved, binders.toList)
+      } yield general
+    }
+
+    val families: Vector[(Vector[String], Vector[String])] = Vector(
+      (
+        Vector(
+          FreeVariable, FreeZero, FreeSuccessor, FreeSum, FreeProduct,
+          FormulaFreeEquality, FormulaFreeNegation, FormulaFreeImplication, FormulaFreeUniversal),
+        Vector(AndFree, OrFree, ExistsFree, LessFree, AllBelowFree, ExistsBelowFree)),
+      (
+        Vector(
+          SubstituteVariable, SubstituteZero, SubstituteSuccessor, SubstituteSum,
+          SubstituteProduct, FormulaSubstituteEquality, FormulaSubstituteNegation,
+          FormulaSubstituteImplication, FormulaSubstituteUniversal),
+        Vector(
+          AndSubstitute, OrSubstitute, ExistsSubstitute, LessSubstitute, AllBelowSubstitute,
+          ExistsBelowSubstitute))
+    )
+
+    for {
+      atCodes <- conditionalRules(logic, classical, vocabulary.numbers)
+      atPropositions <- conditionalRules(logic, classical, Type.Bool)
+      units <- disjunctionUnits(logic)
+      defining <- Vector(
+        AndCases, OrCases, ExistsCases, LessCases, AllBelowCases, ExistsBelowCases
+      ).foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (carried, name) =>
+        for {
+          found <- carried
+          equation <- cases.get(name).toRight(MissingDefinition(name))
+        } yield found :+ equation
+      }
+      proved <- families.foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(Map.empty)) {
+        case (carried, (family, names)) =>
+          for {
+            found <- carried
+            held <- family.foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+              (gathered, name) =>
+                for {
+                  taken <- gathered
+                  fact <- clauses.get(name).toRight(MissingDefinition(name))
+                } yield taken :+ fact
+            }
+            base = held ++ defining ++ atCodes ++ atPropositions ++ units
+            reached <- names.foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(found)) {
+              (gathered, name) =>
+                for {
+                  taken <- gathered
+                  fact <- clause(base, name)
+                } yield taken.updated(name, fact)
+            }
+          } yield reached
+      }
+    } yield proved
   }
 
   /**
