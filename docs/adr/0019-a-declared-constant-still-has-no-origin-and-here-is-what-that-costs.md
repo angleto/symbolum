@@ -84,9 +84,18 @@ So the rejection was not stale in the direction that would reopen it. **Rechecki
 option four times worse than when it was rejected**, and almost all of the growth is `Kernel.assume`,
 which is what a repository of hand derivations is made of.
 
-**3. `Theory.certifies(thm)`, an explicit check at the boundary.** Closes nothing by itself. It is
-the only one of the three that is not a change to the kernel's rules, and therefore the only one
-available while the other two are being weighed.
+**3. An explicit check at the boundary.** Closes nothing by itself. It is the only one of the three
+that is not a change to the kernel's rules, and therefore the only one available while the other two
+are being weighed.
+
+**And it was already built when this record listed it as an option**, which is the one thing here
+that was carried forward without being rechecked. `a9b78674` posed the three on 2026-09-12;
+`Derivation.foreignTo` landed on 2026-09-13 and is this answer, with a production caller in
+`Session` and the case that motivates it asserted in `SoundnessAttackSpec` and `DomainTheorySpec`.
+Both of the figures this record inherited were rechecked and one moved by a factor of four; the
+option list was not, and its third entry had stopped being an option and become a fact. Written
+down rather than quietly corrected, because it is the same failure the rest of this record is
+about: a sentence true on the day it was written, read later as though it still were.
 
 ## Decision
 
@@ -100,15 +109,52 @@ the open half is the half a theory is made of, and this record is the one that s
 `docs/adr/`, where a reader looking for the answer will go. The sentence in `architecture.md` that
 said the opposite was in another file.
 
-**The residual risk is named rather than removed.** `Theory.certifies(thm)` is adopted as the
-boundary check: it does not make the falsity underivable, it makes the crossing nameable at the one
-place a caller can act on it. It is a method on `Theory` and changes no inference rule, so it costs
-nothing that the table above prices.
+**The residual risk is named rather than removed, and the name is `Derivation.foreignTo`.** It does
+not make the falsity underivable; it makes the crossing nameable at the one place a caller can act
+on it, and it changes no inference rule, so it costs nothing that the table above prices.
+
+This record first wrote that check as `Theory.certifies(thm)`, a method on `Theory`. That spelling
+is **withdrawn rather than scheduled**, on two measurements taken on 2026-09-16.
+
+The first is that it would be a second name for something that already works, which is a defect
+while the two agree.
+
+The second is placement, and it is the stronger of the two. What `Theory.certifies` was specified to
+compare over a term — name, type and origin — is `Theory.checkTerm`, which is public and which all
+three theory extensions already call. What decides **this** case is the other half: the axioms a
+theorem rests on against the axioms a theory holds, and an axiom is held by the theory rather than
+by any constant, which is why no field on a term could carry it. Run over the falsity two declaring
+theories produce, the vocabulary half alone answers **yes** against each of the two theories that
+built it, because `p` does not occur in `|- F`; `SoundnessAttackSpec` asserts that outcome rather
+than describing it, beside the axiom half answering no to both.
+
+So a method on `Theory` would have put the check inside the trusted base, for something that must
+not be trusted. `DocumentationSpec` bounds that base at 1200 lines and measures it over **the four
+files a defect in which can produce a false theorem**, which is not the same as the directory:
+`Kernel.scala`, `Term.scala`, `Theory.scala` and `Type.scala`. `Derivation.scala` is one of the four
+that are out, classified as record and display, and the classification is checked rather than
+asserted — the spec reads each of those files for `new Thm(` and fails if it finds one. So the
+argument for excluding it is the same argument that makes it the right home for this check: a wrong
+answer from a record is a false alarm and never a false theorem.
+
+`Theory.scala` is in. The card's own constraint said to measure before and after, and nobody had.
+Measured at `fb3f45a`: the four come to **1184 lines against the bound of 1200**, so the headroom is
+sixteen and a method of this repository's comment density does not fit in it. Nor does moving the
+check to a new file in that directory buy the room, which is worth saying because it is the obvious
+escape: a second assertion pins the directory's contents to the union of the two lists, so a file
+nobody has classified fails that one instead. The bound has never moved — raised to 1400 once, on
+2026-09-10, and put back the same day, and the two records that spent against it deliberately,
+`0006` for the type definition rule and `0008` for the identity on constants, spent lines rather
+than raising it. Paying for this check means a third such record, which is a cost the table above
+says option 3 does not have.
 
 **This decision is not deferred again.** The lesson of how this record came to be needed is that a
-card closed by deferring a decision loses it unless the deferral leaves on a card of its own. The
-implementation of `Theory.certifies` therefore has a card, and this ADR is not satisfied until that
-card is closed.
+card closed by deferring a decision loses it unless the deferral leaves on a card of its own. That
+card is `c776f787`, and what it returned is the correction above: the check existed three days
+before this record listed it as an option. What it delivered instead of a second implementation is
+the pair of assertions the boundary claim needed and did not have — that the falsity is foreign to
+**both** of the theories that produced it, where the test that carried that sentence in its name
+measured one of them and the base, and that a check reading only the vocabulary takes it.
 
 ## Consequences
 
@@ -117,8 +163,9 @@ refuse. What changes is that the limit now has a record that states the measured
 instead of an intention to decide later.
 
 **"A domain theory sits beside the chain and must stay there" stays load-bearing.** It is what keeps
-the two-theory case out of ordinary use, and until `Theory.certifies` exists it is the only thing
-that does.
+the two-theory case out of ordinary use, and it is the only thing that makes it **impossible**:
+`Derivation.foreignTo` makes the crossing detectable to a caller that asks, and nothing forces a
+caller to ask.
 
 **The multi-domain card is unblocked in the sense that matters and not in the sense that was hoped.**
 `23045598` says nothing is to be built before this decision is made. It is made. It is not made in

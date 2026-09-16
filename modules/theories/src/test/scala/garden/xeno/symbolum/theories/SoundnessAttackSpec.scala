@@ -463,17 +463,40 @@ class SoundnessAttackSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------ the limit made detectable, which is not the same as closed */
 
+  /**
+   * The two theories that produce the falsity, each with its axiom asserted.
+   *
+   * Rebuilt here rather than returned by [[falsityFromTwoDeclarations]], which hands back the
+   * theorem alone. `Theory` is a case class and its axioms are terms compared structurally, so a
+   * theory rebuilt the same way is the same theory to every question asked below; what could not
+   * be rebuilt is the theorem, because the two axiom nodes in its derivation have to be the ones
+   * that meet in the rule.
+   */
+  private def bothDeclaringTheories: (Theory, Theory) = {
+    val base = Logic.standard.theory
+    val negation = force(base.constant("~", Type.fun(Type.Bool, Type.Bool)))
+    val theoryA = force(base.declareConstant("p", Type.Bool))
+    val theoryB = force(base.declareConstant("p", Type.Bool))
+    val (withP, _) = force(Kernel.assertAxiom(theoryA, force(theoryA.constant("p", Type.Bool))))
+    val denied = force(Term.app(negation, force(theoryB.constant("p", Type.Bool))))
+    val (withNotP, _) = force(Kernel.assertAxiom(theoryB, denied))
+    (withP, withNotP)
+  }
+
   "The falsity two declaring theories produce" should "be foreign to both of them" in {
     // The row above says the kernel builds this theorem and nothing refuses, and that is still
     // true. What is new on 2026-09-13 is that a caller can ASK, and the thing it asks is not about
     // the constant: `p` is declared in both theories with no origin in either, so nothing on the
     // term tells them apart, and `docs/adr/0008` says that is right for an uninterpreted name.
     // What distinguishes them is the axiom, and an axiom belongs to the theory.
+    //
+    // **Until 2026-09-16 this test measured one of the two and the base**, while its name said
+    // both, and the difference is the one `c776f787` asks for: "foreign to the base" is a weaker
+    // statement that a theorem of either sibling also satisfies, so the sentence a caller wants —
+    // neither parent certifies what the two of them made — was not asserted anywhere.
     val theorem = falsityFromTwoDeclarations.getOrElse(fail("the attack no longer builds"))
     val base = Logic.standard.theory
-    val theoryA = force(base.declareConstant("p", Type.Bool))
-    val theoryB = force(base.declareConstant("p", Type.Bool))
-    val (withP, _) = force(Kernel.assertAxiom(theoryA, force(theoryA.constant("p", Type.Bool))))
+    val (withP, withNotP) = bothDeclaringTheories
 
     // Against the theory that holds only `p`: the `~p` axiom is foreign, and it is reported as an
     // AXIOM rather than as a constant, which is the half that matters for soundness.
@@ -482,7 +505,18 @@ class SoundnessAttackSpec extends AnyFlatSpec with Matchers {
     againstA.axioms should have size 1
     againstA.constants shouldBe empty
 
-    // And against a theory that holds neither: both axioms are foreign. Paired with the row
+    // And the other parent, symmetrically: it holds `~p` and the `p` axiom is the foreign one. The
+    // two together are what the name of this test claims, and neither alone is.
+    val againstB = Derivation.foreignTo(withNotP, theorem)
+    againstB.clean shouldBe false
+    againstB.axioms should have size 1
+    againstB.constants shouldBe empty
+
+    // The two foreign axioms are different axioms, which is what stops the pair above from being
+    // satisfied by a check that reports the same thing twice.
+    againstA.axioms should not be againstB.axioms
+
+    // And against a theory that holds neither: both axioms are foreign. Paired with the rows
     // above, because "reports something" is what a check that reports everything also does.
     val againstBase = Derivation.foreignTo(base, theorem)
     againstBase.axioms should have size 2
@@ -492,7 +526,49 @@ class SoundnessAttackSpec extends AnyFlatSpec with Matchers {
     val innocent = force(Rules(Logic.standard).truth)
     Derivation.foreignTo(base, innocent).clean shouldBe true
     Derivation.foreignTo(withP, innocent).clean shouldBe true
-    Derivation.foreignTo(theoryB, innocent).clean shouldBe true
+    Derivation.foreignTo(withNotP, innocent).clean shouldBe true
+  }
+
+  it should "be taken by a check that reads only its constants, which is why that is not the check" in {
+    // The measurement that decides where the boundary check lives, and it is the one thing a
+    // reading of `docs/adr/0019` could not supply. That record adopts `Theory.certifies(thm)` and
+    // the card carrying it defines it as: every constant of the theorem is the theory's, compared
+    // by name, type and origin. Comparing all three over a term is `Theory.checkTerm`, which is
+    // public and which the three theory extensions already call.
+    //
+    // Run over this theorem against each theory that built it, it says YES to all of it. The
+    // reason is not a defect in `checkTerm`: `p` does not OCCUR in `|- F`. The sequent is
+    // `F` with no hypotheses, every constant in it belongs to the logic both theories extend, and
+    // a check that reads the statement's vocabulary has nothing to object to.
+    //
+    // So the two halves of the card cannot both be met by one definition: "reads the constants"
+    // and "says no on this theorem" are incompatible here, and what says no is the AXIOM half,
+    // which `Derivation.foreignTo` computes and the test above asserts.
+    //
+    // **The inference runs one way only, and a reader who generalises this test needs to know
+    // which.** `checkTerm` is STRICTLY STRONGER than the definition it is standing in for: before
+    // it compares any constant it asks `Term.isLocallyClosed`, and inside the walk it checks the
+    // type of every free variable and of every binder. So green here implies that the weaker
+    // reading also takes the theorem, which is the direction the conclusion needs; a red would
+    // imply nothing about it, because it could come from either of the other two conditions and
+    // neither has anything to do with an origin. On `|- F` those conditions are trivial, which is
+    // why the substitution is fair here and not in general.
+    val theorem = falsityFromTwoDeclarations.getOrElse(fail("the attack no longer builds"))
+    val (withP, withNotP) = bothDeclaringTheories
+
+    val statement = theorem.conclusion :: theorem.hypotheses
+    statement.foreach { term =>
+      withP.checkTerm(term) shouldBe Right(())
+      withNotP.checkTerm(term) shouldBe Right(())
+    }
+
+    // The floor, and it is a refusal rather than a count. A fold reporting "nothing objected to"
+    // is what a check that objects to nothing also reports, and the size of the statement does not
+    // separate the two: `|- F` has one term whatever happens. What separates them is the same call
+    // turning something away, by name, against the same two theories.
+    val foreign = force(Real.standard.theory.constant(Real.Zero, real))
+    withP.checkTerm(foreign) shouldBe Left(UnknownConstant(Real.Zero))
+    withNotP.checkTerm(foreign) shouldBe Left(UnknownConstant(Real.Zero))
   }
 
   it should "not be closed by this, which the corpus row above still records" in {
