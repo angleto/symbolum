@@ -129,6 +129,22 @@ lazy val commonSettings = Seq(
  *
  * The floor only rises. When a change raises the measurement, raise the number with it.
  *
+ * **And raising it to the measurement makes the NEXT change in that module tight, which is a
+ * sequencing hazard rather than a mistake in either half.** Measured on 2026-09-16, in one
+ * session and by one author, which is why it is written here rather than left to be met: the
+ * `theories` floor went 96.0 -> 97.4 in the morning, taking the margin from 734 statements to
+ * 39.7; two commits later a 404-statement development landed in that same module carrying 10
+ * uncovered statements, and the margin fell to 30.4. Nothing broke. A quarter of the headroom
+ * went in one commit, and neither half was wrong: the floor was raised to what the rule sets, and
+ * the development was covered to 97.5% of itself.
+ *
+ * The order is what did it, and the next person will work in the same order because that is the
+ * order the work arrives in: you measure, you raise, and then you land the thing you were
+ * measuring for. What follows is not "raise it less" -- a ratchet set below the rule is the defect
+ * this note spent four sections arguing against. It is that a floor raised in the same session as
+ * a landing into that module should be **re-measured after the landing**, and that a module about
+ * to receive a large file is one to raise last rather than first.
+ *
  * == Measured again on 2026-09-16, and only three of the seven moved ==
  *
  * At `f9e0672`, by `clean coverage test coverageReport` in a worktree that had never been built,
