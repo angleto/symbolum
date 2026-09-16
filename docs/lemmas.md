@@ -86,6 +86,7 @@ they have least appetite for working out how it is produced.
   NUM_GCD_MUL              !x:num. !y:num. !z:num. 0 < z ==> NUM_GCD x z = SUC 0 ==> NUM_GCD y z = SUC 0 ==> NUM_GCD (x * y) z = SUC 0
   NUM_GCD_PROD             !x:num -> num. !y:num. !z:num. 0 < y ==> (!u:num. u < z ==> NUM_GCD (x u) y = SUC 0) ==> NUM_GCD (NUM_PROD x z) y = SUC 0
   NUM_GCD_SHIFTED_MULTIPLES !x:num. !y:num. !z:num. y < z /\ NUM_DIVIDES (NUM_SUB z y) x ==> NUM_GCD (SUC (SUC y * x)) (SUC (SUC z * x)) = SUC 0
+  NUM_PROD_CONG            !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u = y u) ==> NUM_PROD x z = NUM_PROD y z
   NUM_PROD_DIVIDES         !x:num -> num. !y:num. !z:num. y < z ==> NUM_DIVIDES (x y) (NUM_PROD x z)
   NUM_PROD_POSITIVE        !x:num -> num. !y:num. (!z:num. z < y ==> 0 < x z) ==> 0 < NUM_PROD x y
   NUM_PROD_SUC             !x:num -> num. !y:num. NUM_PROD x (SUC y) = NUM_PROD x y * x y
@@ -513,6 +514,10 @@ they have least appetite for working out how it is produced.
 
 ## Primes
 
+  NUM_FACTORISATION        !x:num. SUC 0 < x ==> (?y:num -> num. ?z:num. 0 < z /\ (!u:num. u < z ==> NUM_PRIME (y u)) /\ (!u:num. !v:num. u < v /\ v < z ==> y u <= y v) /\ NUM_PROD y z = x)
+  NUM_FACTORISATION_UNIQUE !x:num -> num. !y:num. !z:num -> num. !u:num. (!v:num. v < y ==> NUM_PRIME (x v)) ==> (!v:num. !w:num. v < w /\ w < y ==> x v <= x w) ==> (!v:num. v < u ==> NUM_PRIME (z v)) ==> (!v:num. !w:num. v < w /\ w < u ==> z v <= z w) ==> NUM_PROD x y = NUM_PROD z u ==> y = u /\ (!v:num. v < y ==> x v = z v)
+  NUM_PRIME_DIVIDES_PROD   !x:num. !y:num -> num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_PROD y z) ==> (?u:num. u < z /\ NUM_DIVIDES x (y u))
+  NUM_PRIME_PROD_ONE       !x:num -> num. !y:num. (!z:num. z < y ==> NUM_PRIME (x z)) ==> NUM_PROD x y = SUC 0 ==> y = 0
   NUM_PRIME_UNBOUNDED      !x:num. ?y:num. NUM_PRIME y /\ x < y
   NUM_SQUARE_NOT_DOUBLE    !x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))
 

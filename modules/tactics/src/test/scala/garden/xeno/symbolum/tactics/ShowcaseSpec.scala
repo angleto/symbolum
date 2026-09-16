@@ -107,6 +107,13 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
     // fragments and chains library lemmas for the rest, and none of those routes reaches a proof
     // of Euclid's lemma.
     //
+    // Fourteen since 2026-09-16, when the two halves of the fundamental theorem of arithmetic
+    // joined the showcase, and **the list went red in the direction that is not the interesting
+    // one**: both are refused, so the second vector grew by two and the proportion moved from six
+    // in twelve to eight in fourteen. That is the expected answer for a statement whose conclusion
+    // is an existential over a family, since nothing on the surface constructs one, and the
+    // measurement is worth keeping for the day something does.
+    //
     // Read it as a reading with a date rather than as a property. `Chaining` and `Propositional`
     // both reach goals they did not a week ago, so the expected direction of travel is that this
     // list goes red because something moved from the second vector to the first, and the repair is
@@ -130,6 +137,8 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
         "NUM_INDUCTION",
         "NUM_BEZOUT",
         "NUM_EUCLID",
+        "NUM_FACTORISATION",
+        "NUM_FACTORISATION_UNIQUE",
         "NUM_CRT",
         "NUM_SQUARE_NOT_DOUBLE",
         "NUM_PROV_DEDUCTION"
