@@ -37,11 +37,29 @@ package garden.xeno.symbolum.dist
  */
 object Repl {
 
-  /** How a caller runs this, from an unpacked distribution. */
+  /**
+   * How a caller runs this, from an unpacked distribution.
+   *
+   * The one declaration of the name. `README.md` and `.github/workflows/publish.yml` each wrote it
+   * out as well until 2026-09-16, three hand-written copies with nothing comparing them, and
+   * `LauncherSpec` compares them now: the two documents are citations of this value and go red
+   * when it moves.
+   */
   val Command: String = "bin/symbolum-repl"
 
-  def main(arguments: Array[String]): Unit = {
-    val classpath = System.getProperty("java.class.path")
-    dotty.tools.repl.Main.main(Array("-classpath", classpath) ++ arguments)
-  }
+  /**
+   * What the REPL is started with, separated from starting it.
+   *
+   * A session reads stdin and does not return, so a spec that called [[main]] would hang, and that
+   * is the whole reason the launcher had no test while the other four could have one. What can be
+   * checked is everything except the delegation: that the process's own classpath is passed, that
+   * it is passed under `-classpath`, and that a caller's arguments come after so that a caller's
+   * own `-classpath` is the one the REPL reads. This function is that part, and [[main]] is the
+   * one line left that a test cannot enter.
+   */
+  def arguments(caller: Array[String]): Array[String] =
+    Array("-classpath", System.getProperty("java.class.path")) ++ caller
+
+  def main(arguments: Array[String]): Unit =
+    dotty.tools.repl.Main.main(Repl.arguments(arguments))
 }
