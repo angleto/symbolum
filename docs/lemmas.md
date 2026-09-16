@@ -138,6 +138,13 @@ they have least appetite for working out how it is produced.
   DIVIDES_ZERO             !x:real. Divides x 0
   ZERO_DIVIDES             !x:real. Divides 0 x = (x = 0)
 
+## Forward
+
+  WORD_RFC_EXTEND          !x:word('a) -> word('a) -> bool. !y:word('a). !z:word('a). !u:word('a). !v:word('a). WORD_RFC x (WORD_CONCAT y z) /\ x (WORD_CONCAT z u) v /\ ~(z = WORD_EMPTY) /\ ~(u = WORD_EMPTY) ==> WORD_RFC x (WORD_CONCAT y v)
+  WORD_RFC_INDUCT          !x:word('a) -> word('a) -> bool. !y:word('a) -> bool. (!z:word('a). (?u:word('a). x u z) ==> y z) /\ (!z:word('a). (?u:word('a). y u /\ WORD_STEP x u z) ==> y z) /\ (!z:word('a). (?u:word('a). ?v:word('a). ?w:word('a). ?x1:word('a). y (WORD_CONCAT u v) /\ x (WORD_CONCAT v w) x1 /\ ~(v = WORD_EMPTY) /\ ~(w = WORD_EMPTY) /\ z = WORD_CONCAT u x1) ==> y z) ==> (!z:word('a). WORD_RFC x z ==> y z)
+  WORD_RFC_INSIDE          !x:word('a) -> word('a) -> bool. !y:word('a). !z:word('a). WORD_RFC x y /\ WORD_STEP x y z ==> WORD_RFC x z
+  WORD_RFC_RIGHT           !x:word('a) -> word('a) -> bool. !y:word('a). !z:word('a). x y z ==> WORD_RFC x z
+
 ## Inductive
 
   INDUCTIVE_FIXPOINT       !x:('a -> bool) -> 'a -> bool. MONOTONE x ==> (!y:'a. INDUCTIVE x y = x (INDUCTIVE x) y)

@@ -212,6 +212,11 @@ object Spellings {
       .operator("WORD_PREFIX", 2, "#1 \\sqsubseteq_{p} #2", Relation)
       .operator("WORD_SUFFIX", 2, "#1 \\sqsubseteq_{s} #2", Relation)
       .operator("WORD_FACTOR", 2, "#1 \\sqsubseteq #2", Relation)
+      // A step of the system, and membership of its right forward closure. The arrow carries the
+      // system as a subscript because both are relative to one: `u \to_R v` is the shape every
+      // rewriting text uses, and dropping the subscript would print two different systems the same.
+      .operator("WORD_STEP", 3, "#2 \\to_{#1} #3", Relation)
+      .operator("WORD_RFC", 2, "#2 \\in \\mathrm{RFC}(#1)", Relation)
       /* ---------------------------------------------------------- the matrix */
       .delimited("MAT2", 4, "\\begin{pmatrix} #1 & #2 \\\\ #3 & #4 \\end{pmatrix}")
       .delimited("MAT_ID", 0, "I")

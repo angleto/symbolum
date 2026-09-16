@@ -44,7 +44,8 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.concatenation.facts.size +
       // And the two of 2026-09-16, which this sum caught the same way: each was in `Library.of`
       // and not here, so the count moved and nothing about the development did.
-      chain.inductive.facts.size + chain.reaching.facts.size
+      chain.inductive.facts.size + chain.reaching.facts.size +
+      chain.forward.facts.size
 
     library.entries.size shouldBe expected
 
@@ -386,8 +387,21 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     //
     // `CLAUDE.md`'s two figures move by **twelve** again and for the reason they did then: every
     // one of the twelve binds three or more leading variables and every one of those is a `num`.
-    library.entries.size shouldBe 489
-    library.names.distinct.size shouldBe 486
+    //
+    // 493 with the right forward closure: `Forward`'s four, which are the three introduction rules
+    // of `RFC(R)` and its induction principle. Two constants arrive with them, `WORD_STEP` and
+    // `WORD_RFC`, and **neither moves the definitional entries**, for the reason two rows above:
+    // `Library.of` collects a development's `facts` and takes `definitions` only from `Classical`
+    // and `Real`. Derived from the four names before this suite was run.
+    //
+    // `CLAUDE.md`'s two figures move by **four and by three**, and the one that does not move is
+    // the one worth reading. All four bind two or more leading variables, so the first figure takes
+    // all of them. `WORD_RFC_INDUCT` binds the system and the carrier, `word('a)->word('a)->bool`
+    // against `word('a)->bool`, which share no type, so it is the second instance in this ledger of
+    // a lemma whose binders the kernel's own typing refuses to transpose. The other three bind
+    // words throughout and are transposable in exactly the way the figure exists to count.
+    library.entries.size shouldBe 493
+    library.names.distinct.size shouldBe 490
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

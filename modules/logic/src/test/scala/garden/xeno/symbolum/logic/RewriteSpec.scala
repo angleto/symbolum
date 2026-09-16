@@ -301,6 +301,14 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
   private val ReviewedCallSites: Map[String, String] = Map(
     // The one of 2026-09-16, and the first whose safety rests on a comparison against WRITTEN
     // statements rather than on termination alone.
+    "Forward.scala" ->
+      ("two calls, both `Rewrite.inTheorem` and both moving a theorem between the two spellings " +
+        "of one set, `INDUCTIVE op` and `WORD_RFC R`. The rule set each is given is a single " +
+        "defining equation read in one direction, so there is nothing for a limit to run out on " +
+        "that is not that equation failing to apply. It is not left to the limit to say so: the " +
+        "result is compared against the operator's own clause and refused by `NotOfForm` naming " +
+        "that clause when it does not land on it, which is the arrangement `Reaching` uses and " +
+        "the reason a silent partial rewrite cannot reach the kernel from here"),
     "Reaching.scala" ->
       ("eight, and they fall into two arrangements. Six are a matched pair per site: the same rules " +
         "at the same default limit are walked FORWARD to learn the normal form a proof should be " +

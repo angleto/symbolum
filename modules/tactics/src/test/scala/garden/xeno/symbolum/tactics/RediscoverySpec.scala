@@ -167,7 +167,20 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // carries the per-lemma derivation. None of the eleven reaches a rediscovery either, for the
     // reason the concatenation entry gives: a weakening of a well-formedness rule is a claim that
     // every code of some shape is a formula, which is false rather than a lemma somebody forgot.
-    propose.weakenings.size shouldBe 323
+    // 327 with the right forward closure's four. **FOUR, derived before the run and then
+    // measured**, by the peeling rule these entries state, and the derivation is one per lemma
+    // because not one of them is curried: `WORD_RFC_RIGHT` takes `R l r`; `WORD_RFC_INSIDE` and
+    // `WORD_RFC_EXTEND` each take a single conjunction, of two conjuncts and of four, under one
+    // arrow; `WORD_RFC_INDUCT` takes the three closure hypotheses as one conjunction. A conjunct
+    // is not an antecedent here and that is the whole of the arithmetic: read as conjuncts the
+    // four lemmas would carry ten.
+    //
+    // `WORD_RFC_INDUCT` is the case the `MONOTONE_LE` caveat is about and it does not bite: its
+    // consequent is `!w. WORD_RFC R w ==> S w`, an arrow under a quantifier, which the peeling
+    // stops at rather than counting. Counting it would propose dropping the membership from an
+    // induction principle, which is not a weaker lemma somebody forgot but the statement that
+    // every word satisfies the carrier.
+    propose.weakenings.size shouldBe 327
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

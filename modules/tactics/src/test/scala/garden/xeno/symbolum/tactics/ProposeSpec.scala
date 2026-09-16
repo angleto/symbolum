@@ -238,7 +238,20 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // each except `NUM_FORM_EXISTS`, which asks only that its body be a formula. Two, two, one,
     // two, two, two. Nothing here is curried under a nested quantifier, so the caveat the
     // `MONOTONE_LE` entry above records does not arise.
-    proposals.size shouldBe 323
+    // 327 with the right forward closure's four. **FOUR, derived before the run and then
+    // measured**, by the peeling rule these entries state, and the derivation is one per lemma
+    // because not one of them is curried: `WORD_RFC_RIGHT` takes `R l r`; `WORD_RFC_INSIDE` and
+    // `WORD_RFC_EXTEND` each take a single conjunction, of two conjuncts and of four, under one
+    // arrow; `WORD_RFC_INDUCT` takes the three closure hypotheses as one conjunction. A conjunct
+    // is not an antecedent here and that is the whole of the arithmetic: read as conjuncts the
+    // four lemmas would carry ten.
+    //
+    // `WORD_RFC_INDUCT` is the case the `MONOTONE_LE` caveat is about and it does not bite: its
+    // consequent is `!w. WORD_RFC R w ==> S w`, an arrow under a quantifier, which the peeling
+    // stops at rather than counting. Counting it would propose dropping the membership from an
+    // induction principle, which is not a weaker lemma somebody forgot but the statement that
+    // every word satisfies the carrier.
+    proposals.size shouldBe 327
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -800,7 +813,19 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_CLOSED_SUC` entry above says exactly that about exactly that shape, and it was not
     // applied here in advance: this ten was read off the run, and the entry above is what makes it
     // unsurprising afterwards rather than what predicted it.
-    open shouldBe 235
+    // 236 with ONE of the four the right forward closure brought, and the other three are in
+    // `unreadable` below. **Measured and not derived**, for the reason this row has now given four
+    // times: which bucket a residue lands in turns on whether a procedure has an address for its
+    // shape, and no procedure here has a reading of `word`. The count of the residues was
+    // derivable and was derived, four; the split of those four was not, and saying which half was
+    // predicted is the whole point of writing the row rather than the delta.
+    //
+    // That three of four are unreadable is the expected direction rather than a surprise, and it
+    // is worth one line because it will be true of every development over `word` that follows:
+    // this repository's procedures decide fragments of the reals and of the naturals, so a residue
+    // whose atoms are `WORD_RFC` and `WORD_STEP` has no address to go to. The bucket is doing what
+    // it is for, which is saying "nobody here can take this shape" rather than reporting it clean.
+    open shouldBe 236
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1025,7 +1050,18 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // caught it: the sentence naming where the eleventh went was written in one place while the
     // count it describes stayed put in another. A derivation written down beside the wrong number
     // is worse than no derivation, because it reads as though somebody checked.
-    unreadable shouldBe 79
+    // 82 with THREE of the four the right forward closure brought, the fourth being in `open`
+    // above. **This three was arithmetic and not a prediction, and the difference is worth the
+    // line**: the four residues were derived before the run, the `open` row read 236 from a failed
+    // assertion, and three is four minus one. Subtracting a measured number from a derived one is
+    // not the same act as deriving, and a row that presented it as a prediction confirmed would be
+    // claiming an instrument it did not use.
+    //
+    // What IS a reading rather than arithmetic is why the split falls this way, and it holds for
+    // whatever lands over `word` next: the procedures here decide fragments of the reals and of
+    // the naturals, so a residue whose atoms are `WORD_RFC` and `WORD_STEP` has nowhere to be
+    // addressed. The one that reached `open` did so on its propositional skeleton alone.
+    unreadable shouldBe 82
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

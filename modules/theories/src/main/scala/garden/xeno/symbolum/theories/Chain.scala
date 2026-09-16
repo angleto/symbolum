@@ -263,7 +263,21 @@ final class Chain private (
    * last theory, which is [[inductive]]'s, and that those coincide here is an accident of ordering
    * rather than the reason.
    */
-  val reaching: Reaching
+  val reaching: Reaching,
+
+  /**
+   * The right forward closure of a string rewriting system, and [[widest]] since 2026-09-16.
+   *
+   * The second thing built on [[inductive]] and the one the rewriting work was for: `RFC(R)` is
+   * the least set holding the right-hand sides of `R` and closed under a step anywhere inside a
+   * member and under extending a member on the right by a rule that overlaps its end. Two
+   * constants, no axiom, and the four facts it publishes cost none either.
+   *
+   * It is built over [[concatenation]] rather than beside it, because the inside-reduction clause
+   * says the left-hand side occurs with a context on each side and that sentence needs
+   * `WORD_CONCAT`. Before 2026-09-16 it could not be written at all.
+   */
+  val forward: Forward
 ) {
 
   /**
@@ -292,7 +306,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = reaching
+  val widest: Signature = forward
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -450,6 +464,12 @@ object Chain {
       // theory, for the reason `Rotation.construct`'s comment gives.
       reaching <- Reaching.construct(
         inductive, peano, product, inductive.theory, inductive.notation)
+
+      // Over `reaching` rather than beside it, so the widest signature carries both. Nothing here
+      // needs a derivation's step count, but a goal about a closure and a goal about a derivation
+      // should be typable against one theory rather than two.
+      forward <- Forward.construct(
+        inductive, concatenation, reaching.theory, reaching.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -479,6 +499,7 @@ object Chain {
       transcendental,
       concatenation,
       inductive,
-      reaching
+      reaching,
+      forward
     )
 }

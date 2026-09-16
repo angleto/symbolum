@@ -138,7 +138,8 @@ object Reach {
         // report can name, so a development added to `Library.of` and not to this list makes a
         // proof that goes through it report resting on nothing of the kind.
         "Inductive" -> chain.inductive.facts,
-        "Reaching" -> chain.reaching.facts
+        "Reaching" -> chain.reaching.facts,
+        "Forward" -> chain.forward.facts
       )
     )
 

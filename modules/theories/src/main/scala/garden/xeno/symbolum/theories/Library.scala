@@ -286,7 +286,8 @@ object Library {
         // chain but not collected here is one `docs/lemmas.md` does not mention.
         collect("Concatenation", chain.concatenation.facts) ++
         collect("Inductive", chain.inductive.facts) ++
-        collect("Reaching", chain.reaching.facts)
+        collect("Reaching", chain.reaching.facts) ++
+        collect("Forward", chain.forward.facts)
     )
 
   /** A library over developments a caller names itself. */

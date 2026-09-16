@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (115)
+## The definitions (117)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -249,8 +249,10 @@ axiom mentioning it means.
 | `definition WORD_NTH` | WORD_NTH = \x:word('a). SND (dest_word x) | **NOT READ** |  |  |
 | `definition WORD_PAD` | WORD_PAD = select (\x:'a. T) | **NOT READ** |  |  |
 | `definition WORD_PREFIX` | WORD_PREFIX = \x:word('a). \y:word('a). ?z:word('a). y = WORD_CONCAT x z | **NOT READ** |  |  |
+| `definition WORD_RFC` | WORD_RFC = \x:word('a) -> word('a) -> bool. INDUCTIVE (\y:word('a) -> bool. \z:word('a). (?u:word('a). x u z) \/ (?u:word('a). y u /\ WORD_STEP x u z) \/ (?u:word('a). ?v:word('a). ?w:word('a). ?x1:word('a). y (WORD_CONCAT u v) /\ x (WORD_CONCAT v w) x1 /\ ~(v = WORD_EMPTY) /\ ~(w = WORD_EMPTY) /\ z = WORD_CONCAT u x1)) | **NOT READ** |  |  |
 | `definition WORD_ROTATE` | WORD_ROTATE = \x:num. \y:word('a). WORD_MAKE (WORD_LENGTH y) (\z:num. COND (z < WORD_LENGTH y) (WORD_NTH y (NUM_MOD (z + x) (WORD_LENGTH y))) WORD_PAD) | **NOT READ** |  |  |
 | `definition WORD_SINGLETON` | WORD_SINGLETON = \x:'a. WORD_MAKE (SUC 0) (\y:num. COND (y < SUC 0) x WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_STEP` | WORD_STEP = \x:word('a) -> word('a) -> bool. \y:word('a). \z:word('a). ?u:word('a). ?v:word('a). ?w:word('a). ?x1:word('a). x v w /\ y = WORD_CONCAT (WORD_CONCAT u v) x1 /\ z = WORD_CONCAT (WORD_CONCAT u w) x1 | **NOT READ** |  |  |
 | `definition WORD_SUFFIX` | WORD_SUFFIX = \x:word('a). \y:word('a). ?z:word('a). y = WORD_CONCAT z x | **NOT READ** |  |  |
 | `definition ZERO` | ZERO = mk_num IND_0 | **NOT READ** |  |  |
 | `definition \/` | \/ = \x:bool. \y:bool. !z:bool. (x ==> z) ==> (y ==> z) ==> z | **NOT READ** |  |  |

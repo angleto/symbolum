@@ -211,8 +211,14 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // beside, and the only thing deciding where it goes is that a constant has to be declared into
     // the last theory to be reachable. The two orders `Rotation.construct` distinguishes are not
     // merely different here; one of them is empty.
-    chain.widest shouldBe chain.reaching
-    chain.widest.theory.constants.keySet shouldBe chain.reaching.theory.constants.keySet
+    // **And it moved again on 2026-09-16**, to `Forward`, which is the second development built
+    // on `Inductive` and the one the rewriting work was for. The note above about `Inductive` not
+    // having a development to sit beside does not transfer to this one: the right forward closure
+    // is about words, so `Concatenation` is exactly where it would naturally sit, and what puts it
+    // at the end instead is the rule that names this whole section -- a constant is reachable only
+    // from the last theory. Which link is last is read here and written nowhere else.
+    chain.widest shouldBe chain.forward
+    chain.widest.theory.constants.keySet shouldBe chain.forward.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,

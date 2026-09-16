@@ -167,6 +167,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Crossing, "the antecedent of an implication an assembly had to match"),
     ("Field.scala", "reals.show(denominator)") ->
       (Verdict.Crossing, "a denominator, in the raiser's notation"),
+    ("Forward.scala", "target") ->
+      (Verdict.Crossing, "the operator's own clause, in the building notation and not a reader's"),
     ("Language.scala", "Axioms(which)._1") -> (Verdict.Name, "an axiom's published name"),
     ("Language.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Language.scala", "payload") -> (Verdict.Crossing, "a code's payload, which is a term"),
