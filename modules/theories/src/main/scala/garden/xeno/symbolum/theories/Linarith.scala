@@ -381,7 +381,7 @@ final class Linarith private (
    * escalation that stopped means the procedure did not finish, whichever of the two stopped it.
    */
   private def kept(escalation: LogicError, refusal: LogicError): LogicError =
-    if (escalation.standing == LogicError.Standing.Exhausted) escalation else refusal
+    if (escalation.standing.stoppedShort) escalation else refusal
 
   /** The case where the goal's own relation holds strictly, which proves it either way it is put. */
   private def fromLess(
@@ -563,7 +563,7 @@ final class Linarith private (
               // A round that stopped survives the swallowing [[kept]] describes, and there is
               // nothing further to try when it does: the pairs are already too many, and the cubic
               // round starts from them.
-              case Left(stopped) if stopped.standing == LogicError.Standing.Exhausted =>
+              case Left(stopped) if stopped.standing.stoppedShort =>
                 Left(stopped)
 
               case Left(_) =>

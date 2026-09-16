@@ -145,13 +145,16 @@ final case class DoesNotFollow(goal: Term, procedure: String) extends LogicError
  * lands at the propositional one. The gap does not close as the chain grows, it widens, and the
  * count that would have to be re-taken to overturn this is the arithmetic one.
  *
- * **What a fourth case would have cost is that nothing would enforce it.** There is no exhaustive
- * match on [[LogicError.Standing]] anywhere under `src/main`: the readers are two
- * `== Standing.Exhausted` comparisons in `Linarith` and the two `decided` predicates, and those two
- * have no production caller at all, every call site in the repository being a spec. A fourth case
- * would compile silently and every existing comparison would answer `false` about it, which is this
- * enumeration's own defect one turn further out. The abstract `standing` above is what makes a new
- * **refusal** choose one; nothing makes a reader of a new **standing** notice it.
+ * **What a fourth case would have cost was that nothing enforced it, and since 2026-09-16 something
+ * does.** There was no exhaustive match on [[LogicError.Standing]] anywhere under `src/main`: the
+ * readers were two `== Standing.Exhausted` comparisons in `Linarith` and the two `decided`
+ * predicates, and those two have no production caller at all, every call site in the repository
+ * being a spec. A fourth case compiled silently and every existing comparison answered `false`
+ * about it, which was this enumeration's own defect one turn further out. The abstract `standing`
+ * above makes a new **refusal** choose one; [[LogicError.Standing.answersTheGoal]] and
+ * [[LogicError.Standing.stoppedShort]] are what now make a new **standing** answer for itself, and
+ * the four readers go through them instead of comparing. It does not reopen the fourth case this
+ * refusal was refused: it makes whichever case comes next a decision rather than an omission.
  *
  * And the distinction it would have carried is already carried, under a compiler check this enum
  * has not got. `Remedy` is a total match on `LogicError`: it sends [[DoesNotFollow]] to `Settled`
@@ -475,6 +478,44 @@ object LogicError {
      * here is the same for all five causes.
      */
     case Unread
+
+    /**
+     * Whether a refusal carrying this standing said something about the goal.
+     *
+     * The question [[decided]] is written in terms of, and the reason this is a match rather than a
+     * comparison: a case added below does not compile until it answers here, exactly as a refusal
+     * added above does not compile until it says which standing it carries. Until 2026-09-16 the
+     * abstract `standing` protected one of those directions and nothing protected the other, so a
+     * fourth case would have compiled in silence and every `== Standing.Decided` in the repository
+     * would have answered `false` about it without anybody being asked.
+     *
+     * A wildcard case here would give that silence back, which is worth saying because the compiler
+     * cannot: `-Xfatal-warnings` makes an omitted case an error and has nothing to say about a
+     * `case _`.
+     */
+    def answersTheGoal: Boolean = this match {
+      case Decided   => true
+      case Exhausted => false
+      case Unread    => false
+    }
+
+    /**
+     * Whether the work stopped before it had finished, rather than finishing or never starting.
+     *
+     * The second question, and it is a second **match** rather than a negation of the first because
+     * the two are independent: today no standing answers yes to both, and [[Unread]] answers no to
+     * both, which is what a single boolean could not have carried. A case added below has to say
+     * where it falls on each, and if neither question fits it, the honest move is a third one.
+     *
+     * The two readers are `Linarith`'s, where an escalation that stopped is reported in place of the
+     * refusal from before it: "I stopped" is not a fact about the goal, and reporting it as one
+     * sends a caller in the opposite direction.
+     */
+    def stoppedShort: Boolean = this match {
+      case Decided   => false
+      case Exhausted => true
+      case Unread    => false
+    }
   }
 
   /**
@@ -492,5 +533,5 @@ object LogicError {
    * and this count had not moved. [[SkeletonFailsAt]] holds both readings and what they settled.
    */
   def decided[T](result: Either[LogicError, T]): Boolean =
-    result.left.exists(_.standing == Standing.Decided)
+    result.left.exists(_.standing.answersTheGoal)
 }

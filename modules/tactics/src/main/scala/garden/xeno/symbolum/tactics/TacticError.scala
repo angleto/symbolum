@@ -136,5 +136,5 @@ object TacticError {
    * is meant to be written with. Everything that is not a decision is false, `None` included.
    */
   def decided[T](result: Either[TacticError, T]): Boolean =
-    result.left.toOption.flatMap(standing).contains(LogicError.Standing.Decided)
+    result.left.toOption.flatMap(standing).exists(_.answersTheGoal)
 }
