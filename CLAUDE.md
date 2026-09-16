@@ -75,6 +75,16 @@ that is deliberate: it is what lets it stay fast and heuristic.
   it could not be run. Three of those four carried `-J-Xmx2g`. It wants a quiet machine and about
   ten minutes, and it is about four times the wall clock of `sbt test` at a comparable resident set,
   so what it spends is exposure rather than size.
+
+  **And since 2026-09-16 it does not only run here: `.github/workflows/ci.yml` runs the same command
+  on every push to a release line**, which is where the memory is and where a checkout has never been
+  built, so the `clean` hazard two paragraphs up cannot arise there at all. The first run was 24
+  minutes and every floor held. What it settled, and it is narrower than "the figures travel": the
+  five modules whose `src/main` and `src/test` had not moved since the laptop's last full run read
+  the **same statement count and the same rate to the hundredth** on Linux, x86 and Temurin 17
+  against macOS, Apple silicon and Temurin 23. `build.sbt` carries that table, the one module that
+  looks like a platform difference and is not, and the tightest gate in the build, which is now
+  `scan` at one statement of slack rather than `sat`.
 - **A console with the algebra loaded:** `sbt core/console`
 - **Asking the prover one thing, without writing Scala:**
   `sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole

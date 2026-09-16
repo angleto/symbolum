@@ -109,6 +109,19 @@ jobs:
   # reading of them off that machine, and it changes the JDK at the same time: if a figure moves,
   # both are candidates and neither is established.
   #
+  # The triggers are the workflow's, unchanged, and that is the decision rather than the default.
+  # Dispatch and pull request alone were the cheap option and would have been protection that does
+  # not fire: work lands on this line by pushing to it, so a gate that runs only on a pull request
+  # runs about never, which is the sentence the `on:` block above already carries about the branches
+  # it does not list. What it costs is measured: the first run took 24 minutes against the 26 the
+  # rest of the workflow spends, so a full run is about twice what it was, and the concurrency group
+  # above cancels the obsolete ones, which took 7 of the 24 runs on 2026-09-16.
+  #
+  # What that buys and what it risks are both small and both worth knowing. Every floor held on the
+  # first run with between 1.9 and 43 statements of margin, and `build.sbt` carries the table. The
+  # one to watch is `scan`: 185 statements at 99.0 is one statement of slack, so that module is where
+  # a red line will come from first, and it will be a real uncovered statement rather than a sample.
+  #
   # It does not duplicate the suite above. The corpus measurements run under `sbt test` and are
   # skipped when coverage is enabled, which `build.sbt` and `garden.xeno.symbolum.tactics.Corpus`
   # argue for at length: the two commands ask different questions, and the one that costs more than
