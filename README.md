@@ -700,6 +700,7 @@ Test coverage includes:
 | [docs/naming.md](docs/naming.md) | How a lemma is named, read off the names the library already holds rather than invented for them, and why the moment to write a convention down is before the size forces one |
 | [docs/reading-register.md](docs/reading-register.md) | Every axiom, every defined constant and every row of the precedence table, each with whether a person has read it, when, and against which source. Everything says NOT READ, which is the state and not an omission |
 | [docs/adr/](docs/adr/) | The decisions, each with the alternatives rejected and what it makes worse |
+| [docs/releases/](docs/releases/) | One note per release: what a consumer has to change before upgrading, what the release did not contain, and the figures measured at the tag. They are frozen on purpose, being the one kind of figure here that cannot go stale |
 | [SIMPLIFICATION_CONFIG_GUIDE.md](SIMPLIFICATION_CONFIG_GUIDE.md) | The algebra half's rule set and how to configure it |
 | [TESTING.md](TESTING.md) | Running the suite, measuring coverage, and where the tests live |
 | [CLAUDE.md](CLAUDE.md) | The short orientation for anyone, or anything, resuming work here |
