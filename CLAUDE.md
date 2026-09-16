@@ -398,7 +398,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 500 lemmas, 326 have two or more leading quantifiers and **298 of
+caller meant: of the library's 502 lemmas, 328 have two or more leading quantifiers and **300 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1009,10 +1009,24 @@ around to avoid needing one. There is no turning this one around, so `Classical.
 with it, along with `Order.LE_OF_NOT_LT` and `LT_OF_NOT_LE`, which cost nothing classical at all:
 on a total order the three cases are on the table before anything is negated.
 
-What is still not proved is that a **series** converges, which is the comparison test and nobody has
-assembled it. So `exp 1 > 2` and `sin x * sin x + cos x * cos x = 1` are **statable and unproved**,
-which is a different answer from the parse error they used to get and is the whole reason to define
-the constants before the analysis rather than after it.
+**That a series converges is `SUM_COMPARISON`, since 2026-09-16, and this paragraph said nobody had
+assembled it for as long as it existed.** Non-negative terms under a series whose partial sums are
+bounded: `SUM_SUC` makes the partial sums increase and `SUM_MONOTONE` carries the domination to
+them, so it is `MONOTONE_CONVERGES` spent on the one sequence a series always has, three published
+facts in one order and no new machinery. `CONVERGES_LE` and `CONVERGES_GE` are what say **where**
+such a limit is, and they landed with the test's first consumer because the test alone cannot: it
+hands back `?l. converges (Sum f) l`, and an existential is not a bound. Their hypothesis is a
+bound the terms respect from an index on rather than everywhere, and that is the whole of their
+usefulness: the lower bound worth having on an increasing sequence is one of its own terms, which
+is false below that term's index.
+
+So `exp 1 > 2` is **still** statable and unproved, and the reason is no longer the comparison test.
+What is missing is the dominating series: putting `1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!`,
+which no development holds, and then an order fact about a quotient, of which this chain has exactly
+one, `INV_POSITIVE`. `sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept
+the first sentence wrong for a day is a tool with no consumer, so there is one now: `LimitSpec`
+obtains the geometric series at one half and sandwiches its limit between zero and two, which is the
+first series here whose convergence is a theorem rather than a hypothesis.
 
 Three things in those derivations were harder than they look and each is recorded where it happens.
 Halving a tolerance is `Linarith`'s, because a numeral denominator is a rational coefficient to it

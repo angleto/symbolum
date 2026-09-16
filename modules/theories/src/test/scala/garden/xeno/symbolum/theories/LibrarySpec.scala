@@ -438,8 +438,18 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // both, and `NUM_FACTORISATION_UNIQUE` is the sharpest instance the second figure has, since it
     // binds two families and two lengths alternately: a positional specialisation that swapped
     // either pair would compare one factorisation with itself and prove nothing.
-    library.entries.size shouldBe 500
-    library.names.distinct.size shouldBe 497
+    //
+    // 502 with the two bounds on where a limit sits, `CONVERGES_LE` and `CONVERGES_GE`. **TWO**,
+    // derived before the run: two derived facts under two names nothing held and no constant, so
+    // the register does not move and the definitional figure stays at six.
+    //
+    // `CLAUDE.md`'s two figures move by **two and by two**, derived from the statements rather than
+    // read off the run. Each binds `s` at `num -> real`, `l` and `b` at `real` and `N` at `num`, so
+    // both have two or more leading quantifiers, and in both the two reals are alike AND adjacent:
+    // the narrow reading and the broad one agree here, as that paragraph in `CLAUDE.md` says they
+    // have so far.
+    library.entries.size shouldBe 502
+    library.names.distinct.size shouldBe 499
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

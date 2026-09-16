@@ -251,7 +251,22 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // stops at rather than counting. Counting it would propose dropping the membership from an
     // induction principle, which is not a weaker lemma somebody forgot but the statement that
     // every word satisfies the carrier.
-    proposals.size shouldBe 327
+    //
+    // 331 with the two bounds on a limit, `CONVERGES_LE` and `CONVERGES_GE`. **FOUR, derived
+    // before the run and then measured**: each is curried twice, the convergence and the eventual
+    // bound being two arrows in front, so two apiece. What follows the second arrow is a
+    // comparison rather than an arrow under a quantifier, so the `MONOTONE_LE` caveat above does
+    // not bite on either.
+    //
+    // 342, and **eleven of the fifteen since the last line above are not this session's**. The
+    // factorisation merge `627ceec` added five lemmas and did not move this figure, so the tree it
+    // landed on was red here; the eleven are derivable from their statements by the peeling rule
+    // these entries state and were derived after the failure rather than before it: one each for
+    // `NUM_PROD_CONG` and `NUM_FACTORISATION`, two each for `NUM_PRIME_DIVIDES_PROD` and
+    // `NUM_PRIME_PROD_ONE`, and five for `NUM_FACTORISATION_UNIQUE`, whose four guarded
+    // hypotheses and one equation are five arrows in front. The remaining four are the two limit
+    // bounds', two apiece.
+    proposals.size shouldBe 342
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -825,7 +840,20 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // this repository's procedures decide fragments of the reals and of the naturals, so a residue
     // whose atoms are `WORD_RFC` and `WORD_STEP` has no address to go to. The bucket is doing what
     // it is for, which is saying "nobody here can take this shape" rather than reporting it clean.
-    open shouldBe 236
+    // 240 with ALL FOUR of the two limit bounds'. **Measured and not derived**, for the reason
+    // this row has now given five times, and this time the measurement went the other way from the
+    // analysis entry three rows up: two of the three residues of the algebra of limits landed here
+    // and the third did not, so a fifty-fifty prediction for these four would have been a guess
+    // dressed as a derivation. What is derivable is that there are four of them, which the
+    // weakenings figure derives; where they land is a fact about the procedures. `unreadable` does
+    // not move at all, so nothing here was left with no address, and `decidedFalse` does not move
+    // either: the residues are false, and refuting one means computing `converges`, which the
+    // model has no interpretation of.
+    // 250, and ten of the fourteen belong to the factorisation merge `627ceec`, which left this
+    // figure at 236 while adding eleven weakenings: ten of those eleven land here and one does
+    // not, measured after the failure and not derived, for the reason this row has now given six
+    // times. The four that are this session's are the limit bounds', and they all land here.
+    open shouldBe 250
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1061,7 +1089,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // whatever lands over `word` next: the procedures here decide fragments of the reals and of
     // the naturals, so a residue whose atoms are `WORD_RFC` and `WORD_STEP` has nowhere to be
     // addressed. The one that reached `open` did so on its propositional skeleton alone.
-    unreadable shouldBe 82
+    // 83, and the one that arrived is the factorisation's rather than this session's: `627ceec`
+    // added eleven weakenings, ten of which land in `open` above, and the eleventh lands here. The
+    // two limit bounds add four and none of the four lands here, so this figure separates the two
+    // pieces of work stacked on this line better than either of the other two does.
+    unreadable shouldBe 83
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1287,7 +1319,20 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_CODE` and `NUM_PAIR`, neither of which is among the thirteen. A development about
     // syntax adds nothing to a list about arithmetic, which is the same rule the concatenation
     // entry above states from the other side.
-    aboutNumbers.size shouldBe 123
+    // 125 with two of the four the limit bounds bring, and which two is again this list counting
+    // CONSTANTS. `CONVERGES_LE` and `CONVERGES_GE` each have two residues: the one that drops the
+    // convergence keeps `!n. NUM_LE N n ==> ...` and so writes `NUM_LE`, and the one that drops the
+    // eventual bound keeps `converges s l ==> l <= b` and writes no constant of the naturals at
+    // all. Two of four, derived from the statements before the run, and the same split the
+    // `CONVERGES_EVENTUALLY` entry above describes: the residue that keeps the indexed hypothesis
+    // counts and its twin does not.
+    // 135, and ten of the twelve are the factorisation's rather than this session's: `627ceec`
+    // added eleven weakenings and left this figure at 123, and ten of the eleven write one of the
+    // thirteen constants, which is what a development whose every statement is about `NUM_PRIME`,
+    // `NUM_DIVIDES` and `NUM_PROD` looks like on a list that counts constants. Measured rather
+    // than derived, since the residues are not this session's to predict; the two that are, from
+    // the limit bounds, were derived above.
+    aboutNumbers.size shouldBe 135
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

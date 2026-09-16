@@ -180,7 +180,22 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // stops at rather than counting. Counting it would propose dropping the membership from an
     // induction principle, which is not a weaker lemma somebody forgot but the statement that
     // every word satisfies the carrier.
-    propose.weakenings.size shouldBe 327
+    //
+    // 331 with the two bounds on a limit, `CONVERGES_LE` and `CONVERGES_GE`. **FOUR, derived
+    // before the run and then measured**, by the peeling rule these entries state: each of the two
+    // is curried twice, the convergence and the eventual bound being two arrows in front, so two
+    // apiece. The `MONOTONE_LE` caveat does not bite on either, because what follows the second
+    // arrow is a comparison and not an arrow under a quantifier.
+    //
+    // 342, and **eleven of the fifteen since the last line above are not this session's**. The
+    // factorisation merge `627ceec` added five lemmas and did not move this figure, so the tree it
+    // landed on was red here; the eleven are derivable from their statements by the peeling rule
+    // these entries state and were derived after the failure rather than before it: one each for
+    // `NUM_PROD_CONG` and `NUM_FACTORISATION`, two each for `NUM_PRIME_DIVIDES_PROD` and
+    // `NUM_PRIME_PROD_ONE`, and five for `NUM_FACTORISATION_UNIQUE`, whose four guarded
+    // hypotheses and one equation are five arrows in front. The remaining four are the two limit
+    // bounds', two apiece.
+    propose.weakenings.size shouldBe 342
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

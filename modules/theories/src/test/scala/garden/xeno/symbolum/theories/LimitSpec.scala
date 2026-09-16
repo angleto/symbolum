@@ -80,6 +80,36 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     axioms(Limit.MonotoneConverges) shouldBe 15
   }
 
+  /**
+   * The two bound facts cost the same as each other and less than the facts that halve.
+   *
+   * Written as a relation rather than as two numbers, because what is being asserted is the claim
+   * the pair's docstring makes about itself: they are one argument run on the two sides of a bound,
+   * so they reach `abs` through its two different halves and nothing else about them differs. A
+   * number would pass that claim and a number beside it would pass its failure.
+   *
+   * The second assertion is the one with content. Every other convergence fact in this file that
+   * compares two quantities halves a tolerance, and halving is what reaches `MUL_INVERSE` and
+   * `ONE_NOT_ZERO`; these two do not halve, because a term inside the whole gap of the limit is
+   * already strictly past the bound, and the absence of those two axioms is that argument measured
+   * rather than repeated.
+   */
+  it should "cost the same on both sides of the bound, and not the halving" in {
+    def axioms(name: String): Set[Term] = Derivation.axiomsOf(force(limit.fact(name)))
+
+    axioms(Limit.BelowBound) shouldBe axioms(Limit.AboveBound)
+
+    val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
+    val nonTrivial = force(chain.reals.axiom("ONE_NOT_ZERO")).conclusion
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+
+    axioms(Limit.BelowBound) should not contain inverse
+    axioms(Limit.BelowBound) should not contain nonTrivial
+
+    // And no supremum is taken here: what these do with a convergence is read it, not obtain it.
+    axioms(Limit.BelowBound) should not contain completeness
+  }
+
   it should "spend the choice axiom on the value and not on the epsilon principle" in {
     val choice = force(chain.classical.axiom(Classical.Choice)).conclusion
 
@@ -150,6 +180,140 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     val obtained = force(rules.mp(opened, everywhere).flatMap(rules.mp(_, bounded)))
     obtained.conclusion shouldBe proposition("?l:real. converges (\\n:num. c:real) l")
     obtained.hypotheses shouldBe empty
+  }
+
+  /**
+   * The comparison test on a series a reader can name, and the two bounds on where its limit is.
+   *
+   * Three facts are under test at once and the composition is the point. `SUM_COMPARISON` obtains a
+   * limit for the geometric series at one half: its terms are non-negative because a power of a
+   * positive base is positive, it dominates itself, and its partial sums are bounded, which is
+   * `SUM_GEOMETRIC` cleared of its denominator and one linear step. Then `CONVERGES_LE` and
+   * `CONVERGES_GE` put that limit between zero and two, which is the first time anything in this
+   * repository says **where** a limit it obtained sits.
+   *
+   * The bound two is not an accident of the choice of a half: `SUM_GEOMETRIC` at `q` gives
+   * `(q - 1) * S n = q^n - 1`, so at `q = 1/2` the partial sum is `2 - 2 * (1/2)^n` and the power
+   * is positive, which is a linear consequence over the two atoms and inside `Linarith`'s fragment.
+   * A symbolic `q` would want `S n <= inv (1 - q)` and that is a different lemma: nothing here
+   * relates an inverse to an order, `Order.INV_POSITIVE` being the only fact about `inv` in this
+   * chain, so the general geometric series is **not** reachable today and this instance is.
+   *
+   * **The lower bound asserted is zero rather than two, and that is honest rather than weak.** The
+   * limit is two, and saying so wants `(1/2)^n` to reach zero, which is the Archimedean property
+   * spent on a power and is not written. What is written is that every partial sum is non-negative,
+   * so zero is a lower bound, and the pair of assertions below is a sandwich that a later
+   * development narrows rather than a claim about the value.
+   */
+  "The comparison test" should "settle a series a reader can name, between two bounds" in {
+    val rules = limit.logic.rules
+    val linarith = force(Linarith.construct(chain.order))
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+    val l = Term.variable("l", real)
+
+    val half = force(limit.term("(1:real) / 2", real))
+    val terms = force(limit.term("\\i:num. Power ((1:real) / 2) i", Type.fun(numbers, real)))
+    val partial = force(limit.term("Sum (\\i:num. Power ((1:real) / 2) i)", Type.fun(numbers, real)))
+
+    /** `|- !n. 0 < Power (1/2) n`, which is where the non-negativity comes from. */
+    val positivePower = force(
+      rules
+        .spec(half, force(chain.series.fact(Series.PowerPositive)))
+        .flatMap(rules.mp(_, force(linarith.prove("0 < (1:real) / 2")))))
+
+    val powerAt = force(limit.term("Power ((1:real) / 2) (n:num)", real))
+    val sumAt = force(limit.term("Sum (\\i:num. Power ((1:real) / 2) i) (n:num)", real))
+
+    val nonNegative = force(
+      rules
+        .specAll(force(chain.order.fact(Order.LeOfLt)), List(force(limit.term("0:real", real)), powerAt))
+        .flatMap(rules.mp(_, force(rules.spec(n, positivePower))))
+        .flatMap(rules.gen(n, _)))
+
+    val dominates = force(
+      rules
+        .specAll(force(chain.order.fact(Order.LeOfEq)), List(powerAt, powerAt))
+        .flatMap(rules.mp(_, Kernel.refl(powerAt)))
+        .flatMap(rules.gen(n, _)))
+
+    // The partial sums are bounded by two, from the geometric sum and the positivity of the power.
+    val geometric = force(
+      rules.specAll(force(chain.series.fact(Series.Geometric)), List(half, n)))
+    val underTwo = force(
+      linarith
+        .prove("!p:real. !s:real. ((1:real) / 2 - 1) * s = p - 1 ==> 0 < p ==> s <= 2")
+        .flatMap(rules.specAll(_, List(powerAt, sumAt)))
+        .flatMap(rules.mp(_, geometric))
+        .flatMap(rules.mp(_, force(rules.spec(n, positivePower)))))
+    val everywhereUnderTwo = force(rules.gen(n, underTwo))
+
+    val boundedStatement =
+      proposition("?b:real. !n:num. Sum (\\i:num. Power ((1:real) / 2) i) n <= b")
+    val boundedPredicate = force(
+      limit.logic.destExistsPredicate(boundedStatement).toRight(MissingDefinition("an existential")))
+    val bounded = force(
+      rules.existsIntro(boundedPredicate, force(limit.term("2:real", real)), everywhereUnderTwo))
+
+    // The comparison test, at the series that dominates itself.
+    val specialised = force(rules.specAll(force(limit.comparison), List(terms, terms)))
+    val opened = force(
+      Conv
+        .betaNormalise(specialised.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised))))
+    val converging = force(
+      rules
+        .mp(opened, nonNegative)
+        .flatMap(rules.mp(_, dominates))
+        .flatMap(rules.mp(_, bounded)))
+
+    converging.conclusion shouldBe
+      proposition("?l:real. converges (Sum (\\i:num. Power ((1:real) / 2) i)) l")
+    converging.hypotheses shouldBe empty
+
+    // And the limit it hands back sits between zero and two, which is the pair under test.
+    val assumed = force(
+      LogicError.lift(
+        Kernel.assume(
+          proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))))
+    val guard = proposition("NUM_LE 0 (n:num)")
+
+    val eventuallyUnderTwo = force(
+      rules.disch(guard, underTwo).flatMap(rules.gen(n, _)))
+    val below = force(
+      rules
+        .specAll(
+          force(limit.belowBound),
+          List(partial, l, force(limit.term("2:real", real)), force(limit.term("0:num", numbers))))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(rules.mp(_, eventuallyUnderTwo)))
+
+    val nonNegativeSums = force(
+      rules
+        .spec(terms, force(chain.series.fact(Series.NonNegative)))
+        .flatMap(theorem =>
+          Conv
+            .betaNormalise(theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem))))
+        .flatMap(rules.mp(_, nonNegative)))
+    val eventuallyOverZero = force(
+      rules
+        .spec(n, nonNegativeSums)
+        .flatMap(rules.disch(guard, _))
+        .flatMap(rules.gen(n, _)))
+    val above = force(
+      rules
+        .specAll(
+          force(limit.aboveBound),
+          List(partial, l, force(limit.term("0:real", real)), force(limit.term("0:num", numbers))))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(rules.mp(_, eventuallyOverZero)))
+
+    below.conclusion shouldBe proposition("l:real <= 2")
+    above.conclusion shouldBe proposition("0 <= l:real")
+    below.hypotheses shouldBe
+      List(proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))
   }
 
   "The definition" should "unfold to the epsilon-N statement a reader checks" in {

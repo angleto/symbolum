@@ -2133,10 +2133,21 @@ cancellation.
    analysis: `Classical.NOT_FORALL`, since "otherwise the supremum would not be least" is a negated
    universal turned into a witness.
 
-   **What is left is convergence of a series**, and the order is not a matter of taste. The
-   comparison test first, which `SUM_MONOTONE` and `SUM_GEOMETRIC` are most of: a series whose
-   partial sums are bounded is a monotone bounded sequence, so the theorem above finishes it, and
-   `exp 1 > 2` becomes a theorem. Then the addition theorem through the Cauchy product, of which
+   **The comparison test landed on 2026-09-16 and it did not buy what this paragraph promised.**
+   `SUM_COMPARISON` is the sentence that was written here: a series with non-negative terms under
+   one whose partial sums are bounded is a monotone bounded sequence, so the theorem above finishes
+   it. What came with its first consumer is `CONVERGES_LE` and `CONVERGES_GE`, a bound respected
+   from an index on being a bound the limit respects, because the test hands back an existential
+   and a caller wanting to know where the limit sits could not say so.
+
+   `exp 1 > 2` did **not** become a theorem with it, and the difference between the prediction and
+   the outcome is the piece worth carrying: what is missing is not the test but a dominating series
+   for the exponential. `1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!`, which no development
+   holds, and an order fact about a quotient, of which this chain holds exactly one,
+   `Order.INV_POSITIVE`. The geometric series at one half needs neither, and `LimitSpec` obtains it
+   with its limit between zero and two.
+
+   **What is left after that** is the addition theorem through the Cauchy product, of which
    `SUM_SWAP` is the half that exists, and the Pythagorean identity with it; then continuity and
    the intermediate value theorem, which is what every fact about `ln` waits on and why that
    constant has none today.

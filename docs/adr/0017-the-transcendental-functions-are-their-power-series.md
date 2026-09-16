@@ -64,6 +64,17 @@ record, on 2026-09-15, as `Limit.MONOTONE_CONVERGES`; the comparison test, which
 half that exists; and the intermediate value theorem, which wants continuity and is what every
 fact about `ln` waits on.
 
+**Corrected in place, 2026-09-16: the first two of those four are done and the list above was the
+wrong list.** `Limit.SUM_COMPARISON` is the comparison test and `CONVERGES_LE` and `CONVERGES_GE`
+came with its first consumer, since a test that hands back `?l. converges (Sum f) l` says nothing
+about where that limit is. Not one of the four statements above moved. What this record predicted,
+by putting them in that order, is that the comparison test is what `exp 1 > 2` waits on; what it
+waits on is a **dominating series for the exponential**, which wants `2^i <= 2 * i!`, held by no
+development here, and an order fact about a quotient, of which this chain holds one,
+`Order.INV_POSITIVE`. The geometric series at one half wants neither and is obtained in `LimitSpec`
+with its limit between zero and two, which is the first series in this repository whose convergence
+is a theorem.
+
 **The cost is a reader who sees `exp` in the signature and assumes the analysis is behind it.**
 That is paid in three places and nowhere else: the row in `README.md`, the docstring of
 `Transcendental`, and this record.

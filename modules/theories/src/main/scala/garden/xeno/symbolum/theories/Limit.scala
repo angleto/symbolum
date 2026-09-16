@@ -29,16 +29,22 @@ import garden.xeno.symbolum.logic.*
  * a development over this must believe is what it was before; `LimitSpec` asserts that as an
  * equality rather than as a ceiling, the way `CodingSpec` does.
  *
- * **Nothing here proves that a sequence converges.** Every fact below takes convergence as a
- * hypothesis and moves it, with one exception: [[Constant]], where the sequence does not move at
- * all. This is the vocabulary and the bookkeeping rather than an instrument for establishing the
- * thing. What establishes it in general is the monotone convergence theorem, which is the next
- * piece of this development and is where `COMPLETENESS` is spent a second time; until it lands, a
- * caller that wants a limit hands one over or has a sequence that is eventually constant.
+ * **Three facts here obtain a convergence and the rest move one.** [[MonotoneConverges]] is the
+ * general instrument, an increasing sequence under a bound, and it is where `COMPLETENESS` is spent
+ * a second time; [[Comparison]] is that theorem spent on the partial sums of a series; [[Constant]]
+ * settles the sequence that does not move at all. Everything else takes a convergence as a
+ * hypothesis and carries it somewhere, which is the vocabulary and the bookkeeping.
+ *
+ * This paragraph said **nothing** here proved a convergence, and it said so for the day between
+ * `MONOTONE_CONVERGES` landing and this sentence being written, with the next line naming that
+ * theorem as what was still to come. A file's own summary of what it cannot do is the sentence
+ * least likely to be reread when the file changes, and no test fails for it.
  *
  * That pair, [[Constant]] with [[Eventually]], is more than it looks: it settles every sequence
  * that stops moving, which is what a power series at zero is, and it is the whole of what
- * [[Transcendental]] can reach today.
+ * [[Transcendental]] can reach today. What [[Comparison]] adds is not reached from
+ * [[Transcendental]] at all: the exponential's series wants a dominating one, and building it wants
+ * `2^i <= 2 * i!` and an order fact about a quotient, neither of which exists.
  *
  * == The epsilon principle is here rather than in `Order`, and that is an argument worth making ==
  *
@@ -98,6 +104,12 @@ final class Limit private (
    * ==> ?l. converges (Sum f) l`
    */
   def comparison: Either[LogicError, Kernel.Thm] = fact(Limit.Comparison)
+
+  /** `|- !s l b N. converges s l ==> (!n. NUM_LE N n ==> s n <= b) ==> l <= b` */
+  def belowBound: Either[LogicError, Kernel.Thm] = fact(Limit.BelowBound)
+
+  /** `|- !s l b N. converges s l ==> (!n. NUM_LE N n ==> b <= s n) ==> b <= l` */
+  def aboveBound: Either[LogicError, Kernel.Thm] = fact(Limit.AboveBound)
 
   /** `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n + t n) (a + b)` */
   def added: Either[LogicError, Kernel.Thm] = fact(Limit.Added)
@@ -179,10 +191,66 @@ object Limit {
    *
    * The first thing here that obtains the convergence of a **series** rather than of a sequence,
    * and it is [[MonotoneConverges]] spent on the one sequence a series always has. `docs/adr/0017`
-   * and `docs/proving.md` both put it first among what the analysis still owes, and what it buys
-   * immediately is that `exp 1 > 2` stops being statable-and-unproved.
+   * and `docs/proving.md` both put it first among what the analysis owed.
+   *
+   * **It did not buy `exp 1 > 2`, which this docstring said it would buy immediately**, and both
+   * records are corrected in place rather than left to be believed. What that claim wants besides
+   * this theorem is a dominating series for the exponential: `1 / i!` under `2 * (1/2)^i` asks for
+   * `2^i <= 2 * i!`, which no development here holds, and then an order fact about a quotient, of
+   * which this chain holds exactly one, `Order.INV_POSITIVE`. The geometric series at one half asks
+   * for neither, and `LimitSpec` obtains it, which is the consumer this theorem went a day without.
    */
   val Comparison: String = "SUM_COMPARISON"
+
+  /**
+   * `|- !s l b N. converges s l ==> (!n. NUM_LE N n ==> s n <= b) ==> l <= b`
+   *
+   * A bound the terms respect from some index on is a bound the limit respects, and until this
+   * landed nothing here could say anything at all about **where** a limit is. [[MonotoneConverges]]
+   * and [[Comparison]] hand back `?l. converges s l` and stop; a caller who wanted to know that the
+   * limit it had just obtained sits under two, or over one, had the existential and no way to say
+   * it. So this pair is not an ornament on the convergence theorems, it is what makes their output
+   * usable in an inequality.
+   *
+   * == Why the hypothesis is eventual and not everywhere ==
+   *
+   * `!n. s n <= b` would be the shorter statement and it is the weaker lemma, by exactly the
+   * distance that matters to the consumer this was written for. An increasing sequence is under no
+   * bound its own terms respect at every index, and the useful lower bound on an increasing
+   * sequence is one of its own terms: `!n. NUM_LE m n ==> s m <= s n` is [[MonotoneBelow]] read at
+   * a fixed `m`, and it is **false** at `n` below `m`. With the everywhere form, that argument
+   * cannot be made at all; with this one it is [[AboveBound]] at `N := m`.
+   *
+   * The index costs the derivation one step and not a case analysis: the tolerance's own witness
+   * and `N` are put together by `Peano.NUM_LE_ADD`, which is the same "above both" [[Unique]] uses
+   * and for the same reason, `num` having no maximum.
+   *
+   * == It is classical, and the file's other bound facts are not ==
+   *
+   * The argument is a contradiction: if the limit passed the bound the distance between them would
+   * be a tolerance no term could be inside, and one is. `Order.LT_OF_NOT_LE` turns the negated
+   * conclusion into the strict inequality the tolerance is built from, and `Classical.NOT_NOT`
+   * closes it. [[BelowEveryPositive]] is the contrast worth reading beside this one: it reaches the
+   * same kind of conclusion through `Order.LE_CASES` and spends nothing classical, and there is no
+   * such route here, because what has to be produced is a **number**, the gap, and a disjunction
+   * over the three cases of the order gives the gap in one case only.
+   */
+  val BelowBound: String = "CONVERGES_LE"
+
+  /**
+   * `|- !s l b N. converges s l ==> (!n. NUM_LE N n ==> b <= s n) ==> b <= l`
+   *
+   * [[BelowBound]] at the other side, and it is a second derivation rather than the first one with
+   * a sign moved: what the two spend of `abs` are the two different halves of it,
+   * `Magnitude.ABS_ABOVE` here and `Magnitude.ABS_ABOVE_NEG` there, because the term that has to be
+   * shown to break the bound sits on the other side of the limit.
+   *
+   * Both are published rather than one, and the reason is the one `Series.POWER_NEG_DOUBLE` states
+   * for the half-law it does **not** have: a reader who finds one side of an order fact and not the
+   * other cannot tell whether the missing side is false or merely unwritten. Here both are true,
+   * both are consumed by the same kind of argument, and the second costs forty lines.
+   */
+  val AboveBound: String = "CONVERGES_GE"
 
   /**
    * `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n + t n) (a + b)`
@@ -242,6 +310,12 @@ object Limit {
     Comparison ->
       ("!f:num -> real. !g:num -> real. (!n:num. 0 <= f n) ==> (!n:num. f n <= g n) ==> " +
         "(?b:real. !n:num. Sum g n <= b) ==> ?l:real. converges (Sum f) l"),
+    BelowBound ->
+      ("!s:num -> real. !l:real. !b:real. !N:num. converges s l ==> " +
+        "(!n:num. NUM_LE N n ==> s n <= b) ==> l <= b"),
+    AboveBound ->
+      ("!s:num -> real. !l:real. !b:real. !N:num. converges s l ==> " +
+        "(!n:num. NUM_LE N n ==> b <= s n) ==> b <= l"),
     Added ->
       ("!s:num -> real. !t:num -> real. !a:real. !b:real. " +
         "converges s a ==> converges t b ==> converges (\\n:num. s n + t n) (a + b)"),
@@ -293,6 +367,7 @@ object Limit {
       notForall <- classical.fact(Classical.NotForall)
       doubleNegation <- classical.fact(Classical.DoubleNegation)
       weakFromNegated <- magnitude.order.fact(Order.LeOfNotLt)
+      strictFromNegated <- magnitude.order.fact(Order.LtOfNotLe)
       addAtZero <- peano.fact(Peano.AddAtZero)
       addAtSuccessor <- peano.fact(Peano.AddAtSuccessor)
       orderDefinition <- peano.definition(Peano.NonStrictOrder)
@@ -335,6 +410,13 @@ object Limit {
       comparisonTest <- comparison(
         logic, linarith, theory, notation, sumAtSuccessor, sumMonotone, monotoneConverges)
 
+      below <- boundsTheLimit(
+        logic, linarith, theory, notation, convergesDefinition, bounds, indices,
+        strictFromNegated, doubleNegation, irreflexive)
+      above <- limitBoundsBelow(
+        logic, linarith, theory, notation, convergesDefinition, bounds, indices,
+        strictFromNegated, doubleNegation, irreflexive)
+
       addedLimits <- convergesAdd(
         logic, linarith, theory, notation, convergesDefinition, bounds, indices)
       negatedLimit <- convergesNegated(
@@ -354,6 +436,8 @@ object Limit {
         MonotoneBelow -> monotoneBelow,
         MonotoneConverges -> monotoneConverges,
         Comparison -> comparisonTest,
+        BelowBound -> below,
+        AboveBound -> above,
         Added -> addedLimits,
         Negated -> negatedLimit
       )
@@ -479,6 +563,209 @@ object Limit {
       dischargedDominated <- rules.disch(dominated, dischargedBounded)
       dischargedNonNegative <- rules.disch(nonNegative, dischargedDominated)
       result <- rules.genAll(dischargedNonNegative, List(f, g))
+    } yield result
+  }
+
+  /**
+   * `|- !s l b N. converges s l ==> (!n. NUM_LE N n ==> s n <= b) ==> l <= b`
+   *
+   * Suppose the limit passed the bound. Then the distance between them is a positive tolerance, so
+   * some index answers it, and from that index on every term is within the gap of the limit and
+   * therefore **above** the bound, which the hypothesis forbids from `N` on. The two indices are put
+   * together the way [[Unique]] puts its two together, by `Peano.NUM_LE_ADD`, and the contradiction
+   * is a single linear step over four atoms.
+   *
+   * == The one step that is not obvious ==
+   *
+   * The tolerance is `l - b` itself rather than a fraction of it. Halving buys nothing here: what
+   * has to be contradicted is a **non-strict** bound, and a term within `l - b` of `l` is already
+   * strictly above `b`. Every other epsilon argument in this file halves, so the absence is worth
+   * the sentence: the reader who expects `e / 2` is expecting the shape of [[Unique]], where two
+   * distances have to fit inside one tolerance and here there is one.
+   */
+  private def boundsTheLimit(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    bounds: Bounds,
+    indices: Indices,
+    strictFromNegated: Kernel.Thm,
+    doubleNegation: Kernel.Thm,
+    irreflexive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val l = Term.variable("l", values)
+    val b = Term.variable("b", values)
+    val from = Term.variable("N", numbers)
+    val m = Term.variable("m", numbers)
+
+    for {
+      converging <- Parser.proposition(theory, notation, "converges (s:num -> real) (l:real)")
+      assumedConverging <- LogicError.lift(Kernel.assume(converging))
+      unfolded <- Conv.unfold(convergesDefinition, List(s, l)).flatMap(normaliseRight)
+      body <- LogicError.lift(Kernel.eqMp(unfolded, assumedConverging))
+
+      eventual <- Parser.proposition(
+        theory, notation, "!n:num. NUM_LE N:num n ==> (s:num -> real) n <= b:real")
+      assumedEventual <- LogicError.lift(Kernel.assume(eventual))
+
+      target <- Parser.proposition(theory, notation, "l:real <= b:real")
+      refused <- Parser.proposition(theory, notation, "~(l:real <= b:real)")
+      assumedRefused <- LogicError.lift(Kernel.assume(refused))
+      strict <- rules.specAll(strictFromNegated, List(l, b)).flatMap(rules.mp(_, assumedRefused))
+
+      tolerance <- Parser.term(theory, notation, "l:real - b:real", values)
+      positive <- linarith
+        .prove("!x:real. !y:real. y < x ==> 0 < x - y")
+        .flatMap(rules.specAll(_, List(l, b)))
+        .flatMap(rules.mp(_, strict))
+      near <- rules.spec(tolerance, body).flatMap(rules.mp(_, positive))
+
+      inside <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE m:num n ==> abs ((s:num -> real) n - (l:real)) < (l:real) - (b:real)"
+      )
+      assumedInside <- LogicError.lift(Kernel.assume(inside))
+
+      index <- Parser.term(theory, notation, "NUM_ADD N:num m:num", numbers)
+      pastFrom <- rules.specAll(indices.atMostSum, List(from, m))
+      pastWitness <- for {
+        other <- rules.specAll(indices.atMostSum, List(m, from))
+        swap <- rules.specAll(indices.commutative, List(m, from))
+        carried <- rewriteWith(swap, other)
+      } yield carried
+
+      close <- rules.spec(index, assumedInside).flatMap(rules.mp(_, pastWitness))
+      under <- rules.spec(index, assumedEventual).flatMap(rules.mp(_, pastFrom))
+
+      atIndex <- Parser.term(theory, notation, "(s:num -> real) (NUM_ADD N:num m:num)", values)
+      gap <- Parser.term(
+        theory, notation, "(s:num -> real) (NUM_ADD N:num m:num) - (l:real)", values)
+      distance <- Parser.term(
+        theory, notation, "abs ((s:num -> real) (NUM_ADD N:num m:num) - (l:real))", values)
+      aboveNegation <- rules.spec(gap, bounds.aboveNegation)
+
+      // Infeasible rather than merely false: the three hypotheses put the term strictly above the
+      // bound and at most the bound, so `l < l` is a linear consequence and irreflexivity is what
+      // turns it into the refutation. The conclusion is about `l` and not about `b` so that the
+      // clash is with the axiom this file already reads.
+      absurd <- linarith
+        .prove(
+          "!x:real. !p:real. !q:real. !d:real. " +
+            "-(x - p) <= d ==> d < p - q ==> x <= q ==> p < p")
+        .flatMap(rules.specAll(_, List(atIndex, l, b, distance)))
+        .flatMap(rules.mp(_, aboveNegation))
+        .flatMap(rules.mp(_, close))
+        .flatMap(rules.mp(_, under))
+      clash <- rules.spec(l, irreflexive).flatMap(rules.notElim(_, absurd))
+      eliminated <- rules.existsElim(near, m, clash)
+
+      doubled <- rules.notIntro(refused, eliminated)
+      settled <- rules.spec(target, doubleNegation).flatMap(rules.mp(_, doubled))
+
+      result <- rules
+        .disch(eventual, settled)
+        .flatMap(rules.disch(converging, _))
+        .flatMap(rules.genAll(_, List(s, l, b, from)))
+    } yield result
+  }
+
+  /**
+   * `|- !s l b N. converges s l ==> (!n. NUM_LE N n ==> b <= s n) ==> b <= l`
+   *
+   * [[boundsTheLimit]] with the limit on the other side of the bound, and the derivation differs in
+   * three places rather than in a sign: the tolerance is `b - l`, the half of `abs` that is spent is
+   * `ABS_ABOVE` instead of `ABS_ABOVE_NEG`, and the linear step contradicts a term sitting strictly
+   * **below** a bound it is supposed to be above.
+   */
+  private def limitBoundsBelow(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    bounds: Bounds,
+    indices: Indices,
+    strictFromNegated: Kernel.Thm,
+    doubleNegation: Kernel.Thm,
+    irreflexive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val l = Term.variable("l", values)
+    val b = Term.variable("b", values)
+    val from = Term.variable("N", numbers)
+    val m = Term.variable("m", numbers)
+
+    for {
+      converging <- Parser.proposition(theory, notation, "converges (s:num -> real) (l:real)")
+      assumedConverging <- LogicError.lift(Kernel.assume(converging))
+      unfolded <- Conv.unfold(convergesDefinition, List(s, l)).flatMap(normaliseRight)
+      body <- LogicError.lift(Kernel.eqMp(unfolded, assumedConverging))
+
+      eventual <- Parser.proposition(
+        theory, notation, "!n:num. NUM_LE N:num n ==> b:real <= (s:num -> real) n")
+      assumedEventual <- LogicError.lift(Kernel.assume(eventual))
+
+      target <- Parser.proposition(theory, notation, "b:real <= l:real")
+      refused <- Parser.proposition(theory, notation, "~(b:real <= l:real)")
+      assumedRefused <- LogicError.lift(Kernel.assume(refused))
+      strict <- rules.specAll(strictFromNegated, List(b, l)).flatMap(rules.mp(_, assumedRefused))
+
+      tolerance <- Parser.term(theory, notation, "b:real - l:real", values)
+      positive <- linarith
+        .prove("!x:real. !y:real. y < x ==> 0 < x - y")
+        .flatMap(rules.specAll(_, List(b, l)))
+        .flatMap(rules.mp(_, strict))
+      near <- rules.spec(tolerance, body).flatMap(rules.mp(_, positive))
+
+      inside <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE m:num n ==> abs ((s:num -> real) n - (l:real)) < (b:real) - (l:real)"
+      )
+      assumedInside <- LogicError.lift(Kernel.assume(inside))
+
+      index <- Parser.term(theory, notation, "NUM_ADD N:num m:num", numbers)
+      pastFrom <- rules.specAll(indices.atMostSum, List(from, m))
+      pastWitness <- for {
+        other <- rules.specAll(indices.atMostSum, List(m, from))
+        swap <- rules.specAll(indices.commutative, List(m, from))
+        carried <- rewriteWith(swap, other)
+      } yield carried
+
+      close <- rules.spec(index, assumedInside).flatMap(rules.mp(_, pastWitness))
+      over <- rules.spec(index, assumedEventual).flatMap(rules.mp(_, pastFrom))
+
+      atIndex <- Parser.term(theory, notation, "(s:num -> real) (NUM_ADD N:num m:num)", values)
+      gap <- Parser.term(
+        theory, notation, "(s:num -> real) (NUM_ADD N:num m:num) - (l:real)", values)
+      distance <- Parser.term(
+        theory, notation, "abs ((s:num -> real) (NUM_ADD N:num m:num) - (l:real))", values)
+      above <- rules.spec(gap, bounds.above)
+
+      absurd <- linarith
+        .prove(
+          "!x:real. !p:real. !q:real. !d:real. " +
+            "x - p <= d ==> d < q - p ==> q <= x ==> p < p")
+        .flatMap(rules.specAll(_, List(atIndex, l, b, distance)))
+        .flatMap(rules.mp(_, above))
+        .flatMap(rules.mp(_, close))
+        .flatMap(rules.mp(_, over))
+      clash <- rules.spec(l, irreflexive).flatMap(rules.notElim(_, absurd))
+      eliminated <- rules.existsElim(near, m, clash)
+
+      doubled <- rules.notIntro(refused, eliminated)
+      settled <- rules.spec(target, doubleNegation).flatMap(rules.mp(_, doubled))
+
+      result <- rules
+        .disch(eventual, settled)
+        .flatMap(rules.disch(converging, _))
+        .flatMap(rules.genAll(_, List(s, l, b, from)))
     } yield result
   }
 
