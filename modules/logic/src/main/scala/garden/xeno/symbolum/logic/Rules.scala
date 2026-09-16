@@ -76,6 +76,39 @@ final class Rules(val logic: Logic) {
    * `G - {q}, D - {p}`, and modus ponens on that equation puts `p` back. Every rule below uses it
    * to move a caller's theorem into an instantiated schema, which is why the hypotheses of a
    * result are those of the theorems that went in.
+   *
+   * == Who calls it, and where its permissiveness can carry weight ==
+   *
+   * It is deliberately permissive: aimed at a hypothesis the target does not carry, it does not
+   * fail, it leaves that hypothesis standing and adds the theorem's own. That is not a defect
+   * here; a rule that exposes it **without establishing the shape of what it received** is one,
+   * and [[notElim]] and [[mp]] were each tightened after one did.
+   *
+   * Censused on 2026-09-16 over every `.scala` file git tracks, by the enclosing `def` of each
+   * call: **twelve sites over seven rules in this file** — [[conjIntro]] twice, `project` once
+   * behind both conjunction eliminations, [[mp]] twice, [[notElim]] twice, `inject` once behind
+   * both disjunction introductions, [[disjElim]] three times and [[existsElim]] once — and four
+   * more outside it, three in `Minimal` and one in `Propositional`. [[falsityElim]] is **not** a
+   * caller: it checks its argument and goes by `eqMp` and `spec`, which is worth saying because
+   * it has been listed beside the two that were tightened.
+   *
+   * **Three of the sixteen can be handed two theorems that disagree**, and those are the ones
+   * where the permissiveness could hide a caller's error: [[mp]] at `proofOfP`, [[notElim]] at
+   * `positive`, and [[existsElim]] at its case. All three establish the shape first, and each
+   * differently — an equality, a reconciliation up to beta that converts, and a check that the
+   * hypothesis to be discharged is present at all. At the other thirteen the instance is built
+   * from the conclusion of the very theorem being discharged, so a mismatch is not expressible.
+   *
+   * **What a whole suite run says, which the reading above did not.** Instrumented to record
+   * rather than refuse, a full `sbt test` at `156cf68` recorded 12306 loose cuts over 2232 green
+   * tests, and they fall at five sites: [[conjIntro]]'s second, [[disjElim]]'s third, and three in
+   * `Minimal`. **Not one at the three that could hide an error.** Every loose cut measured is a
+   * later cut in a chain whose target an earlier cut in the same chain already removed, which
+   * happens exactly when two theorems in the chain carry the same term: `conjIntro(t, t)` where
+   * `t` proves its own conclusion without assuming it, and `disjElim` over `p \/ p`. Both were put
+   * to a probe at those inputs and at controls beside them. So the permissiveness is load-bearing
+   * in this file only in the sense that the cut is idempotent, and tightening it would refuse
+   * correct callers rather than catch incorrect ones.
    */
   def proveHyp(theorem: Kernel.Thm, target: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     lift(Kernel.eqMp(Kernel.deductAntisym(theorem, target), theorem))

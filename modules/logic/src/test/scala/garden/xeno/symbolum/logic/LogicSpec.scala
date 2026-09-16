@@ -165,6 +165,54 @@ class LogicSpec extends AnyFlatSpec with Matchers {
       Left(classOf[NotOfForm])
   }
 
+  it should "reconcile a beta difference that is not at the root, which nothing else reaches" in {
+    // `mp` reconciles an antecedent that differs from the implication's by beta, and it does it in
+    // two ways: a redex at the root, which is three kernel steps, and anything else, which
+    // normalises both sides. The first is what the repository's two real callers have, both of them
+    // the choice axiom at an unreduced `P w`. **The second had no caller at all**: measured on
+    // 2026-09-16 over every test source, nothing named `provingExactly` and nothing built a shape
+    // that reaches it, so the branch was covered by construction and by nothing else.
+    //
+    // This is that shape. The antecedent wanted is a conjunction whose LEFT side is a redex, so the
+    // whole term is an application of the conjunction and `Term.betaReduce` at the root answers
+    // nothing; what settles it is normalising both sides. A caller meeting this in the wild is one
+    // whose lemma carried a lambda inside a compound, which is the ordinary way a redex survives a
+    // specialisation that did not reduce.
+    val identity = lam(Term.variable("x", Type.Bool), Term.variable("x", Type.Bool))
+    val unreduced = force(logic.mkConj(force(Term.app(identity, p)), q))
+    val reduced = force(logic.mkConj(p, q))
+
+    // The premise of the test rather than its subject: if these two were equal, or if the root
+    // reduction settled it, the branch under test would not be entered and the assertions below
+    // would pass against the wrong code path.
+    unreduced should not be reduced
+    Term.betaReduce(unreduced) should not be Some(reduced)
+
+    val implication = force(rules.disch(unreduced, force(Kernel.assume(q))))
+    val detached = force(rules.mp(implication, force(Kernel.assume(reduced))))
+
+    detached.conclusion shouldBe q
+
+    // Converted and not merely accepted, which is the distinction the rule's own documentation
+    // draws: a check that agreed the terms match would leave the cut unable to discharge one form
+    // against the other, and the implication's OWN antecedent would travel on in the hypotheses.
+    // That is the discriminating assertion and it is this one.
+    detached.hypotheses should not contain unreduced
+
+    // And the other form must be there, which this asserted the opposite of at first. The
+    // antecedent handed over is `p /\ q |- p /\ q`, so its own assumption travels with it exactly
+    // as `G, D |- q` says it should; a rule that discharged that too would be discharging something
+    // nobody proved. The failure read as the conversion not happening and was the assertion being
+    // wrong about the contract.
+    detached.hypotheses should contain(reduced)
+
+    // And it still refuses where normalisation does not reconcile, so what is being exercised is
+    // the branch rather than a rule that stopped looking.
+    val different = force(logic.mkConj(q, p))
+    rules.mp(implication, force(Kernel.assume(different))).left.map(_.getClass) shouldBe
+      Left(classOf[NotOfForm])
+  }
+
   "Negation" should "follow from a contradiction" in {
     val theorem = force(rules.notIntro(logic.falsity, force(Kernel.assume(logic.falsity))))
 
