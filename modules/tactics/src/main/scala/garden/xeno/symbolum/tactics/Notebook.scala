@@ -275,9 +275,20 @@ object Notebook {
       .replace(">", "&gt;")
       .replace("\"", "&quot;")
 
+  /**
+   * One example per command, and the placeholder above it is generated from the same list.
+   *
+   * Written out rather than generated because an example is not a keyword: `derive` takes an
+   * inference and two fact names, and a list built from `Keywords` would print the word alone,
+   * which is the part a reader already has. What it costs is that this line and the keywords can
+   * disagree, which they did the hour `derive` landed -- the placeholder listed eight commands
+   * and this line seven -- and it was visible in a browser and in nothing else. `NotebookSpec`
+   * asserts every keyword appears here, so the next one cannot arrive without its example.
+   */
   private val Help: String =
     "declare p : bool &middot; define twice := \\x:real. x + x &middot; assume NAME : claim &middot; " +
-      "prove NAME : claim &middot; ask claim &middot; find name-or-shape &middot; show NAME"
+      "prove NAME : claim &middot; derive NAME : mp FACT FACT &middot; ask claim &middot; " +
+      "find name-or-shape &middot; show NAME"
 
   /**
    * The page's stylesheet and its behaviour, read from resources beside this class.

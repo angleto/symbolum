@@ -165,6 +165,33 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------ over a socket */
 
+  it should "carry an example of every command, which a browser is the only place that shows" in {
+    // Found by opening the page rather than by any assertion here: `derive` landed, the placeholder
+    // is generated from `Keywords` and listed eight commands, and the line under it is written by
+    // hand and listed seven. Both are on screen together, a centimetre apart, and nothing compared
+    // them. So they are compared now.
+    //
+    // The keyword alone is what a reader already has from the placeholder, so this asserts the
+    // example exists rather than asserting the two lists are equal: what is missing when it fails
+    // is a reader's only statement of the SHAPE a command takes.
+    // Read from the help paragraph alone and not from the whole page, which is the difference
+    // between a check and a check-shaped sentence: the placeholder is ON the page and is built from
+    // the same list, so a search over the page finds every keyword whatever the examples say, and
+    // passes on exactly the state this was written for.
+    val page = Notebook.render(Session.standard)
+    val examples = page.linesIterator.filter(_.contains("&middot;")).mkString(" ")
+
+    withClue("no help paragraph was found on the page: ") {
+      examples should not be empty
+    }
+
+    Session.Command.Keywords.foreach { keyword =>
+      withClue(s"the page offers `$keyword` and its examples do not show it: $examples\n") {
+        examples should include(keyword)
+      }
+    }
+  }
+
   "The page endpoint" should "answer the root with the page and everything else with a 404" in {
     withServer(fresh) { (base, _) =>
       val page = get(base, "/")

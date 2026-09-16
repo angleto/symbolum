@@ -176,14 +176,12 @@ class SessionSpec extends AnyFlatSpec with Matchers {
   /* ------------------------------------------------------------------ what it refuses */
 
   "A claim written in a vocabulary the session introduced" should "be refused saying so" in {
-    // The limit this repository chose rather than a defect: `CLAUDE.md` says a domain gets
-    // accounting and not search, because `Ring` and `Linarith` decide fragments of the reals and
-    // have nothing to say about an arbitrary axiom. So no tactic can spend `P_HOLDS`, and what a
-    // session needs in order to is a hand derivation, which is the `derive` command this language
-    // does not have yet and the `Recorder` in `modules/logic` is the surface for.
-    //
-    // Asserted so that the day it lands this test says the picture changed, rather than the
-    // refusal quietly becoming wrong.
+    // The limit this repository chose rather than a defect, and it did not move when `derive`
+    // landed: `Ring` and `Linarith` decide fragments of the reals and have nothing to say about an
+    // arbitrary axiom, so no TACTIC can spend `P_HOLDS`. What changed is that a session now has a
+    // way to spend it by hand, which is `derive` over the `Recorder`, and the tests under "A hand
+    // derivation" below are that half. This assertion is the other half and has to keep holding:
+    // the two commands answer different questions and `prove` must not start guessing.
     val session = fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p", "prove FROM_P : p"))
 
     session.entries.last.outcome match {
@@ -191,6 +189,167 @@ class SessionSpec extends AnyFlatSpec with Matchers {
         reason should include("p")
         reason should include("this session introduced")
       case other => fail(s"a claim over an assumed constant was settled by a tactic: $other")
+    }
+  }
+
+  /* ---------------------------------------------------- what a session can spend by hand */
+
+  "A hand derivation" should "let a session's own axiom reach a conclusion, which no tactic can" in {
+    // Criterion 2 of the card this command comes from, and the whole point of the command: a
+    // session declares a vocabulary, assumes something in it, and gets a consequence out. Before
+    // `derive` the last line was refused by every tactic there is, correctly, and the accounting
+    // promise above it was therefore true of theorems nobody could reach.
+    val session = fresh.runAll(
+      Vector(
+        "declare good : real -> bool",
+        "declare fine : real -> bool",
+        "assume RULE : !r:real. good r ==> fine r",
+        "assume GOOD_ONE : good 1",
+        "derive AT_ONE : specialise RULE at 1",
+        "derive FINE_ONE : mp AT_ONE GOOD_ONE"
+      )
+    )
+    val conclusion = session.entries.last
+
+    withClue(session.transcript + "\n") {
+      conclusion.outcome shouldBe a[Session.Outcome.Proved]
+    }
+    conclusion.state.show(
+      conclusion.outcome.asInstanceOf[Session.Outcome.Proved].theorem.conclusion
+    ) shouldBe "fine 1"
+  }
+
+  it should "carry both assumptions it spent, which is the accounting the command exists for" in {
+    // The half that makes the one above worth having. A conclusion reached by hand from two
+    // assumptions names two, and `Derivation.foreignTo` is what says so: a derivation that
+    // silently dropped one would still produce the theorem and would be the defect this whole
+    // surface is built against.
+    val session = fresh.runAll(
+      Vector(
+        "declare good : real -> bool",
+        "declare fine : real -> bool",
+        "assume RULE : !r:real. good r ==> fine r",
+        "assume GOOD_ONE : good 1",
+        "derive AT_ONE : specialise RULE at 1",
+        "derive FINE_ONE : mp AT_ONE GOOD_ONE"
+      )
+    )
+    val conclusion = session.entries.last
+    val rests = conclusion.restsOn(session.base).map(conclusion.state.show)
+
+    // Compared against what the session records having assumed, rather than against the text that
+    // was typed. The kernel binds by de Bruijn index and `Abs` carries no name, so the binder in
+    // `!r:real. good r ==> fine r` comes back as whatever the printer chose, and an assertion on
+    // the typed spelling fails on a correct answer. What is being asserted is the property that
+    // matters and is stronger: the conclusion rests on exactly the two things this session assumed,
+    // no more and no fewer, with both sides rendered by the same printer.
+    rests shouldBe conclusion.state.assumed.map(pair => conclusion.state.show(pair._2)).toSet
+    rests should have size 2
+  }
+
+  it should "leave the theory exactly as it found it, on every inference it offers" in {
+    // Criterion 3, and it is asserted over the whole vocabulary rather than over one case, because
+    // the property is structural and a single case would pass on an implementation that had one
+    // branch reaching `declareConstant`. A session holds ONE theory: that is what makes the falsity
+    // `SoundnessAttackSpec` derives unassemblable here, and a command that could grow a second
+    // would reopen it whatever else it did.
+    val start = fresh.runAll(
+      Vector(
+        "declare good : real -> bool",
+        "assume RULE : !r:real. good r",
+        "assume PAIR : good 1 /\\ good 2"
+      )
+    )
+    val constants = start.state.theory.constants.keySet
+    val axioms = start.state.theory.axioms.size
+
+    val steps = Vector(
+      "derive A : specialise RULE at 1",
+      "derive B : left PAIR",
+      "derive C : right PAIR",
+      "derive D : both B C",
+      "derive E : mp RULE B"
+    )
+
+    steps.foreach { step =>
+      val after = start.run(step).state
+      withClue(s"$step changed the theory: ") {
+        after.theory.constants.keySet shouldBe constants
+        after.theory.axioms.size shouldBe axioms
+      }
+    }
+
+    // And the vocabulary the loop ran over is the published one, so an inference added without a
+    // case here stops being covered loudly rather than quietly.
+    steps.map(_.split(" : ")(1).takeWhile(_ != ' ')).toSet shouldBe Session.Surface.Inferences.toSet
+  }
+
+  it should "read a specialise argument against the binder it instantiates, not against nothing" in {
+    // `1` alone is ambiguous between `real` and `num` and the parser refuses it, correctly: the
+    // thing that determines it is the quantifier being instantiated, and that is in the command's
+    // hand rather than in the text. So the argument is elaborated against the binder's type, which
+    // is `Signature.term(text, expected)` used where the expectation actually lives.
+    val session = fresh.runAll(
+      Vector("declare good : real -> bool", "assume RULE : !r:real. good r", "derive AT_ONE : specialise RULE at 1")
+    )
+
+    withClue(session.entries.last.render(session.state) + "\n") {
+      session.entries.last.outcome shouldBe a[Session.Outcome.Proved]
+    }
+
+    // And the control, because the assertion above passes on an implementation that guesses `real`
+    // for every numeral: a quantifier over `num` takes the same text to the other type.
+    val naturals = fresh.runAll(
+      Vector("declare small : num -> bool", "assume LOW : !n:num. small n", "derive AT_ONE : specialise LOW at 1")
+    )
+    val proved = naturals.entries.last.outcome.asInstanceOf[Session.Outcome.Proved]
+    naturals.state.show(proved.theorem.conclusion) shouldBe "small 1"
+  }
+
+  it should "keep the account, because a derivation nobody can read back is a claim" in {
+    // The `Recorder` is what makes this a derivation rather than a theorem that appeared. Each step
+    // leaves a line, and the lines accumulate across cells, which is the reason the account lives
+    // on the state rather than on one entry: the argument is written across the transcript.
+    val session = fresh.runAll(
+      Vector(
+        "declare good : real -> bool",
+        "declare fine : real -> bool",
+        "assume RULE : !r:real. good r ==> fine r",
+        "assume GOOD_ONE : good 1",
+        "derive AT_ONE : specialise RULE at 1",
+        "derive FINE_ONE : mp AT_ONE GOOD_ONE"
+      )
+    )
+
+    session.state.script.size shouldBe 2
+    val account = session.state.script.render(session.state.notation, Map.empty)
+    account should include("specialise")
+    account should include("modus ponens")
+
+    // The empty case, so the assertion above is not satisfied by an account that always has lines:
+    // a session that derived nothing has none.
+    fresh.run("declare good : real -> bool").state.script.size shouldBe 0
+  }
+
+  it should "refuse an inference it does not have, by name, rather than guessing" in {
+    val session = fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p", "derive X : contradiction P_HOLDS"))
+
+    session.entries.last.outcome match {
+      case Session.Outcome.Refused(reason, next) =>
+        reason should include("no inference `contradiction`")
+        next.getOrElse(fail("a refusal with no next step")) should include("specialise")
+      case other => fail(s"an inference nobody wrote was accepted: $other")
+    }
+  }
+
+  it should "refuse a fact it does not hold, and say what it does hold" in {
+    val session = fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p", "derive X : left NOWHERE"))
+
+    session.entries.last.outcome match {
+      case Session.Outcome.Refused(reason, _) =>
+        reason should include("no fact named NOWHERE")
+        reason should include("P_HOLDS")
+      case other => fail(s"a name nothing holds was resolved: $other")
     }
   }
 

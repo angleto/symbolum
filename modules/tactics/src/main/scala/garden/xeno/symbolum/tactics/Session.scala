@@ -165,6 +165,14 @@ object Session {
     /** `show NAME`, the generated page for a fact the library holds. */
     case Show(name: String)
 
+    /**
+     * `derive NAME : <step>`, one inference by hand over facts this session already holds.
+     *
+     * The command a session's own axiom needs in order to reach anything, and the reason it is a
+     * cell rather than a tactic is in [[Session.Surface.deriving]].
+     */
+    case Derive(name: String, step: String)
+
     /** A line that did not read, kept as an entry so that the transcript is still the session. */
     case Unreadable(line: String)
   }
@@ -172,7 +180,8 @@ object Session {
   object Command {
 
     /** The keyword of each command, which is also what [[write]] emits. */
-    val Keywords: Vector[String] = Vector("declare", "define", "assume", "prove", "ask", "find", "show")
+    val Keywords: Vector[String] =
+      Vector("declare", "define", "assume", "prove", "derive", "ask", "find", "show")
 
     /**
      * Read one line.
@@ -207,6 +216,7 @@ object Session {
         case "define" => split(":=", "define <name> := <term>").map(Define.apply)
         case "assume" => split(":", "assume <NAME> : <claim>").map(Assume.apply)
         case "prove" => split(":", "prove <NAME> : <claim>").map(Prove.apply)
+        case "derive" => split(":", "derive <NAME> : <step>").map(Derive.apply)
         case "ask" => nonEmpty("a claim").map(Ask.apply)
         case "find" => nonEmpty("a name or a shape").map(Find.apply)
         case "show" => nonEmpty("the name of a fact").map(Show.apply)
@@ -220,6 +230,7 @@ object Session {
       case Define(name, body) => s"define $name := $body"
       case Assume(name, claim) => s"assume $name : $claim"
       case Prove(name, claim) => s"prove $name : $claim"
+      case Derive(name, step) => s"derive $name : $step"
       case Ask(claim) => s"ask $claim"
       case Find(query) => s"find $query"
       case Show(name) => s"show $name"
@@ -309,7 +320,16 @@ object Session {
     /** What this session named, in the order it named it. */
     val named: Vector[(String, Kernel.Thm)],
     /** What this session assumed, which is what its theorems are believed on. */
-    val assumed: Vector[(String, Term)]
+    val assumed: Vector[(String, Term)],
+    /**
+     * The account of every hand derivation this session has run, in order.
+     *
+     * Kept on the state rather than per entry because a derivation is written across cells: the
+     * point of `derive` is that cell 9 cites what cell 7 produced, and an account per cell would
+     * be nine accounts of one line each with nothing saying they are one argument. `Script.tidy`
+     * is what stops a step cited twice from being printed twice.
+     */
+    val script: Script = Script.nothing
   ) extends Signature {
 
     /** A theorem this session holds under that name. */
@@ -319,8 +339,9 @@ object Session {
       theory: Theory = this.theory,
       logic: Logic = this.logic,
       named: Vector[(String, Kernel.Thm)] = this.named,
-      assumed: Vector[(String, Term)] = this.assumed
-    ): State = new State(theory, notation, logic, named, assumed)
+      assumed: Vector[(String, Term)] = this.assumed,
+      script: Script = this.script
+    ): State = new State(theory, notation, logic, named, assumed, script)
   }
 
   object State {
@@ -344,6 +365,7 @@ object Session {
       case Command.Define(name, body) => define(state, name, body)
       case Command.Assume(name, claim) => assume(state, name, claim)
       case Command.Prove(name, claim) => proving(state, name, claim)
+      case Command.Derive(name, step) => deriving(state, name, step)
       case Command.Ask(claim) => (report(Ask.of(state, cost, claim)), state)
       case Command.Find(query) => (report(Find.of(state, library, query)), state)
       case Command.Show(name) => (report(Essay.of(chain, name).fold(identity, identity)), state)
@@ -450,9 +472,173 @@ object Session {
             case Left(failure) => (refusal(state, failure), state)
           }
       }
+
+    /**
+     * One inference by hand, over facts this session already holds.
+     *
+     * The command the accounting promise needed and did not have. `prove` puts a claim to the
+     * tactic surface, and that surface is built over the base chain, so a claim written in a
+     * vocabulary the session added is one no procedure has a reading of: a session that declares a
+     * domain, assumes its axioms and asks for a consequence is refused, correctly, by every tactic
+     * there is. That refusal already named this command as the way out and this command did not
+     * exist, so the promise "assume something and every theorem downstream carries it" was true of
+     * theorems nobody could reach.
+     *
+     * It changes no theory, and that is structural rather than a rule observed here. Every branch
+     * below returns `state.extended(named = ..., script = ...)`, so `theory` and `logic` are the
+     * ones it was given. A session holds one theory because the falsity `SoundnessAttackSpec`
+     * derives needs two, and a command that could build a second would reopen that whatever else
+     * it did; this one cannot reach `declareConstant` or `assertAxiom` at all.
+     *
+     * Every step goes through [[Recorder]] rather than through `Rules`, so the account exists as a
+     * side product and the theorem is the one the rule would have returned either way. The
+     * recorder is built per command because it is a wrapper over `state.logic.rules` and the
+     * notation, and both are already on the state.
+     */
+    private def deriving(state: State, name: String, step: String): (Outcome, State) = {
+      val recorder = new Recorder(state.logic.rules, state.notation)
+
+      /**
+       * A fact by the name this session knows it under, then by the library's.
+       *
+       * The session first, because a name it introduced is the one the reader just typed. The
+       * library second and only when the name resolves to ONE statement: `Library.named` returns
+       * every entry of that name and its own docstring says three names are held by two
+       * developments each, so picking the first would pick by map iteration order.
+       */
+      def fact(reference: String): Either[String, Kernel.Thm] =
+        state.fact(reference) match {
+          case Some(theorem) => Right(theorem)
+          case None =>
+            library.named(reference).map(_.theorem).distinct match {
+              case Vector(one) => Right(one)
+              case Vector() =>
+                Left(s"no fact named $reference: this session holds ${held(state)}")
+              case several =>
+                Left(
+                  s"$reference names ${several.size} different statements across the library's " +
+                    "developments, so this cannot tell which was meant"
+                )
+            }
+        }
+
+      /**
+       * The types the leading quantifiers of a statement bind, outermost first.
+       *
+       * Read so that an argument of `specialise` is elaborated against the binder it is going to
+       * instantiate. Without it `specialise RULE at 1` is refused, correctly and uselessly: a
+       * numeral whose type nothing determines is ambiguous between `real` and `num`, and the thing
+       * that determines it is the quantifier, which is in the caller's hand and not in the text.
+       * This is `Signature.term(text, expected)` used where the expectation actually lives, which
+       * is the rule `Parser.term`'s own docstring states for a caller that knows the type.
+       */
+      def binders(proposition: Term): Vector[Type] = proposition match {
+        case App(Const(Logic.Universal, _), Abs(binderType, body)) => binderType +: binders(body)
+        case _ => Vector.empty
+      }
+
+      def term(text: String, expected: Option[Type]): Either[String, Term] =
+        expected.fold(state.term(text))(state.term(text, _)).left.map(_.message)
+
+      def terms(text: String, expected: Vector[Type]): Either[String, List[Term]] =
+        text.split(",").toVector.map(_.trim).filter(_.nonEmpty) match {
+          case Vector() => Left("specialise wants at least one term after `at`")
+          case parts =>
+            parts.zipWithIndex
+              .foldLeft[Either[String, List[Term]]](Right(Nil)) { case (found, (part, position)) =>
+                for { so <- found; one <- term(part, expected.lift(position)) } yield so :+ one
+              }
+        }
+
+      def two(shape: String)(use: (Kernel.Thm, Kernel.Thm) => Recorded[Kernel.Thm]): Either[String, Recorded[Kernel.Thm]] =
+        step.trim.split("\\s+").toVector.drop(1) match {
+          case Vector(left, right) => for { a <- fact(left); b <- fact(right) } yield use(a, b)
+          case _ => Left(s"written `$shape`")
+        }
+
+      def one(shape: String)(use: Kernel.Thm => Recorded[Kernel.Thm]): Either[String, Recorded[Kernel.Thm]] =
+        step.trim.split("\\s+").toVector.drop(1) match {
+          case Vector(only) => fact(only).map(use)
+          case _ => Left(s"written `$shape`")
+        }
+
+      val (operation, rest) = step.trim.span(!_.isWhitespace) match {
+        case (head, tail) => (head.toLowerCase, tail.trim)
+      }
+
+      val attempted: Either[String, Recorded[Kernel.Thm]] = operation match {
+        case "specialise" =>
+          // The FIRST ` at `, because a term can contain the word and a name cannot contain a space.
+          val marker = rest.indexOf(" at ")
+          if (marker < 0) Left("written `specialise <FACT> at <term>[, <term>]`")
+          else
+            for {
+              theorem <- fact(rest.take(marker).trim)
+              arguments <- terms(rest.drop(marker + 4), binders(theorem.conclusion))
+            } yield recorder.specialise(theorem, arguments)
+        case "mp" => two("mp <IMPLICATION> <ANTECEDENT>")(recorder.modusPonens)
+        case "left" => one("left <CONJUNCTION>")(recorder.firstHalf)
+        case "right" => one("right <CONJUNCTION>")(recorder.secondHalf)
+        case "both" => two("both <FACT> <FACT>")(recorder.both)
+        case other =>
+          Left(s"no inference `$other`; there are ${Surface.Inferences.mkString(", ")}")
+      }
+
+      attempted match {
+        case Left(reason) =>
+          (
+            Outcome.Refused(
+              s"derive $name: $reason",
+              Some(s"the inferences are ${Surface.Inferences.mkString(", ")}, over facts this session holds")
+            ),
+            state
+          )
+        case Right(recorded) =>
+          recorded.both match {
+            case Left(error) => (refusal(state, error), state)
+            case Right((theorem, account)) =>
+              (
+                Outcome.Proved(name, theorem),
+                state.extended(
+                  named = state.named :+ (name -> theorem),
+                  script = Script(state.script.steps ++ account.steps).tidy
+                )
+              )
+          }
+      }
+    }
+
+    /** What a session holds, for a refusal that would otherwise say only that a name is unknown. */
+    private def held(state: State): String =
+      if (state.named.isEmpty) "nothing yet"
+      else state.named.map(_._1).mkString(", ")
   }
 
   private[tactics] object Surface {
+
+    /**
+     * The inferences `derive` offers, each one a [[Recorder]] operation and nothing else.
+     *
+     * The set is measured rather than chosen. `DomainTheorySpec` is the one hand derivation of a
+     * claim about an invented domain that this repository has, and its operations are conjunction
+     * elimination five times, negation elimination three, specialisation twice, modus ponens twice,
+     * generalisation twice, disjunction elimination twice, and one each of negation introduction
+     * and discharge. What is offered here is the part of that list whose arguments are **names of
+     * facts this session already holds**, plus terms for the one operation that instantiates.
+     *
+     * That criterion is the cut, and it is worth stating because the obvious cut is "the common
+     * ones". Negation elimination, disjunction elimination and discharge each take a TERM as a
+     * premise rather than a named fact, so offering them means deciding how a notebook line
+     * elaborates a term in the middle of an inference, which is a second decision and not this
+     * one. Generalisation takes a free VARIABLE, which is the same problem in a smaller costume.
+     * They are absent and named absent, rather than approximated.
+     *
+     * `Recorder.step` is deliberately not reachable from here at all. It is the facade's escape
+     * hatch, it takes the name of a rule as a string, and a cell that reached it would let a
+     * reader write a line claiming any inference at all into an account that is read as a record
+     * of what happened.
+     */
+    val Inferences: Vector[String] = Vector("specialise", "mp", "left", "right", "both")
 
     /** The constants a term names, which is how a session tells its own vocabulary from the chain's. */
     def constantsIn(term: Term): Set[String] = term match {
