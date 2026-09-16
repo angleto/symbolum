@@ -356,8 +356,26 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `real`. The negation binds `s` at `num -> real` and `a` at `real` and shares nothing, which
     // makes it the rarer case this figure exists to count -- a lemma whose binders cannot be
     // silently transposed, because the kernel's own typing refuses it.
-    library.entries.size shouldBe 465
-    library.names.distinct.size shouldBe 462
+    // 477 with the object language's six derived connectives: twelve facts under twelve new
+    // names, six defining equations and six well-formedness rules, one of each per constant.
+    // **The six DEFINITIONS are not in this count and that is the thing to get right here**, since
+    // it is what a reader adding a constant to `Language` will assume. `Library.of` collects
+    // `chain.language.facts` and not `chain.language.definitions`; the only developments whose
+    // definitions it collects are `Classical` and `Real`, which is why the definitional entries
+    // below do not move and why the whole delta lands on the facts. Derived from that reading of
+    // `Library.of` and from the twelve names, before this suite was run.
+    //
+    // `CLAUDE.md`'s two figures move by **twelve**, both of them and all the way, which has
+    // happened once before, when `Concatenation` landed. Every one of the twelve binds two or more
+    // leading variables and every one of those binds them all at `num`: a claim about a code is a
+    // claim about numbers, so there is no binder here of any other type to break the run.
+    //
+    // **This entry was first written against a base of 463 and is 465 plus twelve, not 475.** Two
+    // lemmas landed underneath it while the work was in flight. The addend is the thing this ledger
+    // records and it did not change; what changed is what it is added to, which is why a rebase
+    // takes the base in one piece and re-derives rather than choosing between two numbers.
+    library.entries.size shouldBe 477
+    library.names.distinct.size shouldBe 474
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

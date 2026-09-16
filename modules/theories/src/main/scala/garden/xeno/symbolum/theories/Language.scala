@@ -1205,6 +1205,133 @@ object Language {
       "\\/ (t = 2 /\\ f p) " +
       "\\/ ((t = 3 \\/ t = 4) /\\ (?a:num. ?b:num. p = NUM_PAIR a b /\\ f a /\\ f b)))"
 
+  /* ------------------------------------- the derived connectives and the bounded quantifier */
+
+  /**
+   * The six constants that expand what this language calls an abbreviation, and the obligation
+   * [[FormulaCases]] left behind.
+   *
+   * Four tags and not six is a decision made where the formulas are defined, and its reason is
+   * that a tag for the conjunction would mean proving every clause of `Prov` twice more for
+   * nothing. What it leaves is an obligation rather than a saving, and until 2026-09-16 nobody had
+   * paid it: two places in this file said the conjunction, the disjunction and the existential are
+   * "abbreviations in the object language", and **no code anywhere built one**. An abbreviation
+   * nothing expands is a sentence about an intention, and a reader who took it for an
+   * implementation would have gone looking for a constructor that was not there.
+   *
+   * These six are that expansion. Each is a constant of THIS logic that builds a code, the way
+   * [[NumeralName]] is: they add nothing to the object syntax, and the `NUM_FORM_` fact published
+   * about each says so by deriving that what comes out is a formula the existing four tags already
+   * accept. No new tag, no new [[Clause]] shape, and no second admissibility proof.
+   *
+   * **What they are for is the bounded quantifier**, which `docs/adr/0014` says the object theory
+   * needs in order to take a code apart without an unbounded search, and which is what keeps `Prov`
+   * Sigma-1. The order has to come first, the order needs an existential, and the existential is a
+   * negated universal: the whole chain below is forced by there being no relation symbol in this
+   * signature at all.
+   */
+  val AndName: String = "NUM_AND"
+
+  /** `|- !p q. NUM_AND p q = NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR p (NUM_CODE 6 q)))`. */
+  val AndCases: String = "NUM_AND_CASES"
+
+  /** `NUM_OR p q` is the code of `~p ==> q`, one negation rather than the conjunction's three. */
+  val OrName: String = "NUM_OR"
+
+  /** `|- !p q. NUM_OR p q = NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 p) q)`. */
+  val OrCases: String = "NUM_OR_CASES"
+
+  /** `NUM_EXISTS i p` is the code of `~!i.~p`, the only existential this language has. */
+  val ExistsName: String = "NUM_EXISTS"
+
+  /** `|- !i p. NUM_EXISTS i p = NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR i (NUM_CODE 6 p)))`. */
+  val ExistsCases: String = "NUM_EXISTS_CASES"
+
+  /**
+   * `NUM_LESS z s t` is the code of `?z. s + S z = t`, and `z` is a parameter for a reason.
+   *
+   * **It is not [[Peano.StrictOrder]] and the two cannot be confused by accident**, which is worth
+   * saying because they are a word apart and this repository has already paid once for a pair of
+   * names that were a letter apart. `NUM_LT` is the order of `num`, a predicate, and it is what
+   * the ambient logic reasons WITH. `NUM_LESS` is a function into `num` that builds a piece of
+   * object syntax, and it is what the embedded theory reasons ABOUT. Their types differ, so a
+   * caller that reaches for the wrong one gets a type error rather than a theorem about something
+   * else; that is the defence, and it is mechanical rather than a matter of reading carefully.
+   *
+   * **The witness index is an argument and not a fixed number.** A fixed one would need `z` to be
+   * fresh for `s` and for `t`, and nothing here can discharge that: `notFreeIn` walks a concrete
+   * CLOSED code and refuses precisely the codes that have a free variable in them, which is the
+   * case the condition would be about. Handing the index to the caller moves the obligation to
+   * where the codes are actually known, and it is the same decision tag `8` already makes by
+   * accepting a quantifier over an index that does not occur.
+   */
+  val LessName: String = "NUM_LESS"
+
+  /** `|- !z s t. NUM_LESS z s t = NUM_EXISTS z (NUM_CODE 5 (NUM_PAIR (s + S z) t))`, coded. */
+  val LessCases: String = "NUM_LESS_CASES"
+
+  /** `NUM_ALL_BELOW z i t p` is the code of `!i. i < t ==> p`, the bounded universal. */
+  val AllBelowName: String = "NUM_ALL_BELOW"
+
+  /** `|- !z i t p. NUM_ALL_BELOW z i t p = ...`, the universal over an implication. */
+  val AllBelowCases: String = "NUM_ALL_BELOW_CASES"
+
+  /** `NUM_EXISTS_BELOW z i t p` is the code of `?i. i < t /\ p`, the bounded existential. */
+  val ExistsBelowName: String = "NUM_EXISTS_BELOW"
+
+  /** `|- !z i t p. NUM_EXISTS_BELOW z i t p = ...`, the existential over a conjunction. */
+  val ExistsBelowCases: String = "NUM_EXISTS_BELOW_CASES"
+
+  /**
+   * Each of the six builds a formula out of formulas, which is the half that says they are
+   * abbreviations of this syntax rather than additions to it.
+   *
+   * They extend the run of introduction rules at [[FormulaEquality]] and are named to sit in it.
+   * [[LessFormula]] is the one that asks for TERMS rather than formulas, because a comparison is
+   * where the two levels meet, exactly as the equality clause is.
+   */
+  val AndFormula: String = "NUM_FORM_AND"
+  val OrFormula: String = "NUM_FORM_OR"
+  val ExistsFormula: String = "NUM_FORM_EXISTS"
+  val LessFormula: String = "NUM_FORM_LESS"
+  val AllBelowFormula: String = "NUM_FORM_ALL_BELOW"
+  val ExistsBelowFormula: String = "NUM_FORM_EXISTS_BELOW"
+
+  /**
+   * Where an index occurs free in each of the six, extending the run at [[FormulaFreeEquality]].
+   *
+   * The three that bind carry a `COND` and the three that do not carry a disjunction, which is
+   * the same split [[FormulaFreeUniversal]] makes against its three neighbours. In
+   * [[LessFree]] the bound index is the witness, so the `COND` is about `z`; the occurrence of
+   * `z` that the expansion itself introduces falls away under it, which is why the answer names
+   * only `s` and `t`.
+   */
+  val AndFree: String = "NUM_FREE_FORM_AND"
+  val OrFree: String = "NUM_FREE_FORM_OR"
+  val ExistsFree: String = "NUM_FREE_FORM_EXISTS"
+  val LessFree: String = "NUM_FREE_FORM_LESS"
+  val AllBelowFree: String = "NUM_FREE_FORM_ALL_BELOW"
+  val ExistsBelowFree: String = "NUM_FREE_FORM_EXISTS_BELOW"
+
+  /**
+   * What a substitution does to each of the six, extending the run at
+   * [[FormulaSubstituteEquality]].
+   *
+   * **These inherit [[FormulaSubstituteName]]'s blindness to capture and the condition is on the
+   * caller, not on the equation.** Each clause below is true as an equation whatever is
+   * substituted. What is not safe is substituting a term in which the bound index occurs free:
+   * under [[LessName]] that index is the witness `z`, and a replacement mentioning `z` would come
+   * out captured. The substitution this development publishes has always been sound only for a
+   * closed replacement, [[NumeralIsClosed]] is what discharges that where Goedel's argument needs
+   * it, and these six move the reader's attention to a second index rather than changing the rule.
+   */
+  val AndSubstitute: String = "NUM_SUBST_FORM_AND"
+  val OrSubstitute: String = "NUM_SUBST_FORM_OR"
+  val ExistsSubstitute: String = "NUM_SUBST_FORM_EXISTS"
+  val LessSubstitute: String = "NUM_SUBST_FORM_LESS"
+  val AllBelowSubstitute: String = "NUM_SUBST_FORM_ALL_BELOW"
+  val ExistsBelowSubstitute: String = "NUM_SUBST_FORM_EXISTS_BELOW"
+
   /** Every statement this development publishes, as text, for the reason `Peano` gives. */
   val Statements: Vector[(String, String)] = Vector(
     TermCases ->
@@ -1319,7 +1446,39 @@ object Language {
       val disjuncts = logicalSchemes.map(scheme => s"(${scheme.disjunct("n:num")})")
       s"!n:num. NUM_LOGIC n = (${disjuncts.mkString(" \\/ ")})"
     },
-    LogicFormula -> "!n:num. NUM_LOGIC n ==> NUM_FORM n"
+    LogicFormula -> "!n:num. NUM_LOGIC n ==> NUM_FORM n",
+    AndCases ->
+      ("!p:num q:num. NUM_AND p q = " +
+        "NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR p (NUM_CODE 6 q)))"),
+    OrCases ->
+      "!p:num q:num. NUM_OR p q = NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 p) q)",
+    ExistsCases ->
+      ("!i:num p:num. NUM_EXISTS i p = " +
+        "NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR i (NUM_CODE 6 p)))"),
+    LessCases ->
+      ("!z:num s:num t:num. NUM_LESS z s t = " +
+        "NUM_EXISTS z (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR s (NUM_CODE 2 (NUM_CODE 0 z)))) t))"),
+    AllBelowCases ->
+      ("!z:num i:num t:num p:num. NUM_ALL_BELOW z i t p = " +
+        "NUM_CODE 8 (NUM_PAIR i (NUM_CODE 7 (NUM_PAIR (NUM_LESS z (NUM_CODE 0 i) t) p)))"),
+    ExistsBelowCases ->
+      ("!z:num i:num t:num p:num. NUM_EXISTS_BELOW z i t p = " +
+        "NUM_EXISTS i (NUM_AND (NUM_LESS z (NUM_CODE 0 i) t) p)"),
+    AndFormula ->
+      "!p:num q:num. NUM_FORM p ==> NUM_FORM q ==> NUM_FORM (NUM_AND p q)",
+    OrFormula ->
+      "!p:num q:num. NUM_FORM p ==> NUM_FORM q ==> NUM_FORM (NUM_OR p q)",
+    ExistsFormula -> "!i:num p:num. NUM_FORM p ==> NUM_FORM (NUM_EXISTS i p)",
+    LessFormula ->
+      ("!z:num s:num t:num. NUM_TERM s ==> NUM_TERM t ==> " +
+        "NUM_FORM (NUM_LESS z s t)"),
+    AllBelowFormula ->
+      ("!z:num i:num t:num p:num. NUM_TERM t ==> NUM_FORM p ==> " +
+        "NUM_FORM (NUM_ALL_BELOW z i t p)"),
+    ExistsBelowFormula ->
+      ("!z:num i:num t:num p:num. NUM_TERM t ==> NUM_FORM p ==> " +
+        "NUM_FORM (NUM_EXISTS_BELOW z i t p)")
   ) ++ Axioms.map { case (name, code) => name -> s"NUM_PA ($code)" } ++
     logicalSchemes.map(scheme => scheme.name -> scheme.statement(LogicName))
 
@@ -1663,11 +1822,38 @@ object Language {
         logicalSchemes,
         LogicFormula
       )
+
+      // Last, because each of the six is written with the ones before it and a constant cannot
+      // appear in a body until it is in the theory. Nothing above depends on them, so this is the
+      // one place in `construct` where the order is the definitions' own rather than the proofs'.
+      withConnectives <- defineConnectives(logicTheory, notation, logicLogic)
+      (connectiveTheory, connectiveDefinitions, connectiveEquations) = withConnectives
+      connectiveLogic <- numbering.logic.over(connectiveTheory)
+      connectiveVocabulary <- Vocabulary.of(
+        numbering, connectiveTheory, notation, connectiveLogic)
+      connectiveCases <- connectiveEquations.toVector
+        .foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(Map.empty)) {
+          case (carried, (name, theorem)) =>
+            for {
+              found <- carried
+              agreed <- connectiveVocabulary.checked(name, theorem)
+            } yield found.updated(name, agreed)
+        }
+      connectiveFormulas <- formulaRules(
+        connectiveVocabulary, connectiveCases, introductions)
+      connectiveChecked <- connectiveFormulas.toVector
+        .foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(Map.empty)) {
+          case (carried, (name, theorem)) =>
+            for {
+              found <- carried
+              agreed <- connectiveVocabulary.checked(name, theorem)
+            } yield found.updated(name, agreed)
+        }
     } yield new Language(
       numbering,
-      logicTheory,
+      connectiveTheory,
       notation,
-      logicLogic,
+      connectiveLogic,
       successor,
       Map(
         TermName -> definition,
@@ -1680,7 +1866,7 @@ object Language {
         ClosedName -> closedDefinition,
         AxiomName -> axiomDefinition,
         LogicName -> logicDefinition
-      ),
+      ) ++ connectiveDefinitions,
       Map(
         TermCases -> cases,
         TermVariable -> variable,
@@ -1730,7 +1916,7 @@ object Language {
         .updated(AxiomFormula, axiomFormula)
         .updated(ClosedCases, closedCases)
         .updated(LogicCases, logicCases)
-        .updated(LogicFormula, logicFormula) ++ logicFacts
+        .updated(LogicFormula, logicFormula) ++ logicFacts ++ connectiveCases ++ connectiveChecked
     )
   }
 
@@ -2747,6 +2933,181 @@ object Language {
         else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
       result <- vocabulary.checked(NumeralIsTerm, proved)
     } yield result
+  }
+
+  /**
+   * The six well-formedness rules, each proved from what is already published and from the ones
+   * proved before it.
+   *
+   * A code one of these builds is a formula because the code it abbreviates is one, so every proof
+   * here is the same four moves: read the published statement, assume its antecedents, compose the
+   * rules for the shape, and carry the result back across the defining equation. What differs
+   * between the six is only which rules compose, which is why they are a table rather than six
+   * derivations.
+   *
+   * **The order is the definitions' order and for the definitions' reason.** What proves
+   * [[AllBelowFormula]] is [[LessFormula]], not a second descent to the tags; the accumulator below
+   * is what makes a rule proved here available to the next one. Walking down to the tags each time
+   * would work and would be the version that goes wrong quietly, because a comparison expanded by
+   * hand in two places is two chances to expand it differently.
+   */
+  private def formulaRules(
+    vocabulary: Vocabulary,
+    cases: Map[String, Kernel.Thm],
+    published: Map[String, Kernel.Thm]
+  ): Either[LogicError, Map[String, Kernel.Thm]] = {
+    val rules = vocabulary.rules
+    val logic = vocabulary.logic
+
+    /** The code a `NUM_TERM` or a `NUM_FORM` is about. */
+    def subjectOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+      theorem.conclusion match {
+        case App(_, subject) => Right(subject)
+        case other => Left(NotOfForm("a predicate applied to a code", other))
+      }
+
+    /**
+     * One rule applied: its index arguments first, then the codes its premises are about.
+     *
+     * Every rule in this development concluding `NUM_TERM` or `NUM_FORM` of a built code has that
+     * shape, the six below included, which is what lets one combinator serve all of them and is
+     * worth preserving in a seventh.
+     */
+    def by(
+      facts: Map[String, Kernel.Thm],
+      name: String,
+      indices: List[Term],
+      premises: List[Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        rule <- facts.get(name).toRight(MissingDefinition(name))
+        subjects <- premises.foldLeft[Either[LogicError, List[Term]]](Right(Nil)) {
+          case (carried, premise) =>
+            for {
+              found <- carried
+              subject <- subjectOf(premise)
+            } yield found :+ subject
+        }
+        instance <- rules.specAll(rule, indices ++ subjects)
+        reached <- premises.foldLeft[Either[LogicError, Kernel.Thm]](Right(instance)) {
+          case (carried, premise) => carried.flatMap(rules.mp(_, premise))
+        }
+      } yield reached
+
+    /** Assume every antecedent of a published statement, in the order it writes them. */
+    def peel(
+      body: Term,
+      taken: List[Kernel.Thm]
+    ): Either[LogicError, (List[Kernel.Thm], Term)] =
+      logic.destImp(body) match {
+        case None => Right((taken.reverse, body))
+        case Some((antecedent, rest)) =>
+          LogicError
+            .lift(Kernel.assume(antecedent))
+            .flatMap(assumed => peel(rest, assumed :: taken))
+      }
+
+    def rule(
+      facts: Map[String, Kernel.Thm],
+      name: String,
+      casesName: String,
+      build: (Vector[FVar], Vector[Kernel.Thm]) => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        statement <- vocabulary.statement(name)
+        stripped <- Logic.stripForall(statement)
+        (binders, body) = stripped
+        peeled <- peel(body, Nil)
+        (assumed, conclusion) = peeled
+        equation <- cases
+          .get(casesName)
+          .toRight(MissingDefinition(casesName))
+          .flatMap(rules.specAll(_, binders.toList))
+        inner <- build(binders, assumed.toVector)
+        lifted <- Conv.apTerm(vocabulary.formula, equation)
+        reversed <- Conv.sym(lifted)
+        reached <- LogicError.lift(Kernel.eqMp(reversed, inner))
+        // The composition above could be right about a code and wrong about which code, since
+        // every step of it is a theorem either way. This is where that is caught.
+        _ <- Either.cond(
+          reached.conclusion == conclusion,
+          (),
+          NotOfForm(s"the conclusion published for $name", reached.conclusion))
+        discharged <- assumed.reverse.foldLeft[Either[LogicError, Kernel.Thm]](Right(reached)) {
+          case (carried, assumption) => carried.flatMap(rules.disch(assumption.conclusion, _))
+        }
+        general <- binders.reverse.foldLeft[Either[LogicError, Kernel.Thm]](Right(discharged)) {
+          case (carried, binder) => carried.flatMap(rules.gen(binder, _))
+        }
+      } yield general
+
+    // Named rather than written inline: the shape spans three lines as a type ascription and one
+    // as an alias, and what the three arguments are is the thing a reader of the table needs.
+    type Build =
+      (Map[String, Kernel.Thm], Vector[FVar], Vector[Kernel.Thm]) => Either[LogicError, Kernel.Thm]
+
+    val steps: Vector[(String, String, Build)] = Vector(
+      (
+        AndFormula,
+        AndCases,
+        (facts, _, held) =>
+          by(facts, FormulaNegation, Nil, List(held(1)))
+            .flatMap(right => by(facts, FormulaImplication, Nil, List(held(0), right)))
+            .flatMap(whole => by(facts, FormulaNegation, Nil, List(whole)))),
+      (
+        OrFormula,
+        OrCases,
+        (facts, _, held) =>
+          by(facts, FormulaNegation, Nil, List(held(0)))
+            .flatMap(left => by(facts, FormulaImplication, Nil, List(left, held(1))))),
+      (
+        ExistsFormula,
+        ExistsCases,
+        (facts, binders, held) =>
+          by(facts, FormulaNegation, Nil, List(held(0)))
+            .flatMap(inner => by(facts, FormulaUniversal, List(binders(0)), List(inner)))
+            .flatMap(whole => by(facts, FormulaNegation, Nil, List(whole)))),
+      (
+        LessFormula,
+        LessCases,
+        (facts, binders, held) =>
+          for {
+            variable <- by(facts, TermVariable, List(binders(0)), Nil)
+            stepped <- by(facts, TermSuccessor, Nil, List(variable))
+            summed <- by(facts, TermSum, Nil, List(held(0), stepped))
+            equated <- by(facts, FormulaEquality, Nil, List(summed, held(1)))
+            whole <- by(facts, ExistsFormula, List(binders(0)), List(equated))
+          } yield whole),
+      (
+        AllBelowFormula,
+        AllBelowCases,
+        (facts, binders, held) =>
+          for {
+            variable <- by(facts, TermVariable, List(binders(1)), Nil)
+            below <- by(facts, LessFormula, List(binders(0)), List(variable, held(0)))
+            implied <- by(facts, FormulaImplication, Nil, List(below, held(1)))
+            whole <- by(facts, FormulaUniversal, List(binders(1)), List(implied))
+          } yield whole),
+      (
+        ExistsBelowFormula,
+        ExistsBelowCases,
+        (facts, binders, held) =>
+          for {
+            variable <- by(facts, TermVariable, List(binders(1)), Nil)
+            below <- by(facts, LessFormula, List(binders(0)), List(variable, held(0)))
+            joined <- by(facts, AndFormula, Nil, List(below, held(1)))
+            whole <- by(facts, ExistsFormula, List(binders(1)), List(joined))
+          } yield whole)
+    )
+
+    steps.foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(Map.empty)) {
+      case (carried, (name, casesName, build)) =>
+        for {
+          found <- carried
+          facts = published ++ found
+          proved <- rule(facts, name, casesName, (binders, held) => build(facts, binders, held))
+        } yield found.updated(name, proved)
+    }
   }
 
   /**
@@ -4698,6 +5059,74 @@ object Language {
     defineByCases(
       base, notation, logic, ClosedName, "\\t:num. !k:num. ~(NUM_FREE_TERM k t)", List("t"))
 
+  /**
+   * The six code-builders, each defined over the theory the ones before it produced.
+   *
+   * The order is forced rather than chosen: [[LessName]] is written with [[ExistsName]],
+   * [[AllBelowName]] with [[LessName]], and [[ExistsBelowName]] with all three of
+   * [[ExistsName]], [[AndName]] and [[LessName]]. A constant cannot appear in the body defining
+   * another until it is in the theory, so the sequence below is the dependency order read off.
+   *
+   * Every one goes through [[defineByCases]] and therefore costs nothing: what comes back is the
+   * definition unfolded at variables and generalised, which is an equation the kernel produced
+   * from a definition and no axiom. That is the same reason [[ClosedCases]] and [[LogicCases]] are
+   * free, and `LanguageSpec` asserts the six join them rather than leaving it to be read.
+   */
+  private def defineConnectives(
+    base: Theory,
+    notation: Notation,
+    logic: Logic
+  ): Either[LogicError, (Theory, Map[String, Kernel.Thm], Map[String, Kernel.Thm])] = {
+    val bodies: Vector[(String, String, String, List[String])] = Vector(
+      (
+        AndName,
+        AndCases,
+        "\\p:num q:num. NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR p (NUM_CODE 6 q)))",
+        List("p", "q")),
+      (
+        OrName,
+        OrCases,
+        "\\p:num q:num. NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 p) q)",
+        List("p", "q")),
+      (
+        ExistsName,
+        ExistsCases,
+        "\\i:num p:num. NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR i (NUM_CODE 6 p)))",
+        List("i", "p")),
+      (
+        LessName,
+        LessCases,
+        "\\z:num s:num t:num. NUM_EXISTS z (NUM_CODE 5 (NUM_PAIR " +
+          "(NUM_CODE 3 (NUM_PAIR s (NUM_CODE 2 (NUM_CODE 0 z)))) t))",
+        List("z", "s", "t")),
+      (
+        AllBelowName,
+        AllBelowCases,
+        "\\z:num i:num t:num p:num. NUM_CODE 8 (NUM_PAIR i " +
+          "(NUM_CODE 7 (NUM_PAIR (NUM_LESS z (NUM_CODE 0 i) t) p)))",
+        List("z", "i", "t", "p")),
+      (
+        ExistsBelowName,
+        ExistsBelowCases,
+        "\\z:num i:num t:num p:num. NUM_EXISTS i (NUM_AND (NUM_LESS z (NUM_CODE 0 i) t) p)",
+        List("z", "i", "t", "p"))
+    )
+
+    bodies.foldLeft[Either[LogicError, (Theory, Map[String, Kernel.Thm], Map[String, Kernel.Thm])]](
+      Right((base, Map.empty, Map.empty))
+    ) { case (carried, (name, casesName, text, subjects)) =>
+      for {
+        state <- carried
+        (theory, definitions, cases) = state
+        built <- defineByCases(theory, notation, logic, name, text, subjects)
+        (wider, definition, equation) = built
+      } yield (
+        wider,
+        definitions.updated(name, definition),
+        cases.updated(casesName, equation))
+    }
+  }
+
   /** `NUM_LOGIC`, a disjunction of eight schemes, and the equation that says what it is. */
   private def defineLogic(
     base: Theory,
@@ -4712,9 +5141,19 @@ object Language {
   /**
    * A constant defined by a body, with the equation at a variable published beside it.
    *
-   * Three definitions here are of this shape and none of them is a recursion: what makes a set of
-   * codes decidable is that its definition does not descend into one, and all three say so by being
-   * a formula with the subject free.
+   * Nine definitions here are of this shape and none of them is a recursion, but they are two
+   * kinds of thing and the count alone hides that.
+   *
+   * **Three are predicates**: `NUM_CLOSED`, `NUM_PA` and `NUM_LOGIC`. What makes a set of codes
+   * decidable is that its definition does not descend into one, and each of the three says so by
+   * being a formula with its subject free. That is the property `docs/adr/0013` needs and it is
+   * why they are here rather than under [[definePredicate]].
+   *
+   * **Six build codes**: the derived connectives, from [[AndName]] to [[ExistsBelowName]]. They are
+   * not decidable sets and the sentence above says nothing about them; what they share with the
+   * three is only the shape of the definition, which is why one routine serves both. Each is a
+   * function into `num`, and what says it is well behaved is not the absence of a recursion but the
+   * `NUM_FORM_` fact published about it.
    */
   private[theories] def defineByCases(
     base: Theory,

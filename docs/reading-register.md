@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (109)
+## The definitions (115)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -183,6 +183,8 @@ axiom mentioning it means.
 | `definition MAT_TRANSPOSE` | MAT_TRANSPOSE = \x:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x) (MAT_E21 x) (MAT_E12 x) (MAT_E22 x) | **NOT READ** |  |  |
 | `definition MONOTONE` | MONOTONE = \x:('a -> bool) -> 'a -> bool. !y:'a -> bool. !z:'a -> bool. (!u:'a. y u ==> z u) ==> (!u:'a. x y u ==> x z u) | **NOT READ** |  |  |
 | `definition NUM_ADD` | NUM_ADD = \x:num. select (\y:num -> num. y 0 = x /\ (!z:num. y (SUC z) = SUC (y z))) | **NOT READ** |  |  |
+| `definition NUM_ALL_BELOW` | NUM_ALL_BELOW = \x:num. \y:num. \z:num. \u:num. NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR (NUM_LESS x (NUM_CODE 0 y) z) u))) | **NOT READ** |  |  |
+| `definition NUM_AND` | NUM_AND = \x:num. \y:num. NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 6 y))) | **NOT READ** |  |  |
 | `definition NUM_BETA` | NUM_BETA = \x:num. \y:num. \z:num. NUM_MOD x (SUC (SUC z * y)) | **NOT READ** |  |  |
 | `definition NUM_BIT0` | NUM_BIT0 = \x:num. x + x | **NOT READ** |  |  |
 | `definition NUM_BIT1` | NUM_BIT1 = \x:num. SUC (x + x) | **NOT READ** |  |  |
@@ -192,6 +194,8 @@ axiom mentioning it means.
 | `definition NUM_CONG` | NUM_CONG = \x:num. \y:num. \z:num. ?u:num. ?v:num. y + x * u = z + x * v | **NOT READ** |  |  |
 | `definition NUM_DIV` | NUM_DIV = \x:num. \y:num. select (\z:num. (?u:num. x = y * z + u /\ u < y) \/ y = 0 /\ z = 0) | **NOT READ** |  |  |
 | `definition NUM_DIVIDES` | NUM_DIVIDES = \x:num. \y:num. ?z:num. y = x * z | **NOT READ** |  |  |
+| `definition NUM_EXISTS` | NUM_EXISTS = \x:num. \y:num. NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR x (NUM_CODE 6 y))) | **NOT READ** |  |  |
+| `definition NUM_EXISTS_BELOW` | NUM_EXISTS_BELOW = \x:num. \y:num. \z:num. \u:num. NUM_EXISTS y (NUM_AND (NUM_LESS x (NUM_CODE 0 y) z) u) | **NOT READ** |  |  |
 | `definition NUM_FACT` | NUM_FACT = select (\x:num -> num. x 0 = SUC 0 /\ (!y:num. x (SUC y) = x y * SUC y)) | **NOT READ** |  |  |
 | `definition NUM_FLOOR` | NUM_FLOOR = \x:real. select (\y:num. real_of_num y <= x /\ x < real_of_num y + 1) | **NOT READ** |  |  |
 | `definition NUM_FORM` | NUM_FORM = select (\x:num -> bool. !y:num. x y = (?z:num. ?u:num. y = NUM_CODE z u /\ (z = 5 /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ NUM_TERM v /\ NUM_TERM w) \/ z = 6 /\ x u \/ z = 7 /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ x v /\ x w) \/ z = 8 /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ x w)))) | **NOT READ** |  |  |
@@ -200,12 +204,14 @@ axiom mentioning it means.
 | `definition NUM_FST` | NUM_FST = \x:num. select (\y:num. ?z:num. x = NUM_PAIR y z) | **NOT READ** |  |  |
 | `definition NUM_GCD` | NUM_GCD = \x:num. \y:num. select (\z:num. (NUM_DIVIDES z x /\ NUM_DIVIDES z y) /\ (!u:num. NUM_DIVIDES u x /\ NUM_DIVIDES u y ==> u <= z)) | **NOT READ** |  |  |
 | `definition NUM_LE` | NUM_LE = \x:num. \y:num. ?z:num. x + z = y | **NOT READ** |  |  |
+| `definition NUM_LESS` | NUM_LESS = \x:num. \y:num. \z:num. NUM_EXISTS x (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR y (NUM_CODE 2 (NUM_CODE 0 x)))) z)) | **NOT READ** |  |  |
 | `definition NUM_LOGIC` | NUM_LOGIC = \x:num. (?y:num. ?z:num. NUM_FORM y /\ NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z y)))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM y /\ NUM_FORM z /\ NUM_FORM u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z u)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR y z)) (NUM_CODE 7 (NUM_PAIR y u)))))) \/ (?y:num. ?z:num. NUM_FORM y /\ NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 y) (NUM_CODE 6 z))) (NUM_CODE 7 (NUM_PAIR z y)))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM u /\ NUM_TERM z /\ NUM_CLOSED z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y u)) (NUM_SUBST_FORM y z u))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM z /\ NUM_FORM u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z u)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y z)) (NUM_CODE 8 (NUM_PAIR y u)))))) \/ (?y:num. ?z:num. NUM_FORM z /\ ~(NUM_FREE_FORM y z) /\ x = NUM_CODE 7 (NUM_PAIR z (NUM_CODE 8 (NUM_PAIR y z)))) \/ (?y:num. NUM_TERM y /\ x = NUM_CODE 5 (NUM_PAIR y y)) \/ (?y:num. ?z:num. ?u:num. ?v:num. NUM_FORM v /\ NUM_TERM z /\ NUM_TERM u /\ NUM_CLOSED z /\ NUM_CLOSED u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR z u)) (NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM y z v) (NUM_SUBST_FORM y u v))))) | **NOT READ** |  |  |
 | `definition NUM_LT` | NUM_LT = \x:num. \y:num. SUC x <= y | **NOT READ** |  |  |
 | `definition NUM_MOD` | NUM_MOD = \x:num. \y:num. select (\z:num. x = y * NUM_DIV x y + z /\ z < y \/ y = 0 /\ z = x) | **NOT READ** |  |  |
 | `definition NUM_MUL` | NUM_MUL = \x:num. select (\y:num -> num. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x)) | **NOT READ** |  |  |
 | `definition NUM_NUMERAL` | NUM_NUMERAL = select (\x:num -> num. x 0 = NUM_CODE 1 0 /\ (!y:num. x (SUC y) = NUM_CODE 2 (x y))) | **NOT READ** |  |  |
 | `definition NUM_ONE` | NUM_ONE = SUC 0 | **NOT READ** |  |  |
+| `definition NUM_OR` | NUM_OR = \x:num. \y:num. NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 x) y) | **NOT READ** |  |  |
 | `definition NUM_PA` | NUM_PA = \x:num. x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1)))))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0)))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 1 0)))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))) (NUM_CODE 0 0)))))))) \/ (?y:num. ?z:num. NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM y (NUM_CODE 1 0) z) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z (NUM_SUBST_FORM y (NUM_CODE 2 (NUM_CODE 0 y)) z))))) (NUM_CODE 8 (NUM_PAIR y z)))))) | **NOT READ** |  |  |
 | `definition NUM_PAIR` | NUM_PAIR = \x:num. \y:num. NUM_TRI (x + y) + x | **NOT READ** |  |  |
 | `definition NUM_PAYLOAD` | NUM_PAYLOAD = \x:num. select (\y:num. ?z:num. x = NUM_CODE z y) | **NOT READ** |  |  |

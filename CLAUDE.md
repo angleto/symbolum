@@ -324,7 +324,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 465 lemmas, 292 have two or more leading quantifiers and **266 of
+caller meant: of the library's 477 lemmas, 304 have two or more leading quantifiers and **278 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -643,7 +643,39 @@ index does not occur in); and two about equality. Two and not six, because refle
 replacement scheme give symmetry, transitivity and the congruence of every function symbol, so
 writing `x = y ==> S x = S y` and its siblings as axioms would be writing down consequences.
 Conjunction, disjunction and the existential get nothing because they have no tags: they are
-abbreviations in the object language, which is `NUM_FORM`'s decision being spent.
+abbreviations in the object language, which is `NUM_FORM`'s decision being spent, and since
+2026-09-16 they are abbreviations something expands.
+
+**The six that expand them are `NUM_AND`, `NUM_OR`, `NUM_EXISTS`, `NUM_LESS`, `NUM_ALL_BELOW` and
+`NUM_EXISTS_BELOW`, and the bounded quantifier is what they are for.** Each is a constant of this
+logic that builds a code, the way `NUM_NUMERAL` is; none adds a tag, and the `NUM_FORM_` fact
+published about each derives that what comes out is a code the four tags already accept. Six
+definitions and no axiom. `docs/adr/0021` is the decision.
+
+**Two places said for two days that those three were abbreviations, and nothing built one.** No
+constant, no constructor of the `Obj` tree, no helper: a reader met the sentence and took it for a
+description of something implemented. Nothing fails on a claim of that shape, because an
+abbreviation nobody expands looks exactly like one nobody has needed yet.
+
+**What forced it is that the object signature has no relation symbol at all.** `docs/adr/0014` says
+the theory has to take a code apart with bounded quantifiers alone, since that is what keeps `Prov`
+Sigma-1; but `i < t` has to be written `?z. i + S z = t` and the existential has to be written
+`~!z.~(...)`, so a bound is three abbreviations deep and neither of the two under it existed. The
+witness index `z` is an **argument** rather than a fixed number, because a fixed one would want a
+freshness condition on both sides that nothing here can discharge: `Language.notFreeIn` walks a
+concrete closed code and refuses precisely the codes that have a free variable in them.
+
+**`NUM_LESS` is not `NUM_LT`, and the two cannot be confused by accident.** `NUM_LT` is the ambient
+order on `num`, a predicate, and it is what the meta level reasons with; `NUM_LESS` is a function
+into `num` that builds a piece of object syntax, and it is what the embedded theory reasons about.
+Their types differ, so reaching for the wrong one is a type error rather than a theorem about
+something else. That is the defence this repository did not have when `NUM_PRIME_FACTOR` and
+`NUM_PRIME_DIVISOR` were a letter apart.
+
+What is **not** there, named rather than left to be met: where an index occurs free in one of the
+six, and what a substitution does to it. Three of those twelve clauses are not pure rewriting,
+because `NUM_LESS` introduces an occurrence of its own witness that only a case split on `z = i`
+takes back out of the answer.
 
 **`NUM_CLOSED t` is what the substitution's blindness to capture costs, written down.** **Two** of
 the eight schemes carry it, specialisation once and replacement twice; this sentence said three

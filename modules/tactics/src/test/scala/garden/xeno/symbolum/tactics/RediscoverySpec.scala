@@ -163,7 +163,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // once, so three, derived before the run by the peeling rule this file states and measured
     // identical. The sum's two leading arrows are the two convergences it takes; the negation's
     // one is the single convergence it takes.
-    propose.weakenings.size shouldBe 312
+    // 323 with the six derived connectives' eleven; `ProposeSpec`'s entry on the same figure
+    // carries the per-lemma derivation. None of the eleven reaches a rediscovery either, for the
+    // reason the concatenation entry gives: a weakening of a well-formedness rule is a claim that
+    // every code of some shape is a formula, which is false rather than a lemma somebody forgot.
+    propose.weakenings.size shouldBe 323
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

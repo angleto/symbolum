@@ -153,6 +153,21 @@ object Spellings {
       .delimited("NUM_STEP_FROM", 4, "\\operatorname{step}_{#1}(#2, #3, #4)")
       .delimited("NUM_PROV_FROM", 2, "\\operatorname{Prov}_{#1}(#2)")
       .delimited("NUM_PA", 1, "\\operatorname{PA}(#1)")
+      // The object language's derived connectives. Set as named operations rather than with the
+      // meta level's own symbols, which is the point of the row: `NUM_AND p q` is a NUMBER that
+      // codes a conjunction, and writing it `#1 \\wedge #2` would put it in the same shape as the
+      // ambient connective it is a code for. `\\operatorname{Tm}` and `\\operatorname{Fm}` three rows
+      // up made the same choice for the same reason.
+      .delimited("NUM_AND", 2, "\\operatorname{and}(#1, #2)")
+      .delimited("NUM_OR", 2, "\\operatorname{or}(#1, #2)")
+      .delimited("NUM_EXISTS", 2, "\\operatorname{ex}(#1, #2)")
+      // The three that carry a witness index take it in a subscript, which is where
+      // `NUM_STEP_FROM` puts its own parameter. `ball` and `bex` rather than a bounded quantifier
+      // set with a bound under it: the bound is an argument here, not a decoration, and a reader
+      // who cannot see it as an argument cannot check the row against the statement.
+      .delimited("NUM_LESS", 3, "\\operatorname{lt}_{#1}(#2, #3)")
+      .delimited("NUM_ALL_BELOW", 4, "\\operatorname{ball}_{#1}(#2, #3, #4)")
+      .delimited("NUM_EXISTS_BELOW", 4, "\\operatorname{bex}_{#1}(#2, #3, #4)")
       // The modulus is the FIRST argument, and this row had it last until the rendering was read
       // against `Modular`'s own docstring: "`NUM_CONG k m n`", and "`NUM_CONG k` takes its modulus
       // first, and that is the useful currying". The wrong order set beautifully and said something

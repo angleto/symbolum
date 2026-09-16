@@ -43,3 +43,4 @@ the rejected option attractive, and they will.
 | [0018](0018-an-operator-symbol-stands-for-more-than-one-constant.md) | An operator symbol stands for more than one constant, and the elaborator picks which | accepted, settles an open question of 0016 |
 | [0019](0019-a-declared-constant-still-has-no-origin-and-here-is-what-that-costs.md) | A declared constant still has no origin, and here is what that costs | accepted, revises 0008 |
 | [0020](0020-an-inductive-set-is-the-intersection-and-is-polymorphic.md) | An inductively defined set is the intersection of the closed sets, and it is polymorphic | accepted |
+| [0021](0021-the-derived-connectives-are-constants-that-build-codes.md) | The derived connectives are constants that build codes | accepted, spends 0014 |

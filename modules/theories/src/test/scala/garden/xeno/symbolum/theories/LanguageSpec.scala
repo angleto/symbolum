@@ -102,7 +102,17 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
         Language.AxiomInduction,
         Language.AxiomCases,
         Language.LogicCases,
-        Language.ClosedCases
+        Language.ClosedCases,
+        // The six abbreviations join the free side for the reason `NUM_PA` is on it: each is a
+        // constant defined by a body, so its equation is the definition unfolded and generalised
+        // and no recursion is justified along the way. Their `NUM_FORM_` facts are on the other
+        // side, because composing the introduction rules does spend what those rules cost.
+        Language.AndCases,
+        Language.OrCases,
+        Language.ExistsCases,
+        Language.LessCases,
+        Language.AllBelowCases,
+        Language.ExistsBelowCases
       )).toSet
 
     costs.foreach { case (name, spent) =>
@@ -110,6 +120,53 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
         if (!free.contains(name)) spent shouldBe naturals
       }
     }
+  }
+
+  /**
+   * The bounded quantifier, at a concrete code, with nothing left assumed.
+   *
+   * What this builds is `!v0. v0 < 1 ==> v0 = v0`, with `2` for the witness index and `0` for the
+   * quantified one. The formula is trivial on purpose and is not what is being shown: what is
+   * being shown is that `NUM_FORM` accepts the code with **no hypotheses**, which says the six
+   * abbreviations compose and that a bounded quantifier is now a sentence this repository can
+   * write. Before they landed it was not one, because the object signature has no relation symbol
+   * and tags `5` to `8` have no clause for a bound.
+   *
+   * **It is also the guard against the group being vacuous**, and it is the only assertion about
+   * the six that could fail for that reason. Every one of them is an implication, and an
+   * implication nothing can satisfy is a theorem: all six would be provable, every other assertion
+   * in this file would pass, and there would be no code anywhere that they applied to. Discharging
+   * the antecedents at an actual code is what rules that out.
+   */
+  it should "build a bounded quantifier and accept the code with nothing assumed" in {
+    val variable = term("NUM_CODE 0 ZERO")
+    val body = term("NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 ZERO) (NUM_CODE 0 ZERO))")
+
+    val variableIsTerm =
+      force(rules.spec(term("ZERO"), force(language.fact(Language.TermVariable))))
+    val bodyIsFormula = force(
+      rules
+        .specAll(force(language.fact(Language.FormulaEquality)), List(variable, variable))
+        .flatMap(rules.mp(_, variableIsTerm))
+        .flatMap(rules.mp(_, variableIsTerm))
+    )
+    val boundIsTerm =
+      force(rules.spec(term("SUC ZERO"), force(language.fact(Language.NumeralIsTerm))))
+
+    val whole = force(
+      rules
+        .specAll(
+          force(language.fact(Language.AllBelowFormula)),
+          List(term("SUC (SUC ZERO)"), term("ZERO"), term("NUM_NUMERAL (SUC ZERO)"), body)
+        )
+        .flatMap(rules.mp(_, boundIsTerm))
+        .flatMap(rules.mp(_, bodyIsFormula))
+    )
+
+    whole.hypotheses shouldBe empty
+    whole.conclusion shouldBe proposition(
+      "NUM_FORM (NUM_ALL_BELOW (SUC (SUC ZERO)) ZERO (NUM_NUMERAL (SUC ZERO)) " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 ZERO) (NUM_CODE 0 ZERO))))")
   }
 
   /**

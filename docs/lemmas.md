@@ -146,17 +146,27 @@ they have least appetite for working out how it is produced.
 
 ## Language
 
+  NUM_ALL_BELOW_CASES      !x:num. !y:num. !z:num. !u:num. NUM_ALL_BELOW x y z u = NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR (NUM_LESS x (NUM_CODE 0 y) z) u)))
+  NUM_AND_CASES            !x:num. !y:num. NUM_AND x y = NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 6 y)))
   NUM_CLOSED_ADD           !x:num. !y:num. NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_CLOSED (NUM_CODE 3 (NUM_PAIR x y))
   NUM_CLOSED_CASES         !x:num. NUM_CLOSED x = (!y:num. ~(NUM_FREE_TERM y x))
   NUM_CLOSED_MUL           !x:num. !y:num. NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_CLOSED (NUM_CODE 4 (NUM_PAIR x y))
   NUM_CLOSED_SUC           !x:num. NUM_CLOSED x ==> NUM_CLOSED (NUM_CODE 2 x)
   NUM_CLOSED_ZERO          NUM_CLOSED (NUM_CODE 1 0)
+  NUM_EXISTS_BELOW_CASES   !x:num. !y:num. !z:num. !u:num. NUM_EXISTS_BELOW x y z u = NUM_EXISTS y (NUM_AND (NUM_LESS x (NUM_CODE 0 y) z) u)
+  NUM_EXISTS_CASES         !x:num. !y:num. NUM_EXISTS x y = NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR x (NUM_CODE 6 y)))
   NUM_FORM_ALL             !x:num. !y:num. NUM_FORM y ==> NUM_FORM (NUM_CODE 8 (NUM_PAIR x y))
+  NUM_FORM_ALL_BELOW       !x:num. !y:num. !z:num. !u:num. NUM_TERM z ==> NUM_FORM u ==> NUM_FORM (NUM_ALL_BELOW x y z u)
+  NUM_FORM_AND             !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM (NUM_AND x y)
   NUM_FORM_CASES           !x:num. NUM_FORM x = (?y:num. ?z:num. x = NUM_CODE y z /\ (y = 5 /\ (?u:num. ?v:num. z = NUM_PAIR u v /\ NUM_TERM u /\ NUM_TERM v) \/ y = 6 /\ NUM_FORM z \/ y = 7 /\ (?u:num. ?v:num. z = NUM_PAIR u v /\ NUM_FORM u /\ NUM_FORM v) \/ y = 8 /\ (?u:num. ?v:num. z = NUM_PAIR u v /\ NUM_FORM v)))
   NUM_FORM_EQ              !x:num. !y:num. NUM_TERM x ==> NUM_TERM y ==> NUM_FORM (NUM_CODE 5 (NUM_PAIR x y))
+  NUM_FORM_EXISTS          !x:num. !y:num. NUM_FORM y ==> NUM_FORM (NUM_EXISTS x y)
+  NUM_FORM_EXISTS_BELOW    !x:num. !y:num. !z:num. !u:num. NUM_TERM z ==> NUM_FORM u ==> NUM_FORM (NUM_EXISTS_BELOW x y z u)
   NUM_FORM_IMP             !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM (NUM_CODE 7 (NUM_PAIR x y))
+  NUM_FORM_LESS            !x:num. !y:num. !z:num. NUM_TERM y ==> NUM_TERM z ==> NUM_FORM (NUM_LESS x y z)
   NUM_FORM_NOT             !x:num. NUM_FORM x ==> NUM_FORM (NUM_CODE 6 x)
   NUM_FORM_NOT_ZERO        ~(NUM_FORM 0)
+  NUM_FORM_OR              !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM (NUM_OR x y)
   NUM_FREE_FORM_ALL        !x:num. !y:num. !z:num. NUM_FREE_FORM x (NUM_CODE 8 (NUM_PAIR y z)) = COND (y = x) F (NUM_FREE_FORM x z)
   NUM_FREE_FORM_EQ         !x:num. !y:num. !z:num. NUM_FREE_FORM x (NUM_CODE 5 (NUM_PAIR y z)) = (NUM_FREE_TERM x y \/ NUM_FREE_TERM x z)
   NUM_FREE_FORM_IMP        !x:num. !y:num. !z:num. NUM_FREE_FORM x (NUM_CODE 7 (NUM_PAIR y z)) = (NUM_FREE_FORM x y \/ NUM_FREE_FORM x z)
@@ -166,6 +176,7 @@ they have least appetite for working out how it is produced.
   NUM_FREE_TERM_SUC        !x:num. !y:num. NUM_FREE_TERM x (NUM_CODE 2 y) = NUM_FREE_TERM x y
   NUM_FREE_TERM_VAR        !x:num. !y:num. NUM_FREE_TERM x (NUM_CODE 0 y) = (y = x)
   NUM_FREE_TERM_ZERO       !x:num. NUM_FREE_TERM x (NUM_CODE 1 0) = F
+  NUM_LESS_CASES           !x:num. !y:num. !z:num. NUM_LESS x y z = NUM_EXISTS x (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR y (NUM_CODE 2 (NUM_CODE 0 x)))) z))
   NUM_LOGIC_CASES          !x:num. NUM_LOGIC x = ((?y:num. ?z:num. NUM_FORM y /\ NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z y)))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM y /\ NUM_FORM z /\ NUM_FORM u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z u)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR y z)) (NUM_CODE 7 (NUM_PAIR y u)))))) \/ (?y:num. ?z:num. NUM_FORM y /\ NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 y) (NUM_CODE 6 z))) (NUM_CODE 7 (NUM_PAIR z y)))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM u /\ NUM_TERM z /\ NUM_CLOSED z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y u)) (NUM_SUBST_FORM y z u))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM z /\ NUM_FORM u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z u)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y z)) (NUM_CODE 8 (NUM_PAIR y u)))))) \/ (?y:num. ?z:num. NUM_FORM z /\ ~(NUM_FREE_FORM y z) /\ x = NUM_CODE 7 (NUM_PAIR z (NUM_CODE 8 (NUM_PAIR y z)))) \/ (?y:num. NUM_TERM y /\ x = NUM_CODE 5 (NUM_PAIR y y)) \/ (?y:num. ?z:num. ?u:num. ?v:num. NUM_FORM v /\ NUM_TERM z /\ NUM_TERM u /\ NUM_CLOSED z /\ NUM_CLOSED u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR z u)) (NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM y z v) (NUM_SUBST_FORM y u v))))))
   NUM_LOGIC_CONTRAPOSE     !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_LOGIC (NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 x) (NUM_CODE 6 y))) (NUM_CODE 7 (NUM_PAIR y x))))
   NUM_LOGIC_DISTRIBUTE     !x:num. !y:num. !z:num. NUM_FORM x ==> NUM_FORM y ==> NUM_FORM z ==> NUM_LOGIC (NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 7 (NUM_PAIR y z)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR x y)) (NUM_CODE 7 (NUM_PAIR x z))))))
@@ -181,6 +192,7 @@ they have least appetite for working out how it is produced.
   NUM_NUMERAL_SUC          !x:num. NUM_NUMERAL (SUC x) = NUM_CODE 2 (NUM_NUMERAL x)
   NUM_NUMERAL_TERM         !x:num. NUM_TERM (NUM_NUMERAL x)
   NUM_NUMERAL_ZERO         NUM_NUMERAL 0 = NUM_CODE 1 0
+  NUM_OR_CASES             !x:num. !y:num. NUM_OR x y = NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 x) y)
   NUM_PA_ADD_SUC           NUM_PA (NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))))))))
   NUM_PA_ADD_ZERO          NUM_PA (NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0)))))
   NUM_PA_CASES             !x:num. NUM_PA x = (x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1)))))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0)))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 1 0)))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))) (NUM_CODE 0 0)))))))) \/ (?y:num. ?z:num. NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM y (NUM_CODE 1 0) z) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z (NUM_SUBST_FORM y (NUM_CODE 2 (NUM_CODE 0 y)) z))))) (NUM_CODE 8 (NUM_PAIR y z)))))))

@@ -232,7 +232,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // once, so three, derived before the run by the peeling rule this file states and measured
     // identical. The sum's two leading arrows are the two convergences it takes; the negation's
     // one is the single convergence it takes.
-    proposals.size shouldBe 312
+    // 323 with the object language's six derived connectives. **ELEVEN, derived before the run
+    // and then measured**, by the peeling rule this entry states: the six defining equations are
+    // equations and have nothing to drop, and the six well-formedness rules carry two antecedents
+    // each except `NUM_FORM_EXISTS`, which asks only that its body be a formula. Two, two, one,
+    // two, two, two. Nothing here is curried under a nested quantifier, so the caveat the
+    // `MONOTONE_LE` entry above records does not arise.
+    proposals.size shouldBe 323
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -787,7 +793,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // hypothesis came off. The count of the residues themselves was derivable and was derived,
     // three, and it is the split of those three that was not; keeping the two apart is the whole
     // reason this row says which half was predicted.
-    open shouldBe 225
+    // 235 with TEN of the eleven, and the eleventh is the rule this pair of buckets has now shown
+    // three times rather than a new fact. It is `NUM_FORM_EXISTS`'s only weakening,
+    // `!i p. NUM_FORM (NUM_EXISTS i p)`, and it goes to `unreadable` because dropping the single
+    // hypothesis of a single-hypothesis rule leaves a residue with no antecedent at all. The
+    // `NUM_CLOSED_SUC` entry above says exactly that about exactly that shape, and it was not
+    // applied here in advance: this ten was read off the run, and the entry above is what makes it
+    // unsurprising afterwards rather than what predicted it.
+    open shouldBe 235
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -999,7 +1012,20 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `converges`, and no procedure in this chain has an address for that constant at all. The
     // sum's two stay in `open` because each keeps the other convergence as an antecedent, so what
     // is left is still a conditional a procedure will attempt and fail to settle.
-    unreadable shouldBe 78
+    //
+    // 79 with ONE of the six derived connectives' eleven, and the pair adds up the way this note
+    // asks: ten went to `open` and this one here, eleven with nothing left over. It is
+    // `NUM_FORM_EXISTS`'s only weakening, and it is unreadable for neither of the two reasons
+    // above: not a type nothing has an address for, and not an operator at a type variable, but a
+    // residue with NO ANTECEDENT AT ALL, which is the `NUM_CLOSED_SUC` case the `open` entry
+    // records. Dropping the single hypothesis of a single-hypothesis rule leaves nothing to
+    // attempt.
+    //
+    // **This figure was explained in the `open` entry and not moved here**, and the suite is what
+    // caught it: the sentence naming where the eleventh went was written in one place while the
+    // count it describes stayed put in another. A derivation written down beside the wrong number
+    // is worse than no derivation, because it reads as though somebody checked.
+    unreadable shouldBe 79
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1219,6 +1245,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // residues of the two factor lemmas, the induction and the suffix name no number at all.
     // 120 with two of `Reaching`'s. `REACH` carries `SND`, `SUC` and the pair into every statement
     // about a counted step, and the potential lemma writes `NUM_ADD` and `NUM_LE` outright.
+    // Unmoved by the six derived connectives, and the entry is here because a reader who has just
+    // seen eleven residues arrive will look for them. This list counts CONSTANTS, and every one of
+    // the eleven is a claim about `NUM_FORM` or `NUM_TERM` of a code: what their residues write is
+    // `NUM_CODE` and `NUM_PAIR`, neither of which is among the thirteen. A development about
+    // syntax adds nothing to a list about arithmetic, which is the same rule the concatenation
+    // entry above states from the other side.
     aboutNumbers.size shouldBe 123
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
