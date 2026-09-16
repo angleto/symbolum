@@ -194,8 +194,17 @@ object Session {
      *
      * `define` is separated by `:=` and the rest by the first `:`, which works because a name holds
      * no colon while a claim holds several: `prove SQ : !x:real. 0 <= x * x` splits after `SQ` and
-     * the annotations inside the claim are left alone. A line whose keyword is unknown is refused
-     * naming the seven rather than guessed at.
+     * the annotations inside the claim are left alone. A line whose keyword is unknown is refused by
+     * printing [[Command.Keywords]] rather than guessed at, so what the refusal names cannot fall
+     * behind the enum.
+     *
+     * This said "naming the seven" from the first commit of this history until 2026-09-16, and it
+     * was true when it was written: the eighth keyword is `derive` and it landed afterwards. The
+     * count is deleted rather than corrected, for the reason the one on the enum above already
+     * gives: the only thing it stood for is the list the refusal prints, so a figure beside it is
+     * a second copy of a live enumeration and nothing was comparing the two. It sat eight lines
+     * below that enumeration and three readings of this file that were looking for exactly this
+     * went past it, which is why the repair is deletion and not a better number.
      */
     def read(line: String): Either[String, Command] = {
       val trimmed = line.trim
@@ -457,8 +466,12 @@ object Session {
      * constants in principle; what it needs is the axiom instance specialised and detached by the
      * caller, and over a session that is `derive`, which [[Surface.deriving]] implements further
      * down this same object. This said "which is not written" for the day after it was written, in
-     * the file that writes it, and what carried it that far is that a sentence with no figure in it
-     * has nothing watching it: the three specs that read `CLAUDE.md` each look for a number.
+     * the file that writes it, and what carried it that far is that nothing in the tree was being
+     * compared with it. A figure is the easy case of that, because a test can recount one, and for
+     * a while the only readings of `CLAUDE.md` here did exactly that; `DocumentationSpec` now
+     * compares a *list* in that document with [[Command.Keywords]], so what a watched sentence
+     * needs is an anchor some test can find, and a number is one anchor rather than the only one.
+     * A sentence offering neither is watched by nobody, which is what this one was.
      */
     private def proving(state: State, name: String, claim: String): (Outcome, State) =
       state.proposition(claim) match {
