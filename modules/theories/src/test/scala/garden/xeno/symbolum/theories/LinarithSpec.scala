@@ -145,6 +145,32 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  /* --------------------------------------------- which signature the text is read in */
+
+  "A name the signature does not hold" should "become a variable rather than a refusal" in {
+    // What a caller meets when it hands the `String` entry point a text written in its OWN
+    // development's notation. The text is parsed against `reals.theory`, which for a link in the
+    // chain is below the development doing the calling: `Limit.construct` builds its Linarith over
+    // `magnitude.order`, before `converges` and `lim` exist. A letter-initial name that signature
+    // does not hold is well-typed as a free variable, so the text does not fail, and what is
+    // proved is a claim about a variable.
+    val text = "!x:real. selectivity < x ==> selectivity < x + 1"
+
+    // The line that keeps the rest of this from being vacuous, and the only one that separates the
+    // two readings. If anything ever declares this name into the standard theory, the case below
+    // stops being the case it is named for, and this is what says so rather than a silent pass.
+    reals.theory.constants.exists { case (name, _) => name == "selectivity" } shouldBe false
+
+    val theorem = force(linarith.prove(text))
+    theorem.hypotheses shouldBe empty
+
+    // And it comes back printing as the text that was written, because a variable is printed no
+    // differently from a constant. `proves` above compares the conclusion against
+    // `reals.proposition(text)`, which reads the name the same way, so neither the printer nor
+    // that comparison can catch this; only the constant check can.
+    reals.show(theorem.conclusion) shouldBe text
+  }
+
   "A multiplier" should "close a goal that a plain sum cannot" in {
     // The goal that named the limitation in three documents. The certificate is one half, cleared
     // to a multiplier of one on the hypothesis and a scale of two on the goal, and the scale comes

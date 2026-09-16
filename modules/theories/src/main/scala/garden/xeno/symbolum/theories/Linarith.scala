@@ -84,12 +84,47 @@ final class Linarith private (
 
   private val rules = reals.logic.rules
 
-  /** Prove a goal written in the theory's notation. */
+  /**
+   * Prove a goal written in the notation of the theory THIS INSTANCE was built over, which need
+   * not be the caller's.
+   *
+   * The text goes through `reals.proposition`, so the signature it is read against is
+   * `reals.theory`. A letter-initial name that signature does not hold is not a syntax error
+   * here: it is well-typed as a free variable. So a caller that hands this a text written in its
+   * own development's notation is answered `Right`, with no hypotheses, by a theorem about a
+   * variable rather than about its constant, and the conclusion PRINTS as the text it wrote,
+   * because a variable is printed no differently from a constant. Comparing the conclusion
+   * against the same text parsed again does not separate the two readings either, since that
+   * parse reads the name the same way. What separates them is whether the name is in
+   * `reals.theory.constants`.
+   *
+   * Nothing catches it because nothing is unsound: a free variable is instantiable, so the
+   * theorem is true of every instance, the intended constant included. It is simply not the
+   * claim that was asked for, and the mismatch surfaces later, wherever that theorem meets a
+   * rule expecting one stated over the caller's own constants.
+   *
+   * Handing it a better theory is not the fix, because for a link in the chain the order is
+   * structural: a development constructs its Linarith before it declares anything.
+   * `Limit.construct` builds one over `magnitude.order`, so `converges` and `lim` are outside it
+   * by construction and no argument could have put them in. A goal naming anything of the
+   * caller's own is parsed in the caller's signature and handed to the `Term` overload below,
+   * which is what `Limit` already does for every goal of its that mentions `Sum`.
+   *
+   * `LinarithSpec` holds the reading and the constant check that separates the two.
+   */
   def prove(text: String): Either[LogicError, Kernel.Thm] =
     reals.proposition(text).flatMap(prove)
 
   /**
    * Prove `!vars. h1 /\ ... /\ hn ==> c`, or a goal with no hypotheses at all.
+   *
+   * The antecedents may equally be curried, `h1 ==> ... ==> hn ==> c`, and the mixed shape is
+   * read too: `split` peels every antecedent rather than one, which is what `CurriedGoalSpec`
+   * exists for and what lets this entry point be handed the statements `Order` writes its own
+   * lemmas in. The choice is the caller's and it is not free, because what comes back keeps the
+   * shape that was asked for: the conjoined goal wants a `conjIntro` and one `mp`, the curried
+   * one wants an `mp` per antecedent, and assembling for the wrong one is refused by `Rules.mp`
+   * rather than here.
    *
    * The quantifiers come off, the antecedent is assumed and taken apart, the search picks which
    * of its parts to add, and the result is discharged and closed again. What comes back is checked
