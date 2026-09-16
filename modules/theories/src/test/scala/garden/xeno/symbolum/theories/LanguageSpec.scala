@@ -278,10 +278,21 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    *
    * Without the inner `COND` the clause would answer `T` here whatever `p` is. Both bounded
    * constants are put to it rather than one, and that is not padding: their two statements have
-   * the same right-hand side, the second was written from the first, and a derivation that agrees
-   * with itself is not evidence that the copy was right. The free indices of `!j. j < t ==> p` and
-   * of `?j. j < t /\ p` really are the same set, and this is where that is asserted instead of
-   * assumed.
+   * the same right-hand side and the second was written from the first.
+   *
+   * **The objection to that, and the measurement that answers it.** One test iterating over both
+   * is one instrument, so it could be agreeing with itself twice rather than reading the pair
+   * twice. What it reads is two facts, and those are not one derivation: withholding
+   * `NUM_ALL_BELOW_CASES` from the rule set kills both `NUM_ALL_BELOW` clauses and leaves both
+   * `NUM_EXISTS_BELOW` ones standing, and withholding `NUM_EXISTS_BELOW_CASES` does exactly the
+   * reverse. The dependency is disjoint, so the two answers coinciding is a conclusion reached
+   * through two different expansions rather than one expansion read twice. Measured outside the
+   * tree on 2026-09-16, for the reason the guard-dropped attack is: the derivation takes the
+   * statement published under a name, and a spec has no way to hand it a rule set with an
+   * equation missing.
+   *
+   * The free indices of `!j. j < t ==> p` and of `?j. j < t /\ p` really are the same set, and
+   * this is where that is asserted instead of assumed.
    */
   it should "read a bound under the witness that its own comparison binds" in {
     val body: FVar = Term.variable("p", numbers)
