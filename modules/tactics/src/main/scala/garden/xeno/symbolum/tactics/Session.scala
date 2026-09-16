@@ -137,7 +137,13 @@ object Session {
   /**
    * What a user writes in a cell.
    *
-   * Six that do something and one that failed to read. The language is the plan's, and it is
+   * One case per keyword in [[Command.Keywords]], and one for a line that failed to read. This
+   * said "six that do something" while the enum held eight of them, which makes it the third
+   * sentence in this repository to have survived `derive` landing, and it is the only one of the
+   * three nothing had noticed. The count is deleted rather than corrected: what it was for is the
+   * shape of the list below, which a reader can see by looking.
+   *
+   * The language is the plan's, and it is
    * deliberately not Scala: a cell that evaluates arbitrary Scala can reach `Kernel.assertAxiom`
    * and `Term.variable`, both public and neither checked against anything a transcript records, and
    * then nothing on the page is a function of the page.
