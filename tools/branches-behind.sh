@@ -32,6 +32,14 @@
 #
 # It warns and never fails. A branch left behind is somebody else's unlanded work, and a blocking
 # gate on that condition stops the wrong person.
+#
+# WHERE IT RUNS, WHICH IS NOT WHERE IT WAS TRIED. The pipeline checkout holds one local branch, the
+# line, and every other branch only as a remote-tracking ref; a development machine holds them all
+# locally. This script read bare names as revisions, which is correct in the second shape and fatal
+# in the first, and it exited 128 on the first push that met a second branch while five hand checks
+# on a development machine passed. `tools/branches-behind-test.sh` runs it in both shapes against a
+# repository built for the purpose, and the pipeline runs that test rather than only this script:
+# a check that is green because it has nothing to look at has not been checked.
 
 set -eu
 
@@ -51,10 +59,27 @@ if [ -z "$line" ]; then
     esac
 fi
 
-git rev-parse --verify --quiet "$line" >/dev/null || {
-    echo "branches-behind: no such ref: $line" >&2
-    exit 2
+# The ref a branch name stands for, local first, empty when it stands for neither. Nothing here
+# uses a bare name as a revision, and that is the whole of the repair: in a pipeline checkout every
+# branch but the line exists only as `refs/remotes/origin/<name>`, and a bare name does not resolve
+# to that. `rev-parse` tries `refs/<n>`, `refs/tags/<n>`, `refs/heads/<n>`, `refs/remotes/<n>` and
+# `refs/remotes/<n>/HEAD`, and none of those is it. The third candidate is for a name given the
+# way `git branch -r` prints one, `origin/7.0`, which is the only form a caller is likely to type.
+branch_rev() {
+    for ref in "refs/heads/$1" "refs/remotes/origin/$1" "refs/remotes/$1"; do
+        if git rev-parse --verify --quiet "$ref" >/dev/null; then
+            echo "$ref"
+            return 0
+        fi
+    done
+    return 0
 }
+
+line_rev=$(branch_rev "$line")
+if [ -z "$line_rev" ]; then
+    echo "branches-behind: no such branch: $line" >&2
+    exit 2
+fi
 
 # Branches nothing will ever merge, each with the reason it is here rather than a bare name. An
 # entry with no reason outlives whatever justified it; an entry for a branch that is gone is an
@@ -72,12 +97,23 @@ exempt_reason() {
 exempt_names="pre-rename"
 
 # Every branch, local and remote, once. A remote branch and its local counterpart are one piece of
-# work and reporting both would double every line.
+# work and reporting both would double every line, so the population is keyed by the bare name.
+# That key is not a revision: `branch_rev` turns it back into one, and reading this list as
+# revisions is what made this script exit 128 in the only checkout it was ever installed in.
+#
+# `refs/remotes/origin` and not `refs/remotes`: stripping the remote off the name is what makes one
+# key out of a branch and its tracking ref, and that is exact for one remote only, since
+# `origin/topic` and `fork/topic` are two pieces of work under one key. What it therefore does not
+# report: a branch that exists only on a second remote. This repository has one.
+#
+# Reading `%(refname)` and not `%(refname:short)` for the same reason the loop reads a ref: the
+# short form of `refs/remotes/origin/HEAD` is `origin`, which the `HEAD` filter below did not
+# catch, so a pseudo-branch nobody can push to entered the population and was examined.
 branches=$(
-    git for-each-ref --format='%(refname:short)' refs/heads refs/remotes |
-        sed 's|^origin/||' |
-        grep -v '^HEAD$' |
-        grep -v "^$line\$" |
+    git for-each-ref --format='%(refname)' refs/heads refs/remotes/origin |
+        sed -e 's|^refs/heads/||' -e 's|^refs/remotes/origin/||' |
+        grep -vxF 'HEAD' |
+        grep -vxF "$line" |
         sort -u
 )
 
@@ -95,6 +131,15 @@ in_use=$(
         sort -u
 )
 
+# One place emits a line, because the pipeline wants the annotation as well as the text and there
+# are four conditions that need saying.
+warn() {
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+        echo "::warning title=$1::$2"
+    fi
+    echo "$2"
+}
+
 found=0
 noted=0
 for branch in $branches; do
@@ -103,7 +148,16 @@ for branch in $branches; do
         continue
     fi
 
-    if echo "$in_use" | grep -qx "$branch"; then
+    if echo "$in_use" | grep -qxF "$branch"; then
+        continue
+    fi
+
+    rev=$(branch_rev "$branch")
+    if [ -z "$rev" ]; then
+        # Listed a moment ago and gone now, which is a ref deleted while this ran. Reported and not
+        # skipped: a branch disappearing is the condition this tool exists for.
+        warn "branch not examined" "$branch was listed and no longer resolves; it may have been deleted while this ran"
+        found=$((found + 1))
         continue
     fi
 
@@ -113,9 +167,24 @@ for branch in $branches; do
     # Both numbers are reported for that reason: on this repository `pre-rename` is 455 commits off
     # the line and `git cherry` prints 384, and the missing 71 are merges it never looked at rather
     # than commits it found equivalent. A reader given only the 384 infers an overlap that is zero.
-    ahead=$(git cherry "$line" "$branch" 2>/dev/null | grep -c '^+' || true)
-    merges=$(git rev-list --count --merges "$line..$branch")
-    when=$(git log -1 --format=%cr "$branch")
+    #
+    # Both calls are guarded and both report what they could not read. It was the other way round
+    # in each direction, and the pair is why one unreadable branch was worse than no answer:
+    # `cherry` swallowed its own failure through `|| true` and answered 0, which prints as "every
+    # commit landed", and `rev-list` was guarded by nothing, so under `set -e` the first branch it
+    # could not resolve killed a script whose stated contract is to warn and never fail.
+    if ! cherry=$(git cherry "$line_rev" "$rev" 2>/dev/null); then
+        warn "branch not examined" "$branch could not be compared against $line: git cherry failed"
+        found=$((found + 1))
+        continue
+    fi
+    ahead=$(printf '%s\n' "$cherry" | grep -c '^+' || true)
+    if ! merges=$(git rev-list --count --merges "$line_rev..$rev" 2>/dev/null); then
+        warn "branch not examined" "$branch could not be counted against $line: git rev-list failed"
+        found=$((found + 1))
+        continue
+    fi
+    when=$(git log -1 --format=%cr "$rev")
 
     if [ "$ahead" -eq 0 ]; then
         # Silence here would be an absent answer reported as a negative one. Every non-merge commit
@@ -132,22 +201,14 @@ for branch in $branches; do
     [ "$merges" -gt 0 ] && message="$message, plus $merges merge commit(s) not examined"
     message="$message, last touched $when"
 
-    if [ -n "${GITHUB_ACTIONS:-}" ]; then
-        echo "::warning title=branch left behind::$message"
-    fi
-    echo "$message"
+    warn "branch left behind" "$message"
 done
 
 # An exemption for a branch that no longer exists is an excuse for nothing and would keep passing
 # for ever, so the list is read in both directions.
 for name in $exempt_names; do
-    if ! git rev-parse --verify --quiet "$name" >/dev/null &&
-       ! git rev-parse --verify --quiet "origin/$name" >/dev/null; then
-        message="the exemption for $name names a branch this repository no longer has"
-        if [ -n "${GITHUB_ACTIONS:-}" ]; then
-            echo "::warning title=stale exemption::$message"
-        fi
-        echo "$message"
+    if [ -z "$(branch_rev "$name")" ]; then
+        warn "stale exemption" "the exemption for $name names a branch this repository no longer has"
         found=$((found + 1))
     fi
 done

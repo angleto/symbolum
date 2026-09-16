@@ -78,6 +78,28 @@ jobs:
       # not run and could not fail. Adding scalafmt is a decision about the source; pretending to
       # check it is not, so the step is gone rather than disabled.
 
+  # A gate, unlike the job below it, and the difference is whose work each one is about. This one
+  # runs a shell tool of this repository against a repository built for the purpose; a failure here
+  # is a defect in something committed here, which is what a gate is for. It runs on a pull request
+  # as well, where the report below deliberately does not.
+  #
+  # It exists because the report below was green for want of anything to look at. The remote holds
+  # one branch, so `branches-behind.sh` had nothing to examine and printed its silent line, while in
+  # the checkout shape it actually runs in it exited 128 on the first branch it met. Five hand
+  # checks had passed, all of them on a development machine, where every branch is local and the
+  # defect is invisible. The test builds both shapes, so the pipeline is where the tool is proved
+  # rather than merely where it is installed.
+  branches-behind-test:
+    name: branches-behind, proved in the shape it runs in
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: branches-behind, in both checkout shapes
+        run: sh tools/branches-behind-test.sh
+
   # Not `needs: test`, and not a gate. What it reports is somebody else's unlanded work, so a
   # blocking check on it stops the wrong person, and making it wait for the suite would delay a
   # warning that has nothing to do with whether this commit is sound.
