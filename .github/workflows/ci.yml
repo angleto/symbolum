@@ -122,6 +122,14 @@ jobs:
   # one to watch is `scan`: 185 statements at 99.0 is one statement of slack, so that module is where
   # a red line will come from first, and it will be a real uncovered statement rather than a sample.
   #
+  # And it has been seen to go red, which is the half a green tick never establishes and which the
+  # step this file deleted for pretending to check formatting is the standing warning about. On a
+  # throwaway branch `sat`'s floor was raised to 93.0 against its measured 92.68 and dispatched: this
+  # job failed with `Coverage is below minimum [92.68% < 93.00%]: Stmt:Total` and every other job in
+  # the workflow stayed green. That message names the rate and the floor and **not the module**,
+  # which is the other reason the reports are uploaded: on a red run the artifact is what says which
+  # of the eleven it was.
+  #
   # It does not duplicate the suite above. The corpus measurements run under `sbt test` and are
   # skipped when coverage is enabled, which `build.sbt` and `garden.xeno.symbolum.tactics.Corpus`
   # argue for at length: the two commands ask different questions, and the one that costs more than
