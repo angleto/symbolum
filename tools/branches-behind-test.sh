@@ -27,52 +27,10 @@ subject="$here/branches-behind.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT INT TERM
 
+harness_name=branches-behind-test
+. "$here/test-harness.sh"
+
 failures=0
-
-# A named check rather than `set -e` on a comparison: every case runs, so one broken shape does not
-# hide the state of the other, and the name is what a pipeline log is read for.
-check() {
-    if [ "$2" = "$3" ]; then
-        echo "  ok    $1"
-    else
-        echo "  FAIL  $1"
-        echo "          expected: $3"
-        echo "          actual:   $2"
-        failures=$((failures + 1))
-    fi
-}
-
-holds() {
-    if printf '%s\n' "$report" | grep -q "$2"; then
-        echo "  ok    $1"
-    else
-        echo "  FAIL  $1: no line matching /$2/"
-        failures=$((failures + 1))
-    fi
-}
-
-lacks() {
-    if printf '%s\n' "$report" | grep -q "$2"; then
-        echo "  FAIL  $1: a line matches /$2/"
-        printf '%s\n' "$report" | grep "$2" | sed 's|^|          |'
-        failures=$((failures + 1))
-    else
-        echo "  ok    $1"
-    fi
-}
-
-# Quiet while it works and loud when it does not. Discarding both streams is what a fixture step
-# usually does, and it cost a debugging pass here: a `git clone` run from a directory this script
-# had just deleted failed, `set -e` stopped the run at exit 128, and the output ended mid-list with
-# every printed check passing. A fixture that breaks must not read as a suite that ended.
-git_q() {
-    if ! git_out=$(git -c user.email=test@invalid -c user.name=test -c commit.gpgsign=false \
-        -c advice.detachedHead=false "$@" 2>&1); then
-        echo "branches-behind-test: the fixture could not be built: git $*" >&2
-        printf '%s\n' "$git_out" | sed 's|^|    |' >&2
-        exit 2
-    fi
-}
 
 # The population the fixture answers about, and the answer each member is there to force:
 #   7.0               the line
@@ -219,11 +177,4 @@ echo "branches-behind, an exemption whose branch is gone:"
 check "stale exemption: exits 0" "$status" "0"
 holds "stale exemption: reports the excuse that excuses nothing" 'the exemption for pre-rename names a branch this repository no longer has'
 
-echo
-if [ "$failures" -eq 0 ]; then
-    echo "branches-behind-test: every check passed"
-    exit 0
-fi
-
-echo "branches-behind-test: $failures check(s) failed"
-exit 1
+summarise

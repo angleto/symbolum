@@ -83,14 +83,18 @@ jobs:
   # is a defect in something committed here, which is what a gate is for. It runs on a pull request
   # as well, where the report below deliberately does not.
   #
-  # It exists because the report below was green for want of anything to look at. The remote holds
-  # one branch, so `branches-behind.sh` had nothing to examine and printed its silent line, while in
-  # the checkout shape it actually runs in it exited 128 on the first branch it met. Five hand
-  # checks had passed, all of them on a development machine, where every branch is local and the
-  # defect is invisible. The test builds both shapes, so the pipeline is where the tool is proved
-  # rather than merely where it is installed.
-  branches-behind-test:
-    name: branches-behind, proved in the shape it runs in
+  # It exists because both scripts were green for want of anything to look at, in two different
+  # ways. `branches-behind.sh` had nothing to examine, since the remote holds one branch, and it
+  # printed its silent line while in the checkout shape it actually runs in it exited 128 on the
+  # first branch it met; five hand checks had passed, all on a development machine, where every
+  # branch is local and the defect is invisible. `branch-content-landed.sh` declared two shapes of
+  # name and extracted one, and the answer for a branch the dead shape was the whole of was "it
+  # introduces no name", which reads as a fact about the branch. Neither had a run that could fail.
+  #
+  # It names the two scripts rather than the directory: `tools/` is not proved by this job, two of
+  # its files are, and a job called "shell" would read as coverage of whatever lands there next.
+  shell-tools:
+    name: The shell tools, against repositories built for the purpose
     runs-on: ubuntu-latest
 
     steps:
@@ -99,6 +103,9 @@ jobs:
 
       - name: branches-behind, in both checkout shapes
         run: sh tools/branches-behind-test.sh
+
+      - name: branch-content-landed, one branch per answer
+        run: sh tools/branch-content-landed-test.sh
 
   # Not `needs: test`, and not a gate. What it reports is somebody else's unlanded work, so a
   # blocking check on it stops the wrong person, and making it wait for the suite would delay a

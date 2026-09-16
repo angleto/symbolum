@@ -51,17 +51,36 @@ done
 # branch merely edits contributes the declarations that were already there and every one of them
 # would be found, which is how a check like this passes about work it has not looked at.
 #
+# A failed diff is reported and not answered. It used to reach `grep` through a pipe, so the
+# pipeline carried grep's status and a `fatal:` on stderr became "introduces no name this can look
+# for" with exit 0, which is an absent answer printed as a negative one. It is reachable on this
+# repository today: `pre-rename` is an orphan and `7.0...pre-rename` has no merge base.
+if ! diff_text=$(git diff "$line...$branch" -- '*.scala' 2>&1); then
+    echo "branch-content-landed: cannot diff $branch against $line" >&2
+    printf '%s\n' "$diff_text" | sed 's|^|  |' >&2
+    echo "  for a branch with no merge base, read \`git diff $line $branch\` by hand: what that" >&2
+    echo "  range means is a different question from the one this answers" >&2
+    exit 2
+fi
+added=$(printf '%s\n' "$diff_text" | grep '^+' | grep -v '^+++' || true)
+
 # Two shapes, because this repository publishes both: a Scala declaration, and the quoted name of a
 # lemma, which is what a development actually exports and what the incident lost.
+#
+# Each shape reads the same lines. The two used to be `sed` calls grouped on one stdin, which is one
+# reader too many: the first consumes the stream to EOF and the second is handed nothing, so the
+# quoted shape had never matched a line since the day it was written. Chaining them as two `-e`
+# expressions of one `sed` is the repair that suggests itself and is also wrong, because the first
+# substitution replaces the pattern space with the bare name and the second then reads that instead
+# of the diff line. Holding the input costs what the input weighs: 82 KB for the largest branch this
+# repository has, measured on `verify-quotient`.
 names=$(
-    git diff "$line...$branch" -- '*.scala' |
-        grep '^+' |
-        grep -v '^+++' |
-        {
+    {
+        printf '%s\n' "$added" |
             sed -n -E 's/^\+[[:space:]]*(private |final |lazy |implicit |override |case )*(def|val|var|object|class|trait|type|enum)[[:space:]]+([A-Za-z_][A-Za-z0-9_]*).*/\3/p'
+        printf '%s\n' "$added" |
             sed -n -E 's/.*"([A-Z][A-Z0-9_]{3,})".*/\1/p'
-        } |
-        sort -u
+    } | sort -u
 )
 
 if [ -z "$names" ]; then
