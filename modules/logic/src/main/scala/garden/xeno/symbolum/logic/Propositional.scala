@@ -72,7 +72,7 @@ import garden.xeno.symbolum.sat.Cnf.Literal
  * atom, so a theorem it produces is a theorem whatever the atom means; `(!x. P x) \/ ~(!x. P x)` is
  * proved here and is a correct theorem.
  *
- * For the other answer it is **not** symmetric, and the name says so. [[Verdict.Countermodel]]
+ * For the other answer it is **not** symmetric, and the name says so. [[Propositional.Verdict.Countermodel]]
  * reports an assignment under which the goal is false *with its atoms read as independent*. Two
  * atoms that are the same statement written differently, `x = y` and `y = x`, are two atoms, so a
  * goal that really is valid can come back with a countermodel. It is a refutation of the goal **as

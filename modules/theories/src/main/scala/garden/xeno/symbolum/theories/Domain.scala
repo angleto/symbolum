@@ -56,9 +56,9 @@ import garden.xeno.symbolum.logic.*
  *
  * `Ring` and `Linarith` decide fragments of the reals and have nothing to say about an arbitrary
  * axiom. What reaches a domain is the **propositional skeleton**, and since 2026-09-16
- * [[Built.settle]] is the one call that puts a claim to it: specialise this domain's axioms at the
- * subjects the claim names, decide the skeleton, keep only the axioms the decision needed, detach,
- * quantify again, and report what it spent.
+ * [[Domain.Built.settle]] is the one call that puts a claim to it: specialise this domain's
+ * axioms at the subjects the claim names, decide the skeleton, keep only the axioms the decision
+ * needed, detach, quantify again, and report what it spent.
  *
  * It costs no foundational axiom, which is the part that changed. `Intuitionistic` decides the
  * fragment a hand derivation about a domain works in, and `Propositional` is the fallback for a
@@ -66,7 +66,8 @@ import garden.xeno.symbolum.logic.*
  *
  * What it is still **not** is a search over the domain: nothing looks for a claim, nothing reasons
  * about what a constant means, and a claim reaching arithmetic is refused by name rather than
- * approximated. The promise is accounting, not search, and [[Built.spends]] is the accounting.
+ * approximated. The promise is accounting, not search, and [[Domain.Built.spends]] is what
+ * accounts.
  */
 final case class Domain(
   name: String,
@@ -297,10 +298,11 @@ object Domain {
      * derived rules is intuitionistic throughout and rests on the domain's own assumptions and
      * nothing else, which is what a reader is being asked to check.
      *
-     * So [[Intuitionistic]] is asked first and `Propositional` second, and what separates the two
-     * answers is not a flag on the verdict but the [[Spending]] itself: a claim settled the first
-     * way reports no foundational axiom, and one that needed the second reports choice. That is the
-     * currency this whole file exists to report, and a route that moves it has to say so.
+     * So `Intuitionistic` is asked first and `Propositional` second, and what separates the two
+     * answers is not a flag on the verdict but the [[Domain.Spending]] itself: a claim settled the
+     * first way reports no foundational axiom, and one that needed the second reports choice.
+     * That is the currency this whole file exists to report, and a route that moves it has to say
+     * so.
      *
      * == What it refuses, by name ==
      *
@@ -544,9 +546,9 @@ object Domain {
   /**
    * What a claim about a domain came back as, and the three are not one answer with a flag on it.
    *
-   * [[Verdict.Countermodel]] is the weak one and carries `Propositional`'s own caveat: the atoms
+   * [[Domain.Verdict.Countermodel]] is the weak one and carries `Propositional`'s own caveat: the atoms
    * are uninterpreted, so it refutes the claim **as a propositional schema over the domain's
-   * constants** and never says that the claim is false. [[Verdict.Refused]] is the claim being
+   * constants** and never says that the claim is false. [[Domain.Verdict.Refused]] is the claim being
    * outside what this settles at all, and it names why.
    */
   enum Verdict {

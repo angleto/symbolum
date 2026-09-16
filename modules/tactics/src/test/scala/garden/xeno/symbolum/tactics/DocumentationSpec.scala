@@ -154,9 +154,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // this witness; it is repeated here because the README sentence is about it.
     minimal.prove(all(List(p, q), imp(imp(imp(p, q), p), p))).isLeft shouldBe true
 
-    // The fourth procedure, which the row began naming on 2026-09-16, exercised at both ends: it
-    // takes a statement with a negation in it, which is what `Minimal` refuses and what put the
-    // row's count up, and it stops at the two goals the row names as its boundary.
+    // The calculus that runs UNDER `Minimal` since 2026-09-16, exercised at both ends: it takes a
+    // statement with a negation in it, which is what the gate above it refuses, and it stops at the
+    // two goals the row names as its boundary. The row describes it and deliberately does not list
+    // it, because nothing routes a goal there and the test below reads the row for the searches the
+    // prover reaches; this is the half of that paragraph a machine can exercise.
     val intuitionistic = Intuitionistic.standard
     // `denial` rather than `not`, because a local `not` here shadows the matcher three lines below
     // and the error it produces names an overload rather than the shadowing.
@@ -168,19 +170,107 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     intuitionistic.prove(all(List(p, q), imp(imp(imp(p, q), p), p))).isLeft shouldBe true
     intuitionistic.prove(all(List(p), disj(p, denial(p)))).isLeft shouldBe true
 
-    readme should include("the search under it backtracks")
+    readme should include("The search under it backtracks")
     readme should include("it refuses Peirce's law and the excluded middle")
 
-    // The count, which moved once and is the kind of figure that goes stale in a table nobody
-    // recounts. Asserted with its predecessor denied, so that a row rewritten from memory cannot
-    // put the old one back.
-    readme should include("**Four, and what each of them is not is the point.**")
-    readme should not include "**Three, and what each of them is not is the point.**"
+    // And that the row still says the gate is a gate, which is the sentence that stops a reader
+    // concluding `Minimal` is the search: the two are one implementation and the fragment is what
+    // separates them.
+    readme should include("a **fragment gate** rather than a search of its own")
 
     // The sentence that was there, in the two places that carried it, so that it cannot come back
     // by anybody rewriting the row from memory.
     readme should not include "no choice point anywhere"
     read("docs/evaluation.md") should not include "no choice point anywhere"
+  }
+
+  /**
+   * The same row, on the other question it answers: **which** searches, rather than what they are.
+   *
+   * The row carried a count of them until 2026-09-16 and the count was a fact written twice. It
+   * opened *"Two"* from the day it was written, while naming three of them in the same cell, and
+   * nothing anywhere went red: `docs/evaluation.md` and the front page had both been read for the
+   * sentence about backtracking, which the test above pins, and neither reader recounted the
+   * paragraph they were standing in. Two further copies of the same number were in the prose, as
+   * the ordinals introducing *"the second"* and *"the third"*, and a fourth search would have made
+   * all three stale at once while each of them read as English rather than as a figure.
+   *
+   * The repair is the third of the three this repository uses for a fact written twice, and it is
+   * the one its own `Generated` docstring says is met most often and chosen least: the number is
+   * **deleted** rather than generated or watched, because the paragraph beneath it is the
+   * enumeration and the argument never needed a count on top of one. Generating it was not
+   * available anyway and the reason is mechanical rather than a preference: the row is a cell of a
+   * GitHub-flavoured markdown table, a generated region is delimited by an HTML comment on a line
+   * of its own, and such a line ends the table.
+   *
+   * So what is left to go stale is the enumeration, and this is what watches it. Both directions,
+   * because a guard that only caught the missing one would pass forever on a row still describing a
+   * search that has been deleted.
+   *
+   * **What makes it non-vacuous**, which is the question `RestsOnSpec` asks of a guard like this:
+   * the population is `Prove.searches`, taken from a prover that was built rather than described,
+   * so a configuration reaching no search at all would make the first assertion trivially true.
+   * The second assertion below is the one that refuses that: the standard chain's prover reaches
+   * every search there is, and if it ever reached fewer, this stops rather than quietly checking a
+   * shorter list.
+   *
+   * **What it does not cover.** It reads the row for the name and not for the sentence beside it:
+   * a paragraph that names `Chaining` and then describes something else passes here. What that
+   * paragraph says about each one is read by a person, and the test above is what covers the one
+   * claim in it that a machine can exercise.
+   */
+  it should "name every search the prover reaches, and none it does not, in both documents that list them" in {
+    val prover = force(Prove.construct(Chain.standard))
+
+    // Two cells and not one, and the second is the reason this test is worth more than a repair of
+    // the front page would have been. `docs/evaluation.md` opened the same list with *"there are
+    // three of them now"*, so the figure the README kept by hand was kept by hand twice, in two
+    // files, with nothing comparing them to each other or to the code. It was found by grepping for
+    // the claim rather than for the number, which is the only way a count spelled as a word gets
+    // found at all.
+    val cells = Vector(
+      ("README.md", "| Automated proof search of any kind |"),
+      ("docs/evaluation.md", "| CASC, SMT-COMP (LRA, NRA) |")
+    ).map { case (document, opening) =>
+      (document, read(document).linesIterator
+        .find(_.startsWith(opening))
+        .getOrElse(fail(s"$document no longer holds the row beginning `$opening`")))
+    }
+
+    cells.foreach { case (document, row) =>
+      // Over the whole closed set rather than over what the prover happens to hold, so that a
+      // search dropped from `Prove` leaves the row describing it and fails here.
+      Prove.Search.values.foreach { search =>
+        val named = row.contains(s"`${search.spelling}`")
+        val reached = prover.searches.contains(search)
+        withClue(
+          if (reached) s"`${search.spelling}` is a search the standard prover reaches and $document does not name it: "
+          else s"$document names `${search.spelling}` and the standard prover does not reach it: "
+        ) {
+          named shouldBe reached
+        }
+      }
+    }
+
+    // And the guard against the guard: the assertions above are about a prover, and a prover with
+    // no classical extension and no library reaches `Minimal` and nothing else, so a mistake in
+    // `Prove.construct` would leave every other name unchecked in both documents and every
+    // assertion above green.
+    prover.searches should contain theSameElementsAs Prove.Search.values.toVector
+
+    // The counts are gone rather than corrected, in every form they took: the front page's opening
+    // numeral, the two ordinals that introduced the searches after the first, and the guide's own
+    // sentence. Written as the strings the documents held, so that rewriting a paragraph from
+    // memory puts one back and this says so.
+    val (readme, evaluation) = (cells(0)._2, cells(1)._2)
+    readme should not include "**Three, and what each of them is not is the point.**"
+    readme should not include "is the second:"
+    readme should not include "The third is"
+    evaluation should not include "there are three of them now"
+    evaluation should not include "None of the three"
+
+    info(s"${prover.searches.size} searches named in ${cells.size} documents: " +
+      prover.searches.map(_.spelling).mkString(", "))
   }
 
   "The README solving examples" should "produce the stated roots" in {

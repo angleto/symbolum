@@ -198,6 +198,41 @@ final class Prove private (
   private val chaining: Option[Chaining] =
     library.map { case (lemmas, logic) => Chaining(logic, lemmas) }
 
+  /**
+   * The searches this prover reaches, which is not the same as the searches that exist.
+   *
+   * Only `Minimal` is certain. `Propositional` needs the classical extension and `Chaining` needs
+   * a library, and a prover built over somebody's own order has neither, so this answers `Minimal`
+   * alone there and the whole set over a chain. That is the same real configuration [[library]] and
+   * [[classical]] describe rather than a degraded prover.
+   *
+   * **No count of them appears in this comment**, deliberately, and it is the defect this method
+   * exists to remove written one floor down: a docstring that said "two of the three" would be a
+   * figure beside the thing it counts, going stale on the case after next, in a file arguing
+   * against exactly that. `docs/naming.md` carries the instance this repository found first.
+   *
+   * **It exists because the front page carried the number by hand and the number drifted.** The
+   * row about proof search answered *two* from the day it was written while naming three of them,
+   * and nothing went red, because a count in prose is a fact written twice and the second copy is
+   * the one nobody recounts. The row no longer carries a count: it names them, and
+   * `DocumentationSpec` asserts that what it names is exactly what this returns, so the guard fails
+   * both on a search this reaches that the row has never heard of and on one the row still
+   * describes after it went.
+   *
+   * **What it does not cover, and it is the direction a reader should not assume.** Adding a case
+   * to [[Prove.Search]] without wiring it here is a compile error, because the match below is
+   * exhaustive over a closed set under `-Xfatal-warnings`. Building a fourth search in this class
+   * and declaring no case for it is not caught anywhere: nothing here knows what a search is except
+   * that enumeration, and a test that tried to learn it from the source would be asking the same
+   * question it is answering.
+   */
+  def searches: Vector[Prove.Search] =
+    Prove.Search.values.toVector.filter {
+      case Prove.Search.Minimal => true
+      case Prove.Search.Propositional => propositional.isDefined
+      case Prove.Search.Chaining => chaining.isDefined
+    }
+
   private def held(goal: Term): Option[Kernel.Thm] =
     library.flatMap { case (lemmas, logic) =>
       lemmas.entries.view
@@ -347,6 +382,42 @@ object Prove {
 
     /** Neither shape, and `why` names what a goal would have to be. */
     case Nobody(why: String)
+
+  /**
+   * A search this prover reaches, named as the front page names it.
+   *
+   * The closed set behind [[Prove.searches]], and it is a type rather than a set of strings because
+   * a spelling that resolves to nothing is exactly what this is here to stop: the count it replaces
+   * on the front page went stale in prose, where nothing resolves.
+   *
+   * **A search is not a decision procedure, and the distinction is the row's subject rather than
+   * this file's taxonomy.** RING, LINARITH and `Field` decide a fragment: handed a goal of their
+   * shape they answer, and handed anything else they refuse by name, with no alternative explored
+   * on the way. Each case below explores alternatives it may abandon, which is what makes "no
+   * given-clause loop, no saturation" a sentence worth writing about these and not about those.
+   * [[held]] is not one either: it is a scan of the library that takes a lemma owing nothing, and a
+   * scan that never backtracks is a lookup.
+   *
+   * **[[Search.Propositional]] and [[Address.Propositional]] are different things with one name.**
+   * The address is a property of the goal, which shape decides where it is sent; this is the
+   * procedure that is sent it. They are separate enumerations because a goal can have the address
+   * and reach no procedure, which is what happens over an order carrying no classical extension.
+   */
+  enum Search(val spelling: String):
+
+    /**
+     * The negation-free propositional fragment, asked first because it costs no axiom.
+     *
+     * Always reached: it is built from the signature's own connectives, so there is no
+     * configuration in which a prover has no copy of it.
+     */
+    case Minimal extends Search("Minimal")
+
+    /** The whole classical propositional fragment, where the caller supplied a `Classical`. */
+    case Propositional extends Search("Propositional")
+
+    /** Backward chaining over the library, where there is a library to chain over. */
+    case Chaining extends Search("Chaining")
 
   /** Over the standard theory. */
   lazy val standard: Prove =
