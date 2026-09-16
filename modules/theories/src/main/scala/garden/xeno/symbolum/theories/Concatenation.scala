@@ -515,6 +515,25 @@ object Concatenation {
    * agreement below the bound, discharge the order hypothesis from the bound itself, and hand it to
    * the congruence. They are not written once and used twice, because the agreement each proves is
    * about a different pair of functions and only the assembly is shared.
+   *
+   * == It does not compose with itself through the rewriter, and a consumer will meet that ==
+   *
+   * A word with a factor in the middle is `x (m y)`, so the decomposition a rewriting step wants is
+   * this lemma applied **twice**. Put it to `Rewrite.rewrite` as a rule on such a term and it
+   * refuses, with a transitivity failure naming the once-applied term against the twice-applied
+   * one. The cause is in the right side above: it introduces a lambda for the shifted weight, and
+   * the second application has to match under that lambda, so the two ends of the chain differ by
+   * the beta redex the first application left.
+   *
+   * Measured on 2026-09-16, through `Rewrite.rewrite` directly and through `Peano.normalisation`,
+   * with the same refusal from both — and after a probe had first confirmed the rule fires
+   * perfectly well **once**, on a two-part word, which is what makes this a statement about
+   * composition rather than about the pattern. A higher-order left side is not the obstacle and was
+   * the first guess.
+   *
+   * What a consumer should do instead is apply it at the root twice, giving each application a term
+   * the other has not touched: the whole word, then the second summand of what came back, joined by
+   * the kernel's congruence. That is more work than a rule set and it is the work that succeeds.
    */
   private def tallyOverAConcatenation(
     logic: Logic,
