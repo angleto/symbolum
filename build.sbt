@@ -191,7 +191,10 @@ lazy val commonSettings = Seq(
  *
  * Two things this says that the earlier note could not. The ratchet has produced **two gates the
  * rule above would never have set**, and the tighter of the two got tighter still across the two
- * runs. And the red gate that started all of this is gone: `tactics` failed this file at 89.92 and
+ * runs. Both were put to a person on 2026-09-16 and both **stay**: loosening either means lowering
+ * a floor against the rule at the end of this note, and that trade was declined rather than
+ * overlooked. The record is beside each of the two numbers as well as here, because a decision
+ * written only in a summary is one a reader of the setting never meets. And the red gate that started all of this is gone: `tactics` failed this file at 89.92 and
  * 90.13, and passes at 92.83.
  *
  * One caution that belongs beside a raised floor rather than in the partial-report section below,
@@ -420,7 +423,11 @@ lazy val sat = (project in file("modules/sat"))
     // stands here is the **tightest gate in the build, at three statements of margin**, and it got
     // tighter rather than looser: 92.99 over 428 on 2026-09-15 to 92.68 over 437 today. Leaving it
     // is the ratchet working as written; changing it means lowering a floor, which is a decision
-    // for a person and not one to take while passing.
+    // for a person and not one to take while passing. **Put and decided on 2026-09-16: it stays.**
+    // So this module runs on three statements of margin deliberately, and the next reading that
+    // finds the gate tight here is looking at a decision rather than at an oversight. What would
+    // reopen it is the gate failing on a change that is not a regression, which is the thing the
+    // margin exists to prevent and which has not happened here yet.
     coverageMinimumStmtTotal := 92.0
   )
 
@@ -543,7 +550,10 @@ lazy val tactics = (project in file("modules/tactics"))
     // 0.505 points here and 92.83 less that is 92.33, under the floor already standing. Sixteen
     // statements of margin, which is the second tightest in the build after `sat`, and the note
     // above recorded in September that this is the module where the next change is likelier to
-    // fail this gate than to be caught by it. That is still true.
+    // fail this gate than to be caught by it. That is still true, and **it was put and decided on
+    // 2026-09-16: this floor stays where it is.** Sixteen statements of margin on the module that
+    // carries the only unseeded property draws in the build is the tightest thing here after
+    // `sat`, and it is held on purpose rather than by nobody having looked.
     coverageMinimumStmtTotal := 92.5,
 
     // A compiler at test time, for `ReadmeSpec` and for nothing else.
