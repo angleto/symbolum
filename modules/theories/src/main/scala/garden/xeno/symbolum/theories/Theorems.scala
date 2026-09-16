@@ -67,7 +67,7 @@ object Theorems {
   val Showcase: Vector[(String, String)] = Vector(
     "EXCLUDED_MIDDLE" ->
       ("Every proposition is true or false. It is an **axiom** in most systems and a **theorem** " +
-        "here, derived from the choice operator alone in 829 primitive steps, which is Diaconescu's " +
+        "here, derived from the choice operator alone in 841 primitive steps, which is Diaconescu's " +
         "argument. Three places in this repository said the opposite until `docs/adr/0009` measured " +
         "it."),
     "NUM_INDUCTION" ->

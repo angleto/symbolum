@@ -479,7 +479,7 @@ object Classical {
    *
    * **The derivations run here rather than on demand**, so a development that does not build is a
    * refusal from this function and not a `Left` from [[Classical.fact]] months later. The largest
-   * of the nine is 1143 inference steps and they share most of their nodes, which is small enough
+   * of the nine is 1155 inference steps and they share most of their nodes, which is small enough
    * that no development is going to want a variant of this that skips them. That figure said 1275
    * until 2026-09-12, which is what it was before the two repairs of 2026-09-11, and 1089 until
    * [[NotForall]] landed on 2026-09-15 and took the top from `DE_MORGAN_CONJUNCTION`;
@@ -923,7 +923,7 @@ object Classical {
    *
    * Neither equation reaches eta, which `ClassicalSpec` measures rather than takes on trust: this
    * goes to `SELECT` and the kernel's rules and never through [[ExcludedMiddle]], although a case
-   * split would have proved both and would have cost the excluded middle's 829 steps twice over.
+   * split would have proved both and would have cost the excluded middle's 841 steps twice over.
    */
   private def conditionalEquations(
     logic: Logic,

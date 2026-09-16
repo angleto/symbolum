@@ -171,8 +171,12 @@ Everything this system asks anyone to believe, and no one development is asked f
    else interprets. `docs/adr/0007` is the record of choice and of infinity, `docs/adr/0009` of
    eta. They are what the naturals are built from, and the naturals are **defined**: the type `num`
    costs no axiom of its own. **The excluded middle is not among them**: it is derived from choice
-   alone, in 829 steps, and three places in the repository said the opposite until `docs/adr/0009`
-   measured it. Which of the axioms a session pays for depends on what it builds on, and
+   alone, in 841 steps, and three places in the repository said the opposite until `docs/adr/0009`
+   measured it. That figure is written by hand in four documents **and asserted in all four by
+   `ClassicalSpec`**, which is what makes writing it by hand safe here: the four went stale together
+   once and were found by grep rather than by a test. It has moved twice, 983 to 829 when
+   `Conv.refl` began sharing an atom's reflexivity, and 829 to 841 on 2026-09-16 when `Rules.mp`
+   stopped accepting an antecedent differing from the implication's by a beta redex. Which of the axioms a session pays for depends on what it builds on, and
    `NaturalSpec` measures each case: sixteen over the reals alone, three over the naturals alone,
    nineteen for a development holding both, which is what `Chain.standard` assembles and `ChainSpec`
    asserts. `docs/adr/0007` decides that the reals will be constructed rather than axiomatised, so

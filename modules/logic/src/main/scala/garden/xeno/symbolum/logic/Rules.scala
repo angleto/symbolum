@@ -204,35 +204,106 @@ final class Rules(val logic: Logic) {
     } yield result
 
   /**
-   * `G |- p ==> q` and `D |- p` give `G, D |- q`.
+   * `G |- p ==> q` and `D |- p` give `G, D |- q`, and an antecedent of something else is
+   * **refused**.
    *
-   * **It does not check that `D`'s conclusion is `p`, and a caller must not read it as if it did.**
-   * A theorem of something else goes through `proveHyp`, which leaves what it cannot discharge
-   * where it is, so what comes back is `Right`, its conclusion is `q`, and `p` is still on the
-   * left of the turnstile beside whatever the wrong premise rested on. That is sound: the result
-   * honestly says it assumes `p`. It is simply not a refusal.
+   * == What it did until 2026-09-16, and why that was not a refusal ==
    *
-   * Written down on 2026-09-13 because two sessions read it as one on the same afternoon. One
-   * inverted the order of a lemma's binders and got a `Right` whose conclusion was the one it
-   * wanted; the other closed a card by arguing that a swapped specialisation is caught **because
-   * `mp` refuses it**, which is the wrong reason for a right conclusion. What catches it is the
-   * undischarged hypothesis travelling until somebody looks, and the only thing that looks is
+   * It did not check, and a caller could not read it as if it did. A theorem of something else went
+   * through [[proveHyp]], which leaves what it cannot discharge where it is, so what came back was
+   * `Right`, its conclusion was `q`, and `p` was still on the left of the turnstile beside whatever
+   * the wrong premise rested on. That is sound: the result honestly said it assumed `p`. It was
+   * simply not a refusal, and nothing looked, because the only thing that looks is
    * `thm.hypotheses`.
    *
-   * So a test that reads the conclusion and not the hypotheses of a theorem built through this has
-   * checked half of it, and the half it skipped is the one that moves when a caller is wrong.
+   * Two sessions read it as a refusal on one afternoon in September. One inverted the order of a
+   * lemma's binders and got a `Right` whose conclusion was the one it wanted; the other closed a
+   * card by arguing that a swapped specialisation is caught **because `mp` refuses it**, which was
+   * the wrong reason for a right conclusion. [[notElim]] was made strict first, after the same
+   * reading cost a derivation of Euclid's theorem a hypothesis nobody had assumed.
+   *
+   * == Strict up to beta, which is not the same as strict ==
+   *
+   * The obvious repair, comparing `antecedent.conclusion` with `p` and refusing when they differ,
+   * refuses two correct callers. Both hand the choice axiom specialised at a predicate and a
+   * variable, whose antecedent is the **unreduced** application `P w`, together with an assumption
+   * of its **reduct**. They differ by one beta redex and by nothing else, and beta-equivalent
+   * propositions are the same proposition here.
+   *
+   * So the two forms are reconciled rather than compared: both sides are normalised, a difference
+   * that survives normalisation is refused naming what was wanted, and a difference that does not
+   * is **converted**, so the cut discharges `p` exactly and nothing is left standing. Checking
+   * without converting would have been the worse repair of the two, because it passes at those two
+   * sites while leaving the hypothesis they leak exactly where it was: the check would agree the
+   * terms match and [[proveHyp]] would still fail to discharge one against the other.
+   *
+   * Converting rather than checking is [[existsElim]]'s answer to the same question, three hundred
+   * lines below, where a case stated over a reduct is moved onto the unreduced application before
+   * the cut. This is that, in the other direction.
    */
   def mp(implication: Kernel.Thm, antecedent: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     logic.destImp(implication.conclusion) match {
       case None => Left(NotOfForm("an implication", implication.conclusion))
       case Some((p, q)) =>
         for {
+          proofOfP <- provingExactly(p, antecedent)
           schema <- mpSchema
           instance <- lift(Kernel.inst(Map(P -> p, Q -> q), schema))
           withImplication <- proveHyp(implication, instance)
-          result <- proveHyp(antecedent, withImplication)
+          result <- proveHyp(proofOfP, withImplication)
         } yield result
     }
+
+  /**
+   * The same theorem, concluding `wanted` exactly, or a refusal naming what was wanted.
+   *
+   * Beta is the only difference reconciled, and that is a decision rather than a starting point:
+   * it is the one the two callers in this repository actually have, it is decidable by
+   * normalising, and every other way two propositions can be "the same" -- an unfolded definition,
+   * a commuted conjunction, a renamed bound variable the kernel has not already identified -- is a
+   * step somebody should be made to write down. A rule that quietly reconciled those would be the
+   * permissiveness this method exists to remove, wearing a better name.
+   *
+   * **The refusal names the role and not the term, which loses something on purpose.** `notElim`
+   * writes the proposition it wanted into its own sentence, and `NotationBoundarySpec` classifies
+   * that as `Crossing`: a term rendered where the reader's notation is not known, carried on the
+   * record as debt that every instance repays the same way. Adding a second instance to a list
+   * somebody is paying down is worse than the reader reaching for the implication they already
+   * hold, which is where the wanted term is. What is carried structurally is what they handed
+   * over, which is the half they do not have.
+   */
+  private def provingExactly(
+    wanted: Term,
+    theorem: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    if (theorem.conclusion == wanted) Right(theorem)
+    else if (Term.betaReduce(wanted).contains(theorem.conclusion))
+      // The root redex, which is the whole of what the two callers have and is three kernel steps.
+      // Reached before the general case on purpose: normalising both sides settles the same
+      // question and costs the excluded middle 48 inferences, which is a foundational figure three
+      // documents quote. A repair that moves a number that size should buy something with it, and
+      // against a root redex it buys nothing.
+      for {
+        contraction <- Conv.betaRoot(wanted)
+        backwards <- Conv.sym(contraction)
+        exact <- lift(Kernel.eqMp(backwards, theorem))
+      } yield exact
+    else
+      for {
+        wantedNormal <- Conv.betaNormalise(wanted)
+        heldNormal <- Conv.betaNormalise(theorem.conclusion)
+        wantedForm <- rightOfConclusion(wantedNormal)
+        heldForm <- rightOfConclusion(heldNormal)
+        result <-
+          if (wantedForm != heldForm)
+            Left(NotOfForm("a proof of the implication's antecedent", theorem.conclusion))
+          else
+            for {
+              normalised <- lift(Kernel.eqMp(heldNormal, theorem))
+              backwards <- Conv.sym(wantedNormal)
+              exact <- lift(Kernel.eqMp(backwards, normalised))
+            } yield exact
+      } yield result
 
   /* ------------------------------------------------------------------ negation */
 

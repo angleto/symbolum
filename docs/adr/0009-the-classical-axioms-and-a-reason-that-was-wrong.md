@@ -30,8 +30,12 @@ comments contradicted the ADR. Nobody had tried.
     ETA    : !t:'a->'b. (\x. t x) = t          asserted 2026-09-10, this record
 
 **The excluded middle is derived, and it costs no axiom of its own.** `EXCLUDED_MIDDLE` is a
-theorem on `Classical.standard`: 829 inference steps by `Derivation.size`, reaching `SELECT` and
-nothing else. `ClassicalSpec` asserts that axiom set both ways round, as a set equality against
+theorem on `Classical.standard`: 829 inference steps by `Derivation.size` when this was written,
+**841 since 2026-09-16**, reaching `SELECT` and nothing else. The figure is dated rather than
+restated because what this record decided is the axiom set and not the price: it moved when
+`Rules.mp` stopped accepting an antecedent differing from the implication's by a beta redex and
+began converting it instead, and Diaconescu's argument reaches choice twice, so it pays twice.
+Nothing about which axioms are reached changed, which is the claim this paragraph is making. `ClassicalSpec` asserts that axiom set both ways round, as a set equality against
 choice and as a `should not contain` against eta, so the claim fails the build if it stops being
 true. It was reachable from the moment choice landed.
 

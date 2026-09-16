@@ -167,9 +167,9 @@ order to show the checker one.
 | `x < y /\ y < z ==> x < z` | 4122 | 9 |
 | `(x * y) / y = x` | 1757 | 8 |
 | `p /\ q ==> p`, propositional | 199 | **0** |
-| `((p ==> q) ==> p) ==> p`, found by a solver | 1244 | 1 |
+| `((p ==> q) ==> p) ==> p`, found by a solver | 1256 | 1 |
 | `ADD_SYM`, an axiom of the reals | 1 | 1 |
-| the successor's properties | 391 | 2 |
+| the successor's properties | 403 | 2 |
 | induction over the naturals | 625 | **0** |
 
 <!-- end generated: replay -->

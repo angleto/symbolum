@@ -30,7 +30,7 @@ import garden.xeno.symbolum.kernel.*
  * here proves `p \/ ~p`, and that is a property of what this file asserts, which is nothing.
  *
  * **It is not a property of the system, and it stopped being one on 2026-09-10.** `p \/ ~p` is a
- * theorem of [[Classical]], derived from the choice operator in 829 steps and reaching no other
+ * theorem of [[Classical]], derived from the choice operator in 841 steps and reaching no other
  * axiom; `docs/adr/0009` is the record and it also records that three places here said the excluded
  * middle would need an axiom of its own, which was false. What is true of this file is the weaker
  * and more useful statement: a development that takes `Logic.standard` and declines the classical

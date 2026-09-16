@@ -171,25 +171,38 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // and 829, which is a sixth of each derivation gone. They moved because the work stopped being
     // done, and they are pinned exactly rather than bounded so that the next time they move
     // somebody has to say which way and why.
+    //
+    // The excluded middle moved again on 2026-09-16, 829 to 841, and this is that saying. `Rules.mp`
+    // stopped accepting an antecedent that differs from the implication's by a beta redex and
+    // started **converting** it, which costs three kernel steps each time. Diaconescu's argument
+    // reaches choice twice, so it pays twice. The twelve steps buy the rule refusing an antecedent
+    // that proves something else, which it used to accept while leaving the undischarged
+    // antecedent on the left of the turnstile where only `thm.hypotheses` would show it.
     val sizes = Classical.Statements.map { case (name, _) =>
       name -> Derivation.size(force(classical.fact(name)))
     }.toMap
 
     sizes(Classical.TruthNotFalsity) shouldBe 122
     sizes(Classical.FunctionExtensionality) shouldBe 197
-    sizes(Classical.ExcludedMiddle) shouldBe 829
+    sizes(Classical.ExcludedMiddle) shouldBe 841
 
     // The two conditional equations, measured on 2026-09-12 when they landed. They are pinned for
     // the same reason the three above are: both go through `chosenSatisfies` and a change that made
     // that stop sharing the choice instance between them would prove the same theorems and would
     // show here first.
-    sizes(Classical.CondTrue) shouldBe 476
-    sizes(Classical.CondFalse) shouldBe 476
+    //
+    // 476 until 2026-09-16, and the six they gained is the same six the excluded middle gained
+    // twice: `chosenSatisfies` reaches choice once, and `Rules.mp` now converts the unreduced
+    // application the axiom states into the reduct the caller assumed, where it used to leave the
+    // difference standing as a hypothesis. Both moved by exactly six, which is what says the
+    // sharing this pin watches is still happening.
+    sizes(Classical.CondTrue) shouldBe 482
+    sizes(Classical.CondFalse) shouldBe 482
 
     // De Morgan for the universal quantifier, measured when it landed on 2026-09-15. It is above
     // the excluded middle for the reason the two lines below give: it uses the double negation
     // twice, and each use carries the whole of that derivation.
-    sizes(Classical.NotForall) shouldBe 1143
+    sizes(Classical.NotForall) shouldBe 1155
 
     // The excluded middle is the expensive one and everything classical below it pays that cost
     // again, which is what saying it is derived rather than asserted means.
@@ -453,16 +466,24 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
 
     classical.show(atArguments.conclusion) shouldBe "p ==> COND p a b = a"
 
-    // And there is no way to get the branch without a proof of `p`. `Rules.mp` is a cut and does
-    // not check that what it is handed proves the antecedent, so detaching against something else
-    // does not refuse: what it does is leave `p` standing as a **hypothesis**, which is the honest
-    // answer and is not an equation anybody may use. Measured here rather than assumed, because
-    // "it refused" and "it answered under an assumption" are two outcomes and only the second is
-    // what happens.
-    val notDetached = force(rules.mp(atArguments, Kernel.refl(logic.truth)))
+    // And there is no way to get the branch without a proof of `p`. **Which outcome that is
+    // changed on 2026-09-16 and the old one is worth stating, because this test was written to
+    // pin it.** `Rules.mp` was a cut that did not check what it was handed, so detaching against
+    // something else did not refuse: it left `p` standing as a hypothesis, which is honest and is
+    // not an equation anybody may use, and only `thm.hypotheses` ever showed it. It refuses now,
+    // so the two outcomes this test distinguishes are "refused" and "answered", where they used to
+    // be "refused" and "answered under an assumption".
+    val notDetached = rules.mp(atArguments, Kernel.refl(logic.truth))
 
-    classical.show(notDetached.conclusion) shouldBe "COND p a b = a"
-    notDetached.hypotheses.map(classical.show) should contain("p")
+    notDetached.left.map(_.getClass) shouldBe Left(classOf[NotOfForm])
+
+    // Naming what it was handed, or this passes against a rule that refuses everything.
+    notDetached.fold(_.message, _ => "") should include("T")
+
+    // The branch is still reachable with a real proof of the condition, which is what says the
+    // refusal above is about the mismatch and not about `COND` having stopped working.
+    val assumed = force(LogicError.lift(Kernel.assume(p)))
+    classical.show(force(rules.mp(atArguments, assumed)).conclusion) shouldBe "COND p a b = a"
   }
 
   "The source" should "name the one operation that asserts an axiom, and no other file in this module" in {

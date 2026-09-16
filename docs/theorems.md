@@ -49,7 +49,7 @@ Every page ends with the command that reproduces it. The claim is not quoted in 
 
 ## EXCLUDED_MIDDLE
 
-Every proposition is true or false. It is an **axiom** in most systems and a **theorem** here, derived from the choice operator alone in 829 primitive steps, which is Diaconescu's argument. Three places in this repository said the opposite until `docs/adr/0009` measured it.
+Every proposition is true or false. It is an **axiom** in most systems and a **theorem** here, derived from the choice operator alone in 841 primitive steps, which is Diaconescu's argument. Three places in this repository said the opposite until `docs/adr/0009` measured it.
 
 $$\forall x \colon \mathbb{B}.\ x \lor \lnot x$$
 
@@ -77,20 +77,20 @@ obtained.
 
 ### The proof the kernel holds
 
-829 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+841 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| EqualityElimination | 200 | 24.1% |
-| Congruence | 153 | 18.5% |
-| Antisymmetry | 105 | 12.7% |
-| Instantiation | 85 | 10.3% |
-| Reflexivity | 70 | 8.4% |
-| Transitivity | 55 | 6.6% |
-| Assumption | 53 | 6.4% |
-| BetaStep | 45 | 5.4% |
-| Abstraction | 33 | 4.0% |
-| TypeInstantiation | 22 | 2.7% |
+| EqualityElimination | 204 | 24.3% |
+| Congruence | 157 | 18.7% |
+| Antisymmetry | 105 | 12.5% |
+| Instantiation | 85 | 10.1% |
+| Reflexivity | 72 | 8.6% |
+| Transitivity | 55 | 6.5% |
+| Assumption | 53 | 6.3% |
+| BetaStep | 47 | 5.6% |
+| Abstraction | 33 | 3.9% |
+| TypeInstantiation | 22 | 2.6% |
 | Definition | 7 | 0.8% |
 | Axiom | 1 | 0.1% |
 
@@ -287,16 +287,16 @@ obtained.
 
 ### The proof the kernel holds
 
-15513 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+15549 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 4940 | 31.8% |
-| EqualityElimination | 2933 | 18.9% |
-| Transitivity | 1530 | 9.9% |
-| Reflexivity | 1497 | 9.6% |
+| Congruence | 4952 | 31.8% |
+| EqualityElimination | 2945 | 18.9% |
+| Transitivity | 1530 | 9.8% |
+| Reflexivity | 1503 | 9.7% |
 | Instantiation | 1475 | 9.5% |
-| BetaStep | 926 | 6.0% |
+| BetaStep | 932 | 6.0% |
 | Antisymmetry | 856 | 5.5% |
 | TypeInstantiation | 521 | 3.4% |
 | Abstraction | 483 | 3.1% |
@@ -539,16 +539,16 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 
 ### The proof the kernel holds
 
-7559 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+7565 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 1997 | 26.4% |
-| EqualityElimination | 1610 | 21.3% |
-| Reflexivity | 857 | 11.3% |
+| Congruence | 1999 | 26.4% |
+| EqualityElimination | 1612 | 21.3% |
+| Reflexivity | 858 | 11.3% |
 | Transitivity | 816 | 10.8% |
 | Instantiation | 762 | 10.1% |
-| BetaStep | 518 | 6.9% |
+| BetaStep | 519 | 6.9% |
 | Antisymmetry | 395 | 5.2% |
 | TypeInstantiation | 309 | 4.1% |
 | Assumption | 145 | 1.9% |
@@ -642,18 +642,18 @@ obtained.
 
 ### The proof the kernel holds
 
-8282 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+8306 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 3174 | 38.3% |
-| EqualityElimination | 1380 | 16.7% |
-| Reflexivity | 760 | 9.2% |
+| Congruence | 3182 | 38.3% |
+| EqualityElimination | 1388 | 16.7% |
+| Reflexivity | 764 | 9.2% |
 | Transitivity | 740 | 8.9% |
 | Instantiation | 541 | 6.5% |
-| BetaStep | 524 | 6.3% |
+| BetaStep | 528 | 6.4% |
 | Abstraction | 405 | 4.9% |
-| Antisymmetry | 336 | 4.1% |
+| Antisymmetry | 336 | 4.0% |
 | TypeInstantiation | 279 | 3.4% |
 | Assumption | 118 | 1.4% |
 | Definition | 14 | 0.2% |
@@ -745,19 +745,19 @@ obtained.
 
 ### The proof the kernel holds
 
-10072 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+10096 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 3860 | 38.3% |
-| EqualityElimination | 1633 | 16.2% |
+| Congruence | 3868 | 38.3% |
+| EqualityElimination | 1641 | 16.3% |
 | Transitivity | 977 | 9.7% |
-| Reflexivity | 955 | 9.5% |
+| Reflexivity | 959 | 9.5% |
 | Instantiation | 763 | 7.6% |
-| BetaStep | 627 | 6.2% |
+| BetaStep | 631 | 6.3% |
 | Abstraction | 425 | 4.2% |
 | Antisymmetry | 350 | 3.5% |
-| TypeInstantiation | 338 | 3.4% |
+| TypeInstantiation | 338 | 3.3% |
 | Assumption | 118 | 1.2% |
 | Definition | 14 | 0.1% |
 | Axiom | 10 | 0.1% |
@@ -888,17 +888,17 @@ obtained.
 
 ### The proof the kernel holds
 
-24296 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+24344 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 7672 | 31.6% |
-| EqualityElimination | 5026 | 20.7% |
-| Instantiation | 2081 | 8.6% |
-| Reflexivity | 2014 | 8.3% |
+| Congruence | 7688 | 31.6% |
+| EqualityElimination | 5042 | 20.7% |
+| Instantiation | 2081 | 8.5% |
+| Reflexivity | 2022 | 8.3% |
 | Antisymmetry | 1978 | 8.1% |
 | Transitivity | 1673 | 6.9% |
-| BetaStep | 1393 | 5.7% |
+| BetaStep | 1401 | 5.8% |
 | TypeInstantiation | 831 | 3.4% |
 | Abstraction | 806 | 3.3% |
 | Assumption | 799 | 3.3% |
@@ -1034,17 +1034,17 @@ obtained.
 
 ### The proof the kernel holds
 
-25466 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+25514 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 7926 | 31.1% |
-| EqualityElimination | 5309 | 20.8% |
+| Congruence | 7942 | 31.1% |
+| EqualityElimination | 5325 | 20.9% |
 | Instantiation | 2221 | 8.7% |
-| Reflexivity | 2135 | 8.4% |
+| Reflexivity | 2143 | 8.4% |
 | Antisymmetry | 2091 | 8.2% |
 | Transitivity | 1769 | 6.9% |
-| BetaStep | 1463 | 5.7% |
+| BetaStep | 1471 | 5.8% |
 | TypeInstantiation | 874 | 3.4% |
 | Assumption | 840 | 3.3% |
 | Abstraction | 814 | 3.2% |
@@ -1204,17 +1204,17 @@ obtained.
 
 ### The proof the kernel holds
 
-37312 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+37378 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 11540 | 30.9% |
-| EqualityElimination | 7781 | 20.9% |
+| Congruence | 11562 | 30.9% |
+| EqualityElimination | 7803 | 20.9% |
 | Instantiation | 3290 | 8.8% |
-| Reflexivity | 3255 | 8.7% |
+| Reflexivity | 3266 | 8.7% |
 | Antisymmetry | 2949 | 7.9% |
 | Transitivity | 2697 | 7.2% |
-| BetaStep | 2201 | 5.9% |
+| BetaStep | 2212 | 5.9% |
 | TypeInstantiation | 1312 | 3.5% |
 | Assumption | 1155 | 3.1% |
 | Abstraction | 1105 | 3.0% |
@@ -1354,17 +1354,17 @@ obtained.
 
 ### The proof the kernel holds
 
-23501 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+23549 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 7344 | 31.2% |
-| EqualityElimination | 4863 | 20.7% |
-| Reflexivity | 1974 | 8.4% |
-| Instantiation | 1939 | 8.3% |
+| Congruence | 7360 | 31.3% |
+| EqualityElimination | 4879 | 20.7% |
+| Reflexivity | 1982 | 8.4% |
+| Instantiation | 1939 | 8.2% |
 | Antisymmetry | 1883 | 8.0% |
 | Transitivity | 1724 | 7.3% |
-| BetaStep | 1426 | 6.1% |
+| BetaStep | 1434 | 6.1% |
 | TypeInstantiation | 781 | 3.3% |
 | Assumption | 773 | 3.3% |
 | Abstraction | 770 | 3.3% |
@@ -1512,17 +1512,17 @@ obtained.
 
 ### The proof the kernel holds
 
-32310 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+32358 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 9582 | 29.7% |
-| EqualityElimination | 6948 | 21.5% |
+| Congruence | 9598 | 29.7% |
+| EqualityElimination | 6964 | 21.5% |
 | Instantiation | 2879 | 8.9% |
-| Reflexivity | 2837 | 8.8% |
+| Reflexivity | 2845 | 8.8% |
 | Antisymmetry | 2653 | 8.2% |
 | Transitivity | 2332 | 7.2% |
-| BetaStep | 1943 | 6.0% |
+| BetaStep | 1951 | 6.0% |
 | TypeInstantiation | 1143 | 3.5% |
 | Assumption | 1068 | 3.3% |
 | Abstraction | 901 | 2.8% |
@@ -1740,17 +1740,17 @@ obtained.
 
 ### The proof the kernel holds
 
-77066 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+77186 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 21930 | 28.5% |
-| EqualityElimination | 17218 | 22.3% |
-| Reflexivity | 7043 | 9.1% |
+| Congruence | 21970 | 28.5% |
+| EqualityElimination | 17258 | 22.4% |
+| Reflexivity | 7063 | 9.2% |
 | Instantiation | 6946 | 9.0% |
 | Antisymmetry | 6564 | 8.5% |
 | Transitivity | 5394 | 7.0% |
-| BetaStep | 4740 | 6.2% |
+| BetaStep | 4760 | 6.2% |
 | TypeInstantiation | 2840 | 3.7% |
 | Assumption | 2448 | 3.2% |
 | Abstraction | 1901 | 2.5% |

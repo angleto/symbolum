@@ -132,7 +132,7 @@ add nothing to what has to be believed. Everything else in the system is proved.
 
 ### The excluded middle is derived, and it cost no axiom of its own
 
-`p \/ ~p` is `EXCLUDED_MIDDLE` on `Classical.standard`, and it is a theorem: 829 inference steps by
+`p \/ ~p` is `EXCLUDED_MIDDLE` on `Classical.standard`, and it is a theorem: 841 inference steps by
 `Derivation.size`, resting on `SELECT` and on nothing else. `ClassicalSpec` asserts that axiom set
 rather than describing it, which is what makes the claim a measurement.
 
@@ -172,12 +172,12 @@ off the derivations themselves. A change that moves them fails the suite naming 
 | `TRUTH_NOT_FALSITY` | `⊢ ~(T = F)` | nothing | 122 |
 | `DE_MORGAN_DISJUNCTION` | `⊢ !p:bool. !q:bool. (~(p \/ q)) = (~p /\ ~q)` | nothing | 495 |
 | `FUNCTION_EXTENSIONALITY` | `⊢ !f:'a->'b. !g:'a->'b. (!x:'a. f x = g x) ==> f = g` | `ETA` | 197 |
-| `EXCLUDED_MIDDLE` | `⊢ !p:bool. p \/ ~p` | `SELECT` | 829 |
-| `DOUBLE_NEGATION` | `⊢ !p:bool. ~~p ==> p` | `SELECT` | 940 |
-| `DE_MORGAN_CONJUNCTION` | `⊢ !p:bool. !q:bool. (~(p /\ q)) = (~p \/ ~q)` | `SELECT` | 1089 |
-| `NOT_FORALL` | `⊢ !P:'a->bool. ~(!x:'a. P x) ==> ?x:'a. ~(P x)` | `SELECT` | 1143 |
-| `COND_TRUE` | `⊢ !p:bool. !a:'a. !b:'a. p ==> COND p a b = a` | `SELECT` | 476 |
-| `COND_FALSE` | `⊢ !p:bool. !a:'a. !b:'a. ~p ==> COND p a b = b` | `SELECT` | 476 |
+| `EXCLUDED_MIDDLE` | `⊢ !p:bool. p \/ ~p` | `SELECT` | 841 |
+| `DOUBLE_NEGATION` | `⊢ !p:bool. ~~p ==> p` | `SELECT` | 952 |
+| `DE_MORGAN_CONJUNCTION` | `⊢ !p:bool. !q:bool. (~(p /\ q)) = (~p \/ ~q)` | `SELECT` | 1101 |
+| `NOT_FORALL` | `⊢ !P:'a->bool. ~(!x:'a. P x) ==> ?x:'a. ~(P x)` | `SELECT` | 1155 |
+| `COND_TRUE` | `⊢ !p:bool. !a:'a. !b:'a. p ==> COND p a b = a` | `SELECT` | 482 |
+| `COND_FALSE` | `⊢ !p:bool. !a:'a. !b:'a. ~p ==> COND p a b = b` | `SELECT` | 482 |
 
 <!-- end generated: classical -->
 
@@ -189,7 +189,7 @@ asserts. Before that date there was no conditional constant anywhere in it, and 
 by cases had nothing at all to write its cases with.
 
 They rest on `SELECT` and never reach `EXCLUDED_MIDDLE`, which is worth a line. The obvious proof of
-each is a case split on `p`, and that would put the excluded middle's 829 steps inside both; instead
+each is a case split on `p`, and that would put the excluded middle's 841 steps inside both; instead
 the value is offered to the choice axiom directly and the conjunct that matches the case is read off
 the answer.
 

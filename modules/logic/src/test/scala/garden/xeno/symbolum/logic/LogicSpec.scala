@@ -137,23 +137,27 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     // Modus ponens here does not compare the premise's conclusion with the antecedent: a theorem of
     // something else leaves `p` undischarged, and what comes back is a `Right` whose conclusion is
     // the one that was wanted. Sound, because the result says it assumes `p`; not a check.
-    // The antecedent is `T` and the matching premise is `|- T`, which carries no hypothesis of its
-    // own. That is what makes the pair below read: anything left on the left of the turnstile
-    // afterwards is the antecedent that was not discharged, and not the premise's own baggage.
+    // **This asserted the opposite until 2026-09-16 and the reversal is what it is here to pin.**
+    // `mp` used to accept an antecedent proving something else: it went through `proveHyp`, which
+    // is a cut and leaves what it cannot discharge standing, so the answer was `Right`, its
+    // conclusion was `q`, and the undischarged antecedent travelled on the left of the turnstile
+    // beside the wrong premise's own baggage. Sound, and not a refusal, and nothing looked.
     val truth = force(rules.truth)
     val implication = force(rules.disch(truth.conclusion, force(Kernel.assume(q))))
     val unrelated = force(Kernel.assume(Term.variable("r", Type.Bool)))
 
-    val detached = force(rules.mp(implication, unrelated))
+    rules.mp(implication, unrelated).left.map(_.getClass) shouldBe Left(classOf[NotOfForm])
 
+    // The refusal has to name what it was handed, or this test passes against a rule that refuses
+    // everything. That is the half the old assertion had and the shape of the new one must keep:
+    // "it refused" and "it refused about the right thing" are two outcomes.
+    rules.mp(implication, unrelated).fold(_.message, _ => "") should include("r")
+
+    // And the matching case still detaches, discharging the antecedent rather than carrying it.
+    // Without this the refusal above is consistent with `mp` having stopped working altogether.
+    val detached = force(rules.mp(implication, truth))
     detached.conclusion shouldBe q
-    detached.hypotheses should contain(truth.conclusion)
-    detached.hypotheses should contain(Term.variable("r", Type.Bool))
-
-    // Paired with the matching case, where the antecedent IS discharged and does not appear.
-    // Without this the assertion above is consistent with `mp` never discharging anything, which
-    // would make it a statement about nothing.
-    force(rules.mp(implication, truth)).hypotheses should not contain truth.conclusion
+    detached.hypotheses should not contain truth.conclusion
   }
 
   it should "refuse to detach from something that is not an implication" in {
