@@ -988,6 +988,31 @@ object Classical {
     axioms: Map[String, Kernel.Thm],
     existential: Kernel.Thm
   ): Either[LogicError, Kernel.Thm] =
+    axioms
+      .get(Choice)
+      .toRight(MissingDefinition(Choice))
+      .flatMap(witnessFrom(logic, _, existential))
+
+  /**
+   * The same derivation, given the choice axiom rather than a table to look it up in.
+   *
+   * **The sentence above says one implementation rather than two, and there were two.**
+   * `Modular` carried a copy of this, differing in the two variable names and in how the axiom
+   * arrived, because what it holds is the axiom itself: it builds a quantifier at `num`, and
+   * `Classical.standard` has never heard of that type, so there is no table there to look it up
+   * in. The split was over an argument, and an argument is a parameter.
+   *
+   * Reachable outside this module for that reason, which is what the copy was working around.
+   *
+   * What comes back is the **unreduced** application, and that is deliberate here: a caller
+   * defining a type off the result needs it that way, and a caller that does not reduces it at its
+   * own call site, which is what the one in `Modular` does.
+   */
+  private[symbolum] def witnessFrom(
+    logic: Logic,
+    choice: Kernel.Thm,
+    existential: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
     logic.destExistsPredicate(existential.conclusion) match {
       case None => Left(NotOfForm("an existential quantification", existential.conclusion))
 
@@ -1002,8 +1027,7 @@ object Classical {
             val variable = Conv.freshVariable("w", domain, taken)
 
             for {
-              axiom <- axioms.get(Choice).toRight(MissingDefinition(Choice))
-              instantiated <- Right(Kernel.instType(Map(TypeVariable -> domain), axiom))
+              instantiated <- Right(Kernel.instType(Map(TypeVariable -> domain), choice))
 
               atPredicate <- logic.rules.spec(predicate, instantiated)
               atVariable <- logic.rules.spec(variable, atPredicate)

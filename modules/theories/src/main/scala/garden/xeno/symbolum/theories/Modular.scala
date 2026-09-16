@@ -3101,6 +3101,13 @@ object Modular {
    * same widening `Classical.ext` takes a `Logic` parameter for, and the same reason: a polymorphic
    * axiom is stated once and instantiated where the types live.
    *
+   * **This was a copy of that derivation until 2026-09-16, and the copy is the interesting part.**
+   * What made it look unavoidable is the paragraph above: `Classical.witness` really cannot serve
+   * this file. What does not follow, and is what the copy assumed, is that the derivation cannot
+   * either. The two differed in two variable names and in how the choice axiom arrived, a table to
+   * look it up in there against the theorem itself here, and a difference in how an argument
+   * arrives is a parameter rather than a reason to write the derivation twice.
+   *
    * What comes back is the **unreduced** application, which is what `Classical.witness` documents
    * and is deliberate there; this file reduces it at the one call site, because nothing here is
    * defining a type off the result.
@@ -3110,35 +3117,7 @@ object Modular {
     choice: Kernel.Thm,
     existential: Kernel.Thm
   ): Either[LogicError, Kernel.Thm] =
-    logic.destExistsPredicate(existential.conclusion) match {
-      case None =>
-        Left(NotOfForm("an existential quantification", existential.conclusion))
-
-      case Some(predicate) =>
-        Type.destFun(Term.typeOf(predicate)) match {
-          case None => Left(NotOfForm("a predicate", predicate))
-
-          case Some((domain, _)) =>
-            val taken = Term.freeVariables(predicate) ++
-              existential.hypotheses.flatMap(Term.freeVariables).toSet
-            val chosen = Conv.freshVariable("w", domain, taken)
-
-            for {
-              instantiated <- Right(
-                Kernel.instType(Map(Classical.TypeVariable -> domain), choice)
-              )
-              atPredicate <- logic.rules.spec(predicate, instantiated)
-              atVariable <- logic.rules.spec(chosen, atPredicate)
-
-              applied <- LogicError.lift(Term.app(predicate, chosen))
-              instance <- Term.betaReduce(applied).toRight(NotOfForm("a redex", applied))
-              assumed <- LogicError.lift(Kernel.assume(instance))
-
-              satisfied <- logic.rules.mp(atVariable, assumed)
-              result <- logic.rules.existsElim(existential, chosen, satisfied)
-            } yield result
-        }
-    }
+    Classical.witnessFrom(logic, choice, existential)
 
   /**
    * `|- !n q r p s. n * q + r = n * p + s /\ NUM_LT r n /\ NUM_LT s n ==> q = p /\ r = s`.
