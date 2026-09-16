@@ -119,11 +119,32 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
   it should "name what a theorem rests on only when the session assumed something" in {
     // The empty case is the one worth pinning, because a line that always appears says nothing.
     // `SessionSpec` holds both sides for the outcome; this holds them for the page.
+    //
+    // **The negative half of this was vacuous until 2026-09-16, and coverage is what said so.**
+    // It was written with `find ABS_TRIANGLE` as the unassumed session, which is a `Report` and
+    // never reaches [[Notebook.proved]] at all, so the absent line was absent because nothing had
+    // rendered a theorem rather than because a theorem had rendered without it. The statement that
+    // decides it, `if (rests.isEmpty) ""`, had an invocation count of **zero** in a report where
+    // the test beside it was green: the assertion held for a session that could not have failed
+    // it. This is the guard `CLAUDE.md` asks for under "an assertion is only as good as the
+    // thought somebody gave to what would make it empty", met in the file rather than in the rule.
+    //
+    // So the negative case is now a **proved** theorem that assumed nothing, which is the only
+    // shape that can distinguish the two, and the report stays as a third case because a cell that
+    // is not a theorem should not carry the line either.
     val assumed = fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p"))
-    val unassumed = fresh.run("find ABS_TRIANGLE")
+    val provedFreely = fresh.run("prove SQ : !x:real. 0 <= x * x")
+    val reported = fresh.run("find ABS_TRIANGLE")
+
+    withClue(s"${Notebook.cells(provedFreely)}\n") {
+      // The case that makes the assertion non-vacuous: a theorem is on the page, and the line is
+      // not, because this session spent nothing of its own to get it.
+      Notebook.cells(provedFreely) should include("""class="proved"""")
+      Notebook.cells(provedFreely) should not include "rests on what this session assumed"
+    }
 
     Notebook.cells(assumed) should include("rests on what this session assumed")
-    Notebook.cells(unassumed) should not include "rests on what this session assumed"
+    Notebook.cells(reported) should not include "rests on what this session assumed"
   }
 
   it should "escape what a reader typed, so a transcript cannot write the page" in {

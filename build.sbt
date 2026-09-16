@@ -218,6 +218,47 @@ lazy val commonSettings = Seq(
  * the repository at 84.56%**, which its own note anticipates and argues for: what a floor there
  * would gate is a property of two documents rather than of the code.
  *
+ * == The rebased run the section above asked for, 2026-09-16 ==
+ *
+ * At `748f1f5`, `clean coverage test coverageReport` in a worktree created at the tip and never
+ * built, **2225 tests green**, exit 0, the measured tree clean before and after. Twelve minutes on
+ * a machine carrying no other sbt, which is worth writing beside the 79 of the previous run
+ * because the difference is the neighbours and not the build:
+ *
+ * {{{
+ *   module     statements   rate     floor         margin    the rule sets   outcome
+ *   kernel           1122   95.72    93.4            26.0    93.4            stays
+ *   checker           831   91.82    88.8            25.1    88.8            stays
+ *   core             2901   92.18    91.3            25.5    91.3            stays
+ *   sat               437   92.68    92.0             3.0    86.9            stays, tightest
+ *   logic            4644   95.24    94.4 -> 94.7    39.0    94.7            yes
+ *   theories        49594   97.48    96.0 -> 97.4   734.0    97.4            yes
+ *   tactics          4952   93.05    92.5            27.2    92.5            stays
+ *   mark              432   84.03    none               -    -               no gate
+ *   examples          240   11.67    none               -    -               no gate
+ *   dist                8   62.50    none               -    -               no gate
+ * }}}
+ *
+ * **`theories` is the one this run existed for**, and the section above named the condition it was
+ * waiting on rather than leaving it to be rediscovered. The population check passes this time:
+ * `git diff --numstat 748f1f5..7.0 -- modules/theories modules/logic` is empty, so the rate and
+ * the floor name the same population. Nothing under any module's `src/main` moved across those
+ * commits at all; what did move is two documents and one test source.
+ *
+ * **The gap the ratchet had left at `theories` was 734 statements**, which is the number worth
+ * carrying out of this run. The rule fixes the margin at 25, so that gate was twenty-nine times
+ * looser than intended, on the module that carries four fifths of the statements in the build. The
+ * three floors raised in the morning of 2026-09-16 were between 0.8 and 12 points low; this one was
+ * low by 1.48 points and by far the most statements, because a point is 496 statements here. **A
+ * floor's looseness is not readable from the points between it and the measurement**, which is the
+ * same arithmetic the 25-statement rule was introduced for, seen from the side of a floor that was
+ * never revisited rather than from the side of one being set.
+ *
+ * And the two sentences in this note that are now spent rather than true: "four when the tree
+ * settles" resolved to one on 2026-09-16 and then to two here, and `theories` did not need a quiet
+ * tree, it needed a rebased one. Both are left above as they were written, because what they got
+ * wrong is the part worth reading.
+ *
  * == The run has to be a clean one, and the gate does not say so ==
  *
  * Found on 2026-09-13 by running it twice in the same tree, a commit apart. The second report
@@ -463,8 +504,17 @@ lazy val logic = (project in file("modules/logic"))
     // measurement was taken and five when it landed, and the check is the diff rather than the
     // count. The
     // same check over `modules/theories` is not empty, which is why that floor did not move with
-    // this one although the measurement was in the same report.
-    coverageMinimumStmtTotal := 94.4
+    // this one although the measurement was in the same report. That sentence is now spent:
+    // `modules/theories` was measured on a rebased tree on 2026-09-16 and its floor moved, which
+    // is recorded beside it.
+    //
+    // **95.24% over 4644 statements on 2026-09-16, at `748f1f5`, and the floor rises to 94.7.**
+    // Nine statements more than the module carried at `fb3f45a` and the rate up 0.22, so this is a
+    // rise of the measurement rather than of the sample. The same tip check passes:
+    // `git diff --numstat 748f1f5..7.0 -- modules/logic` is empty. Margin at the old 94.4 was 39
+    // statements, which is above the 25 the rule fixes, so the raise is the ratchet doing what it
+    // says rather than a tightening argued for separately.
+    coverageMinimumStmtTotal := 94.7
   )
 
 // The mathematics: the theory of the reals and, later, the numerals. This is where the trusted
@@ -483,7 +533,23 @@ lazy val theories = (project in file("modules/theories"))
     // to a point and a half below the measurement, which is also more than a point below the lowest
     // reading this module has ever given. The rerun an hour later read 97.35%, so the margin is
     // doing its job on the day it was set.
-    coverageMinimumStmtTotal := 96.0
+    //
+    // **97.48% over 49594 statements on 2026-09-16, at `748f1f5`, and the floor rises to 97.4.**
+    // This is the run the note above asked for in as many words: it left this floor standing not
+    // because the tree was busy but because `modules/theories` had moved between the reading and
+    // the branch, so the rate was for a different population than the floor would have named, and
+    // it said the floor "wants one run on a rebased tree and nothing else". This is that run, in a
+    // worktree created at the tip and never built, and the check it exists for passes:
+    // `git diff --numstat 748f1f5..7.0 -- modules/theories` is **empty**, so the population
+    // measured and the population gated are the same one.
+    //
+    // What the ratchet had left here is worth a line, because it is the widest gap in the build
+    // and the opposite of the two tight ones below. At 96.0 this floor sat **734 statements**
+    // under the measurement, against the 25 the rule fixes: a gate twenty-nine times looser than
+    // intended, on the largest module in the repository by a factor of ten. What it would have
+    // caught is nothing that could plausibly happen, which is the sentence the note above already
+    // wrote about `kernel` at twelve points. The rule sets 97.4 and that is what stands.
+    coverageMinimumStmtTotal := 97.4
   )
 
 // Where the two halves meet: the computer algebra system proposes and the kernel checks. The only
