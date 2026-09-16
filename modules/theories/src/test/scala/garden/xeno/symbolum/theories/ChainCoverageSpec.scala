@@ -116,6 +116,14 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Recursion" -> DeclaresNothing,
     "Semiring" -> DeclaresNothing,
 
+    // Beside the chain and it must STAY beside it, which is the one entry here whose reason is a
+    // soundness argument rather than a classification. It declares nothing OF ITS OWN: what it
+    // builds is a caller's domain theory, over a base the caller hands it. `docs/adr/0019` decided
+    // that two theories axiomatising one name still produce constants that compare equal, so a
+    // domain theory in the chain would be exactly the arrangement `SoundnessAttackSpec` derives
+    // `|- F` from.
+    "Domain" -> DeclaresNothing,
+
     "Certificate" -> NotADevelopment,
     "Chain" -> NotADevelopment,
     "Coefficient" -> NotADevelopment,
