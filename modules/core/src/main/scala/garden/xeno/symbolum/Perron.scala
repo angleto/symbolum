@@ -1,6 +1,7 @@
 package garden.xeno.symbolum
 
-import breeze.linalg.{DenseMatrix, DenseVector, NotConvergedException, eig}
+import org.apache.commons.math3.exception.MaxCountExceededException
+import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
 /**
  * The dominant eigenvalue of a matrix with no negative entry, and the vector that goes with it.
@@ -17,14 +18,31 @@ import breeze.linalg.{DenseMatrix, DenseVector, NotConvergedException, eig}
  *
  * == Why a library, and which one ==
  *
- * Nothing here is written. `breeze.linalg.eig` is LAPACK's `dgeev` underneath: balancing, a
- * Hessenberg reduction, and the shifted QR iteration, which is forty years of edge cases nobody
- * should reimplement to own a copy. Power iteration is the other answer, it is twenty lines, and it
- * is worse in the case this exists for: it converges at the rate `|lambda_2| / |lambda_1|`, which
- * is where a nearly-periodic transfer matrix lives, and it cannot tell slow convergence from no
- * convergence. The full decomposition costs `O(n^3)` and answers the question the caller asked
- * along with [[Dominant.subdominant]], which is the number that says how badly power iteration
- * would have done.
+ * Nothing here is written. `EigenDecomposition` is a Hessenberg reduction and a shifted QR
+ * iteration on the Schur form, which is forty years of edge cases nobody should reimplement to own
+ * a copy. Power iteration is the other answer, it is twenty lines, and it is worse in the case this
+ * exists for: it converges at the rate `|lambda_2| / |lambda_1|`, which is where a nearly-periodic
+ * transfer matrix lives, and it cannot tell slow convergence from no convergence. The full
+ * decomposition costs `O(n^3)` and answers the question the caller asked along with
+ * [[Dominant.subdominant]], which is the number that says how badly power iteration would have
+ * done.
+ *
+ * **It was `breeze.linalg.eig`, which is LAPACK's `dgeev`, until 2026-09-16**, and what moved it is
+ * weight rather than accuracy: Breeze and the type-class tail under it were 24.3 MB of the 31 that
+ * this published module made a consumer download, for this call and one transform. Commons-math3
+ * was already on that classpath, at 1.94 MB, because Breeze depends on it.
+ *
+ * What the two answer, measured on 2026-09-16 before the swap rather than after it: on every matrix
+ * `PerronSpec` names, including the nilpotent and the zero ones that are defective and the cyclic
+ * permutation whose spectral radius is attained by three eigenvalues at once, the Perron root
+ * agrees to at worst `2.3e-13` and the eigenvector's residual stays under `1.9e-14`; over 200
+ * random non-negative matrices up to 5 by 5 there was no disagreement and no refusal. It is the
+ * same algorithm, so that is what one expects; expecting it is not measuring it, and the defective
+ * cases are where a second implementation is most entitled to differ.
+ *
+ * What was **not** established: that it is as fast, or that it holds up at the sizes `dgeev` is
+ * built for. Nothing here has asked for an eigenvalue past `n = 64`, which is `PerronSpec`'s
+ * largest, and a caller that wants one should measure before assuming this scales.
  *
  * The decision is recorded in `build.sbt` beside the dependency. `Farkas`, in `modules/theories`,
  * is **not** moved onto this and must not be: it searches for a certificate by pivoting, and a
@@ -33,7 +51,7 @@ import breeze.linalg.{DenseMatrix, DenseVector, NotConvergedException, eig}
  *
  * == This is a measurement, and it is never a proof ==
  *
- * An eigenvalue out of `dgeev` is correct to a few units in the last place **of a nearby matrix**,
+ * An eigenvalue out of a QR iteration is correct to a few units in the last place **of a nearby matrix**,
  * which is the only guarantee a backward-stable algorithm gives, and for a badly conditioned
  * eigenvalue that nearby matrix can be far enough away to matter. [[Dominant.residual]] is what
  * this can say about it: the largest entry of `A v - lambda v`, which is a number and is reported
@@ -62,23 +80,25 @@ object Perron {
   /**
    * How far from an eigenvector a vector is allowed to be, per unit of `||A||`.
    *
-   * `dgeev` is backward stable, so `||A v - lambda v||` sits at a small multiple of the machine
+   * The iteration is backward stable, so `||A v - lambda v||` sits at a small multiple of the machine
    * epsilon times `||A||` times the dimension, and the scale everything below is measured against
    * is the matrix's infinity norm rather than the eigenvalue. The two are close for a non-negative
    * matrix, since the spectral radius lies between the smallest and the largest row sum, but they
    * are not the same number when the mass is off the dominant direction and the norm is the one the
    * error actually follows.
    *
-   * Measured over `PerronSpec`'s matrices on 2026-09-12. The worst residual seen was the all-ones
-   * matrix at `n = 64`, `1.30e-13` absolutely against a norm of `64`, so `2.03e-15` relatively;
-   * nothing else in that file exceeded `1e-14` even absolutely.
+   * Measured over `PerronSpec`'s matrices on 2026-09-12 against `dgeev`, and again on 2026-09-16
+   * against the decomposition that replaced it: the worst residual seen was the all-ones matrix at
+   * `n = 64`, `1.30e-13` absolutely against a norm of `64` under the first and `1.87e-14` under the
+   * second; nothing else in that file exceeded `1e-14` under either.
    *
    * `1e-9` is six orders of magnitude above the worst of them, and the margin is that wide on
    * purpose, because this gate is not looking for a slightly inaccurate answer. It is looking for a
-   * **wrong vector**. The eigenvector columns arrive in LAPACK's packed layout, where the two
-   * columns belonging to a complex pair are a real part and an imaginary part rather than two
-   * eigenvectors, and a misread of that layout fails here by orders of magnitude rather than by a
-   * digit. A tighter threshold would buy nothing and would start failing on hard matrices.
+   * **wrong vector**. The eigenvector columns arrive in the packed layout the Schur form produces,
+   * where the two columns belonging to a complex pair are a real part and an imaginary part rather
+   * than two eigenvectors, and a misread of that layout fails here by orders of magnitude rather
+   * than by a digit. A tighter threshold would buy nothing and would start failing on hard
+   * matrices.
    */
   val Residual: Double = 1e-9
 
@@ -142,11 +162,11 @@ object Perron {
   final case class Undecided(why: String) extends Outcome
 
   /**
-   * The QR iteration did not converge, which is `dgeev` giving up.
+   * The QR iteration did not converge, which is the decomposition giving up.
    *
    * Its own outcome, distinct from [[Undecided]], because the move is different: this one is about
    * the matrix being hard, and a caller has balancing, a similarity transform, or a different
-   * method to try. `why` carries what LAPACK said.
+   * method to try. `why` carries what the library said.
    */
   final case class NotConverged(why: String) extends Outcome
 
@@ -164,7 +184,8 @@ object Perron {
   def of(matrix: Vector[Vector[Double]]): Outcome =
     refuse(matrix).getOrElse {
       val size = matrix.length
-      val dense = DenseMatrix.tabulate(size, size)((row, column) => matrix(row)(column))
+      val dense = new Array2DRowRealMatrix(
+        Array.tabulate(size, size)((row, column) => matrix(row)(column)), false)
 
       // The infinity norm, which is the largest row sum because no entry is negative. It is the
       // scale every tolerance below is measured in, and it is at least one so that a matrix of tiny
@@ -175,28 +196,33 @@ object Perron {
        * A catch of one named exception rather than `Try`, and the difference matters here.
        *
        * `Try` collects everything non-fatal, and there is no honest outcome to map a defect onto:
-       * `refuse` has already thrown out every matrix `dgeev` documents an argument error for, so
-       * anything other than a failure to converge is a mistake in this file, and turning it into
-       * `NotConverged` or `Undecided` would be merging a defect with a refusal, which is the one
-       * thing the outcomes here exist to prevent. Named this way, a defect propagates and gets
+       * `refuse` has already thrown out every matrix the decomposition documents an argument error
+       * for, so anything other than a failure to converge is a mistake in this file, and turning it
+       * into `NotConverged` or `Undecided` would be merging a defect with a refusal, which is the
+       * one thing the outcomes here exist to prevent. Named this way, a defect propagates and gets
        * fixed.
+       *
+       * `MaxCountExceededException` is the one to name, and it is narrower than it looks: it is
+       * what `EigenDecomposition` raises with `CONVERGENCE_FAILED` when the QR iteration runs out
+       * of steps. The constructor's other declared failure is `MathArithmeticException`, which is
+       * a defect here rather than an outcome and is left to propagate.
        */
       val decomposition =
-        try Right(eig(dense))
-        catch { case failure: NotConvergedException => Left(failure) }
+        try Right(new EigenDecomposition(dense))
+        catch { case failure: MaxCountExceededException => Left(failure) }
 
       decomposition match {
         case Left(failure) =>
           NotConverged(
             s"the eigenvalue iteration did not converge on a $size by $size matrix: " +
-              Option(failure.getMessage).filter(_.nonEmpty).getOrElse(failure.reason.toString))
+              Option(failure.getMessage).filter(_.nonEmpty).getOrElse("no reason given"))
 
         case Right(found) =>
           settle(
-            transform = v => (dense * DenseVector(v.toArray)).toArray.toVector,
-            real = found.eigenvalues.toArray.toVector,
-            imaginary = found.eigenvaluesComplex.toArray.toVector,
-            vector = index => found.eigenvectors(::, index).toArray.toVector,
+            transform = v => dense.operate(v.toArray).toVector,
+            real = found.getRealEigenvalues.toVector,
+            imaginary = found.getImagEigenvalues.toVector,
+            vector = index => found.getEigenvector(index).toArray.toVector,
             scale = scale)
       }
     }
@@ -216,11 +242,11 @@ object Perron {
    *
    * Every [[Undecided]] below is unreachable through [[of]], and deliberately so: [[refuse]] has
    * already thrown out the matrices the theorem does not cover, so an input that gets this far and
-   * fails one of these gates means LAPACK contradicted Perron-Frobenius. A branch nothing can reach
+   * fails one of these gates means the decomposition contradicted Perron-Frobenius. A branch nothing can reach
    * is a branch nothing checks, which this repository says out loud in `Relation.reduce` and
    * resolves there by leaving the guard out. Leaving these out is not the same trade: they catch a
    * **misread of the decomposition**, which is a live defect rather than an impossible input,
-   * because the eigenvector columns arrive in LAPACK's packed layout where a complex pair occupies
+   * because the eigenvector columns arrive in the Schur form's packed layout where a complex pair occupies
    * two columns as a real part and an imaginary part. So the seam is opened instead, and
    * `PerronSpec` drives it with decompositions it makes up.
    *
@@ -264,7 +290,7 @@ object Perron {
    * Normalise the eigenvector, then make it earn the name.
    *
    * Two gates, and each says what it failed by. The residual catches a vector that is not an
-   * eigenvector at all, which is what a misread of LAPACK's packed complex columns produces. The
+   * eigenvector at all, which is what a misread of those packed complex columns produces. The
    * sign catches a vector that is an eigenvector and is not the Perron one, which is what a
    * degenerate spectral radius can produce. Visible to the tests for the reason [[settle]] gives.
    */

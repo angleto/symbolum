@@ -10,18 +10,27 @@ import org.scalatest.matchers.should.Matchers
 /**
  * The numeric library stays on this side of the wall, asserted rather than described.
  *
- * No library anywhere produces `|- det (A * B) = det A * det B`. What Breeze produces is a number,
- * and a number is evidence: `Spectrum` and `Perron` live in `modules/core` because that is the
- * module nothing on the proof side believes, and the arrangement only works while it stays true.
+ * No library anywhere produces `|- det (A * B) = det A * det B`. What a numeric library produces is
+ * a number, and a number is evidence: `Spectrum` and `Perron` live in `modules/core` because that
+ * is the module nothing on the proof side believes, and the arrangement only works while it stays
+ * true.
  *
  * == What the build already enforces, and what it cannot ==
  *
- * `kernel`, `logic` and `theories` declare no path to `core`, so Breeze is not on their compilation
- * classpath at all and `IsolationSpec` in the kernel already asserts the shape of that graph.
- * `tactics` is different: it depends on `core` **and** on `theories`, because it is the module
- * where the algebra proposes and the kernel checks, so Breeze arrives there transitively and the
- * build cannot stop it without severing the join the module exists for. A scan of the source is
- * what is left, and it is what this file does.
+ * `kernel`, `logic` and `theories` declare no path to `core`, so neither library is on their
+ * compilation classpath at all and `IsolationSpec` in the kernel already asserts the shape of that
+ * graph. `tactics` is different: it depends on `core` **and** on `theories`, because it is the
+ * module where the algebra proposes and the kernel checks, so both arrive there transitively and
+ * the build cannot stop them without severing the join the module exists for. A scan of the source
+ * is what is left, and it is what this file does.
+ *
+ * == Which names, and why the list is longer than the classpath ==
+ *
+ * The dependency was Breeze until 2026-09-16 and is JTransforms and commons-math3 now. All three
+ * are scanned for, and the retired one deliberately: a scan whose only word is a library nothing
+ * can resolve any more passes over every source in the repository and reports nothing, which reads
+ * exactly like a scan that found nothing wrong. Keeping the old name costs a string and catches the
+ * session that reaches for the library the docstrings still talk about.
  *
  * `checker` is in the list for a different reason again. It depends on `theories` at test scope, so
  * it has no compile path to `core` either, and its whole value is being a second reader that agrees
@@ -35,6 +44,14 @@ class NumericIsolationSpec extends AnyFlatSpec with Matchers {
 
   /** The modules that must not mention it, and the reason each one is in the list is above. */
   private val proofSide = Vector("kernel", "logic", "theories", "tactics", "checker")
+
+  /**
+   * What a numeric library is called in a source of this repository, current and retired.
+   *
+   * Package prefixes rather than artifact names, because what a scan of Scala sources can see is an
+   * import. `breeze` is retired and is kept for the reason the docstring gives.
+   */
+  private val numericLibraries = Vector("breeze", "org.jtransforms", "org.apache.commons.math3")
 
   private def sourcesOf(module: String): Vector[Path] =
     Files
@@ -50,7 +67,7 @@ class NumericIsolationSpec extends AnyFlatSpec with Matchers {
     }
 
   "The proof side" should "never name the numeric library" in {
-    val offenders = proofSide.flatMap(module => mentions(module, "breeze"))
+    val offenders = proofSide.flatMap(module => mentions(module, numericLibraries*))
 
     withClue(
       "a number out of a numeric library is evidence and never a theorem; these files reach " +
@@ -86,6 +103,28 @@ class NumericIsolationSpec extends AnyFlatSpec with Matchers {
     val relation =
       Files.readString(Paths.get("modules/core/src/main/scala/garden/xeno/symbolum/Relation.scala"))
     relation should include("BigDecimal")
-    relation should not include "breeze"
+    numericLibraries.foreach(library => relation should not include library)
+  }
+
+  "The two files that do use one" should "name a library that is actually on the classpath" in {
+    // The guard above passes by an empty scan, so it is the one assertion in this file that a
+    // retired name would make vacuous rather than false: with `breeze` alone in the list and Breeze
+    // gone, every module reports nothing and the file reads green. This is the other direction, and
+    // it is what says the list is still pointed at something: the two untrusted files import a
+    // library, and it is one of the names scanned for above.
+    // An import line rather than the file, which is the difference between this assertion and no
+    // assertion: both files talk about Breeze in their prose, so a scan of the whole source would
+    // pass on the history alone.
+    Vector("Spectrum", "Perron").foreach { name =>
+      val imports = Files
+        .readString(Paths.get(s"modules/core/src/main/scala/garden/xeno/symbolum/$name.scala"))
+        .linesIterator
+        .filter(_.startsWith("import "))
+        .toVector
+
+      withClue(s"$name imports none of ${numericLibraries.mkString(", ")}: $imports\n") {
+        imports.exists(line => numericLibraries.exists(line.contains)) shouldBe true
+      }
+    }
   }
 }
