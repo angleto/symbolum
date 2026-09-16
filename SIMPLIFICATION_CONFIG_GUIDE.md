@@ -1,5 +1,16 @@
 # Symbolum Simplification Configuration Guide
 
+**EXCERPT — for anyone scanning the index:**
+Which algebraic rewrites the simplifier applies and how to switch one on or off: what each rule
+does, the four named configurations, the worked examples they were written for, the API reference,
+and what to reach for when the result is not what was wanted. It is about the algebra half alone,
+so nothing here concerns a theorem, a tactic or the kernel. Every Scala block below is compiled by
+`OtherDocumentsSpec`, except the two that quote a declaration, which it compares against the source
+they are lifted from instead.
+
+*If you modify this file and this excerpt no longer accurately describes its content, you must
+update it.*
+
 ## Overview
 
 Symbolum lets you choose which algebraic transformations the simplifier applies.
@@ -19,31 +30,31 @@ import garden.xeno.symbolum.{Expr, SimplificationConfig}
 import garden.xeno.symbolum.SimplificationRule._
 
 // Use default configuration
-val result = expr.fullSimplify
+val byDefault = expr.fullSimplify
 
 // Use aggressive configuration (all rules)
-val result = expr.simplify(SimplificationConfig.Aggressive)
+val aggressively = expr.simplify(SimplificationConfig.Aggressive)
 
 // Use minimal configuration (essential rules only)
-val result = expr.simplify(SimplificationConfig.Minimal)
+val minimally = expr.simplify(SimplificationConfig.Minimal)
 ```
 
 ### Custom Configuration
 
 ```scala
 // Start with default and add rules
-val config = SimplificationConfig.Default
+val added = SimplificationConfig.Default
   .withRule(FactorCommonTerms)
   .withRule(CollectLikeTerms)
 
-val result = expr.fullSimplify(config)
+val result = expr.fullSimplify(added)
 
 // Or remove specific rules
-val config = SimplificationConfig.Default
+val removed = SimplificationConfig.Default
   .withoutRule(MergeFractionsCommonDenom)
 
 // Or create from scratch
-val config = SimplificationConfig(List(
+val built = SimplificationConfig(List(
   RemoveIdentity,
   CombineNumericLiterals
 ))
@@ -249,7 +260,7 @@ println(expr1.simplify)
 
 // Merge to LCD
 val configMerged = SimplificationConfig.Default.withRule(MergeFractionsCommonDenom)
-println(expr1.simplify(configLCD))
+println(expr1.simplify(configMerged))
 // Output: 5/6
 ```
 
@@ -273,7 +284,7 @@ val simple2 = collatz1.fullSimplify(config)
 
 ```scala
 // Expand fully
-val expr = 2 * (x + y)
+val expr = Num(2) * (x + y)
 println(expr.expand)
 // Output: 2*x + 2*y
 
@@ -287,7 +298,7 @@ println(expr.expand(configNoDistribute))
 ### Example 4: Like Terms Collection
 
 ```scala
-val expr = x + 2*x + 3*x + y + 4*y
+val expr = x + Num(2)*x + Num(3)*x + y + Num(4)*y
 val config = SimplificationConfig.Default.withRule(CollectLikeTerms)
 
 println(expr.fullSimplify(config))
@@ -328,22 +339,24 @@ case class SimplificationConfig(
 
 ### Expr Methods
 
+The three signatures as `Expr.scala` declares them, quoted rather than described, and checked
+against that file by `OtherDocumentsSpec` so that a change to one of them breaks this page:
+
 ```scala
-trait Expr {
-  // Use default config
-  def simplify: Expr
-
-  // Use custom config
-  def simplify(implicit config: SimplificationConfig): Expr
-
-  // Full simplification with config
-  def fullSimplify(implicit config: SimplificationConfig = SimplificationConfig.Default,
-                   maxIter: Int = 100): Expr
-
-  // Expand with config
-  def expand(implicit config: SimplificationConfig): Expr
-}
+final def simplify(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr
+final def expand(implicit config: SimplificationConfig = SimplificationConfig.Default): Expr
+final def fullSimplify(implicit config: SimplificationConfig = SimplificationConfig.Default,
+                       maxIter: Int = MAX_ITERATIONS): Expr
 ```
+
+The config is an implicit parameter **with a default**, which is why every example above writes
+`expr.simplify` with no argument and `expr.simplify(config)` with one, and both are the same method.
+`MAX_ITERATIONS` is 100, in `NumericConstants.scala`.
+
+This block is a quotation and not a program: a signature with no body does not compile on its own,
+so it is the one block on this page that is checked by comparison with the source instead of by
+being compiled. What stood here until 2026-09-16 was a hand-written `trait Expr` sketch that claimed
+two overloads of `simplify`, which the trait does not have.
 
 ## Best Practices
 
@@ -370,11 +383,11 @@ To take advantage of new features:
 
 ```scala
 // Old way (still works)
-val result = expr.fullSimplify
+val theOldWay = expr.fullSimplify
 
 // New way (more control)
 val config = SimplificationConfig.Default.withRule(FactorCommonTerms)
-val result = expr.fullSimplify(config)
+val theNewWay = expr.fullSimplify(config)
 ```
 
 ## Troubleshooting
@@ -410,9 +423,9 @@ val config = SimplificationConfig.Default.withoutRule(MergeFractionsCommonDenom)
 
 Use minimal config or remove specific rules:
 ```scala
-val config = SimplificationConfig.Minimal
+val minimal = SimplificationConfig.Minimal
 // or
-val config = SimplificationConfig.Default
+val pruned = SimplificationConfig.Default
   .withoutRule(FactorCommonTerms)
   .withoutRule(CollectLikeTerms)
 ```

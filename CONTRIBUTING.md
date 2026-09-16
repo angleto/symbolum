@@ -1,5 +1,16 @@
 # Contributing to Symbolum
 
+**EXCERPT — for anyone scanning the index:**
+How to set up a checkout, what the code and the documentation are expected to look like, what the
+proof half asks before anything in it is changed, how to write a test, and how to open a change. It
+is about process rather than about the system: what the prover can state is in `docs/proving.md` and
+what the algebra half does is in `README.md`. The test example below is compiled by
+`OtherDocumentsSpec`; the Scaladoc template beside it is a template, whose placeholder types are not
+names that resolve, and it says so.
+
+*If you modify this file and this excerpt no longer accurately describes its content, you must
+update it.*
+
 Thank you for your interest in contributing to Symbolum! This document provides guidelines and instructions for contributing to the project.
 
 ## Code of Conduct
@@ -245,19 +256,27 @@ When adding new functionality, include:
 ### Test Structure
 
 ```scala
-// Example test structure (when using a test framework)
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import garden.xeno.symbolum._
+import garden.xeno.symbolum.Dsl._
+
 class MyFeatureTest extends AnyFlatSpec with Matchers {
-  "MyFeature" should "behave correctly" in {
-    val expr = /* ... */
-    val result = expr.simplify()
-    result shouldBe /* expected */
+  private val n = Var("n")
+
+  "Simplification" should "collect like terms" in {
+    (Num(2) * n + Num(3) * n - Num(1)).simplify().toString shouldBe "5 * n - 1"
   }
 
-  it should "handle edge cases" in {
-    // Edge case test
+  it should "handle the edge case where a rule has nothing to do" in {
+    (n * Num(1)).simplify().toString shouldBe "n"
   }
 }
 ```
+
+It compiles, which is the point of printing it: what stood here until 2026-09-16 had `/* ... */`
+where the expression and the expected value belong, so a contributor who pasted it got an error
+from the first line they were meant to keep. `OtherDocumentsSpec` compiles this block now.
 
 ## Documentation Guidelines
 

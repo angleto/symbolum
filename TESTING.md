@@ -2,8 +2,9 @@
 
 **EXCERPT — for anyone scanning the index:**
 How to run the suite, how to measure coverage, and where the tests live, followed by worked
-snippets a reader may want to try by hand. It does not enumerate the suites: they are discovered
-from the source tree, so a list here would go stale silently. It says nothing about what the
+snippets a reader may want to try by hand, every one of them compiled by `OtherDocumentsSpec` so
+that a snippet which stopped being a program fails the build. It does not enumerate the suites: they
+are discovered from the source tree, so a list here would go stale silently. It says nothing about what the
 proof-assistant modules prove, only how to run what they carry.
 
 *If you modify this file and this excerpt no longer accurately describes its content, you must
@@ -107,7 +108,7 @@ sbt core/console
 ```scala
 import garden.xeno.symbolum._, garden.xeno.symbolum.Dsl._
 val x = Var("x")
-(x + 2 * x).simplify()
+(x + Num(2) * x).simplify()
 ```
 
 The runnable demonstrations are a separate module, so they are not part of the published library:

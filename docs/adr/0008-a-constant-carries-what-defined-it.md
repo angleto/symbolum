@@ -18,9 +18,9 @@ while a development mixing their theorems is not, and that nothing detects it. O
 paragraph stopped being a caveat and became a derivation:
 
 ```scala
-val asTruth   = Kernel.defineConstant(logic.theory, "c", logic.truth)._2    // |- c = T
-val asFalsity = Kernel.defineConstant(logic.theory, "c", logic.falsity)._2  // |- c = F
-Conv.sym(asTruth).flatMap(Conv.trans(_, asFalsity))                         // |- T = F
+val asTruth   = Kernel.defineConstant(logic.theory, "c", logic.truth).toOption.get._2    // |- c = T
+val asFalsity = Kernel.defineConstant(logic.theory, "c", logic.falsity).toOption.get._2  // |- c = F
+Conv.sym(asTruth).flatMap(Conv.trans(_, asFalsity))                     // |- T = F, until the decision below
 ```
 
 Both halves are theorems the kernel was right to produce. Each extension is conservative, each
