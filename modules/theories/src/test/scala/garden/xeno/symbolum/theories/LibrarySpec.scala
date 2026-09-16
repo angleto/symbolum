@@ -411,8 +411,18 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `CLAUDE.md`'s two figures move by **one and by one**. It binds `f` at `num -> num` and `m`
     // and `n` at `num`, so it has two or more leading quantifiers, and `m` and `n` are two of one
     // type. Derived before the run from the statement rather than read off it afterwards.
-    library.entries.size shouldBe 494
-    library.names.distinct.size shouldBe 491
+    //
+    // 495 with `WORD_CONCAT_TALLY`, a tally over the positions of a word split where the word is.
+    // **ONE**, derived before the run. It is the consumer `NUM_SUM_SPLIT` was added for one row
+    // above, and the pair is the shape to expect whenever a fact about `num` is added so that a
+    // fact about `word` can be stated: two entries, in two developments, one session apart.
+    //
+    // `CLAUDE.md`'s two figures move by **one and by one**. It binds `f` at `num -> 'a -> num` and
+    // `u` and `v` at `word('a)`, so it has two or more leading quantifiers and two of one type --
+    // and the two of one type are the two halves of a concatenation, which is exactly the pair a
+    // positional specialisation would silently swap, giving the tally of the other half.
+    library.entries.size shouldBe 495
+    library.names.distinct.size shouldBe 492
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

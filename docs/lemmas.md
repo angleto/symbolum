@@ -100,6 +100,7 @@ they have least appetite for working out how it is produced.
   WORD_CONCAT_NTH          !x:word('a). !y:word('a). !z:num. z < WORD_LENGTH x + WORD_LENGTH y ==> WORD_NTH (WORD_CONCAT x y) z = COND (z < WORD_LENGTH x) (WORD_NTH x z) (WORD_NTH y (NUM_SUB z (WORD_LENGTH x)))
   WORD_CONCAT_NTH_LEFT     !x:word('a). !y:word('a). !z:num. z < WORD_LENGTH x ==> WORD_NTH (WORD_CONCAT x y) z = WORD_NTH x z
   WORD_CONCAT_NTH_RIGHT    !x:word('a). !y:word('a). !z:num. z < WORD_LENGTH y ==> WORD_NTH (WORD_CONCAT x y) (WORD_LENGTH x + z) = WORD_NTH y z
+  WORD_CONCAT_TALLY        !x:num -> 'a -> num. !y:word('a). !z:word('a). NUM_SUM (\u:num. x u (WORD_NTH (WORD_CONCAT y z) u)) (WORD_LENGTH (WORD_CONCAT y z)) = NUM_SUM (\u:num. x u (WORD_NTH y u)) (WORD_LENGTH y) + NUM_SUM (\u:num. x (WORD_LENGTH y + u) (WORD_NTH z u)) (WORD_LENGTH z)
   WORD_EMPTY_LENGTH        WORD_LENGTH (WORD_EMPTY:word('a)) = (0:num)
   WORD_FACTOR_LENGTH       !x:word('a). !y:word('a). WORD_FACTOR x y ==> WORD_LENGTH x <= WORD_LENGTH y
   WORD_FACTOR_REFUSED      !x:word('a). !y:word('a). WORD_LENGTH y < WORD_LENGTH x ==> ~(WORD_FACTOR x y)

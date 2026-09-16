@@ -224,6 +224,29 @@ object Concatenation {
    * published: naming the front would be a seventh constant, and nothing outside this proof has
    * asked for one.
    */
+  /**
+   * `|- !f x y. NUM_SUM (\i. f i (WORD_NTH (WORD_CONCAT x y) i)) (WORD_LENGTH (WORD_CONCAT x y)) =
+   * NUM_SUM (\i. f i (WORD_NTH x i)) (WORD_LENGTH x) +
+   * NUM_SUM (\i. f (WORD_LENGTH x + i) (WORD_NTH y i)) (WORD_LENGTH y)`
+   *
+   * A tally over the positions of a word, split where the word is. It is the fact anything that
+   * counts or weighs letters needs, and nothing that counts letters can be said without it: the
+   * number of times a letter occurs, a potential that weighs a letter by where it sits, a cost
+   * that depends on both. Each is this lemma at a different `f`.
+   *
+   * `f` takes the index as well as the letter, and that is not generality for its own sake. A
+   * tally that only saw letters could not express a measure that weighs a letter by its distance
+   * from the start, which is the one this repository wanted it for, and the shifted summand on the
+   * right is exactly the correction such a measure needs: the letters of `y` sit `WORD_LENGTH x`
+   * further along than they do in `y` alone.
+   *
+   * Three facts do the work and each covers one part. [[Length]] turns the bound into a sum so
+   * that `NUM_SUM_SPLIT` applies. [[NthLeft]] says the left half reads the same in the whole,
+   * below `WORD_LENGTH x`. [[NthRight]] says the right half reads the same at `WORD_LENGTH x + i`,
+   * which is the shifted summand `NUM_SUM_SPLIT` produces, so the two meet without an adapter.
+   */
+  val Tally: String = "WORD_CONCAT_TALLY"
+
   val Induction: String = "WORD_INDUCTION"
 
   /* ------------------------------------------------------------------- types */
@@ -295,6 +318,12 @@ object Concatenation {
     NthRight ->
       ("!u:word('a). !v:word('a). !i:num. NUM_LT i (WORD_LENGTH v) ==> " +
         "WORD_NTH (WORD_CONCAT u v) (NUM_ADD (WORD_LENGTH u) i) = WORD_NTH v i"),
+    Tally ->
+      ("!f:num -> 'a -> num. !u:word('a). !v:word('a). " +
+        "NUM_SUM (\\i:num. f i (WORD_NTH (WORD_CONCAT u v) i)) " +
+        "(WORD_LENGTH (WORD_CONCAT u v)) = " +
+        "NUM_ADD (NUM_SUM (\\i:num. f i (WORD_NTH u i)) (WORD_LENGTH u)) " +
+        "(NUM_SUM (\\i:num. f (NUM_ADD (WORD_LENGTH u) i) (WORD_NTH v i)) (WORD_LENGTH v))"),
     EmptyLeft -> "!w:word('a). WORD_CONCAT WORD_EMPTY w = w",
     EmptyRight -> "!w:word('a). WORD_CONCAT w WORD_EMPTY = w",
     Associative ->
@@ -415,6 +444,11 @@ object Concatenation {
         numbers
       )
 
+      split <- peano.fact(Peano.PartialSumSplit)
+      congruence <- peano.fact(Peano.PartialSumCongruenceBelow)
+      tally <- tallyOverAConcatenation(
+        logic, theory, notation, split, congruence, length, nthLeft, nthRight)
+
       facts = Map(
         EmptyLength -> emptyLength,
         SingletonLength -> singletonLength,
@@ -430,7 +464,8 @@ object Concatenation {
         SuffixIsFactor -> suffixIsFactor,
         FactorLength -> factorLength,
         FactorRefused -> factorRefused,
-        Induction -> inductive
+        Induction -> inductive,
+        Tally -> tally
       )
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
@@ -461,6 +496,161 @@ object Concatenation {
       ),
       facts
     )
+  }
+
+  /**
+   * [[Tally]]: `NUM_SUM_SPLIT` at the length of the first half, with both halves re-read.
+   *
+   * No induction of its own. `Peano` does the splitting and this supplies the three word facts that
+   * make the pieces line up, which is the whole of it:
+   *
+   *  - [[Length]] turns `WORD_LENGTH (WORD_CONCAT u v)` into a sum, which is the shape the split
+   *    is stated at. Without it the split does not apply at all.
+   *  - below `WORD_LENGTH u` the whole reads as `u` does, so the first summand is congruent to the
+   *    tally over `u`, by [[NthLeft]] under `NUM_SUM_CONGRUENCE_BELOW`.
+   *  - the split's shifted summand is at `WORD_LENGTH u + i`, and [[NthRight]] is stated at exactly
+   *    that index, so the second summand is congruent to the tally over `v`.
+   *
+   * The two congruences are the only work and they are the same shape twice: build the pointwise
+   * agreement below the bound, discharge the order hypothesis from the bound itself, and hand it to
+   * the congruence. They are not written once and used twice, because the agreement each proves is
+   * about a different pair of functions and only the assembly is shared.
+   */
+  private def tallyOverAConcatenation(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    split: Kernel.Thm,
+    congruence: Kernel.Thm,
+    length: Kernel.Thm,
+    nthLeft: Kernel.Thm,
+    nthRight: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      statement <- Statements
+        .collectFirst { case (name, text) if name == Tally => text }
+        .toRight(MissingDefinition(Tally))
+        .flatMap(text => Parser.proposition(theory, notation, text))
+
+      stripped <- Logic.stripForall(statement)
+      (binders, body) = stripped
+      weight <- binders.lift(0).toRight(NotOfForm("a weight", body))
+      left <- binders.lift(1).toRight(NotOfForm("a first half", body))
+      right <- binders.lift(2).toRight(NotOfForm("a second half", body))
+
+      sides <- Term.destEq(body).toRight(NotOfForm("an equation", body))
+      (statedLeft, statedRight) = sides
+
+      // The length fact and the split, as rewrites. They carry the left side of the statement to
+      // `A + B`, where `A` and `B` are tallies over the WHOLE word at the two ranges. The two
+      // congruences cannot join them: each carries a hypothesis about an index, so a rewriter has
+      // nothing to do with it.
+      conversions <- Peano.normalisation(logic, Vector(length, split), Vector.empty)
+      splitting <- conversions._1(statedLeft)
+      afterSplit <- Term.destEq(splitting.conclusion).map(_._2).toRight(
+        NotOfForm("an equation", splitting.conclusion))
+
+      wholeParts <- summands(logic, afterSplit)
+      (wholeLeft, wholeRight) = wholeParts
+      wantedParts <- summands(logic, statedRight)
+      (wantedLeft, wantedRight) = wantedParts
+
+      // Below `WORD_LENGTH u` the whole reads as `u` does.
+      leftAgrees <- reReadUnder(logic, congruence, nthLeft, wholeLeft, wantedLeft, List(left, right))
+      // And at `WORD_LENGTH u + i`, below `WORD_LENGTH v`, it reads as `v` does.
+      rightAgrees <- reReadUnder(logic, congruence, nthRight, wholeRight, wantedRight, List(left, right))
+
+      // `a = a'` and `b = b'` give `a + b = a' + b'`: the kernel's own congruence, once to carry
+      // the addition over the first and once to apply the result to the second.
+      addition <- additionOf(logic, afterSplit)
+      partial <- Conv.apTerm(addition, leftAgrees)
+      joined <- LogicError.lift(Kernel.mkComb(partial, rightAgrees))
+
+      whole <- Conv.trans(splitting, joined)
+      result <- rules.gen(right, whole).flatMap(rules.gen(left, _)).flatMap(rules.gen(weight, _))
+    } yield result
+  }
+
+  /** The two summands of `NUM_ADD a b`. */
+  private def summands(logic: Logic, term: Term): Either[LogicError, (Term, Term)] = term match {
+    case App(App(_, first), second) => Right((first, second))
+    case other => Left(NotOfForm("a sum of two tallies", other))
+  }
+
+  /** `NUM_ADD` itself, taken off a sum rather than rebuilt from the theory. */
+  private def additionOf(logic: Logic, term: Term): Either[LogicError, Term] = term match {
+    case App(App(head, _), _) => Right(head)
+    case other => Left(NotOfForm("a sum", other))
+  }
+
+  /**
+   * One tally re-read through a fact about where the letters come from.
+   *
+   * `NUM_SUM f n = NUM_SUM g n` where `f` and `g` differ only in which word they read, given a
+   * fact of the form `index < bound ==> WORD_NTH <one> <index> = WORD_NTH <other> <index'>`. The
+   * agreement is built pointwise at a fresh index, the order hypothesis is discharged from the
+   * bound the sum already carries, and `NUM_SUM_CONGRUENCE_BELOW` does the rest.
+   *
+   * Both summands go through here and the only difference is which fact arrives, which is why the
+   * shift is nowhere in this function: `WORD_CONCAT_NTH_RIGHT` is already stated at the shifted
+   * index, so what it proves at a fresh `i` is already the equation the shifted summand needs.
+   */
+  private def reReadUnder(
+    logic: Logic,
+    congruence: Kernel.Thm,
+    nthFact: Kernel.Thm,
+    from: Term,
+    to: Term,
+    halves: List[Term]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      fromParts <- sumParts(logic, from)
+      (fromFunction, bound) = fromParts
+      toParts <- sumParts(logic, to)
+      (toFunction, _) = toParts
+
+      index = Conv.freshVariable(
+        "i",
+        TyApp(Natural.TypeName, Nil),
+        Term.freeVariables(from) ++ Term.freeVariables(to))
+
+      // The fact at this pair of halves and this index: `i < bound ==> nth ... = nth ...`.
+      atHalves <- rules.specAll(nthFact, halves :+ index)
+      condition <- logic.destImp(atHalves.conclusion).map(_._1).toRight(
+        NotOfForm("an implication", atHalves.conclusion))
+      assumed <- LogicError.lift(Kernel.assume(condition))
+      letters <- rules.mp(atHalves, assumed)
+
+      // Both sides applied at the index and beta reduced, so what is compared is what the sum adds.
+      fromAt <- LogicError.lift(Term.app(fromFunction, index)).flatMap(Conv.betaRoot)
+      toAt <- LogicError.lift(Term.app(toFunction, index)).flatMap(Conv.betaRoot)
+      fromValue <- Term.destEq(fromAt.conclusion).map(_._2).toRight(
+        NotOfForm("an equation", fromAt.conclusion))
+
+      weighted <- weightOf(fromValue).toRight(NotOfForm("a weighted letter", fromValue))
+      carried <- Conv.apTerm(weighted, letters)
+      pointwise <- Conv.trans(fromAt, carried).flatMap(Conv.trans(_, Conv.sym(toAt).getOrElse(toAt)))
+
+      agreement <- rules.disch(condition, pointwise).flatMap(rules.gen(index, _))
+      instance <- rules.specAll(congruence, List(fromFunction, toFunction, bound))
+      result <- rules.mp(instance, agreement)
+    } yield result
+  }
+
+  /** The summand function and the bound of `NUM_SUM f n`. */
+  private def sumParts(logic: Logic, term: Term): Either[LogicError, (Term, Term)] = term match {
+    case App(App(_, function), bound) => Right((function, bound))
+    case other => Left(NotOfForm("a partial sum", other))
+  }
+
+  /** `f i` out of `f i (WORD_NTH w i)`, which is what the letter is carried under. */
+  private def weightOf(term: Term): Option[Term] = term match {
+    case App(head, _) => Some(head)
+    case _ => None
   }
 
   /**
