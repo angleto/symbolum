@@ -35,9 +35,17 @@ import scala.jdk.CollectionConverters.*
  * server, so `NotebookSpec` starts one on port 0 and asks it over a socket. This paragraph read
  * "there is no `NotebookSpec` pinning HTML" until that day, which was true when it was written and
  * stopped being true with `f9ae333`, and what it was guarding against survives the correction: that
- * spec does not pin the markup either. What it pins is the two behaviours here that exist because
- * of a failure this file records, the 404 on an unknown path and the thread pool, and neither is a
- * property of the HTML: both are about what a client on the other end of a socket receives.
+ * spec does not pin the markup either. What it pins is the behaviours here that exist because of a
+ * failure this file records, none of which is a property of the HTML: the 404 on an unknown path, the
+ * thread pool, and since 2026-09-16 the ordering, which is what [[Notebook.advance]] is for.
+ *
+ * The half of the ordering that lives in the page cannot be pinned there and is not claimed to be.
+ * `notebook.js` is what stops this page racing itself, and nothing in this repository runs
+ * JavaScript. What a test reaches is the server's own promise, that a command is applied to the
+ * transcript its writer read or to none, and that is what leaves the page's queue checkable by its
+ * consequence rather than unchecked: a page that stopped queueing would start collecting
+ * [[Notebook.Conflict]] where it used to reorder silently, which is a visible failure in place of
+ * an invisible one.
  *
  * == What it binds to, and what it is not ==
  *
@@ -63,6 +71,28 @@ object Notebook {
 
   /** The port when the caller names none. */
   val DefaultPort: Int = 8642
+
+  /**
+   * The header a writer names the transcript it read in, which is how this surface is ordered.
+   *
+   * It carries the number of cells the writer had in front of it. [[Notebook.advance]] is where it
+   * is spent and carries the argument; what belongs on the name is that it is the writer's
+   * reading and not the writer's identity, so two pages that are genuinely in step are both
+   * served, and one that has fallen behind is refused whichever of them got there first.
+   */
+  val After: String = "Symbolum-After"
+
+  /**
+   * What a writer is told when the transcript it read is no longer the one it would write to.
+   *
+   * The body of such an answer is the cells as they stand rather than a message about a failure: a
+   * writer that has fallen behind needs the state, and that is exactly what it has to read before
+   * it can write again.
+   */
+  val Conflict: Int = 409
+
+  /** Written once, because every answer this serves but the 404 is the page or part of it. */
+  private val Html: String = "text/html; charset=utf-8"
 
   def main(arguments: Array[String]): Unit = {
     val port = arguments.headOption.flatMap(_.toIntOption).getOrElse(DefaultPort)
@@ -144,13 +174,27 @@ object Notebook {
    */
   private def root(exchange: HttpExchange, session: AtomicReference[Session]): Unit =
     if (exchange.getRequestURI.getPath == "/")
-      respond(exchange, "text/html; charset=utf-8", render(session.get))
+      respond(exchange, Html, render(session.get))
     else respond(exchange, "text/plain; charset=utf-8", s"no ${exchange.getRequestURI.getPath} here", 404)
 
+  /**
+   * Run what was written, in the order it was written, and answer with the cells.
+   *
+   * **The body is one command per line and not one command**, which is what makes replaying a
+   * development a single request. Five lines pasted into the box arrive together, are folded over
+   * one state in order, and become five cells whose numbering is the order they were written in;
+   * nothing about that order is left to the network. Before 2026-09-16 a five-line body was one
+   * unreadable command, so the only way to replay a development was five requests, which is the
+   * shape the defect lived in.
+   *
+   * Blank lines are dropped rather than recorded as unreadable: they are what a paste is made of
+   * between one command and the next, and a transcript is a lie if it holds cells its writer did
+   * not write. A line that is not blank and does not read is still kept, which is [[Session]]'s
+   * rule and is the opposite case.
+   */
   private def run(exchange: HttpExchange, session: AtomicReference[Session]): Unit = {
-    val line = body(exchange)
-    val updated = session.updateAndGet(current => current.run(line))
-    respond(exchange, "text/html; charset=utf-8", cells(updated))
+    val lines = body(exchange).linesIterator.map(_.trim).filter(_.nonEmpty).toVector
+    advance(exchange, session, current => current.runAll(lines))
   }
 
   /**
@@ -162,8 +206,62 @@ object Notebook {
    */
   private def truncate(exchange: HttpExchange, session: AtomicReference[Session]): Unit = {
     val count = body(exchange).trim.toIntOption.getOrElse(0)
-    val updated = session.updateAndGet(current => current.truncate(count))
-    respond(exchange, "text/html; charset=utf-8", cells(updated))
+    advance(exchange, session, current => current.truncate(count))
+  }
+
+  /**
+   * Advance the session, but never from a transcript other than the one the writer read.
+   *
+   * == What went wrong without it ==
+   *
+   * The handler was `session.updateAndGet(current => current.run(line))` and the page fired a
+   * `fetch` per submission with nothing waiting for the one before it. Five commands written
+   * faster than the round trip arrived as five concurrent POSTs, and the server numbered them in
+   * arrival order: measured on 2026-09-16, `declare` landed as cell 2 and the `derive` that cites
+   * it as cell 1, which then failed naming a fact that did not exist yet. Three seconds between
+   * submissions and the order was the written one, which is what says it was a race rather than a
+   * sorting.
+   *
+   * == The two halves, and why neither is the other's fix ==
+   *
+   * The page writes one at a time, which is `notebook.js`'s queue, and that is what keeps the
+   * count a writer sends current. This is the other half: a writer names the transcript it read in
+   * the `Symbolum-After` header, and a command is applied to that transcript or to none. So a
+   * second tab, a reload with a request in flight, or anything driving the port that is not this
+   * page cannot interleave itself into a development; what it gets is [[Conflict]] and the cells
+   * as they actually stand, which is the state it has to re-read before writing again. A caller
+   * that sends no header is not refused, because `curl` is how this surface is exercised by hand
+   * and it has nothing to be stale about.
+   *
+   * == Under one lock rather than a compare-and-set ==
+   *
+   * Two reasons, and the second is the one that costs something. `AtomicReference.updateAndGet`
+   * **re-applies** its function when it loses the race, so a contended `prove` runs the whole
+   * proof search twice and the second run is against a state its caller never saw: re-applying is
+   * precisely the blind write this exists to refuse. And a compare-and-set here would carry a
+   * failure branch that only a genuine race reaches, which is a branch no test can be made to
+   * enter on purpose.
+   *
+   * What the lock costs is that a long `prove` makes a concurrent submission wait rather than run
+   * beside it. That is the semantics rather than a compromise: there is one theory in a session,
+   * so two commands were never independent. Nothing else takes it -- the page itself and the 404
+   * only read -- so the browser's other requests are not behind it.
+   */
+  private def advance(exchange: HttpExchange, session: AtomicReference[Session], step: Session => Session): Unit = {
+    val expected = Option(exchange.getRequestHeaders.getFirst(After)).flatMap(_.toIntOption)
+    val advanced = session.synchronized {
+      val read = session.get
+      if (expected.exists(_ != read.entries.size)) None
+      else {
+        val updated = step(read)
+        session.set(updated)
+        Some(updated)
+      }
+    }
+    advanced match {
+      case Some(updated) => respond(exchange, Html, cells(updated))
+      case None => respond(exchange, Html, cells(session.get), Conflict)
+    }
   }
 
   private def body(exchange: HttpExchange): String =
@@ -197,11 +295,13 @@ object Notebook {
        |</head><body>
        |<h1>symbolum</h1>
        |<p class="note">One theory, one transcript. Re-running a cell discards everything after it.
-       |The printed form does not read back: the line under it is the one that does.</p>
+       |The printed form does not read back: the line under it is the one that does.
+       |Paste a whole development and it runs line by line, in the order you pasted it.</p>
        |<div id="cells">${cells(session)}</div>
        |<form id="entry" autocomplete="off">
        |  <input id="line" name="line" placeholder="${Session.Command.Keywords.mkString(" | ")}" autofocus>
        |</form>
+       |<p id="trouble" class="trouble"></p>
        |<p class="note">$Help</p>
        |<script>$Script</script>
        |</body></html>""".stripMargin
@@ -325,6 +425,14 @@ object Notebook {
    * left behind attached to nothing when it became `notebook.js`. A doc comment at the end of an
    * object documents the next member, and there is no next member: it compiled, it rendered
    * nowhere, and nothing checks that a comment has a subject.
+   *
+   * Since 2026-09-16 it is four things rather than three, and the fourth is what the file above is
+   * mostly about: submissions are queued, so one is in flight at a time. What is worth saying here
+   * is the cost of the arrangement rather than the behaviour. That queue is three mutable bindings
+   * and `StyleSpec` cannot see them, because it scans Scala sources and this is not one, so the
+   * page holds the only mutable state in this project that no scan reviews and no test executes.
+   * It is written down rather than fixed: running it would want a JavaScript runtime in the build,
+   * which is a dependency this repository does not have for a page served on loopback.
    */
   private lazy val Script: String = resource("notebook.js")
 }

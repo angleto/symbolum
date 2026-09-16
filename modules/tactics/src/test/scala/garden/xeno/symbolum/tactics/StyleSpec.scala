@@ -271,8 +271,11 @@ class StyleSpec extends AnyFlatSpec with Matchers {
       ("one `AtomicReference` holding the current `Session`, which is the whole mutable state of " +
         "the server and is mutable because a page is a long-lived process and a session is not: " +
         "`Session` itself is immutable and every command returns a new one, so the reference is " +
-        "swapped rather than written into, and `updateAndGet` is what keeps two requests from " +
-        "interleaving a read and a write of it now that the server runs its exchanges on a pool")
+        "swapped rather than written into. Read and written under its own monitor since " +
+        "2026-09-16, in `Notebook.advance` and nowhere else, because the pool runs two exchanges " +
+        "at once and the atomic's own `updateAndGet` answers the wrong question here: it makes " +
+        "the write safe by RE-APPLYING the command to a state its writer never read, which is " +
+        "the reordering that file records rather than a defence against it")
   )
 
   /**

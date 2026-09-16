@@ -36,6 +36,13 @@ import org.scalatest.matchers.should.Matchers
  *
  * And the page as a **page**: that KaTeX typesets, that the script rebinds the form, that anything
  * is legible. Those need a browser, which is `994aa06c`'s territory and not a unit test's.
+ *
+ * `notebook.js`'s queue is in that second list and is worth naming separately, because it is half
+ * of a fix the rest of this file does assert. Nothing in this repository runs JavaScript, so that
+ * the page sends one request at a time is not checked here or anywhere. What is checked is the
+ * server's side of it, that a command is applied to the transcript its writer read or to none, and
+ * the two meet at a consequence: a page that stopped queueing would start collecting refusals
+ * where it used to reorder the transcript quietly.
  */
 class NotebookSpec extends AnyFlatSpec with Matchers {
 
@@ -69,13 +76,17 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     )
 
   private def post(base: String, path: String, body: String): HttpResponse[String] =
+    client.send(request(base, path, body).build(), HttpResponse.BodyHandlers.ofString())
+
+  /** The same, naming the transcript the writer read, which is what [[Notebook.After]] carries. */
+  private def postAfter(base: String, path: String, body: String, after: Int): HttpResponse[String] =
     client.send(
-      HttpRequest
-        .newBuilder(URI.create(s"$base$path"))
-        .POST(HttpRequest.BodyPublishers.ofString(body))
-        .build(),
+      request(base, path, body).header(Notebook.After, after.toString).build(),
       HttpResponse.BodyHandlers.ofString()
     )
+
+  private def request(base: String, path: String, body: String): HttpRequest.Builder =
+    HttpRequest.newBuilder(URI.create(s"$base$path")).POST(HttpRequest.BodyPublishers.ofString(body))
 
   /* ------------------------------------------------------------------ the cells */
 
@@ -192,6 +203,23 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "carry the header name the server reads, which is the one fact this page states twice" in {
+    // `Notebook.After` is a Scala constant and `notebook.js` writes the same string in its own
+    // language, because a JavaScript file that took it from Scala would have to be assembled
+    // rather than read, and it is a file so that an editor knows it is JavaScript.
+    //
+    // So the copy is guarded instead of removed, which is the second of the three remedies this
+    // repository uses for a fact written twice and the right one when the two copies cannot be one
+    // file. What a drift costs without this is the whole of the ordering: the page would send a
+    // header nobody reads, every submission would look like a writer that named nothing, and the
+    // refusal that catches a stale write would never fire. Nothing else would go red.
+    val page = Notebook.render(fresh)
+
+    withClue(s"the page does not name `${Notebook.After}`, so the server's ordering header is unsent: ") {
+      page should include(Notebook.After)
+    }
+  }
+
   "The page endpoint" should "answer the root with the page and everything else with a 404" in {
     withServer(fresh) { (base, _) =>
       val page = get(base, "/")
@@ -241,6 +269,113 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
 
       held.get.entries should have size 2
       held.get.entries(1).outcome shouldBe a[Session.Outcome.Refused]
+    }
+  }
+
+  it should "run a whole development in one submission, in the order it was written" in {
+    // **The case the ordering defect was found on, and the acceptance criterion of the card that
+    // asked for this.** Five commands written faster than the round trip used to be five POSTs
+    // racing each other, and the page numbered them in arrival order: `derive AT_ONE` landed as
+    // cell 1 and failed naming `RULE`, which was cell 5. Sent as one body they are folded over one
+    // state in the order they appear, so nothing about that order is the network's to decide.
+    //
+    // The two `derive` lines are what makes this an assertion about **order** rather than about
+    // parsing: each cites a fact an earlier line produced, so any order but the written one leaves
+    // a refusal on the page. A test over five independent lines would pass on a shuffle.
+    val development =
+      """declare good : real -> bool
+        |assume RULE : !r:real. good r ==> good (r + 1)
+        |assume GOOD_ONE : good 1
+        |derive AT_ONE : specialise RULE at 1
+        |derive GOOD_TWO : mp AT_ONE GOOD_ONE""".stripMargin
+
+    withServer(fresh) { (base, held) =>
+      val answer = post(base, "/run", development)
+      answer.statusCode shouldBe 200
+
+      val entries = held.get.entries
+      withClue(s"${held.get.render}\n") {
+        entries should have size 5
+        entries.map(_.number) shouldBe Vector(1, 2, 3, 4, 5)
+        entries.map(entry => Session.Command.write(entry.command)) shouldBe
+          development.linesIterator.toVector
+
+        // Nothing was refused, which is the half that says the order is right rather than merely
+        // preserved: a shuffle of these five refuses at least twice.
+        entries.map(_.outcome).collect { case refused: Session.Outcome.Refused => refused } shouldBe empty
+        entries.last.outcome shouldBe a[Session.Outcome.Proved]
+      }
+    }
+  }
+
+  it should "drop the blank lines a paste is made of, rather than recording them as commands" in {
+    // A transcript holding cells its writer did not write is the same defect as one holding them
+    // in an order its writer did not choose. A line that is not blank and does not read is kept,
+    // which is `Session`'s rule and the opposite case: the assertion below holds both.
+    withServer(fresh) { (base, held) =>
+      post(base, "/run", "\ndeclare p : bool\n\n   \nnot a command\n").statusCode shouldBe 200
+
+      held.get.entries should have size 2
+      held.get.entries.head.outcome shouldBe a[Session.Outcome.Extended]
+      held.get.entries(1).outcome shouldBe a[Session.Outcome.Refused]
+    }
+  }
+
+  "A writer that names the transcript it read" should "be served when it is the current one" in {
+    withServer(fresh.run("declare p : bool")) { (base, held) =>
+      val answer = postAfter(base, "/run", "declare q : bool", after = 1)
+
+      answer.statusCode shouldBe 200
+      answer.body should include("""class="extended"""")
+      held.get.entries should have size 2
+    }
+  }
+
+  it should "be refused, and handed the cells, when the transcript has moved under it" in {
+    // API is not the word for a page on loopback, but the property is the ordinary one: a mutable
+    // resource does not take a blind write. The writer presents what it read and a mismatch gets
+    // the current state back, because what a writer that has fallen behind needs is not an error
+    // message, it is the transcript it has to read before writing again.
+    withServer(fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p"))) { (base, held) =>
+      val answer = postAfter(base, "/run", "declare q : bool", after = 1)
+
+      answer.statusCode shouldBe Notebook.Conflict
+      held.get.entries should have size 2
+      held.get.commands.map(Session.Command.write) should not contain "declare q : bool"
+
+      // The cells as they stand, which is the reason this answer has a body at all.
+      answer.body should include("""class="proved"""")
+      answer.body should include("P_HOLDS")
+    }
+  }
+
+  it should "let one of two concurrent writers through and refuse the other, never interleave them" in {
+    // **The test the card asked for: a concurrent submission and an assertion about order.** It is
+    // the half of the fix a test can reach. The other half is the page's queue, and nothing in
+    // this repository runs JavaScript, so what is asserted here is the property that makes the
+    // queue's absence visible instead of silent: two writers that both read the empty transcript
+    // cannot both write to it.
+    //
+    // The outcome is deterministic although the race is not. Whichever reaches the lock first
+    // applies its command; the other then reads a transcript of one entry, has named zero, and is
+    // refused. Nothing in the assertion depends on which of the two won, which is what keeps it
+    // from being a flake: what is pinned is that exactly one did.
+    withServer(fresh) { (base, held) =>
+      val first = client.sendAsync(
+        request(base, "/run", "declare p : bool").header(Notebook.After, "0").build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+      val second = client.sendAsync(
+        request(base, "/run", "declare q : bool").header(Notebook.After, "0").build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+
+      val statuses = Vector(first.join().statusCode, second.join().statusCode).sorted
+
+      withClue(s"${held.get.render}\n") {
+        statuses shouldBe Vector(200, Notebook.Conflict)
+        held.get.entries should have size 1
+      }
     }
   }
 

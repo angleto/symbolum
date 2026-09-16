@@ -18,3 +18,7 @@ code,pre,.legible{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-s
 .report{white-space:pre-wrap;color:#333;background:#fafafa;padding:.5rem;border-radius:3px;max-height:28rem;overflow:auto}
 #line{width:100%;box-sizing:border-box;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;padding:.55rem .7rem;border:1px solid #ccc;border-radius:4px}
 #line:focus{outline:none;border-color:#888}
+#entry.running #line{border-color:#376;background:#fbfffd}
+#entry.running::after{content:'running';display:block;color:#376;font-size:.75rem;margin-top:.2rem}
+.trouble{color:#b00;font-size:.85rem;margin:.5rem 0 0}
+.trouble:empty{display:none}
