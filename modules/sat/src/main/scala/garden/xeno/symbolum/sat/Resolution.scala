@@ -74,47 +74,48 @@ final case class Derivation(steps: Vector[Step], empty: Int) {
    * exactly this: a step whose antecedents do not resolve to what the analysis thought they did.
    */
   def check(problem: Problem): Either[String, Vector[Clause]] = {
-    val clauses = Array.ofDim[Clause](steps.length)
+    def fault(at: Int, why: String): Left[String, Nothing] = Left(s"step $at: $why")
 
-    def fault(at: Int, why: String): Either[String, Vector[Clause]] =
-      Left(s"step $at: $why")
+    /**
+     * What each step concludes, in order, built forwards.
+     *
+     * A fold and not a scan over an array, and the append is the reason it can be one: a step reads
+     * only steps earlier than itself, which the two bounds below enforce, so the answer at index
+     * `at` is always the next one to be written. `Vector`'s append is amortised constant, so this
+     * costs what the array cost; what it removes is the state in which some entries are filled and
+     * the rest are whatever `ofDim` left there, which is the state the failure path used to leave.
+     */
+    val concluded = steps.zipWithIndex.foldLeft[Either[String, Vector[Clause]]](Right(Vector.empty)) {
+      case (Left(why), _) => Left(why)
+      case (Right(clauses), (Step.Input(index), at)) =>
+        if (index < 0 || index >= problem.clauses.length)
+          fault(at, s"an input clause of the problem; there is no clause $index")
+        else Right(clauses :+ problem.clauses(index))
 
-    var at = 0
-    var failure: Option[Either[String, Vector[Clause]]] = None
-
-    while (at < steps.length && failure.isEmpty) {
-      steps(at) match {
-        case Step.Input(index) =>
-          if (index < 0 || index >= problem.clauses.length)
-            failure = Some(fault(at, s"an input clause of the problem; there is no clause $index"))
-          else clauses(at) = problem.clauses(index)
-
-        case Step.Resolve(left, right, pivot) =>
-          if (left < 0 || left >= at) failure = Some(fault(at, s"an antecedent earlier than itself; left is $left"))
-          else if (right < 0 || right >= at)
-            failure = Some(fault(at, s"an antecedent earlier than itself; right is $right"))
-          else if (!clauses(left).contains(pivot))
-            failure = Some(fault(at, s"the pivot $pivot in the left antecedent, which is ${clauses(left).mkString("[", " ", "]")}"))
-          else if (!clauses(right).contains(-pivot))
-            failure = Some(fault(at, s"the negated pivot ${-pivot} in the right antecedent, which is ${clauses(right).mkString("[", " ", "]")}"))
-          else
-            normalise(clauses(left).filterNot(_ == pivot) ++ clauses(right).filterNot(_ == -pivot)) match {
-              // A resolvent that is a tautology is not a defect in the producer and is not usable
-              // either: every later step that reads it would be sound and would prove nothing, so it
-              // is refused here where the message can say which step made it.
-              case None => failure = Some(fault(at, "a resolvent that is not a tautology"))
-              case Some(resolvent) => clauses(at) = resolvent
-            }
-      }
-      at += 1
+      case (Right(clauses), (Step.Resolve(left, right, pivot), at)) =>
+        if (left < 0 || left >= at) fault(at, s"an antecedent earlier than itself; left is $left")
+        else if (right < 0 || right >= at)
+          fault(at, s"an antecedent earlier than itself; right is $right")
+        else if (!clauses(left).contains(pivot))
+          fault(at, s"the pivot $pivot in the left antecedent, which is ${clauses(left).mkString("[", " ", "]")}")
+        else if (!clauses(right).contains(-pivot))
+          fault(at, s"the negated pivot ${-pivot} in the right antecedent, which is ${clauses(right).mkString("[", " ", "]")}")
+        else
+          normalise(clauses(left).filterNot(_ == pivot) ++ clauses(right).filterNot(_ == -pivot)) match {
+            // A resolvent that is a tautology is not a defect in the producer and is not usable
+            // either: every later step that reads it would be sound and would prove nothing, so it
+            // is refused here where the message can say which step made it.
+            case None => fault(at, "a resolvent that is not a tautology")
+            case Some(resolvent) => Right(clauses :+ resolvent)
+          }
     }
 
-    failure.getOrElse {
+    concluded.flatMap { clauses =>
       if (empty < 0 || empty >= steps.length)
         Left(s"a step index for the empty clause; $empty is not one of ${steps.length} steps")
       else if (clauses(empty).nonEmpty)
         Left(s"step $empty to be the empty clause; it is ${clauses(empty).mkString("[", " ", "]")}")
-      else Right(clauses.toVector)
+      else Right(clauses)
     }
   }
 
@@ -132,16 +133,26 @@ final case class Derivation(steps: Vector[Step], empty: Int) {
    * unsatisfiable core" is the difference between the two, and the weaker word is the true one.
    */
   def core: Set[Int] = {
-    val reached = scala.collection.mutable.BitSet(empty)
-    val used = scala.collection.mutable.Set.empty[Int]
-    var at = steps.length - 1
-    while (at >= 0) {
-      if (reached.contains(at)) steps(at) match {
-        case Step.Input(index) => used += index
-        case Step.Resolve(left, right, _) => reached += left; reached += right
+    // One backwards pass and not a search, for the reason the paragraph above gives: an antecedent
+    // is always an earlier step, so a step's own reachability is settled by the time this arrives at
+    // it and nothing has to be revisited. That is what lets the walk carry two sets forward instead
+    // of iterating to a fixed point.
+    //
+    // What this asks of its caller, which the `BitSet` it replaces asked by throwing: that `empty`
+    // names a step. It did not name one only in a derivation `check` refuses, and there the old
+    // code raised `IllegalArgumentException` from `BitSet` while this returns the empty set, which
+    // reads as "no input clause is needed" and is not an answer at all. Nothing in this repository
+    // can reach that: every call site runs on a refutation the solver has just built. It is said
+    // here because a silence is the one failure of this method a reader cannot see.
+    val (_, used) = (steps.length - 1 to 0 by -1)
+      .foldLeft((Set(empty), Set.empty[Int])) { case ((reached, used), at) =>
+        if (!reached.contains(at)) (reached, used)
+        else
+          steps(at) match {
+            case Step.Input(index) => (reached, used + index)
+            case Step.Resolve(left, right, _) => (reached + left + right, used)
+          }
       }
-      at -= 1
-    }
-    used.toSet
+    used
   }
 }

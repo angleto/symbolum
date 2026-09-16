@@ -389,17 +389,22 @@ final class Solver private (problem: Problem, conflictLimit: Int) {
     index
   }
 
-  def run(): Answer = {
-    problem.check match {
-      case Some(why) => return Answer.Malformed(why)
-      case None => ()
-    }
+  /**
+   * The two answers that arrive before any search, then the search.
+   *
+   * Written as a chain of alternatives rather than as two early exits, and the order is the whole
+   * of it: `Option.orElse` and `Option.getOrElse` take their argument by name, so [[install]] runs
+   * only where the problem checked out and [[search]] only where installing did not already refute
+   * it. Both of those are side-effecting, so an eager version of either would set the database up
+   * for a problem that was never going to be searched.
+   */
+  def run(): Answer =
+    problem.check
+      .map(why => Answer.Malformed(why))
+      .orElse(install().map(step => Answer.Unsatisfiable(Derivation(steps.toVector, step))))
+      .getOrElse(search())
 
-    install() match {
-      case Some(step) => return Answer.Unsatisfiable(Derivation(steps.toVector, step))
-      case None => ()
-    }
-
+  private def search(): Answer = {
     propagated = 0
     var restartAt = FirstRestart
     var sinceRestart = 0

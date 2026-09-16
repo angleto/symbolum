@@ -107,32 +107,52 @@ object Figure {
     }
   }
 
-  private def circle(f: Frame): Set[(Int, Int)] = {
-    val cells = Set.newBuilder[(Int, Int)]
-    for (r <- 0 until f.rows; c <- 0 until f.cols) {
-      val dy = f.yc - r
-      val dx = (c - f.xc) / 2.0
-      val rad = math.hypot(dx, dy)
-      var phi = math.toDegrees(math.atan2(dy, dx))
-      while (phi < Start) phi += 360.0
-      if (phi <= Join) {
-        val rho = interpolate(Radius, fullRadius, phi) * f.radius
-        val w = interpolate(HalfWidth, fullHalfWidth, phi) * f.radius
-        if (math.abs(rad - rho) <= w) cells += ((r, c))
-      }
-    }
-    cells.result()
-  }
+  /**
+   * The angle of a cell, wound forward until it is past where the band starts.
+   *
+   * Written as repeated addition rather than as `Start + ((phi - Start) % 360 + 360) % 360`, which
+   * is the same number and not the same arithmetic. The paragraph on the full-weight values above
+   * is the reason: at the reference size the inner edge of the flank falls on a cell centre, so a
+   * comparison is decided by the last bit of its operands, and a remainder is a different float
+   * operation from an addition. `atan2` answers in `(-180, 180]` and `Start` is 56, so this turns
+   * at most once on every cell the caller has.
+   *
+   * The condition is `phi < Start` and not `phi >= Start` negated, which is the same test on every
+   * number and not on a NaN: `NaN < Start` is false and so is `NaN >= Start`, so the first stops
+   * and the second would call itself for ever. Nothing here produces one, the frame being finite
+   * in both coordinates, and a tail recursion that diverges where the loop it replaces returned is
+   * not a difference to leave to a reader to notice.
+   */
+  @annotation.tailrec
+  private def wound(phi: Double): Double = if (phi < Start) wound(phi + 360.0) else phi
 
-  private def inside(poly: Vector[(Double, Double)], x: Double, y: Double): Boolean = {
-    var in = false
-    for (i <- poly.indices) {
+  private def circle(f: Frame): Set[(Int, Int)] =
+    (for {
+      r <- 0 until f.rows
+      c <- 0 until f.cols
+      dy = f.yc - r
+      dx = (c - f.xc) / 2.0
+      phi = wound(math.toDegrees(math.atan2(dy, dx)))
+      if phi <= Join
+      rho = interpolate(Radius, fullRadius, phi) * f.radius
+      w = interpolate(HalfWidth, fullHalfWidth, phi) * f.radius
+      if math.abs(math.hypot(dx, dy) - rho) <= w
+    } yield (r, c)).toSet
+
+  /**
+   * The even-odd test: a point is inside where a ray from it crosses the outline an odd number of
+   * times.
+   *
+   * Counting the crossings and reading the parity, rather than flipping a flag at each one, because
+   * they are the same statement: a flag starting false and flipped n times ends true exactly when n
+   * is odd. Each crossing is decided by the same two comparisons in the same order as before.
+   */
+  private def inside(poly: Vector[(Double, Double)], x: Double, y: Double): Boolean =
+    poly.indices.count { i =>
       val (x0, y0) = poly(i)
       val (x1, y1) = poly((i + 1) % poly.length)
-      if ((y0 > y) != (y1 > y) && x < (x1 - x0) * (y - y0) / (y1 - y0) + x0) in = !in
-    }
-    in
-  }
+      (y0 > y) != (y1 > y) && x < (x1 - x0) * (y - y0) / (y1 - y0) + x0
+    } % 2 == 1
 
   private def fill(f: Frame, poly: Vector[(Double, Double)]): Set[(Int, Int)] =
     (for {
@@ -200,16 +220,22 @@ object Figure {
     (moved, moved.map(_._1).max + 1, moved.map(_._2).max + 1)
   }
 
-  /** The character art at a size: the operator stream poured into the mask. */
+  /**
+   * The character art at a size: the operator stream poured into the mask.
+   *
+   * The stream advances only over filled cells and does not restart at a row, so the character a
+   * cell gets is fixed by how many filled cells precede it in reading order. That number is what a
+   * running counter was standing for, and sorting the mask gives it directly: `(Int, Int)` orders
+   * lexicographically, which is reading order, so the position in the sorted sequence IS the count.
+   */
   def at(rows: Int): Vector[String] = {
     val (mask, h, w) = cells(rows)
-    var k = 0
+    val order = mask.toVector.sorted.zipWithIndex.toMap
     (0 until h).toVector.map { r =>
-      val line = (0 until w).map { c =>
-        if (mask((r, c))) { val ch = Mark.Stream(k % Mark.Stream.length); k += 1; ch }
-        else ' '
-      }.mkString
-      line.replaceAll("\\s+$", "")
+      (0 until w)
+        .map(c => order.get((r, c)).fold(' ')(k => Mark.Stream(k % Mark.Stream.length)))
+        .mkString
+        .replaceAll("\\s+$", "")
     }
   }
 }

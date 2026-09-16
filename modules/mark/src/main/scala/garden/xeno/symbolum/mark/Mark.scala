@@ -1,7 +1,6 @@
 package garden.xeno.symbolum.mark
 
 import java.nio.file.{Files, Paths}
-import scala.collection.mutable
 import scala.util.matching.Regex
 
 /**
@@ -54,6 +53,9 @@ object Mark {
 
   private val ArtBody: Regex = raw"(?s)## The art\n\n```\n(.*?)\n```".r
 
+  /** A stretch of a line that is not blank. See [[runs]] for why a space is the only separator. */
+  private val Run: Regex = "[^ ]+".r
+
   /**
    * The art as the document holds it, which is what the checks are run against.
    *
@@ -88,37 +90,47 @@ object Mark {
    * single edit shows up as one entry and a shifted copy shows up as hundreds, and the two want
    * different repairs.
    */
-  def streamFaults(rows: Vector[String]): Vector[(Int, Int, Char, Char)] = {
-    val faults = Vector.newBuilder[(Int, Int, Char, Char)]
-    var k = 0
-    for (r <- rows.indices; c <- 0 until width(rows)) {
-      val ch = if (c < rows(r).length) rows(r)(c) else ' '
-      if (ch != ' ') {
-        val expected = Stream(k % Stream.length)
-        if (ch != expected) faults += ((r, c, ch, expected))
-        k += 1
-      }
+  def streamFaults(rows: Vector[String]): Vector[(Int, Int, Char, Char)] =
+    (for {
+      (line, r) <- rows.zipWithIndex
+      (ch, c) <- line.zipWithIndex
+      if ch != ' '
+    } yield (r, c, ch)).zipWithIndex.collect {
+      case ((r, c, ch), k) if ch != Stream(k % Stream.length) => (r, c, ch, Stream(k % Stream.length))
     }
-    faults.result()
-  }
 
+  /**
+   * The four-connected regions of a set of cells, in the order their least cell comes.
+   *
+   * The reach of one cell first, then the cells that reach nothing new, which is the same partition
+   * a breadth-first walk with a seen-set produces and is written as two tail recursions rather than
+   * a queue and two mutable sets. Nothing here is on a hot path: the largest set either caller
+   * hands it is the empty cells of a figure of a few hundred.
+   */
   private def components(inside: Set[Cell]): Vector[Set[Cell]] = {
-    val seen = mutable.Set.empty[Cell]
-    val groups = Vector.newBuilder[Set[Cell]]
-    for (start <- inside.toVector.sorted if !seen(start)) {
-      val group = mutable.Set(start)
-      val queue = mutable.Queue(start)
-      seen += start
-      while (queue.nonEmpty) {
-        val (r, c) = queue.dequeue()
-        for ((dr, dc) <- Seq((1, 0), (-1, 0), (0, 1), (0, -1))) {
-          val next = (r + dr, c + dc)
-          if (inside(next) && !seen(next)) { seen += next; group += next; queue.enqueue(next) }
-        }
-      }
-      groups += group.toSet
+    def neighbours(cell: Cell): Vector[Cell] = {
+      val (r, c) = cell
+      Vector((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)).filter(inside)
     }
-    groups.result()
+
+    @annotation.tailrec
+    def reach(front: Vector[Cell], group: Set[Cell]): Set[Cell] =
+      if (front.isEmpty) group
+      else {
+        val next = front.flatMap(neighbours).filterNot(group).distinct
+        reach(next, group ++ next)
+      }
+
+    @annotation.tailrec
+    def split(left: Vector[Cell], found: Vector[Set[Cell]]): Vector[Set[Cell]] =
+      left.headOption match {
+        case None => found
+        case Some(start) =>
+          val group = reach(Vector(start), Set(start))
+          split(left.filterNot(group), found :+ group)
+      }
+
+    split(inside.toVector.sorted, Vector.empty)
   }
 
   /** How many separate regions the ink forms. The mark is one. */
@@ -147,16 +159,15 @@ object Mark {
   private def escape(text: String): String =
     text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-  private def runs(line: String): Vector[(Int, String)] = {
-    val out = Vector.newBuilder[(Int, String)]
-    var start = -1
-    for (j <- 0 to line.length) {
-      val filled = j < line.length && line(j) != ' '
-      if (filled && start < 0) start = j
-      if (!filled && start >= 0) { out += ((start, line.substring(start, j))); start = -1 }
-    }
-    out.result()
-  }
+  /**
+   * The maximal stretches of a line that are not blank, each with the column it starts at.
+   *
+   * A space is the only separator, which is what the hand-written scan this replaces also said: it
+   * asked `line(j) != ' '` and not `isWhitespace`, so a tab would have been ink to it and is ink to
+   * `[^ ]+` too. The art holds neither, and saying which of the two this is costs one line.
+   */
+  private def runs(line: String): Vector[(Int, String)] =
+    Run.findAllMatchIn(line).map(m => (m.start, m.matched)).toVector
 
   /**
    * The drawing: one `<text>` element per visible run, at ten units a column and twenty a row.

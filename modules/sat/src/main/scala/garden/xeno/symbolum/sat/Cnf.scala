@@ -69,10 +69,13 @@ object Cnf {
    * decides.
    */
   def normalise(literals: Iterable[Literal]): Option[Clause] = {
-    val seen = scala.collection.mutable.LinkedHashSet.empty[Literal]
-    literals.foreach(seen += _)
+    // `distinct` and not a set, because the answer is a sorted vector and the insertion order of a
+    // set is a thing to remember rather than a thing the type says. The membership test below reads
+    // the same vector, which is linear where a set is constant and is the right trade at the length
+    // of a clause: `Propositional` builds clauses of three literals and a learned one reaches tens.
+    val seen = literals.toVector.distinct
     if (seen.exists(literal => seen.contains(-literal))) None
-    else Some(seen.toVector.sortBy(literal => (variableOf(literal), -math.signum(literal))))
+    else Some(seen.sortBy(literal => (variableOf(literal), -math.signum(literal))))
   }
 
   /**
