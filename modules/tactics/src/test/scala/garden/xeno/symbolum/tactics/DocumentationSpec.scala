@@ -17,6 +17,14 @@ import garden.xeno.symbolum.theories.*
  * `docs/proving.md` and in the front of `README.md` is run here, and the axiom table in the guide
  * is compared with the axioms the theory actually holds.
  *
+ * **What "run here" means, precisely, since it did not mean what it said until 2026-09-16.** What
+ * this file runs is a Scala program written beside the assertion that says what the document's
+ * example produces. That is the ANSWER being checked, and it is worth checking; it is not the
+ * document's own text being checked, and for two blocks of the front page the two had drifted so
+ * far apart that one of them did not compile. `ReadmeSpec` is where the text itself is read from
+ * `README.md` and compiled, for every Scala block the file holds. The two are a pair: that one
+ * says the example is a program, this one says the program gives the answer printed beside it.
+ *
  * If you change an example in a document, change it here in the same commit. If this fails, the
  * document is wrong, not the test.
  */
@@ -74,10 +82,13 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // class carrying the operators, and Scala applies one. The guard was green about a program the
     // document does not contain, and the first example on the front page did not run.
     //
-    // The agreement is asserted rather than the text executed: running the block would need a
-    // compiler at test time, and what drifted was the spelling. The two halves together say it,
-    // since the spellings below are compiled by this file and the document is asserted to hold
-    // them character for character.
+    // What this is for CHANGED on 2026-09-16 and the test did not, which is worth a line. It was
+    // written when running the block was out of reach, so it asserted the agreement of two
+    // spellings instead: the one below, compiled by this file, and the one in the document,
+    // asserted character for character. `ReadmeSpec` now compiles the block itself, so the
+    // agreement half is covered there and covered for all twenty-four blocks rather than two.
+    // What survives here, and is not covered there, is the ANSWER: `5 * n - 1` and `16.0` are what
+    // the document tells a reader to expect, and a block that runs is not a block that is right.
     import garden.xeno.symbolum.Dsl.*
     import scala.language.implicitConversions
 

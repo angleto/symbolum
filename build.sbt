@@ -475,7 +475,38 @@ lazy val tactics = (project in file("modules/tactics"))
     // It was 0.0 for one commit, which is a floor that cannot fail; an audit pointed out that
     // this is the module where the oracle's answers head for the kernel.
     // 94.06% on 2026-09-05, against 94.08% the day before: unchanged, so the floor is too.
-    coverageMinimumStmtTotal := 92.5
+    coverageMinimumStmtTotal := 92.5,
+
+    // A compiler at test time, for `ReadmeSpec` and for nothing else.
+    //
+    // Until 2026-09-16 the front page's examples were certified by a test that RE-TYPED them, and
+    // the two spellings drifted: `val expr = 2 * n + 3 * n - 1` was the first example a reader met
+    // and did not compile anywhere, while the guard beside it evaluated `Num(2) * Var("n") + ...`
+    // and was green. A test that rewrites what it certifies does not certify it, so the block is
+    // now read from `README.md` and compiled as it stands.
+    //
+    // `Test` scope only: nothing published from here gains a dependency, which is the whole reason
+    // it is not in `commonSettings`. `modules/dist` carries the same artifact at `Compile` scope
+    // because the distribution's REPL is one, and that module publishes nothing either.
+    libraryDependencies += "org.scala-lang" %% "scala3-compiler" % scalaVersion.value % Test,
+
+    // The classpath those blocks compile against, written where a test can read it.
+    //
+    // Read from `dependencyClasspath` plus the two class directories rather than from
+    // `fullClasspath`, which would be a cycle: `fullClasspath` contains `Test / products`, which
+    // contains the resources this generator produces. The two directories are what
+    // `fullClasspath` adds on top of the dependencies, so the file holds the same entries.
+    //
+    // A generated file and not `java.class.path`, because sbt runs tests in a classloader of its
+    // own and that property holds the launcher, not the suite's classpath. A harness reading it
+    // would compile every block against almost nothing and report an error about `Var`.
+    Test / resourceGenerators += Def.task {
+      val file = (Test / resourceManaged).value / "test-classpath.txt"
+      val entries = (Test / dependencyClasspath).value.map(_.data) ++
+        Seq((Compile / classDirectory).value, (Test / classDirectory).value)
+      IO.write(file, entries.map(_.getAbsolutePath).mkString("\n"))
+      Seq(file)
+    }.taskValue
   )
 
 // Runnable demonstrations, of both halves. Separate from `core` so they stay out of the published

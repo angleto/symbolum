@@ -483,10 +483,11 @@ Control simplification behavior using `SimplificationConfig`:
 
 ```scala
 import garden.xeno.symbolum._
+import garden.xeno.symbolum.Dsl._
 import SimplificationRule._
 
 // Use a predefined configuration
-val expr = /* ... */
+val expr = cos(Var("a")) * cos(Var("b"))
 expr.simplify(SimplificationConfig.Minimal)
 expr.simplify(SimplificationConfig.Aggressive)
 expr.simplify(SimplificationConfig.Collatz0)
@@ -568,10 +569,11 @@ val modified = SimplificationConfig.Default
 For deeply nested expressions, use `fullSimplify()` which applies multiple passes until reaching a fixpoint:
 
 ```scala
-val expr = /* complex nested expression */
+val expr = ((x + Num(1)) ^ Num(2)) * ((x - Num(1)) ^ Num(2))
 val fullySimplified = expr.fullSimplify()
 
 // With custom config and iteration limit
+val customConfig = SimplificationConfig.Default.withoutRule(SimplificationRule.FactorCommonTerms)
 val result = expr.fullSimplify(customConfig, maxIter = 50)
 ```
 
