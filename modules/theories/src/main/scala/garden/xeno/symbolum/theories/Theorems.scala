@@ -96,6 +96,15 @@ object Theorems {
     "NUM_EUCLID" ->
       ("A prime dividing a product divides one of the factors. The step that makes factorisation " +
         "unique, and the reason `NUM_GCD` had to exist before the primes could."),
+    "NUM_FACTORISATION" ->
+      ("Every number above one is a product of primes, and the family can be taken " +
+        "**non-decreasing**. The sorting is what makes the uniqueness below an equation between " +
+        "two families rather than a statement about rearranging one, which this system could not " +
+        "make: it has no permutations, no finite sets and no multisets."),
+    "NUM_FACTORISATION_UNIQUE" ->
+      ("And there is only one such product. Two non-decreasing families of primes with the same " +
+        "product have the same length and the same entries, index for index, which is the " +
+        "fundamental theorem of arithmetic said in a language with no multiset in it."),
     "NUM_CRT" ->
       ("The Chinese remainder theorem, over **n** moduli and not only two. It exists because the " +
         "beta function needs it: coding a sequence of any length as two numbers is what lets a " +

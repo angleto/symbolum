@@ -1,7 +1,6 @@
 package garden.xeno.symbolum
 
-import breeze.linalg.DenseVector
-import breeze.signal.fourierTr
+import org.jtransforms.fft.DoubleFFT_1D
 
 /**
  * The discrete Fourier transform of a real signal, at the sizes a screening loop actually uses.
@@ -15,11 +14,27 @@ import breeze.signal.fourierTr
  *
  * == Why a library, and which one ==
  *
- * Nothing here is written. `breeze.signal.fourierTr` is JTransforms underneath, which is a
- * split-radix transform with the cache blocking and the twiddle-factor tables that make four
- * million points take under a second; the textbook recursion takes minutes at that size and is not
- * a thing to hand-write for the sake of having written it. What this file adds is the two things a
- * library does not: a refusal surface, and an outcome type that cannot be misread.
+ * Nothing here is written. `org.jtransforms.fft.DoubleFFT_1D` is a split-radix transform with the
+ * cache blocking and the twiddle-factor tables that make four million points take under a second;
+ * the textbook recursion takes minutes at that size and is not a thing to hand-write for the sake
+ * of having written it. What this file adds is the two things a library does not: a refusal
+ * surface, and an outcome type that cannot be misread.
+ *
+ * **It was `breeze.signal.fourierTr` until 2026-09-16, and JTransforms is what that called.** The
+ * paragraph that used to be here refused to reach past Breeze to it, on the ground that it would
+ * mean depending on a library Breeze is entitled to change underneath. That ground is gone with
+ * Breeze: this module no longer depends on it at all, so JTransforms is a declared dependency
+ * rather than somebody else's implementation detail, and what was a reach past a library is now a
+ * call to the one that is there. What removed Breeze was its weight rather than this file, which is
+ * `build.sbt`'s argument and `docs/numerics.md`'s table.
+ *
+ * The move is numerically free and was measured rather than assumed: over signals at fourteen
+ * lengths from 1 to 4096, power-of-two and not, [[of]]'s output is **bit-identical** to what
+ * `fourierTr` returned, because `fourierTr` reached the same routine of the same library. At
+ * `n = 2^22` it is also faster, 897 ms against 2017 ms best of three on a machine under load,
+ * which is what dropping the interleaving and the four million boxed results buys. That pair was
+ * timed with the buffer filled by a loop rather than by the copy [[of]] commits to, which the note
+ * there measures at 0.9% of the call.
  *
  * The decision is recorded in `build.sbt` beside the dependency. `Relation` stays exact and is not
  * moved onto this: it works at hundreds of digits, where `Double` has sixteen and the whole method
@@ -54,18 +69,18 @@ import breeze.signal.fourierTr
  *
  * `IArray` costs nothing for that, because it is the primitive array with no mutation in its
  * surface: immutable in, immutable out, and no caller can write to a bin. The one place a mutable
- * `Array` exists is inside [[of]], where Breeze's `DenseVector` needs one; it is built there, read
- * by the library, and unreachable afterwards.
+ * `Array` exists is inside [[of]], where the transform writes its answer over its input; it is
+ * built there, handed to the library, and unreachable afterwards.
  *
  * What this does **not** cover is the copy that costs. A caller holding an `Array[Double]` it owns
- * gets in for nothing, since `IArray.unsafeFromArray` wraps rather than copies, but the copy **out**
- * to Breeze inside [[of]] is real and was measured at **362 ms** at `n = 2^22` against a transform
- * of 1179 ms. There is no Breeze entry point that takes an immutable sequence, so the alternative is
- * not a cheaper call but no call.
+ * gets in for nothing, since `IArray.unsafeFromArray` wraps rather than copies, but the copy **in**
+ * to the transform's buffer is real: the buffer is `2n` doubles because the answer is complex, and
+ * no transform in the world reads an immutable sequence, so the alternative is not a cheaper call
+ * but no call.
  *
  * == What is not here ==
  *
- * The inverse transform. `breeze.signal.iFourierTr` is one line away and has **zero** named
+ * The inverse transform. `DoubleFFT_1D.complexInverse` is one line away and has **zero** named
  * consumers, so it is not built; the number is written down instead. The same for the
  * two-dimensional transform and for windowing.
  */
@@ -131,17 +146,35 @@ object Spectrum {
    * rewriting that indexing at the call site is how a sign error gets in.
    */
   def of(signal: IArray[Double]): Outcome = refuse(signal).getOrElse {
-    // The one mutable value in this file, and it does not leave this expression. `DenseVector`
-    // wants an `Array`, `fourierTr` copies it into a temporary of its own before touching
-    // anything, and nothing here or anywhere else holds a reference to it afterwards. There is no
-    // Breeze entry point that takes an immutable sequence, so the alternative is not a purer call
-    // but no call.
-    val mutable = Array.tabulate(signal.length)(index => signal(index))
-    val transformed = fourierTr(DenseVector(mutable))
+    val length = signal.length
+
+    // The one mutable value in this file, and it does not leave this expression. `realForwardFull`
+    // transforms in place and writes `n` complex numbers as `2n` interleaved doubles, so the buffer
+    // is twice the signal, the samples go in its first half and the second half starts at zero;
+    // nothing here or anywhere else holds a reference to it afterwards. No transform reads an
+    // immutable sequence, so the alternative is not a purer call but no call.
+    //
+    // `copyToArray` rather than a fill loop, which is what keeps this file inside the property
+    // `StyleSpec` asserts for every source under `modules/*/src/main`: no `var`, no `while`, no
+    // cast. The buffer's second half is left at the zero `new Array` gives it, which is what the
+    // transform wants. Three other ways in were measured and rejected: `Array.copy` does not take
+    // an `IArray` without a cast, `IArray.toArray` is deprecated as incorrect and the build takes
+    // that as an error, and `IArray.genericWrapArray(_).toArray` wraps before it copies.
+    //
+    // Measured at `n = 2^22` on 2026-09-17, thread CPU time rather than a wall clock because the
+    // machine carried other builds, least of seven interleaved rounds, the fill alone: **13.2 ms**
+    // written as a loop, **14.8** for this, 23.8 through the wrapper and 28.4 as an
+    // `Array.tabulate` with a branch per entry. Four fills in one interleaved run, which is the
+    // only comparison that survives this machine: the loop would buy 12% of a fill, and it would
+    // cost an entry in that guard's excuse list. The version that reads as the functional one, the
+    // tabulate, is the slowest of the four.
+    val buffer = new Array[Double](2 * length)
+    signal.copyToArray(buffer)
+    new DoubleFFT_1D(length.toLong).realForwardFull(buffer)
 
     new Bins(
-      IArray.tabulate(signal.length)(bin => transformed(bin).real),
-      IArray.tabulate(signal.length)(bin => transformed(bin).imag))
+      IArray.tabulate(length)(bin => buffer(2 * bin)),
+      IArray.tabulate(length)(bin => buffer(2 * bin + 1)))
   }
 
   /**
@@ -154,18 +187,22 @@ object Spectrum {
    * because the transform does not know they are special.
    *
    * **It costs what the whole transform costs**, because it is the whole transform with the second
-   * half dropped. A transform written for real input does about half the work in about half the
-   * memory, and Breeze does not expose one: `breeze.signal.fourierTr` interleaves the input into a
-   * complex array and calls `complexForward`.
+   * half dropped, and that is now a choice rather than a limit. `realForwardFull` exploits the
+   * input being real and then writes the redundant half out anyway; `DoubleFFT_1D.realForward`
+   * writes only the half this keeps, in `n` doubles rather than `2n`. It is not taken, and the
+   * reason is the layout rather than the saving. Measured on 2026-09-16 rather than read off the
+   * documentation: `realForward` puts bin zero's real part at index 0 and then, at index **1**,
+   * the Nyquist bin's real part when `n` is even and the **imaginary** part of the last bin when
+   * `n` is odd, with every other bin an interleaved pair after that. Two layouts, the odd one
+   * holding a number the even one does not, and a misread is a wrong spectrum rather than a slow
+   * one. [[of]] is the entry point every caller here goes through and it wants the whole circle,
+   * so the unpacked layout is read once and this one drops from it.
    *
-   * Measured at `n = 2^22` on 2026-09-12 at load 40, best of three: the transform itself is 1179 ms
-   * and reading its four million boxed `Complex` results back out is **1626 ms**, on top of a
-   * 362 ms copy in, for 2946 ms end to end. Calling JTransforms directly would remove the unpacking
-   * and the copy, because it writes into an interleaved primitive array, and `realForwardFull`
-   * would roughly halve the transform as well: about a factor of three altogether. It is still not
-   * taken, because it means depending on a library Breeze is entitled to change underneath and
-   * nothing has yet asked for a transform of this size in a loop. `docs/numerics.md` carries the
-   * table.
+   * Measured at `n = 2^22` on 2026-09-16, best of three on a machine under load: **897 ms** end to
+   * end, against 2017 ms for the Breeze path this replaced, which is the interleaving and the four
+   * million boxed `Complex` results it no longer builds. The 2026-09-12 reading of that path, 1179
+   * ms of transform plus 1626 ms of unpacking plus a 362 ms copy in, is what the new number is
+   * against. `docs/numerics.md` carries the table.
    */
   def ofReal(signal: IArray[Double]): Outcome = of(signal) match {
     case whole: Bins =>

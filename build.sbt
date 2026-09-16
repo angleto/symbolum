@@ -444,39 +444,62 @@ lazy val core = (project in file("modules/core"))
   .settings(
     name := "symbolum-core",
     /*
-     * Breeze, and only here.
+     * The two numeric libraries, and only here.
      *
      * Two numeric capabilities were named as blocking work that wants to move into this repository:
      * a discrete Fourier transform at N = 2^22, and the dominant eigenvalue of a non-negative
-     * matrix. Both are dense numerical linear algebra and that is not something to write here: a
-     * hand-rolled eigensolver is a decade of edge cases, and a hand-rolled transform at four
-     * million points is a cache-blocking exercise. `garden.xeno.symbolum.Spectrum` and `garden.xeno.symbolum.Perron`
-     * are the two files that use it and they are thin on purpose.
+     * matrix. Both are dense numerical work and that is not something to write here: a hand-rolled
+     * eigensolver is a decade of edge cases, and a hand-rolled transform at four million points is
+     * a cache-blocking exercise. `garden.xeno.symbolum.Spectrum` and `garden.xeno.symbolum.Perron`
+     * are the two files that use them and they are thin on purpose.
      *
-     * **The artifact is `breeze`, not `breeze-natives` and not `breeze-viz`**, and that is the
-     * choice that keeps the consequence smallest. `breeze-natives` adds the netlib-java native
-     * binary bundles, tens of megabytes of platform-specific payload, to buy a faster BLAS that no
-     * measurement here asks for. `breeze` alone resolves to `dev.ludovic.netlib`, which uses a
-     * native BLAS when the machine already has one and otherwise runs a pure-JVM translation, so
-     * **nothing here requires a native library to be installed**. `breeze-viz` is plotting and has
-     * no consumer.
+     * **It was `org.scalanlp:breeze:2.1.0` for both until 2026-09-16, and what removed it is
+     * weight.** Measured off `core/fullClasspath` with the same command before and after: **20 jars
+     * and 30.96 MB** became **5 jars and 10.12 MB**, so what a consumer of this module downloads is
+     * 20.84 MB lighter. Both libraries underneath Breeze were already on that classpath as its own
+     * dependencies, and this module calls two functions: `breeze.signal.fourierTr` was
+     * `org.jtransforms.fft.DoubleFFT_1D` and `breeze.linalg.eig` was LAPACK's `dgeev` through
+     * `dev.ludovic.netlib`.
      *
-     * **This module is published** as `garden.xeno:symbolum-core`, so the dependency is what a
-     * consumer downloads, and that cost is the reason it is declared in exactly one module.
+     * **What is left is not what the card that asked for this predicted, and the difference is one
+     * jar.** It counted `scala-library` 2.13 at 5.65 MB among what Breeze drags in because it is
+     * cross-built. It is still here with Breeze gone: `scala3-library_3` depends on it, so it is
+     * Scala 3's own tail rather than Breeze's, and it is 56% of what remains. Nothing in this
+     * module can remove it.
+     *
+     * **What the swap had to be measured against was the numbers, not the compilation.** The risk
+     * of moving off a numeric library is a different answer rather than a build error, so the
+     * existing corpus is the judge and it was run against both. The transform is
+     * **bit-identical** at fourteen lengths from 1 to 4096, power-of-two and not, because
+     * `fourierTr` called the routine this now calls; it is also 897 ms against 2017 ms at
+     * `n = 2^22`. The eigenvalue is a different implementation of the same algorithm and agrees to
+     * `2.3e-13` at worst over `PerronSpec`'s matrices and over 200 random ones, with no refusal.
+     *
+     * **`commons-math3` cannot do the transform**, which is the measurement that decided the shape
+     * of this rather than a preference: `FastFourierTransformer` refuses any length that is not a
+     * power of two, naming it, and `SpectrumSpec` pins `n = 15` because numpy's rule at an odd
+     * length is what `Spectrum.ofReal` promises. One library for both was the obvious answer and it
+     * is not available.
+     *
+     * **This module is published** as `garden.xeno:symbolum-core`, so these dependencies are what a
+     * consumer downloads, and that cost is the reason they are declared in exactly one module.
      * `docs/numerics.md` carries the measured closure rather than an estimate of it.
      *
-     * **No module on the proof side may gain this**, which is what `NumericIsolationSpec` asserts:
-     * no library produces `|- det (A * B) = det A * det B`, so a number out of Breeze is evidence
+     * **No module on the proof side may gain these**, which is what `NumericIsolationSpec` asserts:
+     * no library produces `|- det (A * B) = det A * det B`, so a number out of either is evidence
      * and never a theorem. `kernel`, `logic` and `theories` cannot reach this module at all by the
-     * graph above. `tactics` depends on `core` and therefore does have Breeze on its classpath
+     * graph above. `tactics` depends on `core` and therefore does have both on its classpath
      * transitively, which the build cannot prevent while `tactics` is the module that sees both
-     * halves; a source scan is what keeps it out of the code there.
+     * halves; a source scan is what keeps them out of the code there.
      *
-     * Pinned at 2.1.0, which is the last release and the only line cross-published for Scala 3. It
-     * is compiled against 3.1.3 and read by 3.3.5 here, which is the direction TASTy compatibility
-     * runs in. There is nothing to float to.
+     * Pinned at the versions the measurements above were made at. JTransforms 3.1 is the last
+     * release, from 2016, and brings `pl.edu.icm:JLargeArrays` with it; commons-math3 3.5 is what
+     * breeze resolved and 3.6.1 is the end of that line, floated to only when something measures a
+     * reason. Neither library has a Scala version, so both are `%` and neither drags a second
+     * standard library in.
      */
-    libraryDependencies += "org.scalanlp" %% "breeze" % "2.1.0",
+    libraryDependencies += "com.github.wendykierp" % "JTransforms" % "3.1",
+    libraryDependencies += "org.apache.commons" % "commons-math3" % "3.5",
     // Measured 88.21% in the full run on 2026-09-04 (78.09% on 2026-09-03; 83.04% under its own
     // tests alone, see the note above), and 88.30% on 2026-09-05 with nothing in this module
     // changed, and 88.24% an hour after that.

@@ -57,9 +57,11 @@ import scala.jdk.CollectionConverters.*
  * without either being reachable from outside.
  *
  * The server is the one in the JDK, `jdk.httpserver`, so this adds no dependency. That is worth a
- * line because it was the decision: the repository has exactly one runtime dependency in six
- * modules, Breeze in `modules/core`, and a web framework for a localhost page would have been the
- * second and the first one above the trust boundary.
+ * line because it was the decision: every runtime dependency this repository has is a numeric
+ * library in `modules/core`, which is the module nothing on the proof side believes, and a web
+ * framework for a localhost page would have been the first one above the trust boundary. The count
+ * is not written here on purpose: it was "exactly one, Breeze" until 2026-09-16 and is two others
+ * now, while what the sentence is for did not move.
  */
 object Notebook {
 

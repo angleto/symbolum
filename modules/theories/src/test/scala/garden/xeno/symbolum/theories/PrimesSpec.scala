@@ -117,6 +117,191 @@ class PrimesSpec extends AnyFlatSpec with Matchers {
       "~(NUM_MUL (SUC ZERO) (SUC ZERO) = NUM_MUL (SUC (SUC ZERO)) (NUM_MUL (SUC ZERO) (SUC ZERO)))")
   }
 
+  /* ------------------------------------ the fundamental theorem of arithmetic */
+
+  private def impParts(term: Term): (Term, Term) =
+    logic.destImp(term).getOrElse(fail(s"an implication was expected: $term"))
+
+  private def conjParts(term: Term): (Term, Term) =
+    logic.destConj(term).getOrElse(fail(s"a conjunction was expected: $term"))
+
+  private def peel(term: Term, count: Int): (Vector[Term], Term) =
+    if (count == 0) (Vector.empty, term)
+    else {
+      val (antecedent, rest) = impParts(term)
+      val (others, conclusion) = peel(rest, count - 1)
+      (antecedent +: others, conclusion)
+    }
+
+  private def openAt(quantified: Term, argument: Term): Term = {
+    val predicate = logic
+      .destForallPredicate(quantified)
+      .orElse(logic.destExistsPredicate(quantified))
+      .getOrElse(fail(s"a quantification was expected: $quantified"))
+    val contracted = force(LogicError.lift(Term.app(predicate, argument)).flatMap(Conv.betaRoot))
+    Term.destEq(contracted.conclusion).map(_._2).getOrElse(fail("an equation was expected"))
+  }
+
+  private def normalise(term: Term): Term =
+    Term
+      .destEq(force(Conv.betaNormalise(term)).conclusion)
+      .map(_._2)
+      .getOrElse(fail("an equation was expected"))
+
+  /**
+   * What the two halves cost, which is what everything over the naturals costs and nothing more.
+   *
+   * An equality rather than a ceiling, for the reason Euclid's theorem is pinned that way above:
+   * the proof reaches across `Modular`, `Coding`, `Peano` and the classical extension, and a
+   * derivation that quietly started spending one of the reals' sixteen would be spending it on a
+   * claim about `num`.
+   */
+  it should "prove the fundamental theorem of arithmetic at the naturals' two axioms" in {
+    // The same two Euclid's theorem reaches, compared as a **set** and not as a count: the
+    // naturals as a theory ask for three, and `Derivation.axiomsOf`'s own docstring lists the five
+    // entries in the library that reach the third, `ETA`. A count of two would pass whichever two
+    // they were, and one of these derivations picking up `ETA` instead of `SELECT` would be a
+    // sixth entry on that list rather than a theorem costing the same as the one above it.
+    val euclid = Derivation.axiomsOf(force(primes.fact(Primes.Unbounded)))
+    euclid should have size 2
+
+    Vector(
+      Primes.PrimeDividesProduct,
+      Primes.PrimeProductIsOne,
+      Primes.Factorisation,
+      Primes.FactorisationUnique
+    ).foreach { name =>
+      withClue(s"$name: ") {
+        val theorem = force(primes.fact(name))
+        theorem.hypotheses shouldBe empty
+        Derivation.axiomsOf(theorem) shouldBe euclid
+      }
+    }
+  }
+
+  /**
+   * The guarantees the existence half hands back are the premises the uniqueness half asks for.
+   *
+   * This is the one thing neither statement can say about itself, and the failure it guards is
+   * silent: two statements that are each true and do not fit leave the theorem unusable while every
+   * test above passes. The comparison is between terms, so a monotonicity written with the two
+   * indices the other way round, or over the wrong bound, fails here.
+   */
+  it should "hand the existence half's guarantees straight to the uniqueness half" in {
+    val subject = Conv.freshVariable("n", numbers, Set.empty)
+    val (_, existential) =
+      impParts(force(rules.spec(subject, force(primes.fact(Primes.Factorisation)))).conclusion)
+
+    val family = Conv.freshVariable("f", Type.fun(numbers, numbers), Set(subject))
+    val length = Conv.freshVariable("k", numbers, Set(subject, family))
+    val body = normalise(openAt(openAt(existential, family), length))
+
+    val (_, afterPositive) = conjParts(body)
+    val (primesBelow, afterPrimes) = conjParts(afterPositive)
+    val (monotoneBelow, _) = conjParts(afterPrimes)
+
+    val unique = force(
+      rules.specAll(
+        force(primes.fact(Primes.FactorisationUnique)),
+        List(family, length, family, length)))
+    val (premises, _) = peel(unique.conclusion, 5)
+
+    primesBelow shouldBe premises(0)
+    monotoneBelow shouldBe premises(1)
+  }
+
+  /**
+   * The theorem as somebody would state it informally, assembled in one place.
+   *
+   * Two sorted families of primes with the same product have the same length and the same entries.
+   * The two factorisations cannot be existentially bound here, because what comes out mentions
+   * them, so they are assumptions and the hypotheses are what says so: five of them, and the fifth
+   * is the equality of the two products, which is what makes this a statement about one number.
+   */
+  it should "settle any two sorted prime factorisations of one number against each other" in {
+    val theorem = force(primes.fact(Primes.FactorisationUnique))
+    val (binders, _) = force(Logic.stripForall(theorem.conclusion))
+    val instance = force(rules.specAll(theorem, binders.toList))
+    val (premises, conclusion) = peel(instance.conclusion, 5)
+
+    val assumed = premises.map(premise => force(LogicError.lift(Kernel.assume(premise))))
+    val reached = assumed.foldLeft(instance)((implication, premise) =>
+      force(rules.mp(implication, premise)))
+
+    reached.conclusion shouldBe conclusion
+    reached.hypotheses should have size 5
+
+    val (sameLength, sameEntries) = conjParts(conclusion)
+    sameLength shouldBe force(LogicError.lift(Term.eq(binders(1), binders(3))))
+
+    // And the second half is an equation between the two families at one index, below the length,
+    // read by opening it rather than by rebuilding it: a rebuilt term compares what this test
+    // wrote with what this test wrote.
+    val index = Conv.freshVariable("i", numbers, binders.toSet)
+    val (isBelow, entriesAgree) = impParts(openAt(sameEntries, index))
+    isBelow shouldBe force(LogicError.lift(Term.appAll(
+      force(LogicError.lift(primes.theory.constant(
+        Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool))))),
+      List(index, binders(1)))))
+    entriesAgree shouldBe force(LogicError.lift(Term.eq(
+      force(LogicError.lift(Term.app(binders(0), index))),
+      force(LogicError.lift(Term.app(binders(2), index))))))
+  }
+
+  /**
+   * The hypothesis `SUC ZERO < n` cannot be dropped, and one is the witness that it cannot.
+   *
+   * At `n = SUC ZERO` the existential is **false**, not merely unproved: a factorisation of one
+   * with a positive length would have a last prime factor dividing one, which
+   * `NUM_PRIME_PROD_ONE` refuses. So this derives the negation rather than asserting that nobody
+   * managed to prove the positive, which is the difference the card for this work asked for.
+   */
+  it should "be false at one, which is why the hypothesis is there" in {
+    val one = term("SUC ZERO")
+    val (_, existential) =
+      impParts(force(rules.spec(one, force(primes.fact(Primes.Factorisation)))).conclusion)
+
+    val family = Conv.freshVariable("f", Type.fun(numbers, numbers), Set.empty)
+    val inner = openAt(existential, family)
+    val length = Conv.freshVariable("k", numbers, Set(family))
+    val body = openAt(inner, length)
+    val opened = force(LogicError.lift(Kernel.assume(body)))
+
+    val positive = force(rules.conjElim1(opened))
+    val afterPositive = force(rules.conjElim2(opened))
+    val primesBelow = force(rules.conjElim1(afterPositive))
+    val product = force(rules.conjElim2(force(rules.conjElim2(afterPositive))))
+
+    val lengthIsZero = force(
+      rules
+        .specAll(force(primes.fact(Primes.PrimeProductIsOne)), List(family, length))
+        .flatMap(rules.mp(_, primesBelow))
+        .flatMap(rules.mp(_, product)))
+    val absurdity = force(
+      Conv
+        .apTerm(
+          force(LogicError.lift(Term.app(
+            force(LogicError.lift(primes.theory.constant(
+              Peano.StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool))))),
+            term("ZERO")))),
+          lengthIsZero)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, positive))))
+    val contradiction = force(
+      rules.notElim(
+        force(rules.spec(term("ZERO"), force(chain.peano.fact(Peano.StrictIrreflexive)))),
+        absurdity))
+
+    val refused = force(
+      rules
+        .existsElim(force(LogicError.lift(Kernel.assume(inner))), length, contradiction)
+        .flatMap(overLength =>
+          rules.existsElim(force(LogicError.lift(Kernel.assume(existential))), family, overLength))
+        .flatMap(rules.notIntro(existential, _)))
+
+    refused.hypotheses shouldBe empty
+    refused.conclusion shouldBe force(logic.mkNot(existential))
+  }
+
   /**
    * A prime above a concrete number, taken out of the existential and read.
    *

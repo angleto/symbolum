@@ -168,6 +168,24 @@ object Coding {
   val ProductDivides: String = "NUM_PROD_DIVIDES"
 
   /**
+   * `|- !f g n. (!i. NUM_LT i n ==> f i = g i) ==> NUM_PROD f n = NUM_PROD g n`
+   *
+   * Two families that agree below the length have the same product, which is what a caller needs
+   * the moment it **builds** a family rather than receiving one: a family extended at one index is
+   * written with a conditional, and nothing said that the conditional's true branch leaves the
+   * shorter product where it was.
+   *
+   * It is stated over an agreement **below the length** rather than everywhere, and that is the
+   * whole of its use: a family extended at `k` disagrees with the old one exactly at `k`, and a
+   * version asking for agreement at every index would not apply to the one place it is wanted.
+   *
+   * The induction is the ordinary one. The step splits the agreement it is given in two, at the
+   * new index and below it, because `NUM_PROD` puts the new factor on the right and the two halves
+   * of the recurrence want different halves of the hypothesis.
+   */
+  val ProductCongruent: String = "NUM_PROD_CONG"
+
+  /**
    * `|- !m n. (!i. NUM_LT i n ==> NUM_LT ZERO (m i)) ==> NUM_LT ZERO (NUM_PROD m n)`
    *
    * The product of positives is positive, which the two-modulus theorem asks of its moduli and
@@ -279,6 +297,9 @@ object Coding {
     FactorialDivides ->
       "!d:num k:num. NUM_LT ZERO d /\\ NUM_LE d k ==> NUM_DIVIDES d (NUM_FACT k)",
     ProductDivides -> "!m:num -> num. !i:num. !n:num. NUM_LT i n ==> NUM_DIVIDES (m i) (NUM_PROD m n)",
+    ProductCongruent ->
+      ("!f:num -> num. !g:num -> num. !n:num. (!i:num. NUM_LT i n ==> f i = g i) ==> " +
+        "NUM_PROD f n = NUM_PROD g n"),
     ProductPositive ->
       ("!m:num -> num. !n:num. (!i:num. NUM_LT i n ==> NUM_LT ZERO (m i)) ==> " +
         "NUM_LT ZERO (NUM_PROD m n)"),
@@ -391,6 +412,8 @@ object Coding {
       gauss <- gaussLemma(vocabulary, semiring)
       bound <- boundedStretch(vocabulary, driver)
       productDivides <- eachFactorDivides(vocabulary, driver, semiring, productSuccessorChecked)
+      productCongruent <- productsOfAgreeingFamilies(
+        vocabulary, driver, productZeroChecked, productSuccessorChecked)
       productPositive <- productOfPositives(vocabulary, driver, productZeroChecked, productSuccessorChecked)
       coprime <- moduliCoprime(vocabulary, semiring, gauss)
       crt <- remainders(vocabulary, semiring)
@@ -419,6 +442,7 @@ object Coding {
         Gauss -> gauss,
         Bound -> bound,
         ProductDivides -> productDivides,
+        ProductCongruent -> productCongruent,
         ProductPositive -> productPositive,
         ModuliCoprime -> coprime,
         Remainders -> crt,
@@ -2194,6 +2218,109 @@ object Coding {
 
       settled <- rules.disjElim(cases, fromHypothesis, fromEquality)
       result <- rules.disch(below, settled)
+    } yield result
+  }
+
+  /**
+   * [[ProductCongruent]], by induction on the length.
+   *
+   * The base is the empty product read at both families, which is `SUC ZERO` either way and needs
+   * nothing of the agreement. The step spends the agreement twice and at different widths: below
+   * `k` it is what the induction hypothesis asks for, and at `k` it is the equation between the two
+   * new factors, so the recurrence's two halves are carried across by one congruence each.
+   */
+  private def productsOfAgreeingFamilies(
+    vocabulary: Vocabulary,
+    driver: Induct,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      statement <- vocabulary.statement(ProductCongruent)
+      proved <- driver.proveBy(
+        statement,
+        goal => agreementBase(vocabulary, atZero, goal),
+        step => agreementStep(vocabulary, atSuccessor, step)
+      )
+      _ <-
+        if (proved.hypotheses.isEmpty) Right(())
+        else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
+      result <- vocabulary.checked(ProductCongruent, proved)
+    } yield result
+
+  /** The family a `NUM_PROD` application is about, read off the application. */
+  private def familyOf(term: Term): Either[LogicError, Term] = term match {
+    case App(App(_, family), _) => Right(family)
+    case other => Left(NotOfForm("a product over a family", other))
+  }
+
+  /** The base of [[ProductCongruent]]: both empty products are one, whatever the families are. */
+  private def agreementBase(
+    vocabulary: Vocabulary,
+    atZero: Kernel.Thm,
+    goal: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = vocabulary.rules
+    for {
+      parts <- vocabulary.logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+      (premise, equation) = parts
+      sides <- Term.destEq(equation).toRight(NotOfForm("an equation", equation))
+      first <- familyOf(sides._1)
+      second <- familyOf(sides._2)
+      left <- rules.spec(first, atZero)
+      right <- rules.spec(second, atZero)
+      both <- Conv.sym(right).flatMap(Conv.trans(left, _))
+      result <- rules.disch(premise, both)
+    } yield result
+  }
+
+  /** The step of [[ProductCongruent]]: the shorter products agree and so do the new factors. */
+  private def agreementStep(
+    vocabulary: Vocabulary,
+    atSuccessor: Kernel.Thm,
+    step: Induct.Step
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = vocabulary.logic
+    val rules = vocabulary.rules
+    for {
+      parts <- logic.destImp(step.goal).toRight(NotOfForm("an implication", step.goal))
+      (premise, equation) = parts
+      sides <- Term.destEq(equation).toRight(NotOfForm("an equation", equation))
+      first <- familyOf(sides._1)
+      second <- familyOf(sides._2)
+      agreement <- LogicError.lift(Kernel.assume(premise))
+
+      successor <- LogicError.lift(Term.app(vocabulary.successor, step.variable))
+      belowSuccessor <- vocabulary
+        .fact(Peano.BelowSuccessor)
+        .flatMap(rules.spec(step.variable, _))
+
+      // The agreement below `k`, which is the hypothesis's own premise.
+      index = Conv.freshVariable(
+        "i", vocabulary.numbers, Term.freeVariables(step.goal) + step.variable)
+      shorter <- LogicError.lift(Term.appAll(vocabulary.below, List(index, step.variable)))
+      assumedShorter <- LogicError.lift(Kernel.assume(shorter))
+      carried <- vocabulary
+        .fact(Peano.StrictTransitive)
+        .flatMap(rules.specAll(_, List(index, step.variable, successor)))
+        .flatMap(implication =>
+          rules.conjIntro(assumedShorter, belowSuccessor).flatMap(rules.mp(implication, _)))
+      here <- rules.spec(index, agreement).flatMap(rules.mp(_, carried))
+      restricted <- rules.disch(shorter, here).flatMap(rules.gen(index, _))
+      shorterProducts <- rules.mp(step.hypothesis, restricted)
+
+      newest <- rules.spec(step.variable, agreement).flatMap(rules.mp(_, belowSuccessor))
+      factors <- Conv
+        .apTerm(vocabulary.times, shorterProducts)
+        .flatMap(scaled => LogicError.lift(Kernel.mkComb(scaled, newest)))
+
+      leftRecurrence <- rules.specAll(atSuccessor, List(first, step.variable))
+      rightRecurrence <- rules.specAll(atSuccessor, List(second, step.variable))
+      reached <- Conv
+        .sym(rightRecurrence)
+        .flatMap(Conv.trans(factors, _))
+        .flatMap(Conv.trans(leftRecurrence, _))
+      result <- rules.disch(premise, reached)
     } yield result
   }
 

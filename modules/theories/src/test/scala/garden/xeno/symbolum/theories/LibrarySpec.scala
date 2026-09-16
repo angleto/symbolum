@@ -421,8 +421,25 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `u` and `v` at `word('a)`, so it has two or more leading quantifiers and two of one type --
     // and the two of one type are the two halves of a concatenation, which is exactly the pair a
     // positional specialisation would silently swap, giving the tally of the other half.
-    library.entries.size shouldBe 495
-    library.names.distinct.size shouldBe 492
+    //
+    // 500 with the fundamental theorem of arithmetic: `NUM_PROD_CONG` in `Coding`, and
+    // `NUM_PRIME_DIVIDES_PROD`, `NUM_PRIME_PROD_ONE`, `NUM_FACTORISATION` and
+    // `NUM_FACTORISATION_UNIQUE` in `Primes`. **FIVE**, derived from the five names before the run.
+    // No constant arrives with them, which is the whole shape of the work: a factorisation is a
+    // family and a length, so the existence and the uniqueness are written with `NUM_PROD` and
+    // nothing new had to be declared to say them.
+    //
+    // `CLAUDE.md`'s two figures move by **four and by three**, and the one that moves neither is
+    // the theorem itself. `NUM_FACTORISATION` binds **one** leading universal, `!n`, and everything
+    // else in it is existential, so it is outside the first figure's population altogether; a
+    // reader expecting the headline result to be the one that counts has it backwards.
+    // `NUM_PRIME_PROD_ONE` is in the first figure and not the second: it binds `f` at `num -> num`
+    // and `k` at `num`, which is two leading quantifiers and no two alike. The other three are in
+    // both, and `NUM_FACTORISATION_UNIQUE` is the sharpest instance the second figure has, since it
+    // binds two families and two lengths alternately: a positional specialisation that swapped
+    // either pair would compare one factorisation with itself and prove nothing.
+    library.entries.size shouldBe 500
+    library.names.distinct.size shouldBe 497
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

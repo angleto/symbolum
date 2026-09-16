@@ -1,6 +1,6 @@
 # What this system has proved
 
-A dozen results, each printed as its own page: the statement as the kernel holds it, what the proof
+The results worth reading, each printed as its own page: the statement as the kernel holds it, what the proof
 rests on, how it was derived where a derivation was recorded, and what it cost in axioms and in
 inferences. The pages below the marker are generated; this section and the one after it are written
 by hand, because they are arguments rather than renderings.
@@ -29,7 +29,7 @@ each measured against what the library actually holds rather than estimated.
 
 | Area | Status | What stands in the way |
 |---|---|---|
-| Number theory over `num` | **partly here.** Bezout, Euclid's lemma, division with remainder, congruences, the gcd, the Chinese remainder theorem, the factorial | Unique factorisation is the next rung and every piece of it exists. What blocks it is the **statement**: uniqueness is a claim about a multiset of primes, and this system has no lists, no finite sets and no multisets |
+| Number theory over `num` | **partly here.** Bezout, Euclid's lemma, division with remainder, congruences, the gcd, the Chinese remainder theorem, the factorial, and since 2026-09-16 **unique factorisation**, both halves | The statement was what blocked it and the way round is worth knowing: uniqueness is usually a claim about a multiset of primes, and this system has no lists, no finite sets and no multisets. A factorisation here is a family and a length with the family asked to be **non-decreasing**, and then uniqueness is an equation between two families. What is still missing above it is anything that quantifies over "the divisors of `n`" as a collection, which wants the same absent machinery |
 | The incompleteness theorems | **in progress.** The object language, both axiom sets, the proof predicate, closure under both rules of inference, and the first derivations of the embedded theory | `Prov` as a formula **of the object language** does not exist; what exists is `NUM_PROV`, a predicate of the ambient logic. D1, D2 and D3 are statements about that formula, so none of the three can be stated yet. `docs/adr/0013` is the plan |
 | Analysis | **partly here, since 2026-09-15.** `Limit` declares `converges` and `lim`, `Transcendental` declares `exp`, `sin`, `cos`, `ln`, `sinh` and `cosh` as their power series through that limit, and between them they cost no axiom. Proved over them: the value of each function at zero, that a limit is unique, the monotone convergence theorem, which is where `COMPLETENESS` is read a second time and the first thing here that obtains a limit rather than assuming one, and the comparison test | The comparison test is proved and **not yet spent**: `Transcendental` publishes six constants, the five values at zero and the two hyperbolic identities, and not one convergence fact, so `exp 1 > 2` is statable and unproved rather than decided. Putting the exponential series under a bounded dominating one is the nearest rung; after it the addition theorem through the Cauchy product, of which `SUM_SWAP` is the half that exists, and the Pythagorean identity by the same argument. Then continuity and the intermediate value theorem, which is what every fact about `ln` waits on and why that constant has none. No derivative, no integral and no square root. **Nothing primitive is missing** here either: each of those is expressible over the theory as it stands |
 | The fundamental theorem of algebra | **out of reach, and nothing about it is a decision** | It wants the complex numbers, so it wants the reals as a construction with the integers and the rationals under them, which `docs/adr/0007` puts in that order and which has not started. Then it wants an argument of its own: the route through Liouville wants a derivative, the route through winding numbers wants a topology, and neither exists here. Unlike the four colour theorem below it, what stands in the way is work rather than a recorded decision |
@@ -46,6 +46,15 @@ and rewritten on 2026-09-16 because `Limit` and `Transcendental` landed on 2026-
 it moved the trusted base not at all. One day between the two, which is what "not blocked on
 anything but work" was claiming and is the only kind of evidence that claim can have. What is
 written in its place is the next rung rather than a second promise.
+
+**There is a third kind of gap and the number theory row is it: the statement.** Unique
+factorisation was not waiting on a primitive and was not waiting on volume of work. Every piece of
+it existed for days, and what was missing was a way to say "the same factors" in a system with no
+permutations and no multisets. The way round was to ask the family to be **non-decreasing**, which
+turns the uniqueness into an equation between two families and costs the existence half one thing:
+the factor taken off has to be the greatest prime divisor rather than any one of them. A gap of this
+kind looks exactly like the second kind from outside, and the two are told apart by trying to write
+the statement down rather than by estimating.
 
 And **a rung that is reachable is not thereby cheap.** The entries marked partly here each took days
 of work per theorem, and nothing below suggests the next one will be faster.
@@ -942,6 +951,316 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_PRIME_DIVISOR"
 ```
 
 From Scala it is `Modular`'s, under the name `NUM_PRIME_DIVISOR`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# NUM_FACTORISATION
+
+$$\forall x \colon \mathbb{N}.\ \mathrm{suc}(0) < x \Rightarrow \left( \exists y \colon \mathbb{N} \to \mathbb{N}.\ \exists z \colon \mathbb{N}.\ 0 < z \land \left( \forall u \colon \mathbb{N}.\ u < z \Rightarrow \mathrm{prime}(y(u)) \right) \land \left( \forall u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ u < v \land v < z \Rightarrow y(u) \le y(v) \right) \land \prod_{i < z} y(i) = x \right)$$
+
+```
+!x:num. SUC 0 < x ==> (?y:num -> num. ?z:num. 0 < z /\ (!u:num. u < z ==> NUM_PRIME (y u)) /\ (!u:num. !v:num. u < v /\ v < z ==> y u <= y v) /\ NUM_PROD y z = x)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+2 axioms reached, 0 of them named below, and 68 named facts in all.
+
+| what | where |
+|---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_PROD_CONG` | Coding |
+| `NUM_PROD_DIVIDES` | Coding |
+| `NUM_PROD_SUC` | Coding |
+| `NUM_PROD_ZERO` | Coding |
+| `NUM_DIVIDES_ELIM` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_TRANS` | Modular |
+| `NUM_PRIME_ABOVE_ONE` | Modular |
+| `NUM_PRIME_FACTOR` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_GREATEST` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_LT_MONOTONE` | Peano |
+| `NUM_MUL_ONE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_STRONG_INDUCTION` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+26547 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 8492 | 32.0% |
+| EqualityElimination | 5464 | 20.6% |
+| Reflexivity | 2193 | 8.3% |
+| Instantiation | 2165 | 8.2% |
+| Antisymmetry | 2128 | 8.0% |
+| Transitivity | 1876 | 7.1% |
+| BetaStep | 1571 | 5.9% |
+| Abstraction | 897 | 3.4% |
+| TypeInstantiation | 877 | 3.3% |
+| Assumption | 859 | 3.2% |
+| Definition | 21 | 0.1% |
+| TypeDefinition | 2 | 0.0% |
+| Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. SUC 0 < x ==> (?y:num -> num. ?z:num. 0 < z /\ (!u:num. u < z ==> NUM_PRIME (y u)) /\ (!u:num. !v:num. u < v /\ v < z ==> y u <= y v) /\ NUM_PROD y z = x)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_FACTORISATION"
+```
+
+From Scala it is `Primes`'s, under the name `NUM_FACTORISATION`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# NUM_FACTORISATION_UNIQUE
+
+$$\forall x \colon \mathbb{N} \to \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \forall z \colon \mathbb{N} \to \mathbb{N}.\ \forall u \colon \mathbb{N}.\ \left( \forall v \colon \mathbb{N}.\ v < y \Rightarrow \mathrm{prime}(x(v)) \right) \Rightarrow \left( \forall v \colon \mathbb{N}.\ \forall w \colon \mathbb{N}.\ v < w \land w < y \Rightarrow x(v) \le x(w) \right) \Rightarrow \left( \forall v \colon \mathbb{N}.\ v < u \Rightarrow \mathrm{prime}(z(v)) \right) \Rightarrow \left( \forall v \colon \mathbb{N}.\ \forall w \colon \mathbb{N}.\ v < w \land w < u \Rightarrow z(v) \le z(w) \right) \Rightarrow \prod_{i < y} x(i) = \prod_{i < u} z(i) \Rightarrow y = u \land \left( \forall v \colon \mathbb{N}.\ v < y \Rightarrow x(v) = z(v) \right)$$
+
+```
+!x:num -> num. !y:num. !z:num -> num. !u:num. (!v:num. v < y ==> NUM_PRIME (x v)) ==> (!v:num. !w:num. v < w /\ w < y ==> x v <= x w) ==> (!v:num. v < u ==> NUM_PRIME (z v)) ==> (!v:num. !w:num. v < w /\ w < u ==> z v <= z w) ==> NUM_PROD x y = NUM_PROD z u ==> y = u /\ (!v:num. v < y ==> x v = z v)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+2 axioms reached, 0 of them named below, and 80 named facts in all.
+
+| what | where |
+|---|---|
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_PROD_DIVIDES` | Coding |
+| `NUM_PROD_POSITIVE` | Coding |
+| `NUM_PROD_SUC` | Coding |
+| `NUM_PROD_ZERO` | Coding |
+| `NUM_BEZOUT` | Modular |
+| `NUM_BEZOUT_EXISTS` | Modular |
+| `NUM_DIVIDES_ADD` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `NUM_DIVIDES_ONE` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_SUMMAND` | Modular |
+| `NUM_DIVIDES_ZERO` | Modular |
+| `NUM_DIVISION` | Modular |
+| `NUM_EUCLID` | Modular |
+| `NUM_GCD_DIVIDES_LEFT` | Modular |
+| `NUM_GCD_DIVIDES_RIGHT` | Modular |
+| `NUM_GCD_GREATEST` | Modular |
+| `NUM_ONE_DIVIDES` | Modular |
+| `NUM_PRIME_ABOVE_ONE` | Modular |
+| `NUM_PRIME_DIVISOR` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_CANCEL_LEFT` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_GREATEST` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_CANCEL_LEFT` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_LT_MONOTONE` | Peano |
+| `NUM_MUL_ONE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_STRONG_INDUCTION` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `NUM_PRIME_DIVIDES_PROD` | Primes |
+| `NUM_PRIME_PROD_ONE` | Primes |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+36730 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 11223 | 30.6% |
+| EqualityElimination | 7846 | 21.4% |
+| Reflexivity | 3173 | 8.6% |
+| Instantiation | 3162 | 8.6% |
+| Antisymmetry | 3044 | 8.3% |
+| Transitivity | 2551 | 6.9% |
+| BetaStep | 2163 | 5.9% |
+| TypeInstantiation | 1261 | 3.4% |
+| Assumption | 1197 | 3.3% |
+| Abstraction | 1085 | 3.0% |
+| Definition | 21 | 0.1% |
+| TypeDefinition | 2 | 0.0% |
+| Axiom | 2 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num. !z:num -> num. !u:num. (!v:num. v < y ==> NUM_PRIME (x v)) ==> (!v:num. !w:num. v < w /\ w < y ==> x v <= x w) ==> (!v:num. v < u ==> NUM_PRIME (z v)) ==> (!v:num. !w:num. v < w /\ w < u ==> z v <= z w) ==> NUM_PROD x y = NUM_PROD z u ==> y = u /\ (!v:num. v < y ==> x v = z v)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_FACTORISATION_UNIQUE"
+```
+
+From Scala it is `Primes`'s, under the name `NUM_FACTORISATION_UNIQUE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 

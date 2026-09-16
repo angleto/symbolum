@@ -155,10 +155,14 @@ import garden.xeno.symbolum.logic.*
  * **Coprimality as a constant**, which is `NUM_GCD a b = SUC ZERO` written out and has one consumer
  * so far, inside [[Modular.Euclid]]. One consumer is not enough to define a constant for.
  *
- * **The fundamental theorem of arithmetic.** Euclid's lemma is its hard half, and what is missing
- * is the other one: a factorisation is a list, and induction over a list of factors is not an
- * induction this development can state. `Word` is the nearest thing to a list here and it is a
- * fixed length.
+ * **The fundamental theorem of arithmetic**, which is **not** missing since 2026-09-16 and is not
+ * here: [[Euclid]] is its hard half and `Primes.NUM_FACTORISATION` is the theorem, one floor up,
+ * because a factorisation is written with `Coding.NUM_PROD` and `Coding` is built over this file.
+ * What this paragraph said until then is worth keeping as the thing that turned out to be wrong: a
+ * factorisation is a **list**, and no induction here can be over one. It is a family and a length
+ * instead, the family is asked to be non-decreasing, and the uniqueness is then an equation
+ * between two families rather than a claim about rearranging one, which is the sentence this
+ * system has no multiset to write.
  */
 final class Modular private (
   val peano: Peano,
