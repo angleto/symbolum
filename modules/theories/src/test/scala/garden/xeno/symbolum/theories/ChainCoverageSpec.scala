@@ -81,6 +81,8 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Primes" -> InTheChain,
     "Limit" -> InTheChain,
     "Transcendental" -> InTheChain,
+    "Inductive" -> InTheChain,
+    "Reaching" -> InTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,
     "Magnitude" -> InTheChain,

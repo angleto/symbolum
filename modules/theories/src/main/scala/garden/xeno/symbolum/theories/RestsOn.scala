@@ -133,7 +133,12 @@ object Reach {
         "Transcendental" -> chain.transcendental.facts,
         // 2026-09-16, and added here after `RestsOnSpec` named all fifteen rather than before,
         // which is the case the two paragraphs above describe rather than an exception to them.
-        "Concatenation" -> chain.concatenation.facts
+        "Concatenation" -> chain.concatenation.facts,
+        // The two of 2026-09-16. `RestsOnSpec` asserts that every fact the chain holds is one this
+        // report can name, so a development added to `Library.of` and not to this list makes a
+        // proof that goes through it report resting on nothing of the kind.
+        "Inductive" -> chain.inductive.facts,
+        "Reaching" -> chain.reaching.facts
       )
     )
 

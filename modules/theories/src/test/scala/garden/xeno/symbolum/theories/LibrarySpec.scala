@@ -41,7 +41,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // anything about the developments, which is the shape of failure the comment above describes.
       chain.limit.facts.size + chain.transcendental.facts.size +
       // 2026-09-16, and this sum caught it too: fifteen facts in `Library.of` and not here.
-      chain.concatenation.facts.size
+      chain.concatenation.facts.size +
+      // And the two of 2026-09-16, which this sum caught the same way: each was in `Library.of`
+      // and not here, so the count moved and nothing about the development did.
+      chain.inductive.facts.size + chain.reaching.facts.size
 
     library.entries.size shouldBe expected
 
@@ -315,8 +318,26 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     //
     // Derived by hand from `docs/lemmas.md` and compared against what this suite computed, in that
     // order, which is the check the paragraph above says was skipped three times.
-    library.entries.size shouldBe 454
-    library.names.distinct.size shouldBe 451
+    // 462 with `Inductive` and `Reaching`, eight facts under eight new names: the least fixed
+    // point of a monotone operator with its induction principle, introduction rules and fixpoint
+    // equation, and over them the counted reachability of a relation with its own induction
+    // principle and the potential-function lemma.
+    //
+    // **This one arrived as a conflict offering 454 and 444, and neither was right.** Two branches
+    // moved the same pinned count from the same base, which is the shape this repository has now
+    // paid for three times: where the two write the same number git merges it silently, and where
+    // they write different ones it shows two candidates and closes with the feeling of having done
+    // the work. The operation is addition -- 436 at the shared base, plus eighteen, plus eight --
+    // and picking a side is never it. Derived from the base and the two addends before this file
+    // was opened, and then measured.
+    //
+    // `CLAUDE.md`'s two figures move by six and by five, which is the first delta here where they
+    // move by different amounts in the same change: of the eight, `INDUCTIVE_INDUCT` and all five
+    // `REACH` facts have two or more leading binders, and only the five have two of one type,
+    // because every `REACH` statement binds the relation and its counted sub-relation at
+    // `'a -> 'a -> bool` while `INDUCTIVE_INDUCT` binds an operator and a set, which differ.
+    library.entries.size shouldBe 462
+    library.names.distinct.size shouldBe 459
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

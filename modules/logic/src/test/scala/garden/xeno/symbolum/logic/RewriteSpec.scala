@@ -299,6 +299,26 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
    * thought about once rather than found later.
    */
   private val ReviewedCallSites: Map[String, String] = Map(
+    // The one of 2026-09-16, and the first whose safety rests on a comparison against WRITTEN
+    // statements rather than on termination alone.
+    "Reaching.scala" ->
+      ("eight, and they fall into two arrangements. Six are a matched pair per site: the same rules " +
+        "at the same default limit are walked FORWARD to learn the normal form a proof should be " +
+        "aimed at, then BACKWARD across the same equation to hand the proof back in the shape the " +
+        "machinery produced. A short walk gives the same short answer both times, so nothing is " +
+        "unsound; what it would corrupt is the published statement, which would carry " +
+        "`FST (PAIR y k)` where the caller wrote `y`. That is caught rather than argued: " +
+        "`ReachingSpec` compares all five facts against `Reaching.Statements` as TERMS, so a walk " +
+        "that stopped early fails the comparison. The other two are in the potential lemma, where " +
+        "two independently rewritten sides have to MEET: the induction hypothesis is carried " +
+        "forward and the goal backward, and `eqMp` refuses unless the two land on the same term, " +
+        "so an exhausted limit is a refusal there rather than a weaker theorem. On termination, " +
+        "all seven rule sets strictly reduce or cannot re-fire: the two projections and " +
+        "`0 + n = n` shrink the term; `m + SUC n = SUC (m + n)` and `SUC m + n = SUC (m + n)` move " +
+        "a successor outward and strictly reduce the successors under a sum; `INDUCTIVE op = " +
+        "REACH R A x` fires once per occurrence because its right side holds no `INDUCTIVE`; and " +
+        "the three ground equations taken from assumptions have left sides their own right sides " +
+        "do not contain"),
     // The seven below arrived on 2026-09-15, when the scan was extended to `Rewrite.inTheorem`
     // and named them. Each is a reading of every call in the file, not of one of them.
     "Order.scala" ->

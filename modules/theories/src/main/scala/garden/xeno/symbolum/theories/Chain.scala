@@ -219,8 +219,11 @@ final class Chain private (
    */
   val transcendental: Transcendental,
   /**
-   * Concatenating two words, the three relations that are nothing but that, and [[widest]] since
-   * 2026-09-16.
+   * Concatenating two words, and the three relations that are nothing but that.
+   *
+   * It was [[widest]] for part of 2026-09-16 and is not, because two links went on top of it the
+   * same day. The field is what to read for which one is; this sentence deliberately no longer
+   * names it.
    *
    * Six constants and no axiom, and the position is the one the last four links have taken: it
    * needs [[word]] for the type and [[peano]] for fourteen facts about `num`, both far below, and
@@ -232,7 +235,35 @@ final class Chain private (
    * to be a development of its own because `NUM_MOD` is outside `Word.standard`'s signature, and
    * nothing here is. `Concatenation`'s own docstring carries the argument that decided it.
    */
-  val concatenation: Concatenation
+  val concatenation: Concatenation,
+  /**
+   * The set defined by rules.
+   *
+   * Two constants, `MONOTONE` and `INDUCTIVE`, and no axiom. It is last because the order above
+   * [[magnitude]] is free and it needs none of the links it sits on: nothing in it mentions a
+   * number, a word or a pair, and what it extends is therefore the last extension rather than
+   * anything it depends on, which is the distinction `Rotation.construct`'s comment draws.
+   *
+   * Being in the chain rather than beside it is not free to choose either way. It declares
+   * constants, so a version sitting outside would declare them into a theory nothing else can see,
+   * its facts would reach no library and `docs/lemmas.md` would not list them. That is the defect
+   * `ChainCoverageSpec` exists to make fail rather than be noticed, and it is the same argument the
+   * five developments moved into the chain on 2026-09-12 were moved by.
+   */
+  val inductive: Inductive,
+  /**
+   * Derivations of a relation with their length, and [[widest]] since 2026-09-16.
+   *
+   * The first thing built on [[inductive]] and the reason it was built: `REACH R A x q` says `FST q`
+   * is reachable from `x` spending `SND q` steps of `A`, so the reflexive-transitive closure and the
+   * length of a derivation are one construction rather than two. One constant, no axiom.
+   *
+   * It needs [[inductive]] for the closure, [[product]] for the pair the count rides in and
+   * [[peano]] for the arithmetic its potential-function lemma is stated in. What it extends is the
+   * last theory, which is [[inductive]]'s, and that those coincide here is an accident of ordering
+   * rather than the reason.
+   */
+  val reaching: Reaching
 ) {
 
   /**
@@ -245,18 +276,23 @@ final class Chain private (
    * `NUM_CODE` and `NUM_TERM` at once. A caller stating a goal about
    * any of them wants this rather than a guess about which development owns which constant.
    *
+   * **The name of the last link is not written here any more, and that is the point of the field.**
    * It was `Series` until 2026-09-12, `Word` for a few hours of that day, then `Matrix`, then
-   * [[rotation]], then [[magnitude]], then [[coding]], then [[numbering]], and it is [[language]]
-   * since 2026-09-14, for the reason the
-   * [[peano]] comment still gives: each was then the last extension. The argument has not changed,
-   * only what is last, and this list is five entries long in two days, which is the argument for
-   * not writing the name of the last one anywhere a reader might trust it instead of the field.
-   * What made the move necessary rather than cosmetic is that `docs/lemmas.md` is printed through
+   * [[rotation]], [[magnitude]], [[coding]], [[numbering]], [[language]], [[transcendental]], and
+   * on 2026-09-16 one more: nine entries in five days. The paragraph that used to stand here named
+   * the current one, was corrected twice for it, and had gone stale a third time before this
+   * sentence replaced it, naming `language` while the field read `transcendental`. A prose name for
+   * a thing that moves this often is a defect with a schedule. The rule is what does not move: the
+   * widest signature is whatever link extended the theory last, because a constant declared into a
+   * side branch is unreachable from everything, and this field is the one place to read which that
+   * is.
+   *
+   * What makes the move necessary rather than cosmetic is that `docs/lemmas.md` is printed through
    * this signature: a library carrying `FST_PAIR` and a `widest` that cannot name `FST` would
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = concatenation
+  val widest: Signature = reaching
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -395,11 +431,25 @@ object Chain {
       transcendental <- Transcendental.construct(
         limit, series, peano, coding, induct, successor, naturals, limit.theory, limit.notation)
 
-      // The last link since 2026-09-16. It needs `word` for the type and `peano` for the arithmetic
+      // Landed 2026-09-16 and was the last link for part of that day. It needs `word` for the type and `peano` for the arithmetic
       // of an index, and it extends `transcendental.theory` because that is the chain's end: a
       // constant declared into a side branch is unreachable from everything, which is the sentence
       // `Rotation.construct` carries and the one every link above `magnitude` has been placed by.
       concatenation <- Concatenation.construct(word, peano, transcendental.theory)
+
+      // The only link whose prerequisites are empty: `MONOTONE`
+      // and `INDUCTIVE` are polymorphic and mention nothing this chain built. So what it takes is
+      // the last theory rather than a theory it needs, which is the one case where
+      // `Rotation.construct`'s distinction between the two orders is the whole of the argument.
+      inductive <- Inductive.construct(
+        classical, concatenation.theory, concatenation.notation)
+
+      // The last link, and the first consumer of the one below it. Unlike
+      // `Inductive` its prerequisites are not empty -- it needs the closure, the pair and the
+      // arithmetic -- and they still do not decide where it goes: what it extends is the last
+      // theory, for the reason `Rotation.construct`'s comment gives.
+      reaching <- Reaching.construct(
+        inductive, peano, product, inductive.theory, inductive.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -427,6 +477,8 @@ object Chain {
       deduction,
       limit,
       transcendental,
-      concatenation
+      concatenation,
+      inductive,
+      reaching
     )
 }

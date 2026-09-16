@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (106)
+## The definitions (109)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -167,6 +167,7 @@ axiom mentioning it means.
 | `definition Divides` | Divides = \x:real. \y:real. ?z:real. y = x * z | **NOT READ** |  |  |
 | `definition F` | F = !x:bool. x | **NOT READ** |  |  |
 | `definition FST` | FST = \x:prod('a, 'b). select (\y:'a. ?z:'b. x = PAIR y z) | **NOT READ** |  |  |
+| `definition INDUCTIVE` | INDUCTIVE = \x:('a -> bool) -> 'a -> bool. \y:'a. !z:'a -> bool. (!u:'a. x z u ==> z u) ==> z y | **NOT READ** |  |  |
 | `definition IND_0` | IND_0 = select (\x:ind. (!y:ind. !z:ind. IND_SUC y = IND_SUC z ==> y = z) /\ (!y:ind. ~(IND_SUC y = x))) | **NOT READ** |  |  |
 | `definition IND_SUC` | IND_SUC = select (\x:ind -> ind. ?y:ind. (!z:ind. !u:ind. x z = x u ==> z = u) /\ (!z:ind. ~(x z = y))) | **NOT READ** |  |  |
 | `definition MAT2` | MAT2 = \x:real. \y:real. \z:real. \u:real. PAIR (PAIR x y) (PAIR z u) | **NOT READ** |  |  |
@@ -180,6 +181,7 @@ axiom mentioning it means.
 | `definition MAT_MUL` | MAT_MUL = \x:prod(prod(real, real), prod(real, real)). \y:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x * MAT_E11 y + MAT_E12 x * MAT_E21 y) (MAT_E11 x * MAT_E12 y + MAT_E12 x * MAT_E22 y) (MAT_E21 x * MAT_E11 y + MAT_E22 x * MAT_E21 y) (MAT_E21 x * MAT_E12 y + MAT_E22 x * MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_SMUL` | MAT_SMUL = \x:real. \y:prod(prod(real, real), prod(real, real)). MAT2 (x * MAT_E11 y) (x * MAT_E12 y) (x * MAT_E21 y) (x * MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_TRANSPOSE` | MAT_TRANSPOSE = \x:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x) (MAT_E21 x) (MAT_E12 x) (MAT_E22 x) | **NOT READ** |  |  |
+| `definition MONOTONE` | MONOTONE = \x:('a -> bool) -> 'a -> bool. !y:'a -> bool. !z:'a -> bool. (!u:'a. y u ==> z u) ==> (!u:'a. x y u ==> x z u) | **NOT READ** |  |  |
 | `definition NUM_ADD` | NUM_ADD = \x:num. select (\y:num -> num. y 0 = x /\ (!z:num. y (SUC z) = SUC (y z))) | **NOT READ** |  |  |
 | `definition NUM_BETA` | NUM_BETA = \x:num. \y:num. \z:num. NUM_MOD x (SUC (SUC z * y)) | **NOT READ** |  |  |
 | `definition NUM_BIT0` | NUM_BIT0 = \x:num. x + x | **NOT READ** |  |  |
@@ -228,6 +230,7 @@ axiom mentioning it means.
 | `definition PRE` | PRE = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = y)) | **NOT READ** |  |  |
 | `definition Power` | Power = \x:real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = x * y z)) | **NOT READ** |  |  |
 | `definition Prod` | Prod = \x:num -> real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = y z * x z)) | **NOT READ** |  |  |
+| `definition REACH` | REACH = \x:'a -> 'a -> bool. \y:'a -> 'a -> bool. \z:'a. INDUCTIVE (\u:prod('a, num) -> bool. \v:prod('a, num). v = PAIR z 0 \/ (?w:prod('a, num). u w /\ x (FST w) (FST v) /\ (y (FST w) (FST v) /\ SND v = SUC (SND w) \/ ~(y (FST w) (FST v)) /\ SND v = SND w))) | **NOT READ** |  |  |
 | `definition SND` | SND = \x:prod('a, 'b). select (\y:'b. ?z:'a. x = PAIR z y) | **NOT READ** |  |  |
 | `definition SUC` | SUC = \x:num. mk_num (IND_SUC (dest_num x)) | **NOT READ** |  |  |
 | `definition Sum` | Sum = \x:num -> real. select (\y:num -> real. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x z)) | **NOT READ** |  |  |

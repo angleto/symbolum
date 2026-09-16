@@ -156,7 +156,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // reason is the one the buckets give: eight are about `word` and unreadable to every
     // procedure here, and the two that are readable leave `!p m n. m < n` and `!m n. n <= m`,
     // which are false rather than lemmas somebody forgot to state.
-    propose.weakenings.size shouldBe 299
+    // 306 with the seven of `Inductive` and `Reaching`; `ProposeSpec`'s entry on the same figure
+    // carries the per-lemma derivation and the count it was first wrong by.
+    propose.weakenings.size shouldBe 306
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -217,7 +217,17 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // length laws, the empty word's length, the singleton's entry and `NUM_SUB_SUB` -- and the
     // other ten carry exactly one antecedent each. No lemma here carries two, which is what a
     // development whose statements are guarded by a single bound looks like.
-    proposals.size shouldBe 299
+    // 306 with `Inductive` and `Reaching`. **Seven**, derived before the run from the rule this
+    // file states: the antecedents IN FRONT are peeled, meaning the curried arrows, not the
+    // conjuncts inside one antecedent. One each for the three `INDUCTIVE` facts, none for
+    // `REACH_START` which has no hypothesis, and one each for `REACH_COUNTED`, `REACH_PLAIN`,
+    // `REACH_INDUCT` and `REACH_POTENTIAL`, whose antecedents are conjunctions of three, three, two
+    // and two under a single arrow.
+    //
+    // It was first derived as THIRTEEN by counting those conjuncts, and the entry above about
+    // `MONOTONE_CONVERGES` carrying two says why that is wrong -- it is curried twice. Kept beside
+    // the right figure because the error was in reading the rule, not in adding up.
+    proposals.size shouldBe 306
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -762,7 +772,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // antecedent at all. The negative half holds too: the weakened power's positivity is FALSE at
     // `m = ZERO` and the model can compute it, and yet `decidedFalse` does not move, because a
     // refutation goes THROUGH the address and an unreadable residue never reaches the sampler.
-    open shouldBe 216
+    // 220 with the four of `Inductive` and `Reaching` that land here. Measured, not derived: which
+    // bucket a residue lands in depends on whether a procedure has an address for its shape, which
+    // is not a property of the lemma the hypothesis was dropped from.
+    open shouldBe 220
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -944,7 +957,22 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // weakenings arrived and they split two and eight with nothing left over, which is the
     // arithmetic the note above says is worth nothing until somebody checks the two counts are
     // over the same population. Here they are: both are over the ten this development added.
-    unreadable shouldBe 74
+    // 77 with three of `Inductive`'s, and **the direction was predicted before the run** rather
+    // than read off it. The pin was left at 74 on purpose as the experiment: the eight entries the
+    // line above is about are unreadable for a reason of TYPE, and nothing in these two
+    // developments gives a procedure an address for a claim about `word('a)`, so the count could
+    // hold or rise and could not fall. It rose by three.
+    //
+    // The three are the weakenings of `INDUCTIVE_INDUCT`, `INDUCTIVE_INTRO` and
+    // `INDUCTIVE_FIXPOINT`, and they are unreadable for `NOT_FORALL`'s reason two entries above,
+    // not for `word`'s: a residue about `('a->bool) -> 'a -> bool` is a claim about an operator at
+    // a type variable, which is a claim about nothing in particular. The other four weakenings this
+    // commit adds are `Reaching`'s, and they went to `Open` — `REACH` carries `SND`, `SUC`,
+    // `NUM_ADD` and `NUM_LE`, which the arithmetic can take, so somebody attempted them and did not
+    // settle them. Seven arrived and they split three and four with nothing left over, which is the
+    // check the note above asks for: both counts are over the seven this commit added, and `open`
+    // moving 216 to 220 is the other half of the same seven.
+    unreadable shouldBe 77
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1162,7 +1190,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // arithmetic lemmas are `!p m n. m < n` and `!m n. n <= m`. The five that do not: dropping
     // the bound from `WORD_CONCAT_NTH_LEFT` leaves an equation between two entries, and the
     // residues of the two factor lemmas, the induction and the suffix name no number at all.
-    aboutNumbers.size shouldBe 118
+    // 120 with two of `Reaching`'s. `REACH` carries `SND`, `SUC` and the pair into every statement
+    // about a counted step, and the potential lemma writes `NUM_ADD` and `NUM_LE` outright.
+    aboutNumbers.size shouldBe 120
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

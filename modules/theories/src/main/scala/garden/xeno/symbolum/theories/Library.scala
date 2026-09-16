@@ -284,7 +284,9 @@ object Library {
         // Landed 2026-09-16 and collected in the same change, for the reason the two above give:
         // `Magnitude` and `Coding` were each invisible for a few hours because a development in the
         // chain but not collected here is one `docs/lemmas.md` does not mention.
-        collect("Concatenation", chain.concatenation.facts)
+        collect("Concatenation", chain.concatenation.facts) ++
+        collect("Inductive", chain.inductive.facts) ++
+        collect("Reaching", chain.reaching.facts)
     )
 
   /** A library over developments a caller names itself. */

@@ -240,7 +240,16 @@ and a reader who writes them is told which constant to reach for.
 Four things a reader meets immediately, and the last two are what the change cost rather than what
 it bought:
 
-- **Nothing printed moves for the reals, and 135 of the library's 436 statements move for `num`.**
+- **Nothing printed moves for the reals, and 135 statements move for `num`.** The criterion is
+  the one the measurement used, and it is written down because without it the figure cannot be
+  reproduced: of the statements whose text changed between 7.0.2 and 7.0.3, compared by **name**
+  rather than by line, 135 carried a `:num` binder beforehand. The 136th changed without one and
+  is `le` becoming `real_le`. This sentence read "135 of the library's 436" until 2026-09-16,
+  and the denominator was the library's size on the afternoon it was written: a count of what
+  moved at one past event does not drift, and the size of the library does, so the ratio was
+  true for a day and nothing failed when it stopped being. The card that asked for the work
+  predicted 172 of 427 and no criterion on the population reproduces that pair, so a 172 found
+  anywhere is the prediction rather than a measurement.
   `NUM_DIVISION_UNIQUE` is the one to look at: it was `NUM_ADD (NUM_MUL x y) z = ...` and is
   `x * y + z = x * u + v /\ z < x /\ v < x ==> y = u /\ z = v`, which is the uniqueness of quotient
   and remainder as anybody would write it. `docs/reading-register.md` gained more than
@@ -315,7 +324,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 454 lemmas, 283 have two or more leading quantifiers and **259 of
+caller meant: of the library's 462 lemmas, 289 have two or more leading quantifiers and **264 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -799,6 +808,31 @@ inside this one, and it is the part most likely to be underestimated.
 A list of what is missing is the one kind of list that goes stale silently: every other figure
 here is pinned by a test that fails when it moves, and nothing fails when an item on this one
 gets built.
+
+**The set defined by rules is `Inductive`, and it is `Chain.widest` since 2026-09-16.** One
+definition in three of rewriting theory is given in the shape "the least subset containing X and
+closed under these clauses", and until this landed that shape could not be **written** here. What
+could be done instead was to generate the closure forwards and look, which answers a membership for
+whatever the budget reached and answers **nothing** about a non-membership. `INDUCTIVE f` is the
+intersection of every `f`-closed set rather than an iteration, which is `Natural.NUM_REP`'s trick
+taken away from the one operator it was written for; `docs/adr/0020` is the decision and what it
+rejects is the Kleene iteration, which wants ordinals or a finitarity hypothesis the motivating
+clause does not satisfy. Two constants, no axiom.
+
+The two faces are two facts because they cost different things, and the asymmetry is the whole
+point. `INDUCTIVE_INDUCT` asks **nothing** of `f` — it is the definition unfolded and specialised —
+and it is what proves a non-membership. `INDUCTIVE_INTRO`, the introduction rules of the rule set
+all at once, asks `MONOTONE f`. `INDUCTIVE_FIXPOINT` is the two together and is derived from them.
+`InductiveSpec` runs both halves on the even numbers, and the membership is not decoration: a
+definition whose extension was empty would satisfy every induction principle and every
+non-membership above it, so the one test that has to be a membership is the guard against the whole
+file being vacuous.
+
+**What it does not carry is a monotonicity procedure**, and that is the gap to name rather than
+leave. Every operator written from a rule set in the usual shape — a disjunction of clauses with the
+set argument only positive — is monotone for syntactic reasons, and nothing reads the shape. A
+two-clause operator costs about forty lines by hand, measured in `InductiveSpec` rather than
+estimated.
 
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants

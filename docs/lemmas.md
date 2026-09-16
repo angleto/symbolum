@@ -138,6 +138,12 @@ they have least appetite for working out how it is produced.
   DIVIDES_ZERO             !x:real. Divides x 0
   ZERO_DIVIDES             !x:real. Divides 0 x = (x = 0)
 
+## Inductive
+
+  INDUCTIVE_FIXPOINT       !x:('a -> bool) -> 'a -> bool. MONOTONE x ==> (!y:'a. INDUCTIVE x y = x (INDUCTIVE x) y)
+  INDUCTIVE_INDUCT         !x:('a -> bool) -> 'a -> bool. !y:'a -> bool. (!z:'a. x y z ==> y z) ==> (!z:'a. INDUCTIVE x z ==> y z)
+  INDUCTIVE_INTRO          !x:('a -> bool) -> 'a -> bool. MONOTONE x ==> (!y:'a. x (INDUCTIVE x) y ==> INDUCTIVE x y)
+
 ## Language
 
   NUM_CLOSED_ADD           !x:num. !y:num. NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_CLOSED (NUM_CODE 3 (NUM_PAIR x y))
@@ -497,6 +503,14 @@ they have least appetite for working out how it is produced.
   NUM_STEP_CASES           !x:num. !y:num. !z:num. NUM_STEP x y z = (NUM_PA (NUM_BETA x y z) \/ NUM_LOGIC (NUM_BETA x y z) \/ (?u:num. ?v:num. u < z /\ v < z /\ NUM_BETA x y u = NUM_CODE 7 (NUM_PAIR (NUM_BETA x y v) (NUM_BETA x y z))) \/ (?u:num. ?v:num. u < z /\ NUM_BETA x y z = NUM_CODE 8 (NUM_PAIR v (NUM_BETA x y u))))
   NUM_STEP_FROM_CASES      !x:num. !y:num. !z:num. !u:num. NUM_STEP_FROM x y z u = (NUM_FORM (NUM_BETA y z u) /\ (NUM_STEP y z u \/ NUM_BETA y z u = x))
   NUM_STEP_SHIFT           !x:num. !y:num. !z:num. !u:num. !v:num. !w:num. !x1:num. (!y1:num. y1 <= w ==> NUM_BETA x y (z + y1) = NUM_BETA u v y1) ==> x1 <= w ==> NUM_STEP u v x1 ==> NUM_STEP x y (z + x1)
+
+## Reaching
+
+  REACH_COUNTED            !x:'a -> 'a -> bool. !y:'a -> 'a -> bool. !z:'a. !u:prod('a, num). !v:'a. REACH x y z u /\ x (FST u) v /\ y (FST u) v ==> REACH x y z (PAIR v (SUC (SND u)))
+  REACH_INDUCT             !x:'a -> 'a -> bool. !y:'a -> 'a -> bool. !z:'a. !u:prod('a, num) -> bool. u (PAIR z 0) /\ (!v:prod('a, num). !w:prod('a, num). u v /\ x (FST v) (FST w) /\ (y (FST v) (FST w) /\ SND w = SUC (SND v) \/ ~(y (FST v) (FST w)) /\ SND w = SND v) ==> u w) ==> (!v:prod('a, num). REACH x y z v ==> u v)
+  REACH_PLAIN              !x:'a -> 'a -> bool. !y:'a -> 'a -> bool. !z:'a. !u:prod('a, num). !v:'a. REACH x y z u /\ x (FST u) v /\ ~(y (FST u) v) ==> REACH x y z (PAIR v (SND u))
+  REACH_POTENTIAL          !x:'a -> 'a -> bool. !y:'a -> 'a -> bool. !z:'a -> num. !u:'a. (!v:'a. !w:'a. y v w ==> z v = SUC (z w)) /\ (!v:'a. !w:'a. x v w /\ ~(y v w) ==> z v <= z w) ==> (!v:prod('a, num). REACH x y u v ==> z u <= SND v + z (FST v))
+  REACH_START              !x:'a -> 'a -> bool. !y:'a -> 'a -> bool. !z:'a. REACH x y z (PAIR z 0)
 
 ## Real, assumed
 

@@ -189,7 +189,9 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // Asserted by reading a proposition rather than by reading the construction, because that is
     // the property: the statement is a statement.
     // `Word` for a few hours of 2026-09-12, then `Matrix`, then `Rotation`, `Magnitude` on
-    // 2026-09-13 and `Coding` later the same day. The field names whichever development is the
+    // 2026-09-13, `Coding` later the same day, then `Numbering`, `Language`, `Transcendental`, and
+    // `Inductive` on 2026-09-16 — nine in five days, which is the rate that makes the second
+    // assertion the one worth reading. The field names whichever development is the
     // last extension, and that is the property; which one it is today is not. So the assertion
     // below is written twice: once naming today's, which has to be edited when the order changes,
     // and once as the property itself, which does not and is what a reader should take from the
@@ -202,12 +204,19 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // distinction `Rotation.construct` records and the one that makes this assertion worth having
     // twice, because the obvious place to put a development is beside what it needs, and the
     // obvious place is a side branch where a constant is unreachable from everything.
-    chain.widest shouldBe chain.concatenation
-    chain.widest.theory.constants.keySet shouldBe chain.concatenation.theory.constants.keySet
+    //
+    // `Inductive` on 2026-09-16 is the third of that kind and the limiting case of it: its
+    // prerequisites are not elsewhere, they are EMPTY. `MONOTONE` and `INDUCTIVE` are polymorphic
+    // and mention nothing this chain built, so there is no development it would naturally sit
+    // beside, and the only thing deciding where it goes is that a constant has to be declared into
+    // the last theory to be reachable. The two orders `Rotation.construct` distinguishes are not
+    // merely different here; one of them is empty.
+    chain.widest shouldBe chain.reaching
+    chain.widest.theory.constants.keySet shouldBe chain.reaching.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
-      chain.transcendental
+      chain.transcendental, chain.concatenation, chain.inductive
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

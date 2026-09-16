@@ -229,6 +229,19 @@ object Spellings {
       .operator("cos", 1, "\\cos #1", Multiplicative + 5)
       .operator("sinh", 1, "\\sinh #1", Multiplicative + 5)
       .operator("cosh", 1, "\\cosh #1", Multiplicative + 5)
+      /* ------------------------------------------------ the set defined by rules */
+      // Both at arity ONE though each is written with two arguments, and that is the faithful
+      // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set
+      // applied to a point, so a row at arity two would set membership as a two-place operator and
+      // hide that the first argument alone denotes something. `\mu` is what the literature writes
+      // for a least fixed point, and `mono` is a predicate on the operator, not on a pair.
+      .delimited("INDUCTIVE", 1, "\\mu(#1)")
+      .delimited("MONOTONE", 1, "\\operatorname{mono}(#1)")
+      // Three arguments and not four: `REACH R A x` is the SET of steps reachable from `x`,
+      // and the fourth argument is that set applied to one of them. Same reading as the two
+      // rows above, and the subscripts are where the relation and the counted sub-relation
+      // belong, since a reader tracks the step and not them.
+      .delimited("REACH", 3, "\\operatorname{reach}^{#2}_{#1}(#3)")
       /* ------------------------------------------ what the type definitions left */
       .delimited("IND_0", 0, "\\mathbb{I}_{0}")
       .delimited("IND_SUC", 1, "\\mathrm{ind\\_suc}(#1)")
