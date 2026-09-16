@@ -174,10 +174,25 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    *
    * `NUM_LESS z s t` codes `?z. s + S z = t`, so `z` occurs in the code and is bound by it. The
    * expansion puts that occurrence into the answer and the quantifier's own clause takes it back
-   * out, and the two published clauses about `NUM_LESS` are where that happens. Both consequences
-   * below are **false** of the statement with its conditional removed, which is why they are here
-   * rather than in a comment: nothing an equation says about itself distinguishes a guard that
-   * does work from one carried along.
+   * out, and the published clauses about the four constants that bind are where that happens.
+   * Every consequence below is **false** of the statement with its conditional removed, which is
+   * why they are here rather than in a comment: nothing an equation says about itself
+   * distinguishes a guard that does work from one carried along.
+   *
+   * **The population is the eight clauses whose statement carries a `COND`, and it is all eight.**
+   * Four of the six constants bind an index, so eight of the twelve clauses have a guard and four
+   * do not: `NUM_AND` and `NUM_OR` bind nothing, their four clauses answer with a disjunction or
+   * with a rebuilt code, and there is no conditional in them for a consequence to be about. Those
+   * four are held by the two assertions at the top of this file and by nothing else here, which is
+   * the honest coverage rather than a gap: a test asserting a consequence of a guard that does not
+   * exist would be a test of nothing.
+   *
+   * **What is NOT here, said because a document claimed it was.** The sharpest attack on these
+   * twelve is to state each one with a guard dropped and check the derivation refuses it, and that
+   * cannot be done from a spec: `Language.connectiveClauses` derives the statement published under
+   * a name, so there is no way in to hand it a statement nobody published. That attack was run
+   * outside the tree and is a measurement rather than a guard. These consequences are the in-tree
+   * form of it, one per guarded clause.
    */
   private val witness: FVar = Term.variable("z", numbers)
   private val leftTerm: FVar = Term.variable("s", numbers)
@@ -225,20 +240,48 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
       "NUM_SUBST_FORM z u (NUM_LESS z s t) = NUM_LESS z s t")
   }
 
+  it should "bind its own index, in both of the quantifier's clauses" in {
+    val body: FVar = Term.variable("p", numbers)
+    val replacement: FVar = Term.variable("u", numbers)
+
+    val free = force(
+      Rewrite.inTheorem(
+        atRepeatedIndex(Type.Bool),
+        force(rules.specAll(
+          force(language.fact(Language.ExistsFree)),
+          List(witness, witness, body)))))
+
+    free.hypotheses shouldBe empty
+    free.conclusion shouldBe proposition("NUM_FREE_FORM z (NUM_EXISTS z p) = F")
+
+    val idle = force(
+      Rewrite.inTheorem(
+        atRepeatedIndex(numbers),
+        force(rules.specAll(
+          force(language.fact(Language.ExistsSubstitute)),
+          List(witness, replacement, witness, body)))))
+
+    idle.hypotheses shouldBe empty
+    idle.conclusion shouldBe proposition(
+      "NUM_SUBST_FORM z u (NUM_EXISTS z p) = NUM_EXISTS z p")
+  }
+
   /**
    * The inner conditional of a bounded quantifier is load-bearing, at numbers that show it.
    *
    * `NUM_ALL_BELOW z j t p` reads its bound `t` **under the witness's own quantifier**, so an
    * index equal to `z` is bound there as well. Taking `z` and the index asked about to be `1`,
    * with a bound that is the code of the variable `v1` and nothing else, the clause answers about
-   * `p` alone: the bound contributes nothing although `v1` is the only thing in it. The second
-   * assertion is the other half and is what makes the first a finding rather than a tautology --
-   * `NUM_FREE_TERM` says at the same index that the bound **is** about it.
+   * `p` alone: the bound contributes nothing although `v1` is the only thing in it. The last
+   * assertion is the other half and is what makes the first two a finding rather than a tautology
+   * -- `NUM_FREE_TERM` says at the same index that the bound **is** about it.
    *
-   * Without the inner `COND` the clause would answer `T` here whatever `p` is, which is the
-   * perturbation this pair refuses. `LanguageSpec` cannot state the wrong clause and check it
-   * fails, since a statement that is not published has no proof to inspect; a consequence of the
-   * right one that the wrong one contradicts is the available form of that check.
+   * Without the inner `COND` the clause would answer `T` here whatever `p` is. Both bounded
+   * constants are put to it rather than one, and that is not padding: their two statements have
+   * the same right-hand side, the second was written from the first, and a derivation that agrees
+   * with itself is not evidence that the copy was right. The free indices of `!j. j < t ==> p` and
+   * of `?j. j < t /\ p` really are the same set, and this is where that is asserted instead of
+   * assumed.
    */
   it should "read a bound under the witness that its own comparison binds" in {
     val body: FVar = Term.variable("p", numbers)
@@ -261,16 +304,21 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
         force(Language.conditionalRules(logic, classical, Type.Bool)) ++
           Vector(decidedApart, decidedSame)))
 
-    val instance = force(
-      rules.specAll(
-        force(language.fact(Language.AllBelowFree)),
-        List(one, one, none, bound, body)))
-    val reduced = force(Rewrite.inTheorem(reading, instance))
+    Vector(
+      Language.AllBelowFree -> "NUM_ALL_BELOW",
+      Language.ExistsBelowFree -> "NUM_EXISTS_BELOW"
+    ).foreach { case (name, spelling) =>
+      val reduced = force(
+        Rewrite.inTheorem(
+          reading,
+          force(rules.specAll(force(language.fact(name)), List(one, one, none, bound, body)))))
 
-    reduced.hypotheses shouldBe empty
-    reduced.conclusion shouldBe proposition(
-      "NUM_FREE_FORM 1 (NUM_ALL_BELOW 1 0 (NUM_CODE 0 1) p) = " +
-        "(F \\/ NUM_FREE_FORM 1 p)")
+      withClue(s"$name: ") {
+        reduced.hypotheses shouldBe empty
+        reduced.conclusion shouldBe proposition(
+          s"NUM_FREE_FORM 1 ($spelling 1 0 (NUM_CODE 0 1) p) = (F \\/ NUM_FREE_FORM 1 p)")
+      }
+    }
 
     val aboutTheBound = force(
       Rewrite.inTheorem(
@@ -279,6 +327,61 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
 
     aboutTheBound.conclusion shouldBe proposition(
       "NUM_FREE_TERM 1 (NUM_CODE 0 1) = T")
+  }
+
+  /**
+   * The same conditional from the other side: a substitution for the witness leaves the bound.
+   *
+   * `NUM_ALL_BELOW z j t p` holds its bound under the witness's quantifier, so replacing the
+   * witness reaches the body and not the bound, and the clause says that with a `COND` sitting
+   * **inside** the bound argument rather than around the whole answer. Taking the witness and the
+   * index being replaced to be `1` and the quantified index to be `0`, the answer keeps `t`
+   * untouched and substitutes into `p` alone.
+   *
+   * Without the inner conditional the clause would put `NUM_SUBST_TERM 1 u t` there instead, which
+   * is a different code for every `t` that mentions `1`. This is the assertion that separates the
+   * two, and it is the last of the eight guarded clauses to get one.
+   */
+  it should "leave a bound alone when the witness is what is being replaced" in {
+    val body: FVar = Term.variable("p", numbers)
+    val replacement: FVar = Term.variable("u", numbers)
+    val boundTerm: FVar = Term.variable("t", numbers)
+    val one = term("1")
+    val none = term("0")
+
+    val apart = force(language.successor.distinct(none, one))
+    val guard = force(LogicError.lift(Term.eq(none, one)))
+    val toFalsity = force(
+      LogicError.lift(Kernel.assume(guard)).flatMap(held => rules.notElim(apart, held)))
+    val fromFalsity = force(
+      LogicError.lift(Kernel.assume(logic.falsity)).flatMap(rules.falsityElim(guard, _)))
+    val decidedApart = force(Conv.sym(Kernel.deductAntisym(toFalsity, fromFalsity)))
+    val decidedSame = force(rules.eqTruthIntro(Kernel.refl(one)))
+    val classical = language.numbering.peano.naturals.classical
+    val reading = force(
+      Rewrite.Rule.all(
+        logic,
+        force(Language.conditionalRules(logic, classical, numbers)) ++
+          Vector(decidedApart, decidedSame)))
+
+    Vector(
+      Language.AllBelowSubstitute -> "NUM_ALL_BELOW",
+      Language.ExistsBelowSubstitute -> "NUM_EXISTS_BELOW"
+    ).foreach { case (name, spelling) =>
+      val reduced = force(
+        Rewrite.inTheorem(
+          reading,
+          force(rules.specAll(
+            force(language.fact(name)),
+            List(one, replacement, one, none, boundTerm, body)))))
+
+      withClue(s"$name: ") {
+        reduced.hypotheses shouldBe empty
+        reduced.conclusion shouldBe proposition(
+          s"NUM_SUBST_FORM 1 u ($spelling 1 0 t p) = " +
+            s"$spelling 1 0 t (NUM_SUBST_FORM 1 u p)")
+      }
+    }
   }
 
   /**

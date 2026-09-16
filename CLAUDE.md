@@ -691,9 +691,25 @@ The reduced form is what is published rather than what the rewriter produces, an
 the whole cost. `NUM_LESS z s t` introduces an occurrence of its own witness, so the rewriting
 answers `(NUM_FREE_TERM i s \/ (z = i)) \/ NUM_FREE_TERM i t` where a consumer wants `s` and `t`
 named and nothing else; taking the middle disjunct out is what needs the split, and two units of
-disjunction that nothing in the logic publishes. `LanguageSpec` puts four statements with one guard
-dropped to the same derivation and all four are refused, which is what says the guards are
-load-bearing rather than carried along.
+disjunction that nothing in the logic publishes.
+
+**What says a guard is load-bearing is a consequence of the right clause that the guard-dropped
+one contradicts, and there is one per guarded clause.** Eight of the twelve carry a `COND`, which
+is the four binding constants times two families, and `LanguageSpec` names all eight: a quantifier
+binds its own index, a comparison leaves nothing free at its witness and replaces nothing there,
+a bounded quantifier reads its bound under that same witness, and a substitution for the witness
+leaves the bound alone. The other four are `NUM_AND`'s and `NUM_OR`'s, which bind nothing and have
+no conditional for a consequence to be about; they are held by the two assertions that run over
+every published statement, and that is the whole of their coverage.
+
+**The sharper attack is not in the tree and this file said it was, from the commit that added
+it.** Stating each clause with a guard dropped and checking the derivation refuses it is the
+direct test, and a spec cannot run it: `connectiveClauses` derives the statement published under a
+name, so nothing can hand it a statement nobody published. It was run outside the tree on
+2026-09-16, one guard-dropped statement per guarded clause and eight refusals, and it is a
+measurement with a date rather than a guard. The
+sentence that claimed `LanguageSpec` did it was contradicted by `LanguageSpec`'s own docstring on
+the day both were written.
 
 **`NUM_CLOSED t` is what the substitution's blindness to capture costs, written down.** **Two** of
 the eight schemes carry it, specialisation once and replacement twice; this sentence said three
