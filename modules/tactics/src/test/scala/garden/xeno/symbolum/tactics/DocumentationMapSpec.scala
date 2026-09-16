@@ -241,6 +241,143 @@ class DocumentationMapSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  /* ------------------------------------------------------- the decision records */
+
+  /** A record's own status line, `- **Status:** ...`, which is where it says what it is. */
+  private val StatusLine = """(?m)^- \*\*Status:\*\* *(.+?) *$""".r
+
+  /** A row of the index: the number, the file it links to, and the status column. */
+  private val IndexRow = """(?m)^\| \[(\d{4})\]\(([^)]+)\) \| [^|]* \| *(.+?) *\|$""".r
+
+  /** The template, which carries the form without being a decision. */
+  private val Template = "0000-template.md"
+
+  /**
+   * The state a status text declares, which is the first of the three words it uses.
+   *
+   * The whole text is **not** what agrees between a record and the index, and that is a decision
+   * rather than a weakening. The index carries back-references the records do not and must not:
+   * `extended by 0016`, `settles an open question of 0016`, `spends 0014`. Writing those into the
+   * records would mean editing a record after the fact, which the index's own opening paragraph
+   * forbids in as many words, and asserting the texts verbatim would force exactly that on six of
+   * them. What has to agree is the state, because a record reading `superseded` under an index
+   * reading `accepted` is the failure this is for, and that one is caught here.
+   */
+  private def stateOf(text: String): Option[String] =
+    Vector("proposed", "accepted", "superseded")
+      .flatMap(word => text.toLowerCase.indexOf(word) match {
+        case -1 => None
+        case at => Some((at, word))
+      })
+      .minByOption(_._1)
+      .map(_._2)
+
+  private def records: Vector[Path] =
+    Files
+      .list(Paths.get("docs/adr"))
+      .iterator
+      .asScala
+      .toVector
+      .filter(path => path.getFileName.toString.matches("""0\d{3}-.*\.md"""))
+      .sortBy(_.getFileName.toString)
+
+  /**
+   * Every record says what state it is in, and the index says the same thing about it.
+   *
+   * This convention was held by nineteen documents and by nothing else until 2026-09-16, and the
+   * first time it lost one was the document written the day before the guard: `0019` carried its
+   * date in prose and no status at all, while the index asserted `accepted, revises 0008` about
+   * it. A fact in two places, one of them empty.
+   *
+   * **Both directions, because a one-directional check passes on the stale half.** A record with no
+   * row is a decision nobody scanning the index can see; a row naming a file that is not there is
+   * a link that resolves to nothing. Neither is caught by asking only the other question.
+   *
+   * **What makes it vacuous, and why the counts are in the clue rather than in the difference.** A
+   * scan that reads twenty-two documents and a scan that reads zero both report "no record is
+   * missing its status". So the number read is asserted against a floor and printed beside the
+   * outcome. The floor is what the directory held on 2026-09-16 and can only rise; a rename of the
+   * files or of the index's row shape takes it red rather than green, which is the failure that
+   * was available to be got wrong here. It was got wrong once already, in the card that asked for
+   * this: a pattern anchored at `^\*\*Status:\*\*` counted zero of twenty-one, because the records
+   * write the line as a list item, and zero reads as a larger defect rather than as a wrong regex.
+   */
+  "Every decision record" should "say what state it is in, and agree with the index about it" in {
+    val index = read("docs/adr/README.md")
+    val rows = IndexRow
+      .findAllMatchIn(index)
+      .map(found => (found.group(1), (found.group(2), found.group(3))))
+      .toMap
+    val found = records
+
+    withClue(
+      s"read ${found.size} record(s) under docs/adr and ${rows.size} row(s) of its index; " +
+        "a scan that reads none reports no defect, so these are the floor: "
+    ) {
+      found.size should be >= 22
+      rows.size should be >= 21
+    }
+
+    val statuses = found.map(path => path.getFileName.toString -> StatusLine
+      .findFirstMatchIn(Files.readString(path))
+      .map(_.group(1))).toMap
+
+    val silent = statuses.collect { case (name, None) => name }.toVector.sorted
+    withClue(
+      s"${silent.size} of ${found.size} record(s) carry no `- **Status:**` line: " +
+        s"${silent.mkString(", ")}. The line is where this family of records says whether a " +
+        "decision is proposed or taken, and the index is not that place.\n"
+    ) {
+      silent shouldBe empty
+    }
+
+    // The template is in the population above and out of the two below, and the split is the whole
+    // reason it is named. It has to carry the line, because it is what the line is copied from and
+    // a template that lost it would propagate the loss to every record written after. It has no
+    // row and no state, because it is not a decision: what it carries is the menu.
+    val menu = statuses(Template).getOrElse("")
+    withClue(s"`$Template` no longer offers the three states to choose from: $menu\n") {
+      Vector("proposed", "accepted", "superseded").foreach(word => menu should include(word))
+    }
+
+    val decisions = found.map(_.getFileName.toString).filterNot(_ == Template)
+
+    val unlisted = decisions.filterNot(name => rows.contains(name.take(4))).sorted
+    withClue(
+      s"${unlisted.size} record(s) the index does not list: ${unlisted.mkString(", ")}. " +
+        "A decision the index omits is invisible to a reader who scans it.\n"
+    ) {
+      unlisted shouldBe empty
+    }
+
+    val dangling = rows.collect {
+      case (number, (target, _)) if !Files.exists(Paths.get("docs/adr").resolve(target)) =>
+        s"$number -> $target"
+    }.toVector.sorted
+    withClue(s"${dangling.size} index row(s) naming a file that is not there: $dangling\n") {
+      dangling shouldBe empty
+    }
+
+    val disagreeing = decisions.flatMap { name =>
+      val carried = statuses(name).flatMap(stateOf)
+      val listed = rows.get(name.take(4)).map(_._2).flatMap(stateOf)
+      if (carried == listed) None
+      else Some(s"$name carries ${carried.getOrElse("nothing")} and the index says " +
+        s"${listed.getOrElse("nothing")}")
+    }.sorted
+
+    // The one this found that the cards asking for it did not: `0004`'s row said `revised by 0007`
+    // and named no state at all, while the record says `accepted, revised by 0007`. An index that
+    // annotates a supersession and forgets to say the decision is still live understates it in the
+    // direction a reader acts on.
+    withClue(
+      s"${disagreeing.size} of ${decisions.size} record(s) disagree with the index about their " +
+        s"state: ${disagreeing.mkString("; ")}\n"
+    ) {
+      disagreeing shouldBe empty
+    }
+  }
+
   /** The turnstile, which is the one piece of notation no document defined until 2026-09-16. */
   it should "explain the turnstile, which is what a sequent is written with" in {
     val notation = read("docs/notation.md")

@@ -1,7 +1,10 @@
 # 0019. A declared constant still has no origin, and here is what that costs
 
-Date: 2026-09-16. Revises `docs/adr/0008`, which decided the identity of a **defined** constant and
-deferred the identity of a **declared** one while reading as though it had settled both.
+- **Status:** accepted, revises `docs/adr/0008`
+- **Date:** 2026-09-16
+
+Revises `docs/adr/0008`, which decided the identity of a **defined** constant and deferred the
+identity of a **declared** one while reading as though it had settled both.
 
 ## Context
 

@@ -26,7 +26,7 @@ the rejected option attractive, and they will.
 | [0001](0001-higher-order-logic-not-first-order.md) | Higher-order logic, not first-order | accepted |
 | [0002](0002-locally-nameless-binders.md) | Locally nameless representation for binders | accepted |
 | [0003](0003-trust-boundary-is-the-module-graph.md) | The trust boundary is the module graph | accepted |
-| [0004](0004-reals-axiomatised-not-constructed.md) | The reals are axiomatised, not constructed | revised by 0007 |
+| [0004](0004-reals-axiomatised-not-constructed.md) | The reals are axiomatised, not constructed | accepted, revised by 0007 |
 | [0005](0005-a-model-is-untrusted-and-answers-only-at-a-point.md) | A model is untrusted, and answers only at a point | accepted |
 | [0006](0006-a-type-is-defined-by-a-bijection-with-a-subset.md) | A type is defined by a bijection with a subset of an existing one | accepted |
 | [0007](0007-the-reals-are-constructed.md) | The reals are constructed, and the foundation gains the classical axioms | accepted, extended by 0016 |
