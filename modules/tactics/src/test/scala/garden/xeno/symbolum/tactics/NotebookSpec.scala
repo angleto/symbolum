@@ -44,6 +44,15 @@ import org.scalatest.matchers.should.Matchers
  * the two meet at a consequence: a page that stopped queueing would start collecting refusals
  * where it used to reorder the transcript quietly.
  *
+ * **Recovery after a refusal is the same split and the uncovered half is the larger one.** What is
+ * asserted below is that the server serves a writer the moment it names the cells it was handed,
+ * which is what makes recovery possible at all. Whether the page does name them is `notebook.js`'s
+ * epoch, and it was a flag that never came back down until 2026-09-16: measured in a browser that
+ * day, a conflict rendered correctly and the two commands written after it never reached the
+ * server, while the box emptied as though they had. No test in this repository went red for that,
+ * and none would. The measurement is a reading with a date, and what would turn it into a guard is
+ * something that runs the page's JavaScript, which nothing here does.
+ *
  * == The four ordering assertions were watched failing, which is the only thing that says they run ==
  *
  * A guard seen only passing is untested, and these were written after the defect rather than
@@ -360,6 +369,39 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
       // The cells as they stand, which is the reason this answer has a body at all.
       answer.body should include("""class="proved"""")
       answer.body should include("P_HOLDS")
+    }
+  }
+
+  it should "be served the moment it names the cells the refusal handed it" in {
+    // **Recovery, which is what the refusal above is for and what nothing asserted until
+    // 2026-09-16.** A refusal nothing can be written after is not a refusal, it is a session that
+    // ended, and the page's message has always said to carry on from the cells it was handed. This
+    // is the server's half of that promise: the same command, refused and then served, with
+    // nothing between the two but the count read back off the body of the refusal.
+    //
+    // Read back rather than written down, because that is the loop the page runs: it renders the
+    // body it was handed, and its next request carries the number of `.cell` elements in what it
+    // rendered. So a change that made the rendered count and the counted transcript disagree fails
+    // here, where `after = 2` written as a literal would pass over it. The two are asserted equal
+    // beside it, so what the follow-up rests on is an agreement between two measurements rather
+    // than one figure used twice.
+    //
+    // **Watched failing on 2026-09-16**, which is the only thing that says it runs: `advance`'s
+    // refusal branch was made to hand back the cells of the transcript minus its last entry, and
+    // this went red at the count, `1 was not equal to 2`. The refusal above went red with it, and
+    // that is one property covered from two sides rather than a duplicate: that one asserts the
+    // body holds the cells, this one asserts it holds all of them.
+    withServer(fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p"))) { (base, held) =>
+      val refused = postAfter(base, "/run", "declare q : bool", after = 1)
+      refused.statusCode shouldBe Notebook.Conflict
+
+      val handed = """class="cell"""".r.findAllIn(refused.body).size
+      handed shouldBe held.get.entries.size
+
+      val served = postAfter(base, "/run", "declare q : bool", after = handed)
+      served.statusCode shouldBe 200
+      held.get.entries should have size 3
+      held.get.commands.map(Session.Command.write) should contain("declare q : bool")
     }
   }
 

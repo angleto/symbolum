@@ -87,8 +87,15 @@ in `README.md` and `docs/proving.md`; if it fails, the document is wrong, not th
 ### Coverage
 
 ```bash
-sbt coverage test coverageReport
+sbt clean coverage test coverageReport
 ```
+
+`clean` is not optional and the gate will not tell you. The report is built from what the
+instrumented compiler saw, so on an incremental build it covers only the files that were
+recompiled: run twice a commit apart on 2026-09-13, the second report held two files, `theories`
+reading 172 statements at 100.00% against 22663 at 97.56%, and it **passed**, because 100 is above
+the floor. Read the statement count beside the rate, and run it after `clean` or in a worktree that
+has never been built. `build.sbt` says why there cannot easily be a check for this.
 
 Each module has a statement floor in `build.sbt`, set to the value measured when it was last
 raised, and the build fails below it. The floor only rises: when a change raises the measurement,

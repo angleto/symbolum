@@ -163,6 +163,95 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     read("docs/evaluation.md") should not include "no choice point anywhere"
   }
 
+  /**
+   * The same row, on the other question it answers: **which** searches, rather than what they are.
+   *
+   * The row carried a count of them until 2026-09-16 and the count was a fact written twice. It
+   * opened *"Two"* from the day it was written, while naming three of them in the same cell, and
+   * nothing anywhere went red: `docs/evaluation.md` and the front page had both been read for the
+   * sentence about backtracking, which the test above pins, and neither reader recounted the
+   * paragraph they were standing in. Two further copies of the same number were in the prose, as
+   * the ordinals introducing *"the second"* and *"the third"*, and a fourth search would have made
+   * all three stale at once while each of them read as English rather than as a figure.
+   *
+   * The repair is the third of the three this repository uses for a fact written twice, and it is
+   * the one its own `Generated` docstring says is met most often and chosen least: the number is
+   * **deleted** rather than generated or watched, because the paragraph beneath it is the
+   * enumeration and the argument never needed a count on top of one. Generating it was not
+   * available anyway and the reason is mechanical rather than a preference: the row is a cell of a
+   * GitHub-flavoured markdown table, a generated region is delimited by an HTML comment on a line
+   * of its own, and such a line ends the table.
+   *
+   * So what is left to go stale is the enumeration, and this is what watches it. Both directions,
+   * because a guard that only caught the missing one would pass forever on a row still describing a
+   * search that has been deleted.
+   *
+   * **What makes it non-vacuous**, which is the question `RestsOnSpec` asks of a guard like this:
+   * the population is `Prove.searches`, taken from a prover that was built rather than described,
+   * so a configuration reaching no search at all would make the first assertion trivially true.
+   * The second assertion below is the one that refuses that: the standard chain's prover reaches
+   * every search there is, and if it ever reached fewer, this stops rather than quietly checking a
+   * shorter list.
+   *
+   * **What it does not cover.** It reads the row for the name and not for the sentence beside it:
+   * a paragraph that names `Chaining` and then describes something else passes here. What that
+   * paragraph says about each one is read by a person, and the test above is what covers the one
+   * claim in it that a machine can exercise.
+   */
+  it should "name every search the prover reaches, and none it does not, in both documents that list them" in {
+    val prover = force(Prove.construct(Chain.standard))
+
+    // Two cells and not one, and the second is the reason this test is worth more than a repair of
+    // the front page would have been. `docs/evaluation.md` opened the same list with *"there are
+    // three of them now"*, so the figure the README kept by hand was kept by hand twice, in two
+    // files, with nothing comparing them to each other or to the code. It was found by grepping for
+    // the claim rather than for the number, which is the only way a count spelled as a word gets
+    // found at all.
+    val cells = Vector(
+      ("README.md", "| Automated proof search of any kind |"),
+      ("docs/evaluation.md", "| CASC, SMT-COMP (LRA, NRA) |")
+    ).map { case (document, opening) =>
+      (document, read(document).linesIterator
+        .find(_.startsWith(opening))
+        .getOrElse(fail(s"$document no longer holds the row beginning `$opening`")))
+    }
+
+    cells.foreach { case (document, row) =>
+      // Over the whole closed set rather than over what the prover happens to hold, so that a
+      // search dropped from `Prove` leaves the row describing it and fails here.
+      Prove.Search.values.foreach { search =>
+        val named = row.contains(s"`${search.spelling}`")
+        val reached = prover.searches.contains(search)
+        withClue(
+          if (reached) s"`${search.spelling}` is a search the standard prover reaches and $document does not name it: "
+          else s"$document names `${search.spelling}` and the standard prover does not reach it: "
+        ) {
+          named shouldBe reached
+        }
+      }
+    }
+
+    // And the guard against the guard: the assertions above are about a prover, and a prover with
+    // no classical extension and no library reaches `Minimal` and nothing else, so a mistake in
+    // `Prove.construct` would leave every other name unchecked in both documents and every
+    // assertion above green.
+    prover.searches should contain theSameElementsAs Prove.Search.values.toVector
+
+    // The counts are gone rather than corrected, in every form they took: the front page's opening
+    // numeral, the two ordinals that introduced the searches after the first, and the guide's own
+    // sentence. Written as the strings the documents held, so that rewriting a paragraph from
+    // memory puts one back and this says so.
+    val (readme, evaluation) = (cells(0)._2, cells(1)._2)
+    readme should not include "**Three, and what each of them is not is the point.**"
+    readme should not include "is the second:"
+    readme should not include "The third is"
+    evaluation should not include "there are three of them now"
+    evaluation should not include "None of the three"
+
+    info(s"${prover.searches.size} searches named in ${cells.size} documents: " +
+      prover.searches.map(_.spelling).mkString(", "))
+  }
+
   "The README solving examples" should "produce the stated roots" in {
     import garden.xeno.symbolum.Dsl.*
 
@@ -796,14 +885,55 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // before touching the notebook, and three things passed over it without seeing it: a full suite
     // of 2271, a verification of the card that added the command, and a session that rewrote the
     // very next paragraph of that file to repair a *different* false sentence about `derive`. That
-    // is where this test comes from rather than a worry about the future: prose with no figure in
-    // it has nothing watching it, and the three specs that open `CLAUDE.md` each look for a number.
+    // is where this test comes from rather than a worry about the future: what watches a sentence
+    // is something in the tree it gets compared against, and until this test every reading of
+    // `CLAUDE.md` here compared a number. This one compares a list, so the shape that had nothing
+    // watching it was not "prose without a figure" but prose no test had an anchor in.
     //
     // The shape is the one the test below uses on the kernel's directory, pointed at an enumeration
     // instead: a hand-kept list compared with a live one by equality in both directions, so a
     // command added without the document moving fails here, and a command removed from the code
     // while the document still advertises it fails here too. The second direction is not
     // decoration — a cell a reader is told about and cannot type is the worse of the two.
+    //
+    // **And this guard does not extend to the same figure written inside a Scala source, which is
+    // where the fourth one was.** `Session.scala` said "naming the seven" eight lines under the
+    // enumeration that holds eight; the repair deleted the count, and the question asked before
+    // closing that card was whether it could have been watched instead. Measured on 2026-09-16,
+    // and the answer is no for three different reasons, of which only the last is interesting:
+    //
+    //   - **A census is the wrong order of magnitude.** The shape `the <cardinal>` with the
+    //     pronoun `the one` excluded stands at 2548 sites in 283 Scala files, 136 of them in
+    //     `modules/tactics/src/main`. This comment is one of the 2548 and the number moved while
+    //     it was being written, which is the honest form of the argument: it is an order of
+    //     magnitude and not a figure anything can pin. A hand-kept list against a live one works
+    //     one paragraph above because the hand-kept side is eight entries.
+    //   - **Reading the number instead of listing it needs to know what it counts, and English
+    //     does not say.** The narrowest rule that fires on the defect — a cardinal in a comment
+    //     sentence that also names a command, a keyword or a cell — finds four sentences in
+    //     `Session.scala` and three of them are innocent: a forty-cell session, `cell 9` citing
+    //     `cell 7`, and the two theories `SoundnessAttackSpec` needs. A gate that is wrong three
+    //     times in four is one somebody argues with rather than fixes. And it still finds four
+    //     after the repair, because the sentence that was the defect is now the sentence that
+    //     records it and matches just as well, which is the next point.
+    //   - **A ban fires on the record of the repair, which is the one that settles it.** This
+    //     repository writes the defect's history beside the code, and that history quotes the
+    //     wrong number: the docstring on `Session.Command` carries "six" and "eight" because it
+    //     is the repair of the third sentence, and the repair of the fourth carries "seven" for
+    //     the same reason. Any rule that recounts or forbids cardinals in comments goes red on
+    //     the fix, so the discipline that catches these and the guard that would watch them are
+    //     in each other's way. Neither repair is cited by line above, because a line number in a
+    //     comment is this same defect one level up.
+    //
+    // What can be watched is a sentence with an anchor, which is what the regular expression above
+    // is, and the price is that the wording is frozen: a rewrite that loses the anchor also
+    // disarms the guard, which is why the `getOrElse(fail(...))` and the emptiness clue above are
+    // load-bearing rather than defensive. The other route is the one both repairs in that file
+    // took, to delete the number and cite the enumeration with a scaladoc link — and **that form
+    // is not checked here today**: scaladoc reports an unresolvable link and nothing fails on it.
+    // Measured the same day, `sbt tactics/doc` exits 0 while naming six of them in
+    // `modules/tactics/src/main`; `-Xfatal-warnings` is already set and does not reach them, and
+    // neither does `-Wconf:msg=No DRI found:e`. Arming that is a gate of its own and has a card.
     val document = read("CLAUDE.md")
     val sentence = """of cells over one `Session`:(.*?)\. The chain is built""".r
       .findFirstMatchIn(document.replace("\n", " "))

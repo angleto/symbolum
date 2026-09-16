@@ -75,6 +75,16 @@ that is deliberate: it is what lets it stay fast and heuristic.
   it could not be run. Three of those four carried `-J-Xmx2g`. It wants a quiet machine and about
   ten minutes, and it is about four times the wall clock of `sbt test` at a comparable resident set,
   so what it spends is exposure rather than size.
+
+  **And since 2026-09-16 it does not only run here: `.github/workflows/ci.yml` runs the same command
+  on every push to a release line**, which is where the memory is and where a checkout has never been
+  built, so the `clean` hazard two paragraphs up cannot arise there at all. The first run was 24
+  minutes and every floor held. What it settled, and it is narrower than "the figures travel": the
+  five modules whose `src/main` and `src/test` had not moved since the laptop's last full run read
+  the **same statement count and the same rate to the hundredth** on Linux, x86 and Temurin 17
+  against macOS, Apple silicon and Temurin 23. `build.sbt` carries that table, the one module that
+  looks like a platform difference and is not, and the tightest gate in the build, which is now
+  `scan` at one statement of slack rather than `sat`.
 - **A console with the algebra loaded:** `sbt core/console`
 - **Asking the prover one thing, without writing Scala:**
   `sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole
@@ -126,8 +136,17 @@ that is deliberate: it is what lets it stay fast and heuristic.
   which is how a development is replayed, and a submission names the transcript it was written
   against, so anything else driving the port is refused rather than interleaved into it. Both
   landed on 2026-09-16: until then the page fired one request per line and waited for none of them,
-  so the order of a transcript was the network's rather than the writer's. It is listening on
-  loopback with no authentication: a single-user tool, not a service.
+  so the order of a transcript was the network's rather than the writer's.
+
+  **A refusal is somewhere to carry on from rather than the end of the load**, which is what the
+  message on it has always said and what the page did not do for the hours after the refusal
+  landed: a flag that stopped the sending never came back down, so every command written next was
+  swallowed and the box emptied as though it had gone. What the page holds now is the transcript it
+  was written against, as a number that moves when the server refuses one, so what was queued
+  behind the refusal is dropped and what is written after the new cells are rendered is sent.
+  Nothing that did not land disappears: the message names each one, and the box gets it back when
+  what it would get is a single line. It is listening on loopback with no authentication: a
+  single-user tool, not a service.
 - **Regenerating `docs/lemmas.md`:** `sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
   replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
   compares the file against the code and fails naming this command, which is the point: the document
