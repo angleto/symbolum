@@ -256,7 +256,9 @@ type. Two consequences, and they are the reason for the choice:
 
   **Not repaired here, and the reason is that it is the same question as the bullet above.** Making
   the invariant true in general means a theorem knowing the theory it came from, which is the
-  decision `docs/adr/0008` deferred for declared constants. Repairing half of it at two rules would
+  decision `docs/adr/0008` deferred for declared constants and `docs/adr/0019` has since measured
+  and settled: the rule stands, because both ways out cost more than when they were last weighed,
+  and the residual risk is named rather than removed. Repairing half of it at two rules would
   cost two of the ten signatures and leave `Term.variable` open, which is a worse arrangement than
   the one written down: a guard that looks complete and is not.
 

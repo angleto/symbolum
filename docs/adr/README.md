@@ -30,7 +30,7 @@ the rejected option attractive, and they will.
 | [0005](0005-a-model-is-untrusted-and-answers-only-at-a-point.md) | A model is untrusted, and answers only at a point | accepted |
 | [0006](0006-a-type-is-defined-by-a-bijection-with-a-subset.md) | A type is defined by a bijection with a subset of an existing one | accepted |
 | [0007](0007-the-reals-are-constructed.md) | The reals are constructed, and the foundation gains the classical axioms | accepted, extended by 0016 |
-| [0008](0008-a-constant-carries-what-defined-it.md) | A constant carries the term that defined it | accepted |
+| [0008](0008-a-constant-carries-what-defined-it.md) | A constant carries the term that defined it | accepted for a DEFINED constant, revised by 0019 for a declared one |
 | [0009](0009-the-classical-axioms-and-a-reason-that-was-wrong.md) | The classical axioms, and a reason that was wrong | accepted |
 | [0010](0010-no-computing-rule-in-the-kernel.md) | No computing rule in the kernel | accepted |
 | [0011](0011-the-numeric-screen-has-two-stages.md) | The numeric screen has two stages, and the second is arbitrary precision | accepted |
@@ -41,3 +41,4 @@ the rejected option attractive, and they will.
 | [0016](0016-what-the-construction-needs-in-front-of-it.md) | What the construction of the reals needs in front of it, and what does not wait for it | accepted, extends 0007, one open question settled by 0018 |
 | [0017](0017-the-transcendental-functions-are-their-power-series.md) | The transcendental functions are their power series | accepted |
 | [0018](0018-an-operator-symbol-stands-for-more-than-one-constant.md) | An operator symbol stands for more than one constant, and the elaborator picks which | accepted, settles an open question of 0016 |
+| [0019](0019-a-declared-constant-still-has-no-origin-and-here-is-what-that-costs.md) | A declared constant still has no origin, and here is what that costs | accepted, revises 0008 |

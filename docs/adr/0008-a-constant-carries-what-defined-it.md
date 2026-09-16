@@ -1,7 +1,14 @@
 # 0008. A constant carries the term that defined it
 
-- **Status:** accepted
+- **Status:** accepted for a **defined** constant; **revised by `0019`** for a declared one
 - **Date:** 2026-09-10
+
+**What this record settles and what it does not.** The identity below is the identity of a constant
+that a definition gives a body to. A constant that is **declared and then axiomatised** — which is
+every primitive of the reals — gets `None` here, and two theories that declare one name and
+axiomatise it in opposite directions produce constants that compare equal. This record reads as
+though it had closed that; it had not, and `docs/adr/0019` is where the measured cost of each way
+out is written down.
 
 ## Context
 
