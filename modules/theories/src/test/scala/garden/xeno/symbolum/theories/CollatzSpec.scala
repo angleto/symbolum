@@ -189,12 +189,12 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     // `S2_MARKED_CONCAT` carries `0 < WORD_LENGTH v` and the condition is not decoration: at the
     // empty tail the left-hand side is `S2_MARKED u` and the right-hand side asks for a last
     // letter of a word with none. This derives the half that makes the equation false there.
-    val empty = system.theory
+    val emptyWord = system.theory
       .constant(Concatenation.Empty, TyApp(Word.TypeName, List(TyApp(Natural.TypeName, Nil))))
       .fold(error => fail(error.message), identity)
 
     val definition = system.definition(Collatz.Marked).fold(error => fail(error.message), identity)
-    val opened = Conv.unfold(definition, List(empty)).fold(error => fail(error.message), identity)
+    val opened = Conv.unfold(definition, List(emptyWord)).fold(error => fail(error.message), identity)
     val claim = Term.destEq(opened.conclusion).map(_._1).getOrElse(fail("not an equation"))
 
     val refused = for {
@@ -223,30 +223,62 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     system.logic.destNot(theorem.conclusion) shouldBe defined
   }
 
-  "What the facts cost" should "be nothing for the two that are about the syntax, and the naturals' two for everything that reads a length" in {
-    // The split is the interesting half. The first two are equations between words and closed
-    // under the definition, so they reach no foundational axiom at all. Everything else reasons
-    // about LENGTHS, which are naturals, so it pays exactly what anything about `num` pays here
-    // and not more: `SELECT` and `INFINITY`, and no third.
+  "What the facts cost" should "split three ways, and the third way was a prediction this test refuted" in {
+    // The two that are equations between words and closed under the definition reach no
+    // foundational axiom at all.
     Derivation.axiomsOf(fact(Collatz.CountedIsRule)) shouldBe empty
     Derivation.axiomsOf(fact(Collatz.Inhabited)) shouldBe empty
 
-    val reading = List(
+    // Everything that reasons about LENGTHS or POSITIONS pays what anything about `num` pays
+    // here and no more: `SELECT` and `INFINITY`.
+    val aboutNumbers = List(
       Collatz.Refused,
       Collatz.TailFreeConcat,
       Collatz.MarkedConcat,
       Collatz.RuleNotEmpty,
       Collatz.MarkedStep,
       Collatz.TailFreeStep,
-      Collatz.MarkedClosed,
-      Collatz.MarkedInhabited,
-      Collatz.StepInhabited
+      Collatz.MarkedInhabited
     )
 
-    for (name <- reading) {
+    for (name <- aboutNumbers) {
       val rests = Derivation.axiomsOf(fact(name))
       withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
         rests.size shouldBe 2
+      }
+    }
+
+    // **And two pay a third, which is `ETA_AX`, and this file predicted two for them.** The
+    // prediction was that "everything that reads a length costs two"; the run said three for
+    // these, and the probe that found out why is worth the two lines it takes to record.
+    //
+    // It is not something the closure does. `WORD_CONCAT_EMPTY_RIGHT` and
+    // `WORD_LENGTH_ZERO` **each cost three by themselves**, eta among them, because both are
+    // `WORD_EXTENSIONALITY` at a word rebuilt from `WORD_EMPTY` and the extensionality of a
+    // defined type goes through its abstraction. Measured, not reasoned: `NUM_CASES` costs
+    // zero, `NUM_ZERO_LT_SUC` costs two, and `WORD_STEP`'s defining equation costs zero, so
+    // none of those is where it enters.
+    //
+    // So the line is not lengths against words. It is whether a proof has to turn a word back
+    // into `WORD_EMPTY`: the closure's empty-tail branch does, the step witness does through
+    // `WORD_CONCAT_EMPTY_LEFT`, and nothing else here does.
+    val throughTheEmptyWord = List(Collatz.MarkedClosed, Collatz.StepInhabited)
+
+    for (name <- throughTheEmptyWord) {
+      val rests = Derivation.axiomsOf(fact(name))
+      withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
+        rests.size shouldBe 3
+      }
+    }
+
+    // The guard against that third being a fact about this file rather than about the two
+    // lemmas: they carry it before anything here touches them.
+    for (name <- List(Concatenation.EmptyRight, Concatenation.LengthZero)) {
+      val rests = chain.concatenation
+        .fact(name)
+        .fold(error => fail(error.message), theorem => Derivation.axiomsOf(theorem))
+      withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
+        rests.size shouldBe 3
       }
     }
   }

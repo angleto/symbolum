@@ -162,6 +162,18 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Coding.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Coefficient.scala", "reals.show(rule.lhs)") ->
       (Verdict.Crossing, "a rewrite rule's left side, in the raiser's notation and not the reader's"),
+    ("Collatz.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "MarkedClosed") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "StepInhabited") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "entry.label") ->
+      (Verdict.Name, "a rule's name in the source that owns it, R1 or A3 or B2"),
+    ("Collatz.scala", "Rules.size") -> (Verdict.Number, "how many rules the table holds"),
+    ("Collatz.scala", "position") -> (Verdict.Number, "which letter of a written-out word"),
+    ("Collatz.scala", "lower") -> (Verdict.Number, "the smaller of two positions being compared"),
+    ("Collatz.scala", "size") -> (Verdict.Number, "how many letters the word has"),
+    ("Collatz.scala", "letters.size") -> (Verdict.Number, "how many letters the word has"),
+    ("Collatz.scala", "letters.size - 1") ->
+      (Verdict.Number, "the last position of a written-out word"),
     ("Deduction.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Divisibility.scala", "parts._1") ->
       (Verdict.Crossing, "the antecedent of an implication an assembly had to match"),

@@ -266,7 +266,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_PRIME_PROD_ONE`, and five for `NUM_FACTORISATION_UNIQUE`, whose four guarded
     // hypotheses and one equation are five arrows in front. The remaining four are the two limit
     // bounds', two apiece.
-    proposals.size shouldBe 342
+    //
+    // 343 with `WORD_LENGTH_ZERO`'s one, and this line is the tip plus this branch's delta rather
+    // than a total carried forward. It is one arrow over a single equation, so it offers one
+    // weakening: `!w. w = WORD_EMPTY`. Every other addend here belongs to work already on the tip
+    // and is taken from it wholesale.
+    proposals.size shouldBe 343
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
