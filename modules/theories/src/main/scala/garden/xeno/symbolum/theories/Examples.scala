@@ -55,6 +55,8 @@ object Examples {
       "NUM_BEZOUT",
       "NUM_EUCLID",
       "NUM_PRIME_DIVISOR",
+      "NUM_FACTORISATION",
+      "NUM_FACTORISATION_UNIQUE",
       "NUM_CRT",
       "NUM_FACT_DIVIDES"
     ),
