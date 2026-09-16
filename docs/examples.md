@@ -31,13 +31,20 @@ each measured against what the library actually holds rather than estimated.
 |---|---|---|
 | Number theory over `num` | **partly here.** Bezout, Euclid's lemma, division with remainder, congruences, the gcd, the Chinese remainder theorem, the factorial | Unique factorisation is the next rung and every piece of it exists. What blocks it is the **statement**: uniqueness is a claim about a multiset of primes, and this system has no lists, no finite sets and no multisets |
 | The incompleteness theorems | **in progress.** The object language, both axiom sets, the proof predicate, closure under both rules of inference, and the first derivations of the embedded theory | `Prov` as a formula **of the object language** does not exist; what exists is `NUM_PROV`, a predicate of the ambient logic. D1, D2 and D3 are statements about that formula, so none of the three can be stated yet. `docs/adr/0013` is the plan |
-| Analysis | **nothing.** The reals are a complete ordered field with `abs`, and `COMPLETENESS` is read by exactly one theorem | No limit, no sequence of reals, no continuity, no derivative, no integral. **Nothing primitive is missing**: the definitions are expressible over the theory as it stands, and this is the largest piece of work on this table that is not blocked on anything but work |
+| Analysis | **partly here, since 2026-09-15.** `Limit` declares `converges` and `lim`, `Transcendental` declares `exp`, `sin`, `cos`, `ln`, `sinh` and `cosh` as their power series through that limit, and between them they cost no axiom. Proved over them: the value of each function at zero, that a limit is unique, the monotone convergence theorem, which is where `COMPLETENESS` is read a second time and the first thing here that obtains a limit rather than assuming one, and the comparison test | The comparison test is proved and **not yet spent**: `Transcendental` publishes six constants, the five values at zero and the two hyperbolic identities, and not one convergence fact, so `exp 1 > 2` is statable and unproved rather than decided. Putting the exponential series under a bounded dominating one is the nearest rung; after it the addition theorem through the Cauchy product, of which `SUM_SWAP` is the half that exists, and the Pythagorean identity by the same argument. Then continuity and the intermediate value theorem, which is what every fact about `ln` waits on and why that constant has none. No derivative, no integral and no square root. **Nothing primitive is missing** here either: each of those is expressible over the theory as it stands |
 | The four colour theorem | **out of reach, and not only by size** | It needs graphs and finite sets, which do not exist, and the only proof anyone has runs a computation over 633 configurations. `docs/adr/0010` decides there is **no computing rule in the kernel** and that there will not be one while the trusted base is the argument, so the route Gonthier took is closed here by a recorded decision rather than by effort |
 | Hilbert's solved problems | **out of reach, with one exception worth naming** | Most need machinery nothing here is near. The tenth, Matiyasevich's theorem, is the exception: it is a statement about Diophantine definability, and the beta function, the coding of sequences and the arithmetisation of syntax that the incompleteness work is building are the same ground floor. It is the one entry on this list that the current work walks towards rather than away from |
 
 Two things this table is careful about. **"Nothing primitive is missing" and "it is a lot of work"
-are different statements**, and analysis is the first and not the second kind of gap, while the four
-colour theorem is neither: it is blocked by a decision that was taken deliberately and written down.
+are different statements**, and analysis was the first kind of gap rather than the second, while the
+four colour theorem is neither: it is blocked by a decision that was taken deliberately and written
+down. The analysis row is what that distinction looks like once it is spent: written on 2026-09-14
+as **nothing**, with the note that the definitions were expressible over the theory as it stands,
+and rewritten on 2026-09-16 because `Limit` and `Transcendental` landed on 2026-09-15 and each asserts that
+it moved the trusted base not at all. One day between the two, which is what "not blocked on
+anything but work" was claiming and is the only kind of evidence that claim can have. What is
+written in its place is the next rung rather than a second promise.
+
 And **a rung that is reachable is not thereby cheap.** The entries marked partly here each took days
 of work per theorem, and nothing below suggests the next one will be faster.
 

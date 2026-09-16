@@ -933,6 +933,82 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
 
     search(Paths.get("").toAbsolutePath, 5)
   }
+  /* ------------------------------------------------- the map of the chain */
+
+  /**
+   * The first column of the guide's map of the chain, as the document writes it.
+   *
+   * Read out of that one section rather than out of the whole file, which is the difference between
+   * an assertion and a vacuous one: `Order`, `Series`, `Peano` and `Limit` are all named in the
+   * prose elsewhere in the guide, so a check that merely asked whether the file contains the word
+   * would pass with the map deleted.
+   */
+  private def mappedDevelopments(guide: String): Vector[String] = {
+    val lines = guide.linesIterator.toVector
+    val opens = lines.indexWhere(_.startsWith("## What the chain holds"))
+    if (opens < 0) fail("docs/proving.md no longer holds the section this test is about")
+    val closes = lines.indexWhere(line => line.startsWith("## "), opens + 1)
+    val rows = lines.slice(opens + 1, if (closes < 0) lines.length else closes)
+
+    rows.flatMap("""^\| `([A-Za-z]+)` \|""".r.findFirstMatchIn(_)).map(_.group(1))
+  }
+
+  "The guide's map of the chain" should "name every development the library holds, and no others" in {
+    // The population is the library's own, which is where `docs/lemmas.md` gets its headings: a
+    // development the chain assembles and nobody collected is `ChainCoverageSpec`'s defect and not
+    // this one. The label carries what it was collected under, `Real, assumed` beside
+    // `Real, defined`, and the map has one row per development rather than one per label, so the
+    // comparison is on the name before the comma.
+    val guide = read("docs/proving.md")
+    val held = Library.of(Chain.standard).entries
+      .map(_.development.takeWhile(_ != ','))
+      .distinct
+      .sorted
+    val mapped = mappedDevelopments(guide)
+
+    // A link added to `Chain.construct` and collected by `Library.of` lands here, which is what the
+    // guide's own sentence about this test promises a reader.
+    withClue(s"held by the library and not in the guide's map: ${held.diff(mapped).mkString(", ")}\n") {
+      held.diff(mapped) shouldBe empty
+    }
+
+    // And the other direction, which is the one that rots quietly: a row describing a development
+    // that has been renamed or removed is a stale reference, and this repository treats one of
+    // those as worse than a missing entry.
+    withClue(s"in the guide's map and not held by the library: ${mapped.diff(held).mkString(", ")}\n") {
+      mapped.diff(held) shouldBe empty
+    }
+
+    // The rows are unique, because a name written twice would let one of the two carry a wrong
+    // description while the set comparison above stayed green.
+    mapped.distinct shouldBe mapped
+    info(s"${mapped.size} developments in the guide's map")
+  }
+
+  it should "say what each development puts in the signature, which is the column that carries the map" in {
+    // The guard above is satisfied by a table of names and empty cells, and a map of empty cells is
+    // exactly the shape a coverage check rewards. So the width of a row is asserted too: three
+    // columns, and the middle one says something.
+    val guide = read("docs/proving.md")
+    val lines = guide.linesIterator.toVector
+    val opens = lines.indexWhere(_.startsWith("## What the chain holds"))
+    val closes = lines.indexWhere(line => line.startsWith("## "), opens + 1)
+
+    val rows = lines
+      .slice(opens + 1, if (closes < 0) lines.length else closes)
+      .filter(line => """^\| `[A-Za-z]+` \|""".r.findFirstIn(line).isDefined)
+
+    rows.foreach { row =>
+      val cells = row.split('|').toVector.map(_.trim).filter(_.nonEmpty)
+      withClue(s"a row of the map is not three columns wide: $row\n") {
+        cells.size shouldBe 3
+      }
+      withClue(s"the map says nothing about what this development is for: $row\n") {
+        cells(2).length should be > 40
+      }
+    }
+  }
+
   "The guide's argument page" should "be the page `ArgumentSpec` builds, down to the three buckets" in {
     // The example is run by `ArgumentSpec`, which owns the development it needs; what is checked
     // here is that the page in the guide is the page that comes out, and in particular that the

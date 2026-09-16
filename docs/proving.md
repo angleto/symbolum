@@ -2,14 +2,23 @@
 
 **EXCERPT — for anyone scanning the index:**
 How to state a proposition, how to get a theorem, and exactly which goals each tactic decides. It
-covers the theory of the real numbers as it stands, the three tactics, the derived rules for
+covers the theory of the real numbers as it stands, a map of every development the standard chain
+holds and what each one puts in the signature, the three tactics, the derived rules for
 proofs written by hand, the bridge to the algebra half, how to look for the assignment that
 refutes a claim or shows a set of hypotheses satisfiable, what would have to be assumed for a claim
 that does not follow, how a conclusion is traced back to the measurements it rests on, what one
 claim costs when all of those are asked at once, what a refusal says to try next, and the text a
 person is shown a formalisation in. It does not explain the kernel's
-design, which is in [architecture.md](architecture.md), and it does not teach logic. Every example
-below is executed by `DocumentationSpec`, so an example that stops working fails the build.
+design, which is in [architecture.md](architecture.md), and it does not teach logic.
+
+**What guards the examples below, said exactly, because the sentence that stood here said more.**
+`DocumentationSpec` runs a Scala program written beside each assertion and checks the answer against
+what the document prints, so an example whose answer stopped being that answer fails the build. What
+it does not check is that the text printed here is the program it ran: the two are written twice and
+can drift, which is what happened on the front page, where a block nobody could compile sat beside a
+green assertion for as long as both existed. `ReadmeSpec` closes that for `README.md` by compiling
+every block as the file holds it. The same thing for this file is not written: it is `994aa06c`'s
+fifth acceptance criterion and is tracked as its own piece of work.
 
 *If you modify this file and this excerpt no longer accurately describes its content, you must
 update it.*
@@ -211,6 +220,68 @@ independent purchases, and a development could take either alone.
 `~` takes the widest argument this notation allows, which is why a negated side of an equation is
 parenthesised above. `~(p \/ q) = (~p /\ ~q)` reads as `~((p \/ q) = (~p /\ ~q))`, a different and
 false statement, and writing the De Morgan entries without the parentheses is how that was found.
+
+## What the chain holds, development by development
+
+The sixteen axioms above are what the *reals* are, and most of what this system can state is not
+about them. The naturals, the pair, the word, the matrix, number theory on `num`, the arithmetisation
+of this system's own syntax and the first analysis are developments stacked into one chain, and that
+is what lets a claim name a constant of any of them: they share one signature rather than each
+having one of its own. `Chain.standard` assembles the stack, `Chain.widest` is the signature it ends
+at, and that signature is what `Ask`, `Find` and the notebook read a claim against.
+
+This table is the map, and the question it answers is which name to look under. It says what each
+development puts into the signature and what it is for; it does not list the lemmas, which are in
+[lemmas.md](lemmas.md) under the heading this table's first column names. `DocumentationSpec`
+compares the two in both directions and fails when the chain holds a development this table does not
+name, or when this table names one the chain does not hold, so a link added to `Chain.construct`
+lands red here rather than going unmentioned.
+
+| Development | What it puts in the signature | What it is for |
+|---|---|---|
+| `Classical` | `COND` | A case split about a proposition, and a function defined by cases. It holds the excluded middle, both De Morgans, double negation, function extensionality and `NOT_FORALL`, every one of them derived; what it costs is the two axioms of the logic, `SELECT` and `ETA` |
+| `Real` | `+`, `*`, `-`, `/`, `inv`, `<`, `<=`, `0`, `1` and the two numeral bits | The complete ordered field of the sixteen axioms above. Subtraction, division, the non-strict order and the bits are definitions, which is why what a reader is asked to believe is sixteen and not twenty-one |
+| `Positivity` | nothing | Three facts about `0 <` that `Order` re-exports. The listing shows both holders rather than one, because a lookup returning the first would be picking by map iteration order |
+| `Order` | nothing | The order worked out: antisymmetry, the case split, cancellation on both sides, `SQUARE_NONNEG`, and the two lemmas that turn a negated comparison into the other one without costing anything classical |
+| `Natural` | the type `num`, `ZERO`, `SUC`, and the type `ind` with `IND_0` and `IND_SUC` under it | The naturals as a **defined** type, carved out of an infinite one as the smallest inductive subset. Induction, Peano's other axioms and the recursion theorem are all derived here rather than assumed; what is assumed is `INFINITY`, and that is the whole of what the type costs |
+| `Peano` | `NUM_ADD`, `NUM_MUL`, `NUM_LE`, `NUM_LT`, `PRE`, `NUM_SUB`, `real_of_num` | The arithmetic and the two orders on `num`, the embedding into the reals, the truncated subtraction that is the only one `num` can have, strong induction, the least and the greatest number principles, and `NUM_ARCHIMEDES`, which is the first of the two places `COMPLETENESS` is spent |
+| `Series` | `Sum`, `Prod`, `Power` | Finite sums, products and powers, built on the recursion theorem: linearity, the telescoping sum, summation by parts, reindexing, the geometric sum and the exchange of two summations |
+| `Divisibility` | `Divides` | Divisibility over the **reals**, which is the weaker of the two here: over a field the antisymmetry is false, and the version of it that holds is `Modular`'s |
+| `Modular` | `NUM_DIVIDES`, `NUM_CONG`, `NUM_GCD`, `NUM_DIV`, `NUM_MOD`, `NUM_PRIME` | Number theory on `num`: congruences with their compatibility with the operations, division with remainder in both halves, the greatest common divisor, Bezout, Euclid's lemma and the definition of a prime. `NUM_GCD` is **chosen** rather than computed, since Euclid's algorithm is a definition by well-founded recursion and this system has no such rule |
+| `Product` | the type `prod`, `PAIR`, `FST`, `SND` | The pair, carved out of `'a -> 'b -> bool` the way `pair.ml` does it. It is the one primitive that lists, matrices and index types were all waiting on |
+| `Word` | the type `word`, `WORD_LENGTH`, `WORD_NTH`, `WORD_MAKE`, `WORD_PAD` | A finite word: a length and a padded function held together in a pair, with the extensionality that says two words agreeing at every index are the same word |
+| `Matrix` | `MAT2`, `MAT_ADD`, `MAT_SMUL`, `MAT_MUL`, `MAT_ID`, `MAT_TRANSPOSE`, `MAT_DET` | Two-by-two real matrices, as far as the determinant being multiplicative |
+| `Rotation` | `WORD_ROTATE` | Rotating a word. It is a development of its own rather than part of `Word` because it needs two things at once: `Word` for the type it rebuilds, and `Modular` for the `NUM_MOD` inside its own definition |
+| `Magnitude` | `max`, `min`, `abs`, `sgn` | The four, with the triangle inequality among them. `ABS_TRIANGLE` is the one theorem here whose derivation is recorded step by step, and [theorems.md](theorems.md) prints it |
+| `Coding` | `NUM_FACT`, `NUM_PROD`, `NUM_BETA` | The arithmetic that coding syntax as numbers needs: the factorial, the product of a family, Gauss's lemma, the Chinese remainder theorem over `n` moduli rather than two, and the beta function, which is what makes any finite stretch of a sequence two numbers |
+| `Primes` | nothing | The two facts about the primes that are results rather than infrastructure: that there is no largest one, and that no square is twice a square at a positive denominator, which is the arithmetic content of the irrationality of the square root of two and is deliberately not that sentence |
+| `Numbering` | `NUM_TRI`, `NUM_PAIR`, `NUM_CODE`, and the four projections that take one apart | Cantor's pairing written on the triangular numbers so that no division appears, and a constructor that codes a tag and a payload as one number. What the whole construction exists for is that both components of a pair are at most the pair |
+| `Language` | `NUM_TERM`, `NUM_FORM`, `NUM_NUMERAL`, `NUM_SUBST_TERM`, `NUM_SUBST_FORM`, `NUM_FREE_TERM`, `NUM_FREE_FORM`, `NUM_CLOSED`, `NUM_PA`, `NUM_LOGIC`, and six abbreviations | The language of Peano arithmetic, as predicates on `num` and not as a datatype: being a term, being a formula, substituting for a free variable, where a variable occurs free, the axioms of PA and the eight schemes of first-order logic with equality |
+| `Provability` | `NUM_STEP`, `NUM_PROOF`, `NUM_PROV`, `NUM_STEP_FROM`, `NUM_PROV_FROM` | What the embedded theory can prove, as a formula with its subject free. Not one of its definitions is a recursion, and that is the whole return on coding a sequence with the beta function rather than by iterating a pairing |
+| `Deduction` | nothing | Derivations **of** the embedded theory: five schemes proved for every formula rather than at one code, and the deduction theorem over them. It is the first link that declares nothing, which is the day the last link and the widest signature stopped being the same thing |
+| `Limit` | `converges`, `lim` | The first analysis here: the epsilon-N statement written out, the limit named by choice and pinned wherever the sequence converges, the monotone convergence theorem, which is the second place `COMPLETENESS` is spent and the first thing here that **obtains** a limit rather than assuming one, and the comparison test over it |
+| `Transcendental` | `exp`, `sin`, `cos`, `ln`, `sinh`, `cosh` | The transcendental functions as their power series through that limit rather than as four characterising axioms, which is what `docs/adr/0017` decides and what it rejects. What is proved of them is the value of each at zero, and the hyperbolic pair's two identities |
+| `Concatenation` | `WORD_EMPTY`, `WORD_SINGLETON`, `WORD_CONCAT`, `WORD_PREFIX`, `WORD_SUFFIX`, `WORD_FACTOR` | Putting two words together, with the prefix, the suffix and the factor each defined **by** the concatenation rather than beside it. Before it, `?x y. w = WORD_CONCAT (WORD_CONCAT x u) y` was not a sentence this system could write, so of a factor nothing could be said, not even wrongly |
+| `Inductive` | `MONOTONE`, `INDUCTIVE` | The set given by a rule set, as the intersection of every closed set rather than as an iteration. What that buys is a **non**-membership: a closure that can only be generated forwards answers a membership for whatever the budget reached and answers nothing at all about what is outside it |
+| `Reaching` | `REACH` | What a rewriting relation reaches, and the first consumer of `INDUCTIVE`: an induction principle over the reachable pairs, and a potential-function argument that bounds how many counted steps a derivation can hold |
+
+**What is not in the table, and why the absence is not an omission.** A development that publishes no
+lemma of its own has no heading in `lemmas.md` and no row here, and there are nine of them. They are
+drivers and procedures: `Induct` runs an induction over a goal, `Bounded` discharges
+`!i. i < k ==> P i` at a concrete bound by proving the instances, `Successor` puts a numeral into
+successor form so that a recurrence can reach it, `Monotone` hands back `|- MONOTONE f` for an
+operator written in the usual shape, `Recursion` and `Quotient` define the **caller's** constant and
+the caller's type, `Descent` defines a predicate by recursion on a code, `Resolving` proves the
+soundness of a resolution step, and `Domain` builds a caller's own theory of a domain that is not
+mathematics. Nothing they produce belongs to them, which is why there is nothing of theirs to list.
+`Ring`, `Field`, `Linarith`, `Arithmetic` and `Order`'s procedures are the section below.
+
+**The position of a development in the chain is its extension order and not its dependency order**,
+and the two are different on purpose. `Inductive` needs nothing from anything below it and sits at
+the end anyway, because a constant declared into a side branch is unreachable from everything above
+it: `Chain.widest` is built over the **last** extension, so a development that extended the theory it
+happened to need would put its constants somewhere no later claim could name them. The comment in
+`Rotation.construct` is where that argument is written down.
 
 ## Proving: the tactics
 
