@@ -859,10 +859,26 @@ final class Rules(val logic: Logic) {
    * Neither of those two would fail loudly if it were left in, which is the reason to check them
    * rather than to let the derivation report it. [[gen]] closes over every occurrence of `v`,
    * including the ones inside the predicate, so the generalisation stops matching the antecedent
-   * [[spec]] produced; and [[mp]] never compares an antecedent against anything, so what comes back
-   * is a true sequent carrying that unmatched antecedent as an extra hypothesis, rather than an
-   * error. A rule that returned a weaker theorem than the one asked for would be worse than one
-   * that refuses.
+   * [[spec]] produced. The second half of that sentence used to read "and [[mp]] never compares an
+   * antecedent against anything, so what comes back is a true sequent carrying that unmatched
+   * antecedent as an extra hypothesis, rather than an error", and **that stopped being true on
+   * 2026-09-16**: `mp` refuses an antecedent it cannot reconcile. The reason to check here is
+   * unchanged and is now the stronger one, that a rule returning a weaker theorem than the one
+   * asked for would be worse than one that refuses.
+   *
+   * == The instance is the REDUCT, and this is where a caller loses a cycle ==
+   *
+   * `D` has to contain `p[v/x]` as the **beta-reduced** instance, not as the application
+   * `predicate v`. [[existsIntro]] documents the mirror of this in its own docstring and this one
+   * did not, so a caller who assumed the application got [[MissingHypothesis]] naming a term that
+   * looks identical to the one they assumed until the redex is noticed.
+   *
+   * It stayed undocumented because nothing met it head-on. The two callers that build an instance
+   * this way go through the choice axiom, whose antecedent is the unreduced application, and `mp`'s
+   * old permissiveness absorbed the difference: it left the unreduced form standing as a hypothesis
+   * and the conversion below discharged both. Making `mp` strict removed that, so the requirement
+   * is now met directly, by a caller rather than by an accident. Reported by the session that paid
+   * for it in three failing tests.
    *
    * `G` is not constrained. `v` may occur free in the hypotheses of the existential itself, and it
    * necessarily occurs in the instance being discharged.
