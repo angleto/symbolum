@@ -19,7 +19,7 @@ can drift, which is what happened on the front page, where a block nobody could 
 green assertion for as long as both existed. `ReadmeSpec` closes that for `README.md` and
 `GuideBlocksSpec` closes it for this file, by **compiling** every block as the file holds it.
 Compiled is the word that matters, and the measurement that says so is what this guard found here on
-2026-09-16: **seven of the forty-seven blocks below did not compile as printed.** Four carried an
+2026-09-16, when the file held forty-seven of them: **seven of the blocks below did not compile as printed.** Four carried an
 invalid escape, `/\` where a Scala string wants `/\\`, which a lexer rejects before anything is
 typed; four failed later, three of them calls that lex perfectly and die in the typer and one a name
 the text used and the document never defined. One block is in both counts. A scan that asked only
@@ -1869,6 +1869,50 @@ assumed with `Kernel.assume` rather than written into the statement, so that wha
 them in its own sequent. It also holds the two boundaries. An argument needing a negation —
 `~(waived r)` is the shape a real handbook rule takes — is refused by name, and `?p:project. T` is
 not derivable, because as far as the theory knows there are no projects at all.
+
+### The same argument with a negation in it, and the one call that settles it
+
+The example above is written without a negation because until 2026-09-16 that was the price of
+costing nothing: `Minimal` refuses a statement with a negation in it, and `Propositional` takes one
+and charges the choice axiom. A real rule is full of negations — *a change that has not been
+reviewed does not ship* — so the fragment that was free was the fragment nobody's rule is in.
+
+`Intuitionistic` is what closed that. Dyckhoff's contraction-free calculus (G4ip), which decides
+intuitionistic propositional logic with negation and falsity included, terminates on a measure
+rather than on a depth bound, and builds its theorem out of the derived rules as it searches, so it
+costs **no axiom at all**. It stops where intuitionistic provability stops: Peirce's law and the
+excluded middle are refused here and proved by `Propositional`, at one axiom, which is the trade
+made visible instead of made silently. `docs/adr/0022` is the decision.
+
+Above it, `Domain.Built.settle` is the call a domain claim actually goes through:
+
+```scala
+val onChange = Type.fun(TyApp("change", Nil), Type.Bool)
+val gate = Domain(
+  name = "the release gate",
+  typeOperators = Vector("change" -> 0),
+  constants = Vector("TwoReviews" -> onChange, "Ships" -> onChange),
+  axioms = Vector("ShipsOnlyReviewed" -> "!r:change. Ships r ==> TwoReviews r")
+)
+val built = Domain.build(Classical.standard.theory, Classical.standard.notation, gate).toOption.get
+
+built.settle(Classical.standard, "!r:change. ~(TwoReviews r) ==> ~(Ships r)")
+// Settled: the release gate: 1 of 1: ShipsOnlyReviewed, and no foundational axiom at all
+```
+
+Four steps, and the third is the one that makes the report worth reading. It specialises the
+domain's axioms at the subjects the claim names; it decides the propositional skeleton, asking the
+intuitionistic calculus first and the classical one only if that refuses; it **cuts the axioms down
+to an irredundant set**, dropping each in turn and deciding again, because detaching all of them
+would make `Derivation.axiomsOf` report every axiom asserted and destroy the accounting; and it
+detaches, quantifies again and reports.
+
+Three answers and not two. A claim that does not follow comes back as a `Countermodel` naming the
+assignment, which refutes it **as a schema over uninterpreted atoms** and never says the claim is
+false. A claim reaching a constant of the foundation rather than of the domain — arithmetic, an
+order, a numeral — comes back `Refused` naming the constant, because an atom with no meaning is not
+an approximation of *at most three attempts*, and composing this with `Linarith` is a different
+piece of work. `DomainTheorySpec` runs all three.
 
 ### A whole argument on one page
 

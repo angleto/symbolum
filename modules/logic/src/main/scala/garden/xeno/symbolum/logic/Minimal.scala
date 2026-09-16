@@ -12,10 +12,20 @@ import garden.xeno.symbolum.kernel.*
  * middle is derived here rather than assumed, and what it is derived from is the choice operator,
  * one of the two axioms `docs/adr/0009` records. Every theorem it produced would rest on that.
  *
- * A statement built from atoms with `/\`, `\/` and `==>` and no negation needs none of it. The
- * rules are the ones `Rules` already derives from the kernel's ten, the search below is an ordinary
- * intuitionistic sequent search, and what comes out reaches **zero axioms**. That is the whole
- * reason this exists beside a classical procedure rather than instead of one.
+ * A statement built from atoms with `/\`, `\/` and `==>` and no negation needs none of it. The rules
+ * are the ones `Rules` already derives from the kernel's ten, the search is [[Intuitionistic]]'s,
+ * and what comes out reaches **zero axioms**. That is the whole reason this exists beside a
+ * classical procedure rather than instead of one.
+ *
+ * == What is left here, since the search went ==
+ *
+ * The search was this file's own until the contraction-free calculus landed, and it is not any more:
+ * one implementation rather than two, for the reason [[calculus]] gives. What did not move is the
+ * fragment, which is the useful half at a call site. A goal with a negation in it is **out** here and
+ * is taken by the wider procedure, so the two answer different questions: this one says "is the
+ * statement inside the fragment that costs nothing and is it provable", and the wider one says "is
+ * it intuitionistically provable", which is a question about a statement nobody promised to keep
+ * positive.
  *
  * **What it is NOT, and the card that asked for this got it slightly wrong in a way worth writing
  * down.** "Negation-free" does not mean "derivable in minimal logic". Peirce's law,
@@ -33,19 +43,30 @@ import garden.xeno.symbolum.kernel.*
  */
 final class Minimal private (val logic: Logic) {
 
-  import Minimal.*
-
-  private val rules = logic.rules
+  /**
+   * The search, which is [[Intuitionistic]]'s and is no longer this file's.
+   *
+   * What lives here is the **fragment**: the gate below, the address, and the refusal that names the
+   * negation. What used to live here as well was a sequent search of its own, and when a calculus
+   * arrived that decides all of intuitionistic propositional logic at the same zero axioms, keeping
+   * both would have been two implementations of one thing — the weaker of them incomplete even for
+   * the fragment it published, since its left rule for an implication fired only where the
+   * antecedent was already among the hypotheses.
+   *
+   * So this is the same promise over a wider search, and the promise is what the callers read: a
+   * goal with a negation in it is refused here by name, and Peirce's law is still out of reach,
+   * because it is out of reach of intuitionistic logic rather than of this file's old rule set.
+   */
+  private val calculus: Intuitionistic = Intuitionistic(logic)
 
   /** Prove a goal of the fragment, in the notation of whatever theory the logic reads. */
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
     for {
       stripped <- Logic.stripForall(goal)
-      (variables, body) = stripped
+      (_, body) = stripped
       _ <- inside(body)
-      proved <- search(Vector.empty, body, Depth)
-      closed <- rules.genAll(proved, variables.toList)
-    } yield closed
+      proved <- calculus.prove(goal)
+    } yield proved
 
   /**
    * Whether a goal is one this could take at all, without attempting it.
@@ -121,183 +142,9 @@ final class Minimal private (val logic: Logic) {
     case Abs(_, body) => mentions(body, name)
     case _ => false
   }
-
-  /* -------------------------------------------------------------------- the search */
-
-  /**
-   * A theorem concluding the goal, with the sequent's hypotheses among those given.
-   *
-   * The order is what makes this terminate and what makes it cheap: the rules that can be applied
-   * without ever having to be undone come first, and only what is left branches. `depth` is the
-   * safety net rather than the argument, and a goal that reaches it is refused by name.
-   */
-  private def search(hypotheses: Vector[Term], goal: Term, depth: Int): Either[LogicError, Kernel.Thm] =
-    if (depth <= 0)
-      Left(NotOfForm(s"a goal this search settles within $Depth steps", goal))
-    else if (hypotheses.contains(goal)) LogicError.lift(Kernel.assume(goal))
-    else if (goal == logic.truth) rules.truth
-    else
-      right(hypotheses, goal, depth)
-        .orElse(left(hypotheses, goal, depth))
-        .orElse(branching(hypotheses, goal, depth))
-
-  /** The right rules that never have to be undone: a conjunction and an implication. */
-  private def right(
-    hypotheses: Vector[Term],
-    goal: Term,
-    depth: Int
-  ): Either[LogicError, Kernel.Thm] =
-    logic.destConj(goal) match {
-      case Some((left, right)) =>
-        for {
-          first <- search(hypotheses, left, depth - 1)
-          second <- search(hypotheses, right, depth - 1)
-          result <- rules.conjIntro(first, second)
-        } yield result
-
-      case None =>
-        logic.destImp(goal) match {
-          case Some((antecedent, consequent)) =>
-            search(hypotheses :+ antecedent, consequent, depth - 1)
-              .flatMap(rules.disch(antecedent, _))
-
-          case None => Left(NotOfForm("a conjunction or an implication", goal))
-        }
-    }
-
-  /**
-   * The left rules that never have to be undone: taking a conjunction apart, and a case analysis.
-   *
-   * A disjunction on the left is invertible even though it branches, which is the reason it belongs
-   * here and not below: both branches have to be proved whatever else is tried, so nothing is lost
-   * by committing to it.
-   *
-   * == Nothing is ever removed, and that is the termination argument ==
-   *
-   * A first version replaced the hypothesis it took apart. It did not terminate, and the way it
-   * failed is worth keeping: [[branching]] re-derives a consequent it does not already have, so a
-   * conjunction taken apart and removed was manufactured again by the implication that concluded
-   * it, taken apart again, and so on until the depth ran out — sixty-four levels of branching, which
-   * is an out-of-memory rather than a refusal. Found by running it, not by reading it.
-   *
-   * So every rule here **adds** and each fires only where it has something to add: a conjunction
-   * whose halves are both present is not taken apart, a disjunction with a disjunct already
-   * assumed is not split, and an implication whose consequent is present is not used. Every step
-   * therefore adds a subformula of a formula already in the sequent, of which there are finitely
-   * many, and the search terminates on its own. [[Minimal.Depth]] is the net under that argument
-   * and not the argument.
-   */
-  private def left(
-    hypotheses: Vector[Term],
-    goal: Term,
-    depth: Int
-  ): Either[LogicError, Kernel.Thm] = {
-    val conjunction = hypotheses.collectFirst {
-      case hypothesis if logic.destConj(hypothesis).exists { case (first, second) =>
-            !hypotheses.contains(first) || !hypotheses.contains(second)
-          } =>
-        hypothesis
-    }
-
-    conjunction match {
-      case Some(hypothesis) =>
-        val (first, second) = logic.destConj(hypothesis).get
-        val gained = Vector(first, second).filterNot(hypotheses.contains)
-
-        for {
-          assumed <- LogicError.lift(Kernel.assume(hypothesis))
-          leftHalf <- rules.conjElim1(assumed)
-          rightHalf <- rules.conjElim2(assumed)
-          proved <- search(hypotheses ++ gained, goal, depth - 1)
-          // The two halves were assumed to prove it; they are discharged against the conjunction,
-          // so what comes back rests on the conjunction as the caller gave it.
-          withFirst <- rules.proveHyp(leftHalf, proved)
-          result <- rules.proveHyp(rightHalf, withFirst)
-        } yield result
-
-      case None =>
-        hypotheses.collectFirst {
-          case hypothesis if logic.destDisj(hypothesis).exists { case (first, second) =>
-                !hypotheses.contains(first) && !hypotheses.contains(second)
-              } =>
-            hypothesis
-        } match {
-          case None => Left(NotOfForm("a conjunction or a disjunction among the hypotheses", goal))
-
-          case Some(hypothesis) =>
-            val (first, second) = logic.destDisj(hypothesis).get
-
-            for {
-              assumed <- LogicError.lift(Kernel.assume(hypothesis))
-              leftCase <- search(hypotheses :+ first, goal, depth - 1)
-              rightCase <- search(hypotheses :+ second, goal, depth - 1)
-              result <- rules.disjElim(assumed, leftCase, rightCase)
-            } yield result
-        }
-    }
-  }
-
-  /**
-   * What is left, and every case here can be the wrong choice.
-   *
-   * An implication among the hypotheses is used when its antecedent is already there, which is the
-   * terminating half of the left implication rule and is all the fragment this file exists for
-   * needs: a monotonicity obligation carries `p ==> p'` beside `p`. A disjunctive goal is tried on
-   * one side and then the other.
-   */
-  private def branching(
-    hypotheses: Vector[Term],
-    goal: Term,
-    depth: Int
-  ): Either[LogicError, Kernel.Thm] = {
-    val usable = hypotheses.flatMap { hypothesis =>
-      logic.destImp(hypothesis) match {
-        case Some((antecedent, consequent))
-          if hypotheses.contains(antecedent) && !hypotheses.contains(consequent) =>
-          Vector((hypothesis, antecedent, consequent))
-        case _ => Vector.empty
-      }
-    }
-
-    val advanced = usable.view
-      .map { case (hypothesis, antecedent, consequent) =>
-        for {
-          implication <- LogicError.lift(Kernel.assume(hypothesis))
-          held <- LogicError.lift(Kernel.assume(antecedent))
-          gained <- rules.mp(implication, held)
-          proved <- search(hypotheses :+ consequent, goal, depth - 1)
-          result <- rules.proveHyp(gained, proved)
-        } yield result
-      }
-      .collectFirst { case Right(theorem) => theorem }
-
-    advanced match {
-      case Some(theorem) => Right(theorem)
-
-      case None =>
-        logic.destDisj(goal) match {
-          case None => Left(NotOfForm("a goal this fragment reaches", goal))
-
-          case Some((first, second)) =>
-            search(hypotheses, first, depth - 1)
-              .flatMap(rules.disjIntro1(second, _))
-              .orElse(search(hypotheses, second, depth - 1).flatMap(rules.disjIntro2(first, _)))
-        }
-    }
-  }
 }
 
 object Minimal {
-
-  /**
-   * How deep the search goes before it says so.
-   *
-   * The safety net and not the termination argument: the invertible rules strictly shrink the
-   * problem and the two that branch are bounded by the hypotheses, so a goal of this fragment
-   * terminates without it. It exists because that argument is a paragraph and this is a number, and
-   * a search that ran away would be worse than one that stops.
-   */
-  val Depth: Int = 64
 
   /** Over the plain logic, which is where a statement with no arithmetic in it lives. */
   lazy val standard: Minimal = new Minimal(Logic.standard)

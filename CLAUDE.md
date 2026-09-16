@@ -1026,23 +1026,35 @@ the assumptions a conclusion actually spends is the question worth asking about 
 world, and `Derivation.axiomsOf` answers it; `Derivation.foreignTo` says which belong to the
 domain and which to the foundation under it.
 
-**A domain claim was a hand derivation and is no longer necessarily one**, and until 2026-09-15
-this paragraph said it was, in the same words as the header of the file that had already stopped
-being an example of them. `Ring` and `Linarith` decide fragments of the reals and have nothing to
-say about an arbitrary axiom, which is the true half and is what the sentence was built on. What
-reaches a domain is the propositional skeleton: `DomainTheorySpec` settles the same claim a second
-time through `Propositional` and keeps both routes on purpose, because the comparison is the
-finding. Same theorem, same one domain axiom, and **one foundational axiom where the hand
-derivation spends none**, since `Propositional` decides classical validity and closes with double
-negation while the hand derivation is intuitionistic throughout. `Minimal` is the procedure that
-would cost nothing and it refuses anything with a negation in it, which a domain criterion is made
-of, so neither procedure here covers such an argument at its real cost.
+**A domain claim was a hand derivation and is no longer one**, and this paragraph has been repaired
+twice. Until 2026-09-15 it said the derivation was the only route, in the same words as the header
+of the file that had already stopped being an example of it. Until 2026-09-16 it said the route that
+existed charged an axiom the hand derivation does not, which was true and was the gap rather than
+the answer. `Domain.Built.settle` is the call: it specialises this domain's axioms at the subjects
+the claim names, decides the propositional skeleton with the domain's constants as atoms given no
+meaning, keeps only the axioms the decision needed, detaches, and reports what it spent. One line
+where the derivation is forty, **same theorem, same one domain axiom, and no foundational axiom
+either**.
 
-The caller still spends the axiom: the instance is specialised and detached by hand, and what the
-procedure gets is a tautology over the domain's constants as atoms, with no meaning given for any
-of them. So the promise is still accounting rather than search, and a route that reaches the
-theorem while moving the accounting has bought fewer lines at a price named in the currency this
-repository exists to report.
+What closed it is `Intuitionistic` in `modules/logic`, Dyckhoff's contraction-free calculus, which
+decides intuitionistic propositional logic with negation included and certifies the answer out of
+the derived rules alone, so it costs nothing at all. `docs/adr/0022` is the decision. `Propositional`
+is still the fallback for a claim that is classically valid and no more, at the choice axiom, and
+`DomainTheorySpec` exercises that route beside the other so that the agreement between the two is a
+measurement rather than a remark about an empty set.
+
+**The accounting is what the method is for, and the obvious implementation destroys it.** Handing
+every specialised axiom to the procedure and detaching all of them reaches the same theorem and
+makes `Derivation.axiomsOf` report all four where the hand derivation spends one, which is what the
+first run of it did. So the instances are cut down to an irredundant set first, by dropping each in
+turn and deciding again without it, which is an unsatisfiable core obtained by deletion rather than
+read off a refutation: `Propositional` does not publish the clauses its refutation read and the
+intuitionistic calculus has no clauses at all. It costs `2n + 1` decisions and it is minimal rather
+than minimum.
+
+What is still not there is search: nothing looks for a claim, nothing interprets a constant, and a
+claim reaching **arithmetic** is refused naming the constant rather than approximated, because an
+atom with no meaning is not an approximation of "at most three attempts".
 
 Such a theory sits beside the chain and must stay there: two theories that axiomatise one name are
 the case `docs/adr/0008` leaves open, and `SoundnessAttackSpec` still derives `|- F` from it.

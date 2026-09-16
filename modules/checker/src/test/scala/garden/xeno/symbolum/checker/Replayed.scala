@@ -99,6 +99,48 @@ object Replayed {
     force(garden.xeno.symbolum.logic.Propositional(classical).prove(goal))
   }
 
+  /**
+   * A claim about a domain that is not mathematics, settled by that domain's own machinery.
+   *
+   * The entry that says the arrangement holds at the far end of the surface. Everything else here
+   * is about numbers or about pure logic; this one is a rule somebody could have written in a
+   * handbook, turned into a theory, and settled by `Domain.Built.settle`, which specialises the
+   * domain's axioms at the subject the claim names and puts the propositional skeleton to
+   * `Intuitionistic`. A second implementation that never heard of any of that reads the proof and
+   * agrees, which is what makes "a domain claim is a theorem like any other" a measurement.
+   *
+   * Its axiom column is the point: the conclusion reaches **one** axiom, the domain's own, and no
+   * foundational one. Nothing else in this table costs nothing but the two that cost nothing
+   * because they assume nothing at all.
+   */
+  private def onCall: Entry = {
+    val classical = garden.xeno.symbolum.logic.Classical.standard
+    val alert = TyApp("alert", Nil)
+
+    val rule = Domain(
+      name = "the on-call rule",
+      typeOperators = Vector("alert" -> 0),
+      constants = Vector(
+        "Paged" -> Type.fun(alert, Type.Bool),
+        "Acknowledged" -> Type.fun(alert, Type.Bool),
+        "Escalated" -> Type.fun(alert, Type.Bool)
+      ),
+      axioms = Vector(
+        "EscalatedOnlyUnacknowledged" ->
+          "!a:alert. Escalated a ==> Paged a /\\ ~(Acknowledged a)"
+      )
+    )
+
+    val built = force(Domain.build(classical.theory, classical.notation, rule))
+
+    built.settle(classical, "!a:alert. Acknowledged a ==> ~(Escalated a)") match {
+      case Domain.Verdict.Settled(theorem, _) =>
+        Entry("an on-call rule's own claim", theorem, built.theory)
+      case other =>
+        throw new IllegalStateException(s"a replayed proof does not build: $other")
+    }
+  }
+
   /** The whole population, built once. */
   lazy val entries: Vector[Entry] = Vector(
     Entry("`0 < 1`", force(Order.standard.zeroLessOne), reals),
@@ -121,6 +163,7 @@ object Replayed {
       peirce,
       garden.xeno.symbolum.logic.Classical.standard.theory
     ),
+    onCall,
     Entry("`ADD_SYM`, an axiom of the reals", force(Real.standard.axiom("ADD_SYM")), reals),
     Entry(
       "the successor's properties",

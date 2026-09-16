@@ -27,9 +27,10 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Compiles, Fate, NotRu
  * [[Blocks]] and never from the document, so what is compiled is the prelude and then the block's
  * own text unaltered. Every character this guard protects is a character `docs/proving.md` holds.
  *
- * Writing the preludes is also the measurement nobody had taken. **Nine of the forty-seven blocks
- * use a name the document never defines anywhere**: `search`, `chain`, `claim`, `cost`, `left`,
- * `right`, `pi` with the four `S_j`, `reads`, and `linarith`. In each case the prose says what the
+ * Writing the preludes is also the measurement nobody had taken, on the forty-seven blocks the
+ * document held on 2026-09-16. **Nine of them use a name the document never defines anywhere**:
+ * `search`, `chain`, `claim`, `cost`, `left`, `right`, `pi` with the four `S_j`, `reads`, and
+ * `linarith`. In each case the prose says what the
  * name is and the reader is expected to build it, which is a fair thing for a guide to do and is
  * not the same as a block they can paste. The preludes here are written from those sentences, so
  * they are a reading of the prose and the one place this file could be wrong about the document
@@ -45,9 +46,10 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Compiles, Fate, NotRu
  * == What it costs ==
  *
  * Ten seconds for the whole suite on 2026-09-16, on a machine carrying two other sbt runs: one
- * compilation of forty-seven blocks, forty-three of them then executed, several of which prove
- * something. That is the number that decided the shape rather than an argument: a per-block
- * compilation was measured at 34 seconds for the first and about a second for each after it, so
+ * compilation of the forty-seven blocks the document held that day, forty-three of them then
+ * executed, several of which prove something. That is the number that decided the shape rather
+ * than an argument: a per-block compilation was measured at 34 seconds for the first and about a
+ * second for each after it, so
  * forty-seven of them arithmetically comes to about eighty seconds against these ten, and running
  * the four excused blocks would have added on top the two slow computations `RelationSpec` and
  * `AlgebraicSpec` already pay for once. Where that would have put this suite in the module's
@@ -235,6 +237,11 @@ class GuideBlocksSpec extends AnyFlatSpec with Matchers {
 
     // The worked argument, whose `reads` is the prose's: the text read against the domain theory.
     "val theory = Vector(\"tierTwo\", \"gated\", \"reviewed\", \"signed\", \"auditable\")" -> Runs(Prover),
+
+    // The same argument with a negation in it, which is one call rather than a fold: a `Domain`
+    // value, built, and a claim settled against it. Self-contained under the guide's imports.
+    "val onChange = Type.fun(TyApp(\"change\", Nil), Type.Bool)" -> Runs(Prover),
+
     "val register = Provenance.of(extended, Vector(" -> Runs(
       Prover +
         "val extended = Real.standard.extended(\n" +

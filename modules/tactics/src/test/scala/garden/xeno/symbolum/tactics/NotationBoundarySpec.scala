@@ -193,7 +193,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Matrix.scala", "expected") -> (Verdict.Crossing, "the entry an assembled law was to reach"),
     ("Matrix.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Matrix.scala", "other.size") -> (Verdict.Number, "how many component equations arrived"),
-    ("Minimal.scala", "Depth") -> (Verdict.Number, "the search depth this procedure allows"),
     ("Modular.scala", "fallback") -> (Verdict.Crossing, "the disjunct an assembly was to reach"),
     ("Modular.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Modular.scala", "parts._1") -> (Verdict.Crossing, "the antecedent of an implication"),

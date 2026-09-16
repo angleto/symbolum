@@ -154,8 +154,28 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // this witness; it is repeated here because the README sentence is about it.
     minimal.prove(all(List(p, q), imp(imp(imp(p, q), p), p))).isLeft shouldBe true
 
-    readme should include("a search with backtracking over the negation-free fragment")
-    readme should include("incomplete for classical propositional logic")
+    // The fourth procedure, which the row began naming on 2026-09-16, exercised at both ends: it
+    // takes a statement with a negation in it, which is what `Minimal` refuses and what put the
+    // row's count up, and it stops at the two goals the row names as its boundary.
+    val intuitionistic = Intuitionistic.standard
+    // `denial` rather than `not`, because a local `not` here shadows the matcher three lines below
+    // and the error it produces names an overload rather than the shadowing.
+    def denial(inner: Term): Term = force(logic.mkNot(inner))
+
+    intuitionistic
+      .prove(all(List(p), denial(force(logic.mkConj(p, denial(p))))))
+      .isRight shouldBe true
+    intuitionistic.prove(all(List(p, q), imp(imp(imp(p, q), p), p))).isLeft shouldBe true
+    intuitionistic.prove(all(List(p), disj(p, denial(p)))).isLeft shouldBe true
+
+    readme should include("the search under it backtracks")
+    readme should include("it refuses Peirce's law and the excluded middle")
+
+    // The count, which moved once and is the kind of figure that goes stale in a table nobody
+    // recounts. Asserted with its predecessor denied, so that a row rewritten from memory cannot
+    // put the old one back.
+    readme should include("**Four, and what each of them is not is the point.**")
+    readme should not include "**Three, and what each of them is not is the point.**"
 
     // The sentence that was there, in the two places that carried it, so that it cannot come back
     // by anybody rewriting the row from memory.
@@ -397,6 +417,29 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // A copy here would be a second test that agrees until it does not.
     read("docs/proving.md") should include("(tierTwo p ==> gated p)")
     read("docs/proving.md") should include("`Derivation.axiomsOf` of it is EMPTY")
+  }
+
+  it should "settle the guide's domain claim at the accounting the guide prints beside it" in {
+    // The block below that one is run by `GuideBlocksSpec`, which says the text compiles; this says
+    // the answer printed under it is the answer it gives. The two guards are the pair that section
+    // describes, and this is the half that would catch a summary line rewritten by hand.
+    val onChange = Type.fun(TyApp("change", Nil), Type.Bool)
+    val gate = Domain(
+      name = "the release gate",
+      typeOperators = Vector("change" -> 0),
+      constants = Vector("TwoReviews" -> onChange, "Ships" -> onChange),
+      axioms = Vector("ShipsOnlyReviewed" -> "!r:change. Ships r ==> TwoReviews r")
+    )
+    val built =
+      force(Domain.build(Classical.standard.theory, Classical.standard.notation, gate))
+
+    val summary = built.settle(Classical.standard, "!r:change. ~(TwoReviews r) ==> ~(Ships r)") match {
+      case Domain.Verdict.Settled(_, spending) => spending.summary
+      case other => fail(s"the guide's own claim must be settled: $other")
+    }
+
+    summary shouldBe "the release gate: 1 of 1: ShipsOnlyReviewed, and no foundational axiom at all"
+    read("docs/proving.md") should include(s"// Settled: $summary")
   }
 
   it should "leave the completeness example to the file that runs it end to end" in {

@@ -52,14 +52,21 @@ import garden.xeno.symbolum.logic.*
  * repair for it rather than the cause. A caller who wants to reason across two domains composes
  * them first, and then the kernel's ordinary checks apply to one theory.
  *
- * == What this does not give ==
+ * == What automation reaches, and what it still does not ==
  *
- * **No automation.** `Ring` and `Linarith` decide fragments of the reals and have nothing to say
- * about an arbitrary axiom. What reaches a domain is the propositional skeleton, which
- * `DomainTheorySpec` measures in both directions: the same claim settled by hand costs no
- * foundational axiom, and settled by `Propositional` costs one, because that procedure decides
- * classical validity and closes with double negation. The promise here is accounting, not search,
- * and [[Built.spends]] is the accounting.
+ * `Ring` and `Linarith` decide fragments of the reals and have nothing to say about an arbitrary
+ * axiom. What reaches a domain is the **propositional skeleton**, and since 2026-09-16
+ * [[Built.settle]] is the one call that puts a claim to it: specialise this domain's axioms at the
+ * subjects the claim names, decide the skeleton, keep only the axioms the decision needed, detach,
+ * quantify again, and report what it spent.
+ *
+ * It costs no foundational axiom, which is the part that changed. `Intuitionistic` decides the
+ * fragment a hand derivation about a domain works in, and `Propositional` is the fallback for a
+ * claim that is classically valid and no more, at the choice axiom and reported as such.
+ *
+ * What it is still **not** is a search over the domain: nothing looks for a claim, nothing reasons
+ * about what a constant means, and a claim reaching arithmetic is refused by name rather than
+ * approximated. The promise is accounting, not search, and [[Built.spends]] is the accounting.
  */
 final case class Domain(
   name: String,
@@ -225,7 +232,7 @@ object Domain {
             asserted <- LogicError.lift(Kernel.assertAxiom(current, proposition))
           } yield (asserted._1, held :+ (name -> asserted._2))
       }
-      .map { case (theory, held) => new Built(domain, base, theory, held.toMap) }
+      .map { case (theory, held) => new Built(domain, base, theory, notation, held.toMap) }
   }
 
   /**
@@ -241,6 +248,7 @@ object Domain {
     val domain: Domain,
     val base: Theory,
     val theory: Theory,
+    val notation: Notation,
     val axioms: Map[String, Kernel.Thm]
   ) {
 
@@ -269,7 +277,320 @@ object Domain {
         unspent = axioms.collect { case (name, asserted) if !all.contains(asserted.conclusion) => name }.toSet
       )
     }
+
+    /* ------------------------------------------------------------- settling a claim about it */
+
+    /**
+     * A claim about this domain, settled against its axioms, with what it cost.
+     *
+     * The three steps are the ones a hand derivation takes and they are worth naming, because what
+     * this does **not** do is the more important half. It specialises the domain's axioms at the
+     * subjects the claim itself names; it asks a propositional procedure whether the claim follows
+     * from those instances, with every constant of the domain an atom given no meaning at all; and
+     * it detaches the instances and puts the quantifiers back. There is no search over the domain.
+     *
+     * == Why the intuitionistic calculus is asked first, which is the whole point of the method ==
+     *
+     * `Propositional` alone would answer more claims and would answer this one, and it closes with
+     * `DOUBLE_NEGATION`, so every theorem it produces rests on the choice axiom. For a claim about
+     * the world that is a bad trade made silently: the same claim derived by hand out of the
+     * derived rules is intuitionistic throughout and rests on the domain's own assumptions and
+     * nothing else, which is what a reader is being asked to check.
+     *
+     * So [[Intuitionistic]] is asked first and `Propositional` second, and what separates the two
+     * answers is not a flag on the verdict but the [[Spending]] itself: a claim settled the first
+     * way reports no foundational axiom, and one that needed the second reports choice. That is the
+     * currency this whole file exists to report, and a route that moves it has to say so.
+     *
+     * == What it refuses, by name ==
+     *
+     * A claim that reaches a constant of the **foundation** rather than of the domain — arithmetic,
+     * an order, an equation between numbers — is refused naming the constants. The procedures below
+     * would give such a constant no meaning either, so what they would decide is a skeleton in which
+     * "at most three attempts" is one opaque atom, and an approximation nobody asked for is worse
+     * than a refusal. Composing this with `Linarith` is a different piece of work and it is not this
+     * one.
+     *
+     * A claim needing more than [[Domain.Instances]] specialised axioms is refused for its size,
+     * which is a bound on this method rather than on the domain: the instances are every assignment
+     * of the subjects the claim names to the binders of each axiom, so a claim naming many subjects
+     * over many axioms multiplies.
+     */
+    def settle(classical: Classical, goal: Term): Verdict =
+      classical.logic.over(theory) match {
+        case Left(error) => Verdict.Refused(error.message)
+        case Right(reading) =>
+          Logic.stripForall(goal) match {
+            case Left(error) => Verdict.Refused(error.message)
+            case Right((variables, body)) => settleBody(classical, reading, variables, body)
+          }
+      }
+
+    /**
+     * The same, for a claim written in the domain's own notation rather than assembled.
+     *
+     * Read against [[notation]], which is the one this domain was **built** with, and not against
+     * the classical extension's. The two differ by everything the foundation added below the
+     * domain: a domain over the chain's widest signature has numerals and an order to write with,
+     * and parsing its claims against `Classical.standard.notation` refuses `3` by saying there is no
+     * constant of that name. Found by a test whose axioms parsed and whose goal did not, which is
+     * the same text through two notations.
+     */
+    def settle(classical: Classical, text: String): Verdict =
+      Parser.proposition(theory, notation, text) match {
+        case Left(error) => Verdict.Refused(error.message)
+        case Right(goal) => settle(classical, goal)
+      }
+
+    private def settleBody(
+      classical: Classical,
+      reading: Logic,
+      variables: Vector[FVar],
+      body: Term
+    ): Verdict = {
+      val foreign = foundationConstantsIn(body)
+
+      if (Term.typeOf(body) != Type.Bool) Verdict.Refused("a proposition")
+      else if (foreign.nonEmpty)
+        Verdict.Refused(
+          s"a claim in ${domain.name}'s own vocabulary: ${foreign.toVector.sorted.mkString(", ")} " +
+            "belongs to the foundation underneath it, and an atom with no meaning is not an " +
+            "approximation of arithmetic"
+        )
+      else
+        instancesFor(reading, body) match {
+          case Left(why) => Verdict.Refused(why)
+          case Right(instances) => close(classical, reading, instances, variables, body)
+        }
+    }
+
+    /**
+     * The tautology, detached against the axiom instances it actually needed, and quantified again.
+     *
+     * == Why the instances are cut down first, which is the whole value of the method ==
+     *
+     * The obvious version hands every specialised axiom to the procedure and detaches all of them.
+     * It produces the same theorem and it **destroys the accounting**: `Derivation.axiomsOf` walks
+     * the proof, every axiom that was detached is in the proof, and a report saying the conclusion
+     * spent all four is worth nothing to the reader it is written for. Measured on the release gate
+     * the first time this was run: four of four, where the hand derivation spends one.
+     *
+     * So the set is made irredundant before the theorem is built. Each instance is dropped in turn
+     * and the bridge re-decided without it; where it still goes through, the instance is gone for
+     * good. What comes out is a set no member of which can be removed, which is what an
+     * unsatisfiable core is, obtained by deletion rather than read off a refutation — `Propositional`
+     * does not publish the clauses its refutation read, and the intuitionistic calculus has no
+     * clauses at all, so deletion is the one route that works for both.
+     *
+     * It costs `2n + 1` decisions for `n` instances, which is why [[Domain.Instances]] is bounded.
+     * And it is **minimal rather than minimum**: a different deletion order can leave a different
+     * irredundant set, and where two axioms would each do alone, the one tried later survives.
+     *
+     * == Why the route is fixed before the cutting down ==
+     *
+     * The intuitionistic calculus is asked first on the whole set, and whichever procedure answered
+     * is the one every deletion step uses. Re-choosing per step would let a subset provable only
+     * classically survive where the full set was intuitionistic, and the report would then name the
+     * choice axiom because the search shrank the assumptions, which is a worse trade made silently.
+     */
+    private def close(
+      classical: Classical,
+      reading: Logic,
+      instances: Vector[Kernel.Thm],
+      variables: Vector[FVar],
+      body: Term
+    ): Verdict = {
+      val rules = reading.rules
+      val calculus = Intuitionistic(reading)
+      val decision = Propositional.over(classical, reading)
+
+      def bridgeOf(subset: Vector[Kernel.Thm]): Either[LogicError, Term] =
+        subset.foldRight[Either[LogicError, Term]](Right(body)) { (instance, acc) =>
+          acc.flatMap(reading.mkImp(instance.conclusion, _))
+        }
+
+      def intuitionistically(subset: Vector[Kernel.Thm]): Option[Kernel.Thm] =
+        bridgeOf(subset).flatMap(calculus.prove).toOption
+
+      def classically(subset: Vector[Kernel.Thm]): Option[Kernel.Thm] =
+        bridgeOf(subset).toOption.flatMap(bridge =>
+          decision.decide(bridge) match {
+            case Propositional.Verdict.Proved(tautology) => Some(tautology)
+            case _ => None
+          }
+        )
+
+      val route: Option[Vector[Kernel.Thm] => Option[Kernel.Thm]] =
+        if (intuitionistically(instances).isDefined) Some(intuitionistically)
+        else if (classically(instances).isDefined) Some(classically)
+        else None
+
+      route match {
+        case None =>
+          bridgeOf(instances) match {
+            case Left(error) => Verdict.Refused(error.message)
+            case Right(bridge) =>
+              decision.decide(bridge) match {
+                case Propositional.Verdict.Countermodel(assignment) => Verdict.Countermodel(assignment)
+                case Propositional.Verdict.Undecided(why) => Verdict.Refused(why)
+                case Propositional.Verdict.Refused(why) => Verdict.Refused(why)
+                case Propositional.Verdict.Proved(_) =>
+                  Verdict.Refused("a decision that did not change between two identical questions")
+              }
+          }
+
+        case Some(prove) =>
+          val needed = instances.foldLeft(instances) { (kept, candidate) =>
+            val trial = kept.filterNot(_.conclusion == candidate.conclusion)
+            if (trial.length == kept.length || prove(trial).isEmpty) kept else trial
+          }
+
+          prove(needed) match {
+            case None => Verdict.Refused("a decision that did not survive its own cutting down")
+            case Some(tautology) =>
+              needed
+                .foldLeft[Either[LogicError, Kernel.Thm]](Right(tautology))((acc, instance) =>
+                  acc.flatMap(rules.mp(_, instance))
+                )
+                .flatMap(rules.genAll(_, variables.toList)) match {
+                case Left(error) => Verdict.Refused(error.message)
+                case Right(theorem) => Verdict.Settled(theorem, spends(theorem))
+              }
+          }
+      }
+    }
+
+    /**
+     * Every axiom of the domain at every subject the claim names, and nothing else.
+     *
+     * The subjects are the claim's own: the variables its quantifiers bound, and the variables and
+     * constants left free in its body. A claim about an arbitrary change and a claim about a named
+     * one therefore both work, and a claim needing an instance at a term that appears nowhere in it
+     * does not — which is the line between specialising a claim and searching for one, and this
+     * method is on the first side of it deliberately.
+     */
+    private def instancesFor(reading: Logic, body: Term): Either[String, Vector[Kernel.Thm]] = {
+      val rules = reading.rules
+      val subjects = (Term.freeVariables(body).toVector: Vector[Term]) ++ constantsIn(body).toVector
+
+      val prefixes = axioms.toVector
+        .sortBy(_._1)
+        .flatMap { case (_, asserted) =>
+          Logic.stripForall(asserted.conclusion).toOption.toVector.map { case (binders, _) =>
+            (asserted, binders.map(_.ty).toList)
+          }
+        }
+
+      // Counted before the tuples are built rather than after, because the count is a PRODUCT: a
+      // claim naming ten subjects over an axiom of eight binders is a hundred million tuples, and a
+      // bound checked on the finished list is a bound checked after the machine has been asked for
+      // the list. Each factor is how many of the subjects have the binder's type.
+      val expected = prefixes.map { case (_, types) =>
+        types.foldLeft(1L)((acc, ty) => acc * subjects.count(Term.typeOf(_) == ty))
+      }.sum
+
+      if (expected > Instances)
+        Left(
+          s"a claim of ${domain.name} needing at most $Instances specialised axioms, and this one " +
+            s"needs $expected: the subjects it names, at every binder of every axiom that takes them"
+        )
+      else
+        prefixes
+          .flatMap { case (asserted, types) => tuples(types, subjects).map((asserted, _)) }
+          .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+            case (acc, (asserted, arguments)) =>
+              for {
+                held <- acc
+                instance <- rules.specAll(asserted, arguments)
+              } yield if (held.exists(_.conclusion == instance.conclusion)) held else held :+ instance
+          }
+          .left
+          .map(_.message)
+    }
+
+    /** Every tuple of subjects matching a prefix of binder types, in the order they were found. */
+    private def tuples(types: List[Type], subjects: Vector[Term]): Vector[List[Term]] =
+      types match {
+        case Nil => Vector(Nil)
+        case head :: rest =>
+          subjects.filter(Term.typeOf(_) == head).flatMap { subject =>
+            tuples(rest, subjects).map(subject :: _)
+          }
+      }
+
+    /** The constants of a term that this domain introduced, as terms, so they can be subjects. */
+    private def constantsIn(term: Term): Set[Term] = term match {
+      case constant @ Const(name, _) if domain.introduced.contains(name) => Set(constant)
+      case App(fn, argument) => constantsIn(fn) ++ constantsIn(argument)
+      case Abs(_, inner) => constantsIn(inner)
+      case _ => Set.empty
+    }
+
+    /** The names a claim reaches that are neither the domain's nor a connective's. */
+    private def foundationConstantsIn(term: Term): Set[String] = {
+      def walk(current: Term): Set[String] = current match {
+        case Const(name, _) if domain.introduced.contains(name) => Set.empty
+        case Const(name, _) if Domain.Structural.contains(name) => Set.empty
+        case Const(name, _) => Set(name)
+        case App(fn, argument) => walk(fn) ++ walk(argument)
+        case Abs(_, inner) => walk(inner)
+        case _ => Set.empty
+      }
+
+      walk(term)
+    }
   }
+
+  /**
+   * What a claim about a domain came back as, and the three are not one answer with a flag on it.
+   *
+   * [[Verdict.Countermodel]] is the weak one and carries `Propositional`'s own caveat: the atoms
+   * are uninterpreted, so it refutes the claim **as a propositional schema over the domain's
+   * constants** and never says that the claim is false. [[Verdict.Refused]] is the claim being
+   * outside what this settles at all, and it names why.
+   */
+  enum Verdict {
+
+    /** A theorem, with what it spent: the half a reader of a domain claim is really owed. */
+    case Settled(theorem: Kernel.Thm, spending: Spending)
+
+    /** An assignment to the domain's own atoms under which the claim's skeleton fails. */
+    case Countermodel(assignment: Vector[(Term, Boolean)])
+
+    /** Outside the fragment, named. */
+    case Refused(why: String)
+  }
+
+  /**
+   * How many specialised axioms one claim may carry.
+   *
+   * A bound on the method and not on the domain, and it is a product rather than a sum: every
+   * subject the claim names is tried at every binder of every axiom. The release gate that this was
+   * measured on is four axioms of one binder at one subject, which is four; a claim naming three
+   * subjects over eight axioms of two binders each is seventy-two and is a different kind of
+   * question, so it is refused rather than run.
+   */
+  val Instances: Int = 64
+
+  /**
+   * The names a claim may reach without leaving its own vocabulary.
+   *
+   * The eight connectives and equality: what a domain claim is built **with** rather than what it
+   * is **about**. Everything else declared below the domain is the foundation's — an order, a sum,
+   * a numeral — and a claim reaching one of those is refused by name, because the propositional
+   * procedures would read it as an atom with no meaning and answer about a skeleton instead.
+   */
+  private val Structural: Set[String] = Set(
+    Logic.Truth,
+    Logic.Falsity,
+    Logic.Conjunction,
+    Logic.Disjunction,
+    Logic.Implication,
+    Logic.Negation,
+    Logic.Universal,
+    Logic.Existential,
+    Term.EqualityName
+  )
 
   /**
    * What a conclusion cost, by name where the name exists and by proposition where it does not.

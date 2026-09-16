@@ -52,22 +52,22 @@ import garden.xeno.symbolum.logic.*
  * The reasoning is propositional over the domain's own assumptions, which is what a reader should
  * be told before being asked to believe anything about a domain.
  *
- * == What automation reaches, which is half of it ==
+ * == The same claim by hand and by procedure, which is what this file measures ==
  *
- * `Ring` and `Linarith` decide fragments of the reals and have nothing to say here, so the
- * derivation below is by hand out of the derived rules. That was the whole answer once, and this
- * section said so under the heading "what it does not show" for as long as it took somebody to
- * read the file downwards: `derivedByTactic` settles the same claim through `Propositional`, and
- * the sentence "no tactic helped" survived, in the header of the file whose own body refutes it.
+ * Both routes are kept and the comparison is the finding rather than the theorem. The hand
+ * derivation is forty lines of `for`-comprehension out of the derived rules; `Domain.Built.settle`
+ * is one call, and what it does is what those lines do: specialise the axioms at the subject the
+ * claim names, decide the propositional skeleton with the domain's five constants as atoms given no
+ * meaning, detach, and quantify again. Same conclusion, same one domain axiom.
  *
- * What the procedure reaches is the propositional skeleton and not the domain. The caller
- * specialises the fourth axiom and detaches by hand, so nothing here searches over an assumption;
- * what goes to `Propositional` is a tautology whose atoms are the domain's constants, and it is
- * given no meaning for any of them. It comes back as the same theorem spending the same one domain
- * axiom, and **one foundational axiom the hand derivation does not spend**, which is asserted below
- * rather than described. So the promise for a domain is still accounting rather than search: a
- * route that reaches the theorem while moving the accounting has bought fewer lines at a price
- * named in the currency this file exists to report.
+ * **And, since 2026-09-16, the same foundational cost, which is nought.** This section recorded the
+ * opposite for as long as `Propositional` was the only procedure that could take a statement with a
+ * negation in it: that one decides classical validity and closes with `DOUBLE_NEGATION`, so it
+ * charged the choice axiom where the hand derivation charged nothing, and the honest report was that
+ * neither procedure covered an argument about a domain at its real cost. `Intuitionistic` is what
+ * closed it, and the assertion below is that the two routes now agree on the accounting and not
+ * merely on the theorem. The classical route is still exercised there, at its own price, so that
+ * the agreement is a measurement rather than a sentence about an empty set.
  *
  * Nor is this a development of the chain, and it must not become one. A theory built beside the
  * chain is the case `docs/adr/0008` warns about, and `SoundnessAttackSpec` still carries the row
@@ -86,44 +86,43 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
   private val foundation = classical.theory
   private val change = TyApp("change", Nil)
 
-  /** The domain's own vocabulary: six names, none of which any theory here had. */
-  private val declarations: Vector[(String, Type)] = Vector(
-    "TwoReviews" -> Type.fun(change, Type.Bool),
-    "OneReview" -> Type.fun(change, Type.Bool),
-    "PipelineGreen" -> Type.fun(change, Type.Bool),
-    "IsRevert" -> Type.fun(change, Type.Bool),
-    "Ships" -> Type.fun(change, Type.Bool)
-  )
-
   /**
-   * The release gate, in four sentences.
+   * The release gate, as a description: one type, five names and four sentences.
    *
-   * The first three are the grounds it gives, and the third is deliberately unlike the other two: a
-   * revert is not a weaker review, it is a different kind of reason, and the two fail differently.
-   * The fourth is the direction the prose means by "ships **when**": without it the three say only
-   * that a change meeting one of them may ship, and nothing at all follows about one that meets
-   * none. The conclusion below is about a change that meets none, so the fourth is the only one it
-   * can possibly spend, which is the accounting this file exists to show.
+   * The first three sentences are the grounds it gives, and the third is deliberately unlike the
+   * other two: a revert is not a weaker review, it is a different kind of reason, and the two fail
+   * differently. The fourth is the direction the prose means by "ships **when**": without it the
+   * three say only that a change meeting one of them may ship, and nothing at all follows about one
+   * that meets none. The conclusion below is about a change that meets none, so the fourth is the
+   * only one it can possibly spend, which is the accounting this file exists to show.
+   *
+   * A `Domain` rather than a fold over `declareConstant` and `assertAxiom` written out here, which
+   * is what this file did until 2026-09-16: the description is the thing a reader checks against the
+   * prose, and the twenty lines that turned it into a theory were the same twenty lines in every
+   * file that has ever done this.
    */
-  private val criterion: Vector[String] = Vector(
-    "!r:change. TwoReviews r ==> Ships r",
-    "!r:change. OneReview r /\\ PipelineGreen r ==> Ships r",
-    "!r:change. IsRevert r ==> Ships r",
-    "!r:change. Ships r ==> " +
-      "TwoReviews r \\/ (OneReview r /\\ PipelineGreen r) \\/ IsRevert r"
+  private val gate: Domain = Domain(
+    name = "the release gate",
+    typeOperators = Vector("change" -> 0),
+    constants = Vector(
+      "TwoReviews" -> Type.fun(change, Type.Bool),
+      "OneReview" -> Type.fun(change, Type.Bool),
+      "PipelineGreen" -> Type.fun(change, Type.Bool),
+      "IsRevert" -> Type.fun(change, Type.Bool),
+      "Ships" -> Type.fun(change, Type.Bool)
+    ),
+    axioms = Vector(
+      "TwoReviewsShip" -> "!r:change. TwoReviews r ==> Ships r",
+      "OneReviewAndGreenShips" -> "!r:change. OneReview r /\\ PipelineGreen r ==> Ships r",
+      "ARevertShips" -> "!r:change. IsRevert r ==> Ships r",
+      "OnThoseGroundsOnly" -> ("!r:change. Ships r ==> " +
+        "TwoReviews r \\/ (OneReview r /\\ PipelineGreen r) \\/ IsRevert r")
+    )
   )
 
-  private lazy val (theory, axioms) = {
-    val withType = lift(foundation.declareTypeOperator("change", 0))
-    val declared = declarations.foldLeft(withType) { (current, entry) =>
-      lift(current.declareConstant(entry._1, entry._2))
-    }
-    criterion.foldLeft((declared, Vector.empty[Kernel.Thm])) { case ((current, held), text) =>
-      val proposition = force(Parser.proposition(current, classical.notation, text))
-      val (extended, asserted) = lift(Kernel.assertAxiom(current, proposition))
-      (extended, held :+ asserted)
-    }
-  }
+  private lazy val built: Domain.Built = force(Domain.build(foundation, classical.notation, gate))
+  private lazy val theory: Theory = built.theory
+  private lazy val converseAxiom: Kernel.Thm = force(built.axiom("OnThoseGroundsOnly"))
 
   private lazy val logic: Logic = force(classical.logic.over(theory))
   private lazy val rules: Rules = logic.rules
@@ -140,11 +139,14 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
       "==> ~(Ships r)"
 
   /**
-   * The derivation, by hand, because nothing here can be asked to find it.
+   * The derivation, by hand, because when it was written nothing here could be asked to find it.
    *
    * Assume the three negations and suppose the change admitted; the fourth axiom gives a
    * disjunction of three, each of which contradicts one of the three negations. The middle case
    * needs only the second half of its conjunction, which is the `PipelineGreen` the caller denied.
+   *
+   * It is kept now that something can be asked, because it is what the procedure is measured
+   * against: what a claim of the world costs when a person writes every step of it.
    */
   private lazy val derived: Kernel.Thm = {
     val subject = Term.variable("r", change)
@@ -164,7 +166,7 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
       noIncident <- rules.conjElim1(rest)
       noStanding <- rules.conjElim2(rest)
 
-      converse <- rules.specAll(axioms(3), List(subject))
+      converse <- rules.specAll(converseAxiom, List(subject))
       supposed <- LogicError.lift(Kernel.assume(admitted))
       cases <- rules.mp(converse, supposed)
 
@@ -187,33 +189,17 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     } yield closed)
   }
 
-  /**
-   * The same statement, found by a procedure instead of written out.
-   *
-   * The hand derivation above is forty lines of `for`-comprehension and it is what this page is
-   * really about: a claim of the world, settled, with its assumptions counted. The question the
-   * card carrying this work asks is whether a machine can do that part, because forty lines per
-   * claim is not an instruction anybody follows.
-   *
-   * It can, and what it costs is measured below rather than described. Three steps: specialise the
-   * fourth axiom at the subject, hand the implication from it to the goal to `Propositional`, and
-   * detach. The domain's five constants are **atoms** to that procedure, which is what makes this
-   * work at all: it is given no meaning for any of them and does not need one, because the argument
-   * really is propositional and the spec above says so of itself.
-   */
-  private lazy val derivedByTactic: Kernel.Thm = {
-    val subject = Term.variable("r", change)
-    val body = proposition(
-      "~(TwoReviews (r:change)) /\\ ~(PipelineGreen r) /\\ ~(IsRevert r) ==> ~(Ships r)"
-    )
+  /** The same statement, put to the domain's own machinery instead of written out. */
+  private lazy val settled: Domain.Verdict = built.settle(classical, statement)
 
-    force(for {
-      converse <- rules.specAll(axioms(3), List(subject))
-      bridge <- logic.mkImp(converse.conclusion, body)
-      tautology <- Propositional.over(classical, logic).prove(bridge)
-      applied <- rules.mp(tautology, converse)
-      closed <- rules.gen(subject, applied)
-    } yield closed)
+  private lazy val derivedByTactic: Kernel.Thm = settled match {
+    case Domain.Verdict.Settled(theorem, _) => theorem
+    case other => fail(s"the claim was not settled: $other")
+  }
+
+  private lazy val spending: Domain.Spending = settled match {
+    case Domain.Verdict.Settled(_, spent) => spent
+    case other => fail(s"the claim was not settled: $other")
   }
 
   "The same claim put to a procedure" should "come back as the same theorem" in {
@@ -225,49 +211,133 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
   }
 
   it should "spend the same one of the four domain axioms" in {
-    // The accounting the card calls the product, produced by the search instead of by reading a
+    // The accounting the card calls the product, produced by the procedure instead of by reading a
     // hand derivation. Same answer: one of the four, and it is the converse.
-    val spent = Derivation.axiomsOf(derivedByTactic)
-    val ours = axioms.map(_.conclusion).toSet
-
-    spent.count(ours.contains) shouldBe 1
-    spent.filter(ours.contains).head shouldBe axioms(3).conclusion
-    axioms.take(3).count(axiom => spent.contains(axiom.conclusion)) shouldBe 0
+    spending.ofTheDomain shouldBe Set("OnThoseGroundsOnly")
+    spending.unspent should have size 3
   }
 
-  it should "cost one foundational axiom where the hand derivation costs none, and that is the finding" in {
-    // **The honest half, and it is a gap rather than a price worth paying quietly.**
+  it should "cost no foundational axiom either, which is what closed the gap" in {
+    // **The half this file reported as a gap until 2026-09-16, asserted the other way round.**
     //
-    // The hand derivation spends no foundational axiom at all: assume the subject ships, take
-    // the disjunction, contradict each case, conclude the negation. Every step of that is
+    // The hand derivation spends no foundational axiom at all: assume the subject ships, take the
+    // disjunction, contradict each case, conclude the negation. Every step of that is
     // intuitionistic. `Propositional` reaches the same theorem and charges the choice axiom,
-    // because it decides classical validity and closes with `DOUBLE_NEGATION`.
+    // because it decides classical validity and closes with `DOUBLE_NEGATION`, and while it was the
+    // only procedure that could take a statement with a negation in it, that was what a domain
+    // claim cost through a tactic.
     //
-    // So neither procedure this repository has covers this argument at its real cost. `Minimal` is
-    // the one that costs nothing and it refuses anything with a negation in it, which this statement
-    // is made of; `Propositional` takes it and overpays. What would close the gap is a decision
-    // procedure for **intuitionistic** propositional logic, negation included — Dyckhoff's
-    // contraction-free calculus is the standard one and it terminates without a depth bound. That is
-    // work of a known shape and it is not done here.
+    // `Domain.Built.settle` asks `Intuitionistic` first, which decides the fragment the hand
+    // derivation works in and certifies the answer out of the derived rules alone.
+    spending.foundational shouldBe empty
+    Derivation.axiomsOf(derived).filterNot(built.ours.contains) shouldBe empty
+
+    // The classical route, kept and still overpaying, which is what makes the two lines above a
+    // measurement rather than a remark about an empty set: same bridge, same theorem, one axiom.
+    val subject = Term.variable("r", change)
+    val body = proposition(
+      "~(TwoReviews (r:change)) /\\ ~(PipelineGreen r) /\\ ~(IsRevert r) ==> ~(Ships r)"
+    )
+    val classicalRoute = force(for {
+      converse <- rules.specAll(converseAxiom, List(subject))
+      bridge <- logic.mkImp(converse.conclusion, body)
+      tautology <- Propositional.over(classical, logic).prove(bridge)
+      applied <- rules.mp(tautology, converse)
+      closed <- rules.gen(subject, applied)
+    } yield closed)
+
+    classicalRoute.conclusion shouldBe derived.conclusion
+    Derivation.axiomsOf(classicalRoute).filterNot(built.ours.contains) shouldBe
+      Set(force(classical.axiom(Classical.Choice)).conclusion)
+  }
+
+  "A claim that does not follow" should "come back as an assignment rather than as a refusal" in {
+    // The other answer, and the one a reader has to be told how to read. A change with two reviews
+    // is admitted, and nothing in the gate says a change that ships has two reviews: the converse
+    // of the first axiom is not an axiom. What comes back names the atoms and the reading under
+    // which the skeleton fails, and it refutes the claim AS A SCHEMA over those atoms rather than
+    // saying that the claim is false, which is `SkeletonFailsAt`'s caveat carried one level up.
+    built.settle(classical, "!r:change. Ships r ==> TwoReviews r") match {
+      case Domain.Verdict.Countermodel(assignment) => assignment should not be empty
+      case other => fail(s"a claim that does not follow must not be settled: $other")
+    }
+  }
+
+  "A claim naming more subjects than the method will specialise at" should "be refused for its size" in {
+    // The bound, fired rather than described. It is a **product**: every subject the claim names is
+    // tried at every binder of every axiom, so an axiom of two binders over nine subjects is
+    // eighty-one specialised axioms and one of eight binders over ten subjects is a hundred
+    // million. The count is therefore taken before the tuples are built, which is what this asserts
+    // by the number in the message: a bound checked on the finished list is a bound checked after
+    // the machine has been asked for the list.
+    val pairs = Domain(
+      name = "the ordering rule",
+      typeOperators = Vector("change" -> 0),
+      constants = Vector(
+        "Ships" -> Type.fun(change, Type.Bool),
+        "Before" -> Type.fun(change, Type.fun(change, Type.Bool))
+      ),
+      axioms = Vector("BeforeShips" -> "!r:change. !s:change. Before r s /\\ Ships s ==> Ships r")
+    )
+    val ordering = force(Domain.build(foundation, classical.notation, pairs))
+
+    // Every one of the nine has to OCCUR, which is the other half of what a subject is: a variable
+    // the claim quantifies and never mentions is not something to specialise an axiom at, and the
+    // first version of this test bound nine and mentioned one, so it was settled rather than
+    // refused and the number it produced was 1 instead of 81.
+    val names = Vector("a", "b", "c", "d", "e", "f", "g", "h", "i")
+    val nine = s"!${names.map(_ + ":change").mkString(" ")}. " +
+      names.map(name => s"Ships $name").mkString(" /\\ ") + " ==> Ships a"
+
+    ordering.settle(classical, nine) match {
+      case Domain.Verdict.Refused(why) =>
+        why should include("81")
+        why should include("at most 64")
+      case other => fail(s"a claim of that size must be refused for it: $other")
+    }
+  }
+
+  "A claim reaching outside the domain's vocabulary" should "be refused by name" in {
+    // The line the card draws and the reason it is drawn there: "at most three attempts" is
+    // arithmetic, the procedures give an arithmetic constant no meaning, and what they would decide
+    // is a skeleton in which the requirement is one opaque atom. An approximation nobody asked for
+    // is worse than a refusal, so the refusal names the constant instead.
     //
-    // Asserted rather than written in prose so that the day it stops being true, this goes red.
-    val ours = axioms.map(_.conclusion).toSet
-    val foundational = Derivation.axiomsOf(derivedByTactic).filterNot(ours.contains)
+    // Built over the chain's widest signature rather than over the classical logic, because a
+    // domain that cannot even SAY `NUM_LE` cannot demonstrate a claim being turned away for
+    // reaching it.
+    val chain = Chain.standard
+    val job = TyApp("job", Nil)
+    val attempts = Domain(
+      name = "the retry rule",
+      typeOperators = Vector("job" -> 0),
+      constants = Vector(
+        "Attempts" -> Type.fun(job, TyApp(Natural.TypeName, Nil)),
+        "Abandoned" -> Type.fun(job, Type.Bool)
+      ),
+      axioms = Vector(
+        "AbandonedOnlyAfterThree" -> "!j:job. Abandoned j ==> NUM_LE 3 (Attempts j)"
+      )
+    )
 
-    foundational should have size 1
-    foundational.head shouldBe force(classical.axiom(Classical.Choice)).conclusion
+    val retries = force(Domain.build(chain.widest.theory, chain.widest.notation, attempts))
 
-    Derivation.axiomsOf(derived).filterNot(ours.contains) shouldBe empty
+    retries.settle(chain.classical, "!j:job. NUM_LT (Attempts j) 3 ==> ~(Abandoned j)") match {
+      case Domain.Verdict.Refused(why) =>
+        why should include("NUM_LT")
+        why should include("foundation")
+      case other => fail(s"arithmetic is outside this fragment and must be said so: $other")
+    }
   }
 
   "A theory of a domain that is not mathematics" should "be a theory like any other" in {
     theory.typeOperators.keySet should contain("change")
-    (theory.constants.keySet -- foundation.constants.keySet) shouldBe declarations.map(_._1).toSet
+    (theory.constants.keySet -- foundation.constants.keySet) shouldBe gate.introduced
 
     // Counted, which the card asks for by name. The domain's four sit on top of the foundation's,
     // and the difference is what a reader of this page is being asked to accept beyond what the
     // logic already assumes.
-    axioms.length shouldBe 4
+    built.axioms should have size 4
     theory.axioms.length shouldBe foundation.axioms.length + 4
   }
 
@@ -283,15 +353,13 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     // The half the card says is the product, and the half no other system packages. Four axioms
     // were asserted; the conclusion rests on one, and it is the converse rather than any of the
     // three that say when a change qualifies.
-    val spent = Derivation.axiomsOf(derived)
-    val ours = axioms.map(_.conclusion).toSet
+    val spent = built.spends(derived)
 
-    spent.count(ours.contains) shouldBe 1
-    spent.filter(ours.contains).head shouldBe axioms(3).conclusion
+    spent.ofTheDomain shouldBe Set("OnThoseGroundsOnly")
 
     // And the three unspent ones are asserted and really unused, which is the statement a reader
     // would not have guessed from reading the four.
-    axioms.take(3).count(axiom => spent.contains(axiom.conclusion)) shouldBe 0
+    spent.unspent shouldBe (built.axioms.keySet - "OnThoseGroundsOnly")
   }
 
   it should "say that no foundational axiom was spent either" in {
@@ -302,9 +370,8 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     // Paired with the assertion above, because "no foundational axiom" is also what a report that
     // found nothing at all would say: one domain axiom was found, so the walk is reading something.
     val spent = Derivation.axiomsOf(derived)
-    val ours = axioms.map(_.conclusion).toSet
 
-    spent.count(axiom => !ours.contains(axiom)) shouldBe 0
+    built.spends(derived).foundational shouldBe empty
 
     // Two paired assertions rather than one, because "no foundational axiom" is what a walk that
     // reads nothing also says, and what a walk that cannot see foundational axioms also says.
@@ -397,14 +464,15 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     Derivation.foreignTo(sibling._1, secondAxiom).axioms should have size 1
   }
 
-  "What a domain does not get" should "be said rather than left to be discovered" in {
-    // `Ring` and `Linarith` decide fragments of the reals. A domain theory has axioms of whatever
-    // shape its author wrote, so what is left is the derived rules and the rewriter, and the
-    // derivation above is a hand proof of a three-way case split. The number is reported rather
-    // than asserted against a bound, because what it is evidence for is the shape of the cost and
-    // not a budget: a claim of this size is tens of inferences per case, and nothing searched.
-    info(s"a three-way case split over four domain axioms: ${Derivation.size(derived)} inferences")
+  "What a domain gets and what it does not" should "be said rather than left to be discovered" in {
+    // `Ring` and `Linarith` decide fragments of the reals and have nothing to say here. What does
+    // reach a domain is the propositional skeleton, and the two numbers below are what that costs
+    // against writing the same argument out by hand. They are reported rather than asserted against
+    // a bound, because what they are evidence for is the shape of the cost and not a budget.
+    info(s"by hand: ${Derivation.size(derived)} inferences")
+    info(s"by procedure: ${Derivation.size(derivedByTactic)} inferences, ${spending.summary}")
 
     Derivation.size(derived) should be > 0
+    Derivation.size(derivedByTactic) should be > 0
   }
 }
