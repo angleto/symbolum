@@ -400,8 +400,19 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // against `word('a)->bool`, which share no type, so it is the second instance in this ledger of
     // a lemma whose binders the kernel's own typing refuses to transpose. The other three bind
     // words throughout and are transposable in exactly the way the figure exists to count.
-    library.entries.size shouldBe 493
-    library.names.distinct.size shouldBe 490
+    //
+    // 494 with `NUM_SUM_SPLIT`, a sum over a range split at a point. **ONE**, derived before the
+    // run: it is a single equation and the developments around it do not move. What it is for is
+    // not arithmetic at all -- a word is a concatenation, so a tally over the positions of
+    // `WORD_CONCAT x y` is this lemma at `m = WORD_LENGTH x`, and the real-valued `Sum` has had
+    // the same fact as `SUM_REINDEX` since it existed while `NUM_SUM` had three facts and no way
+    // to be split.
+    //
+    // `CLAUDE.md`'s two figures move by **one and by one**. It binds `f` at `num -> num` and `m`
+    // and `n` at `num`, so it has two or more leading quantifiers, and `m` and `n` are two of one
+    // type. Derived before the run from the statement rather than read off it afterwards.
+    library.entries.size shouldBe 494
+    library.names.distinct.size shouldBe 491
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

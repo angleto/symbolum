@@ -962,6 +962,21 @@ object Peano {
    * and a summand that agrees only where the sum looks -- which is what every argument about a
    * family indexed below a bound produces -- could not use it.
    */
+  /**
+   * `|- !f m n. NUM_SUM f (m + n) = NUM_SUM f m + NUM_SUM (\i. f (m + i)) n`
+   *
+   * A sum over a range split at a point, which the real-valued `Sum` has had as `SUM_REINDEX`
+   * since it existed and this one had not. What wanted it is a sum over the positions of a word:
+   * a word is a concatenation, so every fact about a tally over `WORD_CONCAT x y` is this lemma
+   * with `m` the length of `x`, and without it such a tally can be defined and nothing said about
+   * it.
+   *
+   * The shifted summand is `\i. f (m + i)` rather than a reindexed bound, which is the form that
+   * composes with `WORD_CONCAT_NTH_RIGHT`: that fact reads the right half at `WORD_LENGTH x + z`,
+   * which is this lemma's `f (m + i)` exactly.
+   */
+  val PartialSumSplit: String = "NUM_SUM_SPLIT"
+
   val PartialSumCongruenceBelow: String = "NUM_SUM_CONGRUENCE_BELOW"
 
   /* ----------------------------------------------------------------- numerals */
@@ -1147,6 +1162,10 @@ object Peano {
     PartialSumAtZero -> "!f:num -> num. NUM_SUM f ZERO = ZERO",
     PartialSumAtSuccessor ->
       "!f:num -> num. !n:num. NUM_SUM f (SUC n) = NUM_ADD (NUM_SUM f n) (f n)",
+    PartialSumSplit ->
+      ("!f:num -> num. !m:num. !n:num. " +
+        "NUM_SUM f (NUM_ADD m n) = " +
+        "NUM_ADD (NUM_SUM f m) (NUM_SUM (\\i:num. f (NUM_ADD m i)) n)"),
     PartialSumCongruenceBelow ->
       ("!f:num -> num. !g:num -> num. !n:num. " +
         "(!i:num. NUM_LT i n ==> f i = g i) ==> NUM_SUM f n = NUM_SUM g n"),
@@ -1456,7 +1475,7 @@ object Peano {
       // Its step adds and its congruence compares: `NUM_ADD` for the recursion and `NUM_LT` with
       // the two lemmas that lift an index to below a successor.
       summed <- partialSums(
-        logic, driver, naturals, withSubtraction, notation, recursion, orderFacts)
+        logic, driver, naturals, withSubtraction, notation, recursion, orderFacts, addFacts)
       (withPartialSums, partialSumDefinition, partialSumFacts) = summed
 
       // The last of the pure stages: three definitions and three doubling lemmas, no real.
@@ -5557,7 +5576,8 @@ object Peano {
     base: Theory,
     notation: Notation,
     recursion: Kernel.Thm,
-    orderFacts: Map[String, Kernel.Thm]
+    orderFacts: Map[String, Kernel.Thm],
+    addFacts: Map[String, Kernel.Thm]
   ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
     val numbers = TyApp(Natural.TypeName, Nil)
     val f = Term.variable("f", Type.fun(numbers, numbers))
@@ -5584,13 +5604,21 @@ object Peano {
       belowSuccessor <- orderFacts.get(BelowSuccessor).toRight(MissingDefinition(BelowSuccessor))
       congruence <- congruenceOnARange(
         logic, driver, theory, notation, atZero, atSuccessor, strictTransitive, belowSuccessor)
+
+      addAtZero <- addFacts.get(AddAtZero).toRight(MissingDefinition(AddAtZero))
+      addAtSuccessor <- addFacts.get(AddAtSuccessor).toRight(MissingDefinition(AddAtSuccessor))
+      addAssociative <- addFacts.get(AddAssociative).toRight(MissingDefinition(AddAssociative))
+      split <- partialSumSplit(
+        logic, driver, theory, notation,
+        addAtZero, addAtSuccessor, addAssociative, atZero, atSuccessor)
     } yield (
       theory,
       definition,
       Map(
         PartialSumAtZero -> atZero,
         PartialSumAtSuccessor -> atSuccessor,
-        PartialSumCongruenceBelow -> congruence
+        PartialSumCongruenceBelow -> congruence,
+        PartialSumSplit -> split
       )
     )
   }
@@ -5687,6 +5715,68 @@ object Peano {
         NumeralBit1Doubles -> bit1Doubles
       )
     )
+  }
+
+  /**
+   * [[PartialSumSplit]] by induction on the second addend, which is the last bound quantified.
+   *
+   * Both halves are a rewrite to a common term rather than an arithmetic argument, and the rule
+   * set is what carries them. The base takes `m + ZERO` to `m` and the empty sum to `ZERO`, and
+   * both sides land on `NUM_SUM f m`. The step takes `m + SUC n` to `SUC (m + n)` and opens both
+   * sums at their successor; what is left on the left is `NUM_SUM f (m + n) + f (m + n)` and on
+   * the right `NUM_SUM f m + (NUM_SUM g n + g n)`, and the induction hypothesis rewrites the first
+   * summand of the left into the two of the right.
+   *
+   * **The associativity is in the rule set rather than applied**, which is the only thing here
+   * worth a line: after the hypothesis fires, the left is bracketed to the left and the right to
+   * the right, and one unconditional rewrite by [[AddAssociative]] puts both in the same shape.
+   * Reaching for it by hand would mean knowing which of the two to move, and the rewriter does not
+   * have to be told.
+   */
+  private def partialSumSplit(
+    logic: Logic,
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    addAtZero: Kernel.Thm,
+    addAtSuccessor: Kernel.Thm,
+    addAssociative: Kernel.Thm,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      statement <- stated(theory, notation, PartialSumSplit)
+      stripped <- Logic.stripForall(statement)
+      (outer, inner) = stripped
+      summand <- outer.lift(0).toRight(NotOfForm("a summand", inner))
+      start <- outer.lift(1).toRight(NotOfForm("a starting point", inner))
+      bound <- outer.lift(2).toRight(NotOfForm("a bound to induct on", inner))
+      overEveryBound <- logic.mkForall(bound, inner)
+
+      shared = Vector(addAtZero, addAtSuccessor, atZero, atSuccessor)
+
+      proved <- driver.proveBy(
+        overEveryBound,
+        goal =>
+          for {
+            conversions <- normalisation(logic, shared, Vector.empty)
+            base <- Rewrite.proveEquation(logic, conversions._1, goal)
+          } yield base,
+        step =>
+          for {
+            // The hypothesis goes into the rule set rather than being applied at a site chosen
+            // here: it is an equation between closed terms of this proof, so it rewrites wherever
+            // it matches and matches in one place.
+            conversions <- normalisation(
+              logic, shared ++ Vector(step.hypothesis, addAssociative), Vector.empty)
+            closed <- Rewrite.proveEquation(logic, conversions._1, step.goal)
+          } yield closed
+      )
+
+      result <- rules.gen(start, proved).flatMap(rules.gen(summand, _))
+    } yield result
   }
 
   /**

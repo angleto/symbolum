@@ -495,6 +495,7 @@ they have least appetite for working out how it is produced.
   NUM_SUC_MUL              !x:num. !y:num. SUC x * y = x * y + y
   NUM_SUC_NOT_SELF         !x:num. ~(SUC x = x)
   NUM_SUM_CONGRUENCE_BELOW !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u = y u) ==> NUM_SUM x z = NUM_SUM y z
+  NUM_SUM_SPLIT            !x:num -> num. !y:num. !z:num. NUM_SUM x (y + z) = NUM_SUM x y + NUM_SUM (\u:num. x (y + u)) z
   NUM_SUM_SUC              !x:num -> num. !y:num. NUM_SUM x (SUC y) = NUM_SUM x y + x y
   NUM_SUM_ZERO             !x:num -> num. NUM_SUM x 0 = 0
   NUM_ZERO_ADD             !x:num. 0 + x = x
