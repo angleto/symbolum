@@ -54,6 +54,20 @@ import org.scalatest.matchers.should.Matchers
  * rule is pointed at a line it must match and a line it must not, so an edit that quietly stops
  * matching fails here instead of passing everywhere.
  *
+ * == What it reads, which was `.scala` and nothing else until 2026-09-16 ==
+ *
+ * The defect above was found in Scala, so the population was Scala, and that is the population
+ * being a habit rather than a decision. The prose it could not see was the denser half:
+ * `build.sbt` alone carries 496 comment lines of 710, against `Rules.scala`'s 499 of 1030 in a
+ * file three times as long, and a comment in `build.sbt` or in `ci.yml` is prose in exactly the
+ * way a comment in a `.scala` is. Seven extensions are read now, through two comment readers,
+ * and [[Formats]] carries the table, the per-format measurement, the two formats left out and why.
+ *
+ * Widening it found nothing, and that is the answer rather than a disappointment: the three
+ * markers over everything the widening added return zero, with `build.sbt` and the two workflows
+ * carrying almost all of it. What it buys is the day somebody writes the next ledger entry in a
+ * workflow or in the build.
+ *
  * == What it does not do ==
  *
  * It does not detect unaccented prose in a language whose function words are not listed, and it
@@ -121,7 +135,7 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
         else if (trimmed.startsWith("/*")) (kept :+ entry, !trimmed.contains("*/"))
         else if (trimmed.startsWith("//") || trimmed.startsWith("*")) (kept :+ entry, false)
         else
-          trailing(line) match {
+          trailing(line, "//", Set('"')) match {
             case Some(comment) => (kept :+ ((index + 1, comment)), false)
             case None => (kept, false)
           }
@@ -129,7 +143,8 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
       ._1
 
   /**
-   * The comment part of a line that is code, or nothing.
+   * The comment part of a line that is code, or nothing, for a language whose line comment starts
+   * with `marker`.
    *
    * A `//` inside a string literal is not a comment, and this spec's own fixtures are the proof:
    * they hold lines of another language inside literals on purpose, and the first draft flagged
@@ -137,13 +152,136 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    * on an escaped quote inside a literal. That case is absent here and the cost of being wrong on
    * it is a false positive, which is the direction to err in for a check somebody must switch off
    * if it cries wolf.
+   *
+   * The marker is a parameter rather than two copies of this, because the `#` languages need the
+   * same rule: measured over the six shell scripts, the two workflows and `build.properties`,
+   * every `#` on a line that does not begin with one is inside a literal, and all three are
+   * `echo "## Published"` and its siblings in `publish.yml`.
+   *
+   * `quotes` is the second parameter, and it is not decoration. The `#` languages quote with both
+   * kinds, and `echo '### The libraries'` is in this tree, so counting only double quotes reads it
+   * as a comment. Scala is the other way round: a `'` is a character literal and passes in and out
+   * of prose as an apostrophe, so requiring single-quote parity there would reject a line like
+   * `val s = "don't" // note` and DROP a real comment. The two directions are not equal in cost. A
+   * dropped comment is never scanned and makes this census greener, which is the failure this file
+   * exists against; a kept literal can at worst be flagged, which is the direction to err in.
+   * Measured before splitting them: across every `.scala`, `.sbt`, `.sc` and `.js` here, the
+   * number of trailing comments single-quote parity would have dropped is zero, so this is a
+   * choice about the next line somebody writes rather than a repair.
    */
-  private def trailing(line: String): Option[String] = {
-    val at = line.indexOf("//")
+  private def trailing(line: String, marker: String, quotes: Set[Char]): Option[String] = {
+    val at = line.indexOf(marker)
     if (at < 0) None
-    else if (line.take(at).count(_ == '"') % 2 != 0) None
+    else if (quotes.exists(quote => line.take(at).count(_ == quote) % 2 != 0)) None
     else Some(line.substring(at))
   }
+
+  /**
+   * Comment lines in a language whose comments begin with `#`, which is shell, YAML and
+   * `.properties` alike.
+   *
+   * A second reader and not a second census: the block above answers the same question for the
+   * languages that open a block comment with a slash and a star. Two readers cover seven of this
+   * repository's formats because comment syntax is shared and file extensions are not, which is
+   * why [[Formats]] maps extensions to readers instead of one census per format.
+   *
+   * Spelled out rather than written, and it cost a compile: Scala nests block comments, so those
+   * two characters inside a doc comment open a second one and the definition below is swallowed
+   * until the next closing marker. The compiler reports it as an unclosed comment at the top of
+   * the docstring and a missing brace at end of file, neither of them at the cause.
+   */
+  private def hashComments(text: String): Vector[(Int, String)] =
+    text.linesIterator.zipWithIndex.flatMap { case (line, index) =>
+      if (line.trim.startsWith("#")) Some((index + 1, line))
+      else trailing(line, "#", Set('"', '\'')).map(comment => (index + 1, comment))
+    }.toVector
+
+  /**
+   * The formats this census reads, each with the syntax its comments are written in.
+   *
+   * Until 2026-09-16 the population was `.scala` and nothing else, and the prose the census could
+   * not see was the larger half by density: `build.sbt` alone carried 496 comment lines of 710,
+   * against `Rules.scala`'s 499 of 1030 in a file three times as long. The defect this spec exists
+   * against is **prose inside a comment**, and a comment in `build.sbt` or in `ci.yml` is prose in
+   * exactly the way a comment in a `.scala` is.
+   *
+   * By extension and not by file, because a file list of length one is the shape `StyleSpec`
+   * already argues against: `project/plugins.sbt` is the second `.sbt` of this tree, and a census
+   * that read `build.sbt` by name would miss it.
+   *
+   * What each format contributes is printed by the assertion below rather than written here, for
+   * the reason a count in prose goes stale silently. The part worth writing down is the part a
+   * count hides: `.js` and `.properties` hold **no comment at all** today, one file each, so their
+   * presence in this table is a commitment about the next comment written in them and not evidence
+   * that anything has been read. `.sc` holds one.
+   *
+   * `.yaml` is deliberately absent though it is the same format: no file here uses that spelling,
+   * and the assertion below requires every declared format to have found a file, so declaring it
+   * would fail. That is the table staying honest rather than an oversight, and the day a `.yaml`
+   * lands the line to add is one.
+   *
+   * `.css` is absent for a reason of its own: `notebook.css` holds no comment at all today, and
+   * `//` is not a comment in CSS while it does occur inside a URL, so the reader above would be
+   * wrong on it the first time one lands. A third reader for one minified file buys less than it
+   * costs, and this sentence is what it buys instead.
+   *
+   * WHAT THIS DOES NOT CLOSE. A format nobody declares is a format nobody scans, which is this
+   * spec's own defect one level up, and nothing here fails when one arrives. The exact population
+   * is git's index, and no test in this repository starts a process; a filesystem census cannot
+   * answer it, because it reads build output, an editor's dotfiles and whatever a session left
+   * lying about. Declared, not solved.
+   */
+  private val Formats: Vector[(String, String => Vector[(Int, String)])] = Vector(
+    ".scala" -> commentLines,
+    ".sbt" -> commentLines,
+    ".sc" -> commentLines,
+    ".js" -> commentLines,
+    ".sh" -> hashComments,
+    ".yml" -> hashComments,
+    ".properties" -> hashComments
+  )
+
+  /**
+   * Directories whose contents are not this repository's prose, each with the reason.
+   *
+   * A directory whose name begins with a dot is a tool's rather than this repository's, and
+   * `.github` is the exception because the workflows are among the prose this census was widened
+   * to read.
+   */
+  private val Skipped: Map[String, String] = Map(
+    "target" -> "build output, which holds generated sources and copies of the ones above them",
+    "third-party" -> "corpora from other projects, whose prose is theirs and not this repository's",
+    "scratch" -> "the probe directory the project sets aside, untracked by design"
+  )
+
+  /**
+   * Every file of a declared format, from the repository root rather than from `modules/`.
+   *
+   * The walk reads the whole tree and filters afterwards, which is the obvious inefficiency and is
+   * measured rather than assumed: 8123 files including build output, a tenth of a second.
+   */
+  private def population: Vector[Path] = {
+    val stream = Files.walk(Paths.get("."))
+    try
+      stream
+        .iterator()
+        .asScala
+        .toVector
+        .map(_.normalize)
+        .filter(path => Formats.exists { case (suffix, _) => path.toString.endsWith(suffix) })
+        .filterNot(path =>
+          path.iterator().asScala.exists { part =>
+            val name = part.toString
+            Skipped.contains(name) || (name.startsWith(".") && name != ".github")
+          }
+        )
+        .sorted
+    finally stream.close()
+  }
+
+  /** The reader for a path, by its extension. Every path in [[population]] has one. */
+  private def reader(path: Path): String => Vector[(Int, String)] =
+    Formats.collectFirst { case (suffix, read) if path.toString.endsWith(suffix) => read }.get
 
   /**
    * Every Scala source under `modules/`, main and test alike.
@@ -170,22 +308,10 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    * Test sources are included because all six blocks that produced this spec were in test sources.
    * A scan of `src/main` alone would have found none of them.
    */
-  private def sources: Vector[Path] = {
-    val modules = Paths.get("modules")
-    if (!Files.exists(modules)) Vector.empty
-    else {
-      val stream = Files.walk(modules)
-      try
-        stream
-          .iterator()
-          .asScala
-          .toVector
-          .filter(path => path.toString.endsWith(".scala"))
-          .filterNot(path => path.toString.contains("/target/"))
-          .sorted
-      finally stream.close()
-    }
-  }
+  private def sources: Vector[Path] =
+    population.filter(path =>
+      path.toString.endsWith(".scala") && path.toString.startsWith("modules/")
+    )
 
   /** Contiguous runs of comment lines, which is the unit an exemption applies to. */
   private def blocks(lines: Vector[(Int, String)]): Vector[Vector[(Int, String)]] =
@@ -199,7 +325,7 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
 
   private def offences(path: Path): Vector[String] =
     for {
-      block <- blocks(commentLines(Files.readString(path)))
+      block <- blocks(reader(path)(Files.readString(path)))
       if !block.exists { case (_, line) => Reason.findFirstIn(line).isDefined }
       (number, line) <- block
       (name, pattern) <- Markers
@@ -212,20 +338,45 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
   // Floors and not equalities: this is not a size budget. A census with no subjects is green, which
   // is the way a scan like this passes without reading anything, so the floor is what a tree that
   // had genuinely lost its sources could not clear. Measured on 2026-09-15 at 320 files and 38446
-  // comment lines, by running these rules over the tree before this file was committed; half of
-  // each is the floor.
+  // comment lines over `.scala` alone, and on 2026-09-16 over all seven formats at 356 files and
+  // a comment total a little under 45000; half of each is the floor.
+  //
+  // The total is written that loosely on purpose, and the reason is one this file can demonstrate
+  // about itself: the census reads its own source, so an exact figure here is changed by writing
+  // it. The first draft said 44978, the run that followed printed 44977, and the difference was
+  // this paragraph. The file count does not have that problem and is exact. What the live numbers
+  // are is what the `info` line below prints, which is the one place they cannot go stale.
   "The scan" should "have found the sources, which is how a census like this passes for free" in {
-    val files = sources
-    withClue(s"scala files found under modules/: ${files.size}\n") {
-      files.size should be >= 160
+    val files = population
+    withClue(s"files found: ${files.size}\n") {
+      files.size should be >= 178
     }
 
-    val lines = files.map(path => commentLines(Files.readString(path)).size).sum
+    val lines = files.map(path => reader(path)(Files.readString(path)).size).sum
     withClue(s"comment lines found: $lines\n") {
-      lines should be >= 19000
+      lines should be >= 22400
     }
 
     info(s"${files.size} files, $lines comment lines")
+  }
+
+  it should "have found a file of every format it declares, so the table cannot name a dead one" in {
+    // The other half of the floor above, and the half a total cannot give: `.scala` is 96% of the
+    // population, so a format that stopped matching anything would cost 1 file of 356 and clear
+    // every floor here. An extension nobody uses, or one spelled `.yaml` where the tree writes
+    // `.yml`, reads as coverage and is not, which is the defect this spec was widened to repair
+    // arriving inside the repair.
+    // Named `unmatched` and not `empty`, which is what it was for a minute: `empty` shadows the
+    // matcher, so `empty shouldBe empty` compiles, compares the value with itself and passes
+    // whatever the population holds. An assertion that cannot fail is the thing this file is about.
+    val unmatched =
+      Formats.map(_._1).filterNot(suffix => population.exists(_.toString.endsWith(suffix)))
+
+    withClue(s"formats matching no file: ${unmatched.mkString(", ")}\n") {
+      unmatched shouldBe empty
+    }
+
+    info(Formats.map(_._1).map(s => s"$s: ${population.count(_.toString.endsWith(s))}").mkString(", "))
   }
 
   it should "reach every module, including any added after this was written" in {
@@ -287,6 +438,27 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
     seen should not contain "val alsoKept = 2"
   }
 
+  it should "read a `#` comment as a comment, and a `#` inside a literal as neither" in {
+    // The same discipline as the block above, for the reader the widening added. The negative is
+    // taken from `publish.yml` rather than invented: that file echoes markdown headings, and all
+    // three `#` occurrences in this tree that are not comments are of that shape.
+    val sample =
+      """# a line comment
+        |sbt.version = 1.10.10
+        |key: value # a trailing comment
+        |          echo "## Published"
+        |          echo '### The libraries'""".stripMargin
+
+    val seen = hashComments(sample).map(_._2.trim)
+    seen should contain("# a line comment")
+    // The single-quoted heading is the case that decided `quotes`: with double quotes alone it
+    // reads as a comment. Scala does not get that rule, and the docstring on `trailing` says why.
+    seen should contain("# a trailing comment")
+    seen should not contain "sbt.version = 1.10.10"
+    seen.exists(_.contains("Published")) shouldBe false
+    seen.exists(_.contains("The libraries")) shouldBe false
+  }
+
   /* ---------------------------------- each rule against a case whose answer is known */
 
   it should "match each marker where it is written, and not where English writes the same letters" in {
@@ -346,8 +518,8 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------------- the census */
 
-  "No comment under modules/" should "be written in a language other than English" in {
-    val found = sources.flatMap(offences)
+  "No comment in this repository's own source" should "be written in a language other than English" in {
+    val found = population.flatMap(offences)
 
     withClue(s"${found.size} comment line(s) not in English:\n${found.mkString("\n")}\n") {
       found shouldBe empty
