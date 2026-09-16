@@ -212,23 +212,31 @@ object Derivation {
     )
 
   /**
-   * A constant the theory holds under that name, with the same origin.
+   * A constant this theory would build: the same name, at a type its schema admits, same origin.
    *
-   * The type is not compared against the schema here, and the reason is that comparing it properly
-   * is `Theory.constant`'s job and reimplementing it would be a second thing to keep in step. A
-   * name the theory has at a schema this instance does not fit is reported as known by this and
-   * refused by the first rule that tries to use it, which is a worse message and not a wrong one.
+   * **The type used not to be compared, and the reason given for that does not hold here.** It was
+   * that comparing it properly is `Theory.constant`'s job and that reimplementing it would be a
+   * second thing to keep in step, with a name held at a schema the instance does not fit reported
+   * as known and refused later by the first rule that tries to use it. The first half is right and
+   * the answer to it is to **call** that method rather than to reimplement it, which is what
+   * happens below. The second half is what was wrong: this is a report at a boundary, and a
+   * boundary is exactly where no later rule runs. A caller reading `clean` acts on it, and
+   * `Session` and `DomainTheorySpec` both do.
+   *
+   * Measured on 2026-09-16 before the change, with two theories declaring one name at two types
+   * neither of which is an instance of the other: the narrower theory refuses to build the
+   * constant and `Theory.checkTerm` refuses the term, while this reported the theorem clean with
+   * zero foreign constants. A control, a name that theory never declared, was reported foreign, so
+   * the instrument was discriminating and still gave that answer.
+   *
+   * Equality is excluded by name because the kernel knows it by name: `Theory.declareConstant`
+   * refuses it and every theory carries it from [[Theory.primitive]].
    */
   private def known(theory: Theory, constant: Term): Boolean = constant match {
-    case Const(name, _) =>
-      name == Term.EqualityName ||
-      (theory.constants.contains(name) && theory.origins.get(name) == originOf(constant))
+    case found: Const =>
+      found.name == Term.EqualityName ||
+      theory.constant(found.name, found.ty).exists(_ == found)
     case _ => false
-  }
-
-  private def originOf(constant: Term): Option[Term] = constant match {
-    case c: Const => c.origin
-    case _ => None
   }
 
   private def constantsIn(term: Term): Set[Term] = term match {

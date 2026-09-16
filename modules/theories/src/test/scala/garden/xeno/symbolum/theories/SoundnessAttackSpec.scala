@@ -529,6 +529,64 @@ class SoundnessAttackSpec extends AnyFlatSpec with Matchers {
     Derivation.foreignTo(withNotP, innocent).clean shouldBe true
   }
 
+  /**
+   * The boundary report compares the type, and until 2026-09-16 it did not.
+   *
+   * `docs/adr/0019` adopts `Derivation.foreignTo` as the check, and the card carrying it defines
+   * the comparison as name, type **and** origin. Two of the three were compared. The type was
+   * left out deliberately, with the reason written beside it: comparing it properly is
+   * `Theory.constant`'s job, reimplementing it would be a second thing to keep in step, and a name
+   * held at a schema the instance does not fit would be "refused by the first rule that tries to
+   * use it, which is a worse message and not a wrong one".
+   *
+   * **The first half of that reason is right and the second is what this test is about.** The
+   * answer to "do not reimplement it" is to call it, which is what the code does now. And there is
+   * no first rule: this is a report AT a boundary, which is the one place where nothing runs
+   * afterwards to catch what it let through. `Session` reads the axioms it returns and
+   * `DomainTheorySpec` asserts `clean`, and neither puts the theorem to another rule first.
+   *
+   * What it measured, before the change, on the pair built below: the narrower theory cannot build
+   * the constant, `Theory.checkTerm` refuses the term, and this reported the theorem **clean**
+   * with zero foreign constants.
+   *
+   * The two types are chosen so that neither is an instance of the other and neither has a type
+   * variable, which is what makes the case unambiguous: a schema with a variable would admit the
+   * instance and there would be nothing to report.
+   */
+  it should "report a constant the theory holds at a type it does not admit" in {
+    val predicate = Type.fun(Type.Bool, Type.Bool)
+    val higher = Type.fun(predicate, Type.Bool)
+
+    val narrow = force(Theory.primitive.declareConstant("f", predicate))
+    val wide = force(Theory.primitive.declareConstant("f", higher))
+
+    val applied = force(
+      Term.app(force(wide.constant("f", higher)), Term.variable("g", predicate)))
+    val theorem = Kernel.refl(applied)
+
+    // The three readings of one pair, and the middle one is the assertion. The outer two are what
+    // say the first is a finding: the narrower theory really cannot have this term, by two routes
+    // that are not this check.
+    narrow.constant("f", higher).isLeft shouldBe true
+    narrow.checkTerm(applied).isLeft shouldBe true
+
+    val report = Derivation.foreignTo(narrow, theorem)
+    report.clean shouldBe false
+    report.constants should have size 1
+    report.axioms shouldBe empty
+
+    // Not vacuous in the other direction, which is the half a tightened check can quietly lose: a
+    // theorem the theory really does admit stays clean, and a polymorphic schema still takes its
+    // instances. Without these two rows, `known` returning false always would pass the assertion
+    // above and every other assertion in this file.
+    val itsOwn = Kernel.refl(force(narrow.constant("f", predicate)))
+    Derivation.foreignTo(narrow, itsOwn).clean shouldBe true
+
+    val schematic = force(Theory.primitive.declareConstant("k", Type.fun(TyVar("A"), Type.Bool)))
+    val atBool = Kernel.refl(force(schematic.constant("k", Type.fun(Type.Bool, Type.Bool))))
+    Derivation.foreignTo(schematic, atBool).clean shouldBe true
+  }
+
   it should "be taken by a check that reads only its constants, which is why that is not the check" in {
     // The measurement that decides where the boundary check lives, and it is the one thing a
     // reading of `docs/adr/0019` could not supply. That record adopts `Theory.certifies(thm)` and
