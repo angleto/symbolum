@@ -664,6 +664,22 @@ class StyleSpec extends AnyFlatSpec with Matchers {
       declared.size should be >= 84
     }
 
+    // The floors above catch a walk that finds nothing. This catches the way it could find
+    // everything it looks for and still miss a module, which is the failure the walk was chosen
+    // to avoid and does not fully avoid. [[testSources]] has no hand-written list of modules, but
+    // it does have a hand-written path: a module that moved its test sources with
+    // `Test / scalaSource` would be outside the census while every count above stayed plausible.
+    // That is `sat` and `mark` sitting outside the main scan with 34 `var` between them, one
+    // level along and one size smaller. There is no such override today and this is what says so,
+    // with no list and no number in it; the sibling assertion above does the same job for the
+    // main sources by reading `build.sbt`'s own aggregation.
+    val overrides = """(?m)^\s*Test\s*/\s*(scalaSource|sourceDirectory|unmanagedSourceDirectories)""".r
+      .findAllIn(Files.readString(root.resolve("build.sbt")))
+      .toVector
+    withClue(s"build.sbt redefines where test sources live: ${overrides.mkString(", ")}\n") {
+      overrides shouldBe empty
+    }
+
     val misnamed = declared.flatMap { case (path, name) =>
       val file = path.getFileName.toString
       Vector(
