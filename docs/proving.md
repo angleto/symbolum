@@ -16,9 +16,16 @@ design, which is in [architecture.md](architecture.md), and it does not teach lo
 what the document prints, so an example whose answer stopped being that answer fails the build. What
 it does not check is that the text printed here is the program it ran: the two are written twice and
 can drift, which is what happened on the front page, where a block nobody could compile sat beside a
-green assertion for as long as both existed. `ReadmeSpec` closes that for `README.md` by compiling
-every block as the file holds it. The same thing for this file is not written: it is `994aa06c`'s
-fifth acceptance criterion and is tracked as its own piece of work.
+green assertion for as long as both existed. `ReadmeSpec` closes that for `README.md` and
+`GuideBlocksSpec` closes it for this file, by **compiling** every block as the file holds it.
+Compiled is the word that matters, and the measurement that says so is what this guard found here on
+2026-09-16: **seven of the forty-seven blocks below did not compile as printed.** Four carried an
+invalid escape, `/\` where a Scala string wants `/\\`, which a lexer rejects before anything is
+typed; four failed later, three of them calls that lex perfectly and die in the typer and one a name
+the text used and the document never defined. One block is in both counts. A scan that asked only
+whether a block lexes would have reported the other three green, and those are the ones that read
+like working code. The two guards are a pair: this one says the text is a program,
+`DocumentationSpec` says the program gives the answer printed beside it.
 
 *If you modify this file and this excerpt no longer accurately describes its content, you must
 update it.*
@@ -42,6 +49,12 @@ difference between a wall and a convention, and it costs one object per theorem.
 Every operation that can fail returns `Either[LogicError, Kernel.Thm]` rather than throwing.
 Failure is the normal case: a tactic is asked about goals it does not decide, and saying so is its
 job.
+
+**`.toOption.get` appears in the examples below and is not how to write this.** It is what an
+example does to keep one line to the point when the failure is not what the line is about, and it
+throws where a real caller would have to decide something. Anything that matters is written as a
+`for` comprehension over the `Either`, which is what the derivations further down do and what the
+refusal is for: the first step that fails stops the chain and hands back what it said.
 
 **A refusal says which of three things happened, and it says it in the type.** `LogicError.standing`
 is `Decided`, `Exhausted` or `Unread`: the procedure searched to the end of its fragment and the
@@ -265,6 +278,15 @@ lands red here rather than going unmentioned.
 | `Inductive` | `MONOTONE`, `INDUCTIVE` | The set given by a rule set, as the intersection of every closed set rather than as an iteration. What that buys is a **non**-membership: a closure that can only be generated forwards answers a membership for whatever the budget reached and answers nothing at all about what is outside it |
 | `Reaching` | `REACH` | What a rewriting relation reaches, and the first consumer of `INDUCTIVE`: an induction principle over the reachable pairs, and a potential-function argument that bounds how many counted steps a derivation can hold |
 
+**This is not the front page's table and the two must not be merged.** `README.md` indexes by
+**capability**, so a row of it is a thing a reader might want to state and the answer is yes or no
+with the development named where there is one; several of its rows are a **No**, which is the half
+this table cannot have, since a development that does not exist has nothing to put in a signature.
+This one indexes by development and is the map you want once the answer is yes and the question is
+where to look. A reader who finds them saying different things about the same development should
+believe this one and fix that one: this table is compared against the library by a test and that
+table is prose.
+
 **What is not in the table, and why the absence is not an omission.** A development that publishes no
 lemma of its own has no heading in `lemmas.md` and no row here, and there are nine of them. They are
 drivers and procedures: `Induct` runs an induction over a goal, `Bounded` discharges
@@ -415,8 +437,10 @@ including zero, and the tactic does not pretend to have needed anything.
 positive settles it and the theorem is left resting on the positivity instead:
 
 ```scala
-val discharged = rules.disch(theorem.hypotheses.head, theorem)   // |- ~(y = 0) ==> ...
-val result = rules.mp(discharged, derived)                       // 0 < y |- ...
+for {
+  discharged <- rules.disch(theorem.hypotheses.head, theorem)   // |- ~(y = 0) ==> ...
+  result <- rules.mp(discharged, derived)                       // 0 < y |- ...
+} yield result
 ```
 
 **Why the atoms are ordered differently.** A rewrite fires between neighbours, and under
@@ -716,7 +740,7 @@ by somebody writing the predicate out themselves. Nobody ever did.
 
 ```scala
 val goal = reals.proposition(
-  "?s:real. (!x:real. x < 1 ==> x <= s) /\ (!b:real. (!x:real. x < 1 ==> x <= b) ==> s <= b)")
+  "?s:real. (!x:real. x < 1 ==> x <= s) /\\ (!b:real. (!x:real. x < 1 ==> x <= b) ==> s <= b)")
 
 Apply.to(logic, reals.axioms("COMPLETENESS"), goal.toOption.get)
 // the instantiation says  P := \x:real. x < 1
@@ -1069,8 +1093,9 @@ variable, because an atom of the system is of type `real` and `real` has no carr
 is solved once and the enumeration decides the rest.
 
 ```scala
-// `risk : entity -> real`, over a model that sizes `entity` at three
-search.satisfying(Vector("0 < x:real", "x:real < 1", "risk a < risk b"))
+// `risk : entity -> real`, over a model that sizes `entity` at three, and `reads` is that
+// theory's parser, since what this takes is propositions rather than text
+search.satisfying(Vector("0 < x:real", "x:real < 1", "risk a < risk b").map(reads))
 // Solved(x = 1/2, a = entity#0, b = entity#1): Survived(100) until 2026-09-11
 ```
 
@@ -1216,7 +1241,7 @@ is an equality between reals the solver cannot read as a linear system. A candid
 those comes back under `unchecked`:
 
 ```scala
-Abduce.standard.missing("!x:real y:real. 0 < x /\ x * y = 1 ==> 2 < x")
+Abduce.standard.missing("!x:real y:real. 0 < x /\\ x * y = 1 ==> 2 < x")
 // Gap(point = ..., found = Vector(), vacuous = Vector(),
 //     circular = Vector(...), unchecked = Vector(x < 0, ...))
 ```
@@ -1312,9 +1337,9 @@ product rather than the sum.
 The two nested alternations an analysis claim is written with are decided:
 
 ```scala
-Quantified.standard.decide("!x:real y:real. x < y ==> ?z:real. x < z /\ z < y")   // Holds
-Quantified.standard.decide("!e:real. 0 < e ==> ?d:real. 0 < d /\ d < e")          // Holds
-Quantified.standard.decide("?d:real. !e:real. 0 < e ==> 0 < d /\ d < e")          // Fails
+Quantified.standard.decide("!x:real y:real. x < y ==> ?z:real. x < z /\\ z < y")   // Holds
+Quantified.standard.decide("!e:real. 0 < e ==> ?d:real. 0 < d /\\ d < e")          // Holds
+Quantified.standard.decide("?d:real. !e:real. 0 < e ==> 0 < d /\\ d < e")          // Fails
 ```
 
 ## Where a claim came from
@@ -1817,10 +1842,11 @@ val theory = Vector("tierTwo", "gated", "reviewed", "signed", "auditable")
     acc.flatMap(_.declareConstant(name, Type.fun(TyApp("project", Nil), Type.Bool)))
   }
 val domain = Logic.standard.over(theory.toOption.get).toOption.get
+def reads(text: String) = Parser.proposition(domain.theory, text).toOption.get
 
 Minimal(domain).prove(reads(
-  "!p:project. (tierTwo p ==> gated p) /\ (gated p ==> reviewed p \/ signed p) /\ " +
-  "(reviewed p ==> auditable p) /\ (signed p ==> auditable p) ==> (tierTwo p ==> auditable p)"))
+  "!p:project. (tierTwo p ==> gated p) /\\ (gated p ==> reviewed p \\/ signed p) /\\ " +
+  "(reviewed p ==> auditable p) /\\ (signed p ==> auditable p) ==> (tierTwo p ==> auditable p)"))
 // Right(|- …), and `Derivation.axiomsOf` of it is EMPTY
 ```
 
@@ -1855,7 +1881,7 @@ val register = Provenance.of(extended, Vector(
   "load <= 60 * rate" -> "ARS 2022, table 4",
   "cap = 100 * rate"  -> "Decreto 152/2006 art. 101",
   "0 < load"          -> "ARS 2022, table 7",
-  "load < cap"        -> "Decreto 152/2006 art. 99"))
+  "load < cap"        -> "Decreto 152/2006 art. 99")).toOption.get
 
 val argument = Argument(cost, linarith, register, Real.standard.theory.axioms.toSet)
 

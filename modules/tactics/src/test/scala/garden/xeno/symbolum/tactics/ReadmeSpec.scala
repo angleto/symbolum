@@ -1,12 +1,8 @@
 package garden.xeno.symbolum.tactics
 
-import java.io.{PrintWriter, StringWriter}
-import java.net.URLClassLoader
-import java.nio.file.{Files, Path, Paths}
-import dotty.tools.dotc.Driver
-import dotty.tools.dotc.reporting.ConsoleReporter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Fate, NotRun, Prepared, Runs}
 
 /**
  * Every Scala block of `README.md`, compiled and run as the document holds it.
@@ -72,11 +68,6 @@ import org.scalatest.matchers.should.Matchers
  *     it is a block that misleads, and the repair is the document's rather than this file's.
  */
 class ReadmeSpec extends AnyFlatSpec with Matchers {
-
-  /** A block's fate: run it after this prelude, or do not run it and say why. */
-  private sealed trait Fate
-  private final case class Runs(prelude: String) extends Fate
-  private final case class NotRun(reason: String) extends Fate
 
   private val Imports =
     "import garden.xeno.symbolum._\nimport garden.xeno.symbolum.Dsl._\n"
@@ -157,25 +148,12 @@ class ReadmeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------ reading the document */
 
-  private def readme: String = Files.readString(locate("README.md"))
+  private val Document = "README.md"
+
+  private def readme: String = DocumentBlocks.read(Document)
 
   /** The fenced Scala blocks, in order, each with the line its first line sits on. */
-  private def blocksOf(markdown: String): Vector[(Int, String)] = {
-    val lines = markdown.linesIterator.toVector
-
-    def gather(at: Int, found: Vector[(Int, String)]): Vector[(Int, String)] =
-      if (at >= lines.length) found
-      else if (lines(at).trim != "```scala") gather(at + 1, found)
-      else {
-        val close = lines.indexWhere(_.trim == "```", at + 1)
-        // An unterminated fence is a broken document rather than a block with no end, and the
-        // failure a reader wants names the line the fence opened on.
-        if (close < 0) fail(s"README.md: a ```scala fence at line ${at + 1} is never closed")
-        else gather(close + 1, found :+ ((at + 2, lines.slice(at + 1, close).mkString("\n"))))
-      }
-
-    gather(0, Vector.empty)
-  }
+  private def blocksOf(markdown: String): Vector[Block] = DocumentBlocks.blocksOf(Document, markdown)
 
   /* ------------------------------------------------------------------ the registry agrees */
 
@@ -185,25 +163,25 @@ class ReadmeSpec extends AnyFlatSpec with Matchers {
     // The half that says nothing was forgotten: a block nobody has decided about fails, rather than
     // being carried along unrun and unnoticed, which is how twenty-two of twenty-four came to be
     // certified by paraphrase for as long as they were.
-    val unclaimed = blocks.filterNot { case (_, text) =>
-      Blocks.exists { case (key, _) => text.contains(key) }
+    val unclaimed = blocks.filterNot { block =>
+      Blocks.exists { case (key, _) => block.text.contains(key) }
     }
     withClue(s"blocks no entry of `Blocks` names, by first line:\n" +
-      s"${unclaimed.map { case (at, text) => s"  line $at: ${text.linesIterator.next()}" }.mkString("\n")}\n") {
+      s"${unclaimed.map(block => s"  line ${block.line}: ${block.text.linesIterator.next()}").mkString("\n")}\n") {
       unclaimed shouldBe empty
     }
 
     // And the half that says no entry has outlived its block. A key matching nothing would leave a
     // prelude and a reason describing text the document no longer holds, which is the stale
     // reference this repository treats as worse than a missing one.
-    val orphaned = Blocks.map(_._1).filterNot(key => blocks.exists(_._2.contains(key)))
+    val orphaned = Blocks.map(_._1).filterNot(key => blocks.exists(_.text.contains(key)))
     withClue(s"entries naming no block of README.md: ${orphaned.mkString(", ")}\n") {
       orphaned shouldBe empty
     }
 
     // A key naming two blocks would run one of them twice and the other never, and both would look
     // covered. That is the ambiguity a positional key does not have and is the price of this one.
-    val ambiguous = Blocks.map(_._1).filter(key => blocks.count(_._2.contains(key)) > 1)
+    val ambiguous = Blocks.map(_._1).filter(key => blocks.count(_.text.contains(key)) > 1)
     withClue(s"entries naming more than one block: ${ambiguous.mkString(", ")}\n") {
       ambiguous shouldBe empty
     }
@@ -228,12 +206,12 @@ class ReadmeSpec extends AnyFlatSpec with Matchers {
     // asserted to be in `Simplifier.scala`, not asserted to do what the section claims. What makes
     // it worth having is that the quotation is the thing that rots, exactly as the two assignments
     // on the front page rotted.
-    val simplifier = Files.readString(
-      locate("modules/core/src/main/scala/garden/xeno/symbolum/Simplifier.scala"))
+    val simplifier =
+      DocumentBlocks.read("modules/core/src/main/scala/garden/xeno/symbolum/Simplifier.scala")
     val quoted = blocksOf(readme)
-      .find(_._2.contains("case Div(operands)"))
+      .find(_.text.contains("case Div(operands)"))
       .getOrElse(fail("the architecture section no longer holds the block this test is about"))
-      ._2
+      .text
 
     quoted.linesIterator
       .filter(_.trim.startsWith("case "))
@@ -247,98 +225,24 @@ class ReadmeSpec extends AnyFlatSpec with Matchers {
 
   /* -------------------------------------------------------------------- compiling and running */
 
-  /**
-   * The classpath the blocks compile against, as `build.sbt` writes it.
-   *
-   * Refused by name rather than falling back to `java.class.path`, which under sbt's own test
-   * runner holds the launcher and not this suite: a harness that fell back would compile every
-   * block against almost nothing and report an error about `Var`, which reads as a defect in the
-   * document rather than as a missing file.
-   */
-  private def classpath: String = {
-    val resource = getClass.getResourceAsStream("/test-classpath.txt")
-    if (resource == null)
-      fail("test-classpath.txt is not on the test classpath; `build.sbt` generates it for this file")
-    else
-      try new String(resource.readAllBytes(), "UTF-8").linesIterator.mkString(java.io.File.pathSeparator)
-      finally resource.close()
-  }
-
-  /** One source holding every block that runs, each as the body of its own object. */
-  private def assemble(blocks: Vector[(String, String, String)]): (String, Vector[(String, Int)]) = {
-    val (lines, offsets) =
-      blocks.zipWithIndex.foldLeft((Vector("package readmeblocks", ""), Vector.empty[(String, Int)])) {
-        case ((lines, offsets), ((key, prelude, text), at)) =>
-          val opened = lines :+ s"object Block$at {" :+ "  def run(): Unit = {"
-          // Indented by four so that a block's own relative indentation survives: Scala 3 reads
-          // indentation, and text at column zero inside a brace is legal but its continuation lines
-          // are not always read the way the document's author wrote them.
-          val body = (prelude.linesIterator.toVector ++ text.linesIterator.toVector).map("    " + _)
-          (opened ++ body :+ "  }" :+ "}" :+ "", offsets :+ ((key, opened.length + 1)))
-      }
-    (lines.mkString("\n"), offsets)
-  }
-
-  /**
-   * Compile the generated source, returning how many errors and what the compiler said.
-   *
-   * **Errors and not warnings, and there is a warning here that a reader should know about.** Eight
-   * of the blocks write a bare integer to the right of an operator, `x + 1`, which reaches `Expr`
-   * through `Dsl.intToNum`; that is an `implicit def` in the Scala 2 style, so Scala 3 warns at
-   * every use site that `scala.language.implicitConversions` should be imported. The document does
-   * not import it and does not need to: the warning is a warning under default settings, which is
-   * what a reader pasting into their own project has. It becomes an error under
-   * `-Xfatal-warnings`, which is what THIS repository builds with, so a reader who pasted a block
-   * into `modules/core` would be stopped by their own settings and not by the document's.
-   *
-   * Those flags are deliberately not passed here, and the warnings are deliberately left in the
-   * text this returns rather than silenced with `-nowarn`: the failure message is where a reader
-   * finds out that the block compiled with something to say. Whether the eight blocks should carry
-   * the import is a question about the document rather than about this guard, and nobody has
-   * decided it.
-   */
-  private def compile(source: Path, out: Path): (Int, String) = {
-    val buffer = new StringWriter
-    val reporter = new Driver().process(
-      Array("-classpath", classpath, "-d", out.toString, "-color:never", source.toString),
-      new ConsoleReporter(null, new PrintWriter(buffer)))
-    (reporter.errorCount, buffer.toString)
-  }
-
-  /** Which block a line of the generated source belongs to. */
-  private def owner(offsets: Vector[(String, Int)], line: Int): String =
-    offsets.takeWhile(_._2 <= line).lastOption.map(_._1).getOrElse("the preamble")
-
   "Every README block this file runs" should "compile as the document holds it and run without throwing" in {
     val blocks = blocksOf(readme)
     val running = Blocks.collect { case (key, Runs(prelude)) =>
-      (key, prelude, blocks.find(_._2.contains(key)).map(_._2).getOrElse(fail(s"no block holds `$key`")))
+      Prepared(
+        key,
+        prelude,
+        blocks.find(_.text.contains(key)).map(_.text).getOrElse(fail(s"no block holds `$key`")),
+        run = true)
     }
 
-    val (text, offsets) = assemble(running)
-    val directory = Files.createTempDirectory("readme-blocks")
-    val out = Files.createDirectory(directory.resolve("classes"))
-    val source = directory.resolve("Blocks.scala")
-    Files.write(source, text.getBytes("UTF-8"))
+    val outcome = DocumentBlocks.outcome("readmeblocks", running)
 
-    val (errors, said) = compile(source, out)
-    val blamed = """(?m)Blocks\.scala:(\d+)""".r
-      .findAllMatchIn(said)
-      .map(m => owner(offsets, m.group(1).toInt))
-      .toVector
-      .distinct
-    withClue(s"$errors error(s), in the block(s) keyed by ${blamed.mkString("; ")}\n$said\n") {
-      errors shouldBe 0
+    withClue(s"${outcome.errors} error(s), in the block(s) keyed by " +
+      s"${outcome.blamed.mkString("; ")}\n${outcome.said}\n") {
+      outcome.errors shouldBe 0
     }
-
-    val loader = new URLClassLoader(Array(out.toUri.toURL), getClass.getClassLoader)
-    val threw = running.zipWithIndex.flatMap { case ((key, _, _), at) =>
-      val module = loader.loadClass(s"readmeblocks.Block$at$$").getField("MODULE$").get(null)
-      try { module.getClass.getMethod("run").invoke(module); None }
-      catch { case failure: Throwable => Some(s"`$key` threw ${Option(failure.getCause).getOrElse(failure)}") }
-    }
-    withClue(s"${threw.size} block(s) threw:\n${threw.mkString("\n")}\n") {
-      threw shouldBe empty
+    withClue(s"${outcome.threw.size} block(s) threw:\n${outcome.threw.mkString("\n")}\n") {
+      outcome.threw shouldBe empty
     }
 
     info(s"${running.size} blocks compiled and run from README.md")
@@ -352,71 +256,36 @@ class ReadmeSpec extends AnyFlatSpec with Matchers {
    * red are a compile error not counted, an exception not caught, and a block whose text was never
    * read. The first two are here; the third is the registry test above.
    *
+   * It stays in this file rather than moving with the harness it exercises, and that is deliberate:
+   * a self-test beside the mechanism is run once however many documents use it, and what it costs
+   * is two compiles. Whoever adds the third document should not pay for it again.
+   *
    * The first case is the front page's own defect put back: the line as it stood on 2026-09-15.
    */
   it should "fail on a block that does not compile, and on one that throws" in {
-    val directory = Files.createTempDirectory("readme-harness")
-
-    /** The blocks that failed to compile, by key, and the ones that threw, by key. */
-    def outcome(blocks: Vector[(String, String, String)]): (Vector[String], Vector[String]) = {
-      val (text, offsets) = assemble(blocks)
-      val out = Files.createTempDirectory(directory, "classes")
-      val source = Files.createTempFile(directory, "Blocks", ".scala")
-      Files.write(source, text.getBytes("UTF-8"))
-      val (errors, said) = compile(source, out)
-      if (errors > 0) {
-        val blamed = """\.scala:(\d+)""".r
-          .findAllMatchIn(said)
-          .map(entry => owner(offsets, entry.group(1).toInt))
-          .toVector
-          .distinct
-        (blamed, Vector.empty)
-      } else {
-        val loader = new URLClassLoader(Array(out.toUri.toURL), getClass.getClassLoader)
-        val threw = blocks.zipWithIndex.collect {
-          case ((key, _, _), at) =>
-            val module = loader.loadClass(s"readmeblocks.Block$at$$").getField("MODULE$").get(null)
-            try { module.getClass.getMethod("run").invoke(module); None }
-            catch { case _: Throwable => Some(key) }
-        }.flatten
-        (Vector.empty, threw)
-      }
-    }
-
     // Two compiles and not four, because each one costs a full scan of the classpath. The first
     // block of each pair is sound, so that a harness which simply reported everything as broken
     // would fail here rather than look like a strict one.
 
     // Two bad blocks at once, which also reads back which block a line belongs to: the first is the
     // line the front page carried until 2026-09-15, the guard of that day being green about it, and
-    // the second is any other line of a block broken, which is this card's criterion for finished.
-    val (broken, alsoThrew) = outcome(Vector(
-      ("sound", Imports, "val n = Var(\"n\")\n(Num(2) * n).simplify()"),
-      ("the old line", Imports, "val n = Var(\"n\")\nval expr = 2 * n + 3 * n - 1"),
-      ("one line broken", Imports, "val n = Var(\"n\")\nval simplified = n.simplifyy()")))
-    broken should contain allOf ("the old line", "one line broken")
-    broken should not contain "sound"
-    alsoThrew shouldBe empty
+    // the second is any other line of a block broken.
+    val broken = DocumentBlocks.outcome("harnessblocks", Vector(
+      Prepared("sound", Imports, "val n = Var(\"n\")\n(Num(2) * n).simplify()", run = true),
+      Prepared("the old line", Imports, "val n = Var(\"n\")\nval expr = 2 * n + 3 * n - 1", run = true),
+      Prepared("one line broken", Imports, "val n = Var(\"n\")\nval simplified = n.simplifyy()", run = true)))
+    broken.blamed should contain allOf ("the old line", "one line broken")
+    broken.blamed should not contain "sound"
+    broken.threw shouldBe empty
 
     // And a block that compiles and then fails at run time, which no error count would report.
-    val (noErrors, threw) = outcome(Vector(
-      ("sound", Imports, "val n = Var(\"n\")\n(Num(2) * n).simplify()"),
-      ("throws", Imports, "val n = Var(\"n\")\nrequire(n.toString == \"m\", \"deliberate\")")))
-    noErrors shouldBe empty
-    threw shouldBe Vector("throws")
+    val throwing = DocumentBlocks.outcome("harnessthrows", Vector(
+      Prepared("sound", Imports, "val n = Var(\"n\")\n(Num(2) * n).simplify()", run = true),
+      Prepared("throws", Imports, "val n = Var(\"n\")\nrequire(n.toString == \"m\", \"deliberate\")",
+        run = true)))
+    throwing.errors shouldBe 0
+    throwing.blamed shouldBe empty
+    throwing.threw.map(_.takeWhile(_ != ' ')) shouldBe Vector("`throws`")
   }
 
-  /* --------------------------------------------------------------------------------- paths */
-
-  /** Find a repository file from wherever the tests were started, as `DocumentationSpec` does. */
-  private def locate(relative: String): Path = {
-    def search(directory: Path, remaining: Int): Path =
-      if (remaining < 0) fail(s"could not find $relative from ${Paths.get("").toAbsolutePath}")
-      else {
-        val candidate = directory.resolve(relative)
-        if (Files.exists(candidate)) candidate else search(directory.getParent, remaining - 1)
-      }
-
-    search(Paths.get("").toAbsolutePath, 5)
-  }
 }
