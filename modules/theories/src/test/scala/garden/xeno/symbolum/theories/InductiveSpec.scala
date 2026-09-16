@@ -158,87 +158,34 @@ class InductiveSpec extends AnyFlatSpec with Matchers {
 
   private def isEven(number: Term): Term = lift(Term.app(evens, number))
 
+  /** `MONOTONE operator`, the proposition, at `num`. */
+  private def monotoneOf(operator: Term): Term = {
+    val constant =
+      lift(inductive.theory.constant(Inductive.Monotone, Type.fun(numberOperators, Type.Bool)))
+    lift(Term.app(constant, operator))
+  }
+
   private val zero: Term = force(inductive.term("ZERO", numbers))
   private val one: Term = force(inductive.term("SUC ZERO", numbers))
   private val two: Term = force(inductive.term("SUC (SUC ZERO)", numbers))
 
   /**
-   * `|- MONOTONE evenRules`, by hand, which is what the docstring's "it does not prove monotonicity
-   * for you" costs measured rather than asserted.
+   * `|- MONOTONE evenRules`, from [[Monotone.prove]] rather than by hand.
    *
-   * The shape is the one every rule set has: a disjunction of clauses in which the set argument
-   * occurs only positively, so each clause is carried by the inclusion and reassembled. A procedure
-   * recognising that shape would replace this function and does not exist.
+   * This was 52 lines of derivation until 2026-09-16, and those lines are half the measurement
+   * `Monotone`'s docstring quotes. The walk they performed is the walk every rule set needs, so it
+   * belongs to a procedure and not to each caller; what is worth asserting here is what comes back,
+   * which the test below does by conclusion as well as by hypothesis count.
    */
-  private lazy val evenIsMonotone: Kernel.Thm = {
-    val definition = atNumbers(force(inductive.definition(Inductive.Monotone)))
-    val unfolded = force(Conv.unfold(definition, List(evenRules)))
-    val body = rightOf(unfolded)
-
-    val normalising = force(Conv.betaNormalise(body))
-    val normal = rightOf(normalising)
-
-    val (sets, inner) = force(Logic.stripForall(normal))
-    val smaller = sets(0)
-    val larger = sets(1)
-    val (inclusion, everywhere) = impliesOf(inner)
-    val assumedInclusion = lift(Kernel.assume(inclusion))
-
-    val (points, clause) = force(Logic.stripForall(everywhere))
-    val point = points(0)
-    val (premise, target) = impliesOf(clause)
-    val assumedPremise = lift(Kernel.assume(premise))
-
-    val (isZero, hasPredecessor) = disjunctsOf(premise)
-    val (targetZero, targetPredecessor) = disjunctsOf(target)
-
-    // The base clause says nothing about the set, so it crosses unchanged.
-    val base = force(rules.disjIntro1(targetPredecessor, lift(Kernel.assume(isZero))))
-
-    // The step clause is where the inclusion is spent, once, on the one positive occurrence.
-    val predicate = force(
-      logic.destExistsPredicate(hasPredecessor).toRight(NotOfForm("an existential", hasPredecessor))
-    )
-    val targetPredicate = force(
-      logic
-        .destExistsPredicate(targetPredecessor)
-        .toRight(NotOfForm("an existential", targetPredecessor))
-    )
-    val witness = Conv.freshVariable("m", numbers, Term.freeVariables(target) ++ Term.freeVariables(premise))
-    // Assumed in BETA-REDUCED form, which is what `Rules.existsElim` looks for when it discharges
-    // the instance: it compares against the contraction of `predicate witness`, not against the
-    // application. Assuming the application instead leaves a hypothesis that is the same
-    // proposition and not the same term, and the refusal names the one it wanted.
-    val instance = rightOf(force(Conv.betaRoot(lift(Term.app(predicate, witness)))))
-    val opened = lift(Kernel.assume(instance))
-    val inSmaller = force(rules.conjElim1(opened))
-    val equation = force(rules.conjElim2(opened))
-    val inLarger = force(rules.spec(witness, assumedInclusion).flatMap(rules.mp(_, inSmaller)))
-    val rebuilt = force(rules.conjIntro(inLarger, equation))
-    val introduced = force(rules.existsIntro(targetPredicate, witness, rebuilt))
-    val step = force(
-      rules.existsElim(
-        lift(Kernel.assume(hasPredecessor)),
-        witness,
-        force(rules.disjIntro2(targetZero, introduced))
-      )
-    )
-
-    val split = force(rules.disjElim(assumedPremise, base, step))
-    val proved = force(
-      rules
-        .disch(premise, split)
-        .flatMap(rules.gen(point, _))
-        .flatMap(rules.disch(inclusion, _))
-        .flatMap(rules.gen(larger, _))
-        .flatMap(rules.gen(smaller, _))
-    )
-
-    lift(Kernel.eqMp(force(Conv.sym(unfolded)), shaped(body, proved)))
-  }
+  private lazy val evenIsMonotone: Kernel.Thm = force(Monotone.prove(logic, inductive, evenRules))
 
   "The rules of the even numbers" should "be monotone, proved rather than assumed" in {
+    // The conclusion as well as the hypotheses, which the hand proof did not need to assert and a
+    // procedure does: a walk that went astray cannot produce a theorem about something else here,
+    // because the last step folds it back across `MONOTONE`'s definition, but the assertion that
+    // says so belongs at the caller rather than in the procedure's own docstring.
     evenIsMonotone.hypotheses shouldBe empty
+    evenIsMonotone.conclusion shouldBe monotoneOf(evenRules)
   }
 
   it should "admit `SUC (SUC ZERO)` through the introduction rules" in {
@@ -353,4 +300,123 @@ class InductiveSpec extends AnyFlatSpec with Matchers {
     refusal.hypotheses shouldBe empty
     refusal.conclusion shouldBe force(logic.mkNot(isEven(one)))
   }
+
+  /* ---------------------------------------- the procedure, and what it refuses */
+
+  /**
+   * `\S n. !m. m < n ==> S m`, the shape neither consumer of [[Monotone.prove]] exercises.
+   *
+   * The even numbers and `Reaching`'s derivations are both disjunctions of existentials, so between
+   * them they walk five of the seven positive shapes and leave the universal and the implication
+   * untouched. This is a real rule set rather than a shape invented for the test — it is the one a
+   * well-founded definition is written in, "in the set if everything below it is" — and it is the
+   * only place the positive side of an implication is carried.
+   */
+  private val belowRules: Term =
+    force(inductive.term("\\S:num->bool. \\n:num. !m:num. m < n ==> S m", numberOperators))
+
+  /** `\S n. ~(S n)`, the operator the refusal exists for. */
+  private val negationRules: Term =
+    force(inductive.term("\\S:num->bool. \\n:num. ~(S n)", numberOperators))
+
+  /** `\S n. S n ==> n = ZERO`, negative for the other of the two reasons. */
+  private val antecedentRules: Term =
+    force(inductive.term("\\S:num->bool. \\n:num. S n ==> n = ZERO", numberOperators))
+
+  "The monotonicity procedure" should "carry a set argument under a universal and to the right of an implication" in {
+    val proved = force(Monotone.prove(logic, inductive, belowRules))
+
+    proved.hypotheses shouldBe empty
+    proved.conclusion shouldBe monotoneOf(belowRules)
+  }
+
+  it should "refuse an operator whose set argument is under a negation, naming the subterm" in {
+    // The subterm and not the operator, because that is what a caller has to go and change. The set
+    // variable's own name is not asserted: it comes from stripping `MONOTONE`'s binders and is
+    // freshened, so pinning it would be pinning the printer rather than the refusal.
+    val refusal = Monotone.prove(logic, inductive, negationRules)
+
+    refusal.isLeft shouldBe true
+    refusal.left.toOption.get match {
+      case NotOfForm(expected, found) =>
+        expected should include("only positively")
+        withClue(s"the refusal should name the negation itself, and named $found: ") {
+          logic.destNot(found) should not be empty
+        }
+      case other => fail(s"expected a refusal about the shape, got ${other.message}")
+    }
+
+    // `Unread` and emphatically not `Decided`: nothing here searched anything, and the next test is
+    // what says the two are different questions even where the answers agree.
+    refusal.left.toOption.get.standing shouldBe LogicError.Standing.Unread
+    LogicError.decided(refusal) shouldBe false
+  }
+
+  it should "be right to refuse that one: its monotonicity is false, and derivably so" in {
+    // The half that makes the refusal worth having. A procedure that refuses everything it does not
+    // recognise is doing its job whether or not the operator was monotone, so what has to be shown
+    // once is an operator it refuses that is genuinely NOT monotone. This is that operator, and the
+    // derivation is short because `INDUCTIVE_FIXPOINT` does the work: `MONOTONE` of it would give
+    // `INDUCTIVE f 0 = ~(INDUCTIVE f 0)`, and a proposition equal to its own negation is falsity.
+    //
+    // It is not a claim that every refusal is of a non-monotone operator, and cannot be: two
+    // negations is monotone and is refused, which `Monotone`'s own docstring says. It is a claim
+    // that this one is not conservatism.
+    val monotone = monotoneOf(negationRules)
+    val assumed = lift(Kernel.assume(monotone))
+
+    val fixpoint = force(
+      rules.spec(negationRules, atNumbers(fact(Inductive.Fixpoint))).flatMap(rules.mp(_, assumed))
+    )
+    val equation = reduced(force(rules.spec(zero, fixpoint)))
+    val proposition = force(
+      Term.destEq(equation.conclusion).map(_._1).toRight(NotOfForm("an equation", equation.conclusion))
+    )
+
+    // `p = ~p` twice: once to refuse `p`, and once to prove it from that refusal.
+    val assumedProposition = lift(Kernel.assume(proposition))
+    val refuted = force(
+      rules
+        .notElim(lift(Kernel.eqMp(equation, assumedProposition)), assumedProposition)
+        .flatMap(rules.notIntro(proposition, _))
+    )
+    val held = lift(Kernel.eqMp(force(Conv.sym(equation)), refuted))
+    val falsity = force(rules.notElim(refuted, held))
+    val refusal = force(rules.notIntro(monotone, falsity))
+
+    refusal.hypotheses shouldBe empty
+    refusal.conclusion shouldBe force(logic.mkNot(monotone))
+  }
+
+  it should "refuse an operator whose set argument is an antecedent, naming that antecedent" in {
+    // The second of the two negative positions, and it arrives by a different route: the negation
+    // above is a shape no handler reads, this one is a shape that IS read and whose left-hand side
+    // is checked. Keeping both means the check is not resting on the negation happening to be
+    // unreadable.
+    val refusal = Monotone.prove(logic, inductive, antecedentRules)
+
+    refusal.isLeft shouldBe true
+    refusal.left.toOption.get match {
+      case NotOfForm(expected, found) =>
+        expected should include("only positively")
+        withClue(s"the refusal should name the antecedent, and named $found: ") {
+          logic.destImp(found) shouldBe empty
+          logic.destNot(found) shouldBe empty
+        }
+      case other => fail(s"expected a refusal about the shape, got ${other.message}")
+    }
+  }
+
+  it should "refuse a term that is not an operator over sets at all" in {
+    // A different question from the two above and it is worth keeping them apart: those are
+    // operators written in a shape this cannot walk, this is not an operator. A caller that hands
+    // over a set where an operator was wanted gets told which, rather than a refusal about
+    // positivity that would send it looking at the wrong thing.
+    val set = force(inductive.term("\\n:num. n = ZERO", numberSets))
+    val refusal = Monotone.prove(logic, inductive, set)
+
+    refusal.isLeft shouldBe true
+    refusal.left.toOption.get.message should include("('a -> bool) -> 'a -> bool")
+  }
+
 }

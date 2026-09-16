@@ -47,8 +47,10 @@ Its two faces are two facts and not one, because they cost different things:
 - `INDUCTIVE_FIXPOINT` is the two together and is derived from them, which is what entitles the name
   "fixed point".
 
-Monotonicity is an obligation on the caller, discharged per rule set, and there is no procedure that
-decides it.
+Monotonicity is an obligation on the caller, discharged per rule set. Nothing decides it, and since
+2026-09-16 `Monotone.prove` discharges it for the shape a rule set is written in, by reading the
+term rather than by searching. That is a recognition and not a decision: an operator it refuses may
+still be monotone, and the refusal says only that the operator is not written in that shape.
 
 ## Consequences
 
@@ -56,11 +58,19 @@ decides it.
 be obtained by computing. `InductiveSpec` derives `~(EVEN (SUC ZERO))` for the even numbers as the
 least set holding `ZERO` and closed under two successors, using no monotonicity at all.
 
-**Every rule set pays a monotonicity proof.** Measured rather than estimated: a two-clause operator
-costs about forty lines of `InductiveSpec`. Every operator written in the usual shape — a
-disjunction of clauses in which the set argument occurs only positively — is monotone, so a
-procedure recognising that shape syntactically would remove the cost entirely. It is not written,
-and that is the gap this record names.
+**Every rule set paid a monotonicity proof, and from 2026-09-16 it pays one call.** This record
+named the gap and `Monotone` is what closed it. The measurement the gap was argued from is worth
+keeping, because this record got it wrong: it said "about forty lines" for the two-clause operator
+of `InductiveSpec`, and the two hand proofs that existed by the time the procedure was written were
+**52** and **56** code lines, comments and blanks stripped, the larger of the two being `Reaching`'s
+over the substantially bigger operator. The prediction's spread was 75% and the measurement's is 8%,
+which is the finding rather than either number: the cost per clause is flat, because everything to
+the right of the one positive occurrence is carried across without being looked at. A cost that does
+not grow with the operator was never a cost about the operator.
+
+The procedure does not make the repository shorter today — 175 code lines against the 108 it
+retires — and that is not what was wrong with the old arrangement. What it changes is that a rule
+set's monotonicity is one line instead of fifty, so the third one is where the total crosses.
 
 **`Chain.widest` moves again.** This link declares two constants, so it is the widest signature. It
 is the ninth name that field has held in five days, which is the argument the field's own comment

@@ -51,11 +51,13 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it does not do ==
  *
- * **It does not prove monotonicity for you.** Every operator written from a rule set in the usual
- * shape — a disjunction of clauses, each a conjunction in which the set argument occurs only
- * positively — is monotone, and a procedure deciding that syntactically is a real thing to want and
- * is not here. `InductiveSpec` proves it by hand for one operator, in about thirty lines, which is
- * the measurement a caller should budget from and the reason to want the procedure.
+ * **It does not prove monotonicity, and since 2026-09-16 [[Monotone]] does.** Every operator
+ * written from a rule set in the usual shape — a disjunction of clauses, each a conjunction in
+ * which the set argument occurs only positively — is monotone for reasons that are visible in the
+ * term, and that procedure reads them. It lives beside this file rather than in it because it
+ * declares nothing and because its caller's logic, not this development's, is the one that can read
+ * the caller's operator. What is still true and is the part to carry: monotonicity is an obligation
+ * on the caller, and a caller whose operator is not written in that shape still owes a hand proof.
  *
  * **It does not give a recursion.** Defining a *function* by recursion over the derivation of a
  * membership is a different theorem, and `Descent` is where this repository's course-of-values

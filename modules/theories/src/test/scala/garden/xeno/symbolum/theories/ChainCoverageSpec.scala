@@ -115,6 +115,17 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Embedding" -> NotADevelopment,
 
     "Descent" -> DeclaresNothing,
+
+    // Beside the chain, and the classification is the one this file exists to make somebody choose.
+    // It is a procedure: handed an operator it returns `|- MONOTONE f`, built entirely out of the
+    // caller's own logic and `Inductive`'s definition of `MONOTONE`. It declares no type, no
+    // constant and no definition, and it holds no fact of its own, which is why nothing of it could
+    // be missing from `Library.of` the way `Magnitude`'s seventeen were. `InTheChain` is wrong for
+    // it for a reason worth writing down rather than leaving to the reader: what it produces is a
+    // theorem about the CALLER's operator, so there is no theory for `Chain.construct` to extend
+    // and no signature for `Chain.widest` to gain.
+    "Monotone" -> DeclaresNothing,
+
     "Recursion" -> DeclaresNothing,
     "Semiring" -> DeclaresNothing,
 

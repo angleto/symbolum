@@ -860,11 +860,18 @@ definition whose extension was empty would satisfy every induction principle and
 non-membership above it, so the one test that has to be a membership is the guard against the whole
 file being vacuous.
 
-**What it does not carry is a monotonicity procedure**, and that is the gap to name rather than
-leave. Every operator written from a rule set in the usual shape — a disjunction of clauses with the
-set argument only positive — is monotone for syntactic reasons, and nothing reads the shape. A
-two-clause operator costs about forty lines by hand, measured in `InductiveSpec` rather than
-estimated.
+**The monotonicity it does not carry is `Monotone`, a procedure rather than a development, since
+2026-09-16.** `INDUCTIVE_INTRO` asks `MONOTONE f` and every operator written from a rule set in the
+usual shape — a disjunction of clauses with the set argument only positive — is monotone for reasons
+visible in the term. `Monotone.prove` walks the term and produces the theorem; it **recognises a
+shape and decides nothing**, so an operator it refuses may still be monotone and the refusal names
+the offending subterm rather than the operator. The two hand proofs it retired were **52** code
+lines in `InductiveSpec` and **56** in `Reaching`, and the pair rather than either figure is the
+argument: the second operator is much larger and its proof was four lines longer, because everything
+to the right of the one positive occurrence is carried across without being looked at. `docs/adr/0020`
+predicted forty and seventy for that pair and is corrected in place. The refusal is exercised on
+`\S x. ~(S x)`, where `InductiveSpec` also derives `~(MONOTONE ...)`, so the refusal is a fact about
+that operator and not this procedure being careful.
 
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants

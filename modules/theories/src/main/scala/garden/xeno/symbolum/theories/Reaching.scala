@@ -65,10 +65,15 @@ import garden.xeno.symbolum.logic.*
  * has no concatenation yet. When it lands, the step relation is one definition and everything above
  * is this file instantiated: `R` is that relation, `A` the rules being counted, `Phi` the measure.
  *
- * **No monotonicity procedure.** The three introduction rules below each spend
- * [[Inductive.Introduction]], so each needs this operator to be monotone, and that is proved once
- * here by hand in [[monotone]]. Every rule set has the shape that makes it true — a disjunction of
- * clauses with the set argument only positive — and nothing recognises the shape.
+ * == Where the monotonicity comes from, which is no longer here ==
+ *
+ * The three introduction rules below each spend [[Inductive.Introduction]], so each needs this
+ * operator to be monotone. That was proved here by hand, in 56 lines, and it is now one call to
+ * [[Monotone.prove]], which reads the shape every rule set has — a disjunction of clauses with the
+ * set argument only positive — instead of being written out again per operator. This file was the
+ * second of the two hand proofs and the measurement that argued for the procedure: its operator is
+ * substantially larger than `InductiveSpec`'s and its proof was four lines longer, because
+ * everything to the right of the one positive occurrence is carried across without being looked at.
  */
 final class Reaching private (
   val inductive: Inductive,
@@ -217,7 +222,7 @@ object Reaching {
       inductiveInduct <- inductive.fact(Inductive.Induction)
       inductiveIntro <- inductive.fact(Inductive.Introduction)
 
-      monotonicity <- monotone(logic, inductive, operator)
+      monotonicity <- Monotone.prove(logic, inductive, operator)
       induction <- inductionPrinciple(logic, inductiveInduct, operator, unfolding)
       steps <- introductionRules(
         logic, theory, notation, product, inductiveIntro, monotonicity, operator, unfolding)
@@ -315,85 +320,6 @@ object Reaching {
 
   private def existsBody(term: Term, logic: Logic): Either[LogicError, Term] =
     logic.destExistsPredicate(term).toRight(NotOfForm("an existential", term))
-
-  /**
-   * `|- MONOTONE op`, proved by hand, which is what every introduction rule below spends.
-   *
-   * The shape is the one every rule set has and the proof is the one every rule set would get: the
-   * clause is a disjunction, the set argument occurs once and positively, so the base disjunct
-   * crosses untouched and the step disjunct is rebuilt with the inclusion applied to that one
-   * occurrence. Everything to the right of it — the `R`-step and the two-way split on whether the
-   * move was counted — is carried across as a single conjunct without being looked at, which is
-   * what makes this proof the same length for a three-clause operator as for a one-clause one.
-   */
-  private def monotone(
-    logic: Logic,
-    inductive: Inductive,
-    operator: Term
-  ): Either[LogicError, Kernel.Thm] = {
-    val rules = logic.rules
-
-    for {
-      definition <- inductive.definition(Inductive.Monotone)
-      atSteps = Kernel.instType(Map(Classical.TypeVariable -> Steps), definition)
-      unfolded <- Conv.unfold(atSteps, List(operator))
-      body <- rightOf(unfolded)
-      normalising <- Conv.betaNormalise(body)
-      normal <- rightOf(normalising)
-
-      outer <- Logic.stripForall(normal)
-      smaller <- outer._1.lift(0).toRight(NotOfForm("a claim about two sets", normal))
-      larger <- outer._1.lift(1).toRight(NotOfForm("a claim about two sets", normal))
-      pair <- impliesOf(outer._2, logic)
-      (inclusion, everywhere) = pair
-      assumedInclusion <- LogicError.lift(Kernel.assume(inclusion))
-
-      inner <- Logic.stripForall(everywhere)
-      point <- inner._1.lift(0).toRight(NotOfForm("a claim about every step", everywhere))
-      clause <- impliesOf(inner._2, logic)
-      (premise, target) = clause
-      assumedPremise <- LogicError.lift(Kernel.assume(premise))
-
-      sides <- disjunctsOf(premise, logic)
-      (isStart, hasPrevious) = sides
-      targets <- disjunctsOf(target, logic)
-      (targetStart, targetPrevious) = targets
-
-      // The base clause says nothing about the set, so it crosses unchanged.
-      assumedStart <- LogicError.lift(Kernel.assume(isStart))
-      base <- rules.disjIntro1(targetPrevious, assumedStart)
-
-      predicate <- existsBody(hasPrevious, logic)
-      targetPredicate <- existsBody(targetPrevious, logic)
-      witness = Conv.freshVariable("p", Steps, Term.freeVariables(inner._2))
-      applied <- LogicError.lift(Term.app(predicate, witness))
-      contraction <- Conv.betaRoot(applied)
-      instance <- rightOf(contraction)
-      // Assumed in beta-reduced form: `Rules.existsElim` discharges the instance against the
-      // contraction of `predicate witness` and not against the application, so assuming the
-      // application leaves a hypothesis that is the same proposition and not the same term.
-      opened <- LogicError.lift(Kernel.assume(instance))
-      inSmaller <- rules.conjElim1(opened)
-      rest <- rules.conjElim2(opened)
-      inLarger <- rules.spec(witness, assumedInclusion).flatMap(rules.mp(_, inSmaller))
-      rebuilt <- rules.conjIntro(inLarger, rest)
-      introduced <- rules.existsIntro(targetPredicate, witness, rebuilt)
-      lifted <- rules.disjIntro2(targetStart, introduced)
-      assumedPrevious <- LogicError.lift(Kernel.assume(hasPrevious))
-      step <- rules.existsElim(assumedPrevious, witness, lifted)
-
-      split <- rules.disjElim(assumedPremise, base, step)
-      proved <- rules
-        .disch(premise, split)
-        .flatMap(rules.gen(point, _))
-        .flatMap(rules.disch(inclusion, _))
-        .flatMap(rules.gen(larger, _))
-        .flatMap(rules.gen(smaller, _))
-
-      folded <- shaped(body, proved)
-      result <- Conv.sym(unfolded).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, folded)))
-    } yield result
-  }
 
   /**
    * [[Induction]]: [[Inductive.Induction]] at this operator, put into the shape a consumer writes.
