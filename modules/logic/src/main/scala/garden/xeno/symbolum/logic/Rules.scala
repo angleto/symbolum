@@ -386,9 +386,15 @@ final class Rules(val logic: Logic) {
    * piece of work rather than the same one-line change. **That work is done**, in `778f615`, and
    * it is not the one-line check this rule got: an antecedent differing from the implication's by
    * a beta redex is reconciled and converted, which is what those 51 tests needed and what a
-   * comparison would have refused. [[provingExactly]] is where it lives. This paragraph said the
-   * work was still outstanding for the day and a half between `acb1844` writing it on 2026-09-14
-   * and `778f615` doing it on 2026-09-16.
+   * comparison would have refused. [[provingExactly]] is where it lives.
+   *
+   * **This paragraph was wrong for seven hours, and the repair first said a day and a half.** The
+   * two intervals are both real and they measure opposite things: `acb1844` wrote the sentence on
+   * 2026-09-14 at 23:40 and it was TRUE, `778f615` tightened `mp` on 2026-09-16 at 09:07 and it
+   * became false, and it was repaired at 16:06 the same day. So 33h27m is how long it stood while
+   * it was right, and 6h59m is how long it stood while it was wrong. The first is the easy one to
+   * compute, because both of its endpoints are named in the sentence, and it is not the one the
+   * claim is about. The repair's own commit title still carries the inverted reading.
    *
    * [[falsityElim]] is **not** the third instance of this shape, which the sentence here implied
    * by putting it beside the two: censused on 2026-09-16, it does not reach [[proveHyp]] at all.
