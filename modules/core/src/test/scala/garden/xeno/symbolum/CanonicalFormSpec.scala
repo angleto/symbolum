@@ -245,6 +245,90 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
     }
   }
 
+  /**
+   * The case that `property("the order of the factors of a product does not matter")` found by
+   * sampling, written down so that it is checked on every run and not on the runs where the
+   * generator happens to reach it.
+   *
+   * It is here rather than as a pinned seed because a seed pins the whole population: the
+   * properties above are meant to keep sampling, and what has to stop being a matter of luck is
+   * this pair of expressions. The seed that produced it was -1627756496053566947, recorded in case
+   * somebody wants the rest of that run.
+   *
+   * What makes it the interesting case rather than one more pair: `cos(-2 + 4/3)` is irrational,
+   * so its coefficient lands in [[Rational]]'s inexact regime and every operation on it afterwards
+   * is plain double arithmetic. The two `y^2` coefficients are then the same quantity reached by
+   * two routes, 0x1.db405eb27add4p-2 and 0x1.db405eb27add0p-2, and adding the contributions in
+   * arrival order left 2^-52 of one of them standing. That is a term present in one canonical form
+   * and absent from the other, which `approxEqual` cannot see past, because the two forms differ in
+   * shape and not in value.
+   *
+   * The assertion is equality of the two canonical forms and not `approxEqual`, deliberately:
+   * approximate agreement is what the property above asks for and it is the weaker question. What
+   * broke here is that one ordering produced a term the other did not, and only equality says that
+   * did not happen.
+   *
+   * It was watched failing on 2026-09-16 against the unrepaired `collectLikeTerms`, with this file
+   * exactly as it is and only that function's fold put back: it printed
+   * `+ 2.220446049250313E-16 * y^2` on one side and nothing on the other, which is the difference
+   * the report carries and not a nearby one. Written down because a guard seen only passing is a
+   * guard nobody has pointed at the defect it names.
+   */
+  property("a product whose coefficients cancel inexactly is the same both ways round") {
+    // The trees the generator actually built, not a rebuild from the printed form. The printer is
+    // lossy about shape -- `y - cos(x) - -1 + x` does not say how it nests -- and a rebuild from it
+    // simplified to something that agreed both ways round, so the first version of this test passed
+    // against the unrepaired code. These came out of a run with the seed, dumped structurally.
+    val left = Mul(Vector(
+      Sub(Vector(
+        Var("y"),
+        Sub(Vector(Cos(Var("x")), Add(Vector(Num(-1), Var("x")))))
+      )),
+      Add(Vector(
+        Cos(Add(Vector(Num(-2), Num(4, 3)))),
+        Add(Vector(Mul(Vector(Var("y"), Num(4))), Div(Vector(Num(-5), Num(4)))))
+      ))
+    ))
+    val right = Sub(Vector(
+      Pow(Sub(Vector(Var("y"), Div(Vector(Num(-4), Num(4))))), Num(2)),
+      Var("y")
+    ))
+
+    Mul(Vector(left, right)).simplify should equal (Mul(Vector(right, left)).simplify)
+  }
+
+  /**
+   * The residual the first repair left, found by permuting multisets of coefficients rather than
+   * by sampling expressions: 20000 multisets drawn from a population deliberately holding both
+   * regimes, 2091 of them summing two ways under an order that was the value alone.
+   *
+   * A stable sort leaves arrival order standing on a tie, and a tie between two DIFFERENT
+   * fractions is reachable across the exactness limit: `2^54 / 2^55` normalises to the inexact
+   * `(0.5, 1.0)` and one half to the exact `(1.0, 2.0)`, one double and two numbers. Summed with a
+   * second exact half the total is `1.5` where the inexact one arrives in the middle and `3/2`
+   * where it arrives last, and those are two canonical forms of one expression.
+   *
+   * The assertion is equality for the reason the test above gives: the two sums agree as values
+   * and differ as terms, so anything approximate calls them the same and the reproducibility this
+   * file exists for does not.
+   *
+   * Watched failing on 2026-09-16 against the order that was the value alone, with this file as it
+   * is: `Vector(1.5 * y, 3 * y/2) had size 2 instead of expected size 1`, which names both shapes.
+   */
+  property("a coefficient tie across the exactness limit is summed the same way round") {
+    val big = math.pow(2, 54)
+    val inexactHalf = Num.fromFraction(Rational.normalize(big, big * 2))
+    val exactHalf = Num.fromFraction(Rational.normalize(1.0, 2.0))
+    Rational.value(inexactHalf.fraction) shouldEqual Rational.value(exactHalf.fraction)
+    inexactHalf.fraction should not equal exactHalf.fraction
+
+    val y = Var("y")
+    def scaled(c: Num): Expr = Mul(Vector(c, y))
+    val terms = Vector(exactHalf, inexactHalf, exactHalf).map(scaled)
+
+    terms.permutations.map(p => Add(p).simplify).toVector.distinct should have size 1
+  }
+
   property("the order of exact terms does not matter, exactly") {
     val exact = Gen.oneOf(
       Gen.choose(-6, 6).map(n => Num(n): Expr),

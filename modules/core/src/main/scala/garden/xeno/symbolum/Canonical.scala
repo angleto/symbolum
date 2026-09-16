@@ -396,11 +396,58 @@ object Canonical {
    *
    * What it does not cover: `VectorMap` is not a drop-in for a `LinkedHashMap` that has entries
    * **removed** from it, where the two do differ. Neither of these two ever removes one.
+   *
+   * == The coefficients are added in a canonical order and not in the order they arrive ==
+   *
+   * Insertion order decides where a base appears in the output, and that is what the paragraphs
+   * above are about. It must NOT also decide the order the coefficients of one base are added in,
+   * and until 2026-09-16 it did, because the fold did both at once.
+   *
+   * Addition of two doubles is commutative, so with two contributions nothing moves. With three or
+   * more it does, since it is not associative, and [[Rational]] is plain double arithmetic once a
+   * value is in its inexact regime, which is where every irrational lands. So a base whose
+   * coefficients cancel mathematically cancelled to zero when the terms arrived one way and to a
+   * machine epsilon when they arrived the other, and an epsilon is not dropped by [[isZero]]: the
+   * term then EXISTS in one canonical form and not in the other, which is a difference of shape
+   * rather than of value and no tolerance in a comparison can see past it.
+   *
+   * The case that produced this, and it is in `CanonicalFormSpec` with its seed: expanding
+   * `(y - cos(x) + 1 + x) * (cos(-2/3) + 4y - 5/4)` one way against the other left
+   * `2.220446049250313E-16 * y^2`, which is 2^-52, standing where two coefficients of `y^2` that
+   * are the same number should have met. They were 0x1.db405eb27add4p-2 and 0x1.db405eb27add0p-2,
+   * the same quantity reached by two routes.
+   *
+   * The order is the value and then the pair itself, and the tie-break is what makes that claim
+   * true rather than nearly true. Sorting by value alone leaves a stable sort's arrival order
+   * standing wherever two DIFFERENT fractions share a double, and the two regimes supply such a
+   * pair: `2^54 / 2^55` leaves the exactness limit and normalises to `(0.5, 1.0)`, where one half
+   * is `(1.0, 2.0)`. Measured over that pair on 2026-09-16, `1/2 + 0.5 + 1/2` is `(1.5, 1.0)` one
+   * way round and `(3.0, 2.0)` the other: the same defect one regime further in, two canonical
+   * forms differing in shape rather than in value. Ordering by the pair after the value makes the
+   * sorted sequence a function of the multiset, because two normalised pairs agreeing in both
+   * components are the same number.
+   *
+   * By value and not by magnitude, which is the other question and is answered separately:
+   * ascending magnitude is the better summation order for the error, and accuracy is not what is
+   * wanted here. What is wanted is that one multiset of coefficients has one sum.
+   *
+   * What it does not cover, and it is the larger half: this makes the SUM canonical and not the
+   * products that feed it. A coefficient built by multiplying three or more inexact factors is
+   * still order-dependent, so a product deep enough to distribute in more than two stages can
+   * still differ. No case of that shape is known here, and that is an absence of sightings rather
+   * than the result of a search: nobody has gone looking for one.
    */
+  /** The order the paragraph above describes: the value, and then the pair, which breaks a tie. */
+  private def coefficientOrder(n: Num): (Double, Double, Double) =
+    (Rational.value(n.fraction), n.numerator, n.denominator)
+
   private def collectLikeTerms(terms: Vector[Expr])(implicit config: SimplificationConfig): Vector[Expr] = {
-    val coefficients = terms.foldLeft(VectorMap.empty[Expr, Num]) { (seen, term) =>
+    val grouped = terms.foldLeft(VectorMap.empty[Expr, Vector[Num]]) { (seen, term) =>
       val (coefficient, base) = splitCoefficient(term)
-      seen.updated(base, numAdd(seen.getOrElse(base, Zero), coefficient))
+      seen.updated(base, seen.getOrElse(base, Vector.empty) :+ coefficient)
+    }
+    val coefficients = grouped.map { case (base, parts) =>
+      base -> parts.sortBy(coefficientOrder).foldLeft(Zero)(numAdd)
     }
     coefficients.toVector
       .map { case (base, coefficient) => scaleDivFree(coefficient, base) }
