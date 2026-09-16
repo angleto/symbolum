@@ -203,7 +203,7 @@ final case class ReportADefect(where: String) extends Remedy {
 }
 
 /**
- * The claim is about `num` and is spelled with a symbol the reals own.
+ * The claim is about `num` and is spelled with a symbol the reals own and `num` does not share.
  *
  * Its own remedy rather than a [[RepairTheText]], and that is the whole of why it is worth a case.
  * `RepairTheText` hands the reader's own complaint back, and the reader's complaint here is "real
@@ -212,11 +212,19 @@ final case class ReportADefect(where: String) extends Remedy {
  *
  * Reached from the claim's **text** rather than from the refusal, because there is no term to read
  * it off: the refusal exists precisely because nothing could be built.
+ *
+ * **The sentence said `num` has no operator notation of its own until 2026-09-16, and
+ * `docs/adr/0018` made that false four symbols ago.** The table under it was pruned to subtraction
+ * in the same change and `CounterpartSpec` asserts the new partition in both directions, so every
+ * piece of the advice was correct while the sentence framing it denied the thing that had just
+ * landed: a reader who wrote `!x:num. !y:num. x + y - y = x` was told `num` has no operator
+ * notation, in a claim whose `+` had read. It was the one string in the chain no test read.
  */
 final case class WriteTheConstant(spellings: Vector[Counterpart.Spelling]) extends Remedy {
   def message: String =
-    s"${Natural.TypeName} has no OPERATOR notation of its own, so this claim is spelled the " +
-      "reals' way: " + spellings.map(_.instruction).mkString("; ")
+    s"${Natural.TypeName} shares the reals' operator symbols only where the operation is the " +
+      "same one, and this claim uses something it does not share: " +
+      spellings.map(_.instruction).mkString("; ")
 }
 
 object Remedy {

@@ -345,6 +345,52 @@ class RemedySpec extends AnyFlatSpec with Matchers {
   }
 
 
+  /* ----------------------------------- the one remedy whose sentence nothing was reading */
+
+  "The remedy for a symbol `num` does not share" should "name the constant and why it differs" in {
+    // Nothing in this file reached `WriteTheConstant` at all until 2026-09-16, which is how its
+    // sentence went false without anything failing. `Counterpart` is thoroughly tested and builds
+    // the per-symbol instructions; the sentence that frames them lives here and no assertion read
+    // it. So this case exists to reach it, and the one below to say what it must not claim.
+    val refusal = TypeError("real and num cannot be the same type")
+    val remedy = Remedy.spelling(reals, "!x:num. !y:num. x - y = x", refusal)
+
+    remedy match {
+      case Some(found: WriteTheConstant) =>
+        found.message should include(garden.xeno.symbolum.theories.Peano.Subtraction)
+        // The caveat is the half that makes the advice safe rather than merely actionable: the
+        // counterpart is not the same function, and a reader told to write it without being told
+        // that has been handed a different claim.
+        found.message should include("truncates at zero")
+      case other => fail(s"expected a spelling remedy, got $other")
+    }
+  }
+
+  it should "not tell a reader that `num` has no operator symbols, which stopped being true" in {
+    // `docs/adr/0018` gave `num` `+`, `*`, `<` and `<=`. The sentence here went on saying "num has
+    // no OPERATOR notation of its own", so a reader who wrote `x + y - y = x` was told that in a
+    // claim whose `+` had just read, beside advice that was itself correct.
+    //
+    // What this assertion is and is not: a tripwire on the retired wording, not a proof that the
+    // replacement is true. What would make the replacement false is a symbol moving between the
+    // shared set and the table, and `CounterpartSpec` is what asserts that partition, in both
+    // directions. This catches the cheaper failure, which is the sentence being restored by
+    // somebody reverting a wording change without the record in front of them.
+    val remedy = Remedy.spelling(
+      reals,
+      "!x:num. !y:num. x + y - y = x",
+      TypeError("real and num cannot be the same type")
+    )
+
+    val message = remedy.map(_.message).getOrElse(fail("expected a spelling remedy"))
+    message should not include "has no OPERATOR notation"
+
+    // And the pairing that gives the assertion something to be about: the advice is still only
+    // ever about the symbol that refuses. `+` is in the text above and must not be proposed for
+    // rewriting, because it reads.
+    message should not include garden.xeno.symbolum.theories.Peano.Addition
+  }
+
   /* ------------------------------------------------- the census, made executable */
 
   /**
