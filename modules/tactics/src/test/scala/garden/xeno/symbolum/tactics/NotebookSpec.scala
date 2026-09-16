@@ -43,6 +43,20 @@ import org.scalatest.matchers.should.Matchers
  * server's side of it, that a command is applied to the transcript its writer read or to none, and
  * the two meet at a consequence: a page that stopped queueing would start collecting refusals
  * where it used to reorder the transcript quietly.
+ *
+ * == The four ordering assertions were watched failing, which is the only thing that says they run ==
+ *
+ * A guard seen only passing is untested, and these were written after the defect rather than
+ * against it, which is the case where that matters most. So the defect was put back on 2026-09-16,
+ * one axis at a time and both at once, by the two edits that carry it: `/run` taking the body as a
+ * single command again, and `advance` ignoring what the writer says it read. Four of the five went
+ * red -- the development in order, the blank lines, the refusal of a stale write, and the two
+ * concurrent writers.
+ *
+ * The fifth, that a writer naming the current transcript is served, stayed green, and that is what
+ * it is for rather than a hole. It is the partner of the refusal: without it, a server that refused
+ * every writer would pass the other four, which is the shape of vacuity this file was already
+ * caught by once, a paragraph down.
  */
 class NotebookSpec extends AnyFlatSpec with Matchers {
 

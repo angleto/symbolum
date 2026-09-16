@@ -76,13 +76,24 @@ that is deliberate: it is what lets it stay fast and heuristic.
   purity: every theorem downstream of an assumption carries it, printed on the page, through
   `Derivation.foreignTo` against the chain.
 
-  What it cannot do yet, named rather than left to be discovered: **nothing can spend an assumption
-  except the assumption itself.** No tactic searches over an assumed constant, and the reason is
-  the surface's rather than the domain's: the tactic surface is built over the base chain, so a
-  claim in a vocabulary the session added is one no procedure has a reading of. The domain-theory
-  paragraph below is what says a procedure is not barred from a domain's constants in principle.
-  So a session's own axiom reaches a conclusion only through a hand derivation, and the command
-  for that (`derive`, over the `Recorder` in `modules/logic`) is not written. It is listening on
+  What it cannot do, named rather than left to be discovered: **no tactic spends an assumption.**
+  No procedure searches over an assumed constant, and the reason is the surface's rather than the
+  domain's: the tactic surface is built over the base chain, so a claim in a vocabulary the session
+  added is one no procedure has a reading of. The domain-theory paragraph below is what says a
+  procedure is not barred from a domain's constants in principle. So a session's own axiom reaches
+  a conclusion through a hand derivation, and since `c0830ce` the command for that **is** written:
+  `derive NAME : <step>`, over the `Recorder` in `modules/logic`. This said it was not written for
+  the hours between that commit and 2026-09-16, which is the shape of stale reference nothing goes
+  red on. What it offers is the five inferences whose arguments are names of facts the session
+  already holds; the three of `DomainTheorySpec`'s that take a term or a free variable as a premise
+  are absent and named absent in `Session.Surface.Inferences`, because offering one is a decision
+  about elaborating a term in the middle of an inference and not this one.
+
+  **A paste of several lines is one submission and its lines run in the order they were pasted**,
+  which is how a development is replayed, and a submission names the transcript it was written
+  against, so anything else driving the port is refused rather than interleaved into it. Both
+  landed on 2026-09-16: until then the page fired one request per line and waited for none of them,
+  so the order of a transcript was the network's rather than the writer's. It is listening on
   loopback with no authentication: a single-user tool, not a service.
 - **Regenerating `docs/lemmas.md`:** `sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
   replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
