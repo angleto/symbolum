@@ -1130,6 +1130,7 @@ being a photograph is better than a number that pretends not to be.
 | A trap corpus for the naturals | 2026-09-11 | measuring what separates two readings | 0 | **1**: the chain did not build `Peano`, so the arithmetic on `num` was unreachable |
 | Reading miniF2F again, with the naturals translatable | 2026-09-11 | widening `Translate` to a second type | 0 | **2**: `Abduce` read "not decided" as "satisfiable" on 65% of what it reported, and the corpus reader defaulted an unknown binder type to `real` |
 | The trusted base read to break it, after a day spent inside it for other reasons | 2026-09-11 | the card that says a pass finding zero is weak evidence and three are not | **1**: the argument for the boundary claims more than the boundary does | **1**: the second checker accepted an axiom no theory asserts |
+| `defineType` and the work standing in the verification station, read to close it | 2026-09-14, 2026-09-15 and 2026-09-16 | three passes over cards awaiting verification, the last with the whole suite green on a clean tree at `d0dde93` rather than a static reading | 0 | **1**: a docstring in `LauncherSpec` claiming a suite in a file not ending `Spec.scala`, which the rename in an ancestor commit had already removed |
 
 ### What the sixth pass found, since neither of its two findings is a wrong inference
 
@@ -1621,8 +1622,15 @@ what the section asked for evidence of and did not have.
    session of the same model, which is not the reading the constraint asks for, and it found one
    thing: the rule did not check that the witness was a theorem of the theory it was extending, so
    a predicate naming a constant that theory does not declare defined a type whose characterising
-   theorem the same theory then refused. What is still open is that no person has read this rule
-   against Harrison, and `docs/adr/0006` is where an auditor of the trusted base finds that said.
+   theorem the same theory then refused.
+
+   **No person has read this rule against Harrison, and on 2026-09-16 that was accepted rather than
+   paid.** Angelo decided the tests and the adversarial passes were enough and closed the card. The
+   sentence above is the current state and not a description of a queue: what changed is that it
+   stopped being work somebody owes, and what did not change is the exposure, which this document's
+   own table now carries as its own row. `docs/adr/0006` has what the decision rests on, which is four
+   readings and no reader, and what it deliberately does not cover, which is the other ten rules in
+   the same file.
 
 8. **The hypothesis ledger, before any generator.** Done on 2026-09-04. The loop screened,
    certified and forgot: run it twice and it did the same work twice, and the unsettled bucket it

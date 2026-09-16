@@ -102,6 +102,29 @@ the code is: HOL Light refuses the constant names before declaring the type oper
 `new_type` mutates a global, and here the order is free because a failed step discards the theory it
 would have returned.
 
+**The debt was accepted on 2026-09-16, and accepting it is not the same as paying it.** Angelo
+decided that the tests and the adversarial passes are enough and closed the card that carried this
+(Mycelium `575cee57`), so it is no longer outstanding work. **The fact it was about is unchanged,
+and that is why this paragraph is here rather than in a work log: no person has read
+`Kernel.defineType` against Harrison.** An auditor of the trusted base should read the two
+paragraphs above as the current state and not as history.
+
+What the decision rests on, so it can be weighed rather than taken: four readings, none by a
+person. The transcription's own author on 2026-09-10; a second session of the same model later that
+day, which found the missing signature check; and three adversarial passes on 2026-09-14,
+2026-09-15 and 2026-09-16, which found nothing in this rule and each said what it had actually run.
+Only the last had the whole suite green on a clean tree rather than a static reading, at `7.0` =
+`d0dde93`, 171 suites and 2220 tests. The standard those four are weighed against is already in
+this repository, in `docs/evaluation.md`'s exposure table: a pass that finds zero is weak evidence
+and several are not. So is the standing counter-evidence, which is that the 2026-09-03 binder
+defect survived four documents, three suites and 251 tests. No number of model passes is a reading
+against the source, and this decision does not claim otherwise.
+
+**What it does not cover.** This is about this rule. The ten primitive inference rules in the same
+file have not been read by a person either; that is tracked separately as Mycelium `26802f4e` and
+nothing here closes it. A reader who opens `Kernel.scala` for `defineType` has them in front of
+them, which is why the two were always better read together.
+
 ## Consequences
 
 **The axioms stay at sixteen and the roadmap unblocks.** The naturals become a definable type
