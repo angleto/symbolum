@@ -219,6 +219,7 @@ they have least appetite for working out how it is produced.
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
+  SUM_COMPARISON           !x:num -> real. !y:num -> real. (!z:num. 0 <= x z) ==> (!z:num. x z <= y z) ==> (?z:real. !u:num. Sum y u <= z) ==> (?z:real. converges (Sum x) z)
 
 ## Magnitude
 

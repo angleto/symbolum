@@ -336,8 +336,8 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `REACH` facts have two or more leading binders, and only the five have two of one type,
     // because every `REACH` statement binds the relation and its counted sub-relation at
     // `'a -> 'a -> bool` while `INDUCTIVE_INDUCT` binds an operator and a set, which differ.
-    library.entries.size shouldBe 462
-    library.names.distinct.size shouldBe 459
+    library.entries.size shouldBe 463
+    library.names.distinct.size shouldBe 460
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

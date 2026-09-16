@@ -405,6 +405,15 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "rule is a property of the call and not of this file, which is this census's own point " +
         "one level further in. That no caller could ever hand a looping one is not measured and " +
         "is not claimed"),
+    "Limit.scala" ->
+      ("one, in the comparison test, and it cannot reach the limit. The rule is `SUM_SUC` " +
+        "REVERSED, `Sum f n + f n = Sum f (SUC n)`, so the application removes the sum it " +
+        "matches and the right side contains no sum of that shape: one pass and nothing to " +
+        "match twice. It is the same argument as the folding entries under `Magnitude.scala` " +
+        "above, and it arrives by the same door, `Rewrite.inTheorem`. This entry exists because " +
+        "the scan asked for it: adding a rewriting step to a file that had none made " +
+        "`Limit.scala` a call site, and the census went red on the same day its twentieth entry " +
+        "was settled"),
     "Induct.scala" ->
       "asks `finished` after the closer refuses, which is where this guard was first written",
     "Family.scala" ->

@@ -158,7 +158,7 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // which are false rather than lemmas somebody forgot to state.
     // 306 with the seven of `Inductive` and `Reaching`; `ProposeSpec`'s entry on the same figure
     // carries the per-lemma derivation and the count it was first wrong by.
-    propose.weakenings.size shouldBe 306
+    propose.weakenings.size shouldBe 309
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

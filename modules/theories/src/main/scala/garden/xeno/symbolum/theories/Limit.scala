@@ -92,6 +92,12 @@ final class Limit private (
 
   /** `|- !s. (!n. s n <= s (SUC n)) ==> (?b. !n. s n <= b) ==> ?l. converges s l` */
   def monotoneConverges: Either[LogicError, Kernel.Thm] = fact(Limit.MonotoneConverges)
+
+  /**
+   * `|- !f g. (!n. 0 <= f n) ==> (!n. f n <= g n) ==> (?b. !n. Sum g n <= b)
+   * ==> ?l. converges (Sum f) l`
+   */
+  def comparison: Either[LogicError, Kernel.Thm] = fact(Limit.Comparison)
 }
 
 object Limit {
@@ -162,6 +168,16 @@ object Limit {
    */
   val MonotoneConverges: String = "MONOTONE_CONVERGES"
 
+  /**
+   * The comparison test: a non-negative series under a bounded one converges.
+   *
+   * The first thing here that obtains the convergence of a **series** rather than of a sequence,
+   * and it is [[MonotoneConverges]] spent on the one sequence a series always has. `docs/adr/0017`
+   * and `docs/proving.md` both put it first among what the analysis still owes, and what it buys
+   * immediately is that `exp 1 > 2` stops being statable-and-unproved.
+   */
+  val Comparison: String = "SUM_COMPARISON"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -176,7 +192,10 @@ object Limit {
         "!m:num. !n:num. NUM_LE m n ==> s m <= s n"),
     MonotoneConverges ->
       ("!s:num -> real. (!n:num. s n <= s (SUC n)) ==> (?b:real. !n:num. s n <= b) ==> " +
-        "?l:real. converges s l")
+        "?l:real. converges s l"),
+    Comparison ->
+      ("!f:num -> real. !g:num -> real. (!n:num. 0 <= f n) ==> (!n:num. f n <= g n) ==> " +
+        "(?b:real. !n:num. Sum g n <= b) ==> ?l:real. converges (Sum f) l")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -196,6 +215,7 @@ object Limit {
   def construct(
     magnitude: Magnitude,
     peano: Peano,
+    series: Series,
     reals: RealTheory,
     induct: Induct,
     base: Theory,
@@ -234,6 +254,14 @@ object Limit {
       transitive <- peano.fact(Peano.Transitive)
       addCommutative <- peano.fact(Peano.AddCommutative)
 
+      // `Series` is built at `Chain.scala:307` and this at 388, so the dependency runs the way the
+      // chain already runs and costs a parameter rather than a reordering. The comparison test is
+      // here and not in `Transcendental`, which has both halves already: that file's first sentence
+      // says it is the transcendental functions, and a general fact about series under it would
+      // make that sentence false.
+      sumAtSuccessor <- series.fact(Series.AtSuccessor)
+      sumMonotone <- series.fact(Series.Monotone)
+
       bounds = Bounds(absCases, absAbove, absAboveNegation, absNonNegative, absZero)
       indices = Indices(atMostSum, transitive, addCommutative)
 
@@ -252,6 +280,9 @@ object Limit {
       monotoneConverges <- monotoneConvergence(
         logic, linarith, theory, notation, convergesDefinition, completeness, notForall,
         doubleNegation, irreflexive, weakFromNegated, bounds, monotoneBelow)
+
+      comparisonTest <- comparison(
+        logic, linarith, theory, notation, sumAtSuccessor, sumMonotone, monotoneConverges)
     } yield new Limit(
       magnitude,
       peano,
@@ -265,9 +296,127 @@ object Limit {
         ValueOfConverges -> value,
         Eventually -> eventually,
         MonotoneBelow -> monotoneBelow,
-        MonotoneConverges -> monotoneConverges
+        MonotoneConverges -> monotoneConverges,
+        Comparison -> comparisonTest
       )
     )
+  }
+
+  /**
+   * The comparison test, from the three facts it is made of and nothing else.
+   *
+   * == Why it is short ==
+   *
+   * Every piece was already published and the work is putting them in one order. `SUM_SUC` says a
+   * partial sum grows by the term just added, so non-negative terms make the partial sums an
+   * increasing sequence; `SUM_MONOTONE` says termwise domination carries to the partial sums; and
+   * [[MonotoneConverges]] closes an increasing sequence bounded above. The series is never
+   * mentioned as a series: what converges is the sequence `Sum f`, which is what a series **is**
+   * here, and that is why no new constant and no axiom are needed.
+   *
+   * == The hypothesis is stronger than the argument strictly needs, and that is deliberate ==
+   *
+   * `!n. 0 <= f n` asks for non-negativity at **every** index, where the mathematics needs it only
+   * from the point the tail starts. The reason is [[MonotoneConverges]]: it asks for
+   * `!n. s n <= s (SUC n)` everywhere, so a weaker hypothesis here would need a convergence rule
+   * for an eventually increasing sequence, which this development has not got. [[Eventually]] is
+   * not that rule: it carries a limit across two sequences that agree past an index, which is
+   * eventual **equality** and not eventual monotonicity.
+   *
+   * So the weaker form is a piece of work rather than a better phrasing of this one, and it is
+   * named here so that a reader meeting the strong hypothesis knows it was measured against the
+   * rule above rather than written down without looking.
+   */
+  private def comparison(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    sumAtSuccessor: Kernel.Thm,
+    sumMonotone: Kernel.Thm,
+    monotoneConverges: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val f = Term.variable("f", sequences)
+    val g = Term.variable("g", sequences)
+    val n = Term.variable("n", numbers)
+    val b = Term.variable("b", values)
+
+    def proposition(text: String): Either[LogicError, Term] =
+      Parser.proposition(theory, notation, text)
+
+    for {
+      nonNegative <- proposition("!n:num. 0 <= (f:num -> real) n")
+      dominated <- proposition("!n:num. (f:num -> real) n <= (g:num -> real) n")
+      boundedAbove <- proposition("?b:real. !n:num. Sum (g:num -> real) n <= b")
+
+      assumedNonNegative <- LogicError.lift(Kernel.assume(nonNegative))
+      assumedDominated <- LogicError.lift(Kernel.assume(dominated))
+      assumedBounded <- LogicError.lift(Kernel.assume(boundedAbove))
+
+      /* ---- the partial sums increase, which is `SUM_SUC` read with a non-negative term ---- */
+
+      sumF <- Parser.term(theory, notation, "Sum (f:num -> real)")
+      atSuccessor <- rules.specAll(sumAtSuccessor, List(f, n))
+      termNonNegative <- rules.spec(n, assumedNonNegative)
+
+      // `Sum f n <= Sum f n + f n` is a linear consequence of `0 <= f n`, and the equation above
+      // turns the right side into `Sum f (SUC n)`. Linarith decides the first and the rewriting
+      // does the second, which is why neither half is a hand derivation.
+      growsBody <- proposition(
+        "0 <= (f:num -> real) n:num ==> Sum f n <= Sum f n + f n")
+      grows <- linarith.prove(growsBody)
+      growsAt <- rules.mp(grows, termNonNegative)
+      // Reversed, because `SUM_SUC` reads `Sum f (SUC n) = Sum f n + f n` and what has to move is
+      // the right side into the left: the linear step above produces `Sum f n + f n` and
+      // `MONOTONE_CONVERGES` asks for `Sum f (SUC n)`.
+      folded <- Conv.sym(atSuccessor)
+      increasingAt <- Rewrite.Rule
+        .of(logic, folded)
+        .flatMap(rule => Rewrite.inTheorem(Vector(rule), growsAt))
+      increasing <- rules.gen(n, increasingAt)
+
+      /* ---- and they are bounded, because they lie under `g`'s ---- */
+
+      belowG <- rules.specAll(sumMonotone, List(f, g))
+      dominatedSums <- rules.mp(belowG, assumedDominated)
+
+      bound <- proposition("!n:num. Sum (g:num -> real) n <= b:real")
+      assumedBound <- LogicError.lift(Kernel.assume(bound))
+
+      // A CONJUNCTION and not two arrows, because that is the shape `Linarith.prove` documents:
+      // "!vars. h1 /\ ... /\ hn ==> c". Written curried, what comes back has an antecedent the
+      // `conjIntro` below does not build, and `Rules.mp` refuses it by name -- which is how this
+      // was found rather than by reading the docstring first.
+      transitivityGoal <- proposition(
+        "Sum (f:num -> real) n:num <= Sum (g:num -> real) n /\\ Sum g n <= b:real ==> " +
+          "Sum f n <= b")
+      transitivity <- linarith.prove(transitivityGoal)
+      underG <- rules.spec(n, dominatedSums)
+      underB <- rules.spec(n, assumedBound)
+      both <- rules.conjIntro(underG, underB)
+      belowBoundAt <- rules.mp(transitivity, both)
+      belowBound <- rules.gen(n, belowBoundAt)
+
+      // The witness is discharged here rather than carried: what `MONOTONE_CONVERGES` wants is the
+      // existential, and rebuilding it after the case keeps `b` out of the conclusion.
+      boundedF <- proposition("?b:real. !n:num. Sum (f:num -> real) n <= b")
+      witnessed <- logic
+        .destExistsPredicate(boundedF)
+        .toRight(NotOfForm("an existential quantification", boundedF))
+      packed <- rules.existsIntro(witnessed, b, belowBound)
+      existsBound <- rules.existsElim(assumedBounded, b, packed)
+
+      /* ---- and that is exactly what the monotone rule asks for ---- */
+
+      atSums <- rules.spec(sumF, monotoneConverges)
+      converging <- rules.mp(atSums, increasing).flatMap(rules.mp(_, existsBound))
+
+      dischargedBounded <- rules.disch(boundedAbove, converging)
+      dischargedDominated <- rules.disch(dominated, dischargedBounded)
+      dischargedNonNegative <- rules.disch(nonNegative, dischargedDominated)
+      result <- rules.genAll(dischargedNonNegative, List(f, g))
+    } yield result
   }
 
   /**
