@@ -605,6 +605,14 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     // back from attempting it is a `TacticError`, and that is mapped.
     "Prove.Address",
 
+    // Which searches a prover reaches, which is `Prove.Address`'s entry read for the other axis:
+    // it is a name of a procedure and never an answer a caller receives, and what comes back from
+    // running one is a `TacticError`. It exists so that two documents listing the searches can be
+    // held against the prover rather than against each other, which `DocumentationSpec` does. This
+    // gate went red on `7.0` when the enum landed, and the entry is the repair rather than a
+    // `Remedy` arm, because there is no next step to offer for a name.
+    "Prove.Search",
+
     // Which of its five questions a report answers. `Cost.render` already sends the refusal the
     // report carries through `Remedy`, and reads the outcome only for the label above it.
     "Cost.Outcome",
