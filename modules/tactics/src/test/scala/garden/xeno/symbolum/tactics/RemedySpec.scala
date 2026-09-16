@@ -605,6 +605,20 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     // back from attempting it is a `TacticError`, and that is mapped.
     "Prove.Address",
 
+    // Which procedures a prover assembled. It sits beside `Prove.Address` and the reason above is
+    // NOT the reason here, which is worth the extra lines because this list is what somebody reads
+    // when deciding whether a new enumeration belongs on it. An address is received: a goal is
+    // sent somewhere and a `TacticError` comes back, mapped. A `Search` is received by nobody.
+    //
+    // Measured rather than argued, because the two enumerations are one word apart and excusing
+    // the wrong one silences a gate that was right: `Prove.searches` is the only site in the
+    // repository that produces a `Search`, its callers are three assertions in
+    // `DocumentationSpec`, nothing under `src/main` outside `Prove.scala` names the type at all,
+    // and no case of `TacticError` carries one. So what this entry claims is the strong half of
+    // what the paragraph above this list asks for: not that a caller meeting this type is not
+    // meeting a refusal, but that no caller meets it.
+    "Prove.Search",
+
     // Which of its five questions a report answers. `Cost.render` already sends the refusal the
     // report carries through `Remedy`, and reads the outcome only for the label above it.
     "Cost.Outcome",
