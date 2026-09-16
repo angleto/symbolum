@@ -450,6 +450,22 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // have so far.
     library.entries.size shouldBe 502
     library.names.distinct.size shouldBe 499
+    //
+    // 503 with `WORD_LENGTH_ZERO`, a word of no letters being the empty word. **ONE**, derived
+    // before the run. It was derived inside the base case of `WORD_INDUCTION` from the day that
+    // landed and is published now because a second consumer arrived: a step of a rewriting system
+    // splits a word into a context, a left-hand side and a tail, and the branch where the tail is
+    // absent needs a length of zero turned back into `WORD_EMPTY`. It binds ONE leading quantifier,
+    // so neither of `CLAUDE.md`'s two figures moves.
+    //
+    // **This line is the tip plus this branch's one, and it has been rebased four times tonight
+    // onto four different bases.** Twice git offered two numbers of which neither was right,
+    // because two branches had moved the same quantity from the same base. The operation is always
+    // addition and picking a side is never it -- it only sometimes agrees, which is how a wrong
+    // rule earns confidence. The safe form is to take whatever the tip now says and add this
+    // branch's delta, never to carry forward a total computed against an earlier one.
+    library.entries.size shouldBe 503
+    library.names.distinct.size shouldBe 500
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

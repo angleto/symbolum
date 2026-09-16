@@ -106,6 +106,7 @@ they have least appetite for working out how it is produced.
   WORD_FACTOR_LENGTH       !x:word('a). !y:word('a). WORD_FACTOR x y ==> WORD_LENGTH x <= WORD_LENGTH y
   WORD_FACTOR_REFUSED      !x:word('a). !y:word('a). WORD_LENGTH y < WORD_LENGTH x ==> ~(WORD_FACTOR x y)
   WORD_INDUCTION           !x:word('a) -> bool. x WORD_EMPTY /\ (!y:word('a). !z:'a. x y ==> x (WORD_CONCAT y (WORD_SINGLETON z))) ==> (!y:word('a). x y)
+  WORD_LENGTH_ZERO         !x:word('a). WORD_LENGTH x = 0 ==> x = WORD_EMPTY
   WORD_PREFIX_FACTOR       !x:word('a). !y:word('a). WORD_PREFIX x y ==> WORD_FACTOR x y
   WORD_SINGLETON_LENGTH    !x:'a. WORD_LENGTH (WORD_SINGLETON x) = SUC 0
   WORD_SINGLETON_NTH       !x:'a. WORD_NTH (WORD_SINGLETON x) 0 = x

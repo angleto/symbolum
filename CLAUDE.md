@@ -398,7 +398,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 502 lemmas, 328 have two or more leading quantifiers and **300 of
+caller meant: of the library's 503 lemmas, 328 have two or more leading quantifiers and **300 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -980,6 +980,43 @@ to the right of the one positive occurrence is carried across without being look
 predicted forty and seventy for that pair and is corrected in place. The refusal is exercised on
 `\S x. ~(S x)`, where `InductiveSpec` also derives `~(MONOTONE ...)`, so the refusal is a fact about
 that operator and not this procedure being careful.
+
+**The one rewriting system this repository is about is `Collatz`, and since 2026-09-16 its marked
+words are closed under a step.** `Forward` gives the right forward closure of an arbitrary system,
+`WORD_RFC R`; `Collatz` is the one `R` an investigation is about, the eleven rules of $S_2$ over
+seven letters, generated from `collatz@8b991e5` `code/referee/checks_rewriting.py` rather than
+transcribed. It sits **beside** the chain, which is a decision rather than an accident: eleven
+rewriting rules of a Collatz encoding do not belong in the vocabulary a question about the reals is
+typed in, so `Ask` and `Find` cannot reach it and `CollatzSpec` is the only thing that builds it.
+
+**The class the argument has to be read on is the marked words, and the reason is a witness rather
+than a convention.** `S2_MARKED w` says `w` has exactly one tail marker and it is the last letter.
+Outside that class the potential argument is false, and the source names the counterexample:
+`/ff.012` rewrites to `/0.012` and the potential falls by three, which no counted step pays for.
+`S2_MARKED_CLOSED` is what says a step never leaves the class, so the argument can be read on it.
+
+Two things about that proof are worth knowing before opening the file. **A tally is the wrong
+instrument and an earlier plan reached for one**: `S2_MARKED` is positional, so a count of markers
+equal to one does not say the marker is last, which is half of what the predicate asserts. What the
+proof runs on is `WORD_CONCAT_NTH_LEFT` and `WORD_CONCAT_NTH_RIGHT`, which speak about positions;
+`WORD_CONCAT_TALLY` is still the right lemma for `S2_PHI`, which is a sum. And **`NUM_ONE_SUC` is
+never applied to a whole statement here**, because three of the eleven rules have the letter `1` in
+them and the rewriter does not know the difference between a letter and a numeral: a proposition
+rewritten with it comes back about a different word. The index is rewritten alone and carried in by
+congruence, which is written where a reader meets it.
+
+**And the two facts that keep it from being a theorem about nothing are published rather than
+argued.** A closure statement over an empty class is true and empty, and so is one over a relation
+that steps nothing; neither would fail anything else in the file. `S2_MARKED_INHABITED` and
+`S2_STEP_INHABITED` are `/0.` and the `B1` step that takes it to `/t.`, and `CollatzSpec` **detaches**
+the closure at that pair rather than asserting that an implication exists.
+
+**The eleven rules are derived pairwise distinct, and that is a different question from the count.**
+`CollatzSpec` counts eleven disjuncts off the definition, which says how many clauses were written;
+the fifty-five separations say how many pairs the relation holds of, and a table in which two rules
+had collapsed into one would pass the first and fail the second. They are not published: no consumer
+needs the rules to be distinct, it is a fact about the encoding, and facts about the encoding live in
+the spec that asks for them.
 
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants
