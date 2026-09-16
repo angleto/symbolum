@@ -311,7 +311,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 436 lemmas, 271 have two or more leading quantifiers and **247 of
+caller meant: of the library's 454 lemmas, 283 have two or more leading quantifiers and **259 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -322,7 +322,10 @@ That count is of binders sharing a type anywhere in the prefix, and the obvious 
 only adjacent ones are realistically swapped and so the real number is smaller, is wrong and was
 measured on 2026-09-13: of the sites a whole suite run reaches, 204 specialise a lemma with two
 alike binders and 202 of those have two alike and adjacent (measured before `Magnitude` joined the
-chain, which added nine alike-binder lemmas and no call sites). A lemma with three binders of one type
+chain, which added nine alike-binder lemmas and no call sites, and before `Concatenation` joined it
+on 2026-09-16, which added both: that file specialises `WORD_EXTENSIONALITY` by position at two
+arguments of one type. The pair of numbers is a reading with a date rather than a property, and what
+it was for is the ratio between them, which nothing since has moved). A lemma with three binders of one type
 has adjacency anyway. The narrow reading and the broad one are the same number.
 
 **The order the rewriting sorts by is not the kernel's.** `Arithmetic.ringOrder` compares by the
@@ -389,6 +392,35 @@ said `Coding`. So it no longer names one. Which development is last changes when
 added, five times in two days, and `Chain.widest` is the one place worth reading for it. What a
 wrong name costs is what the first correction recorded: a reader of it would have gone looking for
 `max` in `Rotation`'s signature.
+
+**Concatenating two words is `Concatenation`, a link since 2026-09-16, and it is the operation the
+type did not have.** `WORD_CONCAT`, the empty word and the one-letter word, and from those three the
+prefix, the suffix and the factor, each **defined by the concatenation** rather than beside it,
+which is what makes `WORD_FACTOR_LENGTH` one lemma instead of three. Six constants, no axiom, and
+fifteen derived facts including associativity, both units, and an induction that extends a word **on
+the right** rather than on its length. Before it, `?x y. w = x u y` was not a sentence this
+repository could write, so of a factor nothing could be said, not even wrongly.
+
+It is **not** a development of its own for `Rotation`'s reason, and the difference is the thing to
+carry: `NUM_MOD` really is outside `Word.standard`'s signature, and `NUM_ADD`, `NUM_SUB`, `NUM_LT`
+and `COND` are all inside it, so this could have gone in `Word.scala` and would have built. What
+decided it is size and subject, and `ConcatenationSpec` asserts the four constants are there rather
+than leaving the claim in prose.
+
+What it cost in front of it was three lemmas about `num` that nobody had needed:
+`Peano.NUM_ADD_LT_CANCEL`, `NUM_LE_OF_NOT_LT` and `NUM_SUB_SUB`. The last is the one to know about,
+because it is what decides the third case of associativity: an index past both of the first two
+blocks is `w`'s at `i - (|u| + |v|)` read one way and at `(i - |u|) - |v|` read the other, and
+nothing said those were the same number. That they are, with **no** side condition, is a property of
+truncated subtraction rather than a coincidence.
+
+**And the absence of a constant is not a parse error here, which is the trap this landed on.**
+`ConcatenationSpec` first asserted that the statement it exists for is *refused* by the signature one
+link down. It is not: an unknown letter-initial name parses as a **free variable**, so the same text
+against `Transcendental` is well-typed and is a claim about an arbitrary function spelled
+`WORD_CONCAT`. That is the trap the `Chain.peano` note records for `NUM_LE ZERO n` and `ChainSpec`
+records for `zork`, met a third time. The question that separates the two signatures is whether the
+name is a **constant** of the theory, and the spec asks that one now.
 
 Number theory on `num` is `Modular`, a link in the chain since 2026-09-12: divisibility with the
 antisymmetry that is false over a field, congruences with their compatibility with addition and

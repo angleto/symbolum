@@ -217,7 +217,22 @@ final class Chain private (
    * [[magnitude]] is free, and a development with no dependent belongs where adding it moves
    * nothing below it.
    */
-  val transcendental: Transcendental
+  val transcendental: Transcendental,
+  /**
+   * Concatenating two words, the three relations that are nothing but that, and [[widest]] since
+   * 2026-09-16.
+   *
+   * Six constants and no axiom, and the position is the one the last four links have taken: it
+   * needs [[word]] for the type and [[peano]] for fourteen facts about `num`, both far below, and
+   * it extends [[transcendental]] because that is where the chain's end is. The extension order and
+   * the dependency order are different things and `Rotation.construct`'s comment is the one that
+   * says so.
+   *
+   * It is not in `Word.scala`, and that is a decision rather than a constraint: `Rotation` **had**
+   * to be a development of its own because `NUM_MOD` is outside `Word.standard`'s signature, and
+   * nothing here is. `Concatenation`'s own docstring carries the argument that decided it.
+   */
+  val concatenation: Concatenation
 ) {
 
   /**
@@ -241,7 +256,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = transcendental
+  val widest: Signature = concatenation
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -379,6 +394,12 @@ object Chain {
       // than as a ceiling.
       transcendental <- Transcendental.construct(
         limit, series, peano, coding, induct, successor, naturals, limit.theory, limit.notation)
+
+      // The last link since 2026-09-16. It needs `word` for the type and `peano` for the arithmetic
+      // of an index, and it extends `transcendental.theory` because that is the chain's end: a
+      // constant declared into a side branch is unreachable from everything, which is the sentence
+      // `Rotation.construct` carries and the one every link above `magnitude` has been placed by.
+      concatenation <- Concatenation.construct(word, peano, transcendental.theory)
     } yield new Chain(
       classical,
       naturals,
@@ -405,6 +426,7 @@ object Chain {
       provability,
       deduction,
       limit,
-      transcendental
+      transcendental,
+      concatenation
     )
 }

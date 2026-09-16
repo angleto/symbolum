@@ -181,6 +181,22 @@ object Spellings {
       .delimited("WORD_PAD", 0, "\\square")
       .delimited("mk_word", 1, "\\mathrm{mk\\_word}(#1)")
       .delimited("dest_word", 1, "\\mathrm{dest\\_word}(#1)")
+      /* --------------------------------------------- the concatenation and its relations */
+      // Juxtaposition is what a book writes for concatenation and it is what this sets, with a thin
+      // space so that `uv` does not read as one name. The precedence is multiplication's because
+      // the operation is a monoid's and a reader bracketing it will bracket it that way; it is NOT
+      // spelled with a product symbol, for the reason `docs/adr/0018` refuses `*` in the concrete
+      // syntax, which is that concatenation is not multiplication.
+      .operator("WORD_CONCAT", 2, "#1 \\, #2", Multiplicative)
+      .delimited("WORD_EMPTY", 0, "\\varepsilon")
+      // Angle brackets, so that a one-letter word is visibly a word and not its letter: `\langle x
+      // \rangle` against `x`, which is the distinction every statement here turns on.
+      .delimited("WORD_SINGLETON", 1, "\\langle #1 \\rangle")
+      // The three relations get the marks a book gives them, which are not the subset signs: a
+      // prefix is written with the square variants precisely because a factor is not a subset.
+      .operator("WORD_PREFIX", 2, "#1 \\sqsubseteq_{p} #2", Relation)
+      .operator("WORD_SUFFIX", 2, "#1 \\sqsubseteq_{s} #2", Relation)
+      .operator("WORD_FACTOR", 2, "#1 \\sqsubseteq #2", Relation)
       /* ---------------------------------------------------------- the matrix */
       .delimited("MAT2", 4, "\\begin{pmatrix} #1 & #2 \\\\ #3 & #4 \\end{pmatrix}")
       .delimited("MAT_ID", 0, "I")

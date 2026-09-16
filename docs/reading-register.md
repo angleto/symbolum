@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (100)
+## The definitions (106)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -232,11 +232,17 @@ axiom mentioning it means.
 | `definition SUC` | SUC = \x:num. mk_num (IND_SUC (dest_num x)) | **NOT READ** |  |  |
 | `definition Sum` | Sum = \x:num -> real. select (\y:num -> real. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x z)) | **NOT READ** |  |  |
 | `definition T` | T = (\x:bool. x) = (\x:bool. x) | **NOT READ** |  |  |
+| `definition WORD_CONCAT` | WORD_CONCAT = \x:word('a). \y:word('a). WORD_MAKE (WORD_LENGTH x + WORD_LENGTH y) (\z:num. COND (z < WORD_LENGTH x + WORD_LENGTH y) (COND (z < WORD_LENGTH x) (WORD_NTH x z) (WORD_NTH y (NUM_SUB z (WORD_LENGTH x)))) WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_EMPTY` | WORD_EMPTY = WORD_MAKE 0 (\x:num. WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_FACTOR` | WORD_FACTOR = \x:word('a). \y:word('a). ?z:word('a). ?u:word('a). y = WORD_CONCAT (WORD_CONCAT z x) u | **NOT READ** |  |  |
 | `definition WORD_LENGTH` | WORD_LENGTH = \x:word('a). FST (dest_word x) | **NOT READ** |  |  |
 | `definition WORD_MAKE` | WORD_MAKE = \x:num. \y:num -> 'a. mk_word (PAIR x y) | **NOT READ** |  |  |
 | `definition WORD_NTH` | WORD_NTH = \x:word('a). SND (dest_word x) | **NOT READ** |  |  |
 | `definition WORD_PAD` | WORD_PAD = select (\x:'a. T) | **NOT READ** |  |  |
+| `definition WORD_PREFIX` | WORD_PREFIX = \x:word('a). \y:word('a). ?z:word('a). y = WORD_CONCAT x z | **NOT READ** |  |  |
 | `definition WORD_ROTATE` | WORD_ROTATE = \x:num. \y:word('a). WORD_MAKE (WORD_LENGTH y) (\z:num. COND (z < WORD_LENGTH y) (WORD_NTH y (NUM_MOD (z + x) (WORD_LENGTH y))) WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_SINGLETON` | WORD_SINGLETON = \x:'a. WORD_MAKE (SUC 0) (\y:num. COND (y < SUC 0) x WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_SUFFIX` | WORD_SUFFIX = \x:word('a). \y:word('a). ?z:word('a). y = WORD_CONCAT z x | **NOT READ** |  |  |
 | `definition ZERO` | ZERO = mk_num IND_0 | **NOT READ** |  |  |
 | `definition \/` | \/ = \x:bool. \y:bool. !z:bool. (x ==> z) ==> (y ==> z) ==> z | **NOT READ** |  |  |
 | `definition abs` | abs = \x:real. max x (-x) | **NOT READ** |  |  |

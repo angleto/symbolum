@@ -130,7 +130,10 @@ object Reach {
         // than after `RestsOnSpec` found them missing, which is how `Magnitude` arrived three
         // paragraphs up.
         "Limit" -> chain.limit.facts,
-        "Transcendental" -> chain.transcendental.facts
+        "Transcendental" -> chain.transcendental.facts,
+        // 2026-09-16, and added here after `RestsOnSpec` named all fifteen rather than before,
+        // which is the case the two paragraphs above describe rather than an exception to them.
+        "Concatenation" -> chain.concatenation.facts
       )
     )
 

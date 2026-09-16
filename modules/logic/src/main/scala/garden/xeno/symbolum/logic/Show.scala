@@ -125,7 +125,25 @@ object Show {
       // an unparenthesised `neg x:real` would have to be read by knowing that. The parentheses cost
       // nothing here: this form is produced only when the plain one did not read back.
       case FVar(name, ty) => if (annotateFree) s"($name:${show(ty)})" else name
-      case Const(name, _) => name
+
+      // A constant is annotated in the annotated form only when its type still has a type variable
+      // in it, which is the one case the parser cannot fill in: it refuses to invent a type
+      // variable rather than guessing, which is `Parser`'s stated design, and `Word.WitnessBody`
+      // already carries `(WORD_PAD:'a)` for exactly that reason on the writing side.
+      //
+      // Narrow twice over, and the second narrowing is what keeps the text readable by a person.
+      // The form is a fallback, reached only when the plain one did not read back, so a constant
+      // whose type is ground is never annotated; and a constant in the **head** position of an
+      // application is not annotated either, which the application case below arranges. Pinning one
+      // occurrence is enough because the elaborator unifies, and annotating the head as well gave
+      // `(WORD_LENGTH:word('a) -> num) (WORD_EMPTY:word('a)) = (0:num)` where the leaf alone gives
+      // `WORD_LENGTH (WORD_EMPTY:word('a)) = 0`. Both read back and only one is worth printing.
+      //
+      // What it repairs is exactly that statement: closed, polymorphic, and with nothing beside the
+      // constant to pin the element type from. Before 2026-09-16 nothing in the library was that
+      // shape, so the claim that everything there reads back was true rather than checked.
+      case Const(name, ty) =>
+        if (annotateFree && Type.variables(ty).nonEmpty) s"($name:${show(ty)})" else name
 
       case App(Const(name, _), Abs(binderType, body))
         if notation.binderOf(name).isDefined =>
@@ -165,9 +183,15 @@ object Show {
         )
 
       case App(fn, argument) =>
+        // The head is printed without its annotation even in the annotated form, which is the
+        // second half of the rule the `Const` case above states: its type variables are determined
+        // by the arguments, and a curried head is an `App` whose own head reaches this case again.
+        val head = fn match {
+          case Const(name, _) => name
+          case other => sub(other, Notation.ApplicationPrecedence)
+        }
         parenthesise(
-          s"${sub(fn, Notation.ApplicationPrecedence)} " +
-            sub(argument, Notation.ApplicationPrecedence + 1),
+          s"$head ${sub(argument, Notation.ApplicationPrecedence + 1)}",
           context,
           Notation.ApplicationPrecedence
         )

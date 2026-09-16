@@ -280,7 +280,11 @@ object Library {
         // `docs/lemmas.md` does not mention, and `ChainCoverageSpec` exists because that happened
         // twice.
         collect("Limit", chain.limit.facts) ++
-        collect("Transcendental", chain.transcendental.facts)
+        collect("Transcendental", chain.transcendental.facts) ++
+        // Landed 2026-09-16 and collected in the same change, for the reason the two above give:
+        // `Magnitude` and `Coding` were each invisible for a few hours because a development in the
+        // chain but not collected here is one `docs/lemmas.md` does not mention.
+        collect("Concatenation", chain.concatenation.facts)
     )
 
   /** A library over developments a caller names itself. */

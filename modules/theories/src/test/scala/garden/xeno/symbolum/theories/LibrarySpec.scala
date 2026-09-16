@@ -39,7 +39,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // The two of 2026-09-15. This sum is the assertion's whole point and it caught them: they
       // were added to `Library.of` and not to this list, and what failed was the count rather than
       // anything about the developments, which is the shape of failure the comment above describes.
-      chain.limit.facts.size + chain.transcendental.facts.size
+      chain.limit.facts.size + chain.transcendental.facts.size +
+      // 2026-09-16, and this sum caught it too: fifteen facts in `Library.of` and not here.
+      chain.concatenation.facts.size
 
     library.entries.size shouldBe expected
 
@@ -302,8 +304,19 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // commits behind and was recovered on 2026-09-15: the power's positivity and the cancellation
     // of a prime power. Both of `CLAUDE.md`'s figures move by two, one binding two variables and
     // the other four, all of the same type.
-    library.entries.size shouldBe 436
-    library.names.distinct.size shouldBe 433
+    // 454 with `Concatenation`'s fifteen and the three facts about `num` that had to be proved in
+    // front of them, `NUM_ADD_LT_CANCEL`, `NUM_LE_OF_NOT_LT` and `NUM_SUB_SUB`. `CLAUDE.md`'s two
+    // figures both move by **twelve**, which is the first delta here where the two move together
+    // and all the way: twelve of the eighteen have two or more leading quantifiers, and every one
+    // of those twelve has two of one type, because a claim about a concatenation binds two words
+    // and a claim about an index binds a pair of numbers. The six that move neither are the ones
+    // binding one variable or none: the two unit laws, the empty word's length, the two singleton
+    // laws, and the induction, whose single leading binder is the predicate.
+    //
+    // Derived by hand from `docs/lemmas.md` and compared against what this suite computed, in that
+    // order, which is the check the paragraph above says was skipped three times.
+    library.entries.size shouldBe 454
+    library.names.distinct.size shouldBe 451
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

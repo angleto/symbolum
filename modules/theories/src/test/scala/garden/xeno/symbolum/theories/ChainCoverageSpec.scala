@@ -96,6 +96,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Series" -> InTheChain,
     "Successor" -> InTheChain,
     "Word" -> InTheChain,
+    "Concatenation" -> InTheChain,
 
     // Beside the chain and correctly so: each produces a theorem or a procedure on request and
     // introduces no constant, which is the reason `Bounded`'s own docstring gives for sitting where

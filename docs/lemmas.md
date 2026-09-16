@@ -91,6 +91,24 @@ they have least appetite for working out how it is produced.
   NUM_PROD_SUC             !x:num -> num. !y:num. NUM_PROD x (SUC y) = NUM_PROD x y * x y
   NUM_PROD_ZERO            !x:num -> num. NUM_PROD x 0 = SUC 0
 
+## Concatenation
+
+  WORD_CONCAT_ASSOC        !x:word('a). !y:word('a). !z:word('a). WORD_CONCAT (WORD_CONCAT x y) z = WORD_CONCAT x (WORD_CONCAT y z)
+  WORD_CONCAT_EMPTY_LEFT   !x:word('a). WORD_CONCAT WORD_EMPTY x = x
+  WORD_CONCAT_EMPTY_RIGHT  !x:word('a). WORD_CONCAT x WORD_EMPTY = x
+  WORD_CONCAT_LENGTH       !x:word('a). !y:word('a). WORD_LENGTH (WORD_CONCAT x y) = WORD_LENGTH x + WORD_LENGTH y
+  WORD_CONCAT_NTH          !x:word('a). !y:word('a). !z:num. z < WORD_LENGTH x + WORD_LENGTH y ==> WORD_NTH (WORD_CONCAT x y) z = COND (z < WORD_LENGTH x) (WORD_NTH x z) (WORD_NTH y (NUM_SUB z (WORD_LENGTH x)))
+  WORD_CONCAT_NTH_LEFT     !x:word('a). !y:word('a). !z:num. z < WORD_LENGTH x ==> WORD_NTH (WORD_CONCAT x y) z = WORD_NTH x z
+  WORD_CONCAT_NTH_RIGHT    !x:word('a). !y:word('a). !z:num. z < WORD_LENGTH y ==> WORD_NTH (WORD_CONCAT x y) (WORD_LENGTH x + z) = WORD_NTH y z
+  WORD_EMPTY_LENGTH        WORD_LENGTH (WORD_EMPTY:word('a)) = (0:num)
+  WORD_FACTOR_LENGTH       !x:word('a). !y:word('a). WORD_FACTOR x y ==> WORD_LENGTH x <= WORD_LENGTH y
+  WORD_FACTOR_REFUSED      !x:word('a). !y:word('a). WORD_LENGTH y < WORD_LENGTH x ==> ~(WORD_FACTOR x y)
+  WORD_INDUCTION           !x:word('a) -> bool. x WORD_EMPTY /\ (!y:word('a). !z:'a. x y ==> x (WORD_CONCAT y (WORD_SINGLETON z))) ==> (!y:word('a). x y)
+  WORD_PREFIX_FACTOR       !x:word('a). !y:word('a). WORD_PREFIX x y ==> WORD_FACTOR x y
+  WORD_SINGLETON_LENGTH    !x:'a. WORD_LENGTH (WORD_SINGLETON x) = SUC 0
+  WORD_SINGLETON_NTH       !x:'a. WORD_NTH (WORD_SINGLETON x) 0 = x
+  WORD_SUFFIX_FACTOR       !x:word('a). !y:word('a). WORD_SUFFIX x y ==> WORD_FACTOR x y
+
 ## Deduction
 
   NUM_PROV_ADD_SUC         !x:num. !y:num. NUM_TERM x ==> NUM_CLOSED x ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR x (NUM_CODE 2 y))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR x y)))))
@@ -355,6 +373,7 @@ they have least appetite for working out how it is produced.
   NUM_ADD_EQ_ZERO          !x:num. !y:num. x + y = 0 ==> x = 0
   NUM_ADD_EXCHANGE         !x:num. !y:num. !z:num. x + (y + z) = y + (x + z)
   NUM_ADD_LE_CANCEL        !x:num. !y:num. !z:num. x + y <= x + z ==> y <= z
+  NUM_ADD_LT_CANCEL        !x:num. !y:num. !z:num. x + y < x + z ==> y < z
   NUM_ADD_LT_MONOTONE      !x:num. !y:num. !z:num. y < z ==> x + y < x + z
   NUM_ADD_MONOTONE         !x:num. !y:num. !z:num. y <= z ==> x + y <= x + z
   NUM_ADD_SHIFT            !x:num. !y:num. x + SUC y = SUC x + y
@@ -376,6 +395,7 @@ they have least appetite for working out how it is produced.
   NUM_LE_CASES             !x:num. !y:num. x <= y ==> x < y \/ x = y
   NUM_LE_LT_TRANS          !x:num. !y:num. !z:num. x <= y /\ y < z ==> x < z
   NUM_LE_OF_LT             !x:num. !y:num. x < y ==> x <= y
+  NUM_LE_OF_NOT_LT         !x:num. !y:num. ~(x < y) ==> y <= x
   NUM_LE_REFL              !x:num. x <= x
   NUM_LE_SUC               !x:num. x <= SUC x
   NUM_LE_TOTAL             !x:num. !y:num. x <= y \/ y <= x
@@ -426,6 +446,7 @@ they have least appetite for working out how it is produced.
   NUM_SUB_EQ_ZERO          !x:num. !y:num. x <= y ==> NUM_SUB x y = 0
   NUM_SUB_LE               !x:num. !y:num. NUM_SUB x y <= x
   NUM_SUB_REFL             !x:num. NUM_SUB x x = 0
+  NUM_SUB_SUB              !x:num. !y:num. !z:num. NUM_SUB (NUM_SUB x y) z = NUM_SUB x (y + z)
   NUM_SUB_SUC              !x:num. !y:num. NUM_SUB x (SUC y) = PRE (NUM_SUB x y)
   NUM_SUB_SUC_SUC          !x:num. !y:num. NUM_SUB (SUC x) (SUC y) = NUM_SUB x y
   NUM_SUB_TRUNCATES        !x:num. !y:num. NUM_SUB x (x + y) = 0

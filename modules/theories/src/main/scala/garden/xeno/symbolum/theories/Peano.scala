@@ -580,6 +580,38 @@ object Peano {
   val AddCancelsOrder: String = "NUM_ADD_LE_CANCEL"
 
   /**
+   * `|- !p m n. NUM_LT (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LT m n`
+   *
+   * [[AddCancelsOrder]] for the strict order, and it is three lines rather than a second induction
+   * because of what [[StrictOrder]] is: `NUM_LT m n` is `NUM_LE (SUC m) n`, and `SUC (p + m)` is
+   * `p + SUC m` by [[AddAtSuccessor]] read backwards. So the premise is the non-strict comparison
+   * at `SUC m`, the summand comes off by [[AddCancelsOrder]], and what is left is the definition
+   * folded again.
+   *
+   * It was missing on 2026-09-16 and the pair was not: [[AddStrictlyMonotone]] had been proved the
+   * day the order was written and nothing had ever needed to read it backwards. What needed it is
+   * placing an index inside a concatenated word, where `k + j < k + m` is what says the index is
+   * inside the second block.
+   */
+  val AddCancelsStrictOrder: String = "NUM_ADD_LT_CANCEL"
+
+  /**
+   * `|- !m n. ~(NUM_LT m n) ==> NUM_LE n m`
+   *
+   * The negation of one order turned into the other, which on a total order costs nothing
+   * classical at all: [[Trichotomy]] puts the three cases on the table before anything is negated,
+   * and the derivation is one disjunction elimination over them. `Order.LE_OF_NOT_LT` is the same
+   * fact about the reals and says the same thing about its own cost.
+   *
+   * What it is for is every case split written as `i < k` against `~(i < k)`: the negative branch
+   * has a negated strict comparison and every lemma about a difference wants a non-strict one.
+   * Nothing had it until 2026-09-16, and until then such a branch either restated its own
+   * trichotomy or was written the other way round to avoid needing one, which is what
+   * [[Archimedean]] records doing.
+   */
+  val AtMostFromNotBelow: String = "NUM_LE_OF_NOT_LT"
+
+  /**
    * `|- !p m n. NUM_LE m n ==> NUM_LE (NUM_MUL p m) (NUM_MUL p n)`
    *
    * [[AddMonotone]] for the other operation, and it costs the same three lines for the same reason:
@@ -837,6 +869,22 @@ object Peano {
   val SumMinus: String = "NUM_ADD_SUB"
 
   /**
+   * `|- !m n p. NUM_SUB (NUM_SUB m n) p = NUM_SUB m (NUM_ADD n p)`
+   *
+   * Taking two amounts away one after the other is taking their sum away, and on `num` it holds
+   * with **no** side condition precisely because the subtraction is truncated: where the first
+   * difference has already bottomed out at `ZERO` so has the second, and `ZERO - p` is `ZERO`.
+   * The same statement over the integers would be the same statement; the reason to say the two
+   * agree here is that almost nothing else about `NUM_SUB` does.
+   *
+   * It is an induction on `p` that the rewriter settles, and [[SubAtSuccessor]] is in its rule set
+   * where the three inductions above it leave it out: nothing here has to fire the hypothesis at a
+   * node that recurrence would have taken apart first, because the hypothesis is at `p` and that
+   * recurrence only matches a successor.
+   */
+  val SubTwice: String = "NUM_SUB_SUB"
+
+  /**
    * `|- !m n. NUM_SUB m (NUM_ADD m n) = ZERO`, which is the truncation itself.
    *
    * Written with the sum on the right rather than as a bound, because that is the form an
@@ -1042,6 +1090,9 @@ object Peano {
       "!p:num m:num n:num. NUM_LT m n ==> NUM_LT (NUM_ADD p m) (NUM_ADD p n)",
     AddCancelsOrder ->
       "!p:num m:num n:num. NUM_LE (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LE m n",
+    AddCancelsStrictOrder ->
+      "!p:num m:num n:num. NUM_LT (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LT m n",
+    AtMostFromNotBelow -> "!m:num n:num. (~(NUM_LT m n)) ==> NUM_LE n m",
     MulMonotone ->
       "!p:num m:num n:num. NUM_LE m n ==> NUM_LE (NUM_MUL p m) (NUM_MUL p n)",
     MulStrictlyMonotone ->
@@ -1085,6 +1136,7 @@ object Peano {
     SubSuccessors -> "!m:num n:num. NUM_SUB (SUC m) (SUC n) = NUM_SUB m n",
     SubSelf -> "!n:num. NUM_SUB n n = ZERO",
     SumMinus -> "!m:num n:num. NUM_SUB (NUM_ADD m n) n = m",
+    SubTwice -> "!m:num n:num p:num. NUM_SUB (NUM_SUB m n) p = NUM_SUB m (NUM_ADD n p)",
     Truncates -> "!m:num n:num. NUM_SUB m (NUM_ADD m n) = ZERO",
     SubIsZero -> "!m:num n:num. NUM_LE m n ==> NUM_SUB m n = ZERO",
     PredecessorBelow -> "!n:num. NUM_LE (PRE n) n",
@@ -1965,6 +2017,16 @@ object Peano {
       )
       belowExcludesAtMost <- strictExcludesNonStrict(
         logic, theory, notation, atMostThenBelow, strictIrreflexive)
+      atMostFromNotBelow <- atMostFromNotStrictlyBelow(
+        logic, theory, notation, trichotomy, reflexive, atMostFromBelow)
+      addCancelsStrictOrder <- additionCancelsTheStrictOrder(
+        logic,
+        theory,
+        notation,
+        strictDefinition,
+        arithmetic(AddAtSuccessor),
+        addCancelsOrder
+      )
       atMostSum <- summandIsAtMostTheSum(
         logic, theory, notation, addMonotone, least, arithmetic(AddAtZero))
       addStrictlyMonotone <- additionIsStrictlyMonotone(
@@ -2035,6 +2097,8 @@ object Peano {
         MulStrictlyMonotone -> mulStrictlyMonotone,
         MulCancelsLeft -> mulCancelsLeft,
         BelowExcludesAtMost -> belowExcludesAtMost,
+        AtMostFromNotBelow -> atMostFromNotBelow,
+        AddCancelsStrictOrder -> addCancelsStrictOrder,
         AtMostSum -> atMostSum,
         BelowThenAtMost -> belowThenAtMost,
         StrongInduction -> strongInduction,
@@ -3558,6 +3622,138 @@ object Peano {
     } yield result
   }
 
+  /**
+   * `|- !m n. ~(NUM_LT m n) ==> NUM_LE n m`, by eliminating [[Trichotomy]].
+   *
+   * One disjunction elimination over the three cases and no classical step: the disjunction is
+   * already a theorem here, so what the negated premise does is close the first branch rather than
+   * open a case split. The middle branch is [[Reflexive]] with one name rewritten and the last is
+   * [[AtMostFromBelow]].
+   */
+  private def atMostFromNotStrictlyBelow(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    trichotomy: Kernel.Thm,
+    reflexive: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val left = Term.variable("m", numbers)
+    val right = Term.variable("n", numbers)
+
+    for {
+      below <- LogicError.lift(
+        theory.constant(StrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      atMost <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      goal <- LogicError.lift(Term.appAll(atMost, List(right, left)))
+      strict <- LogicError.lift(Term.appAll(below, List(left, right)))
+      premise <- logic.mkNot(strict)
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      cases <- rules.specAll(trichotomy, List(left, right))
+      parts <- logic.destDisj(cases.conclusion).toRight(NotOfForm("a disjunction", cases.conclusion))
+      (first, rest) = parts
+      inner <- logic.destDisj(rest).toRight(NotOfForm("a disjunction", rest))
+      (equal, other) = inner
+
+      // `m < n` is the branch the premise refuses, so it proves the goal the way anything follows
+      // from a contradiction.
+      assumedFirst <- LogicError.lift(Kernel.assume(first))
+      absurd <- rules.notElim(assumed, assumedFirst)
+      fromFirst <- rules.falsityElim(goal, absurd)
+
+      // `m = n` carries `NUM_LE n n` to `NUM_LE n m` across the equation itself.
+      assumedEqual <- LogicError.lift(Kernel.assume(equal))
+      atRight <- LogicError.lift(Term.app(atMost, right))
+      moved <- Conv.apTerm(atRight, assumedEqual)
+      atBoth <- rules.spec(right, reflexive)
+      fromEqual <- Conv.sym(moved).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, atBoth)))
+
+      assumedOther <- LogicError.lift(Kernel.assume(other))
+      fromOther <- rules.specAll(atMostFromBelow, List(right, left)).flatMap(rules.mp(_, assumedOther))
+
+      assumedRest <- LogicError.lift(Kernel.assume(rest))
+      fromRest <- rules.disjElim(assumedRest, fromEqual, fromOther)
+      reached <- rules.disjElim(cases, fromFirst, fromRest)
+
+      discharged <- rules.disch(premise, reached)
+      general <- rules.genAll(discharged, List(left, right))
+      result <- checked(theory, notation, AtMostFromNotBelow, general)
+    } yield result
+  }
+
+  /**
+   * `|- !p m n. NUM_LT (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LT m n`, through the definition.
+   *
+   * `NUM_LT a b` **is** `NUM_LE (SUC a) b`, so the premise is `NUM_LE (SUC (p + m)) (p + n)`, and
+   * [[AddAtSuccessor]] read backwards says `SUC (p + m)` is `p + SUC m`. That is
+   * [[AddCancelsOrder]]'s shape exactly, and what it gives back is `NUM_LE (SUC m) n`, which is the
+   * conclusion with the definition folded again. No induction and no case split.
+   */
+  private def additionCancelsTheStrictOrder(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    strictDefinition: Kernel.Thm,
+    addAtSuccessor: Kernel.Thm,
+    addCancelsOrder: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val summand = Term.variable("p", numbers)
+    val left = Term.variable("m", numbers)
+    val right = Term.variable("n", numbers)
+
+    for {
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      leftSum <- LogicError.lift(Term.appAll(plus, List(summand, left)))
+      rightSum <- LogicError.lift(Term.appAll(plus, List(summand, right)))
+
+      opened <- Conv.unfold(strictDefinition, List(leftSum, rightSum))
+      premise <- Term
+        .destEq(opened.conclusion)
+        .map(_._1)
+        .toRight(NotOfForm("an equation", opened.conclusion))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      nonStrict <- LogicError.lift(Kernel.eqMp(opened, assumed))
+
+      // `p + SUC m = SUC (p + m)`, used from right to left so that the comparison is a sum in
+      // both arguments and the cancellation applies.
+      shifted <- rules.specAll(addAtSuccessor, List(summand, left))
+      atMost <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      restated <- Conv.apTerm(atMost, shifted).flatMap(Conv.apThm(_, rightSum))
+      carried <- Conv
+        .sym(restated)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, nonStrict)))
+
+      successorOfLeft <- LogicError.lift(Term.app(successor, left))
+      cancelled <- rules
+        .specAll(addCancelsOrder, List(summand, successorOfLeft, right))
+        .flatMap(rules.mp(_, carried))
+
+      folded <- Conv.unfold(strictDefinition, List(left, right))
+      strict <- Conv
+        .sym(folded)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, cancelled)))
+
+      discharged <- rules.disch(premise, strict)
+      general <- rules.genAll(discharged, List(summand, left, right))
+      result <- checked(theory, notation, AddCancelsStrictOrder, general)
+    } yield result
+  }
+
   /** [[AtMostSum]]: [[AddMonotone]] at zero, with the identity rewritten away. */
   private def summandIsAtMostTheSum(
     logic: Logic,
@@ -5026,6 +5222,14 @@ object Peano {
         Vector(addition(AddAtZero), addition(AddAtSuccessor), subAtZero, subSuccessors)
       )
 
+      subTwice <- byInduction(
+        driver,
+        theory,
+        notation,
+        SubTwice,
+        Vector(addition(AddAtZero), addition(AddAtSuccessor), subAtZero, subAtSuccessor)
+      )
+
       truncates <- byInduction(
         driver,
         theory,
@@ -5070,6 +5274,7 @@ object Peano {
         SubSuccessors -> subSuccessors,
         SubSelf -> subSelf,
         SumMinus -> sumMinus,
+        SubTwice -> subTwice,
         Truncates -> truncates,
         SubIsZero -> subIsZero,
         PredecessorBelow -> predecessorBelow,
