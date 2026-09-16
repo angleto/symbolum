@@ -326,15 +326,15 @@ class StyleSpec extends AnyFlatSpec with Matchers {
   /* ---------------------------------------------------- the scan can see something */
 
   // Floors and not equalities: files and lines are added every day and this is not a size budget.
-  // Two readings with their dates, because one of them is not what it looks like. At `c503d03` on
-  // 2026-09-16 this scan sees 155 files and 44823 lines of code over every module directory; on
+  // Two readings with their dates, because one of them is not what it looks like. At `70648f0` on
+  // 2026-09-16 this scan sees 155 files and 44836 lines of code over every module directory; on
   // 2026-09-12 it saw 118 files and 25251 lines, which is what the same scan saw of the same tree
   // while four of the ten directories were outside it. Half of each is a floor that a tree which
   // had genuinely lost its sources could not clear.
   //
   // **Almost none of that difference is the widening**, and the pair is written down to say so.
   // The four directories that came inside hold 10 files and 746 lines between them. The rest is
-  // work in modules the scan was already reading: `theories` alone is 33105 lines, having gained
+  // work in modules the scan was already reading: `theories` alone is 33082 lines, having gained
   // about 1700 on the day this was written. A reader who took the jump as the size of what had been
   // unscanned would be wrong by a factor of twenty, which is why a figure like this is quoted with
   // the commit it was taken at rather than as a property of the repository.
