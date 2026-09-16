@@ -1098,7 +1098,21 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // added eleven weakenings, ten of which land in `open` above, and the eleventh lands here. The
     // two limit bounds add four and none of the four lands here, so this figure separates the two
     // pieces of work stacked on this line better than either of the other two does.
-    unreadable shouldBe 83
+    //
+    // **84 here, and the tip's 83 is right for the tip.** This branch adds one: `Propose.audit`
+    // was asked which lemma each residue comes from rather than inferred from totals, and
+    // `WORD_LENGTH_ZERO` makes exactly one proposal, `Weakened`, change `WORD_LENGTH x = 0`,
+    // standing `Unreadable`. Its only atom is an equation between words and no procedure here
+    // reads one, which is the reading above holding at a lemma with nothing to do with a closure.
+    //
+    // **The route is worth more than the number.** This was written 83 twice on two kinds of bad
+    // evidence. First on the assertion not appearing in a failure list, which it cannot: it sits
+    // in the same test as `open` and after it, so a red `open` ends the test and this line never
+    // runs. Then on arithmetic over totals, where two buckets and three contributors leave the
+    // attribution underdetermined and each round of subtraction produced a different hypothesis
+    // that fitted the same numbers. When several hypotheses fit one total, the move is not a
+    // finer subtraction, it is asking the instrument whose each element is.
+    unreadable shouldBe 84
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
