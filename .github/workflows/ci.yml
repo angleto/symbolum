@@ -78,6 +78,77 @@ jobs:
       # not run and could not fail. Adding scalafmt is a decision about the source; pretending to
       # check it is not, so the step is gone rather than disabled.
 
+  # The gate `build.sbt` describes, run where the memory is. The command is that file's own, word
+  # for word, because one measurement described in two places is the defect most of the comments in
+  # this repository are about.
+  #
+  # Why it belongs here rather than only on a development machine. Every floor in `build.sbt` was
+  # measured on one laptop, and the run that landed there on 2026-09-16 held between 85 and 207 MB
+  # of free memory for its whole ten minutes against a peak resident set of 1922 MB. It passed
+  # because nothing else was open at that moment, and `-J-Xmx2g`, which is 458 MB more, is enough to
+  # make it die. Verifiability that depends on what else the author has open is not a property a
+  # gate can have. A runner has the memory and has nothing else on it.
+  #
+  # And the hazard `build.sbt` spends a whole section on disappears here by construction rather than
+  # by discipline. A report is built from what the instrumented compiler saw, so on an incremental
+  # build it covers only the files that were recompiled, and a report over two files passes every
+  # floor by being nearly empty. A runner checkout has never been built. What the steps below
+  # restore from cache is `~/.ivy2`, `~/.sbt` and coursier, which is dependency resolution and not
+  # `target/`; `clean` is kept anyway so that this line and the one a person types are the same
+  # line.
+  #
+  # No `-J-Xmx`, and that is measured rather than cautious. Nothing in this build forks the tests,
+  # so the suite runs inside the launcher JVM at sbt's default `-Xmx1024m`, and every floor in
+  # `build.sbt` was measured at that heap. Granting more would read the floors against a different
+  # run from the one that set them, on top of being what killed the run above.
+  #
+  # One JDK where the suite above runs two. What a floor gates is which statements execute, and that
+  # is the same question on 11 and on 17, so a second copy doubles the minutes and not the answer.
+  # 17 rather than 11 because it is the newer of the two the suite already covers. The floors
+  # themselves were read on a machine running Temurin 23, so the first run of this job is the first
+  # reading of them off that machine, and it changes the JDK at the same time: if a figure moves,
+  # both are candidates and neither is established.
+  #
+  # It does not duplicate the suite above. The corpus measurements run under `sbt test` and are
+  # skipped when coverage is enabled, which `build.sbt` and `garden.xeno.symbolum.tactics.Corpus`
+  # argue for at length: the two commands ask different questions, and the one that costs more than
+  # the rest of the build put together is not the one being asked here.
+  coverage:
+    name: Coverage, with the floors enforced
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'sbt'
+
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Verify SBT installation
+        run: sbt --version
+
+      - name: Coverage, with the floors enforced
+        run: sbt clean coverage test coverageReport
+
+      # The rate on its own is what lets a nearly empty report pass, so what a reader wants after a
+      # run is the statement count beside it and, after a red one, the report itself. Uploaded
+      # whichever way the step above went, because the failing run is the one somebody opens.
+      - name: Upload the coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoverage-reports
+          path: modules/*/target/scala-3.3.5/scoverage-report/
+          retention-days: 7
+
   # A gate, unlike the job below it, and the difference is whose work each one is about. This one
   # runs a shell tool of this repository against a repository built for the purpose; a failure here
   # is a defect in something committed here, which is what a gate is for. It runs on a pull request
