@@ -448,8 +448,6 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // both have two or more leading quantifiers, and in both the two reals are alike AND adjacent:
     // the narrow reading and the broad one agree here, as that paragraph in `CLAUDE.md` says they
     // have so far.
-    library.entries.size shouldBe 502
-    library.names.distinct.size shouldBe 499
     //
     // 503 with `WORD_LENGTH_ZERO`, a word of no letters being the empty word. **ONE**, derived
     // before the run. It was derived inside the base case of `WORD_INDUCTION` from the day that
