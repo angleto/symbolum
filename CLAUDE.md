@@ -126,8 +126,17 @@ that is deliberate: it is what lets it stay fast and heuristic.
   which is how a development is replayed, and a submission names the transcript it was written
   against, so anything else driving the port is refused rather than interleaved into it. Both
   landed on 2026-09-16: until then the page fired one request per line and waited for none of them,
-  so the order of a transcript was the network's rather than the writer's. It is listening on
-  loopback with no authentication: a single-user tool, not a service.
+  so the order of a transcript was the network's rather than the writer's.
+
+  **A refusal is somewhere to carry on from rather than the end of the load**, which is what the
+  message on it has always said and what the page did not do for the hours after the refusal
+  landed: a flag that stopped the sending never came back down, so every command written next was
+  swallowed and the box emptied as though it had gone. What the page holds now is the transcript it
+  was written against, as a number that moves when the server refuses one, so what was queued
+  behind the refusal is dropped and what is written after the new cells are rendered is sent.
+  Nothing that did not land disappears: the message names each one, and the box gets it back when
+  what it would get is a single line. It is listening on loopback with no authentication: a
+  single-user tool, not a service.
 - **Regenerating `docs/lemmas.md`:** `sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
   replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
   compares the file against the code and fails naming this command, which is the point: the document
