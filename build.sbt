@@ -129,6 +129,58 @@ lazy val commonSettings = Seq(
  *
  * The floor only rises. When a change raises the measurement, raise the number with it.
  *
+ * == Measured again on 2026-09-16, and only three of the seven moved ==
+ *
+ * At `f9e0672`, by `clean coverage test coverageReport` in a worktree that had never been built,
+ * 2129 tests green, with `HEAD` and the dirty count recorded before and after the run and unchanged
+ * across it. The statement count is beside every rate because the rate alone is what lets a partial
+ * report pass, which the section below this one is about:
+ *
+ * {{{
+ *   module     statements   rate     floor      moved
+ *   kernel           1126   95.65    81.0 -> 93.4   yes
+ *   checker           831   91.82    88.0 -> 88.8   yes
+ *   core             2901   92.18    87.3 -> 91.3   yes
+ *   sat               428   92.99    92.0           no
+ *   logic            4589   95.10    91.0           no
+ *   theories        43676   97.42    96.0           no
+ *   tactics          4951   92.83    92.5           no
+ *   mark              434   84.56    none           no
+ * }}}
+ *
+ * **The margin is 25 statements, not a point, and the arithmetic is why.** A point is 4.3 statements
+ * on `sat` and 436.8 on `theories`, so one sentence repeated in seven comments is two different
+ * gates: the tightest would land on the module with no property draws at all and the loosest on the
+ * one carrying the only unbounded generator in the build. The mechanism the margin exists for is
+ * property-test variation, which is an absolute effect rather than one proportional to module size.
+ * 25 is about two and a half times the largest spread this note has ever recorded, which is the
+ * 0.88 points across four readings of `kernel` — ten statements.
+ *
+ * **Four of the seven were left alone because three other sessions had unlanded work in them**, and
+ * that is a decision rather than caution. A floor that only rises is a ratchet, and a ratchet set
+ * from a tree somebody is mid-change in is not conservative: it is a claim about a commit nobody has
+ * made. The asymmetry decides it. A floor set too low costs one more pass later and nothing else; a
+ * floor set from a statement count that moves under it turns somebody's green branch red for a
+ * reason that is not in their diff, and they spend their first hour looking for a defect they did
+ * not write. `theories` and `logic` were about to take a 2100-line development; `sat` and `mark` a
+ * rewrite of seven constructs; `tactics` a new spec of about 380 lines.
+ *
+ * So the honest form of this measurement is **three now and four when the tree settles**, and the
+ * four are not a gap in the work but the part of it that a single morning could not establish.
+ *
+ * **And the three that moved are still measured, five commits later.** `f9e0672..aaad597` is five
+ * commits by three sessions, and `git diff --numstat f9e0672..aaad597 -- modules/kernel
+ * modules/checker modules/core` is **empty**: not one line of the three modules whose floors rose
+ * changed in them. So these numbers are of `f9e0672` and are equally numbers about the tip, which
+ * is the check worth running before raising a floor off a hash that is no longer the tip rather
+ * than assuming the reading has gone stale because the branch moved.
+ *
+ * Two things in the table that nobody had written down before. **`sat` has four statements of
+ * margin**, 92.99 against 92.0, which makes it the tightest gate in the build and the one most
+ * likely to fail on a change that is not a regression. And **`mark` is the lowest-covered module in
+ * the repository at 84.56%**, which its own note anticipates and argues for: what a floor there
+ * would gate is a property of two documents rather than of the code.
+ *
  * == The run has to be a clean one, and the gate does not say so ==
  *
  * Found on 2026-09-13 by running it twice in the same tree, a commit apart. The second report
@@ -274,9 +326,13 @@ lazy val core = (project in file("modules/core"))
     libraryDependencies += "org.scalanlp" %% "breeze" % "2.1.0",
     // Measured 88.21% in the full run on 2026-09-04 (78.09% on 2026-09-03; 83.04% under its own
     // tests alone, see the note above), and 88.30% on 2026-09-05 with nothing in this module
-    // changed, and 88.24% an hour after that. The floor is just under a point below the lower of
-    // the two, which is the sampling variation the note describes.
-    coverageMinimumStmtTotal := 87.3
+    // changed, and 88.24% an hour after that.
+    //
+    // **92.18% over 2901 statements on 2026-09-16, at `f9e0672`**, and the floor rises to 91.3,
+    // which is 25 statements under the measurement. See the note above this project list for why
+    // the margin is counted in statements rather than in points, and why only three of the seven
+    // floors moved that day.
+    coverageMinimumStmtTotal := 91.3
   )
 
 // The trusted base. It depends on nothing, which is the enforcement mechanism: a theorem cannot
@@ -297,7 +353,12 @@ lazy val kernel = (project in file("modules/kernel"))
     // known variation is not a rise, and setting the number from the best of three samples is how
     // a gate starts failing on the sample rather than on the code. The rerun an hour later read
     // 82.82%, a fourth value, which is the argument rather than an exception to it.
-    coverageMinimumStmtTotal := 81.0
+    //
+    // **95.65% over 1126 statements on 2026-09-16, at `f9e0672`**, and the floor rises to 93.4,
+    // which is 25 statements under the measurement. Thirteen points in one move, from a number that
+    // caught nothing that could plausibly happen: the note above recorded 94.84 here in September
+    // and declined to act on it, which was right then and is what made this jump the size it is.
+    coverageMinimumStmtTotal := 93.4
   )
 
 // The propositional solver. Depends on **nothing**, and that is the correctness argument rather
@@ -379,7 +440,12 @@ lazy val checker = (project in file("modules/checker"))
   .settings(
     name := "symbolum-checker",
     // Measured 90.60% on the first run, 2026-09-10. The floor is set below it and only rises.
-    coverageMinimumStmtTotal := 88.0
+    //
+    // **91.82% over 831 statements on 2026-09-16, at `f9e0672`**, and the floor rises to 88.8,
+    // which is 25 statements under the measurement. The smallest module of the three that moved
+    // that day, so the same 25 statements buy it three points of margin where they buy `core`
+    // under one: that asymmetry is the reason the margin is counted in statements at all.
+    coverageMinimumStmtTotal := 88.8
   )
 
 lazy val tactics = (project in file("modules/tactics"))
