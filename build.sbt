@@ -18,6 +18,11 @@
 //     tactics  -> theories, core
 //     examples -> tactics
 //
+// `scan` is beside that graph too and is reached only at test scope: it holds the one decision
+// about what in a source of this repository is a comment, for the gates in `theories`, `tactics`
+// and `dist` that read the repository's own text before checking it. It depends on nothing, so it
+// cannot weaken the boundary, and it is a module for the same reason `mark` is one.
+//
 // Every module in that graph now exists. `mark` is beside it rather than in it: it depends on
 // nothing, it is not depended on, and what it does is write `docs/logo.svg` from the character art
 // in `docs/logo.md` and assert the three things that document asks of a copy. It is a module rather
@@ -364,7 +369,7 @@ lazy val root = (project in file("."))
   // the failure "a suite that is configured but not executed does not exist" names exactly.
   // `DocumentationSpec` asserts the list against the directories now, so the next module is a
   // decision rather than an omission.
-  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark, sat, symbolum, dist)
+  .aggregate(core, kernel, checker, logic, theories, tactics, examples, mark, sat, scan, symbolum, dist)
   .settings(
     name := "symbolum-root",
     publish / skip := true
@@ -455,6 +460,47 @@ lazy val kernel = (project in file("modules/kernel"))
     coverageMinimumStmtTotal := 93.4
   )
 
+// What in a source of this repository is a comment, for the gates that read the repository's own
+// text. Depends on nothing, publishes nothing, and is reached only at `test->compile`.
+//
+// It is a module rather than a file in one of the test scopes that ask, and the argument is the one
+// `mark` carries further down rather than a taste for small modules. Six gates decided what a
+// comment is separately, in two shapes that did not agree on three inputs, and three of the six sit
+// in three different modules' test scopes: `theories`, `tactics` and `dist`. Sharing along the
+// edges that already exist means `theories % "test->test"` on `tactics`, which puts 75 test files
+// and 21 097 lines into the compile graph of every `tactics/testOnly` in order to remove two copies
+// of one function. Measured on 2026-09-16. The inner loop is not where that is spent, and a check
+// over this repository's own text should not wait for the prover to compile: the days the prover is
+// broken are exactly the days such a check is worth running.
+//
+lazy val scan = (project in file("modules/scan"))
+  .settings(commonSettings)
+  .settings(coverageSettings)
+  .settings(
+    name := "symbolum-scan",
+    publish / skip := true,
+
+    // **Measured 100.00% of statements and 100.00% of branches over 185 statements on 2026-09-16**,
+    // by `sbt clean coverage scan/test scan/coverageReport`, seventeen tests.
+    //
+    // A hundred is the reading this repository distrusts on sight, and `CLAUDE.md` says why: an
+    // incremental report covers only the files that were recompiled, and `theories` once read
+    // 100.00% over 172 statements while the real figure was 97.56% over 22 663. So the denominator
+    // is quoted beside the rate, and it is the whole module rather than a fragment of it: the first
+    // run of the same command read 91.89% over the same 185, and the six tests that closed the gap
+    // are named below.
+    //
+    // The floor is a point under, which on 185 statements is **two statements of margin**, and the
+    // usual reason for a margin does not apply here: there is no property test in this module, so
+    // the reading does not move between runs. What it is for is the next statement somebody adds
+    // without a test, and two is deliberately not many. That those six tests exist is the argument
+    // that it is affordable: each covers a branch a docstring in `Comments` already claimed (an
+    // interpolation holding a quote, an escape, a quote that opens no character literal, and the
+    // two guards that keep the reader total on a malformed line), and every one of those claims was
+    // unchecked until the report named the lines.
+    coverageMinimumStmtTotal := 99.0
+  )
+
 // The propositional solver. Depends on **nothing**, and that is the correctness argument rather
 // than a property it happens to have: a search is untrusted here, and a module that cannot see
 // `kernel` cannot construct a theorem whatever it does. `docs/adr/0003` makes the module graph the
@@ -537,7 +583,11 @@ lazy val logic = (project in file("modules/logic"))
 // base grows, so its axiom list is asserted by a test rather than described.
 lazy val theories = (project in file("modules/theories"))
   .settings(publishSettings)
-  .dependsOn(logic)
+  // `scan` at test scope only, and it is the narrowest edge in this file: `Sources.code` decides
+  // what a comment is before a census reads a source, and that decision is shared with two other
+  // modules' test scopes. The main scope is untouched, and `scan` depends on nothing, so nothing
+  // published from here can reach it and the direction of the graph is unchanged.
+  .dependsOn(logic, scan % "test->compile")
   .settings(commonSettings)
   .settings(coverageSettings)
   .settings(
@@ -606,7 +656,12 @@ lazy val tactics = (project in file("modules/tactics"))
   // proofs — which is the defect that document's own card is about. The main scopes are untouched:
   // nothing published from here can see the checker, and the checker still depends on the kernel
   // alone.
-  .dependsOn(theories, core, checker % "test->test")
+  //
+  // `scan` beside it, at test scope and compile-only: four of this module's specs decide what a
+  // comment is before they read a source, and until 2026-09-16 they decided it three ways that did
+  // not agree with each other or with the two other modules asking. The edge is to a module that
+  // depends on nothing, so it costs the compile graph one file.
+  .dependsOn(theories, core, checker % "test->test", scan % "test->compile")
   .settings(commonSettings)
   .settings(coverageSettings)
   .settings(
@@ -727,7 +782,9 @@ lazy val symbolum = (project in file("modules/aggregate"))
 // a release asset; `publish / skip` says so here rather than leaving it to the workflow.
 lazy val dist = (project in file("modules/dist"))
   .enablePlugins(JavaAppPackaging)
-  .dependsOn(tactics, examples)
+  // `scan` at test scope: `LauncherSpec` compares the text of the launchers with the comments off,
+  // and what a comment is is decided one place for the three modules that ask.
+  .dependsOn(tactics, examples, scan % "test->compile")
   .settings(commonSettings)
   .settings(
     name := "symbolum-dist",

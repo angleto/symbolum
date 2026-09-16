@@ -1,5 +1,7 @@
 package garden.xeno.symbolum.dist
 
+import garden.xeno.symbolum.scan.Comments
+
 import java.io.{ByteArrayOutputStream, PrintStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
@@ -186,34 +188,31 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
    * including this one. An AST would answer completely and wants a parser in a module that reads
    * files as bytes; this is the answer in between.
    *
-   * WHAT IT DOES NOT COVER. A line comment's `//`, or a block comment's opening, inside a string
-   * literal is read as a comment and what follows it on that line is removed. That can delete a
-   * real call and report a launcher as unentered, which is a false RED, so the change moves the
-   * failure this criterion can produce from the unsafe direction to the safe one. That is a
-   * property of removing text from an `exists` rather than a hope.
+   * WHAT IT NO LONGER DOES NOT COVER, which is the half of this note that changed on 2026-09-16.
+   * It used to say that a `//`, or a block comment's opening, inside a string literal was read as
+   * a comment and everything after it on the line removed; that it could delete a real call and
+   * report a launcher as unentered, a false RED; and that at `15fa092` 46 string literals in
+   * `*Spec.scala` held `//` and none of them put a launcher's `main(` after it on the same line.
+   * All of that was true and the mitigation was that nobody had written the bad line yet.
    *
-   * The literal is common and the hazard is not, and this nearly went in as one sentence saying no
-   * such literal exists. At `15fa092`, 46 string literals in `*Spec.scala` contain `//`, most of
-   * them a URL or this repository's own comment-scanning tests. None puts a launcher's `main(`
-   * after the `//` on the same line, which is the shape that would cost anything; the only line
-   * that does is in the test below, where it is there to be stripped.
+   * `scan.Comments` reads a string literal as code, so the hazard is gone rather than bounded, and
+   * with it the reason to count the 46. What the count actually measured was how close the tree was
+   * to the defect, which is the kind of figure that goes stale the next time somebody writes a URL.
    *
-   * A block comment's opening is spelled out above rather than written, and the reason is the
-   * thing itself: Scala nests block comments, so those two characters inside THIS doc comment open
-   * a second one, the marker below closes that one instead, and the definition underneath is
-   * swallowed until the next closing marker, which is inside the regex. The compiler reported it
-   * as three errors and none of them was here.
+   * A block comment's opening is spelled out above rather than written, and the reason is the thing
+   * itself: Scala nests block comments, so those two characters inside THIS doc comment open a
+   * second one, the marker below closes that one instead, and the definition underneath is
+   * swallowed until the next closing marker. The compiler reported it as three errors and none of
+   * them was here. The reader that replaces the substitution knows about the nesting; this docstring
+   * still does not, which is why the convention stands.
    *
-   * The same two substitutions are in `theories`' `Sources.code` and in `RemedySpec`, and this is
-   * the third. They cannot see each other: three modules' test scopes, and only
-   * `checker % "test->test"` crosses such a boundary today. A census run because three sounded low
-   * found six sites deciding what a comment is, in two shapes that do not agree: these three clean
-   * the text, and `StyleSpec`, `SourceLanguageSpec` and `DocumentationSpec` filter whole lines, so
-   * a trailing `// note` after a call is dropped here and kept there. Which of the two a caller
-   * wants is a question before it is a refactor, and it has a card of its own.
+   * The two substitutions this held were also in `theories`' `Sources.code` and in `RemedySpec`,
+   * and a census run because three sounded low found **six** sites deciding what a comment is, in
+   * two shapes that did not agree on three inputs. They are one decision now, in a module that
+   * depends on nothing and is reached at `test->compile`, which is what let the three modules share
+   * it without a `test->test` edge.
    */
-  private def code(text: String): String =
-    text.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("(?m)//.*$", " ")
+  private def code(text: String): String = Comments.withoutComments(text)
 
   /**
    * Which of `launchers` no spec enters through `main`, excusing the ones named.

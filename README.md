@@ -190,10 +190,11 @@ credentials += Credentials(
 )
 ```
 
-`modules/examples` and `modules/mark` are on no registry, and that is a decision rather than an
-omission: neither is a library. The first exists to be read and run, and the second regenerates two
-files under `docs/`, so anybody who resolved it would get a command that writes into their working
-directory.
+`modules/examples`, `modules/mark` and `modules/scan` are on no registry, and that is a decision
+rather than an omission: none of the three is a library. The first exists to be read and run; the
+second regenerates two files under `docs/`, so anybody who resolved it would get a command that
+writes into their working directory; and the third is read only by this repository's own checks,
+being the one place that decides what in a source here is a comment.
 
 ## The distribution
 

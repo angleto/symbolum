@@ -124,6 +124,7 @@ core      -> (nothing)      the computer algebra system, published as garden.xen
 tactics   -> theories, core the lowest module that sees both halves
 examples  -> tactics        runnable demonstrations of either half, not published
 mark      -> (nothing)      the figure, the art and the drawing written from it, and its checks
+scan      -> (nothing)      what in a source of this repository is a comment, for the gates that ask
 ```
 
 `sat` depending on nothing is the same kind of statement as `kernel` depending on nothing, read from
@@ -138,6 +139,16 @@ available to it.
 is a module and not a file in `examples` for one reason, which is that `examples` depends on
 `tactics`, and a check over two files under `docs/` that could only run after the prover compiled
 would stop running on exactly the days the prover is broken.
+
+`scan` is beside it for the same argument and is reached only at **test** scope, by `theories`,
+`tactics` and `dist`. It holds the one decision about what in a source of this repository is a
+comment. Six gates decided that separately until 2026-09-16, in two shapes that disagreed on three
+inputs: a trailing `// note` after a call, a doc comment closed in the middle of a line, and a `//`
+inside a string literal, where the text-cleaning shape deleted real code. What makes it a module
+rather than a file in one of the three test scopes is the measurement: sharing along the edges that
+already exist means `theories % "test->test"` on `tactics`, which puts 75 test files and 21 097
+lines into the compile graph of every `tactics/testOnly` to remove two copies of one function. The
+main scopes are untouched, so nothing published can see it and the trust boundary is unchanged.
 
 `kernel` declaring no dependency is what makes the trusted base something you can point at rather
 than describe, and a test in `modules/kernel/src/test` asserts it cannot see the algebra side.

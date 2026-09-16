@@ -1,5 +1,7 @@
 package garden.xeno.symbolum.tactics
 
+import garden.xeno.symbolum.scan.Comments
+
 import java.nio.file.{Files, Path, Paths}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -771,9 +773,16 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       ._2
   }
 
-  /** A source with its comments removed, so a name in prose is not read as a mapping. */
-  private def withoutComments(text: String): String =
-    text.replaceAll("(?s)/\\*.*?\\*/", " ").replaceAll("(?m)//.*$", " ")
+  /**
+   * A source with its comments removed, so a name in prose is not read as a mapping.
+   *
+   * `scan.Comments` since 2026-09-16, where the same question is answered for the two other modules
+   * that ask it. The line structure survives now, which it did not: the substitution this replaces
+   * put one space where a block comment had been, newlines included, so a docstring of four lines
+   * merged the line above it with the line below. This fold reads lines, and the shape it read
+   * depended on how the prose around the declarations had been wrapped.
+   */
+  private def withoutComments(text: String): String = Comments.withoutComments(text)
 
   /**
    * Find a repository file from wherever the tests were started.

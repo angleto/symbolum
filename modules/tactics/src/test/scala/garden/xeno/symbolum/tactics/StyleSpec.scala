@@ -1,5 +1,7 @@
 package garden.xeno.symbolum.tactics
 
+import garden.xeno.symbolum.scan.Comments
+
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.*
 import org.scalatest.flatspec.AnyFlatSpec
@@ -295,24 +297,22 @@ class StyleSpec extends AnyFlatSpec with Matchers {
   )
 
   /**
-   * The lines of a source that are code, dropping comments.
+   * The lines of a source that are code, with the comment taken off each of them.
    *
    * String literals are not stripped, which is a known limit and the reason [[Forbidden]] holds no
    * pattern a docstring would write in prose: a construct named inside a string is counted, and the
    * cheapest defence against a false positive is to name constructs in comments rather than in
    * strings.
+   *
+   * **The comment comes off the line now, where until 2026-09-16 the line came off the census.**
+   * This filtered whole lines, so `foo() // a var here` was scanned in full because it does not
+   * *begin* with a comment marker, and a doc comment closed in the middle of a line took the code
+   * after it out of the scan entirely. Four lines of this tree are the first shape and none is the
+   * second, so what the repair buys is the next one somebody writes; the reader that decides it is
+   * `scan.Comments`, shared with the five other sites that were asking separately.
    */
   private def codeLines(text: String): Vector[(Int, String)] =
-    text.linesIterator.zipWithIndex
-      .foldLeft((Vector.empty[(Int, String)], false)) { case ((kept, inBlock), (line, index)) =>
-        val trimmed = line.trim
-        if (inBlock) (kept, !trimmed.contains("*/"))
-        else if (trimmed.startsWith("/*")) (kept, !trimmed.contains("*/"))
-        else if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.isEmpty)
-          (kept, false)
-        else (kept :+ ((index + 1, line)), false)
-      }
-      ._1
+    Comments.codeLines(text).map(line => (line.number, line.code))
 
   private def sources: Vector[Path] =
     modules.flatMap { module =>

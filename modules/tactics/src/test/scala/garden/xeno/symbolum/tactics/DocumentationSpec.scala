@@ -1,5 +1,7 @@
 package garden.xeno.symbolum.tactics
 
+import garden.xeno.symbolum.scan.Comments
+
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.*
 import org.scalatest.flatspec.AnyFlatSpec
@@ -479,13 +481,15 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // hurt: it regenerates two files under `docs/`, so a consumer resolving it gets a tool that
     // writes into their working directory. The count above would not move.
     // Comment lines dropped first: the paragraph above these settings names the setting it is
-    // about, so a count over the whole file counts a sentence as a module.
-    val skipped = build.linesIterator
-      .map(_.trim)
-      .filterNot(line => line.startsWith("//") || line.startsWith("*"))
-      .count(_.contains("publish / skip := true"))
-    withClue("`root`, `examples`, `mark` and `dist` are the four that do not publish: ") {
-      skipped shouldBe 4
+    // about, so a count over the whole file counts a sentence as a module. `scan.Comments` decides
+    // which lines those are since 2026-09-16, where the five other sites asking the same question
+    // decide it too; what this one had was the loosest of the three line filters, with no state for
+    // a block comment at all, so a `publish / skip` named inside one would have counted.
+    val skipped = Comments
+      .codeLines(build)
+      .count(_.code.contains("publish / skip := true"))
+    withClue("`root`, `examples`, `mark`, `dist` and `scan` are the five that do not publish: ") {
+      skipped shouldBe 5
     }
   }
 

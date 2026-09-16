@@ -1,5 +1,7 @@
 package garden.xeno.symbolum.theories
 
+import garden.xeno.symbolum.scan.Comments
+
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.*
 
@@ -48,11 +50,14 @@ object Sources {
    * Needed because the interesting question is what the code depends on, and a file that explains
    * why it does not depend on something has to name it in order to say so. Reading the prose as
    * code would make every such explanation into the thing it warns about.
+   *
+   * The decision of what a comment is moved to `garden.xeno.symbolum.scan.Comments` on 2026-09-16,
+   * and what moved with it is a defect this site had: the pair of substitutions here dropped from a
+   * `//` to the end of the line whether or not the slashes were inside a string literal, and three
+   * lines of `Notebook.scala` are exactly that. The census this feeds is `RealSpec`'s over
+   * `assertAxiom`, so the shape of the defect was a line declaring an axiom that a census does not
+   * see.
    */
-  def code(relative: String): String = {
-    val text = Files.readString(repositoryRoot().resolve(relative))
-    text
-      .replaceAll("(?s)/\\*.*?\\*/", " ")
-      .replaceAll("(?m)//.*$", " ")
-  }
+  def code(relative: String): String =
+    Comments.withoutComments(Files.readString(repositoryRoot().resolve(relative)))
 }

@@ -101,6 +101,8 @@ examples  -> tactics            runnable demonstrations of either half
 aggregate -> the seven above    no source: a pom, so one coordinate resolves the whole system
 dist      -> tactics, examples  the tarball a person installs, and the only module that is not a
                                 library and not a demonstration
+scan      -> (nothing)          what in a source of this repository is a comment, reached only at
+                                test scope by `theories`, `tactics` and `dist`
 ```
 
 The last two are what the system ships as, and they are two artifacts rather than one read two

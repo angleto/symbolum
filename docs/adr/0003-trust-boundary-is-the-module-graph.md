@@ -43,6 +43,20 @@ examples -> core
 > boundary, so that a demonstration of the proof half has somewhere to live. The block above is
 > kept as it was decided; `docs/architecture.md` carries the current graph.
 
+> Amended 2026-09-16. `scan` joined the graph as a leaf that depends on nothing, reached **only at
+> test scope** by `theories`, `tactics` and `dist`. It holds the one decision about what in a source
+> of this repository is a comment, which six gates were making separately in two shapes that
+> disagreed. The boundary is untouched in the strict sense and in the useful one: no main scope
+> depends on it, so nothing that could construct a theorem can see it, and it can see neither
+> `kernel` nor `core`.
+>
+> It is the shape the Consequences below reserve for sharing: *"it goes in a leaf module that both
+> sides may depend on, which is a decision to record then, not now"*. That sentence was written
+> about exact arithmetic and this is not that, so what it supplies here is the form rather than the
+> case. The reason the sharing could not go along an existing edge is in `build.sbt` beside the
+> module and is a measurement: `theories % "test->test"` on `tactics` would put 21 097 lines of test
+> sources into the compile graph of every `tactics/testOnly`.
+
 `core` is the existing CAS, unchanged. It is invisible from `kernel`, `logic` and `theories`: an
 import of it from the trusted base is a compile error, not a review finding.
 

@@ -1,5 +1,7 @@
 package garden.xeno.symbolum.tactics
 
+import garden.xeno.symbolum.scan.Comments
+
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.*
 import org.scalatest.flatspec.AnyFlatSpec
@@ -125,56 +127,16 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    * That spec drops comments to scan code; this one drops code to scan comments, and the two
    * together are the file. String literals are left out of both: a literal is data, and a lemma
    * name inside one is not prose about the lemma.
+   *
+   * Both readings come off `scan.Comments` since 2026-09-16, and what this site gained from the
+   * move is the one input in this tree where its own rule gave the wrong answer. Quote parity
+   * decided whether a `//` was a comment, and `Mark.scala:192` opens a triple-quoted string with an
+   * SVG header whose attributes are quoted: the number of quotes before the slashes of its `http`
+   * is even, so parity said "outside a string" and the rest of that header was put to this census
+   * as English prose. It is the line the docstring on the quote rule said did not exist.
    */
   private def commentLines(text: String): Vector[(Int, String)] =
-    text.linesIterator.zipWithIndex
-      .foldLeft((Vector.empty[(Int, String)], false)) { case ((kept, inBlock), (line, index)) =>
-        val trimmed = line.trim
-        val entry = (index + 1, line)
-        if (inBlock) (kept :+ entry, !trimmed.contains("*/"))
-        else if (trimmed.startsWith("/*")) (kept :+ entry, !trimmed.contains("*/"))
-        else if (trimmed.startsWith("//") || trimmed.startsWith("*")) (kept :+ entry, false)
-        else
-          trailing(line, "//", Set('"')) match {
-            case Some(comment) => (kept :+ ((index + 1, comment)), false)
-            case None => (kept, false)
-          }
-      }
-      ._1
-
-  /**
-   * The comment part of a line that is code, or nothing, for a language whose line comment starts
-   * with `marker`.
-   *
-   * A `//` inside a string literal is not a comment, and this spec's own fixtures are the proof:
-   * they hold lines of another language inside literals on purpose, and the first draft flagged
-   * them. Quote parity decides it, which is exact for every line in this tree and would be wrong
-   * on an escaped quote inside a literal. That case is absent here and the cost of being wrong on
-   * it is a false positive, which is the direction to err in for a check somebody must switch off
-   * if it cries wolf.
-   *
-   * The marker is a parameter rather than two copies of this, because the `#` languages need the
-   * same rule: measured over the six shell scripts, the two workflows and `build.properties`,
-   * every `#` on a line that does not begin with one is inside a literal, and all three are
-   * `echo "## Published"` and its siblings in `publish.yml`.
-   *
-   * `quotes` is the second parameter, and it is not decoration. The `#` languages quote with both
-   * kinds, and `echo '### The libraries'` is in this tree, so counting only double quotes reads it
-   * as a comment. Scala is the other way round: a `'` is a character literal and passes in and out
-   * of prose as an apostrophe, so requiring single-quote parity there would reject a line like
-   * `val s = "don't" // note` and DROP a real comment. The two directions are not equal in cost. A
-   * dropped comment is never scanned and makes this census greener, which is the failure this file
-   * exists against; a kept literal can at worst be flagged, which is the direction to err in.
-   * Measured before splitting them: across every `.scala`, `.sbt`, `.sc` and `.js` here, the
-   * number of trailing comments single-quote parity would have dropped is zero, so this is a
-   * choice about the next line somebody writes rather than a repair.
-   */
-  private def trailing(line: String, marker: String, quotes: Set[Char]): Option[String] = {
-    val at = line.indexOf(marker)
-    if (at < 0) None
-    else if (quotes.exists(quote => line.take(at).count(_ == quote) % 2 != 0)) None
-    else Some(line.substring(at))
-  }
+    Comments.commentLines(text).map(line => (line.number, line.comment))
 
   /**
    * Comment lines in a language whose comments begin with `#`, which is shell, YAML and
@@ -191,10 +153,7 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    * the docstring and a missing brace at end of file, neither of them at the cause.
    */
   private def hashComments(text: String): Vector[(Int, String)] =
-    text.linesIterator.zipWithIndex.flatMap { case (line, index) =>
-      if (line.trim.startsWith("#")) Some((index + 1, line))
-      else trailing(line, "#", Set('"', '\'')).map(comment => (index + 1, comment))
-    }.toVector
+    Comments.hashLines(text).map(line => (line.number, line.comment))
 
   /**
    * The formats this census reads, each with the syntax its comments are written in.
