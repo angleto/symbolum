@@ -223,6 +223,34 @@ cannot be a property of how two constants happen to be spelled.
 moves, nothing becomes provable that was not. Anyone judging it by what the prover can newly reach
 will judge it wrongly, which is the same sentence `0016` had to write about the construction.
 
+## The two this decision left behind, renamed on 2026-09-16
+
+This record argued from a defect — a constant whose **name** is a symbol, so that a reader meeting
+it in a list of constants cannot tell a spelling from a name — and renamed three constants for it,
+plus `le` so the four read alike. It left two with the identical defect: `Real.Zero` and `Real.One`
+were the strings `"0"` and `"1"`.
+
+**They were left deliberately, and not by oversight.** They belong to `0012` rather than here: that
+record decides how a numeral is elaborated, and renaming them while implementing this one would have
+settled the interaction between two decisions inside a commit about something else. They are renamed
+separately, to `real_zero` and `real_one`, on the argument this record already makes. Since
+2026-09-12 two encodings are declared, so `0` names one of them and not the other, which is the same
+sentence this record writes about `+`.
+
+**The objection that had to be measured, because it would have been decisive.** A numeral must print
+as `0`, so it looks as though its constant had better be called `0` — the one case where a symbol
+*should* be the name. It does not depend on the name: `Show` asks `notation.valueOfNumeral` **before**
+the case that prints a constant's name, so a term any encoding recognises comes out as digits
+whatever its constants are called. Two measurements beside it, both taken before the rename: nothing
+in any main source compares a constant's name to `"0"` or `"1"`, and the parser picks between the two
+encodings by the **type** `one` was declared at rather than by its spelling, which is what
+`Notation.withNumerals` says of itself.
+
+So the reason to keep the symbols could not be the one that would have justified keeping them, and
+what was left was an asymmetry no document explained. What it cost to remove: two `val`s, three call
+sites, one row of `docs/reading-register.md` whose key carries the name. No statement changes its
+printed form, which is the difference from this record's own rename, where 135 of 436 did.
+
 ## Alternatives rejected
 
 **Accept `+` at `num` for reading and keep printing `NUM_ADD`.** This is exactly the discipline

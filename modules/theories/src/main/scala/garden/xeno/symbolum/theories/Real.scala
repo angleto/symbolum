@@ -86,8 +86,28 @@ final class RealTheory private[theories] (
 object Real {
 
   val TypeName: String = "real"
-  val Zero: String = "0"
-  val One: String = "1"
+
+  /**
+   * The encoding's zero and one, which were the strings `"0"` and `"1"` until 2026-09-16.
+   *
+   * The same defect `docs/adr/0018` renamed the four operations for, and it was left behind because
+   * these two belong to a different decision: `docs/adr/0012` is how a numeral is elaborated, and
+   * touching these while implementing the operators' overloading would have settled the interaction
+   * between two records in one commit. They are renamed here, separately, for the reason 0018 gives
+   * about the others: a reader meeting `0` in a list of constants cannot tell a spelling from a
+   * name, and since 2026-09-12 two encodings are declared, so `0` names one of them and not the
+   * other.
+   *
+   * **What made this look like the case where a symbol SHOULD be the name, and is not.** The
+   * obvious objection is that `0` must print as `0`, so its constant had better be called `0`. It
+   * does not depend on the name at all: `Show` asks `notation.valueOfNumeral` **before** it reaches
+   * the case that prints a constant's name, so a term any encoding recognises comes out as digits
+   * whatever its constants are called. Measured before renaming, along with the two that matter as
+   * much: nothing anywhere compares a constant's name to `"0"` or `"1"`, and the parser picks
+   * between the two encodings by the **type** `one` was declared at, never by its spelling.
+   */
+  val Zero: String = "real_zero"
+  val One: String = "real_one"
 
   /**
    * The four operations whose symbol used to be their name.

@@ -289,7 +289,7 @@ precedence and is not an entry of the table.
 | `notation binder \` | `\x. body` is a lambda, and the body extends as far right as it can | **NOT READ** |  |  |
 | `notation binder !` | `!x. body` is `! (\x. body)`, and the body extends as far right as it can | **NOT READ** |  |  |
 | `notation binder ?` | `?x. body` is `? (\x. body)`, and the body extends as far right as it can | **NOT READ** |  |  |
-| `notation numerals via 1` | a digit string is read in binary through `0`, `1`, `BIT0` and `BIT1`: `12` is `BIT0 (BIT0 (BIT1 1))` | **NOT READ** |  |  |
+| `notation numerals via real_one` | a digit string is read in binary through `real_zero`, `real_one`, `BIT0` and `BIT1`: `12` is `BIT0 (BIT0 (BIT1 real_one))` | **NOT READ** |  |  |
 | `notation numerals via NUM_ONE` | a digit string is read in binary through `ZERO`, `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1`: `12` is `NUM_BIT0 (NUM_BIT0 (NUM_BIT1 NUM_ONE))` | **NOT READ** |  |  |
 | `notation application` | `f x` binds tighter than every operator above, at precedence 1000 | **NOT READ** |  |  |
 
@@ -301,8 +301,6 @@ is the axioms above, which are rows. The abstraction and representation of each 
 arrive from `Kernel.defineType` with two theorems relating them, and a theorem is proved rather
 than read. Equality is the kernel's, and is in the theory before any of this starts.
 
-- `0 : real`
-- `1 : real`
 - `= : 'A -> 'A -> bool`
 - `dest_num : num -> ind`
 - `dest_prod : prod('a, 'b) -> 'a -> 'b -> bool`
@@ -315,6 +313,8 @@ than read. Equality is the kernel's, and is in the theory before any of this sta
 - `real_add : real -> real -> real`
 - `real_lt : real -> real -> bool`
 - `real_mul : real -> real -> real`
+- `real_one : real`
+- `real_zero : real`
 - `select : ('a -> bool) -> 'a`
 
 <!-- end generated -->
