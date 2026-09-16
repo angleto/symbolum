@@ -229,9 +229,23 @@ object Notebook {
    * the `Symbolum-After` header, and a command is applied to that transcript or to none. So a
    * second tab, a reload with a request in flight, or anything driving the port that is not this
    * page cannot interleave itself into a development; what it gets is [[Conflict]] and the cells
-   * as they actually stand, which is the state it has to re-read before writing again. A caller
-   * that sends no header is not refused, because `curl` is how this surface is exercised by hand
-   * and it has nothing to be stale about.
+   * as they actually stand, which is the state it has to re-read before writing again.
+   *
+   * == What this does not order, which was measured rather than reasoned about ==
+   *
+   * A caller that sends no header is served. `curl` is how this surface is exercised by hand, a
+   * caller writing one command at a time has nothing to be stale about, and refusing it would cost
+   * the documented hand-use path in exchange for nothing.
+   *
+   * That sentence stopped there until the page was opened and the case was actually run. A writer
+   * that omits the header **and** writes concurrently still reorders, and what it reorders into is
+   * the original defect exactly: five header-less POSTs fired together on 2026-09-16 landed as
+   * `declare`, `L3`, `L2`, `L1`, `L4`, in a browser, against this code. So what is ordered is a
+   * writer that says what it read, and nothing is claimed about one that declines to. That is a
+   * client racing itself while choosing not to be ordered, which the page is not and no hand
+   * caller is, and telling it from the `curl` case would want a count of the writers waiting on
+   * the lock. `NotebookSpec` asserts the limit rather than leaving it here, because a limit that
+   * lives in a comment is one nothing notices being lifted.
    *
    * == Under one lock rather than a compare-and-set ==
    *

@@ -393,6 +393,26 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "be served when it names nothing, which is the one writer this cannot order" in {
+    // The limit of the ordering, asserted rather than left in a comment, because a limit nothing
+    // runs is one nobody notices being lifted -- in either direction. If a later change refuses a
+    // header-less write, this goes red and the hand-use path in `Notebook`'s own docstring is what
+    // has to be reconsidered; if the docstring quietly stops saying so, this still holds.
+    //
+    // **It is not a hole that was argued away, it is one that was run.** Five header-less requests
+    // fired together at a live page on 2026-09-16 landed `declare`, `L3`, `L2`, `L1`, `L4`, which
+    // is the defect this file exists for, reproduced against the fixed code by a client that
+    // declines to say what it read. What that costs is nothing the page or a hand caller does: one
+    // is the queue and the other is a person typing. What it would cost to close is a count of the
+    // writers waiting on the lock, to tell a racing client from `curl`.
+    withServer(fresh.run("declare p : bool")) { (base, held) =>
+      val answer = post(base, "/run", "declare q : bool")
+
+      answer.statusCode shouldBe 200
+      held.get.entries should have size 2
+    }
+  }
+
   "The truncate endpoint" should "discard what it says it discards, and nothing else" in {
     // Going back is the only way backwards in an append-only transcript, and it is its own endpoint
     // rather than a flag on `/run` because discarding results is not a variant of producing one.
