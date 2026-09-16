@@ -118,10 +118,10 @@ class RealSpec extends AnyFlatSpec with Matchers {
   /**
    * The sources that assert an axiom **a caller asked for**, which is a different kind of thing.
    *
-   * One, since 2026-09-13, and the distinction is worth the second list rather than a fifth row in
-   * the first. A file in [[Foundation]] names the proposition it asserts, and a reader can go and
-   * read it; `Session.scala` names none, because what it asserts is what somebody typed into a
-   * cell. So it does not enlarge what this system asks anyone to believe: it offers a surface on
+   * **Two**, since 2026-09-16, and the distinction is worth the second list rather than two more rows
+   * in the first. A file in [[Foundation]] names the proposition it asserts, and a reader can go and
+   * read it; neither of these names one. `Session.scala` asserts what somebody typed into a cell,
+   * and `Domain.scala` asserts the axiom texts carried by a `Domain` a caller built and handed it. So it does not enlarge what this system asks anyone to believe: it offers a surface on
    * which a user can assume something of their own, which `DomainTheorySpec` is the argument for,
    * and every theorem downstream of such an assumption carries it through `Derivation.foreignTo`,
    * which `SessionSpec` asserts in both directions.
@@ -137,8 +137,20 @@ class RealSpec extends AnyFlatSpec with Matchers {
    * or anything asserted without a caller naming it, it belongs in the first list and this comment
    * is what says so.
    */
+  // **Sorted, and the order is load-bearing rather than tidiness.** The assertion below that filters
+  // the scan against this list compares the two as sequences, and the scan comes back sorted, so a
+  // list written in any other order fails on the order alone once it holds more than one entry. It
+  // held one until 2026-09-16 and the constraint was invisible; `modules/tactics` sorts before
+  // `modules/theories`.
   private val OnRequest: Vector[String] = Vector(
-    "modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Session.scala"
+    "modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Session.scala",
+    // 2026-09-16, and it arrived as a RED rather than as a line added beside the call, which is
+    // this assertion doing its job and the author not running the module's suite. `Domain.build`
+    // asserts the axioms of a domain theory a caller described: the propositions are the caller's
+    // texts, parsed against the caller's base, so the trusted base does not move and
+    // `DomainCompositionSpec` asserts that by reading the composed theory's axiom count against
+    // the foundation's.
+    "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Domain.scala"
   )
 
   "The one operation that asserts an axiom" should "be called by the four that believe and the one that offers" in {
