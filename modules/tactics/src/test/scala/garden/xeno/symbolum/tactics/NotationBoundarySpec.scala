@@ -232,6 +232,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "obstacle") ->
       (Verdict.Crossing, "a sentence LinearForm.obstacleIn has already rendered through reals.show"),
     ("Provenance.scala", "text") -> (Verdict.Text, "an assumption's own text, cited twice"),
+    ("Quotient.scala", "what") ->
+      (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
     ("Rules.scala", "body") -> (Verdict.Crossing, "the pattern a target failed to match"),
     ("Rules.scala", "domain") -> (Verdict.TypeOnly, "the type an existential ranges over"),
     ("Rules.scala", "leftCase.conclusion") ->
@@ -264,6 +266,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
     ("Language.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted"),
+    ("Quotient.scala", "what") ->
+      (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
       (Verdict.Text, "a constant sentence written with an interpolator it does not use")
   )

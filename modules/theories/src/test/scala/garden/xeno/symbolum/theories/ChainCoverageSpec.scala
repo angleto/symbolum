@@ -129,6 +129,15 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Recursion" -> DeclaresNothing,
     "Semiring" -> DeclaresNothing,
 
+    // `Recursion`'s standing for `Recursion`'s reason, and the reason is worth repeating because
+    // the file looks like a counterexample to it. `Quotient` calls `Kernel.defineType` and
+    // `Kernel.defineConstant`, so it plainly declares things; what it does not declare is anything
+    // OF ITS OWN. The type, the projection and every lifted operation are named by the caller and
+    // land in the caller's theory, and the six facts it returns are about the caller's relation.
+    // There is no `Quotient.standard` to put in a chain and nothing here for `Chain.construct` to
+    // build, which is the same position `Recursion` is in one primitive along.
+    "Quotient" -> DeclaresNothing,
+
     // Beside the chain and it must STAY beside it, which is the one entry here whose reason is a
     // soundness argument rather than a classification. It declares nothing OF ITS OWN: what it
     // builds is a caller's domain theory, over a base the caller hands it. `docs/adr/0019` decided
