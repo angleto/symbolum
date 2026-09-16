@@ -165,8 +165,42 @@ lazy val commonSettings = Seq(
  * not write. `theories` and `logic` were about to take a 2100-line development; `sat` and `mark` a
  * rewrite of seven constructs; `tactics` a new spec of about 380 lines.
  *
- * So the honest form of this measurement is **three now and four when the tree settles**, and the
- * four are not a gap in the work but the part of it that a single morning could not establish.
+ * So the honest form of that measurement was **three now and four when the tree settles**, and the
+ * four were not a gap in the work but the part of it that a single morning could not establish.
+ *
+ * == And "four when the tree settles" was wrong: it was one, 2026-09-16 ==
+ *
+ * Measured at `fb3f45a` by a second full clean run, 2163 tests green, 79 minutes. The four left
+ * standing are not four pieces of work waiting on a quiet tree. Two of them **can never rise**,
+ * because the floor each already carries is tighter than the 25-statement rule above would set:
+ *
+ * {{{
+ *   module     statements   rate     floor    the rule would set   outcome
+ *   sat               437   92.68    92.0     86.96                cannot rise, 3 stmts of margin
+ *   tactics          4951   92.83    92.5     92.33                cannot rise, 16 stmts of margin
+ *   logic            4635   95.02    91.0     94.48                91.0 -> 94.4
+ *   theories        47506   97.47    96.0     97.42                not raised, see below
+ * }}}
+ *
+ * So one floor moved. `theories` did not, and the reason is the tip check rather than the tree
+ * being busy: `git diff --numstat fb3f45a..7.0 -- modules/theories` is **not** empty, and what it
+ * holds is 36 added lines under `src/main`, so the statement count itself moved and the rate
+ * measured here is for a different population than the floor would name. The same check over
+ * `modules/logic` is empty, which is the whole difference between the two. That floor wants one run
+ * on a rebased tree and nothing else.
+ *
+ * Two things this says that the earlier note could not. The ratchet has produced **two gates the
+ * rule above would never have set**, and the tighter of the two got tighter still across the two
+ * runs. And the red gate that started all of this is gone: `tactics` failed this file at 89.92 and
+ * 90.13, and passes at 92.83.
+ *
+ * One caution that belongs beside a raised floor rather than in the partial-report section below,
+ * because raising a floor makes it worse rather than better. A partial report passes any floor by
+ * being nearly empty, and the gate behaves identically whether the number is 96.0 or 97.4. What
+ * changes is the reader: a high rate that passes is more convincing than a low one that passes, so
+ * the higher these numbers go the more a vacuous pass looks like a result. The count of compiled
+ * sources against `find` is the check that separates them, it costs one line, and the run above was
+ * verified that way: ten modules, each compiling exactly the number of `.scala` files on disk.
  *
  * **And the three that moved are still measured, five commits later.** `f9e0672..aaad597` is five
  * commits by three sessions, and `git diff --numstat f9e0672..aaad597 -- modules/kernel
@@ -378,6 +412,15 @@ lazy val sat = (project in file("modules/sat"))
     // caller, which is the shape of gap to expect and not one to close with a test that asserts a
     // message. The floor is a point under the measurement, which is where the two modules measured
     // across several runs put theirs, and it only rises.
+    //
+    // **This floor cannot rise, and that is arithmetic rather than caution.** Measured 92.68% over
+    // 437 statements on 2026-09-16 at `fb3f45a`: 25 statements is 5.72 points here, so the rule the
+    // section above fixes would set 86.96, which is below 92.0. The floor was set by the older
+    // rule, a point under the measurement, and a point is 4.4 statements on this module. So what
+    // stands here is the **tightest gate in the build, at three statements of margin**, and it got
+    // tighter rather than looser: 92.99 over 428 on 2026-09-15 to 92.68 over 437 today. Leaving it
+    // is the ratchet working as written; changing it means lowering a floor, which is a decision
+    // for a person and not one to take while passing.
     coverageMinimumStmtTotal := 92.0
   )
 
@@ -398,7 +441,23 @@ lazy val logic = (project in file("modules/logic"))
     // Raised to 92.00% measured on 2026-09-04, with the schema rules and the new connectives, and
     // 91.83% later that day when the rewriter gained its limit diagnostic. The floor stays: it only
     // rises, and this went down. 92.05% on 2026-09-05, which is back where it was and not above it.
-    coverageMinimumStmtTotal := 91.0
+    //
+    // **95.02% over 4635 statements on 2026-09-16, at `fb3f45a`, and the floor rises to 94.4**,
+    // which is 25 statements under the measurement by the rule the section above fixes. This is
+    // the fourth of the seven the note above left standing as "three now and four when the tree
+    // settles", and it is the only one of those four that moved, for reasons written there rather
+    // than here.
+    //
+    // The check that makes this a number about the tip and not only about the commit it was taken
+    // at, which is the one the section above describes and the one worth repeating before raising
+    // any floor: `git diff --numstat fb3f45a..7.0 -- modules/logic` is **empty**, so not one line
+    // of this module changed between the measured tree and the branch. How many commits that is
+    // goes stale within the hour and is deliberately not written here: it was three when the
+    // measurement was taken and five when it landed, and the check is the diff rather than the
+    // count. The
+    // same check over `modules/theories` is not empty, which is why that floor did not move with
+    // this one although the measurement was in the same report.
+    coverageMinimumStmtTotal := 94.4
   )
 
 // The mathematics: the theory of the reals and, later, the numerals. This is where the trusted
@@ -475,6 +534,16 @@ lazy val tactics = (project in file("modules/tactics"))
     // It was 0.0 for one commit, which is a floor that cannot fail; an audit pointed out that
     // this is the module where the oracle's answers head for the kernel.
     // 94.06% on 2026-09-05, against 94.08% the day before: unchanged, so the floor is too.
+    //
+    // **The red gate this module carried is gone, and this floor still cannot rise.** It read
+    // 89.92% on 2026-09-14 and 90.13% on 2026-09-15 against this 92.5, which is the only time a
+    // floor here has actually failed; the suites that closed it were `Chaining`'s and the one that
+    // reaches this module's web surface over a socket. Measured **92.83% over 4951 statements on
+    // 2026-09-16 at `fb3f45a`**, so the gate passes. It does not rise because 25 statements is
+    // 0.505 points here and 92.83 less that is 92.33, under the floor already standing. Sixteen
+    // statements of margin, which is the second tightest in the build after `sat`, and the note
+    // above recorded in September that this is the module where the next change is likelier to
+    // fail this gate than to be caught by it. That is still true.
     coverageMinimumStmtTotal := 92.5,
 
     // A compiler at test time, for `ReadmeSpec` and for nothing else.

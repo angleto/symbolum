@@ -26,10 +26,18 @@ import scala.jdk.CollectionConverters.*
  * == Where the safety actually lives ==
  *
  * Not here. [[Session]] holds one theory and the class comment there is the argument; this file is a
- * transport that does no reasoning of its own, which is why the assertions worth making are in
- * `SessionSpec` and there is no `NotebookSpec` pinning HTML. What is asserted about this file is
- * what a test can hold: [[Notebook.render]] is a pure function from a session to a page, and
- * `SessionSpec` covers the model it renders.
+ * transport that does no reasoning of its own, so what is asserted about the *reasoning* is in
+ * `SessionSpec`, which covers the model this renders.
+ *
+ * What is asserted about this file is what a test can hold, and since 2026-09-16 that is two things
+ * rather than one. [[Notebook.render]] and [[Notebook.cells]] are pure functions from a session to a
+ * page, so a test calls them. The three endpoints are private and reachable only through a running
+ * server, so `NotebookSpec` starts one on port 0 and asks it over a socket. This paragraph read
+ * "there is no `NotebookSpec` pinning HTML" until that day, which was true when it was written and
+ * stopped being true with `f9ae333`, and what it was guarding against survives the correction: that
+ * spec does not pin the markup either. What it pins is the two behaviours here that exist because
+ * of a failure this file records, the 404 on an unknown path and the thread pool, and neither is a
+ * property of the HTML: both are about what a client on the other end of a socket receives.
  *
  * == What it binds to, and what it is not ==
  *
@@ -294,8 +302,6 @@ object Notebook {
 
   private lazy val Style: String = resource("notebook.css")
 
-  private lazy val Script: String = resource("notebook.js")
-
   /**
    * The page's own behaviour, which is three things and deliberately no more.
    *
@@ -303,6 +309,11 @@ object Notebook {
    * are typeset by KaTeX where it loaded and are left as their source where it did not, which is
    * the only sensible failure for a page served on loopback to a machine that may be offline: the
    * line that reads back is under every formula anyway, so nothing is lost but the typesetting.
+   *
+   * This described the JavaScript when the JavaScript was a string literal in this file, and was
+   * left behind attached to nothing when it became `notebook.js`. A doc comment at the end of an
+   * object documents the next member, and there is no next member: it compiled, it rendered
+   * nowhere, and nothing checks that a comment has a subject.
    */
-  
+  private lazy val Script: String = resource("notebook.js")
 }
