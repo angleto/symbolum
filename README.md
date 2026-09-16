@@ -156,8 +156,8 @@ so the installation this file documented could not be performed by anybody.
 
 ## The libraries
 
-Six modules publish under their own coordinates, so a development elsewhere depends on the whole
-system or on one link of its chain. The aggregate is all six at once:
+The library modules publish under their own coordinates, so a development elsewhere depends on the
+whole system or on one link of its chain. The aggregate is all of them at once:
 
 ```scala
 scalaVersion := "3.3.5"
@@ -169,9 +169,10 @@ libraryDependencies += "garden.xeno" %% "symbolum" % "7.0.1"
 
 | coordinate | what it is |
 |---|---|
-| `symbolum` | the six below, as one dependency. No code of its own |
+| `symbolum` | the ones below, as one dependency. No code of its own |
 | `symbolum-kernel` | the trusted base: terms, types, theories, the ten primitive rules |
 | `symbolum-checker` | a second reading of a proof, sharing nothing with the kernel |
+| `symbolum-sat` | a conflict-driven solver and the refutations it produces. It depends on nothing, so it cannot construct a theorem |
 | `symbolum-logic` | connectives, derived rules, rewriting, the parser and the printer |
 | `symbolum-theories` | the naturals, the reals, the numerals, `RING`, `LINARITH`, the library |
 | `symbolum-core` | the computer algebra system, which nothing in the proof half believes |
@@ -214,11 +215,11 @@ bin/symbolum -main <class>               # anything else in the jars
 ```
 
 The five named scripts are an allowlist rather than everything the jars can run, and `bin/symbolum`
-is the escape from it. What the allowlist keeps out is the five mains that regenerate documents of
-**this repository**: `Lemmas`, `Register`, `Guide`, `Examples` and `Foundation` resolve `docs/...`
-against the working directory, so a launcher for one of them would write into wherever you unpacked
-the tarball. They are still reachable through `bin/symbolum -main`, which is a different thing from
-being offered.
+is the escape from it. What the allowlist keeps out is the mains that regenerate documents of
+**this repository**: `Lemmas`, `Register`, `Guide`, `Examples`, `Foundation` and `Theorems` resolve
+`docs/...` against the working directory, so a launcher for one of them would write into wherever
+you unpacked the tarball. They are still reachable through `bin/symbolum -main`, which is a
+different thing from being offered.
 
 From a checkout instead of a distribution, each of the five is
 `sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask ..."` and its siblings, which is the spelling
@@ -240,7 +241,7 @@ compiler's own jars. Neither is the better answer in general, which is why both 
 # The computer algebra system
 
 The rest of this file documents the algebra half, which predates the proof half and publishes on its
-own as `garden.xeno:symbolum-core`. It is one of the seven coordinates above. Until 2026-09-15 it
+own as `garden.xeno:symbolum-core`. It is one of the coordinates above. Until 2026-09-15 it
 was the only module the build allowed to ship, which is a different thing from having shipped.
 
 ## Quick Start
