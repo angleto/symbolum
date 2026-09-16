@@ -21,6 +21,10 @@ state today. The algebra half is documented in full here. The proof half has a g
 [docs/proving.md](docs/proving.md); its design is in [docs/architecture.md](docs/architecture.md)
 and the decisions behind it are in [docs/adr/](docs/adr/). This file does not explain the kernel.
 
+**If a symbol here is unfamiliar, start at [docs/notation.md](docs/notation.md)**: what `|-` is,
+what every operator means, what you are assumed to know, and a precise reference for each thing this
+repository does not explain itself.
+
 *If you modify this file and this excerpt no longer accurately describes its content, you must
 update it.*
 
@@ -424,6 +428,7 @@ modules/theories    the naturals, the reals, numerals, arithmetic, RING and LINA
 modules/core        the computer algebra system, published as garden.xeno:symbolum-core
 modules/tactics     the bridge: the algebra system as an oracle whose answers the kernel checks
 modules/examples    runnable demonstrations, not published
+docs/notation.md       every symbol, the prerequisites, and where to look things up
 docs/architecture.md   the correctness argument, and where a change is dangerous
 docs/examples.md       what has been proved, and how far the asked-for areas are
 docs/proving.md        how to state and prove things

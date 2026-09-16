@@ -177,4 +177,79 @@ class DocumentationMapSpec extends AnyFlatSpec with Matchers {
       broken shouldBe empty
     }
   }
+
+  /* ------------------------------------------------- the symbols a reader meets first */
+
+  /**
+   * Every spelling the parser reads is explained where a reader is sent to look it up.
+   *
+   * `docs/notation.md` is the page the front page points an unfamiliar reader at, and the thing
+   * that would make it useless is the ordinary one: the parser gains a symbol, nobody adds a row,
+   * and the page keeps reading as though it were complete. So the population is taken from the
+   * **generated** table in `docs/reading-register.md`, which `Register` writes from
+   * `Notation.standard`, rather than from a list kept here.
+   *
+   * What this deliberately does not check is precedence, and `notation.md` deliberately does not
+   * carry it: one row per spelling already exists in the register, generated, and a second copy
+   * beside it is the defect this repository has recorded five times. This asserts that the symbol
+   * is **explained**, not that its precedence is repeated.
+   */
+  "Every symbol the parser reads" should "be explained in the page a reader is sent to" in {
+    val register = read("docs/reading-register.md")
+    val notation = read("docs/notation.md")
+
+    // `| \`notation infix ==> via ==>\` | ...` — the spelling is the third word of the key.
+    // The trailing backtick of the key is stripped: a binder's key ends `notation binder \`` and
+    // a greedy `\\S+` takes the delimiter with it, which put `!\``, `?\`` and `\\\`` on the first
+    // failing list and sent the reader looking for symbols that do not exist.
+    val spellings = "\\| `notation (?:infix|prefix|binder) (\\S+)".r
+      .findAllMatchIn(register)
+      .map(_.group(1).stripSuffix("`"))
+      .toVector
+      .distinct
+
+    // The floor that says the table was read at all. **Seventeen**, and the gap from the table's 27
+    // rows is the interesting part: the register has one row per (spelling, constant) PAIR, so `+`
+    // is two rows, the reals' and `num`'s, and so are `*`, `<`, `<=`, `>` and `>=`. That is
+    // `docs/adr/0018` visible in a count.
+    //
+    // This number was written 20 first, from the row count, and then 18, from a run whose regex was
+    // still taking the key's closing backtick as part of the spelling and so counted `-` twice. Both
+    // were pinned before being measured and this clue caught both. It is measured now:
+    //
+    //     grep -oE '\| `notation (infix|prefix|binder) [^ ]+' docs/reading-register.md \
+    //       | awk '{print $NF}' | sed 's/`$//' | sort -u | wc -l
+    withClue("the register's notation table was not read; the shape of its key must have moved: ") {
+      spellings.size should be >= 17
+    }
+
+    // Explained means "appears as a token inside a code span", not "appears somewhere in the file":
+    // `-` and `/` occur inside prose and inside other symbols, so a substring test passes for a
+    // symbol nothing documents. A binder is glued to its variable in `\\x. e`, so a token that
+    // STARTS with the spelling counts, which is why this is a prefix test and not an equality.
+    val spans = "`([^`]+)`".r.findAllMatchIn(notation).map(_.group(1)).toVector
+    val tokens = spans.flatMap(_.split("\\s+")).toSet
+
+    val unexplained = spellings.filterNot(symbol => tokens.exists(_.startsWith(symbol)))
+
+    withClue(
+      s"${unexplained.size} spelling(s) the parser reads and `docs/notation.md` does not " +
+        s"explain: ${unexplained.mkString(", ")}. Add a row saying what each MEANS; its " +
+        s"precedence belongs in the register's generated table and nowhere else.\n"
+    ) {
+      unexplained shouldBe empty
+    }
+  }
+
+  /** The turnstile, which is the one piece of notation no document defined until 2026-09-16. */
+  it should "explain the turnstile, which is what a sequent is written with" in {
+    val notation = read("docs/notation.md")
+
+    notation should include("|-")
+    notation.toLowerCase should include("sequent")
+
+    // Not vacuous: `|-` appears in the guide and on the front page dozens of times, and appearing
+    // is what it did for as long as neither explained it.
+    read("docs/proving.md") should include("|-")
+  }
 }
