@@ -816,7 +816,17 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // and it is reachable: the regular expression above is the only thing tying this to the
     // document's wording, and prose is what moves here.
     withClue(s"the sentence this read was `$sentence`: ") { listed should not be empty }
-    listed.sorted shouldBe Session.Command.Keywords.sorted
+
+    // Named in both directions rather than left to a reader diffing two eight-element vectors by
+    // eye, which is what the bare equality printed when it was first fired at its own defect. A
+    // guard whose failure has to be decoded is one somebody re-runs to see whether it is real.
+    val published = Session.Command.Keywords
+    withClue(
+      s"listed and not published: ${(listed.toSet -- published.toSet).mkString(", ")}; " +
+        s"published and not listed: ${(published.toSet -- listed.toSet).mkString(", ")}\n"
+    ) {
+      listed.sorted shouldBe published.sorted
+    }
   }
 
   it should "classify every file of the kernel, so a new one is a decision and not a default" in {
