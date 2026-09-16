@@ -106,20 +106,57 @@ final case class DoesNotFollow(goal: Term, procedure: String) extends LogicError
  * writer that a term does not belong there, and it was the second refusal in one day whose content
  * was prose where it should have been a value.
  *
- * == Why `Unread`, which was not the first answer ==
+ * == Why `Unread`, and why there is no fourth standing ==
  *
  * `Decided`, by analogy with [[DoesNotFollow]] and [[NotEqualTo]]: a procedure that searched its
  * own fragment to the end, with what lies outside the fragment standing in as unknown. The goal
  * that produced the defect refutes that reading. `!x:real. 1 < x ==> 0 < x \/ x = 99` is **true**,
  * and it is what arrives here, because the atoms are uninterpreted and the skeleton `A ==> B \/ C`
- * is falsifiable whatever the atoms mean. Filed as `Decided`, `LogicError.decided` would answer yes
- * about a theorem, which is the one merge this classification exists to prevent.
+ * is falsifiable whatever the atoms mean. `Unread` is what it carries: the search ran on the
+ * skeleton, the skeleton is not the goal, so about the goal nothing was learned.
  *
- * `Unread` is what it carries, and the question that classification is asked -- was anything
- * learned about the goal -- is answered rightly by it: the search ran on the skeleton, and the
- * skeleton is not the goal. What is true and is not settled here is that the causes `Unread` lists
- * do not include this one. The three standings have no case for a procedure that decided a fragment
- * too coarse to bear on the claim, and adding a fourth is its own piece of work.
+ * **This said until 2026-09-16 that a fourth standing was owed** -- one for "a procedure decided a
+ * fragment too coarse to bear on the claim" -- and left it open. It is not owed, and what closed it
+ * is a count rather than a rereading. Every library entry of the chain is a theorem and every one
+ * is hypothesis-free, so each conclusion is **true**; put to the procedures with the library lookup
+ * removed, so that no goal is answered by recognising the lemma it is, what reaches the
+ * propositional address comes back refused here almost without exception, and what reaches the
+ * order and equation addresses is filed `Decided` about half the time.
+ *
+ * So "this standing would make `LogicError.decided` answer yes about a theorem" does not separate
+ * the two: `Decided` does exactly that, over half of this library's arithmetic statements,
+ * deliberately, because decided over a fragment has never meant refuted and [[DoesNotFollow]] says
+ * so in its own last section. What separates them is how often the fragment bears on the claim at
+ * all, and that argues for filing this one **away** from `Decided`, which is where it already is.
+ *
+ * **Two readings, each with the revision it was taken at, because the population drifts.** The
+ * ratio is the argument and the counts are not, so they carry their base rather than reading as a
+ * property. This said "463 entries, 164 of 166" for four hours; nothing failed when the library
+ * reached 477, which is how a figure of this shape rots with no gate noticing.
+ *
+ * {{{
+ *   7.0 at fb3f45a   463 entries   propositional 164/166   arithmetic 62/112
+ *   7.0 at 78b7b35   477 entries   propositional 172/174   arithmetic 62/112
+ * }}}
+ *
+ * The fourteen between the two readings are twelve of the object language's syntax and two about
+ * limits of sequences. **The arithmetic pair did not move at all**, and that is the half worth
+ * keeping: that address receives the reals' own fragment, which is finished, while new development
+ * lands at the propositional one. The gap does not close as the chain grows, it widens, and the
+ * count that would have to be re-taken to overturn this is the arithmetic one.
+ *
+ * **What a fourth case would have cost is that nothing would enforce it.** There is no exhaustive
+ * match on [[LogicError.Standing]] anywhere under `src/main`: the readers are two
+ * `== Standing.Exhausted` comparisons in `Linarith` and the two `decided` predicates, and those two
+ * have no production caller at all, every call site in the repository being a spec. A fourth case
+ * would compile silently and every existing comparison would answer `false` about it, which is this
+ * enumeration's own defect one turn further out. The abstract `standing` above is what makes a new
+ * **refusal** choose one; nothing makes a reader of a new **standing** notice it.
+ *
+ * And the distinction it would have carried is already carried, under a compiler check this enum
+ * has not got. `Remedy` is a total match on `LogicError`: it sends [[DoesNotFollow]] to `Settled`
+ * and this case to `RestateTheProblem`, so a caller asking what to do next is told two different
+ * things already, and a case added there with no next step named stops compiling.
  *
  * `goal` is carried whole, before the leading quantifiers come off, because that is what the caller
  * asked and what it has to restate.
@@ -419,12 +456,23 @@ object LogicError {
     case Exhausted
 
     /**
-     * The question was never put, so nothing about the goal was learned.
+     * Nothing about the goal was learned.
      *
      * The shape was one the procedure does not take, the text did not read, the theory lacked a
-     * constant, or an assembly below refused. They differ in what a caller repairs, which is what
-     * the refusals themselves and `Remedy` are for; they agree that the search never ran, which is
-     * the only thing this classification is asked about.
+     * constant, an assembly below refused, or a search ran over a reading of the goal so coarse
+     * that what it settled was not the goal. [[SkeletonFailsAt]] is that last one, and it is why
+     * this case is defined by what was **learned** rather than by whether anything ran: the
+     * sentence here said "the question was never put ... they agree that the search never ran"
+     * until 2026-09-16, which is false of that refusal and was the whole of the argument for a
+     * fourth standing. That refusal's own documentation carries the count that closed it.
+     *
+     * **The objection, which is that this case now names situations a caller repairs differently.**
+     * It does, and it did before: counted against `Remedy`, the refusals filed here already lead to
+     * `RepairTheText`, `RestateTheProblem`, `ExtendTheTheory` and `ChooseATerm`, four repairs and
+     * not two. That is not a defect being widened, it is what this classification is not for. What
+     * to do next is `Remedy`'s question and it answers it under a total match on the refusal, which
+     * is a compiler check this enum has not got; what was learned is this one's, and the answer
+     * here is the same for all five causes.
      */
     case Unread
   }
@@ -435,7 +483,13 @@ object LogicError {
    * The predicate a negative check is supposed to be written with, here rather than at each caller
    * so that there is one spelling of it. A `Right` is false, because a proof is not a decision that
    * something does not follow; every refusal but [[Standing.Decided]] is false, because a search
-   * that stopped and a goal that was never read are not answers.
+   * that stopped and a search that learned nothing about the goal are not answers.
+   *
+   * **What `true` does and does not claim, because the difference is what this predicate is for.**
+   * It says a procedure went to the end of its fragment without finding the goal there. It does not
+   * say the goal is false: over the chain's own library it is `true` of 62 theorems, read twice on
+   * 2026-09-16, at `7.0` = `fb3f45a` and again at `78b7b35` where the library had grown by fourteen
+   * and this count had not moved. [[SkeletonFailsAt]] holds both readings and what they settled.
    */
   def decided[T](result: Either[LogicError, T]): Boolean =
     result.left.exists(_.standing == Standing.Decided)

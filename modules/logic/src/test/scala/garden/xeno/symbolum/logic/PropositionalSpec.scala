@@ -138,6 +138,26 @@ class PropositionalSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "file that countermodel as `Unread`, and not because nothing ran" in {
+    // The half the test above cannot give, and the one that would go red if a fourth standing ever
+    // landed and this refusal were moved onto it. `decided` being false is satisfied by three of
+    // the standings, so asserting it pins the safety and not the filing.
+    //
+    // The second assertion is what stops the first from being vacuous, and it is the whole of why
+    // `Unread` was rewritten on 2026-09-16 to mean "nothing about the goal was learned" rather than
+    // "the search never ran". A search DID run here: it came back with an assignment, which is
+    // something only a finished search can produce. `Unread` is right about this refusal under the
+    // first reading and false under the second.
+    val holds = read("!p:bool. !q:bool. (p = q) ==> (q = p)")
+
+    propositional.prove(holds) match {
+      case Left(refusal @ SkeletonFailsAt(_, assignment)) =>
+        refusal.standing shouldBe LogicError.Standing.Unread
+        assignment should not be empty
+      case other => fail(s"expected the skeleton to fail, got $other")
+    }
+  }
+
   "the cheaper procedure" should "stay the right address for a goal both can take" in {
     val text = "!p:bool. !q:bool. (p /\\ q) ==> (q /\\ p)"
     val here = proved(text)
