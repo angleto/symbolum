@@ -297,6 +297,60 @@ lazy val commonSettings = Seq(
  * built, and the statement count is read alongside the rate rather than the rate alone. There is no
  * check for this: a gate that could tell a partial report from a whole one would have to know how
  * many statements the module has, which is the thing being measured.
+ *
+ * == And a runner checkout has never been built, which is where these floors are enforced now ==
+ *
+ * The section above is a discipline on one laptop, and on 2026-09-16 it became a property of the
+ * machine instead: `.github/workflows/ci.yml` runs the same command on a runner, where the checkout
+ * is fresh by construction and the memory is not the 85 to 207 MB this note's gate passed on. The
+ * first run was 24 minutes, exit 0, every floor held. Read off the uploaded `scoverage.xml` rather
+ * than off the console, and that is not fastidiousness: the console prints a rate with no statement
+ * count and no module name, and the projects report in parallel, so reading the rates in the order
+ * they appear against the order the modules were instrumented in sent **five of the eleven to the
+ * wrong module** and left `kernel` with none at all, while `dist` received two. Every row of it
+ * looked like a reading.
+ *
+ * {{{
+ *   module     statements   rate     floor    margin (statements)
+ *   kernel           1122   95.72    93.4      26.0
+ *   checker           831   91.82    88.8      25.1
+ *   core             2913   92.24    91.3      27.4
+ *   sat               437   92.68    92.0       3.0
+ *   scan              185  100.00    99.0       1.9
+ *   logic            4644   95.63    94.7      43.2
+ *   theories        50792   97.45    97.4      25.4
+ *   tactics          5143   93.12    92.5      31.9
+ *   mark              432   84.03    none         -
+ *   examples          240   11.67    none         -
+ *   dist                8   62.50    none         -
+ * }}}
+ *
+ * **`scan` is the tightest gate in the build and `sat` is no longer it.** 185 statements at 99.0
+ * leaves 1.9, which is one statement: lose one and it still passes at 99.46, lose two and the line
+ * goes red. That is tighter than the 25-statement rule would ever set and it was never measured
+ * against it, the floor having been read off a run of that module alone.
+ *
+ * **What this says about the platform is narrower than "the figures hold", and the narrower reading
+ * is the one worth having.** Five modules had no line changed under `src/main` *or* `src/test`
+ * between `748f1f5` and this run — kernel, checker, sat, mark, examples — so for those the
+ * population is provably the same and the comparison is clean. All five read the **same statement
+ * count and the same rate to the hundredth** as they did on the laptop, which runs macOS on Apple
+ * silicon under Temurin 23 against the runner's Linux, x86 and Temurin 17. Not one of the three
+ * differences moved a figure, and the property-test spread this note sets the margin for did not
+ * appear on them either.
+ *
+ * `logic` is the case that looks like a platform difference and is not, which is why it is written
+ * out: same 4644 statements, 95.24 there against 95.63 here, an 18-statement gap. Its `src/main` did
+ * not move, but `RewriteSpec` gained 18 lines in the same interval. The tests explain it and the
+ * platform is not needed to, so the platform is not established as a cause by this run.
+ *
+ * **And the check that separates a whole report from a partial one has exactly one false positive,
+ * measured here rather than guessed.** Counting the distinct sources in each `scoverage.xml` against
+ * `find` agrees on ten of the eleven modules; `core` reads 32 against 33 on disk, and the file that
+ * is absent is `NumericConstants.scala`, an object of `val` literals that carries no instrumented
+ * statement at all. So the check is "every source that holds a statement", not "every source", and
+ * anybody turning it into a gate writes that difference down or it goes red on the first constants
+ * file that lands.
  */
 lazy val coverageSettings = Seq(
   coverageFailOnMinimum := true

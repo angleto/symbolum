@@ -22,8 +22,9 @@ function typeset(){
  *
  * A queue and not a disabled box, which was the other design. Disabling is visible and throws away
  * what is typed or pasted while a request is in flight, and typing ahead is exactly what somebody
- * replaying a development does. So nothing is dropped and the wait is shown instead: the form
- * carries `running` while anything is outstanding.
+ * replaying a development does. So nothing is refused entry and the wait is shown instead: the form
+ * carries `running` while anything is outstanding. What is dropped once accepted, and why, is the
+ * paragraph below this one.
  *
  * Which answer wins the rendering stops being a question here rather than being answered. With one
  * request outstanding there is one answer to render, so the page cannot be left showing a state
@@ -31,7 +32,55 @@ function typeset(){
  */
 let queue = Promise.resolve();
 let outstanding = 0;
-let stalled = false;
+/*
+ * Which transcript a submission was written against, as a number rather than as a flag, and what
+ * happens to a submission written against an older one.
+ *
+ * Everything queued behind a conflict was written against a transcript that no longer exists, so
+ * sending it would be this file's own defect one step further along. That is still the rule. What
+ * it does not cover, and what a flag that never came back down swallowed with it until 2026-09-16,
+ * is everything written AFTER the refusal has been rendered: the page has just re-read the
+ * transcript the server actually holds, so what is written next is written against what is on the
+ * screen. Measured in a browser that day: a conflict was rendered correctly, and the next two
+ * commands never reached the server at all while the box emptied as if they had, for the rest of
+ * the load, under a message that said to carry on from there.
+ *
+ * So: a submission carries the epoch it was written in, the epoch moves when the server refuses
+ * one, an older epoch is dropped, and a submission written after the refusal was rendered carries
+ * the current epoch and goes.
+ */
+let epoch = 0;
+/*
+ * What was written and not applied is named in full rather than counted, and goes back into the box
+ * where the box can hold it.
+ *
+ * Losing the text is the half of this that no reload gives back, and the box is emptied by the
+ * submit handler before anything is queued, which is what makes typing ahead work and is not worth
+ * giving up. So whatever does not land puts it back. Both kinds go in here, because a writer wants
+ * the same thing of both: the one the server refused, which is the one most likely to be written
+ * again since it is valid against the transcript now on the screen, and the ones behind it that
+ * were never sent.
+ *
+ * `line` is an `<input>`, and an input's value sanitisation strips CR and LF, so two commands put
+ * back as one block would arrive silently joined into one unreadable line. The message is therefore
+ * where the text always is, and the box gets it back only when what it would get carries no line
+ * break and nothing else has been typed into it.
+ */
+let unapplied = [];
+const moved = 'Something else wrote to this session, so the cells above are not the ones this page ' +
+  'was writing against. What is above is what the session holds now, and what is written next is ' +
+  'written against it and sent.';
+function announce(){
+  trouble.textContent = unapplied.length === 0 ? moved
+    : moved + ' Not applied, each having been written against the transcript that moved: ' +
+      unapplied.map(what => '"' + what.replace(/[\r\n]+/g, ' ⏎ ') + '"').join(', ');
+}
+function settle(){
+  entry.classList.remove('running');
+  const block = unapplied.join('\n');
+  unapplied = [];
+  if (block !== '' && !/[\r\n]/.test(block) && line.value === '') line.value = block;
+}
 async function post(where, what){
   const response = await fetch(where, {
     method: 'POST',
@@ -44,24 +93,29 @@ async function post(where, what){
   return response.ok;
 }
 function send(where, what){
+  const written = epoch;
   outstanding += 1;
   entry.classList.add('running');
   queue = queue.then(async () => {
-    /* Everything queued behind a conflict was written against a transcript that no longer exists,
-     * so sending it would be this file's own defect one step further along. */
-    if (stalled) return;
-    if (!await post(where, what)) {
-      stalled = true;
-      trouble.textContent = 'Something else wrote to this session, so the cells above are not the ' +
-        'ones this page was writing against, and nothing that was still queued was sent. What is ' +
-        'above is what the session holds now: carry on from there.';
-    }
+    /* Only `/run` carries text somebody wrote. A `/truncate` that does not land is a button press
+     * against a transcript that has moved, and its body is a cell number: naming it would read as a
+     * command and putting it back in the box would put one there. Pressing the button again is the
+     * whole of repeating it, and the count to press is on the cells now on the screen. */
+    if (written !== epoch) { if (where === '/run') unapplied.push(what); announce(); return; }
+    /* Cleared on the way through rather than left standing, because `.trouble` is one element that
+     * persists until something overwrites it: a message about a submission that has since been
+     * answered reads as a page that is still refusing. */
+    if (await post(where, what)) trouble.textContent = '';
+    else { epoch += 1; if (where === '/run') unapplied.push(what); announce(); }
   }).catch(error => {
-    stalled = true;
-    trouble.textContent = 'The session did not answer, so nothing further was sent: ' + error;
+    /* Nothing was rendered, so the page is looking at the same transcript it was looking at before,
+     * and what is queued behind is still written against that. Which is why this reports and does
+     * not block: if the request did land and the answer was lost, the next one carries a count that
+     * is now short by one and the server refuses it, which is the case above and recovers itself. */
+    trouble.textContent = 'The session did not answer, so this was not applied: ' + error;
   }).finally(() => {
     outstanding -= 1;
-    if (outstanding === 0) entry.classList.remove('running');
+    if (outstanding === 0) settle();
   });
   return queue;
 }
