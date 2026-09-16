@@ -3,6 +3,7 @@ package garden.xeno.symbolum.tactics
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import garden.xeno.symbolum.kernel.*
+import garden.xeno.symbolum.theories.Library
 
 /**
  * What a session guarantees, and the attack it exists to make unassemblable.
@@ -350,6 +351,77 @@ class SessionSpec extends AnyFlatSpec with Matchers {
         reason should include("no fact named NOWHERE")
         reason should include("P_HOLDS")
       case other => fail(s"a name nothing holds was resolved: $other")
+    }
+  }
+
+  it should "say the shape of an inference given the wrong number of names" in {
+    // The refusal branches are the ones a derivation actually meets, since getting a hand proof
+    // wrong is the ordinary case and getting it right is the exception. Three shapes at once: too
+    // few names, too many, and `specialise` without its `at`.
+    val session = fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p"))
+
+    val shapes = Vector(
+      "derive X : mp P_HOLDS" -> "mp <IMPLICATION> <ANTECEDENT>",
+      "derive X : left P_HOLDS P_HOLDS" -> "left <CONJUNCTION>",
+      "derive X : both P_HOLDS" -> "both <FACT> <FACT>",
+      "derive X : specialise P_HOLDS" -> "specialise <FACT> at <term>"
+    )
+
+    shapes.foreach { case (line, shape) =>
+      session.run(line).entries.last.outcome match {
+        case Session.Outcome.Refused(reason, _) =>
+          withClue(s"$line was refused without saying how it is written: ") {
+            reason should include(shape)
+          }
+        case other => fail(s"$line was accepted: $other")
+      }
+    }
+  }
+
+  it should "pass the rule's own refusal through, when the names are right and the inference is not" in {
+    // The branch where the parsing succeeds and the LOGIC refuses: `mp` on something that is not an
+    // implication. What must not happen is this being reported as a malformed command, because the
+    // command was well formed and the reader needs the rule's own words.
+    val session = fresh.runAll(Vector("declare p : bool", "assume P_HOLDS : p", "derive X : mp P_HOLDS P_HOLDS"))
+
+    session.entries.last.outcome match {
+      case Session.Outcome.Refused(reason, next) =>
+        reason should not include "written `"
+        next should not be empty
+      case other => fail(s"modus ponens on a non-implication produced $other")
+    }
+  }
+
+  it should "say it holds nothing yet when the first command of a session is a derivation" in {
+    // The empty case of the refusal that lists what the session holds. Asserted because the message
+    // is built by a branch nothing else reaches, and a list that reads as empty where it should read
+    // as "nothing yet" is the difference between a reader thinking the name is wrong and knowing
+    // there is nothing to name.
+    fresh.run("derive X : left NOWHERE").entries.last.outcome match {
+      case Session.Outcome.Refused(reason, _) => reason should include("nothing yet")
+      case other => fail(s"a derivation in an empty session produced $other")
+    }
+  }
+
+  it should "refuse a library name that two developments hold, rather than picking one" in {
+    // `Library.named` returns every entry of a name and its own docstring records that three names
+    // are held by two developments each, so a lookup that took the first would pick by map
+    // iteration order. The session resolves a name the library holds ONCE and refuses one it holds
+    // twice with different statements, which is the honest answer.
+    val library = Library.of(fresh.base)
+    val ambiguous = library.shared.find(name => library.named(name).map(_.theorem).distinct.size > 1)
+
+    ambiguous match {
+      case None =>
+        // Not a failure: the library may hold no name whose two entries differ. Said out loud
+        // rather than passing silently, because a vacuous case that reads as a check is the thing
+        // this file is full of guards against.
+        info("no library name is held twice with two different statements, so this case is empty today")
+      case Some(name) =>
+        fresh.run(s"derive X : left $name").entries.last.outcome match {
+          case Session.Outcome.Refused(reason, _) => reason should include("different statements")
+          case other => fail(s"an ambiguous library name was resolved: $other")
+        }
     }
   }
 
