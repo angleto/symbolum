@@ -47,6 +47,34 @@ that is deliberate: it is what lets it stay fast and heuristic.
   because 100 is above the floor. Read the statement count beside the rate, and run it in a
   worktree that has never been built or after `clean`. There is no check for this, and `build.sbt`
   says why there cannot easily be one.
+
+  **Never pass `-J-Xmx` to it, and the reason is measured rather than cautious.** Nothing in this
+  build forks the tests: no `fork`, no `javaOptions`, no `Xmx` anywhere in `build.sbt` or
+  `project/`, no `.jvmopts` and no `.sbtopts`. So the suite runs inside the launcher JVM and sbt's
+  own default applies, which is `-Xms1024m -Xmx1024m -Xss4M`. **Every floor in `build.sbt` was
+  measured at that 1g heap.**
+
+  Granting more makes the run likelier to die, which is the opposite of what it looks like. Measured
+  on 2026-09-16 against `4b96fe1`, same command, same tree, quiet machine, the two runs minutes
+  apart: at the default the gate **landed in 10m15s with a peak resident set of 1922 MB**; at
+  `-J-Xmx2g` it **died after about 8.5 minutes having written no report**, with a peak of 2380 MB.
+  **Read those two figures as absolutes, not as a ratio that grows.** The resident set is 1.88x the
+  heap at 1g and **1.16x at 2g**, so doubling the heap bought a quarter more footprint rather than
+  double: the ratio falls. What makes the flag a bad idea is the plain 458 MB on a run whose free
+  memory sits between 85 and 207 MB for its whole ten minutes, and not any runaway. Anyone
+  extrapolating the 1.8x forward predicts about 3.7 GB at 2g and is over by 1.3 GB.
+
+  What that death does **not** establish: the run was stopped by the harness supervising it and not
+  demonstrably by the kernel, with no `hs_err`, heap dump or `OutOfMemoryError` produced. That is
+  also true of the earlier kills, so it is the same kind of event rather than a different one. "The
+  machine cannot carry it" and "the harness will not let it run" are different claims and only the
+  second is established, for this run and for those.
+
+  **The gate does run on this machine.** It ran twice on the evening of 2026-09-16, by two sessions,
+  both landing, after an evening on which four attempts had died and a card had been opened saying
+  it could not be run. Three of those four carried `-J-Xmx2g`. It wants a quiet machine and about
+  ten minutes, and it is about four times the wall clock of `sbt test` at a comparable resident set,
+  so what it spends is exposure rather than size.
 - **A console with the algebra loaded:** `sbt core/console`
 - **Asking the prover one thing, without writing Scala:**
   `sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole
