@@ -692,6 +692,22 @@ lazy val theories = (project in file("modules/theories"))
     // intended, on the largest module in the repository by a factor of ten. What it would have
     // caught is nothing that could plausibly happen, which is the sentence the note above already
     // wrote about `kernel` at twelve points. The rule sets 97.4 and that is what stands.
+    //
+    // **Which command produced a figure belongs beside the figure, and on 2026-09-17 it did not.**
+    // This module's rate depends on which suites ran, because scoverage records every execution of
+    // an instrumented class into the module that owns the source, and `tactics`, `checker` and
+    // `dist` all exercise `theories`. Measured that morning on one tree at `30a1452`, minutes
+    // apart:
+    //
+    //   clean coverage theories/test theories/coverageReport   54027/55521 = 97.309%   FAILS
+    //   clean coverage test coverageReport                     54113/55521 = 97.464%   passes
+    //
+    // Same code, same tree, **69 statements** of difference, which is more than the margin the
+    // rule asks for. The gate is the second command, `.github/workflows/ci.yml`, so the second
+    // figure is the one this floor is enforced against and the first is a different question with
+    // the same name. A card was opened at priority 1 saying the release line was red for anybody
+    // landing here, three sessions believed it, and what it rested on was the first figure read as
+    // though it were the second. Before comparing two coverage numbers, compare the two commands.
     coverageMinimumStmtTotal := 97.4
   )
 
