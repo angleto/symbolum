@@ -702,12 +702,34 @@ lazy val theories = (project in file("modules/theories"))
     //   clean coverage theories/test theories/coverageReport   54027/55521 = 97.309%   FAILS
     //   clean coverage test coverageReport                     54113/55521 = 97.464%   passes
     //
-    // Same code, same tree, **69 statements** of difference, which is more than the margin the
+    // Same code, same tree, **86 statements** of difference, which is three times the margin the
     // rule asks for. The gate is the second command, `.github/workflows/ci.yml`, so the second
     // figure is the one this floor is enforced against and the first is a different question with
     // the same name. A card was opened at priority 1 saying the release line was red for anybody
     // landing here, three sessions believed it, and what it rested on was the first figure read as
     // though it were the second. Before comparing two coverage numbers, compare the two commands.
+    //
+    // **The difference between the two commands is a reading of one tree and not a constant of
+    // this build**, and the paragraph above carried a 69 under those two rows until 2026-09-17,
+    // which is the same mistake it exists to prevent, one level down: a figure sitting beside
+    // numbers that do not produce it. That 69 is the same pair one commit later, at `1e5dde1`:
+    //
+    //   clean coverage theories/test theories/coverageReport   54085/55521 = 97.414%
+    //   clean coverage test coverageReport                     54154/55521 = 97.538%
+    //
+    // The six tests that commit added reach 58 statements the module-only run was not reaching and
+    // 41 the whole-build run was not, so seventeen of them were already being executed by
+    // `tactics`, `checker` and `dist`, and the gap between the two commands closed by exactly those
+    // seventeen: 86 - 17 = 69. Covering a statement some other module's tests already reach moves
+    // the module-only figure and not the gate's.
+    //
+    // **What the gate itself reads, which is the only figure this floor is enforced against:
+    // 54154 of 55521, 97.54%, at `fff7434`**, from `modules/theories/.../scoverage.xml` in the
+    // `scoverage-reports` artifact of the CI run of that push. The floor asks for 54078, so the
+    // margin is 76 statements. The same two counts came off a whole-build run on this laptop over
+    // the same sources hours earlier, 55521 and 54154 both times, which is the platform agreement
+    // the note above this project list measured on the five modules that had not moved, seen once
+    // more on the module that moves most.
     coverageMinimumStmtTotal := 97.4
   )
 
