@@ -104,6 +104,42 @@ class QuotientSpec extends AnyFlatSpec with Matchers {
 
   private def numeral(text: String): Term = force(modular.term(text, numbers))
 
+  /* ------------------------------------------- the two accessors a caller reaches for */
+
+  /**
+   * `definition` and `project`, which nothing had driven.
+   *
+   * Both are public and neither was exercised before 2026-09-17, which is a different thing from
+   * being untested code: `fact` beside them is read a dozen times in this file, so what was missing
+   * is not the development but the two entry points a caller who holds an element rather than a
+   * name goes through.
+   *
+   * The refusal is the half worth asserting. Asking for a name that is not there answers with
+   * `MissingDefinition` carrying the name asked for, and the reason to pin that rather than the
+   * success is the shape of the alternative: an accessor that answered with the wrong theorem, or
+   * with a refusal naming nothing, would be found by a caller reading a proof rather than by a
+   * test.
+   */
+  "The definition accessor" should "answer for a name it has and refuse one it has not, saying which" in {
+    val defined = force(parity.definition(names.projection))
+    parity.show(defined.conclusion) should include(names.projection)
+
+    parity.definition("NO_SUCH_CONSTANT") match {
+      case Left(MissingDefinition(name)) => name shouldBe "NO_SUCH_CONSTANT"
+      case other => fail(s"a name this quotient never defined must be refused by name: $other")
+    }
+  }
+
+  "Projecting an element" should "build the application a caller would otherwise spell by hand" in {
+    // The point of the accessor is that the caller does not write the constant's name or its type:
+    // both come from the quotient, so a caller cannot reach for `PARITY` at the wrong type and get
+    // a term that parses and means nothing.
+    val projected = force(parity.project(numeral("2:num")))
+
+    parity.show(projected) should include(names.projection)
+    Term.typeOf(projected) shouldBe TyApp(names.typeName, Nil)
+  }
+
   /* ------------------------------------------------------------------ what it cost */
 
   /** The three the whole chain rests on, by name rather than by shape. */

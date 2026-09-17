@@ -71,6 +71,25 @@ class RotationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  /**
+   * The definition accessor, which nothing had asked.
+   *
+   * `fact` beside it is read all over this file and `definition` was read nowhere, so the two
+   * halves of the same surface had very different evidence behind them. The refusal is the half
+   * asserted here: an unknown name comes back as `MissingDefinition` carrying what was asked for,
+   * which is what lets a caller that mistypes a constant see the name it typed rather than a
+   * `None` it has to trace.
+   */
+  it should "answer for the constant it defines and refuse a name it never introduced" in {
+    rotation.show(force(rotation.definition(Rotation.Name)).conclusion) should include(Rotation.Name)
+
+    rotation.definition(Rotation.Length) match {
+      case Left(MissingDefinition(name)) => name shouldBe Rotation.Length
+      case other =>
+        fail(s"${Rotation.Length} is a derived fact and not a definition, so it must refuse: $other")
+    }
+  }
+
   /* ---------------------------------------------------- the guard, and why it is there */
 
   "The entry law" should "carry its bound as a hypothesis rather than state it everywhere" in {

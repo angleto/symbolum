@@ -100,6 +100,38 @@ class FieldSpec extends AnyFlatSpec with Matchers {
     theorem.hypotheses.map(reals.show) shouldBe List("~(y = 0)")
   }
 
+  it should "take a negated denominator apart, which the product case does not cover" in {
+    // `Field.reciprocal` recurses over the shape of a denominator and has a case per shape. The
+    // product case is the test above; these two are the other two recursive ones, and until
+    // 2026-09-17 nothing in this file drove either. A case in that recursion that nothing exercises
+    // is a case that can be wrong in a way no reader would see: what it builds is a theorem, so a
+    // mistake is not a crash but a hypothesis about the wrong term.
+    //
+    // The negation case rests on `unitOfNegation`, that `(-d) * (-(inv d)) = 1`, so the reciprocal
+    // of a negated denominator is the negation of the reciprocal. What the caller owes is still
+    // about `x` and not about `-x`, which is the part worth asserting: a condition naming a term
+    // the goal does not contain is useless to whoever has to discharge it.
+    val theorem = force(field.prove("!x:real y:real. (y * (-x)) / (-x) = y"))
+
+    theorem.hypotheses.map(reals.show) shouldBe List("~(x = 0)")
+  }
+
+  it should "charge for the inverse itself where the denominator is one, not for what is under it" in {
+    // The asymmetry with the case above, and it was written the other way round first: the
+    // negation recurses and this does not. `-x` as a denominator comes back with `~(x = 0)`, and
+    // `inv x` comes back with **`~(inv x = 0)`**, which is the condition a caller has to discharge
+    // and is not the same sentence.
+    //
+    // It is sound rather than a defect, and knowing why is the reason to pin it: this theory gives
+    // `inv 0` no axiom at all, so `inv x = 0` is not provably equivalent to `x = 0` and the tactic
+    // cannot trade one for the other. What it could do instead is recurse, since `unitReversed`
+    // says `inv d * d = 1`, and then the condition would be about `x`. Nothing here needs that
+    // today, and a caller meeting this hypothesis should know it is asking about the inverse.
+    val theorem = force(field.prove("!x:real y:real. (y * inv x) / inv x = y"))
+
+    theorem.hypotheses.map(reals.show) shouldBe List("~(inv x = 0)")
+  }
+
   it should "settle a numeral denominator with nothing assumed, which it could not until now" in {
     // These three were pinned here as refusals until 2026-09-09, and the reason written beside them
     // is the reason they have gone: a numeral was a monomial's coefficient and never one of its
