@@ -1237,4 +1237,58 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     guide should include("cited and never assumed: load < cap (Decreto 152/2006 art. 99)")
   }
 
+  "The build commands a session copies" should "go through the wrapper, which has to be there to go through" in {
+    // **What this is about is not tidiness, and the measurement that produced it is not about this
+    // repository at all.** The machine these sessions run on caps how many builds run at once,
+    // because eight sbt JVMs out of eight worktrees killed two coverage runs and turned a
+    // two-minute run into a twelve-minute one on 2026-09-16. The cap lives outside every checkout,
+    // so nothing here can enforce it; what this file can do is make sure the instructions do not
+    // send a reader around it. Measured that evening, five of the seven builds running had never
+    // asked the cap for anything, and every one of them was a session running what `CLAUDE.md`
+    // told it to run. The cap was not exceeded, it was bypassed, by people doing as they were told.
+    //
+    // So the assertion is on the document rather than on any behaviour: no command in it starts
+    // `sbt`, and `tools/sbt` is a file that exists and can be executed. The second half is what
+    // keeps the first from being a rename: a document whose commands all name a script that is not
+    // there is worse than one naming `sbt`, because it fails at the shell instead of at the cap.
+    val instructions = read("CLAUDE.md")
+
+    withClue("a command in `CLAUDE.md` starts `sbt`, so copying it skips the machine's cap: ") {
+      instructions should not include "`sbt "
+    }
+
+    // And the non-vacuous half. A document that stopped carrying commands would satisfy the line
+    // above, so what is asserted is a relation inside the document instead of an absence: every
+    // `runMain` it names is introduced by the wrapper, and there is at least one.
+    val runners = instructions.linesIterator.filter(_.contains("runMain")).toVector
+    runners should not be empty
+    runners.foreach { line =>
+      withClue(s"a `runMain` that is not run through the wrapper: $line\n") {
+        line should include("tools/sbt \"")
+      }
+    }
+
+    val wrapper = locate("tools/sbt")
+    withClue(s"$wrapper is not executable, so every command in `CLAUDE.md` fails at the shell: ") {
+      Files.isExecutable(wrapper) shouldBe true
+    }
+
+    // That it is the wrapper and not a stub with the right name. The variable is the whole of its
+    // interface with the machine: a `tools/sbt` that does not read it is a `sbt` with a longer name.
+    read("tools/sbt") should include("SYMBOLUM_BUILD_WRAPPER")
+
+    // **What this does not cover, and the shape of it rather than a count that would go stale.**
+    // `README.md`, `TESTING.md`, `CONTRIBUTING.md` and the documents under `docs/` still carry bare
+    // invocations, and most of those under `docs/` are inside generated regions, so moving them is
+    // a change to the generators rather than to the documents. Nor does it cover the `val Command`
+    // constants that print `sbt "..."` at a user who has asked how to regenerate something. Both
+    // populations are one grep away, which is the point of not writing their sizes here:
+    //
+    //     git grep -n '`sbt ' -- '*.md'
+    //     git grep -n 'val Command: String = "sbt' -- modules
+    //
+    // What is asserted is what the card asked for: a session reading `CLAUDE.md` and nothing else
+    // cannot start a build outside the cap without deciding to. The rest is a decision of its own.
+  }
+
 }

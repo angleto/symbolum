@@ -1,0 +1,59 @@
+#!/bin/sh
+# Run this project's build through whatever wrapper the machine provides, or plainly if it provides
+# none.
+#
+# WHY THIS EXISTS. On 2026-09-16 nine agent sessions worked this repository from eight worktrees.
+# Each worktree is its own compilation, so the machine was running eight sbt JVMs at once: two
+# coverage runs were killed, and a run that takes two minutes took twelve. That much was known and a
+# machine-wide cap on concurrent builds was written to answer it. What was not answered is that the
+# cap lives outside every checkout and the instructions in `CLAUDE.md` did not name it, so the
+# sixteen commands a session copies from the project's own documentation started builds that never
+# asked the cap for anything. Measured that evening: five of the seven sbt JVMs running were outside
+# it, while the cap itself read two slots of two held all night. **The cap was not exceeded, it was
+# bypassed**, and by sessions doing exactly what they were told to do. That distinction is what
+# decides the remedy: a sentence asking people to remember would be another agreement, and this file
+# exists so that copying the command is enough.
+#
+# WHY AN ENVIRONMENT VARIABLE AND NOT THE WRAPPER'S PATH. The wrapper on this machine belongs to a
+# practice that is not part of this repository and does not travel with it. A tracked file naming
+# its path would put a private layout into something that can be handed to somebody else, and would
+# also be wrong on the first machine that arranges things differently. So the repository knows only
+# that a wrapper may exist and where to ask: the machine names it, and a machine that names nothing
+# gets a plain `sbt`, told so on stderr and otherwise losing nothing.
+#
+# WHAT IT IS NOT. It is not a cap of its own. It holds no lock, counts nothing, and cannot make two
+# builds wait for each other; everything it does is hand the command to whatever was named and get
+# out of the way. If `SYMBOLUM_BUILD_WRAPPER` is unset this is `sbt` with one extra process and one
+# line of stderr, which is the case a clone with no such practice around it lands in, and that case
+# is supposed to work.
+#
+# WHY IT SAYS SO WHEN IT IS NOT QUEUEING, which was the other design and was argued out of it by a
+# second session writing the same file the same night. Falling through silently gives a caller the
+# shape of being capped without the fact of it, and believing you are in a queue you are not in is
+# the exact confusion this whole change exists to end: five of seven builds on 2026-09-16 were
+# outside the cap and every one of their sessions thought it was doing the right thing. So an
+# unqueued run is announced on stderr, every time, and the cost of that is one line on a machine
+# that has no cap to ask.
+#
+# THE INTERFACE IT EXPECTS, stated because a wrapper that does not offer it will look broken here:
+# `"$SYMBOLUM_BUILD_WRAPPER" -- sbt <args>` runs `sbt <args>` under whatever discipline it applies,
+# passes its arguments through untouched, and exits with the build's own status. `--` separates the
+# wrapper's options from the command, so a wrapper is free to take options of its own.
+#
+# Usage:
+#   tools/sbt test
+#   tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"
+
+set -eu
+
+if [ -n "${SYMBOLUM_BUILD_WRAPPER:-}" ]; then
+    if [ -x "$SYMBOLUM_BUILD_WRAPPER" ]; then
+        exec "$SYMBOLUM_BUILD_WRAPPER" -- sbt "$@"
+    fi
+    echo "tools/sbt: SYMBOLUM_BUILD_WRAPPER names '$SYMBOLUM_BUILD_WRAPPER', which is not" >&2
+    echo "tools/sbt: executable, so nothing is capping this build." >&2
+else
+    echo "tools/sbt: SYMBOLUM_BUILD_WRAPPER is unset, so nothing is capping this build." >&2
+fi
+
+exec sbt "$@"

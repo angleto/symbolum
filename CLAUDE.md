@@ -14,7 +14,19 @@ that is deliberate: it is what lets it stay fast and heuristic.
 
 ## Running it
 
-- **Tests:** `sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
+**Every command below starts with `tools/sbt` and not `sbt`, and that is the whole of what this
+paragraph asks.** This machine caps how many builds run at once, because eight concurrent sbt JVMs
+out of eight worktrees is not a slower measurement, it is a different one: two coverage runs were
+killed by the operating system on 2026-09-16 and a two-minute run took twelve. The cap lives outside
+every checkout, so nothing in here can enforce it and this file used to name it nowhere; measured
+that evening, five of the seven builds running had never asked it for anything, and every one of
+them was a session doing what the commands below told it to. `tools/sbt` hands the build to
+whatever the machine names in `SYMBOLUM_BUILD_WRAPPER`, and where nothing is named it says so on
+stderr and runs `sbt` anyway, so a checkout with no such arrangement around it loses nothing and
+nobody is left believing they are in a queue they are not in. What it is **not** is a cap of its
+own: it holds nothing and waits for nothing, and its own header says so.
+
+- **Tests:** `tools/sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
   statements to the whole tactic surface and most of **that** is the eighteen it attempts and cannot
   settle. That cost is the prover's rather than the test's, and it is tracked.
 
@@ -33,10 +45,10 @@ that is deliberate: it is what lets it stay fast and heuristic.
   `Abduce` was running a quadratic comparison over candidates it should never have compared, which
   it reached by misreading "the satisfiability question was not settled" as "the premises hold up".
   A suite that got slower is how that was found.
-- **One module:** `sbt kernel/test`, `sbt theories/test`, and so on
-- **One suite:** `sbt "core/testOnly garden.xeno.symbolum.CanonicalFormSpec"`
-- **Coverage, with the floors enforced:** `sbt clean coverage test coverageReport`. This one
-  **skips the corpus measurements**, which `sbt test` does not: the two ask different questions, and
+- **One module:** `tools/sbt kernel/test`, `tools/sbt theories/test`, and so on
+- **One suite:** `tools/sbt "core/testOnly garden.xeno.symbolum.CanonicalFormSpec"`
+- **Coverage, with the floors enforced:** `tools/sbt clean coverage test coverageReport`. This one
+  **skips the corpus measurements**, which `tools/sbt test` does not: the two ask different questions, and
   `ReachSpec` exercises the same lines as the other corpus suites while costing more than the rest
   of the build put together. `build.sbt` and `garden.xeno.symbolum.tactics.Corpus` carry the argument.
 
@@ -73,7 +85,7 @@ that is deliberate: it is what lets it stay fast and heuristic.
   **The gate does run on this machine.** It ran twice on the evening of 2026-09-16, by two sessions,
   both landing, after an evening on which four attempts had died and a card had been opened saying
   it could not be run. Three of those four carried `-J-Xmx2g`. It wants a quiet machine and about
-  ten minutes, and it is about four times the wall clock of `sbt test` at a comparable resident set,
+  ten minutes, and it is about four times the wall clock of `tools/sbt test` at a comparable resident set,
   so what it spends is exposure rather than size.
 
   **And since 2026-09-16 it does not only run here: `.github/workflows/ci.yml` runs the same command
@@ -85,23 +97,23 @@ that is deliberate: it is what lets it stay fast and heuristic.
   against macOS, Apple silicon and Temurin 23. `build.sbt` carries that table, the one module that
   looks like a platform difference and is not, and the tightest gate in the build, which is now
   `scan` at one statement of slack rather than `sat`.
-- **A console with the algebra loaded:** `sbt core/console`
+- **A console with the algebra loaded:** `tools/sbt core/console`
 - **Asking the prover one thing, without writing Scala:**
-  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole
+  `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole
   tactic surface over the widest signature the chain assembles, so a claim about `num` is one it can
   take, and prints what `Cost` reports: the outcome, the price, the axioms, what it rests on, and
   where it fails if it fails. `|` separates two claims; the claim is **not** quoted, because `sbt`
   hands the arguments over already split and the shell's quotes are gone by then.
 - **Looking for a lemma, by name or by shape:**
-  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SUM"`, or
-  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Find x:real + y:real = y + x"`. It puts the query to all
+  `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SUM"`, or
+  `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Find x:real + y:real = y + x"`. It puts the query to all
   three of the library's questions, the name, the constant and the shape, and prints each answer
   under its own heading including the empty ones, because a reader shown two answers to three
   questions cannot tell which was empty and which was never asked. A bare identifier reads as a
   boolean **variable** and a variable pattern matches every lemma there is, so that one is refused
   by shape rather than answered with the whole library.
 - **Working on a theory interactively, in a browser:**
-  `sbt "tactics/runMain garden.xeno.symbolum.tactics.Notebook"`, then open `http://127.0.0.1:8642`. A column
+  `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Notebook"`, then open `http://127.0.0.1:8642`. A column
   of cells over one `Session`: `declare`, `define`, `assume`, `prove`, `derive`, `ask`, `find`,
   `show`. The chain is built once when it starts, a few seconds, and each question after that is
   milliseconds. `DocumentationSpec` compares that list with `Session.Command.Keywords` in both
@@ -147,11 +159,11 @@ that is deliberate: it is what lets it stay fast and heuristic.
   Nothing that did not land disappears: the message names each one, and the box gets it back when
   what it would get is a single line. It is listening on loopback with no authentication: a
   single-user tool, not a service.
-- **Regenerating `docs/lemmas.md`:** `sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
+- **Regenerating `docs/lemmas.md`:** `tools/sbt "theories/runMain garden.xeno.symbolum.theories.Lemmas"`. It
   replaces what lies between the two markers and leaves the prose above them alone. `LibrarySpec`
   compares the file against the code and fails naming this command, which is the point: the document
   breaks exactly when somebody adds a lemma.
-- **Regenerating the mark:** `sbt "mark/runMain garden.xeno.symbolum.mark.Mark"`. It writes **both**
+- **Regenerating the mark:** `tools/sbt "mark/runMain garden.xeno.symbolum.mark.Mark"`. It writes **both**
   the character art in `docs/logo.md` and `docs/logo.svg`, from the description in
   `garden.xeno.symbolum.mark.Figure`, which is in radii rather than in cells. It **refuses** rather
   than writing when what it draws fails one of the three checks that document describes: that the
@@ -160,11 +172,11 @@ that is deliberate: it is what lets it stay fast and heuristic.
   committed files against the description, failing and naming this command.
 
   **With a size in rows it prints instead of writing**, which is the point of the description:
-  `sbt "mark/runMain garden.xeno.symbolum.mark.Mark 33"`. Not every size holds, and the ones nobody
+  `tools/sbt "mark/runMain garden.xeno.symbolum.mark.Mark 33"`. Not every size holds, and the ones nobody
   has measured are a question rather than a gap: twenty, twenty-three and thirty-three hold,
   twenty-six leaks its counter and forty-six seals a pocket, and `MarkSpec` asserts all five.
 - **Regenerating `docs/reading-register.md`:**
-  `sbt "theories/runMain garden.xeno.symbolum.theories.Register"`. The same arrangement as the lemmas, for the
+  `tools/sbt "theories/runMain garden.xeno.symbolum.theories.Register"`. The same arrangement as the lemmas, for the
   three things nothing but a reader checks: every axiom, every defined constant and every row of the
   precedence table, each with whether somebody has read it, when, and against which source.
   Everything says **NOT READ**, because nothing has been. The attestations are written by hand in
@@ -431,7 +443,7 @@ not ask" into "I asked and it was fine", which is the one way this machinery can
 
 **A probe goes in `scratch/`, never under `modules/`.** That directory is ignored by git and is in
 no sbt source set, and it exists because the alternative happened: a session left a throwaway spec
-under `modules/` and the next run of `sbt test` on this shared checkout failed for somebody else
+under `modules/` and the next run of the suite on this shared checkout failed for somebody else
 with an error about a file they had never seen. If you are delegating to an agent, repeat this in
 the briefing: a rule in this file does not reach an agent the project did not write.
 
