@@ -48,9 +48,10 @@ class CommentsSpec extends AnyFlatSpec with Matchers with Inspectors {
   /* ------------------------------------------------------ what the two old shapes got wrong */
 
   "A triple-quoted string" should "hold its quotes and its slashes" in {
-    // `Mark.scala:192`. Quote parity answers "outside a string" here, because the three opening
-    // quotes and the attribute's pair are an even number before the slashes, so the rule the
-    // language census used would have read the rest of this header as English prose.
+    // The SVG header in `Mark.scala`, copied below rather than cited by line. Quote parity answers
+    // "outside a string" here, because the three opening quotes and the attribute's pair are an
+    // even number before the slashes, so the rule the language census used would have read the
+    // rest of this header as English prose.
     val text = "    s\"\"\"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\">"
     val line = Comments.split(text).head
 

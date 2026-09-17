@@ -142,7 +142,7 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // one argument, `prod` and `fun` take two, and the other four take none.
     //
     // Both are measured rather than recalled: the names off `Chain.widest`, the arities off the
-    // declarations (`Real.scala:259`, `Natural.scala:259`, and the `TyApp` each carved type is
+    // declarations themselves, in `Real` and `Natural` and in the `TyApp` each carved type is
     // applied with). The consumer repository's certified artifact prints the seven names in its
     // header and has read them unchanged across nine commits of this one, which means that until
     // this line existed a build outside this repository was the only witness to half of what the

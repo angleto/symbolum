@@ -39,18 +39,28 @@ package garden.xeno.symbolum.scan
  * This is a lexer for comments and **not** a Scala parser, and three things it does that the two
  * shapes above did not are the three that were wrong in this tree rather than in principle:
  *
- *   - **A string literal is code.** Three lines of `Notebook.scala` hold `http://` inside one, and
- *     the substituting shape cut each of them at the slashes: line 77 lost the rest of a `println`.
- *     What reads that shape includes a census over the one operation that can make the trusted base
- *     grow, so its failure is a line declaring an axiom that the census does not see. The operation
- *     is not named here on purpose: a file that names it owes an entry in a hand-kept list in
- *     `theories`, and this module depends on nothing and should not be pointing upwards. The
- *     concrete version of this sentence is in `Sources.code`, which is the caller and may say it.
- *   - **A triple-quoted string is a string**, which quote parity is not enough to know. `Mark.scala`
- *     line 192 opens one whose first characters are three quotes, an SVG tag and an attribute in
- *     quotes of its own, so the number of quotes before the slashes of its `http` is even and a
- *     parity rule reads the rest of that header as English prose. It was the one line in this tree
+ *   - **A string literal is code.** Three lines of `Notebook.scala` carry a double slash inside one,
+ *     the address the server prints and the two the KaTeX tags load, and the substituting shape cut
+ *     each of them there: the `println` lost the rest of itself. What reads that shape includes a
+ *     census over the one operation that can make the trusted base grow, so its failure is a line
+ *     declaring an axiom that the census does not see. The operation is not named here on purpose:
+ *     a file that names it owes an entry in a hand-kept list in `theories`, and this module depends
+ *     on nothing and should not be pointing upwards. The concrete version of this sentence is in
+ *     `Sources.code`, which is the caller and may say it.
+ *   - **A triple-quoted string is a string**, which quote parity is not enough to know. The one in
+ *     `Mark.scala` that opens with an SVG tag has three quotes, a tag and an attribute in quotes of
+ *     its own before its own double slash, so the number of quotes before those slashes is even and
+ *     a parity rule reads the rest of that header as English prose. It was the one line in this tree
  *     where parity gave the wrong answer, and nothing named it.
+ *
+ * **Neither of those two names a line number, and that is the repair rather than a preference.** The
+ * first said "line 77", which was true when it was written and stopped being true at `4b96fe1`, a
+ * commit of somebody else's card that rewrote `Notebook.scala` and left the `println` at 107 with a
+ * blank docstring line at 77. That is worse than naming a file that is gone: the reader arrives
+ * somewhere that exists and says nothing. `Sources.code` carries the concrete version of the same
+ * explanation, has never carried a number, and survived that commit for exactly that reason. The
+ * same sentence also said `http://` of all three lines, where one is `http://` and two are the
+ * `https://` of the CDN; what the lexer is about is the double slash, so that is what it now says.
  *   - **A block comment nests.** Scala nests them, this repository has been bitten twice by writing
  *     an opening marker inside a docstring, and the non-greedy substitution the three text-cleaning
  *     sites used closes at the first closing marker it meets rather than at the matching one.

@@ -130,8 +130,8 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    *
    * Both readings come off `scan.Comments` since 2026-09-16, and what this site gained from the
    * move is the one input in this tree where its own rule gave the wrong answer. Quote parity
-   * decided whether a `//` was a comment, and `Mark.scala:192` opens a triple-quoted string with an
-   * SVG header whose attributes are quoted: the number of quotes before the slashes of its `http`
+   * decided whether a `//` was a comment, and the one triple-quoted string in `Mark.scala` that
+   * opens with an SVG header has attributes of its own in quotes: the number of quotes before the slashes of its `http`
    * is even, so parity said "outside a string" and the rest of that header was put to this census
    * as English prose. It is the line the docstring on the quote rule said did not exist.
    */

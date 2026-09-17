@@ -380,8 +380,8 @@ object Limit {
       transitive <- peano.fact(Peano.Transitive)
       addCommutative <- peano.fact(Peano.AddCommutative)
 
-      // `Series` is built at `Chain.scala:307` and this at 388, so the dependency runs the way the
-      // chain already runs and costs a parameter rather than a reordering. The comparison test is
+      // `Series` is a link of `Chain` below this one, so the dependency runs the way the chain
+      // already runs and costs a parameter rather than a reordering. The comparison test is
       // here and not in `Transcendental`, which has both halves already: that file's first sentence
       // says it is the transcendental functions, and a general fact about series under it would
       // make that sentence false.
