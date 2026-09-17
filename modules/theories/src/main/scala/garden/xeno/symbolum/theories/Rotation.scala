@@ -120,9 +120,11 @@ object Rotation {
    * `Word.standard` and `Product.standard` each build a second development over a narrower theory,
    * and each carries a docstring saying why that is worth the cost: a caller with a development of
    * its own reaches for it, and `docs/adr/0008` makes the two refuse to mix rather than mix
-   * silently. Neither argument reaches this file. Nothing is built on top of a rotation -- it is
-   * the last link -- so a second one would have no caller, and it would put a second `WORD_ROTATE`
-   * of a different origin into the world for a consumer to trip over. So this is a lookup.
+   * silently. Neither argument reaches this file. Nothing is built on top of a rotation -- no
+   * development in this repository takes one, which is a stronger statement than the "it is the
+   * last link" this sentence carried until 2026-09-17, with sixteen entries of `Chain` after it
+   * -- so a second one would have no caller, and it would put a second `WORD_ROTATE` of a different
+   * origin into the world for a consumer to trip over. So this is a lookup.
    */
   lazy val standard: Rotation = Chain.standard.rotation
 

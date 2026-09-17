@@ -38,8 +38,13 @@ takes none of the three.
 it" is strictly weaker than "proved correct", and the systems occupying the second niche — Candle,
 verified to machine code through CakeML, and the Metamath verifiers — are available to the same
 reader. How much hostile attention these lines have actually had is a different question with a
-different answer, and `docs/evaluation.md` keeps the table: five passes so far, six defects in the
-trusted base, and the two most recent passes found none.
+different answer, and `docs/evaluation.md` keeps the table: one row per pass, with its date, what it
+found in the trusted base and what it found outside it. **The count is deliberately not repeated
+here.** This sentence said five passes and six defects until 2026-09-17, and it did not go stale: it
+never agreed with the table in the history this repository keeps. At `243e7dd`, where that history
+begins, the table already held **seven** rows and seven findings in the trusted base, and today it
+holds eight and seven. A count of another document's table is wrong on the day that table grows,
+and the question worth asking of one is whether it was ever right, which here it was not.
 
 That is the whole of it, and the three axiom rows are not a list kept by hand: `RealSpec` scans the
 main sources for `Kernel.assertAxiom` and asserts the exact set of files that name it, which is

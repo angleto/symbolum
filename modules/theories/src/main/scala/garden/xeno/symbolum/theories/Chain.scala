@@ -210,12 +210,16 @@ final class Chain private (
    */
   val limit: Limit,
   /**
-   * The exponential, the sine, the cosine and the logarithm, and [[widest]] since 2026-09-15.
+   * The exponential, the sine, the cosine and the logarithm.
    *
-   * Four constants that are definitions and no axiom, which `docs/adr/0017` decides. It is last
-   * because it is the only link that needs [[limit]], and being last costs nothing: the order above
-   * [[magnitude]] is free, and a development with no dependent belongs where adding it moves
-   * nothing below it.
+   * Four constants that are definitions and no axiom, which `docs/adr/0017` decides. It was
+   * [[widest]] from 2026-09-15 until [[concatenation]] landed on it the next day, and this sentence
+   * named it as the current one for the day after that: [[widest]] is where to read which link is,
+   * and the paragraph on that field says why no docstring here should answer it.
+   *
+   * It is above [[limit]] because it is the only link that needs it, and nothing decides how far
+   * above: the order over [[magnitude]] is free, and a development with no dependent belongs
+   * wherever adding it moves nothing below it.
    */
   val transcendental: Transcendental,
   /**
@@ -239,10 +243,12 @@ final class Chain private (
   /**
    * The set defined by rules.
    *
-   * Two constants, `MONOTONE` and `INDUCTIVE`, and no axiom. It is last because the order above
-   * [[magnitude]] is free and it needs none of the links it sits on: nothing in it mentions a
-   * number, a word or a pair, and what it extends is therefore the last extension rather than
-   * anything it depends on, which is the distinction `Rotation.construct`'s comment draws.
+   * Two constants, `MONOTONE` and `INDUCTIVE`, and no axiom. It sits where it does because the
+   * order over [[magnitude]] is free and it needs none of the links under it: nothing in it
+   * mentions a number, a word or a pair, so what it extends is whatever the chain's end was when it
+   * landed rather than anything it depends on, which is the distinction `Rotation.construct`'s
+   * comment draws. It was that end for the hours between landing and [[reaching]], and this
+   * sentence said it was still the last link for the day after.
    *
    * Being in the chain rather than beside it is not free to choose either way. It declares
    * constants, so a version sitting outside would declare them into a theory nothing else can see,
@@ -252,7 +258,7 @@ final class Chain private (
    */
   val inductive: Inductive,
   /**
-   * Derivations of a relation with their length, and [[widest]] since 2026-09-16.
+   * Derivations of a relation with their length.
    *
    * The first thing built on [[inductive]] and the reason it was built: `REACH R A x q` says `FST q`
    * is reachable from `x` spending `SND q` steps of `A`, so the reflexive-transitive closure and the
@@ -260,13 +266,13 @@ final class Chain private (
    *
    * It needs [[inductive]] for the closure, [[product]] for the pair the count rides in and
    * [[peano]] for the arithmetic its potential-function lemma is stated in. What it extends is the
-   * last theory, which is [[inductive]]'s, and that those coincide here is an accident of ordering
-   * rather than the reason.
+   * chain's end as it stood, which is [[inductive]]'s theory, and that those coincide here is an
+   * accident of ordering rather than the reason.
    */
   val reaching: Reaching,
 
   /**
-   * The right forward closure of a string rewriting system, and [[widest]] since 2026-09-16.
+   * The right forward closure of a string rewriting system.
    *
    * The second thing built on [[inductive]] and the one the rewriting work was for: `RFC(R)` is
    * the least set holding the right-hand sides of `R` and closed under a step anywhere inside a
@@ -458,10 +464,10 @@ object Chain {
       inductive <- Inductive.construct(
         classical, concatenation.theory, concatenation.notation)
 
-      // The last link, and the first consumer of the one below it. Unlike
+      // The first consumer of the one below it. Unlike
       // `Inductive` its prerequisites are not empty -- it needs the closure, the pair and the
-      // arithmetic -- and they still do not decide where it goes: what it extends is the last
-      // theory, for the reason `Rotation.construct`'s comment gives.
+      // arithmetic -- and they still do not decide where it goes: what it extends is the chain's
+      // end as it stands here, for the reason `Rotation.construct`'s comment gives.
       reaching <- Reaching.construct(
         inductive, peano, product, inductive.theory, inductive.notation)
 

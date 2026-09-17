@@ -272,6 +272,15 @@ leaving it out would be its own kind of dishonesty, not because it means anythin
 | never attempted | 205 |
 | wall clock, whole corpus | 32 seconds |
 
+**The date these figures carry, which they did not carry at all until 2026-09-17.** Every count in
+the table above and in the histogram below is the run of `ReachSpec` at `fff7434`, read off the
+whole-suite job of that push's CI run on 2026-09-17 rather than off a laptop. The rule at the end of
+this document says a photograph of a live measurement carries its date, and this section was the one
+place claiming that arrangement while naming no date, so a reader could not tell whether the
+histogram was a week old. The wall clock is the exception and is not from that run: it is an undated
+laptop figure, and the same pass took **1 minute 32 seconds** on the runner, which is a different
+machine rather than a regression.
+
 The 205 that were never attempted are the roadmap's denominator, and this is what stops them:
 
 | What is missing | Statements |
@@ -304,8 +313,14 @@ claims about arbitrary reals; it now names the types it understands and refuses 
 those was ever proved, which was luck: the non-negativity a source states by writing `nnreal` is a
 hypothesis, and dropping it makes a different claim.
 
-What is left behind a **type** is eighteen statements over `ℤ`, `ℚ` and `ℂ`, and those wait on
-`docs/adr/0007` rather than on a translation.
+What is left behind a **type** is the three rows `ℤ`, `ℚ` and `ℂ` of the histogram above, which is
+**nineteen** statements, and those wait on `docs/adr/0007` rather than on a translation. This
+sentence said eighteen until 2026-09-17 and disagreed with its own table two paragraphs above it,
+where the three rows read 10, 5 and 4: each statement never attempted contributes exactly one tally
+to exactly one row, which is what makes the rows addable and what `ReachSpec`'s own assertion that
+they sum to the three not-attempted buckets rests on. Eighteen is the count in the row above the histogram, of statements attempted and not
+settled, and a sum that lands on a figure already in the document is the one shape of arithmetic
+slip nothing here would query.
 
 **Two defects came out of the first run, and they are the reason for reading somebody else's corpus
 rather than writing one's own.**

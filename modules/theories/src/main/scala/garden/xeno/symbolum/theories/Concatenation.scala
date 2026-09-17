@@ -365,19 +365,25 @@ object Concatenation {
   /**
    * The standard development, which is **the chain's own** and not a second one beside it.
    *
-   * The same lookup `Rotation.standard` is, and for the same reason: nothing is built on top of
-   * this, so a second development over a narrower theory would have no caller and would put a
-   * second `WORD_CONCAT` of a different origin into the world for a consumer to trip over.
+   * The same lookup `Rotation.standard` is, and for a reason that is nearly the same and was
+   * written as the same until 2026-09-17: what is built on top of this takes the chain's own.
+   * `Forward` needs a `WORD_CONCAT` for its inside-reduction clause and `Collatz` needs one for
+   * every rule of `S_2`, and both take this development rather than constructing one, so a second
+   * development over a narrower theory would have no caller and would put a second `WORD_CONCAT`
+   * of a different origin into the world for a consumer to trip over. `Rotation` has the stronger
+   * form of the argument, which is that nothing consumes it at all.
    */
   lazy val standard: Concatenation = Chain.standard.concatenation
 
   /**
    * The development over a `Word`, a `Peano` in the same signature, and the theory to extend.
    *
-   * `base` is the theory to extend and is not `word.theory`: this is the last link, so what it
-   * extends is whatever the chain's end is, for the reason `Rotation.construct`'s comment gives. A
-   * development that extended `word.theory` would declare its six constants into a side branch, and
-   * every link above would be unable to see them.
+   * `base` is the theory to extend and is not `word.theory`: what it extends is whatever the
+   * chain's end is when it is built, for the reason `Rotation.construct`'s comment gives. That
+   * sentence read "this is the last link" until 2026-09-17, which stopped being true the day three
+   * links landed on top of it and changed nothing about the argument. A development that extended
+   * `word.theory` would declare its six constants into a side branch, and every link above would be
+   * unable to see them.
    *
    * The `Peano` is separate from the base and is the one the base was built over: the fourteen
    * facts about `num` this file takes by name are theorems of that theory and so of every extension

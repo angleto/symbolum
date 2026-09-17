@@ -1026,6 +1026,89 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     fileOf("Kernel.scala") should include("new Thm(")
   }
 
+  "The name of the widest link" should "be read off the field, because four sentences had it wrong" in {
+    // **This is the fourth, fifth, sixth and seventh occurrence of one defect, and the first guard
+    // over it.** `Chain.widest` is whatever link extended the theory last, and the field's own
+    // docstring says the name is not written in prose anywhere because it had already gone stale
+    // twice by 2026-09-13. On 2026-09-17 it was stale in four more places at once: `CLAUDE.md` said
+    // `Inductive` was the widest, `Chain`'s own docstrings said `Transcendental` and `Reaching`
+    // were, and two of them added that their link was the last one. The field read `forward`, and
+    // two links had landed on top of the newest of those claims on the day it was written.
+    //
+    // What makes this worth a test rather than another careful sentence is the shape: nothing goes
+    // red when a link lands, the sentence that was true yesterday reads exactly like one that is
+    // true today, and the file that warns against writing the name carried the claim four hundred
+    // lines further down. This compares the claim with the field.
+    //
+    // **What it does not cover, which is half of what was found.** A docstring saying its link
+    // "is last" is the same defect and has no shape a regular expression can separate from the
+    // prose around it: `deduction`'s says "the last link and the widest signature stopped being the
+    // same thing", which is a general statement and true, and `rotation`'s says "what is last is
+    // the only thing that moved". A ban on the words fires on both, and on the record of every
+    // repair, which is the argument the notebook guard above makes at length about cardinals. So
+    // the positional claim is left to reading and only the widest one is held here.
+    //
+    // `docs/adr/` is not scanned, deliberately: a record made on the day of a decision may name the
+    // widest link truthfully and is superseded rather than edited afterwards, so a gate over it
+    // would demand rewriting history to stay green.
+    //
+    // **Both halves were seen failing before they were believed**, which for a guard written after
+    // the fact is the whole of the evidence. The prose half was run against `CLAUDE.md` at
+    // `fff7434` and returned `Inductive`; the docstring half was run with
+    // "and [[widest]] since 2026-09-16" put back on `reaching` and answered
+    // "`widest` is `forward` and these docstrings say otherwise: reaching". Neither perturbation is
+    // in the tree: what is kept is the sentence above and the positive control below.
+    val chain = read("modules/theories/src/main/scala/garden/xeno/symbolum/theories/Chain.scala")
+
+    val constructor = chain.split("\n\\) \\{").head
+    val widest = """val widest: Signature = (\w+)""".r
+      .findFirstMatchIn(chain)
+      .map(_.group(1))
+      .getOrElse(fail("Chain.scala no longer defines `widest` as one of its own fields; this guard reads that line"))
+
+    // `(?s)` because a docstring is many lines and `.` does not cross one without it, which is the
+    // way this guard would have read zero docstrings and passed.
+    val documented = """(?s)/\*\*(.*?)\*/\s*\n\s*val (\w+): \w+""".r
+      .findAllMatchIn(constructor)
+      .map(matched => matched.group(2) -> matched.group(1))
+      .toVector
+
+    // The half that can go empty: a pairing that matched nothing would report no false claim. The
+    // chain had thirty fields and twenty-two documented ones when this was written, and what the
+    // bound is for is a regular expression that stops pairing, not a link that arrives undocumented.
+    withClue(s"the docstrings of `Chain`'s fields no longer parse, so this guard reads nothing: ") {
+      documented.size should be > 15
+    }
+
+    val claiming = """(and \[\[widest\]\] since|is \[\[widest\]\]|is `Chain\.widest`)""".r
+    val claimants = documented.collect { case (link, text) if claiming.findFirstIn(text).isDefined => link }
+    withClue(s"`widest` is `$widest` and these docstrings say otherwise: ${claimants.mkString(", ")}\n") {
+      claimants.filterNot(_ == widest) shouldBe empty
+    }
+
+    // The prose half, over the documents a reader is sent to rather than the sources. Normalised
+    // first, because every one of these is hard-wrapped and the sentence that was wrong spanned two
+    // lines: a pattern matched against the file as it is stored finds nothing and reads as a pass.
+    val shape = """`([A-Z]\w+)`[^`]{0,60}?is `Chain\.widest`""".r
+
+    // Fired against the sentence it was written for before being trusted, which is the only thing
+    // that separates a guard from a decoration. This is `CLAUDE.md` as of `fff7434`.
+    withClue("the pattern no longer matches the defect it was written against: ") {
+      shape
+        .findFirstMatchIn("The set defined by rules is `Inductive`, and it is `Chain.widest` since 2026-09-16.")
+        .map(_.group(1)) shouldBe Some("Inductive")
+    }
+
+    Vector("CLAUDE.md", "README.md", "docs/architecture.md", "docs/proving.md", "docs/evaluation.md")
+      .foreach { document =>
+        val prose = read(document).replaceAll("\\s+", " ")
+        val named = shape.findAllMatchIn(prose).map(_.group(1)).toVector.filterNot(_ == widest)
+        withClue(s"$document names ${named.mkString(", ")} as the widest link, and it is `$widest`: ") {
+          named shouldBe empty
+        }
+      }
+  }
+
   "The evaluation document" should "describe limits the tactics still have" in {
     // Each of these is a refusal the document reports as the state of the art here. When one of
     // them starts succeeding, the tactic has improved and the document is stale: update the

@@ -60,10 +60,17 @@ import garden.xeno.symbolum.logic.*
  *
  * == What is not here ==
  *
- * **No rewriting relation on words**, and that is a dependency rather than an oversight. A step of a
- * string rewriting system says the left-hand side of a rule is a **factor** of the term, and `word`
- * has no concatenation yet. When it lands, the step relation is one definition and everything above
- * is this file instantiated: `R` is that relation, `A` the rules being counted, `Phi` the measure.
+ * **The rewriting relation on words is not here and no longer missing**: it landed as
+ * `Forward.WORD_STEP` on 2026-09-16, the same day this file did, once `Concatenation` gave `word`
+ * the factor relation a step is stated with. This section said it did not exist for the day after
+ * that, which is the shape of stale sentence this repository loses most: an absence a reader
+ * believes rather than checks.
+ *
+ * **What has not happened is the instantiation**, which is the sentence worth keeping. `Forward`
+ * builds its closure out of [[Inductive]] directly and never mentions `REACH`, so nothing yet puts
+ * this file at `R := WORD_STEP R`, `A` the rules being counted and `Phi` the measure, and until
+ * something does, the potential-function lemma has no consumer. `Collatz`'s own docstring names
+ * that instantiation as what its argument is for.
  *
  * == Where the monotonicity comes from, which is no longer here ==
  *
