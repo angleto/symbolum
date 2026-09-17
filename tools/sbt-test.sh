@@ -76,13 +76,17 @@ chmod +x "$work/tree/tools/sbt"
 run="$work/tree/tools/sbt"
 
 # 1. Nothing named. The build runs, the wrapper does not, and the subject SAYS the build is
-#    uncapped, which is the half this pair of sessions argued about and is asserted here because
-#    of how that argument ended. The case for silence is that a line on every build of every clone
-#    with no such practice around it is noise. The case for the line, which is the one the tree
-#    took, is the repository's own doctrine one floor down: `Refutation` keeps seven answers apart
-#    and `LogicError.Standing` three, and both say in writing that merging two of them turns "I
-#    could not ask" into "I asked and it was fine". A silent fall-through is that merge, and the
-#    file is called `tools/sbt`, so a reader who takes the name for the cap is not being careless.
+#    uncapped. That last one is **a decision and not a preference**, taken on 2026-09-17 after two
+#    sessions had walked into each other's positions on it, so this check is what holds it rather
+#    than what argues for it: silence here would be tidier and would go red.
+#
+#    The case for silence is that a line on every build of every clone with no such practice
+#    around it is noise. The case for the line is the repository's own doctrine one floor down:
+#    `Refutation` keeps seven answers apart and `LogicError.Standing` three, and both say in
+#    writing that merging two of them turns "I could not ask" into "I asked and it was fine". A
+#    silent fall-through is that merge, and the file is called `tools/sbt`, so a reader who takes
+#    the name for the cap is reading it as written. `tools/sbt` carries the argument; this carries
+#    the consequence.
 report=$(SYMBOLUM_BUILD_WRAPPER= "$run" test 2>&1 || true)
 holds "unnamed: the build runs" "STUB-SBT test"
 lacks "unnamed: the wrapper does not" "STUB-WRAPPER"
