@@ -35,6 +35,14 @@
 # unqueued run is announced on stderr, every time, and the cost of that is one line on a machine
 # that has no cap to ask.
 #
+# The argument that settled it is one this repository already makes about itself twice, and it is
+# stronger than the convenience it costs. `Refutation` keeps seven answers apart and
+# `LogicError.Standing` keeps three, and both say in writing that collapsing two of them turns "I
+# could not ask" into "I asked and it was fine". A silent fall-through is that collapse, performed
+# by a file called `tools/sbt`: a reader who takes the name to mean the cap is not being careless,
+# they are reading it the way it is written. `tools/sbt-test.sh` asserts the line rather than the
+# silence, so the decision is checked and not merely recorded here.
+#
 # THE INTERFACE IT EXPECTS, stated because a wrapper that does not offer it will look broken here:
 # `"$SYMBOLUM_BUILD_WRAPPER" -- sbt <args>` runs `sbt <args>` under whatever discipline it applies,
 # passes its arguments through untouched, and exits with the build's own status. `--` separates the
