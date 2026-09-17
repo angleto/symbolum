@@ -59,6 +59,35 @@ class ReachingSpec extends AnyFlatSpec with Matchers {
     force(Rewrite.Rule.of(logic, force(product.fact(Product.SecondOfPair))))
   )
 
+  /** Every constant name occurring in a term, the way `ConcatenationSpec` asks the same question. */
+  private def constantsIn(term: Term): Set[String] = term match {
+    case Const(name, _) => Set(name)
+    case App(operator, argument) => constantsIn(operator) ++ constantsIn(argument)
+    case Abs(_, body) => constantsIn(body)
+    case _ => Set.empty
+  }
+
+  /**
+   * What the definition of `REACH` is built from, and nothing else: the constant being defined,
+   * equality, four connectives, the two projections of a pair and its constructor, and the two of
+   * `num` that a counter needs. Twelve, and the one that carries the argument is `INDUCTIVE`.
+   */
+  private val DefinitionConstants: Set[String] =
+    Set(
+      Reaching.Name,
+      Inductive.Name,
+      "=",
+      "\\/",
+      "/\\",
+      "~",
+      "?",
+      "PAIR",
+      "FST",
+      "SND",
+      "SUC",
+      "ZERO"
+    )
+
   private def reduce(theorem: Kernel.Thm): Kernel.Thm = {
     val beta = force(Conv.betaNormalise(theorem.conclusion))
     val opened = lift(Kernel.eqMp(beta, theorem))
@@ -90,9 +119,28 @@ class ReachingSpec extends AnyFlatSpec with Matchers {
     // Read off the definition rather than off the proof. A derivation is a finite sequence, and a
     // development that had to walk one would recurse on its length; this one quantifies over an
     // index instead, so the only thing it is built from is `INDUCTIVE`.
+    //
+    // The question is asked of the definition's CONSTANTS and not of its printed text, and the
+    // second half of this test used to ask it of the text: it compared against
+    // `Recursion.getClass.getSimpleName`, which is the Scala module's class name `Recursion$`, and
+    // no term this printer produces carries a `$` — zero of the 462 statements in
+    // `docs/lemmas.md` do. So it passed on every input, including a definition that walked a
+    // derivation's length, which is the one thing it was named after refusing.
+    //
+    // Asserting against a name `Recursion` publishes is not the repair, because it publishes
+    // none: `Recursion.define` mints the CALLER's constant, and the object itself declares no
+    // constant that could appear in any term. What says the closure was defined rather than
+    // iterated is the whole set the definition is built from, so a constant arriving here — one
+    // minted by `Recursion.define`, or `Descent`'s — turns this red rather than passing unseen.
     val definition = force(reaching.definition(Reaching.Name))
-    reaching.show(definition.conclusion) should include(Inductive.Name)
-    reaching.show(definition.conclusion) should not include Recursion.getClass.getSimpleName
+    constantsIn(definition.conclusion) shouldBe DefinitionConstants
+    DefinitionConstants should contain(Inductive.Name)
+
+    // The control on the instrument, which is what the line this replaced never had: the same
+    // helper, asked of a term carrying a constant `REACH` is not built from, finds it. An
+    // assertion about an absence is worth what its instrument is worth when something IS there.
+    constantsIn(term("NUM_ADD ZERO ZERO")) shouldBe Set("NUM_ADD", "ZERO")
+    DefinitionConstants should not contain "NUM_ADD"
   }
 
   /* -------------------------------------------------- a relation, and the lemma applied to it */
