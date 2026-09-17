@@ -199,6 +199,12 @@ jobs:
       - name: branch-content-landed, one branch per answer
         run: sh tools/branch-content-landed-test.sh
 
+      # `tools/sbt` decides whether a build goes under the machine's cap, and the runner is exactly
+      # the place where no such cap exists: the unnamed case is what CI runs every time, so the
+      # three that a developer's machine can be in would otherwise be checked by nobody.
+      - name: sbt, the wrapper every command in CLAUDE.md starts at
+        run: sh tools/sbt-test.sh
+
   # Not `needs: test`, and not a gate. What it reports is somebody else's unlanded work, so a
   # blocking check on it stops the wrong person, and making it wait for the suite would delay a
   # warning that has nothing to do with whether this commit is sound.
