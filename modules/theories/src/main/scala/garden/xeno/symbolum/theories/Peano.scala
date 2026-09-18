@@ -561,6 +561,18 @@ object Peano {
   val AtMostSum: String = "NUM_LE_ADD"
 
   /**
+   * `|- !a b c d. NUM_LE a b /\ NUM_LE c d ==> NUM_LE (NUM_ADD a c) (NUM_ADD b d)`
+   *
+   * [[AddMonotone]] on both summands at once, which is what a sum of two blocks needs and what a
+   * caller could assemble only by commuting twice. Derived rather than induced: the one-sided
+   * lemma twice with [[AddCommutative]] between them and [[Transitive]] at the end.
+   *
+   * What asked for it is a tally over a word split into blocks, where a bound on each block's own
+   * sum has to become a bound on the sum of the two.
+   */
+  val AddMonotoneBoth: String = "NUM_ADD_LE_BOTH"
+
+  /**
    * `|- !p m n. NUM_LE (NUM_ADD p m) (NUM_ADD p n) ==> NUM_LE m n`
    *
    * [[AddMonotone]] read backwards, and the only one of the pair a consumer could not assemble
@@ -979,6 +991,19 @@ object Peano {
 
   val PartialSumCongruenceBelow: String = "NUM_SUM_CONGRUENCE_BELOW"
 
+  /**
+   * `|- !f g n. (!i. NUM_LT i n ==> NUM_LE (f i) (g i)) ==> NUM_LE (NUM_SUM f n) (NUM_SUM g n)`
+   *
+   * [[PartialSumCongruenceBelow]] with the comparison weakened from an equation to the order, and
+   * bounded for the same reason that one is: a summand that agrees only where the sum looks is what
+   * every argument about a family indexed below a bound produces.
+   *
+   * What asked for it is a measure over the positions of a word, where a rule that makes the word
+   * one letter longer moves every letter after it one place along and each of those letters weighs
+   * at least what it weighed before. Nothing pointwise about that is an equation.
+   */
+  val PartialSumMonotoneBelow: String = "NUM_SUM_MONOTONE_BELOW"
+
   /* ----------------------------------------------------------------- numerals */
 
   /**
@@ -1117,6 +1142,9 @@ object Peano {
       "!p:num m:num n:num. NUM_LT ZERO p ==> NUM_MUL p m = NUM_MUL p n ==> m = n",
     BelowExcludesAtMost -> "!m:num n:num. NUM_LT m n ==> ~(NUM_LE n m)",
     AtMostSum -> "!m:num n:num. NUM_LE m (NUM_ADD m n)",
+    AddMonotoneBoth ->
+      ("!a:num b:num c:num d:num. NUM_LE a b /\\ NUM_LE c d ==> " +
+        "NUM_LE (NUM_ADD a c) (NUM_ADD b d)"),
     BelowThenAtMost ->
       "!m:num n:num p:num. NUM_LT m n /\\ NUM_LE n p ==> NUM_LT m p",
     StrongInduction ->
@@ -1169,6 +1197,10 @@ object Peano {
     PartialSumCongruenceBelow ->
       ("!f:num -> num. !g:num -> num. !n:num. " +
         "(!i:num. NUM_LT i n ==> f i = g i) ==> NUM_SUM f n = NUM_SUM g n"),
+    PartialSumMonotoneBelow ->
+      ("!f:num -> num. !g:num -> num. !n:num. " +
+        "(!i:num. NUM_LT i n ==> NUM_LE (f i) (g i)) ==> " +
+        "NUM_LE (NUM_SUM f n) (NUM_SUM g n)"),
     NumeralOneIsSuccessorOfZero -> "NUM_ONE = SUC ZERO",
     NumeralBit0Doubles -> "!n:num. NUM_BIT0 n = NUM_ADD n n",
     NumeralBit1Doubles -> "!n:num. NUM_BIT1 n = SUC (NUM_ADD n n)",
@@ -2048,6 +2080,8 @@ object Peano {
       )
       atMostSum <- summandIsAtMostTheSum(
         logic, theory, notation, addMonotone, least, arithmetic(AddAtZero))
+      addMonotoneBoth <- additionIsMonotoneInBoth(
+        logic, theory, notation, addMonotone, transitive, arithmetic(AddCommutative))
       addStrictlyMonotone <- additionIsStrictlyMonotone(
         logic,
         theory,
@@ -2119,6 +2153,7 @@ object Peano {
         AtMostFromNotBelow -> atMostFromNotBelow,
         AddCancelsStrictOrder -> addCancelsStrictOrder,
         AtMostSum -> atMostSum,
+        AddMonotoneBoth -> addMonotoneBoth,
         BelowThenAtMost -> belowThenAtMost,
         StrongInduction -> strongInduction,
         AtMostZero -> atMostZero,
@@ -3774,6 +3809,233 @@ object Peano {
   }
 
   /** [[AtMostSum]]: [[AddMonotone]] at zero, with the identity rewritten away. */
+  /**
+   * [[AddMonotoneBoth]]: one summand's bound and the other's, put together.
+   *
+   * [[AddMonotone]] shifts on the left, so the second step has to be read through
+   * [[AddCommutative]]: `d + a <= d + b` is the one-sided lemma at `d`, and what the conclusion
+   * wants is `a + d <= b + d`. Both commutations are carried on the relation rather than proved
+   * again, and [[Transitive]] joins the two steps.
+   */
+  private def additionIsMonotoneInBoth(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    addMonotone: Kernel.Thm,
+    transitive: Kernel.Thm,
+    addCommutative: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val a = Term.variable("a", numbers)
+    val b = Term.variable("b", numbers)
+    val c = Term.variable("c", numbers)
+    val d = Term.variable("d", numbers)
+
+    for {
+      statement <- stated(theory, notation, AddMonotoneBoth)
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      atMost <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+
+      premiseLeft <- LogicError.lift(Term.appAll(atMost, List(a, b)))
+      premiseRight <- LogicError.lift(Term.appAll(atMost, List(c, d)))
+      premise <- logic.mkConj(premiseLeft, premiseRight)
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      first <- rules.conjElim1(assumed)
+      second <- rules.conjElim2(assumed)
+
+      // `a + c <= a + d`, the right-hand summand moving under a fixed left one
+      onTheRight <- rules.specAll(addMonotone, List(a, c, d)).flatMap(rules.mp(_, second))
+
+      // `d + a <= d + b`, which is the same lemma at the other summand, read into `a + d <= b + d`
+      shifted <- rules.specAll(addMonotone, List(d, a, b)).flatMap(rules.mp(_, first))
+      commutedLeft <- rules.specAll(addCommutative, List(d, a))
+      commutedRight <- rules.specAll(addCommutative, List(d, b))
+      sumDA <- LogicError.lift(Term.appAll(plus, List(d, a)))
+      sumAD <- LogicError.lift(Term.appAll(plus, List(a, d)))
+      sumDB <- LogicError.lift(Term.appAll(plus, List(d, b)))
+      movedLeft <- Conv
+        .apTerm(atMost, commutedLeft)
+        .flatMap(Conv.apThm(_, sumDB))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, shifted)))
+      partial <- LogicError.lift(Term.app(atMost, sumAD))
+      onTheLeft <- Conv
+        .apTerm(partial, commutedRight)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, movedLeft)))
+
+      sumAC <- LogicError.lift(Term.appAll(plus, List(a, c)))
+      sumBD <- LogicError.lift(Term.appAll(plus, List(b, d)))
+      chained <- rules
+        .conjIntro(onTheRight, onTheLeft)
+        .flatMap(pair =>
+          rules.specAll(transitive, List(sumAC, sumAD, sumBD)).flatMap(rules.mp(_, pair))
+        )
+
+      discharged <- rules.disch(premise, chained)
+      result <- rules.genAll(discharged, List(a, b, c, d))
+      _ <-
+        if (result.conclusion == statement) Right(())
+        else Left(NotOfForm(s"$AddMonotoneBoth as it is written", result.conclusion))
+    } yield result
+  }
+
+  /**
+   * [[PartialSumMonotoneBelow]] by induction on the bound, which is [[congruenceOnARange]]'s shape.
+   *
+   * The base does not use the hypothesis: both sums are `ZERO` by the zero recurrence, and nothing
+   * is below itself in the strict order, so what closes it is reflexivity carried across the two
+   * equations. The step takes the induction hypothesis apart exactly as the congruence does — the
+   * agreement below the successor gives the agreement below the variable, by transitivity with
+   * `v < SUC v` — and what is left is `NUM_SUM f v + f v <= NUM_SUM g v + g v`, which is
+   * [[AddMonotoneBoth]] on the two bounds and not an arithmetic fact of its own.
+   */
+  private def monotoneOnARange(
+    logic: Logic,
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm,
+    strictTransitive: Kernel.Thm,
+    belowSuccessor: Kernel.Thm,
+    reflexive: Kernel.Thm,
+    addMonotoneBoth: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    /** The head of `NUM_LT a b`, read off a statement that uses it rather than rebuilt. */
+    def strictlyBelow(sample: Term): Either[LogicError, Term] = sample match {
+      case App(App(head, _), _) => Right(head)
+      case other => Left(NotOfForm("an order statement", other))
+    }
+
+    /**
+     * `|- R x' y'` from `|- R x y` and the two equations `x = x'` and `y = y'`.
+     *
+     * One side at a time, because a relation is two applications and an equation moves under one
+     * of them: the left equation is carried at the right side as it still stands, and the right
+     * equation at the left side as it has become.
+     */
+    def acrossBoth(
+      relation: Term,
+      left: Kernel.Thm,
+      right: Kernel.Thm,
+      fact: Kernel.Thm
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        rightStart <- Term
+          .destEq(right.conclusion)
+          .map(_._1)
+          .toRight(NotOfForm("an equation", right.conclusion))
+        movedLeft <- Conv.apTerm(relation, left).flatMap(Conv.apThm(_, rightStart))
+        onLeft <- LogicError.lift(Kernel.eqMp(movedLeft, fact))
+        leftEnd <- Term
+          .destEq(left.conclusion)
+          .map(_._2)
+          .toRight(NotOfForm("an equation", left.conclusion))
+        partial <- LogicError.lift(Term.app(relation, leftEnd))
+        movedRight <- Conv.apTerm(partial, right)
+        result <- LogicError.lift(Kernel.eqMp(movedRight, onLeft))
+      } yield result
+
+    for {
+      statement <- stated(theory, notation, PartialSumMonotoneBelow)
+      atMost <- LogicError.lift(
+        theory.constant(NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool)))
+      )
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, numbers))
+      stripped <- Logic.stripForall(statement)
+      (outer, inner) = stripped
+      summands = outer.take(2).toList
+      left <- outer.lift(0).toRight(NotOfForm("two summands", inner))
+      right <- outer.lift(1).toRight(NotOfForm("two summands", inner))
+      bound <- outer.lift(2).toRight(NotOfForm("a bound to induct on", inner))
+      overEveryBound <- logic.mkForall(bound, inner)
+
+      proved <- driver.proveBy(
+        overEveryBound,
+        goal =>
+          for {
+            parts <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+            unfoldLeft <- rules.spec(left, atZero).flatMap(Conv.sym)
+            unfoldRight <- rules.spec(right, atZero).flatMap(Conv.sym)
+            atNothing <- rules.spec(zero, reflexive)
+            base <- acrossBoth(atMost, unfoldLeft, unfoldRight, atNothing)
+            _ <-
+              if (base.conclusion == parts._2) Right(())
+              else Left(NotOfForm("the empty range as it is written", base.conclusion))
+            result <- rules.disch(parts._1, base)
+          } yield result,
+        step =>
+          for {
+            goalParts <- logic.destImp(step.goal).toRight(NotOfForm("an implication", step.goal))
+            (agreesBelowSuccessor, orderedSums) = goalParts
+            assumed <- LogicError.lift(Kernel.assume(agreesBelowSuccessor))
+            atTheVariable <- rules.spec(step.variable, belowSuccessor)
+
+            openedPremise <- Logic.stripForall(agreesBelowSuccessor)
+            innerParts <- logic
+              .destImp(openedPremise._2)
+              .toRight(NotOfForm("a bounded agreement", openedPremise._2))
+            below <- strictlyBelow(innerParts._1)
+            index <- openedPremise._1.lift(0).toRight(NotOfForm("one index", openedPremise._2))
+            smallerTerm <- LogicError.lift(Term.app(below, index).flatMap(Term.app(_, step.variable)))
+            smaller <- LogicError.lift(Kernel.assume(smallerTerm))
+
+            successor <- atTheVariable.conclusion match {
+              case App(App(_, _), above) => Right(above)
+              case other => Left(NotOfForm("an order statement", other))
+            }
+            liftedAt <- rules
+              .spec(index, strictTransitive)
+              .flatMap(rules.spec(step.variable, _))
+              .flatMap(rules.spec(successor, _))
+            chained <- rules.conjIntro(smaller, atTheVariable).flatMap(rules.mp(liftedAt, _))
+            agreementAt <- rules.spec(index, assumed).flatMap(rules.mp(_, chained))
+            agreesBelow <- rules.disch(smallerTerm, agreementAt).flatMap(rules.gen(index, _))
+
+            sumsBelow <- rules.mp(step.hypothesis, agreesBelow)
+            top <- rules.spec(step.variable, assumed).flatMap(rules.mp(_, atTheVariable))
+
+            together <- rules.conjIntro(sumsBelow, top).flatMap { pair =>
+              for {
+                arguments <- sumsBelow.conclusion match {
+                  case App(App(_, sumLeft), sumRight) =>
+                    top.conclusion match {
+                      case App(App(_, topLeft), topRight) =>
+                        Right(List(sumLeft, sumRight, topLeft, topRight))
+                      case other => Left(NotOfForm("an order statement", other))
+                    }
+                  case other => Left(NotOfForm("an order statement", other))
+                }
+                applied <- rules.specAll(addMonotoneBoth, arguments).flatMap(rules.mp(_, pair))
+              } yield applied
+            }
+
+            unfoldLeft <- rules
+              .spec(left, atSuccessor)
+              .flatMap(rules.spec(step.variable, _))
+              .flatMap(Conv.sym)
+            unfoldRight <- rules
+              .spec(right, atSuccessor)
+              .flatMap(rules.spec(step.variable, _))
+              .flatMap(Conv.sym)
+            settled <- acrossBoth(atMost, unfoldLeft, unfoldRight, together)
+            _ <-
+              if (settled.conclusion == orderedSums) Right(())
+              else Left(NotOfForm("the sums at the successor as they are written", settled.conclusion))
+            result <- rules.disch(agreesBelowSuccessor, settled)
+          } yield result
+      )
+      general <- rules.genAll(proved, summands)
+    } yield general
+  }
+
   private def summandIsAtMostTheSum(
     logic: Logic,
     theory: Theory,
@@ -5605,6 +5867,21 @@ object Peano {
       congruence <- congruenceOnARange(
         logic, driver, theory, notation, atZero, atSuccessor, strictTransitive, belowSuccessor)
 
+      reflexive <- orderFacts.get(Reflexive).toRight(MissingDefinition(Reflexive))
+      addMonotoneBoth <- orderFacts.get(AddMonotoneBoth).toRight(MissingDefinition(AddMonotoneBoth))
+      monotone <- monotoneOnARange(
+        logic,
+        driver,
+        theory,
+        notation,
+        atZero,
+        atSuccessor,
+        strictTransitive,
+        belowSuccessor,
+        reflexive,
+        addMonotoneBoth
+      )
+
       addAtZero <- addFacts.get(AddAtZero).toRight(MissingDefinition(AddAtZero))
       addAtSuccessor <- addFacts.get(AddAtSuccessor).toRight(MissingDefinition(AddAtSuccessor))
       addAssociative <- addFacts.get(AddAssociative).toRight(MissingDefinition(AddAssociative))
@@ -5618,6 +5895,7 @@ object Peano {
         PartialSumAtZero -> atZero,
         PartialSumAtSuccessor -> atSuccessor,
         PartialSumCongruenceBelow -> congruence,
+        PartialSumMonotoneBelow -> monotone,
         PartialSumSplit -> split
       )
     )
