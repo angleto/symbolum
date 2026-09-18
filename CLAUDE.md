@@ -69,6 +69,34 @@ session named would be a different tool with the same name.
   A suite that got slower is how that was found.
 - **One module:** `tools/sbt kernel/test`, `tools/sbt theories/test`, and so on
 - **One suite:** `tools/sbt "core/testOnly garden.xeno.symbolum.CanonicalFormSpec"`
+- **The check that `-Xfatal-warnings` arrives:** `tools/sbt fatalWarnings`, and it is **not a
+  command anybody has to remember**: `Test / test` on the root depends on it, so every
+  `tools/sbt test` and every CI run of it pays for the check, at no step of its own. It reads the
+  effective `Compile / compile / scalacOptions` and `Test / compile / scalacOptions` of every
+  project of this build that holds sources, which it finds by asking the disk rather than from a
+  list, so a project that never took `commonSettings` is inside the check; and then it compiles
+  `tools/fatal-warnings-probe`, a source with an inexhaustive match that **must** fail, against a
+  control compiling the same source with the one flag removed, which must succeed. The pair is
+  what makes a red probe attributable to the flag rather than to a broken probe.
+
+  **The question it answers is not the one the old guard answered.** `LogicErrorSpec` asserts the
+  flag is *written* in `build.sbt`, and this repository holds a case of written and not arriving:
+  the documentation build, `tools/sbt doc`, takes none of these options, says `Skipping unused
+  scalacOptions: -Werror` in its own log, and read green over 57 unresolved links. That spec keeps its textual assertion and now says
+  what it does not cover and names this task; what it adds is that the task is still wired to
+  `Test / test`, since a gate can report a dead flag and cannot report that nobody runs it.
+
+  **A green run of it prints one line and no compiler output**, because both probe compilations
+  log into a stream nobody reads: a gate that rides `tools/sbt test` would otherwise put nine
+  `[error]` lines into every suite log, and a healthy log that looks unhealthy is how a reader
+  stops reading it. To see the probe's diagnostics, `tools/sbt warningProbe/compile` restores
+  them, and every refusal the gate prints says so.
+
+  The two probe projects are outside `modules/` and the root aggregates neither, which is what
+  keeps `tools/sbt compile` green over a project that is supposed to fail. It also puts them
+  outside every scan that reads `modules/`, which is the cost of the arrangement and is written
+  where the probe is. `tools/fatal-warnings-probe/README.md` has the perturbations each half was
+  seen failing under.
 - **Coverage, with the floors enforced:** `tools/sbt clean coverage test coverageReport`. This one
   **skips the corpus measurements**, which `tools/sbt test` does not: the two ask different questions, and
   `ReachSpec` exercises the same lines as the other corpus suites while costing more than the rest

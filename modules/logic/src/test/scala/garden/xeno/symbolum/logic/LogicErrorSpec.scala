@@ -96,6 +96,22 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
     // Asserted here rather than in a style spec because this is the only guard in the repository
     // that is nothing but the flag: everything else `-Xfatal-warnings` catches is caught the day
     // somebody reads the warning, and an omitted case is caught by nobody.
+    //
+    // WHAT THIS TEST DOES NOT COVER, said here since 2026-09-18 rather than left to be assumed. It
+    // reads text, so what it establishes is that the flag is WRITTEN. It is silent on whether the
+    // flag ARRIVES at the compiler, and those came apart in this repository already: `sbt doc`
+    // takes none of these options, its own log says `Skipping unused scalacOptions: -Werror`, and
+    // 57 unresolved scaladoc links were reported as warnings under an exit 0 while this assertion
+    // was green throughout. A scope, a later `scalacOptions :=` in place of a `++=`, or a plugin
+    // that replaces the list would each do the same to the compiler.
+    //
+    // WHO COVERS IT: the `fatalWarnings` task in `build.sbt`, which reads the effective options of
+    // every project holding sources and then compiles a source that has to fail because of the
+    // flag, against a control compiling the same source without it. It is not a command somebody
+    // remembers: `Test / test` on the root depends on it, so it runs under `tools/sbt test` and in
+    // CI. A test in this suite cannot be that check -- nothing a compiled program reads at runtime
+    // says which diagnostics were emitted when it was compiled -- which is why the strong half
+    // lives in the build and this half stays here, beside the guard it is about.
     val build = new String(
       java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("build.sbt")),
       "UTF-8"
@@ -111,7 +127,25 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
       build should not be empty
     }
 
-    build should include("-Xfatal-warnings")
+    // Either spelling, and the reason is a measurement rather than tolerance: run directly on
+    // 2026-09-18, the 3.3.5 compiler turns this file's own diagnostic into an error and writes no
+    // class file under `-Xfatal-warnings` and under `-Werror` alike, where under neither it warns
+    // and writes seven. A test that insisted on the spelling this build happens to use would go
+    // red on a rename that changes nothing, and a gate red for the wrong reason is repaired by
+    // loosening it.
+    withClue("neither spelling of the option is in build.sbt: ") {
+      Vector("-Xfatal-warnings", "-Werror").exists(build.contains) shouldBe true
+    }
+
+    // And that the strong check is wired to something that runs. The task can say the flag is
+    // dead; it cannot say that nobody invokes it, and a gate nothing calls is the failure this
+    // file's own subject is about moved one step along. This is text again, and deliberately: what
+    // it guards is a line rather than a value reaching a tool, so the failure that defeated the
+    // assertion above has no counterpart here.
+    withClue("`fatalWarnings` is defined and something runs it: ") {
+      build should include("lazy val fatalWarnings = taskKey[Unit]")
+      build should include("Test / test := (Test / test).dependsOn(fatalWarnings).value")
+    }
   }
 
   it should "say no about a result that is not a refusal at all" in {

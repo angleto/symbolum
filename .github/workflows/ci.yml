@@ -68,6 +68,23 @@ jobs:
       - name: Compile
         run: sbt compile
 
+      # This also runs the `fatalWarnings` gate, and that is deliberate rather than incidental:
+      # `Test / test` on the root depends on it, so the check that `-Xfatal-warnings` reaches the
+      # compiler costs no step and no runner minute of its own here. It reads the effective options
+      # of every project holding sources and then compiles a source that has to fail because of the
+      # flag, against a control compiling the same source without it. A red run whose log ends in
+      # that task's message is this gate rather than a test: `build.sbt` carries the argument and
+      # `tools/fatal-warnings-probe/README.md` the perturbations it was seen failing under.
+      #
+      # It contributes ONE `[info]` line to this log and no compiler output, deliberately and
+      # measured: the probe's compilation is expected to fail, and the nine `[error]` lines that
+      # produced before it was silenced are how a healthy log stops being read. Sessions here read
+      # a run by counting those lines against zero, after one reporting `827 succeeded, 0 failed`
+      # turned out to be a module that had not compiled.
+      #
+      # Wired to a task rather than written as a step for the reason the step it replaces was worth
+      # nothing: a check somebody has to remember to invoke stops existing the day nobody does, and
+      # a `-Xfatal-warnings` that has stopped arriving is silent by construction.
       - name: Run tests
         run: sbt test
 
