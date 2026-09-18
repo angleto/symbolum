@@ -87,7 +87,7 @@ object Matching {
    * Four, and they are not the same kind of limit. [[NoBinderInScope]] is not a higher-order
    * question at all: with nothing bound, a pattern variable applied to anything is a first-order
    * problem the walk already answers where it can, and a refusal there says only that these two
-   * terms do not match. The other three are the fragment's own boundary, and `docs/adr/0029`
+   * terms do not match. The other three are the fragment's own boundary, and `docs/adr/0030`
    * carries how often each is reached.
    */
   enum Refusal {
@@ -371,7 +371,7 @@ object Matching {
    * not fire cannot tell an ordinary miss — this lemma is simply not about this goal — from a
    * question the fragment was asked and had to turn down. That distinction is what anybody
    * measuring this matcher needs, and until 2026-09-18 the only way to get it was to instrument
-   * the file and run the suite, which is how the figures in `docs/adr/0029` were taken.
+   * the file and run the suite, which is how the figures in `docs/adr/0030` were taken.
    *
    * **It re-walks rather than being threaded through [[matchTerm]].** Threading a reason through
    * the walk means every one of its answers carries one, and the walk answers `None` tens of

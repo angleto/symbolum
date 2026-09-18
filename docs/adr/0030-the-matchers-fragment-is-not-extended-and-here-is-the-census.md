@@ -1,4 +1,4 @@
-# 0029. The matcher's fragment is not extended, and the census is why
+# 0030. The matcher's fragment is not extended, and the census is why
 
 - **Status:** accepted
 - **Date:** 2026-09-18
@@ -82,6 +82,12 @@ not have and `Matching.why` now makes cheap.
 
 **The README line stands, with the measurement beside it.** Replacing a true boundary with silence
 would be worse than the boundary; what changes is that a reader is told it was measured and when.
+
+**Another record reached the same place from the other side on the same day.** `docs/adr/0029` asks
+whether the corpus wants a saturation loop and answers that what it wants is arithmetic; this one
+asks whether it wants a larger matching fragment and answers the same way. Neither cites the other
+as evidence — they are two measurements over one corpus, and what they agree on is where that
+corpus's difficulty is, which is neither the search's shape nor the matcher's.
 
 **A zero in this record is a zero over one corpus on one day.** The eighteen unsettled miniF2F goals
 are blocked by nonlinear arithmetic, which this repository already said and which this census

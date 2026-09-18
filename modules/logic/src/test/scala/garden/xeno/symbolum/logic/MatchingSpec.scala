@@ -356,7 +356,7 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
    *
    * What it is for is measuring this matcher: a caller looking at a tactic that did not fire cannot
    * tell an ordinary miss from a question the fragment turned down, and until this landed the only
-   * way to tell was to instrument the file and run the suite. `docs/adr/0029` is the census taken
+   * way to tell was to instrument the file and run the suite. `docs/adr/0030` is the census taken
    * that way, and these are the cases it counted, so the next one costs a call.
    */
   "A refused match" should "name the condition of the fragment it met" in {
@@ -377,7 +377,7 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
     // **The distinction the census turned on.** With no binder open, a pattern variable applied to
     // anything is a first-order problem, and over the whole corpus that is where almost every
     // refusal of this shape comes from: 4377 of 4627 on `tactics/test`, and 278 of 278 on the
-    // miniF2F corpus, measured 2026-09-18 and written down in `docs/adr/0029`. Reporting those as
+    // miniF2F corpus, measured 2026-09-18 and written down in `docs/adr/0030`. Reporting those as
     // the fragment's boundary would have said the boundary is met thousands of times a run.
     val binary = Term.variable("F", Type.fun(alpha, fn))
     val pattern = force(Term.appAll(binary, List(p, q)))
