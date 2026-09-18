@@ -516,7 +516,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 511 lemmas, 335 have two or more leading quantifiers and **307 of
+caller meant: of the library's 552 lemmas, 362 have two or more leading quantifiers and **334 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1310,10 +1310,56 @@ equation sets rather than one: `NUM_ONE_SUC` rewrites the `1` inside a bit encod
 the set the `2` in the cosine's exponent becomes `NUM_BIT0 (SUC ZERO)` and stops matching a lemma
 proved about `Power 0 2`, which is the refusal that produced the split.
 
+**The integers are `Integer`, a link since 2026-09-18, and they arrive as a prerequisite rather
+than as stage four of the construction.** `docs/adr/0033` is the decision and `docs/adr/0016` is
+what it extends. A pair of naturals `(a, b)` stands for `a - b`, two pairs stand for the same
+integer when `a + d = c + b`, and `int` is `Quotient.define` applied to that relation: the first
+real consumer of the builder that record asked for, which was validated on a toy quotient before
+anything was built through it. Written additively on purpose, since `num`'s subtraction is
+truncated and the reading with a `NUM_SUB` in it is not an equivalence. **It costs no axiom beyond
+the carrier's**: choice, eta and infinity, which the pair and the naturals already cost, and
+`IntegerSpec` asserts that as an equality rather than as a ceiling and separately that none of the
+sixteen is among them.
+
+What it is for is that neither existing divisibility can state the condition two open
+formalisations need. `Divisibility` is over the reals, where `DIVIDES_NONZERO` makes every
+non-zero element divide everything, so the hypothesis is discharged **vacuously**; and
+`NUM_DIVIDES` is over `num`, which has no negative numbers. `INT_DIVIDES` is the one that can, and
+`INT_DIVIDES_LINEAR` is the step a lattice argument is made of.
+
+**The non-collapse guard is a theorem here and is not one in `QuotientSpec`**, which says in as
+many words that it cannot carry it: refuting collapse there needs `~(NUM_CONG 2 2 3)` and nothing
+in this repository derives it. `num` has `Successor.distinct`, so
+`~(INT_OF_PAIR (PAIR 0 0) = INT_OF_PAIR (PAIR 1 0))` is derived, and the injectivity of
+`INT_OF_NUM` says the same for every pair of naturals. A one-point `int` passes every other
+assertion in the file.
+
+**The operations keep a prefix spelling and that is a decision.** `docs/adr/0018` lets a symbol
+stand for more than one constant and `+`, `*`, `<` and `<=` already stand for two; a third
+candidate gives every existing statement a new way of being ambiguous, and 135 statements moved
+the last time a type joined the overloading. So it is `INT_ADD a b`, for the reason `num`'s
+truncated subtraction keeps a prefix form for a different one.
+
+**The order is the one construct the quotient builder does not reach**, and what it needed is worth
+knowing before opening the file. `Quotient` lifts a unary operation, a binary one and a predicate
+of **one** argument; a relation of two quotient arguments is none of the three, since
+`liftBinary`'s obligation relates the two results and so needs them in the carrier. So `INT_LE` is
+defined through the chosen representatives directly, and `INT_LE_PAIRS` is the fact that makes
+that definition usable. Its respectfulness lemma is the only obligation in the development that is
+an equation between **propositions**: two related pairs have to give the same order, in both
+directions, so it is `Kernel.deductAntisym` over two implications rather than a rearrangement, and
+`Semiring` cannot be handed the conclusion because the conclusion is an order.
+
+**What is not there, named rather than left to be discovered**: the bridge to `real`; the
+rationals; and `~(INT_DIVIDES 2 1)`, which is the sharpest thing separating this divisibility from
+the field's and which wants the discreteness of the order, a lemma about the carrier that is named
+here rather than written. `docs/adr/0033` carries that list, and it is the kind of list nothing
+goes red over.
+
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's
 algorithm is a definition by well-founded recursion, which this system does not have; then the
-integers and the rationals, and then the reals as a construction rather than an assumption. `docs/adr/0007` is the order and `docs/adr/0006` is the rule that
+rationals, and then the reals as a construction rather than an assumption. `docs/adr/0007` is the order and `docs/adr/0006` is the rule that
 unlocked it. `docs/adr/0004` records why the reals were axiomatised rather than constructed, and the
 same reasoning does not extend to the naturals.
 

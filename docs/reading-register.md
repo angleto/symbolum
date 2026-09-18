@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (117)
+## The definitions (128)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -170,6 +170,17 @@ axiom mentioning it means.
 | `definition INDUCTIVE` | INDUCTIVE = \x:('a -> bool) -> 'a -> bool. \y:'a. !z:'a -> bool. (!u:'a. x z u ==> z u) ==> z y | **NOT READ** |  |  |
 | `definition IND_0` | IND_0 = select (\x:ind. (!y:ind. !z:ind. IND_SUC y = IND_SUC z ==> y = z) /\ (!y:ind. ~(IND_SUC y = x))) | **NOT READ** |  |  |
 | `definition IND_SUC` | IND_SUC = select (\x:ind -> ind. ?y:ind. (!z:ind. !u:ind. x z = x u ==> z = u) /\ (!z:ind. ~(x z = y))) | **NOT READ** |  |  |
+| `definition INT_ADD` | INT_ADD = \x:int. \y:int. INT_OF_PAIR (PAIR (FST (INT_OF_PAIR_repr x) + FST (INT_OF_PAIR_repr y)) (SND (INT_OF_PAIR_repr x) + SND (INT_OF_PAIR_repr y))) | **NOT READ** |  |  |
+| `definition INT_DIVIDES` | INT_DIVIDES = \x:int. \y:int. ?z:int. y = INT_MUL x z | **NOT READ** |  |  |
+| `definition INT_LE` | INT_LE = \x:int. \y:int. FST (INT_OF_PAIR_repr x) + SND (INT_OF_PAIR_repr y) <= FST (INT_OF_PAIR_repr y) + SND (INT_OF_PAIR_repr x) | **NOT READ** |  |  |
+| `definition INT_MUL` | INT_MUL = \x:int. \y:int. INT_OF_PAIR (PAIR (FST (INT_OF_PAIR_repr x) * FST (INT_OF_PAIR_repr y) + SND (INT_OF_PAIR_repr x) * SND (INT_OF_PAIR_repr y)) (FST (INT_OF_PAIR_repr x) * SND (INT_OF_PAIR_repr y) + SND (INT_OF_PAIR_repr x) * FST (INT_OF_PAIR_repr y))) | **NOT READ** |  |  |
+| `definition INT_NEG` | INT_NEG = \x:int. INT_OF_PAIR (PAIR (SND (INT_OF_PAIR_repr x)) (FST (INT_OF_PAIR_repr x))) | **NOT READ** |  |  |
+| `definition INT_OF_NUM` | INT_OF_NUM = \x:num. INT_OF_PAIR (PAIR x 0) | **NOT READ** |  |  |
+| `definition INT_OF_PAIR` | INT_OF_PAIR = \x:prod(num, num). mk_int (INT_SAME x) | **NOT READ** |  |  |
+| `definition INT_OF_PAIR_repr` | INT_OF_PAIR_repr = \x:int. select (\y:prod(num, num). x = INT_OF_PAIR y) | **NOT READ** |  |  |
+| `definition INT_ONE` | INT_ONE = INT_OF_PAIR (PAIR (SUC 0) 0) | **NOT READ** |  |  |
+| `definition INT_SAME` | INT_SAME = \x:prod(num, num). \y:prod(num, num). FST x + SND y = FST y + SND x | **NOT READ** |  |  |
+| `definition INT_ZERO` | INT_ZERO = INT_OF_PAIR (PAIR 0 0) | **NOT READ** |  |  |
 | `definition MAT2` | MAT2 = \x:real. \y:real. \z:real. \u:real. PAIR (PAIR x y) (PAIR z u) | **NOT READ** |  |  |
 | `definition MAT_ADD` | MAT_ADD = \x:prod(prod(real, real), prod(real, real)). \y:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x + MAT_E11 y) (MAT_E12 x + MAT_E12 y) (MAT_E21 x + MAT_E21 y) (MAT_E22 x + MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_DET` | MAT_DET = \x:prod(prod(real, real), prod(real, real)). MAT_E11 x * MAT_E22 x - MAT_E12 x * MAT_E21 x | **NOT READ** |  |  |
@@ -310,7 +321,7 @@ precedence and is not an entry of the table.
 | `notation numerals via NUM_ONE` | a digit string is read in binary through `ZERO`, `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1`: `12` is `NUM_BIT0 (NUM_BIT0 (NUM_BIT1 NUM_ONE))` | **NOT READ** |  |  |
 | `notation application` | `f x` binds tighter than every operator above, at precedence 1000 | **NOT READ** |  |  |
 
-## Declared and never defined (15)
+## Declared and never defined (17)
 
 Not rows, and listed so that a constant with no row is a constant somebody decided about. The
 seven of the reals and `select` are declared and say nothing by themselves: their whole meaning
@@ -319,10 +330,12 @@ arrive from `Kernel.defineType` with two theorems relating them, and a theorem i
 than read. Equality is the kernel's, and is in the theory before any of this starts.
 
 - `= : 'A -> 'A -> bool`
+- `dest_int : int -> prod(num, num) -> bool`
 - `dest_num : num -> ind`
 - `dest_prod : prod('a, 'b) -> 'a -> 'b -> bool`
 - `dest_word : word('a) -> prod(num, num -> 'a)`
 - `inv : real -> real`
+- `mk_int : (prod(num, num) -> bool) -> int`
 - `mk_num : ind -> num`
 - `mk_prod : ('a -> 'b -> bool) -> prod('a, 'b)`
 - `mk_word : prod(num, num -> 'a) -> word('a)`

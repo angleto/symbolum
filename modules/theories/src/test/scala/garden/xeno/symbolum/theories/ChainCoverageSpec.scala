@@ -99,6 +99,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Inductive" -> InTheChain,
     "Reaching" -> InTheChain,
     "Forward" -> InTheChain,
+    "Integer" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,

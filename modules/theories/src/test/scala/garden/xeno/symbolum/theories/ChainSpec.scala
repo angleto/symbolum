@@ -151,6 +151,12 @@ class ChainSpec extends AnyFlatSpec with Matchers {
       "bool" -> 0,
       "fun" -> 2,
       "ind" -> 0,
+      // The fifth carved type, 2026-09-18, and the arity is the interesting half: `int` is a
+      // quotient of `prod(num,num)`, so a reader who expected the carrier's parameters to travel
+      // with it would look for two. They do not. `Kernel.defineType` carves a type out of a
+      // **closed** predicate, and `INT_SAME` names both of its components, so nothing about the
+      // carrier is left free for the new operator to be parameterised by.
+      "int" -> 0,
       "num" -> 0,
       "prod" -> 2,
       "real" -> 0,
@@ -217,8 +223,14 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // is about words, so `Concatenation` is exactly where it would naturally sit, and what puts it
     // at the end instead is the rule that names this whole section -- a constant is reachable only
     // from the last theory. Which link is last is read here and written nowhere else.
-    chain.widest shouldBe chain.forward
-    chain.widest.theory.constants.keySet shouldBe chain.forward.theory.constants.keySet
+    // **And again on 2026-09-18**, to `Integer`, the fifth type operator, which is the sixth entry
+    // in this paragraph's own list and the reason the list is here rather than a sentence naming
+    // the current one. `docs/adr/0033` decides that the integers arrive as a prerequisite of two
+    // blocked formalisations rather than as stage four of the construction of the reals, and what
+    // puts this link at the end is the rule the paragraph above names and nothing about its
+    // subject: a constant is reachable only from the last theory.
+    chain.widest shouldBe chain.integers
+    chain.widest.theory.constants.keySet shouldBe chain.integers.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,

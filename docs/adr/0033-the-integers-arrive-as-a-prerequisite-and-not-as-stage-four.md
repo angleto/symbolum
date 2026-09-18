@@ -1,0 +1,169 @@
+# 0033. The integers arrive as a prerequisite, not as stage four of the construction
+
+- **Status:** accepted, extends 0016
+- **Date:** 2026-09-18
+
+## Context
+
+The chain declared four type operators — `num`, `real`, `prod` and `word` — and no signed ring.
+Mycelium card `f6368d8d` is what says that absence costs something now rather than eventually, and
+the half of it worth carrying is that it blocks two open formalisations of the `collatz`
+repository's `documents/02` in **two different ways**, neither of which is a file sitting in the
+wrong place:
+
+- `Divisibility` is built over the reals, and in a field every non-zero element divides everything.
+  That is not an awkward edge: `DIVIDES_NONZERO` is `!a b. ~(a = 0) ==> Divides a b`, derived in
+  that file with nothing assumed. A divisibility hypothesis stated there is discharged
+  **vacuously**, so a development that carried one would be checking nothing and would look exactly
+  like one that was.
+- `NUM_DIVIDES` is over `num` and cannot state the condition at all, because the coefficients the
+  argument divides are lattice coefficients and are signed.
+
+The two consumers are real and both are already settled by hand on the other side:
+`02 s2.7(e)`, the `Z` basis of the phase-collision lattice, which reduces to the triangular system
+`2^{f-j_i} | lambda_{i-1} - 3 lambda_i` over signed coefficients; and `02 s2.6(c)`, the 2-adic
+valuation of `det_h`, whose determinant entries are signed. What cannot be done is to **state**
+either in this kernel.
+
+[`0007`](0007-the-reals-are-constructed.md) already has the integers: they are step 4 of its
+roadmap, *"the integers and the rationals as quotients, then the reals as a completion"*.
+[`0016`](0016-what-the-construction-needs-in-front-of-it.md) sizes that whole programme at roughly
+200 published facts and thirteen to fourteen thousand lines, and leaves open which of two routes it
+takes.
+
+## Decision
+
+**The integers are built now, as a thing that stands on its own, and not as the opening move of the
+construction of the reals.**
+
+The distinction is not presentational and it is the whole of this record. Under the construction's
+framing this work is estimated as the large piece, scheduled behind a decision about Dedekind cuts
+against Cauchy sequences, and never started; what the card asks for is the part that stands up
+alone. An ordered ring of integers with a divisibility over it needs **no** rational, **no**
+completion and **no** axiom of the reals to become a theorem, and the two consumers need exactly
+that and nothing above it.
+
+**The route is `0016`'s first, the quotient of `prod(num,num)`,** and the decision was deferred in
+that record until the quotient builder's cost had been measured. It has been: `Quotient` landed on
+2026-09-15 and was validated on `num` modulo two before anything real was built through it, which
+is what `0016` asked for. This is its first real consumer, and what it cost is recorded in the
+consequences below.
+
+**The relation is `FST p + SND q = FST q + SND p` and carries no subtraction.** `num`'s subtraction
+is truncated, so `FST p - SND p = FST q - SND q` is a different relation and is not an equivalence:
+`(0,1)` and `(0,2)` both truncate to zero and stand for different integers. The additive form is
+the standard one and it is chosen here for a reason that can be stated rather than for tradition.
+
+**The operations keep a prefix spelling: `INT_ADD a b` and not `a + b`.**
+[`0018`](0018-an-operator-symbol-stands-for-more-than-one-constant.md) lets a symbol stand for more
+than one constant and `+`, `*`, `<` and `<=` already stand for two, the reals' and `num`'s. A third
+candidate is not a line in `Notation`: the elaborator refuses a text nothing determines, so every
+existing statement carrying one of those symbols gains a way of being ambiguous. When `num` joined
+the overloading, 135 statements of the library changed text. That is a measurement of its own and a
+card of its own, and putting it inside this one would mean the integers landing or not landing
+according to whether a notation change went well.
+
+**Which development is `Chain.widest` is not written here**, for the reason `Chain.widest`'s own
+docstring gives. What is written here is that this link extends the chain's end rather than sitting
+beside it, and the argument is the one the five developments moved into the chain on 2026-09-12
+were moved by: a constant declared into a side branch is unreachable from everything, its facts
+reach no library, and `docs/lemmas.md` does not list them.
+
+## Consequences
+
+**The trusted base does not move.** The type is `Kernel.defineType` over the image of a closed
+relation, the operations are lifts, and every fact costs what the carrier cost: choice, eta and
+infinity, which is what the naturals and the pair already cost. `IntegerSpec` asserts that as an
+**equality** of axiom sets rather than as a ceiling, which is the form `CodingSpec` uses, and it
+asserts separately that no axiom of the reals is among them. A signed ring that charged the sixteen
+would be a ring built on the thing it exists to avoid needing.
+
+**The type does not collapse, and that is derived rather than assumed.** `QuotientSpec` says in as
+many words that non-collapse is the one guard it cannot carry: refuting it there means deriving
+`~(NUM_CONG 2 2 3)`, which nothing in this repository can, so that file's evidence is structural.
+Here it is not. `num` has `Successor.distinct`, so `~(INT_OF_PAIR (PAIR 0 0) = INT_OF_PAIR (PAIR 1
+0))` is derived from `~(0 = 1)` with nothing assumed, and the injectivity of `INT_OF_NUM` says the
+same thing for every pair of naturals. A one-point `int` satisfies every equation in the
+development and refutes both of those.
+
+**Every ring law is one function applied to a pair of texts, and a further one costs a line.** Both sides of an equation
+between integers are written at carrier variables; the lifted equations and the two projections of
+a pair rewrite each side to a single `INT_OF_PAIR` of a pair; `Semiring` decides the resulting
+identity of the commutative semiring on `num`, at no axiom of the reals; the quotient's central
+fact turns that into an equation between classes; and the statement is put back over `int` by
+specialising at a representative. How many laws there are is deliberately not written here: the
+number is `Integer.Statements`, `IntegerSpec` compares every entry of it against the theorem proved
+under that name, and a figure repeated in prose is the copy that drifts. What that route cannot do
+is a law that is **not** a semiring
+identity after projection, and the two in the file that are not say so where they are written: the
+respectfulness of multiplication, which multiplies a premise rather than rearranging it, and the
+injectivity of the embedding, which is a biconditional and not an equation between integers.
+
+**The quotient builder's docstring is wrong about its own first consumer, and the correction is a
+reading rather than a run.** That file says it lifts "no function whose result is not quotiented
+(`num`-valued, say)", and names the integers as the consumer that does not need one. The bridge to
+`real` is exactly such a function, so the sentence is false about the thing it names. **What is
+measured is that the code does not say it:** counting on 2026-09-18, `Type.Bool` appears at seven
+lines of `Quotient.scala` and not one of them is inside `liftPredicate` or `checkPredicate`, which
+build their equation with `Term.eq` at whatever type the operation returns and carry it with
+`Conv.sym` and `Conv.trans`, neither of which is about propositions.
+
+**That is a reading of the source and not a demonstration**, and the difference is the whole of why
+this paragraph is worded as it is: the bridge is not built here, so nothing has yet handed that
+method an operation returning a `real`. The prediction is that it lifts unchanged. The record of it
+is here because a reader who believed the docstring would build the bridge by hand through
+representatives, which is the two steps the builder exists to remove, and because a prediction
+written down before the run is worth more than one recalled after it.
+
+**Nothing becomes a theorem that was an axiom**, and nothing a caller could state stops being
+statable. This is an extension of the signature and not a change to it.
+
+**The order is the one construct the quotient builder does not reach, and that is a measurement of
+that builder rather than a complaint about it.** It lifts a unary operation, a binary one and a
+predicate of one argument. A relation of two quotient arguments is none of the three: `liftBinary`'s
+obligation relates the two **results**, which needs them in the carrier, and a proposition is not in
+it. So `INT_LE` is defined through the chosen representatives here and `INT_LE_PAIRS` is derived
+from a respectfulness lemma of its own — which is the shape a fourth lift would have, written once
+in its first consumer rather than added to the builder ahead of one, which is the criterion 0016
+sets for that file.
+
+**What is not here, named so that the list does not go stale silently.** A concrete non-divisibility
+at a non-zero divisor — `~(INT_DIVIDES 2 1)` — is not derived, and it is the sharpest thing that
+separates this divisibility from `Divisibility`'s. It needs the discreteness of the order, that
+nothing lies strictly between zero and one, which is one lemma about the carrier and is named
+rather than written. The converse of `NUM_DIVIDES m n ==> INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)`
+needs the same thing, since the witness has to be shown non-negative. And the bridge to `real`,
+which is where the prediction about `liftPredicate` above gets run.
+
+## Alternatives rejected
+
+**Wait for the construction of the reals and take the integers as its step 4.** It is what `0007`
+and `0016` schedule, and it is what leaves both consumers blocked for the duration. Rejected on the
+card's own argument: the estimate that stops this work is an estimate of the whole programme, and
+none of what the two consumers need is above this link. Nothing in this record forecloses the
+construction — the file reaches for no real except in its bridge, so the link moves below `Real` at
+phase 5 rather than being rewritten, and `Embedding.scala` is the precedent for where the bridge
+goes when it does.
+
+**Canonical representatives: an integer as a pair with one component zero.** It removes the
+quotient builder entirely and `0016` already rejected it, in the general form: the same trick for
+the rationals wants lowest terms, which wants the greatest common divisor, which would put
+`Modular` below `Real`. Repeated here because for the integers **alone** it is genuinely cheaper,
+so a reader who sees only this file would take the rejection for an oversight.
+
+**Define `int` as the subset of `real` carved out by `?n. x = &n \/ x = --(&n)`, which is what HOL
+Light does.** It is much less work: the ring, the order and the bridge all come from the reals'
+axioms and nothing is lifted. Rejected because it inverts the dependency the construction needs: an
+`int` defined over `real` cannot be what `real` is later constructed from, so the work would be
+done twice and the second time from scratch. It also charges the sixteen axioms to every theorem
+about an integer, which is the price `Semiring` exists to avoid paying and which the two consumers
+would inherit.
+
+**A module of its own.** Rejected for `0016`'s reason, which is
+[`0003`](0003-trust-boundary-is-the-module-graph.md): the module graph is the trust boundary and
+this work moves nothing across it. A module would buy a line in a diagram and no guarantee.
+
+**Overload `+`, `*`, `<` and `<=` at `int` in the same change.** Rejected above, and recorded here
+as a rejection rather than as a deferral because the difference matters to whoever picks it up: the
+work is a measurement of what the third candidate does to the 136 statements that moved last time,
+not a line of `Notation`.

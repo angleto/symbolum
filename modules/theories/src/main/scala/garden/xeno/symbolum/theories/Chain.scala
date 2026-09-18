@@ -283,7 +283,24 @@ final class Chain private (
    * says the left-hand side occurs with a context on each side and that sentence needs
    * `WORD_CONCAT`. Before 2026-09-16 it could not be written at all.
    */
-  val forward: Forward
+  val forward: Forward,
+  /**
+   * The integers, and the fifth type operator this chain declares.
+   *
+   * A quotient of `prod(num,num)` under `a + d = c + b`, which `docs/adr/0016` names as the first
+   * real consumer of the quotient builder and which that record's own alternatives section rejects
+   * the cheap version of. It needs [[peano]] for the arithmetic its carrier's equations are settled
+   * by and [[product]] for the pair, both far below, and it extends [[forward]] because that is
+   * where the chain's end was: the extension order and the dependency order are different things,
+   * which is `Rotation.construct`'s sentence and the one every link above [[magnitude]] has been
+   * placed by.
+   *
+   * What it is **for** is not the construction of the reals. Two open formalisations were blocked
+   * on a signed ring in two different ways at once, `Divisibility` stating its condition vacuously
+   * over a field and [[modular]] unable to state it at all, and neither is repaired by moving a
+   * file.
+   */
+  val integers: Integer
 ) {
 
   /**
@@ -312,7 +329,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = forward
+  val widest: Signature = integers
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -476,6 +493,12 @@ object Chain {
       // should be typable against one theory rather than two.
       forward <- Forward.construct(
         inductive, concatenation, reaching.theory, reaching.notation)
+
+      // The fifth type operator, and the last link. It needs `peano` for the arithmetic of the
+      // carrier and `product` for the pair; what it extends is the chain's end as it stands here,
+      // for the reason `Rotation.construct`'s comment gives.
+      integers <- Integer.construct(
+        classical, peano, product, forward.theory, forward.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -506,6 +529,7 @@ object Chain {
       concatenation,
       inductive,
       reaching,
-      forward
+      forward,
+      integers
     )
 }
