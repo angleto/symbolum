@@ -61,7 +61,7 @@ $$\forall x \colon \mathbb{B}.\ x \lor \lnot x$$
 
 ### What it rests on
 
-1 axiom reached, 0 of them named below, and 1 named facts in all.
+1 axiom reached, 0 of them named below, and 1 named fact in all.
 
 | what | where |
 |---|---|

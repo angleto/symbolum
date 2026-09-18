@@ -98,6 +98,64 @@ class EssaySpec extends AnyFlatSpec with Matchers {
     text should include("Congruence")
   }
 
+  // The counts on this page are what a reader is told a theorem costs, and until 2026-09-18 two of
+  // the three were written as a bare interpolation followed by a plural: the page said "1 steps"
+  // and "1 inferences". `Essay.count` already existed and already conditioned the plural; three of
+  // its four call sites simply did not use it.
+  //
+  // BOTH DIRECTIONS IN ONE TEST, which is the whole of why this is not two. A test written only on
+  // the singular passes on an `Essay` that has stopped saying the plural at all, and the repair
+  // being a shared helper makes exactly that mistake cheap: one wrong comparison turns every count
+  // on the page singular and a one-sided test calls it fixed.
+  it should "write the singular where the count is one and the plural where it is not" in {
+    // An asserted axiom is what the kernel holds in a single inference, so every one of the
+    // sixteen of the reals reads this way. `ADD_SYM` is the one the spec above already uses.
+    val single = page("ADD_SYM")
+    val singleSize = garden.xeno.symbolum.kernel.Derivation.size(library.named("ADD_SYM").head.theorem)
+
+    withClue("ADD_SYM is no longer held in one inference, so it cannot exercise the singular: ") {
+      singleSize shouldBe 1
+    }
+    single should include("1 inference.")
+    single should not include "1 inferences"
+
+    // The plural, on the same page and the same noun, so a helper that went singular everywhere
+    // fails here rather than passing.
+    val theorem = library.named(Magnitude.Triangle).head.theorem
+    val many = page(Magnitude.Triangle)
+    val manySize = garden.xeno.symbolum.kernel.Derivation.size(theorem)
+
+    withClue(s"$$Magnitude.Triangle is held in $manySize inference(s), so it cannot exercise the plural: ") {
+      manySize should be > 1
+    }
+    many should include(s"$manySize inferences.")
+  }
+
+  it should "condition the step count the same way, on both sides" in {
+    val scripts = chain.magnitude.scripts
+    val recorded = scripts(Magnitude.Triangle)
+
+    // The plural, from a real account.
+    withClue(s"$Magnitude.Triangle is ${recorded.size} step(s), so it cannot exercise the plural: ") {
+      recorded.size should be > 1
+    }
+    page(Magnitude.Triangle) should include(s"${recorded.size} steps, recorded")
+
+    // The singular, built rather than looked for, and that is the point rather than a convenience.
+    // Measured on 2026-09-18: of the 17 accounts this chain records, ZERO are one step long, so a
+    // test that went looking for one in the library would find nothing and quietly assert nothing.
+    // The page the card was opened against was a notebook's, where a session's own `derive` makes
+    // an account of exactly one step, and `Script` is a plain case class, so that shape is one
+    // `take` away.
+    val single = Script(recorded.steps.take(1))
+    val theorem = library.named(Magnitude.Triangle).head.theorem
+    val page_ = Essay.of(signature, library, Magnitude.Triangle, theorem, Some(single))
+
+    single.size shouldBe 1
+    page_ should include("1 step, recorded")
+    page_ should not include "1 steps"
+  }
+
   "The page for a theorem nobody recorded" should "say that, rather than showing nothing" in {
     // `ADD_SYM` is an axiom of the reals: it has a statement, a foundation and a cost, and no
     // account, and the page has to be readable as exactly that. A page that simply omitted the
