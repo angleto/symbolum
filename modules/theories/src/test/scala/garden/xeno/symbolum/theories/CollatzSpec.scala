@@ -87,6 +87,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     system.definitions.keySet shouldBe Set(
       Collatz.F, Collatz.T, Collatz.Head, Collatz.Tail,
       Collatz.Name, Collatz.Counted, Collatz.Potential, Collatz.Marked, Collatz.TailFree,
+      Collatz.HeadFree, Collatz.Anchored,
       Collatz.Zeros
     )
   }
@@ -226,6 +227,53 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     withClue(s"${system.show(closed.conclusion)}\n") {
       closed.conclusion shouldBe expected
     }
+  }
+
+  "The anchored words" should "be closed under a step, and the closure detached rather than admired" in {
+    // [[Collatz.MarkedClosed]]'s guard at the other marker, and it is needed for the same reason:
+    // a closure over an empty class is a theorem about nothing. `/0.` has its head marker where an
+    // anchored word has one, `B1` steps it, and what comes back is anchored.
+    //
+    // The two classes are what the potential argument is stated on together. Marked alone leaves
+    // the head marker free to sit anywhere in the word, and then a `B` rule fires at a digit that
+    // is not the first and `S2_PHI` falls across a step nothing counted: `0/0.` steps to `0/t.`.
+    val anchored = fact(Collatz.AnchoredInhabited)
+    val stepped = fact(Collatz.StepInhabited)
+
+    val subject = argumentOf(anchored.conclusion)
+    val result = argumentOf(stepped.conclusion)
+
+    val closed = rules
+      .conjIntro(anchored, stepped)
+      .flatMap(premise =>
+        rules
+          .specAll(fact(Collatz.AnchoredClosed), List(subject, result))
+          .flatMap(rules.mp(_, premise)))
+      .fold(error => fail(s"the closure does not apply: ${error.message}"), identity)
+
+    closed.hypotheses shouldBe empty
+
+    val predicate = headOf(anchored.conclusion)
+    val expected = Term
+      .app(predicate, result)
+      .fold(error => fail(s"the predicate does not apply: ${error.message}"), identity)
+
+    withClue(s"${system.show(closed.conclusion)}\n") {
+      closed.conclusion shouldBe expected
+    }
+  }
+
+  it should "be a class the two markers agree on, which is what the step witness shows" in {
+    // The witness is one word, `/0.`, and both classes hold of it: the head marker is its first
+    // letter and the tail marker is its last. A reader who took `S2_ANCHORED` for a restatement of
+    // `S2_MARKED` would find nothing here to correct them, so what says the two are different
+    // claims is that each refuses what the other takes. `/0` has no tail marker and `0.` has no
+    // head marker, and neither is a word this file had to build: they are the rule sides of `B1`
+    // and of `R2`, which the table already spells.
+    val anchoredWitness = argumentOf(fact(Collatz.AnchoredInhabited).conclusion)
+    val markedWitness = argumentOf(fact(Collatz.MarkedInhabited).conclusion)
+
+    anchoredWitness shouldBe markedWitness
   }
 
   private def argumentOf(term: Term): Term = term match {
