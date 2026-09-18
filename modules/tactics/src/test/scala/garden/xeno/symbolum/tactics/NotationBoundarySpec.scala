@@ -190,14 +190,24 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Number, "the value asked to be below the other, when it is not"),
     ("Digits.scala", "right") ->
       (Verdict.Number, "the value it was asked to be below"),
+    ("Prove.scala", "reals.show(computed.conclusion)") ->
+      (Verdict.Crossing,
+        "the equation the constant actually evaluates to, rendered where the refusal is raised; " +
+          "this prover's signature IS the one the goal was read in, so the notation is right, and " +
+          "it is on this list because the repair every crossing gets applies here too -- a refusal " +
+          "that carried the theorem would let the surface render it and would let a caller read the " +
+          "value as a term rather than out of a sentence"),
     ("Value.scala", "constant") ->
       (Verdict.Name, "the constant a caller asked for a value of"),
     ("Value.scala", "reachable.mkString(\", \")") ->
       (Verdict.Name, "the constants the table does have a row for, which is what the caller wanted"),
     ("Value.scala", "route.arity") ->
       (Verdict.Number, "how many arguments the constant takes"),
-    ("Value.scala", "arguments.size") ->
-      (Verdict.Number, "how many it was given"),
+    // `supplied` and not `arguments.size`, since 2026-09-18: the two refusals about a missing row
+    // and a wrong arity are written once now and reached from both callers, so the count arrives as
+    // a parameter. `given` would have been the natural name and is a reserved word in Scala 3.
+    ("Value.scala", "supplied") ->
+      (Verdict.Number, "how many arguments the constant was given"),
     ("Value.scala", "divisor") ->
       (Verdict.Number, "the value asked to divide the other"),
     ("Value.scala", "multiple") ->
