@@ -348,4 +348,52 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
 
     answer(Set(predicate), pattern, target) shouldBe None
   }
+
+  /* ------------------------------------------------- which condition a refusal met */
+
+  /**
+   * `Matching.why` is the half `None` cannot carry, and each case below is one of the four.
+   *
+   * What it is for is measuring this matcher: a caller looking at a tactic that did not fire cannot
+   * tell an ordinary miss from a question the fragment turned down, and until this landed the only
+   * way to tell was to instrument the file and run the suite. `docs/adr/0029` is the census taken
+   * that way, and these are the cases it counted, so the next one costs a call.
+   */
+  "A refused match" should "name the condition of the fragment it met" in {
+    val predicate = Term.variable("P", fn)
+
+    // Applied to something that is not a binder: `\x. P (f x)` against `\x. g x`.
+    val notABinder = lam(q, force(Term.app(predicate, force(Term.app(f, q)))))
+    Matching.why(Set(predicate), notABinder, lam(q, force(Term.app(g, q)))) shouldBe
+      Some(Matching.Refusal.ArgumentIsNotABinder)
+
+    // The target using a binder the variable was not applied to, which is the case above this.
+    val escaping = lam(q, lam(r, force(Term.app(predicate, q))))
+    Matching.why(Set(predicate), escaping, lam(q, lam(r, force(Term.app(f, r))))) shouldBe
+      Some(Matching.Refusal.TargetSeesAnotherBinder)
+  }
+
+  it should "call a first-order miss what it is, rather than a limit of the fragment" in {
+    // **The distinction the census turned on.** With no binder open, a pattern variable applied to
+    // anything is a first-order problem, and over the whole corpus that is where almost every
+    // refusal of this shape comes from: 4377 of 4627 on `tactics/test`, and 278 of 278 on the
+    // miniF2F corpus, measured 2026-09-18 and written down in `docs/adr/0029`. Reporting those as
+    // the fragment's boundary would have said the boundary is met thousands of times a run.
+    val binary = Term.variable("F", Type.fun(alpha, fn))
+    val pattern = force(Term.appAll(binary, List(p, q)))
+
+    Matching.why(Set(binary), pattern, force(Term.appAll(g, List(p)))) shouldBe
+      Some(Matching.Refusal.NoBinderInScope)
+  }
+
+  it should "answer nothing where the match succeeded, so a caller cannot read a limit into one" in {
+    // The control that keeps the three above from being a report on every call: a pair the
+    // fragment answers has no refusal to name, and neither has a pair that simply does not match
+    // for the ordinary reason.
+    val predicate = Term.variable("P", fn)
+    val pattern = lam(q, force(Term.app(predicate, q)))
+
+    Matching.why(Set(predicate), pattern, lam(q, force(Term.app(f, q)))) shouldBe None
+    Matching.why(Set(f), f, g) shouldBe None
+  }
 }

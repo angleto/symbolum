@@ -81,6 +81,32 @@ import garden.xeno.symbolum.kernel.*
 object Matching {
 
   /**
+   * Which condition of the decidable fragment a pair met and failed, as a value rather than a
+   * sentence, so that a caller counting them does not parse prose.
+   *
+   * Four, and they are not the same kind of limit. [[NoBinderInScope]] is not a higher-order
+   * question at all: with nothing bound, a pattern variable applied to anything is a first-order
+   * problem the walk already answers where it can, and a refusal there says only that these two
+   * terms do not match. The other three are the fragment's own boundary, and `docs/adr/0029`
+   * carries how often each is reached.
+   */
+  enum Refusal {
+
+    /** A pattern variable applied to something, with no binder open: first order, not this limit. */
+    case NoBinderInScope
+
+    /** A pattern variable applied to a term that is not one of the binders in scope. */
+    case ArgumentIsNotABinder
+
+    /** A pattern variable applied to the same binder twice, which has more than one answer. */
+    case BinderAppliedTwice
+
+    /** The target uses a binder the pattern variable was not applied to, so no answer of this shape. */
+    case TargetSeesAnotherBinder
+  }
+
+
+  /**
    * What a match decided: the terms the pattern's variables stand for, and the types its type
    * variables stand for.
    *
@@ -336,6 +362,87 @@ object Matching {
     }
 
     go(pattern, target, Nil, Instantiation.empty).filter(_.expressible)
+  }
+
+  /**
+   * Which condition of the fragment a refused match met, for a caller that has to explain one.
+   *
+   * [[matchTerm]] answers `None`, and `None` says nothing: a caller looking at a tactic that did
+   * not fire cannot tell an ordinary miss — this lemma is simply not about this goal — from a
+   * question the fragment was asked and had to turn down. That distinction is what anybody
+   * measuring this matcher needs, and until 2026-09-18 the only way to get it was to instrument
+   * the file and run the suite, which is how the figures in `docs/adr/0029` were taken.
+   *
+   * **It re-walks rather than being threaded through [[matchTerm]].** Threading a reason through
+   * the walk means every one of its answers carries one, and the walk answers `None` tens of
+   * millions of times in a suite: measured on 2026-09-18, one run of `tactics/test` reaches the
+   * higher-order fall-through **70 314 333** times, almost all of them the ordinary first-order
+   * miss. A reason built at each of those is a cost paid by everything to explain the few that
+   * anybody asks about. So this is a second pass, taken only when a caller asks, and it answers
+   * about the **first** place the fragment's conditions were met and failed.
+   *
+   * `None` here means the match was not refused by the fragment: either it succeeded, or it failed
+   * for the ordinary first-order reason, which is not a limit of this matcher but an answer about
+   * the two terms.
+   */
+  def why(variables: Set[FVar], pattern: Term, target: Term): Option[Refusal] =
+    if (matchTerm(variables, pattern, target).isDefined) None
+    else firstRefusal(variables, pattern, target, Nil)
+
+  /**
+   * The first condition of the Miller case this pair meets and fails, walking the same shape.
+   *
+   * The walk mirrors [[matchTerm]]'s: an application is decomposed first, because the first-order
+   * route is tried first there too and reaching the higher-order case at all means that route had
+   * no answer. What it does not mirror is the instantiation: nothing is bound here, so a pair that
+   * this reports on may also have failed for a reason further along.
+   */
+  private def firstRefusal(
+    variables: Set[FVar],
+    pattern: Term,
+    target: Term,
+    binders: List[FVar]
+  ): Option[Refusal] = pattern match {
+    case Abs(_, _) =>
+      target match {
+        case Abs(targetBinderType, _) =>
+          val binder = Term.variable(s"%${binders.length}", targetBinderType)
+          for {
+            patternBody <- open(pattern, binder)
+            targetBody <- open(target, binder)
+            found <- firstRefusal(variables, patternBody, targetBody, binder :: binders)
+          } yield found
+
+        case _ => None
+      }
+
+    case App(_, _) =>
+      val (head, arguments) = spine(pattern)
+
+      val here = head match {
+        case variable: FVar if variables.contains(variable) =>
+          val applied = arguments.collect { case argument: FVar if binders.contains(argument) => argument }
+
+          if (applied.length != arguments.length)
+            Some(if (binders.isEmpty) Refusal.NoBinderInScope else Refusal.ArgumentIsNotABinder)
+          else if (applied.distinct.length != applied.length) Some(Refusal.BinderAppliedTwice)
+          else {
+            val escaping = binders.filterNot(applied.toSet.contains)
+            if (escaping.exists(Term.occursFree(_, target))) Some(Refusal.TargetSeesAnotherBinder)
+            else None
+          }
+
+        case _ => None
+      }
+
+      here.orElse((pattern, target) match {
+        case (App(fn, argument), App(targetFn, targetArgument)) =>
+          firstRefusal(variables, fn, targetFn, binders)
+            .orElse(firstRefusal(variables, argument, targetArgument, binders))
+        case _ => None
+      })
+
+    case _ => None
   }
 
   /** The head of an application and its arguments, outermost first. */
