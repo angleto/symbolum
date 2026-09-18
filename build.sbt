@@ -1046,3 +1046,295 @@ lazy val dist = (project in file("modules/dist"))
     // reason `examples` and `mark` give for having none is the reason this module has none.
     coverageFailOnMinimum := false
   )
+
+// ---------------------------------------------------------------------------------------------
+// The gate that says `-Xfatal-warnings` REACHES the compiler, which is not what was checked before
+// ---------------------------------------------------------------------------------------------
+//
+// WHAT WAS THERE AND WHERE IT STOPPED. `LogicErrorSpec` read this file as text and asserted that
+// the string `-Xfatal-warnings` is in it. That is the flag being WRITTEN. The guard it stands for
+// -- an omitted case in a match over a closed set, which is a warning and nothing else -- needs the
+// flag to ARRIVE at the compiler, and this repository already holds a realised case of the two
+// coming apart: `sbt doc` takes none of these options (`Skipping unused scalacOptions: -Werror` in
+// its own log), the textual assertion passed throughout, and 57 unresolved scaladoc links were
+// reported as warnings under an exit 0. Scope is the cheapest of the three ways to lose the flag in
+// silence; the other two are a later `scalacOptions :=` where a `++=` was meant, and a plugin that
+// replaces the list.
+//
+// TWO CHECKS AND NOT ONE, because they see different failures.
+//
+// The first reads the EFFECTIVE options of every project of this build that holds sources, in
+// `Compile` and in `Test`, through sbt rather than through the file. It sees the late assignment,
+// the plugin and the scope, and it names the project that lost the flag. What it cannot see is a
+// task that takes the setting and drops the options on the way to the compiler, because it never
+// compiles anything.
+//
+// WHAT THE FIRST DELIBERATELY DOES NOT ASK, because the repair for getting it wrong is to loosen
+// the check. It reads `Compile` and `Test` and never `Doc`: the doc tool is not the compiler, says
+// so in its own log (`Skipping unused scalacOptions: -Werror`), and a filter that asked the `Doc`
+// configuration to carry the flag would be red on a correct tree. Unresolved documentation links
+// are covered by the `No DRI found` grep in `.github/workflows/ci.yml` instead, which is a
+// different instrument for a different question.
+//
+// And `Test` is read even though it delegates, which is not redundancy: measured on 2026-09-18 by
+// removing the flag from `theories / Compile / scalacOptions` alone, the check reported `theories
+// (Compile and Test)`, because a configuration delegates to its parent and `Test` extends
+// `Runtime` extends `Compile`. Reading both is what puts the loss in the axis a reader looks in.
+//
+// The second compiles a source that MUST produce a diagnostic, twice: once under this build's
+// options, where it must fail, and once under the same list with `-Xfatal-warnings` removed, where
+// it must succeed. That pair is the measurement, and both halves go through sbt's own `compile`
+// rather than a compiler invoked from here, so an option lost between the setting and zinc is
+// caught as well. A probe that failed for a reason of its own -- a typo, a missing name -- would
+// fail in both, and the control going red is what separates "the flag worked" from "the file is
+// broken". The control's options are DERIVED from the probe's by removing the one string, so the
+// claim that the two runs differ by exactly the flag is a property of the build rather than of two
+// lists somebody keeps in step.
+//
+// IT IS NOT A COMMAND SOMEBODY REMEMBERS TO TYPE, and that was the first draft of this: a gate that
+// runs when a person asks for it stops existing on the day nobody asks, which is the same failure
+// as the one above moved one step along. `Test / test` on the root depends on it, so it runs under
+// `tools/sbt test` and therefore in CI on every push to a release line and every pull request,
+// without a step or a runner minute of its own. `tools/sbt fatalWarnings` runs it alone, which is
+// what a person wants when it is the thing being worked on.
+//
+// SEEN FAILING, against this tree on 2026-09-18, because a guard observed only passing is untested.
+// The perturbations and what each one printed are in `tools/fatal-warnings-probe/README.md`,
+// including the one that matters most: the flag removed from a single module's `Compile` scope
+// while the string stays in this file, where `LogicErrorSpec` stays green and this goes red naming
+// the module. That is the defect class, reproduced rather than argued.
+lazy val fatalWarnings = taskKey[Unit](
+  "Assert that -Xfatal-warnings reaches the compiler: the effective options of every project " +
+    "holding sources, and a compilation that has to fail because of it."
+)
+
+// The option this whole section is about, in both its spellings, written once so that the check and
+// the derivation of the control's options cannot disagree about what is being removed.
+//
+// TWO SPELLINGS AND NOT ONE, measured on 2026-09-18 rather than taken from the documentation: the
+// 3.3.5 compiler run directly over a three-case enum matched at two cases exits 1 with `[E029]
+// Pattern Match Exhaustivity Error` and writes no class file under `-Xfatal-warnings` and under
+// `-Werror` alike, and exits 0 with the same diagnostic as a warning and seven class files under
+// neither. This build writes the first. The check accepts either, because a gate that goes red on
+// a rename is a gate somebody repairs by loosening it, and what it is asked to notice is the
+// option not arriving rather than the string not being the one it remembers.
+lazy val fatalWarningsFlags = Set("-Xfatal-warnings", "-Werror")
+
+// What the messages call it: the spelling this build actually carries, or the alternatives where it
+// carries none, which is exactly the case being reported.
+def fatalWarningsNamed(options: Seq[String]): String =
+  options.find(fatalWarningsFlags).getOrElse(fatalWarningsFlags.toSeq.sorted.mkString(" or "))
+
+// Every project of this build except the control, which is defined to lack the flag and would be
+// the one false answer.
+//
+// `inAnyProject` rather than a list of modules, and that direction is the point: the flag arrives
+// through `commonSettings`, so the defect a list cannot see is a project that never took them. A
+// project added to this build is inside the check until somebody excludes it deliberately. Which of
+// them must carry the flag is then decided by asking the disk whether the project has sources,
+// inside the task, so `root` and `modules/aggregate` fall out because they hold none rather than
+// because they are named.
+lazy val everyProjectButTheControl = ScopeFilter(inAnyProject -- inProjects(warningProbeControl))
+
+// Instrumentation, which the probe compilations are stripped of. Under `coverage` scoverage adds
+// `-Xplugin:` and a per-module `-P:scoverage:dataDir:`, and a probe compiled with those writes
+// coverage data about a source that is not part of any module into that module's measurement.
+// Whether a warning is fatal has nothing to do with an instrumentation plugin, so the two questions
+// are kept apart here rather than left to the order of two commands.
+def withoutInstrumentation(options: Seq[String]): Seq[String] =
+  options.filterNot(option => option.startsWith("-Xplugin") || option.startsWith("-P:"))
+
+// WHY THE TWO PROBE COMPILATIONS SAY NOTHING, which is a decision about other people's logs. The
+// gate rides `Test / test`, so its expected compiler error lands in the log of every full suite
+// run, and a healthy run emitting `[error]` lines breaks how a run is read here: three sessions
+// were reading `grep -cE '^\[error\]'` against zero on 2026-09-18, after a run reporting `827
+// succeeded, 0 failed` turned out to be a module that had not compiled with the modules under it
+// never started. Measured before this line existed, a green gate run emitted NINE `[error]` lines,
+// of which one named the probe's path and eight were echoed source, carets and `one error found`.
+// A marker to grep out would have had to be matched on eight lines carrying nothing to match.
+//
+// So both compilations log into a stream nobody reads, and what a reader gets is the one line this
+// gate prints at the end. Two consequences, the second being why this is written down: the warning
+// the control produces is swallowed too, and somebody debugging the probe sees nothing until they
+// run `tools/sbt warningProbe/compile`, which every red message below names.
+//
+// `sbt.internal` is reached into for it, knowingly. The supported key would be `compilerReporter`,
+// and sbt 1.10.10 does not have one: `javap sbt.Keys` lists `bspReporter` alone, typed to an
+// internal build-server class, and a `compilerReporter :=` fails to load the build. Between an
+// internal setting and a gate that makes a healthy log look unhealthy, this is the one that fails
+// visibly and at once on an sbt upgrade.
+//
+// And sbt's own lint has to be told, because it reads this as a setting nobody consumes: the
+// compile task takes its logger through `streams` rather than through another setting, so
+// `lintUnused` cannot see the edge. Measured on 2026-09-18, the line it prints is `there are 2
+// keys that are not used by any other settings/tasks`, naming both probe projects, on a run where
+// the silencing demonstrably worked -- zero `[error]` lines where there had been nine. A build
+// that warns about its own arrangement on every load is the thing this gate exists to prevent, one
+// level up.
+Global / excludeLintKeys += logManager
+
+lazy val quietly: sbt.internal.LogManager =
+  sbt.internal.LogManager.defaultManager(
+    sbt.internal.util.ConsoleOut.printStreamOut(
+      new java.io.PrintStream(new java.io.ByteArrayOutputStream)
+    )
+  )
+
+// The source that must not compile. See its own file for why it is a file rather than an assertion,
+// why it is outside `modules/`, and why the diagnostic it provokes is an inexhaustive match rather
+// than any warning that would have been easier to write.
+lazy val warningProbe = (project in file("tools/fatal-warnings-probe"))
+  .settings(commonSettings)
+  .settings(
+    // Not aggregated by the root, which is the only thing keeping `sbt compile` and `sbt test`
+    // green over a project that is supposed to fail: it is reached by `fatalWarnings` and by
+    // nothing else.
+    name := "symbolum-fatal-warnings-probe",
+    publish / skip := true,
+
+    // Measured rather than instrumented, in both senses: this project is no part of any module's
+    // coverage, and the options it compiles under are stripped of the plugin that would make it
+    // one.
+    coverageEnabled := false,
+    Compile / scalacOptions ~= withoutInstrumentation,
+    Compile / compile / logManager := quietly
+  )
+
+// The same source under the same options minus the one flag. Its base directory holds no sources of
+// its own -- only a target -- because what is being controlled for is the source being otherwise
+// well-formed, and a second copy of it would control for nothing.
+lazy val warningProbeControl = (project in file("tools/fatal-warnings-probe/control"))
+  .settings(commonSettings)
+  .settings(
+    name := "symbolum-fatal-warnings-probe-control",
+    publish / skip := true,
+    coverageEnabled := false,
+    Compile / unmanagedSourceDirectories :=
+      (warningProbe / Compile / unmanagedSourceDirectories).value,
+
+    // Derived, never written out: the control differs from the probe by this one string and by
+    // nothing a reader has to check.
+    //
+    // Set at the project level and not in `Compile`, which is not a detail of style. `Compile /
+    // scalacOptions` is defined here as an append on what the project level holds, so overriding
+    // the configuration would leave the project-level key defined and read by nobody, and sbt says
+    // so on every load: `there's a key that's not used by any other settings/tasks`. A warning
+    // printed by the build on the way to a gate about warnings is not a thing to leave lying
+    // around.
+    scalacOptions := (warningProbe / scalacOptions).value.filterNot(fatalWarningsFlags),
+    Compile / scalacOptions ~= withoutInstrumentation,
+    Compile / compile / logManager := quietly
+  )
+
+// The gate itself, on the root project.
+//
+// Every `.value` below is a dependency and runs before this body, which is why the compiler error
+// from the probe appears in the log ABOVE the line saying it was wanted. That ordering cannot be
+// changed from here and is why the messages say what they say.
+fatalWarnings := {
+  val log = streams.value.log
+
+  val names = thisProject.all(everyProjectButTheControl).value.map(_.id)
+  val bases = baseDirectory.all(everyProjectButTheControl).value
+  // `compile / scalacOptions` and not the bare key: the first is what the compile task reads and
+  // the second is what it delegates from, which is the exact distinction the doc-tool case turns
+  // on. Reading the more specific one catches a `Compile / compile / scalacOptions :=` that the
+  // other would delegate straight past.
+  val compileOptions = (Compile / compile / scalacOptions).all(everyProjectButTheControl).value
+  val testOptions = (Test / compile / scalacOptions).all(everyProjectButTheControl).value
+
+  // Which projects must carry it: the ones that hold sources. Asked of the disk rather than
+  // answered by a list, so `root` and `modules/aggregate`, which compile nothing, fall out by
+  // measurement.
+  val compiled = names.indices.filter { index =>
+    val base = bases(index)
+    (base / "src" / "main").isDirectory || (base / "src" / "test").isDirectory
+  }
+
+  // The reading that cannot be empty. A scope filter matching nothing, or a criterion matching
+  // nothing, hands back an empty list and every assertion over it holds: `sat` was aggregated by
+  // nobody for an hour and its sixteen tests read as green. Eight is below what this build reads
+  // today, which is twelve -- the eleven module directories that hold sources, `modules/aggregate`
+  // holding none, plus the probe -- and above anything a broken filter returns. A bound and not the
+  // figure itself, because a module is added here more often than the filter breaks.
+  if (compiled.size < 8)
+    throw new MessageOnlyException(
+      s"the filter read ${compiled.size} projects with sources out of ${names.size} " +
+        s"(${compiled.map(names).mkString(", ")}), which is too few for this build: the check " +
+        "below would pass over nothing. Repair the filter rather than the number."
+    )
+
+  val lost = compiled.flatMap { index =>
+    val missing = Seq(
+      if (compileOptions(index).exists(fatalWarningsFlags)) None else Some("Compile"),
+      if (testOptions(index).exists(fatalWarningsFlags)) None else Some("Test")
+    ).flatten
+    if (missing.isEmpty) None else Some(s"${names(index)} (${missing.mkString(" and ")})")
+  }
+
+  if (lost.nonEmpty)
+    throw new MessageOnlyException(
+      s"${fatalWarningsFlags.toSeq.sorted.mkString(" or ")} is not in the effective " +
+        s"scalacOptions of: ${lost.mkString(", ")}.\n" +
+        "The string may well still be in build.sbt: what this read is what sbt hands the " +
+        "compiler, which is the question. Look for a `scalacOptions :=` overriding the `++=` in " +
+        "commonSettings, for a project that never took commonSettings, or for a plugin that " +
+        "replaces the list."
+    )
+
+  val probeOptions = (warningProbe / Compile / scalacOptions).value
+  val controlOptions = (warningProbeControl / Compile / scalacOptions).value
+
+  if (!probeOptions.exists(fatalWarningsFlags))
+    throw new MessageOnlyException(
+      "the probe compiles without the option, in either spelling, so it controls for nothing."
+    )
+  if (probeOptions.filterNot(fatalWarningsFlags) != controlOptions)
+    throw new MessageOnlyException(
+      "the probe and its control differ by more than the flag, so a difference in outcome would " +
+        s"not be attributable to it.\n  probe:   ${probeOptions.mkString(" ")}\n  control: " +
+        controlOptions.mkString(" ")
+    )
+
+  val control = (warningProbeControl / Compile / compile).result.value
+  val probe = (warningProbe / Compile / compile).result.value
+
+  // The two outcomes are the measurement, and there is nothing else to read: the compilations
+  // logged into a stream nobody reads, so a red message here says where to look rather than
+  // quoting what it saw.
+  control match {
+    case sbt.Inc(_) =>
+      throw new MessageOnlyException(
+        "the probe does NOT compile even with the option removed, so it is broken rather than " +
+          "warning. Run `tools/sbt warningProbeControl/compile` to see its errors and repair " +
+          "tools/fatal-warnings-probe/src/main/scala; until it compiles cleanly there, the other " +
+          "half of this check establishes nothing."
+      )
+    case sbt.Value(_) => ()
+  }
+
+  probe match {
+    case sbt.Value(_) =>
+      throw new MessageOnlyException(
+        s"the probe COMPILED under this build's options, and one of two things is true. Either " +
+          s"${fatalWarningsNamed(probeOptions)} is not reaching the compiler although the " +
+          "effective options carry it, which is what this gate is for; or the probe has stopped " +
+          "provoking a diagnostic at all, which is what somebody completing the match in " +
+          "tools/fatal-warnings-probe would do. `tools/sbt warningProbe/compile` is the same " +
+          "compilation with its log restored and tells the two apart in one line."
+      )
+    case sbt.Inc(_) => ()
+  }
+
+  // The one line this gate prints when it passes. It is the whole of its output, which is the
+  // point: a suite run that says nothing else here is a suite run whose warnings are still fatal.
+  log.info(
+    s"${fatalWarningsNamed(probeOptions)} reaches ${compiled.size} projects, and the compilation " +
+      "that had to fail did, quietly."
+  )
+}
+
+// What makes it a gate rather than a command. `sbt test` is what CI runs and what a person runs, so
+// this is where a check that must not be forgotten belongs; the root is the right project for it
+// because what is being checked is a property of the build rather than of any one module.
+Test / test := (Test / test).dependsOn(fatalWarnings).value

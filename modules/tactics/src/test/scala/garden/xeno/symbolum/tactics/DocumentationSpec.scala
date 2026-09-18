@@ -637,8 +637,15 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val skipped = Comments
       .codeLines(build)
       .count(_.code.contains("publish / skip := true"))
-    withClue("`root`, `examples`, `mark`, `dist` and `scan` are the five that do not publish: ") {
-      skipped shouldBe 5
+    withClue(
+      "`root`, `examples`, `mark`, `dist`, `scan` and the two fatal-warnings probes are the " +
+        "seven that do not publish: "
+    ) {
+      // Seven since 2026-09-18, when the two probe projects landed: a source that must not compile
+      // and the control that compiles the same source without `-Xfatal-warnings`. Neither is a
+      // module of this system, the root aggregates neither, and publishing a project whose
+      // compilation is expected to fail would be publishing a build error under a coordinate.
+      skipped shouldBe 7
     }
   }
 
