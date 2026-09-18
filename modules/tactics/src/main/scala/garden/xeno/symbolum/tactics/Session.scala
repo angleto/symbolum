@@ -266,6 +266,22 @@ object Session {
     case Report(text: String)
 
     /**
+     * A **page** for the reader, in markdown, which is what `show` produces and nothing else does.
+     *
+     * Kept apart from [[Report]] because the two are different things to whoever is displaying
+     * them, and collapsing them is what card 07a0d66b is about: a terminal prints both as they
+     * stand, and a browser page prints a report as it stands and **renders** a page, which is why
+     * the one command whose purpose is to be read was the only output on the page that was not
+     * typeset. `Ask` and `Find` write lines; `Essay` writes a document with headings, a table, code
+     * blocks and formulas in it.
+     *
+     * The markdown is carried rather than the HTML, and that is deliberate: `Essay` has one form
+     * and this enum does not ask it for a second, so nothing here can disagree with the document a
+     * generator writes. The display decides how to show it, which is where that decision belongs.
+     */
+    case Page(markdown: String)
+
+    /**
      * Nothing happened, this is why, and this is the next step where there is one.
      *
      * The second field is `Remedy`, asked where the refusal is still a value rather than a
@@ -313,6 +329,10 @@ object Session {
           val statement = current.legible(theorem.conclusion).getOrElse(current.show(theorem.conclusion))
           s"    $name  |- $statement"
         case Outcome.Report(text) => text.linesIterator.map("    " + _).mkString("\n")
+
+        // A terminal has no renderer and markdown was written to be readable without one, which is
+        // the whole reason `Essay` produces it: here the two cases are the same thing.
+        case Outcome.Page(markdown) => markdown.linesIterator.map("    " + _).mkString("\n")
         case Outcome.Refused(reason, next) =>
           (s"    refused: $reason" +: next.map(step => s"    try: $step").toVector).mkString("\n")
       }
@@ -383,7 +403,7 @@ object Session {
       case Command.Derive(name, step) => deriving(state, name, step)
       case Command.Ask(claim) => (report(Ask.of(state, cost, claim)), state)
       case Command.Find(query) => (report(Find.of(state, library, query)), state)
-      case Command.Show(name) => (report(showing(state, name)), state)
+      case Command.Show(name) => (Outcome.Page(showing(state, name)), state)
       case Command.Unreadable(line) => (Outcome.Refused(s"not a command: $line", None), state)
     }
 

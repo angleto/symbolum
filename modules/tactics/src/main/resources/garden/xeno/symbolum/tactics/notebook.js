@@ -2,10 +2,20 @@ const cells = document.getElementById('cells');
 const line = document.getElementById('line');
 const entry = document.getElementById('entry');
 const trouble = document.getElementById('trouble');
+/*
+ * Every element the server marked, in the mode its element says.
+ *
+ * The selector was `.printed[data-tex]` until 2026-09-18, which was every formula there was: a
+ * theorem, set as a block. A rendered `show` page has both, the statement as a block and the
+ * sequent of each derivation step inside the line that describes it, so the mode is read off the
+ * element rather than fixed here: `.printed` is a block and `.tex` is not. Rendering an inline
+ * sequent in display mode puts a line break in the middle of a sentence.
+ */
 function typeset(){
   if (!window.katex) return;
-  for (const el of cells.querySelectorAll('.printed[data-tex]')) {
-    try { katex.render(el.dataset.tex, el, {displayMode:true, throwOnError:false}); }
+  for (const el of cells.querySelectorAll('[data-tex]')) {
+    const block = el.classList.contains('printed');
+    try { katex.render(el.dataset.tex, el, {displayMode:block, throwOnError:false}); }
     catch (e) { /* leave the source showing, which is what the element already holds */ }
   }
 }

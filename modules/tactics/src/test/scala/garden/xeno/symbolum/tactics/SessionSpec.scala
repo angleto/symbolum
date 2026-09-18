@@ -553,10 +553,12 @@ class SessionSpec extends AnyFlatSpec with Matchers {
       }
     }
 
-    // `show` of a name the library does not hold answers rather than refusing, because `Essay`
-    // reports the absence as its page. The distinction is worth pinning: asking about a lemma that
-    // is not there is a question that was put, not a line that did not read.
-    session.entries(4).outcome shouldBe a[Session.Outcome.Report]
+    // `show` of a name nothing holds answers rather than refusing, because the absence is the
+    // answer to a question that was put, not a line that did not read. The distinction is worth
+    // pinning. Since 2026-09-18 what it answers with is an `Outcome.Page` rather than a `Report`,
+    // which is card 07a0d66b: a document and a line of text are different things to whoever is
+    // showing them.
+    session.entries(4).outcome shouldBe a[Session.Outcome.Page]
   }
 
   /* ---------------------------------------------------------- the session as a reader sees it */
@@ -608,31 +610,40 @@ class SessionSpec extends AnyFlatSpec with Matchers {
   "The reading commands" should "answer without touching the theory" in {
     val session = fresh.runAll(Vector("ask !x:real. x + 0 = x", "find ABS_TRIANGLE", "show ABS_TRIANGLE"))
 
-    session.entries.foreach { entry =>
-      withClue(s"${Session.Command.write(entry.command)}: ") {
-        entry.outcome shouldBe a[Session.Outcome.Report]
-      }
+    // Two of the three report and the third pages, which is the split card 07a0d66b made: what they
+    // have in common, and what this test is about, is that none of them changes the theory. The
+    // outcome each one produces is asserted by kind rather than by "not a refusal", so a command
+    // that started refusing would fail here rather than passing on a weaker claim.
+    val answered = session.entries.map(_.outcome).collect {
+      case Session.Outcome.Report(text) => text
+      case Session.Outcome.Page(markdown) => markdown
     }
+
+    answered should have size 3
     session.state.theory.axioms shouldBe fresh.state.theory.axioms
     session.state.theory.constants shouldBe fresh.state.theory.constants
     session.state.named shouldBe empty
 
-    val texts = session.entries.map(_.outcome).collect { case Session.Outcome.Report(text) => text }
-    texts(1) should include("ABS_TRIANGLE")
-    texts(2) should include("## What on this page is checked")
+    answered(1) should include("ABS_TRIANGLE")
+    answered(2) should include("## What on this page is checked")
+
+    // And the page is the third one rather than any of them: `ask` and `find` write lines.
+    session.entries.map(_.outcome).count(_.isInstanceOf[Session.Outcome.Page]) shouldBe 1
+    session.entries.last.outcome shouldBe a[Session.Outcome.Page]
   }
 
   /* ------------------------------------------------- `show` over what the session holds */
 
   /**
-   * What a reading command answered, or the failure that says it did not answer at all.
+   * What `show` answered, or the failure that says it did not answer at all.
    *
-   * `show` reports rather than refusing even when it finds nothing, which the test above pins, so
+   * `show` answers rather than refusing even when it finds nothing, which the test above pins, so
    * a page and a "nothing holds this name" arrive the same way and this helper is about neither.
+   * Both are an `Outcome.Page`, which is what `show` produces and what nothing else does.
    */
   private def reported(entry: Session.Entry): String = entry.outcome match {
-    case Session.Outcome.Report(text) => text
-    case other => fail(s"expected a report, got $other")
+    case Session.Outcome.Page(markdown) => markdown
+    case other => fail(s"expected a page, got $other")
   }
 
   "show" should "reach a fact this session derived, and name what that fact rests on" in {

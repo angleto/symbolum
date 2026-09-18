@@ -352,6 +352,7 @@ object Notebook {
       case Session.Outcome.Extended(what) => s"""<div class="extended">${escape(what)}</div>"""
       case Session.Outcome.Proved(name, theorem) => proved(session, entry, name, theorem)
       case Session.Outcome.Report(text) => s"""<pre class="report">${escape(text)}</pre>"""
+      case Session.Outcome.Page(markdown) => s"""<div class="page">${page(markdown)}</div>"""
       case Session.Outcome.Refused(reason, next) =>
         s"""<div class="refused">${escape(reason)}""" +
           next.map(step => s"""<div class="next">try: ${escape(step)}</div>""").getOrElse("") +
@@ -397,6 +398,164 @@ object Notebook {
     s"""<div class="proved"><span class="name">${escape(name)}</span>$printed""" +
       s"""<div class="legible">|- ${escape(legible)}</div>$assumptions</div>"""
   }
+
+  /**
+   * `Essay`'s page, in the page's own language, which is the whole of card 07a0d66b.
+   *
+   * What a `show` cell produced until 2026-09-18 was markdown printed literally into a `<pre>`:
+   * `# ADD_ZERO`, a `$$…$$` line, a fenced block and a markdown table, all as source. Two screens
+   * above it, in the same page, a `prove` cell typeset the same formula, because the page runs
+   * KaTeX over every `[data-tex]` it finds. So the typesetter was loaded and working and the one
+   * output written **to be read** was the only one not using it.
+   *
+   * == Which of the three routes this is, and what the other two cost ==
+   *
+   * The card lists three and says none is obvious. A markdown renderer **in the page** is another
+   * asset from a CDN or half a megabyte of somebody else's minified JavaScript vendored into a tree
+   * whose argument is that what it asks you to believe is small and readable; [[render]]'s own
+   * comment already refuses that trade for KaTeX, and this would be the second time. Having `show`
+   * **not** call `Essay` at all and print what the other cells print is the smallest change and
+   * loses the derivation, what the theorem rests on and what it cost, which is the part a reader
+   * opens a page for.
+   *
+   * This is the third: the markdown is rendered **here**, on the server, where everything else this
+   * repository renders is rendered, and the page gains no dependency. What it costs is this
+   * function, and the honest limit is that it is not a markdown implementation: it reads the
+   * constructs `Essay` emits and nothing else. `NotebookSpec` is what keeps that from rotting, by
+   * rendering a **real** page and failing on any line that came out as source.
+   *
+   * Formulas are handed to KaTeX the way [[proved]] hands it one, in a `data-tex` attribute with
+   * the source as the element's text, so a page where the script never loaded still shows the
+   * formula rather than an empty box. That decision and its reason are one floor up and are not
+   * repeated here.
+   */
+  private[tactics] def page(markdown: String): String = {
+    val lines = markdown.split("\n", -1).toVector
+
+    def render(rest: Vector[String], out: Vector[String]): Vector[String] = rest.headOption match {
+      case None => out
+
+      case Some(line) if line.trim.startsWith("```") =>
+        val body = rest.tail.takeWhile(!_.trim.startsWith("```"))
+        val after = rest.tail.drop(body.size + 1)
+        render(after, out :+ s"""<pre class="legible">${escape(body.mkString("\n"))}</pre>""")
+
+      case Some(line) if line.trim.startsWith("$$") && line.trim.endsWith("$$") && line.trim.length > 4 =>
+        val source = line.trim.drop(2).dropRight(2)
+        render(rest.tail, out :+ tex("printed", "div", escape(source)))
+
+      case Some(line) if line.startsWith("## ") =>
+        render(rest.tail, out :+ s"""<h4 class="section">${phrase(line.drop(3))}</h4>""")
+
+      case Some(line) if line.startsWith("# ") =>
+        render(rest.tail, out :+ s"""<h3 class="title">${phrase(line.drop(2))}</h3>""")
+
+      case Some(line) if line.startsWith("|") =>
+        val rows = rest.takeWhile(_.startsWith("|"))
+        render(rest.drop(rows.size), out :+ table(rows))
+
+      // A numbered step, with whatever it carries indented under it, which for a derivation is the
+      // sequent. **Not an `ol`**, and that is a fact about `Script` rather than a preference: the
+      // number on a line is the step's own, `Script.Line.number`, and an account that cites a step
+      // it shares with another derivation does not start at one and is not contiguous. A list that
+      // renumbers would print a number that resolves to a different line than the one the text
+      // beside it cites.
+      case Some(line) if line.matches("""\d+\. .*""") =>
+        val steps = rest.takeWhile(current => current.matches("""\d+\. .*""") || current.startsWith(" "))
+        val written = steps
+          .foldLeft(Vector.empty[Vector[String]]) { (held, current) =>
+            if (current.startsWith(" ") && held.nonEmpty) held.init :+ (held.last :+ current.trim)
+            else held :+ Vector(current)
+          }
+          .map(item => s"""<div class="step">${phrase(item.mkString(" "))}</div>""")
+
+        render(rest.drop(steps.size), out :+ written.mkString)
+
+      // A list, with the continuation of an item under it. `Essay` wraps a long item onto an
+      // indented line, and reading only the first line puts the rest of the sentence in a paragraph
+      // of its own **after** the list: "the second form was read back" as an item, "and gave the
+      // same term" as the next paragraph. That is the same defect as a derivation printed as one
+      // run-on paragraph, in the other direction.
+      case Some(line) if line.startsWith("- ") =>
+        val items = rest.takeWhile(current => current.startsWith("- ") || current.startsWith(" "))
+        val written = items
+          .foldLeft(Vector.empty[Vector[String]]) { (held, current) =>
+            if (current.startsWith(" ") && held.nonEmpty) held.init :+ (held.last :+ current.trim)
+            else held :+ Vector(current.drop(2))
+          }
+          .map(item => s"<li>${phrase(item.mkString(" "))}</li>")
+
+        render(rest.drop(items.size), out :+ s"<ul>${written.mkString}</ul>")
+
+      case Some(line) if line.trim.isEmpty => render(rest.tail, out)
+
+      case Some(_) =>
+        val block = rest.takeWhile(current =>
+          current.trim.nonEmpty && !current.startsWith("#") && !current.startsWith("|") &&
+            !current.trim.startsWith("```") && !current.startsWith("- ") &&
+            !current.matches("""\d+\. .*""")
+        )
+        render(rest.drop(block.size), out :+ s"<p>${phrase(block.mkString(" "))}</p>")
+    }
+
+    render(lines, Vector.empty).mkString
+  }
+
+  /**
+   * A markdown table, with the separator row dropped and the first row read as the heading.
+   *
+   * The separator is what says a table is a table in this dialect, so a run of rows without one is
+   * still rendered as a table rather than refused: what `Essay` writes always has it, and a reader
+   * shown a row is better served than a reader shown a pipe.
+   */
+  private def table(rows: Vector[String]): String = {
+    def cells(row: String): Vector[String] =
+      row.split("\\|", -1).toVector.drop(1).dropRight(1).map(_.trim)
+
+    val body = rows.filterNot(row => cells(row).forall(cell => cell.nonEmpty && cell.forall(c => c == '-' || c == ':')))
+    val head = body.headOption.map(row => cells(row).map(cell => s"<th>${phrase(cell)}</th>").mkString)
+    val rest = body.drop(1).map(row => s"<tr>${cells(row).map(cell => s"<td>${phrase(cell)}</td>").mkString}</tr>")
+
+    s"""<table class="page-table">${head.map(cells => s"<tr>$cells</tr>").getOrElse("")}${rest.mkString}</table>"""
+  }
+
+  /**
+   * The phrase-level constructs, applied to text that is escaped first.
+   *
+   * Escaping first and marking up afterwards is the order that cannot produce a tag out of a
+   * reader's text: everything `<`, `>`, `&` and `"` is already gone when the first replacement
+   * runs, and the replacements insert tags of this file's own writing.
+   *
+   * The emphasis pair is read before the single, because `**` contains `*` and reading it the
+   * other way turns bold into an italic asterisk.
+   */
+  private def phrase(text: String): String = {
+    val marked = escape(text)
+      .replaceAll("""\*\*([^*]+)\*\*""", "<strong>$1</strong>")
+      .replaceAll("""(?<![*\w])\*([^*]+)\*(?![*\w])""", "<em>$1</em>")
+      .replaceAll("""`([^`]+)`""", "<code>$1</code>")
+
+    // **Split rather than a regular expression, and the reason is a backslash.** A formula's source
+    // is `\vdash \mathrm{good}(1)`, and `Regex.replaceAllIn` hands what the replacer returns to
+    // `Matcher.appendReplacement`, where a backslash and a dollar are syntax: every source here
+    // would have to be quoted, and forgetting it is a crash on the one page this exists to render.
+    // Splitting on the delimiter has nothing to quote.
+    val pieces = marked.split("\\$", -1).toVector
+
+    pieces.zipWithIndex
+      .map { case (piece, at) => if (at % 2 == 1) tex("tex", "span", piece) else piece }
+      .mkString
+  }
+
+  /**
+   * A formula for KaTeX, with the source as the text so a page without the script still shows it.
+   *
+   * The element is a `span` where the formula sits in a line and a `div` where it is the line, and
+   * that is not decoration: a `div` inside a `p` closes the paragraph in every browser's parser,
+   * so inline mathematics written as a block is a page whose layout collapses at the first formula.
+   */
+  private def tex(kind: String, element: String, source: String): String =
+    s"""<$element class="$kind" data-tex="$source">$source</$element>"""
 
   private def escape(text: String): String =
     text
