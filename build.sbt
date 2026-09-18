@@ -627,11 +627,23 @@ lazy val sat = (project in file("modules/sat"))
     // 437 statements on 2026-09-16 at `fb3f45a`: 25 statements is 5.72 points here, so the rule the
     // section above fixes would set 86.96, which is below 92.0. The floor was set by the older
     // rule, a point under the measurement, and a point is 4.4 statements on this module. So what
-    // stands here is the **tightest gate in the build, at three statements of margin**, and it got
-    // tighter rather than looser: 92.99 over 428 on 2026-09-15 to 92.68 over 437 today. Leaving it
-    // is the ratchet working as written; changing it means lowering a floor, which is a decision
+    // stands here is a gate at **two statements of margin**, and it got tighter rather than looser:
+    // 92.99 over 428 on 2026-09-15 to 92.68 over 437 today. Leaving it is the ratchet working as
+    // written; changing it means lowering a floor, which is a decision
     // for a person and not one to take while passing. **Put and decided on 2026-09-16: it stays.**
-    // So this module runs on three statements of margin deliberately, and the next reading that
+    //
+    // **This note called itself the tightest gate in the build until 2026-09-18, and the note above
+    // the project list had already said it was not.** That note records `scan` taking the title at
+    // one statement, and a file that names a superlative in two places will disagree with itself
+    // the first time the holder changes: the general note was updated and the module's own was not.
+    // So this one no longer claims a rank. Where the rank is, is one place, up there.
+    //
+    // The margin was written as three and is two, which is the same reading taken twice in
+    // different units. 92.68 - 92.0 is 0.68 points and 0.68 points of 437 statements is 2.96, which
+    // rounds to three. What a reader wants is how many may be LOST, and that is an integer taken
+    // downwards: lose two and it reads 92.22 and passes, lose three and it reads 91.99 and does
+    // not. Measured off the `scoverage.xml` of CI run 35194000022 at `6554615`, 405 of 437.
+    // So this module runs on two statements of margin deliberately, and the next reading that
     // finds the gate tight here is looking at a decision rather than at an oversight. What would
     // reopen it is the gate failing on a change that is not a regression, which is the thing the
     // margin exists to prevent and which has not happened here yet.

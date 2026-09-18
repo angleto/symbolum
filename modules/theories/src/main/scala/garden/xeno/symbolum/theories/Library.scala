@@ -29,6 +29,20 @@ import garden.xeno.symbolum.logic.*
  */
 final class Library private (val entries: Vector[Library.Entry]) {
 
+  /**
+   * These entries, then another library's, which is what a caller holding facts of its own needs.
+   *
+   * The order is the whole of it: every question this class answers by name takes the **first**
+   * entry, so what is in front shadows what is behind. A session that proved a lemma of its own
+   * under a name the chain also holds means the one the reader just watched appear, and the
+   * library under it is what they get when the session holds nothing of that name.
+   *
+   * Nothing is merged and nothing is deduplicated: an entry carries the development it came from,
+   * so two facts of one name from two places are two rows a reader can tell apart, which is the
+   * only presentation that does not decide something on their behalf.
+   */
+  def ++(behind: Library): Library = new Library(entries ++ behind.entries)
+
   /** Every name, sorted, which is what a listing is. */
   def names: Vector[String] = entries.map(_.name).sorted
 
