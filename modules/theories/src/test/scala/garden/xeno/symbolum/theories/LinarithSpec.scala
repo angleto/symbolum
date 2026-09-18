@@ -439,6 +439,38 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     Region.largest(closed, form("x:real")) shouldBe Farkas.Extreme.Infeasible
   }
 
+  "A goal with no hypotheses at all" should "be settled by completing its own square" in {
+    // The acceptance criterion of Mycelium card `bacfaba5`, and the two statements are
+    // `algebra_sqineq_at2malt1` and `mathd_algebra_113` of miniF2F, which `docs/adr/0029` names as
+    // the two the corpus was waiting on. Both are one square of a linear form and NEITHER HAS A
+    // HYPOTHESIS, which is why no degree of products ever reached them: the fact pool is built from
+    // the hypotheses, and an empty pool has no products at any degree. `docs/adr/0032` is the
+    // record, and `Linarith.squares` is what it decided.
+    linarith.prove("!a:real. a * (2 - a) <= 1").isRight shouldBe true
+    linarith.prove("!x:real. x * x - 14 * x + 3 >= 7 * 7 - 14 * 7 + 3").isRight shouldBe true
+  }
+
+  it should "still refuse those same statements made false, which is what the square is not" in {
+    // The control the assertion above needs and would pass without. A source that manufactured
+    // facts carelessly would prove these too, and a reader shown only the two successes cannot
+    // tell a procedure that completed a square from one that stopped checking. Both are the
+    // statements above moved by one, so the only difference is the truth.
+    linarith.prove("!a:real. a * (2 - a) <= 0").isLeft shouldBe true
+    linarith.prove("!x:real. x * x + 1 <= 0").isLeft shouldBe true
+  }
+
+  it should "cost no axiom the reals do not already carry" in {
+    // What the square is worth depends on it being free: `Order.SQUARE_NONNEG` is derived, so a
+    // goal settled through it rests on the reals and on nothing else. Asserted as a subset of the
+    // theory's own axioms rather than as a count, because a count moves when the library does and
+    // says nothing about WHICH.
+    val theorem = linarith
+      .prove("!a:real. a * (2 - a) <= 1")
+      .fold(error => fail(error.message), identity)
+
+    Derivation.axiomsOf(theorem).subsetOf(reals.theory.axioms.toSet) shouldBe true
+  }
+
   "The theory" should "still assert only its sixteen axioms" in {
     reals.theory.axioms.length shouldBe Real.Axioms.length
   }
