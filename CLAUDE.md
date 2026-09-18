@@ -122,9 +122,35 @@ own: it holds nothing and waits for nothing, and its own header says so.
   123 warnings and 138 occurrences over 48 files in all, 116 qualified and 22 put in backticks. So a
   red build here says at least one link is broken and never how many.
 
-  What it does **not** see is a link that resolves to the **wrong** thing. `[[Undecided]]` written
-  in a file where some other `Undecided` is in scope is a working link to the wrong page, and
-  nothing in this repository asks that question.
+  **A link that resolves to the wrong thing is a second question, and since 2026-09-18 it has an
+  answer rather than a watcher.** `[[Undecided]]` written in a file where some other `Undecided` is
+  in scope is a working link to the wrong page, and this repository has four entities by that name;
+  the grep above emits nothing, because the link resolved. `tools/scaladoc-scope.sh` reads the
+  generated HTML instead of the log, where the `href` **is** the address scaladoc chose, and it
+  runs in the same `build` job on documentation already on disk, so it costs no runner minutes of
+  its own. `tools/scaladoc-scope-test.sh` checks the classification against pages built for the
+  purpose, in the `shell-tools` job.
+
+  **What it found is that the class is empty because scaladoc cannot produce it.** At `423c12f`:
+  912 unqualified queries on 550 pages, 656 into the writer's own entity, 25 into a member it
+  inherits, 231 into a top-level entity of the module, **none** anywhere else. A query resolves in
+  the lexical and inheritance scope of the entity writing it and consults **no import**, measured
+  twice on `sat/Resolution.scala`, whose `Cnf.Problem` is in scope for the compiler: `[[Problem]]`
+  came back `No DRI found` under `import Cnf.*` and again under an explicit `import Cnf.Problem`.
+  So an unqualified query lands in its writer's scope or fails loudly, and the failure is the gate
+  above. What the script is therefore **for** is pinning that argument: it goes red if a scaladoc
+  resolves differently or a module grows a second package repeating a top-level name.
+
+  Two things it does not reach, and the first is where the defect that is left lives. **Intent**: a
+  query whose writer's own scope holds the name, meant by its author as another entity's, is
+  correct by every rule here and lands on the wrong page, and so is a **qualified** query naming
+  the wrong path. And scaladoc publishes neither private members nor links into them, so 912 of
+  this repository's 1528 unqualified sites are all it reads. The census over the sources was the
+  alternative and is not what landed: it calls 217 sites suspect, on the criterion that their own
+  module declares the name more than once, and reading them shows what that counts, since
+  `[[normalisation]]` in `Arithmetic` resolves to `Arithmetic.normalisation` and is flagged because
+  `Polynomial` and `Semiring` have one too.
+
 - **A console with the algebra loaded:** `tools/sbt core/console`
 - **Asking the prover one thing, without writing Scala:**
   `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole

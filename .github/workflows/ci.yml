@@ -205,6 +205,13 @@ jobs:
       - name: sbt, the wrapper every command in CLAUDE.md starts at
         run: sh tools/sbt-test.sh
 
+      # The subject of this one reads build output, which exists on a machine that has just run a
+      # doc build and on no runner that has not. So the classification is checked here against
+      # pages written for the purpose, every run, and pointed at the real documentation in the
+      # `build` job, which is the only place that documentation exists.
+      - name: scaladoc-scope, one page per answer it can give
+        run: sh tools/scaladoc-scope-test.sh
+
   # Not `needs: test`, and not a gate. What it reports is somebody else's unlanded work, so a
   # blocking check on it stops the wrong person, and making it wait for the suite would delay a
   # warning that has nothing to do with whether this commit is sound.
@@ -269,10 +276,13 @@ jobs:
       # over 48 files in all. A red build here therefore says at least one link is broken, never
       # how many.
       #
-      # It cannot see a link that resolves to the WRONG thing, which is the failure this leaves
-      # standing: `[[Undecided]]` written in a file where some other `Undecided` is in scope is a
-      # working link to the wrong page, and nothing here or anywhere else in this repository asks
-      # that question.
+      # It cannot see a link that resolves to the WRONG thing: `[[Undecided]]` written where some
+      # other `Undecided` is in scope is a working link to the wrong page, and this repository has
+      # four entities by that name. The step after this one put that question to the generated
+      # HTML on 2026-09-18 and the answer was that the class is EMPTY for an unqualified query,
+      # because scaladoc resolves one only in its writer's own scope and consults no import. So
+      # that step is not coverage of this gap; it is what keeps that argument from going stale, and
+      # what is left of the gap after it is in `tools/scaladoc-scope.sh`'s own header.
       #
       # SEEN FAILING, 2026-09-18, because a guard observed only passing is untested. Control first,
       # and it had to be run twice: the first was `sbt doc` on a tree where the task was cached, 9
@@ -311,6 +321,32 @@ jobs:
             grep -B 3 'No DRI found' doc.log
             exit 1
           fi
+
+      # The second question over the output of the step above, and it costs no runner minutes of
+      # its own for the same reason: the documentation is already built and on disk. The grep above
+      # asks whether a link resolved; this asks what it points at.
+      #
+      # WHAT IT IS A GATE ON, which is not what it looks like. Measured at `423c12f` on 2026-09-18,
+      # macOS, Temurin 23, scaladoc 3.3.5, over a `sbt clean doc` of eleven modules: 912 unqualified
+      # queries on 550 pages, 656 into the writer's own entity, 25 into a member it inherits, 231
+      # into a top-level entity of the module, and ZERO anywhere else. Zero by construction rather
+      # than by luck: scaladoc resolves a query in the lexical and inheritance scope of the entity
+      # writing it and consults no import, so a name reachable to the compiler and not to that
+      # scope comes back as `No DRI found` and is caught by the step above instead. Both halves of
+      # that were run rather than reasoned, with a wildcard import and then an explicit one; the
+      # script's header has them.
+      #
+      # So this does not hunt for bad links in the prose, it pins the assumption that argument
+      # rests on. It goes red when a scaladoc changes its resolution rules or a module grows a
+      # second package repeating a top-level name, and either of those means the measurement has
+      # to be taken again rather than a link qualified.
+      #
+      # A separate step rather than more of the one above because the two fail for different
+      # reasons: a red grep says a name reaches nothing and wants the link rewritten or put in
+      # backticks; a red scope check says the argument behind this whole arrangement has stopped
+      # holding. One step reporting both would make a reader decode which.
+      - name: Every unqualified link resolves inside the entity that writes it
+        run: sh tools/scaladoc-scope.sh
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
