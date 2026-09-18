@@ -759,13 +759,58 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
   "The guide's table of order facts" should "name exactly the facts the order holds" in {
     // The same guard as the axiom table below, for the same reason: a fact added to `Order` and
     // not written down is a fact nobody outside this repository can find.
-    val guide = read("docs/proving.md")
-    val names = Order.standard.facts.keys.toVector.sorted
+    //
+    // **It read the whole document and one direction until 2026-09-18, and both halves of that let
+    // a defect through.** Measured that day rather than reasoned about: with `LE_MUL_BOTH` and
+    // `INV_ANTITONE` added to `Order`, the table left untouched, and the two names written into a
+    // PROSE paragraph three screens away, the old assertion passed. What a reader of this guide
+    // looks at is the table, so a name satisfying the guard from a sentence somewhere else is the
+    // guard being satisfied by something that is not the thing. **Both observations are runs and
+    // not readings**: the old assertion was seen passing with the rows gone and the prose present,
+    // and this one was seen failing on the same document, naming `LE_MUL_BOTH` as in the order and
+    // not in the table.
+    //
+    // So the population is the table's rows, and the check is both directions. The second is not
+    // symmetric decoration: a row naming a fact that has been deleted is a reader sent to look for
+    // something that is gone, which this repository calls worse than a gap.
+    //
+    // **What it still does not cover**, said rather than left to be assumed: it reads each row for
+    // the NAME and not for the statement beside it, so a row whose statement has drifted from the
+    // lemma passes here. `OrderSpec` is what reads the statements, by printing each one and
+    // comparing the text, and the two halves live in different modules because the statements are
+    // `theories`' to print and the table is a document this module can read.
+    // The table and not every table: this document holds a second one, of the classical facts, whose
+    // rows have the same shape. The population is the run of rows that follows the sentence
+    // introducing this one, so the scan is anchored to the prose rather than to a line number.
+    val opening = "Each is proved, and `OrderSpec` prints every one of them:"
+    val lines = read("docs/proving.md").linesIterator.toVector
+    val at = lines.indexWhere(_.contains(opening))
+    withClue(s"docs/proving.md no longer holds the sentence `$opening`: ") { at should be >= 0 }
 
-    val quoted = names.filter(guide.contains)
-    withClue(s"missing from docs/proving.md: ${names.diff(quoted).mkString(", ")}\n") {
-      quoted shouldBe names
+    val row = """^\| `([A-Z_]+)` \|""".r
+    val tabled = lines
+      .drop(at)
+      .dropWhile(line => !line.startsWith("|"))
+      .takeWhile(_.startsWith("|"))
+      .flatMap(line => row.findFirstMatchIn(line).map(_.group(1)))
+      .toSet
+    val held = Order.standard.facts.keySet
+
+    withClue(s"in the order and not in the guide's table: ${(held -- tabled).toVector.sorted.mkString(", ")}\n") {
+      (held -- tabled) shouldBe empty
     }
+    withClue(s"in the guide's table and not in the order: ${(tabled -- held).toVector.sorted.mkString(", ")}\n") {
+      (tabled -- held) shouldBe empty
+    }
+
+    // What would make both assertions above pass without reading anything, which is the question
+    // `RestsOnSpec` asks of a guard of this shape: a pattern that matched no row leaves both
+    // differences empty and reports no defect. The floor is what the table held when this was
+    // written and can only rise.
+    withClue(s"the row pattern matched ${tabled.size} row(s), which is too few to be the table: ") {
+      tabled.size should be >= 25
+    }
+    info(s"${tabled.size} order facts, in the guide's table and in `Order.standard` alike")
   }
 
   "The guide's hand proof" should "reach the theorem it claims" in {

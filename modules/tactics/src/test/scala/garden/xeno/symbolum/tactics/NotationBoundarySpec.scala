@@ -206,6 +206,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Value.scala", "right") -> (Verdict.Number, "the right argument of one"),
     ("Value.scala", "answer") -> (Verdict.Number, "the greatest common divisor it is a combination for"),
     ("Value.scala", "bound") -> (Verdict.Number, "how many multipliers were tried before giving up"),
+    ("Value.scala", "numerator") ->
+      (Verdict.Number, "the numerator of the rational a floor was asked about"),
+    ("Value.scala", "denominator") ->
+      (Verdict.Number, "its denominator, which has to be positive"),
     ("Divisibility.scala", "parts._1") ->
       (Verdict.Crossing, "the antecedent of an implication an assembly had to match"),
     ("Field.scala", "reals.show(denominator)") ->

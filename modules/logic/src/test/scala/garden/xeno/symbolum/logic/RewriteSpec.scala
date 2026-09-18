@@ -507,6 +507,14 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "theorem about a half-lifted term, because every step of the chain is an equation the " +
         "kernel built. The computations themselves go through `Rewrite.prove`, which asks the " +
         "question this list is about on the caller's behalf"),
+    "Value.scala" ->
+      ("one call, and what it rewrites is `real_of_num` over a numeral of `num` with the four " +
+        "lemmas that carry the embedding through the bit encoding. The equation it returns is not " +
+        "read as a normal form: it is handed to `Rules.mp` as the premise of a goal whose text the " +
+        "caller wrote, so a rewriting that stopped short produces a theorem that is not the " +
+        "premise and the detachment refuses. It cannot produce a wrong value, because the value is " +
+        "what the two characterisations and the trichotomy settle and this equation only lets " +
+        "`Linarith` read an atom as a number"),
     "Matrix.scala" ->
       ("four calls, and none of them reads what comes back as a normal form on trust. Two require " +
         "it to be `MAT2` applied to four terms and refuse by naming the term they stopped at, so " +

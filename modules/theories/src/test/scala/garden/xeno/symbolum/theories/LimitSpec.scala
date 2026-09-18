@@ -195,9 +195,12 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * The bound two is not an accident of the choice of a half: `SUM_GEOMETRIC` at `q` gives
    * `(q - 1) * S n = q^n - 1`, so at `q = 1/2` the partial sum is `2 - 2 * (1/2)^n` and the power
    * is positive, which is a linear consequence over the two atoms and inside `Linarith`'s fragment.
-   * A symbolic `q` would want `S n <= inv (1 - q)` and that is a different lemma: nothing here
-   * relates an inverse to an order, `Order.INV_POSITIVE` being the only fact about `inv` in this
-   * chain, so the general geometric series is **not** reachable today and this instance is.
+   * A symbolic `q` would want `S n <= inv (1 - q)`, and that was out of reach while `INV_POSITIVE`
+   * was the only fact about `inv` in this chain. `Order.INV_ANTITONE` landed on 2026-09-18 and
+   * **does** relate an inverse to an order, so the sentence that used to stand here is corrected
+   * rather than kept: what the general series still wants is a bound on `1 - q` that this
+   * instance's numerals make trivial and a symbolic ratio does not. The instance below is
+   * unchanged, and is what it always was.
    *
    * **The lower bound asserted is zero rather than two, and that is honest rather than weak.** The
    * limit is two, and saying so wants `(1/2)^n` to reach zero, which is the Archimedean property

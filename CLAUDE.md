@@ -438,7 +438,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 503 lemmas, 328 have two or more leading quantifiers and **300 of
+caller meant: of the library's 505 lemmas, 330 have two or more leading quantifiers and **302 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1165,10 +1165,14 @@ bound the terms respect from an index on rather than everywhere, and that is the
 usefulness: the lower bound worth having on an increasing sequence is one of its own terms, which
 is false below that term's index.
 
-So `exp 1 > 2` is **still** statable and unproved, and the reason is no longer the comparison test.
-What is missing is the dominating series: putting `1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!`,
-which no development holds, and then an order fact about a quotient, of which this chain has exactly
-one, `INV_POSITIVE`. `sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept
+So `exp 1 > 2` is **still** statable and unproved, and the reason is no longer the comparison test,
+nor, since 2026-09-18, the order fact. What is missing is one half of the dominating series: putting
+`1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!`, which no development holds and whose induction
+step is valid only from one upwards, so it is a two-base induction and not an instance. The other
+half was an order fact about a quotient, of which this chain had exactly one, `INV_POSITIVE`;
+`INV_ANTITONE` is the second, the reciprocal reversing the order on the positives, with
+`LE_MUL_BOTH` under it. **That sentence was written in five places and went stale in all five at
+once**, which is the defect this file names about counts arriving at a fact written twice. `sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept
 the first sentence wrong for a day is a tool with no consumer, so there is one now: `LimitSpec`
 obtains the geometric series at one half and sandwiches its limit between zero and two, which is the
 first series here whose convergence is a theorem rather than a hypothesis.

@@ -346,7 +346,7 @@ final class Prove private (
    * runs one search twice.
    *
    * **What it buys, measured on two populations that answer different questions.** Over the
-   * library of `Chain.standard`: of 503 statements 184 take this address and **two** carry a
+   * library of `Chain.standard`: of 505 statements 184 take this address and **two** carry a
    * negation, both of them `Classical`'s own, the excluded middle and double negation, which are
    * classical by construction and refused here. Over the Mathlib ring corpus and the statable slice
    * of miniF2F, **none** takes this address at all. So nothing this repository already proves or

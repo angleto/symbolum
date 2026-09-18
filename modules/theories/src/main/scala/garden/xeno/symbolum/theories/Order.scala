@@ -125,6 +125,12 @@ final class Order private (val ring: Ring, val facts: Map[String, Kernel.Thm]) {
   /** `|- !x y z w. x <= y ==> z <= w ==> x + z <= y + w` */
   def addLe: Either[LogicError, Kernel.Thm] = fact(Order.AddLe)
 
+  /** `|- !c x y. 0 <= c ==> x <= y ==> x * c <= y * c` */
+  def multiplyLe: Either[LogicError, Kernel.Thm] = fact(Order.MultiplyLe)
+
+  /** `|- !x y. 0 < x ==> x <= y ==> inv y <= inv x` */
+  def inverseAntitone: Either[LogicError, Kernel.Thm] = fact(Order.InverseAntitone)
+
   /**
    * `|- 0 < n`, for a numeral above zero.
    *
@@ -285,6 +291,40 @@ object Order {
    */
   val AddLe: String = "ADD_LE"
 
+  /**
+   * `|- !c x y. 0 <= c ==> x <= y ==> x * c <= y * c`.
+   *
+   * [[MultiplyBoth]] at the other relation, and the pair is not symmetric in what it costs: the
+   * strict one is `LT_MUL` with the difference moved to zero, and this one cannot be, because a
+   * product of non-negatives is not a case of a product of positives. It goes through
+   * [[MultiplyNonNegatives]] instead, which is the lemma that already paid for that case analysis.
+   *
+   * **It was missing rather than unwanted**, and `Limit`'s own docstring named the gap from the
+   * consumer's side before this existed: an order fact about a quotient is what the geometric
+   * series wants at a symbolic ratio, and the only fact about `inv` in this chain was
+   * [[InversePositive]]. This is half of what that needs and [[InverseAntitone]] is the other half.
+   */
+  val MultiplyLe: String = "LE_MUL_BOTH"
+
+  /**
+   * `|- !x y. 0 < x ==> x <= y ==> inv y <= inv x`.
+   *
+   * Taking the reciprocal reverses the order, on the positives. The hypothesis is on the **smaller**
+   * one, which is what makes it usable: a caller holding `x <= y` and the positivity of the smaller
+   * gets the positivity of the larger for free inside, and asking for both would be asking for
+   * something the caller has to derive first.
+   *
+   * The derivation is the textbook one and every step of it is an order fact this file already
+   * holds: multiply `x <= y` by `inv x * inv y`, which is non-negative because both factors are
+   * positive, and read each side back through `MUL_INVERSE`. What it costs beyond the order is that
+   * one axiom, and `~(x = 0)` from [[NonZero]] to spend it.
+   *
+   * **It is stated with `inv` and not with `/`**, because `/` is a definitional abbreviation and a
+   * lemma about it would be a lemma about `\x y. x * inv y` unfolded at one shape. A caller with a
+   * quotient unfolds the definition, which is what every other consumer of `inv` here does.
+   */
+  val InverseAntitone: String = "INV_ANTITONE"
+
   private val real: Type = TyApp(Real.TypeName, Nil)
   private val relation: Type = Type.fun(real, Type.fun(real, Type.Bool))
   private val binary: Type = Type.fun(real, Type.fun(real, real))
@@ -332,6 +372,8 @@ object Order {
       antisymmetry <- antisymmetric(reals, cases)
       square <- squareNonNegative(ring, ofLt, ofEq)
       sumOfBounds <- addLe(ring, weakToZero, weakFromZero, addBoth)
+      timesLe <- multiplyLe(ring, weakToZero, weakFromZero, timesNonNegatives)
+      inverseReverses <- inverseAntitone(ring, notZero, inverse, cases, ofLt, timesLe)
     } yield new Order(
       ring,
       Map(
@@ -357,7 +399,9 @@ object Order {
         LeFromZero -> weakFromZero,
         Antisymmetric -> antisymmetry,
         SquareNonNegative -> square,
-        AddLe -> sumOfBounds
+        AddLe -> sumOfBounds,
+        MultiplyLe -> timesLe,
+        InverseAntitone -> inverseReverses
       )
     )
   }
@@ -1290,6 +1334,161 @@ object Order {
       innerDischarged <- rules.disch(second, result)
       outerDischarged <- rules.disch(first, innerDischarged)
       general <- rules.genAll(outerDischarged, List(x, y, z, w))
+    } yield general
+  }
+
+  /* --------------------------------------------------- multiplying an inequality */
+
+  /**
+   * `|- !c x y. 0 <= c ==> x <= y ==> x * c <= y * c`.
+   *
+   * The same three moves [[addLe]] makes and it is worth reading beside it: carry the inequality to
+   * a statement about a difference, do the arithmetic there, and carry it back. What differs is the
+   * middle step, which is [[multiplyNonNegatives]] rather than [[addNonNegatives]] and is the one
+   * line that could not have been written before that lemma existed.
+   *
+   * The ring identity is `(y - x) * c = y * c - x * c`, which is distribution over a subtraction
+   * and is inside what RING decides, so no case analysis appears here at all: the whole of the case
+   * analysis this lemma needs was paid once, in the lemma it calls.
+   */
+  def multiplyLe(
+    ring: Ring,
+    weakToZero: Kernel.Thm,
+    weakFromZero: Kernel.Thm,
+    multiplyNonNegatives: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val rules = reals.logic.rules
+    val c = Term.variable("c", real)
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      nonNegative <- reals.proposition("0 <= c:real")
+      nonNegativeAssumed <- LogicError.lift(Kernel.assume(nonNegative))
+      ordered <- reals.proposition("x:real <= y:real")
+      orderedAssumed <- LogicError.lift(Kernel.assume(ordered))
+
+      gap <- rules.specAll(weakToZero, List(x, y)).flatMap(rules.mp(_, orderedAssumed))
+      difference <- reals.term("y:real - x:real")
+      scaled <- rules
+        .specAll(multiplyNonNegatives, List(difference, c))
+        .flatMap(rules.mp(_, gap))
+        .flatMap(rules.mp(_, nonNegativeAssumed))
+
+      distributed <- ring.prove("(y:real - x:real) * c:real = y * c - x * c")
+      onGoal <- Conv.rewriteRight(scaled, distributed)
+
+      left <- reals.term("x:real * c:real")
+      right <- reals.term("y:real * c:real")
+      result <- rules.specAll(weakFromZero, List(left, right)).flatMap(rules.mp(_, onGoal))
+
+      innerDischarged <- rules.disch(ordered, result)
+      outerDischarged <- rules.disch(nonNegative, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(c, x, y))
+    } yield general
+  }
+
+  /* --------------------------------------------------------- the reciprocal */
+
+  /**
+   * `|- !x y. 0 < x ==> x <= y ==> inv y <= inv x`.
+   *
+   * Multiply the hypothesis by `inv x * inv y` and read both sides back through `MUL_INVERSE`. The
+   * factor is non-negative because both of its factors are positive, and the second of those is
+   * where the work is: `0 < y` does not come with the hypothesis and has to be derived from
+   * `0 < x` and `x <= y`.
+   *
+   * **That derivation is a case split and not a transitivity step**, which is the thing to know
+   * before reading it. `LT_TRANSITIVE` is an axiom and takes two *strict* inequalities; what is in
+   * hand is one strict and one weak, so [[leCases]] opens the weak one into "strictly below" or
+   * "equal", the first branch is the axiom and the second rewrites `0 < x` with `x = y`. This
+   * repository has no `LT_LE_TRANSITIVE`, and adding one would be the same three lines under a
+   * name.
+   *
+   * The two reads back are ring identities in three atoms, `x`, `inv x` and `inv y`, with
+   * `x * inv x` replaced by `1`. RING treats `inv x` as an atom, which is exactly what makes this
+   * work: nothing here asks the normal form to know anything about inverses, and the one fact about
+   * them that is used arrives as a rewrite from `MUL_INVERSE`.
+   */
+  def inverseAntitone(
+    ring: Ring,
+    notZero: Kernel.Thm,
+    inversePositive: Kernel.Thm,
+    cases: Kernel.Thm,
+    ofLt: Kernel.Thm,
+    multiplyLe: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val reals = ring.reals
+    val logic = reals.logic
+    val rules = logic.rules
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    for {
+      positive <- reals.proposition("0 < x:real")
+      positiveAssumed <- LogicError.lift(Kernel.assume(positive))
+      ordered <- reals.proposition("x:real <= y:real")
+      orderedAssumed <- LogicError.lift(Kernel.assume(ordered))
+
+      // `0 < y`, by cases on the weak inequality: the axiom, or a rewrite.
+      opened <- rules.specAll(cases, List(x, y)).flatMap(rules.mp(_, orderedAssumed))
+      strictly <- reals.proposition("x:real < y:real")
+      strictlyAssumed <- LogicError.lift(Kernel.assume(strictly))
+      zero <- reals.term("0:real")
+      transitive <- reals.axiom("LT_TRANSITIVE")
+      fromStrict <- rules
+        .conjIntro(positiveAssumed, strictlyAssumed)
+        .flatMap(pair => rules.specAll(transitive, List(zero, x, y)).flatMap(rules.mp(_, pair)))
+      equally <- reals.proposition("x:real = y:real")
+      equallyAssumed <- LogicError.lift(Kernel.assume(equally))
+      fromEqual <- Rewrite.Rule
+        .all(logic, Vector(equallyAssumed))
+        .flatMap(Rewrite.inTheorem(_, positiveAssumed))
+      positiveRight <- rules.disjElim(opened, fromStrict, fromEqual)
+
+      // The factor, and that it is at least zero.
+      leftInverse <- reals.term("inv (x:real)")
+      rightInverse <- reals.term("inv (y:real)")
+      inverseLeft <- rules.spec(x, inversePositive).flatMap(rules.mp(_, positiveAssumed))
+      inverseRight <- rules.spec(y, inversePositive).flatMap(rules.mp(_, positiveRight))
+      product <- reals.term("inv (x:real) * inv (y:real)")
+      strictFactor <- rules
+        .conjIntro(inverseLeft, inverseRight)
+        .flatMap(pair =>
+          reals
+            .axiom("LT_MUL")
+            .flatMap(rules.specAll(_, List(leftInverse, rightInverse)))
+            .flatMap(rules.mp(_, pair))
+        )
+      factor <- rules.specAll(ofLt, List(zero, product)).flatMap(rules.mp(_, strictFactor))
+
+      // The hypothesis, scaled.
+      scaled <- rules
+        .specAll(multiplyLe, List(product, x, y))
+        .flatMap(rules.mp(_, factor))
+        .flatMap(rules.mp(_, orderedAssumed))
+
+      // And each side read back, `x * inv x` and `y * inv y` both being one.
+      inverseAxiom <- reals.axiom("MUL_INVERSE")
+      leftNotZero <- rules.spec(x, notZero).flatMap(rules.mp(_, positiveAssumed))
+      rightNotZero <- rules.spec(y, notZero).flatMap(rules.mp(_, positiveRight))
+      leftIsOne <- rules.spec(x, inverseAxiom).flatMap(rules.mp(_, leftNotZero))
+      rightIsOne <- rules.spec(y, inverseAxiom).flatMap(rules.mp(_, rightNotZero))
+
+      leftShape <- ring.prove("x:real * (inv (x:real) * inv (y:real)) = (x * inv x) * inv y")
+      rightShape <- ring.prove("y:real * (inv (x:real) * inv (y:real)) = (y * inv y) * inv x")
+      reshaped <- Conv.rewriteSides(leftShape, rightShape, scaled)
+      substituted <- Rewrite.Rule
+        .all(logic, Vector(leftIsOne, rightIsOne))
+        .flatMap(Rewrite.inTheorem(_, reshaped))
+      absorbLeft <- ring.prove("1 * inv (y:real) = inv y")
+      absorbRight <- ring.prove("1 * inv (x:real) = inv x")
+      result <- Conv.rewriteSides(absorbLeft, absorbRight, substituted)
+
+      innerDischarged <- rules.disch(ordered, result)
+      outerDischarged <- rules.disch(positive, innerDischarged)
+      general <- rules.genAll(outerDischarged, List(x, y))
     } yield general
   }
 

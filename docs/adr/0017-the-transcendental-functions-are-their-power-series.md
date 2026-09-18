@@ -70,8 +70,10 @@ came with its first consumer, since a test that hands back `?l. converges (Sum f
 about where that limit is. Not one of the four statements above moved. What this record predicted,
 by putting them in that order, is that the comparison test is what `exp 1 > 2` waits on; what it
 waits on is a **dominating series for the exponential**, which wants `2^i <= 2 * i!`, held by no
-development here, and an order fact about a quotient, of which this chain holds one,
-`Order.INV_POSITIVE`. The geometric series at one half wants neither and is obtained in `LimitSpec`
+development here, and an order fact about a quotient. The second half of that was `Order.INV_POSITIVE`
+alone and is not any more: `INV_ANTITONE` landed on 2026-09-18 and is corrected here in place rather
+than left to be believed, which is what this record already did once with its own prediction two
+sentences up. The geometric series at one half wants neither and is obtained in `LimitSpec`
 with its limit between zero and two, which is the first series in this repository whose convergence
 is a theorem.
 
