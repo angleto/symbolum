@@ -1912,12 +1912,16 @@ to an irredundant set**, dropping each in turn and deciding again, because detac
 would make `Derivation.axiomsOf` report every axiom asserted and destroy the accounting; and it
 detaches, quantifies again and reports.
 
-Three answers and not two. A claim that does not follow comes back as a `Countermodel` naming the
-assignment, which refutes it **as a schema over uninterpreted atoms** and never says the claim is
-false. A claim reaching a constant of the foundation rather than of the domain — arithmetic, an
-order, a numeral — comes back `Refused` naming the constant, because an atom with no meaning is not
-an approximation of *at most three attempts*, and composing this with `Linarith` is a different
-piece of work. `DomainTheorySpec` runs all three.
+Four answers and not one with a flag on it. A claim that does not follow comes back as a
+`Countermodel` naming the assignment, which refutes it **as a schema over uninterpreted atoms** and
+never says the claim is false. A claim reaching a constant of the foundation rather than of the
+domain — arithmetic, an order, a numeral — comes back `Refused` naming the constant, because an atom
+with no meaning is not an approximation of *at most three attempts*, and composing this with
+`Linarith` is a different piece of work. And a claim settled only after the free route ran out of
+net comes back `CutShort` rather than `Settled`: the theorem and the price are the same, and what is
+added is that the `SELECT` may be the search's rather than the claim's, which `docs/adr/0026`
+decides and `DomainTheorySpec` measures at the chain length where it happens.
+`DomainTheorySpec` runs all four.
 
 ### A whole argument on one page
 

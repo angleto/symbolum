@@ -569,4 +569,157 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     Derivation.size(derived) should be > 0
     Derivation.size(derivedByTactic) should be > 0
   }
+
+  /* --------------------------------------- the net under the free route, and what reaching it costs */
+
+  private val ticket = TyApp("ticket", Nil)
+
+  /**
+   * A domain of `links` axioms whose claim walks every one of them, and the claim.
+   *
+   * One axiom per link, one binder each, and the claim names one subject of that binder's type, so
+   * the specialised instances are exactly `links`: the family grows along the axis
+   * [[Domain.Instances]] bounds and along no other. `conjuncts` is how many atoms stand in an
+   * axiom's antecedent, which is what makes a link cost the search more than one step without
+   * making the claim any harder to believe: every member of the family is a chain of modus ponens
+   * and is intuitionistically valid at every size.
+   */
+  private def escalation(links: Int, conjuncts: Int): (Domain.Built, String) = {
+    val stages = (0 to links).map(index => s"Stage$index" -> Type.fun(ticket, Type.Bool)).toVector
+    val guards = (1 until conjuncts).map(index => s"Guard$index" -> Type.fun(ticket, Type.Bool)).toVector
+    val guarded = (1 until conjuncts).map(index => s" /\\ Guard$index t").mkString
+    val rule = Domain(
+      name = "the escalation rule",
+      typeOperators = Vector("ticket" -> 0),
+      constants = stages ++ guards,
+      axioms = (0 until links)
+        .map(index => s"Stage${index}Escalates" -> s"!t:ticket. Stage$index t$guarded ==> Stage${index + 1} t")
+        .toVector
+    )
+
+    (
+      force(Domain.build(foundation, classical.notation, rule)),
+      s"!t:ticket. Stage0 t$guarded ==> Stage$links t"
+    )
+  }
+
+  private def settleEscalation(links: Int, conjuncts: Int): Domain.Verdict =
+    escalation(links, conjuncts) match { case (built, claim) => built.settle(classical, claim) }
+
+  /**
+   * Whether a claim of this size reached the net, by the one answer that says the search stopped.
+   *
+   * The criterion, written here rather than left to the reader: a claim REACHES the net when
+   * `settle` answers [[Domain.Verdict.CutShort]], which is the verdict carrying the calculus's
+   * `BoundReached` and the only refusal that means "I stopped" rather than "it is not so". Reading
+   * it off `Spending.foundational` instead would count a claim that genuinely needs classical logic
+   * as a claim that ran out of net, which is the collapse this whole card is about.
+   */
+  private def cutShortAt(links: Int, conjuncts: Int): Boolean =
+    settleEscalation(links, conjuncts) match {
+      case Domain.Verdict.CutShort(_, _, _) => true
+      case _ => false
+    }
+
+  /** How many atoms stand in the antecedent of the family this file measures on. */
+  private val Atoms: Int = 4
+
+  /**
+   * The least chain length at which the free route is lost, at an [[Atoms]]-atom antecedent.
+   *
+   * Binary search, and the pair of assertions at the edge is what says it landed on a real one.
+   * The figure is found rather than written down, because it is a property of the calculus's rules
+   * and would move for reasons that are not defects; what the assertions below are about is the
+   * relation between it and [[Domain.Instances]], which is the claim.
+   *
+   * **Four atoms rather than two, and the reason is the first measurement's own weakness.** At two
+   * the free route is lost at exactly sixty-four links, which is [[Domain.Instances]] to the link:
+   * a reading at the boundary supports "reachable inside the bound" on one point, and a small
+   * change in the calculus's rules would move it to the other side and take the finding with it.
+   * Measured the same day at three, four and five atoms, the third and the fourth agree: still free
+   * at twenty-four links and cut short at thirty-two, which is half the bound. So the family here
+   * is the one with margin, and what the width buys is nothing about the claim's difficulty —
+   * every member of every one of these families is a chain of modus ponens.
+   */
+  private lazy val lostAt: Int = {
+    var low = 2
+    var high = Domain.Instances
+    while (low < high) {
+      val middle = low + (high - low) / 2
+      if (cutShortAt(middle, Atoms)) high = middle else low = middle + 1
+    }
+    low
+  }
+
+  "The net under the free route" should "be reachable by a claim this method accepts" in {
+    // Mycelium card `0b9ce0ca`, step one: measure before building. `Domain.close` asks the
+    // intuitionistic calculus first and falls to the classical decision when it refuses, and until
+    // 2026-09-18 the two ways of refusing were one `None`. Whether that is worth a report at all
+    // depends on whether anything reaches the net, and the figure this file used to rest on is
+    // `PropositionalRouteSpec`'s: the deepest of 1114 enumerated formulas needs 7 of the 256. That
+    // population is formulas of at most six nodes, and what this method builds is an implication
+    // chain one link per specialised instance, so the figure does not travel to it.
+    //
+    // It is reachable, and inside this method's own bound rather than at it: the claim is a chain
+    // of modus ponens and is intuitionistically valid at every length, so the whole difference
+    // between the case that is free and the case that is not is size.
+    cutShortAt(lostAt, Atoms) shouldBe true
+    lostAt should be < Domain.Instances
+
+    // The edge, and the positive control the count needs: one link short of it the same family
+    // comes back settled and free, so the instrument is reading the size rather than reporting
+    // every large claim as truncated.
+    settleEscalation(lostAt - 1, Atoms) match {
+      case Domain.Verdict.Settled(theorem, spending) =>
+        spending.foundational shouldBe empty
+        theorem.hypotheses shouldBe empty
+      case other => fail(s"one link short of the net the free route must still answer: $other")
+    }
+
+    // And the same length with a one-atom antecedent, which is still free: what costs the search is
+    // the weight of what it takes apart and not the number of axioms on its own, so a bound on the
+    // instance count is not a bound on the net. This is the row that stops the finding from being
+    // read as "a domain of this many axioms cannot be settled for free".
+    cutShortAt(lostAt, 1) shouldBe false
+
+    info(
+      s"the free route is lost at $lostAt links of an antecedent of $Atoms atoms, against " +
+        s"${Domain.Instances} instances allowed, and holds at $lostAt links of one atom"
+    )
+  }
+
+  it should "come back saying it was cut short, rather than as a price the claim asked for" in {
+    // The repair, read from the outside. The theorem is real and the `SELECT` was really spent; what
+    // the verdict adds is that the free route was truncated rather than decided against, which is
+    // the difference between "this claim needs choice" and "this search ran out of net". Nothing in
+    // the answer said which before 2026-09-18.
+    settleEscalation(lostAt, Atoms) match {
+      case Domain.Verdict.CutShort(theorem, spending, why) =>
+        theorem.hypotheses shouldBe empty
+        spending.ofTheDomain should not be empty
+
+        // The price is the classical route's, named rather than described: this is what a reader of
+        // the accounting would otherwise have taken for the claim's own cost.
+        spending.foundational shouldBe Set(force(classical.axiom(Classical.Choice)).conclusion)
+
+        // The calculus's own refusal, verbatim, naming the search that stopped. Rewritten here it
+        // would be this file inventing a sentence about somebody else's bound.
+        why should include(Intuitionistic.SearchName)
+
+      case other => fail(s"a claim whose free route ran out of net must say so: $other")
+    }
+  }
+
+  it should "not be what a claim that genuinely needs classical logic comes back as" in {
+    // The separation the card is about, from the other side, and the assertion that keeps the one
+    // above from being "anything that costs SELECT is reported truncated". The excluded middle over
+    // a domain atom is refused by the calculus because it is **not so** intuitionistically, not
+    // because anything stopped: it is settled, it costs choice, and it is not cut short.
+    built.settle(classical, "!r:change. Ships r \\/ ~(Ships r)") match {
+      case Domain.Verdict.Settled(_, spending) =>
+        spending.foundational shouldBe Set(force(classical.axiom(Classical.Choice)).conclusion)
+        spending.ofTheDomain shouldBe empty
+      case other => fail(s"a classically valid claim is settled at its own price: $other")
+    }
+  }
 }

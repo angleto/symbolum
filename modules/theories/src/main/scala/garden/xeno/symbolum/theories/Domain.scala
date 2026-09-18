@@ -436,24 +436,31 @@ object Domain {
      * classically survive where the full set was intuitionistic, and the report would then name the
      * choice axiom because the search shrank the assumptions, which is a worse trade made silently.
      *
-     * == The net under the first of the two, which this cannot currently tell from a decision ==
+     * == The net under the first of the two, and why it is reported rather than hidden ==
      *
-     * `intuitionistically` reads its answer through `toOption`, so a refusal because
-     * `Intuitionistic.Fuel` ran out and a refusal because the claim is not intuitionistically valid
-     * are the same `None` here, and both fall through to `classically` at the choice axiom. That is
-     * Mycelium card `2e85b5d4`, whose subject is the same shape at `Prove`'s propositional address;
-     * this is its second site and the card named only the first.
+     * `Intuitionistic.Fuel` is a net under a termination argument rather than the argument, so the
+     * calculus has two ways to refuse: `BoundReached`, carrying `Standing.Exhausted`, which means
+     * **I stopped**, and everything else, which means **it is not so**. Until 2026-09-18 both were
+     * read through `toOption` and both fell through to `classically` at the choice axiom, so a
+     * claim whose free route was cut short came back at a price the logic never asked for, with
+     * nothing in the answer saying which of the two had happened.
      *
-     * It is left standing rather than repaired, and the measurement is why. Over the 1114 formulas
-     * `PropositionalRouteSpec` enumerates, the deepest goal needs **7** of the 256, so the net is
-     * not a thing anything reaches. What this file adds to that population is longer implication
-     * chains, one link per instance, and the bound on instances is what bounds them.
+     * **The measurement that decided it is not the one the paragraph here used to cite.** Over the
+     * 1114 formulas `PropositionalRouteSpec` enumerates the deepest goal needs 7 of the 256, and
+     * that population is formulas of at most six nodes; what this method builds is an implication
+     * chain one link per instance, so the figure travels no further than the shape it was taken on.
+     * Measured on the chains this method itself builds, the net **is** reached, by a claim that is
+     * a chain of modus ponens and so intuitionistically valid at every length, and at a length
+     * strictly inside [[Domain.Instances]] rather than at it. `docs/adr/0026` carries the table and
+     * what it counted by; `DomainTheorySpec` finds the length where the free route is lost and
+     * asserts the relation between it and the bound, which is the claim and is what this comment
+     * would otherwise be a stale copy of.
      *
-     * What guards it here is the accounting rather than a depth: `DomainTheorySpec` asserts that a
-     * bridged conclusion spends **exactly** what its bridge spends, which is an equality a silent
-     * fall to the classical route would break by adding `SELECT`. That is a guard on the outcome
-     * where the card asks for one on the reason, and the difference is worth knowing before
-     * trusting it: it catches the fall where a bridge is named and not where none is.
+     * So the fall stays — refusing would lose a theorem the classical route really does have — and
+     * what changes is that [[Domain.Verdict.CutShort]] is what comes back instead of
+     * [[Domain.Verdict.Settled]]. A caller reading the price is told that the free route was
+     * truncated rather than decided against, and a caller matching on `Settled` alone stops
+     * compiling rather than quietly believing the price.
      */
     private def close(
       classical: Classical,
@@ -471,8 +478,8 @@ object Domain {
           acc.flatMap(reading.mkImp(instance.conclusion, _))
         }
 
-      def intuitionistically(subset: Vector[Kernel.Thm]): Option[Kernel.Thm] =
-        bridgeOf(subset).flatMap(calculus.prove).toOption
+      def intuitionistically(subset: Vector[Kernel.Thm]): Either[LogicError, Kernel.Thm] =
+        bridgeOf(subset).flatMap(calculus.prove)
 
       def classically(subset: Vector[Kernel.Thm]): Option[Kernel.Thm] =
         bridgeOf(subset).toOption.flatMap(bridge =>
@@ -482,12 +489,26 @@ object Domain {
           }
         )
 
+      val free = intuitionistically(instances)
+
+      // The refusal kept rather than dropped, which is the whole of the repair. It is read once,
+      // on the full set and before the route is fixed, because that is the decision it changes:
+      // every later call is the route's own and answers a question about a subset.
+      val cutShort: Option[String] =
+        free.left.toOption.filter(_.standing.stoppedShort).map(_.message)
+
       val route: Option[Vector[Kernel.Thm] => Option[Kernel.Thm]] =
-        if (intuitionistically(instances).isDefined) Some(intuitionistically)
+        if (free.isRight) Some(subset => intuitionistically(subset).toOption)
         else if (classically(instances).isDefined) Some(classically)
         else None
 
       route match {
+        // Neither route answered, so what comes back is the classical decision's own answer about
+        // the claim, and `cutShort` is deliberately not added to it: a countermodel refutes the
+        // skeleton classically and therefore intuitionistically as well, so a free route that
+        // stopped changes nothing about it, and the two refusals below already name the procedure
+        // that stopped. What this case is for is a PRICE that carries a caveat, and there is none
+        // here because nothing was settled.
         case None =>
           bridgeOf(instances) match {
             case Left(error) => Verdict.Refused(error.message)
@@ -516,7 +537,11 @@ object Domain {
                 )
                 .flatMap(rules.genAll(_, variables.toList)) match {
                 case Left(error) => Verdict.Refused(error.message)
-                case Right(theorem) => Verdict.Settled(theorem, spends(theorem))
+                case Right(theorem) =>
+                  cutShort match {
+                    case None => Verdict.Settled(theorem, spends(theorem))
+                    case Some(why) => Verdict.CutShort(theorem, spends(theorem), why)
+                  }
               }
           }
       }
@@ -669,7 +694,7 @@ object Domain {
   }
 
   /**
-   * What a claim about a domain came back as, and the three are not one answer with a flag on it.
+   * What a claim about a domain came back as, and the four are not one answer with a flag on it.
    *
    * [[Domain.Verdict.Countermodel]] is the weak one and carries `Propositional`'s own caveat: the atoms
    * are uninterpreted, so it refutes the claim **as a propositional schema over the domain's
@@ -680,6 +705,28 @@ object Domain {
 
     /** A theorem, with what it spent: the half a reader of a domain claim is really owed. */
     case Settled(theorem: Kernel.Thm, spending: Spending)
+
+    /**
+     * The same theorem and the same price, and the free route was cut short rather than decided.
+     *
+     * `Domain.Built.close` asks the intuitionistic calculus first because it costs no axiom, and
+     * falls to the classical decision when that refuses. The calculus refuses in two ways: because
+     * the claim is not intuitionistically valid, and because `Intuitionistic.Fuel` ran out. Only the
+     * first is a fact about the claim. This case is the second, and what it says is that the
+     * `SELECT` in [[Domain.Spending]] is the net's rather than the logic's: a larger net might have
+     * reached the same theorem for nothing, and nothing here knows whether it would have.
+     *
+     * A case of its own rather than a field on [[Domain.Verdict.Settled]], because a price that
+     * needs a caveat and a price that does not are two answers, and a caller that reads them as one
+     * is being told that a claim about its domain needs choice when what it needed was patience.
+     * The theorem is real and carries no hypothesis, so a caller that wants it whatever the route
+     * took can take it from here; what it cannot do is read this as [[Domain.Verdict.Settled]] by
+     * accident.
+     *
+     * `why` is the calculus's own refusal message, verbatim, naming the search and the depth it was
+     * given. Rewriting it here would be this file inventing a sentence about somebody else's bound.
+     */
+    case CutShort(theorem: Kernel.Thm, spending: Spending, why: String)
 
     /** An assignment to the domain's own atoms under which the claim's skeleton fails. */
     case Countermodel(assignment: Vector[(Term, Boolean)])

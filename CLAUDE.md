@@ -1303,6 +1303,16 @@ is still the fallback for a claim that is classically valid and no more, at the 
 `DomainTheorySpec` exercises that route beside the other so that the agreement between the two is a
 measurement rather than a remark about an empty set.
 
+**And the fallback is taken for two different reasons, which since 2026-09-18 the answer tells
+apart.** The calculus refuses a claim that is not intuitionistically valid, and it also refuses one
+whose search ran out of `Intuitionistic.Fuel`; both fell to the classical route and both came back
+`Settled` at one axiom, so a price the net caused was indistinguishable from a price the logic
+asked for. `Domain.Verdict.CutShort` is the second of those now, and `docs/adr/0026` is the decision
+with the measurement that made it worth making: the net is **reachable** here, at a length strictly
+inside this method's own `Domain.Instances` bound, by a chain of modus ponens whose only difference
+from a free one is its length. The figure `docs/adr/0023` rests on for the same defect at `Prove`
+does not travel to this site, and that record now says so rather than being cited here.
+
 **The accounting is what the method is for, and the obvious implementation destroys it.** Handing
 every specialised axiom to the procedure and detaching all of them reaches the same theorem and
 makes `Derivation.axiomsOf` report all four where the hand derivation spends one, which is what the
