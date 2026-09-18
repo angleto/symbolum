@@ -167,6 +167,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Collatz.scala", "StepInhabited") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "entry.label") ->
       (Verdict.Name, "a rule's name in the source that owns it, R1 or A3 or B2"),
+    ("Collatz.scala", "label") ->
+      (Verdict.Name, "a rule's name in the source that owns it, asked for rather than read off"),
+    ("Collatz.scala", "FamilyWithTail") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "other.size") ->
+      (Verdict.Number, "how many witnesses an existential nest opened, where the shape expected four"),
     ("Collatz.scala", "Rules.size") -> (Verdict.Number, "how many rules the table holds"),
     ("Collatz.scala", "position") -> (Verdict.Number, "which letter of a written-out word"),
     ("Collatz.scala", "lower") -> (Verdict.Number, "the smaller of two positions being compared"),

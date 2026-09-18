@@ -27,6 +27,19 @@ import org.scalatest.matchers.should.Matchers
  * And [[Collatz.MarkedClosed]] over an empty class of marked words would be a theorem about
  * nothing. The closure is therefore detached here rather than asserted to exist: `/0.` is marked,
  * `B1` steps it, and what comes back out is a marked word.
+ *
+ * == The fourth, which arrived with the digit family ==
+ *
+ * A membership in `WORD_RFC S2` is worth exactly what the non-memberships are worth, and there
+ * were none until 2026-09-18: a closure that held of every word would make [[Collatz.FamilyWithF]]
+ * and [[Collatz.FamilyWithTail]] theorems about nothing, and neither they nor anything proved
+ * after them would notice. [[Collatz.ClosureRefused]] is the guard, and it is a theorem of the
+ * development rather than an assertion here because the induction it runs on is
+ * [[Forward.Induction]] rather than anything a test can reach.
+ *
+ * The family itself is detached here, for [[Collatz.MarkedInhabited]]'s reason: the statement
+ * quantifies over an index and names a run of digits, so what says it is about words is
+ * specialising it and reading the letters that come out.
  */
 class CollatzSpec extends AnyFlatSpec with Matchers {
 
@@ -48,6 +61,12 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
 
   private def rules: Rules = system.logic.rules
 
+  /** A term of this signature, read the way a person writing one in this file reads it. */
+  private def parse(text: String): Term =
+    Parser
+      .term(system.theory, system.notation, text)
+      .fold(error => fail(s"$text does not read: ${error.message}"), identity)
+
   /** The body of a nest of lambdas: both definitions here are `\l. \r. <the disjunction>`. */
   private def under(term: Term): Term = term match {
     case Abs(_, body) => under(body)
@@ -67,7 +86,8 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
   "The system" should "declare the alphabet, the four relations and the marker-free words" in {
     system.definitions.keySet shouldBe Set(
       Collatz.F, Collatz.T, Collatz.Head, Collatz.Tail,
-      Collatz.Name, Collatz.Counted, Collatz.Potential, Collatz.Marked, Collatz.TailFree
+      Collatz.Name, Collatz.Counted, Collatz.Potential, Collatz.Marked, Collatz.TailFree,
+      Collatz.Zeros
     )
   }
 
@@ -223,6 +243,88 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     system.logic.destNot(theorem.conclusion) shouldBe defined
   }
 
+  "The digit family" should "detach at an index and come back a word with letters in it" in {
+    // `05` section 3.1.30 B at `j = 1`, which is the smallest index the family has and the first
+    // one the source's backward search settles. The published statement quantifies over the index
+    // and names the run `S2_ZEROS` rather than any letter, so what says it is a claim about words
+    // is this: specialise it at zero, rewrite the run away with the recursion's own two equations,
+    // and read what is left. `/f0.` is what comes out, written out letter by letter.
+    //
+    // Source for the word: `collatz@8b991e5`, `code/referee/checks_rewriting.py:726`, where
+    // `_in_rfc('/f' + '0' * j + '.')` is asserted True for `j` from 1 to 10 by a search that knows
+    // nothing of the induction this repository proves.
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val zero = parse("(ZERO:num)")
+    val emptyLeft = Kernel.instType(
+      Map(Classical.TypeVariable -> numbers),
+      chain.forward.concatenation
+        .fact(Concatenation.EmptyLeft)
+        .fold(error => fail(error.message), identity)
+    )
+
+    val equations = Vector(
+      fact(Collatz.ZerosAtSuccessor),
+      fact(Collatz.ZerosAtZero),
+      emptyLeft
+    ).map(equation =>
+      Rewrite.Rule.of(system.logic, equation).fold(error => fail(error.message), identity))
+
+    // Both indices and not one. At `j = 1` the run's own base case is what is read, so a
+    // `S2_ZEROS` that was the empty word at every index would pass; `j = 2` is where the recursion
+    // has to fire twice, and it is the smallest index that says the run grows.
+    val cases = Vector(
+      zero ->
+        ("WORD_RFC S2 (WORD_CONCAT (WORD_CONCAT (WORD_CONCAT " +
+          "(WORD_SINGLETON (S2_HEAD:num)) (WORD_SINGLETON (S2_F:num))) " +
+          "(WORD_SINGLETON (0:num))) (WORD_SINGLETON (S2_TAIL:num)))"),
+      // The run stays a block of its own here, where at `j = 1` it collapsed to one letter and the
+      // word came out flat. That is the shape of the statement rather than an accident of the
+      // rewriting: the family is written `WORD_CONCAT (WORD_CONCAT /f 0^j) .`, so the letters of
+      // the run are inside their own concatenation and nothing above flattens them. A reader
+      // comparing this with `/f00.` is reading the same word at a different nesting.
+      parse("(SUC ZERO)") ->
+        ("WORD_RFC S2 (WORD_CONCAT (WORD_CONCAT (WORD_CONCAT " +
+          "(WORD_SINGLETON (S2_HEAD:num)) (WORD_SINGLETON (S2_F:num))) " +
+          "(WORD_CONCAT (WORD_SINGLETON (0:num)) (WORD_SINGLETON (0:num)))) " +
+          "(WORD_SINGLETON (S2_TAIL:num)))")
+    )
+
+    for ((index, text) <- cases) {
+      val instance = rules
+        .spec(index, fact(Collatz.FamilyWithTail))
+        .fold(error => fail(error.message), identity)
+      val simplified = Rewrite
+        .rewrite(equations, instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+        .fold(error => fail(error.message), identity)
+
+      val expected = Parser
+        .proposition(system.theory, system.notation, text)
+        .fold(error => fail(error.message), identity)
+
+      withClue(s"at ${system.show(index)}: ${system.show(simplified.conclusion)}\n") {
+        simplified.conclusion shouldBe expected
+      }
+      simplified.hypotheses shouldBe empty
+    }
+  }
+
+  it should "be one induction and one extension, not two inductions" in {
+    // The shape of the pair rather than its content, and it is worth asserting because the cheap
+    // mistake here is to prove the family twice. `S2_FAMILY_TAIL` is `S2_FAMILY_F` with one right
+    // extension on the end, so the second rests on the first: what the first reaches, and nothing
+    // else, is what the second can be about.
+    //
+    // Read off the proof record rather than off the source, so a rewrite of either derivation that
+    // separated them goes red here.
+    val familyWithF = fact(Collatz.FamilyWithF)
+    val familyWithTail = fact(Collatz.FamilyWithTail)
+
+    Derivation.restingOn(familyWithTail, Set(familyWithF.conclusion)) should
+      contain(familyWithF.conclusion)
+    Derivation.restingOn(familyWithF, Set(familyWithTail.conclusion)) shouldBe empty
+  }
+
   "What the facts cost" should "split three ways, and the third way was a prediction this test refuted" in {
     // The two that are equations between words and closed under the definition reach no
     // foundational axiom at all.
@@ -265,6 +367,31 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     val throughTheEmptyWord = List(Collatz.MarkedClosed, Collatz.StepInhabited)
 
     for (name <- throughTheEmptyWord) {
+      val rests = Derivation.axiomsOf(fact(name))
+      withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
+        rests.size shouldBe 3
+      }
+    }
+
+    // The digit family, measured on 2026-09-18 when it landed, and it falls on **both** sides of
+    // the line the two paragraphs above draw rather than on one. The run's own equations and the
+    // guard that the closure is not every word cost the naturals' two; the two facts about the
+    // family cost three, and the third is `ETA_AX` again.
+    //
+    // That is the same criterion as above and not a coincidence: the family's base case is
+    // `WORD_CONCAT (/f) (S2_ZEROS ZERO)`, which is a word rebuilt from `WORD_EMPTY` through
+    // `WORD_CONCAT_EMPTY_RIGHT`, and that lemma carries eta by itself. `S2_RFC_REFUSED` mentions
+    // `WORD_EMPTY` in its own statement and costs two, which is what says the criterion is about
+    // turning a word back into the empty word rather than about naming it: that proof only ever
+    // refutes being it, through `WORD_EMPTY_LENGTH`.
+    for (name <- List(Collatz.ZerosAtZero, Collatz.ZerosAtSuccessor, Collatz.ClosureRefused)) {
+      val rests = Derivation.axiomsOf(fact(name))
+      withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
+        rests.size shouldBe 2
+      }
+    }
+
+    for (name <- List(Collatz.FamilyWithF, Collatz.FamilyWithTail)) {
       val rests = Derivation.axiomsOf(fact(name))
       withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
         rests.size shouldBe 3

@@ -1035,11 +1035,25 @@ transcribed. It sits **beside** the chain, which is a decision rather than an ac
 rewriting rules of a Collatz encoding do not belong in the vocabulary a question about the reals is
 typed in, so `Ask` and `Find` cannot reach it and `CollatzSpec` is the only thing that builds it.
 
-**The class the argument has to be read on is the marked words, and the reason is a witness rather
-than a convention.** `S2_MARKED w` says `w` has exactly one tail marker and it is the last letter.
-Outside that class the potential argument is false, and the source names the counterexample:
-`/ff.012` rewrites to `/0.012` and the potential falls by three, which no counted step pays for.
-`S2_MARKED_CLOSED` is what says a step never leaves the class, so the argument can be read on it.
+**The marked words are where the potential argument stops being false, and they are not yet where
+it is true.** `S2_MARKED w` says `w` has exactly one tail marker and it is the last letter, and
+outside that class the argument is false with the witness the source names: `/ff.012` rewrites to
+`/0.012` and the potential falls by three, which no counted step pays for. `S2_MARKED_CLOSED` is
+what says a step never leaves the class. What the class does **not** say is that the head marker is
+the first letter and occurs nowhere else, and `REACH_POTENTIAL` needs that in both of its
+hypotheses: `f0.` is marked, `A2` takes it to `0f.`, and `S2_PHI` is zero on both, where the first
+hypothesis asks for a drop of exactly one; `0/0.` is marked, `B1` takes it to `0/t.`, and the
+potential falls, where the second asks that no uncounted step lower it. The first happens because
+`NUM_SUB i 1` is truncated, so a digit at position 0 and one at position 1 both contribute nothing,
+and without a head marker in front a digit can sit at position 0; the second because the three `B`
+rules fire at **any** occurrence of `/`.
+
+Measured on 2026-09-18 over every word of at most seven letters, no sampling, with `S2_PHI` and
+`S2_MARKED` mirrored from `Collatz.scala` rather than from the source: of the marked words' 44790
+counted steps, 9330 fail the first hypothesis, and of their 33281 uncounted steps, 14454 fail the
+second. Adding the head condition leaves **0 of 3516** and **0 of 3280**, and no step leaves that
+class either. So the class part C has to be stated on is the marked words **and** one head marker in
+front, which is a predicate this development has not got, with a closure lemma of its own to prove.
 
 Two things about that proof are worth knowing before opening the file. **A tally is the wrong
 instrument and an earlier plan reached for one**: `S2_MARKED` is positional, so a count of markers
@@ -1056,6 +1070,26 @@ argued.** A closure statement over an empty class is true and empty, and so is o
 that steps nothing; neither would fail anything else in the file. `S2_MARKED_INHABITED` and
 `S2_STEP_INHABITED` are `/0.` and the `B1` step that takes it to `/t.`, and `CollatzSpec` **detaches**
 the closure at that pair rather than asserting that an implication exists.
+
+**The digit family is in the closure, and since 2026-09-18 that is a theorem rather than a Python
+search.** `S2_FAMILY_TAIL` is `!i. WORD_RFC S2 (/f0^(SUC i).)`, which is section 3.1.30 B of the
+investigation's own document; `S2_FAMILY_F` is the induction under it, that `/f0^i f` is in the
+closure, and the second is the first plus **one** right extension rather than a second induction.
+Three clause instances are the whole proof and the source names all three: `/ff` is `B2`'s
+right-hand side, `f|0 -> 0f` is `A2` and grows the run, `f|f. -> 0.` is `R1` and closes it. The run
+of zeros is `S2_ZEROS`, a tenth constant defined by recursion on the index, and its two equations
+are published because a defined constant whose equations nobody can reach is a name rather than a
+function.
+
+**And what keeps that from being a theorem about everything is `S2_RFC_REFUSED`.** A closure that
+held of every word would leave both family facts derivable and would say nothing, and no test
+anywhere would have noticed: `ForwardSpec` asserts that the induction principle asks nothing of the
+system, which is a different claim. `~(WORD_RFC S2 WORD_EMPTY)` is the guard, one induction over the
+closure at the invariant "not the empty word", and it costs nothing new: every clause produces a
+word with a rule's right-hand side inside it, and `S2_RULE_NOT_EMPTY` already said those have
+letters. It is deliberately the weakest such statement there is. The source's instrument refuses
+`/f.`, `/ff.` and `/tt.` as well, and each of those wants an argument about which letters may stand
+next to which, where this one only counts.
 
 **The eleven rules are derived pairwise distinct, and that is a different question from the count.**
 `CollatzSpec` counts eleven disjuncts off the definition, which says how many clauses were written;

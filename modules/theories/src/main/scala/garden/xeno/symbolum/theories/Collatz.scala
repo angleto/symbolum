@@ -36,13 +36,24 @@ import garden.xeno.symbolum.logic.*
  * argument instantiates as the counted sub-relation of `REACH`: every `A`-step moves one digit one
  * place nearer the head, so it drops [[Potential]] by exactly one, and no other rule lowers it.
  *
- * == The marked words, and why the argument has to be read on them ==
+ * == The marked words, which is where the argument stops being false ==
  *
  * [[Marked]] is the class with exactly one tail marker, at the end, and [[MarkedClosed]] says a
  * step never leaves it. That is not housekeeping: outside the class the potential argument is
  * false, and the source names the witness. `/ff.012` rewrites to `/0.012` by `R1` and [[Potential]]
  * falls by three, which no counted step pays for. Restricting to the marked words is what makes
  * the inequality readable, and the restriction is only usable once it is known to be preserved.
+ *
+ * **It is not where the argument becomes true, and this file said it was.** `REACH_POTENTIAL` asks
+ * that a counted step drop the measure by exactly one and that no other step lower it, and both
+ * fail on words this class accepts: `f0.` is marked, `A2` takes it to `0f.` and [[Potential]] is
+ * zero on both, because `NUM_SUB i 1` is truncated and nothing here says a digit cannot sit at
+ * position 0; `0/0.` is marked, `B1` takes it to `0/t.` and the potential falls, because the three
+ * `B` rules fire at any occurrence of the head marker and nothing here says there is one. Measured
+ * over every word of at most seven letters: 9330 of 44790 counted steps out of this class fail the
+ * first, and 14454 of 33281 uncounted steps fail the second; with one head marker in front and no
+ * other, it is 0 of 3516 and 0 of 3280, and no step leaves that class either. That predicate, and
+ * a closure lemma for it, is what a potential-function argument here needs next.
  *
  * [[TailFree]] is the other half and exists for the decomposition rather than for its own sake: a
  * marked word is a tail-free block with one marker on the end, so a step at `x l y` divides into
@@ -53,6 +64,21 @@ import garden.xeno.symbolum.logic.*
  * once.** `REACH_POTENTIAL` asks that no uncounted step LOWERS the measure, not that none raises
  * it. Two of the eleven do raise it, so the version with the inequality the other way round is
  * true, unusable, and was what a card carried until it was measured against the source.
+ *
+ * == The digit family, which is what the closure was built for ==
+ *
+ * [[Collatz.FamilyWithTail]] is `05` section 3.1.30 B: `/f0^j.` is in `WORD_RFC S2` for every `j`
+ * from one up. [[Collatz.FamilyWithF]] is the induction it rests on, and the pair is one induction
+ * and one extension rather than two inductions, which [[Collatz.digitFamily]] argues where it is
+ * built. [[Collatz.Zeros]] is the run of digits both statements are written with, and it is the one
+ * constant here that is not about the system.
+ *
+ * [[Collatz.ClosureRefused]] is what makes those two say something. `WORD_RFC S2` is constrained
+ * from below by three clauses and from above by nothing at all, so a membership is worth exactly
+ * what the non-memberships are worth, and there were none: both family facts would be theorems, and
+ * so would every membership anybody proved after them, over a closure that held of every word.
+ * `~(WORD_RFC S2 WORD_EMPTY)` costs one induction and the fact that a rule of this system has
+ * letters on both sides, and it is the weakest statement that does the job.
  */
 final class Collatz private (
   val forward: Forward,
@@ -233,6 +259,86 @@ object Collatz {
   /** `|- WORD_STEP S2 </0.> </t.>`, the other half of what [[MarkedInhabited]] guards. */
   val StepInhabited: String = "S2_STEP_INHABITED"
 
+  /* ------------------------------------------------------------------ the digit family */
+
+  /**
+   * `S2_ZEROS i` — the word `0^i`, which is the run of digits the family below is built out of.
+   *
+   * Defined by recursion on the index rather than as a `WORD_MAKE` with a conditional inside it,
+   * and the choice is what the two proofs below cost rather than a preference. The family is
+   * reached one letter at a time, so what every step of those proofs needs is
+   * `0^(SUC i) = WORD_CONCAT 0^i 0`; the recursion hands that over as the defining equation, where
+   * the shape built out of `WORD_MAKE` gives it only through `WORD_EXTENSIONALITY`, which is a
+   * length and an argument about every index, per step, for a word every letter of which is the
+   * same.
+   *
+   * The tenth constant of this development and the first that is not about the system itself. It is
+   * here rather than in `Concatenation` because what it repeats is **this alphabet's** zero: the
+   * general operation, a letter repeated, would be a constant of the chain, and `Concatenation` is
+   * a link in it whose own spec asserts which six constants it adds.
+   */
+  val Zeros: String = "S2_ZEROS"
+
+  /**
+   * `|- S2_ZEROS ZERO = WORD_EMPTY` and `|- !n. S2_ZEROS (SUC n) = WORD_CONCAT (S2_ZEROS n) <0>`.
+   *
+   * The recursion's own two equations, published rather than kept inside the construction. A
+   * defined constant whose equations nobody can reach is a name and not a function: every fact
+   * below states something about `S2_ZEROS i` at an index nobody has written down, and without
+   * these there is no way for a reader, or for a test, to get from such a fact to a word with
+   * letters in it. `CollatzSpec` is what spends them, on the member of the family at `j = 1`.
+   */
+  val ZerosAtZero: String = "S2_ZEROS_ZERO"
+
+  /** The other half of [[ZerosAtZero]], which its documentation covers. */
+  val ZerosAtSuccessor: String = "S2_ZEROS_SUC"
+
+  /**
+   * `|- !i. WORD_RFC S2 (WORD_CONCAT (WORD_CONCAT </f> 0^i) <f>)` — `/f0^i f` is in the closure.
+   *
+   * The induction the family is reached by, and it is published rather than kept private because
+   * it is the fact [[FamilyWithTail]] is one extension away from: a reader who wants to know why
+   * `/f0^j.` is in the closure is reading this statement and then one clause instance.
+   *
+   * Source: `collatz@8b991e5`, `code/referee/checks_rewriting.py:713`, which measures the same two
+   * facts twice, by generating the closure forwards and by a goal-directed backward search, and
+   * which names the three clause instances the proof spends: the right-hand side of `B2`, which is
+   * `/ff`, and the two right extensions `f|0 -> 0f` and `f|f. -> 0.`.
+   */
+  val FamilyWithF: String = "S2_FAMILY_F"
+
+  /**
+   * `|- !i. WORD_RFC S2 (WORD_CONCAT (WORD_CONCAT </f> 0^(SUC i)) <.>)` — the family itself.
+   *
+   * Stated at `SUC i` and not under a hypothesis `0 < j`, which is the same arrangement
+   * `Provability` gives its reason for: the index of a member of this family is one more than the
+   * number of extensions that reached it, and a guard bought to allow an index nobody can reach
+   * would appear in every statement about the family afterwards. `/f.` is **not** a member and
+   * the source's own backward search says so, so `j = 0` is not a case this omits, it is a case
+   * that is false.
+   */
+  val FamilyWithTail: String = "S2_FAMILY_TAIL"
+
+  /**
+   * `|- ~(WORD_RFC S2 WORD_EMPTY)` — the closure of this system is not every word there is.
+   *
+   * The guard on the two statements above, and it is the one this file would be worthless without.
+   * `WORD_RFC S2` is a predicate nothing else here constrains from above: a closure that held of
+   * every word would make [[FamilyWithF]] and [[FamilyWithTail]] theorems about nothing, and both
+   * of them, and every membership anybody proves after them, would still be derivable. That is the
+   * shape of defect `RestsOnSpec` is about, at the one place in this development where it could
+   * hide, and `ForwardSpec` does not cover it: what is asserted there is that the closure's
+   * induction principle asks nothing of the system, not that any closure is proper.
+   *
+   * What it says is small on purpose. The source's own instrument refuses `/f.`, `/ff.` and `/tt.`
+   * as well, and each of those wants an invariant about the letters rather than about the length;
+   * the empty word is refused by the invariant that is already in the file, which is that every
+   * rule of this system has letters on both sides. So this costs [[RuleNotEmpty]], the length of a
+   * concatenation, and one induction over the closure, and it buys the only thing a vacuity guard
+   * has to buy, which is that the predicate is not constant.
+   */
+  val ClosureRefused: String = "S2_RFC_REFUSED"
+
   /* ------------------------------------------------------------------ the types */
 
   private val Numbers: Type = TyApp(Natural.TypeName, Nil)
@@ -244,6 +350,7 @@ object Collatz {
   private val LengthType: Type = Type.fun(Words, Numbers)
   private val NthType: Type = Type.fun(Words, Type.fun(Numbers, Numbers))
   private val ConcatType: Type = Type.fun(Words, Type.fun(Words, Words))
+  private val SystemType: Type = Type.fun(Words, Type.fun(Words, Type.Bool))
   private val OrderType: Type = Type.fun(Numbers, Type.fun(Numbers, Type.Bool))
   private val BinaryNumbers: Type = Type.fun(Numbers, Type.fun(Numbers, Numbers))
 
@@ -336,6 +443,16 @@ object Collatz {
   private def wordText(letters: Vector[String]): String =
     letters.map(singletonText).reduceLeft((built, next) => s"WORD_CONCAT ($built) ($next)")
 
+  /**
+   * `/f0^index last`, as text: the digit family, with whatever letter ends it.
+   *
+   * Left-nested for [[wordText]]'s reason, and the nesting is what the proofs read: the extension
+   * clause asks for a member of the shape `WORD_CONCAT p a`, so the last letter has to be the
+   * outermost concatenation or the clause does not apply without an associativity first.
+   */
+  private def familyText(index: String, last: String): String =
+    s"WORD_CONCAT (WORD_CONCAT (${wordText(spell("/f"))}) ($Zeros $index)) (${singletonText(last)})"
+
   /** A rule set as the disjunction of its clauses, which is how both relations are defined. */
   private def disjunctionText(rules: Vector[Rule]): String =
     "\\l:word(num). \\r:word(num). " +
@@ -401,7 +518,13 @@ object Collatz {
       "!u:word(num). !v:word(num). S2_MARKED u /\\ WORD_STEP S2 u v ==> S2_MARKED v",
     MarkedInhabited -> s"S2_MARKED (${wordText(spell("/0."))})",
     StepInhabited ->
-      s"WORD_STEP S2 (${wordText(spell("/0."))}) (${wordText(spell("/t."))})"
+      s"WORD_STEP S2 (${wordText(spell("/0."))}) (${wordText(spell("/t."))})",
+    ZerosAtZero -> s"$Zeros ZERO = (WORD_EMPTY:word(num))",
+    ZerosAtSuccessor ->
+      s"!n:num. $Zeros (SUC n) = WORD_CONCAT ($Zeros n) (${singletonText("0")})",
+    ClosureRefused -> "~(WORD_RFC S2 (WORD_EMPTY:word(num)))",
+    FamilyWithF -> s"!i:num. WORD_RFC S2 (${familyText("i", F)})",
+    FamilyWithTail -> s"!i:num. WORD_RFC S2 (${familyText("(SUC i)", Tail)})"
   )
 
   /* ------------------------------------------------------------------ construction */
@@ -436,7 +559,27 @@ object Collatz {
 
     for {
       state <- introduced
-      (theory, definitions) = state
+      (declared, letters) = state
+
+      // `S2_ZEROS` is introduced here and not in `Bodies` because it is a recursion and the nine
+      // above are plain definitions: what `Recursion.define` hands back is the constant together
+      // with its two equations, and those two equations are what both proofs of the family run on.
+      recursion <- naturals.recursion
+      zeros <- Recursion.define(
+        forward.logic,
+        naturals,
+        declared,
+        notation,
+        recursion,
+        Zeros,
+        Words,
+        "(WORD_EMPTY:word(num))",
+        s"\\v:word(num). \\i:num. WORD_CONCAT v (${singletonText("0")})",
+        None
+      )
+      (theory, zerosDefinition, zerosAtZero, zerosAtSuccessor) = zeros
+      definitions = letters + (Zeros -> zerosDefinition)
+
       logic <- forward.inductive.classical.logic.over(theory)
 
       countedIsRule <- countedAreRules(logic, theory, notation, definitions)
@@ -484,10 +627,19 @@ object Collatz {
       markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, definitions, partial)
       markedInhabited <- markedWord(tools, BeforeTheStep)
       stepInhabited <- stepHolds(tools, forward.concatenation, forward, definitions)
+      family <- digitFamily(
+        tools, forward, naturals, definitions, zerosAtZero, zerosAtSuccessor)
+      (familyWithF, familyWithTail) = family
+      closureRefused <- closureIsProper(tools, forward, ruleNotEmpty)
       facts = partial ++ Map(
         MarkedClosed -> markedClosed,
         MarkedInhabited -> markedInhabited,
-        StepInhabited -> stepInhabited
+        StepInhabited -> stepInhabited,
+        ZerosAtZero -> zerosAtZero,
+        ZerosAtSuccessor -> zerosAtSuccessor,
+        FamilyWithF -> familyWithF,
+        FamilyWithTail -> familyWithTail,
+        ClosureRefused -> closureRefused
       )
 
       // Every statement checked against the text a reader reads it by, here rather than in the
@@ -2105,6 +2257,474 @@ object Collatz {
   private val AfterTheStep: Vector[String] = spell("/t.")
 
   /** `|- S2 <a rule's left-hand side> <its right-hand side>`, by picking that rule's disjunct. */
+  /**
+   * [[FamilyWithF]] and [[FamilyWithTail]]: the digit family lies in the closure of this system.
+   *
+   * Source: `collatz@8b991e5`, `code/referee/checks_rewriting.py:713`, which is `05` section
+   * 3.1.30 B and which measures the same two facts twice: once by the induction written out below
+   * and once by a goal-directed backward search that knows nothing of it. Three clause instances
+   * are what the proof spends, and that file names all three, so a rule table that moved underneath
+   * this proof breaks it there as well as here.
+   *
+   * == The three instances, and why each one is the clause it is ==
+   *
+   * The base is `/ff`, which is the **right-hand side** of `B2`, so it is in the closure by
+   * [[Forward.RightSide]] and nothing else is needed for it. Each step is a **right extension**:
+   * the member ends in a letter `a`, a rule reads `a b -> r`, and what comes out is the member with
+   * its final `a` replaced by `r`. With `a` the letter `f` and `b` the digit `0`, rule `A2` reads
+   * `f0 -> 0f` and `/f0^i f` becomes `/f0^(SUC i) f`, which is the induction. With `a` the letter
+   * `f` and `b` the word `f.`, rule `R1` reads `ff. -> 0.` and the same member becomes
+   * `/f0^(SUC i) .`, which is the family.
+   *
+   * So there is one induction and not two: [[FamilyWithTail]] is [[FamilyWithF]] with one extension
+   * on the end, and the second statement costs an associativity rather than a second pass over the
+   * numbers.
+   *
+   * == The associativity, which is where the work actually is ==
+   *
+   * Every word here is spelled left-nested, by [[wordText]], and the extension clause asks for a
+   * member of the shape `WORD_CONCAT p a` and hands back `WORD_CONCAT p r`. Those two are exactly
+   * the spellings a caller wants **only** where `a` and `r` are one letter. `R1` has three letters
+   * on the left and the split this proof needs cuts after the first, so the rule's own left-hand
+   * side `(f f) .` has to be read as `f (f .)` before the clause applies: that is
+   * [[Concatenation.Associative]] spent on the rule rather than on the word, and [[carryLeft]] is
+   * what moves the rule across it. The same lemma is spent twice more per step, on the member: once
+   * to turn `p (0 f)` back into `(p 0) f`, and once to turn `((/f) 0^i) 0` into `(/f) (0^i 0)`,
+   * which is where the recursion's own equation for `S2_ZEROS` meets it.
+   */
+  private def digitFamily(
+    tools: Concrete,
+    forward: Forward,
+    naturals: Natural,
+    definitions: Map[String, Kernel.Thm],
+    zerosAtZero: Kernel.Thm,
+    zerosAtSuccessor: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
+    val logic = tools.logic
+    val rules = logic.rules
+    val concatenation = forward.concatenation
+
+    def ruleAt(label: String): Either[LogicError, Kernel.Thm] =
+      Rules
+        .indexWhere(_.label == label) match {
+        case -1 => Left(NotOfForm(s"a rule labelled $label", LeftSide))
+        case position => ruleHolds(tools, definitions, position)
+      }
+
+    def sideOf(label: String, left: Boolean): Either[LogicError, Term] =
+      Rules
+        .find(_.label == label)
+        .toRight(NotOfForm(s"a rule labelled $label", LeftSide))
+        .flatMap(entry => tools.word(if (left) entry.left else entry.right))
+
+    for {
+      system <- tools.constant(Name, SystemType)
+      closure <- tools.constant(Forward.Name, Type.fun(SystemType, Type.fun(Words, Type.Bool)))
+      membership <- LogicError.lift(Term.app(closure, system))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      zerosOf <- tools.constant(Zeros, Type.fun(Numbers, Words))
+
+      stem <- tools.word(spell("/f"))
+      letterF <- tools.word(spell("f"))
+      digitZero <- tools.word(spell("0"))
+      marker <- tools.word(spell("."))
+      afterF <- tools.word(spell("f."))
+
+      associative <- concatenation.fact(Concatenation.Associative).map(atNumbers)
+      emptyRight <- concatenation.fact(Concatenation.EmptyRight).map(atNumbers)
+      rightSide <- forward.fact(Forward.RightSide).map(atNumbers)
+      extend <- forward.fact(Forward.Extend).map(atNumbers)
+
+      fNotEmpty <- notEmptyWord(tools, concatenation, spell("f"))
+      zeroNotEmpty <- notEmptyWord(tools, concatenation, spell("0"))
+      afterFNotEmpty <- notEmptyWord(tools, concatenation, spell("f."))
+
+      induction <- naturals.fact(Natural.Induction)
+      driver = Induct.overNaturals(logic, induction)
+
+      withFStatement <- statement(tools.theory, tools.notation, FamilyWithF)
+      withF <- driver.proveBy(
+        withFStatement,
+        goal =>
+          for {
+            rule <- ruleAt("B2")
+            left <- sideOf("B2", left = true)
+            right <- sideOf("B2", left = false)
+            instance <- rules.specAll(rightSide, List(system, left, right))
+            member <- rules.mp(instance, rule)
+            // `(/f) 0^0` is `(/f) WORD_EMPTY` is `/f`, so the base word is `/ff` written as the
+            // family rather than as a different term that happens to print the same.
+            inFront <- LogicError.lift(Term.app(concat, stem))
+            opened <- Conv.apTerm(inFront, zerosAtZero)
+            collapsed <- rules.spec(stem, emptyRight).flatMap(Conv.trans(opened, _))
+            equation <- Conv.apTerm(concat, collapsed).flatMap(Conv.apThm(_, letterF))
+            result <- acrossTheClause(membership, equation, member)
+            _ <-
+              if (result.conclusion == goal) Right(())
+              else Left(NotOfForm("the base case as the driver opened it", result.conclusion))
+          } yield result,
+        opened =>
+          for {
+            atIndex <- LogicError.lift(Term.app(zerosOf, opened.variable))
+            prefix <- LogicError.lift(Term.app(concat, stem)).flatMap(
+              partial => LogicError.lift(Term.app(partial, atIndex)))
+            rule <- ruleAt("A2")
+            right <- sideOf("A2", left = false)
+            instance <- rules.specAll(extend, List(system, prefix, letterF, digitZero, right))
+            premises <- conjoin(logic, List(opened.hypothesis, rule, fNotEmpty, zeroNotEmpty))
+            member <- rules.mp(instance, premises)
+            reassociated <- rules.specAll(associative, List(prefix, digitZero, letterF))
+            moved <- acrossTheClause(membership, reassociated, member)
+            grown <- runOneLonger(
+              tools, concat, stem, atIndex, digitZero, opened.variable,
+              associative, zerosAtSuccessor)
+            equation <- Conv.apTerm(concat, grown).flatMap(Conv.apThm(_, letterF)).flatMap(Conv.sym)
+            result <- acrossTheClause(membership, equation, moved)
+            _ <-
+              if (result.conclusion == opened.goal) Right(())
+              else Left(NotOfForm("the step as the driver opened it", result.conclusion))
+          } yield result
+      )
+
+      index = Term.variable("i", Numbers)
+      atIndex <- LogicError.lift(Term.app(zerosOf, index))
+      prefix <- LogicError
+        .lift(Term.app(concat, stem))
+        .flatMap(partial => LogicError.lift(Term.app(partial, atIndex)))
+      held <- rules.spec(index, withF)
+      ruleR1 <- ruleAt("R1")
+      right <- sideOf("R1", left = false)
+      split <- rules.specAll(associative, List(letterF, letterF, marker)).flatMap(Conv.sym)
+      shaped <- carryLeft(system, split, right, ruleR1)
+      instance <- rules.specAll(extend, List(system, prefix, letterF, afterF, right))
+      premises <- conjoin(logic, List(held, shaped, fNotEmpty, afterFNotEmpty))
+      member <- rules.mp(instance, premises)
+      reassociated <- rules.specAll(associative, List(prefix, digitZero, marker))
+      moved <- acrossTheClause(membership, reassociated, member)
+      grown <- runOneLonger(
+        tools, concat, stem, atIndex, digitZero, index, associative, zerosAtSuccessor)
+      equation <- Conv.apTerm(concat, grown).flatMap(Conv.apThm(_, marker)).flatMap(Conv.sym)
+      carried <- acrossTheClause(membership, equation, moved)
+      withTail <- rules.gen(index, carried)
+
+      expected <- statement(tools.theory, tools.notation, FamilyWithTail)
+      _ <-
+        if (withTail.conclusion == expected) Right(())
+        else Left(NotOfForm(s"$FamilyWithTail as it is written", withTail.conclusion))
+    } yield (withF, withTail)
+  }
+
+  /**
+   * `|- WORD_CONCAT (WORD_CONCAT stem 0^i) 0 = WORD_CONCAT stem 0^(SUC i)`.
+   *
+   * The one equation both halves of [[digitFamily]] end on, and it is the recursion's own step
+   * equation with an associativity in front of it: what the closure hands back is the run with a
+   * digit concatenated on the outside, and what the statement names is the run at the next index.
+   */
+  private def runOneLonger(
+    tools: Concrete,
+    concat: Term,
+    stem: Term,
+    atIndex: Term,
+    digit: Term,
+    index: Term,
+    associative: Kernel.Thm,
+    zerosAtSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      regrouped <- tools.rules.specAll(associative, List(stem, atIndex, digit))
+      longer <- tools.rules.spec(index, zerosAtSuccessor).flatMap(Conv.sym)
+      inFront <- LogicError.lift(Term.app(concat, stem))
+      carried <- Conv.apTerm(inFront, longer)
+      result <- Conv.trans(regrouped, carried)
+    } yield result
+
+  /**
+   * [[ClosureRefused]]: the empty word is not in the closure, so the closure is not every word.
+   *
+   * One induction over `WORD_RFC S2`, at the invariant `\w. ~(w = WORD_EMPTY)`, and the three
+   * clauses are the same argument three times: whatever a clause produces has a rule's right-hand
+   * side inside it, [[RuleNotEmpty]] says that side has letters, and a concatenation with a
+   * non-empty part is non-empty. Nothing in it reads a letter, which is why it is cheap and also
+   * why it says so little: `/f.` is refused by the source's instrument too and is not refused here,
+   * because what rules that word out is an argument about which letters can stand next to which.
+   *
+   * [[Forward.Induction]] asks **nothing** of the system, which is what makes this affordable at
+   * all: the half of `INDUCTIVE` that settles a non-membership is the free half, and the
+   * monotonicity that the introduction rules pay for is not needed here.
+   */
+  private def closureIsProper(
+    tools: Concrete,
+    forward: Forward,
+    ruleNotEmpty: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+    val concatenation = forward.concatenation
+
+    /** `!w. <premise> ==> ~(w = WORD_EMPTY)`, from a proof of the conclusion under the premise. */
+    def forEachWord(
+      clause: Term
+    )(
+      at: (FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        predicate <- logic
+          .destForallPredicate(clause)
+          .toRight(NotOfForm("a claim about every word", clause))
+        witness = Conv.freshVariable("w", Words, Term.freeVariables(clause))
+        applied <- LogicError.lift(Term.app(predicate, witness))
+        body <- Conv.betaRoot(applied).flatMap(rightOf)
+        parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+        (premise, _) = parts
+        assumed <- LogicError.lift(Kernel.assume(premise))
+        proved <- at(witness, assumed)
+        discharged <- rules.disch(premise, proved)
+        result <- rules.gen(witness, discharged)
+      } yield result
+
+    for {
+      system <- tools.constant(Name, SystemType)
+      closure <- tools.constant(Forward.Name, Type.fun(SystemType, Type.fun(Words, Type.Bool)))
+      membership <- LogicError.lift(Term.app(closure, system))
+      empty <- tools.constant(Concatenation.Empty, Words)
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      lengthOf <- tools.lengthOf
+      order <- tools.strictOrder
+      zero <- tools.zero
+
+      emptyLength <- concatenation.fact(Concatenation.EmptyLength).map(atNumbers)
+      concatLength <- concatenation.fact(Concatenation.Length).map(atNumbers)
+      induction <- forward.fact(Forward.Induction).map(atNumbers)
+      stepDefinition <- forward.definition(Forward.Step).map(atNumbers)
+
+      /* The invariant, as a predicate to instantiate the induction principle with. */
+      subject = Term.variable("w", Words)
+      equated <- LogicError.lift(Term.eq(subject, empty))
+      denied <- LogicError.lift(Term.app(logic.negation, equated))
+      invariant <- LogicError.lift(Term.abs(subject, denied))
+
+      instance <- rules.specAll(induction, List(system, invariant))
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      premises <- logic
+        .destImp(opened.conclusion)
+        .map(_._1)
+        .toRight(NotOfForm("an implication", opened.conclusion))
+      firstTwo <- logic.destConj(premises).toRight(NotOfForm("a conjunction", premises))
+      (contains, rest) = firstTwo
+      lastTwo <- logic.destConj(rest).toRight(NotOfForm("a conjunction", rest))
+      (inside, extending) = lastTwo
+
+      /* A right-hand side has letters, so the word the clause produces has letters. */
+      byContaining <- forEachWord(contains) { (word, held) =>
+        openWitnesses(logic, held, 1, Set(word)) { (witnesses, rule) =>
+          for {
+            left <- witnesses.headOption.toRight(NotOfForm("a left-hand side", word))
+            sides <- rules.specAll(ruleNotEmpty, List(left, word)).flatMap(rules.mp(_, rule))
+            positive <- rules.conjElim2(sides)
+            result <- notEmptyFrom(tools, emptyLength, word, positive)
+          } yield result
+        }
+      }
+
+      /* A step rewrites inside a context, and what it puts there is a right-hand side. */
+      byReducing <- forEachWord(inside) { (word, held) =>
+        openWitnesses(logic, held, 1, Set(word)) { (witnesses, pair) =>
+          for {
+            before <- witnesses.headOption.toRight(NotOfForm("the word stepped from", word))
+            step <- rules.conjElim2(pair)
+            unfolded <- Conv.unfold(stepDefinition, List(system, before, word))
+            existential <- LogicError.lift(Kernel.eqMp(unfolded, step))
+            result <- openWitnesses(logic, existential, 4, Set(word, before)) { (inner, body) =>
+              inner match {
+                case List(front, left, right, back) =>
+                  for {
+                    rule <- rules.conjElim1(body)
+                    equation <- rules.conjElim2(body).flatMap(rules.conjElim2)
+                    sides <- rules.specAll(ruleNotEmpty, List(left, right)).flatMap(rules.mp(_, rule))
+                    positive <- rules.conjElim2(sides)
+                    block <- joined(concat, front, right)
+                    inBlock <- positiveJoined(
+                      tools, concatLength, concat, front, right, positive, onTheLeft = false)
+                    whole <- positiveJoined(
+                      tools, concatLength, concat, block, back, inBlock, onTheLeft = true)
+                    here <- positiveAt(tools, lengthOf, order, zero, equation, whole)
+                    result <- notEmptyFrom(tools, emptyLength, word, here)
+                  } yield result
+
+                case other => Left(NotOfForm(s"four witnesses, not ${other.size}", word))
+              }
+            }
+          } yield result
+        }
+      }
+
+      /* An extension replaces the member's last block by a right-hand side, and keeps its front. */
+      byExtending <- forEachWord(extending) { (word, held) =>
+        openWitnesses(logic, held, 4, Set(word)) { (witnesses, body) =>
+          witnesses match {
+            case List(front, first, second, right) =>
+              for {
+                rule <- rules.conjElim2(body).flatMap(rules.conjElim1)
+                equation <- rules
+                  .conjElim2(body)
+                  .flatMap(rules.conjElim2)
+                  .flatMap(rules.conjElim2)
+                  .flatMap(rules.conjElim2)
+                left <- joined(concat, first, second)
+                sides <- rules.specAll(ruleNotEmpty, List(left, right)).flatMap(rules.mp(_, rule))
+                positive <- rules.conjElim2(sides)
+                whole <- positiveJoined(
+                  tools, concatLength, concat, front, right, positive, onTheLeft = false)
+                here <- positiveAt(tools, lengthOf, order, zero, equation, whole)
+                result <- notEmptyFrom(tools, emptyLength, word, here)
+              } yield result
+
+            case other => Left(NotOfForm(s"four witnesses, not ${other.size}", word))
+          }
+        }
+      }
+
+      everywhere <- conjoin(logic, List(byContaining, byReducing, byExtending))
+        .flatMap(rules.mp(opened, _))
+      atEmpty <- rules.spec(empty, everywhere)
+      claim <- LogicError.lift(Term.app(membership, empty))
+      assumed <- LogicError.lift(Kernel.assume(claim))
+      refused <- rules.mp(atEmpty, assumed)
+      falsity <- rules.notElim(refused, Conv.refl(empty))
+      result <- rules.notIntro(claim, falsity)
+    } yield result
+  }
+
+  /** `WORD_CONCAT u v`, as a term. */
+  private def joined(concat: Term, left: Term, right: Term): Either[LogicError, Term] =
+    LogicError.lift(Term.app(concat, left)).flatMap(partial => LogicError.lift(Term.app(partial, right)))
+
+  /**
+   * `|- 0 < WORD_LENGTH (WORD_CONCAT u v)` from the same of whichever half has the letters.
+   *
+   * Two directions and one proof, because `NUM_LE_LT_TRANS` reads the same either way once the sum
+   * is written with the non-empty half in front: `NUM_LE m (NUM_ADD m n)` is the bound, and the
+   * half that is not in front gets there by commuting the sum rather than by a second lemma.
+   */
+  private def positiveJoined(
+    tools: Concrete,
+    concatLength: Kernel.Thm,
+    concat: Term,
+    left: Term,
+    right: Term,
+    positive: Kernel.Thm,
+    onTheLeft: Boolean
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      lengthOf <- tools.lengthOf
+      order <- tools.strictOrder
+      zero <- tools.zero
+      atMost <- tools.constant(Peano.NonStrictOrder, OrderType)
+      sizeLeft <- LogicError.lift(Term.app(lengthOf, left))
+      sizeRight <- LogicError.lift(Term.app(lengthOf, right))
+      lengths <- rules.specAll(concatLength, List(left, right))
+      bound <-
+        if (onTheLeft) rules.specAll(tools.numbers.atMostSum, List(sizeLeft, sizeRight))
+        else
+          for {
+            flipped <- rules.specAll(tools.numbers.atMostSum, List(sizeRight, sizeLeft))
+            commuted <- rules.specAll(tools.numbers.addCommutative, List(sizeRight, sizeLeft))
+            moved <- carryRight(atMost, sizeRight, commuted, flipped)
+          } yield moved
+      sum <- Term
+        .destEq(lengths.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", lengths.conclusion))
+      size = if (onTheLeft) sizeLeft else sizeRight
+      premises <- rules.conjIntro(positive, bound)
+      below <- rules
+        .specAll(tools.numbers.belowThenAtMost, List(zero, size, sum))
+        .flatMap(rules.mp(_, premises))
+      result <- Conv.sym(lengths).flatMap(carryRight(order, zero, _, below))
+    } yield result
+  }
+
+  /** `|- 0 < WORD_LENGTH w` from `|- w = <a word>` and `|- 0 < WORD_LENGTH <that word>`. */
+  private def positiveAt(
+    tools: Concrete,
+    lengthOf: Term,
+    order: Term,
+    zero: Term,
+    equation: Kernel.Thm,
+    positive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    Conv
+      .apTerm(lengthOf, equation)
+      .flatMap(Conv.sym)
+      .flatMap(carryRight(order, zero, _, positive))
+
+  /**
+   * `|- ~(w = WORD_EMPTY)` from `|- 0 < WORD_LENGTH w`.
+   *
+   * The empty word is the only one with no letters, which is `WORD_EMPTY_LENGTH` read as a
+   * refusal: a word that is the empty word has length zero, and nothing is below zero.
+   */
+  private def notEmptyFrom(
+    tools: Concrete,
+    emptyLength: Kernel.Thm,
+    subject: Term,
+    positive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+
+    for {
+      empty <- tools.constant(Concatenation.Empty, Words)
+      lengthOf <- tools.lengthOf
+      order <- tools.strictOrder
+      zero <- tools.zero
+      equation <- LogicError.lift(Term.eq(subject, empty))
+      assumed <- LogicError.lift(Kernel.assume(equation))
+      lengths <- Conv.apTerm(lengthOf, assumed)
+      collapsed <- Conv.trans(lengths, emptyLength)
+      absurd <- carryRight(order, zero, collapsed, positive)
+      refused <- logic.rules.spec(zero, tools.numbers.notBelowZero)
+      falsity <- logic.rules.notElim(refused, absurd)
+      result <- logic.rules.notIntro(equation, falsity)
+    } yield result
+  }
+
+  /**
+   * `|- ~(<word> = WORD_EMPTY)`, for a word written out letter by letter.
+   *
+   * The two side conditions the extension clause carries, discharged the only way a word spelled as
+   * a concatenation of singletons can discharge them: by its length. `Concatenation` publishes no
+   * fact of this shape and this is not the place to add one, because the general statement is about
+   * `word('a)` and would be a lemma of a link in the chain; what is needed here is the instance at
+   * three concrete words.
+   */
+  private def notEmptyWord(
+    tools: Concrete,
+    concatenation: Concatenation,
+    letters: Vector[String]
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      subject <- tools.word(letters)
+      positive <- positiveLength(tools, letters)
+      emptyLength <- concatenation.fact(Concatenation.EmptyLength).map(atNumbers)
+      result <- notEmptyFrom(tools, emptyLength, subject, positive)
+    } yield result
+
+  /** A right-nested conjunction of what is held, which is the shape a clause's premises take. */
+  private def conjoin(
+    logic: Logic,
+    facts: List[Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] =
+    facts match {
+      case Nil => Left(NotOfForm("at least one premise", LeftSide))
+      case single :: Nil => Right(single)
+      case head :: rest => conjoin(logic, rest).flatMap(logic.rules.conjIntro(head, _))
+    }
+
   private def ruleHolds(
     tools: Concrete,
     definitions: Map[String, Kernel.Thm],
