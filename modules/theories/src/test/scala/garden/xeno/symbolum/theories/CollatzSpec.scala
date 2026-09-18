@@ -151,6 +151,39 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     separations.flatMap(entry => List(entry._1, entry._2)).distinct.size shouldBe 11
   }
 
+  "Every rule" should "carry each marker the same number of times on both sides" in {
+    // The combinatorial half of a closure lemma nobody has proved yet, pinned where facts about
+    // the encoding live. `REACH_POTENTIAL` cannot be read on `S2_MARKED` alone -- `0/0.` is marked,
+    // `B1` takes it to `0/t.`, and `S2_PHI` falls, where the hypothesis asks that no uncounted step
+    // lower it -- so the class the potential argument wants is the marked words **and** one head
+    // marker, in front. What makes that class closed under a step is that no rule of this table
+    // introduces or removes either marker, and this is that, counted.
+    //
+    // **It reads the table and not the definition**, which is weaker than the two tests above it
+    // and is said rather than left to be noticed: `disjuncts` counts clauses off the definition and
+    // the fifty-five separations are derived from it, where this is a property of the Scala vector
+    // the definition is generated from. What it is for is that the next piece of work has the fact
+    // written down at all, at the place a change to the table breaks it.
+    for (rule <- Collatz.Rules) {
+      withClue(s"${rule.label}: ${rule.left.mkString} -> ${rule.right.mkString}\n") {
+        rule.left.count(_ == Collatz.Head) shouldBe rule.right.count(_ == Collatz.Head)
+        rule.left.count(_ == Collatz.Tail) shouldBe rule.right.count(_ == Collatz.Tail)
+      }
+    }
+
+    // And the head marker, where a rule holds one at all, is the first letter on both sides. That
+    // is what says a `B` rule fires at the front of a well-formed word and nowhere else, which is
+    // the other half of the same argument.
+    val atTheHead = Collatz.Rules.filter(_.left.contains(Collatz.Head))
+    atTheHead.map(_.label) shouldBe Vector("B1", "B2", "B3")
+    for (rule <- atTheHead) {
+      withClue(s"${rule.label}: ${rule.left.mkString} -> ${rule.right.mkString}\n") {
+        rule.left.head shouldBe Collatz.Head
+        rule.right.head shouldBe Collatz.Head
+      }
+    }
+  }
+
   "The counted sub-relation" should "be six of the eleven, and every one of them a rule" in {
     disjuncts(bodyOf(Collatz.Counted)) shouldBe 6
     Collatz.CountedRules.size shouldBe 6
