@@ -415,9 +415,13 @@ it trivially true, and assert against that too.
 its failure leaves whatever refusal the shape rule chose. The rule that class is about is that the
 procedure whose fragment recognises the goal's shape is the one whose refusal is reported, and a
 search recognises no shape: it either reaches the goal or does not, so it has no claim on the
-message. The one place the order is reversed is the propositional address, where `Minimal` runs
-before `Propositional` and the **second** refusal survives, because the first names a fragment that
-is no longer the only one.
+message. The one place the order is reversed is the propositional address, where `Intuitionistic`
+runs before `Propositional` and the **second** refusal survives, because the first names a fragment
+that is no longer the only one. **This sentence named `Minimal` until 2026-09-18**, when
+`docs/adr/0023` moved the address off the gate and onto the calculus under it; the argument it
+makes is unchanged, and what was wrong was the procedure it named, in the one document every
+session reads first. `PropositionalRouteSpec` reads this sentence against `Prove.Search` now, so a
+third procedure at that address goes red here rather than being noticed by a reader.
 
 **And the order candidates are tried in is the whole of whether a bounded search works.** Sorting by
 fewest obligations is the obvious order and it is wrong here, measured on 2026-09-15: `DOUBLE_NEGATION`

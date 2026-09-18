@@ -252,4 +252,83 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
       }
     }
   }
+
+  /* ------------------------------------------------ what the documents say about all of this */
+
+  /**
+   * The documents read with the line breaks taken out, because a sentence is wrapped where the
+   * column ran out and a figure lands on either side of that break with no warning.
+   *
+   * The idiom is `ClassicalSpec`'s, which pins the excluded middle's step count in the four places
+   * that spell it; this is the same instrument pointed at the two counts this file computes.
+   */
+  private def read(relative: String): String =
+    java.nio.file.Files
+      .readString(java.nio.file.Paths.get(relative))
+      .replaceAll("\\s+", " ")
+
+  "The counts this file computes" should "be the counts the documents spell, wherever they spell them" in {
+    // Added 2026-09-18, by the verification of the card this work came from, and the defect is one
+    // the assertions above cannot see: 58 and 98 are written by hand in `README.md`,
+    // `docs/evaluation.md` and `Prove`'s docstring, and nothing read any of them. A change to the
+    // routing turns the counts above red, which is the half that was covered; a hand edit to a
+    // document, or a repair that fixes this file and not the prose, was the half that was not.
+    //
+    // The sentence in `README.md` even said the figures "are asserted by `PropositionalRouteSpec`",
+    // which a reader takes for a document being pinned and which was true only of the code's own
+    // count. `CLAUDE.md`'s own precedent is the opposite way round: the excluded middle's 841 is
+    // "written by hand in four documents **and asserted in all four** by `ClassicalSpec`, which is
+    // what makes writing it by hand safe here".
+    //
+    // `docs/adr/0023` spells both figures four times and is deliberately NOT read here: an ADR is a
+    // dated record of a decision, superseded rather than maintained, so a test that forced it to
+    // track a moving count would be asking it to stop being one.
+    val gainedCount = gained.size
+    val classicalOnly = addressed.count(r => r.byClassical && !r.byCalculus)
+
+    val readme = read("README.md")
+    withClue(s"README.md does not say $gainedCount goals move from one axiom to none: ") {
+      readme should include(s"on two atoms, **$gainedCount** are exactly that")
+    }
+    withClue(s"README.md does not say $classicalOnly stay classical-only: ") {
+      readme should include(s"$classicalOnly of the formulas in that same measurement stay classical-only")
+    }
+
+    withClue(s"docs/evaluation.md does not spell ${addressed.size}, $gainedCount and $classicalOnly: ") {
+      read("docs/evaluation.md") should include(
+        s"of the ${addressed.size} formulas of at most six nodes on two atoms that take this " +
+          s"address, $gainedCount move from one axiom to none and $classicalOnly stay classical-only"
+      )
+    }
+
+    val prove = read("modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Prove.scala")
+    withClue(s"Prove.scala's docstring does not say $gainedCount are provable here: ") {
+      prove should include(s"**$gainedCount of those are provable here**")
+    }
+    withClue(s"Prove.scala's docstring does not say the other $classicalOnly stay classical-only: ") {
+      prove should include(s"The other $classicalOnly stay classical-only")
+    }
+  }
+
+  it should "be produced by the procedure the front instructions name at this address" in {
+    // The other half of the same repair, and the one with no figure in it. `CLAUDE.md` went on
+    // saying that the propositional address runs `Minimal` before `Propositional` for the whole of
+    // the day the routing moved, in the document every session reads before it does anything, and
+    // nothing anywhere read that sentence. It is read here rather than in `DocumentationSpec`
+    // because it is a claim about this address and this file is what measures this address.
+    //
+    // Spelled from `Prove.Search` rather than written out, so a third procedure at this address
+    // fails this line instead of leaving the sentence quietly wrong again.
+    val instructions = read("CLAUDE.md")
+    val free = Prove.Search.Intuitionistic.spelling
+
+    withClue(s"CLAUDE.md does not say the propositional address runs `$free` first: ") {
+      instructions should include(s"the propositional address, where `$free`")
+    }
+    instructions should include(s"`$free` runs before `Propositional`")
+
+    // And the sentence it replaced, so that rewriting the paragraph from memory cannot bring it
+    // back: the gate is spent on the address now and answers no goal there.
+    instructions should not include "where `Minimal` runs"
+  }
 }
