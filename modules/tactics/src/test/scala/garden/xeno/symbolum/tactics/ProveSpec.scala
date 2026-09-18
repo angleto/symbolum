@@ -252,6 +252,40 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     force(wider(goal)).hypotheses shouldBe empty
   }
 
+  it should "prove a negated goal the intuitionistic calculus reaches, at no axiom at all" in {
+    // The capability the routing of 2026-09-18 exists for, and the one the two tests above do not
+    // cover between them: `p \\/ ~p` needs the classical axiom and Peirce's law has no negation, so
+    // both of them are answered by `Propositional` and neither says what a goal with a negation in
+    // it that is intuitionistically provable costs.
+    //
+    // It used to cost one. `Minimal` refused this by naming the negation, the goal fell through to
+    // the classical procedure, and the theorem came back resting on `SELECT` — the same term, at a
+    // price the argument does not need. Measured over every propositional formula of at most six
+    // nodes on two atoms, 58 goals are in exactly this position.
+    //
+    // **Seen failing against the tree that carries it**, which is what makes it a guard rather than
+    // a description: run on 2026-09-18 with `Prove.scala` reverted to `6554615` and this file left
+    // as it is, the assertion below reported the axiom set as
+    // `Set(! \x. ! \y. x y ==> x (select x))` where it wanted none — the choice axiom, named by the
+    // failure rather than by this comment. The two cases in `RefusalSpec` went red in the same run.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+    val goal = force(wider.reals.proposition("!p:bool. ~(p /\\ ~p)"))
+
+    wider.addressOf(goal) shouldBe Prove.Address.Propositional
+
+    val theorem = force(wider(goal))
+    theorem.conclusion shouldBe goal
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) shouldBe empty
+
+    // And the same goal through the procedure it used to reach, so that the zero above is read as a
+    // price and not as an absence: the classical route proves it too, and charges for it.
+    val classically = force(Propositional(chain.classical).prove(goal))
+    classically.conclusion shouldBe goal
+    Derivation.axiomsOf(classically).size shouldBe 1
+  }
+
   it should "keep an arithmetic denial with the procedure whose message is worth more" in {
     // The narrowness that makes the widening safe, asserted so it cannot drift. `~(x = 0)` has an
     // arithmetic atom, so it is not the propositional address however propositional its shape looks,
