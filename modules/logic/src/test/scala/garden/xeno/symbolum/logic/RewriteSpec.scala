@@ -715,8 +715,12 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
             .map(_.asInstanceOf[java.nio.file.Path])
             .filter { path =>
               path.getFileName.toString != "Rewrite.scala" &&
+              // `repeatConv(` and not `Rewrite.repeatConv(`: a site written under `import Rewrite.*`
+              // spells it without the qualifier, and a gate that depends on how a call is spelled
+              // is the defect this repository already records about an order and ASCII. The looser
+              // pattern can only over-report, which costs an entry and never a miss.
               new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
-                .contains("Rewrite.repeatConv(")
+                .contains("repeatConv(")
             }
             .map(_.getFileName.toString)
         finally stream.close()
