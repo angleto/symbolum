@@ -145,6 +145,23 @@ line.addEventListener('paste', e => {
   line.value = '';
   send('/run', whole);
 });
+/*
+ * Going back asks first, and the `confirm` is the one thing on this page an automated caller
+ * cannot get past.
+ *
+ * It is a browser modal: it blocks the page's event loop, and a browser-automation extension
+ * driving this tab stops receiving anything at all until a person dismisses it. Measured on
+ * 2026-09-18, driving the page through one such extension: loading it, running six commands,
+ * reading a refusal and carrying on all worked and screenshotted, and this is the only control
+ * that would have stopped that. It is written down rather than replaced, because replacing it is
+ * an in-page dialog and that is a decision about the interface: `confirm` is what makes a
+ * destructive button honest for the person this tool is for, and that person is the one it was
+ * designed for.
+ *
+ * What it does NOT explain is the block this page was reported with on 2026-09-14, and the
+ * difference is worth keeping: that report was a screenshot failing on a freshly loaded page, and
+ * nothing here fires without a click. That block did not reproduce on 2026-09-18.
+ */
 cells.addEventListener('click', e => {
   const button = e.target.closest('.back');
   if (!button) return;

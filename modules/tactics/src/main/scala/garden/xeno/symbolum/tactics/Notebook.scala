@@ -300,6 +300,20 @@ object Notebook {
    * Pure so that it can be asserted about and so that the page after a reload is the page before
    * it: the server holds a session and nothing else, and every state the browser can be in is one
    * this function produces from some session.
+   *
+   * **The two lines naming a CDN are the only thing on this page that leaves the machine**, and
+   * measured in a browser on 2026-09-18 they are exactly two requests to `cdn.jsdelivr.net` on
+   * every load, one for the stylesheet and one for the script. What that costs is stated rather
+   * than left to be discovered: a tool documented as listening on loopback for one person tells a
+   * third party, on each page load, that somebody opened it and from which address. Nothing about
+   * the session travels, because the typesetting happens here out of `data-tex` attributes the
+   * server wrote.
+   *
+   * Vendoring KaTeX would end that and is not done here, because it is a decision about what this
+   * repository ships rather than a repair: half a megabyte of somebody else's minified JavaScript
+   * under `resources`, with its licence, in a tree whose whole argument is that what it asks you to
+   * believe is small and readable. `Script`'s own comment says what happens where it does not load,
+   * which is the failure this arrangement was designed for and is not the same question.
    */
   def render(session: Session): String =
     s"""<!doctype html>
