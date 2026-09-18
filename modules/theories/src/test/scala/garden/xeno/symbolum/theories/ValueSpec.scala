@@ -11,6 +11,12 @@ import org.scalatest.matchers.should.Matchers
  * the reason is worth keeping: this procedure either produces the theorem or it does not, and
  * twenty values measure that once each. What is asserted beside each value is the **price**, which
  * is the thing a second route would change without changing any of the values.
+ *
+ * The price is asserted **per row** and not over the table, and that is a repair rather than a
+ * style: the three rows about `num` cost the naturals' two axioms, and the two about a floor cost
+ * eighteen, because their argument is a real, their characterisation is about reals, and the bounds
+ * on a written rational are settled by `Linarith`. A single assertion over the table would have had
+ * to be the looser of the two, and would have stopped noticing the thing it was written for.
  */
 class ValueSpec extends AnyFlatSpec with Matchers {
 
@@ -121,17 +127,59 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     checked shouldBe 144
   }
 
-  "A constant with no row" should "be refused by name, and the refusal say what there is" in {
-    // `NUM_FLOOR` and not `NUM_GCD`, which is what this test named until the gcd got a row. The
-    // two rows that are missing are missing for a reason the message does not carry and this
-    // comment does: a floor takes a **real** and holds `0 <= x` as a written hypothesis, so its row
-    // is the first that widens the table rather than using it.
+  "A floor and a ceiling" should "be values at a written rational, which is the row that widened the table" in {
+    // The fourth and fifth constants, and the two that take a **real**. The row is given a
+    // numerator and a denominator and builds `p / q` itself, so `NUM_FLOOR (exp 1)` is not answered
+    // badly here — it cannot be asked, which is the honest shape of the limit.
+    evaluate(Peano.Floor, 7, 2).conclusion shouldBe written("NUM_FLOOR ((7:real) / 2) = 3")
+    evaluate(Peano.Ceiling, 7, 2).conclusion shouldBe written("NUM_CEIL ((7:real) / 2) = 4")
+
+    // Where the division is exact the two agree, and where the value is below one they are zero and
+    // one: both are cases the window argument has to get right rather than cases it can guess.
+    evaluate(Peano.Floor, 6, 2).conclusion shouldBe written("NUM_FLOOR ((6:real) / 2) = 3")
+    evaluate(Peano.Ceiling, 6, 2).conclusion shouldBe written("NUM_CEIL ((6:real) / 2) = 3")
+    evaluate(Peano.Floor, 1, 3).conclusion shouldBe written("NUM_FLOOR ((1:real) / 3) = 0")
+    evaluate(Peano.Ceiling, 1, 3).conclusion shouldBe written("NUM_CEIL ((1:real) / 3) = 1")
+  }
+
+  it should "cost the reals, which is the constant's price and not this procedure's" in {
+    // Eighteen against two, and the assertion is the pair rather than either half: a row about a
+    // real cannot be cheaper than the reals, and a row about `num` must not become dearer. What
+    // would break this is a route for the naturals that went through the embedding, which is the
+    // thing `Digits` exists to avoid and which no other test here would notice.
+    val floor = Derivation.axiomsOf(evaluate(Peano.Floor, 7, 2))
+    val quotient = Derivation.axiomsOf(evaluate(Modular.DivName, 17, 5))
+
+    info(s"a floor rests on ${floor.size} axioms and a quotient on ${quotient.size}")
+    floor should have size 18
+    quotient should have size 2
+    quotient.subsetOf(floor) shouldBe true
+  }
+
+  it should "refuse a denominator of zero, and refuse it before dividing by it" in {
+    // The refusal is the procedure's and the order matters: the answer this row computes is
+    // `numerator / denominator` in Scala as well, so a check that came after it threw where every
+    // other refusal here returns. It did, in the first version.
     val refusal = procedure
-      .of(Peano.Floor, Vector(7, 2))
+      .of(Peano.Floor, Vector(7, 0))
       .swap
       .fold(theorem => fail(s"proved ${chain.widest.show(theorem.conclusion)}"), identity)
 
-    refusal.message should include(Peano.Floor)
+    refusal.message should include("positive denominator")
+    refusal.message should include("7 over 0")
+  }
+
+  "A constant with no row" should "be refused by name, and the refusal say what there is" in {
+    // `NUM_SUB` and not `NUM_GCD` or `NUM_FLOOR`, which is what this test named while each of those
+    // was the constant without a row. It is a better subject than either was: truncated subtraction
+    // is **defined** rather than chosen, so a row for it would not be read off a characterisation
+    // at all, and the message still has to name it rather than claim it does not exist.
+    val refusal = procedure
+      .of(Peano.Subtraction, Vector(7, 2))
+      .swap
+      .fold(theorem => fail(s"proved ${chain.widest.show(theorem.conclusion)}"), identity)
+
+    refusal.message should include(Peano.Subtraction)
     refusal.message should include(Modular.DivName)
 
     // And it does not say the constant is missing, which is what this refusal said first: there is
@@ -156,13 +204,20 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     Value.Routes should not be empty
 
     for ((constant, route) <- Value.Routes) {
+      // Looked for in `Modular` and then in `Peano`, because the two families are read off
+      // different developments: a quotient off `Modular`, a floor off `Peano`. A name in neither is
+      // what this catches, which is a note naming a lemma that has been renamed or never existed.
       withClue(s"$constant is read off ${route.characterisation}: ") {
-        chain.modular.fact(route.characterisation).isRight shouldBe true
+        val held = chain.modular
+          .fact(route.characterisation)
+          .orElse(chain.peano.fact(route.characterisation))
+        held.isRight shouldBe true
       }
       route.note should not be empty
       route.arity should be > 0
     }
 
-    procedure.reachable shouldBe Vector(Modular.DivName, Modular.GcdName, Modular.ModName)
+    procedure.reachable shouldBe
+      Vector(Peano.Ceiling, Peano.Floor, Modular.DivName, Modular.GcdName, Modular.ModName).sorted
   }
 }

@@ -43,7 +43,7 @@ import garden.xeno.symbolum.logic.*
  * not a decision procedure for anything: handed `NUM_GCD` today it says it has no route, which is
  * a statement about this table and not about the constant.
  */
-final class Value private (val digits: Digits, val modular: Modular) {
+final class Value private (val digits: Digits, val modular: Modular, val linarith: Linarith) {
 
   /** The constants this can evaluate, which is what a caller should ask before asking for one. */
   def reachable: Vector[String] = Value.Routes.keys.toVector.sorted
@@ -77,6 +77,243 @@ final class Value private (val digits: Digits, val modular: Modular) {
           )
         else route.prove(this, arguments)
     }
+
+  /**
+   * `|- NUM_FLOOR (p / q) = c`, and the ceiling beside it, for a rational somebody wrote down.
+   *
+   * == Why this row takes two numbers for one argument ==
+   *
+   * The constant takes a **real** where every row above takes naturals, which is the widening the
+   * card that asked for this predicted. It is made as small as it can be: the row is given a
+   * numerator and a denominator and builds `p / q` itself, so what it answers about is the
+   * rationals anybody can write. `NUM_FLOOR (exp 1)` stays **inexpressible** through this table
+   * rather than being answered badly — a caller cannot even form the question — and that is the
+   * honest shape of the limit.
+   *
+   * == Why it costs the reals, and why that is the constant's price and not this file's ==
+   *
+   * Every other row rests on the naturals' two axioms and this one cannot: the argument is a real,
+   * the characterisation is about reals, and the bounds on a written rational are settled by
+   * `Linarith`, a decision procedure over the ordered field. Measured on 2026-09-18, a ground goal
+   * through `Linarith` costs fifteen axioms by itself, and `NUM_FLOOR_LE` reaches the sixteenth
+   * through the Archimedean property. `ValueSpec` therefore asserts the price **per row**, which is
+   * the assertion this row would otherwise have broken quietly.
+   *
+   * == The derivation, which is the uniqueness of the floor written out ==
+   *
+   * The two characterisations put `NUM_FLOOR x` in a window of width one, `f <= x < f + 1`, and the
+   * candidate sits in the same window, which `Linarith` settles about two written numbers. That
+   * does **not** give `f = c`: two reals in a window of width one can differ. What closes it is
+   * that both are naturals. `NUM_LT_TOTAL` splits the three cases and `NUM_REAL_LT` turns `f < c`
+   * into `real_of_num f + 1 <= real_of_num c`, a step of a whole unit, which leaves the window. So
+   * the discreteness of `num` does the work and the reals only carry the inequalities.
+   *
+   * == One equation, handed to `Linarith` as a hypothesis rather than rewritten in ==
+   *
+   * `real_of_num c` is an atom to `Linarith` and `c` is a numeral it can read, and the two have to
+   * meet. They meet as a **premise**: every goal below opens with `real_of_num c = c`, which the
+   * three numeral bridges prove and which the procedure reads as two inequalities between an atom
+   * and a number. The alternative is to rewrite the theorem, which is a congruence per statement
+   * and a second door onto the rewriter for this file to be asked about.
+   */
+  private[theories] def rounded(
+    numerator: BigInt,
+    denominator: BigInt,
+    wantCeiling: Boolean
+  ): Either[LogicError, Kernel.Thm] =
+    // Before anything, and as its own method rather than a line inside the derivation: the value
+    // this row is about is `numerator / denominator` in Scala as well as in the theory, so a
+    // denominator of zero throws where every other refusal here returns. The first version had the
+    // check inside the comprehension, which is after the division that computes the answer.
+    if (denominator <= 0 || numerator < 0)
+      modular
+        .term(s"($numerator:${Real.TypeName})")
+        .flatMap(term =>
+          Left(
+            NotOfForm(
+              s"a non-negative numerator over a positive denominator, and " +
+                s"$numerator over $denominator is not one",
+              term
+            )
+          )
+        )
+    else roundedWithin(numerator, denominator, wantCeiling)
+
+  /** [[rounded]] once the arguments are known to name a non-negative rational. */
+  private def roundedWithin(
+    numerator: BigInt,
+    denominator: BigInt,
+    wantCeiling: Boolean
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = modular.logic.rules
+
+    val name = if (wantCeiling) Peano.Ceiling else Peano.Floor
+    val point = s"(($numerator:${Real.TypeName}) / $denominator)"
+    val applied = s"($name $point)"
+    val image = s"real_of_num $applied"
+    val answer =
+      if (wantCeiling) (numerator + denominator - 1) / denominator
+      else numerator / denominator
+    val candidate = s"real_of_num ($answer:${Natural.TypeName})"
+    val meeting = s"$candidate = $answer"
+
+    val insideText = if (wantCeiling) s"$point <= $image" else s"$image <= $point"
+    val outsideText = if (wantCeiling) s"$image < $point + 1" else s"$point < $image + 1"
+    val lowerText = if (wantCeiling) s"$point <= $candidate" else s"$candidate <= $point"
+    val upperText = if (wantCeiling) s"$candidate < $point + 1" else s"$point < $candidate + 1"
+
+    def settle(text: String): Either[LogicError, Kernel.Thm] =
+      modular.proposition(text).flatMap(linarith.prove)
+
+    def once(bridge: Kernel.Thm, text: String): Either[LogicError, Kernel.Thm] =
+      settle(s"$meeting ==> $text").flatMap(rules.mp(_, bridge))
+
+    def characterisation(fact: String, nonNegative: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        held <- modular.peano.fact(fact)
+        argument <- modular.term(point)
+        result <- rules.spec(argument, held).flatMap(rules.mp(_, nonNegative))
+      } yield result
+
+    for {
+      // `0 <= x` is what both characterisations ask for, and `Peano` writes it rather than hiding
+      // it: `num` has no negative numbers, so a floor below zero would be right above zero and
+      // silently wrong under it.
+      nonNegative <- settle(s"(0:${Real.TypeName}) <= $point")
+      inside <- characterisation(
+        if (wantCeiling) Peano.CeilingAtLeast else Peano.FloorAtMost, nonNegative)
+      outside <- characterisation(
+        if (wantCeiling) Peano.CeilingBelow else Peano.FloorAbove, nonNegative)
+
+      bridge <- embedding(answer)
+      lower <- once(bridge, lowerText)
+      upper <- once(bridge, upperText)
+
+      subject <- modular.term(applied)
+      answerTerm <- digits.numeral(answer)
+
+      below <- refuses(
+        subject, answerTerm, bridge, meeting,
+        s"$image + 1 <= $candidate",
+        if (wantCeiling) insideText else outsideText,
+        if (wantCeiling) s"~($candidate < $point + 1)" else s"~($candidate <= $point)",
+        if (wantCeiling) inside else outside,
+        if (wantCeiling) upper else lower
+      )
+      above <- refuses(
+        answerTerm, subject, bridge, meeting,
+        s"$candidate + 1 <= $image",
+        if (wantCeiling) outsideText else insideText,
+        if (wantCeiling) s"~($point <= $candidate)" else s"~($point < $candidate + 1)",
+        if (wantCeiling) outside else inside,
+        if (wantCeiling) lower else upper
+      )
+
+      trichotomy <- modular.peano.fact(Peano.Trichotomy)
+      cases <- rules.specAll(trichotomy, List(subject, answerTerm))
+      result <- byCases(cases, below, above)
+    } yield result
+  }
+
+  /**
+   * `|- ~(NUM_LT a b)`, which is each of the two bad branches of the trichotomy.
+   *
+   * One shape used twice, and the only thing in it that knows the two numbers are naturals is
+   * `NUM_REAL_LT`: what it turns `a < b` into is a step of a whole unit, and that is what leaves
+   * the window the characterisations put both of them in.
+   */
+  private def refuses(
+    smaller: Term,
+    larger: Term,
+    bridge: Kernel.Thm,
+    meetingText: String,
+    stepText: String,
+    windowText: String,
+    refusedText: String,
+    window: Kernel.Thm,
+    bound: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = modular.logic.rules
+
+    for {
+      order <- LogicError.lift(
+        modular.theory.constant(
+          Peano.StrictOrder,
+          Type.fun(Value.Numbers, Type.fun(Value.Numbers, Type.Bool))
+        )
+      )
+      claim <- LogicError.lift(Term.appAll(order, List(smaller, larger)))
+      assumed <- LogicError.lift(Kernel.assume(claim))
+      embeds <- modular.peano.fact(Peano.EmbedsStrictOrder)
+      stepped <- rules.specAll(embeds, List(smaller, larger)).flatMap(rules.mp(_, assumed))
+      // The meeting is passed as the text the caller wrote rather than printed off the bridge and
+      // read back. What that buys is where a mismatch shows up: if the rewriting that built the
+      // bridge had stopped short, `mp` below refuses because the premise is not the theorem, where
+      // a goal rebuilt from the bridge's own sides would have accepted it and failed later.
+      shape <- modular.proposition(
+        s"$meetingText ==> $stepText ==> $windowText ==> $refusedText"
+      )
+      linear <- linarith.prove(shape)
+      denied <- rules
+        .mp(linear, bridge)
+        .flatMap(rules.mp(_, stepped))
+        .flatMap(rules.mp(_, window))
+      falsity <- rules.notElim(denied, bound)
+      result <- rules.notIntro(claim, falsity)
+    } yield result
+  }
+
+  /** `|- real_of_num c = c`, the numeral of `num` and the real numeral with the same digits. */
+  private def embedding(value: BigInt): Either[LogicError, Kernel.Thm] = {
+    val peano = modular.peano
+
+    for {
+      one <- peano.fact(Peano.EmbedsNumeralOne)
+      bit0 <- peano.fact(Peano.EmbedsNumeralBit0)
+      bit1 <- peano.fact(Peano.EmbedsNumeralBit1)
+      zero <- peano.fact(Peano.EmbedsZero)
+      rules <- Rewrite.Rule.all(peano.logic, Vector(one, bit0, bit1, zero))
+      term <- modular.term(s"real_of_num ($value:${Natural.TypeName})")
+      result <- Rewrite.rewrite(rules, term)
+    } yield result
+  }
+
+  /**
+   * `|- a = b` out of the trichotomy and the two denials, which is the case analysis written out.
+   *
+   * The middle disjunct is the answer and the other two are refused, so what this is is
+   * `NUM_LT_TOTAL` with two of its three branches closed by contradiction.
+   */
+  private def byCases(
+    cases: Kernel.Thm,
+    below: Kernel.Thm,
+    above: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = modular.logic
+    val rules = logic.rules
+
+    for {
+      split <- logic.destDisj(cases.conclusion).toRight(NotOfForm("a disjunction", cases.conclusion))
+      (first, rest) = split
+      pair <- logic.destDisj(rest).toRight(NotOfForm("a disjunction", rest))
+      (equality, last) = pair
+
+      assumedFirst <- LogicError.lift(Kernel.assume(first))
+      firstBranch <- rules
+        .notElim(below, assumedFirst)
+        .flatMap(rules.falsityElim(equality, _))
+
+      assumedEquality <- LogicError.lift(Kernel.assume(equality))
+      assumedLast <- LogicError.lift(Kernel.assume(last))
+      lastBranch <- rules
+        .notElim(above, assumedLast)
+        .flatMap(rules.falsityElim(equality, _))
+      assumedRest <- LogicError.lift(Kernel.assume(rest))
+      secondBranch <- rules.disjElim(assumedRest, assumedEquality, lastBranch)
+
+      result <- rules.disjElim(cases, firstBranch, secondBranch)
+    } yield result
+  }
 
   /**
    * `|- NUM_GCD a b = <their greatest common divisor>`, for numerals that are not both zero.
@@ -411,6 +648,20 @@ object Value {
         "the two meet at `NUM_DIVIDES_ANTISYM`, and two zeros are refused because nothing is " +
         "provable about `NUM_GCD ZERO ZERO`",
       (value, arguments) => value.greatestCommonDivisor(arguments(0), arguments(1))
+    ),
+    Peano.Floor -> Route(
+      2,
+      Peano.FloorAtMost,
+      "the greatest natural not above a written rational, read off the window `NUM_FLOOR_LE` and " +
+        "`NUM_FLOOR_LT` put it in; the two arguments are a numerator and a denominator, because " +
+        "the constant takes a real and this table's other rows take naturals",
+      (value, arguments) => value.rounded(arguments(0), arguments(1), wantCeiling = false)
+    ),
+    Peano.Ceiling -> Route(
+      2,
+      Peano.CeilingAtLeast,
+      "the least natural not below the same rational, by the same window the other way up",
+      (value, arguments) => value.rounded(arguments(0), arguments(1), wantCeiling = true)
     )
   )
 
@@ -454,8 +705,10 @@ object Value {
     for {
       semiring <- Semiring.construct(chain.peano)
       digits <- Digits.construct(semiring)
-    } yield new Value(digits, chain.modular)
+      linarith <- Linarith.construct(chain.order)
+    } yield new Value(digits, chain.modular, linarith)
 
-  /** The same, for a caller that has already built the arithmetic. */
-  def over(digits: Digits, modular: Modular): Value = new Value(digits, modular)
+  /** The same, for a caller that has already built the three procedures it stands on. */
+  def over(digits: Digits, modular: Modular, linarith: Linarith): Value =
+    new Value(digits, modular, linarith)
 }
