@@ -150,8 +150,9 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
   }
 
   "A value that is not a numeral of `num`" should "be refused by name rather than computed" in {
-    // `PRF-02` from the other side: the procedure takes two values and there is exactly one way to
-    // hand it something it cannot make a numeral of, which is a negative one. The refusal says
+    // The convention that a procedure which cannot settle must refuse, and must name what it could
+    // not do, read from the other side: the procedure takes two values and there is exactly one way
+    // to hand it something it cannot make a numeral of, which is a negative one. The refusal says
     // which of the two facts about `num` stopped it.
     val refusal = digits.add(-1, 3).swap.fold(theorem => fail(s"proved ${show(theorem.conclusion)}"), identity)
 
