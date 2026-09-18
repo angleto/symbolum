@@ -72,10 +72,19 @@ import garden.xeno.symbolum.logic.*
  * shows: the bridge carries its own axioms into [[Domain.Built.spends]]'s foundational column, so
  * arithmetic is visible rather than free.
  *
- * What it is still **not** is a search over the domain: nothing looks for a claim, nothing looks
- * for the bridge either, and a domain **type** the foundation has never heard of has no bridge to
- * be named, so a claim needing arithmetic about one is still refused by name. The promise is
- * accounting, not search, and [[Domain.Built.spends]] is what accounts.
+ * What it is still **not** is a search over the domain: nothing here looks for a claim, and a
+ * domain **type** the foundation has never heard of has no bridge to be named, so a claim needing
+ * arithmetic about one is still refused by name. The promise of this file is accounting, not
+ * search, and [[Domain.Built.spends]] is what accounts.
+ *
+ * **The bridge itself is looked for since 2026-09-18, and it is looked for somewhere else.**
+ * `Bridging` takes a library, puts the lemmas about the constants a claim names to this method one
+ * at a time, and reports which of them carried it; `docs/adr/0027` is the decision, and the reason
+ * it is a file above this one rather than a mode of [[Domain.Built.settle]] is the one stated at
+ * the text overload below: resolving a name would put `Library` under this file and shut out the
+ * caller whose bridge is a fact it never published. Nothing changes here: what that search hands
+ * back was built by this method, and every refusal this method gives is still what a caller naming
+ * its own bridge gets.
  */
 final case class Domain(
   name: String,
@@ -287,6 +296,20 @@ object Domain {
       )
     }
 
+    /**
+     * The foundation's constants a claim reaches, which is what a bridge has to be about.
+     *
+     * The same walk the refusal below is written from, published because the caller that has to
+     * name a bridge is the one that needs the list, and until 2026-09-18 the only way to obtain it
+     * was to read it back out of the refusal's sentence. `Bridging` is the first consumer: it is
+     * what decides which of the library's lemmas are candidates, and a search over the library
+     * rather than over these constants would be a different tool.
+     *
+     * A claim in the domain's own vocabulary answers with the empty set, and that is the answer
+     * this is most often asked for: it says no bridge is wanted, rather than that none was found.
+     */
+    def reaches(goal: Term): Set[String] = foundationConstantsIn(opened(goal))
+
     /* ------------------------------------------------------------- settling a claim about it */
 
     /**
@@ -327,9 +350,14 @@ object Domain {
      * type `num` whose value nobody knows, so a fact used about it has to hold for all of them, and
      * that is what makes this safe where substituting a number would not be.
      *
-     * Nothing searches for the bridge. A caller that names a lemma which does not apply has it
-     * dropped by the cutting-down below, at the cost of the decisions that takes; a caller that
-     * names none gets the refusal, which is the same answer this method has always given.
+     * Nothing **here** searches for the bridge. A caller that names a lemma which does not apply
+     * has it dropped by the cutting-down below, at the cost of the decisions that takes; a caller
+     * that names none gets the refusal, which is the same answer this method has always given.
+     * Since 2026-09-18 a caller that wants the lemma found rather than named has `Bridging`, which
+     * is a search over a library **above** this method and calls it once per candidate. What it
+     * hands back is a theorem this method built, at a bridge this method was given, so it adds no
+     * way of deciding anything; what it reaches that a caller naming nothing does not is exactly
+     * the claims that were refused for wanting a bridge nobody had chosen.
      *
      * **What it costs is reported rather than hidden**, and that is the whole of why this is
      * allowed. A bridge carries whatever its own derivation spent, `Derivation.axiomsOf` walks it,
@@ -580,10 +608,20 @@ object Domain {
         types.foldLeft(1L)((acc, ty) => acc * subjects.count(Term.typeOf(_) == ty))
       }.sum
 
-      if (expected > Instances)
+      // **The bridges are counted here and were not until 2026-09-18**, which is the half of this
+      // bound that was missing rather than a second bound. `docs/adr/0024` says the cut-down costs
+      // `2n + 1` decisions and that `n` counts the bridges too; the check did not, so a caller
+      // naming many of them walked past a guard that was reading the axioms alone. Found by
+      // `BridgingSpec` putting a whole candidate set to this method and waiting minutes for an
+      // answer it should have been refused in a step, which is what a bound is for.
+      val expectedOfBridges = bridgeCounts(body, bridges).sum
+
+      if (expected + expectedOfBridges > Instances)
         Left(
           s"a claim of ${domain.name} needing at most $Instances specialised axioms, and this one " +
-            s"needs $expected: the subjects it names, at every binder of every axiom that takes them"
+            s"needs ${expected + expectedOfBridges}: the subjects it names, at every binder of " +
+            s"every axiom that takes them, and $expectedOfBridges of them from the bridges it was " +
+            "given"
         )
       else
         prefixes
@@ -618,6 +656,27 @@ object Domain {
      * mistake costing decisions rather than this method's to diagnose, and a refusal here would have
      * to guess which of a caller's several bridges was the intended one.
      */
+    /**
+     * How many instances each bridge will produce, counted before any of them is built.
+     *
+     * The same walk [[bridgeInstances]] makes, as a product rather than as a list, because a bound
+     * checked on the finished list is a bound checked after the machine has been asked for the
+     * list. It has to agree with that method by construction, so the subjects are taken the same
+     * way: the distinct binder types, the claim's maximal subterms of each, and one factor per
+     * binder.
+     */
+    private def bridgeCounts(body: Term, bridges: Vector[Kernel.Thm]): Vector[Long] =
+      bridges.map { bridge =>
+        Logic.stripForall(bridge.conclusion) match {
+          case Left(_) => 1L
+          case Right((binders, _)) if binders.isEmpty => 1L
+          case Right((binders, _)) =>
+            val types = binders.map(_.ty).toList
+            val subjects = types.distinct.flatMap(ty => maximalSubtermsOfType(body, ty)).distinct
+            types.foldLeft(1L)((acc, ty) => acc * subjects.count(Term.typeOf(_) == ty))
+        }
+      }
+
     private def bridgeInstances(
       reading: Logic,
       body: Term,
@@ -649,6 +708,34 @@ object Domain {
         }
       }
     }
+
+    /**
+     * The terms of this type a claim names, which is what a bridge's binder can be specialised at.
+     *
+     * Published to `Bridging` and to nothing else, because a search over candidate bridges needs to
+     * know which of them can produce an instance here at all: a bridge whose binders have a type
+     * this claim names no term of produces none, and a bridge with no instances cannot change any
+     * decision this method makes. Skipping such a candidate is therefore exact rather than a
+     * heuristic, and skipping it is the difference between a search that runs and one that is
+     * refused for its size.
+     */
+    private[theories] def subjectsOfType(goal: Term, ty: Type): Vector[Term] =
+      maximalSubtermsOfType(opened(goal), ty)
+
+    /**
+     * A claim with its leading universals opened into free variables, which is what a walk needs.
+     *
+     * Binders here are locally nameless, so descending into `!j:job. P j` reaches an index with no
+     * binder in hand and `Term.typeOf` throws rather than answering. [[settleBody]] never meets that
+     * because [[settle]] strips the quantifiers before calling it; the two methods above are called
+     * by somebody holding the claim as it was written, so they strip for themselves. Found by
+     * `BridgingSpec` on the first run of the search, as a kernel invariant violation rather than a
+     * wrong answer, which is the failure this representation is chosen to give.
+     *
+     * A claim that is not a universal is its own body, which is what the fall-through says.
+     */
+    private def opened(goal: Term): Term =
+      Logic.stripForall(goal).map(_._2).getOrElse(goal)
 
     /** Every subterm of the given type, not descending into one once it has that type. */
     private def maximalSubtermsOfType(term: Term, ty: Type): Vector[Term] =
@@ -743,6 +830,11 @@ object Domain {
    * measured on is four axioms of one binder at one subject, which is four; a claim naming three
    * subjects over eight axioms of two binders each is seventy-two and is a different kind of
    * question, so it is refused rather than run.
+   *
+   * **The bridges are inside it since 2026-09-18 and were outside it before**, which was the one
+   * way past this guard: a bridge is specialised the same way and its instances cost the cut-down
+   * the same `2n + 1`, so a caller naming twenty of them paid twenty times what a bound of 64 is
+   * for and nothing said so. `docs/adr/0027` records how it was found.
    */
   val Instances: Int = 64
 
