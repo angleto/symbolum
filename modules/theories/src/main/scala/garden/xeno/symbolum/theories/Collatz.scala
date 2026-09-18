@@ -33,10 +33,12 @@ import garden.xeno.symbolum.logic.*
  * == The three groups, which is the structure part C uses ==
  *
  * `D` is the two rules that consume the marker, `A` the six that commute a digit past a letter, and
- * `B` the three that act at the head. [[Collatz.Counted]] is `A` alone, and it is what a
- * potential-function argument instantiates as the counted sub-relation of `REACH`: every `A`-step
- * moves one digit one place nearer the head, so it drops [[Collatz.Potential]] by exactly one, and
- * no other rule lowers it.
+ * `B` the three that act at the head. [[Collatz.Counted]] is `A` alone, and it is what the counted
+ * sub-relation of `REACH` is built from: every `A`-step moves one digit one place nearer the head,
+ * so it drops [[Collatz.Potential]] by exactly one, and no other rule lowers it. The relation
+ * `REACH` is actually instantiated at is [[Collatz.RunCounted]], which is that one with the class
+ * the measure behaves on carried along; the section below on where the argument becomes true says
+ * why the class cannot be a side condition instead.
  *
  * == The marked words, which is where the argument stops being false ==
  *
@@ -56,8 +58,25 @@ import garden.xeno.symbolum.logic.*
  * says there is one. Measured over every word of at most seven letters: 9330 of 44790 counted steps
  * out of this class fail the first, and 14454 of 33281 uncounted steps fail the second; with one
  * head marker in front and no other, it is 0 of 3516 and 0 of 3280, and no step leaves that class
- * either. That predicate, and a closure lemma for it, is what a potential-function argument here
- * needs next.
+ * either.
+ *
+ * == Where it becomes true, which is that class with a head marker in front ==
+ *
+ * [[Collatz.Anchored]] is that predicate and [[Collatz.AnchoredClosed]] is its closure lemma, so
+ * the measurement above is a theorem in both halves rather than a reading over seven letters:
+ * [[Collatz.PotentialCountedStep]] says a counted step drops the measure by exactly one and
+ * [[Collatz.PotentialPlainStep]] says no other step lowers it, each over a word that is anchored
+ * and marked.
+ *
+ * [[Collatz.RunPotential]] is `REACH_POTENTIAL` carrying those two. What the instantiation had to
+ * decide is where the class goes, because the lemma asks its hypotheses of **every** pair and has
+ * no room for a side condition: it goes into the relation, as [[Collatz.Run]], and that loses
+ * nothing because the class is closed under a step. [[Collatz.RunInhabited]] is the guard, since a
+ * bound on every run of a relation that steps nothing is a theorem about nothing.
+ *
+ * What it does **not** yet reach is a run of positive length: detaching one needs a refusal of the
+ * counted step at a concrete pair, which is a negative about `WORD_STEP` and nothing here proves
+ * one.
  *
  * [[Collatz.TailFree]] is the other half and exists for the decomposition rather than for its own
  * sake: a marked word is a tail-free block with one marker on the end, so a step at `x l y` divides
@@ -387,6 +406,44 @@ object Collatz {
   val PotentialPlainStep: String = "S2_PHI_PLAIN_STEP"
 
   /**
+   * `S2_RUN u v` — a step of this system taken FROM a word of the class the measure works on.
+   *
+   * The relation `REACH` is instantiated at, and it exists because `REACH_POTENTIAL` asks its two
+   * hypotheses of **every** pair while [[PotentialCountedStep]] and [[PotentialPlainStep]] hold
+   * only where the word stepped from is anchored and marked. Restricting the relation rather than
+   * weakening the lemma is what makes the two meet, and it costs nothing: the class is closed under
+   * a step ([[AnchoredClosed]], [[MarkedClosed]]), so a run that begins inside it stays inside it
+   * and every pair such a run can use is a pair of this relation.
+   */
+  val Run: String = "S2_RUN"
+
+  /**
+   * `S2_RUN_COUNTED u v` — such a step that is also a commutation, which is what gets counted.
+   *
+   * Written as [[Run]] **and** a counted step rather than as the class and a counted step, so that
+   * the class is spelled in one place and `S2_RUN_COUNTED` is a sub-relation of `S2_RUN` by
+   * construction. `REACH`'s counter advances on this one and stands still on the rest.
+   */
+  val RunCounted: String = "S2_RUN_COUNTED"
+
+  /**
+   * `|- !x q. REACH S2_RUN S2_RUN_COUNTED x q ==> S2_PHI x <= SND q + S2_PHI (FST q)`.
+   *
+   * `REACH_POTENTIAL` at this system, which is what `Reaching` was built for and what nothing
+   * instantiated until it. Read from the other end it is the statement the investigation wants: a
+   * run from `x` spends at least `S2_PHI x - S2_PHI (FST q)` counted steps getting to where it got,
+   * so the measure bounds the length of a derivation from below.
+   *
+   * It is a bound and not a count: nothing here says a run of that length exists, and the empty run
+   * satisfies it at every `x`. [[RunInhabited]] is what says the relation it quantifies over is not
+   * empty, which is the guard a statement of this shape needs.
+   */
+  val RunPotential: String = "S2_RUN_POTENTIAL"
+
+  /** `|- S2_RUN (/0.) (/t.)`: the relation the bound above is about relates something. */
+  val RunInhabited: String = "S2_RUN_INHABITED"
+
+  /**
    * `|- !u v. S2_MARKED u /\ WORD_STEP S2 u v ==> S2_MARKED v`.
    *
    * What this development was asked for, and the sentence that lets a potential-function argument
@@ -659,6 +716,20 @@ object Collatz {
       "WORD_NTH w (NUM_SUB (WORD_LENGTH w) 1) = S2_TAIL /\\ " +
       "(!i:num. i < NUM_SUB (WORD_LENGTH w) 1 ==> ~(WORD_NTH w i = S2_TAIL))"
 
+  /**
+   * `S2_RUN u v` — a step of `S2` from a word that is both anchored and marked.
+   *
+   * The class is written here and nowhere else: [[RunCountedBody]] names this relation rather than
+   * repeating the two conjuncts, so the two cannot drift apart.
+   */
+  private val RunBody: String =
+    "\\u:word(num). \\v:word(num). " +
+      "WORD_STEP S2 u v /\\ S2_ANCHORED u /\\ S2_MARKED u"
+
+  /** `S2_RUN_COUNTED u v` — one of those that is a commutation, which is the counted kind. */
+  private val RunCountedBody: String =
+    "\\u:word(num). \\v:word(num). S2_RUN u v /\\ WORD_STEP S2_COUNTED u v"
+
   /** The four letters that are not digits, in the order they are declared. */
   val Letters: Vector[(String, String)] =
     Vector(F -> "3", T -> "4", Head -> "5", Tail -> "6")
@@ -673,7 +744,9 @@ object Collatz {
         Marked -> MarkedBody,
         TailFree -> TailFreeBody,
         HeadFree -> HeadFreeBody,
-        Anchored -> AnchoredBody
+        Anchored -> AnchoredBody,
+        Run -> RunBody,
+        RunCounted -> RunCountedBody
       )
 
   /** Every statement this development publishes, as text. */
@@ -735,7 +808,16 @@ object Collatz {
       s"!n:num. $Zeros (SUC n) = WORD_CONCAT ($Zeros n) (${singletonText("0")})",
     ClosureRefused -> "~(WORD_RFC S2 (WORD_EMPTY:word(num)))",
     FamilyWithF -> s"!i:num. WORD_RFC S2 (${familyText("i", F)})",
-    FamilyWithTail -> s"!i:num. WORD_RFC S2 (${familyText("(SUC i)", Tail)})"
+    FamilyWithTail -> s"!i:num. WORD_RFC S2 (${familyText("(SUC i)", Tail)})",
+    RunPotential ->
+      ("!x:word(num). !q:prod(word(num), num). " +
+        "REACH S2_RUN S2_RUN_COUNTED x q ==> " +
+        "NUM_LE (S2_PHI x) (NUM_ADD (SND q) (S2_PHI (FST q)))"),
+    // Spelled from `spell` rather than from `BeforeTheStep`, which is declared below this vector:
+    // a `val` of an object reading a `val` declared after it reads `null`, and the neighbours above
+    // are written this way for the same reason.
+    RunInhabited ->
+      s"S2_RUN (${wordText(spell("/0."))}) (${wordText(spell("/t."))})"
   )
 
   /* ------------------------------------------------------------------ construction */
@@ -743,12 +825,17 @@ object Collatz {
   /**
    * The development, built over [[Forward]] so that a claim about `WORD_RFC S2` is typable.
    *
-   * Nine constants and no axiom. The four letters are defined before the rules that name them,
+   * Every constant here is a definition and none of them is an axiom. There is no count in this
+   * sentence on purpose: it said nine for as long as there were nine and was wrong the day the
+   * anchored class landed, and `CollatzSpec` asserts the whole set name for name, which is the
+   * check a number here would only look like. The four letters are defined before the rules that
+   * name them,
    * which is why [[Bodies]] is a vector rather than a map: a constant is reachable only from the
    * theory it was declared into, so the order is the construction and not a presentation choice.
    */
   def construct(
     forward: Forward,
+    reaching: Reaching,
     naturals: Natural,
     peano: Peano,
     successor: Successor,
@@ -896,6 +983,15 @@ object Collatz {
         tools, forward, naturals, definitions, zerosAtZero, zerosAtSuccessor)
       (familyWithF, familyWithTail) = family
       closureRefused <- closureIsProper(tools, forward, ruleNotEmpty)
+      inClass = partial ++ Map(
+        PotentialCountedStep -> potentialCountedStep,
+        PotentialPlainStep -> potentialPlainStep,
+        MarkedInhabited -> markedInhabited,
+        AnchoredInhabited -> anchoredInhabited,
+        StepInhabited -> stepInhabited
+      )
+      runPotentialFact <- runPotential(tools, reaching, definitions, inClass)
+      runInhabited <- runHolds(tools, definitions, inClass)
       facts = partial ++ Map(
         PotentialCountedStep -> potentialCountedStep,
         PotentialPlainStep -> potentialPlainStep,
@@ -908,7 +1004,9 @@ object Collatz {
         ZerosAtSuccessor -> zerosAtSuccessor,
         FamilyWithF -> familyWithF,
         FamilyWithTail -> familyWithTail,
-        ClosureRefused -> closureRefused
+        ClosureRefused -> closureRefused,
+        RunPotential -> runPotentialFact,
+        RunInhabited -> runInhabited
       )
 
       // Every statement checked against the text a reader reads it by, here rather than in the
@@ -2746,6 +2844,199 @@ object Collatz {
         Right((condition, whenTrue, whenFalse))
       case other => Left(NotOfForm("a conditional", other))
     }
+
+  /**
+   * [[RunPotential]]: `REACH_POTENTIAL` instantiated at this system.
+   *
+   * The whole of the work is in the two hypotheses, and what makes them provable is that the
+   * relation carries the class rather than the lemma asking for it. `REACH_POTENTIAL` wants its
+   * measure to fall by exactly one across **every** counted pair and to hold up across every other
+   * one, with no side condition available; [[PotentialCountedStep]] and [[PotentialPlainStep]] are
+   * both conditional on the word stepped from being anchored and marked. Putting those two
+   * conditions inside `S2_RUN` is what closes the gap, and it loses nothing, because the class is
+   * closed under a step: a run that starts inside it never leaves.
+   *
+   * The second hypothesis is where the two definitions pay for being nested. `~(S2_RUN_COUNTED u v)`
+   * with `S2_RUN u v` in hand gives `~(WORD_STEP S2_COUNTED u v)` in three lines, because
+   * `S2_RUN_COUNTED` **is** `S2_RUN` and a counted step; had it been the class and a counted step,
+   * the same inference would have had to take the class apart a second time.
+   */
+  private def runPotential(
+    tools: Concrete,
+    reaching: Reaching,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+    val subject = Term.variable("x", Words)
+    val left = Term.variable("u", Words)
+    val right = Term.variable("v", Words)
+
+    for {
+      target <- statement(tools.theory, tools.notation, RunPotential)
+      run <- tools.constant(Run, SystemType)
+      runCounted <- tools.constant(RunCounted, SystemType)
+      potential <- tools.constant(Potential, Type.fun(Words, Numbers))
+      runDefinition <- definitions.get(Run).toRight(MissingDefinition(Run))
+      runCountedDefinition <- definitions.get(RunCounted).toRight(MissingDefinition(RunCounted))
+      countedStep <- facts
+        .get(PotentialCountedStep)
+        .toRight(MissingDefinition(PotentialCountedStep))
+      plainStep <- facts.get(PotentialPlainStep).toRight(MissingDefinition(PotentialPlainStep))
+
+      lemma <- reaching.fact(Reaching.Potential).map(atWords)
+      specialised <- rules.specAll(lemma, List(run, runCounted, potential, subject))
+      parts <- logic
+        .destImp(specialised.conclusion)
+        .toRight(NotOfForm("an implication", specialised.conclusion))
+      halves <- logic
+        .destConj(parts._1)
+        .toRight(NotOfForm("the two hypotheses of REACH_POTENTIAL", parts._1))
+      (countedTerm, plainTerm) = halves
+
+      falls <- overAStep(logic, countedTerm, left, right) { premise =>
+        for {
+          opened <- Conv
+            .unfold(runCountedDefinition, List(left, right))
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, premise)))
+          inRun <- rules.conjElim1(opened)
+          isCounted <- rules.conjElim2(opened)
+          held <- openRun(rules, runDefinition, left, right, inRun)
+          joined <- rules.conjIntro(held._2, isCounted)
+          result <- rules.specAll(countedStep, List(left, right)).flatMap(rules.mp(_, joined))
+        } yield result
+      }
+
+      holdsUp <- overAStep(logic, plainTerm, left, right) { premise =>
+        for {
+          inRun <- rules.conjElim1(premise)
+          notInCounted <- rules.conjElim2(premise)
+          held <- openRun(rules, runDefinition, left, right, inRun)
+          (stepped, anchored, marked) = held
+
+          folding <- Conv.unfold(runCountedDefinition, List(left, right))
+          countedStepTerm <- rightOf(folding).flatMap(
+            body => logic.destConj(body).map(_._2).toRight(NotOfForm("a counted step", body)))
+          refused <- {
+            for {
+              assumed <- LogicError.lift(Kernel.assume(countedStepTerm))
+              rebuilt <- rules.conjIntro(inRun, assumed)
+              inCounted <- Conv
+                .sym(folding)
+                .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, rebuilt)))
+              absurd <- rules.notElim(notInCounted, inCounted)
+              result <- rules.notIntro(countedStepTerm, absurd)
+            } yield result
+          }
+
+          joined <- rules
+            .conjIntro(stepped, refused)
+            .flatMap(rules.conjIntro(marked, _))
+            .flatMap(rules.conjIntro(anchored, _))
+          result <- rules.specAll(plainStep, List(left, right)).flatMap(rules.mp(_, joined))
+        } yield result
+      }
+
+      both <- rules.conjIntro(falls, holdsUp)
+      settled <- rules.mp(specialised, both)
+      result <- rules.genAll(settled, List(subject))
+      _ <-
+        if (result.conclusion == target) Right(())
+        else Left(NotOfForm(s"$RunPotential as it is written", result.conclusion))
+    } yield result
+  }
+
+  /**
+   * [[RunInhabited]]: the relation [[RunPotential]] quantifies over relates something.
+   *
+   * A bound on every run of a relation that steps nothing is true and empty, and no other test here
+   * would notice: `REACH_START` inhabits the closure at every `x` whatever the relation does, so
+   * even a detachment of the bound would come back with `S2_PHI x <= 0 + S2_PHI x`. The three
+   * conjuncts are the step of `S2_STEP_INHABITED` and the class at the word it starts from.
+   */
+  private def runHolds(
+    tools: Concrete,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      target <- statement(tools.theory, tools.notation, RunInhabited)
+      before <- tools.word(BeforeTheStep)
+      after <- tools.word(AfterTheStep)
+      runDefinition <- definitions.get(Run).toRight(MissingDefinition(Run))
+      stepped <- facts.get(StepInhabited).toRight(MissingDefinition(StepInhabited))
+      anchored <- facts.get(AnchoredInhabited).toRight(MissingDefinition(AnchoredInhabited))
+      marked <- facts.get(MarkedInhabited).toRight(MissingDefinition(MarkedInhabited))
+
+      joined <- rules.conjIntro(anchored, marked).flatMap(rules.conjIntro(stepped, _))
+      result <- Conv
+        .unfold(runDefinition, List(before, after))
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, joined)))
+      _ <-
+        if (result.conclusion == target) Right(())
+        else Left(NotOfForm(s"$RunInhabited as it is written", result.conclusion))
+    } yield result
+  }
+
+  /** The three conjuncts of `S2_RUN u v`, which both hypotheses of the instantiation take apart. */
+  private def openRun(
+    rules: Rules,
+    runDefinition: Kernel.Thm,
+    left: Term,
+    right: Term,
+    inRun: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm)] =
+    for {
+      opened <- Conv
+        .unfold(runDefinition, List(left, right))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, inRun)))
+      stepped <- rules.conjElim1(opened)
+      rest <- rules.conjElim2(opened)
+      anchored <- rules.conjElim1(rest)
+      marked <- rules.conjElim2(rest)
+    } yield (stepped, anchored, marked)
+
+  /**
+   * `|- !u v. P ==> Q`, from a proof of `Q` under `P`, against the statement the caller wants.
+   *
+   * [[underTheBound]] one binder wider and without the arithmetic: what it is for is a hypothesis
+   * of `REACH_POTENTIAL`, which is read off the specialised lemma rather than written again here,
+   * so the check at the end is what says the two are the same claim.
+   */
+  private def overAStep(
+    logic: Logic,
+    statement: Term,
+    left: FVar,
+    right: FVar
+  )(
+    step: Kernel.Thm => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      body <- openAt(logic, statement, List(left, right))
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premiseTerm, conclusionTerm) = parts
+      premise <- LogicError.lift(Kernel.assume(premiseTerm))
+      proved <- step(premise)
+      _ <-
+        if (proved.conclusion == conclusionTerm) Right(())
+        else Left(NotOfForm("the claim at this step as it is written", proved.conclusion))
+      discharged <- rules.disch(premiseTerm, proved)
+      result <- rules.genAll(discharged, List(left, right))
+      _ <-
+        if (result.conclusion == statement) Right(())
+        else Left(NotOfForm("the hypothesis as REACH_POTENTIAL writes it", result.conclusion))
+    } yield result
+  }
+
+  /** A polymorphic lemma of the reachability, read at the type this development has states of. */
+  private def atWords(theorem: Kernel.Thm): Kernel.Thm =
+    Kernel.instType(Map(Classical.TypeVariable -> Words), theorem)
 
   /** What the word is known to be, which is two facts everywhere below. */
   private final case class Class(anchored: Kernel.Thm, marked: Kernel.Thm)

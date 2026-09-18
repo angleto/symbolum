@@ -66,11 +66,16 @@ import garden.xeno.symbolum.logic.*
  * that, which is the shape of stale sentence this repository loses most: an absence a reader
  * believes rather than checks.
  *
- * **What has not happened is the instantiation**, which is the sentence worth keeping. `Forward`
- * builds its closure out of [[Inductive]] directly and never mentions `REACH`, so nothing yet puts
- * this file at `R := WORD_STEP R`, `A` the rules being counted and `Phi` the measure, and until
- * something does, the potential-function lemma has no consumer. `Collatz`'s own docstring names
- * that instantiation as what its argument is for.
+ * **The instantiation happened on 2026-09-18 and it is `Collatz.RunPotential`**, which is this
+ * file at `R := S2_RUN`, `A := S2_RUN_COUNTED` and `Phi := S2_PHI`. What it had to work around is
+ * worth knowing before writing a second one: both hypotheses here are asked of **every** pair, and
+ * a measure that behaves only on some class of states has no side condition to put that class in.
+ * `Collatz` puts it in the relation instead, which costs nothing where the class is closed under a
+ * step and is the only route where it is not.
+ *
+ * `Forward` still builds its closure out of [[Inductive]] directly and never mentions `REACH`: a
+ * membership in the closure and the length of a run that reaches it are two questions about one
+ * system, and only the second needs a counter.
  *
  * == Where the monotonicity comes from, which is no longer here ==
  *
