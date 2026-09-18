@@ -273,7 +273,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and is taken from it wholesale.
     // 347 with the four the order gained on 2026-09-18: `LE_MUL_BOTH` and `INV_ANTITONE` have two
     // hypotheses apiece, and this source offers one weakening per hypothesis.
-    proposals.size shouldBe 347
+    // 349 with `Peano`'s two, `NUM_ADD_LE_BOTH` and `NUM_SUM_MONOTONE_BELOW`, one apiece. This is
+    // the second site carrying the same total and it went red with `RediscoverySpec`'s, which is
+    // the argument for the question that entry raises: a running total kept by hand in two files
+    // is two places to forget. Both lemmas carry one antecedent under one arrow, the first a
+    // conjunction and the second a bounded quantifier, and `Propose.peel` counts arrows and not
+    // conjuncts. Which lemmas moved it is measured off `docs/lemmas.md` at `9734bf7` against the
+    // current one, and the derivation is written out where `RediscoverySpec` pins the same figure.
+    proposals.size shouldBe 349
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -465,7 +472,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the sampler computes exactly. The other eight are about `word`, which no model here
     // interprets, so not one of them can be decided either way and all eight land in the
     // bucket below. Derived and then measured, and both halves came out.
-    decidedFalse shouldBe 76
+    // 77 with ONE of `Peano`'s two rather than both, which is the split this figure exists to
+    // show. `NUM_ADD_LE_BOTH` weakens to `!x y z u. x + z <= y + u`, false at `x = 1` with the
+    // rest zero and written in nothing but `NUM_ADD` and `NUM_LE`, which `Model.Numbers` computes
+    // exactly. `NUM_SUM_MONOTONE_BELOW` weakens to `!x y z. NUM_SUM x z <= NUM_SUM y z`, which is
+    // false too and quantifies over two SEQUENCES: the sampler has no reading of a function
+    // variable, so it lands in `unreadable` below and not here. Derived and then measured, and
+    // both halves came out.
+    decidedFalse shouldBe 77
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -559,6 +573,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // sampler takes them and finds a point. The other eight weakenings are about `word` and are
     // unreadable, so nothing here could have found a witness in them.
     //
+    // 72 with the one of `Peano`'s two that `decidedFalse` above took: `!x y z u. x + z <= y + u`
+    // is a comparison of two sums of arbitrary numbers with no hypothesis left, so the sampler
+    // takes it and finds a point. **Derived in advance this time**, which the entry above says was
+    // not done the last time this pair moved, and derived because the entry above says why: this
+    // assertion sits behind `decidedFalse` in the same test, so a red `decidedFalse` means this
+    // line never runs and its silence is not evidence.
+    //
     // **This entry was not derived in advance and the reason is worth more than the number.** The
     // change that moved it predicted `decidedFalse` by two and `aboutNumbers` by five, and both
     // came out; this assertion and the one at the end of the naturals' test were never consulted,
@@ -567,7 +588,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // reading the first failure as the whole of the damage is how two of these were found on a
     // second pass rather than a first. That is a different mistake from the one recorded above,
     // which was a wrong derivation; this one is a derivation that was never asked for.
-    withAPoint shouldBe 71
+    withAPoint shouldBe 72
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1123,7 +1144,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // attribution underdetermined and each round of subtraction produced a different hypothesis
     // that fitted the same numbers. When several hypotheses fit one total, the move is not a
     // finer subtraction, it is asking the instrument whose each element is.
-    unreadable shouldBe 84
+    //
+    // 85 with the one of `Peano`'s two that `decidedFalse` did not take, and `open` does not move
+    // at all. `NUM_SUM_MONOTONE_BELOW` weakens to `!x y z. NUM_SUM x z <= NUM_SUM y z`, whose two
+    // leading variables are FUNCTIONS: there is nothing for a point to be, so no procedure here
+    // has an address for it and nothing refutes it either, which is the pair of facts this bucket
+    // is for. The attribution is not arithmetic over totals: `decidedFalse` moved by one and this
+    // by one over exactly two new residues, so one each, and which is which follows from the
+    // statements rather than from the subtraction.
+    unreadable shouldBe 85
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1362,7 +1391,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_DIVIDES` and `NUM_PROD` looks like on a list that counts constants. Measured rather
     // than derived, since the residues are not this session's to predict; the two that are, from
     // the limit bounds, were derived above.
-    aboutNumbers.size shouldBe 135
+    // 137 with BOTH of `Peano`'s two, which is the one count the pair does not split on. This list
+    // counts CONSTANTS: `!x y z u. x + z <= y + u` writes `NUM_ADD` and `NUM_LE`, and
+    // `!x y z. NUM_SUM x z <= NUM_SUM y z` writes `NUM_LE`, so both are on it whatever the
+    // procedures and the sampler make of them. "The claim mentions the naturals" and "the model
+    // can compute it" are different facts, which is what the entry below says from the other side.
+    aboutNumbers.size shouldBe 137
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1418,7 +1452,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the model reads and a shape the procedures take at once. The eight word weakenings split
     // the other way and completely: none of them is readable, so none reaches this count even
     // though three of them keep a constant of the naturals in the residue.
-    after shouldBe 50
+    // 51 with one of `Peano`'s two, splitting from `aboutNumbers` above, which took both. This
+    // figure is the SAMPLER over `Model.Numbers`: `!x y z u. x + z <= y + u` is refuted at a point
+    // and `!x y z. NUM_SUM x z <= NUM_SUM y z` cannot be, its two leading variables being
+    // functions there is nothing to sample. Derived in advance for the reason `withAPoint` gives:
+    // this line sits behind `aboutNumbers` in the same test and never ran while that one was red.
+    after shouldBe 51
   }
 
   /* ------------------------------------------------------ the false positive it produced */

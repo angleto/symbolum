@@ -208,7 +208,23 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // and is taken from it wholesale.
     // 347 with `LE_MUL_BOTH`'s two and `INV_ANTITONE`'s two, which is one weakening per hypothesis
     // and each of those lemmas has two. Tip plus this change's delta, as the line above says.
-    propose.weakenings.size shouldBe 347
+    // 349 with `NUM_ADD_LE_BOTH`'s one and `NUM_SUM_MONOTONE_BELOW`'s one, and this line went red
+    // before it was moved: `45416c8` added those two lemmas to `Peano` and left this figure at
+    // 347, which is the second time the comment above has had to record that, and TST-16 is the
+    // rule it breaks. **Which lemmas moved it was measured and not assumed**: `docs/lemmas.md` is
+    // generated from the library, so `git show 9734bf7:docs/lemmas.md` against the current one,
+    // diffed by name, says exactly two entries arrived since the commit that wrote 347 and names
+    // them, with none removed and none restated. The card that opened this guessed `Collatz.scala`
+    // instead, and that is refuted by the same diff: `Collatz` sits beside the chain, so
+    // `Library.of` never sees it and it cannot move this figure whatever it adds.
+    //
+    // One apiece rather than two, and the arithmetic is the peeling rule these entries state.
+    // `NUM_ADD_LE_BOTH` carries `x <= y /\ z <= u` as ONE antecedent under one arrow, which is
+    // the same reading the `WORD_RFC` entry above gives: a conjunct is not an antecedent here.
+    // `NUM_SUM_MONOTONE_BELOW` carries `!u. u < z ==> x u <= y u`, which is one antecedent too,
+    // and what is inside it is an arrow under a quantifier that `Propose.peel` never reaches
+    // because it stops at the first thing that is not an implication.
+    propose.weakenings.size shouldBe 349
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
