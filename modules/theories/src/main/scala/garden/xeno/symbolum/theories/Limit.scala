@@ -45,7 +45,8 @@ import garden.xeno.symbolum.logic.*
  * sequence that stops moving, which is what a power series at zero is, and it is the whole of what
  * [[Transcendental]] can reach today. What [[Limit.Comparison]] adds is not reached from
  * [[Transcendental]] at all: the exponential's series wants a dominating one, and building it wants
- * `2^i <= 2 * i!` and an order fact about a quotient, neither of which exists.
+ * `2^i <= 2 * i!`, which no development holds. What else it wanted and what has since landed are in
+ * [[Limit.Comparison]], which is the one place here that carries them.
  *
  * == The epsilon principle is here rather than in `Order`, and that is an argument worth making ==
  *
