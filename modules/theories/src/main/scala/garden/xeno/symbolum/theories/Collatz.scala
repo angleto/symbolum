@@ -459,6 +459,58 @@ object Collatz {
   /** `|- S2_RUN (/0.) (/t.)`: the relation the bound above is about relates something. */
   val RunInhabited: String = "S2_RUN_INHABITED"
 
+  /** `|- !j. WORD_LENGTH (S2_ZEROS j) = j`, which is the recursion's own index read as a length. */
+  val ZerosLength: String = "S2_ZEROS_LENGTH"
+
+  /**
+   * `|- !j. WORD_LENGTH (WORD_CONCAT (/f) (S2_ZEROS j)) = SUC (SUC j)`.
+   *
+   * The family without its tail marker, measured. It is here rather than inside the one proof that
+   * spends it because that proof spends it under a binder: what the measure of a block placed after
+   * this one depends on is how far along the word that block starts, and this says how far.
+   */
+  val StemLength: String = "S2_STEM_LENGTH"
+
+  /**
+   * `|- !j. S2_PHI (WORD_CONCAT (/f) (S2_ZEROS j)) = NUM_TRI j`.
+   *
+   * The measure of the family in closed form, and the closed form is a **triangular number** rather
+   * than a quotient: `Numbering` defines `NUM_TRI` by recursion for exactly this reason, that
+   * `j (j + 1) / 2` cannot be written on `num` without a division nothing here computes. The two
+   * recurrences line up without arithmetic: the `j`th zero sits at position `j + 1` and contributes
+   * its distance from the head, which is `SUC j`, and `NUM_TRI (SUC j)` is `NUM_TRI j + SUC j`.
+   */
+  val PotentialOfStem: String = "S2_PHI_STEM"
+
+  /** `|- !j. S2_PHI (/f0^j.) = NUM_TRI j`: the tail marker is not a digit, so it weighs nothing. */
+  val PotentialOfFamily: String = "S2_PHI_FAMILY"
+
+  /**
+   * `|- !j q. REACH S2_RUN S2_RUN_COUNTED (/f0^j.) q ==> NUM_TRI j <= SND q + S2_PHI (FST q)`.
+   *
+   * [[RunPotential]] at the one family this investigation has a name for, which is what makes the
+   * bound a statement about a **size** rather than about an arbitrary word. Read at a run that ends
+   * where the measure is nothing, it says a derivation from the `j`th member spends at least
+   * `NUM_TRI j` commutations, and `NUM_TRI` grows as the square: that is the quadratic, in the one
+   * direction this machinery supports, which is from below.
+   *
+   * What it is **not**: a statement that such a run exists, or that any run terminates. Both would
+   * need a derivation of positive length, and [[RunPotential]] records what is missing for one.
+   */
+  val FamilyBounded: String = "S2_FAMILY_BOUNDED"
+
+  /**
+   * `|- S2_PHI (/f0.) = SUC ZERO`, derived through [[PotentialOfFamily]] and written by hand.
+   *
+   * The guard on the closed form, and it is the one an off-by-one would fail. The statement is a
+   * concrete word and a concrete number, checked by eye: the one digit of `/f0.` sits at position
+   * two and weighs its distance from the head, which is one. The **derivation** goes the other way
+   * round, specialising the family at `SUC ZERO` and reducing both sides, so a `NUM_TRI` that
+   * counted the letter rather than its distance would come back `SUC (SUC ZERO)` here and nowhere
+   * else: every other fact about the family is stated in `NUM_TRI` and would agree with itself.
+   */
+  val FamilyAtOne: String = "S2_PHI_FAMILY_AT_ONE"
+
   /**
    * `|- !u v. S2_MARKED u /\ WORD_STEP S2 u v ==> S2_MARKED v`.
    *
@@ -833,7 +885,18 @@ object Collatz {
     // a `val` of an object reading a `val` declared after it reads `null`, and the neighbours above
     // are written this way for the same reason.
     RunInhabited ->
-      s"S2_RUN (${wordText(spell("/0."))}) (${wordText(spell("/t."))})"
+      s"S2_RUN (${wordText(spell("/0."))}) (${wordText(spell("/t."))})",
+    ZerosLength -> s"!j:num. WORD_LENGTH ($Zeros j) = j",
+    StemLength ->
+      s"!j:num. WORD_LENGTH (WORD_CONCAT (${wordText(spell("/f"))}) ($Zeros j)) = SUC (SUC j)",
+    PotentialOfStem ->
+      s"!j:num. S2_PHI (WORD_CONCAT (${wordText(spell("/f"))}) ($Zeros j)) = NUM_TRI j",
+    PotentialOfFamily -> s"!j:num. S2_PHI (${familyText("j", Tail)}) = NUM_TRI j",
+    FamilyBounded ->
+      ("!j:num. !q:prod(word(num), num). " +
+        s"REACH S2_RUN S2_RUN_COUNTED (${familyText("j", Tail)}) q ==> " +
+        "NUM_LE (NUM_TRI j) (NUM_ADD (SND q) (S2_PHI (FST q)))"),
+    FamilyAtOne -> s"S2_PHI (${wordText(spell("/f0."))}) = SUC ZERO"
   )
 
   /* ------------------------------------------------------------------ construction */
@@ -852,6 +915,7 @@ object Collatz {
   def construct(
     forward: Forward,
     reaching: Reaching,
+    numbering: Numbering,
     naturals: Natural,
     peano: Peano,
     successor: Successor,
@@ -999,6 +1063,9 @@ object Collatz {
         tools, forward, naturals, definitions, zerosAtZero, zerosAtSuccessor)
       (familyWithF, familyWithTail) = family
       closureRefused <- closureIsProper(tools, forward, ruleNotEmpty)
+      familySizes <- familyLengths(
+        tools, naturals, forward.concatenation, zerosAtZero, zerosAtSuccessor)
+      (zerosLength, stemLength) = familySizes
       inClass = partial ++ Map(
         PotentialCountedStep -> potentialCountedStep,
         PotentialPlainStep -> potentialPlainStep,
@@ -1008,6 +1075,31 @@ object Collatz {
       )
       runPotentialFact <- runPotential(tools, reaching, definitions, inClass)
       runInhabited <- runHolds(tools, definitions, inClass)
+      stemPotential <- potentialOfStem(
+        tools,
+        naturals,
+        numbering,
+        forward.concatenation,
+        definitions,
+        inClass,
+        zerosAtZero,
+        zerosAtSuccessor,
+        stemLength,
+        conditional,
+        conditionalFalse
+      )
+      quadratic <- familyBounded(
+        tools,
+        numbering,
+        forward.concatenation,
+        inClass ++ Map(RunPotential -> runPotentialFact),
+        stemPotential,
+        zerosAtZero,
+        zerosAtSuccessor,
+        conditional,
+        conditionalFalse
+      )
+      (familyPotential, familyAtOne, familyBound) = quadratic
       facts = partial ++ Map(
         PotentialCountedStep -> potentialCountedStep,
         PotentialPlainStep -> potentialPlainStep,
@@ -1022,7 +1114,13 @@ object Collatz {
         FamilyWithTail -> familyWithTail,
         ClosureRefused -> closureRefused,
         RunPotential -> runPotentialFact,
-        RunInhabited -> runInhabited
+        RunInhabited -> runInhabited,
+        ZerosLength -> zerosLength,
+        StemLength -> stemLength,
+        PotentialOfStem -> stemPotential,
+        PotentialOfFamily -> familyPotential,
+        FamilyAtOne -> familyAtOne,
+        FamilyBounded -> familyBound
       )
 
       // Every statement checked against the text a reader reads it by, here rather than in the
@@ -3070,6 +3168,367 @@ object Collatz {
   /** A polymorphic lemma of the reachability, read at the type this development has states of. */
   private def atWords(theorem: Kernel.Thm): Kernel.Thm =
     Kernel.instType(Map(Classical.TypeVariable -> Words), theorem)
+
+  /**
+   * [[ZerosLength]] and [[StemLength]]: how long the family is, which is what its measure needs.
+   *
+   * The first is the recursion read as a length and is one induction; the second needs none,
+   * because a concatenation's length is the sum of two and the left one is a written-out word the
+   * length rules settle. Both are here rather than inside [[potentialOfStem]] because that proof
+   * spends the second **under a binder**: the weight of a letter is its distance from the head, so
+   * a block placed after the stem needs to know how far along the word it starts.
+   */
+  private def familyLengths(
+    tools: Concrete,
+    naturals: Natural,
+    concatenation: Concatenation,
+    zerosAtZero: Kernel.Thm,
+    zerosAtSuccessor: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      lengthOf <- tools.lengthOf
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      zerosOf <- tools.constant(Zeros, Type.fun(Numbers, Words))
+      stem <- tools.word(spell("/f"))
+      digitZero <- tools.word(spell("0"))
+
+      emptyLength <- concatenation.fact(Concatenation.EmptyLength).map(atNumbers)
+      concatLength <- concatenation.fact(Concatenation.Length).map(atNumbers)
+      singletonLength = tools.singletonLength
+
+      induction <- naturals.fact(Natural.Induction)
+      driver = Induct.overNaturals(logic, induction)
+
+      lengths <- statement(tools.theory, tools.notation, ZerosLength)
+      zerosLength <- driver.proveBy(
+        lengths,
+        goal =>
+          for {
+            opened <- Conv.apTerm(lengthOf, zerosAtZero)
+            result <- Conv.trans(opened, emptyLength)
+            _ <-
+              if (result.conclusion == goal) Right(())
+              else Left(NotOfForm("the empty run's length as the driver opened it", result.conclusion))
+          } yield result,
+        opened =>
+          for {
+            grown <- rules.spec(opened.variable, zerosAtSuccessor)
+            atIndex <- LogicError.lift(Term.app(zerosOf, opened.variable))
+            measured <- Conv.apTerm(lengthOf, grown)
+            split <- rules.specAll(concatLength, List(atIndex, digitZero))
+            joined <- Conv.trans(measured, split)
+            // `|0^j| + |0|` is `j + SUC ZERO`, and the successor comes out of the right summand by
+            // the recurrence and the zero goes by the identity. Two rewrites and no induction of
+            // their own, which is why the length of a run is not its own development.
+            folding <- unfoldingRules(
+              logic,
+              Vector(opened.hypothesis, singletonLength, tools.numbers.addAtSuccessor,
+                tools.numbers.addAtZero)
+            )
+            value <- rightOf(joined)
+            folded <- Rewrite.rewrite(folding ++ tools.lengths, value)
+            result <- Conv.trans(joined, folded)
+            _ <-
+              if (result.conclusion == opened.goal) Right(())
+              else Left(NotOfForm("the run's length as the driver opened it", result.conclusion))
+          } yield result
+      )
+
+      stemStatement <- statement(tools.theory, tools.notation, StemLength)
+      index = Conv.freshVariable("j", Numbers, Term.freeVariables(stemStatement))
+      atIndex <- LogicError.lift(Term.app(zerosOf, index))
+      split <- rules.specAll(concatLength, List(stem, atIndex))
+      folding <- unfoldingRules(
+        logic,
+        Vector(zerosLength, tools.numbers.successorPlus, tools.numbers.zeroPlus)
+      )
+      value <- rightOf(split)
+      folded <- Rewrite.rewrite(folding ++ tools.lengths, value)
+      shaped <- Conv.trans(split, folded)
+      stemLength <- rules.gen(index, shaped)
+      _ <-
+        if (stemLength.conclusion == stemStatement) Right(())
+        else Left(NotOfForm(s"$StemLength as it is written", stemLength.conclusion))
+    } yield (zerosLength, stemLength)
+  }
+
+  /**
+   * [[PotentialOfStem]]: the measure of the family, in closed form, by induction on the run.
+   *
+   * The step is [[PotentialConcat]] at the stem and one digit. What comes back is the measure of
+   * the shorter stem plus a sum over a one-letter word, [[sumOverPositions]] evaluates that sum,
+   * and what it evaluates to is `WORD_LENGTH <stem> - 1`, which [[StemLength]] turns into `SUC j`.
+   * Then `NUM_TRI j + SUC j` is `NUM_TRI (SUC j)` by the triangular numbers' own recurrence, and
+   * the two recursions meeting is the whole content: neither is rearranged to fit the other.
+   */
+  private def potentialOfStem(
+    tools: Concrete,
+    naturals: Natural,
+    numbering: Numbering,
+    concatenation: Concatenation,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm],
+    zerosAtZero: Kernel.Thm,
+    zerosAtSuccessor: Kernel.Thm,
+    stemLength: Kernel.Thm,
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      potential <- tools.constant(Potential, Type.fun(Words, Numbers))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      zerosOf <- tools.constant(Zeros, Type.fun(Numbers, Words))
+      stem <- tools.word(spell("/f"))
+      digitZero <- tools.word(spell("0"))
+
+      associative <- concatenation.fact(Concatenation.Associative).map(atNumbers)
+      emptyRight <- concatenation.fact(Concatenation.EmptyRight).map(atNumbers)
+      potentialConcat <- facts.get(PotentialConcat).toRight(MissingDefinition(PotentialConcat))
+      triangleAtZero <- numbering.fact(Numbering.TriangleAtZero)
+      triangleAtSuccessor <- numbering.fact(Numbering.TriangleAtSuccessor)
+
+      induction <- naturals.fact(Natural.Induction)
+      driver = Induct.overNaturals(logic, induction)
+
+      target <- statement(tools.theory, tools.notation, PotentialOfStem)
+      result <- driver.proveBy(
+        target,
+        goal =>
+          for {
+            // `(/f) 0^0` is `(/f) WORD_EMPTY` is `/f`, written as the family rather than as the
+            // word it happens to equal, which is [[digitFamily]]'s base case read for a measure.
+            inFront <- LogicError.lift(Term.app(concat, stem))
+            opened <- Conv.apTerm(inFront, zerosAtZero)
+            collapsed <- rules.spec(stem, emptyRight).flatMap(Conv.trans(opened, _))
+            measured <- Conv.apTerm(potential, collapsed)
+            evaluated <- potentialOfWord(tools, spell("/f"), definitions, conditional, conditionalFalse)
+            joined <- Conv.trans(measured, evaluated)
+            atZero <- Conv.sym(triangleAtZero)
+            settled <- Conv.trans(joined, atZero)
+            _ <-
+              if (settled.conclusion == goal) Right(())
+              else Left(NotOfForm("the measure at the empty run as the driver opened it", settled.conclusion))
+          } yield settled,
+        opened =>
+          for {
+            atIndex <- LogicError.lift(Term.app(zerosOf, opened.variable))
+            prefix <- LogicError.lift(Term.appAll(concat, List(stem, atIndex)))
+            grown <- runOneLonger(
+              tools, concat, stem, atIndex, digitZero, opened.variable,
+              associative, zerosAtSuccessor)
+            shaped <- Conv.sym(grown)
+            measured <- Conv.apTerm(potential, shaped)
+            split <- rules.specAll(potentialConcat, List(prefix, digitZero))
+            joined <- Conv.trans(measured, split)
+
+            value <- rightOf(joined)
+            tail <- value match {
+              case App(App(_, _), sum) => Right(sum)
+              case other => Left(NotOfForm("the measure of two blocks", other))
+            }
+            summand <- tail match {
+              case App(App(_, function), _) => Right(function)
+              case other => Left(NotOfForm("a sum over a bound", other))
+            }
+            evaluated <- sumOverPositions(tools, summand, spell("0"), conditional, conditionalFalse)
+
+            folded <- foldedSum(
+              tools,
+              Vector(stemLength, opened.hypothesis, tools.numbers.oneIsSuccessorOfZero,
+                tools.numbers.subSuccessors, tools.numbers.subAtZero),
+              evaluated,
+              value
+            )
+            carried <- Conv.trans(joined, folded)
+
+            // The goal's own right-hand side is taken to where the left one ended rather than the
+            // other way round. `NUM_TRI (SUC j)` is `NUM_TRI j + SUC j` by the recurrence, and the
+            // identities then lift that successor out of the sum exactly as they lifted the one on
+            // the left, so the two meet at a term neither of the two recursions is written in.
+            sides <- Term
+              .destEq(opened.goal)
+              .toRight(NotOfForm("an equation", opened.goal))
+            recurrence <- unfoldingRules(logic, Vector(triangleAtSuccessor))
+            expansion <- Rewrite.rewrite(recurrence ++ tools.identities, sides._2)
+            settled <- Conv.sym(expansion).flatMap(Conv.trans(carried, _))
+            _ <-
+              if (settled.conclusion == opened.goal) Right(())
+              else Left(NotOfForm("the measure at the longer run as the driver opened it", settled.conclusion))
+          } yield settled
+      )
+    } yield result
+  }
+
+  /**
+   * [[PotentialOfFamily]] and [[FamilyBounded]]: the tail marker weighs nothing, and the bound.
+   *
+   * One [[PotentialConcat]] over a word whose second block is a single letter that is not a digit,
+   * so the sum it contributes is `ZERO` and the measure of the family is the measure of its stem.
+   * The bound after it is [[RunPotential]] with that equation carried into its left side, and
+   * nothing else: what makes it a statement about a size rather than about a word is `NUM_TRI`.
+   */
+  private def familyBounded(
+    tools: Concrete,
+    numbering: Numbering,
+    concatenation: Concatenation,
+    facts: Map[String, Kernel.Thm],
+    stemPotential: Kernel.Thm,
+    zerosAtZero: Kernel.Thm,
+    zerosAtSuccessor: Kernel.Thm,
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm)] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      potential <- tools.constant(Potential, Type.fun(Words, Numbers))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      zerosOf <- tools.constant(Zeros, Type.fun(Numbers, Words))
+      marker <- tools.word(spell("."))
+      stem <- tools.word(spell("/f"))
+      potentialConcat <- facts.get(PotentialConcat).toRight(MissingDefinition(PotentialConcat))
+      runPotential <- facts.get(RunPotential).toRight(MissingDefinition(RunPotential))
+      emptyLeft <- concatenation.fact(Concatenation.EmptyLeft).map(atNumbers)
+      triangleAtZero <- numbering.fact(Numbering.TriangleAtZero)
+      triangleAtSuccessor <- numbering.fact(Numbering.TriangleAtSuccessor)
+
+      target <- statement(tools.theory, tools.notation, PotentialOfFamily)
+      index = Conv.freshVariable("j", Numbers, Term.freeVariables(target))
+      atIndex <- LogicError.lift(Term.app(zerosOf, index))
+      prefix <- LogicError.lift(Term.appAll(concat, List(stem, atIndex)))
+
+      split <- rules.specAll(potentialConcat, List(prefix, marker))
+      value <- rightOf(split)
+      tail <- value match {
+        case App(App(_, _), sum) => Right(sum)
+        case other => Left(NotOfForm("the measure of two blocks", other))
+      }
+      summand <- tail match {
+        case App(App(_, function), _) => Right(function)
+        case other => Left(NotOfForm("a sum over a bound", other))
+      }
+      evaluated <- sumOverPositions(tools, summand, spell("."), conditional, conditionalFalse)
+      atThisIndex <- rules.spec(index, stemPotential)
+      folded <- foldedSum(tools, Vector(atThisIndex), evaluated, value)
+      shaped <- Conv.trans(split, folded)
+      familyPotential <- rules.gen(index, shaped)
+      _ <-
+        if (familyPotential.conclusion == target) Right(())
+        else Left(NotOfForm(s"$PotentialOfFamily as it is written", familyPotential.conclusion))
+
+      // The closed form read at one index, against a statement written by hand. Both sides are
+      // reduced by rewriting rather than by a second derivation, so what this compares is the
+      // family's own equation with a word and a number a reader checks by eye.
+      atOne <- statement(tools.theory, tools.notation, FamilyAtOne)
+      one <- tools.numeral(1)
+      instanceAtOne <- rules.spec(one, familyPotential)
+      shapes <- unfoldingRules(
+        tools.logic,
+        Vector(zerosAtSuccessor, zerosAtZero, emptyLeft, triangleAtSuccessor, triangleAtZero,
+          tools.numbers.zeroPlus)
+      )
+      sidesAtOne <- Term
+        .destEq(instanceAtOne.conclusion)
+        .toRight(NotOfForm("an equation", instanceAtOne.conclusion))
+      wordReduced <- Rewrite.rewrite(shapes, sidesAtOne._1)
+      valueReduced <- Rewrite.rewrite(shapes, sidesAtOne._2)
+      readAtOne <- Conv
+        .sym(wordReduced)
+        .flatMap(Conv.trans(_, instanceAtOne))
+        .flatMap(Conv.trans(_, valueReduced))
+      _ <-
+        if (readAtOne.conclusion == atOne) Right(())
+        else Left(NotOfForm(s"$FamilyAtOne as it is written", readAtOne.conclusion))
+
+      bound <- statement(tools.theory, tools.notation, FamilyBounded)
+      subject = Conv.freshVariable("j", Numbers, Term.freeVariables(bound))
+      atSubject <- LogicError.lift(Term.app(zerosOf, subject))
+      family <- LogicError
+        .lift(Term.appAll(concat, List(stem, atSubject)))
+        .flatMap(front => LogicError.lift(Term.appAll(concat, List(front, marker))))
+      atMost <- LogicError.lift(tools.theory.constant(Peano.NonStrictOrder, OrderType))
+      instance <- rules.spec(family, runPotential)
+      closedForm <- rules.spec(subject, familyPotential)
+      closed <- underEveryReach(logic, atMost, instance, closedForm)
+      result <- rules.genAll(closed, List(subject))
+      _ <-
+        if (result.conclusion == bound) Right(())
+        else Left(NotOfForm(s"$FamilyBounded as it is written", result.conclusion))
+    } yield (familyPotential, readAtOne, result)
+  }
+
+  /**
+   * A measure of two blocks with the second one's sum evaluated and everything folded.
+   *
+   * [[normalisedMeasure]]'s manoeuvre, at a caller whose offset is a term rather than a written-out
+   * word's length: the evaluated sum is stated at `NUM_SUM f (WORD_LENGTH <word>)`, the rewriting
+   * below normalises that bound and the summand with it before anything else fires, so the equation
+   * as it comes back never matches. It is restated against **the same rules the pass below uses**,
+   * which is the half that was wrong first: restated against a smaller set, the equation is about a
+   * summand the outer pass has already rewritten past, and here the extra rule is the one that says
+   * how long the first block is.
+   */
+  private def foldedSum(
+    tools: Concrete,
+    extra: Vector[Kernel.Thm],
+    evaluated: Kernel.Thm,
+    value: Term
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      preparation <- unfoldingRules(tools.logic, extra)
+      ambient = preparation ++ tools.lengths ++ tools.identities
+      atNumeral <- leftOf(evaluated).flatMap(Rewrite.rewrite(ambient, _))
+      restated <- Conv.sym(atNumeral).flatMap(Conv.trans(_, evaluated))
+      sum <- unfoldingRules(tools.logic, Vector(restated))
+      folded <- Rewrite.rewrite(sum ++ ambient, value)
+    } yield folded
+
+  /** `|- !q. REACH ... x q ==> c <= ...` from the same with `S2_PHI x` there and `|- S2_PHI x = c`. */
+  private def underEveryReach(
+    logic: Logic,
+    atMost: Term,
+    quantified: Kernel.Thm,
+    closedForm: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      predicate <- logic
+        .destForallPredicate(quantified.conclusion)
+        .toRight(NotOfForm("a claim about every reach", quantified.conclusion))
+      domain <- Type
+        .destFun(Term.typeOf(predicate))
+        .map(_._1)
+        .toRight(NotOfForm("a predicate", predicate))
+      witness = Conv.freshVariable(
+        "q",
+        domain,
+        Term.freeVariables(quantified.conclusion) ++ Term.freeVariables(closedForm.conclusion)
+      )
+      opened <- rules.spec(witness, quantified)
+      parts <- logic
+        .destImp(opened.conclusion)
+        .toRight(NotOfForm("an implication", opened.conclusion))
+      (premiseTerm, conclusionTerm) = parts
+      premise <- LogicError.lift(Kernel.assume(premiseTerm))
+      held <- rules.mp(opened, premise)
+      other <- conclusionTerm match {
+        case App(App(_, _), right) => Right(right)
+        case other => Left(NotOfForm("an order statement", other))
+      }
+      reversed <- Conv.sym(closedForm)
+      carried <- carryLeft(atMost, reversed, other, held)
+      discharged <- rules.disch(premiseTerm, carried)
+      result <- rules.gen(witness, discharged)
+    } yield result
+  }
 
   /** What the word is known to be, which is two facts everywhere below. */
   private final case class Class(anchored: Kernel.Thm, marked: Kernel.Thm)

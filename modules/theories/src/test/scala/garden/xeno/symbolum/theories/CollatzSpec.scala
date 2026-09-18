@@ -50,6 +50,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
       .construct(
         chain.forward,
         chain.reaching,
+        chain.numbering,
         chain.naturals,
         chain.peano,
         chain.successor,
