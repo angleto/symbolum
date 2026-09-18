@@ -510,9 +510,15 @@ object Chain {
       forward <- Forward.construct(
         inductive, concatenation, reaching.theory, reaching.notation)
 
-      // The fifth type operator, and the last link. It needs `peano` for the arithmetic of the
-      // carrier and `product` for the pair; what it extends is the chain's end as it stands here,
-      // for the reason `Rotation.construct`'s comment gives.
+      // The fifth type operator. It needs `peano` for the arithmetic of the carrier and `product`
+      // for the pair; what it extends is the chain's end as it stands here, for the reason
+      // `Rotation.construct`'s comment gives. This read "and the last link" until 2026-09-18 and
+      // stopped being true in the commit that added `inclusion` two bindings below it and moved
+      // `widest` off this one in the same diff, which is the defect `widest`'s own docstring is
+      // about, met beside the field rather than in prose about it. Nothing went red on it:
+      // `DocumentationSpec` holds the `widest` claim and says in writing that a positional "is
+      // last" has no shape it can separate from the prose around it, so which link is the end is
+      // read off `widest` and is not written here.
       integers <- Integer.construct(
         classical, peano, product, forward.theory, forward.notation)
 
