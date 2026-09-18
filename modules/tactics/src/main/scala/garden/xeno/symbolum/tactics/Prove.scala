@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, LinearForm, Order, Real, RealTheory, Ring, Signature}
+import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, LinearForm, Order, Real, RealTheory, Ring, Signature, Value}
 
 /**
  * One entry point for "prove this goal", and one rule for which refusal survives.
@@ -87,7 +87,20 @@ final class Prove private (
    * two theories declaring one name, which is the case `docs/adr/0008` leaves open and
    * `SoundnessAttackSpec` derives `|- F` from. The capability is absent or it is passed in.
    */
-  val classical: Option[Classical]
+  val classical: Option[Classical],
+  /**
+   * The table of defined constants this can evaluate at concrete arguments, where there is one.
+   *
+   * `Option` for the reason [[classical]] is one, and the reason is the same both times: what
+   * `Value` stands on — `Digits`, `Modular` and `Linarith` — are pieces a chain has assembled and
+   * an `Order` has not, so a prover built over somebody's own order has no table and says so by
+   * doing less. Only [[Prove.construct]] over a `Chain` can supply it.
+   *
+   * It cannot be missing on a goal that needs it, which is worth saying because the type does not:
+   * a term naming `NUM_DIV` cannot be stated against a signature that has never heard of `num`, so
+   * a prover with no table is a prover no such goal reaches.
+   */
+  val value: Option[Value]
 ) {
 
   /**
@@ -403,9 +416,63 @@ final class Prove private (
             }
         }
 
+      case Prove.Address.Evaluation =>
+        evaluated(goal)
+
       case Prove.Address.Nobody(why) =>
         Left(FromLogic(NotOfForm(why, goal)))
     }
+
+  /**
+   * An equation between a defined constant at numerals and a numeral, settled by computing it.
+   *
+   * The theorem `Value` hands back is `f a b = v` for whatever `v` the constant denotes there, and
+   * the goal is `f a b = c` for whatever the caller wrote. Those are the same theorem exactly when
+   * the caller was right, so the comparison is the answer and the mismatch is worth more than a
+   * refusal usually is: it carries the value. An author who wrote `NUM_DIV 17 5 = 4` is told the
+   * quotient is 3, which is a fact about their claim rather than about this procedure's fragment.
+   *
+   * `None` where there is no table to ask, which is a prover built over somebody's own order rather
+   * than over a chain, and is the same real configuration [[classical]] and [[library]] describe.
+   * It cannot arise on a goal of this shape in practice: a term naming `NUM_DIV` cannot be stated
+   * against a signature that has never heard of `num`, so a prover with no table is a prover no
+   * such goal reaches. It is written rather than assumed because the type does not say so.
+   */
+  private def evaluated(goal: Term): Either[TacticError, Kernel.Thm] =
+    value match {
+      case None =>
+        Left(
+          FromLogic(
+            NotOfForm("a goal this prover has a table for; it was built over an order alone", goal)
+          )
+        )
+
+      case Some(table) =>
+        Term.destEq(goal).map(_._1) match {
+          case None => Left(FromLogic(NotOfForm("an equation", goal)))
+          case Some(left) =>
+            TacticError.lift(table.at(left)).flatMap { computed =>
+              if (computed.conclusion == goal) Right(computed)
+              else
+                Left(
+                  FromLogic(
+                    NotOfForm(
+                      s"${reals.show(computed.conclusion)}, which is what this evaluates to",
+                      goal
+                    )
+                  )
+                )
+            }
+        }
+    }
+
+  /**
+   * The table of defined constants this can evaluate at concrete arguments, where there is one.
+   *
+   * Built from the chain for the same reason [[classical]] is passed in rather than constructed:
+   * what it stands on — `Digits`, `Modular` and `Linarith` — are pieces a chain has assembled and
+   * an `Order` has not.
+   */
 
   /**
    * A propositional goal the free calculus refused, where there is no classical procedure to ask.
@@ -564,6 +631,20 @@ object Prove {
      */
     case Propositional
 
+    /**
+     * An equation whose left side is a defined constant applied to numerals.
+     *
+     * `NUM_DIV 17 5 = 3` is the shape, and until 2026-09-18 it was [[Nobody]]'s with the message
+     * "an equation between reals; this one is between something else" — a true sentence that told
+     * the author to restate a claim with nothing wrong with it. The theorem existed the whole time:
+     * `Value` proves it at two axioms and nothing routed a goal there.
+     *
+     * The address is the **left** side's: what decides it is that the side is an application this
+     * table reads, which `Value.reads` answers. A general claim like `!m n. NUM_DIV (m * n) n = m`
+     * is not this address, because its arguments are variables and there is nothing to evaluate.
+     */
+    case Evaluation
+
     /** Neither shape, and `why` names what a goal would have to be. */
     case Nobody(why: String)
 
@@ -619,6 +700,7 @@ object Prove {
       Field.standard,
       Order.standard.reals,
       libraryOf(Order.standard),
+      None,
       None
     )
 
@@ -673,7 +755,7 @@ object Prove {
     for {
       linarith <- Linarith.construct(order)
       field <- Field.construct(order.ring.arithmetic)
-    } yield new Prove(order, order.ring, linarith, field, reals, libraryOf(order), None)
+    } yield new Prove(order, order.ring, linarith, field, reals, libraryOf(order), None, None)
 
   /**
    * The prover a chain deserves: its widest signature, and everything it holds.
@@ -689,9 +771,13 @@ object Prove {
    * for a goal none of them address.
    */
   def construct(chain: Chain): Either[LogicError, Prove] =
-    Linarith
-      .construct(chain.order)
-      .flatMap(construct(chain.order, chain.widest, Library.of(chain), _, Some(chain.classical)))
+    for {
+      linarith <- Linarith.construct(chain.order)
+      // A table that will not build is a capability absent rather than a prover that does not
+      // build, which is the same shape `libraryOf` uses for a library that will not widen.
+      table = Value.construct(chain).toOption
+      prover <- construct(chain.order, chain.widest, Library.of(chain), linarith, Some(chain.classical), table)
+    } yield prover
 
   /**
    * The same, with a library the caller assembled rather than the one the order can reach.
@@ -707,7 +793,7 @@ object Prove {
    * the reals, because a lemma about `num` is specialised at `num`.
    */
   def construct(order: Order, reals: Signature, held: Library): Either[LogicError, Prove] =
-    Linarith.construct(order).flatMap(construct(order, reals, held, _, None))
+    Linarith.construct(order).flatMap(construct(order, reals, held, _, None, None))
 
   /**
    * The same, with the linear procedure supplied rather than built from the order.
@@ -722,12 +808,14 @@ object Prove {
     reals: Signature,
     held: Library,
     linarith: Linarith,
-    classical: Option[Classical]
+    classical: Option[Classical],
+    value: Option[Value]
   ): Either[LogicError, Prove] =
     for {
       field <- Field.construct(order.ring.arithmetic)
       logic <- reals.logic.over(reals.theory)
-    } yield new Prove(order, order.ring, linarith, field, reals, Some((held, logic)), classical)
+    } yield new Prove(
+      order, order.ring, linarith, field, reals, Some((held, logic)), classical, value)
 
   /**
    * The shape test, applied under any leading quantifiers and through any antecedent.
@@ -787,6 +875,14 @@ object Prove {
         else
           Term.destEq(conclusion) match {
             case Some((left, _)) if Term.typeOf(left) == Real.realType => Address.Equation
+
+            // Asked before the refusal below and not instead of the reals' address above: an
+            // equation between reals is RING's and LINARITH's whatever else it also is, and what
+            // arrives here is what those two have no reading of. `Value.reads` is the table's own
+            // question rather than a shape test written here, so a row added to it reaches this
+            // address without this file changing.
+            case Some((left, _)) if Value.reads(reals.notation, left) => Address.Evaluation
+
             case Some(_) =>
               Address.Nobody("an equation between reals; this one is between something else")
 
