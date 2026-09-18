@@ -224,7 +224,14 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `NUM_SUM_MONOTONE_BELOW` carries `!u. u < z ==> x u <= y u`, which is one antecedent too,
     // and what is inside it is an arrow under a quantifier that `Propose.peel` never reaches
     // because it stops at the first thing that is not an implication.
-    propose.weakenings.size shouldBe 349
+    // 362 with the four facts that put PA's multiplication to work and prove it on numerals, and
+    // the thirteen are derived from the statements rather than read off the failure: seven for
+    // `NUM_PROV_ADD_CONG`, whose three terms each owe a `NUM_TERM` and a `NUM_CLOSED` and which
+    // then asks for one provable equation; four for `NUM_PROV_MUL_SUC` at two terms; two for
+    // `NUM_PROV_MUL_ZERO` at one; and **none** for `NUM_PROV_NUMERAL_MUL`, which carries no
+    // hypothesis at all and is the point of it. The gate said 362 and the peeling rule says
+    // 349 + 13, which is the check this comment exists to make possible.
+    propose.weakenings.size shouldBe 362
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

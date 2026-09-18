@@ -280,7 +280,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // conjunction and the second a bounded quantifier, and `Propose.peel` counts arrows and not
     // conjuncts. Which lemmas moved it is measured off `docs/lemmas.md` at `9734bf7` against the
     // current one, and the derivation is written out where `RediscoverySpec` pins the same figure.
-    proposals.size shouldBe 349
+    // 362 with the four `Deduction` facts that put PA's multiplication to work, and the thirteen
+    // are derived from their statements: seven arrows on `NUM_PROV_ADD_CONG`, four on
+    // `NUM_PROV_MUL_SUC`, two on `NUM_PROV_MUL_ZERO`, none on `NUM_PROV_NUMERAL_MUL`, which owes
+    // nothing and is what the other three were built for. `RediscoverySpec` pins the same figure
+    // and carries the same derivation, which is the two places this comment's neighbour calls out.
+    proposals.size shouldBe 362
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -890,7 +895,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the procedures read -- and that not one of them is refuted at a point was not: dropping
     // `0 <= c` from `LE_MUL_BOTH` leaves a claim false at any negative multiplier, and the sampler
     // did not find one.
-    open shouldBe 256
+    // 269, which is the same thirteen: every weakening of the three new facts with hypotheses is a
+    // claim about the object language's codes, and no procedure here has a reading of `NUM_PROV`,
+    // so each lands open rather than decided. A bucket that had taken any of them would be saying
+    // it can decide provability in PA.
+    open shouldBe 269
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1396,7 +1405,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `!x y z. NUM_SUM x z <= NUM_SUM y z` writes `NUM_LE`, so both are on it whatever the
     // procedures and the sampler make of them. "The claim mentions the naturals" and "the model
     // can compute it" are different facts, which is what the entry below says from the other side.
-    aboutNumbers.size shouldBe 137
+    // 139, and the two are `NUM_PROV_NUMERAL_MUL`'s. This list counts CONSTANTS from `named`, and
+    // of the four facts that landed with the object theory's multiplication it is the only one
+    // whose statement writes one: `NUM_MUL`, inside the numeral of the product. The other three
+    // speak of `NUM_PROV`, `NUM_TERM`, `NUM_CLOSED` and the codes, none of which is on this list.
+    // Measured rather than derived, which is what the entry above already says of its residues.
+    aboutNumbers.size shouldBe 139
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
