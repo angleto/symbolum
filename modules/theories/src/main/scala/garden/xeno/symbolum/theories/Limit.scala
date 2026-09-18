@@ -196,9 +196,12 @@ object Limit {
    * **It did not buy `exp 1 > 2`, which this docstring said it would buy immediately**, and both
    * records are corrected in place rather than left to be believed. What that claim wants besides
    * this theorem is a dominating series for the exponential: `1 / i!` under `2 * (1/2)^i` asks for
-   * `2^i <= 2 * i!`, which no development here holds, and then an order fact about a quotient, of
-   * which this chain holds exactly one, `Order.INV_POSITIVE`. The geometric series at one half asks
-   * for neither, and `LimitSpec` obtains it, which is the consumer this theorem went a day without.
+   * `2^i <= 2 * i!`, which no development here holds, and then an order fact about a quotient.
+   * **The second of those two is here since 2026-09-18**, `Order.INV_ANTITONE` with
+   * `Order.LE_MUL_BOTH` under it, so what `exp 1 > 2` waits on is the first alone, and that is an
+   * induction over `num` whose step holds only from one upwards. The geometric series at one half
+   * asks for neither, and `LimitSpec` obtains it, which is the consumer this theorem went a day
+   * without.
    */
   val Comparison: String = "SUM_COMPARISON"
 

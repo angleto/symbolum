@@ -271,7 +271,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // than a total carried forward. It is one arrow over a single equation, so it offers one
     // weakening: `!w. w = WORD_EMPTY`. Every other addend here belongs to work already on the tip
     // and is taken from it wholesale.
-    proposals.size shouldBe 343
+    // 347 with the four the order gained on 2026-09-18: `LE_MUL_BOTH` and `INV_ANTITONE` have two
+    // hypotheses apiece, and this source offers one weakening per hypothesis.
+    proposals.size shouldBe 347
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -858,7 +860,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // figure at 236 while adding eleven weakenings: ten of those eleven land here and one does
     // not, measured after the failure and not derived, for the reason this row has now given six
     // times. The four that are this session's are the limit bounds', and they all land here.
-    open shouldBe 250
+    // 256 with ALL SIX the order gained on 2026-09-18, and the six are two kinds: four weakenings,
+    // one per hypothesis of `LE_MUL_BOTH` and `INV_ANTITONE`, and two substitutions, which are the
+    // matched pair `RediscoverySpec` reports. **The count of six was derivable and the split was
+    // not**, which is the distinction this row has now drawn seven times: `decidedFalse` does not
+    // move and `unreadable` does not move either, both measured after the run. That the residues
+    // have an address was the likely half -- they are order claims over real atoms, which is what
+    // the procedures read -- and that not one of them is refuted at a point was not: dropping
+    // `0 <= c` from `LE_MUL_BOTH` leaves a claim false at any negative multiplier, and the sampler
+    // did not find one.
+    open shouldBe 256
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

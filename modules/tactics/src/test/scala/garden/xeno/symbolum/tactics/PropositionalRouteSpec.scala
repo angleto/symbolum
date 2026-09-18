@@ -12,7 +12,7 @@ import garden.xeno.symbolum.theories.Chain
  * `docs/adr/0023` moved `Prove`'s propositional address from `Minimal` to the calculus under it,
  * and the figures that decided it are here rather than in a probe somebody ran once. The card
  * asking for the work named the corpus and the library as the population to measure, and that
- * measurement is in `Prove`'s own docstring: of the library's 503 statements two carry a negation at
+ * measurement is in `Prove`'s own docstring: of the library's statements two carry a negation at
  * this address and both are `Classical`'s own, and of the Mathlib ring corpus and the statable slice
  * of miniF2F **none** reaches the address at all. Read as "the change buys nothing" that zero is an
  * absence reported by an instrument pointed at a subject that cannot contain the thing: those three

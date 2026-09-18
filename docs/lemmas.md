@@ -392,10 +392,12 @@ they have least appetite for working out how it is produced.
   ADD_POSITIVE             !x:real. !y:real. 0 < x ==> 0 < y ==> 0 < x + y
   CANCEL_NONNEG            !x:real. !y:real. 0 < x ==> 0 <= x * y ==> 0 <= y
   CANCEL_POSITIVE          !x:real. !y:real. 0 < x ==> 0 < x * y ==> 0 < y
+  INV_ANTITONE             !x:real. !y:real. 0 < x ==> x <= y ==> inv y <= inv x
   INV_POSITIVE             !x:real. 0 < x ==> 0 < inv x
   LE_ANTISYMMETRIC         !x:real. !y:real. x <= y ==> y <= x ==> x = y
   LE_CASES                 !x:real. !y:real. x <= y ==> x < y \/ x = y
   LE_FROM_ZERO             !x:real. !y:real. 0 <= y - x ==> x <= y
+  LE_MUL_BOTH              !x:real. !y:real. !z:real. 0 <= x ==> y <= z ==> y * x <= z * x
   LE_OF_EQ                 !x:real. !y:real. x = y ==> x <= y
   LE_OF_LT                 !x:real. !y:real. x < y ==> x <= y
   LE_OF_NOT_LT             !x:real. !y:real. ~(x < y) ==> y <= x

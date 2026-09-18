@@ -462,8 +462,8 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // addition and picking a side is never it -- it only sometimes agrees, which is how a wrong
     // rule earns confidence. The safe form is to take whatever the tip now says and add this
     // branch's delta, never to carry forward a total computed against an earlier one.
-    library.entries.size shouldBe 503
-    library.names.distinct.size shouldBe 500
+    library.entries.size shouldBe 505
+    library.names.distinct.size shouldBe 502
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

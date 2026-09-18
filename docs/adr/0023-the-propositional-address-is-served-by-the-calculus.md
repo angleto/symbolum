@@ -48,9 +48,11 @@ The last row is what decides the shape of the change and the 58 is what it is wo
 move from one axiom to none, and the 98 are why the classical procedure keeps a job.
 
 Over what this repository already holds and already measures, which is the population the card
-asking for the work named: the library of `Chain.standard` is 503 statements, 184 at this address,
+asking for the work named: the library of `Chain.standard` is 505 statements, 184 at this address,
 **two** of them carrying a negation, and both are `Classical`'s own — the excluded middle and double
-negation, classical by construction. The Mathlib ring corpus and the statable slice of miniF2F put
+negation, classical by construction. It read 503 when this record was written, hours earlier the
+same day, and 505 is `Order` gaining two: the denominator is a property of the library and moves,
+the 184 and the two are properties of the address and did not. The Mathlib ring corpus and the statable slice of miniF2F put
 **nothing** at this address at all. That zero is a fact about those populations rather than about
 the change: they are arithmetic, and a goal reaches this address carrying a negation only where
 every atom is a bare proposition. Read as "the change buys nothing" it is an absence reported by an
