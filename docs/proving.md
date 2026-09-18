@@ -1922,7 +1922,15 @@ the claim's own foundation-typed subterms, which stay opaque throughout, so what
 reported in the foundational column rather than absorbed. `Bridging` is the same route with the
 theorem found instead of named, one candidate at a time out of the library's lemmas about the
 constants the claim reaches, reporting which of them carried it; `docs/adr/0027` is that
-decision, and composing any of this with `Linarith` is still a different piece of work. And a claim
+decision, and composing any of this with `Linarith` is still a different piece of work.
+
+A domain that keeps a **type** of its own is the case neither of those covers, and what stops it is
+not a refusal but the parser: `NUM_LT c 3` at `c:cost` is a type error, so there is no verdict to
+lift. `docs/adr/0028` is the answer — an interpretation handed to `Domain.build`, which sends the
+domain's type to a foundation type and, where the caller wants it, sends a domain constant to a
+**definition** rather than a declaration. Neither costs an axiom, and what the report gains is
+`Domain.Spending.defined`: the interpreted names the conclusion rests on, because a claim resting on
+a translation rests on something the axiom columns will never mention. And a claim
 settled only after the free route ran out of net comes back `CutShort` rather than `Settled`: the
 theorem and the price are the same, and what is added is that the `SELECT` may be the search's
 rather than the claim's, which `docs/adr/0026`

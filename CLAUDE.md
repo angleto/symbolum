@@ -1346,13 +1346,25 @@ just as well if the decision had fallen through to `Propositional` and charged `
 the trade `docs/adr/0022` exists to refuse and which a choice axiom the naturals cost anyway would
 have hidden.
 
-What is still not there is the interpretation itself: a domain **type** the foundation has never
-heard of has no theorem relating it to a number, so there is no bridge to name and none to find
-either, and the refusal is kept for exactly that. `DomainTheorySpec` asserts both halves, and tells
-the refusal apart from a parse error by the sentence rather than by the constant. Nor does the
-search combine two lemmas: one that needs two facts at once is refused in those words, since a
-refusal a reader takes for "out of reach" would hide the route that does settle it, which is naming
-both.
+**A domain type is interpreted at the build, and that is `docs/adr/0028` since 2026-09-18.** A
+domain that keeps a type of its own is not merely refused arithmetic: a claim needing it **cannot
+be written**, because `NUM_LT c 3` at `c:cost` is a type error and not a verdict something could
+lift, which `InterpretationSpec` measures. An `Interpretation` sends a type of the domain to a type
+of the foundation, and then that type is not declared at all; it also sends a constant of the
+domain to a **definition** rather than a declaration, so the predicate stops being an atom with
+nothing inside it. Neither costs an axiom, and the second is what a claim turning on what a word
+*means* was missing: a measure into `num` leaves the predicate opaque however much arithmetic is
+available about the number.
+
+What it costs a reader is a second thing to check, and the report says so: `Domain.Spending.defined`
+names the interpreted constants the conclusion **rests on**, walked out of the derivation rather
+than read off the statement, because the interesting case is exactly the one where the meaning was
+spent on the way and is gone from what was proved. The refusal stays for the domain built without a
+map, and `InterpretationSpec` keeps it non-vacuous by building **one** description both ways.
+
+Nor does the search combine two lemmas: one that needs two facts at once is refused in those words,
+since a refusal a reader takes for "out of reach" would hide the route that does settle it, which is
+naming both.
 
 Such a theory sits beside the chain and must stay there: two theories that axiomatise one name are
 the case `docs/adr/0008` leaves open, and `SoundnessAttackSpec` still derives `|- F` from it.
