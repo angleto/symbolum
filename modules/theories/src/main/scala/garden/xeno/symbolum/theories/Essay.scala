@@ -281,19 +281,16 @@ object Essay {
   }
 
   /**
-   * A number and its noun, with the plural where the number needs one.
+   * The counter this page's four counts go through, which is `Prose.count`.
    *
-   * It existed and three of its four call sites did not use it, which is why the page said
-   * "1 steps" and "1 inferences" until 2026-09-18. Both are reachable and one of them on every
-   * axiom: a theorem the kernel holds in a single inference is what an asserted axiom is, so
-   * every one of the sixteen of the reals read that way.
-   *
-   * **It appends an `s` and is not a rule about English.** That is right for `axiom`, `named
-   * fact`, `step` and `inference`, and wrong for the first irregular noun anybody routes through
-   * it. A noun that does not take a plain `s` wants its two forms written out, not this.
+   * It lived here and was private until 2026-09-18, and three of its four call sites did not use
+   * it, which is why the page said "1 steps" and "1 inferences". Both are reachable and one of them
+   * on every axiom: a theorem the kernel holds in a single inference is what an asserted axiom is,
+   * so every one of the sixteen of the reals read that way. It moved when the same shape was found
+   * at three more sites in `modules/tactics`, which cannot see something private to this file;
+   * `Prose` carries the argument for where it went.
    */
-  private def count(howMany: Int, noun: String): String =
-    if (howMany == 1) s"1 $noun" else s"$howMany ${noun}s"
+  private def count(howMany: Int, noun: String): String = Prose.count(howMany, noun)
 
   private def derivation(
     signature: Signature,

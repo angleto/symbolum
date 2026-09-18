@@ -69,6 +69,34 @@ session named would be a different tool with the same name.
   A suite that got slower is how that was found.
 - **One module:** `tools/sbt kernel/test`, `tools/sbt theories/test`, and so on
 - **One suite:** `tools/sbt "core/testOnly garden.xeno.symbolum.CanonicalFormSpec"`
+- **The check that `-Xfatal-warnings` arrives:** `tools/sbt fatalWarnings`, and it is **not a
+  command anybody has to remember**: `Test / test` on the root depends on it, so every
+  `tools/sbt test` and every CI run of it pays for the check, at no step of its own. It reads the
+  effective `Compile / compile / scalacOptions` and `Test / compile / scalacOptions` of every
+  project of this build that holds sources, which it finds by asking the disk rather than from a
+  list, so a project that never took `commonSettings` is inside the check; and then it compiles
+  `tools/fatal-warnings-probe`, a source with an inexhaustive match that **must** fail, against a
+  control compiling the same source with the one flag removed, which must succeed. The pair is
+  what makes a red probe attributable to the flag rather than to a broken probe.
+
+  **The question it answers is not the one the old guard answered.** `LogicErrorSpec` asserts the
+  flag is *written* in `build.sbt`, and this repository holds a case of written and not arriving:
+  the documentation build, `tools/sbt doc`, takes none of these options, says `Skipping unused
+  scalacOptions: -Werror` in its own log, and read green over 57 unresolved links. That spec keeps its textual assertion and now says
+  what it does not cover and names this task; what it adds is that the task is still wired to
+  `Test / test`, since a gate can report a dead flag and cannot report that nobody runs it.
+
+  **A green run of it prints one line and no compiler output**, because both probe compilations
+  log into a stream nobody reads: a gate that rides `tools/sbt test` would otherwise put nine
+  `[error]` lines into every suite log, and a healthy log that looks unhealthy is how a reader
+  stops reading it. To see the probe's diagnostics, `tools/sbt warningProbe/compile` restores
+  them, and every refusal the gate prints says so.
+
+  The two probe projects are outside `modules/` and the root aggregates neither, which is what
+  keeps `tools/sbt compile` green over a project that is supposed to fail. It also puts them
+  outside every scan that reads `modules/`, which is the cost of the arrangement and is written
+  where the probe is. `tools/fatal-warnings-probe/README.md` has the perturbations each half was
+  seen failing under.
 - **Coverage, with the floors enforced:** `tools/sbt clean coverage test coverageReport`. This one
   **skips the corpus measurements**, which `tools/sbt test` does not: the two ask different questions, and
   `ReachSpec` exercises the same lines as the other corpus suites while costing more than the rest
@@ -1218,6 +1246,23 @@ bound anyway. What is **not** reached is a run of positive length: detaching one
 the counted step at a concrete pair, which is a negative about `WORD_STEP` and nothing here proves
 one.
 
+**And the bound is quadratic at the one family this investigation names, since 2026-09-18.**
+`S2_FAMILY_BOUNDED` is `S2_RUN_POTENTIAL` at `/f0^j.`, so a run from the `j`th member spends at
+least `NUM_TRI j` commutations getting wherever it gets, and `NUM_TRI` grows as the square. What
+made it statable is `S2_PHI_FAMILY`, the measure of that family in closed form, and the closed form
+is a **triangular number** rather than a quotient: `j (j + 1) / 2` cannot be written on `num`, which
+is the same wall `docs/adr/0014` hit and why `Numbering` defines `NUM_TRI` by recursion in the first
+place. The two recursions meet without any arithmetic in between, the `j`th zero sitting at position
+`j + 1` and weighing its distance from the head. `S2_ZEROS_LENGTH` and `S2_STEM_LENGTH` are what the
+induction needs and the second is spent **under a binder**: the weight of a letter is how far along
+the word it is, so a block placed after the stem has to know how long the stem is.
+
+Read it for what it is. It is the quadratic **from below**, which is the direction `REACH_POTENTIAL`
+gives and the direction a lower bound on derivation length wants; it says nothing about termination
+and nothing about a run of that length existing. And `S2_PHI_FAMILY_AT_ONE` is the guard an
+off-by-one would fail: `S2_PHI (/f0.) = SUC ZERO` is written by hand and derived through `NUM_TRI`,
+where every other fact about the family is stated in `NUM_TRI` and would agree with itself.
+
 **And the two facts that keep it from being a theorem about nothing are published rather than
 argued.** A closure statement over an empty class is true and empty, and so is one over a relation
 that steps nothing; neither would fail anything else in the file. `S2_MARKED_INHABITED` and
@@ -1296,9 +1341,18 @@ nor, since 2026-09-18, the order fact. What is missing is one half of the domina
 step is valid only from one upwards, so it is a two-base induction and not an instance. The other
 half was an order fact about a quotient, of which this chain had exactly one, `INV_POSITIVE`;
 `INV_ANTITONE` is the second, the reciprocal reversing the order on the positives, with
-`LE_MUL_BOTH` under it. **That sentence was written in five places and went stale in all five at
-once**, which is the defect this file names about counts arriving at a fact written twice. `sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept
-the first sentence wrong for a day is a tool with no consumer, so there is one now: `LimitSpec`
+`LE_MUL_BOTH` under it. **That sentence was written in seven documents and went stale in all of
+them at once**, which is the defect this file names about a fact written twice. The figure here
+said five for a day, and so does the title of `9734bf7`, the commit that landed the second fact
+and made the copies false. Five is what that commit repaired; the population was seven, and the
+two it left behind stood for the seven hours between that commit and `ceedf4d`, on the same day.
+The instrument is the union of the two commits' own diffs rather than a pattern, because the claim
+is spelled differently in every document and a pattern matching all of them would have been built
+by reading them, which is the reading it was meant to replace. A count of copies
+is itself a copy, and this one counted the repair instead of the population, which is the shape of
+error the sentence it sits in is about.
+`sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept the first sentence
+wrong for a day is a tool with no consumer, so there is one now: `LimitSpec`
 obtains the geometric series at one half and sandwiches its limit between zero and two, which is the
 first series here whose convergence is a theorem rather than a hypothesis.
 

@@ -21,7 +21,18 @@ class AskSpec extends AnyFlatSpec with Matchers {
     val page = Ask.of("!x:real. x + 0 = x")
 
     page should startWith("Proved: !x:real. x + 0 = x")
-    page should include("inferences over 1 axioms")
+    // This assertion read `"inferences over 1 axioms"` until 2026-09-18, which is the defect the
+    // page had, written down as the expected output. A claim resting on a single axiom is the
+    // ordinary case here rather than a corner, so it was the reading this line always took.
+    //
+    // Asserted as the whole line rather than with `include`, because "inferences over 1 axiom" is a
+    // substring of "inferences over 1 axioms" and an `include` would have passed before the repair
+    // as well as after it: the check would have been of the assertion's own wording and not of the
+    // page. The inference count is not written in, since it moves whenever a derivation does.
+    page.linesIterator.find(_.contains(" over ")).map(_.trim) match {
+      case Some(proof) => proof should endWith(" inferences over 1 axiom")
+      case None => fail(s"no proof line on the page:\n$page")
+    }
     page should include("believed on: !x:real. x + 0 = x")
   }
 
@@ -31,6 +42,8 @@ class AskSpec extends AnyFlatSpec with Matchers {
     val page = Ask.of("!x:num. !y:num. NUM_ADD x y = NUM_ADD y x")
 
     page should startWith("Proved:")
+    // The plural beside the singular above, on the same noun and the same page, which is what keeps
+    // the repair from being a counter that has gone singular everywhere.
     page should include("inferences over 2 axioms")
   }
 

@@ -637,8 +637,15 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val skipped = Comments
       .codeLines(build)
       .count(_.code.contains("publish / skip := true"))
-    withClue("`root`, `examples`, `mark`, `dist` and `scan` are the five that do not publish: ") {
-      skipped shouldBe 5
+    withClue(
+      "`root`, `examples`, `mark`, `dist`, `scan` and the two fatal-warnings probes are the " +
+        "seven that do not publish: "
+    ) {
+      // Seven since 2026-09-18, when the two probe projects landed: a source that must not compile
+      // and the control that compiles the same source without `-Xfatal-warnings`. Neither is a
+      // module of this system, the root aggregates neither, and publishing a project whose
+      // compilation is expected to fail would be publishing a build error under a coordinate.
+      skipped shouldBe 7
     }
   }
 
@@ -1376,6 +1383,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val guide = read("docs/proving.md")
 
     guide should include("3 claims, 3 proved, 0 decided, 0 open")
+    // The tail of the same line, added 2026-09-18 because that is the half that went stale and
+    // nothing here read it: the citations were two counts sharing one noun, the repair gave each
+    // number a noun of its own, and the transcript in the guide went on saying "1 idle and 1 stale
+    // citations" with every assertion in this file still green.
+    guide should include("1 idle citation and 1 stale citation")
     guide should include("weighed 1, from ARS 2022, table 4: load <= 60 * rate")
     guide should include("assumed and never weighed: 0 < load (ARS 2022, table 7)")
     guide should include("cited and never assumed: load < cap (Decreto 152/2006 art. 99)")

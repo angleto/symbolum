@@ -5289,7 +5289,13 @@ object Language {
       witnesses = stripped._1
       _ <-
         if (witnesses.size == scheme.binders.size) Right(())
-        else Left(NotOfForm(s"a claim binding ${scheme.binders.size} variables", statement))
+        // Through `Prose.count` because the singular is reachable here and nothing above would show
+        // it: of the nine schemes this file builds, `NUM_LOGIC`'s reflexivity of equality binds
+        // exactly one variable, so a mismatch on that one read "a claim binding 1 variables".
+        else {
+          val wanted = s"a claim binding ${Prose.count(scheme.binders.size, "variable")}"
+          Left(NotOfForm(wanted, statement))
+        }
       split <- peeled(stripped._2, scheme.premises.size)
       (antecedents, conclusion) = split
       assumed <- antecedents.foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) {

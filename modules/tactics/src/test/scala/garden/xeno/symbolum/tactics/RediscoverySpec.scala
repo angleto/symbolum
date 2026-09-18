@@ -212,7 +212,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // before it was moved: `45416c8` added those two lemmas to `Peano` and left this figure at
     // 347, which is the second time the comment above has had to record that. A change that moves
     // a figure a test pins moves the pin in the same commit, whatever module that test lives in,
-    // and running the suite of the module that changed is not evidence about the figure elsewhere. **Which lemmas moved it was measured and not assumed**: `docs/lemmas.md` is
+    // and running the suite of the module that changed is not evidence about the figure
+    // elsewhere. **Which lemmas moved it was measured and not assumed**: `docs/lemmas.md` is
     // generated from the library, so `git show 9734bf7:docs/lemmas.md` against the current one,
     // diffed by name, says exactly two entries arrived since the commit that wrote 347 and names
     // them, with none removed and none restated. The card that opened this guessed `Collatz.scala`

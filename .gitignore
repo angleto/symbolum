@@ -113,3 +113,6 @@ hs_err_pid*
 # source set.
 scratch/*
 !scratch/README.md
+
+# Local-only working area (not part of this repo)
+private/

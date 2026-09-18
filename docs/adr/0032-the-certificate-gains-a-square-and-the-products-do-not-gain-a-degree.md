@@ -57,22 +57,44 @@ silence.
 
 ## Decision
 
-**The cone gains a square, and the product schedule keeps its degree of three.**
+**The fact pool gains a source, and the first source is a completed square. The product schedule
+keeps its degree of three.**
 
-1. **A square of a linear form over the goal's own atoms may enter the fact pool**, justified by
-   `Order.SQUARE_NONNEG` and therefore checked by the kernel like every other fact. Which square is
-   found by **completing the square in exact rational arithmetic** over the atoms the goal already
-   names: `x * x + b * x + c` is `(x + b/2) * (x + b/2) + (c - b * b / 4)`, and the coefficients are
-   the rationals `LinearForm` already carries. No search outside the boundary, no numeric library,
-   no floating point, because the quadratic case is linear algebra and not an optimisation.
-2. **Nothing is added above the quadratic.** A general sum-of-squares certificate wants a
-   semidefinite program, which is a search and belongs outside the trusted boundary with its answer
-   checked inside, exactly as `docs/adr/0003` prescribes and `Propositional` already does. That is a
-   second increment with its own record, and the corpus does not ask for it today: of the eighteen,
-   `docs/adr/0029` puts six under "a genuinely hard inequality", and those are where it would land.
-3. **The products stay at three.** Nothing measured has wanted four. `docs/adr/0029`'s enumeration
-   of the eighteen names no goal that a fourth degree reaches, and `Linarith.byCubes` already
-   records that the cubic round is affordable only because it is last.
+1. **What is extended is the pool, not the certificate.** `Certificate.find` takes a vector of
+   `LinearFact` and returns multipliers indexed against it, and `productsOf` already runs over a
+   pool that the cubic round has extended with manufactured facts. So a fact that is not a
+   hypothesis is a shape this procedure already has. A **source** is a function producing a
+   `LinearFact` together with the `Kernel.Thm` that justifies it, which is the pair the pool and
+   its theorem vector already hold side by side. Writing it that way costs nothing today and is
+   what makes the next increment additive rather than a rewrite.
+2. **The first source completes the square**, justified by `Order.SQUARE_NONNEG` and therefore
+   checked by the kernel like every other fact: over the atoms the goal already names,
+   `x * x + b * x + c` is `(x + b/2) * (x + b/2) + (c - b * b / 4)`, and the coefficients are the
+   rationals `LinearForm` carries. Exact, no search outside the boundary, no numeric library, no
+   floating point, because the quadratic case is linear algebra rather than an optimisation.
+3. **The second source is a semidefinite search and is not built now.** A general sum-of-squares
+   certificate wants one, which belongs outside the trusted boundary with its answer checked
+   inside, exactly as `docs/adr/0003` prescribes and `Propositional` already does. It is a second
+   increment with its own record, and it lands behind the same interface as the first: of the
+   eighteen, `docs/adr/0029` puts six under "a genuinely hard inequality", and those are where it
+   would be spent.
+4. **`support` keeps answering about hypotheses, and this change puts it at risk.** It is the
+   diagnostic half of this procedure, the one an article and `Domain` want, and it answers which of
+   a goal's hypotheses the proof rests on by rebuilding a certificate over `shape.hypotheses`
+   alone. A proof that spent a square is one that certificate cannot reproduce, so `support` must
+   carry the square when it rebuilds and report it **beside** the hypotheses rather than among
+   them. Left alone it refuses a goal that was just proved, with the message that says exactly
+   that, which is loud and wrong; made to report the square as a premise it would be quiet and
+   worse. Either repair is a decision, and this is it.
+5. **The products stay at three, and not because the corpus stops there.** Three of the eighteen
+   carry a monomial above degree three, counted by reading all eighteen rather than by a pattern:
+   `imo_1983_p6` at four (`a^2 * b * (a - b)` is `a^3 * b - a^2 * b^2`), `mathd_algebra_362` at five
+   and `aime_1990_p15` at six. What the schedule stays at three for is that a fourth enumeration
+   round is the wrong instrument for all three: two of them are systems to be solved rather than
+   inequalities to be certified, and the third is in the class point 3 sends to a certificate
+   search, where the degree of the products is a parameter of that search rather than another round
+   of this one. `Linarith.byCubes` records separately that the cubic round is affordable only
+   because it is last.
 
 ## Consequences
 
@@ -96,7 +118,8 @@ leaving a reader to discover it. `docs/adr/0029`'s table is unchanged for the ot
 the card lists it first. It settles neither goal that asked for this work, for the reason measured
 above, and it is quartic in the pool where the cubic round is already the expensive one. A road
 that costs more and delivers nothing on the population that motivated it is not a cheaper version
-of the decision taken here.
+of the decision taken here. What it is **not** rejected for is that the corpus has nothing above
+degree three, which is false and is counted in the decision above.
 
 **Rejected: CAD, the decision procedure for real closed fields.** It is the only one of the three
 that would remove the word "limit", and it is refused for a reason that is not its size. CAD does
@@ -111,6 +134,10 @@ and the building is the card's step 3. It does not rank the three things `docs/a
 corpus asks for. And the completion of the square is decided for a **quadratic** atom, so a goal
 needing a square of a form that is not linear in the atoms is outside it and is refused by name.
 
-**What would reopen this.** A corpus goal that a fourth degree of products settles, which would
-reopen the schedule; or a body of goals in the "genuinely hard inequality" class becoming the work
-in hand, which is what would buy the semidefinite search and the numeric library that goes with it.
+**What would reopen this.** A goal measured to be settled by a fourth degree of products and by
+nothing cheaper, which is a measurement nobody has made in either direction and which this record
+does not claim to have made; or a body of goals in the "genuinely hard inequality" class becoming
+the work in hand, which is what would buy the semidefinite search and the numeric library that
+goes with it. There is deliberately no card for the fourth degree on its own: when it is wanted it
+will be wanted as a parameter of that search, and a card for a fourth enumeration round would be a
+card for the instrument this record declines.

@@ -1960,7 +1960,7 @@ argument.render(argument.read(Vector(
 ```
 
 ```
-3 claims, 3 proved, 0 decided, 0 open; 0 axioms of the domain, 13 foundational; 1 idle and 1 stale citations
+3 claims, 3 proved, 0 decided, 0 open; 0 axioms of the domain, 13 foundational; 1 idle citation and 1 stale citation
 Proved: 0 < rate /\ load <= 60 * rate /\ cap = 100 * rate ==> load < cap
   12446 inferences over 13 axioms
   weighed 40, from ISPRA Tab. 3.1: 0 < rate
