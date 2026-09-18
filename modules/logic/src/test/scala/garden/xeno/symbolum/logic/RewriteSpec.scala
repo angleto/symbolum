@@ -189,6 +189,85 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     Rewrite.Rule.of(logic, force(Kernel.assume(undetermined))).isLeft shouldBe true
   }
 
+  /* ----------------------------------- a rule that puts its own left side back */
+
+  "A rule with no variables whose right side contains its left" should
+    "be refused by everything that repeats, rather than running out of heap" in {
+    // Found on 2026-09-18 and not by reading. Turning an equation already derived into a rule is
+    // the obvious move, and `NUM_ADD ZERO ZERO = ZERO` read the other way round is
+    // `ZERO -> NUM_ADD ZERO ZERO`. Neither guard above bites, because both are about a variable and
+    // this rule has none; the right side holds two copies of the left, so each round of
+    // `repeatConv` doubles them and the size is exponential in the number of rounds. `DefaultLimit`
+    // is 200 and 2^200 arrives at the heap first, which is the sentence `Rule.of` already carries
+    // for `NUM_DIV_MOD`. The run that found it was gone in four and a half minutes.
+    val reproducing = assumedRule(u, force(Term.app(f, u)))
+
+    // **The rule is built**, and that is the decision this test is about as much as the refusal is:
+    // whether a rule can be iterated is not a property of the rule alone, so `Rule.of` is not where
+    // this can be asked. The test below says what it would have cost there.
+    reproducing.reproduces shouldBe true
+
+    // The two published ways to iterate a rule set, and the door the incident came through.
+    Rewrite.rewrite(Vector(reproducing), u).isLeft shouldBe true
+    Rewrite
+      .inTheorem(Vector(reproducing), force(Kernel.assume(force(Term.eq(u, u)))))
+      .isLeft shouldBe true
+    Rewrite
+      .normaliser(Vector(reproducing), Vector.empty, Ordering.by(Rewrite.nodesOf))(u)
+      .isLeft shouldBe true
+  }
+
+  it should "still be usable by a caller that does not repeat, which is what four derivations do" in {
+    // `Arithmetic.timesZero` derives `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`, which is
+    // exactly this shape, and `Order` and `Linarith` do the same with `0 = 0 - x` and its
+    // relatives. Counted on 2026-09-18 over every rule the whole suite builds, those four are all
+    // of it, and every one hands its rule to a single `depthConv`: one pass, one replacement,
+    // finished. A refusal in `Rule.of` would have meant rewriting four derivations the arithmetic
+    // and the order rest on, to satisfy a guard with no way of seeing the driver.
+    val reproducing = assumedRule(u, force(Term.app(f, u)))
+    val once = force(Rewrite.depthConv(Rewrite.rewriteConv(reproducing))(u))
+
+    rightOf(once) shouldBe force(Term.app(f, u))
+  }
+
+  it should "not take a closed rule that merely grows, which is the criterion the count corrected" in {
+    // The card that asked for this guard asked for a refusal on SIZE, and the count refused the
+    // card. Of the distinct closed rules the whole suite builds whose right side has more nodes
+    // than their left, all but the four above do not contain their left side and are ordinary:
+    // every definition unfolded as a rule is one, `MAT_MUL` at 91 nodes against 1 being the
+    // largest, and `NUM_ONE = SUC ZERO`, which is what `Successor` opens every numeral with, the
+    // smallest. A guard on size takes all of them. This is the assertion that says containment is
+    // the criterion.
+    val grows = assumedRule(u, force(Term.app(f, w)))
+
+    grows.reproduces shouldBe false
+    Rewrite.rewrite(Vector(grows), u).isRight shouldBe true
+  }
+
+  it should "leave a rule that has a variable alone, since nothing here is a termination check" in {
+    // `!x. f x = f (f x)` reproduces its own left side under every match, and it is accepted and
+    // diverges: the step limit is what stops it, and `Rule.of` says of itself that it is not a
+    // termination check. `reproduces` is asked only of a rule with nothing to instantiate, because
+    // for one with variables the answer depends on what the matcher put there and no property of
+    // the rule settles it. Without this line the guard could have become the check it is not, and
+    // nothing else here would have noticed.
+    val x = Term.variable("x", alpha)
+    val pattern = force(Term.app(f, x))
+    val diverging = force(
+      Rewrite.Rule.of(
+        logic,
+        force(
+          Kernel.assume(
+            force(logic.mkForall(x, force(Term.eq(pattern, force(Term.app(f, pattern))))))
+          )
+        )
+      )
+    )
+
+    diverging.reproduces shouldBe false
+    Rewrite.rewrite(Vector(diverging), u).isRight shouldBe true
+  }
+
   it should "then apply at every instance of its pattern" in {
     // `!x. f x = x` assumed as a whole rather than generalised from an assumption about one x:
     // generalising over a variable that is free in a hypothesis is exactly what the kernel's
@@ -592,6 +671,49 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     withClue(s"reviewed and no longer a call site: ${stale.mkString(", ")}\n") {
       stale shouldBe empty
     }
+  }
+
+  "Every rule set that is repeated" should "be reachable by the check that refuses one that cannot be" in {
+    // The guard above refuses a rule set that cannot reach a fixed point, and it is asked in
+    // `Rewrite.rewrite` and `Rewrite.normaliser`, which are the two published ways to iterate a
+    // rule set. That covers everything **only while nothing assembles its own repetition**, and on
+    // 2026-09-18 two files did: `Peano.normalisation` had written out the six lines of
+    // `normaliser`, and `Field.normalisation` builds two passes of a shape of its own. A guard with
+    // two holes on the day it lands is a convention, and this is what makes it a property.
+    //
+    // `Peano.scala` is not in the list below because it stopped being a call site rather than
+    // because it was excused: `passOver` was published so that it could call it, which removed the
+    // third copy of the pass at the same time.
+    val reviewed = Map(
+      "Field.scala" ->
+        ("two passes over rules it has just built, asked through `Rewrite.Rule.iterable` before " +
+          "either is repeated. It is not `normaliser`: it carries no ordered rules and no beta, " +
+          "and the argument for that shape is written above the function")
+    )
+
+    val directory = java.nio.file.Paths.get("modules/theories/src/main")
+    val stream = java.nio.file.Files.walk(directory)
+    val callers =
+      try
+        stream
+          .filter(path => path.toString.endsWith(".scala"))
+          .toArray
+          .toVector
+          .map(_.asInstanceOf[java.nio.file.Path])
+          .filter { path =>
+            new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
+              .contains("Rewrite.repeatConv(")
+          }
+          .map(_.getFileName.toString)
+      finally stream.close()
+
+    withClue(s"assembles its own repetition: ${callers.sorted.mkString(", ")}\n") {
+      callers.filterNot(reviewed.contains) shouldBe empty
+    }
+
+    // And it is not passing because it read nothing. `Field.scala` is the one file that does this,
+    // so this line is what separates a scan that found one from a scan that found none.
+    callers should contain("Field.scala")
   }
 
   it should "tell a normal form from a term the rewriter stopped at" in {

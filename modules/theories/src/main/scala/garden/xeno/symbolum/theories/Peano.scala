@@ -6356,15 +6356,14 @@ object Peano {
       unconditional <- Rewrite.Rule.all(logic, plain)
       ordered <- Rewrite.Rule.all(logic, sorting)
     } yield {
-      val once = Rewrite.depthConv(
-        Rewrite.firstConv(
-          unconditional.map(Rewrite.rewriteConv) ++
-            ordered.map(rule => Rewrite.orderedRewriteConv(rule, Term.ordering)) :+
-            Rewrite.betaConv
-        )
-      )
+      // These six lines were written out here and are `Rewrite.passOver`, which `normaliser`
+      // built inside itself and did not publish. That made this the third copy of the pass whose
+      // own docstring says why there is one function rather than one per arithmetic, and nothing
+      // compared them, so it was invisible. Published on 2026-09-18 and called here; `normaliser`
+      // is the same expression repeated, with the refusal `Rule.iterable` carries.
+      val once = Rewrite.passOver(unconditional, ordered, Term.ordering)
 
-      (Rewrite.repeatConv(once), once)
+      (Rewrite.normaliser(unconditional, ordered, Term.ordering), once)
     }
 
   /** Carry an equation into a term that mentions its left side, as `Series` does. */

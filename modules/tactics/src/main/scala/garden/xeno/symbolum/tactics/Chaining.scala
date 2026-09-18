@@ -113,14 +113,10 @@ final class Chaining private (
    * places to fail.
    */
   private def cost(obligations: Vector[Term]): (Int, Int) =
-    (obligations.map(sizeOf).sum, obligations.size)
-
-  /** Nodes in a term, which is what "smaller" means above. */
-  private def sizeOf(term: Term): Int = term match {
-    case App(fn, argument) => 1 + sizeOf(fn) + sizeOf(argument)
-    case Abs(_, body) => 1 + sizeOf(body)
-    case _ => 1
-  }
+    // Nodes in a term, which is what "smaller" means above. `Rewrite.nodesOf` rather than a fold
+    // written here: the guard that refuses a closed rule whose right side contains its left needs
+    // the same count, and this file held the only copy of it until 2026-09-18.
+    (obligations.map(Rewrite.nodesOf).sum, obligations.size)
 
   /**
    * Every term the lemma's body could be read as concluding: itself, then one antecedent less.
