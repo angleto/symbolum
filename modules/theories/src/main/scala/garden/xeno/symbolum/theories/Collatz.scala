@@ -78,6 +78,22 @@ import garden.xeno.symbolum.logic.*
  * counted step at a concrete pair, which is a negative about `WORD_STEP` and nothing here proves
  * one.
  *
+ * **What the bound buys the investigation, and the reading it must not be given.** It bounds the
+ * commutations a run spends from **below**, by [[Collatz.Potential]] where the run began less
+ * [[Collatz.Potential]] where it got to, so it is a statement about how long a derivation is and
+ * none at all about whether derivations end. Termination of this system is what the investigation
+ * wants and this is not a step towards it: a lower bound on the steps of a run cannot make any run
+ * finite, whatever the measure. That termination is Yolcu, Aaronson and Heule's Conjecture 4.12,
+ * open and rewarded, and it is **not** the Collatz conjecture either: by their Proposition 4.5(2)
+ * it says every nonconvergent trajectory meets `5 mod 8`, which settles two of the four residue
+ * classes their Theorem 4.10 leaves open. The place a lower bound on derivation length is actually
+ * spent over there is a corollary of Koprowski and Waldmann's, which rules out a one-step arctic
+ * termination proof once the derivational complexity is superlinear, and this theorem is not that
+ * bound either: that one is a function of the initial word's length over a chosen family, this one
+ * is one run against one measure. `collatz@8b991e5`,
+ * `documents/05-open-problems-and-research-log.md`, sections 3.1.13 A and 3.1.14 E, is where both
+ * of those live and is where a figure about either of them is read from.
+ *
  * [[Collatz.TailFree]] is the other half and exists for the decomposition rather than for its own
  * sake: a marked word is a tail-free block with one marker on the end, so a step at `x l y` divides
  * into the case where the marker is inside `l` and the case where it is behind, and the two are
