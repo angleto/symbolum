@@ -260,7 +260,14 @@ object Session {
     case Extended(what: String)
 
     /** A theorem, named, and held in the session from here on. */
-    case Proved(name: String, theorem: Kernel.Thm)
+    /**
+     * A theorem this session proved, and where a bound rather than the claim chose its price.
+     *
+     * `cutShort` is empty for every proof whose price is its own. Where it is set, the page says so
+     * beside the theorem: `Derivation.axiomsOf` reports an axiom either way and cannot say which of
+     * the two happened, which is what `docs/adr/0029` repairs one floor down in `Prove`.
+     */
+    case Proved(name: String, theorem: Kernel.Thm, cutShort: Option[String] = None)
 
     /** Text for the reader, changing nothing. */
     case Report(text: String)
@@ -316,7 +323,7 @@ object Session {
      * looks the same whether or not the reader's own assumption is underneath it.
      */
     def restsOn(base: Chain): Set[Term] = outcome match {
-      case Outcome.Proved(_, theorem) => Derivation.foreignTo(base.widest.theory, theorem).axioms
+      case Outcome.Proved(_, theorem, _) => Derivation.foreignTo(base.widest.theory, theorem).axioms
       case _ => Set.empty
     }
 
@@ -325,7 +332,7 @@ object Session {
       val head = s"[$number] ${Command.write(command)}"
       val body = outcome match {
         case Outcome.Extended(what) => s"    $what"
-        case Outcome.Proved(name, theorem) =>
+        case Outcome.Proved(name, theorem, _) =>
           val statement = current.legible(theorem.conclusion).getOrElse(current.show(theorem.conclusion))
           s"    $name  |- $statement"
         case Outcome.Report(text) => text.linesIterator.map("    " + _).mkString("\n")
@@ -555,8 +562,18 @@ object Session {
           val ownConstants = state.theory.constants.keySet -- chain.widest.theory.constants.keySet
           val named = Surface.constantsIn(goal).intersect(ownConstants)
           prove(goal) match {
-            case Right(theorem) =>
-              (Outcome.Proved(name, theorem), state.extended(named = state.named :+ (name -> theorem)))
+            case Right(outcome) =>
+              val theorem = outcome.theorem
+              val cutShort = outcome match {
+                case Prove.Outcome.CutShort(_, search, depth) =>
+                  Some(s"$search stopped at $depth, so the free route was cut short and the price " +
+                    "below is a bound's rather than this claim's")
+                case Prove.Outcome.Settled(_) => None
+              }
+              (
+                Outcome.Proved(name, theorem, cutShort),
+                state.extended(named = state.named :+ (name -> theorem))
+              )
             case Left(failure) if named.nonEmpty =>
               (
                 Outcome.Refused(

@@ -47,7 +47,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
 
     ratios.foreach { text =>
       withClue(s"$text: ") {
-        val theorem = force(prove(text))
+        val theorem = force(prove(text)).theorem
 
         theorem.hypotheses shouldBe empty
         theorem.conclusion shouldBe force(reals.proposition(text))
@@ -61,7 +61,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     // naming that is what a caller can act on.
     prove("!x. 0 < x ==> 0 < x / 0") match {
       case Left(error) => Remedy.of(reals, error).message should include("divides by zero")
-      case Right(theorem) => fail(s"expected a refusal, got ${theorem.conclusion}")
+      case Right(outcome) => fail(s"expected a refusal, got ${outcome.theorem.conclusion}")
     }
   }
 
@@ -84,7 +84,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
           case AcceptTheConditions(conditions) => conditions shouldBe Vector("~(x = 0)")
           case other => fail(s"expected the condition to be named, got $other")
         }
-      case Right(theorem) => fail(s"expected a refusal, got ${theorem.conclusion}")
+      case Right(outcome) => fail(s"expected a refusal, got ${outcome.theorem.conclusion}")
     }
   }
 
@@ -109,7 +109,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
 
     conjunctions.foreach { text =>
       withClue(s"$text: ") {
-        val theorem = force(prove(text))
+        val theorem = force(prove(text)).theorem
 
         theorem.hypotheses shouldBe empty
         theorem.conclusion shouldBe force(reals.proposition(text))
@@ -120,7 +120,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
   it should "carry hypotheses through to each conjunct" in {
     val text = "!x y. x < y /\\ 0 < x ==> x < y /\\ 0 < y"
 
-    force(prove(text)).conclusion shouldBe force(reals.proposition(text))
+    force(prove(text)).theorem.conclusion shouldBe force(reals.proposition(text))
   }
 
   it should "be refused by naming the conjunct that failed, not the conjunction" in {
@@ -130,7 +130,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     // now the one denominator nothing here inverts.
     prove("100 < 120 /\\ 0 < 1 / 0") match {
       case Left(error) => Remedy.of(reals, error).message should include("divides by zero")
-      case Right(theorem) => fail(s"expected a refusal, got ${theorem.conclusion}")
+      case Right(outcome) => fail(s"expected a refusal, got ${outcome.theorem.conclusion}")
     }
   }
 
@@ -174,7 +174,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
 
     val goal = force(wider.reals.proposition("!n:num. NUM_LE ZERO n"))
 
-    force(wider(goal)).hypotheses shouldBe empty
+    force(wider(goal)).theorem.hypotheses shouldBe empty
     Prove.standard.reals.proposition("!n:num. NUM_LE ZERO n").isLeft shouldBe true
   }
 
@@ -192,7 +192,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     val wider = force(Prove.construct(chain))
 
     val goal = force(wider.reals.proposition("!x:num. !y:num. FST (PAIR x y) = x"))
-    val theorem = force(wider(goal))
+    val theorem = force(wider(goal)).theorem
 
     theorem.conclusion shouldBe goal
     theorem.hypotheses shouldBe empty
@@ -209,7 +209,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     val goal = force(reals.proposition("!p:bool. p ==> p"))
 
     prove.addressOf(goal) shouldBe Prove.Address.Propositional
-    force(prove(goal)).hypotheses shouldBe empty
+    force(prove(goal)).theorem.hypotheses shouldBe empty
   }
 
   it should "reach the rest of the classical fragment where a chain supplies the axioms for it" in {
@@ -225,7 +225,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     val goal = force(wider.reals.proposition("!p:bool. !q:bool. ((p ==> q) ==> p) ==> p"))
 
     wider.addressOf(goal) shouldBe Prove.Address.Propositional
-    val theorem = force(wider(goal))
+    val theorem = force(wider(goal)).theorem
     theorem.conclusion shouldBe goal
     theorem.hypotheses shouldBe empty
 
@@ -249,7 +249,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     val goal = force(wider.reals.proposition("!p:bool. p \\/ ~p"))
 
     wider.addressOf(goal) shouldBe Prove.Address.Propositional
-    force(wider(goal)).hypotheses shouldBe empty
+    force(wider(goal)).theorem.hypotheses shouldBe empty
   }
 
   it should "prove a negated goal the intuitionistic calculus reaches, at no axiom at all" in {
@@ -274,7 +274,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
 
     wider.addressOf(goal) shouldBe Prove.Address.Propositional
 
-    val theorem = force(wider(goal))
+    val theorem = force(wider(goal)).theorem
     theorem.conclusion shouldBe goal
     theorem.hypotheses shouldBe empty
     Derivation.axiomsOf(theorem) shouldBe empty
@@ -327,7 +327,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
         val goal = force(wider.reals.proposition(text))
         wider.addressOf(goal) shouldBe Prove.Address.Evaluation
 
-        val theorem = force(wider(goal))
+        val theorem = force(wider(goal)).theorem
         theorem.conclusion shouldBe goal
         theorem.hypotheses shouldBe empty
         Derivation.axiomsOf(theorem).size shouldBe axioms
@@ -343,7 +343,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     val wider = force(Prove.construct(chain))
 
     wider("NUM_DIV 17 5 = 4") match {
-      case Right(theorem) => fail(s"expected a refusal, got ${wider.reals.show(theorem.conclusion)}")
+      case Right(outcome) => fail(s"expected a refusal, got ${wider.reals.show(outcome.theorem.conclusion)}")
       case Left(error) =>
         val message = Remedy.of(wider.reals, error).message
         message should include("NUM_DIV 17 5 = 3")
@@ -369,7 +369,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     // whichever procedure was asked last and reporting that procedure's shape requirement.
     prove("!p:bool. p = p") match {
       case Left(error) => Remedy.of(reals, error) shouldBe a[RestateTheProblem]
-      case Right(theorem) => fail(s"expected a refusal, got ${theorem.conclusion}")
+      case Right(outcome) => fail(s"expected a refusal, got ${outcome.theorem.conclusion}")
     }
   }
 
@@ -386,7 +386,7 @@ class ProveSpec extends AnyFlatSpec with Matchers {
   "Text that does not read" should "be a repair of the text, never a procedure's refusal" in {
     prove("!x. x <") match {
       case Left(error) => Remedy.of(reals, error) shouldBe a[RepairTheText]
-      case Right(theorem) => fail(s"expected a refusal, got ${theorem.conclusion}")
+      case Right(outcome) => fail(s"expected a refusal, got ${outcome.theorem.conclusion}")
     }
   }
 

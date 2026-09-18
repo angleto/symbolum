@@ -191,7 +191,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // The goal the routing exists for, put to the PROVER rather than to the calculus, which is the
     // difference between "the procedure can do it" and "asking the system gets it". Two negations,
     // no classical extension anywhere in `Prove.standard`, and nothing believed at the end of it.
-    val reached = force(Prove.standard("!p:bool. ~(p /\\ ~p)"))
+    val reached = force(Prove.standard("!p:bool. ~(p /\\ ~p)")).theorem
     Derivation.axiomsOf(reached) shouldBe empty
 
     // The sentence that was there, in the two places that carried it, so that it cannot come back
@@ -508,7 +508,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // holding the lemma. The guide claims it is proved now; this is the claim.
     val goal = force(Prove.standard.reals.proposition("!x:real. 0 <= x * x"))
 
-    Prove.standard(goal).map(_.hypotheses) shouldBe Right(Nil)
+    Prove.standard(goal).map(_.theorem.hypotheses) shouldBe Right(Nil)
   }
 
   it should "decide the guide's rule set contradictory, as the guide prints" in {
@@ -704,8 +704,8 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
 
     val refusal = Prove.standard("!x:real y:real. (x * y) / y = x") match {
       case Left(error) => error
-      case Right(theorem) =>
-        fail(s"the guide says this is not a theorem as written, and got ${theorem.conclusion}")
+      case Right(outcome) =>
+        fail(s"the guide says this is not a theorem as written, and got ${outcome.theorem.conclusion}")
     }
 
     val price = Remedy.of(reals, refusal)

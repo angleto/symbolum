@@ -51,3 +51,4 @@ the rejected option attractive, and they will.
 | [0026](0026-an-exhausted-free-route-is-reported-not-hidden.md) | A free route that ran out of net is reported, not hidden behind the price it fell to | accepted, extends 0022 |
 | [0027](0027-the-bridge-is-searched-for-above-the-method-that-spends-it.md) | The bridge is searched for above the method that spends it, one candidate at a time | accepted, extends 0024 |
 | [0028](0028-a-domain-type-is-interpreted-and-a-domain-constant-is-defined.md) | A domain's type is interpreted at the build, and a domain's constant is defined rather than declared | accepted, extends 0024 |
+| [0029](0029-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md) | A price a bound chose is not a price the claim asked for | accepted, extends 0023 and 0026 |

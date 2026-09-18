@@ -231,7 +231,7 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     // one goal.
     gained.foreach { reading =>
       withClue(s"${chain.widest.show(reading.goal)}: ") {
-        val theorem = force(prover(reading.goal))
+        val theorem = force(prover(reading.goal)).theorem
 
         theorem.conclusion shouldBe reading.goal
         theorem.hypotheses shouldBe empty
@@ -330,5 +330,74 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     // And the sentence it replaced, so that rewriting the paragraph from memory cannot bring it
     // back: the gate is spent on the address now and answers no goal there.
     instructions should not include "where `Minimal` runs"
+  }
+
+  /* ------------------------------------------- what a bound rather than the claim paid for */
+
+  /**
+   * A chain of implications of `links` links, which is the family the net is measured on.
+   *
+   *   ((p1 ==> p2) /\ (p2 ==> p3) /\ ... ) ==> (p1 ==> p(links+1))
+   *
+   * Intuitionistically valid at every length, every atom a bare proposition so that it takes this
+   * address at all, and the only thing that changes with the length is the size. It is the shape
+   * `docs/adr/0026` used at the twin site in `Domain.close`, so the two measurements are read
+   * against each other rather than each against itself.
+   */
+  private def chainOf(links: Int): Term = {
+    def atom(i: Int): Term = Term.variable(s"p$i", Type.Bool)
+    val steps = (1 to links).map(i => force(logic.mkImp(atom(i), atom(i + 1))))
+    force(
+      logic.mkImp(
+        steps.reduceLeft((a, b) => force(logic.mkConj(a, b))),
+        force(logic.mkImp(atom(1), atom(links + 1)))
+      )
+    )
+  }
+
+  "A goal the free route reaches" should "come back settled, at no axiom" in {
+    // The half that makes the assertion below a difference rather than a fact about one goal. At
+    // this length the calculus uses the whole net and finishes inside it: 127 links needs 256 of
+    // 256, measured on 2026-09-18, and the consumption grows as `2n + 2`.
+    prover(chainOf(127)) match {
+      case Right(Prove.Outcome.Settled(theorem)) =>
+        Derivation.axiomsOf(theorem) shouldBe empty
+      case other => fail(s"a chain of 127 links is settled for nothing: $other")
+    }
+  }
+
+  it should "come back cut short, naming the bound and its depth, one link further on" in {
+    // The defect `docs/adr/0023` recorded and left, and `docs/adr/0027` repairs: the same theorem,
+    // one link longer, at one axiom, and until 2026-09-18 nothing in the answer said why. The pair
+    // is what makes it a measurement instead of an anecdote — the two goals differ by one link and
+    // the price differs by the choice axiom.
+    prover(chainOf(128)) match {
+      case Right(Prove.Outcome.CutShort(theorem, search, depth)) =>
+        search shouldBe Intuitionistic.SearchName
+        depth shouldBe Intuitionistic.Fuel
+        Derivation.axiomsOf(theorem) should have size 1
+
+        // And it is the same theorem the settled one would have been, so what the case reports is
+        // the price and not a different answer.
+        theorem.conclusion shouldBe chainOf(128)
+        theorem.hypotheses shouldBe empty
+
+      case other => fail(s"a chain of 128 links is cut short by the net: $other")
+    }
+  }
+
+  it should "say nothing of the sort about the goals this repository actually holds" in {
+    // The guard against the guard, and the measurement that says the case above is a real edge and
+    // not the ordinary answer: over the whole enumerated population nothing is cut short. The
+    // library reads the same way — 184 of its statements take this address and the deepest uses 9
+    // of 256 — and that measurement is on the card rather than here, because it is about the
+    // library and this file is about the address.
+    addressed.foreach { reading =>
+      prover(reading.goal) match {
+        case Right(Prove.Outcome.CutShort(_, _, _)) =>
+          fail(s"${chain.widest.show(reading.goal)} is cut short, and nothing of this size should be")
+        case _ => ()
+      }
+    }
   }
 }

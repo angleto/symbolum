@@ -27,7 +27,7 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
 
   private def remedyFor(text: String): Remedy =
     prove(text) match {
-      case Right(theorem) => fail(s"$text was proved: ${reals.show(theorem.conclusion)}")
+      case Right(outcome) => fail(s"$text was proved: ${reals.show(outcome.theorem.conclusion)}")
       case Left(error) => Remedy.of(reals, error)
     }
 
@@ -117,7 +117,7 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
     // the world is made of, and the prover with no classical extension reaches it: the theorem is
     // the same one `Propositional` would produce and it rests on nothing, where that one rests on
     // the choice operator.
-    val theorem = prove("!p:bool. ~(p /\\ ~p)").fold(error => fail(error.message), identity)
+    val theorem = prove("!p:bool. ~(p /\\ ~p)").fold(error => fail(error.message), _.theorem)
 
     theorem.hypotheses shouldBe empty
     Derivation.axiomsOf(theorem) shouldBe empty
@@ -169,7 +169,7 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
 
   private def standingFor(text: String): Option[LogicError.Standing] =
     prove(text) match {
-      case Right(theorem) => fail(s"$text was proved: ${reals.show(theorem.conclusion)}")
+      case Right(outcome) => fail(s"$text was proved: ${reals.show(outcome.theorem.conclusion)}")
       case Left(error) => TacticError.standing(error)
     }
 

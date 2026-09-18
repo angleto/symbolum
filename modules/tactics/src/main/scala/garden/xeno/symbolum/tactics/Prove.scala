@@ -125,16 +125,27 @@ final class Prove private (
    * The text is read first, so a goal that does not parse is a [[RepairTheText]] and never a
    * complaint from a procedure that was handed nothing.
    */
-  def apply(text: String): Either[TacticError, Kernel.Thm] =
+  def apply(text: String): Either[TacticError, Prove.Outcome] =
     TacticError.lift(reals.proposition(text)).flatMap(apply)
 
-  /** The same, for a goal already read. */
-  def apply(goal: Term): Either[TacticError, Kernel.Thm] =
+  /**
+   * The same, for a goal already read.
+   *
+   * **What comes back is an [[Prove.Outcome]] and not a theorem, and the case is the point.** A
+   * goal can be settled at the price its own logic asks, or settled after the free route was cut
+   * short by [[Intuitionistic.Fuel]] and the classical procedure charged the choice axiom instead.
+   * The two are the same theorem at two prices, and until 2026-09-18 they were the same answer:
+   * `docs/adr/0029` is the decision and `docs/adr/0023` is where the defect was written down and
+   * left. A case rather than a field, for the reason `docs/adr/0026` gives at the twin site in
+   * `Domain.close`: a caller that reads only the settled case stops compiling instead of believing
+   * a price.
+   */
+  def apply(goal: Term): Either[TacticError, Prove.Outcome] =
     held(goal) match {
-      case Some(theorem) => Right(theorem)
+      case Some(theorem) => Right(Prove.Outcome.Settled(theorem))
       case None =>
         decided(goal) match {
-          case Right(theorem) => Right(theorem)
+          case Right(outcome) => Right(outcome)
           // Asked last, and its failure changes no refusal. The rule this class is about is that the
           // procedure whose fragment recognises the goal's shape is the one whose refusal is
           // reported, and chaining recognises no fragment: it either reaches the goal or does not,
@@ -147,7 +158,10 @@ final class Prove private (
           // nothing already proved changes route or price. What it can do is exactly what neither
           // of the two above can, which is spend the goal's own premises.
           case Left(refusal) =>
-            chained(goal).orElse(underHypotheses(goal)).toRight(refusal)
+            chained(goal)
+              .orElse(underHypotheses(goal))
+              .map(Prove.Outcome.Settled.apply)
+              .toRight(refusal)
         }
     }
 
@@ -176,7 +190,7 @@ final class Prove private (
    * bound under test.
    */
   def directly(goal: Term): Either[TacticError, Kernel.Thm] =
-    held(goal).map(Right(_)).getOrElse(decided(goal))
+    held(goal).map(Right(_)).getOrElse(decided(goal).map(_.theorem))
 
   /**
    * The library searched rather than scanned: a lemma that owes an obligation, and the obligation
@@ -211,7 +225,7 @@ final class Prove private (
    * degraded one.
    */
   def searchFor(goal: Term): Option[Chaining.Outcome] =
-    chaining.map(search => search.prove(goal, target => held(target).orElse(decided(target).toOption)))
+    chaining.map(search => search.prove(goal, target => held(target).orElse(decided(target).toOption.map(_.theorem))))
 
   /**
    * The goal with its own hypotheses assumed, proved, and the assumptions discharged again.
@@ -238,7 +252,7 @@ final class Prove private (
       context <- Context.of(logic, goal)
       leaf = (target: Term) =>
         heldUnder(target, Some(context))
-          .orElse(decided(target).toOption)
+          .orElse(decided(target).toOption.map(_.theorem))
           // Asked of a subgoal and not of the conclusion this route started from: rebuilding the
           // implication there produces the goal the procedures were already handed one step above,
           // so it would be the same question asked twice per goal, which on a corpus is the same
@@ -285,7 +299,7 @@ final class Prove private (
           carried.flatMap(inner => logic.mkImp(antecedent, inner))
         }
         .toOption
-      theorem <- decided(statement).toOption
+      theorem <- decided(statement).toOption.map(_.theorem)
       detached <- context.assumed.foldLeft(Option(theorem)) { (carried, antecedent) =>
         for {
           implication <- carried
@@ -362,19 +376,29 @@ final class Prove private (
         .find(theorem => theorem.conclusion == goal)
     }
 
-  private def decided(goal: Term): Either[TacticError, Kernel.Thm] =
+  /**
+   * The procedure the goal's shape chooses, and what its answer cost beyond the theorem.
+   *
+   * Only the propositional address can answer [[Prove.Outcome.CutShort]] today, because it is the
+   * only one with a free route and a paid one for the same goal. **What that leaves uncovered is
+   * named rather than left to be found**: a cut-short leaf inside a chained proof is not reported,
+   * since `chained` takes the theorem alone through `Chaining`'s own contract, so a chain whose
+   * obligation was settled after the net bit reads as settled. Repairing that is a change to what
+   * `Chaining` hands back and is not this one.
+   */
+  private def decided(goal: Term): Either[TacticError, Prove.Outcome] =
     Prove.addressOf(reals, goal) match {
-      case Prove.Address.Order => TacticError.lift(linarith.prove(goal))
+      case Prove.Address.Order => TacticError.lift(linarith.prove(goal)).map(Prove.Outcome.Settled.apply)
 
       case Prove.Address.Equation =>
         // Both are the right address for an equation between reals: RING decides it by
         // normalising, LINARITH by bounding it on both sides. RING is asked first because it is
         // the one that decides the shape outright, and its refusal is the one kept when both fail.
         ring.prove(goal) match {
-          case Right(theorem) => Right(theorem)
+          case Right(theorem) => Right(Prove.Outcome.Settled(theorem))
           case Left(fromRing) =>
             linarith.prove(goal) match {
-              case Right(theorem) => Right(theorem)
+              case Right(theorem) => Right(Prove.Outcome.Settled(theorem))
 
               // Both refused, and there are three things the refusal can be, in decreasing order
               // of what it tells a caller. `Field` proves it at a price, and the price is named.
@@ -390,7 +414,7 @@ final class Prove private (
 
       case Prove.Address.Propositional =>
         intuitionistic.prove(goal) match {
-          case Right(theorem) => Right(theorem)
+          case Right(theorem) => Right(Prove.Outcome.Settled(theorem))
           // The refusal that survives is the second one where there is a second procedure, which is
           // the opposite of this class's usual rule and is right here for the reason that rule is:
           // the first procedure's refusal is about a fragment, and once a wider procedure has run
@@ -412,12 +436,28 @@ final class Prove private (
                   if (fromIntuitionistic.standing.stoppedShort) fromIntuitionistic
                   else withoutTheClassicalAxioms(goal)
                 ))
-              case Some(classicalFragment) => TacticError.lift(classicalFragment.prove(goal))
+              // The case this whole type exists for. The classical procedure settles it and charges
+              // the choice axiom; whether the free route below had DECIDED against the goal or had
+              // simply stopped is the difference between a price the claim asks for and a price an
+              // arbitrary constant chose, and the two were the same answer until 2026-09-18.
+              //
+              // The depth is read off the refusal rather than written here as `Intuitionistic.Fuel`:
+              // `Intuitionistic.atDepth` rewrites the bound with the depth the run was actually
+              // given, so the refusal is the only thing that knows it, and a figure copied from the
+              // constant would be a second way of saying it and the one that goes stale.
+              case Some(classicalFragment) =>
+                TacticError.lift(classicalFragment.prove(goal)).map { theorem =>
+                  fromIntuitionistic match {
+                    case BoundReached(limit, _, allowed, _) if limit == Intuitionistic.SearchName =>
+                      Prove.Outcome.CutShort(theorem, limit, allowed)
+                    case _ => Prove.Outcome.Settled(theorem)
+                  }
+                }
             }
         }
 
       case Prove.Address.Evaluation =>
-        evaluated(goal)
+        evaluated(goal).map(Prove.Outcome.Settled.apply)
 
       case Prove.Address.Nobody(why) =>
         Left(FromLogic(NotOfForm(why, goal)))
@@ -608,6 +648,38 @@ final class Prove private (
 object Prove {
 
   /** Which procedure a goal's shape belongs to. */
+  /**
+   * What came back, and what it cost beyond the theorem.
+   *
+   * **Two cases and not a theorem with a flag**, which is the shape `docs/adr/0026` chose at the
+   * twin site in `Domain.close` and the reason is the same: a caller that matches only on
+   * [[Outcome.Settled]] stops compiling rather than reading a price that is not the one the claim
+   * asked for. A field with a default would have let every existing caller keep believing the old
+   * answer, which is the defect this type exists to end.
+   *
+   * The theorem is the same object in both cases. What differs is `Derivation.axiomsOf` of it, and
+   * **why**: under [[Outcome.CutShort]] the choice axiom is there because a net stopped the free
+   * route, not because the claim needs it.
+   *
+   * `theorem` is a parameter of the enum rather than a method over the cases, so a caller that has
+   * already read the case can reach the theorem without matching twice, and a case added later
+   * cannot forget to carry one.
+   */
+  enum Outcome(val theorem: Kernel.Thm):
+
+    /** The goal, at the price its own logic asks. */
+    case Settled(proved: Kernel.Thm) extends Outcome(proved)
+
+    /**
+     * The goal, at a price a bound chose: the free route was cut short and the paid one answered.
+     *
+     * `search` and `depth` name **which** bound and **at what**, because the thing a reader has to
+     * know is that an arbitrary constant and not the mathematics decided this price. Measured on
+     * 2026-09-18: a chain of implications of 127 links comes out of here at no axiom and one of
+     * 128 links at one, and the two are the same theorem written one link apart.
+     */
+    case CutShort(proved: Kernel.Thm, search: String, depth: Int) extends Outcome(proved)
+
   enum Address:
 
     /** An inequality, or a conjunction of goals that are themselves LINARITH's. */

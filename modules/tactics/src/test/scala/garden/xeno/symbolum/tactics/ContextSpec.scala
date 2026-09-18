@@ -41,7 +41,7 @@ final class ContextSpec extends AnyFlatSpec with Matchers {
   /** The theorem, checked against the goal as asked, which is what the route promises. */
   private def proved(text: String): Kernel.Thm = {
     val goal = read(text)
-    val theorem = force(prove(goal))
+    val theorem = force(prove(goal)).theorem
 
     withClue(s"$text came back as ${theorem.display}: ") {
       theorem.conclusion shouldBe goal
@@ -120,7 +120,7 @@ final class ContextSpec extends AnyFlatSpec with Matchers {
     val goal = read("!x:real. 0 < x ==> 0 < inv (0 - x)")
 
     prove(goal) match {
-      case Right(theorem) => fail(s"this must not be provable: ${theorem.display}")
+      case Right(outcome) => fail(s"this must not be provable: ${outcome.theorem.display}")
 
       // And it is the message the goal's address chose, not one this route invented. `directly` is
       // the prover before either search, so the two refusals agreeing is the rule "a search may add
