@@ -408,8 +408,13 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    support.map { case (hypothesis, weight) => (reals.show(hypothesis), weight) } shouldBe
+    support.hypotheses.map { case (hypothesis, weight) => (reals.show(hypothesis), weight) } shouldBe
       Vector(("x < y", BigInt(1)), ("y < z", BigInt(1)))
+
+    // The guide prints one field and the answer has two since 2026-09-18, so the other one is
+    // asserted here rather than left out of the comparison: this goal is linear and spends no
+    // square, which is what makes the printed line the whole of the answer for it.
+    support.squares shouldBe empty
   }
 
   "The guide's abduction examples" should "sort the candidates into the buckets the guide prints" in {

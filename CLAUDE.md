@@ -49,8 +49,12 @@ printed as the thing to do and is not executed, because a build that ran a progr
 session named would be a different tool with the same name.
 
 - **Tests:** `tools/sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
-  statements to the whole tactic surface and most of **that** is the eighteen it attempts and cannot
-  settle. That cost is the prover's rather than the test's, and it is tracked.
+  statements to the whole tactic surface and most of **that** is the ones it attempts and cannot
+  settle. That cost is the prover's rather than the test's, and it is tracked. **How many they are
+  is not written here**, for the reason the paragraph below gives about the wall clock: it was
+  eighteen from `docs/adr/0029` until the completed square landed on 2026-09-18 and it is sixteen
+  now, and a figure that moves whenever the prover gets stronger is a figure this file cannot
+  hold. `ReachSpec` prints every one of them by name and `docs/adr/0029` classifies them.
 
   **The number that used to be here is gone rather than corrected.** It said forty seconds, against
   eleven before the corpus landed, and by 2026-09-14 a run was taking a hundred and ten on a quiet
@@ -520,9 +524,11 @@ at every step. `docs/adr/0025` is the decision. The half a reader should not ski
 `Linarith.split` had always assumed a linear goal's antecedents, which is why **no goal already
 proved changes route or price**.
 
-**Where it moved the measurement is not where the card predicted.** miniF2F does not move at all,
-21 proved and 18 unsettled before and after, because what stops those eighteen is nonlinear
-arithmetic rather than a premise nobody could see. What moved is the showcase, from six of its
+**Where it moved the measurement is not where the card predicted.** miniF2F did not move at all
+across **that** change, 21 proved and 18 unsettled before and after it, because what stopped those
+eighteen is nonlinear arithmetic rather than a premise nobody could see. Those are the figures of
+one past event and they do not drift; what they are not is the corpus today, which the completed
+square moved later the same day. What moved is the showcase, from six of its
 fourteen claims settled by the tactic surface to **twelve**, and the six that moved are lemmas this
 library **holds**: a lemma that is the goal was refused, because `Apply` specialises it and then
 reads the instance's own antecedents as obligations, and `Prove.held` takes only a candidate owing
@@ -537,6 +543,31 @@ and 3 by count and 1, 2 and 0 by the total size of what is owed. At forty expans
 corpus cost 2.45 times its own baseline and proved nothing new; at ten under the right order it is
 back at baseline and keeps every goal. A candidate whose obligations are smaller than the target is
 making progress and one whose obligations are larger is not.
+
+**`Linarith`'s fragment is named rather than measured by a degree, and since 2026-09-18 it holds
+one fact nobody wrote.** Linear inequalities over the atoms, where a product of unknowns is an
+atom; the hypotheses multiplied by each other and then by the hypotheses again, which reaches
+degree three; and one square completed over an atom that is one unknown times itself, justified by
+`Order.SQUARE_NONNEG` and so checked by the kernel like every other fact. `docs/adr/0032` is the
+decision and the measurement that chose it is the one to carry: **the fact pool is generated from
+the goal's hypotheses and nothing else**, so a goal with none has an empty pool, and an empty pool
+has no products at any degree. Widening the schedule to a parametric degree therefore settles
+nothing for such a goal, whatever the degree, which is arithmetic about an empty set rather than a
+judgement about cost, and it is why that road was rejected for the two miniF2F statements that
+asked for the work. Both are proved now.
+
+Three things it costs a reader, and the last is the one that bites. The **refusal splits**: a goal
+past the degree still hears about the degree, and a goal with no hypotheses hears that its pool is
+empty, because the sentence about the degree is true of an empty set and sends nobody anywhere.
+`Linarith.support` returns a **`Support` with two fields**, the hypotheses a proof rested on and
+beside them the squares it was given, since a square is a premise nobody wrote and a report that
+dropped it would make such a proof look like one needing no premise at all. And a procedure that
+gets stronger **breaks the tests whose subject is the shape of a proof**: `ChainingSpec`'s witness
+was `0 < inv (x * x + 1)`, whose lower rung the square now settles, so six assertions there went
+red and the line was red with them from `73dc859` until the witness was replaced by
+`0 < (x * x) * (y * y) + 1`, whose rung is a product of four factors and out of reach of both the
+schedule and the completion. The repair is a new witness and never a loosened assertion, and that
+file is where the argument is written.
 
 **A tactic that cannot settle a goal must refuse.** `Ring` and `Linarith` are decision procedures
 for small fragments and they say so by failing on the rest; `Translate` refuses what the theory has
