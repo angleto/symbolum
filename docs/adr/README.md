@@ -54,3 +54,4 @@ the rejected option attractive, and they will.
 | [0029](0029-the-corpus-asks-for-arithmetic-and-not-for-saturation.md) | The corpus asks for arithmetic and not for saturation | accepted, spends 0025 |
 | [0030](0030-the-matchers-fragment-is-not-extended-and-here-is-the-census.md) | The matcher's fragment is not extended, and the census is why | accepted |
 | [0031](0031-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md) | A price a bound chose is not a price the claim asked for | accepted, extends 0023 and 0026 |
+| [0032](0032-the-certificate-gains-a-square-and-the-products-do-not-gain-a-degree.md) | The certificate gains a square, and the products do not gain a degree | accepted, spends 0029 |
