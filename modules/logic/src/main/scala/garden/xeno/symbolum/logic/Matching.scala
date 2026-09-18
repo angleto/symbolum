@@ -84,10 +84,10 @@ object Matching {
    * Which condition of the decidable fragment a pair met and failed, as a value rather than a
    * sentence, so that a caller counting them does not parse prose.
    *
-   * Four, and they are not the same kind of limit. [[NoBinderInScope]] is not a higher-order
-   * question at all: with nothing bound, a pattern variable applied to anything is a first-order
-   * problem the walk already answers where it can, and a refusal there says only that these two
-   * terms do not match. The other three are the fragment's own boundary, and `docs/adr/0030`
+   * Four, and they are not the same kind of limit. [[Matching.Refusal.NoBinderInScope]] is not a
+   * higher-order question at all: with nothing bound, a pattern variable applied to anything is a
+   * first-order problem the walk already answers where it can, and a refusal there says only that
+   * these two terms do not match. The other three are the fragment's own boundary, and `docs/adr/0030`
    * carries how often each is reached.
    */
   enum Refusal {
