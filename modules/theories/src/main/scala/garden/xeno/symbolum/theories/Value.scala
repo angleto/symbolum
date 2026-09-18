@@ -78,6 +78,242 @@ final class Value private (val digits: Digits, val modular: Modular) {
         else route.prove(this, arguments)
     }
 
+  /**
+   * `|- NUM_GCD a b = <their greatest common divisor>`, for numerals that are not both zero.
+   *
+   * The card that asked for this left a decision here and it is taken: **the characterisation and
+   * Bezout, not Euclid's algorithm**. Euclid is a definition by well-founded recursion, which this
+   * system does not have, so that route waits on a piece of work that is not this one; the
+   * characterisation asks for nothing new and costs more per value, which is a trade that only
+   * matters to a caller computing many.
+   *
+   * Two divisibilities meet at `NUM_DIVIDES_ANTISYM`. That the answer divides the gcd is
+   * `NUM_GCD_DIVIDES`, which is the greatest-common-divisor property: it divides both, so it
+   * divides the gcd. The other direction is where Bezout is spent, and it is spent as a **witness**
+   * rather than as a theorem: for `a` and `b` not both zero there are `x` and `y` with
+   * `a * x = b * y + c`, [[Value.combination]] finds them by searching, and what the kernel then
+   * checks is one equation between numerals. The gcd divides `a`, hence `a * x`, hence
+   * `b * y + c`; it divides `b`, hence `b * y`; and `NUM_DIVIDES_SUMMAND` takes the second from the
+   * first.
+   *
+   * `NUM_GCD ZERO ZERO` is refused rather than answered, and the refusal is the one `Modular`
+   * already argues for: with both arguments zero there is no greatest common divisor to choose, so
+   * every fact about the constant carries "not both zero" and nothing is provable about that term.
+   *
+   * A zero on **one** side is not that case and is not a special one either, except in the Bezout
+   * half: `a * x = b * y + c` has no solution at `a = ZERO`, because `c` is then `b`. It does not
+   * need one — the gcd divides the other argument, which **is** the answer, so the side that would
+   * have been reached through the combination is reached directly.
+   */
+  private[theories] def greatestCommonDivisor(
+    left: BigInt,
+    right: BigInt
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = modular.logic.rules
+    val answer = left.gcd(right)
+
+    for {
+      leftTerm <- digits.numeral(left)
+      rightTerm <- digits.numeral(right)
+      answerTerm <- digits.numeral(answer)
+      _ <-
+        if (left != 0 || right != 0) Right(())
+        else
+          // One literal and not two joined, which is a shape `NotationBoundarySpec` asks about: a
+          // description assembled from pieces is one nobody can read off the source at the site.
+          // What is missing from it, that there is no greatest common divisor of nothing and
+          // nothing to have been chosen, is in this method's docstring.
+          Left(
+            NotOfForm(
+              "a pair that is not two zeros, since nothing is provable about NUM_GCD ZERO ZERO",
+              leftTerm
+            )
+          )
+
+      gcdOf <- LogicError.lift(modular.theory.constant(Modular.GcdName, Value.Binary))
+      gcdTerm <- LogicError.lift(Term.appAll(gcdOf, List(leftTerm, rightTerm)))
+      notBothZero <- either(left != 0, leftTerm, rightTerm, left, right)
+
+      dividesLeft <- divides(answer, left)
+      dividesRight <- divides(answer, right)
+      greatest <- modular.fact(Modular.GcdDivides)
+      answerDividesGcd <- rules
+        .specAll(greatest, List(leftTerm, rightTerm, answerTerm))
+        .flatMap(rules.mp(_, notBothZero))
+        .flatMap(step => rules.conjIntro(dividesLeft, dividesRight).flatMap(rules.mp(step, _)))
+
+      gcdDividesLeft <- modular
+        .fact(Modular.GcdDividesLeft)
+        .flatMap(rules.specAll(_, List(leftTerm, rightTerm)))
+        .flatMap(rules.mp(_, notBothZero))
+      gcdDividesRight <- modular
+        .fact(Modular.GcdDividesRight)
+        .flatMap(rules.specAll(_, List(leftTerm, rightTerm)))
+        .flatMap(rules.mp(_, notBothZero))
+
+      gcdDividesAnswer <-
+        if (left == 0) Right(gcdDividesRight)
+        else if (right == 0) Right(gcdDividesLeft)
+        else throughCombination(left, right, answer, gcdTerm, gcdDividesLeft, gcdDividesRight)
+
+      antisymmetric <- modular.fact(Modular.DividesAntisym)
+      same <- rules
+        .specAll(antisymmetric, List(answerTerm, gcdTerm))
+        .flatMap(step => rules.conjIntro(answerDividesGcd, gcdDividesAnswer).flatMap(rules.mp(step, _)))
+      result <- Conv.sym(same)
+    } yield result
+  }
+
+  /**
+   * `|- NUM_DIVIDES g c` from the gcd dividing both arguments, through one Bezout combination.
+   *
+   * The combination is found by searching and checked by the kernel, which is this repository's
+   * arrangement at its smallest: what is believed is the equation `a * x = b * y + c` between four
+   * numerals, and how `x` and `y` were come by is nobody's business.
+   */
+  private def throughCombination(
+    left: BigInt,
+    right: BigInt,
+    answer: BigInt,
+    gcdTerm: Term,
+    gcdDividesLeft: Kernel.Thm,
+    gcdDividesRight: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = modular.logic.rules
+
+    for {
+      pair <- Value.combination(left, right, answer)
+      (multiplier, counter) = pair
+
+      leftTerm <- digits.numeral(left)
+      rightTerm <- digits.numeral(right)
+      answerTerm <- digits.numeral(answer)
+      multiplierTerm <- digits.numeral(multiplier)
+      counterTerm <- digits.numeral(counter)
+
+      dividesProduct <- modular.fact(Modular.DividesMul)
+      timesMultiplier <- rules
+        .specAll(dividesProduct, List(gcdTerm, leftTerm, multiplierTerm))
+        .flatMap(rules.mp(_, gcdDividesLeft))
+      timesCounter <- rules
+        .specAll(dividesProduct, List(gcdTerm, rightTerm, counterTerm))
+        .flatMap(rules.mp(_, gcdDividesRight))
+
+      identity <- combined(left, multiplier, right, counter, answer)
+      divisibility <- LogicError.lift(
+        modular.theory.constant(Modular.DividesName, Type.fun(Value.Numbers, Type.fun(Value.Numbers, Type.Bool)))
+      )
+      partial <- LogicError.lift(Term.app(divisibility, gcdTerm))
+      moved <- Conv.apTerm(partial, identity).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, timesMultiplier)))
+
+      summand <- modular.fact(Modular.DividesSummand)
+      product <- LogicError.lift(
+        modular.theory.constant(Peano.Multiplication, Value.Binary)
+      )
+      rightProduct <- LogicError.lift(Term.appAll(product, List(rightTerm, counterTerm)))
+      result <- rules
+        .specAll(summand, List(gcdTerm, rightProduct, answerTerm))
+        .flatMap(rules.mp(_, timesCounter))
+        .flatMap(rules.mp(_, moved))
+    } yield result
+  }
+
+  /** `|- a * x = b * y + c`, which is the combination with its three numeral computations in it. */
+  private def combined(
+    left: BigInt,
+    multiplier: BigInt,
+    right: BigInt,
+    counter: BigInt,
+    answer: BigInt
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      leftSide <- digits.multiply(left, multiplier)
+      rightSide <- digits.multiply(right, counter)
+      answerTerm <- digits.numeral(answer)
+      sum <- digits.add(right * counter, answer)
+      addition <- LogicError.lift(modular.theory.constant(Peano.Addition, Value.Binary))
+      shifted <- Conv.apTerm(addition, rightSide).flatMap(Conv.apThm(_, answerTerm))
+      settled <- Conv.trans(shifted, sum).flatMap(Conv.sym)
+      result <- Conv.trans(leftSide, settled)
+    } yield result
+
+  /** `|- NUM_DIVIDES d m`, for numerals where the first divides the second. */
+  private def divides(divisor: BigInt, multiple: BigInt): Either[LogicError, Kernel.Thm] = {
+    val rules = modular.logic.rules
+
+    for {
+      divisorTerm <- digits.numeral(divisor)
+      multipleTerm <- digits.numeral(multiple)
+      _ <-
+        if (divisor != 0 && multiple % divisor == 0) Right(())
+        else if (divisor == 0 && multiple == 0) Right(())
+        else Left(NotOfForm(s"a multiple of $divisor, and $multiple is not one", multipleTerm))
+
+      factor = if (divisor == 0) BigInt(0) else multiple / divisor
+      factorTerm <- digits.numeral(factor)
+      product <- digits.multiply(divisor, factor)
+      equation <- Conv.sym(product)
+      introduction <- modular.fact(Modular.DividesIntro)
+      result <- rules
+        .specAll(introduction, List(divisorTerm, multipleTerm, factorTerm))
+        .flatMap(rules.mp(_, equation))
+    } yield result
+  }
+
+  /** `|- ~(a = ZERO) \/ ~(b = ZERO)`, from whichever of the two is not zero. */
+  private def either(
+    onTheLeft: Boolean,
+    leftTerm: Term,
+    rightTerm: Term,
+    left: BigInt,
+    right: BigInt
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = modular.logic
+    val rules = logic.rules
+
+    for {
+      zero <- LogicError.lift(modular.theory.constant(Natural.NumberZero, Value.Numbers))
+      leftEquation <- LogicError.lift(Term.eq(leftTerm, zero))
+      rightEquation <- LogicError.lift(Term.eq(rightTerm, zero))
+      leftDenial <- LogicError.lift(Term.app(logic.negation, leftEquation))
+      rightDenial <- LogicError.lift(Term.app(logic.negation, rightEquation))
+      held <- if (onTheLeft) notZero(left) else notZero(right)
+      result <-
+        if (onTheLeft) rules.disjIntro1(rightDenial, held)
+        else rules.disjIntro2(leftDenial, held)
+    } yield result
+  }
+
+  /**
+   * `|- ~(v = ZERO)` for a positive numeral, which is `0 < v` read as a refusal.
+   *
+   * `Digits.below` is what says the number is positive, and nothing is below zero, so a number that
+   * were zero would be below itself. The same two lines are in `Collatz`, about the empty word, and
+   * they are here rather than shared because what they are about is a different constant.
+   */
+  private def notZero(value: BigInt): Either[LogicError, Kernel.Thm] = {
+    val logic = modular.logic
+    val rules = logic.rules
+
+    for {
+      term <- digits.numeral(value)
+      zero <- LogicError.lift(modular.theory.constant(Natural.NumberZero, Value.Numbers))
+      order <- LogicError.lift(
+        modular.theory.constant(Peano.StrictOrder, Type.fun(Value.Numbers, Type.fun(Value.Numbers, Type.Bool)))
+      )
+      positive <- digits.below(0, value)
+      equation <- LogicError.lift(Term.eq(term, zero))
+      assumed <- LogicError.lift(Kernel.assume(equation))
+      partial <- LogicError.lift(Term.app(order, zero))
+      absurd <- Conv
+        .apTerm(partial, assumed)
+        .flatMap(congruent => LogicError.lift(Kernel.eqMp(congruent, positive)))
+      refused <- digits.peano.fact(Peano.NotBelowZero).flatMap(rules.spec(zero, _))
+      falsity <- rules.notElim(refused, absurd)
+      result <- rules.notIntro(equation, falsity)
+    } yield result
+  }
+
   /** `|- NUM_DIV m n = m/n`, and `|- NUM_MOD m n = m%n`, which are one derivation. */
   private[theories] def division(
     numerator: BigInt,
@@ -166,8 +402,48 @@ object Value {
       Modular.DivisionDetermined,
       "the remainder of the same division, which is the other half of the same conclusion",
       (value, arguments) => value.division(arguments(0), arguments(1), wantQuotient = false)
+    ),
+    Modular.GcdName -> Route(
+      2,
+      Modular.GcdDivides,
+      "the answer divides the gcd because it divides both, and the gcd divides the answer through " +
+        "one Bezout combination found by searching and checked as an equation between numerals; " +
+        "the two meet at `NUM_DIVIDES_ANTISYM`, and two zeros are refused because nothing is " +
+        "provable about `NUM_GCD ZERO ZERO`",
+      (value, arguments) => value.greatestCommonDivisor(arguments(0), arguments(1))
     )
   )
+
+  /**
+   * `x` and `y` with `a * x = b * y + c`, found by searching rather than by an algorithm.
+   *
+   * Bezout says the pair exists for `c` the greatest common divisor, and the classical route to it
+   * is the extended Euclidean algorithm, which produces a coefficient that may be negative and then
+   * needs its sign argued about over a type with no negative numbers. Searching `x` upwards avoids
+   * that entirely: the solutions are a residue class modulo `b / c`, so one is found within that
+   * many steps, and what leaves this function is a pair of numbers the derivation proves an
+   * equation about. Nothing downstream trusts the search.
+   */
+  private[theories] def combination(
+    left: BigInt,
+    right: BigInt,
+    answer: BigInt
+  ): Either[LogicError, (BigInt, BigInt)] = {
+    val bound = if (answer == 0) BigInt(1) else right / answer + 1
+
+    val found = (BigInt(0) to bound).view
+      .map(multiplier => (multiplier, left * multiplier - answer))
+      .collectFirst {
+        case (multiplier, remainder) if remainder >= 0 && right != 0 && remainder % right == 0 =>
+          (multiplier, remainder / right)
+      }
+
+    found.toRight(
+      TypeError(
+        s"no combination a * x = b * y + c for a = $left, b = $right and c = $answer within $bound steps"
+      )
+    )
+  }
 
   private val Numbers: Type = TyApp(Natural.TypeName, Nil)
 

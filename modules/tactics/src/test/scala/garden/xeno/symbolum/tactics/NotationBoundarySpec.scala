@@ -198,6 +198,14 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Number, "how many arguments the constant takes"),
     ("Value.scala", "arguments.size") ->
       (Verdict.Number, "how many it was given"),
+    ("Value.scala", "divisor") ->
+      (Verdict.Number, "the value asked to divide the other"),
+    ("Value.scala", "multiple") ->
+      (Verdict.Number, "the value it does not divide"),
+    ("Value.scala", "left") -> (Verdict.Number, "the left argument of a Bezout combination"),
+    ("Value.scala", "right") -> (Verdict.Number, "the right argument of one"),
+    ("Value.scala", "answer") -> (Verdict.Number, "the greatest common divisor it is a combination for"),
+    ("Value.scala", "bound") -> (Verdict.Number, "how many multipliers were tried before giving up"),
     ("Divisibility.scala", "parts._1") ->
       (Verdict.Crossing, "the antecedent of an implication an assembly had to match"),
     ("Field.scala", "reals.show(denominator)") ->
