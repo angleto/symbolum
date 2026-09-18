@@ -46,7 +46,8 @@ the rejected option attractive, and they will.
 | [0021](0021-the-derived-connectives-are-constants-that-build-codes.md) | The derived connectives are constants that build codes | accepted, spends 0014 |
 | [0022](0022-the-intuitionistic-fragment-gets-its-own-decision.md) | The intuitionistic propositional fragment gets its own decision procedure | accepted, spends 0009 |
 | [0023](0023-the-propositional-address-is-served-by-the-calculus.md) | The propositional address is served by the calculus, and the gate is the address | accepted, extends 0022 |
-| [0024](0024-a-domain-claim-reaches-arithmetic-through-named-bridges.md) | A domain claim reaches arithmetic through named bridges, not through an interpretation | accepted, extends 0022, extended by 0027 |
+| [0024](0024-a-domain-claim-reaches-arithmetic-through-named-bridges.md) | A domain claim reaches arithmetic through named bridges, not through an interpretation | accepted, extends 0022, extended by 0027 and 0028 |
 | [0025](0025-a-goals-own-hypotheses-are-facts.md) | A goal's own hypotheses are facts, and the deduction theorem is what pays for them | accepted |
 | [0026](0026-an-exhausted-free-route-is-reported-not-hidden.md) | A free route that ran out of net is reported, not hidden behind the price it fell to | accepted, extends 0022 |
 | [0027](0027-the-bridge-is-searched-for-above-the-method-that-spends-it.md) | The bridge is searched for above the method that spends it, one candidate at a time | accepted, extends 0024 |
+| [0028](0028-a-domain-type-is-interpreted-and-a-domain-constant-is-defined.md) | A domain's type is interpreted at the build, and a domain's constant is defined rather than declared | accepted, extends 0024 |

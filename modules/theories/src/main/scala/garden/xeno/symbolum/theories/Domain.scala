@@ -231,26 +231,137 @@ object Domain {
     base: Theory,
     notation: Notation,
     domain: Domain
-  ): Either[LogicError, Built] = {
-    val withTypes = domain.typeOperators.foldLeft[Either[LogicError, Theory]](Right(base)) {
-      case (acc, (name, arity)) =>
-        acc.flatMap(current => LogicError.lift(current.declareTypeOperator(name, arity)))
-    }
-    val withConstants = domain.constants.foldLeft(withTypes) { case (acc, (name, schema)) =>
-      acc.flatMap(current => LogicError.lift(current.declareConstant(name, schema)))
-    }
+  ): Either[LogicError, Built] =
+    build(base, notation, domain, Interpretation.none)
 
-    domain.axioms
-      .foldLeft(withConstants.map((_, Vector.empty[(String, Kernel.Thm)]))) {
-        case (acc, (name, text)) =>
-          for {
-            reached <- acc
-            (current, held) = reached
-            proposition <- Parser.proposition(current, notation, text)
-            asserted <- LogicError.lift(Kernel.assertAxiom(current, proposition))
-          } yield (asserted._1, held :+ (name -> asserted._2))
+  /**
+   * The same, with the domain's own vocabulary given a meaning in the foundation's.
+   *
+   * `docs/adr/0028` is the decision and what it rests on. A domain that keeps a type of its own is
+   * not merely refused arithmetic: a claim needing it **cannot be written**, because `NUM_LT c 3`
+   * at `c:cost` is a type error rather than a refusal, which `InterpretationSpec` measures. So an
+   * interpretation is what makes such a claim statable, and it does two things that are not the
+   * same thing:
+   *
+   *  - a **type** of the domain becomes a type of the foundation, and is then not declared at all.
+   *    The domain's constants are declared over the mapped types instead, and nothing else changes:
+   *    no axiom, no definition, and the accounting is what it was.
+   *  - a **constant** of the domain becomes a definition rather than a declaration, so it stops
+   *    being an atom nothing can look inside. That costs no axiom either, and it is the half a
+   *    reader has to be told about, because the conclusion now rests on the translation being
+   *    right. [[Domain.Spending.defined]] is where it is told.
+   *
+   * What is refused, by name: an interpretation mentioning a type or a constant this domain does
+   * not declare, which is a typo in the map rather than a decision; a meaning whose type is not the
+   * one the constant was declared at, read through the map; and a meaning the base signature cannot
+   * read.
+   */
+  def build(
+    base: Theory,
+    notation: Notation,
+    domain: Domain,
+    interpretation: Interpretation
+  ): Either[LogicError, Built] = {
+    val strangeTypes = interpretation.types.keySet -- domain.introducedTypes
+    val strangeConstants = interpretation.meanings.keySet -- domain.introduced
+
+    if (strangeTypes.nonEmpty || strangeConstants.nonEmpty)
+      Left(
+        TypeError(
+          s"an interpretation of ${domain.name}'s own names, and " +
+            s"${(strangeTypes ++ strangeConstants).toVector.sorted.mkString(", ")} " +
+            "is not one of them: a map naming something the domain does not declare is a typo " +
+            "rather than a decision, and giving it a meaning would say nothing about this domain"
+        )
+      )
+    else {
+      val kept = domain.typeOperators.filterNot { case (name, _) => interpretation.types.contains(name) }
+
+      val withTypes = kept.foldLeft[Either[LogicError, Theory]](Right(base)) {
+        case (acc, (name, arity)) =>
+          acc.flatMap(current => LogicError.lift(current.declareTypeOperator(name, arity)))
       }
-      .map { case (theory, held) => new Built(domain, base, theory, notation, held.toMap) }
+
+      val withConstants = domain.constants.foldLeft(withTypes.map((_, Vector.empty[(String, Kernel.Thm)]))) {
+        case (acc, (name, schema)) =>
+          val wanted = interpretation.through(schema)
+
+          acc.flatMap { case (current, defined) =>
+            interpretation.meanings.get(name) match {
+              case None =>
+                LogicError.lift(current.declareConstant(name, wanted)).map((_, defined))
+
+              case Some(text) =>
+                for {
+                  meaning <- Parser.term(current, notation, text, wanted)
+                  extended <- LogicError.lift(Kernel.defineConstant(current, name, meaning))
+                } yield (extended._1, defined :+ (name -> extended._2))
+            }
+          }
+      }
+
+      withConstants
+        .flatMap { case (theory, defined) =>
+          domain.axioms
+            .foldLeft[Either[LogicError, (Theory, Vector[(String, Kernel.Thm)])]](Right((theory, Vector.empty))) {
+              case (acc, (name, text)) =>
+                for {
+                  reached <- acc
+                  (current, held) = reached
+                  proposition <- Parser.proposition(current, notation, text)
+                  asserted <- LogicError.lift(Kernel.assertAxiom(current, proposition))
+                } yield (asserted._1, held :+ (name -> asserted._2))
+            }
+            .map { case (theory, held) => (theory, defined, held) }
+        }
+        .map { case (theory, defined, held) =>
+          new Built(domain, base, theory, notation, held.toMap, defined.toMap)
+        }
+    }
+  }
+
+  /**
+   * What a domain's own vocabulary means in the foundation's, where it means anything.
+   *
+   * Two maps and they are two different kinds of thing, which `docs/adr/0028` decides and this
+   * comment will not let a reader run together.
+   *
+   * [[types]] sends a type this domain declares to a type the foundation already has. Nothing is
+   * asserted and nothing is defined: the domain simply declares one type fewer and its constants
+   * are declared over the foundation's type instead. What it buys is that a claim about such a
+   * subject can be **written**, which is the wall a domain type really hits: `NUM_LT c 3` at
+   * `c:cost` is a type error and not a refusal something could lift.
+   *
+   * [[meanings]] sends a constant this domain declares to a term of the foundation, written as
+   * text and read against the base's own signature. That constant is **defined** rather than
+   * declared, so it stops being an atom with nothing inside it, and `docs/adr/0008` gives it an
+   * origin: two builds of one description under different interpretations produce constants that
+   * are not equal, which is the one place this arrangement is safer than the declared kind.
+   *
+   * **A partial interpretation is the ordinary case rather than an edge.** A domain typically wants
+   * its subject to be a number and its predicates left alone, so a name in neither map is declared
+   * exactly as it was before any of this existed.
+   */
+  final case class Interpretation(
+    types: Map[String, Type],
+    meanings: Map[String, String]
+  ) {
+
+    /** The schema a constant is declared at once this interpretation has been applied to it. */
+    def through(schema: Type): Type = schema match {
+      case TyApp(operator, Nil) if types.contains(operator) => types(operator)
+      case TyApp(operator, arguments) => TyApp(operator, arguments.map(through))
+      case other => other
+    }
+  }
+
+  object Interpretation {
+
+    /** The empty one, which is what [[Domain.build]] uses and is not the same as no build. */
+    val none: Interpretation = Interpretation(Map.empty, Map.empty)
+
+    /** Only types, which is the half that costs nothing and asserts nothing. */
+    def ofTypes(types: (String, Type)*): Interpretation = Interpretation(types.toMap, Map.empty)
   }
 
   /**
@@ -267,7 +378,17 @@ object Domain {
     val base: Theory,
     val theory: Theory,
     val notation: Notation,
-    val axioms: Map[String, Kernel.Thm]
+    val axioms: Map[String, Kernel.Thm],
+    /**
+     * The defining equation of each constant this build gave a meaning to, by name.
+     *
+     * `|- c = <term>` as `Kernel.defineConstant` returns it, which is not yet what a propositional
+     * decision can read: equality is not one of the five connectives, so `Expensive c = NUM_LE 3 c`
+     * is one atom to `Intuitionistic` and to `Propositional` alike. [[meaningOf]] is the shape a
+     * caller hands to [[settle]], and the difference is the whole reason this map is not enough on
+     * its own.
+     */
+    val definitions: Map[String, Kernel.Thm] = Map.empty
   ) {
 
     /** The axiom named, as asserted when the domain was built. */
@@ -292,8 +413,85 @@ object Domain {
         domain = domain.name,
         ofTheDomain = axioms.collect { case (name, asserted) if all.contains(asserted.conclusion) => name }.toSet,
         foundational = all -- mine,
-        unspent = axioms.collect { case (name, asserted) if !all.contains(asserted.conclusion) => name }.toSet
+        unspent = axioms.collect { case (name, asserted) if !all.contains(asserted.conclusion) => name }.toSet,
+        // The interpreted names this conclusion RESTS ON, which is not the same as the ones it
+        // mentions and the difference is why the first version of this line reported nothing. A
+        // definition costs no axiom, so neither column above can ever name it; and the interesting
+        // case is exactly the one where the meaning was spent on the way and is gone from the
+        // conclusion. `!c. c < 3 ==> Approved c` does not mention `Expensive`, and it is true
+        // because of what `Expensive` was taken to mean. So the derivation is walked instead.
+        defined = {
+          val spent = Derivation.restingOn(theorem, definitions.values.map(_.conclusion).toSet)
+          definitions.collect { case (name, equation) if spent.contains(equation.conclusion) => name }.toSet
+        }
       )
+    }
+
+    /**
+     * What an interpreted constant means, as a fact `Domain.Built.settle` can actually use.
+     *
+     * `Kernel.defineConstant` hands back `|- c = <term>`, and for a predicate that is an equation
+     * between two **functions**. Applied to the claim's own subject it becomes an equation between
+     * two propositions, and that is still not usable: equality is not one of the five connectives,
+     * so `Expensive c = NUM_LE 3 c` is a single atom to every procedure `settle` asks. What a
+     * skeleton can read is the pair of implications, so that is what this builds:
+     *
+     *     |- !x. (c x ==> body x) /\ (body x ==> c x)
+     *
+     * It costs no axiom — the definition is a definitional extension and the two implications come
+     * out of `eqMp` and the deduction theorem — and it is handed to [[settle]] as a bridge exactly
+     * as `docs/adr/0024`'s library lemma is. A reader of the call site sees which meanings the
+     * conclusion was allowed to use, which is the same discipline and the same reason.
+     *
+     * Only a constant whose interpreted type ends in `bool` has one of these, because only then are
+     * the two sides propositions. A function into `num` is interpreted just as usefully and what it
+     * needs is rewriting rather than a skeleton, which is a different piece of work and is refused
+     * here by name rather than approximated.
+     */
+    def meaningOf(name: String, logic: Logic): Either[LogicError, Kernel.Thm] = {
+      val rules = logic.rules
+
+      for {
+        equation <- definitions.get(name).toRight(MissingDefinition(name))
+        sides <- Term.destEq(equation.conclusion).toRight(NotOfForm("an equation", equation.conclusion))
+        (constant, _) = sides
+        answered = resultOf(Term.typeOf(constant))
+        _ <- Either.cond(
+          answered == Type.Bool,
+          (),
+          NotOfForm(
+            s"an interpreted constant answering a proposition, and $name answers $answered: what a " +
+              "claim about that needs is rewriting rather than a propositional skeleton, and this " +
+              "hands back neither rather than something that looks like one",
+            equation.conclusion
+          )
+        )
+        subjects = argumentTypes(Term.typeOf(constant)).zipWithIndex.map { case (ty, index) =>
+          Conv.freshVariable(s"x$index", ty, Term.freeVariables(equation.conclusion))
+        }
+        applied <- Conv.unfold(equation, subjects.map(subject => subject: Term))
+        opened <- Term.destEq(applied.conclusion).toRight(NotOfForm("an equation", applied.conclusion))
+        (left, right) = opened
+        assumedLeft <- LogicError.lift(Kernel.assume(left))
+        assumedRight <- LogicError.lift(Kernel.assume(right))
+        forwards <- LogicError.lift(Kernel.eqMp(applied, assumedLeft)).flatMap(rules.disch(left, _))
+        reversed <- Conv.sym(applied)
+        backwards <- LogicError.lift(Kernel.eqMp(reversed, assumedRight)).flatMap(rules.disch(right, _))
+        both <- rules.conjIntro(forwards, backwards)
+        closed <- rules.genAll(both, subjects)
+      } yield closed
+    }
+
+    /** The argument types of a function type, in order. */
+    private def argumentTypes(ty: Type): List[Type] = ty match {
+      case TyApp("fun", List(argument, rest)) => argument :: argumentTypes(rest)
+      case _ => Nil
+    }
+
+    /** What a function type answers once every argument is given. */
+    private def resultOf(ty: Type): Type = ty match {
+      case TyApp("fun", List(_, rest)) => resultOf(rest)
+      case other => other
     }
 
     /**
@@ -869,7 +1067,20 @@ object Domain {
     domain: String,
     ofTheDomain: Set[String],
     foundational: Set[Term],
-    unspent: Set[String]
+    unspent: Set[String],
+    /**
+     * The domain's own names this conclusion is about that are **definitions** rather than
+     * assumptions, which is what `docs/adr/0028` adds to this report.
+     *
+     * Empty for every domain built without an interpretation, which is every domain there was
+     * before 2026-09-18. It is not a cost in axioms and must not be read as one: a definitional
+     * extension costs nothing and `Derivation.axiomsOf` will never mention it. What it is, is the
+     * other thing a reader has to check. A conclusion about `Expensive` where `Expensive` is
+     * assumed rests on an assumption the reader can argue with; the same conclusion where
+     * `Expensive` **means** `3 <= c` rests on that being the right translation of the word, and
+     * nothing in the axiom columns would ever say so.
+     */
+    defined: Set[String] = Set.empty
   ) {
 
     /** The line a report prints: what it cost, and whether it reached outside the domain. */
@@ -879,7 +1090,10 @@ object Domain {
       val outside =
         if (foundational.isEmpty) "and no foundational axiom at all"
         else s"and ${foundational.size} foundational"
-      s"$domain: $spent, $outside"
+      val meanings =
+        if (defined.isEmpty) ""
+        else s", over ${defined.toVector.sorted.mkString(", ")} as interpreted rather than assumed"
+      s"$domain: $spent, $outside$meanings"
     }
   }
 }
