@@ -79,10 +79,10 @@ final class Value private (val digits: Digits, val modular: Modular, val linarit
    * **The reading belongs here and not at the call site**, and that is the whole reason this method
    * exists rather than a helper in `Prove`. Three of the five rows take the term's arguments as
    * their own and two do not: `NUM_FLOOR` takes one argument, a real, where its row takes a
-   * numerator and a denominator. A caller reading [[Route.arity]] against the term's argument count
-   * gets those two wrong, and gets them wrong silently, because two is a plausible number of
-   * arguments for a term to have. [[Shape]] is what the table says about that, and the match below
-   * does not compile if a row is added with a third shape.
+   * numerator and a denominator. A caller reading [[Value.Route.arity]] against the term's
+   * argument count gets those two wrong, and gets them wrong silently, because two is a plausible
+   * number of arguments for a term to have. [[Value.Shape]] is what the table says about that,
+   * and the match below does not compile if a row is added with a third shape.
    *
    * **What it refuses, by name.** A term whose head is not a constant, a constant with no row (with
    * the rows there are named, which is [[of]]'s refusal), a wrong number of arguments, and an
