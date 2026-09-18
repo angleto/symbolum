@@ -22,9 +22,21 @@ every checkout, so nothing in here can enforce it and this file used to name it 
 that evening, five of the seven builds running had never asked it for anything, and every one of
 them was a session doing what the commands below told it to. `tools/sbt` hands the build to
 whatever the machine names in `SYMBOLUM_BUILD_WRAPPER`, and where nothing is named it says so on
-stderr and runs `sbt` anyway, so a checkout with no such arrangement around it loses nothing and
-nobody is left believing they are in a queue they are not in. What it is **not** is a cap of its
-own: it holds nothing and waits for nothing, and its own header says so.
+stderr and runs `sbt` anyway, so a checkout with no such arrangement around it loses nothing.
+
+**The variable is in no profile, so whether a session has it is a coin toss, and the announcement
+alone did not cover that.** The clause that used to end the paragraph above said nobody is left
+believing they are in a queue they are not in; on 2026-09-18 a session read that stderr line sixteen
+times, concluded the cap had been removed from the machine, and ran a whole suite in thirty-six
+minutes against the four it costs quiet. The line was true and said *this build*; it was read as
+*this machine*. So since that day the fall-through also says **which of the two it is**, and it
+finds out the only way a tracked file can, by reading the environment of the sbt processes already
+running: another build here is capped and this session is not in it, and then it prints what to put
+in front of the command; or nothing running here is capped either; or nothing else is running and
+this session cannot see. Three answers rather than two, which is the distinction `Refutation` keeps
+seven of one floor down. `tools/sbt-test.sh` holds all three and CI runs it. What it is **not** is a
+cap of its own: it holds nothing, waits for nothing, and never runs what it found in somebody
+else's environment, and its own header says so.
 
 - **Tests:** `tools/sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
   statements to the whole tactic surface and most of **that** is the eighteen it attempts and cannot

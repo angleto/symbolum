@@ -64,7 +64,23 @@ echo "STUB-WRAPPER $*"
 shift                 # the `--`, which is the wrapper's to consume
 exec "$@"
 STUB
-chmod +x "$work/bin/sbt" "$work/wrapper" "$work/wrapper-exec"
+# The two commands the fall-through asks the machine with, stubbed for the reason every other stub
+# here exists: what is asserted is what the subject SAYS, and a check that read the real process
+# table would answer differently on every machine and every minute of the day. `pgrep` exits
+# non-zero when it finds nothing, and the stub does too, because the subject tells "no build is
+# running" from "a build is running and names no cap" by exactly that status.
+cat > "$work/bin/pgrep" <<STUB
+#!/bin/sh
+if [ -s "$work/pgrep-answer" ]; then cat "$work/pgrep-answer"; else exit 1; fi
+STUB
+cat > "$work/bin/ps" <<STUB
+#!/bin/sh
+cat "$work/ps-answer" 2>/dev/null || true
+STUB
+: > "$work/pgrep-answer"
+: > "$work/ps-answer"
+
+chmod +x "$work/bin/sbt" "$work/wrapper" "$work/wrapper-exec" "$work/bin/pgrep" "$work/bin/ps"
 PATH="$work/bin:/usr/bin:/bin"
 export PATH
 
@@ -91,6 +107,7 @@ report=$(SYMBOLUM_BUILD_WRAPPER= "$run" test 2>&1 || true)
 holds "unnamed: the build runs" "STUB-SBT test"
 lacks "unnamed: the wrapper does not" "STUB-WRAPPER"
 holds "unnamed: and it says the build is uncapped" "nothing is capping this build"
+holds "unnamed: and that nothing else here can be compared with" "no other build is running here"
 
 # 2. The environment names a usable wrapper. It is exec'd with `--`, then the build tool, then the
 #    caller's arguments untouched. The `--` is asserted rather than tolerated: it is what leaves a
@@ -126,6 +143,44 @@ report=$(SYMBOLUM_BUILD_WRAPPER="$work/unrunnable" "$run" test 2>&1 || true)
 holds "unrunnable: the build still runs" "STUB-SBT test"
 holds "unrunnable: and the path is named" "$work/unrunnable"
 lacks "unrunnable: and it is not exec'd" "STUB-WRAPPER"
+
+# 5. Unset, and another build on this machine IS capped. This is the state the card that asked for
+#    these three answers was opened from: a queue running, a session outside it, and a line that
+#    said only that this build was uncapped. What the subject has to say now is which of the two it
+#    is, and what to type. The path comes from the other build's environment rather than from
+#    anything written here, which is what lets a tracked file say it at all.
+echo 4242 > "$work/pgrep-answer"
+printf 'java -jar sbt-launch.jar SYMBOLUM_BUILD_WRAPPER=%s/cap.sh PATH=/usr/bin\n' "$work" > "$work/ps-answer"
+report=$(SYMBOLUM_BUILD_WRAPPER= "$run" test 2>&1 || true)
+holds "queued elsewhere: the build still runs" "STUB-SBT test"
+holds "queued elsewhere: it says the machine has a queue" "this machine has a queue"
+holds "queued elsewhere: and names what to put in front" "SYMBOLUM_BUILD_WRAPPER=$work/cap.sh"
+lacks "queued elsewhere: not reported as nothing to compare with" "no other build is running here"
+
+# 6. Unset, other builds running, none of them capped. The answer is about the machine and not
+#    about this session, and it is a different sentence from both of the others: nothing here is
+#    queueing, which is a fact, where "this session cannot see" is the absence of one.
+echo 4242 > "$work/pgrep-answer"
+printf 'java -jar sbt-launch.jar PATH=/usr/bin\n' > "$work/ps-answer"
+report=$(SYMBOLUM_BUILD_WRAPPER= "$run" test 2>&1 || true)
+holds "none capped: it says nothing here is queueing" "names a cap either"
+lacks "none capped: and does not claim a queue" "this machine has a queue"
+lacks "none capped: and does not claim nothing is running" "no other build is running here"
+
+# 7. Named, absent, and a queue running: somebody configured the cap and configured it wrong, on a
+#    machine where the right answer is visible. Both halves have to be said — the path they gave is
+#    not executable, and here is the one another build was given — because telling them only the
+#    first sends them back to the value they already believe in.
+echo 4242 > "$work/pgrep-answer"
+printf 'java -jar sbt-launch.jar SYMBOLUM_BUILD_WRAPPER=%s/cap.sh PATH=/usr/bin\n' "$work" > "$work/ps-answer"
+report=$(SYMBOLUM_BUILD_WRAPPER="$work/not-there" "$run" test 2>&1 || true)
+holds "misconfigured: their own path is still named" "$work/not-there"
+holds "misconfigured: and so is the one that works" "SYMBOLUM_BUILD_WRAPPER=$work/cap.sh"
+
+# Back to a quiet machine for what follows, so that a check about the exit status is not also a
+# check about what else happened to be running.
+: > "$work/pgrep-answer"
+: > "$work/ps-answer"
 
 # The exit status is the build's in both shapes, or a caller cannot tell a failed build from a
 # subject that lost it.
