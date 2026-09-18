@@ -91,6 +91,34 @@ final case class Script(steps: Vector[Step]) {
   def tidy: Script = Script(steps.distinct)
 
   /**
+   * The steps this theorem was reached by, and nothing else that was recorded beside them.
+   *
+   * An account is per **derivation** where it is written and per **session** where a notebook keeps
+   * one: cell 9 cites what cell 7 produced, so the steps of every `derive` in the transcript sit in
+   * one script. A page about one of those theorems that printed all of them would show a reader
+   * lines that have nothing to do with the statement at the top of it, which is worse than showing
+   * none: a derivation is the one part of a page a reader checks line by line.
+   *
+   * Walked backwards from the target: a step is kept when what it produces is wanted, and keeping
+   * it makes its own premises wanted. A premise no step produces is a lemma from somewhere else and
+   * stops the walk, which is the same decision [[lines]] makes when it names one.
+   *
+   * A theorem is matched by its sequent, as everywhere here. Two steps ending at one sequent are
+   * both kept, and [[tidy]] is what removes the pair when they are the same step twice; keeping
+   * only one would mean choosing which route a reader is shown, and this is not where that is
+   * decided.
+   */
+  def reaching(target: Kernel.Thm): Script = {
+    val (kept, _) = steps.foldRight((Vector.empty[Step], Set(target))) {
+      case (step, (held, wanted)) =>
+        if (wanted.contains(step.result)) (step +: held, wanted ++ step.premises)
+        else (held, wanted)
+    }
+
+    Script(kept)
+  }
+
+  /**
    * The derivation as a numbered list, with each premise named where it can be named.
    *
    * Three ways a premise is referred to, tried in this order, and the order is the point: a lemma

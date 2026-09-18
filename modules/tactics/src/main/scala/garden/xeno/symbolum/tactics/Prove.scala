@@ -141,7 +141,13 @@ final class Prove private (
           // so it can add a theorem and must not take a message away from the procedure that had
           // something to say. `Chaining.prove` names its own bound to a caller that asks it
           // directly, which `chained` deliberately does not turn into a refusal here.
-          case Left(refusal) => chained(goal).toRight(refusal)
+          //
+          // [[underHypotheses]] is asked after it and on the same terms, for the same reason: it
+          // reads no shape either, and it is asked **after** the whole goal has been tried so that
+          // nothing already proved changes route or price. What it can do is exactly what neither
+          // of the two above can, which is spend the goal's own premises.
+          case Left(refusal) =>
+            chained(goal).orElse(underHypotheses(goal)).toRight(refusal)
         }
     }
 
@@ -207,6 +213,88 @@ final class Prove private (
   def searchFor(goal: Term): Option[Chaining.Outcome] =
     chaining.map(search => search.prove(goal, target => held(target).orElse(decided(target).toOption)))
 
+  /**
+   * The goal with its own hypotheses assumed, proved, and the assumptions discharged again.
+   *
+   * The absence this closes is one the front page names: `H ==> C` was matched whole, so `H` was
+   * syntax on the way to `C` and never a fact. Here it becomes one. The premises are assumed, the
+   * conclusion alone is put to the scan, to the decision procedures and to the chaining search with
+   * those facts in hand, and `Context.discharge` puts the antecedents back so that what comes out
+   * is the goal as asked, resting on nothing. The final test is the same one `Chaining` applies to
+   * its own answer and for the same reason: a fold that dropped an antecedent would produce a
+   * theorem that is true and is not this goal.
+   *
+   * **It can only add a theorem.** It is asked after everything else, its failure is not turned
+   * into a refusal, and the decision procedures still see the whole implication first, which is
+   * where `Linarith.split` already assumes and discharges the linear fragment. So a goal proved
+   * before this existed is proved by the same route at the same price.
+   *
+   * `None` where there is no library, which is the configuration [[library]] describes, and where
+   * the goal has no antecedent to assume, which `Context.of` answers.
+   */
+  def underHypotheses(goal: Term): Option[Kernel.Thm] =
+    for {
+      logic <- library.map(_._2)
+      context <- Context.of(logic, goal)
+      leaf = (target: Term) =>
+        heldUnder(target, Some(context))
+          .orElse(decided(target).toOption)
+          // Asked of a subgoal and not of the conclusion this route started from: rebuilding the
+          // implication there produces the goal the procedures were already handed one step above,
+          // so it would be the same question asked twice per goal, which on a corpus is the same
+          // refusal paid for twice.
+          .orElse(if (target == context.conclusion) None else decidedUnder(target, context, logic))
+
+      proof <- leaf(context.conclusion).orElse(chainedUnder(context, leaf))
+      closed <- context.discharge(logic, proof).toOption
+      if closed.conclusion == goal && closed.hypotheses.isEmpty
+    } yield closed
+
+  /** The chaining search over the conclusion, with the goal's own hypotheses among the candidates. */
+  private def chainedUnder(context: Context, leaf: Term => Option[Kernel.Thm]): Option[Kernel.Thm] =
+    chaining.flatMap(search =>
+      search.prove(context.conclusion, leaf, Some(context)) match {
+        case Chaining.Outcome.Proved(theorem, _) => Some(theorem)
+        case _ => None
+      }
+    )
+
+  /**
+   * A subgoal put to the decision procedures **with the goal's premises in front of it**.
+   *
+   * The procedures take a whole implication and assume its antecedents themselves, which is what
+   * `Linarith.split` is; what they cannot do is take a bare subgoal and remember what a search two
+   * levels up assumed. So the premises are written back on, the implication is decided, and the
+   * assumptions are detached again with `mp`, leaving a theorem that rests on exactly them.
+   *
+   * This is the half that reaches arithmetic. A chained step whose obligation is an inequality
+   * following from a premise is invisible to the scan, since no lemma states it, and invisible to
+   * LINARITH, since the premise is not in the question.
+   *
+   * **It is the expensive half and what it buys was measured rather than assumed.** Removed, the
+   * showcase settles eleven claims instead of twelve, and `NUM_FACTORISATION_UNIQUE` is the one
+   * that goes; `ReachSpec`'s corpus pass falls from 4 min 47 s to 3 min 36 s against 2 min 22 s
+   * with no route at all, on 2026-09-18 against `248a4c4`. So roughly seventy seconds of the most
+   * expensive suite in the repository buys that one theorem. `docs/adr/0025` keeps it and says
+   * why, and says that this is the first line to reconsider if the wall clock becomes what binds.
+   */
+  private def decidedUnder(goal: Term, context: Context, logic: Logic): Option[Kernel.Thm] =
+    for {
+      statement <- context.assumed
+        .foldRight(Right(goal): Either[LogicError, Term]) { (antecedent, carried) =>
+          carried.flatMap(inner => logic.mkImp(antecedent, inner))
+        }
+        .toOption
+      theorem <- decided(statement).toOption
+      detached <- context.assumed.foldLeft(Option(theorem)) { (carried, antecedent) =>
+        for {
+          implication <- carried
+          fact <- Kernel.assume(antecedent).toOption
+          step <- logic.rules.mp(implication, fact).toOption
+        } yield step
+      }
+    } yield detached
+
   /** Built once, because the index over the library is what makes a question milliseconds. */
   private val chaining: Option[Chaining] =
     library.map { case (lemmas, logic) => Chaining(logic, lemmas) }
@@ -246,11 +334,25 @@ final class Prove private (
       case Prove.Search.Chaining => chaining.isDefined
     }
 
-  private def held(goal: Term): Option[Kernel.Thm] =
+  private def held(goal: Term): Option[Kernel.Thm] = heldUnder(goal, None)
+
+  /**
+   * The same scan, over the goal's own hypotheses as well, where a caller assumed them.
+   *
+   * The facts come first because they are few and they are about this goal; the library is
+   * unchanged behind them. What changes is the hypothesis test: a candidate may rest on what was
+   * assumed and on nothing else, and with no context that is the emptiness test [[held]] has
+   * always applied. `Context.discharge` is what pays for the relaxation.
+   */
+  private def heldUnder(goal: Term, under: Option[Context]): Option[Kernel.Thm] =
     library.flatMap { case (lemmas, logic) =>
-      lemmas.entries.view
-        .flatMap(entry => Apply.to(logic, entry.theorem, goal).toOption)
-        .filter(application => application.obligations.isEmpty && application.theorem.hypotheses.isEmpty)
+      val allowed = under.map(_.allowed).getOrElse(Set.empty[Term])
+
+      (under.toVector.flatMap(_.facts).view ++ lemmas.entries.view.map(_.theorem))
+        .flatMap(theorem => Apply.to(logic, theorem, goal).toOption)
+        .filter(application =>
+          application.obligations.isEmpty && application.theorem.hypotheses.forall(allowed)
+        )
         // The goal's own quantifiers went off before matching and go back on here, which is the one
         // step `Apply` deliberately leaves to its caller: it cannot know whether the obligations
         // are going to be discharged first.

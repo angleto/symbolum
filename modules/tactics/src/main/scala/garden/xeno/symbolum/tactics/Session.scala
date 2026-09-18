@@ -383,11 +383,66 @@ object Session {
       case Command.Derive(name, step) => deriving(state, name, step)
       case Command.Ask(claim) => (report(Ask.of(state, cost, claim)), state)
       case Command.Find(query) => (report(Find.of(state, library, query)), state)
-      case Command.Show(name) => (report(Essay.of(chain, name).fold(identity, identity)), state)
+      case Command.Show(name) => (report(showing(state, name)), state)
       case Command.Unreadable(line) => (Outcome.Refused(s"not a command: $line", None), state)
     }
 
     private def report(text: String): Outcome = Outcome.Report(text)
+
+    /**
+     * `show NAME`, over what this session holds first and the library behind it.
+     *
+     * It read the library alone until 2026-09-18, and a name the session itself had just produced
+     * came back as `no lemma named AT_TWO` three lines under the cell that produced it. The message
+     * was true of `Library.of(chain)` and false of the session, and the reader it was written for
+     * is the one who had watched the theorem appear: that collapse, of "I did not look there" into
+     * "it does not exist", is the one `Refutation` keeps seven answers apart to avoid, made here in
+     * the one command whose whole purpose is to be read.
+     *
+     * A session fact gets the **same** page a library lemma gets, from the same `Essay.of`, and the
+     * three arguments that differ are what make it honest:
+     *
+     *  - the signature is the **session's**, so a constant this session declared prints as itself
+     *    rather than being unreadable;
+     *  - the library has the session's own facts in front of the chain's, so what the theorem rests
+     *    on is **named** where the session named it. Without that an assumption of this session is
+     *    an axiom the page cannot find, and the page says of an unnamed axiom that `Library.of`
+     *    holds no classical axiom, which would be a sentence about the wrong thing;
+     *  - the account is `Script.reaching`, the steps of this theorem rather than every step the
+     *    transcript has recorded, which for a session is the account of every `derive` in it.
+     */
+    private def showing(state: State, name: String): String =
+      state.fact(name) match {
+        case Some(theorem) =>
+          Essay.of(
+            state,
+            Library.of(Vector(Surface.Held -> state.named.toMap)) ++ library,
+            name,
+            theorem,
+            Some(state.script.reaching(theorem).tidy)
+          )
+
+        case None => Essay.of(chain, name).fold(_ => absent(state, name), identity)
+      }
+
+    /**
+     * The name nothing holds, with **both** places that were looked in named.
+     *
+     * The half of this that is worth having on its own, and the card that asked for it says so: a
+     * refusal that names the set it read is right whatever is decided about what `show` reaches,
+     * because the reader can then tell a name they spelled wrong from a name that is somewhere
+     * else. The session's own names are listed rather than counted, since a transcript holds a
+     * handful and the list is what answers the question a reader actually has.
+     */
+    private def absent(state: State, name: String): String = {
+      val held = state.named.map(_._1).distinct
+
+      val session =
+        if (held.isEmpty) "this session holds no fact of its own"
+        else s"this session holds ${held.mkString(", ")}"
+
+      s"no fact named $name: $session, and the library under it has no lemma of that name"
+    }
 
     /**
      * A refusal with its next step, asked of `Remedy` while the error is still a value.
@@ -637,6 +692,9 @@ object Session {
   }
 
   private[tactics] object Surface {
+
+    /** What a session's own facts are filed under on a page that shows one. */
+    val Held: String = "this session"
 
     /**
      * The inferences `derive` offers, each one a [[Recorder]] operation and nothing else.
