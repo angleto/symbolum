@@ -262,8 +262,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Language.scala", "Axioms(which)._1") -> (Verdict.Name, "an axiom's published name"),
     ("Language.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Language.scala", "payload") -> (Verdict.Crossing, "a code's payload, which is a term"),
-    ("Language.scala", "scheme.binders.size") ->
-      (Verdict.Number, "how many variables a scheme binds"),
     ("Limit.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
@@ -358,6 +356,14 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
     ("Language.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted"),
+    // The same description one step later. It was `s"a claim binding ${scheme.binders.size}
+    // variable(s)"` and the row above this list carried the count; since 2026-09-18 it is built
+    // by `Prose.count` into a local and the refusal is handed the local, so what the scan sees is
+    // the name of the local and not the count inside it. The row keyed on the count was retired
+    // in the same change, because an entry the scan no longer finds is what the pruning
+    // assertion below is for.
+    ("Language.scala", "wanted") ->
+      (Verdict.Text, "how many variables a scheme binds, counted and put into English here"),
     ("Quotient.scala", "what") ->
       (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->

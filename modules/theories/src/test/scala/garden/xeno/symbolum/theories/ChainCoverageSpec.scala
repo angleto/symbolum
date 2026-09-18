@@ -194,6 +194,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Field" -> NotADevelopment,
     "Foundation" -> NotADevelopment,
     "Generated" -> NotADevelopment,
+    // The English a generated page needs that is not mathematics, extracted from `Essay.count`
+    // on 2026-09-18 so that `Cost`, `Ledger` and `Argument` in `tactics` could see it. It
+    // declares nothing and proves nothing; it is here because every file of this module has to
+    // be answered for, which is the check that caught it.
+    "Prose" -> NotADevelopment,
     "Guide" -> NotADevelopment,
     "Lemmas" -> NotADevelopment,
     "Library" -> NotADevelopment,
