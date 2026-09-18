@@ -119,15 +119,20 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     Notebook.cells(fresh) should include("Nothing run yet")
   }
 
-  it should "render each of the four outcomes as its own kind of cell" in {
-    // The four are not one answer with a flag on it, which is what `Session.Outcome` is for, and a
+  it should "render each of the five outcomes as its own kind of cell" in {
+    // The five are not one answer with a flag on it, which is what `Session.Outcome` is for, and a
     // page that rendered a refusal like a result would be the same merge one layer out. One
-    // session carrying all four, because the assertion is that they stay apart.
+    // session carrying all five, because the assertion is that they stay apart.
+    //
+    // **Four until 2026-09-18**, when `show` stopped sharing `Report` with `ask` and `find`: a
+    // report is lines and a page is a document, and the page had been printing the document as its
+    // own source. That is card 07a0d66b, and the case below is the half of it a test can see.
     val session = fresh.runAll(
       Vector(
         "declare p : bool",                 // Extended
         "assume P_HOLDS : p",               // Proved
         "find ABS_TRIANGLE",                // Report
+        "show ABS_TRIANGLE",                // Page
         "prove NOPE : !x:real. x @ 0 = x"   // Refused
       )
     )
@@ -138,6 +143,7 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
       rendered should include("""class="extended"""")
       rendered should include("""class="proved"""")
       rendered should include("""class="report"""")
+      rendered should include("""class="page"""")
       rendered should include("""class="refused"""")
 
       // The refusal carries what to try next, which is the whole reason `Remedy` is wired to this
@@ -146,8 +152,89 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     }
 
     // Every cell offers the way back, which is the only way backwards in an append-only
-    // transcript: four commands, four buttons.
-    """class="back"""".r.findAllMatchIn(rendered).size shouldBe 4
+    // transcript: five commands, five buttons.
+    """class="back"""".r.findAllMatchIn(rendered).size shouldBe 5
+  }
+
+  /**
+   * The page rendered rather than printed, which is the whole of card 07a0d66b.
+   *
+   * Driven by a **real** `Essay` page rather than by markdown written here, and that is the point:
+   * a renderer asserted against a fixture of its author's own writing is asserted against what its
+   * author remembered, and what this has to keep up with is what `Essay` emits. The markdown is
+   * read first for the constructs it contains, so a page that stopped containing a table would
+   * fail here rather than quietly reduce what is being checked.
+   */
+  it should "render a show page into the page's own language, leaving no line as its own source" in {
+    val session = fresh.runAll(Vector("show ABS_TRIANGLE"))
+    val markdown = session.entries.last.outcome match {
+      case Session.Outcome.Page(text) => text
+      case other => fail(s"show must produce a page, got $other")
+    }
+    val rendered = Notebook.page(markdown)
+
+    // What this document actually holds, asserted before anything is asserted about the rendering:
+    // with none of these the test below passes over an empty set.
+    val sources = markdown.linesIterator.toVector
+    withClue(s"$markdown\n") {
+      sources.count(_.startsWith("# ")) shouldBe 1
+      sources.count(_.startsWith("## ")) should be > 2
+      sources.count(_.startsWith("|")) should be > 2
+      sources.count(_.trim.startsWith("```")) should be > 1
+      sources.count(line => line.trim.startsWith("$$")) shouldBe 1
+    }
+
+    withClue(s"$rendered\n") {
+      rendered should include("""<h3 class="title">""")
+      rendered should include("""<h4 class="section">""")
+      rendered should include("<table")
+      rendered should include("""<pre class="legible">""")
+      rendered should include("data-tex=")
+
+      // And nothing came through as source. Every line of the document that begins with a marker is
+      // looked for verbatim, which is what an unrendered line would be: this is the assertion that
+      // does not need to know which constructs exist, only that none of them survived.
+      sources
+        .filter(line => line.startsWith("#") || line.startsWith("|") || line.trim.startsWith("```"))
+        .foreach(line => rendered should not include line)
+    }
+  }
+
+  it should "typeset the formula inside a line without breaking the line" in {
+    // The derivation section writes a sequent **inside** a sentence, so its element is a `span`
+    // where the statement at the top of the page is a `div`. A `div` inside a `p` closes the
+    // paragraph in every browser's parser, which is a page whose layout collapses at the first
+    // formula, and the mode differs too: `notebook.js` reads the block mode off the class.
+    val session = fresh.runAll(
+      Vector(
+        "declare good : real -> bool",
+        "declare fine : real -> bool",
+        "assume RULE : !r:real. good r ==> fine r",
+        "assume GOOD_ONE : good 1",
+        "derive AT_ONE : specialise RULE at 1",
+        "derive FINE_ONE : mp AT_ONE GOOD_ONE",
+        "show FINE_ONE"
+      )
+    )
+    val rendered = Notebook.cells(session)
+
+    withClue(s"$rendered\n") {
+      rendered should include("""<span class="tex" data-tex=""")
+      rendered should include("""<div class="printed" data-tex=""")
+      rendered should not include """<p><div class="tex"""
+
+      // And the two steps of the account are two lines. Written as one paragraph they run together,
+      // `1. specialise … 2. modus ponens …`, which is the one section of a page a reader checks
+      // line by line. The count is taken from the account rather than written here, so a derivation
+      // that grows a step fails this rather than passing on a stale number.
+      val steps = session.entries.last.outcome match {
+        case Session.Outcome.Page(text) => text.linesIterator.count(_.matches("""\d+\. .*"""))
+        case other => fail(s"show must produce a page, got $other")
+      }
+
+      steps shouldBe 2
+      """class="step"""".r.findAllMatchIn(rendered).size shouldBe steps
+    }
   }
 
   it should "name what a theorem rests on only when the session assumed something" in {
