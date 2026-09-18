@@ -162,6 +162,20 @@ object Collatz {
    */
   val TailFree: String = "S2_TAILFREE"
 
+  /**
+   * `S2_HEADFREE u` — no letter of `u` is the head marker.
+   *
+   * [[TailFree]] at the other marker, and the same construction serves both: what a proof about
+   * either one does is read a letter and compare it, so the marker is an argument to those proofs
+   * rather than a second copy of them. What it is **for** is the class the potential argument
+   * holds on: outside a word with one head marker at the front, a `B` rule can fire at a digit
+   * that is not the first one, and the measure falls across a step nothing counted.
+   */
+  val HeadFree: String = "S2_HEADFREE"
+
+  /** `S2_ANCHORED w` — the first letter is the head marker, and no later letter is. */
+  val Anchored: String = "S2_ANCHORED"
+
   /* ------------------------------------------------------------------ the facts */
 
   /** `|- !l r. S2_COUNTED l r ==> S2 l r` — the counted rules are rules. */
@@ -229,6 +243,58 @@ object Collatz {
    * left-hand sides being the only two that hold a marker.
    */
   val TailFreeStep: String = "S2_TAILFREE_STEP"
+
+  /**
+   * `|- !u v. S2_HEADFREE (WORD_CONCAT u v) = (S2_HEADFREE u /\ S2_HEADFREE v)`.
+   *
+   * [[TailFreeConcat]] at the head marker, proved by the same derivation with the marker passed in.
+   */
+  val HeadFreeConcat: String = "S2_HEADFREE_CONCAT"
+
+  /**
+   * `|- !u v. 0 < WORD_LENGTH u ==> (S2_ANCHORED (WORD_CONCAT u v) = (S2_ANCHORED u /\ S2_HEADFREE v))`.
+   *
+   * [[MarkedConcat]] read from the other end, and the guard moves with it: the marker is the FIRST
+   * letter here, so it is the first block that has to be non-empty. With `u` empty the left-hand
+   * side is `S2_ANCHORED v`, which says nothing about `u`, and the right-hand side asks
+   * `S2_ANCHORED WORD_EMPTY`, which is false for want of a first letter.
+   */
+  val AnchoredConcat: String = "S2_ANCHORED_CONCAT"
+
+  /**
+   * `|- !l r. S2 l r /\ S2_HEADFREE l ==> S2_HEADFREE r`.
+   *
+   * The eight rules that do not name the head marker keep a word free of it; the three `B` rules
+   * are discharged by refuting `S2_HEADFREE l`, their left-hand sides being the only ones that
+   * hold a head marker.
+   */
+  val HeadFreeStep: String = "S2_HEADFREE_STEP"
+
+  /**
+   * `|- !l r. S2 l r /\ S2_ANCHORED l ==> S2_ANCHORED r`.
+   *
+   * The mirror of [[MarkedStep]]: only the three `B` rules have an anchored left-hand side, and
+   * each has an anchored right-hand side, `/0 -> /t`, `/1 -> /ff` and `/2 -> /ft`. The other eight
+   * are vacuous, their left-hand sides not beginning with the marker.
+   */
+  val AnchoredStep: String = "S2_ANCHORED_STEP"
+
+  /**
+   * `|- !u v. S2_ANCHORED u /\ WORD_STEP S2 u v ==> S2_ANCHORED v`.
+   *
+   * [[MarkedClosed]] at the other end of the word, and the division is the mirror image: either the
+   * rule fires at the very front, and the marker is inside its own left-hand side, or it does not,
+   * and the marker is in the prefix while the rule sees head-free letters only. `NUM_CASES` on the
+   * prefix's length is what separates them.
+   *
+   * It is the second half of what the potential argument needs. `S2_MARKED` alone leaves the head
+   * marker free to sit anywhere, and then a `B` rule fires at a digit that is not the first one and
+   * lowers the measure across a step nothing counted: `0/0.` steps to `0/t.` and `S2_PHI` falls.
+   */
+  val AnchoredClosed: String = "S2_ANCHORED_CLOSED"
+
+  /** `|- S2_ANCHORED </0.>`, the guard that says [[AnchoredClosed]] is about something. */
+  val AnchoredInhabited: String = "S2_ANCHORED_INHABITED"
 
   /**
    * `|- !u v. S2_MARKED u /\ WORD_STEP S2 u v ==> S2_MARKED v`.
@@ -480,6 +546,23 @@ object Collatz {
   private val TailFreeBody: String =
     "\\w:word(num). !i:num. i < WORD_LENGTH w ==> ~(WORD_NTH w i = S2_TAIL)"
 
+  private val HeadFreeBody: String =
+    "\\w:word(num). !i:num. i < WORD_LENGTH w ==> ~(WORD_NTH w i = S2_HEAD)"
+
+  /**
+   * `S2_ANCHORED w` — positive length, the first letter is the head marker, and no later letter is.
+   *
+   * The inner claim is guarded by `0 < i /\ i < WORD_LENGTH w` rather than by the bound alone,
+   * because position zero is the one place the marker is required rather than forbidden. That is
+   * one conjunct more than [[MarkedBody]] carries, and it is what the index arithmetic buys: over a
+   * truncated subtraction the last position has to be written `|w| - 1` and asks for the length to
+   * be a successor before it is anything, where the first position is `ZERO` and asks for nothing.
+   */
+  private val AnchoredBody: String =
+    "\\w:word(num). 0 < WORD_LENGTH w /\\ " +
+      "WORD_NTH w ZERO = S2_HEAD /\\ " +
+      "(!i:num. 0 < i /\\ i < WORD_LENGTH w ==> ~(WORD_NTH w i = S2_HEAD))"
+
   /** `S2_MARKED w` — positive length, the last letter is the marker, and no earlier letter is. */
   private val MarkedBody: String =
     "\\w:word(num). 0 < WORD_LENGTH w /\\ " +
@@ -498,7 +581,9 @@ object Collatz {
         Counted -> CountedBody,
         Potential -> PotentialBody,
         Marked -> MarkedBody,
-        TailFree -> TailFreeBody
+        TailFree -> TailFreeBody,
+        HeadFree -> HeadFreeBody,
+        Anchored -> AnchoredBody
       )
 
   /** Every statement this development publishes, as text. */
@@ -518,9 +603,20 @@ object Collatz {
         "0 < WORD_LENGTH l /\\ 0 < WORD_LENGTH r"),
     MarkedStep -> "!l:word(num). !r:word(num). S2 l r /\\ S2_MARKED l ==> S2_MARKED r",
     TailFreeStep -> "!l:word(num). !r:word(num). S2 l r /\\ S2_TAILFREE l ==> S2_TAILFREE r",
+    HeadFreeConcat ->
+      ("!u:word(num). !v:word(num). S2_HEADFREE (WORD_CONCAT u v) = " +
+        "(S2_HEADFREE u /\\ S2_HEADFREE v)"),
+    AnchoredConcat ->
+      ("!u:word(num). !v:word(num). 0 < WORD_LENGTH u ==> " +
+        "(S2_ANCHORED (WORD_CONCAT u v) = (S2_ANCHORED u /\\ S2_HEADFREE v))"),
+    HeadFreeStep -> "!l:word(num). !r:word(num). S2 l r /\\ S2_HEADFREE l ==> S2_HEADFREE r",
+    AnchoredStep -> "!l:word(num). !r:word(num). S2 l r /\\ S2_ANCHORED l ==> S2_ANCHORED r",
+    AnchoredClosed ->
+      "!u:word(num). !v:word(num). S2_ANCHORED u /\\ WORD_STEP S2 u v ==> S2_ANCHORED v",
     MarkedClosed ->
       "!u:word(num). !v:word(num). S2_MARKED u /\\ WORD_STEP S2 u v ==> S2_MARKED v",
     MarkedInhabited -> s"S2_MARKED (${wordText(spell("/0."))})",
+    AnchoredInhabited -> s"S2_ANCHORED (${wordText(spell("/0."))})",
     StepInhabited ->
       s"WORD_STEP S2 (${wordText(spell("/0."))}) (${wordText(spell("/t."))})",
     ZerosAtZero -> s"$Zeros ZERO = (WORD_EMPTY:word(num))",
@@ -594,13 +690,34 @@ object Collatz {
       numbers <- Arithmetic.of(peano, naturals)
       tailFreeDefinition <- definitions.get(TailFree).toRight(MissingDefinition(TailFree))
       markedDefinition <- definitions.get(Marked).toRight(MissingDefinition(Marked))
-      tailFreeConcat <- tailFreeSplits(
+      headFreeDefinition <- definitions.get(HeadFree).toRight(MissingDefinition(HeadFree))
+      anchoredDefinition <- definitions.get(Anchored).toRight(MissingDefinition(Anchored))
+      tailFreeConcat <- freeSplits(
         logic,
         theory,
         forward.inductive.classical,
         forward.concatenation,
         numbers,
-        tailFreeDefinition
+        tailFreeDefinition,
+        Tail
+      )
+      headFreeConcat <- freeSplits(
+        logic,
+        theory,
+        forward.inductive.classical,
+        forward.concatenation,
+        numbers,
+        headFreeDefinition,
+        Head
+      )
+      anchoredConcat <- anchoredSplits(
+        logic,
+        theory,
+        forward.inductive.classical,
+        forward.concatenation,
+        numbers,
+        headFreeDefinition,
+        anchoredDefinition
       )
       markedConcat <- markedSplits(
         logic,
@@ -616,7 +733,9 @@ object Collatz {
         logic, theory, notation, forward.concatenation, peano, naturals, successor, numbers, definitions)
       ruleNotEmpty <- rulesAreNotEmpty(tools, definitions)
       markedStep <- markedRules(tools, definitions)
-      tailFreeStep <- tailFreeRules(tools, definitions)
+      tailFreeStep <- freeRules(tools, definitions, Tail, TailFree, TailFreeStep)
+      headFreeStep <- freeRules(tools, definitions, Head, HeadFree, HeadFreeStep)
+      anchoredStep <- anchoredRules(tools, definitions)
 
       partial = Map(
         CountedIsRule -> countedIsRule,
@@ -626,10 +745,16 @@ object Collatz {
         MarkedConcat -> markedConcat,
         RuleNotEmpty -> ruleNotEmpty,
         MarkedStep -> markedStep,
-        TailFreeStep -> tailFreeStep
+        TailFreeStep -> tailFreeStep,
+        HeadFreeConcat -> headFreeConcat,
+        AnchoredConcat -> anchoredConcat,
+        HeadFreeStep -> headFreeStep,
+        AnchoredStep -> anchoredStep
       )
       markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, definitions, partial)
+      anchoredClosed <- anchoredUnderSteps(tools, forward, forward.concatenation, definitions, partial)
       markedInhabited <- markedWord(tools, BeforeTheStep)
+      anchoredInhabited <- anchoredWord(tools, BeforeTheStep)
       stepInhabited <- stepHolds(tools, forward.concatenation, forward, definitions)
       family <- digitFamily(
         tools, forward, naturals, definitions, zerosAtZero, zerosAtSuccessor)
@@ -637,7 +762,9 @@ object Collatz {
       closureRefused <- closureIsProper(tools, forward, ruleNotEmpty)
       facts = partial ++ Map(
         MarkedClosed -> markedClosed,
+        AnchoredClosed -> anchoredClosed,
         MarkedInhabited -> markedInhabited,
+        AnchoredInhabited -> anchoredInhabited,
         StepInhabited -> stepInhabited,
         ZerosAtZero -> zerosAtZero,
         ZerosAtSuccessor -> zerosAtSuccessor,
@@ -843,7 +970,7 @@ object Collatz {
   /* ------------------------------------------------------------------ the marked class */
 
   /**
-   * [[TailFreeConcat]]: tail-freeness splits over a concatenation with nothing left over.
+   * [[TailFreeConcat]] and [[HeadFreeConcat]]: freedom from a marker splits over a concatenation.
    *
    * Both halves are the same two lemmas used in opposite directions. Going left to right, an index
    * into `u` is an index into `u v` by `WORD_CONCAT_NTH_LEFT` and an index into `v` is the shifted
@@ -853,13 +980,14 @@ object Collatz {
    * of the size, because there are two blocks rather than three and no index arithmetic survives
    * into the answer.
    */
-  private def tailFreeSplits(
+  private def freeSplits(
     logic: Logic,
     theory: Theory,
     classical: Classical,
     concatenation: Concatenation,
     numbers: Arithmetic,
-    tailFreeDefinition: Kernel.Thm
+    freeDefinition: Kernel.Thm,
+    markerName: String
   ): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
     val u = Term.variable("u", Words)
@@ -876,7 +1004,7 @@ object Collatz {
       strictOrder <- LogicError.lift(theory.constant(Peano.StrictOrder, OrderType))
       plus <- LogicError.lift(theory.constant(Peano.Addition, BinaryNumbers))
       minus <- LogicError.lift(theory.constant(Peano.Subtraction, BinaryNumbers))
-      marker <- LogicError.lift(theory.constant(Tail, Numbers))
+      marker <- LogicError.lift(theory.constant(markerName, Numbers))
 
       joined <- LogicError.lift(Term.appAll(concatConstant, List(u, v)))
       nthOfJoined <- LogicError.lift(Term.app(nthConstant, joined))
@@ -885,9 +1013,9 @@ object Collatz {
       total <- LogicError.lift(Term.appAll(plus, List(sizeU, sizeV)))
       lengths <- rules.specAll(length, List(u, v))
 
-      openedJoined <- Conv.unfold(tailFreeDefinition, List(joined))
-      openedU <- Conv.unfold(tailFreeDefinition, List(u))
-      openedV <- Conv.unfold(tailFreeDefinition, List(v))
+      openedJoined <- Conv.unfold(freeDefinition, List(joined))
+      openedU <- Conv.unfold(freeDefinition, List(u))
+      openedV <- Conv.unfold(freeDefinition, List(v))
       claimJoined <- leftOf(openedJoined)
       claimU <- leftOf(openedU)
       claimV <- leftOf(openedV)
@@ -1152,6 +1280,237 @@ object Collatz {
     } yield result
   }
 
+  /**
+   * [[AnchoredConcat]]: an anchored word is an anchored block and a head-free block.
+   *
+   * [[MarkedConcat]] read from the other end, and the two differ in one respect that decides which
+   * is the harder proof. The marker this one is about sits at position **zero**, which is a numeral
+   * and not `|w| - 1`, so nothing here has to know that a length is a successor before it can name
+   * a position: there is no case split on the length at all, and the hypothesis `0 < |u|` is spent
+   * twice rather than being what makes the statement sayable.
+   *
+   * Where it is spent is worth naming, because it is the whole content of the guard. Left to right,
+   * it is what carries `0 < |u v|`: an anchored word has a first letter, and `u` is where that
+   * letter is. Right to left, it is what says the letters of `v` sit at positions above zero in
+   * `u v`, which is what lets the inner claim of `S2_ANCHORED`, stated about those positions only,
+   * say anything about `v` at all.
+   */
+  private def anchoredSplits(
+    logic: Logic,
+    theory: Theory,
+    classical: Classical,
+    concatenation: Concatenation,
+    numbers: Arithmetic,
+    headFreeDefinition: Kernel.Thm,
+    anchoredDefinition: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val u = Term.variable("u", Words)
+    val v = Term.variable("v", Words)
+
+    for {
+      length <- concatenation.fact(Concatenation.Length).map(atNumbers)
+      nthLeft <- concatenation.fact(Concatenation.NthLeft).map(atNumbers)
+      nthRight <- concatenation.fact(Concatenation.NthRight).map(atNumbers)
+
+      concatConstant <- LogicError.lift(theory.constant(Concatenation.Name, ConcatType))
+      lengthConstant <- LogicError.lift(theory.constant(Word.Length, LengthType))
+      nthConstant <- LogicError.lift(theory.constant(Word.Nth, NthType))
+      strictOrder <- LogicError.lift(theory.constant(Peano.StrictOrder, OrderType))
+      plus <- LogicError.lift(theory.constant(Peano.Addition, BinaryNumbers))
+      minus <- LogicError.lift(theory.constant(Peano.Subtraction, BinaryNumbers))
+      zero <- LogicError.lift(theory.constant(Natural.NumberZero, Numbers))
+      marker <- LogicError.lift(theory.constant(Head, Numbers))
+
+      joined <- LogicError.lift(Term.appAll(concatConstant, List(u, v)))
+      nthOfJoined <- LogicError.lift(Term.app(nthConstant, joined))
+      sizeU <- LogicError.lift(Term.app(lengthConstant, u))
+      sizeV <- LogicError.lift(Term.app(lengthConstant, v))
+      total <- LogicError.lift(Term.appAll(plus, List(sizeU, sizeV)))
+      lengths <- rules.specAll(length, List(u, v))
+      widened <- Conv.sym(lengths)
+
+      positiveTerm <- LogicError.lift(Term.appAll(strictOrder, List(zero, sizeU)))
+      positive <- LogicError.lift(Kernel.assume(positiveTerm))
+
+      // `0 < |u| <= |u| + |v|`, which is the guard reaching the whole word's own first letter.
+      atMostTotal <- rules.specAll(numbers.atMostSum, List(sizeU, sizeV))
+      positiveSum <- rules
+        .conjIntro(positive, atMostTotal)
+        .flatMap(pair =>
+          rules.specAll(numbers.belowThenAtMost, List(zero, sizeU, total)).flatMap(rules.mp(_, pair))
+        )
+      positiveJoined <- carryRight(strictOrder, zero, widened, positiveSum)
+
+      openedJoined <- Conv.unfold(anchoredDefinition, List(joined))
+      openedU <- Conv.unfold(anchoredDefinition, List(u))
+      openedV <- Conv.unfold(headFreeDefinition, List(v))
+      claimJoined <- leftOf(openedJoined)
+      claimU <- leftOf(openedU)
+      claimV <- leftOf(openedV)
+      both <- logic.mkConj(claimU, claimV)
+
+      partsJoined <- rightOf(openedJoined).flatMap(threeParts(logic, _))
+      (_, atZeroJoinedTerm, everyJoinedTerm) = partsJoined
+      partsU <- rightOf(openedU).flatMap(threeParts(logic, _))
+      (_, _, everyUTerm) = partsU
+      everyVTerm <- rightOf(openedV)
+
+      atZero <- rules.specAll(nthLeft, List(u, v, zero)).flatMap(rules.mp(_, positive))
+
+      /* left to right: the whole word is anchored, so the first block is and the second is free */
+      assumedJoined <- LogicError.lift(Kernel.assume(claimJoined))
+      heldJoined <- LogicError.lift(Kernel.eqMp(openedJoined, assumedJoined))
+      restJoined <- rules.conjElim2(heldJoined)
+      atZeroJoined <- rules.conjElim1(restJoined)
+      everyJoined <- rules.conjElim2(restJoined)
+
+      atZeroU <- Conv.sym(atZero).flatMap(Conv.trans(_, atZeroJoined))
+
+      onU <- atEveryIndexOfBlock(logic, everyUTerm) { (i, above, below) =>
+        for {
+          atMostU <- rules.specAll(numbers.atMostSum, List(sizeU, sizeV))
+          pair <- rules.conjIntro(below, atMostU)
+          belowSum <- rules
+            .specAll(numbers.belowThenAtMost, List(i, sizeU, total))
+            .flatMap(rules.mp(_, pair))
+          inJoined <- carryRight(strictOrder, i, widened, belowSum)
+          guard <- rules.conjIntro(above, inJoined)
+          notMarker <- rules.spec(i, everyJoined).flatMap(rules.mp(_, guard))
+          entry <- rules.specAll(nthLeft, List(u, v, i)).flatMap(rules.mp(_, below))
+          result <- carryLeftNegated(logic, entry, marker, notMarker)
+        } yield result
+      }
+
+      onV <- underTheBound(logic, everyVTerm) { (j, below) =>
+        for {
+          shifted <- LogicError.lift(Term.appAll(plus, List(sizeU, j)))
+          atMostShifted <- rules.specAll(numbers.atMostSum, List(sizeU, j))
+          shiftedPositive <- rules
+            .conjIntro(positive, atMostShifted)
+            .flatMap(pair =>
+              rules
+                .specAll(numbers.belowThenAtMost, List(zero, sizeU, shifted))
+                .flatMap(rules.mp(_, pair))
+            )
+          belowSum <- rules
+            .specAll(numbers.addStrictlyMonotone, List(sizeU, j, sizeV))
+            .flatMap(rules.mp(_, below))
+          inJoined <- carryRight(strictOrder, shifted, widened, belowSum)
+          guard <- rules.conjIntro(shiftedPositive, inJoined)
+          notMarker <- rules.spec(shifted, everyJoined).flatMap(rules.mp(_, guard))
+          entry <- rules.specAll(nthRight, List(u, v, j)).flatMap(rules.mp(_, below))
+          result <- carryLeftNegated(logic, entry, marker, notMarker)
+        } yield result
+      }
+
+      anchoredU <- rules
+        .conjIntro(atZeroU, onU)
+        .flatMap(rules.conjIntro(positive, _))
+        .flatMap(held => Conv.sym(openedU).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, held))))
+      headFreeV <- Conv.sym(openedV).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, onV)))
+      forward <- rules.conjIntro(anchoredU, headFreeV)
+
+      /* right to left: an anchored block in front of a head-free one is an anchored word */
+      assumedBoth <- LogicError.lift(Kernel.assume(both))
+      fromU <- rules
+        .conjElim1(assumedBoth)
+        .flatMap(held => LogicError.lift(Kernel.eqMp(openedU, held)))
+      fromV <- rules
+        .conjElim2(assumedBoth)
+        .flatMap(held => LogicError.lift(Kernel.eqMp(openedV, held)))
+      restU <- rules.conjElim2(fromU)
+      atZeroFromU <- rules.conjElim1(restU)
+      everyFromU <- rules.conjElim2(restU)
+
+      atZeroWhole <- Conv.trans(atZero, atZeroFromU)
+      _ <-
+        if (atZeroWhole.conclusion == atZeroJoinedTerm) Right(())
+        else Left(NotOfForm("the marker at the first letter as it is written", atZeroWhole.conclusion))
+
+      onJoined <- atEveryIndexOfBlock(logic, everyJoinedTerm) { (i, above, below) =>
+        for {
+          inSum <- carryRight(strictOrder, i, lengths, below)
+          belowU <- LogicError.lift(Term.appAll(strictOrder, List(i, sizeU)))
+
+          insideU <- LogicError.lift(Kernel.assume(belowU))
+          entryLeft <- rules.specAll(nthLeft, List(u, v, i)).flatMap(rules.mp(_, insideU))
+          guard <- rules.conjIntro(above, insideU)
+          notU <- rules.spec(i, everyFromU).flatMap(rules.mp(_, guard))
+          firstCase <- Conv
+            .sym(entryLeft)
+            .flatMap(equation => carryLeftNegated(logic, equation, marker, notU))
+
+          notInsideU <- logic.mkNot(belowU)
+          assumedOutside <- LogicError.lift(Kernel.assume(notInsideU))
+          atLeast <- rules
+            .specAll(numbers.atMostFromNotBelow, List(i, sizeU))
+            .flatMap(rules.mp(_, assumedOutside))
+          difference <- LogicError.lift(Term.appAll(minus, List(i, sizeU)))
+          restored <- rules
+            .specAll(numbers.minusThenPlus, List(i, sizeU))
+            .flatMap(rules.mp(_, atLeast))
+          commuted <- rules.specAll(numbers.addCommutative, List(difference, sizeU))
+          placed <- Conv.sym(commuted).flatMap(Conv.trans(_, restored))
+          sumBelow <- carryLeft(strictOrder, placed, total, inSum)
+          inV <- rules
+            .specAll(numbers.addCancelsStrictOrder, List(sizeU, difference, sizeV))
+            .flatMap(rules.mp(_, sumBelow))
+          entryRight <- rules
+            .specAll(nthRight, List(u, v, difference))
+            .flatMap(rules.mp(_, inV))
+          atIndex <- Conv
+            .apTerm(nthOfJoined, placed)
+            .flatMap(Conv.sym)
+            .flatMap(Conv.trans(_, entryRight))
+          notV <- rules.spec(difference, fromV).flatMap(rules.mp(_, inV))
+          secondCase <- Conv
+            .sym(atIndex)
+            .flatMap(equation => carryLeftNegated(logic, equation, marker, notV))
+
+          cases <- classical.excludedMiddleAt(belowU)
+          settled <- rules.disjElim(cases, firstCase, secondCase)
+        } yield settled
+      }
+
+      backward <- rules
+        .conjIntro(atZeroWhole, onJoined)
+        .flatMap(rules.conjIntro(positiveJoined, _))
+        .flatMap(held =>
+          Conv.sym(openedJoined).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, held)))
+        )
+
+      equated = Kernel.deductAntisym(backward, forward)
+      discharged <- rules.disch(positiveTerm, equated)
+      result <- rules.genAll(discharged, List(u, v))
+    } yield result
+  }
+
+  /**
+   * `|- !i. 0 < i /\ i < b ==> c`, proved by assuming both halves and handing them over.
+   *
+   * [[underTheBound]] where the guard is the conjunction `S2_ANCHORED`'s inner claim carries. The
+   * two halves go to the caller separately because they answer different questions: the bound is
+   * what places the index inside a block, and `0 < i` is what says the position is not the one the
+   * marker is required at.
+   */
+  private def atEveryIndexOfBlock(
+    logic: Logic,
+    statement: Term
+  )(
+    step: (FVar, Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    underTheBound(logic, statement) { (index, guard) =>
+      for {
+        above <- rules.conjElim1(guard)
+        below <- rules.conjElim2(guard)
+        result <- step(index, above, below)
+      } yield result
+    }
+  }
+
   /** The words, the readers and the sizes one proof about a split needs, gathered. */
   private final case class Split(
     u: Term,
@@ -1384,6 +1743,105 @@ object Collatz {
 
   /* ------------------------------------------------------------------ concrete words */
 
+  /** `|- S2_ANCHORED <word>`, for a word whose first letter is the head marker and whose others are not. */
+  private def anchoredWord(
+    tools: Concrete,
+    letters: Vector[String]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      subject <- tools.word(letters)
+      definition <- tools.anchoredDefinition
+      opened <- Conv.unfold(definition, List(subject))
+      statement <- rightOf(opened)
+      parts <- threeParts(tools.logic, statement)
+      (positiveTerm, atMarkerTerm, everyTerm) = parts
+
+      size <- lengthIsNumeral(tools, letters)
+      order <- tools.strictOrder
+      zero <- tools.zero
+      predecessor <- tools.numeral(letters.size - 1)
+
+      positive <- rules
+        .spec(predecessor, tools.numbers.successorPositive)
+        .flatMap(fact => Conv.sym(size).flatMap(carryRight(order, zero, _, fact)))
+      _ <-
+        if (positive.conclusion == positiveTerm) Right(())
+        else Left(NotOfForm("the positive length as it is written", positive.conclusion))
+
+      atMarker <- letterAt(tools, letters, 0)
+      _ <-
+        if (atMarker.conclusion == atMarkerTerm) Right(())
+        else Left(NotOfForm("the marker at the first letter as it is written", atMarker.conclusion))
+
+      // The enumeration runs over every position of the word, position zero included, and that one
+      // is closed by the guard rather than by a letter: `0 < 0` is false, so what the marker is
+      // there never comes up. The other positions are the ordinary refusal.
+      every <- atEveryIndexGuarded(tools, everyTerm, size, letters.size) { (above, index, equal) =>
+        for {
+          position <- positionOf(tools, equal, letters.size)
+          held <- above.toRight(NotOfForm("a guard above position zero", everyTerm))
+          result <-
+            if (position == 0)
+              for {
+                consequent <- consequentOf(tools.logic, everyTerm, index)
+                atZero <- carryRight(order, zero, equal, held)
+                none <- rules.spec(zero, tools.numbers.notBelowZero)
+                absurd <- rules.notElim(none, atZero)
+                anything <- rules.falsityElim(consequent, absurd)
+              } yield anything
+            else noMarkerAt(tools, letters, position, index, equal, Head)
+        } yield result
+      }
+
+      held <- rules.conjIntro(atMarker, every).flatMap(rules.conjIntro(positive, _))
+      result <- Conv
+        .sym(opened)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, held)))
+    } yield result
+  }
+
+  /** `|- ~(S2_ANCHORED <word>)`, for a word whose first letter is not the head marker. */
+  private def notAnchoredWord(
+    tools: Concrete,
+    letters: Vector[String]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      subject <- tools.word(letters)
+      definition <- tools.anchoredDefinition
+      opened <- Conv.unfold(definition, List(subject))
+      claim <- leftOf(opened)
+      assumed <- LogicError.lift(Kernel.assume(claim))
+      held <- LogicError.lift(Kernel.eqMp(opened, assumed))
+      rest <- rules.conjElim2(held)
+      atMarker <- rules.conjElim1(rest)
+
+      entry <- letterAt(tools, letters, 0)
+      value <- Conv.sym(entry).flatMap(Conv.trans(_, atMarker))
+      apart <- notTheMarker(tools, letters.head, Head)
+      absurd <- rules.notElim(apart, value)
+      result <- rules.notIntro(claim, absurd)
+    } yield result
+  }
+
+  /** The consequent of `!i. guard ==> c` at a given index, which is what a vacuous case proves. */
+  private def consequentOf(
+    logic: Logic,
+    statement: Term,
+    index: FVar
+  ): Either[LogicError, Term] =
+    for {
+      predicate <- logic
+        .destForallPredicate(statement)
+        .toRight(NotOfForm("a claim about every index", statement))
+      applied <- LogicError.lift(Term.app(predicate, index))
+      body <- Conv.betaRoot(applied).flatMap(rightOf)
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication under the quantifier", body))
+    } yield parts._2
+
   /**
    * Everything a proof about ONE written-out word reaches for, gathered once for eleven rules.
    *
@@ -1410,10 +1868,27 @@ object Collatz {
     singletonLength: Kernel.Thm,
     singletonNth: Kernel.Thm,
     tailFreeDefinition: Kernel.Thm,
-    markedDefinition: Kernel.Thm
+    headFreeDefinition: Kernel.Thm,
+    markedDefinition: Kernel.Thm,
+    anchoredDefinitionOf: Kernel.Thm
   ) {
 
     val rules: Rules = logic.rules
+
+    /**
+     * "No letter of this word is that marker", by the marker's own name.
+     *
+     * The two classes are one construction read at two letters, so what a proof about either needs
+     * is the marker and its definition together. A proof that took only the marker would open the
+     * wrong definition and fail at the first conversion, which is a refusal a reader has to trace
+     * back; this is the pair, and the refusal names the marker instead.
+     */
+    def freeDefinition(marker: String): Either[LogicError, Kernel.Thm] =
+      marker match {
+        case Tail => Right(tailFreeDefinition)
+        case Head => Right(headFreeDefinition)
+        case other => Left(MissingDefinition(other))
+      }
 
     def constant(name: String, ty: Type): Either[LogicError, Term] =
       LogicError.lift(theory.constant(name, ty))
@@ -1430,6 +1905,9 @@ object Collatz {
     lazy val lengthOf: Either[LogicError, Term] = constant(Word.Length, LengthType)
 
     lazy val marker: Either[LogicError, Term] = constant(Tail, Numbers)
+
+    /** The anchored class's own definition, as the two concrete-word proofs reach for it. */
+    lazy val anchoredDefinition: Either[LogicError, Kernel.Thm] = Right(anchoredDefinitionOf)
 
     /** `SUC` applied `count` times to `ZERO`, spelled the way every bound below is. */
     def numeral(count: Int): Either[LogicError, Term] =
@@ -1640,12 +2118,13 @@ object Collatz {
         result <- carryRightNegated(tools.logic, secondValue, firstTerm, atFirst)
       } yield result
 
-  /** `|- ~(<letter> = S2_TAIL)`, which is [[lettersDiffer]] at the one letter that is the marker. */
+  /** `|- ~(<letter> = <marker>)`, which is [[lettersDiffer]] at whichever letter is the marker. */
   private def notTheMarker(
     tools: Concrete,
-    letter: String
+    letter: String,
+    marker: String
   ): Either[LogicError, Kernel.Thm] =
-    lettersDiffer(tools, letter, Tail)
+    lettersDiffer(tools, letter, marker)
 
   /**
    * `|- !i. i < b ==> c`, where `b` is a numeral, by splitting the bound one successor at a time.
@@ -1664,11 +2143,40 @@ object Collatz {
     size: Int
   )(
     at: (FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] =
+    atEveryIndexGuarded(tools, statement, boundIsNumeral, size)((_, index, equal) => at(index, equal))
+
+  /**
+   * The same, where the guard under the quantifier is a conjunction and not the bound alone.
+   *
+   * `S2_ANCHORED` is why this exists: its inner claim is about the positions **above** the first,
+   * so what stands under the quantifier is `0 < i /\ i < WORD_LENGTH w`, and the enumeration needs
+   * the second half while the case at position zero needs the first. Deciding from the shape of the
+   * guard rather than from a flag keeps one walk for both: a caller whose guard is the bound alone
+   * is handed `None` and cannot tell this function from the one above it.
+   */
+  private def atEveryIndexGuarded(
+    tools: Concrete,
+    statement: Term,
+    boundIsNumeral: Kernel.Thm,
+    size: Int
+  )(
+    at: (Option[Kernel.Thm], FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
   ): Either[LogicError, Kernel.Thm] = {
     val rules = tools.rules
 
-    underTheBound(tools.logic, statement) { (index, below) =>
+    underTheBound(tools.logic, statement) { (index, guard) =>
+      val conjuncts = tools.logic.destConj(guard.conclusion)
+
       for {
+        extra <- conjuncts match {
+          case Some(_) => rules.conjElim1(guard).map(Some(_))
+          case None => Right(None)
+        }
+        below <- conjuncts match {
+          case Some(_) => rules.conjElim2(guard)
+          case None => Right(guard)
+        }
         order <- tools.strictOrder
         carried <- carryRight(order, index, boundIsNumeral, below)
         consequent <- {
@@ -1709,7 +2217,7 @@ object Collatz {
                 assumedLower <- LogicError.lift(Kernel.assume(lower))
                 leftCase <- walk(remaining - 1, assumedLower)
                 assumedHere <- LogicError.lift(Kernel.assume(here))
-                rightCase <- at(index, assumedHere)
+                rightCase <- at(extra, index, assumedHere)
                 settled <- rules.disjElim(split, leftCase, rightCase)
               } yield settled
 
@@ -1719,18 +2227,19 @@ object Collatz {
     }
   }
 
-  /** `|- ~(WORD_NTH <word> i = S2_TAIL)` from `|- i = SUC^j ZERO` and the letter at `j`. */
+  /** `|- ~(WORD_NTH <word> i = <marker>)` from `|- i = SUC^j ZERO` and the letter at `j`. */
   private def noMarkerAt(
     tools: Concrete,
     letters: Vector[String],
     position: Int,
     index: FVar,
-    equal: Kernel.Thm
+    equal: Kernel.Thm,
+    markerName: String
   ): Either[LogicError, Kernel.Thm] =
     for {
       entry <- letterAt(tools, letters, position)
-      apart <- notTheMarker(tools, letters(position))
-      marker <- tools.marker
+      apart <- notTheMarker(tools, letters(position), markerName)
+      marker <- tools.constant(markerName, Numbers)
       atNumeral <- Conv
         .sym(entry)
         .flatMap(equation => carryLeftNegated(tools.logic, equation, marker, apart))
@@ -1741,20 +2250,22 @@ object Collatz {
       result <- carryLeftNegated(tools.logic, moved, marker, atNumeral)
     } yield result
 
-  /** `|- S2_TAILFREE <word>`, for a word no letter of which is the marker. */
-  private def tailFreeWord(
+  /** `|- S2_TAILFREE <word>` or `|- S2_HEADFREE <word>`, for a word no letter of which is that marker. */
+  private def freeWord(
     tools: Concrete,
-    letters: Vector[String]
+    letters: Vector[String],
+    markerName: String
   ): Either[LogicError, Kernel.Thm] =
     for {
       subject <- tools.word(letters)
-      opened <- Conv.unfold(tools.tailFreeDefinition, List(subject))
+      definition <- tools.freeDefinition(markerName)
+      opened <- Conv.unfold(definition, List(subject))
       statement <- rightOf(opened)
       size <- lengthIsNumeral(tools, letters)
       every <- atEveryIndex(tools, statement, size, letters.size) { (index, equal) =>
         for {
           position <- positionOf(tools, equal, letters.size)
-          result <- noMarkerAt(tools, letters, position, index, equal)
+          result <- noMarkerAt(tools, letters, position, index, equal, markerName)
         } yield result
       }
       result <- Conv
@@ -1780,17 +2291,19 @@ object Collatz {
         else Left(NotOfForm(s"a position below $size", sides._2))
     } yield count
 
-  /** `|- ~(S2_TAILFREE <word>)`, for a word whose letter at `position` is the marker. */
-  private def notTailFreeWord(
+  /** `|- ~(S2_TAILFREE <word>)` or its head-marker twin, for a word whose letter at `position` is it. */
+  private def notFreeWord(
     tools: Concrete,
     letters: Vector[String],
-    position: Int
+    position: Int,
+    markerName: String
   ): Either[LogicError, Kernel.Thm] = {
     val rules = tools.rules
 
     for {
       subject <- tools.word(letters)
-      opened <- Conv.unfold(tools.tailFreeDefinition, List(subject))
+      definition <- tools.freeDefinition(markerName)
+      opened <- Conv.unfold(definition, List(subject))
       claim <- leftOf(opened)
       assumed <- LogicError.lift(Kernel.assume(claim))
       every <- LogicError.lift(Kernel.eqMp(opened, assumed))
@@ -1845,7 +2358,7 @@ object Collatz {
       every <- atEveryIndex(tools, everyTerm, last, letters.size - 1) { (index, equal) =>
         for {
           position <- positionOf(tools, equal, letters.size - 1)
-          result <- noMarkerAt(tools, letters, position, index, equal)
+          result <- noMarkerAt(tools, letters, position, index, equal, Tail)
         } yield result
       }
 
@@ -1881,7 +2394,7 @@ object Collatz {
         .flatMap(Conv.trans(_, atMarker))
       entry <- letterAt(tools, letters, letters.size - 1)
       value <- Conv.sym(entry).flatMap(Conv.trans(_, atNumeral))
-      apart <- notTheMarker(tools, letters.last)
+      apart <- notTheMarker(tools, letters.last, Tail)
       absurd <- rules.notElim(apart, value)
       result <- rules.notIntro(claim, absurd)
     } yield result
@@ -1938,7 +2451,9 @@ object Collatz {
       letters <- unfoldingRules(logic, letterDefinitions)
 
       tailFreeDefinition <- definitions.get(TailFree).toRight(MissingDefinition(TailFree))
+      headFreeDefinition <- definitions.get(HeadFree).toRight(MissingDefinition(HeadFree))
       markedDefinition <- definitions.get(Marked).toRight(MissingDefinition(Marked))
+      anchoredDefinition <- definitions.get(Anchored).toRight(MissingDefinition(Anchored))
     } yield Concrete(
       logic,
       theory,
@@ -1954,7 +2469,9 @@ object Collatz {
       singletonLength,
       singletonNth,
       tailFreeDefinition,
-      markedDefinition
+      headFreeDefinition,
+      markedDefinition,
+      anchoredDefinition
     )
 
   /* ------------------------------------------------------------------ the eleven rules */
@@ -2141,26 +2658,68 @@ object Collatz {
     }
   }
 
-  /** [[TailFreeStep]]: the nine rules that do not touch the marker keep a word free of it. */
-  private def tailFreeRules(
+  /**
+   * [[AnchoredStep]]: the three rules that fire at the head take an anchored word to an anchored one.
+   *
+   * [[markedRules]] at the other end of the word. The eight others are vacuous and the eight
+   * derivations that say so are the cost: each refutes `S2_ANCHORED` of a written-out word by
+   * reading its first letter, which is not the head marker.
+   */
+  private def anchoredRules(
     tools: Concrete,
     definitions: Map[String, Kernel.Thm]
   ): Either[LogicError, Kernel.Thm] = {
     val logic = tools.logic
 
-    overEveryRule(logic, tools.theory, tools.notation, definitions, TailFreeStep) {
+    overEveryRule(logic, tools.theory, tools.notation, definitions, AnchoredStep) {
       (entry, leftEquation, rightEquation, side, conclusion) =>
         for {
-          tailFree <- tools.constant(TailFree, Type.fun(Words, Type.Bool))
+          anchored <- tools.constant(Anchored, Type.fun(Words, Type.Bool))
           held <- side.toRight(NotOfForm("a premise about the left-hand side", conclusion))
           result <-
-            if (entry.group == Group.Consumes)
-              notTailFreeWord(tools, entry.left, entry.left.indexOf(Tail)).flatMap(
-                refuteAtTheClause(logic, tailFree, leftEquation, held, _, conclusion)
+            if (entry.left.headOption.contains(Head))
+              anchoredWord(tools, entry.right)
+                .flatMap(acrossTheClause(anchored, rightEquation, _))
+            else
+              notAnchoredWord(tools, entry.left).flatMap(
+                refuteAtTheClause(logic, anchored, leftEquation, held, _, conclusion)
+              )
+        } yield result
+    }
+  }
+
+  /**
+   * [[TailFreeStep]] and [[HeadFreeStep]]: the rules that do not name a marker keep a word free of it.
+   *
+   * One derivation for both, and which rules are vacuous is read off the table rather than off the
+   * group: a rule is the interesting case exactly when its left-hand side spells the marker, which
+   * is `R1` and `R2` for the tail and the three `B` rules for the head. Reading it from the letters
+   * is what makes this one function: the groups answer a different question, which is what the
+   * source calls the rules, and a group that gained a member would silently change which clause
+   * this proof takes.
+   */
+  private def freeRules(
+    tools: Concrete,
+    definitions: Map[String, Kernel.Thm],
+    markerName: String,
+    className: String,
+    statementName: String
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+
+    overEveryRule(logic, tools.theory, tools.notation, definitions, statementName) {
+      (entry, leftEquation, rightEquation, side, conclusion) =>
+        for {
+          free <- tools.constant(className, Type.fun(Words, Type.Bool))
+          held <- side.toRight(NotOfForm("a premise about the left-hand side", conclusion))
+          result <-
+            if (entry.left.contains(markerName))
+              notFreeWord(tools, entry.left, entry.left.indexOf(markerName), markerName).flatMap(
+                refuteAtTheClause(logic, free, leftEquation, held, _, conclusion)
               )
             else
-              tailFreeWord(tools, entry.right)
-                .flatMap(acrossTheClause(tailFree, rightEquation, _))
+              freeWord(tools, entry.right, markerName)
+                .flatMap(acrossTheClause(free, rightEquation, _))
         } yield result
     }
   }
@@ -3072,6 +3631,270 @@ object Collatz {
         if (generalised.conclusion == target) Right(())
         else Left(NotOfForm(s"$MarkedClosed as it is written", generalised.conclusion))
     } yield generalised
+  }
+
+  /**
+   * [[AnchoredClosed]]: a step out of an anchored word lands in one.
+   *
+   * [[closedUnderSteps]] in a mirror, and the mirror is not quite an image: the marker is at the
+   * front, so the division is on the **prefix** the rule fired after, and the block that has to be
+   * non-empty for the split to hold is the one on the left of it.
+   *
+   * Either the prefix is empty, and then the marker is inside the rule's own left-hand side and
+   * [[AnchoredStep]] carries it; or it is not, and then the marker is in the prefix, the rule saw
+   * head-free letters only, and [[HeadFreeStep]] carries those. `NUM_CASES` on the prefix's length
+   * is the split and `Concatenation.LengthZero` turns the zero case back into the empty word.
+   *
+   * One thing here has no counterpart in the marked proof. `S2_ANCHORED_CONCAT` asks that its first
+   * block be non-empty, and in the second branch that block is `WORD_CONCAT x l` rather than a
+   * witness the step handed over, so its length is a sum and the positivity has to be derived:
+   * `0 < |x| <= |x| + |l|` against `Concatenation.Length`, which is [[positiveBlock]].
+   */
+  private def anchoredUnderSteps(
+    tools: Concrete,
+    forward: Forward,
+    concatenation: Concatenation,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+    val subject = Term.variable("u", Words)
+    val result = Term.variable("v", Words)
+
+    for {
+      target <- statement(tools.theory, tools.notation, AnchoredClosed)
+      stripped <- Logic.stripForall(target)
+      (variables, _) = stripped
+      _ <-
+        if (variables.size == 2) Right(())
+        else Left(NotOfForm("a claim about two words", target))
+      body <- openAt(logic, target, List(subject, result))
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premiseTerm, conclusionTerm) = parts
+      premise <- LogicError.lift(Kernel.assume(premiseTerm))
+      anchoredSubject <- rules.conjElim1(premise)
+      stepped <- rules.conjElim2(premise)
+
+      anchored <- tools.constant(Anchored, Type.fun(Words, Type.Bool))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      lengthOf <- tools.lengthOf
+      order <- tools.strictOrder
+      zero <- tools.zero
+      system <- tools.constant(Name, Type.fun(Words, Type.fun(Words, Type.Bool)))
+
+      emptyLeft <- concatenation.fact(Concatenation.EmptyLeft).map(atNumbers)
+      concatLength <- concatenation.fact(Concatenation.Length).map(atNumbers)
+      lengthZero <- concatenation.fact(Concatenation.LengthZero).map(atNumbers)
+      anchoredConcat <- facts.get(AnchoredConcat).toRight(MissingDefinition(AnchoredConcat))
+      headFreeConcat <- facts.get(HeadFreeConcat).toRight(MissingDefinition(HeadFreeConcat))
+      ruleNotEmpty <- facts.get(RuleNotEmpty).toRight(MissingDefinition(RuleNotEmpty))
+      anchoredStep <- facts.get(AnchoredStep).toRight(MissingDefinition(AnchoredStep))
+      headFreeStep <- facts.get(HeadFreeStep).toRight(MissingDefinition(HeadFreeStep))
+
+      stepDefinition <- forward.definition(Forward.Step).map(atNumbers)
+      opened <- Conv.unfold(stepDefinition, List(system, subject, result))
+      existential <- LogicError.lift(Kernel.eqMp(opened, stepped))
+
+      settled <- openWitnesses(
+        logic,
+        existential,
+        4,
+        Term.freeVariables(conclusionTerm) ++ Term.freeVariables(premiseTerm)
+      ) { (witnesses, held) =>
+        witnesses match {
+          case List(front, left, right, tail) =>
+            for {
+              ruleHolds <- rules.conjElim1(held)
+              rest <- rules.conjElim2(held)
+              subjectEquation <- rules.conjElim1(rest)
+              resultEquation <- rules.conjElim2(rest)
+
+              sizes <- rules.specAll(ruleNotEmpty, List(left, right)).flatMap(rules.mp(_, ruleHolds))
+              leftPositive <- rules.conjElim1(sizes)
+              rightPositive <- rules.conjElim2(sizes)
+
+              blockLeft <- LogicError.lift(Term.appAll(concat, List(front, left)))
+              blockRight <- LogicError.lift(Term.appAll(concat, List(front, right)))
+              frontLength <- LogicError.lift(Term.app(lengthOf, front))
+
+              cases <- rules.spec(frontLength, tools.numbers.zeroOrSuccessor)
+              disjuncts <- logic
+                .destDisj(cases.conclusion)
+                .toRight(NotOfForm("a disjunction", cases.conclusion))
+              (isZero, isSuccessor) = disjuncts
+
+              atTheFront <- {
+                for {
+                  assumedZero <- LogicError.lift(Kernel.assume(isZero))
+                  frontEmpty <- rules.spec(front, lengthZero).flatMap(rules.mp(_, assumedZero))
+                  onLeft <- collapsedFront(logic, concat, front, left, tail, frontEmpty, emptyLeft)
+                  onRight <- collapsedFront(logic, concat, front, right, tail, frontEmpty, emptyLeft)
+
+                  atBlock <- Conv
+                    .trans(subjectEquation, onLeft)
+                    .flatMap(Conv.apTerm(anchored, _))
+                    .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, anchoredSubject)))
+                  split <- rules
+                    .specAll(anchoredConcat, List(left, tail))
+                    .flatMap(rules.mp(_, leftPositive))
+                  both <- LogicError.lift(Kernel.eqMp(split, atBlock))
+                  anchoredLeft <- rules.conjElim1(both)
+                  headFreeTail <- rules.conjElim2(both)
+                  anchoredRight <- rules
+                    .conjIntro(ruleHolds, anchoredLeft)
+                    .flatMap(pair =>
+                      rules.specAll(anchoredStep, List(left, right)).flatMap(rules.mp(_, pair))
+                    )
+                  splitRight <- rules
+                    .specAll(anchoredConcat, List(right, tail))
+                    .flatMap(rules.mp(_, rightPositive))
+                  anchoredBlock <- rules
+                    .conjIntro(anchoredRight, headFreeTail)
+                    .flatMap(pair =>
+                      Conv.sym(splitRight).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, pair)))
+                    )
+                  answer <- Conv
+                    .trans(resultEquation, onRight)
+                    .flatMap(Conv.sym)
+                    .flatMap(Conv.apTerm(anchored, _))
+                    .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, anchoredBlock)))
+                } yield answer
+              }
+
+              inside <- {
+                val predecessor = Conv.freshVariable(
+                  "k",
+                  Numbers,
+                  Term.freeVariables(conclusionTerm) ++ Term.freeVariables(isSuccessor)
+                )
+
+                for {
+                  assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+                  predicate <- logic
+                    .destExistsPredicate(isSuccessor)
+                    .toRight(NotOfForm("an existential", isSuccessor))
+                  applied <- LogicError.lift(Term.app(predicate, predecessor))
+                  instance <- Conv.betaRoot(applied).flatMap(rightOf)
+                  size <- LogicError.lift(Kernel.assume(instance))
+
+                  frontPositive <- rules
+                    .spec(predecessor, tools.numbers.successorPositive)
+                    .flatMap(fact => Conv.sym(size).flatMap(carryRight(order, zero, _, fact)))
+                  blockLeftPositive <- positiveBlock(
+                    tools, concatLength, order, zero, front, left, frontPositive)
+                  blockRightPositive <- positiveBlock(
+                    tools, concatLength, order, zero, front, right, frontPositive)
+
+                  atBlock <- Conv
+                    .apTerm(anchored, subjectEquation)
+                    .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, anchoredSubject)))
+                  split <- rules
+                    .specAll(anchoredConcat, List(blockLeft, tail))
+                    .flatMap(rules.mp(_, blockLeftPositive))
+                  both <- LogicError.lift(Kernel.eqMp(split, atBlock))
+                  anchoredBlock <- rules.conjElim1(both)
+                  headFreeTail <- rules.conjElim2(both)
+
+                  splitBlock <- rules
+                    .specAll(anchoredConcat, List(front, left))
+                    .flatMap(rules.mp(_, frontPositive))
+                  pieces <- LogicError.lift(Kernel.eqMp(splitBlock, anchoredBlock))
+                  anchoredFront <- rules.conjElim1(pieces)
+                  headFreeLeft <- rules.conjElim2(pieces)
+                  headFreeRight <- rules
+                    .conjIntro(ruleHolds, headFreeLeft)
+                    .flatMap(pair =>
+                      rules.specAll(headFreeStep, List(left, right)).flatMap(rules.mp(_, pair))
+                    )
+                  splitRight <- rules
+                    .specAll(anchoredConcat, List(front, right))
+                    .flatMap(rules.mp(_, frontPositive))
+                  anchoredBlockRight <- rules
+                    .conjIntro(anchoredFront, headFreeRight)
+                    .flatMap(pair =>
+                      Conv.sym(splitRight).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, pair)))
+                    )
+                  splitWhole <- rules
+                    .specAll(anchoredConcat, List(blockRight, tail))
+                    .flatMap(rules.mp(_, blockRightPositive))
+                  anchoredWhole <- rules
+                    .conjIntro(anchoredBlockRight, headFreeTail)
+                    .flatMap(pair =>
+                      Conv.sym(splitWhole).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, pair)))
+                    )
+                  answer <- Conv
+                    .sym(resultEquation)
+                    .flatMap(Conv.apTerm(anchored, _))
+                    .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, anchoredWhole)))
+                  closed <- rules.existsElim(assumedSuccessor, predecessor, answer)
+                } yield closed
+              }
+
+              answer <- rules.disjElim(cases, atTheFront, inside)
+            } yield answer
+
+          case other => Left(NotOfForm("four witnesses", Term.variable(other.size.toString, Words)))
+        }
+      }
+
+      discharged <- rules.disch(premiseTerm, settled)
+      generalised <- rules.genAll(discharged, List(subject, result))
+      _ <-
+        if (generalised.conclusion == target) Right(())
+        else Left(NotOfForm(s"$AnchoredClosed as it is written", generalised.conclusion))
+    } yield generalised
+  }
+
+  /**
+   * `|- WORD_CONCAT (WORD_CONCAT front block) tail = WORD_CONCAT block tail`, the front being empty.
+   *
+   * [[collapsedTail]] at the other end, and it takes one step more: the empty word disappears on
+   * the left of a concatenation that is itself the left argument of another, so the equation has to
+   * be carried under the outer application as well as proved under the inner one.
+   */
+  private def collapsedFront(
+    logic: Logic,
+    concat: Term,
+    front: Term,
+    block: Term,
+    tail: Term,
+    frontEmpty: Kernel.Thm,
+    emptyLeft: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      moved <- Conv.apTerm(concat, frontEmpty).flatMap(Conv.apThm(_, block))
+      collapsed <- logic.rules.spec(block, emptyLeft)
+      inner <- Conv.trans(moved, collapsed)
+      result <- Conv.apTerm(concat, inner).flatMap(Conv.apThm(_, tail))
+    } yield result
+
+  /** `|- 0 < WORD_LENGTH (WORD_CONCAT front block)` from `|- 0 < WORD_LENGTH front`. */
+  private def positiveBlock(
+    tools: Concrete,
+    concatLength: Kernel.Thm,
+    order: Term,
+    zero: Term,
+    front: Term,
+    block: Term,
+    frontPositive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      lengths <- rules.specAll(concatLength, List(front, block))
+      sides <- Term.destEq(lengths.conclusion).toRight(NotOfForm("an equation", lengths.conclusion))
+      (_, sum) = sides
+      lengthConstant <- tools.lengthOf
+      sizeFront <- LogicError.lift(Term.app(lengthConstant, front))
+      sizeBlock <- LogicError.lift(Term.app(lengthConstant, block))
+      atMost <- rules.specAll(tools.numbers.atMostSum, List(sizeFront, sizeBlock))
+      pair <- rules.conjIntro(frontPositive, atMost)
+      positiveSum <- rules
+        .specAll(tools.numbers.belowThenAtMost, List(zero, sizeFront, sum))
+        .flatMap(rules.mp(_, pair))
+      result <- Conv.sym(lengths).flatMap(carryRight(order, zero, _, positiveSum))
+    } yield result
   }
 
   /** `|- WORD_CONCAT block tail = block`, the tail having been shown to be the empty word. */
