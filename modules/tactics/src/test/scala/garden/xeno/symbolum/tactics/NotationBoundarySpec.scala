@@ -361,15 +361,16 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
     ("Language.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted"),
+    // The sentence this replaced was a literal interpolating `scheme.binders.size`, and it had a
+    // row in `Classified` until `Prose.count` arrived in it on 2026-09-18: the call does not fit
+    // the line, so the description is a name now and the scan sees an identifier. That is the
+    // class this table exists for, and what is named here is what the name holds.
+    ("Language.scala", "wanted") ->
+      (Verdict.Text, "a sentence built here from a literal and a count of the scheme's binders"),
     ("Quotient.scala", "what") ->
       (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
-      (Verdict.Text, "a constant sentence written with an interpolator it does not use"),
-    // Where `scheme.binders.size` used to be interpolated directly. `06fbd17` moved it into a
-    // local built one line above with `Prose.count`, so the expression the scan sees is the
-    // val's name and the row above it went stale in the same change.
-    ("Language.scala", "wanted") ->
-      (Verdict.Text, "a sentence built one line above, counting the scheme's binders")
+      (Verdict.Text, "a constant sentence written with an interpolator it does not use")
   )
 
   /* ------------------------------------------------------------------- the scanner */
