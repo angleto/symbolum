@@ -2,6 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import garden.xeno.symbolum.kernel.Derivation
 import garden.xeno.symbolum.logic.LogicError
 
 /**
@@ -84,14 +85,34 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
     refusalFor("!x:real. 0 < x ==> 0 < inv x") should not include "is a product of"
   }
 
-  "A propositional goal with a negation in it" should "be told it is out of the fragment, not that it is hard" in {
+  "A classically valid propositional goal" should "be told what stopped it, not that it is hard" in {
     // Out, not hard, and the two send an author to different places. `p \/ ~p` is a theorem here,
-    // by way of the choice operator, and nothing on the automated surface reaches it: the fragment
-    // that costs no axiom is the one with no negation in it, and the message has to say which of
-    // those two facts stopped it or the author reformulates for ever.
+    // by way of the choice operator, and this prover does not reach it: it was built over
+    // `Order.standard`, which has never heard of the classical axioms, so the widest propositional
+    // procedure it holds is the intuitionistic one and that one refuses the excluded middle.
+    //
+    // **The message this asserted until 2026-09-18 was "negation", and it stopped being true that
+    // day rather than going stale.** While the free procedure was `Minimal` the boundary really was
+    // the negation, so naming it was the actionable fact; since the routing moved, `~(p /\ ~p)` is
+    // proved here with two negations in it and `p \/ ~p` is refused, so a message about the
+    // negation would send an author to remove the one thing that is not the obstacle. What is the
+    // obstacle is the caller's configuration, which is why the sentence names it.
     val message = refusalFor("!p:bool. p \\/ ~p")
 
-    message should include("negation")
+    message should include("classically valid")
+    message should include("this prover has no classical axioms")
+    message should not include "negation"
+  }
+
+  "A propositional goal with a negation that is intuitionistically provable" should "be proved, at no axiom" in {
+    // The other side of the line above and the reason it moved. This is the shape a criterion about
+    // the world is made of, and the prover with no classical extension reaches it: the theorem is
+    // the same one `Propositional` would produce and it rests on nothing, where that one rests on
+    // the choice operator.
+    val theorem = prove("!p:bool. ~(p /\\ ~p)").fold(error => fail(error.message), identity)
+
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) shouldBe empty
   }
 
   "A propositional goal inside the fragment" should "be proved rather than refused" in {

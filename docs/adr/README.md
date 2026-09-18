@@ -45,3 +45,4 @@ the rejected option attractive, and they will.
 | [0020](0020-an-inductive-set-is-the-intersection-and-is-polymorphic.md) | An inductively defined set is the intersection of the closed sets, and it is polymorphic | accepted |
 | [0021](0021-the-derived-connectives-are-constants-that-build-codes.md) | The derived connectives are constants that build codes | accepted, spends 0014 |
 | [0022](0022-the-intuitionistic-fragment-gets-its-own-decision.md) | The intuitionistic propositional fragment gets its own decision procedure | accepted, spends 0009 |
+| [0023](0023-the-propositional-address-is-served-by-the-calculus.md) | The propositional address is served by the calculus, and the gate is the address | accepted, extends 0022 |

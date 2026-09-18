@@ -201,10 +201,10 @@ final class Prove private (
   /**
    * The searches this prover reaches, which is not the same as the searches that exist.
    *
-   * Only `Minimal` is certain. `Propositional` needs the classical extension and `Chaining` needs
-   * a library, and a prover built over somebody's own order has neither, so this answers `Minimal`
-   * alone there and the whole set over a chain. That is the same real configuration [[library]] and
-   * [[classical]] describe rather than a degraded prover.
+   * Only `Intuitionistic` is certain. `Propositional` needs the classical extension and `Chaining`
+   * needs a library, and a prover built over somebody's own order has neither, so this answers
+   * `Intuitionistic` alone there and the whole set over a chain. That is the same real
+   * configuration [[library]] and [[classical]] describe rather than a degraded prover.
    *
    * **No count of them appears in this comment**, deliberately, and it is the defect this method
    * exists to remove written one floor down: a docstring that said "two of the three" would be a
@@ -228,7 +228,7 @@ final class Prove private (
    */
   def searches: Vector[Prove.Search] =
     Prove.Search.values.toVector.filter {
-      case Prove.Search.Minimal => true
+      case Prove.Search.Intuitionistic => true
       case Prove.Search.Propositional => propositional.isDefined
       case Prove.Search.Chaining => chaining.isDefined
     }
@@ -274,16 +274,29 @@ final class Prove private (
         }
 
       case Prove.Address.Propositional =>
-        minimal.prove(goal) match {
+        intuitionistic.prove(goal) match {
           case Right(theorem) => Right(theorem)
           // The refusal that survives is the second one where there is a second procedure, which is
           // the opposite of this class's usual rule and is right here for the reason that rule is:
-          // `Minimal`'s refusal names the fragment it declines by, and once a wider procedure has
-          // run that message is about the wrong fragment. `Propositional` refuses by exhibiting an
+          // the first procedure's refusal is about a fragment, and once a wider procedure has run
+          // that message is about the wrong one. `Propositional` refuses by exhibiting an
           // assignment, which is what a caller can act on.
-          case Left(fromMinimal) =>
+          case Left(fromIntuitionistic) =>
             propositional match {
-              case None => Left(FromLogic(fromMinimal))
+              // No classical extension to ask, so the intuitionistic answer is the whole of what is
+              // known, and what a caller has to be told is which of two things stopped it. The
+              // calculus says "not a goal this calculus reaches", which names a fragment; what it
+              // does not say is that the goal may be classically valid and that this prover was
+              // built without the axioms for that, which is the configuration and not the
+              // mathematics. A refusal that stopped short is kept verbatim: `Standing.Exhausted`
+              // and `Standing.Unread` are the distinction `LogicError` exists to keep, and
+              // rewriting a bound that was reached into a statement about the goal would collapse
+              // them.
+              case None =>
+                Left(FromLogic(
+                  if (fromIntuitionistic.standing.stoppedShort) fromIntuitionistic
+                  else withoutTheClassicalAxioms(goal)
+                ))
               case Some(classicalFragment) => TacticError.lift(classicalFragment.prove(goal))
             }
         }
@@ -293,26 +306,89 @@ final class Prove private (
     }
 
   /**
-   * The negation-free propositional fragment, over whatever theory this reads in.
+   * A propositional goal the free calculus refused, where there is no classical procedure to ask.
+   *
+   * The message names the caller's configuration rather than the goal's shape, and that is the
+   * whole of why it exists. The calculus refuses with "a goal this calculus reaches", which names a
+   * fragment and reads as a fact about the statement; what it does not say is that the statement
+   * may be perfectly valid and that this prover holds none of the axioms that would settle it. An
+   * author told the first rewrites the statement for ever, and an author told the second builds the
+   * prover over a chain and asks again.
+   *
+   * **One literal and not a concatenation**, which is not a style preference:
+   * `NotationBoundarySpec` classifies every expression a refusal writes into its own prose, and a
+   * description that is neither a literal nor an interpolation is one the scan cannot decide about
+   * and has to be listed by hand. A sentence with nothing in it from a term has no business being
+   * on that list.
+   */
+  private def withoutTheClassicalAxioms(goal: Term): LogicError =
+    NotOfForm("a goal intuitionistic logic decides; this one may be classically valid, and this prover has no classical axioms", goal)
+
+  /**
+   * The whole intuitionistic propositional fragment, negation included, over whatever theory this
+   * reads in.
    *
    * Built here rather than passed in because it needs nothing a caller could choose: the
    * connectives are the signature's and the rules come with them.
+   *
+   * **It is asked here and `Minimal` is not, and until 2026-09-18 it was the other way round.**
+   * `docs/adr/0022` made `Minimal` a fragment gate whose search *is* this calculus: `Minimal.prove`
+   * is this method behind a test for a negation. So asking `Minimal` here decided nothing extra and
+   * turned away the goals with a negation in them, which went on to the classical procedure and
+   * came back at the choice axiom where this reaches them at none. The front page had already been
+   * rewritten to call `Minimal` "a fragment gate rather than a search of its own" while this class
+   * still asked it as a search, which is a fact written twice and disagreeing.
+   *
+   * `Minimal` did not go anywhere: [[Prove.addressOf]] is where it is spent now, and its `reads`
+   * and `declines` are what put a goal at this address in the first place. What it stopped being is
+   * the thing that answers once the goal is here. `docs/adr/0023` is the decision, and what it
+   * rejects is the three-step insertion this came from: gate, then calculus, then classical, which
+   * runs one search twice.
+   *
+   * **What it buys, measured on two populations that answer different questions.** Over the
+   * library of `Chain.standard`: of 503 statements 184 take this address and **two** carry a
+   * negation, both of them `Classical`'s own, the excluded middle and double negation, which are
+   * classical by construction and refused here. Over the Mathlib ring corpus and the statable slice
+   * of miniF2F, **none** takes this address at all. So nothing this repository already proves or
+   * measures changes price, and that is a fact about those populations rather than about the
+   * change: they are arithmetic, and a goal reaches this address with a negation in it only where
+   * every atom is a bare proposition.
+   *
+   * The population the change is actually about is the propositional formulas themselves, and over
+   * every one of at most six nodes on two atoms — 1116 of them, 1114 at this address — 152 carry a
+   * negation and are classically provable, and **58 of those are provable here**, at no axiom where
+   * the classical procedure charges one. The other 98 stay classical-only, `p \/ ~p` among them, so
+   * the procedure below keeps a real job. And the cell that decides the order: of the 32 goals
+   * `Minimal` proves, this calculus proves **all 32**, because `Minimal.prove` *is* this method
+   * behind a test for a negation — which is why asking `Minimal` first added nothing and cost the
+   * 58.
    */
-  private val minimal: Minimal = Minimal(reals.logic)
+  private val intuitionistic: Intuitionistic = Intuitionistic(reals.logic)
 
   /**
    * The whole classical propositional fragment, decided by a solver and certified, where there is
    * one to build.
    *
-   * Asked **after** [[minimal]] and never instead of it, and the order is a measurement rather than
-   * a preference: on the goal both take, `(p /\ q) ==> (q /\ p)`, `Minimal` costs 216 primitive
-   * inferences and **no axiom** while this costs 1242 and the choice axiom. A theorem resting on
+   * Asked **after** [[intuitionistic]] and never instead of it, and the order is a measurement
+   * rather than a preference: on the goal both take, `(p /\ q) ==> (q /\ p)`, the free calculus
+   * costs 182 primitive inferences and **no axiom** while this costs 1236 and the choice axiom,
+   * re-measured on 2026-09-18 when the routing moved. The pair read 216 and 1242 here until then,
+   * which was `Minimal`'s own search against this one before `docs/adr/0022` replaced it; both
+   * halves of a pair go stale together when what produced them is replaced. A theorem resting on
    * nothing is worth more than the same theorem resting on something, so the cheaper address keeps
    * the goals it can reach.
    *
-   * What it adds is the rest of the fragment. `Minimal` is an intuitionistic search, so it refuses
-   * classically valid goals with no negation in them at all: Peirce's law is the witness and
-   * `MinimalSpec` holds that boundary from the other side.
+   * **That is the whole answer to "what does a caller get when two procedures reach one theorem at
+   * two prices", and it is written here rather than left implicit in the order.** The theorem is
+   * the same term either way; what differs is `Derivation.axiomsOf`, and the rule is that the
+   * cheapest procedure that settles the goal is the one whose theorem is returned. `Cost` reports
+   * the price of what it was given and names no procedure, which stays true because the order here
+   * is by price: naming the procedure would be a second way of saying the same thing and the one
+   * that goes stale.
+   *
+   * What it adds is the rest of the fragment, which is the classical part and no more. Peirce's law
+   * and the excluded middle are the witnesses: neither is intuitionistically provable, both are
+   * proved here, and `IntuitionisticSpec` holds that boundary from the other side.
    */
   private val propositional: Option[Propositional] = classical.map(Propositional(_))
 
@@ -372,11 +448,17 @@ object Prove {
     case Equation
 
     /**
-     * A statement built from propositions with `/\`, `\/` and `==>`, and no negation in it.
+     * A statement built from propositions with `/\`, `\/`, `==>` and `~`.
      *
      * Reached only where the arithmetic addresses are not, which is deliberate and is what keeps
      * this from changing any answer that already existed: a goal about the order is the order's
      * whatever else it also is. What arrives here is what used to arrive at [[Nobody]].
+     *
+     * **The negation is in the shape and was never out of the address**: `Minimal.declines` is half
+     * of what puts a goal here, and it fires precisely on a statement of bare propositions that has
+     * a negation in it. What was out of the address was nothing; what was out of the free procedure
+     * serving it was the negation, and since 2026-09-18 the procedure serving it is the one that
+     * takes them.
      */
     case Propositional
 
@@ -406,12 +488,19 @@ object Prove {
   enum Search(val spelling: String):
 
     /**
-     * The negation-free propositional fragment, asked first because it costs no axiom.
+     * The intuitionistic propositional fragment, negation included, asked first because it costs
+     * no axiom.
      *
      * Always reached: it is built from the signature's own connectives, so there is no
      * configuration in which a prover has no copy of it.
+     *
+     * **This case was `Minimal` until 2026-09-18**, and the rename is the enumeration catching up
+     * with `docs/adr/0022`: `Minimal` became a gate over this calculus, so a list of the searches a
+     * prover reaches that named `Minimal` was naming the gate and not the search. `Minimal` is
+     * still reached, by [[Prove.addressOf]], and what it decides there is the **address** rather
+     * than the goal.
      */
-    case Minimal extends Search("Minimal")
+    case Intuitionistic extends Search("Intuitionistic")
 
     /** The whole classical propositional fragment, where the caller supplied a `Classical`. */
     case Propositional extends Search("Propositional")

@@ -59,7 +59,8 @@ import garden.xeno.symbolum.kernel.*
  * `(C /\ D) ==> B` heavier than `C ==> (D ==> B)` by the one the conjunction carries. Read the
  * sequent as the multiset of the weights of its hypotheses and its goal, and every rule above
  * strictly decreases it in the multiset order. [[Intuitionistic.Fuel]] is a net under that argument
- * and not the argument, the way `Minimal.Depth` is.
+ * and not the argument, which is the arrangement `Minimal.Depth` had before this file replaced its
+ * search and took the bound with it.
  *
  * **The weight was got wrong once, in the obvious way, and the error is worth keeping.** With
  * `w(A ==> B) = w(A) + w(B) + 1`, which is what one writes by reflex beside the other two, the
@@ -84,7 +85,8 @@ import garden.xeno.symbolum.kernel.*
  * **It is not complete for classical validity, and that is the point rather than a shortfall.**
  * Peirce's law and the excluded middle are refused here and proved by [[Propositional]], at one
  * axiom. A caller that wants an answer whatever it costs asks this one first and that one second,
- * which is what `Domain.Built.settle` does, and then the accounting says which of the two answered.
+ * which is what `Domain.Built.settle` does and, since `docs/adr/0023`, what `Prove` does at its
+ * propositional address, and then the accounting says which of the two answered.
  *
  * **An atom is given no meaning**, so a goal whose validity lives inside an atom is refused here
  * exactly as it would be by a procedure that had never looked. `~(x = y) ==> ~(y = x)` is not
@@ -522,8 +524,11 @@ object Intuitionistic {
   /**
    * How deep the search goes before it says so.
    *
-   * The net and not the termination argument, exactly as `Minimal.Depth` is: the measure in the
-   * class comment falls on every rule, so a goal of this fragment terminates without it. It is here
+   * The net and not the termination argument: the measure in the class comment falls on every rule,
+   * so a goal of this fragment terminates without it. It is the last thing left of `Minimal.Depth`,
+   * which is the bound the search in that file carried and which went with the search in 2026-09-16;
+   * two sentences here went on naming it, which is what a reference to something that has moved
+   * costs when it is a docstring and nothing resolves it. It is here
    * because that argument is a paragraph and this is a number, and because a mistake in one of the
    * rules would otherwise be an out-of-memory rather than a refusal. A goal that reaches it comes
    * back as `BoundReached`, which carries `Standing.Exhausted`: evidence in neither direction,

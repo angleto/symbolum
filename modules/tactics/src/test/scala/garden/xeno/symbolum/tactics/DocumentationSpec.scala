@@ -113,9 +113,9 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
    * The front page's row about proof search, asserted by running the search rather than by reading.
    *
    * It said "no clause queue, no given-clause loop, no choice point anywhere" until 2026-09-15, and
-   * the third of those was false: `Prove` routes a propositional goal to `Minimal`, and `Minimal`
-   * backtracks. The same clause was in `docs/evaluation.md` twice, which is why the repair moved
-   * three cells and not one.
+   * the third of those was false: `Prove` routes a propositional goal to the propositional address,
+   * and the search there backtracks. The same clause was in `docs/evaluation.md` twice, which is
+   * why the repair moved three cells and not one.
    *
    * A negative absolute claim about the code is the worst kind of sentence to leave unchecked,
    * because a reader does not go and verify one. This repository's own rule is that a stale
@@ -154,11 +154,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // this witness; it is repeated here because the README sentence is about it.
     minimal.prove(all(List(p, q), imp(imp(imp(p, q), p), p))).isLeft shouldBe true
 
-    // The calculus that runs UNDER `Minimal` since 2026-09-16, exercised at both ends: it takes a
-    // statement with a negation in it, which is what the gate above it refuses, and it stops at the
-    // two goals the row names as its boundary. The row describes it and deliberately does not list
-    // it, because nothing routes a goal there and the test below reads the row for the searches the
-    // prover reaches; this is the half of that paragraph a machine can exercise.
+    // The calculus itself, which is what `Prove` routes a propositional goal to since 2026-09-18
+    // and what the test below reads the row for. Exercised at both ends: it takes a statement with
+    // a negation in it, which is what the gate in front of it refuses and what the prover therefore
+    // could not reach for free until the routing moved, and it stops at the two goals the row names
+    // as its boundary.
     val intuitionistic = Intuitionistic.standard
     // `denial` rather than `not`, because a local `not` here shadows the matcher three lines below
     // and the error it produces names an overload rather than the shadowing.
@@ -175,8 +175,24 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
 
     // And that the row still says the gate is a gate, which is the sentence that stops a reader
     // concluding `Minimal` is the search: the two are one implementation and the fragment is what
-    // separates them.
+    // separates them. Since 2026-09-18 the row has to say the other half too, that the gate decides
+    // the address and no longer answers the goal, because a reader who takes `Minimal` for the
+    // search reads every cost in this row against the wrong procedure.
     readme should include("a **fragment gate** rather than a search of its own")
+    readme should include("it decides the **address**")
+
+    // The sentence the row carried while `Prove` asked `Minimal` and not the calculus. It was true
+    // when it was written and became false the day the routing moved, which is the one shape of
+    // stale sentence nothing else here would have caught: it is a denial, and a denial of a
+    // property no reader goes and checks.
+    readme should not include "nothing routes a goal there"
+    read("docs/evaluation.md") should not include "this list does not name"
+
+    // The goal the routing exists for, put to the PROVER rather than to the calculus, which is the
+    // difference between "the procedure can do it" and "asking the system gets it". Two negations,
+    // no classical extension anywhere in `Prove.standard`, and nothing believed at the end of it.
+    val reached = force(Prove.standard("!p:bool. ~(p /\\ ~p)"))
+    Derivation.axiomsOf(reached) shouldBe empty
 
     // The sentence that was there, in the two places that carried it, so that it cannot come back
     // by anybody rewriting the row from memory.
@@ -253,8 +269,8 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     }
 
     // And the guard against the guard: the assertions above are about a prover, and a prover with
-    // no classical extension and no library reaches `Minimal` and nothing else, so a mistake in
-    // `Prove.construct` would leave every other name unchecked in both documents and every
+    // no classical extension and no library reaches `Intuitionistic` and nothing else, so a mistake
+    // in `Prove.construct` would leave every other name unchecked in both documents and every
     // assertion above green.
     prover.searches should contain theSameElementsAs Prove.Search.values.toVector
 
