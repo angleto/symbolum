@@ -285,7 +285,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_PROV_MUL_SUC`, two on `NUM_PROV_MUL_ZERO`, none on `NUM_PROV_NUMERAL_MUL`, which owes
     // nothing and is what the other three were built for. `RediscoverySpec` pins the same figure
     // and carries the same derivation, which is the two places this comment's neighbour calls out.
-    proposals.size shouldBe 362
+    // 379 with the integers' seventeen, 2026-09-18, and the seventeen were **predicted before
+    // the run and are what came back**: of the forty-one facts `Integer` publishes, twelve carry
+    // an antecedent, and counting arrows the way `Propose.peel` does gives one each for
+    // `INT_SAME_SYM`, `INT_DIVIDES_INTRO`, `INT_DIVIDES_ELIM`, `INT_DIVIDES_MUL`,
+    // `INT_DIVIDES_NEG`, `INT_ZERO_DIVIDES` and `INT_ADD_LE_MONOTONE`, and two each for
+    // `INT_SAME_TRANS`, `INT_DIVIDES_TRANS`, `INT_DIVIDES_LINEAR`, `INT_LE_TRANS` and
+    // `INT_LE_ANTISYM`. Twelve of the seventeen were predicted at twelve before the order was
+    // written, and the order added the other five. Tip plus this branch's delta, as the
+    // paragraph above insists: never a total carried forward against an earlier base.
+    proposals.size shouldBe 379
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -899,7 +908,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // claim about the object language's codes, and no procedure here has a reading of `NUM_PROV`,
     // so each lands open rather than decided. A bucket that had taken any of them would be saying
     // it can decide provability in PA.
-    open shouldBe 269
+    // 279 with **ten** of the integers' seventeen, and the split is the half that was not
+    // derived, which is the distinction this row has now drawn eight times. The seventeen were
+    // predicted and met; where they land was not predicted and is read off the run. Seven go
+    // somewhere other than here, and a reader wanting to know which has to ask the buckets
+    // rather than this line. Asked, they answer: the other seven are `unreadable`, which is
+    // the assertion further down, and the two buckets together take all seventeen with nothing
+    // refuted and nothing earned. What is not surprising is that ten stay open: a weakening of
+    // a claim about `int` is a claim about a type no procedure in this repository reads,
+    // exactly as the thirteen above are claims about `NUM_PROV`.
+    open shouldBe 279
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1161,7 +1179,18 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // is for. The attribution is not arithmetic over totals: `decidedFalse` moved by one and this
     // by one over exactly two new residues, so one each, and which is which follows from the
     // statements rather than from the subtraction.
-    unreadable shouldBe 85
+    // 92 with the **seven** of the integers' seventeen that `open` did not take, and the two
+    // buckets together are the whole of the seventeen: ten open, seven here, nothing refuted
+    // and nothing earned. That the split is ten and seven was **not** predicted, and the line
+    // above says so; what this line adds is the half the other one could not: the residues have
+    // an address in neither bucket for two different reasons, and the reason here is the one
+    // this bucket is for. A weakening of `INT_DIVIDES_ELIM` or `INT_LE_ANTISYM` is a claim
+    // about `int`, and the sampler has no point to try because nothing interprets that type,
+    // so nothing refutes it either. The attribution is not arithmetic over totals, which is
+    // what the paragraph above warns against: seventeen new residues went to exactly two
+    // buckets, and ten plus seven is the reading rather than a subtraction that happened to
+    // fit.
+    unreadable shouldBe 92
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

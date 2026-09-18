@@ -45,7 +45,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // And the two of 2026-09-16, which this sum caught the same way: each was in `Library.of`
       // and not here, so the count moved and nothing about the development did.
       chain.inductive.facts.size + chain.reaching.facts.size +
-      chain.forward.facts.size
+      chain.forward.facts.size +
+      // 2026-09-18, and added here in the change that added the link rather than after this sum
+      // caught it, which is what the three comments above record happening three times.
+      chain.integers.facts.size
 
     library.entries.size shouldBe expected
 
@@ -465,8 +468,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 511 and 508 with the four `Deduction` facts that put PA's multiplication to work and prove
     // it on numerals. Tip plus this branch's delta, which is what the paragraph above insists on:
     // four entries, four names, none of them shared with another development.
-    library.entries.size shouldBe 511
-    library.names.distinct.size shouldBe 508
+    // 552 and 549 with the integers, 2026-09-18: forty-one facts under forty-one names, none of
+    // them shared with another development, which is the whole of the delta and is what the
+    // paragraph above insists a number here is. Tip plus this branch's delta, never a total carried
+    // forward against an earlier base. The gap between the two figures does not move, three names
+    // being held by two developments apiece since long before this.
+    library.entries.size shouldBe 552
+    library.names.distinct.size shouldBe 549
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

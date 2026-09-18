@@ -229,6 +229,29 @@ object Spellings {
       .delimited("MAT_E12", 1, "(#1)_{12}")
       .delimited("MAT_E21", 1, "(#1)_{21}")
       .delimited("MAT_E22", 1, "(#1)_{22}")
+      /* ------------------------------------------------------- the integers */
+      // Set with the ordinary signs and not with a marked `+` of their own, which is the opposite
+      // of what the constants are named: `INT_ADD` carries a prefix because `docs/adr/0018`'s
+      // overloading stops at two types and a third candidate would make every existing statement
+      // ambiguous to the elaborator. Nothing here is elaborated. A reader of `docs/lemmas.md` has
+      // the statement's types beside it, and setting `\mathbin{+_{\mathbb{Z}}}` would put the
+      // implementation's caution into a document that has no parser in it.
+      .operator("INT_ADD", 2, "#1 + #2", Additive)
+      .operator("INT_MUL", 2, "#1 \\cdot #2", Multiplicative)
+      .operator("INT_NEG", 1, "-#1", Multiplicative + 5)
+      .delimited("INT_ZERO", 0, "0_{\\mathbb{Z}}")
+      .delimited("INT_ONE", 0, "1_{\\mathbb{Z}}")
+      .operator("INT_DIVIDES", 2, "#1 \\mid #2", Relation)
+      .operator("INT_LE", 2, "#1 \\leq #2", Relation)
+      .operator("INT_OF_NUM", 1, "#1_{\\mathbb{Z}}", Multiplicative + 5)
+      // The quotient's own vocabulary, set as the naming rather than as mathematics. A class and
+      // its chosen representative are the construction showing through, and a reader meeting one
+      // in a statement wants to see which of them it is rather than a bracket that hides it.
+      .delimited("INT_OF_PAIR", 1, "[#1]")
+      .delimited("INT_OF_PAIR_repr", 1, "\\mathrm{repr}(#1)")
+      .operator("INT_SAME", 2, "#1 \\sim #2", Relation)
+      .delimited("mk_int", 1, "\\mathrm{mk\\_int}(#1)")
+      .delimited("dest_int", 2, "\\mathrm{dest\\_int}(#1, #2)")
       /* --------------------------------------------- limits and the series */
       // Convergence is a relation, because `converges s l` says the sequence approaches the value
       // and `\to` is what says that; a function-application spelling would hide it. The index

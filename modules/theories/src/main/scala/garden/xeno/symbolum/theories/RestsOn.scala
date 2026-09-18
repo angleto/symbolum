@@ -139,7 +139,9 @@ object Reach {
         // proof that goes through it report resting on nothing of the kind.
         "Inductive" -> chain.inductive.facts,
         "Reaching" -> chain.reaching.facts,
-        "Forward" -> chain.forward.facts
+        "Forward" -> chain.forward.facts,
+        // The integers, 2026-09-18, in the same change as the link and as `Library.of`.
+        "Integer" -> chain.integers.facts
       )
     )
 

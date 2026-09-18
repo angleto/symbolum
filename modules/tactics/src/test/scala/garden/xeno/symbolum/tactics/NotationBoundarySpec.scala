@@ -262,6 +262,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Language.scala", "Axioms(which)._1") -> (Verdict.Name, "an axiom's published name"),
     ("Language.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Language.scala", "payload") -> (Verdict.Crossing, "a code's payload, which is a term"),
+    ("Integer.scala", "Projection") ->
+      (Verdict.Name, "the projection of the quotient, by its own published name"),
+    ("Integer.scala", "name") -> (Verdict.Name, "the ring law's published name"),
+    ("Integer.scala", "error.message") ->
+      (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
     ("Limit.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),

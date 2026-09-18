@@ -301,7 +301,10 @@ object Library {
         collect("Concatenation", chain.concatenation.facts) ++
         collect("Inductive", chain.inductive.facts) ++
         collect("Reaching", chain.reaching.facts) ++
-        collect("Forward", chain.forward.facts)
+        collect("Forward", chain.forward.facts) ++
+        // The integers, 2026-09-18, collected in the change that added the link rather than after
+        // somebody noticed: the two paragraphs above are what happens otherwise.
+        collect("Integer", chain.integers.facts)
     )
 
   /** A library over developments a caller names itself. */

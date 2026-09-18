@@ -233,7 +233,16 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `NUM_PROV_MUL_ZERO` at one; and **none** for `NUM_PROV_NUMERAL_MUL`, which carries no
     // hypothesis at all and is the point of it. The gate said 362 and the peeling rule says
     // 349 + 13, which is the check this comment exists to make possible.
-    propose.weakenings.size shouldBe 362
+    // 379 with the integers' seventeen, 2026-09-18, and the seventeen were **predicted before
+    // the run and are what came back**: of the forty-one facts `Integer` publishes, twelve carry
+    // an antecedent, and counting arrows the way `Propose.peel` does gives one each for
+    // `INT_SAME_SYM`, `INT_DIVIDES_INTRO`, `INT_DIVIDES_ELIM`, `INT_DIVIDES_MUL`,
+    // `INT_DIVIDES_NEG`, `INT_ZERO_DIVIDES` and `INT_ADD_LE_MONOTONE`, and two each for
+    // `INT_SAME_TRANS`, `INT_DIVIDES_TRANS`, `INT_DIVIDES_LINEAR`, `INT_LE_TRANS` and
+    // `INT_LE_ANTISYM`. Twelve of the seventeen were predicted at twelve before the order was
+    // written, and the order added the other five. Tip plus this branch's delta, as the
+    // paragraph above insists: never a total carried forward against an earlier base.
+    propose.weakenings.size shouldBe 379
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

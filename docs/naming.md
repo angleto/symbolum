@@ -28,7 +28,7 @@ number appears here, which was also wrong. Three hand-maintained counts inside t
 argues against hand-maintained counts, which is the fourth time this document has recorded that
 shape and the first time it was the passage itself.
 
-    the library holds 511 entries, 508 distinct names, 502 facts and 6 definitional entries
+    the library holds 552 entries, 549 distinct names, 543 facts and 6 definitional entries
 
 Pinning them is the third repair this paragraph has needed and the first that can hold. It said
 120 on 2026-09-11 and 132 later that day, and neither could be reproduced from the library it
@@ -75,6 +75,15 @@ The operator or the type the lemma is about leads the name, and the rest qualifi
 with a real one: `NUM_ADD_SYM` is the commutativity of `NUM_ADD` and `ADD_SYM` is the commutativity
 of `+`. The embedding is `NUM_REAL_`, which reads as the pair of subjects it is about.
 
+**The integers carry one for the same reason and it is `INT_`**, since 2026-09-18: `INT_ADD_SYM`,
+`NUM_ADD_SYM` and `ADD_SYM` are three facts about three different operations that a reader would
+otherwise have to tell apart by what the statement is at. It is a third namespace rather than a
+second use of the first, and the rule that decides it is the one above read at a third type: a
+prefix marks a **clash**, and every arithmetic name the integers introduce clashes with both of the
+others. `INT_OF_NUM` is the embedding, which reads as the pair of subjects it is about the way
+`NUM_REAL_` does, and `INT_OF_PAIR` is the projection of the quotient, which is not an embedding of
+one numeric type into another and is named for what it takes rather than for a pair of subjects.
+
 ## Constants are a different question, and today they have three answers
 
 Everything above is about the name of a **fact**. A constant is named by whatever development
@@ -84,7 +93,7 @@ introduced it, and the styles in the chain's widest signature are these:
 |---|---|
 | a symbol, printed as itself | `+`, `*`, `<`, `=`, `/\`, `\/`, `==>`, `~`, `!`, `?`, `0`, `1`, `T`, `F` |
 | lowercase | `div`, `inv`, `le`, `neg`, `sub`, `select`, `real_of_num`, `mk_num`, `dest_num`, `converges`, `lim`, `exp`, `ln`, `sin`, `cos`, `sinh`, `cosh` |
-| `UPPER_SNAKE` | `ZERO`, `SUC`, `PRE`, `NUM_ADD`, `NUM_MUL`, `NUM_SUB`, `NUM_LE`, `NUM_LT`, `NUM_REP`, `IND_0`, `IND_SUC`, `BIT0`, `BIT1`, `NUM_DIVIDES`, `NUM_CONG`, `NUM_GCD`, `PAIR`, `FST`, `SND`, `WORD_PAD`, `WORD_LENGTH`, `WORD_NTH`, `WORD_MAKE`, `MAT2`, `MAT_E11`, `MAT_E12`, `MAT_E21`, `MAT_E22`, `MAT_ADD`, `MAT_SMUL`, `MAT_MUL`, `MAT_ID`, `MAT_TRANSPOSE`, `MAT_DET` |
+| `UPPER_SNAKE` | `ZERO`, `SUC`, `PRE`, `NUM_ADD`, `NUM_MUL`, `NUM_SUB`, `NUM_LE`, `NUM_LT`, `NUM_REP`, `IND_0`, `IND_SUC`, `BIT0`, `BIT1`, `NUM_DIVIDES`, `NUM_CONG`, `NUM_GCD`, `PAIR`, `FST`, `SND`, `WORD_PAD`, `WORD_LENGTH`, `WORD_NTH`, `WORD_MAKE`, `MAT2`, `MAT_E11`, `MAT_E12`, `MAT_E21`, `MAT_E22`, `MAT_ADD`, `MAT_SMUL`, `MAT_MUL`, `MAT_ID`, `MAT_TRANSPOSE`, `MAT_DET`, `INT_SAME`, `INT_OF_PAIR`, `INT_OF_NUM`, `INT_ADD`, `INT_NEG`, `INT_MUL`, `INT_ZERO`, `INT_ONE`, `INT_DIVIDES` |
 | `CamelCase` | `Sum`, `Power`, `Prod`, `Divides` |
 
 Every one of those is in the chain's widest signature since 2026-09-12. Ten of the `UPPER_SNAKE`

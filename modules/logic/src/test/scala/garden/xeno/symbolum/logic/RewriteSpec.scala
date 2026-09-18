@@ -524,7 +524,22 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`Ring` ask `finished` on the failing path, which is `Induct`'s arrangement reused. A fifth " +
         "goes through `inTheorem` with a single folding rule, and what comes back is compared " +
         "against the goal the method was asked for and refused as `NotOfForm` otherwise, which " +
-        "that site's own comment argues for at length")
+        "that site's own comment argues for at length"),
+    "Integer.scala" ->
+      ("four calls and one `rewrite` among them, and that one is the only place in the file that " +
+        "has to ask. `Laws.normalise` brings an equation between integers to a single " +
+        "`INT_OF_PAIR` applied to a pair, and `Laws.projected` reads what comes back: where it is " +
+        "not that shape it asks `finished` and refuses with two different messages, one naming a " +
+        "rule set that did not settle and one naming a term the rules have nothing to say about, " +
+        "which is the distinction this census exists for. The other three arrive through " +
+        "`inTheorem` with rules that strictly shrink the term and therefore cannot loop: " +
+        "`FST (PAIR a b) = a` and its twin remove two applications each, " +
+        "`INT_OF_PAIR (INT_OF_PAIR_repr a) = a` removes two and its right side contains neither, " +
+        "and the two tidying rules of the embedding's injectivity replace a projection of a pair " +
+        "by a constant and a sum by a summand. Each of the three hands what comes back to " +
+        "`Conv.trans`, to `Kernel.eqMp` or to `Rules.genAll`, and the published statement is " +
+        "compared against `Integer.Statements` by `IntegerSpec`, so a rewriting that stopped early " +
+        "is a red statement rather than a quiet one")
   )
 
   "Every caller of the rewriter" should "have been asked what it does when the limit runs out" in {

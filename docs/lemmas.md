@@ -158,6 +158,50 @@ they have least appetite for working out how it is produced.
   INDUCTIVE_INDUCT         !x:('a -> bool) -> 'a -> bool. !y:'a -> bool. (!z:'a. x y z ==> y z) ==> (!z:'a. INDUCTIVE x z ==> y z)
   INDUCTIVE_INTRO          !x:('a -> bool) -> 'a -> bool. MONOTONE x ==> (!y:'a. x (INDUCTIVE x) y ==> INDUCTIVE x y)
 
+## Integer
+
+  INT_ADD_ASSOC            !x:int. !y:int. !z:int. INT_ADD (INT_ADD x y) z = INT_ADD x (INT_ADD y z)
+  INT_ADD_LE_MONOTONE      !x:int. !y:int. !z:int. INT_LE x y ==> INT_LE (INT_ADD z x) (INT_ADD z y)
+  INT_ADD_NEG              !x:int. INT_ADD x (INT_NEG x) = INT_ZERO
+  INT_ADD_PAIRS            !x:prod(num, num). !y:prod(num, num). INT_ADD (INT_OF_PAIR x) (INT_OF_PAIR y) = INT_OF_PAIR (PAIR (FST x + FST y) (SND x + SND y))
+  INT_ADD_SYM              !x:int. !y:int. INT_ADD x y = INT_ADD y x
+  INT_ADD_ZERO             !x:int. INT_ADD x INT_ZERO = x
+  INT_CASES                !x:int. ?y:prod(num, num). x = INT_OF_PAIR y
+  INT_COMBINE              !x:int. !y:int. !z:int. !u:int. !v:int. INT_ADD (INT_MUL u (INT_MUL x y)) (INT_MUL v (INT_MUL x z)) = INT_MUL x (INT_ADD (INT_MUL u y) (INT_MUL v z))
+  INT_DIVIDES_ELIM         !x:int. !y:int. INT_DIVIDES x y ==> (?z:int. y = INT_MUL x z)
+  INT_DIVIDES_INTRO        !x:int. !y:int. !z:int. y = INT_MUL x z ==> INT_DIVIDES x y
+  INT_DIVIDES_LINEAR       !x:int. !y:int. !z:int. !u:int. !v:int. INT_DIVIDES x y ==> INT_DIVIDES x z ==> INT_DIVIDES x (INT_ADD (INT_MUL u y) (INT_MUL v z))
+  INT_DIVIDES_MUL          !x:int. !y:int. !z:int. INT_DIVIDES x y ==> INT_DIVIDES x (INT_MUL y z)
+  INT_DIVIDES_NEG          !x:int. !y:int. INT_DIVIDES x y ==> INT_DIVIDES x (INT_NEG y)
+  INT_DIVIDES_REFL         !x:int. INT_DIVIDES x x
+  INT_DIVIDES_TRANS        !x:int. !y:int. !z:int. INT_DIVIDES x y ==> INT_DIVIDES y z ==> INT_DIVIDES x z
+  INT_DIVIDES_ZERO         !x:int. INT_DIVIDES x INT_ZERO
+  INT_EQ_PAIRS             !x:prod(num, num). !y:prod(num, num). INT_OF_PAIR x = INT_OF_PAIR y = INT_SAME x y
+  INT_LE_ANTISYM           !x:int. !y:int. INT_LE x y ==> INT_LE y x ==> x = y
+  INT_LE_OF_NUM            !x:num. !y:num. INT_LE (INT_OF_NUM x) (INT_OF_NUM y) = x <= y
+  INT_LE_PAIRS             !x:prod(num, num). !y:prod(num, num). INT_LE (INT_OF_PAIR x) (INT_OF_PAIR y) = FST x + SND y <= FST y + SND x
+  INT_LE_REFL              !x:int. INT_LE x x
+  INT_LE_TOTAL             !x:int. !y:int. INT_LE x y \/ INT_LE y x
+  INT_LE_TRANS             !x:int. !y:int. !z:int. INT_LE x y ==> INT_LE y z ==> INT_LE x z
+  INT_MUL_ASSOC            !x:int. !y:int. !z:int. INT_MUL (INT_MUL x y) z = INT_MUL x (INT_MUL y z)
+  INT_MUL_DISTRIBUTE       !x:int. !y:int. !z:int. INT_MUL x (INT_ADD y z) = INT_ADD (INT_MUL x y) (INT_MUL x z)
+  INT_MUL_NEG              !x:int. !y:int. INT_MUL x (INT_NEG y) = INT_NEG (INT_MUL x y)
+  INT_MUL_ONE              !x:int. INT_MUL x INT_ONE = x
+  INT_MUL_PAIRS            !x:prod(num, num). !y:prod(num, num). INT_MUL (INT_OF_PAIR x) (INT_OF_PAIR y) = INT_OF_PAIR (PAIR (FST x * FST y + SND x * SND y) (FST x * SND y + SND x * FST y))
+  INT_MUL_SYM              !x:int. !y:int. INT_MUL x y = INT_MUL y x
+  INT_MUL_ZERO             !x:int. INT_MUL x INT_ZERO = INT_ZERO
+  INT_NEG_NEG              !x:int. INT_NEG (INT_NEG x) = x
+  INT_NEG_PAIR             !x:prod(num, num). INT_NEG (INT_OF_PAIR x) = INT_OF_PAIR (PAIR (SND x) (FST x))
+  INT_OF_NUM_ADD           !x:num. !y:num. INT_OF_NUM (x + y) = INT_ADD (INT_OF_NUM x) (INT_OF_NUM y)
+  INT_OF_NUM_EQ            !x:num. !y:num. INT_OF_NUM x = INT_OF_NUM y = (x = y)
+  INT_OF_NUM_MUL           !x:num. !y:num. INT_OF_NUM (x * y) = INT_MUL (INT_OF_NUM x) (INT_OF_NUM y)
+  INT_OF_NUM_ZERO          INT_OF_NUM 0 = INT_ZERO
+  INT_SAME_REFL            !x:prod(num, num). INT_SAME x x
+  INT_SAME_SYM             !x:prod(num, num). !y:prod(num, num). INT_SAME x y ==> INT_SAME y x
+  INT_SAME_TRANS           !x:prod(num, num). !y:prod(num, num). !z:prod(num, num). INT_SAME x y ==> INT_SAME y z ==> INT_SAME x z
+  INT_ZERO_DIVIDES         !x:int. INT_DIVIDES INT_ZERO x ==> x = INT_ZERO
+  INT_ZERO_MUL             !x:int. INT_MUL INT_ZERO x = INT_ZERO
+
 ## Language
 
   NUM_ALL_BELOW_CASES      !x:num. !y:num. !z:num. !u:num. NUM_ALL_BELOW x y z u = NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR (NUM_LESS x (NUM_CODE 0 y) z) u)))
