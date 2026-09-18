@@ -326,7 +326,101 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
       case Domain.Verdict.Refused(why) =>
         why should include("NUM_LT")
         why should include("foundation")
-      case other => fail(s"arithmetic is outside this fragment and must be said so: $other")
+      case other => fail(s"arithmetic with no bridge named is outside this fragment: $other")
+    }
+  }
+
+  it should "be settled when the caller names the fact that carries it across" in {
+    // `docs/adr/0024`. The claim above is the same claim; what changes is that the caller hands over
+    // the theorem relating the two orders, and `Attempts j` stays a term of type `num` whose value
+    // nobody knows. Nothing is interpreted and nothing is approximated: `NUM_LT_NOT_LE` holds for
+    // every `num` there is, so it holds for whatever this job's attempts were.
+    val chain = Chain.standard
+    val job = TyApp("job", Nil)
+    val attempts = Domain(
+      name = "the retry rule",
+      typeOperators = Vector("job" -> 0),
+      constants = Vector(
+        "Attempts" -> Type.fun(job, TyApp(Natural.TypeName, Nil)),
+        "Abandoned" -> Type.fun(job, Type.Bool)
+      ),
+      axioms = Vector(
+        "AbandonedOnlyAfterThree" -> "!j:job. Abandoned j ==> NUM_LE 3 (Attempts j)"
+      )
+    )
+    val retries = force(Domain.build(chain.widest.theory, chain.widest.notation, attempts))
+
+    val bridge = Library
+      .of(chain)
+      .named(Peano.BelowExcludesAtMost)
+      .headOption
+      .getOrElse(fail(s"${Peano.BelowExcludesAtMost} is what this route is built on and the library " +
+        "no longer publishes it"))
+      .theorem
+
+    retries.settle(
+      chain.classical,
+      "!j:job. NUM_LT (Attempts j) 3 ==> ~(Abandoned j)",
+      Vector(bridge)
+    ) match {
+      case Domain.Verdict.Settled(theorem, spending) =>
+        // Printed with the numeral expanded, which is what this printer does with `3:num` and is
+        // worth seeing here rather than hidden behind a nicer expectation: the bridge was
+        // specialised at the term the claim names, and that term is the bit encoding.
+        show(theorem.conclusion) shouldBe
+          "!x:job. NUM_LT (Attempts x) (NUM_BIT1 NUM_ONE) ==> ~(Abandoned x)"
+        theorem.hypotheses shouldBe empty
+
+        // The domain's one axiom, which is the accounting still working across the new route: a
+        // report that lost the domain column when arithmetic arrived would be the failure this
+        // whole file exists to prevent.
+        spending.ofTheDomain shouldBe Set("AbandonedOnlyAfterThree")
+
+        // And the foundation's, which is the half `docs/adr/0024` insists on: a reader of this
+        // conclusion is being asked for what the naturals cost, where the release gate's reader was
+        // asked for nothing.
+        //
+        // Asserted as an EQUALITY against what the bridge itself spends, not as "non-empty", and
+        // the difference is the whole of what could have gone wrong here. Non-empty passes just as
+        // well if the decision fell through to `Propositional` and charged `SELECT` for the
+        // classical step, which is the trade `docs/adr/0022` exists to refuse and which would be
+        // invisible behind a choice axiom the naturals were going to cost anyway. Equality says the
+        // conclusion spent what it was carried across by and not one axiom more, so the logical
+        // half stayed free.
+        spending.foundational shouldBe Derivation.axiomsOf(bridge)
+        spending.foundational should not be empty
+
+      case other => fail(s"the bridge is what this claim was missing: $other")
+    }
+  }
+
+  it should "still refuse when the domain's own type is what would need a meaning" in {
+    // The narrowed refusal, and the reason `docs/adr/0024` keeps one at all. `Cost` is a type this
+    // domain declares and the foundation has never heard of, so no theorem anywhere relates
+    // `Expensive c` to a number, and there is no bridge a caller could name. Without this the
+    // record's line between the two cases would be prose with nothing watching it.
+    val chain = Chain.standard
+    val cost = TyApp("cost", Nil)
+    val budget = Domain(
+      name = "the budget rule",
+      typeOperators = Vector("cost" -> 0),
+      constants = Vector(
+        "Expensive" -> Type.fun(cost, Type.Bool),
+        "Approved" -> Type.fun(cost, Type.Bool)
+      ),
+      axioms = Vector("ExpensiveNeedsApproval" -> "!c:cost. Expensive c ==> Approved c")
+    )
+    val budgets = force(Domain.build(chain.widest.theory, chain.widest.notation, budget))
+
+    budgets.settle(chain.classical, "!c:cost. NUM_LE 3 3 /\\ Expensive c ==> Approved c") match {
+      case Domain.Verdict.Refused(why) =>
+        why should include("NUM_LE")
+        // And that it is THIS refusal rather than a parse error that happens to quote the same
+        // constant back: a claim the notation cannot read is also a `Refused`, with a message
+        // naming what it choked on, and the two are told apart by the sentence rather than by the
+        // constant.
+        why should include("belongs to the foundation underneath it")
+      case other => fail(s"a claim reaching the foundation with no bridge is refused: $other")
     }
   }
 

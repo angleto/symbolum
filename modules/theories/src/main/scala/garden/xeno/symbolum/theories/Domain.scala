@@ -64,10 +64,18 @@ import garden.xeno.symbolum.logic.*
  * fragment a hand derivation about a domain works in, and `Propositional` is the fallback for a
  * claim that is classically valid and no more, at the choice axiom and reported as such.
  *
- * What it is still **not** is a search over the domain: nothing looks for a claim, nothing reasons
- * about what a constant means, and a claim reaching arithmetic is refused by name rather than
- * approximated. The promise is accounting, not search, and [[Domain.Built.spends]] is what
- * accounts.
+ * **Arithmetic arrives on a bridge the caller names**, which is `docs/adr/0024` and is the second
+ * thing that changed. A claim may reach the foundation's constants; the terms of foundation type
+ * in it stay opaque, and a theorem the caller hands over is specialised at them and joins the
+ * axiom instances. Nothing is interpreted, because there is nothing to interpret: a constant like
+ * `Attempts : job -> num` already returns a number, and what is unknown is which one. The cost
+ * shows: the bridge carries its own axioms into [[Domain.Built.spends]]'s foundational column, so
+ * arithmetic is visible rather than free.
+ *
+ * What it is still **not** is a search over the domain: nothing looks for a claim, nothing looks
+ * for the bridge either, and a domain **type** the foundation has never heard of has no bridge to
+ * be named, so a claim needing arithmetic about one is still refused by name. The promise is
+ * accounting, not search, and [[Domain.Built.spends]] is what accounts.
  */
 final case class Domain(
   name: String,
@@ -304,14 +312,30 @@ object Domain {
      * That is the currency this whole file exists to report, and a route that moves it has to say
      * so.
      *
-     * == What it refuses, by name ==
+     * == What it refuses, by name, and what it now asks for instead ==
      *
      * A claim that reaches a constant of the **foundation** rather than of the domain — arithmetic,
-     * an order, an equation between numbers — is refused naming the constants. The procedures below
-     * would give such a constant no meaning either, so what they would decide is a skeleton in which
-     * "at most three attempts" is one opaque atom, and an approximation nobody asked for is worse
-     * than a refusal. Composing this with `Linarith` is a different piece of work and it is not this
-     * one.
+     * an order, an equation between numbers — is refused naming the constants **when the caller has
+     * named no bridge**. The procedures below give such a constant no meaning, so what they would
+     * decide alone is a skeleton in which "at most three attempts" is one opaque atom, and an
+     * approximation nobody asked for is worse than a refusal.
+     *
+     * `docs/adr/0024` decides what carries a claim across that line, and it is not an
+     * interpretation of the domain's constants. A caller hands over **theorems** — library lemmas,
+     * or anything else it holds — and each is specialised at the claim's own foundation-typed
+     * subterms and joins the axiom instances. `Attempts j` is never given a value: it is a term of
+     * type `num` whose value nobody knows, so a fact used about it has to hold for all of them, and
+     * that is what makes this safe where substituting a number would not be.
+     *
+     * Nothing searches for the bridge. A caller that names a lemma which does not apply has it
+     * dropped by the cutting-down below, at the cost of the decisions that takes; a caller that
+     * names none gets the refusal, which is the same answer this method has always given.
+     *
+     * **What it costs is reported rather than hidden**, and that is the whole of why this is
+     * allowed. A bridge carries whatever its own derivation spent, `Derivation.axiomsOf` walks it,
+     * and a release-gate conclusion reaching `NUM_LT_NOT_LE` therefore reports the naturals' two
+     * foundational axioms where a purely propositional one reports none. The promise is not that
+     * arithmetic is free, it is that arithmetic is visible.
      *
      * A claim needing more than [[Domain.Instances]] specialised axioms is refused for its size,
      * which is a bound on this method rather than on the domain: the instances are every assignment
@@ -319,12 +343,23 @@ object Domain {
      * over many axioms multiplies.
      */
     def settle(classical: Classical, goal: Term): Verdict =
+      settle(classical, goal, Vector.empty)
+
+    /**
+     * The same, carried across into the foundation's vocabulary by the facts the caller names.
+     *
+     * Theorems rather than names, which is a smaller decision than it looks. Resolving a name would
+     * put `Library` under this file, and it would also shut out the caller whose bridge is a fact it
+     * derived by hand rather than one the library publishes. What the record asks for is that the
+     * bridge be the caller's choice and visible at the call site, and a theorem is that.
+     */
+    def settle(classical: Classical, goal: Term, bridges: Vector[Kernel.Thm]): Verdict =
       classical.logic.over(theory) match {
         case Left(error) => Verdict.Refused(error.message)
         case Right(reading) =>
           Logic.stripForall(goal) match {
             case Left(error) => Verdict.Refused(error.message)
-            case Right((variables, body)) => settleBody(classical, reading, variables, body)
+            case Right((variables, body)) => settleBody(classical, reading, variables, body, bridges)
           }
       }
 
@@ -339,28 +374,34 @@ object Domain {
      * the same text through two notations.
      */
     def settle(classical: Classical, text: String): Verdict =
+      settle(classical, text, Vector.empty)
+
+    /** The same as the text overload, with the bridges `docs/adr/0024` decides are the caller's. */
+    def settle(classical: Classical, text: String, bridges: Vector[Kernel.Thm]): Verdict =
       Parser.proposition(theory, notation, text) match {
         case Left(error) => Verdict.Refused(error.message)
-        case Right(goal) => settle(classical, goal)
+        case Right(goal) => settle(classical, goal, bridges)
       }
 
     private def settleBody(
       classical: Classical,
       reading: Logic,
       variables: Vector[FVar],
-      body: Term
+      body: Term,
+      bridges: Vector[Kernel.Thm]
     ): Verdict = {
       val foreign = foundationConstantsIn(body)
 
       if (Term.typeOf(body) != Type.Bool) Verdict.Refused("a proposition")
-      else if (foreign.nonEmpty)
+      else if (foreign.nonEmpty && bridges.isEmpty)
         Verdict.Refused(
-          s"a claim in ${domain.name}'s own vocabulary: ${foreign.toVector.sorted.mkString(", ")} " +
-            "belongs to the foundation underneath it, and an atom with no meaning is not an " +
-            "approximation of arithmetic"
+          s"a claim in ${domain.name}'s own vocabulary, or a fact to carry it across: " +
+            s"${foreign.toVector.sorted.mkString(", ")} belongs to the foundation underneath it, " +
+            "and an atom with no meaning is not an approximation of arithmetic. Name the theorem " +
+            "that relates them and it will be specialised at the terms this claim already names"
         )
       else
-        instancesFor(reading, body) match {
+        instancesFor(reading, body, bridges) match {
           case Left(why) => Verdict.Refused(why)
           case Right(instances) => close(classical, reading, instances, variables, body)
         }
@@ -471,7 +512,11 @@ object Domain {
      * does not — which is the line between specialising a claim and searching for one, and this
      * method is on the first side of it deliberately.
      */
-    private def instancesFor(reading: Logic, body: Term): Either[String, Vector[Kernel.Thm]] = {
+    private def instancesFor(
+      reading: Logic,
+      body: Term,
+      bridges: Vector[Kernel.Thm]
+    ): Either[String, Vector[Kernel.Thm]] = {
       val rules = reading.rules
       val subjects = (Term.freeVariables(body).toVector: Vector[Term]) ++ constantsIn(body).toVector
 
@@ -506,9 +551,70 @@ object Domain {
                 instance <- rules.specAll(asserted, arguments)
               } yield if (held.exists(_.conclusion == instance.conclusion)) held else held :+ instance
           }
+          .flatMap(held => bridgeInstances(reading, body, bridges).map(held ++ _))
           .left
           .map(_.message)
     }
+
+    /**
+     * Each bridge specialised at the terms of its own binders' types that the claim already names.
+     *
+     * The subjects are **maximal** subterms of the wanted type rather than every subterm of it, and
+     * that is the difference between four tuples and a hundred here. `NUM_LT (Attempts j) 3` holds
+     * two terms of type `num` that a reader would point at, `Attempts j` and `3`; descending into
+     * `3` finds the bit encoding under it, every level of which is also a `num` and none of which is
+     * anything the claim is about. So the walk stops at the first subterm of the type it wants.
+     *
+     * A bridge with no binders is taken as it stands, which is the degenerate case and is right: a
+     * closed fact needs no instance of itself.
+     *
+     * Nothing here refuses a bridge that does not fit. One whose binders have a type the claim names
+     * no term of produces no instances and disappears, and one that produces instances the decision
+     * does not need is removed by the cutting-down in [[Domain.Built.close]]. Both are the caller's
+     * mistake costing decisions rather than this method's to diagnose, and a refusal here would have
+     * to guess which of a caller's several bridges was the intended one.
+     */
+    private def bridgeInstances(
+      reading: Logic,
+      body: Term,
+      bridges: Vector[Kernel.Thm]
+    ): Either[LogicError, Vector[Kernel.Thm]] = {
+      val rules = reading.rules
+
+      bridges.foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (acc, bridge) =>
+        acc.flatMap { held =>
+          Logic.stripForall(bridge.conclusion) match {
+            case Left(_) => Right(if (held.exists(_.conclusion == bridge.conclusion)) held else held :+ bridge)
+            case Right((binders, _)) if binders.isEmpty =>
+              Right(if (held.exists(_.conclusion == bridge.conclusion)) held else held :+ bridge)
+            case Right((binders, _)) =>
+              val types = binders.map(_.ty).toList
+              val subjects = types.distinct.flatMap(ty => maximalSubtermsOfType(body, ty)).distinct
+
+              tuples(types, subjects.toVector)
+                .foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(held)) { (inner, arguments) =>
+                  inner.flatMap { kept =>
+                    rules.specAll(bridge, arguments) match {
+                      case Left(_) => Right(kept)
+                      case Right(instance) =>
+                        Right(if (kept.exists(_.conclusion == instance.conclusion)) kept else kept :+ instance)
+                    }
+                  }
+                }
+          }
+        }
+      }
+    }
+
+    /** Every subterm of the given type, not descending into one once it has that type. */
+    private def maximalSubtermsOfType(term: Term, ty: Type): Vector[Term] =
+      if (Term.typeOf(term) == ty) Vector(term)
+      else
+        term match {
+          case App(fn, argument) => maximalSubtermsOfType(fn, ty) ++ maximalSubtermsOfType(argument, ty)
+          case Abs(_, inner) => maximalSubtermsOfType(inner, ty)
+          case _ => Vector.empty
+        }
 
     /** Every tuple of subjects matching a prefix of binder types, in the order they were found. */
     private def tuples(types: List[Type], subjects: Vector[Term]): Vector[List[Term]] =

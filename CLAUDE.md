@@ -1234,9 +1234,28 @@ read off a refutation: `Propositional` does not publish the clauses its refutati
 intuitionistic calculus has no clauses at all. It costs `2n + 1` decisions and it is minimal rather
 than minimum.
 
-What is still not there is search: nothing looks for a claim, nothing interprets a constant, and a
-claim reaching **arithmetic** is refused naming the constant rather than approximated, because an
-atom with no meaning is not an approximation of "at most three attempts".
+**A claim reaching arithmetic is settled when the caller names the fact that carries it across**,
+and that is `docs/adr/0024` since 2026-09-18. What the record rejects is the repair everybody
+reaches for first, an interpretation of the domain's constants: measured against the example the
+work was asked for, `Attempts : job -> num` has nothing to interpret, because its result type is
+already the foundation's. `Attempts j` is not an atom standing in for a number, it is a number
+nobody knows, so a fact used about it must hold for all of them and nothing is approximated.
+`Peano.NUM_LT_NOT_LE` specialised there is what `!j:job. Attempts j < 3 ==> ~(Abandoned j)` was
+missing, and the skeleton over it is intuitionistic at **zero** axioms.
+
+The bridge is the caller's and nothing searches for it, which is the same rule the tactics follow:
+a procedure that guessed would be worse than one that stops. What it costs is **reported**, which
+is the whole permission: the bridge carries the naturals' two axioms, `Derivation.axiomsOf` walks
+them, and `DomainTheorySpec` asserts the conclusion spends **exactly** what the bridge spends and
+not one axiom more. That equality rather than a non-emptiness is deliberate: non-empty would pass
+just as well if the decision had fallen through to `Propositional` and charged `SELECT`, which is
+the trade `docs/adr/0022` exists to refuse and which a choice axiom the naturals cost anyway would
+have hidden.
+
+What is still not there is search, and the interpretation itself: a domain **type** the foundation
+has never heard of has no theorem relating it to a number, so there is no bridge to name and the
+refusal is kept for exactly that. `DomainTheorySpec` asserts both halves, and tells the refusal
+apart from a parse error by the sentence rather than by the constant.
 
 Such a theory sits beside the chain and must stay there: two theories that axiomatise one name are
 the case `docs/adr/0008` leaves open, and `SoundnessAttackSpec` still derives `|- F` from it.
