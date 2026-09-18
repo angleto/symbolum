@@ -1284,8 +1284,8 @@ whose search ran out of `Intuitionistic.Fuel`; both fell to the classical route 
 asked for. `Domain.Verdict.CutShort` is the second of those now, and `docs/adr/0026` is the decision
 with the measurement that made it worth making: the net is **reachable** here, at a length strictly
 inside this method's own `Domain.Instances` bound, by a chain of modus ponens whose only difference
-from a free one is its length. The figure `docs/adr/0023` rests on for the same defect at `Prove` does not travel to
-this site, and that record now says so rather than being cited here.
+from a free one is its length. The figure `docs/adr/0023` rests on for the same defect at `Prove`
+does not travel to this site, and that record now says so rather than being cited here.
 
 **The accounting is what the method is for, and the obvious implementation destroys it.** Handing
 every specialised axiom to the procedure and detaching all of them reaches the same theorem and
