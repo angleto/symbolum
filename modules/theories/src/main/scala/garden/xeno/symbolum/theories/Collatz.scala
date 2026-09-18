@@ -297,6 +297,22 @@ object Collatz {
   val AnchoredInhabited: String = "S2_ANCHORED_INHABITED"
 
   /**
+   * `|- !u v. S2_PHI (WORD_CONCAT u v) = NUM_ADD (S2_PHI u) <the second block, weighed where it sits>`.
+   *
+   * The measure over a word split in two, and the shape of the right-hand side is the whole content
+   * of it. A tally that only saw letters would split with `S2_PHI v` on the right; this one weighs a
+   * letter by its distance from the head, so the letters of `v` count from `WORD_LENGTH u` further
+   * along than they do in `v` alone, and what appears is the shifted sum rather than the measure of
+   * the block. `WORD_CONCAT_TALLY` is stated at a weight that takes the index for exactly this
+   * reason and `Concatenation` says so where it is proved.
+   *
+   * It is what every statement about a step runs through: a step rewrites a factor, so both words
+   * are three blocks, and this lemma twice is what turns each of them into a sum of three terms two
+   * of which the rule does not touch.
+   */
+  val PotentialConcat: String = "S2_PHI_CONCAT"
+
+  /**
    * `|- !u v. S2_MARKED u /\ WORD_STEP S2 u v ==> S2_MARKED v`.
    *
    * What this development was asked for, and the sentence that lets a potential-function argument
@@ -617,6 +633,11 @@ object Collatz {
       "!u:word(num). !v:word(num). S2_MARKED u /\\ WORD_STEP S2 u v ==> S2_MARKED v",
     MarkedInhabited -> s"S2_MARKED (${wordText(spell("/0."))})",
     AnchoredInhabited -> s"S2_ANCHORED (${wordText(spell("/0."))})",
+    PotentialConcat ->
+      ("!u:word(num). !v:word(num). S2_PHI (WORD_CONCAT u v) = " +
+        "NUM_ADD (S2_PHI u) " +
+        "(NUM_SUM (\\i:num. COND (WORD_NTH v i < 3) " +
+        "(NUM_SUB (NUM_ADD (WORD_LENGTH u) i) 1) 0) (WORD_LENGTH v))"),
     StepInhabited ->
       s"WORD_STEP S2 (${wordText(spell("/0."))}) (${wordText(spell("/t."))})",
     ZerosAtZero -> s"$Zeros ZERO = (WORD_EMPTY:word(num))",
@@ -710,6 +731,9 @@ object Collatz {
         headFreeDefinition,
         Head
       )
+      potentialDefinition <- definitions.get(Potential).toRight(MissingDefinition(Potential))
+      potentialConcat <- potentialSplits(
+        logic, theory, notation, forward.concatenation, potentialDefinition)
       anchoredConcat <- anchoredSplits(
         logic,
         theory,
@@ -749,7 +773,8 @@ object Collatz {
         HeadFreeConcat -> headFreeConcat,
         AnchoredConcat -> anchoredConcat,
         HeadFreeStep -> headFreeStep,
-        AnchoredStep -> anchoredStep
+        AnchoredStep -> anchoredStep,
+        PotentialConcat -> potentialConcat
       )
       markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, definitions, partial)
       anchoredClosed <- anchoredUnderSteps(tools, forward, forward.concatenation, definitions, partial)
@@ -1277,6 +1302,64 @@ object Collatz {
       settled <- rules.disjElim(cases, emptyBranch, successorBranch)
       discharged <- rules.disch(positiveTerm, settled)
       result <- rules.genAll(discharged, List(u, v))
+    } yield result
+  }
+
+  /**
+   * [[PotentialConcat]]: the measure over a word split in two, by the tally at its own weight.
+   *
+   * Four steps and the middle two are the point. `WORD_CONCAT_TALLY` is stated for a weight
+   * `f : num -> 'a -> num` and a summand `\i. f i (WORD_NTH w i)`, so what this specialises it at
+   * is the measure's own weight written out, `\i. \a. COND (a < 3) (i - 1) 0`; what comes back
+   * carries a redex at every one of the three summands, and `Conv.normaliseSides` is what contracts
+   * them. Then the two ends are read back as `S2_PHI`, which is its definition used in the
+   * direction nothing else here needs it.
+   *
+   * The third summand is left as it comes out of the tally rather than being turned into anything:
+   * it is not `S2_PHI v` and cannot be, which is what the published statement is for.
+   */
+  private def potentialSplits(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    concatenation: Concatenation,
+    potentialDefinition: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val u = Term.variable("u", Words)
+    val v = Term.variable("v", Words)
+
+    for {
+      tally <- concatenation.fact(Concatenation.Tally).map(atNumbers)
+      weight <- Parser.term(
+        theory,
+        notation,
+        "\\i:num. \\a:num. COND (a < 3) (NUM_SUB i 1) 0",
+        Type.fun(Numbers, Type.fun(Numbers, Numbers))
+      )
+      concatConstant <- LogicError.lift(theory.constant(Concatenation.Name, ConcatType))
+      plus <- LogicError.lift(theory.constant(Peano.Addition, BinaryNumbers))
+      joined <- LogicError.lift(Term.appAll(concatConstant, List(u, v)))
+
+      instance <- rules.specAll(tally, List(weight, u, v)).flatMap(Conv.normaliseSides)
+
+      phiJoined <- Conv.unfold(potentialDefinition, List(joined))
+      phiU <- Conv.unfold(potentialDefinition, List(u))
+
+      sides <- Term.destEq(instance.conclusion).toRight(NotOfForm("an equation", instance.conclusion))
+      (_, sum) = sides
+      shifted <- sum match {
+        case App(App(_, _), second) => Right(second)
+        case other => Left(NotOfForm("a sum of two blocks", other))
+      }
+      readBack <- Conv
+        .sym(phiU)
+        .flatMap(equation => Conv.apTerm(plus, equation))
+        .flatMap(Conv.apThm(_, shifted))
+
+      body <- Conv.trans(instance, readBack)
+      whole <- Conv.trans(phiJoined, body)
+      result <- rules.genAll(whole, List(u, v))
     } yield result
   }
 
