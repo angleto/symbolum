@@ -581,6 +581,26 @@ under `modules/` and the next run of the suite on this shared checkout failed fo
 with an error about a file they had never seen. If you are delegating to an agent, repeat this in
 the briefing: a rule in this file does not reach an agent the project did not write.
 
+**A perturbation harness is not a probe, and it is the one verification instrument that is kept.**
+`docs/adr/0034` is the decision. What separates them is what the instrument can become: a
+measurement that counts what a theorem rests on, or prints what a surface says, **can** be an
+assertion in a spec, and a probe that finds something is telling you that no assertion carries it,
+so what it earns is the assertion rather than a home. A perturbation edits a source, runs the suite
+and puts the bytes back, which no spec can do from inside the run it is part of, so it is the only
+one that is lost by not being kept — and it was rewritten twice for one card on 2026-09-18. Those
+live in `tools/verify/`, one file per card and named in the file's first line. Nothing runs them,
+because a harness can only pass by first making the tree wrong. Everything else stays in `scratch/`
+and dies with the checkout, which is what should happen to it.
+
+**They are kept because they survive, and that is a measurement rather than a hope.** At `ba3a60d`
+the eight harnesses there named twelve perturbation targets between them, written across two days
+against files that moved a great deal in that window, and **eleven of the twelve still applied
+exactly once**. The twelfth refused because the card whose harness sits beside it had rewritten that
+line, which is the refusal working: the perturbation tool refuses a substitution that did not apply
+rather than running against unperturbed code, so a harness that has gone stale says so and names
+the string. Repairing it belongs to the change that moved the string, as any other reference here
+does.
+
 **Property tests carry their sample count and the measurement that chose it.** They exist to probe
 the design, not only to guard against regressions, so a new invariant belongs in one of them rather
 than in another example.

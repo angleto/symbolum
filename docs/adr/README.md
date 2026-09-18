@@ -56,3 +56,4 @@ the rejected option attractive, and they will.
 | [0031](0031-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md) | A price a bound chose is not a price the claim asked for | accepted, extends 0023 and 0026 |
 | [0032](0032-the-certificate-gains-a-square-and-the-products-do-not-gain-a-degree.md) | The certificate gains a square, and the products do not gain a degree | accepted, spends 0029 |
 | [0033](0033-the-integers-arrive-as-a-prerequisite-and-not-as-stage-four.md) | The integers arrive as a prerequisite, not as stage four of the construction | accepted, extends 0016 |
+| [0034](0034-a-perturbation-harness-is-versioned-and-a-measurement-probe-is-not.md) | A perturbation harness is versioned and a measurement probe is not | accepted |
