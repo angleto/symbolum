@@ -118,6 +118,17 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
     // both reach goals they did not a week ago, so the expected direction of travel is that this
     // list goes red because something moved from the second vector to the first, and the repair is
     // to move it here rather than to loosen the assertion.
+    //
+    // **Twelve in fourteen since 2026-09-18, and six moved in that direction at once.** The goal's
+    // own hypotheses became facts (`docs/adr/0025`), and what that reaches here is the case the
+    // list had been reporting as a limit of the surface: `NUM_EUCLID` and the five beside it are
+    // lemmas this library **holds**, stated as `hypotheses ==> conclusion`, and a lemma that IS the
+    // goal was refused because `Apply` reads the specialised implication's own antecedents as
+    // obligations. So the surface was refusing claims it had written down, and the six that moved
+    // are the measure of that rather than of a new proof: nothing derives Euclid's lemma here, the
+    // library is asked for it and now it can answer. `NUM_INDUCTION` and `NUM_CRT` stay refused,
+    // and **why** those two and not the rest is not measured here: the two vectors are what this
+    // run reported, and the cause is a question for whoever next moves one of them.
     val (settled, refused) = published.collect { case (name, Some(claim)) => (name, claim) }
       .partition { case (_, claim) => settles(claim) }
 
@@ -128,21 +139,18 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
         "ABS_TRIANGLE",
         "SUM_TELESCOPES",
         "SUM_BY_PARTS",
-        "NUM_PRIME_UNBOUNDED"
-      )
-    }
-
-    withClue(s"refused: ${refused.map(_._1).mkString(", ")}\n") {
-      refused.map(_._1) shouldBe Vector(
-        "NUM_INDUCTION",
         "NUM_BEZOUT",
         "NUM_EUCLID",
         "NUM_FACTORISATION",
         "NUM_FACTORISATION_UNIQUE",
-        "NUM_CRT",
+        "NUM_PRIME_UNBOUNDED",
         "NUM_SQUARE_NOT_DOUBLE",
         "NUM_PROV_DEDUCTION"
       )
+    }
+
+    withClue(s"refused: ${refused.map(_._1).mkString(", ")}\n") {
+      refused.map(_._1) shouldBe Vector("NUM_INDUCTION", "NUM_CRT")
     }
 
     // And neither side is empty, which is what makes the two assertions above say something about
