@@ -435,6 +435,25 @@ object Domain {
      * is the one every deletion step uses. Re-choosing per step would let a subset provable only
      * classically survive where the full set was intuitionistic, and the report would then name the
      * choice axiom because the search shrank the assumptions, which is a worse trade made silently.
+     *
+     * == The net under the first of the two, which this cannot currently tell from a decision ==
+     *
+     * `intuitionistically` reads its answer through `toOption`, so a refusal because
+     * `Intuitionistic.Fuel` ran out and a refusal because the claim is not intuitionistically valid
+     * are the same `None` here, and both fall through to `classically` at the choice axiom. That is
+     * Mycelium card `2e85b5d4`, whose subject is the same shape at `Prove`'s propositional address;
+     * this is its second site and the card named only the first.
+     *
+     * It is left standing rather than repaired, and the measurement is why. Over the 1114 formulas
+     * `PropositionalRouteSpec` enumerates, the deepest goal needs **7** of the 256, so the net is
+     * not a thing anything reaches. What this file adds to that population is longer implication
+     * chains, one link per instance, and the bound on instances is what bounds them.
+     *
+     * What guards it here is the accounting rather than a depth: `DomainTheorySpec` asserts that a
+     * bridged conclusion spends **exactly** what its bridge spends, which is an equality a silent
+     * fall to the classical route would break by adding `SELECT`. That is a guard on the outcome
+     * where the card asks for one on the reason, and the difference is worth knowing before
+     * trusting it: it catches the fall where a bridge is named and not where none is.
      */
     private def close(
       classical: Classical,

@@ -120,6 +120,77 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     info(s"$Formulas formulas of at most $Nodes nodes, ${addressed.size} at the propositional address")
   }
 
+  "The net under the calculus" should "not be reached by any goal of this population" in {
+    // `2e85b5d4`, which is the consequence `docs/adr/0023` wrote down and did not repair: a goal
+    // that exhausts `Intuitionistic.Fuel` comes back `BoundReached`, the propositional address
+    // hands it to the classical procedure anyway, and the theorem that comes back costs an axiom
+    // with nothing saying the free route was cut short rather than decided against.
+    //
+    // The card's own first step is to find out whether anything reaches the net at all, because if
+    // nothing does then a report distinguishing the two refusals is machinery bought for a case
+    // that does not occur. This is that count, and the criterion it counts by is written here
+    // rather than left to the reader: a goal REACHES the net when `prove` refuses it with
+    // `BoundReached` naming this search, which is the one refusal that means "I stopped" rather
+    // than "it is not so".
+    val exhausted = addressed.filter { reading =>
+      calculus.prove(reading.goal) match {
+        case Left(BoundReached(name, _, _, _)) => name == Intuitionistic.SearchName
+        case _ => false
+      }
+    }
+
+    exhausted shouldBe empty
+  }
+
+  it should "have most of itself unused, measured rather than assumed" in {
+    // Zero above says nothing about how close anything came, and "nobody hit 256" is a weak
+    // sentence if the deepest goal used 255. So the net is lowered until the population's answers
+    // change, and the depth at which they first do is how much of it is actually in use.
+    //
+    // The whole answer vector is compared rather than a count, because two goals swapping which of
+    // them is proved would leave a count alone. And the search at a lower depth is the same search:
+    // `Intuitionistic.prove` takes the depth for this measurement and nothing else passes it.
+    val atFull: Vector[Boolean] = addressed.map(r => calculus.prove(r.goal).isRight)
+
+    def answersAt(fuel: Int): Vector[Boolean] =
+      addressed.map(r => calculus.prove(r.goal, fuel).isRight)
+
+    // The least depth that still answers exactly as the full net does. Binary search, and the pair
+    // of assertions under it is what says the search landed on a real edge rather than anywhere:
+    // it agrees at `needed` and disagrees at `needed - 1`.
+    val needed: Int = {
+      var low = 1
+      var high = Intuitionistic.Fuel
+      while (low < high) {
+        val mid = low + (high - low) / 2
+        if (answersAt(mid) == atFull) high = mid else low = mid + 1
+      }
+      low
+    }
+
+    answersAt(needed) shouldBe atFull
+    answersAt(needed - 1) should not be atFull
+
+    // And the assumption the binary search rests on, measured instead of assumed: that agreement
+    // once reached is not lost again higher up. If it could be, `needed` would be an edge rather
+    // than THE edge and the margin below would be a statement about nothing. More depth can only
+    // let the search go further, so this should hold by construction — which is exactly the kind
+    // of "should" this repository asks to be counted.
+    Iterator.iterate(needed)(_ * 2).takeWhile(_ <= Intuitionistic.Fuel).foreach { depth =>
+      withClue(s"the answers changed again at depth $depth: ") {
+        answersAt(depth) shouldBe atFull
+      }
+    }
+
+    // The figure this card is closed with, and it is written as an inequality rather than as the
+    // number: the number is a property of these rules and would move for a reason that is not a
+    // defect, where the margin is the claim. A change that made the search deep enough to matter
+    // fails here and gets to argue for a larger net instead of discovering it in production.
+    needed should be <= (Intuitionistic.Fuel / 4)
+
+    info(s"the deepest of ${addressed.size} goals needs $needed of ${Intuitionistic.Fuel}")
+  }
+
   "The gate in front of the calculus" should "add no theorem to it, which is why it is not asked" in {
     // The measurement `docs/adr/0023` turns on, as a count that must be zero. `Minimal.prove` is
     // `Intuitionistic.prove` behind a test for a negation, so a goal the gate proves and the

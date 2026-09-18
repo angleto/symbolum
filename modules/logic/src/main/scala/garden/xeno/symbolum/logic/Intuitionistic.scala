@@ -111,16 +111,47 @@ final class Intuitionistic private (val logic: Logic) {
    * reason the two procedures beside this one give: the body is what the fragment is about, and a
    * quantifier left on would make the whole goal a single atom and the answer an immediate refusal.
    */
-  def prove(goal: Term): Either[LogicError, Kernel.Thm] =
+  def prove(goal: Term): Either[LogicError, Kernel.Thm] = prove(goal, Fuel)
+
+  /**
+   * The same, at a stated depth, which is what makes the net measurable rather than only present.
+   *
+   * [[Intuitionistic.Fuel]] is a net under a termination argument and not the argument, so the
+   * question a reader should be able to ask of it is how much of it anything uses. With the depth
+   * fixed inside there is no way to ask: a goal either comes back proved or comes back
+   * `BoundReached`, and the distance between the two is invisible. Running a population at a
+   * descending depth and finding where its answers first change is that distance, and
+   * `PropositionalRouteSpec` does exactly that.
+   *
+   * It is **not** a knob for a caller wanting more search. Nothing in this repository passes
+   * anything but the default, the bound is not part of what the procedure promises, and a caller
+   * who reached for a larger one would be buying a deeper search for a fragment whose termination
+   * does not need it.
+   */
+  def prove(goal: Term, fuel: Int): Either[LogicError, Kernel.Thm] =
     for {
       stripped <- Logic.stripForall(goal)
       (variables, body) = stripped
       _ <-
         if (Term.typeOf(body) == Type.Bool) Right(())
         else Left(NotOfForm("a proposition", body))
-      proved <- search(Vector.empty, body, Fuel)
+      proved <- search(Vector.empty, body, fuel).left.map(atDepth(fuel))
       closed <- rules.genAll(proved, variables.toList)
     } yield closed
+
+  /**
+   * The exhaustion refusal, carrying the depth this run was actually given.
+   *
+   * [[search]] reports [[Intuitionistic.Fuel]] because it counts down and never knew what it
+   * started from, which is right for every caller but the measuring one. Rewriting it here rather
+   * than threading the starting depth through the recursion keeps the change to the one place that
+   * can be wrong: a refusal from a run at depth 40 saying 256 is a figure nobody could reconcile,
+   * and this repository loses more to that than to a missing figure.
+   */
+  private def atDepth(fuel: Int)(error: LogicError): LogicError = error match {
+    case BoundReached(SearchName, _, _, goal) => BoundReached(SearchName, fuel, fuel, goal)
+    case other => other
+  }
 
   /**
    * Whether this would take the goal at all, answered before anything is spent on it.
@@ -191,7 +222,7 @@ final class Intuitionistic private (val logic: Logic) {
    * itself.
    */
   private def search(hypotheses: Vector[Term], goal: Term, fuel: Int): Either[LogicError, Kernel.Thm] =
-    if (fuel <= 0) Left(BoundReached("the intuitionistic search", Fuel, Fuel, goal))
+    if (fuel <= 0) Left(BoundReached(SearchName, Fuel, Fuel, goal))
     else if (hypotheses.contains(goal)) assume(goal)
     else if (goal == logic.truth) rules.truth
     else if (hypotheses.contains(logic.falsity))
@@ -536,8 +567,25 @@ object Intuitionistic {
    *
    * Higher than `Minimal.Depth` because the rules here take smaller steps: currying `(C /\ D) ==> B`
    * spends a level to produce a hypothesis that spends another two being used.
+   *
+   * **How much of it anything uses is measured rather than assumed, and the figure is not written
+   * here.** A count copied next to the number it is about is the copy that drifts, so what stands
+   * here is where to read it: `PropositionalRouteSpec` runs its whole enumerated population at a
+   * descending depth, finds the depth at which the answers first change, asserts that the margin is
+   * wide, and prints what it found. That spec is also the only caller anywhere that passes a depth.
    */
   val Fuel: Int = 256
+
+  /**
+   * What the exhaustion refusal calls itself, published so that reading it back is not a literal.
+   *
+   * A caller that has to tell "I stopped" from "it is not so" has only the refusal to tell them
+   * apart by, and `BoundReached` from this search is the one that means the first. Leaving the
+   * string at its two use sites would make that test a quotation, which is the shape that goes
+   * stale when one of the two is reworded and nothing compares them.
+   */
+  val SearchName: String = "the intuitionistic search"
+
 
   /** Over the plain logic, which is where a statement with no arithmetic in it lives. */
   lazy val standard: Intuitionistic = new Intuitionistic(Logic.standard)
