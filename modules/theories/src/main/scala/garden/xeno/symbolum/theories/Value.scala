@@ -61,21 +61,38 @@ final class Value private (val digits: Digits, val modular: Modular, val linarit
       // "no definition of NUM_GCD in this theory": there is one, and saying otherwise sends a
       // caller to look for a constant that is right where they left it. What is missing is a row
       // in this table, and the message says which rows there are.
-      case None =>
-        Left(
-          TypeError(
-            s"$constant has no row in this table; what it evaluates is ${reachable.mkString(", ")}"
-          )
-        )
+      case None => Left(Value.noRow(constant))
 
       case Some(route) =>
-        if (route.arity != arguments.size)
-          Left(
-            TypeError(
-              s"$constant takes ${route.arity} argument(s) and was given ${arguments.size}"
-            )
-          )
+        if (route.arity != arguments.size) Left(Value.wrongArity(constant, route, arguments.size))
         else route.prove(this, arguments)
+    }
+
+  /**
+   * `|- t = v`, for a term `t` that is one of this table's constants applied to numerals.
+   *
+   * [[of]] takes a constant and a vector of values, which is what a caller who already knows both
+   * holds. This is for the caller who holds a **term** and nothing else, which is every consumer on
+   * the tactic surface: a goal arrives as `NUM_DIV 17 5 = 3` and what has to happen first is
+   * reading `NUM_DIV`, `17` and `5` off it.
+   *
+   * **The reading belongs here and not at the call site**, and that is the whole reason this method
+   * exists rather than a helper in `Prove`. Three of the five rows take the term's arguments as
+   * their own and two do not: `NUM_FLOOR` takes one argument, a real, where its row takes a
+   * numerator and a denominator. A caller reading [[Route.arity]] against the term's argument count
+   * gets those two wrong, and gets them wrong silently, because two is a plausible number of
+   * arguments for a term to have. [[Shape]] is what the table says about that, and the match below
+   * does not compile if a row is added with a third shape.
+   *
+   * **What it refuses, by name.** A term whose head is not a constant, a constant with no row (with
+   * the rows there are named, which is [[of]]'s refusal), a wrong number of arguments, and an
+   * argument that is not a numeral — the last naming the argument, because "not a numeral" about a
+   * term the caller wrote is the one refusal they can act on without reading this file.
+   */
+  def at(term: Term): Either[LogicError, Kernel.Thm] =
+    Value.readingOf(modular.notation, term) match {
+      case Right((name, arguments)) => of(name, arguments)
+      case Left(why) => Left(why)
     }
 
   /**
@@ -612,10 +629,40 @@ object Value {
    */
   final case class Route(
     arity: Int,
+    shape: Shape,
     characterisation: String,
     note: String,
     prove: (Value, Vector[BigInt]) => Either[LogicError, Kernel.Thm]
   )
+
+  /**
+   * How a row's arguments sit in a term, which is the one thing a caller holding a term needs and
+   * cannot work out from [[Route.arity]].
+   *
+   * [[Value.of]] takes a vector of values because that is what it computes with, and for three of
+   * the five rows that vector is the term's arguments read as numerals. For the other two it is
+   * not: `NUM_FLOOR` takes **one** argument, a real, and its row takes **two** numbers, a numerator
+   * and a denominator, so a caller matching `arity` against the term's argument count reads that
+   * row as taking two arguments and finds a term that has one.
+   *
+   * It lives here rather than at the call site because the table is the place that knows: adding a
+   * row whose arguments are shaped a third way is then a case added here and a compile error at
+   * [[Value.at]], rather than a silent misreading in whoever holds the term.
+   */
+  enum Shape {
+
+    /** Every argument of the term is a numeral of `num`, and they are the row's arguments. */
+    case Naturals
+
+    /**
+     * One argument of the term, a quotient of two numerals of `real`, read as the pair.
+     *
+     * `NUM_FLOOR (7 / 2)` is the shape, and a real that is not written as one quotient of two
+     * numerals is refused rather than approximated: `NUM_FLOOR (exp 1)` cannot be asked of this
+     * table at all, which is the limit the row's own note states.
+     */
+    case WrittenRational
+  }
 
   /**
    * What this evaluates, which is two of the five the card that asked for it names.
@@ -629,6 +676,7 @@ object Value {
   val Routes: Map[String, Route] = Map(
     Modular.DivName -> Route(
       2,
+      Shape.Naturals,
       Modular.DivisionDetermined,
       "the quotient is determined by `m = n * q + r` with `r < n`, and at a zero divisor by " +
         "`NUM_DIV_ZERO`, which is where the uniqueness cannot reach because `r < ZERO` is unmeetable",
@@ -636,12 +684,14 @@ object Value {
     ),
     Modular.ModName -> Route(
       2,
+      Shape.Naturals,
       Modular.DivisionDetermined,
       "the remainder of the same division, which is the other half of the same conclusion",
       (value, arguments) => value.division(arguments(0), arguments(1), wantQuotient = false)
     ),
     Modular.GcdName -> Route(
       2,
+      Shape.Naturals,
       Modular.GcdDivides,
       "the answer divides the gcd because it divides both, and the gcd divides the answer through " +
         "one Bezout combination found by searching and checked as an equation between numerals; " +
@@ -651,6 +701,7 @@ object Value {
     ),
     Peano.Floor -> Route(
       2,
+      Shape.WrittenRational,
       Peano.FloorAtMost,
       "the greatest natural not above a written rational, read off the window `NUM_FLOOR_LE` and " +
         "`NUM_FLOOR_LT` put it in; the two arguments are a numerator and a denominator, because " +
@@ -659,11 +710,121 @@ object Value {
     ),
     Peano.Ceiling -> Route(
       2,
+      Shape.WrittenRational,
       Peano.CeilingAtLeast,
       "the least natural not below the same rational, by the same window the other way up",
       (value, arguments) => value.rounded(arguments(0), arguments(1), wantCeiling = true)
     )
   )
+
+  /**
+   * Whether a term is one this table evaluates, which is the question an address asks.
+   *
+   * A boolean rather than the reading, because a caller deciding where to send a goal has not
+   * decided to spend anything on it yet, and because the two questions have different answers on
+   * the same term: `NUM_DIV m n` is an application of a constant with a row and is **not**
+   * evaluable, its arguments being variables.
+   */
+  def reads(notation: Notation, term: Term): Boolean = readingOf(notation, term).isRight
+
+  /**
+   * The constant and the argument values a term names, or why it names none.
+   *
+   * One implementation with two callers, which is the reason it is here rather than on the class:
+   * [[Value.at]] spends it to prove, [[reads]] spends it to decide an address, and a second reading
+   * written for the second caller is how a procedure and the address that feeds it come to disagree
+   * about which goals the procedure takes.
+   */
+  def readingOf(
+    notation: Notation,
+    term: Term
+  ): Either[LogicError, (String, Vector[BigInt])] = {
+    def spine(current: Term, collected: Vector[Term]): (Term, Vector[Term]) = current match {
+      case App(fn, argument) => spine(fn, argument +: collected)
+      case head => (head, collected)
+    }
+
+    val (head, arguments) = spine(term, Vector.empty)
+
+    head match {
+      case Const(constant, _) =>
+        Routes.get(constant) match {
+          // The same sentence [[Value.of]] refuses a missing row with, in the same words, because
+          // it is the same fact: there is no row for this constant, and a caller who arrived with a
+          // term rather than a name learns nothing extra from a second wording of it. Written once
+          // and reached from both is what `NotationBoundarySpec`'s census is for.
+          case None => Left(noRow(constant))
+          case Some(route) => readArguments(notation, route, constant, arguments).map((constant, _))
+        }
+      case other =>
+        Left(NotOfForm("an application of a constant this table evaluates", other))
+    }
+  }
+
+  /** The constants this table has a row for, which is what a refusal about a missing one names. */
+  private def reachable: Vector[String] = Routes.keys.toVector.sorted
+
+  /** `constant has no row in this table`, in one place because two callers refuse with it. */
+  private[theories] def noRow(constant: String): LogicError =
+    TypeError(s"$constant has no row in this table; what it evaluates is ${reachable.mkString(", ")}")
+
+  /** `constant takes n and was given m`, likewise. */
+  private[theories] def wrongArity(constant: String, route: Route, given: Int): LogicError =
+    TypeError(s"$constant takes ${route.arity} argument(s) and was given $given")
+
+  /** The values of a term's arguments, as the row's [[Shape]] reads them. */
+  private def readArguments(
+    notation: Notation,
+    route: Route,
+    constant: String,
+    arguments: Vector[Term]
+  ): Either[LogicError, Vector[BigInt]] =
+    route.shape match {
+      case Shape.Naturals =>
+        if (arguments.size != route.arity) Left(wrongArity(constant, route, arguments.size))
+        else
+          arguments.foldLeft(Right(Vector.empty): Either[LogicError, Vector[BigInt]]) {
+            (accumulated, argument) =>
+              for {
+                done <- accumulated
+                read <- notation.valueOfNumeral(argument).toRight(NotOfForm("a numeral", argument))
+              } yield done :+ read
+          }
+
+      // One argument in the term and two in the row, which is what [[Shape]] is about, so the
+      // arity refusal above would name the wrong number here and this branch says its own.
+      case Shape.WrittenRational =>
+        arguments.toList match {
+          case single :: Nil => rational(notation, single)
+          case _ => Left(wrongArity(constant, route.copy(arity = 1), arguments.size))
+        }
+    }
+
+  /**
+   * The numerator and the denominator of a term written as one quotient of two numerals.
+   *
+   * A bare numeral is taken as itself over one, because `NUM_FLOOR 3` is a question somebody will
+   * ask and refusing it for carrying no denominator would be an answer about the notation rather
+   * than about the floor.
+   */
+  private def rational(notation: Notation, term: Term): Either[LogicError, Vector[BigInt]] =
+    notation.valueOfNumeral(term) match {
+      case Some(whole) => Right(Vector(whole, BigInt(1)))
+      case None =>
+        term match {
+          case App(App(Const(Real.Division, _), numerator), denominator) =>
+            for {
+              above <- notation
+                .valueOfNumeral(numerator)
+                .toRight(NotOfForm("a numeral", numerator))
+              below <- notation
+                .valueOfNumeral(denominator)
+                .toRight(NotOfForm("a numeral", denominator))
+            } yield Vector(above, below)
+          case other =>
+            Left(NotOfForm("a numeral, or one numeral over another", other))
+        }
+    }
 
   /**
    * `x` and `y` with `a * x = b * y + c`, found by searching rather than by an algorithm.

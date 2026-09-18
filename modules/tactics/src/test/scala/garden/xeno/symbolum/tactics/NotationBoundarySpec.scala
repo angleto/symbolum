@@ -190,6 +190,13 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Number, "the value asked to be below the other, when it is not"),
     ("Digits.scala", "right") ->
       (Verdict.Number, "the value it was asked to be below"),
+    ("Prove.scala", "reals.show(computed.conclusion)") ->
+      (Verdict.Crossing,
+        "the equation the constant actually evaluates to, rendered where the refusal is raised; " +
+          "this prover's signature IS the one the goal was read in, so the notation is right, and " +
+          "it is on this list because the repair every crossing gets applies here too -- a refusal " +
+          "that carried the theorem would let the surface render it and would let a caller read the " +
+          "value as a term rather than out of a sentence"),
     ("Value.scala", "constant") ->
       (Verdict.Name, "the constant a caller asked for a value of"),
     ("Value.scala", "reachable.mkString(\", \")") ->

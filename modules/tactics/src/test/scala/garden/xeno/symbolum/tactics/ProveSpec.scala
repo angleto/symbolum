@@ -296,6 +296,74 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     wider.addressOf(force(wider.reals.proposition("!x:real. ~(x = 0)"))) should not be Prove.Address.Propositional
   }
 
+  "A defined constant at numerals" should "be evaluated by the prover, which is what `Ask` asks" in {
+    // Step 5 of the card `Value` was built for, and the half that was separately missing. `Value`
+    // has proved `NUM_DIV 17 5 = 3` since 2026-09-18 and **nothing routed a goal to it**: asked of
+    // the prover, that theorem came back "restate it as an equation between reals; this one is
+    // between something else", which is true of the shape and is advice to rewrite a claim with
+    // nothing wrong with it. Measured before the address existed, on all five constants.
+    //
+    // All five are here rather than a witness, because the address is one test and the table is
+    // five rows: a route that worked for the quotient and not for the floor would be an address
+    // that reads `Value.Routes` and a reading that does not, which is exactly what `Value.reads`
+    // exists to prevent.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+
+    val values = Vector(
+      "NUM_DIV 17 5 = 3" -> 2,
+      "NUM_MOD 17 5 = 2" -> 2,
+      "NUM_GCD 12 18 = 6" -> 2,
+      // A floor takes a real, so its bounds are settled over the ordered field and it carries the
+      // reals' fifteen and the sixteenth through the Archimedean property. `ValueSpec` asserts that
+      // split per row; what it means here is that the address is one thing and the price is the
+      // constant's, not the address's.
+      "NUM_FLOOR (7 / 2) = 3" -> 18,
+      "NUM_CEIL (7 / 2) = 4" -> 18
+    )
+
+    values.foreach { case (text, axioms) =>
+      withClue(s"$text: ") {
+        val goal = force(wider.reals.proposition(text))
+        wider.addressOf(goal) shouldBe Prove.Address.Evaluation
+
+        val theorem = force(wider(goal))
+        theorem.conclusion shouldBe goal
+        theorem.hypotheses shouldBe empty
+        Derivation.axiomsOf(theorem).size shouldBe axioms
+      }
+    }
+  }
+
+  it should "answer a wrong value with the value, which is a fact about the claim" in {
+    // What the refusal is worth, and it is worth more than a refusal usually is. Every other
+    // refusal on this surface names a fragment; this one names the number. An author who wrote
+    // `= 4` learns the quotient is 3, which settles their claim rather than redirecting them.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+
+    wider("NUM_DIV 17 5 = 4") match {
+      case Right(theorem) => fail(s"expected a refusal, got ${wider.reals.show(theorem.conclusion)}")
+      case Left(error) =>
+        val message = Remedy.of(wider.reals, error).message
+        message should include("NUM_DIV 17 5 = 3")
+        message should include("what this evaluates to")
+    }
+  }
+
+  it should "leave a general claim about the same constant where it was" in {
+    // The narrowness that makes the address safe, asserted so it cannot drift. What decides the
+    // address is that the left side is an application this table can READ, not that its head is a
+    // constant the table knows: `NUM_DIV (m * n) n = m` names `NUM_DIV` and has nothing to
+    // evaluate, so it keeps whatever refusal it had. Without this line the address would swallow
+    // every lemma about the quotient and answer each one "not a numeral".
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+    val general = force(wider.reals.proposition("!m:num. !n:num. NUM_DIV (m * n) n = m"))
+
+    wider.addressOf(general) should not be Prove.Address.Evaluation
+  }
+
   it should "refuse an unaddressed goal as itself, not as a procedure's complaint" in {
     // The point of the whole file: a goal nobody can take is told so, rather than being handed
     // whichever procedure was asked last and reporting that procedure's shape requirement.
