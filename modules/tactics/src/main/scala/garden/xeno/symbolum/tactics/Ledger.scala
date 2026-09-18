@@ -5,6 +5,7 @@ import java.time.Instant
 import scala.jdk.CollectionConverters.*
 import scala.util.control.NonFatal
 import garden.xeno.symbolum.Expr
+import garden.xeno.symbolum.theories.Prose
 
 /**
  * What has already been asked of this system, and what came of it.
@@ -254,7 +255,8 @@ object Ledger {
    * event, and a reader grepping the file for what the machine has been doing wants the difference.
    */
   private def evidenceOf(reading: Novelty.Reading): String =
-    s"${reading.standing}: ${reading.inferences} inferences over ${reading.axioms} axioms"
+    s"${reading.standing}: ${Prose.count(reading.inferences, "inference")} over " +
+      s"${Prose.count(reading.axioms, "axiom")}"
 
   private def evidenceOf(outcome: Discovery.Outcome): String = outcome match {
     case _: Discovery.Proved => "certified by the kernel"
@@ -269,7 +271,7 @@ object Ledger {
       }
       s"agreed to ${separated.agreement} digits at ${point.mkString(", ")}"
     case unsettled: Discovery.Unsettled =>
-      s"${unsettled.pointsTried} points tried: ${unsettled.reason.message}"
+      s"${Prose.count(unsettled.pointsTried, "point")} tried: ${unsettled.reason.message}"
   }
 
   private def render(entry: Entry): String =

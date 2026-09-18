@@ -258,7 +258,10 @@ class ArgumentSpec extends AnyFlatSpec with Matchers {
 
     lines.head shouldBe reading.summary
     lines.head should include("3 claims, 3 proved")
-    lines.head should include("1 idle and 1 stale")
+    // Two counts and one noun until 2026-09-18, which no rule over the pair renders as English.
+    // Each number governs a noun of its own now, so this reads "1 idle citation and 1 stale
+    // citation" rather than "1 idle and 1 stale citations".
+    lines.head should include("1 idle citation and 1 stale citation")
 
     // The axioms are listed once for the document and not once per claim. Thirteen of them on each
     // of a dozen lines is a hundred and fifty lines saying one thing, and the count stays on every
@@ -270,5 +273,50 @@ class ArgumentSpec extends AnyFlatSpec with Matchers {
     page should include("weighed 1, from ARS 2022, table 4: load <= 60 * rate")
     page should include("assumed and never weighed: 0 < load (ARS 2022, table 7)")
     page should include("cited and never assumed: load < cap (Decreto 152/2006 art. 99)")
+  }
+
+  // Three of this line's counts carry a noun and none of them conditioned it until 2026-09-18, so
+  // a document of one claim said "1 claims" and one that reached a single axiom of its own said
+  // "1 axioms of the domain". The citations were the case with no repair available at the last
+  // letter: two counts shared one noun, and neither "1 idle and 1 stale citations" nor "1 idle and
+  // 0 stale citation" is English, so each number governs a noun of its own now.
+  //
+  // BOTH DIRECTIONS IN ONE TEST, for the reason `EssaySpec` gives at the same shape: the repair is
+  // one shared helper and one wrong comparison in it turns every count on every page singular,
+  // which a test written on the singular alone reports as fixed. The reading is BUILT here rather
+  // than read from the fixture above: `summary` is a function of four fields and nothing else, and
+  // a document costing one claim and one domain axiom is a fixture rather than a proof to find.
+  "The counts on the summary line" should "take the singular at one and the plural elsewhere" in {
+    val claim = force(extended.proposition("0 < load"))
+    val axiom = force(extended.proposition("0 < cap"))
+
+    def line(claims: Int, domain: Int, idle: Int, stale: Int): String = {
+      val report = Cost.Report(
+        claim = claim,
+        outcome = Cost.Outcome.Proved,
+        axioms = if (domain == 0) Set.empty else Set(axiom)
+      )
+      withClue(s"this fixture can build 0 or 1 domain axioms and was asked for $domain: ") {
+        domain should be <= 1
+      }
+      Argument
+        .Reading(
+          lines = Vector.fill(claims)(Argument.Line(claim, report, Vector.empty, None)),
+          idle = Vector.fill(idle)(Provenance.Entry(claim, "a source")),
+          stale = Vector.fill(stale)(Provenance.Entry(claim, "another source")),
+          foundation = Set.empty
+        )
+        .summary
+    }
+
+    line(1, 1, 1, 1) should
+      startWith("1 claim, 1 proved, 0 decided, 0 open; 1 axiom of the domain")
+    line(1, 1, 1, 1) should include("1 idle citation and 1 stale citation")
+
+    // The plural on every one of the three, on a reading of the same shape, so a helper that has
+    // gone singular everywhere fails here rather than passing.
+    line(2, 0, 0, 3) should
+      startWith("2 claims, 2 proved, 0 decided, 0 open; 0 axioms of the domain")
+    line(2, 0, 0, 3) should include("0 idle citations and 3 stale citations")
   }
 }

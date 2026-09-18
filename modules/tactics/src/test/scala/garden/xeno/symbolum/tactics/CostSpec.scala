@@ -170,6 +170,48 @@ class CostSpec extends AnyFlatSpec with Matchers {
     page("!x:real. ?y:real. x < y") should not include "inferences"
   }
 
+  // Until 2026-09-18 this line was a bare interpolation followed by a plural, so the page said
+  // "1 axioms" on any claim resting on a single axiom — which is not a corner: at the tip the card
+  // was opened against, `Ask` on `!x:real. !y:real. x + y = y + x` printed
+  // "77 inferences over 1 axioms". This is the surface on which this repository tells a reader what
+  // it costs to believe something, so the number and its noun have to agree there if anywhere.
+  //
+  // BOTH DIRECTIONS IN ONE TEST, for the reason `EssaySpec` gives for the same shape: the repair is
+  // a shared helper, so one wrong comparison in it turns every count on every page singular, and a
+  // test written only on the singular calls that fixed. The report is built here rather than proved
+  // for, because the singular at the inference count needs a proof exactly one inference long and
+  // what is under test is the rendering, not which claims are that cheap.
+  "The two counts on the proof line" should "take the singular at one and the plural elsewhere" in {
+    val claim = reals.proposition("!x:real. x + 0 = x").fold(error => fail(error.message), identity)
+
+    def proofLine(inferences: Int, axioms: Int): String = {
+      val distinct: Set[Term] = (0 until axioms).map(i => Term.variable(s"a$i", Real.realType)).toSet
+      withClue(s"the fixture asked for $axioms axioms and built ${distinct.size}: ") {
+        distinct.size shouldBe axioms
+      }
+      cost
+        .page(
+          Cost.Report(
+            claim = claim,
+            outcome = Cost.Outcome.Proved,
+            inferences = inferences,
+            axioms = distinct
+          ),
+          believed = false
+        )
+        .fold(error => fail(error.message), identity)
+        .find(_.contains(" over "))
+        .getOrElse(fail(s"no proof line at $inferences inference(s) over $axioms axiom(s)"))
+    }
+
+    proofLine(1, 1).trim shouldBe "1 inference over 1 axiom"
+    proofLine(77, 1).trim shouldBe "77 inferences over 1 axiom"
+    proofLine(1, 2).trim shouldBe "1 inference over 2 axioms"
+    // Zero takes the plural, which is the case a reader of the condition does not picture, and it
+    // is the ordinary reading of a claim the kernel settled without reaching an axiom at all.
+    proofLine(4, 0).trim shouldBe "4 inferences over 0 axioms"
+  }
+
   /* ------------------------------------------- what it rests on, read as mathematics */
 
   "A report over a chain" should "say what the proof rests on, by name, beside the axioms" in {

@@ -1,7 +1,7 @@
 package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.{Kernel, Term}
-import garden.xeno.symbolum.theories.Linarith
+import garden.xeno.symbolum.theories.{Linarith, Prose}
 
 /**
  * A whole argument on one page: what each conclusion cost, what it rests on, and where it came from.
@@ -282,13 +282,28 @@ object Argument {
     /** What the whole run cost, in the inferences the kernel actually took. */
     def inferences: Int = lines.map(_.report.inferences).sum
 
-    /** The first line of the page. */
+    /**
+     * The first line of the page.
+     *
+     * Three of the counts here carry a noun and go through `Prose.count`; `proved`, `decided`,
+     * `open` and `foundational` are adjectives standing on the noun before them and take no plural
+     * of their own, which is why they are left as bare interpolations rather than fixed.
+     *
+     * **The citations are two counts and were one noun**, and that is the one place the rendered
+     * text changes shape rather than only its last letter. "1 idle and 1 stale citations" is wrong
+     * and "1 idle and 0 stale citation" is worse, because no rule over the pair reads as English:
+     * a shared noun cannot be conditioned on either number and conditioning it on the sum says
+     * nothing about either. So each number governs a noun of its own and the reader gets
+     * "1 idle citation and 0 stale citations".
+     */
     def summary: String =
-      s"${lines.length} claims, ${lines.count(_.proved)} proved, " +
+      s"${Prose.count(lines.length, "claim")}, ${lines.count(_.proved)} proved, " +
         s"${lines.count(line => line.settled && !line.proved)} decided, " +
         s"${lines.count(line => !line.settled)} open; " +
-        s"${domainAxioms.size} axioms of the domain, ${foundational.size} foundational; " +
-        s"${idle.length} idle and ${stale.length} stale citations"
+        s"${Prose.count(domainAxioms.size, "axiom")} of the domain, " +
+        s"${foundational.size} foundational; " +
+        s"${Prose.count(idle.length, "idle citation")} and " +
+        s"${Prose.count(stale.length, "stale citation")}"
   }
 
   /** Over a development, a register, and the axioms that are not this argument's own. */

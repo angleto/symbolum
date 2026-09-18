@@ -1376,6 +1376,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val guide = read("docs/proving.md")
 
     guide should include("3 claims, 3 proved, 0 decided, 0 open")
+    // The tail of the same line, added 2026-09-18 because that is the half that went stale and
+    // nothing here read it: the citations were two counts sharing one noun, the repair gave each
+    // number a noun of its own, and the transcript in the guide went on saying "1 idle and 1 stale
+    // citations" with every assertion in this file still green.
+    guide should include("1 idle citation and 1 stale citation")
     guide should include("weighed 1, from ARS 2022, table 4: load <= 60 * rate")
     guide should include("assumed and never weighed: 0 < load (ARS 2022, table 7)")
     guide should include("cited and never assumed: load < cap (Decreto 152/2006 art. 99)")

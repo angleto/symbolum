@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, Order, Reach, RealTheory, Signature}
+import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, Order, Prose, Reach, RealTheory, Signature}
 
 /**
  * Everything this system can say about one claim, gathered in one place.
@@ -243,9 +243,16 @@ final class Cost private (
         .toVector
     } yield {
       val head = s"${report.outcome}: $claim"
+      // Both counts go through `Prose.count`, and both reach one. The page this line is the whole
+      // point of said "1 axioms" until 2026-09-18 on any claim resting on a single axiom, which is
+      // the ordinary case rather than a corner: `!x:real. !y:real. x + y = y + x` reads that way.
+      // The inference count is guarded above zero here and so only ever reads the singular at one.
       val proof =
         if (report.inferences > 0)
-          Vector(s"  ${report.inferences} inferences over ${report.axioms.size} axioms")
+          Vector(
+            s"  ${Prose.count(report.inferences, "inference")} over " +
+              s"${Prose.count(report.axioms.size, "axiom")}"
+          )
         else Vector.empty
       val where = report.point.map(point => s"  fails at: $point").toVector
       // Through `Remedy` rather than the refusal's own text, which names the shape it wanted and

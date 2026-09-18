@@ -141,7 +141,25 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
     val open = ledger.record(discovery.settle(Mul(Vector(x, x)), x, Vector(Map("x" -> 1.0))))
     // Agreement at one point is not a lead and agreement at three hundred is, so the count is the
     // evidence and the reader needs it to know whether to look.
-    open.evidence should startWith("1 points tried")
+    //
+    // This line read `"1 points tried"` until 2026-09-18, which is the defect pinned as the
+    // expected output by the one test written for the count: a sample of exactly one point is the
+    // shape this assertion exists to describe, so the singular was the only reading it ever took
+    // and it was the wrong one.
+    open.evidence should startWith("1 point tried")
+
+    // The plural on the same noun, which is what keeps the repair from being a helper that has gone
+    // singular everywhere. A DIFFERENT candidate pair rather than the same one at more points: the
+    // ledger answers a repeated candidate from what it already wrote, which is the property the
+    // test below this one exists for, so asking again about `x * x` would read back the entry with
+    // one point in it and assert nothing. `x^3` and `x` agree at 0 and at 1 and are not equal.
+    val cube = Pow(x, Num(3))
+    val two = ledger.record(discovery.settle(cube, x, Vector(Map("x" -> 0.0), Map("x" -> 1.0))))
+
+    withClue(s"the fixture was meant to be unsettled at two points and read ${two.verdict}: ") {
+      two.verdict shouldBe Ledger.Verdict.Open
+    }
+    two.evidence should startWith("2 points tried")
   }
 
   "The second run of a candidate" should "cost a lookup instead of a certification" in {
