@@ -9,9 +9,12 @@
 # scope is the shape, and this repository has four entities by that name.
 #
 # WHAT THE ANSWER TURNED OUT TO BE, and it is the reason to read this header before trusting a
-# green run. At `423c12f` on 2026-09-18, over a `sbt clean doc` of eleven modules: 912 unqualified
-# queries on 550 pages, of which 656 resolved to the writer's own entity, 25 to a member it
-# inherits, 231 to a top-level entity of the module, and ZERO anywhere else. Not zero by luck.
+# green run. At `d247b58` on 2026-09-18, over a `sbt clean doc` of eleven modules: 912 unqualified
+# queries on 551 pages, of which 656 resolved to the writer's own entity, 25 to a member it
+# inherits, 231 to a top-level entity of the module, and ZERO anywhere else. Read twice, three
+# commits apart: at `423c12f` it was the same 912 over 550 pages and the same four buckets, the
+# page between them being one `theories` gained. So the partition survived a change to that
+# module rather than being a snapshot of one tree. Not zero by luck.
 # Scaladoc 3.3.5 resolves a query in the lexical and inheritance scope of the entity that writes
 # it and NOWHERE ELSE, so a query either lands in that scope or fails loudly, and the case this
 # file was written to catch is one the tool does not produce.
@@ -37,7 +40,7 @@
 # one `CLAUDE.md` prescribes: qualify it from the top-level entity, `[[Cnf.Problem]]` rather than
 # `[[Problem]]`.
 #
-# The fourth of those is an assumption and was measured rather than assumed: at `423c12f` no
+# The fourth of those is an assumption and was measured rather than assumed: at `d247b58` no
 # top-level name occurs in two packages of one module, the pairs that look like it being a class
 # and its companion object in the same package, which scaladoc tells apart by namespace. A module
 # that grew a second package with a repeated top-level name would make that bucket, 231 of the 912
@@ -51,7 +54,7 @@
 #
 # And scaladoc publishes neither private members nor links into them, so a query whose writer or
 # whose target is private renders as plain text and never becomes an anchor: 912 of the
-# repository's 1528 unqualified query sites reach this instrument at `423c12f`, about six in ten.
+# repository's 1528 unqualified query sites reach this instrument at `d247b58`, about six in ten.
 #
 # THE CENSUS OVER THE SOURCES was the alternative and is not what landed, and the measurement is
 # why. Counting, per site, how many entities of the module carry that name flags 217 sites reading

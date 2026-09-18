@@ -326,9 +326,9 @@ jobs:
       # its own for the same reason: the documentation is already built and on disk. The grep above
       # asks whether a link resolved; this asks what it points at.
       #
-      # WHAT IT IS A GATE ON, which is not what it looks like. Measured at `423c12f` on 2026-09-18,
+      # WHAT IT IS A GATE ON, which is not what it looks like. Measured at `d247b58` on 2026-09-18,
       # macOS, Temurin 23, scaladoc 3.3.5, over a `sbt clean doc` of eleven modules: 912 unqualified
-      # queries on 550 pages, 656 into the writer's own entity, 25 into a member it inherits, 231
+      # queries on 551 pages, 656 into the writer's own entity, 25 into a member it inherits, 231
       # into a top-level entity of the module, and ZERO anywhere else. Zero by construction rather
       # than by luck: scaladoc resolves a query in the lexical and inheritance scope of the entity
       # writing it and consults no import, so a name reachable to the compiler and not to that

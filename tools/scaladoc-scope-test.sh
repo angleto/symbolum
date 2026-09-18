@@ -12,7 +12,7 @@
 # WHY THE OFF-SCOPE CASE IS NOT THE ONLY ONE. A check that only ever sees its own defect passes by
 # being blind: three of the four shapes below are links this repository writes by the hundred, and
 # a subject that flagged them would be red on a tree with nothing wrong with it. The measurement
-# that chose them is on the real tree at `423c12f` on 2026-09-18: of 912 unqualified queries, 656
+# that chose them is on the real tree at `d247b58` on 2026-09-18: of 912 unqualified queries, 656
 # resolved to
 # the writer's own entity, 25 to a member it inherits, 231 to a top-level entity, and none
 # anywhere else. Each of the first three is a case here, and dropping any one of them would turn

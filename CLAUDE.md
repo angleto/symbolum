@@ -153,8 +153,8 @@ session named would be a different tool with the same name.
   its own. `tools/scaladoc-scope-test.sh` checks the classification against pages built for the
   purpose, in the `shell-tools` job.
 
-  **What it found is that the class is empty because scaladoc cannot produce it.** At `423c12f`:
-  912 unqualified queries on 550 pages, 656 into the writer's own entity, 25 into a member it
+  **What it found is that the class is empty because scaladoc cannot produce it.** At `d247b58`:
+  912 unqualified queries on 551 pages, 656 into the writer's own entity, 25 into a member it
   inherits, 231 into a top-level entity of the module, **none** anywhere else. A query resolves in
   the lexical and inheritance scope of the entity writing it and consults **no import**, measured
   twice on `sat/Resolution.scala`, whose `Cnf.Problem` is in scope for the compiler: `[[Problem]]`
