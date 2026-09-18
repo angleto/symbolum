@@ -1341,9 +1341,18 @@ nor, since 2026-09-18, the order fact. What is missing is one half of the domina
 step is valid only from one upwards, so it is a two-base induction and not an instance. The other
 half was an order fact about a quotient, of which this chain had exactly one, `INV_POSITIVE`;
 `INV_ANTITONE` is the second, the reciprocal reversing the order on the positives, with
-`LE_MUL_BOTH` under it. **That sentence was written in five places and went stale in all five at
-once**, which is the defect this file names about counts arriving at a fact written twice. `sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept
-the first sentence wrong for a day is a tool with no consumer, so there is one now: `LimitSpec`
+`LE_MUL_BOTH` under it. **That sentence was written in seven documents and went stale in all of
+them at once**, which is the defect this file names about a fact written twice. The figure here
+said five for a day, and so does the title of `9734bf7`, the commit that landed the second fact
+and made the copies false. Five is what that commit repaired; the population was seven, and the
+two it left behind stood for the seven hours between that commit and `ceedf4d`, on the same day.
+The instrument is the union of the two commits' own diffs rather than a pattern, because the claim
+is spelled differently in every document and a pattern matching all of them would have been built
+by reading them, which is the reading it was meant to replace. A count of copies
+is itself a copy, and this one counted the repair instead of the population, which is the shape of
+error the sentence it sits in is about.
+`sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept the first sentence
+wrong for a day is a tool with no consumer, so there is one now: `LimitSpec`
 obtains the geometric series at one half and sandwiches its limit between zero and two, which is the
 first series here whose convergence is a theorem rather than a hypothesis.
 
