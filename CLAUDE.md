@@ -516,7 +516,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 507 lemmas, 332 have two or more leading quantifiers and **304 of
+caller meant: of the library's 511 lemmas, 335 have two or more leading quantifiers and **307 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1051,6 +1051,26 @@ a code that is not a formula**, and those inversion lemmas are what would settle
 `!i. ~(NUM_FREE_FORM i c)`, so `DeductionSpec` applies the theorem to an actual axiom of PA with
 **nothing** left assumed. The only case it can fail on is a variable no enclosing quantifier binds,
 which is a code that is not closed, and it refuses there by naming the index.
+
+**PA proves its own arithmetic on numerals, and since 2026-09-18 that is both operations.**
+`NUM_PROV_NUMERAL_ADD` came first and called itself the first brick of Sigma-1 completeness;
+`NUM_PROV_NUMERAL_MUL` is the second, and the order between them is not a preference. The step of
+the multiplication's induction turns `t * S u` into `t * u + t`, so the hypothesis travels into the
+left summand of a sum, which is `NUM_PROV_ADD_CONG`, the successor congruence one arity up. What
+stands there is then a **sum of two numerals**, which is exactly the statement the first brick
+settles. `DeductionSpec` asserts that with `Derivation.restingOn` rather than by reading the proof.
+
+Both multiplication axioms had to be put to work first, which is the difference between a fact about
+a code and a fact a derivation can use: `NUM_PA_MUL_ZERO` says `!v0. v0 * 0 = 0` and
+`NUM_PROV_MUL_ZERO` is that axiom at a closed term. The successor one is where the substitution
+walk is longer than addition's, because `v0 * S v1 = v0 * v1 + v0` puts a product **inside** a sum
+and the walk descends through both. Four facts, **zero axioms**, and the trusted base stays at
+nineteen.
+
+Why it is the bottom of the stack rather than a lemma somebody wanted: every pure-arithmetic
+representation `docs/adr/0013`'s coding needs, which is `NUM_TRI`, `NUM_PAIR`, `NUM_CODE` and the
+projections, is written with `*`. While the object theory could add its numerals and not multiply
+them, nothing above could be shown to represent anything.
 
 The quantifier is the only interesting clause, and the bookkeeping is the whole of it: descending
 past `!b. ...` carries `~(b = i)` down, and `NUM_FREE_TERM i (NUM_CODE 0 b)` is `b = i`, so the

@@ -129,6 +129,73 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
         "(NUM_NUMERAL (NUM_ADD (SUC ZERO) (SUC (SUC ZERO))))))")
   }
 
+  /**
+   * The object theory's multiplication on numerals, which stands on the addition above it.
+   *
+   * The same two assertions for the same two reasons, and one more that is about the ORDER rather
+   * than about this theorem: the step of this induction turns `t * S u` into `t * u + t` and then
+   * needs `numeral (m * k) + numeral m` to be a numeral, which is exactly what
+   * `NUM_PROV_NUMERAL_ADD` says. So the second brick cannot be laid before the first, and the
+   * `restingOn` assertion below is what says it really was laid on it rather than beside it.
+   */
+  it should "prove its own multiplication on numerals, at two axioms and no more" in {
+    val theorem = force(deduction.fact(Deduction.NumeralMultiplication))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+
+    val instance = force(rules.specAll(theorem, List(term("SUC (SUC ZERO)"), term("SUC ZERO"))))
+    instance.hypotheses shouldBe empty
+    instance.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL (SUC (SUC ZERO))) (NUM_NUMERAL (SUC ZERO)))) " +
+        "(NUM_NUMERAL (NUM_MUL (SUC (SUC ZERO)) (SUC ZERO)))))")
+
+    // And it rests on the addition brick, which is the claim the file makes about the order. A
+    // derivation that had reached the same statement without it would pass both assertions above.
+    val addition = force(deduction.fact(Deduction.NumeralAddition))
+    Derivation.restingOn(theorem, Set(addition.conclusion)) should contain(addition.conclusion)
+  }
+
+  /**
+   * The two axioms of multiplication put to work, which is what the induction above is made of.
+   *
+   * They are asserted apart from it because they are the pieces a reader checks by eye: the second
+   * is the one whose substitution descends through a sum AND a product, where addition's descends
+   * through a sum alone, and an error there would show as a code that is not the axiom's.
+   */
+  it should "put both multiplication axioms to work at closed terms" in {
+    val zero = force(deduction.fact(Deduction.MultiplicationAtZero))
+    val successor = force(deduction.fact(Deduction.MultiplicationAtSuccessor))
+
+    Derivation.axiomsOf(zero) should have size 2
+    Derivation.axiomsOf(successor) should have size 2
+
+    val numeral = term("NUM_NUMERAL (SUC ZERO)")
+    val isTerm = force(rules.spec(term("SUC ZERO"), force(chain.language.fact(Language.NumeralIsTerm))))
+    val isClosed =
+      force(rules.spec(term("SUC ZERO"), force(chain.language.fact(Language.NumeralIsClosed))))
+
+    val atZero = force(
+      rules.specAll(zero, List(numeral)).flatMap(rules.mp(_, isTerm)).flatMap(rules.mp(_, isClosed)))
+    atZero.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_CODE 1 0))) (NUM_CODE 1 0)))")
+
+    val atSuccessor = force(
+      rules
+        .specAll(successor, List(numeral, numeral))
+        .flatMap(rules.mp(_, isTerm))
+        .flatMap(rules.mp(_, isClosed))
+        .flatMap(rules.mp(_, isTerm))
+        .flatMap(rules.mp(_, isClosed)))
+    atSuccessor.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_CODE 2 (NUM_NUMERAL (SUC ZERO))))) " +
+        "(NUM_CODE 3 (NUM_PAIR " +
+        "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_NUMERAL (SUC ZERO)))) " +
+        "(NUM_NUMERAL (SUC ZERO))))))")
+  }
+
   it should "carry an object theorem across its own equality" in {
     val language = chain.language
     val numeral = term("NUM_NUMERAL m")

@@ -462,8 +462,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // addition and picking a side is never it -- it only sometimes agrees, which is how a wrong
     // rule earns confidence. The safe form is to take whatever the tip now says and add this
     // branch's delta, never to carry forward a total computed against an earlier one.
-    library.entries.size shouldBe 507
-    library.names.distinct.size shouldBe 504
+    // 511 and 508 with the four `Deduction` facts that put PA's multiplication to work and prove
+    // it on numerals. Tip plus this branch's delta, which is what the paragraph above insists on:
+    // four entries, four names, none of them shared with another development.
+    library.entries.size shouldBe 511
+    library.names.distinct.size shouldBe 508
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
