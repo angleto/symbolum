@@ -43,8 +43,14 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `proposals` itself, where it inflates the two counts `ProposeSpec` pins; it is left there and
     // said here rather than repaired in passing, because those counts have a history of moving for
     // reasons nobody derived and this is not the commit to add another.
-    recoveries.size shouldBe 16
-    recoveries.map(_.reached).distinct.size shouldBe 12
+    // **18 and 14 since 2026-09-18, and the two that arrived are a matched pair rather than two
+    // additions.** `Order` gained `LE_MUL_BOTH`, and the generator's own mutation travels between it
+    // and `LT_MUL_BOTH` in both directions: `real_le` for `real_lt` rediscovers the strict one from
+    // the non-strict and back again. So a lemma added to close a gap in the order added exactly the
+    // two rows this loop exists to produce, and it was the loop that said so rather than the person
+    // who added it.
+    recoveries.size shouldBe 18
+    recoveries.map(_.reached).distinct.size shouldBe 14
 
     val pairs = recoveries.map(r => (r.proposal.from, r.proposal.change, r.reached)).toSet
     pairs should contain(("ADD_SYM", "real_add became real_mul", "MUL_SYM"))
@@ -200,7 +206,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // than a total carried forward. It is one arrow over a single equation, so it offers one
     // weakening: `!w. w = WORD_EMPTY`. Every other addend here belongs to work already on the tip
     // and is taken from it wholesale.
-    propose.weakenings.size shouldBe 343
+    // 347 with `LE_MUL_BOTH`'s two and `INV_ANTITONE`'s two, which is one weakening per hypothesis
+    // and each of those lemmas has two. Tip plus this change's delta, as the line above says.
+    propose.weakenings.size shouldBe 347
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -255,7 +263,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `MONOTONE_CONVERGES` write `<=` inside `!n. ...`, which is a lambda, so `swapped` refuses at
     // it. Derived that way and then measured, which is the second time this entry has been able to
     // predict itself.
-    propose.mutable.size shouldBe 75
+    // 77 with the two the order gained on 2026-09-18. `LE_MUL_BOTH` writes `le` and `INV_ANTITONE`
+    // writes both `lt` and `le`, and neither body carries a lambda once the leading quantifiers come
+    // off, which is the condition `swapped` refuses at.
+    propose.mutable.size shouldBe 77
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
@@ -270,11 +281,16 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // more for a claim of the same standing, and the novelty scale calls all sixteen not-news
     // either way, which is correct and is the scale doing its job on its own hardest case: a
     // rediscovery is precisely a claim that looks new and is not.
-    readings.size shouldBe 16
+    // **The two that arrived on 2026-09-18 are both `Known` and neither is `Immediate`**, which is
+    // the split staying where it was rather than moving: four is still the number the ring
+    // normalisation settles outright, and the order pair the generator now travels costs what every
+    // other order fact here costs. A reader who expected the four to move was expecting a new
+    // lemma to be an identity, and `LE_MUL_BOTH` is not one.
+    readings.size shouldBe 18
     readings.map(_.report.outcome).distinct shouldBe Vector(Cost.Outcome.Proved)
 
     readings.count(_.standing == Novelty.Standing.Immediate) shouldBe 4
-    readings.count(_.standing == Novelty.Standing.Known) shouldBe 12
+    readings.count(_.standing == Novelty.Standing.Known) shouldBe 14
     readings.count(_.standing == Novelty.Standing.Earned) shouldBe 0
 
     val immediate = readings.filter(_.standing == Novelty.Standing.Immediate).map(_.inferences)

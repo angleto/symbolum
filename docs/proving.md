@@ -623,7 +623,9 @@ more than one place. Each is proved, and `OrderSpec` prints every one of them:
 | `POSITIVE_NOT_ZERO` | `!x. 0 < x ==> ~(x = 0)` |
 | `CANCEL_POSITIVE` | `!x y. 0 < x ==> 0 < x * y ==> 0 < y` |
 | `LT_MUL_BOTH` | `!x y z. 0 < x ==> y < z ==> y * x < z * x` |
+| `LE_MUL_BOTH` | `!x y z. 0 <= x ==> y <= z ==> y * x <= z * x` |
 | `INV_POSITIVE` | `!x. 0 < x ==> 0 < inv x` |
+| `INV_ANTITONE` | `!x y. 0 < x ==> x <= y ==> inv y <= inv x` |
 | `LE_OF_LT` | `!x y. x < y ==> x <= y` |
 | `LE_OF_EQ` | `!x y. x = y ==> x <= y` |
 | `LE_CASES` | `!x y. x <= y ==> x < y \/ x = y` |
@@ -672,10 +674,13 @@ at all, and `Printer` invents `x, y, z, u, v, w` by depth, so the positive facto
 `c` prints as `x` in the two lemmas where it is bound first, and `ADD_LE`'s fourth variable prints
 as `u`.
 
-`INV_POSITIVE` is what a ratio between two measured quantities needs, and it is the only fact here
-that mentions `inv`. Neither `Ring` nor `Linarith` can produce it: both treat `inv x` as an atom
-they know nothing about. `Field` is the one that knows something about it, and what it knows costs
-a hypothesis.
+`INV_POSITIVE` is what a ratio between two measured quantities needs. It was **the only** fact here
+that mentioned `inv` until 2026-09-18, and that sentence is one of five that said so; `INV_ANTITONE`
+is the second, and it is the one that says the reciprocal reverses the order. Neither `Ring` nor
+`Linarith` can produce either: both treat `inv x` as an atom they know nothing about, which is also
+what makes the derivation of `INV_ANTITONE` work, since the one thing it needs about inverses
+arrives as a rewrite from `MUL_INVERSE` rather than from a normal form. `Field` is the other one
+that knows something about `inv`, and what it knows costs a hypothesis.
 
 `CANCEL_POSITIVE` is the one to read twice. It divides by a positive number without dividing: the
 proof is a case analysis on trichotomy, where `x = 0` makes the product zero and `x < 0` makes
@@ -2143,9 +2148,11 @@ cancellation.
    `exp 1 > 2` did **not** become a theorem with it, and the difference between the prediction and
    the outcome is the piece worth carrying: what is missing is not the test but a dominating series
    for the exponential. `1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!`, which no development
-   holds, and an order fact about a quotient, of which this chain holds exactly one,
-   `Order.INV_POSITIVE`. The geometric series at one half needs neither, and `LimitSpec` obtains it
-   with its limit between zero and two.
+   holds, and an order fact about a quotient. **The second of those two landed on 2026-09-18** and
+   is `Order.INV_ANTITONE`, with `LE_MUL_BOTH` under it; what remains of that sentence is the
+   first, which is an induction over `num` whose step is only valid from one upwards. The
+   geometric series at one half needs neither, and `LimitSpec` obtains it with its limit between
+   zero and two.
 
    **What is left after that** is the addition theorem through the Cauchy product, of which
    `SUM_SWAP` is the half that exists, and the Pythagorean identity with it; then continuity and

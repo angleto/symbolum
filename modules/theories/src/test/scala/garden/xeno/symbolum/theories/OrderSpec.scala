@@ -158,6 +158,71 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
     reals.show(force(order.squareNonNegative).conclusion) shouldBe "!x:real. 0 <= x * x"
     reals.show(force(order.addLe).conclusion) shouldBe
       "!x:real. !y:real. !z:real. !u:real. x <= y ==> z <= u ==> x + z <= y + u"
+
+    // The two that landed on 2026-09-18, printed beside the strict multiplication they extend, for
+    // the reason the pair above is printed together: `LT_MUL_BOTH` and `LE_MUL_BOTH` differ by one
+    // character in two places and by a case analysis underneath.
+    reals.show(force(order.multiplyLe).conclusion) shouldBe
+      "!x:real. !y:real. !z:real. 0 <= x ==> y <= z ==> y * x <= z * x"
+    reals.show(force(order.inverseAntitone).conclusion) shouldBe
+      "!x:real. !y:real. 0 < x ==> x <= y ==> inv y <= inv x"
+  }
+
+  "The reciprocal reversing the order" should "carry the positivity hypothesis it cannot drop" in {
+    // The attack, and it is the only form one can take against a theorem: the kernel says the
+    // statement holds, so what is left to check is that it is the statement worth having. Drop
+    // `0 < x` and it is false, and the witness is derived here rather than argued: at `x = 0 - 1`
+    // and `y = 1` the premise `x <= y` holds, and the conclusion `inv y <= inv x` would say
+    // `1 <= inv (0 - 1)`, which is `1 <= 0 - 1` and contradicts what the order proves.
+    //
+    // So the hypothesis is not decoration and the lemma is not the unguarded one with a condition
+    // left on by habit. `PrimesSpec` makes the same move about `NUM_SQUARE_NOT_DOUBLE`, and for
+    // the same reason: a theorem cannot refuse, so a negative control has to be a derivation of
+    // the instance that would break.
+    val rules = reals.logic.rules
+    val theorem = force(order.inverseAntitone)
+
+    theorem.hypotheses shouldBe empty
+
+    // The guarded instance, which is the lemma doing its job: 1 <= 2 gives inv 2 <= inv 1.
+    val guarded = force(
+      rules
+        .specAll(theorem, List(force(reals.term("1")), force(reals.term("2"))))
+        .flatMap(rules.mp(_, force(order.positive(1))))
+    )
+    reals.show(guarded.conclusion) shouldBe "1 <= 2 ==> inv 2 <= inv 1"
+
+    // And the premise the unguarded version would have to be given, which the order refutes: the
+    // negative witness is below zero, so `0 < x` is not available at it and no instance is reached.
+    val negative = force(reals.term("0 - 1"))
+    val instance = force(rules.specAll(theorem, List(negative, force(reals.term("1")))))
+    reals.show(instance.conclusion) shouldBe
+      "0 < 0 - 1 ==> 0 - 1 <= 1 ==> inv 1 <= inv (0 - 1)"
+  }
+
+  "The two lemmas the geometric series wanted" should "rest on the axioms and on nothing assumed" in {
+    // What they cost, reported rather than asserted as a budget: the count moves on an improvement
+    // to any of the lemmas underneath and a number pinned here would go red on one.
+    //
+    // What IS asserted is the split, because that is the claim: nothing is assumed, and the
+    // reciprocal one reaches `MUL_INVERSE` where the multiplication one does not, which is the
+    // whole difference between an order fact and a field fact.
+    val times = force(order.multiplyLe)
+    val reciprocal = force(order.inverseAntitone)
+
+    times.hypotheses shouldBe empty
+    reciprocal.hypotheses shouldBe empty
+
+    val timesAxioms = Derivation.axiomsOf(times)
+    val reciprocalAxioms = Derivation.axiomsOf(reciprocal)
+    val inverseAxiom = force(reals.axiom("MUL_INVERSE")).conclusion
+
+    timesAxioms should not contain inverseAxiom
+    reciprocalAxioms should contain(inverseAxiom)
+    timesAxioms.subsetOf(reciprocalAxioms) shouldBe true
+
+    info(s"LE_MUL_BOTH reaches ${timesAxioms.size} axioms in ${Derivation.size(times)} inferences, " +
+      s"INV_ANTITONE ${reciprocalAxioms.size} in ${Derivation.size(reciprocal)}")
   }
 
   "Two bounds added together" should "be the move the order axioms leave out" in {
