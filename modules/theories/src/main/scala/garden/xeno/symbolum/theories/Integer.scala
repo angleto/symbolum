@@ -1289,7 +1289,7 @@ object Integer {
             if (settled)
               Left(NotOfForm(s"a term the rules bring to one $Projection", other))
             else
-              Left(NotOfForm(s"a term the rules settle within their step limit", other))
+              Left(NotOfForm("a term the rules settle within their step limit", other))
           }
       }
 

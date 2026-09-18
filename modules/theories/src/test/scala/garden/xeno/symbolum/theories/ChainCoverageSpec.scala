@@ -202,6 +202,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "LinearForm" -> NotADevelopment,
     "Numeral" -> NotADevelopment,
     "Polynomial" -> NotADevelopment,
+    // Landed on `7.0` with `06fbd17` and left this gate red, which is the defect this table exists
+    // for met on the day it was written. `NotADevelopment` on the file's own argument rather than
+    // on a guess: it declares no type, no constant and no axiom, it is one function that renders
+    // English for a generated page, and its docstring puts it beside `Essay` and `Spellings`, both
+    // of which are classified that way here already.
+    "Prose" -> NotADevelopment,
     "Positivity" -> NotADevelopment,
     "Register" -> NotADevelopment,
     "RestsOn" -> NotADevelopment,

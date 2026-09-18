@@ -262,8 +262,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Language.scala", "Axioms(which)._1") -> (Verdict.Name, "an axiom's published name"),
     ("Language.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Language.scala", "payload") -> (Verdict.Crossing, "a code's payload, which is a term"),
-    ("Language.scala", "scheme.binders.size") ->
-      (Verdict.Number, "how many variables a scheme binds"),
+    ("Integer.scala", "Projection") ->
+      (Verdict.Name, "the projection of the quotient, by its own published name"),
+    ("Integer.scala", "name") -> (Verdict.Name, "the ring law's published name"),
+    ("Integer.scala", "error.message") ->
+      (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
     ("Limit.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
@@ -361,7 +364,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Quotient.scala", "what") ->
       (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
-      (Verdict.Text, "a constant sentence written with an interpolator it does not use")
+      (Verdict.Text, "a constant sentence written with an interpolator it does not use"),
+    // Where `scheme.binders.size` used to be interpolated directly. `06fbd17` moved it into a
+    // local built one line above with `Prose.count`, so the expression the scan sees is the
+    // val's name and the row above it went stale in the same change.
+    ("Language.scala", "wanted") ->
+      (Verdict.Text, "a sentence built one line above, counting the scheme's binders")
   )
 
   /* ------------------------------------------------------------------- the scanner */
