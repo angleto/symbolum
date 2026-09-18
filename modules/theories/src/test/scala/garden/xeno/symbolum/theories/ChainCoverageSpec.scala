@@ -144,6 +144,14 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Monotone" -> DeclaresNothing,
 
     "Recursion" -> DeclaresNothing,
+
+    // `Semiring`'s standing, and the entry is worth a line because the file plainly holds facts:
+    // sixteen of them, proved when it is built. They are a procedure's rule table and not a
+    // development's library — the same position `Arithmetic`'s numeral lemmas are in over the
+    // reals — so there is no theory for `Chain.construct` to extend and nothing `Library.of` could
+    // be missing. What would change this entry is a consumer wanting `NUM_ADD_BIT0_BIT1` by name,
+    // and then it belongs in `Peano` rather than here.
+    "Digits" -> DeclaresNothing,
     "Semiring" -> DeclaresNothing,
 
     // `Recursion`'s standing for `Recursion`'s reason, and the reason is worth repeating because

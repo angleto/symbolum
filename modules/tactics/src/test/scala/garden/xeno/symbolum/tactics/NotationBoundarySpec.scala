@@ -180,6 +180,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Collatz.scala", "letters.size - 1") ->
       (Verdict.Number, "the last position of a written-out word"),
     ("Deduction.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    ("Digits.scala", "value") ->
+      (Verdict.Number, "the value asked for, which is not a numeral of `num` when it is negative"),
+    ("Digits.scala", "leftCore._2") ->
+      (Verdict.Number, "how many successors one side of a numeral lemma lifted out"),
+    ("Digits.scala", "rightCore._2") ->
+      (Verdict.Number, "the same for the other side, which has to be the same number"),
     ("Divisibility.scala", "parts._1") ->
       (Verdict.Crossing, "the antecedent of an implication an assembly had to match"),
     ("Field.scala", "reals.show(denominator)") ->

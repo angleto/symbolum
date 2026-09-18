@@ -498,6 +498,15 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`inTheorem`: one folds a definition body back into its constant, and one applies the " +
         "four projections to a code just constructed. Every rule in both strictly reduces and " +
         "none can fire twice"),
+    "Digits.scala" ->
+      ("two calls, and neither reads what comes back as a normal form. Both lift the successors " +
+        "out of one side of a numeral lemma, and what is done with the result is `Conv.trans` " +
+        "around an answer from `Semiring`: a lifting that ran out leaves a side whose core is not " +
+        "the other's, so `Semiring` refuses, or leaves the two sides carrying different numbers of " +
+        "successors, which the site refuses by naming both counts. Neither path can produce a " +
+        "theorem about a half-lifted term, because every step of the chain is an equation the " +
+        "kernel built. The computations themselves go through `Rewrite.prove`, which asks the " +
+        "question this list is about on the caller's behalf"),
     "Matrix.scala" ->
       ("four calls, and none of them reads what comes back as a normal form on trust. Two require " +
         "it to be `MAT2` applied to four terms and refuse by naming the term they stopped at, so " +
