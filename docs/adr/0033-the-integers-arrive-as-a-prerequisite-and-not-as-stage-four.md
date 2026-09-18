@@ -144,9 +144,14 @@ separates this divisibility from `Divisibility`'s. It needs the discreteness of 
 nothing lies strictly between zero and one, which is one lemma about the carrier and is named
 rather than written. The converse of `NUM_DIVIDES m n ==> INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)`
 needs the same thing, since the witness has to be shown non-negative. The bridge to `real` **is**
-here, as `Inclusion`, landed 2026-09-18 and the link that ran the prediction above; what it does not
-carry is the order, `INT_LE a b = real_of_int a <= real_of_int b`, which wants an argument of its own
-rather than the rewriting route that development's eight facts share.
+here, as `Inclusion`, landed 2026-09-18 and the link that ran the prediction above, and so is the
+order, `INT_REAL_LE`, later the same day. It did want an argument of its own rather than the
+rewriting route the equations share, and what it wanted first was a fact one type down: the library
+carried `NUM_LE m n ==> real_of_num m <= real_of_num n` and not its converse, so the right-to-left
+half of the biconditional had nothing to cross on. `Peano.NUM_REAL_LE_BACK` is that converse. What
+the order map does **not** do is settle the non-divisibility above it: it is the instrument by which
+an order fact of the reals could reach `int`, and whether that is the route to discreteness is a
+measurement nobody has made.
 
 ## Alternatives rejected
 

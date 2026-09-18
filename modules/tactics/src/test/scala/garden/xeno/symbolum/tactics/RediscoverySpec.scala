@@ -246,7 +246,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // the run: of `Inclusion`'s eight facts exactly one carries an antecedent, which is
     // `INT_REAL_INJECTIVE`, and counting arrows the way `Propose.peel` does gives it one.
     // The other seven are equations with nothing owed. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 380
+    // 381 with the order map, the same day, and the **one** was derived before the run: of the
+    // pair that landed, `Peano.NUM_REAL_LE_BACK` carries one antecedent under one arrow and
+    // `Inclusion.INT_REAL_LE` is an equation between propositions with nothing owed. The same
+    // figure is pinned in `ProposeSpec` with the same derivation, which is the two places the
+    // entry above calls out. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 381
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -310,7 +315,14 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // condition `swapped` refuses at. The other six write none of the four operators at all:
     // four are equations whose only operation is `real_of_int`, and `INT_REAL_PAIR` and
     // `INT_REAL_NEG` write `sub`, which is not among the four `Propose.swapped` exchanges.
-    propose.mutable.size shouldBe 79
+    // 81 with the order map, and BOTH of the pair are here where the weakenings row above takes
+    // only one, which is the difference between what a lemma owes and what it writes.
+    // `NUM_REAL_LE_BACK` writes `real_le` in its antecedent and `INT_REAL_LE` writes it on the
+    // right of its biconditional; neither body carries a lambda once the leading quantifiers come
+    // off, which is the condition `swapped` refuses at. That both produce a residue and only one
+    // of them is weakenable is the whole of why this figure and the one above move by different
+    // amounts on one change.
+    propose.mutable.size shouldBe 81
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

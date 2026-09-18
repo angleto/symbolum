@@ -156,6 +156,7 @@ they have least appetite for working out how it is produced.
 
   INT_REAL_ADD             !x:int. !y:int. real_of_int (INT_ADD x y) = real_of_int x + real_of_int y
   INT_REAL_INJECTIVE       !x:int. !y:int. real_of_int x = real_of_int y ==> x = y
+  INT_REAL_LE              !x:int. !y:int. INT_LE x y = real_of_int x <= real_of_int y
   INT_REAL_MUL             !x:int. !y:int. real_of_int (INT_MUL x y) = real_of_int x * real_of_int y
   INT_REAL_NEG             !x:int. real_of_int (INT_NEG x) = 0 - real_of_int x
   INT_REAL_OF_NUM          !x:num. real_of_int (INT_OF_NUM x) = real_of_num x
@@ -541,6 +542,7 @@ they have least appetite for working out how it is produced.
   NUM_REAL_BIT1            !x:num. real_of_num (NUM_BIT1 x) = BIT1 (real_of_num x)
   NUM_REAL_INJECTIVE       !x:num. !y:num. real_of_num x = real_of_num y ==> x = y
   NUM_REAL_LE              !x:num. !y:num. x <= y ==> real_of_num x <= real_of_num y
+  NUM_REAL_LE_BACK         !x:num. !y:num. real_of_num x <= real_of_num y ==> x <= y
   NUM_REAL_LT              !x:num. !y:num. x < y ==> real_of_num x + 1 <= real_of_num y
   NUM_REAL_MUL             !x:num. !y:num. real_of_num (x * y) = real_of_num x * real_of_num y
   NUM_REAL_NONNEG          !x:num. 0 <= real_of_num x

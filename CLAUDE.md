@@ -548,7 +548,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 560 lemmas, 365 have two or more leading quantifiers and **337 of
+caller meant: of the library's 562 lemmas, 367 have two or more leading quantifiers and **339 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1429,8 +1429,8 @@ directions, so it is `Kernel.deductAntisym` over two implications rather than a 
 `Semiring` cannot be handed the conclusion because the conclusion is an order.
 
 **The bridge into the reals is `Inclusion`, a link since 2026-09-18, and it is the one piece of the
-integers that mentions a real.** `real_of_int` and eight facts: a ring homomorphism, the triangle
-`real_of_int (INT_OF_NUM n) = real_of_num n`, and injectivity. One constant, no axiom, and it is a
+integers that mentions a real.** `real_of_int`, a ring homomorphism, the triangle
+`real_of_int (INT_OF_NUM n) = real_of_num n`, injectivity, and the order map. One constant, no axiom, and it is a
 development of its own rather than a section of `Integer.scala` because that file says of itself
 that nothing in it reaches for a real, and `docs/adr/0033` rests phase 5's move of it below `Real`
 on the sentence being true. `Embedding.scala` is the precedent one type down and `docs/adr/0016`
@@ -1447,16 +1447,38 @@ That held. What was missing is a different thing: a lift defines its constant in
 onto a theory extending it, checked by `Logic.over`, and that is the whole of the addition.
 
 **And it is where the axiom accounting divides.** `IntegerSpec` asserts that no fact of that
-development reaches any of the sixteen; every fact of this one does, because every fact of this one
-is an equation between reals and `Ring` decides those out of the field. `InclusionSpec` asserts both
-halves in one test, because a reading that answered the same for everything would pass either alone.
+development reaches any of the sixteen; every fact of this one does, because every one of them is
+decided over the field. `InclusionSpec` asserts both halves in one test, because a reading that
+answered the same for everything would pass either alone.
 
-**What is not there, named rather than left to be discovered**: the rationals;
-`INT_LE a b = real_of_int a <= real_of_int b`, which is the bridge as an order map and wants an
-argument rather than the rewriting route the eight share; and `~(INT_DIVIDES 2 1)`, which is the
-sharpest thing separating this divisibility from the field's and which wants the discreteness of the
-order, a lemma about the carrier that is named here rather than written. `docs/adr/0033` carries
-that list, and it is the kind of list nothing goes red over.
+**The order map is `INT_REAL_LE`, landed the same day, and it is the one fact here of a different
+shape.** `INT_LE a b = (real_of_int a <= real_of_int b)`: an equation between **propositions**,
+where the others are equations between reals, so the route they share does not reach it — its last
+step is `Ring`, which has nothing to say about an order. It is two implications joined by
+`Kernel.deductAntisym`, each crossing on one fact about the embedding and the order.
+
+**What it cost is the half to read, because it is where the work was.** The library held
+`NUM_REAL_LE`, which carries a bound on `num` **out** to the reals, and held no way back, so the
+right-to-left half of the biconditional had nothing to cross on: the fact was unstatable for that
+reason rather than unwritten. `Peano.NUM_REAL_LE_BACK` is the converse and its route is
+`NUM_LT_TOTAL` rather than the contraposition a reader reaches for, because turning
+`~(NUM_LE m n) ==> NUM_LT n m` around is a classical step the derivation would then owe, where
+trichotomy puts the three cases on the table before anything is negated. Two of the three cases are
+one line each; the third is `NUM_REAL_LT` spending the **integrality**, the same thing
+`NUM_REAL_INJECTIVE` spends.
+
+**`InclusionSpec` spends the new fact at a pair rather than only reading it**, which is the guard
+the form assertions cannot be: `INT_LE INT_ZERO INT_ONE` comes out of `0 <= 1` on the reals and
+`INT_LE INT_ONE INT_ZERO` is **refused**, both with nothing assumed. The negative is the half that
+matters, since `Integer`'s four order facts — reflexivity, transitivity, antisymmetry, totality —
+are all satisfied by a one-point `int`.
+
+**What is not there, named rather than left to be discovered**: the rationals; and
+`~(INT_DIVIDES 2 1)`, which is the sharpest thing separating this divisibility from the field's and
+which wants the discreteness of the order, a lemma about the carrier that is named here rather than
+written. The order map is the instrument by which a fact of the reals would be carried there and is
+**not** that lemma; whether it is the route is a measurement nobody has made. `docs/adr/0033`
+carries that list, and it is the kind of list nothing goes red over.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's
