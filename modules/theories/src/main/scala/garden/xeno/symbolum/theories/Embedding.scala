@@ -70,7 +70,9 @@ private[theories] object Embedding {
     recursion: Kernel.Thm,
     arithmetic: Map[String, Kernel.Thm],
     orderDefinitions: Map[String, Kernel.Thm],
-    trichotomy: Kernel.Thm
+    trichotomy: Kernel.Thm,
+    reflexive: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm
   ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
     val values = TyApp(Real.TypeName, Nil)
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -153,6 +155,19 @@ private[theories] object Embedding {
         n
       )
 
+      embedsOrderBack <- crossesOrderBack(
+        logic,
+        linarith,
+        theory,
+        notation,
+        trichotomy,
+        reflexive,
+        atMostFromBelow,
+        embedsStrictOrder,
+        m,
+        n
+      )
+
       embedsInjectively <- crossesBack(
         logic,
         linarith,
@@ -174,6 +189,7 @@ private[theories] object Embedding {
         EmbedsNonNegative -> embedsNonNegative,
         EmbedsOrder -> embedsOrder,
         EmbedsStrictOrder -> embedsStrictOrder,
+        EmbedsOrderBack -> embedsOrderBack,
         EmbedsInjectively -> embedsInjectively
       )
     )
@@ -973,6 +989,107 @@ private[theories] object Embedding {
       withoutWitness <- rules.existsElim(existential, gap, bounded)
       discharged <- rules.disch(order, withoutWitness)
       result <- rules.genAll(discharged, List(m, n))
+    } yield result
+  }
+
+  /**
+   * `|- !m n. real_of_num m <= real_of_num n ==> NUM_LE m n`.
+   *
+   * [[crossesOrder]] backwards, and it is a different derivation rather than the same one read the
+   * other way: that one unfolds `NUM_LE` into its witness and hands the arithmetic to `LINARITH`,
+   * and there is nothing to unfold here because the bound it starts from is already about the
+   * reals. What has to come from somewhere instead is the **integrality** — the reals hold plenty
+   * of pairs between two naturals and the naturals hold none — and [[Peano.EmbedsStrictOrder]] is
+   * where this development keeps it.
+   *
+   * So the shape is [[crossesBack]]'s and not [[crossesOrder]]'s: trichotomy on the two naturals,
+   * two cases settled at `num` and the third refuted at the reals. `Peano.EmbedsOrderBack` carries
+   * the argument for trichotomy over the contraposition a reader expects.
+   *
+   * The linear fact is asked for once as a claim about two arbitrary reals and specialised at the
+   * images, which is [[crossesBack]]'s own reason: asking `LINARITH` twice at the images would be
+   * the same work and a second place for the shape to drift.
+   */
+  private def crossesOrderBack(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    trichotomy: Kernel.Thm,
+    reflexive: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm,
+    strictly: Kernel.Thm,
+    m: FVar,
+    n: FVar
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val values = TyApp(Real.TypeName, Nil)
+    val comparison = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+
+    for {
+      embedding <- LogicError.lift(theory.constant(Peano.EmbeddingName, Type.fun(numbers, values)))
+      atMost <- LogicError.lift(theory.constant(NonStrictOrder, comparison))
+      order <- LogicError.lift(
+        theory.constant(Real.NonStrictOrder, Type.fun(values, Type.fun(values, Type.Bool)))
+      )
+
+      embeddedM <- LogicError.lift(Term.app(embedding, m))
+      embeddedN <- LogicError.lift(Term.app(embedding, n))
+      premise <- LogicError.lift(Term.appAll(order, List(embeddedM, embeddedN)))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      goal <- LogicError.lift(Term.appAll(atMost, List(m, n)))
+
+      // `x <= y` and a gap of one the other way cannot both hold, which is linear in two unknowns.
+      // It is the same impossibility `crossesBack` asks for with an equation where this has a
+      // bound, and the two are not the same fact: that one refutes `x = y`, this one `x <= y`.
+      impossible <- Parser
+        .proposition(theory, notation, "!x:real y:real. x <= y /\\ y + 1 <= x ==> F")
+        .flatMap(linarith.prove)
+
+      split <- rules.specAll(trichotomy, List(m, n))
+      branches <- logic
+        .destDisj(split.conclusion)
+        .toRight(NotOfForm("a disjunction", split.conclusion))
+      (isBelow, rest) = branches
+      tail <- logic.destDisj(rest).toRight(NotOfForm("a disjunction", rest))
+      (isEqual, isAbove) = tail
+
+      // `m < n` is the easy way round: the order on `num` follows from the strict one and the
+      // reals are never consulted.
+      belowCase <- LogicError
+        .lift(Kernel.assume(isBelow))
+        .flatMap(assumedBelow => rules.specAll(atMostFromBelow, List(m, n)).flatMap(rules.mp(_, assumedBelow)))
+
+      // `m = n` is reflexivity carried along the assumed equation, by congruence in the second
+      // argument: `NUM_LE m m = NUM_LE m n`, and the left side is a theorem.
+      equalCase <- for {
+        assumedEqual <- LogicError.lift(Kernel.assume(isEqual))
+        atSelf <- rules.spec(m, reflexive)
+        partial <- LogicError.lift(Term.app(atMost, m))
+        congruent <- Conv.apTerm(partial, assumedEqual)
+        moved <- LogicError.lift(Kernel.eqMp(congruent, atSelf))
+      } yield moved
+
+      // `n < m` is the only case the reals are needed for, and it is where the integrality is
+      // spent: the images are a whole unit apart the wrong way round.
+      aboveCase <- for {
+        assumedAbove <- LogicError.lift(Kernel.assume(isAbove))
+        bound <- rules.specAll(strictly, List(n, m)).flatMap(rules.mp(_, assumedAbove))
+        instance <- rules.specAll(impossible, List(embeddedM, embeddedN))
+        pair <- rules.conjIntro(assumed, bound)
+        absurd <- rules.mp(instance, pair)
+        refuted <- rules.falsityElim(goal, absurd)
+      } yield refuted
+
+      upper <- LogicError
+        .lift(Kernel.assume(rest))
+        .flatMap(rules.disjElim(_, equalCase, aboveCase))
+      decided <- rules.disjElim(split, belowCase, upper)
+
+      discharged <- rules.disch(premise, decided)
+      general <- rules.genAll(discharged, List(m, n))
+      result <- checked(theory, notation, EmbedsOrderBack, general)
     } yield result
   }
 

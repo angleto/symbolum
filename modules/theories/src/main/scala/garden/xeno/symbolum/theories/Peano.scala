@@ -771,6 +771,32 @@ object Peano {
   val EmbedsStrictOrder: String = "NUM_REAL_LT"
 
   /**
+   * `|- !m n. real_of_num m <= real_of_num n ==> NUM_LE m n`
+   *
+   * [[EmbedsOrder]] read backwards, and what makes the embedding an order **map** rather than a
+   * monotone function: together the two say a bound on the reals is a bound on the naturals, so a
+   * fact reaching the reals can come home. Until 2026-09-18 only the outward half existed, which
+   * is why `Inclusion.EmbedsOrder` one type up could not be stated: a biconditional at `int` wants
+   * both directions at `num`, and the library held one.
+   *
+   * It is in the `NUM_REAL_` family and not spelled `NUM_LE_OF_REAL_LE`, which the `_OF_X` row of
+   * `docs/naming.md` would also license. Counted on 2026-09-18 over `docs/lemmas.md`: of the
+   * thirteen facts naming both `real_of_num` and a natural, thirteen carry the family prefix and
+   * none is named for its conclusion's type, [[EmbedsInjectively]] and [[EmbedsDifference]]
+   * included, and those two are the ones whose conclusion is at `num`. Thirteen to nothing.
+   *
+   * **The route is [[Trichotomy]] and not a contraposition**, which is the one the obvious reading
+   * reaches for: from `~(NUM_LE m n)` to `NUM_LT n m` is [[AtMostFromNotBelow]] turned around, and
+   * turning an implication around is a classical step this derivation would then owe. Trichotomy
+   * puts the three cases on the table before anything is negated, which is the sentence
+   * [[AtMostFromNotBelow]] already carries about itself. Two of the three cases are one line:
+   * [[AtMostFromBelow]] and [[Reflexive]] under a congruence. The third is where the work is, and
+   * it is [[EmbedsStrictOrder]] carrying the **integrality**, exactly as [[EmbedsInjectively]]
+   * does: `NUM_LT n m` puts a whole unit between the two images, which the assumed bound forbids.
+   */
+  val EmbedsOrderBack: String = "NUM_REAL_LE_BACK"
+
+  /**
    * `|- !m n. real_of_num m = real_of_num n ==> m = n`
    *
    * The embedding in the other direction, and the lemma that makes it usable as more than a
@@ -1165,6 +1191,7 @@ object Peano {
     EmbedsNonNegative -> "!n:num. 0 <= real_of_num n",
     EmbedsOrder -> "!m:num n:num. NUM_LE m n ==> real_of_num m <= real_of_num n",
     EmbedsStrictOrder -> "!m:num n:num. NUM_LT m n ==> real_of_num m + 1 <= real_of_num n",
+    EmbedsOrderBack -> "!m:num n:num. real_of_num m <= real_of_num n ==> NUM_LE m n",
     EmbedsInjectively -> "!m:num n:num. real_of_num m = real_of_num n ==> m = n",
     Archimedean -> "!x:real. ?n:num. x < real_of_num n",
     FloorAtMost -> "!x:real. 0 <= x ==> real_of_num (NUM_FLOOR x) <= x",
@@ -1327,7 +1354,9 @@ object Peano {
         recursion,
         addFacts ++ mulFacts,
         orderDefinitions,
-        orderFacts(Trichotomy)
+        orderFacts(Trichotomy),
+        orderFacts(Reflexive),
+        orderFacts(AtMostFromBelow)
       )
       (withEmbedding, embeddingDefinition, embeddingFacts) = embedded
 

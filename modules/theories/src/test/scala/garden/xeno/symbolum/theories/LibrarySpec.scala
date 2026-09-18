@@ -481,8 +481,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // none of them shared with another development, so the gap between the two figures does not
     // move either. Tip plus this branch's delta, which is what the paragraph above insists a
     // number here is, and the delta is checkable against `docs/lemmas.md`'s new section by eye.
-    library.entries.size shouldBe 560
-    library.names.distinct.size shouldBe 557
+    // 562 and 559 with the order map, the same day: two facts under two names, `NUM_REAL_LE_BACK`
+    // in `Peano` and `INT_REAL_LE` in `Inclusion`, neither shared with another development, so the
+    // gap between the two figures does not move. Tip plus this branch's delta. Two and not one
+    // because the biconditional at `int` needs both directions at `num` and the library held the
+    // outward one alone.
+    library.entries.size shouldBe 562
+    library.names.distinct.size shouldBe 559
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

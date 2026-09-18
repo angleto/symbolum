@@ -56,7 +56,7 @@ import garden.xeno.symbolum.logic.*
  * extended is what this development does first, and it is checked rather than assumed: `Logic.over`
  * refuses a theory that does not declare every constant of the narrower one at the same type.
  *
- * == How six of the eight are proved, which is one route ==
+ * == How six of them are proved, which is one route ==
  *
  * [[Inclusion.AtPair]] is what the lift returns, and each of the six equations after it is the same
  * four steps. Both sides are written at **carrier** variables, `INT_OF_PAIR x` rather than `a:int`;
@@ -67,9 +67,12 @@ import garden.xeno.symbolum.logic.*
  * siblings as atoms it cannot take apart. The result is put back over `int` by specialising at a
  * representative, which is `Integer`'s own last step.
  *
- * The two that are **not** that route say so where they are written: `Inclusion.respectfulness`,
- * which has to move an equation of `num` into the reals before any identity is available, and
- * [[Inclusion.EmbedsInjectively]], which runs the same move backwards and is an implication.
+ * The three that are **not** that route say so where they are written: `Inclusion.respectfulness`,
+ * which has to move an equation of `num` into the reals before any identity is available;
+ * [[Inclusion.EmbedsInjectively]], which runs the same move backwards and is an implication; and
+ * [[Inclusion.EmbedsOrder]], which is an equation between propositions rather than between reals,
+ * so `Ring` closes nothing in it and each half crosses on an implication about the embedding and
+ * the order.
  */
 final class Inclusion private (
   val classical: Classical,
@@ -173,9 +176,9 @@ object Inclusion {
    * What says the embedding loses nothing, and the one fact here that separates **every** pair
    * rather than a named one. `INT_OF_NUM_EQ` is the same argument one type up.
    *
-   * The degenerate map worth checking against is `real_of_int a := 0`, and counted against the
-   * eight statements it satisfies **four**: the homomorphism equations for addition,
-   * multiplication, negation and zero, which are all `0 = 0` under it. What refutes it is not this
+   * The degenerate map worth checking against is `real_of_int a := 0`, and it satisfies **four**
+   * of the statements here: the homomorphism equations for addition, multiplication, negation and
+   * zero, which are all `0 = 0` under it. What refutes it is not this
    * fact but [[EmbedsOne]], which reads `0 = 1`, with [[AtPair]] and [[EmbedsNatural]] refuting it
    * too. So the value at one is load-bearing and is not decoration beside the value at zero. What
    * **this** fact adds over those is the step from two named integers being apart to no two being
@@ -183,6 +186,44 @@ object Inclusion {
    * having collapsed.
    */
   val EmbedsInjectively: String = "INT_REAL_INJECTIVE"
+
+  /**
+   * `|- !a b. INT_LE a b = (real_of_int a <= real_of_int b)`
+   *
+   * The bridge as an **order map**, and the one fact here that is an equation between
+   * propositions rather than between reals. What it is for is that the two divisibilities this
+   * repository holds cannot state the condition a lattice argument needs: `Divisibility` is over
+   * the reals, where `DIVIDES_NONZERO` discharges the hypothesis vacuously, and `NUM_DIVIDES` is
+   * over a type with no negative numbers. An order fact of the reals reaches `int` through this
+   * and through nothing else.
+   *
+   * == Why it is not one of the eight above ==
+   *
+   * Those share one route and its last step is `Ring`, which decides an identity of the reals and
+   * has nothing to say about an order. So this is proved as two implications and joined by
+   * `Kernel.deductAntisym`, which is the same shape [[Inclusion.respectfulness]] needs one floor
+   * down and for the same reason: the conclusion is a proposition and no procedure here produces
+   * one by rewriting.
+   *
+   * == What it cost underneath, which is the half to read first ==
+   *
+   * `Peano.EmbedsOrder` carries `NUM_LE m n` **out** to the reals and the library held no way
+   * back, so the direction `INT_LE` needs for its right-to-left half did not exist: this fact was
+   * unstatable for that reason and not because nobody had written it down.
+   * `Peano.EmbedsOrderBack` landed with this one and the argument for its route is written there.
+   *
+   * Each half of the biconditional spends one of the two, which is what makes the pair load
+   * bearing rather than one lemma quoted twice.
+   *
+   * == What it does not buy, said before somebody writes it ==
+   *
+   * `docs/adr/0033` names `~(INT_DIVIDES 2 1)` as the sharpest thing separating this divisibility
+   * from the field's, and says it wants the **discreteness** of the order: that nothing lies
+   * strictly between zero and one. This is not that lemma and does not prove it. What it is, is
+   * the instrument by which an order fact of the reals is carried to the integers, and whether
+   * that is the route to discreteness is a measurement nobody has made.
+   */
+  val EmbedsOrder: String = "INT_REAL_LE"
 
   /* ------------------------------------------------------------------ the types */
 
@@ -212,7 +253,8 @@ object Inclusion {
     EmbedsZero -> "real_of_int INT_ZERO = 0",
     EmbedsOne -> "real_of_int INT_ONE = 1",
     EmbedsNatural -> "!n:num. real_of_int (INT_OF_NUM n) = real_of_num n",
-    EmbedsInjectively -> "!a:int b:int. real_of_int a = real_of_int b ==> a = b"
+    EmbedsInjectively -> "!a:int b:int. real_of_int a = real_of_int b ==> a = b",
+    EmbedsOrder -> "!a:int b:int. INT_LE a b = (real_of_int a <= real_of_int b)"
   )
 
   /**
@@ -254,10 +296,15 @@ object Inclusion {
     product: Product,
     peano: Peano,
     ring: Ring,
+    bounds: Order,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Inclusion] =
     for {
+      // Over the order the caller already holds, for the reason `Peano.construct` gives about its
+      // own: the three lemmas that procedure runs on are `Order`'s, so building a second order to
+      // get them would leave one of the two copies untested.
+      linarith <- staged("building the linear procedure", Linarith.construct(bounds))
       quotient <- staged("re-basing the quotient", integers.quotient.over(base))
       logic <- classical.logic.over(base)
 
@@ -276,7 +323,8 @@ object Inclusion {
 
       route <- staged(
         "assembling the rule set",
-        Route.over(wider, theory, notation, widened, integers, product, peano, ring, atPair)
+        Route.over(
+          wider, theory, notation, widened, integers, product, peano, ring, linarith, atPair)
       )
       proved <- staged("proving the facts", route.prove)
     } yield new Inclusion(
@@ -402,6 +450,8 @@ object Inclusion {
     val integers: Integer,
     val peano: Peano,
     val ring: Ring,
+    /** What closes the two order steps, where `Ring` closes every identity. */
+    val linarith: Linarith,
     /** The bridge, the lifts, the two pair definitions, the projections and the embedding's facts. */
     val rules: Vector[Rewrite.Rule],
     /** `INT_OF_PAIR (INT_OF_PAIR_repr a) = a`, which is what puts a fact back over `int`. */
@@ -443,6 +493,7 @@ object Inclusion {
         one <- closed(EmbedsOne, "real_of_int INT_ONE", "1")
         ofNatural <- overNaturals(EmbedsNatural, "real_of_int (INT_OF_NUM n)", "real_of_num n", List(n))
         injective <- blaming(EmbedsInjectively, "real_of_int a = real_of_int b ==> a = b", injectivity)
+        ordered <- blaming(EmbedsOrder, "INT_LE a b = (real_of_int a <= real_of_int b)", order)
       } yield Map(
         EmbedsSum -> sum,
         EmbedsProduct -> product,
@@ -450,7 +501,8 @@ object Inclusion {
         EmbedsZero -> zero,
         EmbedsOne -> one,
         EmbedsNatural -> ofNatural,
-        EmbedsInjectively -> injective
+        EmbedsInjectively -> injective,
+        EmbedsOrder -> ordered
       )
 
     /* ------------------------------------------------ the one route */
@@ -614,6 +666,116 @@ object Inclusion {
         )
       } yield result
 
+    /* ------------------------------------------------ and the one that is neither */
+
+    /**
+     * `|- !a b. INT_LE a b = (real_of_int a <= real_of_int b)`.
+     *
+     * Two derivations joined by `Kernel.deductAntisym`, because the conclusion is an equation
+     * between **propositions** and neither procedure here produces one: `Ring` decides identities
+     * of the reals and `LINARITH` decides inequalities, and a biconditional is neither.
+     *
+     * Both halves run between the same two shapes and meet in the middle. `INT_LE_PAIRS` takes the
+     * left-hand side to `NUM_LE (FST x + SND y) (FST y + SND x)`, an order on `num`; the rule set
+     * takes the right-hand side to `A - B <= C - D` over the four images, and `LINARITH` is what
+     * rearranges that into `A + D <= C + B`, which is the same comparison the `num` side makes
+     * once `NUM_REAL_ADD` is read in the appropriate direction. So what each half needs at the
+     * crossing is one implication about the embedding and the order, and the two are
+     * `Peano.EmbedsOrder` and `Peano.EmbedsOrderBack`. The second landed with this fact; the
+     * argument for its own route is written there rather than repeated here.
+     *
+     * **The two linear shapes are asked for separately and are not one fact used twice.**
+     * `a + d <= c + b ==> a - b <= c - d` and its converse are each within `LINARITH`'s fragment
+     * and the biconditional between them is not a statement it decides, so asking for the
+     * equivalence and specialising it twice was not available. They are proved as claims about
+     * four arbitrary reals and specialised at the images, which is `crossesBack`'s reason one type
+     * down: asking at the images would be the same work and a second place for the shape to drift.
+     *
+     * The four images are read off what the rewriting produced rather than rebuilt from the
+     * projections, which is `Inclusion.respectfulness`'s sentence about its own two sums: a
+     * rebuild agrees today and stops agreeing the day a published equation is stated with its
+     * sides the other way round, in a place where the mismatch prints as a step that will not line
+     * up.
+     */
+    private def order: Either[LogicError, Kernel.Thm] =
+      for {
+        atMostPairs <- integers.fact(Integer.AtMostPairs)
+        atPairs <- logic.rules.specAll(atMostPairs, List(x, y))
+        sides <- Term
+          .destEq(atPairs.conclusion)
+          .toRight(NotOfForm("the order at two pairs, as an equation", atPairs.conclusion))
+        (overClasses, overNaturals) = sides
+        sums <- partsOfComparison(Peano.NonStrictOrder, overNaturals)
+        (leftSum, rightSum) = sums
+
+        overReals <- Parser.proposition(
+          theory,
+          notation,
+          "real_of_int (INT_OF_PAIR x) <= real_of_int (INT_OF_PAIR y)"
+        )
+        opening <- Rewrite.rewrite(rules, overReals)
+        differences <- rightOf(opening)
+        compared <- partsOfComparison(Real.NonStrictOrder, differences)
+        (leftDifference, rightDifference) = compared
+        left <- partsOfDifference(leftDifference)
+        (imageA, imageB) = left
+        right <- partsOfDifference(rightDifference)
+        (imageC, imageD) = right
+        images = List(imageA, imageB, imageC, imageD)
+
+        gathering <- linear("!a:real b:real c:real d:real. a + d <= c + b ==> a - b <= c - d")
+        separating <- linear("!a:real b:real c:real d:real. a - b <= c - d ==> a + d <= c + b")
+
+        carriesOut <- peano.fact(Peano.EmbedsOrder)
+        carriesBack <- peano.fact(Peano.EmbedsOrderBack)
+
+        // Left to right: the order at `int` is an order at `num`, which crosses outwards.
+        assumedOrder <- LogicError.lift(Kernel.assume(overClasses))
+        atNaturals <- LogicError.lift(Kernel.eqMp(atPairs, assumedOrder))
+        crossed <- logic.rules
+          .specAll(carriesOut, List(leftSum, rightSum))
+          .flatMap(logic.rules.mp(_, atNaturals))
+        expanded <- Rewrite.inTheorem(rules, crossed)
+        asDifference <- logic.rules.specAll(gathering, images).flatMap(logic.rules.mp(_, expanded))
+        provedReal <- Conv
+          .sym(opening)
+          .flatMap(flip => LogicError.lift(Kernel.eqMp(flip, asDifference)))
+
+        // Right to left: the bound on the reals gathers into one comparison of two images, and
+        // that is the direction the library did not have until `NUM_REAL_LE_BACK`.
+        assumedReal <- LogicError.lift(Kernel.assume(overReals))
+        opened <- Rewrite.inTheorem(rules, assumedReal)
+        asSums <- logic.rules.specAll(separating, images).flatMap(logic.rules.mp(_, opened))
+        folded <- Rewrite.inTheorem(Vector(folding), asSums)
+        atNumbers <- logic.rules
+          .specAll(carriesBack, List(leftSum, rightSum))
+          .flatMap(logic.rules.mp(_, folded))
+        provedOrder <- Conv
+          .sym(atPairs)
+          .flatMap(flip => LogicError.lift(Kernel.eqMp(flip, atNumbers)))
+
+        equation = Kernel.deductAntisym(provedOrder, provedReal)
+        result <- overRepresentatives(
+          logic,
+          quotient,
+          representative,
+          equation,
+          List(x, y),
+          List(a, b)
+        )
+      } yield result
+
+    /** A claim about four arbitrary reals, decided rather than assumed. */
+    private def linear(text: String): Either[LogicError, Kernel.Thm] =
+      Parser.proposition(theory, notation, text).flatMap(linarith.prove)
+
+    /** The two sides of a comparison under `name`, or a refusal naming what was found instead. */
+    private def partsOfComparison(name: String, term: Term): Either[LogicError, (Term, Term)] =
+      term match {
+        case App(App(Const(found, _), left), right) if found == name => Right((left, right))
+        case other => Left(NotOfForm(s"a comparison under `$name`", other))
+      }
+
     /** `real_of_int (INT_OF_PAIR p)`, as a term. */
     private def valueAt(pair: FVar): Either[LogicError, Term] =
       for {
@@ -660,6 +822,7 @@ object Inclusion {
       product: Product,
       peano: Peano,
       ring: Ring,
+      linarith: Linarith,
       atPair: Kernel.Thm
     ): Either[LogicError, Route] = {
       val counter: FVar = Term.variable("k", numbers)
@@ -705,6 +868,7 @@ object Inclusion {
         integers,
         peano,
         ring,
+        linarith,
         Vector(bridge) ++ lifts ++ projections ++ constants ++ Vector(ofNatural) ++ embedding,
         representative,
         folding

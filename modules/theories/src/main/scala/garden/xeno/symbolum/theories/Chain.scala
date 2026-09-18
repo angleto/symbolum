@@ -304,7 +304,7 @@ final class Chain private (
   /**
    * The integers inside the reals, and the one piece of [[integers]] that mentions a real.
    *
-   * `real_of_int` and the eight facts that make it a ring embedding. It is a link of its own rather
+   * `real_of_int`, the facts that make it a ring embedding, and the order map. It is a link of its own rather
    * than a section of `Integer.scala` because that file says of itself that nothing in it reaches
    * for a real, and `docs/adr/0033` rests a consequence on the sentence: when the reals are
    * constructed, that development moves below `Real` instead of being rewritten, and this is the
@@ -529,7 +529,7 @@ object Chain {
       // what it extends is the chain's end as it stands here, which is also the theory the quotient
       // is re-based onto and the one place that re-basing is checked.
       inclusion <- Inclusion.construct(
-        classical, integers, product, peano, ring, integers.theory, integers.notation)
+        classical, integers, product, peano, ring, order, integers.theory, integers.notation)
     } yield new Chain(
       classical,
       naturals,

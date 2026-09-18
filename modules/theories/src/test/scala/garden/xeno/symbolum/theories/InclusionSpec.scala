@@ -21,17 +21,19 @@ import garden.xeno.symbolum.logic.*
  * pass the first, and one that returned everything would pass the second. So both are asserted
  * below, in one test, against a set of axioms read off `chain.reals` rather than named here.
  *
- * == That the eight say something together, which nothing else here could notice ==
+ * == That the facts say something together, which nothing else here could notice ==
  *
  * The other assertions in this file are about **form**: that each statement parses back to the
  * theorem, that nothing is assumed, that the facts and the statements cover each other, what each
- * derivation spent. Every one of them would pass over a development whose eight facts were
- * individually true and jointly empty, and none of them spends two facts against each other.
+ * derivation spent. Every one of them would pass over a development whose facts were individually
+ * true and jointly empty, and none of them spends two facts against each other.
  *
- * The degenerate map to keep in mind is `real_of_int a := 0`, and counted against the eight it
- * satisfies **four**, the homomorphism equations for addition, multiplication, negation and zero.
- * What refutes it is `INT_REAL_ONE`, which reads `0 = 1` under it. So the two value facts are not
- * a matched pair of which one would do.
+ * The degenerate map to keep in mind is `real_of_int a := 0`, and it satisfies **four** of them,
+ * the homomorphism equations for addition, multiplication, negation and zero, which are all
+ * `0 = 0` under it. What refutes it is `INT_REAL_ONE`, which reads `0 = 1`. So the two value facts
+ * are not a matched pair of which one would do. The order map does not refute it either, since
+ * `INT_LE a b = (0 <= 0)` is true of every pair and false of some, which is the second guard
+ * below.
  *
  * The test below spends exactly those two against each other and comes back with
  * `~(INT_ZERO = INT_ONE)`, nothing assumed, derived **through the bridge**: it uses the embedding
@@ -39,12 +41,19 @@ import garden.xeno.symbolum.logic.*
  * `docs/adr/0033` names the same hazard one level down and `IntegerSpec` answers it there in the
  * carrier, through `Successor.distinct`; this answer shares no step with that one.
  *
- * == What is deliberately not here ==
+ * == The order map, which arrived on 2026-09-18 and is the one fact of a different shape ==
  *
- * That the embedding carries the order: `INT_LE a b = real_of_int a <= real_of_int b` is the fact
- * that would say so and it is the obvious next one. It is not in the card that asked for this file,
- * it wants an argument of its own rather than the rewriting route the eight share, and it is named
- * in that card as what is left instead of being left to be discovered here.
+ * `INT_REAL_LE` says the embedding carries the order **both ways**, and it is an equation between
+ * propositions where every other fact here is an equation between reals. It is the first statement
+ * in this file that could have answered the accounting assertion differently, which is why that
+ * assertion is read rather than only re-run below: measured at this revision it reaches fourteen of
+ * the sixteen and the carrier's three and nothing else, so the boundary the section above describes
+ * survives the new shape rather than being assumed to.
+ *
+ * What it is **not** is a way to `~(INT_DIVIDES 2 1)`. `docs/adr/0033` says that wants the
+ * discreteness of the order, a lemma about the carrier that nothing here proves; the order map is
+ * the instrument by which a fact of the reals could be carried, and whether it is the route is a
+ * measurement nobody has made.
  */
 class InclusionSpec extends AnyFlatSpec with Matchers {
 
@@ -58,6 +67,12 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
   private val rules = inclusion.logic.rules
 
   private def fact(name: String): Kernel.Thm = force(inclusion.fact(name))
+
+  private def missing(theorem: Kernel.Thm): LogicError =
+    NotOfForm("an equation between propositions", theorem.conclusion)
+
+  private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+    Term.destEq(theorem.conclusion).map(_._2).toRight(missing(theorem))
 
   /* ------------------------------------------------------------------ the constant exists */
 
@@ -142,7 +157,7 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
    * the two numerals. The negation comes back with nothing assumed.
    *
    * It is the guard on everything above it, and what it guards against is not one wrong map but
-   * the whole class of readings under which the eight facts are individually true and say nothing
+   * the whole class of readings under which the facts are individually true and say nothing
    * jointly. `Integer` has this separation already and proves it through `Successor.distinct` in
    * the carrier, which shares no step with this: here it comes out of two **published** facts of
    * this development and one axiom of the reals.
@@ -211,6 +226,71 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
 
     settled.hypotheses shouldBe empty
     settled.conclusion shouldBe force(integers.fact(Integer.OfNaturalZero)).conclusion
+  }
+
+  /**
+   * The order map refuses a pair, which is what says the biconditional is not trivially true.
+   *
+   * An `INT_LE` that held of every pair would satisfy the statement under an `INT_REAL_LE` that
+   * held of every pair too, and every other assertion in this file would still pass: the form
+   * assertions read the statement, and the accounting assertion reads the derivation. Neither
+   * spends the fact on a claim that could come out false.
+   *
+   * So it is spent here, in both directions and at the same pair. Forward, `INT_ZERO <= INT_ONE`
+   * comes out of `0 <= 1` on the reals; backward, the other order is **refused**, because `1 <= 0`
+   * is not. The negative is the half that matters, and it lands on a claim about the carrier that
+   * nothing in `Integer` proves: the order there is reflexive, transitive, antisymmetric and
+   * total, and a one-point `int` satisfies all four.
+   *
+   * `LINARITH` over the chain's own order rather than a second one, for the reason
+   * `Peano.construct` gives about paying for an order twice.
+   */
+  "The order map" should "settle an order at `int` both ways from one about the reals" in {
+    val linarith = force(Linarith.construct(chain.order))
+
+    val values = force(
+      Rewrite.Rule.all(
+        inclusion.logic,
+        Vector(fact(Inclusion.EmbedsZero), fact(Inclusion.EmbedsOne))
+      )
+    )
+
+    def atReals(left: String, right: String): Kernel.Thm = {
+      val instance = force(
+        rules.specAll(
+          fact(Inclusion.EmbedsOrder),
+          List(
+            force(inclusion.term(left, Integer.Classes)),
+            force(inclusion.term(right, Integer.Classes))
+          )
+        )
+      )
+      force(Rewrite.inTheorem(values, instance))
+    }
+
+    // Forward: the reals decide `0 <= 1` and the equation carries it to `int`.
+    val upwards = atReals("INT_ZERO", "INT_ONE")
+    val holds = force(linarith.prove(force(rightOf(upwards))))
+    val ordered = force(LogicError.lift(Kernel.eqMp(force(Conv.sym(upwards)), holds)))
+
+    ordered.hypotheses shouldBe empty
+    ordered.conclusion shouldBe force(inclusion.proposition("INT_LE INT_ZERO INT_ONE"))
+
+    // Backward, and this is the half a collapsed `int` fails: `1 <= 0` is refutable on the reals,
+    // so the pair is refused rather than merely unproved.
+    val downwards = atReals("INT_ONE", "INT_ZERO")
+    val goal = force(Term.destEq(downwards.conclusion).map(_._1).toRight(missing(downwards)))
+    val assumed = force(LogicError.lift(Kernel.assume(goal)))
+    val overReals = force(LogicError.lift(Kernel.eqMp(downwards, assumed)))
+
+    val refutation = force(
+      linarith.prove(force(inclusion.proposition("(1:real) <= 0 ==> F")))
+    )
+    val absurd = force(rules.mp(refutation, overReals))
+    val refused = force(rules.notIntro(goal, absurd))
+
+    refused.hypotheses shouldBe empty
+    refused.conclusion shouldBe force(inclusion.proposition("~(INT_LE INT_ONE INT_ZERO)"))
   }
 
   /* ------------------------------------------------------------------ what it costs */

@@ -298,7 +298,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the run: of `Inclusion`'s eight facts exactly one carries an antecedent, which is
     // `INT_REAL_INJECTIVE`, and counting arrows the way `Propose.peel` does gives it one.
     // The other seven are equations with nothing owed. Tip plus this branch's delta.
-    proposals.size shouldBe 380
+    // 381 with the order map, the same day, and the **one** was derived before the run: the pair
+    // that landed is `Peano.NUM_REAL_LE_BACK`, one antecedent under one arrow, and
+    // `Inclusion.INT_REAL_LE`, an equation between propositions with nothing owed. So one and not
+    // two, and the asymmetry is the point rather than an accident of counting: a biconditional
+    // owes nothing to weaken, and the implication under it owes everything it crosses on. Tip
+    // plus this branch's delta.
+    proposals.size shouldBe 381
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -497,7 +503,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // false too and quantifies over two SEQUENCES: the sampler has no reading of a function
     // variable, so it lands in `unreadable` below and not here. Derived and then measured, and
     // both halves came out.
-    decidedFalse shouldBe 77
+    // 78 with ONE of the order map's three residues, and which one was derived before the run.
+    // `Peano.NUM_REAL_LE_BACK` is the only one of the pair that owes anything, so it is the only
+    // weakening, and dropping its antecedent leaves `!m n. NUM_LE m n`: false at `m = 1, n = 0`
+    // and written in nothing but `NUM_LE`, which `Model.Numbers` computes exactly. The other two
+    // residues are substitutions and neither is here, for two different reasons the two buckets
+    // below give.
+    decidedFalse shouldBe 78
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -606,7 +618,18 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // reading the first failure as the whole of the damage is how two of these were found on a
     // second pass rather than a first. That is a different mistake from the one recorded above,
     // which was a wrong derivation; this one is a derivation that was never asked for.
-    withAPoint shouldBe 72
+    //
+    // 73 with the order map, moving with `decidedFalse` by one rather than splitting from it: the
+    // one residue that is false is `!m n. NUM_LE m n`, written in `NUM_LE` alone, which
+    // `Model.Numbers` computes exactly, so the search finds `m = 1, n = 0`. The other two
+    // residues are not false at all — one is true and one is about `int` — so neither could reach
+    // this count. **And this entry was again not derived in advance**, for the third time and by
+    // the mechanism the paragraph above describes in full: `decidedFalse` went red first and
+    // ScalaTest stopped, so this line never ran. What found it was the second pass the paragraph
+    // prescribes, which means the paragraph is being read and not acted on. A change that moves a
+    // count is not finished when the suite is green once; it is finished when it has been green
+    // after a run in which every assertion behind the moved one executed.
+    withAPoint shouldBe 73
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -928,7 +951,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // between **reals** with `real_of_int a` as an atom, which is a shape the procedures do
     // have an address for: attempted and not settled is the honest answer and is what `Open`
     // means. The third goes to `unreadable` and the line there says why.
-    open shouldBe 281
+    // 282 with ONE of the order map's three, and the pair of new facts SPLITS across all three
+    // buckets, one residue each, which is what makes this row worth reading rather than
+    // subtracting. Here is `NUM_REAL_LE_BACK` with `real_le` swapped for `real_lt`, which leaves
+    // `!m n. real_of_num m < real_of_num n ==> NUM_LE m n`. That claim is **true**, so nothing
+    // refutes it, and it is an implication between an order on reals and an order on `num`, which
+    // is a shape the procedures take and do not settle. Attempted and not settled, which is what
+    // this bucket means and is a different answer from the one below.
+    open shouldBe 282
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1209,7 +1239,20 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // same reason the seven of `Integer`'s seventeen are here. What separates it from the two
     // above is not the development they come from but what a weakening leaves standing: an
     // equation between reals in one case and a claim about `int` in the other.
-    unreadable shouldBe 93
+    // 94 with the third of the order map's residues, and it is a SUBSTITUTION where every other
+    // entry on this list is a weakening. `INT_REAL_LE` with `real_le` swapped for `real_lt`
+    // leaves `!a b. INT_LE a b = (real_of_int a < real_of_int b)`, which is false at `a = b` and
+    // which nothing here can say so: refuting it means producing an integer, and the sampler has
+    // no point to try because nothing interprets that type. Same reason as the seven of
+    // `Integer`'s and the bridge's one above; different source, which is why this row now says
+    // that what decides the bucket is the **type the residue is about** and not which of the two
+    // generators wrote it.
+    //
+    // **This figure was found by a measurement and not by the run**, and that is worth the line:
+    // `open shouldBe` two paragraphs up went red in the same change, and a red assertion ends its
+    // test, so this one never ran and read exactly like a pass. The three residues were listed off
+    // `Propose.audit` with their standings instead.
+    unreadable shouldBe 94
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1458,7 +1501,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // whose statement writes one: `NUM_MUL`, inside the numeral of the product. The other three
     // speak of `NUM_PROV`, `NUM_TERM`, `NUM_CLOSED` and the codes, none of which is on this list.
     // Measured rather than derived, which is what the entry above already says of its residues.
-    aboutNumbers.size shouldBe 139
+    // 141, and the two are BOTH of `NUM_REAL_LE_BACK`'s while `INT_REAL_LE`'s one is not here,
+    // which is this list counting CONSTANTS again. The weakening leaves `!m n. NUM_LE m n` and
+    // the substitution leaves `real_of_num m < real_of_num n ==> NUM_LE m n`; both write
+    // `NUM_LE`. The third residue is about `int`, and no constant of the naturals survives in it.
+    // So this row moves by two where `decidedFalse` moves by one, which is the split this pair of
+    // counts exists to show: "the claim mentions the naturals" and "the model can compute it" are
+    // different facts, and here the second residue is on this list and in `open`.
+    aboutNumbers.size shouldBe 141
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1519,7 +1569,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and `!x y z. NUM_SUM x z <= NUM_SUM y z` cannot be, its two leading variables being
     // functions there is nothing to sample. Derived in advance for the reason `withAPoint` gives:
     // this line sits behind `aboutNumbers` in the same test and never ran while that one was red.
-    after shouldBe 51
+    // 52 with one of the order map's three, splitting from `aboutNumbers` above, which took two.
+    // The sampler refutes `!m n. NUM_LE m n` at `m = 1, n = 0`; the other residue on that list is
+    // `real_of_num m < real_of_num n ==> NUM_LE m n`, which is **true**, so there is no point to
+    // find. Two constants of the naturals, one refutation, which is this pair of counts doing
+    // what it exists to do. It was not derived in advance either, for the reason the line above
+    // has now recorded three times.
+    after shouldBe 52
   }
 
   /* ------------------------------------------------------ the false positive it produced */
