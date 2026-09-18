@@ -313,6 +313,38 @@ object Collatz {
   val PotentialConcat: String = "S2_PHI_CONCAT"
 
   /**
+   * `|- S2_PHI </00.> = SUC ZERO`, the measure at a word a reader can count by eye.
+   *
+   * What it guards is the reading of every figure below it. `S2_PHI` sums, over the positions of a
+   * word, the distance from the head, counted only where the letter is a digit, and the two
+   * decisions inside that sentence are invisible in the definition: the distance is `i - 1` over a
+   * TRUNCATED subtraction, so a digit at position zero and one at position one both weigh nothing,
+   * and a letter that is not a digit weighs nothing wherever it sits.
+   *
+   * `/00.` is the smallest word that shows both. Its two digits sit at positions one and two, so
+   * they weigh nought and one, and the two markers weigh nothing at all: the measure is one. A
+   * reader who took `S2_PHI` for "how many digits" or for "the sum of the positions" would get two
+   * or three here, and nothing else in this development would correct them.
+   */
+  val PotentialAtAWord: String = "S2_PHI_AT_A_WORD"
+
+  /**
+   * `|- !x m y. S2_PHI ((x m) y) = (S2_PHI x + <m where it sits>) + <y where it sits>`.
+   *
+   * [[PotentialConcat]] twice, at the shape a step produces: `WORD_STEP` gives a word as a context,
+   * a rewritten block and a tail, left-nested exactly like this, so every statement comparing the
+   * measures of two words related by a step is this lemma at both of them.
+   *
+   * What it buys is that two of the three terms do not depend on the block. The first is the
+   * context's own measure and the third is the tail weighed from `WORD_LENGTH (x m)` onwards, so
+   * where a rule keeps the length of what it rewrites, both sides of a step have the **same** third
+   * term and the comparison is between the two middle ones. Where a rule does not keep it -- `R1`
+   * shortens and `B2` and `B3` lengthen -- the third terms differ, and that difference is the whole
+   * reason the class the argument runs on is what it is.
+   */
+  val PotentialBlocks: String = "S2_PHI_BLOCKS"
+
+  /**
    * `|- !u v. S2_MARKED u /\ WORD_STEP S2 u v ==> S2_MARKED v`.
    *
    * What this development was asked for, and the sentence that lets a potential-function argument
@@ -633,6 +665,15 @@ object Collatz {
       "!u:word(num). !v:word(num). S2_MARKED u /\\ WORD_STEP S2 u v ==> S2_MARKED v",
     MarkedInhabited -> s"S2_MARKED (${wordText(spell("/0."))})",
     AnchoredInhabited -> s"S2_ANCHORED (${wordText(spell("/0."))})",
+    PotentialAtAWord -> s"S2_PHI (${wordText(spell("/00."))}) = SUC ZERO",
+    PotentialBlocks ->
+      ("!x:word(num). !m:word(num). !y:word(num). " +
+        "S2_PHI (WORD_CONCAT (WORD_CONCAT x m) y) = " +
+        "NUM_ADD (NUM_ADD (S2_PHI x) " +
+        "(NUM_SUM (\\i:num. COND (WORD_NTH m i < 3) " +
+        "(NUM_SUB (NUM_ADD (WORD_LENGTH x) i) 1) 0) (WORD_LENGTH m))) " +
+        "(NUM_SUM (\\i:num. COND (WORD_NTH y i < 3) " +
+        "(NUM_SUB (NUM_ADD (WORD_LENGTH (WORD_CONCAT x m)) i) 1) 0) (WORD_LENGTH y))"),
     PotentialConcat ->
       ("!u:word(num). !v:word(num). S2_PHI (WORD_CONCAT u v) = " +
         "NUM_ADD (S2_PHI u) " +
@@ -734,6 +775,7 @@ object Collatz {
       potentialDefinition <- definitions.get(Potential).toRight(MissingDefinition(Potential))
       potentialConcat <- potentialSplits(
         logic, theory, notation, forward.concatenation, potentialDefinition)
+      potentialBlocks <- potentialOfBlocks(logic, theory, potentialConcat)
       anchoredConcat <- anchoredSplits(
         logic,
         theory,
@@ -755,6 +797,12 @@ object Collatz {
 
       tools <- concreteTools(
         logic, theory, notation, forward.concatenation, peano, naturals, successor, numbers, definitions)
+      // `COND` is polymorphic in the branches, so both rules arrive with a type variable where this
+      // development has `num`, and a specialisation at a numeral would be refused for it.
+      conditional <- forward.inductive.classical.fact(Classical.CondTrue).map(atNumbers)
+      conditionalFalse <- forward.inductive.classical.fact(Classical.CondFalse).map(atNumbers)
+      potentialAtAWord <- potentialOfWord(
+        tools, spell("/00."), definitions, conditional, conditionalFalse)
       ruleNotEmpty <- rulesAreNotEmpty(tools, definitions)
       markedStep <- markedRules(tools, definitions)
       tailFreeStep <- freeRules(tools, definitions, Tail, TailFree, TailFreeStep)
@@ -774,7 +822,9 @@ object Collatz {
         AnchoredConcat -> anchoredConcat,
         HeadFreeStep -> headFreeStep,
         AnchoredStep -> anchoredStep,
-        PotentialConcat -> potentialConcat
+        PotentialConcat -> potentialConcat,
+        PotentialAtAWord -> potentialAtAWord,
+        PotentialBlocks -> potentialBlocks
       )
       markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, definitions, partial)
       anchoredClosed <- anchoredUnderSteps(tools, forward, forward.concatenation, definitions, partial)
@@ -841,7 +891,14 @@ object Collatz {
     notBelowZero: Kernel.Thm,
     belowSuccessorCases: Kernel.Thm,
     strictTransitive: Kernel.Thm,
-    zeroOrSuccessor: Kernel.Thm
+    zeroOrSuccessor: Kernel.Thm,
+    sumAtZero: Kernel.Thm,
+    sumAtSuccessor: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm,
+    belowExcludesAtMost: Kernel.Thm,
+    strictIrreflexive: Kernel.Thm,
+    addAtZero: Kernel.Thm,
+    zeroPlus: Kernel.Thm
   )
 
   private[theories] object Arithmetic {
@@ -865,6 +922,13 @@ object Collatz {
         belowSuccessorCases <- peano.fact(Peano.BelowSuccessorCases)
         strictTransitive <- peano.fact(Peano.StrictTransitive)
         zeroOrSuccessor <- naturals.fact(Natural.ZeroOrSuccessor)
+        sumAtZero <- peano.fact(Peano.PartialSumAtZero)
+        sumAtSuccessor <- peano.fact(Peano.PartialSumAtSuccessor)
+        atMostFromBelow <- peano.fact(Peano.AtMostFromBelow)
+        belowExcludesAtMost <- peano.fact(Peano.BelowExcludesAtMost)
+        strictIrreflexive <- peano.fact(Peano.StrictIrreflexive)
+        addAtZero <- peano.fact(Peano.AddAtZero)
+        zeroPlus <- peano.fact(Peano.ZeroPlus)
       } yield Arithmetic(
         atMostSum,
         belowThenAtMost,
@@ -882,7 +946,14 @@ object Collatz {
         notBelowZero,
         belowSuccessorCases,
         strictTransitive,
-        zeroOrSuccessor
+        zeroOrSuccessor,
+        sumAtZero,
+        sumAtSuccessor,
+        atMostFromBelow,
+        belowExcludesAtMost,
+        strictIrreflexive,
+        addAtZero,
+        zeroPlus
       )
   }
 
@@ -1304,6 +1375,317 @@ object Collatz {
       result <- rules.genAll(discharged, List(u, v))
     } yield result
   }
+
+  /**
+   * `|- <letter> < 3` or `|- ~(<letter> < 3)`, which is what decides a position's weight.
+   *
+   * The alphabet is seven numerals and the digits are the three below three, so this is a
+   * comparison of numerals and nothing about words. It runs in successor form: the letters and the
+   * bound are written in the bit encoding, where `<` has no decision procedure here, and
+   * `Successor.spell` is what puts both sides where [[numeralBelow]] can compare them.
+   *
+   * The refusal is derived rather than assumed for the same reason [[notTheMarker]] is: at a letter
+   * that IS a digit, a caller asking for the negative answer would otherwise get a theorem about
+   * nothing, and here it gets a refusal naming the letter.
+   */
+  private def belowThree(
+    tools: Concrete,
+    letter: String,
+    wanted: Boolean
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+    val digits = Set("0", "1", "2")
+
+    if (digits.contains(letter) != wanted)
+      Left(NotOfForm(s"a letter whose comparison with three is $wanted", Term.variable(letter, Numbers)))
+    else
+      for {
+        letterTerm <- tools.letter(letter)
+        boundTerm <- Parser.term(tools.theory, tools.notation, "(3:num)", Numbers)
+        letterValue <- Rewrite.rewrite(tools.letters, letterTerm)
+        letterNumeral <- rightOf(letterValue)
+        letterSpelt <- tools.successor.spell(letterNumeral).flatMap(Conv.trans(letterValue, _))
+        boundSpelt <- tools.successor.spell(boundTerm)
+        letterSuccessors <- rightOf(letterSpelt)
+        boundSuccessors <- rightOf(boundSpelt)
+        letterCount <- countOfSuccessors(tools, letterSuccessors)
+        boundCount <- countOfSuccessors(tools, boundSuccessors)
+        order <- tools.strictOrder
+
+        answer <-
+          if (wanted)
+            for {
+              small <- numeralBelow(tools, letterCount, boundCount)
+              placed <- carryLeft(order, letterSpelt, boundSuccessors, small)
+              result <- carryRight(order, letterTerm, Conv.sym(boundSpelt).getOrElse(boundSpelt), placed)
+            } yield result
+          else
+            for {
+              refused <- notNumeralBelow(tools, letterCount, boundCount)
+              placed <- carryLeftNegatedOrder(tools, order, letterSpelt, boundSuccessors, refused)
+              reversed <- Conv.sym(boundSpelt)
+              result <- carryRightNegatedOrder(tools, order, letterTerm, reversed, placed)
+            } yield result
+      } yield answer
+  }
+
+  /** How many successors a numeral in successor form carries, read off the term. */
+  private def countOfSuccessors(tools: Concrete, numeral: Term): Either[LogicError, Int] =
+    for {
+      zero <- tools.zero
+      successor <- tools.successorOf
+      count <- Bounded
+        .lengthOf(zero, successor, numeral)
+        .toRight(NotOfForm(s"a numeral of ${Natural.TypeName}", numeral))
+    } yield count
+
+  /** `|- ~(SUC^a ZERO < SUC^b ZERO)` for `a >= b`, which is the refusal [[numeralBelow]] has no form of. */
+  private def notNumeralBelow(
+    tools: Concrete,
+    left: Int,
+    right: Int
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      leftTerm <- tools.numeral(left)
+      rightTerm <- tools.numeral(right)
+      order <- tools.strictOrder
+      claim <- LogicError.lift(Term.appAll(order, List(leftTerm, rightTerm)))
+      assumed <- LogicError.lift(Kernel.assume(claim))
+      absurd <-
+        if (left == right)
+          for {
+            irreflexive <- rules.spec(leftTerm, tools.numbers.strictIrreflexive)
+            contradiction <- rules.notElim(irreflexive, assumed)
+          } yield contradiction
+        else
+          for {
+            other <- numeralBelow(tools, right, left)
+            excluded <- rules
+              .specAll(tools.numbers.belowExcludesAtMost, List(rightTerm, leftTerm))
+              .flatMap(rules.mp(_, other))
+            weaker <- rules
+              .specAll(tools.numbers.atMostFromBelow, List(leftTerm, rightTerm))
+              .flatMap(rules.mp(_, assumed))
+            contradiction <- rules.notElim(excluded, weaker)
+          } yield contradiction
+      result <- rules.notIntro(claim, absurd)
+    } yield result
+  }
+
+  /** `|- ~(R a' b)` from `|- a = a'` and `|- ~(R a b)`: the order's FIRST argument replaced. */
+  private def carryLeftNegatedOrder(
+    tools: Concrete,
+    order: Term,
+    equation: Kernel.Thm,
+    other: Term,
+    fact: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      reversed <- Conv.sym(equation)
+      moved <- Conv.apTerm(order, reversed).flatMap(Conv.apThm(_, other))
+      negated <- Conv.apTerm(tools.logic.negation, moved)
+      result <- LogicError.lift(Kernel.eqMp(negated, fact))
+    } yield result
+
+  /** `|- ~(R a b')` from `|- b = b'` and `|- ~(R a b)`: the order's SECOND argument replaced. */
+  private def carryRightNegatedOrder(
+    tools: Concrete,
+    order: Term,
+    left: Term,
+    equation: Kernel.Thm,
+    fact: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      partial <- LogicError.lift(Term.app(order, left))
+      moved <- Conv.apTerm(partial, equation)
+      negated <- Conv.apTerm(tools.logic.negation, moved)
+      result <- LogicError.lift(Kernel.eqMp(negated, fact))
+    } yield result
+
+  /**
+   * `|- f <numeral j> = <what the letter at j weighs>`, the summand of the measure at one position.
+   *
+   * Three steps and the middle one is the decision. The redex contracts to a conditional on whether
+   * the letter at that position is a digit; the letter is read off the word and compared with three;
+   * and `COND_TRUE` or `COND_FALSE` turns the answer into the branch. Nothing here simplifies the
+   * branch it produces: at a digit what comes out is the distance as written, `(k + j) - 1` over a
+   * truncated subtraction, and folding that into a numeral is the caller's arithmetic rather than
+   * this function's.
+   */
+  private def summandAt(
+    tools: Concrete,
+    summand: Term,
+    letters: Vector[String],
+    position: Int,
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      index <- tools.numeral(position)
+      applied <- LogicError.lift(Term.app(summand, index))
+      contracted <- Conv.betaRoot(applied)
+      body <- rightOf(contracted)
+      parts <- body match {
+        case App(App(App(_, condition), whenTrue), whenFalse) =>
+          Right((condition, whenTrue, whenFalse))
+        case other => Left(NotOfForm("a conditional", other))
+      }
+      (condition, whenTrue, whenFalse) = parts
+
+      isDigit = Set("0", "1", "2").contains(letters(position))
+      entry <- letterAt(tools, letters, position)
+      order <- tools.strictOrder
+      three <- Parser.term(tools.theory, tools.notation, "(3:num)", Numbers)
+
+      decided <-
+        if (isDigit)
+          for {
+            atLetter <- belowThree(tools, letters(position), wanted = true)
+            held <- carryLeft(order, entry, three, atLetter)
+            chosen <- rules
+              .specAll(conditional, List(condition, whenTrue, whenFalse))
+              .flatMap(rules.mp(_, held))
+          } yield chosen
+        else
+          for {
+            atLetter <- belowThree(tools, letters(position), wanted = false)
+            held <- carryLeftNegatedOrder(tools, order, entry, three, atLetter)
+            chosen <- rules
+              .specAll(conditionalFalse, List(condition, whenTrue, whenFalse))
+              .flatMap(rules.mp(_, held))
+          } yield chosen
+      result <- Conv.trans(contracted, decided)
+    } yield result
+  }
+
+  /**
+   * `|- NUM_SUM f (WORD_LENGTH <word>) = <value>`, the sum unfolded one position at a time.
+   *
+   * The summand is the caller's rather than one built here, because the term a caller has is the one
+   * `S2_PHI_CONCAT` or the definition handed it and a summand written again would be the same
+   * function twice. The bound is a concrete word's length, so it is a numeral in successor form and
+   * `NUM_SUM_SUC` applies to it exactly that many times.
+   *
+   * What comes out is left-nested with `ZERO` at its foot, which is the recursion's own shape; the
+   * two identities of addition fold the zeros away at the end, and every position whose letter is
+   * not a digit contributed one.
+   */
+  private def sumOverPositions(
+    tools: Concrete,
+    summand: Term,
+    letters: Vector[String],
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    def walk(position: Int): Either[LogicError, Kernel.Thm] =
+      if (position == 0) rules.spec(summand, tools.numbers.sumAtZero)
+      else
+        for {
+          below <- walk(position - 1)
+          index <- tools.numeral(position - 1)
+          step <- rules
+            .spec(summand, tools.numbers.sumAtSuccessor)
+            .flatMap(rules.spec(index, _))
+          entry <- summandAt(tools, summand, letters, position - 1, conditional, conditionalFalse)
+          plus <- LogicError.lift(
+            tools.theory.constant(Peano.Addition, BinaryNumbers)
+          )
+          value <- rightOf(below)
+          onTheLeft <- Conv
+            .apTerm(plus, below)
+            .flatMap(Conv.apThm(_, entry.conclusion match {
+              case App(App(_, left), _) => left
+              case other => other
+            }))
+          partial <- LogicError.lift(Term.app(plus, value))
+          onTheRight <- Conv.apTerm(partial, entry)
+          joined <- Conv.trans(onTheLeft, onTheRight)
+          result <- Conv.trans(step, joined)
+        } yield result
+
+    for {
+      length <- lengthIsNumeral(tools, letters)
+      sumConstant <- LogicError.lift(
+        tools.theory.constant(
+          Peano.PartialSum,
+          Type.fun(Type.fun(Numbers, Numbers), Type.fun(Numbers, Numbers))
+        )
+      )
+      partial <- LogicError.lift(Term.app(sumConstant, summand))
+      atNumeral <- Conv.apTerm(partial, length)
+      walked <- walk(letters.size)
+      joined <- Conv.trans(atNumeral, walked)
+      value <- rightOf(joined)
+      folded <- Rewrite.rewrite(tools.identities, value)
+      result <- Conv.trans(joined, folded)
+    } yield result
+  }
+
+  /**
+   * [[PotentialBlocks]]: the measure of a context, a block and a tail, by [[PotentialConcat]] twice.
+   *
+   * The outer application splits the word where the tail begins and the inner one splits what is
+   * left where the block begins, which is the order the left-nesting forces: `(x m) y` is a
+   * concatenation whose first half is itself one, so the outer split is the only one that applies
+   * to the term as it stands.
+   */
+  private def potentialOfBlocks(
+    logic: Logic,
+    theory: Theory,
+    potentialConcat: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val context = Term.variable("x", Words)
+    val block = Term.variable("m", Words)
+    val tail = Term.variable("y", Words)
+
+    for {
+      concat <- LogicError.lift(theory.constant(Concatenation.Name, ConcatType))
+      plus <- LogicError.lift(theory.constant(Peano.Addition, BinaryNumbers))
+      joined <- LogicError.lift(Term.appAll(concat, List(context, block)))
+
+      outer <- rules.specAll(potentialConcat, List(joined, tail))
+      inner <- rules.specAll(potentialConcat, List(context, block))
+
+      sides <- Term.destEq(outer.conclusion).toRight(NotOfForm("an equation", outer.conclusion))
+      (_, sum) = sides
+      shifted <- sum match {
+        case App(App(_, _), second) => Right(second)
+        case other => Left(NotOfForm("a sum of two blocks", other))
+      }
+      readBack <- Conv.apTerm(plus, inner).flatMap(Conv.apThm(_, shifted))
+
+      whole <- Conv.trans(outer, readBack)
+      result <- rules.genAll(whole, List(context, block, tail))
+    } yield result
+  }
+
+  /** [[PotentialAtAWord]]: the measure of a written-out word, read off its own definition. */
+  private def potentialOfWord(
+    tools: Concrete,
+    letters: Vector[String],
+    definitions: Map[String, Kernel.Thm],
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      subject <- tools.word(letters)
+      potentialDefinition <- definitions.get(Potential).toRight(MissingDefinition(Potential))
+      opened <- Conv.unfold(potentialDefinition, List(subject))
+      body <- rightOf(opened)
+      summand <- body match {
+        case App(App(_, function), _) => Right(function)
+        case other => Left(NotOfForm("a sum over a bound", other))
+      }
+      evaluated <- sumOverPositions(tools, summand, letters, conditional, conditionalFalse)
+      result <- Conv.trans(opened, evaluated)
+    } yield result
 
   /**
    * [[PotentialConcat]]: the measure over a word split in two, by the tally at its own weight.
@@ -1946,6 +2328,7 @@ object Collatz {
     lengths: Vector[Rewrite.Rule],
     positions: Vector[Rewrite.Rule],
     letters: Vector[Rewrite.Rule],
+    identities: Vector[Rewrite.Rule],
     entryLeft: Kernel.Thm,
     entryRight: Kernel.Thm,
     singletonLength: Kernel.Thm,
@@ -2532,6 +2915,22 @@ object Collatz {
             } yield held :+ definition
         }
       letters <- unfoldingRules(logic, letterDefinitions)
+      // What folds an evaluated sum into the number it is: the two identities of addition, the two
+      // recurrences of truncated subtraction, and the numeral one spelled as a successor so that
+      // `i - 1` meets them. The measure's weight is `i - 1` over a TRUNCATED subtraction, so
+      // nothing here is arithmetic on the integers: at position zero the pair cancels to `ZERO`
+      // rather than to anything negative, which is the fact the whole class argument turns on.
+      identities <- unfoldingRules(
+        logic,
+        Vector(
+          numbers.addAtZero,
+          numbers.zeroPlus,
+          numbers.addAtSuccessor,
+          numbers.oneIsSuccessorOfZero,
+          numbers.subSuccessors,
+          numbers.subAtZero
+        )
+      )
 
       tailFreeDefinition <- definitions.get(TailFree).toRight(MissingDefinition(TailFree))
       headFreeDefinition <- definitions.get(HeadFree).toRight(MissingDefinition(HeadFree))
@@ -2547,6 +2946,7 @@ object Collatz {
       lengths,
       positions,
       letters,
+      identities,
       entryLeft,
       entryRight,
       singletonLength,

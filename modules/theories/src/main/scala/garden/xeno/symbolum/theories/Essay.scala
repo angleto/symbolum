@@ -275,12 +275,23 @@ object Essay {
       "## What it rests on",
       "",
       s"${count(axioms.size, "axiom")} reached, ${namedAxioms.size} of them named below, and " +
-        s"${named.size} named facts in all.",
+        s"${count(named.size, "named fact")} in all.",
       ""
     ) ++ table ++ unnamed_).mkString("\n")
   }
 
-  /** A number and its noun, with the plural where the number needs one. */
+  /**
+   * A number and its noun, with the plural where the number needs one.
+   *
+   * It existed and three of its four call sites did not use it, which is why the page said
+   * "1 steps" and "1 inferences" until 2026-09-18. Both are reachable and one of them on every
+   * axiom: a theorem the kernel holds in a single inference is what an asserted axiom is, so
+   * every one of the sixteen of the reals read that way.
+   *
+   * **It appends an `s` and is not a rule about English.** That is right for `axiom`, `named
+   * fact`, `step` and `inference`, and wrong for the first irregular noun anybody routes through
+   * it. A noun that does not take a plain `s` wants its two forms written out, not this.
+   */
   private def count(howMany: Int, noun: String): String =
     if (howMany == 1) s"1 $noun" else s"$howMany ${noun}s"
 
@@ -307,7 +318,7 @@ object Essay {
 
       s"""## The derivation
          |
-         |${account.size} steps, recorded as the derivation was written.
+         |${count(account.size, "step")}, recorded as the derivation was written.
          |
          |${lines.mkString("\n")}""".stripMargin
   }
@@ -325,7 +336,8 @@ object Essay {
     (Vector(
       "## The proof the kernel holds",
       "",
-      s"$size inferences. The account above describes them and is not a second proof: what the " +
+      s"${count(size, "inference")}. The account above describes them and is not a second proof: " +
+        "what the " +
         "kernel checked is this, and its shape is",
       "",
       "| rule | inferences | share |",
