@@ -16,6 +16,15 @@ code,pre,.legible{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-s
 .refused{color:#b00}
 .next{color:#666;font-size:.8rem;margin-top:.2rem}
 .report{white-space:pre-wrap;color:#333;background:#fafafa;padding:.5rem;border-radius:3px;max-height:28rem;overflow:auto}
+.page{margin:.4rem 0 0 2rem;background:#fafafa;padding:.5rem .75rem;border-radius:3px;max-height:36rem;overflow:auto}
+.page .title{font-size:.8rem;font-weight:600;letter-spacing:.04em;margin:.2rem 0 .4rem}
+.page .section{font-size:.78rem;font-weight:600;color:#555;letter-spacing:.03em;margin:.9rem 0 .3rem;text-transform:uppercase}
+.page p{margin:.35rem 0}
+.page pre{background:#fff;border:1px solid #eee;border-radius:3px;padding:.35rem .5rem;overflow-x:auto;white-space:pre-wrap}
+.page-table{border-collapse:collapse;font-size:.8rem;margin:.35rem 0}
+.page-table th,.page-table td{border:1px solid #e3e3e3;padding:.15rem .45rem;text-align:left}
+.page-table th{background:#f2f2f2;font-weight:600}
+.page .step{margin:.2rem 0 .2rem .5rem}
 #line{width:100%;box-sizing:border-box;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;padding:.55rem .7rem;border:1px solid #ccc;border-radius:4px}
 #line:focus{outline:none;border-color:#888}
 #entry.running #line{border-color:#376;background:#fbfffd}
