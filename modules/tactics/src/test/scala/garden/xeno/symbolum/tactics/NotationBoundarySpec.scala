@@ -203,8 +203,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Name, "the constants the table does have a row for, which is what the caller wanted"),
     ("Value.scala", "route.arity") ->
       (Verdict.Number, "how many arguments the constant takes"),
-    ("Value.scala", "arguments.size") ->
-      (Verdict.Number, "how many it was given"),
+    // `supplied` and not `arguments.size`, since 2026-09-18: the two refusals about a missing row
+    // and a wrong arity are written once now and reached from both callers, so the count arrives as
+    // a parameter. `given` would have been the natural name and is a reserved word in Scala 3.
+    ("Value.scala", "supplied") ->
+      (Verdict.Number, "how many arguments the constant was given"),
     ("Value.scala", "divisor") ->
       (Verdict.Number, "the value asked to divide the other"),
     ("Value.scala", "multiple") ->

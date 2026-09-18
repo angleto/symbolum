@@ -769,8 +769,8 @@ object Value {
     TypeError(s"$constant has no row in this table; what it evaluates is ${reachable.mkString(", ")}")
 
   /** `constant takes n and was given m`, likewise. */
-  private[theories] def wrongArity(constant: String, route: Route, given: Int): LogicError =
-    TypeError(s"$constant takes ${route.arity} argument(s) and was given $given")
+  private[theories] def wrongArity(constant: String, route: Route, supplied: Int): LogicError =
+    TypeError(s"$constant takes ${route.arity} argument(s) and was given $supplied")
 
   /** The values of a term's arguments, as the row's [[Shape]] reads them. */
   private def readArguments(
