@@ -39,10 +39,11 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it does not do ==
  *
- * It computes a sum and a product of two numerals and nothing else. There is no subtraction, no
- * comparison and no defined function: `NUM_SUB` truncates and is not the difference of a ring,
+ * It computes a sum, a product and a strict comparison of two numerals, and nothing else. There is
+ * no subtraction and no defined function: `NUM_SUB` truncates and is not the difference of a ring,
  * and `NUM_DIV` is chosen rather than computed, so both belong to the procedure above this one
- * rather than to the table. What this is for is to be that procedure's arithmetic.
+ * rather than to the table. What this is for is to be that procedure's arithmetic, and the
+ * comparison is in it because `NUM_DIV_MOD_UNIQUE` asks for a sum **and** an order in one breath.
  */
 final class Digits private (
   val semiring: Semiring,
@@ -75,6 +76,92 @@ final class Digits private (
     compute(multiplicationRules, Peano.Multiplication, left, right, left * right, limit)
 
   /**
+   * `|- SUC m = m+1`, for a numeral `m`.
+   *
+   * The bridge between the two spellings of a number this theory has, and it goes the direction
+   * `Successor` does not: `Successor.spell` opens a numeral into successors, so that a recurrence
+   * stated at `SUC n` has something to hook, and this closes one successor back into a numeral, so
+   * that the arithmetic above carries on in digits. Neither is the other reversed and the cost says
+   * so: spelling five is 4887 inferences and produces five successors, where this is a sum.
+   */
+  def successor(value: BigInt): Either[LogicError, Kernel.Thm] = {
+    val rules = peano.logic.rules
+
+    for {
+      term <- numeral(value)
+      zero <- LogicError.lift(peano.theory.constant(Natural.NumberZero, Digits.Numbers))
+      successorOf <- LogicError.lift(
+        peano.theory.constant(Natural.NumberSuccessor, Type.fun(Digits.Numbers, Digits.Numbers))
+      )
+      addition <- LogicError.lift(peano.theory.constant(Peano.Addition, Digits.Binary))
+      inFront <- LogicError.lift(Term.app(addition, term))
+
+      oneIsSuccessor <- peano.fact(Peano.NumeralOneIsSuccessorOfZero)
+      atSuccessor <- peano.fact(Peano.AddAtSuccessor)
+      atZero <- peano.fact(Peano.AddAtZero)
+
+      opened <- Conv.apTerm(inFront, oneIsSuccessor)
+      stepped <- rules.specAll(atSuccessor, List(term, zero))
+      inside <- rules.spec(term, atZero)
+      lifted <- Conv.apTerm(successorOf, inside)
+      chained <- Conv.trans(opened, stepped).flatMap(Conv.trans(_, lifted))
+      sum <- add(value, 1)
+      back <- Conv.sym(chained)
+      result <- Conv.trans(back, sum)
+    } yield result
+  }
+
+  /**
+   * `|- m < n`, for numerals, and a refusal naming the pair where the first is not below the second.
+   *
+   * The order of `num` is `NUM_LE m n = ?d. m + d = n` with `NUM_LT m n = NUM_LE (SUC m) n`, so a
+   * strict comparison between two numerals is a **witness** rather than a search: the difference
+   * less one is the `d`, and what has to be proved about it is a sum, which is what this file is.
+   * Nothing walks from one number to the other, which is the whole difference between this and the
+   * successor-by-successor comparisons written by hand in `Collatz`: the cost follows the digits.
+   *
+   * It is here and not beside the table because it is the second half of what a procedure over a
+   * defined constant needs. `NUM_DIV_MOD_UNIQUE` asks for `m = n * q + r` **and** `r < n`, and a
+   * caller that had to get the two from two places would be the caller this file exists to spare.
+   */
+  def below(left: BigInt, right: BigInt): Either[LogicError, Kernel.Thm] = {
+    val logic = peano.logic
+    val rules = logic.rules
+
+    for {
+      leftTerm <- numeral(left)
+      rightTerm <- numeral(right)
+      _ <-
+        if (left < right) Right(())
+        else Left(NotOfForm(s"a value below $right, and $left is not one", leftTerm))
+
+      step <- successor(left)
+      witness <- numeral(right - left - 1)
+      sum <- add(left + 1, right - left - 1)
+      addition <- LogicError.lift(peano.theory.constant(Peano.Addition, Digits.Binary))
+      congruent <- Conv.apTerm(addition, step).flatMap(Conv.apThm(_, witness))
+      obligation <- Conv.trans(congruent, sum)
+
+      successorOf <- LogicError.lift(
+        peano.theory.constant(Natural.NumberSuccessor, Type.fun(Digits.Numbers, Digits.Numbers))
+      )
+      above <- LogicError.lift(Term.app(successorOf, leftTerm))
+      atMostDefinition <- peano.definition(Peano.NonStrictOrder)
+      unfolded <- Conv.unfold(atMostDefinition, List(above, rightTerm))
+      existential <- Digits.rightOf(unfolded)
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      witnessed <- rules.existsIntro(predicate, witness, obligation)
+      atMost <- Conv.sym(unfolded).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, witnessed)))
+
+      belowDefinition <- peano.definition(Peano.StrictOrder)
+      strict <- Conv.unfold(belowDefinition, List(leftTerm, rightTerm))
+      result <- Conv.sym(strict).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, atMost)))
+    } yield result
+  }
+
+  /**
    * The numeral for a value, said at `num` out loud.
    *
    * The annotation is `Numeral.of`'s and for its reason one type over: a digit string put to a
@@ -104,9 +191,7 @@ final class Digits private (
       leftTerm <- numeral(left)
       rightTerm <- numeral(right)
       answer <- numeral(expected)
-      operation <- LogicError.lift(
-        peano.theory.constant(operator, Type.fun(Digits.Numbers, Type.fun(Digits.Numbers, Digits.Numbers)))
-      )
+      operation <- LogicError.lift(peano.theory.constant(operator, Digits.Binary))
       statement <- LogicError.lift(Term.appAll(operation, List(leftTerm, rightTerm)))
       theorem <- Rewrite.prove(rules, statement, answer, limit)
     } yield theorem
@@ -297,8 +382,10 @@ object Digits {
     case other => (other, 0)
   }
 
-  private def rightOf(equation: Kernel.Thm): Either[LogicError, Term] =
+  private[theories] def rightOf(equation: Kernel.Thm): Either[LogicError, Term] =
     Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion))
 
   private val Numbers: Type = TyApp(Natural.TypeName, Nil)
+
+  private val Binary: Type = Type.fun(Numbers, Type.fun(Numbers, Numbers))
 }

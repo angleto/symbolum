@@ -145,6 +145,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
 
     "Recursion" -> DeclaresNothing,
 
+    // A procedure over `Modular`'s characterisation lemmas, which declares nothing and publishes
+    // nothing: what it hands back is an equation about a constant `Modular` already defined, at
+    // arguments the caller chose. `Library.of` has nothing to collect from it for the same reason
+    // it has nothing to collect from `Semiring`.
+    "Value" -> DeclaresNothing,
+
     // `Semiring`'s standing, and the entry is worth a line because the file plainly holds facts:
     // sixteen of them, proved when it is built. They are a procedure's rule table and not a
     // development's library — the same position `Arithmetic`'s numeral lemmas are in over the

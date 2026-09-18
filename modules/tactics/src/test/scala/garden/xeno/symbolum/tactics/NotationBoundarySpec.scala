@@ -186,6 +186,18 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Number, "how many successors one side of a numeral lemma lifted out"),
     ("Digits.scala", "rightCore._2") ->
       (Verdict.Number, "the same for the other side, which has to be the same number"),
+    ("Digits.scala", "left") ->
+      (Verdict.Number, "the value asked to be below the other, when it is not"),
+    ("Digits.scala", "right") ->
+      (Verdict.Number, "the value it was asked to be below"),
+    ("Value.scala", "constant") ->
+      (Verdict.Name, "the constant a caller asked for a value of"),
+    ("Value.scala", "reachable.mkString(\", \")") ->
+      (Verdict.Name, "the constants the table does have a row for, which is what the caller wanted"),
+    ("Value.scala", "route.arity") ->
+      (Verdict.Number, "how many arguments the constant takes"),
+    ("Value.scala", "arguments.size") ->
+      (Verdict.Number, "how many it was given"),
     ("Divisibility.scala", "parts._1") ->
       (Verdict.Crossing, "the antecedent of an implication an assembly had to match"),
     ("Field.scala", "reals.show(denominator)") ->
