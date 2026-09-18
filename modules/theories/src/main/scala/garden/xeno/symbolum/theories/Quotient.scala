@@ -76,13 +76,38 @@ import garden.xeno.symbolum.logic.*
  * the two steps would be walked at least four times in the first consumer and three times again in
  * the second.
  *
+ * == A function out of the quotient is [[liftPredicate]], and this file said it was not ==
+ *
+ * The paragraph here used to say that a function whose result is **not** quotiented, `num`-valued
+ * say, was one of three things the builder did not do, and it named the integers as the consumer
+ * that did not need one. Both halves were wrong by 2026-09-18, which is when the bridge `int ->
+ * real` was asked for and `Inclusion` was written.
+ *
+ * Nothing in [[liftPredicate]] is about `bool`. It applies the caller's `p` to a chosen
+ * representative, abstracts, defines, and carries respectfulness across with `Conv.sym` and
+ * `Conv.trans`; the obligation `!x y. R x y ==> (p x = p y)` is an equation at whatever `p`
+ * returns, and none of those steps reads the type. That is checkable by reading two functions:
+ * neither [[liftPredicate]] nor its check names `Type.Bool` anywhere, where the type definition and
+ * the chooser above them both do. **Reading is what predicted it and is not what settled it**,
+ * since a reading finds an absence and an absence is what a broken instrument also reports:
+ * `Inclusion` lifts a `real`-valued function through this call and `InclusionSpec` derives the fact
+ * that comes back, which is the control. What [[liftPredicate]]'s own docstring still says truly is
+ * that respectfulness is asked for as an equation rather than an implication, and why.
+ *
+ * What the consumer really lacked was [[Quotient.over]], and that is a different defect from the
+ * one predicted: a lift defines into the quotient's **own** theory, which for the integers is five
+ * constants short of the theory they publish. The name of the method the obligation is written in
+ * stayed `liftPredicate` rather than becoming `liftFunction`, because the shape it lifts is the
+ * unary one either way and a rename would move every call site to say something the type already
+ * says.
+ *
  * == What is not here ==
  *
- * No induction over the quotient, no lifting of a relation of two quotient arguments other than
- * through [[liftBinary]] at `bool`, and no lifting of a function whose result is **not** quotiented
- * (`num`-valued, say). Each is a further step of the same kind and none of them is needed by the
- * integers, which is the criterion `docs/adr/0016` sets for this piece: validated on a toy quotient
- * and then measured by its first real consumer, not grown ahead of one.
+ * No induction over the quotient, and no lifting of a relation of two quotient arguments other than
+ * through [[liftBinary]] at `bool`: `Integer.Order` writes that one out by hand and says where. Each
+ * is a further step of the same kind and neither is needed yet, which is the criterion
+ * `docs/adr/0016` sets for this piece: validated on a toy quotient and then measured by its real
+ * consumers, not grown ahead of them.
  *
  * No notation. A quotient's operations are written by the names the caller gave them.
  */
@@ -159,11 +184,12 @@ final class Quotient private (
     Quotient.liftBinary(this, name, operation, respects)
 
   /**
-   * A predicate on the carrier, lifted to the classes.
+   * A unary function of the carrier, lifted to the classes, whatever it returns.
    *
-   * `respects` is `|- !x y. R x y ==> (p x = p y)`, an equation at `bool` rather than an
-   * implication: a predicate true of one representative and false of another does not lift, and the
-   * implication in one direction alone would not say so.
+   * `respects` is `|- !x y. R x y ==> (p x = p y)`, an equation rather than an implication: a
+   * predicate true of one representative and false of another does not lift, and the implication in
+   * one direction alone would not say so. At a result outside `bool` the same obligation is the
+   * ordinary one, that `p` is constant on a class.
    */
   def liftPredicate(
     name: String,
@@ -171,6 +197,43 @@ final class Quotient private (
     respects: Kernel.Thm
   ): Either[LogicError, (Quotient, Kernel.Thm)] =
     Quotient.liftPredicate(this, name, predicate, respects)
+
+  /**
+   * The same quotient, read against a theory that extends the one it was built over.
+   *
+   * A lift defines its constant into [[theory]], which is the theory as it stood when the last lift
+   * ran. That is the right theory while a development is still building its operations and the
+   * wrong one afterwards: the integers define `INT_ZERO`, `INT_ONE`, `INT_OF_NUM`, `INT_DIVIDES`
+   * and `INT_LE` **after** their three lifts, so a later consumer lifting through the quotient they
+   * hand on would define into a theory holding none of those five. Measured on 2026-09-18:
+   * `Integer.quotient.theory` carries 140 constants where `Integer.theory` carries 145, and the
+   * difference is exactly those. `Inclusion`'s own `real_of_int INT_ZERO = 0` could not be
+   * **stated** there, never mind proved.
+   *
+   * What it checks is what `Logic.over` checks, which is that the wider theory declares every
+   * constant of this one at the same type. It checks nothing about axioms, and there is nothing it
+   * could check: a theorem in this kernel carries no theory, so what moves here is the signature
+   * terms are built against rather than a claim about what was proved. That is the assumption
+   * [[Quotient.extend]] already makes each time a lift returns, and it is written out here because
+   * this is the one place a caller makes it.
+   */
+  def over(wider: Theory): Either[LogicError, Quotient] =
+    logic
+      .over(wider)
+      .map(widened =>
+        new Quotient(
+          classical,
+          wider,
+          notation,
+          widened,
+          relation,
+          carrier,
+          classes,
+          names,
+          definitions,
+          facts
+        )
+      )
 
 }
 
@@ -1088,9 +1151,10 @@ object Quotient {
   /**
    * A predicate lifted, `|- !x. g (proj x) = p x`.
    *
-   * The simplest of the three, because the result is already a proposition and no projection has to
+   * The simplest of the three, because the result is not in the carrier and so no projection has to
    * be undone: `g (proj x)` unfolds to `p (repr (proj x))`, and respectfulness at `x` and that
-   * representative is an equation at `bool` which is the answer.
+   * representative is already the equation wanted. Nothing below reads the result type, which is
+   * what lets `Inclusion` lift a `real`-valued function through it.
    *
    * Respectfulness is asked for as an **equation** and not as an implication. A predicate holding of
    * one representative and failing at another does not lift at all, and the implication in one

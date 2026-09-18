@@ -150,7 +150,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (128)
+## The definitions (129)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -279,6 +279,7 @@ axiom mentioning it means.
 | `definition min` | min = \x:real. \y:real. x + y - max x y | **NOT READ** |  |  |
 | `definition mk_pair` | mk_pair = \x:'a. \y:'b. \z:'a. \u:'b. z = x /\ u = y | **NOT READ** |  |  |
 | `definition real_le` | real_le = \x:real. \y:real. x < y \/ x = y | **NOT READ** |  |  |
+| `definition real_of_int` | real_of_int = \x:int. real_of_num (FST (INT_OF_PAIR_repr x)) - real_of_num (SND (INT_OF_PAIR_repr x)) | **NOT READ** |  |  |
 | `definition real_of_num` | real_of_num = select (\x:num -> real. x 0 = 0 /\ (!y:num. x (SUC y) = x y + 1)) | **NOT READ** |  |  |
 | `definition sgn` | sgn = \x:real. select (\y:real. x < 0 /\ y = -1 \/ x = 0 /\ y = 0 \/ 0 < x /\ y = 1) | **NOT READ** |  |  |
 | `definition sin` | sin = \x:real. lim (\y:num. Sum (\z:num. Power (0 - 1) z * (Power x (2 * z + 1) / real_of_num (NUM_FACT (2 * z + 1)))) y) | **NOT READ** |  |  |

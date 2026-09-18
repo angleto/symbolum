@@ -250,6 +250,14 @@ object Spellings {
       .delimited("INT_OF_PAIR", 1, "[#1]")
       .delimited("INT_OF_PAIR_repr", 1, "\\mathrm{repr}(#1)")
       .operator("INT_SAME", 2, "#1 \\sim #2", Relation)
+      /* ------------------------------------------------- the integers inside the reals */
+      // `\iota` and not `#1_{\mathbb{R}}`, which is what `real_of_num` above carries, because the
+      // two would then be one spelling and the fact that relates them, `INT_REAL_OF_NUM`, would be
+      // set with a subscript-R on each side and read as a tautology. The docstring above calls two
+      // constants sharing a spelling the one ambiguity this table can introduce on its own; this is
+      // the row where that would have happened, and the inclusion map is written `\iota` in
+      // algebra anyway.
+      .delimited("real_of_int", 1, "\\iota(#1)")
       .delimited("mk_int", 1, "\\mathrm{mk\\_int}(#1)")
       .delimited("dest_int", 2, "\\mathrm{dest\\_int}(#1, #2)")
       /* --------------------------------------------- limits and the series */

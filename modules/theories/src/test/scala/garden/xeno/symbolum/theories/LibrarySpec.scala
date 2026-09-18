@@ -48,7 +48,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.forward.facts.size +
       // 2026-09-18, and added here in the change that added the link rather than after this sum
       // caught it, which is what the three comments above record happening three times.
-      chain.integers.facts.size
+      chain.integers.facts.size +
+      // The bridge into the reals, the same day and the same discipline. It is the piece of the
+      // link above that mentions a real, and it is a development of its own for the reason
+      // `Inclusion`'s first paragraph gives, so it is a development this sum has to name.
+      chain.inclusion.facts.size
 
     library.entries.size shouldBe expected
 
@@ -473,8 +477,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // paragraph above insists a number here is. Tip plus this branch's delta, never a total carried
     // forward against an earlier base. The gap between the two figures does not move, three names
     // being held by two developments apiece since long before this.
-    library.entries.size shouldBe 552
-    library.names.distinct.size shouldBe 549
+    // 560 and 557 with the bridge into the reals, the same day: eight facts under eight names,
+    // none of them shared with another development, so the gap between the two figures does not
+    // move either. Tip plus this branch's delta, which is what the paragraph above insists a
+    // number here is, and the delta is checkable against `docs/lemmas.md`'s new section by eye.
+    library.entries.size shouldBe 560
+    library.names.distinct.size shouldBe 557
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -152,6 +152,17 @@ they have least appetite for working out how it is produced.
   WORD_RFC_INSIDE          !x:word('a) -> word('a) -> bool. !y:word('a). !z:word('a). WORD_RFC x y /\ WORD_STEP x y z ==> WORD_RFC x z
   WORD_RFC_RIGHT           !x:word('a) -> word('a) -> bool. !y:word('a). !z:word('a). x y z ==> WORD_RFC x z
 
+## Inclusion
+
+  INT_REAL_ADD             !x:int. !y:int. real_of_int (INT_ADD x y) = real_of_int x + real_of_int y
+  INT_REAL_INJECTIVE       !x:int. !y:int. real_of_int x = real_of_int y ==> x = y
+  INT_REAL_MUL             !x:int. !y:int. real_of_int (INT_MUL x y) = real_of_int x * real_of_int y
+  INT_REAL_NEG             !x:int. real_of_int (INT_NEG x) = 0 - real_of_int x
+  INT_REAL_OF_NUM          !x:num. real_of_int (INT_OF_NUM x) = real_of_num x
+  INT_REAL_ONE             real_of_int INT_ONE = 1
+  INT_REAL_PAIR            !x:prod(num, num). real_of_int (INT_OF_PAIR x) = real_of_num (FST x) - real_of_num (SND x)
+  INT_REAL_ZERO            real_of_int INT_ZERO = 0
+
 ## Inductive
 
   INDUCTIVE_FIXPOINT       !x:('a -> bool) -> 'a -> bool. MONOTONE x ==> (!y:'a. INDUCTIVE x y = x (INDUCTIVE x) y)

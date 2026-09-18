@@ -141,7 +141,11 @@ object Reach {
         "Reaching" -> chain.reaching.facts,
         "Forward" -> chain.forward.facts,
         // The integers, 2026-09-18, in the same change as the link and as `Library.of`.
-        "Integer" -> chain.integers.facts
+        "Integer" -> chain.integers.facts,
+        // And the bridge into the reals the same day, in the change that added it. This list and
+        // `Library.of`'s are maintained by hand and have drifted once; what keeps them together is
+        // `RestsOnSpec`, which asserts the agreement and names whichever development is missing.
+        "Inclusion" -> chain.inclusion.facts
       )
     )
 
