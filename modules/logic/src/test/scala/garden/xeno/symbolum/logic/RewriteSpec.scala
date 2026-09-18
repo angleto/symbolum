@@ -207,6 +207,10 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     // this can be asked. The test below says what it would have cost there.
     reproducing.reproduces shouldBe true
 
+    // **Seen failing before it was trusted**, 2026-09-18: with `Rule.reproduces` forced to `false`,
+    // which is the tree that carries the defect, this test goes red and the three below it stay
+    // green. That is the shape the observation has to have, because the three are controls and a
+    // perturbation that reddened them too would mean the guard was refusing more than this.
     // The two published ways to iterate a rule set, and the door the incident came through.
     Rewrite.rewrite(Vector(reproducing), u).isLeft shouldBe true
     Rewrite
@@ -691,21 +695,32 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
           "and the argument for that shape is written above the function")
     )
 
-    val directory = java.nio.file.Paths.get("modules/theories/src/main")
-    val stream = java.nio.file.Files.walk(directory)
-    val callers =
-      try
-        stream
-          .filter(path => path.toString.endsWith(".scala"))
-          .toArray
-          .toVector
-          .map(_.asInstanceOf[java.nio.file.Path])
-          .filter { path =>
-            new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
-              .contains("Rewrite.repeatConv(")
-          }
-          .map(_.getFileName.toString)
-      finally stream.close()
+    // The same roots the census above walks, and not `modules/theories` alone: this scan was
+    // written against the two sites that existed and would not have seen a third in `tactics`,
+    // which is a gate that reads where the answer already is. `Rewrite.scala` is where `repeatConv`
+    // is defined and where the two published drivers use it, so it is the one file excluded.
+    val roots = Vector("kernel", "logic", "theories", "tactics", "core", "checker")
+
+    val callers = roots.flatMap { module =>
+      val directory = java.nio.file.Paths.get(s"modules/$module/src/main")
+      if (!java.nio.file.Files.exists(directory)) Vector.empty
+      else {
+        val stream = java.nio.file.Files.walk(directory)
+        try
+          stream
+            .filter(path => path.toString.endsWith(".scala"))
+            .toArray
+            .toVector
+            .map(_.asInstanceOf[java.nio.file.Path])
+            .filter { path =>
+              path.getFileName.toString != "Rewrite.scala" &&
+              new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
+                .contains("Rewrite.repeatConv(")
+            }
+            .map(_.getFileName.toString)
+        finally stream.close()
+      }
+    }.distinct
 
     withClue(s"assembles its own repetition: ${callers.sorted.mkString(", ")}\n") {
       callers.filterNot(reviewed.contains) shouldBe empty
