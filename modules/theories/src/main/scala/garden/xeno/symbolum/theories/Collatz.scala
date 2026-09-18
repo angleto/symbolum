@@ -329,6 +329,22 @@ object Collatz {
   val PotentialAtAWord: String = "S2_PHI_AT_A_WORD"
 
   /**
+   * `|- !x m y. S2_PHI ((x m) y) = (S2_PHI x + <m where it sits>) + <y where it sits>`.
+   *
+   * [[PotentialConcat]] twice, at the shape a step produces: `WORD_STEP` gives a word as a context,
+   * a rewritten block and a tail, left-nested exactly like this, so every statement comparing the
+   * measures of two words related by a step is this lemma at both of them.
+   *
+   * What it buys is that two of the three terms do not depend on the block. The first is the
+   * context's own measure and the third is the tail weighed from `WORD_LENGTH (x m)` onwards, so
+   * where a rule keeps the length of what it rewrites, both sides of a step have the **same** third
+   * term and the comparison is between the two middle ones. Where a rule does not keep it -- `R1`
+   * shortens and `B2` and `B3` lengthen -- the third terms differ, and that difference is the whole
+   * reason the class the argument runs on is what it is.
+   */
+  val PotentialBlocks: String = "S2_PHI_BLOCKS"
+
+  /**
    * `|- !u v. S2_MARKED u /\ WORD_STEP S2 u v ==> S2_MARKED v`.
    *
    * What this development was asked for, and the sentence that lets a potential-function argument
@@ -650,6 +666,14 @@ object Collatz {
     MarkedInhabited -> s"S2_MARKED (${wordText(spell("/0."))})",
     AnchoredInhabited -> s"S2_ANCHORED (${wordText(spell("/0."))})",
     PotentialAtAWord -> s"S2_PHI (${wordText(spell("/00."))}) = SUC ZERO",
+    PotentialBlocks ->
+      ("!x:word(num). !m:word(num). !y:word(num). " +
+        "S2_PHI (WORD_CONCAT (WORD_CONCAT x m) y) = " +
+        "NUM_ADD (NUM_ADD (S2_PHI x) " +
+        "(NUM_SUM (\\i:num. COND (WORD_NTH m i < 3) " +
+        "(NUM_SUB (NUM_ADD (WORD_LENGTH x) i) 1) 0) (WORD_LENGTH m))) " +
+        "(NUM_SUM (\\i:num. COND (WORD_NTH y i < 3) " +
+        "(NUM_SUB (NUM_ADD (WORD_LENGTH (WORD_CONCAT x m)) i) 1) 0) (WORD_LENGTH y))"),
     PotentialConcat ->
       ("!u:word(num). !v:word(num). S2_PHI (WORD_CONCAT u v) = " +
         "NUM_ADD (S2_PHI u) " +
@@ -751,6 +775,7 @@ object Collatz {
       potentialDefinition <- definitions.get(Potential).toRight(MissingDefinition(Potential))
       potentialConcat <- potentialSplits(
         logic, theory, notation, forward.concatenation, potentialDefinition)
+      potentialBlocks <- potentialOfBlocks(logic, theory, potentialConcat)
       anchoredConcat <- anchoredSplits(
         logic,
         theory,
@@ -798,7 +823,8 @@ object Collatz {
         HeadFreeStep -> headFreeStep,
         AnchoredStep -> anchoredStep,
         PotentialConcat -> potentialConcat,
-        PotentialAtAWord -> potentialAtAWord
+        PotentialAtAWord -> potentialAtAWord,
+        PotentialBlocks -> potentialBlocks
       )
       markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, definitions, partial)
       anchoredClosed <- anchoredUnderSteps(tools, forward, forward.concatenation, definitions, partial)
@@ -1598,6 +1624,45 @@ object Collatz {
       value <- rightOf(joined)
       folded <- Rewrite.rewrite(tools.identities, value)
       result <- Conv.trans(joined, folded)
+    } yield result
+  }
+
+  /**
+   * [[PotentialBlocks]]: the measure of a context, a block and a tail, by [[PotentialConcat]] twice.
+   *
+   * The outer application splits the word where the tail begins and the inner one splits what is
+   * left where the block begins, which is the order the left-nesting forces: `(x m) y` is a
+   * concatenation whose first half is itself one, so the outer split is the only one that applies
+   * to the term as it stands.
+   */
+  private def potentialOfBlocks(
+    logic: Logic,
+    theory: Theory,
+    potentialConcat: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val context = Term.variable("x", Words)
+    val block = Term.variable("m", Words)
+    val tail = Term.variable("y", Words)
+
+    for {
+      concat <- LogicError.lift(theory.constant(Concatenation.Name, ConcatType))
+      plus <- LogicError.lift(theory.constant(Peano.Addition, BinaryNumbers))
+      joined <- LogicError.lift(Term.appAll(concat, List(context, block)))
+
+      outer <- rules.specAll(potentialConcat, List(joined, tail))
+      inner <- rules.specAll(potentialConcat, List(context, block))
+
+      sides <- Term.destEq(outer.conclusion).toRight(NotOfForm("an equation", outer.conclusion))
+      (_, sum) = sides
+      shifted <- sum match {
+        case App(App(_, _), second) => Right(second)
+        case other => Left(NotOfForm("a sum of two blocks", other))
+      }
+      readBack <- Conv.apTerm(plus, inner).flatMap(Conv.apThm(_, shifted))
+
+      whole <- Conv.trans(outer, readBack)
+      result <- rules.genAll(whole, List(context, block, tail))
     } yield result
   }
 
