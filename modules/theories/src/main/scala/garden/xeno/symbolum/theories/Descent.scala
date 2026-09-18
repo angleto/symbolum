@@ -56,7 +56,7 @@ import garden.xeno.symbolum.logic.*
  * place a reader should slow down: at `SUC k` the induction hypothesis is needed at the same `i`
  * and at `k`, which is exactly what it gives.
  *
- * The case split is on `i = k`, by [[Classical.cases]] and not by the order, because what the
+ * The case split is on `i = k`, by `Classical.cases` and not by the order, because what the
  * conditional in `h (SUC k)` tests is an equation and not an inequality. The branch where they
  * differ is where `NUM_LT_SUC_CASES` is spent, to turn `i < SUC k` into `i < k`.
  *

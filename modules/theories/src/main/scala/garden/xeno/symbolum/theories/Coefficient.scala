@@ -207,9 +207,9 @@ final class Coefficient private (
    * `|- inv c = r`, for a coefficient `c` that is not zero: its reciprocal, as a coefficient.
    *
    * This is where a quotient becomes a coefficient, and until 2026-09-09 the `c` had to be a
-   * numeral above zero. Any coefficient reaches it now, because [[inverseOfUnit]] asks for a
-   * factor of one instead of asking for `~(c = 0)`, and the factor is the reciprocal this file
-   * computes anyway. So `inv (-1)`, `inv (2 * inv 3)` and `inv 2` are one case rather than an
+   * numeral above zero. Any coefficient reaches it now, because [[Coefficient.inverseOfUnit]] asks
+   * for a factor of one instead of asking for `~(c = 0)`, and the factor is the reciprocal this
+   * file computes anyway. So `inv (-1)`, `inv (2 * inv 3)` and `inv 2` are one case rather than an
    * atom, an atom and a case.
    *
    * `inv 1` is the case worth stating on its own, because it is `1` and not a fraction: leaving it

@@ -35,11 +35,11 @@ import garden.xeno.symbolum.theories.*
  * identically zero is the degree, so the fit is not asked for in advance and a family that is not
  * polynomial says so instead of being fitted badly.
  *
- * A polynomial of degree `d` is determined by `d + 1` points and confirmed by one more. This samples
- * [[Points]] of them and requires the difference column to vanish with at least one point to spare,
- * so the fit is never the last thing the data could have supported. That is a screen and not a
- * proof: the theorem at the end is the proof, and a family that agrees at ten points and diverges at
- * eleven comes back refused rather than certified.
+ * A polynomial of degree `d` is determined by `d + 1` points and confirmed by one more. This
+ * samples [[Family.Points]] of them and requires the difference column to vanish with at least one
+ * point to spare, so the fit is never the last thing the data could have supported. That is a
+ * screen and not a proof: the theorem at the end is the proof, and a family that agrees at ten
+ * points and diverges at eleven comes back refused rather than certified.
  *
  * **What comes out is in the Newton basis and is not the form a textbook prints.** The sum of
  * squares arrives as `x(x-1)/2 + x(x-1)(x-2)/3` rather than as `x(x-1)(2x-1)/6`, and the two are

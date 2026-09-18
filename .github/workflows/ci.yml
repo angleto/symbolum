@@ -255,8 +255,55 @@ jobs:
       - name: Build package
         run: sbt package
 
+      # Scaladoc reports an unresolvable `[[link]]` as a warning and exits 0, so this step read
+      # green over 57 of them on 2026-09-18. Neither `-Xfatal-warnings` nor `-Wconf` reaches it:
+      # the log says `Skipping unused scalacOptions: -Werror`, because the doc tool is not the
+      # compiler and does not take them. So the gate is a grep over the output, and it costs no
+      # runner minutes of its own because this step already runs on every push to a release line
+      # and on every pull request.
+      #
+      # WHAT IT SEES AND WHAT IT DOES NOT. Scaladoc emits one warning per documented symbol and
+      # per query, not per occurrence: two `[[Foo]]` in one comment are one line, and the next
+      # broken query in that same comment is invisible until the first is repaired. Clearing the
+      # 57 took thirteen runs of this command for that reason, 123 warnings and 138 occurrences
+      # over 48 files in all. A red build here therefore says at least one link is broken, never
+      # how many.
+      #
+      # It cannot see a link that resolves to the WRONG thing, which is the failure this leaves
+      # standing: `[[Undecided]]` written in a file where some other `Undecided` is in scope is a
+      # working link to the wrong page, and nothing here or anywhere else in this repository asks
+      # that question.
+      #
+      # SEEN FAILING, 2026-09-18, because a guard observed only passing is untested. Control first,
+      # and it had to be run twice: the first was `sbt doc` on a tree where the task was cached, 9
+      # log lines, no module documented and an exit 0 that read exactly like a pass. The one that
+      # counts is `sbt clean doc` at 248a4c4 with this change's link repairs in place, 11 modules
+      # documented in 661 s and zero. Read the module count beside the verdict: an incremental run
+      # of this command documents only what recompiled, and a zero from six of eleven is a zero
+      # about six. Then `[[split]]` in `scan/Comments.scala` was made `[[splitTheLinesUp]]`: this step
+      # exits 1 and names `Comments.scala:72`, while `sbt scan/test` stays green at 17 tests, which
+      # is the half that says this gate is the only thing in the build that sees it. Restored, the
+      # step is 0 again with `scan` genuinely re-documented rather than cached.
+      #
+      # A CENSUS OVER THE SOURCES was the alternative and is not here. It would see every site at
+      # once where this sees one per symbol, but it can only ask whether a name exists somewhere,
+      # never whether scaladoc can reach it from where it is written, and that is the question:
+      # `[[Ring]]` is 14 sites of which exactly one was broken. Of the 123 warnings cleared, not one
+      # named something that exists nowhere, so the census would assert an empty difference today,
+      # and it would have to read `src/test` as well or report the three links to test classes as
+      # missing names. An assertion nothing can make false is the shape this repository already
+      # warns about.
       - name: Generate documentation
-        run: sbt doc
+        run: |
+          set -o pipefail
+          sbt doc 2>&1 | tee doc.log
+          if grep -q 'No DRI found' doc.log; then
+            echo '::error::scaladoc could not resolve a [[link]]. Qualify it from the top-level'
+            echo '::error::entity of its own file, or write it in backticks if it names another'
+            echo '::error::module: scaladoc runs once per module and cannot see across.'
+            grep -B 3 'No DRI found' doc.log
+            exit 1
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

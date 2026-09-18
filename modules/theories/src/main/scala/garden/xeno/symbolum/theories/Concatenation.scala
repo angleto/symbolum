@@ -14,10 +14,11 @@ import garden.xeno.symbolum.logic.*
  *
  * == What is declared, and why the empty word and the one-letter word are here ==
  *
- * Six constants. [[Name]] is the operation; [[Prefix]], [[Suffix]] and [[Factor]] are defined
- * **from** it rather than each on its own, which is what makes `WORD_FACTOR_LENGTH` one lemma
- * instead of three; and [[Empty]] and [[Singleton]] are the two words the first four cannot be
- * stated without.
+ * Six constants. [[Concatenation.Name]] is the operation; [[Concatenation.Prefix]],
+ * [[Concatenation.Suffix]] and [[Concatenation.Factor]] are defined **from** it rather than each on
+ * its own, which is what makes `WORD_FACTOR_LENGTH` one lemma instead of three; and
+ * [[Concatenation.Empty]] and [[Singleton]] are the two words the first four cannot be stated
+ * without.
  *
  * Putting those last two in `Word.scala`, where the type is, was the alternative and it was
  * rejected on the rule this repository already applies to `COND`: a constant is unreachable from
@@ -25,7 +26,7 @@ import garden.xeno.symbolum.logic.*
  * and nothing does. `Word` builds the empty encoding already, as the witness that makes the type
  * inhabited, and never names it; what turns that witness into a constant worth having is being the
  * unit of an operation, and the operation is here. The one-letter word is narrower still: it exists
- * so that [[Induction]] can say "one letter longer", and it has no other consumer.
+ * so that [[Concatenation.Induction]] can say "one letter longer", and it has no other consumer.
  *
  * == Why this is not a paragraph of `Word.scala` ==
  *
@@ -50,23 +51,24 @@ import garden.xeno.symbolum.logic.*
  * the other polymorphic in the element. So the prefix form stands, and `WORD_CONCAT u v` is what a
  * reader writes.
  *
- * == What the guard on [[Nth]] is, and what it is not ==
+ * == What the guard on [[Concatenation.Nth]] is, and what it is not ==
  *
- * [[Rotation.Nth]] carries a bound and `RotationSpec` says the unguarded version of it is **false**.
- * This one is different and the difference is worth having in front of a reader who has met that
- * file: above the total length both sides here are `WORD_PAD`, the first by [[Word.NthAbove]] and
- * the second because the index into the right-hand word is above **its** length too, so the
- * unguarded statement is true. It is not proved, because nothing wants it: [[NthLeft]] and
- * [[NthRight]] are what a consumer reaches for, both are below a length by construction, and the
- * one place the raw shape is used is inside this file's own associativity.
+ * [[Rotation.Nth]] carries a bound and `RotationSpec` says the unguarded version of it is
+ * **false**. This one is different and the difference is worth having in front of a reader who has
+ * met that file: above the total length both sides here are `WORD_PAD`, the first by
+ * [[Word.NthAbove]] and the second because the index into the right-hand word is above **its**
+ * length too, so the unguarded statement is true. It is not proved, because nothing wants it:
+ * [[Concatenation.NthLeft]] and [[Concatenation.NthRight]] are what a consumer reaches for, both
+ * are below a length by construction, and the one place the raw shape is used is inside this file's
+ * own associativity.
  *
  * == What is here and what is not ==
  *
- * [[Induction]] is the one a consumer asked for by name, and it adds **on the right**: the card
- * that produced this file wants to go from `/f0^i f` to `/f0^(i+1) f`, which is a word one letter
- * longer at the end, and an induction on the length alone does not give a proof that shape. It is
- * derived rather than assumed, by ordinary induction on the length with the decomposition of a
- * non-empty word into its front and its last letter built inside the step.
+ * [[Concatenation.Induction]] is the one a consumer asked for by name, and it adds **on the
+ * right**: the card that produced this file wants to go from `/f0^i f` to `/f0^(i+1) f`, which is a
+ * word one letter longer at the end, and an induction on the length alone does not give a proof
+ * that shape. It is derived rather than assumed, by ordinary induction on the length with the
+ * decomposition of a non-empty word into its front and its last letter built inside the step.
  *
  * == Specialising by position here, and what makes it safe ==
  *
@@ -76,19 +78,21 @@ import garden.xeno.symbolum.logic.*
  * the hazard this repository has recorded, where a reversed pair gives a theorem that is true and
  * is not the one the caller meant, and the type checker cannot see it.
  *
- * What makes it safe is not care, it is the check at the bottom of [[construct]]: every one of the
- * sixteen facts is compared against the text in [[Statements]] before the development is handed
- * out, and every intermediate step in this file is on a path that ends at one of them. A reversed
- * pair anywhere reaches a conclusion that is not what the text says and the construction refuses.
- * So the guard is the same one `Word` and `Rotation` already carry, and it is named here because a
- * reader who knows the convention will otherwise stop at the first `specAll`.
+ * What makes it safe is not care, it is the check at the bottom of [[Concatenation.construct]]:
+ * every one of the sixteen facts is compared against the text in [[Concatenation.Statements]]
+ * before the development is handed out, and every intermediate step in this file is on a path that
+ * ends at one of them. A reversed pair anywhere reaches a conclusion that is not what the text says
+ * and the construction refuses. So the guard is the same one `Word` and `Rotation` already carry,
+ * and it is named here because a reader who knows the convention will otherwise stop at the first
+ * `specAll`.
  *
- * **There is no cancellation and no decidable equality.** `WORD_CONCAT u v = WORD_CONCAT u w ==> v = w`
- * is true and is not here; nothing has needed it, and this file states the absence rather than
+ * **There is no cancellation and no decidable equality.** `WORD_CONCAT u v = WORD_CONCAT u w ==> v
+ * = w` is true and is not here; nothing has needed it, and this file states the absence rather than
  * guessing at the shape a consumer will want, which is what `Rotation` does about composition.
  * **And a factor is stated and not decided**: `WORD_FACTOR u w` is an existential over all words,
  * so deciding it is a bounded search, which is the card `55c586b0` is about and is not this one.
- * [[FactorRefused]] is what refuses by the one argument that costs nothing, which is length.
+ * [[Concatenation.FactorRefused]] is what refuses by the one argument that costs nothing, which is
+ * length.
  */
 final class Concatenation private (
   val word: Word,

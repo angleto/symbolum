@@ -41,12 +41,12 @@ import garden.xeno.symbolum.theories.{Chain, Essay, Library, Signature}
  *
  * == What a cell is not allowed to hide ==
  *
- * Every outcome that produces a theorem carries [[Entry.restsOn]], the axioms the theorem reaches
- * that the foundation does not hold, which is `Derivation.foreignTo` asked at the boundary between
- * what this session assumed and what the repository already believed. A session that assumes
- * something in cell 3 and proves a theorem in cell 7 gets cell 7 answered with cell 3's assumption
- * named on it. That is the one thing a notebook makes easy to lose and it is the reason this is a
- * field of the record rather than a report a caller may forget to ask for.
+ * Every outcome that produces a theorem carries [[Session.Entry.restsOn]], the axioms the theorem
+ * reaches that the foundation does not hold, which is `Derivation.foreignTo` asked at the boundary
+ * between what this session assumed and what the repository already believed. A session that
+ * assumes something in cell 3 and proves a theorem in cell 7 gets cell 7 answered with cell 3's
+ * assumption named on it. That is the one thing a notebook makes easy to lose and it is the reason
+ * this is a field of the record rather than a report a caller may forget to ask for.
  */
 final class Session private (
   /** The foundation every session starts from, built once and shared by every state. */

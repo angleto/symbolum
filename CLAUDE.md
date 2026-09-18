@@ -97,6 +97,34 @@ own: it holds nothing and waits for nothing, and its own header says so.
   against macOS, Apple silicon and Temurin 23. `build.sbt` carries that table, the one module that
   looks like a platform difference and is not, and the tightest gate in the build, which is now
   `scan` at one statement of slack rather than `sat`.
+- **The API documentation, and the check that reads it:** `tools/sbt doc`. Scaladoc reports a
+  `[[link]]` it cannot resolve as a warning and **exits 0**, so the step that runs this in
+  `.github/workflows/ci.yml` read green over 57 unresolved queries. Since 2026-09-18 that step
+  greps its own output and fails when it names `No DRI found`; it costs no runner minutes of its
+  own, because the `build` job already ran this command on every push to a release line and every
+  pull request. Neither `-Xfatal-warnings` nor `-Wconf` reaches these: the log says `Skipping unused
+  scalacOptions: -Werror`, the doc tool not being the compiler.
+
+  **A query resolves inside the module being documented and nowhere else**, which is what decides
+  how a reference is written here rather than taste. Within a file the path is qualified from the
+  top-level entity: `[[Verdict.Countermodel]]` does not resolve and
+  `[[Propositional.Verdict.Countermodel]]` does. Across a module boundary nothing resolves at all,
+  since scaladoc runs once per module, so those go in backticks. That is not a demotion invented for
+  the gate: counting, on 2026-09-18 and before this change, every mention of a name that is the file
+  stem of a main source in **another** module, 636 were already in backticks and 31 in `[[ ]]`. The
+  criterion over-counts the backticks, since a name written in prose that happens to be a file stem
+  is counted, and it is quoted here because the ratio is what the decision rested on and a ratio of
+  20 to 1 survives that slack.
+
+  **The warning is one per documented symbol and query, not one per occurrence**, and that is why
+  clearing the 57 took **thirteen** runs of this command: two `[[Foo]]` in one comment are one
+  warning, and the next broken query in that same comment is invisible until the first is repaired.
+  123 warnings and 138 occurrences over 48 files in all, 116 qualified and 22 put in backticks. So a
+  red build here says at least one link is broken and never how many.
+
+  What it does **not** see is a link that resolves to the **wrong** thing. `[[Undecided]]` written
+  in a file where some other `Undecided` is in scope is a working link to the wrong page, and
+  nothing in this repository asks that question.
 - **A console with the algebra loaded:** `tools/sbt core/console`
 - **Asking the prover one thing, without writing Scala:**
   `tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"`. It puts the claim to the whole

@@ -23,7 +23,7 @@ import garden.xeno.symbolum.logic.*
  * == It costs no axiom beyond what the chain already holds ==
  *
  * Three things could have cost one and none of them does, which `docs/adr/0016` measured against
- * the kernel on 2026-09-15 and [[QuotientSpec]] asserts as an **equality** of axiom sets rather
+ * the kernel on 2026-09-15 and `QuotientSpec` asserts as an **equality** of axiom sets rather
  * than as an inclusion, the form `CodingSpec` uses:
  *
  *   - `Kernel.defineType` wants a closed predicate. The image of the relation,
@@ -43,10 +43,10 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it produces ==
  *
- * [[define]] returns a [[Quotient]] carrying the extended theory, the type, the two halves of the
- * bijection the kernel returned, the projection and four derived facts. Then [[Quotient.liftUnary]],
- * [[Quotient.liftBinary]] and [[Quotient.liftPredicate]] each extend it by one constant and one
- * fact, against an obligation the caller discharges:
+ * [[Quotient.define]] returns a [[Quotient]] carrying the extended theory, the type, the two halves
+ * of the bijection the kernel returned, the projection and four derived facts. Then
+ * [[Quotient.liftUnary]], [[Quotient.liftBinary]] and [[Quotient.liftPredicate]] each extend it by
+ * one constant and one fact, against an obligation the caller discharges:
  *
  * {{{
  *   PROJ_EQ     |- !x y. (proj x = proj y) = R x y
@@ -69,11 +69,12 @@ import garden.xeno.symbolum.logic.*
  *
  * == The one fact that looks redundant and is not ==
  *
- * [[RelatedToRepresentative]], `!x. R x (repr (proj x))`, follows from [[ProjectionEqual]] and
- * [[ProjectionOfRepresentative]] in two steps, and every one of the three lifts takes those two
- * steps. It is derived once and held because a lift is the thing a caller repeats: the integers
- * lift addition, multiplication, negation and the order, so the two steps would be walked at least
- * four times in the first consumer and three times again in the second.
+ * [[Quotient.RelatedToRepresentative]], `!x. R x (repr (proj x))`, follows from
+ * [[Quotient.ProjectionEqual]] and [[Quotient.ProjectionOfRepresentative]] in two steps, and every
+ * one of the three lifts takes those two steps. It is derived once and held because a lift is the
+ * thing a caller repeats: the integers lift addition, multiplication, negation and the order, so
+ * the two steps would be walked at least four times in the first consumer and three times again in
+ * the second.
  *
  * == What is not here ==
  *

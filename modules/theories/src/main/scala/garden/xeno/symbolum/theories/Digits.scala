@@ -34,8 +34,8 @@ import garden.xeno.symbolum.logic.*
  * measured rather than assumed: **nine are decided by `Semiring`** exactly as written, and the
  * other **seven** are the ones where a carry produces a `SUC`. That is the line `Semiring` draws
  * about itself — a successor is an atom additively, and its docstring gives the reason — so the
- * seven are proved here, through [[throughSuccessor]], which is the only thing in this file that
- * is not a table.
+ * seven are proved here, through [[Digits.throughSuccessor]], which is the only thing in this file
+ * that is not a table.
  *
  * == What it does not do ==
  *

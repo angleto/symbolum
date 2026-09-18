@@ -225,7 +225,7 @@ final class Successor private (
    * `Ring` is built four stages below `Series` and cannot name `Power` at all.
    *
    * A refusal from `Ring` comes through as it stands, carrying its own standing: an identity that
-   * is false after expansion is [[NotEqualTo]] and decided, and it is decided about the goal as
+   * is false after expansion is `NotEqualTo` and decided, and it is decided about the goal as
    * written because the expansion is an equation.
    */
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
@@ -357,7 +357,7 @@ object Successor {
    * there is no turn in this file's cost to put a line at.
    *
    * The price is the caller's, and it is the polynomial rather than the exponent. Read on
-   * 2026-09-13, through [[prove]], on two shapes:
+   * 2026-09-13, through [[Successor.prove]], on two shapes:
    *
    * {{{
    *   (x + y)^k      k    2      4      8      16     24      32      40      48

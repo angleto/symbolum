@@ -44,7 +44,7 @@ import garden.xeno.symbolum.logic.*
  * a second copy of one that is there. The first is unsound for the purpose and the second is
  * merely redundant, and they are stated as one conjunction because the source does.
  *
- * == What [[Step]] is, and why it is not [[Concatenation.Factor]] ==
+ * == What [[Forward.Step]] is, and why it is not [[Concatenation.Factor]] ==
  *
  * `WORD_STEP R u v` says `u` and `v` differ by one application of a rule of `R`: there are `x` and
  * `y` with `u = x l y` and `v = x r y` for some rule `l -> r`. The card that asked for this work

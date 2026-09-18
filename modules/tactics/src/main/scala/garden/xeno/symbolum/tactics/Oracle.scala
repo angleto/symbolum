@@ -12,7 +12,7 @@ import garden.xeno.symbolum.theories.{Real, RealTheory, Ring}
  * fast and knows a great deal; it is also wrong in ways this repository has measured, and several
  * of its rewrites hold only under hypotheses it does not record. None of that matters here, because
  * nothing it says is believed. It proposes an answer, the answer is translated into the theory of
- * the reals, and [[Ring]] proves the two are equal or refuses.
+ * the reals, and `Ring` proves the two are equal or refuses.
  *
  * So the failure modes are: a theorem, or no theorem. There is no third outcome where the oracle
  * persuades anybody of something false.

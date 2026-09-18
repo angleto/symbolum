@@ -21,7 +21,7 @@ object Conv {
   /**
    * `|- t = t`, with the leaves shared.
    *
-   * [[Kernel.refl]] with one thing added and nothing changed. Where `t` is an atom (a constant, a
+   * `Kernel.refl` with one thing added and nothing changed. Where `t` is an atom (a constant, a
    * free variable or a bound index) the theorem is built once and handed out again. Every caller
    * above the kernel should reach for this rather than for the rule, and the reason is a
    * measurement rather than a preference.

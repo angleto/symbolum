@@ -13,7 +13,7 @@ final case class Log(argument: Expr) extends Expr {
   override val precedence: Int = 4
 
   /**
-   * @throws ArithmeticException if the argument evaluates to a non-positive value
+   * @throws java.lang.ArithmeticException if the argument evaluates to a non-positive value
    */
   def eval(variables: Map[String, Double]): Double = {
     val value = argument.eval(variables)

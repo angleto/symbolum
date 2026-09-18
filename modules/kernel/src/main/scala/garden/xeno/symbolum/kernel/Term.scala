@@ -19,7 +19,7 @@ package garden.xeno.symbolum.kernel
  * Terms are well-typed by construction: every value built through the operations in [[Term]] and
  * [[Theory]] is, and the rest of the kernel relies on that rather than re-checking. Locally closed
  * is different. The extractor on [[Abs]] hands out a body whose outermost index has no binder
- * above it, so every operation here that accepts a term checks [[isLocallyClosed]] and refuses
+ * above it, so every operation here that accepts a term checks [[Term.isLocallyClosed]] and refuses
  * with [[NotLocallyClosed]] otherwise. Before it did, that body could be put back under a binder
  * of another type and made `|- 0 = 1`; the check is the fix, and the attack is a test.
  *

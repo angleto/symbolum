@@ -257,7 +257,7 @@ object Remedy {
    * fact about a string. It answers `None` wherever it has nothing to add, so a caller prints the
    * reader's own message and this underneath it, and never one in place of the other.
    *
-   * **Only a [[TypeError]]**, which is the refusal `Peano`'s decision produces. A claim that does
+   * **Only a `TypeError`**, which is the refusal `Peano`'s decision produces. A claim that does
    * not lex, or does not parse, has not reached the point where the owner of a symbol is the
    * question, and advice about `NUM_ADD` under a message about an unreadable character would be
    * sent to somebody with a different problem.
@@ -519,8 +519,8 @@ object Remedy {
    * What to do about a decision on the propositional fragment.
    *
    * `Consistency` stands where `Refutation` and `Quantified` stand, under `docs/adr/0005`: it
-   * decides and it certifies nothing. So [[Contradictory]] is [[Settled]] like their decisions are,
-   * and the message says decided rather than proved.
+   * decides and it certifies nothing. So [[Consistency.Verdict.Contradictory]] is [[Settled]] like
+   * their decisions are, and the message says decided rather than proved.
    *
    * **The other answer is not settled and must not read as though it were.** Not contradictory is a
    * statement about propositional structure with the atoms uninterpreted, so premises it accepts can

@@ -65,7 +65,7 @@ final class Propose private (val novelty: Novelty, val library: Library, val log
    *
    * == Distinct, and what it is distinct on ==
    *
-   * `Order` re-exports the facts of `Positivity`, so [[Library.entries]] carries one row per
+   * `Order` re-exports the facts of `Positivity`, so `Library.entries` carries one row per
    * holding and three names are held twice: `ADD_POSITIVE`, `POSITIVE_NOT_ZERO` and `ZERO_LT_ONE`.
    * Without this the same claim is made twice from the same statement and put to the prover twice,
    * which is work done twice and two rows in every count downstream. `Recovery` was made distinct
@@ -150,7 +150,7 @@ final class Propose private (val novelty: Novelty, val library: Library, val log
    *
    * == What is counted and what is not ==
    *
-   * [[Library.stating]] and not `Library.instantiating`, which is the difference between having
+   * `Library.stating` and not `Library.instantiating`, which is the difference between having
    * produced a lemma and having produced something that lemma implies. A dropped hypothesis very
    * often yields an instance of some unrelated general fact, and counting those would report a
    * rediscovery rate made almost entirely of coincidence.
@@ -161,7 +161,7 @@ final class Propose private (val novelty: Novelty, val library: Library, val log
    * == Why the result is made distinct, which the first run did not do ==
    *
    * `Order` re-exports the facts of `Positivity`, so several names are held by two developments
-   * each and [[Library.entries]] carries one row per holding. That duplicates a recovery on both
+   * each and `Library.entries` carries one row per holding. That duplicates a recovery on both
    * ends: the mutation is made twice from the same statement, and the lemma it reaches is found
    * twice. The first run of this reported 19 where 13 mutations had happened, and three of the six
    * extra rows were the same sentence printed twice. The pair is the object here, not the row, so

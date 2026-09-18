@@ -156,13 +156,13 @@ import garden.xeno.symbolum.logic.*
  * so far, inside [[Modular.Euclid]]. One consumer is not enough to define a constant for.
  *
  * **The fundamental theorem of arithmetic**, which is **not** missing since 2026-09-16 and is not
- * here: [[Euclid]] is its hard half and `Primes.NUM_FACTORISATION` is the theorem, one floor up,
- * because a factorisation is written with `Coding.NUM_PROD` and `Coding` is built over this file.
- * What this paragraph said until then is worth keeping as the thing that turned out to be wrong: a
- * factorisation is a **list**, and no induction here can be over one. It is a family and a length
- * instead, the family is asked to be non-decreasing, and the uniqueness is then an equation
- * between two families rather than a claim about rearranging one, which is the sentence this
- * system has no multiset to write.
+ * here: [[Modular.Euclid]] is its hard half and `Primes.NUM_FACTORISATION` is the theorem, one
+ * floor up, because a factorisation is written with `Coding.NUM_PROD` and `Coding` is built over
+ * this file. What this paragraph said until then is worth keeping as the thing that turned out to
+ * be wrong: a factorisation is a **list**, and no induction here can be over one. It is a family
+ * and a length instead, the family is asked to be non-decreasing, and the uniqueness is then an
+ * equation between two families rather than a claim about rearranging one, which is the sentence
+ * this system has no multiset to write.
  */
 final class Modular private (
   val peano: Peano,

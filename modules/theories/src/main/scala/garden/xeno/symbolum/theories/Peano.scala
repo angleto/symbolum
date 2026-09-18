@@ -105,14 +105,14 @@ import garden.xeno.symbolum.logic.*
  * here is a definition that recurses on it, which needs more than the principle: a recursion
  * theorem for a well-founded relation, in the shape `Recursion.theorem` has for the successor.
  *
- * **Four of the operations are written infix, and three deliberately are not.** [[Addition]],
- * [[Multiplication]], [[StrictOrder]] and [[NonStrictOrder]] are read and printed `+`, `*`, `<` and
- * `<=`, the reals' own marks at the reals' own precedences, which `docs/adr/0018` decided and this
- * file declares in its numerals stage: a symbol stands for more than one constant and the
- * elaborator picks by the type unification settles. [[Subtraction]] and `NUM_DIV` keep spellings of
- * their own because they are not the operations `-` and `/` name over a field, which is the section
- * below this one; `NUM_POW` keeps its own because it does not share a shape with `Power`, whose
- * base is a real.
+ * **Four of the operations are written infix, and three deliberately are not.** [[Peano.Addition]],
+ * [[Peano.Multiplication]], [[Peano.StrictOrder]] and [[Peano.NonStrictOrder]] are read and printed
+ * `+`, `*`, `<` and `<=`, the reals' own marks at the reals' own precedences, which `docs/adr/0018`
+ * decided and this file declares in its numerals stage: a symbol stands for more than one constant
+ * and the elaborator picks by the type unification settles. [[Peano.Subtraction]] and `NUM_DIV`
+ * keep spellings of their own because they are not the operations `-` and `/` name over a field,
+ * which is the section below this one; `NUM_POW` keeps its own because it does not share a shape
+ * with `Power`, whose base is a real.
  *
  * **The numerals were the exception, and the exception turned out to be the rule.** Since
  * 2026-09-12 this development declares a second numeral encoding and a digit string reads at
@@ -122,7 +122,7 @@ import garden.xeno.symbolum.logic.*
  * not what the numerals do either. A numeral takes a metavariable, unification runs, and the
  * encoding is read back afterwards; an operator whose candidates share a shape, `t -> t -> t` for
  * `+` and `t -> t -> bool` for `<=`, is deferred the same way. `docs/adr/0018` carries the
- * measurement, and [[NumeralOne]] carries the rest.
+ * measurement, and [[Peano.NumeralOne]] carries the rest.
  *
  * **Nothing here is a decision procedure.** Every fact below is a theorem, and a goal that is an
  * instance of one is closed by the rewriter or by hand. `Ring` decides the reals and there is no

@@ -477,8 +477,8 @@ object Prove {
    * shape they answer, and handed anything else they refuse by name, with no alternative explored
    * on the way. Each case below explores alternatives it may abandon, which is what makes "no
    * given-clause loop, no saturation" a sentence worth writing about these and not about those.
-   * [[held]] is not one either: it is a scan of the library that takes a lemma owing nothing, and a
-   * scan that never backtracks is a lookup.
+   * [[Prove.held]] is not one either: it is a scan of the library that takes a lemma owing nothing,
+   * and a scan that never backtracks is a lookup.
    *
    * **[[Search.Propositional]] and [[Address.Propositional]] are different things with one name.**
    * The address is a property of the goal, which shape decides where it is sent; this is the

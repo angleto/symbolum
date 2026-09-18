@@ -21,9 +21,10 @@ import garden.xeno.symbolum.logic.*
  *
  * Seven letters, encoded as numbers, and the three digits are **0, 1 and 2 themselves**. That is
  * the decision worth knowing before reading anything below: `c` is a digit exactly when `c < 3`,
- * which is one comparison rather than a three-way disjunction, and it is what makes [[Potential]]
- * one `NUM_SUM` over the positions. The other four letters are the numerals above the digits, and
- * they are named because a reader meeting `3` in a rule has no way to know it is `f`.
+ * which is one comparison rather than a three-way disjunction, and it is what makes
+ * [[Collatz.Potential]] one `NUM_SUM` over the positions. The other four letters are the numerals
+ * above the digits, and they are named because a reader meeting `3` in a rule has no way to know it
+ * is `f`.
  *
  * The cost of the encoding is that a letter is a number and nothing stops a term naming the letter
  * `9`. Nothing below cares: every rule names its letters, and a word over letters this system has
@@ -32,33 +33,36 @@ import garden.xeno.symbolum.logic.*
  * == The three groups, which is the structure part C uses ==
  *
  * `D` is the two rules that consume the marker, `A` the six that commute a digit past a letter, and
- * `B` the three that act at the head. [[Counted]] is `A` alone, and it is what a potential-function
- * argument instantiates as the counted sub-relation of `REACH`: every `A`-step moves one digit one
- * place nearer the head, so it drops [[Potential]] by exactly one, and no other rule lowers it.
+ * `B` the three that act at the head. [[Collatz.Counted]] is `A` alone, and it is what a
+ * potential-function argument instantiates as the counted sub-relation of `REACH`: every `A`-step
+ * moves one digit one place nearer the head, so it drops [[Collatz.Potential]] by exactly one, and
+ * no other rule lowers it.
  *
  * == The marked words, which is where the argument stops being false ==
  *
- * [[Marked]] is the class with exactly one tail marker, at the end, and [[MarkedClosed]] says a
- * step never leaves it. That is not housekeeping: outside the class the potential argument is
- * false, and the source names the witness. `/ff.012` rewrites to `/0.012` by `R1` and [[Potential]]
- * falls by three, which no counted step pays for. Restricting to the marked words is what makes
- * the inequality readable, and the restriction is only usable once it is known to be preserved.
+ * [[Collatz.Marked]] is the class with exactly one tail marker, at the end, and
+ * [[Collatz.MarkedClosed]] says a step never leaves it. That is not housekeeping: outside the class
+ * the potential argument is false, and the source names the witness. `/ff.012` rewrites to `/0.012`
+ * by `R1` and [[Collatz.Potential]] falls by three, which no counted step pays for. Restricting to
+ * the marked words is what makes the inequality readable, and the restriction is only usable once
+ * it is known to be preserved.
  *
  * **It is not where the argument becomes true, and this file said it was.** `REACH_POTENTIAL` asks
  * that a counted step drop the measure by exactly one and that no other step lower it, and both
- * fail on words this class accepts: `f0.` is marked, `A2` takes it to `0f.` and [[Potential]] is
- * zero on both, because `NUM_SUB i 1` is truncated and nothing here says a digit cannot sit at
- * position 0; `0/0.` is marked, `B1` takes it to `0/t.` and the potential falls, because the three
- * `B` rules fire at any occurrence of the head marker and nothing here says there is one. Measured
- * over every word of at most seven letters: 9330 of 44790 counted steps out of this class fail the
- * first, and 14454 of 33281 uncounted steps fail the second; with one head marker in front and no
- * other, it is 0 of 3516 and 0 of 3280, and no step leaves that class either. That predicate, and
- * a closure lemma for it, is what a potential-function argument here needs next.
+ * fail on words this class accepts: `f0.` is marked, `A2` takes it to `0f.` and
+ * [[Collatz.Potential]] is zero on both, because `NUM_SUB i 1` is truncated and nothing here says a
+ * digit cannot sit at position 0; `0/0.` is marked, `B1` takes it to `0/t.` and the potential
+ * falls, because the three `B` rules fire at any occurrence of the head marker and nothing here
+ * says there is one. Measured over every word of at most seven letters: 9330 of 44790 counted steps
+ * out of this class fail the first, and 14454 of 33281 uncounted steps fail the second; with one
+ * head marker in front and no other, it is 0 of 3516 and 0 of 3280, and no step leaves that class
+ * either. That predicate, and a closure lemma for it, is what a potential-function argument here
+ * needs next.
  *
- * [[TailFree]] is the other half and exists for the decomposition rather than for its own sake: a
- * marked word is a tail-free block with one marker on the end, so a step at `x l y` divides into
- * the case where the marker is inside `l` and the case where it is behind, and the two are
- * [[MarkedStep]] and [[TailFreeStep]].
+ * [[Collatz.TailFree]] is the other half and exists for the decomposition rather than for its own
+ * sake: a marked word is a tail-free block with one marker on the end, so a step at `x l y` divides
+ * into the case where the marker is inside `l` and the case where it is behind, and the two are
+ * [[Collatz.MarkedStep]] and [[Collatz.TailFreeStep]].
  *
  * **The direction of that second condition is the one this repository has already got backwards
  * once.** `REACH_POTENTIAL` asks that no uncounted step LOWERS the measure, not that none raises

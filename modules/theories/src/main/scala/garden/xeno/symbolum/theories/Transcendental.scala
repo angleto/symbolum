@@ -42,12 +42,13 @@ import garden.xeno.symbolum.logic.*
  * == The hyperbolic pair is not a series, and that is a decision rather than an inconsistency ==
  *
  * `sinh x` is `(exp x - exp (-x)) / 2` and `cosh x` is the same with the other sign.
- * `docs/adr/0017` records the argument; what a reader of this file needs is the shape of it.
- * `sin` and `cos` are series **because there is nothing else here to define them from**: the route
+ * `docs/adr/0017` records the argument; what a reader of this file needs is the shape of it. `sin`
+ * and `cos` are series **because there is nothing else here to define them from**: the route
  * through the exponential needs a complex one, and `docs/adr/0007` puts the integers and the
  * rationals before anything of that kind. These two need no such detour, so the definition that
- * costs one line is available, and it is what makes [[CosinePlusSine]] provable today where the
- * series would have made it wait for a rearrangement of a series into its even and odd parts.
+ * costs one line is available, and it is what makes [[Transcendental.CosinePlusSine]] provable
+ * today where the series would have made it wait for a rearrangement of a series into its even and
+ * odd parts.
  *
  * What the pair does **not** get from that is the identity a reader expects next:
  * `cosh x * cosh x - sinh x * sinh x = 1` needs `exp x * exp (0 - x) = 1`, which is the addition

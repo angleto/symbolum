@@ -343,7 +343,8 @@ object Induct {
    * Every consumer of this driver below the reals uses [[Induct.proveBy]] and writes its own two
    * halves, so the closer is never reached; what this refuses to do is let a caller believe
    * otherwise. Handing it `Ring.prove` would be worse than refusing: `Ring` refuses a goal of type
-   * `num` by type, so [[settle]] would fail on every step with a message about the wrong thing.
+   * `num` by type, so [[Induct.settle]] would fail on every step with a message about the wrong
+   * thing.
    *
    * When a decision procedure for the identities of `num` can be built below the reals, it goes
    * here and this factory stops refusing. `Semiring` is that procedure and cannot be used: it is

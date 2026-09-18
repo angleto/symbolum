@@ -85,11 +85,11 @@ import garden.xeno.symbolum.theories.*
  * it always decided. The whole thing came out **cheaper**, 111048 inferences at the degree-eight
  * case against 111247 before, because the side being normalised is smaller.
  *
- * That driver refuses a written exponent above 32, and this is one place that line cannot bite:
- * the numeric half gives out long before it. The four roots `sqrt2 + sqrt3 + sqrt5 + sqrt7` want
- * degree sixteen and come back [[Outcome.NotCredible]] at [[Digits]] digits, confirmed to six,
- * which is the same wall the card that proposed this source named. The largest degree certified
- * here is nine.
+ * That driver refuses a written exponent above 32, and this is one place that line cannot bite: the
+ * numeric half gives out long before it. The four roots `sqrt2 + sqrt3 + sqrt5 + sqrt7` want degree
+ * sixteen and come back [[Algebraic.Outcome.NotCredible]] at [[Algebraic.Digits]] digits, confirmed
+ * to six, which is the same wall the card that proposed this source named. The largest degree
+ * certified here is nine.
  */
 final class Algebraic private (val chain: Chain, val arithmetic: Arbitrary, val digits: Int) {
 
@@ -127,8 +127,8 @@ final class Algebraic private (val chain: Chain, val arithmetic: Arbitrary, val 
    *
    * Published so that a caller can point the certification at a polynomial whose answer is already
    * known and watch it refuse: `x*x = 2` and the coefficients of `x^2 - 3` come back
-   * [[Outcome.NotInTheIdeal]], which is what says the guard is not reading its own conclusion back.
-   * `of` uses it on what the search produced, and cannot tell the difference.
+   * [[Algebraic.Outcome.NotInTheIdeal]], which is what says the guard is not reading its own
+   * conclusion back. `of` uses it on what the search produced, and cannot tell the difference.
    */
   def certifying(roots: Vector[Root], coefficients: Vector[BigInt]): Outcome =
     if (roots.isEmpty) Outcome.Unusable("a sum of no roots is not a value")
@@ -323,9 +323,10 @@ object Algebraic {
   /**
    * What the source made of a request, kept apart because they say different things.
    *
-   * [[NotCredible]] is the one to read carefully: it says the search found nothing the precision it
-   * was given can support, **not** that no polynomial annihilates the value. A relation with larger
-   * coefficients, or one needing more digits, looks exactly like this from here.
+   * [[Algebraic.Outcome.NotCredible]] is the one to read carefully: it says the search found
+   * nothing the precision it was given can support, **not** that no polynomial annihilates the
+   * value. A relation with larger coefficients, or one needing more digits, looks exactly like this
+   * from here.
    */
   enum Outcome {
 

@@ -24,14 +24,15 @@ import garden.xeno.symbolum.theories.Signature
  * The two answers are not two sides of one coin and merging them is how this machinery would
  * mislead.
  *
- * [[Verdict.Contradictory]] is a **decision about the world**. If no assignment of truth values to
- * the atoms satisfies the premises, then they cannot all hold whatever those atoms turn out to
- * mean, because every real situation induces some assignment. That answer is sound and final.
+ * [[Consistency.Verdict.Contradictory]] is a **decision about the world**. If no assignment of
+ * truth values to the atoms satisfies the premises, then they cannot all hold whatever those atoms
+ * turn out to mean, because every real situation induces some assignment. That answer is sound and
+ * final.
  *
- * [[Verdict.NotContradictory]] is a statement about **propositional structure only**. The atoms are
- * uninterpreted here: `x = y` and `y = x` are two atoms, not one, so a set of premises this calls
- * not contradictory may still be unsatisfiable for a reason living inside an atom. It is the honest
- * name for the weaker answer, and it is why the name is not "consistent".
+ * [[Consistency.Verdict.NotContradictory]] is a statement about **propositional structure only**.
+ * The atoms are uninterpreted here: `x = y` and `y = x` are two atoms, not one, so a set of
+ * premises this calls not contradictory may still be unsatisfiable for a reason living inside an
+ * atom. It is the honest name for the weaker answer, and it is why the name is not "consistent".
  *
  * == What it refuses, and the mistake it was written to avoid ==
  *
@@ -95,9 +96,9 @@ final class Consistency private (val reals: Signature) {
    * Whether the claim holds under every assignment, which is validity and not provability.
    *
    * Asked as the contradiction of its denial, which is the same computation and keeps one reader of
-   * the fragment rather than two. What comes back says [[Verdict.Contradictory]] when the claim is
-   * a tautology, and that reading is deliberately not hidden behind a friendlier name: a caller
-   * that wants "valid" has to notice it is being told something about the denial.
+   * the fragment rather than two. What comes back says [[Consistency.Verdict.Contradictory]] when
+   * the claim is a tautology, and that reading is deliberately not hidden behind a friendlier name:
+   * a caller that wants "valid" has to notice it is being told something about the denial.
    */
   def denialOf(claim: Term): Verdict =
     logic.mkNot(claim) match {
@@ -167,8 +168,9 @@ object Consistency {
   /**
    * What a set of premises came out as, and the three are kept apart on purpose.
    *
-   * Collapsing [[Contradictory]] into [[Refused]] would turn "they cannot all hold" into "I could
-   * not tell", which is the merge `Refutation` keeps seven answers to avoid one layer over.
+   * Collapsing [[Consistency.Verdict.Contradictory]] into [[Consistency.Verdict.Refused]] would
+   * turn "they cannot all hold" into "I could not tell", which is the merge `Refutation` keeps
+   * seven answers to avoid one layer over.
    */
   enum Verdict {
 

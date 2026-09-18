@@ -8,8 +8,8 @@ import garden.xeno.symbolum.logic.*
  *
  * `converges s l` is the epsilon-N statement and nothing more: past some index every term of `s` is
  * within every positive distance of `l`. `lim s` is the value, named by choice the way `NUM_GCD`
- * and `max` are, and pinned by [[Unique]]: where a sequence converges at all, `lim` is what it
- * converges to, and where it does not the term denotes and nothing here says what.
+ * and `max` are, and pinned by [[Limit.Unique]]: where a sequence converges at all, `lim` is what
+ * it converges to, and where it does not the term denotes and nothing here says what.
  *
  * == Why this is the missing piece and not one of several ==
  *
@@ -29,29 +29,31 @@ import garden.xeno.symbolum.logic.*
  * a development over this must believe is what it was before; `LimitSpec` asserts that as an
  * equality rather than as a ceiling, the way `CodingSpec` does.
  *
- * **Three facts here obtain a convergence and the rest move one.** [[MonotoneConverges]] is the
- * general instrument, an increasing sequence under a bound, and it is where `COMPLETENESS` is spent
- * a second time; [[Comparison]] is that theorem spent on the partial sums of a series; [[Constant]]
- * settles the sequence that does not move at all. Everything else takes a convergence as a
- * hypothesis and carries it somewhere, which is the vocabulary and the bookkeeping.
+ * **Three facts here obtain a convergence and the rest move one.** [[Limit.MonotoneConverges]] is
+ * the general instrument, an increasing sequence under a bound, and it is where `COMPLETENESS` is
+ * spent a second time; [[Limit.Comparison]] is that theorem spent on the partial sums of a series;
+ * [[Limit.Constant]] settles the sequence that does not move at all. Everything else takes a
+ * convergence as a hypothesis and carries it somewhere, which is the vocabulary and the
+ * bookkeeping.
  *
  * This paragraph said **nothing** here proved a convergence, and it said so for the day between
  * `MONOTONE_CONVERGES` landing and this sentence being written, with the next line naming that
  * theorem as what was still to come. A file's own summary of what it cannot do is the sentence
  * least likely to be reread when the file changes, and no test fails for it.
  *
- * That pair, [[Constant]] with [[Eventually]], is more than it looks: it settles every sequence
- * that stops moving, which is what a power series at zero is, and it is the whole of what
- * [[Transcendental]] can reach today. What [[Comparison]] adds is not reached from
+ * That pair, [[Limit.Constant]] with [[Limit.Eventually]], is more than it looks: it settles every
+ * sequence that stops moving, which is what a power series at zero is, and it is the whole of what
+ * [[Transcendental]] can reach today. What [[Limit.Comparison]] adds is not reached from
  * [[Transcendental]] at all: the exponential's series wants a dominating one, and building it wants
  * `2^i <= 2 * i!` and an order fact about a quotient, neither of which exists.
  *
  * == The epsilon principle is here rather than in `Order`, and that is an argument worth making ==
  *
- * [[BelowEveryPositive]] is a fact about the order on the reals and mentions neither constant of
- * this file, so `Order` is where a reader would look for it. It is here because it is what a limit
- * argument spends and nothing below has ever wanted it: three links down it would sit where nothing
- * cites it. If a second consumer appears below this, it moves, and the citation moves with it.
+ * [[Limit.BelowEveryPositive]] is a fact about the order on the reals and mentions neither constant
+ * of this file, so `Order` is where a reader would look for it. It is here because it is what a
+ * limit argument spends and nothing below has ever wanted it: three links down it would sit where
+ * nothing cites it. If a second consumer appears below this, it moves, and the citation moves with
+ * it.
  */
 final class Limit private (
   val magnitude: Magnitude,

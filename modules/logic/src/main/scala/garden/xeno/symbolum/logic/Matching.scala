@@ -48,7 +48,7 @@ import garden.xeno.symbolum.kernel.*
  * So a match now answers with a type substitution beside the term one, the way HOL Light's
  * `term_match` does. Three things keep it the same question rather than a larger one:
  *
- *  - **Only the pattern's type variables may be solved.** [[Type.matchType]] is one-way in exactly
+ *  - **Only the pattern's type variables may be solved.** `Type.matchType` is one-way in exactly
  *    this sense and is reused rather than reimplemented; an answer naming a type variable the
  *    pattern does not have would be an answer about the target, and is refused.
  *  - **It accumulates.** A pattern using `'a` twice cannot solve it two ways: each comparison runs

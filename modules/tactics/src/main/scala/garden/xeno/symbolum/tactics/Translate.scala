@@ -70,7 +70,7 @@ import garden.xeno.symbolum.theories.{Natural, Numeral, Peano, Real, RealTheory,
  *
  * That is the arrangement `Peano` was built for and the one HOL Light writes `&n` for. It is
  * faithful because `real_of_num` is an injective homomorphism of the ordered semiring: a sum goes
- * to a sum ([[Peano.EmbedsSum]]), a product to a product ([[Peano.EmbedsProduct]]), zero to zero
+ * to a sum (`Peano.EmbedsSum`), a product to a product (`Peano.EmbedsProduct`), zero to zero
  * and a successor to a successor, so `P(n)` over the naturals and `P(real_of_num n)` over the
  * reals are the same claim about the same numbers. Nothing about that reading is a coercion taken
  * in silence: the embedding is written into the term and a reader sees it.

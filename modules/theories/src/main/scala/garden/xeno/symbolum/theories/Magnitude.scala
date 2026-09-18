@@ -96,8 +96,8 @@ import garden.xeno.symbolum.logic.*
  * out of reach: that is worse than the absence, because it would look like progress.
  *
  * What `sgn` does not come with is `sgn x * abs x = x`, which is the identity that makes it worth
- * having and is not derived here. It wants `abs x = x` under `0 <= x` and `abs x = -x` under
- * `x <= 0`, neither of which is in this file: those are two more case analyses on [[AbsCases]]
+ * having and is not derived here. It wants `abs x = x` under `0 <= x` and `abs x = -x` under `x <=
+ * 0`, neither of which is in this file: those are two more case analyses on [[Magnitude.AbsCases]]
  * against antisymmetry, and they were not reached rather than being out of reach.
  *
  * The triangle inequality **is** here, and it is the fact that makes `abs` worth having: it is

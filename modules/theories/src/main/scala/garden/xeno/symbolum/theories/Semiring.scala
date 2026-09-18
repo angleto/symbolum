@@ -44,11 +44,11 @@ import garden.xeno.symbolum.logic.*
  * was printing both normal forms after one call refused, and the first version of this file
  * asserted the opposite of it in a docstring.
  *
- * [[order]] is what replaces it: **size first, at every level of the recursion**, then the same
- * structural comparison. Under it `A + B` is bigger than `A` because it has more nodes, whatever
- * the constants are called, which is the property associativity needs and the only one it needs.
- * The size test has to be inside the recursion rather than wrapped around it: `(A + B) + C` and
- * `A + (B + C)` have the **same** total size, and what separates them is the size of the two
+ * [[Semiring.order]] is what replaces it: **size first, at every level of the recursion**, then the
+ * same structural comparison. Under it `A + B` is bigger than `A` because it has more nodes,
+ * whatever the constants are called, which is the property associativity needs and the only one it
+ * needs. The size test has to be inside the recursion rather than wrapped around it: `(A + B) + C`
+ * and `A + (B + C)` have the **same** total size, and what separates them is the size of the two
  * function parts one level down.
  *
  * So what is actually new is a table of rules and an order, and eleven of the fourteen rules were

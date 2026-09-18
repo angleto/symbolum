@@ -377,7 +377,7 @@ object Evaluate {
   /**
    * The logic's own definitions, listed rather than read off the logic, which keeps them private.
    *
-   * They are here so that [[EvaluateSpec]] can compare each built-in connective against the
+   * They are here so that `EvaluateSpec` can compare each built-in connective against the
    * equation the kernel holds for it. The evaluator itself never reaches them, because the built-in
    * matches first.
    */

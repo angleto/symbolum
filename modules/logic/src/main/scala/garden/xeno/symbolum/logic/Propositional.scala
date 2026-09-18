@@ -399,11 +399,12 @@ object Propositional {
   /**
    * What a goal came out as, and the four are not one answer with a flag on it.
    *
-   * [[Countermodel]] is the weak answer and the class comment says at length why it is not the
-   * negation of [[Proved]]: the atoms are uninterpreted, so a goal that is valid for a reason living
-   * inside an atom comes back here. [[Undecided]] is the bound being reached and is a statement
-   * about this procedure rather than about the goal. [[Refused]] is the goal being outside what this
-   * reads at all.
+   * [[Propositional.Verdict.Countermodel]] is the weak answer and the class comment says at length
+   * why it is not the negation of [[Propositional.Verdict.Proved]]: the atoms are uninterpreted, so
+   * a goal that is valid for a reason living inside an atom comes back here.
+   * [[Propositional.Verdict.Undecided]] is the bound being reached and is a statement about this
+   * procedure rather than about the goal. [[Propositional.Verdict.Refused]] is the goal being
+   * outside what this reads at all.
    */
   enum Verdict {
     case Proved(theorem: Kernel.Thm)

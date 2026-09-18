@@ -29,13 +29,13 @@ import garden.xeno.symbolum.logic.*
  *
  * **No recursion on `num` anywhere here**, which is the return on defining the closure rather than
  * iterating it. `Recursion` and `Descent` are untouched: the induction over a derivation IS
- * [[Inductive.Induction]] at this operator, and [[Induction]] below is that specialised once so no
- * consumer has to unfold the operator by hand.
+ * [[Inductive.Induction]] at this operator, and [[Reaching.Induction]] below is that specialised
+ * once so no consumer has to unfold the operator by hand.
  *
  * == The potential-function lemma, and the hypothesis that is easy to write backwards ==
  *
- * [[Potential]] is the reusable half of the argument this development was asked for. Given a
- * measure `Phi` into `num`:
+ * [[Reaching.Potential]] is the reusable half of the argument this development was asked for. Given
+ * a measure `Phi` into `num`:
  *
  *  - every `A`-step drops it by exactly one, written `Phi u = SUC (Phi v)` so that no subtraction
  *    appears;

@@ -16,17 +16,17 @@ import garden.xeno.symbolum.logic.NotNormalised
  *
  * == The third outcome is the interesting one, and only one quarter of it ==
  *
- * A pair comes out proved, or disproved with the point where it fails, or [[Unsettled]]: true at
- * every point tried and not turned into a theorem. That last bucket used to be one thing and is
- * four, which matters because only one of the four is a lead and the other three are the machinery
- * describing itself. [[Why]] says which, and a reader who cannot tell them apart cannot read the
- * output of a run at all.
+ * A pair comes out proved, or disproved with the point where it fails, or [[Discovery.Unsettled]]:
+ * true at every point tried and not turned into a theorem. That last bucket used to be one thing
+ * and is four, which matters because only one of the four is a lead and the other three are the
+ * machinery describing itself. [[Discovery.Why]] says which, and a reader who cannot tell them
+ * apart cannot read the output of a run at all.
  *
- * The lead is [[Why.NotProvableHere]]: both sides reached a normal form, the forms differ, and the
- * candidate agreed at every point anyway. That is either an identity needing mathematics this
- * system does not have or a coincidence over the sample, and neither is discoverable by running
- * the tactics alone. The other three say the fragment was too narrow, the numerals too large, or
- * the rewriter out of steps, and each names its own remedy.
+ * The lead is [[Discovery.Why.NotProvableHere]]: both sides reached a normal form, the forms
+ * differ, and the candidate agreed at every point anyway. That is either an identity needing
+ * mathematics this system does not have or a coincidence over the sample, and neither is
+ * discoverable by running the tactics alone. The other three say the fragment was too narrow, the
+ * numerals too large, or the rewriter out of steps, and each names its own remedy.
  */
 final class Discovery private (val oracle: Oracle, val screen: Discovery.Screen) {
 

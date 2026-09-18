@@ -71,8 +71,9 @@ import garden.xeno.symbolum.kernel.*
  *
  * == What is derived, and what each derivation rests on ==
  *
- * Nothing below this line is asserted. Each of [[Statements]] is a theorem, `Derivation.axiomsOf`
- * says which of the two axioms it reaches, and `Derivation.size` says what it cost.
+ * Nothing below this line is asserted. Each of [[Classical.Statements]] is a theorem,
+ * `Derivation.axiomsOf` says which of the two axioms it reaches, and `Derivation.size` says what it
+ * cost.
  *
  * **The table is in `docs/proving.md`, under "The excluded middle is derived", and it is
  * generated**: `sbt "theories/runMain garden.xeno.symbolum.theories.Guide"` writes it and `GuideSpec` fails
@@ -84,16 +85,17 @@ import garden.xeno.symbolum.kernel.*
  *
  * What is here instead is the division, which `ClassicalSpec` asserts against the derivations
  * themselves: two of the nine reach **no axiom at all** and are collected by this extension rather
- * than bought by it, [[Eta]] pays for [[FunctionExtensionality]], and [[Choice]] pays for the other
- * six. Neither axiom appears in the other's derivations, and the two conditional equations are on
- * choice's side of that line: they go to `SELECT` directly and never through the excluded middle,
- * which a case split would have made them pay for twice.
+ * than bought by it, [[Classical.Eta]] pays for [[Classical.FunctionExtensionality]], and
+ * [[Classical.Choice]] pays for the other six. Neither axiom appears in the other's derivations,
+ * and the two conditional equations are on choice's side of that line: they go to `SELECT` directly
+ * and never through the excluded middle, which a case split would have made them pay for twice.
  *
  * Beside them are three derived rules a caller reasons with rather than a theorem they instantiate:
  * [[cases]], which every tactic wanting a case split will reach for, [[contradiction]], and [[ext]].
  *
  * `~` takes the widest argument this notation allows, which is why a negated side of an equation is
- * parenthesised in [[Statements]]: `~(p \/ q) = (~p /\ ~q)` reads as `~((p \/ q) = (~p /\ ~q))`.
+ * parenthesised in [[Classical.Statements]]: `~(p \/ q) = (~p /\ ~q)` reads as `~((p \/ q) = (~p /\
+ * ~q))`.
  *
  * == The excluded middle costs no axiom of its own, and this file used to say otherwise ==
  *

@@ -19,11 +19,11 @@ import garden.xeno.symbolum.logic.*
  * writing it that way would drag `NUM_DIV` and its guard into every proof about syntax. The
  * triangular numbers are a recursion on `num` and cost nothing, so the halving never happens.
  *
- * **The bound is the point of the whole construction and it is [[PairLeft]] and [[PairRight]].**
- * Both components of a pair are at most the pair. That is what lets [[Descent]] define a predicate
- * by recursion on a code, since every sub-code is a smaller number, and it is what will let the
- * object theory's version of that predicate quantify over sub-codes **boundedly**, which is what
- * Delta-0 means. `docs/adr/0014` says it at more length.
+ * **The bound is the point of the whole construction and it is [[Numbering.PairLeft]] and
+ * [[Numbering.PairRight]].** Both components of a pair are at most the pair. That is what lets
+ * [[Descent]] define a predicate by recursion on a code, since every sub-code is a smaller number,
+ * and it is what will let the object theory's version of that predicate quantify over sub-codes
+ * **boundedly**, which is what Delta-0 means. `docs/adr/0014` says it at more length.
  *
  * **The bound is not strict, and that is a fact about the pairing rather than a weakness.**
  * `NUM_PAIR ZERO ZERO` is `ZERO`, so a component can equal its pair, and only there. A constructor

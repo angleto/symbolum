@@ -503,9 +503,10 @@ object LogicError {
      * Whether the work stopped before it had finished, rather than finishing or never starting.
      *
      * The second question, and it is a second **match** rather than a negation of the first because
-     * the two are independent: today no standing answers yes to both, and [[Unread]] answers no to
-     * both, which is what a single boolean could not have carried. A case added below has to say
-     * where it falls on each, and if neither question fits it, the honest move is a third one.
+     * the two are independent: today no standing answers yes to both, and
+     * [[LogicError.Standing.Unread]] answers no to both, which is what a single boolean could not
+     * have carried. A case added below has to say where it falls on each, and if neither question
+     * fits it, the honest move is a third one.
      *
      * The two readers are `Linarith`'s, where an escalation that stopped is reported in place of the
      * refusal from before it: "I stopped" is not a fact about the goal, and reporting it as one

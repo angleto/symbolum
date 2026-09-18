@@ -31,19 +31,20 @@ import garden.xeno.symbolum.logic.*
  *
  * == The two faces, and only one of them costs monotonicity ==
  *
- *  - [[Induction]] is `(!y. f S y ==> S y) ==> (!x. INDUCTIVE f x ==> S x)`: an `f`-closed `S`
- *    contains the closure. It is the **definition unfolded and specialised**, so it needs no
- *    hypothesis about `f` at all. It is what proves a **non**-membership, and it is the half a
- *    forward closure computation cannot do.
- *  - [[Introduction]] is `MONOTONE f ==> (!x. f (INDUCTIVE f) x ==> INDUCTIVE f x)`: the closure is
- *    itself `f`-closed, which is what the introduction rules of a rule set are. This one **does**
- *    need monotonicity, and the asymmetry is not bookkeeping: without monotonicity the intersection
- *    of all closed sets need not be closed, and `INDUCTIVE f` would be a set with an induction
- *    principle and no members.
- *  - [[Fixpoint]] is the two together, `INDUCTIVE f x = f (INDUCTIVE f) x`, which is what entitles
- *    the word "fixed point" in this file's name. It is derived rather than stated twice: the
- *    direction that is not [[Introduction]] is [[Induction]] at `S := f (INDUCTIVE f)`, and what
- *    discharges its obligation is [[Introduction]] pushed through monotonicity.
+ *  - [[Inductive.Induction]] is `(!y. f S y ==> S y) ==> (!x. INDUCTIVE f x ==> S x)`: an
+ *    `f`-closed `S` contains the closure. It is the **definition unfolded and specialised**, so it
+ *    needs no hypothesis about `f` at all. It is what proves a **non**-membership, and it is the
+ *    half a forward closure computation cannot do.
+ *  - [[Inductive.Introduction]] is `MONOTONE f ==> (!x. f (INDUCTIVE f) x ==> INDUCTIVE f x)`: the
+ *    closure is itself `f`-closed, which is what the introduction rules of a rule set are. This one
+ *    **does** need monotonicity, and the asymmetry is not bookkeeping: without monotonicity the
+ *    intersection of all closed sets need not be closed, and `INDUCTIVE f` would be a set with an
+ *    induction principle and no members.
+ *  - [[Inductive.Fixpoint]] is the two together, `INDUCTIVE f x = f (INDUCTIVE f) x`, which is what
+ *    entitles the word "fixed point" in this file's name. It is derived rather than stated twice:
+ *    the direction that is not [[Inductive.Introduction]] is [[Inductive.Induction]] at `S := f
+ *    (INDUCTIVE f)`, and what discharges its obligation is [[Inductive.Introduction]] pushed
+ *    through monotonicity.
  *
  * `MONOTONE f` is `!S T. (!x. S x ==> T x) ==> (!x. f S x ==> f T x)`, defined here rather than
  * assumed of the caller, because a caller that has to state it inline states it differently each

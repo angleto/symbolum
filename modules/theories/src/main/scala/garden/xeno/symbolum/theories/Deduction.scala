@@ -27,20 +27,20 @@ import garden.xeno.symbolum.logic.*
  *
  * Two schemes, each proved once for **every** formula rather than at a code:
  *
- *  - [[SelfImplication]], that PA proves `p ==> p`. The classic three-line Hilbert derivation, and
- *    the reason it is three lines rather than one is that `p ==> p` is not an instance of any
- *    axiom: the system has no reflexivity for implication, only weakening and distribution, and
- *    getting from those to the identity is the standard exercise.
- *  - [[Syllogism]], that provable `p ==> q` and provable `q ==> r` give provable `p ==> r`. The
- *    workhorse: every derivation of any length is a chain of these.
+ *  - [[Deduction.SelfImplication]], that PA proves `p ==> p`. The classic three-line Hilbert
+ *    derivation, and the reason it is three lines rather than one is that `p ==> p` is not an
+ *    instance of any axiom: the system has no reflexivity for implication, only weakening and
+ *    distribution, and getting from those to the identity is the standard exercise.
+ *  - [[Deduction.Syllogism]], that provable `p ==> q` and provable `q ==> r` give provable `p ==>
+ *    r`. The workhorse: every derivation of any length is a chain of these.
  *
  * Both cost the naturals' two axioms and nothing else, which `DeductionSpec` asserts as an equality
  * rather than as a ceiling.
  *
  * And the three rules the **deduction theorem** is assembled from, one per way a step can be
- * justified: [[Weaken]] for the axiom cases, [[ImplicationModusPonens]] for the modus ponens case,
- * and [[ImplicationGeneralisation]] for the generalisation case, which is the one that carries the
- * side condition every textbook statement of that theorem carries.
+ * justified: [[Deduction.Weaken]] for the axiom cases, [[Deduction.ImplicationModusPonens]] for the
+ * modus ponens case, and [[Deduction.ImplicationGeneralisation]] for the generalisation case, which
+ * is the one that carries the side condition every textbook statement of that theorem carries.
  *
  * == What is not here, and what it is in front of ==
  *
@@ -49,7 +49,7 @@ import garden.xeno.symbolum.logic.*
  * have: `NUM_PROV` takes a formula and not a set. That wants a `NUM_PROV_FROM` beside the three
  * definitions there, with a fifth clause on a step saying it is the hypothesis itself, and then an
  * induction over the derivation whose five cases are the three rules above, the hypothesis case
- * (which is [[SelfImplication]]) and nothing else.
+ * (which is [[Deduction.SelfImplication]]) and nothing else.
  *
  * And, further up, the thing Goedel's argument actually needs, which is **not** reachable from
  * here without a large piece of work in between: `Prov` as a formula **of the object language**,

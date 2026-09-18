@@ -65,8 +65,8 @@ import garden.xeno.symbolum.logic.*
  *
  * A refusal is not a claim that `f` is not monotone, and cannot be: `\S x. ~(~(S x))` is monotone
  * and is refused, because two negations is not a shape this reads. What it says is that this
- * operator is not written in the shape a rule set is written in, which is [[LogicError.Standing]]'s
- * `Unread` and is why the refusal is a [[NotOfForm]] rather than a decision.
+ * operator is not written in the shape a rule set is written in, which is `LogicError.Standing`'s
+ * `Unread` and is why the refusal is a `NotOfForm` rather than a decision.
  *
  * == What a defect here could and could not cost ==
  *

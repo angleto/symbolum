@@ -83,7 +83,7 @@ object Comments {
    * was written. The line is carried rather than reassembled from the two parts because they do not
    * reassemble: `object Foo { /* a */ def bar` puts two pieces in `code` and one between them in
    * `comment`, so concatenating the halves gives a line nobody wrote. What survives instead is the
-   * count, and [[CommentsSpec]] asserts it: every character of `text` goes to exactly one part.
+   * count, and `CommentsSpec` asserts it: every character of `text` goes to exactly one part.
    */
   final case class Line(number: Int, text: String, code: String, comment: String) {
 

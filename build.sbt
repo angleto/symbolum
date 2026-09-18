@@ -96,7 +96,34 @@ lazy val commonSettings = Seq(
     else Seq.empty
   },
 
-  Test / parallelExecution := false
+  Test / parallelExecution := false,
+
+  /*
+   * The JDK's own classes, so that a resolved `java.*` name renders as a link rather than as text.
+   *
+   * What this does NOT do is silence a warning, and the first version of this comment said it did.
+   * `@throws ArithmeticException` in `Log.eval` reported `No DRI found`, and measured on
+   * 2026-09-18 against this file with and without the line below, the count is 0 either way: what
+   * fixed it was writing `java.lang.ArithmeticException`, which is the same repair the 40
+   * same-module queries got, and the JDK case was never a class of its own. What the mapping is
+   * worth is the href: without it the rendered page carries the name as plain text, with it an
+   * anchor to docs.oracle.com, checked 200 the same day.
+   *
+   * The 17 in that URL is NOT this build's JDK and an earlier draft of this comment said it was.
+   * The job that runs `doc` pins 11, `coverage` pins 17 and the test matrix moves; the class is in
+   * every one of them, so the number decides which javadoc a reader lands on and says nothing
+   * about what compiled the page.
+   *
+   * It does NOT reach this build's own modules. Scaladoc runs once per module, so a reference from
+   * `theories` to `logic` is outside the source set too, and there is no published URL for a module
+   * of this build to point at. Those are written in backticks, which is what this repository was
+   * already doing: counting every mention of a name that is the file stem of a main source in
+   * another module, 636 were in backticks against 31 in `[[ ]]` on 2026-09-18 before this change.
+   * That criterion over-counts the backticks and is quoted with the figure for that reason.
+   */
+  Compile / doc / scalacOptions ++= Seq(
+    "-external-mappings:.*java.*::javadoc::https://docs.oracle.com/en/java/javase/17/docs/api/java.base/"
+  )
 )
 
 /**

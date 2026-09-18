@@ -617,9 +617,9 @@ object Language {
    * symmetry, transitivity or congruence, and each of those is obtained by choosing a formula with
    * a hole: symmetry takes `v_i = t` and needs its two instances to be `t = t` and `u = t`. Getting
    * there means substituting into a formula that MENTIONS the closed term `t`, and the walk stops
-   * dead at `t` unless something says the substitution leaves it alone. [[substituteIn]] cannot
-   * help, because it computes at a concrete code and `t` here is a variable standing for any closed
-   * term.
+   * dead at `t` unless something says the substitution leaves it alone. [[Language.substituteIn]]
+   * cannot help, because it computes at a concrete code and `t` here is a variable standing for any
+   * closed term.
    *
    * So the rules of equality are stated over arbitrary closed terms rather than over numerals, and
    * this is the fact that buys the difference. Numerals would have been the cheaper lemma, one

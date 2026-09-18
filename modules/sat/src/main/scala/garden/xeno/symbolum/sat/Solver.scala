@@ -461,9 +461,10 @@ object Solver {
   /**
    * What a problem came out as, and the four are kept apart for the reason `Refutation` keeps seven.
    *
-   * Collapsing [[Undecided]] into [[Satisfiable]] would turn "I could not settle it" into "I settled
-   * it and it holds", which is the one way a solver can mislead a proof assistant. Collapsing
-   * [[Malformed]] into [[Undecided]] would hide a caller's own numbering error inside a bound.
+   * Collapsing [[Solver.Answer.Undecided]] into [[Solver.Answer.Satisfiable]] would turn "I could
+   * not settle it" into "I settled it and it holds", which is the one way a solver can mislead a
+   * proof assistant. Collapsing [[Solver.Answer.Malformed]] into [[Solver.Answer.Undecided]] would
+   * hide a caller's own numbering error inside a bound.
    */
   enum Answer {
 

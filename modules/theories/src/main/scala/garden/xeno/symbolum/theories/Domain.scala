@@ -28,8 +28,8 @@ import garden.xeno.symbolum.logic.*
  *
  * So a domain is described rather than reverse-engineered. [[Domain]] is the list of what to
  * declare and what to assert, composition is a check and a concatenation of two such lists, and
- * [[build]] runs it once against a base. `Real.Declarations` and `Natural.Statements` already have
- * this shape; this makes it a value a caller can hold.
+ * [[Domain.build]] runs it once against a base. `Real.Declarations` and `Natural.Statements`
+ * already have this shape; this makes it a value a caller can hold.
  *
  * == Why composition refuses on a shared name ==
  *
@@ -38,11 +38,11 @@ import garden.xeno.symbolum.logic.*
  * constants that are equal, whatever either of them meant by it. Composing them silently would
  * merge two vocabularies into one and say nothing.
  *
- * [[compose]] therefore refuses, naming the constant. That is the whole of what this file does
- * about `0019`'s residual risk: it does not remove it, it makes the one place a caller could walk
- * into it say so. A caller who really does mean one constant says so with [[composeSharing]], and
- * then the sharing is a line in their source rather than an accident of two files agreeing on a
- * word.
+ * [[Domain.compose]] therefore refuses, naming the constant. That is the whole of what this file
+ * does about `0019`'s residual risk: it does not remove it, it makes the one place a caller could
+ * walk into it say so. A caller who really does mean one constant says so with
+ * [[Domain.composeSharing]], and then the sharing is a line in their source rather than an accident
+ * of two files agreeing on a word.
  *
  * **Contradictory axioms are not what this guards against, and conflating the two is easy.** Two
  * domains whose axioms contradict each other compose into one inconsistent theory, and that is

@@ -38,10 +38,10 @@ import garden.xeno.symbolum.theories.{Field, Library, Ring, Signature}
  *
  * **And the honest limit, which the calibration below measures rather than hides.** Everything the
  * automated surface proves is routine almost by construction, because that surface *is* the
- * decision procedures. [[Standing.Earned]] is reachable today through a hand derivation or through
- * `Induct`, and through the escalations inside LINARITH, and not otherwise. A richer prover would
- * make the scale say more; today it mostly separates the trivial from the unreachable, which is
- * still the separation a generator needs most.
+ * decision procedures. [[Novelty.Standing.Earned]] is reachable today through a hand derivation or
+ * through `Induct`, and through the escalations inside LINARITH, and not otherwise. A richer prover
+ * would make the scale say more; today it mostly separates the trivial from the unreachable, which
+ * is still the separation a generator needs most.
  *
  * == The third signal, measured and not built ==
  *

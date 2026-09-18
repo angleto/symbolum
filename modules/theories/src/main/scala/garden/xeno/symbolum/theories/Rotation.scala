@@ -24,10 +24,10 @@ import garden.xeno.symbolum.logic.*
  * `Word`'s own docstring worked this out and then recorded the wrong conclusion, and the correction
  * is worth keeping rather than tidying away. Defining a remainder was never the obstacle: a term
  * naming something that exists is `select` of a predicate, and `Magnitude` makes the general point.
- * What was missing was everything one could then prove about it, because
- * `Modular.Division` gives EXISTENCE of a quotient and remainder and existence alone does not make
- * "the remainder" denote. [[Modular.DivisionUnique]] is the lemma that does, and with it
- * [[Modular.DivisionBelow]] says `i < k ==> i mod k = i`, which is the whole of [[AtZero]] below.
+ * What was missing was everything one could then prove about it, because `Modular.Division` gives
+ * EXISTENCE of a quotient and remainder and existence alone does not make "the remainder" denote.
+ * [[Modular.DivisionUnique]] is the lemma that does, and with it [[Modular.DivisionBelow]] says `i
+ * < k ==> i mod k = i`, which is the whole of [[Rotation.AtZero]] below.
  *
  * == What this does not do ==
  *

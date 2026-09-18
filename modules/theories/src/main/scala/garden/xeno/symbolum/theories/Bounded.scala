@@ -104,18 +104,18 @@ final class Bounded private (
    *
    * == The three refusals, and why they are three ==
    *
-   *  - [[NotOfForm]], when the bound is not a numeral of `num`. `!i. NUM_LT i n ==> P i` over a
+   *  - `NotOfForm`, when the bound is not a numeral of `num`. `!i. NUM_LT i n ==> P i` over a
    *    variable `n` is not false and is not provable this way; the refusal says what shape it
    *    needed, and a caller reading it goes to `Induct` rather than raising anything.
-   *  - [[BoundReached]], when the bound is larger than [[limit]]. Nothing has been asked and
+   *  - `BoundReached`, when the bound is larger than [[limit]]. Nothing has been asked and
    *    nothing has been decided, which is the distinction that case exists for.
-   *  - [[InstanceRefused]], when the caller's own procedure could not settle one index. It names
+   *  - `InstanceRefused`, when the caller's own procedure could not settle one index. It names
    *    **which** index and carries the caller's reason underneath, so a driver that walked eight
    *    instances and stopped at the sixth says so rather than reporting the sixth's message as if
    *    it were about the claim.
    *
    * A fourth arrives inside the third: a caller that returns a theorem of some other shape gets an
-   * [[InstanceRefused]] whose reason is a [[NotOfForm]], because what went wrong is the caller's
+   * `InstanceRefused` whose reason is a `NotOfForm`, because what went wrong is the caller's
    * step either way and the reason field is what tells the two apart.
    */
   def prove(statement: Term)(
@@ -283,7 +283,7 @@ object Bounded {
    */
   final case class Instance(goal: Term, index: Term, position: Int)
 
-  /** The name [[BoundReached]] carries, so that a caller reading a refusal can find the number. */
+  /** The name `BoundReached` carries, so that a caller reading a refusal can find the number. */
   val LimitName: String = "Bounded.Instances"
 
   /**

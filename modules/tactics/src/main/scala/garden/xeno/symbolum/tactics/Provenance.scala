@@ -109,12 +109,13 @@ final class Provenance private (val reals: RealTheory, val entries: Vector[Prove
    * said where this came from" when the truth is "no citation could ever have named it", and the
    * two are opposite things.
    *
-   * But only the premises that **mention an opened variable** have that problem. A goal
-   * `!t. 0 < f t ==> ...` whose register cites facts about `f` cites propositions that survive the
-   * stripping untouched, and refusing the whole goal threw those away with the rest. So the goal is
-   * opened, and a premise naming an opened variable gets [[Premise.Unnameable]] rather than
-   * [[Premise.Uncited]]: the third case exists because merging it into the second is the failure the
-   * refusal was protecting against, and refusing everything was a heavy way to avoid one merge.
+   * But only the premises that **mention an opened variable** have that problem. A goal `!t. 0 < f
+   * t ==> ...` whose register cites facts about `f` cites propositions that survive the stripping
+   * untouched, and refusing the whole goal threw those away with the rest. So the goal is opened,
+   * and a premise naming an opened variable gets [[Provenance.Premise.Unnameable]] rather than
+   * [[Provenance.Premise.Uncited]]: the third case exists because merging it into the second is the
+   * failure the refusal was protecting against, and refusing everything was a heavy way to avoid
+   * one merge.
    */
   def trail(linarith: Linarith, goal: Term): Either[TacticError, Trail] =
     for {

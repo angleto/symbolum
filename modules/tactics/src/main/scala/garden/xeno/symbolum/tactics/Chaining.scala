@@ -33,11 +33,11 @@ import garden.xeno.symbolum.theories.Library
  *
  * == The bounds, and why they are counted in these units ==
  *
- * [[Bounds.depth]] is how many lemmas may be chained; depth 1 is what `Prove.held` already does, so
- * 2 is the first value that buys anything. [[Bounds.expansions]] is how many candidates may have
- * their obligations attempted **in one question**, which is the unit that bounds the recursion
- * rather than the matching: a goal whose head matches forty lemmas costs forty matches and only
- * expands the ones that match, and it is the expansions that recurse.
+ * [[Chaining.Bounds.depth]] is how many lemmas may be chained; depth 1 is what `Prove.held` already
+ * does, so 2 is the first value that buys anything. [[Chaining.Bounds.expansions]] is how many
+ * candidates may have their obligations attempted **in one question**, which is the unit that
+ * bounds the recursion rather than the matching: a goal whose head matches forty lemmas costs forty
+ * matches and only expands the ones that match, and it is the expansions that recurse.
  *
  * Neither is a wall clock, for the reason every bound in this repository is not one: a suite that
  * settles a goal on a quiet machine and refuses it on a busy one is a suite whose failures cannot
@@ -305,8 +305,9 @@ object Chaining {
    * sentence written one file over. This enum first had a single exhausted case carrying a string,
    * and the check in `RemedySpec` that every verdict be mapped is what said so.
    *
-   * [[NoRoute]] is the one that is not a limit. Every candidate was tried inside the bounds and
-   * none reached the goal, so raising a bound changes nothing and what is missing is a lemma.
+   * [[Chaining.Outcome.NoRoute]] is the one that is not a limit. Every candidate was tried inside
+   * the bounds and none reached the goal, so raising a bound changes nothing and what is missing is
+   * a lemma.
    */
   enum Outcome {
 

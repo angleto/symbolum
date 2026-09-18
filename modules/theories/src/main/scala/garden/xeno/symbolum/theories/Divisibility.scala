@@ -17,9 +17,9 @@ import garden.xeno.symbolum.logic.*
  * **This is not the divisibility of the integers.** Over a field every non-zero `a` divides every
  * `b`, with `inv a * b` as the witness. That is not an awkward edge of the encoding, it is the
  * whole of what the relation says here, and it is derived below rather than left for a consumer to
- * discover: [[NonZeroDivides]] is `!a b. ~(a = 0) ==> Divides a b`, with nothing assumed. So the
- * relation is trivially true everywhere except at `a = 0`, where [[ZeroDivides]] settles it
- * outright.
+ * discover: [[Divisibility.NonZeroDivides]] is `!a b. ~(a = 0) ==> Divides a b`, with nothing
+ * assumed. So the relation is trivially true everywhere except at `a = 0`, where
+ * [[Divisibility.ZeroDivides]] settles it outright.
  *
  * What that costs, item by item:
  *
@@ -38,26 +38,29 @@ import garden.xeno.symbolum.logic.*
  * The shape of a derivation is what a no-go argument needs. Such an argument runs: a quantity is a
  * fixed multiple of something at every step of an orbit, the target is not such a multiple,
  * therefore the target is unreachable. Written out, its steps are the ones below, and
- * [[LinearCombination]] is the one that does the work: an invariant preserved by a step that mixes
- * two quantities is preserved because `a` divides `x * b + y * c` whenever it divides `b` and `c`.
- * A consumer states its own arithmetic premises as hypotheses and gets a theorem whose divisibility
- * reasoning is checked, which is more than an argument carrying the whole chain in prose.
+ * [[Divisibility.LinearCombination]] is the one that does the work: an invariant preserved by a
+ * step that mixes two quantities is preserved because `a` divides `x * b + y * c` whenever it
+ * divides `b` and `c`. A consumer states its own arithmetic premises as hypotheses and gets a
+ * theorem whose divisibility reasoning is checked, which is more than an argument carrying the
+ * whole chain in prose.
  *
  * It also does not wait for the integers. `docs/adr/0007` puts the integers and the rationals ahead
  * of the reals-as-a-construction, so a consumer needing divisibility today needs it over the reals
  * or not at all. When there is a type of integers, the same statements are what a reader will
- * expect to find over it, and [[NonZeroDivides]] is the one that stops being true there: it is the
- * only derivation in this file that mentions `inv`, and the rest carry over unchanged.
+ * expect to find over it, and [[Divisibility.NonZeroDivides]] is the one that stops being true
+ * there: it is the only derivation in this file that mentions `inv`, and the rest carry over
+ * unchanged.
  *
  * == Both directions of the definition are theorems, and that is not decoration ==
  *
- * [[Intro]] goes from a witness to the relation and [[Elim]] the other way. Every derivation here
- * is written through that pair rather than through the defining equation, because the elimination
- * is where the side conditions live: taking a witness out of an existential asks that it not escape
- * into the conclusion or into the predicate, and both are refusals from
- * [[garden.xeno.symbolum.logic.Rules.existsElim]] rather than mistakes that yield a weaker theorem. Doing it
- * in one helper is what keeps [[Transitive]] and [[LinearCombination]] readable: they open their
- * premises, do arithmetic on plain equations, and close.
+ * [[Divisibility.Intro]] goes from a witness to the relation and [[Divisibility.Elim]] the other
+ * way. Every derivation here is written through that pair rather than through the defining
+ * equation, because the elimination is where the side conditions live: taking a witness out of an
+ * existential asks that it not escape into the conclusion or into the predicate, and both are
+ * refusals from [[garden.xeno.symbolum.logic.Rules.existsElim]] rather than mistakes that yield a
+ * weaker theorem. Doing it in one helper is what keeps [[Divisibility.Transitive]] and
+ * [[Divisibility.LinearCombination]] readable: they open their premises, do arithmetic on plain
+ * equations, and close.
  */
 final class Divisibility private (
   val ring: Ring,
