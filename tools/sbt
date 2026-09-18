@@ -52,16 +52,100 @@
 #   tools/sbt test
 #   tools/sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. x + 0 = x"
 
+# WHY IT ALSO LOOKS AT WHAT ELSE IS RUNNING, added 2026-09-18 because the announcement below was
+# read sixteen times by somebody who then concluded the opposite of it. The line says *this build*
+# is uncapped and it gets read as *this machine* has no cap, and the two are the distinction this
+# repository keeps seven answers apart for one floor down: "I could not ask" is not "I asked and it
+# was fine". The session that wrote this card spent seven hours outside a queue that was running the
+# whole time, went and checked, and checked with an instrument that could not read — `find` over a
+# symlinked directory, which answers nothing and looks like an absence.
+#
+# So the fall-through now says WHICH of the two it is, and it finds out without this file knowing
+# anything about the machine's layout. A build that HAS a wrapper leaves the path in a file under
+# `$TMPDIR`, and a build that has none reads it. What is written down here is the rendezvous — a
+# name this repository chooses — and never the wrapper's own path, which arrives from whichever
+# session on this machine was configured.
+#
+# WHY `$TMPDIR` AND NOT `/tmp`, measured on 2026-09-18: `$TMPDIR` on macOS is `drwx------` and the
+# user's own, where `/tmp` is world-writable with the sticky bit. The fallback for a machine that
+# names no `$TMPDIR` is `/tmp` with the user id in the file name, where another user can get there
+# first — which is survivable only because of the rule in the paragraph below, that what is found is
+# printed and never run.
+#
+# The environment of the sbt processes already running is read as well, and second, because it is
+# the one thing a file cannot say: that a build is capped **now** rather than that one was once. A
+# machine where the file is missing and something capped is running is a machine whose builds
+# predate this paragraph.
+#
+# IT REPORTS AND NEVER ACTS ON WHAT IT FINDS. Taking a program to exec out of another process's
+# environment would be this file deciding on its own to run something nobody in this session named.
+# The difference between telling a caller what to do and doing it for them is the whole of why this
+# file exists rather than a line in `CLAUDE.md`.
+
 set -eu
+
+# Where a capped build leaves the path and an uncapped one looks for it.
+#
+# The user id is in the name for the `/tmp` case, so that two people on one machine do not write
+# each other's rendezvous; under `$TMPDIR` it is redundant and harmless.
+rendezvous="${TMPDIR:-/tmp}/symbolum-build-wrapper.$(id -u 2>/dev/null || echo unknown)"
+
+# What a capped build recorded, when it is still there and still runs.
+#
+# The `-x` is not tidiness: a path recorded weeks ago and since moved would otherwise be printed as
+# the thing to do, which is the failure this whole change is about arriving from the other side.
+recorded() {
+    [ -r "$rendezvous" ] || return 1
+    remembered=$(head -1 "$rendezvous" 2>/dev/null) || return 1
+    [ -n "$remembered" ] || return 1
+    [ -x "$remembered" ] || return 1
+    printf '%s\n' "$remembered"
+}
+
+# The cap another build on this machine was given, printed, when there is one to see.
+elsewhere() {
+    running=$(pgrep -f sbt-launch 2>/dev/null) || return 1
+
+    for process in $running; do
+        named=$(ps eww -o command= -p "$process" 2>/dev/null |
+            tr ' ' '\n' |
+            sed -n 's/^SYMBOLUM_BUILD_WRAPPER=//p' |
+            sed -n '1p') || named=""
+        if [ -n "$named" ]; then
+            printf '%s\n' "$named"
+            return 0
+        fi
+    done
+
+    return 1
+}
 
 if [ -n "${SYMBOLUM_BUILD_WRAPPER:-}" ]; then
     if [ -x "$SYMBOLUM_BUILD_WRAPPER" ]; then
+        # Left for the next session on this machine, best effort and never fatal: a build that
+        # cannot write a temporary file is still a build, and the thing being recorded is a
+        # convenience for somebody else rather than anything this run depends on.
+        printf '%s\n' "$SYMBOLUM_BUILD_WRAPPER" > "$rendezvous" 2>/dev/null || true
         exec "$SYMBOLUM_BUILD_WRAPPER" -- sbt "$@"
     fi
     echo "tools/sbt: SYMBOLUM_BUILD_WRAPPER names '$SYMBOLUM_BUILD_WRAPPER', which is not" >&2
     echo "tools/sbt: executable, so nothing is capping this build." >&2
 else
     echo "tools/sbt: SYMBOLUM_BUILD_WRAPPER is unset, so nothing is capping this build." >&2
+fi
+
+# Three answers and not two, for the reason the paragraph above gives: a machine with a queue this
+# session is not in, a machine where nothing is queueing, and a machine this session cannot see well
+# enough to say either. Collapsing the last into the middle is what the sentence above already does.
+if seen=$(recorded || elsewhere); then
+    echo "tools/sbt: a build on this machine IS capped, by '$seen', so there is a queue and this" >&2
+    echo "tools/sbt: session is not in it: prefix the command with SYMBOLUM_BUILD_WRAPPER=$seen" >&2
+elif pgrep -f sbt-launch >/dev/null 2>&1; then
+    echo "tools/sbt: no other build running here names a cap either, so nothing on this machine" >&2
+    echo "tools/sbt: is queueing at the moment." >&2
+else
+    echo "tools/sbt: and no other build is running here, nor has one left a cap behind, so whether" >&2
+    echo "tools/sbt: this machine has a queue at all is not something this session can see." >&2
 fi
 
 exec sbt "$@"

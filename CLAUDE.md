@@ -22,9 +22,31 @@ every checkout, so nothing in here can enforce it and this file used to name it 
 that evening, five of the seven builds running had never asked it for anything, and every one of
 them was a session doing what the commands below told it to. `tools/sbt` hands the build to
 whatever the machine names in `SYMBOLUM_BUILD_WRAPPER`, and where nothing is named it says so on
-stderr and runs `sbt` anyway, so a checkout with no such arrangement around it loses nothing and
-nobody is left believing they are in a queue they are not in. What it is **not** is a cap of its
-own: it holds nothing and waits for nothing, and its own header says so.
+stderr and runs `sbt` anyway, so a checkout with no such arrangement around it loses nothing.
+
+**The variable is in no profile, so whether a session has it is a coin toss, and the announcement
+alone did not cover that.** The clause that used to end the paragraph above said nobody is left
+believing they are in a queue they are not in; on 2026-09-18 a session read that stderr line sixteen
+times, concluded the cap had been removed from the machine, and ran a whole suite in thirty-six
+minutes against the four it costs quiet. The line was true and said *this build*; it was read as
+*this machine*. So since that day the fall-through also says **which of the two it is**: a build on
+this machine is capped and this session is not in it, and then it prints what to put in front of the
+command; or nothing here is capped either; or nothing else is running and nothing has left a cap
+behind, and then whether there is a queue at all is not something this session can see. Three
+answers rather than two, which is the distinction `Refutation` keeps seven of one floor down.
+
+**How it knows, without this file knowing where the cap lives.** A build that HAS a wrapper leaves
+the path in a file under `$TMPDIR`, and a build that has none reads it; the environment of the sbt
+processes already running is read as well, and second, because it is the one thing a file cannot
+say — that a build is capped **now** rather than that one was once. What is written down here is the
+rendezvous, which is a name this repository chooses; the wrapper's own path never is. `$TMPDIR` and
+not `/tmp` because on this machine it is `drwx------` and the user's own, where `/tmp` is
+world-writable. `tools/sbt-test.sh` holds all of it against stubs and CI runs it.
+
+What it is **not** is a cap of its own: it holds nothing, waits for nothing, and **never runs what
+it found** — a path from another process's environment or from a file in the temporary directory is
+printed as the thing to do and is not executed, because a build that ran a program nobody in this
+session named would be a different tool with the same name.
 
 - **Tests:** `tools/sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
   statements to the whole tactic surface and most of **that** is the eighteen it attempts and cannot
