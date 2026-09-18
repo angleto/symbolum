@@ -250,6 +250,21 @@ object Spellings {
       .delimited("INT_OF_PAIR", 1, "[#1]")
       .delimited("INT_OF_PAIR_repr", 1, "\\mathrm{repr}(#1)")
       .operator("INT_SAME", 2, "#1 \\sim #2", Relation)
+      /* ------------------------------------------------- the integers inside the reals */
+      // `\iota` and not `#1_{\mathbb{R}}`, which is what `real_of_num` above carries, and the reason
+      // is a rendering rather than taste. `NUM_ADD` falls through to the notation and `INT_ADD`
+      // carries the row above, so both set as `+`; sharing the subscript would then make
+      // `NUM_REAL_ADD` and `INT_REAL_ADD` render to the **same string** up to the names of their
+      // variables, `(m + n)_{\mathbb{R}} = m_{\mathbb{R}} + n_{\mathbb{R}}` in both cases.
+      // Rendered and compared on 2026-09-18 rather than argued. That is the ambiguity the docstring
+      // at the top calls the one this table can introduce on its own, and the inclusion map is
+      // written `\iota` in algebra anyway.
+      //
+      // The reading that does NOT decide it, written down because it is the one that suggests
+      // itself: `INT_REAL_OF_NUM` would not print as a tautology under a shared subscript, since
+      // `INT_OF_NUM` keeps its own `\mathbb{Z}` and the left side comes out `(n_{\mathbb{Z}})_
+      // {\mathbb{R}}`. The facts that collide are the homomorphism's, not the triangle.
+      .delimited("real_of_int", 1, "\\iota(#1)")
       .delimited("mk_int", 1, "\\mathrm{mk\\_int}(#1)")
       .delimited("dest_int", 2, "\\mathrm{dest\\_int}(#1, #2)")
       /* --------------------------------------------- limits and the series */

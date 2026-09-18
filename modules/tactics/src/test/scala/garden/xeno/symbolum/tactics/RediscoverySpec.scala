@@ -242,7 +242,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `INT_LE_ANTISYM`. Twelve of the seventeen were predicted at twelve before the order was
     // written, and the order added the other five. Tip plus this branch's delta, as the
     // paragraph above insists: never a total carried forward against an earlier base.
-    propose.weakenings.size shouldBe 379
+    // 380 with the bridge into the reals, the same day, and the **one** was derived before
+    // the run: of `Inclusion`'s eight facts exactly one carries an antecedent, which is
+    // `INT_REAL_INJECTIVE`, and counting arrows the way `Propose.peel` does gives it one.
+    // The other seven are equations with nothing owed. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 380
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -300,7 +304,13 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 77 with the two the order gained on 2026-09-18. `LE_MUL_BOTH` writes `le` and `INV_ANTITONE`
     // writes both `lt` and `le`, and neither body carries a lambda once the leading quantifiers come
     // off, which is the condition `swapped` refuses at.
-    propose.mutable.size shouldBe 77
+    // 79 with the bridge into the reals, and TWO of its eight, derived the same way the two
+    // rows above are: `INT_REAL_ADD` writes `real_add` and `INT_REAL_MUL` writes `real_mul`,
+    // and neither body carries a lambda once the leading quantifiers come off, which is the
+    // condition `swapped` refuses at. The other six write none of the four operators at all:
+    // four are equations whose only operation is `real_of_int`, and `INT_REAL_PAIR` and
+    // `INT_REAL_NEG` write `sub`, which is not among the four `Propose.swapped` exchanges.
+    propose.mutable.size shouldBe 79
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

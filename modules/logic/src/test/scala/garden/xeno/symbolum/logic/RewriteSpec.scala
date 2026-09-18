@@ -622,7 +622,22 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "by a constant and a sum by a summand. Each of the three hands what comes back to " +
         "`Conv.trans`, to `Kernel.eqMp` or to `Rules.genAll`, and the published statement is " +
         "compared against `Integer.Statements` by `IntegerSpec`, so a rewriting that stopped early " +
-        "is a red statement rather than a quiet one")
+        "is a red statement rather than a quiet one"),
+    "Inclusion.scala" ->
+      ("three doors, two `inTheorem` and one `rewrite`, and the answer is the same at all three " +
+        "because of where the conclusion comes from: **not one of them is built from what the " +
+        "rewriting produced**. `Route.equation` parses both sides, rewrites each, closes the gap " +
+        "with `Ring` and chains the three with `Conv.trans`, so the theorem that comes out is " +
+        "`left = right` at the two parsed texts however far either normalisation got; " +
+        "`respectfulness` builds the equation it discharges out of the four images of components " +
+        "and reads the rewritten premise only to carry it across; and `injectivity` builds its " +
+        "hypothesis from `real_of_int (INT_OF_PAIR x)` and its conclusion from `INT_EQ_PAIRS`. " +
+        "So an exhausted limit cannot produce a theorem about a half-rewritten term here: it " +
+        "leaves `Ring` an identity over atoms it cannot relate and that is refused, or it leaves " +
+        "`partsOfDifference` something that is not a difference, or it leaves `checkPredicate` an " +
+        "obligation that is not the one the lift wants, which refuses by name one level out. And " +
+        "the eight published statements are compared against `Inclusion.Statements` by " +
+        "`InclusionSpec`, which is the same last line of defence `Integer.scala` has above")
   )
 
   "Every caller of the rewriter" should "have been asked what it does when the limit runs out" in {

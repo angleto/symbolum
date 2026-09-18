@@ -304,7 +304,12 @@ object Library {
         collect("Forward", chain.forward.facts) ++
         // The integers, 2026-09-18, collected in the change that added the link rather than after
         // somebody noticed: the two paragraphs above are what happens otherwise.
-        collect("Integer", chain.integers.facts)
+        collect("Integer", chain.integers.facts) ++
+        // The bridge into the reals, 2026-09-18, in the change that added the link. It is a
+        // development of its own rather than more of `Integer` for the reason `Inclusion`'s own
+        // first paragraph gives, and a development of its own is a development this list has to
+        // name: that is what the two paragraphs above are about.
+        collect("Inclusion", chain.inclusion.facts)
     )
 
   /** A library over developments a caller names itself. */

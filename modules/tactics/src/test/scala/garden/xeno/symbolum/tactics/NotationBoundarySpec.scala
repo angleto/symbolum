@@ -267,6 +267,17 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Integer.scala", "name") -> (Verdict.Name, "the ring law's published name"),
     ("Integer.scala", "error.message") ->
       (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
+    // The bridge into the reals, and the four are the three above plus one. `stage` is the reading
+    // `Integer.scala` has no counterpart of: that file is one route and this one is six steps of
+    // different kinds, so a refusal says which of them produced it. It is a phrase this file writes
+    // rather than anything read off a term, which is why it is a `Name`.
+    ("Inclusion.scala", "stage") ->
+      (Verdict.Name, "which step of the construction refused, named by this file"),
+    ("Inclusion.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    ("Inclusion.scala", "text") ->
+      (Verdict.Text, "the statement's own source, which is what the caller wrote and not a rendering"),
+    ("Inclusion.scala", "error.message") ->
+      (Verdict.Text, "the inner refusal's own sentence, put behind the fact's name"),
     ("Limit.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),

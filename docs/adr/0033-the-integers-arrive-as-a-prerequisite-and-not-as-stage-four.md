@@ -99,21 +99,32 @@ identity after projection, and the two in the file that are not say so where the
 respectfulness of multiplication, which multiplies a premise rather than rearranging it, and the
 injectivity of the embedding, which is a biconditional and not an equation between integers.
 
-**The quotient builder's docstring is wrong about its own first consumer, and the correction is a
-reading rather than a run.** That file says it lifts "no function whose result is not quotiented
-(`num`-valued, say)", and names the integers as the consumer that does not need one. The bridge to
-`real` is exactly such a function, so the sentence is false about the thing it names. **What is
-measured is that the code does not say it:** counting on 2026-09-18, `Type.Bool` appears at seven
-lines of `Quotient.scala` and not one of them is inside `liftPredicate` or `checkPredicate`, which
-build their equation with `Term.eq` at whatever type the operation returns and carry it with
-`Conv.sym` and `Conv.trans`, neither of which is about propositions.
+**The quotient builder's docstring is wrong about its own first consumer, and the correction was a
+reading before it was a run.** That file said it lifts "no function whose result is not quotiented
+(`num`-valued, say)", and named the integers as the consumer that does not need one. The bridge to
+`real` is exactly such a function, so the sentence was false about the thing it named. What was
+measured on 2026-09-18, before the bridge existed, is that the code does not say it: `Type.Bool`
+appeared at seven lines of `Quotient.scala` and not one of them was inside `liftPredicate` or
+`checkPredicate`, which build their equation with `Term.eq` at whatever type the operation returns
+and carry it with `Conv.sym` and `Conv.trans`, neither of which is about propositions. **The
+prediction written here was that it lifts the bridge unchanged.**
 
-**That is a reading of the source and not a demonstration**, and the difference is the whole of why
-this paragraph is worded as it is: the bridge is not built here, so nothing has yet handed that
-method an operation returning a `real`. The prediction is that it lifts unchanged. The record of it
-is here because a reader who believed the docstring would build the bridge by hand through
-representatives, which is the two steps the builder exists to remove, and because a prediction
-written down before the run is worth more than one recalled after it.
+**It was run the same day and it held, and what it did not predict is the more useful half.**
+`Inclusion` lifts `\p. real_of_num (FST p) - real_of_num (SND p)` through `liftPredicate` with no
+change to that method at all, and `INT_REAL_PAIR` is what comes back. What the builder was
+nevertheless missing is a second thing, and it is not about the result type: **a lift defines its
+constant into the quotient's own theory**, which is the theory as it stood when the last lift ran.
+The integers lift three operations and then define `INT_ZERO`, `INT_ONE`, `INT_OF_NUM`,
+`INT_DIVIDES` and `INT_LE`, so `Integer.quotient.theory` carries 140 constants against
+`Integer.theory`'s 145, measured on 2026-09-18, and `real_of_int INT_ZERO = 0` could not have been
+**stated** against it. `Quotient.over` re-bases a quotient onto a theory extending it, checked by
+`Logic.over`, which is what the consumer calls first and is the whole of the addition.
+
+So the reading was right about what it looked at and blind to what it did not: it asked whether the
+method reads the result type and answered correctly, and the obstacle was one theory earlier. That
+is worth keeping because the prediction was written down before the run and both halves are
+therefore legible — which is the argument for writing it down, not an argument that a reading
+substitutes for a run.
 
 **Nothing becomes a theorem that was an axiom**, and nothing a caller could state stops being
 statable. This is an extension of the signature and not a change to it.
@@ -132,8 +143,10 @@ at a non-zero divisor — `~(INT_DIVIDES 2 1)` — is not derived, and it is the
 separates this divisibility from `Divisibility`'s. It needs the discreteness of the order, that
 nothing lies strictly between zero and one, which is one lemma about the carrier and is named
 rather than written. The converse of `NUM_DIVIDES m n ==> INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)`
-needs the same thing, since the witness has to be shown non-negative. And the bridge to `real`,
-which is where the prediction about `liftPredicate` above gets run.
+needs the same thing, since the witness has to be shown non-negative. The bridge to `real` **is**
+here, as `Inclusion`, landed 2026-09-18 and the link that ran the prediction above; what it does not
+carry is the order, `INT_LE a b = real_of_int a <= real_of_int b`, which wants an argument of its own
+rather than the rewriting route that development's eight facts share.
 
 ## Alternatives rejected
 

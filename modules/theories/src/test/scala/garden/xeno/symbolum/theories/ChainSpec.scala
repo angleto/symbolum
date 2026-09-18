@@ -229,12 +229,17 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // blocked formalisations rather than as stage four of the construction of the reals, and what
     // puts this link at the end is the rule the paragraph above names and nothing about its
     // subject: a constant is reachable only from the last theory.
-    chain.widest shouldBe chain.integers
-    chain.widest.theory.constants.keySet shouldBe chain.integers.theory.constants.keySet
+    // **And again the same day**, to `Inclusion`, which is the seventh entry and the first one that
+    // is not a new subject: it is the piece of `Integer` that mentions a real, split out because
+    // `docs/adr/0033` rests phase 5's move of that development on its saying nothing about one.
+    // Seven entries in five days is the measurement this paragraph exists to be instead of a
+    // sentence naming whichever link is current.
+    chain.widest shouldBe chain.inclusion
+    chain.widest.theory.constants.keySet shouldBe chain.inclusion.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
-      chain.transcendental, chain.concatenation, chain.inductive
+      chain.transcendental, chain.concatenation, chain.inductive, chain.integers
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

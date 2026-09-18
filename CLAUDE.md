@@ -452,8 +452,12 @@ it bought:
   text, which is what `Algebraic` does when it builds a polynomial out of variable names.
 - **A constant's name is never a symbol any more, and three were.** `Real.Addition` was literally
   `"+"`. It is `real_add`, with `real_mul` and `real_lt` beside it, and `le` became `real_le` so the
-  four read alike. `Real.Zero` is still `"0"` and `Real.One` still `"1"`: the same defect, left
-  alone on purpose, because they belong to `docs/adr/0012` rather than to this change.
+  four read alike. This paragraph went on to say that `Real.Zero` was still `"0"` and `Real.One`
+  still `"1"`, left alone on purpose for `docs/adr/0012`; they are `real_zero` and `real_one` and
+  have been since some change that did not come back here, so the sentence describing the exception
+  outlived the exception. Nothing goes red on it, which is why it is worth saying where it is found
+  rather than only fixing it: the six constants are named in `Real.scala` and nowhere else, and a
+  reader wanting the name asks that file.
 - **`Arithmetic.ringOrder` needed the product to sort before the sum, and got that from ASCII.**
   `*` precedes `+` in ASCII and `real_mul` does not precede `real_add`, so the rename reversed a
   comparison the canonical form depends on, and associativity stopped flattening. **One corpus entry
@@ -544,7 +548,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 552 lemmas, 362 have two or more leading quantifiers and **334 of
+caller meant: of the library's 560 lemmas, 365 have two or more leading quantifiers and **337 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1424,11 +1428,35 @@ an equation between **propositions**: two related pairs have to give the same or
 directions, so it is `Kernel.deductAntisym` over two implications rather than a rearrangement, and
 `Semiring` cannot be handed the conclusion because the conclusion is an order.
 
-**What is not there, named rather than left to be discovered**: the bridge to `real`; the
-rationals; and `~(INT_DIVIDES 2 1)`, which is the sharpest thing separating this divisibility from
-the field's and which wants the discreteness of the order, a lemma about the carrier that is named
-here rather than written. `docs/adr/0033` carries that list, and it is the kind of list nothing
-goes red over.
+**The bridge into the reals is `Inclusion`, a link since 2026-09-18, and it is the one piece of the
+integers that mentions a real.** `real_of_int` and eight facts: a ring homomorphism, the triangle
+`real_of_int (INT_OF_NUM n) = real_of_num n`, and injectivity. One constant, no axiom, and it is a
+development of its own rather than a section of `Integer.scala` because that file says of itself
+that nothing in it reaches for a real, and `docs/adr/0033` rests phase 5's move of it below `Real`
+on the sentence being true. `Embedding.scala` is the precedent one type down and `docs/adr/0016`
+drew that line.
+
+**What it cost the quotient builder is not what the card predicted, and the prediction is worth
+reading before the answer.** `Quotient.scala` said it did not lift a function whose result is not
+quotiented and named the integers as the consumer that did not need one; the card predicted that
+`liftPredicate` would in fact lift the bridge unchanged, since nothing in it reads the result type.
+That held. What was missing is a different thing: a lift defines its constant into the quotient's
+**own** theory, and the integers define five more constants after their three lifts, so
+`Integer.quotient.theory` carries 140 constants where `Integer.theory` carries 145 and
+`real_of_int INT_ZERO = 0` could not be stated there at all. `Quotient.over` re-bases a quotient
+onto a theory extending it, checked by `Logic.over`, and that is the whole of the addition.
+
+**And it is where the axiom accounting divides.** `IntegerSpec` asserts that no fact of that
+development reaches any of the sixteen; every fact of this one does, because every fact of this one
+is an equation between reals and `Ring` decides those out of the field. `InclusionSpec` asserts both
+halves in one test, because a reading that answered the same for everything would pass either alone.
+
+**What is not there, named rather than left to be discovered**: the rationals;
+`INT_LE a b = real_of_int a <= real_of_int b`, which is the bridge as an order map and wants an
+argument rather than the rewriting route the eight share; and `~(INT_DIVIDES 2 1)`, which is the
+sharpest thing separating this divisibility from the field's and which wants the discreteness of the
+order, a lemma about the carrier that is named here rather than written. `docs/adr/0033` carries
+that list, and it is the kind of list nothing goes red over.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's

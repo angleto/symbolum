@@ -294,7 +294,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `INT_LE_ANTISYM`. Twelve of the seventeen were predicted at twelve before the order was
     // written, and the order added the other five. Tip plus this branch's delta, as the
     // paragraph above insists: never a total carried forward against an earlier base.
-    proposals.size shouldBe 379
+    // 380 with the bridge into the reals, the same day, and the **one** was derived before
+    // the run: of `Inclusion`'s eight facts exactly one carries an antecedent, which is
+    // `INT_REAL_INJECTIVE`, and counting arrows the way `Propose.peel` does gives it one.
+    // The other seven are equations with nothing owed. Tip plus this branch's delta.
+    proposals.size shouldBe 380
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -917,7 +921,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // refuted and nothing earned. What is not surprising is that ten stay open: a weakening of
     // a claim about `int` is a claim about a type no procedure in this repository reads,
     // exactly as the thirteen above are claims about `NUM_PROV`.
-    open shouldBe 279
+    // 281 with **two** of the bridge's three, and this row can say which for once without the
+    // hedge: the count of three was derived before the run, one weakening and two
+    // substitutions, and the split was measured. Both substitutions land here. They are
+    // `INT_REAL_ADD` and `INT_REAL_MUL` with the operator swapped, so each is an equation
+    // between **reals** with `real_of_int a` as an atom, which is a shape the procedures do
+    // have an address for: attempted and not settled is the honest answer and is what `Open`
+    // means. The third goes to `unreadable` and the line there says why.
+    open shouldBe 281
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1190,7 +1201,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // what the paragraph above warns against: seventeen new residues went to exactly two
     // buckets, and ten plus seven is the reading rather than a subtraction that happened to
     // fit.
-    unreadable shouldBe 92
+    // 93 with the one of the bridge's three that `open` did not take, and it is the weakening
+    // rather than either substitution. Dropping `INT_REAL_INJECTIVE`'s single hypothesis
+    // leaves `!a b. a = b` over `int`: false, and refuting it means producing two integers,
+    // which the sampler cannot do because nothing interprets that type. So it has no address
+    // and nothing refutes it, which is the pair of facts this bucket is for, and it is the
+    // same reason the seven of `Integer`'s seventeen are here. What separates it from the two
+    // above is not the development they come from but what a weakening leaves standing: an
+    // equation between reals in one case and a claim about `int` in the other.
+    unreadable shouldBe 93
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
