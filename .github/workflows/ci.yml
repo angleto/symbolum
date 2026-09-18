@@ -212,6 +212,34 @@ jobs:
       - name: scaladoc-scope, one page per answer it can give
         run: sh tools/scaladoc-scope-test.sh
 
+      # The subject of this one is pointed at this repository by the `references` job below, and
+      # there it has exactly one answer. The case that matters is the one this repository must
+      # never contain, so it is exhibited here instead, along with the two shapes of blindness that
+      # would otherwise report a clean tree in the same words as a clean tree.
+      - name: foreign-reference, one repository per answer it can give
+        run: sh tools/foreign-reference-test.sh
+
+  # Its own job rather than a step of another, for a reason about when the answer arrives. It is
+  # about the tracked tree and needs no compiler, so putting it behind `test` would delay by twenty
+  # minutes a report that is ready at checkout; and it is a gate rather than a report, so it does
+  # not belong beside `branches`, which deliberately cannot fail a run.
+  #
+  # It exists because four tracked files acquired a reference to a numbered clause of a document
+  # this repository does not contain, on four separate days, each written by a session with a good
+  # local reason, and nothing anywhere went red. The census that found them was itself blind in two
+  # ways, which is why the subject refuses to report an absence it has not first earned; its own
+  # comment carries both.
+  references:
+    name: Every cross-reference resolves inside this repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: A reference nothing here resolves
+        run: sh tools/foreign-reference.sh
+
   # Not `needs: test`, and not a gate. What it reports is somebody else's unlanded work, so a
   # blocking check on it stops the wrong person, and making it wait for the suite would delay a
   # warning that has nothing to do with whether this commit is sound.
