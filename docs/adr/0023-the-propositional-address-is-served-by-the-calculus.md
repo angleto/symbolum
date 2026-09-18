@@ -1,6 +1,6 @@
 # 0023. The propositional address is served by the calculus, and the gate is the address
 
-- **Status:** accepted
+- **Status:** accepted, revised by 0031
 - **Date:** 2026-09-18
 
 ## Context

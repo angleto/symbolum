@@ -619,6 +619,19 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     // meeting a refusal, but that no caller meets it.
     "Prove.Search",
 
+    // What a proof that SUCCEEDED came back as. Both its cases carry a theorem, so neither is a
+    // refusal, and the refusal a caller meets when nothing is proved is still the `TacticError`
+    // the address chose, which is mapped.
+    //
+    // It is worth more than one line because `CutShort` is the one case on this list that reads
+    // like a complaint: it names a search and the depth it stopped at, which is the shape of
+    // `BoundReached`, and that one IS mapped. The two are a bound read in opposite directions.
+    // `BoundReached` says the bound is why nothing came back and a caller who raises it may get a
+    // theorem; `CutShort` says a theorem came back and a bound was passed on the way, so the
+    // classical route paid for it. There is no next step to offer: the goal is settled, and what
+    // the caller does with the price is read it.
+    "Prove.Outcome",
+
     // Which of its five questions a report answers. `Cost.render` already sends the refusal the
     // report carries through `Remedy`, and reads the outcome only for the label above it.
     "Cost.Outcome",

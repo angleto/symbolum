@@ -350,7 +350,9 @@ object Notebook {
 
     val body = entry.outcome match {
       case Session.Outcome.Extended(what) => s"""<div class="extended">${escape(what)}</div>"""
-      case Session.Outcome.Proved(name, theorem) => proved(session, entry, name, theorem)
+      case Session.Outcome.Proved(name, theorem, cutShort) =>
+        proved(session, entry, name, theorem) +
+          cutShort.map(why => s"""<div class="caveat">${escape(why)}</div>""").getOrElse("")
       case Session.Outcome.Report(text) => s"""<pre class="report">${escape(text)}</pre>"""
       case Session.Outcome.Page(markdown) => s"""<div class="page">${page(markdown)}</div>"""
       case Session.Outcome.Refused(reason, next) =>

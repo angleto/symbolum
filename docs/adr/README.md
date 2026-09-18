@@ -45,7 +45,7 @@ the rejected option attractive, and they will.
 | [0020](0020-an-inductive-set-is-the-intersection-and-is-polymorphic.md) | An inductively defined set is the intersection of the closed sets, and it is polymorphic | accepted |
 | [0021](0021-the-derived-connectives-are-constants-that-build-codes.md) | The derived connectives are constants that build codes | accepted, spends 0014 |
 | [0022](0022-the-intuitionistic-fragment-gets-its-own-decision.md) | The intuitionistic propositional fragment gets its own decision procedure | accepted, spends 0009 |
-| [0023](0023-the-propositional-address-is-served-by-the-calculus.md) | The propositional address is served by the calculus, and the gate is the address | accepted, extends 0022 |
+| [0023](0023-the-propositional-address-is-served-by-the-calculus.md) | The propositional address is served by the calculus, and the gate is the address | accepted, extends 0022, revised by 0031 |
 | [0024](0024-a-domain-claim-reaches-arithmetic-through-named-bridges.md) | A domain claim reaches arithmetic through named bridges, not through an interpretation | accepted, extends 0022, extended by 0027 and 0028 |
 | [0025](0025-a-goals-own-hypotheses-are-facts.md) | A goal's own hypotheses are facts, and the deduction theorem is what pays for them | accepted |
 | [0026](0026-an-exhausted-free-route-is-reported-not-hidden.md) | A free route that ran out of net is reported, not hidden behind the price it fell to | accepted, extends 0022 |
@@ -53,3 +53,4 @@ the rejected option attractive, and they will.
 | [0028](0028-a-domain-type-is-interpreted-and-a-domain-constant-is-defined.md) | A domain's type is interpreted at the build, and a domain's constant is defined rather than declared | accepted, extends 0024 |
 | [0029](0029-the-corpus-asks-for-arithmetic-and-not-for-saturation.md) | The corpus asks for arithmetic and not for saturation | accepted, spends 0025 |
 | [0030](0030-the-matchers-fragment-is-not-extended-and-here-is-the-census.md) | The matcher's fragment is not extended, and the census is why | accepted |
+| [0031](0031-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md) | A price a bound chose is not a price the claim asked for | accepted, extends 0023 and 0026 |

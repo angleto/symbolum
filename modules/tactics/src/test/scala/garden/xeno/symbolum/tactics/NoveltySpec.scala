@@ -234,7 +234,7 @@ class NoveltySpec extends AnyFlatSpec with Matchers {
     val chain = garden.xeno.symbolum.theories.Chain.standard
     val library = garden.xeno.symbolum.theories.Library.of(chain)
 
-    val ordinary = force(novelty.cost.prove("!x:real y:real. 0 < x /\\ 0 < y ==> 0 < x + y"))
+    val ordinary = force(novelty.cost.prove("!x:real y:real. 0 < x /\\ 0 < y ==> 0 < x + y")).theorem
     val rested = library.restingOn(ordinary).map(_.name).distinct
 
     withClue(s"an ordinary proof rests on ${rested.size} held lemmas: ") {

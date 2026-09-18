@@ -74,7 +74,8 @@ final class Cost private (
    * after both fail is it worth asking what is missing, which is the expensive question.
    */
   def of(claim: Term): Either[TacticError, Report] = prove(claim) match {
-    case Right(theorem) =>
+    case Right(outcome) =>
+      val theorem = outcome.theorem
       Right(
         Report(
           claim,
@@ -83,7 +84,15 @@ final class Cost private (
           axioms = Derivation.axiomsOf(theorem),
           inferences = Derivation.size(theorem),
           census = Derivation.census(theorem),
-          reach = reachOf(theorem)
+          reach = reachOf(theorem),
+          // The one thing this report cannot compute from the theorem, and the reason it is carried
+          // rather than derived: `axioms` says the choice axiom is there and cannot say whether the
+          // claim needed it or a bound chose it. `Prove` is the only place that knows, and until
+          // 2026-09-18 it threw the answer away. `docs/adr/0031`.
+          cutShort = outcome match {
+            case Prove.Outcome.CutShort(_, search, depth) => Some(search -> depth)
+            case Prove.Outcome.Settled(_) => None
+          }
         )
       )
 
@@ -311,6 +320,15 @@ object Cost {
      * does not move unless the proof does.
      */
     census: Map[String, Int] = Map.empty,
+    /**
+     * Which bound stopped the free route, and at what depth, where one did.
+     *
+     * Empty is the ordinary answer and says the price above is the claim's own. Where it is set,
+     * `axioms` carries an axiom a larger bound might not have charged, and the pair names **which**
+     * search stopped and **at what**, because what a reader needs to know is that an arbitrary
+     * constant rather than the mathematics decided this price.
+     */
+    cutShort: Option[(String, Int)] = None,
     refusal: Option[TacticError] = None,
     point: Option[String] = None,
     missing: Vector[Term] = Vector.empty,
