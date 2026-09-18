@@ -214,7 +214,7 @@ final class Quotient private (
    * constant of this one at the same type. It checks nothing about axioms, and there is nothing it
    * could check: a theorem in this kernel carries no theory, so what moves here is the signature
    * terms are built against rather than a claim about what was proved. That is the assumption
-   * [[Quotient.extend]] already makes each time a lift returns, and it is written out here because
+   * `Quotient.extend` already makes each time a lift returns, and it is written out here because
    * this is the one place a caller makes it.
    */
   def over(wider: Theory): Either[LogicError, Quotient] =

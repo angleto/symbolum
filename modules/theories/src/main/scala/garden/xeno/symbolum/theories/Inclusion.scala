@@ -67,7 +67,7 @@ import garden.xeno.symbolum.logic.*
  * siblings as atoms it cannot take apart. The result is put back over `int` by specialising at a
  * representative, which is `Integer`'s own last step.
  *
- * The two that are **not** that route say so where they are written: [[Inclusion.respectfulness]],
+ * The two that are **not** that route say so where they are written: `Inclusion.respectfulness`,
  * which has to move an equation of `num` into the reals before any identity is available, and
  * [[Inclusion.EmbedsInjectively]], which runs the same move backwards and is an implication.
  */
@@ -157,10 +157,17 @@ object Inclusion {
   /**
    * `|- !a b. real_of_int a = real_of_int b ==> a = b`
    *
-   * What says the embedding loses nothing, and the one fact here whose absence would be invisible:
-   * every equation above holds of the map sending every integer to zero, and so does the axiom
-   * count. This is the assertion that the seven others are about an embedding rather than about a
-   * collapse, and it is `INT_OF_NUM_EQ`'s argument one type up.
+   * What says the embedding loses nothing, and the one fact here that separates **every** pair
+   * rather than a named one. `INT_OF_NUM_EQ` is the same argument one type up.
+   *
+   * The degenerate map worth checking against is `real_of_int a := 0`, and counted against the
+   * eight statements it satisfies **four**: the homomorphism equations for addition,
+   * multiplication, negation and zero, which are all `0 = 0` under it. What refutes it is not this
+   * fact but [[EmbedsOne]], which reads `0 = 1`, with [[AtPair]] and [[EmbedsNatural]] refuting it
+   * too. So the value at one is load-bearing and is not decoration beside the value at zero. What
+   * **this** fact adds over those is the step from two named integers being apart to no two being
+   * identified, which is the difference between the development having content and the type not
+   * having collapsed.
    */
   val EmbedsInjectively: String = "INT_REAL_INJECTIVE"
 
@@ -759,7 +766,7 @@ object Inclusion {
   /**
    * A fact proved at carrier variables, generalised over classes.
    *
-   * See [[Route.overClasses]] for why it is here and private rather than taken from `Integer`.
+   * See `Route.overClasses` for why it is here and private rather than taken from `Integer`.
    */
   private def overRepresentatives(
     logic: Logic,

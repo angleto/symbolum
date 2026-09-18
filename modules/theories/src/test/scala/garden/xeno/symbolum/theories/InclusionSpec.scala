@@ -21,14 +21,23 @@ import garden.xeno.symbolum.logic.*
  * pass the first, and one that returned everything would pass the second. So both are asserted
  * below, in one test, against a set of axioms read off `chain.reals` rather than named here.
  *
- * == That it does not collapse, which nothing else could notice ==
+ * == That the eight say something together, which nothing else here could notice ==
  *
- * Seven of the eight facts hold of the map sending every integer to `0`. So does the axiom reading,
- * so does the comparison against `Inclusion.Statements`, and so does every spelling check. Only
- * something that tells two values apart refutes that map. `docs/adr/0033` names the same hazard one
- * level down, where `IntegerSpec` answers it with a derived non-equality of two classes; the answer
- * here is `~(INT_ZERO = INT_ONE)` derived **through the bridge**, which uses the embedding as the
- * instrument rather than as the subject and so refutes the collapse of this map in particular.
+ * The other assertions in this file are about **form**: that each statement parses back to the
+ * theorem, that nothing is assumed, that the facts and the statements cover each other, what each
+ * derivation spent. Every one of them would pass over a development whose eight facts were
+ * individually true and jointly empty, and none of them spends two facts against each other.
+ *
+ * The degenerate map to keep in mind is `real_of_int a := 0`, and counted against the eight it
+ * satisfies **four**, the homomorphism equations for addition, multiplication, negation and zero.
+ * What refutes it is `INT_REAL_ONE`, which reads `0 = 1` under it. So the two value facts are not
+ * a matched pair of which one would do.
+ *
+ * The test below spends exactly those two against each other and comes back with
+ * `~(INT_ZERO = INT_ONE)`, nothing assumed, derived **through the bridge**: it uses the embedding
+ * as the instrument rather than as the subject, and what it lands on is false in a one-point `int`.
+ * `docs/adr/0033` names the same hazard one level down and `IntegerSpec` answers it there in the
+ * carrier, through `Successor.distinct`; this answer shares no step with that one.
  *
  * == What is deliberately not here ==
  *
@@ -105,10 +114,11 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
    * turn what comes out into `0 = 1`, which contradicts the one axiom of the reals that separates
    * the two numerals. The negation comes back with nothing assumed.
    *
-   * It is the guard on everything above it. `Integer` has this separation already and proves it
-   * through `Successor.distinct` in the carrier; what is refuted **here** is the map sending every
-   * integer to zero, which satisfies all seven equations of this development and which no other
-   * assertion in this file can see.
+   * It is the guard on everything above it, and what it guards against is not one wrong map but
+   * the whole class of readings under which the eight facts are individually true and say nothing
+   * jointly. `Integer` has this separation already and proves it through `Successor.distinct` in
+   * the carrier, which shares no step with this: here it comes out of two **published** facts of
+   * this development and one axiom of the reals.
    */
   "The embedding" should "keep two integers apart, which is what says it did not collapse" in {
     val goal = force(inclusion.proposition("INT_ZERO = INT_ONE"))
@@ -208,7 +218,6 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
         val spent = Derivation.axiomsOf(fact(name))
         (spent intersect field) should not be empty
         (spent -- field) shouldBe carrier
-        spent -- field -- carrier shouldBe empty
       }
     }
 
