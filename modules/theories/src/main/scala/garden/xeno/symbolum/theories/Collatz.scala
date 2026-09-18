@@ -1575,8 +1575,25 @@ object Collatz {
     val rules = tools.rules
     val digits = Set("0", "1", "2")
 
+    // Two refusals with a literal each, rather than one whose prose is built from the flag.
+    // `NotationBoundarySpec` has two tables about a description: one for every expression a refusal
+    // interpolates, and one for a description that is neither a literal nor an interpolation. A
+    // boolean belongs to neither reading, and the message also read badly, ending "is false" where
+    // what the caller needs to be told is which of the two answers it asked for. A literal is in
+    // no table at all, which is what makes this the repair and a row the workaround.
     if (digits.contains(letter) != wanted)
-      Left(NotOfForm(s"a letter whose comparison with three is $wanted", Term.variable(letter, Numbers)))
+      if (wanted)
+        Left(
+          NotOfForm(
+            "a digit, which a comparison below three asks for",
+            Term.variable(letter, Numbers)
+          ))
+      else
+        Left(
+          NotOfForm(
+            "a letter that is not a digit, which a comparison above three asks for",
+            Term.variable(letter, Numbers)
+          ))
     else
       for {
         letterTerm <- tools.letter(letter)

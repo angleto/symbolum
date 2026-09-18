@@ -170,6 +170,22 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Collatz.scala", "label") ->
       (Verdict.Name, "a rule's name in the source that owns it, asked for rather than read off"),
     ("Collatz.scala", "FamilyWithTail") -> (Verdict.Name, "the lemma's published name"),
+    // The rows that landed with the measure, the class it holds on and the instantiation. Most are
+    // the same reading as the three above them, a published name compared against what came out of
+    // the derivation; `Natural.TypeName` is the name of the type `num`, which is the reading
+    // `Bounded.scala` already carries for the same expression, and `expected` is a count.
+    //
+    // A ninth site arrived with them and is not here, deliberately. It passed a description built
+    // from a boolean, which this table has no reading for and which the `Unrendered` table below
+    // has none for either, so the refusal was rewritten as two refusals with a literal each.
+    ("Collatz.scala", "AnchoredClosed") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "PotentialCountedStep") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "PotentialPlainStep") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "RunPotential") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "RunInhabited") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "Natural.TypeName") -> (Verdict.Name, "the name of the type num"),
+    ("Collatz.scala", "expected") ->
+      (Verdict.Number, "how many clauses the disjunction being walked was expected to have"),
     ("Collatz.scala", "other.size") ->
       (Verdict.Number, "how many witnesses an existential nest opened, where the shape expected four"),
     ("Collatz.scala", "Rules.size") -> (Verdict.Number, "how many rules the table holds"),
@@ -289,6 +305,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Parser.scala", "undetermined.size") -> (Verdict.Number, "how many types are still open"),
     ("Parser.scala", "value") -> (Verdict.Number, "the numeral whose type is undetermined"),
     ("Peano.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    ("Peano.scala", "AddMonotoneBoth") -> (Verdict.Name, "the lemma's published name"),
     ("Polynomial.scala", "reals.show(rule.lhs)") ->
       (Verdict.Crossing, "a rewrite rule's left side, in the raiser's notation"),
     ("Primes.scala", "name") -> (Verdict.Name, "the lemma's published name"),
