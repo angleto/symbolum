@@ -411,9 +411,10 @@ axioms to `Library.of` would have emptied the difference it checks, and an empty
 stopped receiving anything would read as a clean result. When writing a guard, ask what input makes
 it trivially true, and assert against that too.
 
-**A search may add a theorem and must never take a refusal away.** `Prove` asks `Chaining` last, and
-its failure leaves whatever refusal the shape rule chose. The rule that class is about is that the
-procedure whose fragment recognises the goal's shape is the one whose refusal is reported, and a
+**A search may add a theorem and must never take a refusal away.** `Prove` asks `Chaining` and then
+the hypothesis route after everything else, and neither failing changes the refusal the shape rule
+chose. The rule that class is about is that the procedure whose fragment recognises the goal's
+shape is the one whose refusal is reported, and a
 search recognises no shape: it either reaches the goal or does not, so it has no claim on the
 message. The one place the order is reversed is the propositional address, where `Intuitionistic`
 runs before `Propositional` and the **second** refusal survives, because the first names a fragment
@@ -422,6 +423,31 @@ that is no longer the only one. **This sentence named `Minimal` until 2026-09-18
 makes is unchanged, and what was wrong was the procedure it named, in the one document every
 session reads first. `PropositionalRouteSpec` reads this sentence against `Prove.Search` now, so a
 third procedure at that address goes red here rather than being noticed by a reader.
+
+**A goal's own hypotheses are facts, and until 2026-09-18 they were not.** `H ==> C` went to the
+library and to the search **whole**, so a lemma had to conclude the implication itself and the
+premise was syntax on the road to the conclusion rather than something known. `Context` assumes the
+antecedents, splits a conjunction into its halves and keeps the whole beside them, and
+`Prove.underHypotheses` puts the conclusion alone to the scan, to the procedures and to the chaining
+search before `Context.discharge` puts the antecedents back with the deduction theorem. Nothing in
+the matching step learned what a hypothesis is: `Kernel.assume` gives `A |- A`, which `Apply` reads
+as a lemma, and an assumption that is itself an implication is one owing its own antecedent.
+
+What it cost is **one** relaxation, and it is in two places: `Prove.held` and `Chaining` refused a
+candidate carrying any hypothesis and now refuse one carrying a hypothesis this goal did not assume,
+so the promise that what comes back rests on nothing is a check at the end rather than an invariant
+at every step. `docs/adr/0025` is the decision. The half a reader should not skip is that
+`Linarith.split` had always assumed a linear goal's antecedents, which is why **no goal already
+proved changes route or price**.
+
+**Where it moved the measurement is not where the card predicted.** miniF2F does not move at all,
+21 proved and 18 unsettled before and after, because what stops those eighteen is nonlinear
+arithmetic rather than a premise nobody could see. What moved is the showcase, from six of its
+fourteen claims settled by the tactic surface to **twelve**, and the six that moved are lemmas this
+library **holds**: a lemma that is the goal was refused, because `Apply` specialises it and then
+reads the instance's own antecedents as obligations, and `Prove.held` takes only a candidate owing
+nothing. The system was refusing claims it had written down. What it costs is that `ReachSpec`'s
+corpus pass roughly doubles, which is measured three ways in the record.
 
 **And the order candidates are tried in is the whole of whether a bounded search works.** Sorting by
 fewest obligations is the obvious order and it is wrong here, measured on 2026-09-15: `DOUBLE_NEGATION`

@@ -165,11 +165,22 @@ final class Chaining private (
    * the **whole** tactic surface at every level and not only over the library: a chained step whose
    * obligation is an inequality is discharged by LINARITH, which is the arrangement that makes two
    * lemmas worth chaining at all.
+   *
+   * `under` is the goal's own hypotheses, where a caller assumed them: their theorems join the
+   * candidates at every level, and what comes back may rest on them and on nothing else. That is
+   * why the caller who supplied the context is the one who discharges it, and the pair is spent in
+   * one place: `Prove.underHypotheses` assumes, asks this, and gives `Context.discharge` the
+   * result. With no context this is what it always was, which is the configuration every existing
+   * caller is in.
    */
-  def prove(goal: Term, leaf: Term => Option[Kernel.Thm]): Outcome = {
+  def prove(
+    goal: Term,
+    leaf: Term => Option[Kernel.Thm],
+    under: Option[Context] = None
+  ): Outcome = {
     val start = Budget(bounds.expansions, stoppedBy = None)
 
-    go(goal, bounds.depth, Set.empty, leaf, start) match {
+    go(goal, bounds.depth, Set.empty, leaf, under, start) match {
       case (Some((theorem, used)), _) => Outcome.Proved(theorem, used)
       case (None, spent) =>
         spent.stoppedBy match {
@@ -188,6 +199,7 @@ final class Chaining private (
     depth: Int,
     above: Set[Term],
     leaf: Term => Option[Kernel.Thm],
+    under: Option[Context],
     budget: Budget
   ): (Found, Budget) =
     leaf(target) match {
@@ -200,17 +212,39 @@ final class Chaining private (
       case None if depth <= 0 => (None, budget.stoppedAt(Bound.Lemmas))
 
       case None =>
-        val applied = candidatesFor(target)
-          .flatMap(entry => Apply.to(logic, entry.theorem, target).toOption.map(entry.name -> _))
+        val held = assumed(under)
+
+        val applied = (assumptions(under) ++ fromLibrary(target))
+          .flatMap { case (name, theorem) => Apply.to(logic, theorem, target).toOption.map(name -> _) }
           // What owes nothing is what `leaf` has already tried, through `Prove.held`, over the same
           // library. Trying it again here would double the cost of every question and could not
           // find anything the line above did not.
           .filter { case (_, application) => application.obligations.nonEmpty }
-          .filter { case (_, application) => application.theorem.hypotheses.isEmpty }
+          // A candidate may rest on what the goal assumed and on nothing else. With no context
+          // `held` is empty and this is the emptiness test it was until 2026-09-18.
+          .filter { case (_, application) => application.theorem.hypotheses.forall(held) }
           .sortBy { case (_, application) => cost(application.obligations) }
 
-        first(applied, target, depth, above + target, leaf, budget)
+        first(applied, target, depth, above + target, leaf, under, budget)
     }
+
+  /** The library's candidates for this target, paired with the name each is filed under. */
+  private def fromLibrary(target: Term): Vector[(String, Kernel.Thm)] =
+    candidatesFor(target).map(entry => entry.name -> entry.theorem)
+
+  /**
+   * The goal's own hypotheses as candidates, which are tried at every level and not only the first.
+   *
+   * Named rather than numbered, because [[Outcome.Proved]] carries the names to answer "which
+   * lemmas were chained" and a proof that spent a premise the goal handed it is answering that
+   * question with something that is not a lemma. A reader of the list has to be able to tell.
+   */
+  private def assumptions(under: Option[Context]): Vector[(String, Kernel.Thm)] =
+    under.toVector.flatMap(_.facts).map("a hypothesis of the goal" -> _)
+
+  /** What a theorem produced under this context may still rest on, which is nothing without one. */
+  private def assumed(under: Option[Context]): Set[Term] =
+    under.map(_.allowed).getOrElse(Set.empty)
 
   /** The candidates in order, until one reaches the target or the budget runs out. */
   private def first(
@@ -219,6 +253,7 @@ final class Chaining private (
     depth: Int,
     above: Set[Term],
     leaf: Term => Option[Kernel.Thm],
+    under: Option[Context],
     budget: Budget
   ): (Found, Budget) =
     candidates.headOption match {
@@ -227,9 +262,9 @@ final class Chaining private (
       case Some(_) if budget.left <= 0 => (None, budget.stoppedAt(Bound.Expansions))
 
       case Some((name, application)) =>
-        discharge(name, application, target, depth, above, leaf, budget.spend) match {
+        discharge(name, application, target, depth, above, leaf, under, budget.spend) match {
           case (Some(found), spent) => (Some(found), spent)
-          case (None, spent) => first(candidates.tail, target, depth, above, leaf, spent)
+          case (None, spent) => first(candidates.tail, target, depth, above, leaf, under, spent)
         }
     }
 
@@ -241,6 +276,7 @@ final class Chaining private (
     depth: Int,
     above: Set[Term],
     leaf: Term => Option[Kernel.Thm],
+    under: Option[Context],
     budget: Budget
   ): (Found, Budget) = {
     val (carried, spent) = application.obligations.foldLeft(
@@ -249,7 +285,7 @@ final class Chaining private (
       case ((None, running), _) => (None, running)
 
       case ((Some((implication, used)), running), obligation) =>
-        go(obligation, depth - 1, above, leaf, running) match {
+        go(obligation, depth - 1, above, leaf, under, running) match {
           case (Some((proof, from)), next) =>
             (logic.rules.mp(implication, proof).toOption.map(step => (step, used ++ from)), next)
           case (None, next) => (None, next)
@@ -263,8 +299,12 @@ final class Chaining private (
       // The check the class comment argues for. A fold that left an antecedent standing, or a `mp`
       // that attached a hypothesis, produces a theorem that is true and is not the one that was
       // asked for, and returning it would be the misleading answer this repository exists not to
-      // give.
-      .filter { case (theorem, _) => theorem.conclusion == target && theorem.hypotheses.isEmpty }
+      // give. Under a context the hypotheses it may carry are the ones the goal assumed, and
+      // `Context.discharge` is what turns them back into the antecedents they came from; a
+      // hypothesis from anywhere else still fails here.
+      .filter { case (theorem, _) =>
+        theorem.conclusion == target && theorem.hypotheses.forall(assumed(under))
+      }
 
     (closed, spent)
   }

@@ -621,4 +621,80 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     texts(1) should include("ABS_TRIANGLE")
     texts(2) should include("## What on this page is checked")
   }
+
+  /* ------------------------------------------------- `show` over what the session holds */
+
+  /**
+   * What a reading command answered, or the failure that says it did not answer at all.
+   *
+   * `show` reports rather than refusing even when it finds nothing, which the test above pins, so
+   * a page and a "nothing holds this name" arrive the same way and this helper is about neither.
+   */
+  private def reported(entry: Session.Entry): String = entry.outcome match {
+    case Session.Outcome.Report(text) => text
+    case other => fail(s"expected a report, got $other")
+  }
+
+  "show" should "reach a fact this session derived, and name what that fact rests on" in {
+    // The transcript of card c16234d1, which answered `no lemma named …` three lines under the cell
+    // that produced the theorem. `show` read `Library.of(chain)` and nothing else, so the message
+    // was true of the library and false of the session, which is the collapse of "I did not look
+    // there" into "it does not exist".
+    //
+    // The three below were **seen failing against that version**, on 2026-09-18: the one line that
+    // routes `Show` was put back to `Essay.of(chain, name)` and nothing else touched, and this test
+    // and the refusal one went red while the library control stayed green. That last part is what
+    // makes the trio a guard about the session rather than about `show` in general.
+    val session = fresh.runAll(
+      Vector(
+        "declare good : real -> bool",
+        "declare fine : real -> bool",
+        "assume RULE : !r:real. good r ==> fine r",
+        "assume GOOD_ONE : good 1",
+        "derive AT_ONE : specialise RULE at 1",
+        "derive FINE_ONE : mp AT_ONE GOOD_ONE",
+        "derive AT_ZERO : specialise RULE at 0",
+        "show FINE_ONE"
+      )
+    )
+    val page = withClue(session.transcript + "\n")(reported(session.entries.last))
+
+    page should include("# FINE_ONE")
+    page should not include "no fact named"
+
+    // The two assumptions are NAMED on the page rather than counted as axioms nobody holds, which
+    // is what the session's own facts being in front of the library buys. Without it the page says
+    // of an unnamed axiom that `Library.of` holds no classical axiom, which is a true sentence
+    // about something else.
+    page should include("RULE")
+    page should include("GOOD_ONE")
+
+    // And the account is this theorem's rather than the transcript's. `AT_ZERO` is a step of the
+    // same session, recorded in the same script, and it is not part of how `FINE_ONE` was reached.
+    //
+    // Asserted beside the step that IS part of it, printed by the same renderer at the same size:
+    // an absence read off an instrument that printed nothing at all would look exactly like this
+    // one. The form is the page's own, which sets a sequent for reading rather than for reading
+    // back, so it is `\\mathrm{good}(1)` and not `good 1`; that is what the page shows a reader and
+    // asserting the other spelling is asserting about a renderer nothing here uses.
+    page should include("\\mathrm{good}(1)")
+    page should not include "\\mathrm{good}(0)"
+  }
+
+  it should "still answer with the library's page for a name the library holds" in {
+    // The control the card asks for by name: a guard on the new case alone passes on a `show` that
+    // has stopped looking in the library at all.
+    reported(fresh.runAll(Vector("show ABS_TRIANGLE")).entries.last) should include("# ABS_TRIANGLE")
+  }
+
+  it should "name both places it looked when neither of them holds the name" in {
+    // The half that is right whatever is decided about what `show` reaches. A reader who spelled a
+    // name wrong and a reader whose name is somewhere else get different sentences.
+    val session = fresh.runAll(Vector("prove SQ : !x:real. 0 <= x * x", "show NOPE"))
+    val text = reported(session.entries.last)
+
+    text should include("no fact named NOPE")
+    text should include("SQ")
+    text should include("library")
+  }
 }

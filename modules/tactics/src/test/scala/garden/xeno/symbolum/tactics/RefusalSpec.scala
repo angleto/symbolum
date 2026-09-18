@@ -52,7 +52,14 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
     // The obstacle is looked for in the sides of the relation and not in the proposition, which is
     // what stopped the message being "an inequality is not a variable, a numeral or a sum of
     // those": true of every inequality ever written, and therefore saying nothing.
-    refusalFor("!x:real. 0 < x ==> 0 < inv x") should include("inv x divides by x")
+    //
+    // **The witness lost its hypothesis on 2026-09-18 and that is the interesting part.** It was
+    // `!x. 0 < x ==> 0 < inv x`, which is `INV_POSITIVE` written out, and the surface refused it:
+    // a lemma that IS the goal owes its own antecedent, because `Apply` reads the specialised
+    // implication's antecedents as obligations. Since the goal's premises became facts
+    // (`docs/adr/0025`) that one is proved, so the goal here is the same claim with nothing
+    // assumed, which no premise can reach and which still has the denominator in it.
+    refusalFor("!x:real. 0 < inv x") should include("inv x divides by x")
 
     // Asserted to the end of the sentence, because the end is the half worth having. Naming the
     // denominator says which subterm stopped the read; the clause after it says what would let the
@@ -81,8 +88,9 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
 
   it should "not fire on an atom that is not a product, which a better message already covers" in {
     // `inv x` is out of reach too, and it is out of reach for a reason that has a name. A degree
-    // message there would be both wrong and a step back from one that was right.
-    refusalFor("!x:real. 0 < x ==> 0 < inv x") should not include "is a product of"
+    // message there would be both wrong and a step back from one that was right. The hypothesis is
+    // gone for the reason the test above gives.
+    refusalFor("!x:real. 0 < inv x") should not include "is a product of"
   }
 
   "A classically valid propositional goal" should "be told what stopped it, not that it is hard" in {
@@ -145,11 +153,18 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
    * The goal is provable and the procedure stops before proving it, which is the only way to reach
    * an exhausted search from this surface. `LinarithLimitsSpec` is where the crossing is measured;
    * here it is a fixture, and it is the shape the consumer this card came from actually met.
+   *
+   * **The bound moved from zero to one on 2026-09-18**, and the reason is the one the two goals
+   * above carry: with `0 < x1 … 0 < x9` the conclusion `0 < x1 * x2` is now **proved**, out of two
+   * of the goal's own premises and one library lemma about a product of positives, so it stopped
+   * being a search that exhausts and became a proof. At `1 <` the library has no such lemma, the
+   * pair round is still what would settle it, and it still runs out: measured the same day,
+   * `Linarith.Facts` reached at 76 against 48.
    */
   private val exhausting: String = {
     val variables = (1 to 9).map(index => s"x$index:real").mkString(" ")
-    val hypotheses = (1 to 9).map(index => s"0 < x$index").mkString(" /\\ ")
-    s"!$variables. $hypotheses ==> 0 < x1 * x2"
+    val hypotheses = (1 to 9).map(index => s"1 < x$index").mkString(" /\\ ")
+    s"!$variables. $hypotheses ==> 1 < x1 * x2"
   }
 
   private def standingFor(text: String): Option[LogicError.Standing] =
