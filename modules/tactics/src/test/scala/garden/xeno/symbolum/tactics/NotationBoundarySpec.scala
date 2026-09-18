@@ -180,6 +180,16 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Collatz.scala", "letters.size - 1") ->
       (Verdict.Number, "the last position of a written-out word"),
     ("Deduction.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    // The four `Domain.scala` sites landed with `docs/adr/0028` and are the interpretation's two
+    // refusals. None is a crossing: a domain's own name and a constant's name are names, the joined
+    // list is names, and a `Type` has one rendering that no notation chooses, which is what
+    // `TypeOnly` says about `Remedy` further down.
+    ("Domain.scala", "domain.name") -> (Verdict.Name, "the domain's own name, as its description gives it"),
+    ("Domain.scala", "(strangeTypes ++ strangeConstants).toVector.sorted.mkString(\", \")") ->
+      (Verdict.Name, "the names an interpretation gave a meaning to that the domain does not declare"),
+    ("Domain.scala", "name") -> (Verdict.Name, "the interpreted constant's own name"),
+    ("Domain.scala", "answered") ->
+      (Verdict.TypeOnly, "what an interpreted constant answers, where a proposition was wanted"),
     ("Digits.scala", "value") ->
       (Verdict.Number, "the value asked for, which is not a numeral of `num` when it is negative"),
     ("Digits.scala", "leftCore._2") ->

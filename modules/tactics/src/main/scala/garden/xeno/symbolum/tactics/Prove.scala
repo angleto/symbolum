@@ -135,7 +135,7 @@ final class Prove private (
    * goal can be settled at the price its own logic asks, or settled after the free route was cut
    * short by [[Intuitionistic.Fuel]] and the classical procedure charged the choice axiom instead.
    * The two are the same theorem at two prices, and until 2026-09-18 they were the same answer:
-   * `docs/adr/0030` is the decision and `docs/adr/0023` is where the defect was written down and
+   * `docs/adr/0031` is the decision and `docs/adr/0023` is where the defect was written down and
    * left. A case rather than a field, for the reason `docs/adr/0026` gives at the twin site in
    * `Domain.close`: a caller that reads only the settled case stops compiling instead of believing
    * a price.

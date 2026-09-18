@@ -52,4 +52,5 @@ the rejected option attractive, and they will.
 | [0027](0027-the-bridge-is-searched-for-above-the-method-that-spends-it.md) | The bridge is searched for above the method that spends it, one candidate at a time | accepted, extends 0024 |
 | [0028](0028-a-domain-type-is-interpreted-and-a-domain-constant-is-defined.md) | A domain's type is interpreted at the build, and a domain's constant is defined rather than declared | accepted, extends 0024 |
 | [0029](0029-the-corpus-asks-for-arithmetic-and-not-for-saturation.md) | The corpus asks for arithmetic and not for saturation | accepted, spends 0025 |
-| [0030](0030-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md) | A price a bound chose is not a price the claim asked for | accepted, extends 0023 and 0026 |
+| [0030](0030-the-matchers-fragment-is-not-extended-and-here-is-the-census.md) | The matcher's fragment is not extended, and the census is why | accepted |
+| [0031](0031-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md) | A price a bound chose is not a price the claim asked for | accepted, extends 0023 and 0026 |
