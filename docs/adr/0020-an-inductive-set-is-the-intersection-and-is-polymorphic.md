@@ -112,8 +112,8 @@ inductive-definition package does when it does not derive them. Rejected on the 
 this repository, that a result is added by proving it; and the cost of keeping that rule is nil
 here, since `Natural.NUM_REP` had already shown the derivation is under thirty lines. Asserting
 would also put the monotonicity condition nowhere: each assertion would be sound only under a
-hypothesis nobody wrote down, which is the defect `STM-01` describes in general and which this
-repository has paid for once already in `docs/adr/0008`.
+hypothesis nobody wrote down, which is a domain assumption admitted as an axiom rather than
+carried by the result, and which this repository has paid for once already in `docs/adr/0008`.
 
 **Making `MONOTONE` a hypothesis written out at each call site rather than a defined constant.**
 Rejected because a condition that every caller states inline is stated differently by each of them,

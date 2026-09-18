@@ -282,8 +282,8 @@ object Reaching {
    * The operator this development's closure is taken of, at the caller's `R`, `A` and `x`.
    *
    * Obtained by unfolding the definition rather than by parsing it a second time: a second parse is
-   * a second term that has to be kept in step with the first, which is the defect `DOC-02` names
-   * about counts and which applies to a term just as well.
+   * a second term that has to be kept in step with the first, which is the defect of a count the
+   * code knows written out by hand beside it, and it applies to a term just as well.
    */
   /* ------------------------------------------------------- the free variables of every proof */
 
