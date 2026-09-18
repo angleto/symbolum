@@ -49,6 +49,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     Collatz
       .construct(
         chain.forward,
+        chain.reaching,
         chain.naturals,
         chain.peano,
         chain.successor,
@@ -88,6 +89,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
       Collatz.F, Collatz.T, Collatz.Head, Collatz.Tail,
       Collatz.Name, Collatz.Counted, Collatz.Potential, Collatz.Marked, Collatz.TailFree,
       Collatz.HeadFree, Collatz.Anchored,
+      Collatz.Run, Collatz.RunCounted,
       Collatz.Zeros
     )
   }
@@ -487,6 +489,57 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
         .fold(error => fail(error.message), theorem => Derivation.axiomsOf(theorem))
       withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
         rests.size shouldBe 3
+      }
+    }
+  }
+
+  "The bound on a run" should "detach, which is REACH_POTENTIAL arriving at this measure" in {
+    // What this shows and what it does not. `REACH_START` inhabits the closure whatever the
+    // relation does, so detaching here says the instantiation's two hypotheses were discharged
+    // and the conclusion reads at this system -- not that any run gets anywhere. What says the
+    // relation steps something at all is `S2_RUN_INHABITED`, derived beside it; what would say a
+    // run of positive length exists is a refusal of the counted step at a concrete pair, and
+    // nothing in this repository proves one of those yet.
+    val rules = system.logic.rules
+    val (run, before) = fact(Collatz.RunInhabited).conclusion match {
+      case App(App(relation, left), _) => (relation, left)
+      case other => fail(s"not a step of the run: ${system.show(other)}")
+    }
+    val counted = system.theory
+      .constant(Collatz.RunCounted, Term.typeOf(run))
+      .fold(error => fail(s"no such constant: $error"), identity)
+    val start = chain.reaching
+      .fact(Reaching.Start)
+      .fold(error => fail(error.message), theorem =>
+        Kernel.instType(Map(Classical.TypeVariable -> Term.typeOf(before)), theorem))
+
+    val atStart = rules
+      .specAll(start, List(run, counted, before))
+      .fold(error => fail(error.message), identity)
+    val reached = atStart.conclusion match {
+      case App(_, argument) => argument
+      case other => fail(s"not a reachability: ${system.show(other)}")
+    }
+    val bound = rules
+      .specAll(fact(Collatz.RunPotential), List(before, reached))
+      .flatMap(rules.mp(_, atStart))
+      .fold(error => fail(error.message), identity)
+
+    // The measure is read off a fact that already names it rather than fetched by name and type,
+    // which keeps this test from having to spell a type it has no other reason to know.
+    val measure = Term.destEq(fact(Collatz.PotentialAtAWord).conclusion) match {
+      case Some((App(head, _), _)) => head
+      case other => fail(s"not the measure at a word: $other")
+    }
+    val wanted = Term
+      .app(measure, before)
+      .fold(error => fail(s"the measure does not apply: $error"), identity)
+
+    bound.hypotheses shouldBe empty
+    withClue(s"${system.show(bound.conclusion)}\n") {
+      bound.conclusion match {
+        case App(App(_, left), _) => left shouldBe wanted
+        case other => fail(s"not an order statement: ${system.show(other)}")
       }
     }
   }

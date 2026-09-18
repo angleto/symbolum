@@ -88,7 +88,7 @@ final class Cost private (
           // The one thing this report cannot compute from the theorem, and the reason it is carried
           // rather than derived: `axioms` says the choice axiom is there and cannot say whether the
           // claim needed it or a bound chose it. `Prove` is the only place that knows, and until
-          // 2026-09-18 it threw the answer away. `docs/adr/0029`.
+          // 2026-09-18 it threw the answer away. `docs/adr/0030`.
           cutShort = outcome match {
             case Prove.Outcome.CutShort(_, search, depth) => Some(search -> depth)
             case Prove.Outcome.Settled(_) => None

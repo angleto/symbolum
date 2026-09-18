@@ -1,4 +1,4 @@
-# 0029. A price a bound chose is not a price the claim asked for
+# 0030. A price a bound chose is not a price the claim asked for
 
 - **Status:** accepted
 - **Date:** 2026-09-18

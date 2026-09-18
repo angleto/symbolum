@@ -33,10 +33,12 @@ import garden.xeno.symbolum.logic.*
  * == The three groups, which is the structure part C uses ==
  *
  * `D` is the two rules that consume the marker, `A` the six that commute a digit past a letter, and
- * `B` the three that act at the head. [[Collatz.Counted]] is `A` alone, and it is what a
- * potential-function argument instantiates as the counted sub-relation of `REACH`: every `A`-step
- * moves one digit one place nearer the head, so it drops [[Collatz.Potential]] by exactly one, and
- * no other rule lowers it.
+ * `B` the three that act at the head. [[Collatz.Counted]] is `A` alone, and it is what the counted
+ * sub-relation of `REACH` is built from: every `A`-step moves one digit one place nearer the head,
+ * so it drops [[Collatz.Potential]] by exactly one, and no other rule lowers it. The relation
+ * `REACH` is actually instantiated at is [[Collatz.RunCounted]], which is that one with the class
+ * the measure behaves on carried along; the section below on where the argument becomes true says
+ * why the class cannot be a side condition instead.
  *
  * == The marked words, which is where the argument stops being false ==
  *
@@ -56,8 +58,25 @@ import garden.xeno.symbolum.logic.*
  * says there is one. Measured over every word of at most seven letters: 9330 of 44790 counted steps
  * out of this class fail the first, and 14454 of 33281 uncounted steps fail the second; with one
  * head marker in front and no other, it is 0 of 3516 and 0 of 3280, and no step leaves that class
- * either. That predicate, and a closure lemma for it, is what a potential-function argument here
- * needs next.
+ * either.
+ *
+ * == Where it becomes true, which is that class with a head marker in front ==
+ *
+ * [[Collatz.Anchored]] is that predicate and [[Collatz.AnchoredClosed]] is its closure lemma, so
+ * the measurement above is a theorem in both halves rather than a reading over seven letters:
+ * [[Collatz.PotentialCountedStep]] says a counted step drops the measure by exactly one and
+ * [[Collatz.PotentialPlainStep]] says no other step lowers it, each over a word that is anchored
+ * and marked.
+ *
+ * [[Collatz.RunPotential]] is `REACH_POTENTIAL` carrying those two. What the instantiation had to
+ * decide is where the class goes, because the lemma asks its hypotheses of **every** pair and has
+ * no room for a side condition: it goes into the relation, as [[Collatz.Run]], and that loses
+ * nothing because the class is closed under a step. [[Collatz.RunInhabited]] is the guard, since a
+ * bound on every run of a relation that steps nothing is a theorem about nothing.
+ *
+ * What it does **not** yet reach is a run of positive length: detaching one needs a refusal of the
+ * counted step at a concrete pair, which is a negative about `WORD_STEP` and nothing here proves
+ * one.
  *
  * [[Collatz.TailFree]] is the other half and exists for the decomposition rather than for its own
  * sake: a marked word is a tail-free block with one marker on the end, so a step at `x l y` divides
@@ -345,6 +364,86 @@ object Collatz {
   val PotentialBlocks: String = "S2_PHI_BLOCKS"
 
   /**
+   * `|- !u v. S2_ANCHORED u /\ WORD_STEP S2_COUNTED u v ==> S2_PHI u = SUC (S2_PHI v)`.
+   *
+   * The first of the two things `REACH_POTENTIAL` asks for, and the reason the anchored class is
+   * needed rather than the marked one. Each of the six commutation rules moves one digit one place
+   * towards the head and leaves everything else where it was, so the measure falls by exactly the
+   * distance that digit lost, which is one -- **provided the rule did not fire at position zero**.
+   *
+   * At position zero it does not fall at all, because the distance is `i - 1` over a truncated
+   * subtraction and a digit at position zero and one at position one both weigh nothing. `f0.`
+   * steps to `0f.` by `A2` and the measure is nought on both. What rules that out is
+   * [[Anchored]]: an anchored word has the head marker at position zero, and no commutation rule
+   * has a head marker in it, so the rule's left-hand side cannot begin there.
+   *
+   * The tails do not move: every commutation rule has two letters on each side, so the block that
+   * follows sits at the same distance from the head in both words, and the third term of
+   * [[PotentialBlocks]] is the same term on both sides of the step.
+   */
+  val PotentialCountedStep: String = "S2_PHI_COUNTED_STEP"
+
+  /**
+   * `|- !u v. <the class> /\ WORD_STEP S2 u v /\ ~(WORD_STEP S2_COUNTED u v) ==> S2_PHI u <= S2_PHI v`.
+   *
+   * The second of the two things `REACH_POTENTIAL` asks for, and the one whose five rules fail in
+   * three different ways. Six of the eleven clauses are not about arithmetic at all: a step by a
+   * commutation rule **is** a counted step, built back out of the same four witnesses, so the
+   * hypothesis refuses it and the clause closes on a contradiction.
+   *
+   * Of the five that remain:
+   *
+   *   - `R1` and `R2` consume the tail marker, so the marker is inside the rewritten block and the
+   *     word is marked, which leaves nothing after it: the tail is empty, both tail sums are
+   *     nought, and what is compared is `P + 0` against `P + (k - 1)`.
+   *   - `B1` fires at the head, so the context is empty and the two blocks weigh the same: the two
+   *     measures are the same term.
+   *   - `B2` and `B3` also fire at the head and make the word one letter longer, so every letter
+   *     after them moves one place along and weighs at least what it weighed. That is the one place
+   *     `NUM_SUM_MONOTONE_BELOW` is spent, and the pointwise step is a case split on whether the
+   *     letter there is a digit.
+   */
+  val PotentialPlainStep: String = "S2_PHI_PLAIN_STEP"
+
+  /**
+   * `S2_RUN u v` — a step of this system taken FROM a word of the class the measure works on.
+   *
+   * The relation `REACH` is instantiated at, and it exists because `REACH_POTENTIAL` asks its two
+   * hypotheses of **every** pair while [[PotentialCountedStep]] and [[PotentialPlainStep]] hold
+   * only where the word stepped from is anchored and marked. Restricting the relation rather than
+   * weakening the lemma is what makes the two meet, and it costs nothing: the class is closed under
+   * a step ([[AnchoredClosed]], [[MarkedClosed]]), so a run that begins inside it stays inside it
+   * and every pair such a run can use is a pair of this relation.
+   */
+  val Run: String = "S2_RUN"
+
+  /**
+   * `S2_RUN_COUNTED u v` — such a step that is also a commutation, which is what gets counted.
+   *
+   * Written as [[Run]] **and** a counted step rather than as the class and a counted step, so that
+   * the class is spelled in one place and `S2_RUN_COUNTED` is a sub-relation of `S2_RUN` by
+   * construction. `REACH`'s counter advances on this one and stands still on the rest.
+   */
+  val RunCounted: String = "S2_RUN_COUNTED"
+
+  /**
+   * `|- !x q. REACH S2_RUN S2_RUN_COUNTED x q ==> S2_PHI x <= SND q + S2_PHI (FST q)`.
+   *
+   * `REACH_POTENTIAL` at this system, which is what `Reaching` was built for and what nothing
+   * instantiated until it. Read from the other end it is the statement the investigation wants: a
+   * run from `x` spends at least `S2_PHI x - S2_PHI (FST q)` counted steps getting to where it got,
+   * so the measure bounds the length of a derivation from below.
+   *
+   * It is a bound and not a count: nothing here says a run of that length exists, and the empty run
+   * satisfies it at every `x`. [[RunInhabited]] is what says the relation it quantifies over is not
+   * empty, which is the guard a statement of this shape needs.
+   */
+  val RunPotential: String = "S2_RUN_POTENTIAL"
+
+  /** `|- S2_RUN (/0.) (/t.)`: the relation the bound above is about relates something. */
+  val RunInhabited: String = "S2_RUN_INHABITED"
+
+  /**
    * `|- !u v. S2_MARKED u /\ WORD_STEP S2 u v ==> S2_MARKED v`.
    *
    * What this development was asked for, and the sentence that lets a potential-function argument
@@ -617,6 +716,20 @@ object Collatz {
       "WORD_NTH w (NUM_SUB (WORD_LENGTH w) 1) = S2_TAIL /\\ " +
       "(!i:num. i < NUM_SUB (WORD_LENGTH w) 1 ==> ~(WORD_NTH w i = S2_TAIL))"
 
+  /**
+   * `S2_RUN u v` — a step of `S2` from a word that is both anchored and marked.
+   *
+   * The class is written here and nowhere else: [[RunCountedBody]] names this relation rather than
+   * repeating the two conjuncts, so the two cannot drift apart.
+   */
+  private val RunBody: String =
+    "\\u:word(num). \\v:word(num). " +
+      "WORD_STEP S2 u v /\\ S2_ANCHORED u /\\ S2_MARKED u"
+
+  /** `S2_RUN_COUNTED u v` — one of those that is a commutation, which is the counted kind. */
+  private val RunCountedBody: String =
+    "\\u:word(num). \\v:word(num). S2_RUN u v /\\ WORD_STEP S2_COUNTED u v"
+
   /** The four letters that are not digits, in the order they are declared. */
   val Letters: Vector[(String, String)] =
     Vector(F -> "3", T -> "4", Head -> "5", Tail -> "6")
@@ -631,7 +744,9 @@ object Collatz {
         Marked -> MarkedBody,
         TailFree -> TailFreeBody,
         HeadFree -> HeadFreeBody,
-        Anchored -> AnchoredBody
+        Anchored -> AnchoredBody,
+        Run -> RunBody,
+        RunCounted -> RunCountedBody
       )
 
   /** Every statement this development publishes, as text. */
@@ -674,6 +789,13 @@ object Collatz {
         "(NUM_SUB (NUM_ADD (WORD_LENGTH x) i) 1) 0) (WORD_LENGTH m))) " +
         "(NUM_SUM (\\i:num. COND (WORD_NTH y i < 3) " +
         "(NUM_SUB (NUM_ADD (WORD_LENGTH (WORD_CONCAT x m)) i) 1) 0) (WORD_LENGTH y))"),
+    PotentialCountedStep ->
+      ("!u:word(num). !v:word(num). S2_ANCHORED u /\\ WORD_STEP S2_COUNTED u v ==> " +
+        "S2_PHI u = SUC (S2_PHI v)"),
+    PotentialPlainStep ->
+      ("!u:word(num). !v:word(num). " +
+        "S2_ANCHORED u /\\ S2_MARKED u /\\ WORD_STEP S2 u v /\\ " +
+        "~(WORD_STEP S2_COUNTED u v) ==> NUM_LE (S2_PHI u) (S2_PHI v)"),
     PotentialConcat ->
       ("!u:word(num). !v:word(num). S2_PHI (WORD_CONCAT u v) = " +
         "NUM_ADD (S2_PHI u) " +
@@ -686,7 +808,16 @@ object Collatz {
       s"!n:num. $Zeros (SUC n) = WORD_CONCAT ($Zeros n) (${singletonText("0")})",
     ClosureRefused -> "~(WORD_RFC S2 (WORD_EMPTY:word(num)))",
     FamilyWithF -> s"!i:num. WORD_RFC S2 (${familyText("i", F)})",
-    FamilyWithTail -> s"!i:num. WORD_RFC S2 (${familyText("(SUC i)", Tail)})"
+    FamilyWithTail -> s"!i:num. WORD_RFC S2 (${familyText("(SUC i)", Tail)})",
+    RunPotential ->
+      ("!x:word(num). !q:prod(word(num), num). " +
+        "REACH S2_RUN S2_RUN_COUNTED x q ==> " +
+        "NUM_LE (S2_PHI x) (NUM_ADD (SND q) (S2_PHI (FST q)))"),
+    // Spelled from `spell` rather than from `BeforeTheStep`, which is declared below this vector:
+    // a `val` of an object reading a `val` declared after it reads `null`, and the neighbours above
+    // are written this way for the same reason.
+    RunInhabited ->
+      s"S2_RUN (${wordText(spell("/0."))}) (${wordText(spell("/t."))})"
   )
 
   /* ------------------------------------------------------------------ construction */
@@ -694,12 +825,17 @@ object Collatz {
   /**
    * The development, built over [[Forward]] so that a claim about `WORD_RFC S2` is typable.
    *
-   * Nine constants and no axiom. The four letters are defined before the rules that name them,
+   * Every constant here is a definition and none of them is an axiom. There is no count in this
+   * sentence on purpose: it said nine for as long as there were nine and was wrong the day the
+   * anchored class landed, and `CollatzSpec` asserts the whole set name for name, which is the
+   * check a number here would only look like. The four letters are defined before the rules that
+   * name them,
    * which is why [[Bodies]] is a vector rather than a map: a constant is reachable only from the
    * theory it was declared into, so the order is the construction and not a presentation choice.
    */
   def construct(
     forward: Forward,
+    reaching: Reaching,
     naturals: Natural,
     peano: Peano,
     successor: Successor,
@@ -822,9 +958,21 @@ object Collatz {
         AnchoredConcat -> anchoredConcat,
         HeadFreeStep -> headFreeStep,
         AnchoredStep -> anchoredStep,
+        PotentialBlocks -> potentialBlocks,
         PotentialConcat -> potentialConcat,
-        PotentialAtAWord -> potentialAtAWord,
-        PotentialBlocks -> potentialBlocks
+        PotentialAtAWord -> potentialAtAWord
+      )
+      potentialCountedStep <- potentialAcrossCounted(
+        tools, forward, forward.concatenation, definitions, partial, conditional, conditionalFalse)
+      potentialPlainStep <- potentialAcrossPlain(
+        tools,
+        forward,
+        forward.concatenation,
+        forward.inductive.classical,
+        definitions,
+        partial,
+        conditional,
+        conditionalFalse
       )
       markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, definitions, partial)
       anchoredClosed <- anchoredUnderSteps(tools, forward, forward.concatenation, definitions, partial)
@@ -835,7 +983,18 @@ object Collatz {
         tools, forward, naturals, definitions, zerosAtZero, zerosAtSuccessor)
       (familyWithF, familyWithTail) = family
       closureRefused <- closureIsProper(tools, forward, ruleNotEmpty)
+      inClass = partial ++ Map(
+        PotentialCountedStep -> potentialCountedStep,
+        PotentialPlainStep -> potentialPlainStep,
+        MarkedInhabited -> markedInhabited,
+        AnchoredInhabited -> anchoredInhabited,
+        StepInhabited -> stepInhabited
+      )
+      runPotentialFact <- runPotential(tools, reaching, definitions, inClass)
+      runInhabited <- runHolds(tools, definitions, inClass)
       facts = partial ++ Map(
+        PotentialCountedStep -> potentialCountedStep,
+        PotentialPlainStep -> potentialPlainStep,
         MarkedClosed -> markedClosed,
         AnchoredClosed -> anchoredClosed,
         MarkedInhabited -> markedInhabited,
@@ -845,7 +1004,9 @@ object Collatz {
         ZerosAtSuccessor -> zerosAtSuccessor,
         FamilyWithF -> familyWithF,
         FamilyWithTail -> familyWithTail,
-        ClosureRefused -> closureRefused
+        ClosureRefused -> closureRefused,
+        RunPotential -> runPotentialFact,
+        RunInhabited -> runInhabited
       )
 
       // Every statement checked against the text a reader reads it by, here rather than in the
@@ -898,7 +1059,13 @@ object Collatz {
     belowExcludesAtMost: Kernel.Thm,
     strictIrreflexive: Kernel.Thm,
     addAtZero: Kernel.Thm,
-    zeroPlus: Kernel.Thm
+    zeroPlus: Kernel.Thm,
+    successorPlus: Kernel.Thm,
+    reflexive: Kernel.Thm,
+    atMostSuccessor: Kernel.Thm,
+    addMonotone: Kernel.Thm,
+    sumMonotoneBelow: Kernel.Thm,
+    strictDefinition: Kernel.Thm
   )
 
   private[theories] object Arithmetic {
@@ -929,6 +1096,12 @@ object Collatz {
         strictIrreflexive <- peano.fact(Peano.StrictIrreflexive)
         addAtZero <- peano.fact(Peano.AddAtZero)
         zeroPlus <- peano.fact(Peano.ZeroPlus)
+        successorPlus <- peano.fact(Peano.SuccessorPlus)
+        reflexive <- peano.fact(Peano.Reflexive)
+        atMostSuccessor <- peano.fact(Peano.AtMostSuccessor)
+        addMonotone <- peano.fact(Peano.AddMonotone)
+        sumMonotoneBelow <- peano.fact(Peano.PartialSumMonotoneBelow)
+        strictDefinition <- peano.definition(Peano.StrictOrder)
       } yield Arithmetic(
         atMostSum,
         belowThenAtMost,
@@ -953,7 +1126,13 @@ object Collatz {
         belowExcludesAtMost,
         strictIrreflexive,
         addAtZero,
-        zeroPlus
+        zeroPlus,
+        successorPlus,
+        reflexive,
+        atMostSuccessor,
+        addMonotone,
+        sumMonotoneBelow,
+        strictDefinition
       )
   }
 
@@ -1622,9 +1801,1403 @@ object Collatz {
       walked <- walk(letters.size)
       joined <- Conv.trans(atNumeral, walked)
       value <- rightOf(joined)
-      folded <- Rewrite.rewrite(tools.identities, value)
+      folded <- Rewrite.rewrite(tools.folds, value)
       result <- Conv.trans(joined, folded)
     } yield result
+  }
+
+  /**
+   * [[PotentialCountedStep]]: a commutation step drops the measure by exactly one.
+   *
+   * The shape of the proof is [[anchoredUnderSteps]]'s -- open the step, walk the clauses -- with
+   * arithmetic where that one has the class lemmas. Per clause:
+   *
+   *   - both words are read as a context, a written-out block and a tail, and [[PotentialBlocks]]
+   *     turns each measure into three terms;
+   *   - the two block sums are evaluated by [[sumOverPositions]] at the offset `WORD_LENGTH x`,
+   *     which is where the rule fired, and the two tail sums are rewritten by the lengths of the
+   *     written-out blocks: both rules have two letters a side, so what comes out is the same term
+   *     and it cancels without being looked at;
+   *   - what is left is `(P + k) + T = SUC ((P + (k - 1)) + T)`, which is the successor recurrences
+   *     of addition on both sides of `k = SUC (k - 1)`.
+   *
+   * That last equation is the one that needs `0 < k`, and [[prefixIsNotEmpty]] is where the
+   * anchored class is spent to get it.
+   */
+  private def potentialAcrossCounted(
+    tools: Concrete,
+    forward: Forward,
+    concatenation: Concatenation,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm],
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+    val subject = Term.variable("u", Words)
+    val result = Term.variable("v", Words)
+
+    for {
+      target <- statement(tools.theory, tools.notation, PotentialCountedStep)
+      body <- openAt(logic, target, List(subject, result))
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premiseTerm, conclusionTerm) = parts
+      premise <- LogicError.lift(Kernel.assume(premiseTerm))
+      anchoredSubject <- rules.conjElim1(premise)
+      stepped <- rules.conjElim2(premise)
+
+      counted <- tools.constant(Counted, Type.fun(Words, Type.fun(Words, Type.Bool)))
+      potential <- tools.constant(Potential, Type.fun(Words, Numbers))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      plus <- LogicError.lift(tools.theory.constant(Peano.Addition, BinaryNumbers))
+      successorOf <- tools.successorOf
+      potentialBlocks <- facts.get(PotentialBlocks).toRight(MissingDefinition(PotentialBlocks))
+      countedDefinition <- definitions.get(Counted).toRight(MissingDefinition(Counted))
+
+      stepDefinition <- forward.definition(Forward.Step).map(atNumbers)
+      opened <- Conv.unfold(stepDefinition, List(counted, subject, result))
+      existential <- LogicError.lift(Kernel.eqMp(opened, stepped))
+
+      settled <- openWitnesses(
+        logic,
+        existential,
+        4,
+        Term.freeVariables(conclusionTerm) ++ Term.freeVariables(premiseTerm)
+      ) { (witnesses, held) =>
+        witnesses match {
+          case List(front, left, right, tail) =>
+            for {
+              ruleHolds <- rules.conjElim1(held)
+              rest <- rules.conjElim2(held)
+              subjectEquation <- rules.conjElim1(rest)
+              resultEquation <- rules.conjElim2(rest)
+
+              asDisjunction <- Conv
+                .unfold(countedDefinition, List(left, right))
+                .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, ruleHolds)))
+
+              answer <- overClauses(logic, asDisjunction, CountedRules.size) {
+                (position, leftEquation, rightEquation) =>
+                  for {
+                    entry <- CountedRules
+                      .lift(position)
+                      .toRight(NotOfForm(s"a counted rule at $position", conclusionTerm))
+                    proved <- countedClause(
+                      tools,
+                      concatenation,
+                      facts,
+                      Step(front, left, right, tail, subject, result),
+                      Readers(potential, concat, plus, successorOf, potentialBlocks),
+                      entry,
+                      leftEquation,
+                      rightEquation,
+                      anchoredSubject,
+                      subjectEquation,
+                      resultEquation,
+                      conditional,
+                      conditionalFalse
+                    )
+                    _ <-
+                      if (proved.conclusion == conclusionTerm) Right(())
+                      else Left(NotOfForm(s"the measure at ${entry.label}", proved.conclusion))
+                  } yield proved
+              }
+            } yield answer
+
+          case other => Left(NotOfForm("four witnesses", Term.variable(other.size.toString, Words)))
+        }
+      }
+
+      discharged <- rules.disch(premiseTerm, settled)
+      generalised <- rules.genAll(discharged, List(subject, result))
+      _ <-
+        if (generalised.conclusion == target) Right(())
+        else Left(NotOfForm(s"$PotentialCountedStep as it is written", generalised.conclusion))
+    } yield generalised
+  }
+
+  /**
+   * One clause of [[PotentialCountedStep]]: the measure of both words, normalised, and compared.
+   *
+   * The comparison is between two terms that differ in one place, and everything before it is
+   * getting them into that shape: both words read as three blocks, the two written-out blocks
+   * evaluated, and the tail sums rewritten by the lengths so that the two become the same term.
+   */
+  private def countedClause(
+    tools: Concrete,
+    concatenation: Concatenation,
+    facts: Map[String, Kernel.Thm],
+    step: Step,
+    readers: Readers,
+    entry: Rule,
+    leftEquation: Kernel.Thm,
+    rightEquation: Kernel.Thm,
+    anchoredSubject: Kernel.Thm,
+    subjectEquation: Kernel.Thm,
+    resultEquation: Kernel.Thm,
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      wordLeft <- tools.word(entry.left)
+      wordRight <- tools.word(entry.right)
+
+      placedLeft <- placeBlock(readers.concat, step.front, leftEquation, step.tail)
+      subjectAt <- Conv.trans(subjectEquation, placedLeft)
+      placedRight <- placeBlock(readers.concat, step.front, rightEquation, step.tail)
+      resultAt <- Conv.trans(resultEquation, placedRight)
+
+      blocksLeft <- rules.specAll(readers.blocks, List(step.front, wordLeft, step.tail))
+      measureLeft <- Conv.apTerm(readers.potential, subjectAt).flatMap(Conv.trans(_, blocksLeft))
+      blocksRight <- rules.specAll(readers.blocks, List(step.front, wordRight, step.tail))
+      measureRight <- Conv.apTerm(readers.potential, resultAt).flatMap(Conv.trans(_, blocksRight))
+
+      normalLeft <- normalisedMeasure(tools, measureLeft, entry.left, conditional, conditionalFalse)
+      normalRight <- normalisedMeasure(tools, measureRight, entry.right, conditional, conditionalFalse)
+
+      positive <- prefixIsNotEmpty(
+        tools, concatenation, facts, step, entry, subjectAt, anchoredSubject)
+      spelled <- successorOfPredecessor(tools, step.front, positive)
+      result <- measureFallsByOne(tools, readers, normalLeft, normalRight, spelled)
+    } yield result
+  }
+
+  /** `|- (x l) y = (x <word>) y` from `|- l = <word>`: the block placed inside its context. */
+  private def placeBlock(
+    concat: Term,
+    front: Term,
+    equation: Kernel.Thm,
+    tail: Term
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      inner <- LogicError.lift(Term.app(concat, front)).flatMap(partial => Conv.apTerm(partial, equation))
+      outer <- Conv.apTerm(concat, inner).flatMap(Conv.apThm(_, tail))
+    } yield outer
+
+  /**
+   * `|- S2_PHI w = <the three terms, the middle one evaluated and the outer one folded>`.
+   *
+   * The middle sum is over a word with no variables in it, so [[sumOverPositions]] settles it; the
+   * tail sum's offset is `WORD_LENGTH (x m)`, which the lengths fold to `SUC^n (WORD_LENGTH x)` and
+   * which is therefore the same term for two blocks of the same length.
+   */
+  private def normalisedMeasure(
+    tools: Concrete,
+    measure: Kernel.Thm,
+    letters: Vector[String],
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      sum <- rightOf(measure)
+      middle <- sum match {
+        case App(App(_, App(App(_, _), block)), _) => Right(block)
+        case other => Left(NotOfForm("a measure of three blocks", other))
+      }
+      summand <- middle match {
+        case App(App(_, function), _) => Right(function)
+        case other => Left(NotOfForm("a sum over a bound", other))
+      }
+      evaluated <- sumOverPositions(tools, summand, letters, conditional, conditionalFalse)
+
+      // The evaluated sum is stated at `WORD_LENGTH <word>` and the rewriting below turns that
+      // bound into a numeral before anything else fires, so the equation as it comes back never
+      // matches. It is restated at the numeral first, which is the same theorem read where the
+      // rewriter will be looking.
+      // The same rule set the outer rewrite below uses, and not a smaller one. A block placed in
+      // an EMPTY context carries `WORD_LENGTH WORD_EMPTY` inside its own summand, which the
+      // identities fold and the lengths alone do not: restated against half the rules, this
+      // equation is about a summand the outer pass has already rewritten past.
+      atNumeral <- leftOf(evaluated).flatMap(
+        Rewrite.rewrite(tools.lengths ++ tools.identities, _))
+      restated <- Conv.sym(atNumeral).flatMap(Conv.trans(_, evaluated))
+
+      folding <- unfoldingRules(tools.logic, Vector(restated))
+      normalised <- Rewrite.rewrite(tools.lengths ++ tools.identities ++ folding, sum)
+      result <- Conv.trans(measure, normalised)
+    } yield result
+
+  /**
+   * `|- (P + a) + t = SUC ((P + b) + t)` carried onto the two measures, from `|- a = SUC b`.
+   *
+   * Two successor recurrences and nothing else: addition takes the successor out of its right
+   * argument and then out of its left one, which is exactly the shape the three blocks leave.
+   */
+  private def measureFallsByOne(
+    tools: Concrete,
+    readers: Readers,
+    measureLeft: Kernel.Thm,
+    measureRight: Kernel.Thm,
+    spelled: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      sum <- rightOf(measureLeft)
+      shape <- sum match {
+        case App(App(_, App(App(_, context), _)), tail) => Right((context, tail))
+        case other => Left(NotOfForm("a measure of three blocks", other))
+      }
+      (context, tail) = shape
+      successorSides <- Term
+        .destEq(spelled.conclusion)
+        .toRight(NotOfForm("an equation", spelled.conclusion))
+      predecessor <- successorSides._2 match {
+        case App(_, inner) => Right(inner)
+        case other => Left(NotOfForm("a successor", other))
+      }
+
+      partial <- LogicError.lift(Term.app(readers.plus, context))
+      atTheBlock <- Conv.apTerm(partial, spelled)
+      takenOut <- rules.specAll(tools.numbers.addAtSuccessor, List(context, predecessor))
+      block <- Conv.trans(atTheBlock, takenOut)
+
+      withTail <- Conv.apTerm(readers.plus, block).flatMap(Conv.apThm(_, tail))
+      smaller <- LogicError.lift(Term.appAll(readers.plus, List(context, predecessor)))
+      liftedOut <- rules.specAll(tools.numbers.successorPlus, List(smaller, tail))
+      whole <- Conv.trans(withTail, liftedOut)
+
+      onTheRight <- Conv.sym(measureRight).flatMap(Conv.apTerm(readers.successorOf, _))
+      joined <- Conv.trans(whole, onTheRight)
+      result <- Conv.trans(measureLeft, joined)
+    } yield result
+  }
+
+  /**
+   * `|- WORD_LENGTH x = SUC (WORD_LENGTH x - 1)`, which is what a positive length spells.
+   *
+   * `NUM_LT ZERO k` is `NUM_LE (SUC ZERO) k` by the strict order's own definition, so
+   * [[Peano.MinusThenPlus]] applies at one and gives `(k - 1) + 1 = k`; the identities fold the
+   * left side into `SUC (k - 1)` and the equation is turned round.
+   */
+  private def successorOfPredecessor(
+    tools: Concrete,
+    word: Term,
+    positive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      lengthOf <- tools.lengthOf
+      size <- LogicError.lift(Term.app(lengthOf, word))
+      zero <- tools.zero
+      one <- tools.numeral(1)
+
+      // The positivity is the caller's theorem rather than an assumption made here. Assuming it
+      // leaves a hypothesis on everything downstream, and what reports that is the generalisation
+      // at the very end refusing a variable that occurs free in it.
+      asAtMost <- Conv
+        .unfold(tools.numbers.strictDefinition, List(zero, size))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, positive)))
+      // `NUM_MINUS_THEN_PLUS` takes the larger number first: `!m n. n <= m ==> (m - n) + n = m`.
+      restored <- rules
+        .specAll(tools.numbers.minusThenPlus, List(size, one))
+        .flatMap(rules.mp(_, asAtMost))
+      folded <- rightOf(restored).flatMap(_ => leftOf(restored)).flatMap(
+        left => Rewrite.rewrite(tools.identities, left))
+      placed <- Conv.sym(folded).flatMap(Conv.trans(_, restored))
+      result <- Conv.sym(placed)
+    } yield result
+  }
+
+  /**
+   * `|- 0 < WORD_LENGTH x`, from the word being anchored and the rule not firing at its first letter.
+   *
+   * The one place this proof spends [[Anchored]], and what it spends it on is the position the rule
+   * fired at. With the context empty the word IS the rule's left-hand side followed by the tail, so
+   * an anchored word would have that side anchored too, and [[notAnchoredWord]] refuses exactly
+   * that: no commutation rule begins with the head marker.
+   */
+  private def prefixIsNotEmpty(
+    tools: Concrete,
+    concatenation: Concatenation,
+    facts: Map[String, Kernel.Thm],
+    step: Step,
+    entry: Rule,
+    subjectAt: Kernel.Thm,
+    anchoredSubject: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      anchored <- tools.constant(Anchored, Type.fun(Words, Type.Bool))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      lengthOf <- tools.lengthOf
+      order <- tools.strictOrder
+      zero <- tools.zero
+      wordLeft <- tools.word(entry.left)
+
+      emptyLeft <- concatenation.fact(Concatenation.EmptyLeft).map(atNumbers)
+      lengthZero <- concatenation.fact(Concatenation.LengthZero).map(atNumbers)
+      anchoredConcat <- facts.get(AnchoredConcat).toRight(MissingDefinition(AnchoredConcat))
+
+      frontLength <- LogicError.lift(Term.app(lengthOf, step.front))
+      positiveTerm <- LogicError.lift(Term.appAll(order, List(zero, frontLength)))
+
+      cases <- rules.spec(frontLength, tools.numbers.zeroOrSuccessor)
+      disjuncts <- logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      (isZero, isSuccessor) = disjuncts
+
+      atTheFront <- {
+        for {
+          assumedZero <- LogicError.lift(Kernel.assume(isZero))
+          frontEmpty <- rules.spec(step.front, lengthZero).flatMap(rules.mp(_, assumedZero))
+          collapsed <- collapsedFront(
+            logic, concat, step.front, wordLeft, step.tail, frontEmpty, emptyLeft)
+          atBlock <- Conv
+            .trans(subjectAt, collapsed)
+            .flatMap(Conv.apTerm(anchored, _))
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, anchoredSubject)))
+          leftPositive <- positiveLength(tools, entry.left)
+          split <- rules
+            .specAll(anchoredConcat, List(wordLeft, step.tail))
+            .flatMap(rules.mp(_, leftPositive))
+          both <- LogicError.lift(Kernel.eqMp(split, atBlock))
+          anchoredBlock <- rules.conjElim1(both)
+          refused <- notAnchoredWord(tools, entry.left)
+          absurd <- rules.notElim(refused, anchoredBlock)
+          anything <- rules.falsityElim(positiveTerm, absurd)
+        } yield anything
+      }
+
+      inside <- {
+        val predecessor = Conv.freshVariable(
+          "k",
+          Numbers,
+          Term.freeVariables(positiveTerm) ++ Term.freeVariables(isSuccessor)
+        )
+
+        for {
+          assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+          predicate <- logic
+            .destExistsPredicate(isSuccessor)
+            .toRight(NotOfForm("an existential", isSuccessor))
+          applied <- LogicError.lift(Term.app(predicate, predecessor))
+          instance <- Conv.betaRoot(applied).flatMap(rightOf)
+          size <- LogicError.lift(Kernel.assume(instance))
+          positive <- rules
+            .spec(predecessor, tools.numbers.successorPositive)
+            .flatMap(fact => Conv.sym(size).flatMap(carryRight(order, zero, _, fact)))
+          closed <- rules.existsElim(assumedSuccessor, predecessor, positive)
+        } yield closed
+      }
+
+      result <- rules.disjElim(cases, atTheFront, inside)
+    } yield result
+  }
+
+  /**
+   * [[PotentialPlainStep]]: an uncounted step never lowers the measure.
+   *
+   * Eleven clauses and the six commutation ones are closed without arithmetic: a step by such a
+   * rule is a counted step over the same four witnesses, which the hypothesis refuses.
+   */
+  private def potentialAcrossPlain(
+    tools: Concrete,
+    forward: Forward,
+    concatenation: Concatenation,
+    classical: Classical,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm],
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+    val subject = Term.variable("u", Words)
+    val result = Term.variable("v", Words)
+
+    for {
+      target <- statement(tools.theory, tools.notation, PotentialPlainStep)
+      body <- openAt(logic, target, List(subject, result))
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premiseTerm, conclusionTerm) = parts
+      premise <- LogicError.lift(Kernel.assume(premiseTerm))
+      anchoredSubject <- rules.conjElim1(premise)
+      afterAnchored <- rules.conjElim2(premise)
+      markedSubject <- rules.conjElim1(afterAnchored)
+      afterMarked <- rules.conjElim2(afterAnchored)
+      stepped <- rules.conjElim1(afterMarked)
+      notCounted <- rules.conjElim2(afterMarked)
+
+      system <- tools.constant(Name, Type.fun(Words, Type.fun(Words, Type.Bool)))
+      counted <- tools.constant(Counted, Type.fun(Words, Type.fun(Words, Type.Bool)))
+      potential <- tools.constant(Potential, Type.fun(Words, Numbers))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      plus <- LogicError.lift(tools.theory.constant(Peano.Addition, BinaryNumbers))
+      successorOf <- tools.successorOf
+      potentialBlocks <- facts.get(PotentialBlocks).toRight(MissingDefinition(PotentialBlocks))
+      systemDefinition <- definitions.get(Name).toRight(MissingDefinition(Name))
+      countedDefinition <- definitions.get(Counted).toRight(MissingDefinition(Counted))
+
+      stepDefinition <- forward.definition(Forward.Step).map(atNumbers)
+      opened <- Conv.unfold(stepDefinition, List(system, subject, result))
+      countedOpened <- Conv.unfold(stepDefinition, List(counted, subject, result))
+      existential <- LogicError.lift(Kernel.eqMp(opened, stepped))
+
+      settled <- openWitnesses(
+        logic,
+        existential,
+        4,
+        Term.freeVariables(conclusionTerm) ++ Term.freeVariables(premiseTerm)
+      ) { (witnesses, held) =>
+        witnesses match {
+          case List(front, left, right, tail) =>
+            for {
+              ruleHolds <- rules.conjElim1(held)
+              rest <- rules.conjElim2(held)
+              subjectEquation <- rules.conjElim1(rest)
+              resultEquation <- rules.conjElim2(rest)
+
+              asDisjunction <- Conv
+                .unfold(systemDefinition, List(left, right))
+                .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, ruleHolds)))
+
+              answer <- overClauses(logic, asDisjunction, Rules.size) {
+                (position, leftEquation, rightEquation) =>
+                  for {
+                    entry <- Rules
+                      .lift(position)
+                      .toRight(NotOfForm(s"a rule at $position", conclusionTerm))
+                    step = Step(front, left, right, tail, subject, result)
+                    readers = Readers(potential, concat, plus, successorOf, potentialBlocks)
+                    proved <-
+                      if (entry.group == Group.Commutes)
+                        refusedAsCounted(
+                          tools,
+                          step,
+                          entry,
+                          leftEquation,
+                          rightEquation,
+                          subjectEquation,
+                          resultEquation,
+                          countedDefinition,
+                          countedOpened,
+                          notCounted,
+                          conclusionTerm
+                        )
+                      else
+                        plainClause(
+                          tools,
+                          concatenation,
+                          classical,
+                          facts,
+                          step,
+                          readers,
+                          entry,
+                          leftEquation,
+                          rightEquation,
+                          Class(anchoredSubject, markedSubject),
+                          subjectEquation,
+                          resultEquation,
+                          conditional,
+                          conditionalFalse
+                        )
+                    _ <-
+                      if (proved.conclusion == conclusionTerm) Right(())
+                      else Left(NotOfForm(s"the measure at ${entry.label}", proved.conclusion))
+                  } yield proved
+              }
+            } yield answer
+
+          case other => Left(NotOfForm("four witnesses", Term.variable(other.size.toString, Words)))
+        }
+      }
+
+      discharged <- rules.disch(premiseTerm, settled)
+      generalised <- rules.genAll(discharged, List(subject, result))
+      _ <-
+        if (generalised.conclusion == target) Right(())
+        else Left(NotOfForm(s"$PotentialPlainStep as it is written", generalised.conclusion))
+    } yield generalised
+  }
+
+  /**
+   * One of the five uncounted clauses of [[PotentialPlainStep]], in the shape its rule has.
+   *
+   * The two consuming rules eat the tail marker, so the marked word has nothing after the block and
+   * both tail sums vanish; the three head rules fire at the front, so the context is empty. What is
+   * compared after that is `P` against `P + w` for the first pair, two identical terms for `B1`,
+   * and two tails one place apart for `B2` and `B3`.
+   */
+  private def plainClause(
+    tools: Concrete,
+    concatenation: Concatenation,
+    classical: Classical,
+    facts: Map[String, Kernel.Thm],
+    step: Step,
+    readers: Readers,
+    entry: Rule,
+    leftEquation: Kernel.Thm,
+    rightEquation: Kernel.Thm,
+    held: Class,
+    subjectEquation: Kernel.Thm,
+    resultEquation: Kernel.Thm,
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      wordLeft <- tools.word(entry.left)
+      wordRight <- tools.word(entry.right)
+      empty <- tools.constant(Concatenation.Empty, Words)
+      atMost <- LogicError.lift(tools.theory.constant(Peano.NonStrictOrder, OrderType))
+
+      placedLeft <- placeBlock(readers.concat, step.front, leftEquation, step.tail)
+      subjectAt <- Conv.trans(subjectEquation, placedLeft)
+      placedRight <- placeBlock(readers.concat, step.front, rightEquation, step.tail)
+      resultAt <- Conv.trans(resultEquation, placedRight)
+
+      // Which block the class says is empty, and the equation that says so.
+      shape <-
+        if (entry.group == Group.Consumes)
+          tailIsEmpty(tools, concatenation, facts, step, entry, subjectAt, held.marked)
+            .map(equation => (equation, false))
+        else
+          prefixIsEmpty(tools, concatenation, facts, step, entry, subjectAt, held.anchored)
+            .map(equation => (equation, true))
+      (emptyEquation, atTheFront) = shape
+
+      collapsedLeft <-
+        if (atTheFront) replaceFront(readers.concat, emptyEquation, wordLeft, step.tail)
+        else replaceTail(readers.concat, step.front, wordLeft, emptyEquation)
+      collapsedRight <-
+        if (atTheFront) replaceFront(readers.concat, emptyEquation, wordRight, step.tail)
+        else replaceTail(readers.concat, step.front, wordRight, emptyEquation)
+
+      subjectFinal <- Conv.trans(subjectAt, collapsedLeft)
+      resultFinal <- Conv.trans(resultAt, collapsedRight)
+
+      context = if (atTheFront) empty else step.front
+      rest = if (atTheFront) step.tail else empty
+
+      blocksLeft <- rules.specAll(readers.blocks, List(context, wordLeft, rest))
+      measureLeft <- Conv.apTerm(readers.potential, subjectFinal).flatMap(Conv.trans(_, blocksLeft))
+      blocksRight <- rules.specAll(readers.blocks, List(context, wordRight, rest))
+      measureRight <- Conv.apTerm(readers.potential, resultFinal).flatMap(Conv.trans(_, blocksRight))
+
+      normalLeft <- normalisedMeasure(tools, measureLeft, entry.left, conditional, conditionalFalse)
+      normalRight <- normalisedMeasure(tools, measureRight, entry.right, conditional, conditionalFalse)
+
+      valueLeft <- rightOf(normalLeft)
+      valueRight <- rightOf(normalRight)
+
+      // Three shapes and the group decides which. A consuming rule leaves `P` against `P + w`, a
+      // head rule that keeps the length leaves two identical terms, and one that lengthens leaves
+      // two tails a place apart.
+      comparison <-
+        if (entry.group == Group.Consumes) summandIsAtMost(tools, valueLeft, valueRight)
+        else if (valueLeft == valueRight) rules.spec(valueLeft, tools.numbers.reflexive)
+        else tailGrows(tools, classical, valueLeft, valueRight, conditional, conditionalFalse)
+
+      subjectMeasure <- leftOf(normalLeft)
+      carried <- carryLeft(atMost, normalLeft, valueRight, comparison)
+      reversed <- Conv.sym(normalRight)
+      result <- carryRight(atMost, subjectMeasure, reversed, carried)
+    } yield result
+  }
+
+  /** `|- (x m) y = (x m) WORD_EMPTY` from `|- y = WORD_EMPTY`. */
+  private def replaceTail(
+    concat: Term,
+    front: Term,
+    block: Term,
+    tailEmpty: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      blockTerm <- LogicError.lift(Term.appAll(concat, List(front, block)))
+      partial <- LogicError.lift(Term.app(concat, blockTerm))
+      result <- Conv.apTerm(partial, tailEmpty)
+    } yield result
+
+  /** `|- (x m) y = (WORD_EMPTY m) y` from `|- x = WORD_EMPTY`. */
+  private def replaceFront(
+    concat: Term,
+    frontEmpty: Kernel.Thm,
+    block: Term,
+    tail: Term
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      inner <- Conv.apTerm(concat, frontEmpty).flatMap(Conv.apThm(_, block))
+      result <- Conv.apTerm(concat, inner).flatMap(Conv.apThm(_, tail))
+    } yield result
+
+  /**
+   * `|- y = WORD_EMPTY`, where `y` is whatever follows a consuming rule in a marked word.
+   *
+   * The one place a consuming clause spends [[Marked]], and it is what makes the two tail sums
+   * vanish instead of having to be compared. Both rules of that group carry the tail marker inside
+   * their own left-hand side, so a non-empty `y` would put a second marker after it, or the same
+   * one somewhere that is not the last letter; a marked word has exactly one and it is the last.
+   *
+   * `MarkedConcat` asks for a tail nobody has shown non-empty, which is why the length is split
+   * first: the zero case **is** the conclusion, by `WORD_LENGTH_ZERO`, and the successor case is
+   * the contradiction.
+   */
+  private def tailIsEmpty(
+    tools: Concrete,
+    concatenation: Concatenation,
+    facts: Map[String, Kernel.Thm],
+    step: Step,
+    entry: Rule,
+    subjectAt: Kernel.Thm,
+    markedSubject: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      marked <- tools.constant(Marked, Type.fun(Words, Type.Bool))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      empty <- tools.constant(Concatenation.Empty, Words)
+      lengthOf <- tools.lengthOf
+      order <- tools.strictOrder
+      zero <- tools.zero
+      wordLeft <- tools.word(entry.left)
+      position <- entry.left.indexOf(Tail) match {
+        case -1 => Left(NotOfForm(s"a rule with a tail marker in it, at ${entry.label}", wordLeft))
+        case found => Right(found)
+      }
+
+      lengthZero <- concatenation.fact(Concatenation.LengthZero).map(atNumbers)
+      markedConcat <- facts.get(MarkedConcat).toRight(MissingDefinition(MarkedConcat))
+      tailFreeConcat <- facts.get(TailFreeConcat).toRight(MissingDefinition(TailFreeConcat))
+
+      goal <- LogicError.lift(Term.eq(step.tail, empty))
+      block <- LogicError.lift(Term.appAll(concat, List(step.front, wordLeft)))
+      tailLength <- LogicError.lift(Term.app(lengthOf, step.tail))
+      atWord <- Conv
+        .apTerm(marked, subjectAt)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, markedSubject)))
+
+      cases <- rules.spec(tailLength, tools.numbers.zeroOrSuccessor)
+      disjuncts <- logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      (isZero, isSuccessor) = disjuncts
+
+      atZero <- {
+        for {
+          assumedZero <- LogicError.lift(Kernel.assume(isZero))
+          result <- rules.spec(step.tail, lengthZero).flatMap(rules.mp(_, assumedZero))
+        } yield result
+      }
+
+      inside <- {
+        val predecessor = Conv.freshVariable(
+          "k",
+          Numbers,
+          Term.freeVariables(goal) ++ Term.freeVariables(isSuccessor)
+        )
+
+        for {
+          assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+          predicate <- logic
+            .destExistsPredicate(isSuccessor)
+            .toRight(NotOfForm("an existential", isSuccessor))
+          applied <- LogicError.lift(Term.app(predicate, predecessor))
+          instance <- Conv.betaRoot(applied).flatMap(rightOf)
+          size <- LogicError.lift(Kernel.assume(instance))
+          positive <- rules
+            .spec(predecessor, tools.numbers.successorPositive)
+            .flatMap(fact => Conv.sym(size).flatMap(carryRight(order, zero, _, fact)))
+          split <- rules
+            .specAll(markedConcat, List(block, step.tail))
+            .flatMap(rules.mp(_, positive))
+          both <- LogicError.lift(Kernel.eqMp(split, atWord))
+          blockFree <- rules.conjElim1(both)
+          pieces <- rules.specAll(tailFreeConcat, List(step.front, wordLeft))
+          parts <- LogicError.lift(Kernel.eqMp(pieces, blockFree))
+          ruleFree <- rules.conjElim2(parts)
+          refused <- notFreeWord(tools, entry.left, position, Tail)
+          absurd <- rules.notElim(refused, ruleFree)
+          anything <- rules.falsityElim(goal, absurd)
+          closed <- rules.existsElim(assumedSuccessor, predecessor, anything)
+        } yield closed
+      }
+
+      result <- rules.disjElim(cases, atZero, inside)
+    } yield result
+  }
+
+  /**
+   * `|- x = WORD_EMPTY`, where `x` is whatever precedes a head rule in an anchored word.
+   *
+   * The twin of [[tailIsEmpty]] at the other end and at the other class. The three head rules carry
+   * the head marker as their first letter, and an anchored word has that marker at position zero
+   * and nowhere else, so nothing can stand in front of one.
+   *
+   * `AnchoredConcat` splits `x` from what follows it, and what follows it here is `m y` rather than
+   * the `(x m) y` the step hands over: the association is moved by `WORD_CONCAT_ASSOC` first, which
+   * is the one place this proof differs from its twin.
+   */
+  private def prefixIsEmpty(
+    tools: Concrete,
+    concatenation: Concatenation,
+    facts: Map[String, Kernel.Thm],
+    step: Step,
+    entry: Rule,
+    subjectAt: Kernel.Thm,
+    anchoredSubject: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      anchored <- tools.constant(Anchored, Type.fun(Words, Type.Bool))
+      concat <- tools.constant(Concatenation.Name, ConcatType)
+      empty <- tools.constant(Concatenation.Empty, Words)
+      lengthOf <- tools.lengthOf
+      order <- tools.strictOrder
+      zero <- tools.zero
+      wordLeft <- tools.word(entry.left)
+      position <- entry.left.indexOf(Head) match {
+        case -1 => Left(NotOfForm(s"a rule with a head marker in it, at ${entry.label}", wordLeft))
+        case found => Right(found)
+      }
+
+      lengthZero <- concatenation.fact(Concatenation.LengthZero).map(atNumbers)
+      associative <- concatenation.fact(Concatenation.Associative).map(atNumbers)
+      anchoredConcat <- facts.get(AnchoredConcat).toRight(MissingDefinition(AnchoredConcat))
+      headFreeConcat <- facts.get(HeadFreeConcat).toRight(MissingDefinition(HeadFreeConcat))
+
+      goal <- LogicError.lift(Term.eq(step.front, empty))
+      rest <- LogicError.lift(Term.appAll(concat, List(wordLeft, step.tail)))
+      frontLength <- LogicError.lift(Term.app(lengthOf, step.front))
+
+      moved <- rules.specAll(associative, List(step.front, wordLeft, step.tail))
+      reassociated <- Conv.trans(subjectAt, moved)
+      atWord <- Conv
+        .apTerm(anchored, reassociated)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, anchoredSubject)))
+
+      cases <- rules.spec(frontLength, tools.numbers.zeroOrSuccessor)
+      disjuncts <- logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      (isZero, isSuccessor) = disjuncts
+
+      atZero <- {
+        for {
+          assumedZero <- LogicError.lift(Kernel.assume(isZero))
+          result <- rules.spec(step.front, lengthZero).flatMap(rules.mp(_, assumedZero))
+        } yield result
+      }
+
+      inside <- {
+        val predecessor = Conv.freshVariable(
+          "k",
+          Numbers,
+          Term.freeVariables(goal) ++ Term.freeVariables(isSuccessor)
+        )
+
+        for {
+          assumedSuccessor <- LogicError.lift(Kernel.assume(isSuccessor))
+          predicate <- logic
+            .destExistsPredicate(isSuccessor)
+            .toRight(NotOfForm("an existential", isSuccessor))
+          applied <- LogicError.lift(Term.app(predicate, predecessor))
+          instance <- Conv.betaRoot(applied).flatMap(rightOf)
+          size <- LogicError.lift(Kernel.assume(instance))
+          positive <- rules
+            .spec(predecessor, tools.numbers.successorPositive)
+            .flatMap(fact => Conv.sym(size).flatMap(carryRight(order, zero, _, fact)))
+          split <- rules
+            .specAll(anchoredConcat, List(step.front, rest))
+            .flatMap(rules.mp(_, positive))
+          both <- LogicError.lift(Kernel.eqMp(split, atWord))
+          afterFree <- rules.conjElim2(both)
+          pieces <- rules.specAll(headFreeConcat, List(wordLeft, step.tail))
+          parts <- LogicError.lift(Kernel.eqMp(pieces, afterFree))
+          ruleFree <- rules.conjElim1(parts)
+          refused <- notFreeWord(tools, entry.left, position, Head)
+          absurd <- rules.notElim(refused, ruleFree)
+          anything <- rules.falsityElim(goal, absurd)
+          closed <- rules.existsElim(assumedSuccessor, predecessor, anything)
+        } yield closed
+      }
+
+      result <- rules.disjElim(cases, atZero, inside)
+    } yield result
+  }
+
+  /**
+   * `|- a <= a + w`, which is what a consuming rule leaves once the tail has gone.
+   *
+   * The rule ate a letter that contributed nothing and left a digit that contributes `|x| - 1`, so
+   * the measure gains a summand and loses none. `NUM_LE_ADD` holds with no side condition because
+   * there are no negative numbers here, and what makes it apply is that the term on the right is
+   * the term on the left with something added and not merely a larger number.
+   */
+  private def summandIsAtMost(
+    tools: Concrete,
+    valueLeft: Term,
+    valueRight: Term
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      parts <- destAdd(tools, valueRight)
+      _ <-
+        if (parts._1 == valueLeft) Right(())
+        else Left(NotOfForm("the measure before the step, with a summand added", valueRight))
+      result <- tools.rules.specAll(tools.numbers.atMostSum, List(valueLeft, parts._2))
+    } yield result
+
+  /**
+   * `|- P + T <= P + T'`, where `T` and `T'` are one tail read at two offsets a place apart.
+   *
+   * The two head rules that lengthen the word push everything after them one place further from
+   * the head, and a digit's contribution is its distance from it. So the comparison is between two
+   * sums over the same tail and the same bound whose summands differ in one number, which is
+   * `NUM_SUM_MONOTONE_BELOW` over a pointwise argument, and the context in front of them is carried
+   * by `NUM_ADD_MONOTONE` rather than looked at.
+   */
+  private def tailGrows(
+    tools: Concrete,
+    classical: Classical,
+    valueLeft: Term,
+    valueRight: Term,
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      leftParts <- destAdd(tools, valueLeft)
+      rightParts <- destAdd(tools, valueRight)
+      _ <-
+        if (leftParts._1 == rightParts._1) Right(())
+        else Left(NotOfForm("two measures over one context", valueRight))
+      (context, tailLeft) = leftParts
+      tailRight = rightParts._2
+
+      before <- destSum(tools, tailLeft)
+      after <- destSum(tools, tailRight)
+      _ <-
+        if (before._2 == after._2) Right(())
+        else Left(NotOfForm("two sums over one bound", tailRight))
+
+      monotone <- rules.specAll(
+        tools.numbers.sumMonotoneBelow, List(before._1, after._1, before._2))
+      shape <- logic
+        .destImp(monotone.conclusion)
+        .toRight(NotOfForm("an implication", monotone.conclusion))
+      pointwise <- underTheBound(logic, shape._1) { (index, _) =>
+        laterIsLarger(tools, classical, before._1, after._1, index, conditional, conditionalFalse)
+      }
+      sums <- rules.mp(monotone, pointwise)
+      result <- rules
+        .specAll(tools.numbers.addMonotone, List(context, tailLeft, tailRight))
+        .flatMap(rules.mp(_, sums))
+    } yield result
+  }
+
+  /**
+   * `|- f i <= g i`, for the two summands of [[tailGrows]] at one index.
+   *
+   * Both are a conditional on the same question, whether the letter there is a digit, and the
+   * branches nobody takes are the same term, so the split is on that question and not on anything
+   * about the two offsets. Where the letter is not a digit both sides are the same number and the
+   * order is reflexive; where it is, [[oneMorePlace]] compares the two contributions.
+   *
+   * What comes back is stated at the **redex**, `f i` rather than the conditional it reduces to,
+   * because that is what `NUM_SUM_MONOTONE_BELOW`'s antecedent is written with.
+   */
+  private def laterIsLarger(
+    tools: Concrete,
+    classical: Classical,
+    before: Term,
+    after: Term,
+    index: FVar,
+    conditional: Kernel.Thm,
+    conditionalFalse: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      atMost <- tools.constant(Peano.NonStrictOrder, OrderType)
+      openedBefore <- LogicError.lift(Term.app(before, index)).flatMap(Conv.betaRoot)
+      openedAfter <- LogicError.lift(Term.app(after, index)).flatMap(Conv.betaRoot)
+      bodyBefore <- rightOf(openedBefore)
+      bodyAfter <- rightOf(openedAfter)
+      partsBefore <- destCond(bodyBefore)
+      partsAfter <- destCond(bodyAfter)
+      _ <-
+        if (partsBefore._1 == partsAfter._1 && partsBefore._3 == partsAfter._3) Right(())
+        else Left(NotOfForm("two summands differing only in the offset", bodyAfter))
+      (condition, sooner, otherwise) = partsBefore
+      later = partsAfter._2
+
+      cases <- classical.excludedMiddleAt(condition)
+      disjuncts <- logic
+        .destDisj(cases.conclusion)
+        .toRight(NotOfForm("a disjunction", cases.conclusion))
+      (holds, fails) = disjuncts
+
+      atADigit <- {
+        for {
+          assumed <- LogicError.lift(Kernel.assume(holds))
+          chosenBefore <- rules
+            .specAll(conditional, List(condition, sooner, otherwise))
+            .flatMap(rules.mp(_, assumed))
+          chosenAfter <- rules
+            .specAll(conditional, List(condition, later, otherwise))
+            .flatMap(rules.mp(_, assumed))
+          compared <- oneMorePlace(tools, sooner, later)
+          onTheLeft <- carryLeft(atMost, chosenBefore, later, compared)
+          reversed <- Conv.sym(chosenAfter)
+          result <- carryRight(atMost, bodyBefore, reversed, onTheLeft)
+        } yield result
+      }
+
+      elsewhere <- {
+        for {
+          assumed <- LogicError.lift(Kernel.assume(fails))
+          chosenBefore <- rules
+            .specAll(conditionalFalse, List(condition, sooner, otherwise))
+            .flatMap(rules.mp(_, assumed))
+          chosenAfter <- rules
+            .specAll(conditionalFalse, List(condition, later, otherwise))
+            .flatMap(rules.mp(_, assumed))
+          same <- rules.spec(otherwise, tools.numbers.reflexive)
+          onTheLeft <- carryLeft(atMost, chosenBefore, otherwise, same)
+          reversed <- Conv.sym(chosenAfter)
+          result <- carryRight(atMost, bodyBefore, reversed, onTheLeft)
+        } yield result
+      }
+
+      settled <- rules.disjElim(cases, atADigit, elsewhere)
+      onTheRedex <- carryLeft(atMost, openedBefore, bodyAfter, settled)
+      applied <- leftOf(openedBefore)
+      reversed <- Conv.sym(openedAfter)
+      result <- carryRight(atMost, applied, reversed, onTheRedex)
+    } yield result
+  }
+
+  /**
+   * `|- (c + i) - 1 <= (SUC c + i) - 1`, the same digit one place further from the head.
+   *
+   * Written as a comparison of two **normalised** terms rather than as a lemma about subtraction,
+   * because there is no monotonicity of truncated subtraction in this development and the two
+   * offsets here are concrete. `NUM_SUC_ADD` lifts the successor out of the sum and the folds take
+   * the `- 1` off both, so what is left is a number against its own successor.
+   */
+  private def oneMorePlace(
+    tools: Concrete,
+    sooner: Term,
+    later: Term
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      shifting <- unfoldingRules(tools.logic, Vector(tools.numbers.successorPlus))
+      folding = shifting ++ tools.folds
+      normalSooner <- Rewrite.rewrite(folding, sooner)
+      normalLater <- Rewrite.rewrite(folding, later)
+      small <- rightOf(normalSooner)
+      large <- rightOf(normalLater)
+      successorOf <- tools.successorOf
+      expected <- LogicError.lift(Term.app(successorOf, small))
+      _ <-
+        if (large == expected) Right(())
+        else Left(NotOfForm("a contribution exactly one place later", large))
+      atMost <- tools.constant(Peano.NonStrictOrder, OrderType)
+      step <- tools.rules.spec(small, tools.numbers.atMostSuccessor)
+      onTheLeft <- carryLeft(atMost, normalSooner, large, step)
+      reversed <- Conv.sym(normalLater)
+      result <- carryRight(atMost, sooner, reversed, onTheLeft)
+    } yield result
+
+  /** `x + y` taken apart, with the constant checked rather than the shape alone. */
+  private def destAdd(tools: Concrete, term: Term): Either[LogicError, (Term, Term)] =
+    for {
+      plus <- tools.constant(Peano.Addition, BinaryNumbers)
+      parts <- term match {
+        case App(App(head, left), right) if head == plus => Right((left, right))
+        case other => Left(NotOfForm("a sum of two numbers", other))
+      }
+    } yield parts
+
+  /** `NUM_SUM f k` taken apart, the same way and for the same reason. */
+  private def destSum(tools: Concrete, term: Term): Either[LogicError, (Term, Term)] =
+    for {
+      sum <- tools.constant(
+        Peano.PartialSum,
+        Type.fun(Type.fun(Numbers, Numbers), Type.fun(Numbers, Numbers))
+      )
+      parts <- term match {
+        case App(App(head, summand), bound) if head == sum => Right((summand, bound))
+        case other => Left(NotOfForm("a partial sum", other))
+      }
+    } yield parts
+
+  /** `COND p a b` taken apart at the one type this development conditions on. */
+  private def destCond(term: Term): Either[LogicError, (Term, Term, Term)] =
+    term match {
+      case App(App(App(_, condition), whenTrue), whenFalse) =>
+        Right((condition, whenTrue, whenFalse))
+      case other => Left(NotOfForm("a conditional", other))
+    }
+
+  /**
+   * [[RunPotential]]: `REACH_POTENTIAL` instantiated at this system.
+   *
+   * The whole of the work is in the two hypotheses, and what makes them provable is that the
+   * relation carries the class rather than the lemma asking for it. `REACH_POTENTIAL` wants its
+   * measure to fall by exactly one across **every** counted pair and to hold up across every other
+   * one, with no side condition available; [[PotentialCountedStep]] and [[PotentialPlainStep]] are
+   * both conditional on the word stepped from being anchored and marked. Putting those two
+   * conditions inside `S2_RUN` is what closes the gap, and it loses nothing, because the class is
+   * closed under a step: a run that starts inside it never leaves.
+   *
+   * The second hypothesis is where the two definitions pay for being nested. `~(S2_RUN_COUNTED u v)`
+   * with `S2_RUN u v` in hand gives `~(WORD_STEP S2_COUNTED u v)` in three lines, because
+   * `S2_RUN_COUNTED` **is** `S2_RUN` and a counted step; had it been the class and a counted step,
+   * the same inference would have had to take the class apart a second time.
+   */
+  private def runPotential(
+    tools: Concrete,
+    reaching: Reaching,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+    val subject = Term.variable("x", Words)
+    val left = Term.variable("u", Words)
+    val right = Term.variable("v", Words)
+
+    for {
+      target <- statement(tools.theory, tools.notation, RunPotential)
+      run <- tools.constant(Run, SystemType)
+      runCounted <- tools.constant(RunCounted, SystemType)
+      potential <- tools.constant(Potential, Type.fun(Words, Numbers))
+      runDefinition <- definitions.get(Run).toRight(MissingDefinition(Run))
+      runCountedDefinition <- definitions.get(RunCounted).toRight(MissingDefinition(RunCounted))
+      countedStep <- facts
+        .get(PotentialCountedStep)
+        .toRight(MissingDefinition(PotentialCountedStep))
+      plainStep <- facts.get(PotentialPlainStep).toRight(MissingDefinition(PotentialPlainStep))
+
+      lemma <- reaching.fact(Reaching.Potential).map(atWords)
+      specialised <- rules.specAll(lemma, List(run, runCounted, potential, subject))
+      parts <- logic
+        .destImp(specialised.conclusion)
+        .toRight(NotOfForm("an implication", specialised.conclusion))
+      halves <- logic
+        .destConj(parts._1)
+        .toRight(NotOfForm("the two hypotheses of REACH_POTENTIAL", parts._1))
+      (countedTerm, plainTerm) = halves
+
+      falls <- overAStep(logic, countedTerm, left, right) { premise =>
+        for {
+          opened <- Conv
+            .unfold(runCountedDefinition, List(left, right))
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, premise)))
+          inRun <- rules.conjElim1(opened)
+          isCounted <- rules.conjElim2(opened)
+          held <- openRun(rules, runDefinition, left, right, inRun)
+          joined <- rules.conjIntro(held._2, isCounted)
+          result <- rules.specAll(countedStep, List(left, right)).flatMap(rules.mp(_, joined))
+        } yield result
+      }
+
+      holdsUp <- overAStep(logic, plainTerm, left, right) { premise =>
+        for {
+          inRun <- rules.conjElim1(premise)
+          notInCounted <- rules.conjElim2(premise)
+          held <- openRun(rules, runDefinition, left, right, inRun)
+          (stepped, anchored, marked) = held
+
+          folding <- Conv.unfold(runCountedDefinition, List(left, right))
+          countedStepTerm <- rightOf(folding).flatMap(
+            body => logic.destConj(body).map(_._2).toRight(NotOfForm("a counted step", body)))
+          refused <- {
+            for {
+              assumed <- LogicError.lift(Kernel.assume(countedStepTerm))
+              rebuilt <- rules.conjIntro(inRun, assumed)
+              inCounted <- Conv
+                .sym(folding)
+                .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, rebuilt)))
+              absurd <- rules.notElim(notInCounted, inCounted)
+              result <- rules.notIntro(countedStepTerm, absurd)
+            } yield result
+          }
+
+          joined <- rules
+            .conjIntro(stepped, refused)
+            .flatMap(rules.conjIntro(marked, _))
+            .flatMap(rules.conjIntro(anchored, _))
+          result <- rules.specAll(plainStep, List(left, right)).flatMap(rules.mp(_, joined))
+        } yield result
+      }
+
+      both <- rules.conjIntro(falls, holdsUp)
+      settled <- rules.mp(specialised, both)
+      result <- rules.genAll(settled, List(subject))
+      _ <-
+        if (result.conclusion == target) Right(())
+        else Left(NotOfForm(s"$RunPotential as it is written", result.conclusion))
+    } yield result
+  }
+
+  /**
+   * [[RunInhabited]]: the relation [[RunPotential]] quantifies over relates something.
+   *
+   * A bound on every run of a relation that steps nothing is true and empty, and no other test here
+   * would notice: `REACH_START` inhabits the closure at every `x` whatever the relation does, so
+   * even a detachment of the bound would come back with `S2_PHI x <= 0 + S2_PHI x`. The three
+   * conjuncts are the step of `S2_STEP_INHABITED` and the class at the word it starts from.
+   */
+  private def runHolds(
+    tools: Concrete,
+    definitions: Map[String, Kernel.Thm],
+    facts: Map[String, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = tools.rules
+
+    for {
+      target <- statement(tools.theory, tools.notation, RunInhabited)
+      before <- tools.word(BeforeTheStep)
+      after <- tools.word(AfterTheStep)
+      runDefinition <- definitions.get(Run).toRight(MissingDefinition(Run))
+      stepped <- facts.get(StepInhabited).toRight(MissingDefinition(StepInhabited))
+      anchored <- facts.get(AnchoredInhabited).toRight(MissingDefinition(AnchoredInhabited))
+      marked <- facts.get(MarkedInhabited).toRight(MissingDefinition(MarkedInhabited))
+
+      joined <- rules.conjIntro(anchored, marked).flatMap(rules.conjIntro(stepped, _))
+      result <- Conv
+        .unfold(runDefinition, List(before, after))
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, joined)))
+      _ <-
+        if (result.conclusion == target) Right(())
+        else Left(NotOfForm(s"$RunInhabited as it is written", result.conclusion))
+    } yield result
+  }
+
+  /** The three conjuncts of `S2_RUN u v`, which both hypotheses of the instantiation take apart. */
+  private def openRun(
+    rules: Rules,
+    runDefinition: Kernel.Thm,
+    left: Term,
+    right: Term,
+    inRun: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm)] =
+    for {
+      opened <- Conv
+        .unfold(runDefinition, List(left, right))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, inRun)))
+      stepped <- rules.conjElim1(opened)
+      rest <- rules.conjElim2(opened)
+      anchored <- rules.conjElim1(rest)
+      marked <- rules.conjElim2(rest)
+    } yield (stepped, anchored, marked)
+
+  /**
+   * `|- !u v. P ==> Q`, from a proof of `Q` under `P`, against the statement the caller wants.
+   *
+   * [[underTheBound]] one binder wider and without the arithmetic: what it is for is a hypothesis
+   * of `REACH_POTENTIAL`, which is read off the specialised lemma rather than written again here,
+   * so the check at the end is what says the two are the same claim.
+   */
+  private def overAStep(
+    logic: Logic,
+    statement: Term,
+    left: FVar,
+    right: FVar
+  )(
+    step: Kernel.Thm => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      body <- openAt(logic, statement, List(left, right))
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premiseTerm, conclusionTerm) = parts
+      premise <- LogicError.lift(Kernel.assume(premiseTerm))
+      proved <- step(premise)
+      _ <-
+        if (proved.conclusion == conclusionTerm) Right(())
+        else Left(NotOfForm("the claim at this step as it is written", proved.conclusion))
+      discharged <- rules.disch(premiseTerm, proved)
+      result <- rules.genAll(discharged, List(left, right))
+      _ <-
+        if (result.conclusion == statement) Right(())
+        else Left(NotOfForm("the hypothesis as REACH_POTENTIAL writes it", result.conclusion))
+    } yield result
+  }
+
+  /** A polymorphic lemma of the reachability, read at the type this development has states of. */
+  private def atWords(theorem: Kernel.Thm): Kernel.Thm =
+    Kernel.instType(Map(Classical.TypeVariable -> Words), theorem)
+
+  /** What the word is known to be, which is two facts everywhere below. */
+  private final case class Class(anchored: Kernel.Thm, marked: Kernel.Thm)
+
+  /**
+   * A commutation clause of [[PotentialPlainStep]], closed by building the counted step it denies.
+   *
+   * The four witnesses the plain step handed over are the same four a counted step wants, and the
+   * rule at this clause is one of the six, so the existential goes back together and the hypothesis
+   * refuses it. Nothing here is about the measure.
+   */
+  private def refusedAsCounted(
+    tools: Concrete,
+    step: Step,
+    entry: Rule,
+    leftEquation: Kernel.Thm,
+    rightEquation: Kernel.Thm,
+    subjectEquation: Kernel.Thm,
+    resultEquation: Kernel.Thm,
+    countedDefinition: Kernel.Thm,
+    countedOpened: Kernel.Thm,
+    notCounted: Kernel.Thm,
+    conclusion: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = tools.logic
+    val rules = logic.rules
+
+    for {
+      position <- CountedRules
+        .indexWhere(_.label == entry.label) match {
+        case -1 => Left(NotOfForm(s"a counted rule named ${entry.label}", conclusion))
+        case found => Right(found)
+      }
+      clauses <- Conv.unfold(countedDefinition, List(step.left, step.right)).flatMap(rightOf)
+      pair <- rules.conjIntro(leftEquation, rightEquation)
+      asClause <- intoDisjunction(logic, clauses, position, CountedRules.size, pair)
+      countedRule <- Conv
+        .unfold(countedDefinition, List(step.left, step.right))
+        .flatMap(Conv.sym)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, asClause)))
+
+      pairedBody <- rules.conjIntro(subjectEquation, resultEquation).flatMap(rules.conjIntro(countedRule, _))
+      quantified <- rightOf(countedOpened)
+      existential <- existsAll(
+        logic,
+        quantified,
+        List(step.front, step.left, step.right, step.tail),
+        pairedBody
+      )
+      countedStep <- Conv
+        .sym(countedOpened)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, existential)))
+      absurd <- rules.notElim(notCounted, countedStep)
+      result <- rules.falsityElim(conclusion, absurd)
+    } yield result
+  }
+
+  /** A proof of one disjunct, placed at its position in a disjunction of `size` clauses. */
+  private def intoDisjunction(
+    logic: Logic,
+    disjunction: Term,
+    position: Int,
+    size: Int,
+    proof: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    def walk(current: Term, index: Int): Either[LogicError, Kernel.Thm] =
+      logic.destDisj(current) match {
+        case None =>
+          if (index == size - 1) Right(proof)
+          else Left(NotOfForm(s"$size clauses", current))
+
+        case Some((here, others)) =>
+          if (index == position) rules.disjIntro1(others, proof)
+          else walk(others, index + 1).flatMap(rules.disjIntro2(here, _))
+      }
+
+    walk(disjunction, 0)
+  }
+
+  /** `?x1 ... xn. body` from a proof of the body at the given witnesses, innermost first. */
+  private def existsAll(
+    logic: Logic,
+    statement: Term,
+    witnesses: List[Term],
+    proof: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    witnesses match {
+      case Nil =>
+        if (proof.conclusion == statement) Right(proof)
+        else Left(NotOfForm("the body as the existential states it", proof.conclusion))
+
+      case witness :: rest =>
+        for {
+          predicate <- logic
+            .destExistsPredicate(statement)
+            .toRight(NotOfForm("an existential", statement))
+          applied <- LogicError.lift(Term.app(predicate, witness))
+          inner <- Conv.betaRoot(applied).flatMap(rightOf)
+          below <- existsAll(logic, inner, rest, proof)
+          result <- logic.rules.existsIntro(predicate, witness, below)
+        } yield result
+    }
+
+  /** What a step handed over: the four witnesses and the two words they decompose. */
+  private final case class Step(
+    front: Term,
+    left: Term,
+    right: Term,
+    tail: Term,
+    subject: Term,
+    result: Term
+  )
+
+  /** The constants and the lemma a measure comparison reads its terms through. */
+  private final case class Readers(
+    potential: Term,
+    concat: Term,
+    plus: Term,
+    successorOf: Term,
+    blocks: Kernel.Thm
+  )
+
+  /**
+   * A claim proved at every clause of a disjunction, which is [[overEveryRule]]'s walk without the
+   * statement around it.
+   */
+  private def overClauses(
+    logic: Logic,
+    disjunction: Kernel.Thm,
+    expected: Int
+  )(
+    at: (Int, Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    def clause(position: Int, term: Term): Either[LogicError, Kernel.Thm] =
+      for {
+        assumed <- LogicError.lift(Kernel.assume(term))
+        leftEquation <- rules.conjElim1(assumed)
+        rightEquation <- rules.conjElim2(assumed)
+        proved <- at(position, leftEquation, rightEquation)
+      } yield proved
+
+    def walk(position: Int, term: Term): Either[LogicError, Kernel.Thm] =
+      logic.destDisj(term) match {
+        case None =>
+          if (position == expected - 1) clause(position, term)
+          else Left(NotOfForm(s"$expected clauses", term))
+
+        case Some((here, others)) =>
+          for {
+            first <- clause(position, here)
+            rest <- walk(position + 1, others)
+            assumed <- LogicError.lift(Kernel.assume(term))
+            split <- rules.disjElim(assumed, first, rest)
+          } yield split
+      }
+
+    walk(0, disjunction.conclusion).flatMap(proved => rules.proveHyp(disjunction, proved))
   }
 
   /**
@@ -2329,6 +3902,7 @@ object Collatz {
     positions: Vector[Rewrite.Rule],
     letters: Vector[Rewrite.Rule],
     identities: Vector[Rewrite.Rule],
+    folds: Vector[Rewrite.Rule],
     entryLeft: Kernel.Thm,
     entryRight: Kernel.Thm,
     singletonLength: Kernel.Thm,
@@ -2915,12 +4489,27 @@ object Collatz {
             } yield held :+ definition
         }
       letters <- unfoldingRules(logic, letterDefinitions)
-      // What folds an evaluated sum into the number it is: the two identities of addition, the two
-      // recurrences of truncated subtraction, and the numeral one spelled as a successor so that
-      // `i - 1` meets them. The measure's weight is `i - 1` over a TRUNCATED subtraction, so
-      // nothing here is arithmetic on the integers: at position zero the pair cancels to `ZERO`
-      // rather than to anything negative, which is the fact the whole class argument turns on.
+      // Two sets and the line between them is the summand. [[identities]] is what tidies a term
+      // AROUND a sum: the identities of addition and its successor recurrence, which is all the
+      // offsets need. [[folds]] adds the numeral one spelled as a successor and the two recurrences
+      // of truncated subtraction, and it is used INSIDE a sum's evaluation.
+      //
+      // Keeping the first set clear of the second is not tidiness. `oneIsSuccessorOfZero` rewrites
+      // the `1` of `i - 1` and the one inside the bit encoding of `3`, both of which live in the
+      // summand; a summand rewritten there is no longer the term the evaluated equation is about,
+      // and the equation then fails to fire with no sign that anything went wrong.
+      emptyLength <- concatenation.fact(Concatenation.EmptyLength).map(atNumbers)
       identities <- unfoldingRules(
+        logic,
+        Vector(
+          numbers.addAtZero,
+          numbers.zeroPlus,
+          numbers.addAtSuccessor,
+          numbers.sumAtZero,
+          emptyLength
+        )
+      )
+      folds <- unfoldingRules(
         logic,
         Vector(
           numbers.addAtZero,
@@ -2947,6 +4536,7 @@ object Collatz {
       positions,
       letters,
       identities,
+      folds,
       entryLeft,
       entryRight,
       singletonLength,

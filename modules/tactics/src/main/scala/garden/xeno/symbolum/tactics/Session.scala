@@ -265,7 +265,7 @@ object Session {
      *
      * `cutShort` is empty for every proof whose price is its own. Where it is set, the page says so
      * beside the theorem: `Derivation.axiomsOf` reports an axiom either way and cannot say which of
-     * the two happened, which is what `docs/adr/0029` repairs one floor down in `Prove`.
+     * the two happened, which is what `docs/adr/0030` repairs one floor down in `Prove`.
      */
     case Proved(name: String, theorem: Kernel.Thm, cutShort: Option[String] = None)
 

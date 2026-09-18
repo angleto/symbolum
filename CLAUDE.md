@@ -1127,11 +1127,13 @@ for, where two of the eleven rules raise the measure. `ReachingSpec` derives the
 rather than asserting that the hypothesis cannot be dropped, which is the only form a negative
 control can take here: a theorem does not refuse.
 
-**Nothing instantiates it yet**, and that is worth saying because the file reads as though the
-rewriting work runs through it. `Forward` builds `WORD_RFC` out of `INDUCTIVE` directly and does not
-mention `REACH`, so the potential-function lemma has no consumer today; `Collatz`'s own docstring
-names that instantiation as what its argument is for, and `S2_PHI` is the measure it would be
-instantiated at.
+**It is instantiated since 2026-09-18, and the instance is `Collatz.S2_RUN_POTENTIAL`**: this
+lemma at `R := S2_RUN`, `A := S2_RUN_COUNTED` and `Phi := S2_PHI`, so a run of the rewriting system
+from `x` is known to spend at least `S2_PHI x - S2_PHI (FST q)` commutations getting where it got.
+The paragraph on `Collatz` below says what that cost. `Forward` still builds `WORD_RFC` out of
+`INDUCTIVE` directly and never mentions `REACH`, which is not an omission: a membership in the
+closure and the length of a run that reaches it are two questions about one system, and only the
+second needs a counter.
 
 **The one rewriting system this repository is about is `Collatz`, and since 2026-09-16 its marked
 words are closed under a step.** `Forward` gives the right forward closure of an arbitrary system,
@@ -1141,9 +1143,9 @@ transcribed. It sits **beside** the chain, which is a decision rather than an ac
 rewriting rules of a Collatz encoding do not belong in the vocabulary a question about the reals is
 typed in, so `Ask` and `Find` cannot reach it and `CollatzSpec` is the only thing that builds it.
 
-**The marked words are where the potential argument stops being false, and they are not yet where
-it is true.** `S2_MARKED w` says `w` has exactly one tail marker and it is the last letter, and
-outside that class the argument is false with the witness the source names: `/ff.012` rewrites to
+**The marked words are where the potential argument stops being false, and the anchored words are
+where it is true.** `S2_MARKED w` says `w` has exactly one tail marker and it is the last letter,
+and outside that class the argument is false with the witness the source names: `/ff.012` rewrites to
 `/0.012` and the potential falls by three, which no counted step pays for. `S2_MARKED_CLOSED` is
 what says a step never leaves the class. What the class does **not** say is that the head marker is
 the first letter and occurs nowhere else, and `REACH_POTENTIAL` needs that in both of its
@@ -1158,8 +1160,10 @@ Measured on 2026-09-18 over every word of at most seven letters, no sampling, wi
 `S2_MARKED` mirrored from `Collatz.scala` rather than from the source: of the marked words' 44790
 counted steps, 9330 fail the first hypothesis, and of their 33281 uncounted steps, 14454 fail the
 second. Adding the head condition leaves **0 of 3516** and **0 of 3280**, and no step leaves that
-class either. So the class part C has to be stated on is the marked words **and** one head marker in
-front, which is a predicate this development has not got, with a closure lemma of its own to prove.
+class either. So the class part C stands on is the marked words **and** one head marker in front.
+That predicate is `S2_ANCHORED`, positive length with the head marker at position zero and at no
+later one, and `S2_ANCHORED_CLOSED` is its closure lemma; `S2_HEADFREE` is to it what `S2_TAILFREE`
+is to the marked words, which is what makes the two constructions one read at two letters.
 
 Two things about that proof are worth knowing before opening the file. **A tally is the wrong
 instrument and an earlier plan reached for one**: `S2_MARKED` is positional, so a count of markers
@@ -1170,6 +1174,29 @@ never applied to a whole statement here**, because three of the eleven rules hav
 them and the rewriter does not know the difference between a letter and a numeral: a proposition
 rewritten with it comes back about a different word. The index is rewritten alone and carried in by
 congruence, which is written where a reader meets it.
+
+**Both hypotheses are theorems on that class.** `S2_PHI_COUNTED_STEP` is the first, that a
+commutation drops the measure by exactly one, and it spends the anchored class in exactly one place:
+the rule fired somewhere and something has to be in front of it for the digit to move towards, which
+is true because no commuting rule begins with the head marker. `S2_PHI_PLAIN_STEP` is the second,
+over the five rules that are not commutations, and it has three shapes rather than one: the two
+consuming rules eat the tail marker, so a marked word has nothing after them and what is compared is
+`P` against `P + (|x| - 1)`, which is `NUM_LE_ADD`; `B1` fires at the head and keeps the length, so
+the two measures come out as the **same** term and the comparison is reflexivity; `B2` and `B3` fire
+at the head and lengthen the word, so every letter after them sits one place further along and
+contributes one more, which is `NUM_SUM_MONOTONE_BELOW` over a pointwise split on whether the letter
+there is a digit.
+
+**What the instantiation had to decide is where the class goes, and it goes in the relation.**
+`REACH_POTENTIAL` asks both of its hypotheses of **every** pair, and a measure that behaves only on
+a class has no side condition to put that class in. `S2_RUN u v` is a step of `S2` from a word that
+is anchored and marked, `S2_RUN_COUNTED` is one of those that is also a commutation, and the
+restriction loses nothing because the class is closed under a step: a run that begins inside it
+never leaves. Two constants, no axiom, and `S2_RUN_INHABITED` is the guard, since a bound on every
+run of a relation that steps nothing is a theorem about nothing and `REACH_START` would detach the
+bound anyway. What is **not** reached is a run of positive length: detaching one wants a refusal of
+the counted step at a concrete pair, which is a negative about `WORD_STEP` and nothing here proves
+one.
 
 **And the two facts that keep it from being a theorem about nothing are published rather than
 argued.** A closure statement over an empty class is true and empty, and so is one over a relation
@@ -1183,9 +1210,9 @@ investigation's own document; `S2_FAMILY_F` is the induction under it, that `/f0
 closure, and the second is the first plus **one** right extension rather than a second induction.
 Three clause instances are the whole proof and the source names all three: `/ff` is `B2`'s
 right-hand side, `f|0 -> 0f` is `A2` and grows the run, `f|f. -> 0.` is `R1` and closes it. The run
-of zeros is `S2_ZEROS`, a tenth constant defined by recursion on the index, and its two equations
-are published because a defined constant whose equations nobody can reach is a name rather than a
-function.
+of zeros is `S2_ZEROS`, a constant of its own defined by recursion on the index, and its two
+equations are published because a defined constant whose equations nobody can reach is a name
+rather than a function.
 
 **And what keeps that from being a theorem about everything is `S2_RFC_REFUSED`.** A closure that
 held of every word would leave both family facts derivable and would say nothing, and no test
