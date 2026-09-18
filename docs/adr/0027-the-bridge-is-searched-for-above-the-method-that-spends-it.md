@@ -37,6 +37,11 @@ Three measurements on the standard chain, 2026-09-18, decide the shape:
    produces **no instance**, and therefore changes no decision `settle` makes. `BridgingSpec`
    measures the two counts against each other rather than writing either down.
 
+   What that alone left was **128 candidates against a bound of 128**, and a peer's lemmas landing
+   in `Peano` the same afternoon took it to 129 and turned the answer into a refusal for size. The
+   lemmas about `NUM_ONE` and `NUM_BIT1` were most of it, which is a bound growing with every proof
+   anybody writes about the number one: a bound on the wrong thing.
+
 3. **A lemma that settles a claim is not always a lemma the claim needed.** A foundation constant
    can sit where the decision never reads it: `NUM_LT (Attempts j) 3 /\ Abandoned j ==> Abandoned j`
    is settled by every candidate in the library and by none of them, because the conjunction is
@@ -57,8 +62,12 @@ structurally here: every theorem `Bridging` returns was built by `settle`, and e
 `settle` gives is still what a caller naming its own bridge gets.
 
 **The candidates are the lemmas about the constants the claim names, minus those that cannot
-produce an instance**, and the set is published as `Bridging.candidates` so that a bound has a
-visible subject. Above `Bridging.Candidates` the search is refused for its size rather than run,
+produce an instance and minus those about what a numeral is built from**, and the set is published
+as `Bridging.candidates` so that a bound has a visible subject. The two exclusions differ in kind
+and the file says so: the first is exact, and the second is a judgement that a claim naming `3` is
+about the order rather than about the encoding, which loses a bridge that really is about the
+encoding and names what it loses. `Domain.Structural` already draws that line for the connectives;
+this is the same line one level down, at the literal. Above `Bridging.Candidates` the search is refused for its size rather than run,
 and the refusal names the route `0024` built.
 
 **Each candidate is tried on its own.** A claim needing two lemmas at once is refused, and the

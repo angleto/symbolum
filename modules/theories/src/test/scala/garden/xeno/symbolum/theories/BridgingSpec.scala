@@ -217,7 +217,8 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
     val reached = retries.reaches(goal)
 
     // Three constants and not one: `NUM_LT`, and the two the numeral `3` is built from. A reader
-    // expecting the search space to be "the lemmas about `<`" is reading the claim and not the term.
+    // expecting the search space to be "the lemmas about `<`" is reading the claim and not the
+    // term, and the search drops those two on purpose: what the claim is about is the order.
     reached.size should be > 1
 
     val about = reached.toVector.sorted
@@ -232,7 +233,15 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
     // filter that stopped filtering nor one that emptied the set reads as a pass.
     tried.length should be < about.length
     tried should not be empty
-    tried.length should be <= Bridging.Candidates
+
+    // **Room rather than a fit, and the margin is the assertion.** This read 128 against a bound of
+    // 128 on 2026-09-18, and a peer's lemmas landing in `Peano` that afternoon took it to 129 and
+    // turned an answer into a refusal for size. A bound a claim only just fits under is one the next
+    // proof about the number one breaks, so what is asserted is that the shape this method was built
+    // for sits well inside it. Going red here is a decision to take, not a number to raise.
+    withClue(s"the search space of the retry claim is ${tried.length} of ${Bridging.Candidates}: ") {
+      tried.length * 2 should be <= Bridging.Candidates
+    }
 
     // And the lemma the claim is really missing survived the filter, which is the positive control
     // on it: a filter that dropped everything would satisfy the three assertions above.

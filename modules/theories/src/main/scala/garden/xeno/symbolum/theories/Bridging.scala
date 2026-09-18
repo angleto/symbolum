@@ -34,6 +34,11 @@ import garden.xeno.symbolum.logic.*
  * one call to `settle` per candidate and each of those is `2n + 1` decisions over its instances. A
  * claim whose constants hold more than [[Candidates]] such lemmas is refused rather than run.
  *
+ * Two things cut that set down and they are not the same kind of thing. A lemma binding a type the
+ * claim names no term of is dropped **exactly**: it produces no instance and can change no decision.
+ * A lemma about what a numeral is built from is dropped as a **judgement** about what a claim is
+ * about, which the `Literal` set states and names what it loses.
+ *
  * == Why the report names the bridges, and why it is entitled to ==
  *
  * `Domain.Spending` reports axioms, and a bridge is a theorem rather than an axiom, so a reader of
@@ -162,11 +167,34 @@ object Bridging {
    * settled anyway, which is the inert claim that [[settle]] rules out before it gets here.
    */
   def candidates(built: Domain.Built, library: Library, goal: Term): Vector[Library.Entry] =
-    built.reaches(goal).toVector.sorted
+    (built.reaches(goal) -- Literal).toVector.sorted
       .flatMap(library.about)
       .distinctBy(entry => (entry.name, entry.theorem.conclusion))
       .filter(entry => specialisable(built, goal, entry.theorem))
       .sortBy(entry => (entry.name, entry.development))
+
+  /**
+   * What a numeral is built from, which a claim names without being about it.
+   *
+   * `Domain.Structural` draws this line once already, for the connectives: what a claim is built
+   * **with** rather than what it is **about**. A numeral is the same thing one level down.
+   * `Attempts j < 3` reaches `NUM_ONE` and `NUM_BIT1` because `docs/adr/0012` encodes `3` in them,
+   * and a reader who wrote that claim did not name them: what the claim is about is the order.
+   *
+   * The measurement that made this a decision rather than a tidy-up. On 2026-09-18 the retry claim
+   * of `docs/adr/0024` had **128** candidates after every other filter, of which most came from
+   * those two, and a peer's lemmas landing in `Peano` the same afternoon pushed the search one past
+   * [[Candidates]] and turned an answer into a refusal for size. A bound whose subject grows with
+   * the library every time anybody proves something about the number one is a bound on the wrong
+   * thing.
+   *
+   * **It is a heuristic and not the exact filter above, so the loss is named.** A bridge that is
+   * genuinely about the encoding — `Peano.NUM_ONE_SUC` is the one to picture — is not found by this
+   * search, and a caller that wants it names it, which is the route `docs/adr/0024` built and this
+   * one never removes.
+   */
+  private val Literal: Set[String] =
+    Set(Natural.NumberZero, Peano.NumeralOne, Peano.NumeralBit0, Peano.NumeralBit1)
 
   /**
    * Whether the claim settles carrying `|- T` and nothing else, which is the control on the report.
