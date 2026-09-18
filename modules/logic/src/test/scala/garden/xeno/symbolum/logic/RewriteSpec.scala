@@ -221,7 +221,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
       .isLeft shouldBe true
   }
 
-  it should "still be usable by a caller that does not repeat, which is what four derivations do" in {
+  it should "still be usable by a caller that does not repeat, as four derivations here do" in {
     // `Arithmetic.timesZero` derives `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`, which is
     // exactly this shape, and `Order` and `Linarith` do the same with `0 = 0 - x` and its
     // relatives. Counted on 2026-09-18 over every rule the whole suite builds, those four are all
@@ -234,7 +234,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     rightOf(once) shouldBe force(Term.app(f, u))
   }
 
-  it should "not take a closed rule that merely grows, which is the criterion the count corrected" in {
+  it should "not take a closed rule that merely grows, the criterion the count corrected" in {
     // The card that asked for this guard asked for a refusal on SIZE, and the count refused the
     // card. Of the distinct closed rules the whole suite builds whose right side has more nodes
     // than their left, all but the four above do not contain their left side and are ordinary:
@@ -677,7 +677,8 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "Every rule set that is repeated" should "be reachable by the check that refuses one that cannot be" in {
+  "Every rule set that is repeated" should
+    "be reachable by the check that refuses one that cannot be" in {
     // The guard above refuses a rule set that cannot reach a fixed point, and it is asked in
     // `Rewrite.rewrite` and `Rewrite.normaliser`, which are the two published ways to iterate a
     // rule set. That covers everything **only while nothing assembles its own repetition**, and on

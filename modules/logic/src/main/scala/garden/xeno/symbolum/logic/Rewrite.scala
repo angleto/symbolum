@@ -159,37 +159,36 @@ object Rewrite {
     /**
      * The rules, refused as a set if one of them cannot be repeated to a fixed point.
      *
-     * **This is asked where a rule set is iterated, and not in `Rule.of`, and the measurement is what
-     * moved it.** A rule with no variables whose right side contains its left grows the term every
-     * time it fires and puts the pattern back, so a driver that repeats never reaches a fixed
-     * point: found on 2026-09-18, where `NUM_ADD ZERO ZERO = ZERO` read the other way round went
-     * to `Rewrite.inTheorem` and the heap was gone in four and a half minutes. Two copies of the left
+     * **This is asked where a rule set is iterated, and not in `Rule.of`, and the measurement is
+     * what moved it.** A rule with no variables whose right side contains its left grows the term
+     * every time it fires and puts the pattern back, so a driver that repeats never reaches a fixed
+     * point: found on 2026-09-18, where `NUM_ADD ZERO ZERO = ZERO` read the other way round went to
+     * `Rewrite.inTheorem` and the heap was gone in four and a half minutes. Two copies of the left
      * side in the right means each round doubles them, so the size is exponential in the number of
-     * rounds and `Rewrite.DefaultLimit` is never reached: 2^200 arrives at the heap first, which is the
-     * sentence `Rule.of` already carries for `NUM_DIV_MOD`.
+     * rounds and `Rewrite.DefaultLimit` is never reached: 2^200 arrives at the heap first, which is
+     * the sentence `Rule.of` already carries for `NUM_DIV_MOD`.
      *
      * The card that asked for this asked `Rule.of` to refuse a closed rule whose right side is
      * strictly larger. Every rule the whole suite builds was counted on 2026-09-18 against
-     * `b680520`, and the count refused the criterion: of 127 distinct closed rules whose right
-     * side is the larger, **123 do not contain their left side** and are ordinary. Every
-     * definition unfolded as a rule is one of them, `MAT_MUL` at 91 nodes against 1 being the
-     * largest; `NUM_ONE = SUC ZERO`, which is what `Successor` opens every numeral with, is the
-     * smallest.
+     * `b680520`, and the count refused the criterion: of 127 distinct closed rules whose right side
+     * is the larger, **123 do not contain their left side** and are ordinary. Every definition
+     * unfolded as a rule is one of them, `MAT_MUL` at 91 nodes against 1 being the largest;
+     * `NUM_ONE = SUC ZERO`, which is what `Successor` opens every numeral with, is the smallest.
      *
      * **The four that do contain their left side are deliberate, and they are an idiom rather than
-     * an accident.** All four are `0 = <something holding 0>`: `Arithmetic.timesZero` derives
-     * `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`, and `Order` and `Linarith` do the same
-     * with `0 = 0 - x` and its relatives. Every one of them hands the rule to a single
-     * `Rewrite.depthConv`: one pass, one replacement, finished. So what decides is the driver and not the
-     * shape, and `Rule.of` cannot see the driver. Refusing there would have meant rewriting four
-     * derivations the arithmetic and the order rest on, to satisfy a guard with no way of knowing
-     * they were safe.
+     * an accident.** All four are `0 = <something holding 0>`. `Arithmetic.timesZero` derives
+     * `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`; `Order` and `Linarith` do the same with
+     * `0 = 0 - x` and its relatives. Each hands the rule to a single `Rewrite.depthConv`:
+     * one pass, one replacement, finished. So what decides is the driver and not the shape, and
+     * `Rule.of` cannot see the driver. Refusing there would have meant rewriting four derivations
+     * the arithmetic and the order rest on, to satisfy a guard with no way of knowing they were
+     * safe.
      *
      * What this does not cover, and both are the price of deciding it on one rule at a time. A set
      * can put back between its rules what no one of them puts back alone, and nothing here sees
      * that. And a reproducing rule handed to a term its left side does not occur in would have
-     * terminated; that call is refused too, because what is asked about is the shape, exactly as
-     * in the two guards `Rule.of` carries. Neither is the general question, which is that the step
+     * terminated; that call is refused too, because what is asked about is the shape, exactly as in
+     * the two guards `Rule.of` carries. Neither is the general question, which is that the step
      * limit bounds steps and not size, so this rewriter can still die where it should stop.
      */
     def iterable(rules: Vector[Rule]): Either[LogicError, Vector[Rule]] =
@@ -198,8 +197,7 @@ object Rewrite {
         case Some(rule) =>
           Left(
             NotOfForm(
-              "rules that can be repeated to a fixed point, none of them an equation with no " +
-                "variables whose right side contains its left",
+              "a rule set no rule of which puts its own left side back",
               rule.theorem.conclusion
             )
           )
