@@ -183,6 +183,13 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Collatz.scala", "PotentialPlainStep") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "RunPotential") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "RunInhabited") -> (Verdict.Name, "the lemma's published name"),
+    // The four that landed with the family's closed form and its quadratic bound, and they are the
+    // block above's reading again: each site writes `s"$Name as it is written"` and compares a
+    // published name against the conclusion the derivation produced.
+    ("Collatz.scala", "StemLength") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "PotentialOfFamily") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "FamilyAtOne") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "FamilyBounded") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "Natural.TypeName") -> (Verdict.Name, "the name of the type num"),
     ("Collatz.scala", "expected") ->
       (Verdict.Number, "how many clauses the disjunction being walked was expected to have"),
