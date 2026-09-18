@@ -84,6 +84,33 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
     chain.widest.term("real_of_int INT_ZERO", Real.realType) should be(Symbol("right"))
   }
 
+  /**
+   * The re-basing refuses a theory that does not extend the one the quotient was built over.
+   *
+   * `Quotient.over` is what this development calls first, and the sentence in its docstring — that
+   * a caller placing this link below the one it embeds is refused rather than quietly building a
+   * second branch off the quotient — was a claim about a guard nothing exercised. It is asserted
+   * here rather than in `QuotientSpec` because the refusal is about a real pair of theories and
+   * that file's quotient is a toy over `NUM_CONG 2` with nothing below it to fail against.
+   *
+   * `forward` is the link the integers extend, so its theory is genuinely below the quotient's:
+   * it declares none of the constants the quotient introduced, and the refusal names them.
+   *
+   * The positive control is the second half and is not decoration. A `Logic.over` that refused
+   * everything would pass the first assertion, and this development would then not build at all —
+   * which is true today and is exactly the kind of thing that stops being true when the check is
+   * loosened rather than when it is removed.
+   */
+  "Re-basing the quotient" should "refuse a theory that does not extend the one it was built over" in {
+    integers.quotient.over(chain.forward.theory) match {
+      case Left(error) => error.message should include(Integer.SameName)
+      case Right(_) =>
+        fail("a theory below the quotient's own was accepted as one extending it")
+    }
+
+    integers.quotient.over(integers.theory) should be(Symbol("right"))
+  }
+
   /* ------------------------------------------------------------------ the statements */
 
   it should "prove each of its facts with nothing assumed" in {

@@ -103,11 +103,24 @@ object Inclusion {
   /**
    * `real_of_int a` — the integer `a` as a real number.
    *
-   * Lowercase, and reading as the pair of subjects it is about, which is `real_of_num`'s spelling
-   * one type down rather than the `INT_` namespace of the development it embeds. `docs/naming.md`
-   * decides it twice over: a constant is named the way its neighbours are named, and the neighbour
-   * of a map into the reals is the other map into the reals. The card that asked for this file
-   * wrote `REAL_OF_INT`, which would have put two spellings of one operation into one signature.
+   * Lowercase, and the card that asked for this file wrote `REAL_OF_INT`. The two readings of
+   * `docs/naming.md` that decide between them point opposite ways, so it was settled by counting
+   * the family instead of by choosing a reading.
+   *
+   * The family is every constant of the widest signature of the form "this `A`, read as a `B`",
+   * and on 2026-09-18 there were three of them: `INT_OF_NUM` and `INT_OF_PAIR` into `int`, both
+   * `UPPER_SNAKE`, and `real_of_num` into `real`, lowercase. **The case follows the target type in
+   * all three, and the owning development in two.** The one it splits on is the exact analogue of
+   * this constant: `real_of_num` is declared in `Peano.scala` between `NUM_MUL` and `PRE`, so a
+   * development whose every other constant is upper wrote this one lowercase, and the only thing
+   * different about it is that what comes out is a real. What comes out here is a real too.
+   *
+   * The objection to answer is that the constant then reads `real_of_int` while its facts read
+   * `INT_REAL_`, which is two orders of the same two subjects in one file. It is not a new
+   * inconsistency: `real_of_num` already carries thirteen facts spelled `NUM_REAL_` in
+   * `docs/lemmas.md`, so this reproduces the established pair rather than inventing one. What the
+   * card's spelling would have introduced is the thing `docs/naming.md` warns about in as many
+   * words, a constant that looks like one type's and behaves like another's, in a family of two.
    */
   val Name: String = "real_of_int"
 
