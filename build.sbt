@@ -204,6 +204,51 @@ lazy val commonSettings = Seq(
  * 25 is about two and a half times the largest spread this note has ever recorded, which is the
  * 0.88 points across four readings of `kernel` — ten statements.
  *
+ * == What the 25 is the capacity FOR, which is not the question anybody asks ==
+ *
+ * Measured on 2026-09-18 from the `scoverage-reports` artifact of CI run `35194000022` at
+ * `6554615`, read per module from the `scoverage.xml` rather than derived from a rate: the margin
+ * in statements answers *how many covered statements may this module lose*, and the question that
+ * presents itself when somebody lands work is *how much new code, covered at q, may this module
+ * take*. The two are not close, and one of them is arithmetic nobody has to run.
+ *
+ * {{{
+ *   module     floor   stmts  covered    rate   may lose    at 99%   at 95%   at 90%   at 0%
+ *   checker     88.8     831      763   91.82         25     never    never    never      28
+ *   core        91.3    2910     2684   92.23         27     never    never     2090      29
+ *   kernel      93.4    1122     1074   95.72         26     never    never      766      27
+ *   logic       94.7    4831     4624   95.72         49     never    never     1043      51
+ *   sat         92.0     437      405   92.68          2     never    never      147       3
+ *   scan        99.0     185      185  100.00          1     never       46       20       1
+ *   tactics     92.5    5152     4798   93.13         32     never    never     1295      35
+ *   theories    97.4   55521    54154   97.54         76     never     3189     1034      78
+ * }}}
+ *
+ * **A module never breaches from code covered at or above its own floor, whatever its size.** The
+ * capacity is `(covered - f * total) / (f - q)` and the denominator turns negative the moment
+ * `q >= f`, which is what every `never` above is. So the floor is not a budget of statements at
+ * all: it is a threshold on the coverage of what arrives. The "25 statements" is the last column,
+ * the capacity for code covered at **zero**, and that is the case this build has never seen.
+ *
+ * Two readings of the same eight rows disagree about which floor is tight, and the disagreement is
+ * the point rather than a curiosity. By statements it may lose: `scan` 1, `sat` 2, `checker` 25,
+ * `kernel` 26, `core` 27, `tactics` 32, `logic` 49, `theories` 76. By what it absorbs at 90%:
+ * `scan` 20, `sat` 147, `kernel` 766, `theories` 1034, `logic` 1043, `tactics` 1295, `core` 2090,
+ * `checker` never. `checker` is second tightest on the first reading and cannot be breached at all
+ * on the second, because its floor is below 90; `theories`, which reads as the loosest by a factor
+ * of three on the first, is fourth of eight on the second.
+ *
+ * `scan` is the only one tight on both, and it is the only one where a realistic landing breaches:
+ * 46 statements at 95%, 20 at 90%. It is at 100.00% with a floor of 99.0, so its whole margin is
+ * one statement, and the `ceil` matters at that size -- the threshold is `ceil(0.99 * 185) = 184`
+ * and not `183.15`, so the margin is 1 and not 1.9.
+ *
+ * **The figures move and the structure does not.** Every count above is of one revision and every
+ * module has grown since; what does not depend on the sizes is the comparison between `q` and the
+ * floor, which is what decides every `never`. A reader wanting today's numbers runs the arithmetic
+ * above against the current `scoverage.xml`; a reader wanting to know what a floor protects reads
+ * the sentence in bold.
+ *
  * **Four of the seven were left alone because three other sessions had unlanded work in them**, and
  * that is a decision rather than caution. A floor that only rises is a ratchet, and a ratchet set
  * from a tree somebody is mid-change in is not conservative: it is a claim about a commit nobody has
