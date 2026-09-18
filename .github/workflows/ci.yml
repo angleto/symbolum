@@ -277,10 +277,17 @@ jobs:
       # SEEN FAILING, 2026-09-18, because a guard observed only passing is untested. Control first,
       # and it had to be run twice: the first was `sbt doc` on a tree where the task was cached, 9
       # log lines, no module documented and an exit 0 that read exactly like a pass. The one that
-      # counts is `sbt clean doc` at 248a4c4 with this change's link repairs in place, 11 modules
-      # documented in 661 s and zero. Read the module count beside the verdict: an incremental run
-      # of this command documents only what recompiled, and a zero from six of eleven is a zero
-      # about six. Then `[[split]]` in `scan/Comments.scala` was made `[[splitTheLinesUp]]`: this step
+      # counts is `sbt clean doc` at 248a4c4 with this change's link repairs in place: 11 modules
+      # documented, and zero. Read the module count beside the verdict, because an incremental run
+      # of this command documents only what recompiled and a zero from six of eleven is a zero
+      # about six.
+      #
+      # What is deliberately NOT here is how long it took, and the first version of this comment
+      # carried it. A wall clock is a property of the machine and of what else was on it, which is
+      # the argument `CLAUDE.md` makes where it deleted such a figure rather than correcting it;
+      # and this one was worse than machine-dependent, because the run that produced it had gone
+      # round the machine's build cap while another build held a slot. It was a number nobody
+      # could reproduce, offered as though it were one. Then `[[split]]` in `scan/Comments.scala` was made `[[splitTheLinesUp]]`: this step
       # exits 1 and names `Comments.scala:72`, while `sbt scan/test` stays green at 17 tests, which
       # is the half that says this gate is the only thing in the build that sees it. Restored, the
       # step is 0 again with `scan` genuinely re-documented rather than cached.
