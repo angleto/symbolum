@@ -1218,6 +1218,23 @@ bound anyway. What is **not** reached is a run of positive length: detaching one
 the counted step at a concrete pair, which is a negative about `WORD_STEP` and nothing here proves
 one.
 
+**And the bound is quadratic at the one family this investigation names, since 2026-09-18.**
+`S2_FAMILY_BOUNDED` is `S2_RUN_POTENTIAL` at `/f0^j.`, so a run from the `j`th member spends at
+least `NUM_TRI j` commutations getting wherever it gets, and `NUM_TRI` grows as the square. What
+made it statable is `S2_PHI_FAMILY`, the measure of that family in closed form, and the closed form
+is a **triangular number** rather than a quotient: `j (j + 1) / 2` cannot be written on `num`, which
+is the same wall `docs/adr/0014` hit and why `Numbering` defines `NUM_TRI` by recursion in the first
+place. The two recursions meet without any arithmetic in between, the `j`th zero sitting at position
+`j + 1` and weighing its distance from the head. `S2_ZEROS_LENGTH` and `S2_STEM_LENGTH` are what the
+induction needs and the second is spent **under a binder**: the weight of a letter is how far along
+the word it is, so a block placed after the stem has to know how long the stem is.
+
+Read it for what it is. It is the quadratic **from below**, which is the direction `REACH_POTENTIAL`
+gives and the direction a lower bound on derivation length wants; it says nothing about termination
+and nothing about a run of that length existing. And `S2_PHI_FAMILY_AT_ONE` is the guard an
+off-by-one would fail: `S2_PHI (/f0.) = SUC ZERO` is written by hand and derived through `NUM_TRI`,
+where every other fact about the family is stated in `NUM_TRI` and would agree with itself.
+
 **And the two facts that keep it from being a theorem about nothing are published rather than
 argued.** A closure statement over an empty class is true and empty, and so is one over a relation
 that steps nothing; neither would fail anything else in the file. `S2_MARKED_INHABITED` and
