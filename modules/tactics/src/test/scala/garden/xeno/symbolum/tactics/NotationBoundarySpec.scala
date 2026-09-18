@@ -262,8 +262,6 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Language.scala", "Axioms(which)._1") -> (Verdict.Name, "an axiom's published name"),
     ("Language.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Language.scala", "payload") -> (Verdict.Crossing, "a code's payload, which is a term"),
-    ("Language.scala", "scheme.binders.size") ->
-      (Verdict.Number, "how many variables a scheme binds"),
     ("Limit.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
@@ -358,6 +356,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
     ("Language.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted"),
+    // The sentence this replaced was a literal interpolating `scheme.binders.size`, and it had a
+    // row in `Classified` until `Prose.count` arrived in it on 2026-09-18: the call does not fit
+    // the line, so the description is a name now and the scan sees an identifier. That is the
+    // class this table exists for, and what is named here is what the name holds.
+    ("Language.scala", "wanted") ->
+      (Verdict.Text, "a sentence built here from a literal and a count of the scheme's binders"),
     ("Quotient.scala", "what") ->
       (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
