@@ -40,6 +40,29 @@ object Rewrite {
   /** The default ceiling on rewriting steps. */
   val DefaultLimit: Int = 200
 
+  /**
+   * Nodes in a term, which is what "larger" means for the guard in [[Rule.of]].
+   *
+   * A count rather than a measure of anything else, because what it has to decide is whether one
+   * application of a rule leaves more term behind than it consumed, and for a rule with nothing to
+   * instantiate that is exactly the node count of the two sides. Type instantiation does not enter
+   * it: `Matching.matchTerm` decides a rule's type variables as well as its term variables, and a
+   * type substitution rewrites the types hanging off the nodes without adding or removing one.
+   */
+  def nodesOf(term: Term): Int = term match {
+    case App(fn, argument) => 1 + nodesOf(fn) + nodesOf(argument)
+    case Abs(_, body) => 1 + nodesOf(body)
+    case _ => 1
+  }
+
+  /** Whether the first term occurs anywhere in the second, itself included. */
+  def occursIn(part: Term, whole: Term): Boolean =
+    part == whole || (whole match {
+      case App(fn, argument) => occursIn(part, fn) || occursIn(part, argument)
+      case Abs(_, body) => occursIn(part, body)
+      case _ => false
+    })
+
   /* --------------------------------------------------------------------- rules */
 
   /**
@@ -49,7 +72,27 @@ object Rewrite {
    * theorem is not one of them: `|- x + 0 = x` with `x` free says something about that particular
    * `x`, and treating it as a pattern would be reading a quantifier that is not there.
    */
-  final case class Rule(variables: Set[FVar], lhs: Term, rhs: Term, theorem: Kernel.Thm)
+  final case class Rule(variables: Set[FVar], lhs: Term, rhs: Term, theorem: Kernel.Thm) {
+
+    /**
+     * Whether firing this rule puts its own left side back, so that repeating it never stops.
+     *
+     * Asked only of a rule with no variables, and that is what makes it decidable rather than a
+     * guess: there is nothing to instantiate, so the two sides are the two terms and containment
+     * settles it once, here. Where there are variables, whether an application reproduces the
+     * pattern depends on what the matcher put in them, and no property of the rule answers it;
+     * `!x. f x = f (f x)` is such a rule, it is accepted, it diverges, and the step limit is what
+     * stops it.
+     *
+     * `lhs != rhs` is not an exception being carved out. `|- t = t` is reflexivity, `changed` is
+     * false on it, no driver loops on it, and `Conv.refl` builds one at every node of every
+     * congruence.
+     *
+     * Computed once, when the rule is built, and the conjunction is in this order because of it:
+     * a rule with variables pays one `isEmpty` and never walks a term.
+     */
+    val reproduces: Boolean = variables.isEmpty && lhs != rhs && occursIn(lhs, rhs)
+  }
 
   object Rule {
 
@@ -111,6 +154,53 @@ object Rewrite {
 
           case Some((lhs, rhs)) => Right(Rule(variables.toSet, lhs, rhs, specialised))
         }
+      }
+
+    /**
+     * The rules, refused as a set if one of them cannot be repeated to a fixed point.
+     *
+     * **This is asked where a rule set is iterated, and not in `Rule.of`, and the measurement is
+     * what moved it.** A rule with no variables whose right side contains its left grows the term
+     * every time it fires and puts the pattern back, so a driver that repeats never reaches a fixed
+     * point: found on 2026-09-18, where `NUM_ADD ZERO ZERO = ZERO` read the other way round went to
+     * `Rewrite.inTheorem` and the heap was gone in four and a half minutes. Two copies of the left
+     * side in the right means each round doubles them, so the size is exponential in the number of
+     * rounds and `Rewrite.DefaultLimit` is never reached: 2^200 arrives at the heap first, which is
+     * the sentence `Rule.of` already carries for `NUM_DIV_MOD`.
+     *
+     * The card that asked for this asked `Rule.of` to refuse a closed rule whose right side is
+     * strictly larger. Every rule the whole suite builds was counted on 2026-09-18 against
+     * `b680520`, and the count refused the criterion: of 127 distinct closed rules whose right side
+     * is the larger, **123 do not contain their left side** and are ordinary. Every definition
+     * unfolded as a rule is one of them, `MAT_MUL` at 91 nodes against 1 being the largest;
+     * `NUM_ONE = SUC ZERO`, which is what `Successor` opens every numeral with, is the smallest.
+     *
+     * **The four that do contain their left side are deliberate, and they are an idiom rather than
+     * an accident.** All four are `0 = <something holding 0>`. `Arithmetic.timesZero` derives
+     * `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`; `Order` and `Linarith` do the same with
+     * `0 = 0 - x` and its relatives. Each hands the rule to a single `Rewrite.depthConv`:
+     * one pass, one replacement, finished. So what decides is the driver and not the shape, and
+     * `Rule.of` cannot see the driver. Refusing there would have meant rewriting four derivations
+     * the arithmetic and the order rest on, to satisfy a guard with no way of knowing they were
+     * safe.
+     *
+     * What this does not cover, and both are the price of deciding it on one rule at a time. A set
+     * can put back between its rules what no one of them puts back alone, and nothing here sees
+     * that. And a reproducing rule handed to a term its left side does not occur in would have
+     * terminated; that call is refused too, because what is asked about is the shape, exactly as in
+     * the two guards `Rule.of` carries. Neither is the general question, which is that the step
+     * limit bounds steps and not size, so this rewriter can still die where it should stop.
+     */
+    def iterable(rules: Vector[Rule]): Either[LogicError, Vector[Rule]] =
+      rules.find(_.reproduces) match {
+        case None => Right(rules)
+        case Some(rule) =>
+          Left(
+            NotOfForm(
+              "a rule set no rule of which puts its own left side back",
+              rule.theorem.conclusion
+            )
+          )
       }
 
     /** Every rule of a theory, in order, refusing the first theorem that is not an equation. */
@@ -418,19 +508,46 @@ object Rewrite {
     order: Ordering[Term],
     limit: Int = DefaultLimit
   ): Conversion = {
-    val conversions =
-      unconditional.map(rewriteConv) ++
-        ordered.map(rule => orderedRewriteConv(rule, order)) :+ betaConv
-
-    repeatConv(depthConv(firstConv(conversions)), limit)
+    // Only the unconditional half is asked, and that is a statement about `orderedRewriteConv`
+    // rather than an omission: it fires only where the result is smaller in `order`, and a rule
+    // that puts its own left side back is strictly larger every time, so it can never fire there.
+    Rule.iterable(unconditional) match {
+      case Left(error) => (_: Term) => Left(error)
+      case Right(_) => repeatConv(passOver(unconditional, ordered, order), limit)
+    }
   }
+
+  /**
+   * One pass of an arithmetic's rules over the whole term, without repeating.
+   *
+   * Published because it was being written out again. [[normaliser]] built these lines inside
+   * itself and `Peano.normalisation` needs the same pass **and** the repetition of it, so it had
+   * re-derived them: that is the third copy of the six lines whose docstring above says why there
+   * is one function rather than one per arithmetic, and it was invisible because nothing compared
+   * them.
+   *
+   * It is not [[stepConv]], and the difference is not cosmetic: that one drives every rule with
+   * [[rewriteConv]], so a sorting rule given to it fires wherever it matches instead of only where
+   * it makes the term smaller.
+   */
+  def passOver(
+    unconditional: Vector[Rule],
+    ordered: Vector[Rule],
+    order: Ordering[Term]
+  ): Conversion =
+    depthConv(
+      firstConv(
+        unconditional.map(rewriteConv) ++
+          ordered.map(rule => orderedRewriteConv(rule, order)) :+ betaConv
+      )
+    )
 
   def rewrite(
     rules: Vector[Rule],
     term: Term,
     limit: Int = DefaultLimit
   ): Either[LogicError, Kernel.Thm] =
-    repeatConv(stepConv(rules), limit)(term)
+    Rule.iterable(rules).flatMap(iterable => repeatConv(stepConv(iterable), limit)(term))
 
   /**
    * One pass of the rules over the whole term, without repeating.

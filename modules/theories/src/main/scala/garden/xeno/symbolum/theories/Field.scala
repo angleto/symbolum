@@ -197,9 +197,21 @@ final class Field private (
   ): Rewrite.Conversion =
     if (splits.isEmpty && rules.isEmpty) cancelling.normalisation
     else {
+      // Asked before it is repeated, for the reason `Rewrite.Rule.iterable` gives: a rule with no
+      // variables whose right side contains its left puts the pattern back every time it fires, so
+      // a driver that repeats never reaches a fixed point and the heap goes before the step limit.
+      // This pass is not `Rewrite.normaliser` and is left as it is: it carries no ordered rules and
+      // no beta, and the paragraph above is the argument for its shape.
       def pass(available: Vector[Rewrite.Rule]): Rewrite.Conversion =
         if (available.isEmpty) (term: Term) => Right(Conv.refl(term))
-        else Rewrite.repeatConv(Rewrite.depthConv(Rewrite.firstConv(available.map(Rewrite.rewriteConv))))
+        else
+          Rewrite.Rule.iterable(available) match {
+            case Left(error) => (_: Term) => Left(error)
+            case Right(_) =>
+              Rewrite.repeatConv(
+                Rewrite.depthConv(Rewrite.firstConv(available.map(Rewrite.rewriteConv)))
+              )
+          }
 
       val split = pass(splits)
       val cancel = pass(rules)
