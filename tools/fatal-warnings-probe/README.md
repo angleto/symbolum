@@ -40,13 +40,15 @@ gate says so.
 ## Seen failing, 2026-09-18, against `c10d61c` plus this change
 
 macOS, Apple silicon, Temurin 23, sbt 1.10.10, Scala 3.3.5, each perturbation applied alone and
-reverted before the next.
+reverted before the next. The first two rows were taken twice: once when they were written, and
+again after the messages changed, so what is quoted is what the gate says today rather than what
+it said when the perturbation was run.
 
 | perturbation | what the gate did |
 |---|---|
 | none (the tree as committed) | green, one line: `-Xfatal-warnings reaches 12 projects, and the compilation that had to fail did, quietly.` |
-| `-Xfatal-warnings` deleted from `commonSettings` | red, exit 1, naming all twelve: `mark, examples, sat, core, scan, warningProbe, theories, logic, checker, dist, tactics, kernel (Compile and Test)` |
-| `theories / Compile / scalacOptions -= "-Xfatal-warnings"`, string left in `build.sbt` | red, exit 1, `theories (Compile and Test)`, while `logic/testOnly ...LogicErrorSpec` stayed green. This is the defect class the card is about, reproduced: written and not arriving |
+| `-Xfatal-warnings` deleted from `commonSettings` | red, exit 1: `-Werror or -Xfatal-warnings is not in the effective scalacOptions of: mark (Compile and Test), examples, sat, core, scan, warningProbe, theories, logic, checker, dist, tactics, kernel` -- all twelve, each with both configurations |
+| `theories / Compile / scalacOptions -= "-Xfatal-warnings"`, string left in `build.sbt` | red, exit 1: `-Werror or -Xfatal-warnings is not in the effective scalacOptions of: theories (Compile and Test)`, while `logic/testOnly ...LogicErrorSpec` stayed green at 5 tests. This is the defect class the card is about, reproduced: written and not arriving |
 | a project added to the build that never took `commonSettings` | red, exit 1, `forgot (Compile and Test)`: the check is over `inAnyProject` and a question to the disk, so a project nobody named is inside it |
 | the probe source made ill-formed (an undefined name) | red at the CONTROL, with the message that the probe is broken rather than warning, so a failing probe is never read as a working flag |
 | `tools/sbt coverage fatalWarnings` | green, and `find tools/fatal-warnings-probe -name 'scoverage*'` returns nothing afterwards: the probe compilations are stripped of `-Xplugin` and `-P:`, so no coverage data about this source enters any module's measurement. That is the interaction the full `clean coverage test coverageReport` would exercise as well; what was run is the cheap half of it |
