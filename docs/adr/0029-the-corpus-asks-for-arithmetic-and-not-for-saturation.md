@@ -36,7 +36,7 @@ its name. Classified by what a prover would have to be able to do, not by what s
 
 | what it needs | how many | which |
 |---|---|---|
-| a square, and nothing else | **2** | `algebra_sqineq_at2malt1`, `mathd_algebra_113` |
+| a square, and nothing else | **2**, and **both are proved since 2026-09-18**, see below | `algebra_sqineq_at2malt1`, `mathd_algebra_113` |
 | substitute or solve, then evaluate | **2** | `mathd_algebra_478`, `mathd_algebra_338` |
 | a system, nonlinear or with division | **6** | `amc12b_2021_p3`, `amc12b_2002_p7`, `amc12b_2002_p19`, `mathd_algebra_362`, `aime_1990_p15`, `amc12_2000_p20` |
 | a genuinely hard inequality | **6** | `imo_1983_p6`, `imo_1964_p2`, `amc12_2000_p12`, `algebra_9onxpypzleqsum2onxpy`, `algebra_sqineq_unitcircatbpamblt1`, `algebra_amgm_sumasqdivbgeqsuma` |
@@ -58,6 +58,19 @@ this library holds. Put to the prover on 2026-09-18 they come back:
 which is `Linarith`'s degree bound refusing, by name. A goal that one published lemma settles is
 stopped by an arithmetic reach, and no amount of search over clauses moves it.
 
+**Both were proved later on 2026-09-18, and this record is left standing rather than corrected in
+place**, because what it is a record of is the measurement that chose the decision below and that
+measurement was taken when it was taken. What has changed since, and what a reader of the table
+above needs so that it does not mislead: `docs/adr/0032` decided the first item of the list below,
+the fact pool gained a completed square, and the two goals of the first row are settled.
+`ReachSpec` prints both among the statements it proves by name, so the figure is read off a run
+rather than asserted here, and the eighteen are **sixteen**. The other four rows are untouched,
+which was predicted in 0032 and is the half of the prediction that could have been wrong.
+
+And the refusal quoted above is no longer the one those two would get, which is a second thing
+0032 changed: a goal with no hypotheses is told its pool is empty rather than told about a degree,
+since the sentence about the degree is true of an empty set and sends the reader nowhere.
+
 ## Decision
 
 **Do not build forward inference, saturation or a given-clause loop.** The corpus this repository
@@ -67,7 +80,8 @@ says so rather than an argument from taste.
 What the corpus asks for instead, in the order the enumeration puts it:
 
 1. **Arithmetic past the degree `Linarith` reaches**, which is Mycelium card `bacfaba5` and which
-   two of the eighteen wait on alone. That is the cheapest thing on this list and the only one with
+   two of the eighteen waited on alone, and which `docs/adr/0032` decided and which is built: those
+   two are proved. That was the cheapest thing on this list and the only one with
    goals whose refusal already names it.
 2. **Deciding a system**: producing the values a set of equations forces, and substituting them.
    Six of the eighteen, and the two "substitute or solve" ones are its easy end.

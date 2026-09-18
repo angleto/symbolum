@@ -177,28 +177,30 @@ final class Linarith private (
    * variables have no names in a term at all. A goal written with free variables, which is what a
    * claim about named quantities is, comes back in its own words.
    */
-  def support(text: String): Either[LogicError, Vector[(Term, BigInt)]] =
+  def support(text: String): Either[LogicError, Linarith.Support] =
     reals.proposition(text).flatMap(support)
 
   /** The same, for a goal already read. */
-  def support(goal: Term): Either[LogicError, Vector[(Term, BigInt)]] =
+  def support(goal: Term): Either[LogicError, Linarith.Support] =
     for {
       _ <- prove(goal)
       stripped <- Logic.stripForall(goal)
       shape = split(stripped._2)
       written <- traverse(shape.hypotheses)(LinearFact.of(reals, _))
 
-      // The squares are carried here and NOT reported, and both halves are decisions. Carried,
-      // because the certificate this rebuilds has to be one the proof could have used: a goal
-      // settled with a completed square has none over the hypotheses alone, and without them this
-      // would refuse a goal `prove` has just proved, with the message below saying exactly that.
-      // Not reported, because the question this answers is which of the goal's OWN hypotheses it
-      // rests on, and a square is not one: nobody wrote it, so nobody can act on its weight.
+      // The squares are carried here and reported BESIDE the hypotheses, which is
+      // `docs/adr/0032` point 4 and is two decisions rather than one. Carried, because the
+      // certificate this rebuilds has to be one the proof could have used: a goal settled with a
+      // completed square has none over the hypotheses alone, and without them this would refuse a
+      // goal `prove` has just proved, with the message below saying exactly that.
       //
-      // What that leaves, said here rather than left to be met: a proof that spent a square is one
-      // whose report can be empty while the goal is a theorem, and empty here means "no hypothesis
-      // was needed" rather than "no certificate was found". The two are told apart by the refusal,
-      // which is what a missing certificate produces and an empty support does not.
+      // Reported, and in a field of their own. Among the hypotheses they would be quiet and
+      // wrong, since the question this answers is which of the goal's OWN premises it rests on
+      // and nobody wrote a square; dropped entirely they would make a proof that spent one report
+      // an empty list, which reads as "no hypothesis was needed" and is indistinguishable from
+      // the answer for a goal that needed none. The second field is what tells those two apart,
+      // and it is why this returns a [[Linarith.Support]] rather than the bare vector it returned
+      // until 2026-09-18.
       completed = squares(shape.conclusion, written)
       facts = written ++ completed.map(_._1)
 
@@ -212,9 +214,19 @@ final class Linarith private (
           Certificate.find(facts, LinearForm.zero, strict = true)
             .toRight(NotOfForm("a certificate for a goal that was just proved", shape.conclusion))
       }
-    } yield shape.hypotheses
-      .zip(certificate.multipliers)
-      .collect { case (hypothesis, weight) if weight != 0 => (hypothesis, weight) }
+      // The multipliers index into the pool in the order it was built, which is the hypotheses
+      // and then the squares, so the split is `written.length` and not a search for which is
+      // which. `LinearFact.of` is applied to the hypotheses in order and `completed` is appended
+      // to that, which is the same construction `proveBody` gives the certificate.
+      weights = certificate.multipliers
+      spentOnHypotheses = shape.hypotheses
+        .zip(weights)
+        .collect { case (hypothesis, weight) if weight != 0 => (hypothesis, weight) }
+      spentOnSquares = completed
+        .map(_._2.conclusion)
+        .zip(weights.drop(shape.hypotheses.length))
+        .collect { case (square, weight) if weight != 0 => (square, weight) }
+    } yield Linarith.Support(spentOnHypotheses, spentOnSquares)
 
   /* -------------------------------------------------------------------- proof */
 
@@ -271,6 +283,18 @@ final class Linarith private (
    * atom and how many factors it has. That is the same discipline as [[LinearForm.unreadable]], one
    * limit further along: a caller repairs one thing at a time and cannot repair a thing nobody
    * named.
+   *
+   * **And there are two obstacles here rather than one, which is what `docs/adr/0032` records and
+   * what this said the wrong one of until 2026-09-18.** The pool the products are built from is
+   * the goal's hypotheses and nothing else, so a goal with none has an empty pool, and an empty
+   * set has no products at any degree. Telling that caller the hypotheses multiplied reach three
+   * is a true sentence about a set with nothing in it, and it sends them to restate a goal for a
+   * degree when what is missing is a premise. So the message splits on whether the pool is empty,
+   * and the degree is named only where there was something to multiply.
+   *
+   * The same discipline again, and the reason it is worth the branch rather than a longer
+   * sentence covering both: a reader acts on the first thing a refusal names, and "degree" and
+   * "no hypotheses" send them to different places.
    */
   private def naming(
     facts: Vector[LinearFact],
@@ -295,6 +319,16 @@ final class Linarith private (
       .find(atom => LinearForm.factorsOf(atom).length > 1)
 
     outOfReach match {
+      case Some(atom) if LinearForm.obstacleIn(reals, conclusion).isEmpty && facts.isEmpty =>
+        NotOfForm(
+          s"a goal with a hypothesis, or one a square settles: ${reals.show(atom)} is a product " +
+            s"of ${LinearForm.factorsOf(atom).length} unknowns, and this goal has no hypotheses " +
+            "at all, so the pool the products are built from is empty and no degree of them " +
+            "exists. Without hypotheses the only fact available is a square completed over an " +
+            "atom that is one unknown times itself, and this goal has none",
+          conclusion
+        )
+
       case Some(atom) if LinearForm.obstacleIn(reals, conclusion).isEmpty =>
         NotOfForm(
           s"a goal whose degree the products reach: ${reals.show(atom)} is a product of " +
@@ -747,7 +781,11 @@ final class Linarith private (
    * `docs/evaluation.md`.
    *
    * Only the products times the originals, never the products times each other. That would be
-   * degree four and the count would be quartic, and nothing measured has wanted it.
+   * degree four and the count would be quartic, and nothing measured has wanted it. `docs/adr/0032`
+   * is where that was measured rather than assumed, and the finding is sharper than "nothing has
+   * wanted it": the two corpus goals that asked for more degree have **no hypotheses**, so the
+   * pool this round multiplies is empty for them and a fourth round would settle neither, at any
+   * degree. What they wanted was a fact from outside the goal's text, which is [[squares]].
    */
   private def byCubes(
     facts: Vector[LinearFact],
@@ -1534,6 +1572,31 @@ final class Linarith private (
 }
 
 object Linarith {
+
+  /**
+   * What a proof rested on: the goal's own premises, and beside them the squares it was given.
+   *
+   * Two fields and not one list, which is `docs/adr/0032` point 4. [[Linarith.support]] answers
+   * "which of the premises I wrote did this need", and a completed square is not a premise
+   * anybody wrote: putting it among them would answer a question nobody asked, and it would put a
+   * proposition in the list that no citation can ever be attached to, which is exactly the
+   * confusion `Provenance.Premise.Unnameable` exists one level up to avoid.
+   *
+   * Leaving it out entirely was the other candidate and it is worse, which is why this type
+   * exists at all. A goal settled by a square alone then reports an empty `hypotheses`, and empty
+   * is already the honest answer for a goal that needed none of its premises; the two readings
+   * are "nothing was needed" and "something was needed and it is not shown", and a diagnostic
+   * that cannot tell them apart is the failure `Refutation` keeps seven outcomes apart to avoid.
+   *
+   * `squares` carries the theorem's own statement, `0 <= (x + c) * (x + c)`, rather than the
+   * atom it was completed over, because that is the proposition the certificate weighed and the
+   * one a reader can check against `SQUARE_NONNEG`.
+   */
+  final case class Support(
+    hypotheses: Vector[(Term, BigInt)],
+    squares: Vector[(Term, BigInt)]
+  )
+
 
   /**
    * The most facts the simplex is asked about once the products have been manufactured.

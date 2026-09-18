@@ -86,6 +86,24 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
     message should include("reach three")
   }
 
+  it should "name the empty pool instead, when the goal has no hypotheses to multiply" in {
+    // The two obstacles `docs/adr/0032` separates, and until 2026-09-18 this goal got the other
+    // one's message. It is the goal above with its four premises taken away: the atom is the same
+    // and just as far out of reach, and what stops the procedure is not the degree. A pool built
+    // from the hypotheses of a goal that has none is empty, and an empty set has no products at
+    // any degree, so "the hypotheses multiplied reach three" is true, says nothing, and sends the
+    // author to restate a goal for a number that is not the obstacle.
+    //
+    // Asserted in both directions, because a message that named the pool everywhere would pass
+    // the first half alone and would have undone the test above.
+    val message = refusalFor("!w:real x:real y:real z:real. 0 < w * x * y * z")
+
+    message should include("is a product of 4 unknowns")
+    message should include("no hypotheses at all")
+    message should include("the pool the products are built from is empty")
+    message should not include "multiplied reach three"
+  }
+
   it should "not fire on an atom that is not a product, which a better message already covers" in {
     // `inv x` is out of reach too, and it is out of reach for a reason that has a name. A degree
     // message there would be both wrong and a step back from one that was right. The hypothesis is

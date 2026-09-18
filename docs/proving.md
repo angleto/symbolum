@@ -562,11 +562,18 @@ hypothesis weighed by zero took no part:
 
 ```scala
 Linarith.standard.support("x:real < y:real /\\ z:real < w:real /\\ y:real < z:real ==> x < z")
-// Right(Vector((x < y, 1), (y < z, 1)))
+// Right(Support(hypotheses = Vector((x < y, 1), (y < z, 1)), squares = Vector()))
 ```
 
 Two of the three premises, with their weights, and `z < w` named as carrying nothing. That is the
 question an argument gets asked: not whether it follows, but which of its assumptions it needed.
+
+The second field is empty here and is not decoration. Since 2026-09-18 the procedure may give
+itself one fact nobody wrote, a square completed over a quadratic atom, and a goal settled with
+one rests on something that is in no premise. Reporting it among the premises would answer a
+question nobody asked; leaving it out would make such a proof report an empty list, which is
+already what a goal needing none of its premises reports. So it comes back beside them, and
+`docs/adr/0032` is the decision.
 The premises come back in the words they were written in when the goal has free variables, which is
 what a claim about named quantities is; a goal with leading quantifiers comes back with the
 variables the procedure opened them into, because a bound variable has no name in a term.

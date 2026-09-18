@@ -121,7 +121,11 @@ final class Provenance private (val reals: RealTheory, val entries: Vector[Prove
     for {
       opened <- TacticError.lift(Logic.stripForall(goal))
       support <- TacticError.lift(linarith.support(goal))
-    } yield attribute(stated(opened._2), support, opened._1.toSet)
+      // `hypotheses` and not the whole answer: a completed square is a proposition nobody wrote
+      // and nobody can cite, so it has no place in a trail whose three cases are cited, uncited
+      // and unnameable. `Linarith.Support` reports it in a field of its own for that reason, and
+      // this is the consumer that reads the other field.
+    } yield attribute(stated(opened._2), support.hypotheses, opened._1.toSet)
 
   /**
    * The premises the goal states, as written.

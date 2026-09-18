@@ -374,19 +374,59 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
       linarith.support("x:real < y:real /\\ z:real < w:real /\\ y:real < z:real ==> x < z")
     )
 
-    support.map { case (hypothesis, weight) => (reals.show(hypothesis), weight) } shouldBe
+    support.hypotheses.map { case (hypothesis, weight) => (reals.show(hypothesis), weight) } shouldBe
       Vector(("x < y", BigInt(1)), ("y < z", BigInt(1)))
+
+    support.squares shouldBe empty
   }
 
   it should "name the multiplier, not only the premise" in {
     val support = force(linarith.support("2 * x:real < 2 * y:real ==> x < y"))
 
-    support.map { case (hypothesis, weight) => (reals.show(hypothesis), weight) } shouldBe
+    support.hypotheses.map { case (hypothesis, weight) => (reals.show(hypothesis), weight) } shouldBe
       Vector(("2 * x < 2 * y", BigInt(1)))
   }
 
   it should "refuse to name a support for a goal it cannot prove" in {
     linarith.support("x:real < y:real ==> y < x").isLeft shouldBe true
+  }
+
+  /**
+   * A proof that spent a square reports it beside the premises, which is `docs/adr/0032` point 4.
+   *
+   * Three things are asserted and each is a different way the design could have failed, which is
+   * why they are one test rather than three: this file's other support tests are all over goals
+   * that spend no square, so every one of them would pass over a `support` that dropped squares
+   * on the floor or refused any goal that used one.
+   *
+   * **It does not refuse.** The certificate is rebuilt over the hypotheses, and a goal proved by
+   * a square has none over those alone; before the squares were carried into the rebuild this
+   * refused a goal `prove` had just proved, with the message saying exactly that.
+   *
+   * **The square is reported.** Dropped, the answer here would be an empty `hypotheses` and
+   * nothing else, which is also the honest answer for a goal that needed none of its premises.
+   * The two readings are "nothing was needed" and "something was needed and is not shown", and
+   * the second field is the whole of what tells them apart.
+   *
+   * **And it is not among the premises.** The goal has one hypothesis and it is genuinely spent,
+   * so this is the case that separates "beside" from "among": a `support` that appended the
+   * square to the same vector would come back with two entries here and the caller would have no
+   * way to tell which of them it wrote.
+   */
+  it should "report a completed square beside the premises rather than among them" in {
+    // `0 <= y` is a real premise and is needed: without it the claim is false at `y = -1, x = 0`.
+    // The square is over the atom `x * x`, which nothing in the goal's hypotheses gives and which
+    // no restatement of them would. It comes back as `0 <= x * x` and not `0 <= (x + 0) * (x + 0)`
+    // because the completion's shift is zero here and `squares` specialises `SQUARE_NONNEG` at the
+    // bare base when it is, which is the shape a reader checks the lemma against.
+    val support = force(linarith.support("0 <= y:real ==> 0 <= x:real * x + y"))
+
+    support.hypotheses.map { case (hypothesis, weight) => (reals.show(hypothesis), weight) } shouldBe
+      Vector(("0 <= y", BigInt(1)))
+
+    support.squares should have length 1
+    support.squares.map { case (square, weight) => (reals.show(square), weight) } shouldBe
+      Vector(("0 <= x * x", BigInt(1)))
   }
 
   /* ---------------------------------------------------------------- how far a form goes */
