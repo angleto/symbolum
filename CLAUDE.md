@@ -1305,19 +1305,28 @@ nobody knows, so a fact used about it must hold for all of them and nothing is a
 `Peano.NUM_LT_NOT_LE` specialised there is what `!j:job. Attempts j < 3 ==> ~(Abandoned j)` was
 missing, and the skeleton over it is intuitionistic at **zero** axioms.
 
-The bridge is the caller's and nothing searches for it, which is the same rule the tactics follow:
-a procedure that guessed would be worse than one that stops. What it costs is **reported**, which
-is the whole permission: the bridge carries the naturals' two axioms, `Derivation.axiomsOf` walks
+The bridge is the caller's, and since 2026-09-18 it is also something that can be **found**:
+`Bridging` is a search over a library, above `Domain.Built.settle` and calling it, and
+`docs/adr/0027` is the decision. It puts the lemmas about the foundation constants a claim names to
+that method one at a time, reports which one carried it, and refuses where none did, naming what it
+tried. What makes the report honest rather than an order of trying is the control it runs first: a
+claim that settles carrying nothing but `|- T` had inert arithmetic in it and comes back with no
+bridge named, because a foundation constant can sit where the decision never reads it. What it
+costs is **reported**, which is the whole permission: the bridge carries the naturals' two axioms,
+`Derivation.axiomsOf` walks
 them, and `DomainTheorySpec` asserts the conclusion spends **exactly** what the bridge spends and
 not one axiom more. That equality rather than a non-emptiness is deliberate: non-empty would pass
 just as well if the decision had fallen through to `Propositional` and charged `SELECT`, which is
 the trade `docs/adr/0022` exists to refuse and which a choice axiom the naturals cost anyway would
 have hidden.
 
-What is still not there is search, and the interpretation itself: a domain **type** the foundation
-has never heard of has no theorem relating it to a number, so there is no bridge to name and the
-refusal is kept for exactly that. `DomainTheorySpec` asserts both halves, and tells the refusal
-apart from a parse error by the sentence rather than by the constant.
+What is still not there is the interpretation itself: a domain **type** the foundation has never
+heard of has no theorem relating it to a number, so there is no bridge to name and none to find
+either, and the refusal is kept for exactly that. `DomainTheorySpec` asserts both halves, and tells
+the refusal apart from a parse error by the sentence rather than by the constant. Nor does the
+search combine two lemmas: one that needs two facts at once is refused in those words, since a
+refusal a reader takes for "out of reach" would hide the route that does settle it, which is naming
+both.
 
 Such a theory sits beside the chain and must stay there: two theories that axiomatise one name are
 the case `docs/adr/0008` leaves open, and `SoundnessAttackSpec` still derives `|- F` from it.

@@ -1915,11 +1915,17 @@ detaches, quantifies again and reports.
 Four answers and not one with a flag on it. A claim that does not follow comes back as a
 `Countermodel` naming the assignment, which refutes it **as a schema over uninterpreted atoms** and
 never says the claim is false. A claim reaching a constant of the foundation rather than of the
-domain — arithmetic, an order, a numeral — comes back `Refused` naming the constant, because an atom
-with no meaning is not an approximation of *at most three attempts*, and composing this with
-`Linarith` is a different piece of work. And a claim settled only after the free route ran out of
-net comes back `CutShort` rather than `Settled`: the theorem and the price are the same, and what is
-added is that the `SELECT` may be the search's rather than the claim's, which `docs/adr/0026`
+domain — arithmetic, an order, a numeral — comes back `Refused` naming the constant **when the
+caller has named no bridge**, because an atom with no meaning is not an approximation of *at most
+three attempts*. What lifts that is `docs/adr/0024`: a theorem the caller hands over, specialised at
+the claim's own foundation-typed subterms, which stay opaque throughout, so what it costs is
+reported in the foundational column rather than absorbed. `Bridging` is the same route with the
+theorem found instead of named, one candidate at a time out of the library's lemmas about the
+constants the claim reaches, reporting which of them carried it; `docs/adr/0027` is that
+decision, and composing any of this with `Linarith` is still a different piece of work. And a claim
+settled only after the free route ran out of net comes back `CutShort` rather than `Settled`: the
+theorem and the price are the same, and what is added is that the `SELECT` may be the search's
+rather than the claim's, which `docs/adr/0026`
 decides and `DomainTheorySpec` measures at the chain length where it happens.
 `DomainTheorySpec` runs all four.
 

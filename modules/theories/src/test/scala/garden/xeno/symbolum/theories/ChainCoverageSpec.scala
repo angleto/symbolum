@@ -169,6 +169,13 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // build, which is the same position `Recursion` is in one primitive along.
     "Quotient" -> DeclaresNothing,
 
+    // `Domain`'s standing, one level up: a search over a library for the theorem that carries a
+    // domain claim into arithmetic. It declares nothing, holds no fact of its own, and every
+    // theorem it hands back was built by `Domain.Built.settle` out of the caller's own domain
+    // theory, so there is nothing here for `Chain.construct` to extend and nothing `Library.of`
+    // could be missing. `docs/adr/0027` is why it is a file rather than a mode of that method.
+    "Bridging" -> DeclaresNothing,
+
     // Beside the chain and it must STAY beside it, which is the one entry here whose reason is a
     // soundness argument rather than a classification. It declares nothing OF ITS OWN: what it
     // builds is a caller's domain theory, over a base the caller hands it. `docs/adr/0019` decided
