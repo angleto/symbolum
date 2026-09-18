@@ -169,6 +169,20 @@ All public APIs must have Scaladoc comments including:
 def someMethod(paramName: Type): ReturnType = ???
 ```
 
+#### Every cross-reference must resolve inside this repository
+
+A reader of a comment, a docstring or a document here has this checkout and nothing else. So a
+reference points at something they can open from it: `docs/adr/NNNN`, a lemma name, a spec, a file
+path, a commit. A citation of a numbered clause of some document that is not here is worse than no
+citation at all, because it reads as a justification and stops the reader looking for the argument
+in the text. Where you would reach for one, write the reason in prose instead, beside the line it
+explains.
+
+`tools/foreign-reference.sh` is the gate, and it runs on every push and every pull request. It
+looks for the shape such a citation has rather than for a list of names, so it needs no list to
+maintain and it catches one it has never seen. It is deliberately narrow: a reference that resolves
+nowhere and is not shaped that way is a reading, and nothing mechanical finds it.
+
 ### Commit Messages
 
 Write clear, descriptive commit messages:
