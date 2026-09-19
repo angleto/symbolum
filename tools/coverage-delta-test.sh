@@ -160,4 +160,34 @@ status=0
 report=$(cd "$work/borderline" && COVERAGE_DELTA_MIN=85 sh "$subject" HEAD~1 2>&1) || status=$?
 check "and green at a floor of 85" "$status" "0"
 
+# 9. THE THREE WAYS THERE IS NO BASE, which are three answers and not one. Only the middle of
+# them can be produced on a runner, and none of them can be produced by reading the script: the
+# caller in `.github/workflows/ci.yml` passes `github.event.before || ...`, which is forty zeros
+# on the first push to a ref, the base sha on a pull request, and an empty string when neither
+# expression resolves.
+build bases 20 20
+
+status=0
+report=$(cd "$work/bases" && sh "$subject" 0000000000000000000000000000000000000000 2>&1) || status=$?
+holds "forty zeros is the first push on a ref and is not a failure" "no base revision"
+check "and exits green" "$status" "0"
+
+status=0
+report=$(cd "$work/bases" && sh "$subject" "" 2>&1) || status=$?
+holds "an empty base is a caller whose expression resolved to nothing" "empty string"
+check "and is refused rather than silently defaulted" "$status" "2"
+
+status=0
+report=$(cd "$work/bases" && sh "$subject" beefbeefbeefbeefbeefbeefbeefbeefbeefbeef 2>&1) || status=$?
+holds "a base that does not resolve names the shallow clone it usually is" "fetch-depth: 0"
+check "and is refused" "$status" "2"
+
+# The control on the three above: with no argument at all the subject measures `HEAD~1` and says
+# something about the change, which is what keeps the three refusals from being a subject that
+# refuses everything.
+status=0
+report=$(cd "$work/bases" && sh "$subject" 2>&1) || status=$?
+holds "no argument at all still measures the last commit" "20 of 20 statement(s)"
+check "and exits green" "$status" "0"
+
 summarise

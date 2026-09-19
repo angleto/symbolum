@@ -57,7 +57,17 @@ root=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 cd "$root" || exit 2
 
-base=${1:-HEAD~1}
+# `${1:-HEAD~1}` was wrong here and the difference only shows on a runner: it treats an EMPTY
+# argument as an absent one, and the caller in `.github/workflows/ci.yml` passes an expression
+# that can resolve to nothing. Falling back to `HEAD~1` there would compare a merge against one
+# of its parents and call the answer the change, which is a figure nobody asked for reported as
+# though they had. An absent argument is a person at a shell; an empty one is a CI expression
+# that produced nothing, and they get different answers.
+if [ "$#" -ge 1 ]; then
+    base=$1
+else
+    base=HEAD~1
+fi
 
 # The threshold, and it is deliberately not a floor in `build.sbt`. See `docs/adr/0035` for the
 # measurement that chose it; it is an environment variable so a session can ask "what would this
@@ -76,8 +86,33 @@ coarse=$(awk -v m="$minimum" 'BEGIN { printf "%d", (m >= 100 ? 0 : 100 / (100 - 
 work=$(mktemp -d) || exit 2
 trap 'rm -rf "$work"' EXIT INT TERM
 
-if ! git rev-parse --verify --quiet "$base" >/dev/null; then
-    echo "coverage-delta: no such revision: $base" >&2
+# THE FIRST PUSH ON A REF HAS NO BASE, and GitHub says so by sending forty zeros as
+# `github.event.before`. There is nothing to compare against and that is not a misconfiguration,
+# so it is a line and a green exit rather than a refusal. An unresolvable base that is NOT that
+# is the shallow-clone case and stays a refusal, because it is a fact about the checkout.
+case "$base" in
+    0000000000000000000000000000000000000000)
+        echo "coverage-delta: no base revision (the first push on this ref), so there is no"
+        echo "coverage-delta: change to measure the coverage of."
+        exit 0
+        ;;
+    "")
+        echo "coverage-delta: the base was passed as an empty string, which is a caller whose" >&2
+        echo "coverage-delta: expression resolved to nothing. Naming no base and naming an empty" >&2
+        echo "coverage-delta: one are different mistakes and neither is a figure." >&2
+        exit 2
+        ;;
+esac
+
+# `^{commit}` and not the bare name, which is the difference between asking whether the string
+# LOOKS like an object and whether the object is here. A full forty-character hex passes
+# `rev-parse --verify` on its syntax alone, so a missing base from a shallow clone -- which is
+# exactly forty characters -- got past this and failed two screens later as "git diff failed",
+# with a message about the wrong thing. Found by the case in `tools/coverage-delta-test.sh`
+# refusing for the right exit code and the wrong reason.
+if ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1; then
+    echo "coverage-delta: no such revision: $base. On a runner this is a shallow clone: the" >&2
+    echo "coverage-delta: coverage job needs fetch-depth: 0 to have a base to diff against." >&2
     exit 2
 fi
 
