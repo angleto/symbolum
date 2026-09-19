@@ -367,7 +367,7 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "come back cut short, naming the bound and its depth, one link further on" in {
-    // The defect `docs/adr/0023` recorded and left, and `docs/adr/0027` repairs: the same theorem,
+    // The defect `docs/adr/0023` recorded and left, and `docs/adr/0031` repairs: the same theorem,
     // one link longer, at one axiom, and until 2026-09-18 nothing in the answer said why. The pair
     // is what makes it a measurement instead of an anecdote — the two goals differ by one link and
     // the price differs by the choice axiom.

@@ -11,7 +11,9 @@ code,pre,.legible{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-s
 .name{display:inline-block;font-weight:600;font-size:.8rem;letter-spacing:.04em}
 .printed{margin:.3rem 0;overflow-x:auto}
 .legible{color:#555}
-.rests{margin-top:.3rem;font-size:.8rem;color:#8a5a00;background:#fff8e8;border:1px solid #f0e0c0;border-radius:3px;padding:.2rem .45rem;display:inline-block}
+.rests,.caveat{margin-top:.3rem;font-size:.8rem;border-radius:3px;padding:.2rem .45rem;display:inline-block}
+.rests{color:#8a5a00;background:#fff8e8;border:1px solid #f0e0c0}
+.caveat{color:#8a3a00;background:#fff1e4;border:1px solid #f0c9a8}
 .extended{color:#376}
 .refused{color:#b00}
 .next{color:#666;font-size:.8rem;margin-top:.2rem}

@@ -67,10 +67,27 @@ can produce, and no rule here asks for that: the rule this repository writes is 
 add a theorem and must never take a refusal away. `Propositional` settles those goals correctly, and
 the price is real — what was missing was the reason for it.
 
-**Each surface says it.** `Cost.Report` carries `cutShort`, so `Ask` and everything else that reads a
-price gets it; the notebook renders it beside the theorem, because `Session.Entry.restsOn` computes
-a price from the theorem and cannot tell the two cases apart. This is the part that is more work than
-the alternatives, and it is the work the alternatives avoid by not saying the thing.
+**Each surface says it**, and that sentence was a decision written as though it were a fact for a
+day. `Cost.Report` carries `cutShort`; the notebook renders it beside the theorem, because
+`Session.Entry.restsOn` computes a price from the theorem and cannot tell the two cases apart. What
+did not follow from carrying the field is that anything read it: on 2026-09-18 the field had **no
+reader at all** outside the notebook's own road, and `Cost.page`, which is what `Ask`, `Argument`
+and `WhatAClaimCosts` print, did not mention it. The verification of card 011218be measured that by
+putting the page of a 128-link chain beside the page of Peirce's law and finding them different in
+the claim and in the inference count and in nothing else, both resting on the same `select`. So the
+one surface a person reaches for from the command line still could not tell the two apart, which is
+precisely what the fourth alternative below was rejected for.
+
+The page carries the line since 2026-09-19, directly under the count it qualifies, and
+`Cost.cutShortCaveat` is the one place the sentence is written: the notebook read a copy of it
+until then, and two copies of one sentence on two surfaces is what this repository calls a fact
+written twice. `CostSpec` asserts both directions at 128 links and at 127, which is the same pair
+one floor up from the two `PropositionalRouteSpec` already had, and
+`tools/verify/perturb-cut-short-prove.sh` fires each half at its own defect.
+
+This is the part that is more work than the alternatives, and it is the work the alternatives avoid
+by not saying the thing. It is also the part that looked finished while half of it was missing,
+which is the argument for the pair of witnesses rather than for one.
 
 ## Consequences
 
