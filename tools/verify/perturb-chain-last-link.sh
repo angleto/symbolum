@@ -60,6 +60,36 @@
 # pinning it is an assertion there rather than a perturbation here, for the same reason the
 # subordinate-clause hole is: what exhibits it is a pattern applied to a literal.
 #
+# VERIFICATION OF ROUND THREE, 2026-09-19 at `66dd288`, by a session that did not deliver it, in
+# /Users/angelo/data/WORK/symbolum-wt/verify-1358bd5e-r3. Control green at 52, and 1 through 8
+# reproduce exactly as round three records them, 7 red where round two's verification had it
+# green. Every figure of that delivery reproduces on the spec's own segmentation: 19 blocks, 50
+# sentences, 7 naming the last link, `until` on its own the marker of none of the seven and a
+# quoted `read` the marker of one alone. Whole suite 2474 tests, 0 failed, exit 0.
+#
+# What it leaves is one finding, and 9 with 10 as its control is it: the alternative that STAYED
+# is blind to tense in the way the one that went was. `read "` matches a `read` followed by a
+# quote in ANY tense, and this repository writes non-past ones -- `Reaching.scala` has "the second
+# hypothesis has to read "does not lower"". So the card's own defect, present tense and dated
+# today, written into a block carrying no marker of any kind, passes when its sentence says
+# `has to read "the last"`. The docstring states the criterion as "the repaired text quoted after
+# `read`" and the code applies something wider, which is the same distance between the stated
+# criterion and the applied one that sent the card back on round two. The card went back to todo
+# on it. A repair owes 9 a red and must leave 1, 2, 4, 5, 6, 8, 10 and 11 red with 3 green.
+#
+# A narrower alternative, measured here rather than proposed: all FOUR quoted records inside
+# `construct` write the demonstrative in front, `[Tt]his read "`, and that pattern clears all
+# seven records at no cost while firing on 9's sentence and on 7's. Whether that is the repair or
+# whether the condition belongs somewhere other than the marker is the next round's decision.
+#
+# 11 is not a finding. Round three added two assertions and neither had been seen to fire, which
+# is the standard round two set for itself when it added 6. Putting `read the` back into the
+# pattern makes the first of them red AT ITS OWN LINE, `Some("read the") was not equal to None`,
+# so that one is a guard that has been observed failing. The second cannot be isolated the same
+# way and the reason is worth knowing rather than fixing: the record it pins rests on the quoted
+# `read` alone, so a pattern dropping that alternative fails the population assertion first, at an
+# earlier line, and the pin can never be the failure a reader sees.
+#
 # What is NOT perturbed here, named so that the gap is not mistaken for coverage: the hole one
 # clause narrower than the one 4 closed, a present-tense claim whose own sentence carries a `was`
 # in a subordinate clause. It is pinned as a literal in the spec instead, since what exhibits it is
@@ -199,3 +229,44 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/7-ma
   > "$OUT/8-control-for-seven.log" 2>&1
 echo "8 the same claim with \`see the\`: exit $? (1 was measured: only the marker separates it from 7)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/8-control-for-seven.log"
+
+# 9. THE FINDING OF ROUND THREE'S VERIFICATION. Round three took `read the` out of the marker
+#    because its two words name no past state in any tense. The same is true of what it kept:
+#    `read "` matches a `read` followed by a quote wherever it falls and in whatever tense, and
+#    the repository's own prose writes non-past ones -- `Reaching.scala` has "the second
+#    hypothesis has to read "does not lower"". So this writes the card's defect -- present tense,
+#    dated today, false -- into the `limit` block, which carries no marker of any kind, with a
+#    non-past quoted `read` in the same sentence. Measured green at `66dd288`.
+"$P" "$CHAIN" \
+  '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
+  '      // The last link since 2026-09-19; the field above has to read "the last" for the two to
+      // agree. The first analysis this repository has: what a sequence of reals converges to and the value' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/9-quoted-read-is-not-past.log" 2>&1
+echo "9 claim whose sentence has a non-past quoted \`read\`: exit $? (0 was the finding; a repair owes 1)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/9-quoted-read-is-not-past.log"
+
+# 10. The control for 9, without which its green says only that the scan did not reach the block.
+#     The same claim, the same block, the same sentence, with "has to say" for "has to read": red,
+#     naming one sentence. So 9's green is the quoted alternative of the marker and nothing else.
+"$P" "$CHAIN" \
+  '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
+  '      // The last link since 2026-09-19; the field above has to say "the last" for the two to
+      // agree. The first analysis this repository has: what a sequence of reals converges to and the value' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/10-control-for-nine.log" 2>&1
+echo "10 the same claim with \`say\`: exit $? (1 was measured: only the marker separates it from 9)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/10-control-for-nine.log"
+
+# 11. NOT A FINDING, and the observation round three's two new assertions were owed: a guard seen
+#     only passing is untested, which is the reason 6 exists. This puts the removed alternative
+#     back into the pattern and the first pin goes red at its own line. The second pin cannot be
+#     isolated this way, because the record it holds rests on the quoted `read` alone and dropping
+#     that alternative fails the population assertion at an earlier line.
+"$P" modules/tactics/src/test/scala/garden/xeno/symbolum/tactics/DocumentationSpec.scala \
+  'val dated = """read "|\bwas\b|\buntil\b""".r' \
+  'val dated = """read "|\bwas\b|\buntil\b|read the""".r' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/11-removed-alternative-back.log" 2>&1
+echo "11 the removed alternative put back: exit $? (1 was measured, at the pin's own line)"
+grep -E "Tests: |\*\*\* FAILED|was not equal to None|perturb:" "$OUT/11-removed-alternative-back.log"
