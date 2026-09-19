@@ -1198,26 +1198,43 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // at most one of the pair was ever true and neither said what the last link is. Counted on the
     // bindings of `Chain.construct`: thirty-one, `matrix` twelfth, `inclusion` last.
     //
-    // **What makes the narrow ban work where the wide one does not**, and it is the deciding
-    // measurement rather than a preference: inside this one block every TRUE sentence of the shape
-    // is a record of a past state, and a record of a past state carries `was`, `until` or the
-    // repaired text in quotes after `read`. Nineteen comment blocks, five mentioning the last link,
-    // and all five carry a marker. The general statements about what "last" means live in the field
-    // docstrings above, which this does not read.
+    // **The unit is the SENTENCE that names the link, and it was the whole block until
+    // 2026-09-19.** A true sentence of this shape is a record of a past state and carries `was`,
+    // `until`, or the repaired text quoted after `read`. Reading the marker off the block is the
+    // same test with a wider window, and the window is what was wrong with it.
     //
-    // **The same test run over those field docstrings was the measurement that decided the scope,
-    // and it refuted the prediction made before it.** The prediction was three false positives.
-    // It is one: of twenty-nine docstrings, five mention the last link and `deduction`'s fires,
-    // which is the exact sentence the guard above names as the reason it will not do this over
-    // prose. But the other four pass for a worse reason than being right. A field docstring here
-    // runs to thirty lines, so it holds an unrelated `was` somewhere almost always, and the marker
-    // is then satisfied by a word in a different sentence. Over long prose this test does not fail
-    // loudly, it passes quietly, which is the one behaviour a guard must not have. It works in
-    // `construct` because a binding comment is short and about one thing.
+    // **The block reading was refuted by perturbation rather than by rereading.** It argued here
+    // that a marker anywhere in a block is safe "because a binding comment is short and about one
+    // thing", against field docstrings where a stray `was` in another sentence makes the test pass
+    // quietly. Measured over the nineteen blocks this reads: **ten already carry the marker**, the
+    // median block is **401 characters**, and **five carry it for a reason that has nothing to do
+    // with the last link** -- the blocks of `word`, `matrix`, `rotation`, `magnitude` and
+    // `coding`, each saying `was` or `until` about its own position in the chain. So the defect
+    // this guard exists for could be written into more than half the blocks it watches and stay
+    // green. `tools/verify/perturb-chain-last-link.sh` shows it at perturbation 4, which puts
+    // `matrix`'s exact defect into `matrix`'s own block, and perturbation 5 is its control: the
+    // same sentence in a block with no marker fires. Passing quietly is the one behaviour a guard
+    // must not have, and this one had it inside the scope it claimed to cover.
     //
-    // So `matrix`'s defect, the undated one and the worst of the four, is in a field docstring and
-    // **nothing guards its class**. That is stated rather than left to be found: this covers the
-    // four-fifths of the population that sits in `construct` and none of the rest.
+    // **The narrower unit costs nothing measured here.** Seven sentences of this block name the
+    // last link and **all seven carry the marker within themselves**, so the repair is not a
+    // tightening anybody pays for today. That is the one thing checked for this round rather than
+    // predicted.
+    //
+    // **What it still does not catch, pinned at the foot of this test rather than claimed away.**
+    // The marker has to be in the naming sentence and not in the naming clause, so a present-tense
+    // claim carrying a `was` in a subordinate clause of the same sentence passes. That is one
+    // clause narrower than the hole it replaces and it is not closed; none of the seven exercises
+    // it, so nothing here measures how often it would arise.
+    //
+    // **And the field docstrings are still outside.** The same test over them was the measurement
+    // that set the scope, and it refuted the prediction made before it: the prediction was three
+    // false positives and it is one, `deduction`'s, which is the exact sentence the guard above
+    // names as why it will not do this over prose. The other four passed on a stray `was`, and the
+    // sentence unit does not rescue them: a docstring here runs to thirty lines, so what it holds
+    // is many sentences, and one false sentence among them is invisible to a test that asks only
+    // whether some sentence is a record. So `matrix`'s defect, the undated one and the worst of
+    // the four, is in a field docstring and **nothing guards its class**.
     //
     // **What it does not cover inside the block either.** A general true sentence written here, of
     // the kind `deduction`'s docstring carries, fires and the words have to move up to the field
@@ -1232,36 +1249,55 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
 
     // A contiguous run of `//` lines, which is the unit a sentence lives in: splitting per line
     // would cut every one of these sentences in half, and this file already records what a
-    // hard-wrapped sentence does to a pattern read against the stored bytes.
+    // hard-wrapped sentence does to a pattern read against the stored bytes. The `//` itself goes,
+    // so that what the splitter sees and what a failure prints are both sentences.
     val blocks = body
       .split("\n")
       .map(_.trim)
       .foldLeft(Vector.empty[Vector[String]]) { (acc, line) =>
-        if (line.startsWith("//")) acc.lastOption match {
-          case Some(run) if run.nonEmpty => acc.init :+ (run :+ line)
-          case _ => acc :+ Vector(line)
-        }
-        else if (acc.lastOption.exists(_.nonEmpty)) acc :+ Vector.empty
+        if (line.startsWith("//")) {
+          val text = line.stripPrefix("//").trim
+          acc.lastOption match {
+            case Some(run) if run.nonEmpty => acc.init :+ (run :+ text)
+            case _ => acc :+ Vector(text)
+          }
+        } else if (acc.lastOption.exists(_.nonEmpty)) acc :+ Vector.empty
         else acc
       }
       .filter(_.nonEmpty)
       .map(_.mkString(" "))
 
-    val mentioning = blocks.filter(_.contains("last link"))
+    val sentences = blocks.flatMap(block => """(?<=[.!?])\s+""".r.split(block).toVector)
 
-    // The floor, because a block scan that stopped matching would report no claim at all and read
-    // exactly like a file with none. Five carry the phrase on 2026-09-19 and every one is a record.
-    withClue(s"comment blocks of `Chain.construct` mentioning the last link: ${mentioning.size}\n") {
+    // The floor the sentence unit needs, and it is not the floor below. A split that stopped
+    // splitting hands back one sentence per block, and this guard is then silently the
+    // block-level one it replaced: same green, same hole, nothing said. Nineteen blocks gave
+    // fifty sentences on 2026-09-19.
+    withClue(
+      s"the sentence split has stopped splitting, so this guard has silently become the " +
+        s"block-level one it replaced: ${blocks.size} block(s) gave ${sentences.size} sentence(s)\n"
+    ) {
+      sentences.size should be > blocks.size
+    }
+
+    val mentioning = sentences.filter(_.contains("last link"))
+
+    // The floor, because a scan that stopped matching would report no claim at all and read
+    // exactly like a file with none. Seven sentences carry the phrase on 2026-09-19 and every one
+    // of them is a record.
+    withClue(s"sentences of `Chain.construct` mentioning the last link: ${mentioning.size}\n") {
       mentioning.size should be >= 4
     }
 
     val dated = """\bwas\b|\buntil\b|read "|read the""".r
-    val present = mentioning.filterNot(block => dated.findFirstIn(block).isDefined)
+    val present = mentioning.filterNot(sentence => dated.findFirstIn(sentence).isDefined)
     withClue(
-      s"${present.size} comment block(s) in `Chain.construct` claim a link is the last one. " +
+      s"${present.size} sentence(s) in `Chain.construct` claim a link is the last one. " +
         s"Which link is the end is `Chain.widest` and is not written in prose; a record of a past " +
-        s"state says `was` or `until`. If the sentence is a general one about what last means, it " +
-        s"belongs in the field docstring above rather than here:\n${present.mkString("\n\n")}\n"
+        s"state says `was` or `until` IN THE SENTENCE THAT NAMES THE LINK, since a marker " +
+        s"elsewhere in the block is a word about something else. If the sentence is a general one " +
+        s"about what last means, it belongs in the field docstring above rather than " +
+        s"here:\n${present.mkString("\n\n")}\n"
     ) {
       present shouldBe empty
     }
@@ -1269,8 +1305,16 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // Fired against the sentence it was written for, so that the pattern is known to separate the
     // two shapes rather than to accept everything. The first is `transcendental`'s as it stood
     // until 2026-09-19 and the second is its replacement.
-    dated.findFirstIn("// The last link since 2026-09-15, and the only one that needs a limit.") shouldBe None
-    dated.findFirstIn("// Landed 2026-09-15 and was the last link until `concatenation` went on top") should not be empty
+    dated.findFirstIn("The last link since 2026-09-15, and the only one that needs a limit.") shouldBe None
+    dated.findFirstIn("Landed 2026-09-15 and was the last link until `concatenation` went on top") should not be empty
+
+    // And the hole, which is why the two lines above are not the whole story: a false claim at the
+    // present tense whose own sentence carries a `was` about something else still passes. This is
+    // the narrowest example anybody has written of it, and it is here so that a reader meets the
+    // limit where the guard is rather than in a record beside it.
+    dated.findFirstIn(
+      "`matrix` is the last link, which was decided when the five were moved into the chain."
+    ) should not be empty
   }
 
   "The evaluation document" should "describe limits the tactics still have" in {
