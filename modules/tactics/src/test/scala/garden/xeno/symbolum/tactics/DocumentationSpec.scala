@@ -1199,9 +1199,10 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // bindings of `Chain.construct`: thirty-one, `matrix` twelfth, `inclusion` last.
     //
     // **The unit is the SENTENCE that names the link, and it was the whole block until
-    // 2026-09-19.** A true sentence of this shape is a record of a past state and carries `was`,
-    // `until`, or the repaired text quoted after `read`. Reading the marker off the block is the
-    // same test with a wider window, and the window is what was wrong with it.
+    // 2026-09-19.** A true sentence of this shape is a record of a past state, and the three
+    // alternatives of the pattern below are what say so: `was`, `until`, and a `read` followed by
+    // a quote, which is the repaired text quoted after the word. Reading the marker off the block
+    // is the same test with a wider window, and the window is what was wrong with it.
     //
     // **The block reading was refuted by perturbation rather than by rereading.** It argued here
     // that a marker anywhere in a block is safe "because a binding comment is short and about one
@@ -1220,6 +1221,22 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // last link and **all seven carry the marker within themselves**, so the repair is not a
     // tightening anybody pays for today. That is the one thing checked for this round rather than
     // predicted.
+    //
+    // **A fourth alternative, `read the`, stood in that pattern from the day it was written and
+    // went on 2026-09-19.** It was never the criterion this docstring states: what it matched is
+    // two ordinary words wherever they fall and in any tense, so "The last link since 2026-09-19;
+    // read the record in `docs/adr/0017`" was a present-tense false claim written inside the scope
+    // this guard covers, and it passed. `tools/verify/perturb-chain-last-link.sh` has it at 7,
+    // with 8, the same claim saying `see the`, as the control that says the green came from the
+    // marker and not from where the scan reaches.
+    //
+    // **What removed it is that it names no past tense, and NOT that nothing depends on it**, and
+    // the difference is what decides whether anything else goes with it. Measured over the fifty
+    // sentences this reads: `read the` occurs in none of them, and in `Chain.scala` in none at
+    // all, while a quoted `read` carries one of the seven records ALONE and is load-bearing.
+    // `until` is on its own the marker of none of the seven, since every sentence carrying it
+    // carries `was` or a quoted `read` as well, and it stays: a bounded interval is what a record
+    // of a past state says, which is a fact about the words rather than about today's population.
     //
     // **What it still does not catch, pinned at the foot of this test rather than claimed away.**
     // The marker has to be in the naming sentence and not in the naming clause, so a present-tense
@@ -1289,15 +1306,17 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
       mentioning.size should be >= 4
     }
 
-    val dated = """\bwas\b|\buntil\b|read "|read the""".r
+    // The quoted alternative is written first so that the literal does not have to end in a
+    // quote, which is the only thing the order decides here.
+    val dated = """read "|\bwas\b|\buntil\b""".r
     val present = mentioning.filterNot(sentence => dated.findFirstIn(sentence).isDefined)
     withClue(
       s"${present.size} sentence(s) in `Chain.construct` claim a link is the last one. " +
         s"Which link is the end is `Chain.widest` and is not written in prose; a record of a past " +
-        s"state says `was` or `until` IN THE SENTENCE THAT NAMES THE LINK, since a marker " +
-        s"elsewhere in the block is a word about something else. If the sentence is a general one " +
-        s"about what last means, it belongs in the field docstring above rather than " +
-        s"here:\n${present.mkString("\n\n")}\n"
+        s"state says `was`, `until`, or the repaired text quoted after `read`, IN THE SENTENCE " +
+        s"THAT NAMES THE LINK, since a marker elsewhere in the block is a word about something " +
+        s"else. If the sentence is a general one about what last means, it belongs in the field " +
+        s"docstring above rather than here:\n${present.mkString("\n\n")}\n"
     ) {
       present shouldBe empty
     }
@@ -1307,6 +1326,16 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // until 2026-09-19 and the second is its replacement.
     dated.findFirstIn("The last link since 2026-09-15, and the only one that needs a limit.") shouldBe None
     dated.findFirstIn("Landed 2026-09-15 and was the last link until `concatenation` went on top") should not be empty
+
+    // The alternative removed on 2026-09-19, pinned as a pair rather than left to the harness: the
+    // first is the sentence perturbation 7 wrote into a block, which `read the` used to clear, and
+    // the second is the record that rests on the quoted `read` alone, so a pattern narrowed until
+    // it caught the first by dropping the quoted alternative instead would go red on the second.
+    dated.findFirstIn("The last link since 2026-09-19; read the record in `docs/adr/0017`.") shouldBe None
+    dated.findFirstIn(
+      "This read \"The last link since 2026-09-14, and the first one that is about a language\" " +
+        "and both halves went on 2026-09-19."
+    ) should not be empty
 
     // And the hole, which is why the two lines above are not the whole story: a false claim at the
     // present tense whose own sentence carries a `was` about something else still passes. This is

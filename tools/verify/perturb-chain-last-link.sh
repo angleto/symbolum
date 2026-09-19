@@ -45,6 +45,21 @@
 # own defect can still be written into a block the scan reaches and pass. The card went back to
 # todo on it. A repair owes 7 a red and must leave 1, 4, 5, 6 and 8 red and 3 green.
 #
+# ROUND THREE, 2026-09-19, the delivery that answers that verification, and the only thing it
+# moves is the marker: the fourth alternative is gone and the pattern is `read "|\bwas\b|\buntil\b`,
+# which is the criterion the guard's own docstring states and nothing wider. Nothing else changed,
+# so 1 through 6 and 8 assert what they asserted and **7 is red**, which is what the verification
+# said a repair owes.
+#
+# What that repair did NOT rest on, because the two readings of a useless alternative delete
+# different things: measured over the seven records inside `construct`, `until` is on its own the
+# marker of NONE of them, since every sentence carrying it carries `was` or a quoted `read` as
+# well, while a quoted `read` carries one record alone. "Nothing depends on it" would therefore
+# have taken `until` and left the defect. What took `read the` is that its two words name no past
+# state in any tense. That measurement is in the guard's docstring, and the pair of sentences
+# pinning it is an assertion there rather than a perturbation here, for the same reason the
+# subordinate-clause hole is: what exhibits it is a pattern applied to a literal.
+#
 # What is NOT perturbed here, named so that the gap is not mistaken for coverage: the hole one
 # clause narrower than the one 4 closed, a present-tense claim whose own sentence carries a `was`
 # in a subordinate clause. It is pinned as a literal in the spec instead, since what exhibits it is
@@ -163,14 +178,14 @@ grep -E "Tests: |\*\*\* FAILED|stopped splitting|perturb:" "$OUT/6-sentence-spli
 #    them, and in none of `Chain.scala` at all, so the alternative carries no record in this file
 #    and only widens what passes. This writes the card's own defect -- present tense, dated today,
 #    false -- into the `limit` block, which carries no marker of any kind, and puts "read the" in
-#    the same sentence. Green.
+#    the same sentence. Green then, and red since round three took the alternative out.
 "$P" "$CHAIN" \
   '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
   '      // The last link since 2026-09-19; read the record in `docs/adr/0017`. The first analysis
       // this repository has: what a sequence of reals converges to and the value' \
   -- ./tools/sbt -batch "$ONLY" \
   > "$OUT/7-marker-is-read-the.log" 2>&1
-echo "7 claim whose sentence says \`read the\`: exit $? (0 was measured, and 1 is what a repair owes)"
+echo "7 claim whose sentence says \`read the\`: exit $? (1 since round three; 0 was the finding)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/7-marker-is-read-the.log"
 
 # 8. The control for 7, without which its green says only that the scan did not reach the block.
