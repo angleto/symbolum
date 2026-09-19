@@ -36,6 +36,15 @@
 #     pair 4/5 stays, because 5 is what says 4's verdict comes from the sentence rather than from
 #     where the scan reaches.
 #
+# VERIFICATION OF ROUND TWO, 2026-09-19 at `e0230a0`, by a session that did not deliver it, in
+# /Users/angelo/data/WORK/symbolum-wt/verify-0919. Control green at 52, and 1 through 6 all
+# reproduce exactly as round two records them: 2 runs now and trips the real floor, 4 is red where
+# round one had it green, 3 is green and is the uncovered class. What that leaves is one finding,
+# and 7 and 8 below are it: the marker has a FOURTH alternative, `read the`, which the docstring
+# above the guard does not state and which matches nothing anywhere in `Chain.scala`, so the card's
+# own defect can still be written into a block the scan reaches and pass. The card went back to
+# todo on it. A repair owes 7 a red and must leave 1, 4, 5, 6 and 8 red and 3 green.
+#
 # What is NOT perturbed here, named so that the gap is not mistaken for coverage: the hole one
 # clause narrower than the one 4 closed, a present-tense claim whose own sentence carries a `was`
 # in a subordinate clause. It is pinned as a literal in the spec instead, since what exhibits it is
@@ -143,3 +152,35 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/5-cl
   > "$OUT/6-sentence-split-starved.log" 2>&1
 echo "6 sentence split starved: exit $? (1 is the expected outcome: the SENTENCE floor fired)"
 grep -E "Tests: |\*\*\* FAILED|stopped splitting|perturb:" "$OUT/6-sentence-split-starved.log"
+
+# 7. THE FINDING OF ROUND TWO'S VERIFICATION, and the reason the card went back to todo on
+#    2026-09-19 for the second time. The guard accepts a sentence as a record of a past state when
+#    it matches `\bwas\b|\buntil\b|read "|read the`, and the LAST of those four is not the criterion
+#    the test's own docstring states, which is "`was`, `until`, or the repaired text quoted after
+#    `read`". It matches any sentence containing the two words "read the", wherever they fall.
+#
+#    Measured at `e0230a0` over the fifty sentences the guard reads: "read the" occurs in NONE of
+#    them, and in none of `Chain.scala` at all, so the alternative carries no record in this file
+#    and only widens what passes. This writes the card's own defect -- present tense, dated today,
+#    false -- into the `limit` block, which carries no marker of any kind, and puts "read the" in
+#    the same sentence. Green.
+"$P" "$CHAIN" \
+  '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
+  '      // The last link since 2026-09-19; read the record in `docs/adr/0017`. The first analysis
+      // this repository has: what a sequence of reals converges to and the value' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/7-marker-is-read-the.log" 2>&1
+echo "7 claim whose sentence says \`read the\`: exit $? (0 was measured, and 1 is what a repair owes)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/7-marker-is-read-the.log"
+
+# 8. The control for 7, without which its green says only that the scan did not reach the block.
+#    The same claim, the same block, the same sentence, with "see the" in place of "read the": red,
+#    naming one sentence. So 7's green is the fourth alternative of the marker and nothing else.
+"$P" "$CHAIN" \
+  '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
+  '      // The last link since 2026-09-19; see the record in `docs/adr/0017`. The first analysis
+      // this repository has: what a sequence of reals converges to and the value' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/8-control-for-seven.log" 2>&1
+echo "8 the same claim with \`see the\`: exit $? (1 was measured: only the marker separates it from 7)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/8-control-for-seven.log"
