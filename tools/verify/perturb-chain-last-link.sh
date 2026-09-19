@@ -11,6 +11,18 @@
 # shape it can separate from prose.
 #
 # Reproduced 2026-09-19 in /Users/angelo/data/WORK/symbolum-wt/chain-last-link.
+#
+# RUN AGAIN 2026-09-19 at `e8f973f` from /Users/angelo/data/WORK/symbolum-wt/verify-1358bd5e, by a
+# session verifying the card rather than delivering it, control green at 52. What it found:
+#
+#   - 1 and 3 reproduce exactly: one test red naming one block, and green for the field docstring.
+#   - **2 does not run at all.** It exits 2 with "the text to replace is not in
+#     DocumentationSpec.scala": the string below carries `def construct\\(` where the spec carries
+#     `def construct\(`, one backslash. The refusal is the perturbation tool working, and what it
+#     means is that the floor's observation is recorded here and CANNOT be re-run from here. It is
+#     left broken on purpose: repairing it is the next round's, and a harness quietly fixed by its
+#     verifier is a harness nobody has seen fail.
+#   - 4 and 5 are new, below, and 4 is the finding.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
@@ -67,3 +79,35 @@ grep -E "Tests: |\*\*\* FAILED|no longer parses|was not greater than|perturb:" "
   > "$OUT/3-field-docstring-uncovered.log" 2>&1
 echo "3 field docstring, uncovered: exit $? (0 is the EXPECTED outcome: nothing guards this class)"
 grep -E "Tests: |\*\*\* FAILED|perturb:" "$OUT/3-field-docstring-uncovered.log"
+
+# 4. THE FINDING, and it is a green run. The guard accepts a block as a record of a past state when
+#    the block carries `was`, `until` or a quoted `read` ANYWHERE in it, and its docstring argues
+#    that this is safe inside `construct` "because a binding comment is short and about one thing",
+#    against field docstrings where a stray `was` in another sentence makes it pass quietly.
+#
+#    Measured at `e8f973f` over the same nineteen blocks the guard reads: TEN already carry the
+#    marker, and the median block is 401 characters. Five carry it for a reason that has nothing to
+#    do with the last link -- `word`, `matrix`, `rotation`, `magnitude` and `coding` -- so a claim
+#    written into any of those five is invisible. This puts `matrix`'s exact defect, present tense
+#    and dated today, into `matrix`'s own block, which already says "the one that was never beside
+#    the chain":
+"$P" "$CHAIN" \
+  '      // The sixth, and the one that was never beside the chain. It needs `Product` for the type it' \
+  '      // The sixth, and the last link since 2026-09-19. It was never beside the chain, and it
+      // needs `Product` for the type it' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/4-claim-under-an-unrelated-marker.log" 2>&1
+echo "4 claim in a block that already carries \`was\`: exit $? (0 was measured: the guard is blind)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/4-claim-under-an-unrelated-marker.log"
+
+# 5. The control for 4, without which its green says nothing: the same sentence in a block that
+#    carries no marker. Red, naming one block. So 4's green is the marker being satisfied by an
+#    unrelated word and not the sentence being written somewhere the scan does not reach.
+"$P" "$CHAIN" \
+  '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
+  '      // The last link since 2026-09-19, and the first analysis this repository has: what a
+      // sequence of reals converges to and the value' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/5-claim-with-nothing-masking-it.log" 2>&1
+echo "5 claim in a block with no marker: exit $? (1 was measured: it fires where nothing masks it)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/5-claim-with-nothing-masking-it.log"
