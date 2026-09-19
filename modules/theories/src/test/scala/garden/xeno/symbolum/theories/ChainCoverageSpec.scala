@@ -82,7 +82,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
    * A new development lands here red, with a message naming it, and the author chooses one of three
    * answers rather than discovering months later that nothing ever looked.
    */
-  private val Accounted: Map[String, Standing] = Map(
+  private val AccountedEntries: Vector[(String, Standing)] = Vector(
     "Arithmetic" -> InTheChain,
     "Bounded" -> InTheChain,
     "Coding" -> InTheChain,
@@ -216,6 +216,49 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Spellings" -> NotADevelopment,
     "Theorems" -> NotADevelopment
   )
+
+  /**
+   * The same accounting as a map, which is what the two assertions below look a file up in.
+   *
+   * The declaration above was a `Map(...)` literal until 2026-09-19, and the reason it is a
+   * `Vector` projected here is what a repeated file name does to **this** table in particular. A
+   * map literal keeps the **last** row, so two rows for one file with two different `Standing`s
+   * resolve to whichever was written second, and the disagreement between them — the one thing a
+   * reader of this table would want to be told about — is what disappears.
+   *
+   * **How much of that the three older assertions already catch was measured rather than assumed,
+   * and the first answer was wrong.** The two about accounting are agreements between two readings
+   * of the *names*, and a `Standing` is not a name, so a repeated file passes both: it is in
+   * `keySet`, so nothing is unaccounted, and it is on disk, so nothing is stale. But the third,
+   * the agreement with `Chain`, reads `Accounted.collect { case (name, InTheChain) => name }`, so
+   * a duplicate that moves a file **out of** `InTheChain` does make it red. Perturbed on
+   * 2026-09-19: `"Bounded" -> InTheChain` duplicated as `NotADevelopment` fails two tests, and
+   * `"Embedding" -> NotADevelopment` duplicated as `DeclaresNothing` fails this one and no other.
+   *
+   * So what this guard adds is not "the only thing that can see a duplicate". It is the case the
+   * other three are blind to, which is every duplicate among the entries that are **not** in the
+   * chain, and on 2026-09-19 that was the large majority of the table. Those are exactly the
+   * entries whose `Standing` nothing else reads.
+   *
+   * **No file is named twice**, measured on 2026-09-19 by the assertion below. The size of the
+   * table is not written here: it moves whenever a development lands, which is the whole purpose
+   * of the accounting above, and the assertion prints it when it fails.
+   */
+  private val Accounted: Map[String, Standing] = AccountedEntries.toMap
+
+  "The accounting" should "not have absorbed a file named twice" in {
+    val repeated =
+      AccountedEntries.map(_._1).groupBy(identity).filter(_._2.size > 1).keys.toVector.sorted
+    withClue(
+      s"named twice in `AccountedEntries`, so one of the two standings is gone: " +
+        s"${repeated.mkString(", ")}\n"
+    )(Accounted.size shouldBe AccountedEntries.size)
+
+    // And it is not passing because the table is empty, which is the one way an equality between
+    // two sizes holds for free. About half of what the table held on 2026-09-19; a floor and not a
+    // pin, because a development landing is what makes this table grow.
+    AccountedEntries.size should be >= 33
+  }
 
   private val directory =
     Paths.get("modules/theories/src/main/scala/garden/xeno/symbolum/theories")
