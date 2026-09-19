@@ -122,6 +122,20 @@ session named would be a different tool with the same name.
   `coverageReport` and a run whose floor fell are both non-zero.
   `tools/coverage-gate-test.sh` holds every branch of that against stubs and CI runs it.
 
+  **And what a change adds is a second figure, which is `tools/coverage-delta.sh`.** The floors
+  above are on a module's **average**, and an average is a property of the pair (module, set of
+  suites that ran) rather than of the module: measured at `30a1452`, `clean coverage
+  theories/test theories/coverageReport` read 54027/55521 and `clean coverage test
+  coverageReport` read 54113/55521 on the same code, **86 statements apart**, because `tactics`,
+  `checker` and `dist` execute `theories`. The slack a floor leaves is about 25. What a change
+  adds does not move that way, so this figure is the same under both commands. It reads the
+  reports already on disk and runs no build, it compares no two reports — the added lines come
+  out of `git diff` in the current file's coordinates and the report is in those same
+  coordinates, so the line-shift problem every coverage-diff tool has does not arise — and its
+  floor is 90% with changes under ten statements reported rather than judged. `docs/adr/0035` is
+  the decision, including why the average floors stay. `tools/coverage-delta-test.sh` is the
+  gate over it.
+
   **`clean` is not optional and the gate will not tell you.** The report is built from what the
   instrumented compiler saw, so on an incremental build it covers only the files that were
   recompiled. Run twice a commit apart on 2026-09-13, the second report held **two files**:
