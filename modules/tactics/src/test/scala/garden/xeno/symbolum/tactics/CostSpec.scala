@@ -2,7 +2,8 @@ package garden.xeno.symbolum.tactics
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import garden.xeno.symbolum.kernel.Term
+import garden.xeno.symbolum.kernel.{Term, Type}
+import garden.xeno.symbolum.logic.Intuitionistic
 import garden.xeno.symbolum.theories.Real
 
 /**
@@ -239,5 +240,61 @@ class CostSpec extends AnyFlatSpec with Matchers {
     // difference by leaving the line out.
     report("!x:real. x * 1 = x").reach shouldBe None
     page("!x:real. x * 1 = x") should not include "rests on:"
+  }
+
+  /* ------------------------------------- a price a bound chose rather than the claim */
+
+  /**
+   * The chain of implications `PropositionalRouteSpec` uses, built here for the same reason it is
+   * built there: it is the one family whose consumption of the intuitionistic net grows with a
+   * parameter, so one link apart is the whole difference between a free route that finishes and
+   * one that is cut short.
+   */
+  private def chainOf(links: Int): Term = {
+    val logic = garden.xeno.symbolum.theories.Chain.standard.widest.logic
+    def force[E, T](result: Either[E, T]): T =
+      result.fold(error => fail(s"expected success, got $error"), identity)
+    def atom(i: Int): Term = Term.variable(s"p$i", Type.Bool)
+    val steps = (1 to links).map(i => force(logic.mkImp(atom(i), atom(i + 1))))
+    force(
+      logic.mkImp(
+        steps.reduceLeft((a, b) => force(logic.mkConj(a, b))),
+        force(logic.mkImp(atom(1), atom(links + 1)))
+      )
+    )
+  }
+
+  // The defect card 011218be exists for, on the surface a person reads. `Prove` has reported the
+  // case in its own type since 2026-09-18 and `Cost.Report` has carried it since the same day, and
+  // until 2026-09-19 **nothing read the field**: the page of a 128-link chain and the page of
+  // Peirce's law differed by the claim and by the inference count and by nothing else, both
+  // resting on the same `select`. So no surface could reconstruct the caveat from the price, and
+  // `docs/adr/0031` said each surface says it while one of the two did not.
+  //
+  // BOTH DIRECTIONS IN ONE TEST, and here that is not a rendering convention but the measurement
+  // itself: a page that printed the caveat always would be as wrong as one that never did, and
+  // only the pair separates them. The two goals are one link apart, so what differs between the
+  // pages is the bound and not the mathematics.
+  "The page of a goal the free route was cut short on" should "name which search stopped and at what, where the page of a goal it finished names nothing" in {
+    val overChain =
+      Cost.construct(garden.xeno.symbolum.theories.Chain.standard).fold(error => fail(error.message), identity)
+
+    def printed(links: Int): String = {
+      val found = overChain.of(chainOf(links)).fold(error => fail(error.message), identity)
+      overChain.render(found).fold(error => fail(error.message), identity)
+    }
+
+    // 128 links: the net runs out and the classical procedure answers, at the choice axiom.
+    val short = printed(128)
+    short should include(Intuitionistic.SearchName)
+    short should include(s"stopped at ${Intuitionistic.Fuel}")
+    short should include("this price is a bound's rather than this claim's")
+
+    // 127 links: the same theorem one link shorter, decided inside the net, and the page says
+    // nothing of the sort. This is the positive control, and without it the assertion above is
+    // satisfied by a renderer that has started saying it about everything.
+    val whole = printed(127)
+    whole should not include Intuitionistic.SearchName
+    whole should not include "cut short"
   }
 }

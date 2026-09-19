@@ -254,6 +254,15 @@ final class Cost private (
               s"${Prose.count(report.axioms.size, "axiom")}"
           )
         else Vector.empty
+      // Directly under the count it is about, because what it qualifies is that number and a
+      // reader who stops after the price has to have met it. Until 2026-09-19 `Report` carried
+      // this field and no renderer read it: the page of a goal the free route was cut short on
+      // and the page of a goal it decided against differed by the claim and by the inference
+      // count and by nothing else, which is the defect of card 011218be surviving on the surface
+      // a person uses. `docs/adr/0031` says each surface says it; this is the second of the two.
+      val caveat = report.cutShort
+        .map { case (search, depth) => s"  ${Cost.cutShortCaveat(search, depth)}" }
+        .toVector
       val where = report.point.map(point => s"  fails at: $point").toVector
       // Through `Remedy` rather than the refusal's own text, which names the shape it wanted and
       // prints the term it got in the kernel's notation. The claim is already at the top of this
@@ -271,13 +280,41 @@ final class Cost private (
       }
       val why = report.refusal.map(refusal => s"  $label: ${Remedy.of(reals, refusal).message}").toVector
 
-      Vector(head) ++ proof ++ charged ++ axioms ++ resting ++ named ++ why ++ where ++ missing ++
-        circular ++ vacuous ++ unchecked
+      Vector(head) ++ proof ++ caveat ++ charged ++ axioms ++ resting ++ named ++ why ++ where ++
+        missing ++ circular ++ vacuous ++ unchecked
     }
   }
 }
 
 object Cost {
+
+  /**
+   * The sentence a price owed to a bound rather than to the claim is said in, written once.
+   *
+   * Two surfaces say it and they are not one renderer: `Cost.page` produces the lines `Ask`,
+   * `Argument` and `WhatAClaimCosts` print, and `Session` produces the cell the notebook renders
+   * through its own `Session.Outcome.Proved`. Until 2026-09-19 only the second said anything, and
+   * the first carried the field and never read it: the verification of card 011218be put the
+   * pages of a 128-link chain and of Peirce's law side by side and they differed by the claim and
+   * by the inference count and by nothing else, on the surface `CLAUDE.md` names first.
+   *
+   * It is a function here rather than a string on either caller because the two would then be a
+   * fact written twice, and this repository has a name for what that does. `Session` reads it off
+   * [[Prove.Outcome.CutShort]] and this file off [[Report.cutShort]], which is the same pair
+   * arriving by two roads.
+   *
+   * What it must say is **which** bound and **at what**, for the reason
+   * [[Prove.Outcome.CutShort]] gives: an arbitrary constant rather than the mathematics decided
+   * this price, and `Derivation.axiomsOf` reports the axiom either way.
+   *
+   * It names no direction, and the sentence `Session` carried until this became shared did: it
+   * said "the price **below**", which is true of a notebook cell and false of a page where the
+   * count is the line above. A sentence that has to be reworded per surface is one that will be,
+   * and then the two drift.
+   */
+  def cutShortCaveat(search: String, depth: Int): String =
+    s"$search stopped at $depth, so the free route was cut short and this price is " +
+      "a bound's rather than this claim's"
 
   /** Which question the report answers, kept apart rather than merged into a verdict. */
   enum Outcome {

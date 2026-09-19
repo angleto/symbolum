@@ -564,10 +564,13 @@ object Session {
           prove(goal) match {
             case Right(outcome) =>
               val theorem = outcome.theorem
+              // The sentence is `Cost.cutShortCaveat` rather than a literal here, and it stopped
+              // being one on 2026-09-19 when `Cost.page` began saying it too. Two copies of one
+              // sentence on two surfaces is the shape this repository calls a fact written twice,
+              // and the copy that drifts is always the one nothing generates.
               val cutShort = outcome match {
                 case Prove.Outcome.CutShort(_, search, depth) =>
-                  Some(s"$search stopped at $depth, so the free route was cut short and the price " +
-                    "below is a bound's rather than this claim's")
+                  Some(Cost.cutShortCaveat(search, depth))
                 case Prove.Outcome.Settled(_) => None
               }
               (
