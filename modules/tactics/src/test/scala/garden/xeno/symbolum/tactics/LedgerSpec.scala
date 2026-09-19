@@ -6,6 +6,7 @@ import scala.jdk.CollectionConverters.*
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import garden.xeno.symbolum.{Add, Cos, Div, Expr, Mul, Num, Pow, Sin, Var}
+import garden.xeno.symbolum.kernel.{Term, Type}
 
 /**
  * The memory the loop did not have.
@@ -160,6 +161,51 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
       two.verdict shouldBe Ledger.Verdict.Open
     }
     two.evidence should startWith("2 points tried")
+  }
+
+  // The file's OTHER pair of counters, and the one the census of 2026-09-18 named here: the
+  // evidence written for a reading is `<standing>: N inferences over M axioms`, and it is a
+  // different line from the `points tried` above, which is why the test above it covers nothing
+  // of this. A reading that cost one inference and reached one axiom is not a corner: the page
+  // `Ask` prints was measured saying "77 inferences over 1 axioms" on commutativity of addition,
+  // which is the same shape one module over.
+  //
+  // BOTH DIRECTIONS IN ONE TEST, for the reason `CostSpec` and `EssaySpec` give at the same shape:
+  // the condition is one shared helper, so a wrong comparison inside it turns every count on every
+  // page singular and a test written on the singular alone reports that as repaired. The reading
+  // is BUILT here rather than obtained from the tactic surface, because what is under test is the
+  // rendering and a proof exactly one inference long is a fixture to hunt for rather than a fact
+  // about this file.
+  //
+  // SEEN RED, which for a guard written after its repair is the only way to know it guards
+  // anything: `tools/verify/perturb-plural-counters.sh` puts this one site back to the bare
+  // interpolation and leaves the other two repaired, and on 2026-09-19 at 66dd288 this assertion
+  // failed with `1 axioms` while the eleven other tests in this file stayed green.
+  "The two counts on the evidence of a reading" should "take the singular at one and the plural elsewhere" in {
+    val (ledger, _, _) = freshLedger()
+    val claim = Term.variable("p", Type.Bool)
+
+    def evidence(inferences: Int, axioms: Int): String =
+      ledger
+        .record(
+          s"claim at $inferences and $axioms",
+          Novelty.Reading(
+            claim = claim,
+            standing = Novelty.Standing.Earned,
+            address = Prove.Address.Equation,
+            inferences = inferences,
+            axioms = axioms,
+            report = Cost.Report(claim = claim, outcome = Cost.Outcome.Proved)
+          )
+        )
+        .evidence
+
+    evidence(1, 1) shouldBe "Earned: 1 inference over 1 axiom"
+    evidence(77, 1) shouldBe "Earned: 77 inferences over 1 axiom"
+    evidence(1, 2) shouldBe "Earned: 1 inference over 2 axioms"
+    // Zero takes the plural, which is the reading of a claim the kernel settled without reaching an
+    // axiom at all, and the case somebody picturing the condition does not picture.
+    evidence(4, 0) shouldBe "Earned: 4 inferences over 0 axioms"
   }
 
   "The second run of a candidate" should "cost a lookup instead of a certification" in {
