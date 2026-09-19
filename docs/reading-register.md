@@ -90,11 +90,25 @@ declaration to read: an uninterpreted name proves nothing, and what each one mea
 axiom that is a row, or by a theorem that was proved. The list is there so that a constant with no
 row is a constant somebody decided about rather than one that fell through.
 
-**Type definitions.** `num`, `prod` and `word` are carved out by `Kernel.defineType`, which is
+**Type definitions.** Several types here are carved out by `Kernel.defineType`, which is
 conservative and which a `Theory` records only as a type operator with an arity. The predicate each
 one is carved out of is a defined constant and has a row (`NUM_REP`, `mk_pair`); the abstraction and
 representation it introduces are in the declared list; the carving itself is neither, because there
-is nothing in the theory value left to print. A reader checking those three wants the files.
+is nothing in the theory value left to print. A reader checking one of them wants the file.
+
+**Which types those are is not written here**, and the sentence that used to list them said `num`,
+`prod` and `word` for the days between `int` being carved and 2026-09-19. A list of what the code
+holds is the copy that drifts, and nothing in this document goes red when it does. The question is
+asked of the code instead:
+
+    grep -rn '\bdefineType(' modules/*/src/main
+
+**Read those lines rather than counting them**, which is the trap this grep has: one of the
+answers is the declaration of the method in `Kernel.scala` and is not a carving. That is not a
+hypothetical — a card of this project counted the lines, published three call sites where there
+were four, and had the figure survive its own adversarial pass. A carving is also not always in
+the file that names the type: `int` is carved by `Quotient.define`, which is a builder, so its
+call site names no type at all and the type it produced is read off the caller.
 
 **The structural symbols.** `(`, `)`, `.`, `,`, `:` and `->` are in `Notation.Structural` and none
 of them has a precedence to get wrong.
