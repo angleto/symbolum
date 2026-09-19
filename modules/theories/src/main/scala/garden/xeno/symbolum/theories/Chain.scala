@@ -541,7 +541,7 @@ object Chain {
       // last" has no shape it can separate from the prose around it, so which link is the end is
       // read off `widest` and is not written here.
       integers <- Integer.construct(
-        classical, peano, product, forward.theory, forward.notation)
+        classical, peano, product, modular, successor, forward.theory, forward.notation)
 
       // The one part of the integers that mentions a real, and so the one part that cannot move
       // below `Real` when the construction arrives. It needs `integers` for the quotient it lifts

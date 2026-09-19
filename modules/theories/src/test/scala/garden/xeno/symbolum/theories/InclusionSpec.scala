@@ -50,10 +50,13 @@ import garden.xeno.symbolum.logic.*
  * the sixteen and the carrier's three and nothing else, so the boundary the section above describes
  * survives the new shape rather than being assumed to.
  *
- * What it is **not** is a way to `~(INT_DIVIDES 2 1)`. `docs/adr/0033` says that wants the
- * discreteness of the order, a lemma about the carrier that nothing here proves; the order map is
- * the instrument by which a fact of the reals could be carried, and whether it is the route is a
- * measurement nobody has made.
+ * What it is **not** is a way to `~(INT_DIVIDES 2 1)`, and since 2026-09-19 that is measured
+ * rather than left open. `docs/adr/0033` predicted that statement wanted the discreteness of the
+ * order and that this map might be the route to it. The statement is proved, as
+ * `Integer.TwoDoesNotDivide`, and `IntegerSpec` walks its derivation and finds no fact of `INT_LE`
+ * in it, with a positive control beside it so an empty answer cannot come from an instrument that
+ * read nothing. That this map is not in it either needs no walk: `Integer` is built below this
+ * development. So this map has no consumer yet.
  */
 class InclusionSpec extends AnyFlatSpec with Matchers {
 

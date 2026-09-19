@@ -185,6 +185,7 @@ they have least appetite for working out how it is produced.
   INT_DIVIDES_LINEAR       !x:int. !y:int. !z:int. !u:int. !v:int. INT_DIVIDES x y ==> INT_DIVIDES x z ==> INT_DIVIDES x (INT_ADD (INT_MUL u y) (INT_MUL v z))
   INT_DIVIDES_MUL          !x:int. !y:int. !z:int. INT_DIVIDES x y ==> INT_DIVIDES x (INT_MUL y z)
   INT_DIVIDES_NEG          !x:int. !y:int. INT_DIVIDES x y ==> INT_DIVIDES x (INT_NEG y)
+  INT_DIVIDES_OF_NUM       !x:num. !y:num. INT_DIVIDES (INT_OF_NUM x) (INT_OF_NUM y) = NUM_DIVIDES x y
   INT_DIVIDES_REFL         !x:int. INT_DIVIDES x x
   INT_DIVIDES_TRANS        !x:int. !y:int. !z:int. INT_DIVIDES x y ==> INT_DIVIDES y z ==> INT_DIVIDES x z
   INT_DIVIDES_ZERO         !x:int. INT_DIVIDES x INT_ZERO
@@ -211,6 +212,7 @@ they have least appetite for working out how it is produced.
   INT_SAME_REFL            !x:prod(num, num). INT_SAME x x
   INT_SAME_SYM             !x:prod(num, num). !y:prod(num, num). INT_SAME x y ==> INT_SAME y x
   INT_SAME_TRANS           !x:prod(num, num). !y:prod(num, num). !z:prod(num, num). INT_SAME x y ==> INT_SAME y z ==> INT_SAME x z
+  INT_TWO_NOT_DIVIDES_ONE  ~(INT_DIVIDES (INT_OF_NUM 2) (INT_OF_NUM 1))
   INT_ZERO_DIVIDES         !x:int. INT_DIVIDES INT_ZERO x ==> x = INT_ZERO
   INT_ZERO_MUL             !x:int. INT_MUL INT_ZERO x = INT_ZERO
 
