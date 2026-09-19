@@ -128,7 +128,10 @@ session named would be a different tool with the same name.
   theories/test theories/coverageReport` read 54027/55521 and `clean coverage test
   coverageReport` read 54113/55521 on the same code, **86 statements apart**, because `tactics`,
   `checker` and `dist` execute `theories`. The slack a floor leaves is about 25. What a change
-  adds does not move that way, so this figure is the same under both commands. It reads the
+  adds barely moves that way, and the pair was measured again on 2026-09-19 over one window:
+  the two commands read **98.32% and 98.26%** on the same 3164 statements, two apart, while the
+  module average read 97.52% and 97.32% and **crossed its floor**. Same mechanism, a lever short
+  enough that no difference of that origin can decide a floor of 90. It reads the
   reports already on disk and runs no build, it compares no two reports — the added lines come
   out of `git diff` in the current file's coordinates and the report is in those same
   coordinates, so the line-shift problem every coverage-diff tool has does not arise — and its

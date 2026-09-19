@@ -13,9 +13,15 @@
 # execute `theories`. The slack the floors leave is about 25 statements; the number one tree moves
 # by changing the command is three times that.
 #
-# The coverage of what a change adds does not move that way. A new statement is executed by
-# somebody or it is not, and who else runs the file does not enter it. So this figure is the same
-# under both commands, which is the defect card 32c9a285 exists to close.
+# The coverage of what a change adds barely moves that way, and "barely" is measured rather than
+# hoped. Over one window on 2026-09-19, base `7cb7d148`, restricted to `theories`: the wide
+# command reads 3111 of 3164 and the narrow one 3109 of 3164, the same denominator and two
+# statements apart, 98.32% against 98.26%. The module average over the same pair reads 97.52%
+# and 97.32%, and **crosses its floor**.
+#
+# The two statements are on one line, `Linarith.scala:1743`, which only a suite outside
+# `theories` calls: the mechanism is the same one, with a lever short enough that no difference
+# of that origin can decide a floor of 90. `docs/adr/0035` carries the table.
 #
 # HOW IT AVOIDS THE PROBLEM EVERY COVERAGE-DIFF TOOL HAS. The obvious construction is to compare
 # two `scoverage.xml` files, and it is wrong: one line inserted in a file moves the line number of

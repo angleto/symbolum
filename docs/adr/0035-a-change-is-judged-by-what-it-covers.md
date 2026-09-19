@@ -68,10 +68,30 @@ explicit decision rather than a side effect of this.
 ## Consequences
 
 **What is covered.** A change that adds poorly covered code is red at the push that adds it,
-naming the statements nobody executed, and the figure is the same under
-`clean coverage test coverageReport` and under `clean coverage theories/test
-theories/coverageReport` — measured both ways on 2026-09-19 over the same thirty-commit window
-restricted to `theories`, which is the defect this record exists to close.
+naming the statements nobody executed.
+
+**And the figure barely moves between the two commands, which is less than "is the same" and is
+what was measured.** Both run on 2026-09-19 over one window, base `7cb7d148`, restricted to
+`theories`:
+
+| | statements on changed lines | executed | delta | module average |
+|---|---|---|---|---|
+| `clean coverage test coverageReport` | 3164 | 3111 | **98.32%** | 97.52%, passes |
+| `clean coverage theories/test theories/coverageReport` | 3164 | 3109 | **98.26%** | 97.32%, FAILS |
+
+The denominator is identical, two statements differ, and the delta figure moves 0.06 points
+while the average moves 0.20 and crosses its floor. So the mechanism is not absent from the
+delta figure — it is the same mechanism with a much shorter lever. **The two statements are on
+one line and the line is known**: `Linarith.scala:1743`, the head of `Linarith.constant`, which
+this window changed and which only a suite outside `theories` calls. A statement that a change
+adds and that only another module's tests reach is counted as uncovered by the narrow command
+and as covered by the wide one, exactly as before; what changed is that the population it is
+measured against is the change rather than the module, so one such line is 0.06 points instead
+of 86 statements being 0.20.
+
+Written the other way round, which is the way a reader should carry it: the delta gate's floor
+is 90 and the two readings are 98.32 and 98.26, so no command-dependence of that size can
+decide this gate, where a difference of that origin already decides the average one.
 
 **What is not, and it is the reason the floors stay.** A module can drift down slowly with every
 individual change well covered: old code deleted, new code added at 90 where the module sits at
