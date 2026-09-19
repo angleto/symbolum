@@ -82,13 +82,27 @@
 # seven records at no cost while firing on 9's sentence and on 7's. Whether that is the repair or
 # whether the condition belongs somewhere other than the marker is the next round's decision.
 #
+# ROUND FOUR, 2026-09-20, the delivery that answers that verification, and it takes the narrowing
+# above: the marker is `[Tt]his read "|\bwas\b|\buntil\b`. Re-measured before changing anything,
+# on the spec's own segmentation: 19 blocks, 50 sentences, 7 naming the last link, and all seven
+# clear the narrowed pattern, so no record was rewritten to keep passing. **9 is red.** Nothing
+# else in the guard moved, so 1, 2, 4, 5, 6, 7, 8 and 10 assert what they asserted and 3 stays
+# green.
+#
+# The two paragraphs of the guard's docstring that this round rewrote rather than patched: the one
+# stating the removal criterion, which now covers both removals under it, and the one keeping the
+# field docstrings out, whose written reason was still the block reading's -- a length argument
+# that round two retired. What replaces it is the cost, measured with the test's own segmentation
+# over the 29 doc comments before `def construct`: 137 sentences, five name the last link, four
+# are records and the fifth is `deduction`'s true general sentence.
+#
 # 11 is not a finding. Round three added two assertions and neither had been seen to fire, which
-# is the standard round two set for itself when it added 6. Putting `read the` back into the
-# pattern makes the first of them red AT ITS OWN LINE, `Some("read the") was not equal to None`,
-# so that one is a guard that has been observed failing. The second cannot be isolated the same
-# way and the reason is worth knowing rather than fixing: the record it pins rests on the quoted
-# `read` alone, so a pattern dropping that alternative fails the population assertion first, at an
-# earlier line, and the pin can never be the failure a reader sees.
+# is the standard round two set for itself when it added 6; round four adds one and it is here for
+# the same reason. Putting the removed alternative back into the pattern -- the bare quoted `read`
+# now, `read the` in round three -- makes the new pin red AT ITS OWN LINE, so it is a guard that
+# has been observed failing. What cannot be isolated this way is the pin of the record resting on
+# the quoted alternative alone: a pattern dropping that alternative fails the population assertion
+# first, at an earlier line, and that pin can never be the failure a reader sees.
 #
 # What is NOT perturbed here, named so that the gap is not mistaken for coverage: the hole one
 # clause narrower than the one 4 closed, a present-tense claim whose own sentence carries a `was`
@@ -236,14 +250,15 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/8-co
 #    the repository's own prose writes non-past ones -- `Reaching.scala` has "the second
 #    hypothesis has to read "does not lower"". So this writes the card's defect -- present tense,
 #    dated today, false -- into the `limit` block, which carries no marker of any kind, with a
-#    non-past quoted `read` in the same sentence. Measured green at `66dd288`.
+#    non-past quoted `read` in the same sentence. Measured green at `66dd288`, and red since round
+#    four narrowed the alternative to `this read "`.
 "$P" "$CHAIN" \
   '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
   '      // The last link since 2026-09-19; the field above has to read "the last" for the two to
       // agree. The first analysis this repository has: what a sequence of reals converges to and the value' \
   -- ./tools/sbt -batch "$ONLY" \
   > "$OUT/9-quoted-read-is-not-past.log" 2>&1
-echo "9 claim whose sentence has a non-past quoted \`read\`: exit $? (0 was the finding; a repair owes 1)"
+echo "9 claim whose sentence has a non-past quoted \`read\`: exit $? (1 since round four; 0 was the finding)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/9-quoted-read-is-not-past.log"
 
 # 10. The control for 9, without which its green says only that the scan did not reach the block.
@@ -258,15 +273,16 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/9-qu
 echo "10 the same claim with \`say\`: exit $? (1 was measured: only the marker separates it from 9)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/10-control-for-nine.log"
 
-# 11. NOT A FINDING, and the observation round three's two new assertions were owed: a guard seen
-#     only passing is untested, which is the reason 6 exists. This puts the removed alternative
-#     back into the pattern and the first pin goes red at its own line. The second pin cannot be
-#     isolated this way, because the record it holds rests on the quoted `read` alone and dropping
-#     that alternative fails the population assertion at an earlier line.
+# 11. NOT A FINDING, and the observation the new assertions of rounds three and four were owed: a
+#     guard seen only passing is untested, which is the reason 6 exists. This widens the marker
+#     back to the bare quoted `read` that round four removed, and the pin of 9's sentence goes red
+#     at its own line. The pin of the record resting on the quoted alternative alone cannot be
+#     isolated this way, because dropping that alternative fails the population assertion at an
+#     earlier line.
 "$P" modules/tactics/src/test/scala/garden/xeno/symbolum/tactics/DocumentationSpec.scala \
+  'val dated = """[Tt]his read "|\bwas\b|\buntil\b""".r' \
   'val dated = """read "|\bwas\b|\buntil\b""".r' \
-  'val dated = """read "|\bwas\b|\buntil\b|read the""".r' \
   -- ./tools/sbt -batch "$ONLY" \
   > "$OUT/11-removed-alternative-back.log" 2>&1
-echo "11 the removed alternative put back: exit $? (1 was measured, at the pin's own line)"
+echo "11 the alternative removed in round four put back: exit $? (1 was measured, at the pin's own line)"
 grep -E "Tests: |\*\*\* FAILED|was not equal to None|perturb:" "$OUT/11-removed-alternative-back.log"

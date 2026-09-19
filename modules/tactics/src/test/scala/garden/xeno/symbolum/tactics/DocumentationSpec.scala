@@ -1200,9 +1200,9 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     //
     // **The unit is the SENTENCE that names the link, and it was the whole block until
     // 2026-09-19.** A true sentence of this shape is a record of a past state, and the three
-    // alternatives of the pattern below are what say so: `was`, `until`, and a `read` followed by
-    // a quote, which is the repaired text quoted after the word. Reading the marker off the block
-    // is the same test with a wider window, and the window is what was wrong with it.
+    // alternatives of the pattern below are what say so: `was`, `until`, and `this read` followed
+    // by a quote, which is a comment quoting what it used to carry. Reading the marker off the
+    // block is the same test with a wider window, and the window is what was wrong with it.
     //
     // **The block reading was refuted by perturbation rather than by rereading.** It argued here
     // that a marker anywhere in a block is safe "because a binding comment is short and about one
@@ -1222,21 +1222,33 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // tightening anybody pays for today. That is the one thing checked for this round rather than
     // predicted.
     //
-    // **A fourth alternative, `read the`, stood in that pattern from the day it was written and
-    // went on 2026-09-19.** It was never the criterion this docstring states: what it matched is
-    // two ordinary words wherever they fall and in any tense, so "The last link since 2026-09-19;
-    // read the record in `docs/adr/0017`" was a present-tense false claim written inside the scope
-    // this guard covers, and it passed. `tools/verify/perturb-chain-last-link.sh` has it at 7,
-    // with 8, the same claim saying `see the`, as the control that says the green came from the
-    // marker and not from where the scan reaches.
+    // **The read alternative went in two steps under one criterion, and the second step is why
+    // the pattern says `this read` rather than `read`.** What an alternative has to do is name a
+    // past state, and two of the four this pattern once carried did not. `read the` went on
+    // 2026-09-19: two ordinary words, wherever they fall and in any tense, so "The last link
+    // since 2026-09-19; read the record in `docs/adr/0017`" was a present-tense false claim
+    // inside the scope this guard covers and it passed. A bare quoted `read` went on 2026-09-20
+    // for exactly the reason the first removal wrote down and did not apply to what it left
+    // standing: a quotation mark says what follows is quoted, not that the sentence is about the
+    // past, and this repository writes non-past quoted reads -- `Reaching.scala` has "the second
+    // hypothesis has to read "does not lower"". So "The last link since 2026-09-19; the field
+    // above has to read "the last" for the two to agree" passed as well.
+    // `tools/verify/perturb-chain-last-link.sh` has the pair at 7 and 9, each with its control at
+    // 8 and 10 -- the same claim saying `see the` and `has to say` -- which fire, so each green
+    // came from the marker and not from where the scan reaches.
     //
-    // **What removed it is that it names no past tense, and NOT that nothing depends on it**, and
-    // the difference is what decides whether anything else goes with it. Measured over the fifty
-    // sentences this reads: `read the` occurs in none of them, and in `Chain.scala` in none at
-    // all, while a quoted `read` carries one of the seven records ALONE and is load-bearing.
+    // **What the demonstrative costs is nothing, and that is measured rather than predicted.**
+    // `this read "` is past tense and its subject is the comment itself, which is what a record
+    // of a repair is. All four of the seven records carrying a quoted `read` write the
+    // demonstrative in front, including `numbering`'s, which is the one record resting on the
+    // quoted alternative ALONE, so no true sentence was rewritten to keep passing.
+    //
+    // **And `until` stays on the criterion rather than on the population**, which is the
+    // difference that decides what goes with what. Measured over the fifty sentences this reads,
     // `until` is on its own the marker of none of the seven, since every sentence carrying it
-    // carries `was` or a quoted `read` as well, and it stays: a bounded interval is what a record
-    // of a past state says, which is a fact about the words rather than about today's population.
+    // carries `was` or a quoted `read` as well: "nothing depends on it" would have taken `until`
+    // out and left both defects standing. A bounded interval is what a record of a past state
+    // says, which is a fact about the words rather than about today's population.
     //
     // **What it still does not catch, pinned at the foot of this test rather than claimed away.**
     // The marker has to be in the naming sentence and not in the naming clause, so a present-tense
@@ -1244,14 +1256,19 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // clause narrower than the hole it replaces and it is not closed; none of the seven exercises
     // it, so nothing here measures how often it would arise.
     //
-    // **And the field docstrings are still outside.** The same test over them was the measurement
-    // that set the scope, and it refuted the prediction made before it: the prediction was three
-    // false positives and it is one, `deduction`'s, which is the exact sentence the guard above
-    // names as why it will not do this over prose. The other four passed on a stray `was`, and the
-    // sentence unit does not rescue them: a docstring here runs to thirty lines, so what it holds
-    // is many sentences, and one false sentence among them is invisible to a test that asks only
-    // whether some sentence is a record. So `matrix`'s defect, the undated one and the worst of
-    // the four, is in a field docstring and **nothing guards its class**.
+    // **And the field docstrings are still outside, for a cost rather than for a length.** The
+    // reason written here until 2026-09-20 was the block reading's and outlived it: a docstring
+    // runs to thirty lines, so a false sentence among many is invisible to a test asking whether
+    // SOME sentence is a record. The sentence unit retired that argument in round two and this
+    // paragraph kept it, which is the class of defect this guard exists to remove, one level out.
+    // Measured with this test's own segmentation over the 29 doc comments before `def construct`:
+    // **137 sentences, five name the last link, four are records and one is not.** The one is
+    // `deduction`'s -- "the last link and the widest signature stopped being the same thing when
+    // this landed" -- true, general, and exactly the shape this guard has no way to tell from a
+    // false claim. So the scope is a decision with a price on each side: this test over the field
+    // docstrings goes red on that sentence until somebody moves or rewrites it, and leaving them
+    // out is why `matrix`'s defect, the undated one and the worst of the four, lived where
+    // **nothing guards its class**.
     //
     // **What it does not cover inside the block either.** A general true sentence written here, of
     // the kind `deduction`'s docstring carries, fires and the words have to move up to the field
@@ -1308,12 +1325,13 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
 
     // The quoted alternative is written first so that the literal does not have to end in a
     // quote, which is the only thing the order decides here.
-    val dated = """read "|\bwas\b|\buntil\b""".r
+    val dated = """[Tt]his read "|\bwas\b|\buntil\b""".r
     val present = mentioning.filterNot(sentence => dated.findFirstIn(sentence).isDefined)
     withClue(
       s"${present.size} sentence(s) in `Chain.construct` claim a link is the last one. " +
         s"Which link is the end is `Chain.widest` and is not written in prose; a record of a past " +
-        s"state says `was`, `until`, or the repaired text quoted after `read`, IN THE SENTENCE " +
+        s"state says `was`, `until`, or `this read` and then the text it used to carry, IN THE " +
+        s"SENTENCE " +
         s"THAT NAMES THE LINK, since a marker elsewhere in the block is a word about something " +
         s"else. If the sentence is a general one about what last means, it belongs in the field " +
         s"docstring above rather than here:\n${present.mkString("\n\n")}\n"
@@ -1327,11 +1345,16 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     dated.findFirstIn("The last link since 2026-09-15, and the only one that needs a limit.") shouldBe None
     dated.findFirstIn("Landed 2026-09-15 and was the last link until `concatenation` went on top") should not be empty
 
-    // The alternative removed on 2026-09-19, pinned as a pair rather than left to the harness: the
-    // first is the sentence perturbation 7 wrote into a block, which `read the` used to clear, and
-    // the second is the record that rests on the quoted `read` alone, so a pattern narrowed until
-    // it caught the first by dropping the quoted alternative instead would go red on the second.
+    // The two removals, pinned here rather than left to the harness, with the record that says
+    // what a narrowing may not cost. The first sentence is what perturbation 7 wrote into a block
+    // and `read the` used to clear; the second is what perturbation 9 wrote and a bare quoted
+    // `read` used to clear, its `read` being present tense; the third is `numbering`'s record,
+    // which rests on the quoted alternative ALONE, so a pattern that caught either of the first
+    // two by dropping the quoted alternative altogether would go red here.
     dated.findFirstIn("The last link since 2026-09-19; read the record in `docs/adr/0017`.") shouldBe None
+    dated.findFirstIn(
+      "The last link since 2026-09-19; the field above has to read \"the last\" for the two to agree."
+    ) shouldBe None
     dated.findFirstIn(
       "This read \"The last link since 2026-09-14, and the first one that is about a language\" " +
         "and both halves went on 2026-09-19."
