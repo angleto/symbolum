@@ -102,7 +102,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
    * are what [[Classified]] covers. The other five are scanned too, because the first assertion is
    * about a file and does not care which field a rendering reached.
    */
-  private val ProseField: Map[String, Int] = Map(
+  private val ProseFieldEntries: Vector[(String, Int)] = Vector(
     "NotOfForm" -> 0,
     "DoesNotFollow" -> 1,
     "BoundReached" -> 0,
@@ -154,7 +154,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
    * are one obligation seen from its two sides, and without the second a table nobody prunes stops
    * being readable and then stops being read.
    */
-  private val Classified: Map[(String, String), (Verdict, String)] = Map(
+  private val ClassifiedEntries: Vector[((String, String), (Verdict, String))] = Vector(
     ("Bounded.scala", "Natural.TypeName") -> (Verdict.Name, "the name of the type num"),
     ("Bounded.scala", "index.name") -> (Verdict.Name, "the bound variable's name"),
     ("Bounded.scala", "position") -> (Verdict.Number, "which instance of the walk"),
@@ -366,7 +366,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
    * rendered is what arrives. They are listed because a list of what a scan cannot decide is the
    * only honest form the undecided can take.
    */
-  private val Unrendered: Map[(String, String), (Verdict, String)] = Map(
+  private val UnrenderedEntries: Vector[((String, String), (Verdict, String))] = Vector(
     ("Propositional.scala", "why") ->
       (Verdict.Text, "Verdict.Undecided's and Verdict.Refused's own sentences, passed through"),
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
@@ -383,6 +383,66 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
       (Verdict.Text, "a constant sentence written with an interpolator it does not use")
   )
+
+  /* ---------------------------------------------- the three tables, as what the scan reads */
+
+  /**
+   * The three declarations above as maps, which is what every assertion in this file looks a site
+   * up in.
+   *
+   * Each was a `Map(...)` literal until 2026-09-19 and each is a `Vector` projected here, and the
+   * difference is what a repeated key does. A map literal absorbs one, keeping the last, and **both
+   * of this file's assertions go on passing**: a duplicated row is still a row the scan finds, so
+   * "every site is classified" holds, and it is still a site the scan reaches, so "every entry is
+   * still found" holds too. What is silently gone is the first of the two readings, which is the
+   * one a person wrote and a reader believes is here. Nothing else in this file can see it, because
+   * both assertions are about the map and the map is where the entry was lost.
+   *
+   * **No key is repeated in any of the three**, measured on 2026-09-19 by the assertion below
+   * rather than by reading them. The guard is latent, which is when it is worth putting in. How
+   * many rows each holds is not written here and the reason is this repository's usual one: a
+   * figure that moves whenever somebody classifies a site is a figure a comment cannot hold, and
+   * the live number is printed by the floors' own clue and by `info` in the census below.
+   *
+   * The count comes off the `Vector` rather than off the source text. Counting the lines of a
+   * literal and comparing them against `size` is the other way to ask it, and it is the shape that
+   * got this wrong the first time it was tried on this file, reading two tables as one and
+   * reporting a duplicate that was not there: a row here spans one line or three, and the unit the
+   * question is about is the entry.
+   */
+  private val ProseField: Map[String, Int] = ProseFieldEntries.toMap
+
+  private val Classified: Map[(String, String), (Verdict, String)] = ClassifiedEntries.toMap
+
+  private val Unrendered: Map[(String, String), (Verdict, String)] = UnrenderedEntries.toMap
+
+  "Each of the three tables" should "not have absorbed a repeated key" in {
+    def repeated[K, V](entries: Vector[(K, V)]): Vector[K] =
+      entries.map(_._1).groupBy(identity).filter(_._2.size > 1).keys.toVector
+
+    withClue(s"repeated in `ClassifiedEntries`: ${repeated(ClassifiedEntries).mkString(", ")}\n") {
+      Classified.size shouldBe ClassifiedEntries.size
+    }
+    withClue(s"repeated in `UnrenderedEntries`: ${repeated(UnrenderedEntries).mkString(", ")}\n") {
+      Unrendered.size shouldBe UnrenderedEntries.size
+    }
+    withClue(s"repeated in `ProseFieldEntries`: ${repeated(ProseFieldEntries).mkString(", ")}\n") {
+      ProseField.size shouldBe ProseFieldEntries.size
+    }
+
+    // And it is not passing because the three tables are empty, which is the one way an equality
+    // between two sizes is true for free. Each floor is about half of what its table held on
+    // 2026-09-19, so a tree that had lost most of a table could not clear it; they are floors and
+    // not pins, because entries are added and this is not a budget.
+    ClassifiedEntries.size should be >= 60
+    UnrenderedEntries.size should be >= 3
+
+    // `ProseField` gets the structure it states rather than a floor: every refusal whose field is a
+    // description is one the table gives a position for, which is what makes `Describes` a subset
+    // of it and not a second list of names beside it.
+    Describes.subsetOf(ProseField.keySet) shouldBe true
+    ProseFieldEntries.size should be > Describes.size
+  }
 
   /* ------------------------------------------------------------------- the scanner */
 

@@ -375,13 +375,69 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
   /* ------------------------------------------ the boundary the compiler cannot check */
 
   /**
+   * Every `src/main` under `modules/`, asked of the disk rather than written down.
+   *
+   * The two censuses below each carried `Vector("kernel", "logic", "theories", "tactics", "core",
+   * "checker")` until 2026-09-19, the second copied from the first with a comment saying so, and
+   * the list was wrong in both directions at once. Measured against `build.sbt` on that day:
+   * `kernel`, `core` and `sat` declare no dependency and `checker` depends on `kernel` alone, so
+   * **three of the six roots cannot name `Rewrite` however the scan is written**; and `examples`
+   * depends on `tactics` and `dist` on `tactics` and `examples`, so **two modules whose `src/main`
+   * does reach `Rewrite` were read by neither census**. Both censuses were green, because a scan
+   * that does not look somewhere reports nothing from there and reads exactly like a scan that
+   * looked and found nothing.
+   *
+   * Nothing was being missed on the day this was repaired: `repeatConv(` over all twelve modules
+   * returns `logic/Rewrite.scala` and `theories/Field.scala` and nothing else, and the first
+   * census's three patterns return files in `logic`, `theories` and `tactics` alone. The hole was
+   * latent, and the repair is worth making while it still is.
+   *
+   * **A derived list is not a shorter way to write the list; it is a different kind of thing.**
+   * `SourceLanguageSpec` reached this shape first and its docstring carries the argument: a module
+   * added tomorrow is scanned tomorrow, where a written list is scanned when somebody remembers.
+   * `NotationBoundarySpec.moduleRoots` is the same walk, and this is deliberately a third copy
+   * rather than a shared helper. The three cannot disagree, because all three ask one filesystem;
+   * the six-name list could and did. Sharing them would want either a fourth module or a
+   * `test->test` edge from `logic`, and `modules/scan`'s own docstring measures what that edge
+   * costs for removing one copy of one function.
+   *
+   * What it does not cover: a project outside `modules/`. `tools/fatal-warnings-probe` is two such
+   * projects, and the note beside the probe already records that they sit outside every scan that
+   * reads `modules/`.
+   */
+  private def moduleRoots: Vector[java.nio.file.Path] = {
+    val stream = java.nio.file.Files.list(java.nio.file.Paths.get("modules"))
+    try
+      stream
+        .toArray
+        .toVector
+        .map(_.asInstanceOf[java.nio.file.Path].resolve("src/main"))
+        .filter(java.nio.file.Files.isDirectory(_))
+        .sortBy(_.toString)
+    finally stream.close()
+  }
+
+  /** Every Scala source under one of [[moduleRoots]]. */
+  private def mainSources: Vector[java.nio.file.Path] =
+    moduleRoots.flatMap { root =>
+      val stream = java.nio.file.Files.walk(root)
+      try
+        stream
+          .toArray
+          .toVector
+          .map(_.asInstanceOf[java.nio.file.Path])
+          .filter(_.toString.endsWith(".scala"))
+      finally stream.close()
+    }
+
+  /**
    * Every call of `Rewrite.rewrite` in the repository, with what each one does about the limit.
    *
    * An entry is a claim that this call site does not read a later failure as a statement about the
    * mathematics. The scan below fails on a call site that is not listed, so a new one has to be
    * thought about once rather than found later.
    */
-  private val ReviewedCallSites: Map[String, String] = Map(
+  private val ReviewedEntries: Vector[(String, String)] = Vector(
     // The one of 2026-09-16, and the first whose safety rests on a comparison against WRITTEN
     // statements rather than on termination alone.
     "Collatz.scala" ->
@@ -640,48 +696,112 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`InclusionSpec`, which is the same last line of defence `Integer.scala` has above")
   )
 
+  /**
+   * The same table as a map, which is what the two censuses below look a file up in.
+   *
+   * The declaration above is a `Vector` and this is its projection, rather than the `Map(...)`
+   * literal it was until 2026-09-19, and the difference is what a repeated key does. A map literal
+   * absorbs one silently, keeping the last: both assertions of the census would go on passing,
+   * because a duplicated entry is still an entry the scan finds and still a file the scan reaches,
+   * so neither "every site is reviewed" nor "every review is still a site" can see it. What is lost
+   * is the review a reader thinks is here. Measured on 2026-09-19, no file is named twice here nor
+   * in any of the four tables repaired with it, three in `NotationBoundarySpec` and one in
+   * `ChainCoverageSpec`, so the guard below is latent rather than a repair of a live defect.
+   *
+   * The count is taken off the `Vector` and not off the source text. Counting the lines of the
+   * literal and comparing them with `size` was the other way to ask, and it is the shape that
+   * mismeasured this the first time it was tried, reading two tables in one file as one table and
+   * declaring a duplicate that was not there: an entry here spans eleven lines as often as one.
+   */
+  private val ReviewedCallSites: Map[String, String] = ReviewedEntries.toMap
+
+  "The table of reviewed call sites" should "not have absorbed a repeated file name" in {
+    val repeated = ReviewedEntries.map(_._1).groupBy(identity).filter(_._2.size > 1).keys.toVector
+    withClue(s"file named twice in `ReviewedEntries`: ${repeated.sorted.mkString(", ")}\n") {
+      repeated shouldBe empty
+    }
+
+    // And it is not passing because the table is empty, which is the one way an equality between
+    // two sizes holds for free. About half of what it held on 2026-09-19; a floor and not a pin,
+    // because the census below is what keeps this table tracking the call sites.
+    ReviewedEntries.size should be >= 13
+    ReviewedCallSites.size shouldBe ReviewedEntries.size
+  }
+
+  "The sources the two censuses walk" should
+    "be every module's, including any module added after this was written" in {
+    // Two readings that must agree, rather than a list. The first is the modules the walk actually
+    // produced a file from; the second is the directories under `modules/` that carry Scala under
+    // `src/main`, computed without going through `mainSources`. A derivation can return nothing,
+    // and two empty readings agree, so the floor below is what separates agreement from silence.
+    val reached = mainSources.map(_.getName(1).toString).distinct.sorted
+
+    val stream = java.nio.file.Files.list(java.nio.file.Paths.get("modules"))
+    val holdingMain =
+      try
+        stream
+          .toArray
+          .toVector
+          .map(_.asInstanceOf[java.nio.file.Path])
+          .filter { module =>
+            val main = module.resolve("src/main")
+            java.nio.file.Files.isDirectory(main) && {
+              val walk = java.nio.file.Files.walk(main)
+              try walk.toArray.toVector.exists(_.toString.endsWith(".scala"))
+              finally walk.close()
+            }
+          }
+          .map(_.getFileName.toString)
+          .sorted
+      finally stream.close()
+
+    reached shouldBe holdingMain
+
+    // A floor and not an equality, because modules are added and this is not a budget. It sits
+    // below what the tree held on 2026-09-19 and above the six the two censuses used to name, so a
+    // list written back in place of the walk cannot clear it. `aggregate` is a directory under
+    // `modules/` that holds no source of its own, which is why this is not a count of `modules/`.
+    withClue(s"modules reached: ${reached.mkString(", ")}\n") {
+      reached.size should be >= 10
+    }
+
+    // And the two the repair of 2026-09-19 was about. Both depend on `tactics` and so can name
+    // `Rewrite`, and the six-name list both censuses used to carry read neither: these are the
+    // entries that disappear first if anybody writes the list back.
+    reached should contain("examples")
+    reached should contain("dist")
+
+    info(s"${reached.size} modules, ${mainSources.size} sources: ${reached.mkString(", ")}")
+  }
+
   "Every caller of the rewriter" should "have been asked what it does when the limit runs out" in {
     // The census the card asked for, as a scan rather than as a reading somebody did once. The
     // defect is that `rewrite` hands back the theorem it had when the step limit ran out, so a rule
     // set that does not settle looks exactly like a false identity; it was closed in
     // `Rewrite.prove`, came back the same day in `Induct.settle`, and came back again in `Family`
     // on the day this list was written. It will come back in the next place that does this.
-    val roots = Vector("kernel", "logic", "theories", "tactics", "core", "checker")
-
-    val callers = roots.flatMap { module =>
-      val directory = java.nio.file.Paths.get(s"modules/$module/src/main")
-      if (!java.nio.file.Files.exists(directory)) Vector.empty
-      else {
-        val stream = java.nio.file.Files.walk(directory)
-        try
-          stream
-            .filter(path => path.toString.endsWith(".scala"))
-            .toArray
-            .toVector
-            .map(_.asInstanceOf[java.nio.file.Path])
-            .filter { path =>
-              val text = new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
-              text.contains("Rewrite.rewrite(") ||
-              // `inTheorem` since 2026-09-15, and it was the gap this file's own docstring
-              // predicted. It calls `rewrite` with the same default limit and hands the result to
-              // `eqMp`, so a walk that ran out yields a TRUE theorem about a half-rewritten term,
-              // which is the defect this list is about arriving by a second door. Twenty call
-              // sites across ten files were unread until a session adding one of its own noticed.
-              text.contains("Rewrite.inTheorem(") ||
-              // `Recorder.rewriteIn` since 2026-09-15, and it is a door rather than a call site
-              // dressed up as one: it takes its rules as a PARAMETER, so `Recorder.scala` can say
-              // what it records and cannot say what an exhausted limit means, and its own entry
-              // above declined to. A caller reaching the rewriter through it was invisible here.
-              // `Magnitude.scala` is that caller and holds zero calls at either of the two doors
-              // above, which is how eight sites in the shared recording layer went unread while
-              // this scan reported itself complete.
-              text.contains(".rewriteIn(") ||
-              (path.getFileName.toString == "Rewrite.scala" && false)
-            }
-            .map(_.getFileName.toString)
-        finally stream.close()
+    val callers = mainSources
+      .filter { path =>
+        val text = new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
+        text.contains("Rewrite.rewrite(") ||
+        // `inTheorem` since 2026-09-15, and it was the gap this file's own docstring
+        // predicted. It calls `rewrite` with the same default limit and hands the result to
+        // `eqMp`, so a walk that ran out yields a TRUE theorem about a half-rewritten term,
+        // which is the defect this list is about arriving by a second door. Twenty call
+        // sites across ten files were unread until a session adding one of its own noticed.
+        text.contains("Rewrite.inTheorem(") ||
+        // `Recorder.rewriteIn` since 2026-09-15, and it is a door rather than a call site
+        // dressed up as one: it takes its rules as a PARAMETER, so `Recorder.scala` can say
+        // what it records and cannot say what an exhausted limit means, and its own entry
+        // above declined to. A caller reaching the rewriter through it was invisible here.
+        // `Magnitude.scala` is that caller and holds zero calls at either of the two doors
+        // above, which is how eight sites in the shared recording layer went unread while
+        // this scan reported itself complete.
+        text.contains(".rewriteIn(")
       }
-    }.distinct.sorted
+      .map(_.getFileName.toString)
+      .distinct
+      .sorted
 
     withClue(s"call sites: ${callers.mkString(", ")}\n") {
       callers.filterNot(ReviewedCallSites.contains) shouldBe empty
@@ -719,43 +839,39 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     // `Peano.scala` is not in the list below because it stopped being a call site rather than
     // because it was excused: `passOver` was published so that it could call it, which removed the
     // third copy of the pass at the same time.
-    val reviewed = Map(
+    val reviewedEntries = Vector(
       "Field.scala" ->
         ("two passes over rules it has just built, asked through `Rewrite.Rule.iterable` before " +
           "either is repeated. It is not `normaliser`: it carries no ordered rules and no beta, " +
           "and the argument for that shape is written above the function")
     )
+    val reviewed = reviewedEntries.toMap
+    withClue(s"file named twice: ${reviewedEntries.map(_._1).mkString(", ")}\n") {
+      reviewed.size shouldBe reviewedEntries.size
+    }
 
-    // The same roots the census above walks, and not `modules/theories` alone: this scan was
-    // written against the two sites that existed and would not have seen a third in `tactics`,
-    // which is a gate that reads where the answer already is. `Rewrite.scala` is where `repeatConv`
-    // is defined and where the two published drivers use it, so it is the one file excluded.
-    val roots = Vector("kernel", "logic", "theories", "tactics", "core", "checker")
-
-    val callers = roots.flatMap { module =>
-      val directory = java.nio.file.Paths.get(s"modules/$module/src/main")
-      if (!java.nio.file.Files.exists(directory)) Vector.empty
-      else {
-        val stream = java.nio.file.Files.walk(directory)
-        try
-          stream
-            .filter(path => path.toString.endsWith(".scala"))
-            .toArray
-            .toVector
-            .map(_.asInstanceOf[java.nio.file.Path])
-            .filter { path =>
-              path.getFileName.toString != "Rewrite.scala" &&
-              // `repeatConv(` and not `Rewrite.repeatConv(`: a site written under `import Rewrite.*`
-              // spells it without the qualifier, and a gate that depends on how a call is spelled
-              // is the defect this repository already records about an order and ASCII. The looser
-              // pattern can only over-report, which costs an entry and never a miss.
-              new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
-                .contains("repeatConv(")
-            }
-            .map(_.getFileName.toString)
-        finally stream.close()
+    // The same sources the census above walks, which since 2026-09-19 is every `src/main` under
+    // `modules/` and not the six names both censuses carried. The comment that stood here said
+    // "the same roots the census above walks, and not `modules/theories` alone", because a gate
+    // that reads where the answer already is would not have seen a third site in `tactics`. The
+    // argument was right and the list stopped one module short of it: it also does not read
+    // `examples` or `dist`, which is where a fourth site would be invisible in exactly the way
+    // this sentence was warning about. `moduleRoots` carries the measurement.
+    //
+    // `Rewrite.scala` is where `repeatConv` is defined and where the two published drivers use it,
+    // so it is the one file excluded.
+    val callers = mainSources
+      .filter { path =>
+        path.getFileName.toString != "Rewrite.scala" &&
+        // `repeatConv(` and not `Rewrite.repeatConv(`: a site written under `import Rewrite.*`
+        // spells it without the qualifier, and a gate that depends on how a call is spelled
+        // is the defect this repository already records about an order and ASCII. The looser
+        // pattern can only over-report, which costs an entry and never a miss.
+        new String(java.nio.file.Files.readAllBytes(path), "UTF-8")
+          .contains("repeatConv(")
       }
-    }.distinct
+      .map(_.getFileName.toString)
+      .distinct
 
     withClue(s"assembles its own repetition: ${callers.sorted.mkString(", ")}\n") {
       callers.filterNot(reviewed.contains) shouldBe empty
