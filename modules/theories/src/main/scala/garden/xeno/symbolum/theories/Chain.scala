@@ -106,7 +106,14 @@ final class Chain private (
   /** Finite words over [[product]], the only one of the five that needs another of them. */
   val word: Word,
   /**
-   * Two-by-two real matrices, and the last link rather than one of the five.
+   * Two-by-two real matrices, appended to the chain where the five were moved into it.
+   *
+   * This read "and the last link rather than one of the five" until 2026-09-19. That was true on
+   * the day it was written and false from the next link onwards, and it is the one of the four
+   * claims in this file that carried no date at all, which is the form `Rotation.scala` and
+   * `Concatenation.scala` each had removed from them once before. Which link is the end is
+   * [[widest]] and is not written in prose; what the sentence was for survives without the claim,
+   * and it is the contrast in the line above.
    *
    * It arrived on 2026-09-12, after the five went in, and it went straight into the chain for the
    * reason they had to be moved into it: a `MAT_DET` defined beside this would be a constant no
@@ -448,9 +455,16 @@ object Chain {
       // field here so that `Library.of` reaches its facts.
       primes <- Primes.construct(coding)
 
-      // The last link since 2026-09-14, and the first one that is about a language rather than
-      // about numbers: `docs/adr/0014` decides that a term of the embedded theory IS a number, so
-      // the arithmetisation extends the arithmetic rather than sitting beside it.
+      // The arithmetisation, landed 2026-09-14. It extends the arithmetic rather than sitting
+      // beside it because `docs/adr/0014` decides that a term of the embedded theory IS a number,
+      // so what it adds is the pairing and the constructor and not a syntax.
+      //
+      // This read "The last link since 2026-09-14, and the first one that is about a language" and
+      // both halves went on 2026-09-19. The first is the claim this file stopped writing in prose,
+      // and `widest` is where it is read. The second was held by TWO bindings at once: `language`,
+      // the next binding, makes it in the same words and out of the same record, and at most one
+      // link can be first. It belongs there, because `NUM_TERM` is where the embedded language
+      // starts and the constants here are numbers that happen to code one.
       numbering <- Numbering.construct(coding, coding.theory, coding.notation)
 
       // The first link that is about a language rather than about numbers, which under
@@ -458,9 +472,14 @@ object Chain {
       language <- Language.construct(
         numbering, induct, successor, numbering.theory, numbering.notation)
 
-      // The last link since 2026-09-14. It is about the language rather than part of it: nothing
-      // in it declares a constructor or a predicate of the object syntax, and it is a separate
-      // development for that reason rather than because `Language.scala` was getting long.
+      // Landed 2026-09-14. It is about the language rather than part of it: nothing in it declares
+      // a constructor or a predicate of the object syntax, and it is a separate development for
+      // that reason rather than because `Language.scala` was getting long.
+      //
+      // This read "The last link since 2026-09-14" until 2026-09-19, which is word for word what
+      // `numbering` said three bindings above with the same date on it. At most one of the two
+      // could have been the last link on any day, so the pair was unusable whichever way "since"
+      // was read, and neither said what the last link is now. `widest` does.
       provability <- Provability.construct(language, language.theory, language.notation)
 
       // Beside the extension order rather than in it, the way `bounded` is: it declares nothing and
@@ -477,7 +496,9 @@ object Chain {
       limit <- Limit.construct(
         magnitude, peano, series, reals, induct, provability.theory, provability.notation)
 
-      // The last link since 2026-09-15, and the only one that needs a limit. `docs/adr/0017` is the
+      // Landed 2026-09-15 and was the last link until `concatenation` went on top of it the next
+      // day, which the binding below says of itself. It is the only one that needs a limit, and
+      // this read "The last link since 2026-09-15" until 2026-09-19. `docs/adr/0017` is the
       // decision it spends: these four constants are their power series rather than four axioms, so
       // the trusted base does not move and `TranscendentalSpec` asserts that as an equality rather
       // than as a ceiling.
