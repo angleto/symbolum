@@ -74,9 +74,21 @@ reach no library, and `docs/lemmas.md` does not list them.
 **The trusted base does not move.** The type is `Kernel.defineType` over the image of a closed
 relation, the operations are lifts, and every fact costs what the carrier cost: choice, eta and
 infinity, which is what the naturals and the pair already cost. `IntegerSpec` asserts that as an
-**equality** of axiom sets rather than as a ceiling, which is the form `CodingSpec` uses, and it
-asserts separately that no axiom of the reals is among them. A signed ring that charged the sixteen
-would be a ring built on the thing it exists to avoid needing.
+**equality** of axiom sets rather than as a ceiling, which is the form `CodingSpec` uses, and for
+every other statement it asserts a **containment** in those three. A signed ring that charged the
+sixteen would be a ring built on the thing it exists to avoid needing.
+
+That sentence said the spec asserted separately that no axiom of the reals is among them, and it
+was written from the shape of the check rather than from the check. Read on 2026-09-19 the loop
+compared each statement against **one** of the sixteen, `ADD_SYM`, so a statement resting on
+`COMPLETENESS` or on any of the other fourteen passed. The repair is the containment above rather
+than a loop over all sixteen, because containment refuses those and also refuses a seventeenth
+axiom arriving from anywhere else, which nothing was watching for. The blanket **equality** over
+every statement, which is the other form and looks stronger, is false: `INT_SAME_REFL` is one of
+them and the next assertion in that file says it does not reach choice. What makes the containment
+say anything about the reals is that the sixteen are outside those three, which is now asserted
+rather than assumed, and `IntegerSpec` exhibits an axiom the old reading accepted and this one
+refuses rather than claiming the difference.
 
 **The type does not collapse, and that is derived rather than assumed.** `QuotientSpec` says in as
 many words that non-collapse is the one guard it cannot carry: refuting it there means deriving
@@ -138,20 +150,41 @@ from a respectfulness lemma of its own — which is the shape a fourth lift woul
 in its first consumer rather than added to the builder ahead of one, which is the criterion 0016
 sets for that file.
 
-**What is not here, named so that the list does not go stale silently.** A concrete non-divisibility
-at a non-zero divisor — `~(INT_DIVIDES 2 1)` — is not derived, and it is the sharpest thing that
-separates this divisibility from `Divisibility`'s. It needs the discreteness of the order, that
-nothing lies strictly between zero and one, which is one lemma about the carrier and is named
-rather than written. The converse of `NUM_DIVIDES m n ==> INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)`
-needs the same thing, since the witness has to be shown non-negative. The bridge to `real` **is**
-here, as `Inclusion`, landed 2026-09-18 and the link that ran the prediction above, and so is the
-order, `INT_REAL_LE`, later the same day. It did want an argument of its own rather than the
+**What is not here, named so that the list does not go stale silently.** The list this paragraph
+carried is empty as of 2026-09-19, and it is rewritten rather than ticked, because what its two
+open entries cost is not what it predicted. What is missing from the development now is one thing
+it never listed, the rationals, and `CLAUDE.md` is where that is written.
+
+It said a concrete non-divisibility at a non-zero divisor — `~(INT_DIVIDES 2 1)` — needed the
+discreteness of the order, that nothing lies strictly between zero and one, and that the converse
+of `NUM_DIVIDES m n ==> INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)` needed the same lemma because
+the witness has to be shown non-negative. **Neither needs it, and no such lemma was written.** The
+two are one fact, `INT_DIVIDES_OF_NUM`, which is the biconditional rather than either implication
+for the reason `INT_LE_OF_NUM` is one; and under it the refusal is `Modular.NUM_DIVIDES_ONE` at two
+numerals. `IntegerSpec` walks the refusal's derivation and asserts that no fact of `INT_LE` is in
+it, with a positive control beside it so an empty answer cannot come from an instrument that read
+nothing.
+
+What the prediction got wrong is worth more than the correction. The witness of the divisibility is
+an **integer**, so reading it back as a natural is the step that wants a sign argument, and the
+route taken does not ask: `INT_CASES` writes the witness as some pair, the equation between classes
+becomes `n + m * b = m * a` between naturals, and `Modular.NUM_DIVIDES_SUMMAND` concludes without
+anything deciding which of `a` and `b` is the larger. There is no case split in the section. The
+arithmetic that bounds the divisors of a non-zero number was already proved one type down, and a
+faithful embedding is how a fact of that kind travels; deriving discreteness here would have
+rebuilt it.
+
+The third entry was already answered when this was written. The bridge to `real` **is** here, as
+`Inclusion`, landed 2026-09-18 and the link that ran the prediction above, and so is the order,
+`INT_REAL_LE`, later the same day. It did want an argument of its own rather than the
 rewriting route the equations share, and what it wanted first was a fact one type down: the library
 carried `NUM_LE m n ==> real_of_num m <= real_of_num n` and not its converse, so the right-to-left
 half of the biconditional had nothing to cross on. `Peano.NUM_REAL_LE_BACK` is that converse. What
-the order map does **not** do is settle the non-divisibility above it: it is the instrument by which
-an order fact of the reals could reach `int`, and whether that is the route to discreteness is a
-measurement nobody has made.
+the order map does **not** do is settle the non-divisibility above it, and since 2026-09-19 that is
+a measurement rather than a question: that statement is proved, `IntegerSpec` finds no fact of
+`INT_LE` in its derivation, and this map cannot be in it because `Integer` is built below
+`Inclusion`. So the map remains the instrument by which an order fact of the reals would reach
+`int`, and it has no consumer.
 
 ## Alternatives rejected
 

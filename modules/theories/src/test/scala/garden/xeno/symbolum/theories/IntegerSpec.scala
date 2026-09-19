@@ -26,14 +26,18 @@ import garden.xeno.symbolum.logic.*
  *
  * The card that asked for this development names `Divisibility` as what it could not use, because
  * over a field every non-zero element divides everything and the condition is discharged
- * vacuously. The two assertions here are the two halves a reader should separate: that the
- * relation carries a divisor across a **linear combination**, which is the step a lattice argument
- * is made of; and that it is not everywhere true, spent on `~(INT_DIVIDES INT_ZERO INT_ONE)`.
+ * vacuously. Three assertions here answer different parts of that, and a reader should keep them
+ * apart: that the relation carries a divisor across a **linear combination**, which is the step a
+ * lattice argument is made of; that it is not everywhere true, spent on `~(INT_DIVIDES INT_ZERO INT_ONE)`; and that it
+ * fails at a divisor that is **not** zero, which is `Integer.TwoDoesNotDivide` and is the one that
+ * separates this relation from the field's.
  *
- * The second is deliberately the weakest such statement there is. What would separate this
- * divisibility from the field's is a non-divisibility at a **non-zero** divisor, and that wants
- * the discreteness of the order, which `docs/adr/0033` names as missing rather than leaving it
- * here to be assumed.
+ * The middle one is deliberately the weakest such statement there is, and it is kept rather than
+ * replaced: it is true over a field too, so what it measures is that the reading can see a
+ * refusal at all. **This paragraph said the third was missing and wanted the discreteness of the
+ * order until 2026-09-19**, which is what `docs/adr/0033` predicted and not what it cost: the
+ * statement is `Integer.DividesOfNatural` detached at two numerals, and `INT_LE` is not consulted
+ * anywhere in its derivation.
  */
 class IntegerSpec extends AnyFlatSpec with Matchers {
 
@@ -303,8 +307,9 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
     // The half of `Divisibility.ZeroDivides` that survives the move, spent on a concrete pair. It
     // is the cheapest statement this development can make that divisibility is not everywhere
     // true, and it is deliberately the weakest one: what it does NOT say is that a non-zero divisor
-    // fails to divide something, which is `~(INT_DIVIDES 2 1)` and wants the discreteness of the
-    // order. `docs/adr/0033` names that as what is missing rather than leaving it here.
+    // fails to divide something. That is `Integer.TwoDoesNotDivide`, and the assertion two below
+    // is where it is spent. This one is kept because the two are different measurements: this
+    // holds over a field and that one does not.
     val one = constant(Integer.One)
 
     val onlyZero = force(rules.spec(one, fact(Integer.ZeroDividesOnly)))
@@ -342,9 +347,69 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
     integers.show(settled.conclusion) should include(Integer.Divides)
 
     // And it rests on nothing of the reals, which is the whole point of building the ring rather
-    // than borrowing one.
-    val reals = force(chain.reals.axiom("ADD_SYM")).conclusion
-    Derivation.axiomsOf(settled) should not contain reals
+    // than borrowing one. All sixteen and not one of them: the guard at the foot of this file
+    // says why the single-axiom reading was not enough.
+    Derivation.axiomsOf(settled) should contain noElementsOf realAxioms
+  }
+
+  /**
+   * The embedding answers the same question on both sides, and the two sides can disagree with a
+   * third thing rather than only with each other.
+   *
+   * `INT_DIVIDES_OF_NUM` is an equation between propositions, so it is satisfied by two sides that
+   * are both always false as readily as by a faithful embedding, and nothing above would notice.
+   * What separates the two is detaching it at a pair where the answer is **yes** and at a pair
+   * where it is **no**, which is what these two lines are: `2` divides `2` on both sides and
+   * divides `1` on neither. The negative is `Integer.TwoDoesNotDivide` and is published, so what
+   * is exercised here is that it detaches with nothing assumed.
+   */
+  it should "answer alike over `num` and over `int`, and answer both ways" in {
+    val two = force(integers.term("2", numbers))
+
+    val reflexive = force(chain.modular.fact(Modular.DividesRefl).flatMap(rules.spec(two, _)))
+    val transferred = force(
+      rules
+        .specAll(fact(Integer.DividesOfNatural), List(two, two))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(force(Conv.sym(equation)), reflexive)))
+    )
+
+    transferred.hypotheses shouldBe empty
+    integers.show(transferred.conclusion) shouldBe "INT_DIVIDES (INT_OF_NUM 2) (INT_OF_NUM 2)"
+
+    fact(Integer.TwoDoesNotDivide).hypotheses shouldBe empty
+    integers.show(fact(Integer.TwoDoesNotDivide).conclusion) shouldBe
+      "~(INT_DIVIDES (INT_OF_NUM 2) (INT_OF_NUM 1))"
+  }
+
+  /**
+   * The refusal at a non-zero divisor does not reach the order, which is where the prediction was.
+   *
+   * `docs/adr/0033` said `~(INT_DIVIDES 2 1)` wanted the discreteness of the order. It does not,
+   * and this is the assertion that keeps the corrected record honest rather than leaving the claim
+   * in prose: the derivation is walked and no fact of this development's order is in it. A route
+   * that went back through `INT_LE` would still prove the theorem and would make that record wrong
+   * again with nothing going red.
+   */
+  it should "refuse `2` dividing `1` without consulting the order" in {
+    val refusal = fact(Integer.TwoDoesNotDivide)
+
+    val order = Vector(
+      Integer.AtMostPairs,
+      Integer.AtMostReflexive,
+      Integer.AtMostTransitive,
+      Integer.AtMostAntisymmetric,
+      Integer.AtMostTotal,
+      Integer.AddMonotone,
+      Integer.AtMostOfNatural
+    ).map(name => fact(name).conclusion).toSet
+
+    // The positive control, and it is not decoration: `restingOn` answers with a set, and a set is
+    // empty both when nothing was used and when the walk read nothing. What is known present here
+    // for a reason independent of the instrument is the equation the refusal is six steps over.
+    val faithful = Set(fact(Integer.DividesOfNatural).conclusion)
+    Derivation.restingOn(refusal, faithful) should not be empty
+
+    Derivation.restingOn(refusal, order) shouldBe empty
   }
 
   /**
@@ -411,23 +476,69 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
   private lazy val choice: Term = force(chain.classical.axiom(Classical.Choice)).conclusion
   private lazy val infinity: Term = force(chain.naturals.axiom(Natural.Infinity)).conclusion
 
+  /** The three the carrier costs, which is the whole of what anything here is allowed to spend. */
+  private lazy val foundation: Set[Term] = Set(choice, eta, infinity)
+
+  /** All sixteen of the reals, read off `Real.Axioms` rather than named one at a time. */
+  private lazy val realAxioms: Set[Term] =
+    Real.Axioms.map { case (name, _) => force(chain.reals.axiom(name)).conclusion }.toSet
+
   /**
-   * The type costs what the carrier cost and not one axiom more, asserted as an equality.
+   * The type costs what the carrier cost and not one axiom more, and so does everything over it.
    *
-   * An equality rather than a ceiling, which is the form `CodingSpec` uses and the one
-   * `docs/adr/0016` predicted the answer to: a fact here that quietly stopped spending the
-   * naturals' two would be as much a defect as one that started spending a seventeenth. **None of
-   * the sixteen axioms of the reals is among them**, which is the claim the card that asked for
-   * this work turns on: a signed ring that charged the reals would be a ring built on the thing it
-   * exists to avoid needing.
+   * An equality at [[Integer.Equal]] rather than a ceiling, which is the form `CodingSpec` uses
+   * and the one `docs/adr/0016` predicted the answer to: a fact here that quietly stopped spending
+   * the naturals' two would be as much a defect as one that started spending a seventeenth.
+   *
+   * **The other forty were checked against one of the sixteen until 2026-09-19**, `ADD_SYM`, so a
+   * statement resting on `COMPLETENESS` or on any of the other fourteen passed, and
+   * `docs/adr/0033` described the check as asserting that no axiom of the reals is among them.
+   * What replaced it is a **containment** and not a widened non-membership, because containment is
+   * the stronger true statement: it refuses the sixteen, and it also refuses a seventeenth axiom
+   * arriving from anywhere else, which is the failure nothing here was watching for.
+   *
+   * The blanket **equality** over every statement was the other candidate and is false, which is
+   * worth writing down because it is what the card proposed and what reading would have missed:
+   * `INT_SAME_REFL` is one of them and the last assertion in this file says it does not reach
+   * choice. A guard that contradicts its neighbour is not the stronger form of it.
+   *
+   * The containment is only about the reals while the sixteen are outside the foundation, so that
+   * is asserted rather than assumed: a `choice` that happened to be one of the sixteen would make
+   * every line here pass and mean nothing.
    */
   "The integers" should "cost the carrier's axioms and no others" in {
-    Derivation.axiomsOf(fact(Integer.Equal)) shouldBe Set(choice, eta, infinity)
+    realAxioms should have size 16
+    realAxioms should contain noElementsOf foundation
 
-    val reals = force(chain.reals.axiom("ADD_SYM")).conclusion
+    Derivation.axiomsOf(fact(Integer.Equal)) shouldBe foundation
+
     Integer.Statements.foreach { case (name, _) =>
-      withClue(s"$name: ")(Derivation.axiomsOf(fact(name)) should not contain reals)
+      withClue(s"$name: ")(Derivation.axiomsOf(fact(name)) should contain noElementsOf realAxioms)
+      withClue(s"$name: ")(Derivation.axiomsOf(fact(name)).diff(foundation) shouldBe empty)
     }
+  }
+
+  /**
+   * And the reading it replaced would have passed something this one refuses, shown rather than
+   * argued.
+   *
+   * A loop that is green over every statement says nothing about whether the guard can go red,
+   * and the claim that the new form is stronger is exactly the kind a reader cannot check by
+   * looking. The subject is
+   * an axiom of the reals that is not `ADD_SYM`, taken from the chain rather than constructed:
+   * `axiomsOf` of it is itself, the old predicate accepts it, and both halves of the new one
+   * refuse it. That is the defect the guard had, exhibited on a real theorem of this repository
+   * and without perturbing anything.
+   */
+  it should "refuse what the single-axiom reading accepted" in {
+    val completeness = force(chain.reals.axiom("COMPLETENESS"))
+    val addSym = force(chain.reals.axiom("ADD_SYM")).conclusion
+
+    Derivation.axiomsOf(completeness) shouldBe Set(completeness.conclusion)
+    Derivation.axiomsOf(completeness) should not contain addSym
+
+    Derivation.axiomsOf(completeness) should contain atLeastOneElementOf realAxioms
+    Derivation.axiomsOf(completeness).diff(foundation) should not be empty
   }
 
   /**

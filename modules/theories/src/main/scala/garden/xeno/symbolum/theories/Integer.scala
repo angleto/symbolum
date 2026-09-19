@@ -232,6 +232,27 @@ object Integer {
   val ZeroDividesOnly: String = "INT_ZERO_DIVIDES"
 
   /**
+   * `|- !m n. INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n) = NUM_DIVIDES m n`
+   *
+   * The embedding is faithful for divisibility, and it is one fact rather than two for the reason
+   * [[AtMostOfNatural]] is one: what a caller wants of an embedding is that the question gets the
+   * same answer on either side, and an implication answers half of it. It is also what carries
+   * `num`'s arithmetic of divisors up here, which is the whole of how [[TwoDoesNotDivide]] is
+   * derived and the reason that one is six steps.
+   */
+  val DividesOfNatural: String = "INT_DIVIDES_OF_NUM"
+
+  /**
+   * `|- ~(INT_DIVIDES (INT_OF_NUM 2) (INT_OF_NUM 1))`
+   *
+   * The witness this development exists for: a non-divisibility at a divisor that is **not** zero,
+   * which is what `Divisibility` cannot supply. Over the reals `DIVIDES_NONZERO` makes every
+   * non-zero element divide everything, so the only refusal available there is at zero, and
+   * [[ZeroDividesOnly]] is that one and holds over a field as well.
+   */
+  val TwoDoesNotDivide: String = "INT_TWO_NOT_DIVIDES_ONE"
+
+  /**
    * `INT_LE a b` — the order, and the one construct here that the quotient builder does not lift.
    *
    * A relation of **two** quotient arguments is not `liftPredicate`, which takes one, and not
@@ -380,6 +401,9 @@ object Integer {
       ("!a:int b:int c:int x:int y:int. INT_DIVIDES a b ==> INT_DIVIDES a c ==> " +
         "INT_DIVIDES a (INT_ADD (INT_MUL x b) (INT_MUL y c))"),
     ZeroDividesOnly -> "!b:int. INT_DIVIDES INT_ZERO b ==> b = INT_ZERO",
+    DividesOfNatural ->
+      "!m:num n:num. INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n) = NUM_DIVIDES m n",
+    TwoDoesNotDivide -> "~(INT_DIVIDES (INT_OF_NUM 2) (INT_OF_NUM 1))",
     AtMostPairs ->
       ("!p:prod(num,num) q:prod(num,num). INT_LE (INT_OF_PAIR p) (INT_OF_PAIR q) = " +
         "NUM_LE (NUM_ADD (FST p) (SND q)) (NUM_ADD (FST q) (SND p))"),
@@ -407,11 +431,20 @@ object Integer {
    * `base` is the theory to **extend** and is not the whole of what this needs: `peano` supplies
    * the arithmetic of `num` the carrier's equations are settled by and `product` the pair. The two
    * orders are different things, which is the distinction `Rotation.construct`'s comment draws.
+   *
+   * `modular` and `successor` are the two the embedding's divisibility needs and nothing else here
+   * does. [[DividesOfNatural]] is an equation between a proposition of this development and one of
+   * `Modular`'s, so that development's own facts are what the right-hand side is reasoned with;
+   * and [[TwoDoesNotDivide]] is written at numerals, which reach `Modular.DividesOne`'s `SUC ZERO`
+   * only through `Successor`. Neither costs an extension: both are developments already below this
+   * one in the chain, so what is added is a lookup and not a prerequisite.
    */
   def construct(
     classical: Classical,
     peano: Peano,
     product: Product,
+    modular: Modular,
+    successor: Successor,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Integer] =
@@ -504,6 +537,15 @@ object Integer {
       )
       (entire, order, atMostDefinition) = ordered
       comparison <- order.prove
+
+      // Last, and over `entire` rather than over `whole`: nothing here needs the order, and taking
+      // the constants from the theory the development ends at is what keeps every term in the file
+      // built from one origin, which is the argument `Carrier` makes about `docs/adr/0008`.
+      embedded <- Embedded.over(
+        classical, carrier, modular, successor, entire, notation, proved, divisibility,
+        equal, cases, mulPairs, ofNaturalDefinition
+      )
+      faithful <- embedded.prove
     } yield new Integer(
       classical,
       entire,
@@ -526,7 +568,7 @@ object Integer {
         AddPairs -> addPairs,
         NegPair -> negPair,
         MulPairs -> mulPairs
-      ) ++ proved ++ divisibility ++ comparison
+      ) ++ proved ++ divisibility ++ comparison ++ faithful
     )
 
   /* ------------------------------------------------------------------ the carrier */
@@ -2107,11 +2149,11 @@ object Integer {
    *
    * `DIVIDES_NONZERO`, `!a b. ~(a = 0) ==> Divides a b`, is derivable over the reals and is the
    * whole of what that relation says away from zero. It is **not** derivable here, and that is the
-   * difference the card asking for this development is about. What this file does not yet carry is
-   * the witness of that difference: a concrete non-divisibility at a non-zero divisor, which is
-   * `~(INT_DIVIDES (INT_OF_NUM 2) (INT_OF_NUM 1))` and wants the discreteness of the order.
-   * `docs/adr/0033` names it rather than leaving it to be discovered, because a list of what is
-   * missing is the one kind of list nothing goes red over.
+   * difference the card asking for this development is about. The witness of that difference is a
+   * concrete non-divisibility at a non-zero divisor, and it is **not in this class**: it is
+   * [[Integer.TwoDoesNotDivide]], one section down, because what settles it is the embedding
+   * rather than anything about `INT_DIVIDES` itself. Nothing here is that witness, and
+   * [[Integer.ZeroDividesOnly]] in particular is not: it is about zero and holds over a field.
    */
   private final class Dividing private (
     val logic: Logic,
@@ -2421,6 +2463,389 @@ object Integer {
         negation,
         addition,
         zero,
+        one
+      )
+  }
+
+  /* ------------------------------------------------------ the embedding's divisibility */
+
+  /**
+   * What divisibility over the integers says about the naturals, and the refusal it buys.
+   *
+   * This is the section the card asking for this development is about. Everything above proves
+   * that `INT_DIVIDES` is a divisibility; none of it separates that relation from the one over the
+   * reals, where `DIVIDES_NONZERO` gives every non-zero element every multiple and the relation
+   * says nothing at all away from zero. [[ZeroDividesOnly]] does not separate them either: it is
+   * about zero, and it holds over a field.
+   *
+   * == Where the work is, which is not where `docs/adr/0033` predicted ==
+   *
+   * That record names the missing fact as `~(INT_DIVIDES 2 1)` and says it wants **the discreteness
+   * of the order**, that nothing lies strictly between zero and one. It does not. What settles it
+   * is [[DividesOfNatural]], and under that the refusal is `Modular.DividesOne` -- a divisor of one
+   * is one -- with two numerals shown apart. The order is not consulted: `INT_LE` does not occur
+   * in this section.
+   *
+   * Two things are worth taking from that rather than only the correction. The arithmetic bounding
+   * the divisors of a non-zero number is **already proved**, one type down, and an embedding that
+   * is faithful for the relation is how such a fact reaches up; deriving discreteness here would
+   * have rebuilt it. And the same equation is what the converse of
+   * `NUM_DIVIDES m n ==> INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)` asks for, which that record
+   * lists as a second missing item wanting the same lemma: the two are one fact, so its list loses
+   * two entries to one derivation.
+   *
+   * == Why the hard direction goes through the carrier ==
+   *
+   * The witness of `INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)` is an **integer**, so the obvious
+   * route -- read that witness back as a natural -- is the one needing a sign argument, and it is
+   * what the prediction above was about. It is avoided by not asking: [[Cases]] writes the witness
+   * as some pair, the equation between classes becomes one equation between naturals, and
+   * `n + m * b = m * a` gives `NUM_DIVIDES m n` through `Modular.DividesSummand` without anything
+   * deciding which of `a` and `b` is the larger. There is no case split in this section.
+   */
+  private final class Embedded private (
+    val logic: Logic,
+    val carrier: Carrier,
+    val modular: Modular,
+    val successor: Successor,
+    val laws: Map[String, Kernel.Thm],
+    val divisibility: Map[String, Kernel.Thm],
+    /** `|- !p q. (INT_OF_PAIR p = INT_OF_PAIR q) = INT_SAME p q`. */
+    val equal: Kernel.Thm,
+    /** `|- !a. ?p. a = INT_OF_PAIR p`, which is what names the witness's pair. */
+    val cases: Kernel.Thm,
+    /** `|- !p q. INT_MUL (INT_OF_PAIR p) (INT_OF_PAIR q) = INT_OF_PAIR (...)`, the lift. */
+    val mulPairs: Kernel.Thm,
+    /** The equation defining `INT_OF_NUM`, which is the only way down to a pair from here. */
+    val ofNatural: Kernel.Thm,
+    val embedding: Term,
+    val multiplication: Term,
+    val projection: Term,
+    val divides: Term,
+    /** `NUM_DIVIDES`, taken from the theory this development ends at and not from `Modular`'s. */
+    val dividesNaturals: Term,
+    /** The numerals `2` and `1` of `num`, read once at the type their context forces. */
+    val two: Term,
+    val one: Term
+  ) {
+
+    val rules: Rules = logic.rules
+
+    private val m: FVar = Term.variable("m", numbers)
+    private val n: FVar = Term.variable("n", numbers)
+    private val c: FVar = Term.variable("c", numbers)
+    private val k: FVar = Term.variable("k", Classes)
+
+    def prove: Either[LogicError, Map[String, Kernel.Thm]] =
+      for {
+        faithful <- faithfulFact
+        refused <- refusalFact(faithful)
+      } yield Map(DividesOfNatural -> faithful, TwoDoesNotDivide -> refused)
+
+    /* ------------------------------------------------ the two directions */
+
+    /**
+     * `|- !m n. INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n) = NUM_DIVIDES m n`.
+     *
+     * `Kernel.deductAntisym` rather than two implications joined: each half is derived with the
+     * other side's statement standing as a hypothesis, and that rule is what drops exactly those
+     * two. The argument order is the equation's order, which is why the half concluding the
+     * integers' relation goes first.
+     */
+    private def faithfulFact: Either[LogicError, Kernel.Thm] =
+      for {
+        up <- fromTheNaturals
+        down <- toTheNaturals
+        equated = Kernel.deductAntisym(up, down)
+        result <- rules.genAll(equated, List(m, n))
+      } yield result
+
+    /**
+     * `NUM_DIVIDES m n |- INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n)`, the easy half.
+     *
+     * The witness is the embedded witness and [[OfNaturalProduct]] is the whole of the arithmetic:
+     * an embedding that carries a product to a product carries a divisibility to one, since a
+     * divisibility is a product with one factor existentially bound.
+     */
+    private def fromTheNaturals: Either[LogicError, Kernel.Thm] =
+      for {
+        divisor <- embeddedAt(m)
+        dividend <- embeddedAt(n)
+
+        premise <- LogicError.lift(Term.appAll(dividesNaturals, List(m, n)))
+        assumed <- LogicError.lift(Kernel.assume(premise))
+        existential <- modular
+          .fact(Modular.DividesElim)
+          .flatMap(rules.specAll(_, List(m, n)))
+          .flatMap(rules.mp(_, assumed))
+        opened <- openedAt(existential, c)
+
+        embedded <- Conv.apTerm(embedding, opened)
+        product <- law(OfNaturalProduct).flatMap(rules.specAll(_, List(m, c)))
+        equation <- Conv.trans(embedded, product)
+
+        witness <- embeddedAt(c)
+        related <- fact(DividesIntro)
+          .flatMap(rules.specAll(_, List(divisor, dividend, witness)))
+          .flatMap(rules.mp(_, equation))
+        closed <- rules.existsElim(existential, c, related)
+      } yield closed
+
+    /**
+     * `INT_DIVIDES (INT_OF_NUM m) (INT_OF_NUM n) |- NUM_DIVIDES m n`, which is where the work is.
+     *
+     * Two witnesses are opened and neither is a natural: the divisibility's own `k`, over `int`,
+     * and the pair [[Cases]] writes `k` as. Under both, the equation between classes is one
+     * equation between naturals and [[dividesTheDifference]] reads the conclusion off it.
+     */
+    private def toTheNaturals: Either[LogicError, Kernel.Thm] =
+      for {
+        divisor <- embeddedAt(m)
+        dividend <- embeddedAt(n)
+
+        premise <- LogicError.lift(Term.appAll(divides, List(divisor, dividend)))
+        assumed <- LogicError.lift(Kernel.assume(premise))
+        existential <- fact(DividesElim)
+          .flatMap(rules.specAll(_, List(divisor, dividend)))
+          .flatMap(rules.mp(_, assumed))
+        atWitness <- openedAt(existential, k)
+
+        pairs <- rules.spec(k, cases)
+        isPair <- openedAt(pairs, p)
+
+        scaled <- LogicError
+          .lift(Term.app(multiplication, divisor))
+          .flatMap(Conv.apTerm(_, isPair))
+        atPair <- Conv.trans(atWitness, scaled)
+
+        overNaturals <- betweenNaturals(atPair)
+        divided <- dividesTheDifference(overNaturals)
+
+        closedPair <- rules.existsElim(pairs, p, divided)
+        closed <- rules.existsElim(existential, k, closedPair)
+      } yield closed
+
+    /* ------------------------------------------------ down to the carrier */
+
+    /**
+     * `|- n + m * SND p = m * FST p`, from an equation reading
+     * `|- INT_OF_NUM n = INT_MUL (INT_OF_NUM m) (INT_OF_PAIR p)`.
+     *
+     * Both sides are brought to one projection each, the central fact of the quotient turns the
+     * equation between classes into the relation, the relation is unfolded, and what is left is the
+     * two products by `ZERO` the lift leaves behind. Those go by [[Carrier.rearranged]] and not
+     * by a rewrite rule set, because what has to hold is that the equation the unfolding produced and
+     * the equation a consumer wants are the same identity, and `Semiring.prove` refuses rather than
+     * searching where they are not.
+     */
+    private def betweenNaturals(equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        dividendPair <- carrier.pairOf(n, carrier.zero)
+        divisorPair <- carrier.pairOf(m, carrier.zero)
+
+        dividendNormal <- Conv.unfold(ofNatural, List(n))
+        divisorNormal <- Conv.unfold(ofNatural, List(m))
+
+        projected <- LogicError.lift(Term.app(projection, p))
+        divisorMoved <- Conv
+          .apTerm(multiplication, divisorNormal)
+          .flatMap(Conv.apThm(_, projected))
+        lifted <- rules.specAll(mulPairs, List(divisorPair, p))
+        liftedReduced <- Rewrite.inTheorem(carrier.projections, lifted)
+        productNormal <- Conv.trans(divisorMoved, liftedReduced)
+        productPair <- rightOf(productNormal).flatMap(underProjection)
+
+        toPairs <- Conv
+          .sym(dividendNormal)
+          .flatMap(Conv.trans(_, equation))
+          .flatMap(Conv.trans(_, productNormal))
+        same <- rules
+          .specAll(equal, List(dividendPair, productPair))
+          .flatMap(instance => LogicError.lift(Kernel.eqMp(instance, toPairs)))
+
+        unfolded <- carrier.unfoldedAt(dividendPair, productPair)
+        opened <- LogicError.lift(Kernel.eqMp(unfolded, same))
+
+        first <- carrier.firstOf(p)
+        second <- carrier.secondOf(p)
+        scaledSecond <- carrier.product(m, second)
+        scaledFirst <- carrier.product(m, first)
+        wanted <- carrier.sum(n, scaledSecond)
+        result <- carrier.rearranged(wanted, scaledFirst, opened)
+      } yield result
+
+    /**
+     * `|- NUM_DIVIDES m n`, from `|- n + m * SND p = m * FST p`.
+     *
+     * The one step of the hard direction that is arithmetic rather than plumbing, and it is three
+     * published facts of `Modular` in a row: `m` divides each of its own multiples, the equation
+     * read the other way says `m * SND p + n` is one of them, and `NUM_DIVIDES_SUMMAND` takes the
+     * first summand off. A route through a non-negative witness would have had to decide which of
+     * `FST p` and `SND p` is the larger; this decides nothing.
+     */
+    private def dividesTheDifference(equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        first <- carrier.firstOf(p)
+        second <- carrier.secondOf(p)
+        scaledSecond <- carrier.product(m, second)
+        scaledFirst <- carrier.product(m, first)
+
+        reflexive <- modular.fact(Modular.DividesRefl).flatMap(rules.spec(m, _))
+        multiple <- modular.fact(Modular.DividesMul)
+        dividesSecond <- rules.specAll(multiple, List(m, m, second)).flatMap(rules.mp(_, reflexive))
+        dividesFirst <- rules.specAll(multiple, List(m, m, first)).flatMap(rules.mp(_, reflexive))
+
+        summed <- carrier.sum(scaledSecond, n)
+        swapped <- carrier.rearranged(summed, scaledFirst, equation)
+        back <- Conv.sym(swapped)
+        dividesSum <- LogicError
+          .lift(Term.app(dividesNaturals, m))
+          .flatMap(Conv.apTerm(_, back))
+          .flatMap(carried => LogicError.lift(Kernel.eqMp(carried, dividesFirst)))
+
+        result <- modular
+          .fact(Modular.DividesSummand)
+          .flatMap(rules.specAll(_, List(m, scaledSecond, n)))
+          .flatMap(rules.mp(_, dividesSecond))
+          .flatMap(rules.mp(_, dividesSum))
+      } yield result
+
+    /* ------------------------------------------------ the refusal */
+
+    /**
+     * `|- ~(INT_DIVIDES (INT_OF_NUM 2) (INT_OF_NUM 1))`.
+     *
+     * Six steps over [[faithfulFact]], and the two that are not bookkeeping are `Modular`'s. The
+     * numerals are why `Successor` is here at all: `NUM_DIVIDES_ONE` concludes `d = SUC ZERO` and
+     * `2` is `NUM_BIT0 NUM_ONE`, so the two spellings have to be walked between.
+     *
+     * **The spelling is carried in by congruence and never by rewriting the statement.** A rule
+     * taking `NUM_ONE` to `SUC ZERO` fires inside the bit encoding of `2` as well, so a statement
+     * rewritten with it comes back about `NUM_BIT0 (SUC ZERO)` and matches nothing: that is the
+     * trap `Limit` records meeting at the cosine's exponent and `Collatz` at a letter.
+     */
+    private def refusalFact(faithful: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        divisor <- embeddedAt(two)
+        dividend <- embeddedAt(one)
+        premise <- LogicError.lift(Term.appAll(divides, List(divisor, dividend)))
+        assumed <- LogicError.lift(Kernel.assume(premise))
+
+        inNaturals <- rules
+          .specAll(faithful, List(two, one))
+          .flatMap(instance => LogicError.lift(Kernel.eqMp(instance, assumed)))
+
+        spelled <- successor.spell(one)
+        atSuccessor <- LogicError
+          .lift(Term.app(dividesNaturals, two))
+          .flatMap(Conv.apTerm(_, spelled))
+          .flatMap(carried => LogicError.lift(Kernel.eqMp(carried, inNaturals)))
+
+        isOne <- modular
+          .fact(Modular.DividesOne)
+          .flatMap(rules.spec(two, _))
+          .flatMap(rules.mp(_, atSuccessor))
+        asNumerals <- Conv.sym(spelled).flatMap(Conv.trans(isOne, _))
+
+        apart <- successor.distinct(two, one)
+        absurd <- rules.notElim(apart, asNumerals)
+        result <- rules.notIntro(premise, absurd)
+      } yield result
+
+    /* ------------------------------------------------ plumbing */
+
+    private def law(name: String): Either[LogicError, Kernel.Thm] =
+      laws.get(name).toRight(MissingDefinition(name))
+
+    private def fact(name: String): Either[LogicError, Kernel.Thm] =
+      divisibility.get(name).toRight(MissingDefinition(name))
+
+    /** `INT_OF_NUM t`, as a term. */
+    private def embeddedAt(number: Term): Either[LogicError, Term] =
+      LogicError.lift(Term.app(embedding, number))
+
+    /**
+     * An existential opened at a named witness: its own body, contracted and assumed.
+     *
+     * The shape `Dividing.open` uses and for its reason: the equation has to be the very term
+     * `Rules.existsElim` looks for among the hypotheses, so it comes from contracting the
+     * quantifier's own predicate rather than from building it a second time.
+     */
+    private def openedAt(existential: Kernel.Thm, witness: FVar): Either[LogicError, Kernel.Thm] =
+      for {
+        predicate <- logic
+          .destExistsPredicate(existential.conclusion)
+          .toRight(NotOfForm("an existential quantification", existential.conclusion))
+        applied <- LogicError.lift(Term.app(predicate, witness))
+        contraction <- Conv.betaRoot(applied)
+        instance <- rightOf(contraction)
+        assumed <- LogicError.lift(Kernel.assume(instance))
+      } yield assumed
+
+    /** The pair under a projection, or a refusal naming what the lift produced instead. */
+    private def underProjection(term: Term): Either[LogicError, Term] =
+      term match {
+        case App(Const(Projection, _), pair) => Right(pair)
+        case other => Left(NotOfForm(s"a term under one $Projection", other))
+      }
+  }
+
+  private object Embedded {
+
+    /** `int -> int -> int`, which is what this development's own arithmetic is written in. */
+    private val binaryClasses: Type = Type.fun(Classes, Type.fun(Classes, Classes))
+
+    /** `num -> num -> bool`, which is what `NUM_DIVIDES` is. */
+    private val naturalRelation: Type = Type.fun(numbers, Type.fun(numbers, Type.Bool))
+
+    def over(
+      classical: Classical,
+      carrier: Carrier,
+      modular: Modular,
+      successor: Successor,
+      theory: Theory,
+      notation: Notation,
+      laws: Map[String, Kernel.Thm],
+      divisibility: Map[String, Kernel.Thm],
+      equal: Kernel.Thm,
+      cases: Kernel.Thm,
+      mulPairs: Kernel.Thm,
+      ofNatural: Kernel.Thm
+    ): Either[LogicError, Embedded] =
+      for {
+        logic <- classical.logic.over(theory)
+        embedding <- LogicError.lift(theory.constant(OfNatural, Type.fun(numbers, Classes)))
+        multiplication <- LogicError.lift(theory.constant(Multiplication, binaryClasses))
+        projection <- LogicError.lift(theory.constant(Projection, Type.fun(Pairs, Classes)))
+        divides <- LogicError.lift(
+          theory.constant(Divides, Type.fun(Classes, Type.fun(Classes, Type.Bool)))
+        )
+        dividesNaturals <- LogicError.lift(
+          theory.constant(Modular.DividesName, naturalRelation)
+        )
+
+        // Read at an expected type rather than annotated in the text: a digit string determines
+        // nothing on its own and the theory reads two encodings, which is `docs/adr/0018`, and the
+        // caller is the one that knows. `Parser.term`'s own docstring is where that is argued.
+        two <- Parser.term(theory, notation, "2", numbers)
+        one <- Parser.term(theory, notation, "1", numbers)
+      } yield new Embedded(
+        logic,
+        carrier,
+        modular,
+        successor,
+        laws,
+        divisibility,
+        equal,
+        cases,
+        mulPairs,
+        ofNatural,
+        embedding,
+        multiplication,
+        projection,
+        divides,
+        dividesNaturals,
+        two,
         one
       )
   }

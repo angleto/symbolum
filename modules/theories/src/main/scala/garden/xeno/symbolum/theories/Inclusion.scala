@@ -215,13 +215,18 @@ object Inclusion {
    * Each half of the biconditional spends one of the two, which is what makes the pair load
    * bearing rather than one lemma quoted twice.
    *
-   * == What it does not buy, said before somebody writes it ==
+   * == What it does not buy, and the measurement that settled it ==
    *
-   * `docs/adr/0033` names `~(INT_DIVIDES 2 1)` as the sharpest thing separating this divisibility
-   * from the field's, and says it wants the **discreteness** of the order: that nothing lies
-   * strictly between zero and one. This is not that lemma and does not prove it. What it is, is
-   * the instrument by which an order fact of the reals is carried to the integers, and whether
-   * that is the route to discreteness is a measurement nobody has made.
+   * `docs/adr/0033` named `~(INT_DIVIDES 2 1)` as the sharpest thing separating that divisibility
+   * from the field's, said it wanted the **discreteness** of the order, and left open whether this
+   * fact was the route to it. It is not the route: the statement landed on 2026-09-19 as
+   * `Integer.TwoDoesNotDivide`, and `IntegerSpec` walks its derivation and finds no fact of
+   * `INT_LE` in it. This fact is not in it either, and that one is the chain rather than a check:
+   * `Integer` is built below this development, so nothing there can reach anything here. What
+   * settles it is
+   * `Integer.DividesOfNatural`, so the arithmetic that bounds a divisor is `num`'s and is carried
+   * up rather than rebuilt here. This fact remains the instrument by which an order fact of the
+   * reals reaches `int`; what is gone is the one consumer anybody had predicted for it.
    */
   val EmbedsOrder: String = "INT_REAL_LE"
 

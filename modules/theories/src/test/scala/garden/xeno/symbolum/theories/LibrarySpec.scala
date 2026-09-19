@@ -486,8 +486,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // gap between the two figures does not move. Tip plus this branch's delta. Two and not one
     // because the biconditional at `int` needs both directions at `num` and the library held the
     // outward one alone.
-    library.entries.size shouldBe 562
-    library.names.distinct.size shouldBe 559
+    // 564 and 561 with the embedding's divisibility, 2026-09-19: two facts under two names,
+    // `INT_DIVIDES_OF_NUM` and `INT_TWO_NOT_DIVIDES_ONE`, both in `Integer` and neither shared
+    // with another development, so the gap between the two figures does not move. Tip plus this
+    // branch's delta, which is what the paragraph above insists a number here is. One of the two
+    // binds two leading quantifiers of one type and the other binds none, so exactly one of
+    // `CLAUDE.md`'s two figures-per-lemma moves by one and both move by one in total.
+    library.entries.size shouldBe 564
+    library.names.distinct.size shouldBe 561
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

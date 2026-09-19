@@ -579,7 +579,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 562 lemmas, 367 have two or more leading quantifiers and **339 of
+caller meant: of the library's 564 lemmas, 368 have two or more leading quantifiers and **340 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1504,12 +1504,20 @@ the form assertions cannot be: `INT_LE INT_ZERO INT_ONE` comes out of `0 <= 1` o
 matters, since `Integer`'s four order facts — reflexivity, transitivity, antisymmetry, totality —
 are all satisfied by a one-point `int`.
 
-**What is not there, named rather than left to be discovered**: the rationals; and
-`~(INT_DIVIDES 2 1)`, which is the sharpest thing separating this divisibility from the field's and
-which wants the discreteness of the order, a lemma about the carrier that is named here rather than
-written. The order map is the instrument by which a fact of the reals would be carried there and is
-**not** that lemma; whether it is the route is a measurement nobody has made. `docs/adr/0033`
-carries that list, and it is the kind of list nothing goes red over.
+**The divisibility is separated from the field's since 2026-09-19, and the separation cost none of
+what was predicted.** `~(INT_DIVIDES 2 1)` is the sharpest thing that separates them,
+`docs/adr/0033` listed it as missing and said it wanted the discreteness of the order, and it
+wanted no such thing:
+`INT_DIVIDES_OF_NUM` is the embedding answering alike on both sides, one biconditional rather than
+the implication and its converse that record listed apart, and under it the refusal is
+`Modular.NUM_DIVIDES_ONE` at two numerals. The witness of a divisibility over `int` is an integer,
+so reading it back as a natural is what wants a sign argument; `INT_CASES` writes it as a pair
+instead and the equation between classes becomes one equation between naturals, with no case split
+anywhere. `IntegerSpec` walks the refusal and asserts no fact of `INT_LE` is in its derivation, so
+the corrected record is a check rather than this sentence. What is left of that record's list of
+what is missing is nothing: the paragraph below is where the rationals are, which it never listed.
+It is still the kind of list nothing goes red over, and the reason those two entries were built is
+that somebody gave them a card, which the third already had and they did not.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's
