@@ -1182,6 +1182,97 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
       }
   }
 
+  "A binding comment of `Chain.construct`" should
+    "not say its own link is the last one, which four of them did" in {
+    // The half the guard above says in writing it does not cover, taken back **only** inside
+    // `Chain.construct`. That test's argument is about the prose of the whole repository: a ban on
+    // the words fires on `deduction`'s true general sentence and on the record of every repair, so
+    // there it is left to reading. Here the subject is narrower and the criterion is a measurement
+    // rather than a hope.
+    //
+    // **What was found on 2026-09-19**, four occurrences that no gate could see, all green:
+    // `matrix`'s field docstring said "and the last link rather than one of the five", present
+    // tense with no date at all, which is the form `Rotation.scala` and `Concatenation.scala` had
+    // each had removed once already; and `numbering`, `provability` and `transcendental` each said
+    // "The last link since <date>", the first two with the SAME date on two different bindings, so
+    // at most one of the pair was ever true and neither said what the last link is. Counted on the
+    // bindings of `Chain.construct`: thirty-one, `matrix` twelfth, `inclusion` last.
+    //
+    // **What makes the narrow ban work where the wide one does not**, and it is the deciding
+    // measurement rather than a preference: inside this one block every TRUE sentence of the shape
+    // is a record of a past state, and a record of a past state carries `was`, `until` or the
+    // repaired text in quotes after `read`. Nineteen comment blocks, five mentioning the last link,
+    // and all five carry a marker. The general statements about what "last" means live in the field
+    // docstrings above, which this does not read.
+    //
+    // **The same test run over those field docstrings was the measurement that decided the scope,
+    // and it refuted the prediction made before it.** The prediction was three false positives.
+    // It is one: of twenty-nine docstrings, five mention the last link and `deduction`'s fires,
+    // which is the exact sentence the guard above names as the reason it will not do this over
+    // prose. But the other four pass for a worse reason than being right. A field docstring here
+    // runs to thirty lines, so it holds an unrelated `was` somewhere almost always, and the marker
+    // is then satisfied by a word in a different sentence. Over long prose this test does not fail
+    // loudly, it passes quietly, which is the one behaviour a guard must not have. It works in
+    // `construct` because a binding comment is short and about one thing.
+    //
+    // So `matrix`'s defect, the undated one and the worst of the four, is in a field docstring and
+    // **nothing guards its class**. That is stated rather than left to be found: this covers the
+    // four-fifths of the population that sits in `construct` and none of the rest.
+    //
+    // **What it does not cover inside the block either.** A general true sentence written here, of
+    // the kind `deduction`'s docstring carries, fires and the words have to move up to the field
+    // docstring where such a sentence belongs. That is a real cost, paid on purpose in one block
+    // of one file.
+    val chain = read("modules/theories/src/main/scala/garden/xeno/symbolum/theories/Chain.scala")
+    val body = chain.split("""def construct\(""").drop(1).mkString
+
+    withClue("`Chain.construct` no longer parses out of the file, so this guard reads nothing: ") {
+      body.length should be > 1000
+    }
+
+    // A contiguous run of `//` lines, which is the unit a sentence lives in: splitting per line
+    // would cut every one of these sentences in half, and this file already records what a
+    // hard-wrapped sentence does to a pattern read against the stored bytes.
+    val blocks = body
+      .split("\n")
+      .map(_.trim)
+      .foldLeft(Vector.empty[Vector[String]]) { (acc, line) =>
+        if (line.startsWith("//")) acc.lastOption match {
+          case Some(run) if run.nonEmpty => acc.init :+ (run :+ line)
+          case _ => acc :+ Vector(line)
+        }
+        else if (acc.lastOption.exists(_.nonEmpty)) acc :+ Vector.empty
+        else acc
+      }
+      .filter(_.nonEmpty)
+      .map(_.mkString(" "))
+
+    val mentioning = blocks.filter(_.contains("last link"))
+
+    // The floor, because a block scan that stopped matching would report no claim at all and read
+    // exactly like a file with none. Five carry the phrase on 2026-09-19 and every one is a record.
+    withClue(s"comment blocks of `Chain.construct` mentioning the last link: ${mentioning.size}\n") {
+      mentioning.size should be >= 4
+    }
+
+    val dated = """\bwas\b|\buntil\b|read "|read the""".r
+    val present = mentioning.filterNot(block => dated.findFirstIn(block).isDefined)
+    withClue(
+      s"${present.size} comment block(s) in `Chain.construct` claim a link is the last one. " +
+        s"Which link is the end is `Chain.widest` and is not written in prose; a record of a past " +
+        s"state says `was` or `until`. If the sentence is a general one about what last means, it " +
+        s"belongs in the field docstring above rather than here:\n${present.mkString("\n\n")}\n"
+    ) {
+      present shouldBe empty
+    }
+
+    // Fired against the sentence it was written for, so that the pattern is known to separate the
+    // two shapes rather than to accept everything. The first is `transcendental`'s as it stood
+    // until 2026-09-19 and the second is its replacement.
+    dated.findFirstIn("// The last link since 2026-09-15, and the only one that needs a limit.") shouldBe None
+    dated.findFirstIn("// Landed 2026-09-15 and was the last link until `concatenation` went on top") should not be empty
+  }
+
   "The evaluation document" should "describe limits the tactics still have" in {
     // Each of these is a refusal the document reports as the state of the art here. When one of
     // them starts succeeding, the tactic has improved and the document is stale: update the
