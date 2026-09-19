@@ -173,8 +173,13 @@ jobs:
       - name: Verify SBT installation
         run: sbt --version
 
+      # Through the script and not the four sbt commands, for the reason the script's own header
+      # gives: they are a sequence, sbt stops at the first failure, and a job that went red said
+      # nothing about whether the floors had been asked or the suite had simply broken. Here that
+      # is the difference between a red job somebody reads and a red job somebody reruns. The
+      # script's last line is the verdict, and it names which of the three happened.
       - name: Coverage, with the floors enforced
-        run: sbt clean coverage test coverageReport
+        run: sh tools/coverage-gate.sh
 
       # The rate on its own is what lets a nearly empty report pass, so what a reader wants after a
       # run is the statement count beside it and, after a red one, the report itself. Uploaded
@@ -221,6 +226,13 @@ jobs:
       # three that a developer's machine can be in would otherwise be checked by nobody.
       - name: sbt, the wrapper every command in CLAUDE.md starts at
         run: sh tools/sbt-test.sh
+
+      # The subject of this one cannot be checked by running it: the states it exists to tell
+      # apart are a red suite and a run killed part way, and producing either for real means
+      # breaking a test on purpose or killing a build at the right second. The stubs reach all of
+      # them in a second, which is why the check lives here rather than beside the coverage job.
+      - name: coverage-gate, in every state its verdict distinguishes
+        run: sh tools/coverage-gate-test.sh
 
       # The subject of this one reads build output, which exists on a machine that has just run a
       # doc build and on no runner that has not. So the classification is checked here against

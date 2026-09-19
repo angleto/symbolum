@@ -87,8 +87,17 @@ in `README.md` and `docs/proving.md`; if it fails, the document is wrong, not th
 ### Coverage
 
 ```bash
-sbt clean coverage test coverageReport
+sh tools/coverage-gate.sh
 ```
+
+**It is a script and not the four sbt commands**, because the four are a sequence and sbt stops
+at the first that fails: `coverageReport` does not run when `test` is red, and the log said
+nothing about the floors having gone unasked. The script ends on a verdict naming which of three
+things happened — asked and held, asked and one fell, or **never asked** — and prints the third
+from a signal handler too, so a run that is killed part way says so as well. It decides by
+whether a report of this run's own vintage exists per module rather than by the exit code, since
+a run killed before `coverageReport` and a run whose floor fell are both non-zero.
+`tools/coverage-gate-test.sh` holds every branch of it against stubs.
 
 `clean` is not optional and the gate will not tell you. The report is built from what the
 instrumented compiler saw, so on an incremental build it covers only the files that were

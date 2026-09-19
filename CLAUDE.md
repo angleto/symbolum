@@ -101,10 +101,26 @@ session named would be a different tool with the same name.
   outside every scan that reads `modules/`, which is the cost of the arrangement and is written
   where the probe is. `tools/fatal-warnings-probe/README.md` has the perturbations each half was
   seen failing under.
-- **Coverage, with the floors enforced:** `tools/sbt clean coverage test coverageReport`. This one
+- **Coverage, with the floors enforced:** `tools/coverage-gate.sh`. This one
   **skips the corpus measurements**, which `tools/sbt test` does not: the two ask different questions, and
   `ReachSpec` exercises the same lines as the other corpus suites while costing more than the rest
   of the build put together. `build.sbt` and `garden.xeno.symbolum.tactics.Corpus` carry the argument.
+
+  **It is a script and not the four sbt commands, because the four are a sequence and sbt stops at
+  the first one that fails.** So `coverageReport` does not run when `test` is red, and until
+  2026-09-19 nothing said so: sixteen minutes and forty-six seconds of a run that did not measure
+  the thing it was launched for, with a log that reads as a test failure. The same silence in a
+  second shape, measured that night on a run killed at `sbt-exit = 143` with nine modules of ten
+  reported: `grep -icE "coveragereport|coverage minimum|scoverage"` over its 4068 lines returned
+  **0**, against 11 for the run that finished twenty minutes later. **The absence of
+  `Coverage is below` is not a pass, it is an instrument that did not read**, and a reader who
+  greps for that line and does not find it concludes the floors held. The script ends on a verdict
+  saying which of three things happened: the floors were asked and held, they were asked and one
+  fell, or **they were never asked**; and it prints the third one from a signal handler too, so a
+  run the supervising harness takes away says it as well. What decides which is not the exit code
+  but whether a report of this run's own vintage exists per module, since a run killed before
+  `coverageReport` and a run whose floor fell are both non-zero.
+  `tools/coverage-gate-test.sh` holds every branch of that against stubs and CI runs it.
 
   **`clean` is not optional and the gate will not tell you.** The report is built from what the
   instrumented compiler saw, so on an incremental build it covers only the files that were
