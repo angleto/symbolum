@@ -18,11 +18,28 @@
 #   - 1 and 3 reproduce exactly: one test red naming one block, and green for the field docstring.
 #   - **2 does not run at all.** It exits 2 with "the text to replace is not in
 #     DocumentationSpec.scala": the string below carries `def construct\\(` where the spec carries
-#     `def construct\(`, one backslash. The refusal is the perturbation tool working, and what it
-#     means is that the floor's observation is recorded here and CANNOT be re-run from here. It is
-#     left broken on purpose: repairing it is the next round's, and a harness quietly fixed by its
-#     verifier is a harness nobody has seen fail.
-#   - 4 and 5 are new, below, and 4 is the finding.
+#     `def construct\(`, one backslash. The refusal is the perturbation tool working. It was
+#     left broken on purpose, because a harness quietly fixed by its verifier is a harness nobody
+#     has seen fail, and repairing it was named as the next round's work.
+#   - 4 and 5 were new then, and 4 was the finding: a claim written into a block that already
+#     carries an unrelated `was` passed green.
+#
+# ROUND TWO, 2026-09-19, the delivery that answers that verification. Three changes:
+#
+#   - **2 is repaired**, one backslash, and it runs. What it asserts has not changed.
+#   - **6 is new**, and it is here for one reason: the sentence floor is the only assertion round
+#     two adds that nothing had been seen to fire, and 2 cannot show it because starving the whole
+#     scan trips the older floor first.
+#   - **4 now expects RED.** The guard reads the sentence that names the link instead of the whole
+#     block, so the `was` of "the one that was never beside the chain" no longer clears a claim
+#     written beside it. The bytes it substitutes are round one's; what moved is the guard. The
+#     pair 4/5 stays, because 5 is what says 4's verdict comes from the sentence rather than from
+#     where the scan reaches.
+#
+# What is NOT perturbed here, named so that the gap is not mistaken for coverage: the hole one
+# clause narrower than the one 4 closed, a present-tense claim whose own sentence carries a `was`
+# in a subordinate clause. It is pinned as a literal in the spec instead, since what exhibits it is
+# a pattern applied to a string and that is an assertion rather than an edit to a source.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
@@ -60,8 +77,8 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/1-tr
 #    the guard slices on is a method name the compiler needs, so the only way to starve the scan
 #    without breaking the build is to move the slice.
 "$P" modules/tactics/src/test/scala/garden/xeno/symbolum/tactics/DocumentationSpec.scala \
-  'val body = chain.split("""def construct\\(""").drop(1).mkString' \
-  'val body = chain.split("""def assemble\\(""").drop(1).mkString' \
+  'val body = chain.split("""def construct\(""").drop(1).mkString' \
+  'val body = chain.split("""def assemble\(""").drop(1).mkString' \
   -- ./tools/sbt -batch "$ONLY" \
   > "$OUT/2-scan-reads-nothing.log" 2>&1
 echo "2 scan reads nothing: exit $? (1 is the expected outcome: the FLOOR fired, not the ban)"
@@ -80,24 +97,25 @@ grep -E "Tests: |\*\*\* FAILED|no longer parses|was not greater than|perturb:" "
 echo "3 field docstring, uncovered: exit $? (0 is the EXPECTED outcome: nothing guards this class)"
 grep -E "Tests: |\*\*\* FAILED|perturb:" "$OUT/3-field-docstring-uncovered.log"
 
-# 4. THE FINDING, and it is a green run. The guard accepts a block as a record of a past state when
-#    the block carries `was`, `until` or a quoted `read` ANYWHERE in it, and its docstring argues
-#    that this is safe inside `construct` "because a binding comment is short and about one thing",
-#    against field docstrings where a stray `was` in another sentence makes it pass quietly.
+# 4. THE FINDING OF ROUND ONE, and a red run since round two. The guard used to accept a block as
+#    a record of a past state when the block carried `was`, `until` or a quoted `read` ANYWHERE in
+#    it, and argued that this was safe inside `construct` "because a binding comment is short and
+#    about one thing". Measured at `e8f973f` over the nineteen blocks it reads: TEN already carried
+#    the marker, median block 401 characters, and five carried it for a reason with nothing to do
+#    with the last link -- `word`, `matrix`, `rotation`, `magnitude` and `coding` -- so a claim
+#    written into any of those five was invisible.
 #
-#    Measured at `e8f973f` over the same nineteen blocks the guard reads: TEN already carry the
-#    marker, and the median block is 401 characters. Five carry it for a reason that has nothing to
-#    do with the last link -- `word`, `matrix`, `rotation`, `magnitude` and `coding` -- so a claim
-#    written into any of those five is invisible. This puts `matrix`'s exact defect, present tense
-#    and dated today, into `matrix`'s own block, which already says "the one that was never beside
-#    the chain":
+#    This puts `matrix`'s exact defect, present tense and dated today, into `matrix`'s own block,
+#    which already says "the one that was never beside the chain". Same bytes as round one; what
+#    changed is that the guard now asks for the marker in the sentence that names the link, so the
+#    `was` next door no longer clears it:
 "$P" "$CHAIN" \
   '      // The sixth, and the one that was never beside the chain. It needs `Product` for the type it' \
   '      // The sixth, and the last link since 2026-09-19. It was never beside the chain, and it
       // needs `Product` for the type it' \
   -- ./tools/sbt -batch "$ONLY" \
   > "$OUT/4-claim-under-an-unrelated-marker.log" 2>&1
-echo "4 claim in a block that already carries \`was\`: exit $? (0 was measured: the guard is blind)"
+echo "4 claim in a block that already carries \`was\`: exit $? (1 since round two; 0 was round one)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/4-claim-under-an-unrelated-marker.log"
 
 # 5. The control for 4, without which its green says nothing: the same sentence in a block that
@@ -111,3 +129,17 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/4-cl
   > "$OUT/5-claim-with-nothing-masking-it.log" 2>&1
 echo "5 claim in a block with no marker: exit $? (1 was measured: it fires where nothing masks it)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/5-claim-with-nothing-masking-it.log"
+
+# 6. THE FLOOR THE SENTENCE UNIT NEEDS, which is a different one from 2 and is the only assertion
+#    round two adds that nothing had seen fire. If the split stops splitting it hands back one
+#    sentence per block, and the guard is then silently the block-level one round one delivered:
+#    same green, same hole, and nobody told. 2 cannot show this -- it starves the whole scan and
+#    the older floor catches it first -- so this starves the splitter alone and leaves the scan
+#    intact. Red, naming the two counts.
+"$P" modules/tactics/src/test/scala/garden/xeno/symbolum/tactics/DocumentationSpec.scala \
+  'blocks.flatMap(block => """(?<=[.!?])\s+""".r.split(block).toVector)' \
+  'blocks.flatMap(block => Vector(block))' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/6-sentence-split-starved.log" 2>&1
+echo "6 sentence split starved: exit $? (1 is the expected outcome: the SENTENCE floor fired)"
+grep -E "Tests: |\*\*\* FAILED|stopped splitting|perturb:" "$OUT/6-sentence-split-starved.log"
