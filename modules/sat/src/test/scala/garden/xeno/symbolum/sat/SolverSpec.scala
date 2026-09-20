@@ -134,9 +134,14 @@ class SolverSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  // The assertion here read `within 1 conflicts` until 2026-09-20, and it is worth saying what
+  // that was: not a test that went stale, but a test that pinned the defect. The bound is a
+  // parameter, this test passes one, and the message agreed with it ungrammatically for as long
+  // as both existed. It is the strongest evidence in the repository that this site reaches one,
+  // and it was written by somebody who read the message and copied it.
   "the bound" should "be named in the refusal rather than reached silently" in {
     Solver.solve(pigeonhole(6), conflictLimit = 1) match {
-      case Solver.Answer.Undecided(why) => why should include("within 1 conflicts")
+      case Solver.Answer.Undecided(why) => why should include("within 1 conflict;")
       case other => fail(s"expected the bound to be reported, got $other")
     }
   }
@@ -202,5 +207,22 @@ class SolverSpec extends AnyFlatSpec with Matchers {
     // which is what makes the tighter matcher available here.
     why(1, 1) should endWith("is not one of 1 step")
     why(2, 9) should endWith("is not one of 2 steps")
+  }
+  /**
+   * The conflict count in the undecided answer, at one and elsewhere.
+   *
+   * The limit is a parameter and not a constant, which is what puts this site in the class: a
+   * caller that passes one reads its own number back. The pigeonhole at three holes needs far more
+   * than one conflict, so the answer is `Undecided` at both limits and only the wording moves.
+   */
+  "The undecided answer" should "take the singular at one conflict and the plural elsewhere" in {
+    def why(limit: Int): String =
+      Solver.solve(pigeonhole(3), limit) match {
+        case Solver.Answer.Undecided(message) => message
+        case other => fail(s"expected the limit to be reached and got $other")
+      }
+
+    why(1) should include("within 1 conflict;")
+    why(2) should include("within 2 conflicts;")
   }
 }

@@ -852,7 +852,8 @@ object Value {
 
     found.toRight(
       TypeError(
-        s"no combination a * x = b * y + c for a = $left, b = $right and c = $answer within $bound steps"
+        s"no combination a * x = b * y + c for a = $left, b = $right and c = $answer " +
+          s"within ${Prose.count(bound, "step")}"
       )
     )
   }

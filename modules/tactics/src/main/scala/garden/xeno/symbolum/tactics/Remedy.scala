@@ -397,8 +397,8 @@ object Remedy {
     // to work out and usually means it reached a different lemma than it meant to.
     case PartialInstance(quantifiers, arguments, _) =>
       RestateTheProblem(
-        s"a call with $quantifiers arguments rather than $arguments, or specPrefix for a partial " +
-          "instance"
+        s"a call with ${Prose.count(quantifiers, "argument")} rather than $arguments, " +
+          "or specPrefix for a partial instance"
       )
 
     // Read off the caller's own reason rather than answered here, and that is the mapping rather
@@ -507,10 +507,10 @@ object Remedy {
       Settled(s"no counterexample exists over $constraints linear constraints")
 
     case Refutation.Survived(asked) =>
-      APersonLooks(s"the claim survived $asked points, which is evidence and not a decision")
+      APersonLooks(s"the claim survived ${Prose.count(asked, "point")}, which is evidence and not a decision")
 
     case Refutation.NeverAsked(offered) =>
-      InterpretMore(s"none of $offered points could be evaluated")
+      InterpretMore(s"none of ${Prose.count(offered, "point")} could be evaluated")
 
     case Refutation.Undecided(reason) => AskDifferently(reason)
   }
@@ -629,7 +629,7 @@ object Remedy {
 
     case CollatzScreen.Agreed(points) =>
       APersonLooks(
-        s"the candidate agreed with iteration at $points points, which is evidence and not a decision"
+        s"the candidate agreed with iteration at ${Prose.count(points, "point")}, which is evidence and not a decision"
       )
 
     case CollatzScreen.NotExact(n, value) =>
@@ -696,7 +696,8 @@ object Remedy {
     // Not a failure and not a claim that no closed form exists: a geometric sum has one and it is
     // not a polynomial. What would find it is a different fit, which is a different source.
     case Family.Outcome.NotPolynomial(_, sampled) =>
-      AskDifferently(s"the values over $sampled points are not a polynomial of any degree that fits them")
+      AskDifferently(
+        s"the values over ${Prose.count(sampled, "point")} are not a polynomial of any degree that fits them")
 
     // The interesting one, and the reason the fit is a screen rather than an answer: the values
     // agreed everywhere they were sampled and the claim did not hold. Nothing mechanical follows

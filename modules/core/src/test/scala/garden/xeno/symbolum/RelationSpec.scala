@@ -187,4 +187,26 @@ class RelationSpec extends AnyFlatSpec with Matchers {
     // back confident about rounding.
     Relation.among(Vector(BigDecimal(12345), BigDecimal(67890)), 3) shouldBe a[Relation.Unusable]
   }
+  /**
+   * The two counts of the precision refusal, at one and elsewhere.
+   *
+   * `core` depends on nothing, so it carries its own counter in `Plural` and this holds one of its
+   * two sites. Both numbers in this sentence reach one and they reach it independently: the digits
+   * asked for, and the decimal places left after the integer part is paid for. The second is why
+   * the guard is `places < 2` rather than `places < 1`.
+   */
+  "The refusal about precision" should "take the singular at one digit and at one place" in {
+    def why(values: Vector[BigDecimal], digits: Int): String =
+      Relation.among(values, digits) match {
+        case Relation.Unusable(message) => message
+        case other => fail(s"expected a refusal and got $other")
+      }
+
+    val small = Vector(BigDecimal(1), BigDecimal(2))
+
+    why(small, 1) should startWith("1 digit leaves")
+    why(small, 3) should startWith("3 digits leaves")
+    why(small, 4) should include("leaves 1 decimal place to scale by")
+    why(small, 1) should include("leaves -2 decimal places to scale by")
+  }
 }

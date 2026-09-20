@@ -45,4 +45,15 @@ object Prose {
    */
   def count(howMany: Int, noun: String): String =
     if (howMany == 1) s"1 $noun" else s"$howMany ${noun}s"
+
+  /**
+   * The same where the count is a `BigInt`, and it is an overload rather than a conversion.
+   *
+   * `Value`'s search bound is `right / answer + 1` over big integers and reaches one exactly when
+   * the answer is zero, so the site is in this class; `toInt` at the call would print a different
+   * number for a bound past the machine word, which is a worse defect than the one being
+   * repaired.
+   */
+  def count(howMany: BigInt, noun: String): String =
+    if (howMany == 1) s"1 $noun" else s"$howMany ${noun}s"
 }

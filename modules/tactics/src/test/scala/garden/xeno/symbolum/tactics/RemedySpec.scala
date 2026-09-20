@@ -301,6 +301,34 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     notCredible(0) should include("more than 0 digits:")
   }
 
+  /**
+   * The five counts of points and arguments, at one and elsewhere.
+   *
+   * These were found by re-running the census of card db67b658 rather than by reading the card's
+   * list, which did not hold them. Each reaches one for a reason in the type rather than in a
+   * caller: a refutation that asked one point, a screen that agreed at one, a fit sampled at one,
+   * and a lemma with one leading quantifier called with the wrong number of arguments.
+   */
+  "The point and argument counts of this file" should "take the singular at one and the plural elsewhere" in {
+    Remedy.of(Refutation.Survived(1)).message should include("survived 1 point,")
+    Remedy.of(Refutation.Survived(400)).message should include("survived 400 points,")
+
+    Remedy.of(Refutation.NeverAsked(1)).message should include("none of 1 point could")
+    Remedy.of(Refutation.NeverAsked(12)).message should include("none of 12 points could")
+
+    Remedy.of(CollatzScreen.Agreed(1)).message should include("iteration at 1 point,")
+    Remedy.of(CollatzScreen.Agreed(400)).message should include("iteration at 400 points,")
+
+    Remedy.of(Family.Outcome.NotPolynomial(Vector.empty[Rational], 1)).message should
+      include("values over 1 point are")
+    Remedy.of(Family.Outcome.NotPolynomial(Vector.empty[Rational], 9)).message should
+      include("values over 9 points are")
+
+    val term = force(reals.term("x:real = x"))
+    Remedy.of(FromLogic(PartialInstance(1, 0, term))).message should include("a call with 1 argument ")
+    Remedy.of(FromLogic(PartialInstance(3, 1, term))).message should include("a call with 3 arguments ")
+  }
+
   /* ------------------------------------------------------------ the ledger's table */
 
   "Every ledger verdict" should "carry a next step" in {

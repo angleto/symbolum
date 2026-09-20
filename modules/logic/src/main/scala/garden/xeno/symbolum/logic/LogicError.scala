@@ -385,7 +385,8 @@ final case class NoCloser(goal: Term, driver: String) extends LogicError {
 final case class PartialInstance(quantifiers: Int, arguments: Int, theorem: Term)
   extends LogicError {
   def message: String =
-    s"this theorem has $quantifiers leading quantifiers and $arguments arguments were given: " +
+    s"this theorem has ${Plural.count(quantifiers, "leading quantifier", "leading quantifiers")} " +
+      s"and ${Plural.count(arguments, "argument", "arguments")} were given: " +
       s"supply $quantifiers, or ask specPrefix for a partial instance"
 
   // `Unread`, and it is the case that made this classification earn its keep on the day it landed.

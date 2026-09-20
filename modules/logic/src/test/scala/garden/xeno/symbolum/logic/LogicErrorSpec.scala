@@ -153,4 +153,24 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
     // calls out: a proof is not a decision that something does not follow.
     LogicError.decided(Right(())) shouldBe false
   }
+  /**
+   * The two counts of the partial-instance refusal, at one and elsewhere.
+   *
+   * `logic` sits below `theories`, so it cannot see the counter the rest of the repository uses
+   * and carries its own in `Plural`. Both numbers here reach one independently: a theorem with one
+   * leading quantifier is the ordinary case, and a call that supplied one argument is what the
+   * refusal is usually about.
+   *
+   * The same pair of numbers is written a second time by `Remedy` one module up, which reaches
+   * `Prose.count` instead. Two messages about one refusal is the arrangement here, not a defect.
+   */
+  "The refusal about a partial instance" should "take the singular at one and the plural elsewhere" in {
+    val subject = Term.variable("p", Type.Bool)
+
+    def message(quantifiers: Int, arguments: Int): String =
+      PartialInstance(quantifiers, arguments, subject).message
+
+    message(1, 1) should startWith("this theorem has 1 leading quantifier and 1 argument were given")
+    message(3, 2) should startWith("this theorem has 3 leading quantifiers and 2 arguments were given")
+  }
 }

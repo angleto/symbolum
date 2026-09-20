@@ -332,22 +332,6 @@ object Perron {
 
   /* ---------------------------------------------------------------- the refusals */
 
-  /**
-   * A number and its noun, with the singular at one.
-   *
-   * **A copy, and the copy is the price of the dependency graph rather than an oversight.** The
-   * counter the rest of the repository uses is `Prose.count` in `modules/theories`, which this
-   * module cannot see: `core` depends on nothing, which is what lets the algebra be published on its
-   * own. What is repeated here is a rule of English rather than a fact about this system, so it
-   * cannot drift against any source of truth in it, and the test in this module's own spec is what
-   * holds it.
-   *
-   * It takes BOTH forms where `Prose.count` appends an `s`, because this class of site contains
-   * `entry`/`entries` in `core` and a counter that can only append is wrong for it.
-   */
-  private def count(howMany: Int, one: String, many: String): String =
-    s"$howMany ${if (howMany == 1) one else many}"
-
   /** Everything about the input that stops the question being asked, or nothing. */
   private def refuse(matrix: Vector[Vector[Double]]): Option[Outcome] =
     if (matrix.isEmpty) Some(Unusable("an eigenvalue wants a matrix and was given no rows"))
@@ -358,8 +342,8 @@ object Perron {
         case ragged if ragged >= 0 =>
           Some(
             Unusable(
-              s"row $ragged has ${count(matrix(ragged).length, "entry", "entries")} in a matrix of " +
-                s"${count(size, "row", "rows")}, and an " +
+              s"row $ragged has ${Plural.count(matrix(ragged).length, "entry", "entries")} in a matrix of " +
+                s"${Plural.count(size, "row", "rows")}, and an " +
                 "eigenvalue is only defined for a square one"))
 
         case _ =>

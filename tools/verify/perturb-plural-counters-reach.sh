@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fire the six both-directions guards of card db67b658 at the defect they were written for.
+# Fire the eleven both-directions guards of card db67b658 at the defect they were written for.
 #
 # Two halves, and the second one is the card's decision being spent. 1 to 3 are the sites in
 # `modules/tactics`, which can see `Prose.count` in `theories`. 4 to 8 are the sites in the five
@@ -52,6 +52,10 @@ PERRON=modules/core/src/main/scala/garden/xeno/symbolum/Perron.scala
 TERM=modules/kernel/src/main/scala/garden/xeno/symbolum/kernel/Term.scala
 MARK=modules/mark/src/main/scala/garden/xeno/symbolum/mark/Mark.scala
 RESOLUTION=modules/sat/src/main/scala/garden/xeno/symbolum/sat/Resolution.scala
+SOLVER=modules/sat/src/main/scala/garden/xeno/symbolum/sat/Solver.scala
+RELATION=modules/core/src/main/scala/garden/xeno/symbolum/Relation.scala
+LOGICERROR=modules/logic/src/main/scala/garden/xeno/symbolum/logic/LogicError.scala
+VALUE=modules/theories/src/main/scala/garden/xeno/symbolum/theories/Value.scala
 REMEDY=modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Remedy.scala
 BOTH='tactics/testOnly garden.xeno.symbolum.tactics.LedgerSpec garden.xeno.symbolum.tactics.RemedySpec'
 
@@ -98,7 +102,7 @@ run "3-remedy-not-credible" "$REMEDY" \
 #    one of the four rules whose arity is one.
 # Expect red on: ParseSpec, "The refusal about a step's premises"
 run "4-checker-premises" "$PARSE" \
-  '${count(Step.arity(step), "premise", "premises")} for' \
+  '${Plural.count(Step.arity(step), "premise", "premises")} for' \
   '${Step.arity(step)} premises for' \
   -- ./tools/sbt -batch 'checker/testOnly garden.xeno.symbolum.checker.ParseSpec'
 
@@ -106,8 +110,8 @@ run "4-checker-premises" "$PARSE" \
 #    This is also the site whose noun is why the copies take both forms: `entry`/`entries`.
 # Expect red on: PerronSpec, "The refusal about a ragged matrix"
 run "5-core-entries-and-rows" "$PERRON" \
-  's"row $ragged has ${count(matrix(ragged).length, "entry", "entries")} in a matrix of " +
-                s"${count(size, "row", "rows")}, and an " +' \
+  's"row $ragged has ${Plural.count(matrix(ragged).length, "entry", "entries")} in a matrix of " +
+                s"${Plural.count(size, "row", "rows")}, and an " +' \
   's"row $ragged has ${matrix(ragged).length} entries in a matrix of $size rows, and an " +' \
   -- ./tools/sbt -batch 'core/testOnly garden.xeno.symbolum.PerronSpec'
 
@@ -123,7 +127,7 @@ run "6-kernel-binders" "$TERM" \
 #    both sit behind a `!= 1` guard, so neither ever prints one.
 # Expect red on: MarkSpec, "The complaint about the stream"
 run "7-mark-cells" "$MARK" \
-  '${count(faults.length, "cell", "cells")}, " +
+  '${Plural.count(faults.length, "cell", "cells")}, " +
           s"first ${faults.head}"' \
   '${faults.length} cells, first ${faults.head}"' \
   -- ./tools/sbt -batch 'mark/testOnly garden.xeno.symbolum.mark.MarkSpec'
@@ -132,9 +136,55 @@ run "7-mark-cells" "$MARK" \
 #    which cannot see `kernel` cannot construct a theorem whatever it does.
 # Expect red on: SolverSpec, "The refusal about the empty clause's index"
 run "8-sat-steps" "$RESOLUTION" \
-  '${count(steps.length, "step", "steps")}' \
+  '${Plural.count(steps.length, "step", "steps")}' \
   '${steps.length} steps' \
   -- ./tools/sbt -batch 'sat/testOnly garden.xeno.symbolum.sat.SolverSpec'
 
-echo "### all eight fired" >> "$OUT/plural-counters-reach.log"
+
+# 9. The five sites of one file that the card's list did not carry and the re-run of its census
+#    found. They are one condition in one file, so one perturbation covers them: `Remedy` reaches
+#    `Prose.count` and the repair there needed no decision.
+# Expect red on: RemedySpec, "The point and argument counts of this file"
+run "9-remedy-points" "$REMEDY" \
+  '${Prose.count(asked, "point")}' \
+  '$asked points' \
+  -- ./tools/sbt -batch 'tactics/testOnly garden.xeno.symbolum.tactics.RemedySpec'
+
+# 10. The two counts of one sentence in `core`, which is the module whose second site turned the
+#     private method of increment two into a file: `Plural` is shared by `Perron` and `Relation`.
+# Expect red on: RelationSpec, "The refusal about precision"
+run "10-core-digits-and-places" "$RELATION" \
+  '${Plural.count(digits, "digit", "digits")} leaves ' \
+  '$digits digits leaves ' \
+  -- ./tools/sbt -batch 'core/testOnly garden.xeno.symbolum.RelationSpec'
+
+# 11. The solver's bound, and the site with the strongest evidence of the whole card: the spec
+#     asserted `within 1 conflicts` until 2026-09-20, so the defect was not merely present, it was
+#     pinned by a test that passed a limit of one and copied the message back.
+# Expect red on: SolverSpec, "The undecided answer"
+run "11-sat-conflicts" "$SOLVER" \
+  '${Plural.count(conflictLimit, "conflict", "conflicts")}' \
+  '$conflictLimit conflicts' \
+  -- ./tools/sbt -batch 'sat/testOnly garden.xeno.symbolum.sat.SolverSpec'
+
+
+# 12. The two counts of one sentence in `logic`, which is the fifth module to need a copy and the
+#     one the card's list did not reach at all: `logic` is BELOW `theories`, so the direction that
+#     makes the chain a chain is what puts the shared counter out of reach.
+# Expect red on: LogicErrorSpec, "The refusal about a partial instance"
+run "12-logic-quantifiers" "$LOGICERROR" \
+  '${Plural.count(quantifiers, "leading quantifier", "leading quantifiers")} ' \
+  '$quantifiers leading quantifiers ' \
+  -- ./tools/sbt -batch 'logic/testOnly garden.xeno.symbolum.logic.LogicErrorSpec'
+
+# 13. The search bound in `theories`, which reaches one for a reason in its own arithmetic: the
+#     bound is `right / answer + 1` and is literally `BigInt(1)` when the answer is zero. It is
+#     also why `Prose.count` gained a `BigInt` overload rather than the call gaining a `toInt`.
+# Expect red on: ValueSpec, "The refusal about a combination"
+run "13-theories-steps" "$VALUE" \
+  '${Prose.count(bound, "step")}' \
+  '$bound steps' \
+  -- ./tools/sbt -batch 'theories/testOnly garden.xeno.symbolum.theories.ValueSpec'
+
+echo "### all thirteen fired" >> "$OUT/plural-counters-reach.log"
 git status --porcelain >> "$OUT/plural-counters-reach.log"

@@ -424,7 +424,9 @@ final class Solver private (problem: Problem, conflictLimit: Int) {
             answer = Some(Answer.Unsatisfiable(Derivation(steps.toVector, empty)))
           }
           else if (conflicts > conflictLimit)
-            answer = Some(Answer.Undecided(s"a problem settled within $conflictLimit conflicts; this one was not"))
+            answer = Some(Answer.Undecided(
+              s"a problem settled within ${Plural.count(conflictLimit, "conflict", "conflicts")}; " +
+                "this one was not"))
           else {
             val (learned, to, step) = analyse(conflict)
             backjump(to)

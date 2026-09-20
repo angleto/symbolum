@@ -106,7 +106,9 @@ object Relation {
       val ahead = values.map(value => value.bigDecimal.precision - value.bigDecimal.scale).max
       val places = digits - math.max(0, ahead) - 2
 
-      if (places < 2) Unusable(s"$digits digits leaves $places decimal places to scale by")
+      if (places < 2) Unusable(
+          s"${Plural.count(digits, "digit", "digits")} leaves " +
+            s"${Plural.count(places, "decimal place", "decimal places")} to scale by")
       else {
         val context = new MathContext(digits, RoundingMode.HALF_EVEN)
         val scaled = values.map { value =>

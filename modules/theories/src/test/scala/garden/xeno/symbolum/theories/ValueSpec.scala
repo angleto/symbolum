@@ -220,4 +220,25 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     procedure.reachable shouldBe
       Vector(Peano.Ceiling, Peano.Floor, Modular.DivName, Modular.GcdName, Modular.ModName).sorted
   }
+  /**
+   * The step count in the refusal about a combination, at one and elsewhere.
+   *
+   * One step is not a corner: the bound is `right / answer + 1` over big integers and is exactly
+   * `1` when the answer is zero, which is the first case anybody who calls this reaches. It is
+   * also why `Prose.count` gained an overload on `BigInt` rather than the call site gaining a
+   * `toInt`, which would print a different number for a bound past the machine word.
+   */
+  "The refusal about a combination" should "take the singular at one step and the plural elsewhere" in {
+    def why(left: BigInt, right: BigInt, answer: BigInt): String =
+      Value.combination(left, right, answer) match {
+        case Left(error) => error.message
+        case Right(found) => fail(s"expected no combination and got $found")
+      }
+
+    // `answer == 0` is the branch that makes the bound one; the second case takes the other
+    // branch at `right / answer == 1`, and both are chosen so the search finds nothing: a left of
+    // zero can never reach a positive answer.
+    why(0, 0, 0) should endWith("within 1 step")
+    why(0, 2, 2) should endWith("within 2 steps")
+  }
 }
