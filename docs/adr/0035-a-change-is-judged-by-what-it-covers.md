@@ -99,6 +99,18 @@ individual change well covered: old code deleted, new code added at 90 where the
 different questions and the repository carries both. A reader who concludes from this record that
 the floors have become advisory has read it backwards.
 
+**What it read, and it had to be told how much to expect.** As delivered the tool took the
+reports it found and had no notion of how many there should be, so after a narrow run it printed a
+rate for the whole change computed over the one module that reported: 9 of 9 statements at 100.00%
+on a change of 176 lines across eight modules, with no line of the output naming the second
+element. That is this record's own defect -- a figure that is a property of the pair (subject, set
+of reports that exist) -- inside the tool written to remove it, and the verification of card
+`32c9a285` found it on 2026-09-20. Since that day the tool asks which modules carry a changed line,
+compares that set against the modules with a report, and **refuses** when one is missing rather
+than rating the change over the rest. The criterion is the change and not the build, which is
+sharper than the neighbouring gate's and is what keeps a narrow local run of the one module a
+change touches measurable: a module with no changed line hides nothing by not reporting.
+
 **What it cannot distinguish**, said here because it is the shape of failure this repository
 cares about: changed lines carrying no statement at all. A comment, a blank line and a signature
 produce that reading, and so does a report written before the change. The tool refuses to call

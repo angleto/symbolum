@@ -135,7 +135,12 @@ session named would be a different tool with the same name.
   reports already on disk and runs no build, it compares no two reports — the added lines come
   out of `git diff` in the current file's coordinates and the report is in those same
   coordinates, so the line-shift problem every coverage-diff tool has does not arise — and its
-  floor is 90% with changes under ten statements reported rather than judged. `docs/adr/0035` is
+  floor is 90% with changes under ten statements reported rather than judged. **And it refuses
+  where a module carrying a changed line has no report**, which is what a narrow run leaves
+  behind and which it answered until 2026-09-20 with a rate over the modules that did report: 9
+  of 9 statements at 100.00% on a change of 176 lines across eight modules, the tool's own
+  defect inside the tool written for it. The criterion is the change and not the build, so a
+  module with no changed line and no report is not a shortfall. `docs/adr/0035` is
   the decision, including why the average floors stay. `tools/coverage-delta-test.sh` is the
   gate over it.
 

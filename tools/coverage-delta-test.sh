@@ -76,6 +76,56 @@ build() {
     } > "$repo/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
 }
 
+# A repository with TWO modules, each changed and each reporting, which is what the partial-report
+# case has to be built out of: with one module there is no difference between "no report" and "a
+# report for every module the change touches", and that is exactly the difference the subject was
+# missing until 2026-09-20.
+build_pair() {
+    name="$1"; per="$2"
+    repo="$work/$name"
+    for module in demo other; do
+        src="modules/$module/src/main/scala/Demo.scala"
+        mkdir -p "$repo/$(dirname "$src")" "$repo/modules/$module/target/scala-3.3.5/scoverage-report"
+    done
+    (
+        cd "$repo"
+        git_q init
+        for module in demo other; do
+            printf 'object Demo {\n}\n' > "modules/$module/src/main/scala/Demo.scala"
+        done
+        git_q add -A
+        git_q commit -m base
+    )
+
+    for module in demo other; do
+        src="$repo/modules/$module/src/main/scala/Demo.scala"
+        {
+            echo 'object Demo {'
+            i=1
+            while [ "$i" -le "$per" ]; do
+                echo "  def f$i(): Int = $i"
+                i=$((i + 1))
+            done
+            echo '}'
+        } > "$src"
+        {
+            echo '<scoverage statement-count="'"$per"'">'
+            i=1
+            while [ "$i" -le "$per" ]; do
+                echo '<statement source="'"$src"'" line="'$((i + 1))'" invocation-count="1">'
+                echo '</statement>'
+                i=$((i + 1))
+            done
+            echo '</scoverage>'
+        } > "$repo/modules/$module/target/scala-3.3.5/scoverage-report/scoverage.xml"
+    done
+    (
+        cd "$repo"
+        git_q add -A
+        git_q commit -m change
+    )
+}
+
 run_subject() {
     status=0
     report=$(cd "$work/$1" && shift && sh "$subject" "$@" 2>&1) || status=$?
@@ -189,5 +239,42 @@ status=0
 report=$(cd "$work/bases" && sh "$subject" 2>&1) || status=$?
 holds "no argument at all still measures the last commit" "20 of 20 statement(s)"
 check "and exits green" "$status" "0"
+
+# 10. A PARTIAL SET OF REPORTS, which is the defect the verification of card 32c9a285 found on
+# 2026-09-20 in the subject itself: it read the reports it found, knew nothing of how many to
+# expect, and after a narrow run printed 9 of 9 statements at 100.00% for a change of 176 lines
+# across eight modules. The population it had measured was one module and no line of the output
+# named it, which is the same shape as the defect the whole tool is for.
+#
+# The criterion is the change and not the build: a module with no changed line hides nothing by
+# not reporting. So the pair of cases is the control and the defect, in that order.
+build_pair pair 20
+run_subject pair HEAD~1
+holds "a change over two modules that both report is measured over both" "40 of 40 statement(s)"
+holds "and says so before the rate" "every one of the 2 module(s) it touches has a report"
+check "and exits green" "$status" "0"
+
+rm -rf "$work/pair/modules/other/target"
+run_subject pair HEAD~1
+holds "a module with changed lines and no report is named" "other"
+holds "and the subject refuses to rate the change over the rest" "invisible here"
+check "and exits 2 rather than reporting a rate over part of the change" "$status" "2"
+lacks "and prints no rate at all" "%"
+
+# The control that keeps case 10 from being a rule about the number of reports: a module that did
+# not report and carries NO changed line is not a shortfall, because nothing of it is in the
+# figure to begin with. Without this the check would refuse every measurement taken after a narrow
+# run of the one module a change touches, which is a legitimate local use.
+build_pair quiet 20
+(
+    cd "$work/quiet"
+    printf 'object Demo {\n  def g(): Int = 1\n}\n' > modules/demo/src/main/scala/Demo.scala
+    git_q add -A
+    git_q commit -m "only demo moves"
+)
+rm -rf "$work/quiet/modules/other/target"
+run_subject quiet HEAD~1
+holds "a module that did not report and did not change is not a shortfall" "1 module(s) it touches has a report"
+check "and the change is measured" "$status" "0"
 
 summarise

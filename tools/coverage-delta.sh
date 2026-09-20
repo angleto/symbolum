@@ -43,7 +43,8 @@
 #
 # Exit codes: 0 when the rate is at or above the threshold or nothing was added, 1 when it is
 # below, 2 when it could not measure -- which is never reported as a pass, for the reason
-# `tools/coverage-gate.sh` exists.
+# `tools/coverage-gate.sh` exists. A module carrying a changed line and no report of this build
+# is one of those 2s, and not a rate over the modules that did report: see the check below.
 
 set -u
 
@@ -156,6 +157,39 @@ if [ -z "$reports" ]; then
     exit 2
 fi
 
+# AND ENOUGH OF THEM, which is a different question from whether there are any. This read the
+# reports it found and had no notion of how many to expect, so after a narrow run it printed a
+# rate for the whole change computed over the one module that reported: 9 of 9 statements at
+# 100.00% on a change of 176 lines across eight modules, with nothing in the output naming the
+# second element. That is the defect this whole tool is about -- a figure that is a property of
+# the pair (subject, set of reports that happen to exist) -- appearing inside the tool written to
+# remove it, and it was found by the verification of card 32c9a285 on 2026-09-20.
+#
+# The set to compare against is NOT every module of the build, which is what `tools/coverage-gate.sh`
+# asks the disk for, and the difference is the whole of why this check is sharper than the one
+# next door: the figure here is about the changed lines, so a module with no changed line hides
+# nothing by not reporting, and a module with changed lines and no report makes every one of its
+# statements invisible while the rate still prints.
+#
+# It refuses rather than qualifying, which follows the precedent this file already sets twice: an
+# empty base and a missing revision are both refusals, because answering a question nobody asked
+# as though they had is the failure this tool exists to prevent.
+cut -f1 "$work/added" | awk -F/ '{ print $2 }' | sort -u > "$work/touched"
+printf '%s\n' "$reports" | awk -F/ '{ print $2 }' | sort -u > "$work/reporting"
+comm -23 "$work/touched" "$work/reporting" > "$work/unreported"
+
+if [ -s "$work/unreported" ]; then
+    echo "coverage-delta: the change touches $(grep -c . < "$work/touched") module(s) under" >&2
+    echo "coverage-delta: modules/*/src/main and $(grep -c . < "$work/reporting") module(s) have a report on disk." >&2
+    echo "coverage-delta: No report, so every statement of these is invisible here:" >&2
+    sed 's/^/  /' "$work/unreported" >&2
+    echo "coverage-delta: A rate over the rest would be the coverage of part of this change" >&2
+    echo "coverage-delta: reported as the coverage of the change, which is the defect this tool" >&2
+    echo "coverage-delta: exists to remove. A narrow run leaves this behind: run" >&2
+    echo "coverage-delta: tools/coverage-gate.sh, or build the missing module's report, and ask again." >&2
+    exit 2
+fi
+
 # The statements of this run that sit on an added line. A statement is the unit the floors count
 # in, so it is the unit here: a line carrying three statements weighs three, which is what keeps
 # this figure comparable with the ones in `build.sbt`.
@@ -205,6 +239,10 @@ newest=$(find modules/*/target/scala-*/scoverage-report/scoverage.xml -exec ls -
 
 echo "coverage-delta: $base...HEAD"
 echo "coverage-delta: $added line(s) added or changed under modules/*/src/main"
+# The positive half of the check above, printed on every run rather than only when it bites: a
+# reader who is told what was missing on the bad path and nothing at all on the good one has to
+# take the good one on trust.
+echo "coverage-delta: every one of the $(grep -c . < "$work/touched") module(s) it touches has a report of this build"
 echo "coverage-delta: reports last written around $newest"
 
 if [ "$total" -eq 0 ]; then
