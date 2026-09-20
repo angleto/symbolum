@@ -269,6 +269,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Integer.scala", "Projection") ->
       (Verdict.Name, "the projection of the quotient, by its own published name"),
     ("Integer.scala", "name") -> (Verdict.Name, "the ring law's published name"),
+    // `Fraction.scala`, 2026-09-20, and both sites are the reading `Coding.scala` and
+    // `Collatz.scala` already carry for the same expression: a fact's published name, compared
+    // against what its derivation produced, in the refusal that says the two disagree.
+    ("Fraction.scala", "name") -> (Verdict.Name, "the fact's published name"),
     ("Integer.scala", "error.message") ->
       (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
     // The bridge into the reals, and the four are the three above plus one. `stage` is the reading
