@@ -96,6 +96,23 @@
 # over the 29 doc comments before `def construct`: 137 sentences, five name the last link, four
 # are records and the fifth is `deduction`'s true general sentence.
 #
+# VERIFICATION OF ROUND FOUR, 2026-09-20 at `8472ed95`, by a session that did not deliver it, in
+# /Users/angelo/data/WORK/symbolum-wt/verify-sweep-0920. Control green at 52, and the whole suite
+# green at 2489 on that line. What it leaves is one finding, and 12 with 13 as its control is it:
+# the criterion round four wrote down -- an alternative must NAME A PAST -- was not applied to
+# `until`, which stayed. `until` names a boundary and takes its tense from the verb beside it, so
+# "stays that way until somebody puts one on top of it" is present and carries no record. The
+# card's own defect, present tense, dated today, written into a block with no marker of any kind,
+# passes. The card went back to todo on it. A repair owes 12 a red and must leave 1, 2, 4, 5, 6,
+# 7, 8, 9, 10, 11 and 13 red with 3 green.
+#
+# What that repair may NOT rest on, for the reason round three's own note gives: "nothing depends
+# on it alone" is the criterion that would have taken `until` and left `read "`, and round four
+# rejected it. Measured here on the spec's own segmentation at `8472ed95`: of the seven records
+# inside `construct`, three carry `was`, four carry `until`, four carry a demonstrative quoted
+# `read`, and `until` is the marker of none of them on its own. So the population says nothing and
+# the criterion has to.
+#
 # 11 is not a finding. Round three added two assertions and neither had been seen to fire, which
 # is the standard round two set for itself when it added 6; round four adds one and it is here for
 # the same reason. Putting the removed alternative back into the pattern -- the bare quoted `read`
@@ -286,3 +303,29 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/10-c
   > "$OUT/11-removed-alternative-back.log" 2>&1
 echo "11 the alternative removed in round four put back: exit $? (1 was measured, at the pin's own line)"
 grep -E "Tests: |\*\*\* FAILED|was not equal to None|perturb:" "$OUT/11-removed-alternative-back.log"
+
+# 12. THE FINDING OF ROUND FOUR'S VERIFICATION. Round four took the bare quoted `read` out of the
+#     marker on a criterion it wrote down: an alternative must NAME A PAST. `until` does not. It
+#     names a boundary and takes its tense from the verb beside it, so "stays that way until
+#     somebody puts one on top of it" is present and future and carries no record in it at all.
+#     This writes the card's defect -- present tense, dated today, false -- into the `limit` block,
+#     which carries no marker of any kind, with a non-past `until` in the same sentence.
+"$P" "$CHAIN" \
+  '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
+  '      // The last link since 2026-09-20, and it stays that way until somebody puts one on top
+      // of it. The first analysis this repository has: what a sequence of reals converges to and the value' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/12-until-is-not-past.log" 2>&1
+echo "12 claim whose sentence says a non-past \`until\`: exit $? (0 is the finding: the marker cleared it)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/12-until-is-not-past.log"
+
+# 13. The control for 12, without which its green says only that the scan did not reach the block.
+#     The same claim, the same block, the same sentence, with "unless" for "until".
+"$P" "$CHAIN" \
+  '      // The first analysis this repository has: what a sequence of reals converges to and the value' \
+  '      // The last link since 2026-09-20, and it stays that way unless somebody puts one on top
+      // of it. The first analysis this repository has: what a sequence of reals converges to and the value' \
+  -- ./tools/sbt -batch "$ONLY" \
+  > "$OUT/13-control-for-twelve.log" 2>&1
+echo "13 the same claim with \`unless\`: exit $? (1 is the expected outcome: only the marker separates it from 12)"
+grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/13-control-for-twelve.log"
