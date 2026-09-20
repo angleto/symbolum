@@ -52,6 +52,46 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     )
   }
 
+  /**
+   * Pascal's triangle, stated and then COMPUTED.
+   *
+   * Three facts fix every entry and a reader agrees with them by reading; what a reader cannot see
+   * from them is whether the constant under them is the one they describe. So the second half of
+   * this test rewrites a concrete entry with nothing but those three and the recurrences of
+   * `NUM_ADD`, and the answer has to be six. An off-by-one in the recursion's `PRE`, or a `COND`
+   * opened at the wrong branch, leaves all three facts provable, prints plausibly, and gives a
+   * different number here.
+   *
+   * The row is `SUC (SUC (SUC (SUC ZERO)))` and not `4`, for the reason every recurrence over `num`
+   * is stated at a successor: a numeral would have to be spelled by `Successor` first and nothing
+   * here needs that.
+   */
+  "The binomial coefficients" should "be Pascal's triangle, and compute to it" in {
+    peano.show(fact(Peano.ChooseNone).conclusion) shouldBe "!x:num. NUM_CHOOSE x 0 = SUC 0"
+    peano.show(fact(Peano.ChooseEmpty).conclusion) shouldBe "!x:num. NUM_CHOOSE 0 (SUC x) = 0"
+    peano.show(fact(Peano.ChoosePascal).conclusion) shouldBe
+      "!x:num. !y:num. NUM_CHOOSE (SUC x) (SUC y) = NUM_CHOOSE x y + NUM_CHOOSE x (SUC y)"
+
+    val entry = force(
+      peano.term(
+        "NUM_CHOOSE (SUC (SUC (SUC (SUC ZERO)))) (SUC (SUC ZERO))",
+        numbers))
+    val computed = force(
+      Rewrite.rewrite(
+        rulesOf(
+          Peano.ChooseNone,
+          Peano.ChooseEmpty,
+          Peano.ChoosePascal,
+          Peano.AddAtZero,
+          Peano.AddAtSuccessor),
+        entry))
+
+    // Four choose two is six, and the triangle above it is the only route to that number: the
+    // rewriting walks the whole of rows zero to three to reach it.
+    peano.show(computed.conclusion) shouldBe
+      "NUM_CHOOSE (SUC (SUC (SUC (SUC 0)))) (SUC (SUC 0)) = SUC (SUC (SUC (SUC (SUC (SUC 0)))))"
+  }
+
   "Commutativity of the two operations" should "be derived, since neither recurrence is symmetric" in {
     // The pair the card called the real work. Each needs two inductions before it: addition needs
     // `ZERO + n = n` for its base and `SUC m + n = SUC (m + n)` for its step, and multiplication

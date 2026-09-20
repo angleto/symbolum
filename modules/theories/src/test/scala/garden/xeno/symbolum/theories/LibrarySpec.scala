@@ -523,8 +523,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `NUM_SUC_SUB_SELF` binds one leading quantifier and the other five bind two or more, and of
     // those five only `NUM_SUC_SUB` (two `num`) and `SUM_OF_PRODUCTS` (two `num -> real`) bind two
     // that share a type.
-    library.entries.size shouldBe 577
-    library.names.distinct.size shouldBe 574
+    // 580 and 577 with the binomial coefficients, 2026-09-20: three facts under three names, all
+    // in `Peano`, none shared with another development, so the gap of three does not move. Tip
+    // plus this branch's delta. `CLAUDE.md`'s two figures-per-lemma each move by **one**, derived
+    // from the statements before the run: `NUM_CHOOSE_ZERO` and `NUM_CHOOSE_EMPTY` bind a single
+    // leading quantifier each, and only `NUM_CHOOSE_SUC` binds two, which are both `num`.
+    library.entries.size shouldBe 580
+    library.names.distinct.size shouldBe 577
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

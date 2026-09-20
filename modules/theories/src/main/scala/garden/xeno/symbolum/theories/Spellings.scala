@@ -95,6 +95,11 @@ object Spellings {
       // `Power`, so neither has a notation to fall through to.
       .operator("NUM_SUB", 2, "#1 \\mathbin{\\dot-} #2", Additive)
       .operator("NUM_POW", 2, "#1^{#2}", Multiplicative + 5)
+      // The binomial coefficient, in the one notation every reader of one already knows. It binds
+      // tighter than anything it could sit beside, because a `\binom` is a single box on the page
+      // however large its two arguments are, so nothing inside it needs a bracket and nothing
+      // outside it can be captured by it.
+      .operator("NUM_CHOOSE", 2, "\\binom{#1}{#2}", Multiplicative + 5)
       .operator("real_of_num", 1, "#1_{\\mathbb{R}}", Multiplicative + 5)
       .binding("NUM_SUM", "\\sum_{#b < #2} #1")
       .binding("NUM_PROD", "\\prod_{#b < #2} #1")

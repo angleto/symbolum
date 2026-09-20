@@ -1063,6 +1063,65 @@ object Peano {
    */
   val PartialSumMonotoneBelow: String = "NUM_SUM_MONOTONE_BELOW"
 
+  /* -------------------------------------------------------- binomial coefficients */
+
+  /**
+   * `NUM_CHOOSE n k`, the number of ways of choosing `k` things out of `n`.
+   *
+   * **The recursion is on `n` and its value is a FUNCTION of `k`**, which is the one shape Pascal's
+   * rule has: `C(n+1, k+1)` is built from `C(n, k)` and `C(n, k+1)`, two entries of the same row at
+   * two different columns, so nothing that recurses on one index while holding the other fixed can
+   * state it. `Recursion.theorem` takes the value type as a parameter, so `num -> num` costs
+   * nothing new here; it is the first constant in this repository defined that way, and the only
+   * thing it costs a reader is that the two equations the recursion hands back are equations
+   * between **functions** and not between numbers.
+   *
+   * Those two are **not published**, and that is a decision rather than an omission. What a reader
+   * checks a binomial coefficient against is Pascal's triangle, which is [[ChooseNone]],
+   * [[ChooseEmpty]] and [[ChoosePascal]]; the function equations are how the recursion happened to
+   * be set up, carry a `COND` and a `PRE` that no consumer should meet, and determine nothing the
+   * three do not. The three between them fix **every** value: the first column is one, the first
+   * row past it is zero, and everything else is the sum of the two above it.
+   *
+   * `COND` is what the `k = 0` case needs and there is no way around it: at `k = 0` the step has to
+   * answer `1` and at every other `k` it has to add two earlier entries, and `PRE` alone cannot
+   * tell the two apart, since `PRE ZERO` is `ZERO` and the step would answer `2 * C(n, 0)`.
+   */
+  val Choose: String = "NUM_CHOOSE"
+
+  /**
+   * `|- !n. NUM_CHOOSE n ZERO = SUC ZERO`
+   *
+   * There is one way to choose nothing, whatever there is to choose from. It is the left edge of
+   * Pascal's triangle, and it is an induction only because the `ZERO` and the `SUC` cases reach the
+   * answer through two different equations: both open a `COND` at a condition that holds, and
+   * neither needs the induction hypothesis.
+   */
+  val ChooseNone: String = "NUM_CHOOSE_ZERO"
+
+  /**
+   * `|- !k. NUM_CHOOSE ZERO (SUC k) = ZERO`
+   *
+   * There is no way to choose anything at all out of nothing, which is the top row of the triangle
+   * past its first entry. Stated at `SUC k` rather than at `k` with a hypothesis, because the entry
+   * it excludes is `NUM_CHOOSE ZERO ZERO`, which is [[ChooseNone]] and is **one**: a reader who met
+   * `NUM_LT ZERO k ==> ...` would have to discharge a bound to use the fact, where this form is a
+   * rewrite rule.
+   */
+  val ChooseEmpty: String = "NUM_CHOOSE_EMPTY"
+
+  /**
+   * `|- !n k. NUM_CHOOSE (SUC n) (SUC k) = NUM_ADD (NUM_CHOOSE n k) (NUM_CHOOSE n (SUC k))`
+   *
+   * Pascal's rule, and with the two above it every entry of the triangle is determined. It is
+   * stated at `SUC k` on both sides for the reason [[ChooseEmpty]] is stated at `SUC k`: the rule
+   * is false at `k = ZERO`, where the left side is `SUC ZERO` and the right side would be
+   * `NUM_ADD (NUM_CHOOSE n (PRE ZERO)) (NUM_CHOOSE n ZERO)`, which is `SUC ZERO` doubled. Writing
+   * it with `PRE` would make it true at every `k` and unusable at all of them, since a consumer
+   * holding a column `SUC k` would have to push a predecessor through it first.
+   */
+  val ChoosePascal: String = "NUM_CHOOSE_SUC"
+
   /* ----------------------------------------------------------------- numerals */
 
   /**
@@ -1247,6 +1306,11 @@ object Peano {
     MinusThenPlus -> "!m:num n:num. NUM_LE n m ==> NUM_ADD (NUM_SUB m n) n = m",
     SuccessorMinus -> "!m:num n:num. NUM_LE n m ==> NUM_SUB (SUC m) n = SUC (NUM_SUB m n)",
     SuccessorMinusSelf -> "!n:num. NUM_SUB (SUC n) n = SUC ZERO",
+    ChooseNone -> "!n:num. NUM_CHOOSE n ZERO = SUC ZERO",
+    ChooseEmpty -> "!k:num. NUM_CHOOSE ZERO (SUC k) = ZERO",
+    ChoosePascal ->
+      ("!n:num k:num. NUM_CHOOSE (SUC n) (SUC k) = " +
+        "NUM_ADD (NUM_CHOOSE n k) (NUM_CHOOSE n (SUC k))"),
     EmbedsDifference ->
       "!m:num n:num. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n",
     PartialSumAtZero -> "!f:num -> num. NUM_SUM f ZERO = ZERO",
@@ -1574,8 +1638,15 @@ object Peano {
         logic, driver, naturals, withSubtraction, notation, recursion, orderFacts, addFacts)
       (withPartialSums, partialSumDefinition, partialSumFacts) = summed
 
+      // The binomial coefficients, whose recursion is the one in this file whose VALUE is a
+      // function. It needs `COND` from the classical extension and `PRE` from the subtraction
+      // stage, which is why it comes after both.
+      chosen <- binomials(
+        logic, driver, naturals, withPartialSums, notation, recursion, subtractionFacts)
+      (withChoose, chooseDefinition, chooseFacts) = chosen
+
       // The last of the pure stages: three definitions and three doubling lemmas, no real.
-      spelt <- numerals(logic, withPartialSums, notation, addFacts)
+      spelt <- numerals(logic, withChoose, notation, addFacts)
       (withNumerals, spelled, numeralDefinitions, numeralFacts) = spelt
     } yield Arithmetic(
       withNumerals,
@@ -1593,10 +1664,11 @@ object Peano {
         Addition -> additionDefinition,
         Multiplication -> multiplicationDefinition,
         Exponentiation -> exponentiationDefinition,
-        PartialSum -> partialSumDefinition
+        PartialSum -> partialSumDefinition,
+        Choose -> chooseDefinition
       ) ++ orderDefinitions ++ subtractionDefinitions ++ numeralDefinitions,
       addFacts ++ mulFacts ++ powFacts ++ orderFacts ++ subtractionFacts ++ partialSumFacts ++
-        numeralFacts ++ Map(PowPositive -> powPositive)
+        chooseFacts ++ numeralFacts ++ Map(PowPositive -> powPositive)
     )
 
   /* --------------------------------------------------------------- addition */
@@ -5991,6 +6063,174 @@ object Peano {
    * hands back the theorem it had when the step limit ran out, so without it an exhausted rewrite
    * and a false identity are the same object.
    */
+  /**
+   * `NUM_CHOOSE`, and the three facts that are Pascal's triangle.
+   *
+   * The recursion's value is a **function**, which is what the rule needs and what nothing else in
+   * this file does. What that costs is here rather than in the caller: the two equations
+   * `Recursion.define` hands back are between functions, so each of the three published facts is
+   * one of them applied to a column and then opened at its `COND`.
+   *
+   * Opening the `COND` is the whole of the work and it is two lines each: at `ZERO` the condition
+   * holds by reflexivity, and at `SUC k` it fails by `Natural.NUM_SUC_NOT_ZERO`. `Classical`'s
+   * `COND_TRUE` and `COND_FALSE` are what turn that into the branch, and they cost the choice
+   * axiom the naturals already pay for, so this stage adds nothing to what a development believes.
+   */
+  private def binomials(
+    logic: Logic,
+    driver: Induct,
+    naturals: Natural,
+    base: Theory,
+    notation: Notation,
+    recursion: Kernel.Thm,
+    subtractionFacts: Map[String, Kernel.Thm]
+  ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+    val k = Term.variable("k", numbers)
+
+    /** `theorem` applied to `argument`, with the redex the application builds reduced away. */
+    def at(theorem: Kernel.Thm, argument: Term): Either[LogicError, Kernel.Thm] =
+      Conv.apThm(theorem, argument).flatMap(applied =>
+        Conv
+          .betaNormalise(applied.conclusion)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, applied))))
+
+    for {
+      defined <- Recursion.define(
+        logic,
+        naturals,
+        base,
+        notation,
+        recursion,
+        Choose,
+        Type.fun(numbers, numbers),
+        "\\k:num. COND (k = ZERO) (SUC ZERO) ZERO",
+        "\\v:num -> num. \\i:num. \\k:num. " +
+          "COND (k = ZERO) (SUC ZERO) (NUM_ADD (v (PRE k)) (v k))",
+        None
+      )
+      (theory, definition, chooseAtZero, chooseAtSuccessor) = defined
+
+      // **At `num` before anything is specialised.** `COND_TRUE` and `COND_FALSE` quantify their
+      // two branches at `'a`, so specialising one of them at a number without instantiating the
+      // type first refuses with `application: expected a, found num`, which reads as a defect in
+      // the recursion rather than in the caller and is where this stage lost an hour.
+      condTrue <- naturals.classical
+        .fact(Classical.CondTrue)
+        .map(Kernel.instType(Map("a" -> numbers), _))
+      condFalse <- naturals.classical
+        .fact(Classical.CondFalse)
+        .map(Kernel.instType(Map("a" -> numbers), _))
+      successorNotZero <- naturals.fact(Natural.SuccessorNotZero)
+      preAtSuccessor <- subtractionFacts
+        .get(PreAtSuccessor)
+        .toRight(MissingDefinition(PreAtSuccessor))
+
+      zero <- Parser.term(theory, notation, "ZERO", numbers)
+      successorOfK <- Parser.term(theory, notation, "SUC (k:num)", numbers)
+      holds = Kernel.refl(zero)
+      fails <- rules.spec(k, successorNotZero)
+
+      /* The two equations the recursion hands back are between FUNCTIONS, and the second is
+         quantified over its row. So every published fact below is that equation specialised at a
+         row, applied to a column, and then opened at the `COND` the column decides. */
+      stepEquation <- rules.spec(n, chooseAtSuccessor)
+
+      // The left edge. Both rows reach the answer through a condition that HOLDS, and neither
+      // reads the induction hypothesis: the induction is here because the two rows are two
+      // different equations and not because anything is built up.
+      emptyColumn <- Parser.proposition(
+        theory, notation, "!n:num. NUM_CHOOSE n ZERO = SUC ZERO")
+      chooseNone <- driver.proveBy(
+        emptyColumn,
+        goal =>
+          for {
+            opened <- at(chooseAtZero, zero)
+            reached <- openTrue(rules, condTrue, holds, opened)
+            _ <- sameAs(goal, reached)
+          } yield reached,
+        step =>
+          for {
+            equation <- rules.spec(step.variable, chooseAtSuccessor)
+            opened <- at(equation, zero)
+            reached <- openTrue(rules, condTrue, holds, opened)
+            _ <- sameAs(step.goal, reached)
+          } yield reached
+      )
+
+      // The top row past its first entry, and Pascal's rule. The same two lines at the other
+      // equation and at a column that is a successor, where the condition FAILS and what is left
+      // is the second branch.
+      chooseEmpty <- at(chooseAtZero, successorOfK)
+        .flatMap(openFalse(rules, condFalse, fails, _))
+        .flatMap(rules.gen(k, _))
+        .flatMap(checked(theory, notation, ChooseEmpty, _))
+
+      choosePascal <- for {
+        opened <- at(stepEquation, successorOfK)
+        selected <- openFalse(rules, condFalse, fails, opened)
+        // `PRE (SUC k)` is `k`, which is the one rewrite between the shape the recursion has to
+        // be written in and the shape Pascal's rule is read in.
+        peeled <- rules.spec(k, preAtSuccessor)
+        reached <- Rewrite.Rule
+          .of(logic, peeled)
+          .flatMap(rule => Rewrite.rewrite(Vector(rule), selected.conclusion))
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, selected)))
+          .flatMap(rules.genAll(_, List(n, k)))
+        checkedFact <- checked(theory, notation, ChoosePascal, reached)
+      } yield checkedFact
+
+      chooseNoneChecked <- checked(theory, notation, ChooseNone, chooseNone)
+    } yield (
+      theory,
+      definition,
+      Map(
+        ChooseNone -> chooseNoneChecked,
+        ChooseEmpty -> chooseEmpty,
+        ChoosePascal -> choosePascal
+      )
+    )
+  }
+
+  /** `x = COND p a b` with `p` proved, carried to `x = a`. */
+  private def openTrue(
+    rules: Rules,
+    condTrue: Kernel.Thm,
+    holds: Kernel.Thm,
+    opened: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    opened.conclusion match {
+      case App(App(_, _), App(App(App(_, condition), whenTrue), whenFalse)) =>
+        rules
+          .specAll(condTrue, List(condition, whenTrue, whenFalse))
+          .flatMap(rules.mp(_, holds))
+          .flatMap(Conv.trans(opened, _))
+      case other => Left(NotOfForm("a conditional", other))
+    }
+
+  /** `x = COND p a b` with `p` refuted, carried to `x = b`. */
+  private def openFalse(
+    rules: Rules,
+    condFalse: Kernel.Thm,
+    fails: Kernel.Thm,
+    opened: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] =
+    opened.conclusion match {
+      case App(App(_, _), App(App(App(_, condition), whenTrue), whenFalse)) =>
+        rules
+          .specAll(condFalse, List(condition, whenTrue, whenFalse))
+          .flatMap(rules.mp(_, fails))
+          .flatMap(Conv.trans(opened, _))
+      case other => Left(NotOfForm("a conditional", other))
+    }
+
+  /** Refuse with both statements named where a derivation and its target have drifted apart. */
+  private def sameAs(target: Term, theorem: Kernel.Thm): Either[LogicError, Unit] =
+    if (theorem.conclusion == target) Right(())
+    else Left(NotOfForm("the goal the driver opened", theorem.conclusion))
+
   private def partialSums(
     logic: Logic,
     driver: Induct,
