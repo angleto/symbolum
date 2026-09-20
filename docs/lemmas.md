@@ -315,6 +315,7 @@ they have least appetite for working out how it is produced.
   CONVERGES_EVENTUALLY     !x:num -> real. !y:num -> real. !z:real. !u:num. (!v:num. u <= v ==> x v = y v) ==> converges x z ==> converges y z
   CONVERGES_GE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> z <= x v) ==> z <= y
   CONVERGES_LE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> x v <= z) ==> y <= z
+  CONVERGES_MUL            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v * y v) (z * u)
   CONVERGES_NEG            !x:num -> real. !y:real. converges x y ==> converges (\z:num. -(x z)) (-y)
   CONVERGES_UNIQUE         !x:num -> real. !y:real. !z:real. converges x y ==> converges x z ==> y = z
   LE_BELOW_EVERY_POSITIVE  !x:real. 0 <= x ==> (!y:real. 0 < y ==> x < y) ==> x = 0

@@ -397,7 +397,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The additive algebra of limits, which is the half of it that needs no case split.
+   * The additive algebra of limits, and what the two halves of it spend.
    *
    * Two assertions and they answer different questions. The first is that the sum fact costs
    * **exactly** what `CONVERGES_UNIQUE` costs, which is not a coincidence and is the reason to
@@ -437,6 +437,77 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * the same measurement pointed at where the axiom must **not** appear, which is the half that
    * catches a route changing under a refactoring nobody meant to be about the foundation.
    */
+  /**
+   * The product, whose cost is the same as the sum's and whose reason for it is not.
+   *
+   * `MUL_INVERSE` appears in both and is reached by two different things, which is why the first
+   * assertion is written beside the second rather than alone: [[Limit.Added]] reaches it by halving
+   * a tolerance, where a numeral denominator is a rational coefficient to `Linarith`, and this one
+   * reaches it through a **symbolic** reciprocal, which no procedure here decides and which enters
+   * as `MUL_INVERSE` at a denominator already known positive. A count cannot tell those apart, and
+   * the pair of assertions is the closest a measurement gets: the same axioms, and no supremum in
+   * either, so what differs between the two derivations is not the foundation.
+   *
+   * The equality is written as a relation and not as a number for the reason the sum's is: a number
+   * would pass a derivation that quietly stopped spending something.
+   */
+  it should "cost what the sum costs, reaching the reciprocal for a different reason" in {
+    def axioms(name: String): Set[Term] = Derivation.axiomsOf(force(limit.fact(name)))
+
+    val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+
+    axioms(Limit.Multiplied) should contain(inverse)
+    axioms(Limit.Multiplied) should not contain completeness
+    axioms(Limit.Multiplied).size shouldBe axioms(Limit.Added).size
+  }
+
+  /**
+   * The scalar multiple, which this development said it did not have and now gets for nothing.
+   *
+   * [[Limit.Negated]]'s own docstring gave the reason the scalar multiple was left out: a proof of
+   * `converges (\n. c * s n) (c * a)` from the definition divides the tolerance by `abs c` and so
+   * has to split on `c = 0` before it can divide at all. That argument is about **that** route. The
+   * product fact takes the constant sequence as one of its two arguments and the split never
+   * arises, because nothing in it divides by `c`: the denominator it does divide by is
+   * `(abs c + 1) + (abs a + 1)`, which is positive whatever `c` is.
+   *
+   * So the assertion that carries the claim is the last one, and it is about the **hypotheses**:
+   * what comes out owes the convergence of `s` and owes nothing about `c`. A test that only checked
+   * the conclusion would pass against a theorem carrying `~(c = 0)` beside it, which is exactly the
+   * shape the docstring predicted and this shows is not what happens.
+   */
+  it should "give the scalar multiple, with no side condition on the scalar" in {
+    val rules = limit.logic.rules
+    val real = TyApp(Real.TypeName, Nil)
+    val sequences = Type.fun(TyApp(Natural.TypeName, Nil), real)
+    val s = Term.variable("s", sequences)
+    val a = Term.variable("a", real)
+    val c = Term.variable("c", real)
+
+    val converging = proposition("converges (s:num -> real) (a:real)")
+    val assumed = force(LogicError.lift(Kernel.assume(converging)))
+    val constant = force(rules.spec(c, force(limit.constantSequence)))
+
+    val scaled = force(
+      rules
+        .specAll(
+          force(limit.multiplied),
+          List(force(limit.term("\\n:num. (c:real)", sequences)), s, c, a))
+        .flatMap(rules.mp(_, constant))
+        .flatMap(rules.mp(_, assumed)))
+
+    // The redex the specialisation builds, for the reason the composition test above records.
+    val reduced = force(
+      Conv
+        .betaNormalise(scaled.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, scaled))))
+
+    reduced.conclusion shouldBe
+      proposition("converges (\\n:num. (c:real) * (s:num -> real) n) ((c:real) * (a:real))")
+    reduced.hypotheses shouldBe List(converging)
+  }
+
   it should "not reach the sixteenth axiom, because no supremum is involved" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
 

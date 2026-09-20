@@ -512,8 +512,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // It binds three leading quantifiers of which the first two are both `int`, so **both** of
     // `CLAUDE.md`'s figures-per-lemma move by one where the three `abs` facts of the same day
     // moved them by one between them.
-    library.entries.size shouldBe 570
-    library.names.distinct.size shouldBe 567
+    // 571 and 568 with `CONVERGES_MUL`, the same day: one fact under one name, in `Limit`, not
+    // shared with another development, so the gap of three does not move. Tip plus this branch's
+    // delta. Its four leading quantifiers are two sequences and two reals, so it has two alike
+    // and both of `CLAUDE.md`'s figures-per-lemma move by one, as the entry above did.
+    library.entries.size shouldBe 571
+    library.names.distinct.size shouldBe 568
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

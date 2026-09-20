@@ -119,6 +119,11 @@ final class Limit private (
 
   /** `|- !s a. converges s a ==> converges (\n. -(s n)) (-a)` */
   def negated: Either[LogicError, Kernel.Thm] = fact(Limit.Negated)
+
+  /**
+   * `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n * t n) (a * b)`
+   */
+  def multiplied: Either[LogicError, Kernel.Thm] = fact(Limit.Multiplied)
 }
 
 object Limit {
@@ -291,13 +296,37 @@ object Limit {
    * `|- !s a. converges s a ==> converges (\n. -(s n)) (-a)`
    *
    * Negation of a sequence, and it is here rather than as the scalar multiple `c = -1` for a reason
-   * that is about the proof and not about generality. `converges (\n. c * s n) (c * a)` divides the
-   * tolerance by `abs c` and therefore has to split on `c = 0` before it can divide at all; the
-   * negation divides by nothing, keeps the same index, and is three lines of `Linarith` over the
-   * same two bounds [[Added]] uses. So the additive group of limits is complete at this cut and the
-   * scalar multiple is left, deliberately, to whoever needs it with its case split.
+   * that is about the proof and not about generality. Proved from the definition,
+   * `converges (\n. c * s n) (c * a)` divides the tolerance by `abs c` and therefore has to split on
+   * `c = 0` before it can divide at all; the negation divides by nothing, keeps the same index, and
+   * is three lines of `Linarith` over the same two bounds [[Added]] uses.
+   *
+   * **The scalar multiple is not missing and never needed that split**, which this paragraph said
+   * it did until [[Multiplied]] landed. It is that fact at the constant sequence, and the split
+   * does not arise because nothing in that derivation divides by `c`: what it divides by is
+   * `(abs c + 1) + (abs a + 1)`, positive whatever `c` is. `LimitSpec` derives it and asserts that
+   * what comes out owes the convergence of `s` and owes nothing about `c`, which is the half of the
+   * claim a conclusion alone would not carry.
    */
   val Negated: String = "CONVERGES_NEG"
+
+  /**
+   * `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n * t n) (a * b)`
+   *
+   * The limit of a product, which is what the Cauchy product has to be able to say and what
+   * [[Added]] is one operation below. It is the last of the four arithmetic operations this
+   * development can carry across a limit that does not need a case split on a zero: the quotient
+   * does, and is not here.
+   *
+   * **It is not [[Added]] with a symbol changed**, and the two places it differs are where the
+   * work is. The tolerance is asked for **three** times rather than two, because one factor of the
+   * estimate is `abs (s n)`, which the hypotheses bound at no fixed number until the convergence of
+   * `s` is spent once at the tolerance `1`. And nothing is halved: the two summands come out
+   * bounded by the tolerance times `abs a + 1` and by the tolerance times `abs b + 1`, so the
+   * tolerance is chosen to make that sum `e` exactly, which is `e * inv ((abs a + 1) + (abs b + 1))`
+   * and the one place a reciprocal enters this file.
+   */
+  val Multiplied: String = "CONVERGES_MUL"
 
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
@@ -327,7 +356,10 @@ object Limit {
       ("!s:num -> real. !t:num -> real. !a:real. !b:real. " +
         "converges s a ==> converges t b ==> converges (\\n:num. s n + t n) (a + b)"),
     Negated ->
-      "!s:num -> real. !a:real. converges s a ==> converges (\\n:num. -(s n)) (-a)"
+      "!s:num -> real. !a:real. converges s a ==> converges (\\n:num. -(s n)) (-a)",
+    Multiplied ->
+      ("!s:num -> real. !t:num -> real. !a:real. !b:real. " +
+        "converges s a ==> converges t b ==> converges (\\n:num. s n * t n) (a * b)")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -395,8 +427,23 @@ object Limit {
       sumAtSuccessor <- series.fact(Series.AtSuccessor)
       sumMonotone <- series.fact(Series.Monotone)
 
+      absTriangle <- magnitude.triangle
+      absMultiplicative <- magnitude.fact(Magnitude.Multiplicative)
+      mulSymmetric <- reals.axiom("MUL_SYM")
+      mulUnit <- reals.axiom("MUL_ONE")
+      mulInverse <- reals.axiom("MUL_INVERSE")
+      mulPositive <- reals.axiom("LT_MUL")
+      zeroLessOne <- magnitude.order.fact(Order.ZeroLessOne)
+      positiveNotZero <- magnitude.order.fact(Order.NonZero)
+      inversePositive <- magnitude.order.fact(Order.InversePositive)
+      multiplyLe <- magnitude.order.fact(Order.MultiplyLe)
+      multiplyLt <- magnitude.order.fact(Order.MultiplyBoth)
+
       bounds = Bounds(absCases, absAbove, absAboveNegation, absNonNegative, absZero)
       indices = Indices(atMostSum, transitive, addCommutative)
+      products = Products(
+        absTriangle, absMultiplicative, mulSymmetric, mulUnit, zeroLessOne, positiveNotZero,
+        mulInverse, inversePositive, mulPositive, multiplyLe, multiplyLt)
 
       epsilon <- belowEveryPositive(logic, linarith, theory, notation, irreflexive, leCases)
       constant <- constantSequence(logic, linarith, theory, notation, convergesDefinition, absCases)
@@ -428,6 +475,9 @@ object Limit {
         logic, linarith, theory, notation, convergesDefinition, bounds, indices)
       negatedLimit <- convergesNegated(
         logic, linarith, theory, notation, convergesDefinition, bounds)
+      multipliedLimits <- convergesMultiplied(
+        logic, linarith, magnitude.order.ring, theory, notation, convergesDefinition, bounds,
+        indices, products)
     } yield new Limit(
       magnitude,
       peano,
@@ -446,7 +496,8 @@ object Limit {
         BelowBound -> below,
         AboveBound -> above,
         Added -> addedLimits,
-        Negated -> negatedLimit
+        Negated -> negatedLimit,
+        Multiplied -> multipliedLimits
       )
     )
   }
@@ -795,6 +846,29 @@ object Limit {
     atMostSum: Kernel.Thm,
     transitive: Kernel.Thm,
     commutative: Kernel.Thm
+  )
+
+  /**
+   * What an estimate over a **product** needs, which is everything an estimate over a sum does not.
+   *
+   * It is a bundle for the reason [[Bounds]] is: one derivation wants all of it and no other wants
+   * any of it, so the alternative is eleven parameters on one signature. Three of them are the
+   * reciprocal's, and they are here rather than in a `Field` call because what this derivation
+   * needs of a denominator is one equation at a value already known positive, not a tactic that
+   * carries a side condition.
+   */
+  private final case class Products(
+    triangle: Kernel.Thm,
+    multiplicative: Kernel.Thm,
+    symmetric: Kernel.Thm,
+    unit: Kernel.Thm,
+    zeroLessOne: Kernel.Thm,
+    nonZero: Kernel.Thm,
+    inverse: Kernel.Thm,
+    inversePositive: Kernel.Thm,
+    productPositive: Kernel.Thm,
+    multiplyLe: Kernel.Thm,
+    multiplyLt: Kernel.Thm
   )
 
   /**
@@ -1435,6 +1509,409 @@ object Limit {
       result <- rules
         .disch(toA, folded)
         .flatMap(rules.gen(a, _))
+        .flatMap(rules.gen(s, _))
+    } yield result
+  }
+
+
+  /**
+   * `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n * t n) (a * b)`
+   *
+   * The limit of a product, and it is the fact `docs/adr/0017`'s second point stands on: the Cauchy
+   * product rearranges a double series and then has to say what the rearranged thing converges to,
+   * which is a statement about a product of two limits. [[Added]] is the same shape one operation
+   * down and its note names what it was for; this one is not that derivation with a symbol changed,
+   * and the two paragraphs below are the whole of the difference.
+   *
+   * == Why the tolerance is asked for three times and not two ==
+   *
+   * `abs (s n * t n - a * b)` is split as `abs (s n) * abs (t n - b) + abs (s n - a) * abs b`, and
+   * the first summand carries a factor, `abs (s n)`, that the hypotheses bound at **no** fixed
+   * number: the sequence is near `a` past some index, and how near depends on the tolerance the
+   * caller picked. So a bound on it has to be bought, and what buys it is the convergence of `s`
+   * asked at the tolerance `1`, which gives `abs (s n) <= abs a + 1` from that index on. The other
+   * two askings are the tolerance the estimate actually needs, one per sequence. Three indices, and
+   * the one that answers is their sum for [[Added]]'s reason: `num` has no maximum.
+   *
+   * **The textbook halves the tolerance and this one does not**, which is where the two derivations
+   * part. Halving works there because the two summands are bounded by the same thing; here they are
+   * bounded by `tolerance * (abs a + 1)` and `tolerance * (abs b + 1)`, whose sum is the tolerance
+   * times a quantity fixed by `a` and `b` alone. So the tolerance is chosen to make that sum come
+   * out at `e` exactly: it is `e * inv ((abs a + 1) + (abs b + 1))`, and the last step of the
+   * estimate is an **equation** rather than the sum of two halves.
+   *
+   * == The reciprocal, which is the one thing here no procedure decides ==
+   *
+   * `Linarith` refuses a symbolic denominator by name, and `Transcendental.EXP_ONE_ABOVE_TWO` is
+   * where the shape that answers it was written down: the reciprocal enters as a term whose only
+   * property used is `MUL_INVERSE` at a denominator already known positive, and every arithmetic
+   * step is a schematic implication over real **variables**, proved once and specialised afterwards
+   * at the terms of this problem. Nothing here is put to a procedure with a quotient in it.
+   *
+   * What that costs is three ring identities over variables — that `(x - p) + p` is `x`, that
+   * `x * y - p * q` splits, and that `(x * v) * p + (x * v) * q` collects — and three uses of
+   * `MUL_SYM` to bring two bounds into the same shape. The commutations are not decoration: a
+   * bound proved as `p * c <= q * c` and one proved as `c * p < c * q` are two theorems modus
+   * ponens cannot join, and rewriting one of them is cheaper than a lemma stated twice.
+   */
+  private def convergesMultiplied(
+    logic: Logic,
+    linarith: Linarith,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    bounds: Bounds,
+    indices: Indices,
+    products: Products
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val t = Term.variable("t", sequences)
+    val a = Term.variable("a", values)
+    val b = Term.variable("b", values)
+    val e = Term.variable("e", values)
+    val n = Term.variable("n", numbers)
+    val m = Term.variable("m", numbers)
+    val k = Term.variable("k", numbers)
+    val j = Term.variable("j", numbers)
+    val x = Term.variable("x", values)
+    val y = Term.variable("y", values)
+    val p = Term.variable("p", values)
+    val q = Term.variable("q", values)
+    val v = Term.variable("v", values)
+
+    /** A ring identity over plain variables, closed so that a caller specialises it at terms. */
+    def schematic(text: String, binders: List[FVar]): Either[LogicError, Kernel.Thm] =
+      binders.foldLeft(ring.prove(text))((theorem, binder) => theorem.flatMap(rules.gen(binder, _)))
+
+    for {
+      toA <- Parser.proposition(theory, notation, "converges (s:num -> real) (a:real)")
+      toB <- Parser.proposition(theory, notation, "converges (t:num -> real) (b:real)")
+      assumedA <- LogicError.lift(Kernel.assume(toA))
+      assumedB <- LogicError.lift(Kernel.assume(toB))
+
+      unfoldedA <- Conv.unfold(convergesDefinition, List(s, a)).flatMap(normaliseRight)
+      unfoldedB <- Conv.unfold(convergesDefinition, List(t, b)).flatMap(normaliseRight)
+      bodyA <- LogicError.lift(Kernel.eqMp(unfoldedA, assumedA))
+      bodyB <- LogicError.lift(Kernel.eqMp(unfoldedB, assumedB))
+
+      positive <- Parser.proposition(theory, notation, "0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+
+      absA <- Parser.term(theory, notation, "abs (a:real)", values)
+      absB <- Parser.term(theory, notation, "abs (b:real)", values)
+      boundA <- Parser.term(theory, notation, "abs (a:real) + 1", values)
+      boundB <- Parser.term(theory, notation, "abs (b:real) + 1", values)
+      scale <- Parser.term(
+        theory, notation, "(abs (a:real) + 1) + (abs (b:real) + 1)", values)
+      tolerance <- Parser.term(
+        theory,
+        notation,
+        "e:real * inv ((abs (a:real) + 1) + (abs (b:real) + 1))",
+        values
+      )
+      inverseTerm <- Parser.term(
+        theory, notation, "inv ((abs (a:real) + 1) + (abs (b:real) + 1))", values)
+      one <- Parser.term(theory, notation, "(1:real)", values)
+
+      nonNegativeA <- rules.spec(a, bounds.nonNegative)
+      nonNegativeB <- rules.spec(b, bounds.nonNegative)
+      positiveBoundA <- linarith
+        .prove("!x:real. 0 <= x ==> 0 < x + 1")
+        .flatMap(rules.spec(absA, _))
+        .flatMap(rules.mp(_, nonNegativeA))
+      positiveBoundB <- linarith
+        .prove("!x:real. 0 <= x ==> 0 < x + 1")
+        .flatMap(rules.spec(absB, _))
+        .flatMap(rules.mp(_, nonNegativeB))
+      positiveScale <- linarith
+        .prove("!x:real. !y:real. 0 <= x ==> 0 <= y ==> 0 < (x + 1) + (y + 1)")
+        .flatMap(rules.specAll(_, List(absA, absB)))
+        .flatMap(rules.mp(_, nonNegativeA))
+        .flatMap(rules.mp(_, nonNegativeB))
+
+      // The reciprocal's only property anything here uses, bought where the denominator is already
+      // known positive, which is what keeps `Field`'s side condition out of every goal below.
+      scaleNotZero <- rules.spec(scale, products.nonZero).flatMap(rules.mp(_, positiveScale))
+      inverseEquation <- rules.spec(scale, products.inverse).flatMap(rules.mp(_, scaleNotZero))
+      positiveInverse <- rules
+        .spec(scale, products.inversePositive)
+        .flatMap(rules.mp(_, positiveScale))
+      positiveTolerance <- rules
+        .conjIntro(assumedPositive, positiveInverse)
+        .flatMap(both =>
+          rules
+            .specAll(products.productPositive, List(e, inverseTerm))
+            .flatMap(rules.mp(_, both)))
+
+      // The tolerance times what the two bounds add up to is `e` on the nose, which is what this
+      // derivation has instead of halving. Nothing below divides anything.
+      collected <- schematic(
+        "(x:real * v:real) * p:real + (x:real * v:real) * q:real = x:real * ((p:real + q:real) * v:real)",
+        List(q, p, v, x)
+      ).flatMap(rules.specAll(_, List(e, inverseTerm, boundA, boundB)))
+      cancelled <- rewriteInProposition(inverseEquation, collected)
+      toleranceSpends <- rules
+        .spec(e, products.unit)
+        .flatMap(unit => Conv.trans(cancelled, unit))
+
+      // The three askings. The first is what bounds `abs (s n)` and is the reason there are three.
+      withinOne <- rules.spec(one, bodyA).flatMap(rules.mp(_, products.zeroLessOne))
+      nearA <- rules.spec(tolerance, bodyA).flatMap(rules.mp(_, positiveTolerance))
+      nearB <- rules.spec(tolerance, bodyB).flatMap(rules.mp(_, positiveTolerance))
+
+      insideOne <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE m:num n ==> abs ((s:num -> real) n - (a:real)) < 1"
+      )
+      insideA <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE k:num n ==> abs ((s:num -> real) n - (a:real)) < " +
+          "e:real * inv ((abs (a:real) + 1) + (abs (b:real) + 1))"
+      )
+      insideB <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE j:num n ==> abs ((t:num -> real) n - (b:real)) < " +
+          "e:real * inv ((abs (a:real) + 1) + (abs (b:real) + 1))"
+      )
+      assumedInsideOne <- LogicError.lift(Kernel.assume(insideOne))
+      assumedInsideA <- LogicError.lift(Kernel.assume(insideA))
+      assumedInsideB <- LogicError.lift(Kernel.assume(insideB))
+
+      index <- Parser.term(
+        theory, notation, "NUM_ADD (NUM_ADD m:num k:num) j:num", numbers)
+      firstPair <- Parser.term(theory, notation, "NUM_ADD m:num k:num", numbers)
+      guard <- Parser.proposition(
+        theory, notation, "NUM_LE (NUM_ADD (NUM_ADD m:num k:num) j:num) n:num")
+      assumedGuard <- LogicError.lift(Kernel.assume(guard))
+
+      pairInIndex <- rules.specAll(indices.atMostSum, List(firstPair, j))
+      inPair <- rules.specAll(indices.atMostSum, List(m, k))
+      kInPair <- for {
+        other <- rules.specAll(indices.atMostSum, List(k, m))
+        swap <- rules.specAll(indices.commutative, List(k, m))
+        carried <- rewriteWith(swap, other)
+      } yield carried
+      jInIndex <- for {
+        other <- rules.specAll(indices.atMostSum, List(j, firstPair))
+        swap <- rules.specAll(indices.commutative, List(j, firstPair))
+        carried <- rewriteWith(swap, other)
+      } yield carried
+
+      mInIndex <- rules
+        .conjIntro(inPair, pairInIndex)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(m, firstPair, index)).flatMap(rules.mp(_, both)))
+      kInIndex <- rules
+        .conjIntro(kInPair, pairInIndex)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(k, firstPair, index)).flatMap(rules.mp(_, both)))
+
+      pastM <- rules
+        .conjIntro(mInIndex, assumedGuard)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(m, index, n)).flatMap(rules.mp(_, both)))
+      pastK <- rules
+        .conjIntro(kInIndex, assumedGuard)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(k, index, n)).flatMap(rules.mp(_, both)))
+      pastJ <- rules
+        .conjIntro(jInIndex, assumedGuard)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(j, index, n)).flatMap(rules.mp(_, both)))
+
+      withinOneAt <- rules.spec(n, assumedInsideOne).flatMap(rules.mp(_, pastM))
+      closeA <- rules.spec(n, assumedInsideA).flatMap(rules.mp(_, pastK))
+      closeB <- rules.spec(n, assumedInsideB).flatMap(rules.mp(_, pastJ))
+
+      atS <- Parser.term(theory, notation, "(s:num -> real) (n:num)", values)
+      atT <- Parser.term(theory, notation, "(t:num -> real) (n:num)", values)
+      gapA <- Parser.term(theory, notation, "(s:num -> real) (n:num) - (a:real)", values)
+      gapB <- Parser.term(theory, notation, "(t:num -> real) (n:num) - (b:real)", values)
+      distanceA <- Parser.term(
+        theory, notation, "abs ((s:num -> real) (n:num) - (a:real))", values)
+      distanceB <- Parser.term(
+        theory, notation, "abs ((t:num -> real) (n:num) - (b:real))", values)
+      sizeOfS <- Parser.term(theory, notation, "abs ((s:num -> real) (n:num))", values)
+      leftFactor <- Parser.term(
+        theory,
+        notation,
+        "(s:num -> real) (n:num) * ((t:num -> real) (n:num) - (b:real))",
+        values
+      )
+      rightFactor <- Parser.term(
+        theory,
+        notation,
+        "((s:num -> real) (n:num) - (a:real)) * (b:real)",
+        values
+      )
+      distance <- Parser.term(
+        theory,
+        notation,
+        "abs ((s:num -> real) (n:num) * (t:num -> real) (n:num) - (a:real) * (b:real))",
+        values
+      )
+
+      // `abs (s n) <= abs a + 1`, which is what the tolerance of one was asked for.
+      recomposed <- schematic("(x:real - p:real) + p:real = x:real", List(p, x))
+        .flatMap(rules.specAll(_, List(atS, a)))
+      sizeSplit <- rules
+        .specAll(products.triangle, List(gapA, a))
+        .flatMap(rewriteInProposition(recomposed, _))
+      sizeBounded <- linarith
+        .prove("!x:real. !y:real. !p:real. x <= y + p ==> y < 1 ==> x <= p + 1")
+        .flatMap(rules.specAll(_, List(sizeOfS, distanceA, absA)))
+        .flatMap(rules.mp(_, sizeSplit))
+        .flatMap(rules.mp(_, withinOneAt))
+
+      // The estimate, which is the triangle inequality over a sum nothing wrote and `ABS_MUL` on
+      // each half of it.
+      rearranged <- schematic(
+        "x:real * y:real - p:real * q:real = x:real * (y:real - q:real) + (x:real - p:real) * q:real",
+        List(q, p, y, x)
+      ).flatMap(rules.specAll(_, List(atS, atT, a, b)))
+      estimate <- rules
+        .specAll(products.triangle, List(leftFactor, rightFactor))
+        .flatMap(theorem =>
+          Conv.sym(rearranged).flatMap(rewriteInProposition(_, theorem)))
+      leftSize <- rules.specAll(products.multiplicative, List(atS, gapB))
+      rightSize <- rules.specAll(products.multiplicative, List(gapA, b))
+      split <- rewriteInProposition(leftSize, estimate)
+        .flatMap(rewriteInProposition(rightSize, _))
+
+      // Each summand against the tolerance. The two steps of each are a non-strict bound on one
+      // factor and a strict one on the other, and `MUL_SYM` is what brings them into one shape: a
+      // bound proved as `p * c <= q * c` and one proved as `c * p < c * q` are two theorems modus
+      // ponens cannot join.
+      leftProduct <- Parser.term(
+        theory,
+        notation,
+        "abs ((s:num -> real) (n:num)) * abs ((t:num -> real) (n:num) - (b:real))",
+        values
+      )
+      leftMiddle <- Parser.term(
+        theory,
+        notation,
+        "abs ((t:num -> real) (n:num) - (b:real)) * (abs (a:real) + 1)",
+        values
+      )
+      leftCeiling <- Parser.term(
+        theory,
+        notation,
+        "(e:real * inv ((abs (a:real) + 1) + (abs (b:real) + 1))) * (abs (a:real) + 1)",
+        values
+      )
+      rightProduct <- Parser.term(
+        theory,
+        notation,
+        "abs ((s:num -> real) (n:num) - (a:real)) * abs (b:real)",
+        values
+      )
+      rightMiddle <- Parser.term(
+        theory,
+        notation,
+        "abs ((s:num -> real) (n:num) - (a:real)) * (abs (b:real) + 1)",
+        values
+      )
+      rightCeiling <- Parser.term(
+        theory,
+        notation,
+        "(e:real * inv ((abs (a:real) + 1) + (abs (b:real) + 1))) * (abs (b:real) + 1)",
+        values
+      )
+
+      nonNegativeGapA <- rules.spec(gapA, bounds.nonNegative)
+      nonNegativeGapB <- rules.spec(gapB, bounds.nonNegative)
+      absBelowBound <- linarith.prove("!x:real. x <= x + 1").flatMap(rules.spec(absB, _))
+
+      leftStep <- rules
+        .specAll(products.multiplyLe, List(distanceB, sizeOfS, boundA))
+        .flatMap(rules.mp(_, nonNegativeGapB))
+        .flatMap(rules.mp(_, sizeBounded))
+        .flatMap(theorem =>
+          rules
+            .specAll(products.symmetric, List(boundA, distanceB))
+            .flatMap(rewriteInProposition(_, theorem)))
+      leftReach <- rules
+        .specAll(products.multiplyLt, List(boundA, distanceB, tolerance))
+        .flatMap(rules.mp(_, positiveBoundA))
+        .flatMap(rules.mp(_, closeB))
+
+      rightStep <- rules
+        .specAll(products.multiplyLe, List(distanceA, absB, boundB))
+        .flatMap(rules.mp(_, nonNegativeGapA))
+        .flatMap(rules.mp(_, absBelowBound))
+        .flatMap(theorem =>
+          rules
+            .specAll(products.symmetric, List(absB, distanceA))
+            .flatMap(rewriteInProposition(_, theorem)))
+        .flatMap(theorem =>
+          rules
+            .specAll(products.symmetric, List(boundB, distanceA))
+            .flatMap(rewriteInProposition(_, theorem)))
+      rightReach <- rules
+        .specAll(products.multiplyLt, List(boundB, distanceA, tolerance))
+        .flatMap(rules.mp(_, positiveBoundB))
+        .flatMap(rules.mp(_, closeA))
+
+      // One schematic implication rather than three, because what the six facts above say is one
+      // chain and splitting it would buy three specialisations and the same arithmetic.
+      closeGap <- linarith
+        .prove(
+          "!g:real. !x:real. !y:real. !u:real. !w:real. !v:real. !z:real. !e:real. " +
+            "g <= x + y ==> x <= u ==> u < w ==> y <= v ==> v < z ==> w + z = e ==> g < e"
+        )
+        .flatMap(rules.specAll(
+          _,
+          List(
+            distance, leftProduct, rightProduct, leftMiddle, leftCeiling, rightMiddle,
+            rightCeiling, e)))
+        .flatMap(rules.mp(_, split))
+        .flatMap(rules.mp(_, leftStep))
+        .flatMap(rules.mp(_, leftReach))
+        .flatMap(rules.mp(_, rightStep))
+        .flatMap(rules.mp(_, rightReach))
+        .flatMap(rules.mp(_, toleranceSpends))
+
+      guarded <- rules.disch(guard, closeGap).flatMap(rules.gen(n, _))
+      existential <- Parser.proposition(
+        theory,
+        notation,
+        "?N:num. !n:num. NUM_LE N n ==> " +
+          "abs ((s:num -> real) n * (t:num -> real) n - (a:real) * (b:real)) < e:real"
+      )
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      witnessed <- rules.existsIntro(predicate, index, guarded)
+
+      withoutB <- rules.existsElim(nearB, j, witnessed)
+      withoutA <- rules.existsElim(nearA, k, withoutB)
+      withoutOne <- rules.existsElim(withinOne, m, withoutA)
+      whole <- rules.disch(positive, withoutOne).flatMap(rules.gen(e, _))
+
+      sequence <- Parser.term(
+        theory, notation, "\\n:num. (s:num -> real) n * (t:num -> real) n", sequences)
+      limit <- Parser.term(theory, notation, "(a:real) * (b:real)", values)
+      unfoldedProduct <- Conv
+        .unfold(convergesDefinition, List(sequence, limit))
+        .flatMap(normaliseRight)
+      bodyProduct <- rightOf(unfoldedProduct)
+      _ <- sameStatement(notation, whole, bodyProduct)
+      folded <- Conv
+        .sym(unfoldedProduct)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, whole)))
+
+      result <- rules
+        .disch(toB, folded)
+        .flatMap(rules.disch(toA, _))
+        .flatMap(rules.gen(b, _))
+        .flatMap(rules.gen(a, _))
+        .flatMap(rules.gen(t, _))
         .flatMap(rules.gen(s, _))
     } yield result
   }
