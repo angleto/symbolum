@@ -479,7 +479,7 @@ object Chain {
       // This read "The last link since 2026-09-14" until 2026-09-19, which is word for word what
       // `numbering` said three bindings above with the same date on it. At most one of the two
       // could have been the last link on any day, so the pair was unusable whichever way "since"
-      // was read, and neither said what the last link is now. `widest` does.
+      // was read, and neither said which link is the end. `widest` does.
       provability <- Provability.construct(language, language.theory, language.notation)
 
       // Beside the extension order rather than in it, the way `bounded` is: it declares nothing and

@@ -125,6 +125,28 @@
 # clause narrower than the one 4 closed, a present-tense claim whose own sentence carries a `was`
 # in a subordinate clause. It is pinned as a literal in the spec instead, since what exhibits it is
 # a pattern applied to a string and that is an assertion rather than an edit to a source.
+# ROUND FIVE, 2026-09-20, and it changes the SHAPE of the marker rather than its contents, on
+# Angelo's decision after the round-four verification. Four rounds had each deleted one word from
+# a list -- `read the`, then a bare quoted `read`, then `until` was found -- and the fifth would
+# have deleted the fourth. A list cannot be finished, because every word on it can also turn up in
+# a sentence that asserts. So the test is now CONTAINMENT: an occurrence of the phrase is excused
+# only by a construction that HOLDS it, `was the last link`, `been the last link`, or a quotation
+# opened by `this read "`. A past-tense word elsewhere in the sentence clears nothing.
+#
+# **12 is red.** So are two holes the docstring had written down as open -- a `was` in a
+# subordinate clause of the naming sentence, and, for a rule about order alone, a `was` earlier in
+# the sentence about another subject -- and all three are pinned as literals in the spec.
+#
+# What it cost, measured before the change and not predicted: **one clause**. Six of the seven
+# records inside `construct` clear untouched; the seventh, `provability`'s, read "neither said
+# what the last link is now", which mentions the phrase inside an indirect question rather than
+# asserting it, and now reads "neither said which link is the end". Round four could report zero
+# cost; this round pays that clause for the three holes.
+#
+# 11 changes target with the idea: it drops containment for the sentence-wide reading it replaces,
+# and the pin that isolates containment -- one sentence carrying a true record AND a fresh claim --
+# goes red at its own line.
+#
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
@@ -290,19 +312,19 @@ grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/9-qu
 echo "10 the same claim with \`say\`: exit $? (1 was measured: only the marker separates it from 9)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/10-control-for-nine.log"
 
-# 11. NOT A FINDING, and the observation the new assertions of rounds three and four were owed: a
-#     guard seen only passing is untested, which is the reason 6 exists. This widens the marker
-#     back to the bare quoted `read` that round four removed, and the pin of 9's sentence goes red
-#     at its own line. The pin of the record resting on the quoted alternative alone cannot be
-#     isolated this way, because dropping that alternative fails the population assertion at an
-#     earlier line.
+# 11. NOT A FINDING, and the observation every new assertion here is owed: a guard seen only
+#     passing is untested, which is the reason 6 exists. Round five's idea is CONTAINMENT -- a
+#     construction excuses an occurrence only if it holds it -- and this puts back the reading it
+#     replaced, where any construction anywhere in the sentence clears the whole sentence. The pin
+#     that isolates it goes red at its own line: one sentence carrying a true record AND a fresh
+#     claim, which every earlier version of this guard called a record.
 "$P" modules/tactics/src/test/scala/garden/xeno/symbolum/tactics/DocumentationSpec.scala \
-  'val dated = """[Tt]his read "|\bwas\b|\buntil\b""".r' \
-  'val dated = """read "|\bwas\b|\buntil\b""".r' \
+  'def excused(at: Int): Boolean = records.exists(m => m.start <= at && at < m.end)' \
+  'def excused(at: Int): Boolean = records.nonEmpty' \
   -- ./tools/sbt -batch "$ONLY" \
-  > "$OUT/11-removed-alternative-back.log" 2>&1
-echo "11 the alternative removed in round four put back: exit $? (1 was measured, at the pin's own line)"
-grep -E "Tests: |\*\*\* FAILED|was not equal to None|perturb:" "$OUT/11-removed-alternative-back.log"
+  > "$OUT/11-containment-dropped.log" 2>&1
+echo "11 containment dropped for the sentence-wide reading: exit $? (1 was measured, at the pin's own line)"
+grep -E "Tests: |\*\*\* FAILED|was not empty|perturb:" "$OUT/11-containment-dropped.log"
 
 # 12. THE FINDING OF ROUND FOUR'S VERIFICATION. Round four took the bare quoted `read` out of the
 #     marker on a criterion it wrote down: an alternative must NAME A PAST. `until` does not. It
@@ -316,7 +338,7 @@ grep -E "Tests: |\*\*\* FAILED|was not equal to None|perturb:" "$OUT/11-removed-
       // of it. The first analysis this repository has: what a sequence of reals converges to and the value' \
   -- ./tools/sbt -batch "$ONLY" \
   > "$OUT/12-until-is-not-past.log" 2>&1
-echo "12 claim whose sentence says a non-past \`until\`: exit $? (0 is the finding: the marker cleared it)"
+echo "12 claim whose sentence says a non-past \`until\`: exit $? (1 since round five; 0 was the finding)"
 grep -E "Tests: |\*\*\* FAILED|claim a link is the last one|perturb:" "$OUT/12-until-is-not-past.log"
 
 # 13. The control for 12, without which its green says only that the scan did not reach the block.
