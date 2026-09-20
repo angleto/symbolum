@@ -555,4 +555,71 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(fact(Integer.SameSymmetric)) should not contain choice
     Derivation.axiomsOf(fact(Integer.Equal)) should contain(choice)
   }
+
+  /* ------------------------------------------------------------------ what the graph costs */
+
+  /**
+   * What a fact of the first quotient carries, which is the figure `docs/adr/0016` asks for here
+   * rather than at the end of the construction.
+   *
+   * That record says an asserted axiom has `Derivation.size` 1 and that after the sixteen become
+   * theorems every claim about a real carries the construction's shared graph, because
+   * `Derivation.walk` deduplicates by identity and walks it anyway. The first quotient is the first
+   * real number to extrapolate from, and taking it late means taking it when it is expensive to act
+   * on. So it is taken here, and it is an assertion rather than a probe for the reason
+   * `docs/adr/0034` gives: a measurement that can be a test is one.
+   *
+   * == What the two assertions are, and why neither is a pin ==
+   *
+   * A size is a property of a derivation, so pinning one would go red on every proof that is
+   * rewritten, which is a gate about nothing. What is asserted is the two things the extrapolation
+   * rests on, each with a margin measured against the reading of 2026-09-20 and stated here so a
+   * later reader can see how much room was left.
+   *
+   * **The type costs and the relation does not**, which is the quantitative twin of the axiom
+   * reading two tests above: `INT_SAME_REFL` is about equality and the arithmetic of `num` and read
+   * 38 nodes, while `INT_EQUAL` carries the carving and read 7687, a factor of 202. The assertion
+   * asks for 50, so a quotient whose facts stopped carrying the carving fails it and a proof made
+   * four times cheaper does not.
+   *
+   * **A fact of the bridge into the reals is four figures**, between 1000 and 100000. Those nine
+   * are the facts a claim about a real will carry once the construction lands, so the band is the
+   * order of magnitude 0016's extrapolation is written in: measured, they run 12827 to 24362. Below
+   * the floor the extrapolation is stale and the record wants rereading; above the ceiling the cost
+   * arrived a stage earlier than predicted, which is the more interesting failure.
+   *
+   * == What it does not cover ==
+   *
+   * The wall clock, deliberately. What a walk costs in milliseconds is a property of the machine
+   * and of what else is running on it, which is why no figure of that kind is written down in this
+   * repository; the node count is a function of the proof and two machines agree on it. And it says
+   * nothing about the rationals or the cuts: the measurement is of one quotient, and the two above
+   * it are the thing being extrapolated to rather than measured.
+   */
+  it should "carry the carving in every fact, which is what the graph costs at the first quotient" in {
+    val sizes = Integer.Statements.map { case (name, _) => (name, Derivation.size(fact(name))) }
+    val ordered = sizes.map(_._2).sorted
+    val bridge = Inclusion.Statements.map { case (name, _) =>
+      (name, Derivation.size(force(chain.inclusion.fact(name))))
+    }
+
+    info(s"${sizes.size} facts of the first quotient: smallest ${sizes.minBy(_._2)}, " +
+      s"quartiles ${ordered(ordered.size / 4)}/${ordered(ordered.size / 2)}/${ordered(3 * ordered.size / 4)}, " +
+      s"largest ${sizes.maxBy(_._2)}, sum ${ordered.map(_.toLong).sum}")
+    info(s"${bridge.size} facts of the bridge into the reals: smallest ${bridge.minBy(_._2)}, " +
+      s"largest ${bridge.maxBy(_._2)}")
+    info(s"the two scales `docs/adr/0016` compares against: an asserted axiom at " +
+      s"${Derivation.size(force(chain.reals.axiom("COMPLETENESS")))}, PAIR_SURJECTIVE at " +
+      s"${Derivation.size(force(chain.product.fact(Product.Surjective)))}")
+
+    Derivation.size(fact(Integer.Equal)) should
+      be > 50 * Derivation.size(fact(Integer.SameReflexive))
+
+    bridge.foreach { case (name, size) =>
+      withClue(s"$name: ") {
+        size should be > 1000
+        size should be < 100000
+      }
+    }
+  }
 }
