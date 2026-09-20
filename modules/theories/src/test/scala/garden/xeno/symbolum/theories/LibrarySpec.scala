@@ -492,8 +492,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // branch's delta, which is what the paragraph above insists a number here is. One of the two
     // binds two leading quantifiers of one type and the other binds none, so exactly one of
     // `CLAUDE.md`'s two figures-per-lemma moves by one and both move by one in total.
-    library.entries.size shouldBe 564
-    library.names.distinct.size shouldBe 561
+    // 565 and 562 with the dominating series for the exponential, 2026-09-20: one fact under one
+    // name, `NUM_POW_LE_FACT` in `Coding`, not shared with another development, so the gap between
+    // the two figures does not move. Tip plus this branch's delta. It binds ONE leading quantifier,
+    // so neither of `CLAUDE.md`'s two figures-per-lemma moves and only the library's own total does,
+    // which is the case the line above describes from the other side.
+    library.entries.size shouldBe 565
+    library.names.distinct.size shouldBe 562
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

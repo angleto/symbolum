@@ -86,6 +86,7 @@ they have least appetite for working out how it is produced.
   NUM_GCD_MUL              !x:num. !y:num. !z:num. 0 < z ==> NUM_GCD x z = SUC 0 ==> NUM_GCD y z = SUC 0 ==> NUM_GCD (x * y) z = SUC 0
   NUM_GCD_PROD             !x:num -> num. !y:num. !z:num. 0 < y ==> (!u:num. u < z ==> NUM_GCD (x u) y = SUC 0) ==> NUM_GCD (NUM_PROD x z) y = SUC 0
   NUM_GCD_SHIFTED_MULTIPLES !x:num. !y:num. !z:num. y < z /\ NUM_DIVIDES (NUM_SUB z y) x ==> NUM_GCD (SUC (SUC y * x)) (SUC (SUC z * x)) = SUC 0
+  NUM_POW_LE_FACT          !x:num. NUM_POW (SUC (SUC 0)) x <= SUC (SUC 0) * NUM_FACT x
   NUM_PROD_CONG            !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u = y u) ==> NUM_PROD x z = NUM_PROD y z
   NUM_PROD_DIVIDES         !x:num -> num. !y:num. !z:num. y < z ==> NUM_DIVIDES (x y) (NUM_PROD x z)
   NUM_PROD_POSITIVE        !x:num -> num. !y:num. (!z:num. z < y ==> 0 < x z) ==> 0 < NUM_PROD x y
