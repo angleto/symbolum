@@ -271,6 +271,36 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     Remedy.of(CollatzScreen.Agreed(400)).message should include("400")
   }
 
+  // The two counters of this file that reach one, and BOTH DIRECTIONS IN ONE TEST for the reason
+  // `LedgerSpec` and `CostSpec` give at the same shape: the condition is one shared helper, so a
+  // wrong comparison inside it turns every count on every page singular and a test written on the
+  // plural alone reports that as repaired.
+  //
+  // The second of the two is not in the census the card of 2026-09-18 carried and was found by
+  // reading the range rather than the site: `Relation.NotCredible` is produced only when
+  // `confirmed < Relation.Confirmation`, which is ten, and `confirmed` is `max(0, ...)`, so the
+  // number this message prints lives in 0 to 9 and one is inside it. That is what separates it
+  // from `Collatz`'s `${Rules.size} clauses`, where the count is the constant eleven.
+  "The two digit counts of this file" should "take the singular at one and the plural elsewhere" in {
+    val separated = (agreement: Int) =>
+      Remedy.of(Discovery.Separated(Var("x"), Var("y"), Map("x" -> BigDecimal(2)), agreement)).message
+
+    separated(1) should include("agreed to 1 digit and no further")
+    separated(40) should include("agreed to 40 digits and no further")
+
+    val notCredible = (confirmed: Int) =>
+      Remedy.of(Algebraic.Outcome.NotCredible(Vector(BigInt(3), BigInt(5)), confirmed, 4)).message
+
+    // The colon is part of the assertion and not decoration: `RaiseALimit` puts the limit
+    // and the reason in one line, so a bare `include("more than 1 digit")` passes on
+    // "more than 1 digits" as well. This test was seen red on exactly that.
+    notCredible(1) should include("more than 1 digit:")
+    notCredible(9) should include("more than 9 digits:")
+    // Zero takes the plural, and here it is the answer a reader meets most: nothing the precision
+    // supported at all.
+    notCredible(0) should include("more than 0 digits:")
+  }
+
   /* ------------------------------------------------------------ the ledger's table */
 
   "Every ledger verdict" should "carry a next step" in {
