@@ -2173,13 +2173,15 @@ cancellation.
    and a caller wanting to know where the limit sits could not say so.
 
    `exp 1 > 2` did **not** become a theorem with it, and the difference between the prediction and
-   the outcome is the piece worth carrying: what is missing is not the test but a dominating series
-   for the exponential. `1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!`, which no development
-   holds, and an order fact about a quotient. **The second of those two landed on 2026-09-18** and
-   is `Order.INV_ANTITONE`, with `LE_MUL_BOTH` under it; what remains of that sentence is the
-   first, which is an induction over `num` whose step is only valid from one upwards. The
-   geometric series at one half needs neither, and `LimitSpec` obtains it with its limit between
-   zero and two.
+   the outcome is the piece worth carrying: what was missing was not the test but a dominating
+   series for the exponential. `1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!` and an order fact
+   about a quotient. The second landed on 2026-09-18 as `Order.INV_ANTITONE` with `LE_MUL_BOTH`
+   under it, and **the first on 2026-09-20 as `Coding.NUM_POW_LE_FACT`**, which is not the two-base
+   induction it looks like: the shifted claim goes through the ordinary induction and `NUM_CASES`
+   joins it to the value at zero. With both, `Transcendental.EXP_ONE_ABOVE_TWO` is `2 < exp 1`, and
+   the whole distance from the comparison test to that theorem was arithmetic on `num` rather than
+   anything about limits. The geometric series at one half needed neither and `LimitSpec` had
+   obtained it with its limit between zero and two, which is the model the exponential's follows.
 
    **What is left after that** is the addition theorem through the Cauchy product, of which
    `SUM_SWAP` is the half that exists, and the Pythagorean identity with it; then continuity and

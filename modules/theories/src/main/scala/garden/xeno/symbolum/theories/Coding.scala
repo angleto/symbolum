@@ -252,9 +252,9 @@ object Coding {
    * `|- !k. NUM_LE (NUM_POW (SUC (SUC ZERO)) k) (NUM_MUL (SUC (SUC ZERO)) (NUM_FACT k))`
    *
    * A power of two is at most twice the factorial, which is the **dominating series** the
-   * exponential's convergence waits on: putting `1 / i!` under `2 * (1/2)^i` is this inequality
-   * divided through, and `Limit.SUM_COMPARISON` has been provable and unspent since 2026-09-16 for
-   * want of it. Five documents of this repository said the comparison test bought `exp 1 > 2` and
+   * exponential's convergence waited on: putting `1 / i!` under `2 * (1/2)^i` is this inequality
+   * divided through, and `Limit.SUM_COMPARISON` had been provable and unspent since 2026-09-16 for
+   * want of it. `Transcendental.EXP_ONE_ABOVE_TWO` is what spends it. Five documents of this repository said the comparison test bought `exp 1 > 2` and
    * were wrong for a day; this is one of the two facts that were missing, the other being
    * `Order.INV_ANTITONE`, which landed on 2026-09-18.
    *

@@ -693,7 +693,23 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`partsOfDifference` something that is not a difference, or it leaves `checkPredicate` an " +
         "obligation that is not the one the lift wants, which refuses by name one level out. And " +
         "the eight published statements are compared against `Inclusion.Statements` by " +
-        "`InclusionSpec`, which is the same last line of defence `Integer.scala` has above")
+        "`InclusionSpec`, which is the same last line of defence `Integer.scala` has above"),
+    // 2026-09-20, with `exp 1 > 2`.
+    "Transcendental.scala" ->
+      ("three, and none of them is left to the limit to report. One is `Rewrite.rewrite` on the " +
+        "third partial sum of the exponential's series, which the recurrences of the sum, the " +
+        "power, the factorial, the product and the embedding walk down to an expression in " +
+        "numerals; what it is handed to is `Linarith`, and a walk that stopped early leaves a " +
+        "`real_of_num (NUM_FACT ...)` or a `Power 1 ...` standing, which is an atom the procedure " +
+        "knows nothing about and cannot bound, so the refusal is the procedure's rather than a " +
+        "weaker theorem. The other two are `Rewrite.inTheorem`, moving `real_of_num` inwards " +
+        "across the embedding and folding `real_of_num 0` to `0`, and each result is handed to " +
+        "`Rules.mp` against an instance of a schematic implication proved beforehand: `mp` is " +
+        "strict here, so a half-rewritten hypothesis does not match `p <= 2 * f` or `0 + 1 <= a` " +
+        "and is refused by name. On termination, every rule strictly reduces: the recurrences " +
+        "open one successor each, the embedding rules move `real_of_num` under a constructor, and " +
+        "the three ground `Ring` equations that fold `0 + 1`, `1 + 1` and `1 * 1` have right sides " +
+        "their own left sides do not contain")
   )
 
   /**

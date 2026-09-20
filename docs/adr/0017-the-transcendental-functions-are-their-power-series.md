@@ -77,6 +77,17 @@ sentences up. The geometric series at one half wants neither and is obtained in 
 with its limit between zero and two, which is the first series in this repository whose convergence
 is a theorem.
 
+**Corrected in place again, 2026-09-20: `exp 1 > 2` is proved and is
+`Transcendental.EXP_ONE_ABOVE_TWO`.** The first half of the pair above landed the same day as
+`Coding.NUM_POW_LE_FACT`, so the exponential series is dominated, `SUM_COMPARISON` obtains its
+limit and `CONVERGES_GE` puts the third partial sum under it. What this record predicted twice and
+got wrong twice is worth stating once more in the form it survived in: the distance between the
+comparison test and the first fact about `exp 1` was **arithmetic on `num`**, not analysis, and
+neither the order of this list nor the definitions were what said so. Of the four statements in the
+list above, one is now a theorem and three are not: the addition theorem and the Pythagorean
+identity want the Cauchy product, and every fact about `ln` still waits on the intermediate value
+theorem.
+
 **The cost is a reader who sees `exp` in the signature and assumes the analysis is behind it.**
 That is paid in three places and nowhere else: the row in `README.md`, the docstring of
 `Transcendental`, and this record.

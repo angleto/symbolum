@@ -211,6 +211,41 @@ object Transcendental {
   /** `|- !x. cosh x - sinh x = exp (0 - x)`, the same step with the other sign. */
   val CosineMinusSine: String = "COSH_MINUS_SINH"
 
+  /**
+   * `|- 2 < exp 1`
+   *
+   * The first fact here about a value this development does not compute. Everything else is a
+   * value at zero, where the series stops after one term; this one needs the series to **converge**
+   * before `lim` says anything at all, which is `Limit.SUM_COMPARISON` spent for the first time,
+   * and then a bound on where the limit sits, which is `CONVERGES_GE` over the third partial sum.
+   *
+   * Five documents of this repository said the comparison test bought this and were wrong for a
+   * day. What was missing was `Coding.NUM_POW_LE_FACT`, a fact of arithmetic rather than of
+   * analysis: `1 / i!` sits under `2 * (1/2)^i` exactly when `2^i <= 2 * i!`.
+   */
+  val ExponentialAboveTwo: String = "EXP_ONE_ABOVE_TWO"
+
+  /**
+   * The dominating series for the exponential at one, written as a sum of two copies.
+   *
+   * `2 * Power (1/2) i` says the same thing and is the wrong shape: `SUM_ADD` splits a sum of two
+   * sequences and `SUM_LINEAR` a scaled one plus another, so the second would want a congruence in
+   * front of it to put the sum in the form the lemma reads.
+   */
+  private val HalvesText: String = "\\i:num. Power ((1:real) / 2) i"
+
+  /** The same, doubled, which is what dominates `1 / i!`. */
+  private val DominatorText: String =
+    "\\i:num. Power ((1:real) / 2) i + Power ((1:real) / 2) i"
+
+  /**
+   * Three, spelled, because every recurrence over `num` is stated at a successor.
+   *
+   * The partial sum at this index is computed by rewriting with those recurrences, and the numeral
+   * `3` would have to go through `Successor` first. Nothing here needs the numeral.
+   */
+  private val ThirdIndexText: String = "SUC (SUC (SUC (0:num)))"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     ExponentialAtZero -> "exp 0 = 1",
@@ -219,7 +254,8 @@ object Transcendental {
     HyperbolicSineAtZero -> "sinh 0 = 0",
     HyperbolicCosineAtZero -> "cosh 0 = 1",
     CosinePlusSine -> "!x:real. cosh x + sinh x = exp x",
-    CosineMinusSine -> "!x:real. cosh x - sinh x = exp (0 - x)"
+    CosineMinusSine -> "!x:real. cosh x - sinh x = exp (0 - x)",
+    ExponentialAboveTwo -> "2 < exp 1"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -332,6 +368,10 @@ object Transcendental {
       hyperbolic <- hyperbolicFacts(
         logic, linarith, series.ring, theory, notation,
         hyperbolicSineDefinition, hyperbolicCosineDefinition, exponential)
+
+      aboveTwo <- exponentialAboveTwo(
+        logic, linarith, theory, notation, limit, series, peano, coding,
+        exponentialDefinition, recurrences)
     } yield new Transcendental(
       limit,
       series,
@@ -348,7 +388,8 @@ object Transcendental {
       Map(
         ExponentialAtZero -> exponential,
         SineAtZero -> sine,
-        CosineAtZero -> cosine
+        CosineAtZero -> cosine,
+        ExponentialAboveTwo -> aboveTwo
       ) ++ hyperbolic
     )
   }
@@ -800,6 +841,672 @@ object Transcendental {
       result <- Conv.trans(unfolded, isValue)
     } yield result
   }
+
+  /**
+   * `|- 2 < exp 1`, which is the first thing this development says about a value it does not know.
+   *
+   * Every other fact here is a value at zero, where the series stops after one term and no
+   * convergence question arises. This one is about `exp 1`, and `exp` is `lim` applied to a
+   * sequence: at an argument where that sequence does not converge, `lim` is a choice and nothing
+   * is provable about it. So the convergence has to be obtained before anything can be said, which
+   * is what `Limit.SUM_COMPARISON` is for and what it had no consumer for until now.
+   *
+   * == The three things the comparison test asks, and where each comes from ==
+   *
+   * The terms are non-negative: `Power 1 i` is `1` and the factorial embeds to something positive,
+   * so each term is the reciprocal of a positive real.
+   *
+   * They are dominated by `(1/2)^i + (1/2)^i`, and this is the half that waited on arithmetic
+   * rather than on analysis. `1 / i! <= 2 * (1/2)^i` is `2^i <= 2 * i!` with the denominator
+   * cleared, which is `Coding.NUM_POW_LE_FACT`, carried to the reals by `NUM_REAL_LE` and
+   * `NUM_REAL_POW`. Five documents said the comparison test bought `exp 1 > 2` and were wrong for
+   * a day: what was missing was that inequality on `num`, and it landed on 2026-09-20.
+   *
+   * The dominating series has bounded partial sums: it is the geometric series at one half twice
+   * over, `SUM_ADD` splits it, and `SUM_GEOMETRIC` bounds each half by two exactly as `LimitSpec`
+   * does for that series on its own. It is written as a sum of two copies rather than as `2 *`
+   * anything because `SUM_ADD` splits that shape and needs no congruence in front of it.
+   *
+   * == How the arithmetic is put to `Linarith`, which is the shape of every step here ==
+   *
+   * **A quotient with a symbolic denominator is outside every procedure in this repository**, and
+   * the refusal says so by name: cancelling one needs it to be non-zero, which is `Field`'s to
+   * assume. So no goal here carries one. Each step is a **schematic implication over real
+   * variables**, proved by `Linarith` once and then specialised at the terms of this problem and
+   * discharged against the facts. The reciprocal enters as a variable `v` with the hypothesis
+   * `f * v = 1`, which is `MUL_INVERSE` at a denominator already known to be positive, and what
+   * closes each goal is that hypothesis multiplied by the negated goal, which is the degree-two
+   * product `docs/adr/0032` describes.
+   *
+   * == And then where the limit is ==
+   *
+   * `CONVERGES_GE` takes a bound that holds from an index on, which is what makes the argument
+   * possible at all: the useful lower bound on an increasing sequence is one of its own terms, and
+   * that is false below that term's index. The term is the third partial sum, `1 + 1 + 1/2`, and
+   * `MONOTONE_LE` carries it to every later index.
+   *
+   * **The index is written `SUC (SUC (SUC 0))` and not `3`**, and that is not an oversight: every
+   * recurrence over `num` is stated at a successor, the partial sum is computed by rewriting with
+   * those recurrences, and a numeral would have to be spelled by `Successor` first. Nothing here
+   * needs the numeral, so nothing here pays for it.
+   *
+   * == The sequence and the partial sums are two terms and both are needed ==
+   *
+   * `exp 1` unfolds to `lim (\n. Sum f n)` and the comparison test speaks about `Sum f`. They are
+   * eta-equivalent and not equal, so `CONVERGES_EVENTUALLY` at index zero carries the convergence
+   * from the one to the other, which is a published fact rather than a use of the eta axiom here.
+   */
+  private def exponentialAboveTwo(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    limit: Limit,
+    series: Series,
+    peano: Peano,
+    coding: Coding,
+    definition: Kernel.Thm,
+    recurrences: Vector[Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val witness = Term.variable("l", values)
+
+    for {
+      one <- Parser.term(theory, notation, "1:real", values)
+      unfolded <- Conv.unfold(definition, List(one))
+      limited <- rightOf(unfolded)
+      sequence <- limited match {
+        case App(_, argument) => Right(argument)
+        case other => Left(NotOfForm("a limit of a sequence", other))
+      }
+
+      // `Sum f` and `f`, read off the definition rather than parsed a second time, so that what
+      // this argument is about and what `exp 1` is are the same terms.
+      partial <- sequence match {
+        case Abs(_, App(sums, _)) => Right(sums)
+        case other => Left(NotOfForm("a sequence of partial sums", other))
+      }
+      summand <- partial match {
+        case App(_, function) => Right(function)
+        case other => Left(NotOfForm("the partial sums of a series", other))
+      }
+
+      dominator <- Parser.term(theory, notation, DominatorText, Type.fun(numbers, values))
+      halves <- Parser.term(theory, notation, HalvesText, Type.fun(numbers, values))
+
+      nonNegative <- termsAreNonNegative(
+        logic, linarith, theory, notation, series, peano, coding, limit, summand)
+      dominated <- termsAreDominated(
+        logic, linarith, theory, notation, series, peano, coding, limit, summand, dominator)
+      bounded <- dominatingSumsAreBounded(logic, linarith, theory, notation, series, halves)
+
+      comparison <- limit.comparison
+        .flatMap(rules.specAll(_, List(summand, dominator)))
+        .flatMap(betaOpened)
+      converging <- rules
+        .mp(comparison, nonNegative)
+        .flatMap(rules.mp(_, dominated))
+        .flatMap(rules.mp(_, bounded))
+
+      // Under the assumption that it converges to `l`. The instance is taken from the existential
+      // itself rather than written out, which is what lets the last step discharge it.
+      predicate <- logic
+        .destExistsPredicate(converging.conclusion)
+        .toRight(NotOfForm("an existential quantification", converging.conclusion))
+      instance <- LogicError
+        .lift(Term.app(predicate, witness))
+        .flatMap(Conv.betaRoot)
+        .flatMap(rightOf)
+      assumed <- LogicError.lift(Kernel.assume(instance))
+
+      atThird <- thirdPartialSum(logic, linarith, theory, notation, series, partial, recurrences)
+      increasing <- partialSumsIncrease(logic, linarith, series, partial, summand, nonNegative)
+      everyLater <- laterSumsAreAsLarge(
+        logic, linarith, theory, notation, limit, partial, increasing, atThird)
+
+      bound <- Parser.term(theory, notation, ThirdIndexText, numbers)
+      threshold <- Parser.term(theory, notation, "(5:real) / 2", values)
+      aboveThreshold <- limit.aboveBound
+        .flatMap(rules.specAll(_, List(partial, witness, threshold, bound)))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(rules.mp(_, everyLater))
+
+      // `exp 1` is that limit. The eta step is `CONVERGES_EVENTUALLY` at index zero, where the
+      // agreement between the two spellings is reflexivity once the redex is reduced.
+      sequenceConverges <- convergenceOfTheSequence(
+        logic, theory, notation, limit, partial, sequence, witness, assumed)
+      limitIsWitness <- limit.valueOfConverges
+        .flatMap(rules.specAll(_, List(sequence, witness)))
+        .flatMap(rules.mp(_, sequenceConverges))
+      exponentialIsWitness <- Conv.trans(unfolded, limitIsWitness)
+
+      strict <- linarith
+        .prove("!a:real. !b:real. a = b ==> (5:real) / 2 <= b ==> 2 < a")
+        .flatMap(rules.specAll(_, List(leftOf(exponentialIsWitness), witness)))
+        .flatMap(rules.mp(_, exponentialIsWitness))
+        .flatMap(rules.mp(_, aboveThreshold))
+
+      released <- rules.existsElim(converging, witness, strict)
+    } yield released
+  }
+
+  /**
+   * `|- !z. 0 <= Power 1 z / real_of_num (NUM_FACT z)`, the first of the comparison test's three.
+   *
+   * The quotient becomes a reciprocal before anything is asked of a procedure, because a symbolic
+   * denominator is what every one of them refuses. `Power 1 z` is `1` by `POWER_ONE` and `1 / f`
+   * is `inv f` by `Ring`, which owes nothing: division unfolds to multiplication by the inverse
+   * and the unit law is ordinary ring algebra.
+   */
+  private def termsAreNonNegative(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    peano: Peano,
+    coding: Coding,
+    limit: Limit,
+    summand: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val index = Term.variable("z", numbers)
+
+    for {
+      term <- reduced(summand, index)
+      parts <- quotientParts(term)
+      (divisor, denominator) = parts
+
+      positive <- factorialEmbedsPositively(logic, linarith, peano, coding, index, denominator)
+      cancels <- inverseCancels(logic, limit, theory, notation, positive, denominator)
+      asInverse <- quotientIsInverse(
+        logic, series, theory, notation, index, divisor, denominator, term)
+      inverse <- rightOf(asInverse)
+
+      atInverse <- linarith
+        .prove("!v:real. !f:real. 0 < f ==> f * v = 1 ==> 0 <= v")
+        .flatMap(rules.specAll(_, List(inverse, denominator)))
+        .flatMap(rules.mp(_, positive))
+        .flatMap(rules.mp(_, cancels))
+      carried <- Conv.sym(asInverse).flatMap(onRight(_, atInverse))
+      result <- rules.gen(index, carried)
+    } yield result
+  }
+
+  /**
+   * `|- !z. Power 1 z / real_of_num (NUM_FACT z) <= Power (1/2) z + Power (1/2) z`.
+   *
+   * The domination, which is `Coding.NUM_POW_LE_FACT` carried across the embedding. Three facts
+   * about this `z` go into one schematic implication: the power of two and the power of a half
+   * multiply to one, the power of two is at most twice the factorial, and the factorial's
+   * reciprocal is a reciprocal. What `Linarith` does with them is multiply the bound by the
+   * geometric term and the negated goal by the denominator, two products of degree two.
+   *
+   * The embedding is a rewriting rather than a chain of congruences: `NUM_REAL_POW` and
+   * `NUM_REAL_MUL` move `real_of_num` inwards, the two recurrences turn `real_of_num (SUC (SUC 0))`
+   * into `(0 + 1) + 1`, and one `Ring` equation folds that to the numeral the schematic is written
+   * with. Without the last of those the schematic would have to be stated over a term nobody
+   * writes.
+   */
+  private def termsAreDominated(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    peano: Peano,
+    coding: Coding,
+    limit: Limit,
+    summand: Term,
+    dominator: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val ring = series.ring
+    val index = Term.variable("z", numbers)
+
+    for {
+      term <- reduced(summand, index)
+      parts <- quotientParts(term)
+      (divisor, denominator) = parts
+      target <- reduced(dominator, index)
+
+      two <- Parser.term(theory, notation, "2:real", values)
+      half <- Parser.term(theory, notation, "(1:real) / 2", values)
+      power <- Parser.term(theory, notation, "Power", Type.fun(values, Type.fun(numbers, values)))
+      doubling <- LogicError.lift(Term.appAll(power, List(two, index)))
+      halving <- LogicError.lift(Term.appAll(power, List(half, index)))
+
+      positive <- factorialEmbedsPositively(logic, linarith, peano, coding, index, denominator)
+      cancels <- inverseCancels(logic, limit, theory, notation, positive, denominator)
+      asInverse <- quotientIsInverse(
+        logic, series, theory, notation, index, divisor, denominator, term)
+      inverse <- rightOf(asInverse)
+
+      positiveHalf <- series
+        .fact(Series.PowerPositive)
+        .flatMap(rules.spec(half, _))
+        .flatMap(theorem => linarith.prove("(0:real) < (1:real) / 2").flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.spec(index, _))
+
+      // `2^z * (1/2)^z = 1`, which is what ties the geometric term to the arithmetic on `num`.
+      multiplicative <- series
+        .fact(Series.Multiplicative)
+        .flatMap(rules.specAll(_, List(two, half, index)))
+      product <- ring.prove("2 * ((1:real) / 2) = 1")
+      atOne <- Conv.apTerm(power, product).flatMap(Conv.apThm(_, index))
+      powerOfOne <- series.fact(Series.PowerOfOne).flatMap(rules.spec(index, _))
+      unit <- Conv
+        .sym(multiplicative)
+        .flatMap(Conv.trans(_, atOne))
+        .flatMap(Conv.trans(_, powerOfOne))
+
+      // `2^z <= 2 * z!`, carried over from `num` by the embedding and its recurrences.
+      overNaturals <- coding.fact(Coding.PowerBelowFactorial).flatMap(rules.spec(index, _))
+      naturalSides <- overNaturals.conclusion match {
+        case App(App(_, left), right) => Right((left, right))
+        case other => Left(NotOfForm("a comparison", other))
+      }
+      embeddedOrder <- peano
+        .fact(Peano.EmbedsOrder)
+        .flatMap(rules.specAll(_, List(naturalSides._1, naturalSides._2)))
+        .flatMap(rules.mp(_, overNaturals))
+      folding <- ring.prove("((0:real) + 1) + 1 = 2")
+      embeddingRules <- gather(
+        Vector(
+          series.fact(Series.EmbedsPower),
+          peano.fact(Peano.EmbedsProduct),
+          peano.fact(Peano.EmbedsSuccessor),
+          peano.fact(Peano.EmbedsZero)
+        )).map(_ :+ folding)
+      embedded <- Rewrite.Rule
+        .all(logic, embeddingRules)
+        .flatMap(Rewrite.inTheorem(_, embeddedOrder))
+
+      atInverse <- linarith
+        .prove(
+          "!p:real. !q:real. !f:real. !v:real. 0 < f ==> 0 < q ==> p * q = 1 ==> " +
+            "p <= 2 * f ==> f * v = 1 ==> v <= q + q")
+        .flatMap(rules.specAll(_, List(doubling, halving, denominator, inverse)))
+        .flatMap(rules.mp(_, positive))
+        .flatMap(rules.mp(_, positiveHalf))
+        .flatMap(rules.mp(_, unit))
+        .flatMap(rules.mp(_, embedded))
+        .flatMap(rules.mp(_, cancels))
+      carried <- Conv.sym(asInverse).flatMap(onLeft(_, atInverse))
+
+      // The shape the comparison test asks for, compared rather than assumed: every term above is
+      // assembled out of what the definition holds, and a refusal here names the step that
+      // produced something else.
+      relation <- relationOf(carried)
+      wanted <- LogicError.lift(Term.appAll(relation, List(term, target)))
+      _ <-
+        if (carried.conclusion == wanted) Right(())
+        else Left(NotOfForm("the domination the comparison test asks for", carried.conclusion))
+      result <- rules.gen(index, carried)
+    } yield result
+  }
+
+  /**
+   * `|- ?b. !n. Sum (\i. (1/2)^i + (1/2)^i) n <= b`, the third hypothesis of the comparison test.
+   *
+   * Each half is bounded by two, which is `SUM_GEOMETRIC` cleared of its denominator and one
+   * linear step, and the whole is the two halves added. The witness is four and it is not tight:
+   * what the comparison test asks for is a bound and not the least one.
+   */
+  private def dominatingSumsAreBounded(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    halves: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val index = Term.variable("n", numbers)
+
+    for {
+      half <- Parser.term(theory, notation, "(1:real) / 2", values)
+      positivePower <- series
+        .fact(Series.PowerPositive)
+        .flatMap(rules.spec(half, _))
+        .flatMap(theorem => linarith.prove("(0:real) < (1:real) / 2").flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.spec(index, _))
+
+      powerAt <- Parser.term(theory, notation, "Power ((1:real) / 2) (n:num)", values)
+      sumAt <- Parser.term(theory, notation, s"Sum ($HalvesText) (n:num)", values)
+
+      geometric <- series.fact(Series.Geometric).flatMap(rules.specAll(_, List(half, index)))
+      underTwo <- linarith
+        .prove("!p:real. !s:real. ((1:real) / 2 - 1) * s = p - 1 ==> 0 < p ==> s <= 2")
+        .flatMap(rules.specAll(_, List(powerAt, sumAt)))
+        .flatMap(rules.mp(_, geometric))
+        .flatMap(rules.mp(_, positivePower))
+
+      split <- series
+        .fact(Series.Additive)
+        .flatMap(rules.specAll(_, List(halves, halves, index)))
+        .flatMap(betaOpened)
+
+      whole <- linarith
+        .prove("!a:real. !b:real. a = b + b ==> b <= 2 ==> a <= 4")
+        .flatMap(rules.specAll(_, List(leftOf(split), sumAt)))
+        .flatMap(rules.mp(_, split))
+        .flatMap(rules.mp(_, underTwo))
+      everywhere <- rules.gen(index, whole)
+
+      four <- Parser.term(theory, notation, "4:real", values)
+      statement <- Parser.proposition(
+        theory, notation, s"?b:real. !n:num. Sum ($DominatorText) n <= b")
+      predicate <- logic
+        .destExistsPredicate(statement)
+        .toRight(NotOfForm("an existential quantification", statement))
+      result <- rules.existsIntro(predicate, four, everywhere)
+    } yield result
+  }
+
+  /**
+   * `|- 5 / 2 <= Sum f (SUC (SUC (SUC 0)))`, which is the bound the limit inherits.
+   *
+   * The partial sum is **computed** rather than reasoned about: the recurrences of the sum, the
+   * power, the factorial, the product and the embedding rewrite it to an expression in numerals,
+   * and `Linarith` compares that with five halves. Three `Ring` equations fold what the
+   * recurrences leave behind, `0 + 1`, `1 + 1` and `1 * 1`, because a denominator that is a sum of
+   * numerals rather than a numeral is an atom to `Linarith` and not a rational coefficient.
+   */
+  private def thirdPartialSum(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    partial: Term,
+    recurrences: Vector[Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val ring = series.ring
+
+    for {
+      bound <- Parser.term(theory, notation, ThirdIndexText, numbers)
+      subject <- LogicError.lift(Term.app(partial, bound))
+      folding <- gather(
+        Vector(
+          ring.prove("(0:real) + 1 = 1"),
+          ring.prove("(1:real) + 1 = 2"),
+          ring.prove("(1:real) * 1 = 1")
+        ))
+      computed <- Rewrite.Rule
+        .all(logic, recurrences ++ folding)
+        .flatMap(Rewrite.rewrite(_, subject))
+      numeric <- rightOf(computed)
+
+      order <- Parser.term(
+        theory, notation, Real.NonStrictOrder, Type.fun(values, Type.fun(values, Type.Bool)))
+      threshold <- Parser.term(theory, notation, "(5:real) / 2", values)
+      goal <- LogicError.lift(Term.appAll(order, List(threshold, numeric)))
+      atNumerals <- linarith.prove(goal)
+
+      result <- linarith
+        .prove("!a:real. !b:real. a = b ==> (5:real) / 2 <= b ==> (5:real) / 2 <= a")
+        .flatMap(rules.specAll(_, List(subject, numeric)))
+        .flatMap(rules.mp(_, computed))
+        .flatMap(rules.mp(_, atNumerals))
+    } yield result
+  }
+
+  /** `|- !y. Sum f y <= Sum f (SUC y)`, which is what `MONOTONE_LE` asks of the partial sums. */
+  private def partialSumsIncrease(
+    logic: Logic,
+    linarith: Linarith,
+    series: Series,
+    partial: Term,
+    summand: Term,
+    nonNegative: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val step = Term.variable("y", numbers)
+
+    for {
+      recurrence <- series.fact(Series.AtSuccessor).flatMap(rules.specAll(_, List(summand, step)))
+      here <- LogicError.lift(Term.app(partial, step))
+      next <- Right(leftOf(recurrence))
+      term <- reduced(summand, step)
+      atStep <- rules.spec(step, nonNegative)
+      increasing <- linarith
+        .prove("!a:real. !b:real. !c:real. c = a + b ==> 0 <= b ==> a <= c")
+        .flatMap(rules.specAll(_, List(here, term, next)))
+        .flatMap(rules.mp(_, recurrence))
+        .flatMap(rules.mp(_, atStep))
+      result <- rules.gen(step, increasing)
+    } yield result
+  }
+
+  /** `|- !v. SUC (SUC (SUC 0)) <= v ==> 5 / 2 <= Sum f v`, which is the bound `CONVERGES_GE` wants. */
+  private def laterSumsAreAsLarge(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    limit: Limit,
+    partial: Term,
+    increasing: Kernel.Thm,
+    atThird: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val later = Term.variable("v", numbers)
+
+    for {
+      bound <- Parser.term(theory, notation, ThirdIndexText, numbers)
+      monotone <- limit.monotoneBelow
+        .flatMap(rules.spec(partial, _))
+        .flatMap(betaOpened)
+        .flatMap(rules.mp(_, increasing))
+        .flatMap(rules.specAll(_, List(bound, later)))
+      parts <- logic
+        .destImp(monotone.conclusion)
+        .toRight(NotOfForm("an implication", monotone.conclusion))
+      (premise, _) = parts
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      ordered <- rules.mp(monotone, assumed)
+      atThirdTerm <- LogicError.lift(Term.app(partial, bound))
+      atLater <- LogicError.lift(Term.app(partial, later))
+      reached <- linarith
+        .prove("!a:real. !b:real. (5:real) / 2 <= a ==> a <= b ==> (5:real) / 2 <= b")
+        .flatMap(rules.specAll(_, List(atThirdTerm, atLater)))
+        .flatMap(rules.mp(_, atThird))
+        .flatMap(rules.mp(_, ordered))
+      result <- rules.disch(premise, reached).flatMap(rules.gen(later, _))
+    } yield result
+  }
+
+  /**
+   * `converges (\n. Sum f n) l` from `converges (Sum f) l`, which is eta and is not the eta axiom.
+   *
+   * The two spellings are the same function and not the same term, and what `exp 1` unfolds to is
+   * the lambda. `CONVERGES_EVENTUALLY` at index zero asks only that the two agree from there on,
+   * and they agree everywhere by reflexivity once the redex is reduced, so the transfer costs a
+   * published fact rather than an appeal to the axiom `Classical` holds.
+   */
+  private def convergenceOfTheSequence(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    limit: Limit,
+    partial: Term,
+    sequence: Term,
+    witness: Term,
+    converges: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      zero <- Parser.term(theory, notation, "0:num", numbers)
+      eventually <- limit.eventually
+        .flatMap(rules.specAll(_, List(partial, sequence, witness, zero)))
+        .flatMap(betaOpened)
+      parts <- logic
+        .destImp(eventually.conclusion)
+        .toRight(NotOfForm("an implication", eventually.conclusion))
+      (agreementStatement, _) = parts
+      stripped <- Logic.stripForall(agreementStatement)
+      variable <- stripped._1.headOption.toRight(
+        NotOfForm("a claim about every index", agreementStatement))
+      inner <- logic
+        .destImp(stripped._2)
+        .toRight(NotOfForm("an implication", stripped._2))
+      (guard, equation) = inner
+      sides <- Term.destEq(equation).toRight(NotOfForm("an equation", equation))
+      agreement <- rules
+        .disch(guard, Kernel.refl(sides._1))
+        .flatMap(rules.gen(variable, _))
+      result <- rules.mp(eventually, agreement).flatMap(rules.mp(_, converges))
+    } yield result
+  }
+
+  /* ------------------------------------------------------------------ the small shared steps */
+
+  /** `|- 0 < real_of_num (NUM_FACT z)`, the factorial's positivity carried across the embedding. */
+  private def factorialEmbedsPositively(
+    logic: Logic,
+    linarith: Linarith,
+    peano: Peano,
+    coding: Coding,
+    index: Term,
+    denominator: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      factorial <- denominator match {
+        case App(_, argument) => Right(argument)
+        case other => Left(NotOfForm("an embedded natural", other))
+      }
+      positive <- coding.fact(Coding.FactorialPositive).flatMap(rules.spec(index, _))
+      sides <- positive.conclusion match {
+        case App(App(_, left), _) => Right(left)
+        case other => Left(NotOfForm("a comparison", other))
+      }
+      embedded <- peano
+        .fact(Peano.EmbedsStrictOrder)
+        .flatMap(rules.specAll(_, List(sides, factorial)))
+        .flatMap(rules.mp(_, positive))
+      zeroEmbeds <- peano.fact(Peano.EmbedsZero)
+      folded <- Rewrite.Rule
+        .all(logic, Vector(zeroEmbeds))
+        .flatMap(Rewrite.inTheorem(_, embedded))
+      result <- linarith
+        .prove("!a:real. 0 + 1 <= a ==> 0 < a")
+        .flatMap(rules.spec(denominator, _))
+        .flatMap(rules.mp(_, folded))
+    } yield result
+  }
+
+  /** `|- f * inv f = 1` at a denominator already known to be positive, which is where the axiom goes. */
+  private def inverseCancels(
+    logic: Logic,
+    limit: Limit,
+    theory: Theory,
+    notation: Notation,
+    positive: Kernel.Thm,
+    denominator: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val order = limit.magnitude.order
+
+    for {
+      nonZero <- order
+        .fact(Positivity.NonZero)
+        .flatMap(rules.spec(denominator, _))
+        .flatMap(rules.mp(_, positive))
+      result <- order.ring.reals
+        .axiom("MUL_INVERSE")
+        .flatMap(rules.spec(denominator, _))
+        .flatMap(rules.mp(_, nonZero))
+    } yield result
+  }
+
+  /** `|- Power 1 z / f = inv f`, which is `POWER_ONE` and then ring algebra with nothing owed. */
+  private def quotientIsInverse(
+    logic: Logic,
+    series: Series,
+    theory: Theory,
+    notation: Notation,
+    index: Term,
+    divisor: Term,
+    denominator: Term,
+    term: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      powerOfOne <- series.fact(Series.PowerOfOne).flatMap(rules.spec(index, _))
+      simplified <- Conv.apTerm(divisor, powerOfOne).flatMap(Conv.apThm(_, denominator))
+      quotient <- rightOf(simplified)
+      inverse <- Parser
+        .term(theory, notation, Real.Inverse, Type.fun(values, values))
+        .flatMap(constant => LogicError.lift(Term.app(constant, denominator)))
+      equation <- LogicError.lift(Term.eq(quotient, inverse)).flatMap(series.ring.prove)
+      result <- Conv.trans(simplified, equation)
+    } yield result
+  }
+
+  /** The divisor and the denominator of a quotient, which every term of this series is. */
+  private def quotientParts(term: Term): Either[LogicError, (Term, Term)] = term match {
+    case App(App(divisor, _), denominator) => Right((divisor, denominator))
+    case other => Left(NotOfForm("a quotient", other))
+  }
+
+  /** A function applied to an argument with the redex reduced, which is what a fact is about. */
+  private def reduced(function: Term, argument: Term): Either[LogicError, Term] =
+    for {
+      applied <- LogicError.lift(Term.app(function, argument))
+      equation <- Conv.betaRoot(applied)
+      result <- rightOf(equation)
+    } yield result
+
+  /** The relation of a binary conclusion, which is what a congruence step is applied under. */
+  private def relationOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+    theorem.conclusion match {
+      case App(App(relation, _), _) => Right(relation)
+      case other => Left(NotOfForm("a comparison", other))
+    }
+
+  /** `|- left' R right` from `|- left = left'` and `|- left R right`. */
+  private def onLeft(equation: Kernel.Thm, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    theorem.conclusion match {
+      case App(App(relation, _), right) =>
+        for {
+          congruence <- Conv.apTerm(relation, equation)
+          applied <- Conv.apThm(congruence, right)
+          result <- LogicError.lift(Kernel.eqMp(applied, theorem))
+        } yield result
+      case other => Left(NotOfForm("a comparison", other))
+    }
+
+  /** `|- left R right'` from `|- right = right'` and `|- left R right`. */
+  private def onRight(equation: Kernel.Thm, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    theorem.conclusion match {
+      case App(App(relation, left), _) =>
+        for {
+          context <- LogicError.lift(Term.app(relation, left))
+          congruence <- Conv.apTerm(context, equation)
+          result <- LogicError.lift(Kernel.eqMp(congruence, theorem))
+        } yield result
+      case other => Left(NotOfForm("a comparison", other))
+    }
+
+  /** A theorem with the redexes of its conclusion reduced. */
+  private def betaOpened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    Conv
+      .betaNormalise(theorem.conclusion)
+      .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+  /** A vector of results as a result of a vector, which three call sites here want. */
+  private def gather(
+    results: Vector[Either[LogicError, Kernel.Thm]]
+  ): Either[LogicError, Vector[Kernel.Thm]] =
+    results.foldRight[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+      case (next, rest) => next.flatMap(one => rest.map(one +: _))
+    }
 
   /** The left side of an equation. */
   private def leftOf(theorem: Kernel.Thm): Term =
