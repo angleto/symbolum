@@ -58,3 +58,4 @@ the rejected option attractive, and they will.
 | [0033](0033-the-integers-arrive-as-a-prerequisite-and-not-as-stage-four.md) | The integers arrive as a prerequisite, not as stage four of the construction | accepted, extends 0016 |
 | [0034](0034-a-perturbation-harness-is-versioned-and-a-measurement-probe-is-not.md) | A perturbation harness is versioned and a measurement probe is not | accepted |
 | [0035](0035-a-change-is-judged-by-what-it-covers.md) | A change is judged by what it covers, and the module average stays beside it | accepted |
+| [0036](0036-a-rationals-denominator-is-a-successor.md) | A rational's denominator is a successor, so the carrier needs no carving | accepted, extends 0016 and 0033 |
