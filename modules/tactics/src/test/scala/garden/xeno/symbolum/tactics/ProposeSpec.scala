@@ -311,7 +311,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 384 with `INT_MUL_CANCEL_NUM`, 2026-09-20, and the **one** was derived before the run: the
     // lemma carries a single antecedent, the equation between the two products, so `Propose.peel`
     // counting arrows gives it one. Tip plus this branch's delta.
-    proposals.size shouldBe 384
+    // 386 with `CONVERGES_MUL`, 2026-09-20, and the **two** were derived before the run: the
+    // limit of a product carries two antecedents, one convergence per sequence, each under its own
+    // arrow, so `Propose.peel` gives it two. Tip plus this branch's delta.
+    proposals.size shouldBe 386
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -979,7 +982,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `abs x = x` with the sign dropped is **false**, and it is here rather than among the
     // disproved for exactly that reason, which is the distinction `docs/adr/0005` keeps seven
     // answers apart for.
-    open shouldBe 288
+    // 290 with the two residues `CONVERGES_MUL` produces, 2026-09-20, and what was derived here
+    // before the run is the **mechanism** rather than the pair of numbers: `converges` is a
+    // constant no model here interprets, exactly as `abs` is in the row above, so a weakening of
+    // it is a claim the sampler cannot evaluate at any point, and `Evaluate` answering nothing is
+    // not a refutation. Both weakenings therefore land here rather than among the disproved,
+    // whether or not the claim they make is true, which is the distinction `docs/adr/0005` keeps
+    // seven answers apart for.
+    open shouldBe 290
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

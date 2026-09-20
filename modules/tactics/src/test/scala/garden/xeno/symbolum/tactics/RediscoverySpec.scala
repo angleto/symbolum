@@ -258,7 +258,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 384 with `INT_MUL_CANCEL_NUM`, 2026-09-20, and the **one** was derived before the run: the
     // lemma carries a single antecedent, the equation between the two products, so `Propose.peel`
     // counting arrows gives it one. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 384
+    // 386 with `CONVERGES_MUL`, 2026-09-20, and the **two** were derived before the run: the
+    // limit of a product carries two antecedents, one convergence per sequence, each under its own
+    // arrow, so `Propose.peel` gives it two. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 386
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
