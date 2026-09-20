@@ -100,6 +100,22 @@ object Mark {
     }
 
   /**
+   * A number and its noun, with the singular at one.
+   *
+   * **A copy, and the copy is the price of the dependency graph rather than an oversight.** The
+   * counter the rest of the repository uses is `Prose.count` in `modules/theories`, which this
+   * module cannot see: `mark` depends on nothing, so that a check over two files under `docs/` keeps
+   * running on the days the prover is broken. What is repeated here is a rule of English rather than
+   * a fact about this system, so it cannot drift against any source of truth in it, and the test in
+   * this module's own spec is what holds it.
+   *
+   * It takes BOTH forms where `Prose.count` appends an `s`, because this class of site contains
+   * `entry`/`entries` in `core` and a counter that can only append is wrong for it.
+   */
+  private def count(howMany: Int, one: String, many: String): String =
+    s"$howMany ${if (howMany == 1) one else many}"
+
+  /**
    * The four-connected regions of a set of cells, in the order their least cell comes.
    *
    * The reach of one cell first, then the cells that reach nothing new, which is the same partition
@@ -212,7 +228,9 @@ object Mark {
     val faults = streamFaults(rows)
     val holes = counters(rows)
     Vector(
-      Option.when(faults.nonEmpty)(s"the stream does not cover the art: ${faults.length} cells, first ${faults.head}"),
+      Option.when(faults.nonEmpty)(
+        s"the stream does not cover the art: ${count(faults.length, "cell", "cells")}, " +
+          s"first ${faults.head}"),
       Option.when(pieces(rows) != 1)(s"the mark is in ${pieces(rows)} pieces"),
       Option.when(holes.length != 1)(s"the mark encloses ${holes.length} empty regions, sizes $holes")
     ).flatten

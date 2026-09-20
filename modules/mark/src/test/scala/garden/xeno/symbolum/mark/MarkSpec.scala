@@ -104,4 +104,23 @@ class MarkSpec extends AnyFlatSpec with Matchers {
     flat should include(s"${Mark.cells(rows).size} cells")
     flat should include(s"${Mark.counters(rows).head} cells")
   }
+  /**
+   * The cell count in the first complaint, at one and elsewhere.
+   *
+   * `mark` depends on nothing, so it carries its own counter and this is what holds it. One
+   * uncovered cell is the ordinary case rather than a corner: it is what a figure one character
+   * out of step with the operator stream produces.
+   *
+   * The other two complaints of this file are NOT of this class and are left alone: both sit
+   * behind a `!= 1` guard, so the number they print is never one, which is the same thing that
+   * keeps `Linarith`'s count out of it.
+   */
+  "The complaint about the stream" should "take the singular at one cell and the plural elsewhere" in {
+    def complaint(rows: Vector[String]): String =
+      Mark.complaints(rows).find(_.contains("does not cover the art")).getOrElse(
+        fail(s"expected a complaint about the stream, got ${Mark.complaints(rows)}"))
+
+    complaint(Vector("X")) should include("art: 1 cell,")
+    complaint(Vector("XY")) should include("art: 2 cells,")
+  }
 }

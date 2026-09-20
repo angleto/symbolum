@@ -314,4 +314,24 @@ class PerronSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks
 
     outcomes.map(_.getClass.getSimpleName).distinct should have size 4
   }
+  /**
+   * The two counts in the ragged-matrix refusal, at one and elsewhere.
+   *
+   * `core` depends on nothing, so it carries its own counter and this is what holds it. Both
+   * counts reach one, and the noun of the first is why this module's counter takes two forms
+   * instead of appending an `s`: one entry, two entries.
+   */
+  "The refusal about a ragged matrix" should "take the singular at one entry and at one row" in {
+    def why(matrix: Vector[Vector[Double]]): String =
+      Perron.of(matrix) match {
+        case Perron.Unusable(message) => message
+        case other => fail(s"expected a refusal and got $other")
+      }
+
+    val oneEntry = why(Vector(Vector(1.0, 2.0), Vector(3.0)))
+    val oneRow = why(Vector(Vector(1.0, 2.0)))
+
+    oneEntry should include("has 1 entry in a matrix of 2 rows")
+    oneRow should include("has 2 entries in a matrix of 1 row,")
+  }
 }

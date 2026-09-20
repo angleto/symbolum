@@ -1,5 +1,12 @@
 #!/bin/sh
-# Fire the two both-directions guards of card db67b658 at the defect they were written for.
+# Fire the six both-directions guards of card db67b658 at the defect they were written for.
+#
+# Two halves, and the second one is the card's decision being spent. 1 to 3 are the sites in
+# `modules/tactics`, which can see `Prose.count` in `theories`. 4 to 8 are the sites in the five
+# modules that CANNOT see it -- `checker`, `core`, `kernel`, `mark`, `sat` -- where the decision
+# was a private counter per module, and for `kernel` no counter at all but a reworded sentence,
+# because the trusted base is counted and a line that exists to render English is a line
+# somebody has to read and believe.
 #
 # The card is the half of `0da00ff8`'s class that its census could not see. Three more sites in
 # `modules/tactics` interpolate a count in front of a noun carrying its plural in the literal, and
@@ -21,6 +28,13 @@
 # repair. It reads `include("more than 1 digit:")` now, with the colon, because a bare
 # `include("more than 1 digit")` is a substring of the defect it is meant to catch.
 #
+# **8 WAS GREEN ON ITS FIRST RUN AND THAT IS WHY THIS HARNESS EXISTS.** The guard it fires read
+# `include("is not one of 1 step")`, which is a SUBSTRING of the defect it is written against,
+# `is not one of 1 steps`, so the assertion passed with the counter taken out. It is `endWith`
+# now. That is the same shape the Remedy guard was caught in, one file over, by a red run rather
+# than by a perturbation: a both-directions test whose singular branch is a prefix of its own
+# defect asserts nothing at all.
+#
 # The strings are literal and were unique at 372a025. perturb.sh REFUSES a perturbation that did
 # not apply rather than running against unperturbed code, so a refusal means the source moved.
 set -u
@@ -33,6 +47,11 @@ restores and verifies the restore; see tools/verify/README.md}
 cd "$WT" || exit 2
 
 LEDGER=modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Ledger.scala
+PARSE=modules/checker/src/main/scala/garden/xeno/symbolum/checker/Parse.scala
+PERRON=modules/core/src/main/scala/garden/xeno/symbolum/Perron.scala
+TERM=modules/kernel/src/main/scala/garden/xeno/symbolum/kernel/Term.scala
+MARK=modules/mark/src/main/scala/garden/xeno/symbolum/mark/Mark.scala
+RESOLUTION=modules/sat/src/main/scala/garden/xeno/symbolum/sat/Resolution.scala
 REMEDY=modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Remedy.scala
 BOTH='tactics/testOnly garden.xeno.symbolum.tactics.LedgerSpec garden.xeno.symbolum.tactics.RemedySpec'
 
@@ -74,5 +93,48 @@ run "3-remedy-not-credible" "$REMEDY" \
   '$confirmed digits' \
   -- ./tools/sbt -batch 'tactics/testOnly garden.xeno.symbolum.tactics.RemedySpec'
 
-echo "### all three fired" >> "$OUT/plural-counters-reach.log"
+
+# 4. The arity refusal of the second reader of a proof, which said `1 premises for abs` for every
+#    one of the four rules whose arity is one.
+# Expect red on: ParseSpec, "The refusal about a step's premises"
+run "4-checker-premises" "$PARSE" \
+  '${count(Step.arity(step), "premise", "premises")} for' \
+  '${Step.arity(step)} premises for' \
+  -- ./tools/sbt -batch 'checker/testOnly garden.xeno.symbolum.checker.ParseSpec'
+
+# 5. The two counts of the ragged-matrix refusal, put back together because they are one sentence.
+#    This is also the site whose noun is why the copies take both forms: `entry`/`entries`.
+# Expect red on: PerronSpec, "The refusal about a ragged matrix"
+run "5-core-entries-and-rows" "$PERRON" \
+  's"row $ragged has ${count(matrix(ragged).length, "entry", "entries")} in a matrix of " +
+                s"${count(size, "row", "rows")}, and an " +' \
+  's"row $ragged has ${matrix(ragged).length} entries in a matrix of $size rows, and an " +' \
+  -- ./tools/sbt -batch 'core/testOnly garden.xeno.symbolum.PerronSpec'
+
+# 6. THE TRUSTED BASE, and the one site repaired by rewriting the sentence rather than by counting.
+#    Putting the old sentence back is putting the count in front of the noun again.
+# Expect red on: TermSpec, "The type walk's invariant violation"
+run "6-kernel-binders" "$TERM" \
+  's"index $index, binders in scope: ${context.length}"' \
+  's"index $index with ${context.length} binders"' \
+  -- ./tools/sbt -batch 'kernel/testOnly garden.xeno.symbolum.kernel.TermSpec'
+
+# 7. The first of the three complaints a figure produces. The other two are NOT of this class:
+#    both sit behind a `!= 1` guard, so neither ever prints one.
+# Expect red on: MarkSpec, "The complaint about the stream"
+run "7-mark-cells" "$MARK" \
+  '${count(faults.length, "cell", "cells")}, " +
+          s"first ${faults.head}"' \
+  '${faults.length} cells, first ${faults.head}"' \
+  -- ./tools/sbt -batch 'mark/testOnly garden.xeno.symbolum.mark.MarkSpec'
+
+# 8. The refutation checker's index refusal, in the module that depends on nothing so that a search
+#    which cannot see `kernel` cannot construct a theorem whatever it does.
+# Expect red on: SolverSpec, "The refusal about the empty clause's index"
+run "8-sat-steps" "$RESOLUTION" \
+  '${count(steps.length, "step", "steps")}' \
+  '${steps.length} steps' \
+  -- ./tools/sbt -batch 'sat/testOnly garden.xeno.symbolum.sat.SolverSpec'
+
+echo "### all eight fired" >> "$OUT/plural-counters-reach.log"
 git status --porcelain >> "$OUT/plural-counters-reach.log"

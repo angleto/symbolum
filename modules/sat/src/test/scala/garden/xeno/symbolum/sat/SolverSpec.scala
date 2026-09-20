@@ -180,4 +180,27 @@ class SolverSpec extends AnyFlatSpec with Matchers {
     Cnf.normalise(Vector(2, 1, 1)) shouldBe Some(Vector(1, 2))
     Cnf.problem(2, Vector(Vector(1, -1), Vector(2))).clauses shouldBe Vector(Vector(2))
   }
+  /**
+   * The step count in the refusal, at one and elsewhere.
+   *
+   * `sat` cannot see the counter the rest of the repository uses, because it depends on nothing,
+   * so it carries a copy and this is what holds the copy. A refutation of one step is not a corner
+   * here: it is what an input clause that is already empty produces.
+   */
+  "The refusal about the empty clause's index" should "take the singular at one step and the plural elsewhere" in {
+    val problem = Cnf.problem(1, Vector(Vector(1)))
+
+    def why(steps: Int, empty: Int): String =
+      Derivation(Vector.fill(steps)(Step.Input(0)), empty).check(problem) match {
+        case Left(message) => message
+        case Right(_) => fail("expected the index to be refused")
+      }
+
+    // `endWith` and not `include`, and the harness is what says why: "is not one of 1 step" is a
+    // SUBSTRING of "is not one of 1 steps", so the `include` this was written with passed under
+    // the perturbation that puts the defect back. The count is the last thing in this message,
+    // which is what makes the tighter matcher available here.
+    why(1, 1) should endWith("is not one of 1 step")
+    why(2, 9) should endWith("is not one of 2 steps")
+  }
 }

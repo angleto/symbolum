@@ -135,4 +135,33 @@ class TermSpec extends AnyFlatSpec with Matchers {
     Term.substitute(Map(x -> loose), x).left.map(_.getClass) shouldBe Left(classOf[NotLocallyClosed])
   }
 
+  /**
+   * The count in the invariant violation, at one and elsewhere.
+   *
+   * This message is the trusted base telling a reader what went wrong, and it read
+   * `${context.length} binders` until 2026-09-20, so under exactly one binder it said "1 binders".
+   * The repair here is the SENTENCE and not a counter: the count is written after its noun, where
+   * nothing has to agree with it. Everywhere else in the repository the same defect is repaired
+   * with a conditional counter, and this module takes none, because a line that exists to render
+   * English is a line somebody has to read and believe.
+   *
+   * Both directions, because a message rewritten into the singular everywhere would pass a test
+   * written on one of them.
+   */
+  "The type walk's invariant violation" should "name the binders in scope without agreeing with the number" in {
+    val ty = Type.Bool
+
+    def thrown(term: Term): String =
+      intercept[KernelInvariantViolation](Term.typeOf(term)).getMessage
+
+    val one = thrown(Abs(ty, BVar(5)))
+    val two = thrown(Abs(ty, Abs(ty, BVar(7))))
+
+    one should include("binders in scope: 1")
+    two should include("binders in scope: 2")
+    // The defect itself, which is what the singular case is for: at one binder the old message
+    // read "1 binders", and at two it was right, so a test written only on the plural said
+    // nothing.
+    one should not include "1 binders"
+  }
 }

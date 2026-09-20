@@ -130,6 +130,22 @@ object Parse {
 
   /* ------------------------------------------------------------------ the records */
 
+  /**
+   * A number and its noun, with the singular at one.
+   *
+   * **A copy, and the copy is the price of the dependency graph rather than an oversight.** The
+   * counter the rest of the repository uses is `Prose.count` in `modules/theories`, which this
+   * module cannot see: `checker` depends on `kernel` alone, which is what makes a second reading of
+   * a proof a second reading. What is repeated here is a rule of English rather than a fact about
+   * this system, so it cannot drift against any source of truth in it, and the test in this module's
+   * own spec is what holds it.
+   *
+   * It takes BOTH forms where `Prose.count` appends an `s`, because this class of site contains
+   * `entry`/`entries` in `core` and a counter that can only append is wrong for it.
+   */
+  private def count(howMany: Int, one: String, many: String): String =
+    s"$howMany ${if (howMany == 1) one else many}"
+
   private def readType(
     fields: Vector[String],
     expected: Int,
@@ -212,7 +228,7 @@ object Parse {
               .toRight("every premise is a step already read")
             _ <-
               if (premises.length == Step.arity(step)) Right(())
-              else Left(s"${Step.arity(step)} premises for ${fields(2)}, not ${premises.length}")
+              else Left(s"${count(Step.arity(step), "premise", "premises")} for ${fields(2)}, not ${premises.length}")
             hypotheses <- allOf(hypothesisFields, term).toRight("every hypothesis is a term already read")
             conclusion <- term(conclusionField).toRight("a conclusion that is a term already read")
           } yield Node(Claim(hypotheses, conclusion), step, premises)
