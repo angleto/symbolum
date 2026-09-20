@@ -171,6 +171,19 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // build, which is the same position `Recursion` is in one primitive along.
     "Quotient" -> DeclaresNothing,
 
+    // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
+    // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being
+    // outside is that its constants describe one object of one investigation; `rat` is mathematics
+    // anyone would want, and being outside the chain means `Ask`, `Find` and the library cannot
+    // reach it, which the standing's own docstring calls usually a defect.
+    //
+    // What it is instead: `docs/adr/0036` and the carrier landed on 2026-09-20 with the type and
+    // its three equivalence facts, and the chain wiring is a piece of its own because it moves
+    // `Chain.widest`, the reading register and the guide's map. `FractionSpec` is the spec the
+    // standing asks of anything outside the chain, and this line moves to `InTheChain` with the
+    // arithmetic. Card `fa8737ad` carries the debt.
+    "Fraction" -> BesideTheChain,
+
     // `Domain`'s standing, one level up: a search over a library for the theorem that carries a
     // domain claim into arithmetic. It declares nothing, holds no fact of its own, and every
     // theorem it hands back was built by `Domain.Built.settle` out of the caller's own domain

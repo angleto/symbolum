@@ -694,6 +694,17 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "obligation that is not the one the lift wants, which refuses by name one level out. And " +
         "the eight published statements are compared against `Inclusion.Statements` by " +
         "`InclusionSpec`, which is the same last line of defence `Integer.scala` has above"),
+    // 2026-09-20, with the rationals' carrier.
+    "Fraction.scala" ->
+      ("two, both `Rewrite.inTheorem` and both the same call: the relation unfolded at two pairs, " +
+        "with `FST (PAIR a b)` reduced away where the pair is built. The rule set is the two " +
+        "projections and nothing else, each of which strictly reduces and neither of which can " +
+        "re-fire on its own right side, so there is no walk here long enough to exhaust a limit. " +
+        "It is not left to the limit to say so either: what the unfolding is handed to is " +
+        "`Kernel.eqMp` against the relation, which refuses a proposition that is not the one it " +
+        "unfolded, and the three facts this file publishes are compared against " +
+        "`Fraction.Statements` before the development is built, which is where a partial " +
+        "reduction would surface as a statement nobody published"),
     // 2026-09-20, with `exp 1 > 2`.
     "Transcendental.scala" ->
       ("three, and none of them is left to the limit to report. One is `Rewrite.rewrite` on the " +
