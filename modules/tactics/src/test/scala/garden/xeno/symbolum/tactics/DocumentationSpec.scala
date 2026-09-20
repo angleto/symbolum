@@ -1198,82 +1198,87 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // at most one of the pair was ever true and neither said what the last link is. Counted on the
     // bindings of `Chain.construct`: thirty-one, `matrix` twelfth, `inclusion` last.
     //
-    // **The unit is the SENTENCE that names the link, and it was the whole block until
-    // 2026-09-19.** A true sentence of this shape is a record of a past state, and the three
-    // alternatives of the pattern below are what say so: `was`, `until`, and `this read` followed
-    // by a quote, which is a comment quoting what it used to carry. Reading the marker off the
-    // block is the same test with a wider window, and the window is what was wrong with it.
+    // **The unit is the OCCURRENCE of the phrase, and it was a word anywhere in the sentence
+    // until 2026-09-20.** A record does not merely carry a past-tense word: it puts the phrase
+    // itself inside a construction about the past. Two of those exist here, and both are written
+    // so that the match **contains** the occurrence it excuses: a past copula governing it,
+    // `was the last link` or `been the last link`, and a quotation opened by `this read "`, which
+    // is a comment quoting what it used to carry. An occurrence no such construction holds is a
+    // claim, whatever else the sentence says.
     //
-    // **The block reading was refuted by perturbation rather than by rereading.** It argued here
-    // that a marker anywhere in a block is safe "because a binding comment is short and about one
-    // thing", against field docstrings where a stray `was` in another sentence makes the test pass
-    // quietly. Measured over the nineteen blocks this reads: **ten already carry the marker**, the
-    // median block is **401 characters**, and **five carry it for a reason that has nothing to do
-    // with the last link** -- the blocks of `word`, `matrix`, `rotation`, `magnitude` and
-    // `coding`, each saying `was` or `until` about its own position in the chain. So the defect
-    // this guard exists for could be written into more than half the blocks it watches and stay
-    // green. `tools/verify/perturb-chain-last-link.sh` shows it at perturbation 4, which puts
-    // `matrix`'s exact defect into `matrix`'s own block, and perturbation 5 is its control: the
-    // same sentence in a block with no marker fires. Passing quietly is the one behaviour a guard
-    // must not have, and this one had it inside the scope it claimed to cover.
+    // **What changed the shape is that four rounds each deleted one word and a fifth found the
+    // next.** The marker was a list -- `was`, `until`, `read the`, a bare quoted `read` -- and the
+    // window was first the whole comment block, then the sentence. `read the` went on 2026-09-19:
+    // two ordinary words, in any tense, so "The last link since 2026-09-19; read the record in
+    // `docs/adr/0017`" was a present-tense false claim inside the declared scope and it passed. A
+    // bare quoted `read` went on 2026-09-20 for the criterion the first removal had written and
+    // not applied to what it left standing -- a quotation mark says what follows is quoted, not
+    // that the sentence is about the past, and this repository writes non-past quoted reads
+    // (`Reaching.scala` has "the second hypothesis has to read "does not lower""). Then `until`
+    // was found the same way: it names a boundary and takes its tense from the verb beside it, so
+    // "The last link since 2026-09-20, and it stays that way until somebody puts one on top of
+    // it" passed. **A list of words cannot be finished**, because every word on it can also turn
+    // up in a sentence that asserts. Containment ends the sequence rather than shortening it: an
+    // alternative that does not include the phrase cannot excuse it, so a past-tense word
+    // elsewhere in the sentence, in any clause and any tense, now clears nothing.
     //
-    // **The narrower unit costs nothing measured here.** Seven sentences of this block name the
-    // last link and **all seven carry the marker within themselves**, so the repair is not a
-    // tightening anybody pays for today. That is the one thing checked for this round rather than
-    // predicted.
+    // **Three holes close with it, and two were written down here as open.** A `was` in a
+    // subordinate clause of the naming sentence ("`matrix` is the last link, which was decided
+    // when the five were moved into the chain") was the hole this docstring declared at round
+    // four; `until` after the phrase was the finding that sent the card back; and a `was` earlier
+    // in the sentence about another subject ("The chain was rebuilt on 2026-09-18, and this is
+    // the last link since then") is what a rule about ORDER alone would still have missed, which
+    // is why the rule is about containment and not about position. All three are pinned as
+    // literals at the foot of this test.
     //
-    // **The read alternative went in two steps under one criterion, and the second step is why
-    // the pattern says `this read` rather than `read`.** What an alternative has to do is name a
-    // past state, and two of the four this pattern once carried did not. `read the` went on
-    // 2026-09-19: two ordinary words, wherever they fall and in any tense, so "The last link
-    // since 2026-09-19; read the record in `docs/adr/0017`" was a present-tense false claim
-    // inside the scope this guard covers and it passed. A bare quoted `read` went on 2026-09-20
-    // for exactly the reason the first removal wrote down and did not apply to what it left
-    // standing: a quotation mark says what follows is quoted, not that the sentence is about the
-    // past, and this repository writes non-past quoted reads -- `Reaching.scala` has "the second
-    // hypothesis has to read "does not lower"". So "The last link since 2026-09-19; the field
-    // above has to read "the last" for the two to agree" passed as well.
-    // `tools/verify/perturb-chain-last-link.sh` has the pair at 7 and 9, each with its control at
-    // 8 and 10 -- the same claim saying `see the` and `has to say` -- which fire, so each green
-    // came from the marker and not from where the scan reaches.
+    // **What the change cost, measured rather than predicted: one clause.** Six of the seven
+    // records inside `construct` clear untouched. The seventh is `provability`'s, which read
+    // "neither said what the last link is now": the phrase **mentioned** rather than used, inside
+    // an indirect question, which no construction about the past contains. It reads "neither said
+    // which link is the end" now, and the sentence after it already answers with `widest`. Round
+    // four could report that its narrowing cost nothing; this one costs that clause, and what it
+    // buys is the three holes above.
     //
-    // **What the demonstrative costs is nothing, and that is measured rather than predicted.**
-    // `this read "` is past tense and its subject is the comment itself, which is what a record
-    // of a repair is. All four of the seven records carrying a quoted `read` write the
-    // demonstrative in front, including `numbering`'s, which is the one record resting on the
-    // quoted alternative ALONE, so no true sentence was rewritten to keep passing.
+    // **The earlier measurements that decided the window stand and are not repeated here.** The
+    // block reading was refuted by perturbation rather than by rereading: of the nineteen blocks
+    // this reads, **ten already carry a word of the old list** anywhere in them;
+    // the median block is **386 characters as the splitter sees it** and 401 with the `// ` still
+    // in front, a difference of unit that two verifications have now had to take apart; and
+    // **five carry one for a reason that has nothing to do with the last link**, so the defect
+    // could be written into more than half the blocks it watched and stay green.
+    // `tools/verify/perturb-chain-last-link.sh` holds that at 4 with its control at 5, and the two
+    // word removals at 7 and 9 with theirs at 8 and 10.
     //
-    // **And `until` stays on the criterion rather than on the population**, which is the
-    // difference that decides what goes with what. Measured over the fifty sentences this reads,
-    // `until` is on its own the marker of none of the seven, since every sentence carrying it
-    // carries `was` or a quoted `read` as well: "nothing depends on it" would have taken `until`
-    // out and left both defects standing. A bounded interval is what a record of a past state
-    // says, which is a fact about the words rather than about today's population.
+    // **And the field docstrings are still outside, for a cost this rule makes larger and easier
+    // to read.** The reason written here until 2026-09-20 was the block reading's and had
+    // outlived it. Measured with this test's own segmentation over the 29 doc comments before
+    // `def construct`: five sentences name the last link and **one** of them clears, where the
+    // sentence-wide marker cleared four. The four are three different kinds, and the spread is
+    // the useful part, because each names a different thing widening would have to decide.
+    // `deduction`'s is true and general -- "the last link and the widest signature stopped being
+    // the same thing when this landed" -- and there is no construction that could tell it from a
+    // claim. One is a real record written "was **still** the last link", an adverb between the
+    // copula and the phrase, which this pattern does not allow. One is a real record written
+    // "the moment `coding` **became** the last link", a past copula this pattern does not carry.
+    // And one mentions the phrase rather than asserting it -- "the name of the last link is not
+    // written here any more" -- which is the shape the one clause above had to be rewritten out
+    // of. **Neither the adverb nor `became` is added here**, and that is the decision rather than
+    // an oversight: nothing inside `construct` writes either, so an alternative for them would be
+    // a branch no pin fires, which is how this guard collected the four words it spent four
+    // rounds removing. So turning this on over the prose is four sentences to move or rephrase
+    // plus two alternatives to add and pin, named rather than estimated, and leaving them out is
+    // still why `matrix`'s
+    // defect -- the undated one, the worst of the four -- lived where **nothing guards its
+    // class**.
     //
-    // **What it still does not catch, pinned at the foot of this test rather than claimed away.**
-    // The marker has to be in the naming sentence and not in the naming clause, so a present-tense
-    // claim carrying a `was` in a subordinate clause of the same sentence passes. That is one
-    // clause narrower than the hole it replaces and it is not closed; none of the seven exercises
-    // it, so nothing here measures how often it would arise.
-    //
-    // **And the field docstrings are still outside, for a cost rather than for a length.** The
-    // reason written here until 2026-09-20 was the block reading's and outlived it: a docstring
-    // runs to thirty lines, so a false sentence among many is invisible to a test asking whether
-    // SOME sentence is a record. The sentence unit retired that argument in round two and this
-    // paragraph kept it, which is the class of defect this guard exists to remove, one level out.
-    // Measured with this test's own segmentation over the 29 doc comments before `def construct`:
-    // **137 sentences, five name the last link, four are records and one is not.** The one is
-    // `deduction`'s -- "the last link and the widest signature stopped being the same thing when
-    // this landed" -- true, general, and exactly the shape this guard has no way to tell from a
-    // false claim. So the scope is a decision with a price on each side: this test over the field
-    // docstrings goes red on that sentence until somebody moves or rewrites it, and leaving them
-    // out is why `matrix`'s defect, the undated one and the worst of the four, lived where
-    // **nothing guards its class**.
-    //
-    // **What it does not cover inside the block either.** A general true sentence written here, of
-    // the kind `deduction`'s docstring carries, fires and the words have to move up to the field
-    // docstring where such a sentence belongs. That is a real cost, paid on purpose in one block
-    // of one file.
+    // **What it does not cover, and each of these is a decision rather than an oversight.** A
+    // quotation that lies: `this read "The last link since <today>"` written while the claim is
+    // still live is a false statement about the comment's own history, and nothing here can see
+    // one. A sentence that DENIES the claim fires, because no construction about the past holds
+    // its occurrence; none is written today, and if one is, its words belong in the field
+    // docstring at the price the paragraph above names. And the literal string `last link`, so a
+    // claim spelled "the final link" is invisible -- registered as a choice at round two and
+    // unchanged.
     val chain = read("modules/theories/src/main/scala/garden/xeno/symbolum/theories/Chain.scala")
     val body = chain.split("""def construct\(""").drop(1).mkString
 
@@ -1323,49 +1328,75 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
       mentioning.size should be >= 4
     }
 
-    // The quoted alternative is written first so that the literal does not have to end in a
-    // quote, which is the only thing the order decides here.
-    val dated = """[Tt]his read "|\bwas\b|\buntil\b""".r
-    val present = mentioning.filterNot(sentence => dated.findFirstIn(sentence).isDefined)
+    // The two constructions, written so that each match holds the occurrence it excuses. Plain
+    // strings rather than triple-quoted ones because the quoted alternative ends in a quote.
+    val quoted = "[Tt]his read \"[^\"]*\"".r
+    val governed = "\\b(?:was|been) the last link".r
+    val phrase = "last link".r
+
+    def unrecorded(sentence: String): Vector[Int] = {
+      val records = (quoted.findAllMatchIn(sentence) ++ governed.findAllMatchIn(sentence)).toVector
+      // Containment is the whole of this guard, and it is this line. An occurrence is excused by a
+      // record that HOLDS it and never by one somewhere else in the same sentence, which is what
+      // four rounds of deleting one word from a list were failing to say.
+      def excused(at: Int): Boolean = records.exists(m => m.start <= at && at < m.end)
+      phrase.findAllMatchIn(sentence).map(_.start).filterNot(at => excused(at)).toVector
+    }
+
+    val present = mentioning.filter(sentence => unrecorded(sentence).nonEmpty)
     withClue(
-      s"${present.size} sentence(s) in `Chain.construct` claim a link is the last one. " +
-        s"Which link is the end is `Chain.widest` and is not written in prose; a record of a past " +
-        s"state says `was`, `until`, or `this read` and then the text it used to carry, IN THE " +
-        s"SENTENCE " +
-        s"THAT NAMES THE LINK, since a marker elsewhere in the block is a word about something " +
-        s"else. If the sentence is a general one about what last means, it belongs in the field " +
+      s"${present.size} sentence(s) in `Chain.construct` claim a link is the last one. Which " +
+        s"link is the end is `Chain.widest` and is not written in prose. A record of a past " +
+        s"state puts the phrase inside a construction that HOLDS it -- `was the last link`, " +
+        s"`been the last link`, or a quotation opened by `this read \"` -- and a past-tense word " +
+        s"elsewhere in the sentence excuses nothing. If the sentence is a general one about what " +
+        s"last means, or mentions the phrase instead of asserting it, it belongs in the field " +
         s"docstring above rather than here:\n${present.mkString("\n\n")}\n"
     ) {
       present shouldBe empty
     }
 
-    // Fired against the sentence it was written for, so that the pattern is known to separate the
-    // two shapes rather than to accept everything. The first is `transcendental`'s as it stood
-    // until 2026-09-19 and the second is its replacement.
-    dated.findFirstIn("The last link since 2026-09-15, and the only one that needs a limit.") shouldBe None
-    dated.findFirstIn("Landed 2026-09-15 and was the last link until `concatenation` went on top") should not be empty
-
-    // The two removals, pinned here rather than left to the harness, with the record that says
-    // what a narrowing may not cost. The first sentence is what perturbation 7 wrote into a block
-    // and `read the` used to clear; the second is what perturbation 9 wrote and a bare quoted
-    // `read` used to clear, its `read` being present tense; the third is `numbering`'s record,
-    // which rests on the quoted alternative ALONE, so a pattern that caught either of the first
-    // two by dropping the quoted alternative altogether would go red here.
-    dated.findFirstIn("The last link since 2026-09-19; read the record in `docs/adr/0017`.") shouldBe None
-    dated.findFirstIn(
-      "The last link since 2026-09-19; the field above has to read \"the last\" for the two to agree."
-    ) shouldBe None
-    dated.findFirstIn(
+    // Fired against the sentences it was written for, so the rule is known to separate the two
+    // shapes rather than to accept everything. The first is `transcendental`'s as it stood until
+    // 2026-09-19, the second its replacement, the third `numbering`'s, which is the one record
+    // that rests on the quoted construction alone.
+    unrecorded(
+      "The last link since 2026-09-15, and the only one that needs a limit."
+    ) should not be empty
+    unrecorded(
+      "Landed 2026-09-15 and was the last link until `concatenation` went on top"
+    ) shouldBe empty
+    unrecorded(
       "This read \"The last link since 2026-09-14, and the first one that is about a language\" " +
         "and both halves went on 2026-09-19."
+    ) shouldBe empty
+
+    // The two words the list lost, kept as pins so that putting either back has to go red here.
+    unrecorded(
+      "The last link since 2026-09-19; read the record in `docs/adr/0017`."
+    ) should not be empty
+    unrecorded(
+      "The last link since 2026-09-19; the field above has to read \"the last\" for the two to agree."
     ) should not be empty
 
-    // And the hole, which is why the two lines above are not the whole story: a false claim at the
-    // present tense whose own sentence carries a `was` about something else still passes. This is
-    // the narrowest example anybody has written of it, and it is here so that a reader meets the
-    // limit where the guard is rather than in a record beside it.
-    dated.findFirstIn(
+    // The three holes containment closes. The first was declared open by this docstring at round
+    // four, the second is the finding that sent the card back at round five, and the third is
+    // what a rule about the ORDER of the marker and the phrase would still have missed.
+    unrecorded(
       "`matrix` is the last link, which was decided when the five were moved into the chain."
+    ) should not be empty
+    unrecorded(
+      "The last link since 2026-09-20, and it stays that way until somebody puts one on top of it."
+    ) should not be empty
+    unrecorded(
+      "The chain was rebuilt on 2026-09-18, and this is the last link since then."
+    ) should not be empty
+
+    // And the pin that isolates containment from the constructions themselves: one sentence
+    // carrying a true record AND a fresh claim. Every construction the rule knows is present in
+    // it, and the second occurrence is inside none of them.
+    unrecorded(
+      "Landed 2026-09-15 and was the last link until 2026-09-16, and the last link again since 2026-09-20."
     ) should not be empty
   }
 
