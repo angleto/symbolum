@@ -197,14 +197,15 @@ object Limit {
    * and `docs/proving.md` both put it first among what the analysis owed.
    *
    * **It did not buy `exp 1 > 2`, which this docstring said it would buy immediately**, and both
-   * records are corrected in place rather than left to be believed. What that claim wants besides
-   * this theorem is a dominating series for the exponential: `1 / i!` under `2 * (1/2)^i` asks for
-   * `2^i <= 2 * i!`, which no development here holds, and then an order fact about a quotient.
-   * **The second of those two is here since 2026-09-18**, `Order.INV_ANTITONE` with
-   * `Order.LE_MUL_BOTH` under it, so what `exp 1 > 2` waits on is the first alone, and that is an
-   * induction over `num` whose step holds only from one upwards. The geometric series at one half
-   * asks for neither, and `LimitSpec` obtains it, which is the consumer this theorem went a day
-   * without.
+   * records were corrected in place rather than left to be believed. What that claim wanted
+   * besides this theorem was a dominating series for the exponential: `1 / i!` under
+   * `2 * (1/2)^i` asks for `2^i <= 2 * i!` and then an order fact about a quotient. The second
+   * landed on 2026-09-18, `Order.INV_ANTITONE` with `Order.LE_MUL_BOTH` under it, and the first
+   * on 2026-09-20 as `Coding.NUM_POW_LE_FACT`, so `Transcendental.EXP_ONE_ABOVE_TWO` is a theorem
+   * and this test is what obtains the limit it is about. **Four days between the theorem and its
+   * first real consumer, and what stood in between was arithmetic on `num`**: the geometric
+   * series at one half asked for neither fact and `LimitSpec` obtained it the same day, which is
+   * how this went from unspent to spent on an example that proved nothing about the gap.
    */
   val Comparison: String = "SUM_COMPARISON"
 

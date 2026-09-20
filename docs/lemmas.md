@@ -698,6 +698,7 @@ they have least appetite for working out how it is produced.
   COSH_PLUS_SINH           !x:real. cosh x + sinh x = exp x
   COSH_ZERO                cosh 0 = 1
   COS_ZERO                 cos 0 = 1
+  EXP_ONE_ABOVE_TWO        2 < exp 1
   EXP_ZERO                 exp 0 = 1
   SINH_ZERO                sinh 0 = 0
   SIN_ZERO                 sin 0 = 0

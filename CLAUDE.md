@@ -617,7 +617,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 565 lemmas, 368 have two or more leading quantifiers and **340 of
+caller meant: of the library's 566 lemmas, 368 have two or more leading quantifiers and **340 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1428,26 +1428,42 @@ bound the terms respect from an index on rather than everywhere, and that is the
 usefulness: the lower bound worth having on an increasing sequence is one of its own terms, which
 is false below that term's index.
 
-So `exp 1 > 2` is **still** statable and unproved, and the reason is no longer the comparison test,
-nor, since 2026-09-18, the order fact. What is missing is one half of the dominating series: putting
-`1 / i!` under `2 * (1/2)^i` wants `2^i <= 2 * i!`, which no development holds and whose induction
-step is valid only from one upwards, so it is a two-base induction and not an instance. The other
-half was an order fact about a quotient, of which this chain had exactly one, `INV_POSITIVE`;
-`INV_ANTITONE` is the second, the reciprocal reversing the order on the positives, with
-`LE_MUL_BOTH` under it. **That sentence was written in seven documents and went stale in all of
-them at once**, which is the defect this file names about a fact written twice. The figure here
-said five for a day, and so does the title of `9734bf7`, the commit that landed the second fact
-and made the copies false. Five is what that commit repaired; the population was seven, and the
-two it left behind stood for the seven hours between that commit and `ceedf4d`, on the same day.
-The instrument is the union of the two commits' own diffs rather than a pattern, because the claim
-is spelled differently in every document and a pattern matching all of them would have been built
-by reading them, which is the reading it was meant to replace. A count of copies
-is itself a copy, and this one counted the repair instead of the population, which is the shape of
-error the sentence it sits in is about.
-`sin x * sin x + cos x * cos x = 1` wants the Cauchy product besides. What kept the first sentence
-wrong for a day is a tool with no consumer, so there is one now: `LimitSpec`
-obtains the geometric series at one half and sandwiches its limit between zero and two, which is the
-first series here whose convergence is a theorem rather than a hypothesis.
+**`Transcendental.EXP_ONE_ABOVE_TWO` is `2 < exp 1` and it is proved, since 2026-09-20.** It is
+the first fact here about a value this repository does not compute: every other one is a value at
+zero, where the series stops after a term and no convergence question arises, and this one needs
+the series to converge before `lim` says anything at all. `SUM_COMPARISON` obtains that, which is
+the first time anything spends it on a series of this file, and `CONVERGES_GE` puts the third
+partial sum, `1 + 1 + 1/2`, under the limit.
+
+**What it waited on was arithmetic and not analysis**, and the sentence that stood here until that
+day is worth keeping in that form: the comparison test had been provable and unspent since
+2026-09-16, and what was missing was the dominating series. Putting `1 / i!` under `2 * (1/2)^i`
+is `2^i <= 2 * i!`, which is `Coding.NUM_POW_LE_FACT` and is one induction on the shifted claim
+plus `NUM_CASES` rather than the two-base induction it looks like. The order half was
+`INV_ANTITONE` with `LE_MUL_BOTH` under it, landed 2026-09-18. **That sentence was written in
+seven documents and went stale in all of them at once**, which is the defect this file names
+about a fact written twice. The figure here said five for a day, and so does the title of
+`9734bf7`, the commit that landed the second fact and made the copies false. Five is what that
+commit repaired; the population was seven, and the two it left behind stood for the seven hours
+between that commit and `ceedf4d`, on the same day. The instrument is the union of the two
+commits' own diffs rather than a pattern, because the claim is spelled differently in every
+document and a pattern matching all of them would have been built by reading them, which is the
+reading it was meant to replace. A count of copies is itself a copy, and this one counted the
+repair instead of the population, which is the shape of error the sentence it sits in is about.
+
+What is **not** proved is the rest of that list: `exp (x + y) = exp x * exp y` and
+`sin x * sin x + cos x * cos x = 1` want the Cauchy product, and every fact about `ln` waits on
+the intermediate value theorem. `LimitSpec` obtains the geometric series at one half and
+sandwiches its limit between zero and two, which was the first series here whose convergence is a
+theorem rather than a hypothesis and is the model the exponential's follows.
+
+**A quotient with a symbolic denominator is outside every procedure here, and that decided the
+shape of the whole derivation.** `Linarith` refuses `x / y` by name, saying that cancelling a
+symbolic denominator needs it to be non-zero and is `Field`'s to assume. So no goal in that proof
+carries one: the reciprocal enters as a variable with the hypothesis `f * v = 1`, which is
+`MUL_INVERSE` at a denominator already known positive, and each step is a schematic implication
+over real variables that is specialised afterwards. It is the shape to copy for any bound on a
+series whose terms are quotients.
 
 Three things in those derivations were harder than they look and each is recorded where it happens.
 Halving a tolerance is `Linarith`'s, because a numeral denominator is a rational coefficient to it

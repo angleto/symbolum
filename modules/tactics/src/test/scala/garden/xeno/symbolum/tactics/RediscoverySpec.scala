@@ -322,7 +322,13 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // off, which is the condition `swapped` refuses at. That both produce a residue and only one
     // of them is weakenable is the whole of why this figure and the one above move by different
     // amounts on one change.
-    propose.mutable.size shouldBe 81
+    // 82 with `exp 1 > 2`, 2026-09-20, and ONE of the two facts that landed with it, which is the
+    // same split the rows above keep drawing. `EXP_ONE_ABOVE_TWO` is `2 < exp 1`: it writes
+    // `real_lt`, binds nothing at all and so carries no lambda for `swapped` to refuse at.
+    // `Coding.NUM_POW_LE_FACT` writes `NUM_LE`, `NUM_POW`, `NUM_MUL` and `NUM_FACT` and not one of
+    // the four operators `Propose.swapped` exchanges, all four of which are the reals', so it
+    // produces nothing here. Derived that way and then measured.
+    propose.mutable.size shouldBe 82
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

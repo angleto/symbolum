@@ -958,7 +958,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // refutes it, and it is an implication between an order on reals and an order on `num`, which
     // is a shape the procedures take and do not settle. Attempted and not settled, which is what
     // this bucket means and is a different answer from the one below.
-    open shouldBe 282
+    // 283 with the ONE residue `exp 1 > 2` produces, 2026-09-20. `EXP_ONE_ABOVE_TWO` swapped is
+    // `2 <= exp 1`, which is **true**, so nothing refutes it, and `exp 1` is a constant no
+    // procedure here has a value or a bound for, so nothing settles it either. Attempted and not
+    // settled, which is what this bucket means. The lemma that landed with it, `NUM_POW_LE_FACT`,
+    // writes none of the four operators the swap exchanges and produces no residue at all, which
+    // is the same split `RediscoverySpec`'s mutable count draws on the same pair.
+    open shouldBe 283
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

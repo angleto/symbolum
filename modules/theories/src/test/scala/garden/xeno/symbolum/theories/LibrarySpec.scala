@@ -497,8 +497,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // the two figures does not move. Tip plus this branch's delta. It binds ONE leading quantifier,
     // so neither of `CLAUDE.md`'s two figures-per-lemma moves and only the library's own total does,
     // which is the case the line above describes from the other side.
-    library.entries.size shouldBe 565
-    library.names.distinct.size shouldBe 562
+    // 566 and 563 with `exp 1 > 2`, the same day: one fact under one name,
+    // `EXP_ONE_ABOVE_TWO` in `Transcendental`, not shared with another development, so the gap
+    // between the two figures does not move. Tip plus this branch's delta. It binds nothing at
+    // all, being a claim about two constants, so neither figure-per-lemma in `CLAUDE.md` moves.
+    library.entries.size shouldBe 566
+    library.names.distinct.size shouldBe 563
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
