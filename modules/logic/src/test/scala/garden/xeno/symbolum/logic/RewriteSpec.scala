@@ -476,6 +476,16 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "REACH R A x` fires once per occurrence because its right side holds no `INDUCTIVE`; and " +
         "the three ground equations taken from assumptions have left sides their own right sides " +
         "do not contain"),
+    "Peano.scala" ->
+      ("one, and it arrived on 2026-09-20 with the binomial coefficients. The rule is " +
+        "`PRE (SUC k) = k` and the term is the right-hand side of Pascal's rule as the recursion " +
+        "leaves it, which holds exactly one `PRE`. **It cannot reach the limit**, and the " +
+        "argument is the rule's own shape rather than a count: the left side holds a `PRE` and " +
+        "the right side holds none, so every firing strictly reduces the number of them and a " +
+        "term with one of them settles in one step. What the file then does with the result is " +
+        "hand it to `eqMp` and compare the outcome against a written statement through " +
+        "`checked`, so an exhausted limit could not pass silently here even if it were " +
+        "reachable: the comparison is the second guard and the termination is the first."),
     // The seven below arrived on 2026-09-15, when the scan was extended to `Rewrite.inTheorem`
     // and named them. Each is a reading of every call in the file, not of one of them.
     "Order.scala" ->

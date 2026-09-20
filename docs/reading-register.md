@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (129)
+## The definitions (130)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -214,6 +214,7 @@ axiom mentioning it means.
 | `definition NUM_BIT0` | NUM_BIT0 = \x:num. x + x | **NOT READ** |  |  |
 | `definition NUM_BIT1` | NUM_BIT1 = \x:num. SUC (x + x) | **NOT READ** |  |  |
 | `definition NUM_CEIL` | NUM_CEIL = \x:real. select (\y:num. x <= real_of_num y /\ real_of_num y < x + 1) | **NOT READ** |  |  |
+| `definition NUM_CHOOSE` | NUM_CHOOSE = select (\x:num -> num -> num. x 0 = (\y:num. COND (y = 0) (SUC 0) 0) /\ (!y:num. x (SUC y) = (\z:num. COND (z = 0) (SUC 0) (x y (PRE z) + x y z)))) | **NOT READ** |  |  |
 | `definition NUM_CLOSED` | NUM_CLOSED = \x:num. !y:num. ~(NUM_FREE_TERM y x) | **NOT READ** |  |  |
 | `definition NUM_CODE` | NUM_CODE = \x:num. \y:num. SUC (NUM_PAIR x y) | **NOT READ** |  |  |
 | `definition NUM_CONG` | NUM_CONG = \x:num. \y:num. \z:num. ?u:num. ?v:num. y + x * u = z + x * v | **NOT READ** |  |  |
