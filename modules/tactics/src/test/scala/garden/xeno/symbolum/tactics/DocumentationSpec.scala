@@ -198,6 +198,30 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // by anybody rewriting the row from memory.
     readme should not include "no choice point anywhere"
     read("docs/evaluation.md") should not include "no choice point anywhere"
+
+    // The justification beside the citation, which is where the same row went wrong a second time
+    // and in the opposite direction: not a denial that had gone stale, but a figure that was born
+    // stale. Both cells said, in the present, "of the eighteen miniF2F statements this system reads
+    // and does not settle" and that two of them were refused by `Linarith`'s degree bound. The
+    // count was eighteen when `docs/adr/0029` enumerated them on 2026-09-18 and the completed
+    // square of `docs/adr/0032` settled two of them later the same day, so the sentence was false
+    // on the day it was written, and the two it names as refused are among the statements
+    // `ReachSpec` prints as proved. What both cells carry now is the classification, which is what
+    // the decision rests on, with the count left where a run prints it.
+    //
+    // Observed failing: restoring either sentence in either document makes this test red, checked
+    // on 2026-09-20 against the text `8472ed95` carried.
+    //
+    // What it does not cover: any other way of writing a count of the unsettled into the row. This
+    // pins the two strings that were there, in the idiom the assertions above use, because a
+    // paragraph rewritten from memory puts one of them back; a figure arriving in a new phrasing is
+    // read by a person, and `ReachSpec` prints the population it would be about.
+    Vector(readme, read("docs/evaluation.md")).foreach { cell =>
+      cell should not include "of the eighteen miniF2F statements this system reads and does not settle"
+      cell should not include "what is left to decide is arithmetic in all eighteen"
+      cell should not include "refused by `Linarith`'s degree bound, by name"
+      cell should not include "what refuses them is `Linarith`'s degree bound, by name"
+    }
   }
 
   /**
