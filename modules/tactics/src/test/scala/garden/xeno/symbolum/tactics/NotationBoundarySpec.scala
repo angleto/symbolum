@@ -248,7 +248,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Value.scala", "left") -> (Verdict.Number, "the left argument of a Bezout combination"),
     ("Value.scala", "right") -> (Verdict.Number, "the right argument of one"),
     ("Value.scala", "answer") -> (Verdict.Number, "the greatest common divisor it is a combination for"),
-    ("Value.scala", "bound") -> (Verdict.Number, "how many multipliers were tried before giving up"),
+    // The entry read `bound` until 2026-09-20 and the scan now sees the call that wraps it, which
+    // is the same thing happening to `Language.scala` two screens down: a count that gains a
+    // plural gains a `Prose.count` around it, and the site the scan reports is the call.
+    ("Value.scala", "Prose.count(bound, \"step\")") ->
+      (Verdict.Number, "how many multipliers were tried before giving up, with its noun"),
     ("Value.scala", "numerator") ->
       (Verdict.Number, "the numerator of the rational a floor was asked about"),
     ("Value.scala", "denominator") ->
