@@ -516,8 +516,15 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // shared with another development, so the gap of three does not move. Tip plus this branch's
     // delta. Its four leading quantifiers are two sequences and two reals, so it has two alike
     // and both of `CLAUDE.md`'s figures-per-lemma move by one, as the entry above did.
-    library.entries.size shouldBe 571
-    library.names.distinct.size shouldBe 568
+    // 577 and 574 with the Cauchy product's finite half, 2026-09-20: SIX facts under six names,
+    // two in `Peano` and four in `Series`, none shared with another development, so the gap of
+    // three does not move. Tip plus this branch's delta. `CLAUDE.md`'s two figures-per-lemma move
+    // by five and by two, and both were derived from the statements before the run: of the six,
+    // `NUM_SUC_SUB_SELF` binds one leading quantifier and the other five bind two or more, and of
+    // those five only `NUM_SUC_SUB` (two `num`) and `SUM_OF_PRODUCTS` (two `num -> real`) bind two
+    // that share a type.
+    library.entries.size shouldBe 577
+    library.names.distinct.size shouldBe 574
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
