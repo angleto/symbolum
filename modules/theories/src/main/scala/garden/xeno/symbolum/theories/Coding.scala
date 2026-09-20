@@ -249,6 +249,37 @@ object Coding {
   val FactorialPositive: String = "NUM_FACT_POSITIVE"
 
   /**
+   * `|- !k. NUM_LE (NUM_POW (SUC (SUC ZERO)) k) (NUM_MUL (SUC (SUC ZERO)) (NUM_FACT k))`
+   *
+   * A power of two is at most twice the factorial, which is the **dominating series** the
+   * exponential's convergence waits on: putting `1 / i!` under `2 * (1/2)^i` is this inequality
+   * divided through, and `Limit.SUM_COMPARISON` has been provable and unspent since 2026-09-16 for
+   * want of it. Five documents of this repository said the comparison test bought `exp 1 > 2` and
+   * were wrong for a day; this is one of the two facts that were missing, the other being
+   * `Order.INV_ANTITONE`, which landed on 2026-09-18.
+   *
+   * == Why the obvious induction does not close it, and why it is not a two-base one ==
+   *
+   * `P k := 2^k <= 2 * k!` has a step that is valid only from one upwards: `2^(SUC k)` is
+   * `2^k * 2`, the hypothesis carries that under `(2 * k!) * 2 = 2 * (k! * 2)`, and reaching
+   * `2 * (k! * SUC k)` asks for `2 <= SUC k`, which is false at zero. `P 0` is nonetheless true,
+   * `1 <= 2`, so the statement holds everywhere and one induction cannot see it.
+   *
+   * A two-base induction is what that shape usually asks for and it is not what is done here.
+   * `Q k := P (SUC k)` is proved by the ordinary induction instead: its step needs
+   * `2 <= SUC (SUC k)`, which holds for every `k` because the index inside `Q` is already a
+   * successor. `P ZERO` is three lines on its own, and `Natural.NUM_CASES` is what puts the two
+   * together, every number being zero or a successor. Nothing new is needed anywhere.
+   *
+   * == Where it lives ==
+   *
+   * Here, with `NUM_FACT`, rather than in `Peano` with `NUM_POW`: a fact about both belongs with
+   * the one that is defined later, and `Coding` is built before `Transcendental` in the chain, so
+   * the lemma is in scope where `exp` is. It reaches the reals through `Series.NUM_REAL_POW`.
+   */
+  val PowerBelowFactorial: String = "NUM_POW_LE_FACT"
+
+  /**
    * `NUM_BETA a b i` is `a mod (1 + (i + 1) * b)`, Goedel's beta function.
    *
    * A definition and not a recursion, which is the whole reason `docs/adr/0013` chose it over a
@@ -311,6 +342,8 @@ object Coding {
         "(!i:num. NUM_LT i n ==> NUM_GCD (m i) c = SUC ZERO) ==> " +
         "NUM_GCD (NUM_PROD m n) c = SUC ZERO"),
     FactorialPositive -> "!k:num. NUM_LT ZERO (NUM_FACT k)",
+    PowerBelowFactorial ->
+      "!k:num. NUM_LE (NUM_POW (SUC (SUC ZERO)) k) (NUM_MUL (SUC (SUC ZERO)) (NUM_FACT k))",
     BetaSequence ->
       ("!s:num -> num. !n:num. ?a:num. ?b:num. !i:num. " +
         "NUM_LT i n ==> NUM_BETA a b i = s i"),
@@ -421,6 +454,7 @@ object Coding {
       coprimeFamily <- coprimeToFamily(vocabulary, driver, productZeroChecked, productSuccessorChecked, coprimeProduct)
       family <- remaindersOverAFamily(vocabulary, driver, crt, productDivides, productPositive, coprimeFamily)
       factorialPositive <- factorialNeverVanishes(vocabulary, driver, zeroChecked, successorChecked)
+      powerBelow <- powerBelowFactorial(vocabulary, driver, zeroChecked, successorChecked)
       betaSequence <- sequenceOfResidues(
         vocabulary, bound, divides, factorialPositive, coprime, family, betaDefinition)
     } yield new Coding(
@@ -450,6 +484,7 @@ object Coding {
         CoprimeToFamily -> coprimeFamily,
         RemaindersFamily -> family,
         FactorialPositive -> factorialPositive,
+        PowerBelowFactorial -> powerBelow,
         BetaSequence -> betaSequence
       )
     )
@@ -576,7 +611,15 @@ object Coding {
         Peano.AtMostSuccessor,
         Peano.SubBelow,
         Peano.ZeroPlus,
-        Peano.SuccessorTimes
+        Peano.SuccessorTimes,
+        // What [[PowerBelowFactorial]] reaches for and nothing else here does: the two recurrences
+        // of the power, the unit of multiplication, its monotonicity, and that a summand is at
+        // most its sum.
+        Peano.PowAtZero,
+        Peano.PowAtSuccessor,
+        Peano.TimesOne,
+        Peano.MulMonotone,
+        Peano.AtMostSum
       )
 
       for {
@@ -3284,6 +3327,258 @@ object Coding {
         if (proved.hypotheses.isEmpty) Right(())
         else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
       result <- vocabulary.checked(FactorialPositive, proved)
+    } yield result
+  }
+
+  /**
+   * [[PowerBelowFactorial]], by the ordinary induction on the shifted claim and one case split.
+   *
+   * The shape is forced and is written out in the docstring of the name: the step of the direct
+   * induction asks for `2 <= SUC k`, which fails at zero, so what is inducted on is
+   * `Q k := P (SUC k)`, whose step asks for `2 <= SUC (SUC k)` and gets it for every `k`. `P ZERO`
+   * is derived beside it, and `Natural.NUM_CASES` puts the two together.
+   *
+   * == The three places the derivation is longer than the argument ==
+   *
+   * `NUM_MUL_MONOTONE` is monotone in the **right** factor with the left one fixed, and every
+   * inequality here needs it in the other direction: the induction hypothesis is multiplied by two
+   * on the right, and the factorial by its own new index. Each of those is the lemma plus one
+   * instance of `NUM_MUL_SYM` carried into the comparison, which is what `onLeft` is for.
+   *
+   * `two <= SUC (SUC k)` has no lemma of its own and is not an instance of one. What gives it is
+   * `NUM_LE_ADD`, `x <= x + y`, at `x := SUC (SUC ZERO)` and `y := k`, with the sum rewritten to
+   * `SUC (SUC k)` by two instances of `NUM_SUC_ADD` over `NUM_ZERO_ADD`. It is three lines and
+   * they are arithmetic rather than order.
+   *
+   * And a two is `SUC (SUC ZERO)` throughout rather than the numeral `2`, which is what `Peano`
+   * does at `NUM_MUL_TWO` and for the same reason: a numeral reaches a recurrence only through
+   * `Successor`, `NUM_POW_SUC` recurses on the exponent, and this file has no need of the numeral
+   * anywhere. A consumer over the reals crosses by `Series.NUM_REAL_POW` and the embedding, where
+   * the two becomes a real numeral in one step that `Linarith` decides.
+   */
+  private def powerBelowFactorial(
+    vocabulary: Vocabulary,
+    driver: Induct,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = vocabulary.rules
+    val logic = vocabulary.logic
+    val numbers = vocabulary.numbers
+
+    /** `|- NUM_LE left' right` from `|- left = left'` and `|- NUM_LE left right`. */
+    def onLeft(equation: Kernel.Thm, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      theorem.conclusion match {
+        case App(App(_, _), right) =>
+          for {
+            congruence <- Conv.apTerm(vocabulary.atMost, equation)
+            applied <- Conv.apThm(congruence, right)
+            result <- LogicError.lift(Kernel.eqMp(applied, theorem))
+          } yield result
+        case other => Left(NotOfForm("a comparison", other))
+      }
+
+    /** `|- NUM_LE left right'` from `|- right = right'` and `|- NUM_LE left right`. */
+    def onRight(equation: Kernel.Thm, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      theorem.conclusion match {
+        case App(App(_, left), _) =>
+          for {
+            context <- LogicError.lift(Term.app(vocabulary.atMost, left))
+            result <- vocabulary.carry(context, equation, theorem)
+          } yield result
+        case other => Left(NotOfForm("a comparison", other))
+      }
+
+    /** `|- left * tail = right * tail` from `|- left = right`. */
+    def overProduct(equation: Kernel.Thm, tail: Term): Either[LogicError, Kernel.Thm] =
+      Conv.apTerm(vocabulary.times, equation).flatMap(Conv.apThm(_, tail))
+
+    for {
+      one <- vocabulary.one
+      two <- LogicError.lift(Term.app(vocabulary.successor, one))
+      power <- LogicError.lift(
+        vocabulary.theory
+          .constant(Peano.Exponentiation, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      powAtZero <- vocabulary.fact(Peano.PowAtZero)
+      powAtSuccessor <- vocabulary.fact(Peano.PowAtSuccessor)
+      timesOne <- vocabulary.fact(Peano.TimesOne)
+      mulSym <- vocabulary.fact(Peano.MulCommutative)
+      monotone <- vocabulary.fact(Peano.MulMonotone)
+      reflexive <- vocabulary.fact(Peano.Reflexive)
+      atMostSuccessor <- vocabulary.fact(Peano.AtMostSuccessor)
+      atMostSum <- vocabulary.fact(Peano.AtMostSum)
+      successorPlus <- vocabulary.fact(Peano.SuccessorPlus)
+      zeroPlus <- vocabulary.fact(Peano.ZeroPlus)
+      cases <- vocabulary.peano.naturals.fact(Natural.ZeroOrSuccessor)
+
+      result <- {
+        def powerAt(exponent: Term): Either[LogicError, Term] =
+          LogicError.lift(Term.appAll(power, List(two, exponent)))
+
+        def successorOf(argument: Term): Either[LogicError, Term] =
+          LogicError.lift(Term.app(vocabulary.successor, argument))
+
+        /** `|- two <= SUC (SUC k)`, which is `NUM_LE_ADD` with the sum rewritten. */
+        def twoBelowTwoSuccessors(k: Term): Either[LogicError, Kernel.Thm] =
+          for {
+            innerShift <- rules.specAll(successorPlus, List(vocabulary.zero, k))
+            zeroAt <- rules.spec(k, zeroPlus)
+            inner <- Conv.apTerm(vocabulary.successor, zeroAt)
+            oneShift <- Conv.trans(innerShift, inner)
+            outerShift <- rules.specAll(successorPlus, List(one, k))
+            outer <- Conv.apTerm(vocabulary.successor, oneShift)
+            shifted <- Conv.trans(outerShift, outer)
+            bounded <- rules.specAll(atMostSum, List(two, k))
+            result <- onRight(shifted, bounded)
+          } yield result
+
+        /** `|- NUM_POW two (SUC ZERO) <= NUM_MUL two (NUM_FACT (SUC ZERO))`, both sides being two. */
+        def shiftedBase(goal: Term): Either[LogicError, Kernel.Thm] =
+          for {
+            opened <- rules.specAll(powAtSuccessor, List(two, vocabulary.zero))
+            atZeroPower <- rules.spec(two, powAtZero)
+            reduced <- overProduct(atZeroPower, two)
+            asOneTimes <- Conv.trans(opened, reduced)
+            commuted <- rules.specAll(mulSym, List(one, two))
+            twoTimesOne <- rules.spec(two, timesOne)
+            leftIsTwo <- Conv.trans(asOneTimes, commuted).flatMap(Conv.trans(_, twoTimesOne))
+
+            factorialStep <- rules.spec(vocabulary.zero, atSuccessor)
+            factorialReduced <- overProduct(atZero, one)
+            oneTimesOne <- rules.spec(one, timesOne)
+            factorialIsOne <- Conv
+              .trans(factorialStep, factorialReduced)
+              .flatMap(Conv.trans(_, oneTimesOne))
+            underTwo <- vocabulary.underProduct(two, factorialIsOne)
+            rightIsTwo <- Conv.trans(underTwo, twoTimesOne)
+
+            refl <- rules.spec(two, reflexive)
+            leftBack <- Conv.sym(leftIsTwo).flatMap(onLeft(_, refl))
+            settled <- Conv.sym(rightIsTwo).flatMap(onRight(_, leftBack))
+            _ <-
+              if (settled.conclusion == goal) Right(())
+              else Left(NotOfForm("the base of the shifted claim", settled.conclusion))
+          } yield settled
+
+        /** The step of the shifted claim, where the two the factorial has to beat is `SUC (SUC k)`. */
+        def shiftedStep(step: Induct.Step): Either[LogicError, Kernel.Thm] =
+          for {
+            successorOfK <- successorOf(step.variable)
+            twice <- successorOf(successorOfK)
+            powerOfK <- powerAt(successorOfK)
+            factorialOfK <- LogicError.lift(Term.app(vocabulary.factorial, successorOfK))
+
+            twiceFactorial <- vocabulary.product(two, factorialOfK)
+            byHypothesis <- rules
+              .specAll(monotone, List(two, powerOfK, twiceFactorial))
+              .flatMap(rules.mp(_, step.hypothesis))
+            commutedPower <- rules.specAll(mulSym, List(powerOfK, two))
+            fromHypothesis <- Conv.sym(commutedPower).flatMap(onLeft(_, byHypothesis))
+
+            bigger <- twoBelowTwoSuccessors(step.variable)
+            grown <- rules
+              .specAll(monotone, List(factorialOfK, two, twice))
+              .flatMap(rules.mp(_, bigger))
+            commutedFactorial <- rules.specAll(mulSym, List(two, factorialOfK))
+            shifted <- Conv.sym(commutedFactorial).flatMap(onLeft(_, grown))
+
+            grownFactorial <- vocabulary.product(factorialOfK, twice)
+            underTwo <- rules
+              .specAll(monotone, List(two, twiceFactorial, grownFactorial))
+              .flatMap(rules.mp(_, shifted))
+
+            leftEnd <- vocabulary.product(powerOfK, two)
+            middle <- vocabulary.product(two, twiceFactorial)
+            rightEnd <- vocabulary.product(two, grownFactorial)
+            chained <- transitively(vocabulary, leftEnd, middle, rightEnd, fromHypothesis, underTwo)
+
+            openedPower <- rules.specAll(powAtSuccessor, List(two, successorOfK))
+            openedFactorial <- rules.spec(successorOfK, atSuccessor)
+            leftBack <- Conv.sym(openedPower).flatMap(onLeft(_, chained))
+            rightBack <- Conv
+              .sym(openedFactorial)
+              .flatMap(vocabulary.underProduct(two, _))
+              .flatMap(onRight(_, leftBack))
+            _ <-
+              if (rightBack.conclusion == step.goal) Right(())
+              else Left(NotOfForm("the step of the shifted claim", rightBack.conclusion))
+          } yield rightBack
+
+        for {
+          shiftedText <- Right(
+            "!k:num. NUM_LE (NUM_POW (SUC (SUC ZERO)) (SUC k)) " +
+              "(NUM_MUL (SUC (SUC ZERO)) (NUM_FACT (SUC k)))"
+          )
+          shifted <- Parser.proposition(vocabulary.theory, vocabulary.notation, shiftedText)
+          everyShift <- driver.proveBy(shifted, shiftedBase, shiftedStep)
+
+          // `P ZERO`, which the shifted claim does not cover and which is true for its own reason:
+          // one power of two is one, no factorial has been taken, and `SUC 0 <= SUC (SUC 0)`.
+          atZeroPower <- rules.spec(two, powAtZero)
+          underTwo <- vocabulary.underProduct(two, atZero)
+          twoTimesOne <- rules.spec(two, timesOne)
+          rightIsTwo <- Conv.trans(underTwo, twoTimesOne)
+          below <- rules.spec(one, atMostSuccessor)
+          leftBack <- Conv.sym(atZeroPower).flatMap(onLeft(_, below))
+          atZeroCase <- Conv.sym(rightIsTwo).flatMap(onRight(_, leftBack))
+
+          statement <- vocabulary.statement(PowerBelowFactorial)
+          stripped <- Logic.stripForall(statement)
+          subject <- stripped._1.lastOption.toRight(
+            NotOfForm("a claim about every number", statement)
+          )
+          template <- LogicError.lift(Term.abs(subject, stripped._2))
+
+          split <- rules.spec(subject, cases)
+          disjuncts <- logic
+            .destDisj(split.conclusion)
+            .toRight(NotOfForm("a disjunction", split.conclusion))
+          (isZero, isSuccessor) = disjuncts
+
+          fromZero <- for {
+            assumed <- LogicError.lift(Kernel.assume(isZero))
+            congruence <- Conv.apTerm(template, assumed)
+            reduced <- Conv.betaSides(congruence)
+            flipped <- Conv.sym(reduced)
+            moved <- LogicError.lift(Kernel.eqMp(flipped, atZeroCase))
+          } yield moved
+
+          predicate <- logic
+            .destExistsPredicate(isSuccessor)
+            .toRight(NotOfForm("an existential quantification", isSuccessor))
+          witness = Conv.freshVariable(
+            "y",
+            numbers,
+            Term.freeVariables(statement) ++ Term.freeVariables(isSuccessor)
+          )
+          applied <- LogicError.lift(Term.app(predicate, witness))
+          contraction <- Conv.betaRoot(applied)
+          inner <- Term
+            .destEq(contraction.conclusion)
+            .map(_._2)
+            .toRight(NotOfForm("an equation", contraction.conclusion))
+
+          fromSuccessor <- for {
+            assumedExists <- LogicError.lift(Kernel.assume(isSuccessor))
+            assumedInner <- LogicError.lift(Kernel.assume(inner))
+            atWitness <- rules.spec(witness, everyShift)
+            congruence <- Conv.apTerm(template, assumedInner)
+            reduced <- Conv.betaSides(congruence)
+            flipped <- Conv.sym(reduced)
+            moved <- LogicError.lift(Kernel.eqMp(flipped, atWitness))
+            eliminated <- rules.existsElim(assumedExists, witness, moved)
+          } yield eliminated
+
+          settled <- rules.disjElim(split, fromZero, fromSuccessor)
+          proved <- rules.gen(subject, settled)
+          _ <-
+            if (proved.hypotheses.isEmpty) Right(())
+            else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
+          checked <- vocabulary.checked(PowerBelowFactorial, proved)
+        } yield checked
+      }
     } yield result
   }
 
