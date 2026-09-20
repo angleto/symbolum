@@ -269,7 +269,7 @@ object Ledger {
       val point = separated.witness.toVector.sortBy(_._1).map { case (name, value) =>
         s"$name=$value"
       }
-      s"agreed to ${separated.agreement} digits at ${point.mkString(", ")}"
+      s"agreed to ${Prose.count(separated.agreement, "digit")} at ${point.mkString(", ")}"
     case unsettled: Discovery.Unsettled =>
       s"${Prose.count(unsettled.pointsTried, "point")} tried: ${unsettled.reason.message}"
   }

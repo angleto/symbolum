@@ -208,6 +208,31 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
     evidence(4, 0) shouldBe "Earned: 4 inferences over 0 axioms"
   }
 
+  // The file's THIRD counter, on the other way in: `record(outcome)` writes the evidence of a
+  // screened pair, and a pair the first stage could not separate and the second could is written
+  // `agreed to N digits at <point>`. The census of 2026-09-18 reached the two above and not this
+  // one, because it read `} steps|} inferences|} axioms|} facts` and this noun is none of the four.
+  //
+  // One digit is not a corner here: `agreement` is how far down two values stayed equal, and a
+  // candidate separated at the first digit after the point is the ordinary case of a pair somebody
+  // wrote wrongly. The outcome is BUILT rather than obtained from a run, for the reason the test
+  // above gives: what is under test is the rendering, and a pair that agrees to exactly one digit
+  // is a fixture to hunt for rather than a fact about this file.
+  "The digits on the evidence of a separated pair" should "take the singular at one and the plural elsewhere" in {
+    val (ledger, _, _) = freshLedger()
+
+    def evidence(agreement: Int): String =
+      ledger
+        .record(Discovery.Separated(square, expanded, Map("x" -> BigDecimal(2)), agreement))
+        .evidence
+
+    evidence(1) should startWith("agreed to 1 digit at ")
+    evidence(9) should startWith("agreed to 9 digits at ")
+    // Zero takes the plural, as it does two counters up: a pair the second stage separated at the
+    // first digit it looked at agreed to none of them.
+    evidence(0) should startWith("agreed to 0 digits at ")
+  }
+
   "The second run of a candidate" should "cost a lookup instead of a certification" in {
     // The whole reason the file exists. The clock counts writes, so one tick after two calls means
     // the second one did not settle anything, and the entry it returns is the first one.

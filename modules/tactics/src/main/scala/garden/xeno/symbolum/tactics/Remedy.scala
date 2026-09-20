@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Counterpart, Natural, RealTheory, Signature}
+import garden.xeno.symbolum.theories.{Counterpart, Natural, Prose, RealTheory, Signature}
 
 /**
  * What a caller can do about a refusal, as a value rather than as prose.
@@ -725,7 +725,7 @@ object Remedy {
     case Algebraic.Outcome.NotCredible(_, confirmed, bound) =>
       RaiseALimit(
         s"the digits the values are known to, past ${Algebraic.Digits}",
-        s"no relation up to degree $bound was confirmed by more than $confirmed digits"
+        s"no relation up to degree $bound was confirmed by more than ${Prose.count(confirmed, "digit")}"
       )
 
     // Settled, and it is the interesting settlement: the value satisfies the polynomial and the
@@ -753,7 +753,7 @@ object Remedy {
     // not separate and the second could is over as a candidate, and how far down it survived says
     // whether the shape was nearly right.
     case Discovery.Separated(left, right, _, agreement) =>
-      Settled(s"$left = $right agreed to $agreement digits and no further")
+      Settled(s"$left = $right agreed to ${Prose.count(agreement, "digit")} and no further")
 
     case unsettled: Discovery.Unsettled => of(unsettled.reason)
   }
