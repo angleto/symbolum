@@ -140,6 +140,37 @@ change.
 gives a real figure to extrapolate from, and whether anything is done about it, a memoised walk or a
 boundary in `Derivation` at a cited fact, is decided there while it is still cheap to decide.
 
+**Measured on 2026-09-20**, once the first quotient had landed, at `7.0` `e6ca774a`. It is an
+assertion in `IntegerSpec` rather than a figure kept here by hand, for the reason `docs/adr/0034`
+gives: a measurement that can be a test is one, and this file carries the reading and the argument
+rather than the instrument.
+
+| | `Derivation.size` |
+|---|---|
+| an asserted axiom | 1 |
+| `INT_SAME_REFL`, a fact of the relation the type is carved from | 38 |
+| `INT_EQUAL`, the fact the carving is wanted for | 7687 |
+| the 43 published facts of `Integer` | 9784 / 11107 / 12775 by quartile, 20592 at the largest |
+| the 9 facts of `Inclusion`, which is what a claim about a real will carry | 12827 to 24362 |
+| the control: `PAIR_SURJECTIVE` | **1832**, the figure this record wrote on 2026-09-15 |
+
+The control is what makes the two readings comparable: the scale did not move under them, so the
+new figures sit beside the old ones rather than replacing a measurement taken differently.
+
+**What it says.** One quotient puts a median published fact at 1.1 × 10^4, which is six times a
+fact about a carved type and four and a half times an identity decided by `RING` today. The
+construction stacks three quotients, each carrying the ones below it by identity, so the sentence
+above about 10^5 to 10^6 per theorem about a real is not contradicted and now has an anchor under it
+instead of only a development's own total.
+
+**And it moves the preference between the two mitigations, which is the half a reader should
+carry.** `Cost` walks one report's graph three times, in `axiomsOf`, `size` and `census`, and
+`Check` and `foreignTo` walk it again where a caller asks. So a memoised walk is a constant factor
+of about three on a report and leaves the walk itself where it is; a boundary at a cited fact is
+what bounds the graph a report reads at all. The cheap one is not the one that answers the growth,
+which is the opposite of the order the gap was written in. Neither is decided here: what this
+paragraph hands on is that the choice is between a constant and an asymptote, and it is measured.
+
 **Analysis does not wait for any of this.** A supremum named by `select` over `COMPLETENESS`,
 sequences, limits, and a square root are built over the reals as they stand. By 0004's preserved
 property they survive the swap without a change, and they are what moves the measurement in
