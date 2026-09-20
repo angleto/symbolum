@@ -308,7 +308,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // run: of `ABS_OF_NONNEG`, `ABS_OF_NONPOS` and `ABS_MUL`, the first two carry one antecedent
     // each, the sign of the argument, and the third is an equation with nothing owed. Tip plus
     // this branch's delta.
-    proposals.size shouldBe 383
+    // 384 with `INT_MUL_CANCEL_NUM`, 2026-09-20, and the **one** was derived before the run: the
+    // lemma carries a single antecedent, the equation between the two products, so `Propose.peel`
+    // counting arrows gives it one. Tip plus this branch's delta.
+    proposals.size shouldBe 384
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1270,7 +1273,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `open shouldBe` two paragraphs up went red in the same change, and a red assertion ends its
     // test, so this one never ran and read exactly like a pass. The three residues were listed off
     // `Propose.audit` with their standings instead.
-    unreadable shouldBe 94
+    // 95 with the residue of `INT_MUL_CANCEL_NUM`, 2026-09-20, and it is here rather than in the
+    // bucket above for the reason this row has now given four times: the weakening drops the
+    // equation between the two products and leaves `!a b d. a = b`, which is **false**, and the
+    // sampler has no point to try because nothing interprets `int`. What decides the bucket is
+    // the type the residue is about, and the three `abs` residues of the same day are the control
+    // on that: they are false too, they are about reals, and every one of them is open.
+    unreadable shouldBe 95
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

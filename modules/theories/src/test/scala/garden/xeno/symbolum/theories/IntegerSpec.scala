@@ -303,6 +303,44 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
     force(Rewrite.inTheorem(naming, separated))
   }
 
+  /* ------------------------------------------------------------------ cancelling a factor */
+
+  "A factor that cannot be zero" should "come off both sides, which is what the rationals want" in {
+    // `INT_MUL_CANCEL_NUM`, spent rather than read. The instance is at a multiplier that is
+    // written as a successor and at two integers that are **not** given as pairs, which is the
+    // shape a consumer has: `docs/adr/0036` reads the denominator of a rational `(a, d)` as
+    // `INT_OF_NUM (SUC d)`, and the transitivity of the relation on those pairs is this lemma at
+    // `d` the middle pair's index.
+    val theorem = force(
+      for {
+        lemma <- integers.fact(Integer.CancelsPositive)
+        left <- integers.term("INT_OF_NUM 3", Integer.Classes)
+        right <- integers.term("INT_OF_NUM 5", Integer.Classes)
+        index <- integers.term("SUC (SUC (0:num))", numbers)
+        instance <- rules.specAll(lemma, List(left, right, index))
+      } yield instance
+    )
+
+    theorem.hypotheses shouldBe empty
+    integers.show(theorem.conclusion) shouldBe
+      "INT_MUL (INT_OF_NUM 3) (INT_OF_NUM (SUC (SUC (SUC 0)))) = " +
+        "INT_MUL (INT_OF_NUM 5) (INT_OF_NUM (SUC (SUC (SUC 0)))) ==> INT_OF_NUM 3 = INT_OF_NUM 5"
+  }
+
+  it should "be the restricted law and not the general one, which this development cannot state" in {
+    // What the lemma is NOT, asserted because a reader who wants the general cancellation will
+    // reach for this name and has to be told in one line rather than by reading the statement.
+    // `~(c = INT_ZERO) ==> INT_MUL a c = INT_MUL b c ==> a = b` is the general law, it wants the
+    // absence of zero divisors, and nothing here holds that. The multiplier of the fact that does
+    // exist is a successor, so the hypothesis is discharged by the shape of the term rather than
+    // by a fact about zero.
+    val general = force(
+      integers.proposition(
+        "!a:int. !b:int. !c:int. ~(c = INT_ZERO) ==> INT_MUL a c = INT_MUL b c ==> a = b"))
+
+    integers.facts.values.exists(_.conclusion == general) shouldBe false
+  }
+
   "Divisibility over the integers" should "refuse to let zero divide one" in {
     // The half of `Divisibility.ZeroDivides` that survives the move, spent on a concrete pair. It
     // is the cheapest statement this development can make that divisibility is not everywhere

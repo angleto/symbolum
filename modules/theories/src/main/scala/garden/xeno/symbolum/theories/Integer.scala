@@ -156,6 +156,23 @@ object Integer {
   /** `|- !a. ?p. a = INT_OF_PAIR p` — every integer is some pair's. */
   val Cases: String = "INT_CASES"
 
+  /**
+   * `|- !a b d. INT_MUL a (INT_OF_NUM (SUC d)) = INT_MUL b (INT_OF_NUM (SUC d)) ==> a = b`
+   *
+   * Cancelling a factor that cannot be zero, in the restricted form `docs/adr/0036` asks for and
+   * not in the general one. The general law is `~(c = INT_ZERO) ==> a * c = b * c ==> a = b`, and
+   * what stands in front of it is the absence of zero divisors, which this development does not
+   * hold; the successor of a natural cannot be zero for a reason the pair representation already
+   * carries, so this form goes through `INT_MUL_PAIRS`, `INT_EQ_PAIRS`, one semiring rearrangement
+   * and `Peano.NUM_MUL_CANCEL_LEFT`, all of which exist.
+   *
+   * **What wants it is the rationals.** Their relation on `prod(int, num)` reads the denominator of
+   * `(a, d)` as `INT_OF_NUM (SUC d)`, and its transitivity is this cancellation: that is the whole
+   * of why the carrier can be the pairs themselves rather than a carved subtype, which is the
+   * decision `docs/adr/0036` records.
+   */
+  val CancelsPositive: String = "INT_MUL_CANCEL_NUM"
+
   /** `|- !p q. INT_ADD (INT_OF_PAIR p) (INT_OF_PAIR q) = INT_OF_PAIR (…)`, the lift. */
   val AddPairs: String = "INT_ADD_PAIRS"
 
@@ -351,6 +368,9 @@ object Integer {
     Equal ->
       "!p:prod(num,num) q:prod(num,num). (INT_OF_PAIR p = INT_OF_PAIR q) = INT_SAME p q",
     Cases -> "!a:int. ?p:prod(num,num). a = INT_OF_PAIR p",
+    CancelsPositive ->
+      ("!a:int. !b:int. !d:num. " +
+        "INT_MUL a (INT_OF_NUM (SUC d)) = INT_MUL b (INT_OF_NUM (SUC d)) ==> a = b"),
     AddPairs ->
       ("!p:prod(num,num) q:prod(num,num). INT_ADD (INT_OF_PAIR p) (INT_OF_PAIR q) = " +
         "INT_OF_PAIR (PAIR (NUM_ADD (FST p) (FST q)) (NUM_ADD (SND p) (SND q)))"),
@@ -546,6 +566,13 @@ object Integer {
         equal, cases, mulPairs, ofNaturalDefinition
       )
       faithful <- embedded.prove
+
+      // Last of all, and over `entire` for the reason the embedding gives: what this needs is the
+      // multiplication of the ring and the embedding of a natural, both of which are behind it.
+      whole1 <- classical.logic.over(entire)
+      cancelling <- cancelsPositive(
+        whole1, carrier, complete, peano, entire, notation, equal, laws.representative,
+        mulPairs, ofNaturalDefinition)
     } yield new Integer(
       classical,
       entire,
@@ -567,7 +594,8 @@ object Integer {
         Cases -> cases,
         AddPairs -> addPairs,
         NegPair -> negPair,
-        MulPairs -> mulPairs
+        MulPairs -> mulPairs,
+        CancelsPositive -> cancelling
       ) ++ proved ++ divisibility ++ comparison ++ faithful
     )
 
@@ -889,6 +917,129 @@ object Integer {
       dischargedFirst <- carrier.rules.disch(firstPremise, dischargedSecond)
       result <- carrier.rules.genAll(dischargedFirst, List(p, q, r))
     } yield result
+
+  /**
+   * [[CancelsPositive]], at the pairs and then over the classes.
+   *
+   * The multiplier is `INT_OF_NUM (SUC d)`, which is `INT_OF_PAIR (PAIR (SUC d) ZERO)` once its
+   * definition is unfolded, so both sides of the hypothesis go through `INT_MUL_PAIRS` and the
+   * equation between two classes becomes `INT_SAME` between two built pairs. Unfolded, that is one
+   * equation on `num`, and the semiring is what puts it in the shape the cancellation reads:
+   * `SUC d * (FST p + SND q) = SUC d * (FST q + SND p)`, where the two sides are what the raw
+   * equation rearranges to. `Peano.NUM_MUL_CANCEL_LEFT` takes the factor off, and what is left is
+   * `INT_SAME p q` folded back and read through `INT_EQ_PAIRS`.
+   *
+   * **The rearrangement is where a wrong construction would fail rather than pass**, which is the
+   * argument `Carrier.rearranged` makes about itself: `Semiring.prove` refuses instead of
+   * searching, so a multiplier whose pair were built differently comes back as two normal forms
+   * that do not meet rather than as a theorem about something else.
+   */
+  private def cancelsPositive(
+    logic: Logic,
+    carrier: Carrier,
+    quotient: Quotient,
+    peano: Peano,
+    theory: Theory,
+    notation: Notation,
+    equal: Kernel.Thm,
+    representative: Rewrite.Rule,
+    mulPairs: Kernel.Thm,
+    ofNatural: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val d = Term.variable("d", numbers)
+    val leftClass = Term.variable("a", Classes)
+    val rightClass = Term.variable("b", Classes)
+
+    for {
+      successor <- Parser.term(theory, notation, "SUC (d:num)", numbers)
+      multiplier <- Parser.term(theory, notation, "INT_OF_NUM (SUC (d:num))", Classes)
+      projection <- LogicError.lift(
+        quotient.theory.constant(quotient.names.projection, Type.fun(Pairs, Classes))
+      )
+      times <- LogicError.lift(
+        theory.constant(Multiplication, Type.fun(Classes, Type.fun(Classes, Classes)))
+      )
+
+      // The multiplier as a pair, which is the one step that needs the embedding's definition.
+      asPair <- Conv.unfold(ofNatural, List(successor))
+      pairOfMultiplier <- rightOf(asPair).flatMap {
+        case App(_, pair) => Right(pair)
+        case other => Left(NotOfForm("a projected pair", other))
+      }
+
+      // Both sides of the hypothesis, as classes of built pairs.
+      leftProduct <- rules
+        .specAll(mulPairs, List(p, pairOfMultiplier))
+        .flatMap(Rewrite.inTheorem(carrier.projections, _))
+      rightProduct <- rules
+        .specAll(mulPairs, List(q, pairOfMultiplier))
+        .flatMap(Rewrite.inTheorem(carrier.projections, _))
+      leftPair <- rightOf(leftProduct).flatMap {
+        case App(_, pair) => Right(pair)
+        case other => Left(NotOfForm("a projected pair", other))
+      }
+      rightPair <- rightOf(rightProduct).flatMap {
+        case App(_, pair) => Right(pair)
+        case other => Left(NotOfForm("a projected pair", other))
+      }
+
+      projectedLeft <- LogicError.lift(Term.app(projection, p))
+      projectedRight <- LogicError.lift(Term.app(projection, q))
+      premiseLeft <- LogicError.lift(Term.appAll(times, List(projectedLeft, multiplier)))
+      premiseRight <- LogicError.lift(Term.appAll(times, List(projectedRight, multiplier)))
+      premise <- LogicError.lift(Term.eq(premiseLeft, premiseRight))
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      // `INT_MUL (INT_OF_PAIR p) (INT_OF_NUM (SUC d))` rewritten to the class of a built pair, on
+      // each side of the assumption.
+      folding <- Rewrite.Rule.all(logic, Vector(asPair, leftProduct, rightProduct))
+      betweenPairs <- Rewrite.inTheorem(folding, assumed)
+
+      related <- rules
+        .specAll(equal, List(leftPair, rightPair))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, betweenPairs)))
+      unfolded <- carrier.unfoldedAt(leftPair, rightPair)
+      raw <- LogicError.lift(Kernel.eqMp(unfolded, related))
+
+      // The shape the cancellation reads, which the semiring is what produces.
+      firstOfP <- carrier.firstOf(p)
+      secondOfP <- carrier.secondOf(p)
+      firstOfQ <- carrier.firstOf(q)
+      secondOfQ <- carrier.secondOf(q)
+      leftSum <- carrier.sum(firstOfP, secondOfQ)
+      rightSum <- carrier.sum(firstOfQ, secondOfP)
+      leftScaled <- carrier.product(successor, leftSum)
+      rightScaled <- carrier.product(successor, rightSum)
+      scaled <- carrier.rearranged(leftScaled, rightScaled, raw)
+
+      positive <- peano.fact(Peano.SuccessorPositive).flatMap(rules.spec(d, _))
+      cancelled <- peano
+        .fact(Peano.MulCancelsLeft)
+        .flatMap(rules.specAll(_, List(successor, leftSum, rightSum)))
+        .flatMap(rules.mp(_, positive))
+        .flatMap(rules.mp(_, scaled))
+
+      sameUnfolded <- carrier.unfoldedAt(p, q)
+      same <- carrier.fold(sameUnfolded, cancelled)
+      central <- rules.specAll(equal, List(p, q))
+      back <- Conv.sym(central)
+      classesEqual <- LogicError.lift(Kernel.eqMp(back, same))
+
+      discharged <- rules.disch(premise, classesEqual)
+
+      // `d` is generalised **after** the classes and not before, which is where the first
+      // assembly of this went wrong: `overRepresentatives` specialises the two leading binders at
+      // the representatives, and a theorem already carrying `!d` in front of them hands it three
+      // quantifiers and two arguments. So the index stays free through that step and the order the
+      // statement publishes, `!a b d`, is restored by putting it back inside afterwards.
+      overClasses <- overRepresentatives(
+        logic, quotient, representative, discharged, List(p, q), List(leftClass, rightClass))
+      atClasses <- rules.specAll(overClasses, List(leftClass, rightClass))
+      inside <- rules.gen(d, atClasses)
+      result <- rules.genAll(inside, List(leftClass, rightClass))
+    } yield result
+  }
 
   /**
    * A fact proved at carrier variables, put back over `int`.

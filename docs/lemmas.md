@@ -198,6 +198,7 @@ they have least appetite for working out how it is produced.
   INT_LE_TOTAL             !x:int. !y:int. INT_LE x y \/ INT_LE y x
   INT_LE_TRANS             !x:int. !y:int. !z:int. INT_LE x y ==> INT_LE y z ==> INT_LE x z
   INT_MUL_ASSOC            !x:int. !y:int. !z:int. INT_MUL (INT_MUL x y) z = INT_MUL x (INT_MUL y z)
+  INT_MUL_CANCEL_NUM       !x:int. !y:int. !z:num. INT_MUL x (INT_OF_NUM (SUC z)) = INT_MUL y (INT_OF_NUM (SUC z)) ==> x = y
   INT_MUL_DISTRIBUTE       !x:int. !y:int. !z:int. INT_MUL x (INT_ADD y z) = INT_ADD (INT_MUL x y) (INT_MUL x z)
   INT_MUL_NEG              !x:int. !y:int. INT_MUL x (INT_NEG y) = INT_NEG (INT_MUL x y)
   INT_MUL_ONE              !x:int. INT_MUL x INT_ONE = x

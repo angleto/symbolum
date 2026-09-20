@@ -255,7 +255,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // run: of `ABS_OF_NONNEG`, `ABS_OF_NONPOS` and `ABS_MUL`, the first two carry one antecedent
     // each, the sign of the argument, and the third is an equation with nothing owed. Tip plus
     // this branch's delta.
-    propose.weakenings.size shouldBe 383
+    // 384 with `INT_MUL_CANCEL_NUM`, 2026-09-20, and the **one** was derived before the run: the
+    // lemma carries a single antecedent, the equation between the two products, so `Propose.peel`
+    // counting arrows gives it one. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 384
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
