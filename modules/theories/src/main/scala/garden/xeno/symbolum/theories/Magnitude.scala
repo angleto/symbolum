@@ -274,6 +274,28 @@ object Magnitude {
   /** `|- !x y. abs (x + y) <= abs x + abs y` */
   val Triangle: String = "ABS_TRIANGLE"
 
+  /**
+   * `|- !x. 0 <= x ==> abs x = x`
+   *
+   * One of the two this file's own opening named as *not reached rather than out of reach*, and
+   * the reason they are worth reaching is that they turn `abs` into a term of the ring: with the
+   * sign known, every occurrence of `abs` disappears and what is left is arithmetic.
+   */
+  val OfNonNegative: String = "ABS_OF_NONNEG"
+
+  /** `|- !x. x <= 0 ==> abs x = -x`, the other of the two. */
+  val OfNonPositive: String = "ABS_OF_NONPOS"
+
+  /**
+   * `|- !x y. abs (x * y) = abs x * abs y`
+   *
+   * What an estimate over a product needs, and what the two facts above were the obstacle to. It
+   * is four cases on the signs, and once the two facts above have removed the `abs` from each
+   * factor, every one of the four is a ring identity. `ABS_TRIANGLE` is the additive half of the
+   * same question and was here from the start; this is the multiplicative one.
+   */
+  val Multiplicative: String = "ABS_MUL"
+
   /** The sign of a real: `-1`, `0` or `1`. */
   val SignName: String = "sgn"
 
@@ -581,6 +603,33 @@ object Magnitude {
       )
       triangle <- triangleRecorded.value
 
+      /* ------------------------------------------------- the sign of abs, and what it unlocks */
+
+      multiplyNonNegatives <- order.fact(Order.MultiplyNonNegatives)
+      ltOfNotLe <- order.fact(Order.LtOfNotLe)
+
+      ofNonNegativeRecorded = absCasesRecorded.flatMap(cases =>
+        absNonNegativeRecorded.flatMap(nonNegative =>
+          distanceOfNonNegative(
+            record, logic, ring, withAbs, notation, cases, nonNegative, antisymmetric, fromZero)
+        )
+      )
+      ofNonNegative <- ofNonNegativeRecorded.value
+      ofNonPositiveRecorded = absCasesRecorded.flatMap(cases =>
+        absNonNegativeRecorded.flatMap(nonNegative =>
+          distanceOfNonPositive(record, logic, ring, withAbs, notation, cases, nonNegative, antisymmetric)
+        )
+      )
+      ofNonPositive <- ofNonPositiveRecorded.value
+      multiplicativeRecorded = ofNonNegativeRecorded.flatMap(positive =>
+        ofNonPositiveRecorded.flatMap(negative =>
+          distanceOfProduct(
+            record, logic, classical, ring, withAbs, notation, positive, negative,
+            multiplyNonNegatives, toZero, fromZero, ltOfNotLe, ofLt)
+        )
+      )
+      multiplicative <- multiplicativeRecorded.value
+
       /* --------------------------------------------------------------- sgn */
 
       signNamed = for {
@@ -640,6 +689,9 @@ object Magnitude {
         AbsNonNegative -> absNonNegative,
         AbsZero -> absZero,
         Triangle -> triangle,
+        OfNonNegative -> ofNonNegative,
+        OfNonPositive -> ofNonPositive,
+        Multiplicative -> multiplicative,
         SignNegative -> signNegativeValue,
         SignZero -> signZeroValue,
         SignPositive -> signPositiveValue
@@ -659,6 +711,9 @@ object Magnitude {
         AbsNonNegative -> absNonNegativeRecorded.script.tidy,
         AbsZero -> absZeroRecorded.script.tidy,
         Triangle -> triangleRecorded.script.tidy,
+        OfNonNegative -> ofNonNegativeRecorded.script.tidy,
+        OfNonPositive -> ofNonPositiveRecorded.script.tidy,
+        Multiplicative -> multiplicativeRecorded.script.tidy,
         SignNegative -> signRecorded._1.script.tidy,
         SignZero -> signRecorded._2.script.tidy,
         SignPositive -> signRecorded._3.script.tidy
@@ -1393,6 +1448,320 @@ object Magnitude {
     }
 
     (negative, atZero, positive)
+  }
+
+  /**
+   * `|- !x. 0 <= x ==> abs x = x`, the first of the two facts this file's own docstring named as
+   * missing rather than out of reach.
+   *
+   * [[AbsCases]] says `abs x` is one of the two and does not say which, so the sign is what
+   * chooses. One branch is the conclusion already. The other assumes `abs x = -x`, which turns
+   * [[AbsNonNegative]] into `0 <= -x`, and that against the hypothesis is antisymmetry: `x` is
+   * zero, so both sides of the goal are zero and the branch closes by rewriting rather than by a
+   * second argument about `abs`.
+   */
+  private def distanceOfNonNegative(
+    record: Recorder,
+    logic: Logic,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    absCases: Kernel.Thm,
+    absNonNegative: Kernel.Thm,
+    antisymmetric: Kernel.Thm,
+    fromZero: Kernel.Thm
+  ): Recorded[Kernel.Thm] = {
+    val x = Term.variable("x", real)
+
+    for {
+      premise <- Recorded.quiet(Parser.proposition(theory, notation, "0 <= x:real"))
+      assumed <- record.assume(premise)
+      zero <- Recorded.quiet(Parser.term(theory, notation, "0", real))
+
+      split <- record.specialise(absCases, List(x))
+      disjuncts <- Recorded.quiet(
+        logic.destDisj(split.conclusion).toRight(NotOfForm("a disjunction", split.conclusion))
+      )
+      (isItself, isNegated) = disjuncts
+
+      whenItself <- record.assume(isItself)
+
+      negatedAssumed <- record.assume(isNegated)
+      negationNonNegative <- record
+        .specialise(absNonNegative, List(x))
+        .flatMap(record.rewriteIn("the case", Vector(negatedAssumed), _))
+      restores <- record.procedure("RING", "0 - x = -x")(ring.prove("0 - x:real = -x"))
+      backwards <- record.symmetry(restores)
+      asDifference <- record.rewriteIn("the difference", Vector(backwards), negationNonNegative)
+      belowZero <- record
+        .specialise(fromZero, List(x, zero))
+        .flatMap(record.modusPonens(_, asDifference))
+      isZero <- record
+        .specialise(antisymmetric, List(x, zero))
+        .flatMap(record.modusPonens(_, belowZero))
+        .flatMap(record.modusPonens(_, assumed))
+      atZero <- record.rewriteIn("x is zero", Vector(isZero), negatedAssumed)
+      folded <- record.procedure("RING", "-0 = 0")(ring.prove("-(0:real) = 0"))
+      collapsed <- record.rewriteRight(atZero, folded)
+      whenNegated <- record
+        .symmetry(isZero)
+        .flatMap(back => record.rewriteIn("zero is x", Vector(back), collapsed))
+
+      result <- record.caseSplit(split, whenItself, whenNegated)
+      discharged <- record.discharge(premise, result)
+      general <- record.generalise(discharged, List(x))
+    } yield general
+  }
+
+  /**
+   * `|- !x. x <= 0 ==> abs x = -x`, the other one, and the same argument with the branches
+   * swapped.
+   *
+   * The branch that is the conclusion is the second disjunct here, and the one that has to work
+   * is the first: `abs x = x` with [[AbsNonNegative]] gives `0 <= x`, which against the hypothesis
+   * puts `x` at zero again. What differs from the fact above is only which of the two ring
+   * identities is needed at the end, and they are `-0 = 0` in both cases because both sides
+   * collapse to zero.
+   */
+  private def distanceOfNonPositive(
+    record: Recorder,
+    logic: Logic,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    absCases: Kernel.Thm,
+    absNonNegative: Kernel.Thm,
+    antisymmetric: Kernel.Thm
+  ): Recorded[Kernel.Thm] = {
+    val x = Term.variable("x", real)
+
+    for {
+      premise <- Recorded.quiet(Parser.proposition(theory, notation, "x:real <= 0"))
+      assumed <- record.assume(premise)
+      zero <- Recorded.quiet(Parser.term(theory, notation, "0", real))
+
+      split <- record.specialise(absCases, List(x))
+      disjuncts <- Recorded.quiet(
+        logic.destDisj(split.conclusion).toRight(NotOfForm("a disjunction", split.conclusion))
+      )
+      (isItself, isNegated) = disjuncts
+
+      itselfAssumed <- record.assume(isItself)
+      aboveZero <- record
+        .specialise(absNonNegative, List(x))
+        .flatMap(record.rewriteIn("the case", Vector(itselfAssumed), _))
+      isZero <- record
+        .specialise(antisymmetric, List(x, zero))
+        .flatMap(record.modusPonens(_, assumed))
+        .flatMap(record.modusPonens(_, aboveZero))
+      atZero <- record.rewriteIn("x is zero", Vector(isZero), itselfAssumed)
+      folded <- record.procedure("RING", "-0 = 0")(ring.prove("-(0:real) = 0"))
+      negatedZero <- record.symmetry(folded)
+      asNegation <- record.rewriteRight(atZero, negatedZero)
+      whenItself <- record
+        .symmetry(isZero)
+        .flatMap(back => record.rewriteIn("zero is x", Vector(back), asNegation))
+
+      whenNegated <- record.assume(isNegated)
+
+      result <- record.caseSplit(split, whenItself, whenNegated)
+      discharged <- record.discharge(premise, result)
+      general <- record.generalise(discharged, List(x))
+    } yield general
+  }
+
+  /**
+   * `|- !x y. abs (x * y) = abs x * abs y`, which is what an estimate over a product wants and
+   * what the two facts above were the obstacle to.
+   *
+   * Four cases, on the sign of each argument, and each one is the same three steps: the sign of
+   * the product, the two distances rewritten by the facts above, and one ring identity to see
+   * that the signed product is the product of the signed factors. Nothing here reasons about
+   * `abs` at all once the signs are known, which is the point of having the two facts: they turn
+   * every occurrence into a term of the ring.
+   *
+   * The split is `Classical.cases` on `0 <= x` and again on `0 <= y`, so it costs the choice
+   * axiom, and the negative side of each is `LT_OF_NOT_LE` followed by `LE_OF_LT`. The order's own
+   * trichotomy would give the same three cases at the same price and one more branch to write.
+   *
+   * `MUL_NONNEG_BOTH` is the only fact about products of signs this needs, and it is asked for at
+   * the negated arguments where a factor is negative: `0 <= -x` and `0 <= -y` give `0 <= -x * -y`,
+   * which is `0 <= x * y` by the ring, and that is how each of the four signs of the product is
+   * reached without a lemma of its own.
+   */
+  private def distanceOfProduct(
+    record: Recorder,
+    logic: Logic,
+    classical: Classical,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    ofNonNegative: Kernel.Thm,
+    ofNonPositive: Kernel.Thm,
+    multiplyNonNegatives: Kernel.Thm,
+    toZero: Kernel.Thm,
+    fromZero: Kernel.Thm,
+    ltOfNotLe: Kernel.Thm,
+    leOfLt: Kernel.Thm
+  ): Recorded[Kernel.Thm] = {
+    val x = Term.variable("x", real)
+    val y = Term.variable("y", real)
+
+    /** `0 <= -t` from `t <= 0`, which is `LE_TO_ZERO` and the ring folding `0 - t`. */
+    def negationIsNonNegative(subject: Term, below: Kernel.Thm): Recorded[Kernel.Thm] =
+      for {
+        zero <- Recorded.quiet(Parser.term(theory, notation, "0", real))
+        gap <- record.specialise(toZero, List(subject, zero)).flatMap(record.modusPonens(_, below))
+        claim <- Recorded.quiet(
+          Parser.proposition(theory, notation, s"0 - ${Show.show(notation, subject)} = -${Show.show(notation, subject)}")
+        )
+        folded <- record.procedure("RING", Show.show(notation, claim))(ring.prove(claim))
+        result <- record.rewriteRight(gap, folded)
+      } yield result
+
+    /** `t <= 0` from `~(0 <= t)`, which is the negated side of each of the two splits. */
+    def belowZeroFromRefusal(subject: Term, refused: Kernel.Thm): Recorded[Kernel.Thm] =
+      for {
+        zero <- Recorded.quiet(Parser.term(theory, notation, "0", real))
+        strict <- record
+          .specialise(ltOfNotLe, List(zero, subject))
+          .flatMap(record.modusPonens(_, refused))
+        result <- record
+          .specialise(leOfLt, List(subject, zero))
+          .flatMap(record.modusPonens(_, strict))
+      } yield result
+
+    /** `abs x * abs y = left * right` from the two distances, by congruence and not by rewriting. */
+    def distancesAre(absX: Kernel.Thm, absY: Kernel.Thm): Recorded[Kernel.Thm] =
+      for {
+        times <- Recorded.quiet(
+          Parser.term(theory, notation, "real_mul", Type.fun(real, Type.fun(real, real)))
+        )
+        distanceOfY <- Recorded.quiet(
+          Term.destEq(absY.conclusion).map(_._1).toRight(NotOfForm("an equation", absY.conclusion))
+        )
+        headOfX <- Recorded.quiet(
+          Term.destEq(absX.conclusion).map(_._2).toRight(NotOfForm("an equation", absX.conclusion))
+        )
+        onTheLeft <- record.step("congruence on the left factor", None, Vector(absX))(
+          Conv.apTerm(times, absX).flatMap(Conv.apThm(_, distanceOfY))
+        )
+        applied <- Recorded.quiet(LogicError.lift(Term.app(times, headOfX)))
+        onTheRight <- record.step("congruence on the right factor", None, Vector(absY))(
+          Conv.apTerm(applied, absY)
+        )
+        result <- record.step("transitivity", None, Vector(onTheLeft, onTheRight))(
+          Conv.trans(onTheLeft, onTheRight)
+        )
+      } yield result
+
+    /**
+     * One of the four cases: the sign of the product, the two distances, and the ring identity
+     * between the signed product and the product of the signed factors.
+     */
+    def caseOf(
+      productSign: Kernel.Thm,
+      productIsNonNegative: Boolean,
+      absX: Kernel.Thm,
+      absY: Kernel.Thm,
+      identity: String
+    ): Recorded[Kernel.Thm] =
+      for {
+        product <- Recorded.quiet(Parser.term(theory, notation, "x:real * y:real", real))
+        distanceOfTheProduct <-
+          if (productIsNonNegative)
+            record.specialise(ofNonNegative, List(product)).flatMap(record.modusPonens(_, productSign))
+          else
+            record.specialise(ofNonPositive, List(product)).flatMap(record.modusPonens(_, productSign))
+        rearranged <- record.procedure("RING", identity)(ring.prove(identity))
+        asProduct <- record.step("transitivity", None, Vector(distanceOfTheProduct, rearranged))(
+          Conv.trans(distanceOfTheProduct, rearranged)
+        )
+        distances <- distancesAre(absX, absY)
+        result <- record
+          .symmetry(distances)
+          .flatMap(back =>
+            record.step("transitivity", None, Vector(asProduct, back))(Conv.trans(asProduct, back))
+          )
+      } yield result
+
+    for {
+      nonNegativeX <- Recorded.quiet(Parser.proposition(theory, notation, "0 <= x:real"))
+      nonNegativeY <- Recorded.quiet(Parser.proposition(theory, notation, "0 <= y:real"))
+      product <- Recorded.quiet(Parser.term(theory, notation, "x:real * y:real", real))
+      negatedX <- Recorded.quiet(Parser.term(theory, notation, "-x:real", real))
+      negatedY <- Recorded.quiet(Parser.term(theory, notation, "-y:real", real))
+      zero <- Recorded.quiet(Parser.term(theory, notation, "0", real))
+
+      assumedX <- record.assume(nonNegativeX)
+      negatedGoalX <- Recorded.quiet(logic.mkNot(nonNegativeX))
+      refusedX <- record.assume(negatedGoalX)
+      belowX <- belowZeroFromRefusal(x, refusedX)
+      assumedY <- record.assume(nonNegativeY)
+      negatedGoalY <- Recorded.quiet(logic.mkNot(nonNegativeY))
+      refusedY <- record.assume(negatedGoalY)
+      belowY <- belowZeroFromRefusal(y, refusedY)
+
+      absXPositive <- record.specialise(ofNonNegative, List(x)).flatMap(record.modusPonens(_, assumedX))
+      absXNegative <- record.specialise(ofNonPositive, List(x)).flatMap(record.modusPonens(_, belowX))
+      absYPositive <- record.specialise(ofNonNegative, List(y)).flatMap(record.modusPonens(_, assumedY))
+      absYNegative <- record.specialise(ofNonPositive, List(y)).flatMap(record.modusPonens(_, belowY))
+
+      negationOfX <- negationIsNonNegative(x, belowX)
+      negationOfY <- negationIsNonNegative(y, belowY)
+
+      // The four signs of the product, each `MUL_NONNEG_BOTH` at the arguments made non-negative
+      // and then one ring identity to put the negations back where the goal has them.
+      bothPositive <- record
+        .specialise(multiplyNonNegatives, List(x, y))
+        .flatMap(record.modusPonens(_, assumedX))
+        .flatMap(record.modusPonens(_, assumedY))
+      positiveTimesNegative <- for {
+        raw <- record
+          .specialise(multiplyNonNegatives, List(x, negatedY))
+          .flatMap(record.modusPonens(_, assumedX))
+          .flatMap(record.modusPonens(_, negationOfY))
+        folded <- record.procedure("RING", "x * (-y) = 0 - x * y")(ring.prove("x:real * (-y:real) = 0 - x * y"))
+        asGap <- record.rewriteRight(raw, folded)
+        result <- record.specialise(fromZero, List(product, zero)).flatMap(record.modusPonens(_, asGap))
+      } yield result
+      negativeTimesPositive <- for {
+        raw <- record
+          .specialise(multiplyNonNegatives, List(negatedX, y))
+          .flatMap(record.modusPonens(_, negationOfX))
+          .flatMap(record.modusPonens(_, assumedY))
+        folded <- record.procedure("RING", "(-x) * y = 0 - x * y")(ring.prove("(-x:real) * y:real = 0 - x * y"))
+        asGap <- record.rewriteRight(raw, folded)
+        result <- record.specialise(fromZero, List(product, zero)).flatMap(record.modusPonens(_, asGap))
+      } yield result
+      bothNegative <- for {
+        raw <- record
+          .specialise(multiplyNonNegatives, List(negatedX, negatedY))
+          .flatMap(record.modusPonens(_, negationOfX))
+          .flatMap(record.modusPonens(_, negationOfY))
+        folded <- record.procedure("RING", "(-x) * (-y) = x * y")(ring.prove("(-x:real) * (-y:real) = x:real * y"))
+        result <- record.rewriteRight(raw, folded)
+      } yield result
+
+      whenBothPositive <- caseOf(bothPositive, true, absXPositive, absYPositive, "x:real * y:real = x * y")
+      whenPositiveNegative <- caseOf(
+        positiveTimesNegative, false, absXPositive, absYNegative, "-(x:real * y:real) = x * (-y)")
+      whenNegativePositive <- caseOf(
+        negativeTimesPositive, false, absXNegative, absYPositive, "-(x:real * y:real) = (-x) * y")
+      whenBothNegative <- caseOf(
+        bothNegative, true, absXNegative, absYNegative, "x:real * y:real = (-x) * (-y)")
+
+      withPositiveX <- record.step("cases on the sign of y", None, Vector(whenBothPositive, whenPositiveNegative))(
+        classical.cases(nonNegativeY, whenBothPositive, whenPositiveNegative)
+      )
+      withNegativeX <- record.step("cases on the sign of y", None, Vector(whenNegativePositive, whenBothNegative))(
+        classical.cases(nonNegativeY, whenNegativePositive, whenBothNegative)
+      )
+      result <- record.step("cases on the sign of x", None, Vector(withPositiveX, withNegativeX))(
+        classical.cases(nonNegativeX, withPositiveX, withNegativeX)
+      )
+      general <- record.generalise(result, List(x, y))
+    } yield general
   }
 
   /**

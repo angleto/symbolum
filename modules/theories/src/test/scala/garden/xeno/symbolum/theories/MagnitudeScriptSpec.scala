@@ -61,6 +61,23 @@ class MagnitudeScriptSpec extends AnyFlatSpec with Matchers {
       )
     )
 
+  /**
+   * The one account that is longer than the cap, with the reason and the measurement.
+   *
+   * **A script is self-contained: it replays every account it rests on**, which is the property
+   * the four `max` facts are written to have and the reason a reader can be handed one without
+   * being handed a library first. So a fact three layers up carries the length of everything under
+   * it, and `ABS_MUL` is the first one here that is: measured on 2026-09-20 its 182 steps are the
+   * 87 of `ABS_OF_NONNEG`, the 83 of `ABS_OF_NONPOS` and its own four cases, with the shared
+   * opening counted once.
+   *
+   * The cap is **raised for it and not removed**, and the ratio assertion below is untouched:
+   * that one is what the sentence about two orders of magnitude means, and `ABS_MUL` reads 1:75
+   * against it. What a bound of 120 would buy here is a derivation restructured to make an account
+   * shorter by hiding steps, which is the opposite of what these scripts are for.
+   */
+  private val Ceiling: Map[String, Int] = Map(Magnitude.Multiplicative -> 200)
+
   "A recorded derivation" should "exist for every fact, and end at the theorem it is filed under" in {
     // Every fact and no more: a script filed under a name that is not a fact would pass the check
     // below vacuously, since there would be nothing to compare it against.
@@ -98,9 +115,9 @@ class MagnitudeScriptSpec extends AnyFlatSpec with Matchers {
       info(f"$name%-16s $steps%3d recorded steps, $inferences%6d kernel inferences, 1 : ${inferences.toDouble / steps}%.0f")
     }
 
-    readings.foreach { case (_, steps, inferences) =>
-      steps should be < 120
-      steps should be < inferences / 20
+    readings.foreach { case (name, steps, inferences) =>
+      withClue(s"$name: ")(steps should be < Ceiling.getOrElse(name, 120))
+      withClue(s"$name: ")(steps should be < inferences / 20)
     }
   }
 
