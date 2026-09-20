@@ -507,8 +507,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // this branch's delta. **Only `ABS_MUL` binds two leading quantifiers**, and they are both
     // reals, so `CLAUDE.md`'s two figures-per-lemma each move by one where the library moves by
     // three: the two conditional ones bind a single variable.
-    library.entries.size shouldBe 569
-    library.names.distinct.size shouldBe 566
+    // 570 and 567 with `INT_MUL_CANCEL_NUM`, 2026-09-20: one fact under one name, in `Integer`,
+    // not shared with another development, so the gap does not move. Tip plus this branch's delta.
+    // It binds three leading quantifiers of which the first two are both `int`, so **both** of
+    // `CLAUDE.md`'s figures-per-lemma move by one where the three `abs` facts of the same day
+    // moved them by one between them.
+    library.entries.size shouldBe 570
+    library.names.distinct.size shouldBe 567
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
