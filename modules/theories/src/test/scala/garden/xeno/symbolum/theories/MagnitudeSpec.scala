@@ -147,6 +147,41 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
     magnitude.show(theorem.conclusion) shouldBe "abs x <= abs y + abs (x - y)"
   }
 
+  it should "be the argument itself where the sign says so, which is what removes it from a term" in {
+    // The two facts this file's own opening called "not reached rather than out of reach" until
+    // 2026-09-20. What they are for is not the statement: it is that with the sign known, `abs`
+    // stops being an opaque application and becomes a term the ring can normalise, which is the
+    // only reason `ABS_MUL` below is four ring identities instead of four arguments about `abs`.
+    magnitude.show(force(magnitude.fact(Magnitude.OfNonNegative)).conclusion) shouldBe
+      "!x:real. 0 <= x ==> abs x = x"
+    magnitude.show(force(magnitude.fact(Magnitude.OfNonPositive)).conclusion) shouldBe
+      "!x:real. x <= 0 ==> abs x = -x"
+  }
+
+  it should "multiply, which is the half of the triangle inequality's question that was missing" in {
+    magnitude.show(force(magnitude.fact(Magnitude.Multiplicative)).conclusion) shouldBe
+      "!x:real. !y:real. abs (x * y) = abs x * abs y"
+  }
+
+  it should "be spent on a product with a sign, which is where a stated identity would hide a swap" in {
+    // `ABS_MUL` at a negative factor, end to end: the statement is symmetric in a way that a
+    // derivation with the two signs crossed would satisfy just as well, so what says the four
+    // cases landed where they were meant to is an instance where the two sides are **different
+    // terms** before the ring sees them. At `x := -y` the left is `abs (-y * y)` and the right is
+    // `abs (-y) * abs y`, and the second fact above turns the first factor into `y` only because
+    // the sign is known.
+    val theorem = force(
+      for {
+        lemma <- magnitude.fact(Magnitude.Multiplicative)
+        negated <- magnitude.term("-y:real")
+        instance <- rules.specAll(lemma, List(negated, y))
+      } yield instance
+    )
+
+    theorem.hypotheses shouldBe empty
+    magnitude.show(theorem.conclusion) shouldBe "abs (-y * y) = abs (-y) * abs y"
+  }
+
   it should "turn a vanishing distance into an equality" in {
     // `ABS_ZERO` at a difference, which is the only shape it is ever used at: two quantities whose
     // distance is nothing are the same quantity. The hypothesis is carried rather than discharged,

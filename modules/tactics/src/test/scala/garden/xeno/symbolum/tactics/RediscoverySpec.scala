@@ -251,7 +251,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `Inclusion.INT_REAL_LE` is an equation between propositions with nothing owed. The same
     // figure is pinned in `ProposeSpec` with the same derivation, which is the two places the
     // entry above calls out. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 381
+    // 383 with the three facts about `abs`, 2026-09-20, and the **two** were derived before the
+    // run: of `ABS_OF_NONNEG`, `ABS_OF_NONPOS` and `ABS_MUL`, the first two carry one antecedent
+    // each, the sign of the argument, and the third is an equation with nothing owed. Tip plus
+    // this branch's delta.
+    propose.weakenings.size shouldBe 383
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -328,7 +332,13 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `Coding.NUM_POW_LE_FACT` writes `NUM_LE`, `NUM_POW`, `NUM_MUL` and `NUM_FACT` and not one of
     // the four operators `Propose.swapped` exchanges, all four of which are the reals', so it
     // produces nothing here. Derived that way and then measured.
-    propose.mutable.size shouldBe 82
+    // 85 with the three facts about `abs`, 2026-09-20, and here **all three** are counted where
+    // the weakenings row above takes two: `ABS_OF_NONNEG` and `ABS_OF_NONPOS` write `le` in their
+    // antecedents and `ABS_MUL` writes `real_mul`, and no body carries a lambda once the leading
+    // quantifiers come off, which is the condition `swapped` refuses at. Three and two on one
+    // change is the same difference between what a lemma owes and what it writes that the row
+    // above draws.
+    propose.mutable.size shouldBe 85
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

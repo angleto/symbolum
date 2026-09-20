@@ -327,7 +327,10 @@ they have least appetite for working out how it is produced.
   ABS_ABOVE                !x:real. x <= abs x
   ABS_ABOVE_NEG            !x:real. -x <= abs x
   ABS_CASES                !x:real. abs x = x \/ abs x = -x
+  ABS_MUL                  !x:real. !y:real. abs (x * y) = abs x * abs y
   ABS_NONNEG               !x:real. 0 <= abs x
+  ABS_OF_NONNEG            !x:real. 0 <= x ==> abs x = x
+  ABS_OF_NONPOS            !x:real. x <= 0 ==> abs x = -x
   ABS_TRIANGLE             !x:real. !y:real. abs (x + y) <= abs x + abs y
   ABS_ZERO                 !x:real. abs x = 0 ==> x = 0
   MAX_ABOVE_LEFT           !x:real. !y:real. x <= max x y

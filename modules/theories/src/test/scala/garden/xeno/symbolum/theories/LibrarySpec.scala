@@ -501,8 +501,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `EXP_ONE_ABOVE_TWO` in `Transcendental`, not shared with another development, so the gap
     // between the two figures does not move. Tip plus this branch's delta. It binds nothing at
     // all, being a claim about two constants, so neither figure-per-lemma in `CLAUDE.md` moves.
-    library.entries.size shouldBe 566
-    library.names.distinct.size shouldBe 563
+    // 569 and 566 with the three facts about `abs` that landed on 2026-09-20 for the Cauchy
+    // product's sake: `ABS_OF_NONNEG`, `ABS_OF_NONPOS` and `ABS_MUL`, all in `Magnitude`, none
+    // shared with another development, so the gap between the two figures does not move. Tip plus
+    // this branch's delta. **Only `ABS_MUL` binds two leading quantifiers**, and they are both
+    // reals, so `CLAUDE.md`'s two figures-per-lemma each move by one where the library moves by
+    // three: the two conditional ones bind a single variable.
+    library.entries.size shouldBe 569
+    library.names.distinct.size shouldBe 566
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

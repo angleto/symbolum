@@ -304,7 +304,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // two, and the asymmetry is the point rather than an accident of counting: a biconditional
     // owes nothing to weaken, and the implication under it owes everything it crosses on. Tip
     // plus this branch's delta.
-    proposals.size shouldBe 381
+    // 383 with the three facts about `abs`, 2026-09-20, and the **two** were derived before the
+    // run: of `ABS_OF_NONNEG`, `ABS_OF_NONPOS` and `ABS_MUL`, the first two carry one antecedent
+    // each, the sign of the argument, and the third is an equation with nothing owed. Tip plus
+    // this branch's delta.
+    proposals.size shouldBe 383
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -964,7 +968,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // settled, which is what this bucket means. The lemma that landed with it, `NUM_POW_LE_FACT`,
     // writes none of the four operators the swap exchanges and produces no residue at all, which
     // is the same split `RediscoverySpec`'s mutable count draws on the same pair.
-    open shouldBe 283
+    // 288 with **all five** residues the three `abs` facts produce, 2026-09-20, and the split is
+    // the half that was derived here rather than read off the run: two weakenings and three
+    // substitutions, and every one of them lands in this bucket. The reason is one fact about the
+    // model rather than five: **nothing interprets `abs`**, so a claim about it is a claim the
+    // sampler cannot evaluate at any point, and `Evaluate` answering nothing is not a refutation.
+    // `abs x = x` with the sign dropped is **false**, and it is here rather than among the
+    // disproved for exactly that reason, which is the distinction `docs/adr/0005` keeps seven
+    // answers apart for.
+    open shouldBe 288
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
