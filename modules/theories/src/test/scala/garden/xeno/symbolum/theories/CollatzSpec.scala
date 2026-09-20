@@ -494,6 +494,86 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  // Part C's nineteen facts, which had no cost asserted anywhere until 2026-09-20 while the two
+  // paragraphs above covered sixteen of the development's others. That gap is what the card's own
+  // test plan asked for and is the reason this test exists rather than a second reading of the one
+  // above: the anchored class, the measure and the run were written after it, and a proof that
+  // quietly started spending a fourth axiom would have been invisible at exactly the facts the
+  // investigation rests on.
+  //
+  // THE PARTITION IS THE ASSERTION AND THE NAMES ARE NOT SORTED BY HAND INTO IT. Every fact is
+  // measured, the two groups come out of the measurement, and the clue prints the whole table, so
+  // a fact that moves between them says which one it is and what it now rests on.
+  "What part C costs" should "be the naturals' two, and a third where the proof rebuilds the empty word" in {
+    val partC = List(
+      Collatz.HeadFreeConcat,
+      Collatz.AnchoredConcat,
+      Collatz.HeadFreeStep,
+      Collatz.AnchoredStep,
+      Collatz.AnchoredClosed,
+      Collatz.AnchoredInhabited,
+      Collatz.PotentialConcat,
+      Collatz.PotentialAtAWord,
+      Collatz.PotentialBlocks,
+      Collatz.PotentialCountedStep,
+      Collatz.PotentialPlainStep,
+      Collatz.RunPotential,
+      Collatz.RunInhabited,
+      Collatz.ZerosLength,
+      Collatz.StemLength,
+      Collatz.PotentialOfStem,
+      Collatz.PotentialOfFamily,
+      Collatz.FamilyBounded,
+      Collatz.FamilyAtOne
+    )
+
+    val measured = partC.map(name => name -> Derivation.axiomsOf(fact(name))).toMap
+    val table = measured.toVector
+      .sortBy(_._1)
+      .map { case (name, rests) => s"$name: ${rests.map(system.show).toVector.sorted.mkString(", ")}" }
+      .mkString("\n")
+
+    withClue(s"what part C rests on, measured:\n$table\n") {
+      // Nothing here reaches a fourth axiom, and that is the half of this test that would still
+      // mean something if the split below were rewritten: the reals are not among them, and no
+      // fact of this development spends anything the naturals do not.
+      measured.values.foreach(rests => rests.size should (be(2) or be(3)))
+
+      // THE PREDICTION WAS THREE FOR EVERYTHING BUT THE TWO LENGTH LEMMAS, AND THE RUN SAID TEN
+      // OF THE NINETEEN COST TWO. It came from a probe a verifying session ran on 2026-09-18 over
+      // ten of these facts, and what was wrong with it was the population rather than the
+      // arithmetic: the anchored and head-free lemmas were not in that ten and they cost two.
+      //
+      // What the run says instead is that the criterion two paragraphs up carries here unchanged,
+      // and this is the third group it has been checked against. A proof costs the third axiom,
+      // `ETA_AX`, exactly when it has to turn a word back into `WORD_EMPTY`:
+      //
+      //   - the closure over the anchored class does, at the empty-tail branch, which is why it
+      //     sits with `S2_MARKED_CLOSED` and not with the other anchored lemmas;
+      //   - the measure's two step theorems do, and everything resting on them does, which is the
+      //     whole of the run and the family;
+      //   - the family's base case is `WORD_CONCAT (/f) (S2_ZEROS ZERO)`, which is
+      //     `WORD_CONCAT_EMPTY_RIGHT`, and that lemma carries eta by itself.
+      //
+      // And what does NOT: everything that only reads positions and lengths, which is the ten
+      // below. `S2_PHI_CONCAT`, `S2_PHI_AT_A_WORD` and `S2_PHI_BLOCKS` are about the measure and
+      // are in that ten, so the line is not the measure against the class either.
+      val two = measured.collect { case (name, rests) if rests.size == 2 => name }.toSet
+      two shouldBe Set(
+        Collatz.HeadFreeConcat,
+        Collatz.AnchoredConcat,
+        Collatz.HeadFreeStep,
+        Collatz.AnchoredStep,
+        Collatz.AnchoredInhabited,
+        Collatz.PotentialConcat,
+        Collatz.PotentialAtAWord,
+        Collatz.PotentialBlocks,
+        Collatz.ZerosLength,
+        Collatz.StemLength
+      )
+    }
+  }
+
   "The bound on a run" should "detach, which is REACH_POTENTIAL arriving at this measure" in {
     // What this shows and what it does not. `REACH_START` inhabits the closure whatever the
     // relation does, so detaching here says the instantiation's two hypotheses were discharged
