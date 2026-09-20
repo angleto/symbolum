@@ -214,8 +214,12 @@ class PropositionalSpec extends AnyFlatSpec with Matchers {
       s"($somewhere) ==> ($shared)"
     }
 
+    // `conflict` and not `conflicts`, and the difference is the point rather than a tidy-up: this
+    // assertion passed a limit of ONE and asked the message to say "conflicts", so it pinned the
+    // ungrammatical reading of the solver's own bound until 2026-09-20. It is the second test in
+    // the repository found doing that with this one message, `SolverSpec` being the first.
     Propositional(classical, conflictLimit = 1).decide(read(pigeonhole(5))) match {
-      case Propositional.Verdict.Undecided(why) => why should include("conflicts")
+      case Propositional.Verdict.Undecided(why) => why should include("within 1 conflict;")
       case other => fail(s"a bound must never read as a countermodel: $other")
     }
   }
