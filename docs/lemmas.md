@@ -571,6 +571,8 @@ they have least appetite for working out how it is produced.
   NUM_SUC_ADD              !x:num. !y:num. SUC x + y = SUC (x + y)
   NUM_SUC_MUL              !x:num. !y:num. SUC x * y = x * y + y
   NUM_SUC_NOT_SELF         !x:num. ~(SUC x = x)
+  NUM_SUC_SUB              !x:num. !y:num. y <= x ==> NUM_SUB (SUC x) y = SUC (NUM_SUB x y)
+  NUM_SUC_SUB_SELF         !x:num. NUM_SUB (SUC x) x = SUC 0
   NUM_SUM_CONGRUENCE_BELOW !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u = y u) ==> NUM_SUM x z = NUM_SUM y z
   NUM_SUM_MONOTONE_BELOW   !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u <= y u) ==> NUM_SUM x z <= NUM_SUM y z
   NUM_SUM_SPLIT            !x:num -> num. !y:num. !z:num. NUM_SUM x (y + z) = NUM_SUM x y + NUM_SUM (\u:num. x (y + u)) z
@@ -684,13 +686,17 @@ they have least appetite for working out how it is produced.
   SUM_CONGRUENCE           !x:num -> real. !y:num -> real. (!z:num. x z = y z) ==> (!z:num. Sum x z = Sum y z)
   SUM_CONGRUENCE_BELOW     !x:num -> real. !y:num -> real. !z:num. (!u:num. u < z ==> x u = y u) ==> Sum x z = Sum y z
   SUM_CONSTANT             !x:real. !y:num. Sum (\z:num. x) y = real_of_num y * x
+  SUM_DIAGONAL             !x:num -> num -> real. !y:num. Sum (\z:num. Sum (\u:num. x u (NUM_SUB z u)) (SUC z)) y = Sum (\z:num. Sum (\u:num. x z u) (NUM_SUB y z)) y
   SUM_GEOMETRIC            !x:real. !y:num. (x - 1) * Sum (\z:num. Power x z) y = Power x y - 1
   SUM_HALVES               !x:num -> real. !y:num. Sum x (y + y) = Sum x y + Sum (\z:num. x (y + z)) y
   SUM_LINEAR               !x:real. !y:num -> real. !z:num -> real. !u:num. Sum (\v:num. x * y v + z v) u = x * Sum y u + Sum z u
   SUM_MONOTONE             !x:num -> real. !y:num -> real. (!z:num. x z <= y z) ==> (!z:num. Sum x z <= Sum y z)
   SUM_NONNEGATIVE          !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. 0 <= Sum x y)
+  SUM_OF_PRODUCTS          !x:num -> real. !y:num -> real. !z:num. !u:num. Sum (\v:num. Sum (\w:num. x v * y w) z) u = Sum x u * Sum y z
   SUM_OF_ZERO              !x:num. Sum (\y:num. 0) x = 0
   SUM_REINDEX              !x:num -> real. !y:num. !z:num. Sum (\u:num. x (y + u)) z = Sum x (y + z) - Sum x y
+  SUM_SCALE                !x:real. !y:num -> real. !z:num. Sum (\u:num. x * y u) z = x * Sum y z
+  SUM_SCALE_RIGHT          !x:real. !y:num -> real. !z:num. Sum (\u:num. y u * x) z = Sum y z * x
   SUM_SHIFT                !x:num -> real. !y:num. Sum (\z:num. x (SUC z)) y = Sum x (SUC y) - x 0
   SUM_SUC                  !x:num -> real. !y:num. Sum x (SUC y) = Sum x y + x y
   SUM_SWAP                 !x:num -> num -> real. !y:num. !z:num. Sum (\u:num. Sum (\v:num. x u v) y) z = Sum (\u:num. Sum (\v:num. x v u) z) y

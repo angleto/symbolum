@@ -205,6 +205,85 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
       "!x:num -> real. !y:num -> real. !z:num. Sum (\\u:num. x u + y u) z = Sum x z + Sum y z"
   }
 
+  "A constant factor" should "come out of a sum from either side, and both are published" in {
+    // Two lemmas and not one, and the reason is `SUM_OF_PRODUCTS` below: its inner collapse binds
+    // the factor on the left and what is left over binds it on the right. A development holding
+    // one of them would have to commute a product under a binder to use it, which is a congruence
+    // over the whole summand rather than a rewrite. Neither is `SUM_LINEAR` specialised, for the
+    // reason `SUM_ADD` is not either: `Linear` at `g := \i. 0` gives the summand `a * f i + 0`.
+    series.show(fact(Series.Scaled).conclusion) shouldBe
+      "!x:real. !y:num -> real. !z:num. Sum (\\u:num. x * y u) z = x * Sum y z"
+    series.show(fact(Series.ScaledRight).conclusion) shouldBe
+      "!x:real. !y:num -> real. !z:num. Sum (\\u:num. y u * x) z = Sum y z * x"
+  }
+
+  "Every product of a term with a term" should "add up to the product of the two sums" in {
+    // The finite half of the Cauchy product: a product of two partial sums is a sum over a SQUARE
+    // of indices. The two lengths are independent, which is what makes it usable where the two
+    // series are cut at different points.
+    series.show(fact(Series.Product).conclusion) shouldBe
+      "!x:num -> real. !y:num -> real. !z:num. !u:num. " +
+        "Sum (\\v:num. Sum (\\w:num. x v * y w) z) u = Sum x u * Sum y z"
+  }
+
+  /**
+   * The other finite half: the triangle of index pairs, re-cut.
+   *
+   * Two assertions and the second is the one with content. The first is the statement a reader
+   * agrees with; the second **spends** it at a bound small enough to check by hand, which is the
+   * discipline this file's opening states for a bound and which applies here for a different
+   * reason: an identity about indices can be off by one, stay provable, and print plausibly. At
+   * `n = SUC (SUC ZERO)` the left side is the two antidiagonals and the right side is the two rows,
+   * and a reader can see that they are the same three entries grouped differently.
+   */
+  "The triangle of index pairs" should "add up the same by antidiagonals and by rows" in {
+    series.show(fact(Series.Diagonal).conclusion) shouldBe
+      "!x:num -> num -> real. !y:num. " +
+        "Sum (\\z:num. Sum (\\u:num. x u (NUM_SUB z u)) (SUC z)) y = " +
+        "Sum (\\z:num. Sum (\\u:num. x z u) (NUM_SUB y z)) y"
+
+    val table = Term.variable(
+      "f",
+      Type.fun(
+        TyApp(Natural.TypeName, Nil),
+        Type.fun(TyApp(Natural.TypeName, Nil), TyApp(Real.TypeName, Nil))))
+    val two = force(series.term("SUC (SUC ZERO)", TyApp(Natural.TypeName, Nil)))
+
+    val opened = force(
+      Rewrite.Rule
+        .all(
+          logic,
+          Vector(
+            fact(Series.AtZero),
+            fact(Series.AtSuccessor),
+            force(peano.fact(Peano.SubAtZero)),
+            force(peano.fact(Peano.SubSuccessors)),
+            force(peano.fact(Peano.ZeroMinus))
+          )
+        )
+        .flatMap { unfolding =>
+          rules
+            .specAll(fact(Series.Diagonal), List(table, two))
+            .flatMap(instance =>
+              Rewrite
+                .rewrite(unfolding, instance.conclusion)
+                .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance))))
+        })
+
+    // Three entries on each side. On the left the antidiagonals, `{(0,0)}` then `{(0,1),(1,0)}`;
+    // on the right the rows, `{(0,0),(0,1)}` then `{(1,0)}`. Same three pairs, grouped two ways,
+    // which is the whole content of the lemma and is what an off-by-one in either length would
+    // break while still printing plausibly.
+    //
+    // The index prints `SUC 0` and not `1` because nothing here spells a numeral: every recurrence
+    // over `num` is stated at a successor and `Successor.spell` is what turns one into the other,
+    // which this check has no reason to pay for. The leading zeroes are the empty sums the
+    // recurrences leave and no normal form anybody chose.
+    series.show(opened.conclusion) shouldBe
+      "0 + (0 + f 0 0) + (0 + f 0 (SUC 0) + f (SUC 0) 0) = " +
+        "0 + (0 + f 0 0 + f 0 (SUC 0)) + (0 + f (SUC 0) 0)"
+  }
+
   "A sum of zeroes" should "be zero at every length, which SUM_ZERO does not say" in {
     // The two read alike and are different facts: `SUM_ZERO` is about a sum of length zero, this is
     // about a summand of value zero. Keeping them apart is what lets an emptied inner sum collapse.

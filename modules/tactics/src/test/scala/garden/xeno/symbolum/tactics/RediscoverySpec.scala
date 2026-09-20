@@ -261,7 +261,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 386 with `CONVERGES_MUL`, 2026-09-20, and the **two** were derived before the run: the
     // limit of a product carries two antecedents, one convergence per sequence, each under its own
     // arrow, so `Propose.peel` gives it two. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 386
+    // 387 with the Cauchy product's finite half, 2026-09-20, and the **one** was derived before the
+    // run: of the six facts that landed, exactly one carries an antecedent, which is
+    // `Peano.NUM_SUC_SUB` and its bound `n <= m`. The other five are equations owing nothing, and
+    // `NUM_SUC_SUB_SELF` is that lemma with its bound already spent. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 387
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

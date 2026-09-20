@@ -227,6 +227,71 @@ object Series {
   val Additive: String = "SUM_ADD"
 
   /**
+   * `|- !a f n. Sum (\i. a * f i) n = a * Sum f n`
+   *
+   * A constant factor comes out of a finite sum. It is [[Linear]] with the second summand dropped
+   * and it is **not** that lemma specialised: `Linear` at `g := \i. 0` gives the summand
+   * `a * f i + 0`, which is not the summand anybody writes, and a rewrite rule is matched
+   * syntactically. The same argument [[Additive]] already makes about itself, one operation over.
+   */
+  val Scaled: String = "SUM_SCALE"
+
+  /**
+   * `|- !a f n. Sum (\i. f i * a) n = Sum f n * a`
+   *
+   * [[Scaled]] with the factor on the other side, and both are published for the reason
+   * [[NegatedDouble]] gives for the half-law it does not have: a reader who finds one side and not
+   * the other cannot tell whether the missing side is false or merely unwritten. Here both are
+   * true and both are consumed, by the two ends of [[Product]]: the inner sum of a double sum
+   * carries its factor on the left and the outer one carries it on the right, so a development
+   * holding one of these would have to commute under a binder to use it.
+   */
+  val ScaledRight: String = "SUM_SCALE_RIGHT"
+
+  /**
+   * `|- !f g m n. Sum (\i. Sum (\j. f i * g j) m) n = Sum f n * Sum g m`
+   *
+   * Every product of a term of `f` with a term of `g`, added up, is the product of the two sums.
+   * It is the **finite** half of what the Cauchy product needs, and it is where a route to
+   * `exp (x + y) = exp x * exp y` begins: the product of two partial sums is a sum over a square
+   * of indices, and everything after this is about what happens to that square as both sides grow.
+   *
+   * **It is not about `Prod`**, which is this file's other operator and is a product of terms of
+   * one sequence. The name says products in the plural because what is summed is one product per
+   * pair, and the two constants cannot be confused in a statement: nothing here mentions `Prod`.
+   *
+   * == What it costs, which is two lemmas and no induction of its own ==
+   *
+   * The two lengths are independent and the induction is on the outer one alone, `m` riding through
+   * as a parameter exactly as it does in [[Swapped]]. The step needs the inner sum collapsed,
+   * `Sum (\j. f n * g j) m = f n * Sum g m`, which is [[Scaled]] **as a rewrite rule**, and that is
+   * the whole of why this is not a line in [[Statements]]: it is proved from a rule set the
+   * statements above have to exist first to build.
+   *
+   * And it is the measurement that says the scale lemmas had to be a pair. The inner collapse binds
+   * the constant on the **left** and what is left over, `Sum (\i. f i * Sum g m) n`, binds it on
+   * the **right**; one lemma would have meant commuting a product under a binder, which is a
+   * congruence over the whole summand rather than a rewrite.
+   */
+  val Product: String = "SUM_OF_PRODUCTS"
+
+  /**
+   * `|- !f n. Sum (\k. Sum (\i. f i (k - i)) (SUC k)) n = Sum (\i. Sum (\j. f i j) (n - i)) n`
+   *
+   * The triangle `{(i, j) : i + j < n}` added up by antidiagonals on the left and by rows on the
+   * right. With [[Product]] it is the whole finite content of the Cauchy product: that one says a
+   * product of two sums is a sum over a **square**, this one says how a triangle is re-cut, and
+   * what is left between the pair and `exp (x + y) = exp x * exp y` is analysis and the binomial
+   * theorem, neither of which this file owns.
+   *
+   * The antidiagonal `k` has `SUC k` entries and the row `i` has `n - i` of them, which is why the
+   * two lengths are written the way they are and why neither side can be stated without the
+   * truncated difference. See [[summedDiagonal]] for what the step costs, which is a bounded
+   * congruence and two facts about `NUM_SUB` that did not exist.
+   */
+  val Diagonal: String = "SUM_DIAGONAL"
+
+  /**
    * `|- !n. Sum (\i. 0) n = 0`
    *
    * A sum of nothing is nothing, at every length, and it does **not** follow from `SUM_ZERO`, which
@@ -631,6 +696,14 @@ object Series {
     (
       OfZero,
       "!n:num. Sum (\\i:num. 0) n = 0"
+    ),
+    (
+      Scaled,
+      "!a:real. !f:num->real. !n:num. Sum (\\i:num. a * f i) n = a * Sum f n"
+    ),
+    (
+      ScaledRight,
+      "!a:real. !f:num->real. !n:num. Sum (\\i:num. f i * a) n = Sum f n * a"
     )
   )
 
@@ -874,6 +947,13 @@ object Series {
       derived <- prove(driver, withProd, notation, Statements, recurrences)
       alsoDerived <- prove(driver, withProd, notation, ProductStatements, prodRules ++ powerRules)
 
+      // The two scale lemmas are members of `Statements` and rules of the one fact below, so this
+      // comes after that call and builds its rules from what it proved.
+      scaleFact <- derived.toMap.get(Scaled).toRight(MissingDefinition(Scaled))
+      scaleRightFact <- derived.toMap.get(ScaledRight).toRight(MissingDefinition(ScaledRight))
+      scaleRules <- Rewrite.Rule.all(logic, Vector(scaleFact, scaleRightFact))
+      productOfSums <- summedProducts(logic, withProd, notation, scaleRules)
+
       // The power of a product of bases, from the power's recurrences alone. Its own call
       // because its rule set is its own: see `BaseStatements`.
       basewise <- prove(driver, withProd, notation, BaseStatements, powerRules)
@@ -952,6 +1032,19 @@ object Series {
       ofZero <- byName.get(OfZero).toRight(MissingDefinition(OfZero))
       ofZeroRule <- Rewrite.Rule.of(logic, ofZero)
       swapped <- swappedSums(driver, withProd, notation, recurrences :+ ofZeroRule, additive)
+
+      // The diagonal, which wants the bounded congruence just proved, `SUM_ADD` by hand as the
+      // swap does, and the two facts about `NUM_SUB` that landed in `Peano` for it. The
+      // unconditional one is a rewrite rule and the conditional one cannot be, which is why both
+      // are here.
+      subSelf <- peano.fact(Peano.SubSelf)
+      stepMinusSelf <- peano.fact(Peano.SuccessorMinusSelf)
+      stepMinus <- peano.fact(Peano.SuccessorMinus)
+      atMostFromBelow <- peano.fact(Peano.AtMostFromBelow)
+      differences <- Rewrite.Rule.all(logic, Vector(subSelf, stepMinusSelf))
+      diagonal <- summedDiagonal(
+        driver, withProd, notation, recurrences ++ differences, additive, congruenceBelow,
+        stepMinus, atMostFromBelow, atSuccessor)
     } yield new Series(
       ring,
       logic,
@@ -973,6 +1066,8 @@ object Series {
         Monotone -> monotone,
         ProdPositive -> prodPositive,
         Swapped -> swapped,
+        Product -> productOfSums,
+        Diagonal -> diagonal,
         Halves -> halves,
         CongruenceBelow -> congruenceBelow,
         Geometric -> geometric
@@ -1309,6 +1404,202 @@ object Series {
    * rewriting having left the goal in a shape the instance does not answer, which is the way this
    * proof can go wrong silently.
    */
+  /**
+   * `|- !f n. Sum (\k. Sum (\i. f i (k - i)) (SUC k)) n = Sum (\i. Sum (\j. f i j) (n - i)) n`
+   *
+   * The triangle of index pairs `{(i, j) : i + j < n}` added up by **antidiagonals** on the left and
+   * by **rows** on the right. It is the second half of what the Cauchy product needs and the half
+   * that is about the indices rather than the algebra: [[Product]] says a product of two sums is a
+   * sum over a square, and this says how a triangle inside that square is re-cut. Everything left
+   * between here and `exp (x + y) = exp x * exp y` is analysis, or the binomial theorem, and this
+   * file owns neither.
+   *
+   * == Where the work is, and it is not the induction ==
+   *
+   * The step peels the last antidiagonal off the left and the last **row** off the right, and the
+   * two do not match term for term: what comes off the right is one entry of every row that is still
+   * there, plus a row of length one. So the step needs the whole right-hand sum at `SUC n` rewritten
+   * into the one at `n` plus that scattering, which is `SUM_CONGRUENCE_BELOW` and [[Additive]]
+   * instantiated by hand, exactly as [[Swapped]]'s step instantiates `Additive` and for the same
+   * reason: the rewriter is first order and neither could be handed to it as a rule.
+   *
+   * **The congruence has to be the bounded one**, and that is the whole reason this lemma waited.
+   * Replacing `NUM_SUB (SUC n) i` by `SUC (NUM_SUB n i)` under the binder is true **only where
+   * `i < n`** — at `i = n` the left side is `SUC ZERO` and the right is `SUC ZERO` as well, but at
+   * any `i` above `n` both sides are `ZERO` and `SUC ZERO` and differ. `SUM_CONGRUENCE`, the
+   * unbounded one, cannot state that hypothesis at all. That lemma's own docstring predicts this
+   * meeting in as many words, about four other lemmas stated at the wrong scope: **the first real
+   * consumer of a bounded rewrite meets the wall**, and it did.
+   *
+   * == The two facts on `num` it needed, neither of which existed ==
+   *
+   * `Peano.NUM_SUC_SUB`, that a step on the **left** of a truncated difference comes out of it
+   * under `n <= m`, and `Peano.NUM_SUC_SUB_SELF`, the unconditional instance at `m = n`. The second
+   * is not a convenience: `Rewrite.Rule.of` refuses an implication, so the conditional fact cannot
+   * be in a rule set and the last row of the triangle, whose length is `SUC n - n`, is reached by
+   * rewriting or not at all.
+   */
+  private def summedDiagonal(
+    driver: Induct,
+    theory: Theory,
+    notation: Notation,
+    settleRules: Vector[Rewrite.Rule],
+    additive: Kernel.Thm,
+    congruenceBelow: Kernel.Thm,
+    successorMinus: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm,
+    atSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val logic = driver.logic
+    val rules = logic.rules
+
+    /** The summand and the length of `Sum body length`. */
+    def destSum(term: Term): Either[LogicError, (Term, Term)] = term match {
+      case App(App(Const(SumName, _), body), length) => Right((body, length))
+      case other => Left(NotOfForm("a sum", other))
+    }
+
+    /** `Sum body`, the partial application a congruence on the length rewrites through. */
+    def partialSum(term: Term): Either[LogicError, Term] = term match {
+      case App(partial @ App(Const(SumName, _), _), _) => Right(partial)
+      case other => Left(NotOfForm("a sum", other))
+    }
+
+    def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    def sidesOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      Term.destEq(theorem.conclusion).toRight(NotOfForm("an equation", theorem.conclusion))
+
+    for {
+      statement <- Parser.proposition(
+        theory,
+        notation,
+        "!f:num->num->real. !n:num. " +
+          "Sum (\\k:num. Sum (\\i:num. f i (NUM_SUB k i)) (SUC k)) n = " +
+          "Sum (\\i:num. Sum (\\j:num. f i j) (NUM_SUB n i)) n"
+      )
+      result <- driver.proveBy(
+        statement,
+        goal => driver.settle(settleRules)(goal, Vector.empty),
+        opened =>
+          val index = opened.variable
+          for {
+            goalSides <- Term
+              .destEq(opened.goal)
+              .toRight(NotOfForm("an equation", opened.goal))
+
+            // Every function this step needs is READ OFF the goal and the hypothesis rather than
+            // rebuilt: `proveBy` freshens the quantified variables, so a term assembled here from
+            // a name written in the statement above would be a term about a different variable.
+            byRows <- sidesOf(opened.hypothesis).flatMap(sides => destSum(sides._2)).map(_._1)
+            byDiagonals <- destSum(goalSides._1).map(_._1)
+            lastDiagonal <- LogicError
+              .lift(Term.app(byDiagonals, index))
+              .flatMap(applied => Conv.betaNormalise(applied))
+              .flatMap(equation => sidesOf(equation))
+              .flatMap(sides => destSum(sides._2))
+              .map(_._1)
+            wideRows <- destSum(goalSides._2).map(_._1)
+
+            // `Sum (\i. rows i + diagonal i) n = Sum rows n + Sum diagonal n`, whose left-hand
+            // summand is the function the congruence below has to reach.
+            split <- rules
+              .specAll(additive, List(byRows, lastDiagonal, index))
+              .flatMap(normalised)
+            rowsAndOne <- sidesOf(split).flatMap(sides => destSum(sides._1)).map(_._1)
+
+            congruence <- rules
+              .specAll(congruenceBelow, List(wideRows, rowsAndOne, index))
+              .flatMap(normalised)
+            obligation <- logic
+              .destImp(congruence.conclusion)
+              .toRight(NotOfForm("an implication", congruence.conclusion))
+              .map(_._1)
+            stripped <- Logic.stripForall(obligation)
+            row <- stripped._1.headOption.toRight(NotOfForm("a claim about every index", obligation))
+            guarded <- logic
+              .destImp(stripped._2)
+              .toRight(NotOfForm("an implication", stripped._2))
+            (below, claim) = guarded
+            assumedBelow <- LogicError.lift(Kernel.assume(below))
+
+            // The one entry: at `i < n` the row is one longer than it was, and `SUC n - i` is
+            // `SUC (n - i)` for exactly that reason.
+            weak <- rules.specAll(atMostFromBelow, List(row, index)).flatMap(rules.mp(_, assumedBelow))
+            shifted <- rules.specAll(successorMinus, List(index, row)).flatMap(rules.mp(_, weak))
+            claimSides <- Term.destEq(claim).toRight(NotOfForm("an equation", claim))
+            partial <- partialSum(claimSides._1)
+            longer <- Conv.apTerm(partial, shifted)
+            body <- destSum(claimSides._1).map(_._1)
+            shortLength <- sidesOf(shifted).flatMap(sides => sides._2 match {
+              case App(_, shorter) => Right(shorter)
+              case other           => Left(NotOfForm("a successor", other))
+            })
+            peeled <- rules.specAll(atSuccessor, List(body, shortLength)).flatMap(normalised)
+            entry <- Conv.trans(longer, peeled)
+            _ <-
+              if (entry.conclusion == claim) Right(())
+              else Left(NotOfForm("the congruence's own obligation", entry.conclusion))
+
+            everyRow <- rules.disch(below, entry).flatMap(rules.gen(row, _))
+            widened <- rules.mp(congruence, everyRow)
+            gap <- Conv.trans(widened, split)
+
+            gapRule <- Rewrite.Rule.of(logic, gap)
+
+            // **The hypothesis is rewritten before it is offered as a rule**, and this is the one
+            // place the step is not the obvious thing. Its left side is a sum whose summand is
+            // itself a sum of length `SUC k`, so `SUM_SUC` fires on it under the binder and the
+            // goal never carries the shape the hypothesis is stated in. Offered raw it matched
+            // nothing and the refusal named the two sides differing in exactly that summand. Put
+            // through the same rules first, both it and the goal are in the same normal form.
+            settled <- Rewrite.rewrite(settleRules, opened.hypothesis.conclusion)
+            carried <- LogicError.lift(Kernel.eqMp(settled, opened.hypothesis))
+            hypothesisRule <- Rewrite.Rule.of(logic, carried)
+            proved <- driver.settle(settleRules)(opened.goal, Vector(hypothesisRule, gapRule))
+          } yield proved
+      )
+    } yield result
+  }
+
+  /**
+   * `|- !f g m n. Sum (\i. Sum (\j. f i * g j) m) n = Sum f n * Sum g m`
+   *
+   * **No induction, and that is the measurement rather than a shortcut.** The first attempt was the
+   * shared driver with [[Scaled]] in its rule set, and its step refused: the rewriting collapses
+   * the inner sum everywhere it occurs, including inside the outer one, so the term the induction
+   * hypothesis is about no longer exists by the time the hypothesis is offered as a rule. The
+   * refusal named it, `Sum (\x. f x * Sum g m) n + f n * Sum g m is not equal to ...`.
+   *
+   * Adding [[ScaledRight]] to the set to repair that is what showed the induction was never needed:
+   * with both, the left side rewrites to the right in two steps and nothing is left for a base or a
+   * step to do. Running the induction anyway would have gone green and left a reader believing the
+   * recurrences were load-bearing here, which is why this is a conversion over the equation and not
+   * `proveWith`.
+   *
+   * So what this lemma costs is the pair above and two rewrites, and the pair is what it is worth
+   * reading it for: the inner collapse binds the constant on the left, the outer one binds it on
+   * the right, and a development holding one of them would be commuting a product under a binder.
+   */
+  private def summedProducts(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    scaleRules: Vector[Rewrite.Rule]
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      statement <- Parser.proposition(
+        theory,
+        notation,
+        "!f:num->real. !g:num->real. !m:num. !n:num. " +
+          "Sum (\\i:num. Sum (\\j:num. f i * g j) m) n = Sum f n * Sum g m"
+      )
+      proved <- Rewrite.proveEquation(logic, term => Rewrite.rewrite(scaleRules, term), statement)
+    } yield proved
+
   private def swappedSums(
     driver: Induct,
     theory: Theory,

@@ -314,7 +314,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 386 with `CONVERGES_MUL`, 2026-09-20, and the **two** were derived before the run: the
     // limit of a product carries two antecedents, one convergence per sequence, each under its own
     // arrow, so `Propose.peel` gives it two. Tip plus this branch's delta.
-    proposals.size shouldBe 386
+    // 387 with the Cauchy product's finite half, 2026-09-20, and the **one** was derived before the
+    // run: of the six facts that landed, exactly one carries an antecedent, which is
+    // `Peano.NUM_SUC_SUB` and its bound `n <= m`. The other five are equations owing nothing, and
+    // `NUM_SUC_SUB_SELF` is that lemma with its bound already spent. Tip plus this branch's delta.
+    proposals.size shouldBe 387
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -513,13 +517,19 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // false too and quantifies over two SEQUENCES: the sampler has no reading of a function
     // variable, so it lands in `unreadable` below and not here. Derived and then measured, and
     // both halves came out.
+    // 79 with the ONE weakening the Cauchy product's finite half brings, and it was derived before
+    // the run: of the six facts only `Peano.NUM_SUC_SUB` owes anything, and dropping its bound
+    // leaves `!m n. NUM_SUB (SUC m) n = SUC (NUM_SUB m n)`, false at `m = 0, n = 1` where the left
+    // side is `0` and the right is `1`. It is written in nothing but `NUM_SUB` and `SUC`, which
+    // `Model.Numbers` computes exactly, so it is decided here rather than left open. Truncation is
+    // the whole of why it is false, which is what the lemma's bound is for.
     // 78 with ONE of the order map's three residues, and which one was derived before the run.
     // `Peano.NUM_REAL_LE_BACK` is the only one of the pair that owes anything, so it is the only
     // weakening, and dropping its antecedent leaves `!m n. NUM_LE m n`: false at `m = 1, n = 0`
     // and written in nothing but `NUM_LE`, which `Model.Numbers` computes exactly. The other two
     // residues are substitutions and neither is here, for two different reasons the two buckets
     // below give.
-    decidedFalse shouldBe 78
+    decidedFalse shouldBe 79
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -639,7 +649,19 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // prescribes, which means the paragraph is being read and not acted on. A change that moves a
     // count is not finished when the suite is green once; it is finished when it has been green
     // after a run in which every assertion behind the moved one executed.
-    withAPoint shouldBe 73
+    // 74 with the ONE weakening the Cauchy product's finite half brings, moving with
+    // `decidedFalse` rather than splitting from it, for the reason that entry gives:
+    // `!m n. NUM_SUB (SUC m) n = SUC (NUM_SUB m n)` is written in `NUM_SUB` and `SUC` alone, both
+    // of which `Model.Numbers` computes exactly, so the search finds `m = 0, n = 1`.
+    //
+    // **The mechanism was derived in advance and this number was not**, which is the distinction
+    // the paragraph above is really asking for and which is worth separating from its complaint:
+    // the single false residue and why the sampler can refute it were both written down while
+    // `decidedFalse` was being moved, and this line still went red on the next run, because
+    // deriving what moves a count is not the same as editing every count it moves. That is the
+    // fourth time, and what the paragraph prescribes — a second pass in which every assertion
+    // behind the moved one executes — is what found it again.
+    withAPoint shouldBe 74
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1538,6 +1560,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // whose statement writes one: `NUM_MUL`, inside the numeral of the product. The other three
     // speak of `NUM_PROV`, `NUM_TERM`, `NUM_CLOSED` and the codes, none of which is on this list.
     // Measured rather than derived, which is what the entry above already says of its residues.
+    // 142 with the same single weakening the entry in `decidedFalse` names, and it is on this list
+    // for the reason that list keeps: `!m n. NUM_SUB (SUC m) n = SUC (NUM_SUB m n)` writes
+    // `NUM_SUB` and `SUC`. Here the two counts move together, where the row below them is the case
+    // that separates them. The other five facts of that change write `Sum`, `Power` and the reals,
+    // and none of them is on this list.
     // 141, and the two are BOTH of `NUM_REAL_LE_BACK`'s while `INT_REAL_LE`'s one is not here,
     // which is this list counting CONSTANTS again. The weakening leaves `!m n. NUM_LE m n` and
     // the substitution leaves `real_of_num m < real_of_num n ==> NUM_LE m n`; both write
@@ -1545,7 +1572,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // So this row moves by two where `decidedFalse` moves by one, which is the split this pair of
     // counts exists to show: "the claim mentions the naturals" and "the model can compute it" are
     // different facts, and here the second residue is on this list and in `open`.
-    aboutNumbers.size shouldBe 141
+    aboutNumbers.size shouldBe 142
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1612,7 +1639,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // find. Two constants of the naturals, one refutation, which is this pair of counts doing
     // what it exists to do. It was not derived in advance either, for the reason the line above
     // has now recorded three times.
-    after shouldBe 52
+    // 53 with that same single weakening, which is the sampler and `aboutNumbers` moving together
+    // rather than splitting: the one residue on that list is refutable at a point, where the two
+    // entries above it each had one that was not. `NUM_SUC_SUB_SELF` produces no weakening at all,
+    // having no antecedent to drop, and the four facts in `Series` write no constant of the
+    // naturals in a residue.
+    after shouldBe 53
   }
 
   /* ------------------------------------------------------ the false positive it produced */

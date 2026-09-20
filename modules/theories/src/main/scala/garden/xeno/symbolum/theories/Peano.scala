@@ -949,6 +949,39 @@ object Peano {
   val MinusThenPlus: String = "NUM_SUB_ADD"
 
   /**
+   * `|- !m n. NUM_LE n m ==> NUM_SUB (SUC m) n = SUC (NUM_SUB m n)`
+   *
+   * A step on the left of a truncated difference comes out of it, and the hypothesis is what makes
+   * that true rather than decoration: at `m = ZERO` and `n = SUC ZERO` the left side is
+   * `SUC ZERO - SUC ZERO`, which is `ZERO`, and the right side is `SUC (ZERO - SUC ZERO)`, which is
+   * `SUC ZERO`. Truncation is what separates them, exactly as it separates [[SumMinus]] from
+   * [[MinusThenPlus]].
+   *
+   * **It is not [[SubAtSuccessor]] read from the other side.** That one moves a step on the
+   * **right**, `m - SUC n = PRE (m - n)`, and it is a recurrence of the definition: it holds
+   * everywhere and mentions `PRE`. This one moves a step on the left, holds only under the bound,
+   * and mentions no predecessor. The pair is the same asymmetry the file's opening draws between
+   * the two cancellation laws.
+   *
+   * Derived rather than induced, from the two that already exist: `n <= m` gives
+   * `(m - n) + n = m` by [[MinusThenPlus]], a step on both sides and [[SuccessorPlus]] give
+   * `(SUC (m - n)) + n = SUC m`, and [[SumMinus]] takes the `n` back off with nothing owed,
+   * because after the first move nothing has been truncated.
+   */
+  val SuccessorMinus: String = "NUM_SUC_SUB"
+
+  /**
+   * `|- !n. NUM_SUB (SUC n) n = SUC ZERO`
+   *
+   * [[SuccessorMinus]] at `m := n` with [[SubSelf]] under it, and it carries **no** hypothesis for
+   * that reason: the bound `n <= n` is [[Reflexive]] and is discharged where the lemma is derived
+   * rather than left for a caller. It is published because a conditional fact cannot be a rewrite
+   * rule and this one can, which is what a caller peeling the last row off a triangle of indices
+   * actually reaches for.
+   */
+  val SuccessorMinusSelf: String = "NUM_SUC_SUB_SELF"
+
+  /**
    * `|- !m n. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n`
    *
    * The lemma the rest of the subtraction is for. `real_of_num (NUM_SUB m n)` is an atom to every
@@ -1212,6 +1245,8 @@ object Peano {
     PredecessorBelow -> "!n:num. NUM_LE (PRE n) n",
     SubBelow -> "!m:num n:num. NUM_LE (NUM_SUB m n) m",
     MinusThenPlus -> "!m:num n:num. NUM_LE n m ==> NUM_ADD (NUM_SUB m n) n = m",
+    SuccessorMinus -> "!m:num n:num. NUM_LE n m ==> NUM_SUB (SUC m) n = SUC (NUM_SUB m n)",
+    SuccessorMinusSelf -> "!n:num. NUM_SUB (SUC n) n = SUC ZERO",
     EmbedsDifference ->
       "!m:num n:num. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n",
     PartialSumAtZero -> "!f:num -> num. NUM_SUM f ZERO = ZERO",
@@ -5572,6 +5607,10 @@ object Peano {
         orderFacts
       )
       minusThenPlus <- restores(logic, theory, notation, orderDefinitions, addition, sumMinus)
+      stepMinus <- successorMinus(
+        logic, theory, notation, minusThenPlus, addition(SuccessorPlus), sumMinus)
+      stepMinusSelf <- successorMinusSelf(
+        logic, theory, notation, stepMinus, subSelf, orderFacts(Reflexive))
     } yield (
       theory,
       Map(Predecessor -> predecessorDefinition, Subtraction -> subtractionDefinition),
@@ -5589,7 +5628,9 @@ object Peano {
         SubIsZero -> subIsZero,
         PredecessorBelow -> predecessorBelow,
         SubBelow -> subBelow,
-        MinusThenPlus -> minusThenPlus
+        MinusThenPlus -> minusThenPlus,
+        SuccessorMinus -> stepMinus,
+        SuccessorMinusSelf -> stepMinusSelf
       )
     )
   }
@@ -5780,6 +5821,96 @@ object Peano {
             }
           } yield reached
       )
+    } yield result
+  }
+
+  /**
+   * `|- !n. NUM_SUB (SUC n) n = SUC ZERO`, which is [[SuccessorMinus]] with its bound spent here.
+   *
+   * Three lines, and the only reason it is a lemma of its own is that a conditional equation is not
+   * a rewrite rule. `Rewrite.Rule.of` refuses an implication, so a caller rewriting a difference
+   * inside a sum cannot reach the general fact at all; this is the instance that fires.
+   */
+  private def successorMinusSelf(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    successorMinus: Kernel.Thm,
+    subSelf: Kernel.Thm,
+    reflexive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+
+    for {
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      atMost <- rules.spec(n, reflexive)
+      stepped <- rules.specAll(successorMinus, List(n, n)).flatMap(rules.mp(_, atMost))
+      vanishes <- rules.spec(n, subSelf).flatMap(Conv.apTerm(successor, _))
+      result <- Conv
+        .trans(stepped, vanishes)
+        .flatMap(rules.gen(n, _))
+        .flatMap(checked(theory, notation, SuccessorMinusSelf, _))
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LE n m ==> NUM_SUB (SUC m) n = SUC (NUM_SUB m n)`, from the two that exist.
+   *
+   * No induction: [[MinusThenPlus]] restores what the difference took away, a successor is put on
+   * both sides of that equation by congruence, [[SuccessorPlus]] moves it inside the sum, and
+   * [[SumMinus]] takes the summand off again with **no** hypothesis, since by then the sum is one
+   * nothing was truncated out of. The bound is spent once, at the first step, and nowhere after.
+   */
+  private def successorMinus(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    minusThenPlus: Kernel.Thm,
+    successorPlus: Kernel.Thm,
+    sumMinus: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+
+    for {
+      minus <- LogicError.lift(
+        theory.constant(Subtraction, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      below <- Parser.proposition(theory, notation, "NUM_LE (n:num) (m:num)")
+      assumed <- LogicError.lift(Kernel.assume(below))
+
+      restored <- rules.specAll(minusThenPlus, List(m, n)).flatMap(rules.mp(_, assumed))
+      difference <- Term.destEq(restored.conclusion)
+        .map(_._1)
+        .toRight(NotOfForm("an equation", restored.conclusion))
+      gap <- difference match {
+        case App(App(_, left), _) => Right(left)
+        case other                => Left(NotOfForm("a sum", other))
+      }
+
+      stepped <- Conv.apTerm(successor, restored)
+      pushed <- rules.specAll(successorPlus, List(gap, n))
+      joined <- Conv.trans(pushed, stepped)
+
+      stepGap <- LogicError.lift(Term.app(successor, gap))
+      cancelled <- rules.specAll(sumMinus, List(stepGap, n))
+      carried <- Conv.sym(joined).flatMap(Conv.apTerm(minus, _)).flatMap(Conv.apThm(_, n))
+
+      result <- Conv
+        .trans(carried, cancelled)
+        .flatMap(rules.disch(below, _))
+        .flatMap(rules.genAll(_, List(m, n)))
+        .flatMap(checked(theory, notation, SuccessorMinus, _))
     } yield result
   }
 
