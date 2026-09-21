@@ -419,6 +419,90 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     force(ring.prove(force(LogicError.lift(Term.eq(rightSide, corner))))).hypotheses shouldBe empty
   }
 
+  /**
+   * The bounded monotone, spent on a pair `SUM_MONOTONE` cannot compare.
+   *
+   * The prediction in `SUM_CONGRUENCE_BELOW`'s note is that the first real consumer of one of the
+   * four unbounded lemmas meets a wall and gets a bounded twin. This is that twin, and the test
+   * that earns it is not that it proves something — the unbounded one proves the same conclusion
+   * whenever it applies — but that it applies where the other **cannot**.
+   *
+   * `real_of_num i <= 0` holds at `i = 0` and at no other index, so at the bound `SUC ZERO` the
+   * bounded hypothesis is dischargeable and the unbounded one is **false**. The second half of
+   * this test derives that falsity rather than asserting it, which is what makes the first half a
+   * demonstration instead of a coincidence.
+   */
+  "The bounded monotone" should "compare where the unbounded one cannot" in {
+    series.show(fact(Series.MonotoneBelow).conclusion) shouldBe
+      "!x:num -> real. !y:num -> real. !z:num. " +
+        "(!u:num. u < z ==> x u <= y u) ==> Sum x z <= Sum y z"
+
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val i = Term.variable("i", numbers)
+    val one = force(series.term("SUC ZERO", numbers))
+    val climbing = force(series.term("\\i:num. real_of_num i", Type.fun(numbers, real)))
+    val flat = force(series.term("\\i:num. (0:real)", Type.fun(numbers, real)))
+    val linarith = force(Linarith.construct(order))
+
+    // Below the bound the only index is zero, and there the two agree.
+    val guard = force(
+      Parser.proposition(series.theory, series.notation, "NUM_LT (i:num) (SUC ZERO)"))
+    val assumed = force(LogicError.lift(Kernel.assume(guard)))
+    val isZero = force(
+      rules
+        .specAll(force(peano.fact(Peano.AtMostBelowSuccessor)), List(force(series.term("ZERO", numbers)), i))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(atMost =>
+          rules.spec(i, force(peano.fact(Peano.AtMostZero))).flatMap(rules.mp(_, atMost))))
+    val below = force(
+      Conv
+        .apTerm(
+          force(LogicError.lift(series.theory.constant(Peano.EmbeddingName, Type.fun(numbers, real)))),
+          isZero)
+        .flatMap(carried =>
+          Conv
+            .trans(carried, force(peano.fact(Peano.EmbedsZero)))
+            .flatMap(atZero =>
+              linarith
+                .prove("!e:real. e = 0 ==> e <= 0")
+                .flatMap(rules.spec(force(series.term("real_of_num (i:num)", real)), _))
+                .flatMap(rules.mp(_, atZero))))
+        .flatMap(rules.disch(guard, _))
+        .flatMap(rules.gen(i, _)))
+
+    val compared = force(
+      rules
+        .specAll(fact(Series.MonotoneBelow), List(climbing, flat, one))
+        .flatMap(theorem =>
+          Conv
+            .betaNormalise(theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem))))
+        .flatMap(rules.mp(_, below)))
+    compared.hypotheses shouldBe empty
+    series.show(compared.conclusion) shouldBe
+      "Sum (\\x:num. real_of_num x) (SUC 0) <= Sum (\\x:num. 0) (SUC 0)"
+
+    // And the unbounded hypothesis is false at the bound itself, derived rather than asserted:
+    // `real_of_num (SUC ZERO)` is `real_of_num ZERO + 1`, which is one.
+    val atTheBound = force(
+      Conv
+        .trans(
+          force(rules.spec(force(series.term("ZERO", numbers)), force(peano.fact(Peano.EmbedsSuccessor)))),
+          force(
+            linarith
+              .prove("!z:real. z = 0 ==> z + 1 = 1")
+              .flatMap(rules.spec(force(series.term("real_of_num ZERO", real)), _))
+              .flatMap(rules.mp(_, force(peano.fact(Peano.EmbedsZero)))))))
+    val refused = force(
+      linarith
+        .prove("!e:real. e = 1 ==> ~(e <= 0)")
+        .flatMap(rules.spec(force(series.term("real_of_num (SUC ZERO)", real)), _))
+        .flatMap(rules.mp(_, atTheBound)))
+    refused.hypotheses shouldBe empty
+    series.show(refused.conclusion) shouldBe "~(real_of_num (SUC 0) <= 0)"
+  }
+
   "A sum of zeroes" should "be zero at every length, which SUM_ZERO does not say" in {
     // The two read alike and are different facts: `SUM_ZERO` is about a sum of length zero, this is
     // about a summand of value zero. Keeping them apart is what lets an emptied inner sum collapse.

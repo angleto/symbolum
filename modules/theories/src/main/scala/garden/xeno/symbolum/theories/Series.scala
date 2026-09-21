@@ -549,6 +549,30 @@ object Series {
   val CongruenceBelow: String = "SUM_CONGRUENCE_BELOW"
 
   /**
+   * `|- !f g n. (!i. NUM_LT i n ==> f i <= g i) ==> Sum f n <= Sum g n`
+   *
+   * [[Monotone]] with the bound written into the hypothesis, and **it is the prediction
+   * [[CongruenceBelow]]'s note makes, come true.** That note counts four lemmas here stated at the
+   * wrong scope, says that none of them is demonstrated to be a defect from inside, and predicts
+   * that the first real consumer of any of the four meets the same wall and gets a bounded twin
+   * rather than a correction. [[Monotone]] is one of the four, and the Cauchy product is that
+   * consumer: the square of side `n` sits inside the triangle of side `n + n`, and the two
+   * summands it compares are ordered **only** below the bound.
+   *
+   * It costs no derivation of its own. [[congruenceOnARange]] was already the induction this
+   * wants, and the only thing in it specific to an equation was how the base closes, so that is a
+   * parameter now. [[Monotone]] stays, for the reason [[Congruence]] stays beside its own twin.
+   *
+   * **The parameter is kept for what it refuses, not for what it proves**, and that was measured
+   * rather than assumed. `Linarith` settles `0 = 0`, so closing the equation's base with it
+   * instead of with `Kernel.refl` leaves the whole suite green: a perturbation says so. What
+   * `refl` buys is that it refuses any base the rewriting did not already close, where the
+   * decider would accept a true equation it had failed to reduce, and a base that is silently
+   * not closed is the shape of defect this induction cannot otherwise report.
+   */
+  val MonotoneBelow: String = "SUM_MONOTONE_BELOW"
+
+  /**
    * `|- !b m n. Power b (NUM_MUL m n) = Power (Power b m) n`, the second law of exponents.
    *
    * The companion of [[PowerOfSum]] and proved by the same induction one line later, because its
@@ -883,6 +907,10 @@ object Series {
 
   /** [[Halves]], which is [[Reindex]] at one instance and is not proved by induction. */
   /** [[CongruenceBelow]], whose induction carries an implication and needs its own driver. */
+  val MonotoneBelowStatement: String =
+    "!f:num -> real. !g:num -> real. !n:num. " +
+      "(!i:num. NUM_LT i n ==> f i <= g i) ==> Sum f n <= Sum g n"
+
   val CongruenceBelowStatement: String =
     "!f:num -> real. !g:num -> real. !n:num. " +
       "(!i:num. NUM_LT i n ==> f i = g i) ==> Sum f n = Sum g n"
@@ -1081,7 +1109,22 @@ object Series {
       belowSuccessor <- peano.fact(Peano.BelowSuccessor)
       congruenceBelow <- congruenceOnARange(
         driver, logic, order, withProd, notation, recurrences, atSuccessor,
-        strictTransitive, belowSuccessor)
+        strictTransitive, belowSuccessor,
+        CongruenceBelowStatement,
+        (_, goal) =>
+          Term.destEq(goal) match {
+            case Some((left, right)) if left == right => Right(Kernel.refl(left))
+            case _ => Left(NotOfForm("an empty range on both sides", goal))
+          })
+
+      // The same induction at the order, which is the bounded twin `Congruence`'s own note
+      // predicted the first real consumer of one of the four would want. It is the Cauchy
+      // product, which compares two summands only below the bound.
+      monotoneBelow <- congruenceOnARange(
+        driver, logic, order, withProd, notation, recurrences, atSuccessor,
+        strictTransitive, belowSuccessor,
+        MonotoneBelowStatement,
+        (linarith, goal) => linarith.prove(goal))
 
       // The swap wants two of the facts just proved: `SUM_ADD` to close its step by hand, and
       // `SUM_OF_ZERO` as a rewrite rule, since its base leaves an inner sum of zeroes behind.
@@ -1162,6 +1205,7 @@ object Series {
         CauchyGap -> cauchyGap,
         Halves -> halves,
         CongruenceBelow -> congruenceBelow,
+        MonotoneBelow -> monotoneBelow,
         Geometric -> geometric
       ) ++ derived ++ alsoDerived ++ basewise ++ signwise ++ reindexed ++ exponents ++ bridged ++
         counted).toMap
@@ -1193,7 +1237,9 @@ object Series {
     recurrences: Vector[Rewrite.Rule],
     atSuccessor: Kernel.Thm,
     strictTransitive: Kernel.Thm,
-    belowSuccessor: Kernel.Thm
+    belowSuccessor: Kernel.Thm,
+    claim: String,
+    settle: (Linarith, Term) => Either[LogicError, Kernel.Thm]
   ): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -1206,7 +1252,7 @@ object Series {
 
     for {
       linarith <- Linarith.construct(bounds)
-      statement <- Parser.proposition(theory, notation, CongruenceBelowStatement)
+      statement <- Parser.proposition(theory, notation, claim)
       stripped <- Logic.stripForall(statement)
       (outer, inner) = stripped
       summands = outer.take(2).toList
@@ -1224,12 +1270,9 @@ object Series {
             parts <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
             opened <- Rewrite.rewrite(recurrences, parts._2)
             sides <- Term.destEq(opened.conclusion).toRight(NotOfForm("an equation", parts._2))
-            closed <- Term.destEq(sides._2).toRight(NotOfForm("two sides", sides._2))
-            _ <-
-              if (closed._1 == closed._2) Right(())
-              else Left(NotOfForm("an empty range on both sides", sides._2))
+            closed <- settle(linarith, sides._2)
             backwards <- Conv.sym(opened)
-            base <- LogicError.lift(Kernel.eqMp(backwards, Kernel.refl(closed._1)))
+            base <- LogicError.lift(Kernel.eqMp(backwards, closed))
             result <- rules.disch(parts._1, base)
           } yield result,
         step =>

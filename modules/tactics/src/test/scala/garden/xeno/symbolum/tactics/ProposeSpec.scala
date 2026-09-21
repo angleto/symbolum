@@ -328,7 +328,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 393 with the two tail facts, 2026-09-21, and the **three** were derived before the run:
     // `SUM_BELOW_LIMIT` carries two antecedents, the non-negativity of the terms and the
     // convergence, and `CONVERGES_TAIL` carries one. Tip plus this branch's delta.
-    proposals.size shouldBe 393
+    // 394 with the bounded monotone, 2026-09-21, and the **one** was derived before the run: it
+    // carries a single antecedent, the comparison below the bound. Tip plus this branch's delta.
+    proposals.size shouldBe 394
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1024,22 +1026,28 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `abs x = x` with the sign dropped is **false**, and it is here rather than among the
     // disproved for exactly that reason, which is the distinction `docs/adr/0005` keeps seven
     // answers apart for.
-    // 290 with the two residues `CONVERGES_MUL` produces, 2026-09-20, and what was derived here
-    // before the run is the **mechanism** rather than the pair of numbers: `converges` is a
-    // constant no model here interprets, exactly as `abs` is in the row above, so a weakening of
-    // it is a claim the sampler cannot evaluate at any point, and `Evaluate` answering nothing is
-    // not a refutation. Both weakenings therefore land here rather than among the disproved,
-    // whether or not the claim they make is true, which is the distinction `docs/adr/0005` keeps
-    // seven answers apart for.
-    // 292 with TWO of the three residues the tail facts bring, 2026-09-21, and the **split was
-    // predicted wrong**: the prediction was three here and none below, on the reading that all
-    // three are about `converges` and no model reads it. Two of them are. The third is
-    // `SUM_BELOW_LIMIT` with its CONVERGENCE dropped rather than its non-negativity, which leaves
-    // `!f l. (!i. 0 <= f i) ==> !n. Sum f n <= l`: no `converges` in it at all, and what it
-    // quantifies over is a function, which the sampler has no reading of. So it is in the bucket
-    // below and these two are here, which is the distinction the two buckets exist to draw and
-    // which a prediction made per LEMMA rather than per residue cannot see.
-    open shouldBe 292
+    // 290 with the two residues `CONVERGES_MUL` produces, 2026-09-20; 292 with two of the three
+    // the tail facts bring, 2026-09-21; 293 with the bounded monotone's one, the same day.
+    //
+    // **Three predictions about which of these two buckets a residue lands in were made over
+    // those three days and all three were wrong, and the account they were made on is corrected
+    // here rather than beside each row.** It was that the split turns on what the MODEL reads:
+    // `converges` is interpreted nowhere, so a claim about it cannot be evaluated, so it is not
+    // refuted. Every word of that is true and none of it decides this bucket. `Novelty` does, in
+    // four lines: an `Unsettled` report is `Unreadable` where the address is
+    // `Prove.Address.Nobody` and `Open` otherwise. The question is whether any procedure
+    // **recognised the shape**, and the model does not come into it at all.
+    //
+    // So `!f g n. Sum f n <= Sum g n` is here, because an order between two reals is a shape the
+    // procedures take and then fail on, while `!f l. (!i. 0 <= f i) ==> !n. Sum f n <= l` is
+    // below, because nothing addresses it. Read that way the three rows agree and need no story
+    // about sequences or function variables.
+    //
+    // The criterion was written down before any of the three guesses: the bucket below opens by
+    // saying "nobody here can take this shape", which is the address and nothing else. What the
+    // three cost was not the numbers, which the suite catches, but three comments recording a
+    // mechanism that is not the mechanism, in the place the next session reads.
+    open shouldBe 293
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1339,23 +1347,25 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // sampler has no point to try because nothing interprets `int`. What decides the bucket is
     // the type the residue is about, and the three `abs` residues of the same day are the control
     // on that: they are false too, they are about reals, and every one of them is open.
-    // 96 with the OTHER of the two weakenings of 2026-09-21, and **this bucket was predicted
-    // wrong**, which is worth more than the number. The mechanism was derived correctly before
-    // the run — `NUM_CHOOSE` is a constant no model here interprets, so the residue
-    // `!n k. NUM_CHOOSE n k = ZERO` cannot be evaluated at a point — and the bucket read off that
-    // was `open`. It is here instead. The rows above say what decides it and the reading that
-    // missed it was of the TYPE rather than of the constants: `num` is interpreted, which is what
-    // sent the prediction to `open`, and `NUM_CHOOSE` inside a claim about `num` is not.
+    // 96 with the OTHER of the two weakenings of 2026-09-20, `!n k. NUM_CHOOSE n k = ZERO`. It is
+    // here because nothing addresses a claim about `NUM_CHOOSE`, which is this bucket's criterion
+    // and is not the one first written beside this row: that said the model does not interpret
+    // `NUM_CHOOSE`, which is true and decides whether the claim is REFUTED rather than which of
+    // these two buckets holds it. The row in `open` carries the correction for all three.
     // 97 with the residue of the absolute convergence theorem, 2026-09-21, and **this bucket was
     // predicted right this time**, which is the entry above being read rather than the prose
     // beside it: dropping the hypothesis leaves `!f l. ?m. converges (Sum f) m`, which is false
     // and is about `converges`, a constant no model here interprets. The row above records the
     // reading that sent the same prediction to `open` yesterday, and the criterion it gives —
     // the constants and not the type — is what was used here.
-    // 98 with the third of those residues, the one whose weakening removed the convergence. It
-    // sat behind `open` in this same test and so never ran on the first pass, which is the fourth
-    // time this file has recorded that and the first time the number behind it was also the one
-    // the prediction had wrong. The second pass is what found both.
+    // 98 with the third of those residues, `SUM_BELOW_LIMIT` with its convergence dropped. It is
+    // here for the reason this bucket's own opening gives and the row above now repeats: nothing
+    // addresses `!f l. (!i. 0 <= f i) ==> !n. Sum f n <= l`, where an order between two partial
+    // sums IS addressed and so lands above.
+    //
+    // It also sat behind `open` in this same test and so never ran on the first pass, which is
+    // the fourth time this file has recorded that, and the first time the number behind it was
+    // also the one a prediction had wrong. The second pass found both.
     unreadable shouldBe 98
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
@@ -1628,7 +1638,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // deliberately. So what this list counts is that set and not the sentence describing it, and
     // the same reading that missed `unreadable` yesterday missed this today — the prose beside a
     // criterion is not the criterion.
-    aboutNumbers.size shouldBe 148
+    // 149 with the bounded monotone's residue, which writes `Sum` and so is on this list for the
+    // reason the rows above give.
+    aboutNumbers.size shouldBe 149
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1703,7 +1715,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 54 with that same single residue, the sampler and `aboutNumbers` moving together where the
     // `NUM_CHOOSE` one moves neither: it is on `aboutNumbers` and in `unreadable`, so it is
     // counted as being about the naturals and is refuted at no point at all.
-    after shouldBe 54
+    // 55 with the bounded monotone's residue, `!f g n. Sum f n <= Sum g n`, and the mechanism
+    // was **measured rather than derived**, because the entry four rows up would have predicted
+    // the opposite: it says a claim whose two leading variables are functions gives the sampler
+    // nothing to sample. That is true of `NUM_SUM` over the naturals and is **not** true of `Sum`
+    // over the reals, which this residue settles — printing what the search refutes shows it
+    // among them, beside the two residues of `SUM_CONGRUENCE` and its bounded twin, which are
+    // refuted too. So the reading transfers between the two operators and the note above does not
+    // say that it does not.
+    after shouldBe 55
   }
 
   /* ------------------------------------------------------ the false positive it produced */

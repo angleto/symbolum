@@ -550,8 +550,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `Limit`, neither shared, so the gap of three does not move. Tip plus this branch's delta.
     // Each binds two leading quantifiers, a **sequence** and a real, so they do not share a type
     // and `CLAUDE.md`'s first figure moves by two while its second does not move at all.
-    library.entries.size shouldBe 588
-    library.names.distinct.size shouldBe 585
+    // 589 and 586 with the bounded monotone, 2026-09-21: one fact under one name, in `Series`,
+    // not shared, so the gap of three does not move. Tip plus this branch's delta. It binds three
+    // leading quantifiers of which the first two are both `num -> real`, so **both** of
+    // `CLAUDE.md`'s figures-per-lemma move by one.
+    library.entries.size shouldBe 589
+    library.names.distinct.size shouldBe 586
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

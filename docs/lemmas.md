@@ -702,6 +702,7 @@ they have least appetite for working out how it is produced.
   SUM_HALVES               !x:num -> real. !y:num. Sum x (y + y) = Sum x y + Sum (\z:num. x (y + z)) y
   SUM_LINEAR               !x:real. !y:num -> real. !z:num -> real. !u:num. Sum (\v:num. x * y v + z v) u = x * Sum y u + Sum z u
   SUM_MONOTONE             !x:num -> real. !y:num -> real. (!z:num. x z <= y z) ==> (!z:num. Sum x z <= Sum y z)
+  SUM_MONOTONE_BELOW       !x:num -> real. !y:num -> real. !z:num. (!u:num. u < z ==> x u <= y u) ==> Sum x z <= Sum y z
   SUM_NONNEGATIVE          !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. 0 <= Sum x y)
   SUM_OF_PRODUCTS          !x:num -> real. !y:num -> real. !z:num. !u:num. Sum (\v:num. Sum (\w:num. x v * y w) z) u = Sum x u * Sum y z
   SUM_OF_ZERO              !x:num. Sum (\y:num. 0) x = 0
