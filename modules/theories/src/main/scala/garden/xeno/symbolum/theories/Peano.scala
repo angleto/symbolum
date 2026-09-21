@@ -698,6 +698,20 @@ object Peano {
   val AtMostBelowSuccessor: String = "NUM_LE_OF_LT_SUC"
 
   /**
+   * `|- !n i. NUM_LE i n ==> NUM_LE n (NUM_SUB (NUM_ADD n n) i)`
+   *
+   * Taking at most `n` away from `n + n` leaves at least `n`. It is what says the square of side
+   * `n` sits inside the triangle of side `n + n`, which is the half of the Cauchy product's
+   * sandwich that looked as though it needed a division: `2n - i >= n` for `i <= n` is the same
+   * statement, and written with `NUM_ADD n n` it needs no `NUM_DIV` and no halving.
+   *
+   * Additively it has no case split. `NUM_LE i n` **is** `?d. NUM_ADD i d = n`, so `n + n` is
+   * `i + (d + n)`; commuting once puts the `i` where [[SumMinus]] takes it off with nothing owed,
+   * and what is left is `d + n`, which is at least `n` by [[AtMostSum]] and one more commutation.
+   */
+  val AtMostDoubleMinus: String = "NUM_LE_DOUBLE_SUB"
+
+  /**
    * `|- !P:num->bool. (?n. P n) ==> (?m. P m /\ (!k. NUM_LT k m ==> ~(P k)))`
    *
    * The least-number principle: a property that holds somewhere holds first somewhere. The only
@@ -1297,6 +1311,8 @@ object Peano {
         "(!n:num. P n)"),
     AtMostZero -> "!n:num. NUM_LE n ZERO ==> n = ZERO",
     AtMostBelowSuccessor -> "!n:num i:num. NUM_LT i (SUC n) ==> NUM_LE i n",
+    AtMostDoubleMinus ->
+      "!n:num i:num. NUM_LE i n ==> NUM_LE n (NUM_SUB (NUM_ADD n n) i)",
     BelowSuccessorCases -> "!n:num i:num. NUM_LT i (SUC n) ==> NUM_LT i n \\/ i = n",
     LeastNumber ->
       ("!P:num->bool. (?n:num. P n) ==> " +
@@ -3081,6 +3097,88 @@ object Peano {
    * branch, which a caller then has to eliminate. This one has no case split, and a consumer
    * under `SUM_CONGRUENCE_BELOW` at a bound of `SUC n` wants exactly this shape.
    */
+  /**
+   * `|- !n i. NUM_LE i n ==> NUM_LE n (NUM_SUB (NUM_ADD n n) i)`, and the witness does the work.
+   *
+   * `i + d = n` gives `n + n = i + (d + n)` by associativity; [[AddCommutative]] moves the `i` to
+   * where [[SumMinus]] takes it off with nothing owed, since nothing was truncated; and `d + n`
+   * is at least `n` by [[AtMostSum]] commuted. No case split and no order fact beyond the two the
+   * definition unfolds to.
+   */
+  private def atMostDoubleMinus(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    nonStrict: Kernel.Thm,
+    arithmetic: Map[String, Kernel.Thm],
+    sumMinus: Kernel.Thm,
+    atMostSum: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+
+    /** Rewrite the last argument of an application, which is all the congruence here needs. */
+    def inLastArgument(
+      equation: Kernel.Thm,
+      theorem: Kernel.Thm
+    ): Either[LogicError, Kernel.Thm] =
+      theorem.conclusion match {
+        case App(partial, _) =>
+          Conv
+            .apTerm(partial, equation)
+            .flatMap(congruence => LogicError.lift(Kernel.eqMp(congruence, theorem)))
+        case other => Left(NotOfForm("an application", other))
+      }
+
+    for {
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      minus <- LogicError.lift(
+        theory.constant(Subtraction, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+
+      below <- Parser.proposition(theory, notation, "NUM_LE (i:num) (n:num)")
+      assumed <- LogicError.lift(Kernel.assume(below))
+      existential <- gap(logic, nonStrict, i, n, assumed)
+
+      difference = Conv.freshVariable("d", numbers, Term.freeVariables(below))
+      reaching <- LogicError.lift(
+        Term.appAll(plus, List(i, difference)).flatMap(Term.eq(_, n)))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      // `n + n = (i + d) + n = i + (d + n)`, and then the `i` goes to the other side of the sum.
+      doubled <- Conv
+        .sym(reaches)
+        .flatMap(equation => Conv.apThm(Conv.apTerm(plus, equation).getOrElse(equation), n))
+      associated <- rules.specAll(arithmetic(AddAssociative), List(i, difference, n))
+      shaped <- Conv.trans(doubled, associated)
+      rest <- LogicError.lift(Term.appAll(plus, List(difference, n)))
+      swapped <- rules.specAll(arithmetic(AddCommutative), List(i, rest))
+      moved <- Conv.trans(shaped, swapped)
+
+      cancelled <- rules.specAll(sumMinus, List(rest, i))
+      carried <- Conv.apTerm(minus, moved).flatMap(Conv.apThm(_, i))
+      difference0 <- Conv.trans(carried, cancelled)
+
+      reached <- rules
+        .specAll(atMostSum, List(n, difference))
+        .flatMap(atMost =>
+          rules
+            .specAll(arithmetic(AddCommutative), List(n, difference))
+            .flatMap(commuted => inLastArgument(commuted, atMost)))
+      result <- Conv
+        .sym(difference0)
+        .flatMap(equation => inLastArgument(equation, reached))
+        .flatMap(rules.existsElim(existential, difference, _))
+        .flatMap(rules.disch(below, _))
+        .flatMap(rules.genAll(_, List(n, i)))
+        .flatMap(checked(theory, notation, AtMostDoubleMinus, _))
+    } yield result
+  }
+
   private def atMostBelowSuccessor(
     logic: Logic,
     theory: Theory,
@@ -5793,6 +5891,9 @@ object Peano {
       minusThenPlus <- restores(logic, theory, notation, orderDefinitions, addition, sumMinus)
       stepMinus <- successorMinus(
         logic, theory, notation, minusThenPlus, addition(SuccessorPlus), sumMinus)
+      atMostDouble <- atMostDoubleMinus(
+        logic, theory, notation, orderDefinitions(NonStrictOrder), addition, sumMinus,
+        orderFacts(AtMostSum))
       stepMinusSelf <- successorMinusSelf(
         logic, theory, notation, stepMinus, subSelf, orderFacts(Reflexive))
     } yield (
@@ -5814,7 +5915,8 @@ object Peano {
         SubBelow -> subBelow,
         MinusThenPlus -> minusThenPlus,
         SuccessorMinus -> stepMinus,
-        SuccessorMinusSelf -> stepMinusSelf
+        SuccessorMinusSelf -> stepMinusSelf,
+        AtMostDoubleMinus -> atMostDouble
       )
     )
   }

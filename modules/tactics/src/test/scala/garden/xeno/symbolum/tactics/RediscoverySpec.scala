@@ -277,7 +277,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // convergence, and `CONVERGES_TAIL` carries one. Tip plus this branch's delta.
     // 394 with the bounded monotone, 2026-09-21, and the **one** was derived before the run: it
     // carries a single antecedent, the comparison below the bound. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 394
+    // 400 with the sandwich and what it wanted in front of it, 2026-09-21, and the **six** were
+    // derived before the run: one antecedent each on `SUM_GROWS` and `Peano.NUM_LE_DOUBLE_SUB`,
+    // two each on the sandwich's two halves. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 400
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

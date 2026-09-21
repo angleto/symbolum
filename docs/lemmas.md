@@ -325,7 +325,10 @@ they have least appetite for working out how it is produced.
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
   SUM_BELOW_LIMIT          !x:num -> real. !y:real. (!z:num. 0 <= x z) ==> converges (Sum x) y ==> (!z:num. Sum x z <= y)
+  SUM_CAUCHY_BELOW_SQUARE  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) z <= Sum x z * Sum y z
   SUM_COMPARISON           !x:num -> real. !y:num -> real. (!z:num. 0 <= x z) ==> (!z:num. x z <= y z) ==> (?z:real. !u:num. Sum y u <= z) ==> (?z:real. converges (Sum x) z)
+  SUM_GROWS                !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. !z:num. y <= z ==> Sum x y <= Sum x z)
+  SUM_SQUARE_BELOW_CAUCHY  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum x z * Sum y z <= Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) (z + z)
 
 ## Magnitude
 
@@ -516,6 +519,7 @@ they have least appetite for working out how it is produced.
   NUM_LE_ADD               !x:num. !y:num. x <= x + y
   NUM_LE_ANTISYM           !x:num. !y:num. x <= y /\ y <= x ==> x = y
   NUM_LE_CASES             !x:num. !y:num. x <= y ==> x < y \/ x = y
+  NUM_LE_DOUBLE_SUB        !x:num. !y:num. y <= x ==> x <= NUM_SUB (x + x) y
   NUM_LE_LT_TRANS          !x:num. !y:num. !z:num. x <= y /\ y < z ==> x < z
   NUM_LE_OF_LT             !x:num. !y:num. x < y ==> x <= y
   NUM_LE_OF_LT_SUC         !x:num. !y:num. y < SUC x ==> y <= x

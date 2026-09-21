@@ -131,6 +131,15 @@ final class Limit private (
   /** `|- !f l. (!i. 0 <= f i) ==> converges (Sum f) l ==> !n. Sum f n <= l` */
   def belowLimit: Either[LogicError, Kernel.Thm] = fact(Limit.BelowLimit)
 
+  /** `|- !f. (!i. 0 <= f i) ==> !m n. NUM_LE m n ==> Sum f m <= Sum f n` */
+  def grows: Either[LogicError, Kernel.Thm] = fact(Limit.Grows)
+
+  /** The `n`th partial Cauchy sum under the product of the two `n`th partial sums. */
+  def cauchyBelowSquare: Either[LogicError, Kernel.Thm] = fact(Limit.CauchyBelowSquare)
+
+  /** The product of the two `n`th partial sums under the partial Cauchy sum at `n + n`. */
+  def squareBelowCauchy: Either[LogicError, Kernel.Thm] = fact(Limit.SquareBelowCauchy)
+
   /** `|- !f l. converges (Sum f) l ==> converges (\n. l - Sum f n) 0` */
   def tail: Either[LogicError, Kernel.Thm] = fact(Limit.Tail)
 }
@@ -372,6 +381,54 @@ object Limit {
   val BelowLimit: String = "SUM_BELOW_LIMIT"
 
   /**
+   * `|- !f. (!i. 0 <= f i) ==> !m n. NUM_LE m n ==> Sum f m <= Sum f n`
+   *
+   * The partial sums of a series of non-negative terms grow with the length. It is two lines —
+   * `Series.SUM_SUC` with the hypothesis makes the sequence increasing, and [[MonotoneBelow]]
+   * carries that to every pair of indices — and it is published because those two lines had been
+   * written **three times** by the time anything asked for them: inside [[BelowLimit]], and twice
+   * more in the arguments that wanted a partial sum at a shorter length under one at a longer.
+   *
+   * The third copy is what settled it. A fact derived twice is a coincidence of two authors; a
+   * fact derived three times is the library missing an entry, and the rule in `ARC` that a
+   * business rule has one implementation site reads the same way about a lemma.
+   */
+  val Grows: String = "SUM_GROWS"
+
+  /**
+   * `|- !a b n. (!i. 0 <= a i) ==> (!i. 0 <= b i) ==>
+   * Sum (\k. Sum (\i. a i * b (k - i)) (SUC k)) n <= Sum a n * Sum b n`
+   *
+   * The triangle is inside the square: for non-negative terms the `n`th partial sum of a Cauchy
+   * product never passes the product of the two `n`th partial sums. It is the first half of the
+   * sandwich the Cauchy product's convergence rests on, and it is what makes the **split at `n/2`
+   * unnecessary** — the measurement that decided the route is written in the card.
+   *
+   * It costs nothing but `Series.SUM_CAUCHY_GAP` read as a sign. That fact says the difference is
+   * `Sum (\i. a i * (Sum b n - Sum b (n - i))) n`, every term of which is a non-negative number
+   * times a **tail** of `b`, and a tail of a non-negative series is non-negative because
+   * [[Grows]] says the shorter partial sum is the smaller one. `NUM_SUB_LE` is what puts
+   * `n - i` under `n`, and it holds with no side condition because the difference is truncated.
+   */
+  val CauchyBelowSquare: String = "SUM_CAUCHY_BELOW_SQUARE"
+
+  /**
+   * `|- !a b n. (!i. 0 <= a i) ==> (!i. 0 <= b i) ==>
+   * Sum a n * Sum b n <= Sum (\k. Sum (\i. a i * b (k - i)) (SUC k)) (n + n)`
+   *
+   * The square is inside the double triangle: every pair `(i, j)` with `i < n` and `j < n` has
+   * `i + j < n + n`. It is the second half of the sandwich, and with [[CauchyBelowSquare]] it is
+   * what makes the Cauchy product's convergence reachable **without a split at `n / 2`**: the
+   * bound `A * B <= D` comes from this at every `n` rather than from cutting a sum in two.
+   *
+   * `n + n` and not `2 * n`, which is not a spelling. Written with the doubling there is no
+   * division anywhere in the argument and `NUM_DIV` never enters; written with `2 * n` the
+   * arithmetic under it is the same but a reader is invited to look for the halving that is not
+   * there.
+   */
+  val SquareBelowCauchy: String = "SUM_SQUARE_BELOW_CAUCHY"
+
+  /**
    * `|- !f l. converges (Sum f) l ==> converges (\n. l - Sum f n) 0`
    *
    * What a series has left to add goes to zero. With [[BelowLimit]] it is the tail estimate every
@@ -426,6 +483,16 @@ object Limit {
     BelowLimit ->
       ("!f:num -> real. !l:real. (!i:num. 0 <= f i) ==> converges (Sum f) l ==> " +
         "!n:num. Sum f n <= l"),
+    Grows ->
+      ("!f:num -> real. (!i:num. 0 <= f i) ==> " +
+        "!m:num. !n:num. NUM_LE m n ==> Sum f m <= Sum f n"),
+    CauchyBelowSquare ->
+      ("!a:num -> real. !b:num -> real. !n:num. (!i:num. 0 <= a i) ==> (!i:num. 0 <= b i) ==> " +
+        "Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k)) n <= Sum a n * Sum b n"),
+    SquareBelowCauchy ->
+      ("!a:num -> real. !b:num -> real. !n:num. (!i:num. 0 <= a i) ==> (!i:num. 0 <= b i) ==> " +
+        "Sum a n * Sum b n <= " +
+        "Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k)) (NUM_ADD n n)"),
     Tail ->
       ("!f:num -> real. !l:real. converges (Sum f) l ==> " +
         "converges (\\n:num. l - Sum f n) 0")
@@ -545,8 +612,35 @@ object Limit {
         logic, linarith, theory, notation, convergesDefinition, bounds, indices)
       negatedLimit <- convergesNegated(
         logic, linarith, theory, notation, convergesDefinition, bounds)
-      belowItsOwnLimit <- belowItsLimit(
-        logic, linarith, theory, notation, sumAtSuccessor, monotoneBelow, above)
+      partialSumsGrow <- sumsGrow(
+        logic, linarith, theory, notation, sumAtSuccessor, monotoneBelow)
+      sumCauchyGap <- series.fact(Series.CauchyGap)
+      sumNonNegative <- series.fact(Series.NonNegative)
+      productNonNegative <- magnitude.order.fact(Order.MultiplyNonNegatives)
+      differenceBelow <- peano.fact(Peano.SubBelow)
+      sumCauchy <- series.fact(Series.Cauchy)
+      sumHalves <- series.fact(Series.Halves)
+      sumMonotoneBelow <- series.fact(Series.MonotoneBelow)
+      sumScaledRight <- series.fact(Series.ScaledRight)
+      atMostFromBelow <- peano.fact(Peano.AtMostFromBelow)
+      atMostDouble <- peano.fact(Peano.AtMostDoubleMinus)
+      multiplyLe <- magnitude.order.fact(Order.MultiplyLe)
+      mulSymmetric <- reals.axiom("MUL_SYM")
+      squareUnderTriangle <- squareUnderCauchy(
+        logic,
+        linarith,
+        theory,
+        notation,
+        Squares(
+          sumCauchy, sumHalves, sumMonotoneBelow, sumScaledRight, sumNonNegative,
+          productNonNegative, partialSumsGrow, atMostFromBelow, atMostDouble, multiplyLe,
+          mulSymmetric)
+      )
+
+      triangleUnderSquare <- cauchyUnderSquare(
+        logic, linarith, theory, notation, sumCauchyGap, partialSumsGrow, sumNonNegative,
+        productNonNegative, differenceBelow)
+      belowItsOwnLimit <- belowItsLimit(logic, theory, notation, partialSumsGrow, above)
       tailToZero <- tailVanishes(
         logic, magnitude.order.ring, theory, notation, constant, negatedLimit, addedLimits,
         eventually)
@@ -586,6 +680,9 @@ object Limit {
         Multiplied -> multipliedLimits,
         Absolute -> absoluteSeries,
         BelowLimit -> belowItsOwnLimit,
+        Grows -> partialSumsGrow,
+        CauchyBelowSquare -> triangleUnderSquare,
+        SquareBelowCauchy -> squareUnderTriangle,
         Tail -> tailToZero
       )
     )
@@ -954,6 +1051,21 @@ object Limit {
    * work is putting facts that already exist in one order, and the only thing it adds is the
    * observation that the bracket is non-negative.
    */
+  /** What the square-inside-the-double-triangle argument takes from the three files under it. */
+  private final case class Squares(
+    cauchy: Kernel.Thm,
+    halves: Kernel.Thm,
+    monotoneBelow: Kernel.Thm,
+    scaledRight: Kernel.Thm,
+    nonNegativeSum: Kernel.Thm,
+    productNonNegative: Kernel.Thm,
+    grows: Kernel.Thm,
+    atMostFromBelow: Kernel.Thm,
+    atMostDouble: Kernel.Thm,
+    multiplyLe: Kernel.Thm,
+    symmetric: Kernel.Thm
+  )
+
   private final case class Absolutes(
     additive: Kernel.Thm,
     comparison: Kernel.Thm,
@@ -2082,20 +2194,320 @@ object Limit {
    * one `Magnitude.ABS_NONNEG` and costs this nothing: the derivation never read anything about
    * `abs` except that it is non-negative.
    */
-  private def belowItsLimit(
+  /**
+   * [[SquareBelowCauchy]], which is where the split at `n / 2` was supposed to be and is not.
+   *
+   * Every pair `(i, j)` with `i < n` and `j < n` has `i + j < n + n`, so the square of side `n`
+   * sits inside the triangle of side `n + n`. As sums: the partial Cauchy sum at `n + n` is
+   * `Series.SUM_HALVES` into a first half and a second, the second is non-negative and dropped,
+   * and the first dominates `Sum a n * Sum b n` term by term because a row read at `(n + n) - i`
+   * is longer than one read at `n` whenever `i <= n`.
+   *
+   * **That last step wanted two lemmas and neither existed.** The comparison holds only below the
+   * bound, which is `Series.SUM_MONOTONE_BELOW`; and the arithmetic under it is
+   * `Peano.NUM_LE_DOUBLE_SUB`, which is `2n - i >= n` written with `NUM_ADD n n` so that no
+   * division appears anywhere. Both landed for this.
+   */
+  private def squareUnderCauchy(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    pieces: Squares
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val a = Term.variable("a", sequences)
+    val b = Term.variable("b", sequences)
+    val n = Term.variable("n", numbers)
+
+    def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    def sidesOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      Term
+        .destEq(theorem.conclusion)
+        .toRight(NotOfForm("an equation", theorem.conclusion))
+
+    def summandOf(term: Term): Either[LogicError, Term] = term match {
+      case App(App(_, body), _) => Right(body)
+      case other                => Left(NotOfForm("a sum", other))
+    }
+
+    /** The right of `x <= y`, which is where an order statement keeps the larger side. */
+    def largerOf(term: Term): Either[LogicError, Term] = term match {
+      case App(App(_, _), larger) => Right(larger)
+      case other                  => Left(NotOfForm("an order statement", other))
+    }
+
+    /** Open a bounded pointwise obligation and hand its index and guard to the caller. */
+    def belowTheBound(
+      left: Term,
+      right: Term,
+      length: Term,
+      close: (Term, FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        instance <- rules
+          .specAll(pieces.monotoneBelow, List(left, right, length))
+          .flatMap(normalised)
+        obligation <- logic
+          .destImp(instance.conclusion)
+          .map(_._1)
+          .toRight(NotOfForm("an implication", instance.conclusion))
+        stripped <- Logic.stripForall(obligation)
+        index <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every index", obligation))
+        parts <- logic
+          .destImp(stripped._2)
+          .toRight(NotOfForm("an implication", stripped._2))
+        (guard, body) = parts
+        assumed <- LogicError.lift(Kernel.assume(guard))
+        proved <- close(body, index, assumed)
+        result <- rules
+          .disch(guard, proved)
+          .flatMap(rules.gen(index, _))
+          .flatMap(rules.mp(instance, _))
+      } yield result
+
+    /** Open an unbounded pointwise obligation the same way. */
+    def everywhere(
+      body: Term,
+      close: (Term, FVar) => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        instance <- rules.spec(body, pieces.nonNegativeSum).flatMap(normalised)
+        obligation <- logic
+          .destImp(instance.conclusion)
+          .map(_._1)
+          .toRight(NotOfForm("an implication", instance.conclusion))
+        stripped <- Logic.stripForall(obligation)
+        index <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every index", obligation))
+        proved <- close(stripped._2, index).flatMap(rules.gen(index, _))
+        result <- rules.mp(instance, proved)
+      } yield result
+
+    for {
+      nonNegativeA <- Parser.proposition(theory, notation, "!i:num. 0 <= (a:num -> real) i")
+      nonNegativeB <- Parser.proposition(theory, notation, "!i:num. 0 <= (b:num -> real) i")
+      assumedA <- LogicError.lift(Kernel.assume(nonNegativeA))
+      assumedB <- LogicError.lift(Kernel.assume(nonNegativeB))
+
+      doubled <- Parser.term(theory, notation, "NUM_ADD (n:num) (n:num)", numbers)
+      partialB <- Parser.term(theory, notation, "Sum (b:num -> real) (n:num)", values)
+
+      rowsNonNegative <- rules.spec(b, pieces.nonNegativeSum).flatMap(rules.mp(_, assumedB))
+      ordered <- rules.spec(b, pieces.grows).flatMap(rules.mp(_, assumedB))
+
+      // The Cauchy partial sum at twice the length, as one sum over rows.
+      wideAt <- rules.specAll(pieces.cauchy, List(a, b, doubled))
+      wideBody <- sidesOf(wideAt).map(_._2).flatMap(summandOf)
+
+      // Halved, and the second half dropped because every term of it is a product of two
+      // non-negative numbers: a term of `a`, and a partial sum of `b`.
+      split <- rules.specAll(pieces.halves, List(wideBody, n)).flatMap(normalised)
+      secondHalf <- sidesOf(split).map(_._2).flatMap(largerOf)
+      shiftedBody <- summandOf(secondHalf)
+      secondNonNegative <- everywhere(
+        shiftedBody,
+        (goal, index) =>
+          goal match {
+            case App(App(_, _), App(App(_, factor), row)) =>
+              for {
+                // The factor is `a (n + z)` and not `a z`: the second half is the shifted one,
+                // so the non-negativity is asked at the shifted index rather than at the index.
+                at <- factor match {
+                  case App(_, argument) => Right(argument)
+                  case other            => Left(NotOfForm("a term of the sequence", other))
+                }
+                positive <- rules.spec(at, assumedA)
+                length <- row match {
+                  case App(_, end) => Right(end)
+                  case other       => Left(NotOfForm("a partial sum", other))
+                }
+                rows <- rules.spec(length, rowsNonNegative)
+                product <- rules
+                  .specAll(pieces.productNonNegative, List(factor, row))
+                  .flatMap(rules.mp(_, positive))
+                  .flatMap(rules.mp(_, rows))
+              } yield product
+            case other => Left(NotOfForm("a product of two", other))
+          }
+      ).flatMap(rules.spec(n, _))
+
+      // The first half dominates the square, term by term and only below the bound.
+      product <- rules.specAll(pieces.scaledRight, List(partialB, a, n)).flatMap(normalised)
+      squareBody <- sidesOf(product).map(_._1).flatMap(summandOf)
+      dominated <- belowTheBound(
+        squareBody,
+        wideBody,
+        n,
+        (goal, index, bound) =>
+          for {
+            weak <- rules.specAll(pieces.atMostFromBelow, List(index, n)).flatMap(rules.mp(_, bound))
+            reaches <- rules.specAll(pieces.atMostDouble, List(n, index)).flatMap(rules.mp(_, weak))
+            far <- largerOf(reaches.conclusion)
+            longer <- rules.specAll(ordered, List(n, far)).flatMap(rules.mp(_, reaches))
+            farSum <- largerOf(longer.conclusion)
+            here <- LogicError.lift(Term.app(a, index))
+            positive <- rules.spec(index, assumedA)
+            scaled <- rules
+              .specAll(pieces.multiplyLe, List(here, partialB, farSum))
+              .flatMap(rules.mp(_, positive))
+              .flatMap(rules.mp(_, longer))
+            turnedLeft <- rules.specAll(pieces.symmetric, List(partialB, here))
+            turnedRight <- rules.specAll(pieces.symmetric, List(farSum, here))
+            settled <- rewriteInProposition(turnedLeft, scaled)
+              .flatMap(rewriteInProposition(turnedRight, _))
+            _ <- sameStatement(notation, settled, goal)
+          } yield settled
+      )
+
+      // Six sums, five equations and inequalities between them, and the goal is linear in
+      // all six. Nothing here multiplies anything: the two products were made into atoms above.
+      square <- sidesOf(product).map(_._2)
+      scaledSum <- sidesOf(product).map(_._1)
+      firstHalf <- sidesOf(split).map(_._2).flatMap {
+        case App(App(_, first), _) => Right(first)
+        case other                 => Left(NotOfForm("a sum of two halves", other))
+      }
+      whole <- sidesOf(split).map(_._1)
+      cauchyAt <- sidesOf(wideAt).map(_._1)
+      result <- linarith
+        .prove(
+          "!p:real. !q:real. !r:real. !s:real. !t:real. !c:real. " +
+            "q = p ==> q <= r ==> 0 <= s ==> t = r + s ==> c = t ==> p <= c"
+        )
+        .flatMap(rules.specAll(
+          _, List(square, scaledSum, firstHalf, secondHalf, whole, cauchyAt)))
+        .flatMap(rules.mp(_, product))
+        .flatMap(rules.mp(_, dominated))
+        .flatMap(rules.mp(_, secondNonNegative))
+        .flatMap(rules.mp(_, split))
+        .flatMap(rules.mp(_, wideAt))
+        .flatMap(rules.disch(nonNegativeB, _))
+        .flatMap(rules.disch(nonNegativeA, _))
+        .flatMap(rules.genAll(_, List(a, b, n)))
+    } yield result
+  }
+
+  /**
+   * [[CauchyBelowSquare]], which is `SUM_CAUCHY_GAP` read as a statement about a sign.
+   *
+   * Nothing here is an induction and nothing is an estimate. The gap is a sum whose every term is
+   * `a i` against a tail of `b`; both factors are non-negative, so the sum is, so the thing it is
+   * the gap of is the larger. The only fact that is not immediate is that a tail of a
+   * non-negative series is non-negative, which is [[Grows]] at `n - i` and `n`.
+   */
+  private def cauchyUnderSquare(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    cauchyGap: Kernel.Thm,
+    grows: Kernel.Thm,
+    nonNegativeSum: Kernel.Thm,
+    productNonNegative: Kernel.Thm,
+    differenceBelow: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val a = Term.variable("a", sequences)
+    val b = Term.variable("b", sequences)
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+
+    for {
+      nonNegativeA <- Parser.proposition(theory, notation, "!i:num. 0 <= (a:num -> real) i")
+      nonNegativeB <- Parser.proposition(theory, notation, "!i:num. 0 <= (b:num -> real) i")
+      assumedA <- LogicError.lift(Kernel.assume(nonNegativeA))
+      assumedB <- LogicError.lift(Kernel.assume(nonNegativeB))
+
+      gap <- rules.specAll(cauchyGap, List(a, b, n))
+      corner <- Term
+        .destEq(gap.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", gap.conclusion))
+      cornerBody <- corner match {
+        case App(App(_, body), _) => Right(body)
+        case other                => Left(NotOfForm("a sum", other))
+      }
+
+      shorter <- Parser.term(theory, notation, "NUM_SUB (n:num) (i:num)", numbers)
+      shortSum <- Parser.term(
+        theory, notation, "Sum (b:num -> real) (NUM_SUB (n:num) (i:num))", values)
+      longSum <- Parser.term(theory, notation, "Sum (b:num -> real) (n:num)", values)
+      tail <- Parser.term(
+        theory,
+        notation,
+        "Sum (b:num -> real) (n:num) - Sum (b:num -> real) (NUM_SUB (n:num) (i:num))",
+        values
+      )
+      here <- Parser.term(theory, notation, "(a:num -> real) (i:num)", values)
+
+      // A tail of a non-negative series is non-negative, which is the one fact here that is not
+      // immediate. `NUM_SUB_LE` needs no side condition because the difference is truncated.
+      ordered <- rules.spec(b, grows).flatMap(rules.mp(_, assumedB))
+      below <- rules.specAll(differenceBelow, List(n, i))
+      grown <- rules.specAll(ordered, List(shorter, n)).flatMap(rules.mp(_, below))
+      tailNonNegative <- linarith
+        .prove("!s:real. !t:real. s <= t ==> 0 <= t - s")
+        .flatMap(rules.specAll(_, List(shortSum, longSum)))
+        .flatMap(rules.mp(_, grown))
+
+      termNonNegative <- rules
+        .spec(i, assumedA)
+        .flatMap(atI =>
+          rules
+            .specAll(productNonNegative, List(here, tail))
+            .flatMap(rules.mp(_, atI))
+            .flatMap(rules.mp(_, tailNonNegative)))
+        .flatMap(rules.gen(i, _))
+      cornerNonNegative <- rules
+        .spec(cornerBody, nonNegativeSum)
+        .flatMap(theorem =>
+          Conv
+            .betaNormalise(theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem))))
+        .flatMap(rules.mp(_, termNonNegative))
+        .flatMap(rules.spec(n, _))
+
+      pieces <- Term.destEq(gap.conclusion).map(_._1) match {
+        case Some(App(App(_, product), cauchy)) => Right((product, cauchy))
+        case _ => Left(NotOfForm("a difference of a square and a triangle", gap.conclusion))
+      }
+      result <- linarith
+        .prove("!p:real. !c:real. !g:real. p - c = g ==> 0 <= g ==> c <= p")
+        .flatMap(rules.specAll(_, List(pieces._1, pieces._2, corner)))
+        .flatMap(rules.mp(_, gap))
+        .flatMap(rules.mp(_, cornerNonNegative))
+        .flatMap(rules.disch(nonNegativeB, _))
+        .flatMap(rules.disch(nonNegativeA, _))
+        .flatMap(rules.genAll(_, List(a, b, n)))
+    } yield result
+  }
+
+  /**
+   * [[Grows]], which is the two lines [[belowItsLimit]] used to open with and two other arguments
+   * wrote again.
+   *
+   * `Series.SUM_SUC` with the hypothesis makes the sequence of partial sums increasing, and
+   * [[MonotoneBelow]] carries that to every pair of indices. Nothing else is in it, which is why
+   * it went unnoticed as a copy for as long as it did: two lines are cheaper to write again than
+   * to look for.
+   */
+  private def sumsGrow(
     logic: Logic,
     linarith: Linarith,
     theory: Theory,
     notation: Notation,
     atSuccessor: Kernel.Thm,
-    monotoneBelow: Kernel.Thm,
-    aboveBound: Kernel.Thm
+    monotoneBelow: Kernel.Thm
   ): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
     val f = Term.variable("f", sequences)
-    val l = Term.variable("l", values)
     val n = Term.variable("n", numbers)
-    val i = Term.variable("i", numbers)
 
     def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
       Conv
@@ -2103,15 +2515,9 @@ object Limit {
         .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
 
     for {
-      pointwise <- Parser.proposition(
-        theory, notation, "!i:num. 0 <= (f:num -> real) i")
+      pointwise <- Parser.proposition(theory, notation, "!i:num. 0 <= (f:num -> real) i")
       assumedPointwise <- LogicError.lift(Kernel.assume(pointwise))
-      premise <- Parser.proposition(
-        theory, notation, "converges (Sum (f:num -> real)) (l:real)")
-      assumed <- LogicError.lift(Kernel.assume(premise))
-
       partial <- Parser.term(theory, notation, "Sum (f:num -> real)", sequences)
-      here <- Parser.term(theory, notation, "Sum (f:num -> real) (n:num)", values)
       atN <- Parser.term(theory, notation, "(f:num -> real) (n:num)", values)
 
       stepped <- rules.specAll(atSuccessor, List(f, n)).flatMap(normalised)
@@ -2129,6 +2535,33 @@ object Limit {
             .flatMap(rules.mp(_, positive)))
         .flatMap(rules.gen(n, _))
       ordered <- rules.spec(partial, monotoneBelow).flatMap(rules.mp(_, increasing))
+      result <- rules.disch(pointwise, ordered).flatMap(rules.gen(f, _))
+    } yield result
+  }
+
+  private def belowItsLimit(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    grows: Kernel.Thm,
+    aboveBound: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val f = Term.variable("f", sequences)
+    val l = Term.variable("l", values)
+    val n = Term.variable("n", numbers)
+
+    for {
+      pointwise <- Parser.proposition(
+        theory, notation, "!i:num. 0 <= (f:num -> real) i")
+      assumedPointwise <- LogicError.lift(Kernel.assume(pointwise))
+      premise <- Parser.proposition(
+        theory, notation, "converges (Sum (f:num -> real)) (l:real)")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      partial <- Parser.term(theory, notation, "Sum (f:num -> real)", sequences)
+      here <- Parser.term(theory, notation, "Sum (f:num -> real) (n:num)", values)
+      ordered <- rules.spec(f, grows).flatMap(rules.mp(_, assumedPointwise))
       everywhere <- rules
         .specAll(aboveBound, List(partial, l, here, n))
         .flatMap(rules.mp(_, assumed))
