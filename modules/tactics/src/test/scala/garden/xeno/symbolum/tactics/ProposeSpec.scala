@@ -330,7 +330,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // convergence, and `CONVERGES_TAIL` carries one. Tip plus this branch's delta.
     // 394 with the bounded monotone, 2026-09-21, and the **one** was derived before the run: it
     // carries a single antecedent, the comparison below the bound. Tip plus this branch's delta.
-    proposals.size shouldBe 394
+    // 400 with the sandwich and what it wanted in front of it, 2026-09-21, and the **six** were
+    // derived before the run: one antecedent each on `SUM_GROWS` and `Peano.NUM_LE_DOUBLE_SUB`,
+    // two each on the sandwich's two halves. Tip plus this branch's delta.
+    proposals.size shouldBe 400
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -546,7 +549,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // written in `NUM_LE` alone, which `Model.Numbers` computes exactly. `NUM_CHOOSE_ABOVE`
     // weakens to `!n k. NUM_CHOOSE n k = ZERO`, which is false too and is about a constant no
     // model here reads, so it cannot be decided and is not here. The split is the point.
-    decidedFalse shouldBe 80
+    // 81 with ONE of the six weakenings of 2026-09-21, and which one was derived before the run:
+    // `Peano.NUM_LE_DOUBLE_SUB` weakens to `!x y. x <= NUM_SUB (x + x) y`, false at `x = 1,
+    // y = 2` where the right side is zero, and written in `NUM_SUB` and `NUM_LE`, which
+    // `Model.Numbers` computes exactly. The other five are about `Sum` over the reals and are
+    // not decided by any model here.
+    decidedFalse shouldBe 81
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -683,7 +691,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // as `decidedFalse` this time**, which is what the paragraph above has asked for four times
     // and did not get; what was still missing on the run before this one was the two rows below
     // and above it, not this one.
-    withAPoint shouldBe 75
+    // 76, moving with `decidedFalse` and by the same single residue, the one on `num`.
+    withAPoint shouldBe 76
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1047,7 +1056,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // saying "nobody here can take this shape", which is the address and nothing else. What the
     // three cost was not the numbers, which the suite catches, but three comments recording a
     // mechanism that is not the mechanism, in the place the next session reads.
-    open shouldBe 293
+    // 298 with the FIVE of the six that are about `Sum`, 2026-09-21, and **this is the first
+    // entry in this file predicted right**, by the criterion the correction above states: the
+    // question is the ADDRESS. An order between two partial sums is a shape the procedures take
+    // and fail on, so all five land here; the sixth is arithmetic on `num` and is decided. Three
+    // earlier guesses on this row used the model instead and were wrong three times.
+    open shouldBe 298
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1640,7 +1654,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // criterion is not the criterion.
     // 149 with the bounded monotone's residue, which writes `Sum` and so is on this list for the
     // reason the rows above give.
-    aboutNumbers.size shouldBe 149
+    // 155 with all six, which is this list counting CONSTANTS: five of the residues write `Sum`
+    // and the sixth writes `NUM_SUB` and `NUM_LE`, and `named` holds all three.
+    aboutNumbers.size shouldBe 155
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1723,7 +1739,19 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // among them, beside the two residues of `SUM_CONGRUENCE` and its bounded twin, which are
     // refuted too. So the reading transfers between the two operators and the note above does not
     // say that it does not.
-    after shouldBe 55
+    // 57, and **the prediction said 56**. It was that this row moves with `decidedFalse` and by
+    // the same single residue on `num`; two of the six move it. The other is one of the five
+    // about `Sum`, which this sampler refutes at a point while the PROVER returns `Unsettled`
+    // for it — so it is in `open` above and here, and in `decidedFalse` nowhere.
+    //
+    // That is the pair of instruments this row exists to separate, and the row above says so in
+    // as many words: `decidedFalse` is the prover's verdict and this is the sampler's, and
+    // nothing makes them move together. The prediction collapsed them again after the same
+    // mistake had been made three times about `open` and `unreadable`. Both this line and
+    // `withAPoint` were set in the same pass as the counts they sit behind rather than after a
+    // red, which is what the paragraph four rows up has asked for five times; `withAPoint` was
+    // right and this was not, and the pass is what showed it.
+    after shouldBe 57
   }
 
   /* ------------------------------------------------------ the false positive it produced */

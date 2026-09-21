@@ -554,8 +554,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // not shared, so the gap of three does not move. Tip plus this branch's delta. It binds three
     // leading quantifiers of which the first two are both `num -> real`, so **both** of
     // `CLAUDE.md`'s figures-per-lemma move by one.
-    library.entries.size shouldBe 589
-    library.names.distinct.size shouldBe 586
+    // 593 and 590 with the sandwich and what it wanted in front of it, 2026-09-21: four facts
+    // under four names, three in `Limit` and one in `Peano`, none shared, so the gap of three
+    // does not move. Tip plus this branch's delta. `CLAUDE.md`'s two figures move by **three**
+    // and not four, derived before the run: `SUM_GROWS` binds a single leading quantifier, and
+    // each of the other three binds two that share a type.
+    library.entries.size shouldBe 593
+    library.names.distinct.size shouldBe 590
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

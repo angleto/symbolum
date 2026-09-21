@@ -372,6 +372,71 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     settled.conclusion shouldBe claim
   }
 
+  /**
+   * The two halves of the sandwich, and the assertion is that they **are** one.
+   *
+   * Each on its own is an inequality a reader can check. What neither shows is that the upper
+   * bound of the first is the lower bound of the second, at the same `a`, `b` and `n` and as the
+   * same term — and that is the whole of why the Cauchy product's convergence follows without a
+   * split, since it is what lets `A * B` be squeezed between `D_n` and `D_{n+n}`.
+   *
+   * So the assertion compares terms rather than proving anything: the right of the triangle's
+   * bound against the left of the square's. A change that moved either statement's middle by an
+   * associativity would leave both facts true and the sandwich gone, and nothing else here would
+   * notice.
+   */
+  "The two halves of the sandwich" should "meet at the same term" in {
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val sequences = Type.fun(numbers, real)
+    val a = Term.variable("a", sequences)
+    val b = Term.variable("b", sequences)
+    val n = Term.variable("n", numbers)
+    val rules = limit.logic.rules
+
+    def bodyOf(theorem: Kernel.Thm): Term =
+      force(
+        rules
+          .specAll(theorem, List(a, b, n))
+          .map(instance => instance.conclusion))
+
+    def afterTwo(term: Term): Term = term match {
+      case App(App(_, _), inner) =>
+        inner match {
+          case App(App(_, _), body) => body
+          case other                => other
+        }
+      case other => other
+    }
+
+    val triangle = afterTwo(bodyOf(force(limit.cauchyBelowSquare)))
+    val square = afterTwo(bodyOf(force(limit.squareBelowCauchy)))
+
+    def leftOf(term: Term): Term = term match {
+      case App(App(_, left), _) => left
+      case other                => other
+    }
+    def rightOf(term: Term): Term = term match {
+      case App(App(_, _), right) => right
+      case other                 => other
+    }
+
+    val upperOfTriangle = rightOf(triangle)
+    val lowerOfSquare = leftOf(square)
+
+    // The same term, not merely the same number: `Sum a n * Sum b n` on both sides.
+    upperOfTriangle shouldBe lowerOfSquare
+    limit.show(upperOfTriangle) shouldBe "Sum a n * Sum b n"
+
+    // And the two ends are the Cauchy partial sum at `n` and at `n + n`, which is the bracket.
+    val lowerOfTriangle = leftOf(triangle)
+    val upperOfSquare = rightOf(square)
+    limit.show(lowerOfTriangle) shouldBe
+      "Sum (\\x:num. Sum (\\y:num. a y * b (NUM_SUB x y)) (SUC x)) n"
+    limit.show(upperOfSquare) shouldBe
+      "Sum (\\x:num. Sum (\\y:num. a y * b (NUM_SUB x y)) (SUC x)) (n + n)"
+  }
+
   "An absolutely convergent series" should "converge, where the comparison test cannot reach it" in {
     val rules = limit.logic.rules
     val linarith = force(Linarith.construct(chain.order))
