@@ -310,6 +310,7 @@ they have least appetite for working out how it is produced.
 
 ## Limit
 
+  ABS_POWER_LE             !x:real. !y:real. !z:num. abs x <= y ==> abs (Power x z) <= Power y z
   CONVERGES_ABSOLUTE       !x:num -> real. !y:real. converges (Sum (\z:num. abs (x z))) y ==> (?z:real. converges (Sum x) z)
   CONVERGES_ADD            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v + y v) (z + u)
   CONVERGES_CONSTANT       !x:real. converges (\y:num. x) x

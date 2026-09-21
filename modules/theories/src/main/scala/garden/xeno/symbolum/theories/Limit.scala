@@ -155,6 +155,9 @@ final class Limit private (
   /** [[Limit.Cauchy]], the Cauchy product for absolutely convergent series. */
   def cauchy: Either[LogicError, Kernel.Thm] = fact(Limit.Cauchy)
 
+  /** [[Limit.PowerOfAMagnitude]], a power under the power of a bound on its base. */
+  def powerOfAMagnitude: Either[LogicError, Kernel.Thm] = fact(Limit.PowerOfAMagnitude)
+
   /** `|- !f l. converges (Sum f) l ==> converges (\n. l - Sum f n) 0` */
   def tail: Either[LogicError, Kernel.Thm] = fact(Limit.Tail)
 }
@@ -554,6 +557,16 @@ object Limit {
    */
   val Cauchy: String = "SUM_CAUCHY_PRODUCT"
 
+  /**
+   * `|- !x c n. abs x <= c ==> abs (Power x n) <= Power c n`
+   *
+   * A power is under the power of any bound on its base. One induction over `ABS_MUL`, and it is
+   * what the exponential's absolute convergence needs in front of it: the bound a caller has is
+   * a **natural** number, `real_of_num M` out of `NUM_CEIL_LE`, so the equation
+   * `abs (Power x n) = Power (abs x) n` would leave it a second monotonicity to do.
+   */
+  val PowerOfAMagnitude: String = "ABS_POWER_LE"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -623,7 +636,9 @@ object Limit {
         "converges (Sum (\\i:num. abs (a i))) P ==> " +
         "converges (Sum (\\i:num. abs (b i))) Q ==> " +
         "converges (Sum a) A ==> converges (Sum b) B ==> " +
-        "converges (Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k))) (A * B)")
+        "converges (Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k))) (A * B)"),
+    PowerOfAMagnitude ->
+      "!x:real. !c:real. !n:num. abs x <= c ==> abs (Power x n) <= Power c n"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -815,6 +830,13 @@ object Limit {
       )
       absNonNegative <- magnitude.fact(Magnitude.AbsNonNegative)
       absMul <- magnitude.fact(Magnitude.Multiplicative)
+      powerAtZero <- series.fact(Series.PowerAtZero)
+      powerAtSuccessor <- series.fact(Series.PowerAtSuccessor)
+      boundedPower <- powerUnderABound(
+        logic, linarith, theory, notation, induct,
+        Powers(
+          absNonNegative, absOfNonNegative, absMul, powerAtZero, powerAtSuccessor,
+          multiplyLe, mulSymmetric))
       sumMonotone <- series.fact(Series.Monotone)
       signedCauchyProduct <- cauchyOfSigned(
         logic,
@@ -856,7 +878,8 @@ object Limit {
         SumOfMagnitudes -> magnitudesOfASum,
         Squeezed -> vanishingDominates,
         StretchOfMagnitudes -> magnitudesOfAStretch,
-        Cauchy -> signedCauchyProduct
+        Cauchy -> signedCauchyProduct,
+        PowerOfAMagnitude -> boundedPower
       )
     )
   }
@@ -1261,6 +1284,26 @@ object Limit {
     multiplyLe: Kernel.Thm,
     symmetric: Kernel.Thm,
     subBelow: Kernel.Thm
+  )
+
+  /**
+   * What a bound on a power of a magnitude takes, which is seven facts and one induction.
+   *
+   * A bundle for [[Bounds]]'s reason. It is the third of these that is about `abs` beside
+   * something `Magnitude` cannot see, after [[Magnitudes]] and the stretch, and the three
+   * together are the argument for the note on [[SumOfMagnitudes]]: `Magnitude` is built above
+   * `Series` and is handed none of it, so this file is where the two vocabularies meet. If a
+   * fourth arrives, the three should become a development of their own rather than a fourth
+   * bundle here.
+   */
+  private final case class Powers(
+    nonNegative: Kernel.Thm,
+    ofNonNegative: Kernel.Thm,
+    absMul: Kernel.Thm,
+    atZero: Kernel.Thm,
+    atSuccessor: Kernel.Thm,
+    multiplyLe: Kernel.Thm,
+    symmetric: Kernel.Thm
   )
 
   /**
@@ -4137,6 +4180,122 @@ object Limit {
         .flatMap(rules.disch(toQ, _))
         .flatMap(rules.disch(toP, _))
         .flatMap(rules.genAll(_, List(a, b, bigA, bigB, bigP, bigQ)))
+    } yield result
+  }
+
+  /**
+   * `|- !x c n. abs x <= c ==> abs (Power x n) <= Power c n`
+   *
+   * A power is dominated by the power of any bound on its base, which is one induction over
+   * `ABS_MUL` and is what the exponential's absolute convergence needs in front of it.
+   *
+   * **Stated with a bound rather than as `abs (Power x n) = Power (abs x) n`**, which is the
+   * equation a reader expects and is a different lemma. The equation is true and costs the same
+   * induction; what it does not do is save the consumer a step, because the consumer's bound is a
+   * **natural number** — `real_of_num M` with `2 * abs x <= real_of_num M` from `NUM_CEIL_LE` —
+   * and it would then have to carry `Power (abs x) n` to `Power (real_of_num M) n` by a second
+   * monotonicity anyway. One lemma in the shape the caller wants rather than two.
+   *
+   * `0 <= c` is not a hypothesis and is not missing: it follows from `abs x <= c` and
+   * `ABS_NONNEG`, and the derivation reads it off rather than asking for it.
+   */
+  private def powerUnderABound(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    induct: Induct,
+    pieces: Powers
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val x = Term.variable("x", values)
+    val c = Term.variable("c", values)
+    val n = Term.variable("n", numbers)
+
+    def sidesOf(proposition: Term): Either[LogicError, (Term, Term)] =
+      proposition match {
+        case App(App(_, left), right) => Right((left, right))
+        case other                    => Left(NotOfForm("a comparison of two terms", other))
+      }
+
+    for {
+      one <- Parser.term(theory, notation, "1:real", values)
+      absOne <- rules
+        .spec(one, pieces.ofNonNegative)
+        .flatMap(theorem => linarith.prove("(0:real) <= 1").flatMap(rules.mp(theorem, _)))
+
+      bound <- Parser.proposition(theory, notation, "abs (x:real) <= c:real")
+      assumedBound <- LogicError.lift(Kernel.assume(bound))
+      here <- Parser.term(theory, notation, "abs (x:real)", values)
+      hereNonNegative <- rules.spec(x, pieces.nonNegative)
+      boundNonNegative <- linarith
+        .prove("!p:real. !q:real. 0 <= p ==> p <= q ==> 0 <= q")
+        .flatMap(rules.specAll(_, List(here, c)))
+        .flatMap(rules.mp(_, hereNonNegative))
+        .flatMap(rules.mp(_, assumedBound))
+
+      vanishing <- Rewrite.Rule.of(logic, pieces.atZero)
+      collapse <- Rewrite.Rule.of(logic, absOne)
+      recurrence <- Rewrite.Rule.of(logic, pieces.atSuccessor)
+      splitting <- Rewrite.Rule.of(logic, pieces.absMul)
+
+      statement <- Parser.proposition(
+        theory, notation, "!n:num. abs (Power (x:real) n) <= Power (c:real) n")
+
+      everywhere <- induct.proveBy(
+        statement,
+        base =>
+          Induct.afterRewriting(Vector(vanishing, collapse), base)(goal =>
+            linarith.prove(Show.show(notation, goal))),
+        step =>
+          Induct.afterRewriting(Vector(recurrence, splitting), step.goal) { goal =>
+            for {
+              // `abs x * abs (Power x k) <= c * Power c k`, and the two factors move one at a
+              // time: the base by the bound, and the power by the induction hypothesis.
+              sides <- goal match {
+                case App(App(_, App(App(_, _), leftPower)), App(App(_, _), rightPower)) =>
+                  Right((leftPower, rightPower))
+                case other => Left(NotOfForm("a product under a product", other))
+              }
+              (carriedPower, targetPower) = sides
+
+              // At the power and not at its magnitude: `ABS_NONNEG` specialised at
+              // `abs (Power x k)` proves `0 <= abs (abs (Power x k))`, which is true and is not
+              // the antecedent. This file records the same slip once already.
+              powerNonNegative <- rules.spec(argumentOf(carriedPower), pieces.nonNegative)
+
+              baseMoved <- rules
+                .specAll(pieces.multiplyLe, List(carriedPower, here, c))
+                .flatMap(rules.mp(_, powerNonNegative))
+                .flatMap(rules.mp(_, assumedBound))
+              powerMoved <- rules
+                .specAll(pieces.multiplyLe, List(c, carriedPower, targetPower))
+                .flatMap(rules.mp(_, boundNonNegative))
+                .flatMap(rules.mp(_, step.hypothesis))
+              turnedLeft <- rules.specAll(pieces.symmetric, List(carriedPower, c))
+              turnedRight <- rules.specAll(pieces.symmetric, List(targetPower, c))
+              commuted <- rewriteInProposition(turnedLeft, powerMoved)
+                .flatMap(rewriteInProposition(turnedRight, _))
+
+              ends <- sidesOf(goal)
+              (small, large) = ends
+              middle <- sidesOf(commuted.conclusion).map(_._1)
+              result <- linarith
+                .prove("!p:real. !q:real. !r:real. p <= q ==> q <= r ==> p <= r")
+                .flatMap(rules.specAll(_, List(small, middle, large)))
+                .flatMap(rules.mp(_, baseMoved))
+                .flatMap(rules.mp(_, commuted))
+            } yield result
+          }
+      )
+
+      // The index is pulled out in front of the implication, which is the shape the consumer
+      // wants: it specialises all three and detaches once, rather than specialising twice with
+      // a modus ponens in between.
+      result <- rules
+        .spec(n, everywhere)
+        .flatMap(rules.disch(bound, _))
+        .flatMap(rules.genAll(_, List(x, c, n)))
     } yield result
   }
 

@@ -568,8 +568,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // this branch's delta. `CLAUDE.md`'s two figures move by **four** and **three**, derived
     // before the run and met: all four bind two or more leading quantifiers, and `SUM_ABS`
     // binds `num -> real` then `num`, which is the one of the four with no pair sharing a type.
-    library.entries.size shouldBe 598
-    library.names.distinct.size shouldBe 595
+    // 599 and 596 with `ABS_POWER_LE`, 2026-09-21. One fact, one name, not shared.
+    library.entries.size shouldBe 599
+    library.names.distinct.size shouldBe 596
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

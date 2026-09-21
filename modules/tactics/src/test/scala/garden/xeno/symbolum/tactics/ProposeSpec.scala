@@ -340,7 +340,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // **seven** were derived before the run and met: four antecedents on the product, two on
     // the squeeze, one on the stretch, and `SUM_ABS` carries none at all. Tip plus this
     // branch's delta.
-    proposals.size shouldBe 411
+    // 412 with `ABS_POWER_LE`, which carries one antecedent.
+    proposals.size shouldBe 412
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -738,6 +739,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
 
     // `SUM_ABS` carries no antecedent, so it produces no weakening and nothing to address.
     addresses("SUM_ABS") shouldBe empty
+    // **Two**, not one: the weakening that drops `abs x <= c`, and the substitution that puts
+    // `real_lt` where `real_le` stands. Both are orders between two reals, so both are `Order`,
+    // and the second is the one the prediction for this lemma forgot.
+    addresses("ABS_POWER_LE") shouldBe Vector.fill(2)(Prove.Address.Order)
 
     // 37 since the laws of exponents landed. `POWER_ADD` has no hypothesis, so it adds no
     // weakening; what it adds is one substitution, `Power x (NUM_ADD y z) = Power x y + Power x z`.
@@ -1117,7 +1122,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // reals is a shape the procedures take and then fail on. Two wrong predictions in one day,
     // and both were the address criterion applied to the wrong thing rather than the wrong
     // criterion. The remedy is the assertion, not another account.
-    open shouldBe 309
+    // 311 with `ABS_POWER_LE`'s **two** residues, 2026-09-21, and the prediction was 310. The
+    // address was predicted right and measured right, `Order` for both; what the prediction got
+    // wrong is the population. This bucket is over every proposal, and a lemma with one
+    // antecedent that also writes `real_le` produces a weakening **and** a substitution. The
+    // weakenings row four hundred lines above moved by one and this one by two, which is the
+    // same difference `RediscoverySpec`'s `mutable` row draws and which the prediction read as
+    // one number.
+    open shouldBe 311
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1719,7 +1731,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the criterion these rows state: this list counts CONSTANTS. The four from the product and
     // the one from the stretch write `Sum`; the squeeze's two are about arbitrary sequences and
     // write `abs` and `converges`, neither of which is on `named`.
-    aboutNumbers.size shouldBe 164
+    // 166 with `ABS_POWER_LE`'s **two** residues, both of which write `Power`. Predicted 165,
+    // by counting the weakening and forgetting the substitution.
+    aboutNumbers.size shouldBe 166
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
