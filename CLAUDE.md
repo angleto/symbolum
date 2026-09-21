@@ -1297,11 +1297,20 @@ potential falls, where the second asks that no uncounted step lower it. The firs
 and without a head marker in front a digit can sit at position 0; the second because the three `B`
 rules fire at **any** occurrence of `/`.
 
-Measured on 2026-09-18 over every word of at most seven letters, no sampling, with `S2_PHI` and
-`S2_MARKED` mirrored from `Collatz.scala` rather than from the source: of the marked words' 44790
-counted steps, 9330 fail the first hypothesis, and of their 33281 uncounted steps, 14454 fail the
-second. Adding the head condition leaves **0 of 3516** and **0 of 3280**, and no step leaves that
-class either. So the class part C stands on is the marked words **and** one head marker in front.
+**Those two witnesses are derivations since 2026-09-21, and what they replaced is a reading.**
+`Collatz.ClassWitnesses` is the pair, nine theorems each checked against the text it is written
+down as saying, and `CollatzSpec` is what reads them: marked, not anchored, stepped, and the
+conclusion of the published lemma refuted at that pair. The half that costs something is
+`~(WORD_STEP S2_COUNTED (0/0.) (0/t.))`, a **negative** about a relation, which naming `B1` does not
+give and which `Collatz.noCountedStepFrom` derives: every commutation's left-hand side begins with
+`f` or with `t`, and `0/0.` holds neither letter anywhere, so the rule cannot have fired at
+`WORD_LENGTH x` for any context at all. What that argument does not reach is a word holding one of
+those two letters, which is written where it lives. Until that day the two sentences rested instead
+on six figures measured over every word of at most seven letters, no sampling: of the marked words'
+44790 counted steps, 9330 failed the first hypothesis, and of their 33281 uncounted steps, 14454
+failed the second, against **0 of 3516** and **0 of 3280** once the head condition is added. No test
+read them, and a figure of that shape is a property of the enumeration's bound as much as of the
+system. So the class part C stands on is the marked words **and** one head marker in front.
 That predicate is `S2_ANCHORED`, positive length with the head marker at position zero and at no
 later one, and `S2_ANCHORED_CLOSED` is its closure lemma; `S2_HEADFREE` is to it what `S2_TAILFREE`
 is to the marked words, which is what makes the two constructions one read at two letters.

@@ -202,6 +202,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Collatz.scala", "letters.size") -> (Verdict.Number, "how many letters the word has"),
     ("Collatz.scala", "letters.size - 1") ->
       (Verdict.Number, "the last position of a written-out word"),
+    ("Collatz.scala", "leftCount") ->
+      (Verdict.Number, "how many successors a measure evaluated to, where another was compared with it"),
+    ("Collatz.scala", "letterName") ->
+      (Verdict.Name, "the letter a word was asked to be free of, by the name the theory declares it under"),
     ("Deduction.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     // The four `Domain.scala` sites landed with `docs/adr/0028` and are the interpretation's two
     // refusals. None is a crossing: a domain's own name and a constant's name are names, the joined
