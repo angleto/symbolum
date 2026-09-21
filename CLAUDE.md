@@ -617,7 +617,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 604 lemmas, 398 have two or more leading quantifiers and **361 of
+caller meant: of the library's 607 lemmas, 401 have two or more leading quantifiers and **364 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1504,12 +1504,33 @@ it. `EXP_TAIL_GEOMETRIC` is that iterated. Three things owe a condition in the f
 three are discharged: the two cancellations at `NUM_FACT i` and `NUM_FACT (SUC i)`, and
 `Field`'s `inv f = r * inv (f * r)`.
 
-What is still **not** proved is `exp (x + y) = exp x * exp y` and
-`sin x * sin x + cos x * cos x = 1`. What stands in front of the first is now one identification
-and no analysis: the convolution of `x^i / i!` and `y^j / j!` has to be shown to be
-`(x + y)^k / k!`, which is `Series.POWER_BINOMIAL` — already proved — together with a fact
-relating `NUM_CHOOSE` to the three factorials, which is where the remaining work is. Every fact
-about `ln` still waits on the intermediate value theorem, and nothing here moves that.
+**`exp (x + y) = exp x * exp y` is proved, since 2026-09-21**, which is the first entry on
+`docs/adr/0017`'s list of what the series owe. What stood in front of it was never analysis: the
+Cauchy product, then `EXP_ABSOLUTE`, then the identification of the convolution.
+
+`Transcendental.EXP_CONVOLUTION` is that identification and it is where the arithmetic is: the
+convolution of `x^i / i!` and `y^j / j!` **is** `(x + y)^k / k!`. It is `Series.POWER_BINOMIAL`
+scaled by `inv (k!)` and compared termwise with `SUM_CONGRUENCE_BELOW`, and what it waited on is
+`Coding.NUM_CHOOSE_FACTORIAL`: the binomial theorem's coefficient is a `NUM_CHOOSE` and nothing
+in the library related that to a factorial. That identity is **written additively**,
+`C (i + j) i * (i! * j!) = (i + j)!`, so it holds at every pair with nothing assumed and no
+`NUM_SUB` anywhere; two ordinary inductions and no strong one, with `Peano.NUM_CHOOSE_ALL` as
+the edge the recurrence cannot reach.
+
+**Nothing in the chain is divided, and that is the decision rather than a style.** The termwise
+step is `MUL_INV_COMBINE`, stated over nine real **variables**: both sides are multiplied by
+`k!`, each collapses by cancelling its own reciprocals, and the division back is one more
+cancellation. Turning `C k u * inv (k!)` into `inv (u!) * inv ((k-u)!)` instead would need the
+coefficient to be non-zero, which is a positivity fact about `NUM_CHOOSE` this repository does
+not have and would have to prove.
+
+What the addition theorem does **not** say is what `exp x` is. Four existentials are opened in
+it and none of them is a number this repository computes, which is the shape every fact about
+these constants has.
+
+What is still not proved is `sin x * sin x + cos x * cos x = 1`, which wants the same product at
+the two alternating series and their absolute convergence, neither of which is written. Every
+fact about `ln` still waits on the intermediate value theorem, and nothing here moves that.
 
 `LimitSpec` detaches **both** Cauchy theorems at the geometric series on both sides and asserts
 `hypotheses` empty, because an implication with four antecedents that nobody can discharge is a

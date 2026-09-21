@@ -263,6 +263,43 @@ object Transcendental {
   val AbsolutelyConvergent: String = "EXP_ABSOLUTE"
 
   /**
+   * `|- !c fu fv fk p q iu iv ik. fu * iu = 1 ==> fv * iv = 1 ==> fk * ik = 1 ==>
+   * c * (fu * fv) = fk ==> (p * iu) * (q * iv) = (c * (p * q)) * ik`
+   *
+   * The arithmetic under [[Convolution]], over real variables: three reciprocals, one relation
+   * between the three denominators, and no division. It is published because it is the whole of
+   * why the convolution of two exponential terms is an exponential term, and because stating it
+   * at the terms would hide that behind a page of `Power` and `NUM_FACT`.
+   */
+  val ReciprocalsCombine: String = "MUL_INV_COMBINE"
+
+  /**
+   * `|- !x y k. Sum (\u. (x^u / u!) * (y^(k-u) / (k-u)!)) (SUC k) = (x + y)^k / k!`
+   *
+   * The convolution of the exponential's terms at `x` and at `y` **is** its term at `x + y`.
+   * `Limit.SUM_CAUCHY_PRODUCT` hands back a series whose `k`th term is the left side, so this is
+   * what turns that series into the exponential's own.
+   *
+   * It is `Series.POWER_BINOMIAL` scaled by `inv (k!)` and compared termwise, and what it waited
+   * on is `Coding.NUM_CHOOSE_FACTORIAL`: the binomial theorem's coefficient is a `NUM_CHOOSE`
+   * and nothing in the library related that to a factorial.
+   */
+  val Convolution: String = "EXP_CONVOLUTION"
+
+  /**
+   * `|- !x y. exp (x + y) = exp x * exp y`
+   *
+   * The addition theorem, which `docs/adr/0017` lists first among what the series owe. What
+   * stood in front of it was never analysis: [[AbsolutelyConvergent]], which
+   * `Limit.SUM_CAUCHY_PRODUCT` asks of both its arguments, and then [[Convolution]], which is
+   * `Series.POWER_BINOMIAL` meeting `Coding.NUM_CHOOSE_FACTORIAL`.
+   *
+   * It names no value. Four existentials are opened and none of them is a number this repository
+   * computes, which is the shape every fact about these constants has.
+   */
+  val Addition: String = "EXP_ADD"
+
+  /**
    * The dominating series for the exponential at one, written as a sum of two copies.
    *
    * `2 * Power (1/2) i` says the same thing and is the wrong shape: `SUM_ADD` splits a sum of two
@@ -303,7 +340,17 @@ object Transcendental {
         "Power (1 / 2) j * abs (Power x m / real_of_num (NUM_FACT m))"),
     AbsolutelyConvergent ->
       ("!x:real. ?P:real. " +
-        "converges (Sum (\\i:num. abs (Power x i / real_of_num (NUM_FACT i)))) P")
+        "converges (Sum (\\i:num. abs (Power x i / real_of_num (NUM_FACT i)))) P"),
+    ReciprocalsCombine ->
+      ("!c:real. !fu:real. !fv:real. !fk:real. !p:real. !q:real. !iu:real. !iv:real. !ik:real. " +
+        "fu * iu = 1 ==> fv * iv = 1 ==> fk * ik = 1 ==> c * (fu * fv) = fk ==> " +
+        "(p * iu) * (q * iv) = (c * (p * q)) * ik"),
+    Convolution ->
+      ("!x:real. !y:real. !k:num. " +
+        "Sum (\\u:num. (Power x u / real_of_num (NUM_FACT u)) * " +
+        "(Power y (NUM_SUB k u) / real_of_num (NUM_FACT (NUM_SUB k u)))) (SUC k) = " +
+        "Power (x + y) k / real_of_num (NUM_FACT k)"),
+    Addition -> "!x:real. !y:real. exp (x + y) = exp x * exp y"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -426,8 +473,15 @@ object Transcendental {
         logic, linarith, field, theory, notation, series, peano, coding, limit)
       geometricTail <- tailIsGeometric(
         logic, linarith, theory, notation, series, peano, induct, halving)
+      combined <- convolutionTermIdentity(logic, theory, notation, series.ring)
+      convolution <- convolutionIsATerm(
+        logic, linarith, theory, notation, series, peano, coding, limit, combined)
+
       absolute <- absolutelyConvergentEverywhere(
         logic, linarith, theory, notation, series, peano, limit, geometricTail)
+
+      addition <- additionTheorem(
+        logic, theory, notation, limit, series, exponentialDefinition, absolute, convolution)
     } yield new Transcendental(
       limit,
       series,
@@ -448,7 +502,10 @@ object Transcendental {
         ExponentialAboveTwo -> aboveTwo,
         TermsHalve -> halving,
         TailIsGeometric -> geometricTail,
-        AbsolutelyConvergent -> absolute
+        AbsolutelyConvergent -> absolute,
+        ReciprocalsCombine -> combined,
+        Convolution -> convolution,
+        Addition -> addition
       ) ++ hyperbolic
     )
   }
@@ -2113,6 +2170,609 @@ object Transcendental {
         .flatMap(rules.mp(_, bounded))
 
       result <- rules.gen(x, converging)
+    } yield result
+  }
+
+  /**
+   * The term identity of [[Convolution]], proved once over real **variables** and specialised
+   * afterwards.
+   *
+   * `|- !c fu fv fk p q iu iv ik. fu * iu = 1 ==> fv * iv = 1 ==> fk * ik = 1 ==>
+   * c * (fu * fv) = fk ==> (p * iu) * (q * iv) = (c * (p * q)) * ik`
+   *
+   * Over variables rather than at the terms, for the reason this file already gives twice: every
+   * step is `Ring` on something a reader can hold in their head, where the same steps at
+   * `Power x u / real_of_num (NUM_FACT u)` are the same algebra written across a page.
+   *
+   * **Nothing is divided, and that is the argument.** The left side is multiplied by `fk` and
+   * collapses to `c * (p * q)` by cancelling its own two reciprocals; the right side is already
+   * `c * (p * q)` times `ik`, so it needs no work at all, and what joins them is one more
+   * cancellation. Turning `c * ik` into `iu * iv` instead would need `c` to be non-zero, and `c`
+   * is an embedded `NUM_CHOOSE`, whose positivity is a fact this repository does not have.
+   */
+  private def convolutionTermIdentity(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    ring: Ring
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val names = List("c", "fu", "fv", "fk", "p", "q", "iu", "iv", "ik")
+
+    val leftText = "((p:real) * (iu:real)) * ((q:real) * (iv:real))"
+    val valueText = "(c:real) * ((p:real) * (q:real))"
+
+    def term(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text, values)
+
+    def identity(from: String, to: String): Either[LogicError, Kernel.Thm] =
+      for {
+        left <- term(from)
+        right <- term(to)
+        proved <- LogicError.lift(Term.eq(left, right)).flatMap(ring.prove)
+      } yield proved
+
+    for {
+      times <- term("(1:real) * 1").flatMap {
+        case App(App(constant, _), _) => Right(constant)
+        case other                    => Left(NotOfForm("a product", other))
+      }
+
+      cancelU <- Parser.proposition(theory, notation, "(fu:real) * (iu:real) = 1")
+      cancelV <- Parser.proposition(theory, notation, "(fv:real) * (iv:real) = 1")
+      cancelK <- Parser.proposition(theory, notation, "(fk:real) * (ik:real) = 1")
+      related <- Parser.proposition(
+        theory, notation, "(c:real) * ((fu:real) * (fv:real)) = fk:real")
+      assumedU <- LogicError.lift(Kernel.assume(cancelU))
+      assumedV <- LogicError.lift(Kernel.assume(cancelV))
+      assumedK <- LogicError.lift(Kernel.assume(cancelK))
+      assumedRelation <- LogicError.lift(Kernel.assume(related))
+
+      left <- term(leftText)
+      value <- term(valueText)
+      valueTimesOne <- term("(" + valueText + ") * 1")
+      restV <- term("(fv:real) * (iv:real)")
+      reciprocalK <- term("ik:real")
+      byLeft <- LogicError.lift(Term.app(times, left))
+      byValue <- LogicError.lift(Term.app(times, value))
+      byValueTimesOne <- LogicError.lift(Term.app(times, valueTimesOne))
+
+      /* --------------------------------- the left side times `fk`, cancelling its two factors */
+
+      substituted <- Conv.sym(assumedRelation).flatMap(Conv.apTerm(byLeft, _))
+      gathered <- identity(
+        "(" + leftText + ") * ((c:real) * ((fu:real) * (fv:real)))",
+        "((" + valueText + ") * ((fu:real) * (iu:real))) * ((fv:real) * (iv:real))")
+      withU <- Conv
+        .apTerm(byValue, assumedU)
+        .flatMap(equation => Conv.apTerm(times, equation).flatMap(Conv.apThm(_, restV)))
+      withV <- Conv.apTerm(byValueTimesOne, assumedV)
+      collapsed <- identity("((" + valueText + ") * 1) * 1", valueText)
+      timesFactorial <- Conv
+        .trans(substituted, gathered)
+        .flatMap(Conv.trans(_, withU))
+        .flatMap(Conv.trans(_, withV))
+        .flatMap(Conv.trans(_, collapsed))
+
+      /* ------------- and back, by the third cancellation: the right side is already the value */
+
+      opened <- identity(leftText, "(" + leftText + ") * 1")
+      restored <- Conv.sym(assumedK).flatMap(Conv.apTerm(byLeft, _))
+      regrouped <- identity(
+        "(" + leftText + ") * ((fk:real) * (ik:real))",
+        "((" + leftText + ") * (fk:real)) * (ik:real)")
+      carried <- Conv
+        .apTerm(times, timesFactorial)
+        .flatMap(Conv.apThm(_, reciprocalK))
+
+      whole <- Conv
+        .trans(opened, restored)
+        .flatMap(Conv.trans(_, regrouped))
+        .flatMap(Conv.trans(_, carried))
+
+      result <- rules
+        .disch(related, whole)
+        .flatMap(rules.disch(cancelK, _))
+        .flatMap(rules.disch(cancelV, _))
+        .flatMap(rules.disch(cancelU, _))
+        .flatMap(theorem =>
+          rules.genAll(theorem, names.map(Term.variable(_, values))))
+    } yield result
+  }
+
+  /**
+   * [[Convolution]], where the binomial theorem becomes a statement about the exponential.
+   *
+   * `Limit.SUM_CAUCHY_PRODUCT` hands back a series whose `k`th term is the convolution of the two
+   * term sequences, and this says that convolution **is** the term of the series at `x + y`.
+   * Everything after it is bookkeeping about limits; the arithmetic is here.
+   *
+   * == The fact it waited on ==
+   *
+   * `Series.POWER_BINOMIAL` was proved and unspent, because the coefficient it produces is
+   * `NUM_CHOOSE k u` and nothing in the library related that to a factorial.
+   * `Coding.NUM_CHOOSE_FACTORIAL` is that fact and it is written additively, so it is used here
+   * at `(u, k - u)` with `Peano.NUM_SUB_ADD` supplying `u + (k - u) = k`. The `u <= k` that needs
+   * is free: `SUM_CONGRUENCE_BELOW` asks its hypothesis only below the length, and the length is
+   * `SUC k`.
+   *
+   * == Two sums compared termwise rather than transformed ==
+   *
+   * The binomial theorem is scaled by `inv (k!)` with `SUM_SCALE_RIGHT`, which turns
+   * `(x + y)^k / k!` into a sum whose terms carry the coefficient. That sum and the convolution
+   * have the same length and different terms, and `SUM_CONGRUENCE_BELOW` is what joins them.
+   * [[ReciprocalsCombine]] is the termwise step, and it is stated over variables for the reason
+   * its own docstring gives.
+   */
+  private def convolutionIsATerm(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    peano: Peano,
+    coding: Coding,
+    limit: Limit,
+    combined: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val ring = series.ring
+    val x = Term.variable("x", values)
+    val y = Term.variable("y", values)
+    val k = Term.variable("k", numbers)
+
+    val termsText =
+      "\\u:num. (Power (x:real) u / real_of_num (NUM_FACT u)) * " +
+        "(Power (y:real) (NUM_SUB (k:num) u) / real_of_num (NUM_FACT (NUM_SUB (k:num) u)))"
+    val binomialText =
+      "\\u:num. real_of_num (NUM_CHOOSE (k:num) u) * " +
+        "(Power (x:real) u * Power (y:real) (NUM_SUB (k:num) u))"
+    val scaledText =
+      "\\u:num. (real_of_num (NUM_CHOOSE (k:num) u) * " +
+        "(Power (x:real) u * Power (y:real) (NUM_SUB (k:num) u))) * " +
+        "inv (real_of_num (NUM_FACT (k:num)))"
+
+    def opened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    for {
+      terms <- Parser.term(theory, notation, termsText, Type.fun(numbers, values))
+      binomialTerms <- Parser.term(theory, notation, binomialText, Type.fun(numbers, values))
+      scaledTerms <- Parser.term(theory, notation, scaledText, Type.fun(numbers, values))
+      successorOfK <- Parser.term(theory, notation, "SUC (k:num)", numbers)
+      atK <- Parser.term(theory, notation, "real_of_num (NUM_FACT (k:num))", values)
+      inverseAtK <- Parser.term(
+        theory, notation, "inv (real_of_num (NUM_FACT (k:num)))", values)
+      raised <- Parser.term(theory, notation, "Power ((x:real) + (y:real)) (k:num)", values)
+      quotient <- Parser.term(
+        theory,
+        notation,
+        "Power ((x:real) + (y:real)) (k:num) / real_of_num (NUM_FACT (k:num))",
+        values)
+      raisedTimes <- Parser.term(
+        theory,
+        notation,
+        "Power ((x:real) + (y:real)) (k:num) * inv (real_of_num (NUM_FACT (k:num)))",
+        values)
+      times <- Parser.term(theory, notation, "(1:real) * 1", values).flatMap {
+        case App(App(constant, _), _) => Right(constant)
+        case other                    => Left(NotOfForm("a product", other))
+      }
+
+      /* ------------------------------- the binomial theorem, scaled by the reciprocal of `k!` */
+
+      binomial <- series.fact(Series.Binomial).flatMap(rules.specAll(_, List(x, y, k)))
+      scaledSum <- series
+        .fact(Series.ScaledRight)
+        .flatMap(rules.specAll(_, List(inverseAtK, binomialTerms, successorOfK)))
+        .flatMap(opened)
+      asProduct <- LogicError.lift(Term.eq(quotient, raisedTimes)).flatMap(ring.prove)
+      carried <- Conv.apTerm(times, binomial).flatMap(Conv.apThm(_, inverseAtK))
+      quotientIsScaled <- Conv
+        .trans(asProduct, carried)
+        .flatMap(theorem => Conv.sym(scaledSum).flatMap(Conv.trans(theorem, _)))
+
+      /* ------------------------------------------- the two sums, compared at every index below */
+
+      congruence <- series
+        .fact(Series.CongruenceBelow)
+        .flatMap(rules.specAll(_, List(terms, scaledTerms, successorOfK)))
+        .flatMap(opened)
+      obligation <- logic
+        .destImp(congruence.conclusion)
+        .toRight(NotOfForm("an implication", congruence.conclusion))
+      pointwise <- Logic.stripForall(obligation._1)
+      index <- pointwise._1.headOption
+        .toRight(NotOfForm("a claim about every index", obligation._1))
+      inner <- logic
+        .destImp(pointwise._2)
+        .toRight(NotOfForm("an implication", pointwise._2))
+      assumedBelow <- LogicError.lift(Kernel.assume(inner._1))
+
+      atIndex <- termsAgree(
+        logic, linarith, theory, notation, series, peano, coding, limit, combined,
+        index, assumedBelow, inner._2)
+      everyIndex <- rules.disch(inner._1, atIndex).flatMap(rules.gen(index, _))
+      sameSums <- rules.mp(congruence, everyIndex)
+
+      result <- Conv
+        .sym(quotientIsScaled)
+        .flatMap(Conv.trans(sameSums, _))
+        .flatMap(rules.genAll(_, List(x, y, k)))
+    } yield result
+  }
+
+  /**
+   * One index of [[Convolution]]: the convolution's term and the scaled binomial's agree.
+   *
+   * `u < SUC k` is what the congruence hands over and it is all that is needed:
+   * `Peano.NUM_LE_OF_LT_SUC` turns it into `u <= k`, `Peano.NUM_SUB_ADD` turns that into
+   * `u + (k - u) = k`, and `Coding.NUM_CHOOSE_FACTORIAL` is then read at `(u, k - u)` with
+   * nothing assumed. The embedding carries it to the reals with `NUM_REAL_MUL` twice, and what
+   * is left is [[ReciprocalsCombine]] at nine terms.
+   */
+  private def termsAgree(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    peano: Peano,
+    coding: Coding,
+    limit: Limit,
+    combined: Kernel.Thm,
+    index: Term,
+    below: Kernel.Thm,
+    goal: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val ring = series.ring
+    val k = Term.variable("k", numbers)
+
+    def argumentOf(term: Term): Either[LogicError, Term] = term match {
+      case App(_, argument) => Right(argument)
+      case other            => Left(NotOfForm("an application", other))
+    }
+
+    def sidesOf(term: Term): Either[LogicError, (Term, Term)] = term match {
+      case App(App(_, left), right) => Right((left, right))
+      case other                    => Left(NotOfForm("two arguments of one operator", other))
+    }
+
+    for {
+      goalSides <- Term.destEq(goal).toRight(NotOfForm("an equation", goal))
+      quotients <- sidesOf(goalSides._1)
+      firstQuotient <- sidesOf(quotients._1)
+      secondQuotient <- sidesOf(quotients._2)
+      (powerOfX, atIndex) = firstQuotient
+      (powerOfY, atComplement) = secondQuotient
+      scaled <- sidesOf(goalSides._2)
+      coefficientAndBody <- sidesOf(scaled._1)
+      coefficient = coefficientAndBody._1
+      reciprocalAtK = scaled._2
+
+      atK <- argumentOf(reciprocalAtK)
+      inverse <- reciprocalAtK match {
+        case App(constant, _) => Right(constant)
+        case other            => Left(NotOfForm("a reciprocal", other))
+      }
+      reciprocalAtIndex <- LogicError.lift(Term.app(inverse, atIndex))
+      reciprocalAtComplement <- LogicError.lift(Term.app(inverse, atComplement))
+
+      factorialAtIndex <- argumentOf(atIndex)
+      indexArgument <- argumentOf(factorialAtIndex)
+      factorialAtComplement <- argumentOf(atComplement)
+      complement <- argumentOf(factorialAtComplement)
+      factorialAtK <- argumentOf(atK)
+      wholeIndex <- argumentOf(factorialAtK)
+
+      /* ----------------------------------- the identity on `num`, read at `(u, k - u)` */
+
+      atMost <- peano
+        .fact(Peano.AtMostBelowSuccessor)
+        .flatMap(rules.specAll(_, List(wholeIndex, indexArgument)))
+        .flatMap(rules.mp(_, below))
+      minusThenPlus <- peano
+        .fact(Peano.MinusThenPlus)
+        .flatMap(rules.specAll(_, List(wholeIndex, indexArgument)))
+        .flatMap(rules.mp(_, atMost))
+      commuted <- peano
+        .fact(Peano.AddCommutative)
+        .flatMap(rules.specAll(_, List(complement, indexArgument)))
+      sumForm <- Conv.sym(commuted).flatMap(Conv.trans(_, minusThenPlus))
+      sumRule <- Rewrite.Rule.of(logic, sumForm)
+
+      chooseFact <- coding
+        .fact(Coding.ChooseTimesFactorials)
+        .flatMap(rules.specAll(_, List(complement, indexArgument)))
+        .flatMap(theorem =>
+          Rewrite
+            .rewrite(Vector(sumRule), theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem))))
+
+      /* ------------------------------------------------ carried to the reals, and the three cancellings */
+
+      embedding <- atK match {
+        case App(constant, _) => Right(constant)
+        case other            => Left(NotOfForm("an embedded natural", other))
+      }
+      embedded <- Conv.apTerm(embedding, chooseFact)
+      chooseSides <- Term
+        .destEq(chooseFact.conclusion)
+        .toRight(NotOfForm("an equation", chooseFact.conclusion))
+      productSides <- sidesOf(chooseSides._1)
+      factorialSides <- sidesOf(productSides._2)
+      outerSplit <- peano
+        .fact(Peano.EmbedsProduct)
+        .flatMap(rules.specAll(_, List(productSides._1, productSides._2)))
+      innerSplit <- peano
+        .fact(Peano.EmbedsProduct)
+        .flatMap(rules.specAll(_, List(factorialSides._1, factorialSides._2)))
+      times <- Parser.term(theory, notation, "(1:real) * 1", values).flatMap {
+        case App(App(constant, _), _) => Right(constant)
+        case other                    => Left(NotOfForm("a product", other))
+      }
+      byCoefficient <- LogicError.lift(Term.app(times, coefficient))
+      innerCarried <- Conv.apTerm(byCoefficient, innerSplit)
+      relation <- Conv
+        .sym(outerSplit)
+        .flatMap(Conv.trans(_, embedded))
+        .flatMap(theorem => Conv.sym(innerCarried).flatMap(Conv.trans(_, theorem)))
+
+      positiveAtIndex <- factorialEmbedsPositively(
+        logic, linarith, peano, coding, indexArgument, atIndex)
+      positiveAtComplement <- factorialEmbedsPositively(
+        logic, linarith, peano, coding, complement, atComplement)
+      positiveAtK <- factorialEmbedsPositively(
+        logic, linarith, peano, coding, wholeIndex, atK)
+      cancelsAtIndex <- inverseCancels(logic, limit, theory, notation, positiveAtIndex, atIndex)
+      cancelsAtComplement <- inverseCancels(
+        logic, limit, theory, notation, positiveAtComplement, atComplement)
+      cancelsAtK <- inverseCancels(logic, limit, theory, notation, positiveAtK, atK)
+
+      /* ------------------------------------------------------------ and the schematic, at nine terms */
+
+      instance <- rules
+        .specAll(
+          combined,
+          List(
+            coefficient, atIndex, atComplement, atK, powerOfX, powerOfY,
+            reciprocalAtIndex, reciprocalAtComplement, reciprocalAtK))
+        .flatMap(rules.mp(_, cancelsAtIndex))
+        .flatMap(rules.mp(_, cancelsAtComplement))
+        .flatMap(rules.mp(_, cancelsAtK))
+        .flatMap(rules.mp(_, relation))
+
+      instanceSides <- Term
+        .destEq(instance.conclusion)
+        .toRight(NotOfForm("an equation", instance.conclusion))
+      opened <- LogicError.lift(Term.eq(goalSides._1, instanceSides._1)).flatMap(ring.prove)
+      result <- Conv.trans(opened, instance)
+    } yield result
+  }
+
+  /**
+   * [[Addition]], the exponential's addition theorem, which is everything above put in one order.
+   *
+   * `docs/adr/0017` lists it first among what the series owe, and what stood in front of it was
+   * never the analysis: it was [[AbsolutelyConvergent]], which `Limit.SUM_CAUCHY_PRODUCT` asks of
+   * both its arguments, and then [[Convolution]], which is the binomial theorem meeting
+   * `Coding.NUM_CHOOSE_FACTORIAL`.
+   *
+   * Four existentials are opened and none of them is a value this repository can compute: `P` and
+   * `Q` are the sums of the magnitudes, `A` and `B` the sums themselves, and the theorem says
+   * `exp (x + y)` is `A * B` without saying what `A` is. That is the shape every fact about these
+   * constants has, and it is why `Limit.CONVERGES_UNIQUE` is what pins them: `exp x` is `lim` of
+   * a sequence, `lim` is choice applied to convergence, and a limit that exists is the one.
+   *
+   * **`Limit.CONVERGES_EVENTUALLY` is used three times and never for an eventuality.** The
+   * convolution's series and the exponential's are equal at every index and are different
+   * lambdas, and the partial sums of a series and the sequence the definition writes differ by an
+   * eta step. Both are what that fact settles at index zero, whose guard is then discharged
+   * without being read. It is the same use `Tail` makes of it.
+   */
+  private def additionTheorem(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    limit: Limit,
+    series: Series,
+    definition: Kernel.Thm,
+    absolute: Kernel.Thm,
+    convolution: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val x = Term.variable("x", values)
+    val y = Term.variable("y", values)
+    val k = Term.variable("k", numbers)
+    val n = Term.variable("n", numbers)
+    val p = Term.variable("P", values)
+    val q = Term.variable("Q", values)
+    val a = Term.variable("A", values)
+    val b = Term.variable("B", values)
+
+    def opened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    /** The sequence the definition writes, its partial sums, and the terms under them. */
+    def readDefinition(argument: Term): Either[LogicError, (Kernel.Thm, Term, Term, Term)] =
+      for {
+        unfolded <- Conv.unfold(definition, List(argument))
+        limited <- rightOf(unfolded)
+        sequence <- limited match {
+          case App(_, inner) => Right(inner)
+          case other         => Left(NotOfForm("a limit of a sequence", other))
+        }
+        partial <- sequence match {
+          case Abs(_, App(sums, _)) => Right(sums)
+          case other                => Left(NotOfForm("a sequence of partial sums", other))
+        }
+        terms <- partial match {
+          case App(_, inner) => Right(inner)
+          case other         => Left(NotOfForm("the partial sums of a series", other))
+        }
+      } yield (unfolded, sequence, partial, terms)
+
+    /**
+     * The same convergence about the sequence the **definition** writes.
+     *
+     * Used three times and never for an eventuality: twice the two sequences differ by an eta
+     * step and once by which lambda a series was built from, and `CONVERGES_EVENTUALLY` at index
+     * zero settles both. Its guard is discharged without being read.
+     */
+    def carried(
+      partial: Term,
+      sequence: Term,
+      value: Term,
+      convergence: Kernel.Thm,
+      agree: Term => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        zero <- Parser.term(theory, notation, "ZERO", numbers)
+        eventually <- limit.fact(Limit.Eventually)
+        instance <- rules
+          .specAll(eventually, List(partial, sequence, value, zero))
+          .flatMap(opened)
+        premise <- logic
+          .destImp(instance.conclusion)
+          .toRight(NotOfForm("an implication", instance.conclusion))
+        stripped <- Logic.stripForall(premise._1)
+        index <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every index", premise._1))
+        inner <- logic
+          .destImp(stripped._2)
+          .toRight(NotOfForm("an implication", stripped._2))
+        pointwise <- agree(index)
+        everywhere <- rules.disch(inner._1, pointwise).flatMap(rules.gen(index, _))
+        result <- rules.mp(instance, everywhere).flatMap(rules.mp(_, convergence))
+      } yield result
+
+    /** `|- exp argument = value`, the definition unfolded and `LIM_OF_CONVERGES` after it. */
+    def named(
+      unfolded: Kernel.Thm,
+      sequence: Term,
+      value: Term,
+      convergence: Kernel.Thm
+    ): Either[LogicError, Kernel.Thm] =
+      limit
+        .fact(Limit.ValueOfConverges)
+        .flatMap(rules.specAll(_, List(sequence, value)))
+        .flatMap(rules.mp(_, convergence))
+        .flatMap(Conv.trans(unfolded, _))
+
+    /** The body of an existential at a chosen witness, ready to be assumed. */
+    def instanceAt(existential: Kernel.Thm, witness: Term): Either[LogicError, Term] =
+      logic
+        .destExistsPredicate(existential.conclusion)
+        .toRight(NotOfForm("an existential quantification", existential.conclusion))
+        .flatMap(predicate =>
+          LogicError.lift(Term.app(predicate, witness)).flatMap(Conv.betaRoot).flatMap(rightOf))
+
+    for {
+      sum <- Parser.term(theory, notation, "(x:real) + (y:real)", values)
+      product <- Parser.term(theory, notation, "(A:real) * (B:real)", values)
+
+      atX <- readDefinition(x)
+      atY <- readDefinition(y)
+      atSum <- readDefinition(sum)
+      (unfoldedX, sequenceX, partialX, termsX) = atX
+      (unfoldedY, sequenceY, partialY, termsY) = atY
+      (unfoldedSum, sequenceSum, partialSum, termsSum) = atSum
+
+      /* ------------------------------------ the four existentials, opened from the outside in */
+
+      magnitudesAtX <- rules.spec(x, absolute)
+      magnitudesAtY <- rules.spec(y, absolute)
+      nearP <- instanceAt(magnitudesAtX, p)
+      nearQ <- instanceAt(magnitudesAtY, q)
+      assumedP <- LogicError.lift(Kernel.assume(nearP))
+      assumedQ <- LogicError.lift(Kernel.assume(nearQ))
+
+      absoluteFact <- limit.fact(Limit.Absolute)
+      convergingX <- rules
+        .specAll(absoluteFact, List(termsX, p))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, assumedP))
+      convergingY <- rules
+        .specAll(absoluteFact, List(termsY, q))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, assumedQ))
+      nearA <- instanceAt(convergingX, a)
+      nearB <- instanceAt(convergingY, b)
+      assumedA <- LogicError.lift(Kernel.assume(nearA))
+      assumedB <- LogicError.lift(Kernel.assume(nearB))
+
+      /* ----------------------------------------- the product, and its series identified */
+
+      cauchy <- limit
+        .fact(Limit.Cauchy)
+        .flatMap(rules.specAll(_, List(termsX, termsY, a, b, p, q)))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, assumedP))
+        .flatMap(rules.mp(_, assumedQ))
+        .flatMap(rules.mp(_, assumedA))
+        .flatMap(rules.mp(_, assumedB))
+      convolutionTerms <- cauchy.conclusion match {
+        case App(App(_, App(_, terms)), _) => Right(terms)
+        case other => Left(NotOfForm("a convergence of a series", other))
+      }
+      convolutionPartial <- cauchy.conclusion match {
+        case App(App(_, sums), _) => Right(sums)
+        case other                => Left(NotOfForm("a convergence", other))
+      }
+
+      pointwise <- rules.specAll(convolution, List(x, y, k)).flatMap(rules.gen(k, _))
+      sameSums <- series
+        .fact(Series.Congruence)
+        .flatMap(rules.specAll(_, List(convolutionTerms, termsSum)))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, pointwise))
+
+      atTheSum <- carried(
+        convolutionPartial, sequenceSum, product, cauchy, index => rules.spec(index, sameSums))
+
+      /* ------------------------------------------------- the three values, and the equation */
+
+      atX <- carried(
+        partialX, sequenceX, a, assumedA,
+        index =>
+          LogicError.lift(Term.app(partialX, index)).map(Kernel.refl))
+      atY <- carried(
+        partialY, sequenceY, b, assumedB,
+        index =>
+          LogicError.lift(Term.app(partialY, index)).map(Kernel.refl))
+
+      valueAtSum <- named(unfoldedSum, sequenceSum, product, atTheSum)
+      valueAtX <- named(unfoldedX, sequenceX, a, atX)
+      valueAtY <- named(unfoldedY, sequenceY, b, atY)
+
+      times <- Parser.term(theory, notation, "(1:real) * 1", values).flatMap {
+        case App(App(constant, _), _) => Right(constant)
+        case other                    => Left(NotOfForm("a product", other))
+      }
+      exponentialAtY <- Term
+        .destEq(valueAtY.conclusion)
+        .map(_._1)
+        .toRight(NotOfForm("an equation", valueAtY.conclusion))
+      byValue <- LogicError.lift(Term.app(times, a))
+      productOfValues <- Conv
+        .apTerm(times, valueAtX)
+        .flatMap(Conv.apThm(_, exponentialAtY))
+        .flatMap(first => Conv.apTerm(byValue, valueAtY).flatMap(Conv.trans(first, _)))
+
+      whole <- Conv.sym(productOfValues).flatMap(Conv.trans(valueAtSum, _))
+
+      /* ------------------------------------------- and the four existentials closed, inside out */
+
+      withoutB <- rules.existsElim(convergingY, b, whole)
+      withoutA <- rules.existsElim(convergingX, a, withoutB)
+      withoutQ <- rules.existsElim(magnitudesAtY, q, withoutA)
+      result <- rules
+        .existsElim(magnitudesAtX, p, withoutQ)
+        .flatMap(rules.genAll(_, List(x, y)))
     } yield result
   }
 

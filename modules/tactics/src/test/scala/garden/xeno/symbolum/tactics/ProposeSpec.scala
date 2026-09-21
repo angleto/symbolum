@@ -342,7 +342,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // branch's delta.
     // 412 with `ABS_POWER_LE`, which carries one antecedent.
     // 414: one antecedent each on the halving and the geometric tail, none on the convergence.
-    proposals.size shouldBe 414
+    // 418 with `MUL_INV_COMBINE`'s four antecedents; the other two carry none.
+    proposals.size shouldBe 418
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -745,6 +746,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and the second is the one the prediction for this lemma forgot.
     addresses("ABS_POWER_LE") shouldBe Vector.fill(2)(Prove.Address.Order)
 
+    // The third address, and the one that arrives with the addition theorem: an equation
+    // between reals is `Ring`'s shape, and `Ring` failing on it is what `Open` means here.
+    addresses("MUL_INV_COMBINE") shouldBe Vector.fill(5)(Prove.Address.Equation)
+    addresses("EXP_ADD") shouldBe Vector.fill(2)(Prove.Address.Equation)
+
+    // And `EXP_CONVOLUTION` produces nothing at all: no antecedent to weaken, and a body that
+    // is a `Sum` of a lambda, which `swapped` refuses.
+    addresses("EXP_CONVOLUTION") shouldBe empty
+
     // 37 since the laws of exponents landed. `POWER_ADD` has no hypothesis, so it adds no
     // weakening; what it adds is one substitution, `Power x (NUM_ADD y z) = Power x y + Power x z`.
     // `POWER_MUL` adds nothing at all: no hypothesis to drop, and no `+`, `*`, `<` or `le` in it for
@@ -1133,7 +1143,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 315 with four: two weakenings and two substitutions, every one of them an order between
     // two reals and so at address `Order`. The population was counted this time, which is what
     // the row above got wrong.
-    open shouldBe 315
+    // 322 with the addition theorem's seven, 2026-09-21: `MUL_INV_COMBINE`'s four weakenings and
+    // one substitution, and `EXP_ADD`'s two substitutions. All seven are here, and the address
+    // is a **third** one — `Equation`, after `Propositional` and `Order` — because all seven are
+    // equations between reals and `Ring` takes that shape and fails on it.
+    //
+    // What was hedged rather than predicted is the only thing worth recording: these are the
+    // first residues in five commits that write neither `abs` nor `converges`, so unlike those
+    // the model can evaluate them, and dropping `fu * iu = 1` leaves something false. None of
+    // the seven was refuted. The hedge was that some would be; it is measured and it was not.
+    open shouldBe 322
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

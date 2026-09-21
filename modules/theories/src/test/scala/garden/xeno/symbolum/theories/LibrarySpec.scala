@@ -575,8 +575,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 604 and 601 with the triangle's diagonal and the binomial coefficient against the three
     // factorials, 2026-09-21. `CLAUDE.md`'s two figures move by **one** each: the diagonal binds
     // a single quantifier, and the factorial identity binds two that share `num`.
-    library.entries.size shouldBe 604
-    library.names.distinct.size shouldBe 601
+    // 607 and 604 with the addition theorem and the two facts under it, 2026-09-21. All three
+    // bind two or more leading quantifiers and all three have a pair sharing `real`, so both of
+    // `CLAUDE.md`'s figures move by three.
+    library.entries.size shouldBe 607
+    library.names.distinct.size shouldBe 604
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
