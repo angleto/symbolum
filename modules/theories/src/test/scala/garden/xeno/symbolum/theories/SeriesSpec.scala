@@ -284,6 +284,76 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
         "0 + (0 + f 0 0 + f 0 (SUC 0)) + (0 + f (SUC 0) 0)"
   }
 
+  /**
+   * The binomial theorem, stated and then COMPUTED at a square.
+   *
+   * The first assertion is the sentence a reader agrees with. The second is the one with content:
+   * at `n = SUC (SUC ZERO)` the sum is three explicit terms, and what they add up to has to be
+   * `(x + y) * ((x + y) * 1)`, which is the left-hand side with its own recurrence unfolded. A
+   * coefficient off by one row, a power off by one, or a subtraction that truncated where it
+   * should not would all leave the theorem provable and print plausibly, and none of them
+   * survives being asked for a number.
+   *
+   * `Ring` is what closes it rather than a printed comparison, because the two sides are the same
+   * polynomial written two ways and no normal form here is anybody's choice.
+   */
+  "The binomial theorem" should "hold, and expand to a square a reader can check" in {
+    series.show(fact(Series.Binomial).conclusion) shouldBe
+      "!x:real. !y:real. !z:num. Power (x + y) z = " +
+        "Sum (\\u:num. real_of_num (NUM_CHOOSE z u) * " +
+        "(Power x u * Power y (NUM_SUB z u))) (SUC z)"
+
+    val real = TyApp(Real.TypeName, Nil)
+    val a = Term.variable("a", real)
+    val b = Term.variable("b", real)
+    val two = force(series.term("SUC (SUC ZERO)", TyApp(Natural.TypeName, Nil)))
+
+    val square = force(rules.specAll(fact(Series.Binomial), List(a, b, two)))
+
+    val opened = force(
+      Rewrite.Rule
+        .all(
+          logic,
+          Vector(
+            fact(Series.AtZero),
+            fact(Series.AtSuccessor),
+            fact(Series.PowerAtZero),
+            fact(Series.PowerAtSuccessor),
+            force(peano.fact(Peano.ChooseNone)),
+            force(peano.fact(Peano.ChooseEmpty)),
+            force(peano.fact(Peano.ChoosePascal)),
+            force(peano.fact(Peano.SubAtZero)),
+            force(peano.fact(Peano.SubSuccessors)),
+            force(peano.fact(Peano.AddAtZero)),
+            force(peano.fact(Peano.AddAtSuccessor)),
+            force(peano.fact(Peano.EmbedsZero)),
+            force(peano.fact(Peano.EmbedsSuccessor)),
+            force(peano.fact(Peano.EmbedsSum))
+          )
+        )
+        .flatMap(unfolding =>
+          Rewrite
+            .rewrite(unfolding, square.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, square)))))
+
+    // Three terms, one per column, and their sum is the square. Nothing here is asserted about
+    // the shape the rewriting happens to leave: what is asserted is the arithmetic.
+    // **The coefficients are visible and they are Pascal's second row.** They print unevaluated,
+    // as sums of the embedded naturals, which is what makes this assertion worth reading rather
+    // than only running: `(0 + 1)` against the square of the second, `(0 + 1 + (0 + 1 + 0))` in
+    // the middle and `(0 + 1 + 0 + (0 + 0))` against the square of the first are **1, 2, 1**, in
+    // that order, and a coefficient taken from the wrong row would show here as a different
+    // number rather than as a failure somewhere else.
+    series.show(opened.conclusion) shouldBe
+      "(a + b) * ((a + b) * 1) = 0 + (0 + 1) * (1 * (b * (b * 1))) + " +
+        "(0 + 1 + (0 + 1 + 0)) * (a * 1 * (b * 1)) + (0 + 1 + 0 + (0 + 0)) * (a * (a * 1) * 1)"
+
+    // And they add up: the three terms are the square, which is the half the printed form cannot
+    // carry. `Ring` closes it, and the two sides are not the same term, so it did work.
+    Term.destEq(opened.conclusion).map(sides => sides._1 == sides._2) shouldBe Some(false)
+    force(ring.prove(opened.conclusion)).hypotheses shouldBe empty
+  }
+
   "A sum of zeroes" should "be zero at every length, which SUM_ZERO does not say" in {
     // The two read alike and are different facts: `SUM_ZERO` is about a sum of length zero, this is
     // about a summand of value zero. Keeping them apart is what lets an emptied inner sum collapse.

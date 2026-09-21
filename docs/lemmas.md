@@ -673,6 +673,7 @@ they have least appetite for working out how it is produced.
 
   NUM_REAL_POW             !x:num. !y:num. real_of_num (NUM_POW x y) = Power (real_of_num x) y
   POWER_ADD                !x:real. !y:num. !z:num. Power x (y + z) = Power x y * Power x z
+  POWER_BINOMIAL           !x:real. !y:real. !z:num. Power (x + y) z = Sum (\u:num. real_of_num (NUM_CHOOSE z u) * (Power x u * Power y (NUM_SUB z u))) (SUC z)
   POWER_MONOTONE           !x:real. !y:real. 0 < x ==> x <= y ==> (!z:num. Power x z <= Power y z)
   POWER_MUL                !x:real. !y:num. !z:num. Power x (y * z) = Power (Power x y) z
   POWER_MULTIPLICATIVE     !x:real. !y:real. !z:num. Power (x * y) z = Power x z * Power y z
