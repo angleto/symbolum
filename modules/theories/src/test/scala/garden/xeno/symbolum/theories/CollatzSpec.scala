@@ -638,8 +638,12 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     // the claim is about `S2_COUNTED`, is true and is not the counterexample, and nothing in the
     // shape assertions below would notice: they read which relation and which pair, off the
     // theorem itself. This reads the text.
+    // The population is pinned on both sides and then counted, because two names that had
+    // collided would leave the two sets equal and the loop below reading eight of nine, and an
+    // empty table would make every assertion here true of nothing.
     val derived = witnesses.named.toMap
     derived.keySet shouldBe Collatz.WitnessStatements.map(_._1).toSet
+    derived.size shouldBe 9
 
     for ((name, text) <- Collatz.WitnessStatements) {
       val expected = Parser
