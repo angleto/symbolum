@@ -290,23 +290,40 @@ object Induct {
    *
    * == The question it asks after the closer refuses ==
    *
-   * `Rewrite.rewrite` returns the theorem it had built when the step limit ran out, and that theorem
-   * is true: nothing in it says whether the rewriting had finished. So a step whose rules do not
-   * settle looks exactly like a step whose claim is false, and the caller is sent to check something
-   * that was never the problem. Asked only after the refusal, because that is where the answer
-   * changes what the refusal means, and it costs one more pass of the conversion.
+   * `Rewrite.rewrite` returns the theorem it had built when it stopped, and that theorem is true:
+   * nothing in it says whether the rewriting had finished. So a step whose rules do not settle
+   * looks exactly like a step whose claim is false, and the caller is sent to check something that
+   * was never the problem.
+   *
+   * **There are three answers and not two, since `docs/adr/0037`.** The rules were done, the step
+   * limit ran out, or the term grew past the rewriter's ceiling, and the third is the one whose
+   * remedy is the opposite of the second's: a rule set that multiplies the term gets worse with a
+   * higher limit. `Rewrite.rewriteReporting` hands the reason over with the equation, so the two
+   * that are not the first cost nothing to tell apart and only the first is asked again.
+   *
+   * That second question is asked only after the closer refuses, because that is where the answer
+   * changes what the refusal means, and it costs one more pass of the conversion. This is the
+   * widest rewriting in the repository: measured on 2026-09-22 over a whole-suite run, the widest
+   * term any repetition carried was 7709 nodes and it was carried here, from a goal of 77.
    */
   def afterRewriting(rules: Vector[Rewrite.Rule], goal: Term)(
     close: Term => Either[LogicError, Kernel.Thm]
   ): Either[LogicError, Kernel.Thm] =
     for {
-      equation <- Rewrite.rewrite(rules, goal)
+      reported <- Rewrite.rewriteReporting(rules, goal)
+      (equation, stop) = reported
       rewritten <- Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", goal))
 
       proved <- close(rewritten).left.flatMap { refusal =>
-        Rewrite
-          .finished(rules, rewritten)
-          .flatMap(settled => if (settled) Left(refusal) else Left(NotNormalised(rewritten)))
+        stop match {
+          case Rewrite.Stop.Size(nodes) =>
+            Left(GrewPastCeiling(rewritten, nodes, Rewrite.DefaultCeiling))
+
+          case _ =>
+            Rewrite
+              .finished(rules, rewritten)
+              .flatMap(settled => if (settled) Left(refusal) else Left(NotNormalised(rewritten)))
+        }
       }
 
       backwards <- Conv.sym(equation)

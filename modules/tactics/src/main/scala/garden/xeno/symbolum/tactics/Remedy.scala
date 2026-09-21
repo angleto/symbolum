@@ -363,6 +363,19 @@ object Remedy {
     case NotNormalised(term) =>
       RaiseALimit("the rewriting step limit", s"${write(term, reals)}, which still changes")
 
+    // `ReportADefect` and NOT `RaiseALimit`, which is the whole of why `GrewPastCeiling` is its own
+    // refusal rather than a `NotNormalised` with a number in it. Both say the rewriting did not
+    // finish; raising the limit settles the one above and makes this one worse, because what
+    // stopped it is a rule set that multiplies the term rather than one that has not got there yet.
+    // Three runs were killed for memory before anything could say which of the two it was, and the
+    // advice they would have been given is the advice that lengthens the run.
+    case GrewPastCeiling(term, reached, allowed) =>
+      ReportADefect(
+        s"a rule set took ${write(term, reals)} to $reached nodes in one pass where $allowed " +
+          "are allowed: the rules multiply the term rather than settle it, so the rule set is " +
+          "what to change and Rewrite.DefaultCeiling is not"
+      )
+
     // A defect and not a limit, which is the whole reason `NoCloser` is its own refusal. The two
     // above are procedures that looked and could not; this one is a driver that was built with
     // nothing to look with, so no restatement of the goal and no raised limit reaches it. What is
