@@ -127,6 +127,12 @@ final class Limit private (
 
   /** `|- !f l. converges (Sum (\i. abs (f i))) l ==> ?m. converges (Sum f) m` */
   def absolute: Either[LogicError, Kernel.Thm] = fact(Limit.Absolute)
+
+  /** `|- !f l. (!i. 0 <= f i) ==> converges (Sum f) l ==> !n. Sum f n <= l` */
+  def belowLimit: Either[LogicError, Kernel.Thm] = fact(Limit.BelowLimit)
+
+  /** `|- !f l. converges (Sum f) l ==> converges (\n. l - Sum f n) 0` */
+  def tail: Either[LogicError, Kernel.Thm] = fact(Limit.Tail)
 }
 
 object Limit {
@@ -344,6 +350,44 @@ object Limit {
    */
   val Absolute: String = "CONVERGES_ABSOLUTE"
 
+  /**
+   * `|- !f l. (!i. 0 <= f i) ==> converges (Sum f) l ==> !n. Sum f n <= l`
+   *
+   * A series of non-negative terms never passes its own limit. It is what turns the **hypothesis**
+   * of a convergence into the **bound** a comparison argument needs, and it is the one shape of
+   * that move this development has: `CONVERGES_LE` goes the other way, from a bound on the terms
+   * to a bound on the limit.
+   *
+   * It was derived inside [[Absolute]] and is published because a second consumer arrived. That
+   * one discharges the non-negativity from `Magnitude.ABS_NONNEG` and is otherwise unchanged, so
+   * what this removes is a copy rather than adding a name: the derivation lived in one function
+   * and the next argument that wanted it would have written it again.
+   *
+   * The route is worth a line. The partial sums increase, by `Series.SUM_SUC` and the
+   * hypothesis; [[MonotoneBelow]] carries that to every pair of indices; and [[AboveBound]] at
+   * **one of the sequence's own terms** turns "increasing and convergent to `l`" into "at most
+   * `l`". That last step is what [[AboveBound]] was published for, and it is false below that
+   * term's index.
+   */
+  val BelowLimit: String = "SUM_BELOW_LIMIT"
+
+  /**
+   * `|- !f l. converges (Sum f) l ==> converges (\n. l - Sum f n) 0`
+   *
+   * What a series has left to add goes to zero. With [[BelowLimit]] it is the tail estimate every
+   * rearrangement argument needs, and the pair is **not** a Cauchy criterion: for a series of
+   * non-negative terms the tail from `N` on is at most `l - Sum f N`, so the criterion's content
+   * is available without the criterion. This repository still has none, and this is the second
+   * place where the route around it is monotone convergence rather than completeness twice.
+   *
+   * It costs four facts and no analysis: the constant sequence converges, [[Negated]] turns the
+   * partial sums around, [[Added]] puts the two together at `l + -l`, and the value is `0` by the
+   * ring. The sequence is then `\n. l + -(Sum f n)` where a reader writes `\n. l - Sum f n`, and
+   * the two are equal at every index without being the same term, which is [[Eventually]] at
+   * index zero for the reason `Transcendental.EXP_ONE_ABOVE_TWO` gives.
+   */
+  val Tail: String = "CONVERGES_TAIL"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -378,7 +422,13 @@ object Limit {
         "converges s a ==> converges t b ==> converges (\\n:num. s n * t n) (a * b)"),
     Absolute ->
       ("!f:num -> real. !l:real. converges (Sum (\\i:num. abs (f i))) l ==> " +
-        "?m:real. converges (Sum f) m")
+        "?m:real. converges (Sum f) m"),
+    BelowLimit ->
+      ("!f:num -> real. !l:real. (!i:num. 0 <= f i) ==> converges (Sum f) l ==> " +
+        "!n:num. Sum f n <= l"),
+    Tail ->
+      ("!f:num -> real. !l:real. converges (Sum f) l ==> " +
+        "converges (\\n:num. l - Sum f n) 0")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -495,14 +545,19 @@ object Limit {
         logic, linarith, theory, notation, convergesDefinition, bounds, indices)
       negatedLimit <- convergesNegated(
         logic, linarith, theory, notation, convergesDefinition, bounds)
+      belowItsOwnLimit <- belowItsLimit(
+        logic, linarith, theory, notation, sumAtSuccessor, monotoneBelow, above)
+      tailToZero <- tailVanishes(
+        logic, magnitude.order.ring, theory, notation, constant, negatedLimit, addedLimits,
+        eventually)
+
       absoluteSeries <- absolutelyConvergent(
         logic,
         linarith,
         theory,
         notation,
         Absolutes(
-          sumAtSuccessor, sumAdditive, comparisonTest, monotoneBelow, above, addedLimits,
-          negatedLimit, eventually),
+          sumAdditive, comparisonTest, belowItsOwnLimit, addedLimits, negatedLimit, eventually),
         bounds
       )
 
@@ -529,7 +584,9 @@ object Limit {
         Added -> addedLimits,
         Negated -> negatedLimit,
         Multiplied -> multipliedLimits,
-        Absolute -> absoluteSeries
+        Absolute -> absoluteSeries,
+        BelowLimit -> belowItsOwnLimit,
+        Tail -> tailToZero
       )
     )
   }
@@ -898,11 +955,9 @@ object Limit {
    * observation that the bracket is non-negative.
    */
   private final case class Absolutes(
-    atSuccessor: Kernel.Thm,
     additive: Kernel.Thm,
     comparison: Kernel.Thm,
-    monotoneBelow: Kernel.Thm,
-    aboveBound: Kernel.Thm,
+    belowLimit: Kernel.Thm,
     added: Kernel.Thm,
     negated: Kernel.Thm,
     eventually: Kernel.Thm
@@ -2020,6 +2075,178 @@ object Limit {
    * argues at length against adding library entries nobody has asked for, and this is that
    * argument applied to the first entry that would have been added for symmetry alone.
    */
+  /**
+   * [[BelowLimit]], lifted out of [[absolutelyConvergent]] when a second consumer arrived.
+   *
+   * The generalisation is from `abs (f i)` to any non-negative summand, which costs the caller
+   * one `Magnitude.ABS_NONNEG` and costs this nothing: the derivation never read anything about
+   * `abs` except that it is non-negative.
+   */
+  private def belowItsLimit(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    atSuccessor: Kernel.Thm,
+    monotoneBelow: Kernel.Thm,
+    aboveBound: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val f = Term.variable("f", sequences)
+    val l = Term.variable("l", values)
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+
+    def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    for {
+      pointwise <- Parser.proposition(
+        theory, notation, "!i:num. 0 <= (f:num -> real) i")
+      assumedPointwise <- LogicError.lift(Kernel.assume(pointwise))
+      premise <- Parser.proposition(
+        theory, notation, "converges (Sum (f:num -> real)) (l:real)")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      partial <- Parser.term(theory, notation, "Sum (f:num -> real)", sequences)
+      here <- Parser.term(theory, notation, "Sum (f:num -> real) (n:num)", values)
+      atN <- Parser.term(theory, notation, "(f:num -> real) (n:num)", values)
+
+      stepped <- rules.specAll(atSuccessor, List(f, n)).flatMap(normalised)
+      steppedParts <- Term.destEq(stepped.conclusion) match {
+        case Some((whole, App(App(_, short), _))) => Right((whole, short))
+        case _ => Left(NotOfForm("a sum peeled at its top", stepped.conclusion))
+      }
+      increasing <- rules
+        .spec(n, assumedPointwise)
+        .flatMap(positive =>
+          linarith
+            .prove("!s:real. !a:real. !t:real. t = s + a ==> 0 <= a ==> s <= t")
+            .flatMap(rules.specAll(_, List(steppedParts._2, atN, steppedParts._1)))
+            .flatMap(rules.mp(_, stepped))
+            .flatMap(rules.mp(_, positive)))
+        .flatMap(rules.gen(n, _))
+      ordered <- rules.spec(partial, monotoneBelow).flatMap(rules.mp(_, increasing))
+      everywhere <- rules
+        .specAll(aboveBound, List(partial, l, here, n))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(theorem => rules.spec(n, ordered).flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.gen(n, _))
+      result <- rules
+        .disch(premise, everywhere)
+        .flatMap(rules.disch(pointwise, _))
+        .flatMap(rules.genAll(_, List(f, l)))
+    } yield result
+  }
+
+  /**
+   * [[Tail]], which is four facts in one order and no analysis at all.
+   *
+   * The only thing in it that is not a specialisation is the value: [[Added]] hands back
+   * `l + -l` and what is wanted is `0`, so the value is rewritten by a congruence on the
+   * convergence's second argument. Doing that to the **value** rather than to the sequence is
+   * what keeps [[Eventually]] out of it until the end, where it is needed for the sequence and
+   * for nothing else.
+   */
+  private def tailVanishes(
+    logic: Logic,
+    ring: Ring,
+    theory: Theory,
+    notation: Notation,
+    constant: Kernel.Thm,
+    negated: Kernel.Thm,
+    added: Kernel.Thm,
+    eventually: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val f = Term.variable("f", sequences)
+    val l = Term.variable("l", values)
+    val n = Term.variable("n", numbers)
+
+    def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    def convergenceOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      theorem.conclusion match {
+        case App(App(_, sequence), value) => Right((sequence, value))
+        case other                        => Left(NotOfForm("a convergence", other))
+      }
+
+    for {
+      premise <- Parser.proposition(
+        theory, notation, "converges (Sum (f:num -> real)) (l:real)")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+      partial <- Parser.term(theory, notation, "Sum (f:num -> real)", sequences)
+
+      steady <- rules.spec(l, constant)
+      steadyParts <- convergenceOf(steady)
+      turned <- rules.specAll(negated, List(partial, l)).flatMap(rules.mp(_, assumed))
+      turnedParts <- convergenceOf(turned)
+      together <- rules
+        .specAll(added, List(steadyParts._1, turnedParts._1, l, turnedParts._2))
+        .flatMap(rules.mp(_, steady))
+        .flatMap(rules.mp(_, turned))
+        .flatMap(normalised)
+
+      // The value, by a congruence on the convergence's second argument rather than by anything
+      // about the sequence.
+      togetherParts <- convergenceOf(together)
+      zero <- Parser.term(theory, notation, "(0:real)", values)
+      vanishes <- LogicError
+        .lift(Term.eq(togetherParts._2, zero))
+        .flatMap(ring.prove)
+      leading <- together.conclusion match {
+        case App(partial, _) => Right(partial)
+        case other           => Left(NotOfForm("a convergence", other))
+      }
+      atZero <- Conv
+        .apTerm(leading, vanishes)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, together)))
+
+      // And the sequence, which a reader writes with a subtraction.
+      wanted <- Parser.term(
+        theory, notation, "\\n:num. (l:real) - Sum (f:num -> real) n", sequences)
+      guard <- Parser.proposition(theory, notation, "NUM_LE ZERO (n:num)")
+      indexZero <- Parser.term(theory, notation, "ZERO", numbers)
+      agreeing <- rules
+        .specAll(eventually, List(togetherParts._1, wanted, zero, indexZero))
+        .flatMap(normalised)
+        .flatMap(instance =>
+          logic
+            .destImp(instance.conclusion)
+            .toRight(NotOfForm("an implication", instance.conclusion))
+            .flatMap { parts =>
+              Logic
+                .stripForall(parts._1)
+                .flatMap { stripped =>
+                  stripped._1.headOption
+                    .toRight(NotOfForm("a claim about every index", parts._1))
+                    .flatMap { index =>
+                      logic
+                        .destImp(stripped._2)
+                        .toRight(NotOfForm("an implication", stripped._2))
+                        .flatMap { inner =>
+                          ring
+                            .prove(inner._2)
+                            .flatMap(rules.disch(inner._1, _))
+                            .flatMap(rules.gen(index, _))
+                            .flatMap(rules.mp(instance, _))
+                        }
+                    }
+                }
+            })
+      carried <- rules.mp(agreeing, atZero)
+      result <- rules
+        .disch(premise, carried)
+        .flatMap(rules.genAll(_, List(f, l)))
+      _ = guard
+    } yield result
+  }
+
   private def absolutelyConvergent(
     logic: Logic,
     linarith: Linarith,
@@ -2067,9 +2294,6 @@ object Limit {
       sequence <- Parser.term(theory, notation, "Sum (f:num -> real)", sequences)
       atI <- Parser.term(theory, notation, "(f:num -> real) (i:num)", values)
       sizeAtI <- Parser.term(theory, notation, "abs ((f:num -> real) (i:num))", values)
-      atN <- Parser.term(theory, notation, "(f:num -> real) (n:num)", values)
-      sizeAtN <- Parser.term(theory, notation, "abs ((f:num -> real) (n:num))", values)
-      here <- Parser.term(theory, notation, "Sum (" + absolute + ") (n:num)", values)
       twice <- Parser.term(theory, notation, "(l:real) + (l:real)", values)
 
       premise <- Parser.proposition(
@@ -2094,24 +2318,14 @@ object Limit {
             .flatMap(rules.mp(_, upper)))
         .flatMap(rules.gen(i, _))
 
-      // The absolute partial sums increase, so they are ordered, so each is at most the limit.
-      stepped <- rules.specAll(pieces.atSuccessor, List(absBody, n)).flatMap(normalised)
-      steppedParts <- shorter(stepped)
-      increasing <- rules
-        .spec(atN, bounds.nonNegative)
-        .flatMap(positive =>
-          linarith
-            .prove("!s:real. !a:real. !t:real. t = s + a ==> 0 <= a ==> s <= t")
-            .flatMap(rules.specAll(_, List(steppedParts._2, sizeAtN, steppedParts._1)))
-            .flatMap(rules.mp(_, stepped))
-            .flatMap(rules.mp(_, positive)))
-        .flatMap(rules.gen(n, _))
-      ordered <- rules.spec(absSeries, pieces.monotoneBelow).flatMap(rules.mp(_, increasing))
+      // The absolute partial sums never pass their limit, which is [[BelowLimit]] and was this
+      // derivation's own twelve lines until that fact was published. All it asks of `abs` is
+      // that it is non-negative.
+      nonNegativeTerms <- rules.spec(atI, bounds.nonNegative).flatMap(rules.gen(i, _))
       atMostLimit <- rules
-        .specAll(pieces.aboveBound, List(absSeries, l, here, n))
+        .specAll(pieces.belowLimit, List(absBody, l))
+        .flatMap(rules.mp(_, nonNegativeTerms))
         .flatMap(rules.mp(_, assumed))
-        .flatMap(theorem => rules.spec(n, ordered).flatMap(rules.mp(theorem, _)))
-        .flatMap(rules.gen(n, _))
 
       // So the dominating partial sums are bounded, and the bound is the limit twice.
       split <- rules.specAll(pieces.additive, List(absBody, absBody, n)).flatMap(normalised)

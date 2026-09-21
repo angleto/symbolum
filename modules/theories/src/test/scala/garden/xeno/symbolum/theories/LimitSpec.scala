@@ -304,6 +304,74 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * way at all; what settles it is the absolute series, which is the geometric one, and the
    * theorem under test. What comes out carries nothing assumed.
    */
+  /**
+   * The two tail facts, spent end to end on the one series this file can obtain from nothing.
+   *
+   * What comes out is `?l. converges (\n. l - Sum f n) 0` with **nothing assumed**: the geometric
+   * series has a tail that vanishes. That is the statement the Cauchy product's remaining estimate
+   * needs, and it is reached here without a Cauchy criterion, which this repository has not got —
+   * for a series of non-negative terms the tail from `N` on is at most `l - Sum f N`, and that is
+   * `SUM_BELOW_LIMIT` with `CONVERGES_TAIL` beside it.
+   *
+   * The first assertion is about the **hypotheses** rather than the conclusion, which is where
+   * the content is: `SUM_BELOW_LIMIT` at this series owes the convergence and owes nothing about
+   * the terms, because their non-negativity is discharged rather than carried.
+   */
+  "The tail of a convergent series" should "vanish, and its partial sums stay under the limit" in {
+    val rules = limit.logic.rules
+    val linarith = force(Linarith.construct(chain.order))
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val sequences = Type.fun(numbers, real)
+    val n = Term.variable("n", numbers)
+    val l = Term.variable("l", real)
+
+    val half = force(limit.term("(1:real) / 2", real))
+    val terms = force(limit.term("\\i:num. Power ((1:real) / 2) i", sequences))
+    val powerAt = force(limit.term("Power ((1:real) / 2) (n:num)", real))
+    val positivePower = force(
+      rules
+        .spec(half, force(chain.series.fact(Series.PowerPositive)))
+        .flatMap(rules.mp(_, force(linarith.prove("0 < (1:real) / 2")))))
+    val nonNegative = force(
+      rules
+        .specAll(
+          force(chain.order.fact(Order.LeOfLt)),
+          List(force(limit.term("0:real", real)), powerAt))
+        .flatMap(rules.mp(_, force(rules.spec(n, positivePower))))
+        .flatMap(rules.gen(n, _)))
+
+    val converging = force(
+      LogicError.lift(
+        Kernel.assume(proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))))
+
+    // Under the limit, owing the convergence and nothing about the terms.
+    val under = force(
+      rules
+        .specAll(force(limit.belowLimit), List(terms, l))
+        .flatMap(rules.mp(_, nonNegative))
+        .flatMap(rules.mp(_, converging)))
+    under.hypotheses shouldBe
+      List(proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))
+    limit.show(under.conclusion) shouldBe
+      "!x:num. Sum (\\y:num. Power (1 / 2) y) x <= l"
+
+    // And the tail, carried out of the existential the comparison test hands over.
+    val vanishing = force(
+      rules.specAll(force(limit.tail), List(terms, l)).flatMap(rules.mp(_, converging)))
+    val claim = proposition(
+      "?l:real. converges (\\n:num. l - Sum (\\i:num. Power ((1:real) / 2) i) n) 0")
+    val predicate = force(
+      limit.logic.destExistsPredicate(claim).toRight(MissingDefinition("an existential")))
+    val settled = force(
+      rules
+        .existsIntro(predicate, l, vanishing)
+        .flatMap(rules.existsElim(geometricConverges, l, _)))
+
+    settled.hypotheses shouldBe empty
+    settled.conclusion shouldBe claim
+  }
+
   "An absolutely convergent series" should "converge, where the comparison test cannot reach it" in {
     val rules = limit.logic.rules
     val linarith = force(Linarith.construct(chain.order))
