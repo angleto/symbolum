@@ -10,22 +10,29 @@
 # Each perturbation below takes away one thing the argument rests on and the spec must go red.
 # The control is the run before them, in the same tree, and it must be green.
 #
-# WHAT WAS SEEN, 2026-09-21, on the tree that landed this. Control green at 20 tests, all four
-# red, restore verified clean. The messages are in `$OUT/anchored-class.log` and each is the
-# refusal naming the step that was removed rather than a downstream collapse:
+# WHAT WAS SEEN, 2026-09-21, on the tree that landed this (`1a2628e`). Control green at 20 tests,
+# all four red at three tests each, restore verified clean. The messages are in
+# `$OUT/anchored-class.log`, and each names the step that was taken away rather than collapsing
+# somewhere downstream of it:
 #
-#   1. `expected the measure as a run of successors, found NUM_SUB ZERO (SUC ZERO)`. The measure
-#      of `0f.` with the fold rule for position zero taken away: the right number in a shape no
-#      comparison here can read, which is what it was before 2026-09-21 and why the rule landed.
-#   2. `expected a counted rule beginning with a named letter` is NOT what comes back; the
-#      refusal is the clause's own, `notElim`, because the word has no `f` where the clause says
-#      `t`. That is the discrimination being load-bearing: one refusal per clause, not one for
-#      the table.
-#   3. `expected 6 clauses` -- the clause walk reading the eleven where the definition has six,
-#      which is the count being read off the table rather than assumed.
-#   4. The measure comparison taken the other way round, which is the claim that the potential
-#      FALLS rather than rises: red at the text comparison, since the theorem is then about the
-#      other pair of measures.
+#   1. `expected a numeral of num, found NUM_SUB ZERO (SUC ZERO)`. The measure of a word with a
+#      digit at position zero, with the fold rule for that position taken away: the right number
+#      in a shape no comparison here can read. It is `countOfSuccessors` that says so and not
+#      `measureIsNumeral`'s own sentence, because the count is what that check asks for first.
+#      This is the state the file was in before 2026-09-21 and why the rule landed.
+#   2. `expected a proof of (WORD_NTH (0/0.) (WORD_LENGTH w) = S2_F), found (... = S2_T)`. The
+#      refusal offered per clause rather than per table: three of the six commutations begin with
+#      `t`, and the `f` refusal cannot be applied to what those clauses produce. It is the
+#      discrimination being load-bearing, and it is the clause's own `notElim` that refuses.
+#   3. `expected 11 clauses, found (w1 = <t2's left> /\ w2 = <t2's right>)`. The walk told to
+#      expect the eleven of `S2` over the six of `S2_COUNTED`, refusing at the last clause. The
+#      count is read off the table rather than assumed, which is what a disjunction with a clause
+#      left unanswered would otherwise slip past.
+#   4. `expected a measure strictly below 1, found ZERO`. The comparison turned round, refused by
+#      the check that the measure FALLS. What that check is for is that the direction cannot be
+#      taken from whichever way the two numbers happen to lie: read the other way the theorem is
+#      true, is about the same two words, and refutes nothing.
+
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
