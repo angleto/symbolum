@@ -226,6 +226,43 @@ object Transcendental {
   val ExponentialAboveTwo: String = "EXP_ONE_ABOVE_TWO"
 
   /**
+   * `|- !x i. 2 * abs x <= real_of_num (SUC i) ==>
+   * abs (Power x (SUC i) / real_of_num (NUM_FACT (SUC i)))
+   * <= 1 / 2 * abs (Power x i / real_of_num (NUM_FACT i))`
+   *
+   * Past the index where `2 * abs x` is reached, each term of the exponential's series is at
+   * most half the one before it. It is the whole content of the series' absolute convergence at
+   * an arbitrary real: the head up to that index is a number and the tail is under a geometric
+   * series, where [[ExponentialAboveTwo]]'s domination works at `x = 1` and at no other point.
+   *
+   * The index is not mentioned: it is whatever `Peano.NUM_CEIL_LE` returns for `2 * abs x`, and
+   * this fact is stated at every `i` satisfying the bound rather than at that one.
+   */
+  val TermsHalve: String = "EXP_TERM_HALVES"
+
+  /**
+   * `|- !x m. 2 * abs x <= real_of_num m ==> !j. T (m + j) <= Power (1/2) j * T m`
+   *
+   * [[TermsHalve]] iterated, which is what makes the exponential's tail geometric. It is stated
+   * at a **variable** index rather than at `NUM_CEIL (2 * abs x)`: the induction never mentions
+   * the ceiling, and a caller with any index meeting the bound can spend it.
+   */
+  val TailIsGeometric: String = "EXP_TAIL_GEOMETRIC"
+
+  /**
+   * `|- !x. ?P. converges (Sum (\i. abs (Power x i / real_of_num (NUM_FACT i)))) P`
+   *
+   * The exponential's series is absolutely convergent at **every** real, which is what
+   * `Limit.SUM_CAUCHY_PRODUCT` asks of both of its arguments. [[ExponentialAboveTwo]] did not
+   * buy it: that one dominates `1 / i!` by `2 * (1/2)^i`, and the dominating series is the one
+   * for `x = 1` and for no other.
+   *
+   * What it is **not** is a statement about `exp x`. It says the series converges and names no
+   * value, because `lim` is what names the value and `exp` is defined through it.
+   */
+  val AbsolutelyConvergent: String = "EXP_ABSOLUTE"
+
+  /**
    * The dominating series for the exponential at one, written as a sum of two copies.
    *
    * `2 * Power (1/2) i` says the same thing and is the wrong shape: `SUM_ADD` splits a sum of two
@@ -255,7 +292,18 @@ object Transcendental {
     HyperbolicCosineAtZero -> "cosh 0 = 1",
     CosinePlusSine -> "!x:real. cosh x + sinh x = exp x",
     CosineMinusSine -> "!x:real. cosh x - sinh x = exp (0 - x)",
-    ExponentialAboveTwo -> "2 < exp 1"
+    ExponentialAboveTwo -> "2 < exp 1",
+    TermsHalve ->
+      ("!x:real. !i:num. 2 * abs x <= real_of_num (SUC i) ==> " +
+        "abs (Power x (SUC i) / real_of_num (NUM_FACT (SUC i))) <= " +
+        "1 / 2 * abs (Power x i / real_of_num (NUM_FACT i))"),
+    TailIsGeometric ->
+      ("!x:real. !m:num. 2 * abs x <= real_of_num m ==> " +
+        "!j:num. abs (Power x (NUM_ADD m j) / real_of_num (NUM_FACT (NUM_ADD m j))) <= " +
+        "Power (1 / 2) j * abs (Power x m / real_of_num (NUM_FACT m))"),
+    AbsolutelyConvergent ->
+      ("!x:real. ?P:real. " +
+        "converges (Sum (\\i:num. abs (Power x i / real_of_num (NUM_FACT i)))) P")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -372,6 +420,14 @@ object Transcendental {
       aboveTwo <- exponentialAboveTwo(
         logic, linarith, theory, notation, limit, series, peano, coding,
         exponentialDefinition, recurrences)
+
+      field <- Field.construct(series.ring.arithmetic)
+      halving <- termsHalveFromAnIndex(
+        logic, linarith, field, theory, notation, series, peano, coding, limit)
+      geometricTail <- tailIsGeometric(
+        logic, linarith, theory, notation, series, peano, induct, halving)
+      absolute <- absolutelyConvergentEverywhere(
+        logic, linarith, theory, notation, series, peano, limit, geometricTail)
     } yield new Transcendental(
       limit,
       series,
@@ -389,7 +445,10 @@ object Transcendental {
         ExponentialAtZero -> exponential,
         SineAtZero -> sine,
         CosineAtZero -> cosine,
-        ExponentialAboveTwo -> aboveTwo
+        ExponentialAboveTwo -> aboveTwo,
+        TermsHalve -> halving,
+        TailIsGeometric -> geometricTail,
+        AbsolutelyConvergent -> absolute
       ) ++ hyperbolic
     )
   }
@@ -1363,6 +1422,699 @@ object Transcendental {
   }
 
   /* ------------------------------------------------------------------ the small shared steps */
+
+  /**
+   * [[TermsHalve]], which is where the exponential's absolute convergence is decided.
+   *
+   * Past the index at which `2 * abs x` is reached, each term of the series is at most half the
+   * one before it. That is the whole of what makes the tail geometric, and the index comes from
+   * `Peano.NUM_CEIL_LE` rather than from anything about `exp`.
+   *
+   * == What owes a condition, which is three things and none of them is left assumed ==
+   *
+   * `Ring` unfolds `div`, so moving a quotient into a numerator times a reciprocal owes nothing,
+   * which is what `Field`'s own docstring says of the two normal forms. What does owe something
+   * is cancellation, asked at `NUM_FACT i` and at `NUM_FACT (SUC i)`, and the identity
+   * `inv f = r * inv (f * r)`, which is `Field`'s and carries `~(f = 0)` and `~(r = 0)`. All
+   * three are discharged here: the factorials by `NUM_FACT_POSITIVE` across the embedding, and
+   * the successor by `NUM_REAL_SUC` with `NUM_REAL_NONNEG` under it.
+   *
+   * That identity is why the relation between the two reciprocals costs no fact about zero
+   * divisors. Deriving it from `f * (v - r * w) = 0` would need one, and that is a case analysis
+   * this development does not have to do.
+   *
+   * == The estimate is assembled forwards, and that is not a style choice ==
+   *
+   * Every equation here is proved in the direction the terms already stand and then handed to a
+   * **schematic implication** over real variables, which is specialised afterwards:
+   * `lhs = (a * p) * w ==> rhs = p * (r * w) ==> 2 * a <= r ==> 0 <= p * w ==> lhs <= 1/2 * rhs`.
+   * The alternative is to rewrite backwards inside an inequality, and the shape this file uses
+   * for that reaches the arguments of one relation and no further. What `Linarith` does with the
+   * schematic is multiply `2 * a <= r` by `0 <= p * w`, one product of degree three, which is
+   * inside what the procedure decides. Nothing is put to it with a quotient in it.
+   */
+  private def termsHalveFromAnIndex(
+    logic: Logic,
+    linarith: Linarith,
+    field: Field,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    peano: Peano,
+    coding: Coding,
+    limit: Limit
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val ring = series.ring
+    val order = limit.magnitude.order
+    val x = Term.variable("x", values)
+    val i = Term.variable("i", numbers)
+
+    def headOf(term: Term): Either[LogicError, Term] = term match {
+      case App(head, _) => Right(head)
+      case other        => Left(NotOfForm("an application to take the head of", other))
+    }
+
+    def nonZero(positive: Kernel.Thm, term: Term): Either[LogicError, Kernel.Thm] =
+      order.fact(Positivity.NonZero).flatMap(rules.spec(term, _)).flatMap(rules.mp(_, positive))
+
+    def discharged(condition: Term, proof: Kernel.Thm, theorem: Kernel.Thm) =
+      rules.disch(condition, theorem).flatMap(rules.mp(_, proof))
+
+    for {
+      /* ------------------------------------------------------------------ everything, parsed */
+
+      atIndex <- Parser.term(theory, notation, "real_of_num (NUM_FACT (i:num))", values)
+      atSuccessor <- Parser.term(
+        theory, notation, "real_of_num (NUM_FACT (SUC (i:num)))", values)
+      successorIndex <- Parser.term(theory, notation, "SUC (i:num)", numbers)
+      embedded <- Parser.term(theory, notation, "real_of_num (SUC (i:num))", values)
+      embeddedIndex <- Parser.term(theory, notation, "real_of_num (i:num)", values)
+      factorialHere <- Parser.term(theory, notation, "NUM_FACT (i:num)", numbers)
+      reciprocal <- Parser.term(
+        theory, notation, "inv (real_of_num (NUM_FACT (i:num)))", values)
+      nextReciprocal <- Parser.term(
+        theory, notation, "inv (real_of_num (NUM_FACT (SUC (i:num))))", values)
+      splitProduct <- Parser.term(
+        theory,
+        notation,
+        "real_of_num (NUM_FACT (i:num)) * real_of_num (SUC (i:num))",
+        values)
+      overSplit <- Parser.term(
+        theory,
+        notation,
+        "real_of_num (SUC (i:num)) * " +
+          "inv (real_of_num (NUM_FACT (i:num)) * real_of_num (SUC (i:num)))",
+        values)
+      overSuccessor <- Parser.term(
+        theory,
+        notation,
+        "real_of_num (SUC (i:num)) * inv (real_of_num (NUM_FACT (SUC (i:num))))",
+        values)
+      powerAt <- Parser.term(theory, notation, "Power (x:real) (i:num)", values)
+      powerAtSuccessor <- Parser.term(
+        theory, notation, "Power (x:real) (SUC (i:num))", values)
+      quotientAt <- Parser.term(
+        theory, notation, "Power (x:real) (i:num) / real_of_num (NUM_FACT (i:num))", values)
+      quotientAtSuccessor <- Parser.term(
+        theory,
+        notation,
+        "Power (x:real) (SUC (i:num)) / real_of_num (NUM_FACT (SUC (i:num)))",
+        values)
+      here <- Parser.term(theory, notation, "abs (x:real)", values)
+      magnitudeOfPower <- Parser.term(theory, notation, "abs (Power (x:real) (i:num))", values)
+      termHere <- Parser.term(
+        theory,
+        notation,
+        "abs (Power (x:real) (i:num) / real_of_num (NUM_FACT (i:num)))",
+        values)
+      termNext <- Parser.term(
+        theory,
+        notation,
+        "abs (Power (x:real) (SUC (i:num)) / real_of_num (NUM_FACT (SUC (i:num))))",
+        values)
+
+      magnitudeConstant <- headOf(here)
+      embeddingConstant <- headOf(embeddedIndex)
+      inverseConstant <- headOf(reciprocal)
+      scaledHead <- headOf(overSplit)
+
+      absMul <- limit.magnitude.fact(Magnitude.Multiplicative)
+      absOfNonNegative <- limit.magnitude.fact(Magnitude.OfNonNegative)
+      absNonNegative <- limit.magnitude.fact(Magnitude.AbsNonNegative)
+
+      /* --------------------------------------- positivity, and the three conditions discharged */
+
+      positiveAtIndex <- factorialEmbedsPositively(logic, linarith, peano, coding, i, atIndex)
+      positiveAtSuccessor <- factorialEmbedsPositively(
+        logic, linarith, peano, coding, successorIndex, atSuccessor)
+      cancels <- inverseCancels(logic, limit, theory, notation, positiveAtIndex, atIndex)
+      cancelsNext <- inverseCancels(
+        logic, limit, theory, notation, positiveAtSuccessor, atSuccessor)
+
+      reciprocalNonNegative <- linarith
+        .prove("!v:real. !f:real. 0 < f ==> f * v = 1 ==> 0 <= v")
+        .flatMap(rules.specAll(_, List(reciprocal, atIndex)))
+        .flatMap(rules.mp(_, positiveAtIndex))
+        .flatMap(rules.mp(_, cancels))
+      nextReciprocalNonNegative <- linarith
+        .prove("!v:real. !f:real. 0 < f ==> f * v = 1 ==> 0 <= v")
+        .flatMap(rules.specAll(_, List(nextReciprocal, atSuccessor)))
+        .flatMap(rules.mp(_, positiveAtSuccessor))
+        .flatMap(rules.mp(_, cancelsNext))
+
+      embeddedSuccessor <- peano.fact(Peano.EmbedsSuccessor).flatMap(rules.spec(i, _))
+      indexNonNegative <- peano.fact(Peano.EmbedsNonNegative).flatMap(rules.spec(i, _))
+      embeddedPositive <- linarith
+        .prove("!r:real. !m:real. r = m + 1 ==> 0 <= m ==> 0 < r")
+        .flatMap(rules.specAll(_, List(embedded, embeddedIndex)))
+        .flatMap(rules.mp(_, embeddedSuccessor))
+        .flatMap(rules.mp(_, indexNonNegative))
+
+      factorialNotZero <- nonZero(positiveAtIndex, atIndex)
+      successorNotZero <- nonZero(embeddedPositive, embedded)
+
+      /* ------------------------------------------- the two reciprocals, and what relates them */
+
+      factorialStep <- coding.fact(Coding.FactorialAtSuccessor).flatMap(rules.spec(i, _))
+      carriedStep <- Conv.apTerm(embeddingConstant, factorialStep)
+      productOfEmbeddings <- peano
+        .fact(Peano.EmbedsProduct)
+        .flatMap(rules.specAll(_, List(factorialHere, successorIndex)))
+      splitDenominator <- Conv.trans(carriedStep, productOfEmbeddings)
+
+      overSplitEquation <- LogicError.lift(Term.eq(reciprocal, overSplit)).flatMap(field.prove)
+      cleared <- discharged(factorialNotZero.conclusion, factorialNotZero, overSplitEquation)
+        .flatMap(discharged(successorNotZero.conclusion, successorNotZero, _))
+      foldedInner <- Conv.sym(splitDenominator).flatMap(Conv.apTerm(inverseConstant, _))
+      foldedOuter <- Conv.apTerm(scaledHead, foldedInner)
+      relation <- Conv.trans(cleared, foldedOuter)
+
+      /* ------------------------- each term as a magnitude times a reciprocal, proved forwards */
+
+      productHere <- Parser.term(
+        theory,
+        notation,
+        "Power (x:real) (i:num) * inv (real_of_num (NUM_FACT (i:num)))",
+        values)
+      productNext <- Parser.term(
+        theory,
+        notation,
+        "Power (x:real) (SUC (i:num)) * inv (real_of_num (NUM_FACT (SUC (i:num))))",
+        values)
+      timesConstant <- headOf(scaledHead)
+      byMagnitude <- LogicError.lift(Term.app(timesConstant, magnitudeOfPower))
+
+      asProduct <- LogicError.lift(Term.eq(quotientAt, productHere)).flatMap(ring.prove)
+      asProductNext <- LogicError
+        .lift(Term.eq(quotientAtSuccessor, productNext))
+        .flatMap(ring.prove)
+
+      collapseHere <- rules
+        .spec(reciprocal, absOfNonNegative)
+        .flatMap(rules.mp(_, reciprocalNonNegative))
+      collapseNext <- rules
+        .spec(nextReciprocal, absOfNonNegative)
+        .flatMap(rules.mp(_, nextReciprocalNonNegative))
+
+      termHereIs <- Conv
+        .apTerm(magnitudeConstant, asProduct)
+        .flatMap(opening =>
+          rules
+            .specAll(absMul, List(powerAt, reciprocal))
+            .flatMap(Conv.trans(opening, _)))
+        .flatMap(split =>
+          Conv.apTerm(byMagnitude, collapseHere).flatMap(Conv.trans(split, _)))
+
+      magnitudeAtSuccessor <- Parser.term(
+        theory, notation, "abs (Power (x:real) (SUC (i:num)))", values)
+      byMagnitudeNext <- LogicError.lift(Term.app(timesConstant, magnitudeAtSuccessor))
+      termNextIs <- Conv
+        .apTerm(magnitudeConstant, asProductNext)
+        .flatMap(opening =>
+          rules
+            .specAll(absMul, List(powerAtSuccessor, nextReciprocal))
+            .flatMap(Conv.trans(opening, _)))
+        .flatMap(split =>
+          Conv.apTerm(byMagnitudeNext, collapseNext).flatMap(Conv.trans(split, _)))
+
+      /* ------------------------------------- the successor's magnitude, and the two shapes */
+
+      powerStep <- series.fact(Series.PowerAtSuccessor).flatMap(rules.specAll(_, List(x, i)))
+      magnitudeStep <- Conv
+        .apTerm(magnitudeConstant, powerStep)
+        .flatMap(opening =>
+          rules.specAll(absMul, List(x, powerAt)).flatMap(Conv.trans(opening, _)))
+
+      leftShape <- Conv
+        .apTerm(timesConstant, magnitudeStep)
+        .flatMap(Conv.apThm(_, nextReciprocal))
+        .flatMap(Conv.trans(termNextIs, _))
+      rightShape <- Conv
+        .apTerm(byMagnitude, relation)
+        .flatMap(Conv.trans(termHereIs, _))
+
+      /* ---------------------------------------------------------------- the estimate itself */
+
+      powerNonNegative <- rules.spec(powerAt, absNonNegative)
+      productNonNegative <- order
+        .multiplyNonNegatives
+        .flatMap(rules.specAll(_, List(magnitudeOfPower, nextReciprocal)))
+        .flatMap(rules.mp(_, powerNonNegative))
+        .flatMap(rules.mp(_, nextReciprocalNonNegative))
+
+      bound <- Parser.proposition(
+        theory, notation, "2 * abs (x:real) <= real_of_num (SUC (i:num))")
+      assumedBound <- LogicError.lift(Kernel.assume(bound))
+
+      estimate <- linarith
+        .prove(
+          "!lhs:real. !rhs:real. !a:real. !p:real. !w:real. !r:real. " +
+            "lhs = (a * p) * w ==> rhs = p * (r * w) ==> 2 * a <= r ==> 0 <= p * w ==> " +
+            "lhs <= 1 / 2 * rhs")
+        .flatMap(rules.specAll(
+          _, List(termNext, termHere, here, magnitudeOfPower, nextReciprocal, embedded)))
+        .flatMap(rules.mp(_, leftShape))
+        .flatMap(rules.mp(_, rightShape))
+        .flatMap(rules.mp(_, assumedBound))
+        .flatMap(rules.mp(_, productNonNegative))
+
+      result <- rules
+        .disch(bound, estimate)
+        .flatMap(rules.genAll(_, List(x, i)))
+    } yield result
+  }
+
+  /**
+   * `|- !x m. 2 * abs x <= real_of_num m ==> !j. T (m + j) <= Power (1/2) j * T m`, where `T` is
+   * the exponential's term at `x` read through `abs`.
+   *
+   * [[TermsHalve]] once per step, and the whole of the induction is carrying the bound forward:
+   * the halving asks for `2 * abs x <= real_of_num (SUC (m + j))` and what is assumed is the
+   * same at `m`, so what a step spends beyond the hypothesis is `m <= SUC (m + j)` on `num`
+   * carried across the embedding — `NUM_LE_ADD` and `NUM_LE_SUC` with one transitivity.
+   *
+   * **The index the bound holds from is not named here**, and that is the point of stating it at
+   * a variable: it is whatever `Peano.NUM_CEIL_LE` returns for `2 * abs x`, and this induction
+   * never mentions `NUM_CEIL`.
+   */
+  private def tailIsGeometric(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    peano: Peano,
+    induct: Induct,
+    halving: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val x = Term.variable("x", values)
+    val m = Term.variable("m", numbers)
+
+    val termsText = "\\i:num. abs (Power (x:real) i / real_of_num (NUM_FACT i))"
+
+    def sidesOf(proposition: Term): Either[LogicError, (Term, Term)] =
+      proposition match {
+        case App(App(_, left), right) => Right((left, right))
+        case other                    => Left(NotOfForm("a comparison of two terms", other))
+      }
+
+    def argumentOf(term: Term): Either[LogicError, Term] = term match {
+      case App(_, argument) => Right(argument)
+      case other            => Left(NotOfForm("an application to take the argument of", other))
+    }
+
+    for {
+      half <- Parser.term(theory, notation, "(1:real) / 2", values)
+      doubled <- Parser.term(theory, notation, "2 * abs (x:real)", values)
+      embeddedIndex <- Parser.term(theory, notation, "real_of_num (m:num)", values)
+
+      bound <- Parser.proposition(
+        theory, notation, "2 * abs (x:real) <= real_of_num (m:num)")
+      assumedBound <- LogicError.lift(Kernel.assume(bound))
+
+      collapseIndex <- peano.fact(Peano.AddAtZero).flatMap(rules.spec(m, _))
+      unitPower <- series.fact(Series.PowerAtZero).flatMap(rules.spec(half, _))
+      indexAtZero <- Rewrite.Rule.of(logic, collapseIndex)
+      powerAtZero <- Rewrite.Rule.of(logic, unitPower)
+
+      statement <- Parser.proposition(
+        theory,
+        notation,
+        // Beta-reduced as written, because the driver compares what it proves with what it was
+        // handed and every rewriting under it normalises. A statement carrying the redex is a
+        // different term and the refusal names neither end.
+        "!j:num. abs (Power (x:real) (NUM_ADD (m:num) j) / " +
+          "real_of_num (NUM_FACT (NUM_ADD (m:num) j))) <= " +
+          "Power ((1:real) / 2) j * " +
+          "abs (Power (x:real) (m:num) / real_of_num (NUM_FACT (m:num)))")
+
+      everywhere <- induct.proveBy(
+        statement,
+        base =>
+          Induct.afterRewriting(Vector(indexAtZero, powerAtZero), base) { goal =>
+            for {
+              ends <- sidesOf(goal)
+              settled <- linarith
+                .prove("!t:real. t <= 1 * t")
+                .flatMap(rules.spec(ends._1, _))
+            } yield settled
+          },
+        step =>
+          for {
+            // `m + SUC j = SUC (m + j)`, which is what puts the goal where the halving applies.
+            shift <- peano
+              .fact(Peano.AddAtSuccessor)
+              .flatMap(rules.specAll(_, List(m, step.variable)))
+            successorOfInner <- Term
+              .destEq(shift.conclusion)
+              .map(_._2)
+              .toRight(NotOfForm("an equation", shift.conclusion))
+            inner <- argumentOf(successorOfInner)
+
+            // `m <= SUC (m + j)`, on `num` and then across the embedding.
+            belowSum <- peano
+              .fact(Peano.AtMostSum)
+              .flatMap(rules.specAll(_, List(m, step.variable)))
+            belowSuccessor <- peano.fact(Peano.AtMostSuccessor).flatMap(rules.spec(inner, _))
+            reaches <- rules
+              .conjIntro(belowSum, belowSuccessor)
+              .flatMap(both =>
+                peano
+                  .fact(Peano.Transitive)
+                  .flatMap(rules.specAll(_, List(m, inner, successorOfInner)))
+                  .flatMap(rules.mp(_, both)))
+            carried <- peano
+              .fact(Peano.EmbedsOrder)
+              .flatMap(rules.specAll(_, List(m, successorOfInner)))
+              .flatMap(rules.mp(_, reaches))
+            embeddedSides <- sidesOf(carried.conclusion)
+
+            reachedBound <- linarith
+              .prove("!a:real. !p:real. !q:real. a <= p ==> p <= q ==> a <= q")
+              .flatMap(rules.specAll(_, List(doubled, embeddedIndex, embeddedSides._2)))
+              .flatMap(rules.mp(_, assumedBound))
+              .flatMap(rules.mp(_, carried))
+
+            halved <- rules
+              .specAll(halving, List(x, inner))
+              .flatMap(rules.mp(_, reachedBound))
+            halvedSides <- sidesOf(halved.conclusion)
+            hypothesisSides <- sidesOf(step.hypothesis.conclusion)
+            previous <- argumentOf(halvedSides._2)
+            scaleAndTail <- hypothesisSides._2 match {
+              case App(App(_, scale), tail) => Right((scale, tail))
+              case other => Left(NotOfForm("a scaled term", other))
+            }
+
+            powerStep <- series
+              .fact(Series.PowerAtSuccessor)
+              .flatMap(rules.specAll(_, List(half, step.variable)))
+            indexRule <- Rewrite.Rule.of(logic, shift)
+            powerRule <- Rewrite.Rule.of(logic, powerStep)
+
+            result <- Induct.afterRewriting(Vector(indexRule, powerRule), step.goal) { _ =>
+              linarith
+                .prove(
+                  "!u:real. !v:real. !p:real. !t:real. " +
+                    "u <= 1 / 2 * v ==> v <= p * t ==> u <= (1 / 2 * p) * t")
+                .flatMap(rules.specAll(
+                  _, List(halvedSides._1, previous, scaleAndTail._1, scaleAndTail._2)))
+                .flatMap(rules.mp(_, halved))
+                .flatMap(rules.mp(_, step.hypothesis))
+            }
+          } yield result
+      )
+
+      result <- rules
+        .disch(bound, everywhere)
+        .flatMap(rules.genAll(_, List(x, m)))
+    } yield result
+  }
+
+  /**
+   * [[AbsolutelyConvergent]], which is what `Limit.SUM_CAUCHY_PRODUCT` asks of both its arguments
+   * and what [[ExponentialAboveTwo]] did not buy.
+   *
+   * == Why the comparison test is not the instrument ==
+   *
+   * `Limit.SUM_COMPARISON` asks for domination at **every** index, and a uniform geometric
+   * dominator for an arbitrary `x` wants `(2 * abs x)^i <= C * i!`, a fact about `num` this
+   * repository does not have. Its base-two case, `Coding.NUM_POW_LE_FACT`, is two hundred and
+   * twenty-seven lines, and the general one wants a split at `N` and a monotonicity of the power
+   * in its exponent on top of that. **That was measured before this route was chosen** rather
+   * than after.
+   *
+   * What is used instead is `Limit.MONOTONE_CONVERGES` on the partial sums directly. The terms
+   * are non-negative so the sums increase, and the bound comes from **splitting** the series
+   * rather than from dominating it: `Peano.NUM_CEIL_LE` gives `M` with
+   * `2 * abs x <= real_of_num M`, [[TailIsGeometric]] puts everything past `M` under a geometric
+   * series, and everything before it is one number.
+   *
+   * == The split, and where `SUM_REINDEX` does the work ==
+   *
+   * `NUM_LE_TOTAL` divides the indices and the two cases are answered differently. Up to `M` the
+   * partial sums are under `Sum T M` by `Limit.SUM_GROWS`. Past it the index is `M + d`, and
+   * `Series.SUM_REINDEX` reads `Sum (\u. T (M + u)) d` as a difference of two partial sums, so
+   * the tail estimate becomes an estimate on `Sum T (M + d)` with no arithmetic in between.
+   * `SUM_SCALE_RIGHT` takes the constant `T M` out of the dominating sum and what is left is the
+   * geometric series under two, which is the same three facts `ExponentialAboveTwo` uses.
+   */
+  private def absolutelyConvergentEverywhere(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Series,
+    peano: Peano,
+    limit: Limit,
+    geometricTail: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val order = limit.magnitude.order
+    val x = Term.variable("x", values)
+    val i = Term.variable("i", numbers)
+    val n = Term.variable("n", numbers)
+    val d = Term.variable("d", numbers)
+
+    val termsText = "\\i:num. abs (Power (x:real) i / real_of_num (NUM_FACT i))"
+    val ceilingText = "NUM_CEIL (2 * abs (x:real))"
+    val quotientAtCeiling =
+      "Power (x:real) (" + ceilingText + ") / real_of_num (NUM_FACT (" + ceilingText + "))"
+    val termAtCeiling = "abs (" + quotientAtCeiling + ")"
+
+    def opened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    def sidesOf(proposition: Term): Either[LogicError, (Term, Term)] =
+      proposition match {
+        case App(App(_, left), right) => Right((left, right))
+        case other                    => Left(NotOfForm("two terms of one relation", other))
+      }
+
+    def chain(
+      lower: Kernel.Thm,
+      upper: Kernel.Thm,
+      small: Term,
+      middle: Term,
+      large: Term
+    ): Either[LogicError, Kernel.Thm] =
+      linarith
+        .prove("!p:real. !q:real. !r:real. p <= q ==> q <= r ==> p <= r")
+        .flatMap(rules.specAll(_, List(small, middle, large)))
+        .flatMap(rules.mp(_, lower))
+        .flatMap(rules.mp(_, upper))
+
+    for {
+      /* ------------------------------------------------------------------- everything, parsed */
+
+      terms <- Parser.term(theory, notation, termsText, Type.fun(numbers, values))
+      partial <- Parser.term(
+        theory, notation, "Sum (" + termsText + ")", Type.fun(numbers, values))
+      ceiling <- Parser.term(theory, notation, ceilingText, numbers)
+      half <- Parser.term(theory, notation, "(1:real) / 2", values)
+      halves <- Parser.term(
+        theory, notation, "\\u:num. Power ((1:real) / 2) u", Type.fun(numbers, values))
+      doubled <- Parser.term(theory, notation, "2 * abs (x:real)", values)
+      quotientAtIndex <- Parser.term(
+        theory, notation, "Power (x:real) (i:num) / real_of_num (NUM_FACT (i:num))", values)
+      quotientAtN <- Parser.term(
+        theory, notation, "Power (x:real) (n:num) / real_of_num (NUM_FACT (n:num))", values)
+      quotientAtM <- Parser.term(theory, notation, quotientAtCeiling, values)
+      atCeiling <- Parser.term(theory, notation, termAtCeiling, values)
+      sumAtCeiling <- Parser.term(
+        theory, notation, "Sum (" + termsText + ") (" + ceilingText + ")", values)
+      sumAtIndex <- Parser.term(theory, notation, "Sum (" + termsText + ") (n:num)", values)
+      sumAtGap <- Parser.term(
+        theory,
+        notation,
+        "Sum (" + termsText + ") (NUM_ADD (" + ceilingText + ") (d:num))",
+        values)
+      shifted <- Parser.term(
+        theory,
+        notation,
+        "\\u:num. abs (Power (x:real) (NUM_ADD (" + ceilingText + ") u) / " +
+          "real_of_num (NUM_FACT (NUM_ADD (" + ceilingText + ") u)))",
+        Type.fun(numbers, values))
+      dominating <- Parser.term(
+        theory,
+        notation,
+        "\\u:num. Power ((1:real) / 2) u * (" + termAtCeiling + ")",
+        Type.fun(numbers, values))
+      geometricAtGap <- Parser.term(
+        theory, notation, "Sum (\\u:num. Power ((1:real) / 2) u) (d:num)", values)
+      shiftedAtGap <- Parser.term(
+        theory,
+        notation,
+        "Sum (\\u:num. abs (Power (x:real) (NUM_ADD (" + ceilingText + ") u) / " +
+          "real_of_num (NUM_FACT (NUM_ADD (" + ceilingText + ") u)))) (d:num)",
+        values)
+      dominatingAtGap <- Parser.term(
+        theory,
+        notation,
+        "Sum (\\u:num. Power ((1:real) / 2) u * (" + termAtCeiling + ")) (d:num)",
+        values)
+      powerAtGap <- Parser.term(theory, notation, "Power ((1:real) / 2) (d:num)", values)
+      two <- Parser.term(theory, notation, "2:real", values)
+      ceilingBound <- Parser.term(
+        theory,
+        notation,
+        "Sum (" + termsText + ") (" + ceilingText + ") + 2 * (" + termAtCeiling + ")",
+        values)
+
+      absNonNegative <- limit.magnitude.fact(Magnitude.AbsNonNegative)
+      nonNegative <- rules.spec(quotientAtIndex, absNonNegative).flatMap(rules.gen(i, _))
+      atCeilingNonNegative <- rules.spec(quotientAtM, absNonNegative)
+      atIndexNonNegative <- rules.spec(quotientAtN, absNonNegative)
+
+      /* ---------------------------------------------------- the partial sums increase, at all */
+
+      recurrence <- series
+        .fact(Series.AtSuccessor)
+        .flatMap(rules.specAll(_, List(terms, n)))
+        .flatMap(opened)
+      recurrenceSides <- Term
+        .destEq(recurrence.conclusion)
+        .toRight(NotOfForm("an equation", recurrence.conclusion))
+      summands <- sidesOf(recurrenceSides._2)
+      increasing <- linarith
+        .prove("!p:real. !q:real. !t:real. q = p + t ==> 0 <= t ==> p <= q")
+        .flatMap(rules.specAll(_, List(summands._1, recurrenceSides._1, summands._2)))
+        .flatMap(rules.mp(_, recurrence))
+        .flatMap(rules.mp(_, atIndexNonNegative))
+        .flatMap(rules.gen(n, _))
+
+      /* ------------------------------------------- the index, and the tail geometric under it */
+
+      magnitudeNonNegative <- rules.spec(x, absNonNegative)
+      doubledNonNegative <- linarith
+        .prove("!a:real. 0 <= a ==> 0 <= 2 * a")
+        .flatMap(theorem =>
+          sidesOf(magnitudeNonNegative.conclusion)
+            .flatMap(sides => rules.specAll(theorem, List(sides._2)))
+            .flatMap(rules.mp(_, magnitudeNonNegative)))
+      reachesCeiling <- peano
+        .fact(Peano.CeilingAtLeast)
+        .flatMap(rules.spec(doubled, _))
+        .flatMap(rules.mp(_, doubledNonNegative))
+      tail <- rules
+        .specAll(geometricTail, List(x, ceiling))
+        .flatMap(rules.mp(_, reachesCeiling))
+
+      /* ------------------------------------------------------ the geometric series under two */
+
+      positivePower <- series
+        .fact(Series.PowerPositive)
+        .flatMap(rules.spec(half, _))
+        .flatMap(theorem => linarith.prove("(0:real) < (1:real) / 2").flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.spec(d, _))
+      geometric <- series.fact(Series.Geometric).flatMap(rules.specAll(_, List(half, d)))
+      geometricUnderTwo <- linarith
+        .prove("!p:real. !s:real. ((1:real) / 2 - 1) * s = p - 1 ==> 0 < p ==> s <= 2")
+        .flatMap(rules.specAll(_, List(powerAtGap, geometricAtGap)))
+        .flatMap(rules.mp(_, geometric))
+        .flatMap(rules.mp(_, positivePower))
+
+      /* ------------------------------------------------------------- the tail sum under twice */
+
+      dominated <- series
+        .fact(Series.Monotone)
+        .flatMap(rules.specAll(_, List(shifted, dominating)))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, tail))
+        .flatMap(rules.spec(d, _))
+      takenOut <- series
+        .fact(Series.ScaledRight)
+        .flatMap(rules.specAll(_, List(atCeiling, halves, d)))
+        .flatMap(opened)
+      scaled <- order
+        .fact(Order.MultiplyLe)
+        .flatMap(rules.specAll(_, List(atCeiling, geometricAtGap, two)))
+        .flatMap(rules.mp(_, atCeilingNonNegative))
+        .flatMap(rules.mp(_, geometricUnderTwo))
+      scaledSides <- sidesOf(scaled.conclusion)
+      throughTheScale <- onRight(takenOut, dominated)
+      tailSum <- chain(
+        throughTheScale, scaled, shiftedAtGap, scaledSides._1, scaledSides._2)
+
+      /* ---------------------------------------------- the bound at every index, by two cases */
+
+      reindex <- series
+        .fact(Series.Reindex)
+        .flatMap(rules.specAll(_, List(terms, ceiling, d)))
+        .flatMap(opened)
+      pastTheIndex <- linarith
+        .prove("!s:real. !g:real. !h:real. !t:real. g = s - h ==> g <= 2 * t ==> s <= h + 2 * t")
+        .flatMap(rules.specAll(_, List(sumAtGap, shiftedAtGap, sumAtCeiling, atCeiling)))
+        .flatMap(rules.mp(_, reindex))
+        .flatMap(rules.mp(_, tailSum))
+
+      grows <- limit
+        .fact(Limit.Grows)
+        .flatMap(rules.spec(terms, _))
+        .flatMap(rules.mp(_, nonNegative))
+        .flatMap(opened)
+      belowIndex <- Parser.proposition(
+        theory, notation, "NUM_LE (n:num) (" + ceilingText + ")")
+      assumedBelow <- LogicError.lift(Kernel.assume(belowIndex))
+      beforeTheIndex <- rules
+        .specAll(grows, List(n, ceiling))
+        .flatMap(rules.mp(_, assumedBelow))
+        .flatMap(theorem =>
+          linarith
+            .prove("!s:real. !h:real. !t:real. s <= h ==> 0 <= t ==> s <= h + 2 * t")
+            .flatMap(rules.specAll(_, List(sumAtIndex, sumAtCeiling, atCeiling)))
+            .flatMap(rules.mp(_, theorem))
+            .flatMap(rules.mp(_, atCeilingNonNegative)))
+
+      aboveIndex <- Parser.proposition(
+        theory, notation, "NUM_LE (" + ceilingText + ") (n:num)")
+      assumedAbove <- LogicError.lift(Kernel.assume(aboveIndex))
+      orderDefinition <- peano.definition(Peano.NonStrictOrder)
+      unfolded <- Conv
+        .unfold(orderDefinition, List(ceiling, n))
+        .flatMap(equation =>
+          Term
+            .destEq(equation.conclusion)
+            .toRight(NotOfForm("an equation", equation.conclusion))
+            .flatMap(sides => Conv.betaNormalise(sides._2).flatMap(Conv.trans(equation, _))))
+      witness <- LogicError.lift(Kernel.eqMp(unfolded, assumedAbove))
+      inner <- Parser.proposition(
+        theory, notation, "NUM_ADD (" + ceilingText + ") (d:num) = n:num")
+      assumedInner <- LogicError.lift(Kernel.assume(inner))
+      carriedIndex <- Conv.apTerm(partial, assumedInner)
+      atTheIndex <- onLeft(carriedIndex, pastTheIndex)
+      afterTheIndex <- rules.existsElim(witness, d, atTheIndex)
+
+      total <- peano.fact(Peano.Total).flatMap(rules.specAll(_, List(n, ceiling)))
+      // Not discharged: `disjElim` discharges each disjunct itself and asks only that the two
+      // cases prove the same thing.
+      everyIndex <- rules
+        .disjElim(total, beforeTheIndex, afterTheIndex)
+        .flatMap(rules.gen(n, _))
+
+      /* ------------------------------------------------- bounded and increasing, so convergent */
+
+      boundClaim <- Parser.proposition(
+        theory, notation, "?b:real. !n:num. Sum (" + termsText + ") n <= b")
+      boundPredicate <- logic
+        .destExistsPredicate(boundClaim)
+        .toRight(NotOfForm("an existential quantification", boundClaim))
+      bounded <- rules.existsIntro(boundPredicate, ceilingBound, everyIndex)
+
+      converging <- limit
+        .fact(Limit.MonotoneConverges)
+        .flatMap(rules.spec(partial, _))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, increasing))
+        .flatMap(rules.mp(_, bounded))
+
+      result <- rules.gen(x, converging)
+    } yield result
+  }
 
   /** `|- 0 < real_of_num (NUM_FACT z)`, the factorial's positivity carried across the embedding. */
   private def factorialEmbedsPositively(

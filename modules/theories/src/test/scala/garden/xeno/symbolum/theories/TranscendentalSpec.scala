@@ -199,4 +199,94 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
       Parser.proposition(chain.widest.theory, chain.widest.notation, "ln 1 = 0")
     logarithm.isRight shouldBe true
   }
+  /**
+   * The absolute convergence does what it was built for, which is to feed the Cauchy product.
+   *
+   * `Limit.SUM_CAUCHY_PRODUCT` asks four things of its two series and two of them are absolute
+   * convergences. This asserts that [[Transcendental.AbsolutelyConvergent]] supplies one of
+   * those at an arbitrary real, and that `Limit.CONVERGES_ABSOLUTE` turns it into the other, the
+   * plain convergence of the signed series — which is the pair the addition theorem needs and
+   * which `EXP_ONE_ABOVE_TWO` supplies at `x = 1` and nowhere else.
+   *
+   * Both come out with `hypotheses` empty and with `x` still a variable, and the second is the
+   * half worth asserting: a theorem that held only at a particular real would satisfy every
+   * reading of the statement above and would be useless to the product.
+   */
+  "The exponential's series" should "converge absolutely at an arbitrary real, and so converge" in {
+    val rules = transcendental.logic.rules
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val x = Term.variable("x", real)
+    val p = Term.variable("P", real)
+
+    val absolute = force(transcendental.fact(Transcendental.AbsolutelyConvergent))
+    val atAPoint = force(rules.spec(x, absolute))
+
+    atAPoint.hypotheses shouldBe empty
+    atAPoint.conclusion shouldBe proposition(
+      "?P:real. converges (Sum (\\i:num. abs (Power (x:real) i / real_of_num (NUM_FACT i)))) P")
+
+    // And the signed series converges, which is the second of the product's four antecedents.
+    val terms = force(
+      Parser.term(
+        transcendental.theory,
+        transcendental.notation,
+        "\\i:num. Power (x:real) i / real_of_num (NUM_FACT i)",
+        Type.fun(numbers, real)))
+    val assumed = force(
+      LogicError.lift(
+        Kernel.assume(proposition(
+          "converges (Sum (\\i:num. abs (Power (x:real) i / real_of_num (NUM_FACT i)))) (P:real)"))))
+    val signed = force(
+      rules
+        .specAll(force(chain.limit.absolute), List(terms, p))
+        .flatMap(theorem =>
+          Conv
+            .betaNormalise(theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+            .flatMap(rules.mp(_, assumed))))
+
+    val settled = force(rules.existsElim(atAPoint, p, signed))
+
+    settled.hypotheses shouldBe empty
+    settled.conclusion shouldBe proposition(
+      "?m:real. converges (Sum (\\i:num. Power (x:real) i / real_of_num (NUM_FACT i))) m")
+  }
+
+  /**
+   * It rests on the monotone convergence theorem and on the reindexing, and **not** on the
+   * comparison test.
+   *
+   * That last one is the claim the docstring makes about itself and the only one a reader cannot
+   * check from the statement: `SUM_COMPARISON` is the obvious instrument for a convergence of
+   * this shape and it is deliberately not used, because it asks for domination at every index
+   * and a uniform geometric dominator for an arbitrary `x` wants a fact about `num` this
+   * repository does not have. What replaces it is a **split**, and `SUM_REINDEX` is what does
+   * the splitting, so the pair of assertions below is the route rather than a remark about it.
+   *
+   * `EXP_ONE_ABOVE_TWO` is asserted on the other side of the same line: it **does** rest on the
+   * comparison test, which is what makes the absence above a choice rather than an accident.
+   */
+  it should "rest on the monotone convergence and the reindexing, and not on the comparison test" in {
+    val absolute = force(transcendental.fact(Transcendental.AbsolutelyConvergent))
+
+    val route = Set(
+      force(chain.limit.fact(Limit.MonotoneConverges)).conclusion,
+      force(chain.series.fact(Series.Reindex)).conclusion,
+      force(transcendental.fact(Transcendental.TailIsGeometric)).conclusion,
+      force(transcendental.fact(Transcendental.TermsHalve)).conclusion)
+
+    Derivation.restingOn(absolute, route) shouldBe route
+
+    val comparison = force(chain.limit.fact(Limit.Comparison)).conclusion
+
+    Derivation.restingOn(absolute, Set(comparison)) shouldBe empty
+    Derivation.restingOn(
+      force(transcendental.fact(Transcendental.ExponentialAboveTwo)),
+      Set(comparison)) shouldBe Set(comparison)
+
+    // And completeness is reached, through the monotone convergence and nowhere else.
+    Derivation.axiomsOf(absolute) should contain(
+      force(chain.reals.axiom("COMPLETENESS")).conclusion)
+  }
 }

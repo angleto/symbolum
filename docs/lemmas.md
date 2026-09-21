@@ -731,7 +731,10 @@ they have least appetite for working out how it is produced.
   COSH_PLUS_SINH           !x:real. cosh x + sinh x = exp x
   COSH_ZERO                cosh 0 = 1
   COS_ZERO                 cos 0 = 1
+  EXP_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power x z / real_of_num (NUM_FACT z)))) y
   EXP_ONE_ABOVE_TWO        2 < exp 1
+  EXP_TAIL_GEOMETRIC       !x:real. !y:num. 2 * abs x <= real_of_num y ==> (!z:num. abs (Power x (y + z) / real_of_num (NUM_FACT (y + z))) <= Power (1 / 2) z * abs (Power x y / real_of_num (NUM_FACT y)))
+  EXP_TERM_HALVES          !x:real. !y:num. 2 * abs x <= real_of_num (SUC y) ==> abs (Power x (SUC y) / real_of_num (NUM_FACT (SUC y))) <= 1 / 2 * abs (Power x y / real_of_num (NUM_FACT y))
   EXP_ZERO                 exp 0 = 1
   SINH_ZERO                sinh 0 = 0
   SIN_ZERO                 sin 0 = 0

@@ -569,8 +569,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // before the run and met: all four bind two or more leading quantifiers, and `SUM_ABS`
     // binds `num -> real` then `num`, which is the one of the four with no pair sharing a type.
     // 599 and 596 with `ABS_POWER_LE`, 2026-09-21. One fact, one name, not shared.
-    library.entries.size shouldBe 599
-    library.names.distinct.size shouldBe 596
+    // 602 and 599 with the exponential's absolute convergence and the two lemmas under it,
+    // 2026-09-21. `CLAUDE.md`'s two figures move by **two** and **zero**: the halving and the
+    // geometric tail each bind `real` then `num`, and the convergence binds one quantifier.
+    library.entries.size shouldBe 602
+    library.names.distinct.size shouldBe 599
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
