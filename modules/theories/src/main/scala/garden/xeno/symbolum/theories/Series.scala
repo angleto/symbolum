@@ -292,6 +292,24 @@ object Series {
   val Diagonal: String = "SUM_DIAGONAL"
 
   /**
+   * `|- !x y n. Power (x + y) n =
+   * Sum (\i. real_of_num (NUM_CHOOSE n i) * (Power x i * Power y (n - i))) (SUC n)`
+   *
+   * The binomial theorem. It is the one fact in this file whose statement mentions a constant
+   * this development does not own: `NUM_CHOOSE` is `Peano`'s, and it is the reason this waited,
+   * since nothing anywhere defined a binomial coefficient until 2026-09-20.
+   *
+   * The sum runs to `SUC n` rather than to `n` because the range of a `Sum` is the indices
+   * **below** its bound, so `SUC n` is the `n + 1` entries a reader expects. Everything at or
+   * past that is zero anyway, which is `Peano.NUM_CHOOSE_ABOVE` and is spent inside the proof
+   * rather than left for a reader to notice.
+   *
+   * See [[binomialTheorem]] for what the step costs, which is four congruences of which exactly
+   * one carries a bound.
+   */
+  val Binomial: String = "POWER_BINOMIAL"
+
+  /**
    * `|- !n. Sum (\i. 0) n = 0`
    *
    * A sum of nothing is nothing, at every length, and it does **not** follow from `SUM_ZERO`, which
@@ -1042,6 +1060,30 @@ object Series {
       stepMinus <- peano.fact(Peano.SuccessorMinus)
       atMostFromBelow <- peano.fact(Peano.AtMostFromBelow)
       differences <- Rewrite.Rule.all(logic, Vector(subSelf, stepMinusSelf))
+      // The binomial theorem, which is the one fact here whose statement names a constant of
+      // `Peano` rather than of this development, and the reason it waited.
+      shiftFact <- byName.get(Shift).toRight(MissingDefinition(Shift))
+      binomialLinarith <- Linarith.construct(order)
+      binomial <- binomialTheorem(
+        driver,
+        logic,
+        binomialLinarith,
+        withProd,
+        notation,
+        Map(
+          Congruence -> congruence,
+          CongruenceBelow -> congruenceBelow,
+          Additive -> additive,
+          ScaledRight -> scaleRightFact,
+          AtZero -> atZero,
+          AtSuccessor -> atSuccessor,
+          Shift -> shiftFact,
+          PowerAtZero -> powerAtZero,
+          PowerAtSuccessor -> powerAtSuccessor
+        ),
+        peano
+      )
+
       diagonal <- summedDiagonal(
         driver, withProd, notation, recurrences ++ differences, additive, congruenceBelow,
         stepMinus, atMostFromBelow, atSuccessor)
@@ -1068,6 +1110,7 @@ object Series {
         Swapped -> swapped,
         Product -> productOfSums,
         Diagonal -> diagonal,
+        Binomial -> binomial,
         Halves -> halves,
         CongruenceBelow -> congruenceBelow,
         Geometric -> geometric
@@ -1404,6 +1447,389 @@ object Series {
    * rewriting having left the goal in a shape the instance does not answer, which is the way this
    * proof can go wrong silently.
    */
+  /**
+   * `|- !x y n. Power (x + y) n =
+   * Sum (\i. real_of_num (NUM_CHOOSE n i) * (Power x i * Power y (n - i))) (SUC n)`
+   *
+   * The binomial theorem, and the last thing between this repository and
+   * `exp (x + y) = exp x * exp y` on the combinatorial side. What it waited on was the
+   * coefficient: `NUM_CHOOSE` did not exist anywhere until 2026-09-20.
+   *
+   * == The step, in the order it is built ==
+   *
+   * [[Shift]] peels the **bottom** entry off the wide sum, and which end is not a preference. At
+   * the top the coefficient has already run past the diagonal, so the two sides no longer have
+   * the same number of terms; at the bottom nothing has moved. What is left, `\i. G (SUC i)`,
+   * splits by Pascal's rule into a column carrying an extra `x` and one carrying an extra `y`,
+   * and [[ScaledRight]] reads both back as the narrow sum times a factor.
+   *
+   * **Three of the four congruences are unconditional and the fourth is not**, and the fourth is
+   * where the work is. `NUM_SUB (SUC n) (SUC i) = NUM_SUB n i` holds at every `i`, so Pascal's
+   * split, the `x` column and the identification of the `y` column with a shifted sum all go
+   * through [[Congruence]]. What does **not** hold at every `i` is `SUC (n - i) = SUC n - i`,
+   * false above the diagonal and `Peano.NUM_SUC_SUB` under `i <= n`. That one needs
+   * [[CongruenceBelow]], and `Peano.NUM_LE_OF_LT_SUC` to turn the bound the congruence hands
+   * over, `i < SUC n`, into the bound the arithmetic asks for.
+   *
+   * `Peano.NUM_CHOOSE_ABOVE` is spent exactly once, on the entry the shift leaves at the top:
+   * `NUM_CHOOSE n (SUC n)` is zero, so the `y` column may be summed to `SUC n` rather than to `n`
+   * and the two sums have one length. Without it the assembly is short one term and no
+   * rearrangement recovers it.
+   *
+   * == The assembly is linear, and the hypothesis is spent before it ==
+   *
+   * Nine equations between sums go to `Linarith` at once, over real **variables**, and what closes
+   * it is that every product in sight is a sum against `x` or against `y`. The induction
+   * hypothesis is folded in **before** that call rather than passed to it: `Power (x + y) n` and
+   * `Sum g (SUC n)` are two atoms to a linear solver, so `l = (x + y) * p` with `p = s` beside it
+   * does not give `l = (x + y) * s`. Substituting one for the other is a rewrite and not an
+   * inference, and doing it late is the version of this proof that does not close.
+   */
+  private def binomialTheorem(
+    driver: Induct,
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    series: Map[String, Kernel.Thm],
+    peano: Peano
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val reals = TyApp(Real.TypeName, Nil)
+    val x = Term.variable("x", reals)
+    val y = Term.variable("y", reals)
+    val n = Term.variable("n", numbers)
+
+    val narrow = "\\i:num. real_of_num (NUM_CHOOSE (n:num) i) * " +
+      "(Power (x:real) i * Power (y:real) (NUM_SUB (n:num) i))"
+    val wide = "\\i:num. real_of_num (NUM_CHOOSE (SUC (n:num)) i) * " +
+      "(Power (x:real) i * Power (y:real) (NUM_SUB (SUC (n:num)) i))"
+    val wideStepped = "\\i:num. real_of_num (NUM_CHOOSE (SUC (n:num)) (SUC i)) * " +
+      "(Power (x:real) (SUC i) * Power (y:real) (NUM_SUB (SUC (n:num)) (SUC i)))"
+    val xColumn = "\\i:num. real_of_num (NUM_CHOOSE (n:num) i) * " +
+      "(Power (x:real) (SUC i) * Power (y:real) (NUM_SUB (n:num) i))"
+    val yColumn = "\\i:num. real_of_num (NUM_CHOOSE (n:num) (SUC i)) * " +
+      "(Power (x:real) (SUC i) * Power (y:real) (NUM_SUB (n:num) i))"
+    val bothColumns = "\\i:num. real_of_num (NUM_CHOOSE (n:num) i) * " +
+      "(Power (x:real) (SUC i) * Power (y:real) (NUM_SUB (n:num) i)) + " +
+      "real_of_num (NUM_CHOOSE (n:num) (SUC i)) * " +
+      "(Power (x:real) (SUC i) * Power (y:real) (NUM_SUB (n:num) i))"
+    val wideNarrow = "\\i:num. real_of_num (NUM_CHOOSE (n:num) i) * " +
+      "(Power (x:real) i * Power (y:real) (NUM_SUB (SUC (n:num)) i))"
+    val wideStepNarrow = "\\i:num. real_of_num (NUM_CHOOSE (n:num) (SUC i)) * " +
+      "(Power (x:real) (SUC i) * Power (y:real) (NUM_SUB (SUC (n:num)) (SUC i)))"
+    val againstX = "\\i:num. (real_of_num (NUM_CHOOSE (n:num) i) * " +
+      "(Power (x:real) i * Power (y:real) (NUM_SUB (n:num) i))) * (x:real)"
+    val againstY = "\\i:num. (real_of_num (NUM_CHOOSE (n:num) i) * " +
+      "(Power (x:real) i * Power (y:real) (NUM_SUB (n:num) i))) * (y:real)"
+
+    def fact(name: String): Either[LogicError, Kernel.Thm] =
+      series.get(name).map(Right(_)).getOrElse(peano.fact(name))
+
+    def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    /** The last argument of an application, which is how a peeled entry is read off a shift. */
+    def lastArgument(term: Term): Either[LogicError, Term] = term match {
+      case App(_, argument) => Right(argument)
+      case other            => Left(NotOfForm("an application", other))
+    }
+
+    /** The function of an application, which is how a scaling is read off a product. */
+    def partialOf(term: Term): Either[LogicError, Term] = term match {
+      case App(partial, _) => Right(partial)
+      case other           => Left(NotOfForm("an application", other))
+    }
+
+    /**
+     * The two summands under the power on the left of a goal.
+     *
+     * `Induct.proveBy` freshens the quantified variables, so the two reals this derivation is
+     * about are read off the goal the driver opened rather than taken from the names written
+     * above: a term built here from `x` and `y` would be a term about two other variables.
+     */
+    def baseOf(goal: Term): Either[LogicError, (Term, Term)] =
+      Term.destEq(goal).map(_._1) match {
+        case Some(App(App(_, App(App(_, left), right)), _)) => Right((left, right))
+        case _ => Left(NotOfForm("a power of a sum", goal))
+      }
+
+    def rightOfEquation(theorem: Kernel.Thm): Either[LogicError, Term] =
+      Term
+        .destEq(theorem.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", theorem.conclusion))
+
+    /**
+     * Two summands equal at every index, so the two sums are equal at every length.
+     *
+     * The obligation is opened here and closed by the caller: what each use needs is a different
+     * rule set and nothing else about them differs.
+     */
+    def sameSummand(
+      left: Term,
+      right: Term,
+      length: Term,
+      close: Term => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        congruence <- fact(Congruence)
+        instance <- rules.specAll(congruence, List(left, right)).flatMap(normalised)
+        obligation <- logic
+          .destImp(instance.conclusion)
+          .map(_._1)
+          .toRight(NotOfForm("an implication", instance.conclusion))
+        stripped <- Logic.stripForall(obligation)
+        index <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every index", obligation))
+        proved <- close(stripped._2).flatMap(rules.gen(index, _))
+        everywhere <- rules.mp(instance, proved)
+        here <- rules.spec(length, everywhere)
+      } yield here
+
+    /** The same where the two agree only below the bound, which is one of the four. */
+    def sameSummandBelow(
+      left: Term,
+      right: Term,
+      length: Term,
+      close: (Term, FVar, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        congruence <- fact(CongruenceBelow)
+        instance <- rules.specAll(congruence, List(left, right, length)).flatMap(normalised)
+        obligation <- logic
+          .destImp(instance.conclusion)
+          .map(_._1)
+          .toRight(NotOfForm("an implication", instance.conclusion))
+        stripped <- Logic.stripForall(obligation)
+        index <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every index", obligation))
+        parts <- logic
+          .destImp(stripped._2)
+          .toRight(NotOfForm("an implication", stripped._2))
+        (guard, body) = parts
+        assumed <- LogicError.lift(Kernel.assume(guard))
+        proved <- close(body, index, assumed)
+        result <- rules
+          .disch(guard, proved)
+          .flatMap(rules.gen(index, _))
+          .flatMap(rules.mp(instance, _))
+      } yield result
+
+    for {
+      additive <- fact(Additive)
+      scaledRight <- fact(ScaledRight)
+      atZero <- fact(AtZero)
+      atSuccessor <- fact(AtSuccessor)
+      shift <- fact(Shift)
+      powerAtZero <- fact(PowerAtZero)
+      powerAtSuccessor <- fact(PowerAtSuccessor)
+
+      pascal <- fact(Peano.ChoosePascal)
+      chooseNone <- fact(Peano.ChooseNone)
+      chooseAbove <- fact(Peano.ChooseAbove)
+      subSuccessors <- fact(Peano.SubSuccessors)
+      subAtZero <- fact(Peano.SubAtZero)
+      successorMinus <- fact(Peano.SuccessorMinus)
+      atMostBelow <- fact(Peano.AtMostBelowSuccessor)
+      belowSuccessor <- fact(Peano.BelowSuccessor)
+      embedsSum <- fact(Peano.EmbedsSum)
+      embedsZero <- fact(Peano.EmbedsZero)
+      embedsSuccessor <- fact(Peano.EmbedsSuccessor)
+
+      embedding <- Rewrite.Rule.all(logic, Vector(embedsSum, embedsZero, embedsSuccessor))
+      powers <- Rewrite.Rule.all(logic, Vector(powerAtZero, powerAtSuccessor))
+      pascalRules <- Rewrite.Rule.all(logic, Vector(pascal, subSuccessors))
+      sums <- Rewrite.Rule.all(logic, Vector(atZero, atSuccessor))
+      edges <- Rewrite.Rule.all(logic, Vector(chooseNone, subAtZero))
+      stepDown <- Rewrite.Rule.all(logic, Vector(subSuccessors))
+
+      narrowBody <- Parser.term(theory, notation, narrow)
+      wideBody <- Parser.term(theory, notation, wide)
+      wideSteppedBody <- Parser.term(theory, notation, wideStepped)
+      xBody <- Parser.term(theory, notation, xColumn)
+      yBody <- Parser.term(theory, notation, yColumn)
+      bothBody <- Parser.term(theory, notation, bothColumns)
+      wideNarrowBody <- Parser.term(theory, notation, wideNarrow)
+      wideStepNarrowBody <- Parser.term(theory, notation, wideStepNarrow)
+      againstXBody <- Parser.term(theory, notation, againstX)
+      againstYBody <- Parser.term(theory, notation, againstY)
+      successorOfN <- Parser.term(theory, notation, "SUC (n:num)", numbers)
+
+      /* ------------------------------------------------------------------ base */
+
+      baseGoal <- Parser.proposition(
+        theory,
+        notation,
+        "Power ((x:real) + (y:real)) ZERO = " +
+          "Sum (\\i:num. real_of_num (NUM_CHOOSE ZERO i) * " +
+          "(Power (x:real) i * Power (y:real) (NUM_SUB ZERO i))) (SUC ZERO)"
+      )
+      baseLemma <- driver
+        .settle(sums ++ powers ++ edges ++ embedding)(baseGoal, Vector.empty)
+        .flatMap(rules.genAll(_, List(x, y)))
+
+      /* ------------------------------------------------------------------ step */
+
+      premise <- Parser.proposition(
+        theory,
+        notation,
+        "Power ((x:real) + (y:real)) (n:num) = Sum (" + narrow + ") (SUC (n:num))"
+      )
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      // 1. The bottom entry peeled off the wide sum.
+      wideShift <- rules.specAll(shift, List(wideBody, successorOfN)).flatMap(normalised)
+      wideZero <- rightOfEquation(wideShift).flatMap(lastArgument)
+
+      // 2. Pascal's rule splits what is left, at every index and under no bound.
+      pascalSplit <- sameSummand(
+        wideSteppedBody,
+        bothBody,
+        successorOfN,
+        goal => driver.settle(pascalRules ++ embedding)(goal, Vector.empty)
+      )
+      addSplit <- rules
+        .specAll(additive, List(xBody, yBody, successorOfN))
+        .flatMap(normalised)
+      leftAndRight <- Conv.trans(pascalSplit, addSplit)
+
+      // 3. The x column, where the extra factor comes out of the power at every index.
+      xSame <- sameSummand(
+        xBody,
+        againstXBody,
+        successorOfN,
+        goal => driver.settle(powers)(goal, Vector.empty)
+      )
+      xScaled <- rules
+        .specAll(scaledRight, List(x, narrowBody, successorOfN))
+        .flatMap(normalised)
+      xIsScaled <- Conv.trans(xSame, xScaled)
+
+      // 4. The y column, which is the one congruence that carries a bound: `SUC (n - i)` is
+      // `SUC n - i` only where `i` has not passed the diagonal.
+      ySame <- sameSummandBelow(
+        wideNarrowBody,
+        againstYBody,
+        successorOfN,
+        (goal, index, bound) =>
+          for {
+            atMost <- rules.specAll(atMostBelow, List(n, index)).flatMap(rules.mp(_, bound))
+            stepped <- rules.specAll(successorMinus, List(n, index)).flatMap(rules.mp(_, atMost))
+            rule <- Rewrite.Rule.of(logic, stepped)
+            proved <- driver.settle(powers)(goal, Vector(rule))
+          } yield proved
+      )
+      yScaled <- rules
+        .specAll(scaledRight, List(y, narrowBody, successorOfN))
+        .flatMap(normalised)
+      yIsScaled <- Conv.trans(ySame, yScaled)
+
+      // 5. And the y column IS the second of Pascal's two, shifted: the bottom entry of the one
+      // is what the other has at every index one along.
+      yShift <- rules.specAll(shift, List(wideNarrowBody, n)).flatMap(normalised)
+      yZero <- rightOfEquation(yShift).flatMap(lastArgument)
+      narrowSame <- sameSummand(
+        wideStepNarrowBody,
+        yBody,
+        n,
+        goal => driver.settle(stepDown)(goal, Vector.empty)
+      )
+      shortIsShifted <- Conv.sym(narrowSame).flatMap(Conv.trans(_, yShift))
+
+      // 6. The entry the shift leaves at the top of the y column, which is zero above the
+      // diagonal and is the one place `NUM_CHOOSE_ABOVE` is spent.
+      ySuc <- rules.specAll(atSuccessor, List(yBody, n)).flatMap(normalised)
+      topEntry <- rightOfEquation(ySuc).flatMap(lastArgument)
+      aboveDiagonal <- rules
+        .spec(n, belowSuccessor)
+        .flatMap(below =>
+          rules.specAll(chooseAbove, List(n, successorOfN)).flatMap(rules.mp(_, below)))
+      aboveRule <- Rewrite.Rule.of(logic, aboveDiagonal)
+      zero <- Parser.term(theory, notation, "(0:real)", reals)
+      topGoal <- LogicError.lift(Term.eq(topEntry, zero))
+      topIsZero <- driver.settle(Vector(aboveRule) ++ embedding)(topGoal, Vector.empty)
+
+      // 7. The two bottom entries are one number, because both coefficients are one.
+      bottomGoal <- LogicError.lift(Term.eq(wideZero, yZero))
+      bottomsAgree <- driver.settle(edges ++ embedding)(bottomGoal, Vector.empty)
+
+      // 8. The hypothesis spent on the left-hand side, BEFORE anything linear is asked. A
+      // congruence and not a rewrite: `Rewrite.Rule.of` would make the hypothesis's own `n`
+      // schematic and the rule would then fire on `Power (x + y) (SUC n)` as well.
+      sumOfBoth <- Parser.term(theory, notation, "(x:real) + (y:real)", reals)
+      openedPower <- rules.specAll(powerAtSuccessor, List(sumOfBoth, n))
+      scaling <- rightOfEquation(openedPower).flatMap(partialOf)
+      folded <- Conv.apTerm(scaling, assumed).flatMap(Conv.trans(openedPower, _))
+
+      // 9. Nine equations between sums, over real variables, and the products are all a sum
+      // against `x` or against `y`.
+      wideSum <- Parser.term(theory, notation, "Sum (" + wide + ") (SUC (SUC (n:num)))", reals)
+      steppedSum <- Parser.term(
+        theory, notation, "Sum (" + wideStepped + ") (SUC (n:num))", reals)
+      xSum <- Parser.term(theory, notation, "Sum (" + xColumn + ") (SUC (n:num))", reals)
+      ySum <- Parser.term(theory, notation, "Sum (" + yColumn + ") (SUC (n:num))", reals)
+      yShortSum <- Parser.term(theory, notation, "Sum (" + yColumn + ") (n:num)", reals)
+      wideNarrowSum <- Parser.term(
+        theory, notation, "Sum (" + wideNarrow + ") (SUC (n:num))", reals)
+      narrowSum <- Parser.term(theory, notation, "Sum (" + narrow + ") (SUC (n:num))", reals)
+      lifted <- Parser.term(
+        theory, notation, "Power ((x:real) + (y:real)) (SUC (n:num))", reals)
+
+      assembled <- linarith
+        .prove(
+          "!l:real. !t:real. !g:real. !h:real. !a:real. !b:real. !c:real. !d:real. " +
+            "!v:real. !w:real. !s:real. !p:real. !q:real. " +
+            "h = t - g ==> h = a + b ==> a = s * p ==> b = c + d ==> c = w - v ==> " +
+            "w = s * q ==> d = 0 ==> g = v ==> l = (p + q) * s ==> l = t"
+        )
+        .flatMap(rules.specAll(
+          _,
+          List(
+            lifted, wideSum, wideZero, steppedSum, xSum, ySum, yShortSum, topEntry,
+            yZero, wideNarrowSum, narrowSum, x, y)))
+        .flatMap(rules.mp(_, wideShift))
+        .flatMap(rules.mp(_, leftAndRight))
+        .flatMap(rules.mp(_, xIsScaled))
+        .flatMap(rules.mp(_, ySuc))
+        .flatMap(rules.mp(_, shortIsShifted))
+        .flatMap(rules.mp(_, yIsScaled))
+        .flatMap(rules.mp(_, topIsZero))
+        .flatMap(rules.mp(_, bottomsAgree))
+        .flatMap(rules.mp(_, folded))
+
+      stepLemma <- rules.disch(premise, assembled).flatMap(rules.genAll(_, List(x, y, n)))
+
+      /* ------------------------------------------------------- the induction itself */
+
+      statement <- Parser.proposition(
+        theory,
+        notation,
+        "!x:real. !y:real. !n:num. Power (x + y) n = " +
+          "Sum (\\i:num. real_of_num (NUM_CHOOSE n i) * " +
+          "(Power x i * Power y (NUM_SUB n i))) (SUC n)"
+      )
+      result <- driver.proveBy(
+        statement,
+        goal =>
+          for {
+            pair <- baseOf(goal)
+            proved <- rules.specAll(baseLemma, List(pair._1, pair._2))
+          } yield proved,
+        opened =>
+          for {
+            pair <- baseOf(opened.goal)
+            proved <- rules
+              .specAll(stepLemma, List(pair._1, pair._2, opened.variable))
+              .flatMap(rules.mp(_, opened.hypothesis))
+          } yield proved
+      )
+    } yield result
+  }
+
   /**
    * `|- !f n. Sum (\k. Sum (\i. f i (k - i)) (SUC k)) n = Sum (\i. Sum (\j. f i j) (n - i)) n`
    *
