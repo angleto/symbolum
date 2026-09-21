@@ -354,6 +354,71 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     force(ring.prove(opened.conclusion)).hypotheses shouldBe empty
   }
 
+  /**
+   * The Cauchy product's partial sum and the gap to the product, computed at a square.
+   *
+   * The statements are what a reader agrees with; what reading cannot settle is whether the two
+   * sides describe the same region of the index square. At `n = 2` they can be checked by eye:
+   * the partial Cauchy sum is the three pairs with `i + j < 2` and the product of the two partial
+   * sums is all four, so the gap has to come out as the single corner `a 1 * b 1`. A
+   * subtraction that truncated where it should not, or a row read at the wrong length, gives a
+   * different corner and the assertion says which.
+   */
+  "The Cauchy product" should "have a closed partial sum, and a gap that is the corner" in {
+    series.show(fact(Series.Cauchy).conclusion) shouldBe
+      "!x:num -> real. !y:num -> real. !z:num. " +
+        "Sum (\\u:num. Sum (\\v:num. x v * y (NUM_SUB u v)) (SUC u)) z = " +
+        "Sum (\\u:num. x u * Sum y (NUM_SUB z u)) z"
+    series.show(fact(Series.CauchyGap).conclusion) shouldBe
+      "!x:num -> real. !y:num -> real. !z:num. " +
+        "Sum x z * Sum y z - Sum (\\u:num. Sum (\\v:num. x v * y (NUM_SUB u v)) (SUC u)) z = " +
+        "Sum (\\u:num. x u * (Sum y z - Sum y (NUM_SUB z u))) z"
+
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val a = Term.variable("a", Type.fun(numbers, real))
+    val b = Term.variable("b", Type.fun(numbers, real))
+    val two = force(series.term("SUC (SUC ZERO)", numbers))
+
+    val unfolding = force(
+      Rewrite.Rule.all(
+        logic,
+        Vector(
+          fact(Series.AtZero),
+          fact(Series.AtSuccessor),
+          force(peano.fact(Peano.SubAtZero)),
+          force(peano.fact(Peano.SubSuccessors)),
+          force(peano.fact(Peano.ZeroMinus))
+        )
+      ))
+
+    def opened(statement: Kernel.Thm): Kernel.Thm = {
+      val instance = force(rules.specAll(statement, List(a, b, two)))
+      force(
+        Rewrite
+          .rewrite(unfolding, instance.conclusion)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance))))
+    }
+
+    // The three pairs with `i + j < 2` on each side, grouped by antidiagonal on the left and by
+    // row on the right. The index prints `SUC 0` and not `1` for the reason the diagonal's own
+    // test gives: nothing here spells a numeral.
+    series.show(opened(fact(Series.Cauchy)).conclusion) shouldBe
+      "0 + (0 + a 0 * b 0) + (0 + a 0 * b (SUC 0) + a (SUC 0) * b 0) = " +
+        "0 + a 0 * (0 + b 0 + b (SUC 0)) + a (SUC 0) * (0 + b 0)"
+
+    // And the gap, whose right-hand side has to reduce to the one corner outside the triangle.
+    val gap = opened(fact(Series.CauchyGap))
+    force(ring.prove(gap.conclusion)).hypotheses shouldBe empty
+    Term.destEq(gap.conclusion).map(sides => sides._1 == sides._2) shouldBe Some(false)
+
+    // The corner named, which is the half `Ring` closing the equation does not show a reader.
+    val corner = force(series.term("a (SUC ZERO) * b (SUC ZERO)", real))
+    val rightSide = force(
+      Term.destEq(gap.conclusion).map(_._2).toRight(MissingDefinition("an equation")))
+    force(ring.prove(force(LogicError.lift(Term.eq(rightSide, corner))))).hypotheses shouldBe empty
+  }
+
   "A sum of zeroes" should "be zero at every length, which SUM_ZERO does not say" in {
     // The two read alike and are different facts: `SUM_ZERO` is about a sum of length zero, this is
     // about a summand of value zero. Keeping them apart is what lets an emptied inner sum collapse.

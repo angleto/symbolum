@@ -542,8 +542,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // binds two leading quantifiers and they are a **sequence** and a real, so `CLAUDE.md`'s
     // first figure moves by one and its second does not move at all — the first entry today
     // whose two figures part company, and both were derived from the statement before the run.
-    library.entries.size shouldBe 584
-    library.names.distinct.size shouldBe 581
+    // 586 and 583 with the Cauchy product's partial sum and its gap, 2026-09-21: two facts under
+    // two names, both in `Series`, neither shared, so the gap of three does not move. Tip plus
+    // this branch's delta. Each binds three leading quantifiers of which the first two are both
+    // `num -> real`, so **both** of `CLAUDE.md`'s figures-per-lemma move by two.
+    library.entries.size shouldBe 586
+    library.names.distinct.size shouldBe 583
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

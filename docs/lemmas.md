@@ -690,6 +690,8 @@ they have least appetite for working out how it is produced.
   PROD_ZERO                !x:num -> real. Prod x 0 = 1
   SUM_ADD                  !x:num -> real. !y:num -> real. !z:num. Sum (\u:num. x u + y u) z = Sum x z + Sum y z
   SUM_BY_PARTS             !x:num -> real. !y:num -> real. !z:num. Sum (\u:num. x u * (y (SUC u) - y u)) z = x z * y z - x 0 * y 0 - Sum (\u:num. y (SUC u) * (x (SUC u) - x u)) z
+  SUM_CAUCHY               !x:num -> real. !y:num -> real. !z:num. Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) z = Sum (\u:num. x u * Sum y (NUM_SUB z u)) z
+  SUM_CAUCHY_GAP           !x:num -> real. !y:num -> real. !z:num. Sum x z * Sum y z - Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) z = Sum (\u:num. x u * (Sum y z - Sum y (NUM_SUB z u))) z
   SUM_CONGRUENCE           !x:num -> real. !y:num -> real. (!z:num. x z = y z) ==> (!z:num. Sum x z = Sum y z)
   SUM_CONGRUENCE_BELOW     !x:num -> real. !y:num -> real. !z:num. (!u:num. u < z ==> x u = y u) ==> Sum x z = Sum y z
   SUM_CONSTANT             !x:real. !y:num. Sum (\z:num. x) y = real_of_num y * x
