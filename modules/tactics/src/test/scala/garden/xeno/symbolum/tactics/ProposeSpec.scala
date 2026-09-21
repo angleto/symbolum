@@ -333,7 +333,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 400 with the sandwich and what it wanted in front of it, 2026-09-21, and the **six** were
     // derived before the run: one antecedent each on `SUM_GROWS` and `Peano.NUM_LE_DOUBLE_SUB`,
     // two each on the sandwich's two halves. Tip plus this branch's delta.
-    proposals.size shouldBe 400
+    // 404 with the Cauchy product, 2026-09-21, and the **four** were derived before the run:
+    // it carries four antecedents, two non-negativities and two convergences, one weakening
+    // each. Tip plus this branch's delta.
+    proposals.size shouldBe 404
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1061,7 +1064,18 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // question is the ADDRESS. An order between two partial sums is a shape the procedures take
     // and fail on, so all five land here; the sixth is arithmetic on `num` and is decided. Three
     // earlier guesses on this row used the model instead and were wrong three times.
-    open shouldBe 298
+    //
+    // 302 with the Cauchy product's four, 2026-09-21, and **the prediction was `unreadable` and
+    // was wrong**, which is the fourth miss on this one split. What was predicted, by the
+    // address criterion the row above states: nothing recognises `converges (Sum c) (A * B)`, so
+    // `Nobody`, so `unreadable`. What happened: all four are here. **No mechanism is written for
+    // that**, deliberately, and this is the difference between this entry and the three the
+    // correction above is about — a fourth story fitted to the number after the fact would read
+    // exactly like the three that were wrong, and would be the same thing a fifth session
+    // inherits. What would settle it is one reading of `cost.prove.addressOf` on these four
+    // claims, which is a measurement nobody has run; until somebody does, the number is a
+    // reading and the reason is open.
+    open shouldBe 302
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1656,7 +1670,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // reason the rows above give.
     // 155 with all six, which is this list counting CONSTANTS: five of the residues write `Sum`
     // and the sixth writes `NUM_SUB` and `NUM_LE`, and `named` holds all three.
-    aboutNumbers.size shouldBe 155
+    // 159 with the Cauchy product's four, which write `Sum` and are on this list for the reason
+    // the rows above give. Predicted before the run and right, on the criterion those rows
+    // state: this list counts CONSTANTS.
+    aboutNumbers.size shouldBe 159
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

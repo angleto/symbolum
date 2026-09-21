@@ -140,6 +140,9 @@ final class Limit private (
   /** The product of the two `n`th partial sums under the partial Cauchy sum at `n + n`. */
   def squareBelowCauchy: Either[LogicError, Kernel.Thm] = fact(Limit.SquareBelowCauchy)
 
+  /** [[Limit.CauchyNonNegative]], the Cauchy product where both series have non-negative terms. */
+  def cauchyNonNegative: Either[LogicError, Kernel.Thm] = fact(Limit.CauchyNonNegative)
+
   /** `|- !f l. converges (Sum f) l ==> converges (\n. l - Sum f n) 0` */
   def tail: Either[LogicError, Kernel.Thm] = fact(Limit.Tail)
 }
@@ -445,6 +448,32 @@ object Limit {
    */
   val Tail: String = "CONVERGES_TAIL"
 
+  /**
+   * `|- !a b A B. (!i. 0 <= a i) ==> (!i. 0 <= b i) ==> converges (Sum a) A ==> converges (Sum b) B
+   * ==> converges (Sum (\k. Sum (\i. a i * b (k - i)) (SUC k))) (A * B)`
+   *
+   * The Cauchy product, for series of non-negative terms, and **there is no epsilon in it**.
+   *
+   * The two halves of the sandwich do the whole of the work. Write `D` for the partial sums of
+   * the convolution and `P n` for `Sum a n * Sum b n`. [[CauchyBelowSquare]] gives `D n <= P n`
+   * and [[SquareBelowCauchy]] gives `P n <= D (n + n)`, so `D` is bounded by `A * B` and
+   * [[Comparison]] hands back a limit `l`; then `l <= A * B` by [[BelowBound]] on `D`, and
+   * `A * B <= l` by [[BelowBound]] on `P`, whose bound is `P n <= D (n + n) <= l`. Antisymmetry
+   * closes it.
+   *
+   * That the epsilon is absent is the return on the sandwich rather than a coincidence. A bracket
+   * holding at every index between two sequences whose limits are known is an **order** argument,
+   * and the only analysis anywhere under it is the one [[Comparison]] already did. The textbook
+   * proof of this theorem is an epsilon argument with a split at `n / 2` inside it; what replaced
+   * the split is `n + n`, and what replaced the epsilon is the bracket.
+   *
+   * Non-negative and not absolutely convergent, which is the honest scope and not a step on the
+   * way: the general case needs the triangle inequality at a finite sum, which this repository
+   * does not publish, and a squeeze this file does not have. [[Absolute]] is the other half of
+   * that pair and is equally unspent here.
+   */
+  val CauchyNonNegative: String = "SUM_CAUCHY_PRODUCT_NONNEG"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -495,7 +524,12 @@ object Limit {
         "Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k)) (NUM_ADD n n)"),
     Tail ->
       ("!f:num -> real. !l:real. converges (Sum f) l ==> " +
-        "converges (\\n:num. l - Sum f n) 0")
+        "converges (\\n:num. l - Sum f n) 0"),
+    CauchyNonNegative ->
+      ("!a:num -> real. !b:num -> real. !A:real. !B:real. " +
+        "(!i:num. 0 <= a i) ==> (!i:num. 0 <= b i) ==> " +
+        "converges (Sum a) A ==> converges (Sum b) B ==> " +
+        "converges (Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k))) (A * B)")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -658,6 +692,18 @@ object Limit {
       multipliedLimits <- convergesMultiplied(
         logic, linarith, magnitude.order.ring, theory, notation, convergesDefinition, bounds,
         indices, products)
+
+      antisymmetry <- magnitude.order.antisymmetric
+      cauchyProduct <- cauchyOfNonNegative(
+        logic,
+        linarith,
+        theory,
+        notation,
+        Cauchys(
+          comparisonTest, below, belowItsOwnLimit, triangleUnderSquare, squareUnderTriangle,
+          multipliedLimits, sumNonNegative, productNonNegative, multiplyLe, mulSymmetric,
+          antisymmetry)
+      )
     } yield new Limit(
       magnitude,
       peano,
@@ -683,7 +729,8 @@ object Limit {
         Grows -> partialSumsGrow,
         CauchyBelowSquare -> triangleUnderSquare,
         SquareBelowCauchy -> squareUnderTriangle,
-        Tail -> tailToZero
+        Tail -> tailToZero,
+        CauchyNonNegative -> cauchyProduct
       )
     )
   }
@@ -1034,23 +1081,6 @@ object Limit {
     commutative: Kernel.Thm
   )
 
-  /**
-   * What an estimate over a **product** needs, which is everything an estimate over a sum does not.
-   *
-   * It is a bundle for the reason [[Bounds]] is: one derivation wants all of it and no other wants
-   * any of it, so the alternative is eleven parameters on one signature. Three of them are the
-   * reciprocal's, and they are here rather than in a `Field` call because what this derivation
-   * needs of a denominator is one equation at a value already known positive, not a tactic that
-   * carries a side condition.
-   */
-  /**
-   * What the absolute convergence theorem takes from the two developments under this one.
-   *
-   * A bundle for [[Bounds]]'s reason: one derivation wants all eight and no other wants any of
-   * them. Two are `Series`' and six are this file's own, which is the shape of the argument — the
-   * work is putting facts that already exist in one order, and the only thing it adds is the
-   * observation that the bracket is non-negative.
-   */
   /** What the square-inside-the-double-triangle argument takes from the three files under it. */
   private final case class Squares(
     cauchy: Kernel.Thm,
@@ -1066,6 +1096,36 @@ object Limit {
     symmetric: Kernel.Thm
   )
 
+  /**
+   * What the Cauchy product takes, which is eleven facts and not one procedure.
+   *
+   * A bundle for [[Bounds]]'s reason. It is worth reading as a list, because it is the whole
+   * argument: five of the eleven are this file's own and were proved for this consumer, and the
+   * other six are the order's. Nothing in it is an analysis fact that the two sandwich halves did
+   * not already buy.
+   */
+  private final case class Cauchys(
+    comparison: Kernel.Thm,
+    belowBound: Kernel.Thm,
+    belowLimit: Kernel.Thm,
+    cauchyBelowSquare: Kernel.Thm,
+    squareBelowCauchy: Kernel.Thm,
+    multiplied: Kernel.Thm,
+    nonNegativeSum: Kernel.Thm,
+    productNonNegative: Kernel.Thm,
+    multiplyLe: Kernel.Thm,
+    symmetric: Kernel.Thm,
+    antisymmetric: Kernel.Thm
+  )
+
+  /**
+   * What the absolute convergence theorem takes from the two developments under this one.
+   *
+   * A bundle for [[Bounds]]'s reason: one derivation wants all eight and no other wants any of
+   * them. Two are `Series`' and six are this file's own, which is the shape of the argument — the
+   * work is putting facts that already exist in one order, and the only thing it adds is the
+   * observation that the bracket is non-negative.
+   */
   private final case class Absolutes(
     additive: Kernel.Thm,
     comparison: Kernel.Thm,
@@ -1075,6 +1135,15 @@ object Limit {
     eventually: Kernel.Thm
   )
 
+  /**
+   * What an estimate over a **product** needs, which is everything an estimate over a sum does not.
+   *
+   * It is a bundle for the reason [[Bounds]] is: one derivation wants all of it and no other wants
+   * any of it, so the alternative is eleven parameters on one signature. Three of them are the
+   * reciprocal's, and they are here rather than in a `Field` call because what this derivation
+   * needs of a denominator is one equation at a value already known positive, not a tactic that
+   * carries a side condition.
+   */
   private final case class Products(
     triangle: Kernel.Thm,
     multiplicative: Kernel.Thm,
@@ -3008,6 +3077,264 @@ object Limit {
         } yield moved
       case other => Left(NotOfForm("an application", other))
     }
+
+  /**
+   * [[CauchyNonNegative]], which is the sandwich squeezed.
+   *
+   * `D` is the partial sums of the convolution and `P n` is `Sum a n * Sum b n`. The argument is
+   * four bounds and an antisymmetry, and the reason the docstring on the name is worth reading
+   * first is that this one is about where each bound comes from rather than about the shape:
+   *
+   *  - `D n <= P n <= A * B`, so the Cauchy partial sums are bounded, so they converge, which is
+   *    [[Comparison]] at a series dominating **itself**. That gives a limit `l` and says nothing
+   *    at all about where it is.
+   *  - `l <= A * B`, because `D n <= A * B` at every `n`, which is [[BelowBound]].
+   *  - `A * B <= l`, because `P n <= D (n + n) <= l`, the first being [[SquareBelowCauchy]] and
+   *    the second [[BelowLimit]] at the convolution. `P` converges to `A * B` by [[Multiplied]],
+   *    so it is [[BelowBound]] again, on the other sequence.
+   *  - The two meet by `Order.LE_ANTISYMMETRIC`, and the value is rewritten where it stands by a
+   *    congruence on the convergence's second argument rather than by a rewriting pass.
+   *
+   * The dominating series being the dominated one is the step worth pausing on. [[Comparison]]
+   * asks for termwise domination and a bound on the **dominator**'s partial sums; here there is
+   * only one series and the bound is its own, so what the test is being used for is the
+   * monotone convergence under it and nothing else. `!k. D' k <= D' k` is `Linarith`'s, in one
+   * line, rather than `Order.LE_OF_EQ` over a reflexivity, which is what `LimitSpec` does two
+   * files over and is equally available here: the fragment decides `!x. x <= x` outright, so the
+   * alternative is a twelfth field on the bundle to save nothing.
+   *
+   * Two `NUM_LE ZERO n` guards are introduced and discharged vacuously, because [[BelowBound]]
+   * asks for a bound from an index on and what is available here is a bound everywhere. That is
+   * the same shape `Transcendental.EXP_ONE_ABOVE_TWO` meets and is not a defect of either: a
+   * bound from zero on is a bound, and the alternative is a second form of the theorem nobody
+   * would use twice.
+   */
+  private def cauchyOfNonNegative(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    pieces: Cauchys
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val a = Term.variable("a", sequences)
+    val b = Term.variable("b", sequences)
+    val bigA = Term.variable("A", values)
+    val bigB = Term.variable("B", values)
+    val l = Term.variable("l", values)
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+    val k = Term.variable("k", numbers)
+
+    val convolution =
+      "\\k:num. Sum (\\i:num. (a:num -> real) i * (b:num -> real) (NUM_SUB k i)) (SUC k)"
+    val inner = "\\i:num. (a:num -> real) i * (b:num -> real) (NUM_SUB (k:num) i)"
+
+    /** A fact specialised at a lambda leaves a redex where the variable was applied. */
+    def opened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    /** Two bounds put end to end, which this derivation does three times. */
+    def chain(
+      lower: Kernel.Thm,
+      upper: Kernel.Thm,
+      small: Term,
+      middle: Term,
+      large: Term
+    ): Either[LogicError, Kernel.Thm] =
+      linarith
+        .prove("!x:real. !y:real. !z:real. x <= y ==> y <= z ==> x <= z")
+        .flatMap(rules.specAll(_, List(small, middle, large)))
+        .flatMap(rules.mp(_, lower))
+        .flatMap(rules.mp(_, upper))
+
+    for {
+      nonNegativeA <- Parser.proposition(theory, notation, "!i:num. 0 <= (a:num -> real) i")
+      nonNegativeB <- Parser.proposition(theory, notation, "!i:num. 0 <= (b:num -> real) i")
+      toA <- Parser.proposition(theory, notation, "converges (Sum (a:num -> real)) (A:real)")
+      toB <- Parser.proposition(theory, notation, "converges (Sum (b:num -> real)) (B:real)")
+      assumedA <- LogicError.lift(Kernel.assume(nonNegativeA))
+      assumedB <- LogicError.lift(Kernel.assume(nonNegativeB))
+      convergesA <- LogicError.lift(Kernel.assume(toA))
+      convergesB <- LogicError.lift(Kernel.assume(toB))
+
+      convolutionBody <- Parser.term(theory, notation, convolution)
+      innerBody <- Parser.term(theory, notation, inner)
+      product <- Parser.term(theory, notation, "(A:real) * (B:real)", values)
+      zero <- Parser.term(theory, notation, "ZERO", numbers)
+      here <- Parser.term(theory, notation, "(a:num -> real) (i:num)", values)
+      shifted <- Parser.term(
+        theory, notation, "(b:num -> real) (NUM_SUB (k:num) (i:num))", values)
+      shiftedIndex <- Parser.term(theory, notation, "NUM_SUB (k:num) (i:num)", numbers)
+      successorOfK <- Parser.term(theory, notation, "SUC (k:num)", numbers)
+      partialA <- Parser.term(theory, notation, "Sum (a:num -> real) (n:num)", values)
+      partialB <- Parser.term(theory, notation, "Sum (b:num -> real) (n:num)", values)
+      sumA <- Parser.term(theory, notation, "Sum (a:num -> real)", sequences)
+      sumB <- Parser.term(theory, notation, "Sum (b:num -> real)", sequences)
+      cauchySums <- Parser.term(theory, notation, "Sum (" + convolution + ")", sequences)
+      atZeroA <- Parser.term(theory, notation, "Sum (a:num -> real) ZERO", values)
+      squareAt <- Parser.term(
+        theory, notation, "Sum (a:num -> real) (n:num) * Sum (b:num -> real) (n:num)", values)
+      viaLimitOfA <- Parser.term(
+        theory, notation, "(A:real) * Sum (b:num -> real) (n:num)", values)
+      cauchyAt <- Parser.term(theory, notation, "Sum (" + convolution + ") (n:num)", values)
+      cauchyAtDouble <- Parser.term(
+        theory, notation, "Sum (" + convolution + ") (NUM_ADD (n:num) (n:num))", values)
+      doubled <- Parser.term(theory, notation, "NUM_ADD (n:num) (n:num)", numbers)
+      termAt <- Parser.term(theory, notation, "Sum (" + inner + ") (SUC (k:num))", values)
+
+      /* -------------------------------------------- the convolution is non-negative */
+
+      innerNonNegative <- rules
+        .spec(i, assumedA)
+        .flatMap(atHere =>
+          rules
+            .spec(shiftedIndex, assumedB)
+            .flatMap(atThere =>
+              rules
+                .specAll(pieces.productNonNegative, List(here, shifted))
+                .flatMap(rules.mp(_, atHere))
+                .flatMap(rules.mp(_, atThere))))
+        .flatMap(rules.gen(i, _))
+      convolutionNonNegative <- rules
+        .spec(innerBody, pieces.nonNegativeSum)
+        .flatMap(opened)
+        .flatMap(rules.mp(_, innerNonNegative))
+        .flatMap(rules.spec(successorOfK, _))
+        .flatMap(rules.gen(k, _))
+
+      /* -------------------------------- the partial Cauchy sums are under `A * B` */
+
+      belowSquare <- rules
+        .specAll(pieces.cauchyBelowSquare, List(a, b, n))
+        .flatMap(rules.mp(_, assumedA))
+        .flatMap(rules.mp(_, assumedB))
+      aBelow <- rules
+        .specAll(pieces.belowLimit, List(a, bigA))
+        .flatMap(rules.mp(_, assumedA))
+        .flatMap(rules.mp(_, convergesA))
+      bBelow <- rules
+        .specAll(pieces.belowLimit, List(b, bigB))
+        .flatMap(rules.mp(_, assumedB))
+        .flatMap(rules.mp(_, convergesB))
+      aNonNegative <- rules.spec(a, pieces.nonNegativeSum).flatMap(rules.mp(_, assumedA))
+      bNonNegative <- rules.spec(b, pieces.nonNegativeSum).flatMap(rules.mp(_, assumedB))
+
+      aNonNegativeAtZero <- rules.spec(zero, aNonNegative)
+      aBelowAtZero <- rules.spec(zero, aBelow)
+      limitNonNegative <- linarith
+        .prove("!s:real. !u:real. 0 <= s ==> s <= u ==> 0 <= u")
+        .flatMap(rules.specAll(_, List(atZeroA, bigA)))
+        .flatMap(rules.mp(_, aNonNegativeAtZero))
+        .flatMap(rules.mp(_, aBelowAtZero))
+
+      bNonNegativeAtN <- rules.spec(n, bNonNegative)
+      aBelowAtN <- rules.spec(n, aBelow)
+      bBelowAtN <- rules.spec(n, bBelow)
+      firstFactor <- rules
+        .specAll(pieces.multiplyLe, List(partialB, partialA, bigA))
+        .flatMap(rules.mp(_, bNonNegativeAtN))
+        .flatMap(rules.mp(_, aBelowAtN))
+      secondFactor <- rules
+        .specAll(pieces.multiplyLe, List(bigA, partialB, bigB))
+        .flatMap(rules.mp(_, limitNonNegative))
+        .flatMap(rules.mp(_, bBelowAtN))
+      turnedLeft <- rules.specAll(pieces.symmetric, List(partialB, bigA))
+      turnedRight <- rules.specAll(pieces.symmetric, List(bigB, bigA))
+      secondTurned <- rewriteInProposition(turnedLeft, secondFactor)
+        .flatMap(rewriteInProposition(turnedRight, _))
+
+      squareBelowProduct <- chain(firstFactor, secondTurned, squareAt, viaLimitOfA, product)
+      cauchyBelowProduct <- chain(belowSquare, squareBelowProduct, cauchyAt, squareAt, product)
+
+      /* ------------------------------------------- bounded, so convergent, so squeezed */
+
+      boundClaim <- Parser.proposition(
+        theory, notation, "?z:real. !u:num. Sum (" + convolution + ") u <= z")
+      boundPredicate <- logic
+        .destExistsPredicate(boundClaim)
+        .toRight(NotOfForm("an existential quantification", boundClaim))
+      bounded <- rules
+        .gen(n, cauchyBelowProduct)
+        .flatMap(rules.existsIntro(boundPredicate, product, _))
+
+      // At the series' `k`th **term**, which is a whole inner sum, and not at its `k`th partial
+      // sum: the comparison test compares terms, and the two differ by the `Sum` in front.
+      dominates <- linarith
+        .prove("!x:real. x <= x")
+        .flatMap(rules.spec(termAt, _))
+        .flatMap(rules.gen(k, _))
+      converging <- rules
+        .specAll(pieces.comparison, List(convolutionBody, convolutionBody))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, convolutionNonNegative))
+        .flatMap(rules.mp(_, dominates))
+        .flatMap(rules.mp(_, bounded))
+
+      guard <- Parser.proposition(theory, notation, "NUM_LE ZERO (n:num)")
+      converged <- Parser.proposition(
+        theory, notation, "converges (Sum (" + convolution + ")) (l:real)")
+      assumedLimit <- LogicError.lift(Kernel.assume(converged))
+
+      everyCauchyIndex <- rules.disch(guard, cauchyBelowProduct).flatMap(rules.gen(n, _))
+      limitBelowProduct <- rules
+        .specAll(pieces.belowBound, List(cauchySums, l, product, zero))
+        .flatMap(rules.mp(_, assumedLimit))
+        .flatMap(rules.mp(_, everyCauchyIndex))
+
+      cauchyBelowLimit <- rules
+        .specAll(pieces.belowLimit, List(convolutionBody, l))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, convolutionNonNegative))
+        .flatMap(rules.mp(_, assumedLimit))
+      squareBelowDouble <- rules
+        .specAll(pieces.squareBelowCauchy, List(a, b, n))
+        .flatMap(rules.mp(_, assumedA))
+        .flatMap(rules.mp(_, assumedB))
+      squareBelowLimit <- rules
+        .spec(doubled, cauchyBelowLimit)
+        .flatMap(chain(squareBelowDouble, _, squareAt, cauchyAtDouble, l))
+
+      productConverges <- rules
+        .specAll(pieces.multiplied, List(sumA, sumB, bigA, bigB))
+        .flatMap(rules.mp(_, convergesA))
+        .flatMap(rules.mp(_, convergesB))
+      productSequence <- productConverges.conclusion match {
+        case App(App(_, sequence), _) => Right(sequence)
+        case other                    => Left(NotOfForm("a convergence", other))
+      }
+      everySquareIndex <- rules.disch(guard, squareBelowLimit).flatMap(rules.gen(n, _))
+      productBelowLimit <- rules
+        .specAll(pieces.belowBound, List(productSequence, product, l, zero))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, productConverges))
+        .flatMap(rules.mp(_, everySquareIndex))
+
+      // The two bounds meet, and the value is rewritten where it stands: the congruence reaches
+      // the last argument of the application, which is exactly the one that moves.
+      equal <- rules
+        .specAll(pieces.antisymmetric, List(l, product))
+        .flatMap(rules.mp(_, limitBelowProduct))
+        .flatMap(rules.mp(_, productBelowLimit))
+      carried <- assumedLimit.conclusion match {
+        case App(partial, _) =>
+          Conv
+            .apTerm(partial, equal)
+            .flatMap(congruence => LogicError.lift(Kernel.eqMp(congruence, assumedLimit)))
+        case other => Left(NotOfForm("a convergence", other))
+      }
+
+      result <- rules
+        .existsElim(converging, l, carried)
+        .flatMap(rules.disch(toB, _))
+        .flatMap(rules.disch(toA, _))
+        .flatMap(rules.disch(nonNegativeB, _))
+        .flatMap(rules.disch(nonNegativeA, _))
+        .flatMap(rules.genAll(_, List(a, b, bigA, bigB)))
+    } yield result
+  }
 
   /**
    * Rewrite one subterm of a proposition with an equation, wherever in it the subterm occurs.

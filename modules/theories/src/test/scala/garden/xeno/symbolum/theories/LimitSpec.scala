@@ -883,4 +883,104 @@ class LimitSpec extends AnyFlatSpec with Matchers {
       proposition(
         "converges (\\n:num. (s:num -> real) n + -((s:num -> real) n)) ((a:real) + -(a:real))")
   }
+  /**
+   * The Cauchy product, detached at a series this file can name, with nothing left assumed.
+   *
+   * It is the guard the two assertions below cannot be. `SUM_CAUCHY_PRODUCT_NONNEG` is an
+   * implication with four antecedents, and an implication nobody can discharge is a theorem and
+   * says nothing: a version of it whose hypotheses were unmeetable would satisfy every reading of
+   * the statement and every axiom count. So the geometric series at one half is put in on both
+   * sides and the conclusion comes out with `hypotheses` empty.
+   *
+   * The value is `l * l` under the existential rather than `4`, and that is the honest scope of
+   * what is being tested here rather than a shortcut: this file obtains that the geometric series
+   * converges and never obtains what it converges to, so the product's limit is named the same
+   * way. What the assertion is about is that the convolution converges at all.
+   */
+  "The Cauchy product" should "settle a product of two series a reader can name" in {
+    val rules = limit.logic.rules
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val linarith = force(Linarith.construct(chain.order))
+    val n = Term.variable("n", numbers)
+    val l = Term.variable("l", real)
+
+    val half = force(limit.term("(1:real) / 2", real))
+    val terms = force(limit.term("\\i:num. Power ((1:real) / 2) i", Type.fun(numbers, real)))
+    val powerAt = force(limit.term("Power ((1:real) / 2) (n:num)", real))
+
+    val positivePower = force(
+      rules
+        .spec(half, force(chain.series.fact(Series.PowerPositive)))
+        .flatMap(rules.mp(_, force(linarith.prove("0 < (1:real) / 2")))))
+    val nonNegative = force(
+      rules
+        .specAll(
+          force(chain.order.fact(Order.LeOfLt)),
+          List(force(limit.term("0:real", real)), powerAt))
+        .flatMap(rules.mp(_, force(rules.spec(n, positivePower))))
+        .flatMap(rules.gen(n, _)))
+
+    val assumed = force(
+      LogicError.lift(
+        Kernel.assume(proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))))
+
+    // The same series on both sides, so the four antecedents are two facts each used twice.
+    val product = force(
+      rules
+        .specAll(force(limit.cauchyNonNegative), List(terms, terms, l, l))
+        .flatMap(rules.mp(_, nonNegative))
+        .flatMap(rules.mp(_, nonNegative))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(rules.mp(_, assumed)))
+
+    // Specialising `a` and `b` at a lambda leaves `(\z. Power (1/2) z) y` under two binders, so
+    // what comes back is a theorem about the series a reader means printed in a form a reader
+    // does not write. The reduction is the caller's step, which is the last test in this file
+    // met from the other side and the reason this line is here rather than inside the derivation.
+    val reduced = force(
+      Conv
+        .betaNormalise(product.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, product))))
+
+    val claim = proposition(
+      "?m:real. converges " +
+        "(Sum (\\k:num. Sum (\\i:num. Power ((1:real) / 2) i * " +
+        "Power ((1:real) / 2) (NUM_SUB k i)) (SUC k))) m")
+    val predicate = limit.logic.destExistsPredicate(claim).get
+    val wrapped = force(rules.existsIntro(predicate, force(limit.term("(l:real) * l", real)), reduced))
+
+    val settled = force(rules.existsElim(geometricConverges, l, wrapped))
+
+    settled.hypotheses shouldBe empty
+    settled.conclusion shouldBe claim
+  }
+
+  /**
+   * It rests on both halves of the sandwich, which is the claim its docstring makes about itself.
+   *
+   * A count of axioms cannot say this and neither can the statement: the theorem would read the
+   * same if it had been proved by the textbook epsilon argument with a split at `n / 2`. What
+   * separates the two routes is which published facts are inside the derivation, and
+   * `SUM_SQUARE_BELOW_CAUCHY` is in this one exactly because the split is not: it is what gives
+   * `A * B <= l` where the split would have given it by cutting a sum in two.
+   *
+   * `CONVERGES_MUL` is asserted beside them for the same reason one level out. The bracket's
+   * upper end is the limit of `Sum a n * Sum b n`, and knowing that sequence converges to `A * B`
+   * is the only place in the argument where anything about a **product** of limits is used.
+   */
+  it should "rest on both halves of the sandwich and on the limit of a product" in {
+    val theorem = force(limit.cauchyNonNegative)
+
+    val sandwich = Set(
+      force(limit.cauchyBelowSquare).conclusion,
+      force(limit.squareBelowCauchy).conclusion,
+      force(limit.multiplied).conclusion)
+
+    Derivation.restingOn(theorem, sandwich) shouldBe sandwich
+
+    // And the comparison test, which is the one door completeness comes through: the sandwich
+    // brackets the partial sums and brackets alone converge nothing.
+    Derivation.axiomsOf(theorem) should contain(force(chain.reals.axiom("COMPLETENESS")).conclusion)
+  }
 }

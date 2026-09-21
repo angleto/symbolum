@@ -326,6 +326,7 @@ they have least appetite for working out how it is produced.
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
   SUM_BELOW_LIMIT          !x:num -> real. !y:real. (!z:num. 0 <= x z) ==> converges (Sum x) y ==> (!z:num. Sum x z <= y)
   SUM_CAUCHY_BELOW_SQUARE  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) z <= Sum x z * Sum y z
+  SUM_CAUCHY_PRODUCT_NONNEG !x:num -> real. !y:num -> real. !z:real. !u:real. (!v:num. 0 <= x v) ==> (!v:num. 0 <= y v) ==> converges (Sum x) z ==> converges (Sum y) u ==> converges (Sum (\v:num. Sum (\w:num. x w * y (NUM_SUB v w)) (SUC v))) (z * u)
   SUM_COMPARISON           !x:num -> real. !y:num -> real. (!z:num. 0 <= x z) ==> (!z:num. x z <= y z) ==> (?z:real. !u:num. Sum y u <= z) ==> (?z:real. converges (Sum x) z)
   SUM_GROWS                !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. !z:num. y <= z ==> Sum x y <= Sum x z)
   SUM_SQUARE_BELOW_CAUCHY  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum x z * Sum y z <= Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) (z + z)
