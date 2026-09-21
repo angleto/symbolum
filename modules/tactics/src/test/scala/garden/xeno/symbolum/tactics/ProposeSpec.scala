@@ -336,7 +336,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 404 with the Cauchy product, 2026-09-21, and the **four** were derived before the run:
     // it carries four antecedents, two non-negativities and two convergences, one weakening
     // each. Tip plus this branch's delta.
-    proposals.size shouldBe 404
+    // 411 with the general Cauchy product and the three lemmas under it, 2026-09-21, and the
+    // **seven** were derived before the run and met: four antecedents on the product, two on
+    // the squeeze, one on the stretch, and `SUM_ABS` carries none at all. Tip plus this
+    // branch's delta.
+    proposals.size shouldBe 411
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -711,6 +715,30 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     val open = findings.count(_.standing.contains(Novelty.Standing.Open))
     val unreadable = findings.count(_.standing.contains(Novelty.Standing.Unreadable))
 
+    // The subject the address is read on, asserted rather than left to a reading, because this
+    // is where the fourth wrong prediction was made and an address is not visible in a count.
+    // `Novelty.of` asks `addressOf` of the whole claim: a weakening of a lemma with antecedents
+    // is an implication whatever its conclusion is about, so it has a propositional address even
+    // where nothing can read one word of it. A residue that arrived at `Nobody` here would mean
+    // the propositional route had stopped taking implications, which is a different defect from
+    // any count moving and is invisible to every other assertion in this file.
+    def addresses(name: String): Vector[Prove.Address] =
+      findings.filter(_.proposal.from == name).flatMap(_.reading).map(_.address)
+
+    addresses("SUM_CAUCHY_PRODUCT_NONNEG") shouldBe
+      Vector.fill(4)(Prove.Address.Propositional)
+    addresses("SUM_CAUCHY_PRODUCT") shouldBe Vector.fill(4)(Prove.Address.Propositional)
+    addresses("CONVERGES_TO_ZERO") shouldBe Vector.fill(2)(Prove.Address.Propositional)
+
+    // And the one that is **not** propositional, which is where the fifth wrong prediction was
+    // made. `SUM_TAIL_ABS` has a single antecedent, so its residue is an order between two reals
+    // rather than an implication, and `Linarith` takes that shape and fails on it. `Nobody` here
+    // would mean the order fragment had stopped recognising its own goals.
+    addresses("SUM_TAIL_ABS") shouldBe Vector(Prove.Address.Order)
+
+    // `SUM_ABS` carries no antecedent, so it produces no weakening and nothing to address.
+    addresses("SUM_ABS") shouldBe empty
+
     // 37 since the laws of exponents landed. `POWER_ADD` has no hypothesis, so it adds no
     // weakening; what it adds is one substitution, `Power x (NUM_ADD y z) = Power x y + Power x z`.
     // `POWER_MUL` adds nothing at all: no hypothesis to drop, and no `+`, `*`, `<` or `le` in it for
@@ -1065,17 +1093,31 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and fail on, so all five land here; the sixth is arithmetic on `num` and is decided. Three
     // earlier guesses on this row used the model instead and were wrong three times.
     //
-    // 302 with the Cauchy product's four, 2026-09-21, and **the prediction was `unreadable` and
-    // was wrong**, which is the fourth miss on this one split. What was predicted, by the
-    // address criterion the row above states: nothing recognises `converges (Sum c) (A * B)`, so
-    // `Nobody`, so `unreadable`. What happened: all four are here. **No mechanism is written for
-    // that**, deliberately, and this is the difference between this entry and the three the
-    // correction above is about — a fourth story fitted to the number after the fact would read
-    // exactly like the three that were wrong, and would be the same thing a fifth session
-    // inherits. What would settle it is one reading of `cost.prove.addressOf` on these four
-    // claims, which is a measurement nobody has run; until somebody does, the number is a
-    // reading and the reason is open.
-    open shouldBe 302
+    // 302 with the Cauchy product's four, 2026-09-21. **The prediction was `unreadable` and was
+    // wrong**, the fourth miss on this one split, and the miss is worth more than the number
+    // because the reading that produced it was the corrected criterion applied to the wrong
+    // term. The address criterion was right; what was fed to it was the claim's CONCLUSION,
+    // `converges (Sum c) (A * B)`, which nothing does recognise. `Novelty.of` reads
+    // `cost.prove.addressOf` on the WHOLE claim, and a weakening of this lemma is an
+    // implication, which the propositional address takes.
+    //
+    // That is measured rather than reasoned, and the assertion below is the measurement kept:
+    // all four are `Propositional`. So the three earlier guesses failed on the criterion and
+    // this one failed on the subject, which is the distinction the correction above could not
+    // have carried because it had not been met yet.
+    // 309 with all seven of the general Cauchy product's residues, 2026-09-21, and the
+    // prediction was **308**, wrong by one for the fifth time on this one split. What was
+    // predicted: six, on the ground that a residue of a lemma with one antecedent is not an
+    // implication and so has no propositional address. What happened: `SUM_TAIL_ABS`'s single
+    // residue is here too, at the address **`Order`** — measured, not reasoned, and asserted
+    // below so nobody has to reason about it again.
+    //
+    // The correction is not a new mechanism, which is what makes this miss worth a line rather
+    // than a paragraph: the row four hundred lines above already says that an order between two
+    // reals is a shape the procedures take and then fail on. Two wrong predictions in one day,
+    // and both were the address criterion applied to the wrong thing rather than the wrong
+    // criterion. The remedy is the assertion, not another account.
+    open shouldBe 309
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1673,7 +1715,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 159 with the Cauchy product's four, which write `Sum` and are on this list for the reason
     // the rows above give. Predicted before the run and right, on the criterion those rows
     // state: this list counts CONSTANTS.
-    aboutNumbers.size shouldBe 159
+    // 164 with five of the general Cauchy product's seven, 2026-09-21. Predicted and met, on
+    // the criterion these rows state: this list counts CONSTANTS. The four from the product and
+    // the one from the stretch write `Sum`; the squeeze's two are about arbitrary sequences and
+    // write `abs` and `converges`, neither of which is on `named`.
+    aboutNumbers.size shouldBe 164
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

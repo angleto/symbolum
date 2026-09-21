@@ -143,6 +143,18 @@ final class Limit private (
   /** [[Limit.CauchyNonNegative]], the Cauchy product where both series have non-negative terms. */
   def cauchyNonNegative: Either[LogicError, Kernel.Thm] = fact(Limit.CauchyNonNegative)
 
+  /** [[Limit.SumOfMagnitudes]], the triangle inequality at a finite sum. */
+  def sumOfMagnitudes: Either[LogicError, Kernel.Thm] = fact(Limit.SumOfMagnitudes)
+
+  /** [[Limit.Squeezed]], a sequence under a vanishing one. */
+  def squeezed: Either[LogicError, Kernel.Thm] = fact(Limit.Squeezed)
+
+  /** [[Limit.StretchOfMagnitudes]], the triangle inequality on a stretch of a series. */
+  def stretchOfMagnitudes: Either[LogicError, Kernel.Thm] = fact(Limit.StretchOfMagnitudes)
+
+  /** [[Limit.Cauchy]], the Cauchy product for absolutely convergent series. */
+  def cauchy: Either[LogicError, Kernel.Thm] = fact(Limit.Cauchy)
+
   /** `|- !f l. converges (Sum f) l ==> converges (\n. l - Sum f n) 0` */
   def tail: Either[LogicError, Kernel.Thm] = fact(Limit.Tail)
 }
@@ -474,6 +486,74 @@ object Limit {
    */
   val CauchyNonNegative: String = "SUM_CAUCHY_PRODUCT_NONNEG"
 
+  /**
+   * `|- !f n. abs (Sum f n) <= Sum (\i. abs (f i)) n`
+   *
+   * The triangle inequality at a finite sum. `ABS_TRIANGLE` is the two-term case and this is the
+   * induction over it, so it costs no axiom the order did not already cost.
+   *
+   * It is in this development rather than in `Magnitude` or `Series` because those two cannot
+   * write it: `abs` belongs to the first, `Sum` to the second, `Magnitude` is built above
+   * `Series` and is handed none of it, and this is the lowest link that holds both names.
+   */
+  val SumOfMagnitudes: String = "SUM_ABS"
+
+  /**
+   * `|- !s u. (!n. abs (s n) <= u n) ==> converges u 0 ==> converges s 0`
+   *
+   * The squeeze at zero. A sequence whose magnitude is under one that vanishes vanishes, which is
+   * the one shape of squeeze the general Cauchy product needs and the cheapest one to state: at a
+   * general limit the hypothesis reads `abs (s n - l) <= u n`, which is this statement with the
+   * subtraction done by the caller, and both callers here already hold the difference.
+   *
+   * It costs one asking of `u`'s convergence and no halving, because there is no second sequence
+   * to put an index together with.
+   */
+  val Squeezed: String = "CONVERGES_TO_ZERO"
+
+  /**
+   * `|- !f m n. NUM_LE m n ==> abs (Sum f n - Sum f m) <= Sum (\i. abs (f i)) n - Sum (\i. abs (f i)) m`
+   *
+   * [[SumOfMagnitudes]] on a stretch rather than on a prefix. `SUM_REINDEX` turns each difference
+   * into a sum over the stretch and back, so it costs three facts and no induction.
+   *
+   * The order is a hypothesis rather than the difference being written with `NUM_SUB`, and the
+   * derivation says why: at the one call site the guard is then `Peano.NUM_SUB_LE`, which holds
+   * with nothing assumed, where the additive form would make the consumer owe `i <= n` at every
+   * index.
+   */
+  val StretchOfMagnitudes: String = "SUM_TAIL_ABS"
+
+  /**
+   * `|- !a b A B P Q. converges (Sum (\i. abs (a i))) P ==> converges (Sum (\i. abs (b i))) Q ==>
+   * converges (Sum a) A ==> converges (Sum b) B ==>
+   * converges (Sum (\k. Sum (\i. a i * b (k - i)) (SUC k))) (A * B)`
+   *
+   * The Cauchy product, for series whose terms have signs, which is what
+   * `Transcendental.EXP_ADD` and the Pythagorean identity were waiting for:
+   * [[CauchyNonNegative]] reaches neither, since `sin` alternates and the exponential is wanted
+   * at every real rather than at the positives.
+   *
+   * Both series absolutely convergent, which is the honest hypothesis and not the weakest one:
+   * Mertens' theorem asks it of one of the two and this asks it of both. What that buys is that
+   * the whole argument runs on one instance of the non-negative theorem and one squeeze.
+   *
+   * == The identity that does the work carries no hypothesis ==
+   *
+   * `Series.SUM_CAUCHY_GAP` says `A_n * B_n - D_n = Sum (\i. a i * (B_n - B (n - i))) n` and asks
+   * **nothing** of the terms, so it holds of signed series exactly as it holds of non-negative
+   * ones. Written at `a, b` and again at the magnitudes it gives two sums that compare termwise,
+   * and the comparison is `ABS_MUL` with [[StretchOfMagnitudes]] under it. So the signed gap is
+   * under the magnitudes' gap at every index, the magnitudes' gap vanishes because
+   * [[Multiplied]] and [[CauchyNonNegative]] send its two halves to the same number, and
+   * [[Squeezed]] carries that across.
+   *
+   * **There is no epsilon in this one either**, and for a reason one step removed from the
+   * non-negative theorem's: the only epsilon anywhere under it is the one [[Squeezed]] spends,
+   * and [[Squeezed]] spends exactly one.
+   */
+  val Cauchy: String = "SUM_CAUCHY_PRODUCT"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -528,6 +608,20 @@ object Limit {
     CauchyNonNegative ->
       ("!a:num -> real. !b:num -> real. !A:real. !B:real. " +
         "(!i:num. 0 <= a i) ==> (!i:num. 0 <= b i) ==> " +
+        "converges (Sum a) A ==> converges (Sum b) B ==> " +
+        "converges (Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k))) (A * B)"),
+    SumOfMagnitudes ->
+      "!f:num -> real. !n:num. abs (Sum f n) <= Sum (\\i:num. abs (f i)) n",
+    Squeezed ->
+      ("!s:num -> real. !u:num -> real. (!n:num. abs (s n) <= u n) ==> " +
+        "converges u 0 ==> converges s 0"),
+    StretchOfMagnitudes ->
+      ("!f:num -> real. !m:num. !n:num. NUM_LE m n ==> " +
+        "abs (Sum f n - Sum f m) <= Sum (\\i:num. abs (f i)) n - Sum (\\i:num. abs (f i)) m"),
+    Cauchy ->
+      ("!a:num -> real. !b:num -> real. !A:real. !B:real. !P:real. !Q:real. " +
+        "converges (Sum (\\i:num. abs (a i))) P ==> " +
+        "converges (Sum (\\i:num. abs (b i))) Q ==> " +
         "converges (Sum a) A ==> converges (Sum b) B ==> " +
         "converges (Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k))) (A * B)")
   )
@@ -693,6 +787,21 @@ object Limit {
         logic, linarith, magnitude.order.ring, theory, notation, convergesDefinition, bounds,
         indices, products)
 
+      vanishingDominates <- dominatedByAVanishing(
+        logic, linarith, theory, notation, convergesDefinition, bounds)
+
+      absTriangle <- magnitude.fact(Magnitude.Triangle)
+      absOfNonNegative <- magnitude.fact(Magnitude.OfNonNegative)
+      sumAtSuccessorFact <- series.fact(Series.AtSuccessor)
+      sumAtZero <- series.fact(Series.AtZero)
+      magnitudesOfASum <- sumUnderMagnitudes(
+        logic, linarith, theory, notation, induct,
+        Magnitudes(absTriangle, absOfNonNegative, sumAtSuccessorFact, sumAtZero))
+
+      sumReindex <- series.fact(Series.Reindex)
+      magnitudesOfAStretch <- stretchUnderMagnitudes(
+        logic, theory, notation, orderDefinition, sumReindex, magnitudesOfASum)
+
       antisymmetry <- magnitude.order.antisymmetric
       cauchyProduct <- cauchyOfNonNegative(
         logic,
@@ -703,6 +812,19 @@ object Limit {
           comparisonTest, below, belowItsOwnLimit, triangleUnderSquare, squareUnderTriangle,
           multipliedLimits, sumNonNegative, productNonNegative, multiplyLe, mulSymmetric,
           antisymmetry)
+      )
+      absNonNegative <- magnitude.fact(Magnitude.AbsNonNegative)
+      absMul <- magnitude.fact(Magnitude.Multiplicative)
+      sumMonotone <- series.fact(Series.Monotone)
+      signedCauchyProduct <- cauchyOfSigned(
+        logic,
+        linarith,
+        theory,
+        notation,
+        Generals(
+          magnitude.order.ring, absNonNegative, absMul, cauchyProduct, multipliedLimits,
+          addedLimits, negatedLimit, eventually, vanishingDominates, sumCauchyGap, sumMonotone,
+          magnitudesOfASum, magnitudesOfAStretch, multiplyLe, mulSymmetric, differenceBelow)
       )
     } yield new Limit(
       magnitude,
@@ -730,7 +852,11 @@ object Limit {
         CauchyBelowSquare -> triangleUnderSquare,
         SquareBelowCauchy -> squareUnderTriangle,
         Tail -> tailToZero,
-        CauchyNonNegative -> cauchyProduct
+        CauchyNonNegative -> cauchyProduct,
+        SumOfMagnitudes -> magnitudesOfASum,
+        Squeezed -> vanishingDominates,
+        StretchOfMagnitudes -> magnitudesOfAStretch,
+        Cauchy -> signedCauchyProduct
       )
     )
   }
@@ -1094,6 +1220,47 @@ object Limit {
     atMostDouble: Kernel.Thm,
     multiplyLe: Kernel.Thm,
     symmetric: Kernel.Thm
+  )
+
+  /**
+   * What the triangle inequality at a finite sum takes, which is three facts and an induction.
+   *
+   * A bundle for [[Bounds]]'s reason, and the smallest one here. Two are `Magnitude`'s and one is
+   * `Series`', which is the whole of why the lemma cannot live in either of those files.
+   */
+  private final case class Magnitudes(
+    triangle: Kernel.Thm,
+    ofNonNegative: Kernel.Thm,
+    atSuccessor: Kernel.Thm,
+    atZero: Kernel.Thm
+  )
+
+  /**
+   * What the general Cauchy product takes, which is fifteen facts and is the whole argument.
+   *
+   * A bundle for [[Bounds]]'s reason, and the largest here. Four of the fifteen are this file's
+   * own and were proved for this consumer — the non-negative product, the squeeze, and the
+   * triangle inequality at a prefix and at a stretch — and the rest are the order's, the ring's
+   * and `Series`'. `SUM_CAUCHY_GAP` is the one to read first: it carries no hypothesis, which is
+   * why an argument about non-negative terms and an argument about signed ones can share it.
+   */
+  private final case class Generals(
+    ring: Ring,
+    absNonNegative: Kernel.Thm,
+    absMul: Kernel.Thm,
+    nonNegativeProduct: Kernel.Thm,
+    multiplied: Kernel.Thm,
+    added: Kernel.Thm,
+    negated: Kernel.Thm,
+    eventually: Kernel.Thm,
+    squeezed: Kernel.Thm,
+    gap: Kernel.Thm,
+    monotone: Kernel.Thm,
+    prefix: Kernel.Thm,
+    stretch: Kernel.Thm,
+    multiplyLe: Kernel.Thm,
+    symmetric: Kernel.Thm,
+    subBelow: Kernel.Thm
   )
 
   /**
@@ -3333,6 +3500,643 @@ object Limit {
         .flatMap(rules.disch(nonNegativeB, _))
         .flatMap(rules.disch(nonNegativeA, _))
         .flatMap(rules.genAll(_, List(a, b, bigA, bigB)))
+    } yield result
+  }
+
+  /**
+   * `|- !f n. abs (Sum f n) <= Sum (\i. abs (f i)) n`
+   *
+   * The triangle inequality at a finite sum, which is one induction over `ABS_TRIANGLE`.
+   *
+   * **It lives here and its subject is not limits**, which is the chain's doing rather than a
+   * choice: `abs` is `Magnitude`'s and `Sum` is `Series`', `Magnitude` is built **above** `Series`
+   * and is handed no `Series` at all, so the lowest development in which the two can be written
+   * in one statement is this one. Handing `Magnitude` a `Series` to carry one lemma would add an
+   * edge to the dependency graph for a fact about neither of its two subjects, and
+   * `CONVERGES_ABSOLUTE` already pairs the two names here, so this is where a reader looking for
+   * the pair arrives.
+   *
+   * **Nothing consumed it until 2026-09-21, which is why it was not written**, and this file said
+   * so of itself while it was absent. The consumer is the general Cauchy product: bounding a
+   * signed sum by the same sum of magnitudes is what turns the non-negative theorem into a
+   * statement about arbitrary terms.
+   *
+   * The step is put together and then folded back rather than rewritten forwards. What
+   * `ABS_TRIANGLE` and the hypothesis give is an order between the **opened** partial sums, and
+   * the two recurrences are applied backwards to it by [[rewriteInProposition]], which is the
+   * same direction [[rewriteInProposition]]'s other callers use and avoids asking the rewriter to
+   * put a `SUC` back where it has just taken one out.
+   */
+  private def sumUnderMagnitudes(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    induct: Induct,
+    pieces: Magnitudes
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val f = Term.variable("f", sequences)
+
+    def opened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    for {
+      zero <- Parser.term(theory, notation, "0:real", values)
+      absZero <- rules
+        .spec(zero, pieces.ofNonNegative)
+        .flatMap(theorem => linarith.prove("(0:real) <= 0").flatMap(rules.mp(theorem, _)))
+
+      vanishing <- Rewrite.Rule.of(logic, pieces.atZero)
+      collapse <- Rewrite.Rule.of(logic, absZero)
+
+      magnitudes <- Parser.term(
+        theory, notation, "\\i:num. abs ((f:num -> real) i)", sequences)
+
+      statement <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. abs (Sum (f:num -> real) n) <= Sum (\\i:num. abs ((f:num -> real) i)) n")
+
+      everywhere <- induct.proveBy(
+        statement,
+        // Both sides collapse to zero, and `abs 0 = 0` is the one rule the sum's own does not give.
+        base =>
+          Induct.afterRewriting(Vector(vanishing, collapse), base)(goal =>
+            linarith.prove(Show.show(notation, goal))),
+        step =>
+          for {
+            atSignedSuccessor <- rules.specAll(pieces.atSuccessor, List(f, step.variable))
+            atMagnitudeSuccessor <- rules
+              .specAll(pieces.atSuccessor, List(magnitudes, step.variable))
+              .flatMap(opened)
+
+            // `Sum f k + f k` and `Sum (\i. abs (f i)) k + abs (f k)`, read off the two
+            // recurrences rather than built, so no term here is written twice.
+            signedSides <- destructEquation(atSignedSuccessor)
+            magnitudeSides <- destructEquation(atMagnitudeSuccessor)
+            summands <- signedSides._2 match {
+              case App(App(_, partial), here) => Right((partial, here))
+              case other => Left(NotOfForm("a partial sum and the term just added", other))
+            }
+            (partial, here) = summands
+
+            triangle <- rules.specAll(pieces.triangle, List(partial, here))
+            bounds <- triangle.conclusion match {
+              case App(App(_, whole), App(App(_, left), right)) => Right((whole, left, right))
+              case other => Left(NotOfForm("the triangle inequality", other))
+            }
+            (whole, leftMagnitude, rightMagnitude) = bounds
+
+            partialMagnitudes <- magnitudeSides._2 match {
+              case App(App(_, sofar), _) => Right(sofar)
+              case other => Left(NotOfForm("a partial sum and the term just added", other))
+            }
+
+            // `p <= q + r` with `q <= s` gives `p <= s + r`: the hypothesis replaces the first
+            // summand and the second is carried across untouched.
+            assembled <- linarith
+              .prove("!p:real. !q:real. !r:real. !s:real. p <= q + r ==> q <= s ==> p <= s + r")
+              .flatMap(rules.specAll(
+                _, List(whole, leftMagnitude, rightMagnitude, partialMagnitudes)))
+              .flatMap(rules.mp(_, triangle))
+              .flatMap(rules.mp(_, step.hypothesis))
+
+            foldedLeft <- Conv.sym(atSignedSuccessor).flatMap(rewriteInProposition(_, assembled))
+            result <- Conv.sym(atMagnitudeSuccessor).flatMap(rewriteInProposition(_, foldedLeft))
+          } yield result
+      )
+
+      result <- rules.gen(f, everywhere)
+    } yield result
+  }
+
+  /**
+   * `|- !s u. (!n. abs (s n) <= u n) ==> converges u 0 ==> converges s 0`
+   *
+   * The squeeze, in the only shape this development needs: a sequence dominated in magnitude by
+   * one that goes to zero goes to zero. Written at zero rather than at a general limit on purpose,
+   * because the two-sided form wants `abs (s n - l) <= u n`, which is the same statement with the
+   * shift done by the caller, and every consumer here already has the difference in hand.
+   *
+   * **One tolerance and no halving.** `u`'s own convergence is asked once, at the tolerance the
+   * caller gave, and the index it answers with is the index this sequence answers with: there is
+   * no second sequence to put an index together with, which is what makes this shorter than
+   * [[Added]] and much shorter than [[Multiplied]]. The whole estimate is
+   * `abs (s n - 0) = abs (s n) <= u n <= abs (u n - 0) < e`, four links, and the middle two are
+   * the hypothesis and `ABS_ABOVE`.
+   *
+   * The first link is the one worth naming, because it is not an identity the rewriting produces:
+   * `abs (s n - 0)` is what `converges` asks about and `abs (s n)` is what the hypothesis bounds,
+   * and they are different terms. What joins them is `s n - 0 = s n` carried under `abs` by
+   * congruence, which is the same step [[Tail]] takes for the same reason.
+   */
+  private def dominatedByAVanishing(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    bounds: Bounds
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val u = Term.variable("u", sequences)
+    val e = Term.variable("e", values)
+    val n = Term.variable("n", numbers)
+    val m = Term.variable("m", numbers)
+
+    for {
+      zero <- Parser.term(theory, notation, "0:real", values)
+      dominated <- Parser.proposition(
+        theory, notation, "!n:num. abs ((s:num -> real) n) <= (u:num -> real) n")
+      assumedDominated <- LogicError.lift(Kernel.assume(dominated))
+
+      toZero <- Parser.proposition(theory, notation, "converges (u:num -> real) 0")
+      assumedZero <- LogicError.lift(Kernel.assume(toZero))
+      unfoldedU <- Conv.unfold(convergesDefinition, List(u, zero)).flatMap(normaliseRight)
+      bodyU <- LogicError.lift(Kernel.eqMp(unfoldedU, assumedZero))
+
+      positive <- Parser.proposition(theory, notation, "0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      near <- rules.spec(e, bodyU).flatMap(rules.mp(_, assumedPositive))
+
+      inside <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE m:num n ==> abs ((u:num -> real) n - 0) < e:real")
+      assumedInside <- LogicError.lift(Kernel.assume(inside))
+
+      guard <- Parser.proposition(theory, notation, "NUM_LE m:num n:num")
+      assumedGuard <- LogicError.lift(Kernel.assume(guard))
+      close <- rules.spec(n, assumedInside).flatMap(rules.mp(_, assumedGuard))
+
+      atHere <- rules.spec(n, assumedDominated)
+      atU <- Parser.term(theory, notation, "(u:num -> real) (n:num)", values)
+      gapU <- Parser.term(theory, notation, "(u:num -> real) (n:num) - 0", values)
+      distanceU <- Parser.term(theory, notation, "abs ((u:num -> real) (n:num) - 0)", values)
+      atS <- Parser.term(theory, notation, "abs ((s:num -> real) (n:num))", values)
+      distanceS <- Parser.term(theory, notation, "abs ((s:num -> real) (n:num) - 0)", values)
+      aboveU <- rules.spec(gapU, bounds.above)
+
+      // `abs (s n - 0)` is what `converges` asks about and `abs (s n)` is what the hypothesis
+      // bounds. The shift is carried under `abs` by congruence rather than by a rewriting pass.
+      atSPlain <- Parser.term(theory, notation, "(s:num -> real) (n:num)", values)
+      magnitude <- distanceS match {
+        case App(constant, _) => Right(constant)
+        case other            => Left(NotOfForm("a magnitude", other))
+      }
+      shift <- linarith.prove("!x:real. x - 0 = x")
+      carried <- rules.spec(atSPlain, shift).flatMap(Conv.apTerm(magnitude, _))
+
+      closeGap <- linarith
+        .prove(
+          "!d:real. !q:real. !v:real. !w:real. !t:real. " +
+            "d = q ==> q <= v ==> v - 0 <= w ==> w < t ==> d < t")
+        .flatMap(rules.specAll(_, List(distanceS, atS, atU, distanceU, e)))
+        .flatMap(rules.mp(_, carried))
+        .flatMap(rules.mp(_, atHere))
+        .flatMap(rules.mp(_, aboveU))
+        .flatMap(rules.mp(_, close))
+
+      guarded <- rules.disch(guard, closeGap).flatMap(rules.gen(n, _))
+      existential <- Parser.proposition(
+        theory,
+        notation,
+        "?N:num. !n:num. NUM_LE N n ==> abs ((s:num -> real) n - 0) < e:real")
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential quantification", existential))
+      witnessed <- rules.existsIntro(predicate, m, guarded)
+      eliminated <- rules.existsElim(near, m, witnessed)
+      whole <- rules.disch(positive, eliminated).flatMap(rules.gen(e, _))
+
+      unfoldedS <- Conv.unfold(convergesDefinition, List(s, zero)).flatMap(normaliseRight)
+      bodyS <- rightOf(unfoldedS)
+      _ <- sameStatement(notation, whole, bodyS)
+      folded <- Conv
+        .sym(unfoldedS)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, whole)))
+
+      result <- rules
+        .disch(toZero, folded)
+        .flatMap(rules.disch(dominated, _))
+        .flatMap(rules.genAll(_, List(s, u)))
+    } yield result
+  }
+
+  /**
+   * `|- !f m n. NUM_LE m n ==> abs (Sum f n - Sum f m) <= Sum (\i. abs (f i)) n - Sum (\i. abs (f i)) m`
+   *
+   * The triangle inequality on a **stretch** of a series rather than on a prefix, which is
+   * [[SumOfMagnitudes]] with `SUM_REINDEX` on both sides of it and no induction of its own.
+   *
+   * `SUM_REINDEX` already says that a sum started at `m` and run for `d` terms is the difference
+   * of two partial sums, so the whole derivation is three facts in a line: read the difference
+   * backwards into a sum over the stretch, put [[SumOfMagnitudes]] to that sum, and read the
+   * answer forwards into a difference again with the same fact at the magnitudes. **The lemma
+   * that looked missing was in the library**, which is why this costs three lines rather than a
+   * second induction over the gap.
+   *
+   * == Why the order is a hypothesis and not a subtraction ==
+   *
+   * `SUM_REINDEX` is additive, so the natural statement of this is over `m` and `d` with `m + d`
+   * where this one writes `n`. That form is true, shorter to derive, and **unusable at the one
+   * call site there is**: the consumer holds `Sum b n - Sum b (NUM_SUB n i)` and would have to
+   * produce `NUM_SUB n i + i = n`, which is `Peano.NUM_SUB_ADD` under `i <= n` — a hypothesis it
+   * would then owe for every `i`. Written with the order in front, the guard at that site is
+   * `NUM_LE (NUM_SUB n i) n`, which is `Peano.NUM_SUB_LE` and holds for **every** `i` with
+   * nothing assumed. So the hypothesis here buys the consumer the absence of one there, and the
+   * consumer can use `SUM_MONOTONE` where it would otherwise have needed the bounded twin.
+   */
+  private def stretchUnderMagnitudes(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    orderDefinition: Kernel.Thm,
+    reindex: Kernel.Thm,
+    prefix: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val f = Term.variable("f", sequences)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val d = Term.variable("d", numbers)
+
+    def opened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    for {
+      magnitudes <- Parser.term(
+        theory, notation, "\\i:num. abs ((f:num -> real) i)", sequences)
+      shifted <- Parser.term(
+        theory, notation, "\\u:num. (f:num -> real) (NUM_ADD (m:num) u)", sequences)
+
+      // The stretch read as a difference, and the same for the magnitudes.
+      asDifference <- rules.specAll(reindex, List(f, m, d)).flatMap(opened)
+      magnitudesAsDifference <- rules.specAll(reindex, List(magnitudes, m, d)).flatMap(opened)
+
+      overTheStretch <- rules.specAll(prefix, List(shifted, d)).flatMap(opened)
+
+      core <- rewriteInProposition(asDifference, overTheStretch)
+        .flatMap(rewriteInProposition(magnitudesAsDifference, _))
+
+      below <- Parser.proposition(theory, notation, "NUM_LE (m:num) (n:num)")
+      assumedBelow <- LogicError.lift(Kernel.assume(below))
+      unfolded <- Conv.unfold(orderDefinition, List(m, n)).flatMap(normaliseRight)
+      witness <- LogicError.lift(Kernel.eqMp(unfolded, assumedBelow))
+
+      inner <- Parser.proposition(theory, notation, "NUM_ADD (m:num) (d:num) = n:num")
+      assumedInner <- LogicError.lift(Kernel.assume(inner))
+      atIndex <- rewriteInProposition(assumedInner, core)
+      eliminated <- rules.existsElim(witness, d, atIndex)
+
+      result <- rules
+        .disch(below, eliminated)
+        .flatMap(rules.genAll(_, List(f, m, n)))
+    } yield result
+  }
+
+  /**
+   * [[Cauchy]], the Cauchy product where the terms have signs.
+   *
+   * == What the non-negative theorem does and does not give ==
+   *
+   * [[CauchyNonNegative]] is this statement at `abs (a i)` and `abs (b i)`, and it is spent here
+   * exactly once, on the magnitudes. What that buys is a sequence that is known to vanish; it
+   * says nothing at all about the signed convolution, whose partial sums are not monotone and
+   * are not bracketed by anything.
+   *
+   * == The argument, which is one identity and one squeeze ==
+   *
+   * Write `A_n` for `Sum a n` and `D_n` for the signed convolution's partial sum, and `P_n`,
+   * `Q_n`, `E_n` for the same three at the magnitudes. `Series.SUM_CAUCHY_GAP` is an identity
+   * carrying **no hypothesis**, so it holds of signed terms as it does of non-negative ones:
+   *
+   *   `A_n * B_n - D_n = Sum (\i. a i * (B_n - B (n - i))) n`
+   *
+   * and the same at the magnitudes. The two right-hand sides compare termwise, which is the
+   * whole of the work: `abs (a i * (B_n - B (n - i)))` is `abs (a i) * abs (B_n - B (n - i))` by
+   * `ABS_MUL`, and the second factor is under `Q_n - Q (n - i)` by [[StretchOfMagnitudes]] with
+   * `Peano.NUM_SUB_LE` discharging its guard at every `i` and nothing assumed. So
+   * [[SumOfMagnitudes]] and `SUM_MONOTONE` give
+   *
+   *   `abs (A_n * B_n - D_n) <= P_n * Q_n - E_n`
+   *
+   * and the right side vanishes, because [[Multiplied]] sends `P_n * Q_n` to `P * Q` and the
+   * non-negative theorem sends `E_n` to the same number. [[Squeezed]] carries that to the left
+   * side, and then `D_n = A_n * B_n - (A_n * B_n - D_n)` converges to `A * B - 0`.
+   *
+   * == Two shapes of bookkeeping, named so a reader does not mistake them for the argument ==
+   *
+   * The difference of two limits is assembled out of [[Negated]] and [[Added]], so what comes
+   * back is a sequence spelled `\n. x n + -(y n)` and a limit spelled `l + -(l)`. Neither is the
+   * term a reader writes. [[Eventually]] at index zero replaces the sequence, its hypothesis
+   * being a pointwise **linear** equation, and a rewrite replaces the limit. That is the same
+   * arrangement [[Tail]] uses and is for the same reason.
+   */
+  private def cauchyOfSigned(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    pieces: Generals
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val a = Term.variable("a", sequences)
+    val b = Term.variable("b", sequences)
+    val bigA = Term.variable("A", values)
+    val bigB = Term.variable("B", values)
+    val bigP = Term.variable("P", values)
+    val bigQ = Term.variable("Q", values)
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+
+    val magnitudesOfA = "\\i:num. abs ((a:num -> real) i)"
+    val magnitudesOfB = "\\i:num. abs ((b:num -> real) i)"
+    val signedConvolution =
+      "\\k:num. Sum (\\i:num. (a:num -> real) i * (b:num -> real) (NUM_SUB k i)) (SUC k)"
+
+    def opened(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    def convergenceOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      theorem.conclusion match {
+        case App(App(_, sequence), value) => Right((sequence, value))
+        case other                        => Left(NotOfForm("a convergence", other))
+      }
+
+    /**
+     * The same convergence with the **value** written the way a reader writes it.
+     *
+     * [[Added]] hands back `l + -l` where what is wanted is `0`, and the repair is a congruence
+     * on the convergence's second argument: nothing about the sequence is touched.
+     */
+    def valued(produced: Kernel.Thm, wanted: Term): Either[LogicError, Kernel.Thm] =
+      for {
+        parts <- convergenceOf(produced)
+        equation <- LogicError.lift(Term.eq(parts._2, wanted)).flatMap(pieces.ring.prove)
+        leading <- produced.conclusion match {
+          case App(partial, _) => Right(partial)
+          case other           => Left(NotOfForm("a convergence", other))
+        }
+        result <- Conv
+          .apTerm(leading, equation)
+          .flatMap(congruence => LogicError.lift(Kernel.eqMp(congruence, produced)))
+      } yield result
+
+    /**
+     * The same convergence with the **sequence** written the way a reader writes it.
+     *
+     * This one cannot be a congruence, because the two sequences are equal at every index and are
+     * not the same function: what says so is [[Eventually]] at index zero, whose hypothesis is a
+     * pointwise equation the ring decides. The index is read off the instance rather than written,
+     * since the instance is what fixes which variable the hypothesis is about.
+     */
+    def spelled(produced: Kernel.Thm, wanted: Term): Either[LogicError, Kernel.Thm] =
+      for {
+        parts <- convergenceOf(produced)
+        indexZero <- Parser.term(theory, notation, "ZERO", numbers)
+        instance <- rules
+          .specAll(pieces.eventually, List(parts._1, wanted, parts._2, indexZero))
+          .flatMap(opened)
+        premise <- logic
+          .destImp(instance.conclusion)
+          .toRight(NotOfForm("an implication", instance.conclusion))
+        stripped <- Logic.stripForall(premise._1)
+        index <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every index", premise._1))
+        inner <- logic
+          .destImp(stripped._2)
+          .toRight(NotOfForm("an implication", stripped._2))
+        agreeing <- pieces.ring
+          .prove(inner._2)
+          .flatMap(rules.disch(inner._1, _))
+          .flatMap(rules.gen(index, _))
+          .flatMap(rules.mp(instance, _))
+        result <- rules.mp(agreeing, produced)
+      } yield result
+
+    /** Two bounds put end to end. */
+    def chain(
+      lower: Kernel.Thm,
+      upper: Kernel.Thm,
+      small: Term,
+      middle: Term,
+      large: Term
+    ): Either[LogicError, Kernel.Thm] =
+      linarith
+        .prove("!x:real. !y:real. !z:real. x <= y ==> y <= z ==> x <= z")
+        .flatMap(rules.specAll(_, List(small, middle, large)))
+        .flatMap(rules.mp(_, lower))
+        .flatMap(rules.mp(_, upper))
+
+    for {
+      toP <- Parser.proposition(
+        theory, notation, "converges (Sum (" + magnitudesOfA + ")) (P:real)")
+      toQ <- Parser.proposition(
+        theory, notation, "converges (Sum (" + magnitudesOfB + ")) (Q:real)")
+      toA <- Parser.proposition(theory, notation, "converges (Sum (a:num -> real)) (A:real)")
+      toB <- Parser.proposition(theory, notation, "converges (Sum (b:num -> real)) (B:real)")
+      convergesP <- LogicError.lift(Kernel.assume(toP))
+      convergesQ <- LogicError.lift(Kernel.assume(toQ))
+      convergesA <- LogicError.lift(Kernel.assume(toA))
+      convergesB <- LogicError.lift(Kernel.assume(toB))
+
+      absA <- Parser.term(theory, notation, magnitudesOfA, sequences)
+      absB <- Parser.term(theory, notation, magnitudesOfB, sequences)
+      signed <- Parser.term(theory, notation, signedConvolution, sequences)
+      sumA <- Parser.term(theory, notation, "Sum (a:num -> real)", sequences)
+      sumB <- Parser.term(theory, notation, "Sum (b:num -> real)", sequences)
+      sumAbsA <- Parser.term(theory, notation, "Sum (" + magnitudesOfA + ")", sequences)
+      sumAbsB <- Parser.term(theory, notation, "Sum (" + magnitudesOfB + ")", sequences)
+      product <- Parser.term(theory, notation, "(A:real) * (B:real)", values)
+      magnitudeProduct <- Parser.term(theory, notation, "(P:real) * (Q:real)", values)
+      zero <- Parser.term(theory, notation, "0:real", values)
+
+      /* --------------------------------------- the magnitudes, where the old theorem is spent */
+
+      atA <- Parser.term(theory, notation, "(a:num -> real) (i:num)", values)
+      atB <- Parser.term(theory, notation, "(b:num -> real) (i:num)", values)
+      nonNegativeA <- rules.spec(atA, pieces.absNonNegative).flatMap(rules.gen(i, _))
+      nonNegativeB <- rules.spec(atB, pieces.absNonNegative).flatMap(rules.gen(i, _))
+
+      magnitudeCauchy <- rules
+        .specAll(pieces.nonNegativeProduct, List(absA, absB, bigP, bigQ))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, nonNegativeA))
+        .flatMap(rules.mp(_, nonNegativeB))
+        .flatMap(rules.mp(_, convergesP))
+        .flatMap(rules.mp(_, convergesQ))
+      // The **sequence**, which is `Sum` applied to the convolution and not the convolution:
+      // `CONVERGES_NEG` is about a sequence and the partial sums are what converges.
+      magnitudeParts <- convergenceOf(magnitudeCauchy)
+      magnitudeConvolution = magnitudeParts._1
+
+      magnitudeSquares <- rules
+        .specAll(pieces.multiplied, List(sumAbsA, sumAbsB, bigP, bigQ))
+        .flatMap(rules.mp(_, convergesP))
+        .flatMap(rules.mp(_, convergesQ))
+      signedSquares <- rules
+        .specAll(pieces.multiplied, List(sumA, sumB, bigA, bigB))
+        .flatMap(rules.mp(_, convergesA))
+        .flatMap(rules.mp(_, convergesB))
+
+      /* ---------------------------------------------- the two gaps, and the bound between them */
+
+      signedGap <- rules.specAll(pieces.gap, List(a, b, n))
+      magnitudeGap <- rules.specAll(pieces.gap, List(absA, absB, n)).flatMap(opened)
+      signedGapSides <- destructEquation(signedGap)
+      magnitudeGapSides <- destructEquation(magnitudeGap)
+      signedBody <- signedGapSides._2 match {
+        case App(App(_, body), _) => Right(body)
+        case other => Left(NotOfForm("a sum over the gap", other))
+      }
+      magnitudeBody <- magnitudeGapSides._2 match {
+        case App(App(_, body), _) => Right(body)
+        case other => Left(NotOfForm("a sum over the gap", other))
+      }
+
+      tailOfB <- Parser.term(
+        theory,
+        notation,
+        "Sum (b:num -> real) (n:num) - Sum (b:num -> real) (NUM_SUB (n:num) (i:num))",
+        values)
+      tailOfMagnitudes <- Parser.term(
+        theory,
+        notation,
+        "Sum (" + magnitudesOfB + ") (n:num) - Sum (" + magnitudesOfB + ") (NUM_SUB (n:num) (i:num))",
+        values)
+      hereMagnitude <- Parser.term(theory, notation, "abs ((a:num -> real) (i:num))", values)
+      hereTailMagnitude <- Parser.term(
+        theory,
+        notation,
+        "abs (Sum (b:num -> real) (n:num) - Sum (b:num -> real) (NUM_SUB (n:num) (i:num)))",
+        values)
+
+      // The stretch bound, at every `i` and with nothing assumed: its guard is `NUM_SUB_LE`.
+      difference <- Parser.term(theory, notation, "NUM_SUB (n:num) (i:num)", numbers)
+      stretch <- rules
+        .specAll(pieces.stretch, List(b, difference, n))
+        .flatMap(opened)
+        .flatMap(theorem =>
+          rules.specAll(pieces.subBelow, List(n, i)).flatMap(rules.mp(theorem, _)))
+      hereNonNegative <- rules.spec(atA, pieces.absNonNegative)
+      scaled <- rules
+        .specAll(pieces.multiplyLe, List(hereMagnitude, hereTailMagnitude, tailOfMagnitudes))
+        .flatMap(rules.mp(_, hereNonNegative))
+        .flatMap(rules.mp(_, stretch))
+      turnedLeft <- rules.specAll(pieces.symmetric, List(hereTailMagnitude, hereMagnitude))
+      turnedRight <- rules.specAll(pieces.symmetric, List(tailOfMagnitudes, hereMagnitude))
+      commuted <- rewriteInProposition(turnedLeft, scaled)
+        .flatMap(rewriteInProposition(turnedRight, _))
+      splitMagnitude <- rules.specAll(pieces.absMul, List(atA, tailOfB))
+      termwise <- Conv.sym(splitMagnitude).flatMap(rewriteInProposition(_, commuted))
+      everyTerm <- rules.gen(i, termwise)
+
+      magnitudesOfSigned <- rules.specAll(pieces.prefix, List(signedBody, n)).flatMap(opened)
+      magnitudesSequence <- magnitudesOfSigned.conclusion match {
+        case App(App(_, _), App(App(_, sequence), _)) => Right(sequence)
+        case other => Left(NotOfForm("a bound on a sum of magnitudes", other))
+      }
+      dominated <- rules
+        .specAll(pieces.monotone, List(magnitudesSequence, magnitudeBody))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, everyTerm))
+        .flatMap(rules.spec(n, _))
+
+      // `Sum` and `abs` are read off terms already built rather than parsed bare.
+      partialSums <- sumA match {
+        case App(constant, _) => Right(constant)
+        case other            => Left(NotOfForm("the partial sums of a series", other))
+      }
+      magnitudeOf <- hereMagnitude match {
+        case App(constant, _) => Right(constant)
+        case other            => Left(NotOfForm("a magnitude", other))
+      }
+      signedSums <- LogicError.lift(Term.app(partialSums, signedBody))
+      signedSum <- LogicError.lift(Term.app(signedSums, n))
+      magnitudeSums <- LogicError.lift(Term.app(partialSums, magnitudeBody))
+      magnitudeSum <- LogicError.lift(Term.app(magnitudeSums, n))
+      middleSums <- LogicError.lift(Term.app(partialSums, magnitudesSequence))
+      middleSum <- LogicError.lift(Term.app(middleSums, n))
+      absOfSignedSum <- LogicError.lift(Term.app(magnitudeOf, signedSum))
+
+      bounded <- chain(magnitudesOfSigned, dominated, absOfSignedSum, middleSum, magnitudeSum)
+      foldedLeft <- Conv
+        .sym(signedGap)
+        .flatMap(equation => rewriteInProposition(equation, bounded))
+      pointwise <- Conv
+        .sym(magnitudeGap)
+        .flatMap(equation => rewriteInProposition(equation, foldedLeft))
+      everywhere <- rules.gen(n, pointwise)
+
+      /* ------------------------------------- the bound vanishes, so the gap does, so `D` lands */
+
+      pointwiseSides <- pointwise.conclusion match {
+        case App(App(_, left), right) => Right((left, right))
+        case other                    => Left(NotOfForm("a comparison", other))
+      }
+      signedGapAt <- pointwiseSides._1 match {
+        case App(_, inner) => Right(inner)
+        case other         => Left(NotOfForm("a magnitude", other))
+      }
+      gapSequence <- LogicError.lift(Term.abs(n, signedGapAt))
+      boundSequence <- LogicError.lift(Term.abs(n, pointwiseSides._2))
+
+      magnitudeSquareParts <- convergenceOf(magnitudeSquares)
+      turnedMagnitudes <- rules
+        .specAll(pieces.negated, List(magnitudeConvolution, magnitudeProduct))
+        .flatMap(rules.mp(_, magnitudeCauchy))
+      turnedMagnitudeParts <- convergenceOf(turnedMagnitudes)
+      boundTogether <- rules
+        .specAll(
+          pieces.added,
+          List(
+            magnitudeSquareParts._1,
+            turnedMagnitudeParts._1,
+            magnitudeProduct,
+            turnedMagnitudeParts._2))
+        .flatMap(rules.mp(_, magnitudeSquares))
+        .flatMap(rules.mp(_, turnedMagnitudes))
+        .flatMap(opened)
+      boundVanishes <- valued(boundTogether, zero).flatMap(spelled(_, boundSequence))
+
+      gapVanishes <- rules
+        .specAll(pieces.squeezed, List(gapSequence, boundSequence))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, everywhere))
+        .flatMap(rules.mp(_, boundVanishes))
+
+      signedSquareParts <- convergenceOf(signedSquares)
+      turnedGap <- rules
+        .specAll(pieces.negated, List(gapSequence, zero))
+        .flatMap(rules.mp(_, gapVanishes))
+        .flatMap(opened)
+      turnedGapParts <- convergenceOf(turnedGap)
+      assembled <- rules
+        .specAll(
+          pieces.added,
+          List(signedSquareParts._1, turnedGapParts._1, product, turnedGapParts._2))
+        .flatMap(rules.mp(_, signedSquares))
+        .flatMap(rules.mp(_, turnedGap))
+        .flatMap(opened)
+
+      convolutionSums <- LogicError.lift(Term.app(partialSums, signed))
+      landed <- valued(assembled, product).flatMap(spelled(_, convolutionSums))
+
+      result <- rules
+        .disch(toB, landed)
+        .flatMap(rules.disch(toA, _))
+        .flatMap(rules.disch(toQ, _))
+        .flatMap(rules.disch(toP, _))
+        .flatMap(rules.genAll(_, List(a, b, bigA, bigB, bigP, bigQ)))
     } yield result
   }
 

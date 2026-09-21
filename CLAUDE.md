@@ -617,7 +617,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 594 lemmas, 390 have two or more leading quantifiers and **356 of
+caller meant: of the library's 598 lemmas, 394 have two or more leading quantifiers and **359 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1451,31 +1451,50 @@ document and a pattern matching all of them would have been built by reading the
 reading it was meant to replace. A count of copies is itself a copy, and this one counted the
 repair instead of the population, which is the shape of error the sentence it sits in is about.
 
-What is **not** proved is the rest of that list: `exp (x + y) = exp x * exp y` and
-`sin x * sin x + cos x * cos x = 1` want the Cauchy product, and every fact about `ln` waits on
-the intermediate value theorem. `LimitSpec` obtains the geometric series at one half and
-sandwiches its limit between zero and two, which was the first series here whose convergence is a
-theorem rather than a hypothesis and is the model the exponential's follows.
+**The Cauchy product is proved, in two theorems, and both landed on 2026-09-21.**
+`Limit.SUM_CAUCHY_PRODUCT_NONNEG` is the case where both series have non-negative terms and
+`SUM_CAUCHY_PRODUCT` is the case where they do not, the second asking absolute convergence of
+both. The order between them is the whole design and not a sequence of attempts: the general one
+spends the non-negative one **once**, on the magnitudes, and gets from it a sequence that is
+known to vanish.
 
-**Half the Cauchy product landed on 2026-09-21 and the sentence above is still true**, which is
-worth saying in that order because the name in `docs/lemmas.md` invites the opposite reading.
-`Limit.SUM_CAUCHY_PRODUCT_NONNEG` is the theorem for series of **non-negative** terms, and
-neither of those two identities has any: `sin` alternates, and `exp (x + y)` is wanted at every
-real and not only at the positives. What the non-negative case settles is that the route works,
-and the route is the thing that was in doubt: `SUM_CAUCHY_BELOW_SQUARE` and
-`SUM_SQUARE_BELOW_CAUCHY` bracket the Cauchy partial sums between `Sum a n * Sum b n` and the
-same read at `n + n`, and a bracket at every index between two sequences whose limits are known
-needs **no epsilon at all**. The textbook proof is an epsilon argument with a split at `n / 2`
-in it; there is no division anywhere in this one, and `NUM_DIV` is not reached. That the split
-is unnecessary is a measurement rather than a preference, and it is recorded on the card that
-asked for the work.
+**Neither of them has an epsilon in it**, which is the return on the route rather than a
+coincidence. `SUM_CAUCHY_BELOW_SQUARE` and `SUM_SQUARE_BELOW_CAUCHY` bracket the Cauchy partial
+sums between `Sum a n * Sum b n` and the same read at `n + n`, and a bracket at every index
+between two sequences whose limits are known is an order argument; the textbook proof is an
+epsilon estimate with a split at `n / 2` in it, and there is no division anywhere here and
+`NUM_DIV` is not reached. The signed case adds one identity and one squeeze, and the squeeze is
+the only epsilon under either theorem.
 
-What the general case wants is named rather than estimated, and it is two things this repository
-does not have: the triangle inequality at a finite sum, which nothing publishes because until
-now nothing consumed it, and a squeeze. Both are small beside what landed. `LimitSpec` detaches
-the non-negative theorem at the geometric series on both sides and asserts `hypotheses` empty,
-because an implication with four antecedents that nobody can discharge is a theorem and says
-nothing.
+`Series.SUM_CAUCHY_GAP` is the fact to read first and the reason there are two theorems rather
+than one proof twice. It says `A_n * B_n - D_n = Sum (\i. a i * (B_n - B (n - i))) n` and asks
+**nothing** of the terms, so it holds of signed series exactly as of non-negative ones: written
+once at `a, b` and once at the magnitudes it gives two sums that compare termwise, and the
+comparison is `ABS_MUL` with `SUM_TAIL_ABS` under it.
+
+Three lemmas were written for that comparison and each is published on its own. `SUM_ABS` is the
+triangle inequality at a finite sum, which nothing had consumed and so nothing had written;
+`SUM_TAIL_ABS` is the same on a **stretch** rather than a prefix, which is `SUM_REINDEX` on both
+sides of `SUM_ABS` and no induction, the lemma that looked missing having been in the library all
+along; and `CONVERGES_TO_ZERO` is the squeeze at zero. All three live in `Limit` rather than in
+`Magnitude` or `Series`, and the reason is the chain: `abs` belongs to the first, `Sum` to the
+second, `Magnitude` is built **above** `Series` and is handed none of it, so this is the lowest
+link that can write the two names in one statement.
+
+What is still **not** proved is `exp (x + y) = exp x * exp y` and
+`sin x * sin x + cos x * cos x = 1`, and what stands in front of them is no longer the Cauchy
+product. It is that the exponential's series is absolutely convergent **at every real**, which is
+a convergence result this repository does not have: `Transcendental.EXP_ONE_ABOVE_TWO` dominates
+`1 / i!` by `2 * (1/2)^i`, and that dominating series is the one for `x = 1` and for no other.
+With that in hand the convolution of `x^i / i!` and `y^j / j!` is `(x + y)^k / k!` by
+`Series.POWER_BINOMIAL`, which is already proved. Every fact about `ln` still waits on the
+intermediate value theorem, and nothing here moves that.
+
+`LimitSpec` detaches **both** Cauchy theorems at the geometric series on both sides and asserts
+`hypotheses` empty, because an implication with four antecedents that nobody can discharge is a
+theorem that says nothing. It asserts separately, by `Derivation.restingOn`, which published
+facts are inside each derivation, since a theorem proved the textbook way would read the same
+word for word.
 
 **A quotient with a symbolic denominator is outside every procedure here, and that decided the
 shape of the whole derivation.** `Linarith` refuses `x / y` by name, saying that cancelling a
