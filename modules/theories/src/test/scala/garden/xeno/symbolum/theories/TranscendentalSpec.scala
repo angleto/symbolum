@@ -348,4 +348,44 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
 
     Derivation.restingOn(addition, route) shouldBe route
   }
+  /**
+   * The hyperbolic pair, which is what `docs/adr/0017` chose the sum and the difference for.
+   *
+   * That record decided `sinh` and `cosh` would be `(exp x - exp (0 - x)) / 2` and the same sum
+   * rather than two series of their own, and said what it bought was `cosh x + sinh x = exp x`
+   * today. This is the rest of that purchase: those two facts landed on 2026-09-15 and had
+   * nothing to spend until [[Transcendental.Addition]] arrived.
+   *
+   * Two assertions carry the claim that it is **bought** and not proved again: it rests on
+   * `EXP_ADD`, and it spends exactly the axioms `EXP_ADD` spends and no others. A derivation
+   * through the two series would reach the same statement and would cost the Cauchy product a
+   * second time, and neither the statement nor an axiom count alone would show the difference.
+   *
+   * The trigonometric identity is out of reach and no test can say so; what says it is the
+   * docstring on the name, and the reason is that `sin` and `cos` meet `exp` only through a
+   * square root of minus one.
+   */
+  "The hyperbolic pair" should "be bought by the addition theorem rather than proved again" in {
+    val reciprocal = force(transcendental.fact(Transcendental.Reciprocal))
+    val pythagoras = force(transcendental.fact(Transcendental.HyperbolicPythagoras))
+
+    reciprocal.hypotheses shouldBe empty
+    pythagoras.hypotheses shouldBe empty
+    reciprocal.conclusion shouldBe proposition("!x:real. exp x * exp (0 - x) = 1")
+    pythagoras.conclusion shouldBe
+      proposition("!x:real. cosh x * cosh x - sinh x * sinh x = 1")
+
+    val route = Set(
+      force(transcendental.fact(Transcendental.Addition)).conclusion,
+      force(transcendental.fact(Transcendental.CosinePlusSine)).conclusion,
+      force(transcendental.fact(Transcendental.CosineMinusSine)).conclusion)
+
+    Derivation.restingOn(pythagoras, route) shouldBe route
+
+    // And it adds **no** axiom to what the addition theorem already cost, which is the half that
+    // says it is bought rather than proved again: a derivation through the two series would
+    // reach the same statement and would spend the Cauchy product a second time.
+    Derivation.axiomsOf(pythagoras) shouldBe
+      Derivation.axiomsOf(force(transcendental.fact(Transcendental.Addition)))
+  }
 }

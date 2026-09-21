@@ -300,6 +300,30 @@ object Transcendental {
   val Addition: String = "EXP_ADD"
 
   /**
+   * `|- !x. exp x * exp (0 - x) = 1`
+   *
+   * [[Addition]] at `(x, 0 - x)`. Written as a **product** rather than as
+   * `exp (0 - x) = inv (exp x)`, which is the same fact and would owe `~(exp x = 0)`; there is
+   * no reciprocal here to justify.
+   */
+  val Reciprocal: String = "EXP_NEGATE"
+
+  /**
+   * `|- !x. cosh x * cosh x - sinh x * sinh x = 1`
+   *
+   * The hyperbolic identity, two lines over [[Reciprocal]]: `cosh x + sinh x` is `exp x` and
+   * `cosh x - sinh x` is `exp (0 - x)`, so their product is one and `Ring` says that product is
+   * the difference of the squares. `docs/adr/0017` decided the pair would be that sum and that
+   * difference rather than two series of their own, and **this is what that decision was for** —
+   * the facts it names landed on 2026-09-15 and had nothing to spend until now.
+   *
+   * It is **not** `sin x * sin x + cos x * cos x = 1` with three symbols changed, and nothing
+   * here reaches that one: `sin` and `cos` are their own series and meet `exp` only through a
+   * square root of minus one, which this development has no type for.
+   */
+  val HyperbolicPythagoras: String = "COSH_SQUARED"
+
+  /**
    * The dominating series for the exponential at one, written as a sum of two copies.
    *
    * `2 * Power (1/2) i` says the same thing and is the wrong shape: `SUM_ADD` splits a sum of two
@@ -350,7 +374,10 @@ object Transcendental {
         "Sum (\\u:num. (Power x u / real_of_num (NUM_FACT u)) * " +
         "(Power y (NUM_SUB k u) / real_of_num (NUM_FACT (NUM_SUB k u)))) (SUC k) = " +
         "Power (x + y) k / real_of_num (NUM_FACT k)"),
-    Addition -> "!x:real. !y:real. exp (x + y) = exp x * exp y"
+    Addition -> "!x:real. !y:real. exp (x + y) = exp x * exp y",
+    Reciprocal -> "!x:real. exp x * exp (0 - x) = 1",
+    HyperbolicPythagoras ->
+      "!x:real. cosh x * cosh x - sinh x * sinh x = 1"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -482,6 +509,17 @@ object Transcendental {
 
       addition <- additionTheorem(
         logic, theory, notation, limit, series, exponentialDefinition, absolute, convolution)
+
+      hyperbolicPair <- hyperbolicIdentities(
+        logic,
+        theory,
+        notation,
+        series.ring,
+        addition,
+        exponential,
+        hyperbolic(CosinePlusSine),
+        hyperbolic(CosineMinusSine))
+      (reciprocal, pythagoras) = hyperbolicPair
     } yield new Transcendental(
       limit,
       series,
@@ -505,7 +543,9 @@ object Transcendental {
         AbsolutelyConvergent -> absolute,
         ReciprocalsCombine -> combined,
         Convolution -> convolution,
-        Addition -> addition
+        Addition -> addition,
+        Reciprocal -> reciprocal,
+        HyperbolicPythagoras -> pythagoras
       ) ++ hyperbolic
     )
   }
@@ -2774,6 +2814,97 @@ object Transcendental {
         .existsElim(magnitudesAtX, p, withoutQ)
         .flatMap(rules.genAll(_, List(x, y)))
     } yield result
+  }
+
+  /**
+   * [[Reciprocal]] and [[HyperbolicPythagoras]], which is what [[Addition]] buys immediately.
+   *
+   * `exp x * exp (0 - x) = 1` is the addition theorem at `(x, 0 - x)` with `Ring` collapsing the
+   * argument and [[ExponentialAtZero]] naming the value. **It needs nothing about `exp` being
+   * non-zero**, which is worth saying because that is the hypothesis the textbook statement
+   * `exp (0 - x) = inv (exp x)` would want and this one does not: written as a product there is
+   * no reciprocal to justify.
+   *
+   * And from it the hyperbolic identity is two lines, because the two facts it needs were proved
+   * on 2026-09-15 and had nothing to spend: `cosh x + sinh x` is `exp x` and `cosh x - sinh x`
+   * is `exp (0 - x)`, so their product is `1` and `Ring` says that product is
+   * `cosh x * cosh x - sinh x * sinh x`. `docs/adr/0017` decided the pair would be that sum and
+   * that difference rather than two series, and this is what that decision was for.
+   *
+   * The **trigonometric** identity is not this fact with three symbols changed and nothing here
+   * reaches it: `sin` and `cos` are their own series and meet `exp` only through a square root of
+   * minus one, which this development has no type for. What it would take is the Cauchy product
+   * at the two alternating series, which wants their absolute convergence first.
+   */
+  private def hyperbolicIdentities(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    ring: Ring,
+    addition: Kernel.Thm,
+    atZero: Kernel.Thm,
+    plus: Kernel.Thm,
+    minus: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
+    val rules = logic.rules
+    val x = Term.variable("x", values)
+
+    for {
+      negated <- Parser.term(theory, notation, "0 - (x:real)", values)
+      zero <- Parser.term(theory, notation, "0:real", values)
+      collapsed <- Parser.term(theory, notation, "(x:real) + (0 - (x:real))", values)
+      exponential <- Parser.term(theory, notation, "exp 0", values).flatMap {
+        case App(constant, _) => Right(constant)
+        case other            => Left(NotOfForm("an application of the exponential", other))
+      }
+
+      /* ------------------------------------------ the product of the two exponentials is one */
+
+      atThePair <- rules.specAll(addition, List(x, negated))
+      argument <- LogicError.lift(Term.eq(collapsed, zero)).flatMap(ring.prove)
+      carried <- Conv.apTerm(exponential, argument).flatMap(Conv.trans(_, atZero))
+      reciprocal <- Conv
+        .sym(atThePair)
+        .flatMap(Conv.trans(_, carried))
+        .flatMap(rules.gen(x, _))
+
+      /* ------------------------------------------------ and the hyperbolic identity from it */
+
+      sum <- rules.spec(x, plus)
+      difference <- rules.spec(x, minus)
+      times <- Parser.term(theory, notation, "(1:real) * 1", values).flatMap {
+        case App(App(constant, _), _) => Right(constant)
+        case other                    => Left(NotOfForm("a product", other))
+      }
+      leftSide <- Term
+        .destEq(sum.conclusion)
+        .map(_._1)
+        .toRight(NotOfForm("an equation", sum.conclusion))
+      rightSide <- Term
+        .destEq(difference.conclusion)
+        .map(_._1)
+        .toRight(NotOfForm("an equation", difference.conclusion))
+      byExponential <- Term
+        .destEq(sum.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", sum.conclusion))
+        .flatMap(value => LogicError.lift(Term.app(times, value)))
+      product <- Conv
+        .apTerm(times, sum)
+        .flatMap(Conv.apThm(_, rightSide))
+        .flatMap(first => Conv.apTerm(byExponential, difference).flatMap(Conv.trans(first, _)))
+
+      squares <- Parser.term(
+        theory, notation, "cosh (x:real) * cosh (x:real) - sinh (x:real) * sinh (x:real)", values)
+      byLeft <- LogicError.lift(Term.app(times, leftSide))
+      factors <- LogicError.lift(Term.app(byLeft, rightSide))
+      factored <- LogicError.lift(Term.eq(squares, factors)).flatMap(ring.prove)
+      pythagoras <- rules
+        .spec(x, reciprocal)
+        .flatMap(unit =>
+          Conv.trans(factored, product).flatMap(Conv.trans(_, unit)))
+        .flatMap(rules.gen(x, _))
+    } yield (reciprocal, pythagoras)
   }
 
   /** `|- 0 < real_of_num (NUM_FACT z)`, the factorial's positivity carried across the embedding. */

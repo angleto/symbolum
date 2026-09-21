@@ -617,7 +617,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 607 lemmas, 401 have two or more leading quantifiers and **364 of
+caller meant: of the library's 609 lemmas, 401 have two or more leading quantifiers and **364 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1528,9 +1528,24 @@ What the addition theorem does **not** say is what `exp x` is. Four existentials
 it and none of them is a number this repository computes, which is the shape every fact about
 these constants has.
 
-What is still not proved is `sin x * sin x + cos x * cos x = 1`, which wants the same product at
-the two alternating series and their absolute convergence, neither of which is written. Every
-fact about `ln` still waits on the intermediate value theorem, and nothing here moves that.
+**And what it buys immediately is the hyperbolic pair, which `docs/adr/0017` decided for.**
+`EXP_NEGATE` is `exp x * exp (0 - x) = 1`, the addition theorem at `(x, 0 - x)` with `Ring`
+collapsing the argument; it is written as a product and not as `exp (0 - x) = inv (exp x)`,
+which is the same fact and would owe `~(exp x = 0)`. From it `COSH_SQUARED` is two lines:
+`cosh x + sinh x` is `exp x` and `cosh x - sinh x` is `exp (0 - x)`, so their product is one and
+`Ring` says that product is the difference of the squares. Those two facts landed on 2026-09-15
+and had nothing to spend until the addition theorem arrived, which is what that record chose the
+sum and the difference over two series for.
+
+What is still not proved is the **trigonometric** identity,
+`sin x * sin x + cos x * cos x = 1`, and it is not the hyperbolic one with three symbols
+changed. `sin` and `cos` are their own series and meet `exp` only through a square root of minus
+one, which this development has no type for, so the route is the Cauchy product at the two
+alternating series — which wants their absolute convergence first, the same argument
+`EXP_ABSOLUTE` makes and not an instance of it. Every fact about `ln` still waits on the
+intermediate value theorem, and nothing above moves that: there is no continuity anywhere in
+this repository, and `MONOTONE_CONVERGES` spends `COMPLETENESS` inline rather than publishing a
+supremum anything else could reach.
 
 `LimitSpec` detaches **both** Cauchy theorems at the geometric series on both sides and asserts
 `hypotheses` empty, because an implication with four antecedents that nobody can discharge is a
