@@ -734,10 +734,13 @@ they have least appetite for working out how it is produced.
   COSH_ZERO                cosh 0 = 1
   COS_ZERO                 cos 0 = 1
   EXP_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power x z / real_of_num (NUM_FACT z)))) y
+  EXP_ADD                  !x:real. !y:real. exp (x + y) = exp x * exp y
+  EXP_CONVOLUTION          !x:real. !y:real. !z:num. Sum (\u:num. Power x u / real_of_num (NUM_FACT u) * (Power y (NUM_SUB z u) / real_of_num (NUM_FACT (NUM_SUB z u)))) (SUC z) = Power (x + y) z / real_of_num (NUM_FACT z)
   EXP_ONE_ABOVE_TWO        2 < exp 1
   EXP_TAIL_GEOMETRIC       !x:real. !y:num. 2 * abs x <= real_of_num y ==> (!z:num. abs (Power x (y + z) / real_of_num (NUM_FACT (y + z))) <= Power (1 / 2) z * abs (Power x y / real_of_num (NUM_FACT y)))
   EXP_TERM_HALVES          !x:real. !y:num. 2 * abs x <= real_of_num (SUC y) ==> abs (Power x (SUC y) / real_of_num (NUM_FACT (SUC y))) <= 1 / 2 * abs (Power x y / real_of_num (NUM_FACT y))
   EXP_ZERO                 exp 0 = 1
+  MUL_INV_COMBINE          !x:real. !y:real. !z:real. !u:real. !v:real. !w:real. !x1:real. !y1:real. !z1:real. y * x1 = 1 ==> z * y1 = 1 ==> u * z1 = 1 ==> x * (y * z) = u ==> v * x1 * (w * y1) = x * (v * w) * z1
   SINH_ZERO                sinh 0 = 0
   SIN_ZERO                 sin 0 = 0
 

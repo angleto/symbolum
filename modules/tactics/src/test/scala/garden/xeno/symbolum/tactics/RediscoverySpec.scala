@@ -289,7 +289,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // branch's delta.
     // 412 with `ABS_POWER_LE`, which carries one antecedent.
     // 414: one antecedent each on the halving and the geometric tail, none on the convergence.
-    propose.weakenings.size shouldBe 414
+    // 418 with `MUL_INV_COMBINE`'s four antecedents; the other two carry none.
+    propose.weakenings.size shouldBe 418
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -390,7 +391,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // to swap, so it produces no substitution and is not mutable at all. The prediction read
     // `swapped`'s refusal condition and not the table it ranges over, which is the same half-read
     // selector the note beside `ProposeSpec`'s buckets is about.
-    propose.mutable.size shouldBe 87
+    // 89 with `MUL_INV_COMBINE` and `EXP_ADD`, which write `real_mul` and carry no lambda.
+    // `EXP_CONVOLUTION` is refused: its body is a `Sum` of one.
+    propose.mutable.size shouldBe 89
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

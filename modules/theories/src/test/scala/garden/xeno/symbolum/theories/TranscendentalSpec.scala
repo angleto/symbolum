@@ -289,4 +289,63 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(absolute) should contain(
       force(chain.reals.axiom("COMPLETENESS")).conclusion)
   }
+  /**
+   * The addition theorem, and what it does **not** say.
+   *
+   * `exp (x + y) = exp x * exp y` at two variables, with `hypotheses` empty. The assertion worth
+   * having beside it is the second one: `exp 0 = 1` comes out of it by putting `y := 0` and
+   * cancelling, which is a fact this file already proves another way, so agreeing with it is a
+   * check that the addition theorem is about the same constant.
+   *
+   * What is asserted is the agreement and not a new derivation of `EXP_ZERO`: the cancellation
+   * needs `~(exp 0 = 0)`, which this development has no way to reach — nothing here bounds `exp`
+   * away from zero at a general point, and `EXP_ONE_ABOVE_TWO` is at one point only.
+   */
+  "The addition theorem" should "hold at two variables with nothing assumed" in {
+    val addition = force(transcendental.fact(Transcendental.Addition))
+
+    addition.hypotheses shouldBe empty
+    addition.conclusion shouldBe proposition("!x:real. !y:real. exp (x + y) = exp x * exp y")
+
+    // At `y := 0` it reads `exp x = exp x * exp 0`, and `EXP_ZERO` is what makes that an
+    // identity rather than a constraint. The two facts agree, which is the check.
+    val rules = transcendental.logic.rules
+    val real = TyApp(Real.TypeName, Nil)
+    val x = Term.variable("x", real)
+    val zero = force(
+      Parser.term(transcendental.theory, transcendental.notation, "0:real", real))
+
+    val atZero = force(rules.specAll(addition, List(x, zero)))
+
+    atZero.hypotheses shouldBe empty
+    atZero.conclusion shouldBe proposition("exp ((x:real) + 0) = exp (x:real) * exp 0")
+
+    force(transcendental.fact(Transcendental.ExponentialAtZero)).conclusion shouldBe
+      proposition("exp 0 = 1")
+  }
+
+  /**
+   * It rests on the Cauchy product, on the convolution and on the absolute convergence.
+   *
+   * The three are the route and none of them is visible in the statement, which is four symbols
+   * long. `Limit.SUM_CAUCHY_PRODUCT` is what multiplies the two series;
+   * [[Transcendental.Convolution]] is what says the result is the exponential's own series at
+   * `x + y`, and it is where `Coding.NUM_CHOOSE_FACTORIAL` is spent; and
+   * [[Transcendental.AbsolutelyConvergent]] is what lets the product be applied at all.
+   *
+   * `Series.POWER_BINOMIAL` is asserted under them because it is the fact that had been proved
+   * and unspent: nothing consumed it until the convolution did.
+   */
+  it should "rest on the Cauchy product, the convolution and the binomial theorem" in {
+    val addition = force(transcendental.fact(Transcendental.Addition))
+
+    val route = Set(
+      force(chain.limit.fact(Limit.Cauchy)).conclusion,
+      force(transcendental.fact(Transcendental.Convolution)).conclusion,
+      force(transcendental.fact(Transcendental.AbsolutelyConvergent)).conclusion,
+      force(chain.series.fact(Series.Binomial)).conclusion,
+      force(chain.coding.fact(Coding.ChooseTimesFactorials)).conclusion)
+
+    Derivation.restingOn(addition, route) shouldBe route
+  }
 }
