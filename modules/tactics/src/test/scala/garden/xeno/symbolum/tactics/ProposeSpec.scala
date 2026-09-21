@@ -322,7 +322,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // **two** were derived before the run: `NUM_CHOOSE_ABOVE` carries the bound `n < k` and
     // `NUM_LE_OF_LT_SUC` carries `i < SUC n`, one antecedent each under one arrow. Tip plus this
     // branch's delta.
-    proposals.size shouldBe 389
+    // 390 with the absolute convergence theorem, 2026-09-21, and the **one** was derived before
+    // the run: it carries a single antecedent, the convergence of the absolute series, under one
+    // arrow. Tip plus this branch's delta.
+    proposals.size shouldBe 390
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1332,7 +1335,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // was `open`. It is here instead. The rows above say what decides it and the reading that
     // missed it was of the TYPE rather than of the constants: `num` is interpreted, which is what
     // sent the prediction to `open`, and `NUM_CHOOSE` inside a claim about `num` is not.
-    unreadable shouldBe 96
+    // 97 with the residue of the absolute convergence theorem, 2026-09-21, and **this bucket was
+    // predicted right this time**, which is the entry above being read rather than the prose
+    // beside it: dropping the hypothesis leaves `!f l. ?m. converges (Sum f) m`, which is false
+    // and is about `converges`, a constant no model here interprets. The row above records the
+    // reading that sent the same prediction to `open` yesterday, and the criterion it gives —
+    // the constants and not the type — is what was used here.
+    unreadable shouldBe 97
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1597,7 +1606,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `!n k. NUM_CHOOSE n k = ZERO` writes `NUM_CHOOSE` and `!n i. NUM_LE i n` writes `NUM_LE`,
     // both of them the naturals'. So this row moves by two where `decidedFalse` moves by one and
     // `unreadable` by one, which is the three-way split this family of counts exists to show.
-    aboutNumbers.size shouldBe 144
+    // 145 with that same residue, and **this one was predicted wrong**. The prediction was that
+    // it would not move, on the reading that a claim about `converges` and `Sum` is not a claim
+    // about the naturals. `named` a hundred lines above is a written set of thirteen and it holds
+    // `Sum`, `Power` and `Prod`: the summation operators are indexed by `num` and were put on it
+    // deliberately. So what this list counts is that set and not the sentence describing it, and
+    // the same reading that missed `unreadable` yesterday missed this today — the prose beside a
+    // criterion is not the criterion.
+    aboutNumbers.size shouldBe 145
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

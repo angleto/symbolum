@@ -269,7 +269,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // **two** were derived before the run: `NUM_CHOOSE_ABOVE` carries the bound `n < k` and
     // `NUM_LE_OF_LT_SUC` carries `i < SUC n`, one antecedent each under one arrow. Tip plus this
     // branch's delta.
-    propose.weakenings.size shouldBe 389
+    // 390 with the absolute convergence theorem, 2026-09-21, and the **one** was derived before
+    // the run: it carries a single antecedent, the convergence of the absolute series, under one
+    // arrow. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 390
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
