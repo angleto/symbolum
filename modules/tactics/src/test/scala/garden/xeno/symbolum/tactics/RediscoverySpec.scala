@@ -287,7 +287,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // **seven** were derived before the run and met: four antecedents on the product, two on
     // the squeeze, one on the stretch, and `SUM_ABS` carries none at all. Tip plus this
     // branch's delta.
-    propose.weakenings.size shouldBe 411
+    // 412 with `ABS_POWER_LE`, which carries one antecedent.
+    propose.weakenings.size shouldBe 412
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -370,7 +371,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // quantifiers come off, which is the condition `swapped` refuses at. Three and two on one
     // change is the same difference between what a lemma owes and what it writes that the row
     // above draws.
-    propose.mutable.size shouldBe 85
+    // 86 with `ABS_POWER_LE`, 2026-09-21, which writes `real_le` and carries no lambda once its
+    // three leading quantifiers come off. It is counted here and once in the weakenings row, and
+    // **that pair is where the prediction for it went wrong**: `open` is over every proposal,
+    // weakenings and substitutions together, and the prediction counted only the first kind.
+    propose.mutable.size shouldBe 86
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
