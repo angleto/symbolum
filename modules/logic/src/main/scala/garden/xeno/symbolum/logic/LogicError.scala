@@ -195,6 +195,30 @@ final case class NotNormalised(term: Term) extends LogicError {
 }
 
 /**
+ * The rewriting stopped because the term was growing, which is the opposite advice to a limit.
+ *
+ * Its own case rather than a [[NotNormalised]], and the distinction is the one `docs/adr/0037`
+ * exists for. Both say the rewriting did not finish, and the reader's next move is opposite: a
+ * rewriting that ran out of steps is settled by raising the limit, and a rewriting that ran out of
+ * **room** gets worse the higher the limit goes, because what stopped it was the rule set
+ * multiplying the term. Reported as [[NotNormalised]] it reaches `Remedy` as `RaiseALimit`, which
+ * is the advice that turns a four-minute heap exhaustion into a longer one.
+ *
+ * `reached` and `allowed` are the widths, in nodes, so that the message says how far past the
+ * ceiling one pass took the term rather than only that it did. The term carried is the one the
+ * caller was handed, which is the widest one **under** the ceiling: the one that crossed is not
+ * kept, for the reason the ceiling exists.
+ */
+final case class GrewPastCeiling(term: Term, reached: Int, allowed: Int) extends LogicError {
+  def message: String =
+    s"rewriting stopped because the term was growing: one pass took it to $reached nodes " +
+      s"where $allowed are allowed, so the rules multiply rather than settle and a higher " +
+      s"limit makes this worse, not better. What was reached before that pass is $term"
+
+  def standing: LogicError.Standing = LogicError.Standing.Exhausted
+}
+
+/**
  * A named bound stopped a search before it had looked at everything it would have looked at.
  *
  * The same argument as [[NotNormalised]] one procedure over, and it is the reason this is its own

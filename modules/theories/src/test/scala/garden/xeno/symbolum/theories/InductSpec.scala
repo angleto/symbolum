@@ -142,4 +142,46 @@ class InductSpec extends AnyFlatSpec with Matchers {
 
     chain.induct.proveAssuming(statement, recurrences)(linarith.prove).isLeft shouldBe true
   }
+
+  "A step whose rules multiply the term" should "be refused as a defect and not as a limit" in {
+    // `docs/adr/0037` end to end, at the one call site that spends its third outcome. The two
+    // refusals `Induct.afterRewriting` can raise both say the rewriting did not finish and their
+    // remedies are opposites: `NotNormalised` is settled by raising the step limit, and this one
+    // gets worse the higher that limit goes, because what stopped it is a rule set that multiplies
+    // the term. Before 2026-09-22 this case did not stop at all -- it is the shape that killed a
+    // suite after an hour, held a thread at 540 s of processor, and exhausted the heap in four and
+    // a half minutes, on three separate days.
+    //
+    // The rule is `!f n. Sum f n = Sum f n + Sum f n`, which no guard in `Rewrite.Rule.of`
+    // reaches: the pattern has variables in it, so `Rule.reproduces` is not asked, and the left
+    // side is an application and not a bare variable, so the other refusal does not apply either.
+    val quantified = force(
+      chain.series.proposition("!f:num->real. !n:num. Sum f n = Sum f n + Sum f n")
+    )
+    val rule = force(
+      Rewrite.Rule.of(chain.series.logic, force(LogicError.lift(Kernel.assume(quantified))))
+    )
+
+    val goal = force(chain.series.proposition("Sum (\\i:num. 1) ZERO = Sum (\\i:num. 1) ZERO"))
+
+    val refusal = Induct
+      .afterRewriting(Vector(rule), goal)(_ => Left(NotOfForm("a closer that settles this", goal)))
+      .swap
+      .getOrElse(fail("the rewriting was expected to be refused"))
+
+    withClue(s"${refusal.message}\n") {
+      refusal shouldBe a[GrewPastCeiling]
+    }
+
+    // And the width it names is past the ceiling rather than an arbitrary number, which is what a
+    // reader compares against `Rewrite.DefaultCeiling` to tell a rule set that multiplies from a
+    // corpus that has outgrown the number.
+    refusal match {
+      case GrewPastCeiling(_, reached, allowed) =>
+        allowed shouldBe Rewrite.DefaultCeiling
+        reached should be > Rewrite.DefaultCeiling
+      case other => fail(s"not the ceiling's refusal: $other")
+    }
+  }
+
 }

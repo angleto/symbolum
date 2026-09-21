@@ -41,6 +41,49 @@ object Rewrite {
   val DefaultLimit: Int = 200
 
   /**
+   * The default ceiling on the SIZE of the term a repetition carries, in nodes.
+   *
+   * A step limit bounds how many times a rule set runs and bounds nothing about what it produces,
+   * and a step can multiply the term. `docs/adr/0037` is the decision and carries the measurement:
+   * over one whole-suite run, 44174 invocations of [[repeatConv]], the widest term any of them
+   * carried was **7709 nodes** and 99.9955% of them stayed under 2048. This is 65536, eight and a
+   * half times that maximum and three doublings above it.
+   *
+   * What a ceiling has to be is above every term this corpus legitimately carries and low enough
+   * that the term cannot exhaust the heap the floors were measured at, which is sbt's default
+   * gigabyte. Being wrong is cheap in one direction only, and that is why [[Stop.Size]] exists:
+   * a repetition that stops here says so by name instead of handing back a truncated rewrite that
+   * reads as a false identity.
+   */
+  val DefaultCeiling: Int = 65536
+
+  /**
+   * Why a repetition stopped, which the theorem it hands back cannot say.
+   *
+   * [[repeatConv]] returns the equation it had built whatever stopped it, and that equation is
+   * true; a partial normalisation is a correct equation and every caller of [[rewrite]] has been
+   * asked what it does about one, which is the census `RewriteSpec` holds. What none of them could
+   * ask before is **which** of three things happened, and the third is new since
+   * `docs/adr/0037`: the rules were done with the term, the step limit ran out, or the term grew
+   * past [[DefaultCeiling]].
+   *
+   * [[Rewrite.finished]] answers the first against the other two and costs a pass of the
+   * conversion. This is the sharper question and costs nothing, because it comes out of the run
+   * that was happening anyway.
+   */
+  enum Stop {
+
+    /** The conversion had nothing left to do. */
+    case Settled
+
+    /** The step limit ran out, which is where a rule set that cycles ends up. */
+    case Steps
+
+    /** The term reached `nodes` and the ceiling stopped the repetition there. */
+    case Size(nodes: Int)
+  }
+
+  /**
    * Nodes in a term, which is what "larger" means for the guard in [[Rule.of]].
    *
    * A count rather than a measure of anything else, because what it has to decide is whether one
@@ -467,15 +510,49 @@ object Rewrite {
       result <- chain(below, here)
     } yield result
 
-  /** Repeat a conversion until it stops changing the term, or until the limit is reached. */
-  def repeatConv(conversion: Conversion, limit: Int = DefaultLimit): Conversion = term => {
-    def go(accumulated: Kernel.Thm, remaining: Int): Either[LogicError, Kernel.Thm] =
-      if (remaining <= 0) Right(accumulated)
+  /** Repeat a conversion until it stops changing the term, or until a limit is reached. */
+  def repeatConv(
+    conversion: Conversion,
+    limit: Int = DefaultLimit,
+    ceiling: Int = DefaultCeiling
+  ): Conversion = term => repeatReporting(conversion, limit, ceiling)(term).map(_._1)
+
+  /**
+   * [[repeatConv]] with the reason it stopped beside the theorem.
+   *
+   * The theorem is the same one and the work is the same work: this is where both are produced and
+   * [[repeatConv]] is this with the reason dropped. A caller that wants to know why the rewriting
+   * stopped asks here rather than running the conversion a second time.
+   *
+   * **The ceiling is read on the result of a step and not on the step's own intermediate terms**,
+   * so what it bounds is how many passes a growing rule set gets, not the peak of any one pass.
+   * `depthConv` applies the rules at every node of the term, so a single pass can multiply the size
+   * by a factor and there is no point inside it where this could intervene without being part of
+   * it. That is enough for what this is for: all three incidents `docs/adr/0037` records needed
+   * tens of passes to reach the heap, and are stopped at the first one that crosses.
+   *
+   * The theorem handed back when the ceiling bites is the one built **before** the step that
+   * crossed it, so what a caller receives is never wider than the ceiling. `Stop.Size` carries the
+   * width of the term that crossed, which is the number a reader needs to tell a rule set that
+   * multiplies from a corpus that grew.
+   */
+  def repeatReporting(
+    conversion: Conversion,
+    limit: Int = DefaultLimit,
+    ceiling: Int = DefaultCeiling
+  ): Term => Either[LogicError, (Kernel.Thm, Stop)] = term => {
+    def go(accumulated: Kernel.Thm, remaining: Int): Either[LogicError, (Kernel.Thm, Stop)] =
+      if (remaining <= 0) Right((accumulated, Stop.Steps))
       else
         rightOf(accumulated).flatMap { current =>
           conversion(current).flatMap { step =>
-            if (!changed(step)) Right(accumulated)
-            else chain(accumulated, step).flatMap(go(_, remaining - 1))
+            if (!changed(step)) Right((accumulated, Stop.Settled))
+            else
+              rightOf(step).flatMap { next =>
+                val width = nodesOf(next)
+                if (width > ceiling) Right((accumulated, Stop.Size(width)))
+                else chain(accumulated, step).flatMap(go(_, remaining - 1))
+              }
           }
         }
 
@@ -547,7 +624,23 @@ object Rewrite {
     term: Term,
     limit: Int = DefaultLimit
   ): Either[LogicError, Kernel.Thm] =
-    Rule.iterable(rules).flatMap(iterable => repeatConv(stepConv(iterable), limit)(term))
+    rewriteReporting(rules, term, limit).map(_._1)
+
+  /**
+   * [[rewrite]] with the reason the repetition stopped beside the equation.
+   *
+   * What a call site listed in `RewriteSpec`'s census can ask instead of, or as well as,
+   * [[finished]]. The three answers are the rules being done, the step limit, and the ceiling, and
+   * only the last of the three says the rule set **grows** the term, which is the diagnosis three
+   * incidents cost an hour, nine minutes of processor and a heap before anybody had.
+   */
+  def rewriteReporting(
+    rules: Vector[Rule],
+    term: Term,
+    limit: Int = DefaultLimit,
+    ceiling: Int = DefaultCeiling
+  ): Either[LogicError, (Kernel.Thm, Stop)] =
+    Rule.iterable(rules).flatMap(iterable => repeatReporting(stepConv(iterable), limit, ceiling)(term))
 
   /**
    * One pass of the rules over the whole term, without repeating.

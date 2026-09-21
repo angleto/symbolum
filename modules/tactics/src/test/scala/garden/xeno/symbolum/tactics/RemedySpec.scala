@@ -390,6 +390,12 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     }
 
     Remedy.of(reals, FromLogic(NotNormalised(goal))) shouldBe a[RaiseALimit]
+
+    // And the refusal beside it does NOT, which is the assertion the case was added for. A rule
+    // set that grows the term is a defect in the rule set; the advice that fits the line above is
+    // the advice that makes this one worse, and a census that only counted the cases would pass
+    // with both of them mapped to the same remedy.
+    Remedy.of(reals, FromLogic(GrewPastCeiling(goal, 131072, 65536))) shouldBe a[ReportADefect]
   }
 
   it should "carry the position of a syntax error and admit having none for a type error" in {
@@ -496,6 +502,11 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       // `mkString` over a vector of length one without ever exercising the separator.
       SkeletonFailsAt(x, Vector(x -> true, Term.variable("y", realType) -> false)),
       NotNormalised(x),
+      // Beside it rather than folded into it, and the pair is the whole of `docs/adr/0037`: both
+      // say the rewriting did not finish and their remedies are opposites. The one above is a
+      // `RaiseALimit`; this one must not be, because what stopped it is a rule set that multiplies
+      // the term and a higher limit lengthens the run that was going to die anyway.
+      GrewPastCeiling(x, 131072, 65536),
       BoundReached("Linarith.Facts", 76, 48, x),
       NotEqualTo(x, Term.variable("y", realType)),
       SyntaxError("expected a term", 3),

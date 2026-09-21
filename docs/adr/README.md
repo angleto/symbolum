@@ -59,3 +59,4 @@ the rejected option attractive, and they will.
 | [0034](0034-a-perturbation-harness-is-versioned-and-a-measurement-probe-is-not.md) | A perturbation harness is versioned and a measurement probe is not | accepted |
 | [0035](0035-a-change-is-judged-by-what-it-covers.md) | A change is judged by what it covers, and the module average stays beside it | accepted |
 | [0036](0036-a-rationals-denominator-is-a-successor.md) | A rational's denominator is a successor, so the carrier needs no carving | accepted, extends 0016 and 0033 |
+| [0037](0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md) | The rewriter bounds the term and not only the steps | accepted |

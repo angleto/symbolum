@@ -221,6 +221,105 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
       .isLeft shouldBe true
   }
 
+  /* ------------------------------------------- the ceiling on the term, `docs/adr/0037` */
+
+  /** `|- !x. left = right`, which is the shape a rule with variables in it is built from. */
+  private def quantifiedRule(variable: FVar, left: Term, right: Term): Rewrite.Rule = {
+    val body = force(Term.eq(left, right))
+    val statement = force(logic.mkForall(variable, body))
+    force(Rewrite.Rule.of(logic, force(Kernel.assume(statement))))
+  }
+
+  /**
+   * `|- !x. f x = g (f x) (f x)`, which doubles the term at every pass and is refused by nothing.
+   *
+   * The pattern has a variable in it, so `Rule.reproduces` is not asked; the left side is an
+   * application and not a bare variable, so the other refusal in `Rule.of` does not reach it
+   * either. Whether firing it grows the term depends on what the matcher put in `x`, which is the
+   * sentence `Rule.reproduces` carries about its own limits.
+   */
+  private lazy val doublingRule: Rewrite.Rule = {
+    val pattern = Term.variable("x", alpha)
+    val pair = Term.variable("g", Type.fun(alpha, Type.fun(alpha, alpha)))
+    val applied = force(Term.app(f, pattern))
+    quantifiedRule(pattern, applied, force(Term.appAll(pair, List(applied, applied))))
+  }
+
+  "A rule set that multiplies the term" should "be stopped by the ceiling and not by the steps" in {
+    // The class `Rule.reproduces` cannot reach, said in as many words by its own docstring: whether
+    // an application puts the pattern back depends on what the matcher put in the variables, so no
+    // property of the rule answers it. `!x. f x = g (f x) (f x)` is accepted by every guard there
+    // is, doubles the term every pass, and until 2026-09-21 the only thing between it and the heap
+    // was a count of 200 passes.
+    //
+    // It is NOT the incident of 2026-09-12 written out: that one's left side was a bare variable,
+    // and `Rule.of` refuses one of those by name, which this test met by being written that way
+    // first. What is left over after that refusal is this, and this is the class the card is about.
+    val doubling = doublingRule
+
+    doubling.reproduces shouldBe false
+    doubling.variables.size shouldBe 1
+
+    val (theorem, stop) =
+      force(Rewrite.rewriteReporting(Vector(doubling), force(Term.app(f, u)), ceiling = 64))
+
+    // Stopped by the ceiling, and the number it carries is the width of the term that crossed it
+    // rather than the ceiling, which is what tells a rule set that multiplies from a corpus that
+    // has grown past the number.
+    stop match {
+      case Rewrite.Stop.Size(nodes) => nodes should be > 64
+      case other => fail(s"stopped at $other rather than at the ceiling")
+    }
+
+    // And what comes back is an equation, true, and narrower than the ceiling: the theorem handed
+    // over is the one built BEFORE the pass that crossed, so a caller is never given the term the
+    // ceiling refused.
+    Term.destEq(theorem.conclusion) shouldBe defined
+    Rewrite.nodesOf(rightOf(theorem)) should be <= 64
+  }
+
+  it should "reach the ceiling before the steps, which is the whole reason it exists" in {
+    // The two limits at their defaults, on the same rule. A doubling rule crosses 65536 nodes in
+    // seventeen passes and the step limit is 200, so the count never arrives: that gap is what
+    // three incidents fell into, and it is a property of the two numbers rather than of this rule.
+    val (_, stop) = force(Rewrite.rewriteReporting(Vector(doublingRule), force(Term.app(f, u))))
+
+    stop shouldBe a[Rewrite.Stop.Size]
+  }
+
+  "The reason a repetition stopped" should "tell the three cases apart" in {
+    // `finished` answers the first against the other two and costs a pass; this answers all three
+    // and costs nothing. The third is the one that says the rule set GROWS, which is the diagnosis
+    // nobody had while three runs were being killed.
+    val settles = assumedRule(u, w)
+    val (_, settled) = force(Rewrite.rewriteReporting(Vector(settles), u))
+    settled shouldBe Rewrite.Stop.Settled
+
+    // A pair of rules that undo each other cycles: neither grows the term and neither finishes, so
+    // the step limit is what stops it and the ceiling never comes into it.
+    val there = assumedRule(u, w)
+    val back = assumedRule(w, u)
+    val (_, cycled) = force(Rewrite.rewriteReporting(Vector(there, back), u))
+    cycled shouldBe Rewrite.Stop.Steps
+  }
+
+  "The ceiling" should "stand in a measured relation to the widest term this corpus carries" in {
+    // The number is a decision and `docs/adr/0037` is where it is argued; what is asserted here is
+    // the relation it was chosen by, which is the thing that goes wrong silently. Measured on
+    // 2026-09-22 over one whole-suite run by an instrumented `repeatConv`: **44174 invocations**,
+    // the widest term any of them carried **7709 nodes**, at `Induct.afterRewriting` from a goal of
+    // 77, and 99.9955% of them under 2048.
+    //
+    // A ceiling below that maximum turns proofs that work into rewrites truncated in silence, and
+    // that is the failure a number alone cannot be read for. So the assertion is the margin.
+    val widestMeasured = 7709
+    Rewrite.DefaultCeiling should be >= 8 * widestMeasured
+
+    // And it is not so high that it has stopped being a ceiling: a doubling rule set reaches it
+    // from that maximum in three passes.
+    Rewrite.DefaultCeiling should be <= 16 * widestMeasured
+  }
+
   it should "still be usable by a caller that does not repeat, as four derivations here do" in {
     // `Arithmetic.timesZero` derives `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`, which is
     // exactly this shape, and `Order` and `Linarith` do the same with `0 = 0 - x` and its
@@ -582,7 +681,12 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`Limit.scala` a call site, and the census went red on the same day its twentieth entry " +
         "was settled"),
     "Induct.scala" ->
-      "asks `finished` after the closer refuses, which is where this guard was first written",
+      ("asks `finished` after the closer refuses, which is where this guard was first written. " +
+        "Since `docs/adr/0037` it asks `Rewrite.rewriteReporting` instead of `Rewrite.rewrite` " +
+        "and reads the reason off that: a repetition the ceiling stopped is `GrewPastCeiling` " +
+        "and never `NotNormalised`, because the two imply opposite moves and only the second is " +
+        "settled by a higher limit. `finished` is still asked on the other branch, so the case " +
+        "this entry was written for is unchanged"),
     "Family.scala" ->
       "asks `finished` when the sample is not a number, and says which of the two it was",
     "Recursion.scala" ->
@@ -827,6 +931,12 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         // which is the defect this list is about arriving by a second door. Twenty call
         // sites across ten files were unread until a session adding one of its own noticed.
         text.contains("Rewrite.inTheorem(") ||
+        // `rewriteReporting` since 2026-09-22, and it is a fourth door that this scan found on the
+        // day it was opened rather than a year later: `Induct.scala` moved onto it and fell out of
+        // the list, which is what the two positive controls below are for. It is the same walk as
+        // `rewrite` with the reason it stopped beside the theorem, so a caller here owes exactly
+        // what a caller of `rewrite` owes and owes it about three answers rather than two.
+        text.contains("Rewrite.rewriteReporting(") ||
         // `Recorder.rewriteIn` since 2026-09-15, and it is a door rather than a call site
         // dressed up as one: it takes its rules as a PARAMETER, so `Recorder.scala` can say
         // what it records and cannot say what an exhausted limit means, and its own entry
