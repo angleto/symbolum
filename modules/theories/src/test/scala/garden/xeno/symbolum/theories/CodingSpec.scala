@@ -557,4 +557,65 @@ class CodingSpec extends AnyFlatSpec with Matchers {
     separates.hypotheses shouldBe empty
     Derivation.axiomsOf(separates) should have size 2
   }
+  /**
+   * The binomial coefficient against the three factorials, spent at a pair rather than read.
+   *
+   * The identity is published additively and holds at every pair with nothing assumed, so there
+   * is no hypothesis to detach and the guard has to be a different one: that the textbook form
+   * comes back out of it. `C 5 2 * (2! * 3!) = 5!` is that at `i = 2`, `j = 3`, and it is the
+   * reading a consumer does — choose `j` and the subtraction never appears.
+   *
+   * `NUM_CHOOSE_ALL` is spent beside it at the same numeral, because the diagonal is the edge of
+   * the induction that the recurrence cannot reach and a statement about it that held only at
+   * zero would satisfy every other assertion here.
+   */
+  "The binomial coefficient" should "meet the three factorials at a pair, and on the diagonal" in {
+    val rules = coding.logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    def number(text: String): Term =
+      force(Parser.term(coding.theory, coding.notation, text, numbers))
+
+    def proposition(text: String): Term =
+      force(Parser.proposition(coding.theory, coding.notation, text))
+
+    val identity = force(coding.fact(Coding.ChooseTimesFactorials))
+    val atTwoAndThree = force(
+      rules.specAll(identity, List(number("SUC (SUC (SUC ZERO))"), number("SUC (SUC ZERO)"))))
+
+    atTwoAndThree.hypotheses shouldBe empty
+    atTwoAndThree.conclusion shouldBe proposition(
+      "NUM_CHOOSE (NUM_ADD (SUC (SUC ZERO)) (SUC (SUC (SUC ZERO)))) (SUC (SUC ZERO)) * " +
+        "(NUM_FACT (SUC (SUC ZERO)) * NUM_FACT (SUC (SUC (SUC ZERO)))) = " +
+        "NUM_FACT (NUM_ADD (SUC (SUC ZERO)) (SUC (SUC (SUC ZERO))))")
+
+    val diagonal = force(
+      modular.peano
+        .fact(Peano.ChooseDiagonal)
+        .flatMap(rules.spec(number("SUC (SUC (SUC ZERO))"), _)))
+
+    diagonal.hypotheses shouldBe empty
+    diagonal.conclusion shouldBe proposition(
+      "NUM_CHOOSE (SUC (SUC (SUC ZERO))) (SUC (SUC (SUC ZERO))) = SUC ZERO")
+  }
+
+  /**
+   * It costs the naturals' two axioms and no more, which is the split this file asserts of every
+   * other fact in the development.
+   *
+   * The identity is two inductions over Pascal's recurrence and the factorial's, and every
+   * rearrangement in it is `Semiring`, which decides the commutative semiring on `num` without
+   * embedding anything. So nothing here reaches the reals, and a derivation that had gone through
+   * `Modular.identity` instead would be charging the sixteen for arithmetic that is entirely
+   * about `num` — which is the trade `Semiring`'s own docstring exists to refuse. The two are
+   * asserted as an **equality** with the recursion's own, which is what the tests above this one
+   * do and is stronger than a ceiling: a derivation that quietly started spending a seventeenth
+   * would be as much a defect as one that stopped spending the two.
+   */
+  it should "cost the naturals' two axioms and no more" in {
+    val identity = force(coding.fact(Coding.ChooseTimesFactorials))
+
+    Derivation.axiomsOf(identity) shouldBe Derivation.axiomsOf(force(chain.naturals.recursion))
+    Derivation.axiomsOf(identity) should have size 2
+  }
 }

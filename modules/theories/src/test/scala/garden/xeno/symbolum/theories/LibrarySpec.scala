@@ -572,8 +572,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 602 and 599 with the exponential's absolute convergence and the two lemmas under it,
     // 2026-09-21. `CLAUDE.md`'s two figures move by **two** and **zero**: the halving and the
     // geometric tail each bind `real` then `num`, and the convergence binds one quantifier.
-    library.entries.size shouldBe 602
-    library.names.distinct.size shouldBe 599
+    // 604 and 601 with the triangle's diagonal and the binomial coefficient against the three
+    // factorials, 2026-09-21. `CLAUDE.md`'s two figures move by **one** each: the diagonal binds
+    // a single quantifier, and the factorial identity binds two that share `num`.
+    library.entries.size shouldBe 604
+    library.names.distinct.size shouldBe 601
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

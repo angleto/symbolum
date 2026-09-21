@@ -1163,6 +1163,17 @@ object Peano {
    */
   val ChooseAbove: String = "NUM_CHOOSE_ABOVE"
 
+  /**
+   * `|- !m. NUM_CHOOSE m m = SUC ZERO`, the triangle's diagonal.
+   *
+   * Pascal's recurrence with [[ChooseAbove]] under it: the entry one past the diagonal is zero,
+   * so the two summands the recurrence produces are the hypothesis and nothing.
+   *
+   * It exists for `Coding.NUM_CHOOSE_FACTORIAL` and for the one case of that identity a strong
+   * induction on `i + j` cannot reach from below, which is `j = 0`.
+   */
+  val ChooseDiagonal: String = "NUM_CHOOSE_ALL"
+
   /* ----------------------------------------------------------------- numerals */
 
   /**
@@ -1356,6 +1367,7 @@ object Peano {
       ("!n:num k:num. NUM_CHOOSE (SUC n) (SUC k) = " +
         "NUM_ADD (NUM_CHOOSE n k) (NUM_CHOOSE n (SUC k))"),
     ChooseAbove -> "!n:num k:num. NUM_LT n k ==> NUM_CHOOSE n k = ZERO",
+    ChooseDiagonal -> "!m:num. NUM_CHOOSE m m = SUC ZERO",
     EmbedsDifference ->
       "!m:num n:num. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n",
     PartialSumAtZero -> "!f:num -> num. NUM_SUM f ZERO = ZERO",
@@ -6403,6 +6415,10 @@ object Peano {
 
       chooseAboveDiagonal <- chooseAbove(
         logic, theory, notation, induction, orderDefinitions, addition, chooseEmpty, choosePascal)
+
+      onTheDiagonal <- chooseDiagonal(
+        logic, theory, notation, driver, orderDefinitions, addition, chooseNoneChecked,
+        choosePascal, chooseAboveDiagonal)
     } yield (
       theory,
       definition,
@@ -6410,9 +6426,114 @@ object Peano {
         ChooseNone -> chooseNoneChecked,
         ChooseEmpty -> chooseEmpty,
         ChoosePascal -> choosePascal,
-        ChooseAbove -> chooseAboveDiagonal
+        ChooseAbove -> chooseAboveDiagonal,
+        ChooseDiagonal -> onTheDiagonal
       )
     )
+  }
+
+  /**
+   * `|- !m. NUM_CHOOSE m m = SUC ZERO`, the diagonal of the triangle.
+   *
+   * One ordinary induction over Pascal's recurrence, and the only thing it needs beyond the
+   * hypothesis is that the entry one step past the diagonal is zero: `NUM_CHOOSE p (SUC p)` is
+   * [[Peano.ChooseAbove]] at `p < SUC p`, so the recurrence's two summands are the hypothesis
+   * and nothing.
+   *
+   * **`p < SUC p` is built here rather than taken from the order's own facts**, and the reason is
+   * where this function sits: the block that defines `NUM_CHOOSE` has the two order *definitions*
+   * and the addition, and the order's published lemmas are derived elsewhere in this file. What
+   * the definitions give is enough and is three steps: `NUM_LT p (SUC p)` unfolds to
+   * `NUM_LE (SUC p) (SUC p)`, which unfolds to `?d. SUC p + d = SUC p`, whose witness is `ZERO`
+   * by `NUM_ADD_ZERO`.
+   *
+   * It exists for `Coding.NUM_CHOOSE_FACTORIAL`, which is the one case of that identity the
+   * strong induction cannot reach from below: at `j = 0` the claim is about `NUM_CHOOSE n n` and
+   * the sum `i + j` is `n` itself.
+   */
+  private def chooseDiagonal(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    driver: Induct,
+    orderDefinitions: Map[String, Kernel.Thm],
+    addition: Map[String, Kernel.Thm],
+    chooseNone: Kernel.Thm,
+    choosePascal: Kernel.Thm,
+    chooseAbove: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+
+    def settled(goal: Term): Either[LogicError, Kernel.Thm] =
+      Term.destEq(goal) match {
+        case Some((left, right)) if left == right => Right(Kernel.refl(left))
+        case _                                    => Left(NotOfForm("a closed equation", goal))
+      }
+
+    for {
+      zero <- Parser.term(theory, notation, "ZERO", numbers)
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers)))
+      strictOrder <- orderDefinitions.get(StrictOrder).toRight(MissingDefinition(StrictOrder))
+      nonStrict <- orderDefinitions.get(NonStrictOrder).toRight(MissingDefinition(NonStrictOrder))
+      addAtZero <- addition.get(AddAtZero).toRight(MissingDefinition(AddAtZero))
+      addAtZeroRule <- Rewrite.Rule.of(logic, addAtZero)
+      pascalRule <- Rewrite.Rule.of(logic, choosePascal)
+
+      statement <- Parser.proposition(
+        theory, notation, "!m:num. NUM_CHOOSE m m = SUC ZERO")
+
+      result <- driver.proveBy(
+        statement,
+        _ => rules.spec(zero, chooseNone),
+        step =>
+          for {
+            here <- LogicError.lift(Term.app(successor, step.variable))
+
+            // `p < SUC p`, out of the two definitions and the addition, in three steps.
+            witnessed <- rules.specAll(addAtZero, List(here))
+            reflexive <- Conv
+              .unfold(nonStrict, List(here, here))
+              .flatMap(equation =>
+                Term
+                  .destEq(equation.conclusion)
+                  .toRight(NotOfForm("an equation", equation.conclusion))
+                  .flatMap(sides =>
+                    Conv.betaNormalise(sides._2).flatMap(Conv.trans(equation, _))))
+            reflexiveBody <- Term
+              .destEq(reflexive.conclusion)
+              .map(_._2)
+              .toRight(NotOfForm("an equation", reflexive.conclusion))
+            reflexivePredicate <- logic
+              .destExistsPredicate(reflexiveBody)
+              .toRight(NotOfForm("an existential quantification", reflexiveBody))
+            atZeroGap <- rules.existsIntro(reflexivePredicate, zero, witnessed)
+            atMost <- Conv
+              .sym(reflexive)
+              .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, atZeroGap)))
+            strict <- Conv
+              .unfold(strictOrder, List(step.variable, here))
+              .flatMap(equation =>
+                Term
+                  .destEq(equation.conclusion)
+                  .toRight(NotOfForm("an equation", equation.conclusion))
+                  .flatMap(sides =>
+                    Conv.betaNormalise(sides._2).flatMap(Conv.trans(equation, _))))
+              .flatMap(equation =>
+                Conv.sym(equation).flatMap(back => LogicError.lift(Kernel.eqMp(back, atMost))))
+
+            vanishes <- rules
+              .specAll(chooseAbove, List(step.variable, here))
+              .flatMap(rules.mp(_, strict))
+            vanishesRule <- Rewrite.Rule.of(logic, vanishes)
+            hypothesisRule <- Rewrite.Rule.of(logic, step.hypothesis)
+
+            closed <- Induct.afterRewriting(
+              Vector(pascalRule, hypothesisRule, vanishesRule, addAtZeroRule), step.goal)(settled)
+          } yield closed
+      )
+    } yield result
   }
 
   /**
