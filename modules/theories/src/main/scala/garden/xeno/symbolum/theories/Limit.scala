@@ -124,6 +124,9 @@ final class Limit private (
    * `|- !s t a b. converges s a ==> converges t b ==> converges (\n. s n * t n) (a * b)`
    */
   def multiplied: Either[LogicError, Kernel.Thm] = fact(Limit.Multiplied)
+
+  /** `|- !f l. converges (Sum (\i. abs (f i))) l ==> ?m. converges (Sum f) m` */
+  def absolute: Either[LogicError, Kernel.Thm] = fact(Limit.Absolute)
 }
 
 object Limit {
@@ -328,6 +331,19 @@ object Limit {
    */
   val Multiplied: String = "CONVERGES_MUL"
 
+  /**
+   * `|- !f l. converges (Sum (\i. abs (f i))) l ==> ?m. converges (Sum f) m`
+   *
+   * An absolutely convergent series converges. It is the first theorem here that obtains a
+   * convergence from another convergence rather than from a bound, and it is what every argument
+   * that rearranges a series has to have in front of it.
+   *
+   * **It does not go through a Cauchy criterion**, which this repository has not got. See
+   * [[absolutelyConvergent]] for the route, which spends completeness exactly once and through
+   * [[Comparison]], and for the one lemma it deliberately does not publish beside itself.
+   */
+  val Absolute: String = "CONVERGES_ABSOLUTE"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -359,7 +375,10 @@ object Limit {
       "!s:num -> real. !a:real. converges s a ==> converges (\\n:num. -(s n)) (-a)",
     Multiplied ->
       ("!s:num -> real. !t:num -> real. !a:real. !b:real. " +
-        "converges s a ==> converges t b ==> converges (\\n:num. s n * t n) (a * b)")
+        "converges s a ==> converges t b ==> converges (\\n:num. s n * t n) (a * b)"),
+    Absolute ->
+      ("!f:num -> real. !l:real. converges (Sum (\\i:num. abs (f i))) l ==> " +
+        "?m:real. converges (Sum f) m")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -426,6 +445,7 @@ object Limit {
       // make that sentence false.
       sumAtSuccessor <- series.fact(Series.AtSuccessor)
       sumMonotone <- series.fact(Series.Monotone)
+      sumAdditive <- series.fact(Series.Additive)
 
       absTriangle <- magnitude.triangle
       absMultiplicative <- magnitude.fact(Magnitude.Multiplicative)
@@ -475,6 +495,17 @@ object Limit {
         logic, linarith, theory, notation, convergesDefinition, bounds, indices)
       negatedLimit <- convergesNegated(
         logic, linarith, theory, notation, convergesDefinition, bounds)
+      absoluteSeries <- absolutelyConvergent(
+        logic,
+        linarith,
+        theory,
+        notation,
+        Absolutes(
+          sumAtSuccessor, sumAdditive, comparisonTest, monotoneBelow, above, addedLimits,
+          negatedLimit, eventually),
+        bounds
+      )
+
       multipliedLimits <- convergesMultiplied(
         logic, linarith, magnitude.order.ring, theory, notation, convergesDefinition, bounds,
         indices, products)
@@ -497,7 +528,8 @@ object Limit {
         AboveBound -> above,
         Added -> addedLimits,
         Negated -> negatedLimit,
-        Multiplied -> multipliedLimits
+        Multiplied -> multipliedLimits,
+        Absolute -> absoluteSeries
       )
     )
   }
@@ -857,6 +889,25 @@ object Limit {
    * needs of a denominator is one equation at a value already known positive, not a tactic that
    * carries a side condition.
    */
+  /**
+   * What the absolute convergence theorem takes from the two developments under this one.
+   *
+   * A bundle for [[Bounds]]'s reason: one derivation wants all eight and no other wants any of
+   * them. Two are `Series`' and six are this file's own, which is the shape of the argument — the
+   * work is putting facts that already exist in one order, and the only thing it adds is the
+   * observation that the bracket is non-negative.
+   */
+  private final case class Absolutes(
+    atSuccessor: Kernel.Thm,
+    additive: Kernel.Thm,
+    comparison: Kernel.Thm,
+    monotoneBelow: Kernel.Thm,
+    aboveBound: Kernel.Thm,
+    added: Kernel.Thm,
+    negated: Kernel.Thm,
+    eventually: Kernel.Thm
+  )
+
   private final case class Products(
     triangle: Kernel.Thm,
     multiplicative: Kernel.Thm,
@@ -1913,6 +1964,227 @@ object Limit {
         .flatMap(rules.gen(a, _))
         .flatMap(rules.gen(t, _))
         .flatMap(rules.gen(s, _))
+    } yield result
+  }
+
+  /**
+   * `|- !f l. converges (Sum (\i. abs (f i))) l ==> ?m. converges (Sum f) m`
+   *
+   * An absolutely convergent series converges, **and without a Cauchy criterion**, which this
+   * repository does not have. That is the whole of what is worth reading here rather than the
+   * statement: the textbook route shows the partial sums are Cauchy and appeals to completeness
+   * through a criterion nothing here states, and building one is a piece of work of its own. This
+   * route appeals to completeness exactly once, through [[Comparison]], which is
+   * [[MonotoneConverges]] on a series of non-negative terms and was already here.
+   *
+   * == The trick, which is one line of algebra ==
+   *
+   * `f i` is `(f i + abs (f i)) - abs (f i)`, and the bracket is **non-negative** and at most
+   * `abs (f i) + abs (f i)`: the lower bound is `Magnitude.ABS_ABOVE_NEG` and the upper is
+   * `Magnitude.ABS_ABOVE`, one each and nothing else. So the series of brackets has non-negative
+   * terms dominated by one whose partial sums are bounded, which is what the comparison test asks
+   * for, and what comes back is a convergence. Taking the absolute series off again is
+   * [[Negated]] and [[Added]], both of which take a convergence as a hypothesis and neither of
+   * which reaches the sixteenth axiom.
+   *
+   * == Where the hypothesis becomes a bound, which is the half that is not the trick ==
+   *
+   * The comparison test wants the dominating partial sums **bounded** and the hypothesis gives
+   * that they converge. A series of non-negative terms has increasing partial sums, by
+   * `Series.SUM_SUC` and `Magnitude.ABS_NONNEG`; [[MonotoneBelow]] carries that to every pair of
+   * indices; and [[AboveBound]] at one of its own terms turns "increasing and convergent to `l`"
+   * into "at most `l`". That last step is the one to read: the useful lower bound on an increasing
+   * sequence is one of its own terms, which is exactly what [[AboveBound]] was published for and
+   * is false below that term's index. The bound handed over is `l + l`, the absolute series twice.
+   *
+   * == The lambda at the end, and a claim about it that was measured and dropped ==
+   *
+   * The two sequences are identified by [[Eventually]] at index zero: what [[Added]] produces is
+   * a lambda over the two and what is wanted is `Sum f`, equal at every index without being the
+   * same term. That lambda **does** carry a beta redex, since [[Negated]]'s sequence goes in as
+   * a lambda and comes back applied, and `Conv.betaNormalise` moves it, which is the check.
+   *
+   * Reducing it is nevertheless **not** load-bearing, and this derivation did it for a paragraph
+   * on the strength of a sentence rather than a measurement. A perturbation that removed the
+   * reduction left the whole suite green, so the call is gone rather than kept with prose beside
+   * it. `LimitSpec`'s composition test records the same trap from the other side, where the redex
+   * does reach an assertion and the comparison against the written form goes red; the difference
+   * is that nothing downstream of this one reads the intermediate sequence.
+   *
+   * == What is NOT published beside it ==
+   *
+   * `abs (Sum f n) <= Sum (\i. abs (f i)) n`, the triangle inequality at a finite sum. It is the
+   * other basic fact about absolute values and sums, it is three lines from `ABS_TRIANGLE`, and
+   * **nothing asks for it today**: this theorem does not, since the trick goes through an
+   * inequality between summands rather than between sums. `Series.SUM_CONGRUENCE_BELOW`'s note
+   * argues at length against adding library entries nobody has asked for, and this is that
+   * argument applied to the first entry that would have been added for symmetry alone.
+   */
+  private def absolutelyConvergent(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    pieces: Absolutes,
+    bounds: Bounds
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val f = Term.variable("f", sequences)
+    val l = Term.variable("l", values)
+    val m = Term.variable("m", values)
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+
+    val absolute = "\\i:num. abs ((f:num -> real) i)"
+    val bracket = "\\i:num. (f:num -> real) i + abs (f i)"
+    val doubled = "\\i:num. abs ((f:num -> real) i) + abs (f i)"
+
+    def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    /** The sequence and the value of `converges s v`. */
+    def convergenceOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      theorem.conclusion match {
+        case App(App(_, sequence), value) => Right((sequence, value))
+        case other                        => Left(NotOfForm("a convergence", other))
+      }
+
+    /** The shorter partial sum on the right of `Sum f (SUC n) = Sum f n + f n`. */
+    def shorter(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      Term.destEq(theorem.conclusion) match {
+        case Some((whole, App(App(_, short), _))) => Right((whole, short))
+        case _ => Left(NotOfForm("a sum peeled at its top", theorem.conclusion))
+      }
+
+    for {
+      absSeries <- Parser.term(theory, notation, "Sum (" + absolute + ")", sequences)
+      bracketBody <- Parser.term(theory, notation, bracket)
+      doubledBody <- Parser.term(theory, notation, doubled)
+      absBody <- Parser.term(theory, notation, absolute)
+      bracketSeries <- Parser.term(theory, notation, "Sum (" + bracket + ")", sequences)
+      sequence <- Parser.term(theory, notation, "Sum (f:num -> real)", sequences)
+      atI <- Parser.term(theory, notation, "(f:num -> real) (i:num)", values)
+      sizeAtI <- Parser.term(theory, notation, "abs ((f:num -> real) (i:num))", values)
+      atN <- Parser.term(theory, notation, "(f:num -> real) (n:num)", values)
+      sizeAtN <- Parser.term(theory, notation, "abs ((f:num -> real) (n:num))", values)
+      here <- Parser.term(theory, notation, "Sum (" + absolute + ") (n:num)", values)
+      twice <- Parser.term(theory, notation, "(l:real) + (l:real)", values)
+
+      premise <- Parser.proposition(
+        theory, notation, "converges (Sum (" + absolute + ")) (l:real)")
+      assumed <- LogicError.lift(Kernel.assume(premise))
+
+      // The bracket is non-negative and at most the absolute term twice. One `abs` fact each.
+      nonNegative <- rules
+        .spec(atI, bounds.aboveNegation)
+        .flatMap(lower =>
+          linarith
+            .prove("!x:real. !a:real. -x <= a ==> 0 <= x + a")
+            .flatMap(rules.specAll(_, List(atI, sizeAtI)))
+            .flatMap(rules.mp(_, lower)))
+        .flatMap(rules.gen(i, _))
+      dominated <- rules
+        .spec(atI, bounds.above)
+        .flatMap(upper =>
+          linarith
+            .prove("!x:real. !a:real. x <= a ==> x + a <= a + a")
+            .flatMap(rules.specAll(_, List(atI, sizeAtI)))
+            .flatMap(rules.mp(_, upper)))
+        .flatMap(rules.gen(i, _))
+
+      // The absolute partial sums increase, so they are ordered, so each is at most the limit.
+      stepped <- rules.specAll(pieces.atSuccessor, List(absBody, n)).flatMap(normalised)
+      steppedParts <- shorter(stepped)
+      increasing <- rules
+        .spec(atN, bounds.nonNegative)
+        .flatMap(positive =>
+          linarith
+            .prove("!s:real. !a:real. !t:real. t = s + a ==> 0 <= a ==> s <= t")
+            .flatMap(rules.specAll(_, List(steppedParts._2, sizeAtN, steppedParts._1)))
+            .flatMap(rules.mp(_, stepped))
+            .flatMap(rules.mp(_, positive)))
+        .flatMap(rules.gen(n, _))
+      ordered <- rules.spec(absSeries, pieces.monotoneBelow).flatMap(rules.mp(_, increasing))
+      atMostLimit <- rules
+        .specAll(pieces.aboveBound, List(absSeries, l, here, n))
+        .flatMap(rules.mp(_, assumed))
+        .flatMap(theorem => rules.spec(n, ordered).flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.gen(n, _))
+
+      // So the dominating partial sums are bounded, and the bound is the limit twice.
+      split <- rules.specAll(pieces.additive, List(absBody, absBody, n)).flatMap(normalised)
+      splitParts <- shorter(split)
+      boundedAt <- linarith
+        .prove("!t:real. !s:real. !b:real. t = s + s ==> s <= b ==> t <= b + b")
+        .flatMap(rules.specAll(_, List(splitParts._1, splitParts._2, l)))
+        .flatMap(rules.mp(_, split))
+        .flatMap(theorem => rules.spec(n, atMostLimit).flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.gen(n, _))
+      boundClaim <- Parser.proposition(
+        theory, notation, "?b:real. !n:num. Sum (" + doubled + ") n <= b")
+      boundPredicate <- logic
+        .destExistsPredicate(boundClaim)
+        .toRight(NotOfForm("an existential", boundClaim))
+      bounded <- rules.existsIntro(boundPredicate, twice, boundedAt)
+
+      // The comparison test, which is the one place completeness is spent.
+      brackets <- rules
+        .specAll(pieces.comparison, List(bracketBody, doubledBody))
+        .flatMap(rules.mp(_, nonNegative))
+        .flatMap(rules.mp(_, dominated))
+        .flatMap(rules.mp(_, bounded))
+
+      // And back. The bracket series less the absolute one is the series itself, at every index.
+      inner <- Parser.proposition(
+        theory, notation, "converges (Sum (" + bracket + ")) (m:real)")
+      assumedInner <- LogicError.lift(Kernel.assume(inner))
+      negatedSeries <- rules
+        .specAll(pieces.negated, List(absSeries, l))
+        .flatMap(rules.mp(_, assumed))
+      negatedParts <- convergenceOf(negatedSeries)
+      together <- rules
+        .specAll(pieces.added, List(bracketSeries, negatedParts._1, m, negatedParts._2))
+        .flatMap(rules.mp(_, assumedInner))
+        .flatMap(rules.mp(_, negatedSeries))
+      togetherParts <- convergenceOf(together)
+
+      guard <- Parser.proposition(theory, notation, "NUM_LE ZERO (n:num)")
+      assumedGuard <- LogicError.lift(Kernel.assume(guard))
+      bracketSplit <- rules.specAll(pieces.additive, List(f, absBody, n)).flatMap(normalised)
+      bracketParts <- Term
+        .destEq(bracketSplit.conclusion)
+        .toRight(NotOfForm("an equation", bracketSplit.conclusion))
+      identified <- bracketParts._2 match {
+        case App(App(_, plain), tail) =>
+          linarith
+            .prove("!p:real. !q:real. !r:real. p = q + r ==> p + -r = q")
+            .flatMap(rules.specAll(_, List(bracketParts._1, plain, tail)))
+            .flatMap(rules.mp(_, bracketSplit))
+        case other => Left(NotOfForm("a sum of two", other))
+      }
+      agreeing <- rules
+        .disch(guard, identified)
+        .flatMap(rules.gen(n, _))
+
+      zero <- Parser.term(theory, notation, "ZERO", numbers)
+      carried <- rules
+        .specAll(pieces.eventually, List(togetherParts._1, sequence, togetherParts._2, zero))
+        .flatMap(normalised)
+        .flatMap(rules.mp(_, agreeing))
+        .flatMap(rules.mp(_, together))
+
+      claim <- Parser.proposition(
+        theory, notation, "?m:real. converges (Sum (f:num -> real)) m")
+      predicate <- logic
+        .destExistsPredicate(claim)
+        .toRight(NotOfForm("an existential", claim))
+      witnessed <- rules.existsIntro(predicate, togetherParts._2, carried)
+      withoutWitness <- rules.existsElim(brackets, m, witnessed)
+      result <- rules
+        .disch(premise, withoutWitness)
+        .flatMap(rules.genAll(_, List(f, l)))
     } yield result
   }
 

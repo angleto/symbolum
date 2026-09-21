@@ -81,6 +81,29 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * Completeness is spent once by the absolute convergence theorem, and through the comparison
+   * test.
+   *
+   * The docstring's central claim is that the textbook route, which shows the partial sums are
+   * Cauchy, is replaced by one appeal to completeness that was already here. A count cannot say
+   * "once", but it can say **where**: the sixteenth axiom is in this derivation, and it is in
+   * `SUM_COMPARISON` too, and the facts this theorem also spends — the sum, the negation and the
+   * carrying across — are asserted three assertions below to reach no supremum at all. So the
+   * only door it can have come through is that one.
+   */
+  it should "reach the sixteenth axiom, and only where the comparison test does" in {
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+
+    Derivation.axiomsOf(force(limit.absolute)) should contain(completeness)
+    Derivation.axiomsOf(force(limit.comparison)) should contain(completeness)
+
+    // The other three it rests on do not, which is what leaves the comparison test as the door.
+    Derivation.axiomsOf(force(limit.added)) should not contain completeness
+    Derivation.axiomsOf(force(limit.negated)) should not contain completeness
+    Derivation.axiomsOf(force(limit.eventually)) should not contain completeness
+  }
+
+  /**
    * The two bound facts cost the same as each other and less than the facts that halve.
    *
    * Written as a relation rather than as two numbers, because what is being asserted is the claim
@@ -208,6 +231,165 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * so zero is a lower bound, and the pair of assertions below is a sandwich that a later
    * development narrows rather than a claim about the value.
    */
+  /**
+   * `|- ?l. converges (Sum (\i. Power (1/2) i)) l`, built once for the two tests that spend it.
+   *
+   * The geometric series at one half is the only convergence this file can obtain from nothing,
+   * so both the comparison test's own assertion and the absolute one below it start here. It is a
+   * `lazy val` rather than a line in each, because a second copy would be a second thing to keep
+   * in agreement and the two tests ask different questions of the same theorem.
+   */
+  private lazy val geometricConverges: Kernel.Thm = {
+    val rules = limit.logic.rules
+    val linarith = force(Linarith.construct(chain.order))
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+
+    val half = force(limit.term("(1:real) / 2", real))
+    val terms = force(limit.term("\\i:num. Power ((1:real) / 2) i", Type.fun(numbers, real)))
+    val positivePower = force(
+      rules
+        .spec(half, force(chain.series.fact(Series.PowerPositive)))
+        .flatMap(rules.mp(_, force(linarith.prove("0 < (1:real) / 2")))))
+    val powerAt = force(limit.term("Power ((1:real) / 2) (n:num)", real))
+    val sumAt = force(limit.term("Sum (\\i:num. Power ((1:real) / 2) i) (n:num)", real))
+
+    val nonNegative = force(
+      rules
+        .specAll(
+          force(chain.order.fact(Order.LeOfLt)),
+          List(force(limit.term("0:real", real)), powerAt))
+        .flatMap(rules.mp(_, force(rules.spec(n, positivePower))))
+        .flatMap(rules.gen(n, _)))
+    val dominates = force(
+      rules
+        .specAll(force(chain.order.fact(Order.LeOfEq)), List(powerAt, powerAt))
+        .flatMap(rules.mp(_, Kernel.refl(powerAt)))
+        .flatMap(rules.gen(n, _)))
+    val geometric = force(
+      rules.specAll(force(chain.series.fact(Series.Geometric)), List(half, n)))
+    val everywhereUnderTwo = force(
+      linarith
+        .prove("!p:real. !s:real. ((1:real) / 2 - 1) * s = p - 1 ==> 0 < p ==> s <= 2")
+        .flatMap(rules.specAll(_, List(powerAt, sumAt)))
+        .flatMap(rules.mp(_, geometric))
+        .flatMap(rules.mp(_, force(rules.spec(n, positivePower))))
+        .flatMap(rules.gen(n, _)))
+
+    val boundedStatement =
+      proposition("?b:real. !n:num. Sum (\\i:num. Power ((1:real) / 2) i) n <= b")
+    val boundedPredicate = force(
+      limit.logic.destExistsPredicate(boundedStatement).toRight(MissingDefinition("an existential")))
+    val bounded = force(
+      rules.existsIntro(boundedPredicate, force(limit.term("2:real", real)), everywhereUnderTwo))
+
+    val specialised = force(rules.specAll(force(limit.comparison), List(terms, terms)))
+    val opened = force(
+      Conv
+        .betaNormalise(specialised.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised))))
+    force(
+      rules
+        .mp(opened, nonNegative)
+        .flatMap(rules.mp(_, dominates))
+        .flatMap(rules.mp(_, bounded)))
+  }
+
+  /**
+   * An absolutely convergent series converges, spent on one the comparison test **refuses**.
+   *
+   * The demonstration is the point rather than the instance. `SUM_COMPARISON` asks for
+   * non-negative terms and `-(1/2)^i` is negative at every index, so it cannot be reached that
+   * way at all; what settles it is the absolute series, which is the geometric one, and the
+   * theorem under test. What comes out carries nothing assumed.
+   */
+  "An absolutely convergent series" should "converge, where the comparison test cannot reach it" in {
+    val rules = limit.logic.rules
+    val linarith = force(Linarith.construct(chain.order))
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val sequences = Type.fun(numbers, real)
+    val i = Term.variable("i", numbers)
+    val l = Term.variable("l", real)
+
+    val half = force(limit.term("(1:real) / 2", real))
+    val negated = force(limit.term("\\i:num. -(Power ((1:real) / 2) i)", sequences))
+    val positivePower = force(
+      rules
+        .spec(half, force(chain.series.fact(Series.PowerPositive)))
+        .flatMap(rules.mp(_, force(linarith.prove("0 < (1:real) / 2")))))
+
+    // The distance of a negative term from zero is the term back again, which is the one step
+    // that makes the absolute series the geometric one.
+    val powerAt = force(limit.term("Power ((1:real) / 2) (i:num)", real))
+    val negatedAt = force(limit.term("-(Power ((1:real) / 2) (i:num))", real))
+    val sizeIsPower = force(
+      rules
+        .spec(negatedAt, force(chain.magnitude.fact(Magnitude.OfNonPositive)))
+        .flatMap(rules.mp(
+          _,
+          force(
+            linarith
+              .prove("!p:real. 0 < p ==> -p <= 0")
+              .flatMap(rules.spec(powerAt, _))
+              .flatMap(rules.mp(_, force(rules.spec(i, positivePower)))))))
+        .flatMap(theorem =>
+          linarith
+            .prove("!a:real. !p:real. a = -(-p) ==> a = p")
+            .flatMap(rules.specAll(_, List(force(limit.term("abs (-(Power ((1:real) / 2) (i:num)))", real)), powerAt)))
+            .flatMap(rules.mp(_, theorem)))
+        .flatMap(rules.gen(i, _)))
+
+    // So the two series of partial sums agree at every index, and the convergence crosses.
+    val sizes = force(limit.term("\\i:num. abs (-(Power ((1:real) / 2) i))", sequences))
+    val terms = force(limit.term("\\i:num. Power ((1:real) / 2) i", sequences))
+    val sameSums = force(
+      rules
+        .specAll(force(chain.series.fact(Series.Congruence)), List(sizes, terms))
+        .flatMap(theorem =>
+          Conv
+            .betaNormalise(theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem))))
+        .flatMap(rules.mp(_, sizeIsPower)))
+
+    val assumedLimit = force(
+      LogicError.lift(
+        Kernel.assume(proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))))
+    val zero = force(limit.term("ZERO", numbers))
+    val absoluteConverges = force(
+      rules
+        .specAll(
+          force(limit.eventually),
+          List(
+            force(limit.term("Sum (\\i:num. Power ((1:real) / 2) i)", sequences)),
+            force(limit.term("Sum (\\i:num. abs (-(Power ((1:real) / 2) i)))", sequences)),
+            l,
+            zero))
+        .flatMap(theorem =>
+          rules
+            .gen(
+              i,
+              force(
+                rules
+                  .disch(
+                    proposition("NUM_LE ZERO (i:num)"),
+                    force(Conv.sym(force(rules.spec(i, sameSums)))))))
+            .flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.mp(_, assumedLimit)))
+
+    val reached = force(
+      rules
+        .specAll(force(limit.absolute), List(negated, l))
+        .flatMap(rules.mp(_, absoluteConverges)))
+
+    val settled = force(rules.existsElim(geometricConverges, l, reached))
+
+    settled.hypotheses shouldBe empty
+    settled.conclusion shouldBe
+      proposition("?m:real. converges (Sum (\\i:num. -(Power ((1:real) / 2) i))) m")
+  }
+
   "The comparison test" should "settle a series a reader can name, between two bounds" in {
     val rules = limit.logic.rules
     val linarith = force(Linarith.construct(chain.order))

@@ -310,6 +310,7 @@ they have least appetite for working out how it is produced.
 
 ## Limit
 
+  CONVERGES_ABSOLUTE       !x:num -> real. !y:real. converges (Sum (\z:num. abs (x z))) y ==> (?z:real. converges (Sum x) z)
   CONVERGES_ADD            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v + y v) (z + u)
   CONVERGES_CONSTANT       !x:real. converges (\y:num. x) x
   CONVERGES_EVENTUALLY     !x:num -> real. !y:num -> real. !z:real. !u:num. (!v:num. u <= v ==> x v = y v) ==> converges x z ==> converges y z
