@@ -157,11 +157,12 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
 
   "Every rule" should "carry each marker the same number of times on both sides" in {
     // The combinatorial half of a closure lemma nobody has proved yet, pinned where facts about
-    // the encoding live. `REACH_POTENTIAL` cannot be read on `S2_MARKED` alone -- `0/0.` is marked,
-    // `B1` takes it to `0/t.`, and `S2_PHI` falls, where the hypothesis asks that no uncounted step
-    // lower it -- so the class the potential argument wants is the marked words **and** one head
-    // marker, in front. What makes that class closed under a step is that no rule of this table
-    // introduces or removes either marker, and this is that, counted.
+    // the encoding live. That `REACH_POTENTIAL` cannot be read on `S2_MARKED` alone is a theorem
+    // since 2026-09-21 and is no longer a witness quoted in a comment: `Collatz.PlainStepHolds`
+    // with the three facts beside it is the instance, at the bottom of this file. So the class the
+    // potential argument wants is the marked words **and** one head marker, in front, and what
+    // makes that class closed under a step is that no rule of this table introduces or removes
+    // either marker, which is this, counted.
     //
     // **It reads the table and not the definition**, which is weaker than the two tests above it
     // and is said rather than left to be noticed: `disjuncts` counts clauses off the definition and
@@ -622,6 +623,132 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
         case App(App(_, left), _) => left shouldBe wanted
         case other => fail(s"not an order statement: ${system.show(other)}")
       }
+    }
+  }
+
+  /* ---------------------------------- the anchored class, and why it is not the marked one */
+
+  private lazy val witnesses: Collatz.ClassWitnesses =
+    system.classWitnesses
+      .fold(error => fail(s"the witnesses do not build: ${error.message}"), identity)
+
+  "The anchored class" should "have nine witnesses that say what they are written down as saying" in {
+    // The same comparison `Statements` gets one section up, at the facts this development does
+    // not publish. A derivation that reached a theorem about another word, or about `S2` where
+    // the claim is about `S2_COUNTED`, is true and is not the counterexample, and nothing in the
+    // shape assertions below would notice: they read which relation and which pair, off the
+    // theorem itself. This reads the text.
+    val derived = witnesses.named.toMap
+    derived.keySet shouldBe Collatz.WitnessStatements.map(_._1).toSet
+
+    for ((name, text) <- Collatz.WitnessStatements) {
+      val expected = Parser
+        .proposition(system.theory, system.notation, text)
+        .fold(error => fail(s"$name does not parse: ${error.message}"), identity)
+      val held = derived.getOrElse(name, fail(s"no witness named $name"))
+
+      withClue(s"$name\n  text:    ${system.show(expected)}\n  theorem: ${system.show(held.conclusion)}\n") {
+        held.conclusion shouldBe expected
+        held.hypotheses shouldBe empty
+      }
+    }
+  }
+
+  it should "be what the counted step's drop needs, refuted on a marked word" in {
+    // `S2_PHI_COUNTED_STEP` asks `S2_ANCHORED u` and nothing else. What says that hypothesis is
+    // load-bearing is this instance: `f0.` satisfies every other antecedent, is NOT anchored, and
+    // the conclusion is false at it. A theorem does not refuse, so this is the only form the
+    // control can take, and it is the one `ReachingSpec` uses on the lemma being instantiated.
+    //
+    // Until 2026-09-21 what stood in this place was six figures in prose, counted by a Python
+    // mirror over every word of at most seven letters and read by no test. A figure of that kind
+    // is a property of the enumeration's bound as much as of the system; this is a derivation.
+    val witness = witnesses.counted
+
+    for (held <- List(witness.marked, witness.notAnchored, witness.stepped, witness.measureStands))
+      withClue(s"${system.show(held.conclusion)}\n") {
+        held.hypotheses shouldBe empty
+      }
+
+    // Marked, and not anchored: the pair is what says the weakening under test is a real one.
+    system.logic.destNot(witness.notAnchored.conclusion) shouldBe defined
+    system.logic.destNot(witness.marked.conclusion) shouldBe empty
+
+    // The step is a COUNTED one, so the lemma's second antecedent holds as written.
+    witness.stepped.conclusion match {
+      case App(App(App(_, relation), _), _) =>
+        relation shouldBe system.theory
+          .constant(Collatz.Counted, Term.typeOf(relation))
+          .fold(error => fail(s"no such constant: $error"), identity)
+      case other => fail(s"not a step: ${system.show(other)}")
+    }
+
+    // And the conclusion is refuted: what the lemma would give is `S2_PHI u = SUC (S2_PHI v)`,
+    // and both measures are nothing, because a digit at position zero and one at position one
+    // both weigh `i - 1` over a truncated subtraction.
+    withClue(s"${system.show(witness.measureStands.conclusion)}\n") {
+      system.logic.destNot(witness.measureStands.conclusion) shouldBe defined
+    }
+  }
+
+  it should "be what the uncounted step's bound needs, refuted on another marked word" in {
+    // `S2_PHI_PLAIN_STEP` asks `S2_ANCHORED u /\ S2_MARKED u /\ ...`, and this refutes dropping
+    // the first of the two. `0/0.` is marked, is not anchored, `B1` steps it to `0/t.`, nothing
+    // counts that step, and the measure FALLS across it, which is the second hypothesis of
+    // `REACH_POTENTIAL` failing at a pair the weakened lemma would admit.
+    //
+    // The antecedent that costs something is the third. Naming `B1` says the rule that fired is
+    // not a commutation and says nothing about a different factorisation of the same pair;
+    // `Collatz.noCountedStepFrom` is what derives the negative about the relation.
+    val witness = witnesses.plain
+
+    val everything = List(
+      witness.marked,
+      witness.notAnchored,
+      witness.stepped,
+      witness.notCounted,
+      witness.measureFalls)
+
+    for (held <- everything)
+      withClue(s"${system.show(held.conclusion)}\n") {
+        held.hypotheses shouldBe empty
+      }
+
+    system.logic.destNot(witness.notAnchored.conclusion) shouldBe defined
+    system.logic.destNot(witness.marked.conclusion) shouldBe empty
+
+    // The step is a step of the SYSTEM, and it is not a step of the counted sub-relation. The
+    // second is a negative, and a negative about a relation is the half a witness cannot exhibit.
+    witness.stepped.conclusion match {
+      case App(App(App(_, relation), _), _) =>
+        relation shouldBe system.theory
+          .constant(Collatz.Name, Term.typeOf(relation))
+          .fold(error => fail(s"no such constant: $error"), identity)
+      case other => fail(s"not a step: ${system.show(other)}")
+    }
+
+    val refused = system.logic
+      .destNot(witness.notCounted.conclusion)
+      .getOrElse(fail(s"not a refusal: ${system.show(witness.notCounted.conclusion)}"))
+    refused match {
+      case App(App(App(_, relation), _), _) =>
+        relation shouldBe system.theory
+          .constant(Collatz.Counted, Term.typeOf(relation))
+          .fold(error => fail(s"no such constant: $error"), identity)
+      case other => fail(s"not a step: ${system.show(other)}")
+    }
+
+    // The two steps are about the same pair, which is what makes the four antecedents one
+    // instance rather than four facts that happen to be true.
+    (witness.stepped.conclusion, refused) match {
+      case (App(App(_, beforeStep), afterStep), App(App(_, beforeRefusal), afterRefusal)) =>
+        beforeStep shouldBe beforeRefusal
+        afterStep shouldBe afterRefusal
+      case other => fail(s"not two steps: $other")
+    }
+
+    withClue(s"${system.show(witness.measureFalls.conclusion)}\n") {
+      system.logic.destNot(witness.measureFalls.conclusion) shouldBe defined
     }
   }
 }
