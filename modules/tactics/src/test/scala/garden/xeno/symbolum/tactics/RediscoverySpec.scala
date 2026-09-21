@@ -283,7 +283,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 404 with the Cauchy product, 2026-09-21, and the **four** were derived before the run:
     // it carries four antecedents, two non-negativities and two convergences, one weakening
     // each. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 404
+    // 411 with the general Cauchy product and the three lemmas under it, 2026-09-21, and the
+    // **seven** were derived before the run and met: four antecedents on the product, two on
+    // the squeeze, one on the stretch, and `SUM_ABS` carries none at all. Tip plus this
+    // branch's delta.
+    propose.weakenings.size shouldBe 411
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

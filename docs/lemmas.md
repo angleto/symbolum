@@ -319,17 +319,21 @@ they have least appetite for working out how it is produced.
   CONVERGES_MUL            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v * y v) (z * u)
   CONVERGES_NEG            !x:num -> real. !y:real. converges x y ==> converges (\z:num. -(x z)) (-y)
   CONVERGES_TAIL           !x:num -> real. !y:real. converges (Sum x) y ==> converges (\z:num. y - Sum x z) 0
+  CONVERGES_TO_ZERO        !x:num -> real. !y:num -> real. (!z:num. abs (x z) <= y z) ==> converges y 0 ==> converges x 0
   CONVERGES_UNIQUE         !x:num -> real. !y:real. !z:real. converges x y ==> converges x z ==> y = z
   LE_BELOW_EVERY_POSITIVE  !x:real. 0 <= x ==> (!y:real. 0 < y ==> x < y) ==> x = 0
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
+  SUM_ABS                  !x:num -> real. !y:num. abs (Sum x y) <= Sum (\z:num. abs (x z)) y
   SUM_BELOW_LIMIT          !x:num -> real. !y:real. (!z:num. 0 <= x z) ==> converges (Sum x) y ==> (!z:num. Sum x z <= y)
   SUM_CAUCHY_BELOW_SQUARE  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) z <= Sum x z * Sum y z
+  SUM_CAUCHY_PRODUCT       !x:num -> real. !y:num -> real. !z:real. !u:real. !v:real. !w:real. converges (Sum (\x1:num. abs (x x1))) v ==> converges (Sum (\x1:num. abs (y x1))) w ==> converges (Sum x) z ==> converges (Sum y) u ==> converges (Sum (\x1:num. Sum (\y1:num. x y1 * y (NUM_SUB x1 y1)) (SUC x1))) (z * u)
   SUM_CAUCHY_PRODUCT_NONNEG !x:num -> real. !y:num -> real. !z:real. !u:real. (!v:num. 0 <= x v) ==> (!v:num. 0 <= y v) ==> converges (Sum x) z ==> converges (Sum y) u ==> converges (Sum (\v:num. Sum (\w:num. x w * y (NUM_SUB v w)) (SUC v))) (z * u)
   SUM_COMPARISON           !x:num -> real. !y:num -> real. (!z:num. 0 <= x z) ==> (!z:num. x z <= y z) ==> (?z:real. !u:num. Sum y u <= z) ==> (?z:real. converges (Sum x) z)
   SUM_GROWS                !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. !z:num. y <= z ==> Sum x y <= Sum x z)
   SUM_SQUARE_BELOW_CAUCHY  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum x z * Sum y z <= Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) (z + z)
+  SUM_TAIL_ABS             !x:num -> real. !y:num. !z:num. y <= z ==> abs (Sum x z - Sum x y) <= Sum (\u:num. abs (x u)) z - Sum (\u:num. abs (x u)) y
 
 ## Magnitude
 

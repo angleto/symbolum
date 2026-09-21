@@ -983,4 +983,157 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     // brackets the partial sums and brackets alone converge nothing.
     Derivation.axiomsOf(theorem) should contain(force(chain.reals.axiom("COMPLETENESS")).conclusion)
   }
+  /**
+   * The general Cauchy product, detached at a series a reader can name, with nothing assumed.
+   *
+   * The guard the structural assertion below cannot be, and the same one
+   * `SUM_CAUCHY_PRODUCT_NONNEG` has: six binders and four antecedents, and an implication nobody
+   * can discharge is a theorem that says nothing.
+   *
+   * **The instance is the geometric series, whose terms are not negative**, and that is worth
+   * being plain about rather than hiding behind the word "general": what this test shows is that
+   * the hypotheses are meetable and the conclusion comes out, not that the theorem reaches
+   * further than [[CauchyNonNegative]]. Reaching further is what the statement says and what the
+   * derivation's own facts say, and a series alternating in sign would need `abs (-x) = abs x`
+   * carried under a `Sum` twice, which is the test three above this one doing its work again for
+   * no new assertion.
+   *
+   * What the four antecedents cost here is one step: `abs` of a non-negative term is the term, so
+   * `Sum (\i. abs (a i))` and `Sum a` agree at every index and [[Eventually]] crosses the
+   * convergence. That step is the reason the absolute hypotheses are not free even at a series
+   * with no signs in it.
+   */
+  it should "settle a product of two absolutely convergent series a reader can name" in {
+    val rules = limit.logic.rules
+    val real = TyApp(Real.TypeName, Nil)
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val linarith = force(Linarith.construct(chain.order))
+    val i = Term.variable("i", numbers)
+    val l = Term.variable("l", real)
+
+    val half = force(limit.term("(1:real) / 2", real))
+    val terms = force(limit.term("\\i:num. Power ((1:real) / 2) i", Type.fun(numbers, real)))
+    val magnitudes =
+      force(limit.term("\\i:num. abs (Power ((1:real) / 2) i)", Type.fun(numbers, real)))
+    val powerAt = force(limit.term("Power ((1:real) / 2) (i:num)", real))
+
+    val positivePower = force(
+      rules
+        .spec(half, force(chain.series.fact(Series.PowerPositive)))
+        .flatMap(rules.mp(_, force(linarith.prove("0 < (1:real) / 2")))))
+
+    // `abs` of a non-negative term is the term, so the two series agree at every index.
+    val sizeIsTerm = force(
+      rules
+        .spec(powerAt, force(chain.magnitude.fact(Magnitude.OfNonNegative)))
+        .flatMap(rules.mp(
+          _,
+          force(
+            rules
+              .specAll(
+                force(chain.order.fact(Order.LeOfLt)),
+                List(force(limit.term("0:real", real)), powerAt))
+              .flatMap(rules.mp(_, force(rules.spec(i, positivePower)))))))
+        .flatMap(rules.gen(i, _)))
+
+    val sameSums = force(
+      rules
+        .specAll(force(chain.series.fact(Series.Congruence)), List(magnitudes, terms))
+        .flatMap(theorem =>
+          Conv
+            .betaNormalise(theorem.conclusion)
+            .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem))))
+        .flatMap(rules.mp(_, sizeIsTerm)))
+
+    val assumedLimit = force(
+      LogicError.lift(
+        Kernel.assume(proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))))
+    val zero = force(limit.term("ZERO", numbers))
+    val absoluteConverges = force(
+      rules
+        .specAll(
+          force(limit.eventually),
+          List(
+            force(limit.term("Sum (\\i:num. Power ((1:real) / 2) i)", Type.fun(numbers, real))),
+            force(limit.term(
+              "Sum (\\i:num. abs (Power ((1:real) / 2) i))", Type.fun(numbers, real))),
+            l,
+            zero))
+        .flatMap(theorem =>
+          rules
+            .gen(
+              i,
+              force(
+                rules.disch(
+                  proposition("NUM_LE ZERO (i:num)"),
+                  force(Conv.sym(force(rules.spec(i, sameSums)))))))
+            .flatMap(rules.mp(theorem, _)))
+        .flatMap(rules.mp(_, assumedLimit)))
+
+    // The same series on both sides, so the four antecedents are two facts each used twice.
+    val product = force(
+      rules
+        .specAll(force(limit.cauchy), List(terms, terms, l, l, l, l))
+        .flatMap(rules.mp(_, absoluteConverges))
+        .flatMap(rules.mp(_, absoluteConverges))
+        .flatMap(rules.mp(_, assumedLimit))
+        .flatMap(rules.mp(_, assumedLimit)))
+
+    val reduced = force(
+      Conv
+        .betaNormalise(product.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, product))))
+
+    val claim = proposition(
+      "?m:real. converges " +
+        "(Sum (\\k:num. Sum (\\i:num. Power ((1:real) / 2) i * " +
+        "Power ((1:real) / 2) (NUM_SUB k i)) (SUC k))) m")
+    val predicate = limit.logic.destExistsPredicate(claim).get
+    val wrapped =
+      force(rules.existsIntro(predicate, force(limit.term("(l:real) * l", real)), reduced))
+
+    val settled = force(rules.existsElim(geometricConverges, l, wrapped))
+
+    settled.hypotheses shouldBe empty
+    settled.conclusion shouldBe claim
+  }
+
+  /**
+   * It rests on the non-negative theorem, on the gap identity and on the squeeze.
+   *
+   * The three together are the route, and none of them is visible in the statement: the theorem
+   * would read the same word for word if it had been proved by the textbook estimate, which
+   * splits the square into three regions and bounds each with an epsilon. What separates the two
+   * is which published facts are inside the derivation.
+   *
+   * `SUM_CAUCHY_GAP` is the one to read first. It carries **no hypothesis**, which is what lets
+   * one identity serve the signed argument and the non-negative one, and it is the reason this
+   * derivation spends [[CauchyNonNegative]] exactly once rather than repeating its sandwich.
+   *
+   * And `SUM_TAIL_ABS` is asserted here rather than only where it is defined, because it is the
+   * step that does not appear in any textbook account of this theorem: the usual estimate bounds
+   * a tail of `b` by a tolerance, and this one bounds it by a **difference of two partial sums
+   * of the magnitudes**, which is what makes the whole argument an order statement.
+   */
+  it should "rest on the non-negative product, the gap identity and the squeeze" in {
+    val theorem = force(limit.cauchy)
+
+    val route = Set(
+      force(limit.cauchyNonNegative).conclusion,
+      force(chain.series.fact(Series.CauchyGap)).conclusion,
+      force(limit.squeezed).conclusion,
+      force(limit.stretchOfMagnitudes).conclusion,
+      force(limit.sumOfMagnitudes).conclusion)
+
+    Derivation.restingOn(theorem, route) shouldBe route
+
+    // And it reaches completeness, through the non-negative theorem's comparison test and
+    // nowhere else: the squeeze and the two triangle inequalities have no supremum in them.
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+
+    Derivation.axiomsOf(theorem) should contain(completeness)
+    Derivation.axiomsOf(force(limit.squeezed)) should not contain completeness
+    Derivation.axiomsOf(force(limit.sumOfMagnitudes)) should not contain completeness
+    Derivation.axiomsOf(force(limit.stretchOfMagnitudes)) should not contain completeness
+  }
 }
