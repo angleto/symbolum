@@ -617,7 +617,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 593 lemmas, 389 have two or more leading quantifiers and **355 of
+caller meant: of the library's 594 lemmas, 390 have two or more leading quantifiers and **356 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1456,6 +1456,26 @@ What is **not** proved is the rest of that list: `exp (x + y) = exp x * exp y` a
 the intermediate value theorem. `LimitSpec` obtains the geometric series at one half and
 sandwiches its limit between zero and two, which was the first series here whose convergence is a
 theorem rather than a hypothesis and is the model the exponential's follows.
+
+**Half the Cauchy product landed on 2026-09-21 and the sentence above is still true**, which is
+worth saying in that order because the name in `docs/lemmas.md` invites the opposite reading.
+`Limit.SUM_CAUCHY_PRODUCT_NONNEG` is the theorem for series of **non-negative** terms, and
+neither of those two identities has any: `sin` alternates, and `exp (x + y)` is wanted at every
+real and not only at the positives. What the non-negative case settles is that the route works,
+and the route is the thing that was in doubt: `SUM_CAUCHY_BELOW_SQUARE` and
+`SUM_SQUARE_BELOW_CAUCHY` bracket the Cauchy partial sums between `Sum a n * Sum b n` and the
+same read at `n + n`, and a bracket at every index between two sequences whose limits are known
+needs **no epsilon at all**. The textbook proof is an epsilon argument with a split at `n / 2`
+in it; there is no division anywhere in this one, and `NUM_DIV` is not reached. That the split
+is unnecessary is a measurement rather than a preference, and it is recorded on the card that
+asked for the work.
+
+What the general case wants is named rather than estimated, and it is two things this repository
+does not have: the triangle inequality at a finite sum, which nothing publishes because until
+now nothing consumed it, and a squeeze. Both are small beside what landed. `LimitSpec` detaches
+the non-negative theorem at the geometric series on both sides and asserts `hypotheses` empty,
+because an implication with four antecedents that nobody can discharge is a theorem and says
+nothing.
 
 **A quotient with a symbolic denominator is outside every procedure here, and that decided the
 shape of the whole derivation.** `Linarith` refuses `x / y` by name, saying that cancelling a

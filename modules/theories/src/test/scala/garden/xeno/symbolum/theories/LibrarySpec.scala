@@ -559,8 +559,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // does not move. Tip plus this branch's delta. `CLAUDE.md`'s two figures move by **three**
     // and not four, derived before the run: `SUM_GROWS` binds a single leading quantifier, and
     // each of the other three binds two that share a type.
-    library.entries.size shouldBe 593
-    library.names.distinct.size shouldBe 590
+    // 594 and 591 with the Cauchy product, 2026-09-21: one fact under one name, not shared, so
+    // the gap of three does not move. Tip plus this branch's delta. `CLAUDE.md`'s two figures
+    // move by **one** each, derived before the run: it binds four leading quantifiers and two
+    // pairs of those share a type, and that row counts a lemma once however many pairs it has.
+    library.entries.size shouldBe 594
+    library.names.distinct.size shouldBe 591
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
