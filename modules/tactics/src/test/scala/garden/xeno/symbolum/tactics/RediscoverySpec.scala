@@ -288,7 +288,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // the squeeze, one on the stretch, and `SUM_ABS` carries none at all. Tip plus this
     // branch's delta.
     // 412 with `ABS_POWER_LE`, which carries one antecedent.
-    propose.weakenings.size shouldBe 412
+    // 414: one antecedent each on the halving and the geometric tail, none on the convergence.
+    propose.weakenings.size shouldBe 414
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -375,7 +376,14 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // three leading quantifiers come off. It is counted here and once in the weakenings row, and
     // **that pair is where the prediction for it went wrong**: `open` is over every proposal,
     // weakenings and substitutions together, and the prediction counted only the first kind.
-    propose.mutable.size shouldBe 86
+    // 87 with the halving alone, 2026-09-21, and the prediction was 88. **Two** of the three
+    // new facts are refused by `swapped` rather than one, and the condition it refuses at is
+    // the same for both: a lambda in the body once the leading quantifiers come off.
+    // `EXP_ABSOLUTE` is a `converges` of a `Sum` of one, which was predicted; `EXP_TAIL_GEOMETRIC`
+    // carries `!j. ...` **inside** its implication, and a universal quantifier is a lambda here,
+    // which was not. Reading `stripForall` as removing every quantifier rather than the leading
+    // ones is what the prediction did.
+    propose.mutable.size shouldBe 87
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

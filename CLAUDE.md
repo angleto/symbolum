@@ -617,7 +617,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 599 lemmas, 395 have two or more leading quantifiers and **360 of
+caller meant: of the library's 602 lemmas, 397 have two or more leading quantifiers and **360 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1481,14 +1481,35 @@ along; and `CONVERGES_TO_ZERO` is the squeeze at zero. All three live in `Limit`
 second, `Magnitude` is built **above** `Series` and is handed none of it, so this is the lowest
 link that can write the two names in one statement.
 
+**The exponential's series is absolutely convergent at every real since 2026-09-21**, which is
+`Transcendental.EXP_ABSOLUTE` and is what the Cauchy product asks of both its arguments.
+`EXP_ONE_ABOVE_TWO` did not buy it: that one dominates `1 / i!` by `2 * (1/2)^i`, and the
+dominating series is the one for `x = 1` and for no other.
+
+**The comparison test is not what proves it, and that is a measurement rather than a
+preference.** `SUM_COMPARISON` asks for domination at **every** index, and a uniform geometric
+dominator for an arbitrary `x` wants `(2 * abs x)^i <= C * i!`, a fact about `num` this
+repository does not have; its base-two case, `Coding.NUM_POW_LE_FACT`, is two hundred and
+twenty-seven lines and the general one wants a split at `N` with a monotonicity of the power in
+its exponent on top. What is used instead is `MONOTONE_CONVERGES` on the partial sums, with the
+bound got by **splitting** the series: `Peano.NUM_CEIL_LE` gives `M` with `2 * abs x <=
+real_of_num M`, everything past `M` is under a geometric series, and everything before it is one
+number. `Series.SUM_REINDEX` is what does the splitting. `TranscendentalSpec` asserts both
+halves of that with `Derivation.restingOn`, including that `EXP_ONE_ABOVE_TWO` **does** rest on
+the comparison test, so the absence in the other is a choice and not an accident.
+
+Two lemmas were written under it, both published. `EXP_TERM_HALVES` is where the convergence is
+decided: past the index where `2 * abs x` is reached each term is at most half the one before
+it. `EXP_TAIL_GEOMETRIC` is that iterated. Three things owe a condition in the first and all
+three are discharged: the two cancellations at `NUM_FACT i` and `NUM_FACT (SUC i)`, and
+`Field`'s `inv f = r * inv (f * r)`.
+
 What is still **not** proved is `exp (x + y) = exp x * exp y` and
-`sin x * sin x + cos x * cos x = 1`, and what stands in front of them is no longer the Cauchy
-product. It is that the exponential's series is absolutely convergent **at every real**, which is
-a convergence result this repository does not have: `Transcendental.EXP_ONE_ABOVE_TWO` dominates
-`1 / i!` by `2 * (1/2)^i`, and that dominating series is the one for `x = 1` and for no other.
-With that in hand the convolution of `x^i / i!` and `y^j / j!` is `(x + y)^k / k!` by
-`Series.POWER_BINOMIAL`, which is already proved. Every fact about `ln` still waits on the
-intermediate value theorem, and nothing here moves that.
+`sin x * sin x + cos x * cos x = 1`. What stands in front of the first is now one identification
+and no analysis: the convolution of `x^i / i!` and `y^j / j!` has to be shown to be
+`(x + y)^k / k!`, which is `Series.POWER_BINOMIAL` — already proved — together with a fact
+relating `NUM_CHOOSE` to the three factorials, which is where the remaining work is. Every fact
+about `ln` still waits on the intermediate value theorem, and nothing here moves that.
 
 `LimitSpec` detaches **both** Cauchy theorems at the geometric series on both sides and asserts
 `hypotheses` empty, because an implication with four antecedents that nobody can discharge is a
