@@ -325,7 +325,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 390 with the absolute convergence theorem, 2026-09-21, and the **one** was derived before
     // the run: it carries a single antecedent, the convergence of the absolute series, under one
     // arrow. Tip plus this branch's delta.
-    proposals.size shouldBe 390
+    // 393 with the two tail facts, 2026-09-21, and the **three** were derived before the run:
+    // `SUM_BELOW_LIMIT` carries two antecedents, the non-negativity of the terms and the
+    // convergence, and `CONVERGES_TAIL` carries one. Tip plus this branch's delta.
+    proposals.size shouldBe 393
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1028,7 +1031,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // not a refutation. Both weakenings therefore land here rather than among the disproved,
     // whether or not the claim they make is true, which is the distinction `docs/adr/0005` keeps
     // seven answers apart for.
-    open shouldBe 290
+    // 292 with TWO of the three residues the tail facts bring, 2026-09-21, and the **split was
+    // predicted wrong**: the prediction was three here and none below, on the reading that all
+    // three are about `converges` and no model reads it. Two of them are. The third is
+    // `SUM_BELOW_LIMIT` with its CONVERGENCE dropped rather than its non-negativity, which leaves
+    // `!f l. (!i. 0 <= f i) ==> !n. Sum f n <= l`: no `converges` in it at all, and what it
+    // quantifies over is a function, which the sampler has no reading of. So it is in the bucket
+    // below and these two are here, which is the distinction the two buckets exist to draw and
+    // which a prediction made per LEMMA rather than per residue cannot see.
+    open shouldBe 292
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1341,7 +1352,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and is about `converges`, a constant no model here interprets. The row above records the
     // reading that sent the same prediction to `open` yesterday, and the criterion it gives —
     // the constants and not the type — is what was used here.
-    unreadable shouldBe 97
+    // 98 with the third of those residues, the one whose weakening removed the convergence. It
+    // sat behind `open` in this same test and so never ran on the first pass, which is the fourth
+    // time this file has recorded that and the first time the number behind it was also the one
+    // the prediction had wrong. The second pass is what found both.
+    unreadable shouldBe 98
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1613,7 +1628,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // deliberately. So what this list counts is that set and not the sentence describing it, and
     // the same reading that missed `unreadable` yesterday missed this today — the prose beside a
     // criterion is not the criterion.
-    aboutNumbers.size shouldBe 145
+    aboutNumbers.size shouldBe 148
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

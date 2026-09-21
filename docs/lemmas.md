@@ -318,11 +318,13 @@ they have least appetite for working out how it is produced.
   CONVERGES_LE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> x v <= z) ==> y <= z
   CONVERGES_MUL            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v * y v) (z * u)
   CONVERGES_NEG            !x:num -> real. !y:real. converges x y ==> converges (\z:num. -(x z)) (-y)
+  CONVERGES_TAIL           !x:num -> real. !y:real. converges (Sum x) y ==> converges (\z:num. y - Sum x z) 0
   CONVERGES_UNIQUE         !x:num -> real. !y:real. !z:real. converges x y ==> converges x z ==> y = z
   LE_BELOW_EVERY_POSITIVE  !x:real. 0 <= x ==> (!y:real. 0 < y ==> x < y) ==> x = 0
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
+  SUM_BELOW_LIMIT          !x:num -> real. !y:real. (!z:num. 0 <= x z) ==> converges (Sum x) y ==> (!z:num. Sum x z <= y)
   SUM_COMPARISON           !x:num -> real. !y:num -> real. (!z:num. 0 <= x z) ==> (!z:num. x z <= y z) ==> (?z:real. !u:num. Sum y u <= z) ==> (?z:real. converges (Sum x) z)
 
 ## Magnitude
