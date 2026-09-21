@@ -502,6 +502,7 @@ they have least appetite for working out how it is produced.
   NUM_BIT1_SUC             !x:num. NUM_BIT1 x = SUC (x + x)
   NUM_CEIL_LE              !x:real. 0 <= x ==> x <= real_of_num (NUM_CEIL x)
   NUM_CEIL_LT              !x:real. 0 <= x ==> real_of_num (NUM_CEIL x) < x + 1
+  NUM_CHOOSE_ABOVE         !x:num. !y:num. x < y ==> NUM_CHOOSE x y = 0
   NUM_CHOOSE_EMPTY         !x:num. NUM_CHOOSE 0 (SUC x) = 0
   NUM_CHOOSE_SUC           !x:num. !y:num. NUM_CHOOSE (SUC x) (SUC y) = NUM_CHOOSE x y + NUM_CHOOSE x (SUC y)
   NUM_CHOOSE_ZERO          !x:num. NUM_CHOOSE x 0 = SUC 0
@@ -514,6 +515,7 @@ they have least appetite for working out how it is produced.
   NUM_LE_CASES             !x:num. !y:num. x <= y ==> x < y \/ x = y
   NUM_LE_LT_TRANS          !x:num. !y:num. !z:num. x <= y /\ y < z ==> x < z
   NUM_LE_OF_LT             !x:num. !y:num. x < y ==> x <= y
+  NUM_LE_OF_LT_SUC         !x:num. !y:num. y < SUC x ==> y <= x
   NUM_LE_OF_NOT_LT         !x:num. !y:num. ~(x < y) ==> y <= x
   NUM_LE_REFL              !x:num. x <= x
   NUM_LE_SUC               !x:num. x <= SUC x

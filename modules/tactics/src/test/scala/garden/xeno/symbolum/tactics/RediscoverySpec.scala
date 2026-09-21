@@ -265,7 +265,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // run: of the six facts that landed, exactly one carries an antecedent, which is
     // `Peano.NUM_SUC_SUB` and its bound `n <= m`. The other five are equations owing nothing, and
     // `NUM_SUC_SUB_SELF` is that lemma with its bound already spent. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 387
+    // 389 with the two facts the binomial theorem wants in front of it, 2026-09-21, and the
+    // **two** were derived before the run: `NUM_CHOOSE_ABOVE` carries the bound `n < k` and
+    // `NUM_LE_OF_LT_SUC` carries `i < SUC n`, one antecedent each under one arrow. Tip plus this
+    // branch's delta.
+    propose.weakenings.size shouldBe 389
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

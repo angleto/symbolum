@@ -528,8 +528,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // plus this branch's delta. `CLAUDE.md`'s two figures-per-lemma each move by **one**, derived
     // from the statements before the run: `NUM_CHOOSE_ZERO` and `NUM_CHOOSE_EMPTY` bind a single
     // leading quantifier each, and only `NUM_CHOOSE_SUC` binds two, which are both `num`.
-    library.entries.size shouldBe 580
-    library.names.distinct.size shouldBe 577
+    // 582 and 579 with the two facts the binomial theorem asks for in front of it, 2026-09-21:
+    // `NUM_CHOOSE_ABOVE` and `NUM_LE_OF_LT_SUC`, both in `Peano`, neither shared, so the gap of
+    // three does not move. Tip plus this branch's delta. Each binds two leading quantifiers and
+    // both of each pair are `num`, so `CLAUDE.md`'s two figures-per-lemma move by **two** each,
+    // derived from the statements before the run.
+    library.entries.size shouldBe 582
+    library.names.distinct.size shouldBe 579
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

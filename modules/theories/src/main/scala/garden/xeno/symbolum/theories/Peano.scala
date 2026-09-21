@@ -684,6 +684,20 @@ object Peano {
   val BelowSuccessorCases: String = "NUM_LT_SUC_CASES"
 
   /**
+   * `|- !n i. NUM_LT i (SUC n) ==> NUM_LE i n`
+   *
+   * An index strictly inside a range of length `SUC n` is at most `n`, which is what an argument
+   * under `Series.SUM_CONGRUENCE_BELOW` at that bound needs and what nothing here could reach
+   * without a case split. [[BelowSuccessorCases]] gets to the same place through a disjunction
+   * with an equation in one branch, which the caller then has to eliminate.
+   *
+   * Additively it has no branch at all: `NUM_LT i (SUC n)` **is** `?d. NUM_ADD (SUC i) d = SUC n`
+   * and `NUM_LE i n` **is** `?d. NUM_ADD i d = n`, so the two existentials have the same witness
+   * and what happens in between is [[SuccessorPlus]] and the injectivity of the successor.
+   */
+  val AtMostBelowSuccessor: String = "NUM_LE_OF_LT_SUC"
+
+  /**
    * `|- !P:num->bool. (?n. P n) ==> (?m. P m /\ (!k. NUM_LT k m ==> ~(P k)))`
    *
    * The least-number principle: a property that holds somewhere holds first somewhere. The only
@@ -1122,6 +1136,19 @@ object Peano {
    */
   val ChoosePascal: String = "NUM_CHOOSE_SUC"
 
+  /**
+   * `|- !n k. NUM_LT n k ==> NUM_CHOOSE n k = ZERO`
+   *
+   * The triangle is zero above its own diagonal, which is the one fact about it that is not a
+   * recurrence and the one a shifted sum needs: extending a sum over columns `0..n` to one over
+   * `0..n+1` costs nothing exactly because the entry it adds is this.
+   *
+   * [[ChooseEmpty]] is the case `n = ZERO` and does **not** give this: that one is the top row,
+   * and a single induction on the row cannot reach the rest, because the step at `SUC n` asks for
+   * the row `n` at **two** columns and an induction on one variable offers it at one.
+   */
+  val ChooseAbove: String = "NUM_CHOOSE_ABOVE"
+
   /* ----------------------------------------------------------------- numerals */
 
   /**
@@ -1269,6 +1296,7 @@ object Peano {
       ("!P:num->bool. (!n:num. (!m:num. NUM_LT m n ==> P m) ==> P n) ==> " +
         "(!n:num. P n)"),
     AtMostZero -> "!n:num. NUM_LE n ZERO ==> n = ZERO",
+    AtMostBelowSuccessor -> "!n:num i:num. NUM_LT i (SUC n) ==> NUM_LE i n",
     BelowSuccessorCases -> "!n:num i:num. NUM_LT i (SUC n) ==> NUM_LT i n \\/ i = n",
     LeastNumber ->
       ("!P:num->bool. (?n:num. P n) ==> " +
@@ -1311,6 +1339,7 @@ object Peano {
     ChoosePascal ->
       ("!n:num k:num. NUM_CHOOSE (SUC n) (SUC k) = " +
         "NUM_ADD (NUM_CHOOSE n k) (NUM_CHOOSE n (SUC k))"),
+    ChooseAbove -> "!n:num k:num. NUM_LT n k ==> NUM_CHOOSE n k = ZERO",
     EmbedsDifference ->
       "!m:num n:num. NUM_LE n m ==> real_of_num (NUM_SUB m n) = real_of_num m - real_of_num n",
     PartialSumAtZero -> "!f:num -> num. NUM_SUM f ZERO = ZERO",
@@ -1642,7 +1671,8 @@ object Peano {
       // function. It needs `COND` from the classical extension and `PRE` from the subtraction
       // stage, which is why it comes after both.
       chosen <- binomials(
-        logic, driver, naturals, withPartialSums, notation, recursion, subtractionFacts)
+        logic, driver, naturals, withPartialSums, notation, recursion, subtractionFacts,
+        orderDefinitions, addFacts, induction)
       (withChoose, chooseDefinition, chooseFacts) = chosen
 
       // The last of the pure stages: three definitions and three doubling lemmas, no real.
@@ -2142,6 +2172,14 @@ object Peano {
         arithmetic,
         naturals
       )
+      atMostBelowSuc <- atMostBelowSuccessor(
+        logic,
+        theory,
+        notation,
+        (nonStrictDefinition, strictDefinition),
+        arithmetic,
+        naturals
+      )
 
       atMostFromBelow <- atMostFromStrictlyBelow(
         logic,
@@ -2277,6 +2315,7 @@ object Peano {
         MulPositive -> mulPositive,
         NotBelowZero -> notBelowZero,
         BelowSuccessorCases -> belowSuccessorCases,
+        AtMostBelowSuccessor -> atMostBelowSuc,
         AtMostFromBelow -> atMostFromBelow,
         AtMostThenBelow -> atMostThenBelow,
         AddMonotone -> addMonotone,
@@ -3030,6 +3069,79 @@ object Peano {
    * the sum to reach a strict bound; here the sum already carries the successor on the left, and
    * what moves is the one on the right, which is what the recurrence says directly.
    */
+  /**
+   * `|- !n i. NUM_LT i (SUC n) ==> NUM_LE i n`, and the witness never moves.
+   *
+   * `NUM_LT i (SUC n)` **is** `?d. NUM_ADD (SUC i) d = SUC n`, and `NUM_LE i n` **is**
+   * `?d. NUM_ADD i d = n`. So the whole of the proof is that the two existentials have the same
+   * witness: [[SuccessorPlus]] moves the step out of the sum on the left, and the injectivity of
+   * the successor takes it off both sides.
+   *
+   * [[BelowSuccessorCases]] reaches the same fact through a disjunction with an equation in one
+   * branch, which a caller then has to eliminate. This one has no case split, and a consumer
+   * under `SUM_CONGRUENCE_BELOW` at a bound of `SUC n` wants exactly this shape.
+   */
+  private def atMostBelowSuccessor(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definitions: (Kernel.Thm, Kernel.Thm),
+    arithmetic: Map[String, Kernel.Thm],
+    naturals: Natural
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (nonStrict, strict) = definitions
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+    val i = Term.variable("i", numbers)
+
+    for {
+      injective <- naturals.fact(Natural.SuccessorInjective)
+      successorPlus <- arithmetic.get(SuccessorPlus).toRight(MissingDefinition(SuccessorPlus))
+
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+      plus <- LogicError.lift(
+        theory.constant(Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
+      )
+      successorOfN <- LogicError.lift(Term.app(successor, n))
+      successorOfI <- LogicError.lift(Term.app(successor, i))
+
+      unfolded <- Conv.unfold(strict, List(i, successorOfN))
+      guard <- leftOf(unfolded)
+      assumed <- LogicError.lift(Kernel.assume(guard))
+      bounded <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+      existential <- gap(logic, nonStrict, successorOfI, successorOfN, bounded)
+
+      difference = Conv.freshVariable("d", numbers, Term.freeVariables(guard))
+      sum <- LogicError.lift(Term.appAll(plus, List(successorOfI, difference)))
+      reaching <- LogicError.lift(Term.eq(sum, successorOfN))
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      pushed <- rules.specAll(successorPlus, List(i, difference))
+      stepped <- Conv.sym(pushed).flatMap(Conv.trans(_, reaches))
+      inside <- LogicError.lift(Term.appAll(plus, List(i, difference)))
+      cancelled <- rules.specAll(injective, List(inside, n)).flatMap(rules.mp(_, stepped))
+
+      atMost <- Conv.unfold(nonStrict, List(i, n))
+      body <- rightOf(atMost)
+      predicate <- logic
+        .destExistsPredicate(body)
+        .toRight(NotOfForm("an existential", body))
+      witnessed <- rules.existsIntro(predicate, difference, cancelled)
+      folded <- Conv
+        .sym(atMost)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, witnessed)))
+
+      withoutWitness <- rules.existsElim(existential, difference, folded)
+      result <- rules
+        .disch(guard, withoutWitness)
+        .flatMap(rules.genAll(_, List(n, i)))
+        .flatMap(checked(theory, notation, AtMostBelowSuccessor, _))
+    } yield result
+  }
+
   private def belowSuccessorSplits(
     logic: Logic,
     theory: Theory,
@@ -6083,7 +6195,10 @@ object Peano {
     base: Theory,
     notation: Notation,
     recursion: Kernel.Thm,
-    subtractionFacts: Map[String, Kernel.Thm]
+    subtractionFacts: Map[String, Kernel.Thm],
+    orderDefinitions: Map[String, Kernel.Thm],
+    addition: Map[String, Kernel.Thm],
+    induction: Kernel.Thm
   ): Either[LogicError, (Theory, Kernel.Thm, Map[String, Kernel.Thm])] = {
     val rules = logic.rules
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -6183,15 +6298,188 @@ object Peano {
       } yield checkedFact
 
       chooseNoneChecked <- checked(theory, notation, ChooseNone, chooseNone)
+
+      chooseAboveDiagonal <- chooseAbove(
+        logic, theory, notation, induction, orderDefinitions, addition, chooseEmpty, choosePascal)
     } yield (
       theory,
       definition,
       Map(
         ChooseNone -> chooseNoneChecked,
         ChooseEmpty -> chooseEmpty,
-        ChoosePascal -> choosePascal
+        ChoosePascal -> choosePascal,
+        ChooseAbove -> chooseAboveDiagonal
       )
     )
+  }
+
+  /**
+   * `|- !n k. NUM_LT n k ==> NUM_CHOOSE n k = ZERO`, the triangle above its own diagonal.
+   *
+   * == Written additively inside and ordered outside, which is the whole of the design ==
+   *
+   * The induction is not on the statement above. `NUM_LT n k` **is** `?d. NUM_ADD (SUC n) d = k`,
+   * so the claim can be written `!n j. NUM_CHOOSE n (NUM_ADD n (SUC j)) = ZERO`, and in that form
+   * the proof asks for no order fact, no `NUM_CASES` and no case split at all: the base is
+   * [[ZeroPlus]] with [[ChooseEmpty]], and the step is [[SuccessorPlus]], Pascal's rule and the
+   * hypothesis at **two** columns. Stated with `NUM_LT` the same induction wants a number known
+   * positive to be a successor, and every route to that is a disjunction with an existential in
+   * one branch.
+   *
+   * What is published is the ordered form, because that is what a consumer holds: a shifted sum
+   * meets this at its last entry, where what is known is that the column has gone past the row.
+   * Crossing between the two is one existential elimination and two rewrites, and it happens once.
+   *
+   * == The inner quantifier is why this is not `Induct.proveBy` ==
+   *
+   * That driver inducts on the **last** leading quantifier and leaves the others free, so
+   * `!n j. P n j` would induct on `j` with `n` fixed. The step needs the hypothesis at two
+   * different columns of one row, which is a claim about every column, so the column has to be
+   * quantified **inside** the predicate the induction is handed. `Language.NUM_NUMERAL_INJECTIVE`
+   * is the other place in this repository that meets this, and it runs `Natural.Induction`
+   * directly for the same reason.
+   */
+  private def chooseAbove(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    induction: Kernel.Thm,
+    orderDefinitions: Map[String, Kernel.Thm],
+    addition: Map[String, Kernel.Thm],
+    chooseEmpty: Kernel.Thm,
+    choosePascal: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val n = Term.variable("n", numbers)
+    val k = Term.variable("k", numbers)
+    val d = Term.variable("d", numbers)
+
+    /** An equation between two terms that are already the same, which is what a closed goal is. */
+    def settled(goal: Term): Either[LogicError, Kernel.Thm] =
+      Term.destEq(goal) match {
+        case Some((left, right)) if left == right => Right(Kernel.refl(left))
+        case _                                    => Left(NotOfForm("a closed equation", goal))
+      }
+
+    def normalise(equations: Vector[Rewrite.Rule])(
+      theorem: Kernel.Thm
+    ): Either[LogicError, Kernel.Thm] =
+      Rewrite
+        .rewrite(equations, theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    for {
+      zeroPlus <- addition.get(ZeroPlus).toRight(MissingDefinition(ZeroPlus))
+      successorPlus <- addition.get(SuccessorPlus).toRight(MissingDefinition(SuccessorPlus))
+      addAtSuccessor <- addition.get(AddAtSuccessor).toRight(MissingDefinition(AddAtSuccessor))
+      addAtZero <- addition.get(AddAtZero).toRight(MissingDefinition(AddAtZero))
+      nonStrict <- orderDefinitions.get(NonStrictOrder).toRight(MissingDefinition(NonStrictOrder))
+      strictOrder <- orderDefinitions.get(StrictOrder).toRight(MissingDefinition(StrictOrder))
+      successor <- LogicError.lift(
+        theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      )
+
+      arithmetic <- Rewrite.Rule.all(
+        logic, Vector(zeroPlus, successorPlus, addAtSuccessor, addAtZero))
+      pascalRule <- Rewrite.Rule.of(logic, choosePascal)
+      emptyRule <- Rewrite.Rule.of(logic, chooseEmpty)
+      shared = arithmetic :+ pascalRule
+
+      // The predicate the induction is handed, with the COLUMN quantified inside it.
+      claim <- Parser.proposition(
+        theory, notation, "!j:num. NUM_CHOOSE (n:num) (NUM_ADD n (SUC j)) = ZERO")
+      predicate <- LogicError.lift(Term.abs(n, claim))
+      instance <- rules.spec(predicate, induction)
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      premises <- logic
+        .destImp(opened.conclusion)
+        .toRight(NotOfForm("an implication", opened.conclusion))
+      halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
+      (baseTerm, stepTerm) = halves
+
+      // The base. The top row is zero at every column past the first, which is `ChooseEmpty` once
+      // `NUM_ADD ZERO` is out of the way.
+      baseStripped <- Logic.stripForall(baseTerm)
+      baseColumn <- baseStripped._1.headOption
+        .toRight(NotOfForm("a claim about every column", baseTerm))
+      base <- Induct
+        .afterRewriting(shared :+ emptyRule, baseStripped._2)(settled)
+        .flatMap(rules.gen(baseColumn, _))
+      _ <-
+        if (base.conclusion == baseTerm) Right(())
+        else Left(NotOfForm("the base the induction asks for", base.conclusion))
+
+      // The step. Pascal turns one entry into two and the hypothesis settles both, at the column
+      // and at the one above it. The two instances are built BY HAND rather than offered as a
+      // schematic rule, because what the arithmetic leaves is `SUC (SUC (n + j))` and a pattern
+      // written `NUM_ADD n (SUC ?j)` has already been normalised past by the time it would match.
+      stepStripped <- Logic.stripForall(stepTerm)
+      row <- stepStripped._1.headOption.toRight(NotOfForm("a claim about every row", stepTerm))
+      stepParts <- logic
+        .destImp(stepStripped._2)
+        .toRight(NotOfForm("an implication", stepStripped._2))
+      hypothesis <- LogicError.lift(Kernel.assume(stepParts._1))
+      goalStripped <- Logic.stripForall(stepParts._2)
+      column <- goalStripped._1.headOption
+        .toRight(NotOfForm("a claim about every column", stepParts._2))
+      nextColumn <- LogicError.lift(Term.app(successor, column))
+      here <- rules.spec(column, hypothesis).flatMap(normalise(shared))
+      above <- rules.spec(nextColumn, hypothesis).flatMap(normalise(shared))
+      hereRule <- Rewrite.Rule.of(logic, here)
+      aboveRule <- Rewrite.Rule.of(logic, above)
+      step <- Induct
+        .afterRewriting(Vector(hereRule, aboveRule) ++ shared, goalStripped._2)(settled)
+        .flatMap(rules.gen(column, _))
+      _ <-
+        if (step.conclusion == stepParts._2) Right(())
+        else Left(NotOfForm("the step the induction asks for", step.conclusion))
+      generalStep <- rules.disch(stepParts._1, step).flatMap(rules.gen(row, _))
+      everywhere <- rules.conjIntro(base, generalStep).flatMap(rules.mp(opened, _))
+
+      // And out to the order, where a consumer meets it. The witness of `NUM_LT n k` is the `j`
+      // the induction was run over, one rewrite away: `SUC n + d` and `n + SUC d` are the same
+      // number by the two recurrences of addition read in opposite directions.
+      below <- Parser.proposition(theory, notation, "NUM_LT (n:num) (k:num)")
+      assumed <- LogicError.lift(Kernel.assume(below))
+      weakened <- Conv
+        .unfold(strictOrder, List(n, k))
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, assumed)))
+      successorOfRow <- LogicError.lift(Term.app(successor, n))
+      witnessed <- gap(logic, nonStrict, successorOfRow, k, weakened)
+
+      reaching <- Parser.proposition(
+        theory, notation, "NUM_ADD (SUC (n:num)) (d:num) = k:num")
+      reaches <- LogicError.lift(Kernel.assume(reaching))
+
+      // `n + SUC d = SUC (n + d) = SUC n + d = k`, which is the whole of the crossing.
+      through <- rules
+        .specAll(addAtSuccessor, List(n, d))
+        .flatMap(left =>
+          rules
+            .specAll(successorPlus, List(n, d))
+            .flatMap(Conv.sym)
+            .flatMap(Conv.trans(left, _)))
+      bridge <- Conv.trans(through, reaches)
+
+      atWitness <- rules.specAll(everywhere, List(n, d))
+      carried <- atWitness.conclusion match {
+        case App(App(_, App(partial, _)), _) =>
+          Conv
+            .apTerm(partial, bridge)
+            .flatMap(Conv.sym)
+            .flatMap(Conv.trans(_, atWitness))
+        case other => Left(NotOfForm("an entry of the triangle", other))
+      }
+
+      withoutWitness <- rules.existsElim(witnessed, d, carried)
+      result <- rules
+        .disch(below, withoutWitness)
+        .flatMap(rules.genAll(_, List(n, k)))
+        .flatMap(checked(theory, notation, ChooseAbove, _))
+    } yield result
   }
 
   /** `x = COND p a b` with `p` proved, carried to `x = a`. */

@@ -92,6 +92,65 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
       "NUM_CHOOSE (SUC (SUC (SUC (SUC 0)))) (SUC (SUC 0)) = SUC (SUC (SUC (SUC (SUC (SUC 0)))))"
   }
 
+  /**
+   * The triangle above its diagonal, spent at a pair rather than only printed.
+   *
+   * Two entries and the second is the control. `2 choose 3` is zero because the column has run
+   * past the row, which is the fact under test discharged at a concrete bound; `2 choose 2` is
+   * **one**, and it is here because the fact would say zero about it too if its hypothesis were
+   * dropped. A lemma whose side condition does no work passes every assertion about the cases it
+   * covers, and the only way to see that this one works is to compute an entry it does not cover.
+   */
+  "The triangle" should "be zero above its diagonal, and not on it" in {
+    peano.show(fact(Peano.ChooseAbove).conclusion) shouldBe
+      "!x:num. !y:num. x < y ==> NUM_CHOOSE x y = 0"
+
+    val two = force(peano.term("SUC (SUC ZERO)", numbers))
+    val three = force(peano.term("SUC (SUC (SUC ZERO))", numbers))
+
+    val past = force(
+      rules
+        .specAll(fact(Peano.ChooseAbove), List(two, three))
+        .flatMap(rules.mp(_, force(rules.spec(two, fact(Peano.BelowSuccessor))))))
+    past.hypotheses shouldBe empty
+    peano.show(past.conclusion) shouldBe
+      "NUM_CHOOSE (SUC (SUC 0)) (SUC (SUC (SUC 0))) = 0"
+
+    // And on the diagonal it is one, computed from the three recurrences and nothing else.
+    val onIt = force(
+      Rewrite.rewrite(
+        rulesOf(
+          Peano.ChooseNone,
+          Peano.ChooseEmpty,
+          Peano.ChoosePascal,
+          Peano.AddAtZero,
+          Peano.AddAtSuccessor),
+        force(peano.term("NUM_CHOOSE (SUC (SUC ZERO)) (SUC (SUC ZERO))", numbers))))
+    peano.show(onIt.conclusion) shouldBe
+      "NUM_CHOOSE (SUC (SUC 0)) (SUC (SUC 0)) = SUC 0"
+  }
+
+  /**
+   * An index below a successor is at most its predecessor, which is the bound every argument under
+   * `Series.SUM_CONGRUENCE_BELOW` holds and the one none of them could turn into arithmetic.
+   *
+   * It is spent here rather than only printed, at the pair where the two bounds differ: `1 < 2`
+   * gives `1 <= 1`, which is the boundary case and the one a proof by cases would have reached
+   * through the equation branch.
+   */
+  "An index strictly below a successor" should "be at most the number under it" in {
+    peano.show(fact(Peano.AtMostBelowSuccessor).conclusion) shouldBe
+      "!x:num. !y:num. y < SUC x ==> y <= x"
+
+    val one = force(peano.term("SUC ZERO", numbers))
+    val reached = force(
+      rules
+        .specAll(fact(Peano.AtMostBelowSuccessor), List(one, one))
+        .flatMap(rules.mp(_, force(rules.spec(one, fact(Peano.BelowSuccessor))))))
+    reached.hypotheses shouldBe empty
+    peano.show(reached.conclusion) shouldBe "SUC 0 <= SUC 0"
+  }
+
   "Commutativity of the two operations" should "be derived, since neither recurrence is symmetric" in {
     // The pair the card called the real work. Each needs two inductions before it: addition needs
     // `ZERO + n = n` for its base and `SUC m + n = SUC (m + n)` for its step, and multiplication

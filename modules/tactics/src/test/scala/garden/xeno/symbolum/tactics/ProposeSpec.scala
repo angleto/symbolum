@@ -318,7 +318,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // run: of the six facts that landed, exactly one carries an antecedent, which is
     // `Peano.NUM_SUC_SUB` and its bound `n <= m`. The other five are equations owing nothing, and
     // `NUM_SUC_SUB_SELF` is that lemma with its bound already spent. Tip plus this branch's delta.
-    proposals.size shouldBe 387
+    // 389 with the two facts the binomial theorem wants in front of it, 2026-09-21, and the
+    // **two** were derived before the run: `NUM_CHOOSE_ABOVE` carries the bound `n < k` and
+    // `NUM_LE_OF_LT_SUC` carries `i < SUC n`, one antecedent each under one arrow. Tip plus this
+    // branch's delta.
+    proposals.size shouldBe 389
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -529,7 +533,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and written in nothing but `NUM_LE`, which `Model.Numbers` computes exactly. The other two
     // residues are substitutions and neither is here, for two different reasons the two buckets
     // below give.
-    decidedFalse shouldBe 79
+    // 80 with ONE of the two weakenings of 2026-09-21, and **which one was derived before the
+    // run**: `NUM_LE_OF_LT_SUC` weakens to `!n i. NUM_LE i n`, false at `i = 1, n = 0` and
+    // written in `NUM_LE` alone, which `Model.Numbers` computes exactly. `NUM_CHOOSE_ABOVE`
+    // weakens to `!n k. NUM_CHOOSE n k = ZERO`, which is false too and is about a constant no
+    // model here reads, so it cannot be decided and is not here. The split is the point.
+    decidedFalse shouldBe 80
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -661,7 +670,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // deriving what moves a count is not the same as editing every count it moves. That is the
     // fourth time, and what the paragraph prescribes — a second pass in which every assertion
     // behind the moved one executes — is what found it again.
-    withAPoint shouldBe 74
+    // 75, moving with `decidedFalse` and by the same single residue: `!n i. NUM_LE i n` is
+    // written in `NUM_LE` alone and the sampler finds `i = 1, n = 0`. **Edited in the same pass
+    // as `decidedFalse` this time**, which is what the paragraph above has asked for four times
+    // and did not get; what was still missing on the run before this one was the two rows below
+    // and above it, not this one.
+    withAPoint shouldBe 75
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1311,7 +1325,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // sampler has no point to try because nothing interprets `int`. What decides the bucket is
     // the type the residue is about, and the three `abs` residues of the same day are the control
     // on that: they are false too, they are about reals, and every one of them is open.
-    unreadable shouldBe 95
+    // 96 with the OTHER of the two weakenings of 2026-09-21, and **this bucket was predicted
+    // wrong**, which is worth more than the number. The mechanism was derived correctly before
+    // the run — `NUM_CHOOSE` is a constant no model here interprets, so the residue
+    // `!n k. NUM_CHOOSE n k = ZERO` cannot be evaluated at a point — and the bucket read off that
+    // was `open`. It is here instead. The rows above say what decides it and the reading that
+    // missed it was of the TYPE rather than of the constants: `num` is interpreted, which is what
+    // sent the prediction to `open`, and `NUM_CHOOSE` inside a claim about `num` is not.
+    unreadable shouldBe 96
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1572,7 +1593,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // So this row moves by two where `decidedFalse` moves by one, which is the split this pair of
     // counts exists to show: "the claim mentions the naturals" and "the model can compute it" are
     // different facts, and here the second residue is on this list and in `open`.
-    aboutNumbers.size shouldBe 142
+    // 144 with BOTH weakenings of 2026-09-21, which is this list counting CONSTANTS again:
+    // `!n k. NUM_CHOOSE n k = ZERO` writes `NUM_CHOOSE` and `!n i. NUM_LE i n` writes `NUM_LE`,
+    // both of them the naturals'. So this row moves by two where `decidedFalse` moves by one and
+    // `unreadable` by one, which is the three-way split this family of counts exists to show.
+    aboutNumbers.size shouldBe 144
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1644,7 +1669,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // entries above it each had one that was not. `NUM_SUC_SUB_SELF` produces no weakening at all,
     // having no antecedent to drop, and the four facts in `Series` write no constant of the
     // naturals in a residue.
-    after shouldBe 53
+    // 54 with that same single residue, the sampler and `aboutNumbers` moving together where the
+    // `NUM_CHOOSE` one moves neither: it is on `aboutNumbers` and in `unreadable`, so it is
+    // counted as being about the naturals and is refuted at no point at all.
+    after shouldBe 54
   }
 
   /* ------------------------------------------------------ the false positive it produced */
