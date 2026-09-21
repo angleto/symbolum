@@ -275,7 +275,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 393 with the two tail facts, 2026-09-21, and the **three** were derived before the run:
     // `SUM_BELOW_LIMIT` carries two antecedents, the non-negativity of the terms and the
     // convergence, and `CONVERGES_TAIL` carries one. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 393
+    // 394 with the bounded monotone, 2026-09-21, and the **one** was derived before the run: it
+    // carries a single antecedent, the comparison below the bound. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 394
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
