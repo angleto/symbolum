@@ -383,6 +383,13 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // carries `!j. ...` **inside** its implication, and a universal quantifier is a lambda here,
     // which was not. Reading `stripForall` as removing every quantifier rather than the leading
     // ones is what the prediction did.
+    // **87 still**, with `NUM_CHOOSE_ALL` and `NUM_CHOOSE_FACTORIAL`, and the prediction was 89.
+    // Neither carries a lambda, which is what was checked and is not the whole condition:
+    // `Propose.Swaps` holds **four** constants and all four are the reals' — addition against
+    // multiplication and the two orders. A lemma written entirely in `num` constants has nothing
+    // to swap, so it produces no substitution and is not mutable at all. The prediction read
+    // `swapped`'s refusal condition and not the table it ranges over, which is the same half-read
+    // selector the note beside `ProposeSpec`'s buckets is about.
     propose.mutable.size shouldBe 87
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }

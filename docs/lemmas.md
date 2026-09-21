@@ -76,6 +76,7 @@ they have least appetite for working out how it is produced.
 
   NUM_BETA_SEQUENCE        !x:num -> num. !y:num. ?z:num. ?u:num. !v:num. v < y ==> NUM_BETA z u v = x v
   NUM_BOUNDED_BELOW_LENGTH !x:num -> num. !y:num. ?z:num. !u:num. u < y ==> x u <= z
+  NUM_CHOOSE_FACTORIAL     !x:num. !y:num. NUM_CHOOSE (y + x) y * (NUM_FACT y * NUM_FACT x) = NUM_FACT (y + x)
   NUM_CRT                  !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> 0 < x u) ==> (!u:num. !v:num. u < z /\ v < z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. v < z ==> NUM_CONG (x v) u (y v))
   NUM_CRT_PAIR             !x:num. !y:num. !z:num. !u:num. NUM_GCD x y = SUC 0 /\ 0 < x /\ 0 < y ==> (?v:num. NUM_CONG x v z /\ NUM_CONG y v u)
   NUM_FACT_DIVIDES         !x:num. !y:num. 0 < x /\ x <= y ==> NUM_DIVIDES x (NUM_FACT y)
@@ -515,6 +516,7 @@ they have least appetite for working out how it is produced.
   NUM_CEIL_LE              !x:real. 0 <= x ==> x <= real_of_num (NUM_CEIL x)
   NUM_CEIL_LT              !x:real. 0 <= x ==> real_of_num (NUM_CEIL x) < x + 1
   NUM_CHOOSE_ABOVE         !x:num. !y:num. x < y ==> NUM_CHOOSE x y = 0
+  NUM_CHOOSE_ALL           !x:num. NUM_CHOOSE x x = SUC 0
   NUM_CHOOSE_EMPTY         !x:num. NUM_CHOOSE 0 (SUC x) = 0
   NUM_CHOOSE_SUC           !x:num. !y:num. NUM_CHOOSE (SUC x) (SUC y) = NUM_CHOOSE x y + NUM_CHOOSE x (SUC y)
   NUM_CHOOSE_ZERO          !x:num. NUM_CHOOSE x 0 = SUC 0

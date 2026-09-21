@@ -280,6 +280,23 @@ object Coding {
   val PowerBelowFactorial: String = "NUM_POW_LE_FACT"
 
   /**
+   * `|- !j i. NUM_CHOOSE (i + j) i * (NUM_FACT i * NUM_FACT j) = NUM_FACT (i + j)`
+   *
+   * The binomial coefficient against the three factorials, **written additively**. The textbook
+   * form is `C n k * (k! * (n - k)!) = n!` under `k <= n`; this one holds at every pair with
+   * nothing assumed and no `NUM_SUB` anywhere, and a consumer recovers the textbook form by
+   * choosing `j`. It is the same decision `Limit.SUM_TAIL_ABS` records from the other side.
+   *
+   * Two ordinary inductions and no strong one: Pascal's recurrence wants the claim at
+   * `(a, SUC b)` and at `(SUC a, b)`, and an induction on `j` whose step contains one on `i`
+   * reaches both. The two edges are `Peano.NUM_CHOOSE_ZERO` and `Peano.NUM_CHOOSE_ALL`.
+   *
+   * It is what turns `Series.POWER_BINOMIAL` into a statement about the exponential, which is
+   * the last thing `Transcendental` needs for the addition theorem.
+   */
+  val ChooseTimesFactorials: String = "NUM_CHOOSE_FACTORIAL"
+
+  /**
    * `NUM_BETA a b i` is `a mod (1 + (i + 1) * b)`, Goedel's beta function.
    *
    * A definition and not a recursion, which is the whole reason `docs/adr/0013` chose it over a
@@ -344,6 +361,9 @@ object Coding {
     FactorialPositive -> "!k:num. NUM_LT ZERO (NUM_FACT k)",
     PowerBelowFactorial ->
       "!k:num. NUM_LE (NUM_POW (SUC (SUC ZERO)) k) (NUM_MUL (SUC (SUC ZERO)) (NUM_FACT k))",
+    ChooseTimesFactorials ->
+      ("!j:num. !i:num. NUM_CHOOSE (NUM_ADD i j) i * (NUM_FACT i * NUM_FACT j) = " +
+        "NUM_FACT (NUM_ADD i j)"),
     BetaSequence ->
       ("!s:num -> num. !n:num. ?a:num. ?b:num. !i:num. " +
         "NUM_LT i n ==> NUM_BETA a b i = s i"),
@@ -455,6 +475,9 @@ object Coding {
       family <- remaindersOverAFamily(vocabulary, driver, crt, productDivides, productPositive, coprimeFamily)
       factorialPositive <- factorialNeverVanishes(vocabulary, driver, zeroChecked, successorChecked)
       powerBelow <- powerBelowFactorial(vocabulary, driver, zeroChecked, successorChecked)
+      induction <- vocabulary.peano.naturals.fact(Natural.Induction)
+      chooseFactorials <- chooseTimesFactorials(
+        vocabulary, driver, semiring, induction, zeroChecked, successorChecked)
       betaSequence <- sequenceOfResidues(
         vocabulary, bound, divides, factorialPositive, coprime, family, betaDefinition)
     } yield new Coding(
@@ -485,6 +508,7 @@ object Coding {
         RemaindersFamily -> family,
         FactorialPositive -> factorialPositive,
         PowerBelowFactorial -> powerBelow,
+        ChooseTimesFactorials -> chooseFactorials,
         BetaSequence -> betaSequence
       )
     )
@@ -3327,6 +3351,250 @@ object Coding {
         if (proved.hypotheses.isEmpty) Right(())
         else Left(NotOfForm("a theorem with nothing assumed", proved.conclusion))
       result <- vocabulary.checked(FactorialPositive, proved)
+    } yield result
+  }
+
+  /**
+   * [[ChooseTimesFactorials]], which is what the binomial theorem needs to become a statement
+   * about the exponential.
+   *
+   * == Written additively, and that is the decision ==
+   *
+   * The textbook identity is `C n k * (k! * (n - k)!) = n!` under `k <= n`, and on `num` that
+   * spelling costs a side condition at every use and a truncated subtraction inside the
+   * induction. Written as `C (i + j) i * (i! * j!) = (i + j)!` it holds for **every** pair with
+   * nothing assumed, `NUM_SUB` never appears, and the consumer recovers the textbook form by
+   * choosing `j`. It is the same lesson `Peano.NUM_SUB_ADD` and `Limit.SUM_TAIL_ABS` record.
+   *
+   * == Two ordinary inductions and no strong one ==
+   *
+   * Pascal's recurrence reads `C (SUC a) (SUC b) = C a b + C a (SUC b)`, so the claim at
+   * `(SUC a, SUC b)` wants it at `(a, SUC b)` and at `(SUC a, b)`. Neither is the predecessor of
+   * the other in one variable, which is why the obvious single induction does not close it and
+   * why the first plan here was a strong induction on `i + j` with `NUM_CASES` twice. It is not
+   * needed: an induction on `j` whose step contains an induction on `i` reaches both, the inner
+   * hypothesis giving `(a, SUC b)` and the outer one at `SUC a` giving `(SUC a, b)`. Nothing
+   * compares two numbers anywhere in it.
+   *
+   * The two edges are the two facts about the triangle that are not the recurrence:
+   * `Peano.NUM_CHOOSE_ZERO` at `i = 0` and `Peano.NUM_CHOOSE_ALL` at `j = 0`, the second being
+   * the diagonal and the reason that lemma was written.
+   *
+   * Every rearrangement is `Semiring`, which decides the commutative semiring on `num`: without
+   * it each of the six steps below would be a chain of congruences over associativity and
+   * commutativity, which is what the rest of this file had to do before it existed.
+   */
+  private def chooseTimesFactorials(
+    vocabulary: Vocabulary,
+    driver: Induct,
+    semiring: Semiring,
+    induction: Kernel.Thm,
+    factorialAtZero: Kernel.Thm,
+    factorialAtSuccessor: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = vocabulary.rules
+    val logic = vocabulary.logic
+    val theory = vocabulary.theory
+    val notation = vocabulary.notation
+    val numbers = vocabulary.numbers
+    val j = Term.variable("j", numbers)
+
+    val claimText =
+      "!i:num. NUM_CHOOSE (NUM_ADD i (j:num)) i * (NUM_FACT i * NUM_FACT j) = " +
+        "NUM_FACT (NUM_ADD i (j:num))"
+
+    def settled(goal: Term): Either[LogicError, Kernel.Thm] =
+      Term.destEq(goal) match {
+        case Some((left, right)) => semiring.prove(left, right)
+        case None                => Left(NotOfForm("an equation", goal))
+      }
+
+    for {
+      zeroPlus <- vocabulary.peano.fact(Peano.ZeroPlus)
+      successorPlus <- vocabulary.peano.fact(Peano.SuccessorPlus)
+      addAtZero <- vocabulary.peano.fact(Peano.AddAtZero)
+      addAtSuccessor <- vocabulary.peano.fact(Peano.AddAtSuccessor)
+      chooseNone <- vocabulary.peano.fact(Peano.ChooseNone)
+      chooseDiagonal <- vocabulary.peano.fact(Peano.ChooseDiagonal)
+      choosePascal <- vocabulary.peano.fact(Peano.ChoosePascal)
+      arithmetic <- Rewrite.Rule.all(
+        logic, Vector(zeroPlus, successorPlus, addAtZero, addAtSuccessor))
+      noneRule <- Rewrite.Rule.of(logic, chooseNone)
+      diagonalRule <- Rewrite.Rule.of(logic, chooseDiagonal)
+      pascalRule <- Rewrite.Rule.of(logic, choosePascal)
+      factorialZeroRule <- Rewrite.Rule.of(logic, factorialAtZero)
+      factorialSuccessorRule <- Rewrite.Rule.of(logic, factorialAtSuccessor)
+
+      claim <- Parser.proposition(theory, notation, claimText)
+      predicate <- LogicError.lift(Term.abs(j, claim))
+      instance <- rules.spec(predicate, induction)
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      premises <- logic
+        .destImp(opened.conclusion)
+        .toRight(NotOfForm("an implication", opened.conclusion))
+      halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
+      (baseTerm, stepTerm) = halves
+
+      /* ------------------------------------------- the right edge: nothing left to distribute */
+
+      baseStripped <- Logic.stripForall(baseTerm)
+      baseRow <- baseStripped._1.headOption
+        .toRight(NotOfForm("a claim about every row", baseTerm))
+      base <- Induct
+        .afterRewriting(
+          arithmetic ++ Vector(diagonalRule, factorialZeroRule), baseStripped._2)(settled)
+        .flatMap(rules.gen(baseRow, _))
+      _ <-
+        if (base.conclusion == baseTerm) Right(())
+        else Left(NotOfForm("the base the induction asks for", base.conclusion))
+
+      /* --------------------------------------------------------------------------- the step */
+
+      stepStripped <- Logic.stripForall(stepTerm)
+      column <- stepStripped._1.headOption
+        .toRight(NotOfForm("a claim about every column", stepTerm))
+      stepParts <- logic
+        .destImp(stepStripped._2)
+        .toRight(NotOfForm("an implication", stepStripped._2))
+      outerHypothesis <- LogicError.lift(Kernel.assume(stepParts._1))
+
+      inner <- driver.proveBy(
+        stepParts._2,
+        innerBase =>
+          Induct.afterRewriting(
+            arithmetic ++ Vector(noneRule, factorialZeroRule), innerBase)(settled),
+        innerStep =>
+          for {
+            here <- LogicError.lift(Term.app(vocabulary.successor, innerStep.variable))
+            fromOuter <- rules.spec(here, outerHypothesis)
+
+            // Both hypotheses read at the same index, with every `(SUC x)!` opened, so that what
+            // is left of each is a product the semiring can move around.
+            innerOpened <- Rewrite
+              .rewrite(arithmetic :+ factorialSuccessorRule, innerStep.hypothesis.conclusion)
+              .flatMap(equation =>
+                LogicError.lift(Kernel.eqMp(equation, innerStep.hypothesis)))
+            // **Pascal as well, and the goal is why.** Rewriting the goal opens
+            // `C (SUC (SUC q)) (SUC a)` into `C (SUC q) a + C (SUC q) (SUC a)` and then opens
+            // the second of those again, so what stands where this hypothesis has to match is
+            // `C q a + C q (SUC a)`. The inner hypothesis needs no such rule: its coefficient is
+            // `C (SUC q) a`, whose lower index is a variable, and Pascal asks for two successors.
+            outerOpened <- Rewrite
+              .rewrite(arithmetic ++ Vector(factorialSuccessorRule, pascalRule), fromOuter.conclusion)
+              .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, fromOuter)))
+
+            closed <- Induct.afterRewriting(
+              arithmetic ++ Vector(pascalRule, factorialSuccessorRule), innerStep.goal)(goal =>
+              closeTheStep(vocabulary, semiring, goal, innerOpened, outerOpened, arithmetic))
+          } yield closed
+      )
+
+      generalStep <- rules.disch(stepParts._1, inner).flatMap(rules.gen(column, _))
+      everywhere <- rules.conjIntro(base, generalStep).flatMap(rules.mp(opened, _))
+    } yield everywhere
+  }
+
+  /**
+   * The step of [[ChooseTimesFactorials]], which is six equations and no reasoning.
+   *
+   * By the time this is reached the goal has been rewritten with the arithmetic, Pascal and the
+   * factorial's recurrence, so it reads `(ca + cs) * X = fp * n` where `X` is the product of the
+   * two opened factorials, and the two induction hypotheses read `ca * A = fp` and `cs * B = fp`
+   * with `A` and `B` the same product with one factor left out. Both of those factors are
+   * successors, and what the six steps do is put each hypothesis back into `X` and add.
+   *
+   * Everything that is not a congruence on one of the two hypotheses is `Semiring`, which is why
+   * the associativity and commutativity never appear: `ca * X = (ca * A) * sa` is an identity of
+   * the semiring, and the hypothesis then replaces `ca * A` by `fp` under one `apThm`.
+   */
+  private def closeTheStep(
+    vocabulary: Vocabulary,
+    semiring: Semiring,
+    goal: Term,
+    innerHypothesis: Kernel.Thm,
+    outerHypothesis: Kernel.Thm,
+    arithmetic: Vector[Rewrite.Rule]
+  ): Either[LogicError, Kernel.Thm] = {
+    def sidesOfProduct(term: Term): Either[LogicError, (Term, Term)] = term match {
+      case App(App(_, left), right) => Right((left, right))
+      case other                    => Left(NotOfForm("a product of two terms", other))
+    }
+
+    /** `|- left * tail = right * tail` from `|- left = right`. */
+    def overProduct(equation: Kernel.Thm, tail: Term): Either[LogicError, Kernel.Thm] =
+      Conv.apTerm(vocabulary.times, equation).flatMap(Conv.apThm(_, tail))
+
+    for {
+      goalSides <- Term.destEq(goal).toRight(NotOfForm("an equation", goal))
+      (goalLeft, goalRight) = goalSides
+      leftParts <- sidesOfProduct(goalLeft)
+      (coefficients, product) = leftParts
+      chosen <- sidesOfProduct(coefficients)
+      (fromInner, fromOuter) = chosen
+      factors <- sidesOfProduct(product)
+      firstFactor <- sidesOfProduct(factors._1)
+      secondFactor <- sidesOfProduct(factors._2)
+      rowStep = firstFactor._2
+      columnStep = secondFactor._2
+
+      innerSides <- Term
+        .destEq(innerHypothesis.conclusion)
+        .toRight(NotOfForm("an equation", innerHypothesis.conclusion))
+      outerSides <- Term
+        .destEq(outerHypothesis.conclusion)
+        .toRight(NotOfForm("an equation", outerHypothesis.conclusion))
+      value = innerSides._2
+
+      /* ------------------ each hypothesis put back into the product, one factor at a time */
+
+      innerLeft <- vocabulary.product(fromInner, product)
+      innerRight <- vocabulary.product(innerSides._1, rowStep)
+      innerShaped <- semiring.prove(innerLeft, innerRight)
+      innerCarried <- overProduct(innerHypothesis, rowStep)
+      innerWhole <- Conv.trans(innerShaped, innerCarried)
+
+      outerLeft <- vocabulary.product(fromOuter, product)
+      outerRight <- vocabulary.product(outerSides._1, columnStep)
+      outerShaped <- semiring.prove(outerLeft, outerRight)
+      outerCarried <- overProduct(outerHypothesis, columnStep)
+      outerWhole <- Conv.trans(outerShaped, outerCarried)
+
+      /* ----------------------------------------------------- distributed, added, and collected */
+
+      bothTerms <- vocabulary.sum(innerLeft, outerLeft)
+      distributed <- semiring.prove(goalLeft, bothTerms)
+
+      addedLeft <- vocabulary.overSum(innerWhole, outerLeft)
+      innerValue <- vocabulary.product(value, rowStep)
+      addedRight <- vocabulary.underSum(innerValue, outerWhole)
+      added <- Conv.trans(addedLeft, addedRight)
+
+      // `fp * sa + fp * sb = fp * (sa + sb)`, and then the index: `sa + sb` is the successor the
+      // arithmetic rules already know, so the last factor is reached by rewriting and not by a
+      // second identity.
+      indexSum <- vocabulary.sum(rowStep, columnStep)
+      indexed <- Rewrite.rewrite(arithmetic, indexSum)
+      index <- Term
+        .destEq(indexed.conclusion)
+        .map(_._2)
+        .toRight(NotOfForm("an equation", indexed.conclusion))
+      outerValue <- vocabulary.product(value, columnStep)
+      collectedLeft <- vocabulary.sum(innerValue, outerValue)
+      collectedRight <- vocabulary.product(value, index)
+      collected <- semiring.prove(collectedLeft, collectedRight)
+
+      result <- Conv
+        .trans(distributed, added)
+        .flatMap(Conv.trans(_, collected))
+        .flatMap(whole =>
+          Term
+            .destEq(whole.conclusion)
+            .toRight(NotOfForm("an equation", whole.conclusion))
+            .flatMap(sides =>
+              if (sides._2 == goalRight) Right(whole)
+              else semiring.prove(sides._2, goalRight).flatMap(Conv.trans(whole, _))))
     } yield result
   }
 
