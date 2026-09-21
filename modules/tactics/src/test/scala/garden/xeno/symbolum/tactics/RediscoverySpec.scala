@@ -393,7 +393,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // selector the note beside `ProposeSpec`'s buckets is about.
     // 89 with `MUL_INV_COMBINE` and `EXP_ADD`, which write `real_mul` and carry no lambda.
     // `EXP_CONVOLUTION` is refused: its body is a `Sum` of one.
-    propose.mutable.size shouldBe 89
+    // 91 with the two hyperbolic facts, which write `real_mul` and carry no lambda.
+    propose.mutable.size shouldBe 91
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

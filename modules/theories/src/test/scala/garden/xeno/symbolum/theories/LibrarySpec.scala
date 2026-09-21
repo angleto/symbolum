@@ -578,8 +578,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 607 and 604 with the addition theorem and the two facts under it, 2026-09-21. All three
     // bind two or more leading quantifiers and all three have a pair sharing `real`, so both of
     // `CLAUDE.md`'s figures move by three.
-    library.entries.size shouldBe 607
-    library.names.distinct.size shouldBe 604
+    // 609 and 606 with the exponential's reciprocal and the hyperbolic identity. Neither moves
+    // `CLAUDE.md`'s figures: both bind a single leading quantifier.
+    library.entries.size shouldBe 609
+    library.names.distinct.size shouldBe 606
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

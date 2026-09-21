@@ -1152,7 +1152,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // first residues in five commits that write neither `abs` nor `converges`, so unlike those
     // the model can evaluate them, and dropping `fu * iu = 1` leaves something false. None of
     // the seven was refuted. The hedge was that some would be; it is measured and it was not.
-    open shouldBe 322
+    // 324 with one substitution each from the two hyperbolic facts, both at `Equation`.
+    open shouldBe 324
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
