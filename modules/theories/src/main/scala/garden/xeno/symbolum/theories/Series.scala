@@ -310,6 +310,46 @@ object Series {
   val Binomial: String = "POWER_BINOMIAL"
 
   /**
+   * `|- !a b n. Sum (\k. Sum (\i. a i * b (k - i)) (SUC k)) n = Sum (\i. a i * Sum b (n - i)) n`
+   *
+   * The `n`th partial sum of a Cauchy product, in closed form. The left side is the definition —
+   * add up the first `n` convolutions — and the right side is one sum whose `i`th term is a term
+   * of `a` against a **partial sum** of `b`. Everything a convergence argument does to a Cauchy
+   * product starts by making that move, and until [[Diagonal]] landed it could not be made.
+   *
+   * It is [[Diagonal]] at `\i j. a i * b j` with [[Scaled]] inside, and nothing else: the
+   * diagonal says the triangle summed by antidiagonals is the triangle summed by rows, and a row
+   * of this triangle is `a i` times a partial sum of `b` because `a i` does not depend on the
+   * index the row runs over. The congruence is unconditional, since that is true at every `i`.
+   */
+  val Cauchy: String = "SUM_CAUCHY"
+
+  /**
+   * `|- !a b n. Sum a n * Sum b n - Sum (\k. Sum (\i. a i * b (k - i)) (SUC k)) n =
+   * Sum (\i. a i * (Sum b n - Sum b (n - i))) n`
+   *
+   * What a Cauchy product is missing at `n`, as **one sum**. The product of the two partial sums
+   * is a sum over a square and the partial Cauchy sum is a sum over the triangle inside it, so
+   * the gap is the corner; written this way it is a single sum whose `i`th term is a term of `a`
+   * against a **tail** of `b`, `Sum b n - Sum b (n - i)`.
+   *
+   * That shape is the whole point. The remaining analytic step in the Cauchy product theorem is
+   * that this goes to zero, and in this form it is one estimate over one sum rather than an
+   * argument about two regions of a square. What it still needs is stated where the work is
+   * tracked rather than promised here: tails of an absolutely convergent series going to zero,
+   * which this development has not got.
+   *
+   * == It is derived as a sum and published as a difference ==
+   *
+   * The derivation gives `gap + cauchy = product`, because [[Additive]] splits a sum and there is
+   * no lemma here taking a negation out of one: `Sum (\i. -(f i)) n = -(Sum f n)` is not in the
+   * library and is not added for this, since one `Linarith` step over three atoms turns the sum
+   * form into the difference a reader wants. The difference is what is published because that is
+   * what the word "gap" means.
+   */
+  val CauchyGap: String = "SUM_CAUCHY_GAP"
+
+  /**
    * `|- !n. Sum (\i. 0) n = 0`
    *
    * A sum of nothing is nothing, at every length, and it does **not** follow from `SUM_ZERO`, which
@@ -1087,6 +1127,13 @@ object Series {
       diagonal <- summedDiagonal(
         driver, withProd, notation, recurrences ++ differences, additive, congruenceBelow,
         stepMinus, atMostFromBelow, atSuccessor)
+
+      // The Cauchy product's partial sum and the gap to the product of the two partial sums,
+      // which are the diagonal and `SUM_ADD` pointed at a product of two sequences.
+      cauchyPair <- cauchyProduct(
+        logic, ring, binomialLinarith, withProd, notation, diagonal, congruence, additive,
+        scaleFact, scaleRightFact)
+      (cauchyPartial, cauchyGap) = cauchyPair
     } yield new Series(
       ring,
       logic,
@@ -1111,6 +1158,8 @@ object Series {
         Product -> productOfSums,
         Diagonal -> diagonal,
         Binomial -> binomial,
+        Cauchy -> cauchyPartial,
+        CauchyGap -> cauchyGap,
         Halves -> halves,
         CongruenceBelow -> congruenceBelow,
         Geometric -> geometric
@@ -1865,6 +1914,152 @@ object Series {
    * be in a rule set and the last row of the triangle, whose length is `SUC n - n`, is reached by
    * rewriting or not at all.
    */
+  /**
+   * [[Cauchy]] and [[CauchyGap]], which are [[Diagonal]] and [[Additive]] pointed at a product.
+   *
+   * Neither is an induction. The first is the diagonal specialised at `\i j. a i * b j` with the
+   * rows collapsed by [[Scaled]]; the second splits one sum in two with [[Additive]] and reads
+   * the whole back through [[ScaledRight]]. What makes both cheap is that every congruence in
+   * them is **unconditional**: `a i` does not depend on the index a row runs over, and the
+   * algebra inside the second is a ring identity at every index. The one bounded congruence this
+   * file has is in the binomial theorem and nothing here needs it.
+   *
+   * **The summand bodies are read off the theorems rather than parsed twice**, which is not
+   * fussiness. `Sum (\u. a u * c) n` and `Sum (\i. a i * c) n` are the same sum and are not the
+   * same term, so a body written here to match one a rule produced would agree with it only by
+   * the accident of two files choosing one letter. Where a body has to be built it is built once
+   * and specialised, and where a rule produced it, it is taken from there.
+   */
+  private def cauchyProduct(
+    logic: Logic,
+    ring: Ring,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    diagonal: Kernel.Thm,
+    congruence: Kernel.Thm,
+    additive: Kernel.Thm,
+    scaled: Kernel.Thm,
+    scaledRight: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val reals = TyApp(Real.TypeName, Nil)
+    val sequences = Type.fun(numbers, reals)
+    val a = Term.variable("a", sequences)
+    val b = Term.variable("b", sequences)
+    val n = Term.variable("n", numbers)
+
+    def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv
+        .betaNormalise(theorem.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    /** The summand of `Sum body length`, wherever it came from. */
+    def summandOf(term: Term): Either[LogicError, Term] = term match {
+      case App(App(_, body), _) => Right(body)
+      case other                => Left(NotOfForm("a sum", other))
+    }
+
+    def sidesOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      Term
+        .destEq(theorem.conclusion)
+        .toRight(NotOfForm("an equation", theorem.conclusion))
+
+    /** Two summands equal at every index, so the sums are equal at the length asked for. */
+    def sameSummand(
+      left: Term,
+      right: Term,
+      length: Term,
+      close: Term => Either[LogicError, Kernel.Thm]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        instance <- rules.specAll(congruence, List(left, right)).flatMap(normalised)
+        obligation <- logic
+          .destImp(instance.conclusion)
+          .map(_._1)
+          .toRight(NotOfForm("an implication", instance.conclusion))
+        stripped <- Logic.stripForall(obligation)
+        index <- stripped._1.headOption
+          .toRight(NotOfForm("a claim about every index", obligation))
+        proved <- close(stripped._2).flatMap(rules.gen(index, _))
+        everywhere <- rules.mp(instance, proved)
+        here <- rules.spec(length, everywhere)
+      } yield here
+
+    for {
+      pair <- Parser.term(
+        theory, notation, "\\i:num. \\j:num. (a:num -> real) i * (b:num -> real) j")
+      rowsBody <- Parser.term(
+        theory,
+        notation,
+        "\\i:num. (a:num -> real) i * Sum (b:num -> real) (NUM_SUB (n:num) i)"
+      )
+      cornerBody <- Parser.term(
+        theory,
+        notation,
+        "\\i:num. (a:num -> real) i * " +
+          "(Sum (b:num -> real) (n:num) - Sum (b:num -> real) (NUM_SUB (n:num) i))"
+      )
+
+      /* ------------------------------------------- the partial sum in closed form */
+
+      opened <- rules.specAll(diagonal, List(pair, n)).flatMap(normalised)
+      byRows <- sidesOf(opened).map(_._2).flatMap(summandOf)
+      collapsed <- sameSummand(
+        byRows,
+        rowsBody,
+        n,
+        goal =>
+          Term.destEq(goal) match {
+            case Some((App(App(_, _), length), App(App(_, factor), _))) =>
+              rules.specAll(scaled, List(factor, b, length)).flatMap(normalised)
+            case _ => Left(NotOfForm("a row against a scaled partial sum", goal))
+          }
+      )
+      cauchy <- Conv.trans(opened, collapsed).flatMap(rules.genAll(_, List(a, b, n)))
+
+      /* -------------------------------------------------------------- the gap */
+
+      apart <- rules.specAll(additive, List(cornerBody, rowsBody, n)).flatMap(normalised)
+      togetherBody <- sidesOf(apart).map(_._1).flatMap(summandOf)
+
+      partialB <- Parser.term(theory, notation, "Sum (b:num -> real) (n:num)", reals)
+      product <- rules.specAll(scaledRight, List(partialB, a, n)).flatMap(normalised)
+      wholeBody <- sidesOf(product).map(_._1).flatMap(summandOf)
+
+      // The one place algebra happens, and it is a ring identity at every index:
+      // `a i * Sum b n` is `a i * (Sum b n - Sum b (n - i)) + a i * Sum b (n - i)`.
+      splitEq <- sameSummand(wholeBody, togetherBody, n, goal => ring.prove(goal))
+
+      toCorner <- Conv
+        .sym(product)
+        .flatMap(Conv.trans(_, splitEq))
+        .flatMap(Conv.trans(_, apart))
+
+      // And the right-hand summand read back as the antidiagonal sum a caller writes.
+      atHere <- rules.specAll(cauchy, List(a, b, n))
+      backwards <- Conv.sym(atHere)
+      corner <- sidesOf(toCorner).map(_._2)
+      leading <- corner match {
+        case App(partial, _) => Right(partial)
+        case other           => Left(NotOfForm("a sum of two", other))
+      }
+      assembled <- Conv.apTerm(leading, backwards).flatMap(Conv.trans(toCorner, _))
+
+      pieces <- sidesOf(assembled).map(_._2).flatMap {
+        case App(App(_, gap), convolution) => Right((gap, convolution))
+        case other                         => Left(NotOfForm("a sum of two", other))
+      }
+      wholeProduct <- sidesOf(assembled).map(_._1)
+      gap <- linarith
+        .prove("!p:real. !g:real. !c:real. p = g + c ==> p - c = g")
+        .flatMap(rules.specAll(_, List(wholeProduct, pieces._1, pieces._2)))
+        .flatMap(rules.mp(_, assembled))
+        .flatMap(rules.genAll(_, List(a, b, n)))
+    } yield (cauchy, gap)
+  }
+
   private def summedDiagonal(
     driver: Induct,
     theory: Theory,
