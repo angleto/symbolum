@@ -208,9 +208,11 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     // was caught by an out-of-memory or by nothing.
     //
     // Measured beyond this population on 2026-09-22, exhaustively over every formula on two atoms
-    // of at most **seven** nodes, 5618 of them: no goal needs more than its size and the bound is
-    // reached, so it is tight rather than slack. Eight nodes is 26032 formulas and did not finish
-    // inside the time it was given, which is why the figure quoted is seven.
+    // of at most **seven** nodes, 5618 of them: no goal needs more than its size. Eight nodes is
+    // 26032 formulas and did not finish inside the time it was given, which is why the figure
+    // quoted is seven. What that probe reports per size band is the worst NEED, which is 4 at five
+    // and six nodes and 6 at seven; it is not a ratio, and reading it as one is the defect the
+    // comment beside the second assertion records.
     def needOf(goal: Term): Int = {
       def stopped(fuel: Int): Boolean = calculus.prove(goal, fuel) match {
         case Left(BoundReached(name, _, _, _)) => name == Intuitionistic.SearchName
@@ -236,17 +238,29 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
 
     // And the bound is approached, which is what keeps the assertion above from being a claim
     // about a number nothing comes near: without this it would pass just as well on a search that
-    // spent one unit on everything. An atom needing one is not a witness, so the witness asked for
-    // is a goal with a connective in it: some formula of at least four nodes needs all but one of
-    // them. Measured over seven nodes on 2026-09-22 the worst ratio is 6 of 7.
+    // spent one unit on everything.
     //
-    // **This half has never been seen failing, and three attempts to make it fail are recorded in
-    // `tools/verify/perturb-the-nets-criterion.sh`.** Charging nothing at the implication rule on
-    // the right, and charging nothing at the conjunction rule on the left, both leave the worst
-    // need over this population at 4 and leave a witness standing; what they redden is the edge
-    // two tests down, because a cheaper search settles the 128-link chain that should be cut
-    // short. So the guard above is fired and this one is not, and it is kept as a guard against a
-    // future search that is uniformly cheap rather than as one this repository has tested.
+    // **The bound is in fact ATTAINED, and where it is attained is why this assertion asks for
+    // four nodes rather than for equality.** `~p` and `~q` need 2 of 2, which is the ratio the
+    // `info` below prints and which perturbation 1 of `tools/verify/perturb-the-nets-criterion.sh`
+    // names when it fires. Equality at two nodes is trivial: a negation opens and the search is
+    // done, so any calculus at all attains it, and an assertion on the ratio would be satisfied by
+    // one that spent nothing anywhere else. The witness worth asking for is a goal with structure
+    // in it, so what is asserted is that some formula of at least four nodes needs all but one of
+    // them.
+    //
+    // **The sentence that stood here said "the worst ratio is 6 of 7" and it was three copies of
+    // a wrong reading, found by the verification of card 87e74c7f on 2026-09-22.** Six is the
+    // worst NEED among the seven-node formulas of the out-of-tree probe, a statistic per size
+    // band; the worst ratio is 1, and the instrument three statements down was printing `2 of 2`
+    // in the same run that the comment claimed 6 of 7. The two cannot be the same number, and the
+    // one that is recomputed on every run is the one that was right.
+    //
+    // **This half has been seen failing exactly once and by one perturbation**, number 4 in that
+    // harness, which charges nothing at the NEGATION rule. Three earlier attempts could not: each
+    // made a rule free that the edge's chain of implications is built from, so the edge moved and
+    // the two tests below went red before this one could. The negation is the one rule that chain
+    // never reaches, which is what made it the perturbation that isolates this assertion.
     val approached = sized.filter { case (size, goal) =>
       size >= 4 &&
       Prove.addressOf(chain.widest, goal) == Prove.Address.Propositional &&
