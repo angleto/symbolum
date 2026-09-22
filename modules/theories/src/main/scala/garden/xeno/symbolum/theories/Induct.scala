@@ -303,8 +303,10 @@ object Induct {
    *
    * That second question is asked only after the closer refuses, because that is where the answer
    * changes what the refusal means, and it costs one more pass of the conversion. This is the
-   * widest rewriting in the repository: measured on 2026-09-22 over a whole-suite run, the widest
-   * term any repetition carried was 7709 nodes and it was carried here, from a goal of 77.
+   * widest rewriting in the repository: `Rewrite.WidestMeasured` is the node count, measured over
+   * a whole-suite run, and this site is where it was carried, from a goal of 77 nodes. The number
+   * is not repeated here, because it was written by hand in four files and guarded in none of
+   * them, and `docs/adr/0037` is where the ceiling it decided is argued.
    */
   def afterRewriting(rules: Vector[Rewrite.Rule], goal: Term)(
     close: Term => Either[LogicError, Kernel.Thm]

@@ -46,6 +46,14 @@ suite was run. **2026-09-22, one whole-suite run, 44174 invocations:**
 `Induct.afterRewriting`, from a goal of 77 nodes, which is a ratio of a hundred. The next widest is
 3317, in `Algebraic.derive`, and that one starts at 3317: it does not grow at all.
 
+That maximum is declared once, as `Rewrite.WidestMeasured`, and this sentence is the one place it
+is also written out. It was written out in four on the day this record landed — here, both
+docstrings, and `RewriteSpec` — with nothing comparing any two of them, which was measured by
+putting a different number in this sentence and watching the three document gates stay green over
+64 tests. The two docstrings cite the name now. This one cannot, being a document, so `RewriteSpec`
+spells the sentence from the constant and fails naming this file when they disagree: the figure has
+one declaration and one guarded copy rather than four unguarded ones.
+
 The growth ratio was measured beside it and is what rules out the other shape of ceiling. 92.6% of
 invocations never grow the term and 99.99% stay under 64 times their input — but the one that
 exceeds that is the legitimate maximum above, at a hundred. A ceiling on the ratio would therefore
