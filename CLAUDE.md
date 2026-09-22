@@ -1302,10 +1302,18 @@ rules fire at **any** occurrence of `/`.
 down as saying, and `CollatzSpec` is what reads them: marked, not anchored, stepped, and the
 conclusion of the published lemma refuted at that pair. The half that costs something is
 `~(WORD_STEP S2_COUNTED (0/0.) (0/t.))`, a **negative** about a relation, which naming `B1` does not
-give and which `Collatz.noCountedStepFrom` derives: every commutation's left-hand side begins with
-`f` or with `t`, and `0/0.` holds neither letter anywhere, so the rule cannot have fired at
-`WORD_LENGTH x` for any context at all. What that argument does not reach is a word holding one of
-those two letters, which is written where it lives. Until that day the two sentences rested instead
+give and which `Collatz.noCountedStepFrom` derives: every commutation's left-hand side is a marker
+followed by a digit, and `0/0.` holds no marker anywhere, so the rule cannot have fired at
+`WORD_LENGTH x` for any context at all.
+
+**There are two readings of that block and the second landed on 2026-09-22.** This paragraph said
+until then that the argument does not reach a word holding an `f` or a `t`, and the card that asked
+for such a word said it would want the enumeration of `WORD_LENGTH x`. It does not: the letter read
+is the block's **second** rather than its first, a word with no `0`, `1` and `2` cannot supply that
+one either, and it is the same walk with the offset in it. `/ff.` is derived at that offset in
+`CollatzSpec`, and `tools/verify/perturb-the-other-end-of-the-block.sh` is where the two readings
+are each seen carrying a test the other does not. What is **not** reached is a word holding a marker
+**and** a digit, `/f0.` being the smallest, and that one is refused by name. Until 2026-09-21 the two sentences rested instead
 on six figures measured over every word of at most seven letters, no sampling: of the marked words'
 44790 counted steps, 9330 failed the first hypothesis, and of their 33281 uncounted steps, 14454
 failed the second, against **0 of 3516** and **0 of 3280** once the head condition is added. No test
