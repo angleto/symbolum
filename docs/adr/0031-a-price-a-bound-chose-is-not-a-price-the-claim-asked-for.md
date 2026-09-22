@@ -99,12 +99,30 @@ reported: `chained` takes the theorem alone through `Chaining`'s contract, so a 
 was settled after the net bit reads as settled. Repairing that is a change to what `Chaining` hands
 back, and it is not this one.
 
-**What this record does not decide, and what it opens.** At 127 links the search uses the whole net.
-The constant is doing real work at that edge and nobody chose 256 for that reason: `Intuitionistic.Fuel`
-is "a net under a termination argument and not the argument", and the measure in that class's comment
-falls on every rule, so the fragment terminates without it. Whether 256 is the right number, or
-whether the net should exist at all now that the termination argument is written down, is a question
-this measurement opens and does not answer.
+**What this record did not decide, and what answered it.** At 127 links the search uses the whole
+net. The constant is doing real work at that edge and nobody had chosen 256 for that reason:
+`Intuitionistic.Fuel` is "a net under a termination argument and not the argument", and the measure
+in that class's comment falls on every rule, so the fragment terminates without it. Whether 256 was
+the right number, or whether the net should exist at all now that the termination argument is
+written down, was a question this measurement opened and did not answer.
+
+**Card 87e74c7f answered it on 2026-09-22 and the answer is that it stays at 256**, with the
+criterion it is chosen by written where the constant lives and asserted where the population is.
+The criterion is a relation and not a number: **the fuel a goal needs never exceeds the goal's own
+size**, one for each connective and one for each atom occurrence, measured exhaustively over every
+formula on two atoms of at most seven nodes, 5618 of them, with the bound approached at 6 of 7. So
+256 read forwards is the promise that a goal of at most 256 nodes is answered rather than stopped,
+which is a sentence a reader can check a written claim against, and the edge above is the generous
+reading of the same thing: the 127-link chain is 511 nodes and saturates the net at half that size.
+
+That relation is also the thing the net exists to catch. A rule that stopped decreasing the measure
+would show up as a goal needing more than its size, and `PropositionalRouteSpec` now goes red there
+instead of the mistake arriving as an out-of-memory.
+
+The two figures in this record and the one in that spec's older test are three different statistics
+and all three are right: **7** is the least depth at which the whole population still answers as the
+full net does, **9** is the deepest of the library's 184 addressed statements, and the per-goal
+worst need over the enumerated population is **4** at six nodes and **6** at seven.
 
 ### Rejected
 

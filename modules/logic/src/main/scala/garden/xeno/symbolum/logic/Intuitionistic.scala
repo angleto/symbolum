@@ -573,6 +573,46 @@ object Intuitionistic {
    * here is where to read it: `PropositionalRouteSpec` runs its whole enumerated population at a
    * descending depth, finds the depth at which the answers first change, asserts that the margin is
    * wide, and prints what it found. That spec is also the only caller anywhere that passes a depth.
+   *
+   * == What 256 promises, which is the criterion it is chosen by ==
+   *
+   * **The fuel a goal needs never exceeds the goal's own size**, counting one for each connective
+   * and one for each atom occurrence. So this number read forwards is a promise about what a caller
+   * may write: **a goal of at most 256 nodes is answered rather than stopped.** That is the
+   * sentence this constant was missing, and without it 256 is a rounding.
+   *
+   * It is measured and asserted rather than argued. `PropositionalRouteSpec` puts it to every
+   * formula of the enumerated population and also asserts that the bound is approached, since a
+   * search that spent one unit on everything would satisfy the first half alone. Exhaustively over
+   * every formula on two atoms of at most **seven** nodes, 5618 of them, measured 2026-09-22: none
+   * needs more than its size, and the closest needs 6 of 7. Eight nodes is 26032 formulas and did
+   * not finish in the time it was given, which is why the figure quoted is seven.
+   *
+   * **That relation is also what the net is for.** This is a net against a mistake in the rules and
+   * not against the mathematics, which is what the paragraph above says; a rule that stopped
+   * decreasing the measure would show up as a goal needing more than its size, and now goes red
+   * there instead of arriving as an out-of-memory.
+   *
+   * == Where it bites, and what that costs ==
+   *
+   * The edge is one link wide and it is exhibited rather than possible. On the chain of
+   * implications `PropositionalRouteSpec.chainOf` builds, consumption grows as `2n + 2`: at 127
+   * links the search needs **256 of 256** and settles at no axiom, and at 128 it is cut short and
+   * the classical route settles it at one. **Past that point the price is decided by this constant
+   * rather than by the claim**, which is the whole reason `Prove.Outcome.CutShort` exists to say so;
+   * `docs/adr/0031` is that decision and carries the table.
+   *
+   * A 127-link chain is 511 nodes, so the family that saturates the net is twice the size the
+   * criterion above admits: the criterion is the conservative reading and the edge is the generous
+   * one. Nothing this repository holds is near either. Of the library's 505 statements 184 take
+   * this address and the deepest uses 9, the corpora cannot take the address at all, and over the
+   * enumerated population of at most six nodes nothing is cut short.
+   *
+   * **So it stays at 256, and that is a decision rather than an inheritance.** Raising it moves the
+   * edge without changing its nature and would want a criterion for which population must fit;
+   * removing it trades a refusal for an out-of-memory in exactly the case the net is there to take,
+   * which the paragraph above declines. What was missing was never the number, it was the sentence
+   * saying what the number buys, and that sentence is the first paragraph of this section.
    */
   val Fuel: Int = 256
 
