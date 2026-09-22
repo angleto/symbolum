@@ -585,8 +585,18 @@ object Intuitionistic {
    * formula of the enumerated population and also asserts that the bound is approached, since a
    * search that spent one unit on everything would satisfy the first half alone. Exhaustively over
    * every formula on two atoms of at most **seven** nodes, 5618 of them, measured 2026-09-22: none
-   * needs more than its size, and the closest needs 6 of 7. Eight nodes is 26032 formulas and did
-   * not finish in the time it was given, which is why the figure quoted is seven.
+   * needs more than its size. Eight nodes is 26032 formulas and did not finish in the time it was
+   * given, which is why the figure quoted is seven.
+   *
+   * **The bound is attained rather than approached, and it is attained at two nodes.** `~p` and
+   * `~q` need 2 of 2, which is what that spec prints and what the first perturbation of
+   * `tools/verify/perturb-the-nets-criterion.sh` names when it fires. So the relation is tight,
+   * and tight trivially: a negation opens and the search is done, which any calculus at all
+   * attains. What is asserted is therefore the non-trivial half, that some goal of at least four
+   * nodes needs all but one of them, and the two are kept apart because collapsing them is the
+   * defect this paragraph repairs. It said the closest needs **6 of 7** until 2026-09-22, here and
+   * in `docs/adr/0031` and in that spec's own comment; 6 is the worst NEED among the probe's
+   * seven-node formulas, a figure per size band, and is not a ratio at all.
    *
    * **That relation is also what the net is for.** This is a net against a mistake in the rules and
    * not against the mathematics, which is what the paragraph above says; a rule that stopped
