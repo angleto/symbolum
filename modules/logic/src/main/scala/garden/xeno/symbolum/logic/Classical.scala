@@ -925,7 +925,8 @@ object Classical {
    *
    * Neither equation reaches eta, which `ClassicalSpec` measures rather than takes on trust: this
    * goes to `SELECT` and the kernel's rules and never through [[ExcludedMiddle]], although a case
-   * split would have proved both and would have cost the excluded middle's 841 steps twice over.
+   * split would have proved both and would have cost the excluded middle's whole derivation twice
+   * over. The figure is in the generated table of `docs/proving.md` and is not repeated here.
    */
   private def conditionalEquations(
     logic: Logic,

@@ -404,11 +404,40 @@ Everything this system asks anyone to believe, and no one development is asked f
    eta. They are what the naturals are built from, and the naturals are **defined**: the type `num`
    costs no axiom of its own. **The excluded middle is not among them**: it is derived from choice
    alone, in 841 steps, and three places in the repository said the opposite until `docs/adr/0009`
-   measured it. That figure is written by hand in four documents **and asserted in all four by
-   `ClassicalSpec`**, which is what makes writing it by hand safe here: the four went stale together
-   once and were found by grep rather than by a test. It has moved twice, 983 to 829 when
-   `Conv.refl` began sharing an atom's reflexivity, and 829 to 841 on 2026-09-16 when `Rules.mp`
-   stopped accepting an antecedent differing from the implication's by a beta redex. Which of the axioms a session pays for depends on what it builds on, and
+   measured it.
+
+   **That figure is written by hand in this sentence, in `docs/proving.md` and in `Logic.scala`,
+   and `ClassicalSpec` spells all three from `Derivation.size` rather than comparing them with a
+   literal.** Two further readings are generated and compared with the same measurement, the
+   classical table of `docs/proving.md` by `GuideSpec` and the showcase page by `TheoremsSpec`,
+   and one more is the pin, which is the only place the digits are written as a literal against
+   the code. **Everywhere else the derivation is named and the count is not repeated**, and since
+   2026-09-22 `ClassicalSpec` walks every module and every other document to say so, because a
+   list of guarded sentences covers what somebody put on it and nothing else.
+
+   **This paragraph said until then that the figure was "written by hand in four documents and
+   asserted in all four by `ClassicalSpec`, which is what makes writing it by hand safe here", and
+   the interesting part is which half was wrong.** Not the coverage: that gate is real and has
+   been since 2026-09-11. What was wrong is that it read as covering **every** copy, and it
+   covered the sentences on its list; six others were live, present tense, and watched by nothing,
+   including one inside a generated page sitting twenty-eight lines from the same count printed
+   from the measurement. A reader met the promise, concluded that writing the number out was safe
+   here, and wrote it out again.
+
+   **The card that repaired this was opened on a reading that was itself false, and that is the
+   part worth carrying.** It was written from `git grep 841` and concluded nothing guarded the
+   figure. The gate that did guard it **spells** the number instead of writing it, so it has no
+   digits in it and a grep for the digits cannot see it. An absence an instrument reports is not
+   an absence until that instrument has been seen finding something.
+
+   **And the copies were three kinds of thing, which is why a count of them decides nothing.**
+   Some sat inside generated regions. Two were dated statements about a past move, like the
+   sentence below this one, and what happened on a day does not go stale when the figure moves
+   again. The rest were live, and those are the ones that are gone.
+
+   It has moved twice, 983 to 829 when `Conv.refl` began sharing an atom's reflexivity, and 829 to
+   841 on 2026-09-16 when `Rules.mp` stopped accepting an antecedent differing from the
+   implication's by a beta redex. Which of the axioms a session pays for depends on what it builds on, and
    `NaturalSpec` measures each case: sixteen over the reals alone, three over the naturals alone,
    nineteen for a development holding both, which is what `Chain.standard` assembles and `ChainSpec`
    asserts. `docs/adr/0007` decides that the reals will be constructed rather than axiomatised, so

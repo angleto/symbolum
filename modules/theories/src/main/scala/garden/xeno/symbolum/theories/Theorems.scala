@@ -65,11 +65,18 @@ object Theorems {
    * a rename fails the build rather than producing a document with a hole in it.
    */
   val Showcase: Vector[(String, String)] = Vector(
+    // The step count is deliberately not in this sentence, and the reason is measured rather than
+    // stylistic. The page this generates prints it from `Derivation.size`, under "The proof the
+    // kernel holds"; until 2026-09-22 this literal repeated that count in words, so one
+    // generated page carried the measurement and a hand copy of it twenty-eight lines apart with
+    // nothing comparing them. `TheoremsSpec`'s comparison cannot: it compares the document with
+    // this generator, and the generator embeds this literal, so both sides move together and a
+    // derivation that got cheaper would have left the page disagreeing with itself.
     "EXCLUDED_MIDDLE" ->
       ("Every proposition is true or false. It is an **axiom** in most systems and a **theorem** " +
-        "here, derived from the choice operator alone in 841 primitive steps, which is Diaconescu's " +
-        "argument. Three places in this repository said the opposite until `docs/adr/0009` measured " +
-        "it."),
+        "here, derived from the choice operator alone, which is Diaconescu's argument; what it " +
+        "cost the kernel is counted further down this page. Three places in this repository said " +
+        "the opposite until `docs/adr/0009` measured it."),
     "NUM_INDUCTION" ->
       ("Proof by induction over the naturals. Peano assumed it; here the type `num` is **carved " +
         "out** of an infinite one as the smallest inductive subset, and induction is what falls out " +

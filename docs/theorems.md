@@ -49,7 +49,7 @@ Every page ends with the command that reproduces it. The claim is not quoted in 
 
 ## EXCLUDED_MIDDLE
 
-Every proposition is true or false. It is an **axiom** in most systems and a **theorem** here, derived from the choice operator alone in 841 primitive steps, which is Diaconescu's argument. Three places in this repository said the opposite until `docs/adr/0009` measured it.
+Every proposition is true or false. It is an **axiom** in most systems and a **theorem** here, derived from the choice operator alone, which is Diaconescu's argument; what it cost the kernel is counted further down this page. Three places in this repository said the opposite until `docs/adr/0009` measured it.
 
 $$\forall x \colon \mathbb{B}.\ x \lor \lnot x$$
 
