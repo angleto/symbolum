@@ -238,6 +238,14 @@ object Mark {
     val size = args.headOption.map(_.toInt).getOrElse(Figure.Reference)
     val rows = Figure.at(size)
     val bad = complaints(rows)
+    // None of the three counts printed below reaches one, and it is measured rather than assumed,
+    // because a count in front of a bare plural is the defect this file already carries a counter
+    // for in `complaints`. Swept over every size from 1 to 30: size 1 raises `empty.min` inside
+    // `Figure.cells` before anything is printed, the mask at radius 0.5 being empty; from 2 up,
+    // `height` is the size itself and the smallest figure is 2 rows by 5 columns of 4 cells, so
+    // the floor on each of the three is 2, 5 and 4. The branch below is the reference size, a
+    // constant, so it does not reach one either. A change to what `Figure.cells` does at a radius
+    // under one is what would move this, and then these three want `Plural.count` like the fourth.
     if (size != Figure.Reference) {
       rows.foreach(println)
       println(s"${height(rows)} rows by ${width(rows)} columns, ${cells(rows).size} cells")

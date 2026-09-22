@@ -208,11 +208,20 @@ final case class NotNormalised(term: Term) extends LogicError {
  * ceiling one pass took the term rather than only that it did. The term carried is the one the
  * caller was handed, which is the widest one **under** the ceiling: the one that crossed is not
  * kept, for the reason the ceiling exists.
+ *
+ * **Both numbers reach one and neither is a constant.** `Rewrite.repeatConv` takes its ceiling as
+ * a parameter with a default, and `RewriteSpec` already passes one of its own; the guard is
+ * `width > ceiling`, so a ceiling of zero prints `reached` as one and a ceiling of one prints
+ * `allowed` as one. `reached` therefore goes through `Plural`, and `allowed` is written after
+ * the noun rather than in front of it: `$allowed are allowed` would be a verb disagreeing with
+ * its own number, which is the same defect one part of speech over and is not what a counter
+ * repairs.
  */
 final case class GrewPastCeiling(term: Term, reached: Int, allowed: Int) extends LogicError {
   def message: String =
-    s"rewriting stopped because the term was growing: one pass took it to $reached nodes " +
-      s"where $allowed are allowed, so the rules multiply rather than settle and a higher " +
+    s"rewriting stopped because the term was growing: one pass took it to " +
+      s"${Plural.count(reached, "node", "nodes")} where the ceiling in nodes is $allowed, " +
+      s"so the rules multiply rather than settle and a higher " +
       s"limit makes this worse, not better. What was reached before that pass is $term"
 
   def standing: LogicError.Standing = LogicError.Standing.Exhausted
@@ -405,12 +414,19 @@ final case class NoCloser(goal: Term, driver: String) extends LogicError {
  *
  * A partial instance is still wanted, once: `Rules.specPrefix` is where it is asked for by name.
  * The measurement that decided this is at that method.
+ *
+ * **The second count is given before its verb rather than after it, and that is the repair
+ * finishing rather than a rewording.** Both numbers went through `Plural` on 2026-09-20 and the
+ * sentence still read `1 argument were given` at one, because a counter repairs the noun and says
+ * nothing about what agrees with it; the spec of this file asserted that sentence, so nothing was
+ * going to go red on it either. `was given 1 argument` has no number in front of a verb to
+ * disagree with.
  */
 final case class PartialInstance(quantifiers: Int, arguments: Int, theorem: Term)
   extends LogicError {
   def message: String =
     s"this theorem has ${Plural.count(quantifiers, "leading quantifier", "leading quantifiers")} " +
-      s"and ${Plural.count(arguments, "argument", "arguments")} were given: " +
+      s"and was given ${Plural.count(arguments, "argument", "arguments")}: " +
       s"supply $quantifiers, or ask specPrefix for a partial instance"
 
   // `Unread`, and it is the case that made this classification earn its keep on the day it landed.

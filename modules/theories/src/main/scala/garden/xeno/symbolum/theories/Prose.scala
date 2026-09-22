@@ -47,6 +47,22 @@ object Prose {
     if (howMany == 1) s"1 $noun" else s"$howMany ${noun}s"
 
   /**
+   * The same with both forms written out, for a noun that does not take a plain `s`.
+   *
+   * The paragraph above says such a noun wants its two forms rather than the counter, and until
+   * 2026-09-22 that sentence left the caller nowhere to put them: `Remedy` wrote
+   * `${n} thing(s)` instead, which is a mechanism of its own and reads badly at every number.
+   * The five per-module copies of this counter have taken both forms since 2026-09-20, for
+   * `entry`/`entries` in `core`, so this is the shared one catching up with them rather than a
+   * new idea.
+   *
+   * It is an overload and not a default argument, because a default would let a caller write
+   * `count(n, "hypothesis")` and get `hypothesiss` from the one-argument body.
+   */
+  def count(howMany: Int, one: String, many: String): String =
+    s"$howMany ${if (howMany == 1) one else many}"
+
+  /**
    * The same where the count is a `BigInt`, and it is an overload rather than a conversion.
    *
    * `Value`'s search bound is `right / answer + 1` over big integers and reaches one exactly when

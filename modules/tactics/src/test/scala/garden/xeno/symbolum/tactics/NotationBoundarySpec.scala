@@ -240,8 +240,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Name, "the constant a caller asked for a value of"),
     ("Value.scala", "reachable.mkString(\", \")") ->
       (Verdict.Name, "the constants the table does have a row for, which is what the caller wanted"),
-    ("Value.scala", "route.arity") ->
-      (Verdict.Number, "how many arguments the constant takes"),
+    // The entry read `route.arity` until 2026-09-22, when the count gained its noun: the message
+    // said `takes 1 argument(s)`, which reads at every number and is a second name for the
+    // counter this file already calls one row down. Same move as `bound` below and `wanted` two
+    // screens on, and the same reason the entry moves with it: the scan reports the call.
+    ("Value.scala", "Prose.count(route.arity, \"argument\")") ->
+      (Verdict.Number, "how many arguments the constant takes, with its noun"),
     // `supplied` and not `arguments.size`, since 2026-09-18: the two refusals about a missing row
     // and a wrong arity are written once now and reached from both callers, so the count arrives as
     // a parameter. `given` would have been the natural name and is a reserved word in Scala 3.

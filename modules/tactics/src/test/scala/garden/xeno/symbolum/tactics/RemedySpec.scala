@@ -329,6 +329,66 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     Remedy.of(FromLogic(PartialInstance(3, 1, term))).message should include("a call with 3 arguments ")
   }
 
+  /**
+   * The ceiling refusal's two counts, which are a sixth site of the same class in this file.
+   *
+   * Neither is a constant: `Rewrite.repeatConv` takes the ceiling as a parameter with a default,
+   * `RewriteSpec` passes one of its own, and the guard is `width > ceiling`, so a ceiling of zero
+   * prints `reached` as one and a ceiling of one prints `allowed` as one. `Solver`'s conflict
+   * limit was repaired on that same argument.
+   *
+   * The two are repaired differently inside one sentence and the assertions take both. `reached`
+   * goes through `Prose.count`; `allowed` moved behind its noun, because `1 are allowed` is a
+   * verb disagreeing with its number, which a counter does not reach. `LogicError` holds the
+   * same pair one module down, in its own words.
+   */
+  "The ceiling counts of this file" should "take the singular at one and put the ceiling after its noun" in {
+    val goal = force(reals.term("x:real = x"))
+
+    def message(reached: Int, allowed: Int): String =
+      Remedy.of(reals, FromLogic(GrewPastCeiling(goal, reached, allowed))).message
+
+    message(1, 0) should include("in one pass where the ceiling in nodes is 0")
+    message(1, 0) should include("to 1 node in one pass")
+    message(2, 1) should include("to 2 nodes in one pass")
+    message(2, 1) should include("the ceiling in nodes is 1")
+    // The two defects, one per number.
+    message(1, 0) should not include "to 1 nodes"
+    message(2, 1) should not include "1 are allowed"
+  }
+
+  /**
+   * The two counts this file wrote with an `(s)` rather than with the counter it already imports.
+   *
+   * Neither is what card db67b658's census selects, the noun in each being `argument(s)` and
+   * `thing(s)` rather than a bare plural, and neither was ever WRONG at one: `(s)` reads at every
+   * number. What it is instead is a second name for `Prose.count` inside a file that calls it six
+   * times, which is why they went the day the refusal beside them was repaired. `Value` had the
+   * third and it went with these.
+   *
+   * `hypothesis` is why `Prose.count` gained a two-form overload: the one-argument body appends an
+   * `s` and says of itself that an irregular noun wants both forms written out, and until that
+   * overload landed there was nowhere to write them.
+   */
+  "The two counts this file wrote with a parenthesis" should "take the singular at one and the plural elsewhere" in {
+    def arity(expected: Int): String =
+      Remedy.of(reals, FromLogic(FromKernel(ArityMismatch("list", expected, 3)))).message
+
+    arity(1) should include("list applied to 1 argument")
+    arity(2) should include("list applied to 2 arguments")
+    arity(1) should not include "argument(s)"
+
+    val goal = force(reals.term("x:real = x"))
+    def assuming(hypotheses: Int): String =
+      Remedy.of(reals, FromLogic(FromKernel(TheoremHasHypotheses(List.fill(hypotheses)(goal))))).message
+
+    assuming(1) should include("assumes 1 hypothesis")
+    assuming(2) should include("assumes 2 hypotheses")
+    assuming(1) should not include "thing(s)"
+    // The plural the one-argument counter would have produced, which is why the overload exists.
+    assuming(2) should not include "hypothesiss"
+  }
+
   /* ------------------------------------------------------------ the ledger's table */
 
   "Every ledger verdict" should "carry a next step" in {

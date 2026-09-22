@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fire the eleven both-directions guards of card db67b658 at the defect they were written for.
+# Fire the both-directions guards of card db67b658 at the defect each was written for.
 #
 # Two halves, and the second one is the card's decision being spent. 1 to 3 are the sites in
 # `modules/tactics`, which can see `Prose.count` in `theories`. 4 to 8 are the sites in the five
@@ -35,8 +35,21 @@
 # than by a perturbation: a both-directions test whose singular branch is a prefix of its own
 # defect asserts nothing at all.
 #
-# The strings are literal and were unique at 372a025. perturb.sh REFUSES a perturbation that did
-# not apply rather than running against unperturbed code, so a refusal means the source moved.
+# 14 TO 17 ARE THE FOURTH INCREMENT, and three of them are a second part of speech. Re-reading the
+# census to the end again found `ArityMismatch` in `kernel`, which says `takes 1 arguments` at
+# every unary type operator, and `GrewPastCeiling`, whose sentence is written twice -- once in
+# `logic` and once by `Remedy` one module up -- and whose BOTH numbers reach one, the ceiling being
+# a parameter and the guard being `width > ceiling`.
+#
+# And it found what a counter does not reach. `1 argument were given` survived increment three in
+# `LogicError`, whose own spec asserted that sentence: `Plural` repaired the noun, nothing agrees a
+# verb with a number, and a test copied from the message it guards cannot tell the two apart. 16
+# fires at that verb, and it is the one perturbation here whose defect was in the tree with a
+# green suite over it for two days.
+#
+# The strings are literal and were unique at 372a025, and 14 to 20 at b2091a03. perturb.sh REFUSES
+# a perturbation that did not apply rather than running against unperturbed code, so a refusal
+# means the source moved.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
@@ -57,6 +70,7 @@ RELATION=modules/core/src/main/scala/garden/xeno/symbolum/Relation.scala
 LOGICERROR=modules/logic/src/main/scala/garden/xeno/symbolum/logic/LogicError.scala
 VALUE=modules/theories/src/main/scala/garden/xeno/symbolum/theories/Value.scala
 REMEDY=modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Remedy.scala
+KERNELERROR=modules/kernel/src/main/scala/garden/xeno/symbolum/kernel/KernelError.scala
 BOTH='tactics/testOnly garden.xeno.symbolum.tactics.LedgerSpec garden.xeno.symbolum.tactics.RemedySpec'
 
 run() { n="$1"; shift
@@ -186,5 +200,75 @@ run "13-theories-steps" "$VALUE" \
   '$bound steps' \
   -- ./tools/sbt -batch 'theories/testOnly garden.xeno.symbolum.theories.ValueSpec'
 
-echo "### all thirteen fired" >> "$OUT/plural-counters-reach.log"
+
+# 14. THE TRUSTED BASE AGAIN, and the second site in it of the shape `Term.typeIn` was repaired
+#     for. `Theory.declareTypeOperator` takes any arity and `TheorySpec` declares `list` at one,
+#     so `takes 1 arguments` is what every unary operator's refusal read. Repaired the kernel's
+#     way, by moving the count behind its noun rather than by counting.
+# Expect red on: TheorySpec, "name the arity without a noun that has to agree with it"
+run "14-kernel-arity" "$KERNELERROR" \
+  's"type operator $name, arity $expected, arguments given: $found"' \
+  's"type operator $name takes $expected arguments, found $found"' \
+  -- ./tools/sbt -batch 'kernel/testOnly garden.xeno.symbolum.kernel.TheorySpec'
+
+# 15. The ceiling refusal in `logic`, whose two numbers are repaired two different ways inside one
+#     sentence: `reached` by the counter, `allowed` by moving behind its noun. This one puts the
+#     noun back and fires the first half.
+# Expect red on: LogicErrorSpec, "The refusal about a term that grew"
+run "15-logic-nodes" "$LOGICERROR" \
+  '${Plural.count(reached, "node", "nodes")} where the ceiling in nodes is $allowed' \
+  '$reached nodes where $allowed are allowed' \
+  -- ./tools/sbt -batch 'logic/testOnly garden.xeno.symbolum.logic.LogicErrorSpec'
+
+# 16. THE VERB, and the one defect here that increment three left behind a green suite. The
+#     counter had already repaired the noun of this sentence; `1 argument were given` is what it
+#     still said at one, and this file's own spec asserted that string. A perturbation is the only
+#     instrument that can show the difference, because the assertion and the defect were copies.
+# Expect red on: LogicErrorSpec, "The refusal about a partial instance"
+run "16-logic-verb" "$LOGICERROR" \
+  's"and was given ${Plural.count(arguments, "argument", "arguments")}: " +' \
+  's"and ${Plural.count(arguments, "argument", "arguments")} were given: " +' \
+  -- ./tools/sbt -batch 'logic/testOnly garden.xeno.symbolum.logic.LogicErrorSpec'
+
+# 17. The same refusal one module up, which `Remedy` writes in its own words and which reaches
+#     `Prose.count` rather than a copy. Two messages about one refusal is the arrangement, so the
+#     guard is two guards and this fires the second.
+# Expect red on: RemedySpec, "The ceiling counts of this file"
+run "17-remedy-nodes" "$REMEDY" \
+  '${Prose.count(reached, "node")} in one pass " +
+          s"where the ceiling in nodes is $allowed' \
+  '$reached nodes in one pass where $allowed are allowed' \
+  -- ./tools/sbt -batch 'tactics/testOnly garden.xeno.symbolum.tactics.RemedySpec'
+
+
+# 18 TO 20 ARE NOT OF THE CENSUS'S CLASS, and they are here because they are the same decision.
+# `argument(s)` and `thing(s)` read at every number, so none of the three was ever WRONG and no
+# grep on a bare plural finds them. What they are is a second name for the counter, in two files
+# that call it thirteen times between them, which is the arrangement this card spent three
+# increments removing. They went the day the refusals beside them were repaired.
+
+# 18. `Remedy`'s reading of the kernel's arity refusal, whose own sentence is perturbation 14.
+# Expect red on: RemedySpec, "The two counts this file wrote with a parenthesis"
+run "18-remedy-arity-parenthesis" "$REMEDY" \
+  '${Prose.count(expected, "argument")}")' \
+  '$expected argument(s)")' \
+  -- ./tools/sbt -batch 'tactics/testOnly garden.xeno.symbolum.tactics.RemedySpec'
+
+# 19. The irregular noun, and the one site that needed `Prose.count` to grow rather than to be
+#     called: the one-argument body appends an `s` and would say `hypothesiss`.
+# Expect red on: RemedySpec, "The two counts this file wrote with a parenthesis"
+run "19-remedy-hypotheses" "$REMEDY" \
+  'Prose.count(hypotheses.length, "hypothesis", "hypotheses")' \
+  's"${hypotheses.length} thing(s)"' \
+  -- ./tools/sbt -batch 'tactics/testOnly garden.xeno.symbolum.tactics.RemedySpec'
+
+# 20. The third, in `theories`, and the one reached at one BY CONSTRUCTION: the branch that reads
+#     a numeral passes `route.copy(arity = 1)`, so the literal one is in the source above it.
+# Expect red on: ValueSpec, "The refusal about a constant's arity"
+run "20-value-arity-parenthesis" "$VALUE" \
+  '${Prose.count(route.arity, "argument")} and was given' \
+  '${route.arity} argument(s) and was given' \
+  -- ./tools/sbt -batch 'theories/testOnly garden.xeno.symbolum.theories.ValueSpec'
+
+echo "### all twenty fired" >> "$OUT/plural-counters-reach.log"
 git status --porcelain >> "$OUT/plural-counters-reach.log"

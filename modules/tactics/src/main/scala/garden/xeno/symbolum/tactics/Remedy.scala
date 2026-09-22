@@ -369,11 +369,16 @@ object Remedy {
     // stopped it is a rule set that multiplies the term rather than one that has not got there yet.
     // Three runs were killed for memory before anything could say which of the two it was, and the
     // advice they would have been given is the advice that lengthens the run.
+    // Both numbers reach one, for the reason `GrewPastCeiling` gives about itself: the ceiling is
+    // a parameter and the guard is `width > ceiling`, so zero prints `reached` as one and one
+    // prints `allowed` as one. The first goes through `Prose.count`; the second is written after
+    // its noun, because `$allowed are allowed` disagrees with its own number and no counter
+    // repairs a verb. The refusal one module down says the same thing in its own words.
     case GrewPastCeiling(term, reached, allowed) =>
       ReportADefect(
-        s"a rule set took ${write(term, reals)} to $reached nodes in one pass where $allowed " +
-          "are allowed: the rules multiply the term rather than settle it, so the rule set is " +
-          "what to change and Rewrite.DefaultCeiling is not"
+        s"a rule set took ${write(term, reals)} to ${Prose.count(reached, "node")} in one pass " +
+          s"where the ceiling in nodes is $allowed: the rules multiply the term rather than " +
+          "settle it, so the rule set is what to change and Rewrite.DefaultCeiling is not"
       )
 
     // A defect and not a limit, which is the whole reason `NoCloser` is its own refusal. The two
@@ -441,8 +446,12 @@ object Remedy {
     case UnknownTypeOperator(name) => ExtendTheTheory(name)
 
     case AlreadyDeclared(name) => RestateTheProblem(s"a declaration that does not repeat $name")
+    // `argument(s)` until 2026-09-22, which reads at one and is a third mechanism for that in a
+    // file whose other six counts go through `Prose.count`. It is not a defect the census finds,
+    // the noun not being a bare plural, and it is a second name for what the counter already
+    // does; the refusal it reads is `ArityMismatch`, whose own sentence moved on the same day.
     case ArityMismatch(name, expected, _) =>
-      RestateTheProblem(s"$name applied to $expected argument(s)")
+      RestateTheProblem(s"$name applied to ${Prose.count(expected, "argument")}")
     case NotAnInstance(name, declared, _) =>
       RestateTheProblem(s"$name at an instance of ${Show.show(declared)}")
     case TypeMismatch(expected, _, context) =>
@@ -455,9 +464,15 @@ object Remedy {
     // Both arrive from `defineType` and both are about the witness the caller supplied, not about
     // anything a tactic built, so they are restated rather than reported: a caller defining a type
     // chose that theorem and can choose another.
+    // `thing(s)` until 2026-09-22, and the third of this file's `(s)` forms to go: a theorem
+    // reaching this branch assumes at least one, so the singular is the ordinary case rather than
+    // an edge. `hypothesis` is the noun a reader wants and it is irregular, which is what
+    // `Prose.count`'s two-form overload is for; writing the condition here instead would be a
+    // fourth way of saying the same thing in a file that already has one.
     case TheoremHasHypotheses(hypotheses) =>
       RestateTheProblem(
-        s"a theorem that holds outright, where this one assumes ${hypotheses.length} thing(s)"
+        s"a theorem that holds outright, where this one assumes " +
+          Prose.count(hypotheses.length, "hypothesis", "hypotheses")
       )
     case NotAnApplication(found) =>
       RestateTheProblem(s"a theorem concluding `P x`, where ${write(found, reals)} applies nothing")

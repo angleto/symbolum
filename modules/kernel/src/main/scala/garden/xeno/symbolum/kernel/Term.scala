@@ -212,11 +212,14 @@ object Term {
       // The count is written after its noun and not in front of it, which is a decision rather
       // than a style: this message used to read `${context.length} binders` and said "1 binders"
       // under exactly one binder. Everywhere else in the repository that defect is repaired with a
-      // counter -- `Prose.count` in `modules/theories`, and a copy of it in the four modules that
-      // cannot see it -- and the trusted base takes neither. It is counted, four files and under
-      // 1200 lines, and a line that exists to render English is a line somebody has to read and
-      // believe. `Argument` set the precedent one module over by changing the sentence rather than
-      // the last letter.
+      // counter -- `Prose.count` in `modules/theories`, and a copy of it in each module that
+      // cannot see it -- and the trusted base takes neither. How many those are is not written
+      // here: it was four when this sentence was, `logic` became the fifth on 2026-09-20, and a
+      // figure that moves whenever a module grows a message is a figure a comment cannot hold.
+      // The trusted base is counted, four files and under 1200 lines, and a line that exists to
+      // render English is a line somebody has to read and believe. `Argument` set the precedent
+      // one module over by changing the sentence rather than the last letter, and `ArityMismatch`
+      // in `KernelError` is the same move at the one other site of this shape in here.
       else throw new KernelInvariantViolation(s"index $index, binders in scope: ${context.length}")
 
     case FVar(_, ty) => ty
