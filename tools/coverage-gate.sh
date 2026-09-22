@@ -32,6 +32,19 @@
 # died in `tactics` is salvaged; that is a thing to do by hand, with the checks card f18d03d2
 # lists, and not something a gate should do behind a reader's back.
 #
+# WHAT IT DOES NOT ASK, which is the other half of the coverage question and has had a gate of its
+# own since 2026-09-19. Every floor this enforces is on a module's AVERAGE, so it answers "is this
+# module covered" and says nothing about whether the twenty statements a change just added are
+# among the fourteen hundred the floor permits to be uncovered. `tools/coverage-delta.sh` is the
+# one that asks that, at a floor of 90, and `docs/adr/0035` is the decision and the measurement.
+# It reads the reports THIS script's run leaves on disk and starts no build of its own, so it
+# costs nothing extra and has nothing to read when this one did not finish.
+#
+# Neither is the other's replacement and that record refuses the trade in both directions: a
+# module can drift down while every individual change is well covered, which only a floor on the
+# average sees, and a change can add badly covered code inside a module that is comfortably above
+# its floor, which only the delta sees. CI runs the two in the same job, one after the other.
+#
 # `tools/coverage-gate-test.sh` holds every branch of this against stubs, and CI runs it.
 
 set -u
