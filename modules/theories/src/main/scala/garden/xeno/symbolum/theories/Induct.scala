@@ -304,9 +304,14 @@ object Induct {
    * That second question is asked only after the closer refuses, because that is where the answer
    * changes what the refusal means, and it costs one more pass of the conversion. This is the
    * widest rewriting in the repository: `Rewrite.WidestMeasured` is the node count, measured over
-   * a whole-suite run, and this site is where it was carried, from a goal of 77 nodes. The number
-   * is not repeated here, because it was written by hand in four files and guarded in none of
-   * them, and `docs/adr/0037` is where the ceiling it decided is argued.
+   * a whole-suite run, and this site is where it was carried, from a goal of
+   * `Rewrite.WidestFromGoal` nodes. Neither number is repeated here, because each was written by
+   * hand in more than one file and guarded in none of them, and `docs/adr/0037` is where the
+   * ceiling they decided is argued.
+   *
+   * The second name landed on 2026-09-22, after the first, and the sentence above is why it is
+   * worth a line: it used to write the goal size out as digits, inside the clause explaining that
+   * the other half is not written out here because a figure in four files goes stale in three.
    */
   def afterRewriting(rules: Vector[Rewrite.Rule], goal: Term)(
     close: Term => Either[LogicError, Kernel.Thm]

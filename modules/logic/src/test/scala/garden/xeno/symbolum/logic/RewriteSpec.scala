@@ -368,6 +368,114 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  /**
+   * The other half of that measurement, and the two figures the record DERIVES from the pair.
+   *
+   * `Rewrite.WidestFromGoal` was left as digits when its other half was named on 2026-09-22, in
+   * this record and in `Induct.afterRewriting`'s docstring, which wrote it out inside the sentence
+   * saying the node count is not repeated there because a figure in four files goes stale in
+   * three. So the test is the same shape as the one above and the reason it exists is not: this
+   * one is about a pair being split rather than about a figure being copied.
+   *
+   * **And the two derived figures are asserted as ARITHMETIC rather than as words**, which is the
+   * part worth reading. "A ratio of a hundred" and "eight and a half times the measured maximum"
+   * are sentences with no digits in them, so no grep over the record can see that they depend on
+   * three constants, and a search for the words would go green against a record whose numbers had
+   * moved underneath them. What is asserted is the relation that makes each phrase true, which is
+   * what fails when a constant moves; the phrase is asserted beside it so that editing the words
+   * out fails as well. Neither direction alone covers the other.
+   */
+  it should "carry the goal the widest rewriting grew from, in one declaration and one guarded copy" in {
+    val record = "docs/adr/0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md"
+    val flowed = new String(Files.readAllBytes(Paths.get(record)), StandardCharsets.UTF_8)
+      .replaceAll("\\s+", " ")
+
+    withClue(s"$record must carry the goal as ${Rewrite.WidestFromGoal}: ") {
+      flowed should include(s"from a goal of ${Rewrite.WidestFromGoal} nodes")
+    }
+    // The empty-search control, as above: a sentence the record does not carry is not found.
+    flowed should not include s"from a goal of ${Rewrite.WidestFromGoal + 1} nodes"
+
+    // `Induct` names the constant and writes neither figure. `Rewrite` declares both and writes
+    // each once.
+    //
+    // A NUMBER and not a substring, which the assertion above this one can afford to ignore and
+    // this one cannot: `7709` contains `77`, so a `sliding` count of the digits reads two
+    // occurrences in a file that writes the goal size once. The first run of this test went red
+    // on exactly that, and the defect was in the instrument. The boundary is "no digit and no
+    // decimal point on either side", which is the same criterion the census of card `61ed206b`
+    // counted by.
+    def occurrencesOf(path: String, digits: String): Int = {
+      val text = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8)
+      s"(?<![0-9.])$digits(?![0-9.])".r.findAllIn(text).size
+    }
+    val induct = "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Induct.scala"
+    val rewrite = "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Rewrite.scala"
+    val goal = Rewrite.WidestFromGoal.toString
+
+    withClue(s"$induct must name the constant and not write $goal: ") {
+      occurrencesOf(induct, goal) shouldBe 0
+    }
+    withClue(s"$rewrite must write $goal exactly once, at the declaration: ") {
+      occurrencesOf(rewrite, goal) shouldBe 1
+    }
+
+  }
+
+  /**
+   * The two figures `docs/adr/0037` DERIVES from those constants, which are sentences with no
+   * digits in them.
+   *
+   * **A test of its own and not three more lines in the one above, and the perturbation harness is
+   * why.** Both live in the same record, so the obvious place for them was beside the assertions
+   * that read it; putting them there made them unreachable. A red assertion ends its test, so
+   * moving `WidestFromGoal` fired the digits assertion first and the ratio below never ran, and
+   * the harness's fourth perturbation -- written to fire this one -- was firing that one. An
+   * assertion shadowed by an earlier failure in the same test is an assertion nothing has been
+   * seen exercising.
+   *
+   * **Each figure is asserted twice, as arithmetic and as words, and neither direction covers the
+   * other.** "A ratio of a hundred" and "eight and a half times the measured maximum" contain no
+   * numerals, so no grep over the record can see that they rest on three constants: a guard on the
+   * words alone stays green while the constants move underneath them, and a guard on the relation
+   * alone stays green while somebody edits the words out. The harness fires one perturbation per
+   * direction.
+   */
+  it should "derive the record's two ratios from the constants rather than reading them off it" in {
+    val record = "docs/adr/0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md"
+    val rewrite = "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Rewrite.scala"
+    def flowedOf(path: String): String =
+      new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8).replaceAll("\\s+", " ")
+
+    val flowed = flowedOf(record)
+
+    // THE RATIO. `WidestMeasured / WidestFromGoal` is 100.1, and the record calls it a hundred;
+    // the assertion is that it rounds there, which is what stops being true if either moves.
+    withClue(
+      s"${Rewrite.WidestMeasured} / ${Rewrite.WidestFromGoal} must round to 100 for the record's " +
+        "`a ratio of a hundred` to hold: "
+    ) {
+      val ratio = Rewrite.WidestMeasured.toDouble / Rewrite.WidestFromGoal.toDouble
+      ratio should be >= 95.0
+      ratio should be <= 105.0
+    }
+    flowed should include("which is a ratio of a hundred")
+
+    // THE MULTIPLE. `DefaultCeiling / WidestMeasured` is 8.5, and two places say "eight and a
+    // half". The band asserted further up is 8 to 16, which is the DECISION about the ceiling;
+    // this is tighter because it is about the WORDS, so it is the half between eight and nine.
+    withClue(
+      s"${Rewrite.DefaultCeiling} / ${Rewrite.WidestMeasured} must lie in [8, 9) for `eight and a " +
+        "half` to hold in the record and in DefaultCeiling's docstring: "
+    ) {
+      val multiple = Rewrite.DefaultCeiling.toDouble / Rewrite.WidestMeasured.toDouble
+      multiple should be >= 8.0
+      multiple should be < 9.0
+    }
+    flowed should include("eight and a half times the measured maximum")
+    flowedOf(rewrite) should include("eight and a half times that maximum")
+  }
+
   it should "still be usable by a caller that does not repeat, as four derivations here do" in {
     // `Arithmetic.timesZero` derives `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`, which is
     // exactly this shape, and `Order` and `Linarith` do the same with `0 = 0 - x` and its
