@@ -46,6 +46,23 @@ suite was run. **2026-09-22, one whole-suite run, 44174 invocations:**
 `Induct.afterRewriting`, from a goal of 77 nodes, which is a ratio of a hundred. The next widest is
 3317, in `Algebraic.derive`, and that one starts at 3317: it does not grow at all.
 
+### Which figures above are alive and which are a photograph
+
+Worth a heading rather than a reader's inference, because the two want opposite treatment and this
+record holds both. **Everything in the distribution table, the 44174 invocations, the 92.6% and the
+99.99%, and the 3317 in the sentence above, is a photograph**: it describes one instrumented run on
+one date and it stays true when the code moves, because what it claims is what that run saw. None
+of it is a defect and none of it wants a gate. Instrumenting the rewriter again would produce a
+different picture of a different corpus, which is a second photograph and not a correction of this
+one.
+
+**Two of these numbers are not photographs, and they are the two something else now depends on.**
+`Rewrite.WidestMeasured` and `Rewrite.WidestFromGoal` are cited by live claims — the ceiling's
+adequacy, and the argument below that rules out a ceiling on the growth ratio — so each has one
+declaration and the copies here are spelled from it by `RewriteSpec`. A figure crosses from the
+first kind to the second the moment an argument starts resting on it, which is what happened to
+both of these and is why the crossing is written down rather than left to be noticed.
+
 That maximum is declared once, as `Rewrite.WidestMeasured`, and this sentence is the one place it
 is also written out. It was written out in four on the day this record landed — here, both
 docstrings, and `RewriteSpec` — with nothing comparing any two of them, which was measured by
@@ -54,9 +71,18 @@ putting a different number in this sentence and watching the three document gate
 spells the sentence from the constant and fails naming this file when they disagree: the figure has
 one declaration and one guarded copy rather than four unguarded ones.
 
+**The goal size was the other half of that and was left behind by it**, which is why it is now
+`Rewrite.WidestFromGoal` and why this paragraph is longer than it was. One number of the pair got
+a declaration on the day this record landed and the other stayed as digits, here and inside
+`Induct.afterRewriting`'s docstring — in the very sentence saying the node count is not repeated
+there because a figure in four files goes stale in three. The ratio below is built out of the two,
+so it is spelled from them as well.
+
 The growth ratio was measured beside it and is what rules out the other shape of ceiling. 92.6% of
 invocations never grow the term and 99.99% stay under 64 times their input — but the one that
-exceeds that is the legitimate maximum above, at a hundred. A ceiling on the ratio would therefore
+exceeds that is the legitimate maximum above, at a hundred. That hundred is
+`WidestMeasured / WidestFromGoal`, so it is not a figure of its own and `RewriteSpec` derives it
+from the pair rather than reading it here. A ceiling on the ratio would therefore
 have to sit above 128 to admit the work this repository already does, where the ceiling on the
 absolute size has the whole corpus below 8192 and nothing between 8192 and the heap.
 

@@ -63,6 +63,27 @@ object Rewrite {
   val WidestMeasured: Int = 7709
 
   /**
+   * The goal [[WidestMeasured]] grew from, in nodes, out of the same instrumented run.
+   *
+   * The other half of one measurement, and it is here for the reason its other half is: it was
+   * written by hand in `docs/adr/0037` and in `Induct.afterRewriting`'s docstring, and the second
+   * of those wrote it out inside the sentence explaining that the node count is NOT repeated
+   * there because a figure in four files goes stale in three. One number of the pair was named
+   * on 2026-09-22 and the other was left where it was.
+   *
+   * What it is for is the ratio. `WidestMeasured / WidestFromGoal` is what `docs/adr/0037` calls
+   * a ratio of a hundred, and that ratio is a load-bearing step of its argument rather than a
+   * detail of the run: it is what rules out a ceiling on the growth RATIO, which would have to
+   * sit above 128 to admit work this repository already does. A record whose rejected
+   * alternative rests on a figure nothing compares is a record that can go quietly wrong.
+   *
+   * A photograph like its other half, and for the same reason not a gate: nothing in this tree
+   * can produce it again without instrumenting the rewriter again. What `RewriteSpec` holds is
+   * the ratio the record states, not a claim that the corpus still starts here.
+   */
+  val WidestFromGoal: Int = 77
+
+  /**
    * The default ceiling on the SIZE of the term a repetition carries, in nodes.
    *
    * A step limit bounds how many times a rule set runs and bounds nothing about what it produces,

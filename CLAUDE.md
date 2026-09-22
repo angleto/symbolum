@@ -707,6 +707,31 @@ does.
 the design, not only to guard against regressions, so a new invariant belongs in one of them rather
 than in another example.
 
+**A figure in prose is one of three things, and which one decides what it costs.** It is **alive
+and recomputable** if the code knows it, and then it is spelled from the measurement rather than
+written: `FiguresSpec` searches `docs/evaluation.md` for the sentence with the measured number
+already substituted in, so it goes red when the code moves and when somebody edits the sentence.
+It is **alive and not recomputable** if it came from an instrumented run nobody can repeat, and
+then it gets one declaration and every copy is spelled from that: `Rewrite.WidestMeasured` and
+`Rewrite.WidestFromGoal` are the pair, and `docs/adr/0037` is the record whose copies `RewriteSpec`
+compiles. Or it is a **photograph**, a dated past event that stays true when the code moves, and
+then it wants nothing at all.
+
+**The third is the one to get right, because calling it a defect deletes the record of how a guard
+came to exist.** `docs/adr/0037` and `docs/numerics.md` each close with a section saying which of
+their own figures are which, and those are the two worked examples; `docs/numerics.md` is the one
+to read first, being almost entirely photographs with four live figures in it. **A decision record
+is a photograph by default** — it says what was measured when the decision was taken, and
+`docs/adr/0004` is superseded rather than edited for the same reason — and a figure in one crosses
+into the second class exactly when something live starts resting on it, which is what happened to
+that pair and is written where it happened.
+
+Two traps, both paid for here. **A count of copies is itself a copy**: the sentence that counted
+the sites of `841` counted the repair rather than the population, and this file carries that
+account. And **a figure spelled out in words has no digits in it**, so a grep for the digits
+reports an absence that is not one: `ClassicalSpec` guards `841` by spelling it, and the card that
+was opened on `git grep 841` concluded nothing guarded it.
+
 ## Where this is going
 
 The goal is exploration: proposing identities quickly and having each one certified, so that a long

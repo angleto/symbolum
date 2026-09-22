@@ -3,9 +3,10 @@
 **EXCERPT — for anyone scanning the index:**
 The two numerical capabilities in `modules/core` that are not written here, what library they rest
 on and what that costs anyone who depends on the published artifact, and the line between a number
-and a theorem that the arrangement exists to hold. It does not explain the computer algebra system,
-which is [../README.md](../README.md), and it does not argue the trust boundary, which is
-[architecture.md](architecture.md).
+and a theorem that the arrangement exists to hold. It closes by saying which of its own figures are
+alive and which are a photograph of one run, because almost all of them are the second. It does not
+explain the computer algebra system, which is [../README.md](../README.md), and it does not argue
+the trust boundary, which is [architecture.md](architecture.md).
 
 *If you modify this file and this excerpt no longer accurately describes its content, you must
 update it.*
@@ -328,5 +329,36 @@ a backward-stable method predicts, and at `n = 256` a residual of 1.8e-12 agains
 ### The suite
 
 `sbt test` with these two files and their suites in it: **1614 tests green in 27 minutes 11
-seconds**, at load average 250. The three suites added run 42 tests, which took 5.2 seconds inside a
-109-second invocation on the same machine.
+seconds**, at load average 250. The three suites added ran 42 tests on that day, which took 5.2
+seconds inside a 109-second invocation on the same machine.
+
+**That 42 is of that run and is not a count of the suites today**, and the tense is the whole of
+the repair: it read "run 42 tests" until 2026-09-22 and a reader who counted got 44, with no way to
+tell whether the document was stale or they had miscounted. Measured across the revisions that
+touched this file: 42 blocks on 2026-09-15, 43 on 2026-09-17, 44 now. The number is right about
+what it describes, so it stays; what was missing is that it says so.
+
+## Which figures here are alive, and which are a photograph
+
+Almost everything above is a **photograph** and wants no gate: every timing, every load average,
+every jar size, the benchmark tables, the residuals of one probe, and the test count in the section
+just above. Each describes one run under conditions it states, each stays true when the code moves,
+and rewriting one to match today would delete the measurement rather than refresh it. A machine
+this loaded read the same suite at 41 seconds and at 6 minutes 39 in one afternoon, which is the
+sentence in this document that says most clearly why these numbers are dated rather than current.
+
+**Four figures are alive**, in the sense that the code knows them now and a change can make the
+sentence false:
+
+| figure | where | what holds it |
+|---|---|---|
+| `SpectrumSpec` pins `n = 15` | the odd-length promise | nothing; the spec writes the 15 |
+| `PerronSpec`'s largest is `n = 64` | what is not established past it | nothing; the spec writes the 64 |
+| `Spectrum` at 100% and `Perron` at 92.62% statement coverage | the uncovered branch | nothing; and it moves whenever either file does |
+| the relative residual `Perron.Residual` was set from | the last column | the constant is cited **by name**, which is the arrangement the other three do not have |
+
+The fourth is the one to copy. A figure cited by the name the code declares it under cannot go
+stale, because a name that stops resolving does not compile; the other three are digits, and what
+this table buys is that a reader knows which is which rather than weighing a photograph as though
+somebody were still checking it. Whether the three earn a gate of their own is card `61ed206b`'s
+second half and is not settled here.
