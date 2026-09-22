@@ -41,13 +41,35 @@ object Rewrite {
   val DefaultLimit: Int = 200
 
   /**
+   * The widest term any repetition in this repository was measured carrying, in nodes.
+   *
+   * A photograph and not a live figure, which is why it is a constant rather than something a
+   * gate recomputes: it comes from a checkout that instrumented [[repeatConv]] to record, per
+   * invocation, the node count of the widest term that invocation carried, and then ran the whole
+   * suite once, on 2026-09-22. It was carried by `Induct.afterRewriting`. Nothing in this tree can
+   * produce the number again, so re-measuring it means instrumenting the rewriter again;
+   * `docs/adr/0037` holds the whole distribution and the argument the ceiling was chosen by.
+   *
+   * It is **named** because it was written by hand in four files and guarded in none of them, and
+   * a figure in four places is a figure that goes stale in three. Every other site cites this
+   * name instead of repeating the digits; the one copy that cannot, `docs/adr/0037`, is spelled
+   * from this constant by `RewriteSpec` rather than left to agree by luck.
+   *
+   * What it does **not** say is that the corpus still stops here. It is the maximum of one past
+   * run, so it does not drift; the claim that [[DefaultCeiling]] is above everything this corpus
+   * carries is a claim about the corpus now, and the corpus moves. What watches that is
+   * [[Stop.Size]] arriving where nobody expected it, not this number.
+   */
+  val WidestMeasured: Int = 7709
+
+  /**
    * The default ceiling on the SIZE of the term a repetition carries, in nodes.
    *
    * A step limit bounds how many times a rule set runs and bounds nothing about what it produces,
-   * and a step can multiply the term. `docs/adr/0037` is the decision and carries the measurement:
-   * over one whole-suite run, 44174 invocations of [[repeatConv]], the widest term any of them
-   * carried was **7709 nodes** and 99.9955% of them stayed under 2048. This is 65536, eight and a
-   * half times that maximum and three doublings above it.
+   * and a step can multiply the term. `docs/adr/0037` is the decision and carries the measurement,
+   * whose maximum is [[WidestMeasured]]: this is 65536, eight and a half times that maximum and
+   * three doublings above it. What is asserted, in `RewriteSpec`, is the band rather than either
+   * number, since the number is a decision and the band is what goes wrong in silence.
    *
    * What a ceiling has to be is above every term this corpus legitimately carries and low enough
    * that the term cannot exhaust the heap the floors were measured at, which is sbt's default

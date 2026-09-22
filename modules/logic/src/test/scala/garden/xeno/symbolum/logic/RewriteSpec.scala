@@ -1,5 +1,7 @@
 package garden.xeno.symbolum.logic
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import garden.xeno.symbolum.kernel.*
@@ -305,19 +307,65 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
 
   "The ceiling" should "stand in a measured relation to the widest term this corpus carries" in {
     // The number is a decision and `docs/adr/0037` is where it is argued; what is asserted here is
-    // the relation it was chosen by, which is the thing that goes wrong silently. Measured on
-    // 2026-09-22 over one whole-suite run by an instrumented `repeatConv`: **44174 invocations**,
-    // the widest term any of them carried **7709 nodes**, at `Induct.afterRewriting` from a goal of
-    // 77, and 99.9955% of them under 2048.
+    // the relation it was chosen by, which is the thing that goes wrong silently. The maximum it
+    // is a relation to is `Rewrite.WidestMeasured`, and the digits used to be a second copy of it
+    // written here, one of four in the tree with nothing comparing any two.
     //
     // A ceiling below that maximum turns proofs that work into rewrites truncated in silence, and
     // that is the failure a number alone cannot be read for. So the assertion is the margin.
-    val widestMeasured = 7709
-    Rewrite.DefaultCeiling should be >= 8 * widestMeasured
+    Rewrite.DefaultCeiling should be >= 8 * Rewrite.WidestMeasured
 
     // And it is not so high that it has stopped being a ceiling: a doubling rule set reaches it
     // from that maximum in three passes.
-    Rewrite.DefaultCeiling should be <= 16 * widestMeasured
+    Rewrite.DefaultCeiling should be <= 16 * Rewrite.WidestMeasured
+  }
+
+  it should "be the only place the measurement is written, and the record it is argued in agrees" in {
+    // The defect this stands against, measured on 2026-09-22: `7709` was written by hand in four
+    // files -- this spec, `Rewrite`'s docstring, `Induct`'s docstring and `docs/adr/0037` -- and
+    // only this spec's copy did anything, by entering the relation above. Perturbing the record's
+    // copy to a different number and running the three document gates
+    // (`tactics/testOnly ...DocumentationSpec ...DocumentationMapSpec ...OtherDocumentsSpec`, 64
+    // tests) left all 64 green, so the three prose copies were unguarded rather than guarded
+    // loosely.
+    //
+    // Three of the four are gone: `Rewrite.WidestMeasured` is the declaration and the two
+    // docstrings cite the name. The fourth cannot cite a Scala name and readably stay a decision
+    // record, so it is spelled from the constant here instead, which is what `FiguresSpec` does
+    // for the figures of `docs/evaluation.md` and what makes a second copy a copy one gate
+    // settles. This is a test of a DOCUMENT, in `logic` rather than in `tactics` where the
+    // document gates live, because `docs/` belongs to the repository rather than to a module and
+    // the subject is the constant three lines up: a reader who moves the constant looks here.
+    val record = "docs/adr/0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md"
+    val flowed = new String(Files.readAllBytes(Paths.get(record)), StandardCharsets.UTF_8)
+      .replaceAll("\\s+", " ")
+
+    withClue(s"$record must carry the maximum as ${Rewrite.WidestMeasured}: ") {
+      flowed should include(
+        s"**The widest term anything in this repository carries is ${Rewrite.WidestMeasured} nodes.**"
+      )
+    }
+
+    // And the assertion above is only worth what an empty search would be worth, so this says the
+    // instrument reads: a sentence the record does NOT carry is not found. Without it a renamed
+    // record, or a `read` that silently returned nothing, would pass as agreement.
+    flowed should not include s"**The widest term anything in this repository carries is ${Rewrite.WidestMeasured + 1} nodes.**"
+
+    // The two docstrings are covered by not holding the number at all: `Rewrite.WidestMeasured` is
+    // what they name, and a name that stops resolving does not compile.
+    val sources = Vector(
+      "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Rewrite.scala",
+      "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Induct.scala"
+    )
+    sources.foreach { path =>
+      val text = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8)
+      val digits = Rewrite.WidestMeasured.toString
+      val occurrences = text.sliding(digits.length).count(_ == digits)
+
+      withClue(s"$path writes $digits ${occurrences}x, and the declaration is the only one allowed: ") {
+        occurrences shouldBe (if (path.endsWith("Rewrite.scala")) 1 else 0)
+      }
+    }
   }
 
   it should "still be usable by a caller that does not repeat, as four derivations here do" in {
