@@ -159,6 +159,30 @@ final class Collatz private (
   private[theories] def classWitnesses: Either[LogicError, Collatz.ClassWitnesses] =
     Collatz.classWitnesses(tools, forward, definitions, facts)
 
+  /**
+   * `|- ~(WORD_STEP S2_COUNTED <word> <other>)` for a written-out pair the caller names.
+   *
+   * [[classWitnesses]] spends this at the one pair it is about, and that pair holds no marker, so
+   * the reading at the other end of the block was derivable and never derived. Exposing the
+   * builder is what lets a caller put a word **with** a marker to it, which is the half the
+   * docstring of `Collatz.noCountedStepFrom` used to say was out of reach.
+   *
+   * It refuses a word that holds a marker and a digit both, by name, which is what it does not
+   * cover rather than what it does not do today.
+   */
+  private[theories] def noCountedStep(
+    word: String,
+    other: String
+  ): Either[LogicError, Kernel.Thm] =
+    Collatz.noCountedStepFrom(
+      tools,
+      forward,
+      forward.concatenation,
+      definitions,
+      Collatz.spell(word),
+      Collatz.spell(other)
+    )
+
   /** The logic, reading and building against **this** theory rather than the one below it. */
   val logic: Logic = forward.inductive.classical.logic
     .over(theory)
@@ -4783,7 +4807,15 @@ object Collatz {
     }
   }
 
-  /** `|- ~(WORD_NTH <word> i = <marker>)` from `|- i = SUC^j ZERO` and the letter at `j`. */
+  /**
+   * `|- ~(WORD_NTH <word> i = <letter>)` from `|- i = SUC^j ZERO` and the letter at `j`.
+   *
+   * The letter is fetched with [[Concrete.letter]] rather than with [[Concrete.constant]], and
+   * that is what lets a **digit** be refused here as well as a marker: three of the seven letters
+   * are numerals and not constants of any name, so asking the theory for a constant called `0` is
+   * a refusal naming a constant nobody declared. [[lettersDiffer]] under it was already parsing,
+   * so this was the one line that decided which letters this walk could reach.
+   */
   private def noMarkerAt(
     tools: Concrete,
     letters: Vector[String],
@@ -4795,7 +4827,7 @@ object Collatz {
     for {
       entry <- letterAt(tools, letters, position)
       apart <- notTheMarker(tools, letters(position), markerName)
-      marker <- tools.constant(markerName, Numbers)
+      marker <- tools.letter(markerName)
       atNumeral <- Conv
         .sym(entry)
         .flatMap(equation => carryLeftNegated(tools.logic, equation, marker, apart))
@@ -6889,7 +6921,6 @@ object Collatz {
         forward,
         concatenation,
         definitions,
-        facts,
         BeforeTheUncountedStep,
         AfterTheUncountedStep
       )
@@ -7199,8 +7230,8 @@ object Collatz {
    * [[freeWord]] at a letter that is not one of the two markers, and therefore without a constant
    * of its own to be the definition of: the claim is built as a term instead of being unfolded out
    * of one, and the walk over the positions is the same. What wants it is [[noCountedStepFrom]],
-   * where the position the letter is refused at is `WORD_LENGTH x` for a context nobody has written
-   * down, so a claim about every position is the only shape that reaches it.
+   * where the position the letter is refused at is `WORD_LENGTH x + SUC^j ZERO` for a context
+   * nobody has written down, so a claim about every position is the only shape that reaches it.
    */
   private def noLetterBelowLength(
     tools: Concrete,
@@ -7229,29 +7260,56 @@ object Collatz {
   }
 
   /**
+   * The letters a commutation's left-hand side carries at one offset, read off the table.
+   *
+   * Every one of the six is a **marker followed by a digit**, so `countedLettersAt(0)` is `f` and
+   * `t` and `countedLettersAt(1)` is `0`, `1` and `2`. Taken from [[CountedRules]] rather than
+   * written out, so a table that grew a rule opening on a third letter widens the refusal
+   * [[noCountedStepFrom]] builds instead of leaving it short by one clause.
+   */
+  private def countedLettersAt(offset: Int): Vector[String] =
+    CountedRules.flatMap(_.left.lift(offset)).distinct
+
+  /**
    * `|- ~(WORD_STEP S2_COUNTED <word> <other>)`: no commutation takes this word anywhere.
    *
    * The antecedent [[PlainWitness]] cannot get by naming the rule that fired. `B1` is not a
    * commutation, which is a fact about the table; that a **different** factorisation of the same
    * pair is not a commutation step either is a fact about the word, and this is that fact.
    *
-   * What it runs on is that every commutation's left-hand side begins with `f` or with `t`, and
-   * `0/0.` has neither letter anywhere in it. The arithmetic is therefore all in front of the
-   * clause split and none of it inside: from `u = (x l) y` and `0 < WORD_LENGTH l` comes both
-   * `WORD_LENGTH x < WORD_LENGTH u`, which is where a letter of `u` may be read, and
-   * `WORD_NTH u (WORD_LENGTH x) = WORD_NTH l ZERO`, which is what is read there. Each of the six
-   * clauses then names its own first letter and the two refusals close it.
+   * What it runs on is that a commutation's left-hand side is two letters and this word holds
+   * none of the letters that stand at one of the two offsets. **There are therefore two readings
+   * and not one**, which is [[countedLettersAt]]: a word with no `f` and no `t` cannot supply the
+   * first letter, and a word with no `0`, `1` and `2` cannot supply the second. The second is
+   * what reaches a word holding a marker, `/ff.` being one, and the enumeration of `WORD_LENGTH
+   * x` that such a word looks like it needs is not needed at either offset.
    *
-   * **What it does not cover**, since the class is exactly the point: nothing here says a word
-   * holding an `f` or a `t` is not stepped by a commutation, and for such a word this refusal would
-   * want the enumeration of `WORD_LENGTH x` the shape above avoids.
+   * The shape is one walk with the offset in it. From `u = (x l) y` and `SUC^j ZERO < WORD_LENGTH
+   * l` comes `WORD_LENGTH x + SUC^j ZERO < WORD_LENGTH u`, which is where a letter of `u` may be
+   * read, and `WORD_NTH u (WORD_LENGTH x + SUC^j ZERO) = WORD_NTH l (SUC^j ZERO)`, which is what
+   * is read there. Each of the six clauses then names its own letter at that offset and the
+   * refusals close it.
+   *
+   * **The index is left as `WORD_LENGTH x + SUC^j ZERO` and never normalised**, which is what
+   * makes one walk serve both. Reading it back as `WORD_LENGTH x` at offset zero is what the
+   * first version of this did, and it cost the `NUM_ADD_ZERO` rewrite on both the order and the
+   * entry, in the one case where the two happen to agree.
+   *
+   * The length of the block is derived **inside** the clause and not in front of it, since
+   * `S2_RULE_NOT_EMPTY` gives `0 < WORD_LENGTH l` and the second offset wants `SUC ZERO <
+   * WORD_LENGTH l`. Each clause equates `l` to a written-out word, so its length is a numeral
+   * there and the order is [[numeralBelow]]: more than the uniform fact says, from the clause
+   * that was going to be opened anyway.
+   *
+   * **What it does not cover**: a word holding a marker **and** a digit. Both readings refuse
+   * such a word, and refusing the step for it wants the enumeration of `WORD_LENGTH x`, which is
+   * the shape this avoids at both offsets. `/f0.` is the smallest one.
    */
   private def noCountedStepFrom(
     tools: Concrete,
     forward: Forward,
     concatenation: Concatenation,
     definitions: Map[String, Kernel.Thm],
-    facts: Map[String, Kernel.Thm],
     letters: Vector[String],
     after: Vector[String]
   ): Either[LogicError, Kernel.Thm] = {
@@ -7266,26 +7324,34 @@ object Collatz {
       lengthOf <- tools.lengthOf
       nth <- tools.nth
       order <- tools.strictOrder
-      zero <- tools.zero
 
       countedDefinition <- definitions.get(Counted).toRight(MissingDefinition(Counted))
-      countedIsRule <- facts.get(CountedIsRule).toRight(MissingDefinition(CountedIsRule))
-      ruleNotEmpty <- facts.get(RuleNotEmpty).toRight(MissingDefinition(RuleNotEmpty))
       concatLength <- concatenation.fact(Concatenation.Length).map(atNumbers)
       nthLeft <- concatenation.fact(Concatenation.NthLeft).map(atNumbers)
       nthRight <- concatenation.fact(Concatenation.NthRight).map(atNumbers)
 
-      // The two letters a commutation's left-hand side can begin with, refused of this word once
-      // rather than once per clause. A table whose `A` group grew a rule starting with a third
-      // letter is refused by name here instead of producing a wrong theorem.
-      _ <- CountedRules.foldLeft[Either[LogicError, Unit]](Right(())) { (accumulated, entry) =>
-        accumulated.flatMap { _ =>
-          if (entry.left.headOption.exists(letter => letter == F || letter == T)) Right(())
-          else Left(NotOfForm("a commutation beginning with a named letter", LeftSide))
+      // Which end of the block this word can be refused at. Both offsets are tried and the first
+      // that works is taken, which makes the marker reading the one a word admitting both gets:
+      // it is the cheaper walk and it is the one every caller before 2026-09-22 was written
+      // against. A word admitting neither is refused here rather than further in, because the
+      // refusal is about the word and not about any clause.
+      offset <- (0 until CountedRules.map(_.left.size).minOption.getOrElse(0))
+        .find(at => !letters.exists(countedLettersAt(at).contains))
+        .toRight(NotOfForm("a word missing every letter at one end of a commutation", subject))
+
+      // The letters at that offset, refused of this word once rather than once per clause. Read
+      // off the table, so a rule carrying a letter nobody has refused adds a refusal instead of
+      // silently not being covered by one; the bound above is the SHORTEST left-hand side, so an
+      // offset no rule reaches cannot be chosen and a clause cannot fall out of the walk.
+      refusals <- countedLettersAt(offset)
+        .foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(Map.empty)) {
+          (built, letterName) =>
+            for {
+              collected <- built
+              refusal <- noLetterBelowLength(tools, letters, letterName)
+            } yield collected.updated(letterName, refusal)
         }
-      }
-      noF <- noLetterBelowLength(tools, letters, F)
-      noT <- noLetterBelowLength(tools, letters, T)
+      offsetNumeral <- tools.numeral(offset)
 
       stepDefinition <- forward.definition(Forward.Step).map(atNumbers)
       opened <- Conv.unfold(stepDefinition, List(counted, subject, result))
@@ -7302,70 +7368,11 @@ object Collatz {
                 rest <- rules.conjElim2(held)
                 subjectEquation <- rules.conjElim1(rest)
 
-                asRule <- rules
-                  .specAll(countedIsRule, List(left, right))
-                  .flatMap(rules.mp(_, ruleHeld))
-                sizes <- rules.specAll(ruleNotEmpty, List(left, right)).flatMap(rules.mp(_, asRule))
-                leftPositive <- rules.conjElim1(sizes)
-
                 contextLength <- LogicError.lift(Term.app(lengthOf, front))
                 blockLength <- LogicError.lift(Term.app(lengthOf, left))
                 tailLength <- LogicError.lift(Term.app(lengthOf, tail))
                 block <- LogicError.lift(Term.appAll(concat, List(front, left)))
-
-                // `|x| < |x| + |l|`: the block is not empty, written as an order on the offsets.
-                shifted <- rules
-                  .specAll(tools.numbers.addStrictlyMonotone, List(contextLength, zero, blockLength))
-                  .flatMap(rules.mp(_, leftPositive))
-                blockSum <- shifted.conclusion match {
-                  case App(App(_, _), bound) => Right(bound)
-                  case other => Left(NotOfForm("an order with a bound on the right", other))
-                }
-                atZero <- rules.spec(contextLength, tools.numbers.addAtZero)
-                insideBlock <- Conv
-                  .sym(atZero)
-                  .flatMap(carryLeft(order, _, blockSum, shifted))
-
-                // and `|x| < |x l|`, which is that read back through the concatenation's length.
-                blockSize <- rules.specAll(concatLength, List(front, left))
-                insideConcat <- Conv
-                  .sym(blockSize)
-                  .flatMap(carryRight(order, contextLength, _, insideBlock))
-
-                // and `|x| < |u|`, which is where a letter of the written-out word may be read.
-                wholeSize <- rules.specAll(concatLength, List(block, tail))
                 blockTerm <- LogicError.lift(Term.app(lengthOf, block))
-                wholeSum <- rightOf(wholeSize)
-                atMost <- rules.specAll(tools.numbers.atMostSum, List(blockTerm, tailLength))
-                reaches <- rules
-                  .specAll(
-                    tools.numbers.belowThenAtMost,
-                    List(contextLength, blockTerm, wholeSum))
-                  .flatMap(claimed =>
-                    rules.conjIntro(insideConcat, atMost).flatMap(rules.mp(claimed, _)))
-                wordSum <- Conv
-                  .apTerm(lengthOf, subjectEquation)
-                  .flatMap(Conv.trans(_, wholeSize))
-                inWord <- Conv
-                  .sym(wordSum)
-                  .flatMap(carryRight(order, contextLength, _, reaches))
-
-                // `WORD_NTH u |x| = WORD_NTH l ZERO`: the letter the rule fired on, read twice.
-                leftRead <- rules
-                  .specAll(nthLeft, List(block, tail, contextLength))
-                  .flatMap(rules.mp(_, insideConcat))
-                rightRead <- rules
-                  .specAll(nthRight, List(front, left, zero))
-                  .flatMap(rules.mp(_, leftPositive))
-                nthOfBlock <- LogicError.lift(Term.app(nth, block))
-                normalised <- Conv.sym(atZero).flatMap(Conv.apTerm(nthOfBlock, _))
-                throughConcat <- Conv
-                  .trans(normalised, rightRead)
-                  .flatMap(Conv.trans(leftRead, _))
-                atBlock <- Conv
-                  .apTerm(nth, subjectEquation)
-                  .flatMap(Conv.apThm(_, contextLength))
-                  .flatMap(Conv.trans(_, throughConcat))
 
                 asDisjunction <- Conv
                   .unfold(countedDefinition, List(left, right))
@@ -7377,14 +7384,81 @@ object Collatz {
                       entry <- CountedRules
                         .lift(position)
                         .toRight(NotOfForm(s"a counted rule at $position", LeftSide))
-                      refusal = if (entry.left.head == F) noF else noT
-                      opening <- letterAt(tools, entry.left, 0)
+                      letterName <- entry.left
+                        .lift(offset)
+                        .toRight(NotOfForm(s"a letter at $offset of ${entry.label}", LeftSide))
+                      refusal <- refusals
+                        .get(letterName)
+                        .toRight(MissingDefinition(letterName))
+
+                      // `SUC^j ZERO < |l|`, where the uniform fact gives only `0 < |l|`. This
+                      // clause says `l` IS a written-out word, so its length is a numeral and the
+                      // order between two numerals is a walk up the successors.
+                      blockIsNumeral <- lengthIsNumeral(tools, entry.left)
+                      blockEquation <- Conv
+                        .apTerm(lengthOf, leftEquation)
+                        .flatMap(Conv.trans(_, blockIsNumeral))
+                      belowSize <- numeralBelow(tools, offset, entry.left.size)
+                      offsetBelow <- Conv
+                        .sym(blockEquation)
+                        .flatMap(carryRight(order, offsetNumeral, _, belowSize))
+
+                      // `|x| + SUC^j ZERO < |x| + |l|`: the offset is inside the block. The index
+                      // is read off this rather than built, which is what keeps it the same term
+                      // the entry lemma produces one step down.
+                      shifted <- rules
+                        .specAll(
+                          tools.numbers.addStrictlyMonotone,
+                          List(contextLength, offsetNumeral, blockLength))
+                        .flatMap(rules.mp(_, offsetBelow))
+                      index <- shifted.conclusion match {
+                        case App(App(_, at), _) => Right(at)
+                        case other => Left(NotOfForm("an order with an index on the left", other))
+                      }
+
+                      // and `< |x l|`, which is that read back through the concatenation's length.
+                      blockSize <- rules.specAll(concatLength, List(front, left))
+                      insideConcat <- Conv
+                        .sym(blockSize)
+                        .flatMap(carryRight(order, index, _, shifted))
+
+                      // and `< |u|`, which is where a letter of the written-out word may be read.
+                      wholeSize <- rules.specAll(concatLength, List(block, tail))
+                      wholeSum <- rightOf(wholeSize)
+                      atMost <- rules.specAll(tools.numbers.atMostSum, List(blockTerm, tailLength))
+                      reaches <- rules
+                        .specAll(tools.numbers.belowThenAtMost, List(index, blockTerm, wholeSum))
+                        .flatMap(claimed =>
+                          rules.conjIntro(insideConcat, atMost).flatMap(rules.mp(claimed, _)))
+                      wordSum <- Conv
+                        .apTerm(lengthOf, subjectEquation)
+                        .flatMap(Conv.trans(_, wholeSize))
+                      inWord <- Conv
+                        .sym(wordSum)
+                        .flatMap(carryRight(order, index, _, reaches))
+
+                      // `WORD_NTH u index = WORD_NTH l (SUC^j ZERO)`: the letter the rule fired
+                      // on, read twice. The two halves meet with no rewriting between them,
+                      // because the entry lemma on the right is stated at exactly this index.
+                      leftRead <- rules
+                        .specAll(nthLeft, List(block, tail, index))
+                        .flatMap(rules.mp(_, insideConcat))
+                      rightRead <- rules
+                        .specAll(nthRight, List(front, left, offsetNumeral))
+                        .flatMap(rules.mp(_, offsetBelow))
+                      atBlock <- Conv
+                        .apTerm(nth, subjectEquation)
+                        .flatMap(Conv.apThm(_, index))
+                        .flatMap(Conv.trans(_, leftRead))
+                        .flatMap(Conv.trans(_, rightRead))
+
+                      opening <- letterAt(tools, entry.left, offset)
                       carried <- Conv
                         .apTerm(nth, leftEquation)
-                        .flatMap(Conv.apThm(_, zero))
+                        .flatMap(Conv.apThm(_, offsetNumeral))
                         .flatMap(Conv.trans(_, opening))
                       reading <- Conv.trans(atBlock, carried)
-                      denied <- rules.spec(contextLength, refusal).flatMap(rules.mp(_, inWord))
+                      denied <- rules.spec(index, refusal).flatMap(rules.mp(_, inWord))
                       absurd <- rules.notElim(denied, reading)
                     } yield absurd
                 }

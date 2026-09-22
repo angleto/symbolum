@@ -755,4 +755,60 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
       system.logic.destNot(witness.measureFalls.conclusion) shouldBe defined
     }
   }
+
+  "The refusal of a counted step" should "reach a word holding a marker, by reading the other end of the block" in {
+    // The card that asked for this said a word holding an `f` or a `t` wants the enumeration of
+    // `WORD_LENGTH x`, the position the rule would have fired at, which is the shape the argument
+    // avoids. It does not. Every commutation's left-hand side is a marker followed by a DIGIT --
+    // `t0 f0 t1 f1 f2 t2`, counted off `Collatz.CountedRules` -- so a word with no digit anywhere
+    // cannot supply the second letter for exactly the reason a word with no marker cannot supply
+    // the first, and it is the same walk reading at offset one instead of offset zero.
+    //
+    // `/ff.` is such a word and not an artificial one: it is `B2`'s right-hand side, it holds two
+    // `f`s, and `Collatz.noCountedStepFrom` refused it before this change.
+    val refusal = system
+      .noCountedStep("/ff.", "/0.")
+      .fold(error => fail(s"the refusal does not derive: ${error.message}"), identity)
+
+    withClue(s"${system.show(refusal.conclusion)}\n") { refusal.hypotheses shouldBe empty }
+
+    val refused = system.logic
+      .destNot(refusal.conclusion)
+      .getOrElse(fail(s"not a refusal: ${system.show(refusal.conclusion)}"))
+
+    refused match {
+      case App(App(App(_, relation), before), after) =>
+        relation shouldBe system.theory
+          .constant(Collatz.Counted, Term.typeOf(relation))
+          .fold(error => fail(s"no such constant: $error"), identity)
+
+        // The subject really is the word that was asked for. Without this the assertions above
+        // are satisfied by a refusal about any word at all, including one with no marker in it,
+        // which is the case that was already covered.
+        before shouldBe parse(
+          "WORD_CONCAT (WORD_CONCAT (WORD_CONCAT " +
+            "(WORD_SINGLETON (S2_HEAD:num)) (WORD_SINGLETON (S2_F:num))) " +
+            "(WORD_SINGLETON (S2_F:num))) (WORD_SINGLETON (S2_TAIL:num))")
+        after should not be before
+      case other => fail(s"not a step: ${system.show(other)}")
+    }
+  }
+
+  it should "refuse a word holding a marker AND a digit, which is what neither reading reaches" in {
+    // The half that keeps the assertion above from reading as more than it is. `/f0.` holds an
+    // `f` and a `0`, so neither end of the block is free of the letters that stand there and no
+    // refusal is derivable by this argument; what such a word wants is the enumeration of
+    // `WORD_LENGTH x`, which is the construction the card describes and which this is not.
+    //
+    // It is also the control on the test above: a builder that had stopped reading the word and
+    // was answering for every pair would pass that one and fail this one.
+    system.noCountedStep("/f0.", "/0f.") match {
+      case Left(error) =>
+        withClue(s"the refusal must name what it could not find: ${error.message}\n") {
+          error.message.toLowerCase should include("commutation")
+        }
+      case Right(held) =>
+        fail(s"a word holding both letters was refused a step: ${system.show(held.conclusion)}")
+    }
+  }
 }
