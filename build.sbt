@@ -249,6 +249,27 @@ lazy val commonSettings = Seq(
  * above against the current `scoverage.xml`; a reader wanting to know what a floor protects reads
  * the sentence in bold.
  *
+ * == The question this section says nobody asks has had a gate of its own since 2026-09-19 ==
+ *
+ * `tools/coverage-delta.sh` measures the coverage of the statements a change adds, at a floor of
+ * 90, and `docs/adr/0035` is the decision. The four sections above are the argument for it: a
+ * margin in statements answers *how many covered statements may this module lose*, the question
+ * that presents itself is *is what I am adding covered*, and until that record there was nothing
+ * that asked the second.
+ *
+ * **Read in the direction that matters, which is not the flattering one.** The floors here are NOT
+ * superseded by it and have not become advisory. A module can drift down while every individual
+ * change is well covered -- old code deleted, new code added at 90 where the module sits at 97 --
+ * and a delta gate cannot see that, where a floor on the average is exactly what does. The two
+ * answer different questions and this build runs both, in the same CI job, on the same reports.
+ * That record rejects replacing these floors with that gate and gives the measurement for it.
+ *
+ * The cross-reference is written here because it was not, for three days after the gate landed.
+ * `tools/coverage-delta.sh` names `build.sbt`, `tools/coverage-gate.sh` and `docs/adr/0035`
+ * between them five times; neither of the two files holding the floors named it back, so the
+ * reader who arrives at the sentence in bold above -- which is where somebody goes to find out
+ * what a floor protects -- was told what these floors do not cover and not what does.
+ *
  * **Four of the seven were left alone because three other sessions had unlanded work in them**, and
  * that is a decision rather than caution. A floor that only rises is a ratchet, and a ratchet set
  * from a tree somebody is mid-change in is not conservative: it is a claim about a commit nobody has
