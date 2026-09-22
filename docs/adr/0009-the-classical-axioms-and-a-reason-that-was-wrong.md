@@ -30,11 +30,18 @@ comments contradicted the ADR. Nobody had tried.
     ETA    : !t:'a->'b. (\x. t x) = t          asserted 2026-09-10, this record
 
 **The excluded middle is derived, and it costs no axiom of its own.** `EXCLUDED_MIDDLE` is a
-theorem on `Classical.standard`: 829 inference steps by `Derivation.size` when this was written,
-**841 since 2026-09-16**, reaching `SELECT` and nothing else. The figure is dated rather than
-restated because what this record decided is the axiom set and not the price: it moved when
-`Rules.mp` stopped accepting an antecedent differing from the implication's by a beta redex and
-began converting it instead, and Diaconescu's argument reaches choice twice, so it pays twice.
+theorem on `Classical.standard`: **829 inference steps by `Derivation.size` when this was
+written**, reaching `SELECT` and nothing else. The figure is left at what it was on the day rather
+than restated, because what this record decided is the axiom set and not the price, and a price
+written into a decision record is a copy that goes stale without anything going red. It has moved
+since, once: `Rules.mp` stopped accepting an antecedent differing from the implication's by a beta
+redex and began converting it instead, and Diaconescu's argument reaches choice twice, so it pays
+twice. **What it is now is not written here.** `ClassicalSpec` pins it against the code and the
+generated table of `docs/proving.md` prints it, and those are the two places to read it off.
+
+That sentence carried a second, present-tense figure until 2026-09-22 — the count as it stood on
+2026-09-16 — which is the shape to avoid in a dated record: true when written, and one derivation
+away from being false with nothing going red. Card `ad47e293` is where the copies were counted.
 Nothing about which axioms are reached changed, which is the claim this paragraph is making. `ClassicalSpec` asserts that axiom set both ways round, as a set equality against
 choice and as a `should not contain` against eta, so the claim fails the build if it stops being
 true. It was reachable from the moment choice landed.

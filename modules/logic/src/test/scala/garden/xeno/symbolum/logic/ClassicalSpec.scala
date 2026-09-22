@@ -563,4 +563,116 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // copies of one measurement is the defect, not the fact that they disagreed.
     classicalFile should not include "EXCLUDED_MIDDLE          |-"
   }
+
+  it should "be written out nowhere the test above does not reach, which is the half it was missing" in {
+    // **The gate above is a list of sentences, and a list only covers what somebody put on it.**
+    // Card `ad47e293` was opened on the reading that nothing guarded the excluded middle's count
+    // at all, which is false and is worth recording as the instrument's failure rather than the
+    // reader's: that card was written from `git grep 841`, and the test above spells the figure
+    // from the derivation instead of writing it, so a grep for the digits cannot see the guard
+    // that covers them. An absence an instrument reports is not an absence until the instrument
+    // has been seen finding something.
+    //
+    // What the card was right about is the half a list cannot have. Counted on 2026-09-22, the
+    // figure stood at fifteen places: three inside generated regions, which `GuideSpec` and
+    // `TheoremsSpec` compare against the derivation; the pin below; two DATED sentences about a
+    // past move, which do not go stale when the figure moves again; three covered by the list
+    // above; and **six that nothing watched**. Those six are gone, and this is what stops a
+    // seventh: a copy written into a source or a document is caught here whether or not anybody
+    // adds it to that list.
+    //
+    // Two of the six are worth naming. `Theorems.Showcase` carried it in a literal that a
+    // GENERATED page is built from, twenty-eight lines above the same count printed by `Essay`
+    // from `Derivation.size`: `TheoremsSpec` compares the page with its generator, and the
+    // generator embeds the literal, so both sides would have moved together and the page would
+    // have come to disagree with itself with every gate green. And `docs/adr/0009` carried it in
+    // the present tense inside a dated record, which is the one place a moving figure should
+    // never be.
+    val digits = Derivation.size(force(classical.fact(Classical.ExcludedMiddle))).toString
+
+    // Bounded on both sides, so the digits inside a longer number are not a match. Three such
+    // exist and all three are `ArbitrarySpec`'s decimal expansions of pi and of the sine of one.
+    val standalone = s"(?<![0-9])$digits(?![0-9])".r
+
+    // What may carry it, and each is one of the readings above. The set is short on purpose:
+    // every entry added to it is a copy this assertion has stopped watching, so widening it is
+    // how the repair comes undone.
+    val carriers = Set(
+      "CLAUDE.md",
+      "docs/proving.md",
+      "docs/theorems.md",
+      "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Logic.scala",
+      "modules/logic/src/test/scala/garden/xeno/symbolum/logic/ClassicalSpec.scala")
+
+    val documents =
+      Vector("README.md", "docs/architecture.md", "docs/evaluation.md", "docs/theorems.md")
+    val scanned = (documents ++ ClassicalSpec.everyModuleSource).filterNot(carriers.contains)
+
+    val spread = scanned.filter(path => standalone.findFirstIn(ClassicalSpec.contentsOf(path)).isDefined)
+
+    withClue(s"writing $digits out where the derivation should be named instead: ${spread.mkString(", ")}\n") {
+      spread shouldBe empty
+    }
+
+    // Not vacuous, which is the whole lesson of the card this answers: an absence reported by an
+    // instrument that read nothing looks exactly like an absence reported by one that read
+    // everything. The walk must reach the modules, and it must find the figure where the figure
+    // legitimately lives.
+    withClue("the walk over the modules found no sources: ") {
+      ClassicalSpec.everyModuleSource.size should be > 100
+    }
+    standalone.findFirstIn(ClassicalSpec.contentsOf(
+      "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Logic.scala")) shouldBe defined
+
+    // **What it does not cover.** It searches for the digits, so on the day the derivation moves
+    // to a count some unrelated line happens to hold, this goes red on a file that is not a copy;
+    // the failure names the file and the answer is a row in `carriers` with its reason, which is
+    // the arrangement `NotationBoundarySpec` already runs for interpolated prose. It reads
+    // `modules/` and the documents listed here and nothing else, so a figure written into a
+    // script under `tools/` is outside it — `tools/verify/perturb-the-figure-the-code-knows.sh`
+    // names the bytes it substitutes and is one.
+  }
+}
+
+private object ClassicalSpec {
+
+  /**
+   * Every Scala source of every module, main and test, relative to the repository root.
+   *
+   * Found by asking the disk rather than from a list, so a module added later is inside the scan
+   * without anybody remembering to add it. The test scope is walked as well as the main one,
+   * because two of the copies this was written for were in specs.
+   */
+  lazy val everyModuleSource: Vector[String] = {
+    val root = java.nio.file.Paths.get("modules")
+    val modules = java.nio.file.Files.list(root)
+    val roots =
+      try {
+        val iterator = modules.iterator
+        Iterator.continually(iterator).takeWhile(_.hasNext).map(_.next()).toVector.sortBy(_.toString)
+      } finally modules.close()
+
+    roots.flatMap { module =>
+      Vector("src/main", "src/test")
+        .map(module.resolve)
+        .filter(java.nio.file.Files.isDirectory(_))
+        .flatMap { source =>
+          val stream = java.nio.file.Files.walk(source)
+          try {
+            val iterator = stream.iterator
+            Iterator
+              .continually(iterator)
+              .takeWhile(_.hasNext)
+              .map(_.next())
+              .toVector
+              .filter(path =>
+                java.nio.file.Files.isRegularFile(path) && path.toString.endsWith(".scala"))
+              .map(_.toString)
+          } finally stream.close()
+        }
+    }
+  }
+
+  def contentsOf(relative: String): String =
+    java.nio.file.Files.readString(java.nio.file.Paths.get(relative))
 }

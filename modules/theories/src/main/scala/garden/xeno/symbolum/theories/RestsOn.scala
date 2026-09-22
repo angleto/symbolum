@@ -82,7 +82,9 @@ object Reach {
         // The classical FACTS and the conditional's definition, added on 2026-09-12 in the change
         // that put them into `Library.of(chain)`, which is what the guard below this file's own
         // list exists to force. They are labelled apart from the axioms on purpose: `Classical` is
-        // in `Foundational` above, and the excluded middle is **derived** from choice in 841 steps.
+        // in `Foundational` above, and the excluded middle is **derived** from choice. The step
+        // count is not repeated here: `ClassicalSpec` pins it and `docs/proving.md`'s generated
+        // table carries it, and this comment needs the word `derived` rather than the figure.
         // Filing it foundational would report a theorem as an assumption, which is the one mistake
         // this three-bucket report exists to prevent.
         "Classical, derived" -> chain.classical.facts,

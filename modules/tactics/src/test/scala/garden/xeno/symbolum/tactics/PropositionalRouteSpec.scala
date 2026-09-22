@@ -363,9 +363,13 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     //
     // The sentence in `README.md` even said the figures "are asserted by `PropositionalRouteSpec`",
     // which a reader takes for a document being pinned and which was true only of the code's own
-    // count. `CLAUDE.md`'s own precedent is the opposite way round: the excluded middle's 841 is
-    // "written by hand in four documents **and asserted in all four** by `ClassicalSpec`, which is
-    // what makes writing it by hand safe here".
+    // count. `CLAUDE.md` cites the excluded middle's step count as the opposite precedent, "written
+    // by hand in four documents **and asserted in all four** by `ClassicalSpec`", and that half of
+    // it is true: `ClassicalSpec` spells the figure into three sentences from `Derivation.size`
+    // and has since 2026-09-11, which is the arrangement this test copies. What card `ad47e293`
+    // found on 2026-09-22 is what the sentence left out rather than what it claimed: a list of
+    // guarded sentences covers the list, and six copies were not on it. Both files now carry the
+    // other half, a walk that refuses the figure everywhere the list does not reach.
     //
     // `docs/adr/0023` spells both figures four times and is deliberately NOT read here: an ADR is a
     // dated record of a decision, superseded rather than maintained, so a test that forced it to
