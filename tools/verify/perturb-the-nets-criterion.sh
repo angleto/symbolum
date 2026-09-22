@@ -32,6 +32,19 @@
 # the substitution APPLIED and changed nothing and the suite stayed green. `perturb.sh` refuses a
 # substitution that does not apply and cannot refuse one that is inert, so a perturbation reading
 # green is a statement about the perturbation before it is one about the guard.
+#
+# ADDED 2026-09-22 BY THE VERIFICATION OF THIS CARD, re-running the three above on `3d2de7e9` in a
+# checkout of its own. Control green at 14. What differs from the record above, and it is recorded
+# beside it rather than in place of it, because two runs disagreeing is itself the finding:
+#
+#   - Perturbation 1 reddens TWO tests here, the criterion and `should come back settled`, 12 of
+#     14 passing. The note above names one.
+#   - Perturbation 3 does NOT redden the tightness half, exactly as the note above says, and the
+#     comment beside the perturbation itself says the opposite. Measured: the witness count falls
+#     from 26 to 20 and the assertion stands; what goes red is `should come back cut short`.
+#
+# And perturbation 4 below is the one the delivery asked a verifier for: it is the first thing
+# seen to fail the tightness half ALONE.
 
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -85,5 +98,19 @@ echo "################ 3-nothing-approaches-the-bound" >> "$LOG"
   '              search(hypotheses ++ gained(hypotheses, Vector(antecedent)), consequent, fuel)' \
   -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 3-nothing-approaches-the-bound" >> "$LOG"
+
+# 4. The tightness witness removed for real, which the three above could not do. Every attempt in
+# the record charges nothing at a rule the 127-link chain is built from, so the edge moves and the
+# edge tests go red before the tightness half does. The negation rule is the one rule of the
+# calculus that chain does not use at all: charged nothing, the goals that carried the witnesses
+# are answered in fewer units than their size, `approached` is empty, and the two edge tests are
+# untouched. Seen 2026-09-22: red on `should be a net whose size is a statement about the goal`
+# and on nothing else, `Vector() was empty (PropositionalRouteSpec.scala:255)`, 13 of 14 passing.
+echo "################ 4-the-tightness-half-alone" >> "$LOG"
+"$P" "$CALCULUS" \
+  '              search(hypotheses ++ gained(hypotheses, Vector(proposition)), logic.falsity, fuel - 1)' \
+  '              search(hypotheses ++ gained(hypotheses, Vector(proposition)), logic.falsity, fuel)' \
+  -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
+echo "### exit $? for 4-the-tightness-half-alone" >> "$LOG"
 
 echo "log: $LOG"
