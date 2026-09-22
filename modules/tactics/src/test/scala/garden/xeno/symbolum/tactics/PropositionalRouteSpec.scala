@@ -60,7 +60,8 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
   /** How many formulas that is, asserted below rather than trusted here. */
   private val Formulas: Int = 1116
 
-  private val formulas: Vector[Term] = {
+  /** Every formula with its own size, which is what the net's criterion is stated against. */
+  private val sized: Vector[(Int, Term)] = {
     val atoms = Vector(Term.variable("p", Type.Bool), Term.variable("q", Type.Bool))
     val bySize = scala.collection.mutable.Map[Int, Vector[Term]](1 -> atoms)
 
@@ -75,8 +76,10 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
       bySize(size) = unary ++ binary
     }
 
-    (1 to Nodes).toVector.flatMap(bySize.getOrElse(_, Vector.empty))
+    (1 to Nodes).toVector.flatMap(size => bySize.getOrElse(size, Vector.empty).map(size -> _))
   }
+
+  private val formulas: Vector[Term] = sized.map(_._2)
 
   private def carriesANegation(term: Term): Boolean = term match {
     case Const(name, _) => name == Logic.Negation || name == Logic.Falsity
@@ -189,6 +192,76 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     needed should be <= (Intuitionistic.Fuel / 4)
 
     info(s"the deepest of ${addressed.size} goals needs $needed of ${Intuitionistic.Fuel}")
+  }
+
+  it should "be a net whose size is a statement about the goal, which is what chose the number" in {
+    // The criterion `87e74c7f` asked for, and the reason 256 is a decision rather than a rounding:
+    // **the fuel a goal needs never exceeds the goal's own size**, counting one for each connective
+    // and one for each atom occurrence. Read forwards, `Intuitionistic.Fuel` at 256 is the promise
+    // that any goal of at most 256 nodes is answered rather than stopped, which is a sentence a
+    // reader can check a written claim against. The two tests above give the edge on one family;
+    // this gives the relation the number can be chosen by.
+    //
+    // It is also the assertion the net exists to be: the net is there against a mistake in the
+    // RULES, which the class comment says in as many words, and a rule that stopped decreasing the
+    // measure would show up here as a goal needing more than its size. Before this, that mistake
+    // was caught by an out-of-memory or by nothing.
+    //
+    // Measured beyond this population on 2026-09-22, exhaustively over every formula on two atoms
+    // of at most **seven** nodes, 5618 of them: no goal needs more than its size and the bound is
+    // reached, so it is tight rather than slack. Eight nodes is 26032 formulas and did not finish
+    // inside the time it was given, which is why the figure quoted is seven.
+    def needOf(goal: Term): Int = {
+      def stopped(fuel: Int): Boolean = calculus.prove(goal, fuel) match {
+        case Left(BoundReached(name, _, _, _)) => name == Intuitionistic.SearchName
+        case _ => false
+      }
+
+      var low = 1
+      var high = Intuitionistic.Fuel
+      while (low < high) {
+        val mid = low + (high - low) / 2
+        if (stopped(mid)) low = mid + 1 else high = mid
+      }
+      low
+    }
+
+    val over = sized.filter { case (size, goal) =>
+      Prove.addressOf(chain.widest, goal) == Prove.Address.Propositional && needOf(goal) > size
+    }
+
+    withClue(s"goals needing more fuel than their own size: ${over.map(_._2).map(chain.widest.show).mkString(", ")}\n") {
+      over shouldBe empty
+    }
+
+    // And the bound is approached, which is what keeps the assertion above from being a claim
+    // about a number nothing comes near: without this it would pass just as well on a search that
+    // spent one unit on everything. An atom needing one is not a witness, so the witness asked for
+    // is a goal with a connective in it: some formula of at least four nodes needs all but one of
+    // them. Measured over seven nodes on 2026-09-22 the worst ratio is 6 of 7.
+    //
+    // **This half has never been seen failing, and three attempts to make it fail are recorded in
+    // `tools/verify/perturb-the-nets-criterion.sh`.** Charging nothing at the implication rule on
+    // the right, and charging nothing at the conjunction rule on the left, both leave the worst
+    // need over this population at 4 and leave a witness standing; what they redden is the edge
+    // two tests down, because a cheaper search settles the 128-link chain that should be cut
+    // short. So the guard above is fired and this one is not, and it is kept as a guard against a
+    // future search that is uniformly cheap rather than as one this repository has tested.
+    val approached = sized.filter { case (size, goal) =>
+      size >= 4 &&
+      Prove.addressOf(chain.widest, goal) == Prove.Address.Propositional &&
+      needOf(goal) >= size - 1
+    }
+    approached should not be empty
+
+    val worst = sized
+      .filter { case (_, goal) => Prove.addressOf(chain.widest, goal) == Prove.Address.Propositional }
+      .map { case (size, goal) => (needOf(goal), size) }
+      .maxBy { case (need, size) => need.toDouble / size }
+
+    info(
+      s"${sized.size} formulas, none needing more than its size; " +
+        s"the closest is ${worst._1} of ${worst._2}, and ${approached.size} come within one")
   }
 
   "The gate in front of the calculus" should "add no theorem to it, which is why it is not asked" in {
