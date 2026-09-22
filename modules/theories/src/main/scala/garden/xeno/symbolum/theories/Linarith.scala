@@ -312,6 +312,11 @@ final class Linarith private (
     // out of reach is `inv x` or a quotient, which [[LinearForm.unreadable]] names better and
     // by its own name, and a message about its degree would be both wrong and a step backwards
     // from one that was right.
+    //
+    // The `> 1` is also why neither of the two refusals below ever says `a product of 1 unknowns`:
+    // the atom they name is the one this find selected, so the number they print is at least two
+    // and no counter is wanted. Both messages read the same `factorsOf` and both are covered by
+    // the one guard, which is worth saying because there is one guard and two sentences.
     val outOfReach = goalAtoms
       .diff(reachable)
       .toVector

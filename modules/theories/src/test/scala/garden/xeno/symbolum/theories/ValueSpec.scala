@@ -241,4 +241,47 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     why(0, 0, 0) should endWith("within 1 step")
     why(0, 2, 2) should endWith("within 2 steps")
   }
+
+  /**
+   * The arity in the refusal about a constant applied to the wrong number of arguments.
+   *
+   * It reached one by construction and read `takes 1 argument(s)`: the branch of `Value` that
+   * reads a numeral passes `route.copy(arity = 1)`, so the literal one is in the source. The
+   * `(s)` form is not what the card's census finds -- the noun is not a bare plural -- and it is
+   * a second name for what `Prose.count` already does in this same file, which is why it went.
+   *
+   * Both directions, because a message rewritten into the singular everywhere would pass on one.
+   */
+  "The refusal about a constant's arity" should "take the singular at one and the plural elsewhere" in {
+    // A row off the table rather than one built here, so the test says nothing about `Route`'s
+    // shape and survives a field being added to it.
+    val route = Value.Routes.values.head
+
+    Value.wrongArity("f", route.copy(arity = 1), 3).message should
+      include("f takes 1 argument and was given 3")
+    Value.wrongArity("f", route.copy(arity = 2), 3).message should
+      include("f takes 2 arguments and was given 3")
+    // The form it replaced, which reads at one and at two and is neither the singular nor the
+    // plural.
+    Value.wrongArity("f", route, 3).message should not include "argument(s)"
+  }
+
+  /**
+   * The counter's two-form overload, which landed with the site above and its neighbour in
+   * `Remedy`.
+   *
+   * `Prose.count` appends an `s` and says of itself that an irregular noun wants both forms
+   * written out; until 2026-09-22 there was nowhere to write them, so a caller needing
+   * `hypothesis`/`hypotheses` wrote `thing(s)`. The five per-module copies of this counter have
+   * taken both forms since 2026-09-20 for `entry`/`entries`, so this is the shared one catching
+   * up rather than a new mechanism.
+   *
+   * Zero takes the plural here as it does in the one-argument body, which is the case a reader
+   * of the condition does not picture.
+   */
+  "The counter with both forms" should "take the first at one and the second everywhere else" in {
+    Prose.count(1, "hypothesis", "hypotheses") shouldBe "1 hypothesis"
+    Prose.count(2, "hypothesis", "hypotheses") shouldBe "2 hypotheses"
+    Prose.count(0, "hypothesis", "hypotheses") shouldBe "0 hypotheses"
+  }
 }

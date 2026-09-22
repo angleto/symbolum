@@ -96,9 +96,19 @@ final case class UnknownTypeOperator(name: String) extends KernelError {
   def message: String = s"no type operator named $name in this theory"
 }
 
-/** A type operator was applied to the wrong number of arguments. */
+/**
+ * A type operator was applied to the wrong number of arguments.
+ *
+ * The counts are written after their nouns and not in front of them, for the reason
+ * `Term.typeIn` gives at the one other site of this shape in the trusted base: this message
+ * used to read `takes $expected arguments` and said "takes 1 arguments" at every unary type
+ * operator, which `Theory.declareTypeOperator` accepts at any arity and which `TheorySpec`
+ * already declares. Elsewhere that defect is repaired by a counter; here the sentence moves
+ * instead, because the trusted base is counted and a line that exists to render English is a
+ * line somebody has to read and believe.
+ */
 final case class ArityMismatch(name: String, expected: Int, found: Int) extends KernelError {
-  def message: String = s"type operator $name takes $expected arguments, found $found"
+  def message: String = s"type operator $name, arity $expected, arguments given: $found"
 }
 
 /** A use of a constant at a type that is not an instance of its declared type. */

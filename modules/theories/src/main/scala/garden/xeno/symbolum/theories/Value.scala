@@ -768,9 +768,17 @@ object Value {
   private[theories] def noRow(constant: String): LogicError =
     TypeError(s"$constant has no row in this table; what it evaluates is ${reachable.mkString(", ")}")
 
-  /** `constant takes n and was given m`, likewise. */
+  /**
+   * `constant takes n and was given m`, likewise.
+   *
+   * The count goes through `Prose.count` and read `argument(s)` until 2026-09-22. That reads at
+   * one and is a third mechanism for it in a file whose search bound already uses the counter, so
+   * it is a second name for what the counter does rather than a defect the census finds -- the
+   * noun is not a bare plural. It is reached at one by construction: the branch below that reads
+   * a numeral passes `route.copy(arity = 1)`.
+   */
   private[theories] def wrongArity(constant: String, route: Route, supplied: Int): LogicError =
-    TypeError(s"$constant takes ${route.arity} argument(s) and was given $supplied")
+    TypeError(s"$constant takes ${Prose.count(route.arity, "argument")} and was given $supplied")
 
   /** The values of a term's arguments, as the row's [[Shape]] reads them. */
   private def readArguments(

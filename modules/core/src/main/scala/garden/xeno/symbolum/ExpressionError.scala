@@ -41,6 +41,12 @@ final case class UndefinedVariableError(
 /**
  * Thrown when expansion would create too many terms.
  *
+ * `$estimatedTerms terms` is not a count that reaches one, and the reason is two guards rather
+ * than a reading of the message: `SimplificationConfig` requires `maxExpansionTerms > 0`, and
+ * `Canonical.distribute` raises this only where `estimatedTerms > maxExpansionTerms`, so the
+ * number printed is at least two. `Arbitrary`'s own `$digits digits` is excluded for the same
+ * shape of reason, inside a `require`. Neither takes the counter in `Plural`.
+ *
  * @param estimatedTerms Number of terms that would be created
  * @param limit Maximum allowed terms
  */

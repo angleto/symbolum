@@ -53,6 +53,39 @@ class TheorySpec extends AnyFlatSpec with Matchers {
       Left(classOf[ArityMismatch])
   }
 
+  /**
+   * The same refusal read for its English, which the assertion above cannot see because it
+   * compares a class.
+   *
+   * The unary case is the one this exists for: `takes 1 arguments` was what it said, and a unary
+   * type operator is not hypothetical here -- the test below this one declares `list` at arity
+   * one, and `defineType` reads its arity off the type variables of the predicate, so carving a
+   * type with one parameter produces one. The trusted base takes no counter, so the sentence
+   * moves instead and the count is written after its noun; `Term.typeIn` is the other site of
+   * that decision and says why.
+   *
+   * Both directions, because a message that said `arity 1` everywhere would pass a test written
+   * on the singular alone.
+   */
+  it should "name the arity without a noun that has to agree with it" in {
+    val unary = force(Theory.primitive.declareTypeOperator("list", 1))
+    val binary = force(Theory.primitive.declareTypeOperator("pair", 2))
+
+    def refusal(theory: Theory, name: String, arguments: List[Type]): String =
+      theory.checkType(TyApp(name, arguments))
+        .fold(_.message, _ => fail("expected the arity to be refused"))
+
+    val one = refusal(unary, "list", List(Type.Bool, Type.Bool))
+    val two = refusal(binary, "pair", List(Type.Bool))
+
+    one should include("arity 1, arguments given: 2")
+    two should include("arity 2, arguments given: 1")
+    // The defect itself. At arity one the old message read `takes 1 arguments`, and at two it was
+    // right, so a test written on the plural alone said nothing.
+    one should not include "takes 1 arguments"
+    two should not include "arguments, found 1"
+  }
+
   it should "be rejected when it was never declared" in {
     Theory.primitive.checkType(real).left.map(_.getClass) shouldBe
       Left(classOf[UnknownTypeOperator])

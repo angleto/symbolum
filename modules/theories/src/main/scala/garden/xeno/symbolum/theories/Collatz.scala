@@ -3635,6 +3635,10 @@ object Collatz {
   }
 
   /** A proof of one disjunct, placed at its position in a disjunction of `size` clauses. */
+  // `$size clauses` never says one, for the reason `${Rules.size} clauses` further down never
+  // does: this method is private and its one caller passes `CountedRules.size`, which is the six
+  // commuting rules read off the table. The table is what `collatz@8b991e5` generates, and a
+  // rewriting system of one rule is not the system this file is about.
   private def intoDisjunction(
     logic: Logic,
     disjunction: Term,
@@ -3704,6 +3708,10 @@ object Collatz {
   /**
    * A claim proved at every clause of a disjunction, which is [[overEveryRule]]'s walk without the
    * statement around it.
+   *
+   * `$expected clauses` is not a count that reaches one: this method is private and its three
+   * callers pass `Rules.size` or `CountedRules.size`, eleven and six, both read off the table
+   * rather than written. `intoDisjunction` above carries the same argument for its own `size`.
    */
   private def overClauses(
     logic: Logic,

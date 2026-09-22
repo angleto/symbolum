@@ -163,6 +163,12 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
    *
    * The same pair of numbers is written a second time by `Remedy` one module up, which reaches
    * `Prose.count` instead. Two messages about one refusal is the arrangement here, not a defect.
+   *
+   * **The verb is asserted here and was not, which is what the counter did not cover.** Until
+   * 2026-09-22 the first line below read `1 argument were given` and this assertion said so: the
+   * counter had repaired the noun, nothing repairs what agrees with it, and a test copied from
+   * the message it is about cannot tell the two apart. The sentence gives the count after the
+   * verb now, so there is no number in front of one to disagree.
    */
   "The refusal about a partial instance" should "take the singular at one and the plural elsewhere" in {
     val subject = Term.variable("p", Type.Bool)
@@ -170,7 +176,33 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
     def message(quantifiers: Int, arguments: Int): String =
       PartialInstance(quantifiers, arguments, subject).message
 
-    message(1, 1) should startWith("this theorem has 1 leading quantifier and 1 argument were given")
-    message(3, 2) should startWith("this theorem has 3 leading quantifiers and 2 arguments were given")
+    message(1, 1) should startWith("this theorem has 1 leading quantifier and was given 1 argument")
+    message(3, 2) should startWith("this theorem has 3 leading quantifiers and was given 2 arguments")
+    message(1, 1) should not include "1 argument were given"
+  }
+
+  /**
+   * The two counts of the ceiling refusal, which the card's census reached and its list did not.
+   *
+   * Neither is a constant: `Rewrite.repeatConv` takes its ceiling as a parameter with a default
+   * and `RewriteSpec` passes one of its own, and the guard is `width > ceiling`, so a ceiling of
+   * zero prints `reached` as one and a ceiling of one prints `allowed` as one. That is the same
+   * argument `Solver`'s conflict limit is repaired under, one module over.
+   *
+   * They are repaired two different ways in one sentence, and the assertions take both: `reached`
+   * goes through `Plural`, and `allowed` is written after its noun because `1 are allowed` is a
+   * verb disagreeing with its number and a counter does not reach a verb.
+   */
+  "The refusal about a term that grew" should "take the singular at one and put the ceiling after its noun" in {
+    val subject = Term.variable("t", Type.Bool)
+
+    def message(reached: Int, allowed: Int): String =
+      GrewPastCeiling(subject, reached, allowed).message
+
+    message(1, 0) should include("took it to 1 node where the ceiling in nodes is 0")
+    message(2, 1) should include("took it to 2 nodes where the ceiling in nodes is 1")
+    // The two defects, one per number.
+    message(1, 0) should not include "1 nodes"
+    message(2, 1) should not include "1 are allowed"
   }
 }

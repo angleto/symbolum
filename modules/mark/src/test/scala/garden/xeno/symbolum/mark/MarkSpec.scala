@@ -123,4 +123,33 @@ class MarkSpec extends AnyFlatSpec with Matchers {
     complaint(Vector("X")) should include("art: 1 cell,")
     complaint(Vector("XY")) should include("art: 2 cells,")
   }
+
+  /**
+   * The three counts `main` prints are not of that class either, and this is the measurement that
+   * says so rather than a reading.
+   *
+   * Card db67b658 listed them as **not established** and named them so they would not be found
+   * again: a figure of one row is not a mark anybody draws, and nobody had measured it. Swept
+   * over sizes 1 to 30, the floors are 2 rows, 5 columns and 4 cells, and size 1 does not print
+   * at all -- the mask at radius 0.5 is empty and `Figure.cells` raises `empty.min` before any
+   * count is rendered. So none of the three reaches one and none takes `Plural`.
+   *
+   * It is an assertion and not a comment because the reason is a measurement: a change to what
+   * `Figure.cells` does under a radius of one would move it, and a sentence saying "measured on
+   * 2026-09-22" would not notice.
+   */
+  it should "print no count of one at any size it can draw" in {
+    val drawn = (2 to 30).map { size =>
+      val rows = Figure.at(size)
+      (Mark.height(rows), Mark.width(rows), Mark.cells(rows).size)
+    }
+
+    drawn.map(_._1).min shouldBe 2
+    drawn.map(_._2).min shouldBe 5
+    drawn.map(_._3).min shouldBe 4
+
+    // The size below the smallest one that draws. It is a refusal rather than a figure of one
+    // row, which is what keeps the floor above from being the accident of where the sweep began.
+    an[UnsupportedOperationException] should be thrownBy Figure.at(1)
+  }
 }
