@@ -337,6 +337,17 @@ they have least appetite for working out how it is produced.
   SUM_SQUARE_BELOW_CAUCHY  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum x z * Sum y z <= Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) (z + z)
   SUM_TAIL_ABS             !x:num -> real. !y:num. !z:num. y <= z ==> abs (Sum x z - Sum x y) <= Sum (\u:num. abs (x u)) z - Sum (\u:num. abs (x u)) y
 
+## Listing
+
+  LIST_CASES               !x:word('a). x = WORD_EMPTY \/ x = LIST_CONS (LIST_HEAD x) (LIST_TAIL x)
+  LIST_CONS_INJECTIVE      !x:'a. !y:word('a). !z:'a. !u:word('a). LIST_CONS x y = LIST_CONS z u ==> x = z /\ y = u
+  LIST_CONS_LENGTH         !x:'a. !y:word('a). WORD_LENGTH (LIST_CONS x y) = SUC (WORD_LENGTH y)
+  LIST_CONS_NOT_EMPTY      !x:'a. !y:word('a). ~(LIST_CONS x y = WORD_EMPTY)
+  LIST_CONS_NTH            !x:'a. !y:word('a). !z:num. WORD_NTH (LIST_CONS x y) (SUC z) = WORD_NTH y z
+  LIST_HEAD_CONS           !x:'a. !y:word('a). LIST_HEAD (LIST_CONS x y) = x
+  LIST_INDUCT              !x:word('a) -> bool. x WORD_EMPTY /\ (!y:'a. !z:word('a). x z ==> x (LIST_CONS y z)) ==> (!y:word('a). x y)
+  LIST_TAIL_CONS           !x:'a. !y:word('a). LIST_TAIL (LIST_CONS x y) = y
+
 ## Magnitude
 
   ABS_ABOVE                !x:real. x <= abs x

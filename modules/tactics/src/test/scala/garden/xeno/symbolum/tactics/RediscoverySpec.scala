@@ -290,7 +290,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 412 with `ABS_POWER_LE`, which carries one antecedent.
     // 414: one antecedent each on the halving and the geometric tail, none on the convergence.
     // 418 with `MUL_INV_COMBINE`'s four antecedents; the other two carry none.
-    propose.weakenings.size shouldBe 418
+    // 420 with the list interface, 2026-09-23, and the **two** were derived before the run:
+    // `LIST_CONS_INJECTIVE` and `LIST_INDUCT` each carry one antecedent, and the other six
+    // facts of that development carry none.
+    propose.weakenings.size shouldBe 420
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (130)
+## The definitions (133)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -195,6 +195,9 @@ axiom mentioning it means.
 | `definition INT_ONE` | INT_ONE = INT_OF_PAIR (PAIR (SUC 0) 0) | **NOT READ** |  |  |
 | `definition INT_SAME` | INT_SAME = \x:prod(num, num). \y:prod(num, num). FST x + SND y = FST y + SND x | **NOT READ** |  |  |
 | `definition INT_ZERO` | INT_ZERO = INT_OF_PAIR (PAIR 0 0) | **NOT READ** |  |  |
+| `definition LIST_CONS` | LIST_CONS = \x:'a. \y:word('a). WORD_CONCAT (WORD_SINGLETON x) y | **NOT READ** |  |  |
+| `definition LIST_HEAD` | LIST_HEAD = \x:word('a). WORD_NTH x 0 | **NOT READ** |  |  |
+| `definition LIST_TAIL` | LIST_TAIL = \x:word('a). WORD_MAKE (PRE (WORD_LENGTH x)) (\y:num. COND (y < PRE (WORD_LENGTH x)) (WORD_NTH x (SUC y)) WORD_PAD) | **NOT READ** |  |  |
 | `definition MAT2` | MAT2 = \x:real. \y:real. \z:real. \u:real. PAIR (PAIR x y) (PAIR z u) | **NOT READ** |  |  |
 | `definition MAT_ADD` | MAT_ADD = \x:prod(prod(real, real), prod(real, real)). \y:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x + MAT_E11 y) (MAT_E12 x + MAT_E12 y) (MAT_E21 x + MAT_E21 y) (MAT_E22 x + MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_DET` | MAT_DET = \x:prod(prod(real, real), prod(real, real)). MAT_E11 x * MAT_E22 x - MAT_E12 x * MAT_E21 x | **NOT READ** |  |  |

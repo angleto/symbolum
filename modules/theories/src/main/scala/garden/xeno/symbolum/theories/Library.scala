@@ -309,7 +309,11 @@ object Library {
         // development of its own rather than more of `Integer` for the reason `Inclusion`'s own
         // first paragraph gives, and a development of its own is a development this list has to
         // name: that is what the two paragraphs above are about.
-        collect("Inclusion", chain.inclusion.facts)
+        collect("Inclusion", chain.inclusion.facts) ++
+        // The list interface, 2026-09-23, in the change that added the link, for the reason the
+        // three notes above give. It declares no type: `docs/adr/0038` is why a list here is an
+        // orientation on `word` rather than a carrier of its own.
+        collect("Listing", chain.listing.facts)
     )
 
   /** A library over developments a caller names itself. */

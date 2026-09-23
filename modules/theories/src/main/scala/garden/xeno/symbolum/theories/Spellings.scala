@@ -222,6 +222,14 @@ object Spellings {
       // rewriting text uses, and dropping the subscript would print two different systems the same.
       .operator("WORD_STEP", 3, "#2 \\to_{#1} #3", Relation)
       .operator("WORD_RFC", 2, "#2 \\in \\mathrm{RFC}(#1)", Relation)
+      /* ------------------------------------------------- the list interface over `word` */
+      // `docs/adr/0038` decides that a list here is an orientation on `word` and not a carrier of
+      // its own, and these three spellings are where a reader meets that: the cons gets the double
+      // colon every text writes it with, at the precedence of concatenation because it IS a
+      // concatenation, and the empty list is `\varepsilon` above because it IS `WORD_EMPTY`.
+      .operator("LIST_CONS", 2, "#1 :: #2", Multiplicative)
+      .delimited("LIST_HEAD", 1, "\\mathrm{hd}(#1)")
+      .delimited("LIST_TAIL", 1, "\\mathrm{tl}(#1)")
       /* ---------------------------------------------------------- the matrix */
       .delimited("MAT2", 4, "\\begin{pmatrix} #1 & #2 \\\\ #3 & #4 \\end{pmatrix}")
       .delimited("MAT_ID", 0, "I")

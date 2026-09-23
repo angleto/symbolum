@@ -234,12 +234,17 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // `docs/adr/0033` rests phase 5's move of that development on its saying nothing about one.
     // Seven entries in five days is the measurement this paragraph exists to be instead of a
     // sentence naming whichever link is current.
-    chain.widest shouldBe chain.inclusion
-    chain.widest.theory.constants.keySet shouldBe chain.inclusion.theory.constants.keySet
+    // **And again on 2026-09-23**, to `Listing`, the eighth entry, and the first one that adds no
+    // type where a reader of the card would have expected one: `docs/adr/0038` decides that a list
+    // is an orientation on `word` rather than a carrier of its own, so what puts this link at the
+    // end is the same rule as every entry above it and nothing about its subject. The assertion
+    // two paragraphs down that the type operators do not move is what carries that decision here.
+    chain.widest shouldBe chain.listing
+    chain.widest.theory.constants.keySet shouldBe chain.listing.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
-      chain.transcendental, chain.concatenation, chain.inductive, chain.integers
+      chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

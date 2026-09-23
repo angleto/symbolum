@@ -323,7 +323,19 @@ final class Chain private (
    * link buys is that the constant is reachable from `Ask`, from `Find` and from `docs/lemmas.md`,
    * and what it costs is a row in `docs/reading-register.md`.
    */
-  val inclusion: Inclusion
+  val inclusion: Inclusion,
+
+  /**
+   * The list interface over `word`: cons, a head, a tail, and cons-induction.
+   *
+   * It is a link and not a type of its own, which is the decision `Listing`'s own docstring
+   * carries: `word('a)` is already polymorphic and already has the empty word, the one-letter word
+   * and a concatenation, so a second carrier would be isomorphic to it and would inherit none of
+   * its facts. What it needs is `concatenation` for those three and `peano` for the arithmetic of
+   * an index; what it extends is the chain's end as it stands, for the reason
+   * `Rotation.construct`'s comment gives.
+   */
+  val listing: Listing
 ) {
 
   /**
@@ -352,7 +364,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = inclusion
+  val widest: Signature = listing
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -551,6 +563,7 @@ object Chain {
       // is re-based onto and the one place that re-basing is checked.
       inclusion <- Inclusion.construct(
         classical, integers, product, peano, ring, order, integers.theory, integers.notation)
+      listing <- Listing.construct(concatenation, peano, inclusion.theory)
     } yield new Chain(
       classical,
       naturals,
@@ -583,6 +596,7 @@ object Chain {
       reaching,
       forward,
       integers,
-      inclusion
+      inclusion,
+      listing
     )
 }

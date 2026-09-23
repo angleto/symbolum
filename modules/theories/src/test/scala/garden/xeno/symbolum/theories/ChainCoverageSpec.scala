@@ -101,6 +101,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Forward" -> InTheChain,
     "Integer" -> InTheChain,
     "Inclusion" -> InTheChain,
+    // 2026-09-23. It declares three constants and no type: `docs/adr/0038` decides that a list
+    // here is an orientation on `word` rather than a carrier, so what it adds to the chain is
+    // cons, a head, a tail and the induction that descends from the left.
+    "Listing" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,
