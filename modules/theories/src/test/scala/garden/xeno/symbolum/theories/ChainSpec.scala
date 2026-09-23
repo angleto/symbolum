@@ -239,12 +239,17 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // is an orientation on `word` rather than a carrier of its own, so what puts this link at the
     // end is the same rule as every entry above it and nothing about its subject. The assertion
     // two paragraphs down that the type operators do not move is what carries that decision here.
-    chain.widest shouldBe chain.listing
-    chain.widest.theory.constants.keySet shouldBe chain.listing.theory.constants.keySet
+    // **And again the same day**, to `Folding`, the ninth entry, and the first one whose subject is
+    // a CONSUMER of the link below it rather than a subject of its own: `LIST_FOLD` is defined by
+    // `LIST_RECURSION`, and a development that spent that theorem beside the chain would declare
+    // its constant where nothing above can see it.
+    chain.widest shouldBe chain.folding
+    chain.widest.theory.constants.keySet shouldBe chain.folding.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
-      chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion
+      chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
+      chain.listing
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

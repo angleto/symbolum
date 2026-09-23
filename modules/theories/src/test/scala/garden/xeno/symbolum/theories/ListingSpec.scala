@@ -272,4 +272,90 @@ class ListingSpec extends AnyFlatSpec with Matchers {
     everywhere.hypotheses shouldBe empty
     everywhere.conclusion shouldBe emptyRight.conclusion
   }
+
+  /* --------------------------- whether the recursion can be spent */
+
+  "The structural recursion" should "produce a function this repository already has" in {
+    // The same guard as the one above, for the two theorems above it, and it has to be a different
+    // test because the danger is a different one: `LIST_RECURSION` is an EXISTENTIAL, so a file
+    // that only ever asserts a function exists has not shown that one can be got out, and
+    // `LIST_RECURSION_UNIQUE` is an implication whose premises nobody may be able to discharge.
+    // Both are spent here, in one derivation, and what comes out is compared against a constant
+    // this repository defined long before either of them: `WORD_LENGTH`.
+    //
+    // The step is `\x. \w. \r. SUC r` and the start is `ZERO`, so what the recursion produces is
+    // the function counting a list's letters. `WORD_LENGTH` satisfies those two equations already
+    // -- `WORD_EMPTY_LENGTH` is the first and `LIST_CONS_LENGTH` is the second -- so uniqueness
+    // says the two are one function. Neither half of that is available without both theorems: the
+    // recursion supplies the function and nothing else says it is the one already here.
+    val classical = Chain.standard.classical
+    val concatenation = Chain.standard.concatenation
+    val emptyLength = force(concatenation.fact(Concatenation.EmptyLength))
+    val consLength = fact(Listing.ConsLength)
+
+    def atNumbers(theorem: Kernel.Thm): Kernel.Thm =
+      Kernel.instType(
+        Map(Classical.TypeVariable -> numbers, Classical.CodomainVariable -> numbers),
+        theorem
+      )
+
+    val zero = term("ZERO:num")
+    val step = term("\\x:num. \\w:word(num). \\r:num. SUC r")
+    val lengthConstant = force(
+      LogicError.lift(listing.theory.constant(Word.Length, Type.fun(numberWords, numbers)))
+    )
+
+    // The function, out of the existential. `Classical.witness` is what turns "there is one" into
+    // a term, and it is the only thing that can: the theorem names no function.
+    val instance = force(rules.specAll(atNumbers(fact(Listing.RecursionTheorem)), List(zero, step)))
+    val opened = force(
+      Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+    )
+    val chosen = force(classical.witness(opened))
+    val reduced = force(
+      Conv
+        .betaNormalise(chosen.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, chosen)))
+    )
+    val selected = chosen.conclusion match {
+      case App(_, function) => function
+      case other => fail(s"the witness is not a predicate applied to a term: $other")
+    }
+
+    // What `WORD_LENGTH` has to satisfy for uniqueness to reach it, and both are already proved.
+    val lengthAtEmpty = Kernel.instType(Map(Classical.TypeVariable -> numbers), emptyLength)
+    val lengthAtCons = Kernel.instType(Map(Classical.TypeVariable -> numbers), consLength)
+
+    val unique = force(
+      rules.specAll(
+        atNumbers(fact(Listing.RecursionUnique)),
+        List(zero, step, selected, lengthConstant)
+      )
+    )
+    val stated = force(
+      Conv
+        .betaNormalise(unique.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, unique)))
+    )
+    val wanted = logic
+      .destImp(stated.conclusion)
+      .getOrElse(fail(s"the uniqueness is not an implication: ${stated.conclusion}"))
+    val halves = logic
+      .destConj(wanted._1)
+      .getOrElse(fail(s"its premise is not a conjunction: ${wanted._1}"))
+
+    val fromLength = force(rules.conjIntro(lengthAtEmpty, lengthAtCons))
+    withClue("the length's own two equations are not the ones uniqueness asks for: ") {
+      fromLength.conclusion shouldBe halves._2
+    }
+
+    val both = force(rules.conjIntro(reduced, fromLength))
+    val equal = force(rules.mp(stated, both))
+
+    // The function the recursion produced IS `WORD_LENGTH`, owing nothing.
+    equal.hypotheses shouldBe empty
+    equal.conclusion shouldBe force(LogicError.lift(Term.eq(selected, lengthConstant)))
+  }
 }

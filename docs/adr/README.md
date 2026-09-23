@@ -61,3 +61,4 @@ the rejected option attractive, and they will.
 | [0036](0036-a-rationals-denominator-is-a-successor.md) | A rational's denominator is a successor, so the carrier needs no carving | accepted, extends 0016 and 0033 |
 | [0037](0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md) | The rewriter bounds the term and not only the steps | accepted |
 | [0038](0038-a-list-is-an-orientation-on-word-and-not-a-second-carrier.md) | A list is an orientation on `word` and not a second carrier | accepted |
+| [0039](0039-the-fold-is-a-catamorphism-and-a-link-of-its-own.md) | The fold discards the tail, and is a link of its own | accepted, extends 0038 |

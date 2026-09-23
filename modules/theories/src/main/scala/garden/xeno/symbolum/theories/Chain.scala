@@ -335,7 +335,16 @@ final class Chain private (
    * an index; what it extends is the chain's end as it stands, for the reason
    * `Rotation.construct`'s comment gives.
    */
-  val listing: Listing
+  val listing: Listing,
+
+  /**
+   * The aggregate over a sequence, defined by recursion on the sequence.
+   *
+   * The consumer of `LIST_RECURSION` rather than more of the interface, and a link for the reason
+   * [[listing]] is one: `LIST_FOLD` is a constant, so a development that declared it beside the
+   * chain would put it where nothing above can see it. One constant, no axiom.
+   */
+  val folding: Folding
 ) {
 
   /**
@@ -364,7 +373,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = listing
+  val widest: Signature = folding
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -564,6 +573,10 @@ object Chain {
       inclusion <- Inclusion.construct(
         classical, integers, product, peano, ring, order, integers.theory, integers.notation)
       listing <- Listing.construct(concatenation, peano, inclusion.theory)
+
+      // The consumer that spends `LIST_RECURSION`, which is what makes the recursion theorem a
+      // fact this repository uses rather than one it holds.
+      folding <- Folding.construct(listing, listing.theory)
     } yield new Chain(
       classical,
       naturals,
@@ -597,6 +610,7 @@ object Chain {
       forward,
       integers,
       inclusion,
-      listing
+      listing,
+      folding
     )
 }

@@ -94,10 +94,16 @@ Lists do not need it, which is the argument that split them off in the first pla
 
 ## What is not here
 
-**The structural recursion theorem**, `!a g. ?f. f WORD_EMPTY = a /\ (!x w. f (LIST_CONS x w) = g x w (f w))`,
-and a consumer development that writes with lists what it today writes with the coding or with
-`word`. Those are what make the interface usable for a *definition* rather than only for a proof,
-and induction does not give them. The route is settled and written down where the work is tracked:
-`Recursion.theorem` on `num` at result type `word('a) -> 'b`, with `f w = F (WORD_LENGTH w) w`, and
-uniqueness by `LIST_INDUCT`. It is the reason `LIST_HEAD` and `LIST_TAIL` are constants here rather
-than a later addition.
+**Nothing, since 2026-09-23, and this section is kept rather than deleted because what it said was
+the reason `LIST_HEAD` and `LIST_TAIL` are constants here.** It named two things: the structural
+recursion theorem, `!a g. ?f. f WORD_EMPTY = a /\ (!x w. f (LIST_CONS x w) = g x w (f w))`, and a
+consumer development writing with lists what this repository today writes with the coding or with
+`word`. Both landed the same day, by the route settled here — `Recursion.theorem` on `num` at result
+type `word('a) -> 'b`, with `f w = F (WORD_LENGTH w) w`, and uniqueness by `LIST_INDUCT` — and
+`docs/adr/0039` is the record of what the consumer decided, which is that its step discards the tail
+and that it is a link of its own rather than three more facts here.
+
+The section is updated instead of being left standing because a list of what is missing is the one
+kind of list nothing goes red over: every other figure in this repository is pinned by a test that
+fails when it moves, and a gap that has been filled fails nothing at all. That has happened here
+once before, to the list `docs/adr/0013` keeps.

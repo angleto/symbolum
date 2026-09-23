@@ -313,7 +313,12 @@ object Library {
         // The list interface, 2026-09-23, in the change that added the link, for the reason the
         // three notes above give. It declares no type: `docs/adr/0038` is why a list here is an
         // orientation on `word` rather than a carrier of its own.
-        collect("Listing", chain.listing.facts)
+        collect("Listing", chain.listing.facts) ++
+        // The fold, 2026-09-23, in the change that added it. It is a development of its own and
+        // not more of `Listing` because it is that interface's CONSUMER: `LIST_FOLD` is defined by
+        // `LIST_RECURSION`, and a recursion theorem nobody spends is a capability rather than a
+        // fact.
+        collect("Folding", chain.folding.facts)
     )
 
   /** A library over developments a caller names itself. */

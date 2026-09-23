@@ -230,6 +230,7 @@ object Spellings {
       .operator("LIST_CONS", 2, "#1 :: #2", Multiplicative)
       .delimited("LIST_HEAD", 1, "\\mathrm{hd}(#1)")
       .delimited("LIST_TAIL", 1, "\\mathrm{tl}(#1)")
+      .delimited("LIST_FOLD", 3, "\\mathrm{fold}_{#1}(#2, #3)")
       /* ---------------------------------------------------------- the matrix */
       .delimited("MAT2", 4, "\\begin{pmatrix} #1 & #2 \\\\ #3 & #4 \\end{pmatrix}")
       .delimited("MAT_ID", 0, "I")

@@ -105,6 +105,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // here is an orientation on `word` rather than a carrier, so what it adds to the chain is
     // cons, a head, a tail and the induction that descends from the left.
     "Listing" -> InTheChain,
+    // 2026-09-23, the same day and the link above this one's consumer. It declares one constant,
+    // `LIST_FOLD`, defined by `LIST_RECURSION`, which is what makes that theorem something this
+    // repository spends rather than something it holds.
+    "Folding" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,
