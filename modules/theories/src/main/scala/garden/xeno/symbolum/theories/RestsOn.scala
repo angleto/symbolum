@@ -151,7 +151,9 @@ object Reach {
         // The list interface, 2026-09-23, in the change that added the link. It declares no
         // type, so the only place it shows up is here and in the two lists beside this one:
         // `docs/adr/0038` is why a list is an orientation on `word` and not a carrier.
-        "Listing" -> chain.listing.facts
+        "Listing" -> chain.listing.facts,
+        // Its consumer the same day, in the change that added it, for the reason above.
+        "Folding" -> chain.folding.facts
       )
     )
 

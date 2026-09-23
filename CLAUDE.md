@@ -646,7 +646,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 617 lemmas, 407 have two or more leading quantifiers and **365 of
+caller meant: of the library's 622 lemmas, 412 have two or more leading quantifiers and **367 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -829,12 +829,43 @@ there is no coercion at any boundary. The distinctness and injectivity a carved 
 from its tags are theorems instead, `LIST_CONS_NOT_EMPTY` off the lengths and `LIST_CONS_INJECTIVE`
 off the head and the tail.
 
-What is **not** there and is named absent rather than left to be discovered: the **structural
-recursion theorem**, and a development that writes with lists what it today writes with the coding
-or with `word`. Those are what a *definition* needs, and an induction principle does not give them.
-`LIST_HEAD` and `LIST_TAIL` are constants here rather than terms built inside a proof precisely
-because that theorem's auxiliary function has to name them, which is the one place this development
-pays in advance for work it has not done.
+**`LIST_RECURSION` is what a *definition* needs, and `LIST_INDUCT` is not it.** Induction proves a
+property of every list and produces no function, so until the recursion theorem landed the interface
+could be used in a proof and not in a definition. `word('a)` is a defined type and the only recursion
+principle it has is the one it was carved with, which is `num`'s, so the function is built at one
+remove: `Recursion.theorem` at the result type `word('a) -> 'b` gives an `F : num -> word('a) -> 'b`
+and what the theorem asserts is `\w. F (WORD_LENGTH w) w`. **No induction happens in it**, which is
+worth saying because the statement looks like it should need one: the empty word's length is `ZERO`
+and a cons's is `SUC (WORD_LENGTH w)`, so each of `F`'s own two equations fires once and
+`LIST_HEAD_CONS` and `LIST_TAIL_CONS` read the arguments back. That step is why `LIST_HEAD` and
+`LIST_TAIL` are constants here rather than terms built inside a proof: it has to name them.
+`LIST_RECURSION_UNIQUE` is beside it and not a `?!`, this logic having no unique-existence
+quantifier, which is how `Recursion.Statement` on `num` is written for the same reason.
+
+**The consumer is `Folding`, a link of the same day, and it is what makes that theorem a fact this
+repository spends rather than one it holds.** `LIST_FOLD g a (LIST_CONS x w)` is
+`g x (LIST_FOLD g a w)`: one constant, no axiom, no type, defined by the recursion and not provable
+into existence without it. Its step is handed the letter and the value so far and **not** the tail,
+which `docs/adr/0039` decides and which is not a simplification: `LIST_FOLD_CONCAT` is **false** for
+a step that can read the tail, because at `LIST_CONS x u` one side's tail is `WORD_CONCAT u v` and
+the other's is `u`. A caller wanting the general form has `LIST_RECURSION` itself.
+
+What the consumer measures is the difference the orientation buys, against a lemma this repository
+already holds. `Concatenation.WORD_CONCAT_TALLY` splits an aggregate over a word by **position**, so
+the right half's letters are re-read `NUM_ADD (WORD_LENGTH u) i` further along and every consumer
+carries that correction whether it weighs by position or not; `LIST_FOLD_CONCAT` carries none, and
+`FoldingSpec` asserts that by walking the constants each of the two statements names rather than
+leaving it in prose. The other half of the same sentence is the cost: a fold cannot express a
+measure that weighs a letter by where it sits, `S2_PHI` is the consumer that wants one, and the
+tally is not superseded.
+
+**And what could have gone vacuous is guarded by spending both theorems at once.** An existential
+nobody discharges and an implication nobody detaches read exactly like facts. `ListingSpec` takes
+the witness at the step `\x. \w. \r. SUC r` and the start `ZERO`, observes that `WORD_LENGTH`
+satisfies those two equations already — `WORD_EMPTY_LENGTH` is the first and `LIST_CONS_LENGTH` is
+the second — and closes with the uniqueness. What comes out is that the function the recursion
+produced **is** `WORD_LENGTH`, owing nothing, which is a theorem this repository proved long before
+either principle existed.
 
 Number theory on `num` is `Modular`, a link in the chain since 2026-09-12: divisibility with the
 antisymmetry that is false over a field, congruences with their compatibility with addition and

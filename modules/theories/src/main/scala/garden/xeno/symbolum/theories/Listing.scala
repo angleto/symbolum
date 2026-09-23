@@ -137,6 +137,55 @@ object Listing {
    */
   val Induct: String = "LIST_INDUCT"
 
+  /**
+   * `|- !a g. ?f. f WORD_EMPTY = a /\ (!x w. f (LIST_CONS x w) = g x w (f w))`
+   *
+   * Structural recursion, which is what a **definition** needs and what [[Induct]] does not give.
+   * Induction proves a property of every list; it does not produce a function, and until this
+   * landed the interface could be used in a proof and not in a definition.
+   *
+   * == Why the auxiliary function recurses on a number ==
+   *
+   * `word('a)` is a defined type and the only recursion principle it has is the one it was carved
+   * with, which is `num`'s. So the function is built at one remove: `Recursion.theorem` at the
+   * result type `word('a) -> 'b` gives an `F : num -> word('a) -> 'b` with
+   *
+   * {{{
+   *   F ZERO    = \w. a
+   *   F (SUC n) = \w. g (LIST_HEAD w) (LIST_TAIL w) (F n (LIST_TAIL w))
+   * }}}
+   *
+   * and the witness is `\w. F (WORD_LENGTH w) w`. The two equations come out of it with **no
+   * induction at all**: at the empty word the length is `ZERO`, and at a cons it is
+   * `SUC (WORD_LENGTH w)` by [[ConsLength]], so the step's own equation fires once and
+   * [[HeadOfCons]] and [[TailOfCons]] read the two arguments back. That the step's recursive call
+   * lands on `w` rather than on something shorter-by-accident is [[TailOfCons]] and nothing else.
+   *
+   * **This is where [[Head]] and [[Tail]] being constants is spent.** `docs/adr/0038` says they are
+   * constants rather than terms built inside a proof because the step above has to name them, and
+   * this is the theorem that names them. `Concatenation` builds the front of a word inside its own
+   * induction and writes that nobody had asked for a name; something asks here.
+   *
+   * == The uniqueness is a second theorem and not a `?!` ==
+   *
+   * This logic has no unique-existence quantifier, so [[RecursionUnique]] states the other half
+   * separately. `Recursion.Statement` on `num` is written the same way for the same reason.
+   */
+  val RecursionTheorem: String = "LIST_RECURSION"
+
+  /**
+   * `|- !a g f h. <f satisfies the two equations> /\ <h satisfies them> ==> f = h`
+   *
+   * The other half of [[RecursionTheorem]]. [[Induct]] on `\w. f w = h w`, then `Classical.ext`:
+   * the base is the two values at the empty word being one and the same `a`, and the step rewrites
+   * the recursive call with the induction hypothesis under `g`.
+   *
+   * A consumer that defines a constant from [[RecursionTheorem]] gets its two equations and
+   * **nothing saying they pin it down**; that is what this supplies, and it is what makes a
+   * definition by recursion a definition rather than a choice among many.
+   */
+  val RecursionUnique: String = "LIST_RECURSION_UNIQUE"
+
   /* ------------------------------------------------------------------- the types */
 
   private val Element: Type = TyVar(Classical.TypeVariable)
@@ -202,7 +251,17 @@ object Listing {
     Induct ->
       ("!P:word('a)->bool. P WORD_EMPTY /\\ " +
         "(!x:'a. !w:word('a). P w ==> P (LIST_CONS x w)) ==> " +
-        "!w:word('a). P w")
+        "!w:word('a). P w"),
+    RecursionTheorem ->
+      ("!a:'b. !g:'a->word('a)->'b->'b. ?f:word('a)->'b. " +
+        "f WORD_EMPTY = a /\\ " +
+        "(!x:'a. !w:word('a). f (LIST_CONS x w) = g x w (f w))"),
+    RecursionUnique ->
+      ("!a:'b. !g:'a->word('a)->'b->'b. !f:word('a)->'b. !h:word('a)->'b. " +
+        "(f WORD_EMPTY = a /\\ " +
+        "(!x:'a. !w:word('a). f (LIST_CONS x w) = g x w (f w))) /\\ " +
+        "(h WORD_EMPTY = a /\\ " +
+        "(!x:'a. !w:word('a). h (LIST_CONS x w) = g x w (h w))) ==> f = h")
   )
 
   /** The development in the chain's signature, which is the one a consumer reaches for. */
@@ -258,6 +317,9 @@ object Listing {
       induct <- consInduction(
         logic, theory, notation, tailDefinition, headDefinition,
         consLength, consNth, headOfCons, held)
+      recursion <- structuralRecursion(
+        logic, theory, notation, consLength, headOfCons, tailOfCons, held)
+      recursionUnique <- recursionIsUnique(logic, theory, notation, induct, held)
 
       facts = Map(
         ConsLength -> consLength,
@@ -267,7 +329,9 @@ object Listing {
         TailOfCons -> tailOfCons,
         ConsInjective -> consInjective,
         Cases -> cases,
-        Induct -> induct
+        Induct -> induct,
+        RecursionTheorem -> recursion,
+        RecursionUnique -> recursionUnique
       )
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
@@ -1218,6 +1282,341 @@ object Listing {
     } yield result
   }
 
+  /**
+   * [[RecursionTheorem]]: `Recursion.theorem` at the result type `word('a) -> 'b`, read at the
+   * length.
+   *
+   * The auxiliary function is `F : num -> word('a) -> 'b` with `F ZERO = \w. a` and
+   * `F (SUC n) = \w. g (LIST_HEAD w) (LIST_TAIL w) (F n (LIST_TAIL w))`, and the function the
+   * theorem asserts is `\w. F (WORD_LENGTH w) w`. **The type substitution is the one place to read
+   * carefully**: the recursion theorem's own variable is `'a` and so is the element type of
+   * `word('a)`, and what makes writing `'a := word('a) -> 'b` right rather than a collision is that
+   * type substitution is simultaneous and does not walk into what it substitutes.
+   * `Word.atEncoding` does exactly this and says so.
+   *
+   * **No induction happens here**, which is worth saying because the statement looks like it should
+   * need one. The empty word's length is `ZERO` by `WORD_EMPTY_LENGTH`, so `F`'s first equation
+   * fires; a cons's length is `SUC (WORD_LENGTH w)` by [[ConsLength]], so `F`'s second equation
+   * fires once, and [[HeadOfCons]] and [[TailOfCons]] turn what it produced into `g x w (f w)`.
+   * The induction is inside `Recursion.theorem` and is spent there.
+   *
+   * Everything is built at the variables the parsed statement binds rather than at variables named
+   * here, for [[theCases]]'s reason: `existsIntro` compares against the predicate's own
+   * beta-contraction, so a proof about a differently-named word is refused rather than accepted.
+   */
+  private def structuralRecursion(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    consLength: Kernel.Thm,
+    headOfCons: Kernel.Thm,
+    tailOfCons: Kernel.Thm,
+    held: Held
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      goal <- Parser.proposition(theory, notation, Statements.toMap.apply(RecursionTheorem))
+      stripped <- Logic.stripForall(goal)
+      start <- stripped._1.headOption.toRight(
+        NotOfForm("a claim about every starting value", goal)
+      )
+      stepper <- stripped._1.drop(1).headOption.toRight(
+        NotOfForm("a claim about every step", goal)
+      )
+      predicate <- logic
+        .destExistsPredicate(stripped._2)
+        .toRight(NotOfForm("an existential quantification", stripped._2))
+
+      headConstant <- LogicError.lift(theory.constant(Head, headType))
+      tailConstant <- LogicError.lift(theory.constant(Tail, tailType))
+      lengthConstant <- LogicError.lift(theory.constant(Word.Length, lengthType))
+      consConstant <- LogicError.lift(theory.constant(Cons, consType))
+      empty <- LogicError.lift(theory.constant(Concatenation.Empty, Words))
+
+      results = Term.typeOf(start)
+      functions = Type.fun(Words, results)
+
+      // The variables the statement BINDS, not only those free in it: the goal is closed, so what
+      // is free in it is empty, and a variable chosen fresh against that set is free to collide
+      // with a binder the statement already spent.
+      taken = Term.freeVariables(goal) ++ stripped._1.toSet
+
+      // `\w. a` and `\p. \n. \w. g (LIST_HEAD w) (LIST_TAIL w) (p (LIST_TAIL w))`, which are the
+      // two arguments `Recursion.theorem` takes. The step ignores the index, because a list's
+      // recursive call is at its own tail rather than at a smaller number the caller can see.
+      ignored = Conv.freshVariable("w", Words, taken)
+      startFunction <- LogicError.lift(Term.abs(ignored, start))
+
+      previous = Conv.freshVariable("p", functions, taken)
+      index = Conv.freshVariable("n", Numbers, taken + previous)
+      subject = Conv.freshVariable("w", Words, taken + previous + index)
+      headOfSubject <- LogicError.lift(Term.app(headConstant, subject))
+      tailOfSubject <- LogicError.lift(Term.app(tailConstant, subject))
+      recursiveCall <- LogicError.lift(Term.app(previous, tailOfSubject))
+      stepBody <- LogicError.lift(
+        Term.appAll(stepper, List(headOfSubject, tailOfSubject, recursiveCall))
+      )
+      stepFunction <- LogicError.lift(
+        Term.absAll(List(previous, index, subject), stepBody)
+      )
+
+      atFunctions = Kernel.instType(Map(Classical.TypeVariable -> functions), held.recursion)
+      instance <- rules.specAll(atFunctions, List(startFunction, stepFunction))
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+
+      // The auxiliary function, assumed to satisfy the two equations `Recursion.theorem` gives.
+      auxiliary = Conv.freshVariable("F", Type.fun(Numbers, functions), taken)
+      auxiliaryPredicate <- logic
+        .destExistsPredicate(opened.conclusion)
+        .toRight(NotOfForm("an existential quantification", opened.conclusion))
+      applied <- LogicError.lift(Term.app(auxiliaryPredicate, auxiliary))
+      contraction <- Conv.betaRoot(applied)
+      bodyTerm <- rightOf(contraction)
+      assumed <- LogicError.lift(Kernel.assume(bodyTerm))
+      atZero <- rules.conjElim1(assumed)
+      atStep <- rules.conjElim2(assumed)
+
+      // The function the theorem asserts: read the auxiliary at the word's own length.
+      witnessWord = Conv.freshVariable("w", Words, taken + auxiliary)
+      lengthOfWitnessWord <- LogicError.lift(Term.app(lengthConstant, witnessWord))
+      readOff <- LogicError.lift(
+        Term.appAll(auxiliary, List(lengthOfWitnessWord, witnessWord))
+      )
+      witness <- LogicError.lift(Term.abs(witnessWord, readOff))
+
+      // What `existsIntro` will compare against, taken apart so that the two halves are built at
+      // exactly the terms it expects rather than at terms rebuilt from the statement by hand.
+      wanted <- LogicError.lift(Term.app(predicate, witness)).flatMap(Conv.betaRoot).flatMap(rightOf)
+      halves <- logic.destConj(wanted).toRight(NotOfForm("a conjunction", wanted))
+      (atEmptyTarget, atConsTarget) = halves
+
+      base <- valueAtTheEmptyList(witness, empty, auxiliary, atZero, held)
+      _ <-
+        if (base.conclusion == atEmptyTarget) Right(())
+        else Left(NotOfForm("the value at the empty list as it is written", base.conclusion))
+
+      stepStripped <- Logic.stripForall(atConsTarget)
+      letter <- stepStripped._1.headOption.toRight(
+        NotOfForm("a claim about every letter", atConsTarget)
+      )
+      word <- stepStripped._1.drop(1).headOption.toRight(
+        NotOfForm("a claim about every word", atConsTarget)
+      )
+      stepValue <- valueAtACons(
+        logic, witness, (auxiliary, stepper, consConstant, lengthConstant),
+        (letter, word), atStep, consLength, headOfCons, tailOfCons)
+      step <- rules.genAll(stepValue, List(letter, word))
+      _ <-
+        if (step.conclusion == atConsTarget) Right(())
+        else Left(NotOfForm("the value at a cons as it is written", step.conclusion))
+
+      conjoined <- rules.conjIntro(base, step)
+      built <- rules.existsIntro(predicate, witness, conjoined)
+      closed <- rules.existsElim(opened, auxiliary, built)
+      result <- rules.genAll(closed, List(start, stepper))
+      _ <-
+        if (result.conclusion == goal) Right(())
+        else Left(NotOfForm("the recursion as it is written", result.conclusion))
+    } yield result
+  }
+
+  /**
+   * `|- (\w. F (WORD_LENGTH w) w) WORD_EMPTY = a`, from `|- F ZERO = \w. a`.
+   *
+   * The application is left unreduced on the left, because that is the form `existsIntro` compares
+   * against: it contracts the predicate at the witness and reduces the root only, so an inner
+   * redex it did not touch has to survive in what is handed to it.
+   */
+  private def valueAtTheEmptyList(
+    witness: Term,
+    empty: Term,
+    auxiliary: Term,
+    atZero: Kernel.Thm,
+    held: Held
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      unfolded <- LogicError.lift(Term.app(witness, empty)).flatMap(Conv.betaRoot)
+      atLengthZero <- Conv.apTerm(auxiliary, held.emptyLength).flatMap(Conv.apThm(_, empty))
+      chosen <- Conv.apThm(atZero, empty)
+      value <- rightOf(chosen).flatMap(Conv.betaRoot).flatMap(Conv.trans(chosen, _))
+      result <- Conv
+        .trans(unfolded, atLengthZero)
+        .flatMap(Conv.trans(_, value))
+    } yield result
+
+  /**
+   * `|- (\w. F (WORD_LENGTH w) w) (LIST_CONS x w) = g x w ((\w. F (WORD_LENGTH w) w) w)`.
+   *
+   * The whole of the recursion's step, and it is three rewrites over one equation of `F`. The
+   * cons's length is `SUC (WORD_LENGTH w)`, so `F`'s successor equation applies and produces
+   * `g (LIST_HEAD (cons x w)) (LIST_TAIL (cons x w)) (F (WORD_LENGTH w) (LIST_TAIL (cons x w)))`;
+   * the head is `x` and the two tails are `w`, and the recursive call is then `F (WORD_LENGTH w) w`,
+   * which is the witness at `w` read backwards.
+   *
+   * The congruences are built by hand rather than by the rewriter because the tail occurs twice in
+   * one term and the two occurrences are reached from different operators, so what a rewrite pass
+   * would do here is what these five steps do and it would do it without saying where.
+   */
+  private def valueAtACons(
+    logic: Logic,
+    witness: Term,
+    constants: (Term, Term, Term, Term),
+    arguments: (Term, Term),
+    atStep: Kernel.Thm,
+    consLength: Kernel.Thm,
+    headOfCons: Kernel.Thm,
+    tailOfCons: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (auxiliary, stepper, consConstant, lengthConstant) = constants
+    val (letter, word) = arguments
+
+    for {
+      consed <- LogicError.lift(Term.appAll(consConstant, List(letter, word)))
+      unfolded <- LogicError.lift(Term.app(witness, consed)).flatMap(Conv.betaRoot)
+
+      measured <- rules.specAll(consLength, List(letter, word))
+      movedIndex <- Conv.apTerm(auxiliary, measured).flatMap(Conv.apThm(_, consed))
+
+      lengthOfWord <- LogicError.lift(Term.app(lengthConstant, word))
+      stepped <- rules.spec(lengthOfWord, atStep).flatMap(Conv.apThm(_, consed))
+      produced <- rightOf(stepped).flatMap(Conv.betaRoot).flatMap(Conv.trans(stepped, _))
+
+      headEquation <- rules.specAll(headOfCons, List(letter, word))
+      tailEquation <- rules.specAll(tailOfCons, List(letter, word))
+      tailOfConsed <- leftOf(tailEquation)
+      atLength <- LogicError.lift(Term.app(auxiliary, lengthOfWord))
+      call <- LogicError.lift(Term.app(atLength, tailOfConsed))
+      applied <- LogicError.lift(Term.app(stepper, letter))
+      both <- LogicError.lift(Term.appAll(stepper, List(letter, word)))
+
+      // `g <head> <tail> = g x w`, in two congruences, then carried to the recursive call.
+      outer <- Conv
+        .apTerm(stepper, headEquation)
+        .flatMap(Conv.apThm(_, tailOfConsed))
+        .flatMap(step => Conv.apTerm(applied, tailEquation).flatMap(Conv.trans(step, _)))
+      carried <- Conv.apThm(outer, call)
+
+      // `F (WORD_LENGTH w) <tail> = F (WORD_LENGTH w) w`, which is the witness at `w` backwards.
+      inner <- Conv.apTerm(atLength, tailEquation)
+      movedCall <- Conv.apTerm(both, inner)
+      folded <- LogicError.lift(Term.app(witness, word))
+        .flatMap(Conv.betaRoot)
+        .flatMap(Conv.sym)
+        .flatMap(Conv.apTerm(both, _))
+
+      result <- Conv
+        .trans(unfolded, movedIndex)
+        .flatMap(Conv.trans(_, produced))
+        .flatMap(Conv.trans(_, carried))
+        .flatMap(Conv.trans(_, movedCall))
+        .flatMap(Conv.trans(_, folded))
+    } yield result
+  }
+
+  /**
+   * [[RecursionUnique]]: [[Induct]] on `\w. f w = h w`, then function extensionality.
+   *
+   * The base is that both sides are the same `a` at the empty word, which is one `Conv.sym` and one
+   * `Conv.trans`; the step rewrites the recursive call under `g` with the induction hypothesis, and
+   * is where the hypothesis is genuinely spent. `Classical.ext` is taken against **this**
+   * development's logic rather than the classical one, because eta has to be specialised at the
+   * function type and `Classical.standard` has never heard of `word`.
+   */
+  private def recursionIsUnique(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    induct: Kernel.Thm,
+    held: Held
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+
+    for {
+      goal <- Parser.proposition(theory, notation, Statements.toMap.apply(RecursionUnique))
+      stripped <- Logic.stripForall(goal)
+      variables = stripped._1
+      stepper <- variables.drop(1).headOption.toRight(NotOfForm("a claim about every step", goal))
+      first <- variables.drop(2).headOption.toRight(NotOfForm("a claim about a function", goal))
+      second <- variables.drop(3).headOption.toRight(NotOfForm("a claim about a function", goal))
+      parts <- logic.destImp(stripped._2).toRight(NotOfForm("an implication", stripped._2))
+      (hypothesisTerm, conclusionTerm) = parts
+      assumed <- LogicError.lift(Kernel.assume(hypothesisTerm))
+      firstHalf <- rules.conjElim1(assumed)
+      secondHalf <- rules.conjElim2(assumed)
+      firstAtEmpty <- rules.conjElim1(firstHalf)
+      firstAtCons <- rules.conjElim2(firstHalf)
+      secondAtEmpty <- rules.conjElim1(secondHalf)
+      secondAtCons <- rules.conjElim2(secondHalf)
+
+      consConstant <- LogicError.lift(theory.constant(Cons, consType))
+      empty <- LogicError.lift(theory.constant(Concatenation.Empty, Words))
+
+      // `\w. f w = h w`, the predicate the induction runs on. `taken` is what the statement binds
+      // rather than what is free in it, for the reason [[structuralRecursion]] gives.
+      taken = Term.freeVariables(goal) ++ variables.toSet
+      subject = Conv.freshVariable("w", Words, taken)
+      onTheLeft <- LogicError.lift(Term.app(first, subject))
+      onTheRight <- LogicError.lift(Term.app(second, subject))
+      agreement <- LogicError.lift(Term.eq(onTheLeft, onTheRight))
+      predicate <- LogicError.lift(Term.abs(subject, agreement))
+
+      instance <- rules.spec(predicate, induct)
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      premises <- logic
+        .destImp(opened.conclusion)
+        .toRight(NotOfForm("an implication", opened.conclusion))
+      halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
+      (baseTerm, stepTerm) = halves
+
+      // The base: both are `a` at the empty word, so they are each other.
+      base <- Conv.sym(secondAtEmpty).flatMap(Conv.trans(firstAtEmpty, _))
+      _ <-
+        if (base.conclusion == baseTerm) Right(())
+        else Left(NotOfForm("the two functions agreeing at the empty list", base.conclusion))
+
+      stepStripped <- Logic.stripForall(stepTerm)
+      letter <- stepStripped._1.headOption.toRight(
+        NotOfForm("a claim about every letter", stepTerm)
+      )
+      word <- stepStripped._1.drop(1).headOption.toRight(
+        NotOfForm("a claim about every word", stepTerm)
+      )
+      stepParts <- logic
+        .destImp(stepStripped._2)
+        .toRight(NotOfForm("an implication", stepStripped._2))
+      hypothesis <- LogicError.lift(Kernel.assume(stepParts._1))
+
+      leftAtCons <- rules.specAll(firstAtCons, List(letter, word))
+      rightAtCons <- rules.specAll(secondAtCons, List(letter, word))
+      applied <- LogicError.lift(Term.appAll(stepper, List(letter, word)))
+      underG <- Conv.apTerm(applied, hypothesis)
+      reached <- Conv
+        .trans(leftAtCons, underG)
+        .flatMap(step => Conv.sym(rightAtCons).flatMap(Conv.trans(step, _)))
+      step <- rules
+        .disch(stepParts._1, reached)
+        .flatMap(rules.genAll(_, List(letter, word)))
+
+      everywhere <- rules.conjIntro(base, step).flatMap(rules.mp(opened, _))
+      equal <- held.classical.ext(logic, everywhere)
+      _ <-
+        if (equal.conclusion == conclusionTerm) Right(())
+        else Left(NotOfForm("the two functions being one", equal.conclusion))
+
+      discharged <- rules.disch(hypothesisTerm, equal)
+      result <- rules.genAll(discharged, variables.toList)
+      _ <-
+        if (result.conclusion == goal) Right(())
+        else Left(NotOfForm("the uniqueness as it is written", result.conclusion))
+    } yield result
+  }
+
   /* ------------------------------------------------------------------- internals */
 
   /**
@@ -1302,6 +1701,9 @@ object Listing {
   private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
     Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))
 
+  private def leftOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+    Term.destEq(theorem.conclusion).map(_._1).toRight(NotOfForm("an equation", theorem.conclusion))
+
 
   /**
    * The facts this file needs from the developments below it, collected once and named.
@@ -1333,7 +1735,8 @@ object Listing {
     addCancelsStrictOrder: Kernel.Thm,
     preAtSuccessor: Kernel.Thm,
     notBelowZero: Kernel.Thm,
-    zeroOrSuccessor: Kernel.Thm
+    zeroOrSuccessor: Kernel.Thm,
+    recursion: Kernel.Thm
   )
 
   private object Held {
@@ -1365,6 +1768,7 @@ object Listing {
         preAtSuccessor <- peano.fact(Peano.PreAtSuccessor)
         notBelowZero <- peano.fact(Peano.NotBelowZero)
         zeroOrSuccessor <- peano.naturals.fact(Natural.ZeroOrSuccessor)
+        recursion <- peano.naturals.recursion
       } yield Held(
         classical,
         emptyLength,
@@ -1388,7 +1792,8 @@ object Listing {
         addCancelsStrictOrder,
         preAtSuccessor,
         notBelowZero,
-        zeroOrSuccessor
+        zeroOrSuccessor,
+        recursion
       )
   }
 }

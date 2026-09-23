@@ -345,7 +345,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 418 with `MUL_INV_COMBINE`'s four antecedents; the other two carry none.
     // 420 with the list interface, 2026-09-23: `LIST_CONS_INJECTIVE` and `LIST_INDUCT` carry one
     // antecedent each and the other six facts of that development carry none.
-    proposals.size shouldBe 420
+    // 421 with the structural recursion theorem and the fold, 2026-09-23: `LIST_RECURSION_UNIQUE`
+    // carries one antecedent and the other four facts of those two developments carry none.
+    proposals.size shouldBe 421
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1486,7 +1488,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // correction. **And this assertion sat behind that one again**, so it did not run on the
     // pass that moved it: the fifth time this file has recorded that, and the second time
     // the figure behind it was also moving.
-    unreadable shouldBe 99
+    // 100 with the weakening residue of `LIST_RECURSION_UNIQUE`, 2026-09-23. Dropping its one
+    // antecedent leaves `!a g f h. f = h`, which is false and which names **no constant at all**,
+    // so there is nothing for a model here to address and the criterion two rows up sends it to
+    // this bucket rather than to `open`. Read off the run rather than predicted.
+    unreadable shouldBe 100
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

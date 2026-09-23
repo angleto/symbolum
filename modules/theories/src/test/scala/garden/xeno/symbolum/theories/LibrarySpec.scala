@@ -56,7 +56,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // The list interface, 2026-09-23, added here in the change that added the link rather
       // than after this sum caught it, which is what the four comments above record happening
       // four times.
-      chain.listing.facts.size
+      chain.listing.facts.size +
+      // Its consumer, the same day and the same discipline. `Folding` is a development of its own
+      // rather than more of `Listing` because it SPENDS that interface's recursion theorem instead
+      // of publishing it, and a development of its own is one this sum has to name.
+      chain.folding.facts.size
 
     library.entries.size shouldBe expected
 
@@ -589,8 +593,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // six of the eight bind two or more leading quantifiers, and of those only `LIST_CASES`'s
     // sibling `LIST_CONS_INJECTIVE` binds a pair sharing a type, `'a` with `'a` and
     // `word('a)` with `word('a)`.
-    library.entries.size shouldBe 617
-    library.names.distinct.size shouldBe 614
+    // 622 and 619 with the structural recursion theorem and the fold, 2026-09-23. Five facts under
+    // five names, none shared, so the gap of three does not move. `CLAUDE.md`'s two figures move by
+    // **five** and **two**, derived before the run and met: all five bind two or more leading
+    // quantifiers, and the two with a pair sharing a type are `LIST_RECURSION_UNIQUE`, whose `f`
+    // and `h` are both `word('a) -> 'b`, and `LIST_FOLD_CONCAT`, whose `u` and `v` are both
+    // `word('a)`. The other three bind a step, a start and at most one word between them.
+    library.entries.size shouldBe 622
+    library.names.distinct.size shouldBe 619
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

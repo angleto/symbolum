@@ -147,6 +147,12 @@ they have least appetite for working out how it is produced.
   DIVIDES_ZERO             !x:real. Divides x 0
   ZERO_DIVIDES             !x:real. Divides 0 x = (x = 0)
 
+## Folding
+
+  LIST_FOLD_CONCAT         !x:'a -> 'b -> 'b. !y:'b. !z:word('a). !u:word('a). LIST_FOLD x y (WORD_CONCAT z u) = LIST_FOLD x (LIST_FOLD x y u) z
+  LIST_FOLD_CONS           !x:'a -> 'b -> 'b. !y:'b. !z:'a. !u:word('a). LIST_FOLD x y (LIST_CONS z u) = x z (LIST_FOLD x y u)
+  LIST_FOLD_EMPTY          !x:'a -> 'b -> 'b. !y:'b. LIST_FOLD x y WORD_EMPTY = y
+
 ## Forward
 
   WORD_RFC_EXTEND          !x:word('a) -> word('a) -> bool. !y:word('a). !z:word('a). !u:word('a). !v:word('a). WORD_RFC x (WORD_CONCAT y z) /\ x (WORD_CONCAT z u) v /\ ~(z = WORD_EMPTY) /\ ~(u = WORD_EMPTY) ==> WORD_RFC x (WORD_CONCAT y v)
@@ -346,6 +352,8 @@ they have least appetite for working out how it is produced.
   LIST_CONS_NTH            !x:'a. !y:word('a). !z:num. WORD_NTH (LIST_CONS x y) (SUC z) = WORD_NTH y z
   LIST_HEAD_CONS           !x:'a. !y:word('a). LIST_HEAD (LIST_CONS x y) = x
   LIST_INDUCT              !x:word('a) -> bool. x WORD_EMPTY /\ (!y:'a. !z:word('a). x z ==> x (LIST_CONS y z)) ==> (!y:word('a). x y)
+  LIST_RECURSION           !x:'b. !y:'a -> word('a) -> 'b -> 'b. ?z:word('a) -> 'b. z WORD_EMPTY = x /\ (!u:'a. !v:word('a). z (LIST_CONS u v) = y u v (z v))
+  LIST_RECURSION_UNIQUE    !x:'b. !y:'a -> word('a) -> 'b -> 'b. !z:word('a) -> 'b. !u:word('a) -> 'b. (z WORD_EMPTY = x /\ (!v:'a. !w:word('a). z (LIST_CONS v w) = y v w (z w))) /\ u WORD_EMPTY = x /\ (!v:'a. !w:word('a). u (LIST_CONS v w) = y v w (u w)) ==> z = u
   LIST_TAIL_CONS           !x:'a. !y:word('a). LIST_TAIL (LIST_CONS x y) = y
 
 ## Magnitude

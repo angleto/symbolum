@@ -293,7 +293,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 420 with the list interface, 2026-09-23, and the **two** were derived before the run:
     // `LIST_CONS_INJECTIVE` and `LIST_INDUCT` each carry one antecedent, and the other six
     // facts of that development carry none.
-    propose.weakenings.size shouldBe 420
+    // 421 with the structural recursion theorem and the fold, 2026-09-23. The **one** is
+    // `LIST_RECURSION_UNIQUE`'s single antecedent, the two developments' other four facts carrying
+    // none: `LIST_RECURSION` is an existential owing nothing and the three fold facts are bare
+    // equations. Read off the run and reconciled against that reading rather than predicted before
+    // it, which is the difference this file's rows are careful to record.
+    propose.weakenings.size shouldBe 421
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
