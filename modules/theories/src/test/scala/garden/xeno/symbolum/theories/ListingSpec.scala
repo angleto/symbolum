@@ -1,0 +1,275 @@
+package garden.xeno.symbolum.theories
+
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import garden.xeno.symbolum.kernel.*
+import garden.xeno.symbolum.logic.*
+
+/**
+ * The list interface over `word`, and the four questions that decide whether it is worth anything.
+ *
+ * **What it cost.** Three defined constants and no axiom, asserted as a difference against the
+ * theory this link extends rather than against a number, which is `ConcatenationSpec`'s argument
+ * and the same one. **And no type**: `docs/adr/0038` is the decision, so the assertion that the
+ * type operators do not move is the one carrying it and not decoration.
+ *
+ * **What it says.** Each fact is compared against the text `Listing.Statements` holds, as a
+ * **term**: a type variable is written `'a` and printed `a`, so a printed polymorphic statement
+ * does not read back and parsing the text is the stronger check anyway.
+ *
+ * **Whether the two constructors are really two.** A development in which `LIST_CONS x w` could be
+ * `WORD_EMPTY` would satisfy every equation below and would be useless, and so would one in which
+ * two conses could be equal without their arguments being. Both are derived at a concrete pair
+ * rather than left to the general statement, because a general statement about an empty case is
+ * true.
+ *
+ * **Whether the induction can be SPENT.** This is the one that could go vacuous without anything
+ * noticing: an induction principle is an implication, and a file that only ever asserts the
+ * implication exists has not shown that its premises can be discharged. The last test discharges
+ * both and reaches a conclusion, and the conclusion is a theorem this repository already holds by
+ * another route -- `WORD_CONCAT_EMPTY_RIGHT` -- so what comes out is compared against it rather
+ * than merely inspected. Re-deriving a known fact is the point: the subject of the test is the
+ * principle, and the strongest available check on what the principle produced is a theorem proved
+ * without it.
+ */
+class ListingSpec extends AnyFlatSpec with Matchers {
+
+  private def force[T](result: Either[LogicError, T]): T =
+    result.fold(error => fail(s"unexpected refusal: ${error.message}"), identity)
+
+  private val listing = Listing.standard
+  private val logic = listing.logic
+  private val rules = logic.rules
+
+  private def fact(name: String): Kernel.Thm = force(listing.fact(name))
+
+  private val numbers: Type = TyApp(Natural.TypeName, Nil)
+  private val element: Type = TyVar(Classical.TypeVariable)
+  private val words: Type = TyApp(Word.TypeName, List(element))
+  private val numberWords: Type = TyApp(Word.TypeName, List(numbers))
+
+  /** The whole development at `num` as the element type, which is what a concrete test needs. */
+  private def overNumbers(theorem: Kernel.Thm): Kernel.Thm =
+    Kernel.instType(Map(Classical.TypeVariable -> numbers), theorem)
+
+  private def term(text: String): Term =
+    force(Parser.term(listing.theory, listing.notation, text))
+
+  private def proposition(text: String): Term =
+    force(Parser.proposition(listing.theory, listing.notation, text))
+
+  /* --------------------------------------------------------------- what it cost */
+
+  "The list interface" should "be defined rather than assumed, and add no type" in {
+    // Against the theory it EXTENDS, which is `Inclusion`'s and not `Concatenation`'s. This
+    // development needs the concatenation and sits on top of the chain's end, and the two are
+    // different questions: a difference taken against `concatenation.theory` would come back
+    // holding every constant of the five links between them and say nothing about what this added.
+    val below = Chain.standard.inclusion.theory
+
+    listing.theory.axioms shouldBe below.axioms
+    (listing.theory.constants.keySet -- below.constants.keySet) shouldBe Set(
+      Listing.Cons,
+      Listing.Head,
+      Listing.Tail
+    )
+
+    // The claim `docs/adr/0038` rests on, and the reason this line is here rather than in prose: a
+    // list that carved a carrier would show up as a sixth type operator, and nothing else in this
+    // file would notice.
+    listing.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
+
+    Listing.Definitions.foreach { case (name, _) =>
+      listing.theory.definitions.keySet should contain(name)
+    }
+  }
+
+  it should "cost the naturals' two axioms and no more" in {
+    // An equality rather than a ceiling, which is `CodingSpec`'s discipline: a fact that quietly
+    // started spending a third axiom would pass a subset check.
+    val spent = Listing.Statements.flatMap { case (name, _) =>
+      listing.facts.get(name).toVector.flatMap(theorem => Derivation.axiomsOf(theorem).toVector)
+    }.toSet
+
+    // `Derivation.axiomsOf` answers with the axiom TERMS; the two developments hold them by
+    // name, so what is compared is the conclusions and not the pairs.
+    val naturals =
+      (Chain.standard.naturals.axioms.values ++ Chain.standard.classical.axioms.values)
+        .map(_.conclusion)
+        .toSet
+    withClue(s"what these facts rest on: ${spent.map(listing.show).mkString("; ")}\n") {
+      (spent -- naturals) shouldBe empty
+    }
+  }
+
+  /* ------------------------------------------------------------- what it says */
+
+  it should "prove every statement it publishes, owing nothing" in {
+    Listing.Statements.foreach { case (name, text) =>
+      val proved = fact(name)
+      withClue(s"$name: ") {
+        proved.hypotheses shouldBe empty
+        proved.conclusion shouldBe proposition(text)
+      }
+    }
+  }
+
+  it should "publish a fact for every name in its statement list" in {
+    // The half that goes empty if the list and the map drift apart: a statement nobody derived
+    // would be skipped by `construct`'s own check, which passes over a name it has no fact for so
+    // that the surface can be written down before it is built out. This is what says the building
+    // out finished.
+    Listing.Statements.map(_._1).toSet shouldBe listing.facts.keySet
+  }
+
+  /* --------------------------------- whether the two constructors are really two */
+
+  "A cons" should "be refused as the empty word at a concrete pair" in {
+    // `LIST_CONS_NOT_EMPTY` is general, so it is true of an empty domain. This detaches it.
+    val claim = proposition("~(LIST_CONS (ZERO:num) WORD_EMPTY = WORD_EMPTY)")
+    val refused = force(
+      rules.specAll(
+        overNumbers(fact(Listing.ConsNotEmpty)),
+        List(term("ZERO:num"), term("WORD_EMPTY:word(num)"))
+      )
+    )
+
+    refused.hypotheses shouldBe empty
+    refused.conclusion shouldBe claim
+  }
+
+  it should "give its two arguments back, at a concrete pair" in {
+    val subject = term("LIST_CONS (ZERO:num) WORD_EMPTY")
+
+    val head = force(
+      rules.specAll(
+        overNumbers(fact(Listing.HeadOfCons)),
+        List(term("ZERO:num"), term("WORD_EMPTY:word(num)"))
+      )
+    )
+    head.hypotheses shouldBe empty
+    head.conclusion shouldBe proposition("LIST_HEAD (LIST_CONS (ZERO:num) WORD_EMPTY) = ZERO")
+
+    val tail = force(
+      rules.specAll(
+        overNumbers(fact(Listing.TailOfCons)),
+        List(term("ZERO:num"), term("WORD_EMPTY:word(num)"))
+      )
+    )
+    tail.hypotheses shouldBe empty
+    tail.conclusion shouldBe
+      proposition("LIST_TAIL (LIST_CONS (ZERO:num) WORD_EMPTY) = WORD_EMPTY")
+  }
+
+  "The cases" should "be exhaustive and, at the empty word, decided by the left one" in {
+    // A disjunction is not a decision. This spends `LIST_CONS_NOT_EMPTY` against the right disjunct
+    // at the empty word, which is what makes the split a split rather than two overlapping cases.
+    val atEmpty = force(
+      rules.spec(term("WORD_EMPTY:word(num)"), overNumbers(fact(Listing.Cases)))
+    )
+    atEmpty.hypotheses shouldBe empty
+
+    val halves = logic
+      .destDisj(atEmpty.conclusion)
+      .getOrElse(fail(s"the cases are not a disjunction: ${atEmpty.conclusion}"))
+    halves._1 shouldBe proposition("(WORD_EMPTY:word(num)) = WORD_EMPTY")
+  }
+
+  /* ------------------------------ whether the induction can be spent */
+
+  "The cons induction" should "reach a conclusion this repository proves another way" in {
+    // The guard against the whole file being vacuous. `LIST_INDUCT` is an implication, and nothing
+    // above discharges its premises: a development whose induction principle could never be used
+    // would pass every test before this one.
+    //
+    // The claim is `!w. WORD_CONCAT w WORD_EMPTY = w`, which is `Concatenation.EmptyRight` and is
+    // already a theorem by a different route. That is deliberate and is the strongest check
+    // available here: what the principle produces is compared against a theorem proved without it,
+    // rather than read and approved.
+    //
+    // The step is where the induction is really spent. `WORD_CONCAT (LIST_CONS x w) WORD_EMPTY` is
+    // `WORD_CONCAT (WORD_CONCAT (WORD_SINGLETON x) w) WORD_EMPTY`, which associativity moves to
+    // `WORD_CONCAT (WORD_SINGLETON x) (WORD_CONCAT w WORD_EMPTY)`, and **there** the hypothesis
+    // rewrites the inner concatenation to `w`. Without the hypothesis the step does not close.
+    val concatenation = Chain.standard.concatenation
+    val emptyRight = force(concatenation.fact(Concatenation.EmptyRight))
+    val emptyLeft = force(concatenation.fact(Concatenation.EmptyLeft))
+    val associative = force(concatenation.fact(Concatenation.Associative))
+
+    val w = Term.variable("w", words)
+    val emptyWord = term("WORD_EMPTY:word('a)")
+    val concat = force(
+      LogicError.lift(listing.theory.constant(Concatenation.Name, Type.fun(words, Type.fun(words, words))))
+    )
+
+    // `\w. WORD_CONCAT w WORD_EMPTY = w`
+    val applied = force(LogicError.lift(Term.appAll(concat, List(w, emptyWord))))
+    val body = force(LogicError.lift(Term.eq(applied, w)))
+    val predicate = force(LogicError.lift(Term.abs(w, body)))
+
+    val instance = force(rules.spec(predicate, fact(Listing.Induct)))
+    val opened = force(
+      Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+    )
+    val premises = logic
+      .destImp(opened.conclusion)
+      .getOrElse(fail(s"the induction is not an implication: ${opened.conclusion}"))
+    val pair = logic
+      .destConj(premises._1)
+      .getOrElse(fail(s"its premise is not a conjunction: ${premises._1}"))
+
+    // The base: `WORD_CONCAT WORD_EMPTY WORD_EMPTY = WORD_EMPTY`, which is the left unit at the
+    // empty word and not a second argument about it.
+    val base = force(rules.spec(emptyWord, emptyLeft))
+    base.conclusion shouldBe pair._1
+
+    // The step, as the induction states it. **Its two variables are read off it and not chosen
+    // here**, which is what the first attempt at this test got wrong: specialising the principle at
+    // a predicate whose own body binds `w` renames the step's word variable away from it, so a step
+    // rebuilt with the name written here is a proof about a different word and `Conv.trans` refuses
+    // it two lines later. The refusal named both terms, which is how it was found.
+    val stepStripped = force(Logic.stripForall(pair._2))
+    val letterVariable = stepStripped._1.headOption
+      .getOrElse(fail(s"the step binds no letter: ${pair._2}"))
+    val wordVariable = stepStripped._1.drop(1).headOption
+      .getOrElse(fail(s"the step binds no word: ${pair._2}"))
+    val stepParts = logic
+      .destImp(stepStripped._2)
+      .getOrElse(fail(s"the step is not an implication: ${stepStripped._2}"))
+    val hypothesis = force(LogicError.lift(Kernel.assume(stepParts._1)))
+
+    val singleton = force(
+      LogicError.lift(listing.theory.constant(Concatenation.Singleton, Type.fun(element, words)))
+    )
+    val letter = force(LogicError.lift(Term.app(singleton, letterVariable)))
+
+    // `WORD_CONCAT (LIST_CONS x w) WORD_EMPTY` is `WORD_CONCAT (WORD_CONCAT (WORD_SINGLETON x) w)
+    // WORD_EMPTY`; associativity moves the empty word inside, and **there** the hypothesis rewrites
+    // it away. Without the hypothesis the step does not close, which is what makes this a use of
+    // the induction rather than a demonstration beside it.
+    val consOpened = force(
+      Conv.unfold(force(listing.definition(Listing.Cons)), List(letterVariable, wordVariable))
+    )
+    val carried = force(Conv.apTerm(concat, consOpened).flatMap(Conv.apThm(_, emptyWord)))
+    val moved = force(rules.specAll(associative, List(letter, wordVariable, emptyWord)))
+    val inner = force(
+      Conv.apTerm(force(LogicError.lift(Term.app(concat, letter))), hypothesis)
+    )
+    val reached = force(
+      Conv.trans(carried, moved).flatMap(Conv.trans(_, inner)).flatMap { step =>
+        Conv.sym(consOpened).flatMap(Conv.trans(step, _))
+      }
+    )
+    reached.conclusion shouldBe stepParts._2
+
+    val step = force(
+      rules.disch(stepParts._1, reached).flatMap(rules.genAll(_, stepStripped._1.toList))
+    )
+    val everywhere = force(rules.conjIntro(base, step).flatMap(rules.mp(opened, _)))
+
+    everywhere.hypotheses shouldBe empty
+    everywhere.conclusion shouldBe emptyRight.conclusion
+  }
+}

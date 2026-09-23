@@ -52,7 +52,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // The bridge into the reals, the same day and the same discipline. It is the piece of the
       // link above that mentions a real, and it is a development of its own for the reason
       // `Inclusion`'s first paragraph gives, so it is a development this sum has to name.
-      chain.inclusion.facts.size
+      chain.inclusion.facts.size +
+      // The list interface, 2026-09-23, added here in the change that added the link rather
+      // than after this sum caught it, which is what the four comments above record happening
+      // four times.
+      chain.listing.facts.size
 
     library.entries.size shouldBe expected
 
@@ -580,8 +584,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `CLAUDE.md`'s figures move by three.
     // 609 and 606 with the exponential's reciprocal and the hyperbolic identity. Neither moves
     // `CLAUDE.md`'s figures: both bind a single leading quantifier.
-    library.entries.size shouldBe 609
-    library.names.distinct.size shouldBe 606
+    // 617 and 614 with the list interface, 2026-09-23. Eight facts under eight names, none shared,
+    // so the gap of three does not move. `CLAUDE.md`'s two figures move by **six** and **one**:
+    // six of the eight bind two or more leading quantifiers, and of those only `LIST_CASES`'s
+    // sibling `LIST_CONS_INJECTIVE` binds a pair sharing a type, `'a` with `'a` and
+    // `word('a)` with `word('a)`.
+    library.entries.size shouldBe 617
+    library.names.distinct.size shouldBe 614
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

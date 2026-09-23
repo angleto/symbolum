@@ -343,7 +343,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 412 with `ABS_POWER_LE`, which carries one antecedent.
     // 414: one antecedent each on the halving and the geometric tail, none on the convergence.
     // 418 with `MUL_INV_COMBINE`'s four antecedents; the other two carry none.
-    proposals.size shouldBe 418
+    // 420 with the list interface, 2026-09-23: `LIST_CONS_INJECTIVE` and `LIST_INDUCT` carry one
+    // antecedent each and the other six facts of that development carry none.
+    proposals.size shouldBe 420
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1153,7 +1155,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the model can evaluate them, and dropping `fu * iu = 1` leaves something false. None of
     // the seven was refuted. The hedge was that some would be; it is measured and it was not.
     // 324 with one substitution each from the two hyperbolic facts, both at `Equation`.
-    open shouldBe 324
+    // 325 with the list interface, 2026-09-23. The two weakenings it adds produce **one**
+    // residue here and one in `unreadable`, which is the pair of buckets doing what it is
+    // for rather than a prediction met: what was predicted before the run was two here, on
+    // the reading that a claim about `word('a)` is one no procedure addresses and no model
+    // interprets. That reading is right about the constants and does not decide between
+    // these two buckets, which is the correction the three rows above this one already
+    // carry about a different pair.
+    open shouldBe 325
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1472,7 +1481,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // It also sat behind `open` in this same test and so never ran on the first pass, which is
     // the fourth time this file has recorded that, and the first time the number behind it was
     // also the one a prediction had wrong. The second pass found both.
-    unreadable shouldBe 98
+    // 99 with the second of the list interface's two weakening residues, 2026-09-23. The row
+    // in `open` above carries the reading that predicted both of them there and the
+    // correction. **And this assertion sat behind that one again**, so it did not run on the
+    // pass that moved it: the fifth time this file has recorded that, and the second time
+    // the figure behind it was also moving.
+    unreadable shouldBe 99
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

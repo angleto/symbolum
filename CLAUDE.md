@@ -646,7 +646,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 609 lemmas, 401 have two or more leading quantifiers and **364 of
+caller meant: of the library's 617 lemmas, 407 have two or more leading quantifiers and **365 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -806,6 +806,35 @@ against `Transcendental` is well-typed and is a claim about an arbitrary functio
 `WORD_CONCAT`. That is the trap the `Chain.peano` note records for `NUM_LE ZERO n` and `ChainSpec`
 records for `zork`, met a third time. The question that separates the two signatures is whether the
 name is a **constant** of the theory, and the spec asks that one now.
+
+**A list is an orientation on `word` rather than a type, and `Listing` is that link since
+2026-09-23.** The card asking for it wanted `list('a)` carved with `defineType` beside `num`,
+`prod`, `word` and `int`, on the stated ground that `word` is not polymorphic. It is: the arity of a
+carved type is read off the free type variables of the predicate, and `Word`'s is
+`\p:prod(num,num->'a). ...`, so `word('a)` is a type operator of arity one and a word over any type
+is a word. A second carve would be **from the same predicate**, so the carrier would be isomorphic
+to one that exists and would inherit none of its seventeen facts. `docs/adr/0038` is the decision.
+
+What was missing is one principle and not a type. `Concatenation.WORD_INDUCTION` extends a word **on
+the right**, and a definition by recursion on a sequence descends from the **left**. So `LIST_CONS x
+w` is `WORD_CONCAT (WORD_SINGLETON x) w` under a name, `LIST_HEAD` and `LIST_TAIL` are its two
+inverses, and `LIST_INDUCT` is cons-induction, derived the way the mirror is: `Natural.Induction`
+over `\n. !w. WORD_LENGTH w = n ==> P w`, with `LIST_CASES` supplying the decomposition. Three
+definitions, no axiom, **no type**, and `ListingSpec` asserts the last of those as a difference of
+type operators rather than leaving it in prose.
+
+**The empty list is `WORD_EMPTY` and has no second name**, which is the whole of what a link rather
+than a duplicate means here: a reader who has a word has a list, `WORD_CONCAT` **is** append, and
+there is no coercion at any boundary. The distinctness and injectivity a carved free algebra gets
+from its tags are theorems instead, `LIST_CONS_NOT_EMPTY` off the lengths and `LIST_CONS_INJECTIVE`
+off the head and the tail.
+
+What is **not** there and is named absent rather than left to be discovered: the **structural
+recursion theorem**, and a development that writes with lists what it today writes with the coding
+or with `word`. Those are what a *definition* needs, and an induction principle does not give them.
+`LIST_HEAD` and `LIST_TAIL` are constants here rather than terms built inside a proof precisely
+because that theorem's auxiliary function has to name them, which is the one place this development
+pays in advance for work it has not done.
 
 Number theory on `num` is `Modular`, a link in the chain since 2026-09-12: divisibility with the
 antisymmetry that is false over a field, congruences with their compatibility with addition and
