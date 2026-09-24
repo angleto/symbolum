@@ -33,8 +33,20 @@ stamp=$(($(date +%s) * 1000))
 
 # Sources dated before the reports that describe them, which is the order a build produces. A
 # fixture writes both within a second, and the subject refuses a report older than a changed file.
+#
+# And beside every report, the instrumentation it was written from, dated with it: scoverage writes
+# `scoverage-data/scoverage.coverage` at the instrumented compile and `coverageReport` reads it, so
+# a real report never exists without one, and since 2026-09-25 the subject refuses a report that
+# has none (case 16b) or whose compile is older than a changed file (case 16). Its content is never
+# read, only its date.
 age() {
     find "$1/modules" -path '*/src/*' -type f -exec touch -t 202601010000 {} +
+    for report in "$1"/modules/*/target/scala-*/scoverage-report/scoverage.xml; do
+        [ -f "$report" ] || continue
+        data="${report%/scoverage-report/scoverage.xml}/scoverage-data"
+        mkdir -p "$data"
+        printf 'instrumentation\n' > "$data/scoverage.coverage"
+    done
 }
 
 # A repository with one module, a first commit, and then a change of `$1` statements of which
@@ -416,5 +428,39 @@ status=0
 report=$(cd "$work/events" && sh "$subject" --event push HEAD~1 beefbeefbeefbeefbeefbeefbeefbeefbeefbeef 2>&1) || status=$?
 holds "a push is measured from the commit before it" "20 of 20 statement(s)"
 check "and exits green" "$status" "0"
+
+# 16. A REPORT WRITTEN AFTER THE EDIT FROM INSTRUMENTATION WRITTEN BEFORE IT. The verification of
+# card 61cdee9d, 2026-09-25, on a real report of `scan` at 570e1e40: an uncommitted line inserted
+# above the change, then `coverage scan/coverageReport` alone, which rewrites `scoverage.xml` from
+# the `scoverage.coverage` the last compile left and recompiles nothing. The report is newer than
+# every changed file, so 13b does not fire, and its statements are in the coordinates of the file
+# before the edit: the subject answered "none of those lines carries a statement", exit 0, on a
+# change of six statements of which two were never run. A report's mtime says when it was
+# written, not what it was built from.
+build replayed 20 20
+data="$work/replayed/modules/demo/target/scala-3.3.5/scoverage-data"
+mkdir -p "$data"
+printf 'instrumentation of the tree before the edit\n' > "$data/scoverage.coverage"
+touch -t 202601010000 "$data/scoverage.coverage"
+{
+    echo '// an uncommitted line above the change'
+    cat "$work/replayed/modules/demo/src/main/scala/Demo.scala"
+} > "$work/replayed/demo.next" && mv "$work/replayed/demo.next" "$work/replayed/modules/demo/src/main/scala/Demo.scala"
+touch -t 202601020000 "$work/replayed/modules/demo/src/main/scala/Demo.scala"
+touch -t 202601030000 "$work/replayed/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+run_subject replayed HEAD~1
+holds "a changed file newer than the instrumentation its report was written from is named" "Demo.scala"
+holds "and the reason is the compile, not the report" "instrumented compile"
+check "and refused" "$status" "2"
+
+# 16b. A REPORT WITH NO INSTRUMENTATION BESIDE IT, which no build of scoverage leaves: the date of
+# the compile is what 16 reads, and without it there is nothing to compare, so the subject refuses
+# rather than falling back on the report's own date, which is the reading 16 shows is not enough.
+build bare 20 20
+rm -rf "$work/bare/modules/demo/target/scala-3.3.5/scoverage-data"
+run_subject bare HEAD~1
+holds "a report with no instrumentation is named" "no instrumentation beside them"
+check "and refused" "$status" "2"
+lacks "and no rate is printed" "%"
 
 summarise

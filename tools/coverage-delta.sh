@@ -48,9 +48,10 @@
 # its base, and any other event names no change and says so.
 #
 # It reads the reports already on disk and runs no build: `tools/coverage-gate.sh` is what
-# produces them. A report is refused when it is not one a build wrote, when it is older than a
-# changed file of its module, and when a changed file appears in no report at all; the three are
-# checked below and each one was a pass until 2026-09-24.
+# produces them. A report is refused when it is not one a build wrote, when it or the instrumented
+# compile it was written from is older than a changed file of its module, and when a changed file
+# appears in no report at all; the three are checked below, each one was a pass until 2026-09-24,
+# and the compile's date was not read until 2026-09-25.
 #
 # Exit codes: 0 when the rate is at or above the threshold or nothing was added, 1 when it is
 # below, 2 when it could not measure -- which is never reported as a pass, for the reason
@@ -251,20 +252,53 @@ if [ -s "$work/unstamped" ]; then
     exit 2
 fi
 
-# OLDER THAN THE CHANGE. A changed file modified after its module's report was written is a
-# change that report never saw. The file's modification time and not its commit's, because the
-# report is of the working tree; a checkout rewrites the times of what it changes, so a report
-# built on another branch reads as older than every file that branch differs in.
+# OLDER THAN THE CHANGE, which is two dates and not one, because a report is written from what an
+# instrumented compile left behind and the two are separate steps. A changed file modified after
+# its module's report was written is a change that report never saw. But a report written AFTER
+# the edit can still be of the tree before it: `coverageReport` alone recompiles nothing and
+# rewrites `scoverage.xml` from the `scoverage-data/scoverage.coverage` of the last instrumented
+# compile, and `tools/coverage-gate.sh` recommends exactly that command when its sequence stops.
+# Checked against the report only, until 2026-09-25, and measured by the verification of card
+# 61cdee9d on a real report of `scan`: an uncommitted line above the change, then that command,
+# and this answered "none of those lines carries a statement", exit 0, on six statements of which
+# two were never run. So the instrumentation's own date is compared as well, and a module whose
+# report has no instrumentation beside it is refused, since nothing then says what it was built
+# from.
+#
+# The file's modification time and not its commit's, because the report is of the working tree;
+# a checkout rewrites the times of what it changes, so a report built on another branch reads as
+# older than every file that branch differs in.
 cut -f1 "$work/added" | sort -u | while IFS= read -r file; do
     module=$(printf '%s\n' "$file" | awk -F/ '{ print $2 }')
     for report in modules/"$module"/target/scala-*/scoverage-report/scoverage.xml; do
-        [ -n "$(find "$file" -newer "$report" 2>/dev/null)" ] && echo "$file"
+        data=${report%/scoverage-report/scoverage.xml}/scoverage-data/scoverage.coverage
+        if [ ! -f "$data" ]; then
+            printf 'NODATA\t%s\n' "$data"
+        elif [ -n "$(find "$file" -newer "$data" 2>/dev/null)" ]; then
+            printf 'COMPILE\t%s\n' "$file"
+        elif [ -n "$(find "$file" -newer "$report" 2>/dev/null)" ]; then
+            printf 'REPORT\t%s\n' "$file"
+        fi
     done
 done | sort -u > "$work/newer"
+if grep -q '^NODATA' "$work/newer"; then
+    echo "coverage-delta: these reports have no instrumentation beside them, so nothing says which" >&2
+    echo "coverage-delta: tree they were written from:" >&2
+    grep '^NODATA' "$work/newer" | cut -f2 | sed 's/^/  /' >&2
+    echo "coverage-delta: run tools/coverage-gate.sh, which writes both, and ask again." >&2
+    exit 2
+fi
+if grep -q '^COMPILE' "$work/newer"; then
+    echo "coverage-delta: these changed after the instrumented compile their module's report was" >&2
+    echo "coverage-delta: written from, so the report is of a tree without them, however recent it is:" >&2
+    grep '^COMPILE' "$work/newer" | cut -f2 | sed 's/^/  /' >&2
+    echo "coverage-delta: \`coverageReport\` alone does not recompile; run tools/coverage-gate.sh and ask again." >&2
+    exit 2
+fi
 if [ -s "$work/newer" ]; then
     echo "coverage-delta: these changed after their module's report was written, so the report" >&2
     echo "coverage-delta: is of a tree without them:" >&2
-    sed 's/^/  /' "$work/newer" >&2
+    cut -f2 "$work/newer" | sed 's/^/  /' >&2
     echo "coverage-delta: build the report again (tools/coverage-gate.sh) and ask again." >&2
     exit 2
 fi
@@ -344,7 +378,8 @@ echo "coverage-delta: $added line(s) added or changed under modules/*/src/main"
 # The positive half of the check above, printed on every run rather than only when it bites: a
 # reader who is told what was missing on the bad path and nothing at all on the good one has to
 # take the good one on trust.
-echo "coverage-delta: every one of the $(grep -c . < "$work/touched") module(s) it touches has a report of this build"
+echo "coverage-delta: every one of the $(grep -c . < "$work/touched") module(s) it touches has a report, written from an"
+echo "coverage-delta: instrumented compile, and both are newer than every changed file of that module"
 echo "coverage-delta: reports last written around $newest"
 
 if [ "$total" -eq 0 ]; then

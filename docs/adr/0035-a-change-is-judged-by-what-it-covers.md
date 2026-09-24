@@ -139,6 +139,17 @@ than the change, and each is a refusal now rather than a rate:
 - **The date printed was the wrong one**: `ls -l` columns sorted as text print the 3rd of a month
   before the 22nd. It is read from the reports' own stamps now, as a number.
 
+**The report's date was the wrong date to compare, found on 2026-09-25.** The verification of card
+`61cdee9d`, on a real report of `scan`: an uncommitted line inserted above the change, then
+`coverage scan/coverageReport` alone. That command recompiles nothing and rewrites `scoverage.xml`
+from the `scoverage-data/scoverage.coverage` the last instrumented compile left, so the report was
+newer than the edit and in the coordinates before it, and the tool answered "none of those lines
+carries a statement", exit 0, on six statements of which two were never run. It is not an exotic
+route: `tools/coverage-gate.sh` recommends that command when its sequence stops. A report's date
+says when it was written and not what it was written from, so the tool now also compares each
+changed file with the instrumentation's date, and refuses a report with no instrumentation beside
+it, since then nothing says which tree it is of.
+
 And the base a runner measured from was decided by an expression in `ci.yml` that no test could
 reach: empty on a manual run, so red on every one, and on a pull request's later pushes the
 previous push rather than the base. The script takes the event and decides, and its test holds
@@ -146,9 +157,14 @@ all three.
 
 **What it still cannot distinguish**, said here because it is the shape of failure this
 repository cares about: changed lines carrying no statement in a file the report does list. A
-comment, a blank line and a signature produce that reading, and so would a report of the right
-date built without the change, which the checks above make hard to come by and do not make
-impossible. The tool refuses to call it a pass and prints the report's date beside it.
+comment, a blank line and a signature produce that reading, and so would a report whose compile
+is dated after the change and did not read it. The checks above leave two ways to that, both
+about modification times rather than content: a file saved while the instrumented compile was
+running, after the compiler read it and before it wrote its instrumentation, and a file whose
+time was set back, by `touch -t`, `cp -p` or an archive. On that reading the tool **exits 0**,
+which on a runner is a green step, and says in its output that a stale report looks the same and
+which date to check; until 2026-09-25 this paragraph said it refused to call it a pass, which the
+exit code did not bear out.
 
 **What it costs.** No runner minutes of its own: the `coverage` job already builds the reports
 and this reads them. `fetch-depth: 0` on that job's checkout, because a shallow clone has no
