@@ -364,7 +364,17 @@ final class Chain private (
    * something says the exponential reaches the value. A link and not a development beside the
    * chain because `continuous` is a constant. One constant, no axiom.
    */
-  val continuity: Continuity
+  val continuity: Continuity,
+
+  /**
+   * The first facts about `ln`, and the facts about the exponential they wait on: that it is
+   * positive, continuous, strictly increasing and onto the positive reals.
+   *
+   * Like [[deduction]] it declares nothing, so it is not the widest signature: its facts are about
+   * `exp`, `ln` and `continuous`, which are declared below it, and it is a link rather than a
+   * development beside the chain because stating them needs all three, which only the end sees.
+   */
+  val logarithm: Logarithm
 ) {
 
   /**
@@ -607,6 +617,11 @@ object Chain {
       // Over the reals, their order and their magnitude, extending the chain's end: the theorem
       // spends `COMPLETENESS` and the definition reads `abs`, and neither needs anything since.
       continuity <- Continuity.construct(classical, reals, magnitude, root.theory, root.notation)
+
+      // Declares nothing, as `deduction` does: the exponential's order, continuity and range, and
+      // the first facts about `ln`, over the constants the three links below declared.
+      logarithm <- Logarithm.construct(
+        classical, reals, magnitude, series, peano, coding, limit, transcendental, continuity)
     } yield new Chain(
       classical,
       naturals,
@@ -643,6 +658,7 @@ object Chain {
       listing,
       folding,
       root,
-      continuity
+      continuity,
+      logarithm
     )
 }

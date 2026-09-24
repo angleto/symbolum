@@ -307,7 +307,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // absolute convergences and `SIN_COS_SQUARED` carry none.
     // 431 with continuity, the same day, derived before the run: `INTERMEDIATE_VALUE` carries four
     // antecedents and the two facts about particular functions carry none.
-    propose.weakenings.size shouldBe 431
+    // 441 with the logarithm, the same day, derived before the run: ten antecedents over twelve
+    // facts, two each on `EXP_SMALL_ABOVE` and `LN_MUL` and one on six others.
+    propose.weakenings.size shouldBe 441
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -418,7 +420,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // derived before the run. The other four facts of that change are refused: `SUM_EVEN_ODD` and
     // `CONVERGES_SHIFT` carry a lambda once their quantifiers come off, and the two absolute
     // convergences are existentials.
-    propose.mutable.size shouldBe 95
+    // 102 with seven of the logarithm's twelve, derived before the run: every fact writing an order
+    // or a sum or product between reals with no lambda in the body. `EXP_CONTINUOUS`,
+    // `EXP_INJECTIVE`, `LN_EXP` and `LN_ONE` write none of the four, and `EXP_ONTO` is an
+    // existential.
+    propose.mutable.size shouldBe 102
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

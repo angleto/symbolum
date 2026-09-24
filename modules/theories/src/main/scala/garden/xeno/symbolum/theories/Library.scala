@@ -324,7 +324,10 @@ object Library {
         // transcendental function.
         collect("Root", chain.root.facts) ++
         // Continuity and the intermediate value theorem, 2026-09-24, in the change that added them.
-        collect("Continuity", chain.continuity.facts)
+        collect("Continuity", chain.continuity.facts) ++
+        // The first facts about `ln`, the same day: a development of its own because it is about
+        // three constants declared by three developments below it.
+        collect("Logarithm", chain.logarithm.facts)
     )
 
   /** A library over developments a caller names itself. */

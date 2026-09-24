@@ -363,6 +363,21 @@ they have least appetite for working out how it is produced.
   LIST_RECURSION_UNIQUE    !x:'b. !y:'a -> word('a) -> 'b -> 'b. !z:word('a) -> 'b. !u:word('a) -> 'b. (z WORD_EMPTY = x /\ (!v:'a. !w:word('a). z (LIST_CONS v w) = y v w (z w))) /\ u WORD_EMPTY = x /\ (!v:'a. !w:word('a). u (LIST_CONS v w) = y v w (u w)) ==> z = u
   LIST_TAIL_CONS           !x:'a. !y:word('a). LIST_TAIL (LIST_CONS x y) = y
 
+## Logarithm
+
+  EXP_ABOVE_LINE           !x:real. 0 < x ==> 1 + x <= exp x
+  EXP_CONTINUOUS           !x:real. continuous exp x
+  EXP_INJECTIVE            !x:real. !y:real. exp x = exp y ==> x = y
+  EXP_LN                   !x:real. 0 < x ==> exp (ln x) = x
+  EXP_LT_MONOTONE          !x:real. !y:real. x < y ==> exp x < exp y
+  EXP_NEAR_ONE             !x:real. abs x <= 1 / 2 ==> abs (exp x - 1) <= 2 * abs x
+  EXP_ONTO                 !x:real. 0 < x ==> (?y:real. exp y = x)
+  EXP_POSITIVE             !x:real. 0 < exp x
+  EXP_SMALL_ABOVE          !x:real. 0 < x ==> x <= 1 / 2 ==> exp x <= 1 + 2 * x
+  LN_EXP                   !x:real. ln (exp x) = x
+  LN_MUL                   !x:real. !y:real. 0 < x ==> 0 < y ==> ln (x * y) = ln x + ln y
+  LN_ONE                   ln 1 = 0
+
 ## Magnitude
 
   ABS_ABOVE                !x:real. x <= abs x

@@ -799,6 +799,14 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     // `Recorder` rather than directly. It holds ZERO `Rewrite.rewrite(` and zero
     // `Rewrite.inTheorem(`, so it was invisible to this scan while the scan read two doors, which
     // is the hole `Recorder.scala`'s entry declined to fill and could not fill from where it sits.
+    "Logarithm.scala" ->
+      ("two doors, and neither is left to the limit to report. `Rewrite.rewrite` walks the " +
+        "exponential's partial sum at two down to numerals, and what it produces is handed to " +
+        "`Ring` as one equation against `1 + x`, so a walk that stopped early leaves a " +
+        "`NUM_FACT` or a `Power` standing and the refusal is `Ring`'s. `Rewrite.inTheorem`, through " +
+        "a one-rule helper, moves a ground equation into a theorem, and every result is handed to " +
+        "`Rules.mp` against a schematic implication, to `existsElim` or to the development's check " +
+        "of each fact against its published text: a half-rewritten theorem matches none of them"),
     "Magnitude.scala" ->
       ("eight through `Recorder.rewriteIn`, and none of them can reach the limit. The equations " +
         "are read off the recorded steps of `Magnitude.standard` rather than off how they are " +
