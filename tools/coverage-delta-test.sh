@@ -33,8 +33,20 @@ stamp=$(($(date +%s) * 1000))
 
 # Sources dated before the reports that describe them, which is the order a build produces. A
 # fixture writes both within a second, and the subject refuses a report older than a changed file.
+#
+# And beside every report, the instrumentation it was written from, dated with it: scoverage writes
+# `scoverage-data/scoverage.coverage` at the instrumented compile and `coverageReport` reads it, so
+# a real report never exists without one, and since 2026-09-25 the subject refuses a report that
+# has none (case 16b) or whose compile is older than a changed file (case 16). Its content is never
+# read, only its date.
 age() {
     find "$1/modules" -path '*/src/*' -type f -exec touch -t 202601010000 {} +
+    for report in "$1"/modules/*/target/scala-*/scoverage-report/scoverage.xml; do
+        [ -f "$report" ] || continue
+        data="${report%/scoverage-report/scoverage.xml}/scoverage-data"
+        mkdir -p "$data"
+        printf 'instrumentation\n' > "$data/scoverage.coverage"
+    done
 }
 
 # A repository with one module, a first commit, and then a change of `$1` statements of which
@@ -438,6 +450,17 @@ touch -t 202601020000 "$work/replayed/modules/demo/src/main/scala/Demo.scala"
 touch -t 202601030000 "$work/replayed/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
 run_subject replayed HEAD~1
 holds "a changed file newer than the instrumentation its report was written from is named" "Demo.scala"
+holds "and the reason is the compile, not the report" "instrumented compile"
 check "and refused" "$status" "2"
+
+# 16b. A REPORT WITH NO INSTRUMENTATION BESIDE IT, which no build of scoverage leaves: the date of
+# the compile is what 16 reads, and without it there is nothing to compare, so the subject refuses
+# rather than falling back on the report's own date, which is the reading 16 shows is not enough.
+build bare 20 20
+rm -rf "$work/bare/modules/demo/target/scala-3.3.5/scoverage-data"
+run_subject bare HEAD~1
+holds "a report with no instrumentation is named" "no instrumentation beside them"
+check "and refused" "$status" "2"
+lacks "and no rate is printed" "%"
 
 summarise
