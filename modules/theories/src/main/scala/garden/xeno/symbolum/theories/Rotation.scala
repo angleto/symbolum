@@ -136,9 +136,10 @@ object Rotation {
    * being used rather than asserted, since the parse of [[Body]] against `base` is what refuses if
    * the two were built beside each other rather than one over the other.
    *
-   * `base` is the theory to extend and is not `word.theory`: this is the LAST link, so what it
-   * extends is `Matrix`'s. A development that extended `word.theory` inside a chain whose last link
-   * was `matrix` would declare its constant into a side branch, and every link below would be
+   * `base` is the theory to extend and is not `word.theory`: a link extends the theory of the link
+   * below it in the chain, which here is `Matrix`'s, and not the theory of the development it draws
+   * its prerequisites from. A development that extended `word.theory` inside a chain with `matrix`
+   * above `word` would declare its constant into a side branch, and every later link would be
    * unable to see it -- which is the defect this repository has already paid for once, and is why
    * the five developments that used to sit beside the chain are in it.
    */
