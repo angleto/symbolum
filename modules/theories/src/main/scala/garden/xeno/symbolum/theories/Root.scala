@@ -25,9 +25,20 @@ import garden.xeno.symbolum.logic.*
  *
  * It is a development of its own and not a section of [[Limit]] or [[Transcendental]], because
  * each of those says in its first sentence what it is: the first is what a sequence converges to
- * and the second is the transcendental functions, and the square root is neither. What it needs is
- * the reals and their order, and nothing between them and the end of the chain; it is at the end
- * because that is where a link's constant is reachable from everything, which `Chain.widest` says.
+ * and the second is the transcendental functions, and the square root is neither. What the
+ * existence needs is the reals and their order; it is at the end of the chain because that is
+ * where a link's constant is reachable from everything, which `Chain.widest` says.
+ *
+ * == The sentence this made writable, and proves ==
+ *
+ * [[Root.TwoIrrational]] is that `sqrt 2` is not a ratio of two naturals at a positive
+ * denominator: the classical statement of the irrationality of the square root of two, which
+ * `Primes.NUM_SQUARE_NOT_DOUBLE` declared itself not to be because until this development there
+ * was no square root to state it about. The proof is that fact carried across the embedding: a
+ * ratio clears to `sqrt 2 * q = p`, squaring gives `p * p = 2 * (q * q)` over the reals,
+ * `real_of_num` preserves products and is injective, and the equation lands in `num`, where the
+ * descent already refused it. So it is here and not in `Primes`, which is built before `sqrt`
+ * exists, and it is why this development takes the naturals as well as the reals.
  *
  * == The derivation has no quotient in it, and no classical step ==
  *
@@ -103,6 +114,15 @@ object Root {
   /** `|- sqrt 1 = 1`. */
   val AtOne: String = "SQRT_ONE"
 
+  /**
+   * `|- !p q. 0 < q ==> ~(sqrt 2 = real_of_num p / real_of_num q)`
+   *
+   * The square root of two is not a ratio of naturals. Stated over naturals rather than over the
+   * integers because `sqrt 2` is positive, so a ratio equal to it would have both terms of one sign
+   * and `real_of_num` reaches every such pair; the integers would add a sign case and no content.
+   */
+  val TwoIrrational: String = "SQRT_TWO_IRRATIONAL"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Exists -> "!x:real. 0 <= x ==> (?y:real. 0 <= y /\\ y * y = x)",
@@ -110,7 +130,8 @@ object Root {
     Unique -> "!x:real y:real. 0 <= y /\\ y * y = x ==> sqrt x = y",
     OfSquare -> "!y:real. 0 <= y ==> sqrt (y * y) = y",
     AtZero -> "sqrt 0 = 0",
-    AtOne -> "sqrt 1 = 1"
+    AtOne -> "sqrt 1 = 1",
+    TwoIrrational -> "!p:num q:num. 0 < q ==> ~(sqrt 2 = real_of_num p / real_of_num q)"
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -119,7 +140,8 @@ object Root {
   lazy val standard: Root = Chain.standard.root
 
   /**
-   * The development over the reals and their order, extending `base`.
+   * The development over the reals and their order, extending `base`, with the naturals' embedding
+   * and the descent `Primes` holds for the one fact that is about both.
    *
    * `base` is the chain's end when this is built rather than `reals.theory`, for the reason every
    * link gives: a constant declared into a side branch is unreachable from every link above it.
@@ -128,6 +150,9 @@ object Root {
     classical: Classical,
     reals: RealTheory,
     order: Order,
+    ring: Ring,
+    peano: Peano,
+    primes: Primes,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Root] =
@@ -151,6 +176,7 @@ object Root {
         .flatMap(steps.mp(_, steps.conj(steps.lemma("(0:real) <= 0"), steps.lemma("(0:real) * 0 = 0"))))
       atOne <- steps.at(unique, "1:real", "1:real")
         .flatMap(steps.mp(_, steps.conj(steps.lemma("(0:real) <= 1"), steps.lemma("(1:real) * 1 = 1"))))
+      twoIrrational <- irrationalityOfTwo(steps, reals, ring, peano, primes, squares)
 
       facts = Map(
         Exists -> exists,
@@ -158,7 +184,8 @@ object Root {
         Unique -> unique,
         OfSquare -> ofSquare,
         AtZero -> atZero,
-        AtOne -> atOne
+        AtOne -> atOne,
+        TwoIrrational -> twoIrrational
       )
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
@@ -429,6 +456,106 @@ object Root {
         .flatMap(mp(_, Right(rootBelow), Right(rootAbove)))
       statement <- proposition(hypothesis)
       result <- rules.disch(statement, same).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+    } yield result
+  }
+
+  /**
+   * [[TwoIrrational]]: a ratio equal to `sqrt 2` is carried into `num`, where the descent refused it.
+   *
+   * Four moves, and only the first decides anything. The division unfolds to `p * inv q` and clears
+   * to `sqrt 2 * q = p`, which is `Linarith` given `q * inv q = 1` and the two signs it multiplies
+   * by. Squaring is NOT `Linarith`'s: `p * p = 2 * (q * q)` is of degree four in the atoms, past the
+   * cubes it reaches, so it is congruence, one `Ring` identity to regroup, and `SQRT` at two. The
+   * way back into `num` is congruence again rather than one arithmetic lemma over the six equations,
+   * which `Linarith` refuses by name at its bound on facts. Then injectivity, and the refusal.
+   */
+  private def irrationalityOfTwo(
+    steps: Steps,
+    reals: RealTheory,
+    ring: Ring,
+    peano: Peano,
+    primes: Primes,
+    squares: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val p = Term.variable("p", numbers)
+    val q = Term.variable("q", numbers)
+    def natural(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text, numbers)
+    def naturals(texts: String*): Either[LogicError, List[Term]] =
+      texts.foldLeft[Either[LogicError, List[Term]]](Right(Nil)) { (acc, text) =>
+        for { terms <- acc; term <- natural(text) } yield terms :+ term
+      }
+    def atNatural(theorem: Kernel.Thm, arguments: String*): Either[LogicError, Kernel.Thm] =
+      naturals(arguments*).flatMap(rules.specAll(theorem, _))
+    val claimText = "sqrt 2 = real_of_num p / real_of_num q"
+
+    for {
+      zero <- peano.fact(Peano.EmbedsZero)
+      successor <- peano.fact(Peano.EmbedsSuccessor)
+      product <- peano.fact(Peano.EmbedsProduct)
+      nonNegative <- peano.fact(Peano.EmbedsNonNegative)
+      strict <- peano.fact(Peano.EmbedsStrictOrder)
+      injective <- peano.fact(Peano.EmbedsInjectively)
+      descent <- primes.fact(Primes.SquareNotDouble)
+      division <- reals.definition(Real.Division)
+      inverse <- reals.axiom("MUL_INVERSE")
+
+      positiveText = "0 < q:num"
+      positive <- assume(positiveText)
+      claim <- assume(claimText)
+
+      // `q` is positive as a real, which is what lets the division clear.
+      below <- atNatural(strict, "0", "q").flatMap(rules.mp(_, positive))
+      qPositive <- at(lemma("!a:real b:real. a = 0 ==> a + 1 <= b ==> 0 < b"), "real_of_num 0", "real_of_num q")
+        .flatMap(mp(_, Right(zero), Right(below)))
+
+      rp <- real("real_of_num p")
+      rq <- real("real_of_num q")
+      unfolded <- Conv.unfold(division, List(rp, rq))
+      asProduct <- Conv.trans(claim, unfolded)
+      nonZero <- at(lemma("!c:real. 0 < c ==> ~(c = 0)"), "real_of_num q").flatMap(mp(_, Right(qPositive)))
+      reciprocal <- rules.spec(rq, inverse).flatMap(rules.mp(_, nonZero))
+      cleared <- at(
+        lemma("!s:real a:real b:real w:real. 0 <= a ==> 0 < b ==> b * w = 1 ==> s = a * w ==> s * b = a"),
+        "sqrt 2", "real_of_num p", "real_of_num q", "inv (real_of_num q)"
+      ).flatMap(mp(_, rules.spec(p, nonNegative), Right(qPositive), Right(reciprocal), Right(asProduct)))
+
+      // Squared: `p * p = 2 * (q * q)` over the reals, by congruence and not by arithmetic.
+      atTwo <- at(squares, "2").flatMap(mp(_, lemma("(0:real) <= 2"))).flatMap(rules.conjElim2)
+      times <- real("real_of_num p * real_of_num p").flatMap {
+        case App(App(multiplication, _), _) => Right(multiplication)
+        case other => Left(NotOfForm("a product", other))
+      }
+      back <- Conv.sym(cleared)
+      squared <- Conv.apTerm(times, back).flatMap(left => LogicError.lift(Kernel.mkComb(left, back)))
+      regrouped <- ring.prove("!s:real b:real. (s * b) * (s * b) = (s * s) * (b * b)")
+        .flatMap(identity => at(identity, "sqrt 2", "real_of_num q"))
+      qq <- real("real_of_num q * real_of_num q")
+      doubled <- Conv.apTerm(times, atTwo).flatMap(Conv.apThm(_, qq))
+      realSide <- Conv.trans(squared, regrouped).flatMap(Conv.trans(_, doubled))
+
+      // Back into `num`, one congruence per factor.
+      left <- atNatural(product, "p", "p")
+      right <- atNatural(product, "SUC (SUC 0)", "q * q")
+      inner <- atNatural(product, "q", "q")
+      twoSteps <- atNatural(successor, "SUC 0")
+      oneStep <- atNatural(successor, "0")
+      twoIsTwo <- at(lemma("!t:real u:real v:real. t = u + 1 ==> u = v + 1 ==> v = 0 ==> t = 2"),
+        "real_of_num (SUC (SUC 0))", "real_of_num (SUC 0)", "real_of_num 0")
+        .flatMap(mp(_, Right(twoSteps), Right(oneStep), Right(zero)))
+      factors <- Conv.apTerm(times, twoIsTwo).flatMap(scaled => LogicError.lift(Kernel.mkComb(scaled, inner)))
+      rightRead <- Conv.trans(right, factors)
+      rightBack <- Conv.sym(rightRead)
+      embedded <- Conv.trans(left, realSide).flatMap(Conv.trans(_, rightBack))
+      inNumbers <- atNatural(injective, "p * p", "SUC (SUC 0) * (q * q)").flatMap(rules.mp(_, embedded))
+
+      refused <- rules.specAll(descent, List(p, q)).flatMap(rules.mp(_, positive))
+      absurd <- rules.notElim(refused, inNumbers)
+      claimStatement <- proposition(claimText)
+      negated <- rules.notIntro(claimStatement, absurd)
+      positiveStatement <- proposition(positiveText)
+      result <- rules.disch(positiveStatement, negated).flatMap(rules.gen(q, _)).flatMap(rules.gen(p, _))
     } yield result
   }
 

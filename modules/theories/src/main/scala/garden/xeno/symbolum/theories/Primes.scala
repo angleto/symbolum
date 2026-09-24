@@ -65,11 +65,10 @@ object Primes {
    *
    * No square is twice a square, except where the denominator is zero. This is the arithmetic
    * content of the irrationality of the square root of two, and it is **not** that statement. The
-   * classical sentence can be written since 2026-09-24, when `Root` declared `sqrt`, and it is not
-   * proved: what stands between this and it is carrying the equation across `real_of_num` and
-   * clearing a denominator, which nothing here has done yet. What this proves is the thing the
-   * classical proof actually establishes, that the equation has no solution in positive naturals,
-   * and the name says that rather than the sentence it is on the way to.
+   * classical sentence is `Root.SQRT_TWO_IRRATIONAL`, which could not be written here because this
+   * development is built before `sqrt` exists, and whose proof is this fact carried across
+   * `real_of_num`. What this proves is the thing the classical proof actually establishes, that the
+   * equation has no solution in positive naturals, and the name says that.
    *
    * The proof is the descent, run through `NUM_LEAST` rather than through an infinite regress: take
    * the **least** `q` for which some `p` solves it. Two divides `p * p`, hence `p`, because two is

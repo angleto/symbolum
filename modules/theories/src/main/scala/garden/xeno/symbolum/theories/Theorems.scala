@@ -122,10 +122,14 @@ object Theorems {
         "as Euclid's does."),
     "NUM_SQUARE_NOT_DOUBLE" ->
       ("No square is twice a square at a positive denominator. It is the arithmetic content of the " +
-        "irrationality of the square root of two and is deliberately **not** that sentence. The " +
-        "sentence can be written, since `sqrt` has been a constant here from 2026-09-24, and it is " +
-        "not proved: carrying the equation across the embedding of the naturals into the reals is " +
-        "the step nobody has taken, and the name says what is proved rather than what is next."),
+        "irrationality of the square root of two and is deliberately **not** that sentence, which " +
+        "is the page after this one: this is the equation refused in the naturals, and that is the " +
+        "same refusal carried across the embedding into the reals."),
+    "SQRT_TWO_IRRATIONAL" ->
+      ("The square root of two is not a ratio of naturals. It is the sentence the page before this " +
+        "one is the arithmetic content of, stated about `sqrt`, which `Root` defines and proves to " +
+        "exist from the completeness of the reals; the proof clears the ratio, squares it, and " +
+        "carries the equation back into the naturals, where the descent already refused it."),
     "NUM_PROV_DEDUCTION" ->
       ("The deduction theorem, for **Peano arithmetic as this system encodes it inside itself**. " +
         "Not a fact about the logic these pages are written in: a fact about an arithmetic whose " +

@@ -349,7 +349,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // carries one antecedent and the other four facts of those two developments carry none.
     // 425 with the square root, 2026-09-24: one antecedent each on `SQRT_EXISTS`, `SQRT`,
     // `SQRT_UNIQUE` and `SQRT_SQUARE`, none on the two values.
-    proposals.size shouldBe 425
+    // 426 with `SQRT_TWO_IRRATIONAL`'s one antecedent, the same day.
+    proposals.size shouldBe 426
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1169,7 +1170,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 335 with the square root, 2026-09-24, and this one was read off the run and NOT derived:
     // ten more residues, against its four weakenings and the substitutions of its three mutable
     // facts, and which of those land here rather than in the other buckets was not measured.
-    open shouldBe 335
+    // 336 with the irrationality of the root of two, whose one weakening lands here; read off the
+    // run like the row above it.
+    open shouldBe 336
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1783,7 +1786,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 166 with `ABS_POWER_LE`'s **two** residues, both of which write `Power`. Predicted 165,
     // by counting the weakening and forgetting the substitution.
     // 170 with the four residues the two order lemmas produce, all of which write `Power`.
-    aboutNumbers.size shouldBe 170
+    // 171 with the irrationality of the root of two, whose weakening writes `real_of_num`, which is
+    // on `named`: this list counts CONSTANTS, as the rows above say.
+    aboutNumbers.size shouldBe 171
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
