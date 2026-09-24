@@ -112,6 +112,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // 2026-09-24. It declares one constant, `sqrt`, and the theorem that spends `COMPLETENESS` a
     // third time to say what it names exists.
     "Root" -> InTheChain,
+    "Continuity" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,
@@ -143,6 +144,13 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // these become a development above `Order`, this entry becomes `InTheChain` and `Chain` gains
     // the field that makes it true.
     "Embedding" -> NotADevelopment,
+
+    // Not a development: half of `Transcendental`, for `Embedding`'s reason and not `Monotone`'s.
+    // It declares nothing, and the three facts it derives, the two alternating series' absolute
+    // convergence and `SIN_COS_SQUARED`, are published in `Transcendental.facts` under names
+    // `Transcendental` declares, so what reaches `Library.of` does so as that development's. It is
+    // a file of its own because the derivation is a third the length of the file it belongs to.
+    "Trigonometric" -> NotADevelopment,
 
     "Descent" -> DeclaresNothing,
 

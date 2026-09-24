@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (135)
+## The definitions (136)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -287,6 +287,7 @@ axiom mentioning it means.
 | `definition ZERO` | ZERO = mk_num IND_0 | **NOT READ** |  |  |
 | `definition \/` | \/ = \x:bool. \y:bool. !z:bool. (x ==> z) ==> (y ==> z) ==> z | **NOT READ** |  |  |
 | `definition abs` | abs = \x:real. max x (-x) | **NOT READ** |  |  |
+| `definition continuous` | continuous = \x:real -> real. \y:real. !z:real. 0 < z ==> (?u:real. 0 < u /\ (!v:real. abs (v - y) < u ==> abs (x v - x y) < z)) | **NOT READ** |  |  |
 | `definition converges` | converges = \x:num -> real. \y:real. !z:real. 0 < z ==> (?u:num. !v:num. u <= v ==> abs (x v - y) < z) | **NOT READ** |  |  |
 | `definition cos` | cos = \x:real. lim (\y:num. Sum (\z:num. Power (0 - 1) z * (Power x (2 * z) / real_of_num (NUM_FACT (2 * z)))) y) | **NOT READ** |  |  |
 | `definition cosh` | cosh = \x:real. (exp x + exp (0 - x)) / 2 | **NOT READ** |  |  |

@@ -64,7 +64,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // The square root, 2026-09-24, in the change that added the link, and a development of its
       // own for the reason `Root`'s docstring gives: it is neither a limit nor a transcendental
       // function.
-      chain.root.facts.size
+      chain.root.facts.size +
+      // Continuity, the same day, in the change that added the link: neither a limit, which is
+      // about a sequence, nor anything `Root` is about.
+      chain.continuity.facts.size
 
     library.entries.size shouldBe expected
 
@@ -611,8 +614,17 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 629 and 626 with the irrationality of the root of two, the same day. One fact under one name,
     // and `CLAUDE.md`'s two figures move by one each: it binds `p` and `q`, both `num`. Derived
     // after the run had named the figures, and it agrees with them.
-    library.entries.size shouldBe 629
-    library.names.distinct.size shouldBe 626
+    // 634 and 631 with the trigonometric identity, the same day. Five facts under five names, none
+    // shared: `CONVERGES_SHIFT`, `SUM_EVEN_ODD`, and `COS_ABSOLUTE`, `SIN_ABSOLUTE` and
+    // `SIN_COS_SQUARED`. `CLAUDE.md`'s two figures move by **two** and **none**: only the first two
+    // bind two leading quantifiers, a sequence and a number, and the other three bind one `x`.
+    // Derived after the run had named the figures, and it agrees with them.
+    // 637 and 634 with continuity, the same day, derived before the run and met. Three facts
+    // under three names, none shared. `CLAUDE.md`'s figures move by **one** and **one** twice:
+    // `CONTINUOUS_CONST` binds `c` and `x`, both `real`, and `INTERMEDIATE_VALUE` binds `f`, `a`,
+    // `b` and `y`, three of them `real`; `CONTINUOUS_ID` binds one.
+    library.entries.size shouldBe 637
+    library.names.distinct.size shouldBe 634
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

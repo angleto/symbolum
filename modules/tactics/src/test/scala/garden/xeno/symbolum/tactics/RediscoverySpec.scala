@@ -302,7 +302,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `SQRT_SQUARE` carry one antecedent each and the two values carry none. Reconciled against
     // that reading after the run rather than predicted before it.
     // 426 with `SQRT_TWO_IRRATIONAL`'s one antecedent, `0 < q`, the same day.
-    propose.weakenings.size shouldBe 426
+    // 427 with the trigonometric identity's five facts, the same day, and the **one** was derived
+    // before the run: `CONVERGES_SHIFT` carries one antecedent, and `SUM_EVEN_ODD`, the two
+    // absolute convergences and `SIN_COS_SQUARED` carry none.
+    // 431 with continuity, the same day, derived before the run: `INTERMEDIATE_VALUE` carries four
+    // antecedents and the two facts about particular functions carry none.
+    propose.weakenings.size shouldBe 431
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -409,7 +414,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 94 with the square root, 2026-09-24: `SQRT`, `SQRT_UNIQUE` and `SQRT_SQUARE` write
     // `real_mul` with no lambda in the body. `SQRT_EXISTS` writes it too and is refused, its body
     // being an existential, and the two values write no operator `Propose.Swaps` holds.
-    propose.mutable.size shouldBe 94
+    // 95 with `SIN_COS_SQUARED`, which writes `real_mul` and `real_add` with no lambda in the body,
+    // derived before the run. The other four facts of that change are refused: `SUM_EVEN_ODD` and
+    // `CONVERGES_SHIFT` carry a lambda once their quantifiers come off, and the two absolute
+    // convergences are existentials.
+    propose.mutable.size shouldBe 95
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

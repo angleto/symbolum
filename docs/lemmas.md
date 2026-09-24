@@ -114,6 +114,12 @@ they have least appetite for working out how it is produced.
   WORD_SINGLETON_NTH       !x:'a. WORD_NTH (WORD_SINGLETON x) 0 = x
   WORD_SUFFIX_FACTOR       !x:word('a). !y:word('a). WORD_SUFFIX x y ==> WORD_FACTOR x y
 
+## Continuity
+
+  CONTINUOUS_CONST         !x:real. !y:real. continuous (\z:real. x) y
+  CONTINUOUS_ID            !x:real. continuous (\y:real. y) x
+  INTERMEDIATE_VALUE       !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)
+
 ## Deduction
 
   NUM_PROV_ADD_CONG        !x:num. !y:num. !z:num. NUM_TERM x ==> NUM_CLOSED x ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_TERM z ==> NUM_CLOSED z ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR x z)) (NUM_CODE 3 (NUM_PAIR y z))))
@@ -326,6 +332,7 @@ they have least appetite for working out how it is produced.
   CONVERGES_LE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> x v <= z) ==> y <= z
   CONVERGES_MUL            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v * y v) (z * u)
   CONVERGES_NEG            !x:num -> real. !y:real. converges x y ==> converges (\z:num. -(x z)) (-y)
+  CONVERGES_SHIFT          !x:num -> real. !y:real. converges x y ==> converges (\z:num. x (SUC z)) y
   CONVERGES_TAIL           !x:num -> real. !y:real. converges (Sum x) y ==> converges (\z:num. y - Sum x z) 0
   CONVERGES_TO_ZERO        !x:num -> real. !y:num -> real. (!z:num. abs (x z) <= y z) ==> converges y 0 ==> converges x 0
   CONVERGES_UNIQUE         !x:num -> real. !y:real. !z:real. converges x y ==> converges x z ==> y = z
@@ -739,6 +746,7 @@ they have least appetite for working out how it is produced.
   SUM_CONGRUENCE_BELOW     !x:num -> real. !y:num -> real. !z:num. (!u:num. u < z ==> x u = y u) ==> Sum x z = Sum y z
   SUM_CONSTANT             !x:real. !y:num. Sum (\z:num. x) y = real_of_num y * x
   SUM_DIAGONAL             !x:num -> num -> real. !y:num. Sum (\z:num. Sum (\u:num. x u (NUM_SUB z u)) (SUC z)) y = Sum (\z:num. Sum (\u:num. x z u) (NUM_SUB y z)) y
+  SUM_EVEN_ODD             !x:num -> real. !y:num. Sum x (y + y) = Sum (\z:num. x (z + z)) y + Sum (\z:num. x (SUC (z + z))) y
   SUM_GEOMETRIC            !x:real. !y:num. (x - 1) * Sum (\z:num. Power x z) y = Power x y - 1
   SUM_HALVES               !x:num -> real. !y:num. Sum x (y + y) = Sum x y + Sum (\z:num. x (y + z)) y
   SUM_LINEAR               !x:real. !y:num -> real. !z:num -> real. !u:num. Sum (\v:num. x * y v + z v) u = x * Sum y u + Sum z u
@@ -762,6 +770,7 @@ they have least appetite for working out how it is produced.
   COSH_PLUS_SINH           !x:real. cosh x + sinh x = exp x
   COSH_SQUARED             !x:real. cosh x * cosh x - sinh x * sinh x = 1
   COSH_ZERO                cosh 0 = 1
+  COS_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (z + z) / real_of_num (NUM_FACT (z + z)))))) y
   COS_ZERO                 cos 0 = 1
   EXP_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power x z / real_of_num (NUM_FACT z)))) y
   EXP_ADD                  !x:real. !y:real. exp (x + y) = exp x * exp y
@@ -773,6 +782,8 @@ they have least appetite for working out how it is produced.
   EXP_ZERO                 exp 0 = 1
   MUL_INV_COMBINE          !x:real. !y:real. !z:real. !u:real. !v:real. !w:real. !x1:real. !y1:real. !z1:real. y * x1 = 1 ==> z * y1 = 1 ==> u * z1 = 1 ==> x * (y * z) = u ==> v * x1 * (w * y1) = x * (v * w) * z1
   SINH_ZERO                sinh 0 = 0
+  SIN_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (SUC (z + z)) / real_of_num (NUM_FACT (SUC (z + z))))))) y
+  SIN_COS_SQUARED          !x:real. sin x * sin x + cos x * cos x = 1
   SIN_ZERO                 sin 0 = 0
 
 ## Word

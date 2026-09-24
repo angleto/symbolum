@@ -212,6 +212,20 @@ object Limit {
   val Eventually: String = "CONVERGES_EVENTUALLY"
 
   /**
+   * `|- !s l. converges s l ==> converges (\n. s (SUC n)) l`
+   *
+   * A sequence read one place later has the same limit. It is not [[Eventually]], which compares
+   * two sequences at the **same** index: here the index moves, and what the derivation spends is
+   * that an index past `N` has its successor past `N` too, so the tolerance's own `N` answers for
+   * the shifted sequence unchanged.
+   *
+   * Its first consumer is `Transcendental.SIN_COS_SQUARED`, where the Cauchy product at the
+   * cosine's series cancels the one at the sine's **one index along**, so the two partial sums that
+   * add to one are `Sum C (SUC n)` and `Sum S n`.
+   */
+  val Shifted: String = "CONVERGES_SHIFT"
+
+  /**
    * `|- !s. (!n. s n <= s (SUC n)) ==> !m n. NUM_LE m n ==> s m <= s n`
    *
    * A step at a time gives a step to anywhere, which is the induction nobody states and everybody
@@ -576,6 +590,8 @@ object Limit {
     Eventually ->
       ("!s:num -> real. !t:num -> real. !l:real. !N:num. " +
         "(!n:num. NUM_LE N n ==> s n = t n) ==> converges s l ==> converges t l"),
+    Shifted ->
+      "!s:num -> real. !l:real. converges s l ==> converges (\\n:num. s (SUC n)) l",
     MonotoneBelow ->
       ("!s:num -> real. (!n:num. s n <= s (SUC n)) ==> " +
         "!m:num. !n:num. NUM_LE m n ==> s m <= s n"),
@@ -732,6 +748,9 @@ object Limit {
       value <- valueOfConverges(logic, classical, theory, notation, valueDefinition, unique)
       eventually <- eventuallyEqual(
         logic, theory, notation, convergesDefinition, indices)
+      stepUp <- peano.fact(Peano.AtMostSuccessor)
+      shifted <- shiftedConvergence(
+        logic, theory, notation, convergesDefinition, indices, stepUp)
 
       monotoneBelow <- monotoneOrder(
         logic, linarith, theory, notation, induct, leOfEq, orderDefinition, addAtZero,
@@ -860,6 +879,7 @@ object Limit {
         Unique -> unique,
         ValueOfConverges -> value,
         Eventually -> eventually,
+        Shifted -> shifted,
         MonotoneBelow -> monotoneBelow,
         MonotoneConverges -> monotoneConverges,
         Comparison -> comparisonTest,
@@ -3263,6 +3283,85 @@ object Limit {
         .flatMap(rules.gen(bound, _))
         .flatMap(rules.gen(l, _))
         .flatMap(rules.gen(t, _))
+        .flatMap(rules.gen(s, _))
+    } yield result
+  }
+
+  /**
+   * [[Shifted]], `|- !s l. converges s l ==> converges (\n. s (SUC n)) l`.
+   *
+   * The same `N` answers for both sequences, which is why nothing here is a sum of indices the way
+   * [[eventuallyEqual]] needs one: past `N` an index `n` has `SUC n` past `N` as well, by
+   * `NUM_LE_SUC` and transitivity, and the distance of `s (SUC n)` from `l` is exactly what the
+   * shifted sequence's own definition asks about at `n`.
+   */
+  private def shiftedConvergence(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    convergesDefinition: Kernel.Thm,
+    indices: Indices,
+    stepUp: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val s = Term.variable("s", sequences)
+    val l = Term.variable("l", values)
+    val e = Term.variable("e", values)
+    val n = Term.variable("n", numbers)
+    val m = Term.variable("m", numbers)
+
+    for {
+      convergesS <- Parser.proposition(theory, notation, "converges (s:num -> real) (l:real)")
+      assumedS <- LogicError.lift(Kernel.assume(convergesS))
+      unfoldedS <- Conv.unfold(convergesDefinition, List(s, l)).flatMap(normaliseRight)
+      bodyS <- LogicError.lift(Kernel.eqMp(unfoldedS, assumedS))
+
+      positive <- Parser.proposition(theory, notation, "0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      near <- rules.spec(e, bodyS).flatMap(rules.mp(_, assumedPositive))
+
+      inside <- Parser.proposition(
+        theory,
+        notation,
+        "!n:num. NUM_LE m:num n ==> abs ((s:num -> real) n - (l:real)) < e:real"
+      )
+      assumedInside <- LogicError.lift(Kernel.assume(inside))
+      guard <- Parser.proposition(theory, notation, "NUM_LE m:num n:num")
+      assumedGuard <- LogicError.lift(Kernel.assume(guard))
+
+      successor <- Parser.term(theory, notation, "SUC (n:num)", numbers)
+      step <- rules.spec(n, stepUp)
+      past <- rules
+        .conjIntro(assumedGuard, step)
+        .flatMap(both =>
+          rules.specAll(indices.transitive, List(m, n, successor)).flatMap(rules.mp(_, both)))
+      close <- rules.spec(successor, assumedInside).flatMap(rules.mp(_, past))
+
+      guarded <- rules.disch(guard, close).flatMap(rules.gen(n, _))
+      existential <- Parser.proposition(
+        theory,
+        notation,
+        "?M:num. !n:num. NUM_LE M n ==> abs ((s:num -> real) (SUC n) - (l:real)) < e:real"
+      )
+      predicate <- logic
+        .destExistsPredicate(existential)
+        .toRight(NotOfForm("an existential", existential))
+      witnessed <- rules.existsIntro(predicate, m, guarded)
+      eliminated <- rules.existsElim(near, m, witnessed)
+
+      whole <- rules.disch(positive, eliminated).flatMap(rules.gen(e, _))
+      shifted <- Parser.term(
+        theory, notation, "\\n:num. (s:num -> real) (SUC n)", sequences)
+      unfoldedT <- Conv.unfold(convergesDefinition, List(shifted, l)).flatMap(normaliseRight)
+      bodyT <- rightOf(unfoldedT)
+      _ <- sameStatement(notation, whole, bodyT)
+      folded <- Conv
+        .sym(unfoldedT)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, whole)))
+
+      result <- rules
+        .disch(convergesS, folded)
+        .flatMap(rules.gen(l, _))
         .flatMap(rules.gen(s, _))
     } yield result
   }

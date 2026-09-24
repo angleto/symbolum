@@ -499,6 +499,22 @@ object Series {
   val Halves: String = "SUM_HALVES"
 
   /**
+   * `|- !f n. Sum f (NUM_ADD n n) = Sum (\i. f (NUM_ADD i i)) n + Sum (\i. f (SUC (NUM_ADD i i))) n`
+   *
+   * A sum of even length is its terms at the even indices plus its terms at the odd ones. What
+   * reads a series at every other index wants it: the sine's and the cosine's are the
+   * exponential's terms at the odd and the even places with signs attached, so a bound on the
+   * exponential's magnitudes bounds theirs through this, and the Cauchy product of the cosine
+   * with itself meets the one of the sine with itself exactly when a convolution of the
+   * exponential's terms is split this way.
+   *
+   * Written with `NUM_ADD i i` rather than `NUM_MUL 2 i` because that is the shape the induction
+   * closes on and the shape [[NegatedDouble]] already has; a caller holding the multiplicative
+   * spelling crosses with `NUM_MUL_TWO`.
+   */
+  val EvenOdd: String = "SUM_EVEN_ODD"
+
+  /**
    * `|- !f g n. (!i. NUM_LT i n ==> f i = g i) ==> Sum f n = Sum g n`
    *
    * Congruence ON A RANGE, which is the statement a consumer can actually use.
@@ -859,6 +875,20 @@ object Series {
     )
   )
 
+  /**
+   * The one split by PARITY, an eighth list because its rules are the sum's recurrences with
+   * `NUM_ADD`'s three: [[SignStatements]] has the same arithmetic over the power's recurrences,
+   * and [[ArithmeticStatements]] has the sum's with only two of `NUM_ADD`'s, which stalls at
+   * `NUM_ADD (SUC n) n` for the reason [[NegatedDouble]] gives.
+   */
+  val ParityStatements: Vector[(String, String)] = Vector(
+    (
+      EvenOdd,
+      "!f:num->real. !n:num. Sum f (NUM_ADD n n) = " +
+        "Sum (\\i:num. f (NUM_ADD i i)) n + Sum (\\i:num. f (SUC (NUM_ADD i i))) n"
+    )
+  )
+
   /** [[Geometric]], whose step carries the hypothesis as an implication. See [[Geometric]]. */
   val GeometricStatement: String =
     "!q:real. !n:num. (q - 1) * Sum (\\i:num. Power q i) n = Power q n - 1"
@@ -1063,6 +1093,7 @@ object Series {
       successorPlus <- peano.fact(Peano.SuccessorPlus)
       doubling <- Rewrite.Rule.all(logic, Vector(addAtZero, addAtSuccessor, successorPlus))
       signwise <- prove(driver, withProd, notation, SignStatements, powerRules ++ doubling)
+      paritywise <- prove(driver, withProd, notation, ParityStatements, recurrences ++ doubling)
 
       // The laws of exponents, which want the same arithmetic and the power's recurrences instead
       // of the sum's. They are a separate call because they are proved in order rather than from
@@ -1207,7 +1238,8 @@ object Series {
         CongruenceBelow -> congruenceBelow,
         MonotoneBelow -> monotoneBelow,
         Geometric -> geometric
-      ) ++ derived ++ alsoDerived ++ basewise ++ signwise ++ reindexed ++ exponents ++ bridged ++
+      ) ++ derived ++ alsoDerived ++ basewise ++ signwise ++ paritywise ++ reindexed ++ exponents ++
+        bridged ++
         counted).toMap
     )
   }

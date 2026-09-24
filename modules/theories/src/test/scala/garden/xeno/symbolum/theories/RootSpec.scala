@@ -137,8 +137,7 @@ class RootSpec extends AnyFlatSpec with Matchers {
     root.show(atRoot.conclusion) shouldBe "~(sqrt (0 - 1) * sqrt (0 - 1) = 0 - 1)"
   }
 
-  it should "be the chain's end, so that every development above the reals can name it" in {
-    chain.widest shouldBe root
+  it should "be reachable from the chain's end, so that every development above the reals can name it" in {
     chain.widest.theory.constants.keySet should contain(Root.SquareRoot)
   }
 

@@ -350,7 +350,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 425 with the square root, 2026-09-24: one antecedent each on `SQRT_EXISTS`, `SQRT`,
     // `SQRT_UNIQUE` and `SQRT_SQUARE`, none on the two values.
     // 426 with `SQRT_TWO_IRRATIONAL`'s one antecedent, the same day.
-    proposals.size shouldBe 426
+    // 427 with `CONVERGES_SHIFT`'s one antecedent, the same day; the trigonometric identity and the
+    // three other facts that came with it carry none.
+    // 431 with `INTERMEDIATE_VALUE`'s four antecedents, the same day; `CONTINUOUS_CONST` and
+    // `CONTINUOUS_ID` carry none.
+    proposals.size shouldBe 431
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1172,7 +1176,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // facts, and which of those land here rather than in the other buckets was not measured.
     // 336 with the irrationality of the root of two, whose one weakening lands here; read off the
     // run like the row above it.
-    open shouldBe 336
+    // 338 with the trigonometric identity's change, the same day, read off the run and NOT derived
+    // before it: the two are `SIN_COS_SQUARED`'s substitutions, equations between reals that `Ring`
+    // takes and fails on, as `EXP_ADD`'s did. `CONVERGES_SHIFT`'s weakening is in `unreadable`
+    // below, which is what accounted for the pair once that row had run.
+    // 342 with the intermediate value theorem's four weakenings, the same day, read off the run:
+    // each drops one antecedent and leaves an order between reals under the others, a shape
+    // `Order` addresses and does not settle, so all four land here and `unreadable` below does
+    // not move. That row sat behind this one again; it was predicted from this one before it ran,
+    // and the run that reached it agreed.
+    open shouldBe 342
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1500,7 +1513,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // antecedent leaves `!a g f h. f = h`, which is false and which names **no constant at all**,
     // so there is nothing for a model here to address and the criterion two rows up sends it to
     // this bucket rather than to `open`. Read off the run rather than predicted.
-    unreadable shouldBe 100
+    // 101 with `CONVERGES_SHIFT`'s weakening, 2026-09-24: dropping its antecedent leaves
+    // `!s l. converges (\n. s (SUC n)) l`, about `converges`, which no model here interprets, and
+    // this bucket's criterion sends it here as it sent `SUM_BELOW_LIMIT`'s. **It sat behind `open`
+    // again**, the sixth time: the first pass moved `open` and never reached this line, and it was
+    // the reading here that accounted for `open`'s two as `SIN_COS_SQUARED`'s substitutions.
+    unreadable shouldBe 101
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1788,7 +1806,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 170 with the four residues the two order lemmas produce, all of which write `Power`.
     // 171 with the irrationality of the root of two, whose weakening writes `real_of_num`, which is
     // on `named`: this list counts CONSTANTS, as the rows above say.
-    aboutNumbers.size shouldBe 171
+    // 172 with `CONVERGES_SHIFT`'s weakening, which writes `SUC`, the same day. Reconciled against
+    // `named` after the run had named the figure rather than predicted before it.
+    aboutNumbers.size shouldBe 172
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
