@@ -22,8 +22,11 @@ import garden.xeno.symbolum.theories.Chain
  * seen only proofs will read the next refusal as a defect.
  *
  * The refused one is **true**: every non-negative real has a square root, and what proves it is
- * `COMPLETENESS`, which no tactic reaches. A false claim in that slot would have demonstrated
- * something else and would have read as the same thing, which is the way this page could mislead.
+ * `COMPLETENESS`. Since 2026-09-24 the library holds that proof, `Root.SQRT_EXISTS`, which also
+ * says the root is non-negative; no tactic reaches it, because the lookup matches a statement and
+ * this one leaves the sign out, so the answer here is still `Unsettled`, read off a run that day. A
+ * false claim in that slot would have demonstrated something else and would have read as the same
+ * thing, which is the way this page could mislead.
  *
  * Names are written as the printer prints them, `x` and not `n`, because a page that answers about
  * `x` a question asked about `n` is `docs/adr/0002` being paid for in a demonstration. Here there

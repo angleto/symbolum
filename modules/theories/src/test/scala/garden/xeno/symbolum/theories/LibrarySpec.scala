@@ -60,7 +60,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // Its consumer, the same day and the same discipline. `Folding` is a development of its own
       // rather than more of `Listing` because it SPENDS that interface's recursion theorem instead
       // of publishing it, and a development of its own is one this sum has to name.
-      chain.folding.facts.size
+      chain.folding.facts.size +
+      // The square root, 2026-09-24, in the change that added the link, and a development of its
+      // own for the reason `Root`'s docstring gives: it is neither a limit nor a transcendental
+      // function.
+      chain.root.facts.size
 
     library.entries.size shouldBe expected
 
@@ -599,8 +603,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // quantifiers, and the two with a pair sharing a type are `LIST_RECURSION_UNIQUE`, whose `f`
     // and `h` are both `word('a) -> 'b`, and `LIST_FOLD_CONCAT`, whose `u` and `v` are both
     // `word('a)`. The other three bind a step, a start and at most one word between them.
-    library.entries.size shouldBe 622
-    library.names.distinct.size shouldBe 619
+    // 628 and 625 with the square root, 2026-09-24. Six facts under six names, none shared, so the
+    // gap of three does not move. `CLAUDE.md`'s two figures move by **one** and **one**: of the six
+    // only `SQRT_UNIQUE` binds two leading quantifiers, and its `x` and `y` are both `real`; the
+    // existence, the read-back and the square bind one and the two values none. Derived from the
+    // statements after the first run had named the figures, and it agrees with them.
+    library.entries.size shouldBe 628
+    library.names.distinct.size shouldBe 625
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -312,8 +312,9 @@ object Algebraic {
    * One of the radicals the target is built from: a real whose `degree`-th power is `radicand`.
    *
    * `Root(2, 3)` is a square root of three, and the claim it contributes is `y * y = 3`. It is
-   * deliberately not "the positive square root": the theory has no name for that one, the statement
-   * holds of both, and a hypothesis that pinned the sign would be a hypothesis the proof never uses.
+   * deliberately not "the positive square root". The theory has a name for that one since
+   * 2026-09-24, `sqrt 3`, and it is still not what this means: the statement holds of both roots, and
+   * a hypothesis that pinned the sign would be a hypothesis the proof never uses.
    */
   final case class Root(degree: Int, radicand: BigInt)
 

@@ -697,6 +697,15 @@ they have least appetite for working out how it is produced.
   real_le                  real_le = (\x:real. \y:real. x < y \/ x = y)
   sub                      sub = (\x:real. \y:real. x + -y)
 
+## Root
+
+  SQRT                     !x:real. 0 <= x ==> 0 <= sqrt x /\ sqrt x * sqrt x = x
+  SQRT_EXISTS              !x:real. 0 <= x ==> (?y:real. 0 <= y /\ y * y = x)
+  SQRT_ONE                 sqrt 1 = 1
+  SQRT_SQUARE              !x:real. 0 <= x ==> sqrt (x * x) = x
+  SQRT_UNIQUE              !x:real. !y:real. 0 <= y /\ y * y = x ==> sqrt x = y
+  SQRT_ZERO                sqrt 0 = 0
+
 ## Rotation
 
   WORD_ROTATE_LENGTH       !x:num. !y:word('a). WORD_LENGTH (WORD_ROTATE x y) = WORD_LENGTH y

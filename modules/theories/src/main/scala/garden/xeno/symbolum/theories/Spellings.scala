@@ -297,6 +297,9 @@ object Spellings {
       // only where the context needs it.
       .operator("exp", 1, "\\exp #1", Multiplicative + 5)
       .operator("ln", 1, "\\ln #1", Multiplicative + 5)
+      // The radical, with its argument under the bar, which is what makes the argument's extent
+      // visible without brackets: `\sqrt{x * x}` needs none where `sqrt (x * x)` does.
+      .delimited("sqrt", 1, "\\sqrt{#1}")
       .operator("sin", 1, "\\sin #1", Multiplicative + 5)
       .operator("cos", 1, "\\cos #1", Multiplicative + 5)
       .operator("sinh", 1, "\\sinh #1", Multiplicative + 5)

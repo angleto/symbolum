@@ -298,7 +298,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // none: `LIST_RECURSION` is an existential owing nothing and the three fold facts are bare
     // equations. Read off the run and reconciled against that reading rather than predicted before
     // it, which is the difference this file's rows are careful to record.
-    propose.weakenings.size shouldBe 421
+    // 425 with the square root, 2026-09-24: `SQRT_EXISTS`, `SQRT`, `SQRT_UNIQUE` and
+    // `SQRT_SQUARE` carry one antecedent each and the two values carry none. Reconciled against
+    // that reading after the run rather than predicted before it.
+    propose.weakenings.size shouldBe 425
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -402,7 +405,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 89 with `MUL_INV_COMBINE` and `EXP_ADD`, which write `real_mul` and carry no lambda.
     // `EXP_CONVOLUTION` is refused: its body is a `Sum` of one.
     // 91 with the two hyperbolic facts, which write `real_mul` and carry no lambda.
-    propose.mutable.size shouldBe 91
+    // 94 with the square root, 2026-09-24: `SQRT`, `SQRT_UNIQUE` and `SQRT_SQUARE` write
+    // `real_mul` with no lambda in the body. `SQRT_EXISTS` writes it too and is refused, its body
+    // being an existential, and the two values write no operator `Propose.Swaps` holds.
+    propose.mutable.size shouldBe 94
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

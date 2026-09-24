@@ -344,7 +344,17 @@ final class Chain private (
    * [[listing]] is one: `LIST_FOLD` is a constant, so a development that declared it beside the
    * chain would put it where nothing above can see it. One constant, no axiom.
    */
-  val folding: Folding
+  val folding: Folding,
+
+  /**
+   * The square root of a non-negative real, and the theorem that it exists.
+   *
+   * The third thing `COMPLETENESS` buys, after the Archimedean property and the monotone
+   * convergence theorem. It needs the reals and their order and nothing between them and here; it
+   * is a link rather than a development beside the chain because `sqrt` is a constant, and a
+   * constant declared beside the chain is where nothing above can see it. One constant, no axiom.
+   */
+  val root: Root
 ) {
 
   /**
@@ -373,7 +383,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = folding
+  val widest: Signature = root
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -577,6 +587,10 @@ object Chain {
       // The consumer that spends `LIST_RECURSION`, which is what makes the recursion theorem a
       // fact this repository uses rather than one it holds.
       folding <- Folding.construct(listing, listing.theory)
+
+      // Over the reals and their order and nothing else, extending the chain's end: what it spends
+      // is `COMPLETENESS` and one choice, and neither needs anything built since `Order`.
+      root <- Root.construct(classical, reals, order, folding.theory, folding.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -611,6 +625,7 @@ object Chain {
       integers,
       inclusion,
       listing,
-      folding
+      folding,
+      root
     )
 }
