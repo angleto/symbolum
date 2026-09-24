@@ -409,6 +409,12 @@ object Remedy {
 
     case Undetermined(variable) => ChooseATerm(variable.name)
 
+    // The same move as the case above, reached from the other side: there the goal does not fix a
+    // variable, here the matcher cannot decide one, and in both the caller names the term and
+    // specialises at it. Not a restatement, because the target may be an instance and nothing
+    // about it needs changing.
+    case BeyondMatching(_, _, refusal) => ChooseATerm(refusal.variable.name)
+
     // A shape to restate and not a term to choose, which is the line between this and the case
     // above: `Undetermined` says the goal is right and one quantity is unsaid, and this says the
     // call is wrong. Both numbers reach the message, because which of them is wrong is the caller's

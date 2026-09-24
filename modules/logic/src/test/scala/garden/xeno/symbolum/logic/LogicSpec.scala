@@ -371,6 +371,46 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "say the fragment was left, and not that the target is no instance, where the matcher cannot decide it" in {
+    // `!P. a = a ==> !x. P x ==> P (s x)` against `a = a ==> !x. x = a ==> s x = a`, which IS an
+    // instance at `P := \x. x = a`. The inner quantifier sits behind an implication so that
+    // `specTo` does not strip it with `P`: it has to stay a binder, since a variable applied to a
+    // non-binder is only the fragment's question when a binder is in scope. The matcher decides `P`
+    // from its first occurrence and then meets `P (s x)`, where the fragment stops. Until
+    // 2026-09-25 this came back as `NotOfForm("an instance of ...")`, which says the opposite of
+    // what is true. The refusal now names the variable, which is what the caller has to supply.
+    val predicate = Term.variable("P", Type.fun(alpha, Type.Bool))
+    val step = Term.variable("s", Type.fun(alpha, alpha))
+    val x = Term.variable("x", alpha)
+    val guard = force(Term.eq(a, a))
+
+    def behindGuard(body: Term): Term = force(logic.mkImp(guard, force(logic.mkForall(x, body))))
+
+    val principle = force(
+      Kernel.assume(
+        force(
+          logic.mkForall(
+            predicate,
+            behindGuard(
+              force(logic.mkImp(force(Term.app(predicate, x)), force(Term.app(predicate, force(Term.app(step, x))))))
+            )
+          )
+        )
+      )
+    )
+    val instance =
+      behindGuard(force(logic.mkImp(force(Term.eq(x, a)), force(Term.eq(force(Term.app(step, x)), a)))))
+
+    // Named by type and not by name, as the open quantifier is named in the test below: `specTo`
+    // opens the lemma's quantifiers with names coined from their position, so the variable the
+    // refusal carries is the lemma's first quantifier as the lemma prints, not the `P` built here.
+    rules.specTo(principle, instance) match {
+      case Left(BeyondMatching(_, _, Matching.Refusal.ArgumentIsNotABinder(variable))) =>
+        variable.ty shouldBe predicate.ty
+      case other => fail(s"expected the fragment's refusal naming the predicate, got $other")
+    }
+  }
+
   it should "refuse a target that leaves a quantifier open, naming it" in {
     // A quantifier the body does not mention: every value gives the target, so there is no answer
     // rather than several. Picking one would be the silent choice this whole method exists to

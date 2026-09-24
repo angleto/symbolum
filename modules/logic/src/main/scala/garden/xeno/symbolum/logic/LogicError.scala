@@ -374,6 +374,37 @@ final case class Undetermined(variable: FVar) extends LogicError {
 }
 
 /**
+ * A lemma was not specialised at a target because deciding whether the target is an instance of it
+ * is higher-order matching outside the fragment `Matching` decides.
+ *
+ * Its own refusal rather than a [[NotOfForm]], and the difference is what the caller is told.
+ * `NotOfForm("an instance of ...")` says the target is not an instance, and here nothing was
+ * decided about that: the target may be one. `!P. !n. P n ==> P (SUC n)` against
+ * `!n. n < 3 ==> SUC n < 3` **is** an instance, at `P := \n. n < 3`, and the matcher turns it down,
+ * because the second occurrence of `P` is applied to `SUC n` and a variable applied to a term that
+ * is not a binder is where the fragment stops. That pair was measured against the chain on
+ * 2026-09-25, and `LogicSpec` holds the same shape over a type variable.
+ *
+ * `refusal` names the variable and the condition, and the repair is the caller's rather than a
+ * rephrasing: name the term the variable stands for and specialise at it, which is how `Induct`
+ * has always used an induction principle whose predicate is outside the fragment. `Unread`,
+ * because nothing about the target was learned.
+ *
+ * What it does not say: that the target IS an instance. `Matching.why` reports the first condition
+ * the walk met, and a pair refused there may also fail further along; `docs/adr/0030` measured
+ * that every refusal of this kind the suite produced was such a pair.
+ */
+final case class BeyondMatching(pattern: Term, target: Term, refusal: Matching.Refusal)
+  extends LogicError {
+  def message: String =
+    s"whether $target is an instance of $pattern is not decided here: " +
+      s"${refusal.variable.name} is ${refusal.condition}, which is outside the fragment this " +
+      s"matcher decides; supply ${refusal.variable.name} and specialise at it"
+
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+/**
  * A driver was asked to finish a goal and holds no procedure that could.
  *
  * Its own case, for the reason [[NotNormalised]] is its own case: "the closer looked and could not"
