@@ -95,4 +95,30 @@ echo "################ 3-the-cons-not-moved-out" >> "$LOG"
   -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 3-the-cons-not-moved-out" >> "$LOG"
 
+# 4. Added by the verification, 2026-09-24. The fold's step made to read the tail, which is what
+# `docs/adr/0039` says makes `LIST_FOLD_CONCAT` false. Perturbation 3 cannot hand the tail back,
+# because `g`'s type forbids it; this one keeps `g`'s type and hands it `LIST_HEAD w`, the head of
+# the TAIL, in place of the letter. Three substitutions, nested: the step, the fold's own cons
+# equation as derived, and its statement. The fold's two equations then prove, so what goes red is
+# the split itself, at `u` empty inside the step, where one side's tail is `WORD_CONCAT u v` and
+# the other's is `u`.
+#
+# WHAT WAS SEEN, 2026-09-24 on 712964af, with these three substitutions applied by hand rather
+# than by the tool: red at the chain, both suites aborted, with
+#   `transitivity: ((x (LIST_HEAD ((WORD_CONCAT y1) u))) (((LIST_FOLD x) y) ((WORD_CONCAT y1) u)))
+#    is not ((x x1) (((LIST_FOLD x) y) ((WORD_CONCAT y1) u)))`,
+# which is inside `foldOverAConcatenation`'s step and after both equations were accepted.
+echo "################ 4-the-step-reads-the-tail" >> "$LOG"
+"$P" "$FOLDING" \
+  'applied <- LogicError.lift(Term.appAll(step, List(letter, ignored)))' \
+  'applied <- LogicError.lift(base.constant(Listing.Head, Type.fun(Words, Element))).flatMap(h => LogicError.lift(Term.app(h, word))).flatMap(t => LogicError.lift(Term.appAll(step, List(t, ignored))))' \
+  -- "$P" "$FOLDING" \
+  'onTheRight <- Conv.apTerm(partial, back)' \
+  'onTheRight <- LogicError.lift(theory.constant(Listing.Head, Type.fun(Words, Element))).flatMap(h => LogicError.lift(Term.app(h, word))).flatMap(t => LogicError.lift(Term.app(step, t))).flatMap(Conv.apTerm(_, back))' \
+  -- "$P" "$FOLDING" \
+  '"LIST_FOLD g a (LIST_CONS x w) = g x (LIST_FOLD g a w)"' \
+  '"LIST_FOLD g a (LIST_CONS x w) = g (LIST_HEAD w) (LIST_FOLD g a w)"' \
+  -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
+echo "### exit $? for 4-the-step-reads-the-tail" >> "$LOG"
+
 cd "$WT" && git status --porcelain >> "$LOG"
