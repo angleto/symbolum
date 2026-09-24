@@ -380,12 +380,11 @@ final class Chain private (
   /**
    * The signature that holds everything this chain assembled.
    *
-   * `Language` is built last and over all of the others, so it is the one that declares `NUM_ADD`,
-   * `NUM_MUL`, `NUM_LE`, `real_of_num`, `Sum`, `Power`, `Prod`, `Divides`, `NUM_DIVIDES`,
-   * `NUM_CONG`, `NUM_GCD`, `PAIR`, `FST`, `SND`, the word operations, the matrix operations,
-   * `max`, `min`, `abs`, `sgn`, `NUM_FACT`, `NUM_PROD`, `NUM_BETA`, `NUM_TRI`, `NUM_PAIR`,
-   * `NUM_CODE` and `NUM_TERM` at once. A caller stating a goal about
-   * any of them wants this rather than a guess about which development owns which constant.
+   * Each link that declares something extends the theory of the link below it, so the last of them
+   * holds every constant the chain declares, whichever link declared it: the arithmetic of
+   * `num` and of the reals, the sums and products, pairs, words and matrices, the coding the
+   * embedded theory is written in, and the analysis. A caller stating a goal about any of them
+   * wants this rather than a guess about which development owns which constant.
    *
    * **The name of the last link is not written here any more, and that is the point of the field.**
    * It was `Series` until 2026-09-12, `Word` for a few hours of that day, then `Matrix`, then
