@@ -1324,9 +1324,25 @@ that, the thing Goedel's argument actually needs, which is `Prov` as a formula *
 language** with one free variable rather than as the predicate `NUM_PROV` of the ambient logic.
 **D1, D2 and D3 are statements about that formula, so not one of the three can be stated yet.**
 
-What is above that is not written: that object-level `Prov`, the diagonal lemma, and then D1, D2
-and D3. `docs/adr/0013` says why the last of those is its own piece of work rather than a helper
-inside this one, and it is the part most likely to be underestimated.
+**The road to that formula goes through truth, and the first half of it is `Truth`, since
+2026-09-25.** `docs/adr/0040` is the decision: a representation of one of the constants the stack
+uses is a formula of the object language with a theorem that its **truth** is the predicate, and
+what turns a true formula into a provable one is completeness for bounded formulas, proved once,
+rather than a derivation in PA per constant. `NUM_VALUE t e` and `NUM_TRUE p e` are the value of a
+term and the truth of a formula at an environment `e : num -> num`, both recursions on the code
+answering with a function of the environment, which the quantifier's clause forces: it reads the
+body at `e` updated at the bound index. `NUM_TRI_GRAPH`, the code of `v0 + v0 = v1 * S v1`, is the
+first representation, and `NUM_TRI_GRAPH_TRUE` says its truth is `e 0 = NUM_TRI (e 1)`. It sits
+beside the chain, as `Collatz` does, until completeness gives it a consumer there.
+
+**Read that for what it is: nothing in it is about provability.** `NUM_TRI_GRAPH_TRUE` says what
+the formula means and not that PA proves it at any numeral, and a reader who rounds the first up to
+the second has skipped the one theorem `docs/adr/0040` says is left to prove and doubts most.
+
+What is above that is not written: completeness for bounded formulas, the remaining
+representations in the order Mycelium card `4102f131` gives, that object-level `Prov`, the diagonal
+lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last of those is its own piece of work
+rather than a helper inside this one, and it is the part most likely to be underestimated.
 
 **Discharging the freeness condition at a concrete code was a fourth entry on that list until
 2026-09-15**, fifteen lines below the paragraph that says `Language.notFreeIn` does it and

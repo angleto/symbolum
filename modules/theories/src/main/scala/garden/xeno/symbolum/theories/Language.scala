@@ -3918,7 +3918,7 @@ object Language {
    * rather than on what the branch produces. Written once because the alternative is two hundred
    * lines differing in `numbers` against `Type.Bool`, which go stale in one direction.
    */
-  private def defineShaped(
+  private[theories] def defineShaped(
     numbering: Numbering,
     recursion: Kernel.Thm,
     base: Theory,
@@ -3999,7 +3999,7 @@ object Language {
    * Every recursive call sits under a guard that says what shape `s` has, and the bound comes from
    * that shape rather than from a tag. That is the whole reason the guards are written as equations.
    */
-  private def shapedIsAdmissible(
+  private[theories] def shapedIsAdmissible(
     numbering: Numbering,
     logic: Logic,
     admissible: Term,
@@ -4097,6 +4097,26 @@ object Language {
                   overArgument <- congruent(x, y, guard).flatMap(Conv.apTerm(g, _))
                   result <- Conv.trans(overFunction, overArgument)
                 } yield result
+              // Under a binder, which `Truth`'s step has and no step in this file does: the truth
+              // of a formula is a function of the environment, so its branches are abstractions
+              // over it, and the quantifier's branch applies the recursion under `!n.`. The
+              // variable opened here is fresh against both sides and against every assumption,
+              // which is the side condition `Kernel.abs` checks: the agreement and the guard
+              // mention the functions and the index and nothing bound inside a branch.
+              case (Abs(ta, _), Abs(tb, _)) if ta == tb =>
+                val taken = Term.freeVariables(a) ++ Term.freeVariables(b) ++
+                  (agreement.hypotheses ++ guard.hypotheses ++
+                    List(agreement.conclusion, guard.conclusion)).flatMap(Term.freeVariables)
+                val opened = Conv.freshVariable("v", ta, taken)
+                for {
+                  one <- LogicError.lift(Term.app(a, opened))
+                  other <- LogicError.lift(Term.app(b, opened))
+                  inside <- (Term.betaReduce(one), Term.betaReduce(other)) match {
+                    case (Some(x), Some(y)) => congruent(x, y, guard)
+                    case _ => Left(NotOfForm("an abstraction that opens", a))
+                  }
+                  closed <- LogicError.lift(Kernel.abs(opened, inside))
+                } yield closed
               case _ => Left(NotOfForm(s"two branches that differ only by the function", a))
             }
 
@@ -4243,12 +4263,49 @@ object Language {
         case other => Left(MissingDefinition(other))
       }
 
+    for {
+      parts <- shape
+      (tagText, payloadShape, extra) = parts
+      tag <- numeral(tagText)
+      payload <- payloadShape match {
+        case None => numeral("0")
+        case Some(Left(single)) => Right(single: Term)
+        case Some(Right((a, b))) => vocabulary.paired(a, b)
+      }
+      coded <- vocabulary.coded(tag, payload)
+      instance <- rules.specAll(cases, parameters.map(variable => variable: Term) :+ coded)
+      cleaned <- Rewrite.inTheorem(projections, instance)
+
+      settled <- settleGuards(vocabulary.numbering, vocabulary.logic, successor, answers, cleaned)
+      general <- rules.genAll(settled, parameters ++ extra)
+      result <- vocabulary.checked(statement, general)
+    } yield result
+  }
+
+  /**
+   * A recursion equation over a code of a given shape, with the nest of shape tests taken off.
+   *
+   * What `shapedAt` does once the projections are gone, and what `Truth` does to its own two
+   * recursions, so it is written once. Every guard in these nests is an equation between two codes,
+   * so each is either a reflexivity or refuted by the tags differing. A conditional whose guard is
+   * neither is part of the ANSWER rather than of the shape test and is left standing.
+   */
+  private[theories] def settleGuards(
+    numbering: Numbering,
+    logic: Logic,
+    successor: Successor,
+    answers: Type,
+    equation: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val classical = numbering.peano.naturals.classical
+
     /**
      * Decide one guard, or say it is not one.
      *
      * `None` means the conditional is part of the **answer** rather than part of the shape test,
      * which is the variable clause's `COND (j = i) t (NUM_CODE 0 j)`: whether the index matches is
-     * not something this file settles, and the published statement carries it. Without that stop
+     * not something settled here, and the published statement carries it. Without that stop
      * the walk descends into it and asks two indices to be codes.
      */
     def decide(guard: Term): Either[LogicError, Option[Either[Kernel.Thm, Kernel.Thm]]] =
@@ -4257,7 +4314,7 @@ object Language {
         case Some((App(App(_, leftTag), leftPayload), App(App(_, rightTag), rightPayload))) =>
           for {
             assumed <- LogicError.lift(Kernel.assume(guard))
-            recovered <- vocabulary.numbering
+            recovered <- numbering
               .fact(Numbering.CodeInjective)
               .flatMap(rules.specAll(_, List(leftTag, leftPayload, rightTag, rightPayload)))
               .flatMap(rules.mp(_, assumed))
@@ -4297,36 +4354,20 @@ object Language {
     }
 
     for {
-      parts <- shape
-      (tagText, payloadShape, extra) = parts
-      tag <- numeral(tagText)
-      payload <- payloadShape match {
-        case None => numeral("0")
-        case Some(Left(single)) => Right(single: Term)
-        case Some(Right((a, b))) => vocabulary.paired(a, b)
-      }
-      coded <- vocabulary.coded(tag, payload)
-      instance <- rules.specAll(cases, parameters.map(variable => variable: Term) :+ coded)
-      cleaned <- Rewrite.inTheorem(projections, instance)
-
       conditional <- LogicError.lift(
-        vocabulary.theory.constant(
+        numbering.theory.constant(
           Classical.Conditional,
           Type.fun(Type.Bool, Type.fun(answers, Type.fun(answers, answers)))
         )
       )
-      classical = vocabulary.numbering.peano.naturals.classical
       trueRule <- classical
         .fact(Classical.CondTrue)
         .map(Kernel.instType(Map(Classical.TypeVariable -> answers), _))
       falseRule <- classical
         .fact(Classical.CondFalse)
         .map(Kernel.instType(Map(Classical.TypeVariable -> answers), _))
-
-      settled <- reduced(cleaned, conditional, trueRule, falseRule)
-      general <- rules.genAll(settled, parameters ++ extra)
-      result <- vocabulary.checked(statement, general)
-    } yield result
+      settled <- reduced(equation, conditional, trueRule, falseRule)
+    } yield settled
   }
 
   /* ----------------------------------------------- substitution keeps what it is given */
