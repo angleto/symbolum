@@ -135,9 +135,9 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // Beside the chain and correctly so: each produces a theorem or a procedure on request and
     // introduces no constant, which is the reason `Bounded`'s own docstring gives for sitting where
     // it does. `Coding` was put here by mistake for a few hours and is the reason this file exists:
-    // it introduces `NUM_FACT`, so the reason that covers these three never covered it.
+    // it introduces `NUM_FACT`, so the reason that covers these never covered it.
     // Not a development: HALF of one. `docs/adr/0016`'s phase 0 split `Peano` by whether a stage
-    // can be stated without the reals, and this file is the seventeen that cannot, `real_of_num`
+    // can be stated without the reals, and this file is the stages that cannot, `real_of_num`
     // and the floor among them. `InTheChain` was written here first and the test below refused it,
     // correctly: the constants are declared into `Peano`'s theory and the facts are published in
     // `Peano.facts`, so what reaches `Chain.widest` and `Library.of` does so as `Peano`'s and this
@@ -147,7 +147,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Embedding" -> NotADevelopment,
 
     // Not a development: half of `Transcendental`, for `Embedding`'s reason and not `Monotone`'s.
-    // It declares nothing, and the three facts it derives, the two alternating series' absolute
+    // It declares nothing, and the facts it derives, the two alternating series' absolute
     // convergence and `SIN_COS_SQUARED`, are published in `Transcendental.facts` under names
     // `Transcendental` declares, so what reaches `Library.of` does so as that development's. It is
     // a file of its own because the derivation is a third the length of the file it belongs to.
@@ -174,7 +174,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Value" -> DeclaresNothing,
 
     // `Semiring`'s standing, and the entry is worth a line because the file plainly holds facts:
-    // sixteen of them, proved when it is built. They are a procedure's rule table and not a
+    // a table of them, proved when it is built. They are a procedure's rule table and not a
     // development's library — the same position `Arithmetic`'s numeral lemmas are in over the
     // reals — so there is no theory for `Chain.construct` to extend and nothing `Library.of` could
     // be missing. What would change this entry is a consumer wanting `NUM_ADD_BIT0_BIT1` by name,
@@ -186,7 +186,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // the file looks like a counterexample to it. `Quotient` calls `Kernel.defineType` and
     // `Kernel.defineConstant`, so it plainly declares things; what it does not declare is anything
     // OF ITS OWN. The type, the projection and every lifted operation are named by the caller and
-    // land in the caller's theory, and the six facts it returns are about the caller's relation.
+    // land in the caller's theory, and the facts it returns are about the caller's relation.
     // There is no `Quotient.standard` to put in a chain and nothing here for `Chain.construct` to
     // build, which is the same position `Recursion` is in one primitive along.
     "Quotient" -> DeclaresNothing,
@@ -343,7 +343,8 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The three beside the chain declare nothing, which is the reason they are allowed to be there.
+   * What sits beside the chain declares nothing, which is the reason it is allowed to be there, and
+   * `Descent` and `Semiring` are the two built here to show it.
    *
    * Asserted rather than described, because it is the reason `Coding` did not qualify and nobody
    * noticed. A development that starts declaring a constant fails here and has to move.

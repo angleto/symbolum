@@ -9,11 +9,12 @@ import garden.xeno.symbolum.theories.*
 /**
  * A document rather than a claim, and the question that only exists at that size.
  *
- * `Cost` answers five questions about one claim and `Provenance` names the sources behind one
- * proof. Run `n` times over a register of `m` citations, the second one gives an answer that is
- * wrong in a specific and misleading way: nearly every citation looks stale on nearly every line,
- * because a measurement used by the second conclusion was not used by the first. A reader handed
- * that page has to work out for themselves which of the twelve "stale" lines are real.
+ * `Cost` answers the questions its own docstring lists about one claim and `Provenance` names the
+ * sources behind one proof. Run `n` times over a register of `m` citations, the second one gives an
+ * answer that is wrong in a specific and misleading way: nearly every citation looks stale on
+ * nearly every line, because a measurement used by the second conclusion was not used by the first.
+ * A reader handed that page has to work out for themselves which of the twelve "stale" lines are
+ * real.
  *
  * So the three buckets are computed over the argument, and the test that matters here is the
  * contrast: the same citation, stale to `Provenance.trail` on one claim and used by the document.
@@ -57,7 +58,10 @@ class ArgumentSpec extends AnyFlatSpec with Matchers {
     Quantified(linarith)
   )
 
-  /** Four citations, of which the argument below uses two, states a third and never states a fourth. */
+  /**
+   * The register: the argument below weighs most of it, states one citation and never weighs
+   * it, and never states another at all. The two tests after the first pin which one is which.
+   */
   private val register = forced(
     Provenance.of(
       extended,

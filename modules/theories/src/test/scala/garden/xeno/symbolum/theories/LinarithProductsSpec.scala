@@ -147,9 +147,9 @@ class LinarithProductsSpec extends AnyFlatSpec with Matchers {
     // number anybody can be held to.
     //
     // What the gate does is observable without a clock. The search stops at the **pair** round,
-    // having manufactured a hundred and four facts against a bound of forty-eight, and never enters
-    // the cube round at all. Had it entered, the bound it reached would be the other one and the
-    // count would be larger. That is a function of the goal and of nothing else.
+    // having manufactured the count the assertion below pins, past the bound `Linarith.Facts` sets,
+    // and never enters the cube round at all. Had it entered, the bound it reached would be the
+    // other one and the count would be larger. That is a function of the goal and of nothing else.
     val size = 12
     val names = (0 to size).map(index => s"x$index:real").mkString(" ")
     val links = (0 until size).map(index => s"x$index:real < x${index + 1}:real").mkString(" /\\ ")

@@ -52,8 +52,8 @@ class FamilySpec extends AnyFlatSpec with Matchers {
 
   it should "reach the degrees a person would want, which is where the source stops being a toy" in {
     // Faulhaber's first four, found rather than stated. The last of them is a quartic and is the
-    // reason the sampling budget is ten rather than four: a polynomial of degree d wants d + 1
-    // points and this keeps two in hand.
+    // reason `Family.Points`, the sampling budget, is well above four: a polynomial of degree d
+    // wants d + 1 points and this keeps some in hand.
     Vector(
       ("\\i:num. 1", 1),
       ("\\i:num. real_of_num i", 2),
@@ -146,15 +146,16 @@ class FamilySpec extends AnyFlatSpec with Matchers {
   /* ------------------------------------------------------ what it guarantees */
 
   "Every closed form it reports" should "be a theorem of exactly the claim it fitted" in {
-    // The guarantee, and the whole reason the fit is allowed to be a guess. The screen is ten
-    // points of agreement, which is evidence and not a proof; what makes a `Found` worth anything
-    // is that the theorem inside it is a theorem of the claim beside it, with nothing on its left.
+    // The guarantee, and the whole reason the fit is allowed to be a guess. The screen is agreement
+    // at `Family.Points` points, which is evidence and not a proof; what makes a `Found` worth
+    // anything is that the theorem inside it is a theorem of the claim beside it, with nothing on
+    // its left.
     //
     // `NotCertified` is the bucket for a fit that agreed at every sampled point and did not hold:
     // it is reachable and no witness for it is known in this fragment, because a summand that
-    // agrees with a polynomial for ten values and then diverges needs a case split, and until
-    // 2026-09-12 the reader had no conditional to write one with. `COND` is in the signature now,
-    // so such a summand can be **written**; what there is still no way to get is a fit that
+    // agrees with a polynomial at every sampled value and then diverges needs a case split, and
+    // until 2026-09-12 the reader had no conditional to write one with. `COND` is in the signature
+    // now, so such a summand can be **written**; what there is still no way to get is a fit that
     // produces one, since the Newton form this interpolates in has no branch in it. Stated rather
     // than tested, because a test that cannot be written is better admitted than faked.
     Vector(

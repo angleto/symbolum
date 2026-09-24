@@ -423,9 +423,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
    * The bounded monotone, spent on a pair `SUM_MONOTONE` cannot compare.
    *
    * The prediction in `SUM_CONGRUENCE_BELOW`'s note is that the first real consumer of one of the
-   * four unbounded lemmas meets a wall and gets a bounded twin. This is that twin, and the test
-   * that earns it is not that it proves something — the unbounded one proves the same conclusion
-   * whenever it applies — but that it applies where the other **cannot**.
+   * unbounded lemmas that note counts meets a wall and gets a bounded twin. This is that twin, and
+   * the test that earns it is not that it proves something (the unbounded one proves the same
+   * conclusion whenever it applies) but that it applies where the other **cannot**.
    *
    * `real_of_num i <= 0` holds at `i = 0` and at no other index, so at the bound `SUC ZERO` the
    * bounded hypothesis is dischargeable and the unbounded one is **false**. The second half of
@@ -636,8 +636,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
   it should "need `NUM_SUC_ADD`, which is why its list is not the reindexing one" in {
     // `ParityStatements`' docstring says the reindexing list's two `NUM_ADD` rules stall at
-    // `NUM_ADD (SUC n) n`. Asserted, so the reason for an eighth list is a measurement: the true
-    // statement is refused without the third rule and proved with it.
+    // `NUM_ADD (SUC n) n`. Asserted, so the reason for a list of its own is a measurement: the
+    // true statement is refused without the third rule and proved with it.
     val statement = force(series.proposition(Series.ParityStatements.head._2))
     val driver = Induct(series.logic, ring, force(naturals.fact(Natural.Induction)))
 
@@ -699,7 +699,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // The claim `EmbeddingStatements` rests on, measured rather than asserted: the same induction
     // over the sum's recurrences ALONE does not close, because the length crosses from num to real
     // on the right-hand side and nothing in `Statements`' rule set can move it. If this ever
-    // starts passing, the fifth list has stopped earning its existence.
+    // starts passing, `EmbeddingStatements` has stopped earning its existence.
     val statement = force(series.proposition(Series.EmbeddingStatements.toMap.apply(Series.Constant)))
     val induction = force(naturals.fact(Natural.Induction))
     val driver = Induct(series.logic, ring, induction)
@@ -909,8 +909,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     val f = force(series.term("f:num->real"))
     // `specPrefix` and not `specAll`: the bound is left quantified on purpose, and that has to be
     // asked for by name since 2026-09-12, because a short list to `specAll` is also what handing it
-    // another lemma's arguments looks like and is refused there now. This is the one call in the
-    // whole suite that wanted a partial instance, and it is the measurement that kept the operation.
+    // another lemma's arguments looks like and is refused there now. On 2026-09-12 this was the one
+    // call in the whole suite that wanted a partial instance, and it is the measurement that kept
+    // the operation.
     val instance = force(rules.specPrefix(fact(Series.Reindex), List(f, one)))
 
     series.show(instance.conclusion) should include("SUC 0 +")
@@ -1025,7 +1026,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // Over whatever the development holds rather than over a list written here, so that a fact
     // added later is covered by this without anybody remembering to add it. Two claims: nothing
     // carries a hypothesis, and no derivation reached an axiom that is not one of the theory's, so
-    // the eighteen are still the whole of what this file asks anyone to believe.
+    // the theory's own axioms, counted at the end of this test, are still the whole of what this
+    // file asks anyone to believe.
     val believed = series.theory.axioms.toSet
 
     series.facts should not be empty

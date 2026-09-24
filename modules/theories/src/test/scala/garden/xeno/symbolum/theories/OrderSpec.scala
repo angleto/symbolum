@@ -37,7 +37,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
 
   it should "add two positive quantities" in {
     // Written in `Linarith` and moved here when the recursion on the bits of a numeral turned out
-    // to need it once per bit. One home, three consumers.
+    // to need it once per bit. One home, for every consumer.
     reals.show(force(order.addPositive).conclusion) shouldBe
       "!x:real. !y:real. 0 < x ==> 0 < y ==> 0 < x + y"
   }

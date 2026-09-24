@@ -8,17 +8,16 @@ import garden.xeno.symbolum.logic.*
 /**
  * The factorial, and the fact the beta function's moduli rest on.
  *
- * What is asserted: the three statements are the text `Coding.Statements` publishes; the divisor
- * lemma is not vacuous, which for this one means the hypothesis it would be easiest to drop is the
- * one that makes it false; and the accounting, which is the assertion worth reading.
+ * What is asserted: the statements are the text `Coding.Statements` publishes; the divisor lemma
+ * is not vacuous, which for this one means the hypothesis it would be easiest to drop is the one
+ * that makes it false; and the accounting, which is the assertion worth reading.
  *
- * The accounting is written as an **equality against what it inherits** rather than as a count.
- * `NUM_FACT_DIVIDES` reaches sixteen axioms, fourteen of them the real numbers', and not one of
- * them is reached by anything in this file: they arrive whole from `NUM_DIVIDES_MUL`, which is
- * `Modular`'s and is proved through the embedding. Pinning the sixteen would make this test fail
- * the day somebody improves that derivation, which is the wrong way round. What is pinned is that
- * this development adds nothing of its own, which is the claim the number stood for and which stays
- * true whatever `Modular` costs.
+ * The accounting is written first as an **equality against what it inherits** and only then as a
+ * count. Every axiom `NUM_FACT_DIVIDES` reaches arrives whole from `NUM_DIVIDES_MUL`, which is
+ * `Modular`'s, and not one of them is reached by anything in this file. The equality is the claim
+ * that this development adds nothing of its own, which stays true whatever `Modular` costs; the
+ * count beside it is what `Modular` costs now, and it is the half that moves when somebody
+ * improves that derivation, as it did once already.
  */
 class CodingSpec extends AnyFlatSpec with Matchers {
 
@@ -60,7 +59,7 @@ class CodingSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The Chinese remainder theorem, and where its sixteen axioms come from.
+   * The Chinese remainder theorem, and where its axioms come from.
    *
    * Both reach two, and this one reached sixteen until the evening of 2026-09-13: they arrived
    * whole from `NUM_BEZOUT`, which was proved through the embedding into the reals like

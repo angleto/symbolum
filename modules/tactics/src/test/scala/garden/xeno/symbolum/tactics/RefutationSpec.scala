@@ -60,10 +60,11 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
   }
 
   "A false claim about the naturals" should "come back with the number it fails at" in {
-    // Until 2026-09-11 every one of these came back `NeverAsked`: `Model.Reals` interprets seven
-    // constants and none of them is about `num`, so a point had nothing to say and the honest
-    // answer was that nobody could ask. The claims below are the weakenings and operator swaps
-    // `Propose` produces from this repository's own library, and they are false at small numbers.
+    // Until 2026-09-11 every one of these came back `NeverAsked`: `Model.Reals` interprets the
+    // reals' own constants and none of them is about `num`, so a point had nothing to say and the
+    // honest answer was that nobody could ask. The claims below are the weakenings and operator
+    // swaps `Propose` produces from this repository's own library, and they are false at small
+    // numbers.
     aboutNumbers("!x:num. !y:num. real_of_num (NUM_ADD x y) = real_of_num x * real_of_num y") shouldBe
       a[Refutation.Found]
     // Base then exponent, which is how `POWER_SUC` reads since the night of 2026-09-12 and so how
@@ -167,10 +168,10 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
 
   "An equality the grid can land on" should "be settled rather than refused as measure-zero" in {
     // The refusal above is about the reals and says so, and until 2026-09-11 it was asked of the
-    // equality's **type**: anything at a type with no finite carrier was refused, which was the same
-    // test while the reals were the only thing sampled. `num` is sampled now, as a small range of
-    // whole numbers, so an equality between two naturals is hit about one point in twelve and
-    // refusing it turned an answer into a refusal.
+    // equality's **type**: anything at a type with no finite carrier was refused, which was the
+    // same test while the reals were the only thing sampled. `num` is sampled now, as a small range
+    // of whole numbers, so an equality between two naturals is hit about once in `Refutation.Span`
+    // points and refusing it turned an answer into a refusal.
     def satisfying(texts: Vector[String]): Refutation.Outcome =
       naturals.satisfying(texts.map(text =>
         chain.widest.proposition(text).fold(error => fail(error.message), identity)))
@@ -617,7 +618,8 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
     // size a type at anything, and a premise set over four variables of a type sized at sixty
     // would otherwise be twelve million evaluations inside a search that is supposed to be cheaper
     // than the proof it screens. What it cuts is stated as a carrier size here, exactly: a set over
-    // one variable of a type sized at the bound is decided, and one past it is a hundred points.
+    // one variable of a type sized at the bound is decided, and one past it is `Refutation.Points`
+    // sampled points.
     def over(size: Int): Refutation.Outcome = {
       val agents = TyApp("crowd", Nil)
       val predicate = Type.fun(agents, Type.Bool)
@@ -646,8 +648,9 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
 
     over(Refutation.Assignments) should matchPattern { case Refutation.Contradictory(_) => }
 
-    // One past it, and the answer drops back to what the sampler has: a hundred points out of the
-    // 4097 there are, none of which was it, reported as the count it is rather than as a decision.
+    // One past it, and the answer drops back to what the sampler has: `Refutation.Points` points
+    // out of the `Refutation.Assignments + 1` there are, none of which was it, reported as the
+    // count it is rather than as a decision.
     over(Refutation.Assignments + 1) match {
       case Refutation.Survived(asked) => asked shouldBe Refutation.Points
       case other => fail(s"expected the sampler to take it back, got $other")
@@ -658,8 +661,8 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
 
   "The intended model" should "satisfy the axioms the theory holds, where it can evaluate them" in {
     // A check on `Model.Reals` rather than on the search: if `+` or `<` were interpreted wrongly,
-    // one of the fifteen would fail here and the failure would name it. Two hundred points takes
-    // well under a second.
+    // one of the axioms it can evaluate would fail here and the failure would name it. Two hundred
+    // points takes well under a second.
     //
     // `Double` is not the reals and addition on it is not associative, so `ADD_ASSOC` passes only
     // because equality here is the relative tolerance the screening uses everywhere. That is the

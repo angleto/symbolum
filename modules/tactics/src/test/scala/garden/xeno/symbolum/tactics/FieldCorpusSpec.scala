@@ -119,7 +119,7 @@ class FieldCorpusSpec extends AnyFlatSpec with Matchers {
    * Track R's goals split by whether the ring fragment certifies them.
    *
    * The split is the population the claim below is about, and it was the whole population until
-   * 2026-09-09: every goal the corpus stated was one RING certified. Three are not, since
+   * 2026-09-09: every goal the corpus stated was one RING certified. Some are not, since
    * `LeanSyntax` learned `⁻¹`, and they are not ring identities in this theory at all — Mathlib's
    * `⁻¹` is total and this one is not, so `(1/x)^2 = 1/x^2` holds at zero there and is undetermined
    * here. Asking whether FIELD over-charges on a goal that genuinely needs a condition would

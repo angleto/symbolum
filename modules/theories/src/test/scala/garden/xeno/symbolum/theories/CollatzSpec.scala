@@ -442,9 +442,9 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     // It is not something the closure does. `WORD_CONCAT_EMPTY_RIGHT` and
     // `WORD_LENGTH_ZERO` **each cost three by themselves**, eta among them, because both are
     // `WORD_EXTENSIONALITY` at a word rebuilt from `WORD_EMPTY` and the extensionality of a
-    // defined type goes through its abstraction. Measured, not reasoned: `NUM_CASES` costs
-    // zero, `NUM_ZERO_LT_SUC` costs two, and `WORD_STEP`'s defining equation costs zero, so
-    // none of those is where it enters.
+    // defined type goes through its abstraction. Measured, not reasoned, on 2026-09-17:
+    // `NUM_CASES` cost zero, `NUM_ZERO_LT_SUC` cost two, and `WORD_STEP`'s defining equation
+    // cost zero, so none of those is where it enters.
     //
     // So the line is not lengths against words. It is whether a proof has to turn a word back
     // into `WORD_EMPTY`: the closure's empty-tail branch does, the step witness does through

@@ -50,8 +50,9 @@ class CollatzSeriesSpec extends AnyFlatSpec with Matchers with ScalaCheckPropert
   }
 
   it should "agree with iteration on large starts and long runs" in {
-    // 200 cases of a 256-bit start over up to 600 steps run in about a second; the range is the
-    // one the reference implementation in the Collatz repository checks.
+    // 200 cases of a 256-bit start over up to 600 steps ran in about a second when measured, which
+    // was before 2026-09-14, where this repository's history begins; the range is the one the
+    // reference implementation in the Collatz repository checks.
     val starts = Gen.choose(BigInt(1), BigInt(1) << 256)
     val depths = Gen.choose(0, 600)
 

@@ -14,13 +14,12 @@ import garden.xeno.symbolum.kernel.{Abs, App, BVar, Const, FVar, Term}
  *
  * The counts below are the calibration and are asserted rather than printed. What they say is that
  * the loop works and finds nothing, which for a curated library is the right answer and is only
- * worth anything because the machine is demonstrably running: fifty-one of the hundred and
- * seventy-four proposals are decided **false**, which is a dropped hypothesis that was
- * load-bearing, correctly refuted with a point.
+ * worth anything because the machine is demonstrably running: the proposals `decidedFalse` counts
+ * below are decided **false**, each a dropped hypothesis that was load-bearing, correctly refuted.
  *
- * The two figures in that sentence were twenty-five and forty-eight until 2026-09-11 and were not
- * moved when the assertions below were; they are read off the assertions now rather than off a
- * memory of them.
+ * That sentence carried the count and the total as digits copied from the assertions, and they
+ * were not moved when the assertions below were, on 2026-09-11 and again after it; it names the
+ * assertion now rather than restating it.
  *
  * **Every count here moved on 2026-09-12 and one lemma was not proved to move it.** Five
  * developments that sat beside `Chain` went into it, so the library the generator reads went from
@@ -581,11 +580,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // written in nothing but equality. The other twenty-four are in the two buckets below.
     decidedFalse shouldBe 82
 
-    // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
-    // is decided false by quantifier elimination and the abduction that would name a point comes
-    // back with none. That is two different answers and the number is written out rather than
-    // asserted away, because "decided false" and "decided false, here" are worth different amounts
-    // to a reader and merging them is the habit this repository does not have.
+    // Most of those come with the point they fail at, and some do not: the claim is decided false
+    // by quantifier elimination and the abduction that would name a point comes back with none.
+    // That is two different answers and the gap between `decidedFalse` and `withAPoint` is asserted
+    // rather than asserted away, because "decided false" and "decided false, here" are worth
+    // different amounts to a reader and merging them is the habit this repository does not have.
     val withAPoint = findings
       .filter(_.standing.contains(Novelty.Standing.False))
       .flatMap(_.reading)
@@ -1541,16 +1540,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
 
   "The proposals about the naturals" should "carry the point they fail at, which they did not" in {
     // The measurement card `88463baa` was opened for, as an A/B on one line. `Model.Reals`
-    // interprets the seven constants the theory of the reals declares and nothing about `num`, so
+    // interprets the constants the theory of the reals declares and nothing about `num`, so
     // every claim naming `Sum`, `Power`, `Prod`, `SUC`, `NUM_ADD`, `NUM_MUL`, `NUM_LE` or
     // `real_of_num` had no point that could be evaluated, and the search truthfully reported that
     // nobody could ask. `Model.Numbers` interprets them exactly, and `Refutation.grid` samples a
     // variable of type `num` as a natural number and one of type `num -> real` as a function.
     //
-    // Twenty-eight of the proposals name one of those constants. None of them is decided even now,
-    // for the reason above; twenty-one are refuted at a point a reader can check, where none was.
-    // Those two figures were nineteen and sixteen when this was written and were left behind twice
-    // while the assertions at the end of the test were updated; they are the assertions now.
+    // The proposals that name one of those constants are `aboutNumbers` below, and the ones among
+    // them refuted at a point a reader can check are `after`, where `before` says none was. Both
+    // counts were written here as digits once and were left behind twice while the assertions at
+    // the end of the test were updated, so this names the assertions instead.
     val chain = garden.xeno.symbolum.theories.Chain.standard
     // `PRE` and `NUM_SUB` joined the list when they were defined, and adding them changed no count:
     // all three proposals they produce already name `ZERO`, `NUM_ADD` or `real_of_num`. They are
@@ -1933,10 +1932,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // That is the exact merge this repository is built not to make. It is asserted here so that a
     // future reading that looks at the standing again fails.
     //
-    // **The count moved on 2026-09-11 and the reading did not.** There are twenty earned proposals
-    // now rather than one, because the substitution source produces theorems: `LT_ADD` with `<`
-    // swapped for `le` is a real lemma this library did not hold. What is asserted here is the
-    // weakening that is NOT one, by name, and that nothing reads it as an unnecessary hypothesis.
+    // **The count moved on 2026-09-11 and the reading did not.** On that day there were twenty
+    // earned proposals rather than one, because the substitution source produces theorems: `LT_ADD`
+    // with `<` swapped for `le` is a real lemma this library did not hold. What is asserted here is
+    // the weakening that is NOT one, by name, and that nothing reads it as an unnecessary
+    // hypothesis.
     val earned = findings.filter(_.standing.contains(Novelty.Standing.Earned))
     val fromWeakening = earned.filter(_.proposal.source == Propose.Source.Weakened)
 

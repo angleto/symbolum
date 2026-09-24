@@ -352,7 +352,8 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
   /* ------------------------------------------------- which condition a refusal met */
 
   /**
-   * `Matching.why` is the half `None` cannot carry, and each case below is one of the four.
+   * `Matching.why` is the half `None` cannot carry, and each case below is one of the conditions
+   * `Matching.Refusal` names.
    *
    * What it is for is measuring this matcher: a caller looking at a tactic that did not fire cannot
    * tell an ordinary miss from a question the fragment turned down, and until this landed the only
@@ -387,7 +388,7 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "answer nothing where the match succeeded, so a caller cannot read a limit into one" in {
-    // The control that keeps the three above from being a report on every call: a pair the
+    // The control that keeps the cases above from being a report on every call: a pair the
     // fragment answers has no refusal to name, and neither has a pair that simply does not match
     // for the ordinary reason.
     val predicate = Term.variable("P", fn)

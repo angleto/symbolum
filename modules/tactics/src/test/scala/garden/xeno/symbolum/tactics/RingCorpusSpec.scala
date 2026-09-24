@@ -43,10 +43,10 @@ import garden.xeno.symbolum.*
  *    wait for. **This bucket is empty, and it held one goal until 2026-09-04.** The goal was
  *    `(876544 : ℤ) * -1 + (1000000 - 123456) = 0`, and what put it there was RING expanding a
  *    coefficient of `n` into `n` copies of a term. RING collects them now, the budget moved from
- *    100 to a million million on the measurement recorded in `Oracle`, and the goal is certified.
- *    The exact value still selects nothing here and is still not tuned to this corpus: no goal in
- *    the file has a written numeral above 1000000, so any budget above that partitions it the same
- *    way.
+ *    100 to the value `Oracle.NumeralBudget` holds, on the measurement recorded beside it, and the
+ *    goal is certified. The exact value still selects nothing here and is still not tuned to this
+ *    corpus: no goal in the file has a written numeral above 1000000, so any budget above that
+ *    partitions it the same way.
  *  - **certified**, and **in the fragment and unproved**. A member of the last is a goal this
  *    system can state, can afford, and cannot prove, while another prover's test suite says it is
  *    true: that is a finding about RING. It must hold nothing but what the written exception list

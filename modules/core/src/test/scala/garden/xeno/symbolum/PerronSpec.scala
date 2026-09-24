@@ -71,9 +71,9 @@ class PerronSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks
     found.subdominant should be < 1e-12
     found.eigenvector.foreach(entry => entry shouldBe (1 / math.sqrt(n.toDouble)) +- 1e-12)
 
-    // Relative to the matrix norm, which for this one is n. Measured at 1.30e-13 absolute, so
-    // 2.03e-15 relative, and this is the largest residual any matrix in this file produces: it is
-    // the number `Perron.Residual` leaves six orders of magnitude of room above.
+    // Relative to the matrix norm, which for this one is n. This is the worst residual any matrix
+    // in this file has been measured producing, and `Perron.Residual`'s docstring carries those
+    // measurements, dated, with the margin the threshold leaves above them.
     found.residual / n should be < 1e-14
   }
 
@@ -145,7 +145,8 @@ class PerronSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks
   }
 
   "The Perron root of a non-negative matrix" should "lie between the smallest and largest row sum" in {
-    // 200 matrices of order 2 to 6, which run in about a third of a second. The bound is
+    // 200 matrices of order 2 to 6, which ran in about a third of a second when measured, before
+    // 2026-09-14 where this repository's history begins. The bound is
     // Frobenius's and is a theorem about the matrix, so it is independent of how the number was
     // computed; the eigenvector's sign is the other half of Perron-Frobenius and is checked with
     // it. Two hundred was chosen by running the same property at 50, 200 and 1000: the coverage of

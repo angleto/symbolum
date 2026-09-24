@@ -47,9 +47,9 @@ import garden.xeno.symbolum.{Add, Div, Expr, Mul, Neg, Num, Pow, Sub, Var}
  * why the grouping is worth stating: read the other way it would be `X^6`, a different statement
  * that this reader would hand on without complaint. Both readings are inside the fragment, since
  * `Translate` evaluates a closed exponent before expanding, so `X^(2^3)` is `X^8` and eight is
- * under its maximum; what the grouping decides here is faithfulness and not reach. Unary minus
- * binds looser than
- * `^` and tighter than `*`, so `-a^2` is `-(a^2)` and `-a * b` is `(-a) * b`, again following Lean.
+ * within `Translate.MaximumExponent`; what the grouping decides here is faithfulness and not reach.
+ * Unary minus binds looser than `^` and tighter than `*`, so `-a^2` is `-(a^2)` and `-a * b` is
+ * `(-a) * b`, again following Lean.
  */
 object LeanSyntax {
 
@@ -74,7 +74,7 @@ object LeanSyntax {
     } catch {
       case unreadable: Unreadable => Left(unreadable.getMessage)
       // A construction the algebra system refuses arrives here as a `Left` rather than as a stack
-      // trace through the suite. A dozen constructors carry a `require`; none of them is reachable
+      // trace through the suite. Several constructors carry a `require`; none of them is reachable
       // from this grammar today, and the guard is for the corpus that reaches one.
       case refused: IllegalArgumentException => Left(s"the algebra system refused it: ${refused.getMessage}")
     }

@@ -271,11 +271,11 @@ class LogicSpec extends AnyFlatSpec with Matchers {
 
   "Specialising at fewer arguments than quantifiers" should "be refused, naming both numbers" in {
     // Until 2026-09-12 this was a partial instance rather than an error, and the theorem it gave
-    // went on to fail somewhere else: a session reached `NUM_DIVISION_UNIQUE`, which has five
-    // variables, holding `NUM_DIV_MOD_UNIQUE`'s four arguments, and read the first symptom at an
-    // unrelated `mp` with a message about an implication. Both numbers are in the refusal because
-    // the useful reading of them is together: three against two usually means a caller reached a
-    // different lemma from the one it meant to.
+    // went on to fail somewhere else: a session reached `NUM_DIVISION_UNIQUE` holding
+    // `NUM_DIV_MOD_UNIQUE`'s arguments, one fewer than it has variables, and read the first
+    // symptom at an unrelated `mp` with a message about an implication. Both numbers are in the
+    // refusal because the useful reading of them is together: three against two usually means a
+    // caller reached a different lemma from the one it meant to.
     rules.specAll(threeDeep, List(Term.variable("a", TyVar("A")))) match {
       case Left(PartialInstance(quantifiers, arguments, _)) =>
         quantifiers shouldBe 3
@@ -286,8 +286,8 @@ class LogicSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "still be reachable under a name that says so" in {
-    // One call in the suite wants a partial instance, in `SeriesSpec`, and that is the measurement
-    // that kept the operation. What it must not be is something a caller arrives at by accident.
+    // The call in `SeriesSpec` that wants a partial instance is the measurement that kept the
+    // operation. What it must not be is something a caller arrives at by accident.
     val partial = force(rules.specPrefix(threeDeep, List(Term.variable("a", TyVar("A")))))
 
     Logic.stripForall(partial.conclusion).map(_._1.length) shouldBe Right(2)
@@ -334,7 +334,7 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     // The premise of the demonstration below, asserted rather than assumed: if the two binders had
     // different types the reversal would be a type error and there would be nothing to show. On
     // 2026-09-13 that is exactly why the consumer's build stopped instead of shipping a wrong
-    // theorem, and 142 of the library's 260 lemmas do not have that luck.
+    // theorem, and on that day 142 of the library's 260 lemmas did not have that luck.
     val left = force(Logic.stripForall(firstThenSecond.conclusion))._1
     val right = force(Logic.stripForall(secondThenFirst.conclusion))._1
 

@@ -52,8 +52,8 @@ import org.scalatest.matchers.should.Matchers
  * them. What is untested and stays untested is the `sys.exit` itself, which is the one statement
  * per command this file cannot reach and is named here rather than left to be found in a report.
  *
- * `Essay` is the eighth entry point and is not a document generator: it prints one page and writes
- * no file, so it is driven separately below, in all three of its arms.
+ * `Essay` is the remaining entry point and is not a document generator: it prints one page and
+ * writes no file, so it is driven separately below, in all three of its arms.
  *
  * Nothing here writes inside the working tree. Every run is against a copy under the system
  * temporary directory, and the committed documents are read and never opened for writing, which
@@ -103,7 +103,7 @@ class GeneratorCommandSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  /* ------------------------------------------------------------------ the five that write */
+  /* ------------------------------------------------------------------ the ones that write */
 
   "Each generator's command" should "leave an up-to-date document exactly as it found it" in {
     commands.foreach { command =>

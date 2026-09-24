@@ -67,8 +67,9 @@ class CommentsSpec extends AnyFlatSpec with Matchers with Inspectors {
   }
 
   "A character literal holding a quote" should "not open a string" in {
-    // `'"'` occurs twice in this tree. Read as an ordinary character it opens a literal that never
-    // closes, and every comment after it on the line disappears; this is the line it occurs on.
+    // `'"'` occurs in this tree, in the scanners themselves. Read as an ordinary character it opens
+    // a literal that never closes, and every comment after it on the line disappears; this is a
+    // line of one of the scanners this module replaced, kept as it was written.
     val lines = Comments.split("""trailing(line, "//", Set('"')) // the marker""")
 
     lines.head.comment shouldBe "// the marker"
@@ -80,8 +81,8 @@ class CommentsSpec extends AnyFlatSpec with Matchers with Inspectors {
   "An interpolation" should "keep the quotes inside it from ending the literal" in {
     // The case `NotationBoundarySpec` paid for one module over: a scanner that ends the literal at
     // the first quote inside `${...}` leaves the rest of the expression in the open, and here that
-    // would hand the slashes of the inner separator to the comment reader. Four sites in this tree
-    // are shaped like this one.
+    // would hand the slashes of the inner separator to the comment reader. On 2026-09-16 four sites
+    // in this tree were shaped like this one.
     val lines = Comments.split("""val s = s"a ${xs.mkString("//")} b" // the only comment""")
 
     lines.head.comment shouldBe "// the only comment"
@@ -116,7 +117,7 @@ class CommentsSpec extends AnyFlatSpec with Matchers with Inspectors {
 
   "An unterminated literal" should "end with the line rather than the scan" in {
     // Not a Scala source, and the reader still has to be total: a census that threw on one bad file
-    // would report nothing about the other 348, which is a worse answer than a wrong one.
+    // would report nothing about every other file, which is a worse answer than a wrong one.
     val lines = Comments.split("val s = \"abc // not a comment\nval after = 1 // a comment")
 
     lines.head.comment shouldBe ""

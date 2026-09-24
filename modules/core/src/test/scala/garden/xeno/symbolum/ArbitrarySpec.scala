@@ -173,7 +173,7 @@ class ArbitrarySpec extends AnyFlatSpec with Matchers {
   "The comparison" should "count the digits two values have in common" in {
     // The measured false positive of the precision corpus, and the reason this file exists: seven
     // and seven plus a billionth of seven agree to nine digits, which is inside the `Double`
-    // screen's tolerance of `1e-8` and nowhere near fifty.
+    // screen's tolerance, `Discovery.Tolerance`, and nowhere near fifty.
     val value = BigDecimal(7)
     val nudged = fifty.sum(Vector(value, fifty.over(Vector(value, BigDecimal(1000000000))).get))
 
@@ -226,7 +226,8 @@ class ArbitrarySpec extends AnyFlatSpec with Matchers {
     // The card asked for the choice between `BigDecimal` and an arbitrary-precision library to be
     // made by measuring. This is the measurement: six hundred transcendental evaluations at two
     // hundred digits. A dependency would have to beat this by enough to be worth being a
-    // dependency, and at half a millisecond each it does not.
+    // dependency, and at the half millisecond each that the reading below gave on 2026-09-11 it
+    // did not.
     val wide = Arbitrary.to(200)
     wide.pi
 

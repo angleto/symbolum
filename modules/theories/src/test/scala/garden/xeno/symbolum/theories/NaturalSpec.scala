@@ -102,8 +102,9 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
   }
 
   "Induction" should "be derived, and be the statement as it is written" in {
-    // The theorem the naturals exist for. It rests on the two axioms and on nothing else: no third
-    // axiom, and no assumption on the left of the turnstile.
+    // The theorem the naturals exist for. Nothing is left on the left of the turnstile, and it
+    // reaches no axiom at all: it is the carving predicate read back, which the division over the
+    // axioms below asserts with `Derivation.axiomsOf` rather than leaving to this sentence.
     val induction = force(naturals.fact(Natural.Induction))
 
     induction.hypotheses shouldBe empty
@@ -224,15 +225,15 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     Show.show(together.notation, claim) shouldBe "!x:num. 0 < size x ==> 0 < size x + 1"
 
     // And the price of asking for both is stated: nineteen, not sixteen. It was eighteen until eta
-    // landed in `Classical.scala` on 2026-09-10, and the two that are not the field's are the two
-    // the classical logic asserts.
+    // landed in `Classical.scala` on 2026-09-10, and the ones that are not the field's are
+    // `Classical.Axioms` and `Natural`'s infinity.
     together.theory.axioms.size shouldBe 19
   }
 
   "The reals" should "be untouched by any of this, since nothing here is built over them" in {
     // The two developments are siblings and not a chain: `Real.standard` is over `Logic.standard`,
-    // which has no axioms, and this is over `Classical.standard`, which has two. A session that
-    // proves something about the reals is not asked to believe the choice operator or eta.
+    // which has no axioms, and this is over `Classical.standard`, which asserts `Classical.Axioms`.
+    // A session that proves something about the reals is not asked to believe choice or eta.
     Real.standard.theory.axioms.size shouldBe 16
     Real.standard.theory.typeOperators.get(Natural.TypeName) shouldBe None
     Real.standard.theory.constants.get(Classical.Select) shouldBe None

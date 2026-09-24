@@ -4,7 +4,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 /**
- * The one condition four renderers share, checked where it is written rather than four times over.
+ * The one condition every caller of `Prose.count` shares, checked where it is written rather than
+ * once per caller.
  *
  * `EssaySpec`, `CostSpec`, `LedgerSpec` and `ArgumentSpec` each take both directions through their
  * own page, which is the assertion that the page reaches this and is not a copy of it. What is left

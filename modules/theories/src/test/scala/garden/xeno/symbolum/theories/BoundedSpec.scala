@@ -13,10 +13,10 @@ import garden.xeno.symbolum.logic.*
  * kernel"*. The instances were never the missing half: a caller could prove each of the twelve and
  * had nothing to join them with, `Peano` holding no fact that takes `i < SUC n` apart.
  *
- * What is asserted here, in order: the two lemmas are what they say they are; two consumers are
- * proved end to end, which is this repository's bar for a tactic being built; the three refusals are
- * three; and the cost is measured as a function of the bound, because that number is what tells a
- * future reader what this is for and what it is not for.
+ * What is asserted here, in order: the two lemmas are what they say they are; the consumers are
+ * proved end to end, which is this repository's bar for a tactic being built; the refusals are told
+ * apart from each other; and the cost is measured as a function of the bound, because that number
+ * is what tells a future reader what this is for and what it is not for.
  */
 class BoundedSpec extends AnyFlatSpec with Matchers {
 
@@ -160,7 +160,7 @@ class BoundedSpec extends AnyFlatSpec with Matchers {
     seen.map(_._3).toVector.distinct shouldBe Vector(truth.conclusion)
   }
 
-  /* ------------------------------------------------------------- the three refusals */
+  /* ------------------------------------------------------------------- the refusals */
 
   "A bound that is not a numeral" should "be refused by shape, and not by a limit" in {
     // `!i. i < n ==> P i` over a variable `n` is not false and is not provable this way. The refusal
@@ -268,7 +268,7 @@ class BoundedSpec extends AnyFlatSpec with Matchers {
   "The cost of the assembly" should "be linear in the bound, and that is what it is for" in {
     // Instances that cost nothing, so what is measured is the driver and not the caller. The number
     // is the point of the test rather than the assertion: a reader deciding whether to reach for
-    // this needs to know that a bound of a hundred is a hundred times a bound of one.
+    // this needs to know that the cost grows linearly with the bound and no faster.
     val truth = force(rules.truth)
 
     val sizes = Vector(1, 2, 4, 8).map { bound =>

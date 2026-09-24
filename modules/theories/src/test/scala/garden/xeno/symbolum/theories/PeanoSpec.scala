@@ -14,8 +14,8 @@ import garden.xeno.symbolum.logic.*
  * proof record is asked which axioms each derivation actually reaches.
  *
  * The second is whether it can be used. A fact that is stated correctly and that nothing can apply
- * is one nobody finds out about until later, so the four uses at the end are the ones a consumer
- * would write: adding two numbers, chaining a bound, turning "at most zero" into "is zero", and
+ * is one nobody finds out about until later, so the uses below are the ones a consumer would
+ * write: adding two numbers, chaining a bound, turning "at most zero" into "is zero", and
  * handing a natural number to the tactic that decides the reals.
  */
 class PeanoSpec extends AnyFlatSpec with Matchers {
@@ -661,7 +661,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // evaluates `f` at or above `n`, so a hypothesis quantified over the whole type asks for
     // evidence about indices the sum cannot see, and two summands that agree exactly where the sum
     // looks -- the ordinary case -- cannot use it at all. `Series.CongruenceBelow` carries the
-    // count of four lemmas in this library that still have the unconditional shape.
+    // count of the lemmas in this library that still have the unconditional shape.
     peano.show(fact(Peano.PartialSumCongruenceBelow).conclusion) shouldBe
       "!x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> x u = y u) ==> NUM_SUM x z = " +
         "NUM_SUM y z"

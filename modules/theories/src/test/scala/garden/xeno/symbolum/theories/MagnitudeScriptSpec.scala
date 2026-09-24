@@ -9,16 +9,17 @@ import garden.xeno.symbolum.logic.*
  * Whether a derivation that records itself comes out at the size of an essay.
  *
  * The spike of 2026-09-13, and the question it exists to settle is a measurement rather than a
- * design preference. A theorem's `Derivation` is at the kernel's size: over the library the median
- * lemma is 4651 inferences, 70% of the nodes are congruence, equality elimination, transitivity and
- * reflexivity, and collapsing the graph at every node that is a named lemma leaves 791 anonymous
- * steps in the median. The claim being tested is that the account a reader wants is one the
- * **author** has and the record does not, so capturing it where it exists costs a receiver at each
- * call site and gives a derivation of twenty lines instead of seven thousand.
+ * design preference. A theorem's `Derivation` is at the kernel's size: over the library that day
+ * the median lemma was 4651 inferences, 70% of the nodes were congruence, equality elimination,
+ * transitivity and reflexivity, and collapsing the graph at every node that is a named lemma left
+ * 791 anonymous steps in the median. The claim being tested is that the account a reader wants is
+ * one the **author** has and the record does not, so capturing it where it exists costs a receiver
+ * at each call site and gives a derivation of twenty lines instead of seven thousand.
  *
- * Three of `Magnitude`'s fourteen derivations are converted. Three rather than one because one
- * proves nothing about the shape of the others, and three rather than fourteen because the point of
- * a spike is to be cheap enough to throw away.
+ * The spike converted three of `Magnitude`'s derivations: three rather than one because one proves
+ * nothing about the shape of the others, and not all of them because the point of a spike is to be
+ * cheap enough to throw away. The whole file was converted afterwards, and the first test below
+ * holds it to that by asking for a script under every fact.
  *
  * == What is asserted, and why each assertion is not vacuous ==
  *

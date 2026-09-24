@@ -52,7 +52,7 @@ class ConcatenationSpec extends AnyFlatSpec with Matchers {
     // Against the theory it actually EXTENDS, which is `Transcendental`'s and not `Word`'s. This
     // development needs `Word` and sits on top of the chain's end, and the two are different
     // questions: a difference taken against `word.theory` would come back holding every constant of
-    // nine links and say nothing about what the concatenation added.
+    // every link between the two and say nothing about what the concatenation added.
     val below = Chain.standard.transcendental.theory
 
     concatenation.theory.axioms shouldBe below.axioms

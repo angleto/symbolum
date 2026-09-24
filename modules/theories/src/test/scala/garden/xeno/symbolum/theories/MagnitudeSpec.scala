@@ -209,8 +209,9 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
     // The distinction the file turns on, and the one easiest to get wrong in a report: `sgn` is a
     // three-way split, so it cannot be assembled out of `max` and needs its own appeal to choice.
     // A second *use* of an axiom already believed adds nothing to what has to be believed, so the
-    // theory here holds the same seventeen it held before `sgn` existed. What is asserted is that
-    // the count did not move and that `sgn` is nevertheless a constant of its own.
+    // theory here holds the axioms of `Real.Axioms` and `Classical.Axioms` and no more, as it did
+    // before `sgn` existed. What is asserted is that the count did not move and that `sgn` is
+    // nevertheless a constant of its own.
     magnitude.theory.axioms should have length (Real.Axioms.length + Classical.Axioms.length)
     magnitude.definitions.keySet should contain(Magnitude.SignName)
   }
@@ -257,13 +258,14 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
 
   "The price of having a greatest of two reals at all" should "be one axiom, and the choice one" in {
     // The claim the whole file exists to make, asserted by counting rather than by prose. The
-    // numbers are the code's: the reals' axioms plus the classical logic's, which is sixteen plus
-    // one, against `Real.standard`'s sixteen. A `max` that had cost nothing would make these equal
-    // and a `max` that had cost more would make the first larger.
+    // numbers are the code's: `Real.Axioms` plus `Classical.Axioms` against `Real.Axioms` alone,
+    // both spelled in the assertion below rather than written here. A `max` that had cost nothing
+    // would make these equal and a `max` that had cost more would make the first larger.
     magnitude.theory.axioms should have length (Real.Axioms.length + Classical.Axioms.length)
     Real.standard.theory.axioms should have length Real.Axioms.length
 
-    // And the extra one is the choice axiom itself and not something else of the same size.
+    // And the choice axiom itself is among what the classical logic adds, which is the one naming a
+    // greatest of two needs; eta arrives beside it with that logic.
     val choice = force(Classical.standard.axiom(Classical.Choice)).conclusion
     magnitude.theory.axioms should contain(choice)
   }
@@ -294,8 +296,8 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
     // chains from one root could not state a theorem mentioning both, which is the failure
     // `Chain`'s own note describes.
     //
-    // The axiom count is the code's again, and it is the third of the three configurations: sixteen
-    // for the reals alone, seventeen with choice, eighteen once infinity is in as well.
+    // The axiom count is the code's again, and it is the third of the three configurations: the
+    // reals' alone, then the classical logic's added, then `Natural`'s infinity added as well.
     val chain = Chain.standard
     val overChain = force(Magnitude.construct(chain.classical, chain.order))
 

@@ -170,7 +170,8 @@ class ResolvingSpec extends AnyFlatSpec with Matchers {
 
   "This development" should "declare nothing, so it cannot become the widest signature" in {
     // The promise `Deduction` makes and the reason it can be read without checking the chain: a
-    // constant arriving here would move the signature, the reading register and three pinned counts.
+    // constant arriving here would move the signature, the reading register and the three
+    // comparisons against the widest signature below.
     resolving.theory.constants.keySet shouldBe chain.widest.theory.constants.keySet
     resolving.theory.typeOperators.keySet shouldBe chain.widest.theory.typeOperators.keySet
     resolving.theory.axioms.length shouldBe chain.widest.theory.axioms.length

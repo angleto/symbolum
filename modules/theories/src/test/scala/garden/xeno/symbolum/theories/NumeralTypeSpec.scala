@@ -153,8 +153,9 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
 
   it should "read unannotated where the signature offers one encoding" in {
     // The other half of the same pairing, and the measurement behind the rule: a signature holding
-    // only the reals has no second reading to protect anybody from, and forty call sites in this
-    // module parse the bare text `"0"` and `"1"` against exactly such a signature.
+    // only the reals has no second reading to protect anybody from, and when this was written, no
+    // later than 2026-09-14, forty call sites in this module parsed the bare text `"0"` and `"1"`
+    // against exactly such a signature.
     Term.typeOf(force(reals.term("2"))) shouldBe real
     Term.typeOf(force(reals.term("0"))) shouldBe real
     Term.typeOf(force(reals.term("1"))) shouldBe real

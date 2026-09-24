@@ -95,7 +95,7 @@ class OracleCertificationSpec extends AnyFlatSpec with Matchers {
 
   private val oracle = Oracle.standard
 
-  /** A fixed seed, because a sample that costs fifteen seconds should be the same one every run. */
+  /** A fixed seed, so that every run draws the sample the timings above were measured on. */
   private val sample: Vector[Expr] = {
     val parameters = CheckTest.Parameters.default
     val start = org.scalacheck.rng.Seed(20260904L)

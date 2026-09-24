@@ -278,9 +278,10 @@ class RemedySpec extends AnyFlatSpec with Matchers {
   //
   // The second of the two is not in the census the card of 2026-09-18 carried and was found by
   // reading the range rather than the site: `Relation.NotCredible` is produced only when
-  // `confirmed < Relation.Confirmation`, which is ten, and `confirmed` is `max(0, ...)`, so the
-  // number this message prints lives in 0 to 9 and one is inside it. That is what separates it
-  // from `Collatz`'s `${Rules.size} clauses`, where the count is the constant eleven.
+  // `confirmed < Relation.Confirmation` and `confirmed` is `max(0, ...)`, so the number this
+  // message prints lives from zero up to one below that constant, and one is inside it. That is
+  // what separates it from `Collatz`'s `${Rules.size} clauses`, where the count is the size of a
+  // fixed table of rules and is never one.
   "The two digit counts of this file" should "take the singular at one and the plural elsewhere" in {
     val separated = (agreement: Int) =>
       Remedy.of(Discovery.Separated(Var("x"), Var("y"), Map("x" -> BigDecimal(2)), agreement)).message
@@ -773,9 +774,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     //
     // Measured rather than argued, because the two enumerations are one word apart and excusing
     // the wrong one silences a gate that was right: `Prove.searches` is the only site in the
-    // repository that produces a `Search`, its callers are three assertions in
-    // `DocumentationSpec`, nothing under `src/main` outside `Prove.scala` names the type at all,
-    // and no case of `TacticError` carries one. So what this entry claims is the strong half of
+    // repository that produces a `Search`, its callers are all in `DocumentationSpec`'s tests,
+    // nothing under `src/main` outside `Prove.scala` names the type at all, and no case of
+    // `TacticError` carries one. So what this entry claims is the strong half of
     // what the paragraph above this list asks for: not that a caller meeting this type is not
     // meeting a refusal, but that no caller meets it.
     "Prove.Search",

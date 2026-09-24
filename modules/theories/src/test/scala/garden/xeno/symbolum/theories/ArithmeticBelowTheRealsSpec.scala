@@ -9,7 +9,7 @@ import org.scalatest.matchers.should.Matchers
  * The arithmetic of `num` builds over a theory that does not declare `real`.
  *
  * `docs/adr/0016`'s phase 0, asserted rather than described. The record's own guard says why this
- * shape and not the obvious one: a test saying the 74 facts do not reach the sixteen axioms of the
+ * shape and not the obvious one: a test saying these facts do not reach the sixteen axioms of the
  * reals **passes today**, and would go on passing if the reals crept back in through a lemma that
  * happens to cost no axiom. What cannot go vacuous is that the development builds at all over a
  * theory in which the type operator is not declared, because there is then nothing to creep in.
@@ -76,9 +76,9 @@ final class ArithmeticBelowTheRealsSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "be believed on exactly what the naturals are believed on" in {
-    // Choice and infinity, and nothing else. An equality rather than a ceiling, which is the shape
-    // `CodingSpec` uses: a fact that quietly stopped spending them would be as much a defect as one
-    // that started spending something new.
+    // Nothing beyond what the naturals' induction and recursion spend. A ceiling and not an
+    // equality: it refuses a fact that starts spending something new, and it lets through one that
+    // quietly stops spending one of them, which is the half the equality `CodingSpec` uses covers.
     val expected = Derivation.axiomsOf(force(naturals.fact(Natural.Induction)))
       .union(Derivation.axiomsOf(force(naturals.recursion)))
 

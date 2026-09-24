@@ -807,9 +807,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       facts + definitional shouldBe distinct
     }
 
-    // One sentence rather than four loose figures, because four loose figures cannot fail. A bare
-    // `6` occurs five times in that document for unrelated reasons, so a check that looked for each
-    // number somewhere in the file would have passed whatever the definitional count really was.
+    // One sentence rather than four loose figures, because four loose figures cannot fail. A number
+    // as small as the definitional count can turn up in that document for unrelated reasons, so a
+    // check that looked for each number somewhere in the file would pass whatever the count was.
     // That is the vacuity this repository's conventions warn about, met while writing the guard
     // against a different one.
     val sentence =

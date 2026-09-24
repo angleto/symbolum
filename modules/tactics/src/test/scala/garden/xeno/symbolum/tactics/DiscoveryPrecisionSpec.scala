@@ -79,7 +79,7 @@ class DiscoveryPrecisionSpec extends AnyFlatSpec with Matchers {
       (x + Num(1)) * (x + Num(1)) * (x + Num(1)),
       x * x * x + Num(3) * x * x + Num(2) * x + Num(1)),
     Candidate("halves, one denominator", Label.NearMiss, x / Num(2) + x / Num(3), x),
-    // False by one part in a thousand million, which is under `Discovery.Tolerance` of 1e-8. It must
+    // False by one part in a thousand million, which is under `Discovery.Tolerance`. It must
     // survive the screen, and the point of having it is that the certifying step is what catches it:
     // this is the loop's whole argument, written as a candidate.
     //
@@ -107,14 +107,14 @@ class DiscoveryPrecisionSpec extends AnyFlatSpec with Matchers {
    * Near-misses neither stage of the screen catches, with the reason each is here.
    *
    * **Empty since 2026-09-11**, and it held one entry until then. `false under the tolerance` is
-   * false by one part in a thousand million, which is under the first stage's `1e-8`; it used to
+   * false by one part in a thousand million, which is under `Discovery.Tolerance`; it used to
    * survive the whole screen, reach the kernel, and come back refused, and this file's last
    * assertion was the record of that. The second stage tells it apart at the ninth digit, which is
    * where it is now caught.
    *
    * The list stays, and it fails when a member stops failing as well as when one starts. A member
-   * would be a false identity that agrees at every sampled point to fifty digits, and it would be
-   * evidence about the grid rather than about the loop.
+   * would be a false identity that agrees at every sampled point to every digit the second stage
+   * carries, and it would be evidence about the grid rather than about the loop.
    */
   private val KnownSurvivors: Set[String] = Set.empty
 
@@ -132,12 +132,13 @@ class DiscoveryPrecisionSpec extends AnyFlatSpec with Matchers {
   "The screen" should "throw away nothing that is true, which is the expensive mistake" in {
     // The assertion this file exists for. A false candidate that survives costs one certification
     // and a refusal; a true one thrown away is gone, and the run reports a witness that is really a
-    // rounding error. `Discovery.Tolerance` is 1e-8 and relative, and this is where that choice is
-    // measured rather than argued.
+    // rounding error. `Discovery.Tolerance` is relative, and this is where that choice is measured
+    // rather than argued.
     //
     // Both stages are read, and the second is the one that could newly break this: a true identity
-    // does not agree to every digit, because every step of an expression rounds. Measured here, the
-    // worst true candidate agrees to 49 of 50 and `Discovery.Slack` gives away 4.
+    // does not agree to every digit, because every step of an expression rounds. Measured by the
+    // test below, which prints it, the worst true candidate falls short of full agreement by less
+    // than `Discovery.Slack` gives away.
     val wronglyDisproved = outcomes.collect {
       case (candidate, Discovery.Disproved(_, _, witness, difference)) if candidate.label != Label.NearMiss =>
         s"${candidate.name} (${candidate.label}): differs by $difference at $witness"
@@ -152,8 +153,9 @@ class DiscoveryPrecisionSpec extends AnyFlatSpec with Matchers {
 
   it should "leave the true ones agreeing to nearly every digit, which is the margin it rests on" in {
     // The measurement `Discovery.Slack` is set from, asserted rather than described. What makes the
-    // second stage safe is not that true identities agree to fifty digits, which they do not, but
-    // that the gap between the worst true one and the best false one is forty digits wide.
+    // second stage safe is not that true identities agree to every digit, which they do not, but
+    // that the gap between the worst true one and the best false one is most of the digits carried,
+    // far wider than `Discovery.Slack`.
     val screen = Discovery.Screen.standard
     val precise = screen.precise
 
@@ -242,16 +244,17 @@ class DiscoveryPrecisionSpec extends AnyFlatSpec with Matchers {
     // The assertion that moved on 2026-09-11, and it is worth reading against what it said before.
     //
     // `false under the tolerance` differs by one part in a thousand million, which is below the
-    // first stage's 1e-8. Until the second stage existed it passed the whole screen, RING refused
-    // it, and it landed in the bucket that means "agreed everywhere and did not become a theorem" —
-    // which is the bucket a reader is supposed to look at. This file's comment said in as many
-    // words that a loop which screened and reported would have called it a discovery, and that was
-    // the argument for having a certifying step at all.
+    // first stage's `Discovery.Tolerance`. Until the second stage existed it passed the whole
+    // screen, RING refused it, and it landed in the bucket that means "agreed everywhere and did
+    // not become a theorem", which is the bucket a reader is supposed to look at. This file's
+    // comment said in as many words that a loop which screened and reported would have called it a
+    // discovery, and that was the argument for having a certifying step at all.
     //
     // It is still the argument, and it is no longer this candidate's job to make it. The second
-    // stage tells the pair apart at the ninth digit for the price of a hundred evaluations, which
-    // is the difference between a screen that hands a person a false lead and one that does not.
-    // What the kernel is still for is everything neither stage can separate at any precision.
+    // stage tells the pair apart at the ninth digit for the price of one evaluation per sampled
+    // point, which is the difference between a screen that hands a person a false lead and one that
+    // does not. What the kernel is still for is everything neither stage can separate at any
+    // precision.
     val outcome = outcomes.collectFirst { case (candidate, o) if candidate.name == "false under the tolerance" => o }
 
     outcome match {

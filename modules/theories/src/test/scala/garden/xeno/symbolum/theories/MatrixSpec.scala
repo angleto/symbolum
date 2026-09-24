@@ -10,8 +10,9 @@ import garden.xeno.symbolum.logic.*
  *
  * **What it does.** `det (A * B) = det A * det B`, proved rather than computed, together with the
  * constructor, the four accessors, addition, scalar multiplication, multiplication, the identity,
- * the transpose and the laws that fall out of the same unfolding. Twenty-four facts, of which six
- * are derived by hand and eighteen by the driver.
+ * the transpose and the laws that fall out of the same unfolding. Every fact is an entry of
+ * `Matrix.Statements`; the ones `Matrix` names in `ByHand` are derived by hand and the rest by the
+ * driver.
  *
  * **What it costs.** No axiom and no type. The theory's axiom list is asserted against the one
  * below it rather than against a number written here, and the type operator list is asserted to be
@@ -105,7 +106,7 @@ class MatrixSpec extends AnyFlatSpec with Matchers {
     // form is sorted, so the cost is superlinear in that count rather than linear.
     // Read 8389 and 4938 on 2026-09-12. A band rather than an equality, because both counts
     // include the shared derivations of `Rules`, of `Product` and of `Polynomial` underneath them
-    // and a cheaper `existsIntro` anywhere below would move all twenty-four.
+    // and a cheaper `existsIntro` anywhere below would move every one of them.
     val cost = Derivation.size(fact(Matrix.DeterminantMul))
     val constructorForm = Derivation.size(fact(Matrix.MulOfConstructors))
     info(

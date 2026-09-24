@@ -199,9 +199,9 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     // the obvious move, and `NUM_ADD ZERO ZERO = ZERO` read the other way round is
     // `ZERO -> NUM_ADD ZERO ZERO`. Neither guard above bites, because both are about a variable and
     // this rule has none; the right side holds two copies of the left, so each round of
-    // `repeatConv` doubles them and the size is exponential in the number of rounds. `DefaultLimit`
-    // is 200 and 2^200 arrives at the heap first, which is the sentence `Rule.of` already carries
-    // for `NUM_DIV_MOD`. The run that found it was gone in four and a half minutes.
+    // `repeatConv` doubles them and the size is exponential in the number of rounds. Two to the
+    // power of `DefaultLimit` arrives at the heap first, which is the sentence `Rule.of` already
+    // carries for `NUM_DIV_MOD`. The run that found it was gone in four and a half minutes.
     val reproducing = assumedRule(u, force(Term.app(f, u)))
 
     // **The rule is built**, and that is the decision this test is about as much as the refusal is:
@@ -281,8 +281,8 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "reach the ceiling before the steps, which is the whole reason it exists" in {
-    // The two limits at their defaults, on the same rule. A doubling rule crosses 65536 nodes in
-    // seventeen passes and the step limit is 200, so the count never arrives: that gap is what
+    // The two limits at their defaults, on the same rule. A doubling rule crosses `DefaultCeiling`
+    // in far fewer passes than `DefaultLimit` allows, so the count never arrives: that gap is what
     // three incidents fell into, and it is a property of the two numbers rather than of this rule.
     val (_, stop) = force(Rewrite.rewriteReporting(Vector(doublingRule), force(Term.app(f, u))))
 
@@ -316,7 +316,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     Rewrite.DefaultCeiling should be >= 8 * Rewrite.WidestMeasured
 
     // And it is not so high that it has stopped being a ceiling: a doubling rule set reaches it
-    // from that maximum in three passes.
+    // from that maximum within the doublings the factor below allows.
     Rewrite.DefaultCeiling should be <= 16 * Rewrite.WidestMeasured
   }
 
@@ -491,12 +491,12 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
 
   it should "not take a closed rule that merely grows, the criterion the count corrected" in {
     // The card that asked for this guard asked for a refusal on SIZE, and the count refused the
-    // card. Of the distinct closed rules the whole suite builds whose right side has more nodes
-    // than their left, all but the four above do not contain their left side and are ordinary:
-    // every definition unfolded as a rule is one, `MAT_MUL` at 91 nodes against 1 being the
-    // largest, and `NUM_ONE = SUC ZERO`, which is what `Successor` opens every numeral with, the
-    // smallest. A guard on size takes all of them. This is the assertion that says containment is
-    // the criterion.
+    // card. Counted on 2026-09-18, of the distinct closed rules the whole suite built whose right
+    // side had more nodes than their left, all but the four above did not contain their left side
+    // and were ordinary: every definition unfolded as a rule was one, `MAT_MUL` at 91 nodes
+    // against 1 being the largest, and `NUM_ONE = SUC ZERO`, which is what `Successor` opens every
+    // numeral with, the smallest. A guard on size takes all of them. This is the assertion that
+    // says containment is the criterion.
     val grows = assumedRule(u, force(Term.app(f, w)))
 
     grows.reproduces shouldBe false
@@ -613,8 +613,9 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     // What that assertion missed until 2026-09-10. The finished-or-not question was asked with the
     // **repeated** conversion, so a pair of rules that undo each other came back where it started
     // whenever the limit was even, `changed` was false, and the term was declared finished when the
-    // rewriting had not finished at all. `DefaultLimit` is 200 and even, so the shape a caller
-    // actually meets was the one this reported wrongly; the line above passed on its choice of 7.
+    // rewriting had not finished at all. `DefaultLimit` is even, which `FiguresSpec` asserts, so
+    // the shape a caller actually meets was the one this reported wrongly; the line above passed
+    // on its choice of 7.
     val there = assumedRule(u, w)
     val back = assumedRule(w, u)
     val other = Term.variable("c", alpha)
@@ -795,10 +796,6 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "which is the caller. Only `rewriteIn` is a walk: `Recorder.rewrite` is `depthConv` on " +
         "its own, one traversal of a finite term, and `rewriteSides`, `rewriteRight` and " +
         "`replace` are single kernel applications with no limit between them"),
-    // The file the third door exists for, and the only caller that reaches the rewriter through
-    // `Recorder` rather than directly. It holds ZERO `Rewrite.rewrite(` and zero
-    // `Rewrite.inTheorem(`, so it was invisible to this scan while the scan read two doors, which
-    // is the hole `Recorder.scala`'s entry declined to fill and could not fill from where it sits.
     "Logarithm.scala" ->
       ("two doors, and neither is left to the limit to report. `Rewrite.rewrite` walks the " +
         "exponential's partial sum at two down to numerals, and what it produces is handed to " +
@@ -807,10 +804,15 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "a one-rule helper, moves a ground equation into a theorem, and every result is handed to " +
         "`Rules.mp` against a schematic implication, to `existsElim` or to the development's check " +
         "of each fact against its published text: a half-rewritten theorem matches none of them"),
+    // The file the third door exists for, and the only caller that reaches the rewriter through
+    // `Recorder` rather than directly. It holds no `Rewrite.rewrite(` and no
+    // `Rewrite.inTheorem(`, so it was invisible to this scan while the scan read two doors, which
+    // is the hole `Recorder.scala`'s entry declined to fill and could not fill from where it sits.
     "Magnitude.scala" ->
-      ("eight through `Recorder.rewriteIn`, and none of them can reach the limit. The equations " +
-        "are read off the recorded steps of `Magnitude.standard` rather than off how they are " +
-        "built, which is what makes them seven and not eight: 34 recorded steps over 17 scripts " +
+      ("every call through `Recorder.rewriteIn`, and none of them can reach the limit. Counted " +
+        "on 2026-09-15, when those calls were eight, the equations were read off the recorded " +
+        "steps of `Magnitude.standard` rather than off how they were built, which made them " +
+        "seven and not eight: 34 recorded steps over 17 scripts " +
         "carry seven distinct rules, and 1169 and 1172 share one. Three fold a constant the same " +
         "expression has just defined, `select (\\y. ...) -> sgn x`, `select (\\z. ...) -> max x y` " +
         "and `max x (-x) -> abs x`: a constant cannot occur in its own body, so the body is gone " +
@@ -1135,12 +1137,13 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     callers should contain("Family.scala")
 
     // And the second door is not passing because it was quietly closed again. `Order.scala` has
-    // no `Rewrite.rewrite(` in it at all and seven calls to `inTheorem`, so it is in this list
-    // only while the scan reads both, and it is the file that disappears first if one is dropped.
+    // no `Rewrite.rewrite(` in it at all and reaches the rewriter through `inTheorem` alone, so it
+    // is in this list only while the scan reads both, and it is the file that disappears first if
+    // one is dropped.
     callers should contain("Order.scala")
 
-    // And the third door, by the same test: `Magnitude.scala` calls the rewriter zero times
-    // directly and eight times through `Recorder`, so it is in this list only while the scan reads
+    // And the third door, by the same test: `Magnitude.scala` never calls the rewriter directly and
+    // reaches it only through `Recorder`, so it is in this list only while the scan reads
     // `.rewriteIn(` and it is the file that disappears first if that door is dropped.
     callers should contain("Magnitude.scala")
 
@@ -1200,8 +1203,8 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
       callers.filterNot(reviewed.contains) shouldBe empty
     }
 
-    // And it is not passing because it read nothing. `Field.scala` is the one file that does this,
-    // so this line is what separates a scan that found one from a scan that found none.
+    // And it is not passing because it read nothing. `Field.scala` does this, so this line is what
+    // separates a scan that found it from a scan that found none.
     callers should contain("Field.scala")
   }
 

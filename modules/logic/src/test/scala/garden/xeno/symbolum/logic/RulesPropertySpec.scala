@@ -24,10 +24,10 @@ class RulesPropertySpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenP
   /**
    * ScalaTest's default is ten cases, which is a smoke test rather than a property check.
    *
-   * Two hundred, measured: the slowest property below takes about five seconds at that count,
-   * because each case runs a real derivation through the kernel, and the module's whole suite
-   * takes sixteen. That is the budget these are worth; a higher count belongs in a slower gate
-   * rather than in this one.
+   * The count below was measured, before 2026-09-14 where this repository's history begins: the
+   * slowest property took about five seconds at it, because each case runs a real derivation
+   * through the kernel, and the module's whole suite took sixteen. That is the budget these are
+   * worth; a higher count belongs in a slower gate rather than in this one.
    */
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration(minSuccessful = 200)

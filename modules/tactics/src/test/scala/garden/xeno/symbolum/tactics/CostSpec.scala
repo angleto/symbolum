@@ -11,8 +11,8 @@ import garden.xeno.symbolum.theories.Real
  *
  * The interesting assertions here are the ones about what the report does **not** merge. Every
  * answer this file gathers already existed and each was already tested where it lives, so a spec
- * that only re-checked them would say nothing; what is new is that five answers arrive together and
- * that a reader can tell which question each one answered.
+ * that only re-checked them would say nothing; what is new is that the answers `Cost`'s docstring
+ * lists arrive together and that a reader can tell which question each one answered.
  */
 class CostSpec extends AnyFlatSpec with Matchers {
 
@@ -40,7 +40,7 @@ class CostSpec extends AnyFlatSpec with Matchers {
     // The rule, and it is a rule about what a reader is shown rather than about axioms. Everything
     // on this page except the axioms is the caller's own text and is read back strictly: text that
     // does not come back as the term is text about a different claim. An axiom is the theory's, the
-    // caller cannot have got it wrong, and withholding the other twelve lines over it helps nobody.
+    // caller cannot have got it wrong, and withholding the rest of the page over it helps nobody.
     val shown = cost
       .page(
         Cost.Report(

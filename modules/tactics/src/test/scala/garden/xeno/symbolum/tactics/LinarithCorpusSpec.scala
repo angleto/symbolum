@@ -221,7 +221,7 @@ class LinarithCorpusSpec extends AnyFlatSpec with Matchers {
             // `False` as a goal is read, and it is not an exception to the syntax-only rule: it is
             // the same falsity the logic already has, and asking whether the premises imply it is
             // asking whether they can all hold, which is the half of the procedure that has
-            // nothing to do with a goal. Six declarations in this file are written that way.
+            // nothing to do with a goal. Several declarations in this file are written that way.
             if (goalText.trim == "False") {
               val hypotheses = binders.collect { case Binder.Assumption(relation) => relation }
               val sides = hypotheses.flatMap(relation => Vector(relation.left, relation.right))
@@ -302,7 +302,7 @@ class LinarithCorpusSpec extends AnyFlatSpec with Matchers {
         s"not linear ${count(Outcome.NotLinear)}, unproved ${count(Outcome.Unproved)}"
     )
 
-    // Where the excluded ones went, by line, because a bucket of twenty is a claim about this
+    // Where the excluded ones went, by line, because the size of a bucket is a claim about this
     // corpus that a reader should be able to check against the file rather than take on trust.
     Outcome.values.filterNot(_ == Outcome.Proved).foreach { bucket =>
       val members = outcomes.collect { case (declaration, `bucket`, why) => s"${declaration.line} ($why)" }

@@ -12,7 +12,7 @@ import org.scalatest.matchers.should.Matchers
  * **The BBP formula** is the one the method is famous for, and it is the reason this exists at all:
  * `pi = 4 S1 - 2 S4 - S5 - S6` over the four sums `S_j = sum_k 1 / (16^k (8k + j))` was found by
  * putting those five numbers into an integer relation search and reading the answer off. It comes
- * back here with a residual of `8e-200`.
+ * back here with a residual well inside the bound the test asserts, and the run prints it.
  *
  * **The minimal polynomial of `sqrt2 + sqrt3 + sqrt5`** is the one that shows what the digits are
  * for. Nine values and coefficients up to 960, so it is an accident until about thirty digits: at
@@ -81,9 +81,11 @@ class RelationSpec extends AnyFlatSpec with Matchers {
 
   it should "be found at fifty digits too, since five values and small coefficients are easy" in {
     // The honest half of the calibration. BBP is the famous case and it is **not** the case that
-    // needs the digits: five values with coefficients under five are confirmed by twelve digits at
-    // sixteen. What needed hundreds of digits historically was searching a much longer vector of
-    // candidate terms, which is a different run from checking a relation among five.
+    // needs the digits: five values with coefficients under five were confirmed by twelve digits at
+    // sixteen when this was measured, before 2026-09-14 where this repository's history begins, and
+    // this test does not repeat that run. What needed hundreds of digits historically was searching
+    // a much longer vector of candidate terms, which is a different run from checking a relation
+    // among five.
     Relation.among(bbpValues(50), 50) match {
       case Relation.Found(coefficients, _, _) =>
         coefficients shouldBe Vector(BigInt(1), BigInt(-4), BigInt(2), BigInt(1), BigInt(1))

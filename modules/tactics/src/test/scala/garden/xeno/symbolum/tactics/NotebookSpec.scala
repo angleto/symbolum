@@ -9,10 +9,10 @@ import org.scalatest.matchers.should.Matchers
 /**
  * The one surface in this project that speaks to a browser, exercised over a socket.
  *
- * `Notebook` was 101 uncovered statements of 172, the largest single hole in the coverage of
- * `modules/tactics`, and the reason is structural rather than neglect: its three endpoints are
- * private and reachable only through a running server, so nothing could reach them without one.
- * `SessionSpec` has thirteen tests and one of them touches the page at all.
+ * On 2026-09-15 `Notebook` was 101 uncovered statements of 172, the largest single hole in the
+ * coverage of `modules/tactics`, and the reason is structural rather than neglect: its three
+ * endpoints are private and reachable only through a running server, so nothing could reach them
+ * without one. `SessionSpec` had thirteen tests that day and one of them touched the page at all.
  *
  * == Why a real server and not a fake exchange ==
  *
@@ -24,7 +24,7 @@ import org.scalatest.matchers.should.Matchers
  * keeps open. A fake `HttpExchange` asserts the handler's arithmetic and neither of those.
  *
  * The server listens on port **0**, so the operating system picks a free one and two runs of this
- * suite, or a run beside somebody's notebook on 8642, cannot collide.
+ * suite, or a run beside somebody's notebook on `Notebook.DefaultPort`, cannot collide.
  *
  * == What it does not cover ==
  *
@@ -270,9 +270,9 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
 
   it should "escape what a reader typed, so a transcript cannot write the page" in {
     // A line that does not read is **kept** in the transcript, because a dropped line makes the
-    // transcript a lie, and that is what puts a reader's text on the page whatever it contains.
-    // The characters are `escape`'s four, checked by being sent through as a command rather than
-    // by calling it: what matters is that nothing between the reader and the page skips it.
+    // transcript a lie, and that is what puts a reader's text on the page whatever it contains. The
+    // characters are the ones `escape` replaces, checked by being sent through as a command rather
+    // than by calling it: what matters is that nothing between the reader and the page skips it.
     val session = fresh.run("""declare <script>alert("x & y")</script> : bool""")
     val rendered = Notebook.cells(session)
 

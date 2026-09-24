@@ -15,12 +15,12 @@ import org.scalatest.matchers.should.Matchers
  *
  * == What is asserted, and why it is not a benchmark row ==
  *
- * The counts below are calibration. They say that the loop reproduces twelve of the fifty-five
- * lemmas its rediscovering source can reach, that it reaches none at all by the other source out of
- * a hundred and seventeen tries, and that everything it reaches it proves. None of that is evidence
- * that anything was discovered, and `docs/evaluation.md` says at length why a figure like this is
- * not a benchmark. What it is: the number that has to exist before any claim about the loop is
- * anything but anecdote.
+ * The counts below are calibration. They say that the loop reproduces some of the lemmas its
+ * rediscovering source can reach, `propose.mutable`, that it reaches none at all by the other
+ * source over every weakening it tries, and that everything it reaches it proves. None of that is
+ * evidence that anything was discovered, and `docs/evaluation.md` says at length why a figure like
+ * this is not a benchmark. What it is: the number that has to exist before any claim about the loop
+ * is anything but anecdote.
  */
 class RediscoverySpec extends AnyFlatSpec with Matchers {
 
@@ -62,14 +62,14 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
   it should "reach none of them by dropping a hypothesis, which the file predicted and nobody had measured" in {
     // `Propose.substitutions` says in prose that dropping a hypothesis makes a lemma weaker, and
     // that a weaker form of something already held is not a lemma anybody was missing. That was an
-    // argument. This is the measurement: 117 weakenings, and not one of them states a lemma the
-    // library holds.
+    // argument. This is the measurement: every weakening the generator makes, the count pinned at
+    // the end of this test, and not one of them states a lemma the library holds.
     //
     // It is the cleanest possible confirmation and it is also a limit, which is why it is asserted
     // rather than left as a satisfying zero. The loop has exactly **one** source that can
-    // rediscover, so every figure in this file is a figure about the operator substitution and its
-    // four swaps. A second such source would move all of them, and the day one arrives this
-    // assertion is what says so.
+    // rediscover, so every figure in this file is a figure about the operator substitution and the
+    // swaps in `Propose.Swaps`. A second such source would move all of them, and the day one
+    // arrives this assertion is what says so.
     recoveries.count(_.proposal.source == Propose.Source.Weakened) shouldBe 0
     // 121 since the classical facts joined the library, derived at `ProposeSpec`: four of the nine
     // that arrived carry an antecedent. None of the four reaches a rediscovery, so the zero below
@@ -429,14 +429,14 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
   }
 
   it should "prove every one, and the price splits them in two" in {
-    // All 16 come back `Proved`, which is the least surprising fact here: they are lemmas this
+    // Every one comes back `Proved`, which is the least surprising fact here: they are lemmas this
     // library holds, so a failure would be a finding about the tactic surface and not about the
     // generator. It is asserted because that is exactly why it is worth knowing.
     //
-    // **The interesting half is the price.** Four are settled by the ring normalisation at once and
-    // come back `Immediate` at 77 and 108 inferences; the other twelve are order facts the ring
-    // does not decide, come back `Known`, and cost between 3706 and 7351. Forty to seventy times
-    // more for a claim of the same standing, and the novelty scale calls all sixteen not-news
+    // **The interesting half is the price.** The ones the ring normalisation settles at once come
+    // back `Immediate`, at 77 and 108 inferences; the rest are order facts the ring does not
+    // decide, come back `Known`, and cost between 3706 and 7351. Forty to seventy times more for a
+    // claim of the same standing, and the novelty scale calls every one of them not-news
     // either way, which is correct and is the scale doing its job on its own hardest case: a
     // rediscovery is precisely a claim that looks new and is not.
     // **The two that arrived on 2026-09-18 are both `Known` and neither is `Immediate`**, which is

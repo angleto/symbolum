@@ -88,7 +88,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // written when running the block was out of reach, so it asserted the agreement of two
     // spellings instead: the one below, compiled by this file, and the one in the document,
     // asserted character for character. `ReadmeSpec` now compiles the block itself, so the
-    // agreement half is covered there and covered for all twenty-four blocks rather than two.
+    // agreement half is covered there and covered for every block rather than two.
     // What survives here, and is not covered there, is the ANSWER: `5 * n - 1` and `16.0` are what
     // the document tells a reader to expect, and a block that runs is not a block that is right.
     import garden.xeno.symbolum.Dsl.*
@@ -696,10 +696,10 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     launchers.foreach(entry => build should include(s"\"$entry\""))
 
     // What would make that vacuous: an allowlist that is a superset of the entry points, which is
-    // discovery with extra steps. The five mains that regenerate documents through `Generated` are
-    // named here, so that adding one to the distribution fails rather than passes. `Generated`
-    // resolves `docs/...` against the working directory, so one of these in a tarball is a command
-    // that writes into wherever the person who installed it happened to be standing.
+    // discovery with extra steps. Mains that regenerate documents are named here, so that adding
+    // one to the distribution fails rather than passes. Each writes a `docs/...` path resolved
+    // against the working directory, so one of these in a tarball is a command that writes into
+    // wherever the person who installed it happened to be standing.
     val writers = Vector(
       "garden.xeno.symbolum.theories.Lemmas",
       "garden.xeno.symbolum.theories.Register",
@@ -1064,7 +1064,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     //     `modules/tactics/src/main`. This comment is one of the 2548 and the number moved while
     //     it was being written, which is the honest form of the argument: it is an order of
     //     magnitude and not a figure anything can pin. A hand-kept list against a live one works
-    //     one paragraph above because the hand-kept side is eight entries.
+    //     one paragraph above because the hand-kept side is as short as `Keywords`.
     //   - **Reading the number instead of listing it needs to know what it counts, and English
     //     does not say.** The narrowest rule that fires on the defect — a cardinal in a comment
     //     sentence that also names a command, a keyword or a cell — finds four sentences in
@@ -1104,7 +1104,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // document's wording, and prose is what moves here.
     withClue(s"the sentence this read was `$sentence`: ") { listed should not be empty }
 
-    // Named in both directions rather than left to a reader diffing two eight-element vectors by
+    // Named in both directions rather than left to a reader diffing two vectors of keywords by
     // eye, which is what the bare equality printed when it was first fired at its own defect. A
     // guard whose failure has to be decoded is one somebody re-runs to see whether it is real.
     val published = Session.Command.Keywords
@@ -1519,11 +1519,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
   /**
    * What the trusted base may grow to before somebody has to decide.
    *
-   * It has been 1200 since it was written and it is still 1200, which is worth a sentence because
-   * it was raised to 1400 on 2026-09-10 and put back the same day. What had grown past it was the
-   * kernel *directory*, and the four files above had not: a proof record and a printer are read by
-   * nobody who is deciding whether to believe a theorem. Raising a bound because the wrong thing
-   * was being measured is how a bound stops meaning anything.
+   * It has not moved since it was written, which is worth a sentence because it was raised to 1400
+   * on 2026-09-10 and put back the same day. What had grown past it was the kernel *directory*, and
+   * the four files above had not: a proof record and a printer are read by nobody who is deciding
+   * whether to believe a theorem. Raising a bound because the wrong thing was being measured is how
+   * a bound stops meaning anything.
    *
    * What it protects is that one person can read the whole of what they are asked to believe in a
    * sitting. Two records have spent against it deliberately, `docs/adr/0006` for the type
