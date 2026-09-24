@@ -81,6 +81,31 @@ class FoldingSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "spend exactly choice, infinity and eta, measured as an equality" in {
+    // Written by the verification of cards 5d59c308 and 708faa52 on 2026-09-24. The test above is
+    // a ceiling: `(spent -- naturals) shouldBe empty` passes when `spent` is empty, and `naturals`
+    // there holds both of the classical theory's axioms beside infinity, so it admits three. The
+    // delivery said two, choice and infinity, "as an equality"; measured, the union is THREE, eta
+    // being the third. This pins what was measured, so a derivation that starts or stops spending
+    // any of them goes red, and the informer line names which of the three each fact reaches.
+    val choice = Chain.standard.classical.axioms(Classical.Choice).conclusion
+    val eta = Chain.standard.classical.axioms(Classical.Eta).conclusion
+    val infinity = Chain.standard.naturals.axioms(Natural.Infinity).conclusion
+    val named = Map(choice -> "SELECT", eta -> "ETA", infinity -> "INFINITY")
+    val perFact = Folding.Statements.map { case (name, _) =>
+      name -> folding.facts.get(name).toVector.flatMap(t => Derivation.axiomsOf(t).toVector).toSet
+    }
+    val report = perFact
+      .map { case (name, axioms) =>
+        s"$name: " + axioms.toVector.map(a => named.getOrElse(a, folding.show(a))).sorted.mkString(", ")
+      }
+      .mkString("; ")
+    info(report)
+    withClue(s"per fact: $report\n") {
+      perFact.flatMap(_._2).toSet shouldBe Set(choice, infinity, eta)
+    }
+  }
+
   /* ------------------------------------------------------------- what it says */
 
   it should "prove every statement it publishes, owing nothing" in {
