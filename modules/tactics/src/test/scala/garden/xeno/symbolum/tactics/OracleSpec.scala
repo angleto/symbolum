@@ -18,7 +18,8 @@ class OracleSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenProperty
 
   /**
    * Fewer cases than elsewhere: every one of them runs a full ring normalisation, where the other
-   * property tests run a substitution. Twenty-five random polynomials take a few seconds.
+   * property tests run a substitution. The random polynomials the count below asks for took a few
+   * seconds on 2026-09-03.
    */
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration(minSuccessful = 25)

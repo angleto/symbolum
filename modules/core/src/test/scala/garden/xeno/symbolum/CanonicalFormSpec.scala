@@ -57,7 +57,7 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
    * A generated tree can be one the algebra system refuses, and refusing is not a failure here.
    *
    * `ExpressionError` is the live case: simplification can reach a division by zero that the tree
-   * did not contain. The `IllegalArgumentException` arm covers the dozen `require`s on the
+   * did not contain. The `IllegalArgumentException` arm covers the `require`s on the node
    * constructors, none of which this generator can currently trip; it stays because a property test
    * that dies with a stack trace instead of skipping a sample is the harder failure to read.
    */
@@ -101,7 +101,8 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
     // result and precisely what the paragraph above says is the wrong scale.
     //
     // Found on 2026-09-07 by a generated case, `(-6/5 + y)^3^2^3`, whose simplified form is a sum
-    // of eighteen terms up to 1e18 over the numeral 3814697265625. Seed -1600853951632219810.
+    // with a term for every power of `y` it reaches, coefficients up to 1e18, over the numeral
+    // 3814697265625. Seed -1600853951632219810.
     case Neg(inner) => errorScale(inner)
 
     case Div(parts) if parts.nonEmpty =>
@@ -117,12 +118,12 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
    * The case that made this suite fail at random, pinned so that it cannot come back unseen.
    *
    * `(-6/5 + y)^3^2^3` is `(-6/5 + y)` raised to the eighteenth, and its simplified form is a sum
-   * of nineteen terms with coefficients reaching 1e18 over the numeral 3814697265625. At the sample
-   * point the terms are of order 1e9 and their sum is about 5.6, so roughly nine digits go in the
-   * cancellation and no double arithmetic recovers them. Before 2026-09-08 the value property
-   * scaled its tolerance by the magnitude of the result, which asserted a precision the arithmetic
-   * cannot deliver and failed for a reason that has nothing to do with whether simplification
-   * preserved the value.
+   * with a term for every power of `y` from the zeroth to that one, coefficients reaching 1e18,
+   * over the numeral 3814697265625. At the sample point the terms are of order 1e9 and their sum
+   * is about 5.6, so roughly nine digits go in the cancellation and no double arithmetic recovers
+   * them. Before 2026-09-08 the value property scaled its tolerance by the magnitude of the
+   * result, which asserted a precision the arithmetic cannot deliver and failed for a reason that
+   * has nothing to do with whether simplification preserved the value.
    *
    * The two bounds below are measured, not deduced. Reading them off the printed coefficients gave
    * 1e15 and was wrong by six orders of magnitude: the coefficients are divided by a numeral and

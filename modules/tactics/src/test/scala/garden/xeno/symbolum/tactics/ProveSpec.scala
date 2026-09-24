@@ -260,8 +260,9 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     //
     // It used to cost one. `Minimal` refused this by naming the negation, the goal fell through to
     // the classical procedure, and the theorem came back resting on `SELECT` — the same term, at a
-    // price the argument does not need. Measured over every propositional formula of at most six
-    // nodes on two atoms, 58 goals are in exactly this position.
+    // price the argument does not need. Over every propositional formula on two atoms within the
+    // node bound `PropositionalRouteSpec` enumerates, the goals in exactly this position are the
+    // ones that spec counts as gained and pins.
     //
     // **Seen failing against the tree that carries it**, which is what makes it a guard rather than
     // a description: run on 2026-09-18 with `Prove.scala` reverted to `6554615` and this file left

@@ -6,14 +6,15 @@ import garden.xeno.symbolum.logic.*
 /**
  * The half of `Peano` that cannot be stated without the real numbers.
  *
- * `real_of_num` and the seventeen facts about it: that it is a homomorphism for both operations,
- * that it carries the order and the integrality with it, that it is injective, the Archimedean
- * property, and the floor and the ceiling. They are here and the other seventy-four are in
- * `Peano.scala`, and the line between the two files is the line `docs/adr/0016` draws.
+ * `real_of_num` and the facts about it: that it is a homomorphism for both operations, that it
+ * carries the order and the integrality with it in both directions, that it is injective, the
+ * Archimedean property, and the floor and the ceiling. They are here and the rest of `Peano`'s
+ * facts are in `Peano.scala`, and the line between the two files is the line `docs/adr/0016` draws.
+ * How many fall on each side is `ArithmeticBelowTheRealsSpec`'s to count, not this comment's.
  *
  * == Why this is a file and not yet a development ==
  *
- * The record says the seventeen "become a development above `Order`", and that is phase 5's work
+ * The record says these facts "become a development above `Order`", and that is phase 5's work
  * rather than this one's. Splitting the class as well as the file would move every call site of the
  * shape `peano.fact(Peano.EmbedsSum)` to a second development, 78 of them on 2026-09-15, and every
  * one of them would move **again** when the chain is reordered and this is constructed after `Ring`
@@ -23,7 +24,7 @@ import garden.xeno.symbolum.logic.*
  * thousand lines.
  *
  * What already makes the boundary a fact rather than a convention is not this file. It is that
- * `Peano.arithmetic` builds the seventy-four over a theory in which the type operator `real` is not
+ * `Peano.arithmetic` builds the other side over a theory in which the type operator `real` is not
  * declared, which `ArithmeticBelowTheRealsSpec` asserts and which nothing here changes.
  *
  * == What everything in it has in common ==
@@ -32,7 +33,7 @@ import garden.xeno.symbolum.logic.*
  * for the two homomorphism inductions and `LINARITH` for the three that carry a bound across;
  * `archimedean` is the one place `COMPLETENESS` is spent; `floors` needs the trichotomy of the
  * reals and a case split. That is the same list read from the other side: these are the facts whose
- * derivations reach the sixteen axioms, and `Peano`'s other seventy-four reach none of them.
+ * derivations reach the sixteen axioms, and `Peano`'s other facts reach none of them.
  *
  * The functions are `private[theories]` and `Peano.construct` is their only caller. They are not a
  * surface: a caller wanting these facts asks `peano.fact` for them by name, exactly as before this

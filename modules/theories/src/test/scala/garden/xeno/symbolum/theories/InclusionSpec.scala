@@ -46,7 +46,7 @@ import garden.xeno.symbolum.logic.*
  * `INT_REAL_LE` says the embedding carries the order **both ways**, and it is an equation between
  * propositions where every other fact here is an equation between reals. It is the first statement
  * in this file that could have answered the accounting assertion differently, which is why that
- * assertion is read rather than only re-run below: measured at this revision it reaches fourteen of
+ * assertion is read rather than only re-run below: measured on 2026-09-18 it reached fourteen of
  * the sixteen and the carrier's three and nothing else, so the boundary the section above describes
  * survives the new shape rather than being assumed to.
  *

@@ -28,7 +28,7 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Fate, NotRun, Prepare
  *
  * == How ==
  *
- * One compilation and not twenty-four. Each block becomes the body of its own object in a single
+ * One compilation and not one per block. Each block becomes the body of its own object in a single
  * generated source, which buys two things that matter more than the time it saves. The first is
  * **isolation**: an object's body cannot see another object's locals, so a block that only works
  * because an earlier block defined a name fails here, loudly, rather than passing on context the
@@ -43,7 +43,7 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Fate, NotRun, Prepare
  *
  * A fresh `ReplDriver` per block has no such leak and costs a classpath scan each time: 34 seconds
  * for the first block and about a second for each after it, measured 2026-09-16 on a loaded
- * machine. Twenty-four scans is not a trade worth making for a guard that runs in every suite.
+ * machine. A scan per block is not a trade worth making for a guard that runs in every suite.
  *
  * == What a prelude is, and what it is not ==
  *
@@ -58,10 +58,10 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Fate, NotRun, Prepare
  *     1`, and this runs the block without comparing against it. Those comparisons are
  *     `DocumentationSpec`'s and stay there; what moved here is whether the program in the document
  *     is a program at all.
- *   - **Four of the twenty-four blocks do not run**, each with its reason in [[Blocks]] below, and
- *     only three of them are unprotected. Three are sbt build fragments, which are Scala and are
- *     not Scala this classpath can elaborate, so breaking a line of one of those is the one case
- *     this file would not catch. The fourth is a quotation of two lines of `Simplifier.scala`,
+ *   - **The blocks marked `NotRun` do not run**, each with its reason in [[Blocks]] below, and
+ *     only the sbt ones among them are unprotected. Those are build fragments, which are Scala and
+ *     are not Scala this classpath can elaborate, so breaking a line of one of those is the one
+ *     case this file would not catch. The other is a quotation of two lines of `Simplifier.scala`,
  *     which is checked against that file as a quotation one test below. Two others were elliptical,
  *     `val expr = /* ... */` where an expression belongs, and those were repaired in the document
  *     rather than excused here: a comment standing in for a value is not a block that cannot run,

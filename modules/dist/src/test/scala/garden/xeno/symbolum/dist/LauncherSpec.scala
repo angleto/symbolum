@@ -15,8 +15,8 @@ import garden.xeno.symbolum.tactics.Find
 /**
  * Every launcher the tarball ships is entered by something, which the allowlist did not say.
  *
- * `build.sbt` names five main classes for `JavaAppPackaging`, and `DocumentationSpec` asserts the
- * five appear in that file. Nothing asserted that any of them WORKS. That is the repository's own
+ * `build.sbt` names the main classes for `JavaAppPackaging`, and `DocumentationSpec` asserts they
+ * appear in that file. Nothing asserted that any of them WORKS. That is the repository's own
  * rule about what counts as built, unapplied to the file it cites as the first demonstration of the
  * proof half: a tactic is built when it has proved something end to end, not when it compiles and
  * its unit tests pass.
@@ -114,8 +114,8 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
    * The allowlist as `build.sbt` holds it, parsed rather than copied.
    *
    * A second hand-written list here would be the thing this file exists against: it would agree
-   * with the build on the day it was written and be the only thing still saying five when the
-   * build said six.
+   * with the build on the day it was written and be the only thing still naming the old set
+   * after the build gained a launcher.
    */
   private lazy val shipped: Vector[String] = {
     val build = read("build.sbt")
@@ -310,12 +310,12 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
   private lazy val demonstration: String = capturing(WhatAClaimCosts.main(Array.empty))
 
   "`WhatAClaimCosts`" should "run end to end and report on every claim it makes" in {
-    // Running it is the point. The class builds `Cost.construct(Chain.standard)` and puts four
+    // Running it is the point. The class builds `Cost.construct(Chain.standard)` and puts its
     // claims to the whole tactic surface, so this is the one gate that fails when the demonstration
     // a reader is pointed at stops demonstrating.
     demonstration should include("WHAT A CLAIM COSTS")
 
-    // Named rather than counted, because a count says four arrived and not which four.
+    // Named rather than counted, because a count says how many arrived and not which.
     demonstration should include("a ring identity over the reals")
     demonstration should include("an order fact")
     demonstration should include("a claim about the naturals")
@@ -325,7 +325,7 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
   it should "still carry the one it cannot settle, which is what the page is for" in {
     // The assertion a gate written to check that the demonstration "works" would not have. Its own
     // documentation says a page made only of successes teaches that the tool answers, which is the
-    // one thing about it that is not true, and the fourth claim is true and unproved on purpose. A
+    // one thing about it that is not true, and the last claim is true and unproved on purpose. A
     // change that quietly started proving it, or dropped it, changes what the page teaches.
     demonstration should include("?y:real. y * y = x")
   }

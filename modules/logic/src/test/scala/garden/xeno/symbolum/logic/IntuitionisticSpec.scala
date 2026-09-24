@@ -15,7 +15,8 @@ import garden.xeno.symbolum.kernel.*
  *
  * The other half is the refusals. A procedure that proved everything classical would be the
  * procedure this repository already had; what makes this one worth its lines is that it stops
- * exactly where intuitionistic provability stops, and the four goals under "the boundary" are where.
+ * exactly where intuitionistic provability stops, and the classical goals it refuses below, the
+ * ones under "the boundary" among them, are where.
  */
 class IntuitionisticSpec extends AnyFlatSpec with Matchers {
 

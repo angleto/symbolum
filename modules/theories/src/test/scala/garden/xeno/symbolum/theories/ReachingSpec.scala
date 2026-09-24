@@ -123,8 +123,8 @@ class ReachingSpec extends AnyFlatSpec with Matchers {
     // The question is asked of the definition's CONSTANTS and not of its printed text, and the
     // second half of this test used to ask it of the text: it compared against
     // `Recursion.getClass.getSimpleName`, which is the Scala module's class name `Recursion$`, and
-    // no term this printer produces carries a `$` — zero of the 462 statements in
-    // `docs/lemmas.md` do. So it passed on every input, including a definition that walked a
+    // no term this printer produces carries a `$`: none of the statements in `docs/lemmas.md`
+    // does. So it passed on every input, including a definition that walked a
     // derivation's length, which is the one thing it was named after refusing.
     //
     // Asserting against a name `Recursion` publishes is not the repair, because it publishes

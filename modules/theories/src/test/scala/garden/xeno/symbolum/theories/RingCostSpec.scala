@@ -191,9 +191,10 @@ class RingCostSpec extends AnyFlatSpec with Matchers {
   }
 
   "The collecting normal form of a power" should "have one monomial per term of the polynomial" in {
-    // Runs to twelve, which is the degree the change was asked for, and costs about 1.2 seconds of
-    // this suite to do it. That is most of what this file costs and it is the assertion the whole
-    // change exists for, so it is asserted rather than described.
+    // Runs to twelve, which is the degree the change was asked for, and cost about 1.2 seconds of
+    // this suite to do it when it was written, no later than 2026-09-14. That was most of what this
+    // file cost, and it is the assertion the whole change exists for, so it is asserted rather than
+    // described.
     val measured = (2 to 12).map(degree => degree -> normalised(collecting, power(degree)))
 
     info(

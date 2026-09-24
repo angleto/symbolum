@@ -110,7 +110,7 @@ class QuotientSpec extends AnyFlatSpec with Matchers {
    * `definition` and `project`, which nothing had driven.
    *
    * Both are public and neither was exercised before 2026-09-17, which is a different thing from
-   * being untested code: `fact` beside them is read a dozen times in this file, so what was missing
+   * being untested code: `fact` beside them is read throughout this file, so what was missing
    * is not the development but the two entry points a caller who holds an element rather than a
    * name goes through.
    *

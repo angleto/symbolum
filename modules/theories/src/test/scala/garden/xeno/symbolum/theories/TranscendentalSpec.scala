@@ -6,14 +6,14 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 /**
- * The four transcendental constants are definitions, they are four different things, and what is
- * proved about them is what is claimed.
+ * The transcendental constants are definitions, they are different things, and what is proved
+ * about them is what is claimed.
  *
- * The assertion this file exists for is the third one. Six constants defined out of one limit
- * operator could all be the same function without any other test here noticing:
- * every value at zero would still come out, the axiom count would be unchanged, and the statements
- * would still read back. What says they are different is a derivation that two of them differ at a
- * point, and what that costs is one axiom of the reals, `ONE_NOT_ZERO`.
+ * The assertion this file exists for is the third one. The constants this development declares,
+ * defined out of one limit operator, could all be the same function without any other test here
+ * noticing: every value at zero would still come out, the axiom count would be unchanged, and the
+ * statements would still read back. What says they are different is a derivation that two of them
+ * differ at a point, and what that costs is one axiom of the reals, `ONE_NOT_ZERO`.
  *
  * **What this file cannot assert is what any of these constants is at a point away from zero.**
  * `2 < exp 1`, the addition theorem and both squared identities are theorems and are asserted
@@ -67,7 +67,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
    *
    * The printed form is what the assertion is against rather than the term, because what is being
    * checked is a translation: `Sum f n` is the first `n` terms indexed from zero, so the exponential
-   * is `\sum_{i<n} x^i / i!` and the sine's exponent is `2k + 1`. A reader comparing these four
+   * is `\sum_{i<n} x^i / i!` and the sine's exponent is `2k + 1`. A reader comparing these
    * lines with a textbook is doing the only check that matters here, and a definition has to be
    * checkable that way by somebody who did not write it, which is why they are printed rather than
    * assembled.
@@ -95,7 +95,8 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The exponential and the sine differ at zero, so the four are not one constant four times.
+   * The exponential and the sine differ at zero, so the constants are not one constant under
+   * several names.
    *
    * `EXP_ZERO` and `SIN_ZERO` give `exp 0 = 1` and `sin 0 = 0`, and `ONE_NOT_ZERO` is what turns
    * that pair into a difference. It is the axiom of the reals that says the field is not trivial,
@@ -433,9 +434,10 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
 
   it should "cost what the addition theorem costs, and the series' magnitudes what the exponential's do" in {
     // Equalities and not ceilings, for `CodingSpec`'s reason. The absolute convergence of the two
-    // alternating series was predicted at nineteen before it was measured and came in at eighteen,
-    // which is `EXP_ABSOLUTE`'s own figure: the bound it spends is the exponential's, and the sign
-    // `(0 - 1)^k` costs nothing past the magnitude facts `EXP_ABSOLUTE` already reaches.
+    // alternating series was predicted at nineteen before it was measured and came in at exactly
+    // what `EXP_ABSOLUTE` spends, which the equality below pins: the bound it spends is the
+    // exponential's, and the sign `(0 - 1)^k` costs nothing past the magnitude facts `EXP_ABSOLUTE`
+    // already reaches.
     def axioms(name: String): Set[Term] =
       Derivation.axiomsOf(force(transcendental.fact(name))).toSet
 

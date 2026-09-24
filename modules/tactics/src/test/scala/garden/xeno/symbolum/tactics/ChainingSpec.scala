@@ -140,10 +140,10 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
   "The depth bound" should "stop a goal that needs three, and say so" in {
     // `inv` over the witness is one lemma deeper than it, so the default must not reach it.
     //
-    // **It was `inv (inv (x * x + 1))` until 2026-09-18, and that goal takes two lemmas now**, not
-    // three: the completed square settles the bottom rung, so the default reached it and this
-    // assertion read as a regression in the depth bound when what had moved was the procedure
-    // under it. The class comment carries the whole of that.
+    // **It was `inv (inv (x * x + 1))` until 2026-09-18, and on that day the goal took two
+    // lemmas**, not three: the completed square settles the bottom rung, so the default reached it
+    // and this assertion read as a regression in the depth bound when what had moved was the
+    // procedure under it. The class comment carries the whole of that.
     prove.searchFor(read("!x:real. !y:real. 0 < inv ((x * x) * (y * y) + 1)")) match {
       case Some(Chaining.Outcome.Depleted(_, _)) => succeed
       case other => fail(s"the default bounds must stop this: $other")

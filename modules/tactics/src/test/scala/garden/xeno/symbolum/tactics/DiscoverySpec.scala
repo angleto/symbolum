@@ -73,11 +73,12 @@ class DiscoverySpec extends AnyFlatSpec with Matchers {
   }
 
   "A candidate carrying a numeral too large to be worth the wait" should "be declined before it is attempted" in {
-    // This test used to use `1000 * x`, and that is now a two-millisecond goal: RING collects
-    // coefficients instead of expanding them, so the wall the budget was set against moved by ten
-    // orders of magnitude. What is left is the numeral arithmetic, which grows with the number of
-    // digits, and `Oracle.NumeralBudget` carries the measurement that placed it. The loop still
-    // declines rather than starting, and this test still returns at once, which is the point of it.
+    // This test used to use `1000 * x`, and on 2026-09-04 that had become a two-millisecond goal:
+    // RING collects coefficients instead of expanding them, so the wall the budget was set against
+    // moved by ten orders of magnitude. What is left is the numeral arithmetic, which grows with
+    // the number of digits, and `Oracle.NumeralBudget` carries the measurement that placed it. The
+    // loop still declines rather than starting, and this test still returns at once, which is the
+    // point of it.
     val large = Mul(Vector(Num(1e13), x))
 
     discovery.settle(large, large, samplesFor(large)) match {
@@ -119,9 +120,9 @@ class DiscoverySpec extends AnyFlatSpec with Matchers {
 
   "The rewriter running out" should "be classified apart from a candidate that is not provable" in {
     // The fourth case, and the only one without an end-to-end test, because no input was found
-    // that exhausts the standard normalisation: reversed sums up to thirty-two terms and two
-    // hundred and fifty nested cancellations all certify, and the numerals that would be slow
-    // enough are declined by the budget above before they are tried. It is reachable through
+    // that exhausts the standard normalisation: on 2026-09-04 reversed sums up to thirty-two terms
+    // and two hundred and fifty nested cancellations all certified, and the numerals that would be
+    // slow enough are declined by the budget above before they are tried. It is reachable through
     // `Rewrite` with a rule set of one's own, which `RewriteSpec` demonstrates, so the
     // classification is tested here where the classifying happens and the error is tested there
     // where it arises.

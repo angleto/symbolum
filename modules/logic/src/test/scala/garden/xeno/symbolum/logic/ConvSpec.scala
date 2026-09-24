@@ -137,8 +137,8 @@ class ConvSpec extends AnyFlatSpec with Matchers {
   it should "hold a constant and a bound-free variable alike, and not an application" in {
     // The population the cache is bounded by. An application is not shared, because a table keyed
     // by arbitrary terms is unbounded in the size of what anyone proves and pays an O(size) hash
-    // per lookup: measured over the library, atoms are 4287 distinct keys against 26791 for every
-    // term, and sharing the atoms alone recovers 23.4% of the nodes against 29.0% for all of them.
+    // per lookup. `Conv`'s docstring carries the census over the library, dated, that compared the
+    // distinct atoms with the distinct terms and what sharing each would recover.
     val implication = force(logic.mkImp(p, q))
 
     (Conv.refl(logic.truth) eq Conv.refl(logic.truth)) shouldBe true
@@ -150,7 +150,7 @@ class ConvSpec extends AnyFlatSpec with Matchers {
   it should "stop growing at its bound rather than refusing" in {
     // The behaviour at the cap, which is not a refusal: past it the rule is called directly and
     // only the saving stops. Asserted on the number rather than by filling the table, because
-    // filling it would leave 8192 entries behind for every suite that runs after this one.
+    // filling it would leave `Conv.Atoms` entries behind for every suite that runs after this one.
     Conv.Atoms should be > 4287
   }
 

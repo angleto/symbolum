@@ -62,9 +62,9 @@ class ListingSpec extends AnyFlatSpec with Matchers {
 
   "The list interface" should "be defined rather than assumed, and add no type" in {
     // Against the theory it EXTENDS, which is `Inclusion`'s and not `Concatenation`'s. This
-    // development needs the concatenation and sits on top of the chain's end, and the two are
-    // different questions: a difference taken against `concatenation.theory` would come back
-    // holding every constant of the five links between them and say nothing about what this added.
+    // development needs the concatenation and sits on top of `Inclusion` in the chain, and the two
+    // are different questions: a difference taken against `concatenation.theory` would come back
+    // holding every constant of the links between them and say nothing about what this added.
     val below = Chain.standard.inclusion.theory
 
     listing.theory.axioms shouldBe below.axioms
@@ -75,8 +75,8 @@ class ListingSpec extends AnyFlatSpec with Matchers {
     )
 
     // The claim `docs/adr/0038` rests on, and the reason this line is here rather than in prose: a
-    // list that carved a carrier would show up as a sixth type operator, and nothing else in this
-    // file would notice.
+    // list that carved a carrier would show up as a type operator `Inclusion`'s theory does not
+    // have, and nothing else in this file would notice.
     listing.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
 
     Listing.Definitions.foreach { case (name, _) =>
@@ -140,10 +140,10 @@ class ListingSpec extends AnyFlatSpec with Matchers {
   it should "spend eta exactly where it rests on the extensionality of words, and nowhere else" in {
     // Where the third axiom comes in, measured rather than read off the derivation. It is
     // `WORD_EXTENSIONALITY`, two words of one length agreeing below it being one word, which
-    // `LIST_TAIL_CONS` closes on and every fact after it inherits; the four facts before it do not
-    // reach it and do not spend eta. The equivalence per fact is what makes a fact that reached eta
-    // by another road go red naming itself, and the two counts at the end say it is not vacuous in
-    // either direction.
+    // `LIST_TAIL_CONS` closes on and every fact after it in `Listing.Statements` inherits; the
+    // facts before it do not reach it and do not spend eta. The equivalence per fact is what makes
+    // a fact that reached eta by another road go red naming itself, and the two counts at the end
+    // say it is not vacuous in either direction.
     //
     // **What it does not see**: `LIST_RECURSION_UNIQUE` pays for eta a second time, through
     // `Classical.ext` taken in this development's logic, which is a rule and not the published

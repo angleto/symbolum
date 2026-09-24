@@ -12,12 +12,13 @@ import garden.xeno.symbolum.theories.{Chain, Real}
  * The first is the arithmetic, and it is checked against the theory rather than against a second
  * opinion: `sub`, `div`, `le` and the numerals are evaluated by unfolding the equations the kernel
  * proved when they were introduced, so a test that they come out right is a test that the unfolding
- * works, not that somebody transcribed five definitions correctly.
+ * works, not that somebody transcribed those definitions correctly.
  *
- * The second is the eight logical constants, which [[Evaluate]] does interpret directly, and that is
- * the one duplication in the design. It is closed here exhaustively rather than by sampling: over
- * `bool` there are four assignments to a binary connective and all four are tried, so the agreement
- * between the built-in and the definition is settled rather than made likely.
+ * The second is the logical constants `Evaluate.LogicDefinitions` lists, which [[Evaluate]] does
+ * interpret directly, and that is the one duplication in the design. It is closed here exhaustively
+ * rather than by sampling: over `bool` there are four assignments to a binary connective and all
+ * four are tried, so the agreement between the built-in and the definition is settled rather than
+ * made likely.
  */
 class EvaluateSpec extends AnyFlatSpec with Matchers {
 

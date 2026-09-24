@@ -175,7 +175,8 @@ class NaturalTrapSpec extends AnyFlatSpec with Matchers {
   "What separates a pair on this fragment" should "be reported by kind, since no point is available" in {
     // The line the card asks for in its own words: nothing sizes `num`, so no pair here can be
     // separated by a witness point, and the report must say that rather than return fewer points
-    // in silence. The kinds are counted apart for the same reason `Refutation` keeps seven answers.
+    // in silence. The kinds are counted apart for the reason `Refutation.Outcome` keeps its cases
+    // apart.
     val byProof = measured.count { case (_, Witness.Proved(_), _, _) => true; case _ => false }
     val byDecision = measured.count { case (_, Witness.Decided(_), _, _) => true; case _ => false }
     val byPrinting = measured.count { case (_, Witness.Printed, _, _) => true; case _ => false }

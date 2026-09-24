@@ -7,11 +7,11 @@ import garden.xeno.symbolum.kernel.{Type, TyApp}
 /**
  * The table that answers a claim about `num` written with the reals' symbols.
  *
- * Two questions, and the second is the one worth the file. The first is whether the five pairs name
- * constants that exist, which is what stops a refusal advising a reader to write something the
+ * Two questions, and the second is the one worth the file. The first is whether the table's pairs
+ * name constants that exist, which is what stops a refusal advising a reader to write something the
  * reader would refuse. The second is whether the constants it **leaves out** are the ones nothing
- * on `num` corresponds to: a table that silently stopped covering `<=` would go on being right about
- * every entry it kept, and a reader who wrote `<=` would be back where this started.
+ * on `num` corresponds to: a table that silently stopped covering `-` would go on being right about
+ * every entry it kept, and a reader who wrote `-` would be back where this started.
  */
 class CounterpartSpec extends AnyFlatSpec with Matchers {
 

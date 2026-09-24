@@ -551,8 +551,8 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
 
     val classicalFile = read("modules/logic/src/main/scala/garden/xeno/symbolum/logic/Classical.scala")
     // The count in that sentence is a WORD and cannot be spliced from the derivations, so it is
-    // pinned here instead: a tenth derived fact fails this line and names the number the three
-    // places in `Classical.scala` that spell it have to be changed to. It said "eight" until
+    // pinned here instead: one more derived fact fails this line and names the number the places
+    // in `Classical.scala` that spell it have to be changed to. It said "eight" until
     // `NOT_FORALL` landed on 2026-09-15.
     Classical.Statements.size shouldBe 9
     withClue(s"Classical.scala does not say the largest of the nine is $largest steps: ") {
@@ -590,8 +590,9 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // never be.
     val digits = Derivation.size(force(classical.fact(Classical.ExcludedMiddle))).toString
 
-    // Bounded on both sides, so the digits inside a longer number are not a match. Three such
-    // exist and all three are `ArbitrarySpec`'s decimal expansions of pi and of the sine of one.
+    // Bounded on both sides, so the digits inside a longer number are not a match. Such numbers
+    // exist, and every one of them is in `ArbitrarySpec`'s decimal expansions of pi and of the
+    // sine of one.
     val standalone = s"(?<![0-9])$digits(?![0-9])".r
 
     // What may carry it, and the SENTENCES in each that may, read with the line breaks taken out
@@ -603,8 +604,8 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // assertion below that a second live sentence is found went red on it, because a second
     // sentence ending `in 841 steps` was exempted by the first one's entry.
     //
-    // Each is one of the readings above. The live ones are the three the test above asserts, the
-    // generated ones are compared against the derivation by `GuideSpec` and `TheoremsSpec`, and
+    // Each is one of the readings above. The live ones are the sentences the test above asserts,
+    // the generated ones are compared against the derivation by `GuideSpec` and `TheoremsSpec`, and
     // the rest of `CLAUDE.md` names the figure as the SUBJECT of a lesson about finding it, which
     // is a dated account and not a count. Every entry is a copy this assertion has stopped
     // watching, so adding one is how the repair comes undone.

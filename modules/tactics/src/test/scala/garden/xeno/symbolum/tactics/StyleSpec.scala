@@ -182,9 +182,10 @@ class StyleSpec extends AnyFlatSpec with Matchers {
    * The instances `Propositional` sends today are the small end of that range and are settled in
    * milliseconds either way, so nothing here says the functional version would be felt by a reader
    * of this repository **now**. What it says is about the case the module was written for, which
-   * `tactics.Consistency`'s own comment names: the goals an enumeration refuses above sixteen
-   * atoms. An exception argued from today's traffic would have to be re-argued the first time a
-   * register of rules reached that size, which is the situation the solver exists for.
+   * `tactics.Consistency`'s own comment names: the goals an enumeration refuses above
+   * `Consistency.Atoms` atoms. An exception argued from today's traffic would have to be re-argued
+   * the first time a register of rules reached that size, which is the situation the solver exists
+   * for.
    *
    * It also says nothing about memory, which was not measured, and nothing about a third design:
    * a functional shell over arrays confined to one private function, which is the shape the class
@@ -310,9 +311,10 @@ class StyleSpec extends AnyFlatSpec with Matchers {
    * **The comment comes off the line now, where until 2026-09-16 the line came off the census.**
    * This filtered whole lines, so `foo() // a var here` was scanned in full because it does not
    * *begin* with a comment marker, and a doc comment closed in the middle of a line took the code
-   * after it out of the scan entirely. Four lines of this tree are the first shape and none is the
-   * second, so what the repair buys is the next one somebody writes; the reader that decides it is
-   * `scan.Comments`, shared with the five other sites that were asking separately.
+   * after it out of the scan entirely. On 2026-09-16 four lines of this tree were the first shape
+   * and none was the second, so what the repair buys is the next one somebody writes; the reader
+   * that decides it is `scan.Comments`, shared with the five other sites that were asking
+   * separately.
    */
   private def codeLines(text: String): Vector[(Int, String)] =
     Comments.codeLines(text).map(line => (line.number, line.code))
@@ -451,7 +453,7 @@ class StyleSpec extends AnyFlatSpec with Matchers {
     // One directory there legitimately holds no source, and it is invisible until somebody builds:
     // `modules/aggregate` is the project `build.sbt` calls `symbolum`, the pom that names the
     // others, and sbt CREATES that directory for its `target/` the first time the build runs. So
-    // this walk sees ten directories in a fresh clone and eleven in a tree anybody has compiled,
+    // this walk sees one directory more in a tree anybody has compiled than in a fresh clone,
     // which is a difference that would have turned this assertion red on exactly the machines it
     // matters on -- and did not turn it red under the scan that first checked it, because that tree
     // had never been built. `DocumentationSpec` subtracts the same name for the same reason, and
@@ -639,10 +641,10 @@ class StyleSpec extends AnyFlatSpec with Matchers {
    * in principle: what makes that tolerable is that the disagreement shows up as a suite this scan
    * cannot see, which is the direction the floors below point.
    *
-   * The floors are the other stated limit. They are half of today's readings and they catch a walk
-   * that finds nothing; they do not catch a walk that finds half the tree, and 90 files would pass
-   * while the tree was broken. Raising them to fit would turn them back into the pin this test
-   * exists to avoid, so the gap is named rather than closed.
+   * The floors are the other stated limit. They are half of the readings of 2026-09-16 and they
+   * catch a walk that finds nothing; they do not catch a walk that finds half the tree, and a count
+   * just over the floor would pass while the tree was broken. Raising them to fit would turn them
+   * back into the pin this test exists to avoid, so the gap is named rather than closed.
    */
   "Every suite" should "live in a file that carries its own name and ends in Spec" in {
     val files = testSources

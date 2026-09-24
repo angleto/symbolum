@@ -36,9 +36,9 @@ class ParseSpec extends AnyFlatSpec with Matchers {
    * a second opinion, so it cannot reach the counter the rest of the repository uses and carries
    * its own. This is what holds the copy.
    *
-   * One premise is not a corner: `Step.arity` is **1** for `Abstraction`, `Instantiation`,
-   * `TypeInstantiation` and `TypeDefinition`, which is four of the rules this reader knows, and
-   * until 2026-09-20 a table giving one of them two premises was refused with `1 premises for abs`.
+   * One premise is not a corner: `Step.arity` gives one to every rule it names in its
+   * single-premise case, `Abstraction` and `Instantiation` among them, and until 2026-09-20 a table
+   * giving one of them two premises was refused with `1 premises for abs`.
    *
    * Both directions in one test, because a counter stuck in the plural and a counter stuck in the
    * singular are the same defect twice and a test on one of them reports the other as repaired.

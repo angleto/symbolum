@@ -15,8 +15,8 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Compiles, Fate, NotRu
  * it is not the text the document prints. The two are written twice and drift, and the front page
  * is where that was measured: a block whose first line did not compile anywhere sat beside a green
  * assertion for as long as both existed, because the assertion evaluated a different spelling.
- * `ReadmeSpec` closed it for `README.md` on 2026-09-16 and this closes it for the guide, over four
- * times as many blocks.
+ * `ReadmeSpec` closed it for `README.md` on 2026-09-16 and this closes it for the guide, which
+ * holds more blocks than the front page.
  *
  * The two guards are a pair and neither is the strong version of the other. This one says the text
  * is a program; `DocumentationSpec` says the program gives the answer printed beside it.
@@ -38,10 +38,11 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Compiles, Fate, NotRu
  *
  * == Compiled and not run, which is the third fate ==
  *
- * Four blocks compile and are deliberately not executed, each saying why beside itself. Two would
- * write a file into the working directory a test was started from, and two are computations another
- * spec owns and times. Excusing them from compiling as well would give up the guard for the defect
- * this file exists to catch in order to avoid a cost that is only in the running.
+ * The blocks registered as `Compiles` compile and are deliberately not executed, each saying why
+ * beside itself. Some would write a file into the working directory a test was started from, and
+ * the rest are computations another spec owns and times. Excusing them from compiling as well would
+ * give up the guard for the defect this file exists to catch in order to avoid a cost that is only
+ * in the running.
  *
  * == What it costs ==
  *

@@ -18,10 +18,11 @@ import org.scalatest.matchers.should.Matchers
  *
  * == Why a walk and not a list ==
  *
- * A list of documents that ought to be linked is a second copy of the thing it checks, and the
- * repository has five instances of what that costs. The walk asks the reader's question instead:
- * start where a reader starts, follow what is written, and see what is never arrived at. A document
- * added and never linked fails this, and so does a link written to a file that has been moved.
+ * A list of documents that ought to be linked is a second copy of the thing it checks, and on
+ * 2026-09-15 the repository held five instances of what that costs. The walk asks the reader's
+ * question instead: start where a reader starts, follow what is written, and see what is never
+ * arrived at. A document added and never linked fails this, and so does a link written to a file
+ * that has been moved.
  *
  * == What it does not cover ==
  *
@@ -38,7 +39,7 @@ import org.scalatest.matchers.should.Matchers
  * repository has that argument written down in the other direction, for `mark`, which is a module
  * of its own precisely so that a check over two files under `docs/` keeps running when the prover
  * is broken. `StyleSpec`, `SourceLanguageSpec` and `DocumentationSpec` are all here and all have
- * the same gap; moving the four of them is its own piece of work and not this one.
+ * the same gap; moving them together with this one is a piece of work of its own.
  */
 class DocumentationMapSpec extends AnyFlatSpec with Matchers {
 
@@ -191,8 +192,8 @@ class DocumentationMapSpec extends AnyFlatSpec with Matchers {
    *
    * What this deliberately does not check is precedence, and `notation.md` deliberately does not
    * carry it: one row per spelling already exists in the register, generated, and a second copy
-   * beside it is the defect this repository has recorded five times. This asserts that the symbol
-   * is **explained**, not that its precedence is repeated.
+   * beside it is the defect this repository had recorded five times by 2026-09-16. This asserts
+   * that the symbol is **explained**, not that its precedence is repeated.
    */
   "Every symbol the parser reads" should "be explained in the page a reader is sent to" in {
     val register = read("docs/reading-register.md")
@@ -208,10 +209,10 @@ class DocumentationMapSpec extends AnyFlatSpec with Matchers {
       .toVector
       .distinct
 
-    // The floor that says the table was read at all. **Seventeen**, and the gap from the table's 27
-    // rows is the interesting part: the register has one row per (spelling, constant) PAIR, so `+`
-    // is two rows, the reals' and `num`'s, and so are `*`, `<`, `<=`, `>` and `>=`. That is
-    // `docs/adr/0018` visible in a count.
+    // The floor that says the table was read at all. **Seventeen**, and the gap from the number of
+    // rows in the table is the interesting part: the register has one row per (spelling, constant)
+    // PAIR, so `+` is two rows, the reals' and `num`'s, and so are `*`, `<`, `<=`, `>` and `>=`.
+    // That is `docs/adr/0018` visible in a count.
     //
     // This number was written 20 first, from the row count, and then 18, from a run whose regex was
     // still taking the key's closing backtick as part of the spelling and so counted `-` twice. Both
@@ -259,9 +260,10 @@ class DocumentationMapSpec extends AnyFlatSpec with Matchers {
    * rather than a weakening. The index carries back-references the records do not and must not:
    * `extended by 0016`, `settles an open question of 0016`, `spends 0014`. Writing those into the
    * records would mean editing a record after the fact, which the index's own opening paragraph
-   * forbids in as many words, and asserting the texts verbatim would force exactly that on six of
-   * them. What has to agree is the state, because a record reading `superseded` under an index
-   * reading `accepted` is the failure this is for, and that one is caught here.
+   * forbids in as many words, and asserting the texts verbatim would force exactly that on every
+   * record whose row carries one. What has to agree is the state, because a record reading
+   * `superseded` under an index reading `accepted` is the failure this is for, and that one is
+   * caught here.
    */
   private def stateOf(text: String): Option[String] =
     Vector("proposed", "accepted", "superseded")

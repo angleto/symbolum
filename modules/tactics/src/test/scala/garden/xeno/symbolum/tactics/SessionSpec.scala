@@ -33,10 +33,10 @@ class SessionSpec extends AnyFlatSpec with Matchers {
    * One empty session, shared.
    *
    * A `val` rather than a `def` because a session is immutable and every operation returns a new
-   * one, so the fifteen uses below are fifteen readings of the same empty state. It matters to the
-   * suite's clock rather than to the assertions: `Session.standard` builds the tactic surface and
-   * the cost report, measured at 334 to 717 ms and 312 ms on 2026-09-13, and a `def` here would
-   * have put ten seconds into a file that asserts nothing about either.
+   * one, so every use below is a reading of the same empty state. It matters to the suite's clock
+   * rather than to the assertions: `Session.standard` builds the tactic surface and the cost
+   * report, measured at 334 to 717 ms and 312 ms on 2026-09-13, and a `def` here would have paid
+   * that once per use, in a file that asserts nothing about either.
    */
   private lazy val fresh: Session = Session.standard
 
@@ -430,7 +430,7 @@ class SessionSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "refuse a library name that two developments hold, rather than picking one" in {
-    // `Library.named` returns every entry of a name and its own docstring records that three names
+    // `Library.named` returns every entry of a name and its own docstring records that some names
     // are held by two developments each, so a lookup that took the first would pick by map
     // iteration order. The session resolves a name the library holds ONCE and refuses one it holds
     // twice with different statements, which is the honest answer.

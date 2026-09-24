@@ -10,8 +10,8 @@ import Cnf.*
  * The assertion that carries this file is not that the verdicts are right. It is that **every
  * refutation checks**: a verdict is one bit and a defect in conflict analysis produces the right bit
  * with a derivation that does not hold together, which is exactly the failure that would reach
- * `Propositional` and cost 92 primitive inferences a step to discover there. The `check` line in
- * each test is the point.
+ * `Propositional` and cost a full replay to discover there, at the price per resolution step that
+ * `PropositionalSpec` measures. The `check` line in each test is the point.
  */
 class SolverSpec extends AnyFlatSpec with Matchers {
 
@@ -67,13 +67,14 @@ class SolverSpec extends AnyFlatSpec with Matchers {
   /**
    * Random instances, decided both ways.
    *
-   * **Three thousand, and the count was chosen by what it found.** The first run of this fuzz over
-   * three thousand instances produced 300 unsatisfiable ones and reported 298 derivations that did
-   * not check, which was one defect: the step list was snapshotted before the refutation appended to
-   * it, so every derivation named a step it did not contain. At three hundred instances the same run
-   * produces about thirty refutations, which is enough to find a defect of that size and not enough
-   * to find one that affects a tenth of them. Under a hundred the unsatisfiable bucket is small
-   * enough to be empty on a bad seed, and a fuzz that quietly tests nothing is worse than none.
+   * **`Trials`, and the count was chosen by what it found.** The first run of this fuzz, on
+   * 2026-09-15 over three thousand instances, produced 300 unsatisfiable ones and reported 298
+   * derivations that did not check, which was one defect: the step list was snapshotted before the
+   * refutation appended to it, so every derivation named a step it did not contain. At a tenth of
+   * those instances the same run would have produced about thirty refutations, which is enough to
+   * find a defect of that size and not enough to find one that affects a tenth of them. Under a
+   * hundred the unsatisfiable bucket is small enough to be empty on a bad seed, and a fuzz that
+   * quietly tests nothing is worse than none.
    *
    * The seed is fixed, so this is a fixed set of instances rather than a new sample each run: a
    * property test that draws afresh fails on the machine that drew badly and passes on the next.

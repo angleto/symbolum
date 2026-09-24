@@ -158,10 +158,11 @@ class PrimesSpec extends AnyFlatSpec with Matchers {
    */
   it should "prove the fundamental theorem of arithmetic at the naturals' two axioms" in {
     // The same two Euclid's theorem reaches, compared as a **set** and not as a count: the
-    // naturals as a theory ask for three, and `Derivation.axiomsOf`'s own docstring lists the five
-    // entries in the library that reach the third, `ETA`. A count of two would pass whichever two
-    // they were, and one of these derivations picking up `ETA` instead of `SELECT` would be a
-    // sixth entry on that list rather than a theorem costing the same as the one above it.
+    // naturals as a theory ask for choice, eta and infinity, and `Derivation.axiomsOf`'s own
+    // docstring lists the entries of the library that reached `ETA` when it was measured on
+    // 2026-09-14. A count of two would pass whichever two they were, and one of these derivations
+    // picking up `ETA` instead of `SELECT` would be one more fact spending eta rather than a
+    // theorem costing the same as the one above it.
     val euclid = Derivation.axiomsOf(force(primes.fact(Primes.Unbounded)))
     euclid should have size 2
 

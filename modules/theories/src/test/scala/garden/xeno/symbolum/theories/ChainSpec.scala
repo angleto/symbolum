@@ -139,11 +139,11 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // `Kernel.defineType` takes it from the type variables of the predicate it is given, ordered, so
     // a predicate written with one variable more produces an operator of the same name at a
     // different arity and nothing anywhere says so; a check on the names alone passes. `word` takes
-    // one argument, `prod` and `fun` take two, and the other four take none.
+    // one argument, `prod` and `fun` take two, and every other operator below takes none.
     //
     // Both are measured rather than recalled: the names off `Chain.widest`, the arities off the
     // declarations themselves, in `Real` and `Natural` and in the `TyApp` each carved type is
-    // applied with). The consumer repository's certified artifact prints the seven names in its
+    // applied with). The consumer repository's certified artifact prints these names in its
     // header and has read them unchanged across nine commits of this one, which means that until
     // this line existed a build outside this repository was the only witness to half of what the
     // signature is, and nothing at all was a witness to the arities.
@@ -151,7 +151,7 @@ class ChainSpec extends AnyFlatSpec with Matchers {
       "bool" -> 0,
       "fun" -> 2,
       "ind" -> 0,
-      // The fifth carved type, 2026-09-18, and the arity is the interesting half: `int` is a
+      // The type carved on 2026-09-18, and the arity is the interesting half: `int` is a
       // quotient of `prod(num,num)`, so a reader who expected the carrier's parameters to travel
       // with it would look for two. They do not. `Kernel.defineType` carves a type out of a
       // **closed** predicate, and `INT_SAME` names both of its components, so nothing about the
@@ -204,12 +204,13 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // line.
     //
     // `Coding` is the first of them whose prerequisites sit elsewhere: it draws its facts from
-    // `Modular`, which is six links down, and extends the last theory anyway. `Numbering` is the
-    // second and is further still from what it needs: everything it proves is `Peano`'s arithmetic,
-    // seven links down, and it extends `Coding` because that is where the chain's end is. That is the
-    // distinction `Rotation.construct` records and the one that makes this assertion worth having
-    // twice, because the obvious place to put a development is beside what it needs, and the
-    // obvious place is a side branch where a constant is unreachable from everything.
+    // `Modular`, several links down in `Chain.construct`, and extends the last theory anyway.
+    // `Numbering` is the second and is further still from what it needs: everything it proves is
+    // `Peano`'s arithmetic, below `Modular` in the same order, and it extends `Coding` because that
+    // is where the chain's end is. That is the distinction `Rotation.construct` records and the
+    // one that makes this assertion worth having twice, because the obvious place to put a
+    // development is beside what it needs, and the obvious place is a side branch where a
+    // constant is unreachable from everything.
     //
     // `Inductive` on 2026-09-16 is the third of that kind and the limiting case of it: its
     // prerequisites are not elsewhere, they are EMPTY. `MONOTONE` and `INDUCTIVE` are polymorphic
@@ -223,7 +224,7 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // is about words, so `Concatenation` is exactly where it would naturally sit, and what puts it
     // at the end instead is the rule that names this whole section -- a constant is reachable only
     // from the last theory. Which link is last is read here and written nowhere else.
-    // **And again on 2026-09-18**, to `Integer`, the fifth type operator, which is the sixth entry
+    // **And again on 2026-09-18**, to `Integer`, a new type operator, which is the sixth entry
     // in this paragraph's own list and the reason the list is here rather than a sentence naming
     // the current one. `docs/adr/0033` decides that the integers arrive as a prerequisite of two
     // blocked formalisations rather than as stage four of the construction of the reals, and what

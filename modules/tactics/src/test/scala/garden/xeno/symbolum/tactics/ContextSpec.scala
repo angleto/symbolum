@@ -82,9 +82,9 @@ final class ContextSpec extends AnyFlatSpec with Matchers {
     // Two uses of `INV_POSITIVE`, which is `!x. 0 < x ==> 0 < inv x`. The first owes `0 < inv x`,
     // the second owes `0 < x`, and that last obligation is the goal's own hypothesis: no lemma in
     // this library proves `0 < x` of an arbitrary `x`, and there had better not be one.
-    // `ChainingSpec` has the same shape one lemma deeper and out of budget,
-    // `0 < inv (inv (x * x + 1))`, which is what to read this against: the premise here is doing
-    // the work the third lemma does there.
+    // `ChainingSpec`'s depth bound is read against the same outer shape,
+    // `0 < inv ((x * x) * (y * y) + 1)`, which its default bounds refuse: there the positivity
+    // under `inv` costs the lemmas that build it from squares, and here the premise supplies it.
     val text = "!x:real. 0 < x ==> 0 < inv (inv x)"
     val theorem = proved(text)
     val context = Context.of(logic, read(text)).getOrElse(fail("this goal has an antecedent"))

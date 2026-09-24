@@ -55,9 +55,9 @@ class LinarithLimitsSpec extends AnyFlatSpec with Matchers {
    *
    * The count is read off the refusal rather than predicted from the number of hypotheses, and the
    * first version of this file predicted it and was wrong: `n + n * (n + 1) / 2` says 54 facts for
-   * nine hypotheses and the procedure reports 76, because the pool is not only the hypotheses. A
-   * formula in a test is a second implementation of the thing under test, and this one disagreed
-   * with it on the first run.
+   * nine hypotheses and on that first run, no later than 2026-09-14, the procedure reported 76,
+   * because the pool is not only the hypotheses. A formula in a test is a second implementation of
+   * the thing under test, and this one disagreed with it the first time it was asked.
    */
   private def bound(text: String): Option[(String, Int, Int)] =
     standard.prove(text).left.toOption.collect { case BoundReached(limit, reached, allowed, _) =>
