@@ -84,10 +84,13 @@ run "5-floor-moved" tools/coverage-delta.sh \
 #    for it to `FiguresSpec`, and `LibrarySpec` had held one already, spelled from the library:
 #    the census that chose it looked for the digits, and a guard that spells its figure has none.
 #    The copy was removed the next day and this fires the guard that was there first.
+#    It edited the count, `413`, until 2026-09-24, and stopped applying when the library grew:
+#    a harness that names a figure the library moves goes stale with every lemma. It edits the
+#    words the guard spells around the count instead, which move only when the sentence does.
 # Expect red on: LibrarySpec, "say in `CLAUDE.md` how wide the positional-specialisation hole is"
 run "6-census-miscounted" CLAUDE.md \
-  '413 have two or more leading quantifiers' \
-  '411 have two or more leading quantifiers' \
+  'have two or more leading quantifiers and **' \
+  'have three or more leading quantifiers and **' \
   -- ./tools/sbt -batch 'theories/testOnly garden.xeno.symbolum.theories.LibrarySpec'
 
 # 7. A replayed count quoted in prose beside the generated table.
@@ -130,5 +133,15 @@ run "11-example-digits-edited" modules/tactics/src/main/scala/garden/xeno/symbol
   'confirmed to 34 digits)' \
   -- ./tools/sbt -batch "$ALGEBRAIC"
 
-echo "### all eleven fired" >> "$LOG"
+# 12. The number `docs/evaluation.md` says the project publishes about its trusted base. The
+#     verification of 2026-09-24 made exactly this edit and saw `DocumentationSpec` and
+#     `FiguresSpec` stay green: the census had counted it as guarded because `DocumentationSpec`
+#     holds both the document's name and the digits, for other sentences.
+# Expect red on: DocumentationSpec, the trusted-base bound
+run "12-bound-in-the-evaluation" docs/evaluation.md \
+  'its trusted base: four files under 1200 lines' \
+  'its trusted base: four files under 1300 lines' \
+  -- ./tools/sbt -batch "$DOCUMENTATION"
+
+echo "### all twelve fired" >> "$LOG"
 git status --porcelain >> "$LOG"

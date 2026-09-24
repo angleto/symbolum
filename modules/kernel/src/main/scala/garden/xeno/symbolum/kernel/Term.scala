@@ -216,8 +216,9 @@ object Term {
       // cannot see it -- and the trusted base takes neither. How many those are is not written
       // here: it was four when this sentence was, `logic` became the fifth on 2026-09-20, and a
       // figure that moves whenever a module grows a message is a figure a comment cannot hold.
-      // The trusted base is counted, four files and under 1200 lines, and a line that exists to
-      // render English is a line somebody has to read and believe. `Argument` set the precedent
+      // The trusted base is counted, in files and in lines against a bound `DocumentationSpec`
+      // holds, and a line that exists to render English is a line somebody has to read and
+      // believe. `Argument` set the precedent
       // one module over by changing the sentence rather than the last letter, and `ArityMismatch`
       // in `KernelError` is the same move at the one other site of this shape in here.
       else throw new KernelInvariantViolation(s"index $index, binders in scope: ${context.length}")
