@@ -101,4 +101,56 @@ echo "################ 4-the-walk-that-reads-nothing" >> "$LOG"
   -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
 echo "### exit $? for 4-the-walk-that-reads-nothing" >> "$LOG"
 
+# 5 TO 9 ARE THE SECOND ROUND, 2026-09-24. The verification of the first put a copy in each of
+# the places below and saw `ClassicalSpec` stay green: the walk read a list of three documents,
+# and it exempted a carrier as a whole file. It now reads every document on disk and exempts the
+# named sentences of a carrier, and each of 5 to 8 is one of those green runs made red.
+# 9 is 4 again for the documents: the walk over them must be seen reading something.
+#
+# WHAT WAS SEEN, 2026-09-24, on the tree that landed the second round. Control green at 30, all
+# nine red at 29 of 30 (3 at 28 on its first run, see below), every restore verified clean. 1, 2,
+# 5, 6, 7 and 8 redden the walk naming the file; 3 the list; 4 the walk's non-vacuity over
+# modules; 9 its non-vacuity over documents, `Vector() did not contain element "docs/numerics.md"`.
+# On its first run 3 reddened the walk as well: the check that a second live sentence is found read
+# `CLAUDE.md` itself, so a drifted live sentence left it nothing to find. It is built from the
+# exemption entries now, so 3 is the list alone again.
+
+# 5 and 6. A live copy in a document the list of three did not hold.
+echo "################ 5-a-copy-in-a-dated-record" >> "$LOG"
+"$P" "docs/adr/0009-the-classical-axioms-and-a-reason-that-was-wrong.md" \
+  '# 0009. The classical axioms, and a reason that was wrong' \
+  '# 0009. The classical axioms, and a reason that was wrong, in 841 steps' \
+  -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
+echo "### exit $? for 5-a-copy-in-a-dated-record" >> "$LOG"
+
+echo "################ 6-a-copy-in-an-unlisted-document" >> "$LOG"
+"$P" docs/numerics.md \
+  '# Numerics' \
+  '# Numerics, and the excluded middle is 841 steps' \
+  -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
+echo "### exit $? for 6-a-copy-in-an-unlisted-document" >> "$LOG"
+
+# 7 and 8. A second live sentence inside a carrier, beside the one the list asserts.
+echo "################ 7-a-second-sentence-in-claude-md" >> "$LOG"
+"$P" CLAUDE.md \
+  '   read a list of three documents and exempted carriers whole, and this sentence said "every other' \
+  '   read a list of three documents and exempted carriers whole (841 steps), and this sentence said "every other' \
+  -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
+echo "### exit $? for 7-a-second-sentence-in-claude-md" >> "$LOG"
+
+echo "################ 8-a-second-sentence-in-the-guide" >> "$LOG"
+"$P" docs/proving.md \
+  'rather than describing it, which is what makes the claim a measurement.' \
+  'rather than describing it, which is what makes the claim a measurement of 841 steps.' \
+  -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
+echo "### exit $? for 8-a-second-sentence-in-the-guide" >> "$LOG"
+
+# 9. The walk over the documents that reads nothing: it matches no file name at all.
+echo "################ 9-the-document-walk-that-reads-nothing" >> "$LOG"
+"$P" "$SPEC" \
+  'file.getFileName.toString.endsWith(".md")' \
+  'file.getFileName.toString.endsWith(".nowhere")' \
+  -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
+echo "### exit $? for 9-the-document-walk-that-reads-nothing" >> "$LOG"
+
 echo "log: $LOG"
