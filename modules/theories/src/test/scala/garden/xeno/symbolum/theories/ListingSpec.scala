@@ -118,7 +118,8 @@ class ListingSpec extends AnyFlatSpec with Matchers {
     }
     val report = perFact
       .map { case (name, axioms) =>
-        s"$name: " + axioms.toVector.map(a => named.getOrElse(a, listing.show(a))).sorted.mkString(", ")
+        val names = axioms.toVector.map(a => named.getOrElse(a, listing.show(a))).sorted
+        s"$name: " + names.mkString(", ")
       }
       .mkString("; ")
     info(report)
