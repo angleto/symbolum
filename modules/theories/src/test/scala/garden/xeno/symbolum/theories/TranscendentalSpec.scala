@@ -15,11 +15,12 @@ import org.scalatest.matchers.should.Matchers
  * would still read back. What says they are different is a derivation that two of them differ at a
  * point, and what that costs is one axiom of the reals, `ONE_NOT_ZERO`.
  *
- * **What this file cannot assert is the honest limitation.** That `exp 1` is above `2`, that
- * `sin x * sin x + cos x * cos x = 1`, that `ln` has any property at all: none of them is provable
- * here and a test cannot assert that something is **not** provable, only that a particular
- * derivation refuses. `docs/adr/0017` carries the list and the order the work wants it in, and the
- * row in `README.md` is where a reader meets it.
+ * **What this file cannot assert is what any of these constants is at a point away from zero.**
+ * `2 < exp 1`, the addition theorem and both squared identities are theorems and are asserted
+ * below, and `ln`'s first facts are `LogarithmSpec`'s; every one of them is an identity or a bound
+ * and none names a value. A test cannot assert that something is **not** provable, only that a
+ * particular derivation refuses, so that limit is said here rather than tested. `docs/adr/0017`
+ * records the order the four facts it once listed as unprovable arrived in.
  */
 class TranscendentalSpec extends AnyFlatSpec with Matchers {
 
@@ -181,23 +182,24 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * A claim about these constants is a proposition now, which is the point of the whole file.
+   * A claim about these constants, written the way somebody asking would write it, is the very
+   * statement a theorem here proves.
    *
    * Before they existed, `sin x * sin x + cos x * cos x = 1` was a parse error about an unknown
-   * constant, which reads as the asker's mistake. It now reads, and the prover cannot settle it,
-   * which reads as the system's limit. Those are different answers and this asserts the second.
+   * constant, which reads as the asker's mistake. On the day they landed it read and the prover
+   * could not settle it, and this test asserted only that it read. Since 2026-09-24 it and
+   * `ln 1 = 0` are both theorems, so what is asserted is the step between the two: the text read at
+   * the chain's widest signature, which is the one `Ask` and `Find` read in, is the term the
+   * published fact concludes. A widest signature that read either text as something else, a free
+   * variable spelled `sin` for instance, would leave both theorems standing and turn this red.
    */
-  "A claim the prover cannot settle" should "at least be statable" in {
-    val pythagoras = Parser.proposition(
-      chain.widest.theory,
-      chain.widest.notation,
-      "!x:real. sin x * sin x + cos x * cos x = 1"
-    )
-    pythagoras.isRight shouldBe true
+  "A claim about these constants" should "read at the widest signature as what a theorem proves" in {
+    def widest(text: String): Term =
+      force(Parser.proposition(chain.widest.theory, chain.widest.notation, text))
 
-    val logarithm =
-      Parser.proposition(chain.widest.theory, chain.widest.notation, "ln 1 = 0")
-    logarithm.isRight shouldBe true
+    widest("!x:real. sin x * sin x + cos x * cos x = 1") shouldBe
+      force(transcendental.fact(Transcendental.Pythagoras)).conclusion
+    widest("ln 1 = 0") shouldBe force(chain.logarithm.fact(Logarithm.AtOne)).conclusion
   }
   /**
    * The absolute convergence does what it was built for, which is to feed the Cauchy product.
@@ -361,9 +363,9 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
    * through the two series would reach the same statement and would cost the Cauchy product a
    * second time, and neither the statement nor an axiom count alone would show the difference.
    *
-   * The trigonometric identity is out of reach and no test can say so; what says it is the
-   * docstring on the name, and the reason is that `sin` and `cos` meet `exp` only through a
-   * square root of minus one.
+   * The trigonometric identity could not be bought the same way, because `sin` and `cos` meet
+   * `exp` only through a square root of minus one; it is a second pair of Cauchy products, and the
+   * test below asserts that it does not rest on `EXP_ADD`.
    */
   "The hyperbolic pair" should "be bought by the addition theorem rather than proved again" in {
     val reciprocal = force(transcendental.fact(Transcendental.Reciprocal))
