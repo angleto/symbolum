@@ -594,21 +594,50 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // exist and all three are `ArbitrarySpec`'s decimal expansions of pi and of the sine of one.
     val standalone = s"(?<![0-9])$digits(?![0-9])".r
 
-    // What may carry it, and each is one of the readings above. The set is short on purpose:
-    // every entry added to it is a copy this assertion has stopped watching, so widening it is
-    // how the repair comes undone.
-    val carriers = Set(
-      "CLAUDE.md",
-      "docs/proving.md",
-      "docs/theorems.md",
-      "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Logic.scala",
-      "modules/logic/src/test/scala/garden/xeno/symbolum/logic/ClassicalSpec.scala")
+    // What may carry it, and the SENTENCES in each that may, read with the line breaks taken out
+    // as the test above reads them. Until 2026-09-24 this was a set of files, and the verification
+    // of card `ad47e293` measured what that cost: a second live sentence written into `CLAUDE.md`
+    // or `docs/proving.md` stayed green, because a carrier was exempt as a whole. A sentence here
+    // is removed from its file before the search, ONCE for each time it is listed, so the file
+    // may hold these and nothing else: the first version of this removed every occurrence, and the
+    // assertion below that a second live sentence is found went red on it, because a second
+    // sentence ending `in 841 steps` was exempted by the first one's entry.
+    //
+    // Each is one of the readings above. The live ones are the three the test above asserts, the
+    // generated ones are compared against the derivation by `GuideSpec` and `TheoremsSpec`, and
+    // the rest of `CLAUDE.md` names the figure as the SUBJECT of a lesson about finding it, which
+    // is a dated account and not a count. Every entry is a copy this assertion has stopped
+    // watching, so adding one is how the repair comes undone.
+    val carriers: Map[String, Vector[String]] = Map(
+      "CLAUDE.md" -> Vector(
+        s"in $digits steps", // the live sentence, asserted by the test above
+        s"829 to $digits on 2026-09-16", // a dated move
+        s"`git grep $digits`", // the instrument a card was opened with, named twice
+        s"`git grep $digits`",
+        s"the sites of `$digits`",
+        s"guards `$digits` by spelling it"),
+      "docs/proving.md" -> Vector(
+        s"$digits inference steps by `Derivation.size`", // live, asserted above
+        s"| `SELECT` | $digits |"), // the generated table, `GuideSpec`
+      "docs/theorems.md" -> Vector(
+        s"$digits inferences. The account above describes them"), // generated, `TheoremsSpec`
+      "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Logic.scala" -> Vector(
+        s"in $digits steps")) // live, asserted above
 
-    val documents =
-      Vector("README.md", "docs/architecture.md", "docs/evaluation.md", "docs/theorems.md")
-    val scanned = (documents ++ ClassicalSpec.everyModuleSource).filterNot(carriers.contains)
+    def uncovered(path: String): Boolean = {
+      val flowed = ClassicalSpec.contentsOf(path).replaceAll("\\s+", " ")
+      val left = carriers.getOrElse(path, Vector.empty).foldLeft(flowed)(ClassicalSpec.removeOnce)
+      standalone.findFirstIn(left).isDefined
+    }
 
-    val spread = scanned.filter(path => standalone.findFirstIn(ClassicalSpec.contentsOf(path)).isDefined)
+    // This file is the one carrier exempt as a whole, and only because it is where the figure is
+    // pinned and where the history of the pin is told: a copy here is read by whoever edits the
+    // pin, which is not true of any other file.
+    val self = "modules/logic/src/test/scala/garden/xeno/symbolum/logic/ClassicalSpec.scala"
+    val scanned =
+      (ClassicalSpec.everyDocument ++ ClassicalSpec.everyModuleSource).filterNot(_ == self)
+
+    val spread = scanned.filter(uncovered)
 
     withClue(s"writing $digits out where the derivation should be named instead: ${spread.mkString(", ")}\n") {
       spread shouldBe empty
@@ -624,13 +653,31 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     standalone.findFirstIn(ClassicalSpec.contentsOf(
       "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Logic.scala")) shouldBe defined
 
+    // And the walk over the documents reaches the two the list of three did not, which is where
+    // the verification of 2026-09-24 put a copy and saw this stay green.
+    withClue("the walk over the documents missed a file the old list missed: ") {
+      ClassicalSpec.everyDocument should contain("docs/numerics.md")
+      ClassicalSpec.everyDocument.exists(_.startsWith("docs/adr/0009")) shouldBe true
+      ClassicalSpec.everyDocument.size should be > 50
+    }
+
+    // And a sentence exemption removes that sentence and not the file: text holding every
+    // exempted sentence of `CLAUDE.md` once, and the live one a second time, still holds the
+    // figure. Built from the entries rather than read from the file, so that this half stays green
+    // when the list above goes red on a drifted sentence and the two are seen failing apart.
+    val exempted = carriers("CLAUDE.md")
+    val twice = (exempted :+ s"derived in $digits steps").mkString(" ")
+    standalone.findFirstIn(exempted.foldLeft(twice)(ClassicalSpec.removeOnce)) shouldBe defined
+
     // **What it does not cover.** It searches for the digits, so on the day the derivation moves
     // to a count some unrelated line happens to hold, this goes red on a file that is not a copy;
     // the failure names the file and the answer is a row in `carriers` with its reason, which is
     // the arrangement `NotationBoundarySpec` already runs for interpolated prose. It reads
-    // `modules/` and the documents listed here and nothing else, so a figure written into a
-    // script under `tools/` is outside it — `tools/verify/perturb-the-figure-the-code-knows.sh`
-    // names the bytes it substitutes and is one.
+    // the Scala of `modules/` and every document on disk outside the directories git ignores, so
+    // a figure written into a script under `tools/` is outside it —
+    // `tools/verify/perturb-the-figure-the-code-knows.sh` names the bytes it substitutes and is
+    // one. A figure that moves also leaves a dated entry above matching nothing, which is harmless:
+    // the entry removes nothing, and it is read by whoever looks at why the list says what it says.
   }
 }
 
@@ -671,6 +718,55 @@ private object ClassicalSpec {
           } finally stream.close()
         }
     }
+  }
+
+  /**
+   * Every document of the repository, relative to its root: every `.md` on disk.
+   *
+   * Asked of the disk for the reason [[everyModuleSource]] is, and it replaced a list of three on
+   * 2026-09-24. What it skips is what git ignores and a session writes into: `scratch/` and
+   * `private/`, which hold other sessions' probes on a shared checkout, the build's `target/`
+   * directories, and every directory whose name starts with a dot. Measured that day, what is left
+   * is exactly the tracked documents except `scratch/README.md`, which sits in an ignored directory
+   * and says what the directory is for.
+   */
+  lazy val everyDocument: Vector[String] = {
+    import java.nio.file.{FileVisitResult, Files, Path, Paths, SimpleFileVisitor}
+    import java.nio.file.attribute.BasicFileAttributes
+
+    val root = Paths.get("").toAbsolutePath
+    val skipped = Set("scratch", "private", "target", "node_modules")
+    val found = Vector.newBuilder[String]
+
+    // A visitor and not `Files.walk`, so that `target/` and `.git/` are never descended into
+    // rather than walked and then filtered: the first is the build's and the second is large.
+    Files.walkFileTree(
+      root,
+      new SimpleFileVisitor[Path] {
+        override def preVisitDirectory(
+          dir: Path,
+          attributes: BasicFileAttributes
+        ): FileVisitResult = {
+          val name = Option(dir.getFileName).map(_.toString).getOrElse("")
+          if (dir != root && (name.startsWith(".") || skipped.contains(name)))
+            FileVisitResult.SKIP_SUBTREE
+          else FileVisitResult.CONTINUE
+        }
+
+        override def visitFile(file: Path, attributes: BasicFileAttributes): FileVisitResult = {
+          if (attributes.isRegularFile && file.getFileName.toString.endsWith(".md"))
+            found += root.relativize(file).toString
+          FileVisitResult.CONTINUE
+        }
+      }
+    )
+    found.result().sorted
+  }
+
+  /** `text` with the first occurrence of `fragment` taken out, and unchanged where there is none. */
+  def removeOnce(text: String, fragment: String): String = {
+    val at = text.indexOf(fragment)
+    if (at < 0) text else text.substring(0, at) + text.substring(at + fragment.length)
   }
 
   def contentsOf(relative: String): String =

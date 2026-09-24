@@ -412,9 +412,14 @@ Everything this system asks anyone to believe, and no one development is asked f
    literal.** Two further readings are generated and compared with the same measurement, the
    classical table of `docs/proving.md` by `GuideSpec` and the showcase page by `TheoremsSpec`,
    and one more is the pin, which is the only place the digits are written as a literal against
-   the code. **Everywhere else the derivation is named and the count is not repeated**, and since
-   2026-09-22 `ClassicalSpec` walks every module and every other document to say so, because a
-   list of guarded sentences covers what somebody put on it and nothing else.
+   the code. **Everywhere else the derivation is named and the count is not repeated**, and
+   `ClassicalSpec` walks the repository to say so, because a list of guarded sentences covers
+   what somebody put on it and nothing else. It reads every Scala source of every module and, since
+   2026-09-24, every document on disk outside the directories git ignores; in a file that carries
+   the figure it exempts the sentences named there and not the file. From 2026-09-22 until then it
+   read a list of three documents and exempted carriers whole, and this sentence said "every other
+   document": a copy in `docs/adr/0009` stayed green, and so did a second live sentence here. A
+   list of documents covers what somebody put on it, too.
 
    **This paragraph said until then that the figure was "written by hand in four documents and
    asserted in all four by `ClassicalSpec`, which is what makes writing it by hand safe here", and
