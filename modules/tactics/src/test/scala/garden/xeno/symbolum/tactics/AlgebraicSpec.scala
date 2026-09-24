@@ -298,5 +298,17 @@ class AlgebraicSpec extends AnyFlatSpec with Matchers {
       s"confirmed to ${outcome.confirmed.getOrElse(0)} digits")
     outcome.inferences should be > 0
     Derivation.size(outcome.theorem) shouldBe outcome.inferences
+
+    // The class docstring's example shows this outcome, and the digits it is confirmed to are a
+    // function of `Algebraic.Digits` and the coefficients rather than of the machine, so they are
+    // held to what the procedure returns: a digit there was compared with nothing until 2026-09-24.
+    val confirmed = outcome.confirmed.getOrElse(fail("the three roots came back unconfirmed"))
+    val source = new String(
+      java.nio.file.Files.readAllBytes(
+        java.nio.file.Paths.get("modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Algebraic.scala")
+      ),
+      "UTF-8"
+    )
+    source should include(s"1 0 -40 0 352 0 -960 0 576, confirmed to $confirmed digits)")
   }
 }

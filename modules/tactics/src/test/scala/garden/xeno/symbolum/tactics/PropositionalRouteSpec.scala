@@ -457,6 +457,24 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "be the size `Intuitionistic`'s docstring gives it" in {
+    // The docstring argues from the chain's size in nodes, one for each connective and one for each
+    // atom occurrence, which is the unit its criterion counts in, and that figure was a digit
+    // compared with nothing until 2026-09-24. A node is a leaf of the term: a connective's constant
+    // or an atom, since a connective is a constant applied to its arguments.
+    def nodes(term: Term): Int = term match {
+      case App(function, argument) => nodes(function) + nodes(argument)
+      case _ => 1
+    }
+    val size = nodes(chainOf(127))
+    size shouldBe 4 * 127 + 3
+
+    val docstring = read("modules/logic/src/main/scala/garden/xeno/symbolum/logic/Intuitionistic.scala")
+    withClue(s"a 127-link chain is $size nodes: ") {
+      docstring should include(s"A 127-link chain is $size nodes")
+    }
+  }
+
   it should "come back cut short, naming the bound and its depth, one link further on" in {
     // The defect `docs/adr/0023` recorded and left, and `docs/adr/0031` repairs: the same theorem,
     // one link longer, at one axiom, and until 2026-09-18 nothing in the answer said why. The pair
