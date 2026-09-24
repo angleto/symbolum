@@ -191,7 +191,7 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
       case Left(error) => TacticError.standing(error)
     }
 
-  "The three refusals" should "be three answers in the type, not three sentences in one" in {
+  "The kinds of refusal" should "be answers in the type, not sentences in one" in {
     // The card: a consumer's harness counted every failure as a refutation, so an exhausted search
     // was published as one. It was careful, and being careful was not enough, because what told the
     // two apart was English inside a constructor both of them used.

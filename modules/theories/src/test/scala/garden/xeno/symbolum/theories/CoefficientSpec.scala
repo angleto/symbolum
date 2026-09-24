@@ -84,7 +84,7 @@ class CoefficientSpec extends AnyFlatSpec with Matchers {
     coefficients.ofInverse(0, 1).isLeft shouldBe true
   }
 
-  "The three lemmas a denominator is taken apart with" should "be the ones stated" in {
+  "The lemmas a denominator is taken apart with" should "be the ones stated" in {
     // `Field` composes these to build a reciprocal for a denominator of any shape, so each is
     // stated over the reciprocal as a variable rather than about `inv`: that is what lets the next
     // one be built from the last. Pinned because a caller reading `Field`'s hypotheses is entitled

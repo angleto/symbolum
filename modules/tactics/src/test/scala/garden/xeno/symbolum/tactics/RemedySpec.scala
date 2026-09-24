@@ -186,7 +186,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------- the seven model answers */
 
-  "The model search's seven outcomes" should "not collapse into fewer next steps" in {
+  "The model search's outcomes" should "not collapse into fewer next steps" in {
     // `Refutation` keeps seven answers apart because collapsing any two turns "I could not ask"
     // into "I asked and it was fine". The three that are not answers must stay three here too.
     val survived = Remedy.of(Refutation.Survived(300))
@@ -242,7 +242,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "A screened candidate" should "keep its disagreement, its agreement and its two absences apart" in {
+  "A screened candidate" should "keep its disagreement, its agreement and its absences apart" in {
     // Four real runs of the screen, and what is asserted is that the four answers do not collapse.
     // The candidate is the variable itself throughout, so what changes is only how many steps it is
     // screened against and where: at one step it disagrees with iteration, at none it agrees, past
@@ -282,7 +282,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
   // message prints lives from zero up to one below that constant, and one is inside it. That is
   // what separates it from `Collatz`'s `${Rules.size} clauses`, where the count is the size of a
   // fixed table of rules and is never one.
-  "The two digit counts of this file" should "take the singular at one and the plural elsewhere" in {
+  "The digit counts of this file" should "take the singular at one and the plural elsewhere" in {
     val separated = (agreement: Int) =>
       Remedy.of(Discovery.Separated(Var("x"), Var("y"), Map("x" -> BigDecimal(2)), agreement)).message
 
@@ -403,7 +403,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
    * search. The assertions on the defect carry the text after the noun, so the singular is not a
    * substring of what it replaced.
    */
-  "The two linear decisions of this file" should "agree with their count at one and elsewhere" in {
+  "The linear decisions of this file" should "agree with their count at one and elsewhere" in {
     val refutation = Refutation.standard
     def proposition(text: String): Term = force(reals.proposition(text))
 

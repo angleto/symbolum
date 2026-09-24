@@ -303,7 +303,7 @@ class PerronSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks
     }
   }
 
-  "The four outcomes" should "be four, so a caller cannot collapse two of them" in {
+  "The outcomes" should "be distinct classes, so a caller cannot collapse two of them" in {
     // Named rather than counted: the compiler would be happy with three, and the point of this
     // assertion is that a future session reads why there are four before removing one.
     val outcomes: Vector[Perron.Outcome] = Vector(

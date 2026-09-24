@@ -166,7 +166,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------ what it costs */
 
-  "Every fact of the carrier" should "cost the integers' three axioms and none of the sixteen" in {
+  "Every fact of the carrier" should "cost at most the integers' foundation and no real axiom" in {
     // The reading `IntegerSpec` makes one level down, and it is about what a **fact** rests on and
     // not about the theory's axiom list. The list is the whole chain's and carries the sixteen
     // wherever it is taken, so an assertion over it would be about the chain rather than about

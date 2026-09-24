@@ -149,7 +149,7 @@ class RingSpec extends AnyFlatSpec with Matchers {
     ring.prove("!x:real. x * inv x = 1").left.map(_.getClass) shouldBe Left(classOf[NotEqualTo])
   }
 
-  "The theory it proves in" should "still assert only its sixteen axioms" in {
+  "The theory it proves in" should "still assert only the reals' axioms" in {
     reals.theory.axioms.length shouldBe Real.Axioms.length
   }
 }

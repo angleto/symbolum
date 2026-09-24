@@ -46,7 +46,7 @@ class MatrixSpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------- what it cost */
 
-  "The eleven constants" should "be defined rather than assumed, and add no type" in {
+  "The matrix constants" should "be defined rather than assumed, and add no type" in {
     matrices.theory.axioms shouldBe chain.word.theory.axioms
 
     // The fourth `defineType` that is deliberately not here. A 2x2 matrix IS a pair of pairs, so

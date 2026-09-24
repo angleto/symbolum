@@ -47,7 +47,7 @@ class ProductSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------ what the type definition cost */
 
-  "The type and its three constants" should "be defined rather than assumed" in {
+  "The type and its constants" should "be defined rather than assumed" in {
     product.theory.axioms shouldBe classical.theory.axioms
 
     (product.theory.typeOperators.keySet -- classical.theory.typeOperators.keySet) shouldBe

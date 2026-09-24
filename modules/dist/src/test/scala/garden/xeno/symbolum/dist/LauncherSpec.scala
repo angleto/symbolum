@@ -322,7 +322,7 @@ final class LauncherSpec extends AnyFlatSpec with Matchers {
     demonstration should include("the decision procedures still do not decide")
   }
 
-  it should "still carry the one it cannot settle, which is what the page is for" in {
+  it should "still carry a claim it cannot settle, which is what the page is for" in {
     // The assertion a gate written to check that the demonstration "works" would not have. Its own
     // documentation says a page made only of successes teaches that the tool answers, which is the
     // one thing about it that is not true, and the last claim is true and unproved on purpose. A

@@ -85,7 +85,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     under(Term.destEq(definition.conclusion).map(_._2).getOrElse(fail("not an equation")))
   }
 
-  "The system" should "declare the alphabet, the four relations and the marker-free words" in {
+  "The system" should "declare exactly the alphabet, relations, classes and functions" in {
     system.definitions.keySet shouldBe Set(
       Collatz.F, Collatz.T, Collatz.Head, Collatz.Tail,
       Collatz.Name, Collatz.Counted, Collatz.Potential, Collatz.Marked, Collatz.TailFree,
@@ -95,7 +95,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  it should "hold exactly eleven rules, which is the number the source has" in {
+  it should "hold exactly the rules the source has, counted off the body" in {
     // Counted off the definition rather than off the table that generated it, so that a
     // generation which dropped or doubled a clause is caught here rather than believed.
     withClue(s"${system.show(bodyOf(Collatz.Name))}\n") {
@@ -134,7 +134,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "have eleven rules that are pairwise different, derived rather than counted" in {
+  it should "have rules that are pairwise different, derived rather than counted" in {
     // The count above says eleven clauses were written. This says the eleven left-hand sides are
     // eleven different words, which is what a table with a rule duplicated would fail: the count
     // would still be eleven and this would go red on the pair that had become one.
@@ -189,7 +189,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The counted sub-relation" should "be six of the eleven, and every one of them a rule" in {
+  "The counted sub-relation" should "be the clauses its table lists, each a rule" in {
     disjuncts(bodyOf(Collatz.Counted)) shouldBe 6
     Collatz.CountedRules.size shouldBe 6
 
@@ -410,7 +410,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(familyWithF, Set(familyWithTail.conclusion)) shouldBe empty
   }
 
-  "What the facts cost" should "split three ways, and the third way was a prediction this test refuted" in {
+  "What the facts cost" should "split by what each reads, and where eta enters refuted a prediction" in {
     // The two that are equations between words and closed under the definition reach no
     // foundational axiom at all.
     Derivation.axiomsOf(fact(Collatz.CountedIsRule)) shouldBe empty
@@ -505,7 +505,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
   // THE PARTITION IS THE ASSERTION AND THE NAMES ARE NOT SORTED BY HAND INTO IT. Every fact is
   // measured, the two groups come out of the measurement, and the clue prints the whole table, so
   // a fact that moves between them says which one it is and what it now rests on.
-  "What part C costs" should "be the naturals' two, and a third where the proof rebuilds the empty word" in {
+  "What part C costs" should "be the naturals' cost, and eta where the proof rebuilds the empty word" in {
     val partC = List(
       Collatz.HeadFreeConcat,
       Collatz.AnchoredConcat,
@@ -632,7 +632,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     system.classWitnesses
       .fold(error => fail(s"the witnesses do not build: ${error.message}"), identity)
 
-  "The anchored class" should "have nine witnesses that say what they are written down as saying" in {
+  "The anchored class" should "have witnesses that say what they are written down as saying" in {
     // The same comparison `Statements` gets one section up, at the facts this development does
     // not publish. A derivation that reached a theorem about another word, or about `S2` where
     // the claim is about `S2_COUNTED`, is true and is not the counterexample, and nothing in the

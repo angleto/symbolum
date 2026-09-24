@@ -328,7 +328,7 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "have cost one axiom on the route it used to take" in {
+  it should "have cost choice on the route it used to take" in {
     // The price the zero above is read against. Every one of them is classically provable, and the
     // classical procedure closes with `DOUBLE_NEGATION`, so every one of them used to arrive
     // resting on the choice operator: same theorem, different accounting, which is the currency

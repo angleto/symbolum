@@ -119,7 +119,7 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     Notebook.cells(fresh) should include("Nothing run yet")
   }
 
-  it should "render each of the five outcomes as its own kind of cell" in {
+  it should "render each outcome as its own kind of cell" in {
     // The five are not one answer with a flag on it, which is what `Session.Outcome` is for, and a
     // page that rendered a refusal like a result would be the same merge one layer out. One
     // session carrying all five, because the assertion is that they stay apart.
@@ -313,7 +313,7 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "carry the header name the server reads, which is the one fact this page states twice" in {
+  it should "carry the header name the server reads, which the page's script writes again" in {
     // `Notebook.After` is a Scala constant and `notebook.js` writes the same string in its own
     // language, because a JavaScript file that took it from Scala would have to be assembled
     // rather than read, and it is a file so that an editor knows it is JavaScript.
@@ -522,7 +522,7 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "be served when it names nothing, which is the one writer this cannot order" in {
+  it should "be served when it names nothing, which is the writer this cannot order" in {
     // The limit of the ordering, asserted rather than left in a comment, because a limit nothing
     // runs is one nobody notices being lifted -- in either direction. If a later change refuses a
     // header-less write, this goes red and the hand-use path in `Notebook`'s own docstring is what

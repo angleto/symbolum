@@ -48,7 +48,7 @@ final class ArithmeticBelowTheRealsSpec extends AnyFlatSpec with Matchers {
     naturals.theory.checkType(realType).isLeft shouldBe true
   }
 
-  it should "still not declare it after seven stages have extended it" in {
+  it should "still not declare it after every stage has extended it" in {
     theory.checkType(realType).isLeft shouldBe true
   }
 

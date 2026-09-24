@@ -29,7 +29,7 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
 
   import LogicError.Standing
 
-  "A standing" should "answer the two questions the readers ask, one row per case" in {
+  "A standing" should "answer the questions the readers ask, one row per case" in {
     // The table, written out rather than summarised, because it is what a fourth case has to extend
     // and a reader comparing this file with the enum should be able to do it line by line.
     Standing.Decided.answersTheGoal shouldBe true

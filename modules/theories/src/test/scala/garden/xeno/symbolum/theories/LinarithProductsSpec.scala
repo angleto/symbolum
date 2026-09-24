@@ -115,7 +115,7 @@ class LinarithProductsSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "Degree four" should "be the limit, and be refused rather than searched for indefinitely" in {
+  "A degree past the cubic round" should "be refused rather than searched for indefinitely" in {
     refused(
       "!w:real x:real y:real. 0 < w /\\ 0 < x /\\ 0 < y /\\ 0 < z:real ==> 0 < w * x * y * z"
     )
@@ -210,7 +210,7 @@ class LinarithProductsSpec extends AnyFlatSpec with Matchers {
     refusal.fold(_.message, _ => "") should include("non-negative combination of the hypotheses")
   }
 
-  it should "still name a denominator, which is the one thing that does stop here" in {
+  it should "still name a denominator, which the reader goes on turning away" in {
     // The narrowing is a narrowing and not a removal. A symbolic denominator asks for `~(y = 0)`,
     // which is `Field`'s to assume, and `inv 0` is an atom rather than a denominator: both keep the
     // message that names the denominator and whose price it is.

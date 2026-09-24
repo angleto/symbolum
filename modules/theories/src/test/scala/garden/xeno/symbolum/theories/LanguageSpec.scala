@@ -420,7 +420,7 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * see are different by looking. What is being checked is that the proof of each landed where its
    * name says, and the only way to see that is to read what was proved.
    */
-  it should "prove seven different memberships and not one of them seven times" in {
+  it should "prove a different membership for each axiom, not one of them repeated" in {
     val names = Language.Axioms.map(_._1) :+ Language.AxiomInduction
     val conclusions = names.map(name => force(language.fact(name)).conclusion)
 
@@ -428,7 +428,7 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   }
 
   /** The same guard for the logical axioms, where every one of them is a scheme. */
-  it should "prove eight different logical axioms and not one of them eight times" in {
+  it should "prove a different logical axiom for each name, not one of them repeated" in {
     val conclusions = Language.LogicalAxioms.map(name => force(language.fact(name)).conclusion)
 
     conclusions.distinct should have size Language.LogicalAxioms.size

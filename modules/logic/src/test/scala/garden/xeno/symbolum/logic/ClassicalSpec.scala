@@ -38,7 +38,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
   private val p = Term.variable("p", Type.Bool)
   private val q = Term.variable("q", Type.Bool)
 
-  "The classical extension" should "hold exactly two axioms, and print them as written" in {
+  "The classical extension" should "hold exactly the axioms below, printed as written" in {
     // The copy is written out by hand, as `RealSpec` writes out the sixteen, so a changed or added
     // axiom fails the build until the copy changes in the same commit. Comparing the theory with
     // its own list parsed again would pass any edit.
@@ -95,7 +95,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "offer exactly these eight and nothing this file has not read" in {
+  it should "offer exactly these and nothing this file has not read" in {
     classical.facts.keySet shouldBe Classical.Statements.map(_._1).toSet
   }
 
@@ -136,7 +136,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "What each derivation reaches" should "divide over the two axioms exactly where the mathematics says" in {
+  "What each derivation reaches" should "divide over choice and eta exactly where the mathematics says" in {
     // The picture the proof record draws of this whole file, and it is the right one. Two of the
     // six statements were always available and are collected here rather than bought; eta pays for
     // one of them and choice for the other three. Nothing reaches both, which is worth knowing:

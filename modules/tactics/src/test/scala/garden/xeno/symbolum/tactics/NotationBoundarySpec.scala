@@ -448,7 +448,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
 
   private val Unrendered: Map[(String, String), (Verdict, String)] = UnrenderedEntries.toMap
 
-  "Each of the three tables" should "not have absorbed a repeated key" in {
+  "Each of the tables" should "not have absorbed a repeated key" in {
     def repeated[K, V](entries: Vector[(K, V)]): Vector[K] =
       entries.map(_._1).groupBy(identity).filter(_._2.size > 1).keys.toVector
 

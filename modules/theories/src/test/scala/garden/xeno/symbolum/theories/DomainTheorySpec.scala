@@ -210,7 +210,7 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     derivedByTactic.hypotheses shouldBe empty
   }
 
-  it should "spend the same one of the four domain axioms" in {
+  it should "spend the same domain axiom the hand derivation spends" in {
     // The accounting the card calls the product, produced by the procedure instead of by reading a
     // hand derivation. Same answer: one of the four, and it is the converse.
     spending.ofTheDomain shouldBe Set("OnThoseGroundsOnly")

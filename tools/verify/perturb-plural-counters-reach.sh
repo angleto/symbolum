@@ -96,7 +96,7 @@ run "1-ledger-digits" "$LEDGER" \
 
 # 2. The same count on the next step a separated pair produces, which is a different file and a
 # different sentence about the same number.
-# Expect red on: RemedySpec, "The two digit counts of this file"
+# Expect red on: RemedySpec, "The digit counts of this file"
 run "2-remedy-separated" "$REMEDY" \
   '${Prose.count(agreement, "digit")}' \
   '$agreement digits' \
@@ -105,7 +105,7 @@ run "2-remedy-separated" "$REMEDY" \
 # 3. The site the card's own census did not carry, fired on its own so that the finding is
 # reproducible rather than a sentence: with 2 repaired and this one back, the same test goes red
 # for the other half of its assertion.
-# Expect red on: RemedySpec, "The two digit counts of this file"
+# Expect red on: RemedySpec, "The digit counts of this file"
 run "3-remedy-not-credible" "$REMEDY" \
   '${Prose.count(confirmed, "digit")}' \
   '$confirmed digits' \

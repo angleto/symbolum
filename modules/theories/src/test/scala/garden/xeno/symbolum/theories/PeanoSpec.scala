@@ -422,7 +422,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The one lemma that needs the sums sorted" should "refuse without the sorting, which is why it is there" in {
+  "The lemma that needs the sums sorted" should "refuse without the sorting, which is why it is there" in {
     // The file says `NUM_SUC_MUL` is the single step that plain rewriting cannot close, and this is
     // that claim checked instead of asserted. The same induction is run again here with the four
     // recurrences and the associativity of addition and **without** commutativity, and it refuses:

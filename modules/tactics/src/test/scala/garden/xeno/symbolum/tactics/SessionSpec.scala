@@ -533,7 +533,7 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     session.transcript shouldBe "declare p"
   }
 
-  "A command the theory refuses" should "come back refused at each of the four places" in {
+  "A command the theory refuses" should "come back refused at declare, define, assume or prove" in {
     // One per command that touches the theory, because they fail through four different paths and
     // a single case would leave three of them unread. The claims are chosen to fail at the reader
     // rather than at the prover, which is what keeps this test quick.
@@ -567,7 +567,7 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     fresh.render shouldBe "nothing run yet"
   }
 
-  it should "show each of the four outcomes in the shape that outcome has" in {
+  it should "show each outcome of a mixed session in the shape that outcome has" in {
     // The text form, which is what a caller with no browser reads, and the counterpart of the
     // page `Notebook` renders. One session carrying all four, because what is asserted is that
     // they stay apart: a refusal printed like a result is the same merge one layer out.

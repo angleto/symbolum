@@ -130,7 +130,7 @@ class CostSpec extends AnyFlatSpec with Matchers {
     broken.circular.map(reals.show) should contain("1 < x")
   }
 
-  it should "keep the three kinds of candidate apart" in {
+  it should "keep the kinds of candidate apart" in {
     // `Abduce`'s own discipline, carried through rather than flattened: a premise that closes the
     // goal, one that makes the premises impossible, and one that is the conclusion handed back are
     // three different things to be told, and only the first is an answer.

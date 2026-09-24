@@ -79,7 +79,7 @@ class SolverSpec extends AnyFlatSpec with Matchers {
    * The seed is fixed, so this is a fixed set of instances rather than a new sample each run: a
    * property test that draws afresh fails on the machine that drew badly and passes on the next.
    */
-  it should "agree with an exhaustive reading on three thousand random instances" in {
+  it should "agree with an exhaustive reading on a fixed set of random instances" in {
     val random = new scala.util.Random(20260915)
     var unsatisfiable = 0
 

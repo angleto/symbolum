@@ -114,7 +114,7 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     LogicError.decided(unreadable) shouldBe false
   }
 
-  it should "say which of the three things happened, in the type" in {
+  it should "say in the type which standing it ended in" in {
     // Read together rather than one by one, because what the card is about is that they were one
     // answer. A caller that takes `isLeft` for "does not follow" gets the same `true` from all
     // three, which is the weak and honest reading; the decision is reachable only by naming it.
@@ -511,7 +511,7 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(theorem).subsetOf(reals.theory.axioms.toSet) shouldBe true
   }
 
-  "The theory" should "still assert only its sixteen axioms" in {
+  "The theory" should "still assert only the axioms `Real.Axioms` lists" in {
     reals.theory.axioms.length shouldBe Real.Axioms.length
   }
 }

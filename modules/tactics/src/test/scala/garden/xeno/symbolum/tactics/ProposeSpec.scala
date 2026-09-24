@@ -1920,7 +1920,7 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------ the false positive it produced */
 
-  "The one proposal that comes back certified" should "not be read as an unnecessary hypothesis" in {
+  "The certified weakening of `MUL_INVERSE`" should "not be read as an unnecessary hypothesis" in {
     // The finding of the first run, and the reason this test exists. Dropping `~(x = 0)` from
     // `MUL_INVERSE` gives `!x. x * inv x = 1`, which is FALSE at zero, and the prover reports it
     // `Conditional`: `Field` proves it while assuming exactly the hypothesis that was dropped.

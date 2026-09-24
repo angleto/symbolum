@@ -137,7 +137,7 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     prove(read("!x:real. !y:real. 0 < (x * x) * (y * y) + 1")).isRight shouldBe true
   }
 
-  "The depth bound" should "stop a goal that needs three, and say so" in {
+  "The depth bound" should "stop a goal one lemma past it, and say so" in {
     // `inv` over the witness is one lemma deeper than it, so the default must not reach it.
     //
     // **It was `inv (inv (x * x + 1))` until 2026-09-18, and on that day the goal took two
@@ -164,7 +164,7 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "be raised by a caller who wants the third step, which is what makes it a bound" in {
+  it should "be raised by a caller who wants the next step, which is what makes it a bound" in {
     // The other half: the goal above is not out of reach, it is out of budget. A bound no setting
     // could pass would be a limit wearing a bound's name.
     //

@@ -21,7 +21,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
 
   private val naturals = Natural.standard
 
-  "The development" should "assert three statements and no others" in {
+  "The development" should "assert the statements written out below and no others" in {
     // The copy is written out by hand, as `RealSpec` writes out the sixteen. The first two are
     // inherited from the classical logic this is built over, the third is this file's own, and a
     // changed or added axiom fails here until the copy changes in the same commit.
@@ -74,7 +74,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     characterisation.hypotheses shouldBe empty
   }
 
-  it should "cost no axiom beyond the three, which is the whole reason for the rule" in {
+  it should "cost no axiom beyond those it asserts, which is the whole reason for the rule" in {
     // `Kernel.defineType` is in the kernel exactly so that this line can be written. Every
     // alternative in `docs/adr/0006` reaches the same two theorems by asserting them, and the count
     // would then move by two for every type anyone defined.
@@ -131,7 +131,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     Vector(notZero, injective, cases).foreach(_.hypotheses shouldBe empty)
   }
 
-  it should "divide over the two axioms exactly where the mathematics says it should" in {
+  it should "divide over its axioms exactly where the mathematics says it should" in {
     // The picture the proof record draws, and it is the right one. The two facts that tell the
     // naturals apart from a one-element type need infinity; the two that are structural do not.
     // If `ind` had a single element, `num` would be a singleton: induction and the case split would
