@@ -532,12 +532,16 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "prove the goal the guide says was refused until the lookup existed" in {
-    // `!x. 0 <= x * x` is `SQUARE_NONNEG`. LINARITH is the right address for an inequality and
-    // cannot take a goal whose atom is a product of unknowns, so this was a refusal from a system
+    // `!x. 0 <= x * x` is `SQUARE_NONNEG`, and before the lookup LINARITH took no goal whose atom
+    // is a product of unknowns without hypotheses to multiply, so this was a refusal from a system
     // holding the lemma. The guide claims it is proved now; this is the claim.
     val goal = force(Prove.standard.reals.proposition("!x:real. 0 <= x * x"))
 
     Prove.standard(goal).map(_.theorem.hypotheses) shouldBe Right(Nil)
+
+    // And the guide's second sentence about it: since the completed square LINARITH takes it too.
+    // That paragraph said LINARITH could not for six days after it could, and nothing read it.
+    Linarith.standard.prove("!x:real. 0 <= x * x").isRight shouldBe true
   }
 
   it should "decide the guide's rule set contradictory, as the guide prints" in {
@@ -1469,8 +1473,14 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     force(Linarith.standard.prove("!x:real y:real. 0 < x /\\ 0 < y /\\ 0 < z:real ==> 0 < x * y * z"))
     force(Linarith.standard.prove("!x:real y:real. 0 < x * y /\\ 0 < x ==> 0 < y"))
 
-    // Degree four is the limit now, and it is the same shape of limit one round up: a third round
-    // would reach it and nothing measured has asked for one.
+    // A goal with no hypotheses has an empty pool and no products at any degree, and since
+    // 2026-09-18 it has one completed square instead: the guide's example of it, which is
+    // `algebra_sqineq_at2malt1` of miniF2F.
+    force(Linarith.standard.prove("!a:real. a * (2 - a) <= 1"))
+
+    // A product of four unknowns is past what the products make, for a goal with hypotheses to
+    // multiply. A third round would reach it and nothing measured has asked for one: the two
+    // corpus goals that asked for more wanted the square above, which `docs/adr/0032` records.
     Linarith.standard
       .prove("!w:real x:real y:real. 0 < w /\\ 0 < x /\\ 0 < y /\\ 0 < z:real ==> 0 < w * x * y * z")
       .isLeft shouldBe true
