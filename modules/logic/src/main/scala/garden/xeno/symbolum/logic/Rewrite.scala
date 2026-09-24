@@ -251,8 +251,8 @@ object Rewrite {
      * point: found on 2026-09-18, where `NUM_ADD ZERO ZERO = ZERO` read the other way round went to
      * `Rewrite.inTheorem` and the heap was gone in four and a half minutes. Two copies of the left
      * side in the right means each round doubles them, so the size is exponential in the number of
-     * rounds and `Rewrite.DefaultLimit` is never reached: 2^200 arrives at the heap first, which is
-     * the sentence `Rule.of` already carries for `NUM_DIV_MOD`.
+     * rounds and `Rewrite.DefaultLimit` is never reached: two to the power of that limit arrives at
+     * the heap first, which is the sentence `Rule.of` already carries for `NUM_DIV_MOD`.
      *
      * The card that asked for this asked `Rule.of` to refuse a closed rule whose right side is
      * strictly larger. Every rule the whole suite builds was counted on 2026-09-18 against

@@ -1028,6 +1028,13 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val origin = "docs/adr/0019-a-declared-constant-still-has-no-origin-and-here-is-what-that-costs.md"
     flowed(model) should include(s"which is currently $claim")
     flowed(origin) should include(s"bounds that base at $TrustedBaseLineBound lines")
+
+    // And the one number `docs/evaluation.md` says the project publishes about its trusted base,
+    // which the verification of card 61ed206b moved to 1300 on 2026-09-24 and saw this stay green:
+    // a live figure in the present tense, repeating the bound, read by nothing. Its "four" is the
+    // number of files counted above, and is held beside it for the same reason.
+    TrustedFiles.size shouldBe 4
+    flowed("docs/evaluation.md") should include(s"its trusted base: four files $claim")
   }
 
   it should "list the notebook's cells as the code publishes them, so an eighth cannot go unlisted" in {
