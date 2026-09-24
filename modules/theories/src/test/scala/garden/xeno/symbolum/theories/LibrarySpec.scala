@@ -608,8 +608,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // only `SQRT_UNIQUE` binds two leading quantifiers, and its `x` and `y` are both `real`; the
     // existence, the read-back and the square bind one and the two values none. Derived from the
     // statements after the first run had named the figures, and it agrees with them.
-    library.entries.size shouldBe 628
-    library.names.distinct.size shouldBe 625
+    // 629 and 626 with the irrationality of the root of two, the same day. One fact under one name,
+    // and `CLAUDE.md`'s two figures move by one each: it binds `p` and `q`, both `num`. Derived
+    // after the run had named the figures, and it agrees with them.
+    library.entries.size shouldBe 629
+    library.names.distinct.size shouldBe 626
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

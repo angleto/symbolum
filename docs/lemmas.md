@@ -703,6 +703,7 @@ they have least appetite for working out how it is produced.
   SQRT_EXISTS              !x:real. 0 <= x ==> (?y:real. 0 <= y /\ y * y = x)
   SQRT_ONE                 sqrt 1 = 1
   SQRT_SQUARE              !x:real. 0 <= x ==> sqrt (x * x) = x
+  SQRT_TWO_IRRATIONAL      !x:num. !y:num. 0 < y ==> ~(sqrt 2 = real_of_num x / real_of_num y)
   SQRT_UNIQUE              !x:real. !y:real. 0 <= y /\ y * y = x ==> sqrt x = y
   SQRT_ZERO                sqrt 0 = 0
 

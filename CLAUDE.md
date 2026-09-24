@@ -647,7 +647,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 628 lemmas, 413 have two or more leading quantifiers and **368 of
+caller meant: of the library's 629 lemmas, 414 have two or more leading quantifiers and **369 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -881,10 +881,10 @@ in it, because it declares nothing. It is one of three now: `Primes` and `Deduct
 that is two. Euclid's, `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
 primes" says in a logic with no notion of an infinite set. And `NUM_SQUARE_NOT_DOUBLE`, that no
 square is twice a square at a positive denominator, which is the arithmetic content of the
-irrationality of the square root of two and is **not** that sentence. The sentence can be written
-since `Root` declared `sqrt` on 2026-09-24, and it is not proved: carrying the equation across
-`real_of_num` and clearing a denominator is the step nobody has taken, and the name says what is
-proved rather than what is next.
+irrationality of the square root of two and is **not** that sentence. The sentence is
+`Root.SQRT_TWO_IRRATIONAL`, since 2026-09-24: `sqrt 2` is not a ratio of naturals, proved by
+clearing the ratio, squaring, and carrying the equation back across `real_of_num`, where this fact
+refuses it. It lives in `Root` because `Primes` is built before `sqrt` exists.
 `PrimesSpec` asserts that its hypothesis cannot be dropped, by proving the equation at zero. It is not in `Modular` because of one
 constant: the proof runs through `n! + 1` and the factorial is defined in `Coding`, which is built
 **over** `Modular`. Putting it in `Coding` instead would have made that file's own first sentence

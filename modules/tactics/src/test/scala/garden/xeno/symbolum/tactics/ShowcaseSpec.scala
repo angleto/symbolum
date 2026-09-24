@@ -145,6 +145,10 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
         "NUM_FACTORISATION_UNIQUE",
         "NUM_PRIME_UNBOUNDED",
         "NUM_SQUARE_NOT_DOUBLE",
+        // 2026-09-24, the classical sentence beside its arithmetic content. Predicted settled
+        // before the run, on the reading that the library holds it and `docs/adr/0025` lets a
+        // lemma that is the goal answer, and checked by the run.
+        "SQRT_TWO_IRRATIONAL",
         "NUM_PROV_DEDUCTION"
       )
     }

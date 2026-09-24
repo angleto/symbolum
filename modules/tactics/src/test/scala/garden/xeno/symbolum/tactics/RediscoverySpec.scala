@@ -301,7 +301,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 425 with the square root, 2026-09-24: `SQRT_EXISTS`, `SQRT`, `SQRT_UNIQUE` and
     // `SQRT_SQUARE` carry one antecedent each and the two values carry none. Reconciled against
     // that reading after the run rather than predicted before it.
-    propose.weakenings.size shouldBe 425
+    // 426 with `SQRT_TWO_IRRATIONAL`'s one antecedent, `0 < q`, the same day.
+    propose.weakenings.size shouldBe 426
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -350,9 +350,9 @@ final class Chain private (
    * The square root of a non-negative real, and the theorem that it exists.
    *
    * The third thing `COMPLETENESS` buys, after the Archimedean property and the monotone
-   * convergence theorem. It needs the reals and their order and nothing between them and here; it
-   * is a link rather than a development beside the chain because `sqrt` is a constant, and a
-   * constant declared beside the chain is where nothing above can see it. One constant, no axiom.
+   * convergence theorem, and the irrationality of the square root of two stated over it. It is a
+   * link rather than a development beside the chain because `sqrt` is a constant, and a constant
+   * declared beside the chain is where nothing above can see it. One constant, no axiom.
    */
   val root: Root
 ) {
@@ -588,9 +588,11 @@ object Chain {
       // fact this repository uses rather than one it holds.
       folding <- Folding.construct(listing, listing.theory)
 
-      // Over the reals and their order and nothing else, extending the chain's end: what it spends
-      // is `COMPLETENESS` and one choice, and neither needs anything built since `Order`.
-      root <- Root.construct(classical, reals, order, folding.theory, folding.notation)
+      // Over the reals and their order, extending the chain's end: the existence spends
+      // `COMPLETENESS` and needs nothing built since `Order`. The naturals' embedding, `Primes` and
+      // `Ring` are for the one fact about both, that the root of two is not a ratio of naturals.
+      root <- Root.construct(
+        classical, reals, order, ring, peano, primes, folding.theory, folding.notation)
     } yield new Chain(
       classical,
       naturals,

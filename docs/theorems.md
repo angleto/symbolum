@@ -16,7 +16,7 @@ update it.*
 
 **A listing answers "is there already a lemma about this". A showcase answers "what can this system
 actually do".** They are different questions and a reader arriving for the second one drowns in the
-first: [lemmas.md](lemmas.md) holds every lemma the library publishes, and the twelve here are
+first: [lemmas.md](lemmas.md) holds every lemma the library publishes, and the pages here are
 chosen so that somebody who has never opened this repository can tell from the statement why each is
 worth having.
 
@@ -1725,7 +1725,7 @@ worth proving.
 
 ## NUM_SQUARE_NOT_DOUBLE
 
-No square is twice a square at a positive denominator. It is the arithmetic content of the irrationality of the square root of two and is deliberately **not** that sentence. The sentence can be written, since `sqrt` has been a constant here from 2026-09-24, and it is not proved: carrying the equation across the embedding of the naturals into the reals is the step nobody has taken, and the name says what is proved rather than what is next.
+No square is twice a square at a positive denominator. It is the arithmetic content of the irrationality of the square root of two and is deliberately **not** that sentence, which is the page after this one: this is the equation refused in the naturals, and that is the same refusal carried across the embedding into the reals.
 
 $$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < y \Rightarrow \lnot \left( x \cdot x = \mathrm{suc}(\mathrm{suc}(0)) \cdot \left( y \cdot y \right) \right)$$
 
@@ -1865,6 +1865,213 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_SQUARE_NOT_DOUBLE"
 ```
 
 From Scala it is `Primes`'s, under the name `NUM_SQUARE_NOT_DOUBLE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+### What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+## SQRT_TWO_IRRATIONAL
+
+The square root of two is not a ratio of naturals. It is the sentence the page before this one is the arithmetic content of, stated about `sqrt`, which `Root` defines and proves to exist from the completeness of the reals; the proof clears the ratio, squares it, and carries the equation back into the naturals, where the descent already refused it.
+
+$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < y \Rightarrow \lnot \left( \sqrt{2} = x_{\mathbb{R}} / y_{\mathbb{R}} \right)$$
+
+```
+!x:num. !y:num. 0 < y ==> ~(sqrt 2 = real_of_num x / real_of_num y)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+### What it rests on
+
+18 axioms reached, 16 of them named below, and 124 named facts in all.
+
+| what | where |
+|---|---|
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_BEZOUT` | Modular |
+| `NUM_BEZOUT_EXISTS` | Modular |
+| `NUM_DIVIDES_ADD` | Modular |
+| `NUM_DIVIDES_ELIM` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_SUMMAND` | Modular |
+| `NUM_DIVIDES_ZERO` | Modular |
+| `NUM_DIVISION` | Modular |
+| `NUM_EUCLID` | Modular |
+| `NUM_GCD_DIVIDES_LEFT` | Modular |
+| `NUM_GCD_DIVIDES_RIGHT` | Modular |
+| `NUM_GCD_GREATEST` | Modular |
+| `NUM_ONE_DIVIDES` | Modular |
+| `NUM_PRIME_ABOVE_ONE` | Modular |
+| `NUM_PRIME_DIVISOR` | Modular |
+| `NUM_PRIME_TWO` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_CANCEL_LEFT` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_GREATEST` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ADD` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_CANCEL_LEFT` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_LT_MONOTONE` | Peano |
+| `NUM_MUL_MONOTONE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_REAL_ADD` | Peano |
+| `NUM_REAL_INJECTIVE` | Peano |
+| `NUM_REAL_LE` | Peano |
+| `NUM_REAL_LT` | Peano |
+| `NUM_REAL_MUL` | Peano |
+| `NUM_REAL_NONNEG` | Peano |
+| `NUM_REAL_SUC` | Peano |
+| `NUM_REAL_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `NUM_SQUARE_NOT_DOUBLE` | Primes |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `SQRT` | Root |
+| `SQRT_EXISTS` | Root |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+### The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+### The proof the kernel holds
+
+87593 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 25762 | 29.4% |
+| EqualityElimination | 16100 | 18.4% |
+| Instantiation | 11238 | 12.8% |
+| Transitivity | 10537 | 12.0% |
+| Reflexivity | 8861 | 10.1% |
+| Antisymmetry | 4915 | 5.6% |
+| BetaStep | 4899 | 5.6% |
+| TypeInstantiation | 2512 | 2.9% |
+| Assumption | 1575 | 1.8% |
+| Abstraction | 1148 | 1.3% |
+| Definition | 26 | 0.0% |
+| Axiom | 18 | 0.0% |
+| TypeDefinition | 2 | 0.0% |
+
+### How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. 0 < y ==> ~(sqrt 2 = real_of_num x / real_of_num y)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SQRT_TWO_IRRATIONAL"
+```
+
+From Scala it is `Root`'s, under the name `SQRT_TWO_IRRATIONAL`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ### What on this page is checked
 

@@ -57,13 +57,45 @@ class RootSpec extends AnyFlatSpec with Matchers {
     // other foundational axiom: an equality rather than a ceiling, so a fact that quietly began to
     // spend infinity or eta would fail here rather than pass under a bound.
     val select = force(chain.classical.axiom("SELECT")).conclusion
-    Root.Statements.map(_._1).filterNot(_ == Root.Exists).foreach { name =>
+    Root.Statements.map(_._1).filterNot(Set(Root.Exists, Root.TwoIrrational)).foreach { name =>
       val spent = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(spent -- reals).map(root.show).mkString("; ")}\n") {
         (spent -- reals) shouldBe Set(select)
         spent should contain(completeness)
       }
     }
+  }
+
+  it should "state the irrationality of the root of two by carrying the descent across" in {
+    // The fact is the descent `Primes` holds, read on the reals: what it rests on is that and the
+    // root, and the naturals' own two axioms come with the descent. Asserted by the facts it rests
+    // on rather than by its size, because a derivation that reached the same statement without the
+    // descent would be a different proof and the one this development claims to have.
+    val theorem = fact(Root.TwoIrrational)
+    val descent = force(chain.primes.fact(Primes.SquareNotDouble)).conclusion
+    val squares = fact(Root.Squares).conclusion
+    Derivation.restingOn(theorem, Set(descent, squares)) shouldBe Set(descent, squares)
+
+    val select = force(chain.classical.axiom("SELECT")).conclusion
+    val infinity = force(chain.naturals.axiom(Natural.Infinity)).conclusion
+    val spent = Derivation.axiomsOf(theorem)
+    withClue(s"it reaches: ${(spent -- reals).map(root.show).mkString("; ")}\n") {
+      (spent -- reals) shouldBe Set(select, infinity)
+    }
+  }
+
+  it should "detach at a denominator, so that its hypothesis is one something satisfies" in {
+    // A negation under a hypothesis nothing satisfies is a theorem about nothing, and it would pass
+    // every assertion above. `0 < SUC 0` is a fact of `num`, so the instance at one over one
+    // detaches with nothing assumed.
+    val one = force(root.term("SUC 0", TyApp(Natural.TypeName, Nil)))
+    val atOne = force(logic.rules.specAll(fact(Root.TwoIrrational), List(one, one)))
+    val zero = force(root.term("0", TyApp(Natural.TypeName, Nil)))
+    val positive = force(logic.rules.spec(zero, force(chain.peano.fact(Peano.SuccessorPositive))))
+    val detached = force(logic.rules.mp(atOne, positive))
+
+    detached.hypotheses shouldBe empty
+    root.show(detached.conclusion) shouldBe "~(sqrt 2 = real_of_num (SUC 0) / real_of_num (SUC 0))"
   }
 
   /* ------------------------------------------------------------- what it says */
