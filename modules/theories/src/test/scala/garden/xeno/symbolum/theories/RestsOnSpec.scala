@@ -136,4 +136,28 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
         (before.facts ++ before.domain ++ before.foundational).toSet
     }
   }
+
+  /**
+   * The count of named facts in the one-line reading, at one and elsewhere.
+   *
+   * Card 601788d5 found it by widening db67b658's census to a count followed by a modifier and then
+   * the plural, `${facts.size} named facts`, which printed "1 named facts" wherever a proof went
+   * through one named fact. That it does is measured here and not assumed: the lemmas of `Order`
+   * are searched for one whose reading holds exactly one, and the search has to find it.
+   */
+  "The one-line reading" should "take the singular at one named fact and the plural elsewhere" in {
+    val readings = chain.order.facts.toVector.sortBy(_._1).map { case (name, theorem) =>
+      name -> Reach.of(held, theorem)
+    }
+    val one = readings.find(_._2.facts.size == 1)
+    val several = readings.find(_._2.facts.size > 1)
+
+    withClue("no lemma of Order rests on exactly one named fact, so the site is not reached: ") {
+      one should not be empty
+    }
+    withClue("no lemma of Order rests on more than one: ") { several should not be empty }
+
+    one.get._2.summary should startWith("1 named fact,")
+    several.get._2.summary should startWith(s"${several.get._2.facts.size} named facts,")
+  }
 }

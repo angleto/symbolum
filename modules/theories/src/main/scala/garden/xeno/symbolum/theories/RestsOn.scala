@@ -50,7 +50,7 @@ final case class Reach(
 
   /** The reading a person wants, one line. */
   def summary: String =
-    s"${facts.size} named facts, ${domain.size} assumed about the subject, " +
+    s"${Prose.count(facts.size, "named fact")}, ${domain.size} assumed about the subject, " +
       s"${foundational.size} asked of the formalism"
 }
 

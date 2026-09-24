@@ -389,6 +389,38 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     assuming(2) should not include "hypothesiss"
   }
 
+  /**
+   * The two decisions of a linear refutation, where a count agrees with a plural that is not the
+   * noun right after it.
+   *
+   * Card 601788d5 found these by widening db67b658's census to a count, a modifier, then the
+   * plural: `$constraints linear constraints`. The premise count beside it is the same class with a
+   * demonstrative, `these $premises cannot`, which no census of a noun selects.
+   *
+   * Both reach one, and that is measured here rather than argued: `Refutation` decides a single
+   * self-contradictory premise, and a claim with no premises puts its one denied conclusion to the
+   * search. The assertions on the defect carry the text after the noun, so the singular is not a
+   * substring of what it replaced.
+   */
+  "The two linear decisions of this file" should "agree with their count at one and elsewhere" in {
+    val refutation = Refutation.standard
+    def proposition(text: String): Term = force(reals.proposition(text))
+
+    val alone = refutation.satisfying(Vector(proposition("x:real < x")))
+    alone shouldBe Refutation.Contradictory(1)
+    val decided = refutation.counterexample(Vector.empty, proposition("x:real < x + 1"))
+    decided shouldBe Refutation.NoCounterexample(1)
+
+    Remedy.of(alone).message should include("the one premise here cannot hold, so every")
+    Remedy.of(alone).message should include("follows from it")
+    Remedy.of(alone).message should not include "these 1"
+    Remedy.of(Refutation.Contradictory(3)).message should
+      include("these 3 cannot, so every conclusion follows from them")
+
+    Remedy.of(decided).message should include("over 1 linear constraint;")
+    Remedy.of(Refutation.NoCounterexample(2)).message should include("over 2 linear constraints;")
+  }
+
   /* ------------------------------------------------------------ the ledger's table */
 
   "Every ledger verdict" should "carry a next step" in {
