@@ -111,6 +111,7 @@ class GuideBlocksSpec extends AnyFlatSpec with Matchers {
     "Linarith.standard.prove(\"!x:real y:real. 0 <= x /\\\\ 0 <= y ==> 0 <= x * y\")" ->
       Runs(Theories),
     "Linarith.standard.prove(\"!e:real. e / 3 + e / 3 + e / 3 <= e\")" -> Runs(Theories),
+    "Linarith.standard.prove(\"!a:real. a * (2 - a) <= 1\")" -> Runs(Theories),
     "Linarith.standard.support(" -> Runs(Theories),
     "Arithmetic.standard.add(1000, 1000)" -> Runs(Theories),
     "Order.standard.zeroLessOne" -> Runs(Theories),
