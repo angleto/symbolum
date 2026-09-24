@@ -305,7 +305,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 427 with the trigonometric identity's five facts, the same day, and the **one** was derived
     // before the run: `CONVERGES_SHIFT` carries one antecedent, and `SUM_EVEN_ODD`, the two
     // absolute convergences and `SIN_COS_SQUARED` carry none.
-    propose.weakenings.size shouldBe 427
+    // 431 with continuity, the same day, derived before the run: `INTERMEDIATE_VALUE` carries four
+    // antecedents and the two facts about particular functions carry none.
+    propose.weakenings.size shouldBe 431
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

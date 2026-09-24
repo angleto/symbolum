@@ -322,7 +322,9 @@ object Library {
         // The square root, 2026-09-24, in the change that added it: the third thing
         // `COMPLETENESS` buys, and a development of its own because it is neither a limit nor a
         // transcendental function.
-        collect("Root", chain.root.facts)
+        collect("Root", chain.root.facts) ++
+        // Continuity and the intermediate value theorem, 2026-09-24, in the change that added them.
+        collect("Continuity", chain.continuity.facts)
     )
 
   /** A library over developments a caller names itself. */

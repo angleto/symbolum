@@ -352,7 +352,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 426 with `SQRT_TWO_IRRATIONAL`'s one antecedent, the same day.
     // 427 with `CONVERGES_SHIFT`'s one antecedent, the same day; the trigonometric identity and the
     // three other facts that came with it carry none.
-    proposals.size shouldBe 427
+    // 431 with `INTERMEDIATE_VALUE`'s four antecedents, the same day; `CONTINUOUS_CONST` and
+    // `CONTINUOUS_ID` carry none.
+    proposals.size shouldBe 431
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1178,7 +1180,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // before it: the two are `SIN_COS_SQUARED`'s substitutions, equations between reals that `Ring`
     // takes and fails on, as `EXP_ADD`'s did. `CONVERGES_SHIFT`'s weakening is in `unreadable`
     // below, which is what accounted for the pair once that row had run.
-    open shouldBe 338
+    // 342 with the intermediate value theorem's four weakenings, the same day, read off the run:
+    // each drops one antecedent and leaves an order between reals under the others, a shape
+    // `Order` addresses and does not settle, so all four land here and `unreadable` below does
+    // not move. That row sat behind this one again; it was predicted from this one before it ran,
+    // and the run that reached it agreed.
+    open shouldBe 342
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

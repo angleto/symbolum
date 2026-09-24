@@ -246,13 +246,15 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // **And again on 2026-09-24**, to `Root`, the tenth entry: the square root, which needs the
     // reals and their order and nothing since, and is at the end for the same rule and nothing
     // about its subject.
-    chain.widest shouldBe chain.root
-    chain.widest.theory.constants.keySet shouldBe chain.root.theory.constants.keySet
+    // **And again the same day**, to `Continuity`, the eleventh: continuity at a point and the
+    // intermediate value theorem, which need the reals, their order and their magnitude.
+    chain.widest shouldBe chain.continuity
+    chain.widest.theory.constants.keySet shouldBe chain.continuity.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
       chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
-      chain.listing, chain.folding
+      chain.listing, chain.folding, chain.root
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

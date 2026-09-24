@@ -304,6 +304,9 @@ object Spellings {
       .operator("cos", 1, "\\cos #1", Multiplicative + 5)
       .operator("sinh", 1, "\\sinh #1", Multiplicative + 5)
       .operator("cosh", 1, "\\cosh #1", Multiplicative + 5)
+      // Continuity at a point, which books write in words and no symbol settles. Delimited, so the
+      // function and the point are each bracketed by the template rather than by the context.
+      .delimited("continuous", 2, "\\operatorname{cont}(#1, #2)")
       /* ------------------------------------------------ the set defined by rules */
       // Both at arity ONE though each is written with two arguments, and that is the faithful
       // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set

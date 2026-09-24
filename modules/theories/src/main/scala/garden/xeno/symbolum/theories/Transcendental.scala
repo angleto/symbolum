@@ -31,8 +31,9 @@ import garden.xeno.symbolum.logic.*
  * discovered: `exp 1` is above `2`, and what it is, this repository cannot say.
  *
  * `ln` has **no fact at all** and that is not an oversight either: every one of them wants the
- * exponential to be onto the positives, which is the intermediate value theorem, which wants
- * continuity, which is not written. The constant is here because it is written the moment the
+ * exponential to be onto the positives. `Continuity.INTERMEDIATE_VALUE` is the theorem that gives
+ * that, and what it asks of the exponential, continuity at every point and a value on each side of
+ * every positive number, is not proved yet. The constant is here because it is written the moment the
  * exponential is, and a development that defined three of the four would leave a reader asking
  * which of the two reasons applied to the fourth.
  *
@@ -162,7 +163,8 @@ object Transcendental {
    * The same construction as `NUM_GCD` and `Limit.Value`, and the same silence: at an argument the
    * exponential does not reach, `ln` denotes and nothing is provable about it. Unlike those two,
    * **nothing is provable about it anywhere yet**, because what would pin it is that the
-   * exponential is onto the positive reals and that is the intermediate value theorem.
+   * exponential is onto the positive reals: the intermediate value theorem at the exponential,
+   * which is `Continuity`'s theorem once the exponential is known to be continuous.
    */
   val LogarithmBody: String = "\\y:real. select (\\x:real. exp x = y)"
 

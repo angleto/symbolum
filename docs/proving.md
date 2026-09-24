@@ -285,6 +285,7 @@ lands red here rather than going unmentioned.
 | `Listing` | `LIST_CONS`, `LIST_HEAD`, `LIST_TAIL` | The list interface over `word`, which is an orientation and not a carrier: `docs/adr/0038` measures that `word('a)` is already a type operator of arity one, already has `WORD_EMPTY`, `WORD_SINGLETON` and `WORD_CONCAT`, and that a second carve would be from the **same** predicate and inherit none of its facts. What was missing is one principle: `WORD_INDUCTION` extends a word on the right, and a definition by recursion on a sequence descends from the left. So `LIST_CONS x w` is `WORD_CONCAT (WORD_SINGLETON x) w` under a name, the empty list is `WORD_EMPTY` with no second name, and `LIST_INDUCT` is cons-induction. Three definitions, **no axiom and no type**. `LIST_RECURSION` is the principle a *definition* needs, where `LIST_INDUCT` only proves things: it is `Recursion.theorem` at the result type `word('a) -> 'b`, read at the word's own length, and it is why `LIST_HEAD` and `LIST_TAIL` are constants rather than terms built inside a proof. `LIST_RECURSION_UNIQUE` is the other half, since this logic has no unique-existence quantifier |
 | `Folding` | `LIST_FOLD` | The consumer of `LIST_RECURSION`, and the first thing here written with lists that `word` writes by index. `LIST_FOLD g a (LIST_CONS x w)` is `g x (LIST_FOLD g a w)`, so `LIST_FOLD_CONCAT` splits over an append with **no index correction** where `WORD_CONCAT_TALLY` carries `NUM_ADD (WORD_LENGTH u) i`. One definition, no axiom, no type. What a fold cannot express is the other half of that sentence: a measure weighing a letter by where it sits, which is what the tally is for and why it is not superseded |
 | `Root` | `sqrt` | The square root of a non-negative real, named by choice, and `SQRT_EXISTS`, which says what it names exists: the least upper bound of the numbers whose square is at most `x` squares to `x`, which is `COMPLETENESS` read a third time and the reason the existence rests on the reals alone. `SQRT`, `SQRT_UNIQUE` and `SQRT_SQUARE` read the choice back; nothing is said below zero, where the choice falls somewhere, and `RootSpec` refutes the unconditional statement at minus one |
+| `Continuity` | `continuous` | Continuity at a point, the epsilon-delta statement written out, and `INTERMEDIATE_VALUE`: a function continuous on `[a, b]` takes every value between `f a` and `f b` in it, which is `COMPLETENESS` read a fourth time. `CONTINUOUS_CONST` and `CONTINUOUS_ID` are the two functions everything else will be built from; `ContinuitySpec` shows a step is not continuous and refutes the theorem without its continuity hypothesis at that step |
 
 **This is not the front page's table and the two must not be merged.** `README.md` indexes by
 **capability**, so a row of it is a thing a reader might want to state and the answer is yes or no
@@ -2190,8 +2191,9 @@ cancellation.
 
    **What came after that** is the addition theorem through the Cauchy product, on 2026-09-21, and
    on 2026-09-24 the Pythagorean identity, `SIN_COS_SQUARED`, through a second pair of Cauchy
-   products at the two alternating series. What is left is continuity and the intermediate value
-   theorem, which is what every fact about `ln` waits on and why that constant has none today.
+   products at the two alternating series. The same day `Continuity` defined continuity at a point
+   and proved the intermediate value theorem from `COMPLETENESS`. What is left before `ln` has a
+   fact is the exponential's own continuity and a value on each side of every positive number.
 5. **A proof for what `Quantified` decides.** Since 2026-09-10 a quantified linear claim is
    decided, and it is decided rather than proved: the elimination runs on untrusted forms and no
    theorem comes back. Making it produce one wants the density and the unboundedness of the order

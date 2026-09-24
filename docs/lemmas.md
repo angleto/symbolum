@@ -114,6 +114,12 @@ they have least appetite for working out how it is produced.
   WORD_SINGLETON_NTH       !x:'a. WORD_NTH (WORD_SINGLETON x) 0 = x
   WORD_SUFFIX_FACTOR       !x:word('a). !y:word('a). WORD_SUFFIX x y ==> WORD_FACTOR x y
 
+## Continuity
+
+  CONTINUOUS_CONST         !x:real. !y:real. continuous (\z:real. x) y
+  CONTINUOUS_ID            !x:real. continuous (\y:real. y) x
+  INTERMEDIATE_VALUE       !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)
+
 ## Deduction
 
   NUM_PROV_ADD_CONG        !x:num. !y:num. !z:num. NUM_TERM x ==> NUM_CLOSED x ==> NUM_TERM y ==> NUM_CLOSED y ==> NUM_TERM z ==> NUM_CLOSED z ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR x z)) (NUM_CODE 3 (NUM_PAIR y z))))

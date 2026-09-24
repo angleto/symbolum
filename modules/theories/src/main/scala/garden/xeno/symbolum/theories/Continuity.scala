@@ -1,0 +1,519 @@
+package garden.xeno.symbolum.theories
+
+import garden.xeno.symbolum.kernel.*
+import garden.xeno.symbolum.logic.*
+
+/**
+ * Continuity of a real function at a point, and the intermediate value theorem.
+ *
+ * `continuous f x` is the epsilon-delta statement written out, the way `converges` is the
+ * epsilon-N one: for every positive tolerance there is a positive radius inside which `f` stays
+ * within the tolerance of `f x`. It is a definition and costs no axiom. What it buys is
+ * [[Continuity.IntermediateValue]]: a function continuous on `[a, b]` takes every value between
+ * `f a` and `f b` somewhere in `[a, b]`, which is what every fact about `ln` waits on, since `ln`
+ * is the inverse of the exponential named by choice and a choice is silent until something says
+ * the exponential reaches the value.
+ *
+ * == Why this is the fourth thing `COMPLETENESS` buys ==
+ *
+ * The rationals are an ordered field in which the theorem is false: `x * x - 2` is continuous, is
+ * negative at `0` and positive at `2`, and has no rational root. So the proof has to spend the
+ * sixteenth axiom, as `Peano.NUM_ARCHIMEDES`, `Limit.MONOTONE_CONVERGES` and `Root.SQRT_EXISTS` do.
+ * The argument is the textbook one: the points of `[a, b]` where `f` is at most the value hold `a`
+ * and sit under `b`, so they have a least upper bound `s`, and `f s` is neither below the value nor
+ * above it. Below, continuity at `s` puts a point a little past `s` in the set, so `s` was not an
+ * upper bound; above, it keeps `f` over the value on a stretch below `s`, so a point a little
+ * before `s` is an upper bound already and `s` was not the least.
+ *
+ * `COMPLETENESS` is spent **inline** here, as it is in those three, rather than through a published
+ * supremum. That is not a principle: it is the fourth consumer, and the moment a fifth wants the
+ * supremum by name is the moment it belongs in a development of its own.
+ *
+ * == The derivation has no quotient in it that a procedure is asked about ==
+ *
+ * The one step that moves by "a little" moves by `min (d / 2) (b - s)` below the root and
+ * `min (d / 2) (s - a)` above it, which stays inside `[a, b]` and inside the radius at once. A
+ * numeral denominator is a rational coefficient to `Linarith`, so `d / 2` is inside the fragment it
+ * decides, and `Magnitude`'s three facts about `min` are the only thing said about the minimum.
+ *
+ * == What it costs ==
+ *
+ * One constant, no axiom. It is a development of its own rather than a section of [[Limit]],
+ * whose first sentence says it is what a sequence converges to, and continuity at a point is a
+ * statement about a function and a radius with no sequence in it.
+ */
+final class Continuity private (
+  val theory: Theory,
+  val notation: Notation,
+  val logic: Logic,
+  val definitions: Map[String, Kernel.Thm],
+  val facts: Map[String, Kernel.Thm]
+) extends Signature {
+
+  /** The equation defining `name`, as proved when the constant was introduced. */
+  def definition(name: String): Either[LogicError, Kernel.Thm] =
+    definitions.get(name).toRight(MissingDefinition(name))
+
+  /** A derived fact of this development, by name. Nothing here is asserted. */
+  def fact(name: String): Either[LogicError, Kernel.Thm] =
+    facts.get(name).toRight(MissingDefinition(name))
+}
+
+object Continuity {
+
+  /* ---------------------------------------------------------------- the constant */
+
+  /** `continuous f x`: `f` is continuous at `x`. */
+  val Continuous: String = "continuous"
+
+  /** The definition, as text: the epsilon-delta statement at one point. */
+  val ContinuousBody: String =
+    "\\f:real -> real. \\x:real. !e:real. 0 < e ==> " +
+      "?d:real. 0 < d /\\ (!y:real. abs (y - x) < d ==> abs (f y - f x) < e)"
+
+  /* ------------------------------------------------------------------- the facts */
+
+  /**
+   * `|- !c x. continuous (\y. c) x`
+   *
+   * A constant function is continuous everywhere. Published for what it guards rather than for
+   * what it says: a definition nothing satisfies would make the intermediate value theorem true
+   * and empty, and this and [[Identity]] are the two functions every other fact about continuity
+   * is built from.
+   */
+  val Constant: String = "CONTINUOUS_CONST"
+
+  /** `|- !x. continuous (\y. y) x`: the identity is continuous everywhere, at radius the tolerance. */
+  val Identity: String = "CONTINUOUS_ID"
+
+  /**
+   * `|- !f a b y. a <= b ==> (!x. a <= x /\ x <= b ==> continuous f x) ==>
+   * f a <= y ==> y <= f b ==> ?x. a <= x /\ x <= b /\ f x = y`
+   *
+   * The intermediate value theorem, for a value between `f a` and `f b` in that order. The other
+   * order is this one at `\x. 0 - f x`, which needs the continuity of a difference, and nothing has
+   * wanted it yet.
+   */
+  val IntermediateValue: String = "INTERMEDIATE_VALUE"
+
+  /** What every derived fact says, as text, in the order they are derived. */
+  val Statements: Vector[(String, String)] = Vector(
+    Constant -> "!c:real. !x:real. continuous (\\y:real. c) x",
+    Identity -> "!x:real. continuous (\\y:real. y) x",
+    IntermediateValue ->
+      ("!f:real -> real. !a:real. !b:real. !y:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> continuous f x) ==> f a <= y ==> y <= f b ==> " +
+        "?x:real. a <= x /\\ x <= b /\\ f x = y")
+  )
+
+  private val Reals: Type = TyApp(Real.TypeName, Nil)
+  private val Functions: Type = Type.fun(Reals, Reals)
+
+  /** The development in the chain's signature, which is the one a consumer reaches for. */
+  lazy val standard: Continuity = Chain.standard.continuity
+
+  /**
+   * The development over the reals, their order and their magnitude, extending `base`.
+   *
+   * `base` is the chain's end when this is built rather than `reals.theory`, for the reason every
+   * link gives: a constant declared into a side branch is unreachable from every link above it.
+   */
+  def construct(
+    classical: Classical,
+    reals: RealTheory,
+    magnitude: Magnitude,
+    base: Theory,
+    notation: Notation
+  ): Either[LogicError, Continuity] =
+    for {
+      body <- Parser.term(base, notation, ContinuousBody)
+      defined <- LogicError.lift(Kernel.defineConstant(base, Continuous, body))
+      (theory, definition) = defined
+
+      logic <- classical.logic.over(theory)
+      linarith <- Linarith.construct(magnitude.order)
+      steps = Steps(logic, linarith, theory, notation, definition)
+
+      constant <- constantFunction(steps, magnitude)
+      identity <- identityFunction(steps)
+      intermediate <- intermediateValue(steps, reals, magnitude)
+
+      facts = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate)
+
+      // Each statement checked against the text a person reads it by, here rather than in the spec:
+      // a development that built something other than what it says it built must not be handed out.
+      _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { (acc, entry) =>
+        val (name, text) = entry
+        for {
+          _ <- acc
+          expected <- Parser.proposition(theory, notation, text)
+          proved <- facts.get(name).toRight(MissingDefinition(name))
+          _ <-
+            if (proved.conclusion == expected && proved.hypotheses.isEmpty) Right(())
+            else Left(NotOfForm(s"$name as it is written", proved.conclusion))
+        } yield ()
+      }
+    } yield new Continuity(theory, notation, logic, Map(Continuous -> definition), facts)
+
+  /**
+   * The few moves every derivation below makes, over one theory, which is `Root`'s arrangement:
+   * `lemma` is the one place anything is decided, `Linarith` on a closed schematic statement over
+   * real variables, and everything else specialises, detaches and unfolds.
+   */
+  private final case class Steps(
+    logic: Logic,
+    linarith: Linarith,
+    theory: Theory,
+    notation: Notation,
+    definition: Kernel.Thm
+  ) {
+    val rules: Rules = logic.rules
+
+    def proposition(text: String): Either[LogicError, Term] = Parser.proposition(theory, notation, text)
+    def real(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text, Reals)
+    def assume(text: String): Either[LogicError, Kernel.Thm] =
+      proposition(text).flatMap(statement => LogicError.lift(Kernel.assume(statement)))
+
+    /** A schematic arithmetic fact, closed. Refused here if `Linarith` cannot settle it. */
+    def lemma(text: String): Either[LogicError, Kernel.Thm] = linarith.prove(text)
+
+    def at(theorem: Either[LogicError, Kernel.Thm], arguments: String*): Either[LogicError, Kernel.Thm] =
+      theorem.flatMap(proved =>
+        arguments.foldLeft[Either[LogicError, List[Term]]](Right(Nil)) { (acc, text) =>
+          for { terms <- acc; term <- real(text) } yield terms :+ term
+        }.flatMap(rules.specAll(proved, _)))
+
+    def mp(implication: Kernel.Thm, premises: Either[LogicError, Kernel.Thm]*): Either[LogicError, Kernel.Thm] =
+      premises.foldLeft[Either[LogicError, Kernel.Thm]](Right(implication)) { (acc, premise) =>
+        for { current <- acc; proved <- premise; next <- rules.mp(current, proved) } yield next
+      }
+
+    def conj(left: Either[LogicError, Kernel.Thm], right: Either[LogicError, Kernel.Thm]): Either[LogicError, Kernel.Thm] =
+      for { l <- left; r <- right; both <- rules.conjIntro(l, r) } yield both
+
+    def existential(text: String): Either[LogicError, Term] =
+      proposition(text).flatMap(statement =>
+        logic.destExistsPredicate(statement).toRight(NotOfForm("an existential", statement)))
+
+    /** `|- continuous f x = <the epsilon-delta statement at f and x>`, reduced. */
+    def unfolded(function: Term, point: Term): Either[LogicError, Kernel.Thm] =
+      for {
+        equation <- Conv.unfold(definition, List(function, point))
+        right <- Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion))
+        normal <- Conv.betaNormalise(right)
+        joined <- Conv.trans(equation, normal)
+      } yield joined
+
+    /** `|- continuous f x` from a proof of its epsilon-delta statement. */
+    def folded(function: Term, point: Term, statement: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        equation <- unfolded(function, point)
+        backwards <- Conv.sym(equation)
+        result <- LogicError.lift(Kernel.eqMp(backwards, statement))
+      } yield result
+  }
+
+  /** [[Constant]]: the distance of `c` from `c` is zero, under every tolerance, at radius one. */
+  private def constantFunction(steps: Steps, magnitude: Magnitude): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val c = Term.variable("c", Reals)
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val y = Term.variable("y", Reals)
+    for {
+      function <- Parser.term(theory, notation, "\\y:real. c:real", Functions)
+      positive <- proposition("0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      distance <- at(magnitude.fact(Magnitude.OfNonNegative), "c - c:real")
+        .flatMap(mp(_, lemma("!c:real. 0 <= c - c").flatMap(rules.spec(c, _))))
+      within <- at(lemma("!a:real c:real e:real. a = c - c ==> 0 < e ==> a < e"), "abs (c - c:real)", "c:real", "e:real")
+        .flatMap(mp(_, Right(distance), Right(assumedPositive)))
+      near <- proposition("abs (y - x:real) < 1")
+      everyPoint <- rules.disch(near, within).flatMap(rules.gen(y, _))
+      radius <- conj(lemma("(0:real) < 1"), Right(everyPoint))
+      one <- real("1:real")
+      witnessed <- existential("?d:real. 0 < d /\\ (!y:real. abs (y - x:real) < d ==> abs (c - c:real) < e:real)")
+        .flatMap(rules.existsIntro(_, one, radius))
+      statement <- rules.disch(positive, witnessed).flatMap(rules.gen(e, _))
+      result <- folded(function, x, statement).flatMap(rules.gen(x, _)).flatMap(rules.gen(c, _))
+    } yield result
+  }
+
+  /** [[Identity]]: at radius the tolerance, the distance of the value is the distance of the point. */
+  private def identityFunction(steps: Steps): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val y = Term.variable("y", Reals)
+    for {
+      function <- Parser.term(theory, notation, "\\y:real. y", Functions)
+      positive <- proposition("0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      near <- proposition("abs (y - x:real) < e:real")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      everyPoint <- rules.disch(near, assumedNear).flatMap(rules.gen(y, _))
+      radius <- rules.conjIntro(assumedPositive, everyPoint)
+      witnessed <- existential("?d:real. 0 < d /\\ (!y:real. abs (y - x:real) < d ==> abs (y - x) < e:real)")
+        .flatMap(rules.existsIntro(_, e, radius))
+      statement <- rules.disch(positive, witnessed).flatMap(rules.gen(e, _))
+      result <- folded(function, x, statement).flatMap(rules.gen(x, _))
+    } yield result
+  }
+
+  /** Membership of the set whose supremum is the crossing, at a point named `x`. */
+  private val Member: String = "a:real <= x:real /\\ x <= b:real /\\ (f:real -> real) x <= y:real"
+
+  /** What the theorem concludes, over the free `f`, `a`, `b` and `y`. */
+  private val Goal: String = "?x:real. a:real <= x /\\ x <= b:real /\\ (f:real -> real) x = y:real"
+
+  /** `w = min (d / 2) gap` is positive when `d` and the gap are, from `MIN_CASES`. */
+  private def minimumPositive(
+    steps: Steps,
+    magnitude: Magnitude,
+    gap: String,
+    dPositive: Either[LogicError, Kernel.Thm],
+    gapPositive: Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val w = s"min (d / 2) ($gap)"
+    for {
+      cases <- at(magnitude.fact(Magnitude.MinCases), "d / 2", gap)
+      halfCase <- proposition(s"$w = d / 2")
+      gapCase <- proposition(s"$w = $gap")
+      fromHalf <- LogicError.lift(Kernel.assume(halfCase)).flatMap(assumed =>
+        at(lemma("!w:real d:real. w = d / 2 ==> 0 < d ==> 0 < w"), w, "d:real")
+          .flatMap(mp(_, Right(assumed), dPositive)))
+      fromGap <- LogicError.lift(Kernel.assume(gapCase)).flatMap(assumed =>
+        at(lemma("!w:real g:real. w = g ==> 0 < g ==> 0 < w"), w, gap)
+          .flatMap(mp(_, Right(assumed), gapPositive)))
+      result <- rules.disjElim(cases, fromHalf, fromGap)
+    } yield result
+  }
+
+  /** [[IntermediateValue]], from `COMPLETENESS` at the points of `[a, b]` where `f` is at most `y`. */
+  private def intermediateValue(
+    steps: Steps,
+    reals: RealTheory,
+    magnitude: Magnitude
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val y = Term.variable("y", Reals)
+    val x = Term.variable("x", Reals)
+    val s = Term.variable("s", Reals)
+    val d = Term.variable("d", Reals)
+
+    val ordered = assume("a:real <= b:real")
+    val atA = assume("(f:real -> real) a <= y:real")
+    val atB = assume("y:real <= (f:real -> real) b")
+    val everywhere = assume("!x:real. a:real <= x /\\ x <= b:real ==> continuous (f:real -> real) x")
+
+    for {
+      completeness <- reals.axiom("COMPLETENESS")
+      total <- reals.axiom("LT_TOTAL")
+      leCases <- magnitude.order.fact(Order.LeCases)
+      goal <- proposition(Goal)
+      memberStatement <- proposition(Member)
+
+      /* ------------------------------------------------ inhabited by `a`, bounded by `b` */
+
+      set <- Parser.term(theory, notation, s"\\x:real. $Member", Type.fun(Reals, Type.Bool))
+      aMember <- conj(at(lemma("!a:real. a <= a"), "a:real"), conj(ordered, atA))
+      inhabited <- existential(s"?x:real. $Member").flatMap(rules.existsIntro(_, a, aMember))
+      assumedMember <- LogicError.lift(Kernel.assume(memberStatement))
+      memberBelowB <- rules.conjElim2(assumedMember).flatMap(rules.conjElim1)
+      everyBelowB <- rules.disch(memberStatement, memberBelowB).flatMap(rules.gen(x, _))
+      bounded <- existential(s"?c:real. !x:real. $Member ==> x <= c").flatMap(rules.existsIntro(_, b, everyBelowB))
+
+      atSet <- rules.spec(set, completeness)
+      opened <- Conv.betaNormalise(atSet.conclusion).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, atSet)))
+      supremumExists <- conj(Right(inhabited), Right(bounded)).flatMap(rules.mp(opened, _))
+
+      supremum <- assume(
+        s"(!x:real. $Member ==> x <= s:real) /\\ (!c:real. (!x:real. $Member ==> x <= c) ==> s <= c)")
+      upper <- rules.conjElim1(supremum)
+      least <- rules.conjElim2(supremum)
+      sAboveA <- rules.spec(a, upper).flatMap(rules.mp(_, aMember))
+      sBelowB <- rules.spec(b, least).flatMap(rules.mp(_, everyBelowB))
+
+      continuousAtS <- everywhere
+        .flatMap(rules.spec(s, _))
+        .flatMap(mp(_, conj(Right(sAboveA), Right(sBelowB))))
+      epsilonDelta <- unfolded(f, s).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, continuousAtS)))
+
+      /* -------------------------------------------- below the value: `s` was not an upper bound */
+
+      below <- {
+        val under = assume("(f:real -> real) s < y:real")
+        val gap = "b - s"
+        val w = s"min (d / 2) ($gap)"
+        val t = s"s + $w"
+        for {
+          tolerance <- real("y - (f:real -> real) s")
+          tolerancePositive <- at(lemma("!p:real q:real. p < q ==> 0 < q - p"), "(f:real -> real) s", "y:real")
+            .flatMap(mp(_, under))
+          near <- rules.spec(tolerance, epsilonDelta).flatMap(rules.mp(_, tolerancePositive))
+          radius <- assume(
+            "0 < d:real /\\ (!z:real. abs (z - s:real) < d ==> " +
+              "abs ((f:real -> real) z - f s) < y:real - f s)")
+          dPositive <- rules.conjElim1(radius)
+          inside <- rules.conjElim2(radius)
+
+          // At `s = b` the value is `f b`, which is not below `y`.
+          atEnd <- for {
+            same <- assume("s:real = b:real")
+            values <- Conv.apTerm(f, same)
+            absurd <- at(lemma("!p:real q:real r:real. p < q ==> p = r ==> q <= r ==> F"),
+              "(f:real -> real) s", "y:real", "(f:real -> real) b")
+              .flatMap(mp(_, under, Right(values), atB))
+            result <- rules.falsityElim(goal, absurd)
+          } yield result
+
+          // Before it, `s + min (d / 2) (b - s)` is in the set and past `s`.
+          beforeEnd <- for {
+            strictly <- assume("s:real < b:real")
+            gapPositive = at(lemma("!s:real b:real. s < b ==> 0 < b - s"), "s:real", "b:real").flatMap(mp(_, Right(strictly)))
+            wPositive <- minimumPositive(steps, magnitude, gap, Right(dPositive), gapPositive)
+            wHalf <- at(magnitude.fact(Magnitude.MinBelowLeft), "d / 2", gap)
+            wGap <- at(magnitude.fact(Magnitude.MinBelowRight), "d / 2", gap)
+            magnitudeIs <- at(magnitude.fact(Magnitude.OfNonNegative), s"($t) - s")
+              .flatMap(mp(_, at(lemma("!s:real w:real. 0 < w ==> 0 <= (s + w) - s"), "s:real", w).flatMap(mp(_, Right(wPositive)))))
+            close <- at(
+              lemma("!m:real s:real w:real d:real. m = (s + w) - s ==> w <= d / 2 ==> 0 < d ==> m < d"),
+              s"abs (($t) - s)", "s:real", w, "d:real"
+            ).flatMap(mp(_, Right(magnitudeIs), Right(wHalf), Right(dPositive)))
+            tTerm <- real(t)
+            valueNear <- rules.spec(tTerm, inside).flatMap(rules.mp(_, close))
+            above <- at(magnitude.fact(Magnitude.AbsAbove), s"(f:real -> real) ($t) - f s")
+            stillUnder <- at(
+              lemma("!m:real p:real q:real v:real. p - q <= m ==> m < v - q ==> p <= v"),
+              s"abs ((f:real -> real) ($t) - f s)", s"(f:real -> real) ($t)", "(f:real -> real) s", "y:real"
+            ).flatMap(mp(_, Right(above), Right(valueNear)))
+            tAboveA <- at(lemma("!a:real s:real w:real. a <= s ==> 0 < w ==> a <= s + w"), "a:real", "s:real", w)
+              .flatMap(mp(_, Right(sAboveA), Right(wPositive)))
+            tBelowB <- at(lemma("!s:real w:real b:real. w <= b - s ==> s + w <= b"), "s:real", w, "b:real")
+              .flatMap(mp(_, Right(wGap)))
+            tMember <- conj(Right(tAboveA), conj(Right(tBelowB), Right(stillUnder)))
+            passes <- rules.spec(tTerm, upper).flatMap(rules.mp(_, tMember))
+            absurd <- at(lemma("!s:real w:real. 0 < w ==> s + w <= s ==> F"), "s:real", w)
+              .flatMap(mp(_, Right(wPositive), Right(passes)))
+            result <- rules.falsityElim(goal, absurd)
+          } yield result
+
+          split <- rules.specAll(leCases, List(s, b)).flatMap(rules.mp(_, sBelowB))
+          cases <- rules.disjElim(split, beforeEnd, atEnd)
+          result <- rules.existsElim(near, d, cases)
+        } yield result
+      }
+
+      /* ------------------------------------------------------------ at the value: `s` is it */
+
+      equal <- for {
+        hit <- assume("(f:real -> real) s = y:real")
+        inside <- rules.conjIntro(sBelowB, hit)
+        both <- rules.conjIntro(sAboveA, inside)
+        result <- existential(Goal).flatMap(rules.existsIntro(_, s, both))
+      } yield result
+
+      /* --------------------------------------- above the value: `s` was not the least bound */
+
+      above <- {
+        val over = assume("y:real < (f:real -> real) s")
+        val gap = "s - a"
+        val w = s"min (d / 2) ($gap)"
+        val lower = s"s - $w"
+        for {
+          tolerance <- real("(f:real -> real) s - y")
+          tolerancePositive <- at(lemma("!p:real q:real. p < q ==> 0 < q - p"), "y:real", "(f:real -> real) s")
+            .flatMap(mp(_, over))
+          near <- rules.spec(tolerance, epsilonDelta).flatMap(rules.mp(_, tolerancePositive))
+          radius <- assume(
+            "0 < d:real /\\ (!z:real. abs (z - s:real) < d ==> " +
+              "abs ((f:real -> real) z - f s) < f s - y:real)")
+          dPositive <- rules.conjElim1(radius)
+          inside <- rules.conjElim2(radius)
+
+          // At `s = a` the value is `f a`, which is not above `y`.
+          atStart <- for {
+            same <- assume("a:real = s:real")
+            values <- Conv.apTerm(f, same)
+            absurd <- at(lemma("!p:real q:real r:real. p < q ==> r = q ==> r <= p ==> F"),
+              "y:real", "(f:real -> real) s", "(f:real -> real) a")
+              .flatMap(mp(_, over, Right(values), atA))
+            result <- rules.falsityElim(goal, absurd)
+          } yield result
+
+          // After it, `s - min (d / 2) (s - a)` bounds the set already.
+          afterStart <- for {
+            strictly <- assume("a:real < s:real")
+            gapPositive = at(lemma("!a:real s:real. a < s ==> 0 < s - a"), "a:real", "s:real").flatMap(mp(_, Right(strictly)))
+            wPositive <- minimumPositive(steps, magnitude, gap, Right(dPositive), gapPositive)
+            wHalf <- at(magnitude.fact(Magnitude.MinBelowLeft), "d / 2", gap)
+            member <- LogicError.lift(Kernel.assume(memberStatement))
+            memberUnder <- rules.conjElim2(member).flatMap(rules.conjElim2)
+            atMostS <- rules.spec(x, upper).flatMap(rules.mp(_, member))
+            lowerTerm <- real(lower)
+            trichotomy <- rules.specAll(total, List(lowerTerm, x))
+
+            // Past the candidate bound the point is within the radius of `s`, so `f` is over `y`
+            // there, which a member of the set is not.
+            past <- for {
+              beyond <- assume(s"$lower < x:real")
+              magnitudeIs <- at(magnitude.fact(Magnitude.OfNonPositive), "x - s:real")
+                .flatMap(mp(_, at(lemma("!x:real s:real. x <= s ==> x - s <= 0"), "x:real", "s:real").flatMap(mp(_, Right(atMostS)))))
+              close <- at(
+                lemma("!m:real x:real s:real w:real d:real. m = -(x - s) ==> s - w < x ==> w <= d / 2 ==> 0 < d ==> m < d"),
+                "abs (x - s:real)", "x:real", "s:real", w, "d:real"
+              ).flatMap(mp(_, Right(magnitudeIs), Right(beyond), Right(wHalf), Right(dPositive)))
+              valueNear <- rules.spec(x, inside).flatMap(rules.mp(_, close))
+              underAbs <- at(magnitude.fact(Magnitude.AbsAboveNegation), "(f:real -> real) x - f s")
+              valueOver <- at(
+                lemma("!m:real p:real q:real v:real. -(p - q) <= m ==> m < q - v ==> v < p"),
+                "abs ((f:real -> real) x - f s)", "(f:real -> real) x", "(f:real -> real) s", "y:real"
+              ).flatMap(mp(_, Right(underAbs), Right(valueNear)))
+              absurd <- at(lemma("!p:real q:real. p < q ==> q <= p ==> F"), "y:real", "(f:real -> real) x")
+                .flatMap(mp(_, Right(valueOver), Right(memberUnder)))
+              claim <- proposition(s"x:real <= $lower")
+              result <- rules.falsityElim(claim, absurd)
+            } yield result
+            meets <- assume(s"$lower = x:real").flatMap(equation =>
+              at(lemma("!p:real q:real. p = q ==> q <= p"), lower, "x:real").flatMap(mp(_, Right(equation))))
+            short <- assume(s"x:real < $lower").flatMap(strict =>
+              at(lemma("!p:real q:real. p < q ==> p <= q"), "x:real", lower).flatMap(mp(_, Right(strict))))
+            rest <- assume(s"$lower = x:real \\/ x:real < $lower").flatMap(rules.disjElim(_, meets, short))
+            underLower <- rules.disjElim(trichotomy, past, rest)
+            bound <- rules.disch(memberStatement, underLower).flatMap(rules.gen(x, _))
+            passes <- rules.spec(lowerTerm, least).flatMap(rules.mp(_, bound))
+            absurd <- at(lemma("!s:real w:real. 0 < w ==> s <= s - w ==> F"), "s:real", w)
+              .flatMap(mp(_, Right(wPositive), Right(passes)))
+            result <- rules.falsityElim(goal, absurd)
+          } yield result
+
+          split <- rules.specAll(leCases, List(a, s)).flatMap(rules.mp(_, sAboveA))
+          cases <- rules.disjElim(split, afterStart, atStart)
+          result <- rules.existsElim(near, d, cases)
+        } yield result
+      }
+
+      /* --------------------------------------------------- the three cases, and the closing */
+
+      value <- real("(f:real -> real) s")
+      trichotomy <- rules.specAll(total, List(value, y))
+      rest <- assume("(f:real -> real) s = y:real \\/ y:real < (f:real -> real) s")
+        .flatMap(rules.disjElim(_, equal, above))
+      cases <- rules.disjElim(trichotomy, below, rest)
+      eliminated <- rules.existsElim(supremumExists, s, cases)
+
+      result <- List(
+        "y:real <= (f:real -> real) b",
+        "(f:real -> real) a <= y:real",
+        "!x:real. a:real <= x /\\ x <= b:real ==> continuous (f:real -> real) x",
+        "a:real <= b:real"
+      ).foldLeft[Either[LogicError, Kernel.Thm]](Right(eliminated)) { (acc, text) =>
+        for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+      }.flatMap(rules.genAll(_, List(f, a, b, y)))
+    } yield result
+  }
+}

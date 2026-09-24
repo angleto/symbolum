@@ -354,7 +354,17 @@ final class Chain private (
    * link rather than a development beside the chain because `sqrt` is a constant, and a constant
    * declared beside the chain is where nothing above can see it. One constant, no axiom.
    */
-  val root: Root
+  val root: Root,
+
+  /**
+   * Continuity at a point, and the intermediate value theorem.
+   *
+   * The fourth thing `COMPLETENESS` buys, and the one every fact about `ln` waits on: the
+   * logarithm is the inverse of the exponential named by choice, and a choice is silent until
+   * something says the exponential reaches the value. A link and not a development beside the
+   * chain because `continuous` is a constant. One constant, no axiom.
+   */
+  val continuity: Continuity
 ) {
 
   /**
@@ -383,7 +393,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = root
+  val widest: Signature = continuity
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -593,6 +603,10 @@ object Chain {
       // `Ring` are for the one fact about both, that the root of two is not a ratio of naturals.
       root <- Root.construct(
         classical, reals, order, ring, peano, primes, folding.theory, folding.notation)
+
+      // Over the reals, their order and their magnitude, extending the chain's end: the theorem
+      // spends `COMPLETENESS` and the definition reads `abs`, and neither needs anything since.
+      continuity <- Continuity.construct(classical, reals, magnitude, root.theory, root.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -628,6 +642,7 @@ object Chain {
       inclusion,
       listing,
       folding,
-      root
+      root,
+      continuity
     )
 }

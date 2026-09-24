@@ -112,6 +112,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // 2026-09-24. It declares one constant, `sqrt`, and the theorem that spends `COMPLETENESS` a
     // third time to say what it names exists.
     "Root" -> InTheChain,
+    "Continuity" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,

@@ -155,7 +155,9 @@ object Reach {
         // Its consumer the same day, in the change that added it, for the reason above.
         "Folding" -> chain.folding.facts,
         // The square root, 2026-09-24, in the change that added it.
-        "Root" -> chain.root.facts
+        "Root" -> chain.root.facts,
+        // Continuity, 2026-09-24, in the change that added it.
+        "Continuity" -> chain.continuity.facts
       )
     )
 

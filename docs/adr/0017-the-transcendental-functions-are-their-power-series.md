@@ -94,7 +94,9 @@ Pythagorean identity is `Transcendental.SIN_COS_SQUARED` since 2026-09-24. The s
 first read through a square root of minus one, which this repository has no type for: it is the same
 convolution fact, `EXP_CONVOLUTION` at `(x, 0 - x)`, split into its even and its odd places, where
 the cosine's Cauchy product with itself and the sine's cancel one index apart. What is left of the
-list is every fact about `ln`, which still waits on the intermediate value theorem.
+list is every fact about `ln`. The intermediate value theorem it waited on landed the same day, as
+`Continuity.INTERMEDIATE_VALUE`, and what `ln` waits on now is that theorem's hypotheses at the
+exponential: continuity at every point, and a value on each side of every positive number.
 
 **The cost is a reader who sees `exp` in the signature and assumes the analysis is behind it.**
 That is paid in three places and nowhere else: the row in `README.md`, the docstring of
