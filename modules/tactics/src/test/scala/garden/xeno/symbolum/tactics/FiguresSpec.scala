@@ -6,6 +6,9 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import garden.xeno.symbolum.checker.{Check, Replayed}
 import garden.xeno.symbolum.kernel.*
+import garden.xeno.symbolum.NumericConstants
+import garden.xeno.symbolum.logic.{Intuitionistic, Logic, Rewrite}
+import garden.xeno.symbolum.theories.{Chain, Domain, Library}
 
 /**
  * The figures of `docs/evaluation.md`, each one either generated or spelled out of the code.
@@ -42,6 +45,18 @@ class FiguresSpec extends AnyFlatSpec with Matchers {
    * generated.
    */
   private def flowed(relative: String): String = read(relative).replaceAll("\\s+", " ")
+
+  /**
+   * [[flowed]], where the text may be a Scala comment: the leading `*` of every line of a doc
+   * comment is taken out first, so a sentence wrapped inside one reads as it does in a document.
+   */
+  private def flowedComment(relative: String): String =
+    if (relative.endsWith(".scala"))
+      read(relative).replaceAll("(?m)^\\s*\\*(?![*/])", " ").replaceAll("\\s+", " ")
+    else flowed(relative)
+
+  /** How `tools/coverage-delta.sh` writes its default floor, the one place that declares it. */
+  private val CoverageDeltaFloor = "COVERAGE_DELTA_MIN:-([0-9]+)".r
 
   private def force[E, T](result: Either[E, T]): T =
     result.fold(error => fail(s"unexpected refusal: $error"), identity)
@@ -144,9 +159,103 @@ class FiguresSpec extends AnyFlatSpec with Matchers {
     // than a column of it, and the number is spelled from the same walk the generator uses.
     val entry = Replayed.entry(Replayed.Serialised)
     val written = Replayed.nodesOf(entry.theorem)
+    // The records the format did write stand beside it in the same sentence, and were a digit
+    // nothing compared until 2026-09-24: the table above holds the same count, generated, and a
+    // reader comparing the two would have found them agreeing only because nothing had moved.
+    val terms = Proof.write(entry.theorem).linesIterator.count(_.startsWith("t "))
 
-    withClue(s"a writer without sharing would have emitted $written nodes: ") {
-      flowed(Evaluation.Document) should include(s"**$written** term nodes")
+    withClue(s"$terms records stand in for $written nodes a writer without sharing would emit: ") {
+      flowed(Evaluation.Document) should include(
+        s"those $terms records stand in for **$written** term nodes"
+      )
+    }
+  }
+
+  "The replayed counts quoted in prose beside the table" should "be what the checker replays" in {
+    // Two sentences quote a row of the generated replay table by its number, one in this document
+    // and one in the guide, and neither was compared with anything before 2026-09-24. The second
+    // half of the first sentence, `it measured 625 then`, is a photograph of 2026-09-12 and is
+    // held as written, so a change to the count makes the sentence say that it moved.
+    val induction = verdict("induction over the naturals").steps
+    withClue(s"induction over the naturals replays in $induction inferences: ") {
+      flowed(Evaluation.Document) should include(s"it measures $induction and it measured 625 then")
+    }
+
+    val quotient = verdict("`(x * y) / y = x`").steps
+    withClue(s"`(x * y) / y = x` replays in $quotient inferences: ") {
+      flowed("docs/proving.md") should include(s"it cost **$quotient inferences**")
+    }
+  }
+
+  "A constant the prose restates" should "be spelled from its declaration wherever it is" in {
+    // Each of these is a present-tense sentence about a value the code declares, in a document or a
+    // docstring away from the declaration, and until 2026-09-24 each was a digit compared with
+    // nothing. The ones in decision records are the record's decision rather than a copy of it:
+    // `docs/adr/0031` decided that the fuel stays where it is, and a change to the constant is a
+    // change to that decision, which this makes a reader of the red build find.
+    val fuel = Intuitionistic.Fuel
+    val instances = Domain.Instances
+    val floor = CoverageDeltaFloor.findFirstMatchIn(read("tools/coverage-delta.sh")) match {
+      case Some(found) => found.group(1).toInt
+      case None => fail("tools/coverage-delta.sh no longer names its floor as COVERAGE_DELTA_MIN:-N")
+    }
+
+    val sentences = Vector(
+      "docs/adr/0023-the-propositional-address-is-served-by-the-calculus.md" ->
+        s"`Intuitionistic.Fuel` is $fuel and is a net",
+      "docs/adr/0026-an-exhausted-free-route-is-reported-not-hidden.md" ->
+        s"the deepest needs **7** of the $fuel",
+      "docs/adr/0026-an-exhausted-free-route-is-reported-not-hidden.md" ->
+        s"bounded by `Domain.Instances`, which is $instances.",
+      "docs/adr/0026-an-exhausted-free-route-is-reported-not-hidden.md" ->
+        s"the quantity `Domain.Instances` bounds at $instances:",
+      "docs/adr/0031-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md" ->
+        s"the answer is that it stays at $fuel**",
+      "docs/adr/0031-a-price-a-bound-chose-is-not-a-price-the-claim-asked-for.md" ->
+        s"$fuel read forwards is the promise that a goal of at most $fuel nodes is answered",
+      "docs/adr/0035-a-change-is-judged-by-what-it-covers.md" ->
+        s"**The floor is $floor%, and the number",
+      "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Domain.scala" ->
+        s"the deepest goal needs 7 of the $fuel,",
+      "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Rewrite.scala" ->
+        s"`DefaultLimit` is ${Rewrite.DefaultLimit}, which is even;",
+      "SIMPLIFICATION_CONFIG_GUIDE.md" ->
+        s"`MAX_ITERATIONS` is ${NumericConstants.MAX_ITERATIONS}, in"
+    )
+
+    sentences.foreach { case (path, sentence) =>
+      withClue(s"$path should say `$sentence`: ") {
+        flowedComment(path) should include(sentence)
+      }
+    }
+  }
+
+  "The rewriting limit" should "be even, which is what its docstring argues from" in {
+    // The argument is about parity rather than about two hundred, so the parity is asserted as well
+    // as the sentence: an odd limit with the docstring edited to match would leave the sentence
+    // spelled right and the argument false. A test of its own because a red assertion ends its
+    // test, and in the one above this would never run whenever the sentence had moved first.
+    Rewrite.DefaultLimit % 2 shouldBe 0
+  }
+
+  "The binder census in CLAUDE.md" should "be the library's, counted" in {
+    // The sentence that tells a session why a lemma is specialised by instance and not by position
+    // rests on how many lemmas have two leading binders of one type. It was rewritten by hand when
+    // the library grew and was right on 2026-09-24; it is spelled from the library now, so the next
+    // lemma that lands moves it or turns this red.
+    val library = Library.of(Chain.standard)
+    val prefixes = library.entries.map { entry =>
+      Logic.stripForall(entry.theorem.conclusion).fold(_ => Vector.empty, _._1)
+    }
+    val several = prefixes.filter(_.size >= 2)
+    val alike = several.filter(prefix => prefix.map(_.ty).distinct.size < prefix.size)
+
+    val counts = s"${library.entries.size} lemmas, ${several.size} with two binders, ${alike.size} alike"
+    withClue(s"$counts: ") {
+      flowed("CLAUDE.md") should include(
+        s"of the library's ${library.entries.size} lemmas, ${several.size} have two or more leading " +
+          s"quantifiers and **${alike.size} of those have two that share a type**"
+      )
     }
   }
 

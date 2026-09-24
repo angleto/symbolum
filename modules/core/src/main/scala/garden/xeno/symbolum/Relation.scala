@@ -53,9 +53,12 @@ object Relation {
    * The measurement, over the cases in `RelationSpec`. A relation among `n` values with largest
    * coefficient `M` is an accident once `n log10(M)` reaches the digits the values carry, so what
    * is left over, `digits - n log10(M)`, is what the relation is confirmed by. The negative control
-   * of five unrelated constants scores 1 or less at every precision from sixteen digits to a
-   * hundred and twenty, while it returns coefficients that grow from three figures to twenty-four.
-   * The BBP relation scores 13 at sixteen digits and 197 at two hundred.
+   * of five unrelated constants scores at most 4 at sixteen, sixty and a hundred and twenty digits,
+   * while it returns coefficients that grow from three figures to twenty-four; the BBP relation
+   * scores 196 at two hundred digits, and the formula above gives it 12 at sixteen. Those are the
+   * readings of 2026-09-24. Before 2026-09-14 this said 1 or less for the control and 13 and 197
+   * for BBP, and nothing compared them: what `RelationSpec` asserts is which side of ten each case
+   * falls on, which is the claim, and the figures are what it prints.
    *
    * Ten is above everything the control produced and below everything a real relation produced,
    * with a wide gap on both sides.

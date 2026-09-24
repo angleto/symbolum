@@ -1653,8 +1653,9 @@ object Linarith {
    * and the first version of it asserted the opposite, on the argument that the smaller number is
    * reached first.
    *
-   * Reached by one statement of miniF2F, `imo_1964_p2`, at 27 against 24, and by six positivity
-   * hypotheses with a product of three in the conclusion — which is provable, and refused here.
+   * Reached by one statement of miniF2F, `imo_1964_p2`, at 27 against 24 when this was measured,
+   * before 2026-09-14, and by six positivity hypotheses with a product of three in the conclusion —
+   * which is provable, and refused here.
    */
   val Cubes: Int = 24
 

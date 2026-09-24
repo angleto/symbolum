@@ -59,8 +59,8 @@ import garden.xeno.symbolum.theories.*
  * The alternative was to rewrite the goal into the ring's normal form and reduce there, which needs
  * the normal form to expose `x * x` as a subterm; it is not obliged to, and the cofactor identity
  * needs nothing of the normaliser but the decision it already makes. The largest case here, the
- * degree-eight polynomial over three roots, costs 111048 inferences end to end, which `AlgebraicSpec`
- * reports rather than asserts.
+ * degree-eight polynomial over three roots, cost 111078 inferences end to end on 2026-09-24, which
+ * `AlgebraicSpec` reports rather than asserts.
  *
  * == What the theorem says, and the three things it does not ==
  *

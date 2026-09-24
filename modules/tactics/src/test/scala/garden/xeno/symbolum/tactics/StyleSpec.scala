@@ -242,9 +242,9 @@ class StyleSpec extends AnyFlatSpec with Matchers {
         "not by identity, which is the opposite choice from the theorems above it and is the " +
         "right one: two equal types are one type and the record is meant to name it once"),
     "Conv.scala" ->
-      ("the reflexivity cache, bounded at 8192 against a measured 4287 distinct atoms in the " +
-        "standard chain's 112 lemmas, read through `Option` at the boundary because the map is a " +
-        "Java one and both of its misses are a `null`"),
+      ("the reflexivity cache, bounded at `Conv.Atoms` for the reason its docstring measures, " +
+        "read through `Option` at the boundary because the map is a Java one and both of its " +
+        "misses are a `null`"),
     "Arbitrary.scala" ->
       ("pi and the two logarithms memoised per precision, because every reduction wants them and " +
         "a screening run asks a few thousand times; the alternative is a few thousand Machin series"),

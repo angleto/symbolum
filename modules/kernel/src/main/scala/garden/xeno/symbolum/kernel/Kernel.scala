@@ -49,7 +49,8 @@ package garden.xeno.symbolum.kernel
  * lineage on every theorem would, which Isabelle checks at every binary rule, and one global theory
  * makes it unnecessary, which is why HOL Light has neither. `docs/adr/0008` measured the first and
  * rejected it on cost: [[refl]], [[assume]] and [[beta]] are the three rules that admit a term from
- * outside, about 240 call sites between them, and [[refl]] would stop being total.
+ * outside, about 240 call sites between them when that record counted them and several times that
+ * now, and [[refl]] would stop being total.
  *
  * One thing outside the kernel reduces the exposure without closing it: a development built **over**
  * another rather than beside it has one chain and one `c`, which is why `Real.construct` and

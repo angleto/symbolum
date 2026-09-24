@@ -143,6 +143,18 @@ class RingCostSpec extends AnyFlatSpec with Matchers {
     // numeral procedure takes milliseconds.
     size(expandedForm) shouldBe 4 * 144 - 3
 
+    // Two documents quote the node count, and until 2026-09-24 neither was compared with this. The
+    // count is spelled from the form rather than from the formula above, so the two documents
+    // follow the measurement even where the formula is what moved.
+    val nodes = size(expandedForm)
+    def flowed(path: String): String =
+      new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)), "UTF-8")
+        .replaceAll("\\s+", " ")
+    withClue(s"12 * 12 expands to $nodes nodes: ") {
+      flowed("docs/evaluation.md") should include(s"| `12 * 12` | $nodes nodes |")
+      flowed("docs/proving.md") should include(s"`12 * 12` reached $nodes nodes")
+    }
+
     // And 144 as the numeral 144, which is eight binary digits: the collecting form reaches the
     // same answer the numeral procedure reaches, because it is the numeral procedure that computes
     // it. This is the one goal in the repository where the two forms differ by a factor of a

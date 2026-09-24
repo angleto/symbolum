@@ -46,6 +46,8 @@ import garden.xeno.symbolum.logic.*
  * `InfinitySpec` writes the derivation out — the weak form **assumed** rather than asserted, so the
  * trusted base is untouched and what comes back carries the weak form on its left — and it is
  * **1957 inferences, reaching one axiom**, which is choice and which this development already has.
+ * It read 1648 on 2026-09-24, the rules under it having got cheaper; the one axiom is what
+ * `InfinitySpec` asserts and the count is what it prints.
  *
  * That number settles the shape of the argument. It is not a cost paid per development, because a
  * derived strong form would be a fact in this file like any other and derived once. So the reason

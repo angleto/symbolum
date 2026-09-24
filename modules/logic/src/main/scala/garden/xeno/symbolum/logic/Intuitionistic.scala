@@ -614,9 +614,10 @@ object Intuitionistic {
    *
    * A 127-link chain is 511 nodes, so the family that saturates the net is twice the size the
    * criterion above admits: the criterion is the conservative reading and the edge is the generous
-   * one. Nothing this repository holds is near either. Of the library's 505 statements 184 take
-   * this address and the deepest uses 9, the corpora cannot take the address at all, and over the
-   * enumerated population of at most six nodes nothing is cut short.
+   * one. Nothing this repository holds is near either. When `docs/adr/0023` counted the library on
+   * 2026-09-18, 184 of its 505 statements took this address and the deepest used 9; the corpora
+   * cannot take the address at all, and over the enumerated population of at most six nodes nothing
+   * is cut short.
    *
    * **So it stays at 256, and that is a decision rather than an inheritance.** Raising it moves the
    * edge without changing its nature and would want a criterion for which population must fit;

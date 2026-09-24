@@ -554,14 +554,14 @@ final class Prove private (
    * rejects is the three-step insertion this came from: gate, then calculus, then classical, which
    * runs one search twice.
    *
-   * **What it buys, measured on two populations that answer different questions.** Over the
-   * library of `Chain.standard`: of 505 statements 184 take this address and **two** carry a
-   * negation, both of them `Classical`'s own, the excluded middle and double negation, which are
-   * classical by construction and refused here. Over the Mathlib ring corpus and the statable slice
-   * of miniF2F, **none** takes this address at all. So nothing this repository already proves or
-   * measures changes price, and that is a fact about those populations rather than about the
-   * change: they are arithmetic, and a goal reaches this address with a negation in it only where
-   * every atom is a bare proposition.
+   * **What it buys, measured on two populations that answer different questions**, on 2026-09-18
+   * when the routing moved. Over the library of `Chain.standard`, then 505 statements, 184 took
+   * this address and **two** carried a negation, both of them `Classical`'s own, the excluded
+   * middle and double negation, which are classical by construction and refused here. Over the
+   * Mathlib ring corpus and the statable slice of miniF2F, **none** takes this address at all. So
+   * nothing this repository already proves or measures changes price, and that is a fact about
+   * those populations rather than about the change: they are arithmetic, and a goal reaches this
+   * address with a negation in it only where every atom is a bare proposition.
    *
    * The population the change is actually about is the propositional formulas themselves, and over
    * every one of at most six nodes on two atoms — 1116 of them, 1114 at this address — 152 carry a

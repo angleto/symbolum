@@ -1459,7 +1459,7 @@ landed on 2026-09-11 and it is the one place where the proposal is arithmetic on
 check is a theorem: it computes a finite sum's first ten values, fits the polynomial through them by
 finite differences, states that they agree at every `n`, and puts that to `Induct`. Faulhaber's
 first four come back certified without anybody having told it the answer — `Sum (\i. i^3)` is a
-quartic found from the values 0, 0, 1, 9, 36, 100 and proved in 37859 inferences.
+quartic found from the values 0, 0, 1, 9, 36, 100 and proved in 29456 inferences.
 
 That is **not** the same activity as pointing a generator at a decidable region, and the difference
 is the reason this one was built. The fragment it works in has no decision procedure: `Induct`

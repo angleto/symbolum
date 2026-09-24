@@ -64,11 +64,12 @@ final case class Derivation(steps: Vector[Step], empty: Int) {
   /**
    * The clause each step concludes, or why this is not a refutation of that problem.
    *
-   * **This is the first of the two checks and it is the cheap one.** It works over sets of `Int` and
-   * costs microseconds; the second is the replay through the kernel's rules, which costs 92
-   * primitive inferences per step. A derivation that fails here would fail there too, forty thousand
-   * times more slowly and with a message about terms rather than about numbers, so this runs first
-   * and the other never sees a derivation that did not pass it.
+   * **This is the first of the two checks and it is the cheap one.** It works over sets of `Int`
+   * and costs microseconds; the second is the replay through the kernel's rules, which cost 92
+   * primitive inferences per step when `Propositional` measured it on 2026-09-15. A derivation that
+   * fails here would fail there too, forty thousand times more slowly and with a message about
+   * terms rather than about numbers, so this runs first and the other never sees a derivation that
+   * did not pass it.
    *
    * It is not a formality. The solver is untrusted and a defect in its conflict analysis produces
    * exactly this: a step whose antecedents do not resolve to what the analysis thought they did.

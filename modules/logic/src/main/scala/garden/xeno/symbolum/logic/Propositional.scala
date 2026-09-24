@@ -351,7 +351,8 @@ final class Propositional private (
    * The refutation, re-derived through the rules, and then the one classical step.
    *
    * Every step is built from the two before it and nothing is searched for again, so this is linear
-   * in the derivation and the constant is the 92 inferences the class comment measures.
+   * in the derivation and the constant is the 92 inferences the class comment measured on
+   * 2026-09-15.
    */
   private def replay(
     encoding: Encoding,

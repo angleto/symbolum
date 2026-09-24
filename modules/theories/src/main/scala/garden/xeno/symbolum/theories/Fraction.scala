@@ -9,7 +9,7 @@ import garden.xeno.symbolum.logic.*
  *
  * **The file is `Fraction` and the type is `rat`, and the name is not a preference.** `Rational`
  * is taken, by the exact arithmetic of `modules/core`, which is a Scala value on the untrusted
- * side and has 217 occurrences across the tree; renaming that to free the word here would be a
+ * side and is used across the tree; renaming that to free the word here would be a
  * mechanical change through five modules for a reader's convenience. What the word names in this
  * file is the **carrier**: a fraction is a numerator and a denominator, and `rat` is the quotient
  * of those.

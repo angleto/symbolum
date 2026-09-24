@@ -33,8 +33,8 @@ built around making it visible: a `Kernel.Thm` carries its hypotheses, and a der
 quietly left one standing is a derivation that proved something weaker than it looks. Most specs
 here assert `hypotheses shouldBe empty` for exactly that reason.
 
-`|-` appears 39 times in `proving.md` and 10 times in `README.md`, and until this page existed
-neither said what it was.
+`|-` is used throughout `proving.md` and in `README.md`, and until this page existed neither said
+what it was.
 
 ## The symbols
 

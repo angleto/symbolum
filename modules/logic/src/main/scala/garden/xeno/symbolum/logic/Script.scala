@@ -15,7 +15,7 @@ import garden.xeno.symbolum.kernel.*
  *
  * This is where that shape is kept. One [[Step]] per line of a derivation, holding the rule that
  * was applied, what it was applied to, and what came out, so a derivation of ABS_TRIANGLE is
- * eighteen lines rather than 7559 inferences.
+ * eighteen lines rather than 7565 inferences, as the kernel counted them on 2026-09-24.
  *
  * == It is not part of any proof, and that is the whole of its safety ==
  *

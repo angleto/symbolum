@@ -38,9 +38,9 @@ import garden.xeno.symbolum.logic.*
  * a statement about resolution quantifies over derivations, and a derivation is a finite object the
  * ambient logic can hold directly.
  *
- * So there is no coding, no beta function, no division, and no new primitive. `Provability` is
- * 1507 lines and `Language` 5035; this is a fraction of either, and the difference is the decision
- * rather than the effort.
+ * So there is no coding, no beta function, no division, and no new primitive. `Provability` and
+ * `Language` each run to thousands of lines; this is a fraction of either, and the difference is
+ * the decision rather than the effort.
  *
  * == How a clause and a derivation are written ==
  *

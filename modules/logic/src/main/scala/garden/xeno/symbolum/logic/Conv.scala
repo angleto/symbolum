@@ -80,9 +80,13 @@ object Conv {
   /**
    * How many atoms the reflexivity cache holds.
    *
-   * Measured: the standard chain's 112 lemmas reach 4287 distinct atoms in all. Twice that, so that
-   * a development half as large again as everything here still shares all of its leaves, and a
-   * runaway supply of fresh variables still stops at a bounded table.
+   * Set before 2026-09-14, when this repository's history begins, at twice the 4287 distinct atoms
+   * the standard chain's 112 lemmas then reached, so that a development half as large again as
+   * everything here still shares all of its leaves, and a runaway supply of fresh variables still
+   * stops at a bounded table. Read again on 2026-09-24 through the table itself: building
+   * `Chain.standard`, which then published 622 lemmas, leaves 473 atoms in it. The two are
+   * different counts, the first over every atom the derivations name and the second over the ones
+   * this cache was asked for, and the second is the one this bound is about.
    */
   val Atoms: Int = 8192
 

@@ -1019,6 +1019,15 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val claim = s"under $TrustedBaseLineBound lines"
     architecture should include(claim)
     read("CLAUDE.md") should include(claim)
+
+    // Two decision records quote the bound as it stands rather than as it stood, and were compared
+    // with nothing until 2026-09-24. They are held to it because both argue from it: a bound that
+    // moved would leave each argument resting on a figure the build no longer enforces.
+    def flowed(path: String): String = read(path).replaceAll("\\s+", " ")
+    val model = "docs/adr/0005-a-model-is-untrusted-and-answers-only-at-a-point.md"
+    val origin = "docs/adr/0019-a-declared-constant-still-has-no-origin-and-here-is-what-that-costs.md"
+    flowed(model) should include(s"which is currently $claim")
+    flowed(origin) should include(s"bounds that base at $TrustedBaseLineBound lines")
   }
 
   it should "list the notebook's cells as the code publishes them, so an eighth cannot go unlisted" in {
