@@ -12,9 +12,10 @@ import garden.xeno.symbolum.logic.*
  * series read through [[Limit.Value]], `ln` is the inverse of the exponential named by choice, and
  * `sinh` and `cosh` are built from `exp` for the reason the heading below gives. What that buys
  * immediately is that a claim about them is a **proposition** here, which it was not: `Ask` on
- * `sin x * sin x + cos x * cos x = 1` came back as a parse error about an unknown constant, and it
- * now comes back as a claim the prover cannot settle. Those are different answers and the second is
- * the honest one.
+ * `sin x * sin x + cos x * cos x = 1` came back as a parse error about an unknown constant, which
+ * reads as the asker's mistake. On the day these landed it came back instead as a claim the prover
+ * could not settle, which is the system's limit said honestly; since 2026-09-24 it comes back
+ * proved, by [[Transcendental.Pythagoras]].
  *
  * == What is proved about them today, and what is not ==
  *
