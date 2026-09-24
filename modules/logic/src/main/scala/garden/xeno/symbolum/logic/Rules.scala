@@ -535,8 +535,8 @@ final class Rules(val logic: Logic) {
    * where `SUM_REINDEX` is specialised at a function and at `SUC ZERO` and the bound is left
    * quantified on purpose, so that what comes out can be compared with `SUM_SHIFT`. One is not
    * zero, so the operation stays; one is also not many, so it does not get to be the default. The
-   * count is dynamic and covers what the suite exercises rather than the 261 places `specAll` is
-   * written, and a call on no tested path would not have been seen.
+   * count is dynamic and covers what the suite exercises rather than the 261 places `specAll` was
+   * written that day, and a call on no tested path would not have been seen.
    */
   def specPrefix(theorem: Kernel.Thm, arguments: List[Term]): Either[LogicError, Kernel.Thm] =
     arguments.foldLeft(Right(theorem): Either[LogicError, Kernel.Thm]) { (acc, argument) =>

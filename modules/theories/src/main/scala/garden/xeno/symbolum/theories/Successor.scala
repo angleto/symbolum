@@ -352,7 +352,8 @@ object Successor {
    * The largest written exponent [[Successor.expand]] opens, for a caller that does not choose.
    *
    * **What this line is about is not what a reader expects, and the measurement is why.** The
-   * driver's own cost is nearly flat: spelling a numeral is 4810 inferences at 2 and 6258 at 64,
+   * driver's own cost is nearly flat: spelling a numeral was 4810 inferences at 2 and 6258 at 64
+   * before this limit existed, and 4834 at 2 and 5323 at 32 on 2026-09-24,
    * because almost all of it is the five lemmas the rules rest on and every call shares them. So
    * there is no turn in this file's cost to put a line at.
    *

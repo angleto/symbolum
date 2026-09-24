@@ -1161,9 +1161,9 @@ the question asks now.
 **The naturals are sampled too, since 2026-09-11, and nothing about them is enumerated.** The model
 used to interpret the seven constants the theory of the reals declares and nothing else, so a claim
 naming `Sum`, `Power`, `Prod`, `SUC`, `NUM_ADD`, `NUM_MUL`, `NUM_LE` or `real_of_num` had no point
-that could be evaluated at all and came back `NeverAsked`. Measured over this repository's own
-proposal audit: nineteen of the 116 proposals name one of those, and not one of them carried a
-witness. Sixteen do now.
+that could be evaluated at all and came back `NeverAsked`. Measured on that day over this
+repository's own proposal audit, then 116 proposals: nineteen named one of those and not one of
+them carried a witness, and sixteen did once the naturals were sampled.
 
 ```scala
 Refutation(Evaluate.over(chain.reals, Model.Numbers))
@@ -1177,7 +1177,7 @@ successor that saturates at the top element, `!n. ~(SUC n = n)` comes back false
 refutes a theorem is worse than no model. With a successor undefined at the top, no universal that
 mentions one has a value. So `num` is treated the way `real` already is: not enumerated, sampled,
 and a point that turns up is a genuine natural and therefore a genuine witness. `RefutationSpec`
-puts all 109 lemmas of the standard library to the model and asserts that none of them is refuted.
+puts every lemma of the standard library to the model and asserts that none of them is refuted.
 
 A variable of type `num -> real` is sampled as a **function**, because six of those nineteen
 proposals quantify over a summand rather than over a number and `!f n. 0 <= Sum f n` cannot be

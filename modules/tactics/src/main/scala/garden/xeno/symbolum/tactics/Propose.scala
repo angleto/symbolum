@@ -144,7 +144,7 @@ final class Propose private (val novelty: Novelty, val library: Library, val log
    * here is a function of **one** source lemma, so a proposal made from `L` is a proposal the
    * generator would have made from a library with every other lemma removed. Asking, of each
    * proposal, whether it states some lemma other than the one it was made from is therefore exactly
-   * the leave-one-out question asked of all 233 lemmas at once, rather than of one arbitrary half.
+   * the leave-one-out question asked of every lemma at once, rather than of one arbitrary half.
    * The halved version also depends on where the split falls: `ADD_SYM` and `MUL_SYM` in the same
    * half makes that rediscovery impossible to observe, and no split can avoid every such pair.
    *

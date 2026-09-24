@@ -3,11 +3,11 @@ package garden.xeno.symbolum.theories
 /**
  * The showcase: the results worth reading, each as the page `Essay` renders for it.
  *
- * `docs/lemmas.md` is the **listing** and holds all 430 of them, which is what you search. This is
- * the **showcase**, and the difference is the question each answers: the listing answers "is there
- * already a lemma about this", and a showcase answers "what can this system actually do". A reader
- * who has never opened this repository gets the second question answered here and would drown in
- * the first.
+ * `docs/lemmas.md` is the **listing** and holds every one of them, which is what you search. This
+ * is the **showcase**, and the difference is the question each answers: the listing answers "is
+ * there already a lemma about this", and a showcase answers "what can this system actually do". A
+ * reader who has never opened this repository gets the second question answered here and would
+ * drown in the first.
  *
  * == What decides whether a theorem belongs here ==
  *

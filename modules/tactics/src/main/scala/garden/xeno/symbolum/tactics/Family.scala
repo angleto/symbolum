@@ -16,7 +16,7 @@ import garden.xeno.symbolum.theories.*
  * {{{
  *   Family.standard.of("\\i:num. real_of_num i")
  *   // Found(!n:num. Sum (\i:num. real_of_num i) n = real_of_num n * (real_of_num n - 1) / 2,
- *   //       degree 2, 20976 inferences)
+ *   //       degree 2, 13957 inferences on 2026-09-24)
  * }}}
  *
  * == Why it works at all, which is one lemma ==

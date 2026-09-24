@@ -174,9 +174,10 @@ object Discovery {
    *
    * Every step of an expression rounds, so a true identity does not come back agreeing to every
    * digit. Measured over the twenty-one labelled candidates of `DiscoveryPrecisionSpec`, at a
-   * hundred points each and fifty digits: every true one agrees to **49 or 50** digits at its worst
-   * point, and the only false one the first stage lets through agrees to **9**. There is nothing in
-   * between, and the six false ones the first stage already catches agree to none of them.
+   * hundred points each and fifty digits, and read again on 2026-09-24: every true one agrees to
+   * **49 or 50** digits at its worst point, and the only false one the first stage lets through
+   * agrees to **9**. There is nothing in between, and the six false ones the first stage already
+   * catches agree to none of them.
    *
    * So one would do, and this is four. The margin is for the candidates nobody has written yet: a
    * deeper expression rounds more times, and that corpus is shallow because it was written to

@@ -65,6 +65,21 @@ class FamilySpec extends AnyFlatSpec with Matchers {
       withClue(s"$summand: ") { outcome.degree shouldBe degree }
       outcome.theorem.hypotheses shouldBe empty
       info(s"$summand: degree ${outcome.degree}, ${Derivation.size(outcome.theorem)} inferences")
+
+      // The quartic's cost is quoted in `docs/evaluation.md`, and until 2026-09-24 that digit was
+      // compared with nothing: it said 37859 while this printed 29456. Spelled from the proof now.
+      if (degree == 4) {
+        val cost = Derivation.size(outcome.theorem)
+        val evaluation = new String(
+          java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("docs/evaluation.md")),
+          "UTF-8"
+        ).replaceAll("\\s+", " ")
+        withClue(s"the quartic is $cost inferences: ") {
+          evaluation should include(
+            s"found from the values 0, 0, 1, 9, 36, 100 and proved in $cost inferences"
+          )
+        }
+      }
     }
   }
 

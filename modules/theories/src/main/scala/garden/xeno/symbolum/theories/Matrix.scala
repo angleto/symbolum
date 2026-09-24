@@ -17,15 +17,16 @@ import garden.xeno.symbolum.logic.*
  *
  * `num`, `prod` and `word` are all carved out of a larger type by a predicate, because in each case
  * the larger type holds things that are not what is wanted: an inductive subset inside an infinite
- * type, the one-point functions inside `'a -> 'b -> bool`, the padded encodings inside
- * `prod(num, num -> 'a)`. **A 2x2 matrix has no such predicate.** Every element of
- * `prod(prod(real,real), prod(real,real))` is a 2x2 matrix and every 2x2 matrix is one of them, so
- * a fourth use of `Kernel.defineType` would carve out the whole of the type it was given. What it
- * would buy is a name in the type language and a distinct equality; what it would cost is a
- * bijection to cross in every one of the twenty-four derivations below, and `Word` is the measured
- * example of what that costs: its cheapest fact is 1214 inferences, of which the bijection is most.
- * The trade would be worth making for a type whose equality has to be coarser than its encoding's,
- * which is exactly the argument `Word` makes and exactly the argument that does not apply here.
+ * type, the one-point functions inside `'a -> 'b -> bool`, the padded encodings inside `prod(num,
+ * num -> 'a)`. **A 2x2 matrix has no such predicate.** Every element of `prod(prod(real,real),
+ * prod(real,real))` is a 2x2 matrix and every 2x2 matrix is one of them, so a fourth use of
+ * `Kernel.defineType` would carve out the whole of the type it was given. What it would buy is a
+ * name in the type language and a distinct equality; what it would cost is a bijection to cross in
+ * every one of the twenty-four derivations below, and `Word` is the measured example of what that
+ * costs: its cheapest fact was 1214 inferences before 2026-09-14 and 1452 on 2026-09-24, of which
+ * the bijection is most. The trade would be worth making for a type whose equality has to be
+ * coarser than its encoding's, which is exactly the argument `Word` makes and exactly the argument
+ * that does not apply here.
  *
  * So the matrix type is `prod(prod(real,real), prod(real,real))` spelled out, [[Matrix.Matrices]],
  * and [[Matrix.Constructor]] is a **defined constant** rather than an abstraction function. The

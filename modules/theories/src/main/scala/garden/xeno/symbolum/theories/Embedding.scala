@@ -14,12 +14,13 @@ import garden.xeno.symbolum.logic.*
  * == Why this is a file and not yet a development ==
  *
  * The record says the seventeen "become a development above `Order`", and that is phase 5's work
- * rather than this one's. Splitting the class as well as the file would move 78 call sites from
- * `peano.fact(Peano.EmbedsSum)` to a second development, and every one of them would move **again**
- * when the chain is reordered and this is constructed after `Ring` instead of inside `Peano`. A
- * split done twice is not twice as good, so what is split here is the code, which pays at once: a
- * reader opening `Peano.scala` now meets `num` and nothing else, and a lemma about the reals added
- * to the wrong half is visible in the diff rather than buried in six thousand lines.
+ * rather than this one's. Splitting the class as well as the file would move every call site of the
+ * shape `peano.fact(Peano.EmbedsSum)` to a second development, 78 of them on 2026-09-15, and every
+ * one of them would move **again** when the chain is reordered and this is constructed after `Ring`
+ * instead of inside `Peano`. A split done twice is not twice as good, so what is split here is the
+ * code, which pays at once: a reader opening `Peano.scala` now meets `num` and nothing else, and a
+ * lemma about the reals added to the wrong half is visible in the diff rather than buried in six
+ * thousand lines.
  *
  * What already makes the boundary a fact rather than a convention is not this file. It is that
  * `Peano.arithmetic` builds the seventy-four over a theory in which the type operator `real` is not

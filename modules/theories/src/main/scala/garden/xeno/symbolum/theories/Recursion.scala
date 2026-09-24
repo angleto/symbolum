@@ -44,8 +44,9 @@ import garden.xeno.symbolum.logic.*
  * `NUM_SUM_SUC !x:num -> num. !y:num. NUM_SUM x (SUC y) = ...`.
  *
  * **That those three were the anomaly is measured, and the first version of this paragraph
- * overclaimed it.** Of the 159 published lemmas carrying two or more leading binders that the body
- * all mentions, 19 quantify in an order the printed body does not follow; 15 of the 19 carry a
+ * overclaimed it.** Over the library as it stood before 2026-09-14, when this repository's history
+ * begins: of the 159 published lemmas carrying two or more leading binders that the body all
+ * mentions, 19 quantify in an order the printed body does not follow; 15 of the 19 carry a
  * hypothesis, which mentions whatever it is about before the conclusion applies anything, and is a
  * different question. Four are a bare claim. One of the four is `NUM_DIV_MOD`, whose binders do
  * follow `NUM_DIV x y` and `NUM_MOD x y` and whose body merely writes the product the other way

@@ -15,6 +15,14 @@ decision was made, which is exactly what is needed to judge whether the new cont
 differs. Deleting breaks every citation, and a citation resolving to nothing is worse than an
 outdated one.
 
+**A figure in a record is a photograph of the day it was decided**, for the same reason: it is what
+was measured when the choice was made, and it stays true of that day when the code moves on. So
+the counts, sizes and timings below are not kept current and a reader should not expect them to
+be. The exception is a figure something live still rests on, which is usually the constant the
+record decided: those are spelled from the code by a test, `FiguresSpec` and `DocumentationSpec`
+hold the ones that are, and a record whose decided value moved says so by going red rather than by
+being edited.
+
 Several of these reject an option that is genuinely attractive. That is the function of the
 directory: a decision with no written alternative gets re-litigated by the next person who finds
 the rejected option attractive, and they will.

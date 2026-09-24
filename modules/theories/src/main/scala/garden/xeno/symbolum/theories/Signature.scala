@@ -56,7 +56,7 @@ trait Signature {
    * The plain form wherever the plain form suffices, and the annotated one where it does not. A
    * free variable prints as a bare name and a bare name carries no type, so `mk_prod (dest_prod a)
    * = a` says nowhere what `a` is and cannot be read back at all; annotating **every** statement
-   * instead would put a type on every occurrence of every free name in all 186 lines of
+   * instead would put a type on every occurrence of every free name in every statement of
    * `docs/lemmas.md` to serve the two that need it, and the document is read by people.
    *
    * **Which form is chosen is decided by trying, not by predicting.** That is what makes this worth

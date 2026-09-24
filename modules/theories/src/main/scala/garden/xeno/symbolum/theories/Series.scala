@@ -613,16 +613,16 @@ object Series {
   /**
    * `|- !a b n. Power (a * b) n = Power a n * Power b n`, the power of a product of BASES.
    *
-   * Every other power law here names what happens in the EXPONENT: [[PowerOfSum]] is
-   * `Power b (NUM_ADD m n)` and [[PowerOfProduct]] is `Power b (NUM_MUL m n)`. This one is the
-   * first about the base, which is why it is not called `POWER_PRODUCT` or `POWER_OF_PRODUCT`:
-   * the pattern `POWER_<operation>` is taken, so a name of that shape for a law about the base
-   * reads as a third law of exponents, and a reader who has seen the two lines above it in
-   * `docs/lemmas.md` parses it that way. `MUL` is also the corpus's spelling of multiplication,
-   * 33 fact names to `PRODUCT`'s 0 out of 279, and the one-spelling-per-concept rule in
-   * `docs/naming.md` says a new lemma may not add a fourth. The adjective follows [[Linear]]:
-   * a name for the homomorphism property of the OPERATOR rather than for the operation inside
-   * its argument, which is what `SUM_LINEAR` is to `Sum`.
+   * Every other power law here names what happens in the EXPONENT: [[PowerOfSum]] is `Power b
+   * (NUM_ADD m n)` and [[PowerOfProduct]] is `Power b (NUM_MUL m n)`. This one is the first about
+   * the base, which is why it is not called `POWER_PRODUCT` or `POWER_OF_PRODUCT`: the pattern
+   * `POWER_<operation>` is taken, so a name of that shape for a law about the base reads as a third
+   * law of exponents, and a reader who has seen the two lines above it in `docs/lemmas.md` parses
+   * it that way. `MUL` is also the corpus's spelling of multiplication, 33 fact names to
+   * `PRODUCT`'s 0 out of 279 when this was named, and the one-spelling-per-concept rule in
+   * `docs/naming.md` says a new lemma may not add a fourth. The adjective follows [[Linear]]: a
+   * name for the homomorphism property of the OPERATOR rather than for the operation inside its
+   * argument, which is what `SUM_LINEAR` is to `Sum`.
    *
    * **What asked for it, and it is a consumer rather than symmetry.** `Ring` normalises to a sum
    * of monomials over ATOMS, and an atom is a term the procedure has decided not to look inside.
@@ -689,9 +689,9 @@ object Series {
    * for it: `POWER_ADD` to split the doubled exponent, [[Multiplicative]] BACKWARDS to collect
    * `(0-x)(0-x)`, a ring step to `x*x`, then the two forwards again. It does not close, and the
    * reason is mechanical: a rewrite rule fires in one direction, and that route needs
-   * [[Multiplicative]] in the other. Put to the kernel, the rule set reduces both sides to
-   * `Power (0-x) n * Power (0-x) n` and `Power x n * Power x n`, which `Ring` sees as unrelated
-   * atoms, and refuses. The plain induction closes in 9581 inferences and wants neither
+   * [[Multiplicative]] in the other. Put to the kernel, the rule set reduces both sides to `Power
+   * (0-x) n * Power (0-x) n` and `Power x n * Power x n`, which `Ring` sees as unrelated atoms, and
+   * refuses. The plain induction closes, in 9611 inferences on 2026-09-24, and wants neither
    * [[PowerOfSum]] nor [[Multiplicative]]: the power's two recurrences and `NUM_ADD`'s three.
    *
    * `NUM_SUC_ADD` is the third of those and is the one that is easy to leave out. Without it the

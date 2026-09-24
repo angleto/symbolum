@@ -30,10 +30,10 @@ import garden.xeno.symbolum.logic.*
  * being looked at. A cost that does not grow with the operator is not a cost about the operator.
  *
  * **What it does not do is make the repository shorter today, and saying otherwise would be the
- * easy claim to make.** This file is 175 code lines against the 108 it retires, so the first two
- * callers together do not pay for it. What it changes is the shape of the cost: a caller's
- * monotonicity goes from about 54 lines to one, so the third rule set is where the total crosses,
- * and there is one of those open already.
+ * easy claim to make.** This file was 175 code lines against the 108 it retired when it landed on
+ * 2026-09-16, so the first two callers together do not pay for it. What it changes is the shape of
+ * the cost: a caller's monotonicity goes from about 54 lines to one, so the third rule set is where
+ * the total crosses, and there is one of those open already.
  *
  * == It reads a shape; it does not search ==
  *

@@ -82,7 +82,8 @@ final class Digits private (
    * `Successor` does not: `Successor.spell` opens a numeral into successors, so that a recurrence
    * stated at `SUC n` has something to hook, and this closes one successor back into a numeral, so
    * that the arithmetic above carries on in digits. Neither is the other reversed and the cost says
-   * so: spelling five is 4887 inferences and produces five successors, where this is a sum.
+   * so: spelling five was 4887 inferences on 2026-09-24 and produces five successors, where this is
+   * a sum.
    */
   def successor(value: BigInt): Either[LogicError, Kernel.Thm] = {
     val rules = peano.logic.rules

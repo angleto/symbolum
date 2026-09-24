@@ -1420,7 +1420,7 @@ object Peano {
    *
    * It is not what the chain builds. The chain still puts this development over the reals, because
    * nothing below them needs it there yet and moving it is churn until the construction wants it.
-   * What this is for is the assertion `PeanoSpec` makes with it: that the 74 facts are **buildable**
+   * What this is for is the assertion `PeanoSpec` makes with it: that the facts are **buildable**
    * below the reals rather than merely free of them, which is the difference between a measurement
    * of the derivations as they stand and a fact about what they depend on.
    *
@@ -1631,7 +1631,7 @@ object Peano {
    * Every stage that names no real, over whatever theory the caller has.
    *
    * `docs/adr/0016`'s phase 0 in one signature. These seven stages were measured on 2026-09-15:
-   * not one node of any of the 74 facts they produce mentions a real, in a conclusion or in a
+   * not one node of any of the 74 facts they produced mentions a real, in a conclusion or in a
    * hypothesis. So they take a `base` and a `notation` and ask for nothing else, and in particular
    * for **no `Ring`**. The driver is [[Induct.overNaturals]], whose closer refuses by name, because
    * `Ring.prove` refuses a goal of type `num` by type and so never closed one of these.

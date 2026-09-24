@@ -26,16 +26,19 @@ import garden.xeno.symbolum.logic.*
  *
  * That is why the cost is what it is, and the measurement is worth reading because it is not where
  * a reader would guess. `BoundedSpec` walks bounds 1, 2, 4 and 8 over an instance that costs
- * nothing, and reads 9129, 9302, 9648 and 10340 inferences: **173 per instance, and linear**, on a
- * base of about 8956 which is the two order lemmas it rests on, and which every claim it proves
- * shares. The driver is therefore not what a bounded universal costs here.
+ * nothing, and read 6625, 6771, 7063 and 7647 inferences on 2026-09-24: **146 per instance, and
+ * linear**, on a base of about 6480 which is the two order lemmas it rests on, and which every
+ * claim it proves shares. The driver is therefore not what a bounded universal costs here. What the
+ * spec asserts is the linearity; the four figures are its printout of that day and move whenever a
+ * lemma under them does, which is why they carry a date. They read 9129 to 10340 before 2026-09-14
+ * and nothing noticed the change.
  *
  * What it costs is the caller's, and that grows faster than the bound for a reason that is the
- * mathematics rather than this file. The same claim closed by LINARITH over the embedding,
- * `!i. i < k ==> real_of_num i < k`, reads 14216 inferences at `k = 1`, 20409 at 8, 82783 at 32 and
- * 340388 at 64: the instances get **larger** as the bound does, `real_of_num 63 < 64` being a
- * bigger problem than `real_of_num 0 < 1`. A reader wanting the arithmetic decided cheaply instead
- * wants the thing `docs/adr/0010` refused.
+ * mathematics rather than this file. The same claim closed by LINARITH over the embedding, `!i. i <
+ * k ==> real_of_num i < k`, read 14216 inferences at `k = 1`, 20409 at 8, 82783 at 32 and 340388 at
+ * 64 when [[Bounded.Instances]] was chosen, before 2026-09-14: the instances get **larger** as the
+ * bound does, `real_of_num 63 < 64` being a bigger problem than `real_of_num 0 < 1`. A reader
+ * wanting the arithmetic decided cheaply instead wants the thing `docs/adr/0010` refused.
  *
  * == The bound is read off the statement rather than passed beside it ==
  *
@@ -290,12 +293,13 @@ object Bounded {
    * The most instances a bounded universal is enumerated over before this refuses.
    *
    * The number says what the procedure is for rather than tuning it, and it is **not** set by this
-   * driver's own cost, which is 173 inferences per instance and would not be worth a limit. It is
-   * set by what a caller pays, which is the thing a bound multiplies.
+   * driver's own cost, which is 146 inferences per instance on 2026-09-24 and would not be worth a
+   * limit. It is set by what a caller pays, which is the thing a bound multiplies.
    *
    * Measured on the consumer `!i. i < k ==> real_of_num i < k`, closed by LINARITH after the
-   * embedding is rewritten, over one process on a machine at load 135 (the wall clock here is
-   * worthless as an absolute and the ratios are not):
+   * embedding is rewritten, over one process on a machine at load 135, before 2026-09-14 (the wall
+   * clock here is worthless as an absolute and the ratios are not, and the inference counts have
+   * moved since, as the next paragraph shows):
    *
    * {{{
    *   k     8      16      32      64
@@ -312,7 +316,8 @@ object Bounded {
    * nothing. `BoundedSpec` builds the same driver at 4 and at 32 and asks the same claim:
    *
    *  - what the line cuts: at 4, the eight-instance consumer comes back refused, naming the bound
-   *    and the limit, and it is provable. At 32 it is proved, in 20409 inferences.
+   *    and the limit, and it is provable. At 32 it is proved, in 15486 inferences on 2026-09-24,
+   *    where the table read 20409.
    *  - what it buys: that a bound of ten thousand, which is a term a translator produces without
    *    anybody intending it, is a refusal naming the limit rather than a walk nobody watches
    *    finish. At the rate above that claim is on the order of a day.

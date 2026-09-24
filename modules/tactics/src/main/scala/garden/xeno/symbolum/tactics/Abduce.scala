@@ -40,11 +40,12 @@ import garden.xeno.symbolum.theories.{Farkas, Linarith, LinearFact, LinearForm, 
  *
  * **That check answers a good deal less often than this paragraph used to imply**, and until
  * 2026-09-11 the difference was invisible because the code read a decline as a pass.
- * `Refutation.satisfying` has five answers here and only two of them decide anything: a point
- * where the premises hold, or a proof that no point does. The other three say the question was not
- * settled, and on miniF2F they are the majority — 275 of the 422 candidates that close a goal. A
- * candidate under one of those is [[Abduce.Gap.unchecked]], which is neither an answer nor a
- * warning but the absence of both, and the field's own docstring carries the measurement.
+ * `Refutation.satisfying` has five answers here and only two of them decide anything: a point where
+ * the premises hold, or a proof that no point does. The other three say the question was not
+ * settled, and on miniF2F they were the majority on 2026-09-11 — 275 of the 422 candidates that
+ * closed a goal. A candidate under one of those is [[Abduce.Gap.unchecked]], which is neither an
+ * answer nor a warning but the absence of both, and the field's own docstring carries the
+ * measurement.
  *
  * The four are kept apart for the reason `Refutation` keeps seven outcomes apart.
  *

@@ -367,9 +367,10 @@ comment. Six gates decided that separately until 2026-09-16, in two shapes that 
 inputs: a trailing `// note` after a call, a doc comment closed in the middle of a line, and a `//`
 inside a string literal, where the text-cleaning shape deleted real code. What makes it a module
 rather than a file in one of the three test scopes is the measurement: sharing along the edges that
-already exist means `theories % "test->test"` on `tactics`, which puts 75 test files and 21 097
-lines into the compile graph of every `tactics/testOnly` to remove two copies of one function. The
-main scopes are untouched, so nothing published can see it and the trust boundary is unchanged.
+already exist means `theories % "test->test"` on `tactics`, which on 2026-09-16 put 75 test files
+and 21 097 lines into the compile graph of every `tactics/testOnly` to remove two copies of one
+function. The main scopes are untouched, so nothing published can see it and the trust boundary is
+unchanged.
 
 `kernel` declaring no dependency is what makes the trusted base something you can point at rather
 than describe, and a test in `modules/kernel/src/test` asserts it cannot see the algebra side.
@@ -1754,9 +1755,10 @@ quotiented and named the integers as the consumer that did not need one; the car
 `liftPredicate` would in fact lift the bridge unchanged, since nothing in it reads the result type.
 That held. What was missing is a different thing: a lift defines its constant into the quotient's
 **own** theory, and the integers define five more constants after their three lifts, so
-`Integer.quotient.theory` carries 140 constants where `Integer.theory` carries 145 and
-`real_of_int INT_ZERO = 0` could not be stated there at all. `Quotient.over` re-bases a quotient
-onto a theory extending it, checked by `Logic.over`, and that is the whole of the addition.
+`Integer.quotient.theory` carried 140 constants where `Integer.theory` carried 145 on the day the
+bridge landed, and `real_of_int INT_ZERO = 0` could not be stated there at all. `Quotient.over`
+re-bases a quotient onto a theory extending it, checked by `Logic.over`, and that is the whole of
+the addition.
 
 **And it is where the axiom accounting divides.** `IntegerSpec` asserts that no fact of that
 development reaches any of the sixteen; every fact of this one does, because every one of them is
