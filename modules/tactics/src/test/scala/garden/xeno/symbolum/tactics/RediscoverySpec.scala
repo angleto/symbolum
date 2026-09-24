@@ -428,7 +428,7 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
-  it should "prove every one, and the price splits them in two" in {
+  it should "prove every one, with the price separating them" in {
     // Every one comes back `Proved`, which is the least surprising fact here: they are lemmas this
     // library holds, so a failure would be a finding about the tactic surface and not about the
     // generator. It is asserted because that is exactly why it is worth knowing.

@@ -183,7 +183,7 @@ class QuotientSpec extends AnyFlatSpec with Matchers {
    *
    * The floor against vacuity is the count: six facts, not an empty map silently agreeing.
    */
-  it should "rest on the chain's three foundational axioms and no others, in every fact it hands out" in {
+  it should "rest on choice, eta and infinity and no others, in every fact it hands out" in {
     val names = Vector(
       Quotient.AbstractionOfRepresentation,
       Quotient.Characterisation,

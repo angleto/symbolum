@@ -229,7 +229,7 @@ class AlgebraicSpec extends AnyFlatSpec with Matchers {
     algebraic.certifying(Vector.empty, Vector(BigInt(1))) shouldBe a[Outcome.Unusable]
   }
 
-  it should "name a fourth root and beyond, which three letters cannot" in {
+  it should "name a fourth root and beyond, which the letters alone cannot" in {
     // Read directly rather than by running a four-radical search, which would walk to degree
     // sixteen to answer a question about a string.
     Vector(0, 1, 2, 3, 4).map(Algebraic.nameOf) shouldBe Vector("x", "y", "z", "x4", "x5")

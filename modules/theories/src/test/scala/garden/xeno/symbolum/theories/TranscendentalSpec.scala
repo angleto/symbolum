@@ -45,7 +45,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     transcendental.facts.keySet shouldBe Transcendental.Statements.map(_._1).toSet
   }
 
-  "The development" should "declare exactly the six constants it is about" in {
+  "The development" should "declare exactly the constants it is about" in {
     val before = chain.limit.theory.constants.keySet
     (transcendental.theory.constants.keySet -- before) shouldBe
       Set(
@@ -172,7 +172,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     force(transcendental.cosinePlusSine).hypotheses shouldBe empty
   }
 
-  it should "differ between the exponential and the other two by exactly one axiom" in {
+  it should "differ between the exponential and the other two by eta alone" in {
     def axioms(name: String): Set[Term] =
       Derivation.axiomsOf(force(transcendental.fact(name))).toSet
 

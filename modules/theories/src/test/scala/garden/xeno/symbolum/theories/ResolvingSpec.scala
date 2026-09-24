@@ -129,7 +129,7 @@ class ResolvingSpec extends AnyFlatSpec with Matchers {
     antecedents(force(Logic.stripForall(theorem.conclusion))._2, 0) shouldBe 2
   }
 
-  it should "cost the naturals' two, because the induction is a fact about `num`" in {
+  it should "cost what the naturals cost, because the induction is a fact about `num`" in {
     // The pair that says where the cost is. `RES_STEP_SOUND` carries the classical case split and
     // spends one axiom; this carries strong induction and the transitivity of the order, both facts
     // about `num`, and spends two. The reasoning did not get harder between them: the difference is

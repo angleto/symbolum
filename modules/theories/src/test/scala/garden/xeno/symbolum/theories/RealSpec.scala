@@ -153,7 +153,7 @@ class RealSpec extends AnyFlatSpec with Matchers {
     "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Domain.scala"
   )
 
-  "The one operation that asserts an axiom" should "be called by the files that believe and those that offer" in {
+  "The operation that asserts an axiom" should "be called by the files that believe and those that offer" in {
     // `Kernel.assertAxiom` is the non-conservative operation. Any main source that CALLS it is
     // trusted base, so the claim that the base is the kernel plus three files is checked here
     // rather than stated in a document. The kernel's own file is where it is defined.

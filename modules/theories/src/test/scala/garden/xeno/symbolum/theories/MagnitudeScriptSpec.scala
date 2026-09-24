@@ -73,9 +73,9 @@ class MagnitudeScriptSpec extends AnyFlatSpec with Matchers {
    * opening counted once.
    *
    * The cap is **raised for it and not removed**, and the ratio assertion below is untouched:
-   * that one is what the sentence about two orders of magnitude means, and `ABS_MUL` reads 1:75
-   * against it. What a bound of 120 would buy here is a derivation restructured to make an account
-   * shorter by hiding steps, which is the opposite of what these scripts are for.
+   * that one is what the title about an order of magnitude means, and on 2026-09-20 `ABS_MUL`
+   * read 1:75 against it. What a bound of 120 would buy here is a derivation restructured to
+   * make an account shorter by hiding steps, which is the opposite of what these scripts are for.
    */
   private val Ceiling: Map[String, Int] = Map(Magnitude.Multiplicative -> 200)
 
@@ -105,7 +105,7 @@ class MagnitudeScriptSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "be shorter than the proof it describes by two orders of magnitude" in {
+  it should "be shorter than the proof it describes by more than an order of magnitude" in {
     val readings = magnitude.scripts.toVector.sortBy(_._1).map { case (name, script) =>
       val inferences = Derivation.size(magnitude.facts(name))
       (name, script.size, inferences)

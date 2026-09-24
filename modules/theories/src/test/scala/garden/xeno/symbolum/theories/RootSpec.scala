@@ -36,14 +36,14 @@ class RootSpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------- what it cost */
 
-  "The square root" should "add one constant and no axiom to the theory below it" in {
+  "The square root" should "add its constant and no axiom to the theory below it" in {
     val below = chain.folding.theory
     root.theory.axioms shouldBe below.axioms
     (root.theory.constants.keySet -- below.constants.keySet) shouldBe Set(Root.SquareRoot)
     root.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
-  it should "prove its existence from the reals alone, and name it with one choice more" in {
+  it should "prove its existence from the reals alone, and name it with choice on top" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
     val exists = Derivation.axiomsOf(fact(Root.Exists))
 

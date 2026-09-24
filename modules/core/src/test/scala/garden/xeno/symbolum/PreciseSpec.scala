@@ -135,7 +135,7 @@ class PreciseSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The two that are declined" should "give nothing rather than fifty digits of a step size" in {
+  "The declined operations" should "give nothing rather than fifty digits of a step size" in {
     // Both are approximations in the `Double` evaluator as well, and their error is a property of
     // the step rather than of the arithmetic. Fifty digits of a five-point finite difference is
     // fifty digits of which only the leading few are about the derivative.

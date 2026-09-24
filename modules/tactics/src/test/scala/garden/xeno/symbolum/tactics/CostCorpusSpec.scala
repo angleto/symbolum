@@ -54,7 +54,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
       s"${count(Cost.Outcome.Conditional)} proved at a price")
   }
 
-  "The six that are not identities here" should "each name the denominator they need" in {
+  "The goals that are not identities here" should "each name the denominator they need" in {
     // Mathlib's inverse is total and this one is not, so a goal upstream states as an identity is
     // an identity away from zero here. That is a difference between two theories and not a
     // shortfall, and it is only visible because the condition comes back rather than being
@@ -66,7 +66,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
       Vector("~(x = 0)", "~(y = 0)", "~(z = 0)")
   }
 
-  "The three the corpus does not close either" should "come back with the point they fail at" in {
+  "The goals the corpus does not close either" should "come back with the point they fail at" in {
     // Not a shortfall of this system, and worth the assertion for that reason. Two of the three are
     // stated upstream with a hypothesis this extraction drops, so what is asked here is a different
     // and false claim; the third, `a - b - c - d = 0`, is closed upstream with `test_sorry` and is
@@ -82,7 +82,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------- what the corpus is believed on */
 
-  "The corpus as a whole" should "reach fifteen of the sixteen axioms, and not completeness" in {
+  "The corpus as a whole" should "reach every axiom of the reals but completeness" in {
     val reached = reports.filter(_.outcome == Cost.Outcome.Proved).flatMap(_.axioms).toSet
     val held = Real.standard.axioms.map(_._2.conclusion).toSet
 

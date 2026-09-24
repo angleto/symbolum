@@ -254,7 +254,7 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
    * an index whether or not it occurs in the formula, and here it does not occur, which is the
    * vacuous case being a theorem rather than an oversight.
    */
-  it should "close under both rules, which with the eight schemes is the whole system" in {
+  it should "close under both rules, which with the schemes is the whole system" in {
     val conclusion = implies(second, first)
 
     def generalisedAt(index: Term): Kernel.Thm =

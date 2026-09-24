@@ -44,7 +44,7 @@ class TheorySpec extends AnyFlatSpec with Matchers {
     Theory.primitive.undefinedConstants shouldBe Set(Term.EqualityName)
   }
 
-  it should "know exactly the two type operators the kernel mentions" in {
+  it should "know exactly the type operators the kernel mentions" in {
     Theory.primitive.typeOperators.keySet shouldBe Set("bool", "fun")
   }
 

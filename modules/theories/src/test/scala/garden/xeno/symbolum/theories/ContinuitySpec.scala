@@ -49,7 +49,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------- what it cost */
 
-  "Continuity" should "add one constant and no axiom to the theory below it" in {
+  "Continuity" should "add its constant and no axiom to the theory below it" in {
     val below = chain.root.theory
     continuity.theory.axioms shouldBe below.axioms
     (continuity.theory.constants.keySet -- below.constants.keySet) shouldBe Set(Continuity.Continuous)

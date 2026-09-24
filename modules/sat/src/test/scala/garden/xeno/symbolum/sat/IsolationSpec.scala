@@ -33,7 +33,7 @@ class IsolationSpec extends AnyFlatSpec with Matchers {
     assertDoesNotCompile("""garden.xeno.symbolum.Num(1)""")
   }
 
-  it should "see its own entry point, so the three assertions above are about the boundary" in {
+  it should "see its own entry point, so the assertions above are about the boundary" in {
     assertCompiles("""Solver.solve(Cnf.Problem(0, Vector(Cnf.Empty)))""")
   }
 }

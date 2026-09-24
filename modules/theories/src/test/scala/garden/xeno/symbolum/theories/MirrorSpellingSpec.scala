@@ -73,7 +73,7 @@ class MirrorSpellingSpec extends AnyFlatSpec with Matchers {
     reals.proposition("3 $ 4").left.map(_.getClass) shouldBe Left(classOf[SyntaxError])
   }
 
-  "The theory it reads in" should "still assert only its sixteen axioms" in {
+  "The theory it reads in" should "still assert only the reals' axioms" in {
     // A spelling is not a constant: nothing about the trusted base moves.
     reals.theory.axioms.length shouldBe Real.Axioms.length
     reals.theory.constants.keySet should not contain ">"

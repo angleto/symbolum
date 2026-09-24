@@ -304,7 +304,7 @@ class PolynomialSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenProp
     ring.prove("!x:real. x * inv x = 1").left.map(_.getClass) shouldBe Left(classOf[NotEqualTo])
   }
 
-  "The theory it works in" should "still assert only its sixteen axioms" in {
+  "The theory it works in" should "still assert only the reals' axioms" in {
     reals.theory.axioms.length shouldBe Real.Axioms.length
   }
 }

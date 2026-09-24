@@ -256,7 +256,7 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The price of having a greatest of two reals at all" should "be one axiom, and the choice one" in {
+  "The price of having a greatest of two reals at all" should "be choice, with eta beside it" in {
     // The claim the whole file exists to make, asserted by counting rather than by prose. The
     // numbers are the code's: `Real.Axioms` plus `Classical.Axioms` against `Real.Axioms` alone,
     // both spelled in the assertion below rather than written here. A `max` that had cost nothing

@@ -64,7 +64,7 @@ class LinarithLimitsSpec extends AnyFlatSpec with Matchers {
       (limit, reached, allowed)
     }
 
-  "The fact bound" should "cut proofs, and the smallest one it cuts is nine hypotheses" in {
+  "The fact bound" should "cut proofs, at a family size pinned here from both sides" in {
     // The measurement the card asked for, and it is an exact crossing rather than an estimate.
     // Both sides are asserted, because a bound that cut nothing would pass a test that only
     // checked the far side.

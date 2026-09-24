@@ -132,7 +132,7 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------- the refusal, and what it is not */
 
-  "A numeral nothing determines" should "be refused where the signature reads two, and named" in {
+  "A numeral nothing determines" should "be refused where it has several readings, and named" in {
     val refusal = widest.term("2")
     refusal.isLeft shouldBe true
 
@@ -202,7 +202,7 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------- what it cost, and what it buys */
 
-  "The three constants" should "be definitions, so the trusted base does not move" in {
+  "The new constants" should "be definitions, so the trusted base does not move" in {
     // Against the two theories this development was built over rather than against a number
     // written here, which is `ProductSpec`'s argument and the same one: a number written here
     // would have to be edited when a base moves for an unrelated reason, and editing it is the
@@ -263,7 +263,7 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
    * work, so a parser that had simply stopped reading `+` would fail the second half rather than go
    * on passing the first.
    */
-  "An operator nothing determines" should "be refused where the signature reads two, and named" in {
+  "An operator nothing determines" should "be refused where it has several readings, and named" in {
     val refusal = widest.proposition("0 < 1")
     refusal.isLeft shouldBe true
 

@@ -124,7 +124,7 @@ class CodingSpec extends AnyFlatSpec with Matchers {
    * Showing it would mean settling `NUM_GCD ZERO ZERO`, and that is a `select` over a set with no
    * greatest element, so nothing decides it. The guard is Bezout's own and travels with it.
    */
-  it should "hold the finite product and Gauss's lemma, both at two axioms" in {
+  it should "hold the finite product and Gauss's lemma, both at what the naturals cost" in {
     Vector(Coding.ProductAtZero, Coding.ProductAtSuccessor, Coding.Gauss).foreach { name =>
       val theorem = force(coding.fact(name))
       withClue(s"$name: ") {
@@ -168,7 +168,7 @@ class CodingSpec extends AnyFlatSpec with Matchers {
    * available: a reader who doubts the premise has a number to check by hand, which is more than a
    * sentence saying the premise is needed.
    */
-  it should "prove the moduli pairwise coprime, at the two axioms the naturals cost" in {
+  it should "prove the moduli pairwise coprime, at the axioms the naturals cost" in {
     val coprime = force(coding.fact(Coding.ModuliCoprime))
     coprime.hypotheses shouldBe empty
     Derivation.axiomsOf(coprime) should have size 2
@@ -611,7 +611,7 @@ class CodingSpec extends AnyFlatSpec with Matchers {
    * do and is stronger than a ceiling: a derivation that quietly started spending a seventeenth
    * would be as much a defect as one that stopped spending the two.
    */
-  it should "cost the naturals' two axioms and no more" in {
+  it should "cost what the recursion theorem costs and no more" in {
     val identity = force(coding.fact(Coding.ChooseTimesFactorials))
 
     Derivation.axiomsOf(identity) shouldBe Derivation.axiomsOf(force(chain.naturals.recursion))

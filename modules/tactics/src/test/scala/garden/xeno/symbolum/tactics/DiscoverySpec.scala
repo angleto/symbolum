@@ -136,7 +136,7 @@ class DiscoverySpec extends AnyFlatSpec with Matchers {
       Discovery.Why.NotProvableHere
   }
 
-  "Screening a bag of candidates" should "sort them into the three outcomes" in {
+  "Screening a bag of candidates" should "sort them by outcome" in {
     val square = Mul(Vector(Add(Vector(x, Num(1))), Add(Vector(x, Num(1)))))
     val expanded = Add(Vector(Pow(x, Num(2)), Mul(Vector(Num(2), x)), Num(1)))
     val different = Add(Vector(Pow(x, Num(2)), Num(1)))

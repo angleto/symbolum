@@ -28,7 +28,7 @@ class RecursionSpec extends AnyFlatSpec with Matchers {
     theorem.conclusion shouldBe force(naturals.proposition(Recursion.Statement))
   }
 
-  it should "rest on both axioms, which nothing below it did" in {
+  it should "rest on axioms, which nothing below it did" in {
     // Where the axiom of infinity is finally spent. Uniqueness needs `SUC n` never to be `ZERO` and
     // `SUC` to be injective, and those are the two facts that reach it; the type, induction and the
     // case split reach nothing. Everything built by recursion inherits both from here.

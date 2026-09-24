@@ -47,7 +47,7 @@ class PrimesSpec extends AnyFlatSpec with Matchers {
    * four developments, `Modular`, `Coding`, `Peano` and the classical extension, and a theorem that
    * quietly started spending one of the reals' sixteen would be spending it on the naturals' behalf.
    */
-  it should "cost the naturals' two axioms and nothing else" in {
+  it should "cost what the naturals cost and nothing else" in {
     Derivation.axiomsOf(force(primes.fact(Primes.Unbounded))) should have size 2
   }
 
@@ -156,7 +156,7 @@ class PrimesSpec extends AnyFlatSpec with Matchers {
    * derivation that quietly started spending one of the reals' sixteen would be spending it on a
    * claim about `num`.
    */
-  it should "prove the fundamental theorem of arithmetic at the naturals' two axioms" in {
+  it should "prove the fundamental theorem of arithmetic at the cost of Euclid's theorem" in {
     // The same two Euclid's theorem reaches, compared as a **set** and not as a count: the
     // naturals as a theory ask for choice, eta and infinity, and `Derivation.axiomsOf`'s own
     // docstring lists the entries of the library that reached `ETA` when it was measured on

@@ -76,7 +76,7 @@ class NumericIsolationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "not reach for the two files that use it either" in {
+  it should "not reach for the files that use it either" in {
     // `Spectrum` and `Perron` are untrusted by construction, and the reason to keep them out of the
     // proof side is the same reason the library is kept out: a tactic that read a spectral radius
     // and believed it would have put a floating-point number inside a derivation. Nothing does
@@ -106,7 +106,7 @@ class NumericIsolationSpec extends AnyFlatSpec with Matchers {
     numericLibraries.foreach(library => relation should not include library)
   }
 
-  "The two files that do use one" should "name a library that is actually on the classpath" in {
+  "The files that do use one" should "name a library that is actually on the classpath" in {
     // The guard above passes by an empty scan, so it is the one assertion in this file that a
     // retired name would make vacuous rather than false: with `breeze` alone in the list and Breeze
     // gone, every module reports nothing and the file reads green. This is the other direction, and

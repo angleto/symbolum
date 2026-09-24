@@ -201,7 +201,7 @@ class ReadmeSpec extends AnyFlatSpec with Matchers {
 
   /* ---------------------------------------------------------------------- what is not run */
 
-  "The two lines the architecture section quotes" should "be lines of the file it quotes them from" in {
+  "The lines the architecture section quotes" should "be lines of the file it quotes them from" in {
     // The block above that this replaces, and it is a weaker guarantee said plainly: these two are
     // asserted to be in `Simplifier.scala`, not asserted to do what the section claims. What makes
     // it worth having is that the quotation is the thing that rots, exactly as the two assignments

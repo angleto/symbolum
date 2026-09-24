@@ -57,7 +57,7 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "rest on the two axioms the naturals cost, and no more" in {
+  it should "rest on the axioms the naturals cost, and no more" in {
     for ((name, _) <- Digits.Lemmas) {
       val theorem = digits.lemma(name).fold(error => fail(error.message), identity)
       val axioms = Derivation.axiomsOf(theorem)
@@ -74,7 +74,7 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
     ) shouldBe empty
   }
 
-  "A sum and a product of numerals" should "be theorems about `num` at the naturals' two axioms" in {
+  "A sum and a product of numerals" should "be theorems about `num` at what the naturals cost" in {
     val sum = digits.add(2, 3).fold(error => fail(error.message), identity)
     val product = digits.multiply(12, 12).fold(error => fail(error.message), identity)
 

@@ -1041,7 +1041,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     flowed("docs/evaluation.md") should include(s"its trusted base: four files $claim")
   }
 
-  it should "list the notebook's cells as the code publishes them, so an eighth cannot go unlisted" in {
+  it should "list the notebook's cells as the code publishes them, so a new one cannot go unlisted" in {
     // **`derive` landed and this list stayed at seven for a day**, in the paragraph a session reads
     // before touching the notebook, and three things passed over it without seeing it: a full suite
     // of 2271, a verification of the card that added the command, and a session that rewrote the
@@ -1649,7 +1649,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The guide's argument page" should "be the page `ArgumentSpec` builds, down to the three buckets" in {
+  "The guide's argument page" should "be the page `ArgumentSpec` builds, down to its buckets" in {
     // The example is run by `ArgumentSpec`, which owns the development it needs; what is checked
     // here is that the page in the guide is the page that comes out, and in particular that the
     // three lines a reader acts on are quoted rather than paraphrased.

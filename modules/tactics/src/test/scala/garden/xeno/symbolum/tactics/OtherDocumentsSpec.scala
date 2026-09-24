@@ -246,7 +246,7 @@ class OtherDocumentsSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------------- the quotations */
 
-  "The two blocks that are not programs" should "still be what the source says" in {
+  "The blocks that are quotations" should "still be what the source says" in {
     // What a quotation buys that compiling does not: the configuration guide's copy of
     // `SimplificationConfig` would compile as a local class however far the real one had drifted,
     // and the `Expr` signatures do not compile at all. Both are compared against the file they are

@@ -43,7 +43,7 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     remainder.hypotheses shouldBe empty
   }
 
-  it should "rest on the two axioms the naturals cost, which is the whole design question" in {
+  it should "rest on the axioms the naturals cost, which is the whole design question" in {
     // The measurement that decided the route. Embedding into the reals, computing there and coming
     // back proves the same equations and charges sixteen, because `NUM_REAL_INJECTIVE` rests on
     // the reals; every characterisation this spends rests on two. A change of route would leave

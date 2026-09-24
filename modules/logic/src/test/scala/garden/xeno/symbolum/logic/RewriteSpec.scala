@@ -289,7 +289,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     stop shouldBe a[Rewrite.Stop.Size]
   }
 
-  "The reason a repetition stopped" should "tell the three cases apart" in {
+  "The reason a repetition stopped" should "tell its cases apart" in {
     // `finished` answers the first against the other two and costs a pass; this answers all three
     // and costs nothing. The third is the one that says the rule set GROWS, which is the diagnosis
     // nobody had while three runs were being killed.
@@ -385,7 +385,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
    * what fails when a constant moves; the phrase is asserted beside it so that editing the words
    * out fails as well. Neither direction alone covers the other.
    */
-  it should "carry the goal the widest rewriting grew from, in one declaration and one guarded copy" in {
+  it should "carry the widest rewriting's goal, declared in Rewrite and guarded where copied" in {
     val record = "docs/adr/0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md"
     val flowed = new String(Files.readAllBytes(Paths.get(record)), StandardCharsets.UTF_8)
       .replaceAll("\\s+", " ")
@@ -441,7 +441,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
    * alone stays green while somebody edits the words out. The harness fires one perturbation per
    * direction.
    */
-  it should "derive the record's two ratios from the constants rather than reading them off it" in {
+  it should "derive the record's ratios from the constants rather than reading them off it" in {
     val record = "docs/adr/0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md"
     val rewrite = "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Rewrite.scala"
     def flowedOf(path: String): String =
@@ -476,7 +476,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
     flowedOf(rewrite) should include("eight and a half times that maximum")
   }
 
-  it should "still be usable by a caller that does not repeat, as four derivations here do" in {
+  it should "still be usable by a caller that does not repeat, as derivations here are" in {
     // `Arithmetic.timesZero` derives `x * 0 = 0` by rewriting `x * 0` with `0 = 0 + 0`, which is
     // exactly this shape, and `Order` and `Linarith` do the same with `0 = 0 - x` and its
     // relatives. Counted on 2026-09-18 over every rule the whole suite builds, those four are all

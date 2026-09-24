@@ -351,7 +351,7 @@ class DomainCompositionSpec extends AnyFlatSpec with Matchers {
     Show.show(classical.notation, derived.conclusion) should include("Inv")
   }
 
-  it should "spend three of the six axioms, and not the three a reader would expect" in {
+  it should "spend the step axioms, and not the converses a reader would expect" in {
     val spending = built.spends(derived)
 
     spending.ofTheDomain shouldBe Set(

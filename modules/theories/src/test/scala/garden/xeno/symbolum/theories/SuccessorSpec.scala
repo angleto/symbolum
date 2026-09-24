@@ -46,7 +46,7 @@ class SuccessorSpec extends AnyFlatSpec with Matchers {
     spelled.hypotheses shouldBe empty
   }
 
-  it should "rest on nothing, since the five facts it uses are all derived" in {
+  it should "rest on nothing, since the facts it uses are all derived" in {
     force(successor.spell(term("8:num"))).hypotheses shouldBe empty
   }
 
