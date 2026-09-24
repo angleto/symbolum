@@ -111,5 +111,22 @@ run "9-bound-in-record" docs/adr/0005-a-model-is-untrusted-and-answers-only-at-a
   'currently under 1300 lines' \
   -- ./tools/sbt -batch "$DOCUMENTATION"
 
-echo "### all nine fired" >> "$LOG"
+# 10. and 11. landed in a second commit of the same increment: the two figures the first left
+#    without a reason beside them, each a function of a definition rather than of the machine.
+ROUTE='tactics/testOnly garden.xeno.symbolum.tactics.PropositionalRouteSpec'
+ALGEBRAIC='tactics/testOnly garden.xeno.symbolum.tactics.AlgebraicSpec'
+
+# Expect red on: PropositionalRouteSpec, "be the size `Intuitionistic`'s docstring gives it"
+run "10-chain-size-edited" modules/logic/src/main/scala/garden/xeno/symbolum/logic/Intuitionistic.scala \
+  'A 127-link chain is 511 nodes' \
+  'A 127-link chain is 512 nodes' \
+  -- ./tools/sbt -batch "$ROUTE"
+
+# Expect red on: AlgebraicSpec, "cost what it costs, reported and not asserted"
+run "11-example-digits-edited" modules/tactics/src/main/scala/garden/xeno/symbolum/tactics/Algebraic.scala \
+  'confirmed to 33 digits)' \
+  'confirmed to 34 digits)' \
+  -- ./tools/sbt -batch "$ALGEBRAIC"
+
+echo "### all eleven fired" >> "$LOG"
 git status --porcelain >> "$LOG"
