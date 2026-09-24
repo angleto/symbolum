@@ -417,4 +417,27 @@ report=$(cd "$work/events" && sh "$subject" --event push HEAD~1 beefbeefbeefbeef
 holds "a push is measured from the commit before it" "20 of 20 statement(s)"
 check "and exits green" "$status" "0"
 
+# 16. A REPORT WRITTEN AFTER THE EDIT FROM INSTRUMENTATION WRITTEN BEFORE IT. The verification of
+# card 61cdee9d, 2026-09-25, on a real report of `scan` at 570e1e40: an uncommitted line inserted
+# above the change, then `coverage scan/coverageReport` alone, which rewrites `scoverage.xml` from
+# the `scoverage.coverage` the last compile left and recompiles nothing. The report is newer than
+# every changed file, so 13b does not fire, and its statements are in the coordinates of the file
+# before the edit: the subject answered "none of those lines carries a statement", exit 0, on a
+# change of six statements of which two were never run. A report's mtime says when it was
+# written, not what it was built from.
+build replayed 20 20
+data="$work/replayed/modules/demo/target/scala-3.3.5/scoverage-data"
+mkdir -p "$data"
+printf 'instrumentation of the tree before the edit\n' > "$data/scoverage.coverage"
+touch -t 202601010000 "$data/scoverage.coverage"
+{
+    echo '// an uncommitted line above the change'
+    cat "$work/replayed/modules/demo/src/main/scala/Demo.scala"
+} > "$work/replayed/demo.next" && mv "$work/replayed/demo.next" "$work/replayed/modules/demo/src/main/scala/Demo.scala"
+touch -t 202601020000 "$work/replayed/modules/demo/src/main/scala/Demo.scala"
+touch -t 202601030000 "$work/replayed/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+run_subject replayed HEAD~1
+holds "a changed file newer than the instrumentation its report was written from is named" "Demo.scala"
+check "and refused" "$status" "2"
+
 summarise
