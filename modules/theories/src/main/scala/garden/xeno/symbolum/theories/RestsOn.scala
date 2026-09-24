@@ -157,7 +157,9 @@ object Reach {
         // The square root, 2026-09-24, in the change that added it.
         "Root" -> chain.root.facts,
         // Continuity, 2026-09-24, in the change that added it.
-        "Continuity" -> chain.continuity.facts
+        "Continuity" -> chain.continuity.facts,
+        // The logarithm, the same day, in the change that added it.
+        "Logarithm" -> chain.logarithm.facts
       )
     )
 

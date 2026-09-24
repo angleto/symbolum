@@ -354,7 +354,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // three other facts that came with it carry none.
     // 431 with `INTERMEDIATE_VALUE`'s four antecedents, the same day; `CONTINUOUS_CONST` and
     // `CONTINUOUS_ID` carry none.
-    proposals.size shouldBe 431
+    // 441 with the logarithm's ten antecedents, the same day.
+    proposals.size shouldBe 441
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -575,7 +576,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // y = 2` where the right side is zero, and written in `NUM_SUB` and `NUM_LE`, which
     // `Model.Numbers` computes exactly. The other five are about `Sum` over the reals and are
     // not decided by any model here.
-    decidedFalse shouldBe 81
+    // 82 with ONE of the logarithm's residues, read off a probe of `Propose.audit` rather than
+    // predicted: `EXP_INJECTIVE` weakens to `!x y. x = y`, false at any two distinct reals and
+    // written in nothing but equality. The other twenty-four are in the two buckets below.
+    decidedFalse shouldBe 82
 
     // Twenty-three of the twenty-five come with the point they fail at, and two do not: the claim
     // is decided false by quantifier elimination and the abduction that would name a point comes
@@ -713,7 +717,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and did not get; what was still missing on the run before this one was the two rows below
     // and above it, not this one.
     // 76, moving with `decidedFalse` and by the same single residue, the one on `num`.
-    withAPoint shouldBe 76
+    // 77, moving with `decidedFalse` by the logarithm's one false residue, `!x y. x = y`, which the
+    // search refutes at two distinct reals. **Not moved in the same pass as `decidedFalse`**, and
+    // found the way the paragraph above says it is found: the next run, in which this line ran.
+    withAPoint shouldBe 77
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1185,7 +1192,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `Order` addresses and does not settle, so all four land here and `unreadable` below does
     // not move. That row sat behind this one again; it was predicted from this one before it ran,
     // and the run that reached it agreed.
-    open shouldBe 342
+    // 365 with twenty-three of the logarithm's twenty-five residues, read off a probe of
+    // `Propose.audit` and not predicted. Several are TRUE and unproved rather than doubtful:
+    // `!x. 1 + x <= exp x` and `!x. 0 <= exp x` are two, and that is this bucket's meaning, a claim
+    // a procedure addressed and did not settle, not a claim believed false.
+    open shouldBe 365
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1518,7 +1529,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // this bucket's criterion sends it here as it sent `SUM_BELOW_LIMIT`'s. **It sat behind `open`
     // again**, the sixth time: the first pass moved `open` and never reached this line, and it was
     // the reading here that accounted for `open`'s two as `SIN_COS_SQUARED`'s substitutions.
-    unreadable shouldBe 101
+    // 102 with `EXP_ONTO`'s weakening, `!x. ?y. exp y = x`, read off the same probe: false at
+    // every non-positive `x`, and an existential over an exponential that no procedure addresses.
+    unreadable shouldBe 102
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

@@ -67,7 +67,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.root.facts.size +
       // Continuity, the same day, in the change that added the link: neither a limit, which is
       // about a sequence, nor anything `Root` is about.
-      chain.continuity.facts.size
+      chain.continuity.facts.size +
+      // The logarithm, the same day and the same discipline.
+      chain.logarithm.facts.size
 
     library.entries.size shouldBe expected
 
@@ -623,8 +625,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under three names, none shared. `CLAUDE.md`'s figures move by **one** and **one** twice:
     // `CONTINUOUS_CONST` binds `c` and `x`, both `real`, and `INTERMEDIATE_VALUE` binds `f`, `a`,
     // `b` and `y`, three of them `real`; `CONTINUOUS_ID` binds one.
-    library.entries.size shouldBe 637
-    library.names.distinct.size shouldBe 634
+    // 649 and 646 with the logarithm, the same day, derived before the run and met: twelve facts
+    // under twelve names, none shared. `CLAUDE.md`'s figures move by **three** and **three**:
+    // `EXP_LT_MONOTONE`, `EXP_INJECTIVE` and `LN_MUL` each bind two reals, and the other nine
+    // bind one or none.
+    library.entries.size shouldBe 649
+    library.names.distinct.size shouldBe 646
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -95,8 +95,9 @@ first read through a square root of minus one, which this repository has no type
 convolution fact, `EXP_CONVOLUTION` at `(x, 0 - x)`, split into its even and its odd places, where
 the cosine's Cauchy product with itself and the sine's cancel one index apart. What is left of the
 list is every fact about `ln`. The intermediate value theorem it waited on landed the same day, as
-`Continuity.INTERMEDIATE_VALUE`, and what `ln` waits on now is that theorem's hypotheses at the
-exponential: continuity at every point, and a value on each side of every positive number.
+`Continuity.INTERMEDIATE_VALUE`, and `Logarithm` spent it the same day: the exponential is
+continuous and onto the positive reals, and `ln` has `EXP_LN`, `LN_EXP`, `LN_ONE` and `LN_MUL`.
+Every entry of the list above is now a theorem.
 
 **The cost is a reader who sees `exp` in the signature and assumes the analysis is behind it.**
 That is paid in three places and nowhere else: the row in `README.md`, the docstring of

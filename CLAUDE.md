@@ -647,7 +647,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 637 lemmas, 418 have two or more leading quantifiers and **371 of
+caller meant: of the library's 649 lemmas, 421 have two or more leading quantifiers and **374 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1694,11 +1694,15 @@ coefficient to it. One constant, no axiom; `ContinuitySpec` asserts that the the
 being vacuous both ways: it is detached at the identity on `[0, 1]`, a step is shown not continuous
 at zero, and the same step refutes the statement with its continuity hypothesis dropped.
 
-**Every fact about `ln` still waits, and what it waits on moved.** The theorem is there; what `ln`
-needs from it is the exponential continuous at every point and bracketing every positive value, and
-neither is proved. The second is near: `EXP_NEGATE` and a lower bound `1 + x <= exp x` read off
-the series. The first is the exponential's own estimate, `exp (x + h) - exp x = exp x (exp h - 1)`
-with `exp h - 1` small at small `h`, which nothing here states yet.
+**`ln` has its first facts, and they are `Logarithm`, a link since 2026-09-24 that declares
+nothing.** `EXP_LN` and `LN_EXP` are the two compositions, `LN_ONE` and `LN_MUL` follow by
+injectivity, and what they rest on is `EXP_ONTO`, the intermediate value theorem at the exponential.
+Its hypotheses are the rest of the file: `EXP_CONTINUOUS`, from one estimate,
+`abs (exp h - 1) <= 2 * abs h` for `abs h <= 1/2`, carried by the addition theorem; and a value on
+each side of every positive number, from `1 + x <= exp x`. **The estimate needed no factorial
+dominated**, which is the thing to know before reaching for `EXP_ONE_ABOVE_TWO`'s route: at a ratio
+of at most a half, `t^i / i! <= t^i` because `i! >= 1`, and the geometric series does the rest.
+`LogarithmSpec` refutes the estimate without its radius at `h = 8`, where `exp 8 >= 81`.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
