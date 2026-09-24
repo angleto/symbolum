@@ -49,9 +49,12 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it costs ==
  *
- * One constant and no axiom. [[Folding.Fold]] carries the two axioms the naturals cost, choice and
- * infinity, and nothing else: choice twice over, once inside `LIST_RECURSION` and once here where
- * the existence theorem is turned into a name.
+ * One constant and no axiom. What [[Folding.Fold]] rests on is three of the nineteen: choice,
+ * infinity and eta. Choice twice over, once inside `LIST_RECURSION` and once here where the
+ * existence theorem is turned into a name; infinity with the naturals; and eta because
+ * `LIST_RECURSION` rests on `WORD_EXTENSIONALITY`, which `ListingSpec` asserts. This said
+ * "the two axioms the naturals cost" until 2026-09-24, from the day it was written, and the test
+ * that was meant to hold it was a ceiling that admitted the third.
  */
 final class Folding private (
   val listing: Listing,

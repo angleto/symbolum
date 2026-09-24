@@ -84,31 +84,14 @@ class ListingSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "cost the naturals' two axioms and no more" in {
-    // An equality rather than a ceiling, which is `CodingSpec`'s discipline: a fact that quietly
-    // started spending a third axiom would pass a subset check.
-    val spent = Listing.Statements.flatMap { case (name, _) =>
-      listing.facts.get(name).toVector.flatMap(theorem => Derivation.axiomsOf(theorem).toVector)
-    }.toSet
-
-    // `Derivation.axiomsOf` answers with the axiom TERMS; the two developments hold them by
-    // name, so what is compared is the conclusions and not the pairs.
-    val naturals =
-      (Chain.standard.naturals.axioms.values ++ Chain.standard.classical.axioms.values)
-        .map(_.conclusion)
-        .toSet
-    withClue(s"what these facts rest on: ${spent.map(listing.show).mkString("; ")}\n") {
-      (spent -- naturals) shouldBe empty
-    }
-  }
-
   it should "spend exactly choice, infinity and eta, measured as an equality" in {
-    // Written by the verification of cards 5d59c308 and 708faa52 on 2026-09-24. The test above is
-    // a ceiling: `(spent -- naturals) shouldBe empty` passes when `spent` is empty, and `naturals`
-    // there holds both of the classical theory's axioms beside infinity, so it admits three. The
-    // delivery said two, choice and infinity, "as an equality"; measured, the union is THREE, eta
-    // being the third. This pins what was measured, so a derivation that starts or stops spending
-    // any of them goes red, and the informer line names which of the three each fact reaches.
+    // Written by the verification of cards 5d59c308 and 708faa52 on 2026-09-24, and it replaced a
+    // test titled "cost the naturals' two axioms and no more", which card 9084078b removed. That
+    // one was a ceiling though its comment called it an equality: `(spent -- naturals) shouldBe
+    // empty` passes when `spent` is empty, and `naturals` held both of the classical theory's
+    // axioms beside infinity, so it admitted three. The delivery said two; measured, the union is
+    // THREE, eta being the third. This pins what was measured, so a derivation that starts or
+    // stops spending any of them goes red, and the informer line names which each fact reaches.
     val choice = Chain.standard.classical.axioms(Classical.Choice).conclusion
     val eta = Chain.standard.classical.axioms(Classical.Eta).conclusion
     val infinity = Chain.standard.naturals.axioms(Natural.Infinity).conclusion
@@ -126,6 +109,38 @@ class ListingSpec extends AnyFlatSpec with Matchers {
     withClue(s"per fact: $report\n") {
       perFact.flatMap(_._2).toSet shouldBe Set(choice, infinity, eta)
     }
+  }
+
+  it should "spend eta exactly where it rests on the extensionality of words, and nowhere else" in {
+    // Where the third axiom comes in, measured rather than read off the derivation. It is
+    // `WORD_EXTENSIONALITY`, two words of one length agreeing below it being one word, which
+    // `LIST_TAIL_CONS` closes on and every fact after it inherits; the four facts before it do not
+    // reach it and do not spend eta. The equivalence per fact is what makes a fact that reached eta
+    // by another road go red naming itself, and the two counts at the end say it is not vacuous in
+    // either direction.
+    //
+    // **What it does not see**: `LIST_RECURSION_UNIQUE` pays for eta a second time, through
+    // `Classical.ext` taken in this development's logic, which is a rule and not the published
+    // `FUNCTION_EXTENSIONALITY`, so `restingOn` cannot find it. Card 9084078b's first version of
+    // this test looked for that fact and found it under no list fact. The uniqueness rests on
+    // `LIST_INDUCT` as well, so the equivalence holds for it and says nothing about the second
+    // road; nothing here would notice that road closing.
+    val eta = Chain.standard.classical.axioms(Classical.Eta).conclusion
+    val ofWords = force(listing.concatenation.word.fact(Word.Extensionality))
+    Derivation.axiomsOf(ofWords) should contain(eta)
+
+    val readings = Listing.Statements.map { case (name, _) =>
+      val theorem = fact(name)
+      val through = Derivation.restingOn(theorem, Set(ofWords.conclusion)).nonEmpty
+      (name, Derivation.axiomsOf(theorem).contains(eta), through)
+    }
+    info(readings.collect { case (name, _, true) => name }.mkString("through it: ", ", ", ""))
+
+    readings.foreach { case (name, spendsEta, through) =>
+      withClue(s"$name: ") { spendsEta shouldBe through }
+    }
+    readings.count(_._2) should be > 0
+    readings.count(!_._2) should be > 0
   }
 
   /* ------------------------------------------------------------- what it says */

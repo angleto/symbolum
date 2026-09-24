@@ -63,31 +63,14 @@ class FoldingSpec extends AnyFlatSpec with Matchers {
     folding.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
-  it should "cost the naturals' two axioms and no more" in {
-    // An equality rather than a ceiling, which is `CodingSpec`'s discipline and `ListingSpec`'s: a
-    // fact that quietly started spending a third axiom would pass a subset check. Choice is spent
-    // twice over here, once inside `LIST_RECURSION` and once where the existence theorem becomes a
-    // name, and twice is not a third axiom.
-    val spent = Folding.Statements.flatMap { case (name, _) =>
-      folding.facts.get(name).toVector.flatMap(theorem => Derivation.axiomsOf(theorem).toVector)
-    }.toSet
-
-    val naturals =
-      (Chain.standard.naturals.axioms.values ++ Chain.standard.classical.axioms.values)
-        .map(_.conclusion)
-        .toSet
-    withClue(s"what these facts rest on: ${spent.map(folding.show).mkString("; ")}\n") {
-      (spent -- naturals) shouldBe empty
-    }
-  }
-
   it should "spend exactly choice, infinity and eta, measured as an equality" in {
-    // Written by the verification of cards 5d59c308 and 708faa52 on 2026-09-24. The test above is
-    // a ceiling: `(spent -- naturals) shouldBe empty` passes when `spent` is empty, and `naturals`
-    // there holds both of the classical theory's axioms beside infinity, so it admits three. The
-    // delivery said two, choice and infinity, "as an equality"; measured, the union is THREE, eta
-    // being the third. This pins what was measured, so a derivation that starts or stops spending
-    // any of them goes red, and the informer line names which of the three each fact reaches.
+    // Written by the verification of cards 5d59c308 and 708faa52 on 2026-09-24, and it replaced a
+    // test titled "cost the naturals' two axioms and no more", which card 9084078b removed. That
+    // one was a ceiling though its comment called it an equality, for `ListingSpec`'s reason. Eta
+    // comes in through `LIST_RECURSION`, which this link spends and which rests on
+    // `WORD_EXTENSIONALITY`; `ListingSpec` asserts where. Choice is spent twice over, once inside
+    // `LIST_RECURSION` and once where the existence theorem becomes a name, and twice is not a
+    // fourth axiom.
     val choice = Chain.standard.classical.axioms(Classical.Choice).conclusion
     val eta = Chain.standard.classical.axioms(Classical.Eta).conclusion
     val infinity = Chain.standard.naturals.axioms(Natural.Infinity).conclusion
