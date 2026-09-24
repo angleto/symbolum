@@ -28,7 +28,11 @@
 # every statement below it, so the naive comparison reports the whole rest of the file as new.
 # **Nothing here compares two reports.** It reads the added lines out of `git diff` in the
 # coordinates of the CURRENT file, and reads the current report, which is in those same
-# coordinates. There is no baseline report, so there is nothing to shift.
+# coordinates. There is no baseline report, so there is nothing to shift. The current file is the
+# one in the WORKING TREE, because that is what the report was built from: the diff is taken from
+# where the change left the line to the working tree, and a source nobody has added to git yet is
+# the change too. Until 2026-09-24 it was taken to `HEAD`, and an uncommitted edit above a changed
+# line put every added line on a different number from the report's.
 #
 # WHAT IT IS NOT. It is not a replacement for the floors and does not lower one. A module can
 # drift down slowly with every change well covered, which is exactly what a floor on the average
@@ -36,10 +40,17 @@
 #
 # Usage:
 #   tools/coverage-delta.sh [BASE]          # BASE defaults to HEAD~1
+#   tools/coverage-delta.sh --event NAME BEFORE PR_BASE
+#
+# The second form is the one `.github/workflows/ci.yml` calls, and it exists so that which base a
+# runner measures from is decided here, where a test can reach it, rather than in an expression in
+# YAML that only a runner evaluates: a push measures from the commit before it, a pull request from
+# its base, and any other event names no change and says so.
 #
 # It reads the reports already on disk and runs no build: `tools/coverage-gate.sh` is what
-# produces them, and a report older than the working tree is the one failure mode this cannot
-# see, which is why it prints the report's own timestamp beside the figure.
+# produces them. A report is refused when it is not one a build wrote, when it is older than a
+# changed file of its module, and when a changed file appears in no report at all; the three are
+# checked below and each one was a pass until 2026-09-24.
 #
 # Exit codes: 0 when the rate is at or above the threshold or nothing was added, 1 when it is
 # below, 2 when it could not measure -- which is never reported as a pass, for the reason
@@ -64,7 +75,25 @@ cd "$root" || exit 2
 # of its parents and call the answer the change, which is a figure nobody asked for reported as
 # though they had. An absent argument is a person at a shell; an empty one is a CI expression
 # that produced nothing, and they get different answers.
-if [ "$#" -ge 1 ]; then
+if [ "${1:-}" = "--event" ]; then
+    [ "$#" -eq 4 ] || {
+        echo "coverage-delta: --event takes three arguments: NAME BEFORE PR_BASE" >&2
+        exit 2
+    }
+    case "$2" in
+        push) base=$3 ;;
+        # NOT `before`, which a pull request's synchronize event carries too: that is the previous
+        # push to the branch, so the figure would be the coverage of the last push and not of the
+        # change under review. The expression this replaced tried `before` first.
+        pull_request) base=$4 ;;
+        *)
+            # A manual run, or any trigger that names no change. The expression this replaced
+            # resolved to an empty string here and the step went red on every manual run.
+            echo "coverage-delta: a $2 run names no change, so there is nothing to measure."
+            exit 0
+            ;;
+    esac
+elif [ "$#" -ge 1 ]; then
     base=$1
 else
     base=HEAD~1
@@ -118,11 +147,23 @@ if ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1; then
 fi
 
 # THE ADDED LINES, in the coordinates of the working tree. `--unified=0` so a hunk header names
-# exactly the lines that changed and not three of context either side; `...` so a branch is
-# compared against where it left the line rather than against the line's tip, which is the
-# question a reader of a change asks. A deleted file has no lines to cover, and a deleted line
+# exactly the lines that changed and not three of context either side; from the merge base so a
+# branch is compared against where it left the line rather than against the line's tip, which is
+# the question a reader of a change asks. A deleted file has no lines to cover, and a deleted line
 # has nowhere to be covered, so only the new side is read.
-git diff --unified=0 --diff-filter=d "$base"...HEAD -- 'modules/*/src/main/*.scala' \
+#
+# TO THE WORKING TREE AND NOT TO `HEAD`, decided on 2026-09-24 and recorded in `docs/adr/0035`.
+# The report is built from the working tree, so its line numbers are the working tree's; a diff to
+# `HEAD` is in the coordinates of a file that is not on disk whenever anything is uncommitted, and
+# measured on a real report of `scan` that answered "none of those lines carries a statement" for
+# a change of six statements, two of them never run. Refusing a dirty tree was the alternative and
+# is correct too; it was not taken because measuring an uncommitted change is the local use this
+# tool is for, and the comment here said it could.
+fork=$(git merge-base "$base" HEAD 2>/dev/null) || {
+    echo "coverage-delta: $base and HEAD share no history, so there is no change between them" >&2
+    exit 2
+}
+git diff --unified=0 --diff-filter=d "$fork" -- 'modules/*/src/main/*.scala' \
     > "$work/diff" 2>"$work/diff.err" || {
         echo "coverage-delta: git diff against $base failed" >&2
         cat "$work/diff.err" >&2
@@ -138,19 +179,27 @@ awk '
         count = (plus[2] == "" ? 1 : plus[2])
         for (i = 0; i < count; i++) print file "\t" (start + i)
     }
-' "$work/diff" | sort -u > "$work/added"
+' "$work/diff" > "$work/added.unsorted"
+
+# A source git does not know yet is added whole: every line of it is new.
+git ls-files --others --exclude-standard -- 'modules/*/src/main/*.scala' | while IFS= read -r file; do
+    awk -v f="$file" '{ print f "\t" NR }' "$file"
+done >> "$work/added.unsorted"
+sort -u "$work/added.unsorted" > "$work/added"
 
 added=$(grep -c . < "$work/added" || :)
 
 if [ "$added" -eq 0 ]; then
-    echo "coverage-delta: $base...HEAD adds or changes no line under modules/*/src/main; nothing to measure."
+    echo "coverage-delta: $base... adds or changes no line under modules/*/src/main; nothing to measure."
     exit 0
 fi
 
-# THE REPORTS. Their age is printed rather than checked, because "older than the tree" is a
-# judgement about what the reader is doing and a wrong guess either way is worse than the date:
-# a session measuring an uncommitted change wants the report it just built, and one measuring a
-# commit wants the report of that commit.
+# THE REPORTS, and whether each is one a build wrote after the change. Until 2026-09-24 their age
+# was printed rather than checked, on the argument that "older than the tree" is a judgement about
+# what the reader is doing. It is not, once the diff is to the working tree: a report older than a
+# changed file of its module was built without that change, whatever the reader meant, and the
+# shared checkout held a `<statements/>` of fourteen bytes dated 2020 in all eleven modules, which
+# this passed for a change of 199 lines.
 reports=$(find modules/*/target/scala-*/scoverage-report/scoverage.xml 2>/dev/null | sort)
 if [ -z "$reports" ]; then
     echo "coverage-delta: no coverage report on disk. Run tools/coverage-gate.sh first." >&2
@@ -190,6 +239,36 @@ if [ -s "$work/unreported" ]; then
     exit 2
 fi
 
+# NOT A REPORT A BUILD WROTE. scoverage stamps every report it writes with `timestamp`, in
+# milliseconds; a file without one is not its output, whatever it is named.
+for report in $reports; do
+    grep -q 'timestamp="[0-9][0-9]*"' "$report" || echo "$report"
+done > "$work/unstamped"
+if [ -s "$work/unstamped" ]; then
+    echo "coverage-delta: these carry no timestamp, so no build of scoverage wrote them:" >&2
+    sed 's/^/  /' "$work/unstamped" >&2
+    echo "coverage-delta: run tools/coverage-gate.sh, which writes every module's report, and ask again." >&2
+    exit 2
+fi
+
+# OLDER THAN THE CHANGE. A changed file modified after its module's report was written is a
+# change that report never saw. The file's modification time and not its commit's, because the
+# report is of the working tree; a checkout rewrites the times of what it changes, so a report
+# built on another branch reads as older than every file that branch differs in.
+cut -f1 "$work/added" | sort -u | while IFS= read -r file; do
+    module=$(printf '%s\n' "$file" | awk -F/ '{ print $2 }')
+    for report in modules/"$module"/target/scala-*/scoverage-report/scoverage.xml; do
+        [ -n "$(find "$file" -newer "$report" 2>/dev/null)" ] && echo "$file"
+    done
+done | sort -u > "$work/newer"
+if [ -s "$work/newer" ]; then
+    echo "coverage-delta: these changed after their module's report was written, so the report" >&2
+    echo "coverage-delta: is of a tree without them:" >&2
+    sed 's/^/  /' "$work/newer" >&2
+    echo "coverage-delta: build the report again (tools/coverage-gate.sh) and ask again." >&2
+    exit 2
+fi
+
 # The statements of this run that sit on an added line. A statement is the unit the floors count
 # in, so it is the unit here: a line carrying three statements weighs three, which is what keeps
 # this figure comparable with the ones in `build.sbt`.
@@ -218,6 +297,7 @@ awk '
             n = length(f)
             if (substr(src, length(src) - n) == "/" f || src == f) { hit = f; break }
         }
+        if (hit != "") seen[hit] = 1
         if (hit == "" || !((hit "\t" ln) in wanted)) next
         match($0, /invocation-count="[0-9]*"/)
         hits = substr($0, RSTART + 18, RLENGTH - 19) + 0
@@ -228,16 +308,38 @@ awk '
     END {
         printf "%d %d\n", total, covered
         for (k in uncovered) print "MISS " k
+        for (f in files) if (!(f in seen)) print "UNSEEN " f
     }
 ' "$work/added" $reports > "$work/counted"
+
+# A CHANGED FILE NO REPORT MENTIONS, which left the denominator in silence until 2026-09-24: a
+# fixture of 42 changed lines of code read "20 of 20 = 100.00%" because the file holding 22 of
+# them was in no report. That is the module check above one level down, and it refuses for the
+# same reason. The cost is a file with no statement at all, which a report cannot list either:
+# measured on 2026-09-24, none of the 183 sources under modules/*/src/main is free of `def`, `val`
+# and `var`, so no file of this repository is expected to meet it.
+grep '^UNSEEN ' "$work/counted" | sed 's/^UNSEEN //' | sort > "$work/unseen"
+if [ -s "$work/unseen" ]; then
+    echo "coverage-delta: these carry changed lines and appear in no report, so none of their" >&2
+    echo "coverage-delta: statements is in the figure:" >&2
+    sed 's/^/  /' "$work/unseen" >&2
+    echo "coverage-delta: a report built incrementally lists only what it recompiled; run" >&2
+    echo "coverage-delta: tools/coverage-gate.sh, which cleans first, and ask again." >&2
+    exit 2
+fi
 
 total=$(head -1 "$work/counted" | cut -d' ' -f1)
 covered=$(head -1 "$work/counted" | cut -d' ' -f2)
 
-newest=$(find modules/*/target/scala-*/scoverage-report/scoverage.xml -exec ls -l {} + 2>/dev/null \
-    | awk '{print $6, $7, $8}' | sort | tail -1)
+# The newest report's own stamp, read as a number. This sorted the `ls -l` date columns as text
+# until 2026-09-24, so reports of the 3rd and the 22nd of a month printed the 3rd, and of the 30th
+# of September and the 1st of October printed the 30th.
+stamp=$(cat $reports | sed -n 's/.*timestamp="\([0-9][0-9]*\)".*/\1/p' | sort -n | tail -1)
+seconds=$((stamp / 1000))
+newest=$(date -u -d "@$seconds" '+%Y-%m-%d %H:%M UTC' 2>/dev/null \
+    || date -u -r "$seconds" '+%Y-%m-%d %H:%M UTC')
 
-echo "coverage-delta: $base...HEAD"
+echo "coverage-delta: $base... to the working tree"
 echo "coverage-delta: $added line(s) added or changed under modules/*/src/main"
 # The positive half of the check above, printed on every run rather than only when it bites: a
 # reader who is told what was missing on the bad path and nothing at all on the good one has to
