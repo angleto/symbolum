@@ -87,22 +87,50 @@ object Matching {
    * Four, and they are not the same kind of limit. [[Matching.Refusal.NoBinderInScope]] is not a
    * higher-order question at all: with nothing bound, a pattern variable applied to anything is a
    * first-order problem the walk already answers where it can, and a refusal there says only that
-   * these two terms do not match. The other three are the fragment's own boundary, and `docs/adr/0030`
-   * carries how often each is reached.
+   * these two terms do not match. The other three are the fragment's own boundary, which is what
+   * [[isTheFragmentsBoundary]] answers, and `docs/adr/0030` carries how often each is reached.
+   *
+   * Each carries the pattern variable it met, because that is what a caller is told to supply: a
+   * refusal saying the fragment was left and not saying where would leave the caller to find the
+   * variable by reading the lemma.
    */
   enum Refusal {
 
+    /** The pattern variable at the head of the application where the condition failed. */
+    def variable: FVar
+
     /** A pattern variable applied to something, with no binder open: first order, not this limit. */
-    case NoBinderInScope
+    case NoBinderInScope(variable: FVar)
 
     /** A pattern variable applied to a term that is not one of the binders in scope. */
-    case ArgumentIsNotABinder
+    case ArgumentIsNotABinder(variable: FVar)
 
     /** A pattern variable applied to the same binder twice, which has more than one answer. */
-    case BinderAppliedTwice
+    case BinderAppliedTwice(variable: FVar)
 
     /** The target uses a binder the pattern variable was not applied to, so no answer of this shape. */
-    case TargetSeesAnotherBinder
+    case TargetSeesAnotherBinder(variable: FVar)
+
+    /**
+     * Whether this is the fragment turning a question down, rather than a first-order miss.
+     *
+     * A match rather than a comparison with the one case that answers `false`, so that a fifth
+     * condition does not compile until somebody says which it is.
+     */
+    def isTheFragmentsBoundary: Boolean = this match {
+      case NoBinderInScope(_)         => false
+      case ArgumentIsNotABinder(_)    => true
+      case BinderAppliedTwice(_)      => true
+      case TargetSeesAnotherBinder(_) => true
+    }
+
+    /** What the variable was applied to, as the clause a refusal message ends with. */
+    def condition: String = this match {
+      case NoBinderInScope(_)         => "applied with no binder in scope"
+      case ArgumentIsNotABinder(_)    => "applied to a term that is not a bound variable"
+      case BinderAppliedTwice(_)      => "applied to the same bound variable twice"
+      case TargetSeesAnotherBinder(_) => "not applied to a bound variable the target uses"
+    }
   }
 
 
@@ -424,11 +452,14 @@ object Matching {
           val applied = arguments.collect { case argument: FVar if binders.contains(argument) => argument }
 
           if (applied.length != arguments.length)
-            Some(if (binders.isEmpty) Refusal.NoBinderInScope else Refusal.ArgumentIsNotABinder)
-          else if (applied.distinct.length != applied.length) Some(Refusal.BinderAppliedTwice)
+            Some(
+              if (binders.isEmpty) Refusal.NoBinderInScope(variable)
+              else Refusal.ArgumentIsNotABinder(variable)
+            )
+          else if (applied.distinct.length != applied.length) Some(Refusal.BinderAppliedTwice(variable))
           else {
             val escaping = binders.filterNot(applied.toSet.contains)
-            if (escaping.exists(Term.occursFree(_, target))) Some(Refusal.TargetSeesAnotherBinder)
+            if (escaping.exists(Term.occursFree(_, target))) Some(Refusal.TargetSeesAnotherBinder(variable))
             else None
           }
 

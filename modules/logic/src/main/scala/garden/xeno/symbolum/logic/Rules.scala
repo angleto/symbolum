@@ -578,9 +578,11 @@ final class Rules(val logic: Logic) {
    * nominal: it would stop breaking without starting to be right, which is worse than what it
    * replaces. So the caller says what it wants to obtain, and the obtaining is matched against it.
    *
-   * == The two refusals, and the guard after them ==
+   * == The refusals, and the guard after them ==
    *
    *  - [[NotOfForm]] when no instantiation of the leading quantifiers gives `target` at all.
+   *  - [[BeyondMatching]] when finding one is a higher-order question outside the fragment
+   *    `Matching` decides, naming the variable to supply. The target may be an instance there.
    *  - [[Undetermined]] when the match succeeded but left a quantifier open, which happens when
    *    that variable does not occur in the body. Any value would give `target`, so picking one is
    *    exactly the silent choice this method exists to refuse; it names the variable instead.
@@ -655,7 +657,7 @@ final class Rules(val logic: Logic) {
 
       found <- Matching
         .matchTerm(variables.toSet, body, target)
-        .toRight(NotOfForm(s"an instance of $body", target))
+        .toRight(unmatched(variables.toSet, body, target))
 
       // The types first, where there were any to decide: the quantifiers below range over the
       // pattern's types, and `spec` would meet the target's.
@@ -672,6 +674,21 @@ final class Rules(val logic: Logic) {
 
       result <- specAll(opened, arguments)
     } yield result
+
+  /**
+   * Why no instantiation was found, told apart into the two things it can be.
+   *
+   * An ordinary miss, where the target is not an instance, is [[NotOfForm]]. A question the
+   * matcher's fragment turned down is [[BeyondMatching]], and the difference is not wording: the
+   * first tells the caller to restate, the second to supply the variable it names, and a target in
+   * the second case may be an instance. `Matching.why` is asked only here, after the match has
+   * already failed, so the walk it repeats is paid on the refusal path and never on a success.
+   */
+  private def unmatched(variables: Set[FVar], body: Term, target: Term): LogicError =
+    Matching.why(variables, body, target).filter(_.isTheFragmentsBoundary) match {
+      case Some(refusal) => BeyondMatching(body, target, refusal)
+      case None => NotOfForm(s"an instance of $body", target)
+    }
 
   /** The guard both of them end with: what comes back is the term that was asked for, or nothing. */
   private def isTarget(theorem: Kernel.Thm, target: Term): Either[LogicError, Kernel.Thm] =

@@ -366,12 +366,12 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
     // Applied to something that is not a binder: `\x. P (f x)` against `\x. g x`.
     val notABinder = lam(q, force(Term.app(predicate, force(Term.app(f, q)))))
     Matching.why(Set(predicate), notABinder, lam(q, force(Term.app(g, q)))) shouldBe
-      Some(Matching.Refusal.ArgumentIsNotABinder)
+      Some(Matching.Refusal.ArgumentIsNotABinder(predicate))
 
     // The target using a binder the variable was not applied to, which is the case above this.
     val escaping = lam(q, lam(r, force(Term.app(predicate, q))))
     Matching.why(Set(predicate), escaping, lam(q, lam(r, force(Term.app(f, r))))) shouldBe
-      Some(Matching.Refusal.TargetSeesAnotherBinder)
+      Some(Matching.Refusal.TargetSeesAnotherBinder(predicate))
   }
 
   it should "call a first-order miss what it is, rather than a limit of the fragment" in {
@@ -384,7 +384,19 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
     val pattern = force(Term.appAll(binary, List(p, q)))
 
     Matching.why(Set(binary), pattern, force(Term.appAll(g, List(p)))) shouldBe
-      Some(Matching.Refusal.NoBinderInScope)
+      Some(Matching.Refusal.NoBinderInScope(binary))
+  }
+
+  it should "say which refusals are the fragment's boundary, so a caller can tell a limit from a miss" in {
+    // The reading `Rules.specTo` spends: three of the four are the fragment turning a question
+    // down, and the fourth is a first-order miss. All four, so that the one answering `false` is
+    // seen answering it rather than assumed to.
+    val predicate = Term.variable("P", fn)
+
+    Matching.Refusal.NoBinderInScope(predicate).isTheFragmentsBoundary shouldBe false
+    Matching.Refusal.ArgumentIsNotABinder(predicate).isTheFragmentsBoundary shouldBe true
+    Matching.Refusal.BinderAppliedTwice(predicate).isTheFragmentsBoundary shouldBe true
+    Matching.Refusal.TargetSeesAnotherBinder(predicate).isTheFragmentsBoundary shouldBe true
   }
 
   it should "answer nothing where the match succeeded, so a caller cannot read a limit into one" in {

@@ -608,6 +608,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       EscapingVariable(Term.variable("w", realType), "the conclusion"),
       MissingHypothesis(x, "eliminating an existential"),
       Undetermined(Term.variable("y", realType)),
+      BeyondMatching(x, x, Matching.Refusal.ArgumentIsNotABinder(Term.variable("P", Type.fun(realType, Type.Bool)))),
       PartialInstance(5, 4, x),
       // The driver below the reals, which holds no closer and says so. It is in the census as a
       // `ReportADefect` rather than a limit: the two refusals above it are procedures that looked
@@ -656,6 +657,16 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     remedies.count(_.isInstanceOf[ExtendTheTheory]) shouldBe 2
     remedies.count(_.isInstanceOf[ReportADefect]) shouldBe 7
     remedies.count(_.isInstanceOf[RestateTheProblem]) shouldBe 8
+  }
+
+  "A lemma the matcher could not specialise" should "ask for the variable it could not decide, by name" in {
+    // Not a restatement: the target may well be an instance, and `LogicError.BeyondMatching` says
+    // why that is not decided. What the caller can do is what `Induct` does with an induction
+    // principle, which is to supply the predicate and specialise at it.
+    val predicate = Term.variable("P", Type.fun(realType, Type.Bool))
+
+    Remedy.of(BeyondMatching(x, x, Matching.Refusal.ArgumentIsNotABinder(predicate))) shouldBe
+      ChooseATerm("P")
   }
 
   "Every model outcome and every verdict" should "produce a next step that says something" in {
