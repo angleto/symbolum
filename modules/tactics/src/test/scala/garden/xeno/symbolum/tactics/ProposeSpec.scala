@@ -356,7 +356,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 441 with the logarithm's ten antecedents, the same day.
     // 451 with the extreme value theorem's ten, 2026-09-25: three on `INTERVAL_GLUING`, two each
     // on `CONTINUOUS_BOUNDED` and the two attainments, one on `CONTINUOUS_NEG`.
-    proposals.size shouldBe 451
+    // 466 with the convergence criteria's fifteen antecedents, 2026-09-25, derived before the run:
+    // three on `SUM_RATIO_TEST`, two on each of the other three that carry more than one, one on
+    // each of six, and none on the three values in `Transcendental`.
+    proposals.size shouldBe 466
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -747,9 +750,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     def addresses(name: String): Vector[Prove.Address] =
       findings.filter(_.proposal.from == name).flatMap(_.reading).map(_.address)
 
-    addresses("SUM_CAUCHY_PRODUCT_NONNEG") shouldBe
-      Vector.fill(4)(Prove.Address.Propositional)
-    addresses("SUM_CAUCHY_PRODUCT") shouldBe Vector.fill(4)(Prove.Address.Propositional)
+    //
+    // **The two Cauchy products left that address on 2026-09-25, and the paragraph above is why
+    // they could.** A weakening is addressed by its conclusion under its antecedents, and theirs
+    // is a convergence of a series, which `Prove.Address.Series` reads before the propositional
+    // fallback is asked. The standing is unchanged, `Open`, because the series procedure cannot
+    // read a convolution of two unknown sequences; what changed is who was asked, and it is now
+    // the procedure whose question it is. `CONVERGES_TO_ZERO`'s residues conclude a convergence
+    // of a sequence that is not a series, so they stay where they were.
+    addresses("SUM_CAUCHY_PRODUCT_NONNEG") shouldBe Vector.fill(4)(Prove.Address.Series)
+    addresses("SUM_CAUCHY_PRODUCT") shouldBe Vector.fill(4)(Prove.Address.Series)
     addresses("CONVERGES_TO_ZERO") shouldBe Vector.fill(2)(Prove.Address.Propositional)
 
     // And the one that is **not** propositional, which is where the fifth wrong prediction was
@@ -1202,7 +1212,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // sits at the propositional address, which takes it and does not settle it. The tenth is in
     // `unreadable` below. The run that found this row red was the first to reach it; the probe is
     // what said where the other one went, since the row below had not run.
-    open shouldBe 374
+    // 387 with the convergence criteria, 2026-09-25, measured by a probe of `Propose.audit` before
+    // this line was edited: twelve of their fifteen residues conclude a convergence or a divergence
+    // of a series and land here through `Prove.Address.Series`, and the thirteenth is an OLD
+    // residue, `CONVERGES_ABSOLUTE`'s `!f l. ?z. converges (Sum f) z`, which had no address until
+    // that one existed and so moves here from `unreadable` below.
+    open shouldBe 387
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1540,7 +1555,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 103 with `CONTINUOUS_NEG`'s one weakening, `!f x. continuous (\y. 0 - f y) x`, from the same
     // probe: false at any function with a jump, and about `continuous`, which no procedure
     // addresses and no model interprets.
-    unreadable shouldBe 103
+    // 105 with the same probe: three of the criteria's residues conclude a convergence of a
+    // sequence that is not a series, `CONVERGES_OFFSET`'s, `SUM_TERMS_VANISH`'s and
+    // `POWER_VANISHES`'s, and have no address, and `CONVERGES_ABSOLUTE`'s left for `open` above.
+    // Plus three, minus one.
+    unreadable shouldBe 105
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1830,7 +1849,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // on `named`: this list counts CONSTANTS, as the rows above say.
     // 172 with `CONVERGES_SHIFT`'s weakening, which writes `SUC`, the same day. Reconciled against
     // `named` after the run had named the figure rather than predicted before it.
-    aboutNumbers.size shouldBe 172
+    // 185 with thirteen of the criteria's fifteen residues, 2026-09-25, measured by the same probe
+    // and on the criterion these rows state: every one that keeps `Sum`, `Power` or `NUM_LE` is on
+    // this list, and the two that do not are `CONVERGES_OFFSET`'s and `SUM_TERMS_VANISH`'s, whose
+    // only naturals constant was in the antecedent they dropped. None is refuted at a point, so
+    // `after` below does not move.
+    aboutNumbers.size shouldBe 185
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

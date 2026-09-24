@@ -255,6 +255,24 @@ final case class BoundReached(limit: String, reached: Int, allowed: Int, goal: T
 }
 
 /**
+ * A procedure proved the opposite of the goal: `proved` is a theorem, and it denies `goal`.
+ *
+ * The case `Convergence` needed on the day it landed, when a goal `?l. converges (Sum f) l` arrives
+ * about a series the procedure proves divergent. That is the strongest answer a refusal can carry
+ * and none of the others says it: [[NotOfForm]] would report that nothing was learned, which is
+ * false, and [[DoesNotFollow]] speaks of a combination of hypotheses, which is LINARITH's fragment
+ * and not this. Carried as terms for the reason [[NotEqualTo]] gives.
+ *
+ * `Decided`, and more than decided: unlike [[DoesNotFollow]] it does refute, because `proved` is a
+ * theorem of the theory the goal was asked in. What it does not say is anything about a goal the
+ * procedure did not read, and the procedure is named so a reader knows which fragment answered.
+ */
+final case class Denied(goal: Term, proved: Term, procedure: String) extends LogicError {
+  def message: String = s"$procedure proved $proved, which denies $goal"
+  def standing: LogicError.Standing = LogicError.Standing.Decided
+}
+
+/**
  * Two normal forms that do not meet, carried as terms rather than as a printed sentence.
  *
  * Its own case rather than a [[NotOfForm]] with the right-hand side interpolated, and the reason is

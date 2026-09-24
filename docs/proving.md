@@ -2208,7 +2208,11 @@ cancellation.
    products at the two alternating series. The same day `Continuity` defined continuity at a point
    and proved the intermediate value theorem from `COMPLETENESS`, and `Logarithm` spent it on the
    exponential: continuous everywhere, onto the positive reals, and `ln` its inverse, with
-   `EXP_LN`, `LN_EXP`, `LN_ONE` and `LN_MUL`.
+   `EXP_LN`, `LN_EXP`, `LN_ONE` and `LN_MUL`. On 2026-09-25 whether a series converges became something the
+   system **decides** rather than something a reader assembles: `Convergence`, reached through
+   `Prove.Address.Series`, answers in both directions over the geometric, exponential, sine and
+   cosine summands, and `docs/adr/0041` says why it reads closed forms instead of applying the
+   ratio test it also publishes.
 5. **A proof for what `Quantified` decides.** Since 2026-09-10 a quantified linear claim is
    decided, and it is decided rather than proved: the elimination runs on untrusted forms and no
    theorem comes back. Making it produce one wants the density and the unboundedness of the order
