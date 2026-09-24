@@ -188,15 +188,21 @@ jobs:
       # The second gate, and it answers a question the one above cannot: the floors are on a
       # module's AVERAGE, which is a property of the pair (module, suites that ran) rather than of
       # the module -- 86 statements of difference on one tree between two commands, measured at
-      # `30a1452`. What a change adds does not move that way, so this figure is the same under
-      # both. `docs/adr/0035` is the decision, including why the floors above stay.
+      # `30a1452`. What a change adds barely moves that way: the two commands read 98.32% and
+      # 98.26% on the same 3164 added statements on 2026-09-19, two statements apart, where the
+      # module average crossed its floor. `docs/adr/0035` is the decision, including why the
+      # floors above stay.
       #
       # It costs no runner minutes of its own: the step above built the reports and this reads
       # them. It runs whichever way that step went, because a red floor and a poorly covered
-      # change are different findings and a reader wants both.
+      # change are different findings and a reader wants both. Which base each event measures
+      # from is decided by the script and held by its test, not by an expression here: the one
+      # this replaced was empty on a manual run and read a pull request from its previous push.
       - name: What this change covers
         if: always()
-        run: sh tools/coverage-delta.sh "${{ github.event.before || github.event.pull_request.base.sha }}"
+        run: >-
+          sh tools/coverage-delta.sh --event "${{ github.event_name }}"
+          "${{ github.event.before }}" "${{ github.event.pull_request.base.sha }}"
 
       # The rate on its own is what lets a nearly empty report pass, so what a reader wants after a
       # run is the statement count beside it and, after a red one, the report itself. Uploaded

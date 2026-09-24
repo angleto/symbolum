@@ -36,14 +36,18 @@ nobody can read without redoing the arithmetic.
 module floors left exactly as they are.
 
 The figure is the fraction of statements on added or changed lines under `modules/*/src/main`
-that some test executed. It does not move with the command, because who else runs a file does
-not enter it: a new statement is executed by somebody or it is not.
+that some test executed. It barely moves with the command, because who else runs a file enters
+it only through the added statements that another module's suite alone reaches; the table under
+Consequences measures that at two statements of 3164. **Corrected in place on 2026-09-24**: this
+sentence said "it does not move with the command" when it was written, and the measurement of
+2026-09-19 below it had already shown a difference of 0.06 points.
 
 **It compares no two reports, and that is the whole of the construction.** The obvious tool diffs
 two `scoverage.xml` files, and it is wrong: one line inserted moves the line number of every
 statement below it, so the naive comparison reports the rest of the file as new. This reads the
 added lines out of `git diff` in the coordinates of the **current** file and reads the current
-report, which is in those same coordinates. There is no baseline, so there is nothing to shift.
+report, which is in those same coordinates. The current file is the one in the working tree,
+since 2026-09-24; see "What it read" below for why it was not before and what that cost. There is no baseline, so there is nothing to shift.
 That also means no baseline file to commit, no artifact of a previous push to fetch, and nothing
 that can go stale except the report itself, whose date is printed beside the figure.
 
@@ -111,11 +115,40 @@ than rating the change over the rest. The criterion is the change and not the bu
 sharper than the neighbouring gate's and is what keeps a narrow local run of the one module a
 change touches measurable: a module with no changed line hides nothing by not reporting.
 
-**What it cannot distinguish**, said here because it is the shape of failure this repository
-cares about: changed lines carrying no statement at all. A comment, a blank line and a signature
-produce that reading, and so does a report written before the change. The tool refuses to call
-it a pass and prints the report's date beside it, which puts the judgement on a reader rather
-than on a silence.
+**And what it read was still part of the change, one level down, until 2026-09-24.** The
+verification of card `2cc13929` measured four more ways for the figure to be about something other
+than the change, and each is a refusal now rather than a rate:
+
+- **A changed file no report lists** left the denominator in silence: a fixture of 42 changed
+  lines of code read 20 of 20. The tool now refuses and names the file. What that costs is a
+  source with no statement at all, which no report can list either; none of the 183 sources under
+  `modules/*/src/main` was free of `def`, `val` and `var` that day, so nothing here is expected to
+  meet it.
+- **The diff was to `HEAD` and the report of the working tree.** With anything uncommitted the two
+  are in different coordinates, and on a real report of `scan` the tool answered "none of those
+  lines carries a statement" for a change of six statements, two never run. **Decided: the diff is
+  to the working tree, and a source git does not track yet is added whole**, because that is the
+  tree the report was built from. Refusing a dirty tree is the alternative and is correct as well;
+  it is rejected because measuring an uncommitted change is the local use this tool has, and on a
+  runner the two are the same since the checkout is clean.
+- **A report no build wrote**, a fourteen-byte `<statements/>` dated 2020 that the shared checkout
+  held in every module, passed a change of 199 lines. A report without scoverage's `timestamp` is
+  refused, and so is a report older than a changed file of its module: that report is of a tree
+  without the change. The file's modification time is what is compared, since the report is of
+  the working tree, and a checkout rewrites the times of what it changes.
+- **The date printed was the wrong one**: `ls -l` columns sorted as text print the 3rd of a month
+  before the 22nd. It is read from the reports' own stamps now, as a number.
+
+And the base a runner measured from was decided by an expression in `ci.yml` that no test could
+reach: empty on a manual run, so red on every one, and on a pull request's later pushes the
+previous push rather than the base. The script takes the event and decides, and its test holds
+all three.
+
+**What it still cannot distinguish**, said here because it is the shape of failure this
+repository cares about: changed lines carrying no statement in a file the report does list. A
+comment, a blank line and a signature produce that reading, and so would a report of the right
+date built without the change, which the checks above make hard to come by and do not make
+impossible. The tool refuses to call it a pass and prints the report's date beside it.
 
 **What it costs.** No runner minutes of its own: the `coverage` job already builds the reports
 and this reads them. `fetch-depth: 0` on that job's checkout, because a shallow clone has no

@@ -27,6 +27,16 @@ harness_name=coverage-delta-test
 
 failures=0
 
+# What scoverage stamps a report with, in milliseconds. Every fixture report carries one because
+# the subject refuses a report without, which is what a stub nobody's build wrote looks like.
+stamp=$(($(date +%s) * 1000))
+
+# Sources dated before the reports that describe them, which is the order a build produces. A
+# fixture writes both within a second, and the subject refuses a report older than a changed file.
+age() {
+    find "$1/modules" -path '*/src/*' -type f -exec touch -t 202601010000 {} +
+}
+
 # A repository with one module, a first commit, and then a change of `$1` statements of which
 # `$2` are recorded as executed. The report is written by hand: the subject reads the numbers it
 # finds, and a fixture that ran a real build would be measuring scoverage rather than this.
@@ -63,7 +73,7 @@ build() {
     # first `covered` of them executed. Line 1 and the last line are the braces and carry none,
     # which is why the statements start at line 2.
     {
-        echo '<scoverage statement-count="'"$added"'">'
+        echo '<scoverage statement-count="'"$added"'" timestamp="'"$stamp"'">'
         i=1
         while [ "$i" -le "$added" ]; do
             hits=0
@@ -74,6 +84,7 @@ build() {
         done
         echo '</scoverage>'
     } > "$repo/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+    age "$repo"
 }
 
 # A repository with TWO modules, each changed and each reporting, which is what the partial-report
@@ -109,7 +120,7 @@ build_pair() {
             echo '}'
         } > "$src"
         {
-            echo '<scoverage statement-count="'"$per"'">'
+            echo '<scoverage statement-count="'"$per"'" timestamp="'"$stamp"'">'
             i=1
             while [ "$i" -le "$per" ]; do
                 echo '<statement source="'"$src"'" line="'$((i + 1))'" invocation-count="1">'
@@ -124,6 +135,7 @@ build_pair() {
         git_q add -A
         git_q commit -m change
     )
+    age "$repo"
 }
 
 run_subject() {
@@ -178,15 +190,31 @@ holds "a change under no module says there is nothing to measure" "nothing to me
 lacks "and does not print a rate" "%"
 check "and exits green" "$status" "0"
 
-# 6. THE CONTROL ON THE REPORT, and it is the one that separates this from a subject that has
-# stopped reading. Lines were added and no report mentions them: that is what a stale report
-# gives, and the subject must refuse to read it as a pass while still exiting green, because
-# failing here would fail every documentation change.
-build stale 20 20
-rm -f "$work/stale/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
-printf '<scoverage statement-count="0">\n</scoverage>\n' \
-    > "$work/stale/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
-run_subject stale HEAD~1
+# 6. CHANGED LINES WITH NO STATEMENT ON THEM, in a file the report does list: a comment, a blank,
+# a signature. That is ordinary and is not a rate over an empty set, so the subject says which of
+# the readings a reader has to rule out and exits green, because failing here would fail every
+# change to a comment. Until 2026-09-24 this case was a report listing nothing at all, which the
+# subject passed the same way; that report is refused now, and case 13 is where.
+build comments 20 20
+(
+    cd "$work/comments"
+    { echo '// a note'; cat modules/demo/src/main/scala/Demo.scala; } > next
+    mv next modules/demo/src/main/scala/Demo.scala
+    git_q add -A
+    git_q commit -m note
+)
+{
+    echo '<scoverage statement-count="20" timestamp="'"$stamp"'">'
+    i=1
+    while [ "$i" -le 20 ]; do
+        echo '<statement source="'"$work/comments/modules/demo/src/main/scala/Demo.scala"'" line="'$((i + 2))'" invocation-count="1">'
+        echo '</statement>'
+        i=$((i + 1))
+    done
+    echo '</scoverage>'
+} > "$work/comments/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+age "$work/comments"
+run_subject comments HEAD~1
 holds "lines with no statement in any report are not called covered" "none of those lines carries a statement"
 holds "and the reader is told a stale report looks the same" "stale report"
 check "and exits green" "$status" "0"
@@ -210,11 +238,11 @@ status=0
 report=$(cd "$work/borderline" && COVERAGE_DELTA_MIN=85 sh "$subject" HEAD~1 2>&1) || status=$?
 check "and green at a floor of 85" "$status" "0"
 
-# 9. THE THREE WAYS THERE IS NO BASE, which are three answers and not one. Only the middle of
-# them can be produced on a runner, and none of them can be produced by reading the script: the
-# caller in `.github/workflows/ci.yml` passes `github.event.before || ...`, which is forty zeros
-# on the first push to a ref, the base sha on a pull request, and an empty string when neither
-# expression resolves.
+# 9. THE THREE WAYS THERE IS NO BASE, which are three answers and not one. On a runner the first
+# is `github.event.before` on the first push to a ref, which is forty zeros; the third is a base a
+# shallow clone does not hold. The empty string was what `ci.yml` passed on a manual run until
+# 2026-09-24, when the choice of base moved into the script (case 15); it is still refused, since
+# naming no base and naming an empty one are different mistakes.
 build bases 20 20
 
 status=0
@@ -272,9 +300,121 @@ build_pair quiet 20
     git_q add -A
     git_q commit -m "only demo moves"
 )
+age "$work/quiet"
 rm -rf "$work/quiet/modules/other/target"
 run_subject quiet HEAD~1
 holds "a module that did not report and did not change is not a shortfall" "1 module(s) it touches has a report"
 check "and the change is measured" "$status" "0"
+
+# 11 TO 15 ARE THE VERIFICATION OF CARD 2cc13929, 2026-09-24: five things the subject answered
+# wrongly, each measured then and each a case here that fails on the subject of that day.
+
+# 11. A CHANGED FILE NO REPORT LISTS. The report is of `Demo.scala`; the change also adds
+# `Other.scala`, twenty-two lines of code nobody's report mentions. The subject read "20 of 20 =
+# 100.00%" and exited green, which is a rate over part of the change presented as the change.
+build unlisted 20 20
+(
+    cd "$work/unlisted"
+    {
+        echo 'object Other {'
+        i=1
+        while [ "$i" -le 21 ]; do echo "  def g$i(): Int = $i"; i=$((i + 1)); done
+    } > modules/demo/src/main/scala/Other.scala
+    git_q add -A
+    git_q commit --amend -m change
+)
+age "$work/unlisted"
+run_subject unlisted HEAD~1
+holds "a changed file in no report is named" "Other.scala"
+lacks "and no rate is printed over the file that is listed" "20 of 20"
+check "and the change is refused as unmeasured" "$status" "2"
+
+# 12. AN UNCOMMITTED EDIT ABOVE THE CHANGE. The report is built from the working tree, where a
+# comment now sits above the twenty new statements, so they are on lines 3 to 22; the committed
+# change has them on 2 to 21. Diffing to HEAD read the committed numbers against the working
+# tree's report.
+build dirty 20 20
+(
+    cd "$work/dirty"
+    { echo '// not committed'; cat modules/demo/src/main/scala/Demo.scala; } > next
+    mv next modules/demo/src/main/scala/Demo.scala
+)
+{
+    echo '<scoverage statement-count="20" timestamp="'"$stamp"'">'
+    i=1
+    while [ "$i" -le 20 ]; do
+        hits=1; [ "$i" -eq 20 ] && hits=0
+        echo '<statement source="'"$work/dirty/modules/demo/src/main/scala/Demo.scala"'" line="'$((i + 2))'" invocation-count="'"$hits"'">'
+        echo '</statement>'
+        i=$((i + 1))
+    done
+    echo '</scoverage>'
+} > "$work/dirty/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+age "$work/dirty"
+run_subject dirty HEAD~1
+holds "the change is read in the working tree's coordinates, all twenty statements" "19 of 20 statement(s)"
+holds "including the one on the last line that nobody ran" "= 95.00%"
+check "and exits green" "$status" "0"
+
+# 12b. The same, with the edit a NEW FILE git does not know yet: it is part of the change.
+build fresh 20 20
+(
+    cd "$work/fresh"
+    printf 'object Fresh {\n  def h(): Int = 1\n}\n' > modules/demo/src/main/scala/Fresh.scala
+)
+age "$work/fresh"
+run_subject fresh HEAD~1
+holds "an untracked source is part of the change and is named when no report lists it" "Fresh.scala"
+check "and is refused rather than left out" "$status" "2"
+
+# 13. A REPORT NO BUILD WROTE. The shared checkout held `<statements/>`, fourteen bytes dated 2020,
+# in every module, and the subject passed a change of 199 lines over them.
+build stub 20 20
+printf '<statements/>' > "$work/stub/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+run_subject stub HEAD~1
+holds "a report with no timestamp is named as not a build's" "no build of scoverage wrote them"
+check "and refused" "$status" "2"
+
+# 13b. A report OLDER than a changed file, which is a report of a tree without the change.
+build older 20 20
+touch -t 202512010000 "$work/older/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+run_subject older HEAD~1
+holds "a changed file newer than its module's report is named" "changed after their module's report"
+check "and refused" "$status" "2"
+
+# 14. THE NEWEST DATE, read as a number. Reports stamped the 3rd and the 22nd of September; the
+# subject sorted `ls -l` columns as text and printed the 3rd.
+build_pair dated 20
+sept3=$(( $(date -u -d '2026-09-03 12:00' +%s 2>/dev/null || date -u -j -f '%Y-%m-%d %H:%M' '2026-09-03 12:00' +%s) * 1000 ))
+sept22=$(( $(date -u -d '2026-09-22 12:00' +%s 2>/dev/null || date -u -j -f '%Y-%m-%d %H:%M' '2026-09-22 12:00' +%s) * 1000 ))
+for pair in "demo $sept3 202609031200" "other $sept22 202609221200"; do
+    set -- $pair
+    file="$work/dated/modules/$1/target/scala-3.3.5/scoverage-report/scoverage.xml"
+    sed "s/timestamp=\"[0-9]*\"/timestamp=\"$2\"/" "$file" > "$file.next" && mv "$file.next" "$file"
+    touch -t "$3" "$file"
+done
+run_subject dated HEAD~1
+holds "the newest of the two reports is the one printed" "2026-09-22"
+lacks "and not the earlier one" "2026-09-03"
+check "and exits green" "$status" "0"
+
+# 15. THE EVENT A RUNNER IS ON, decided here and not in YAML. `ci.yml` passed
+# `github.event.before || github.event.pull_request.base.sha`: empty on a manual run, so exit 2 on
+# every one, and on a pull request's synchronize the previous push rather than the base.
+build events 20 20
+status=0
+report=$(cd "$work/events" && sh "$subject" --event workflow_dispatch "" "" 2>&1) || status=$?
+holds "a manual run names no change and says so" "names no change"
+check "and is not a red job" "$status" "0"
+
+status=0
+report=$(cd "$work/events" && sh "$subject" --event pull_request beefbeefbeefbeefbeefbeefbeefbeefbeefbeef HEAD~1 2>&1) || status=$?
+holds "a pull request is measured from its base and not from the previous push" "20 of 20 statement(s)"
+check "and exits green" "$status" "0"
+
+status=0
+report=$(cd "$work/events" && sh "$subject" --event push HEAD~1 beefbeefbeefbeefbeefbeefbeefbeefbeefbeef 2>&1) || status=$?
+holds "a push is measured from the commit before it" "20 of 20 statement(s)"
+check "and exits green" "$status" "0"
 
 summarise
