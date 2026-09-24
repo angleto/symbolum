@@ -976,6 +976,18 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`Fraction.Statements` before the development is built, which is where a partial " +
         "reduction would surface as a statement nobody published"),
     // 2026-09-20, with `exp 1 > 2`.
+    "Trigonometric.scala" ->
+      ("five walks, and none of them is left to the limit to report. Two are the helper that " +
+        "proves each termwise identity: it rewrites each side with ground equations of its own " +
+        "and hands the two results to `Ring` as one equation, so a walk that stopped early leaves " +
+        "an index, a sign or a power standing that the other side lacks, and the refusal is " +
+        "`Ring`'s rather than a weaker theorem. The odd place's two open `NUM_ADD` over " +
+        "successors and are joined by `Conv.trans` to an equation built without the rewriter, " +
+        "which refuses a term that does not match on the nose. The last puts the two values into " +
+        "the identity and is handed to `Ring` against the sum of the two squares, with the same " +
+        "effect. And the two `Rewrite.inTheorem` calls respell a definition's index: what comes " +
+        "out is compared with the partial sums of the convergence it is joined to before anything " +
+        "is read off it, so a half-respelled sequence is refused by name"),
     "Transcendental.scala" ->
       ("three, and none of them is left to the limit to report. One is `Rewrite.rewrite` on the " +
         "third partial sum of the exponential's series, which the recurrences of the sum, the " +

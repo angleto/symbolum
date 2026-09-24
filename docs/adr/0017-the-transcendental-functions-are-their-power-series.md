@@ -88,6 +88,14 @@ list above, one is now a theorem and three are not: the addition theorem and the
 identity want the Cauchy product, and every fact about `ln` still waits on the intermediate value
 theorem.
 
+**Corrected in place a third time, 2026-09-24: two more of the four are theorems.** The addition
+theorem is `Transcendental.EXP_ADD` since 2026-09-21, through `Limit.SUM_CAUCHY_PRODUCT`, and the
+Pythagorean identity is `Transcendental.SIN_COS_SQUARED` since 2026-09-24. The second is **not** the
+first read through a square root of minus one, which this repository has no type for: it is the same
+convolution fact, `EXP_CONVOLUTION` at `(x, 0 - x)`, split into its even and its odd places, where
+the cosine's Cauchy product with itself and the sine's cancel one index apart. What is left of the
+list is every fact about `ln`, which still waits on the intermediate value theorem.
+
 **The cost is a reader who sees `exp` in the signature and assumes the analysis is behind it.**
 That is paid in three places and nowhere else: the row in `README.md`, the docstring of
 `Transcendental`, and this record.

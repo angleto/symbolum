@@ -647,7 +647,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 629 lemmas, 414 have two or more leading quantifiers and **369 of
+caller meant: of the library's 634 lemmas, 416 have two or more leading quantifiers and **369 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1671,15 +1671,20 @@ which is the same fact and would owe `~(exp x = 0)`. From it `COSH_SQUARED` is t
 and had nothing to spend until the addition theorem arrived, which is what that record chose the
 sum and the difference over two series for.
 
-What is still not proved is the **trigonometric** identity,
-`sin x * sin x + cos x * cos x = 1`, and it is not the hyperbolic one with three symbols
-changed. `sin` and `cos` are their own series and meet `exp` only through a square root of minus
-one, which this development has no type for, so the route is the Cauchy product at the two
-alternating series — which wants their absolute convergence first, the same argument
-`EXP_ABSOLUTE` makes and not an instance of it. Every fact about `ln` still waits on the
-intermediate value theorem, and nothing above moves that: there is no continuity anywhere in
-this repository, and `MONOTONE_CONVERGES` spends `COMPLETENESS` inline rather than publishing a
-supremum anything else could reach.
+**The trigonometric identity is `Transcendental.SIN_COS_SQUARED`, since 2026-09-24**, and it is
+not the hyperbolic one with three symbols changed: `sin` and `cos` are their own series and meet
+`exp` only through a square root of minus one, which this development has no type for. So it is
+a second pair of Cauchy products, the cosine's series with itself and the sine's with itself, and
+what joins them is `EXP_CONVOLUTION` at `(x, 0 - x)`, which is `0^N / N!`, split by parity with
+`Series.SUM_EVEN_ODD`: its even places are the cosine's product term at `m + 1` and its odd places
+the sine's at `m`, so the two cancel **one index apart** and `Limit.CONVERGES_SHIFT` is what makes
+that a statement about the limits. `Trigonometric.scala` is the derivation and its docstring the
+argument. It costs exactly what `EXP_ADD` costs and does not rest on it, which `TranscendentalSpec`
+asserts both ways.
+
+Every fact about `ln` still waits on the intermediate value theorem, and nothing above moves that:
+there is no continuity anywhere in this repository, and `MONOTONE_CONVERGES` spends `COMPLETENESS`
+inline rather than publishing a supremum anything else could reach.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

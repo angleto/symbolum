@@ -68,6 +68,9 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     def axioms(name: String): Int = Derivation.axiomsOf(force(limit.fact(name))).size
 
     axioms(Limit.Eventually) shouldBe 2
+    // The same two and for the same reason: it moves an index along the naturals' order and a
+    // proposition about a distance, and decides no arithmetic on the reals at all.
+    axioms(Limit.Shifted) shouldBe 2
     axioms(Limit.BelowEveryPositive) shouldBe 11
     axioms(Limit.Constant) shouldBe 13
     axioms(Limit.Unique) shouldBe 17

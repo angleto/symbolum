@@ -18,20 +18,17 @@ import garden.xeno.symbolum.logic.*
  *
  * == What is proved about them today, and what is not ==
  *
- * The value of each at zero, and for the hyperbolic pair two identities besides. `EXP_ZERO`,
- * `SIN_ZERO` and `COS_ZERO` are reachable because at zero every series here **stops moving**: past
- * the first term every summand carries a power of zero, so the partial sums are eventually constant
- * and `Limit.CONVERGES_EVENTUALLY` with `Limit.CONVERGES_CONSTANT` settles them without any
- * convergence theorem at all. `SINH_ZERO`, `COSH_ZERO`, `COSH_PLUS_SINH` and `COSH_MINUS_SINH` are
- * cheaper still and are pure algebra, which is the heading two below.
+ * The value of each at zero; `2 < exp 1`; the exponential's addition theorem and its absolute
+ * convergence at every real; the hyperbolic identity; and the trigonometric one,
+ * `sin x * sin x + cos x * cos x = 1`. The facts at zero are reachable because there every series
+ * **stops moving**: past the first term every summand carries a power of zero, so
+ * `Limit.CONVERGES_EVENTUALLY` with `Limit.CONVERGES_CONSTANT` settles them without any convergence
+ * theorem at all. Everything after them needs a series to converge before `lim` says anything, and
+ * each docstring below says which theorem of [[Limit]] obtained that.
  *
- * **Everywhere else the constants denote and nothing is provable about them**, which is the same
- * silence `NUM_GCD ZERO ZERO` leaves and is stated here rather than left to be discovered. `exp 1`
- * is a term; that it is above `2` is not a theorem, because the series at `1` converges and nothing
- * here can say so yet. What closes that gap is the monotone convergence theorem in [[Limit]] and
- * then a comparison with a geometric series, which `Series.SUM_GEOMETRIC` already holds. The
- * addition theorem `exp (x + y) = exp x * exp y` is further: it wants the Cauchy product, and
- * `Series.SUM_SWAP` is the half of that which exists.
+ * **Every fact about a value away from zero is an identity or a bound, and none names a number**,
+ * which is the same silence `NUM_GCD ZERO ZERO` leaves and is stated here rather than left to be
+ * discovered: `exp 1` is above `2`, and what it is, this repository cannot say.
  *
  * `ln` has **no fact at all** and that is not an oversight either: every one of them wants the
  * exponential to be onto the positives, which is the intermediate value theorem, which wants
@@ -50,10 +47,10 @@ import garden.xeno.symbolum.logic.*
  * today where the series would have made it wait for a rearrangement of a series into its even and
  * odd parts.
  *
- * What the pair does **not** get from that is the identity a reader expects next:
- * `cosh x * cosh x - sinh x * sinh x = 1` needs `exp x * exp (0 - x) = 1`, which is the addition
- * theorem, which wants the Cauchy product. So they arrive with the same silence `exp` has rather
- * than a smaller one.
+ * The identity a reader expects next, `cosh x * cosh x - sinh x * sinh x = 1`, is two lines over
+ * the addition theorem for that reason. The trigonometric one is not, and
+ * [[Transcendental.Pythagoras]] says what it costs instead: the same convolution read by parity,
+ * through a second pair of Cauchy products.
  *
  * == Why the series and not an axiom ==
  *
@@ -317,11 +314,44 @@ object Transcendental {
    * difference rather than two series of their own, and **this is what that decision was for** —
    * the facts it names landed on 2026-09-15 and had nothing to spend until now.
    *
-   * It is **not** `sin x * sin x + cos x * cos x = 1` with three symbols changed, and nothing
-   * here reaches that one: `sin` and `cos` are their own series and meet `exp` only through a
-   * square root of minus one, which this development has no type for.
+   * It is **not** [[Pythagoras]] with three symbols changed: `sin` and `cos` are their own series
+   * and meet `exp` only through a square root of minus one, which this development has no type
+   * for, so that one is a second Cauchy product rather than a consequence of this.
    */
   val HyperbolicPythagoras: String = "COSH_SQUARED"
+
+  /**
+   * `|- !x. ?P. converges (Sum (\k. abs ((0 - 1)^k * (x^(k + k) / (k + k)!)))) P`
+   *
+   * The cosine's series converges absolutely at every real, which is what
+   * `Limit.SUM_CAUCHY_PRODUCT` asks of it before it can be squared. It is [[AbsolutelyConvergent]]
+   * read at the even places: each term's magnitude is under the exponential's at its index, and
+   * the exponential's magnitudes at the even and the odd places together are its partial sums at
+   * an even length, `Series.SUM_EVEN_ODD`.
+   *
+   * The index is written `k + k` and not `NUM_MUL 2 k` as the definition writes it, because that
+   * is the spelling the parity split closes on; the proof of [[Pythagoras]] crosses between them
+   * once, at the definition.
+   */
+  val CosineAbsolute: String = "COS_ABSOLUTE"
+
+  /** `|- !x. ?P. converges (Sum (\k. abs ((0 - 1)^k * (x^(SUC (k + k)) / (SUC (k + k))!)))) P` */
+  val SineAbsolute: String = "SIN_ABSOLUTE"
+
+  /**
+   * `|- !x. sin x * sin x + cos x * cos x = 1`
+   *
+   * The trigonometric identity, from the two series and nothing about a circle, since there is no
+   * circle here to have anything about. `Trigonometric` is the derivation and its docstring the
+   * argument; the short form is that the Cauchy product of the cosine with itself and of the sine
+   * with itself cancel **one index apart**, the cosine's at `m + 1` against the sine's at `m`,
+   * because both are [[Convolution]] at `(x, 0 - x)` read at the even and at the odd places, and
+   * that convolution is `0^N / N!`.
+   *
+   * It costs exactly what [[Addition]] costs and does not rest on it: the two identities are two
+   * readings of one convolution fact, not one read off the other.
+   */
+  val Pythagoras: String = "SIN_COS_SQUARED"
 
   /**
    * The dominating series for the exponential at one, written as a sum of two copies.
@@ -377,7 +407,14 @@ object Transcendental {
     Addition -> "!x:real. !y:real. exp (x + y) = exp x * exp y",
     Reciprocal -> "!x:real. exp x * exp (0 - x) = 1",
     HyperbolicPythagoras ->
-      "!x:real. cosh x * cosh x - sinh x * sinh x = 1"
+      "!x:real. cosh x * cosh x - sinh x * sinh x = 1",
+    CosineAbsolute ->
+      ("!x:real. ?P:real. converges (Sum (\\k:num. abs (" + Trigonometric.cosineTerm("k") +
+        "))) P"),
+    SineAbsolute ->
+      ("!x:real. ?P:real. converges (Sum (\\k:num. abs (" + Trigonometric.sineTerm("k") +
+        "))) P"),
+    Pythagoras -> "!x:real. sin x * sin x + cos x * cos x = 1"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -520,6 +557,12 @@ object Transcendental {
         hyperbolic(CosinePlusSine),
         hyperbolic(CosineMinusSine))
       (reciprocal, pythagoras) = hyperbolicPair
+
+      semiring <- Semiring.construct(peano)
+      trigonometric <- Trigonometric.prove(
+        Trigonometric.Pieces(
+          logic, linarith, semiring, theory, notation, limit, series, peano, coding,
+          sineDefinition, cosineDefinition, absolute, convolution))
     } yield new Transcendental(
       limit,
       series,
@@ -546,7 +589,7 @@ object Transcendental {
         Addition -> addition,
         Reciprocal -> reciprocal,
         HyperbolicPythagoras -> pythagoras
-      ) ++ hyperbolic
+      ) ++ hyperbolic ++ trigonometric
     )
   }
 
@@ -2831,10 +2874,10 @@ object Transcendental {
    * `cosh x * cosh x - sinh x * sinh x`. `docs/adr/0017` decided the pair would be that sum and
    * that difference rather than two series, and this is what that decision was for.
    *
-   * The **trigonometric** identity is not this fact with three symbols changed and nothing here
-   * reaches it: `sin` and `cos` are their own series and meet `exp` only through a square root of
-   * minus one, which this development has no type for. What it would take is the Cauchy product
-   * at the two alternating series, which wants their absolute convergence first.
+   * The **trigonometric** identity is not this fact with three symbols changed: `sin` and `cos`
+   * are their own series and meet `exp` only through a square root of minus one, which this
+   * development has no type for. `Trigonometric` takes the other road, the Cauchy product at the
+   * two alternating series.
    */
   private def hyperbolicIdentities(
     logic: Logic,

@@ -388,4 +388,73 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(pythagoras) shouldBe
       Derivation.axiomsOf(force(transcendental.fact(Transcendental.Addition)))
   }
+
+  /**
+   * The trigonometric identity, which the two series owe and the hyperbolic one could not buy.
+   *
+   * What `Trigonometric` claims is a route, and a route is invisible in a statement four symbols
+   * long, so the route is what is asserted: the two Cauchy products, the convolution at `(x, -x)`
+   * read by parity, the sign law at a doubled exponent, and the shift that lines the cosine's
+   * product up with the sine's one index along.
+   *
+   * **And what it does not rest on is half the claim.** `EXP_ADD` is the exponential's reading of
+   * the same convolution fact, and a derivation of this from it would be the square root of minus
+   * one this repository does not have. Asserting the absence is what separates "the same
+   * convolution read twice" from "one identity read off the other", and it is not vacuous: the
+   * same walk finds every fact of the route above.
+   */
+  "The trigonometric identity" should "hold at every real with nothing assumed" in {
+    val squared = force(transcendental.fact(Transcendental.Pythagoras))
+
+    squared.hypotheses shouldBe empty
+    transcendental.show(squared.conclusion) shouldBe "!x:real. sin x * sin x + cos x * cos x = 1"
+  }
+
+  it should "rest on the two Cauchy products and the convolution read by parity" in {
+    val squared = force(transcendental.fact(Transcendental.Pythagoras))
+
+    val route = Set(
+      force(chain.limit.fact(Limit.Cauchy)).conclusion,
+      force(chain.limit.fact(Limit.Shifted)).conclusion,
+      force(transcendental.fact(Transcendental.Convolution)).conclusion,
+      force(transcendental.fact(Transcendental.CosineAbsolute)).conclusion,
+      force(transcendental.fact(Transcendental.SineAbsolute)).conclusion,
+      force(chain.series.fact(Series.EvenOdd)).conclusion,
+      force(chain.series.fact(Series.NegatedDouble)).conclusion,
+      force(chain.series.fact(Series.Binomial)).conclusion)
+
+    Derivation.restingOn(squared, route) shouldBe route
+
+    val addition = force(transcendental.fact(Transcendental.Addition)).conclusion
+    Derivation.restingOn(squared, Set(addition)) shouldBe empty
+  }
+
+  it should "cost what the addition theorem costs, and the series' magnitudes what the exponential's do" in {
+    // Equalities and not ceilings, for `CodingSpec`'s reason. The absolute convergence of the two
+    // alternating series was predicted at nineteen before it was measured and came in at eighteen,
+    // which is `EXP_ABSOLUTE`'s own figure: the bound it spends is the exponential's, and the sign
+    // `(0 - 1)^k` costs nothing past the magnitude facts `EXP_ABSOLUTE` already reaches.
+    def axioms(name: String): Set[Term] =
+      Derivation.axiomsOf(force(transcendental.fact(name))).toSet
+
+    axioms(Transcendental.Pythagoras) shouldBe axioms(Transcendental.Addition)
+    axioms(Transcendental.CosineAbsolute) shouldBe axioms(Transcendental.AbsolutelyConvergent)
+    axioms(Transcendental.SineAbsolute) shouldBe axioms(Transcendental.AbsolutelyConvergent)
+  }
+
+  it should "detach at zero into the two values the series have there" in {
+    // Not a second proof of anything: the identity at zero, with `SIN_ZERO` and `COS_ZERO`
+    // substituted, is `0 * 0 + 1 * 1 = 1`. What it checks is that the constants the identity is
+    // about are the ones those two facts are about, which a statement parsed against another
+    // signature would not be.
+    val squared = force(transcendental.fact(Transcendental.Pythagoras))
+    val zero = force(Parser.term(transcendental.theory, transcendental.notation, "0:real"))
+    val atZero = force(transcendental.logic.rules.spec(zero, squared))
+    val values = force(Rewrite.Rule.all(
+      transcendental.logic,
+      Vector(force(transcendental.sineAtZero), force(transcendental.cosineAtZero))))
+    val moved = force(Rewrite.inTheorem(values, atZero))
+
+    transcendental.show(moved.conclusion) shouldBe "0 * 0 + 1 * 1 = 1"
+  }
 }

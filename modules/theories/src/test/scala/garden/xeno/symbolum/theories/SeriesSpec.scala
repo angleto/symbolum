@@ -610,6 +610,41 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     driver.proveWith(statement, rules) shouldBe a[Left[?, ?]]
   }
 
+  "A sum of even length" should "be its even places plus its odd ones" in {
+    series.show(fact(Series.EvenOdd).conclusion) shouldBe
+      "!x:num -> real. !y:num. Sum x (y + y) = " +
+      "Sum (\\z:num. x (z + z)) y + Sum (\\z:num. x (SUC (z + z))) y"
+    fact(Series.EvenOdd).hypotheses shouldBe empty
+  }
+
+  private def parityRules(withSuccessorPlus: Boolean): Vector[Rewrite.Rule] =
+    force(Rewrite.Rule.all(series.logic, Vector(
+      fact(Series.AtZero), fact(Series.AtSuccessor),
+      force(peano.fact(Peano.AddAtZero)), force(peano.fact(Peano.AddAtSuccessor))) ++
+      (if (withSuccessorPlus) Vector(force(peano.fact(Peano.SuccessorPlus))) else Vector.empty)))
+
+  it should "refuse the same statement with the even places counted twice" in {
+    // The false control: the odd places read as the even ones, which is the slip a reindexing
+    // makes when it drops a successor. Same driver and the rules the real proof has.
+    val statement = force(series.proposition(
+      "!f:num->real. !n:num. Sum f (NUM_ADD n n) = " +
+        "Sum (\\i:num. f (NUM_ADD i i)) n + Sum (\\i:num. f (NUM_ADD i i)) n"))
+    val driver = Induct(series.logic, ring, force(naturals.fact(Natural.Induction)))
+
+    driver.proveWith(statement, parityRules(withSuccessorPlus = true)) shouldBe a[Left[?, ?]]
+  }
+
+  it should "need `NUM_SUC_ADD`, which is why its list is not the reindexing one" in {
+    // `ParityStatements`' docstring says the reindexing list's two `NUM_ADD` rules stall at
+    // `NUM_ADD (SUC n) n`. Asserted, so the reason for an eighth list is a measurement: the true
+    // statement is refused without the third rule and proved with it.
+    val statement = force(series.proposition(Series.ParityStatements.head._2))
+    val driver = Induct(series.logic, ring, force(naturals.fact(Natural.Induction)))
+
+    driver.proveWith(statement, parityRules(withSuccessorPlus = false)) shouldBe a[Left[?, ?]]
+    driver.proveWith(statement, parityRules(withSuccessorPlus = true)) shouldBe a[Right[?, ?]]
+  }
+
   "The geometric sum" should "hold at every length, cleared of its denominator" in {
     // Cleared so that `Ring` and not a field closes it, and so that the lemma carries no
     // hypothesis `q != 1` at all: at q = 1 both sides are zero, which is true and uninformative

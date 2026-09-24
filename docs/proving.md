@@ -2188,10 +2188,10 @@ cancellation.
    anything about limits. The geometric series at one half needed neither and `LimitSpec` had
    obtained it with its limit between zero and two, which is the model the exponential's follows.
 
-   **What is left after that** is the addition theorem through the Cauchy product, of which
-   `SUM_SWAP` is the half that exists, and the Pythagorean identity with it; then continuity and
-   the intermediate value theorem, which is what every fact about `ln` waits on and why that
-   constant has none today.
+   **What came after that** is the addition theorem through the Cauchy product, on 2026-09-21, and
+   on 2026-09-24 the Pythagorean identity, `SIN_COS_SQUARED`, through a second pair of Cauchy
+   products at the two alternating series. What is left is continuity and the intermediate value
+   theorem, which is what every fact about `ln` waits on and why that constant has none today.
 5. **A proof for what `Quantified` decides.** Since 2026-09-10 a quantified linear claim is
    decided, and it is decided rather than proved: the elimination runs on untrusted forms and no
    theorem comes back. Making it produce one wants the density and the unboundedness of the order
