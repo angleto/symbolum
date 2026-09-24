@@ -526,13 +526,17 @@ object Remedy {
           )
       )
 
+    // A count agreeing with a plural in both of these, a demonstrative in the first and a noun
+    // behind a modifier in the second, and both reach one: a single premise can contradict itself,
+    // and a claim with no premises puts one constraint to the search.
     case Refutation.Contradictory(premises) =>
-      RestateTheProblem(
-        s"premises that can hold at once; these $premises cannot, so every conclusion follows from them"
-      )
+      val which =
+        if (premises == 1) "the one premise here cannot hold, so every conclusion follows from it"
+        else s"these $premises cannot, so every conclusion follows from them"
+      RestateTheProblem(s"premises that can hold at once; $which")
 
     case Refutation.NoCounterexample(constraints) =>
-      Settled(s"no counterexample exists over $constraints linear constraints")
+      Settled(s"no counterexample exists over ${Prose.count(constraints, "linear constraint")}")
 
     case Refutation.Survived(asked) =>
       APersonLooks(s"the claim survived ${Prose.count(asked, "point")}, which is evidence and not a decision")

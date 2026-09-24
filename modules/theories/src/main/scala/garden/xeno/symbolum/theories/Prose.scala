@@ -29,6 +29,17 @@ package garden.xeno.symbolum.theories
  * one. `scan` is a module because six gates had each decided the same question separately and two
  * of the answers disagreed on three inputs; here there is one function, seven call sites and
  * nothing disagreeing.
+ *
+ * == What a site of this class looks like ==
+ *
+ * A count written into a message that also writes a word agreeing with it. The census of card
+ * db67b658 looked for the noun right after the number, `$n steps`; card 601788d5 widened it to a
+ * modifier in between, `$n named facts`, and found three more sites that reach one, in `RestsOn`,
+ * in `Cnf` and in `Remedy`. Beside the last was a fourth that no census of a noun selects, because
+ * what agrees is a demonstrative before the number, `these $n cannot`. A counter repairs the first
+ * two shapes and not the third, which is written as two sentences instead. What neither census
+ * reads is a count that is a constant, or one whose guard keeps it off one, such as `Mark`'s
+ * `holes.length != 1`: those print a plural correctly and are left alone.
  */
 object Prose {
 

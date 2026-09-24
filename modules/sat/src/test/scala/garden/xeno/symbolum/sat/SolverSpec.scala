@@ -122,7 +122,17 @@ class SolverSpec extends AnyFlatSpec with Matchers {
 
   "a malformed problem" should "be refused by name rather than read" in {
     Solver.solve(Problem(2, Vector(Vector(1, 3)))) match {
-      case Solver.Answer.Malformed(why) => why should include("within the 2 declared variables")
+      case Solver.Answer.Malformed(why) => why should include("within the 2 declared variables;")
+      case other => fail(s"expected a refusal, got $other")
+    }
+  }
+
+  // At one variable, which card 601788d5 found printing "the 1 declared variables": a problem of
+  // one variable is one a caller can declare, and a literal naming the second is the off-by-one
+  // this refusal exists for. The semicolon keeps the singular from being a substring of the defect.
+  it should "take the singular when the problem declares one variable" in {
+    Solver.solve(Problem(1, Vector(Vector(2)))) match {
+      case Solver.Answer.Malformed(why) => why should include("within the 1 declared variable;")
       case other => fail(s"expected a refusal, got $other")
     }
   }

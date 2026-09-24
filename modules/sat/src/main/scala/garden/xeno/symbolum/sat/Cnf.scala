@@ -119,8 +119,13 @@ object Cnf {
           .flatMap { case (clause, at) =>
             clause.iterator.map { literal =>
               if (literal == 0) Some(s"no zero literal; clause $at has one")
-              else if (variableOf(literal) > variables)
-                Some(s"a literal within the $variables declared variables; clause $at has $literal")
+              // Through `Plural` because one variable is a problem a caller can declare, and the
+              // modifier between the count and the noun is what the first census of this class did
+              // not look for.
+              else if (variableOf(literal) > variables) {
+                val declared = Plural.count(variables, "declared variable", "declared variables")
+                Some(s"a literal within the $declared; clause $at has $literal")
+              }
               // Canonical form is required rather than repaired, so that a step of a derivation and
               // the clause it names are the same value. `Cnf.problem` is what puts clauses into it.
               else if (normalise(clause) != Some(clause))
