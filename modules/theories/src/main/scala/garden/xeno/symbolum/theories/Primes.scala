@@ -64,11 +64,12 @@ object Primes {
    * `|- !p q. NUM_LT ZERO q ==> ~(NUM_MUL p p = NUM_MUL (SUC (SUC ZERO)) (NUM_MUL q q))`
    *
    * No square is twice a square, except where the denominator is zero. This is the arithmetic
-   * content of the irrationality of the square root of two, and it is **not** that statement:
-   * there is no square root on the reals in this system, so the classical sentence cannot be
-   * written. What can be written is the thing the classical proof actually establishes, which is
-   * that the equation has no solution in positive naturals, and the name says that rather than
-   * promising a constant that does not exist.
+   * content of the irrationality of the square root of two, and it is **not** that statement. The
+   * classical sentence can be written since 2026-09-24, when `Root` declared `sqrt`, and it is not
+   * proved: what stands between this and it is carrying the equation across `real_of_num` and
+   * clearing a denominator, which nothing here has done yet. What this proves is the thing the
+   * classical proof actually establishes, that the equation has no solution in positive naturals,
+   * and the name says that rather than the sentence it is on the way to.
    *
    * The proof is the descent, run through `NUM_LEAST` rather than through an infinite regress: take
    * the **least** `q` for which some `p` solves it. Two divides `p * p`, hence `p`, because two is

@@ -318,7 +318,11 @@ object Library {
         // not more of `Listing` because it is that interface's CONSUMER: `LIST_FOLD` is defined by
         // `LIST_RECURSION`, and a recursion theorem nobody spends is a capability rather than a
         // fact.
-        collect("Folding", chain.folding.facts)
+        collect("Folding", chain.folding.facts) ++
+        // The square root, 2026-09-24, in the change that added it: the third thing
+        // `COMPLETENESS` buys, and a development of its own because it is neither a limit nor a
+        // transcendental function.
+        collect("Root", chain.root.facts)
     )
 
   /** A library over developments a caller names itself. */

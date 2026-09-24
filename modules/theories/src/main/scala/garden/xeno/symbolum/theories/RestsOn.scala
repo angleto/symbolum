@@ -153,7 +153,9 @@ object Reach {
         // `docs/adr/0038` is why a list is an orientation on `word` and not a carrier.
         "Listing" -> chain.listing.facts,
         // Its consumer the same day, in the change that added it, for the reason above.
-        "Folding" -> chain.folding.facts
+        "Folding" -> chain.folding.facts,
+        // The square root, 2026-09-24, in the change that added it.
+        "Root" -> chain.root.facts
       )
     )
 

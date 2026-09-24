@@ -647,7 +647,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 622 lemmas, 412 have two or more leading quantifiers and **367 of
+caller meant: of the library's 628 lemmas, 413 have two or more leading quantifiers and **368 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -881,8 +881,10 @@ in it, because it declares nothing. It is one of three now: `Primes` and `Deduct
 that is two. Euclid's, `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
 primes" says in a logic with no notion of an infinite set. And `NUM_SQUARE_NOT_DOUBLE`, that no
 square is twice a square at a positive denominator, which is the arithmetic content of the
-irrationality of the square root of two and is **not** that sentence: there is no square root on the
-reals here, so the classical statement cannot be written and the name does not pretend otherwise.
+irrationality of the square root of two and is **not** that sentence. The sentence can be written
+since `Root` declared `sqrt` on 2026-09-24, and it is not proved: carrying the equation across
+`real_of_num` and clearing a denominator is the step nobody has taken, and the name says what is
+proved rather than what is next.
 `PrimesSpec` asserts that its hypothesis cannot be dropped, by proving the equation at zero. It is not in `Modular` because of one
 constant: the proof runs through `n! + 1` and the factorial is defined in `Coding`, which is built
 **over** `Modular`. Putting it in `Coding` instead would have made that file's own first sentence
@@ -1678,6 +1680,23 @@ alternating series — which wants their absolute convergence first, the same ar
 intermediate value theorem, and nothing above moves that: there is no continuity anywhere in
 this repository, and `MONOTONE_CONVERGES` spends `COMPLETENESS` inline rather than publishing a
 supremum anything else could reach.
+
+**The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
+buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
+say something: the least upper bound `s` of the non-negative numbers whose square is at most `x`
+squares to `x`, because below it `s + e` is still in the set and above it `s - e` already bounds
+it. One constant, no axiom, and the existence rests on the reals alone: `RootSpec` asserts that it
+reaches `COMPLETENESS` and nothing the chain adds, and that every fact about the constant spends one
+choice more and nothing else. It spends the supremum inline too, as `MONOTONE_CONVERGES` does, so
+the intermediate value theorem still has no published supremum to reach for.
+
+The derivation has no quotient in it and no classical step, and that is the shape to copy. Each `e`
+is `d * inv c` with `c` a sum already known positive, the only fact about the reciprocal it uses is
+`MUL_INVERSE` at `c` turned into `e * c = d`, and the two absurd branches of the trichotomy leave by
+ex falso. It also found a limit of `Linarith` worth knowing before reaching for it: from `0 <= a`,
+`0 <= b` and two equal squares it settles `a <= b` and refuses `a = b`, so `SQRT_UNIQUE` is two
+inequalities and an antisymmetry. `Root.scala` says where in `Linarith` the difference seems to
+come from, and that the reading is not verified.
 
 `LimitSpec` detaches **both** Cauchy theorems at the geometric series on both sides and asserts
 `hypotheses` empty, because an implication with four antecedents that nobody can discharge is a

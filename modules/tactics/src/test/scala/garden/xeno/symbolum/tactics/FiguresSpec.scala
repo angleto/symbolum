@@ -7,8 +7,8 @@ import org.scalatest.matchers.should.Matchers
 import garden.xeno.symbolum.checker.{Check, Replayed}
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.NumericConstants
-import garden.xeno.symbolum.logic.{Intuitionistic, Logic, Rewrite}
-import garden.xeno.symbolum.theories.{Chain, Domain, Library}
+import garden.xeno.symbolum.logic.{Intuitionistic, Rewrite}
+import garden.xeno.symbolum.theories.Domain
 
 /**
  * The figures of `docs/evaluation.md`, each one either generated or spelled out of the code.
@@ -236,27 +236,6 @@ class FiguresSpec extends AnyFlatSpec with Matchers {
     // spelled right and the argument false. A test of its own because a red assertion ends its
     // test, and in the one above this would never run whenever the sentence had moved first.
     Rewrite.DefaultLimit % 2 shouldBe 0
-  }
-
-  "The binder census in CLAUDE.md" should "be the library's, counted" in {
-    // The sentence that tells a session why a lemma is specialised by instance and not by position
-    // rests on how many lemmas have two leading binders of one type. It was rewritten by hand when
-    // the library grew and was right on 2026-09-24; it is spelled from the library now, so the next
-    // lemma that lands moves it or turns this red.
-    val library = Library.of(Chain.standard)
-    val prefixes = library.entries.map { entry =>
-      Logic.stripForall(entry.theorem.conclusion).fold(_ => Vector.empty, _._1)
-    }
-    val several = prefixes.filter(_.size >= 2)
-    val alike = several.filter(prefix => prefix.map(_.ty).distinct.size < prefix.size)
-
-    val counts = s"${library.entries.size} lemmas, ${several.size} with two binders, ${alike.size} alike"
-    withClue(s"$counts: ") {
-      flowed("CLAUDE.md") should include(
-        s"of the library's ${library.entries.size} lemmas, ${several.size} have two or more leading " +
-          s"quantifiers and **${alike.size} of those have two that share a type**"
-      )
-    }
   }
 
   "Every figure in the evaluation document" should "be alive or marked as a photograph" in {

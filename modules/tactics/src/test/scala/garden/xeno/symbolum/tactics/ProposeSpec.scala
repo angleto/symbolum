@@ -347,7 +347,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // antecedent each and the other six facts of that development carry none.
     // 421 with the structural recursion theorem and the fold, 2026-09-23: `LIST_RECURSION_UNIQUE`
     // carries one antecedent and the other four facts of those two developments carry none.
-    proposals.size shouldBe 421
+    // 425 with the square root, 2026-09-24: one antecedent each on `SQRT_EXISTS`, `SQRT`,
+    // `SQRT_UNIQUE` and `SQRT_SQUARE`, none on the two values.
+    proposals.size shouldBe 425
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1164,7 +1166,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // interprets. That reading is right about the constants and does not decide between
     // these two buckets, which is the correction the three rows above this one already
     // carry about a different pair.
-    open shouldBe 325
+    // 335 with the square root, 2026-09-24, and this one was read off the run and NOT derived:
+    // ten more residues, against its four weakenings and the substitutions of its three mutable
+    // facts, and which of those land here rather than in the other buckets was not measured.
+    open shouldBe 335
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

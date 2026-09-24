@@ -12,9 +12,9 @@ import garden.xeno.symbolum.logic.*
  * `Listing` publishes `LIST_RECURSION`, and an existence theorem nobody spends is a capability
  * rather than a fact: a development can hold one for as long as it likes without anything going
  * red. This is the consumer, and it is the one thing here that could not have been written before
- * that theorem landed. [[Fold]] is **defined** by it, which is the whole point: `LIST_INDUCT` would
- * have proved any property of a fold one could write down, and it would not have let anybody write
- * one down.
+ * that theorem landed. [[Folding.Fold]] is **defined** by it, which is the whole point:
+ * `LIST_INDUCT` would have proved any property of a fold one could write down, and it would not
+ * have let anybody write one down.
  *
  * == What it replaces, measured against a fact this repository already holds ==
  *
@@ -33,7 +33,8 @@ import garden.xeno.symbolum.logic.*
  * `Collatz` is the consumer that does care, and `Concatenation.Tally`'s own docstring says the
  * general `f` is there for it.
  *
- * [[FoldOfConcat]] is the same split for [[Fold]] and there is **no correction in it**:
+ * [[Folding.FoldOfConcat]] is the same split for [[Folding.Fold]] and there is **no correction in
+ * it**:
  *
  * {{{
  *   LIST_FOLD g a (WORD_CONCAT u v) = LIST_FOLD g (LIST_FOLD g a v) u
@@ -48,7 +49,7 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it costs ==
  *
- * One constant and no axiom. [[Fold]] carries the two axioms the naturals cost, choice and
+ * One constant and no axiom. [[Folding.Fold]] carries the two axioms the naturals cost, choice and
  * infinity, and nothing else: choice twice over, once inside `LIST_RECURSION` and once here where
  * the existence theorem is turned into a name.
  */

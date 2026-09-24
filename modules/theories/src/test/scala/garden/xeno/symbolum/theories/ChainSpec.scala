@@ -243,13 +243,16 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // a CONSUMER of the link below it rather than a subject of its own: `LIST_FOLD` is defined by
     // `LIST_RECURSION`, and a development that spent that theorem beside the chain would declare
     // its constant where nothing above can see it.
-    chain.widest shouldBe chain.folding
-    chain.widest.theory.constants.keySet shouldBe chain.folding.theory.constants.keySet
+    // **And again on 2026-09-24**, to `Root`, the tenth entry: the square root, which needs the
+    // reals and their order and nothing since, and is at the end for the same rule and nothing
+    // about its subject.
+    chain.widest shouldBe chain.root
+    chain.widest.theory.constants.keySet shouldBe chain.root.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
       chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
-      chain.listing
+      chain.listing, chain.folding
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

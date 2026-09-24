@@ -26,19 +26,19 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it costs ==
  *
- * Three definitions and no axiom. [[Cons]] is not a constructor in the sense a carved free algebra
- * has one: it is `WORD_CONCAT (WORD_SINGLETON x) w` under a name, and every law about it below
- * comes out of `Concatenation`'s laws about those two. The empty list is `WORD_EMPTY` and gets no
- * second name, which is the whole of what a link rather than a duplicate means here: a reader who
- * has a word has a list, with no coercion between them and nothing to keep in step.
+ * Three definitions and no axiom. [[Listing.Cons]] is not a constructor in the sense a carved free
+ * algebra has one: it is `WORD_CONCAT (WORD_SINGLETON x) w` under a name, and every law about it
+ * below comes out of `Concatenation`'s laws about those two. The empty list is `WORD_EMPTY` and
+ * gets no second name, which is the whole of what a link rather than a duplicate means here: a
+ * reader who has a word has a list, with no coercion between them and nothing to keep in step.
  *
  * == What the distinctness and injectivity of the two constructors rest on ==
  *
  * A carved free algebra gets `~(CONS h t = NIL)` from its tags. There are no tags here and the
- * facts are theorems instead: [[ConsNotEmpty]] is `SUC n` never being `ZERO` read through the
- * lengths, and [[ConsInjective]] is [[HeadOfCons]] and [[TailOfCons]] applied to one equation.
- * Nothing is weaker for it, and the two are what stop [[Cases]] from being a disjunction whose
- * halves can both hold.
+ * facts are theorems instead: [[Listing.ConsNotEmpty]] is `SUC n` never being `ZERO` read through
+ * the lengths, and [[Listing.ConsInjective]] is [[Listing.HeadOfCons]] and [[Listing.TailOfCons]]
+ * applied to one equation. Nothing is weaker for it, and the two are what stop [[Listing.Cases]]
+ * from being a disjunction whose halves can both hold.
  */
 final class Listing private (
   val concatenation: Concatenation,

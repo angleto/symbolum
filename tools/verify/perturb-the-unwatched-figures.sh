@@ -80,13 +80,15 @@ run "5-floor-moved" tools/coverage-delta.sh \
   'COVERAGE_DELTA_MIN:-85' \
   -- ./tools/sbt -batch "$FIGURES"
 
-# 6. The binder census in CLAUDE.md, edited by one. It was rewritten by hand when the library grew,
-#    and this is what a hand miscounting it looks like.
-# Expect red on: FiguresSpec, "The binder census in CLAUDE.md"
+# 6. The binder census in CLAUDE.md, edited by one. The first version of this card added a guard
+#    for it to `FiguresSpec`, and `LibrarySpec` had held one already, spelled from the library:
+#    the census that chose it looked for the digits, and a guard that spells its figure has none.
+#    The copy was removed the next day and this fires the guard that was there first.
+# Expect red on: LibrarySpec, "say in `CLAUDE.md` how wide the positional-specialisation hole is"
 run "6-census-miscounted" CLAUDE.md \
-  '412 have two or more leading quantifiers' \
+  '413 have two or more leading quantifiers' \
   '411 have two or more leading quantifiers' \
-  -- ./tools/sbt -batch "$FIGURES"
+  -- ./tools/sbt -batch 'theories/testOnly garden.xeno.symbolum.theories.LibrarySpec'
 
 # 7. A replayed count quoted in prose beside the generated table.
 # Expect red on: FiguresSpec, "The replayed counts quoted in prose beside the table"

@@ -109,6 +109,9 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `LIST_FOLD`, defined by `LIST_RECURSION`, which is what makes that theorem something this
     // repository spends rather than something it holds.
     "Folding" -> InTheChain,
+    // 2026-09-24. It declares one constant, `sqrt`, and the theorem that spends `COMPLETENESS` a
+    // third time to say what it names exists.
+    "Root" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,

@@ -1725,7 +1725,7 @@ worth proving.
 
 ## NUM_SQUARE_NOT_DOUBLE
 
-No square is twice a square at a positive denominator. It is the arithmetic content of the irrationality of the square root of two and is deliberately **not** that sentence: there is no square root on the reals here, so the classical statement cannot be written and the name does not pretend otherwise.
+No square is twice a square at a positive denominator. It is the arithmetic content of the irrationality of the square root of two and is deliberately **not** that sentence. The sentence can be written, since `sqrt` has been a constant here from 2026-09-24, and it is not proved: carrying the equation across the embedding of the naturals into the reals is the step nobody has taken, and the name says what is proved rather than what is next.
 
 $$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < y \Rightarrow \lnot \left( x \cdot x = \mathrm{suc}(\mathrm{suc}(0)) \cdot \left( y \cdot y \right) \right)$$
 
