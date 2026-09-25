@@ -109,6 +109,12 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     //
     // It is the lower rung of the witness above, which is deliberate: the pair of assertions then
     // says that adding `ADD_NONNEG_LT` on top of it adds exactly one name to the list.
+    //
+    // It is also the guard on `Chaining`'s rule that a candidate owing a goal on the path costs
+    // nothing, and it was seen red without that rule: on 2026-09-25 `INTERVAL_GLUING` joined the
+    // library, a lemma concluding `P a b` that is a candidate at every goal and at this one owes
+    // this goal back, and the search came back `Depleted(Expansions, 10)`. Removing that one lemma
+    // from the library put it back, and so did the rule, with the library whole.
     val (_, used) = chained("!x:real. !y:real. 0 <= (x * x) * (y * y)")
     used shouldBe Vector("MUL_NONNEG_BOTH")
   }

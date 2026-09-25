@@ -153,6 +153,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // a file of its own because the derivation is a third the length of the file it belongs to.
     "Trigonometric" -> NotADevelopment,
 
+    // Not a development, for `Trigonometric`'s reason: the derivation of the extreme value theorem
+    // and the gluing under it, whose five facts are published in `Continuity.facts` under names
+    // `Continuity` declares. A file of its own because it is longer than the file it belongs to.
+    "ExtremeValue" -> NotADevelopment,
+
     "Descent" -> DeclaresNothing,
 
     // Beside the chain, and the classification is the one this file exists to make somebody choose.

@@ -629,8 +629,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under twelve names, none shared. `CLAUDE.md`'s figures move by **three** and **three**:
     // `EXP_LT_MONOTONE`, `EXP_INJECTIVE` and `LN_MUL` each bind two reals, and the other nine
     // bind one or none.
-    library.entries.size shouldBe 649
-    library.names.distinct.size shouldBe 646
+    // 654 and 651 with the extreme value theorem, 2026-09-25, derived before the run: five facts
+    // under five names, none shared. `CLAUDE.md`'s figures move by **five** and **four**: all five
+    // bind two or more leading quantifiers, and all but `CONTINUOUS_NEG`, whose `f` and `x` differ
+    // in type, bind two reals among them.
+    library.entries.size shouldBe 654
+    library.names.distinct.size shouldBe 651
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
