@@ -232,4 +232,43 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     val refused = force(rules.notIntro(unconditional, absurd))
     refused.hypotheses shouldBe empty
   }
+
+  /* --------------------------------------------------- a continuous function has one */
+
+  it should "give every continuous function an integral at the gluing's price, through Cousin and the supremum" in {
+    // Measured on 2026-09-25 before it was written here: the reals' sixteen and the choice, the
+    // same as Cousin's lemma. `COMPLETENESS` is spent by the gluing and once more for the supremum.
+    val gluing = force(chain.continuity.fact(Continuity.IntervalGluing)).conclusion
+    for (name <- List(Integral.ContinuousHas, Integral.ContinuousIntegral)) withClue(name) {
+      Derivation.axiomsOf(fact(name)) shouldBe realAxioms + select
+    }
+    // The route: the criterion glues, and the sums the supremum compares come from Cousin.
+    val route = Set(gluing, fact(Integral.Exists).conclusion, fact(Integral.Gauge).conclusion)
+    Derivation.restingOn(fact(Integral.ContinuousHas), route) shouldBe route
+  }
+
+  it should "detach at the constant one on [0, 1], and agree with the fundamental theorem there" in {
+    // Two routes to one number: the existence names `integral (\y. 1) 0 1`, the fundamental theorem
+    // at the identity says `1 - 0` is an integral of the same function, and uniqueness joins them.
+    // A statement that held for a reason unrelated to integration could not be joined to the other.
+    val one = function("\\y:real. (1:real)")
+    val instance = opened(force(rules.specAll(fact(Integral.ContinuousIntegral), List(one, real("0:real"), real("1:real")))))
+    val x = Term.variable("x", reals)
+    val continuous = force(rules.specAll(force(chain.continuity.fact(Continuity.Constant)), List(real("1:real"), x)))
+    val everywhere = force(rules.disch(proposition("(0:real) <= x /\\ x <= 1"), continuous).flatMap(rules.gen(x, _)))
+    val named = force(rules.mp(instance, lemma("(0:real) <= 1")).flatMap(rules.mp(_, everywhere)))
+    named.hypotheses shouldBe empty
+    named.conclusion shouldBe proposition("has_integral (\\y:real. (1:real)) 0 1 (integral (\\y:real. (1:real)) 0 1)")
+
+    val joined = opened(force(rules.specAll(fact(Integral.HasUnique),
+      List(one, real("0:real"), real("1:real"), real("integral (\\y:real. (1:real)) 0 1"), real("1 - 0:real")))))
+    val agreed = force(rules.mp(joined, lemma("(0:real) <= 1")).flatMap(rules.mp(_, named)).flatMap(rules.mp(_, oneOverUnit)))
+    agreed.hypotheses shouldBe empty
+    agreed.conclusion shouldBe proposition("integral (\\y:real. (1:real)) 0 1 = 1 - 0")
+  }
+
+  // What is not here, and why: a control refuting the existence without continuity. Dirichlet's
+  // function is gauge integrable, so a counterexample has to be unbounded, like `1 / x` near zero,
+  // and showing that no number is its integral is an argument about unbounded fine sums of its own.
+  // The existence is kept from vacuity by the detachment above instead.
 }

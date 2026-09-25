@@ -661,7 +661,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 739 lemmas, 494 have two or more leading quantifiers and **430 of
+caller meant: of the library's 741 lemmas, 496 have two or more leading quantifiers and **432 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1892,6 +1892,17 @@ is spent, and so uniqueness and the value `integral` spend it. `IntegralSpec` as
 equalities, and keeps the definition from being empty four ways: Cousin detached at a constant
 gauge, the theorem detached at `y * y` on `[0, 1]`, a wrong value refused, and uniqueness refuted
 without `a <= b` on `[1, 0]`, where there are no fine sums and every number is an integral.
+
+**A continuous function has an integral, `CONTINUOUS_HAS_INTEGRAL`, since 2026-09-25**, and
+`CONTINUOUS_INTEGRAL` says `integral` names it. `Integrability.scala` is the derivation and it never
+compares two divisions directly: a Cauchy criterion, "some gauge keeps any two fine sums over
+`[u, w]` within `e * (w - u)`", glues through `INTERVAL_GLUING`, because a gauge at most
+`abs (x - v)` away from the joint `v` forces every piece containing `v` to be tagged `v`, and such a
+piece splits there exactly. The integral is then one supremum, of `t - e * (b - a)` over good gauges
+and their fine sums, two of which are compared through a third that Cousin supplies. It costs the
+gluing's price; `IntegralSpec` detaches it at the constant one and joins it to the fundamental
+theorem's value there. No control refutes it without continuity: Dirichlet's function is gauge
+integrable, so a counterexample has to be unbounded, and that is an argument of its own.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

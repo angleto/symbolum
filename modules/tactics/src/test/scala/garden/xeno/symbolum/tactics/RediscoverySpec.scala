@@ -341,7 +341,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 583 with the gauge integral, the same day, derived before the run and read off the probe
     // after it: eighteen antecedents over nine facts, three on `HAS_INTEGRAL_UNIQUE`, one on
     // `FINE_SUM_PIECE` and two on each of the other seven. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 583
+    // 587 with the existence of the integral, the same day, derived before the run: two
+    // antecedents on each of `CONTINUOUS_HAS_INTEGRAL` and `CONTINUOUS_INTEGRAL`.
+    propose.weakenings.size shouldBe 587
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

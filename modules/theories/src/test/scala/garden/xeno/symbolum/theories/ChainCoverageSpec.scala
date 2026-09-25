@@ -165,6 +165,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `Continuity` declares. A file of its own because it is longer than the file it belongs to.
     "ExtremeValue" -> NotADevelopment,
 
+    // Not a development, for the same reason: the derivation that a continuous function has an
+    // integral, whose two facts are published in `Integral.facts` under names `Integral` declares.
+    "Integrability" -> NotADevelopment,
+
     // Not a development, for `Trigonometric`'s reason: half of `Limit`. It declares nothing, and
     // the criteria it derives are published in `Limit.facts` under names `Limit` declares, so what
     // reaches `Library.of` does so as that development's.
