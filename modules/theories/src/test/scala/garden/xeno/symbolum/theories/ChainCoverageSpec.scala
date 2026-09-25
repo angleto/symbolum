@@ -167,6 +167,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // reaches `Library.of` does so as that development's.
     "Criteria" -> NotADevelopment,
 
+    // Not a development, for `Criteria`'s reason: the polynomial-times-geometric criteria, whose six
+    // facts `Limit` publishes under names it declares. A file of its own because what it needs
+    // beyond `Criteria` is the embedding of `num` in the reals, which nothing in `Criteria` does.
+    "Degrees" -> NotADevelopment,
+
     // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
     // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
     // fact of its own, and `Prove` reaches it through the chain it is constructed from.

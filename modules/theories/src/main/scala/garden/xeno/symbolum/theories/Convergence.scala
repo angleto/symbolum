@@ -24,6 +24,11 @@ import garden.xeno.symbolum.logic.*
  *  - `Power q i`, the geometric series, decided in **both** directions when the sign of `q` and its
  *    magnitude against one are decided by LINARITH: `Limit.SUM_GEOMETRIC_CONVERGES` below one, with
  *    the value `inv (1 - q)`, and `Limit.SUM_GEOMETRIC_DIVERGES` at one and above;
+ *  - `real_of_num i * Power q i` and `Power (real_of_num i) k * Power q i`, a polynomial in the
+ *    index times a geometric term, decided on the same magnitude of `q` by
+ *    `Limit.SUM_INDEX_GEOMETRIC_CONVERGES` and its three siblings, `docs/adr/0045`; these converge to
+ *    a value no lemma names, so a caller asking for the value is told that rather than refused as
+ *    unread;
  *  - `Power t i / real_of_num (NUM_FACT i)`, the exponential's series, which converges at every `t`
  *    whatever `t` is, to `exp t`;
  *  - the cosine's and the sine's series in the spelling `Transcendental.COS_CONVERGES` states, to
@@ -56,9 +61,8 @@ import garden.xeno.symbolum.logic.*
  * exponential's series is a rewrite of `POWER_SUC`, of `NUM_FACT` at a successor, of `real_of_num`
  * across a product and a cancellation of a reciprocal, all before LINARITH sees anything, and a
  * different sequence of those for every shape. The closed forms need none of it: every shape here
- * already has a published theorem saying what its series does. Widening the fragment to the
- * hypergeometric terms is the work the ratio test is for, and it is recorded as a gap rather than
- * started here.
+ * already has a published theorem saying what its series does. Where the ratio test IS spent is
+ * inside the degree-one lemma, once and for every ratio, which is `docs/adr/0045`.
  *
  * == What it does not do ==
  *
@@ -121,8 +125,23 @@ final class Convergence private (
         if !Term.occursFree(index, bound)
       } yield bound)
 
+    // Two parameters, a degree of type `num` and a ratio, which `read` above does not take.
+    def poly: Option[Shape] =
+      (for {
+        written <- Parser.term(theory, notation, "Power (real_of_num (i:num)) (k:num) * Power (q:real) (i:num)", values).toOption
+        placed <- Term.substitute(Map(Term.variable("i", numbers) -> index), written).toOption
+        degree = Term.variable("k", numbers)
+        ratio = Term.variable("q", values)
+        found <- Matching.matchTerm(Set(degree, ratio), placed, body)
+        k <- found.terms.get(degree)
+        q <- found.terms.get(ratio)
+        if !Term.occursFree(index, k) && !Term.occursFree(index, q)
+      } yield Shape.Poly(k, q))
+
     def plain: Option[Shape] =
       read("Power (q:real) (i:num)", "q").map(Shape.Geometric.apply)
+        .orElse(read("real_of_num (i:num) * Power (q:real) (i:num)", "q").map(Shape.Index.apply))
+        .orElse(poly)
         .orElse(read("Power (t:real) (i:num) / real_of_num (NUM_FACT (i:num))", "t").map(Shape.Exponential.apply))
         .orElse(read(Trigonometric.cosineTerm("i:num"), "x").map(Shape.Cosine.apply))
         .orElse(read(Trigonometric.sineTerm("i:num"), "x").map(Shape.Sine.apply))
@@ -149,18 +168,36 @@ final class Convergence private (
   }
 
   /**
-   * Whether the index occurs in `body` only inside `real_of_num`, which is what a rational function
-   * of the index looks like here: `inv (real_of_num (SUC i))`, `real_of_num i * real_of_num i`.
+   * Whether the index occurs in `body` only inside `real_of_num` and only as a polynomial there,
+   * which is what a rational function of the index looks like: `inv (real_of_num (SUC i))`,
+   * `real_of_num i * real_of_num i`.
+   *
+   * **The polynomial is the half that was missing**, found on 2026-09-25 by a test written for
+   * the other refusal: with only "inside `real_of_num`" as the criterion,
+   * `inv (real_of_num (NUM_FACT i))` read as a rational function, and a series whose ratio tends
+   * to zero was refused with the sentence for a ratio tending to one.
    */
   private def ratioTendsToOne(index: FVar, body: Term): Boolean = {
     val embedding = Parser.term(theory, notation, "real_of_num").toOption
-    def outside(term: Term): Boolean = term match {
-      case App(fn, _) if embedding.contains(fn) => false
-      case App(fn, arg)                         => outside(fn) || outside(arg)
-      case Abs(_, inner)                        => outside(inner)
-      case other                                => other == index
+    val arithmetic = Vector("SUC", "NUM_ADD", "NUM_MUL")
+      .flatMap(name => Parser.term(theory, notation, name).toOption)
+      .toSet
+    def polynomial(term: Term): Boolean = term match {
+      case _ if !Term.occursFree(index, term) => true
+      case `index`                            => true
+      case App(App(operator, left), right) if arithmetic.contains(operator) =>
+        polynomial(left) && polynomial(right)
+      case App(operator, argument) if arithmetic.contains(operator) => polynomial(argument)
+      case _                                                        => false
     }
-    Term.occursFree(index, body) && !outside(body)
+    def rational(term: Term): Option[Boolean] = term match {
+      case App(fn, argument) if embedding.contains(fn) => Some(polynomial(argument))
+      case App(fn, argument) =>
+        for { l <- rational(fn); r <- rational(argument) } yield l && r
+      case Abs(_, inner) => rational(inner)
+      case other         => Some(other != index)
+    }
+    Term.occursFree(index, body) && rational(body).contains(true)
   }
 
   /** The theorem a recognised shape is answered with. */
@@ -172,6 +209,20 @@ final class Convergence private (
             rules.spec(q, facts.geometricConverges).flatMap(rules.mp(_, below)).map(Answer.Converges.apply)
           case Right(atLeast) =>
             rules.spec(q, facts.geometricDiverges).flatMap(rules.mp(_, atLeast)).map(Answer.Diverges.apply)
+        }
+      case Shape.Index(q) =>
+        magnitude(q).flatMap {
+          case Left(below) =>
+            rules.spec(q, facts.indexConverges).flatMap(rules.mp(_, below)).map(Answer.Somewhere.apply)
+          case Right(atLeast) =>
+            rules.spec(q, facts.indexDiverges).flatMap(rules.mp(_, atLeast)).map(Answer.Diverges.apply)
+        }
+      case Shape.Poly(k, q) =>
+        magnitude(q).flatMap {
+          case Left(below) =>
+            rules.specAll(facts.polyConverges, List(k, q)).flatMap(rules.mp(_, below)).map(Answer.Somewhere.apply)
+          case Right(atLeast) =>
+            rules.specAll(facts.polyDiverges, List(k, q)).flatMap(rules.mp(_, atLeast)).map(Answer.Diverges.apply)
         }
       case Shape.Constant(value) =>
         // The term test at the constant's own magnitude, from index zero. Only a non-zero constant
@@ -210,6 +261,30 @@ final class Convergence private (
                 .flatMap(Limit.normalised)
                 .flatMap(rules.mp(_, theorem))
             } yield Answer.Converges(scaled)
+          case Answer.Somewhere(theorem) =>
+            // Scaled inside the existential: the witness is opened, carried by the factor, and
+            // closed again at `c * l`.
+            for {
+              predicate <- logic.destExistsPredicate(theorem.conclusion).toRight(NotOfForm("an existential", theorem.conclusion))
+              value = Conv.freshVariable("l", values, Term.freeVariables(theorem.conclusion) ++ Term.freeVariables(c))
+              opened <- LogicError.lift(Term.app(predicate, value)).flatMap(Conv.betaNormalise).flatMap(Limit.rightOf)
+              assumed <- LogicError.lift(Kernel.assume(opened))
+              parts <- Limit.convergenceOf(assumed)
+              summand <- summandOf(parts._1)
+              scaled <- rules
+                .specAll(facts.scaleConverges, List(summand, c, value))
+                .flatMap(Limit.normalised)
+                .flatMap(rules.mp(_, assumed))
+              scaledParts <- Limit.convergenceOf(scaled)
+              // `\l. converges S l`, the predicate the existential is over, reduced from the text.
+              predicateOfScaled <- Parser
+                .term(theory, notation, "\\s:num -> real. \\l:real. converges s l")
+                .flatMap(converging => LogicError.lift(Term.app(converging, scaledParts._1)))
+                .flatMap(Conv.betaNormalise)
+                .flatMap(Limit.rightOf)
+              packed <- rules.existsIntro(predicateOfScaled, scaledParts._2, scaled)
+              closed <- rules.existsElim(theorem, value, packed)
+            } yield Answer.Somewhere(closed)
           case Answer.Diverges(theorem) =>
             for {
               series <- theorem.conclusion match {
@@ -312,6 +387,11 @@ final class Convergence private (
 
       case (Question.Diverges(_), Answer.Diverges(theorem)) => sameAs(goal, theorem)
 
+      case (Question.Exists(_), Answer.Somewhere(theorem)) => sameAs(goal, theorem)
+      case (Question.To(_, _), Answer.Somewhere(_)) =>
+        Left(NotOfForm(Unnamed, goal))
+      case (_, Answer.Somewhere(theorem)) => Left(Denied(goal, theorem.conclusion, Name))
+
       case (_, Answer.Converges(theorem)) => Left(Denied(goal, theorem.conclusion, Name))
       case (_, Answer.Diverges(theorem))  => Left(Denied(goal, theorem.conclusion, Name))
     }
@@ -351,9 +431,14 @@ object Convergence {
 
   /** The summands this procedure reads, as a refusal names them. */
   val Summands: String =
-    "a summand this procedure reads: a non-zero constant, Power q i, " +
-      "Power t i / real_of_num (NUM_FACT i), the cosine's or the sine's term, " +
-      "or a constant times one of those"
+    "a summand this procedure reads: a non-zero constant, Power q i, real_of_num i * Power q i, " +
+      "Power (real_of_num i) k * Power q i, Power t i / real_of_num (NUM_FACT i), the cosine's " +
+      "or the sine's term, or a constant times one of those"
+
+  /** The refusal at a value asked of a series this procedure shows converges and names no value for. */
+  val Unnamed: String =
+    "a series whose value this procedure names; this one converges, and the theorem that says so " +
+      "is an existential with no value in it"
 
   /** The refusal at a rational function of the index, which is not the refusal of an unread summand. */
   val RatioTendsToOne: String =
@@ -366,6 +451,10 @@ object Convergence {
   /** The theorems it answers with, named so that a missing one is a refusal to build. */
   final case class Facts(
     termTest: Kernel.Thm,
+    indexConverges: Kernel.Thm,
+    indexDiverges: Kernel.Thm,
+    polyConverges: Kernel.Thm,
+    polyDiverges: Kernel.Thm,
     geometricConverges: Kernel.Thm,
     geometricDiverges: Kernel.Thm,
     scaleConverges: Kernel.Thm,
@@ -383,11 +472,19 @@ object Convergence {
     case To(about: Term, value: Term) extends Question(about)
     case Diverges(about: Term) extends Question(about)
 
+  /**
+   * What a series does, with the theorem that says so. `Somewhere` is a convergence with no value
+   * named, `?l. converges (Sum f) l`, and it is its own case because a caller asking for the value
+   * is owed a different answer from one asking whether there is one.
+   */
   private enum Answer:
     case Converges(theorem: Kernel.Thm)
+    case Somewhere(theorem: Kernel.Thm)
     case Diverges(theorem: Kernel.Thm)
 
   private enum Shape:
+    case Index(ratio: Term)
+    case Poly(degree: Term, ratio: Term)
     case Constant(value: Term)
     case Geometric(ratio: Term)
     case Exponential(argument: Term)
@@ -442,6 +539,10 @@ object Convergence {
       field <- Field.construct(chain.arithmetic)
       facts <- for {
         termTest <- chain.limit.fact(Limit.TermTest)
+        indexConverges <- chain.limit.fact(Limit.IndexGeometricConverges)
+        indexDiverges <- chain.limit.fact(Limit.IndexGeometricDiverges)
+        polyConverges <- chain.limit.fact(Limit.PolyGeometricConverges)
+        polyDiverges <- chain.limit.fact(Limit.PolyGeometricDiverges)
         geometricConverges <- chain.limit.fact(Limit.GeometricConverges)
         geometricDiverges <- chain.limit.fact(Limit.GeometricDiverges)
         scaleConverges <- chain.limit.fact(Limit.ScaleConverges)
@@ -452,7 +553,7 @@ object Convergence {
         ofNonNegative <- chain.magnitude.fact(Magnitude.OfNonNegative)
         ofNonPositive <- chain.magnitude.fact(Magnitude.OfNonPositive)
       } yield Facts(
-        termTest, geometricConverges, geometricDiverges, scaleConverges, scaleDiverges, exponentialConverges,
+        termTest, indexConverges, indexDiverges, polyConverges, polyDiverges, geometricConverges, geometricDiverges, scaleConverges, scaleDiverges, exponentialConverges,
         cosineConverges, sineConverges, ofNonNegative, ofNonPositive)
     } yield new Convergence(
       chain.logic, chain.widest.theory, chain.widest.notation, linarith, chain.ring, field, facts)

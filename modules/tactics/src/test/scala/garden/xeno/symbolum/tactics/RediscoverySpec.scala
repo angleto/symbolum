@@ -315,7 +315,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // run and met: three on `SUM_RATIO_TEST`, two each on `SUM_DIVERGES`, `SUM_RATIO_DIVERGES` and
     // `SUM_SCALE_DIVERGES`, one each on the six other facts of `Limit`, and none on the three
     // values in `Transcendental`, which are bare convergences.
-    propose.weakenings.size shouldBe 466
+    // 472 with the polynomial-times-geometric criteria, 2026-09-25, derived before the run: one
+    // antecedent on each of the six.
+    propose.weakenings.size shouldBe 472
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 679 lemmas, 442 have two or more leading quantifiers and **384 of
+caller meant: of the library's 685 lemmas, 445 have two or more leading quantifiers and **384 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1630,7 +1630,11 @@ the ratio test is a derivation per shape at a symbolic index and every closed fo
 published theorem; so the hypergeometric terms are outside the fragment and refused by name, a
 rational function of the index is refused as the class where the ratio tends to one, and a goal the
 procedure refutes comes back as `Denied`, the one refusal of standing `Decided` among the three.
-`docs/adr/0041` is the decision. `Conjugacy.GAMMA_CONVERGES` is the Collatz series it made
+`docs/adr/0041` is the decision. **A polynomial in the index times a geometric term is in the
+fragment since the same night**, `docs/adr/0045`: degree one is the ratio test, which is that
+test's first consumer outside a spec, and each degree after it is a comparison that spends
+`CONVERGES_BOUNDED`; the procedure names no value for these and says so when a value is asked.
+`Conjugacy.GAMMA_CONVERGES` is the Collatz series it made
 statable, and it is one direction of section 3.1.10 B in the form the comparison test gives, which
 that file says in its first paragraph.
 

@@ -119,12 +119,48 @@ class ConvergenceSpec extends AnyFlatSpec with Matchers {
       }
     }
 
-    // And a summand whose ratio does not tend to one, but which is outside the closed forms, is
-    // the other refusal: this one converges by the ratio test and is refused as unread.
-    val hypergeometric = refused(
-      "?l:real. converges (Sum (\\i:num. real_of_num i * Power ((1:real) / 2) i)) l")
-    hypergeometric.message should not include "tends to one"
-    hypergeometric.message should include(Convergence.Summands)
+    // And a summand whose ratio does not tend to one but which no closed form reads is the other
+    // refusal: `real_of_num i * inv (real_of_num (NUM_FACT i))` converges by the ratio test and is
+    // refused as unread, not as the class where the ratio tends to one.
+    val unread = refused("?l:real. converges (Sum (\\i:num. real_of_num i * inv (real_of_num (NUM_FACT i)))) l")
+    unread.message should not include "tends to one"
+    unread.message should include(Convergence.Summands)
+  }
+
+  /**
+   * The witness the card that asked for this named: it converges, the ratio `(i + 1) / (2 i)`
+   * tending to one half, and it was refused as a summand outside the fragment until the degree-one
+   * lemma landed. Beside it the same shape at degree two, the divergent side, and the answer owed
+   * a caller asking for a value the procedure does not name.
+   */
+  "A polynomial in the index times a geometric term" should "be decided in both directions" in {
+    Vector(
+      "?l:real. converges (Sum (\\i:num. real_of_num i * Power ((1:real) / 2) i)) l",
+      "?l:real. converges (Sum (\\i:num. Power (real_of_num i) 2 * Power ((0 - 1:real) / 3) i)) l",
+      "?l:real. converges (Sum (\\i:num. 5 * (real_of_num i * Power ((1:real) / 2) i))) l",
+      "diverges (Sum (\\i:num. real_of_num i * Power (1:real) i))",
+      "diverges (Sum (\\i:num. Power (real_of_num i) 3 * Power (0 - (2:real)) i))"
+    ).foreach { text =>
+      withClue(s"$text: ") {
+        val theorem = proved(text)
+        theorem.conclusion shouldBe proposition(text)
+        theorem.hypotheses shouldBe empty
+      }
+    }
+  }
+
+  it should "say that it names no value where a value is asked, and refute a divergence it disproves" in {
+    val value = refused("converges (Sum (\\i:num. real_of_num i * Power ((1:real) / 2) i)) 2")
+    value.message should include(Convergence.Unnamed)
+    val denied = refused("diverges (Sum (\\i:num. real_of_num i * Power ((1:real) / 2) i))")
+    denied shouldBe a[Denied]
+    denied.standing shouldBe LogicError.Standing.Decided
+  }
+
+  it should "rest on the ratio test at degree one, which is that test's consumer" in {
+    val theorem = proved("?l:real. converges (Sum (\\i:num. real_of_num i * Power ((1:real) / 2) i)) l")
+    val ratio = chain.limit.fact(Limit.RatioTest).fold(e => fail(e.message), identity)
+    Derivation.restingOn(theorem, Set(ratio.conclusion)) shouldBe Set(ratio.conclusion)
   }
 
   "What an answer rests on" should "be the published fact that settles its shape and no other" in {

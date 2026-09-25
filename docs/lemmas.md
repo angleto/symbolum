@@ -331,6 +331,7 @@ they have least appetite for working out how it is produced.
   ABS_POWER_LE             !x:real. !y:real. !z:num. abs x <= y ==> abs (Power x z) <= Power y z
   CONVERGES_ABSOLUTE       !x:num -> real. !y:real. converges (Sum (\z:num. abs (x z))) y ==> (?z:real. converges (Sum x) z)
   CONVERGES_ADD            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v + y v) (z + u)
+  CONVERGES_BOUNDED        !x:num -> real. !y:real. converges x y ==> (?z:real. !u:num. abs (x u) <= z)
   CONVERGES_CONSTANT       !x:real. converges (\y:num. x) x
   CONVERGES_EVENTUALLY     !x:num -> real. !y:num -> real. !z:real. !u:num. (!v:num. u <= v ==> x v = y v) ==> converges x z ==> converges y z
   CONVERGES_GE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> z <= x v) ==> z <= y
@@ -346,6 +347,7 @@ they have least appetite for working out how it is produced.
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
+  POWER_NONNEG             !x:real. 0 <= x ==> (!y:num. 0 <= Power x y)
   POWER_VANISHES           !x:real. abs x < 1 ==> converges (\y:num. Power x y) 0
   SUM_ABS                  !x:num -> real. !y:num. abs (Sum x y) <= Sum (\z:num. abs (x z)) y
   SUM_BELOW_LIMIT          !x:num -> real. !y:real. (!z:num. 0 <= x z) ==> converges (Sum x) y ==> (!z:num. Sum x z <= y)
@@ -357,6 +359,10 @@ they have least appetite for working out how it is produced.
   SUM_GEOMETRIC_CONVERGES  !x:real. abs x < 1 ==> converges (Sum (\y:num. Power x y)) (inv (1 - x))
   SUM_GEOMETRIC_DIVERGES   !x:real. 1 <= abs x ==> diverges (Sum (\y:num. Power x y))
   SUM_GROWS                !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. !z:num. y <= z ==> Sum x y <= Sum x z)
+  SUM_INDEX_GEOMETRIC_CONVERGES !x:real. abs x < 1 ==> (?y:real. converges (Sum (\z:num. real_of_num z * Power x z)) y)
+  SUM_INDEX_GEOMETRIC_DIVERGES !x:real. 1 <= abs x ==> diverges (Sum (\y:num. real_of_num y * Power x y))
+  SUM_POLY_GEOMETRIC_CONVERGES !x:num. !y:real. abs y < 1 ==> (?z:real. converges (Sum (\u:num. Power (real_of_num u) x * Power y u)) z)
+  SUM_POLY_GEOMETRIC_DIVERGES !x:num. !y:real. 1 <= abs y ==> diverges (Sum (\z:num. Power (real_of_num z) x * Power y z))
   SUM_RATIO_DIVERGES       !x:num -> real. !y:num. ~(x y = 0) ==> (!z:num. y <= z ==> abs (x z) <= abs (x (SUC z))) ==> diverges (Sum x)
   SUM_RATIO_TEST           !x:num -> real. !y:real. !z:num. 0 <= y ==> y < 1 ==> (!u:num. z <= u ==> abs (x (SUC u)) <= y * abs (x u)) ==> (?u:real. converges (Sum x) u)
   SUM_SCALE_CONVERGES      !x:num -> real. !y:real. !z:real. converges (Sum x) z ==> converges (Sum (\u:num. y * x u)) (y * z)

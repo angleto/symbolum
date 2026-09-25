@@ -680,6 +680,48 @@ object Limit {
    */
   val ScaleDiverges: String = "SUM_SCALE_DIVERGES"
 
+  /**
+   * `|- !s l. converges s l ==> ?B. !n. abs (s n) <= B`
+   *
+   * A convergent sequence is bounded. The bound is the limit's magnitude plus one past the index the
+   * tolerance one gives, and before it the partial sum of the magnitudes, which is above each of
+   * them: that is how "the largest of finitely many" is said without a maximum, which `num` has not
+   * got. Its consumer is the degree step of [[PolyGeometricConverges]].
+   */
+  val Bounded: String = "CONVERGES_BOUNDED"
+
+  /**
+   * `|- !x. 0 <= x ==> !n. 0 <= Power x n`
+   *
+   * `POWER_POSITIVE` asks `0 < x`, and a base of zero is where a non-negative ratio starts; this is
+   * the half that holds there.
+   */
+  val PowerNonNegative: String = "POWER_NONNEG"
+
+  /**
+   * `|- !q. abs q < 1 ==> ?l. converges (Sum (\i. real_of_num i * Power q i)) l`
+   *
+   * The first series here whose convergence is [[RatioTest]]'s: the ratio `(i + 1) q / i` is at
+   * most `(1 + abs q) / 2` past an index the derivation builds as a term, `NUM_CEIL` of
+   * `2 abs q / (1 - abs q)`. `Degrees` has the route.
+   */
+  val IndexGeometricConverges: String = "SUM_INDEX_GEOMETRIC_CONVERGES"
+
+  /** `|- !q. 1 <= abs q ==> diverges (Sum (\i. real_of_num i * Power q i))` */
+  val IndexGeometricDiverges: String = "SUM_INDEX_GEOMETRIC_DIVERGES"
+
+  /**
+   * `|- !k q. abs q < 1 ==> ?l. converges (Sum (\i. Power (real_of_num i) k * Power q i)) l`
+   *
+   * A polynomial in the index times a geometric term, at every degree, by induction on the degree:
+   * each step is a comparison that spends [[Bounded]] on the degree-one terms at a ratio half way
+   * to one. No value is named, which is the difference from [[GeometricConverges]].
+   */
+  val PolyGeometricConverges: String = "SUM_POLY_GEOMETRIC_CONVERGES"
+
+  /** `|- !k q. 1 <= abs q ==> diverges (Sum (\i. Power (real_of_num i) k * Power q i))` */
+  val PolyGeometricDiverges: String = "SUM_POLY_GEOMETRIC_DIVERGES"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -777,7 +819,19 @@ object Limit {
         "converges (Sum (\\i:num. c * f i)) (c * l)"),
     ScaleDiverges ->
       ("!f:num -> real. !c:real. ~(c = 0) ==> diverges (Sum f) ==> " +
-        "diverges (Sum (\\i:num. c * f i))")
+        "diverges (Sum (\\i:num. c * f i))"),
+    Bounded ->
+      "!s:num -> real. !l:real. converges s l ==> ?B:real. !n:num. abs (s n) <= B",
+    PowerNonNegative -> "!x:real. 0 <= x ==> !n:num. 0 <= Power x n",
+    IndexGeometricConverges ->
+      "!q:real. abs q < 1 ==> ?l:real. converges (Sum (\\i:num. real_of_num i * Power q i)) l",
+    IndexGeometricDiverges ->
+      "!q:real. 1 <= abs q ==> diverges (Sum (\\i:num. real_of_num i * Power q i))",
+    PolyGeometricConverges ->
+      ("!k:num. !q:real. abs q < 1 ==> " +
+        "?l:real. converges (Sum (\\i:num. Power (real_of_num i) k * Power q i)) l"),
+    PolyGeometricDiverges ->
+      "!k:num. !q:real. 1 <= abs q ==> diverges (Sum (\\i:num. Power (real_of_num i) k * Power q i))"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -1025,6 +1079,29 @@ object Limit {
       geometricDiverges <- Criteria.geometricDiverges(criteria, ratioDiverges)
       scaleConverges <- Criteria.scaleConverges(criteria)
       scaleDiverges <- Criteria.scaleDiverges(criteria, scaleConverges)
+
+      /* ---- a polynomial in the index times a geometric term: `Degrees` derives it ---- */
+
+      field <- Field.construct(magnitude.order.ring.arithmetic)
+      numTotal <- peano.fact(Peano.Total)
+      realLe <- peano.fact(Peano.EmbedsOrder)
+      realNonNeg <- peano.fact(Peano.EmbedsNonNegative)
+      realSuc <- peano.fact(Peano.EmbedsSuccessor)
+      realZero <- peano.fact(Peano.EmbedsZero)
+      ceilLe <- peano.fact(Peano.CeilingAtLeast)
+      sucAdd <- peano.fact(Peano.SuccessorPlus)
+      powerOfProduct <- series.fact(Series.Multiplicative)
+      powerMonotone <- series.fact(Series.PowerMonotone)
+      powerOne <- series.fact(Series.PowerOfOne)
+      bothNonNeg <- magnitude.order.fact(Order.MultiplyNonNegatives)
+      square <- magnitude.order.fact(Order.SquareNonNegative)
+      degrees <- Degrees.derive(
+        criteria,
+        Degrees.Pieces(
+          field, numTotal, realLe, realNonNeg, realSuc, realZero, ceilLe, sumNonNegative,
+          partialSumsGrow, sucAdd, induct.induction, powerOfProduct, powerMonotone, powerOne,
+          bothNonNeg, square, inversePositive, absTriangle, vanishingTerms, scaleConverges,
+          ratioTest, termTest, geometricConverges))
     } yield new Limit(
       magnitude,
       peano,
@@ -1068,7 +1145,7 @@ object Limit {
         RatioDiverges -> ratioDiverges,
         ScaleConverges -> scaleConverges,
         ScaleDiverges -> scaleDiverges
-      )
+      ) ++ degrees
     )
   }
 

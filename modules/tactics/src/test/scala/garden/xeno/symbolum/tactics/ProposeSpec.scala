@@ -359,7 +359,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 466 with the convergence criteria's fifteen antecedents, 2026-09-25, derived before the run:
     // three on `SUM_RATIO_TEST`, two on each of the other three that carry more than one, one on
     // each of six, and none on the three values in `Transcendental`.
-    proposals.size shouldBe 466
+    // 472 with the polynomial-times-geometric criteria's six, 2026-09-25, derived before the run:
+    // one antecedent on each of the six facts.
+    proposals.size shouldBe 472
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1217,7 +1219,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // of a series and land here through `Prove.Address.Series`, and the thirteenth is an OLD
     // residue, `CONVERGES_ABSOLUTE`'s `!f l. ?z. converges (Sum f) z`, which had no address until
     // that one existed and so moves here from `unreadable` below.
-    open shouldBe 387
+    // 392 with five of the polynomial-times-geometric criteria's six residues, 2026-09-25, measured
+    // by the same probe of `Propose.audit`. The four about series land at `Prove.Address.Series` as
+    // predicted; the fifth is `POWER_NONNEG`'s `!x n. 0 <= Power x n`, which **was predicted to be
+    // refuted here and is not**: it is false at `x = -1, n = 1`, the audit's search does not find
+    // that point, and it lands at the order's address, taken and not settled. The sampler over the
+    // naturals' model does find it, and `after` below is where that shows.
+    open shouldBe 392
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1559,7 +1567,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // sequence that is not a series, `CONVERGES_OFFSET`'s, `SUM_TERMS_VANISH`'s and
     // `POWER_VANISHES`'s, and have no address, and `CONVERGES_ABSOLUTE`'s left for `open` above.
     // Plus three, minus one.
-    unreadable shouldBe 105
+    // 106 with `CONVERGES_BOUNDED`'s residue, `!s l. ?B. !n. abs (s n) <= B`, which is false and an
+    // existential no address takes. Predicted and met.
+    unreadable shouldBe 106
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1854,7 +1864,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // this list, and the two that do not are `CONVERGES_OFFSET`'s and `SUM_TERMS_VANISH`'s, whose
     // only naturals constant was in the antecedent they dropped. None is refuted at a point, so
     // `after` below does not move.
-    aboutNumbers.size shouldBe 185
+    // 190 with five of the six polynomial-times-geometric residues, which write `Power`, `Sum` or
+    // `real_of_num`; `CONVERGES_BOUNDED`'s writes none of `named`. Measured by the probe.
+    aboutNumbers.size shouldBe 190
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1949,7 +1961,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `withAPoint` were set in the same pass as the counts they sit behind rather than after a
     // red, which is what the paragraph four rows up has asked for five times; `withAPoint` was
     // right and this was not, and the pass is what showed it.
-    after shouldBe 57
+    // 58 with `POWER_NONNEG`'s residue, `!x n. 0 <= Power x n`, refuted at a point by this sampler
+    // where the audit's search above did not refute it: the model of the naturals computes `Power`
+    // at a numeral exponent, which is the difference this pair of counts exists to show.
+    after shouldBe 58
   }
 
   /* ------------------------------------------------------ the false positive it produced */
