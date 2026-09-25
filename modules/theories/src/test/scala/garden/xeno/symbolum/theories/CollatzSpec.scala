@@ -49,12 +49,13 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     Collatz
       .construct(
         chain.forward,
+        chain.folding,
         chain.reaching,
         chain.numbering,
         chain.naturals,
         chain.peano,
         chain.successor,
-        chain.forward.theory,
+        chain.folding.theory,
         chain.forward.notation)
       .fold(error => fail(s"the system does not build: ${error.message}"), identity)
 
@@ -417,14 +418,12 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(fact(Collatz.Inhabited)) shouldBe empty
 
     // Everything that reasons about LENGTHS or POSITIONS pays what anything about `num` pays
-    // here and no more: `SELECT` and `INFINITY`.
+    // here and no more: `SELECT` and `INFINITY`. Three facts left this list on 2026-09-25 and are
+    // in the group after the next, for a reason that is about the lists and not about them.
     val aboutNumbers = List(
       Collatz.Refused,
-      Collatz.TailFreeConcat,
-      Collatz.MarkedConcat,
       Collatz.RuleNotEmpty,
       Collatz.MarkedStep,
-      Collatz.TailFreeStep,
       Collatz.MarkedInhabited
     )
 
@@ -455,6 +454,38 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
       val rests = Derivation.axiomsOf(fact(name))
       withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
         rests.size shouldBe 3
+      }
+    }
+
+    // **And since 2026-09-25 a second way in, which is the lists.** The two marker-free predicates
+    // are folds (`docs/adr/0039`, the decision to move an existing development onto the lists),
+    // and every fact about a fold rests on eta: `LIST_RECURSION`, `LIST_INDUCT` and `LIST_CASES`
+    // all turn a word back into `WORD_EMPTY`, which is the criterion above met one layer down. So a
+    // fact that reads `S2_TAILFREE` reads it through `LIST_FOLD_EVERY` and pays the third axiom
+    // there. Measured over all thirty-five facts when it landed: exactly six moved from two to
+    // three, three of them here and three in part C, and the other twenty-nine did not move. The
+    // decision was Angelo's, taken with that count in front of him.
+    val throughTheLists = List(Collatz.TailFreeConcat, Collatz.MarkedConcat, Collatz.TailFreeStep)
+
+    for (name <- throughTheLists) {
+      val rests = Derivation.axiomsOf(fact(name))
+      withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
+        rests.size shouldBe 3
+      }
+    }
+
+    // The guard that the third comes from the lists rather than from this file: the bridge carries
+    // it before anything here touches it, and the three facts about positions a cons has do not.
+    val bridge = chain.folding
+      .fact(Folding.FoldOfEvery)
+      .fold(error => fail(error.message), theorem => Derivation.axiomsOf(theorem))
+    bridge.size shouldBe 3
+    for (name <- List(Listing.ConsLength, Listing.ConsNth, Listing.HeadOfCons)) {
+      val rests = chain.listing
+        .fact(name)
+        .fold(error => fail(error.message), theorem => Derivation.axiomsOf(theorem))
+      withClue(s"$name rests on: ${rests.map(system.show).toVector.sorted.mkString(", ")}\n") {
+        rests.size shouldBe 2
       }
     }
 
@@ -556,14 +587,15 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
       //   - the family's base case is `WORD_CONCAT (/f) (S2_ZEROS ZERO)`, which is
       //     `WORD_CONCAT_EMPTY_RIGHT`, and that lemma carries eta by itself.
       //
-      // And what does NOT: everything that only reads positions and lengths, which is the ten
+      //   - since 2026-09-25, a proof that reads `S2_HEADFREE`, which is a fold over the list and
+      //     reaches eta through `LIST_FOLD_EVERY`: that moved `S2_HEADFREE_CONCAT`,
+      //     `S2_ANCHORED_CONCAT` and `S2_HEADFREE_STEP` out of the group below, and nothing else.
+      //
+      // And what does NOT: everything that only reads positions and lengths, which is the seven
       // below. `S2_PHI_CONCAT`, `S2_PHI_AT_A_WORD` and `S2_PHI_BLOCKS` are about the measure and
-      // are in that ten, so the line is not the measure against the class either.
+      // are in that seven, so the line is not the measure against the class either.
       val two = measured.collect { case (name, rests) if rests.size == 2 => name }.toSet
       two shouldBe Set(
-        Collatz.HeadFreeConcat,
-        Collatz.AnchoredConcat,
-        Collatz.HeadFreeStep,
         Collatz.AnchoredStep,
         Collatz.AnchoredInhabited,
         Collatz.PotentialConcat,
