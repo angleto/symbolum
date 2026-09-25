@@ -328,7 +328,11 @@ object Library {
         collect("Continuity", chain.continuity.facts) ++
         // The first facts about `ln`, the same day: a development of its own because it is about
         // three constants declared by three developments below it.
-        collect("Logarithm", chain.logarithm.facts)
+        collect("Logarithm", chain.logarithm.facts) ++
+        // Resolution, 2026-09-25, in the change that made it a link. Its five soundness theorems
+        // were derived beside the chain until then and were in no library, which is what a
+        // development that declared nothing could afford and a link cannot.
+        collect("Resolving", chain.resolving.facts)
     )
 
   /** A library over developments a caller names itself. */

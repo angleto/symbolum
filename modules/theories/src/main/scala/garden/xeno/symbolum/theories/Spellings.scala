@@ -331,6 +331,15 @@ object Spellings {
       // rows above, and the subscripts are where the relation and the counted sub-relation
       // belong, since a reader tracks the step and not them.
       .delimited("REACH", 3, "\\operatorname{reach}^{#2}_{#1}(#3)")
+      /* ---------------------------------------------------- resolution as an object */
+      // Words rather than symbols, because the literature has none that all four share: a proof
+      // complexity paper writes `w(\pi)` for the width of a refutation `\pi`, and here there is no
+      // `\pi`, only the functions and the index count it is made of. The width's subscript is the
+      // clause lengths and its argument the count, which is how `NUM_PROD` above is laid out.
+      .delimited("RES_SAT", 5, "\\operatorname{sat}_{#1}(#2, #3, #4, #5)")
+      .delimited("RES_JUSTIFIED", 5, "\\operatorname{just}(#1, #2, #3, #4, #5)")
+      .delimited("RES_REFUTATION", 5, "\\operatorname{ref}(#1, #2, #3, #4, #5)")
+      .delimited("RES_WIDTH", 2, "\\operatorname{w}_{#1}(#2)")
       /* ------------------------------------------ what the type definitions left */
       .delimited("IND_0", 0, "\\mathbb{I}_{0}")
       .delimited("IND_SUC", 1, "\\mathrm{ind\\_suc}(#1)")

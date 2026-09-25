@@ -381,7 +381,18 @@ final class Chain private (
    * `exp`, `ln` and `continuous`, which are declared below it, and it is a link rather than a
    * development beside the chain because stating them needs all three, which only the end sees.
    */
-  val logarithm: Logarithm
+  val logarithm: Logarithm,
+
+  /**
+   * Resolution as an object: the soundness of a refutation, and the refutation, its satisfaction
+   * and its width under names.
+   *
+   * It sat beside the chain and declared nothing until 2026-09-25. It is a link since, because a
+   * statement about every refutation of a family is written with `RES_REFUTATION` and `RES_WIDTH`,
+   * and a constant declared beside the chain is where nothing above can see it. Four constants, no
+   * axiom.
+   */
+  val resolving: Resolving
 ) {
 
   /**
@@ -409,7 +420,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = continuity
+  val widest: Signature = resolving
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -635,6 +646,11 @@ object Chain {
       // the first facts about `ln`, over the constants the three links below declared.
       logarithm <- Logarithm.construct(
         classical, reals, magnitude, series, peano, coding, limit, transcendental, continuity)
+
+      // Over the naturals and the classical logic, extending the chain's end: a derivation is three
+      // functions on `num` and nothing about the reals is read, so what it needs from below is
+      // `Peano`'s order and induction and the case split `COND` asks for.
+      resolving <- Resolving.construct(classical, peano, continuity.theory, continuity.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -673,6 +689,7 @@ object Chain {
       folding,
       root,
       continuity,
-      logarithm
+      logarithm,
+      resolving
     )
 }

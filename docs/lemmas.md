@@ -740,6 +740,21 @@ they have least appetite for working out how it is produced.
   real_le                  real_le = (\x:real. \y:real. x < y \/ x = y)
   sub                      sub = (\x:real. \y:real. x + -y)
 
+## Resolving
+
+  RES_EMPTY_UNSATISFIABLE  !x:num -> bool. !y:num -> num. !z:num -> bool. !u:num. u = 0 ==> ~(?v:num. v < u /\ x (y v) = z v)
+  RES_REFUTATION_NONEMPTY  !x:num -> num. !y:num -> num -> num. !z:num -> num -> bool. !u:num. !v:num. RES_REFUTATION x y z u v ==> 0 < v
+  RES_REFUTATION_UNSATISFIABLE !x:num -> num. !y:num -> num -> num. !z:num -> num -> bool. !u:num. !v:num. RES_REFUTATION x y z u v ==> ~(?w:num -> bool. !x1:num. x1 < u ==> RES_SAT w x y z x1)
+  RES_REFUTES              !x:num -> num. !y:num -> num -> num. !z:num -> num -> bool. !u:num. !v:num. (!w:num. w < v ==> w < u \/ (?x1:num. ?y1:num. ?z1:num. x1 < w /\ y1 < w /\ (!u1:num. u1 < x x1 ==> ~(y x1 u1 = z1 /\ z x1 u1 = T) ==> (?v1:num. v1 < x w /\ y w v1 = y x1 u1 /\ z w v1 = z x1 u1)) /\ (!u1:num. u1 < x y1 ==> ~(y y1 u1 = z1 /\ z y1 u1 = F) ==> (?v1:num. v1 < x w /\ y w v1 = y y1 u1 /\ z w v1 = z y1 u1)))) ==> (?w:num. w < v /\ x w = 0) ==> ~(?w:num -> bool. !x1:num. x1 < u ==> (?y1:num. y1 < x x1 /\ w (y x1 y1) = z x1 y1))
+  RES_SOUND                !x:num -> bool. !y:num -> num. !z:num -> num -> num. !u:num -> num -> bool. !v:num. !w:num. (!x1:num. x1 < v ==> (?y1:num. y1 < y x1 /\ x (z x1 y1) = u x1 y1)) ==> (!x1:num. x1 < w ==> x1 < v \/ (?y1:num. ?z1:num. ?u1:num. y1 < x1 /\ z1 < x1 /\ (!v1:num. v1 < y y1 ==> ~(z y1 v1 = u1 /\ u y1 v1 = T) ==> (?w1:num. w1 < y x1 /\ z x1 w1 = z y1 v1 /\ u x1 w1 = u y1 v1)) /\ (!v1:num. v1 < y z1 ==> ~(z z1 v1 = u1 /\ u z1 v1 = F) ==> (?w1:num. w1 < y x1 /\ z x1 w1 = z z1 v1 /\ u x1 w1 = u z1 v1)))) ==> (!x1:num. x1 < w ==> (?y1:num. y1 < y x1 /\ x (z x1 y1) = u x1 y1))
+  RES_STEP_SOUND           !x:num -> bool. !y:num -> num. !z:num -> bool. !u:num -> num. !v:num -> bool. !w:num -> num. !x1:num -> bool. !y1:num. !z1:num. !u1:num. !v1:num. (!w1:num. w1 < y1 ==> ~(y w1 = v1 /\ z w1 = T) ==> (?x2:num. x2 < u1 /\ w x2 = y w1 /\ x1 x2 = z w1)) ==> (!w1:num. w1 < z1 ==> ~(u w1 = v1 /\ v w1 = F) ==> (?x2:num. x2 < u1 /\ w x2 = u w1 /\ x1 x2 = v w1)) ==> (?w1:num. w1 < y1 /\ x (y w1) = z w1) ==> (?w1:num. w1 < z1 /\ x (u w1) = v w1) ==> (?w1:num. w1 < u1 /\ x (w w1) = x1 w1)
+  RES_STEP_SOUND_OF_RESOLVENT !x:num -> bool. !y:num -> num. !z:num -> bool. !u:num -> num. !v:num -> bool. !w:num -> num. !x1:num -> bool. !y1:num. !z1:num. !u1:num. !v1:num. (?w1:num. w1 < y1 /\ y w1 = v1 /\ z w1 = T) ==> (?w1:num. w1 < z1 /\ u w1 = v1 /\ v w1 = F) ==> (!w1:num. w1 < y1 ==> ~(y w1 = v1 /\ z w1 = T) ==> (?x2:num. x2 < u1 /\ w x2 = y w1 /\ x1 x2 = z w1)) ==> (!w1:num. w1 < z1 ==> ~(u w1 = v1 /\ v w1 = F) ==> (?x2:num. x2 < u1 /\ w x2 = u w1 /\ x1 x2 = v w1)) ==> (?w1:num. w1 < y1 /\ x (y w1) = z w1) ==> (?w1:num. w1 < z1 /\ x (u w1) = v w1) ==> (?w1:num. w1 < u1 /\ x (w w1) = x1 w1)
+  RES_WIDTH_ATTAINED       !x:num -> num. !y:num. RES_WIDTH x y = 0 \/ (?z:num. z < y /\ RES_WIDTH x y = x z)
+  RES_WIDTH_BOUND          !x:num -> num. !y:num. !z:num. y < z ==> x y <= RES_WIDTH x z
+  RES_WIDTH_LEAST          !x:num -> num. !y:num. !z:num. (!u:num. u < y ==> x u <= z) ==> RES_WIDTH x y <= z
+  RES_WIDTH_SUC            !x:num -> num. !y:num. RES_WIDTH x (SUC y) = COND (x y <= RES_WIDTH x y) (RES_WIDTH x y) (x y)
+  RES_WIDTH_ZERO           !x:num -> num. RES_WIDTH x 0 = 0
+
 ## Root
 
   SQRT                     !x:real. 0 <= x ==> 0 <= sqrt x /\ sqrt x * sqrt x = x

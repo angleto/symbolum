@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (140)
+## The definitions (144)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -270,6 +270,10 @@ axiom mentioning it means.
 | `definition Power` | Power = \x:real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = x * y z)) | **NOT READ** |  |  |
 | `definition Prod` | Prod = \x:num -> real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = y z * x z)) | **NOT READ** |  |  |
 | `definition REACH` | REACH = \x:'a -> 'a -> bool. \y:'a -> 'a -> bool. \z:'a. INDUCTIVE (\u:prod('a, num) -> bool. \v:prod('a, num). v = PAIR z 0 \/ (?w:prod('a, num). u w /\ x (FST w) (FST v) /\ (y (FST w) (FST v) /\ SND v = SUC (SND w) \/ ~(y (FST w) (FST v)) /\ SND v = SND w))) | **NOT READ** |  |  |
+| `definition RES_JUSTIFIED` | RES_JUSTIFIED = \x:num -> num. \y:num -> num -> num. \z:num -> num -> bool. \u:num. \v:num. v < u \/ (?w:num. ?x1:num. ?y1:num. w < v /\ x1 < v /\ (!z1:num. z1 < x w ==> ~(y w z1 = y1 /\ z w z1 = T) ==> (?u1:num. u1 < x v /\ y v u1 = y w z1 /\ z v u1 = z w z1)) /\ (!z1:num. z1 < x x1 ==> ~(y x1 z1 = y1 /\ z x1 z1 = F) ==> (?u1:num. u1 < x v /\ y v u1 = y x1 z1 /\ z v u1 = z x1 z1))) | **NOT READ** |  |  |
+| `definition RES_REFUTATION` | RES_REFUTATION = \x:num -> num. \y:num -> num -> num. \z:num -> num -> bool. \u:num. \v:num. (!w:num. w < v ==> RES_JUSTIFIED x y z u w) /\ (?w:num. w < v /\ x w = 0) | **NOT READ** |  |  |
+| `definition RES_SAT` | RES_SAT = \x:num -> bool. \y:num -> num. \z:num -> num -> num. \u:num -> num -> bool. \v:num. ?w:num. w < y v /\ x (z v w) = u v w | **NOT READ** |  |  |
+| `definition RES_WIDTH` | RES_WIDTH = \x:num -> num. select (\y:num -> num. y 0 = 0 /\ (!z:num. y (SUC z) = COND (x z <= y z) (y z) (x z))) | **NOT READ** |  |  |
 | `definition SND` | SND = \x:prod('a, 'b). select (\y:'b. ?z:'a. x = PAIR z y) | **NOT READ** |  |  |
 | `definition SUC` | SUC = \x:num. mk_num (IND_SUC (dest_num x)) | **NOT READ** |  |  |
 | `definition Sum` | Sum = \x:num -> real. select (\y:num -> real. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x z)) | **NOT READ** |  |  |

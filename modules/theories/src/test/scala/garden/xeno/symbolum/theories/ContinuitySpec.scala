@@ -356,8 +356,10 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     refused.hypotheses shouldBe empty
   }
 
-  it should "be the chain's end, so that every development above the reals can name it" in {
-    chain.widest shouldBe continuity
+  it should "be reachable from the chain's end, so that every development above the reals can name it" in {
+    // It WAS the end until 2026-09-25, and this asserted the identity; `Resolving` is above it since.
+    // What the test is for is the visibility, and which link is last is `ChainSpec`'s to pin.
     chain.widest.theory.constants.keySet should contain(Continuity.Continuous)
+    chain.widest.theory.constants(Continuity.Continuous) shouldBe continuity.theory.constants(Continuity.Continuous)
   }
 }

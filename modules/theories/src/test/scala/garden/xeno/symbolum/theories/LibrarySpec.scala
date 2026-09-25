@@ -71,7 +71,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // about a sequence, nor anything `Root` is about.
       chain.continuity.facts.size +
       // The logarithm, the same day and the same discipline.
-      chain.logarithm.facts.size
+      chain.logarithm.facts.size +
+      // Resolution, 2026-09-25, in the change that made it a link: its five soundness theorems
+      // were in no library while it sat beside the chain, and its seven over the names are new.
+      chain.resolving.facts.size
 
     library.entries.size shouldBe expected
 
@@ -649,8 +652,15 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // plus this delta before the run: six facts under six names, none shared. `CLAUDE.md`'s figures
     // move by **three** and **none**: `CONVERGES_BOUNDED` and the two polynomial facts bind two
     // leading quantifiers each, of different types, and the other three bind one.
-    library.entries.size shouldBe 685
-    library.names.distinct.size shouldBe 682
+    // 691 and 688 with resolution as a link, the same day: twelve facts under twelve names, none
+    // shared, so the gap of three does not move. Tip plus this branch's delta. `CLAUDE.md`'s figures
+    // move by **eleven** and **nine**, derived from the twelve statements before the run and not
+    // measured by it: every one but `RES_WIDTH_ZERO` binds two or more leading quantifiers, and the
+    // three with no pair of one type are that one, `RES_WIDTH_SUC` and `RES_WIDTH_ATTAINED`, which
+    // bind a length function and a number. The other nine each bind two numbers, or two
+    // `num -> bool`.
+    library.entries.size shouldBe 697
+    library.names.distinct.size shouldBe 694
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
