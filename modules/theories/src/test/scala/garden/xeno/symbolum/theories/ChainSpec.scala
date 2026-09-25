@@ -256,13 +256,15 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // **And again the same day**, to `Derivative`, the thirteenth: the derivative at a point and
     // Rolle's theorem, which reads `continuous` and nothing `Resolving` declares, and is at the end
     // for the same rule and nothing about its subject.
-    chain.widest shouldBe chain.derivative
-    chain.widest.theory.constants.keySet shouldBe chain.derivative.theory.constants.keySet
+    // **And again the same day**, to `Integral`, the fourteenth: the gauge integral and the
+    // fundamental theorem, which names `derivative` and so sits above it.
+    chain.widest shouldBe chain.integral
+    chain.widest.theory.constants.keySet shouldBe chain.integral.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
       chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
-      chain.listing, chain.folding, chain.root, chain.continuity, chain.resolving
+      chain.listing, chain.folding, chain.root, chain.continuity, chain.resolving, chain.derivative
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

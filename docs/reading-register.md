@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (145)
+## The definitions (148)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -302,6 +302,9 @@ axiom mentioning it means.
 | `definition div` | div = \x:real. \y:real. x * inv y | **NOT READ** |  |  |
 | `definition diverges` | diverges = \x:num -> real. ~(?y:real. converges x y) | **NOT READ** |  |  |
 | `definition exp` | exp = \x:real. lim (\y:num. Sum (\z:num. Power x z / real_of_num (NUM_FACT z)) y) | **NOT READ** |  |  |
+| `definition fine_sum` | fine_sum = \x:real -> real. \y:real -> real. \z:real. \u:real. \v:real. INDUCTIVE (\w:prod(real, prod(real, real)) -> bool. \x1:prod(real, prod(real, real)). (?y1:real. ?z1:real. ?u1:real. x1 = PAIR y1 (PAIR z1 (x u1 * (z1 - y1))) /\ y1 <= u1 /\ u1 <= z1 /\ z1 - y1 < y u1) \/ (?y1:real. ?z1:real. ?u1:real. ?v1:real. ?w1:real. x1 = PAIR y1 (PAIR u1 (v1 + w1)) /\ w (PAIR y1 (PAIR z1 v1)) /\ w (PAIR z1 (PAIR u1 w1)))) (PAIR z (PAIR u v)) | **NOT READ** |  |  |
+| `definition has_integral` | has_integral = \x:real -> real. \y:real. \z:real. \u:real. !v:real. 0 < v ==> (?w:real -> real. (!x1:real. 0 < w x1) /\ (!x1:real. fine_sum x w y z x1 ==> abs (x1 - u) < v)) | **NOT READ** |  |  |
+| `definition integral` | integral = \x:real -> real. \y:real. \z:real. select (\u:real. has_integral x y z u) | **NOT READ** |  |  |
 | `definition lim` | lim = \x:num -> real. select (\y:real. converges x y) | **NOT READ** |  |  |
 | `definition ln` | ln = \x:real. select (\y:real. exp y = x) | **NOT READ** |  |  |
 | `definition max` | max = \x:real. \y:real. select (\z:real. (z = x \/ z = y) /\ x <= z /\ y <= z) | **NOT READ** |  |  |

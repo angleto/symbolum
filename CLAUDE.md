@@ -655,7 +655,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 729 lemmas, 484 have two or more leading quantifiers and **420 of
+caller meant: of the library's 738 lemmas, 493 have two or more leading quantifiers and **429 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1857,6 +1857,28 @@ costs exactly what the estimate costs.
 points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hypothesis names. The
 hypothesis states the derivative and its sign in one existential, so it asks no second statement
 of differentiability; the three cost what the mean value theorem costs.
+
+**The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
+Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum
+per piece and the common refinement of two partitions, neither of which is integration.
+`fine_sum f g u v s` says `s` is the sum of `f` over a division of `[u, v]` fine for the gauge `g`,
+and it is `INDUCTIVE`'s closure of two rules over the triple `PAIR u (PAIR v s)`: one piece with
+its tag, and two adjacent divisions joined. There is no sequence of points anywhere in it.
+`FINE_SUM_EXISTS` is Cousin's lemma, and it is `INTERVAL_GLUING` at "some fine sum exists";
+`has_integral` is the epsilon-gauge statement written out and `integral` is `select` over it,
+pinned by `HAS_INTEGRAL_UNIQUE`, whose one division fine for two gauges is taken at their pointwise
+minimum. **`INTEGRAL_DERIVATIVE` is the fundamental theorem with no integrability hypothesis**: if
+`F` has derivative `f x` at every point of `[a, b]`, then `integral f a b = F b - F a`. The gauge at
+`x` is a radius the derivative gives, chosen by `select`, and the bound over a division is an
+induction over the relation from the straddle inequality on one piece. Three constants, no axiom.
+
+**The figure worth carrying is where `COMPLETENESS` enters.** `HAS_INTEGRAL_DERIVATIVE`, the theorem
+stated with `has_integral`, spends fifteen of the sixteen and the choice and not the supremum,
+because every fine sum being close needs no division to exist. Cousin's lemma is where the supremum
+is spent, and so uniqueness and the value `integral` spend it. `IntegralSpec` asserts both as
+equalities, and keeps the definition from being empty four ways: Cousin detached at a constant
+gauge, the theorem detached at `y * y` on `[0, 1]`, a wrong value refused, and uniqueness refuted
+without `a <= b` on `[1, 0]`, where there are no fine sums and every number is an integral.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

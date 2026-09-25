@@ -381,7 +381,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents,
     // three on `NUM_PRIME_DIVIDES_CHOOSE`, two on `NUM_PRIME_NOT_DIVIDES_FACT`, one each on
     // `NUM_DIVIDES_SUM`, `NUM_FRESHMAN` and `NUM_FERMAT`, none on the three equations.
-    proposals.size shouldBe 562
+    // 580 with the gauge integral's eighteen, the same day.
+    proposals.size shouldBe 580
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1284,7 +1285,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // this line was edited: the three residues of `NUM_PRIME_DIVIDES_CHOOSE`, a divisibility the
     // propositional address takes and cannot settle. The other five are `unreadable` below. Tip
     // plus this branch's delta.
-    open shouldBe 458
+    // 481 with twenty-three of the gauge integral's twenty-four residues, the same day, read off a
+    // probe of `Propose.audit` filtered by `from`: seventeen weakenings that keep an implication or
+    // name `fine_sum`, `has_integral` or `derivative`, which no procedure settles, and six
+    // substitutions of the order, the sum and the product. The twenty-fourth is in `unreadable`.
+    open shouldBe 481
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1644,7 +1649,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 131 with the same probe: `NUM_FRESHMAN`'s, `NUM_FERMAT`'s and `NUM_DIVIDES_SUM`'s one each
     // and `NUM_PRIME_NOT_DIVIDES_FACT`'s two, a congruence, a divisibility or its denial, which no
     // procedure reads.
-    unreadable shouldBe 131
+    // 132 with `FINE_SUM_PIECE`'s one weakening, from the same probe as `open`'s 481: dropping its
+    // only antecedent leaves a bare `fine_sum`, which no procedure reads.
+    unreadable shouldBe 132
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
