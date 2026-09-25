@@ -368,7 +368,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // none. Tip plus this branch's delta.
     // 504 with the derivative's thirteen, the same day: four on each interior lemma, four on
     // `ROLLE`, one on `DERIVATIVE_NEG`. Tip plus this branch's delta.
-    proposals.size shouldBe 504
+    // 533 with the closed terms, the same day, tip plus this delta, derived before the run: seven antecedents
+    // on each of the three new congruences, five on `NUM_PROV_TRUE_EQ`, two on `NUM_PROV_VALUE`
+    // and one on `NUM_PROV_REFL`.
+    proposals.size shouldBe 533
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1245,7 +1248,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // each an implication with an antecedent gone, taken at the propositional address and not
     // settled. The thirteenth, `DERIVATIVE_NEG`'s, is in `unreadable` below, and the probe is what
     // placed it, since that row sits behind this one. Tip plus this branch's delta.
-    open shouldBe 405
+    // 433 with the closed terms' twenty-nine residues less one, tip plus this delta, 2026-09-25, derived before the
+    // run that reached this row: every residue of the three new congruences, of `NUM_PROV_VALUE`
+    // and of `NUM_PROV_TRUE_EQ` keeps at least one implication, so it sits at the propositional
+    // address, which takes it and does not settle it. The one missing is `NUM_PROV_REFL`'s, which
+    // has nothing left to imply and is predicted in `unreadable` below.
+    open shouldBe 433
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1596,7 +1604,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 124 with `DERIVATIVE_NEG`'s one weakening, `!f x m. derivative (\y. 0 - f y) x (0 - m)`,
     // from the same probe as `open`'s 405: false at the identity, and about `derivative`, which no
     // procedure addresses and no model interprets. Tip plus this branch's delta.
-    unreadable shouldBe 124
+    // 125 with `NUM_PROV_REFL`'s one weakening, 2026-09-25, predicted from the row above: dropping
+    // its only antecedent leaves `!t. NUM_PROV (t = t)`, a bare application of a predicate that no
+    // address takes.
+    unreadable shouldBe 125
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
