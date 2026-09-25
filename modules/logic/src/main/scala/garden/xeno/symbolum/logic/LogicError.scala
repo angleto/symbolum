@@ -93,6 +93,37 @@ final case class DoesNotFollow(goal: Term, procedure: String) extends LogicError
 }
 
 /**
+ * A search found a certificate for the goal and rebuilding it in the kernel was refused.
+ *
+ * The opposite of [[DoesNotFollow]] and the refusal most easily mistaken for it, which is why it is
+ * its own case. The untrusted half finished and said the goal follows; the trusted half did not
+ * accept the assembly, so nothing is established, and what failed is the procedure against its own
+ * search rather than the goal against the fragment. Until 2026-09-25 this came out as whatever the
+ * failing step said, a RING `NotEqualTo` at the first level, standing decided and naming neither
+ * the goal nor the certificate; and inside an escalation it did not come out at all, because the
+ * escalation reports the refusal from before it and that was `DoesNotFollow`. So a goal whose proof
+ * had just been found was reported as decided not to follow, which is the one way this machinery
+ * can mislead. Measured against `Linarith` at `57a2276d`, on
+ * `!c x. c < 1 ==> 0 <= x ==> x = c * x ==> x <= 0`.
+ *
+ * `reason` is the step that refused, unchanged, so the defect can be found from the message.
+ */
+final case class NotRebuilt(goal: Term, procedure: String, reason: LogicError) extends LogicError {
+  def message: String =
+    s"$procedure found a combination of the hypotheses giving $goal and could not rebuild it in " +
+      s"the kernel, so nothing about the goal is established either way: ${reason.message}"
+
+  // Never decided, whatever the step that refused says of itself: a step deciding that the
+  // assembled combination is not the goal's is a statement about the assembly. A step that stopped
+  // on a bound keeps saying so, since "the rebuilding ran out" is still a search that stopped.
+  def standing: LogicError.Standing = reason.standing match {
+    case LogicError.Standing.Decided   => LogicError.Standing.Unread
+    case LogicError.Standing.Exhausted => LogicError.Standing.Exhausted
+    case LogicError.Standing.Unread    => LogicError.Standing.Unread
+  }
+}
+
+/**
  * A classical propositional search finished and the goal's skeleton is falsifiable, with the
  * assignment that falsifies it.
  *

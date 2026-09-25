@@ -170,6 +170,31 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
    * the message it is about cannot tell the two apart. The sentence gives the count after the
    * verb now, so there is no number in front of one to disagree.
    */
+  "A certificate found and not rebuilt" should "never be a decision, whatever the step that refused says" in {
+    // The refusal exists because its reason is usually a decision about the wrong thing: RING
+    // deciding that the assembled combination is not the goal's difference, which is a statement
+    // about the assembly. So a decided reason is demoted, a stopped one stays stopped, and none of
+    // the three comes out as `decided`. One reason per standing, so the demotion and the two
+    // pass-throughs are each checked.
+    val goal = Term.variable("x", Type.Bool)
+    val reasons: Vector[LogicError] = Vector(
+      DoesNotFollow(goal, "RING"),
+      BoundReached("a limit", 1, 0, goal),
+      SyntaxError("a text that does not read", 0)
+    )
+    reasons.map(_.standing).distinct should contain theSameElementsAs Standing.values.toSeq
+
+    reasons.foreach { reason =>
+      val refusal = NotRebuilt(goal, "LINARITH", reason)
+      withClue(s"over a reason that is ${reason.standing}: ") {
+        LogicError.decided(Left(refusal)) shouldBe false
+        refusal.standing.stoppedShort shouldBe reason.standing.stoppedShort
+        refusal.message should include(goal.toString)
+        refusal.message should include(reason.message)
+      }
+    }
+  }
+
   "The refusal about a partial instance" should "take the singular at one and the plural elsewhere" in {
     val subject = Term.variable("p", Type.Bool)
 
