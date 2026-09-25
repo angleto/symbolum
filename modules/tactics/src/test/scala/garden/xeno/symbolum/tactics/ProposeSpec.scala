@@ -388,7 +388,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 600 with Euler's theorem, the same day, derived before the run: fourteen antecedents, three on
     // `NUM_PROD_PERMUTE`, two each on `NUM_PROD_POINT`, `NUM_INVERSE`, `NUM_GCD_MOD`,
     // `NUM_UNIT_COPRIME` and `NUM_EULER`, one on `NUM_PROD_CONG_MOD`. Tip plus this branch's delta.
-    proposals.size shouldBe 600
+    // 604 with the existence of the integral, the same day, derived before the run: two antecedents
+    // on each of its two facts, `a <= b` and the continuity. Tip plus this branch's delta.
+    proposals.size shouldBe 604
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1310,7 +1312,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // line was edited: twelve of its fourteen residues, each an implication or a congruence the
     // propositional address takes and cannot settle; the other two are `unreadable` below. Tip
     // plus this branch's delta.
-    open shouldBe 507
+    // 511 with the existence of the integral's four weakenings, the same day, read off a run on an
+    // earlier tree and confirmed by a second in which every assertion after this row held: each
+    // keeps an implication and names `has_integral` or `integral`, which no procedure settles. Tip
+    // plus this branch's delta.
+    open shouldBe 511
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

@@ -113,6 +113,15 @@ object Integral {
   /** A division fine for a gauge is fine for every larger one. */
   val Gauge: String = "FINE_SUM_GAUGE"
 
+  /**
+   * Every function continuous on `[a, b]` has an integral there. A Cauchy criterion that glues, and
+   * one supremum; `Integrability` is the derivation.
+   */
+  val ContinuousHas: String = "CONTINUOUS_HAS_INTEGRAL"
+
+  /** The same through `integral`: a continuous function has the integral `integral` names. */
+  val ContinuousIntegral: String = "CONTINUOUS_INTEGRAL"
+
   /** Over a non-empty interval an integral is unique. */
   val HasUnique: String = "HAS_INTEGRAL_UNIQUE"
 
@@ -144,6 +153,12 @@ object Integral {
     Gauge ->
       ("!f:real -> real. !g:real -> real. !h:real -> real. !u:real. !v:real. !s:real. " +
         "(!x:real. g x <= h x) ==> fine_sum f g u v s ==> fine_sum f h u v s"),
+    ContinuousHas ->
+      ("!f:real -> real. !a:real. !b:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "?i:real. has_integral f a b i"),
+    ContinuousIntegral ->
+      ("!f:real -> real. !a:real. !b:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "has_integral f a b (integral f a b)"),
     HasUnique ->
       ("!f:real -> real. !a:real. !b:real. !i:real. !j:real. a <= b ==> " +
         "has_integral f a b i ==> has_integral f a b j ==> i = j"),
@@ -208,6 +223,9 @@ object Integral {
       derivativeDefinition <- derivative.definition(Derivative.DerivativeName)
       hasFundamental <- fundamental(steps, reals, magnitude, classical, hasDefinition, derivativeDefinition, induction)
       fundamentalTheorem <- integralOfDerivative(steps, unique, hasFundamental)
+      continuous <- Integrability.prove(steps, reals, magnitude, classical, continuity, gluing, piece, join, induction,
+        exists, gauge, hasDefinition, unique)
+      (continuousHas, continuousIntegral) = continuous
 
       facts = Map[String, Kernel.Thm](
         Piece -> piece,
@@ -218,7 +236,9 @@ object Integral {
         HasUnique -> hasUnique,
         Unique -> unique,
         HasFundamental -> hasFundamental,
-        Fundamental -> fundamentalTheorem
+        Fundamental -> fundamentalTheorem,
+        ContinuousHas -> continuousHas,
+        ContinuousIntegral -> continuousIntegral
       )
 
       // Each statement checked against the text a person reads it by: a development that built

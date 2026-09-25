@@ -267,6 +267,8 @@ they have least appetite for working out how it is produced.
 
 ## Integral
 
+  CONTINUOUS_HAS_INTEGRAL  !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. has_integral x y z u)
+  CONTINUOUS_INTEGRAL      !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> has_integral x y z (integral x y z)
   FINE_SUM_EXISTS          !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> 0 < y v) ==> (?v:real. fine_sum x y z u v)
   FINE_SUM_GAUGE           !x:real -> real. !y:real -> real. !z:real -> real. !u:real. !v:real. !w:real. (!x1:real. y x1 <= z x1) ==> fine_sum x y u v w ==> fine_sum x z u v w
   FINE_SUM_INDUCT          !x:real -> real. !y:real -> real. !z:real -> real -> real -> bool. (!u:real. !v:real. !w:real. u <= w /\ w <= v /\ v - u < y w ==> z u v (x w * (v - u))) ==> (!u:real. !v:real. !w:real. !x1:real. !y1:real. z u v x1 ==> z v w y1 ==> z u w (x1 + y1)) ==> (!u:real. !v:real. !w:real. fine_sum x y u v w ==> z u v w)
