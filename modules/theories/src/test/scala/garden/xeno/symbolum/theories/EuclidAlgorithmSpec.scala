@@ -21,7 +21,7 @@ class EuclidAlgorithmSpec extends AnyFlatSpec with Matchers {
   private val chain = Chain.standard
   private lazy val euclid = force(EuclidAlgorithm.construct(chain))
   private lazy val rules = euclid.logic.rules
-  private lazy val value = force(Value.construct(chain))
+  private lazy val evaluator = force(Value.construct(chain))
   private val Num = TyApp(Natural.TypeName, Nil)
 
   private def fact(name: String): Kernel.Thm = force(euclid.fact(name))
@@ -59,7 +59,7 @@ class EuclidAlgorithmSpec extends AnyFlatSpec with Matchers {
           atAB <- rules.specAll(fact(EuclidAlgorithm.Step), List(numeral(a), numeral(b)))
           apart <- chain.successor.distinct(numeral(b), numeral(0))
           stepped <- rules.mp(atAB, apart)
-          remainder <- value.of("NUM_MOD", Vector(BigInt(a), BigInt(b)))
+          remainder <- evaluator.of("NUM_MOD", Vector(BigInt(a), BigInt(b)))
           name <- euclid.term(s"${EuclidAlgorithm.Name} ${b}")
           carried <- Conv.apTerm(name, remainder)
           result <- Conv.trans(stepped, carried)
