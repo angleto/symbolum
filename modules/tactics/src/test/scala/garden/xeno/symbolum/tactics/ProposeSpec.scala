@@ -371,7 +371,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 533 with the closed terms, the same day, tip plus this delta, derived before the run: seven antecedents
     // on each of the three new congruences, five on `NUM_PROV_TRUE_EQ`, two on `NUM_PROV_VALUE`
     // and one on `NUM_PROV_REFL`.
-    proposals.size shouldBe 533
+    // 542 with the mean value theorem's nine, the same day: two each on the two linearities and on
+    // uniqueness, three on `MEAN_VALUE`. Tip plus this branch's delta.
+    proposals.size shouldBe 542
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1253,7 +1255,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and of `NUM_PROV_TRUE_EQ` keeps at least one implication, so it sits at the propositional
     // address, which takes it and does not settle it. The one missing is `NUM_PROV_REFL`'s, which
     // has nothing left to imply and is predicted in `unreadable` below.
-    open shouldBe 433
+    // 442 with all nine of the mean value theorem's weakenings, the same day, read off a probe of
+    // `Propose.audit` filtered by `from`: each keeps an implication and sits at the propositional
+    // address, taken and not settled, so `unreadable` below does not move. Tip plus this branch's
+    // delta, the delta probed on the tree before the closed terms landed.
+    open shouldBe 442
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

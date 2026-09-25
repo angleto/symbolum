@@ -323,7 +323,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // antecedents over six facts, four on each interior lemma and on `ROLLE`, one on the negation.
     // 533 with the closed terms, the same day, tip plus this delta, derived before the run: seven on each of
     // the three new congruences, five, two and one on the other three.
-    propose.weakenings.size shouldBe 533
+    // 542 with the mean value theorem, the same day, derived before the run: nine antecedents over
+    // four facts, two on each linearity and on uniqueness, three on the theorem. Tip plus this
+    // branch's delta.
+    propose.weakenings.size shouldBe 542
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

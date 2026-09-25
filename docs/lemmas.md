@@ -121,6 +121,7 @@ they have least appetite for working out how it is produced.
   CONTINUOUS_BOUNDED       !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. !v:real. y <= v /\ v <= z ==> x v <= u)
   CONTINUOUS_CONST         !x:real. !y:real. continuous (\z:real. x) y
   CONTINUOUS_ID            !x:real. continuous (\y:real. y) x
+  CONTINUOUS_LINEAR        !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. continuous x z ==> continuous y z ==> continuous (\w:real. u * x w + v * y w) z
   CONTINUOUS_NEG           !x:real -> real. !y:real. continuous x y ==> continuous (\z:real. 0 - x z) y
   INTERMEDIATE_VALUE       !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)
   INTERVAL_GLUING          !x:real -> real -> bool. !y:real. !z:real. y <= z ==> (!u:real. !v:real. !w:real. u <= v /\ v <= w /\ x u v /\ x v w ==> x u w) ==> (!u:real. y <= u /\ u <= z ==> (?v:real. 0 < v /\ (!w:real. !x1:real. y <= w /\ w <= u /\ u <= x1 /\ x1 <= z /\ x1 - w < v ==> x w x1))) ==> x y z
@@ -155,7 +156,10 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_ID            !x:real. derivative (\y:real. y) x 1
   DERIVATIVE_INTERIOR_MAX  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x w <= x u) ==> derivative x u v ==> v = 0
   DERIVATIVE_INTERIOR_MIN  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x u <= x w) ==> derivative x u v ==> v = 0
+  DERIVATIVE_LINEAR        !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. !x1:real. derivative x z u ==> derivative y z v ==> derivative (\y1:real. w * x y1 + x1 * y y1) z (w * u + x1 * v)
   DERIVATIVE_NEG           !x:real -> real. !y:real. !z:real. derivative x y z ==> derivative (\u:real. 0 - x u) y (0 - z)
+  DERIVATIVE_UNIQUE        !x:real -> real. !y:real. !z:real. !u:real. derivative x y z ==> derivative x y u ==> z = u
+  MEAN_VALUE               !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))
   ROLLE                    !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)
 
 ## Divisibility

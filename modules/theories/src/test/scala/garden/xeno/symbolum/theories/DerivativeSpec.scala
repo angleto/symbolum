@@ -6,8 +6,8 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * The derivative, the interior extremum lemma and Rolle's theorem: what they cost, what they rest
- * on, and that what they say is not vacuous.
+ * The derivative, the interior extremum lemma, Rolle's theorem and the mean value theorem: what
+ * they cost, what they rest on, and that what they say is not vacuous.
  *
  * **What it cost.** One defined constant and no axiom, asserted as a difference against the theory
  * below it rather than as a count.
@@ -81,9 +81,12 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     spent should contain(completeness)
     (spent -- realAxioms) shouldBe Set(select)
 
+    // The mean value theorem is Rolle at a combination, and costs what Rolle costs.
+    Derivation.axiomsOf(fact(Derivative.MeanValue)) shouldBe spent
+
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
-    for (name <- Derivative.Statements.map(_._1) if name != Derivative.Rolle) {
+    for (name <- Derivative.Statements.map(_._1) if name != Derivative.Rolle && name != Derivative.MeanValue) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
@@ -104,6 +107,12 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(fact(Derivative.Rolle), wanted) shouldBe wanted
     Derivation.restingOn(fact(Derivative.InteriorMinimum), published(Derivative.InteriorMaximum, Derivative.Negation)) shouldBe
       published(Derivative.InteriorMaximum, Derivative.Negation)
+
+    // And the mean value theorem is Rolle at a combination: its continuity from `Continuity`'s
+    // linearity, its derivative from this file's, and the zero carried back by uniqueness.
+    val combination = published(Derivative.Rolle, Derivative.Linear, Derivative.Unique) +
+      force(chain.continuity.fact(Continuity.Linear)).conclusion
+    Derivation.restingOn(fact(Derivative.MeanValue), combination) shouldBe combination
   }
 
   /* ------------------------------------------------------------- what it says */
@@ -177,6 +186,50 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   it should "refuse a slope of zero to the identity, so that the definition is not satisfied by everything" in {
     identityNotFlat.hypotheses shouldBe empty
     derivative.show(identityNotFlat.conclusion) shouldBe "~(derivative (\\y:real. y) x 0)"
+  }
+
+  it should "refuse it a second way, by uniqueness, and the two refusals agree" in {
+    // `DERIVATIVE_UNIQUE` at the identity's slope one and a supposed slope zero gives `1 = 0`. The
+    // hand derivation above does not use uniqueness, so this is a second road to the same
+    // statement, and a uniqueness that held vacuously, or a slope the identity did not have, would
+    // make the two disagree.
+    val x = Term.variable("x", reals)
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val claim = proposition("derivative (\\y:real. y) x 0")
+    val assumed = force(LogicError.lift(Kernel.assume(claim)))
+    val one = force(rules.spec(x, fact(Derivative.Identity)))
+    val same = force(rules.specAll(fact(Derivative.Unique), List(identity, x, real("1:real"), real("0:real")))
+      .flatMap(rules.mp(_, one)).flatMap(rules.mp(_, assumed)))
+    val absurd = force(rules.notElim(lemma("~((1:real) = 0)"), same))
+    val refused = force(rules.notIntro(claim, absurd))
+    refused.hypotheses shouldBe empty
+    refused.conclusion shouldBe identityNotFlat.conclusion
+  }
+
+  it should "detach the mean value theorem at the identity on [0, 1], where the ends differ" in {
+    // Not Rolle in disguise: the identity takes different values at the two ends, so what comes out
+    // is a slope times the length of the interval equal to the change, with nothing assumed.
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val instance = opened(force(rules.specAll(fact(Derivative.MeanValue), List(identity, real("0:real"), real("1:real")))))
+    val x = Term.variable("x", reals)
+    val continuousEverywhere = {
+      val inside = proposition("(0:real) <= x /\\ x <= 1")
+      val continuous = force(chain.continuity.fact(Continuity.Identity).flatMap(rules.spec(x, _)))
+      force(rules.disch(inside, continuous).flatMap(rules.gen(x, _)))
+    }
+    val differentiableInside = {
+      val inside = proposition("(0:real) < x /\\ x < 1")
+      val slope = force(rules.spec(x, fact(Derivative.Identity)))
+      val exists = force(derivative.proposition("?m:real. derivative (\\y:real. y) x m")
+        .flatMap(statement => logic.destExistsPredicate(statement).toRight(NotOfForm("an existential", statement)))
+        .flatMap(rules.existsIntro(_, real("1:real"), slope)))
+      force(rules.disch(inside, exists).flatMap(rules.gen(x, _)))
+    }
+    val detached = Vector(lemma("(0:real) < 1"), continuousEverywhere, differentiableInside)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    derivative.show(detached.conclusion) shouldBe
+      "?x:real. ?y:real. 0 < x /\\ x < 1 /\\ derivative (\\z:real. z) x y /\\ 1 - 0 = y * (1 - 0)"
   }
 
   it should "need f a = f b, which is shown by refuting the theorem without it at the identity" in {
