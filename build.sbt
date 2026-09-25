@@ -149,7 +149,12 @@ lazy val commonSettings = Seq(
     "-deprecation",
     "-feature",
     "-unchecked",
-    "-Xfatal-warnings"
+    "-Xfatal-warnings",
+    // The oldest JDK the library supports, `docs/adr/0051`, enforced where it can be: class files
+    // for 21, and the JDK's API as 21 has it, whatever JDK runs sbt. Without it a build on the 23
+    // this laptop runs would accept a call that exists only after 21 and fail at a consumer's.
+    "-java-output-version",
+    "21"
   ),
 
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
@@ -174,6 +179,22 @@ lazy val commonSettings = Seq(
   },
 
   Test / parallelExecution := false,
+
+  /*
+   * `test` runs every suite of the module, as it did under sbt 1. Decided by Angelo on 2026-09-25
+   * (Mycelium card 775d62f0).
+   *
+   * sbt 2 made `test` incremental: it runs the suites a change touched and answers the rest from
+   * what it remembers, and the whole suite became `testFull`. Here every figure, gate and handover
+   * reads `tools/sbt test` as the whole suite, and a green over part of the suite taken for a green
+   * over all of it is a mistake this repository has already recorded more than once, in shapes a
+   * log does not show. The incremental run is still one word away and is named for what it is:
+   * `tools/sbt testQuick`.
+   *
+   * Uncached, because what it returns is the suite's result and sbt 2 would otherwise remember it;
+   * `TestResult` has no serialisation either.
+   */
+  Test / test := Def.uncached((Test / testFull).value),
 
   /*
    * Each module's tests run in a JVM of their own, one module at a time, and the JVM ends with them.
@@ -228,10 +249,9 @@ lazy val commonSettings = Seq(
    * worth is the href: without it the rendered page carries the name as plain text, with it an
    * anchor to docs.oracle.com, checked 200 the same day.
    *
-   * The 17 in that URL is NOT this build's JDK and an earlier draft of this comment said it was.
-   * The job that runs `doc` pins 11, `coverage` pins 17 and the test matrix moves; the class is in
-   * every one of them, so the number decides which javadoc a reader lands on and says nothing
-   * about what compiled the page.
+   * The 21 in that URL is the oldest JDK the library supports since `docs/adr/0051`, and it is NOT
+   * the JDK that compiled the page, which is whatever runs sbt: 21 in CI, 23 on the laptop. The
+   * class is in every one of them, so the number decides which javadoc a reader lands on.
    *
    * It does NOT reach this build's own modules. Scaladoc runs once per module, so a reference from
    * `theories` to `logic` is outside the source set too, and there is no published URL for a module
@@ -241,7 +261,7 @@ lazy val commonSettings = Seq(
    * That criterion over-counts the backticks and is quoted with the figure for that reason.
    */
   Compile / doc / scalacOptions ++= Seq(
-    "-external-mappings:.*java.*::javadoc::https://docs.oracle.com/en/java/javase/17/docs/api/java.base/"
+    "-external-mappings:.*java.*::javadoc::https://docs.oracle.com/en/java/javase/21/docs/api/java.base/"
   )
 ) ++ identitySettings
 

@@ -36,7 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '11', '17' ]
+        # 21 alone since 2026-09-25: it is what the library asks of a consumer (docs/adr/0051), and
+        # sbt 2 runs on 17 or later.
+        java: [ '21' ]
         scala: [ '3.3.5' ]
       fail-fast: false
 
@@ -174,11 +176,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup JDK 17
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
           cache: 'sbt'
 
       - name: Setup sbt
@@ -339,11 +341,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup JDK 11
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '21'
           cache: 'sbt'
 
       # The runner image carries no sbt. This job had no installation at all until somebody noticed

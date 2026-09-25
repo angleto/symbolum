@@ -48,7 +48,11 @@ it found** — a path from another process's environment or from a file in the t
 printed as the thing to do and is not executed, because a build that ran a program nobody in this
 session named would be a different tool with the same name.
 
-- **Tests:** `tools/sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
+- **Tests:** `tools/sbt test`, which is **every** suite of every module. Under sbt 2 that is a
+  decision rather than the default: sbt 2's own `test` runs only what a change touched, and here
+  `test` is pointed at the whole suite, so that a green read off `tools/sbt test` means what it
+  meant under sbt 1. The incremental run is `tools/sbt testQuick`, and nothing that reports a
+  figure or closes a card should read one. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
   statements to the whole tactic surface and most of **that** is the ones it attempts and cannot
   settle. That cost is the prover's rather than the test's, and it is tracked. **How many they are
   is not written here**, for the reason the paragraph below gives about the wall clock: it was
