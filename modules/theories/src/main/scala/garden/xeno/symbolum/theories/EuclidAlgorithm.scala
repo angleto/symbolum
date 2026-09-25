@@ -21,14 +21,23 @@ import garden.xeno.symbolum.logic.*
  * component is not zero the step reads the function only at `(b, a MOD b)`, and `NUM_MOD_LT` is
  * what says that is below.
  *
+ * == It computes the gcd, and the quotient beside it ==
+ *
+ * `NUM_EUCLID_GCD a b = NUM_GCD a b` whenever `a` and `b` are not both zero, which is [[IsGcd]]
+ * and landed on 2026-09-25: strong induction on `b`, with the common divisors of `(a, b)` shown to be
+ * those of `(b, a MOD b)`. Until then this was a computation with an equation and not a computation
+ * of the gcd. `NUM_EUCLID_DIV` is the same arrangement for `NUM_DIV`, repeated subtraction by the
+ * same recursion along a measure, and [[DivIsDiv]] is its theorem. `EuclidAlgorithmSpec` runs both
+ * sets of equations at a point and carries the answer to the chosen constant, so `NUM_GCD 4 6 = 2`
+ * is a theorem reached by computing.
+ *
  * == It sits beside the chain, and that is a debt ==
  *
  * Euclid's algorithm is arithmetic anyone would want, so this is `Fraction`'s standing and not
  * `Collatz`'s: `Ask`, `Find` and the library do not reach `NUM_EUCLID_GCD` because wiring a link moves
- * `Chain.widest`, the reading register and the guide's map, which is a piece of its own. And what
- * it does not yet say is the thing it is for: that `NUM_EUCLID_GCD a b = NUM_GCD a b` whenever `a` and
- * `b` are not both zero, which wants the common divisors of `(a, b)` to be those of `(b, a MOD b)`.
- * Until that lands this is a computation with an equation, not a computation of the gcd.
+ * `Chain.widest`, the reading register and the guide's map, which is a piece of its own. The two
+ * theorems above did not change that and were not the reason to: they are about constants this
+ * development declares, and a link would carry them along unchanged.
  */
 final class EuclidAlgorithm private (
   val theory: Theory,
@@ -64,11 +73,59 @@ object EuclidAlgorithm {
   /** `|- !a b. ~(b = 0) ==> NUM_EUCLID_GCD a b = NUM_EUCLID_GCD b (NUM_MOD a b)`. */
   val Step: String = "NUM_EUCLID_GCD_STEP"
 
+  /**
+   * `|- !a b. ~(a = 0 /\ b = 0) ==> NUM_EUCLID_GCD a b = NUM_GCD a b`: what the algorithm is for.
+   *
+   * Strong induction on `b`. At zero both sides are `a`, which is [[GcdAtZero]]; above zero one step
+   * of the algorithm and [[GcdRemainder]] meet at `(b, a MOD b)`, which is below. The exception is
+   * the one `NUM_GCD` makes itself: at `(0, 0)` every number divides both, so the choice it is
+   * defined by falls where nothing can say, and the algorithm answers `0`.
+   */
+  val IsGcd: String = "NUM_EUCLID_GCD_IS_GCD"
+
+  /** `|- !a. ~(a = 0) ==> NUM_GCD a 0 = a` */
+  val GcdAtZero: String = "NUM_GCD_AT_ZERO"
+
+  /**
+   * `|- !a b. ~(b = 0) ==> NUM_GCD b (NUM_MOD a b) = NUM_GCD a b`
+   *
+   * The step Euclid's algorithm takes preserves the greatest common divisor: the common divisors of
+   * `(a, b)` are those of `(b, a MOD b)`, because `a = b (a DIV b) + a MOD b`.
+   */
+  val GcdRemainder: String = "NUM_GCD_REMAINDER"
+
+  /**
+   * `NUM_EUCLID_DIV a b`, the quotient by repeated subtraction, which is what computes `NUM_DIV`.
+   *
+   * `NUM_DIV` is chosen, like `NUM_GCD`, and this is its computing counterpart, defined by the same
+   * recursion along a measure, here the first component: `a - b` is below `a` once `0 < b <= a`.
+   */
+  val DivName: String = "NUM_EUCLID_DIV"
+
+  /** The division's recursion, as one equation. */
+  val DivRecursion: String = "NUM_EUCLID_DIV_RECURSION"
+
+  /**
+   * `|- !a b. ~(b = 0) ==> NUM_EUCLID_DIV a b = NUM_DIV a b`
+   *
+   * Strong induction on `a`: below `b` both are `0`, and otherwise `NUM_DIV_MOD_UNIQUE` reads
+   * `a = b * SUC (NUM_DIV (a - b) b) + NUM_MOD (a - b) b` as saying the quotient went up by one. At
+   * `b = 0` the division answers `0` and `NUM_DIV` is silent.
+   */
+  val DivIsDiv: String = "NUM_EUCLID_DIV_IS_DIV"
+
   /** Everything published here, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     Recursion -> "!a:num. !b:num. NUM_EUCLID_GCD a b = COND (b = 0) a (NUM_EUCLID_GCD b (NUM_MOD a b))",
     AtZero -> "!a:num. NUM_EUCLID_GCD a 0 = a",
-    Step -> "!a:num. !b:num. ~(b = 0) ==> NUM_EUCLID_GCD a b = NUM_EUCLID_GCD b (NUM_MOD a b)"
+    Step -> "!a:num. !b:num. ~(b = 0) ==> NUM_EUCLID_GCD a b = NUM_EUCLID_GCD b (NUM_MOD a b)",
+    GcdAtZero -> "!a:num. ~(a = 0) ==> NUM_GCD a 0 = a",
+    GcdRemainder -> "!a:num. !b:num. ~(b = 0) ==> NUM_GCD b (NUM_MOD a b) = NUM_GCD a b",
+    IsGcd -> "!a:num. !b:num. ~(a = 0 /\\ b = 0) ==> NUM_EUCLID_GCD a b = NUM_GCD a b",
+    DivRecursion ->
+      ("!a:num. !b:num. NUM_EUCLID_DIV a b = " +
+        "COND (b = 0) 0 (COND (NUM_LT a b) 0 (SUC (NUM_EUCLID_DIV (NUM_SUB a b) b)))"),
+    DivIsDiv -> "!a:num. !b:num. ~(b = 0) ==> NUM_EUCLID_DIV a b = NUM_DIV a b"
   )
 
   /** The step, over a pair `(a, b)`: `a` at zero, otherwise the function at `(b, a MOD b)`. */
@@ -99,18 +156,41 @@ object EuclidAlgorithm {
       wide <- chain.classical.logic.over(extended)
       rest <- consequences(chain, Datatype.Tools(ground, wide, extended, notation), recursion)
       (atZero, stepped) = rest
-      facts = Map(Recursion -> recursion, AtZero -> atZero, Step -> stepped)
+      own = Map(Recursion -> recursion, AtZero -> atZero, Step -> stepped)
+      semiring <- Semiring.construct(chain.peano)
+      lookup = (name: String) =>
+        own.get(name).toRight(MissingDefinition(name))
+          .orElse(chain.modular.fact(name))
+          .orElse(chain.peano.fact(name))
+          .orElse(chain.peano.naturals.fact(name))
+          .orElse(chain.classical.fact(name))
+          .orElse(chain.product.fact(name))
+      kit = Freshman.Kit(wide, extended, notation, semiring, chain.induct, lookup)
+      atZeroGcd <- Computing.gcdAtZero(kit)
+      remainderGcd <- Computing.gcdRemainder(kit)
+      isGcd <- Computing.euclidIsGcd(kit, atZero, stepped, atZeroGcd, remainderGcd)
+      divDefined <- Computing.defineDiv(chain, extended, notation, kit)
+      (withDiv, divDefinition, divRecursion) = divDefined
+      wideDiv <- chain.classical.logic.over(withDiv)
+      divIsDiv <- Computing.divIsDiv(Freshman.Kit(wideDiv, withDiv, notation, semiring, chain.induct, lookup), divRecursion)
+      facts = own ++ Map(
+        GcdAtZero -> atZeroGcd,
+        GcdRemainder -> remainderGcd,
+        IsGcd -> isGcd,
+        DivRecursion -> divRecursion,
+        DivIsDiv -> divIsDiv
+      )
       _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
         for {
           _ <- acc
-          expected <- Parser.proposition(extended, notation, text)
+          expected <- Parser.proposition(withDiv, notation, text)
           proved <- facts.get(name).toRight(MissingDefinition(name))
           _ <-
             if (proved.conclusion == expected && proved.hypotheses.isEmpty) Right(())
             else Left(NotOfForm(s"$name as it is written", proved.conclusion))
         } yield ()
       }
-    } yield new EuclidAlgorithm(extended, notation, wide, Map(Name -> definition), facts)
+    } yield new EuclidAlgorithm(withDiv, notation, wideDiv, Map(Name -> definition, DivName -> divDefinition), facts)
   }
 
   /** The development over the standard chain. */
@@ -346,5 +426,400 @@ object EuclidAlgorithm {
         result <- rules.disch(notZero, equation).flatMap(rules.genAll(_, List(a, b)))
       } yield result
     } yield (atZero, stepped)
+  }
+
+  /**
+   * What the algorithm computes, and the division beside it: the derivations `construct` runs after
+   * the definition, over the `Steps` every hand derivation here shares.
+   */
+  private object Computing {
+    import Steps.*
+
+    private val Num: Type = TyApp(Natural.TypeName, Nil)
+    private val Pairs: Type = TyApp(Product.TypeName, List(Num, Num))
+
+
+
+
+    /** `|- !a. ~(a = 0) ==> NUM_GCD a 0 = a` */
+    def gcdAtZero(kit: Kit): R[Kernel.Thm] = {
+      val a = Term.variable("a", Num)
+      val rules = kit.rules
+      for {
+        haT <- kit.proposition("~((a:num) = 0)")
+        ha <- assume(haT)
+        z <- zero(kit)
+        zz <- eqTerm(z, z).flatMap(kit.logic.mkNot)
+        cond <- rules.disjIntro1(zz, ha)
+        g <- kit.at("\\a:num. NUM_GCD a 0", a)
+        refl <- kit.use("NUM_DIVIDES_REFL", List(a))
+        atZero <- kit.use("NUM_DIVIDES_ZERO", List(a))
+        both <- rules.conjIntro(refl, atZero)
+        d1 <- kit.use("NUM_GCD_DIVIDES", List(a, z, a), cond, both)
+        d2 <- kit.use("NUM_GCD_DIVIDES_LEFT", List(a, z), cond)
+        both2 <- rules.conjIntro(d2, d1)
+        r <- kit.use("NUM_DIVIDES_ANTISYM", List(g, a), both2)
+        out <- rules.disch(haT, r).flatMap(rules.gen(a, _))
+      } yield out
+    }
+
+    /** `|- !a b. ~(b = 0) ==> NUM_GCD b (NUM_MOD a b) = NUM_GCD a b` */
+    def gcdRemainder(kit: Kit): R[Kernel.Thm] = {
+      val a = Term.variable("a", Num)
+      val b = Term.variable("b", Num)
+      val rules = kit.rules
+      for {
+        hbT <- kit.proposition("~((b:num) = 0)")
+        hb <- assume(hbT)
+        r <- kit.at("\\a:num. \\b:num. NUM_MOD a b", a, b)
+        q <- kit.at("\\a:num. \\b:num. NUM_DIV a b", a, b)
+        d <- kit.at("\\a:num. \\b:num. NUM_GCD b (NUM_MOD a b)", a, b)
+        e <- kit.at("\\a:num. \\b:num. NUM_GCD a b", a, b)
+        bq <- mul(kit, b, q)
+        rZero <- zero(kit).flatMap(eqTerm(r, _)).flatMap(kit.logic.mkNot)
+        aZero <- zero(kit).flatMap(eqTerm(a, _)).flatMap(kit.logic.mkNot)
+        condBR <- rules.disjIntro1(rZero, hb)
+        condAB <- rules.disjIntro2(aZero, hb)
+        db <- kit.use("NUM_GCD_DIVIDES_LEFT", List(b, r), condBR)
+        dr <- kit.use("NUM_GCD_DIVIDES_RIGHT", List(b, r), condBR)
+        dbq <- kit.use("NUM_DIVIDES_MUL", List(d, b, q), db)
+        dsum <- rules.conjIntro(dbq, dr).flatMap(c => kit.use("NUM_DIVIDES_ADD", List(d, bq, r), c))
+        dm <- kit.use("NUM_DIV_MOD", List(a, b))
+        da <- Limit.rewriteInProposition(dm, dsum)
+        de <- rules.conjIntro(da, db).flatMap(c => kit.use("NUM_GCD_DIVIDES", List(a, b, d), condAB, c))
+        ea <- kit.use("NUM_GCD_DIVIDES_LEFT", List(a, b), condAB)
+        eb <- kit.use("NUM_GCD_DIVIDES_RIGHT", List(a, b), condAB)
+        ebq <- kit.use("NUM_DIVIDES_MUL", List(e, b, q), eb)
+        dividesBy <- kit.at("\\e:num. \\x:num. NUM_DIVIDES e x", e)
+        back <- Conv.sym(dm)
+        eSum <- transport(dividesBy, back, ea)
+        er <- kit.use("NUM_DIVIDES_SUMMAND", List(e, bq, r), ebq, eSum)
+        ed <- rules.conjIntro(eb, er).flatMap(c => kit.use("NUM_GCD_DIVIDES", List(b, r, e), condBR, c))
+        eq <- rules.conjIntro(de, ed).flatMap(c => kit.use("NUM_DIVIDES_ANTISYM", List(d, e), c))
+        out <- rules.disch(hbT, eq).flatMap(rules.genAll(_, List(a, b)))
+      } yield out
+    }
+
+    /** `|- !a b. ~(a = 0 /\ b = 0) ==> NUM_EUCLID_GCD a b = NUM_GCD a b` */
+    def euclidIsGcd(kit: Kit, atZeroE: Kernel.Thm, stepE: Kernel.Thm, gz: Kernel.Thm, gr: Kernel.Thm): R[Kernel.Thm] = {
+      val nm = Num
+      val rules = kit.rules
+      for {
+        predicate <- Parser.term(kit.theory, kit.notation,
+          "\\b:num. !a:num. ~(a = 0 /\\ b = 0) ==> NUM_EUCLID_GCD a b = NUM_GCD a b")
+        induction <- kit.use("NUM_STRONG_INDUCTION", List(predicate))
+        p0 <- imp(kit, induction.conclusion)
+        (premise, _) = p0
+        n = fresh("n", nm, induction)
+        body <- open(kit, premise, n)
+        p1 <- imp(kit, body)
+        (ihT, goal) = p1
+        ih <- assume(ihT)
+        a = fresh("a", nm, induction, ih)
+        goalA <- open(kit, goal, a)
+        p2 <- imp(kit, goalA)
+        (hT, eqT) = p2
+        h <- assume(hT)
+        z <- zero(kit)
+        nIsZero <- eqTerm(n, z)
+        proved <- split(kit, nIsZero)(
+          hz =>
+            for {
+              aZeroT <- eqTerm(a, z)
+              aNot <- for {
+                ha <- assume(aZeroT)
+                both <- rules.conjIntro(ha, hz)
+                f_ <- rules.notElim(h, both)
+                r <- rules.notIntro(aZeroT, f_)
+              } yield r
+              e1 <- rules.spec(a, atZeroE)
+              g1 <- kit.applyTo(gz, List(a), aNot)
+              eq0 <- Conv.sym(g1).flatMap(Conv.trans(e1, _))
+              back <- Conv.sym(hz)
+              r <- Limit.rewriteInProposition(back, eq0)
+            } yield r,
+          hn =>
+            for {
+              stepped <- kit.applyTo(stepE, List(a, n), hn)
+              pos <- positive(kit, n, hn)
+              rLt <- kit.use("NUM_MOD_LT", List(a, n), pos)
+              r <- kit.at("\\a:num. \\n:num. NUM_MOD a n", a, n)
+              atR <- kit.applyTo(ih, List(r), rLt)
+              pNR <- Parser.term(kit.theory, kit.notation, "\\n:num. \\r:num. n = 0 /\\ r = 0")
+              conjT <- app(pNR, n, r).flatMap(Conv.betaNormalise).flatMap(Limit.rightOf)
+              notBoth <- for {
+                hc <- assume(conjT)
+                n0 <- rules.conjElim1(hc)
+                f_ <- rules.notElim(hn, n0)
+                r2 <- rules.notIntro(conjT, f_)
+              } yield r2
+              ih2 <- kit.applyTo(atR, List(n), notBoth)
+              g2 <- kit.applyTo(gr, List(a, n), hn)
+              r3 <- transAll(stepped, ih2, g2)
+            } yield r3
+        )
+        _ <- if (proved.conclusion == eqT) Right(()) else Left(NotOfForm("the claim at n", proved.conclusion))
+        stepThm <- rules.disch(hT, proved).flatMap(rules.gen(a, _)).flatMap(rules.disch(ihT, _)).flatMap(rules.gen(n, _))
+        all <- rules.mp(induction, stepThm)
+        aa = Term.variable("a", nm)
+        bb = Term.variable("b", nm)
+        at <- rules.spec(bb, all).flatMap(rules.spec(aa, _))
+        out <- rules.genAll(at, List(aa, bb))
+      } yield out
+    }
+
+
+    val DivStepText: String =
+      "\\f:prod(num,num) -> num. \\p:prod(num,num). COND (SND p = 0) 0 " +
+        "(COND (NUM_LT (FST p) (SND p)) 0 (SUC (f (PAIR (NUM_SUB (FST p) (SND p)) (SND p)))))"
+
+
+    /** `a - b < a` from `0 < b` and `b <= a`. */
+    private def subBelow(kit: Kit, a: Term, b: Term, pos: Kernel.Thm, le: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        z <- zero(kit)
+        diff <- kit.at("\\a:num. \\b:num. NUM_SUB a b", a, b)
+        m <- kit.use(Peano.AddStrictlyMonotone, List(diff, z, b), pos)
+        addZero <- kit.use(Peano.AddAtZero, List(diff))
+        back <- kit.use("NUM_SUB_ADD", List(a, b), le)
+        m1 <- Limit.rewriteInProposition(addZero, m)
+        r <- Limit.rewriteInProposition(back, m1)
+      } yield r
+
+    private def unfoldStep(term: Term): R[Kernel.Thm] = term match {
+      case App(App(lambda, function), point) => Conv.unfold(Conv.refl(lambda), List(function, point))
+      case other => Left(NotOfForm("a step applied to a function and a point", other))
+    }
+
+    private def divAdmissibility(chain: Chain, kit: Kit, instance: Kernel.Thm): R[Kernel.Thm] = {
+      val rules = kit.rules
+      val fn = Type.fun(Pairs, Num)
+      val f = Term.variable("f", fn)
+      val g = Term.variable("g", fn)
+      val x = Term.variable("x", Pairs)
+      for {
+        obligation <- kit.logic.destImp(instance.conclusion).map(_._1).toRight(NotOfForm("an implication", instance.conclusion))
+        atFGX <- assume(obligation).flatMap(rules.specAll(_, List(f, g, x)))
+        p1 <- imp(kit, atFGX.conclusion)
+        (agreeing, same) = p1
+        p2 <- sides(same)
+        (left, right) = p2
+        hAgree <- assume(agreeing)
+        lOpen <- unfoldStep(left)
+        rOpen <- unfoldStep(right)
+        lBody <- Limit.rightOf(lOpen)
+        rBody <- Limit.rightOf(rOpen)
+        lc <- conditional(lBody)
+        (t1, lz, lInner) = lc
+        rc <- conditional(rBody)
+        (_, rz, rInner) = rc
+        bodies <- split(kit, t1)(
+          yes =>
+            for {
+              l <- condTrue(kit, t1, lz, lInner, yes)
+              r <- condTrue(kit, t1, rz, rInner, yes)
+              e <- Conv.sym(r).flatMap(Conv.trans(l, _))
+            } yield e,
+          no =>
+            for {
+              l <- condFalse(kit, t1, lz, lInner, no)
+              r <- condFalse(kit, t1, rz, rInner, no)
+              li <- conditional(lInner)
+              (t2, lz2, lSuc) = li
+              ri <- conditional(rInner)
+              (_, rz2, rSuc) = ri
+              inner <- split(kit, t2)(
+                below =>
+                  for {
+                    l2 <- condTrue(kit, t2, lz2, lSuc, below)
+                    r2 <- condTrue(kit, t2, rz2, rSuc, below)
+                    e <- Conv.sym(r2).flatMap(Conv.trans(l2, _))
+                  } yield e,
+                notBelow =>
+                  for {
+                    l2 <- condFalse(kit, t2, lz2, lSuc, notBelow)
+                    r2 <- condFalse(kit, t2, rz2, rSuc, notBelow)
+                    second <- t1 match {
+                      case App(App(_, s), _) => Right(s)
+                      case other => Left(NotOfForm("an equation", other))
+                    }
+                    first <- t2 match {
+                      case App(App(_, fx), _) => Right(fx)
+                      case other => Left(NotOfForm("an order", other))
+                    }
+                    pos <- positive(kit, second, no)
+                    le <- kit.use("NUM_LE_OF_NOT_LT", List(first, second), notBelow)
+                    lt <- subBelow(kit, first, second, pos, le)
+                    next <- lSuc match {
+                      case App(_, App(_, argument)) => Right(argument)
+                      case other => Left(NotOfForm("a successor of an application", other))
+                    }
+                    diff <- kit.at("\\a:num. \\b:num. NUM_SUB a b", first, second)
+                    fstNext <- kit.fact(Product.FirstOfPair)
+                      .map(Kernel.instType(Map(Classical.TypeVariable -> Num, Classical.CodomainVariable -> Num), _))
+                      .flatMap(rules.specAll(_, List(diff, second)))
+                    belowLam <- kit.at("\\y:num. \\t:num. NUM_LT t y", first)
+                    back <- Conv.sym(fstNext)
+                    measured <- transport(belowLam, back, lt)
+                    agree <- rules.spec(next, hAgree).flatMap(rules.mp(_, measured))
+                    suc <- kit.term("SUC", Type.fun(Num, Num))
+                    moved <- cong(suc, agree)
+                    e <- transAll(l2, moved).flatMap(t => Conv.sym(r2).flatMap(Conv.trans(t, _)))
+                  } yield e
+              )
+              e <- transAll(l, inner).flatMap(t => Conv.sym(r).flatMap(Conv.trans(t, _)))
+            } yield e
+        )
+        joined <- transAll(lOpen, bodies).flatMap(t => Conv.sym(rOpen).flatMap(Conv.trans(t, _)))
+        out <- rules.disch(agreeing, joined).flatMap(rules.genAll(_, List(f, g, x)))
+      } yield out
+    }
+
+    /** The definition and its recursion equation, as `EuclidAlgorithm.define` builds the gcd's. */
+    def defineDiv(chain: Chain, theory: Theory, notation: Notation, kit: Kit): R[(Theory, Kernel.Thm, Kernel.Thm)] = {
+      val ground = Datatype.Ground.of(chain)
+      val a = Term.variable("a", Num)
+      val b = Term.variable("b", Num)
+      for {
+        logic <- chain.classical.logic.over(theory)
+        tools = Datatype.Tools(ground, logic, theory, notation)
+        general <- WellFounded.theorem(ground, theory, notation)
+        typed = Kernel.instType(Map(Classical.TypeVariable -> Pairs, Classical.CodomainVariable -> Num), general)
+        measure <- LogicError.lift(theory.constant(Product.First, Type.fun(Pairs, Num)))
+        step <- Parser.term(theory, notation, DivStepText)
+        instance <- logic.rules.specAll(typed, List(measure, step))
+        admissible <- divAdmissibility(chain, kit, instance)
+        exists <- logic.rules.mp(instance, admissible)
+
+        predicate <- logic.destExistsPredicate(exists.conclusion).toRight(NotOfForm("an existential", exists.conclusion))
+        choice <- tools.select(Type.fun(Pairs, Num))
+        chosen <- tools.app(choice, predicate)
+        pairing <- tools.constant(Product.Pairing, Type.fun(Num, Type.fun(Num, Pairs)))
+        pairAB <- tools.app(pairing, a, b)
+        atAB <- tools.app(chosen, pairAB)
+        body <- LogicError.lift(Term.absAll(List(a, b), atAB))
+        defined <- LogicError.lift(Kernel.defineConstant(theory, DivName, body))
+        (extended, definition) = defined
+        wide <- chain.classical.logic.over(extended)
+        here = Datatype.Tools(ground, wide, extended, notation)
+        witnessed <- here.witness(exists)
+        opened <- Conv.betaRoot(witnessed.conclusion).flatMap(eqn => LogicError.lift(Kernel.eqMp(eqn, witnessed)))
+        atPair <- here.rules.spec(pairAB, opened)
+        stepped <- Conv.unfold(Conv.refl(step), List(chosen, pairAB))
+        reduced <- Limit.rightOf(stepped)
+        fstPair <- chain.product.fact(Product.FirstOfPair)
+          .map(here.at(_, Classical.TypeVariable -> Num, Classical.CodomainVariable -> Num))
+          .flatMap(here.rules.specAll(_, List(a, b)))
+        sndPair <- chain.product.fact(Product.SecondOfPair)
+          .map(here.at(_, Classical.TypeVariable -> Num, Classical.CodomainVariable -> Num))
+          .flatMap(here.rules.specAll(_, List(a, b)))
+        hf = Term.variable("hole_f", Num)
+        hs = Term.variable("hole_s", Num)
+        zero <- Parser.term(extended, notation, "0", Num)
+        cond <- here.conditional(Num)
+        lessThan <- here.constant("NUM_LT", Type.fun(Num, Type.fun(Num, Type.Bool)))
+        minus <- here.constant("NUM_SUB", Type.fun(Num, Type.fun(Num, Num)))
+        suc <- here.constant("SUC", Type.fun(Num, Num))
+        template <- for {
+          test <- here.equal(hs, zero)
+          test2 <- here.app(lessThan, hf, hs)
+          diff <- here.app(minus, hf, hs)
+          nextPair <- here.app(pairing, diff, hs)
+          next <- here.app(chosen, nextPair)
+          succ <- here.app(suc, next)
+          inner <- here.app(cond, test2, zero, succ)
+          result <- here.app(cond, test, zero, inner)
+        } yield result
+        projected <- here.congruence(List(hf, hs), template, List(fstPair, sndPair))
+        lhs <- Datatype.leftOf(projected)
+        _ <- if (lhs == reduced) Right(()) else Left(NotOfForm("the step read at a pair", lhs))
+        diffAB <- here.app(minus, a, b)
+        unfoldedNext <- Conv.unfold(definition, List(diffAB, b))
+        namedNext <- Conv.sym(unfoldedNext)
+        hole = Term.variable("hole_", Num)
+        nameTemplate <- for {
+          test <- here.equal(b, zero)
+          test2 <- here.app(lessThan, a, b)
+          succ <- here.app(suc, hole)
+          inner <- here.app(cond, test2, zero, succ)
+          result <- here.app(cond, test, zero, inner)
+        } yield result
+        renamed <- here.congruence(List(hole), nameTemplate, List(namedNext))
+        unfolded <- Conv.unfold(definition, List(a, b))
+        equation <- transAll(unfolded, atPair, stepped, projected, renamed)
+        result <- here.rules.genAll(equation, List(a, b))
+      } yield (extended, definition, result)
+    }
+
+    /** `|- !a b. ~(b = 0) ==> NUM_EUCLID_DIV a b = NUM_DIV a b` */
+    def divIsDiv(kit: Kit, recursion: Kernel.Thm): R[Kernel.Thm] = {
+      val rules = kit.rules
+      val b = Term.variable("b", Num)
+      for {
+        predicate <- Parser.term(kit.theory, kit.notation, "\\a:num. ~((b:num) = 0) ==> NUM_EUCLID_DIV a b = NUM_DIV a b")
+        induction <- kit.use("NUM_STRONG_INDUCTION", List(predicate))
+        p0 <- imp(kit, induction.conclusion)
+        (premise, _) = p0
+        n = fresh("n", Num, induction)
+        body <- open(kit, premise, n)
+        p1 <- imp(kit, body)
+        (ihT, goal) = p1
+        ih <- assume(ihT)
+        p2 <- imp(kit, goal)
+        (hbT, eqT) = p2
+        hb <- assume(hbT)
+        rec <- rules.specAll(recursion, List(n, b))
+        recBody <- Limit.rightOf(rec)
+        c0 <- conditional(recBody)
+        (t1, z, inner) = c0
+        c1 <- condFalse(kit, t1, z, inner, hb)
+        ci <- conditional(inner)
+        (t2, z2, sucTerm) = ci
+        proved <- split(kit, t2)(
+          below =>
+            for {
+              c2 <- condTrue(kit, t2, z2, sucTerm, below)
+              both <- kit.use("NUM_DIV_MOD_BELOW", List(n, b), below)
+              div0 <- rules.conjElim1(both)
+              back <- Conv.sym(div0)
+              r <- transAll(rec, c1, c2, back)
+            } yield r,
+          notBelow =>
+            for {
+              c2 <- condFalse(kit, t2, z2, sucTerm, notBelow)
+              pos <- positive(kit, b, hb)
+              le <- kit.use("NUM_LE_OF_NOT_LT", List(n, b), notBelow)
+              lt <- subBelow(kit, n, b, pos, le)
+              diff <- kit.at("\\a:num. \\b:num. NUM_SUB a b", n, b)
+              dq <- kit.applyTo(ih, List(diff), lt).flatMap(rules.mp(_, hb))
+              q <- kit.at("\\a:num. \\b:num. NUM_DIV a b", diff, b)
+              r <- kit.at("\\a:num. \\b:num. NUM_MOD a b", diff, b)
+              dm <- kit.use("NUM_DIV_MOD", List(diff, b))
+              e1 <- kit.use("NUM_SUB_ADD", List(n, b), le).flatMap(Conv.sym)
+              plusB <- kit.at("\\b:num. \\x:num. x + b", b)
+              e2 <- Conv.sym(dm).flatMap(cong(plusB, _))
+              p_e2 <- sides(e2.conclusion)
+              (_, mid) = p_e2
+              target <- kit.at("\\b:num. \\q:num. \\r:num. b * SUC q + r", b, q, r)
+              mulSuc <- kit.use(Peano.MulAtSuccessor, List(b, q))
+              e3 <- equate(kit, mid, target, Vector.empty, Vector(mulSuc))
+              decomposed <- transAll(e1, e2, e3)
+              rLt <- kit.use("NUM_MOD_LT", List(diff, b), pos)
+              sq <- kit.at("\\q:num. SUC q", q)
+              uniq <- rules.conjIntro(decomposed, rLt).flatMap(c => kit.use("NUM_DIV_MOD_UNIQUE", List(n, b, sq, r), c))
+              u1 <- rules.conjElim1(uniq)
+              suc <- kit.term("SUC", Type.fun(Num, Num))
+              movedQ <- cong(suc, dq)
+              out <- transAll(rec, c1, c2, movedQ, u1)
+            } yield out
+        )
+        _ <- if (proved.conclusion == eqT) Right(()) else Left(NotOfForm("the claim at n", proved.conclusion))
+        stepThm <- rules.disch(hbT, proved).flatMap(rules.disch(ihT, _)).flatMap(rules.gen(n, _))
+        all <- rules.mp(induction, stepThm)
+        aa = Term.variable("a", Num)
+        at <- rules.spec(aa, all)
+        out <- rules.genAll(at, List(aa, b))
+      } yield out
+    }
   }
 }

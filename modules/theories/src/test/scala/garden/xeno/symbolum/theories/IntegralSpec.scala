@@ -232,4 +232,43 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     val refused = force(rules.notIntro(unconditional, absurd))
     refused.hypotheses shouldBe empty
   }
+
+  it should "need a <= b for the fundamental theorem, refuted on [1, 0] where its other hypothesis asks nothing" in {
+    // Written by the verification of card 0abc40ca. Over `[1, 0]` no point is in the interval, so
+    // "F has derivative f x at every point of it" holds of every `F`, and the statement with
+    // `a <= b` dropped names one value for `integral f 1 0` as `F 0 - F 1` for all of them at once:
+    // `0 - 0` at the zero function and `0 - 1` at the identity. So the hypothesis is what keeps the
+    // theorem true, and a later edit loosening the published statement to this form would be
+    // publishing a falsity.
+    //
+    // The same hypothesis is NOT load-bearing in `HAS_INTEGRAL_DERIVATIVE`, and no test here refutes
+    // it there on purpose: over `[1, 0]` every number is an integral, which is what the uniqueness
+    // test above derives, so that statement stays true without `a <= b` and the hypothesis narrows it.
+    val dropped = proposition(
+      "!F:real -> real. !f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> derivative F x (f x)) ==> " +
+        "integral f a b = F b - F a")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val zero = function("\\y:real. (0:real)")
+    val x = Term.variable("x", reals)
+    def at(primitive: String, slope: String): Kernel.Thm = {
+      val instance = opened(force(rules.specAll(assumed, List(function(primitive), zero, real("1:real"), real("0:real")))))
+      val inside = proposition("(1:real) <= x /\\ x <= 0")
+      val nowhere = force(rules.spec(x, lemma("!x:real. 1 <= x /\\ x <= 0 ==> F"))
+        .flatMap(rules.mp(_, force(LogicError.lift(Kernel.assume(inside))))))
+      val vacuous = force(rules.falsityElim(proposition(s"derivative ($primitive) x $slope"), nowhere)
+        .flatMap(rules.disch(inside, _)).flatMap(rules.gen(x, _)))
+      force(rules.mp(instance, vacuous))
+    }
+    val atZero = at("\\y:real. (0:real)", "0")
+    val atIdentity = at("\\y:real. y", "0")
+    // Compared as terms, where alpha-equivalence is equality: the printer names the binder `x` here,
+    // because the `x` the vacuous hypothesis was generalised over is in scope when it prints.
+    atZero.conclusion shouldBe proposition("integral (\\y:real. (0:real)) 1 0 = 0 - 0")
+    atIdentity.conclusion shouldBe proposition("integral (\\y:real. (0:real)) 1 0 = 0 - 1")
+    val same = force(Conv.sym(atZero).flatMap(Conv.trans(_, atIdentity)))
+    val absurd = force(rules.notElim(lemma("~((0:real) - 0 = 0 - 1)"), same))
+    absurd.hypotheses shouldBe List(dropped)
+    val refused = force(rules.notIntro(dropped, absurd))
+    refused.hypotheses shouldBe empty
+  }
 }

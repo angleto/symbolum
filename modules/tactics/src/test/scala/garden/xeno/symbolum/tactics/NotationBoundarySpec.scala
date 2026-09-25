@@ -165,6 +165,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Crossing, "a rewrite rule's left side, in the raiser's notation and not the reader's"),
     ("Collatz.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "MarkedClosed") -> (Verdict.Name, "the lemma's published name"),
+    ("Collatz.scala", "statement") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "StepInhabited") -> (Verdict.Name, "the lemma's published name"),
     ("Collatz.scala", "entry.label") ->
       (Verdict.Name, "a rule's name in the source that owns it, R1 or A3 or B2"),

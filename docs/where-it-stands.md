@@ -61,8 +61,10 @@ theorem after `Recursion` on the successor and `Descent` on a code:
 hypothesis is **admissibility**, the caller's to discharge because it is a fact about a step, and
 `docs/adr/0043` is why it is a measure into `num` and not an arbitrary relation. It costs choice and
 infinity and not eta. `EuclidAlgorithm` spends it, beside the chain, as `NUM_EUCLID_GCD` — not
-`NUM_EUCLID`, which is Euclid's lemma — whose equations compute `NUM_EUCLID_GCD 4 6 = 2`; that its
-value is `NUM_GCD` is not proved.
+`NUM_EUCLID`, which is Euclid's lemma — whose equations compute `NUM_EUCLID_GCD 4 6 = 2`, and since
+the same day `NUM_EUCLID_GCD_IS_GCD` says that value is `NUM_GCD` off both zero, so `NUM_GCD 4 6 = 2` is
+a theorem reached by computing. `NUM_EUCLID_DIV` is the second thing it defines, the quotient by
+repeated subtraction, and `NUM_EUCLID_DIV_IS_DIV` ties it to `NUM_DIV` off a zero divisor.
 
 `Rotation` needs two others at once: `Word` for the type it rebuilds and `Modular` for the
 `NUM_MOD` inside its own definition. That is why it is not in `Word.scala`: `Word.standard` is built
@@ -161,6 +163,17 @@ carries that correction whether it weighs by position or not; `LIST_FOLD_CONCAT`
 leaving it in prose. The other half of the same sentence is the cost: a fold cannot express a
 measure that weighs a letter by where it sits, `S2_PHI` is the consumer that wants one, and the
 tally is not superseded.
+
+**A development that existed before the lists writes with them since 2026-09-25, and it is
+`Collatz`.** A new development was not what the card that asked for lists wanted, and Angelo held
+it to that. `S2_TAILFREE` and `S2_HEADFREE` are folds of conjunctions now, and their split over a
+concatenation is `LIST_FOLD_EVERY_CONCAT` at the marker, where it was 150 lines of index
+arithmetic. Nothing else in the file moved, because `LIST_FOLD_EVERY` is the bridge to the reading
+by position and the old definitional equation is **derived** from it and handed to the proofs that
+ran on it. What it cost is eta on six of its facts, every fact about a fold resting on the carved
+type's extensionality; the count and the decision are in `docs/adr/0039`, and so is why `Collatz`
+and no other candidate: `Forward` and `Rotation` sit below `Listing` in the chain, and `Collatz`
+sits beside it and can be built over `Folding`.
 
 **And what could have gone vacuous is guarded by spending both theorems at once.** An existential
 nobody discharges and an implication nobody detaches read exactly like facts. `ListingSpec` takes
@@ -1115,8 +1128,8 @@ one estimate rather than a rule: the addition theorem turns the error into
 `abs h <= 1 / 2`. That estimate is `EXP_NEAR_ONE` one order higher, the tail after two terms under
 `EXP_TAIL_GEOMETRIC` at a ratio of a half, and it covers both signs of `h` in one argument where
 the first-order one went through the reflection. It is the one fact of `Derivative` that spends a
-series, so it reaches `COMPLETENESS` and the naturals' axioms, and `DerivativeSpec` asserts it
-costs exactly what the estimate costs.
+series, so it reaches `COMPLETENESS`, the naturals' axioms and eta, all nineteen of the chain, and
+`DerivativeSpec` asserts it costs exactly what the estimate costs and what the addition theorem costs.
 **And the sign of a derivative on an interval, the same day**: `DERIVATIVE_ZERO_CONSTANT`,
 `DERIVATIVE_NONNEG_MONOTONE` and `DERIVATIVE_POS_LT_MONOTONE`, the mean value theorem between two
 points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hypothesis names. The
@@ -1317,10 +1330,12 @@ and `RAT_LE_ADD` and `RAT_LE_MUL` tie the order to the operations. The existence
 needed the sign of the numerator, which the pair holds as an integer, and `INT_OF_NUM_CASES` is that
 split; `tools/verify/perturb-rational-field.sh` fires the zero branch and the sign of the witness.
 
-`NUM_GCD` and `NUM_DIV` are both chosen rather than calculated. Since 2026-09-25 `WellFounded` is
-recursion along a measure into `num`, and `EuclidAlgorithm` defines `NUM_EUCLID_GCD` by it beside the
-chain, with equations that compute; that its value is `NUM_GCD` off both zero is not proved, and
-`NUM_DIV` has no computing counterpart. The reals are still axiomatised: `docs/adr/0004` records
+`NUM_GCD` and `NUM_DIV` are both chosen rather than calculated, and since 2026-09-25 each has a
+computing counterpart proved equal to it: `EuclidAlgorithm` defines `NUM_EUCLID_GCD` and
+`NUM_EUCLID_DIV` by `WellFounded`'s recursion along a measure, beside the chain, and
+`NUM_EUCLID_GCD_IS_GCD` and `NUM_EUCLID_DIV_IS_DIV` are the two equalities, off both zero and off a
+zero divisor. What is not done is wiring that development into the chain, which is why `Ask` and
+`Find` do not reach either. The reals are still axiomatised: `docs/adr/0004` records
 why, and why the same reasoning does not extend to the naturals, and `docs/adr/0007` orders their
 construction, which `docs/adr/0006` is the rule that unlocked.
 

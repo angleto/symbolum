@@ -114,8 +114,8 @@ object Derivative {
    *
    * The one fact about combining derivatives anything here has needed, which is
    * `Continuity.Negation`'s situation exactly: [[InteriorMinimum]] is [[InteriorMaximum]] at the
-   * negation. [[Linear]] is the general one since 2026-09-25, and a product of two functions is not
-   * here, because nothing has asked for one.
+   * negation. [[Linear]] is the general one since 2026-09-25, and [[ProductRule]] and [[ChainRule]]
+   * are the product and the composition of two functions since the same day.
    */
   val Negation: String = "DERIVATIVE_NEG"
 
