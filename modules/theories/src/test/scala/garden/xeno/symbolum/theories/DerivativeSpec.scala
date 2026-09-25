@@ -48,6 +48,11 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   /** The facts about a whole interval rather than a point, which rest on the mean value theorem. */
   private val onInterval: Set[String] = Set(Derivative.Flat, Derivative.NonDecreasing, Derivative.Increasing)
 
+  /** The textbook forms of the interval theorems, which `DerivativeWithin` carries across the extension. */
+  private val withinInterval: Set[String] = Set(
+    Derivative.RolleWithin, Derivative.MeanValueWithin, Derivative.FlatWithin,
+    Derivative.NonDecreasingWithin, Derivative.IncreasingWithin)
+
   private val realAxioms: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
   private val completeness: Term = force(chain.reals.axiom("COMPLETENESS")).conclusion
   private val select: Term = force(chain.classical.axiom("SELECT")).conclusion
@@ -89,11 +94,16 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(fact(Derivative.MeanValue)) shouldBe spent
     for (name <- onInterval) withClue(name) { Derivation.axiomsOf(fact(name)) shouldBe spent }
 
+    // Their textbook forms, with continuity relative to [a, b], cost the same and nothing more: the
+    // extension they are carried by is built from the reals' order and `COND`, which the choice
+    // already pays for.
+    for (name <- withinInterval) withClue(name) { Derivation.axiomsOf(fact(name)) shouldBe spent }
+
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine) ++
-          onInterval).contains(name)) {
+          onInterval ++ withinInterval).contains(name)) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness

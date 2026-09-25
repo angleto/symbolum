@@ -77,7 +77,12 @@ object Continuity {
 
   /* ---------------------------------------------------------------- the constant */
 
-  /** `continuous f x`: `f` is continuous at `x`. */
+  /**
+   * `continuous f x`: `f` is continuous at `x`, **two-sided**, looking at the points on both sides
+   * of `x` whatever interval a caller has in mind. So the interval theorems' hypothesis `!x. a <= x
+   * /\ x <= b ==> continuous f x` asks more at the two ends than a textbook's "continuous on
+   * `[a, b]`" does, and each of them has a textbook form stated with [[ContinuousWithin]] beside it.
+   */
   val Continuous: String = "continuous"
 
   /** The definition, as text: the epsilon-delta statement at one point. */
@@ -178,6 +183,48 @@ object Continuity {
    */
   val Uniform: String = "CONTINUOUS_UNIFORM"
 
+  /**
+   * `continuous_within f a b x`: `f` is continuous at `x` relative to `[a, b]`, the epsilon-delta
+   * statement with the nearby points restricted to the interval. What a textbook means by "continuous
+   * on `[a, b]`" at an end, where `continuous` also looks outside. `Within` has the argument.
+   */
+  val ContinuousWithin: String = "continuous_within"
+
+  val ContinuousWithinBody: String =
+    "\\f:real -> real. \\a:real. \\b:real. \\x:real. !e:real. 0 < e ==> ?d:real. 0 < d /\\ " +
+      "(!y:real. a <= y /\\ y <= b /\\ abs (y - x) < d ==> abs (f y - f x) < e)"
+
+  /** `|- !f a b x. continuous f x ==> continuous_within f a b x`: the relative hypothesis is the weaker. */
+  val WithinOfContinuous: String = "CONTINUOUS_WITHIN_OF_CONTINUOUS"
+
+  /** `|- !f a b x. a <= x /\ x <= b ==> COND (x < a) (f a) (COND (b < x) (f b) (f x)) = f x`. */
+  val ExtensionAgrees: String = "CONTINUOUS_EXTENSION_AGREES"
+
+  /**
+   * `|- !f a b. a <= b ==> (!x. a <= x /\ x <= b ==> continuous_within f a b x) ==>
+   * !x. continuous (\y. COND (y < a) (f a) (COND (b < y) (f b) (f y))) x`: a function continuous
+   * relative to the interval, extended by its value at the nearer end, is continuous everywhere.
+   * The lemma every textbook form below is carried by.
+   */
+  val Extension: String = "CONTINUOUS_EXTENSION"
+
+  /** [[IntermediateValue]] with continuity relative to `[a, b]`. */
+  val IntermediateValueWithin: String = "INTERMEDIATE_VALUE_WITHIN"
+
+  /** [[Bounded]] with continuity relative to `[a, b]`. */
+  val BoundedWithin: String = "CONTINUOUS_BOUNDED_WITHIN"
+
+  /** [[AttainsMaximum]] with continuity relative to `[a, b]`. */
+  val AttainsMaximumWithin: String = "CONTINUOUS_ATTAINS_MAX_WITHIN"
+
+  /** [[AttainsMinimum]] with continuity relative to `[a, b]`. */
+  val AttainsMinimumWithin: String = "CONTINUOUS_ATTAINS_MIN_WITHIN"
+
+  /** [[Uniform]] with continuity relative to `[a, b]`. */
+  val UniformWithin: String = "CONTINUOUS_UNIFORM_WITHIN"
+
+  private val RelativeText: String = "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x)"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Constant -> "!c:real. !x:real. continuous (\\y:real. c) x",
@@ -207,6 +254,30 @@ object Continuity {
     Uniform ->
       ("!f:real -> real. !a:real. !b:real. !e:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "0 < e ==> ?d:real. 0 < d /\\ (!x:real. !y:real. a <= x /\\ x <= b /\\ a <= y /\\ y <= b /\\ " +
+        "abs (x - y) < d ==> abs (f x - f y) < e)"),
+    WithinOfContinuous ->
+      "!f:real -> real. !a:real. !b:real. !x:real. continuous f x ==> continuous_within f a b x",
+    ExtensionAgrees ->
+      ("!f:real -> real. !a:real. !b:real. !x:real. a <= x /\\ x <= b ==> " +
+        "COND (x < a) (f a) (COND (b < x) (f b) (f x)) = f x"),
+    Extension ->
+      (s"!f:real -> real. !a:real. !b:real. a <= b ==> $RelativeText ==> " +
+        "!x:real. continuous (\\y:real. COND (y < a) (f a) (COND (b < y) (f b) (f y))) x"),
+    IntermediateValueWithin ->
+      (s"!f:real -> real. !a:real. !b:real. !y:real. a <= b ==> $RelativeText ==> f a <= y ==> y <= f b ==> " +
+        "?x:real. a <= x /\\ x <= b /\\ f x = y"),
+    BoundedWithin ->
+      (s"!f:real -> real. !a:real. !b:real. a <= b ==> $RelativeText ==> " +
+        "?M:real. !x:real. a <= x /\\ x <= b ==> f x <= M"),
+    AttainsMaximumWithin ->
+      (s"!f:real -> real. !a:real. !b:real. a <= b ==> $RelativeText ==> " +
+        "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f x <= f m)"),
+    AttainsMinimumWithin ->
+      (s"!f:real -> real. !a:real. !b:real. a <= b ==> $RelativeText ==> " +
+        "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f m <= f x)"),
+    UniformWithin ->
+      (s"!f:real -> real. !a:real. !b:real. !e:real. a <= b ==> $RelativeText ==> " +
+        "0 < e ==> ?d:real. 0 < d /\\ (!x:real. !y:real. a <= x /\\ x <= b /\\ a <= y /\\ y <= b /\\ " +
         "abs (x - y) < d ==> abs (f x - f y) < e)")
   )
 
@@ -232,7 +303,10 @@ object Continuity {
     for {
       body <- Parser.term(base, notation, ContinuousBody)
       defined <- LogicError.lift(Kernel.defineConstant(base, Continuous, body))
-      (theory, definition) = defined
+      (withContinuous, definition) = defined
+      withinBody <- Parser.term(withContinuous, notation, ContinuousWithinBody)
+      withinDefined <- LogicError.lift(Kernel.defineConstant(withContinuous, ContinuousWithin, withinBody))
+      (theory, withinDefinition) = withinDefined
 
       logic <- classical.logic.over(theory)
       linarith <- Linarith.construct(magnitude.order)
@@ -244,8 +318,10 @@ object Continuity {
       extremes <- ExtremeValue.prove(steps, reals, magnitude, classical)
       linear <- linearCombination(steps, reals, magnitude)
 
-      facts = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate, Linear -> linear) ++
+      twoSided = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate, Linear -> linear) ++
         extremes
+      relative <- Within.prove(steps, withinDefinition, reals, magnitude, classical, twoSided)
+      facts = twoSided ++ relative
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
       // a development that built something other than what it says it built must not be handed out.
@@ -260,7 +336,8 @@ object Continuity {
             else Left(NotOfForm(s"$name as it is written", proved.conclusion))
         } yield ()
       }
-    } yield new Continuity(theory, notation, logic, Map(Continuous -> definition), facts)
+    } yield new Continuity(
+      theory, notation, logic, Map(Continuous -> definition, ContinuousWithin -> withinDefinition), facts)
 
   /**
    * The few moves every derivation below makes, over one theory, which is `Root`'s arrangement:

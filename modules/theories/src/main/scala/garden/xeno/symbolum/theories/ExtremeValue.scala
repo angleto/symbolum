@@ -828,7 +828,7 @@ private[theories] object ExtremeValue {
     s"!x:real. !y:real. $lo <= x /\\ x <= $hi /\\ abs (x - y) < $d ==> abs ($F x - $F y) < e:real"
 
   /** `|- t < c` and `|- -(t) < c` from `|- abs (t) < c`. */
-  private def sides(steps: Steps, magnitude: Magnitude, t: String, c: String, bound: Kernel.Thm): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
+  private[theories] def sides(steps: Steps, magnitude: Magnitude, t: String, c: String, bound: Kernel.Thm): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
     import steps.*
     for {
       up <- at(lemma("!m:real a:real c:real. a <= m ==> m < c ==> a < c"), s"abs ($t)", s"$t", c)
@@ -839,7 +839,7 @@ private[theories] object ExtremeValue {
   }
 
   /** `|- abs (t) < c` from `|- t < c` and `|- -(t) < c`, by the two cases of `abs`. */
-  private def joined(steps: Steps, magnitude: Magnitude, t: String, c: String, up: Kernel.Thm, down: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+  private[theories] def joined(steps: Steps, magnitude: Magnitude, t: String, c: String, up: Kernel.Thm, down: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
     import steps.*
     val m = s"abs ($t)"
     for {

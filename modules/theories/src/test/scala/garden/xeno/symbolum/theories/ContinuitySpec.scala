@@ -52,7 +52,10 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
   "Continuity" should "add its constant and no axiom to the theory below it" in {
     val below = chain.root.theory
     continuity.theory.axioms shouldBe below.axioms
-    (continuity.theory.constants.keySet -- below.constants.keySet) shouldBe Set(Continuity.Continuous)
+    // Two since 2026-09-25: continuity relative to an interval is a constant of its own, and the
+    // textbook forms of the interval theorems are stated with it.
+    (continuity.theory.constants.keySet -- below.constants.keySet) shouldBe
+      Set(Continuity.Continuous, Continuity.ContinuousWithin)
     continuity.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
@@ -125,9 +128,8 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     force(rules.specAll(conditional, List(guard, real("1:real"), real("0:real"))).flatMap(rules.mp(_, evidence)))
   }
 
-  it should "refuse a step, so that the definition is not satisfied by everything" in {
-    // `COND (0 < y) 1 0` jumps at zero. At tolerance one half, every radius `d` holds `d / 2`, where
-    // the step is one while it is zero at zero, and one is not within a half of zero.
+  /** `|- ~(continuous step 0)`: at tolerance one half, every radius holds a point where the step is one. */
+  private lazy val stepRefused: Kernel.Thm = {
     val continuous = force(continuity.term(Continuity.Continuous))
     val claim = force(LogicError.lift(Term.app(continuous, step).flatMap(Term.app(_, real("0:real")))))
     val assumed = force(LogicError.lift(Kernel.assume(claim)))
@@ -163,8 +165,87 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
 
     val eliminated = force(rules.existsElim(near, d, absurd))
     val refused = force(rules.notIntro(claim, eliminated))
+    refused
+  }
+
+  it should "refuse a step, so that the definition is not satisfied by everything" in {
+    // `COND (0 < y) 1 0` jumps at zero. At tolerance one half, every radius `d` holds `d / 2`, where
+    // the step is one while it is zero at zero, and one is not within a half of zero.
+    val refused = stepRefused
     refused.hypotheses shouldBe empty
     continuity.show(refused.conclusion) shouldBe "~(continuous (\\x:real. COND (0 < x) 1 0) 0)"
+  }
+
+  it should "take on [-1, 0] the step it refuses at 0, which is the whole of the textbook form" in {
+    // The step is 0 on [-1, 0] and 1 right of it, so it is not continuous at 0, which the test above
+    // derives, and it is continuous relative to [-1, 0] at every point, being constant there. So
+    // `INTERMEDIATE_VALUE` cannot be detached at it on [-1, 0], its hypothesis failing at the end,
+    // and `INTERMEDIATE_VALUE_WITHIN` is, below, with nothing left assumed. A relative hypothesis
+    // that held only where the two-sided one does would make the textbook forms a renaming.
+    val steps = Continuity.Steps(logic, linarith, continuity.theory, continuity.notation,
+      force(continuity.definition(Continuity.Continuous)))
+    val within = force(continuity.definition(Continuity.ContinuousWithin))
+    val x = Term.variable("x", reals)
+    val y = Term.variable("y", reals)
+    val e = Term.variable("e", reals)
+
+    // `|- COND (0 < t) 1 0 = 0` from `|- t <= 0`.
+    def flat(t: String, upper: Kernel.Thm): Kernel.Thm =
+      stepValue(t, force(Within.notBelow(steps, chain.reals, "(0:real)", t, upper)), positive = false)
+
+    val inside = proposition("(0:real) - 1 <= x /\\ x <= 0")
+    val assumedInside = force(LogicError.lift(Kernel.assume(inside)))
+    val atX = flat("x:real", force(rules.conjElim2(assumedInside)))
+    val positive = proposition("0 < e:real")
+    val assumedPositive = force(LogicError.lift(Kernel.assume(positive)))
+    val near = proposition("(0:real) - 1 <= y /\\ y <= 0 /\\ abs (y - x) < 1")
+    val assumedNear = force(LogicError.lift(Kernel.assume(near)))
+    val atY = flat("y:real", force(rules.conjElim2(assumedNear).flatMap(rules.conjElim1)))
+
+    val zeroDistance = force(chain.limit.magnitude.fact(Magnitude.OfNonNegative)
+      .flatMap(rules.spec(real("(0:real) - 0"), _)).flatMap(rules.mp(_, lemma("(0:real) <= 0 - 0"))))
+    val same = force(rules.specAll(lemma("!m:real e:real. m = 0 - 0 ==> 0 < e ==> m < e"), List(real("abs ((0:real) - 0)"), e))
+      .flatMap(rules.mp(_, zeroDistance)).flatMap(rules.mp(_, assumedPositive)))
+    val target = proposition("abs (COND (0 < y:real) (1:real) 0 - COND (0 < x:real) (1:real) 0) < e:real")
+    val rewritten = force(Rewrite.Rule.all(logic, Vector(atY, atX)).flatMap(Rewrite.rewrite(_, target)))
+    val value = force(Conv.sym(rewritten).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, same))))
+
+    val everyPoint = force(rules.disch(near, value).flatMap(rules.gen(y, _)))
+    val pair = force(rules.conjIntro(lemma("(0:real) < 1"), everyPoint))
+    val shape = force(logic.destExistsPredicate(proposition(
+      "?d:real. 0 < d /\\ (!y:real. (0:real) - 1 <= y /\\ y <= 0 /\\ abs (y - x) < d ==> " +
+        "abs (COND (0 < y) (1:real) 0 - COND (0 < x:real) (1:real) 0) < e:real)")).toRight(NotOfForm("an existential", x)))
+    val witnessed = force(rules.existsIntro(shape, real("1:real"), pair))
+    val statement = force(rules.disch(positive, witnessed).flatMap(rules.gen(e, _)))
+    val unfolded = force(Conv.unfold(within, List(step, real("(0:real) - 1"), real("0:real"), x)))
+    val normal = force(Conv.betaNormalise(force(Term.destEq(unfolded.conclusion).map(_._2).toRight(NotOfForm("an equation", x)))))
+    val definition = force(Conv.trans(unfolded, normal))
+    val relative = force(Conv.sym(definition).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, statement))))
+    val everywhere = force(rules.disch(inside, relative).flatMap(rules.gen(x, _)))
+
+    val instance = opened(force(rules.specAll(
+      fact(Continuity.IntermediateValueWithin),
+      List(step, real("(0:real) - 1"), real("0:real"), real("0:real")))))
+    val leftEnd = force(rules.specAll(lemma("!p:real. p = 0 ==> p <= 0"), List(real("COND (0 < (0:real) - 1) (1:real) 0")))
+      .flatMap(rules.mp(_, flat("(0:real) - 1", lemma("(0:real) - 1 <= 0")))))
+    val rightEnd = force(rules.specAll(lemma("!p:real. p = 0 ==> 0 <= p"), List(real("COND ((0:real) < 0) (1:real) 0")))
+      .flatMap(rules.mp(_, flat("0", lemma("(0:real) <= 0")))))
+    val detached = Vector(lemma("(0:real) - 1 <= 0"), everywhere, leftEnd, rightEnd)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+
+    detached.hypotheses shouldBe empty
+    continuity.show(detached.conclusion) shouldBe "?x:real. 0 - 1 <= x /\\ x <= 0 /\\ COND (0 < x) 1 0 = 0"
+    stepRefused.hypotheses shouldBe empty
+
+    // And each textbook form costs exactly what its two-sided form does: the extension is built from
+    // the order and `COND`, which the choice under `abs` already pays for.
+    for ((relative, twoSided) <- Vector(
+        Continuity.IntermediateValueWithin -> Continuity.IntermediateValue,
+        Continuity.BoundedWithin -> Continuity.Bounded,
+        Continuity.AttainsMaximumWithin -> Continuity.AttainsMaximum,
+        Continuity.AttainsMinimumWithin -> Continuity.AttainsMinimum,
+        Continuity.UniformWithin -> Continuity.Uniform))
+      withClue(relative) { Derivation.axiomsOf(fact(relative)) shouldBe Derivation.axiomsOf(fact(twoSided)) }
   }
 
   it should "need its continuity hypothesis, which is shown by refuting the theorem without it" in {
