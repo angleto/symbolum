@@ -807,6 +807,15 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "which is the caller. Only `rewriteIn` is a walk: `Recorder.rewrite` is `depthConv` on " +
         "its own, one traversal of a finite term, and `rewriteSides`, `rewriteRight` and " +
         "`replace` are single kernel applications with no limit between them"),
+    "Integral.scala" ->
+      ("two calls to `Rewrite.rewrite`, both with `FST_PAIR` and `SND_PAIR` and nothing else, both in " +
+        "the induction principle over a fine sum, and neither is read as a normal form. One reads the " +
+        "carrier at a triple back to `P` at its parts, and the equation it yields is joined with " +
+        "others and handed to `Kernel.eqMp` against a theorem already about those parts, so a walk " +
+        "that stopped with a projection standing is a term that does not match and is refused " +
+        "there. The other tidies the closure premise before it is proved case by case, and each " +
+        "case applies the caller's hypotheses by `Rules.mp`, which refuses a premise still holding a " +
+        "projection; the development then compares every statement with its published text."),
     "Logarithm.scala" ->
       ("two doors, and neither is left to the limit to report. `Rewrite.rewrite` walks the " +
         "exponential's partial sum at two down to numerals, and what it produces is handed to " +

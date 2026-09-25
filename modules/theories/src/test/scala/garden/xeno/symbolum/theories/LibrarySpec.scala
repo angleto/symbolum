@@ -77,7 +77,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // were in no library while it sat beside the chain, and its seven over the names are new.
       chain.resolving.facts.size +
       // The derivative and Rolle's theorem, the same day, in the change that added the link.
-      chain.derivative.facts.size
+      chain.derivative.facts.size +
+      // The gauge integral, the same day. Added after this sum caught it, which is the sixth time
+      // the comments here record: the link was in `Library.of` and its first full run went red.
+      chain.integral.facts.size
 
     library.entries.size shouldBe expected
 
