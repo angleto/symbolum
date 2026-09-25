@@ -665,7 +665,7 @@ object Chain {
       // Over continuity, extending the chain's end: Rolle's theorem spends the extreme value
       // theorem, and the definition reads `abs`; nothing `Resolving` declares is read.
       derivative <- Derivative.construct(
-        classical, reals, magnitude, continuity, resolving.theory, resolving.notation)
+        classical, reals, magnitude, continuity, transcendental, logarithm, resolving.theory, resolving.notation)
     } yield new Chain(
       classical,
       naturals,

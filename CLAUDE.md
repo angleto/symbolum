@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 716 lemmas, 473 have two or more leading quantifiers and **409 of
+caller meant: of the library's 718 lemmas, 473 have two or more leading quantifiers and **409 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1824,6 +1824,14 @@ of unknown sign to do it and does not. **And the chain rule, `DERIVATIVE_CHAIN`*
 hypothesis that `g (x + h)` differs from `g x`: the error of `f` at the increment `k` is bounded in
 both cases, by the derivative when `k` is not zero and because it is zero when `k` is, which is
 the case the textbook's quotient cannot reach and `DerivativeSpec` detaches at a constant `g`.
+**The exponential is its own derivative, `DERIVATIVE_EXP`, the same day**, and what it waited on is
+one estimate rather than a rule: the addition theorem turns the error into
+`exp x * (exp h - 1 - h)`, and `Logarithm.EXP_NEAR_LINE` puts the bracket under `h * h` for
+`abs h <= 1 / 2`. That estimate is `EXP_NEAR_ONE` one order higher, the tail after two terms under
+`EXP_TAIL_GEOMETRIC` at a ratio of a half, and it covers both signs of `h` in one argument where
+the first-order one went through the reflection. It is the one fact of `Derivative` that spends a
+series, so it reaches `COMPLETENESS` and the naturals' axioms, and `DerivativeSpec` asserts it
+costs exactly what the estimate costs.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

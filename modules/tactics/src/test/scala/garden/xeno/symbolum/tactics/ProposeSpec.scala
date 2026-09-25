@@ -376,7 +376,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 545 with the product rule's three, the same day: one on the continuity of a differentiable
     // function, two on the product rule.
     // 547 with the chain rule's two, the same day.
-    proposals.size shouldBe 547
+    // 548 with the estimate's one, the same day; `DERIVATIVE_EXP` has no antecedent to drop.
+    proposals.size shouldBe 548
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
