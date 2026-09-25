@@ -334,7 +334,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 554 with the sign of a derivative on an interval, the same day, derived before the run: two
     // antecedents on each of the three, the continuity and the slope; the `!x` or `!u v` after them
     // is under a binder and is not peeled.
-    propose.weakenings.size shouldBe 554
+    // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents over
+    // five facts, three, two, one, one and one; the binomial theorem and the two sums carry none.
+    propose.weakenings.size shouldBe 562
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

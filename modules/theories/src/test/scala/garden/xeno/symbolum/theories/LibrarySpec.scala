@@ -687,8 +687,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 721 and 718 with the sign of a derivative on an interval, the same day, derived before the
     // run: three facts under three names, none shared. `CLAUDE.md`'s figures move by **three** and
     // **three**: each binds `f`, `a` and `b` in front, and the two ends are both real.
-    library.entries.size shouldBe 721
-    library.names.distinct.size shouldBe 718
+    // 729 and 726 with Fermat's little theorem, the same day, derived before the run: eight facts in
+    // `Primes` under eight names, none shared. `CLAUDE.md`'s figures move by **eight** and
+    // **eight**: every one binds two or more leading quantifiers, and every one has two of `num`
+    // among them, `NUM_SUM_ADD` two functions instead. Tip plus this branch's delta.
+    library.entries.size shouldBe 729
+    library.names.distinct.size shouldBe 726
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

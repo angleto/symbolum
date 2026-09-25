@@ -165,6 +165,47 @@ object Primes {
   val FactorisationUnique: String = "NUM_FACTORISATION_UNIQUE"
 
   /**
+   * `|- !p a. NUM_PRIME p ==> NUM_CONG p (NUM_POW a p) a`
+   *
+   * Fermat's little theorem, in the form that needs no division: `a^p` and `a` leave the same
+   * remainder on division by a prime `p`, for every `a`, including the multiples of `p`. The route
+   * is the freshman's dream below it and an induction on `a`; `Freshman` has the argument.
+   */
+  val Fermat: String = "NUM_FERMAT"
+
+  /**
+   * `|- !p a. NUM_PRIME p ==> NUM_CONG p (NUM_POW (SUC a) p) (NUM_ADD (NUM_POW a p) (SUC 0))`
+   *
+   * `(a + 1)^p` is congruent to `a^p + 1` modulo a prime, because every other term of the binomial
+   * expansion is a multiple of `p`.
+   */
+  val Freshman: String = "NUM_FRESHMAN"
+
+  /**
+   * `|- !a n. NUM_POW (SUC a) n = NUM_SUM (\k. NUM_CHOOSE n k * NUM_POW a k) (SUC n)`
+   *
+   * The binomial theorem on `num`, at `x + 1`, which is the case Fermat needs. It is proved by
+   * Pascal's rule and not carried from `Series.POWER_BINOMIAL` across `real_of_num`, which would
+   * work and would rest a theorem about the naturals on the sixteen axioms of the reals.
+   */
+  val Binomial: String = "NUM_BINOMIAL"
+
+  /** `|- !f g n. NUM_SUM (\k. f k + g k) n = NUM_SUM f n + NUM_SUM g n` */
+  val SumAdd: String = "NUM_SUM_ADD"
+
+  /** `|- !f c n. NUM_SUM (\k. f k * c) n = NUM_SUM f n * c` */
+  val SumTimes: String = "NUM_SUM_MUL"
+
+  /** `|- !d g n. (!u. NUM_LT u n ==> NUM_DIVIDES d (g u)) ==> NUM_DIVIDES d (NUM_SUM g n)` */
+  val DividesSum: String = "NUM_DIVIDES_SUM"
+
+  /** `|- !p n. NUM_PRIME p ==> NUM_LT n p ==> ~(NUM_DIVIDES p (NUM_FACT n))` */
+  val NotDividesFactorial: String = "NUM_PRIME_NOT_DIVIDES_FACT"
+
+  /** `|- !p k. NUM_PRIME p ==> NUM_LT 0 k ==> NUM_LT k p ==> NUM_DIVIDES p (NUM_CHOOSE p k)` */
+  val DividesChoose: String = "NUM_PRIME_DIVIDES_CHOOSE"
+
+  /**
    * The statement [[FactorisationUnique]] is proved through, which carries the value explicitly.
    *
    * The induction is on the value of the two products, and a statement that mentions the value
@@ -204,12 +245,42 @@ object Primes {
         "(!i:num. NUM_LT i j ==> NUM_PRIME (g i)) ==> " +
         "(!a:num. !b:num. NUM_LT a b /\\ NUM_LT b j ==> NUM_LE (g a) (g b)) ==> " +
         "NUM_PROD f k = NUM_PROD g j ==> " +
-        "k = j /\\ (!i:num. NUM_LT i k ==> f i = g i)")
+        "k = j /\\ (!i:num. NUM_LT i k ==> f i = g i)"),
+    SumAdd ->
+      "!f:num -> num. !g:num -> num. !n:num. NUM_SUM (\\k:num. f k + g k) n = NUM_SUM f n + NUM_SUM g n",
+    SumTimes -> "!f:num -> num. !c:num. !n:num. NUM_SUM (\\k:num. f k * c) n = NUM_SUM f n * c",
+    Binomial ->
+      "!a:num. !n:num. NUM_POW (SUC a) n = NUM_SUM (\\k:num. NUM_CHOOSE n k * NUM_POW a k) (SUC n)",
+    DividesSum ->
+      ("!d:num. !g:num -> num. !n:num. (!u:num. NUM_LT u n ==> NUM_DIVIDES d (g u)) ==> " +
+        "NUM_DIVIDES d (NUM_SUM g n)"),
+    NotDividesFactorial ->
+      "!p:num. !n:num. NUM_PRIME p ==> NUM_LT n p ==> ~(NUM_DIVIDES p (NUM_FACT n))",
+    DividesChoose ->
+      "!p:num. !k:num. NUM_PRIME p ==> NUM_LT 0 k ==> NUM_LT k p ==> NUM_DIVIDES p (NUM_CHOOSE p k)",
+    Freshman ->
+      "!p:num. !a:num. NUM_PRIME p ==> NUM_CONG p (NUM_POW (SUC a) p) (NUM_ADD (NUM_POW a p) (SUC 0))",
+    Fermat -> "!p:num. !a:num. NUM_PRIME p ==> NUM_CONG p (NUM_POW a p) a"
   )
 
   /** Build it over the arithmetic that holds the factorial. It extends nothing. */
-  def construct(coding: Coding): Either[LogicError, Primes] = {
+  def construct(coding: Coding, induct: Induct): Either[LogicError, Primes] = {
     val builder = new Builder(coding)
+    val peano = coding.peano
+    def lookup(name: String): Either[LogicError, Kernel.Thm] =
+      peano.fact(name)
+        .orElse(peano.naturals.fact(name))
+        .orElse(coding.modular.fact(name))
+        .orElse(coding.fact(name))
+        .left
+        .map(_ => MissingDefinition(name))
+    val fermat =
+      for {
+        semiring <- Semiring.construct(peano)
+        kit = garden.xeno.symbolum.theories.Freshman.Kit(
+          coding.logic, coding.theory, coding.notation, semiring, induct, lookup)
+        derived <- garden.xeno.symbolum.theories.Freshman.derive(kit)
+      } yield derived
     try
       Right(
         new Primes(
@@ -226,7 +297,9 @@ object Primes {
             Factorisation -> builder.checked(Factorisation, builder.factorisation),
             FactorisationUnique ->
               builder.checked(FactorisationUnique, builder.factorisationUnique)
-          )
+          ) ++ fermat
+            .fold(error => throw new RefusedHere(error), identity)
+            .map { case (name, theorem) => name -> builder.checked(name, theorem) }
         )
       )
     catch { case refused: RefusedHere => Left(refused.error) }

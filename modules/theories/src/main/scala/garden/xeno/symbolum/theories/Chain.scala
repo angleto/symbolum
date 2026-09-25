@@ -531,7 +531,7 @@ object Chain {
 
       // Beside the extension order, like `bounded` and `deduction`: it declares nothing and is a
       // field here so that `Library.of` reaches its facts.
-      primes <- Primes.construct(coding)
+      primes <- Primes.construct(coding, induct)
 
       // The arithmetisation, landed 2026-09-14. It extends the arithmetic rather than sitting
       // beside it because `docs/adr/0014` decides that a term of the embedded theory IS a number,
