@@ -161,14 +161,19 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Trigonometric" -> NotADevelopment,
 
     // Not a development, for `Trigonometric`'s reason: the derivation of the extreme value theorem
-    // and the gluing under it, whose five facts are published in `Continuity.facts` under names
-    // `Continuity` declares. A file of its own because it is longer than the file it belongs to.
+    // and the gluing under it, whose facts are the map `ExtremeValue.prove` returns and are
+    // published in `Continuity.facts` under names `Continuity` declares. A file of its own because
+    // it is longer than the file it belongs to.
     "ExtremeValue" -> NotADevelopment,
+
+    // Not a development, for `ExtremeValue`'s reason: continuity relative to `[a, b]` and the
+    // interval theorems in that form, published in `Continuity.facts`, and the same for the
+    // derivative's, published in `Derivative.facts`. Each declares nothing of its own.
     "Within" -> NotADevelopment,
     "DerivativeWithin" -> NotADevelopment,
 
     // Not a development, for the same reason: the derivation that a continuous function has an
-    // integral, whose two facts are published in `Integral.facts` under names `Integral` declares.
+    // integral, whose facts are published in `Integral.facts` under names `Integral` declares.
     "Integrability" -> NotADevelopment,
 
     // Not a development, for `Trigonometric`'s reason: half of `Limit`. It declares nothing, and
@@ -176,18 +181,18 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // reaches `Library.of` does so as that development's.
     "Criteria" -> NotADevelopment,
 
-    // Not a development, for `Criteria`'s reason: the polynomial-times-geometric criteria, whose six
+    // Not a development, for `Criteria`'s reason: the polynomial-times-geometric criteria, whose
     // facts `Limit` publishes under names it declares. A file of its own because what it needs
     // beyond `Criteria` is the embedding of `num` in the reals, which nothing in `Criteria` does.
     "Degrees" -> NotADevelopment,
 
     // Not a development, for `Criteria`'s reason: the binomial theorem on `num` and Fermat's little
-    // theorem, whose eight facts `Primes` publishes under names it declares. A file of its own
+    // theorem, whose facts `Primes` publishes under names it declares. A file of its own
     // because it is an induction toolkit over `NUM_SUM` that nothing else in `Primes` needs.
     "Freshman" -> NotADevelopment,
 
     // Not a development, for `Freshman`'s reason: the permutation of a finite product and Euler's
-    // theorem, whose nine facts `Primes` publishes under names it declares. The one constant the
+    // theorem, whose facts `Primes` publishes under names it declares. The one constant the
     // statement needs, `NUM_TOTIENT`, is `Modular`'s.
     "Euler" -> NotADevelopment,
 

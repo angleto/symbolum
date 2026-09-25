@@ -55,7 +55,7 @@ private[theories] object ExtremeValue {
   private val F = "(f:real -> real)"
   private val Everywhere = s"!x:real. a:real <= x /\\ x <= b:real ==> continuous $F x"
 
-  /** The six facts, by the names `Continuity` publishes them under. */
+  /** Its facts, by the names `Continuity` publishes them under. */
   def prove(
     steps: Steps,
     reals: RealTheory,

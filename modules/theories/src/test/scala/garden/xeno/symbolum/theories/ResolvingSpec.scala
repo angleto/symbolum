@@ -174,7 +174,8 @@ class ResolvingSpec extends AnyFlatSpec with Matchers {
 
   "This development" should "add the constants it names, all of them definitions, and no axiom" in {
     // It declared nothing until 2026-09-25 and this test said so; the difference is taken against the
-    // link below it rather than against the widest signature, which this now is.
+    // link below it, which is where `Chain` builds it, and not against `Chain.widest`, which is
+    // whatever link is last and is a different development whenever one is added.
     val below = chain.continuity.theory
     resolving.theory.axioms shouldBe below.axioms
     (resolving.theory.constants.keySet -- below.constants.keySet) shouldBe

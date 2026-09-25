@@ -48,7 +48,7 @@ class PigeonholeSpec extends AnyFlatSpec with Matchers {
     pigeonhole.facts.keySet shouldBe Pigeonhole.Statements.map(_._1).toSet
   }
 
-  it should "cost choice and infinity and none of the reals' sixteen" in {
+  it should "cost choice and infinity and none of the reals' axioms" in {
     // Built over the chain's end, where the reals live; nothing about a field is reached.
     val expected = Set(
       ok(chain.classical.axiom(Classical.Choice)).conclusion,

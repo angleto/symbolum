@@ -73,7 +73,7 @@ class TruthSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------------ what it cost */
 
-  it should "define three constants and assert no axiom" in {
+  it should "define the constants it names and assert no axiom" in {
     val below = chain.provability.theory
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
