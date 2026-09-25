@@ -103,6 +103,36 @@ class EuclidAlgorithmSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * At two zeros the theorem claims nothing, and that is the half which says its hypothesis is
+   * meant. `NUM_GCD 0 0` is a choice with nothing provable about it, so `NUM_EUCLID_GCD 0 0 =
+   * NUM_GCD 0 0` is a claim nothing here could either prove or refute, and a statement making it
+   * would be one nobody could check. So three things are asserted at the pair: the algorithm's own
+   * equations still run there and answer `0`; the published theorem, specialised there, has an
+   * antecedent whose negation is derived with nothing assumed, so it cannot be detached; and
+   * `Value`, which reaches `NUM_GCD` by the characterisation, refuses the pair where it answers
+   * `4 6`. The last is the control on the refusal: an evaluator that refused everything would pass
+   * the first half of it.
+   */
+  it should "claim nothing at two zeros, where NUM_GCD is a choice" in {
+    val zero = numeral(0)
+
+    val computed = evaluate(0, 0)
+    computed.hypotheses shouldBe empty
+    computed.conclusion shouldBe force(euclid.proposition("NUM_EUCLID_GCD 0 0 = 0"))
+
+    val instance = force(rules.specAll(fact(EuclidAlgorithm.IsGcd), List(zero, zero)))
+    val (antecedent, _) = euclid.logic.destImp(instance.conclusion).getOrElse(
+      fail(s"not an implication at 0 0: ${instance.conclusion}"))
+    val bothZero = force(rules.conjIntro(Kernel.refl(zero), Kernel.refl(zero)))
+    bothZero.hypotheses shouldBe empty
+    antecedent shouldBe force(euclid.logic.mkNot(bothZero.conclusion))
+
+    evaluator.of(Modular.GcdName, Vector(BigInt(0), BigInt(0))).isLeft shouldBe true
+    force(evaluator.of(Modular.GcdName, Vector(BigInt(4), BigInt(6)))).conclusion shouldBe
+      force(euclid.proposition("NUM_GCD 4 6 = 2"))
+  }
+
+  /**
    * The division's equations run too: `NUM_EUCLID_DIV 3 2` is one by the recursion alone, in
    * successor form so that the subtraction is `NUM_SUB_SUC_SUC` and the order is `NUM_LT_SUC`.
    * Then `NUM_EUCLID_DIV_IS_DIV` carries it to `NUM_DIV`, which gives the quotient of the chosen
