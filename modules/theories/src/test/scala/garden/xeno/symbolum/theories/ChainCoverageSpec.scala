@@ -236,6 +236,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // which `docs/adr/0042` decides, so there is nothing of its own for `Chain.construct` to build.
     "Datatype" -> DeclaresNothing,
 
+    // A procedure, `Semiring`'s generalisation: handed constants and laws, it derives rules and
+    // returns a normaliser, and every theorem it produces is about the caller's operations. It
+    // declares nothing, so there is nothing for `Chain.construct` to extend; `Semiring` and
+    // `Integer.ring` are its two instances.
+    "CommutativeRing" -> DeclaresNothing,
+
     // Beside the chain by decision and not as a debt, which is the line that separates it from
     // `Fraction`: `pterm` is a second syntax of arithmetic beside the coded one `Language` holds,
     // and in the chain every `PVAR` would sit next to a `NUM_CODE` in `Find` for a reader who asked

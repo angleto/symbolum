@@ -152,6 +152,7 @@ they have least appetite for working out how it is produced.
 
 ## Derivative
 
+  DERIVATIVE_CHAIN         !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. derivative y z v ==> derivative x (y z) u ==> derivative (\w:real. x (y w)) z (u * v)
   DERIVATIVE_CONST         !x:real. !y:real. derivative (\z:real. x) y 0
   DERIVATIVE_CONTINUOUS    !x:real -> real. !y:real. !z:real. derivative x y z ==> continuous x y
   DERIVATIVE_ID            !x:real. derivative (\y:real. y) x 1

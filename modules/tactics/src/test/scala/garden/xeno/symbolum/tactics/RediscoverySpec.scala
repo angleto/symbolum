@@ -328,7 +328,8 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // branch's delta.
     // 545 with the product rule, the same day, derived before the run: three antecedents over two
     // facts, one on `DERIVATIVE_CONTINUOUS` and two on `DERIVATIVE_PRODUCT`.
-    propose.weakenings.size shouldBe 545
+    // 547 with the chain rule, the same day, derived before the run: its two antecedents.
+    propose.weakenings.size shouldBe 547
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

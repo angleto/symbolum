@@ -375,7 +375,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // uniqueness, three on `MEAN_VALUE`. Tip plus this branch's delta.
     // 545 with the product rule's three, the same day: one on the continuity of a differentiable
     // function, two on the product rule.
-    proposals.size shouldBe 545
+    // 547 with the chain rule's two, the same day.
+    proposals.size shouldBe 547
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1264,7 +1265,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 444 with the product rule's two weakenings, the same day, read off a probe of `Propose.audit`
     // filtered by `from`: each drops one of the two slopes and keeps an implication. The third, the
     // continuity bridge's, is in `unreadable` below.
-    open shouldBe 444
+    // 446 with the chain rule's two weakenings, the same day, read off a probe of `Propose.audit`
+    // filtered by `from`: each drops one of the two slopes and keeps an implication.
+    open shouldBe 446
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
