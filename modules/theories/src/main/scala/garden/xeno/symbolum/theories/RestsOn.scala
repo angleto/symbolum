@@ -165,7 +165,9 @@ object Reach {
         // Resolution, 2026-09-25, in the change that made it a link.
         "Resolving" -> chain.resolving.facts,
         // The derivative and Rolle's theorem, 2026-09-25, in the change that added them.
-        "Derivative" -> chain.derivative.facts
+        "Derivative" -> chain.derivative.facts,
+        // The gauge integral and the fundamental theorem, 2026-09-25, in the change that added them.
+        "Integral" -> chain.integral.facts
       )
     )
 

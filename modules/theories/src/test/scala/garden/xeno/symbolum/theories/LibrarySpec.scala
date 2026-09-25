@@ -77,7 +77,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // were in no library while it sat beside the chain, and its seven over the names are new.
       chain.resolving.facts.size +
       // The derivative and Rolle's theorem, the same day, in the change that added the link.
-      chain.derivative.facts.size
+      chain.derivative.facts.size +
+      // The gauge integral, the same day. Added after this sum caught it, which is the sixth time
+      // the comments here record: the link was in `Library.of` and its first full run went red.
+      chain.integral.facts.size
 
     library.entries.size shouldBe expected
 
@@ -694,8 +697,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 730 and 727 with uniform continuity, the same day, derived before the run: one fact under one
     // name. `CLAUDE.md`'s figures move by **one** and **one**: `CONTINUOUS_UNIFORM` binds a function
     // and three reals, `a`, `b` and `e`. Tip plus this branch's delta.
-    library.entries.size shouldBe 730
-    library.names.distinct.size shouldBe 727
+    // 739 and 736 with the gauge integral, the same day, derived before the run: nine facts in
+    // `Integral` under nine names, none shared. `CLAUDE.md`'s figures move by **nine** and
+    // **nine**: every one binds two or more leading quantifiers, and every one binds two functions
+    // or two reals among them. Tip plus this branch's delta.
+    library.entries.size shouldBe 739
+    library.names.distinct.size shouldBe 736
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

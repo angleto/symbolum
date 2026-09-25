@@ -336,7 +336,11 @@ object Library {
         // The derivative and Rolle's theorem, 2026-09-25, in the change that added them: a
         // development of its own because a derivative is a statement about an increment and a
         // slope, where continuity is one about a radius.
-        collect("Derivative", chain.derivative.facts)
+        collect("Derivative", chain.derivative.facts) ++
+        // The gauge integral and the fundamental theorem, 2026-09-25, in the change that added
+        // them: a link of its own because an integral is a statement about every division of an
+        // interval, where a derivative is one about a point.
+        collect("Integral", chain.integral.facts)
     )
 
   /** A library over developments a caller names itself. */

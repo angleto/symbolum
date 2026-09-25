@@ -322,6 +322,11 @@ object Spellings {
       // `f'(x) = m`: the constant is a proposition, and an equation inside a delimited template
       // reads wrongly under a negation, where `\neg f'(x) = 0` hides which side is denied.
       .delimited("derivative", 3, "\\operatorname{deriv}(#1, #2, #3)")
+      // The integral and its two relations in words, for the reason `derivative` is: two of the
+      // three are propositions, and the value is `select` applied to one of them.
+      .delimited("fine_sum", 5, "\\operatorname{finesum}(#1, #2, #3, #4, #5)")
+      .delimited("has_integral", 4, "\\operatorname{hasintegral}(#1, #2, #3, #4)")
+      .delimited("integral", 3, "\\operatorname{integral}(#1, #2, #3)")
       /* ------------------------------------------------ the set defined by rules */
       // Both at arity ONE though each is written with two arguments, and that is the faithful
       // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set

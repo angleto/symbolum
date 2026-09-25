@@ -227,6 +227,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Resolving.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     // And `Derivative.scala`'s, the same check over `Derivative.Statements`, an eighth time.
     ("Derivative.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    // And `Integral.scala`'s, over `Integral.Statements`, a ninth time.
+    ("Integral.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     // The four `Domain.scala` sites landed with `docs/adr/0028` and are the interpretation's two
     // refusals. None is a crossing: a domain's own name and a constant's name are names, the joined
     // list is names, and a `Type` has one rendering that no notation chooses, which is what

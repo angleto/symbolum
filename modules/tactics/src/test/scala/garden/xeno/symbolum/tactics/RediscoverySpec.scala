@@ -338,7 +338,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // five facts, three, two, one, one and one; the binomial theorem and the two sums carry none.
     // 565 with uniform continuity, the same day, derived before the run: its three antecedents.
     // Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 565
+    // 583 with the gauge integral, the same day, derived before the run and read off the probe
+    // after it: eighteen antecedents over nine facts, three on `HAS_INTEGRAL_UNIQUE`, one on
+    // `FINE_SUM_PIECE` and two on each of the other seven. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 583
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -456,7 +459,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 103 with `EXP_NEAR_LINE`, 2026-09-25, read off a probe of `Propose.audit` filtered by `from`:
     // it writes the order and the product between reals with no lambda in the body, and swaps to
     // two substitutions. `DERIVATIVE_EXP` writes none of the four outside `derivative`.
-    propose.mutable.size shouldBe 103
+    // 107 with four of the integral's nine, derived before the run and read off the probe: the two
+    // rules of a fine sum and the two uniquenesses write an order, a sum or a product between reals
+    // with no lambda in the body. The other five each carry a quantifier inside, which is a lambda.
+    propose.mutable.size shouldBe 107
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

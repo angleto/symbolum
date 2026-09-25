@@ -383,7 +383,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_DIVIDES_SUM`, `NUM_FRESHMAN` and `NUM_FERMAT`, none on the three equations.
     // 565 with uniform continuity's three, the same day, derived before the run: `a <= b`, the
     // continuity on `[a, b]` and `0 < e`. Tip plus this branch's delta.
-    proposals.size shouldBe 565
+    // 583 with the gauge integral's eighteen, the same day. Tip plus this branch's delta.
+    proposals.size shouldBe 583
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1291,7 +1292,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // every assertion after this row held: none went to `unreadable` or was refuted, each keeps an
     // implication and sits at the propositional address, taken and not settled. Tip plus this
     // branch's delta.
-    open shouldBe 461
+    // 484 with twenty-three of the gauge integral's twenty-four residues, the same day, read off a
+    // probe of `Propose.audit` filtered by `from`: seventeen weakenings that keep an implication or
+    // name `fine_sum`, `has_integral` or `derivative`, which no procedure settles, and six
+    // substitutions of the order, the sum and the product. The twenty-fourth is in `unreadable`.
+    // Tip plus this branch's delta, the delta probed on the tree before uniform continuity landed.
+    open shouldBe 484
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1651,7 +1657,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 131 with the same probe: `NUM_FRESHMAN`'s, `NUM_FERMAT`'s and `NUM_DIVIDES_SUM`'s one each
     // and `NUM_PRIME_NOT_DIVIDES_FACT`'s two, a congruence, a divisibility or its denial, which no
     // procedure reads.
-    unreadable shouldBe 131
+    // 132 with `FINE_SUM_PIECE`'s one weakening, from the same probe as `open`'s 484: dropping its
+    // only antecedent leaves a bare `fine_sum`, which no procedure reads.
+    unreadable shouldBe 132
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

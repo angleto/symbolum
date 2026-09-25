@@ -120,6 +120,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Continuity" -> InTheChain,
     "Logarithm" -> InTheChain,
     "Derivative" -> InTheChain,
+    "Integral" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,

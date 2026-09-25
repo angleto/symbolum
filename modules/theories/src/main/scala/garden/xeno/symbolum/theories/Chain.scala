@@ -402,7 +402,17 @@ final class Chain private (
    * `Resolving` declares; it is above that link only because every link that declares extends
    * whatever the end is when it is built. One constant, no axiom.
    */
-  val derivative: Derivative
+  val derivative: Derivative,
+
+  /**
+   * The gauge integral, Cousin's lemma and the fundamental theorem of calculus.
+   *
+   * A link above [[derivative]] because the fundamental theorem names `derivative`, and a link
+   * rather than a development beside the chain because its three constants are what a claim about
+   * an integral is typed in. `docs/adr/0049` is why the integral is the gauge one. Three
+   * constants, no axiom.
+   */
+  val integral: Integral
 ) {
 
   /**
@@ -430,7 +440,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = derivative
+  val widest: Signature = integral
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -666,6 +676,11 @@ object Chain {
       // theorem, and the definition reads `abs`; nothing `Resolving` declares is read.
       derivative <- Derivative.construct(
         classical, reals, magnitude, continuity, transcendental, logarithm, resolving.theory, resolving.notation)
+
+      // Over the derivative, extending the chain's end: the fundamental theorem names `derivative`,
+      // and the sums are `Inductive`'s closure over `Product`'s triples.
+      integral <- Integral.construct(
+        classical, reals, magnitude, product, inductive, continuity, limit, derivative, derivative.theory, derivative.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -706,6 +721,7 @@ object Chain {
       continuity,
       logarithm,
       resolving,
-      derivative
+      derivative,
+      integral
     )
 }
