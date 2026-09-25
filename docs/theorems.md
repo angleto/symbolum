@@ -288,15 +288,15 @@ obtained.
 
 ### The proof the kernel holds
 
-15549 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+15546 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 4952 | 31.8% |
+| Congruence | 4952 | 31.9% |
 | EqualityElimination | 2945 | 18.9% |
 | Transitivity | 1530 | 9.8% |
 | Reflexivity | 1503 | 9.7% |
-| Instantiation | 1475 | 9.5% |
+| Instantiation | 1472 | 9.5% |
 | BetaStep | 932 | 6.0% |
 | Antisymmetry | 856 | 5.5% |
 | TypeInstantiation | 521 | 3.4% |
@@ -2034,13 +2034,13 @@ obtained.
 
 ### The proof the kernel holds
 
-87593 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+87569 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
 | Congruence | 25762 | 29.4% |
 | EqualityElimination | 16100 | 18.4% |
-| Instantiation | 11238 | 12.8% |
+| Instantiation | 11214 | 12.8% |
 | Transitivity | 10537 | 12.0% |
 | Reflexivity | 8861 | 10.1% |
 | Antisymmetry | 4915 | 5.6% |
