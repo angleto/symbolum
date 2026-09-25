@@ -2053,9 +2053,11 @@ split; `tools/verify/perturb-rational-field.sh` fires the zero branch and the si
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated. The half of that
 which needed a primitive landed on 2026-09-25: `WellFounded` is recursion along a measure into
-`num`, and `Euclid` defines `NUM_EUCLID_GCD` by it beside the chain, with equations that compute; what
-is left is the theorem that its value is `NUM_GCD` off both zero, and `NUM_DIV` the same way. Then the
-rationals, and then the reals as a construction rather than an assumption. `docs/adr/0007` is the order and `docs/adr/0006` is the rule that
+`num`, and `EuclidAlgorithm` defines `NUM_EUCLID_GCD` by it beside the chain, with equations that
+compute; what is left is the theorem that its value is `NUM_GCD` off both zero, and `NUM_DIV` the same
+way. Then the reals as a construction rather than an assumption. The rationals are no longer on this
+list, being the ordered field the paragraph above describes; what the construction will ask of them
+beyond that is the Archimedean property and density, and `Fraction` holds neither. `docs/adr/0007` is the order and `docs/adr/0006` is the rule that
 unlocked it. `docs/adr/0004` records why the reals were axiomatised rather than constructed, and the
 same reasoning does not extend to the naturals.
 

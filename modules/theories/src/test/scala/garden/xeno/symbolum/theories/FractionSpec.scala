@@ -265,7 +265,207 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     fractions.show(product.conclusion) shouldBe "RAT_LE RAT_ZERO (RAT_MUL RAT_ONE RAT_ONE)"
   }
 
+  /* ------------------------------------------------------ the hypotheses the statements carry */
+
+  // A theorem does not refuse, so a hypothesis is shown to be load-bearing the only way a theorem
+  // can show it: the statement with that hypothesis dropped is refuted at one instance, derived
+  // here from published facts with nothing assumed. Without these, a statement carrying a
+  // hypothesis it does not need would pass every assertion above, since it is still a theorem.
+
+  private val classes = Fraction.Classes
+  private def rational(text: String): Term = force(fractions.term(text, classes))
+  private def ground(theorems: Kernel.Thm*): Vector[Rewrite.Rule] =
+    force(Rewrite.Rule.all(fractions.logic, theorems.toVector))
+
+  /** `~P`, from a derivation of `F` under the assumption `P`. */
+  private def refute(text: String)(absurd: Kernel.Thm => Either[LogicError, Kernel.Thm]): Kernel.Thm = {
+    val claim = force(fractions.proposition(text))
+    force(
+      for {
+        held <- LogicError.lift(Kernel.assume(claim))
+        falsity <- absurd(held)
+        result <- rules.notIntro(claim, falsity)
+      } yield result
+    )
+  }
+
+  /** `x + 0 = x` and `0 + x = x` at a given `x`, the second through the commutativity. */
+  private def addZeroRight(x: Term): Kernel.Thm = force(rules.spec(x, fact(Fraction.AddAtZero)))
+  private def addZeroLeft(x: Term): Kernel.Thm = {
+    val zero = rational("RAT_ZERO")
+    force(
+      rules.specAll(fact(Fraction.AddCommutative), List(zero, x)).flatMap(Conv.trans(_, addZeroRight(x)))
+    )
+  }
+
+  "The order with the sum" should "need its premise: without it `1 + 0 <= 0 + 0` would follow" in {
+    // `RAT_LE_ADD` with `RAT_LE x y` dropped says `x + z <= y + z` for every triple, and at
+    // `(1, 0, 0)` that is `1 <= 0`, which `RAT_NOT_ONE_LE_ZERO` refuses.
+    val refuted = refute("RAT_LE (RAT_ADD RAT_ONE RAT_ZERO) (RAT_ADD RAT_ZERO RAT_ZERO)") { held =>
+      Rewrite.inTheorem(ground(fact(Fraction.AddAtZero)), held)
+        .flatMap(rules.notElim(fact(Fraction.OneNotAtMostZero), _))
+    }
+    refuted.hypotheses shouldBe empty
+    fractions.show(refuted.conclusion) shouldBe
+      "~(RAT_LE (RAT_ADD RAT_ONE RAT_ZERO) (RAT_ADD RAT_ZERO RAT_ZERO))"
+  }
+
+  /**
+   * `0 <= -1` gives `1 <= 0`: `RAT_LE_ADD` at `(0, -1, 1)`, with `0 + 1 = 1` and `-1 + 1 = 0`.
+   * This is the step both refutations of `RAT_LE_MUL` below end on.
+   */
+  private def minusOneNotAboveZero(held: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    val zero = rational("RAT_ZERO")
+    val one = rational("RAT_ONE")
+    val minusOne = rational("RAT_NEG RAT_ONE")
+    for {
+      shifted <- rules.specAll(fact(Fraction.AtMostAdd), List(zero, minusOne, one)).flatMap(rules.mp(_, held))
+      cancels <- rules
+        .specAll(fact(Fraction.AddCommutative), List(minusOne, one))
+        .flatMap(swapped => rules.spec(one, fact(Fraction.AddNegation)).flatMap(Conv.trans(swapped, _)))
+      oneAtMostZero <- Rewrite.inTheorem(ground(addZeroLeft(one), cancels), shifted)
+      falsity <- rules.notElim(fact(Fraction.OneNotAtMostZero), oneAtMostZero)
+    } yield falsity
+  }
+
+  "The order with the product" should "need both of its hypotheses, refuted at one and minus one" in {
+    // `RAT_LE_MUL` with `0 <= y` dropped says `0 <= x` alone gives `0 <= x * y`, and at `x = 1`,
+    // `y = -1` the product is `-1`; with `0 <= x` dropped the same at `x = -1`, `y = 1`. Both end
+    // in `0 <= -1`, which the order with the sum turns into `1 <= 0`.
+    val one = rational("RAT_ONE")
+    val minusOne = rational("RAT_NEG RAT_ONE")
+    val oneTimes = force(
+      rules
+        .specAll(fact(Fraction.MulCommutative), List(one, minusOne))
+        .flatMap(Conv.trans(_, force(rules.spec(minusOne, fact(Fraction.MulAtOne)))))
+    )
+    val timesOne = force(rules.spec(minusOne, fact(Fraction.MulAtOne)))
+
+    val withoutSecond = refute("RAT_LE RAT_ZERO (RAT_MUL RAT_ONE (RAT_NEG RAT_ONE))") { held =>
+      Rewrite.inTheorem(ground(oneTimes), held).flatMap(minusOneNotAboveZero)
+    }
+    val withoutFirst = refute("RAT_LE RAT_ZERO (RAT_MUL (RAT_NEG RAT_ONE) RAT_ONE)") { held =>
+      Rewrite.inTheorem(ground(timesOne), held).flatMap(minusOneNotAboveZero)
+    }
+
+    // The other hypothesis holds at each instance, so what fails is the dropped one.
+    fact(Fraction.ZeroAtMostOne).hypotheses shouldBe empty
+    Vector(withoutSecond, withoutFirst).foreach(_.hypotheses shouldBe empty)
+    fractions.show(withoutSecond.conclusion) shouldBe "~(RAT_LE RAT_ZERO (RAT_MUL RAT_ONE (RAT_NEG RAT_ONE)))"
+    fractions.show(withoutFirst.conclusion) shouldBe "~(RAT_LE RAT_ZERO (RAT_MUL (RAT_NEG RAT_ONE) RAT_ONE))"
+  }
+
+  "The inverse" should "need its hypothesis: at zero the product is zero, not one" in {
+    // `RAT_MUL_INV` with `~(x = RAT_ZERO)` dropped says `0 * inv 0 = 1`. `RAT_INV_ZERO` makes that
+    // `0 * 0`, which the ring laws make `0`: with `a = 0 * 0`, the distributive law at `0 + 0 = 0`
+    // gives `a = a + a`, and adding `-a` to both sides gives `a = 0`. Then `0 = 1`, which
+    // `RAT_ZERO_NOT_ONE` refuses. Nothing here reads a pair: it is the laws on classes alone.
+    val zero = rational("RAT_ZERO")
+    val product = rational("RAT_MUL RAT_ZERO RAT_ZERO")
+    val negated = rational("RAT_NEG (RAT_MUL RAT_ZERO RAT_ZERO)")
+    val times = force(fractions.term("RAT_MUL RAT_ZERO", Type.fun(classes, classes)))
+    val plus = force(fractions.term("RAT_ADD", Type.fun(classes, Type.fun(classes, classes))))
+
+    val productIsZero = force(
+      for {
+        // a = a + a
+        doubled <- rules.specAll(fact(Fraction.Distributive), List(zero, zero, zero))
+        collapsed <- Conv.apTerm(times, addZeroRight(zero))
+        selfDouble <- Conv.sym(collapsed).flatMap(Conv.trans(_, doubled))
+        // 0 = a + -a = (a + a) + -a = a + (a + -a) = a + 0 = a
+        cancel <- rules.spec(product, fact(Fraction.AddNegation))
+        widened <- Conv.apTerm(plus, selfDouble).flatMap(Conv.apThm(_, negated))
+        regrouped <- rules.specAll(fact(Fraction.AddAssociative), List(product, product, negated))
+        inner <- Conv.apTerm(force(fractions.term("RAT_ADD (RAT_MUL RAT_ZERO RAT_ZERO)",
+          Type.fun(classes, classes))), cancel)
+        path <- Conv.sym(cancel)
+          .flatMap(Conv.trans(_, widened))
+          .flatMap(Conv.trans(_, regrouped))
+          .flatMap(Conv.trans(_, inner))
+          .flatMap(Conv.trans(_, addZeroRight(product)))
+        result <- Conv.sym(path)
+      } yield result
+    )
+    productIsZero.hypotheses shouldBe empty
+    fractions.show(productIsZero.conclusion) shouldBe "RAT_MUL RAT_ZERO RAT_ZERO = RAT_ZERO"
+
+    val refuted = refute("RAT_MUL RAT_ZERO (RAT_INV RAT_ZERO) = RAT_ONE") { held =>
+      for {
+        atZero <- Rewrite.inTheorem(ground(fact(Fraction.InverseAtZero), productIsZero), held)
+        falsity <- rules.notElim(fact(Fraction.UnitsDistinct), atZero)
+      } yield falsity
+    }
+    refuted.hypotheses shouldBe empty
+    fractions.show(refuted.conclusion) shouldBe "~(RAT_MUL RAT_ZERO (RAT_INV RAT_ZERO) = RAT_ONE)"
+  }
+
+  "A factor coming off a comparison of integers" should "need to be positive, which the successor says" in {
+    // `INT_LE_CANCEL_NUM` with the factor `INT_OF_NUM (SUC d)` weakened to `INT_OF_NUM d` says
+    // `a * 0 <= b * 0` gives `a <= b`, and at `a = 1`, `b = 0` the premise is `0 <= 0` and the
+    // conclusion is `NUM_LE (SUC 0) 0` through the embedding, which `NUM_LE_ZERO` refuses.
+    val integers = chain.integers
+    val ints = TyApp(Integer.TypeName, Nil)
+    val nums = TyApp(Natural.TypeName, Nil)
+    val zeroNum = force(fractions.term("ZERO", nums))
+    val oneNum = force(fractions.term("SUC ZERO", nums))
+    val text =
+      "INT_LE (INT_MUL (INT_OF_NUM (SUC ZERO)) (INT_OF_NUM ZERO)) (INT_MUL (INT_OF_NUM ZERO) (INT_OF_NUM ZERO)) " +
+        "==> INT_LE (INT_OF_NUM (SUC ZERO)) (INT_OF_NUM ZERO)"
+    val premiseText =
+      "INT_LE (INT_MUL (INT_OF_NUM (SUC ZERO)) (INT_OF_NUM ZERO)) (INT_MUL (INT_OF_NUM ZERO) (INT_OF_NUM ZERO))"
+
+    val premise = force(
+      for {
+        term <- fractions.proposition(premiseText)
+        evaluated <- Rewrite.Rule
+          .all(fractions.logic, Vector(integers.fact(Integer.OfNaturalZero), integers.fact(Integer.MulAtZero))
+            .map(force(_)))
+          .flatMap(Rewrite.rewrite(_, term))
+        back <- Conv.sym(evaluated)
+        reflexive <- integers.fact(Integer.AtMostReflexive).flatMap(rules.spec(force(fractions.term("INT_ZERO", ints)), _))
+        result <- LogicError.lift(Kernel.eqMp(back, reflexive))
+      } yield result
+    )
+    premise.hypotheses shouldBe empty
+
+    val refuted = refute(text) { held =>
+      for {
+        conclusion <- rules.mp(held, premise)
+        asNaturals <- integers.fact(Integer.AtMostOfNatural).flatMap(rules.specAll(_, List(oneNum, zeroNum)))
+        ordered <- LogicError.lift(Kernel.eqMp(asNaturals, conclusion))
+        collapse <- chain.peano.fact(Peano.AtMostZero).flatMap(rules.spec(oneNum, _)).flatMap(rules.mp(_, ordered))
+        never <- chain.peano.naturals.fact(Natural.SuccessorNotZero).flatMap(rules.spec(zeroNum, _))
+        falsity <- rules.notElim(never, collapse)
+      } yield falsity
+    }
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe force(fractions.proposition(s"~($text)"))
+  }
+
   /* ------------------------------------------------------------------ what it costs */
+
+  "Every fact of the development" should "cost exactly what it was measured to cost, not merely at most" in {
+    // The ceiling below says no fact reaches past choice, eta and infinity; this says which of them
+    // each one reaches, as an equality, measured on 2026-09-25 at `87175842`. Every fact spends all
+    // three except three: reflexivity and symmetry of the relation, which are about equality and
+    // reach none, and `RAT_INV_ZERO`, which reads the definition's conditional and reaches the
+    // choice `COND` is defined by and nothing else. A fact that moved between those classes, in
+    // either direction, is a derivation that changed route, and a ceiling would not see it.
+    val eta = force(chain.classical.axiom(Classical.Eta)).conclusion
+    val choice = force(chain.classical.axiom(Classical.Choice)).conclusion
+    val infinity = force(chain.naturals.axiom(Natural.Infinity)).conclusion
+    val exceptions: Map[String, Set[Term]] = Map(
+      Fraction.SameReflexive -> Set.empty,
+      Fraction.SameSymmetric -> Set.empty,
+      Fraction.InverseAtZero -> Set(choice)
+    )
+    exceptions.keySet.subsetOf(Fraction.Statements.map(_._1).toSet) shouldBe true
+    Fraction.Statements.foreach { case (name, _) =>
+      withClue(s"$name: ") {
+        Derivation.axiomsOf(fact(name)) shouldBe exceptions.getOrElse(name, Set(choice, eta, infinity))
+      }
+    }
+  }
 
   "Every fact of the carrier" should "cost at most the integers' foundation and no real axiom" in {
     // The reading `IntegerSpec` makes one level down, and it is about what a **fact** rests on and
