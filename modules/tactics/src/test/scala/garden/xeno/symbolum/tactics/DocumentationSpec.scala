@@ -1532,18 +1532,19 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
   /**
    * What the trusted base may grow to before somebody has to decide.
    *
-   * It has not moved since it was written, which is worth a sentence because it was raised to 1400
-   * on 2026-09-10 and put back the same day. What had grown past it was the kernel *directory*, and
-   * the four files above had not: a proof record and a printer are read by nobody who is deciding
-   * whether to believe a theorem. Raising a bound because the wrong thing was being measured is how
-   * a bound stops meaning anything.
+   * It was 1200 from when it was written until 2026-09-25, and it was raised to 1400 once in
+   * between, on 2026-09-10, and put back the same day. What had grown past it then was the kernel
+   * *directory*, and the four files above had not: a proof record and a printer are read by nobody
+   * who is deciding whether to believe a theorem. Raising a bound because the wrong thing was being
+   * measured is how a bound stops meaning anything.
    *
    * What it protects is that one person can read the whole of what they are asked to believe in a
-   * sitting. Two records have spent against it deliberately, `docs/adr/0006` for the type
-   * definition rule and `docs/adr/0008` for the identity on constants, and that is the only way it
-   * is allowed to move.
+   * sitting. Three records have spent against it deliberately, and that is the only way it is
+   * allowed to move: `docs/adr/0006` for the type definition rule and `docs/adr/0008` for the
+   * identity on constants spent headroom, and `docs/adr/0047` raised it to 1220 for `Kernel.cite`,
+   * which needed eleven lines where three were left.
    */
-  private val TrustedBaseLineBound: Int = 1200
+  private val TrustedBaseLineBound: Int = 1220
 
   private def fileOf(name: String): String =
     read(s"modules/kernel/src/main/scala/garden/xeno/symbolum/kernel/$name")

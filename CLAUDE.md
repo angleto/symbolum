@@ -385,7 +385,7 @@ to live. `WhatAClaimCosts` is the first one that does.
 
 Everything this system asks anyone to believe, and no one development is asked for all of it:
 
-1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1200 lines. The
+1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1220 lines. The
    directory also holds a printer, the refusal surface, the proof record and the reader of which
    commit the classes were built from, which are not counted and cannot construct a theorem, which
    a test checks rather than claims. `Kernel.Thm` is a class
@@ -393,7 +393,9 @@ Everything this system asks anyone to believe, and no one development is asked f
    `TrustBoundaryTwinSpec` casts the underlying pair and gets a `ClassCastException` where it used
    to get a theorem out of nothing. Ten primitive inference rules construct a theorem, and three
    theory extensions also do: defining a constant, defining a type, and asserting an axiom. Only
-   the last of those adds to what has to be believed. Term constructors are `private[kernel]`, so a
+   the last of those adds to what has to be believed. `Kernel.cite` builds one too and infers
+   nothing: it restates a published fact's sequent under the fact's name, which is where a report
+   on a proof stops walking, and `docs/adr/0047` is why. Term constructors are `private[kernel]`, so a
    term exists only because a checking constructor built it and is well-typed by construction. Type
    constructors are not private, because naming a type proves nothing: a type entering the system
    from outside is checked by `Theory.checkType`.
@@ -653,7 +655,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 718 lemmas, 473 have two or more leading quantifiers and **409 of
+caller meant: of the library's 721 lemmas, 476 have two or more leading quantifiers and **412 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1833,6 +1835,11 @@ one estimate rather than a rule: the addition theorem turns the error into
 the first-order one went through the reflection. It is the one fact of `Derivative` that spends a
 series, so it reaches `COMPLETENESS` and the naturals' axioms, and `DerivativeSpec` asserts it
 costs exactly what the estimate costs.
+**And the sign of a derivative on an interval, the same day**: `DERIVATIVE_ZERO_CONSTANT`,
+`DERIVATIVE_NONNEG_MONOTONE` and `DERIVATIVE_POS_LT_MONOTONE`, the mean value theorem between two
+points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hypothesis names. The
+hypothesis states the derivative and its sign in one existential, so it asks no second statement
+of differentiability; the three cost what the mean value theorem costs.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

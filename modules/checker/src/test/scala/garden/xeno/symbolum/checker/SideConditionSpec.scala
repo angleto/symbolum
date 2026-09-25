@@ -310,6 +310,16 @@ class SideConditionSpec extends AnyFlatSpec with Matchers {
       }),
       "The kernel builds the two halves itself and cannot be handed a wrong one, so this is the " +
         "checker's alone. It accepted any nested application until 2026-09-10."
+    ),
+    Guarded(
+      "cite",
+      "the sequent is the cited fact's, hypotheses included",
+      None,
+      Some(() =>
+        checkerRefuses(Claim(Vector.empty, ep), Step.Citation("P"), Vector(Claim(Vector(ep), ep)))
+      ),
+      "The kernel restates the cited sequent itself and cannot be handed another, so this is the " +
+        "checker's alone. The case drops a hypothesis, which is the one change that would matter."
     )
   )
 
@@ -337,7 +347,7 @@ class SideConditionSpec extends AnyFlatSpec with Matchers {
     val named = Conditions.map(_.rule).distinct.toSet
     val expected = Set(
       "refl", "trans", "mkComb", "abs", "beta", "assume", "eqMp", "deductAntisym", "inst",
-      "instType", "defineConstant", "assertAxiom", "defineType"
+      "instType", "cite", "defineConstant", "assertAxiom", "defineType"
     )
 
     withClue(s"in the kernel and not in this table: ${(expected -- named).mkString(", ")}\n") {
@@ -363,12 +373,13 @@ class SideConditionSpec extends AnyFlatSpec with Matchers {
     //
     // Most of them have no kernel case by construction, because the kernel BUILDS the thing the
     // condition is about rather than being handed it: it builds the reflexive sequent, computes the
-    // discharge, applies a type substitution to the whole sequent, constructs the defined constant
-    // with its origin, and produces both halves of a type definition. Those are the checker's alone
+    // discharge, applies a type substitution to the whole sequent, restates a cited fact's sequent,
+    // constructs the defined constant with its origin, and produces both halves of a type
+    // definition. Those are the checker's alone
     // and always will be. The type definition's witness has its kernel case in
     // `SoundnessAttackSpec` instead of here. And one is a real gap on the other side: the escaping
     // type variable has no checker case.
-    oneSided.size shouldBe 7
+    oneSided.size shouldBe 8
   }
 
   "The conditions guarded on both sides" should "be the majority, which is the property claimed" in {
