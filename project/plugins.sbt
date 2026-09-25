@@ -1,6 +1,6 @@
 // Statement coverage. The floor it enforces lives in build.sbt, per module, set to the value
 // actually measured rather than to an aspiration.
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.2.1")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.4.4")
 
 // The distribution: `dist/Universal/packageZipTarball` builds the tarball that carries every
 // module's jar, the runtime classpath and a launcher per entry point. A library reaches a consumer
@@ -9,7 +9,7 @@ addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.2.1")
 //
 // Pinned at 1.11.7, the current release, because a packaging plugin decides the shape of what
 // ships: a floating version would change the launcher scripts without a commit saying so.
-addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.11.7")
+addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.12.0")
 
 // The version, read from the git tag rather than written in `build.sbt`. Before this it was both:
 // `ThisBuild / version` held a literal and the publishing workflow overwrote that literal with a

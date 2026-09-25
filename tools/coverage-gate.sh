@@ -2,7 +2,7 @@
 # Run the coverage gate, and say which of three things happened rather than leaving one of them
 # silent.
 #
-# WHY THIS EXISTS. The gate is `clean coverage test coverageReport`, a SEQUENCE, and sbt stops at
+# WHY THIS EXISTS. The gate is `clean coverage testFull coverageReport`, a SEQUENCE, and sbt stops at
 # the first command that fails. So `coverageReport` does not run when `test` is red, and the log
 # says nothing about the floors having gone unasked: sixteen minutes and forty-six seconds of a
 # run that did not measure the thing it was launched for, reading as a test failure. Measured
@@ -80,7 +80,10 @@ fresh() {
     # why: `find` prints nothing and exits non-zero when `modules/` does not exist, which is a
     # checkout this script has no business running in; the count of zero is the right answer and
     # is reported as "never asked" below, which names the situation better than a stack of errors.
-    find "$root"/modules/*/target/scala-*/scoverage-report/scoverage.xml \
+    #
+    # sbt 2 writes every project's output under the build's own `target/out`, in a directory named
+    # after the project (`modules/core` is `symbolum-core`), where sbt 1 wrote under each module.
+    find "$root"/target/out/jvm/scala-*/symbolum-*/scoverage-report/scoverage.xml \
         -newer "$marker" 2>/dev/null | grep -c . || :
 }
 
@@ -110,7 +113,7 @@ verdict() {
     else
         echo "coverage-gate: the floors were asked of all $_want modules and the build exited"
         echo "coverage-gate: $status. A floor fell: the line above names the rate and the floor,"
-        echo "coverage-gate: and modules/*/target/scala-*/scoverage-report/ says which module."
+        echo "coverage-gate: and target/out/jvm/scala-*/symbolum-*/scoverage-report/ says which module."
     fi
     echo "coverage-gate: ------------------------------------------------------------"
 }
@@ -127,7 +130,10 @@ on_signal() {
 }
 trap on_signal INT TERM
 
-"$SBT" clean coverage test coverageReport
+# `testFull` and not `test`: under sbt 2 `test` runs what a change touched, and a floor is a
+# property of the whole suite's coverage, so the gate asks for the whole suite whatever `test`
+# means at the prompt.
+"$SBT" clean coverage testFull coverageReport
 status=$?
 
 verdict

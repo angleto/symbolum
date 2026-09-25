@@ -201,7 +201,10 @@ fi
 # changed file of its module was built without that change, whatever the reader meant, and the
 # shared checkout held a `<statements/>` of fourteen bytes dated 2020 in all eleven modules, which
 # this passed for a change of 199 lines.
-reports=$(find modules/*/target/scala-*/scoverage-report/scoverage.xml 2>/dev/null | sort)
+#
+# Where sbt 2 writes them: under the build's own `target/out`, one directory per project, named
+# after the project, so `modules/core`'s report is `target/out/jvm/scala-*/symbolum-core/...`.
+reports=$(find target/out/jvm/scala-*/symbolum-*/scoverage-report/scoverage.xml 2>/dev/null | sort)
 if [ -z "$reports" ]; then
     echo "coverage-delta: no coverage report on disk. Run tools/coverage-gate.sh first." >&2
     exit 2
@@ -225,7 +228,7 @@ fi
 # empty base and a missing revision are both refusals, because answering a question nobody asked
 # as though they had is the failure this tool exists to prevent.
 cut -f1 "$work/added" | awk -F/ '{ print $2 }' | sort -u > "$work/touched"
-printf '%s\n' "$reports" | awk -F/ '{ print $2 }' | sort -u > "$work/reporting"
+printf '%s\n' "$reports" | awk -F/ '{ sub(/^symbolum-/, "", $5); print $5 }' | sort -u > "$work/reporting"
 comm -23 "$work/touched" "$work/reporting" > "$work/unreported"
 
 if [ -s "$work/unreported" ]; then
@@ -270,7 +273,7 @@ fi
 # older than every file that branch differs in.
 cut -f1 "$work/added" | sort -u | while IFS= read -r file; do
     module=$(printf '%s\n' "$file" | awk -F/ '{ print $2 }')
-    for report in modules/"$module"/target/scala-*/scoverage-report/scoverage.xml; do
+    for report in target/out/jvm/scala-*/symbolum-"$module"/scoverage-report/scoverage.xml; do
         data=${report%/scoverage-report/scoverage.xml}/scoverage-data/scoverage.coverage
         if [ ! -f "$data" ]; then
             printf 'NODATA\t%s\n' "$data"

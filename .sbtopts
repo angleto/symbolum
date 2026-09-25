@@ -1,0 +1,5 @@
+# sbt 2's runner starts a background server and talks to it through a native client unless told
+# otherwise. On a machine that caps concurrent builds, a server that outlives its command is a JVM
+# nobody queued for, and a client joins every argument into one command line. `--server` runs sbt
+# in the foreground, as sbt 1 did, for every invocation that starts here: people, tools and CI.
+--server

@@ -211,7 +211,11 @@ lazy val commonSettings = Seq(
    */
   Test / fork := true,
   Test / javaOptions ++= Seq("-Xmx1024m", "-Xss4M"),
-  Test / forkOptions := (Test / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value),
+  // Uncached, because sbt 2 caches a task's result by serialising it and `ForkOptions` has no
+  // serialisation; the value is recomputed on every run, which costs nothing.
+  Test / forkOptions := Def.uncached(
+    (Test / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value)
+  ),
 
   /*
    * The JDK's own classes, so that a resolved `java.*` name renders as a link rather than as text.
@@ -606,11 +610,11 @@ lazy val publishSettings = Seq(
     sys.env.getOrElse("GITHUB_TOKEN", "")
   ),
 
-  licenses := Seq("GPL-3.0-or-later" -> url("https://www.gnu.org/licenses/gpl-3.0.html")),
-  homepage := Some(url("https://symbolum.xeno.garden")),
+  licenses := Seq("GPL-3.0-or-later" -> uri("https://www.gnu.org/licenses/gpl-3.0.html")),
+  homepage := Some(uri("https://symbolum.xeno.garden")),
   scmInfo := Some(
     ScmInfo(
-      url("https://github.com/angleto/symbolum"),
+      uri("https://github.com/angleto/symbolum"),
       "scm:git:git@github.com:angleto/symbolum.git"
     )
   ),
@@ -619,7 +623,7 @@ lazy val publishSettings = Seq(
       id = "angleto",
       name = "angleto",
       email = "",
-      url = url("https://github.com/angleto")
+      url = uri("https://github.com/angleto")
     )
   ),
   pomIncludeRepository := { _ => false }
@@ -1053,7 +1057,10 @@ lazy val tactics = (project in file("modules/tactics"))
     // would compile every block against almost nothing and report an error about `Var`.
     Test / resourceGenerators += Def.task {
       val file = (Test / resourceManaged).value / "test-classpath.txt"
-      val entries = (Test / dependencyClasspath).value.map(_.data) ++
+      // sbt 2 hands the classpath over as virtual file references, and the converter is what turns
+      // one into the path a compiler reading this file can open.
+      val converter = fileConverter.value
+      val entries = (Test / dependencyClasspath).value.map(entry => converter.toPath(entry.data).toFile) ++
         Seq((Compile / classDirectory).value, (Test / classDirectory).value)
       IO.write(file, entries.map(_.getAbsolutePath).mkString("\n"))
       Seq(file)
@@ -1333,7 +1340,15 @@ lazy val warningProbe = (project in file("tools/fatal-warnings-probe"))
     // one.
     coverageEnabled := false,
     Compile / scalacOptions ~= withoutInstrumentation,
-    Compile / compile / logManager := quietly
+    Compile / compile / logManager := quietly,
+
+    // No cache, because the gate is the compiler being asked. sbt 2 keeps the outcome of a compile,
+    // a failed one included, and replays it on the next run with the same inputs: the probe's
+    // failure then comes out of the cache rather than out of the compiler, and its diagnostics are
+    // printed by the replay, around the quiet log manager above. Measured on 2026-09-25, the second
+    // `fatalWarnings` of a session read "cache 100%, 1 cached-failure cache hit" and put the
+    // probe's nine `[error]` lines into the log of a gate that passed.
+    cacheStores := Seq.empty
   )
 
 // The same source under the same options minus the one flag. Its base directory holds no sources of
@@ -1359,7 +1374,10 @@ lazy val warningProbeControl = (project in file("tools/fatal-warnings-probe/cont
     // around.
     scalacOptions := (warningProbe / scalacOptions).value.filterNot(fatalWarningsFlags),
     Compile / scalacOptions ~= withoutInstrumentation,
-    Compile / compile / logManager := quietly
+    Compile / compile / logManager := quietly,
+
+    // Uncached for the probe's reason: the control's success is only evidence if it was compiled.
+    cacheStores := Seq.empty
   )
 
 // The gate itself, on the root project.
@@ -1367,7 +1385,12 @@ lazy val warningProbeControl = (project in file("tools/fatal-warnings-probe/cont
 // Every `.value` below is a dependency and runs before this body, which is why the compiler error
 // from the probe appears in the log ABOVE the line saying it was wanted. That ordering cannot be
 // changed from here and is why the messages say what they say.
-fatalWarnings := {
+// Uncached, and not for want of a serialisation: sbt 2 would otherwise answer this from a result
+// it remembers, and a gate that can be answered without looking is not a gate.
+// Scoped to the root by name: sbt 2 applies a setting written bare in this file to every
+// subproject, where sbt 1 applied it to the root alone, so the bare form would run the gate once
+// per project.
+LocalRootProject / fatalWarnings := Def.uncached {
   val log = streams.value.log
 
   val names = thisProject.all(everyProjectButTheControl).value.map(_.id)
@@ -1439,18 +1462,18 @@ fatalWarnings := {
   // logged into a stream nobody reads, so a red message here says where to look rather than
   // quoting what it saw.
   control match {
-    case sbt.Inc(_) =>
+    case Result.Inc(_) =>
       throw new MessageOnlyException(
         "the probe does NOT compile even with the option removed, so it is broken rather than " +
           "warning. Run `tools/sbt warningProbeControl/compile` to see its errors and repair " +
           "tools/fatal-warnings-probe/src/main/scala; until it compiles cleanly there, the other " +
           "half of this check establishes nothing."
       )
-    case sbt.Value(_) => ()
+    case Result.Value(_) => ()
   }
 
   probe match {
-    case sbt.Value(_) =>
+    case Result.Value(_) =>
       throw new MessageOnlyException(
         s"the probe COMPILED under this build's options, and one of two things is true. Either " +
           s"${fatalWarningsNamed(probeOptions)} is not reaching the compiler although the " +
@@ -1459,7 +1482,7 @@ fatalWarnings := {
           "tools/fatal-warnings-probe would do. `tools/sbt warningProbe/compile` is the same " +
           "compilation with its log restored and tells the two apart in one line."
       )
-    case sbt.Inc(_) => ()
+    case Result.Inc(_) => ()
   }
 
   // The one line this gate prints when it passes. It is the whole of its output, which is the
@@ -1473,4 +1496,10 @@ fatalWarnings := {
 // What makes it a gate rather than a command. `sbt test` is what CI runs and what a person runs, so
 // this is where a check that must not be forgotten belongs; the root is the right project for it
 // because what is being checked is a property of the build rather than of any one module.
-Test / test := (Test / test).dependsOn(fatalWarnings).value
+// `test` is an input task in sbt 2, the incremental one, and `testFull` is the whole suite; the
+// gate rides both, so whichever of the two a run asks for pays for it.
+LocalRootProject / Test / test :=
+  (LocalRootProject / Test / test).dependsOn(LocalRootProject / fatalWarnings).evaluated
+LocalRootProject / Test / testFull := Def.uncached(
+  (LocalRootProject / Test / testFull).dependsOn(LocalRootProject / fatalWarnings).value
+)

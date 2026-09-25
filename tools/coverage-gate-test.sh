@@ -8,7 +8,7 @@
 # reports it was told to and exits the code it was told to reaches every state in a second, and
 # the subject's whole content is what it says about which state it is in.
 #
-# WHAT IT DOES NOT COVER, named rather than left to be assumed: whether `clean coverage test
+# WHAT IT DOES NOT COVER, named rather than left to be assumed: whether `clean coverage testFull
 # coverageReport` is the right command, and whether scoverage writes where this expects. The
 # first is `build.sbt`'s and `CLAUDE.md`'s; the second is checked by the gate's own real runs,
 # where a wrong path would read as "never asked" on a run that plainly finished.
@@ -54,8 +54,10 @@ written=0
 for d in "$STUB_ROOT"/modules/*/; do
     [ -d "$d/src/main" ] || continue
     [ "$written" -ge "$STUB_REPORTS" ] && break
-    mkdir -p "$d/target/scala-3.3.5/scoverage-report"
-    echo '<statements/>' > "$d/target/scala-3.3.5/scoverage-report/scoverage.xml"
+    # Where sbt 2 puts a module's report: under the build's `target/out`, named after the project.
+    r="$STUB_ROOT/target/out/jvm/scala-3.3.5/symbolum-$(basename "$d")/scoverage-report"
+    mkdir -p "$r"
+    echo '<statements/>' > "$r/scoverage.xml"
     written=$((written + 1))
 done
 exit "$STUB_EXIT"
@@ -71,7 +73,7 @@ root=$(CDPATH= cd -- "$here/.." && pwd)
 age_them() {
     for d in "$root"/modules/*/; do
         [ -d "$d/src/main" ] || continue
-        f="$d/target/scala-3.3.5/scoverage-report/scoverage.xml"
+        f="$root/target/out/jvm/scala-3.3.5/symbolum-$(basename "$d")/scoverage-report/scoverage.xml"
         [ -f "$f" ] || { mkdir -p "$(dirname "$f")"; echo '<statements/>' > "$f"; }
         touch -t 202001010000 "$f"
     done
