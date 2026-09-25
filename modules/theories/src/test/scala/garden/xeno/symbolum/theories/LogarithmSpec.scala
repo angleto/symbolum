@@ -182,7 +182,10 @@ class LogarithmSpec extends AnyFlatSpec with Matchers {
     val half = real("1 / 2")
     val wrong = force(rules.specAll(assumed, List(half, half)))
     val right = force(chain.transcendental.fact(Transcendental.CosineAddition).flatMap(rules.specAll(_, List(half, half))))
-    val near = mp(force(rules.spec(half, fact(Logarithm.SineNearLine))), lemma("abs ((1:real) / 2) <= 1 / 2"))
+    val halfIsItself = mp(force(chain.limit.magnitude.fact(Magnitude.OfNonNegative).flatMap(rules.spec(half, _))),
+      lemma("(0:real) <= 1 / 2"))
+    val halfSmall = mp(force(rules.spec(real("abs (1 / 2)"), lemma("!A:real. A = 1 / 2 ==> A <= 1 / 2"))), halfIsItself)
+    val near = mp(force(rules.spec(half, fact(Logarithm.SineNearLine))), halfSmall)
     val below = force(chain.limit.magnitude.fact(Magnitude.AbsAboveNegation).flatMap(rules.spec(real("sin (1 / 2) - 1 / 2"), _)))
     val quarter = mp(force(rules.specAll(
       lemma("!s:real A:real. -(s - 1 / 2) <= A ==> A <= 1 / 2 * (1 / 2) ==> 1 / 4 <= s"),
