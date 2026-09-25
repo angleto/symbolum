@@ -655,7 +655,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 721 lemmas, 476 have two or more leading quantifiers and **412 of
+caller meant: of the library's 730 lemmas, 485 have two or more leading quantifiers and **421 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -915,8 +915,9 @@ assembling them, and was the one development that sat beside the chain's extensi
 in it, because it declares nothing. It is one of three now: `Primes` and `Deduction` joined it on
 2026-09-14.
 
-**`Primes` holds theorems about the primes that are results rather than infrastructure**, and today
-that is two. Euclid's, `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
+**`Primes` holds theorems about the primes that are results rather than infrastructure**, and
+`docs/lemmas.md` is where they are counted; this paragraph said "today that is two" while the file
+held six, a count beside a generated document being the copy that drifts. The first two are Euclid's, `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
 primes" says in a logic with no notion of an infinite set. And `NUM_SQUARE_NOT_DOUBLE`, that no
 square is twice a square at a positive denominator, which is the arithmetic content of the
 irrationality of the square root of two and is **not** that sentence. The sentence is
@@ -937,6 +938,22 @@ divisor above one rather than the textbook induction: the least one is prime for
 induction would want a negation pushed through a universal quantifier, which this logic had no law
 for until `Classical.NOT_FORALL` landed on 2026-09-15; the route is unchanged, since the least
 divisor asks for nothing beyond `NUM_LEAST`.
+
+**Fermat's little theorem is `NUM_FERMAT`, since 2026-09-25, and the binomial theorem on `num` came
+with it.** `NUM_CONG p (NUM_POW a p) a` at every prime `p` and every `a`, in the congruence form that
+needs no division, by induction on `a` over `NUM_FRESHMAN`, that `(a + 1)^p` is `a^p + 1` modulo
+`p`. What that rests on is `NUM_BINOMIAL` at `x + 1` and `NUM_PRIME_DIVIDES_CHOOSE`, that `p`
+divides every middle coefficient: `Coding.NUM_CHOOSE_FACTORIAL` at `p = k + (p - k)` puts `p!` on
+one side, `p` divides it, and Euclid's lemma applied twice meets `NUM_PRIME_NOT_DIVIDES_FACT` at
+both factorials on the other.
+
+**The binomial theorem is proved on `num` by Pascal's rule and is not carried across from
+`Series.POWER_BINOMIAL`**, and the reason is a measurement: the transported version worked and
+rested on seventeen axioms, the reals' sixteen among them, which
+`NothingOverNumRestsOnTheRealsSpec` refuses for a fact about the naturals. The native one costs the
+naturals' two. `Freshman.scala` is the derivation and is not a development; `FermatSpec` detaches
+the theorem at two, asserts the route, and refutes the statement with its hypothesis dropped at
+`p = 4, a = 2`, where `2^4` leaves nought on division by four.
 
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
@@ -1794,6 +1811,13 @@ is the derivation. `ContinuitySpec` asserts all four reach exactly the reals' si
 that the two attainments rest on the gluing and on the negation rather than on some other route,
 detaches both at the identity on `[0, 1]`, refutes the maximum without its continuity hypothesis at
 `COND (y < 1) y 0`, and refutes the gluing without its gluing hypothesis at "shorter than one".
+
+**Uniform continuity is the gluing's third use, `CONTINUOUS_UNIFORM`, since 2026-09-25**: continuous
+on `[a, b]` gives one radius per tolerance for every pair of points of it, Heine and Cantor's
+theorem. What glues is **not** "one radius serves on `[u, v]`", whose pairs straddling the joint
+neither half covers, but "one radius serves every point of `[u, v]` against every point at all",
+which glues at the smaller radius. It costs what the extreme value theorem costs, and
+`ContinuitySpec` refutes it without continuity at the step `COND (0 < y) 1 0` on `[0, 1]`.
 
 **`ln` has its first facts, and they are `Logarithm`, a link since 2026-09-24 that declares
 nothing.** `EXP_LN` and `LN_EXP` are the two compositions, `LN_ONE` and `LN_MUL` follow by

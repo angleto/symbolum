@@ -170,6 +170,14 @@ object Continuity {
    */
   val Linear: String = "CONTINUOUS_LINEAR"
 
+  /**
+   * `f` continuous on `[a, b]` is uniformly continuous there: for every tolerance one radius serves
+   * every pair of points of the interval. Heine and Cantor's theorem, and the gluing's third use,
+   * over "one radius serves every point of `[u, v]` against every point at all", which is the form
+   * of the property that glues. It costs what the extreme value theorem costs.
+   */
+  val Uniform: String = "CONTINUOUS_UNIFORM"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Constant -> "!c:real. !x:real. continuous (\\y:real. c) x",
@@ -195,7 +203,11 @@ object Continuity {
         "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f m <= f x)"),
     Linear ->
       ("!f:real -> real. !g:real -> real. !x:real. !p:real. !q:real. continuous f x ==> continuous g x ==> " +
-        "continuous (\\y:real. p * f y + q * g y) x")
+        "continuous (\\y:real. p * f y + q * g y) x"),
+    Uniform ->
+      ("!f:real -> real. !a:real. !b:real. !e:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "0 < e ==> ?d:real. 0 < d /\\ (!x:real. !y:real. a <= x /\\ x <= b /\\ a <= y /\\ y <= b /\\ " +
+        "abs (x - y) < d ==> abs (f x - f y) < e)")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)

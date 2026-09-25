@@ -378,7 +378,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 547 with the chain rule's two, the same day.
     // 548 with the estimate's one, the same day; `DERIVATIVE_EXP` has no antecedent to drop.
     // 554 with the sign of a derivative on an interval's six, the same day: two on each fact.
-    proposals.size shouldBe 554
+    // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents,
+    // three on `NUM_PRIME_DIVIDES_CHOOSE`, two on `NUM_PRIME_NOT_DIVIDES_FACT`, one each on
+    // `NUM_DIVIDES_SUM`, `NUM_FRESHMAN` and `NUM_FERMAT`, none on the three equations.
+    // 565 with uniform continuity's three, the same day, derived before the run: `a <= b`, the
+    // continuity on `[a, b]` and `0 < e`. Tip plus this branch's delta.
+    proposals.size shouldBe 565
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1277,7 +1282,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `Propose.audit` filtered by `from`: six weakenings, each dropping the continuity or the slope
     // and keeping an implication under `!f a b`, so each is taken and not settled. No
     // substitution: the bodies carry a quantifier, which is a lambda here.
-    open shouldBe 455
+    // 458 with Fermat's little theorem, the same day, measured by a probe of `Propose.audit` before
+    // this line was edited: the three residues of `NUM_PRIME_DIVIDES_CHOOSE`, a divisibility the
+    // propositional address takes and cannot settle. The other five are `unreadable` below. Tip
+    // plus this branch's delta.
+    // 461 with uniform continuity's three weakenings, the same day, read off the run on the tree
+    // before the sign of a derivative and Fermat landed and then confirmed by a second run in which
+    // every assertion after this row held: none went to `unreadable` or was refuted, each keeps an
+    // implication and sits at the propositional address, taken and not settled. Tip plus this
+    // branch's delta.
+    open shouldBe 461
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1634,7 +1648,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 126 with `DERIVATIVE_CONTINUOUS`'s one weakening, `!f x. continuous f x`, from the same probe
     // as `open`'s 444: false at any function with a jump, and about `continuous`, which no procedure
     // addresses and no model interprets.
-    unreadable shouldBe 126
+    // 131 with the same probe: `NUM_FRESHMAN`'s, `NUM_FERMAT`'s and `NUM_DIVIDES_SUM`'s one each
+    // and `NUM_PRIME_NOT_DIVIDES_FACT`'s two, a congruence, a divisibility or its denial, which no
+    // procedure reads.
+    unreadable shouldBe 131
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1935,7 +1952,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // writes `NUM_LT` or `NUM_LE`, both on `named`, since a clause is indexed by `num` throughout.
     // Seventeen keep a `NUM_LT`; the width's bound and least bound lose theirs with the antecedent
     // and keep the `NUM_LE` of their conclusion.
-    aboutNumbers.size shouldBe 209
+    // 215 with six of Fermat's eight residues, 2026-09-25, by the same probe on this list: the
+    // three of `NUM_PRIME_DIVIDES_CHOOSE` and one of `NUM_PRIME_NOT_DIVIDES_FACT` keep `NUM_LT`,
+    // `NUM_FRESHMAN`'s keeps `SUC` and `NUM_DIVIDES_SUM`'s `NUM_SUM`; `NUM_FERMAT`'s and the other
+    // of the factorial's name nothing on it. None is refuted at a point, so `after` stays.
+    aboutNumbers.size shouldBe 215
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
