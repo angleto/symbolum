@@ -329,7 +329,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 545 with the product rule, the same day, derived before the run: three antecedents over two
     // facts, one on `DERIVATIVE_CONTINUOUS` and two on `DERIVATIVE_PRODUCT`.
     // 547 with the chain rule, the same day, derived before the run: its two antecedents.
-    propose.weakenings.size shouldBe 547
+    // 548 with the exponential's slope, the same day, derived before the run: the estimate's one
+    // antecedent, and the slope has none.
+    propose.weakenings.size shouldBe 548
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -444,7 +446,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // or a sum or product between reals with no lambda in the body. `EXP_CONTINUOUS`,
     // `EXP_INJECTIVE`, `LN_EXP` and `LN_ONE` write none of the four, and `EXP_ONTO` is an
     // existential.
-    propose.mutable.size shouldBe 102
+    // 103 with `EXP_NEAR_LINE`, 2026-09-25, read off a probe of `Propose.audit` filtered by `from`:
+    // it writes the order and the product between reals with no lambda in the body, and swaps to
+    // two substitutions. `DERIVATIVE_EXP` writes none of the four outside `derivative`.
+    propose.mutable.size shouldBe 103
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

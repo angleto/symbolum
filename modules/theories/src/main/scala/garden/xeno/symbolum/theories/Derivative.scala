@@ -6,7 +6,7 @@ import garden.xeno.symbolum.logic.*
 /**
  * The derivative of a real function at a point, the interior extremum lemma, Rolle's theorem, the
  * mean value theorem, and since the same day the product rule with the continuity it rests on, and
- * the chain rule.
+ * the chain rule, and since then the exponential's derivative.
  *
  * `derivative f x m` says that `f` has derivative `m` at `x`, and it is the epsilon-delta statement
  * written out, the way `continuous` and `converges` are: for every positive tolerance `e` there is
@@ -196,6 +196,15 @@ object Derivative {
    */
   val ChainRule: String = "DERIVATIVE_CHAIN"
 
+  /**
+   * `|- !x. derivative exp x (exp x)`
+   *
+   * The exponential is its own derivative. The first derivative of a function this repository
+   * defines rather than builds from `x` by arithmetic, and the one the series was chosen for. What
+   * it needed was `Logarithm.EXP_NEAR_LINE`, the second-order estimate at zero.
+   */
+  val Exponential: String = "DERIVATIVE_EXP"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Constant -> "!c:real. !x:real. derivative (\\y:real. c) x 0",
@@ -226,7 +235,8 @@ object Derivative {
         "derivative (\\y:real. f y * g y) x (m * g x + f x * n)"),
     ChainRule ->
       ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. derivative g x n ==> derivative f (g x) m ==> " +
-        "derivative (\\y:real. f (g y)) x (m * n)")
+        "derivative (\\y:real. f (g y)) x (m * n)"),
+    Exponential -> "!x:real. derivative exp x (exp x)"
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -248,6 +258,8 @@ object Derivative {
     reals: RealTheory,
     magnitude: Magnitude,
     continuity: Continuity,
+    transcendental: Transcendental,
+    logarithm: Logarithm,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Derivative] =
@@ -274,6 +286,8 @@ object Derivative {
       continuous <- continuousWhereDifferentiable(steps, reals, magnitude, continuity)
       productRuleFact <- productRule(steps, reals, magnitude, continuity, continuous)
       chainRule <- chainRuleFact(steps, reals, magnitude, continuity, continuous)
+      nearLine <- logarithm.fact(Logarithm.NearLine)
+      exponential <- exponentialSlope(steps, reals, magnitude, transcendental, logarithm, nearLine)
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,
@@ -287,7 +301,8 @@ object Derivative {
         MeanValue -> meanValue,
         Continuous -> continuous,
         ProductRule -> productRuleFact,
-        ChainRule -> chainRule
+        ChainRule -> chainRule,
+        Exponential -> exponential
       )
 
       // Each statement checked against the text a person reads it by, as `Continuity` does: a
@@ -1628,6 +1643,92 @@ object Derivative {
       slope <- real("m:real * n:real")
       result <- foldDerivative(steps, function, x, slope, statement)
       closed <- rules.disch(fHyp, result).flatMap(rules.disch(gHyp, _)).flatMap(rules.genAll(_, List(f, g, x, m, n)))
+    } yield closed
+  }
+
+  /**
+   * [[Exponential]]: `exp (x + h) - exp x - exp x * h` is `exp x * (exp h - 1 - h)` by the addition
+   * theorem, and `Logarithm.EXP_NEAR_LINE` puts the bracket under `h * h` for `abs h <= 1 / 2`. So
+   * the error is at most `exp x * abs h * abs h`, under `e * abs h` once `abs h` is under the share
+   * of `e` for `exp x`. `abs (exp x)` is replaced inside the product by congruence.
+   */
+  private def exponentialSlope(
+    steps: Continuity.Steps,
+    reals: RealTheory,
+    magnitude: Magnitude,
+    transcendental: Transcendental,
+    logarithm: Logarithm,
+    nearLine: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val h = Term.variable("h", Reals)
+    val error = "exp (x:real + h) - exp x - exp x * h"
+    val second = "exp (h:real) - 1 - h"
+    for {
+      positive <- proposition("0 < e:real")
+      ePositive <- LogicError.lift(Kernel.assume(positive))
+      expPositive <- at(logarithm.fact(Logarithm.Positive), "x:real")
+      expNonNeg <- at(lemma("!E:real. 0 < E ==> 0 <= E"), "exp (x:real)").flatMap(mp(_, Right(expPositive)))
+      share <- Continuity.portion(steps, reals, "exp (x:real)", expNonNeg, 1, ePositive)
+      halfPositive <- lemma("(0:real) < 1 / 2")
+      radius = s"min (1 / 2) (${share.term})"
+      radiusPositive <- Continuity.minimumOf(steps, magnitude, "1 / 2", share.term, halfPositive, share.positive)
+
+      near <- proposition(s"0 < abs (h:real) /\\ abs h < $radius")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      hPositive <- rules.conjElim1(assumedNear)
+      hSmall <- rules.conjElim2(assumedNear)
+      belowHalf <- at(magnitude.fact(Magnitude.MinBelowLeft), "1 / 2", share.term)
+      hHalf <- at(lemma("!A:real w:real. A < w ==> w <= 1 / 2 ==> A <= 1 / 2"), "abs (h:real)", radius)
+        .flatMap(mp(_, Right(hSmall), Right(belowHalf)))
+      hBelowT <- at(magnitude.fact(Magnitude.MinBelowRight), "1 / 2", share.term)
+        .flatMap(b => at(lemma(Through), "abs (h:real)", radius, share.term).flatMap(mp(_, Right(hSmall), Right(b))))
+
+      estimate <- rules.spec(h, nearLine).flatMap(rules.mp(_, hHalf))
+      split <- at(transcendental.fact(Transcendental.Addition), "x:real", "h:real")
+      regrouped <- at(lemma("!P:real E:real Q:real h:real. P = E * Q ==> P - E - E * h = E * (Q - 1 - h)"),
+        "exp (x:real + h)", "exp (x:real)", "exp (h:real)", "h:real").flatMap(mp(_, Right(split)))
+      absFn <- Parser.term(theory, notation, "abs", Functions)
+      sameAbs <- Conv.apTerm(absFn, regrouped)
+      product <- at(magnitude.fact(Magnitude.Multiplicative), "exp (x:real)", second)
+      absExp <- at(magnitude.fact(Magnitude.OfNonNegative), "exp (x:real)").flatMap(mp(_, Right(expNonNeg)))
+      // `abs (exp x)` is replaced inside the product by congruence, not by `Linarith`.
+      multiply <- Term.destEq(product.conclusion).map(_._2).collect { case App(App(op, _), _) => op }
+        .toRight(NotOfForm("a product", product.conclusion))
+      secondMagnitude <- real(s"abs ($second)")
+      replaced <- Conv.apTerm(multiply, absExp).flatMap(Conv.apThm(_, secondMagnitude))
+      errorIs <- Conv.trans(sameAbs, product).flatMap(Conv.trans(_, replaced))
+
+      squareIs <- at(magnitude.fact(Magnitude.OfNonNegative), "h:real * h")
+        .flatMap(mp(_, at(lemma("!h:real. 0 <= h * h"), "h:real")))
+      squareSplit <- at(magnitude.fact(Magnitude.Multiplicative), "h:real", "h:real")
+      squareAbs <- Conv.sym(squareIs).flatMap(Conv.trans(_, squareSplit))
+      underSquare <- at(lemma("!A:real S:real B:real. A <= S ==> S = B ==> A <= B"), s"abs ($second)", "h:real * h", "abs (h:real) * abs h")
+        .flatMap(mp(_, Right(estimate), Right(squareAbs)))
+      scaled <- at(lemma("!P:real A:real B:real. 0 <= P ==> A <= B ==> P * A <= P * B"), "exp (x:real)", s"abs ($second)", "abs (h:real) * abs h")
+        .flatMap(mp(_, Right(expNonNeg), Right(underSquare)))
+      slope <- at(lemma("!E:real H:real T:real e:real. 0 <= E ==> 0 < H ==> H < T ==> 1 * (E + 1) * T = e ==> E * H < e"),
+        "exp (x:real)", "abs (h:real)", share.term, "e:real")
+        .flatMap(mp(_, Right(expNonNeg), Right(hPositive), Right(hBelowT), Right(share.equation)))
+      bound <- at(lemma("!X:real E:real H:real e:real. X <= E * (H * H) ==> 0 < H ==> E * H < e ==> X < e * H"),
+        s"exp (x:real) * abs ($second)", "exp (x:real)", "abs (h:real)", "e:real")
+        .flatMap(mp(_, Right(scaled), Right(hPositive), Right(slope)))
+      within <- at(lemma("!R:real X:real e:real H:real. R = X ==> X < e * H ==> R < e * H"),
+        s"abs ($error)", s"exp (x:real) * abs ($second)", "e:real", "abs (h:real)")
+        .flatMap(mp(_, Right(errorIs), Right(bound)))
+
+      everyH <- rules.disch(near, within).flatMap(rules.gen(h, _))
+      both <- rules.conjIntro(radiusPositive, everyH)
+      radiusTerm <- real(radius)
+      witnessed <- existential(s"?d:real. 0 < d /\\ (!h:real. 0 < abs h /\\ abs h < d ==> abs ($error) < e:real * abs h)")
+        .flatMap(rules.existsIntro(_, radiusTerm, both))
+      statement <- rules.disch(positive, witnessed).flatMap(rules.gen(e, _))
+      exp <- Parser.term(theory, notation, "exp", Functions)
+      value <- real("exp (x:real)")
+      result <- foldDerivative(steps, exp, x, value, statement)
+      closed <- rules.gen(x, result)
     } yield closed
   }
 }
