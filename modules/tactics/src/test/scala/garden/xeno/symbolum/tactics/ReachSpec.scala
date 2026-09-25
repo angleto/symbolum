@@ -293,6 +293,7 @@ final class ReachSpec extends AnyFlatSpec with Matchers {
                       cost.of(statement) match {
                         case Left(error) => (Outcome.Unsettled, error.message)
                         case Right(report) =>
+                          if (report.outcome == Cost.Outcome.Proved) proved = proved :+ statement
                           val outcome = report.outcome match {
                             case Cost.Outcome.Proved => Outcome.Proved
                             case Cost.Outcome.Conditional => Outcome.Conditional
@@ -311,6 +312,9 @@ final class ReachSpec extends AnyFlatSpec with Matchers {
     }
 
   private var elapsed: Vector[(String, Outcome, Long)] = Vector.empty
+
+  /** The statements the corpus proved, kept so the cost of reporting on them can be read again. */
+  private var proved: Vector[Term] = Vector.empty
 
   private def count(outcome: Outcome): Int = outcomes.count(_._2 == outcome)
 
@@ -419,5 +423,57 @@ final class ReachSpec extends AnyFlatSpec with Matchers {
   it should "say which statements it proved, by name, so the claim can be checked one at a time" taggedAs Corpus in {
     named(Outcome.Proved).foreach(name => info(name))
     named(Outcome.Proved).distinct.size shouldBe named(Outcome.Proved).size
+  }
+
+  /**
+   * What `docs/adr/0047`'s boundary buys where `Cost` is paid, which is here: point 3 of card
+   * 5a54c044, measured on 2026-09-25 as card 2a48d6d0 after the delivery had measured the library
+   * instead and said so.
+   *
+   * Two readings of the same proved statements. Nodes, which are a function of the proofs and are
+   * asserted: what a report reads, `Derivation.size`, against what a checker replays, the step
+   * records of `Proof.write`. And time, which is not asserted and is printed: what `Cost.of` walks
+   * after the proof is found, read the way it is now and the way it was before the boundary, in one
+   * JVM, alternated over three rounds after a warm-up, so the machine's load falls on both sides.
+   *
+   * **`Cost.of` walks the whole graph once per report even now**, and that is the half a reader
+   * should carry. Its three accounting walks stop at a citation, and `Reach.of` does not: it is
+   * `Library.restingOn`, which asks which named facts a proof used, transitively, and no summary
+   * kept on a citation could answer that for any collection a caller names. So the time a report
+   * saves is three walks out of four, and the "before" column below is three whole walks plus that
+   * one, the "now" column three bounded walks plus it.
+   */
+  it should "read less than it replays, which is the boundary at a cited fact where Cost is paid" taggedAs Corpus in {
+    // `proved` is filled while the corpus is measured, so the measurement is forced first.
+    outcomes should not be empty
+    val theorems = proved.map(statement =>
+      cost.prove(statement).fold(error => fail(error.message), _.theorem))
+    val library = cost.held.getOrElse(fail("the corpus's Cost holds no library, so its reach is not read"))
+    def replayed(theorem: Kernel.Thm): Int = Proof.write(theorem).linesIterator.count(_.startsWith("s "))
+    val read = theorems.map(t => Derivation.size(t).toLong).sum
+    val whole = theorems.map(t => replayed(t).toLong).sum
+    val citations = theorems.map(t => Derivation.census(t).getOrElse("Citation", 0)).sum
+
+    def now(t: Kernel.Thm): Unit = { Derivation.axiomsOf(t); Derivation.size(t); Derivation.census(t) }
+    def before(t: Kernel.Thm): Unit = (1 to 3).foreach(_ => Derivation.restingOn(t, Set.empty))
+    def reach(t: Kernel.Thm): Unit = Reach.of(library, t)
+    def timed(work: Kernel.Thm => Unit): Long = {
+      val started = System.nanoTime()
+      theorems.foreach(work)
+      System.nanoTime() - started
+    }
+    theorems.foreach(now); theorems.foreach(before); theorems.foreach(reach)
+    val rounds = (1 to 3).map(_ => (timed(now), timed(before), timed(reach)))
+    val (bounded, unbounded, reached) =
+      (rounds.map(_._1).sum / 1000000L, rounds.map(_._2).sum / 1000000L, rounds.map(_._3).sum / 1000000L)
+
+    info(s"${theorems.size} proved statements: read $read nodes, replayed $whole, $citations citations")
+    info(s"three rounds: the three accounting walks $bounded ms now against $unbounded ms whole; Reach.of $reached ms")
+    info(s"a report's walks, now ${bounded + reached} ms against ${unbounded + reached} ms before")
+
+    theorems should not be empty
+    citations should be > 0
+    read should be < whole
+    theorems.foreach(t => Derivation.size(t) should be <= replayed(t))
   }
 }

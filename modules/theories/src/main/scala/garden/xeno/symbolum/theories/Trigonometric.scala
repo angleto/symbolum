@@ -39,6 +39,15 @@ import garden.xeno.symbolum.logic.*
  * the two products, and the cancellation says the cosine's partial sums **one index along** plus
  * the sine's are one at every index. `Limit.CONVERGES_SHIFT` is what makes "one index along" a
  * statement about a limit.
+ *
+ * == The addition formulas, which are the same argument at a second point ==
+ *
+ * The square is the convolution at `(x, 0 - x)`, and `Transcendental.COS_ADD` and `SIN_ADD` are
+ * the convolution at `(x, y)`. At an even length the even places are the cosine product's term and
+ * the odd places minus the sine product's one index earlier, which is the square's cancellation
+ * with `(x + y)^N / N!` where the square had `0^N / N!`; at an odd length the two places are the
+ * two mixed products, and there is no shift. What the general point removes is a step: at `0 - x`
+ * a partner's power had to be carried back to `x`, and at `y` it is the same atom on both sides.
  */
 private[theories] object Trigonometric {
 
@@ -92,13 +101,17 @@ private[theories] object Trigonometric {
         pieces, CosineTermsText, cosineAbsolute, respelled(pieces, pieces.cosineDefinition, _))
       sineValue <- toItsValue(
         pieces, SineTermsText, sineAbsolute, respelled(pieces, pieces.sineDefinition, _))
+      additions <- addition(pieces, cosineAbsolute, sineAbsolute, cosineValue, sineValue)
+      (cosineOfSum, sineOfSum) = additions
     } yield Map(
       Transcendental.CosineAbsolute -> cosineAbsolute,
       Transcendental.SineAbsolute -> sineAbsolute,
       Transcendental.Pythagoras -> squared,
       Transcendental.ExponentialConverges -> exponentialValue,
       Transcendental.CosineConverges -> cosineValue,
-      Transcendental.SineConverges -> sineValue
+      Transcendental.SineConverges -> sineValue,
+      Transcendental.CosineAddition -> cosineOfSum,
+      Transcendental.SineAddition -> sineOfSum
     )
 
   /* ======================================================================== small conversions */
@@ -1026,4 +1039,516 @@ private[theories] object Trigonometric {
         .flatMap(pieces.logic.rules.mp(_, towards))
       result <- Conv.trans(respelledDefinition, named)
     } yield result
+
+  /* ======================================================================= the addition formulas */
+
+  /** A series' text at another point: every `(x:real)` in it becomes `point`. */
+  private def at(text: String, point: String): String = text.replace("(x:real)", point)
+
+  /** The convolution of the exponential's terms at `x` and `y`, at a length. */
+  private def convolutionAt(pieces: Pieces, length: Term): Either[LogicError, Kernel.Thm] =
+    pieces.logic.rules.specAll(
+      pieces.exponentialConvolution,
+      List(Term.variable("x", values), Term.variable("y", values), length))
+
+  /** `|- P n = P d * P u` from `n = d + u`, the sign split along a partner. */
+  private def signSplit(pieces: Pieces, partner: Kernel.Thm, d: Term, u: Term): Either[LogicError, Kernel.Thm] =
+    for {
+      sign <- functionIn(pieces, "Power ((0:real) - 1) (0:num)", values)
+      minusOne <- Parser.term(pieces.theory, pieces.notation, "(0:real) - 1", values)
+      along <- Conv.apTerm(sign, partner)
+      split <- pieces.series.fact(Series.PowerOfSum).flatMap(pieces.logic.rules.specAll(_, List(minusOne, d, u)))
+      result <- Conv.trans(along, split)
+    } yield result
+
+  /**
+   * `|- n = d + u` and `|- NUM_ADD n n = NUM_ADD (NUM_ADD d d) (NUM_ADD u u)` for `u < SUC n`,
+   * `d` being `NUM_SUB n u`: the partner index and the doubled length regrouped.
+   */
+  private def partnerOf(pieces: Pieces, n: Term, u: Term, below: Kernel.Thm): Either[LogicError, (Term, Kernel.Thm, Kernel.Thm)] = {
+    val rules = pieces.logic.rules
+    for {
+      subtract <- operatorIn(pieces, "NUM_SUB (0:num) 0", numbers)
+      add <- operatorIn(pieces, "NUM_ADD (0:num) 0", numbers)
+      d <- LogicError.lift(Term.app(subtract, n).flatMap(Term.app(_, u)))
+      atMost <- pieces.peano.fact(Peano.AtMostBelowSuccessor).flatMap(rules.specAll(_, List(n, u))).flatMap(rules.mp(_, below))
+      partner <- pieces.peano.fact(Peano.MinusThenPlus).flatMap(rules.specAll(_, List(n, u)))
+        .flatMap(rules.mp(_, atMost)).flatMap(Conv.sym)
+      du <- LogicError.lift(Term.app(add, d).flatMap(Term.app(_, u)))
+      doubled <- Conv.apTerm(add, partner).flatMap(Conv.apThm(_, n)).flatMap(first =>
+        LogicError.lift(Term.app(add, du)).flatMap(context => Conv.apTerm(context, partner)).flatMap(Conv.trans(first, _)))
+      dd <- LogicError.lift(Term.app(add, d).flatMap(Term.app(_, d)))
+      uu <- LogicError.lift(Term.app(add, u).flatMap(Term.app(_, u)))
+      regrouped <- LogicError.lift(Term.app(add, dd).flatMap(Term.app(_, uu)))
+      semiring <- rightOf(doubled).flatMap(pieces.semiring.prove(_, regrouped))
+      joined <- Conv.trans(doubled, semiring)
+    } yield (d, partner, joined)
+  }
+
+  /** `|- NUM_SUB (NUM_ADD n n) (NUM_ADD u u) = NUM_ADD d d`, from the regrouped doubling. */
+  private def evenGap(pieces: Pieces, u: Term, d: Term, doubled: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    for {
+      subtract <- operatorIn(pieces, "NUM_SUB (0:num) 0", numbers)
+      add <- operatorIn(pieces, "NUM_ADD (0:num) 0", numbers)
+      uu <- LogicError.lift(Term.app(add, u).flatMap(Term.app(_, u)))
+      dd <- LogicError.lift(Term.app(add, d).flatMap(Term.app(_, d)))
+      takenApart <- pieces.peano.fact(Peano.SumMinus).flatMap(pieces.logic.rules.specAll(_, List(dd, uu)))
+      result <- Conv.apTerm(subtract, doubled).flatMap(Conv.apThm(_, uu)).flatMap(Conv.trans(_, takenApart))
+    } yield result
+
+  /**
+   * The cosine's even place at `(x, y)`: `c u * c' (K - u) = P K * g (u + u)` for `u < SUC K`,
+   * `K = SUC m`. What [[evenPlace]] does at `(x, 0 - x)` less its one step, the partner's term at
+   * `0 - x` read at `x`: at `(x, y)` the partner's power of `y` is the same atom on both sides.
+   */
+  private def cosineEvenPlace(pieces: Pieces, u: Term, below: Kernel.Thm, goal: Term): Either[LogicError, Kernel.Thm] =
+    for {
+      k <- Parser.term(pieces.theory, pieces.notation, "SUC (m:num)", numbers)
+      parts <- partnerOf(pieces, k, u, below)
+      (d, partner, doubled) = parts
+      index <- evenGap(pieces, u, d, doubled)
+      signs <- signSplit(pieces, partner, d, u)
+      sides <- Term.destEq(goal).toRight(NotOfForm("an equation", goal))
+      result <- byRewritingThenRing(pieces, sides._1, sides._2, Vector.empty, Vector(index, signs))
+    } yield result
+
+  /**
+   * The cosine's odd place at `(x, y)`: `s u * s' (m - u) = ((0 - 1) * P (SUC m)) * g (SUC (u + u))`
+   * for `u < SUC m`, the length being `SUC m + SUC m`. The index is [[oddPlace]]'s; the sign the
+   * sine pair lacks is written into the scale rather than found at `0 - x`.
+   */
+  private def cosineOddPlace(pieces: Pieces, u: Term, below: Kernel.Thm, goal: Term): Either[LogicError, Kernel.Thm] = {
+    val rules = pieces.logic.rules
+    val theory = pieces.theory
+    val notation = pieces.notation
+    val m = Term.variable("m", numbers)
+    for {
+      parts <- partnerOf(pieces, m, u, below)
+      (d, partner, doubled) = parts
+      successor <- functionIn(pieces, "SUC (0:num)", numbers)
+      subtract <- operatorIn(pieces, "NUM_SUB (0:num) 0", numbers)
+      add <- operatorIn(pieces, "NUM_ADD (0:num) 0", numbers)
+      times <- operatorIn(pieces, "(1:real) * 1", values)
+      minusOne <- Parser.term(theory, notation, "(0:real) - 1", values)
+      length <- Parser.term(theory, notation, "NUM_ADD (SUC (m:num)) (SUC (m:num))", numbers)
+      dd <- LogicError.lift(Term.app(add, d).flatMap(Term.app(_, d)))
+      uu <- LogicError.lift(Term.app(add, u).flatMap(Term.app(_, u)))
+      oddD <- LogicError.lift(Term.app(successor, dd))
+      oddU <- LogicError.lift(Term.app(successor, uu))
+      apart <- LogicError.lift(Term.app(add, oddD).flatMap(Term.app(_, oddU)))
+
+      successorRules <- Vector(Peano.AddAtSuccessor, Peano.SuccessorPlus)
+        .map(pieces.peano.fact)
+        .foldRight[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+          case (next, rest) => next.flatMap(one => rest.map(one +: _))
+        }
+        .flatMap(Rewrite.Rule.all(pieces.logic, _))
+      lengthOpened <- Rewrite.rewrite(successorRules, length)
+      apartOpened <- Rewrite.rewrite(successorRules, apart)
+      inner <- Conv.apTerm(successor, doubled).flatMap(Conv.apTerm(successor, _))
+      lengthApart <- Conv.trans(lengthOpened, inner).flatMap(theorem => Conv.sym(apartOpened).flatMap(Conv.trans(theorem, _)))
+      takenApart <- pieces.peano.fact(Peano.SumMinus).flatMap(rules.specAll(_, List(oddD, oddU)))
+      index <- Conv.apTerm(subtract, lengthApart).flatMap(Conv.apThm(_, oddU)).flatMap(Conv.trans(_, takenApart))
+
+      powerStep <- pieces.series.fact(Series.PowerAtSuccessor)
+      step <- rules.specAll(powerStep, List(minusOne, m))
+      split <- signSplit(pieces, partner, d, u)
+      byMinusOne <- LogicError.lift(Term.app(times, minusOne))
+      carriedSplit <- Conv.apTerm(byMinusOne, split)
+      signs <- Conv.trans(step, carriedSplit)
+
+      sides <- Term.destEq(goal).toRight(NotOfForm("an equation", goal))
+      result <- byRewritingThenRing(pieces, sides._1, sides._2, Vector.empty, Vector(index, signs))
+    } yield result
+  }
+
+  /**
+   * The sine's even place at `(x, y)`: `c u * s' (m - u) = P m * g (u + u)` for `u < SUC m`, the
+   * length being `SUC (m + m)`, whose gap to `u + u` is `SUC (d + d)`.
+   */
+  private def sineEvenPlace(pieces: Pieces, u: Term, below: Kernel.Thm, goal: Term): Either[LogicError, Kernel.Thm] = {
+    val rules = pieces.logic.rules
+    val m = Term.variable("m", numbers)
+    for {
+      parts <- partnerOf(pieces, m, u, below)
+      (d, partner, doubled) = parts
+      successor <- functionIn(pieces, "SUC (0:num)", numbers)
+      subtract <- operatorIn(pieces, "NUM_SUB (0:num) 0", numbers)
+      add <- operatorIn(pieces, "NUM_ADD (0:num) 0", numbers)
+      dd <- LogicError.lift(Term.app(add, d).flatMap(Term.app(_, d)))
+      uu <- LogicError.lift(Term.app(add, u).flatMap(Term.app(_, u)))
+      oddD <- LogicError.lift(Term.app(successor, dd))
+      inner <- Conv.apTerm(successor, doubled)
+      moved <- pieces.peano.fact(Peano.SuccessorPlus).flatMap(rules.specAll(_, List(dd, uu))).flatMap(Conv.sym)
+      lengthApart <- Conv.trans(inner, moved)
+      takenApart <- pieces.peano.fact(Peano.SumMinus).flatMap(rules.specAll(_, List(oddD, uu)))
+      index <- Conv.apTerm(subtract, lengthApart).flatMap(Conv.apThm(_, uu)).flatMap(Conv.trans(_, takenApart))
+      signs <- signSplit(pieces, partner, d, u)
+      sides <- Term.destEq(goal).toRight(NotOfForm("an equation", goal))
+      result <- byRewritingThenRing(pieces, sides._1, sides._2, Vector.empty, Vector(index, signs))
+    } yield result
+  }
+
+  /**
+   * The sine's odd place at `(x, y)`: `s u * c' (m - u) = P m * g (SUC (u + u))` for `u < SUC m`.
+   * `NUM_SUB_SUC_SUC` takes the step off both, and what is left is the even gap.
+   */
+  private def sineOddPlace(pieces: Pieces, u: Term, below: Kernel.Thm, goal: Term): Either[LogicError, Kernel.Thm] = {
+    val rules = pieces.logic.rules
+    val m = Term.variable("m", numbers)
+    for {
+      parts <- partnerOf(pieces, m, u, below)
+      (d, partner, doubled) = parts
+      add <- operatorIn(pieces, "NUM_ADD (0:num) 0", numbers)
+      mm <- LogicError.lift(Term.app(add, m).flatMap(Term.app(_, m)))
+      uu <- LogicError.lift(Term.app(add, u).flatMap(Term.app(_, u)))
+      stepOff <- pieces.peano.fact(Peano.SubSuccessors).flatMap(rules.specAll(_, List(mm, uu)))
+      gap <- evenGap(pieces, u, d, doubled)
+      index <- Conv.trans(stepOff, gap)
+      signs <- signSplit(pieces, partner, d, u)
+      sides <- Term.destEq(goal).toRight(NotOfForm("an equation", goal))
+      result <- byRewritingThenRing(pieces, sides._1, sides._2, Vector.empty, Vector(index, signs))
+    } yield result
+  }
+
+  /**
+   * `COS_ADD` and `SIN_ADD`: the Cauchy products of the two series at `x` against the two at `y`,
+   * and `EXP_CONVOLUTION` at `(x, y)` read by parity, which is [[pythagoras]]'s argument at a second
+   * point rather than at `0 - x`.
+   *
+   * At an even length `N = K + K` with `K = SUC m`, the convolution's even places are `P K` times
+   * the cosine product's term at `K`, and its odd places are minus `P K` times the sine product's
+   * at `m`; so the cosine's term at `x + y` and the sine product's at `m` add to the cosine
+   * product's at `K`, one index apart as in the square. At an odd length `SUC (m + m)` the even
+   * places are the product of the cosine at `x` and the sine at `y`, the odd places the sine at `x`
+   * and the cosine at `y`, and the sine's term at `x + y` is their sum with no shift.
+   */
+  private def addition(
+    pieces: Pieces,
+    cosineAbsolute: Kernel.Thm,
+    sineAbsolute: Kernel.Thm,
+    cosineValue: Kernel.Thm,
+    sineValue: Kernel.Thm
+  ): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
+    val rules = pieces.logic.rules
+    val theory = pieces.theory
+    val notation = pieces.notation
+    val ring = pieces.series.ring
+    val x = Term.variable("x", values)
+    val y = Term.variable("y", values)
+    val m = Term.variable("m", numbers)
+    val n = Term.variable("n", numbers)
+    val u = Term.variable("u", numbers)
+    val sequence = Type.fun(numbers, values)
+    val names = List("P1", "P2", "P3", "P4").map(Term.variable(_, values))
+    val List(p1, p2, p3, p4) = names: @unchecked
+    val X = "(x:real)"
+    val Y = "(y:real)"
+    val XY = "((x:real) + (y:real))"
+
+    def sums(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text, sequence)
+    def product(a: Term, b: Term, limitA: Term, limitB: Term, pa: Term, pb: Term,
+                absA: Kernel.Thm, absB: Kernel.Thm, convA: Kernel.Thm, convB: Kernel.Thm) =
+      pieces.limit.fact(Limit.Cauchy)
+        .flatMap(rules.specAll(_, List(a, b, limitA, limitB, pa, pb)))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, absA)).flatMap(rules.mp(_, absB)).flatMap(rules.mp(_, convA)).flatMap(rules.mp(_, convB))
+    def termsOf(productFact: Kernel.Thm): Either[LogicError, Term] =
+      sidesOf(productFact.conclusion).map(_._1).flatMap {
+        case App(_, terms) => Right(terms)
+        case other         => Left(NotOfForm("the partial sums of a series", other))
+      }
+    def limitOf(theorem: Kernel.Thm): Either[LogicError, Term] = sidesOf(theorem.conclusion).map(_._2)
+
+    for {
+      cosX <- sums(at(CosineTermsText, X))
+      cosY <- sums(at(CosineTermsText, Y))
+      sinX <- sums(at(SineTermsText, X))
+      sinY <- sums(at(SineTermsText, Y))
+      cosXY <- sums(at(CosineTermsText, XY))
+      sinXY <- sums(at(SineTermsText, XY))
+      sum <- Parser.term(theory, notation, XY, values)
+
+      /* ------------------------------------ the magnitudes' sums at both points, opened */
+      cosMagX <- rules.spec(x, cosineAbsolute)
+      cosMagY <- rules.spec(y, cosineAbsolute)
+      sinMagX <- rules.spec(x, sineAbsolute)
+      sinMagY <- rules.spec(y, sineAbsolute)
+      absCosX <- instanceAt(pieces, cosMagX, p1).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      absCosY <- instanceAt(pieces, cosMagY, p2).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      absSinX <- instanceAt(pieces, sinMagX, p3).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      absSinY <- instanceAt(pieces, sinMagY, p4).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      convCosX <- rules.spec(x, cosineValue)
+      convCosY <- rules.spec(y, cosineValue)
+      convSinX <- rules.spec(x, sineValue)
+      convSinY <- rules.spec(y, sineValue)
+      convCosXY <- rules.spec(sum, cosineValue)
+      convSinXY <- rules.spec(sum, sineValue)
+      cX <- limitOf(convCosX)
+      cY <- limitOf(convCosY)
+      sX <- limitOf(convSinX)
+      sY <- limitOf(convSinY)
+
+      /* ------------------------------------ the four Cauchy products */
+      cc <- product(cosX, cosY, cX, cY, p1, p2, absCosX, absCosY, convCosX, convCosY)
+      ss <- product(sinX, sinY, sX, sY, p3, p4, absSinX, absSinY, convSinX, convSinY)
+      cs <- product(cosX, sinY, cX, sY, p1, p4, absCosX, absSinY, convCosX, convSinY)
+      sc <- product(sinX, cosY, sX, cY, p3, p2, absSinX, absCosY, convSinX, convCosY)
+      ccTerms <- termsOf(cc)
+      ssTerms <- termsOf(ss)
+      csTerms <- termsOf(cs)
+      scTerms <- termsOf(sc)
+
+      /* ------------------------------------ the cosine: one index apart, as in the square */
+      cosineStep <- {
+        for {
+          k <- Parser.term(theory, notation, "SUC (m:num)", numbers)
+          afterK <- Parser.term(theory, notation, "SUC (SUC (m:num))", numbers)
+          length <- Parser.term(theory, notation, "NUM_ADD (SUC (m:num)) (SUC (m:num))", numbers)
+          sign <- Parser.term(theory, notation, "Power ((0:real) - 1) (SUC (m:num))", values)
+          negatedSign <- Parser.term(theory, notation, "((0:real) - 1) * Power ((0:real) - 1) (SUC (m:num))", values)
+          evenIndex <- Parser.term(theory, notation, "NUM_ADD (u:num) (u:num)", numbers)
+          oddIndex <- Parser.term(theory, notation, "SUC (NUM_ADD (u:num) (u:num))", numbers)
+
+          convolution <- convolutionAt(pieces, length)
+          convolutionSum <- leftOf(convolution)
+          g <- summandOf(convolutionSum)
+          evens <- applied(g, evenIndex).flatMap(body => LogicError.lift(Term.abs(u, body)))
+          odds <- applied(g, oddIndex).flatMap(body => LogicError.lift(Term.abs(u, body)))
+          scaledEvens <- pieces.series.fact(Series.Scaled).flatMap(rules.specAll(_, List(sign, evens, afterK))).flatMap(opened)
+          scaledOdds <- pieces.series.fact(Series.Scaled).flatMap(rules.specAll(_, List(negatedSign, odds, k))).flatMap(opened)
+
+          ccAtK <- applied(ccTerms, k)
+          ssAtM <- applied(ssTerms, m)
+          ccPairs <- summandOf(ccAtK)
+          ssPairs <- summandOf(ssAtM)
+          evenTarget <- leftOf(scaledEvens).flatMap(summandOf)
+          oddTarget <- leftOf(scaledOdds).flatMap(summandOf)
+          sameEvens <- congruentBelow(pieces, ccPairs, evenTarget, afterK, cosineEvenPlace(pieces, _, _, _))
+          sameOdds <- congruentBelow(pieces, ssPairs, oddTarget, k, cosineOddPlace(pieces, _, _, _))
+          ccScaled <- Conv.trans(sameEvens, scaledEvens)
+          ssScaled <- Conv.trans(sameOdds, scaledOdds)
+
+          evenStep <- pieces.series.fact(Series.AtSuccessor).flatMap(rules.specAll(_, List(evens, k))).flatMap(opened)
+          halves <- pieces.series.fact(Series.EvenOdd).flatMap(rules.specAll(_, List(g, k))).flatMap(opened)
+          lastStep <- pieces.series.fact(Series.AtSuccessor).flatMap(rules.specAll(_, List(g, length))).flatMap(opened)
+          evenLong <- leftOf(evenStep)
+          evenShort <- rightOf(evenStep).flatMap(sidesOf).map(_._1)
+          lastTerm <- rightOf(evenStep).flatMap(sidesOf).map(_._2)
+          halfSum <- leftOf(halves)
+          oddSum <- rightOf(halves).flatMap(sidesOf).map(_._2)
+          wholeSum <- leftOf(lastStep)
+          value <- rightOf(convolution)
+          parts <- pieces.linarith
+            .prove("!a:real. !b:real. !c:real. !d:real. !e:real. !f:real. !E:real. " +
+              "a = b + c ==> d = b + e ==> f = d + c ==> f = E ==> E = a + e")
+            .flatMap(rules.specAll(_, List(evenLong, evenShort, lastTerm, halfSum, oddSum, wholeSum, value)))
+            .flatMap(rules.mp(_, evenStep)).flatMap(rules.mp(_, halves)).flatMap(rules.mp(_, lastStep))
+            .flatMap(rules.mp(_, convolution))
+
+          cosXYAtK <- applied(cosXY, k)
+          plus <- operatorIn(pieces, "(1:real) + 1", values)
+          left <- LogicError.lift(Term.app(plus, cosXYAtK).flatMap(Term.app(_, ssAtM)))
+          step <- byRewritingThenRing(pieces, left, ccAtK, Vector(ssScaled, parts), Vector(ccScaled))
+          result <- rules.gen(m, step)
+        } yield result
+      }
+      cosineAtZero <- cosineProductAtZero(pieces, ccTerms)
+      cosXYAtZero <- cosineProductAtZero(pieces, cosXY)
+
+      /* ------------------------------------ the partial sums, one index along */
+      cosineSums <- {
+        for {
+          shiftXY <- pieces.series.fact(Series.Shift).flatMap(rules.specAll(_, List(cosXY, n))).flatMap(opened)
+          shiftCC <- pieces.series.fact(Series.Shift).flatMap(rules.specAll(_, List(ccTerms, n))).flatMap(opened)
+          shiftedXY <- leftOf(shiftXY).flatMap(summandOf)
+          shiftedCC <- leftOf(shiftCC).flatMap(summandOf)
+          additive <- pieces.series.fact(Series.Additive).flatMap(rules.specAll(_, List(shiftedXY, ssTerms, n))).flatMap(opened)
+          summed <- leftOf(additive).flatMap(summandOf)
+          congruent <- pieces.series.fact(Series.Congruence).flatMap(rules.specAll(_, List(summed, shiftedCC)))
+            .flatMap(opened).flatMap(rules.mp(_, cosineStep)).flatMap(rules.spec(n, _))
+          shiftedXYSum <- leftOf(shiftXY)
+          longXY <- rightOf(shiftXY).flatMap(sidesOf).map(_._1)
+          firstXY <- rightOf(shiftXY).flatMap(sidesOf).map(_._2)
+          shiftedCCSum <- leftOf(shiftCC)
+          longCC <- rightOf(shiftCC).flatMap(sidesOf).map(_._1)
+          firstCC <- rightOf(shiftCC).flatMap(sidesOf).map(_._2)
+          summedSum <- leftOf(additive)
+          ssSum <- rightOf(additive).flatMap(sidesOf).map(_._2)
+          result <- pieces.linarith
+            .prove("!a:real. !A:real. !a0:real. !c:real. !C:real. !c0:real. !t:real. !S:real. " +
+              "a = A - a0 ==> c = C - c0 ==> t = a + S ==> t = c ==> a0 = 1 ==> c0 = 1 ==> A + S = C")
+            .flatMap(rules.specAll(_, List(shiftedXYSum, longXY, firstXY, shiftedCCSum, longCC, firstCC, summedSum, ssSum)))
+            .flatMap(rules.mp(_, shiftXY)).flatMap(rules.mp(_, shiftCC)).flatMap(rules.mp(_, additive))
+            .flatMap(rules.mp(_, congruent)).flatMap(rules.mp(_, cosXYAtZero)).flatMap(rules.mp(_, cosineAtZero))
+            .flatMap(rules.gen(n, _))
+        } yield result
+      }
+
+      /* ------------------------------------ the sine: no shift */
+      sineStep <- {
+        for {
+          k <- Parser.term(theory, notation, "SUC (m:num)", numbers)
+          oddLength <- Parser.term(theory, notation, "SUC (NUM_ADD (m:num) (m:num))", numbers)
+          doubleK <- Parser.term(theory, notation, "NUM_ADD (SUC (m:num)) (SUC (m:num))", numbers)
+          sign <- Parser.term(theory, notation, "Power ((0:real) - 1) (m:num)", values)
+          evenIndex <- Parser.term(theory, notation, "NUM_ADD (u:num) (u:num)", numbers)
+          oddIndex <- Parser.term(theory, notation, "SUC (NUM_ADD (u:num) (u:num))", numbers)
+
+          convolution <- convolutionAt(pieces, oddLength)
+          convolutionSum <- leftOf(convolution)
+          g <- summandOf(convolutionSum)
+          sumOp <- convolutionSum match {
+            case App(op, _) => Right(op)
+            case other      => Left(NotOfForm("a partial sum", other))
+          }
+          evens <- applied(g, evenIndex).flatMap(body => LogicError.lift(Term.abs(u, body)))
+          odds <- applied(g, oddIndex).flatMap(body => LogicError.lift(Term.abs(u, body)))
+          scaledEvens <- pieces.series.fact(Series.Scaled).flatMap(rules.specAll(_, List(sign, evens, k))).flatMap(opened)
+          scaledOdds <- pieces.series.fact(Series.Scaled).flatMap(rules.specAll(_, List(sign, odds, k))).flatMap(opened)
+
+          csAtM <- applied(csTerms, m)
+          scAtM <- applied(scTerms, m)
+          csPairs <- summandOf(csAtM)
+          scPairs <- summandOf(scAtM)
+          evenTarget <- leftOf(scaledEvens).flatMap(summandOf)
+          oddTarget <- leftOf(scaledOdds).flatMap(summandOf)
+          sameEvens <- congruentBelow(pieces, csPairs, evenTarget, k, sineEvenPlace(pieces, _, _, _))
+          sameOdds <- congruentBelow(pieces, scPairs, oddTarget, k, sineOddPlace(pieces, _, _, _))
+          csScaled <- Conv.trans(sameEvens, scaledEvens)
+          scScaled <- Conv.trans(sameOdds, scaledOdds)
+
+          successorRules <- Vector(Peano.AddAtSuccessor, Peano.SuccessorPlus)
+            .map(pieces.peano.fact)
+            .foldRight[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+              case (next, rest) => next.flatMap(one => rest.map(one +: _))
+            }
+            .flatMap(Rewrite.Rule.all(pieces.logic, _))
+          lengthOpened <- Rewrite.rewrite(successorRules, doubleK)
+          sameLength <- Conv.apTerm(sumOp, lengthOpened)
+          halves <- pieces.series.fact(Series.EvenOdd).flatMap(rules.specAll(_, List(g, k))).flatMap(opened)
+          halfSum <- leftOf(halves)
+          evenSum <- rightOf(halves).flatMap(sidesOf).map(_._1)
+          oddSum <- rightOf(halves).flatMap(sidesOf).map(_._2)
+          wholeSum <- leftOf(convolution)
+          value <- rightOf(convolution)
+          parts <- pieces.linarith
+            .prove("!d:real. !a:real. !e:real. !f:real. !E:real. d = f ==> d = a + e ==> f = E ==> E = a + e")
+            .flatMap(rules.specAll(_, List(halfSum, evenSum, oddSum, wholeSum, value)))
+            .flatMap(rules.mp(_, sameLength)).flatMap(rules.mp(_, halves)).flatMap(rules.mp(_, convolution))
+
+          sinXYAtM <- applied(sinXY, m)
+          plus <- operatorIn(pieces, "(1:real) + 1", values)
+          right <- LogicError.lift(Term.app(plus, csAtM).flatMap(Term.app(_, scAtM)))
+          step <- byRewritingThenRing(pieces, sinXYAtM, right, Vector(parts), Vector(csScaled, scScaled))
+          result <- rules.gen(m, step)
+        } yield result
+      }
+      sineSums <- {
+        for {
+          additive <- pieces.series.fact(Series.Additive).flatMap(rules.specAll(_, List(csTerms, scTerms, n))).flatMap(opened)
+          summed <- leftOf(additive).flatMap(summandOf)
+          congruent <- pieces.series.fact(Series.Congruence).flatMap(rules.specAll(_, List(sinXY, summed)))
+            .flatMap(opened).flatMap(rules.mp(_, sineStep)).flatMap(rules.spec(n, _))
+          result <- Conv.trans(congruent, additive).flatMap(rules.gen(n, _))
+        } yield result
+      }
+
+      /* ------------------------------------ the limits */
+      zero <- Parser.term(theory, notation, "0:num", numbers)
+      cosineOfSum <- {
+        for {
+          ccLimit <- limitOf(cc)
+          ssLimit <- limitOf(ss)
+          ccPartials <- sidesOf(cc.conclusion).map(_._1)
+          ssPartials <- sidesOf(ss.conclusion).map(_._1)
+          shiftedCC <- pieces.limit.fact(Limit.Shifted).flatMap(rules.specAll(_, List(ccPartials, ccLimit))).flatMap(opened)
+            .flatMap(rules.mp(_, cc))
+          negatedSS <- pieces.limit.fact(Limit.Negated).flatMap(rules.specAll(_, List(ssPartials, ssLimit))).flatMap(opened)
+            .flatMap(rules.mp(_, ss))
+          shiftedSeq <- sidesOf(shiftedCC.conclusion).map(_._1)
+          negatedSeq <- sidesOf(negatedSS.conclusion).map(_._1)
+          negatedLimit <- limitOf(negatedSS)
+          together <- pieces.limit.fact(Limit.Added)
+            .flatMap(rules.specAll(_, List(shiftedSeq, negatedSeq, ccLimit, negatedLimit))).flatMap(opened)
+            .flatMap(rules.mp(_, shiftedCC)).flatMap(rules.mp(_, negatedSS))
+          togetherSeq <- sidesOf(together.conclusion).map(_._1)
+          total <- limitOf(together)
+          xyPartials <- sidesOf(convCosXY.conclusion).map(_._1)
+          xyLimit <- limitOf(convCosXY)
+          target <- pieces.limit.fact(Limit.Shifted).flatMap(rules.specAll(_, List(xyPartials, xyLimit))).flatMap(opened)
+            .flatMap(rules.mp(_, convCosXY))
+          targetSeq <- sidesOf(target.conclusion).map(_._1)
+          eventually <- pieces.limit.fact(Limit.Eventually)
+            .flatMap(rules.specAll(_, List(togetherSeq, targetSeq, total, zero))).flatMap(opened)
+          premise <- pieces.logic.destImp(eventually.conclusion).toRight(NotOfForm("an implication", eventually.conclusion))
+          stripped <- Logic.stripForall(premise._1)
+          index <- stripped._1.headOption.toRight(NotOfForm("a claim about every index", premise._1))
+          inner <- pieces.logic.destImp(stripped._2).toRight(NotOfForm("an implication", stripped._2))
+          atIndex <- rules.spec(index, cosineSums)
+          pointwise <- {
+            // `C + -S = A` at the index, from the partial sums' identity there.
+            for {
+              aS <- leftOf(atIndex)
+              parts <- sidesOf(aS)
+              c0 <- rightOf(atIndex)
+              lemma <- pieces.linarith.prove("!A:real. !S:real. !C:real. A + S = C ==> C + -S = A")
+              instance <- rules.specAll(lemma, List(parts._1, parts._2, c0)).flatMap(rules.mp(_, atIndex))
+              _ <- if (instance.conclusion == inner._2) Right(()) else Left(NotEqualTo(inner._2, instance.conclusion))
+            } yield instance
+          }
+          everywhere <- rules.disch(inner._1, pointwise).flatMap(rules.gen(index, _))
+          towards <- rules.mp(eventually, everywhere).flatMap(rules.mp(_, together))
+          cosXYValue <- limitOf(convCosXY)
+          same <- pieces.limit.fact(Limit.Unique).flatMap(rules.specAll(_, List(targetSeq, total, cosXYValue)))
+            .flatMap(rules.mp(_, towards)).flatMap(rules.mp(_, target))
+          claim <- Parser.term(theory, notation, "cos (x:real) * cos (y:real) - sin x * sin y", values)
+          reordered <- LogicError.lift(Term.eq(total, claim)).flatMap(ring.prove)
+          result <- Conv.sym(same).flatMap(Conv.trans(_, reordered))
+        } yield result
+      }
+      sineOfSum <- {
+        for {
+          csLimit <- limitOf(cs)
+          scLimit <- limitOf(sc)
+          csPartials <- sidesOf(cs.conclusion).map(_._1)
+          scPartials <- sidesOf(sc.conclusion).map(_._1)
+          together <- pieces.limit.fact(Limit.Added)
+            .flatMap(rules.specAll(_, List(csPartials, scPartials, csLimit, scLimit))).flatMap(opened)
+            .flatMap(rules.mp(_, cs)).flatMap(rules.mp(_, sc))
+          togetherSeq <- sidesOf(together.conclusion).map(_._1)
+          total <- limitOf(together)
+          xyPartials <- sidesOf(convSinXY.conclusion).map(_._1)
+          eventually <- pieces.limit.fact(Limit.Eventually)
+            .flatMap(rules.specAll(_, List(togetherSeq, xyPartials, total, zero))).flatMap(opened)
+          premise <- pieces.logic.destImp(eventually.conclusion).toRight(NotOfForm("an implication", eventually.conclusion))
+          stripped <- Logic.stripForall(premise._1)
+          index <- stripped._1.headOption.toRight(NotOfForm("a claim about every index", premise._1))
+          inner <- pieces.logic.destImp(stripped._2).toRight(NotOfForm("an implication", stripped._2))
+          pointwise <- rules.spec(index, sineSums).flatMap(Conv.sym)
+          _ <- if (pointwise.conclusion == inner._2) Right(()) else Left(NotEqualTo(inner._2, pointwise.conclusion))
+          everywhere <- rules.disch(inner._1, pointwise).flatMap(rules.gen(index, _))
+          towards <- rules.mp(eventually, everywhere).flatMap(rules.mp(_, together))
+          sinXYValue <- limitOf(convSinXY)
+          same <- pieces.limit.fact(Limit.Unique).flatMap(rules.specAll(_, List(xyPartials, total, sinXYValue)))
+            .flatMap(rules.mp(_, towards)).flatMap(rules.mp(_, convSinXY))
+          claim <- Parser.term(theory, notation, "sin (x:real) * cos (y:real) + cos x * sin y", values)
+          reordered <- LogicError.lift(Term.eq(total, claim)).flatMap(ring.prove)
+          result <- Conv.sym(same).flatMap(Conv.trans(_, reordered))
+        } yield result
+      }
+
+      /* ------------------------------------ the four existentials closed, inside out */
+      closed <- List(cosineOfSum, sineOfSum).foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) { (acc, theorem) =>
+        for {
+          done <- acc
+          byP4 <- rules.existsElim(sinMagY, p4, theorem)
+          byP3 <- rules.existsElim(sinMagX, p3, byP4)
+          byP2 <- rules.existsElim(cosMagY, p2, byP3)
+          byP1 <- rules.existsElim(cosMagX, p1, byP2)
+          general <- rules.genAll(byP1, List(x, y))
+        } yield done :+ general
+      }
+    } yield (closed(0), closed(1))
+  }
 }

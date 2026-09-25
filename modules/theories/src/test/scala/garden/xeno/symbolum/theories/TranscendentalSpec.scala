@@ -446,6 +446,30 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     axioms(Transcendental.SineAbsolute) shouldBe axioms(Transcendental.AbsolutelyConvergent)
   }
 
+  it should "prove the addition formulas at what the square costs, from the same convolution at a second point" in {
+    // Measured on 2026-09-25: both cost what `SIN_COS_SQUARED` costs. And what the second point
+    // removes is measured rather than said: the square carried a partner's power at `0 - x` back to
+    // `x` with `POWER_NEG_DOUBLE`, and neither formula rests on it.
+    def axioms(name: String): Set[Term] = Derivation.axiomsOf(force(transcendental.fact(name))).toSet
+    val route = Set(
+      force(chain.limit.fact(Limit.Cauchy)).conclusion,
+      force(transcendental.fact(Transcendental.Convolution)).conclusion,
+      force(transcendental.fact(Transcendental.CosineAbsolute)).conclusion,
+      force(transcendental.fact(Transcendental.SineAbsolute)).conclusion,
+      force(chain.series.fact(Series.EvenOdd)).conclusion)
+    val negatedDouble = force(chain.series.fact(Series.NegatedDouble)).conclusion
+    for (name <- List(Transcendental.CosineAddition, Transcendental.SineAddition)) withClue(name) {
+      axioms(name) shouldBe axioms(Transcendental.Pythagoras)
+      val theorem = force(transcendental.fact(name))
+      theorem.hypotheses shouldBe empty
+      Derivation.restingOn(theorem, route) shouldBe route
+      Derivation.restingOn(theorem, Set(negatedDouble)) shouldBe empty
+    }
+    // The cosine's is one index apart, as the square is, and the sine's is not.
+    val shifted = force(chain.limit.fact(Limit.Shifted)).conclusion
+    Derivation.restingOn(force(transcendental.fact(Transcendental.CosineAddition)), Set(shifted)) shouldBe Set(shifted)
+  }
+
   it should "detach at zero into the two values the series have there" in {
     // Not a second proof of anything: the identity at zero, with `SIN_ZERO` and `COS_ZERO`
     // substituted, is `0 * 0 + 1 * 1 = 1`. What it checks is that the constants the identity is

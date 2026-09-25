@@ -706,11 +706,16 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // none shared. `CLAUDE.md`'s figures move by **two** and **one**: the first binds a predicate
     // and a word, two types; the second a predicate and two words, which share one. Tip plus this
     // branch's delta.
-    // 743 and 740 with the existence of the integral of a continuous function, the same day,
+    // 748 and 745 with the sine's and the cosine's derivatives, the same day, derived before the
+    // run: seven facts under seven names, none shared, two in `Transcendental`, three in
+    // `Logarithm` and two in `Derivative`. `CLAUDE.md`'s figures move by **two** and **two**: the
+    // two addition formulas bind `x` and `y`, and the other five bind one leading quantifier each.
+    // Tip plus this branch's delta.
+    // 750 and 747 with the existence of the integral of a continuous function, the same day,
     // derived before the run: two facts in `Integral` under two names. `CLAUDE.md`'s figures move by
     // **two** and **two**: each binds `f`, `a` and `b`, the two ends real. Tip plus this branch's delta.
-    library.entries.size shouldBe 743
-    library.names.distinct.size shouldBe 740
+    library.entries.size shouldBe 750
+    library.names.distinct.size shouldBe 747
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
