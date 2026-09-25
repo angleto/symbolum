@@ -80,7 +80,7 @@ is `Derivation.size`, what a report walks. "Replayed" is the number of step reco
 The replayed column is the old one plus the citations, which is the control: the graph did not
 change, only where a report stops reading it.
 
-**Over the whole library, where the report is paid for.** Every published fact of
+**Over the whole library.** Every published fact of
 `Chain.standard`, 716 on the day, read by the three walks `Cost` makes, against the same three
 walked through every citation, which is what they were before. In one JVM, interleaved over three
 rounds after a warm-up that also filled every citation's summary: **12.4 seconds against 47.8**, a
@@ -95,6 +95,23 @@ developments, whose inferences come out of `Linarith` and `Ring` run inside each
 boundary at a published fact makes a proof's own work smaller. This was a probe and is not kept:
 the node counts it could assert are asserted at the first quotient by `IntegerSpec`, and a wall
 clock is asserted nowhere in this repository, deliberately.
+
+**Inside `ReachSpec`, which is where a report is actually paid for, the saving is small.** This
+record called the library measurement "where the report is paid" until the verification of the
+card said it was not, and card 2a48d6d0 measured it there on 2026-09-25: the 23 statements of
+miniF2F the prover settles, re-proved and read the same two ways. Nodes: **199912 read against
+251374 replayed**, with 119 citations among them, a factor of 1.26 where the library's was 2.8,
+because a proof the tactics produce is almost all its own work. Time, in one JVM over three
+alternated rounds: the three accounting walks **872 ms against 1082**, and `Reach.of` **3177 ms**
+on both sides, so a report's walks as a whole are **4049 ms against 4259**, about five per cent.
+`ReachSpec` asserts the node half; the time is printed.
+
+**The walk that dominates is `Reach.of`, and the boundary does not reach it.** It is
+`Library.restingOn`, which the decision above leaves walking through every citation because the
+facts it asks about are any named collection. On these statements it costs three times the three
+accounting walks together. Bounding it would take a summary per citation of the named facts under
+it, which is a different decision about memory and about what `Reach` means, and it is card `0c00cac9`
+rather than a sentence here.
 
 **What moved elsewhere in the repository, read off the suite rather than predicted.** The figures
 that count a report are smaller wherever a proof uses a fact another development published: the
