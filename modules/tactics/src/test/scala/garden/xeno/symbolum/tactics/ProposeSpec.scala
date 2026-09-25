@@ -1970,7 +1970,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // three of `NUM_PRIME_DIVIDES_CHOOSE` and one of `NUM_PRIME_NOT_DIVIDES_FACT` keep `NUM_LT`,
     // `NUM_FRESHMAN`'s keeps `SUC` and `NUM_DIVIDES_SUM`'s `NUM_SUM`; `NUM_FERMAT`'s and the other
     // of the factorial's name nothing on it. None is refuted at a point, so `after` stays.
-    aboutNumbers.size shouldBe 215
+    // 216 with `EXP_TAIL_BOUND`'s weakening, 2026-09-25, which keeps a `Sum` of `Power`s at `SUC`
+    // indices and so is on this list; the other ten residues of the sine's and the cosine's
+    // derivatives name `sin`, `cos` and `abs` and nothing on it. Found by the run and not predicted
+    // before it: the probe that placed the buckets was read for the buckets and not for this list.
+    aboutNumbers.size shouldBe 216
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

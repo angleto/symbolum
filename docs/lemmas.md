@@ -156,6 +156,7 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_CHAIN         !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. derivative y z v ==> derivative x (y z) u ==> derivative (\w:real. x (y w)) z (u * v)
   DERIVATIVE_CONST         !x:real. !y:real. derivative (\z:real. x) y 0
   DERIVATIVE_CONTINUOUS    !x:real -> real. !y:real. !z:real. derivative x y z ==> continuous x y
+  DERIVATIVE_COS           !x:real. derivative cos x (0 - sin x)
   DERIVATIVE_EXP           !x:real. derivative exp x (exp x)
   DERIVATIVE_ID            !x:real. derivative (\y:real. y) x 1
   DERIVATIVE_INTERIOR_MAX  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x w <= x u) ==> derivative x u v ==> v = 0
@@ -165,6 +166,7 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_NONNEG_MONOTONE !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 <= v)) ==> (!u:real. !v:real. y <= u /\ u <= v /\ v <= z ==> x u <= x v)
   DERIVATIVE_POS_LT_MONOTONE !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 < v)) ==> (!u:real. !v:real. y <= u /\ u < v /\ v <= z ==> x u < x v)
   DERIVATIVE_PRODUCT       !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. derivative x z u ==> derivative y z v ==> derivative (\w:real. x w * y w) z (u * y z + x z * v)
+  DERIVATIVE_SIN           !x:real. derivative sin x (cos x)
   DERIVATIVE_UNIQUE        !x:real -> real. !y:real. !z:real. !u:real. derivative x y z ==> derivative x y u ==> z = u
   DERIVATIVE_ZERO_CONSTANT !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> derivative x u 0) ==> (!u:real. y <= u /\ u <= z ==> x u = x y)
   MEAN_VALUE               !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))
@@ -423,6 +425,7 @@ they have least appetite for working out how it is produced.
 
 ## Logarithm
 
+  COS_NEAR_ONE             !x:real. abs x <= 1 / 2 ==> abs (cos x - 1) <= x * x
   EXP_ABOVE_LINE           !x:real. 0 < x ==> 1 + x <= exp x
   EXP_CONTINUOUS           !x:real. continuous exp x
   EXP_INJECTIVE            !x:real. !y:real. exp x = exp y ==> x = y
@@ -433,9 +436,11 @@ they have least appetite for working out how it is produced.
   EXP_ONTO                 !x:real. 0 < x ==> (?y:real. exp y = x)
   EXP_POSITIVE             !x:real. 0 < exp x
   EXP_SMALL_ABOVE          !x:real. 0 < x ==> x <= 1 / 2 ==> exp x <= 1 + 2 * x
+  EXP_TAIL_BOUND           !x:real. abs x <= 1 / 2 ==> (!y:num. Sum (\z:num. abs (Power x (SUC (SUC 0) + z) / real_of_num (NUM_FACT (SUC (SUC 0) + z)))) y <= x * x)
   LN_EXP                   !x:real. ln (exp x) = x
   LN_MUL                   !x:real. !y:real. 0 < x ==> 0 < y ==> ln (x * y) = ln x + ln y
   LN_ONE                   ln 1 = 0
+  SIN_NEAR_LINE            !x:real. abs x <= 1 / 2 ==> abs (sin x - x) <= x * x
 
 ## Magnitude
 
@@ -868,6 +873,7 @@ they have least appetite for working out how it is produced.
   COSH_SQUARED             !x:real. cosh x * cosh x - sinh x * sinh x = 1
   COSH_ZERO                cosh 0 = 1
   COS_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (z + z) / real_of_num (NUM_FACT (z + z)))))) y
+  COS_ADD                  !x:real. !y:real. cos (x + y) = cos x * cos y - sin x * sin y
   COS_CONVERGES            !x:real. converges (Sum (\y:num. Power (0 - 1) y * (Power x (y + y) / real_of_num (NUM_FACT (y + y))))) (cos x)
   COS_ZERO                 cos 0 = 1
   EXP_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power x z / real_of_num (NUM_FACT z)))) y
@@ -882,6 +888,7 @@ they have least appetite for working out how it is produced.
   MUL_INV_COMBINE          !x:real. !y:real. !z:real. !u:real. !v:real. !w:real. !x1:real. !y1:real. !z1:real. y * x1 = 1 ==> z * y1 = 1 ==> u * z1 = 1 ==> x * (y * z) = u ==> v * x1 * (w * y1) = x * (v * w) * z1
   SINH_ZERO                sinh 0 = 0
   SIN_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (SUC (z + z)) / real_of_num (NUM_FACT (SUC (z + z))))))) y
+  SIN_ADD                  !x:real. !y:real. sin (x + y) = sin x * cos y + cos x * sin y
   SIN_CONVERGES            !x:real. converges (Sum (\y:num. Power (0 - 1) y * (Power x (SUC (y + y)) / real_of_num (NUM_FACT (SUC (y + y)))))) (sin x)
   SIN_COS_SQUARED          !x:real. sin x * sin x + cos x * cos x = 1
   SIN_ZERO                 sin 0 = 0
