@@ -18,11 +18,10 @@ import garden.xeno.symbolum.logic.*
  *
  * == And what it deliberately does not ask ==
  *
- * The operations exist since 2026-09-25 and their statements are compared below with every other
- * fact's; what is not here is the rest of an ordered field (associativity, the units, the inverse,
- * the order), because it is not in `Fraction` yet. Until that day this paragraph said there was no
- * arithmetic because nothing decided identities over `int`, and `CommutativeRing` is what changed
- * that.
+ * The operations exist since 2026-09-25, and the same day the rest of a commutative ring: the two
+ * units, both associativities, the additive inverse and the distributive law, each compared below
+ * with the text it is published as. What is not here is what makes it an ordered field, the
+ * inverse of a non-zero rational and the order, because it is not in `Fraction` yet.
  */
 class FractionSpec extends AnyFlatSpec with Matchers {
 
@@ -157,13 +156,39 @@ class FractionSpec extends AnyFlatSpec with Matchers {
       "~(RAT_OF_PAIR (PAIR INT_ZERO 0) = RAT_OF_PAIR (PAIR INT_ONE 0))"
   }
 
-  it should "declare `rat`, the quotient's own constants and the three operations, and nothing else" in {
-    // The operations since 2026-09-25, when the ring of `int` closed their obligations; a fourth
-    // constant arriving here would be a definition nobody listed, which is what this reads for.
+  it should "declare `rat`, the quotient's own constants, the three operations and the two units, and nothing else" in {
+    // The operations and the units since 2026-09-25, when the ring of `int` closed their
+    // obligations; a constant arriving here beyond these would be a definition nobody listed,
+    // which is what this reads for.
     val before = chain.integers.theory.constants.keySet
     (fractions.theory.constants.keySet -- before) shouldBe
       Set(Fraction.SameName, Fraction.Abstraction, Fraction.Representation, Fraction.Projection,
-        Fraction.Names.representative, Fraction.Addition, Fraction.Negation, Fraction.Multiplication)
+        Fraction.Names.representative, Fraction.Addition, Fraction.Negation, Fraction.Multiplication,
+        Fraction.Zero, Fraction.One)
+  }
+
+  "The units" should "be different rationals, stated on the published constants" in {
+    // The pair-level refusal above is what this repeats at the constants a consumer writes. It is
+    // asserted as a theorem with nothing assumed rather than only as a statement, because a law
+    // like `x + 0 = x` holds of a one-point type and this is the one fact here that does not.
+    val distinct = fact(Fraction.UnitsDistinct)
+    distinct.hypotheses shouldBe empty
+    fractions.show(distinct.conclusion) shouldBe "~(RAT_ZERO = RAT_ONE)"
+  }
+
+  "The ring laws" should "rest on the ring of `int`, which is what decides each pair-level identity" in {
+    // Each law is two rewritings to a pair and one relation between the pairs decided by
+    // `Integer.ring`. A law whose derivation did not reach an integer law would have been decided
+    // some other way, and the argument in `Fraction.Lifting.laws` would be describing a route
+    // nothing took.
+    val integerLaws = Set(Integer.MulCommutative, Integer.AddCommutative, Integer.MulAssociative)
+      .map(name => force(chain.integers.fact(name)).conclusion)
+    Vector(Fraction.AddAssociative, Fraction.MulAssociative, Fraction.Distributive, Fraction.MulAtOne)
+      .foreach { name =>
+        withClue(s"$name: ") {
+          Derivation.restingOn(fact(name), integerLaws) should not be empty
+        }
+      }
   }
 
   /* ------------------------------------------------------------------ what it costs */
