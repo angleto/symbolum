@@ -200,4 +200,80 @@ class DatatypeSpec extends AnyFlatSpec with Matchers {
   "A type with no constructor" should "be refused" in {
     build(Specification("none", Nil)).left.map(_.message).swap.getOrElse("") should include("at least one constructor")
   }
+
+  /* ------------------------------------------------------------------ no fixed slot anywhere */
+
+  // The two shapes the delivery named as not attacked (card 9b02e0ba, 2026-09-25): no constructor
+  // with a fixed argument, so the label's payload has no slot to carry and every label is the
+  // constructor's index paired with the filler; and a type of nullary constructors only, which is
+  // an enumeration and has no recursion at all. A builder that read a slot where there is none, or
+  // that let two labels without payload coincide, would give a one-point type here, and the
+  // distinctness detached below is what a one-point type cannot satisfy.
+
+  private lazy val unary = force(
+    build(Specification("unat", List(Constructor("UZ", Nil), Constructor("US", List(Argument.Recursive)))))
+  )
+  private lazy val colour = force(
+    build(Specification("colour", List(Constructor("RED", Nil), Constructor("GREEN", Nil), Constructor("BLUE", Nil))))
+  )
+
+  "A type with no fixed argument in any constructor" should "have Peano's statements and tell its constructors apart" in {
+    force(unary.fact(Datatype.induction("unat"))).conclusion shouldBe statement(
+      unary,
+      "!P:unat -> bool. P UZ /\\ (!t:unat. P t ==> P (US t)) ==> (!t:unat. P t)"
+    )
+    force(unary.fact(Datatype.injective("US"))).conclusion shouldBe statement(
+      unary,
+      "!t:unat. !t':unat. US t = US t' ==> t = t'"
+    )
+    force(unary.fact(Datatype.recursion("unat"))).conclusion shouldBe statement(
+      unary,
+      "!e:'b. !f:unat -> 'b -> 'b. ?h:unat -> 'b. h UZ = e /\\ (!t:unat. h (US t) = f t (h t))"
+    )
+    val separated = force(
+      for {
+        refusal <- unary.fact(Datatype.distinct("UZ", "US"))
+        zero <- unary.term("UZ")
+        result <- unary.logic.rules.specAll(refusal, List(zero))
+      } yield result
+    )
+    separated.hypotheses shouldBe empty
+    separated.conclusion shouldBe statement(unary, "~(UZ = US UZ)")
+    List(Datatype.recursion("unat"), Datatype.injective("US"), Datatype.distinct("UZ", "US")).foreach { name =>
+      withClue(s"$name: ")(Derivation.axiomsOf(force(unary.fact(name))) shouldBe foundation)
+    }
+    Derivation.axiomsOf(force(unary.fact(Datatype.induction("unat")))) shouldBe empty
+  }
+
+  it should "define a function by recursion whose equations come back as written" in {
+    val (extended, _, equations) = force(
+      for {
+        zero <- unary.term("ZERO")
+        step <- unary.term("\\t:unat. \\n:num. SUC n")
+        defined <- Datatype.defineRecursive(unary, ground, unary.theory, "UNAT_VALUE", Nil, List(zero, step))
+      } yield defined
+    )
+    equations.map(_.hypotheses) shouldBe List(Nil, Nil)
+    equations.map(_.conclusion) shouldBe List(
+      force(Parser.proposition(extended, unary.notation, "UNAT_VALUE UZ = ZERO")),
+      force(Parser.proposition(extended, unary.notation, "!t:unat. UNAT_VALUE (US t) = SUC (UNAT_VALUE t)"))
+    )
+  }
+
+  "A type of nullary constructors only" should "be an enumeration with every pair of constructors apart" in {
+    colour.facts.keySet shouldBe Set(
+      "COLOUR_INDUCT", "COLOUR_CASES", "COLOUR_RECURSION", "RED_NOT_GREEN", "RED_NOT_BLUE", "GREEN_NOT_BLUE"
+    )
+    force(colour.fact(Datatype.cases("colour"))).conclusion shouldBe statement(
+      colour,
+      "!t:colour. t = RED \\/ t = GREEN \\/ t = BLUE"
+    )
+    List(("RED", "GREEN"), ("RED", "BLUE"), ("GREEN", "BLUE")).foreach { case (left, right) =>
+      val fact = force(colour.fact(Datatype.distinct(left, right)))
+      withClue(s"$left, $right: ") {
+        fact.hypotheses shouldBe empty
+        fact.conclusion shouldBe statement(colour, s"~($left = $right)")
+      }
+    }
+  }
 }
