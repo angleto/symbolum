@@ -385,7 +385,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // continuity on `[a, b]` and `0 < e`. Tip plus this branch's delta.
     // 583 with the gauge integral's eighteen, the same day. Tip plus this branch's delta.
     // 586 with the three estimates near zero, one each, the same day.
-    proposals.size shouldBe 586
+    // 600 with Euler's theorem, the same day, derived before the run: fourteen antecedents, three on
+    // `NUM_PROD_PERMUTE`, two each on `NUM_PROD_POINT`, `NUM_INVERSE`, `NUM_GCD_MOD`,
+    // `NUM_UNIT_COPRIME` and `NUM_EULER`, one on `NUM_PROD_CONG_MOD`. Tip plus this branch's delta.
+    proposals.size shouldBe 600
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1303,7 +1306,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // about `cos`, `sin` or a sum of the exponential's terms, which no procedure has a value for,
     // and eight substitutions of the order, the sum and the product in the two addition formulas
     // and the two estimates. None reached `unreadable`.
-    open shouldBe 495
+    // 507 with Euler's theorem, the same day, measured by a probe of `Propose.audit` before this
+    // line was edited: twelve of its fourteen residues, each an implication or a congruence the
+    // propositional address takes and cannot settle; the other two are `unreadable` below. Tip
+    // plus this branch's delta.
+    open shouldBe 507
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1665,7 +1672,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // procedure reads.
     // 132 with `FINE_SUM_PIECE`'s one weakening, from the same probe as `open`'s 484: dropping its
     // only antecedent leaves a bare `fine_sum`, which no procedure reads.
-    unreadable shouldBe 132
+    // 134 with the same probe: `NUM_PROD_CONG_MOD`'s one residue, a congruence with its hypothesis
+    // dropped, and one of `NUM_PROD_POINT`'s, whose conclusion is an equation between naturals, which
+    // no procedure reads.
+    unreadable shouldBe 134
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1974,7 +1984,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // indices and so is on this list; the other ten residues of the sine's and the cosine's
     // derivatives name `sin`, `cos` and `abs` and nothing on it. Found by the run and not predicted
     // before it: the probe that placed the buckets was read for the buckets and not for this list.
-    aboutNumbers.size shouldBe 216
+    // 229 with thirteen of Euler's fourteen residues, the same day, by the same probe on this list;
+    // none is refuted at a point, so `after` stays. Tip plus this branch's delta.
+    aboutNumbers.size shouldBe 229
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

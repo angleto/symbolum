@@ -426,6 +426,20 @@ object Modular {
    */
   val PrimeName: String = "NUM_PRIME"
 
+  /**
+   * `NUM_TOTIENT n` is `NUM_SUM (\k. COND (NUM_GCD k n = SUC 0) (SUC 0) 0) n`: how many `k < n` are
+   * coprime to `n`.
+   *
+   * Euler's function as a count rather than as a product over primes, because the count is what the
+   * theorem that wants it reads: `Euler` multiplies a product over `[0, n)` by `a` once per coprime
+   * index, and what comes out is `a` to this power. At `n = 1` the one index is `0`, and
+   * `NUM_GCD 0 1` is one, so the count is one, which is the usual value.
+   *
+   * Here and not in `Primes`, which extends nothing: this is where `NUM_GCD` is, and a constant
+   * defined in a development is unreachable from every link below it.
+   */
+  val TotientName: String = "NUM_TOTIENT"
+
   /** `|- !a b k. b = NUM_MUL a k ==> NUM_DIVIDES a b` */
   val DividesIntro: String = "NUM_DIVIDES_INTRO"
 
@@ -1042,6 +1056,10 @@ object Modular {
    * refusal names a position in the middle of a term and says nothing about annotations.
    */
 
+  /** The body of [[TotientName]], a count written out. */
+  private val TotientBody: String =
+    "\\n:num. NUM_SUM (\\k:num. COND (NUM_GCD k n = SUC ZERO) (SUC ZERO) ZERO) n"
+
   /** The body of [[PrimeName]], which is a predicate written out rather than a choice. */
   private val PrimeBody: String =
     "\\p:num. NUM_LT (SUC ZERO) p /\\ (!d:num. NUM_DIVIDES d p ==> d = SUC ZERO \\/ d = p)"
@@ -1165,7 +1183,11 @@ object Modular {
 
       primeBody <- Parser.term(modTheory, notation, PrimeBody)
       withPrime <- LogicError.lift(Kernel.defineConstant(modTheory, PrimeName, primeBody))
-      (theory, primeDefinition) = withPrime
+      (primeTheory, primeDefinition) = withPrime
+
+      totientBody <- Parser.term(primeTheory, notation, TotientBody)
+      withTotient <- LogicError.lift(Kernel.defineConstant(primeTheory, TotientName, totientBody))
+      (theory, totientDefinition) = withTotient
 
       vocabulary <- Vocabulary.over(peano, theory, dividesDefinition, congruenceDefinition)
 
@@ -1253,7 +1275,8 @@ object Modular {
         GcdName -> gcdDefinition,
         DivName -> divDefinition,
         ModName -> modDefinition,
-        PrimeName -> primeDefinition
+        PrimeName -> primeDefinition,
+        TotientName -> totientDefinition
       ),
       Map(
         DividesIntro -> introduction,

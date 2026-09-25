@@ -186,6 +186,7 @@ object Spellings {
       // else, which is the failure this table can produce on its own and no test here can catch.
       .operator("NUM_CONG", 3, "#2 \\equiv #3 \\pmod{#1}", Relation)
       .delimited("NUM_PRIME", 1, "\\mathrm{prime}(#1)")
+      .delimited("NUM_TOTIENT", 1, "\\varphi(#1)")
       .delimited("NUM_FLOOR", 1, "\\lfloor #1 \\rfloor")
       .delimited("NUM_CEIL", 1, "\\lceil #1 \\rceil")
       /* ------------------------------------------------------------ the pair */

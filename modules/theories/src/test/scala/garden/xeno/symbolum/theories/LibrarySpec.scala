@@ -711,8 +711,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `Logarithm` and two in `Derivative`. `CLAUDE.md`'s figures move by **two** and **two**: the
     // two addition formulas bind `x` and `y`, and the other five bind one leading quantifier each.
     // Tip plus this branch's delta.
-    library.entries.size shouldBe 748
-    library.names.distinct.size shouldBe 745
+    // 757 and 754 with Euler's theorem, the same day, derived before the run: nine facts in `Primes`
+    // under nine names, none shared; `NUM_TOTIENT` is a definition of `Modular`, which the library
+    // does not collect. `CLAUDE.md`'s figures move by **nine** and **nine**. Tip plus this branch's
+    // delta.
+    library.entries.size shouldBe 757
+    library.names.distinct.size shouldBe 754
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

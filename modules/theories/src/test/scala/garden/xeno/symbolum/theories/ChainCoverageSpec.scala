@@ -180,6 +180,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // because it is an induction toolkit over `NUM_SUM` that nothing else in `Primes` needs.
     "Freshman" -> NotADevelopment,
 
+    // Not a development, for `Freshman`'s reason: the permutation of a finite product and Euler's
+    // theorem, whose nine facts `Primes` publishes under names it declares. The one constant the
+    // statement needs, `NUM_TOTIENT`, is `Modular`'s.
+    "Euler" -> NotADevelopment,
+
     // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
     // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
     // fact of its own, and `Prove` reaches it through the chain it is constructed from.
