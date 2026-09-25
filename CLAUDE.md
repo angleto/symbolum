@@ -152,13 +152,19 @@ session named would be a different tool with the same name.
   worktree that has never been built or after `clean`. There is no check for this, and `build.sbt`
   says why there cannot easily be one.
 
-  **Never pass `-J-Xmx` to it, and the reason is measured rather than cautious.** Nothing in this
-  build forks the tests: no `fork`, no `javaOptions`, no `Xmx` anywhere in `build.sbt` or
-  `project/`, no `.jvmopts` and no `.sbtopts`. So the suite runs inside the launcher JVM and sbt's
-  own default applies, which is `-Xms1024m -Xmx1024m -Xss4M`. **Every floor in `build.sbt` was
-  measured at that 1g heap.**
+  **Never pass `-J-Xmx` to it, and the reason is measured rather than cautious.** Since
+  2026-09-25 each module's tests run in a JVM of their own, one module at a time, at `-Xmx1024m
+  -Xss4M`, which is what `Test / javaOptions` in `build.sbt` says and what the launcher's own
+  default is; before that day nothing forked and the whole suite shared the launcher's 1g, which
+  is the heap **every floor in `build.sbt` was measured at**. So `-J-Xmx` now reaches only the
+  launcher, which compiles and no longer runs a test. Why the tests left it is in the comment on
+  `Test / fork`: `tools/sbt test` died of `OutOfMemoryError` in every aggregated run on 2026-09-24
+  and 25, because sbt 1.10.10 keeps a finished module's test state for the whole session and
+  because the aggregated run holds several modules' chains at once. The price is a second JVM:
+  2924 MB of physical footprint at the peak of one `tools/sbt test`, launcher and fork together,
+  measured with `footprint`, since `ps` leaves out the pages this machine compresses.
 
-  Granting more makes the run likelier to die, which is the opposite of what it looks like. Measured
+  Before that change, granting more made the run likelier to die, which is the opposite of what it looked like. Measured
   on 2026-09-16 against `4b96fe1`, same command, same tree, quiet machine, the two runs minutes
   apart: at the default the gate **landed in 10m15s with a peak resident set of 1922 MB**; at
   `-J-Xmx2g` it **died after about 8.5 minutes having written no report**, with a peak of 2380 MB.
