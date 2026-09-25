@@ -39,9 +39,9 @@ import garden.xeno.symbolum.logic.*
  * generalised rather than each obligation derived by hand (Mycelium card `fa8737ad`), and
  * `CommutativeRing` is that generalisation: `Integer.ring` decides the algebra of `int`, and
  * `CommutativeRing.consequence` closes an obligation that follows from its premises by
- * substitution, given the coefficient each premise is scaled by. [[Denominator]] is the one lemma
- * the obligations share: the index a product of two denominators is stored at, read back as the
- * product.
+ * substitution, given the coefficient each premise is scaled by. [[Fraction.Denominator]] is the
+ * one lemma the obligations share: the index a product of two denominators is stored at, read back
+ * as the product.
  *
  * Not here yet: associativity, the units, the inverse of a non-zero rational, the distributive law
  * and the order, which are what make `rat` an ordered field and what the reals as cuts will ask of
@@ -574,7 +574,7 @@ object Fraction {
    *
    * Every obligation is one shape. Unfold the relation at the two results and read the pairs'
    * projections off; turn the stored denominator `SUC (d * e + d + e)` into the product
-   * `SUC d * SUC e` with [[Denominator]]; and what is left is an equation of `int` that follows from
+   * `SUC d * SUC e` with [[Fraction.Denominator]]; and what is left is an equation of `int` that follows from
    * the premises by substitution, which `CommutativeRing.consequence` decides given the
    * coefficient each premise is scaled by.
    */
@@ -697,7 +697,7 @@ object Fraction {
   private object Lifting {
 
     /**
-     * Over the theory that holds the relation. [[Denominator]] is proved first: over `num`,
+     * Over the theory that holds the relation. [[Fraction.Denominator]] is proved first: over `num`,
      * `SUC n = n + SUC 0` for each successor puts both sides in `Semiring`'s fragment, and
      * `INT_OF_NUM_MUL` carries the product into `int`.
      */
