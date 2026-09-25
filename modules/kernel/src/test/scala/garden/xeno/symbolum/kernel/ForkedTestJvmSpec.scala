@@ -27,6 +27,11 @@ import org.scalatest.matchers.should.Matchers
  * fail, because what they guard is this build's configuration and not every way of running a
  * suite.
  *
+ * Seen failing on 2026-09-25 against the defect it is for: `tools/sbt "set kernel / Test / fork :=
+ * false" "kernel/testOnly ...ForkedTestJvmSpec"` failed the first test, `sun.java.command` naming
+ * the launcher's `sbt-launch.jar`, and passed the other two, the launcher's own heap being 1g too.
+ * The same spec passed all three in a whole `tools/sbt test` with the fork in place.
+ *
  * WHAT IT DOES NOT COVER. It runs in `kernel`, so a project that does not take `commonSettings` could
  * run its tests in the launcher and nothing here would see it; and it says nothing about the forks
  * running one at a time, which `Tags.ForkedTestGroup` in `build.sbt` limits and which a test inside
