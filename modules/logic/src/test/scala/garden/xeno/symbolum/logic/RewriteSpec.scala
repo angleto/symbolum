@@ -986,6 +986,16 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "the eight published statements are compared against `Inclusion.Statements` by " +
         "`InclusionSpec`, which is the same last line of defence `Integer.scala` has above"),
     // 2026-09-20, with the rationals' carrier.
+    "Freshman.scala" ->
+      ("four calls, all `Rewrite.rewrite` and all inside `byRewriting`, which is private and serves " +
+        "only the derivations of this file's own fixed lemmas: each side of an equation of naturals " +
+        "is rewritten with ground equations the caller hands over, then with `SUC 0 = 1`, and " +
+        "SEMIRING is asked about what is left. A walk that ran out leaves a side half rewritten, " +
+        "and then either SEMIRING still proves the two sides equal, in which case the chain of " +
+        "`Conv.trans` is checked against the goal by `landsOn` and refused by `NotOfForm` when it " +
+        "does not land, or SEMIRING refuses. Either refusal ends `Freshman.derive`, which " +
+        "`Primes.construct` needs for its facts, so what an exhausted limit costs is the chain " +
+        "failing to build, never a verdict about a claim reaching a caller"),
     "Fraction.scala" ->
       ("two, both `Rewrite.inTheorem` and both the same call: the relation unfolded at two pairs, " +
         "with `FST (PAIR a b)` reduced away where the pair is built. The rule set is the two " +
