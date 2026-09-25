@@ -337,10 +337,12 @@ final class Value private (val digits: Digits, val modular: Modular, val linarit
    *
    * The card that asked for this left a decision here and it is taken: **the characterisation and
    * Bezout, not Euclid's algorithm**. When this was decided Euclid was a definition by well-founded
-   * recursion this system did not have; since 2026-09-25 it has one, `EuclidAlgorithm.NUM_EUCLID_GCD` beside the
-   * chain, and what that route still lacks is the theorem that its value is `NUM_GCD`, so the
-   * decision stands: the characterisation asks for nothing new and costs more per value, which is a
-   * trade that only matters to a caller computing many.
+   * recursion this system did not have. Since 2026-09-25 it has one, `EuclidAlgorithm` beside the
+   * chain, and `NUM_EUCLID_GCD_IS_GCD` says its value is `NUM_GCD` off both zero, so the route this
+   * decision passed over exists now. The decision has not been revisited: taking that route would
+   * have this table, which is built over the chain, build a development beside it for one row,
+   * and the characterisation costs more per value, a trade that only matters to a caller computing
+   * many. `EuclidAlgorithmSpec` checks the two routes agree at `4 6`.
    *
    * Two divisibilities meet at `NUM_DIVIDES_ANTISYM`. That the answer divides the gcd is
    * `NUM_GCD_DIVIDES`, which is the greatest-common-divisor property: it divides both, so it
