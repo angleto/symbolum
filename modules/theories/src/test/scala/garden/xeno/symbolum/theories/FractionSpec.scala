@@ -18,11 +18,11 @@ import garden.xeno.symbolum.logic.*
  *
  * == And what it deliberately does not ask ==
  *
- * There is no arithmetic on `rat` yet, so there is nothing here about addition, multiplication or
- * the order. What decides when there will be is measured and is in `Fraction`'s own opening: the
- * carrier is pairs of **integers**, `Semiring` decides identities on `num` and `Ring` on the
- * reals, and nothing decides them on `int`, so each lifted operation's respectfulness is a hand
- * derivation until something does. That is a fact about the tools and not about the rationals.
+ * The operations exist since 2026-09-25 and their statements are compared below with every other
+ * fact's; what is not here is the rest of an ordered field (associativity, the units, the inverse,
+ * the order), because it is not in `Fraction` yet. Until that day this paragraph said there was no
+ * arithmetic because nothing decided identities over `int`, and `CommutativeRing` is what changed
+ * that.
  */
 class FractionSpec extends AnyFlatSpec with Matchers {
 
@@ -33,7 +33,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
 
   private val chain = Chain.standard
   private val fractions = force(
-    Fraction.construct(chain.classical, chain.integers, chain.product)
+    Fraction.construct(chain.classical, chain.integers, chain.product, chain.peano)
   )
   private val rules = fractions.logic.rules
 
@@ -157,11 +157,13 @@ class FractionSpec extends AnyFlatSpec with Matchers {
       "~(RAT_OF_PAIR (PAIR INT_ZERO 0) = RAT_OF_PAIR (PAIR INT_ONE 0))"
   }
 
-  it should "declare `rat` and the quotient's own constants, and nothing else" in {
+  it should "declare `rat`, the quotient's own constants and the three operations, and nothing else" in {
+    // The operations since 2026-09-25, when the ring of `int` closed their obligations; a fourth
+    // constant arriving here would be a definition nobody listed, which is what this reads for.
     val before = chain.integers.theory.constants.keySet
     (fractions.theory.constants.keySet -- before) shouldBe
       Set(Fraction.SameName, Fraction.Abstraction, Fraction.Representation, Fraction.Projection,
-        Fraction.Names.representative)
+        Fraction.Names.representative, Fraction.Addition, Fraction.Negation, Fraction.Multiplication)
   }
 
   /* ------------------------------------------------------------------ what it costs */

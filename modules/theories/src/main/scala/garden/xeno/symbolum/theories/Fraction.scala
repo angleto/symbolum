@@ -29,14 +29,23 @@ import garden.xeno.symbolum.logic.*
  *
  * == What is here and what is not ==
  *
- * The relation, its three equivalence facts, and the type. **No arithmetic**: the operations are a
- * piece of their own and what decides their cost is measured rather than guessed. `Integer` closes
- * every one of its obligations with `Semiring`, which decides identities on `num` and which the
- * pair representation of an integer puts within reach; the carrier here is pairs of **integers**,
- * and there is no such procedure over `int`. `Semiring` is written against `Peano` and `Ring`
- * against the reals' `Arithmetic`, so the respectfulness of a lifted product here is a hand
- * derivation over `INT_MUL_ASSOC` and `INT_MUL_SYM` until something decides that algebra. The card
- * that owns this work carries the measurement.
+ * The relation, its three equivalence facts, the type, and since 2026-09-25 **the operations**:
+ * `RAT_ADD`, `RAT_NEG` and `RAT_MUL`, lifted from `(a, d) + (b, e) = (a * (e + 1) + b * (d + 1),
+ * d * e + d + e)`, `-(a, d) = (-a, d)` and `(a, d) * (b, e) = (a * b, d * e + d + e)`, with the
+ * commutativity of the sum and of the product on classes. Until that day there was none, and the
+ * reason is worth the paragraph: `Integer` closes every one of its obligations with `Semiring`,
+ * which the pair representation of an integer puts within reach, and the carrier here is pairs of
+ * **integers**, over which nothing decided an identity. Angelo decided that the procedure be
+ * generalised rather than each obligation derived by hand (Mycelium card `fa8737ad`), and
+ * `CommutativeRing` is that generalisation: `Integer.ring` decides the algebra of `int`, and
+ * `CommutativeRing.consequence` closes an obligation that follows from its premises by
+ * substitution, given the coefficient each premise is scaled by. [[Fraction.Denominator]] is the
+ * one lemma the obligations share: the index a product of two denominators is stored at, read back
+ * as the product.
+ *
+ * Not here yet: associativity, the units, the inverse of a non-zero rational, the distributive law
+ * and the order, which are what make `rat` an ordered field and what the reals as cuts will ask of
+ * it. Each is a pair-level identity carried to the classes the way the two commutativities are.
  *
  * == The one thing transitivity needs, and where it comes from ==
  *
@@ -121,6 +130,43 @@ object Fraction {
    */
   val SwapFactors: String = "INT_MUL_SWAP"
 
+  /** `RAT_ADD`, `RAT_NEG` and `RAT_MUL`: the operations, lifted from the pairs. */
+  val Addition: String = "RAT_ADD"
+  val Negation: String = "RAT_NEG"
+  val Multiplication: String = "RAT_MUL"
+
+  /**
+   * `|- !d e. INT_OF_NUM (SUC (d * e + d + e)) = INT_MUL (INT_OF_NUM (SUC d)) (INT_OF_NUM (SUC e))`
+   *
+   * The index a product of two denominators is stored at, read back as the product. It is what
+   * `docs/adr/0036` means by "a successor peeled": `SUC d * SUC e` is `SUC (d * e + d + e)`, so the
+   * sum and the product of two rationals stay in the carrier without a subtraction, and every
+   * obligation about them meets its denominators through this equation.
+   */
+  val Denominator: String = "RAT_DENOMINATOR"
+
+  /** The three lifts, as `Quotient` returns them: an operation on classes of pairs is its pair form. */
+  val AddPairs: String = "RAT_ADD_PAIRS"
+  val NegPair: String = "RAT_NEG_PAIR"
+  val MulPairs: String = "RAT_MUL_PAIRS"
+
+  /** `|- !x y. RAT_ADD x y = RAT_ADD y x` and the same for the product: the first laws on classes. */
+  val AddCommutative: String = "RAT_ADD_SYM"
+  val MulCommutative: String = "RAT_MUL_SYM"
+
+  /** `(a, d) + (b, e) = (a * (e + 1) + b * (d + 1), d * e + d + e)`, over the pair's own projections. */
+  private val AddBody: String =
+    "\\p:prod(int,num). \\q:prod(int,num). " +
+      "PAIR (INT_ADD (INT_MUL (FST p) (INT_OF_NUM (SUC (SND q)))) (INT_MUL (FST q) (INT_OF_NUM (SUC (SND p))))) " +
+      "(SND p * SND q + SND p + SND q)"
+
+  /** `(a, d) * (b, e) = (a * b, d * e + d + e)`. */
+  private val MulBody: String =
+    "\\p:prod(int,num). \\q:prod(int,num). PAIR (INT_MUL (FST p) (FST q)) (SND p * SND q + SND p + SND q)"
+
+  /** `-(a, d) = (-a, d)`. */
+  private val NegBody: String = "\\p:prod(int,num). PAIR (INT_NEG (FST p)) (SND p)"
+
   val Names: Quotient.Names =
     Quotient.Names(
       typeName = TypeName,
@@ -140,7 +186,19 @@ object Fraction {
     SameSymmetric -> "!p:prod(int,num). !q:prod(int,num). RAT_SAME p q ==> RAT_SAME q p",
     SameTransitive ->
       ("!p:prod(int,num). !q:prod(int,num). !r:prod(int,num). " +
-        "RAT_SAME p q ==> RAT_SAME q r ==> RAT_SAME p r")
+        "RAT_SAME p q ==> RAT_SAME q r ==> RAT_SAME p r"),
+    Denominator ->
+      "!d:num. !e:num. INT_OF_NUM (SUC (d * e + d + e)) = INT_MUL (INT_OF_NUM (SUC d)) (INT_OF_NUM (SUC e))",
+    AddPairs ->
+      ("!p:prod(int,num). !q:prod(int,num). RAT_ADD (RAT_OF_PAIR p) (RAT_OF_PAIR q) = RAT_OF_PAIR " +
+        "(PAIR (INT_ADD (INT_MUL (FST p) (INT_OF_NUM (SUC (SND q)))) (INT_MUL (FST q) (INT_OF_NUM (SUC (SND p))))) " +
+        "(SND p * SND q + SND p + SND q))"),
+    NegPair -> "!p:prod(int,num). RAT_NEG (RAT_OF_PAIR p) = RAT_OF_PAIR (PAIR (INT_NEG (FST p)) (SND p))",
+    MulPairs ->
+      ("!p:prod(int,num). !q:prod(int,num). RAT_MUL (RAT_OF_PAIR p) (RAT_OF_PAIR q) = RAT_OF_PAIR " +
+        "(PAIR (INT_MUL (FST p) (FST q)) (SND p * SND q + SND p + SND q))"),
+    AddCommutative -> "!x:rat. !y:rat. RAT_ADD x y = RAT_ADD y x",
+    MulCommutative -> "!x:rat. !y:rat. RAT_MUL x y = RAT_MUL y x"
   )
 
   private val numbers: Type = TyApp(Natural.TypeName, Nil)
@@ -159,8 +217,8 @@ object Fraction {
   /* ------------------------------------------------------------------ the construction */
 
   /** Over the development that holds the integers, which is where the carrier's arithmetic is. */
-  def construct(classical: Classical, integer: Integer, product: Product): Either[LogicError, Fraction] =
-    construct(classical, integer, product, integer.theory, integer.notation)
+  def construct(classical: Classical, integer: Integer, product: Product, peano: Peano): Either[LogicError, Fraction] =
+    construct(classical, integer, product, peano, integer.theory, integer.notation)
 
   /**
    * The same, extending a theory that already holds something else, which is the chain's entry
@@ -170,6 +228,7 @@ object Fraction {
     classical: Classical,
     integer: Integer,
     product: Product,
+    peano: Peano,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Fraction] =
@@ -201,15 +260,51 @@ object Fraction {
         Quotient.Equivalence(relation, reflexive, symmetric, transitive)
       )
 
+      arithmetic <- Lifting.over(logic, withSame, notation, integer, peano, sameDefinition, projections)
+      addOperation <- Parser.term(withSame, notation, AddBody)
+      negOperation <- Parser.term(withSame, notation, NegBody)
+      mulOperation <- Parser.term(withSame, notation, MulBody)
+
+      // With `a * D1 = a1 * D` and `b * E1 = b1 * E` as the premises, the sum's cross-multiplication
+      // follows with the coefficients `E * E1` and `D * D1`, and the product's with `b * E1` and
+      // `a1 * D`: those are the whole of the arithmetic, and a wrong one is refused by the ring.
+      // (Indices rather than primes, because the language census reads a capital and an apostrophe
+      // as a truncated accent.)
+      addRespects <- arithmetic.binaryRespects(
+        addOperation,
+        "INT_MUL (INT_OF_NUM (SUC (SND (y:prod(int,num))))) (INT_OF_NUM (SUC (SND (v:prod(int,num)))))",
+        "INT_MUL (INT_OF_NUM (SUC (SND (x:prod(int,num))))) (INT_OF_NUM (SUC (SND (u:prod(int,num)))))"
+      )
+      withAddition <- quotient.liftBinary(Addition, addOperation, addRespects)
+      (afterAddition, addPairs) = withAddition
+      negRespects <- arithmetic.unaryRespects(negOperation, "INT_NEG INT_ONE")
+      withNegation <- afterAddition.liftUnary(Negation, negOperation, negRespects)
+      (afterNegation, negPair) = withNegation
+      mulRespects <- arithmetic.binaryRespects(
+        mulOperation,
+        "INT_MUL (FST (y:prod(int,num))) (INT_OF_NUM (SUC (SND (v:prod(int,num)))))",
+        "INT_MUL (FST (u:prod(int,num))) (INT_OF_NUM (SUC (SND (x:prod(int,num)))))"
+      )
+      withMultiplication <- afterNegation.liftBinary(Multiplication, mulOperation, mulRespects)
+      (complete, mulPairs) = withMultiplication
+      addSymmetric <- arithmetic.commutative(complete, Addition, addOperation, addPairs)
+      mulSymmetric <- arithmetic.commutative(complete, Multiplication, mulOperation, mulPairs)
+
       checked <- Vector(
         (SwapFactors, swap),
         (SameReflexive, reflexive),
         (SameSymmetric, symmetric),
-        (SameTransitive, transitive)
+        (SameTransitive, transitive),
+        (Denominator, arithmetic.denominator),
+        (AddPairs, addPairs),
+        (NegPair, negPair),
+        (MulPairs, mulPairs),
+        (AddCommutative, addSymmetric),
+        (MulCommutative, mulSymmetric)
       ).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
         case ((name, theorem), rest) =>
           for {
-            statement <- Parser.proposition(quotient.theory, notation, statementOf(name))
+            statement <- Parser.proposition(complete.theory, notation, statementOf(name))
             _ <-
               if (theorem.conclusion == statement) Right(())
               else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
@@ -222,10 +317,10 @@ object Fraction {
     } yield new Fraction(
       classical,
       integer,
-      quotient.theory,
+      complete.theory,
       notation,
-      quotient,
-      Map(SameName -> sameDefinition) ++ quotient.definitions,
+      complete,
+      Map(SameName -> sameDefinition) ++ complete.definitions,
       checked.toMap
     )
 
@@ -469,4 +564,192 @@ object Fraction {
       case App(_, App(App(_, left), _)) => left
       case _ => theorem.conclusion
     }
+
+  /* ------------------------------------------------------------------ the arithmetic */
+
+  /**
+   * The obligations the three lifts owe, closed by the ring of `int`: which is what `Integer.ring`
+   * was built for, and the decision of 2026-09-25 (Mycelium card `fa8737ad`) that the procedure be
+   * generalised rather than each obligation derived by hand.
+   *
+   * Every obligation is one shape. Unfold the relation at the two results and read the pairs'
+   * projections off; turn the stored denominator `SUC (d * e + d + e)` into the product
+   * `SUC d * SUC e` with [[Fraction.Denominator]]; and what is left is an equation of `int` that follows from
+   * the premises by substitution, which `CommutativeRing.consequence` decides given the
+   * coefficient each premise is scaled by.
+   */
+  private final case class Lifting(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    definition: Kernel.Thm,
+    projections: Vector[Rewrite.Rule],
+    denominators: Vector[Rewrite.Rule],
+    denominator: Kernel.Thm,
+    ring: CommutativeRing
+  ) {
+    private val rules = logic.rules
+    private val x: FVar = Term.variable("x", Pairs)
+    private val y: FVar = Term.variable("y", Pairs)
+    private val u: FVar = Term.variable("u", Pairs)
+    private val v: FVar = Term.variable("v", Pairs)
+
+    private def read(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text)
+
+    private def reduced(operation: Term, arguments: Term*): Either[LogicError, Term] =
+      for {
+        applied <- LogicError.lift(Term.appAll(operation, arguments.toList))
+        equation <- Conv.betaNormalise(applied)
+        sides <- Term.destEq(equation.conclusion).toRight(NotOfForm("an equation", equation.conclusion))
+      } yield sides._2
+
+    /** The premise `RAT_SAME s t`, assumed, and the equation it unfolds to. */
+    private def premise(left: Term, right: Term): Either[LogicError, (Term, Kernel.Thm)] =
+      for {
+        unfolded <- unfoldedAt(definition, projections, left, right)
+        statement <- leftOf(unfolded)
+        assumed <- LogicError.lift(Kernel.assume(statement))
+        equation <- LogicError.lift(Kernel.eqMp(unfolded, assumed))
+      } yield (statement, equation)
+
+    /** `|- RAT_SAME s t` from the premises, scaled by the coefficients, with denominators read back. */
+    private def related(left: Term, right: Term, premises: List[(Kernel.Thm, Term)]): Either[LogicError, Kernel.Thm] =
+      for {
+        target <- unfoldedAt(definition, projections, left, right)
+        sides <- sidesOf(target)
+        leftRead <- Rewrite.rewrite(denominators, sides._1)
+        rightRead <- Rewrite.rewrite(denominators, sides._2)
+        leftForm <- rightOfTheorem(leftRead)
+        rightForm <- rightOfTheorem(rightRead)
+        core <- ring.consequence(leftForm, rightForm, premises)
+        equation <- Conv.sym(rightRead).flatMap(back => Conv.trans(leftRead, core).flatMap(Conv.trans(_, back)))
+        folded <- fold(target, equation)
+      } yield folded
+
+    /** `|- !x y u v. RAT_SAME x u ==> RAT_SAME y v ==> RAT_SAME (f x y) (f u v)`. */
+    def binaryRespects(operation: Term, first: String, second: String): Either[LogicError, Kernel.Thm] =
+      for {
+        firstPremise <- premise(x, u)
+        secondPremise <- premise(y, v)
+        firstCoefficient <- read(first)
+        secondCoefficient <- read(second)
+        left <- reduced(operation, x, y)
+        right <- reduced(operation, u, v)
+        folded <- related(left, right, List(firstPremise._2 -> firstCoefficient, secondPremise._2 -> secondCoefficient))
+        discharged <- rules.disch(secondPremise._1, folded).flatMap(rules.disch(firstPremise._1, _))
+        result <- rules.genAll(discharged, List(x, y, u, v))
+      } yield result
+
+    /** `|- !x y. RAT_SAME x y ==> RAT_SAME (f x) (f y)`. */
+    def unaryRespects(operation: Term, coefficient: String): Either[LogicError, Kernel.Thm] =
+      for {
+        only <- premise(x, y)
+        scale <- read(coefficient)
+        left <- reduced(operation, x)
+        right <- reduced(operation, y)
+        folded <- related(left, right, List(only._2 -> scale))
+        discharged <- rules.disch(only._1, folded)
+        result <- rules.genAll(discharged, List(x, y))
+      } yield result
+
+    /**
+     * `|- !p q. g p q = g q p` for a lifted operation `g`, from the pair form being symmetric up to
+     * the relation: every class is a projection, and two projections are equal exactly where their
+     * pairs are related.
+     */
+    def commutative(quotient: Quotient, name: String, operation: Term, pairs: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+      val wide = quotient.logic.rules
+      val p = Term.variable("p", Classes)
+      val q = Term.variable("q", Classes)
+      for {
+        lifted <- LogicError.lift(quotient.theory.constant(name, Type.fun(Classes, Type.fun(Classes, Classes))))
+        onto <- quotient.fact(Quotient.ProjectionOnto)
+        equal <- quotient.fact(Quotient.ProjectionEqual)
+        atP <- wide.spec(p, onto)
+        atQ <- wide.spec(q, onto)
+        pIs <- quotient.logic.destExistsPredicate(atP.conclusion).toRight(NotOfForm("an existential", atP.conclusion))
+          .flatMap(pred => LogicError.lift(Term.app(pred, x))).flatMap(Conv.betaRoot).flatMap(rightOfTheorem)
+        qIs <- quotient.logic.destExistsPredicate(atQ.conclusion).toRight(NotOfForm("an existential", atQ.conclusion))
+          .flatMap(pred => LogicError.lift(Term.app(pred, y))).flatMap(Conv.betaRoot).flatMap(rightOfTheorem)
+        hp <- LogicError.lift(Kernel.assume(pIs))
+        hq <- LogicError.lift(Kernel.assume(qIs))
+        forwards <- wide.specAll(pairs, List(x, y))
+        backwards <- wide.specAll(pairs, List(y, x))
+        left <- reduced(operation, x, y)
+        right <- reduced(operation, y, x)
+        sameResults <- related(left, right, Nil)
+        projectionsEqual <- wide.specAll(equal, List(left, right))
+          .flatMap(eqn => Conv.sym(eqn))
+          .flatMap(eqn => LogicError.lift(Kernel.eqMp(eqn, sameResults)))
+        onClasses <- Conv.apTerm(lifted, hp).flatMap(partial => LogicError.lift(Kernel.mkComb(partial, hq)))
+        swappedClasses <- Conv.apTerm(lifted, hq).flatMap(partial => LogicError.lift(Kernel.mkComb(partial, hp)))
+        chain <- Conv.trans(onClasses, forwards)
+          .flatMap(Conv.trans(_, projectionsEqual))
+          .flatMap(step => Conv.sym(backwards).flatMap(Conv.trans(step, _)))
+          .flatMap(step => Conv.sym(swappedClasses).flatMap(Conv.trans(step, _)))
+        openedQ <- wide.existsElim(atQ, y, chain)
+        openedP <- wide.existsElim(atP, x, openedQ)
+        result <- wide.genAll(openedP, List(p, q))
+      } yield result
+    }
+  }
+
+  private object Lifting {
+
+    /**
+     * Over the theory that holds the relation. [[Fraction.Denominator]] is proved first: over `num`,
+     * `SUC n = n + SUC 0` for each successor puts both sides in `Semiring`'s fragment, and
+     * `INT_OF_NUM_MUL` carries the product into `int`.
+     */
+    def over(
+      logic: Logic,
+      theory: Theory,
+      notation: Notation,
+      integer: Integer,
+      peano: Peano,
+      definition: Kernel.Thm,
+      projections: Vector[Rewrite.Rule]
+    ): Either[LogicError, Lifting] = {
+      val rules = logic.rules
+      val d = Term.variable("d", numbers)
+      val e = Term.variable("e", numbers)
+      for {
+        ring <- integer.ring
+        semiring <- Semiring.construct(peano)
+        successor <- LogicError.lift(theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers)))
+        times <- LogicError.lift(theory.constant(Peano.Multiplication, Type.fun(numbers, Type.fun(numbers, numbers))))
+        ofNatural <- LogicError.lift(theory.constant(Integer.OfNatural, Type.fun(numbers, integers)))
+        zero <- Parser.term(theory, notation, "0", numbers)
+        addSuccessor <- peano.fact(Peano.AddAtSuccessor)
+        addZero <- peano.fact(Peano.AddAtZero)
+        // `SUC n = n + SUC 0`, from `n + SUC 0 = SUC (n + 0)` and `n + 0 = n`
+        asSum = (n: Term) =>
+          for {
+            stepped <- rules.specAll(addSuccessor, List(n, zero))
+            inner <- rules.spec(n, addZero).flatMap(Conv.apTerm(successor, _))
+            joined <- Conv.trans(stepped, inner)
+            result <- Conv.sym(joined)
+          } yield result
+        stored <- Parser.term(theory, notation, "d:num * e:num + d + e", numbers)
+        atStored <- asSum(stored)
+        atD <- asSum(d)
+        atE <- asSum(e)
+        factors <- Conv.apTerm(times, atD).flatMap(partial => LogicError.lift(Kernel.mkComb(partial, atE)))
+        storedSum <- rightOfTheorem(atStored)
+        factorsSum <- rightOfTheorem(factors)
+        core <- semiring.prove(storedSum, factorsSum)
+        onNum <- Conv.sym(factors).flatMap(back => Conv.trans(atStored, core).flatMap(Conv.trans(_, back)))
+        embedded <- Conv.apTerm(ofNatural, onNum)
+        successorD <- LogicError.lift(Term.app(successor, d))
+        successorE <- LogicError.lift(Term.app(successor, e))
+        product <- integer.fact(Integer.OfNaturalProduct).flatMap(rules.specAll(_, List(successorD, successorE)))
+        joined <- Conv.trans(embedded, product)
+        denominator <- rules.genAll(joined, List(d, e))
+        denominators <- Rewrite.Rule.all(logic, Vector(denominator))
+      } yield Lifting(logic, theory, notation, definition, projections, denominators, denominator, ring)
+    }
+  }
+
+  private def rightOfTheorem(theorem: Kernel.Thm): Either[LogicError, Term] =
+    Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))
 }

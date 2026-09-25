@@ -51,8 +51,9 @@ import garden.xeno.symbolum.logic.*
  * and `A + (B + C)` have the **same** total size, and what separates them is the size of the two
  * function parts one level down.
  *
- * So what is actually new is a table of rules and an order, and eleven of the fourteen rules were
- * already proved in `Peano`.
+ * So what was new was a table of rules and an order, and eleven of the fourteen rules were already
+ * proved in `Peano`. Since 2026-09-25 both are `CommutativeRing`'s, of which this is the `num`
+ * instance, and the three rules `Peano` did not hold are derived there from its laws.
  *
  * == The fragment, stated so a caller knows when to expect a refusal ==
  *
@@ -98,52 +99,20 @@ object Semiring {
   /**
    * The order the sorting rules use: more nodes is bigger, and ties go to the structure.
    *
-   * Why not `Arithmetic.ringOrder`, which is the order the reals sort with and which is inert on
-   * `num` terms: see the class comment. In one line, it compares head constants by name and
-   * `NUM_ADD` precedes `NUM_MUL`, so associativity refuses to flatten `(a * p + b * q) + a * q` and
-   * two equal sums reach two different normal forms.
-   *
-   * Any total order makes the sorting terminate and canonical, which is `ringOrder`'s own docstring
-   * and is as true here; what an order is chosen **for** is what it puts where. This one is chosen
-   * so that a sum always outranks either of its summands, which is exactly the direction
-   * associativity has to travel.
+   * It is `CommutativeRing.order` with no negation, which is what it was generalised into on
+   * 2026-09-25 and why that order compares by size inside the recursion. Why not
+   * `Arithmetic.ringOrder`, which is the order the reals sort with and which is inert on `num`
+   * terms: see the class comment. In one line, it compares head constants by name and `NUM_ADD`
+   * precedes `NUM_MUL`, so associativity refuses to flatten `(a * p + b * q) + a * q` and two equal
+   * sums reach two different normal forms.
    */
-  val order: Ordering[Term] = new Ordering[Term] {
-
-    def compare(left: Term, right: Term): Int = {
-      val bySize = size(left).compare(size(right))
-      if (bySize != 0) bySize else structurally(left, right)
-    }
-
-    /**
-     * The same comparison one level down, and the reason the size test is not simply wrapped
-     * around a structural order: `(A + B) + C` and `A + (B + C)` hold the same nodes, so size says
-     * nothing about them at the top and everything about their function parts.
-     */
-    private def structurally(left: Term, right: Term): Int = (left, right) match {
-      case (App(leftFn, leftArgument), App(rightFn, rightArgument)) =>
-        val byFunction = compare(leftFn, rightFn)
-        if (byFunction != 0) byFunction else compare(leftArgument, rightArgument)
-
-      case (Abs(leftType, leftBody), Abs(rightType, rightBody)) =>
-        val byBinder = Type.ordering.compare(leftType, rightType)
-        if (byBinder != 0) byBinder else compare(leftBody, rightBody)
-
-      case _ => Term.ordering.compare(left, right)
-    }
-
-    private def size(term: Term): Int = term match {
-      case App(fn, argument) => size(fn) + size(argument)
-      case Abs(_, body) => 1 + size(body)
-      case _ => 1
-    }
-  }
+  val order: Ordering[Term] = CommutativeRing.order(None)
 
   /**
    * `|- !x y z. NUM_MUL (NUM_ADD x y) z = NUM_ADD (NUM_MUL x z) (NUM_MUL y z)`
    *
    * `Peano.Distributive` distributes over the **right** factor and the rewriting needs both. Not in
-   * `Peano` because nothing there needed it; derived here in three commutations.
+   * `Peano` because nothing there needed it; derived by `CommutativeRing` in three commutations.
    */
   val RightDistributive: String = "NUM_DISTRIBUTE_RIGHT"
 
@@ -158,7 +127,7 @@ object Semiring {
    */
   val MulExchange: String = "NUM_MUL_EXCHANGE"
 
-  /** The three this file proves before it can build its own rule set, as text. */
+  /** The three `Peano` does not hold and the generic builder derives, as text. */
   val Statements: Vector[(String, String)] = Vector(
     RightDistributive ->
       "!x:num y:num z:num. NUM_MUL (NUM_ADD x y) z = NUM_ADD (NUM_MUL x z) (NUM_MUL y z)",
@@ -167,158 +136,80 @@ object Semiring {
       "!x:num y:num z:num. NUM_MUL x (NUM_MUL y z) = NUM_MUL y (NUM_MUL x z)"
   )
 
-  /** Build it over an arithmetic on the naturals. */
-  def construct(peano: Peano): Either[LogicError, Semiring] =
-    for {
-      derived <- missingLemmas(peano)
-      conversion <- conversionFrom(peano, derived)
-    } yield new Semiring(peano, conversion)
-
   /**
-   * The three rules `Peano` does not hold, derived by hand rather than by bootstrapping.
+   * Build it over an arithmetic on the naturals, as the `num` instance of `CommutativeRing`.
    *
-   * `Arithmetic` proves its own auxiliaries with a partial normalisation and then rebuilds, which
-   * is elegant and is not used here: each of these is three or four specialisations of lemmas that
-   * are already proved, and a hand derivation that either works or names the step it failed at is
-   * worth more than a bootstrap whose failure is a normal form that did not close.
+   * The laws are `Peano`'s, and so are three of the derived rules, passed as supplied so that the
+   * rules hold the theorems `Peano` publishes: its exchange and its two zeros on the left. The rest
+   * is derived there. What is `num`'s alone is the extra rules: the numerals opened into successor
+   * sums, and a successor opened **under a product** and only there. `x * SUC y` becomes `x * y + x`,
+   * which strictly reduces the successor depth beneath a `*` and so leaves the termination argument
+   * alone; added on 2026-09-13 when the conversion of `Modular` was measured, where of eighty
+   * identities that development decides through the reals seventy-four were already in this
+   * fragment and the six that were not were all this one shape. `SUC t` stays an atom
+   * **additively**, which is the line the class comment draws.
    */
-  private def missingLemmas(peano: Peano): Either[LogicError, Map[String, Kernel.Thm]] = {
-    val logic = peano.logic
-    val rules = logic.rules
+  def construct(peano: Peano): Either[LogicError, Semiring] = {
     val numbers = TyApp(Natural.TypeName, Nil)
-    val x = Term.variable("x", numbers)
-    val y = Term.variable("y", numbers)
-    val z = Term.variable("z", numbers)
-
+    val binary = Type.fun(numbers, Type.fun(numbers, numbers))
     for {
-      commutative <- peano.fact(Peano.MulCommutative)
-      associative <- peano.fact(Peano.MulAssociative)
-      distributive <- peano.fact(Peano.Distributive)
-      successorTimes <- peano.fact(Peano.SuccessorTimes)
-      zeroTimes <- peano.fact(Peano.ZeroTimes)
-      zeroPlus <- peano.fact(Peano.ZeroPlus)
-      times <- LogicError.lift(
-        peano.theory.constant(Peano.Multiplication, Type.fun(numbers, Type.fun(numbers, numbers)))
-      )
-      plus <- LogicError.lift(
-        peano.theory.constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers)))
-      )
+      add <- LogicError.lift(peano.theory.constant(Peano.Addition, binary))
+      multiply <- LogicError.lift(peano.theory.constant(Peano.Multiplication, binary))
       zero <- LogicError.lift(peano.theory.constant(Natural.NumberZero, numbers))
-
-      // `(x + y) * z = z * (x + y) = z * x + z * y = x * z + y * z`.
-      rightDistributive <- for {
-        sum <- LogicError.lift(Term.appAll(plus, List(x, y)))
-        swapped <- rules.specAll(commutative, List(sum, z))
-        opened <- rules.specAll(distributive, List(z, x, y))
-        chained <- Conv.trans(swapped, opened)
-        leftFactor <- rules.specAll(commutative, List(z, x))
-        rightFactor <- rules.specAll(commutative, List(z, y))
-        bothSides <- Conv.apTerm(plus, leftFactor).flatMap(step => LogicError.lift(Kernel.mkComb(step, rightFactor)))
-        whole <- Conv.trans(chained, bothSides)
-        general <- rules.genAll(whole, List(x, y, z))
-      } yield general
-
-      // `SUC 0 * x = 0 * x + x = 0 + x = x`.
-      oneTimes <- for {
-        stepped <- rules.specAll(successorTimes, List(zero, x))
-        vanishes <- rules.spec(x, zeroTimes)
-        onTheLeft <- Conv.apTerm(plus, vanishes).flatMap(step => LogicError.lift(Kernel.mkComb(step, Conv.refl(x))))
-        collapsed <- Conv.trans(stepped, onTheLeft)
-        unit <- rules.spec(x, zeroPlus)
-        whole <- Conv.trans(collapsed, unit)
-        general <- rules.gen(x, whole)
-      } yield general
-
-      // `x * (y * z) = (x * y) * z = (y * x) * z = y * (x * z)`.
-      mulExchange <- for {
-        regrouped <- rules.specAll(associative, List(x, y, z)).flatMap(Conv.sym)
-        swapped <- rules.specAll(commutative, List(x, y))
-        onTheLeft <- Conv.apTerm(times, swapped).flatMap(Conv.apThm(_, z))
-        chained <- Conv.trans(regrouped, onTheLeft)
-        opened <- rules.specAll(associative, List(y, x, z))
-        whole <- Conv.trans(chained, opened)
-        general <- rules.genAll(whole, List(x, y, z))
-      } yield general
-
-      derived = Map(
-        RightDistributive -> rightDistributive,
-        OneTimes -> oneTimes,
-        MulExchange -> mulExchange
+      successor <- LogicError.lift(peano.theory.constant(Natural.NumberSuccessor, Type.fun(numbers, numbers)))
+      one <- LogicError.lift(Term.app(successor, zero))
+      laws <- for {
+        addAssociative <- peano.fact(Peano.AddAssociative)
+        addCommutative <- peano.fact(Peano.AddCommutative)
+        addZero <- peano.fact(Peano.AddAtZero)
+        multiplyAssociative <- peano.fact(Peano.MulAssociative)
+        multiplyCommutative <- peano.fact(Peano.MulCommutative)
+        multiplyOne <- peano.fact(Peano.TimesOne)
+        distributive <- peano.fact(Peano.Distributive)
+        multiplyZero <- peano.fact(Peano.MulAtZero)
+      } yield CommutativeRing.Laws(
+        addAssociative, addCommutative, addZero, multiplyAssociative, multiplyCommutative,
+        multiplyOne, distributive, Some(multiplyZero), None
       )
-      checked <- Statements.foldLeft[Either[LogicError, Map[String, Kernel.Thm]]](Right(derived)) {
-        case (acc, (name, text)) =>
-          for {
-            found <- acc
-            expected <- Parser.proposition(peano.theory, peano.notation, text)
-            theorem <- found.get(name).toRight(MissingDefinition(name))
-            _ <-
-              if (theorem.conclusion == expected && theorem.hypotheses.isEmpty) Right(())
-              else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
-          } yield found
-      }
-    } yield checked
-  }
-
-  /**
-   * The rule set, split the way `Rewrite.normaliser` wants it.
-   *
-   * Unconditional: open a numeral, distribute a product over a sum, and remove a unit or a zero.
-   * Every one of these makes the term smaller in a measure that does not depend on the order.
-   *
-   * Ordered: the six associativity, commutativity and exchange rules, which fire only where they
-   * decrease `Arithmetic.ringOrder` and would otherwise apply to their own output forever.
-   */
-  private def conversionFrom(
-    peano: Peano,
-    derived: Map[String, Kernel.Thm]
-  ): Either[LogicError, Rewrite.Conversion] = {
-    def named(names: Vector[String]): Either[LogicError, Vector[Kernel.Thm]] =
-      names.foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) { (acc, name) =>
+      supplied <- for {
+        exchange <- peano.fact(Peano.AddExchange)
+        zeroPlus <- peano.fact(Peano.ZeroPlus)
+        zeroTimes <- peano.fact(Peano.ZeroTimes)
+      } yield Map(
+        CommutativeRing.AddExchange -> exchange,
+        CommutativeRing.ZeroPlus -> zeroPlus,
+        CommutativeRing.ZeroTimes -> zeroTimes
+      )
+      extra <- Vector(
+        Peano.NumeralOneIsSuccessorOfZero,
+        Peano.NumeralBit0Doubles,
+        Peano.NumeralBit1Doubles,
+        Peano.MulAtSuccessor,
+        Peano.SuccessorTimes
+      ).foldLeft[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty))((acc, name) =>
+        acc.flatMap(found => peano.fact(name).map(found :+ _)))
+      built <- CommutativeRing.semiring(
+        peano.logic,
+        CommutativeRing.Operations(numbers, add, multiply, zero, one, None),
+        laws,
+        extra,
+        supplied
+      )
+      _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
+        val generic = name match {
+          case RightDistributive => CommutativeRing.RightDistributive
+          case OneTimes => CommutativeRing.OneTimes
+          case _ => CommutativeRing.MultiplyExchange
+        }
         for {
-          found <- acc
-          theorem <- derived.get(name).map(Right(_)).getOrElse(peano.fact(name))
-        } yield found :+ theorem
+          _ <- acc
+          expected <- Parser.proposition(peano.theory, peano.notation, text)
+          theorem <- built.fact(generic)
+          _ <-
+            if (theorem.conclusion == expected && theorem.hypotheses.isEmpty) Right(())
+            else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
+        } yield ()
       }
-
-    for {
-      unconditionalFacts <- named(
-        Vector(
-          Peano.NumeralOneIsSuccessorOfZero,
-          Peano.NumeralBit0Doubles,
-          Peano.NumeralBit1Doubles,
-          Peano.Distributive,
-          RightDistributive,
-          // A successor **under a product** is opened, and only there. `x * SUC y` becomes
-          // `x * y + x`, which strictly reduces the successor depth beneath a `*` and so leaves the
-          // termination argument alone. Added on 2026-09-13 when the conversion of `Modular` was
-          // measured: of eighty identities that development decides through the reals, seventy-four
-          // were already in this fragment and the six that were not were all this one shape.
-          //
-          // `SUC t` stays an atom **additively**, which is the line the class comment draws and
-          // still draws: nothing here turns `SUC (SUC ZERO)` into a sum, and a claim about a
-          // written bound is still `Successor`'s business.
-          Peano.MulAtSuccessor,
-          Peano.SuccessorTimes,
-          Peano.TimesOne,
-          OneTimes,
-          Peano.MulAtZero,
-          Peano.ZeroTimes,
-          Peano.AddAtZero,
-          Peano.ZeroPlus
-        )
-      )
-      orderedFacts <- named(
-        Vector(
-          Peano.AddAssociative,
-          Peano.AddCommutative,
-          Peano.AddExchange,
-          Peano.MulAssociative,
-          Peano.MulCommutative,
-          MulExchange
-        )
-      )
-      unconditional <- Rewrite.Rule.all(peano.logic, unconditionalFacts)
-      ordered <- Rewrite.Rule.all(peano.logic, orderedFacts)
-    } yield Rewrite.normaliser(unconditional, ordered, order)
+    } yield new Semiring(peano, built.normalisation)
   }
 }

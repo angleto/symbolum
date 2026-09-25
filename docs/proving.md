@@ -309,7 +309,8 @@ the instances, `Successor` puts a numeral into successor form so that a recurren
 `Quotient` define the **caller's** constant and the caller's type, `Datatype` defines the caller's
 inductive type from its constructors and a function on it by structural recursion
 (`docs/adr/0042`), `WellFounded` proves recursion along a measure for the caller's step
-(`docs/adr/0043`), `Descent` defines a predicate by recursion on a code, and `Domain` builds a
+(`docs/adr/0043`), `CommutativeRing` builds the normaliser of the caller's ring or semiring
+from its laws (`docs/adr/0046`), `Descent` defines a predicate by recursion on a code, and `Domain` builds a
 caller's own theory of a domain that is not mathematics. `Resolving` was on this list until the
 same day, when it became a link with lemmas of its own and a row above. Nothing they produce
 belongs to them, which is why there is nothing of theirs to list.
