@@ -269,6 +269,24 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     continuous.conclusion shouldBe force(chain.continuity.fact(Continuity.Identity).flatMap(rules.spec(x, _))).conclusion
   }
 
+  it should "detach linearity at the identity and a constant, with nothing assumed" in {
+    // The mean value card asked each of its three facts for a guard of its own. Uniqueness has two,
+    // the refusals above, and `CONTINUOUS_LINEAR` is detached in `ContinuitySpec`; this one was
+    // reached only inside `MEAN_VALUE`, whose derivation discharges its hypotheses from hypotheses
+    // of its own, so nothing showed that the two it asks for are met by any pair of functions.
+    // Added by the verification of 2026-09-25 at `87175842`. Specialised by the instance rather
+    // than by position: five of the binders are reals, and a swap would be a different theorem.
+    val x = Term.variable("x", reals)
+    val target = proposition(
+      "derivative (\\y:real. y) x 1 ==> derivative (\\y:real. (2:real)) x 0 ==> " +
+        "derivative (\\y:real. 3 * y + (0 - 1) * 2) x (3 * 1 + (0 - 1) * 0)")
+    val instance = force(rules.specToReduced(fact(Derivative.Linear), target))
+    val detached = force(rules.mp(instance, force(rules.spec(x, fact(Derivative.Identity))))
+      .flatMap(rules.mp(_, force(rules.specAll(fact(Derivative.Constant), List(real("2:real"), x))))))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition("derivative (\\y:real. 3 * y + (0 - 1) * 2) x (3 * 1 + (0 - 1) * 0)")
+  }
+
   it should "detach the chain rule at the identity after itself, and after a constant" in {
     val x = Term.variable("x", reals)
     val identity = force(derivative.term("\\y:real. y", functions))
