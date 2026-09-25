@@ -340,12 +340,14 @@ they have least appetite for working out how it is produced.
   ABS_POWER_LE             !x:real. !y:real. !z:num. abs x <= y ==> abs (Power x z) <= Power y z
   CONVERGES_ABSOLUTE       !x:num -> real. !y:real. converges (Sum (\z:num. abs (x z))) y ==> (?z:real. converges (Sum x) z)
   CONVERGES_ADD            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v + y v) (z + u)
+  CONVERGES_BOUNDED        !x:num -> real. !y:real. converges x y ==> (?z:real. !u:num. abs (x u) <= z)
   CONVERGES_CONSTANT       !x:real. converges (\y:num. x) x
   CONVERGES_EVENTUALLY     !x:num -> real. !y:num -> real. !z:real. !u:num. (!v:num. u <= v ==> x v = y v) ==> converges x z ==> converges y z
   CONVERGES_GE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> z <= x v) ==> z <= y
   CONVERGES_LE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> x v <= z) ==> y <= z
   CONVERGES_MUL            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v * y v) (z * u)
   CONVERGES_NEG            !x:num -> real. !y:real. converges x y ==> converges (\z:num. -(x z)) (-y)
+  CONVERGES_OFFSET         !x:num -> real. !y:real. !z:num. converges (\u:num. x (z + u)) y ==> converges x y
   CONVERGES_SHIFT          !x:num -> real. !y:real. converges x y ==> converges (\z:num. x (SUC z)) y
   CONVERGES_TAIL           !x:num -> real. !y:real. converges (Sum x) y ==> converges (\z:num. y - Sum x z) 0
   CONVERGES_TO_ZERO        !x:num -> real. !y:num -> real. (!z:num. abs (x z) <= y z) ==> converges y 0 ==> converges x 0
@@ -354,15 +356,29 @@ they have least appetite for working out how it is produced.
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
+  POWER_NONNEG             !x:real. 0 <= x ==> (!y:num. 0 <= Power x y)
+  POWER_VANISHES           !x:real. abs x < 1 ==> converges (\y:num. Power x y) 0
   SUM_ABS                  !x:num -> real. !y:num. abs (Sum x y) <= Sum (\z:num. abs (x z)) y
   SUM_BELOW_LIMIT          !x:num -> real. !y:real. (!z:num. 0 <= x z) ==> converges (Sum x) y ==> (!z:num. Sum x z <= y)
   SUM_CAUCHY_BELOW_SQUARE  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) z <= Sum x z * Sum y z
   SUM_CAUCHY_PRODUCT       !x:num -> real. !y:num -> real. !z:real. !u:real. !v:real. !w:real. converges (Sum (\x1:num. abs (x x1))) v ==> converges (Sum (\x1:num. abs (y x1))) w ==> converges (Sum x) z ==> converges (Sum y) u ==> converges (Sum (\x1:num. Sum (\y1:num. x y1 * y (NUM_SUB x1 y1)) (SUC x1))) (z * u)
   SUM_CAUCHY_PRODUCT_NONNEG !x:num -> real. !y:num -> real. !z:real. !u:real. (!v:num. 0 <= x v) ==> (!v:num. 0 <= y v) ==> converges (Sum x) z ==> converges (Sum y) u ==> converges (Sum (\v:num. Sum (\w:num. x w * y (NUM_SUB v w)) (SUC v))) (z * u)
   SUM_COMPARISON           !x:num -> real. !y:num -> real. (!z:num. 0 <= x z) ==> (!z:num. x z <= y z) ==> (?z:real. !u:num. Sum y u <= z) ==> (?z:real. converges (Sum x) z)
+  SUM_DIVERGES             !x:num -> real. !y:real. !z:num. 0 < y ==> (!u:num. z <= u ==> y <= abs (x u)) ==> diverges (Sum x)
+  SUM_GEOMETRIC_CONVERGES  !x:real. abs x < 1 ==> converges (Sum (\y:num. Power x y)) (inv (1 - x))
+  SUM_GEOMETRIC_DIVERGES   !x:real. 1 <= abs x ==> diverges (Sum (\y:num. Power x y))
   SUM_GROWS                !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. !z:num. y <= z ==> Sum x y <= Sum x z)
+  SUM_INDEX_GEOMETRIC_CONVERGES !x:real. abs x < 1 ==> (?y:real. converges (Sum (\z:num. real_of_num z * Power x z)) y)
+  SUM_INDEX_GEOMETRIC_DIVERGES !x:real. 1 <= abs x ==> diverges (Sum (\y:num. real_of_num y * Power x y))
+  SUM_POLY_GEOMETRIC_CONVERGES !x:num. !y:real. abs y < 1 ==> (?z:real. converges (Sum (\u:num. Power (real_of_num u) x * Power y u)) z)
+  SUM_POLY_GEOMETRIC_DIVERGES !x:num. !y:real. 1 <= abs y ==> diverges (Sum (\z:num. Power (real_of_num z) x * Power y z))
+  SUM_RATIO_DIVERGES       !x:num -> real. !y:num. ~(x y = 0) ==> (!z:num. y <= z ==> abs (x z) <= abs (x (SUC z))) ==> diverges (Sum x)
+  SUM_RATIO_TEST           !x:num -> real. !y:real. !z:num. 0 <= y ==> y < 1 ==> (!u:num. z <= u ==> abs (x (SUC u)) <= y * abs (x u)) ==> (?u:real. converges (Sum x) u)
+  SUM_SCALE_CONVERGES      !x:num -> real. !y:real. !z:real. converges (Sum x) z ==> converges (Sum (\u:num. y * x u)) (y * z)
+  SUM_SCALE_DIVERGES       !x:num -> real. !y:real. ~(y = 0) ==> diverges (Sum x) ==> diverges (Sum (\z:num. y * x z))
   SUM_SQUARE_BELOW_CAUCHY  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum x z * Sum y z <= Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) (z + z)
   SUM_TAIL_ABS             !x:num -> real. !y:num. !z:num. y <= z ==> abs (Sum x z - Sum x y) <= Sum (\u:num. abs (x u)) z - Sum (\u:num. abs (x u)) y
+  SUM_TERMS_VANISH         !x:num -> real. !y:real. converges (Sum x) y ==> converges x 0
 
 ## Listing
 
@@ -733,6 +749,21 @@ they have least appetite for working out how it is produced.
   real_le                  real_le = (\x:real. \y:real. x < y \/ x = y)
   sub                      sub = (\x:real. \y:real. x + -y)
 
+## Resolving
+
+  RES_EMPTY_UNSATISFIABLE  !x:num -> bool. !y:num -> num. !z:num -> bool. !u:num. u = 0 ==> ~(?v:num. v < u /\ x (y v) = z v)
+  RES_REFUTATION_NONEMPTY  !x:num -> num. !y:num -> num -> num. !z:num -> num -> bool. !u:num. !v:num. RES_REFUTATION x y z u v ==> 0 < v
+  RES_REFUTATION_UNSATISFIABLE !x:num -> num. !y:num -> num -> num. !z:num -> num -> bool. !u:num. !v:num. RES_REFUTATION x y z u v ==> ~(?w:num -> bool. !x1:num. x1 < u ==> RES_SAT w x y z x1)
+  RES_REFUTES              !x:num -> num. !y:num -> num -> num. !z:num -> num -> bool. !u:num. !v:num. (!w:num. w < v ==> w < u \/ (?x1:num. ?y1:num. ?z1:num. x1 < w /\ y1 < w /\ (!u1:num. u1 < x x1 ==> ~(y x1 u1 = z1 /\ z x1 u1 = T) ==> (?v1:num. v1 < x w /\ y w v1 = y x1 u1 /\ z w v1 = z x1 u1)) /\ (!u1:num. u1 < x y1 ==> ~(y y1 u1 = z1 /\ z y1 u1 = F) ==> (?v1:num. v1 < x w /\ y w v1 = y y1 u1 /\ z w v1 = z y1 u1)))) ==> (?w:num. w < v /\ x w = 0) ==> ~(?w:num -> bool. !x1:num. x1 < u ==> (?y1:num. y1 < x x1 /\ w (y x1 y1) = z x1 y1))
+  RES_SOUND                !x:num -> bool. !y:num -> num. !z:num -> num -> num. !u:num -> num -> bool. !v:num. !w:num. (!x1:num. x1 < v ==> (?y1:num. y1 < y x1 /\ x (z x1 y1) = u x1 y1)) ==> (!x1:num. x1 < w ==> x1 < v \/ (?y1:num. ?z1:num. ?u1:num. y1 < x1 /\ z1 < x1 /\ (!v1:num. v1 < y y1 ==> ~(z y1 v1 = u1 /\ u y1 v1 = T) ==> (?w1:num. w1 < y x1 /\ z x1 w1 = z y1 v1 /\ u x1 w1 = u y1 v1)) /\ (!v1:num. v1 < y z1 ==> ~(z z1 v1 = u1 /\ u z1 v1 = F) ==> (?w1:num. w1 < y x1 /\ z x1 w1 = z z1 v1 /\ u x1 w1 = u z1 v1)))) ==> (!x1:num. x1 < w ==> (?y1:num. y1 < y x1 /\ x (z x1 y1) = u x1 y1))
+  RES_STEP_SOUND           !x:num -> bool. !y:num -> num. !z:num -> bool. !u:num -> num. !v:num -> bool. !w:num -> num. !x1:num -> bool. !y1:num. !z1:num. !u1:num. !v1:num. (!w1:num. w1 < y1 ==> ~(y w1 = v1 /\ z w1 = T) ==> (?x2:num. x2 < u1 /\ w x2 = y w1 /\ x1 x2 = z w1)) ==> (!w1:num. w1 < z1 ==> ~(u w1 = v1 /\ v w1 = F) ==> (?x2:num. x2 < u1 /\ w x2 = u w1 /\ x1 x2 = v w1)) ==> (?w1:num. w1 < y1 /\ x (y w1) = z w1) ==> (?w1:num. w1 < z1 /\ x (u w1) = v w1) ==> (?w1:num. w1 < u1 /\ x (w w1) = x1 w1)
+  RES_STEP_SOUND_OF_RESOLVENT !x:num -> bool. !y:num -> num. !z:num -> bool. !u:num -> num. !v:num -> bool. !w:num -> num. !x1:num -> bool. !y1:num. !z1:num. !u1:num. !v1:num. (?w1:num. w1 < y1 /\ y w1 = v1 /\ z w1 = T) ==> (?w1:num. w1 < z1 /\ u w1 = v1 /\ v w1 = F) ==> (!w1:num. w1 < y1 ==> ~(y w1 = v1 /\ z w1 = T) ==> (?x2:num. x2 < u1 /\ w x2 = y w1 /\ x1 x2 = z w1)) ==> (!w1:num. w1 < z1 ==> ~(u w1 = v1 /\ v w1 = F) ==> (?x2:num. x2 < u1 /\ w x2 = u w1 /\ x1 x2 = v w1)) ==> (?w1:num. w1 < y1 /\ x (y w1) = z w1) ==> (?w1:num. w1 < z1 /\ x (u w1) = v w1) ==> (?w1:num. w1 < u1 /\ x (w w1) = x1 w1)
+  RES_WIDTH_ATTAINED       !x:num -> num. !y:num. RES_WIDTH x y = 0 \/ (?z:num. z < y /\ RES_WIDTH x y = x z)
+  RES_WIDTH_BOUND          !x:num -> num. !y:num. !z:num. y < z ==> x y <= RES_WIDTH x z
+  RES_WIDTH_LEAST          !x:num -> num. !y:num. !z:num. (!u:num. u < y ==> x u <= z) ==> RES_WIDTH x y <= z
+  RES_WIDTH_SUC            !x:num -> num. !y:num. RES_WIDTH x (SUC y) = COND (x y <= RES_WIDTH x y) (RES_WIDTH x y) (x y)
+  RES_WIDTH_ZERO           !x:num -> num. RES_WIDTH x 0 = 0
+
 ## Root
 
   SQRT                     !x:real. 0 <= x ==> 0 <= sqrt x /\ sqrt x * sqrt x = x
@@ -800,9 +831,11 @@ they have least appetite for working out how it is produced.
   COSH_SQUARED             !x:real. cosh x * cosh x - sinh x * sinh x = 1
   COSH_ZERO                cosh 0 = 1
   COS_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (z + z) / real_of_num (NUM_FACT (z + z)))))) y
+  COS_CONVERGES            !x:real. converges (Sum (\y:num. Power (0 - 1) y * (Power x (y + y) / real_of_num (NUM_FACT (y + y))))) (cos x)
   COS_ZERO                 cos 0 = 1
   EXP_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power x z / real_of_num (NUM_FACT z)))) y
   EXP_ADD                  !x:real. !y:real. exp (x + y) = exp x * exp y
+  EXP_CONVERGES            !x:real. converges (Sum (\y:num. Power x y / real_of_num (NUM_FACT y))) (exp x)
   EXP_CONVOLUTION          !x:real. !y:real. !z:num. Sum (\u:num. Power x u / real_of_num (NUM_FACT u) * (Power y (NUM_SUB z u) / real_of_num (NUM_FACT (NUM_SUB z u)))) (SUC z) = Power (x + y) z / real_of_num (NUM_FACT z)
   EXP_NEGATE               !x:real. exp x * exp (0 - x) = 1
   EXP_ONE_ABOVE_TWO        2 < exp 1
@@ -812,8 +845,24 @@ they have least appetite for working out how it is produced.
   MUL_INV_COMBINE          !x:real. !y:real. !z:real. !u:real. !v:real. !w:real. !x1:real. !y1:real. !z1:real. y * x1 = 1 ==> z * y1 = 1 ==> u * z1 = 1 ==> x * (y * z) = u ==> v * x1 * (w * y1) = x * (v * w) * z1
   SINH_ZERO                sinh 0 = 0
   SIN_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (SUC (z + z)) / real_of_num (NUM_FACT (SUC (z + z))))))) y
+  SIN_CONVERGES            !x:real. converges (Sum (\y:num. Power (0 - 1) y * (Power x (SUC (y + y)) / real_of_num (NUM_FACT (SUC (y + y)))))) (sin x)
   SIN_COS_SQUARED          !x:real. sin x * sin x + cos x * cos x = 1
   SIN_ZERO                 sin 0 = 0
+
+## Truth
+
+  NUM_TRI_DOUBLE           !x:num. NUM_TRI x + NUM_TRI x = x * SUC x
+  NUM_TRI_GRAPH_TRUE       !x:num -> num. NUM_TRUE NUM_TRI_GRAPH x = (x 0 = NUM_TRI (x 1))
+  NUM_TRUE_ALL             !x:num -> num. !y:num. !z:num. NUM_TRUE (NUM_CODE 8 (NUM_PAIR y z)) x = (!u:num. NUM_TRUE z (\v:num. COND (v = y) u (x v)))
+  NUM_TRUE_EQ              !x:num -> num. !y:num. !z:num. NUM_TRUE (NUM_CODE 5 (NUM_PAIR y z)) x = (NUM_VALUE y x = NUM_VALUE z x)
+  NUM_TRUE_IMP             !x:num -> num. !y:num. !z:num. NUM_TRUE (NUM_CODE 7 (NUM_PAIR y z)) x = (NUM_TRUE y x ==> NUM_TRUE z x)
+  NUM_TRUE_NOT             !x:num -> num. !y:num. NUM_TRUE (NUM_CODE 6 y) x = (~(NUM_TRUE y x))
+  NUM_VALUE_ADD            !x:num -> num. !y:num. !z:num. NUM_VALUE (NUM_CODE 3 (NUM_PAIR y z)) x = NUM_VALUE y x + NUM_VALUE z x
+  NUM_VALUE_MUL            !x:num -> num. !y:num. !z:num. NUM_VALUE (NUM_CODE 4 (NUM_PAIR y z)) x = NUM_VALUE y x * NUM_VALUE z x
+  NUM_VALUE_NUMERAL        !x:num -> num. !y:num. NUM_VALUE (NUM_NUMERAL y) x = y
+  NUM_VALUE_SUC            !x:num -> num. !y:num. NUM_VALUE (NUM_CODE 2 y) x = SUC (NUM_VALUE y x)
+  NUM_VALUE_VAR            !x:num -> num. !y:num. NUM_VALUE (NUM_CODE 0 y) x = x y
+  NUM_VALUE_ZERO           !x:num -> num. NUM_VALUE (NUM_CODE 1 0) x = 0
 
 ## Word
 

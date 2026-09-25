@@ -288,6 +288,7 @@ object Library {
         collect("Provability", chain.provability.facts) ++
         collect("Primes", chain.primes.facts) ++
         collect("Deduction", chain.deduction.facts) ++
+        collect("Truth", chain.truth.facts) ++
         // The two that landed on 2026-09-15, listed here in the same breath as they were written
         // rather than after somebody noticed: `Magnitude` and `Coding` were each invisible for a
         // few hours because a development in the chain but not collected here is a development
@@ -328,6 +329,10 @@ object Library {
         // The first facts about `ln`, the same day: a development of its own because it is about
         // three constants declared by three developments below it.
         collect("Logarithm", chain.logarithm.facts) ++
+        // Resolution, 2026-09-25, in the change that made it a link. Its five soundness theorems
+        // were derived beside the chain until then and were in no library, which is what a
+        // development that declared nothing could afford and a link cannot.
+        collect("Resolving", chain.resolving.facts) ++
         // The derivative and Rolle's theorem, 2026-09-25, in the change that added them: a
         // development of its own because a derivative is a statement about an increment and a
         // slope, where continuity is one about a radius.

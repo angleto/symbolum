@@ -35,6 +35,8 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.rotation.facts.size + chain.magnitude.facts.size + chain.coding.facts.size +
       chain.numbering.facts.size + chain.language.facts.size +
       chain.provability.facts.size + chain.deduction.facts.size +
+      // The truth of the object language, 2026-09-25, added after this sum caught it.
+      chain.truth.facts.size +
       chain.primes.facts.size +
       // The two of 2026-09-15. This sum is the assertion's whole point and it caught them: they
       // were added to `Library.of` and not to this list, and what failed was the count rather than
@@ -70,7 +72,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.continuity.facts.size +
       // The logarithm, the same day and the same discipline.
       chain.logarithm.facts.size +
-      // The derivative and Rolle's theorem, 2026-09-25, in the change that added the link.
+      // Resolution, 2026-09-25, in the change that made it a link: its five soundness theorems
+      // were in no library while it sat beside the chain, and its seven over the names are new.
+      chain.resolving.facts.size +
+      // The derivative and Rolle's theorem, the same day, in the change that added the link.
       chain.derivative.facts.size
 
     library.entries.size shouldBe expected
@@ -635,12 +640,33 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under five names, none shared. `CLAUDE.md`'s figures move by **five** and **four**: all five
     // bind two or more leading quantifiers, and all but `CONTINUOUS_NEG`, whose `f` and `x` differ
     // in type, bind two reals among them.
-    // 660 and 657 with the derivative and Rolle's theorem, the same day, derived before the run:
+    // 667 and 664 with the convergence criteria, 2026-09-25, derived before the run and met:
+    // ten facts in `Limit` and three in `Transcendental`, thirteen names none of them shared, and
+    // `diverges` is a definition, which is the register's rather than this count's. `CLAUDE.md`'s
+    // figures move by **seven** and **one**: seven of the thirteen bind two or more leading
+    // quantifiers, and only `SUM_SCALE_CONVERGES` binds two of one type, its `c` and its `l`.
+    // 679 and 676 with `Truth`, the same day, derived as that base plus this delta before the run:
+    // twelve facts under twelve names, none shared. `CLAUDE.md`'s figures move by **nine** and
+    // **five**: every clause but `NUM_VALUE_ZERO` binds the environment and at least one code,
+    // which is the nine, and the five are the ones binding two codes, `a` and `b` or `p` and `q`
+    // or `j` and `p`; the environment is `num -> num` and shares its type with nothing.
+    // 685 and 682 with the polynomial-times-geometric criteria, 2026-09-25, derived as that base
+    // plus this delta before the run: six facts under six names, none shared. `CLAUDE.md`'s figures
+    // move by **three** and **none**: `CONVERGES_BOUNDED` and the two polynomial facts bind two
+    // leading quantifiers each, of different types, and the other three bind one.
+    // 691 and 688 with resolution as a link, the same day: twelve facts under twelve names, none
+    // shared, so the gap of three does not move. Tip plus this branch's delta. `CLAUDE.md`'s figures
+    // move by **eleven** and **nine**, derived from the twelve statements before the run and not
+    // measured by it: every one but `RES_WIDTH_ZERO` binds two or more leading quantifiers, and the
+    // three with no pair of one type are that one, `RES_WIDTH_SUC` and `RES_WIDTH_ATTAINED`, which
+    // bind a length function and a number. The other nine each bind two numbers, or two
+    // `num -> bool`.
+    // 703 and 700 with the derivative and Rolle's theorem, the same day, derived before the run:
     // six facts under six names, none shared. `CLAUDE.md`'s figures move by **five** and **five**:
     // every fact but `DERIVATIVE_ID`, which binds one `x`, binds two or more, and each of those five
-    // binds two reals among them.
-    library.entries.size shouldBe 660
-    library.names.distinct.size shouldBe 657
+    // binds two reals among them. Tip plus this branch's delta.
+    library.entries.size shouldBe 703
+    library.names.distinct.size shouldBe 700
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

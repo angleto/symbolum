@@ -128,6 +128,8 @@ object Reach {
         "Provability" -> chain.provability.facts,
         "Primes" -> chain.primes.facts,
         "Deduction" -> chain.deduction.facts,
+        // 2026-09-25, in the same change that put it in the chain.
+        "Truth" -> chain.truth.facts,
         // The two of 2026-09-15, added here in the same change that added them to the chain rather
         // than after `RestsOnSpec` found them missing, which is how `Magnitude` arrived three
         // paragraphs up.
@@ -160,6 +162,8 @@ object Reach {
         "Continuity" -> chain.continuity.facts,
         // The logarithm, the same day, in the change that added it.
         "Logarithm" -> chain.logarithm.facts,
+        // Resolution, 2026-09-25, in the change that made it a link.
+        "Resolving" -> chain.resolving.facts,
         // The derivative and Rolle's theorem, 2026-09-25, in the change that added them.
         "Derivative" -> chain.derivative.facts
       )

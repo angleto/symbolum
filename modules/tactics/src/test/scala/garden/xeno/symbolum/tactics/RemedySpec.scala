@@ -591,6 +591,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     everyKernelRefusal.map(FromKernel.apply) ++ Vector(
       NotOfForm("an implication", x),
       DoesNotFollow(x, "LINARITH"),
+      // The procedure holds the opposite of the goal as a theorem, which is `Settled` like the one
+      // above and for a stronger reason: that one searched a fragment, this one refuted the goal.
+      Denied(x, Term.variable("y", realType), "Convergence"),
       // Two atoms and not one, because the remedy joins them and a single pair would run a
       // `mkString` over a vector of length one without ever exercising the separator.
       SkeletonFailsAt(x, Vector(x -> true, Term.variable("y", realType) -> false)),
@@ -615,6 +618,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       // and could not, and this one is a driver built with nothing to look with, so no restatement
       // of the goal and no raised limit reaches it.
       NoCloser(x, "the induction driver over num"),
+      // A certificate found and not rebuilt, whose inner reason is decided and whose own standing
+      // is not: the census holds it for the remedy, which is a defect whatever the inner reason.
+      NotRebuilt(x, "LINARITH", NotEqualTo(x, Term.variable("y", realType))),
       // Both arms of the one refusal that carries another: a caller's procedure that refused, and a
       // caller's procedure that returned something else. The remedy is read off the inner reason, so
       // the branch is only worth running when the two inner reasons take different arms there.

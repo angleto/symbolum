@@ -207,6 +207,13 @@ final class Chain private (
    */
   val deduction: Deduction,
   /**
+   * The value of a term and the truth of a formula of the embedded theory, and the first
+   * representation built on them. `docs/adr/0040` is the decision: a representation is a formula
+   * whose truth is the predicate, so this is the half of the Goedel stack that says what a formula
+   * means, and nothing in it is about what PA proves.
+   */
+  val truth: Truth,
+  /**
    * Convergence and the limit of a sequence of reals, and the first analysis in the chain.
    *
    * It is above the arithmetisation rather than beside it for the reason every link above [[peano]]
@@ -377,11 +384,23 @@ final class Chain private (
   val logarithm: Logarithm,
 
   /**
+   * Resolution as an object: the soundness of a refutation, and the refutation, its satisfaction
+   * and its width under names.
+   *
+   * It sat beside the chain and declared nothing until 2026-09-25. It is a link since, because a
+   * statement about every refutation of a family is written with `RES_REFUTATION` and `RES_WIDTH`,
+   * and a constant declared beside the chain is where nothing above can see it. Four constants, no
+   * axiom.
+   */
+  val resolving: Resolving,
+
+  /**
    * The derivative at a point, the interior extremum lemma, and Rolle's theorem.
    *
-   * The first thing to spend the extreme value theorem, which is why it sits above `Continuity`,
-   * and a link rather than a development beside the chain because `derivative` is a constant. One
-   * constant, no axiom.
+   * The first thing to spend the extreme value theorem, and a link rather than a development beside
+   * the chain because `derivative` is a constant. It reads `continuous` and `abs` and nothing
+   * `Resolving` declares; it is above that link only because every link that declares extends
+   * whatever the end is when it is built. One constant, no axiom.
    */
   val derivative: Derivative
 ) {
@@ -547,13 +566,20 @@ object Chain {
       // developments, and a fact reachable from no library is in no document either.
       deduction <- Deduction.construct(provability)
 
+      // Landed 2026-09-25. It declares `NUM_VALUE`, `NUM_TRUE` and the code of the triangle's
+      // graph, so it extends the theory the embedded language ends at, and `limit` is built over
+      // it rather than over `provability` for the reason that binding gives: the extension order
+      // and the dependency order are different things.
+      truth <- Truth.construct(
+        language, numbering, provability, induct, successor, naturals)
+
       // The first analysis this repository has: what a sequence of reals converges to and the value
-      // it converges to, both definitions. It extends `provability.theory` rather than
+      // it converges to, both definitions. It extends `truth.theory` rather than
       // `magnitude.theory`, where its prerequisites are, for the reason `Rotation.construct`'s
       // comment gives: the extension order and the dependency order are different things, and
       // `widest` is built over the last extension.
       limit <- Limit.construct(
-        magnitude, peano, series, reals, induct, provability.theory, provability.notation)
+        magnitude, peano, series, reals, induct, truth.theory, truth.notation)
 
       // Landed 2026-09-15 and was the last link until `concatenation` went on top of it the next
       // day, which the binding below says of itself. It is the only one that needs a limit, and
@@ -631,10 +657,15 @@ object Chain {
       logarithm <- Logarithm.construct(
         classical, reals, magnitude, series, peano, coding, limit, transcendental, continuity)
 
+      // Over the naturals and the classical logic, extending the chain's end: a derivation is three
+      // functions on `num` and nothing about the reals is read, so what it needs from below is
+      // `Peano`'s order and induction and the case split `COND` asks for.
+      resolving <- Resolving.construct(classical, peano, continuity.theory, continuity.notation)
+
       // Over continuity, extending the chain's end: Rolle's theorem spends the extreme value
-      // theorem, and the definition reads `abs` and nothing declared since.
+      // theorem, and the definition reads `abs`; nothing `Resolving` declares is read.
       derivative <- Derivative.construct(
-        classical, reals, magnitude, continuity, continuity.theory, continuity.notation)
+        classical, reals, magnitude, continuity, resolving.theory, resolving.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -660,6 +691,7 @@ object Chain {
       language,
       provability,
       deduction,
+      truth,
       limit,
       transcendental,
       concatenation,
@@ -673,6 +705,7 @@ object Chain {
       root,
       continuity,
       logarithm,
+      resolving,
       derivative
     )
 }

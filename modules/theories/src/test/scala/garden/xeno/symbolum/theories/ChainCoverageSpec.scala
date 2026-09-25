@@ -90,9 +90,14 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Language" -> InTheChain,
     "Provability" -> InTheChain,
     "Deduction" -> InTheChain,
-    // Beside the chain: soundness of a resolution step is a theorem ABOUT a proof system, and the
-    // development declares no type, no constant and no definition. `ResolvingSpec` asserts that.
-    "Resolving" -> DeclaresNothing,
+    // 2026-09-25. `NUM_VALUE`, `NUM_TRUE` and the triangle's graph, between `provability` and
+    // `limit`. It was written first beside the chain, and the question this spec asked is what
+    // moved it: a truth predicate for the embedded arithmetic is not one investigation's object.
+    "Truth" -> InTheChain,
+    // Beside the chain and declaring nothing until 2026-09-25, and a link since: a statement about
+    // every refutation of a family is written with `RES_REFUTATION` and `RES_WIDTH`, which have to
+    // be where the links above can see them. `ResolvingSpec` asserts the four constants.
+    "Resolving" -> InTheChain,
     "Primes" -> InTheChain,
     "Limit" -> InTheChain,
     "Transcendental" -> InTheChain,
@@ -159,6 +164,27 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `Continuity` declares. A file of its own because it is longer than the file it belongs to.
     "ExtremeValue" -> NotADevelopment,
 
+    // Not a development, for `Trigonometric`'s reason: half of `Limit`. It declares nothing, and
+    // the criteria it derives are published in `Limit.facts` under names `Limit` declares, so what
+    // reaches `Library.of` does so as that development's.
+    "Criteria" -> NotADevelopment,
+
+    // Not a development, for `Criteria`'s reason: the polynomial-times-geometric criteria, whose six
+    // facts `Limit` publishes under names it declares. A file of its own because what it needs
+    // beyond `Criteria` is the embedding of `num` in the reals, which nothing in `Criteria` does.
+    "Degrees" -> NotADevelopment,
+
+    // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
+    // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
+    // fact of its own, and `Prove` reaches it through the chain it is constructed from.
+    "Convergence" -> DeclaresNothing,
+
+    // Not a development: a function of the chain that proves one fact about one investigation's
+    // series and declares nothing. It is not `BesideTheChain`, which is for a development that
+    // declares constants; what it shares with `Collatz` is the reason its fact is not in the
+    // library, which `Conjugacy` gives in its first paragraph, and `ConjugacySpec` builds it.
+    "Conjugacy" -> NotADevelopment,
+
     "Descent" -> DeclaresNothing,
 
     // Beside the chain, and the classification is the one this file exists to make somebody choose.
@@ -196,6 +222,29 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // There is no `Quotient.standard` to put in a chain and nothing here for `Chain.construct` to
     // build, which is the same position `Recursion` is in one primitive along.
     "Quotient" -> DeclaresNothing,
+
+    // `Quotient`'s standing, for `Quotient`'s reason, one type former along: `Datatype` calls
+    // `Kernel.defineType` and `Kernel.defineConstant`, and everything it declares — the type, its
+    // two bijections, the constructors and any function `defineRecursive` names — is named by the
+    // caller and lands in the caller's theory. Its universe of trees is a term and not a constant,
+    // which `docs/adr/0042` decides, so there is nothing of its own for `Chain.construct` to build.
+    "Datatype" -> DeclaresNothing,
+
+    // Beside the chain by decision and not as a debt, which is the line that separates it from
+    // `Fraction`: `pterm` is a second syntax of arithmetic beside the coded one `Language` holds,
+    // and in the chain every `PVAR` would sit next to a `NUM_CODE` in `Find` for a reader who asked
+    // about neither. It is `Datatype`'s consumer, and `SyntaxSpec` is the spec the standing asks.
+    "Syntax" -> BesideTheChain,
+
+    // `Recursion`'s standing again: a theorem and nothing declared. What it proves is about the
+    // caller's measure and step, and the constant a caller names by it is the caller's.
+    "WellFounded" -> DeclaresNothing,
+
+    // `Fraction`'s standing, a debt and not a decision: Euclid's algorithm is arithmetic anyone
+    // would want, and wiring it into the chain moves `Chain.widest`, the reading register and the
+    // guide's map. The other half of the debt is the theorem it is for, `NUM_EUCLID_GCD = NUM_GCD` off
+    // both zero, which the file's own docstring names as not yet proved. `EuclidAlgorithmSpec` is the spec.
+    "EuclidAlgorithm" -> BesideTheChain,
 
     // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
     // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being

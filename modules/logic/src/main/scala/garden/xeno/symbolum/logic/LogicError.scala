@@ -93,6 +93,37 @@ final case class DoesNotFollow(goal: Term, procedure: String) extends LogicError
 }
 
 /**
+ * A search found a certificate for the goal and rebuilding it in the kernel was refused.
+ *
+ * The opposite of [[DoesNotFollow]] and the refusal most easily mistaken for it, which is why it is
+ * its own case. The untrusted half finished and said the goal follows; the trusted half did not
+ * accept the assembly, so nothing is established, and what failed is the procedure against its own
+ * search rather than the goal against the fragment. Until 2026-09-25 this came out as whatever the
+ * failing step said, a RING `NotEqualTo` at the first level, standing decided and naming neither
+ * the goal nor the certificate; and inside an escalation it did not come out at all, because the
+ * escalation reports the refusal from before it and that was `DoesNotFollow`. So a goal whose proof
+ * had just been found was reported as decided not to follow, which is the one way this machinery
+ * can mislead. Measured against `Linarith` at `57a2276d`, on
+ * `!c x. c < 1 ==> 0 <= x ==> x = c * x ==> x <= 0`.
+ *
+ * `reason` is the step that refused, unchanged, so the defect can be found from the message.
+ */
+final case class NotRebuilt(goal: Term, procedure: String, reason: LogicError) extends LogicError {
+  def message: String =
+    s"$procedure found a combination of the hypotheses giving $goal and could not rebuild it in " +
+      s"the kernel, so nothing about the goal is established either way: ${reason.message}"
+
+  // Never decided, whatever the step that refused says of itself: a step deciding that the
+  // assembled combination is not the goal's is a statement about the assembly. A step that stopped
+  // on a bound keeps saying so, since "the rebuilding ran out" is still a search that stopped.
+  def standing: LogicError.Standing = reason.standing match {
+    case LogicError.Standing.Decided   => LogicError.Standing.Unread
+    case LogicError.Standing.Exhausted => LogicError.Standing.Exhausted
+    case LogicError.Standing.Unread    => LogicError.Standing.Unread
+  }
+}
+
+/**
  * A classical propositional search finished and the goal's skeleton is falsifiable, with the
  * assignment that falsifies it.
  *
@@ -252,6 +283,24 @@ final case class BoundReached(limit: String, reached: Int, allowed: Int, goal: T
       s"about $goal either way"
 
   def standing: LogicError.Standing = LogicError.Standing.Exhausted
+}
+
+/**
+ * A procedure proved the opposite of the goal: `proved` is a theorem, and it denies `goal`.
+ *
+ * The case `Convergence` needed on the day it landed, when a goal `?l. converges (Sum f) l` arrives
+ * about a series the procedure proves divergent. That is the strongest answer a refusal can carry
+ * and none of the others says it: [[NotOfForm]] would report that nothing was learned, which is
+ * false, and [[DoesNotFollow]] speaks of a combination of hypotheses, which is LINARITH's fragment
+ * and not this. Carried as terms for the reason [[NotEqualTo]] gives.
+ *
+ * `Decided`, and more than decided: unlike [[DoesNotFollow]] it does refute, because `proved` is a
+ * theorem of the theory the goal was asked in. What it does not say is anything about a goal the
+ * procedure did not read, and the procedure is named so a reader knows which fragment answered.
+ */
+final case class Denied(goal: Term, proved: Term, procedure: String) extends LogicError {
+  def message: String = s"$procedure proved $proved, which denies $goal"
+  def standing: LogicError.Standing = LogicError.Standing.Decided
 }
 
 /**

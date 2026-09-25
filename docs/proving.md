@@ -274,6 +274,7 @@ lands red here rather than going unmentioned.
 | `Language` | `NUM_TERM`, `NUM_FORM`, `NUM_NUMERAL`, `NUM_SUBST_TERM`, `NUM_SUBST_FORM`, `NUM_FREE_TERM`, `NUM_FREE_FORM`, `NUM_CLOSED`, `NUM_PA`, `NUM_LOGIC`, and six abbreviations | The language of Peano arithmetic, as predicates on `num` and not as a datatype: being a term, being a formula, substituting for a free variable, where a variable occurs free, the axioms of PA and the eight schemes of first-order logic with equality |
 | `Provability` | `NUM_STEP`, `NUM_PROOF`, `NUM_PROV`, `NUM_STEP_FROM`, `NUM_PROV_FROM` | What the embedded theory can prove, as a formula with its subject free. Not one of its definitions is a recursion, and that is the whole return on coding a sequence with the beta function rather than by iterating a pairing |
 | `Deduction` | nothing | Derivations **of** the embedded theory: five schemes proved for every formula rather than at one code, and the deduction theorem over them. It is the first link that declares nothing, which is the day the last link and the widest signature stopped being the same thing |
+| `Truth` | `NUM_VALUE`, `NUM_TRUE`, `NUM_TRI_GRAPH` | What a term of the embedded theory is worth and whether a formula of it holds, at an environment giving each variable a number, and the triangle's graph as the first formula whose truth is a predicate of this logic. `docs/adr/0040` is why a representation is stated this way; nothing in it says what PA proves |
 | `Limit` | `converges`, `lim` | The first analysis here: the epsilon-N statement written out, the limit named by choice and pinned wherever the sequence converges, the monotone convergence theorem, which is the second place `COMPLETENESS` is spent and the first thing here that **obtains** a limit rather than assuming one, and the comparison test over it |
 | `Transcendental` | `exp`, `sin`, `cos`, `ln`, `sinh`, `cosh` | The transcendental functions as their power series through that limit rather than as four characterising axioms, which is what `docs/adr/0017` decides and what it rejects. What is proved of them here is the value of each at zero, `2 < exp 1`, the exponential's absolute convergence and addition theorem, the hyperbolic identity, and `sin x * sin x + cos x * cos x = 1` through a second pair of Cauchy products; the facts about `ln` are `Logarithm`'s |
 | `Concatenation` | `WORD_EMPTY`, `WORD_SINGLETON`, `WORD_CONCAT`, `WORD_PREFIX`, `WORD_SUFFIX`, `WORD_FACTOR` | Putting two words together, with the prefix, the suffix and the factor each defined **by** the concatenation rather than beside it. Before it, `?x y. w = WORD_CONCAT (WORD_CONCAT x u) y` was not a sentence this system could write, so of a factor nothing could be said, not even wrongly |
@@ -287,6 +288,7 @@ lands red here rather than going unmentioned.
 | `Root` | `sqrt` | The square root of a non-negative real, named by choice, and `SQRT_EXISTS`, which says what it names exists: the least upper bound of the numbers whose square is at most `x` squares to `x`, which is `COMPLETENESS` read a third time and the reason the existence rests on the reals alone. `SQRT`, `SQRT_UNIQUE` and `SQRT_SQUARE` read the choice back; nothing is said below zero, where the choice falls somewhere, and `RootSpec` refutes the unconditional statement at minus one |
 | `Continuity` | `continuous` | Continuity at a point, the epsilon-delta statement written out, and `INTERMEDIATE_VALUE`: a function continuous on `[a, b]` takes every value between `f a` and `f b` in it, which is `COMPLETENESS` read a fourth time. `CONTINUOUS_CONST` and `CONTINUOUS_ID` are the two functions everything else will be built from; `ContinuitySpec` shows a step is not continuous and refutes the theorem without its continuity hypothesis at that step. Since 2026-09-25 also the extreme value theorem, `CONTINUOUS_ATTAINS_MAX` and `CONTINUOUS_ATTAINS_MIN` with `CONTINUOUS_BOUNDED` under them, and all three are one lemma used twice: `INTERVAL_GLUING`, that a property of intervals which glues end to end and holds on every short interval around each point holds on `[a, b]`. `CONTINUOUS_NEG` is what turns the maximum into the minimum |
 | `Logarithm` | nothing | The first facts about `ln`, and what they wait on: the exponential positive, strictly increasing, continuous everywhere from one estimate near zero, and onto the positive reals by the intermediate value theorem; then `EXP_LN`, `LN_EXP`, `LN_ONE` and `LN_MUL`. It declares nothing, as `Deduction` does, because its subject is three constants declared below it |
+| `Resolving` | `RES_SAT`, `RES_JUSTIFIED`, `RES_REFUTATION`, `RES_WIDTH` | Resolution as an object: a step sound, a derivation sound by strong induction on the step index, and a derivation reaching the empty clause leaving **no** assignment satisfying the inputs. The refutation, satisfaction and width have names since 2026-09-25, so a statement about every refutation of a family is written without coding one: a refutation is three functions and a step count, its size is that count, and its width is the largest clause, defined by recursion on the count. It is the floor Cook and Reckhow require of a proof system and not a lower bound |
 | `Derivative` | `derivative` | The derivative at a point, written with no quotient: `abs (f (x + h) - f x - m * h) < e * abs h` for every non-zero `h` inside the radius, which keeps every step inside what `Linarith` decides. `DERIVATIVE_INTERIOR_MAX` and `DERIVATIVE_INTERIOR_MIN` are Fermat's lemma, the minimum being the maximum at `\y. 0 - f y` through `DERIVATIVE_NEG`, and `ROLLE` is the first thing to spend the extreme value theorem, at exactly its price. `DERIVATIVE_CONST` and `DERIVATIVE_ID` keep the definition from being empty; `DerivativeSpec` shows the identity is flat nowhere and refutes Rolle without `f a = f b` there. The mean value theorem is not here yet |
 
 **This is not the front page's table and the two must not be merged.** `README.md` indexes by
@@ -299,14 +301,18 @@ believe this one and fix that one: this table is compared against the library by
 table is prose.
 
 **What is not in the table, and why the absence is not an omission.** A development that publishes no
-lemma of its own has no heading in `lemmas.md` and no row here, and there are nine of them. They are
-drivers and procedures: `Induct` runs an induction over a goal, `Bounded` discharges
-`!i. i < k ==> P i` at a concrete bound by proving the instances, `Successor` puts a numeral into
-successor form so that a recurrence can reach it, `Monotone` hands back `|- MONOTONE f` for an
-operator written in the usual shape, `Recursion` and `Quotient` define the **caller's** constant and
-the caller's type, `Descent` defines a predicate by recursion on a code, `Resolving` proves the
-soundness of a resolution step, and `Domain` builds a caller's own theory of a domain that is not
-mathematics. Nothing they produce belongs to them, which is why there is nothing of theirs to list.
+lemma of its own has no heading in `lemmas.md` and no row here. They are drivers and procedures,
+and this sentence counted them until 2026-09-25, when a tenth made the count false: `Induct` runs
+an induction over a goal, `Bounded` discharges `!i. i < k ==> P i` at a concrete bound by proving
+the instances, `Successor` puts a numeral into successor form so that a recurrence can reach it,
+`Monotone` hands back `|- MONOTONE f` for an operator written in the usual shape, `Recursion` and
+`Quotient` define the **caller's** constant and the caller's type, `Datatype` defines the caller's
+inductive type from its constructors and a function on it by structural recursion
+(`docs/adr/0042`), `WellFounded` proves recursion along a measure for the caller's step
+(`docs/adr/0043`), `Descent` defines a predicate by recursion on a code, and `Domain` builds a
+caller's own theory of a domain that is not mathematics. `Resolving` was on this list until the
+same day, when it became a link with lemmas of its own and a row above. Nothing they produce
+belongs to them, which is why there is nothing of theirs to list.
 `Ring`, `Field`, `Linarith`, `Arithmetic` and `Order`'s procedures are the section below.
 
 **The position of a development in the chain is its extension order and not its dependency order**,
@@ -2209,7 +2215,11 @@ cancellation.
    products at the two alternating series. The same day `Continuity` defined continuity at a point
    and proved the intermediate value theorem from `COMPLETENESS`, and `Logarithm` spent it on the
    exponential: continuous everywhere, onto the positive reals, and `ln` its inverse, with
-   `EXP_LN`, `LN_EXP`, `LN_ONE` and `LN_MUL`.
+   `EXP_LN`, `LN_EXP`, `LN_ONE` and `LN_MUL`. On 2026-09-25 whether a series converges became something the
+   system **decides** rather than something a reader assembles: `Convergence`, reached through
+   `Prove.Address.Series`, answers in both directions over the geometric, exponential, sine and
+   cosine summands, and `docs/adr/0041` says why it reads closed forms instead of applying the
+   ratio test it also publishes.
 5. **A proof for what `Quantified` decides.** Since 2026-09-10 a quantified linear claim is
    decided, and it is decided rather than proved: the elimination runs on untrusted forms and no
    theorem comes back. Making it produce one wants the density and the unboundedness of the order

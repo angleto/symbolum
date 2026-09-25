@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, LinearForm, Order, Real, RealTheory, Ring, Signature, Value}
+import garden.xeno.symbolum.theories.{Chain, Convergence, Field, Library, Linarith, LinearForm, Order, Real, RealTheory, Ring, Signature, Value}
 
 /**
  * One entry point for "prove this goal", and one rule for which refusal survives.
@@ -101,7 +101,15 @@ final class Prove private (
    * a term naming `NUM_DIV` cannot be stated against a signature that has never heard of `num`, so
    * a prover with no table is a prover no such goal reaches.
    */
-  val value: Option[Value]
+  val value: Option[Value],
+  /**
+   * The procedure that decides a series over its fragment, where the prover was built over a chain.
+   *
+   * `Option` for the reason [[value]] is one: `converges` and `Sum` are constants a chain has
+   * assembled and an `Order` has never heard of, so a prover over somebody's own order has no
+   * such procedure and no goal of its shape can even be stated against it.
+   */
+  val convergence: Option[Convergence]
 ) {
 
   /**
@@ -460,6 +468,13 @@ final class Prove private (
       case Prove.Address.Evaluation =>
         evaluated(goal).map(Prove.Outcome.Settled.apply)
 
+      case Prove.Address.Series =>
+        convergence match {
+          case None =>
+            Left(FromLogic(NotOfForm("a prover built over a chain; this one has no series in it", goal)))
+          case Some(procedure) => TacticError.lift(procedure.prove(goal)).map(Prove.Outcome.Settled.apply)
+        }
+
       case Prove.Address.Nobody(why) =>
         Left(FromLogic(NotOfForm(why, goal)))
     }
@@ -644,6 +659,10 @@ final class Prove private (
    * a procedure or whether nothing here is the right address.
    */
   def addressOf(goal: Term): Prove.Address = Prove.addressOf(reals, goal)
+
+  /** The same prover, with the series procedure a chain supplies. */
+  private[tactics] def withConvergence(procedure: Option[Convergence]): Prove =
+    new Prove(order, ring, linarith, field, reals, library, classical, value, procedure)
 }
 
 object Prove {
@@ -718,6 +737,19 @@ object Prove {
      */
     case Evaluation
 
+    /**
+     * A question about a series: `?l. converges (Sum f) l`, `converges (Sum f) v`, or
+     * `diverges (Sum f)`.
+     *
+     * `Convergence` is what it is sent to, and until 2026-09-25 such a goal was [[Nobody]]'s with a
+     * message listing four shapes it could be restated as, none of which a convergence is. The
+     * library scan still runs first, so a series some lemma states outright is still settled there;
+     * what arrives here is the question the scan cannot answer, which for this predicate is nearly
+     * all of them, because a lemma that would settle one takes its dominating series or its ratio
+     * as a hypothesis and matching the goal determines neither. `docs/adr/0041` is the decision.
+     */
+    case Series
+
     /** Neither shape, and `why` names what a goal would have to be. */
     case Nobody(why: String)
 
@@ -774,6 +806,7 @@ object Prove {
       Order.standard.reals,
       libraryOf(Order.standard),
       None,
+      None,
       None
     )
 
@@ -828,7 +861,7 @@ object Prove {
     for {
       linarith <- Linarith.construct(order)
       field <- Field.construct(order.ring.arithmetic)
-    } yield new Prove(order, order.ring, linarith, field, reals, libraryOf(order), None, None)
+    } yield new Prove(order, order.ring, linarith, field, reals, libraryOf(order), None, None, None)
 
   /**
    * The prover a chain deserves: its widest signature, and everything it holds.
@@ -850,7 +883,8 @@ object Prove {
       // build, which is the same shape `libraryOf` uses for a library that will not widen.
       table = Value.construct(chain).toOption
       prover <- construct(chain.order, chain.widest, Library.of(chain), linarith, Some(chain.classical), table)
-    } yield prover
+      // A procedure that will not build is a capability absent, as the table's is.
+    } yield prover.withConvergence(Convergence.construct(chain).toOption)
 
   /**
    * The same, with a library the caller assembled rather than the one the order can reach.
@@ -888,7 +922,7 @@ object Prove {
       field <- Field.construct(order.ring.arithmetic)
       logic <- reals.logic.over(reals.theory)
     } yield new Prove(
-      order, order.ring, linarith, field, reals, Some((held, logic)), classical, value)
+      order, order.ring, linarith, field, reals, Some((held, logic)), classical, value, None)
 
   /**
    * The shape test, applied under any leading quantifiers and through any antecedent.
@@ -932,7 +966,11 @@ object Prove {
   }
 
   private def conclusionAddress(reals: Signature, conclusion: Term): Address =
-    reals.logic.destConj(conclusion) match {
+    // Asked first because none of the arithmetic addresses reads it: a convergence is an application
+    // of a predicate, an existential over one or a divergence, and each would fall through to
+    // [[Address.Nobody]] with a list of shapes it is not.
+    if (Convergence.goalOf(reals.logic, conclusion).isDefined) Address.Series
+    else reals.logic.destConj(conclusion) match {
       // A conjunction is LINARITH's exactly when both sides are, which is what its own route does:
       // it proves each conjunct and introduces. A conjunction with one side outside the fragment
       // is outside it, and saying so names the side that is.

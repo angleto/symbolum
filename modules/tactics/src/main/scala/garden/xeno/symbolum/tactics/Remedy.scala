@@ -351,6 +351,11 @@ object Remedy {
           s"$procedure searched to the end of its fragment"
       )
 
+    // `Settled`, and with more reason than the case above: the procedure holds a theorem denying
+    // the goal, so no restatement of the goal's own shape can change the answer.
+    case Denied(goal, proved, procedure) =>
+      Settled(s"$procedure proved ${write(proved, reals)}, which denies ${write(goal, reals)}")
+
     // The two sides met a normal form each and the forms differ, which is what a false identity
     // looks like. It is a lead for a person rather than a shape to restate, and it is the one
     // refusal whose message has to print a term the reader recognises.
@@ -388,6 +393,15 @@ object Remedy {
     // knows which of the two to go and change.
     case NoCloser(_, driver) =>
       ReportADefect(s"$driver was asked to finish a goal and holds no procedure that could")
+
+    // A defect for `NoCloser`'s reason, from the other end: there a driver had nothing to look
+    // with, here a procedure looked, found, and could not assemble what it found. No restatement
+    // reaches it, since the search already said the goal follows, and no limit does either.
+    case NotRebuilt(goal, procedure, reason) =>
+      ReportADefect(
+        s"$procedure found a certificate for ${write(goal, reals)} and its rebuilding was refused: " +
+          reason.message
+      )
 
     // The same shape one procedure over, and the reason `BoundReached` is its own case: a search
     // that stopped and a claim that does not follow look identical and imply opposite moves. The

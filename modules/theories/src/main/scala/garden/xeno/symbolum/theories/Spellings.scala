@@ -158,6 +158,13 @@ object Spellings {
       .delimited("NUM_STEP_FROM", 4, "\\operatorname{step}_{#1}(#2, #3, #4)")
       .delimited("NUM_PROV_FROM", 2, "\\operatorname{Prov}_{#1}(#2)")
       .delimited("NUM_PA", 1, "\\operatorname{PA}(#1)")
+      // The value of a term and the truth of a formula at an environment, which is how the
+      // semantics of a first-order language is written: the double brackets for the value and a
+      // satisfaction turnstile for the truth, the environment on the left of it.
+      .delimited("NUM_VALUE", 2, "[\\![#1]\\!]_{#2}")
+      // `operator` and not `delimited`: neither argument is inside marks of its own.
+      .operator("NUM_TRUE", 2, "#2 \\vDash #1", Relation)
+      .delimited("NUM_TRI_GRAPH", 0, "\\ulcorner v_0 + v_0 = v_1 \\cdot S v_1 \\urcorner")
       // The object language's derived connectives. Set as named operations rather than with the
       // meta level's own symbols, which is the point of the row: `NUM_AND p q` is a NUMBER that
       // codes a conjunction, and writing it `#1 \\wedge #2` would put it in the same shape as the
@@ -291,6 +298,10 @@ object Spellings {
       // must carry its own marks around every argument and `\lim #1` carries none, so
       // `lim s + 1` would set as the limit of a sum.
       .operator("lim", 1, "\\lim #1", Multiplicative + 5)
+      // Delimited, because the books write "the series diverges" in words after the series and a
+      // template ending on its place promises nothing about where that place ends; the word in
+      // front of a bracket is the same claim with its marks on both sides.
+      .delimited("diverges", 1, "\\mathrm{diverges}(#1)")
       // The four transcendental functions, each as an operator tighter than multiplication rather
       // than as a delimited template: `\\sin(x)` is what a delimited row would give and
       // `\\sin x + 1` is what the books write, so the argument is bracketed by the context and
@@ -324,6 +335,15 @@ object Spellings {
       // rows above, and the subscripts are where the relation and the counted sub-relation
       // belong, since a reader tracks the step and not them.
       .delimited("REACH", 3, "\\operatorname{reach}^{#2}_{#1}(#3)")
+      /* ---------------------------------------------------- resolution as an object */
+      // Words rather than symbols, because the literature has none that all four share: a proof
+      // complexity paper writes `w(\pi)` for the width of a refutation `\pi`, and here there is no
+      // `\pi`, only the functions and the index count it is made of. The width's subscript is the
+      // clause lengths and its argument the count, which is how `NUM_PROD` above is laid out.
+      .delimited("RES_SAT", 5, "\\operatorname{sat}_{#1}(#2, #3, #4, #5)")
+      .delimited("RES_JUSTIFIED", 5, "\\operatorname{just}(#1, #2, #3, #4, #5)")
+      .delimited("RES_REFUTATION", 5, "\\operatorname{ref}(#1, #2, #3, #4, #5)")
+      .delimited("RES_WIDTH", 2, "\\operatorname{w}_{#1}(#2)")
       /* ------------------------------------------ what the type definitions left */
       .delimited("IND_0", 0, "\\mathbb{I}_{0}")
       .delimited("IND_SUC", 1, "\\mathrm{ind\\_suc}(#1)")

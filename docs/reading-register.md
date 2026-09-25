@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (137)
+## The definitions (145)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -262,11 +262,18 @@ axiom mentioning it means.
 | `definition NUM_TAG` | NUM_TAG = \x:num. select (\y:num. ?z:num. x = NUM_CODE y z) | **NOT READ** |  |  |
 | `definition NUM_TERM` | NUM_TERM = select (\x:num -> bool. !y:num. x y = (?z:num. ?u:num. y = NUM_CODE z u /\ (z = 0 \/ z = 1 /\ u = 0 \/ z = 2 /\ x u \/ (z = 3 \/ z = 4) /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ x v /\ x w)))) | **NOT READ** |  |  |
 | `definition NUM_TRI` | NUM_TRI = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = x y + SUC y)) | **NOT READ** |  |  |
+| `definition NUM_TRI_GRAPH` | NUM_TRI_GRAPH = NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))) (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 2 (NUM_CODE 0 1))))) | **NOT READ** |  |  |
+| `definition NUM_TRUE` | NUM_TRUE = select (\x:num -> (num -> num) -> bool. !y:num. x y = COND (y = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. NUM_VALUE (NUM_FST (NUM_PAYLOAD y)) z = NUM_VALUE (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 6 (NUM_PAYLOAD y)) (\z:num -> num. ~(x (NUM_PAYLOAD y) z)) (COND (y = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z ==> x (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. !u:num. x (NUM_SND (NUM_PAYLOAD y)) (\v:num. COND (v = NUM_FST (NUM_PAYLOAD y)) u (z v))) (\z:num -> num. F))))) | **NOT READ** |  |  |
+| `definition NUM_VALUE` | NUM_VALUE = select (\x:num -> (num -> num) -> num. !y:num. x y = COND (y = NUM_CODE 0 (NUM_PAYLOAD y)) (\z:num -> num. z (NUM_PAYLOAD y)) (COND (y = NUM_CODE 2 (NUM_PAYLOAD y)) (\z:num -> num. SUC (x (NUM_PAYLOAD y) z)) (COND (y = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z + x (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z * x (NUM_SND (NUM_PAYLOAD y)) z) (\z:num -> num. 0))))) | **NOT READ** |  |  |
 | `definition PAIR` | PAIR = \x:'a. \y:'b. mk_prod (mk_pair x y) | **NOT READ** |  |  |
 | `definition PRE` | PRE = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = y)) | **NOT READ** |  |  |
 | `definition Power` | Power = \x:real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = x * y z)) | **NOT READ** |  |  |
 | `definition Prod` | Prod = \x:num -> real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = y z * x z)) | **NOT READ** |  |  |
 | `definition REACH` | REACH = \x:'a -> 'a -> bool. \y:'a -> 'a -> bool. \z:'a. INDUCTIVE (\u:prod('a, num) -> bool. \v:prod('a, num). v = PAIR z 0 \/ (?w:prod('a, num). u w /\ x (FST w) (FST v) /\ (y (FST w) (FST v) /\ SND v = SUC (SND w) \/ ~(y (FST w) (FST v)) /\ SND v = SND w))) | **NOT READ** |  |  |
+| `definition RES_JUSTIFIED` | RES_JUSTIFIED = \x:num -> num. \y:num -> num -> num. \z:num -> num -> bool. \u:num. \v:num. v < u \/ (?w:num. ?x1:num. ?y1:num. w < v /\ x1 < v /\ (!z1:num. z1 < x w ==> ~(y w z1 = y1 /\ z w z1 = T) ==> (?u1:num. u1 < x v /\ y v u1 = y w z1 /\ z v u1 = z w z1)) /\ (!z1:num. z1 < x x1 ==> ~(y x1 z1 = y1 /\ z x1 z1 = F) ==> (?u1:num. u1 < x v /\ y v u1 = y x1 z1 /\ z v u1 = z x1 z1))) | **NOT READ** |  |  |
+| `definition RES_REFUTATION` | RES_REFUTATION = \x:num -> num. \y:num -> num -> num. \z:num -> num -> bool. \u:num. \v:num. (!w:num. w < v ==> RES_JUSTIFIED x y z u w) /\ (?w:num. w < v /\ x w = 0) | **NOT READ** |  |  |
+| `definition RES_SAT` | RES_SAT = \x:num -> bool. \y:num -> num. \z:num -> num -> num. \u:num -> num -> bool. \v:num. ?w:num. w < y v /\ x (z v w) = u v w | **NOT READ** |  |  |
+| `definition RES_WIDTH` | RES_WIDTH = \x:num -> num. select (\y:num -> num. y 0 = 0 /\ (!z:num. y (SUC z) = COND (x z <= y z) (y z) (x z))) | **NOT READ** |  |  |
 | `definition SND` | SND = \x:prod('a, 'b). select (\y:'b. ?z:'a. x = PAIR z y) | **NOT READ** |  |  |
 | `definition SUC` | SUC = \x:num. mk_num (IND_SUC (dest_num x)) | **NOT READ** |  |  |
 | `definition Sum` | Sum = \x:num -> real. select (\y:num -> real. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x z)) | **NOT READ** |  |  |
@@ -293,6 +300,7 @@ axiom mentioning it means.
 | `definition cosh` | cosh = \x:real. (exp x + exp (0 - x)) / 2 | **NOT READ** |  |  |
 | `definition derivative` | derivative = \x:real -> real. \y:real. \z:real. !u:real. 0 < u ==> (?v:real. 0 < v /\ (!w:real. 0 < abs w /\ abs w < v ==> abs (x (y + w) - x y - z * w) < u * abs w)) | **NOT READ** |  |  |
 | `definition div` | div = \x:real. \y:real. x * inv y | **NOT READ** |  |  |
+| `definition diverges` | diverges = \x:num -> real. ~(?y:real. converges x y) | **NOT READ** |  |  |
 | `definition exp` | exp = \x:real. lim (\y:num. Sum (\z:num. Power x z / real_of_num (NUM_FACT z)) y) | **NOT READ** |  |  |
 | `definition lim` | lim = \x:num -> real. select (\y:real. converges x y) | **NOT READ** |  |  |
 | `definition ln` | ln = \x:real. select (\y:real. exp y = x) | **NOT READ** |  |  |

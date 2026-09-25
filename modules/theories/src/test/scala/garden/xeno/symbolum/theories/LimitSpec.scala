@@ -43,8 +43,8 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   }
 
   "The development" should "declare exactly the constants it is about" in {
-    val before = chain.provability.theory.constants.keySet
-    (limit.theory.constants.keySet -- before) shouldBe Set(Limit.Converges, Limit.Value)
+    val before = chain.truth.theory.constants.keySet
+    (limit.theory.constants.keySet -- before) shouldBe Set(Limit.Converges, Limit.Value, Limit.Diverges)
   }
 
   it should "add no axiom at all, which is the whole of what a definition costs" in {
@@ -235,68 +235,34 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * development narrows rather than a claim about the value.
    */
   /**
-   * `|- ?l. converges (Sum (\i. Power (1/2) i)) l`, built once for the two tests that spend it.
+   * `|- ?l. converges (Sum (\i. Power (1/2) i)) l`, built once for the tests that spend it.
    *
-   * The geometric series at one half is the only convergence this file can obtain from nothing,
-   * so both the comparison test's own assertion and the absolute one below it start here. It is a
-   * `lazy val` rather than a line in each, because a second copy would be a second thing to keep
-   * in agreement and the two tests ask different questions of the same theorem.
+   * It is `Limit.SUM_GEOMETRIC_CONVERGES` at one half, which says the limit is two, with the value
+   * put back under the existential because the tests below ask for a limit and not for its value.
+   * Until 2026-09-25 this was ninety lines of kernel calls through the comparison test, and it was
+   * the only convergence this file could obtain from nothing; the comparison test's own assertion
+   * above still goes that way, which is what keeps that route exercised.
    */
   private lazy val geometricConverges: Kernel.Thm = {
     val rules = limit.logic.rules
     val linarith = force(Linarith.construct(chain.order))
     val real = TyApp(Real.TypeName, Nil)
-    val numbers = TyApp(Natural.TypeName, Nil)
-    val n = Term.variable("n", numbers)
 
     val half = force(limit.term("(1:real) / 2", real))
-    val terms = force(limit.term("\\i:num. Power ((1:real) / 2) i", Type.fun(numbers, real)))
-    val positivePower = force(
+    val size = force(
       rules
-        .spec(half, force(chain.series.fact(Series.PowerPositive)))
-        .flatMap(rules.mp(_, force(linarith.prove("0 < (1:real) / 2")))))
-    val powerAt = force(limit.term("Power ((1:real) / 2) (n:num)", real))
-    val sumAt = force(limit.term("Sum (\\i:num. Power ((1:real) / 2) i) (n:num)", real))
-
-    val nonNegative = force(
-      rules
-        .specAll(
-          force(chain.order.fact(Order.LeOfLt)),
-          List(force(limit.term("0:real", real)), powerAt))
-        .flatMap(rules.mp(_, force(rules.spec(n, positivePower))))
-        .flatMap(rules.gen(n, _)))
-    val dominates = force(
-      rules
-        .specAll(force(chain.order.fact(Order.LeOfEq)), List(powerAt, powerAt))
-        .flatMap(rules.mp(_, Kernel.refl(powerAt)))
-        .flatMap(rules.gen(n, _)))
-    val geometric = force(
-      rules.specAll(force(chain.series.fact(Series.Geometric)), List(half, n)))
-    val everywhereUnderTwo = force(
+        .spec(half, force(chain.magnitude.fact(Magnitude.OfNonNegative)))
+        .flatMap(rules.mp(_, force(linarith.prove("0 <= (1:real) / 2")))))
+    val small = force(
       linarith
-        .prove("!p:real. !s:real. ((1:real) / 2 - 1) * s = p - 1 ==> 0 < p ==> s <= 2")
-        .flatMap(rules.specAll(_, List(powerAt, sumAt)))
-        .flatMap(rules.mp(_, geometric))
-        .flatMap(rules.mp(_, force(rules.spec(n, positivePower))))
-        .flatMap(rules.gen(n, _)))
+        .prove("!a:real. a = 1 / 2 ==> a < 1")
+        .flatMap(rules.spec(force(limit.term("abs ((1:real) / 2)", real)), _))
+        .flatMap(rules.mp(_, size)))
+    val converging = force(rules.spec(half, force(limit.fact(Limit.GeometricConverges))).flatMap(rules.mp(_, small)))
 
-    val boundedStatement =
-      proposition("?b:real. !n:num. Sum (\\i:num. Power ((1:real) / 2) i) n <= b")
-    val boundedPredicate = force(
-      limit.logic.destExistsPredicate(boundedStatement).toRight(MissingDefinition("an existential")))
-    val bounded = force(
-      rules.existsIntro(boundedPredicate, force(limit.term("2:real", real)), everywhereUnderTwo))
-
-    val specialised = force(rules.specAll(force(limit.comparison), List(terms, terms)))
-    val opened = force(
-      Conv
-        .betaNormalise(specialised.conclusion)
-        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised))))
-    force(
-      rules
-        .mp(opened, nonNegative)
-        .flatMap(rules.mp(_, dominates))
-        .flatMap(rules.mp(_, bounded)))
+    val claim = proposition("?l:real. converges (Sum (\\i:num. Power ((1:real) / 2) i)) l")
+    val predicate = force(limit.logic.destExistsPredicate(claim).toRight(MissingDefinition("an existential")))
+    force(rules.existsIntro(predicate, force(Limit.convergenceOf(converging))._2, converging))
   }
 
   /**

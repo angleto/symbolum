@@ -311,9 +311,17 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // facts, two each on `EXP_SMALL_ABOVE` and `LN_MUL` and one on six others.
     // 451 with the extreme value theorem, 2026-09-25, derived before the run: ten antecedents over
     // five facts, three on the gluing, one on the negation and two on each of the other three.
-    // 464 with the derivative and Rolle's theorem, 2026-09-25, derived before the run: thirteen
+        // 466 with the convergence criteria, 2026-09-25, and the **fifteen** were derived before the
+    // run and met: three on `SUM_RATIO_TEST`, two each on `SUM_DIVERGES`, `SUM_RATIO_DIVERGES` and
+    // `SUM_SCALE_DIVERGES`, one each on the six other facts of `Limit`, and none on the three
+    // values in `Transcendental`, which are bare convergences.
+    // 472 with the polynomial-times-geometric criteria, 2026-09-25, derived before the run: one
+    // antecedent on each of the six.
+    // 491 with resolution as a link, the same day, derived before the run: nineteen antecedents
+    // over twelve facts, which `ProposeSpec` lists one by one. Tip plus this branch's delta.
+    // 504 with the derivative and Rolle's theorem, the same day, derived before the run: thirteen
     // antecedents over six facts, four on each interior lemma and on `ROLLE`, one on the negation.
-    propose.weakenings.size shouldBe 464
+    propose.weakenings.size shouldBe 504
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

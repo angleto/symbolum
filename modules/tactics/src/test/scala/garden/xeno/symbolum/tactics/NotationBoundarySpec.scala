@@ -223,7 +223,9 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Continuity.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     // And `Logarithm.scala`'s, the same check over `Logarithm.Statements`, a sixth time.
     ("Logarithm.scala", "name") -> (Verdict.Name, "the lemma's published name"),
-    // And `Derivative.scala`'s, the same check over `Derivative.Statements`, a seventh time.
+    // And `Resolving.scala`'s, over `Resolving.Statements`, a seventh, since it became a link.
+    ("Resolving.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    // And `Derivative.scala`'s, the same check over `Derivative.Statements`, an eighth time.
     ("Derivative.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     // The four `Domain.scala` sites landed with `docs/adr/0028` and are the interpretation's two
     // refusals. None is a crossing: a domain's own name and a constant's name are names, the joined
@@ -291,6 +293,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Crossing, "the operator's own clause, in the building notation and not a reader's"),
     ("Language.scala", "Axioms(which)._1") -> (Verdict.Name, "an axiom's published name"),
     ("Language.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    ("Truth.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     ("Language.scala", "payload") -> (Verdict.Crossing, "a code's payload, which is a term"),
     ("Integer.scala", "Projection") ->
       (Verdict.Name, "the projection of the quotient, by its own published name"),
@@ -299,6 +302,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     // `Collatz.scala` already carry for the same expression: a fact's published name, compared
     // against what its derivation produced, in the refusal that says the two disagree.
     ("Fraction.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    // `Syntax.scala`, 2026-09-25, the same reading once more: the published name of a fact in the
+    // refusal that says its derivation produced something other than its statement.
+    ("Syntax.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    ("EuclidAlgorithm.scala", "name") -> (Verdict.Name, "the fact's published name"),
     ("Integer.scala", "error.message") ->
       (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
     // The bridge into the reals, and the four are the three above plus one. `stage` is the reading
@@ -315,6 +322,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Limit.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
+    ("Criteria.scala", "Show.show(notation, target)") ->
+      (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
+    ("Convergence.scala", "Show.show(notation, goal)") ->
+      (Verdict.Crossing, "the goal, rendered at the raiser against the widest notation it reads in"),
     ("Linarith.scala", "LinearForm.factorsOf(atom).length") ->
       (Verdict.Number, "how many unknowns a product has"),
     ("Linarith.scala", "named") ->
@@ -414,6 +425,14 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Text, "a sentence built here from a literal and a count of the scheme's binders"),
     ("Quotient.scala", "what") ->
       (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
+    ("Convergence.scala", "Expected") ->
+      (Verdict.Text, "the three shapes of question the procedure is asked, written here"),
+    ("Convergence.scala", "Summands") ->
+      (Verdict.Text, "the summands the procedure reads, written here"),
+    ("Convergence.scala", "Unnamed") ->
+      (Verdict.Text, "why a value asked of a series the procedure shows converges is not given, written here"),
+    ("Convergence.scala", "RatioTendsToOne") ->
+      (Verdict.Text, "why a rational function of the index is refused, written here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
       (Verdict.Text, "a constant sentence written with an interpolator it does not use")
   )

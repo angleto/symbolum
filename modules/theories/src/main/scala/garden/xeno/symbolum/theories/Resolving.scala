@@ -23,10 +23,12 @@ import garden.xeno.symbolum.logic.*
  * What is **not** here is the content of that programme, and the gap should be read as large.
  * Haken's lower bound for the pigeonhole principle, and the width bound of Ben-Sasson and
  * Wigderson that gives a shorter route to it, are combinatorial arguments about restrictions and
- * about a sub-additive measure on clauses; nothing below is a step towards either. Width and size
- * are not even defined here. `docs/adr/0013`'s warning about calling a meta-level closure by the
- * name of an object-level theorem applies to this file too: this is soundness, it is the floor, and
- * it is not a lower bound.
+ * about a sub-additive measure on clauses. What is here is what either of them has to be **stated**
+ * over: a refutation as a named predicate, its size, and its width, with the three facts that make
+ * the width the largest clause and not merely a bound on it. `docs/adr/0013`'s warning about
+ * calling a meta-level closure by the name of an object-level theorem applies to this file too:
+ * this is soundness and the vocabulary of the measure, it is the floor, and it is not a lower
+ * bound.
  *
  * == Nothing is coded, and the card that asked for this expected the opposite ==
  *
@@ -58,11 +60,35 @@ import garden.xeno.symbolum.logic.*
  * (v j i) = s j i)`. The empty clause has `k j = ZERO` and nothing below zero, so nothing satisfies
  * it; [[Resolving.EmptyUnsatisfiable]] is that, and it is what makes a refutation a refutation.
  *
- * **Nothing is given a name of its own, and that is deliberate for now.** A constant for "clause
- * `j` is satisfied" would read better and would make this a link in the chain, which moves the
- * signature, the reading register, `docs/lemmas.md` and three pinned counts. The statements below
- * are written out instead, which is more to read and is checkable against the informal claim
- * without trusting a definition. Naming them is the first thing the next piece of work should do.
+ * == Four names, and the five theorems that stay written out ==
+ *
+ * Since 2026-09-25 this is a link in the chain and declares four constants, all definitions:
+ * [[Resolving.Satisfied]], [[Resolving.JustifiedName]], [[Resolving.Refutation]] and
+ * [[Resolving.Width]]. They are what a statement about **every** refutation of a family is written
+ * with, and a constant declared beside the chain would be where nothing above can see it, which is
+ * the reason every other link gives. No axiom.
+ *
+ * The five soundness theorems keep their written-out statements, and that is a decision rather than
+ * a leftover: each is checkable against the informal claim without trusting a definition, and
+ * [[Resolving.RefutationUnsatisfiable]] is [[Resolving.Refutes]] read through the names, derived from
+ * it, so the named form costs nobody a second trust.
+ *
+ * **The size of a refutation is its index count and gets no constant.** A refutation here is
+ * `k`, `v` and `s` read at `m` indices, so the number of steps is the argument `m` itself, and
+ * `RES_REFUTATION k v s inputs m` states it; a constant `RES_SIZE m = m` would be a second name for
+ * a variable. [[Resolving.RefutationNonEmpty]] is the one fact about it that follows from the
+ * definition, that a refutation has at least one step. The width is different in kind: it is the
+ * largest of `m` values, which the representation does not carry, so it is a function defined by
+ * recursion on `m`.
+ *
+ * **What a lower bound is written with, measured rather than predicted.** The card that asked for
+ * this, Mycelium `edc1f509`, asked first whether a derivation had to become a **number**, coded
+ * with the beta function the way `Provability.NUM_PROOF` codes one, before a statement quantifying
+ * over all refutations of a family could be written. It does not: `ResolvingSpec` states Haken's
+ * theorem for the pigeonhole principle over these four constants, the quantifier over refutations
+ * being three universally quantified functions, and asserts that the statement elaborates and is
+ * closed. That is the second time the premise that proof complexity needs arithmetisation has
+ * fallen, and the first is in the paragraph above.
  */
 final class Resolving private (
   val peano: Peano,
@@ -70,10 +96,15 @@ final class Resolving private (
   val theory: Theory,
   val notation: Notation,
   val logic: Logic,
+  val definitions: Map[String, Kernel.Thm],
   val facts: Map[String, Kernel.Thm]
 ) extends Signature {
 
-  /** A derived fact of this development, by name. */
+  /** The equation defining `name`, as proved when the constant was introduced. */
+  def definition(name: String): Either[LogicError, Kernel.Thm] =
+    definitions.get(name).toRight(MissingDefinition(name))
+
+  /** A derived fact of this development, by name. Nothing here is asserted. */
   def fact(name: String): Either[LogicError, Kernel.Thm] =
     facts.get(name).toRight(MissingDefinition(name))
 }
@@ -206,52 +237,210 @@ object Resolving {
    *
    * This is the property Cook and Reckhow require of a proof system before the size of a proof means
    * anything, and having it is what makes the next question — how large a refutation of a given
-   * family has to be — a question rather than a category error. It is still not a lower bound, and
-   * nothing here defines width or size.
+   * family has to be — a question rather than a category error. It is still not a lower bound.
    */
   val Refutes: String = "RES_REFUTES"
 
-  /** Over the standard chain. */
-  lazy val standard: Resolving =
-    construct(Chain.standard).fold(
-      error => throw new IllegalStateException(s"the standard resolution facts do not build: $error"),
-      identity
-    )
+  /* ---------------------------------------------------------------- the constants */
+
+  /** `RES_SAT a k v s j`: the assignment `a` satisfies clause `j` of the derivation `k`, `v`, `s`. */
+  val Satisfied: String = "RES_SAT"
 
   /**
-   * Over a chain of one's own.
-   *
-   * Beside the chain rather than in it, like `Bounded`, `Primes` and `Deduction`: it declares no
-   * type, no constant and no definition, so it cannot be the widest signature and adding it moves
-   * nothing. `ResolvingSpec` asserts that the theory it hands on is the one it was given.
+   * `RES_JUSTIFIED k v s inputs j`: step `j` is one of the first `inputs` clauses, or two earlier
+   * steps resolve to it. The justification [[DerivationSound]] writes out, under a name.
    */
-  def construct(chain: Chain): Either[LogicError, Resolving] = {
-    val signature = chain.widest
-    val logic = signature.logic
-    val rules = logic.rules
-    val classical = chain.classical
+  val JustifiedName: String = "RES_JUSTIFIED"
+
+  /**
+   * `RES_REFUTATION k v s inputs m`: the `m` steps `k`, `v`, `s` are a resolution refutation of the
+   * first `inputs` clauses, which is every step justified and one of them empty.
+   *
+   * **Its size is `m`.** Unused steps are allowed, as they are in the textbook definition of a
+   * derivation, so `m` is the size of this refutation and not the least size of any refutation of
+   * the same inputs; a lower bound on size is a statement that every `m` for which this holds is
+   * large, and that is what it quantifies over.
+   */
+  val Refutation: String = "RES_REFUTATION"
+
+  /**
+   * `RES_WIDTH k m`: the largest `k j` for `j < m`, and `ZERO` when `m` is.
+   *
+   * By recursion on `m`, with `COND` picking the larger of the width so far and the new clause's
+   * length, because `num` has no maximum. What makes it the largest rather than an upper bound is
+   * the pair [[WidthBound]] and [[WidthAttained]], and [[WidthLeast]] is what a caller spends.
+   */
+  val Width: String = "RES_WIDTH"
+
+  /* ------------------------------------------------------------------- the facts */
+
+  /** `|- !k. RES_WIDTH k ZERO = ZERO`, the recursion's first equation. */
+  val WidthAtZero: String = "RES_WIDTH_ZERO"
+
+  /** The recursion's second equation, `RES_WIDTH k (SUC n)` as the larger of two. */
+  val WidthAtSuccessor: String = "RES_WIDTH_SUC"
+
+  /** Every clause below `m` is at most `RES_WIDTH k m` long. By induction on `m`. */
+  val WidthBound: String = "RES_WIDTH_BOUND"
+
+  /**
+   * `RES_WIDTH k m` is `ZERO` or the length of a clause below `m`.
+   *
+   * Written as a disjunction rather than as `0 < m ==> ...`, because the width of a derivation whose
+   * clauses are all empty is also `ZERO` and the implication would need a case split on `m` that
+   * the disjunction does not: the recursion's first equation is its base, and each step either keeps
+   * the old width or takes the new clause, which is the right disjunct at `m` itself.
+   */
+  val WidthAttained: String = "RES_WIDTH_ATTAINED"
+
+  /** A bound on every clause below `m` bounds the width. From [[WidthAttained]], no induction. */
+  val WidthLeast: String = "RES_WIDTH_LEAST"
+
+  /**
+   * [[Refutes]] read through the names: a refutation's inputs have no satisfying assignment.
+   *
+   * Derived from [[Refutes]] by unfolding the three definitions at the top of each term they head,
+   * so the named statement costs exactly what the written-out one costs and trusts nothing new.
+   */
+  val RefutationUnsatisfiable: String = "RES_REFUTATION_UNSATISFIABLE"
+
+  /**
+   * A refutation has at least one step: `RES_REFUTATION k v s inputs m ==> NUM_LT ZERO m`.
+   *
+   * The one fact about a refutation's size that follows from the definition, and the trivial lower
+   * bound every real one sits above. `ResolvingSpec` spends it on the pigeonhole statement, which is
+   * what keeps that statement from being a sentence nothing can be derived from.
+   */
+  val RefutationNonEmpty: String = "RES_REFUTATION_NONEMPTY"
+
+  /** What the four definitions say, as text: a reader compares these with the informal ones. */
+  def Bodies: Vector[(String, String)] = Vector(
+    Satisfied -> s"\\a:num->bool. \\k:num->num. \\v:num->num->num. \\s:num->num->bool. \\j:num. $SatisfiedAt",
+    JustifiedName ->
+      s"\\k:num->num. \\v:num->num->num. \\s:num->num->bool. \\inputs:num. \\j:num. $Justified",
+    Refutation ->
+      ("\\k:num->num. \\v:num->num->num. \\s:num->num->bool. \\inputs:num. \\m:num. " +
+        "(!j:num. NUM_LT j m ==> RES_JUSTIFIED k v s inputs j) /\\ (?j:num. NUM_LT j m /\\ k j = ZERO)")
+  )
+
+  /** The recursion defining [[Width]]: its start and its step, the parameter being `k`. */
+  private val WidthStart: String = "ZERO"
+  private val WidthStep: String = "\\w:num. \\i:num. COND (NUM_LE ((k:num->num) i) w) w (k i)"
+
+  /** What every fact over the constants says, as text, in the order they are derived. */
+  val Statements: Vector[(String, String)] = Vector(
+    WidthAtZero -> "!k:num->num. RES_WIDTH k ZERO = ZERO",
+    WidthAtSuccessor ->
+      "!k:num->num. !n:num. RES_WIDTH k (SUC n) = COND (NUM_LE (k n) (RES_WIDTH k n)) (RES_WIDTH k n) (k n)",
+    WidthBound -> "!k:num->num. !j:num. !m:num. NUM_LT j m ==> NUM_LE (k j) (RES_WIDTH k m)",
+    WidthAttained ->
+      "!k:num->num. !m:num. RES_WIDTH k m = ZERO \\/ (?j:num. NUM_LT j m /\\ RES_WIDTH k m = k j)",
+    WidthLeast ->
+      ("!k:num->num. !m:num. !u:num. (!j:num. NUM_LT j m ==> NUM_LE (k j) u) ==> " +
+        "NUM_LE (RES_WIDTH k m) u"),
+    RefutationUnsatisfiable ->
+      ("!k:num->num. !v:num->num->num. !s:num->num->bool. !inputs:num. !m:num. " +
+        "RES_REFUTATION k v s inputs m ==> " +
+        "~(?a:num->bool. !j:num. NUM_LT j inputs ==> RES_SAT a k v s j)"),
+    RefutationNonEmpty ->
+      ("!k:num->num. !v:num->num->num. !s:num->num->bool. !inputs:num. !m:num. " +
+        "RES_REFUTATION k v s inputs m ==> NUM_LT ZERO m")
+  )
+
+  private val Numbers: Type = TyApp(Natural.TypeName, Nil)
+
+  /** The development in the chain's signature, which is the one a consumer reaches for. */
+  lazy val standard: Resolving = Chain.standard.resolving
+
+  /**
+   * The development over the naturals and the classical logic, extending `base`.
+   *
+   * A link since 2026-09-25, when the four constants arrived; until then it sat beside the chain
+   * and declared nothing. `base` is the chain's end when this is built, for the reason every link
+   * gives: a constant declared into a side branch is unreachable from every link above it. The
+   * five soundness theorems are derived over the extended theory, which changes nothing about them
+   * since none of them mentions a constant this link declares.
+   */
+  def construct(
+    classical: Classical,
+    peano: Peano,
+    base: Theory,
+    notation: Notation
+  ): Either[LogicError, Resolving] = {
+    type Declared = Either[LogicError, (Theory, Map[String, Kernel.Thm])]
+    val declared = Bodies.foldLeft[Declared](Right((base, Map.empty))) { (acc, entry) =>
+        val (name, text) = entry
+        for {
+          current <- acc
+          (theory, definitions) = current
+          body <- Parser.term(theory, notation, text)
+          defined <- LogicError.lift(Kernel.defineConstant(theory, name, body))
+        } yield (defined._1, definitions + (name -> defined._2))
+    }
 
     for {
+      named <- declared
+      (namedTheory, namedDefinitions) = named
+      namedLogic <- classical.logic.over(namedTheory)
+      recursion <- peano.naturals.recursion
+      parameter = Term.variable("k", Type.fun(Numbers, Numbers))
+      widthDefined <- Recursion.define(
+        namedLogic, peano.naturals, namedTheory, notation, recursion,
+        Width, Numbers, WidthStart, WidthStep, Some(parameter)
+      )
+      (theory, widthDefinition, atZero, atSuccessor) = widthDefined
+      logic <- classical.logic.over(theory)
+      rules = logic.rules
+      signature = Resolving.Reading(theory, notation, logic)
+      definitions = namedDefinitions + (Width -> widthDefinition)
+      steps = Steps(signature, peano, classical, definitions, atSuccessor)
+
       step <- stepSoundness(signature, logic, rules, classical)
       resolvent <- ofResolvent(signature, logic, rules, step)
-      empty <- emptyUnsatisfiable(signature, logic, rules, chain.peano)
-      sound <- derivationSoundness(signature, logic, rules, chain.peano, step)
+      empty <- emptyUnsatisfiable(signature, logic, rules, peano)
+      sound <- derivationSoundness(signature, logic, rules, peano, step)
       refutes <- refutation(signature, logic, rules, sound, empty)
-    } yield new Resolving(
-      chain.peano,
-      classical,
-      signature.theory,
-      signature.notation,
-      logic,
-      Map(
+
+      bound <- widthBound(steps)
+      attained <- widthAttained(steps, atZero)
+      least <- widthLeast(steps, attained)
+      unsatisfiable <- namedRefutation(steps, refutes)
+      nonEmpty <- refutationNonEmpty(steps)
+
+      facts = Map(
         StepSound -> step,
         StepSoundOfResolvent -> resolvent,
         EmptyUnsatisfiable -> empty,
         DerivationSound -> sound,
-        Refutes -> refutes
+        Refutes -> refutes,
+        WidthAtZero -> atZero,
+        WidthAtSuccessor -> atSuccessor,
+        WidthBound -> bound,
+        WidthAttained -> attained,
+        WidthLeast -> least,
+        RefutationUnsatisfiable -> unsatisfiable,
+        RefutationNonEmpty -> nonEmpty
       )
-    )
+
+      // Each statement over the constants checked against the text a person reads it by, here
+      // rather than in the spec: a development that built something other than what it says it
+      // built must not be handed out. The five written-out ones are checked by their own builders.
+      _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { (acc, entry) =>
+        val (name, text) = entry
+        for {
+          _ <- acc
+          expected <- signature.proposition(text)
+          proved <- facts.get(name).toRight(MissingDefinition(name))
+          _ <-
+            if (proved.conclusion == expected && proved.hypotheses.isEmpty) Right(())
+            else Left(NotOfForm(s"$name as it is written", proved.conclusion))
+        } yield ()
+      }
+    } yield new Resolving(peano, classical, theory, notation, logic, definitions, facts)
   }
+
+  /** A theory, its notation and its logic, read as a signature while the development is built. */
+  private final case class Reading(theory: Theory, notation: Notation, logic: Logic) extends Signature
 
   /** The statement of [[StepSound]], written out so a reader compares text with the claim. */
   private val StepStatement: String =
@@ -769,4 +958,416 @@ object Resolving {
       discharged <- rules.disch(antecedents(0), negated)
       closed <- rules.genAll(discharged, binders.toList)
     } yield closed
+
+  /* ------------------------------------------------------ the width, and the names read back */
+
+  /** The text a fact over the constants is checked against, by name. */
+  private def textOf(name: String): Either[LogicError, String] =
+    Statements.collectFirst { case (`name`, text) => text }.toRight(MissingDefinition(name))
+
+  /**
+   * What the derivations over the four constants share: one signature, its logic, and the few moves
+   * every one of them makes, which is `Continuity`'s arrangement.
+   */
+  private final case class Steps(
+    signature: Signature,
+    peano: Peano,
+    classical: Classical,
+    definitions: Map[String, Kernel.Thm],
+    atSuccessor: Kernel.Thm
+  ) {
+    val logic: Logic = signature.logic
+    val rules: Rules = logic.rules
+
+    def statement(name: String): Either[LogicError, Term] = textOf(name).flatMap(signature.proposition)
+
+    def assume(term: Term): Either[LogicError, Kernel.Thm] = LogicError.lift(Kernel.assume(term))
+
+    /** A fact about `num`, specialised at every one of its binders. */
+    def at(name: String, arguments: Term*): Either[LogicError, Kernel.Thm] =
+      peano.fact(name).flatMap(rules.specAll(_, arguments.toList))
+
+    def mp(implication: Kernel.Thm, premises: Kernel.Thm*): Either[LogicError, Kernel.Thm] =
+      premises.foldLeft[Either[LogicError, Kernel.Thm]](Right(implication))((acc, premise) =>
+        acc.flatMap(rules.mp(_, premise)))
+
+    /** `|- R a b'` from `|- R a b` and `|- b = b'`. */
+    def right(relation: Kernel.Thm, equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      relation.conclusion match {
+        case App(fn, _) =>
+          Conv.apTerm(fn, equation).flatMap(moved => LogicError.lift(Kernel.eqMp(moved, relation)))
+        case other => Left(NotOfForm("a relation applied to two arguments", other))
+      }
+
+    /** `|- R a' b` from `|- R a b` and `|- a = a'`. */
+    def left(relation: Kernel.Thm, equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      relation.conclusion match {
+        case App(App(fn, _), argument) =>
+          Conv
+            .apTerm(fn, equation)
+            .flatMap(Conv.apThm(_, argument))
+            .flatMap(moved => LogicError.lift(Kernel.eqMp(moved, relation)))
+        case other => Left(NotOfForm("a relation applied to two arguments", other))
+      }
+
+    /** `|- C a1 ... an = <the body at a1 ... an>`, reduced: one definition, opened once. */
+    def unfolded(name: String, arguments: List[Term]): Either[LogicError, Kernel.Thm] =
+      for {
+        definition <- definitions.get(name).toRight(MissingDefinition(name))
+        equation <- Conv.unfold(definition, arguments)
+        body <- Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion))
+        normal <- Conv.betaNormalise(body)
+        joined <- Conv.trans(equation, normal)
+      } yield joined
+
+    /** `|- <the body>` from `|- C a1 ... an`. */
+    def opened(name: String, arguments: List[Term], theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      unfolded(name, arguments).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+    /** `COND_TRUE` or `COND_FALSE` at `num`, specialised and detached against its guard. */
+    def conditional(name: String, guard: Kernel.Thm, arguments: List[Term]): Either[LogicError, Kernel.Thm] =
+      classical
+        .fact(name)
+        .map(Kernel.instType(Map("a" -> Numbers), _))
+        .flatMap(rules.specAll(_, arguments))
+        .flatMap(rules.mp(_, guard))
+  }
+
+  /** The two arguments of a binary application, `f x y`. */
+  private def arguments(term: Term): Either[LogicError, (Term, Term)] = term match {
+    case App(App(_, first), second) => Right((first, second))
+    case other => Left(NotOfForm("a binary application", other))
+  }
+
+  /**
+   * `RES_WIDTH k (SUC n) = COND c w t` read apart: the new width, the guard, the old width and the
+   * new clause's length, in that order.
+   */
+  private def recurrenceParts(recurrence: Kernel.Thm): Either[LogicError, (Term, Term, Term, Term)] =
+    recurrence.conclusion match {
+      case App(App(_, next), App(App(App(_, guard), kept), taken)) => Right((next, guard, kept, taken))
+      case other => Left(NotOfForm("the width's recurrence", other))
+    }
+
+  /**
+   * `|- NUM_LE (RES_WIDTH k n) (RES_WIDTH k (SUC n)) /\ NUM_LE (k n) (RES_WIDTH k (SUC n))`.
+   *
+   * The whole content of the recursion's step, by cases on the guard it tests. When the new clause
+   * is no longer than the width so far the width stays, and the new clause is under it by the guard
+   * itself. Otherwise the width becomes the new clause's length, and the old width is under it by
+   * the totality of the order, the guard's denial ruling out the other arm. One classical step, the
+   * case split, which is what `COND` over an undecided guard costs everywhere it is read.
+   */
+  private def widthSteps(steps: Steps, k: Term, n: Term): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      recurrence <- rules.specAll(atSuccessor, List(k, n))
+      parts <- recurrenceParts(recurrence)
+      (_, guard, kept, taken) = parts
+
+      holds <- assume(guard)
+      keeps <- conditional(Classical.CondTrue, holds, List(guard, kept, taken))
+      stays <- Conv.trans(recurrence, keeps).flatMap(Conv.sym)
+      oldUnderKept <- at(Peano.Reflexive, kept).flatMap(right(_, stays))
+      newUnderKept <- right(holds, stays)
+      whenKept <- rules.conjIntro(oldUnderKept, newUnderKept)
+
+      denial <- logic.mkNot(guard)
+      fails <- assume(denial)
+      takes <- conditional(Classical.CondFalse, fails, List(guard, kept, taken))
+      moves <- Conv.trans(recurrence, takes).flatMap(Conv.sym)
+      newUnderTaken <- at(Peano.Reflexive, taken).flatMap(right(_, moves))
+      total <- at(Peano.Total, kept, taken)
+      arms <- logic.destDisj(total.conclusion).toRight(NotOfForm("a disjunction", total.conclusion))
+      (keptFirst, takenFirst) = arms
+      keptArm <- assume(keptFirst)
+      takenArm <- assume(takenFirst)
+      ruledOut <- rules.notElim(fails, takenArm).flatMap(rules.falsityElim(keptFirst, _))
+      oldBelowNew <- rules.disjElim(total, keptArm, ruledOut)
+      oldUnderTaken <- right(oldBelowNew, moves)
+      whenTaken <- rules.conjIntro(oldUnderTaken, newUnderTaken)
+
+      result <- classical.cases(guard, whenKept, whenTaken)
+    } yield result
+  }
+
+  /** [[WidthBound]], by induction on `m`: the step is [[widthSteps]] and the order's transitivity. */
+  private def widthBound(steps: Steps): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      statement <- steps.statement(WidthBound)
+      induction <- peano.naturals.fact(Natural.Induction)
+      driver = Induct.overNaturals(logic, induction)
+      proved <- driver.proveBy(statement, goal => boundAtZero(steps, goal), step => boundStep(steps, step))
+    } yield proved
+  }
+
+  /** Nothing is below zero, so the base is ex falso. */
+  private def boundAtZero(steps: Steps, goal: Term): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      parts <- logic.destImp(goal).toRight(NotOfForm("an implication", goal))
+      (premise, conclusion) = parts
+      index <- arguments(premise).map(_._1)
+      below <- assume(premise)
+      absurd <- at(Peano.NotBelowZero, index).flatMap(rules.notElim(_, below))
+      reached <- rules.falsityElim(conclusion, absurd)
+      result <- rules.disch(premise, reached)
+    } yield result
+  }
+
+  /**
+   * An index below `SUC m` is below `m` or is `m`. Below `m` the hypothesis puts its clause under
+   * the old width, which is under the new one; at `m` the clause is the new one, which is under the
+   * new width. Both halves are [[widthSteps]].
+   */
+  private def boundStep(steps: Steps, step: Induct.Step): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val m = step.variable
+    for {
+      parts <- logic.destImp(step.goal).toRight(NotOfForm("an implication", step.goal))
+      (premise, conclusion) = parts
+      index <- arguments(premise).map(_._1)
+      lengthAtIndex <- arguments(conclusion).map(_._1)
+      k <- lengthAtIndex match {
+        case App(fn, _) => Right(fn)
+        case other => Left(NotOfForm("a clause's length", other))
+      }
+
+      below <- assume(premise)
+      split <- at(Peano.BelowSuccessorCases, m, index).flatMap(rules.mp(_, below))
+      arms <- logic.destDisj(split.conclusion).toRight(NotOfForm("a disjunction", split.conclusion))
+      (earlierTerm, sameTerm) = arms
+      bounds <- widthSteps(steps, k, m)
+      oldUnder <- rules.conjElim1(bounds)
+      newUnder <- rules.conjElim2(bounds)
+
+      earlier <- assume(earlierTerm)
+      inductive <- rules.mp(step.hypothesis, earlier)
+      ends <- arguments(inductive.conclusion)
+      newWidth <- arguments(oldUnder.conclusion).map(_._2)
+      viaOld <- at(Peano.Transitive, ends._1, ends._2, newWidth)
+        .flatMap(transitive => rules.conjIntro(inductive, oldUnder).flatMap(rules.mp(transitive, _)))
+
+      same <- assume(sameTerm)
+      backwards <- Conv.sym(same)
+      atIndex <- Conv.apTerm(k, backwards)
+      viaNew <- left(newUnder, atIndex)
+
+      both <- rules.disjElim(split, viaOld, viaNew)
+      result <- rules.disch(premise, both)
+    } yield result
+  }
+
+  /** [[WidthAttained]], by induction on `m`. */
+  private def widthAttained(steps: Steps, atZero: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      statement <- steps.statement(WidthAttained)
+      induction <- peano.naturals.fact(Natural.Induction)
+      driver = Induct.overNaturals(logic, induction)
+      proved <- driver.proveBy(
+        statement,
+        goal => attainedAtZero(steps, atZero, goal),
+        step => attainedStep(steps, step)
+      )
+    } yield proved
+  }
+
+  /** The width of nothing is `ZERO`, which is the recursion's first equation and the left disjunct. */
+  private def attainedAtZero(steps: Steps, atZero: Kernel.Thm, goal: Term): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      arms <- logic.destDisj(goal).toRight(NotOfForm("a disjunction", goal))
+      (zeroTerm, clauseTerm) = arms
+      width <- arguments(zeroTerm).map(_._1)
+      k <- arguments(width).map(_._1)
+      zero <- rules.spec(k, atZero)
+      result <- rules.disjIntro1(clauseTerm, zero)
+    } yield result
+  }
+
+  /**
+   * By cases on the recursion's guard. When the width stays, whichever disjunct held of it at `m`
+   * holds at `SUC m`, the witness carried one step up by `NUM_LT_TRANS`; when it moves, it is the new
+   * clause's length and the witness is `m`.
+   */
+  private def attainedStep(steps: Steps, step: Induct.Step): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val m = step.variable
+    for {
+      arms <- logic.destDisj(step.goal).toRight(NotOfForm("a disjunction", step.goal))
+      (zeroTerm, clauseTerm) = arms
+      width <- arguments(zeroTerm).map(_._1)
+      k <- arguments(width).map(_._1)
+      predicate <- logic.destExistsPredicate(clauseTerm).toRight(NotOfForm("an existential", clauseTerm))
+
+      recurrence <- rules.specAll(atSuccessor, List(k, m))
+      parts <- recurrenceParts(recurrence)
+      (next, guard, kept, taken) = parts
+      successor <- arguments(next).map(_._2)
+      mBelow <- at(Peano.BelowSuccessor, m)
+
+      holds <- assume(guard)
+      stays <- conditional(Classical.CondTrue, holds, List(guard, kept, taken)).flatMap(Conv.trans(recurrence, _))
+      earlierArms <- logic
+        .destDisj(step.hypothesis.conclusion)
+        .toRight(NotOfForm("a disjunction", step.hypothesis.conclusion))
+      (wasZeroTerm, wasClauseTerm) = earlierArms
+      wasZero <- assume(wasZeroTerm)
+      stillZero <- Conv.trans(stays, wasZero).flatMap(rules.disjIntro1(clauseTerm, _))
+
+      wasClause <- assume(wasClauseTerm)
+      index = Conv.freshVariable("j", Numbers, freeIn(step.hypothesis) ++ freeIn(recurrence) + m)
+      witnessBody <- openAt(logic, wasClauseTerm, index)
+      witnessed <- assume(witnessBody)
+      earlier <- rules.conjElim1(witnessed)
+      equal <- rules.conjElim2(witnessed)
+      belowSuccessor <- at(Peano.StrictTransitive, index, m, successor)
+        .flatMap(transitive => rules.conjIntro(earlier, mBelow).flatMap(rules.mp(transitive, _)))
+      nowEqual <- Conv.trans(stays, equal)
+      carried <- rules
+        .conjIntro(belowSuccessor, nowEqual)
+        .flatMap(rules.existsIntro(predicate, index, _))
+        .flatMap(rules.disjIntro2(zeroTerm, _))
+        .flatMap(rules.existsElim(wasClause, index, _))
+      whenKept <- rules.disjElim(step.hypothesis, stillZero, carried)
+
+      denial <- logic.mkNot(guard)
+      fails <- assume(denial)
+      moves <- conditional(Classical.CondFalse, fails, List(guard, kept, taken)).flatMap(Conv.trans(recurrence, _))
+      whenTaken <- rules
+        .conjIntro(mBelow, moves)
+        .flatMap(rules.existsIntro(predicate, m, _))
+        .flatMap(rules.disjIntro2(zeroTerm, _))
+
+      result <- classical.cases(guard, whenKept, whenTaken)
+    } yield result
+  }
+
+  /** [[WidthLeast]], from [[WidthAttained]]: `ZERO` is under everything, and a clause is under `u`. */
+  private def widthLeast(steps: Steps, attained: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      whole <- steps.statement(WidthLeast)
+      stripped <- Logic.stripForall(whole)
+      (binders, body) = stripped
+      k = binders(0)
+      m = binders(1)
+      u = binders(2)
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premise, _) = parts
+      bounded <- assume(premise)
+
+      cases <- rules.specAll(attained, List(k, m))
+      arms <- logic.destDisj(cases.conclusion).toRight(NotOfForm("a disjunction", cases.conclusion))
+      (zeroTerm, clauseTerm) = arms
+
+      zero <- assume(zeroTerm)
+      zeroArm <- Conv.sym(zero).flatMap(back => at(Peano.ZeroIsLeast, u).flatMap(left(_, back)))
+
+      clause <- assume(clauseTerm)
+      index = Conv.freshVariable("j", Numbers, binders.toSet ++ freeIn(bounded))
+      witnessBody <- openAt(logic, clauseTerm, index)
+      witnessed <- assume(witnessBody)
+      earlier <- rules.conjElim1(witnessed)
+      equal <- rules.conjElim2(witnessed)
+      underBound <- rules.spec(index, bounded).flatMap(rules.mp(_, earlier))
+      clauseArm <- Conv
+        .sym(equal)
+        .flatMap(left(underBound, _))
+        .flatMap(rules.existsElim(clause, index, _))
+
+      both <- rules.disjElim(cases, zeroArm, clauseArm)
+      result <- rules.disch(premise, both).flatMap(rules.genAll(_, binders.toList))
+    } yield result
+  }
+
+  /**
+   * [[RefutationUnsatisfiable]], over [[Refutes]].
+   *
+   * The refutation is opened into its two halves, the named justification of each step is opened
+   * into the written-out one [[Refutes]] asks for, and its conclusion, which speaks of the written-
+   * out satisfaction, is carried to the named one by opening `RES_SAT` inside an assumed assignment.
+   * Every definition is opened at the top of the term it heads and nowhere else, so no rewriting
+   * under a binder happens and the rewriter is not reached.
+   */
+  private def namedRefutation(steps: Steps, refutes: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      whole <- steps.statement(RefutationUnsatisfiable)
+      stripped <- Logic.stripForall(whole)
+      (binders, body) = stripped
+      derivation = binders.toList.map(variable => variable: Term)
+      k = binders(0)
+      v = binders(1)
+      s = binders(2)
+      inputs = binders(3)
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premise, conclusion) = parts
+
+      refutation <- assume(premise)
+      halves <- opened(Refutation, derivation, refutation)
+      namedSteps <- rules.conjElim1(halves)
+      reachesEmpty <- rules.conjElim2(halves)
+
+      avoid = binders.toSet ++ freeIn(refutation)
+      index = Conv.freshVariable("j", Numbers, avoid)
+      atIndex <- rules.spec(index, namedSteps)
+      stepParts <- logic.destImp(atIndex.conclusion).toRight(NotOfForm("an implication", atIndex.conclusion))
+      below <- assume(stepParts._1)
+      justified <- rules.mp(atIndex, below).flatMap(opened(JustifiedName, List(k, v, s, inputs, index), _))
+      writtenSteps <- rules.disch(stepParts._1, justified).flatMap(rules.gen(index, _))
+
+      written <- rules.specAll(refutes, derivation).flatMap(mp(_, writtenSteps, reachesEmpty))
+      writtenExistential <- logic.destNot(written.conclusion).toRight(NotOfForm("a negation", written.conclusion))
+      writtenPredicate <- logic
+        .destExistsPredicate(writtenExistential)
+        .toRight(NotOfForm("an existential", writtenExistential))
+
+      named <- logic.destNot(conclusion).toRight(NotOfForm("a negation", conclusion))
+      supposed <- assume(named)
+      subject = Conv.freshVariable("a", Type.fun(Numbers, Type.Bool), avoid + index)
+      assignmentBody <- openAt(logic, named, subject)
+      assignment <- assume(assignmentBody)
+      clause = Conv.freshVariable("j", Numbers, avoid + index + subject)
+      atClause <- rules.spec(clause, assignment)
+      clauseParts <- logic.destImp(atClause.conclusion).toRight(NotOfForm("an implication", atClause.conclusion))
+      input <- assume(clauseParts._1)
+      satisfied <- rules.mp(atClause, input).flatMap(opened(Satisfied, List(subject, k, v, s, clause), _))
+      everyInput <- rules.disch(clauseParts._1, satisfied).flatMap(rules.gen(clause, _))
+      satisfiable <- rules.existsIntro(writtenPredicate, subject, everyInput)
+
+      absurd <- rules.notElim(written, satisfiable)
+      overSubject <- rules.existsElim(supposed, subject, absurd)
+      negated <- rules.notIntro(named, overSubject)
+      result <- rules.disch(premise, negated).flatMap(rules.genAll(_, binders.toList))
+    } yield result
+  }
+
+  /** [[RefutationNonEmpty]]: the empty step is below `m`, and `ZERO` is at most it. */
+  private def refutationNonEmpty(steps: Steps): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      whole <- steps.statement(RefutationNonEmpty)
+      stripped <- Logic.stripForall(whole)
+      (binders, body) = stripped
+      derivation = binders.toList.map(variable => variable: Term)
+      m = binders(4)
+      parts <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+      (premise, _) = parts
+
+      refutation <- assume(premise)
+      reachesEmpty <- opened(Refutation, derivation, refutation).flatMap(rules.conjElim2)
+      index = Conv.freshVariable("j", Numbers, binders.toSet ++ freeIn(refutation))
+      witnessBody <- openAt(logic, reachesEmpty.conclusion, index)
+      below <- assume(witnessBody).flatMap(rules.conjElim1)
+      zeroUnder <- at(Peano.ZeroIsLeast, index)
+      zero <- arguments(zeroUnder.conclusion).map(_._1)
+      positive <- at(Peano.AtMostThenBelow, zero, index, m)
+        .flatMap(transitive => rules.conjIntro(zeroUnder, below).flatMap(rules.mp(transitive, _)))
+      over <- rules.existsElim(reachesEmpty, index, positive)
+      result <- rules.disch(premise, over).flatMap(rules.genAll(_, binders.toList))
+    } yield result
+  }
 }

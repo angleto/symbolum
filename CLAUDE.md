@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 660 lemmas, 431 have two or more leading quantifiers and **383 of
+caller meant: of the library's 703 lemmas, 461 have two or more leading quantifiers and **398 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -762,10 +762,40 @@ as a written hypothesis rather than a hidden one: `num` has no negative numbers,
 answered below zero would be right above it and silently wrong under it, and the version with no
 condition at all wants the integers, which `docs/adr/0007` puts later.
 
-**`defineType` has three uses now and they were all built the same way.** `num`, then `prod` in
-`Product.scala`, carved out of `'a -> 'b -> bool` the way `pair.ml` does it, then `word` in
-`Word.scala`, a length and a padded function held together in a pair. The second and third exist
-because lists, matrices and index types were all one missing primitive, and it was the pair.
+**`defineType` is called by hand for the types the chain is built from, and by builders that
+carve a type from a description.** By hand: `num`, then `prod` in `Product.scala`, carved out of
+`'a -> 'b -> bool` the way `pair.ml` does it, then `word` in `Word.scala`, a length and a padded
+function held together in a pair; the second and third exist because lists, matrices and index
+types were all one missing primitive, and it was the pair. This paragraph counted those uses
+until 2026-09-25 and said three while `Quotient` was already the fourth, which is why it counts
+nothing now: `git grep -n "defineType(" -- 'modules/*/src/main/*.scala'` is the census, and its
+first line is the declaration. The file part of that pathspec is not decoration: without it the
+same command answers nothing, which reads exactly like a repository with no call site.
+
+The builders are `Quotient`, the classes of an equivalence relation, whose first consumer is
+`int`, and since 2026-09-25 **`Datatype`, an inductive type from a list of its constructors**, with
+its induction principle, case analysis, injectivity, distinctness and recursion theorem all derived
+and `Datatype.defineRecursive` to name a function by structural recursion. Every such type lives in
+one universe of labelled trees, `word(num) -> L -> bool`, and `docs/adr/0042` is the construction.
+The one discipline it asks of anyone editing it is that the node of the universe is a **term** and
+not a constant, so nothing in the builder may normalise a term holding one: every reduction there
+is at the root. Induction and case analysis spend no axiom; injectivity, distinctness and recursion
+spend choice, eta and infinity, which the chain already holds. Its consumer is `Syntax`, the terms of
+Peano arithmetic as a type `pterm` with the five constructors `Language` numbers, `PSUBST` by
+structural recursion, and `PSUBST_SELF` proved by induction; it sits beside the chain by decision,
+since in it every `PVAR` would sit next to a `NUM_CODE`. So a syntax can be a type here now, and
+the object level is still numbers for the reason `docs/adr/0014` gives: the embedded theory
+quantifies over codes. That the code of `PSUBST` of a term is `NUM_SUBST_TERM` of its code is
+statable now and not proved.
+
+**Recursion along a measure is `WellFounded`, since 2026-09-25**, and it is the third recursion
+theorem after `Recursion` on the successor and `Descent` on a code:
+`!m st. (!f g x. (!y. m y < m x ==> f y = g y) ==> st f x = st g x) ==> ?f. !x. f x = st f x`. The
+hypothesis is **admissibility**, the caller's to discharge because it is a fact about a step, and
+`docs/adr/0043` is why it is a measure into `num` and not an arbitrary relation. It costs choice and
+infinity and not eta. `EuclidAlgorithm` spends it, beside the chain, as `NUM_EUCLID_GCD` — not
+`NUM_EUCLID`, which is Euclid's lemma — whose equations compute `NUM_EUCLID_GCD 4 6 = 2`; that its
+value is `NUM_GCD` is not proved.
 
 `Rotation` needs two others at once: `Word` for the type it rebuilds and `Modular` for the
 `NUM_MOD` inside its own definition. That is why it is not in `Word.scala`: `Word.standard` is built
@@ -1324,9 +1354,26 @@ that, the thing Goedel's argument actually needs, which is `Prov` as a formula *
 language** with one free variable rather than as the predicate `NUM_PROV` of the ambient logic.
 **D1, D2 and D3 are statements about that formula, so not one of the three can be stated yet.**
 
-What is above that is not written: that object-level `Prov`, the diagonal lemma, and then D1, D2
-and D3. `docs/adr/0013` says why the last of those is its own piece of work rather than a helper
-inside this one, and it is the part most likely to be underestimated.
+**The road to that formula goes through truth, and the first half of it is `Truth`, since
+2026-09-25.** `docs/adr/0040` is the decision: a representation of one of the constants the stack
+uses is a formula of the object language with a theorem that its **truth** is the predicate, and
+what turns a true formula into a provable one is completeness for bounded formulas, proved once,
+rather than a derivation in PA per constant. `NUM_VALUE t e` and `NUM_TRUE p e` are the value of a
+term and the truth of a formula at an environment `e : num -> num`, both recursions on the code
+answering with a function of the environment, which the quantifier's clause forces: it reads the
+body at `e` updated at the bound index. `NUM_TRI_GRAPH`, the code of `v0 + v0 = v1 * S v1`, is the
+first representation, and `NUM_TRI_GRAPH_TRUE` says its truth is `e 0 = NUM_TRI (e 1)`. It is a
+link, between `provability` and `limit`, and not a development beside the chain: that standing is
+for the constants of one investigation, which is what `ChainCoverageSpec` says of it.
+
+**Read that for what it is: nothing in it is about provability.** `NUM_TRI_GRAPH_TRUE` says what
+the formula means and not that PA proves it at any numeral, and a reader who rounds the first up to
+the second has skipped the one theorem `docs/adr/0040` says is left to prove and doubts most.
+
+What is above that is not written: completeness for bounded formulas, the remaining
+representations in the order Mycelium card `4102f131` gives, that object-level `Prov`, the diagonal
+lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last of those is its own piece of work
+rather than a helper inside this one, and it is the part most likely to be underestimated.
 
 **Discharging the freeness condition at a concrete code was a fourth entry on that list until
 2026-09-15**, fifteen lines below the paragraph that says `Language.notFreeIn` does it and
@@ -1566,6 +1613,30 @@ hands back `?l. converges (Sum f) l`, and an existential is not a bound. Their h
 bound the terms respect from an index on rather than everywhere, and that is the whole of their
 usefulness: the lower bound worth having on an increasing sequence is one of its own terms, which
 is false below that term's index.
+
+**Whether a series converges is decided over a named fragment since 2026-09-25, and in both
+directions.** Until then the answer set was {converges, silence}: nothing in the proof side could say
+that a series fails to converge, and `?l. converges (Sum f) l` went to no procedure at all, because
+`Prove.addressOf` had no address for it and matching it against `SUM_COMPARISON` determines `f` and
+nothing about the dominating series. `diverges` is a constant of `Limit` now, and the criteria are
+published there in both directions and derived in `Criteria`: the term test, the geometric series at
+a symbolic ratio **with its value** `inv (1 - q)` and its divergence from magnitude one up, the ratio
+test and its other side, and a constant factor carried in and out. The powers of a fraction vanish
+without an Archimedean step, because their limit equals its own multiple by the fraction.
+
+`Convergence` is the procedure and `Prove.Address.Series` is where the three shapes of the question
+go. **It reads a summand against closed forms and does not apply the ratio test**, because applying
+the ratio test is a derivation per shape at a symbolic index and every closed form already has a
+published theorem; so the hypergeometric terms are outside the fragment and refused by name, a
+rational function of the index is refused as the class where the ratio tends to one, and a goal the
+procedure refutes comes back as `Denied`, the one refusal of standing `Decided` among the three.
+`docs/adr/0041` is the decision. **A polynomial in the index times a geometric term is in the
+fragment since the same night**, `docs/adr/0045`: degree one is the ratio test, which is that
+test's first consumer outside a spec, and each degree after it is a comparison that spends
+`CONVERGES_BOUNDED`; the procedure names no value for these and says so when a value is asked.
+`Conjugacy.GAMMA_CONVERGES` is the Collatz series it made
+statable, and it is one direction of section 3.1.10 B in the form the comparison test gives, which
+that file says in its first paragraph.
 
 **`Transcendental.EXP_ONE_ABOVE_TWO` is `2 < exp 1` and it is proved, since 2026-09-20.** It is
 the first fact here about a value this repository does not compute: every other one is a value at
@@ -1876,8 +1947,10 @@ It is still the kind of list nothing goes red over, and the reason those two ent
 that somebody gave them a card, which the third already had and they did not.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
-**compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated and Euclid's
-algorithm is a definition by well-founded recursion, which this system does not have; then the
+**compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated. The half of that
+which needed a primitive landed on 2026-09-25: `WellFounded` is recursion along a measure into
+`num`, and `Euclid` defines `NUM_EUCLID_GCD` by it beside the chain, with equations that compute; what
+is left is the theorem that its value is `NUM_GCD` off both zero, and `NUM_DIV` the same way. Then the
 rationals, and then the reals as a construction rather than an assumption. `docs/adr/0007` is the order and `docs/adr/0006` is the rule that
 unlocked it. `docs/adr/0004` records why the reals were axiomatised rather than constructed, and the
 same reasoning does not extend to the naturals.

@@ -581,6 +581,147 @@ object Limit {
    */
   val PowerOfAMagnitude: String = "ABS_POWER_LE"
 
+  /** `diverges s` says the sequence `s` converges to nothing. */
+  val Diverges: String = "diverges"
+
+  /**
+   * The failure to converge, as a constant rather than as the negation a reader would write.
+   *
+   * `~(?l. converges s l)` says the same thing, and a constant is chosen for what a reader of an
+   * answer sees: a procedure that refuses and a theorem that a series diverges are both "no" in
+   * prose, and the second is a theorem whose conclusion names the predicate. It also keeps a
+   * divergence out of the address `Prove` gives a denial, which is LINARITH's: `~(...)` would be
+   * sent there and refused as a denial of something that is not an inequality.
+   */
+  val DivergesBody: String = "\\s:num -> real. ~(?l:real. converges s l)"
+
+  /**
+   * `|- !s l N. converges (\n. s (NUM_ADD N n)) l ==> converges s l`
+   *
+   * A sequence converges where its tail from any index does. [[Shifted]] goes the other way and one
+   * place at a time; this comes back from any distance, which is what [[RatioTest]] needs, since
+   * what it can sum is the tail from the index its hypothesis starts at.
+   */
+  val Offset: String = "CONVERGES_OFFSET"
+
+  /**
+   * `|- !f l. converges (Sum f) l ==> converges f 0`
+   *
+   * The terms of a convergent series vanish. Its contrapositive is [[TermTest]], and it is the fact
+   * that turns a bound on the terms into a **divergence** rather than into a silence.
+   */
+  val TermsVanish: String = "SUM_TERMS_VANISH"
+
+  /**
+   * `|- !f b N. 0 < b ==> (!n. NUM_LE N n ==> b <= abs (f n)) ==> diverges (Sum f)`
+   *
+   * The term test: terms that stay a fixed distance from zero past an index make a divergent series.
+   * Stated with the bound a caller holds rather than with the failure of `converges f 0`, which
+   * nobody holds. `Sum (\i. 1)` diverges by it at `b = 1`, which `CriteriaSpec` derives.
+   */
+  val TermTest: String = "SUM_DIVERGES"
+
+  /**
+   * `|- !q. abs q < 1 ==> converges (\n. Power q n) 0`
+   *
+   * The powers of a number inside the unit interval vanish, and with no Archimedean step: see
+   * `Criteria.powersVanish` for the route, which is a limit equal to its own multiple by `q`.
+   */
+  val PowersVanish: String = "POWER_VANISHES"
+
+  /**
+   * `|- !q. abs q < 1 ==> converges (Sum (\i. Power q i)) (inv (1 - q))`
+   *
+   * The geometric series at a symbolic ratio, **with its value**. The instance at one half was
+   * ninety lines of kernel calls inside `LimitSpec` and obtained a limit without saying which; this
+   * says it, and the instance is one specialisation.
+   */
+  val GeometricConverges: String = "SUM_GEOMETRIC_CONVERGES"
+
+  /**
+   * `|- !q. 1 <= abs q ==> diverges (Sum (\i. Power q i))`
+   *
+   * The other half of the geometric series, so that the pair decides it at every ratio.
+   */
+  val GeometricDiverges: String = "SUM_GEOMETRIC_DIVERGES"
+
+  /**
+   * `|- !f r N. 0 <= r ==> r < 1 ==> (!n. NUM_LE N n ==> abs (f (SUC n)) <= r * abs (f n))
+   * ==> ?l. converges (Sum f) l`
+   *
+   * The ratio test, with the ratio bound from an index on rather than everywhere, which is the form
+   * a summand like the exponential's has. It goes through [[Absolute]], so the terms need no sign.
+   *
+   * **A search cannot use it and that is structural**: nothing in its conclusion determines `r`
+   * or `N`, so a lemma matched against a goal `?l. converges (Sum f) l` leaves both open. It is
+   * for a hand derivation, and `Convergence` reads summands against closed forms instead.
+   */
+  val RatioTest: String = "SUM_RATIO_TEST"
+
+  /**
+   * `|- !f N. ~(f N = 0) ==> (!n. NUM_LE N n ==> abs (f n) <= abs (f (SUC n))) ==> diverges (Sum f)`
+   *
+   * The ratio test's other side at ratio one, which is the weakest ratio that diverges: a caller
+   * with `r * abs (f n) <= abs (f (SUC n))` and `1 <= r` has this hypothesis by one linear step.
+   */
+  val RatioDiverges: String = "SUM_RATIO_DIVERGES"
+
+  /**
+   * `|- !f c l. converges (Sum f) l ==> converges (Sum (\i. c * f i)) (c * l)`
+   *
+   * A constant factor comes out of a series and out of its limit.
+   */
+  val ScaleConverges: String = "SUM_SCALE_CONVERGES"
+
+  /**
+   * `|- !f c. ~(c = 0) ==> diverges (Sum f) ==> diverges (Sum (\i. c * f i))`
+   *
+   * And out of a divergence, where it is not zero: at zero the scaled series converges.
+   */
+  val ScaleDiverges: String = "SUM_SCALE_DIVERGES"
+
+  /**
+   * `|- !s l. converges s l ==> ?B. !n. abs (s n) <= B`
+   *
+   * A convergent sequence is bounded. The bound is the limit's magnitude plus one past the index the
+   * tolerance one gives, and before it the partial sum of the magnitudes, which is above each of
+   * them: that is how "the largest of finitely many" is said without a maximum, which `num` has not
+   * got. Its consumer is the degree step of [[PolyGeometricConverges]].
+   */
+  val Bounded: String = "CONVERGES_BOUNDED"
+
+  /**
+   * `|- !x. 0 <= x ==> !n. 0 <= Power x n`
+   *
+   * `POWER_POSITIVE` asks `0 < x`, and a base of zero is where a non-negative ratio starts; this is
+   * the half that holds there.
+   */
+  val PowerNonNegative: String = "POWER_NONNEG"
+
+  /**
+   * `|- !q. abs q < 1 ==> ?l. converges (Sum (\i. real_of_num i * Power q i)) l`
+   *
+   * The first series here whose convergence is [[RatioTest]]'s: the ratio `(i + 1) q / i` is at
+   * most `(1 + abs q) / 2` past an index the derivation builds as a term, `NUM_CEIL` of
+   * `2 abs q / (1 - abs q)`. `Degrees` has the route.
+   */
+  val IndexGeometricConverges: String = "SUM_INDEX_GEOMETRIC_CONVERGES"
+
+  /** `|- !q. 1 <= abs q ==> diverges (Sum (\i. real_of_num i * Power q i))` */
+  val IndexGeometricDiverges: String = "SUM_INDEX_GEOMETRIC_DIVERGES"
+
+  /**
+   * `|- !k q. abs q < 1 ==> ?l. converges (Sum (\i. Power (real_of_num i) k * Power q i)) l`
+   *
+   * A polynomial in the index times a geometric term, at every degree, by induction on the degree:
+   * each step is a comparison that spends [[Bounded]] on the degree-one terms at a ratio half way
+   * to one. No value is named, which is the difference from [[GeometricConverges]].
+   */
+  val PolyGeometricConverges: String = "SUM_POLY_GEOMETRIC_CONVERGES"
+
+  /** `|- !k q. 1 <= abs q ==> diverges (Sum (\i. Power (real_of_num i) k * Power q i))` */
+  val PolyGeometricDiverges: String = "SUM_POLY_GEOMETRIC_DIVERGES"
+
   /** Everything this development proves, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     BelowEveryPositive -> "!x:real. 0 <= x ==> (!e:real. 0 < e ==> x < e) ==> x = 0",
@@ -654,7 +795,43 @@ object Limit {
         "converges (Sum a) A ==> converges (Sum b) B ==> " +
         "converges (Sum (\\k:num. Sum (\\i:num. a i * b (NUM_SUB k i)) (SUC k))) (A * B)"),
     PowerOfAMagnitude ->
-      "!x:real. !c:real. !n:num. abs x <= c ==> abs (Power x n) <= Power c n"
+      "!x:real. !c:real. !n:num. abs x <= c ==> abs (Power x n) <= Power c n",
+    Offset ->
+      ("!s:num -> real. !l:real. !N:num. " +
+        "converges (\\n:num. s (NUM_ADD N n)) l ==> converges s l"),
+    TermsVanish -> "!f:num -> real. !l:real. converges (Sum f) l ==> converges f 0",
+    TermTest ->
+      ("!f:num -> real. !b:real. !N:num. 0 < b ==> " +
+        "(!n:num. NUM_LE N n ==> b <= abs (f n)) ==> diverges (Sum f)"),
+    PowersVanish -> "!q:real. abs q < 1 ==> converges (\\n:num. Power q n) 0",
+    GeometricConverges ->
+      "!q:real. abs q < 1 ==> converges (Sum (\\i:num. Power q i)) (inv (1 - q))",
+    GeometricDiverges -> "!q:real. 1 <= abs q ==> diverges (Sum (\\i:num. Power q i))",
+    RatioTest ->
+      ("!f:num -> real. !r:real. !N:num. 0 <= r ==> r < 1 ==> " +
+        "(!n:num. NUM_LE N n ==> abs (f (SUC n)) <= r * abs (f n)) ==> " +
+        "?l:real. converges (Sum f) l"),
+    RatioDiverges ->
+      ("!f:num -> real. !N:num. ~(f N = 0) ==> " +
+        "(!n:num. NUM_LE N n ==> abs (f n) <= abs (f (SUC n))) ==> diverges (Sum f)"),
+    ScaleConverges ->
+      ("!f:num -> real. !c:real. !l:real. converges (Sum f) l ==> " +
+        "converges (Sum (\\i:num. c * f i)) (c * l)"),
+    ScaleDiverges ->
+      ("!f:num -> real. !c:real. ~(c = 0) ==> diverges (Sum f) ==> " +
+        "diverges (Sum (\\i:num. c * f i))"),
+    Bounded ->
+      "!s:num -> real. !l:real. converges s l ==> ?B:real. !n:num. abs (s n) <= B",
+    PowerNonNegative -> "!x:real. 0 <= x ==> !n:num. 0 <= Power x n",
+    IndexGeometricConverges ->
+      "!q:real. abs q < 1 ==> ?l:real. converges (Sum (\\i:num. real_of_num i * Power q i)) l",
+    IndexGeometricDiverges ->
+      "!q:real. 1 <= abs q ==> diverges (Sum (\\i:num. real_of_num i * Power q i))",
+    PolyGeometricConverges ->
+      ("!k:num. !q:real. abs q < 1 ==> " +
+        "?l:real. converges (Sum (\\i:num. Power (real_of_num i) k * Power q i)) l"),
+    PolyGeometricDiverges ->
+      "!k:num. !q:real. 1 <= abs q ==> diverges (Sum (\\i:num. Power (real_of_num i) k * Power q i))"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -689,7 +866,11 @@ object Limit {
 
       valueBody <- Parser.term(afterConverges, notation, ValueBody)
       definedValue <- LogicError.lift(Kernel.defineConstant(afterConverges, Value, valueBody))
-      (theory, valueDefinition) = definedValue
+      (afterValue, valueDefinition) = definedValue
+
+      divergesBody <- Parser.term(afterValue, notation, DivergesBody)
+      definedDiverges <- LogicError.lift(Kernel.defineConstant(afterValue, Diverges, divergesBody))
+      (theory, divergesDefinition) = definedDiverges
 
       logic <- classical.logic.over(theory)
       linarith <- Linarith.construct(magnitude.order)
@@ -867,12 +1048,66 @@ object Limit {
           addedLimits, negatedLimit, eventually, vanishingDominates, sumCauchyGap, sumMonotone,
           magnitudesOfASum, magnitudesOfAStretch, multiplyLe, mulSymmetric, differenceBelow)
       )
+
+      /* ---- the criteria, in both directions: `Criteria` derives them ---- */
+
+      powerPositive <- series.fact(Series.PowerPositive)
+      geometricSum <- series.fact(Series.Geometric)
+      leOfLt <- magnitude.order.fact(Order.LeOfLt)
+      total <- reals.axiom("LT_TOTAL")
+      associative <- peano.fact(Peano.AddAssociative)
+      sumScaled <- series.fact(Series.Scaled)
+      sumCongruence <- series.fact(Series.Congruence)
+      criteria = Criteria.Kit(
+        logic, magnitude.order.ring, linarith, theory, notation, induct,
+        convergesDefinition, divergesDefinition, orderDefinition,
+        constant, unique, eventually, shifted, monotoneConverges, comparisonTest, above,
+        addedLimits, negatedLimit, multipliedLimits, absoluteSeries, belowItsOwnLimit,
+        vanishingDominates, boundedPower, sumAtSuccessor, powerAtZero, powerAtSuccessor,
+        powerPositive, geometricSum, sumReindex, sumScaled, sumScaledRight, sumCongruence,
+        absNonNegative, absAbove,
+        absOfNonNegative, absMul, absZero, leOfLt, leOfEq, weakFromNegated, antisymmetry,
+        positiveNotZero, mulInverse, multiplyLe, mulPositive, total, addAtZero, addAtSuccessor,
+        atMostSum, associative, addCommutative)
+      offsetFact <- Criteria.offset(criteria)
+      vanishingTerms <- Criteria.termsVanish(criteria)
+      termTest <- Criteria.termTest(criteria, vanishingTerms)
+      powersVanish <- Criteria.powersVanish(criteria)
+      geometricConverges <- Criteria.geometricConverges(criteria, powersVanish)
+      ratioTest <- Criteria.ratioTest(criteria, geometricConverges, offsetFact)
+      ratioDiverges <- Criteria.ratioDiverges(criteria, termTest)
+      geometricDiverges <- Criteria.geometricDiverges(criteria, ratioDiverges)
+      scaleConverges <- Criteria.scaleConverges(criteria)
+      scaleDiverges <- Criteria.scaleDiverges(criteria, scaleConverges)
+
+      /* ---- a polynomial in the index times a geometric term: `Degrees` derives it ---- */
+
+      field <- Field.construct(magnitude.order.ring.arithmetic)
+      numTotal <- peano.fact(Peano.Total)
+      realLe <- peano.fact(Peano.EmbedsOrder)
+      realNonNeg <- peano.fact(Peano.EmbedsNonNegative)
+      realSuc <- peano.fact(Peano.EmbedsSuccessor)
+      realZero <- peano.fact(Peano.EmbedsZero)
+      ceilLe <- peano.fact(Peano.CeilingAtLeast)
+      sucAdd <- peano.fact(Peano.SuccessorPlus)
+      powerOfProduct <- series.fact(Series.Multiplicative)
+      powerMonotone <- series.fact(Series.PowerMonotone)
+      powerOne <- series.fact(Series.PowerOfOne)
+      bothNonNeg <- magnitude.order.fact(Order.MultiplyNonNegatives)
+      square <- magnitude.order.fact(Order.SquareNonNegative)
+      degrees <- Degrees.derive(
+        criteria,
+        Degrees.Pieces(
+          field, numTotal, realLe, realNonNeg, realSuc, realZero, ceilLe, sumNonNegative,
+          partialSumsGrow, sucAdd, induct.induction, powerOfProduct, powerMonotone, powerOne,
+          bothNonNeg, square, inversePositive, absTriangle, vanishingTerms, scaleConverges,
+          ratioTest, termTest, geometricConverges))
     } yield new Limit(
       magnitude,
       peano,
       theory,
       notation,
-      Map(Converges -> convergesDefinition, Value -> valueDefinition),
+      Map(Converges -> convergesDefinition, Value -> valueDefinition, Diverges -> divergesDefinition),
       Map(
         BelowEveryPositive -> epsilon,
         Constant -> constant,
@@ -899,8 +1134,18 @@ object Limit {
         Squeezed -> vanishingDominates,
         StretchOfMagnitudes -> magnitudesOfAStretch,
         Cauchy -> signedCauchyProduct,
-        PowerOfAMagnitude -> boundedPower
-      )
+        PowerOfAMagnitude -> boundedPower,
+        Offset -> offsetFact,
+        TermsVanish -> vanishingTerms,
+        TermTest -> termTest,
+        PowersVanish -> powersVanish,
+        GeometricConverges -> geometricConverges,
+        GeometricDiverges -> geometricDiverges,
+        RatioTest -> ratioTest,
+        RatioDiverges -> ratioDiverges,
+        ScaleConverges -> scaleConverges,
+        ScaleDiverges -> scaleDiverges
+      ) ++ degrees
     )
   }
 
@@ -3374,7 +3619,7 @@ object Limit {
    * application apart by hand, which is where a derivation silently starts being about the wrong
    * argument.
    */
-  private def rewriteWith(
+  private[theories] def rewriteWith(
     equation: Kernel.Thm,
     theorem: Kernel.Thm
   ): Either[LogicError, Kernel.Thm] =
@@ -4407,7 +4652,7 @@ object Limit {
    * reduced: that is the general rewrite, written here rather than reached for from `Rewrite`
    * because what is wanted is one occurrence of one term and not a normalising pass.
    */
-  private def rewriteInProposition(
+  private[theories] def rewriteInProposition(
     equation: Kernel.Thm,
     theorem: Kernel.Thm
   ): Either[LogicError, Kernel.Thm] =
@@ -4834,7 +5079,7 @@ object Limit {
   }
 
   /** The two sides of an equation a theorem states. */
-  private def destructEquation(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+  private[theories] def destructEquation(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
     Term.destEq(theorem.conclusion).toRight(NotOfForm("an equation", theorem.conclusion))
 
   /**
@@ -4856,13 +5101,26 @@ object Limit {
   }
 
   /** Beta-normalise the right side of an equation, keeping it an equation. */
-  private def normaliseRight(equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+  private[theories] def normaliseRight(equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     for {
       right <- rightOf(equation)
       normal <- Conv.betaNormalise(right)
       joined <- Conv.trans(equation, normal)
     } yield joined
 
-  private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+  private[theories] def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
     Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))
+
+  /** A theorem with its whole conclusion beta-normalised, which a specialisation at a lambda needs. */
+  private[theories] def normalised(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    Conv
+      .betaNormalise(theorem.conclusion)
+      .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
+
+  /** The sequence and the value of `converges s v`. */
+  private[theories] def convergenceOf(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+    theorem.conclusion match {
+      case App(App(_, sequence), value) => Right((sequence, value))
+      case other                        => Left(NotOfForm("a convergence", other))
+    }
 }

@@ -52,7 +52,9 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   /* --------------------------------------------------------------- what it cost */
 
   "The derivative" should "add its constant and no axiom to the theory below it" in {
-    val below = chain.continuity.theory
+    // The theory it extends is the chain's end when it is built, which is `Resolving`'s, and not
+    // `Continuity`'s, whose constants it reads.
+    val below = chain.resolving.theory
     derivative.theory.axioms shouldBe below.axioms
     (derivative.theory.constants.keySet -- below.constants.keySet) shouldBe Set(Derivative.DerivativeName)
     derivative.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
