@@ -202,13 +202,15 @@ final class Chaining private (
       case Some(theorem) => (Some((theorem, Vector.empty)), budget)
 
       // A target already on the path above is a loop and not a subgoal: the depth bound would stop
-      // it anyway, and stopping here keeps the budget for candidates that can move.
-      case None if above.contains(target) => (None, budget)
+      // it anyway, and stopping here keeps the budget for candidates that can move. The path holds
+      // bodies, for the reason [[bodyOf]] gives.
+      case None if above.contains(bodyOf(target)) => (None, budget)
 
       case None if depth <= 0 => (None, budget.stoppedAt(Bound.Lemmas))
 
       case None =>
         val held = assumed(under)
+        val path = above + bodyOf(target)
 
         val applied = (assumptions(under) ++ fromLibrary(target))
           .flatMap { case (name, theorem) => Apply.to(logic, theorem, target).toOption.map(name -> _) }
@@ -219,10 +221,36 @@ final class Chaining private (
           // A candidate may rest on what the goal assumed and on nothing else. With no context
           // `held` is empty and this is the emptiness test it was until 2026-09-18.
           .filter { case (_, application) => application.theorem.hypotheses.forall(held) }
+          // A candidate owing a goal on the path is the loop the second case above refuses, met one
+          // step earlier: its obligation would reach that case after `leaf` had failed on it once
+          // already, so it cannot succeed, and trying it costs an expansion. Measured on 2026-09-25,
+          // when `INTERVAL_GLUING` joined the library. Its conclusion `P a b` has no head, so it is
+          // a candidate at every goal, and at `0 <= t` it owes `0 <= t` itself; at every subgoal
+          // under that goal it owes the goal again. One expansion per subgoal was the whole of what
+          // took `ChainingSpec`'s one-lemma witness past its budget of ten, and removing this lemma
+          // alone from the library put it back. Nothing that can succeed is dropped, on one premise:
+          // that `leaf` answers a goal and its generalisation alike. `Prove.held` does by
+          // construction, since `Apply.to` takes the goal's universals off before matching; the
+          // procedures take theirs off first as well, and `ReachSpec`'s corpus not moving when this
+          // landed is the measurement that premise rests on rather than a proof of it.
+          .filterNot { case (_, application) => application.obligations.exists(owed => path.contains(bodyOf(owed))) }
           .sortBy { case (_, application) => cost(application.obligations) }
 
-        first(applied, target, depth, above + target, leaf, under, budget)
+        first(applied, target, depth, path, leaf, under, budget)
     }
+
+  /**
+   * A goal without its leading universals, which is what "the same goal" means on the path.
+   *
+   * `Apply.to` takes a goal's own universals off before matching and does not put them back, so
+   * every obligation below the first level is an open term, while the goal a caller hands over is
+   * usually closed. Compared as written, `!x. 0 <= x * x` and the obligation `0 <= x * x` are two
+   * goals and a loop between them goes unseen; they are one goal, since proving the open body with
+   * nothing assumed about `x` is proving its generalisation. Until 2026-09-25 the path held terms
+   * as written, and no loop through the top goal could be caught before the depth bound stopped it.
+   */
+  private def bodyOf(goal: Term): Term =
+    Logic.stripForall(goal).toOption.map(_._2).getOrElse(goal)
 
   /** The library's candidates for this target, paired with the name each is filed under. */
   private def fromLibrary(target: Term): Vector[(String, Kernel.Thm)] =

@@ -354,7 +354,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 431 with `INTERMEDIATE_VALUE`'s four antecedents, the same day; `CONTINUOUS_CONST` and
     // `CONTINUOUS_ID` carry none.
     // 441 with the logarithm's ten antecedents, the same day.
-    proposals.size shouldBe 441
+    // 451 with the extreme value theorem's ten, 2026-09-25: three on `INTERVAL_GLUING`, two each
+    // on `CONTINUOUS_BOUNDED` and the two attainments, one on `CONTINUOUS_NEG`.
+    proposals.size shouldBe 451
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1195,7 +1197,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `Propose.audit` and not predicted. Several are TRUE and unproved rather than doubtful:
     // `!x. 1 + x <= exp x` and `!x. 0 <= exp x` are two, and that is this bucket's meaning, a claim
     // a procedure addressed and did not settle, not a claim believed false.
-    open shouldBe 365
+    // 374 with nine of the extreme value theorem's ten weakenings, 2026-09-25, read off a probe of
+    // `Propose.audit` filtered by `from` and not predicted: every one keeps an implication and so
+    // sits at the propositional address, which takes it and does not settle it. The tenth is in
+    // `unreadable` below. The run that found this row red was the first to reach it; the probe is
+    // what said where the other one went, since the row below had not run.
+    open shouldBe 374
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1530,7 +1537,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the reading here that accounted for `open`'s two as `SIN_COS_SQUARED`'s substitutions.
     // 102 with `EXP_ONTO`'s weakening, `!x. ?y. exp y = x`, read off the same probe: false at
     // every non-positive `x`, and an existential over an exponential that no procedure addresses.
-    unreadable shouldBe 102
+    // 103 with `CONTINUOUS_NEG`'s one weakening, `!f x. continuous (\y. 0 - f y) x`, from the same
+    // probe: false at any function with a jump, and about `continuous`, which no procedure
+    // addresses and no model interprets.
+    unreadable shouldBe 103
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

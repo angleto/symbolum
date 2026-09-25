@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 649 lemmas, 421 have two or more leading quantifiers and **374 of
+caller meant: of the library's 654 lemmas, 426 have two or more leading quantifiers and **378 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1698,6 +1698,19 @@ coefficient to it. One constant, no axiom; `ContinuitySpec` asserts that the the
 `COMPLETENESS` and past the reals' sixteen exactly the choice `abs` is defined by, and keeps it from
 being vacuous both ways: it is detached at the identity on `[0, 1]`, a step is shown not continuous
 at zero, and the same step refutes the statement with its continuity hypothesis dropped.
+
+**The extreme value theorem is in `Continuity` too, since 2026-09-25, and it is one lemma used
+twice rather than two supremum arguments.** `INTERVAL_GLUING` says a property `P u v` of intervals
+that glues (`P u v` and `P v w` give `P u w`) and holds on every short enough interval around each
+point of `[a, b]` holds on `[a, b]`; `CONTINUOUS_BOUNDED` is it at "bounded above", and
+`CONTINUOUS_ATTAINS_MAX` is it at "some positive gap under the supremum of the values", which is how
+the maximum is reached **without** the continuity of a reciprocal, the textbook's second step and a
+fact this repository does not have. `CONTINUOUS_ATTAINS_MIN` is the maximum of `\y. 0 - f y`, through
+`CONTINUOUS_NEG`, the one fact about combining continuous functions it needed. `ExtremeValue.scala`
+is the derivation. `ContinuitySpec` asserts all four reach exactly the reals' sixteen and the choice,
+that the two attainments rest on the gluing and on the negation rather than on some other route,
+detaches both at the identity on `[0, 1]`, refutes the maximum without its continuity hypothesis at
+`COND (y < 1) y 0`, and refutes the gluing without its gluing hypothesis at "shorter than one".
 
 **`ln` has its first facts, and they are `Logarithm`, a link since 2026-09-24 that declares
 nothing.** `EXP_LN` and `LN_EXP` are the two compositions, `LN_ONE` and `LN_MUL` follow by

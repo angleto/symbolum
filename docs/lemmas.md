@@ -116,9 +116,14 @@ they have least appetite for working out how it is produced.
 
 ## Continuity
 
+  CONTINUOUS_ATTAINS_MAX   !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. y <= u /\ u <= z /\ (!v:real. y <= v /\ v <= z ==> x v <= x u))
+  CONTINUOUS_ATTAINS_MIN   !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. y <= u /\ u <= z /\ (!v:real. y <= v /\ v <= z ==> x u <= x v))
+  CONTINUOUS_BOUNDED       !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. !v:real. y <= v /\ v <= z ==> x v <= u)
   CONTINUOUS_CONST         !x:real. !y:real. continuous (\z:real. x) y
   CONTINUOUS_ID            !x:real. continuous (\y:real. y) x
+  CONTINUOUS_NEG           !x:real -> real. !y:real. continuous x y ==> continuous (\z:real. 0 - x z) y
   INTERMEDIATE_VALUE       !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)
+  INTERVAL_GLUING          !x:real -> real -> bool. !y:real. !z:real. y <= z ==> (!u:real. !v:real. !w:real. u <= v /\ v <= w /\ x u v /\ x v w ==> x u w) ==> (!u:real. y <= u /\ u <= z ==> (?v:real. 0 < v /\ (!w:real. !x1:real. y <= w /\ w <= u /\ u <= x1 /\ x1 <= z /\ x1 - w < v ==> x w x1))) ==> x y z
 
 ## Deduction
 
