@@ -265,9 +265,11 @@ object Fraction {
       negOperation <- Parser.term(withSame, notation, NegBody)
       mulOperation <- Parser.term(withSame, notation, MulBody)
 
-      // `a * D' = a' * D` and `b * E' = b' * E` give the sum's cross-multiplication with the
-      // coefficients `E * E'` and `D * D'`, and the product's with `b * E'` and `a' * D`: those are
-      // the whole of the arithmetic, and a wrong one is refused by the ring rather than proved.
+      // With `a * D1 = a1 * D` and `b * E1 = b1 * E` as the premises, the sum's cross-multiplication
+      // follows with the coefficients `E * E1` and `D * D1`, and the product's with `b * E1` and
+      // `a1 * D`: those are the whole of the arithmetic, and a wrong one is refused by the ring.
+      // (Indices rather than primes, because the language census reads a capital and an apostrophe
+      // as a truncated accent.)
       addRespects <- arithmetic.binaryRespects(
         addOperation,
         "INT_MUL (INT_OF_NUM (SUC (SND (y:prod(int,num))))) (INT_OF_NUM (SUC (SND (v:prod(int,num)))))",
