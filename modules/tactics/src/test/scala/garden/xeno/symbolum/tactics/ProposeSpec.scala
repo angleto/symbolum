@@ -373,7 +373,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and one on `NUM_PROV_REFL`.
     // 542 with the mean value theorem's nine, the same day: two each on the two linearities and on
     // uniqueness, three on `MEAN_VALUE`. Tip plus this branch's delta.
-    proposals.size shouldBe 542
+    // 545 with the product rule's three, the same day: one on the continuity of a differentiable
+    // function, two on the product rule.
+    proposals.size shouldBe 545
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1259,7 +1261,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `Propose.audit` filtered by `from`: each keeps an implication and sits at the propositional
     // address, taken and not settled, so `unreadable` below does not move. Tip plus this branch's
     // delta, the delta probed on the tree before the closed terms landed.
-    open shouldBe 442
+    // 444 with the product rule's two weakenings, the same day, read off a probe of `Propose.audit`
+    // filtered by `from`: each drops one of the two slopes and keeps an implication. The third, the
+    // continuity bridge's, is in `unreadable` below.
+    open shouldBe 444
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1613,7 +1618,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 125 with `NUM_PROV_REFL`'s one weakening, 2026-09-25, predicted from the row above: dropping
     // its only antecedent leaves `!t. NUM_PROV (t = t)`, a bare application of a predicate that no
     // address takes.
-    unreadable shouldBe 125
+    // 126 with `DERIVATIVE_CONTINUOUS`'s one weakening, `!f x. continuous f x`, from the same probe
+    // as `open`'s 444: false at any function with a jump, and about `continuous`, which no procedure
+    // addresses and no model interprets.
+    unreadable shouldBe 126
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

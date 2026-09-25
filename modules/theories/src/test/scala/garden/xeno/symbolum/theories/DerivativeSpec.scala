@@ -113,6 +113,11 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val combination = published(Derivative.Rolle, Derivative.Linear, Derivative.Unique) +
       force(chain.continuity.fact(Continuity.Linear)).conclusion
     Derivation.restingOn(fact(Derivative.MeanValue), combination) shouldBe combination
+
+    // And the product rule keeps `g (x + h)` in hand through the continuity of a differentiable
+    // function, which is why that fact is published beside it.
+    val bridge = published(Derivative.Continuous)
+    Derivation.restingOn(fact(Derivative.ProductRule), bridge) shouldBe bridge
   }
 
   /* ------------------------------------------------------------- what it says */
@@ -204,6 +209,24 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val refused = force(rules.notIntro(claim, absurd))
     refused.hypotheses shouldBe empty
     refused.conclusion shouldBe identityNotFlat.conclusion
+  }
+
+  it should "detach the product rule at the identity times itself, with nothing assumed" in {
+    // Both hypotheses are `DERIVATIVE_ID` at the same point, and what comes out is the slope of
+    // `\y. y * y` at `x`, written as the rule writes it.
+    val x = Term.variable("x", reals)
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val slope = force(rules.spec(x, fact(Derivative.Identity)))
+    val detached = opened(force(rules.specAll(fact(Derivative.ProductRule), List(identity, identity, x, real("1:real"), real("1:real")))
+      .flatMap(rules.mp(_, slope)).flatMap(rules.mp(_, slope))))
+    detached.hypotheses shouldBe empty
+    derivative.show(detached.conclusion) shouldBe "derivative (\\y:real. y * y) x (1 * x + x * 1)"
+
+    // And the bridge at the same function: a differentiable identity is continuous, the fact
+    // `Continuity` proves directly, reached here the other way.
+    val continuous = force(rules.specAll(fact(Derivative.Continuous), List(identity, x, real("1:real"))).flatMap(rules.mp(_, slope)))
+    continuous.hypotheses shouldBe empty
+    continuous.conclusion shouldBe force(chain.continuity.fact(Continuity.Identity).flatMap(rules.spec(x, _))).conclusion
   }
 
   it should "detach the mean value theorem at the identity on [0, 1], where the ends differ" in {
