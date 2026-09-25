@@ -162,6 +162,17 @@ class LogarithmSpec extends AnyFlatSpec with Matchers {
     refute(unbounded, absurd)
   }
 
+  it should "need the second-order estimate's radius, refuted at the same point" in {
+    // `exp 8 - 1 - 8 >= 72`, and the square of eight is 64.
+    val unconditional = proposition("!h:real. abs (exp h - 1 - h) <= h * h")
+    val atEight = force(rules.spec(real("8:real"), force(LogicError.lift(Kernel.assume(unconditional)))))
+    val above = force(chain.limit.magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(real("exp 8 - 1 - 8"), _)))
+    val absurd = mp(force(rules.specAll(
+      lemma("!e:real d:real. 81 <= e ==> e - 1 - 8 <= d ==> d <= 8 * 8 ==> F"),
+      List(real("exp 8"), real("abs (exp 8 - 1 - 8)")))), eightAbove, above, atEight)
+    refute(unconditional, absurd)
+  }
+
   it should "need the positivity in EXP_LN, since the exponential is never zero" in {
     // At `0` the dropped form says `exp (ln 0) = 0`, and `EXP_POSITIVE` at `ln 0` says it is above.
     val everywhere = proposition("!x:real. exp (ln x) = x")

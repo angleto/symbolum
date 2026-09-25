@@ -62,8 +62,11 @@ final class Limit private (
   val theory: Theory,
   val notation: Notation,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** The logic, reading and building against **this** theory rather than the one below it. */
   val logic: Logic = magnitude.classical.logic

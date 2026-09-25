@@ -64,6 +64,14 @@ object Step {
   /** Asserted, and the only step in any proof that is believed rather than checked. */
   final case class Axiom(proposition: Expr) extends Step
 
+  /**
+   * A published fact under its name: the sequent of its one premise, restated.
+   *
+   * The checker has nothing to take on trust here. The cited proof is the premise and is checked
+   * like any other, so what this step adds is only that the two sequents are the same one.
+   */
+  final case class Citation(name: String) extends Step
+
   /** A type definition, and which half of the bijection this theorem is. */
   final case class TypeDefinition(
     typeName: String,
@@ -75,7 +83,8 @@ object Step {
   /** How many premises the rule takes, which is what a table read from text has to agree with. */
   def arity(step: Step): Int = step match {
     case Transitivity | Congruence | EqualityElimination | Antisymmetry => 2
-    case Abstraction(_) | Instantiation(_) | TypeInstantiation(_) | TypeDefinition(_, _, _, _) => 1
+    case Abstraction(_) | Instantiation(_) | TypeInstantiation(_) | TypeDefinition(_, _, _, _) |
+        Citation(_) => 1
     case _ => 0
   }
 }

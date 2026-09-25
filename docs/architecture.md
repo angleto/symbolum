@@ -28,7 +28,7 @@ takes none of the three.
 
 | What | Where | Size |
 |---|---|---|
-| The kernel | `Kernel`, `Term`, `Type`, `Theory` | under 1200 lines, and see below for what that number does and does not say |
+| The kernel | `Kernel`, `Term`, `Type`, `Theory` | under 1220 lines, and see below for what that number does and does not say |
 | Beside it, and not counted | `Printer`, `KernelError`, `Derivation`, `Proof` | display, refusals, the proof record and the writing of it out: none can build a theorem |
 | The axioms of the reals | `Real.Axioms` in `modules/theories/.../Real.scala` | 16 propositions, a complete ordered field |
 | The axioms about the formalism | `Classical.Axioms` in `modules/logic/.../Classical.scala` | 2 propositions, both from HOL Light's `class.ml`: choice, `SELECT_AX` with `select` for a character this lexer cannot read, and eta, `ETA_AX` over `'a` and `'b` |

@@ -1519,28 +1519,32 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
    * recording is not checking, so a derivation that does not replay is a false alarm from a checker
    * and never a false theorem. `Proof.scala` writes that record out as text, and the same argument
    * covers it one step further along: a proof written down wrongly is a table that fails to check.
+   * `Build.scala` reads the record of which commit the classes were built from: a defect there is
+   * a wrong provenance line under a certificate, and the certificate's theorems are checked or not
+   * whatever it says.
    *
-   * None of the four can construct a `Thm`, which the test below checks rather than trusting this
+   * None of them can construct a `Thm`, which the test below checks rather than trusting this
    * paragraph.
    */
   private val RecordAndDisplay: Vector[String] =
-    Vector("Printer.scala", "KernelError.scala", "Derivation.scala", "Proof.scala")
+    Vector("Printer.scala", "KernelError.scala", "Derivation.scala", "Proof.scala", "Build.scala")
 
   /**
    * What the trusted base may grow to before somebody has to decide.
    *
-   * It has not moved since it was written, which is worth a sentence because it was raised to 1400
-   * on 2026-09-10 and put back the same day. What had grown past it was the kernel *directory*, and
-   * the four files above had not: a proof record and a printer are read by nobody who is deciding
-   * whether to believe a theorem. Raising a bound because the wrong thing was being measured is how
-   * a bound stops meaning anything.
+   * It was 1200 from when it was written until 2026-09-25, and it was raised to 1400 once in
+   * between, on 2026-09-10, and put back the same day. What had grown past it then was the kernel
+   * *directory*, and the four files above had not: a proof record and a printer are read by nobody
+   * who is deciding whether to believe a theorem. Raising a bound because the wrong thing was being
+   * measured is how a bound stops meaning anything.
    *
    * What it protects is that one person can read the whole of what they are asked to believe in a
-   * sitting. Two records have spent against it deliberately, `docs/adr/0006` for the type
-   * definition rule and `docs/adr/0008` for the identity on constants, and that is the only way it
-   * is allowed to move.
+   * sitting. Three records have spent against it deliberately, and that is the only way it is
+   * allowed to move: `docs/adr/0006` for the type definition rule and `docs/adr/0008` for the
+   * identity on constants spent headroom, and `docs/adr/0047` raised it to 1220 for `Kernel.cite`,
+   * which needed eleven lines where three were left.
    */
-  private val TrustedBaseLineBound: Int = 1200
+  private val TrustedBaseLineBound: Int = 1220
 
   private def fileOf(name: String): String =
     read(s"modules/kernel/src/main/scala/garden/xeno/symbolum/kernel/$name")

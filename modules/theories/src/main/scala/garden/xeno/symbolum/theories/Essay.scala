@@ -333,9 +333,9 @@ object Essay {
     (Vector(
       "## The proof the kernel holds",
       "",
-      s"${count(size, "inference")}. The account above describes them and is not a second proof: " +
-        "what the " +
-        "kernel checked is this, and its shape is",
+      s"${count(size, "inference")} of its own, a published fact it uses counting as one " +
+        "`Citation`. The account above describes them and is not a second proof: what the kernel " +
+        "checked for this proof is this, and its shape is",
       "",
       "| rule | inferences | share |",
       "|---|---|---|"
@@ -349,7 +349,8 @@ object Essay {
        |  and gave the same term, which is what `Signature.readable` returns a pair for.
        |- What it rests on is a walk over the derivation, and a name appears against a fact only
        |  where the sequents agree.
-       |- The inferences and their shape are counted from the same walk.
+       |- The inferences and their shape are counted from the same walk, which stops at a published
+       |  fact: the fact's own proof was checked when its development was built.
        |${if (script.isEmpty) "" else "- Each step is one operation as it was recorded, and a step citing a name cites a fact whose\n  statement is that name's.\n"}
        |Not checked, and not claimed: that the statement says what somebody meant, which is what the
        |readable form is printed for; that a constant is spelled the way the literature spells it,

@@ -75,8 +75,11 @@ final class Integer private (
   /** The quotient this development is, kept so a consumer can project and lift against it. */
   val quotient: Quotient,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** The logic, reading and building against **this** theory rather than the one below it. */
   val logic: Logic = classical.logic
@@ -93,9 +96,66 @@ final class Integer private (
   /** A derived fact of this development, by name. Nothing here is asserted. */
   def fact(name: String): Either[LogicError, Kernel.Thm] =
     facts.get(name).toRight(MissingDefinition(name))
+
+  /**
+   * Identities of the ring `int`, decided: `CommutativeRing` over this development's own laws.
+   *
+   * Until 2026-09-25 nothing decided an identity whose carrier was `int`: `Semiring` was written
+   * against `Peano` and `Ring` against the reals, and this development closed its own obligations
+   * with `Semiring` only because its carrier is pairs of naturals. The rationals' carrier is pairs of
+   * integers, which is what this is for. It declares nothing, and the rules it runs on are the ring
+   * laws above plus four this development already publishes, handed in so that they are not
+   * derived a second time.
+   */
+  lazy val ring: Either[LogicError, CommutativeRing] = Integer.ringOver(this)
 }
 
 object Integer {
+
+  /** The `int` instance of `CommutativeRing`, over the laws a development of the integers holds. */
+  def ringOver(integers: Integer): Either[LogicError, CommutativeRing] = {
+    val integer = TyApp(TypeName, Nil)
+    val binary = Type.fun(integer, Type.fun(integer, integer))
+    def constant(name: String, ty: Type): Either[LogicError, Term] = LogicError.lift(integers.theory.constant(name, ty))
+    for {
+      add <- constant(Addition, binary)
+      multiply <- constant(Multiplication, binary)
+      negate <- constant(Negation, Type.fun(integer, integer))
+      zero <- constant(Zero, integer)
+      one <- constant(One, integer)
+      laws <- for {
+        addAssociative <- integers.fact(AddAssociative)
+        addCommutative <- integers.fact(AddCommutative)
+        addZero <- integers.fact(AddAtZero)
+        multiplyAssociative <- integers.fact(MulAssociative)
+        multiplyCommutative <- integers.fact(MulCommutative)
+        multiplyOne <- integers.fact(MulAtOne)
+        distributive <- integers.fact(Distributive)
+        inverse <- integers.fact(AddNegation)
+      } yield CommutativeRing.Laws(
+        addAssociative, addCommutative, addZero, multiplyAssociative, multiplyCommutative,
+        multiplyOne, distributive, None, Some(inverse)
+      )
+      supplied <- for {
+        negNeg <- integers.fact(NegTwice)
+        mulNeg <- integers.fact(MulNegation)
+        timesZero <- integers.fact(MulAtZero)
+        zeroTimes <- integers.fact(ZeroTimes)
+      } yield Map(
+        CommutativeRing.NegateNegate -> negNeg,
+        CommutativeRing.NegateMultiplyRight -> mulNeg,
+        CommutativeRing.TimesZero -> timesZero,
+        CommutativeRing.ZeroTimes -> zeroTimes
+      )
+      built <- CommutativeRing.ring(
+        integers.logic,
+        CommutativeRing.Operations(integer, add, multiply, zero, one, Some(negate)),
+        laws,
+        Vector.empty,
+        supplied
+      )
+    } yield built
+  }
 
   /* ------------------------------------------------------------------ the names */
 

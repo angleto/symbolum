@@ -28,7 +28,10 @@ import garden.xeno.symbolum.logic.*
  * the width the largest clause and not merely a bound on it. `docs/adr/0013`'s warning about
  * calling a meta-level closure by the name of an object-level theorem applies to this file too:
  * this is soundness and the vocabulary of the measure, it is the floor, and it is not a lower
- * bound.
+ * bound. The first lower bound proved over these names is `Pigeonhole`'s, since 2026-09-25: every
+ * refutation of the principle for `n + 1` pigeons **derives** a clause at least `n - 1` long. It is
+ * a bound on width and not Haken's on size, and it is stated on a derived clause because
+ * [[Resolving.Width]] counts the inputs, whose pigeon clauses already have `n` literals.
  *
  * == Nothing is coded, and the card that asked for this expected the opposite ==
  *
@@ -97,8 +100,11 @@ final class Resolving private (
   val notation: Notation,
   val logic: Logic,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** The equation defining `name`, as proved when the constant was introduced. */
   def definition(name: String): Either[LogicError, Kernel.Thm] =

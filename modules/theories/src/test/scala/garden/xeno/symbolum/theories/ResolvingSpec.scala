@@ -307,7 +307,9 @@ class ResolvingSpec extends AnyFlatSpec with Matchers {
    * `n DIV c` is zero and the bound is the one step every refutation has.
    *
    * **Stated and not proved.** What this file establishes is that it can be written, which is the
-   * question Mycelium `edc1f509` asked first; proving it is `01520749`.
+   * question Mycelium `edc1f509` asked first. The lower bound proved over these names since
+   * 2026-09-25 is `Pigeonhole.RES_PHP_DERIVED_WIDTH`, on the width of a derived clause; size from
+   * width is Ben-Sasson and Wigderson's step, and it is not taken anywhere here.
    */
   private val Haken: String =
     "?c:num. NUM_LT 0 c /\\ (" +

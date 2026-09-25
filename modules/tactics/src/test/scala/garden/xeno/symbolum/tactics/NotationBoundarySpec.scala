@@ -302,6 +302,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     // `Collatz.scala` already carry for the same expression: a fact's published name, compared
     // against what its derivation produced, in the refusal that says the two disagree.
     ("Fraction.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    // The ring laws of 2026-09-25 on classes, which refuse the way `Integer.scala`'s do one
+    // quotient down: the inner refusal behind the law's name, and the projection by its own name.
+    ("Fraction.scala", "error.message") ->
+      (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
+    ("Fraction.scala", "Projection") ->
+      (Verdict.Name, "the projection of the quotient, by its own published name"),
     // `Syntax.scala`, 2026-09-25, the same reading once more: the published name of a fact in the
     // refusal that says its derivation produced something other than its statement.
     ("Syntax.scala", "name") -> (Verdict.Name, "the fact's published name"),
@@ -419,6 +425,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
     ("Language.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted"),
+    // `Pigeonhole.Builder.refuse`, the one site of its file. Every caller passes a literal or a
+    // literal interpolating a variable's or a published fact's name, and none renders a term: the
+    // one that did, a proof's statement through `show`, was taken out before this row was written.
+    ("Pigeonhole.scala", "what") ->
+      (Verdict.Text, "a caller's own description of the shape it wanted, naming at most a variable"),
     // The sentence this replaced was a literal interpolating `scheme.binders.size`, and it had a
     // row in `Classified` until `Prose.count` arrived in it on 2026-09-18: the call does not fit
     // the line, so the description is a name now and the scan sees an identifier. That is the

@@ -5,7 +5,9 @@ import garden.xeno.symbolum.logic.*
 
 /**
  * The derivative of a real function at a point, the interior extremum lemma, Rolle's theorem, the
- * mean value theorem, and since the same day the product rule with the continuity it rests on.
+ * mean value theorem, and since the same day the product rule with the continuity it rests on, and
+ * the chain rule, and since then the exponential's derivative and what the sign of a derivative
+ * says about the function on an interval.
  *
  * `derivative f x m` says that `f` has derivative `m` at `x`, and it is the epsilon-delta statement
  * written out, the way `continuous` and `converges` are: for every positive tolerance `e` there is
@@ -66,8 +68,11 @@ final class Derivative private (
   val notation: Notation,
   val logic: Logic,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** The equation defining `name`, as proved when the constant was introduced. */
   def definition(name: String): Either[LogicError, Kernel.Thm] =
@@ -185,6 +190,47 @@ object Derivative {
    */
   val ProductRule: String = "DERIVATIVE_PRODUCT"
 
+  /**
+   * `|- !f g x m n. derivative g x n ==> derivative f (g x) m ==>
+   * derivative (\y. f (g y)) x (m * n)`
+   *
+   * The chain rule. No hypothesis says `g (x + h)` differs from `g x`, which is the hypothesis the
+   * quotient argument needs and cannot have: `g` may be constant near `x`, and then every increment
+   * of `f` at `g x` is zero. `DerivativeSpec` detaches it at such a `g`.
+   */
+  val ChainRule: String = "DERIVATIVE_CHAIN"
+
+  /**
+   * `|- !x. derivative exp x (exp x)`
+   *
+   * The exponential is its own derivative. The first derivative of a function this repository
+   * defines rather than builds from `x` by arithmetic, and the one the series was chosen for. What
+   * it needed was `Logarithm.EXP_NEAR_LINE`, the second-order estimate at zero.
+   */
+  val Exponential: String = "DERIVATIVE_EXP"
+
+  /**
+   * `|- !f a b. (!x. a <= x /\ x <= b ==> continuous f x) ==> (!x. a < x /\ x < b ==> derivative f x 0) ==>
+   * !x. a <= x /\ x <= b ==> f x = f a`
+   *
+   * A function whose derivative is zero inside an interval, and which is continuous on it, is
+   * constant there. The mean value theorem from `a` to each point, and uniqueness.
+   */
+  val Flat: String = "DERIVATIVE_ZERO_CONSTANT"
+
+  /**
+   * `|- !f a b. (!x. a <= x /\ x <= b ==> continuous f x) ==> (!x. a < x /\ x < b ==> ?m. derivative f x m /\ 0 <= m) ==>
+   * !u v. a <= u /\ u <= v /\ v <= b ==> f u <= f v`
+   *
+   * A non-negative derivative inside makes `f` non-decreasing on the interval. The hypothesis states
+   * that the derivative exists and its sign in one existential, so it asks for no second statement
+   * of differentiability.
+   */
+  val NonDecreasing: String = "DERIVATIVE_NONNEG_MONOTONE"
+
+  /** The same with `0 < m`, and `f` strictly increasing: `a <= u /\ u < v /\ v <= b ==> f u < f v`. */
+  val Increasing: String = "DERIVATIVE_POS_LT_MONOTONE"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Constant -> "!c:real. !x:real. derivative (\\y:real. c) x 0",
@@ -212,7 +258,22 @@ object Derivative {
     Continuous -> "!f:real -> real. !x:real. !m:real. derivative f x m ==> continuous f x",
     ProductRule ->
       ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. derivative f x m ==> derivative g x n ==> " +
-        "derivative (\\y:real. f y * g y) x (m * g x + f x * n)")
+        "derivative (\\y:real. f y * g y) x (m * g x + f x * n)"),
+    ChainRule ->
+      ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. derivative g x n ==> derivative f (g x) m ==> " +
+        "derivative (\\y:real. f (g y)) x (m * n)"),
+    Exponential -> "!x:real. derivative exp x (exp x)",
+    Flat ->
+      ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> derivative f x 0) ==> !x:real. a <= x /\\ x <= b ==> f x = f a"),
+    NonDecreasing ->
+      ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 <= m) ==> " +
+        "!u:real. !v:real. a <= u /\\ u <= v /\\ v <= b ==> f u <= f v"),
+    Increasing ->
+      ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 < m) ==> " +
+        "!u:real. !v:real. a <= u /\\ u < v /\\ v <= b ==> f u < f v")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -234,6 +295,8 @@ object Derivative {
     reals: RealTheory,
     magnitude: Magnitude,
     continuity: Continuity,
+    transcendental: Transcendental,
+    logarithm: Logarithm,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Derivative] =
@@ -259,6 +322,12 @@ object Derivative {
       meanValue <- meanValueTheorem(steps, continuity, continuousLinear, continuousIdentity, identity, linear, unique, rolle)
       continuous <- continuousWhereDifferentiable(steps, reals, magnitude, continuity)
       productRuleFact <- productRule(steps, reals, magnitude, continuity, continuous)
+      chainRule <- chainRuleFact(steps, reals, magnitude, continuity, continuous)
+      nearLine <- logarithm.fact(Logarithm.NearLine)
+      exponential <- exponentialSlope(steps, reals, magnitude, transcendental, logarithm, nearLine)
+      flat <- flatSlope(steps, magnitude.order, meanValue, unique)
+      nonDecreasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = false)
+      increasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = true)
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,
@@ -271,7 +340,12 @@ object Derivative {
         Unique -> unique,
         MeanValue -> meanValue,
         Continuous -> continuous,
-        ProductRule -> productRuleFact
+        ProductRule -> productRuleFact,
+        ChainRule -> chainRule,
+        Exponential -> exponential,
+        Flat -> flat,
+        NonDecreasing -> nonDecreasing,
+        Increasing -> increasing
       )
 
       // Each statement checked against the text a person reads it by, as `Continuity` does: a
@@ -1424,6 +1498,500 @@ object Derivative {
       slope <- real(s"m:real * $g0 + $f0 * n:real")
       result <- foldDerivative(steps, function, x, slope, statement)
       closed <- rules.disch(gHyp, result).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x, m, n)))
+    } yield closed
+  }
+
+  /**
+   * [[ChainRule]]: with `k = g (x + h) - g x`, the error is
+   * `[f (g x + k) - f (g x) - m * k] + m * [g (x + h) - g x - n * h]`, an identity. The first bracket
+   * is at most `T * abs k` in **both** cases: when `k` is not zero because `f` has derivative `m` at
+   * `g x` and [[Continuous]] at `g` keeps `k` inside `f`'s radius, and when `k` is zero because the
+   * bracket is then zero. That second case is the step the textbook's quotient gets wrong. `abs k`
+   * stays under `(abs n + 1) * abs h`, and each bracket under half of `e * abs h`.
+   */
+  private def chainRuleFact(
+    steps: Continuity.Steps,
+    reals: RealTheory,
+    magnitude: Magnitude,
+    continuity: Continuity,
+    differentiableContinuous: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val x = Term.variable("x", Reals)
+    val m = Term.variable("m", Reals)
+    val n = Term.variable("n", Reals)
+    val e = Term.variable("e", Reals)
+    val h = Term.variable("h", Reals)
+    val df = Term.variable("df", Reals)
+    val dc = Term.variable("dc", Reals)
+    val dg = Term.variable("dg", Reals)
+    val g1 = "(g:real -> real) (x + h)"
+    val g0 = "(g:real -> real) x"
+    val k = s"($g1 - $g0)"
+    val eg = s"$g1 - $g0 - n:real * h"
+    val fk = s"(f:real -> real) ($g0 + $k)"
+    val ef = s"$fk - (f:real -> real) ($g0) - m:real * $k"
+    val whole = s"(f:real -> real) ($g1) - (f:real -> real) ($g0) - (m:real * n:real) * h"
+    val second = s"m:real * ($eg)"
+    for {
+      gHyp <- proposition("derivative (g:real -> real) x n")
+      fHyp <- proposition("derivative (f:real -> real) ((g:real -> real) x) m")
+      assumedG <- LogicError.lift(Kernel.assume(gHyp))
+      assumedF <- LogicError.lift(Kernel.assume(fHyp))
+      gx <- real(g0)
+      gAt <- openDerivative(steps, g, x, n, assumedG)
+      fAt <- openDerivative(steps, f, gx, m, assumedF)
+      gContinuous <- rules.specAll(differentiableContinuous, List(g, x, n)).flatMap(rules.mp(_, assumedG))
+      gNear <- unfoldContinuity(continuity, g, x).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, gContinuous)))
+
+      positive <- proposition("0 < e:real")
+      ePositive <- LogicError.lift(Kernel.assume(positive))
+      nNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), "n:real")
+      mNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), "m:real")
+      forF <- Continuity.portion(steps, reals, "abs (n:real)", nNonNeg, 2, ePositive)
+      forM <- Continuity.portion(steps, reals, "abs (m:real)", mNonNeg, 2, ePositive)
+      tolerance = s"min 1 (${forM.term})"
+      onePositive <- lemma("(0:real) < 1")
+      tolerancePositive <- Continuity.minimumOf(steps, magnitude, "1", forM.term, onePositive, forM.positive)
+
+      nearF <- real(forF.term).flatMap(rules.spec(_, fAt)).flatMap(rules.mp(_, forF.positive))
+      radiusF <- assume(s"0 < df:real /\\ (!h:real. 0 < abs h /\\ abs h < df ==> abs ((f:real -> real) ($g0 + h) - f ($g0) - m:real * h) < ${forF.term} * abs h)")
+      dfPositive <- rules.conjElim1(radiusF)
+      insideF <- rules.conjElim2(radiusF)
+      nearC <- rules.spec(df, gNear).flatMap(rules.mp(_, dfPositive))
+      radiusC <- assume(s"0 < dc:real /\\ (!y:real. abs (y - x:real) < dc ==> abs ((g:real -> real) y - g x) < df:real)")
+      dcPositive <- rules.conjElim1(radiusC)
+      insideC <- rules.conjElim2(radiusC)
+      nearG <- real(tolerance).flatMap(rules.spec(_, gAt)).flatMap(rules.mp(_, tolerancePositive))
+      radiusG <- assume(s"0 < dg:real /\\ (!h:real. 0 < abs h /\\ abs h < dg ==> abs ((g:real -> real) (x + h) - g x - n:real * h) < $tolerance * abs h)")
+      dgPositive <- rules.conjElim1(radiusG)
+      insideG <- rules.conjElim2(radiusG)
+      radius = "min (dg:real) (dc:real)"
+      radiusPositive <- Continuity.minimumOf(steps, magnitude, "dg:real", "dc:real", dgPositive, dcPositive)
+
+      near <- proposition(s"0 < abs (h:real) /\\ abs h < $radius")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      hPositive <- rules.conjElim1(assumedNear)
+      hSmall <- rules.conjElim2(assumedNear)
+      hBelowG <- at(magnitude.fact(Magnitude.MinBelowLeft), "dg:real", "dc:real")
+        .flatMap(b => at(lemma(Through), "abs (h:real)", radius, "dg:real").flatMap(mp(_, Right(hSmall), Right(b))))
+      hBelowC <- at(magnitude.fact(Magnitude.MinBelowRight), "dg:real", "dc:real")
+        .flatMap(b => at(lemma(Through), "abs (h:real)", radius, "dc:real").flatMap(mp(_, Right(hSmall), Right(b))))
+
+      gClose <- rules.conjIntro(hPositive, hBelowG).flatMap(ok => rules.spec(h, insideG).flatMap(rules.mp(_, ok)))
+      absFn <- Parser.term(theory, notation, "abs", Functions)
+      shift <- at(lemma("!x:real h:real. (x + h) - x = h"), "x:real", "h:real").flatMap(Conv.apTerm(absFn, _))
+      stepInside <- at(lemma("!A:real B:real d:real. A = B ==> B < d ==> A < d"), "abs ((x:real + h) - x)", "abs (h:real)", "dc:real")
+        .flatMap(mp(_, Right(shift), Right(hBelowC)))
+      stepped <- real("x:real + h")
+      kSmall <- rules.spec(stepped, insideC).flatMap(rules.mp(_, stepInside))
+
+      /* ----------------------------------- f's error at the increment k, in both cases */
+      kNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), k)
+      leCases <- magnitude.order.fact(Order.LeCases)
+      zero <- real("0:real")
+      kMagnitude <- real(s"abs $k")
+      split <- rules.specAll(leCases, List(zero, kMagnitude)).flatMap(rules.mp(_, kNonNeg))
+      tfNonNeg <- at(lemma("!T:real. 0 < T ==> 0 <= T"), forF.term).flatMap(mp(_, Right(forF.positive)))
+
+      apart <- for {
+        away <- assume(s"0 < abs $k")
+        admissible <- rules.conjIntro(away, kSmall)
+        kTerm <- real(k)
+        bound <- rules.spec(kTerm, insideF).flatMap(rules.mp(_, admissible))
+        result <- at(lemma("!A:real T:real K:real. A < T * K ==> A <= T * K"), s"abs ($ef)", forF.term, s"abs $k")
+          .flatMap(mp(_, Right(bound)))
+      } yield result
+
+      still <- for {
+        none <- assume(s"0 = abs $k").flatMap(Conv.sym)
+        kZero <- at(magnitude.fact(Magnitude.AbsZero), k).flatMap(mp(_, Right(none)))
+        mTimes <- Parser.term(theory, notation, "real_mul (m:real)", Functions).flatMap(Conv.apTerm(_, kZero))
+        argument <- at(lemma("!G:real K:real. K = 0 ==> G + K = G"), g0, k).flatMap(mp(_, Right(kZero)))
+        values <- Conv.apTerm(f, argument)
+        errorZero <- at(lemma("!F:real F0:real m:real k:real. F = F0 ==> m * k = m * 0 ==> F - F0 - m * k = 0"),
+          fk, s"(f:real -> real) ($g0)", "m:real", k).flatMap(mp(_, Right(values), Right(mTimes)))
+        itself <- at(magnitude.fact(Magnitude.OfNonNegative), ef)
+          .flatMap(mp(_, at(lemma("!E:real. E = 0 ==> 0 <= E"), ef).flatMap(mp(_, Right(errorZero)))))
+        result <- at(lemma("!A:real E:real T:real K:real. A = E ==> E = 0 ==> 0 <= T ==> 0 <= K ==> A <= T * K"),
+          s"abs ($ef)", ef, forF.term, s"abs $k").flatMap(mp(_, Right(itself), Right(errorZero), Right(tfNonNeg), Right(kNonNeg)))
+      } yield result
+
+      fError <- rules.disjElim(split, apart, still)
+
+      /* -------------------------------------------- abs k < (abs n + 1) * abs h */
+      kSplit <- at(lemma("!G1:real G0:real n:real h:real. G1 - G0 = (G1 - G0 - n * h) + n * h"), g1, g0, "n:real", "h:real")
+        .flatMap(Conv.apTerm(absFn, _))
+      kTriangle <- at(magnitude.fact(Magnitude.Triangle), eg, "n:real * h")
+      nh <- at(magnitude.fact(Magnitude.Multiplicative), "n:real", "h:real")
+      kBelow <- at(lemma("!K:real S:real E:real B:real N:real H:real. K = S ==> S <= E + B ==> B = N * H ==> K <= E + N * H"),
+        s"abs $k", s"abs ($eg + n:real * h)", s"abs ($eg)", "abs (n:real * h)", "abs (n:real)", "abs (h:real)")
+        .flatMap(mp(_, Right(kSplit), Right(kTriangle), Right(nh)))
+      toleranceBelowOne <- at(magnitude.fact(Magnitude.MinBelowLeft), "1", forM.term)
+      kBound <- at(lemma("!K:real E:real N:real H:real T:real. K <= E + N * H ==> E < T * H ==> T <= 1 ==> 0 < H ==> K < (N + 1) * H"),
+        s"abs $k", s"abs ($eg)", "abs (n:real)", "abs (h:real)", tolerance)
+        .flatMap(mp(_, Right(kBelow), Right(gClose), Right(toleranceBelowOne), Right(hPositive)))
+
+      /* ------------------------------------------------------------- the first half */
+      scaledK <- at(lemma("!T:real K:real W:real. 0 < T ==> K < W ==> T * K < T * W"), forF.term, s"abs $k", "(abs (n:real) + 1) * abs (h:real)")
+        .flatMap(mp(_, Right(forF.positive), Right(kBound)))
+      halfEquation <- at(lemma("!T:real N:real H:real e:real. 0 < H ==> 2 * (N + 1) * T = e ==> T * ((N + 1) * H) = e / 2 * H"),
+        forF.term, "abs (n:real)", "abs (h:real)", "e:real").flatMap(mp(_, Right(hPositive), Right(forF.equation)))
+      firstHalf <- at(lemma("!A:real X:real Y:real Z:real. A <= X ==> X < Y ==> Y = Z ==> A < Z"),
+        s"abs ($ef)", s"${forF.term} * abs $k", s"${forF.term} * ((abs (n:real) + 1) * abs (h:real))", "e:real / 2 * abs (h:real)")
+        .flatMap(mp(_, Right(fError), Right(scaledK), Right(halfEquation)))
+
+      /* ------------------------------------------------------------ the second half */
+      mul <- at(magnitude.fact(Magnitude.Multiplicative), "m:real", eg)
+      scaledE <- at(lemma("!P:real A:real B:real. 0 <= P ==> A < B ==> P * A <= P * B"), "abs (m:real)", s"abs ($eg)", s"$tolerance * abs (h:real)")
+        .flatMap(mp(_, Right(mNonNeg), Right(gClose)))
+      toleranceBelowM <- at(magnitude.fact(Magnitude.MinBelowRight), "1", forM.term)
+      mScaled <- at(lemma("!M:real T:real S:real. 0 <= M ==> T <= S ==> M * T <= M * S"), "abs (m:real)", tolerance, forM.term)
+        .flatMap(mp(_, Right(mNonNeg), Right(toleranceBelowM)))
+      mShare <- at(lemma("!M:real S:real e:real. 0 <= M ==> 0 < S ==> 2 * (M + 1) * S = e ==> M * S < e / 2"), "abs (m:real)", forM.term, "e:real")
+        .flatMap(mp(_, Right(mNonNeg), Right(forM.positive), Right(forM.equation)))
+      mUnder <- at(lemma("!X:real Y:real Z:real. X <= Y ==> Y < Z ==> X < Z"), s"abs (m:real) * $tolerance", s"abs (m:real) * ${forM.term}", "e:real / 2")
+        .flatMap(mp(_, Right(mScaled), Right(mShare)))
+      secondBound <- at(lemma("!X:real M:real T:real H:real e:real. X <= M * (T * H) ==> 0 < H ==> M * T < e / 2 ==> X <= e / 2 * H"),
+        s"abs (m:real) * abs ($eg)", "abs (m:real)", tolerance, "abs (h:real)", "e:real")
+        .flatMap(mp(_, Right(scaledE), Right(hPositive), Right(mUnder)))
+      secondHalf <- at(lemma("!R:real X:real Y:real. R = X ==> X <= Y ==> R <= Y"), s"abs ($second)", s"abs (m:real) * abs ($eg)", "e:real / 2 * abs (h:real)")
+        .flatMap(mp(_, Right(mul), Right(secondBound)))
+
+      /* ------------------------------------------------------------------- together */
+      backArgument <- at(lemma("!G1:real G0:real. G0 + (G1 - G0) = G1"), g1, g0)
+      fValues <- Conv.apTerm(f, backArgument).flatMap(Conv.sym)
+      regrouped <- at(lemma("!P:real Q:real R:real m:real n:real h:real G1:real G0:real. P = Q ==> " +
+        "P - R - (m * n) * h = (Q - R - m * (G1 - G0)) + m * (G1 - G0 - n * h)"),
+        s"(f:real -> real) ($g1)", fk, s"(f:real -> real) ($g0)", "m:real", "n:real", "h:real", g1, g0)
+        .flatMap(mp(_, Right(fValues)))
+      sameAbs <- Conv.apTerm(absFn, regrouped)
+      triangle <- at(magnitude.fact(Magnitude.Triangle), ef, second)
+      within <- at(lemma("!S:real R:real X:real Y:real e:real H:real. S = R ==> R <= X + Y ==> X < e / 2 * H ==> Y <= e / 2 * H ==> S < e * H"),
+        s"abs ($whole)", s"abs ($ef + $second)", s"abs ($ef)", s"abs ($second)", "e:real", "abs (h:real)")
+        .flatMap(mp(_, Right(sameAbs), Right(triangle), Right(firstHalf), Right(secondHalf)))
+
+      everyH <- rules.disch(near, within).flatMap(rules.gen(h, _))
+      both <- rules.conjIntro(radiusPositive, everyH)
+      radiusTerm <- real(radius)
+      witnessed <- existential(s"?d:real. 0 < d /\\ (!h:real. 0 < abs h /\\ abs h < d ==> abs ($whole) < e:real * abs h)")
+        .flatMap(rules.existsIntro(_, radiusTerm, both))
+      withoutG <- rules.existsElim(nearG, dg, witnessed)
+      withoutC <- rules.existsElim(nearC, dc, withoutG)
+      withoutF <- rules.existsElim(nearF, df, withoutC)
+      statement <- rules.disch(positive, withoutF).flatMap(rules.gen(e, _))
+      function <- Parser.term(theory, notation, "\\y:real. (f:real -> real) ((g:real -> real) y)", Functions)
+      slope <- real("m:real * n:real")
+      result <- foldDerivative(steps, function, x, slope, statement)
+      closed <- rules.disch(fHyp, result).flatMap(rules.disch(gHyp, _)).flatMap(rules.genAll(_, List(f, g, x, m, n)))
+    } yield closed
+  }
+
+  /**
+   * [[Exponential]]: `exp (x + h) - exp x - exp x * h` is `exp x * (exp h - 1 - h)` by the addition
+   * theorem, and `Logarithm.EXP_NEAR_LINE` puts the bracket under `h * h` for `abs h <= 1 / 2`. So
+   * the error is at most `exp x * abs h * abs h`, under `e * abs h` once `abs h` is under the share
+   * of `e` for `exp x`. `abs (exp x)` is replaced inside the product by congruence.
+   */
+  private def exponentialSlope(
+    steps: Continuity.Steps,
+    reals: RealTheory,
+    magnitude: Magnitude,
+    transcendental: Transcendental,
+    logarithm: Logarithm,
+    nearLine: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val h = Term.variable("h", Reals)
+    val error = "exp (x:real + h) - exp x - exp x * h"
+    val second = "exp (h:real) - 1 - h"
+    for {
+      positive <- proposition("0 < e:real")
+      ePositive <- LogicError.lift(Kernel.assume(positive))
+      expPositive <- at(logarithm.fact(Logarithm.Positive), "x:real")
+      expNonNeg <- at(lemma("!E:real. 0 < E ==> 0 <= E"), "exp (x:real)").flatMap(mp(_, Right(expPositive)))
+      share <- Continuity.portion(steps, reals, "exp (x:real)", expNonNeg, 1, ePositive)
+      halfPositive <- lemma("(0:real) < 1 / 2")
+      radius = s"min (1 / 2) (${share.term})"
+      radiusPositive <- Continuity.minimumOf(steps, magnitude, "1 / 2", share.term, halfPositive, share.positive)
+
+      near <- proposition(s"0 < abs (h:real) /\\ abs h < $radius")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      hPositive <- rules.conjElim1(assumedNear)
+      hSmall <- rules.conjElim2(assumedNear)
+      belowHalf <- at(magnitude.fact(Magnitude.MinBelowLeft), "1 / 2", share.term)
+      hHalf <- at(lemma("!A:real w:real. A < w ==> w <= 1 / 2 ==> A <= 1 / 2"), "abs (h:real)", radius)
+        .flatMap(mp(_, Right(hSmall), Right(belowHalf)))
+      hBelowT <- at(magnitude.fact(Magnitude.MinBelowRight), "1 / 2", share.term)
+        .flatMap(b => at(lemma(Through), "abs (h:real)", radius, share.term).flatMap(mp(_, Right(hSmall), Right(b))))
+
+      estimate <- rules.spec(h, nearLine).flatMap(rules.mp(_, hHalf))
+      split <- at(transcendental.fact(Transcendental.Addition), "x:real", "h:real")
+      regrouped <- at(lemma("!P:real E:real Q:real h:real. P = E * Q ==> P - E - E * h = E * (Q - 1 - h)"),
+        "exp (x:real + h)", "exp (x:real)", "exp (h:real)", "h:real").flatMap(mp(_, Right(split)))
+      absFn <- Parser.term(theory, notation, "abs", Functions)
+      sameAbs <- Conv.apTerm(absFn, regrouped)
+      product <- at(magnitude.fact(Magnitude.Multiplicative), "exp (x:real)", second)
+      absExp <- at(magnitude.fact(Magnitude.OfNonNegative), "exp (x:real)").flatMap(mp(_, Right(expNonNeg)))
+      // `abs (exp x)` is replaced inside the product by congruence, not by `Linarith`.
+      multiply <- Term.destEq(product.conclusion).map(_._2).collect { case App(App(op, _), _) => op }
+        .toRight(NotOfForm("a product", product.conclusion))
+      secondMagnitude <- real(s"abs ($second)")
+      replaced <- Conv.apTerm(multiply, absExp).flatMap(Conv.apThm(_, secondMagnitude))
+      errorIs <- Conv.trans(sameAbs, product).flatMap(Conv.trans(_, replaced))
+
+      squareIs <- at(magnitude.fact(Magnitude.OfNonNegative), "h:real * h")
+        .flatMap(mp(_, at(lemma("!h:real. 0 <= h * h"), "h:real")))
+      squareSplit <- at(magnitude.fact(Magnitude.Multiplicative), "h:real", "h:real")
+      squareAbs <- Conv.sym(squareIs).flatMap(Conv.trans(_, squareSplit))
+      underSquare <- at(lemma("!A:real S:real B:real. A <= S ==> S = B ==> A <= B"), s"abs ($second)", "h:real * h", "abs (h:real) * abs h")
+        .flatMap(mp(_, Right(estimate), Right(squareAbs)))
+      scaled <- at(lemma("!P:real A:real B:real. 0 <= P ==> A <= B ==> P * A <= P * B"), "exp (x:real)", s"abs ($second)", "abs (h:real) * abs h")
+        .flatMap(mp(_, Right(expNonNeg), Right(underSquare)))
+      slope <- at(lemma("!E:real H:real T:real e:real. 0 <= E ==> 0 < H ==> H < T ==> 1 * (E + 1) * T = e ==> E * H < e"),
+        "exp (x:real)", "abs (h:real)", share.term, "e:real")
+        .flatMap(mp(_, Right(expNonNeg), Right(hPositive), Right(hBelowT), Right(share.equation)))
+      bound <- at(lemma("!X:real E:real H:real e:real. X <= E * (H * H) ==> 0 < H ==> E * H < e ==> X < e * H"),
+        s"exp (x:real) * abs ($second)", "exp (x:real)", "abs (h:real)", "e:real")
+        .flatMap(mp(_, Right(scaled), Right(hPositive), Right(slope)))
+      within <- at(lemma("!R:real X:real e:real H:real. R = X ==> X < e * H ==> R < e * H"),
+        s"abs ($error)", s"exp (x:real) * abs ($second)", "e:real", "abs (h:real)")
+        .flatMap(mp(_, Right(errorIs), Right(bound)))
+
+      everyH <- rules.disch(near, within).flatMap(rules.gen(h, _))
+      both <- rules.conjIntro(radiusPositive, everyH)
+      radiusTerm <- real(radius)
+      witnessed <- existential(s"?d:real. 0 < d /\\ (!h:real. 0 < abs h /\\ abs h < d ==> abs ($error) < e:real * abs h)")
+        .flatMap(rules.existsIntro(_, radiusTerm, both))
+      statement <- rules.disch(positive, witnessed).flatMap(rules.gen(e, _))
+      exp <- Parser.term(theory, notation, "exp", Functions)
+      value <- real("exp (x:real)")
+      result <- foldDerivative(steps, exp, x, value, statement)
+      closed <- rules.gen(x, result)
+    } yield closed
+  }
+
+  /* ================================================ the sign of the derivative on an interval */
+
+  private val ContinuousOnInterval = "!x:real. a:real <= x /\\ x <= b:real ==> continuous (f:real -> real) x"
+
+  private def slopes(sign: String => String): String =
+    s"!x:real. a:real < x /\\ x < b:real ==> ?m:real. derivative (f:real -> real) x m /\\ ${sign("m:real")}"
+
+  /**
+   * Under the two hypotheses on `[a, b]`, `|- a <= u ==> u < v ==> v <= b ==>
+   * ?m. R m /\ f v - f u = m * (v - u)`: the mean value theorem on `[u, v]`, with the slope it finds
+   * carried to the one the hypothesis gives at the same point, by uniqueness.
+   */
+  private def monotoneStep(
+    steps: Continuity.Steps,
+    meanValue: Kernel.Thm,
+    unique: Kernel.Thm,
+    sign: String => String,
+    transfer: (Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val u = Term.variable("u", Reals)
+    val v = Term.variable("v", Reals)
+    val x = Term.variable("x", Reals)
+    val c = Term.variable("c", Reals)
+    val m = Term.variable("m", Reals)
+    val n = Term.variable("n", Reals)
+    val Goal = s"?m:real. ${sign("m")} /\\ (f:real -> real) v - f u = m * (v:real - u:real)"
+    for {
+      continuous <- assume(ContinuousOnInterval)
+      slope <- assume(slopes(sign))
+      lower <- assume("a:real <= u:real")
+      ordered <- assume("u:real < v:real")
+      upper <- assume("v:real <= b:real")
+
+      within <- for {
+        member <- proposition("u:real <= x:real /\\ x <= v:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        left <- at(lemma("!a:real u:real x:real. a <= u ==> u <= x ==> a <= x"), "a:real", "u:real", "x:real")
+          .flatMap(mp(_, Right(lower), rules.conjElim1(assumed)))
+        right <- at(lemma("!x:real v:real b:real. x <= v ==> v <= b ==> x <= b"), "x:real", "v:real", "b:real")
+          .flatMap(mp(_, rules.conjElim2(assumed), Right(upper)))
+        result <- conj(Right(left), Right(right))
+          .flatMap(both => rules.spec(x, continuous).flatMap(rules.mp(_, both)))
+          .flatMap(rules.disch(member, _)).flatMap(rules.gen(x, _))
+      } yield result
+
+      differentiable <- for {
+        member <- proposition("u:real < x:real /\\ x < v:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        left <- at(lemma("!a:real u:real x:real. a <= u ==> u < x ==> a < x"), "a:real", "u:real", "x:real")
+          .flatMap(mp(_, Right(lower), rules.conjElim1(assumed)))
+        right <- at(lemma("!x:real v:real b:real. x < v ==> v <= b ==> x < b"), "x:real", "v:real", "b:real")
+          .flatMap(mp(_, rules.conjElim2(assumed), Right(upper)))
+        exists <- conj(Right(left), Right(right)).flatMap(both => rules.spec(x, slope).flatMap(rules.mp(_, both)))
+        body <- assume(s"derivative (f:real -> real) x n /\\ ${sign("n:real")}")
+        witnessed <- existential("?m:real. derivative (f:real -> real) x m")
+          .flatMap(p => rules.conjElim1(body).flatMap(rules.existsIntro(p, n, _)))
+        found <- rules.existsElim(exists, n, witnessed)
+        result <- rules.disch(member, found).flatMap(rules.gen(x, _))
+      } yield result
+
+      somewhere <- rules.specAll(meanValue, List(f, u, v))
+        .flatMap(mp(_, Right(ordered), Right(within), Right(differentiable)))
+
+      found <- for {
+        inside <- assume("u:real < c:real /\\ c < v:real /\\ derivative (f:real -> real) c m /\\ f v - f u = m * (v - u)")
+        left <- rules.conjElim1(inside)
+        right <- rules.conjElim2(inside).flatMap(rules.conjElim1)
+        own <- rules.conjElim2(inside).flatMap(rules.conjElim2).flatMap(rules.conjElim1)
+        balance <- rules.conjElim2(inside).flatMap(rules.conjElim2).flatMap(rules.conjElim2)
+        aBelow <- at(lemma("!a:real u:real c:real. a <= u ==> u < c ==> a < c"), "a:real", "u:real", "c:real")
+          .flatMap(mp(_, Right(lower), Right(left)))
+        bAbove <- at(lemma("!c:real v:real b:real. c < v ==> v <= b ==> c < b"), "c:real", "v:real", "b:real")
+          .flatMap(mp(_, Right(right), Right(upper)))
+        stated <- conj(Right(aBelow), Right(bAbove)).flatMap(both => rules.spec(c, slope).flatMap(rules.mp(_, both)))
+        body <- assume(s"derivative (f:real -> real) c n /\\ ${sign("n:real")}")
+        theirs <- rules.conjElim1(body)
+        signed <- rules.conjElim2(body)
+        equal <- rules.specAll(unique, List(f, c, m, n)).flatMap(mp(_, Right(own), Right(theirs)))
+        carried <- transfer(equal, signed)
+        witnessed <- existential(Goal).flatMap(p => conj(Right(carried), Right(balance)).flatMap(rules.existsIntro(p, m, _)))
+        result <- rules.existsElim(stated, n, witnessed)
+      } yield result
+
+      eliminated <- for {
+        exists <- assume("?m:real. u:real < c:real /\\ c < v:real /\\ derivative (f:real -> real) c m /\\ f v - f u = m * (v - u)")
+        byM <- rules.existsElim(exists, m, found)
+        byC <- rules.existsElim(somewhere, c, byM)
+      } yield byC
+      closed <- List("v:real <= b:real", "u:real < v:real", "a:real <= u:real")
+        .foldLeft[Either[LogicError, Kernel.Thm]](Right(eliminated)) { (acc, text) =>
+          for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+        }.flatMap(rules.genAll(_, List(u, v)))
+    } yield closed
+  }
+
+  /**
+   * [[NonDecreasing]] and, with `strict`, [[Increasing]]: [[monotoneStep]] between two points, and
+   * the sign of the slope it hands back read off `f v - f u = m * (v - u)`. The non-strict one splits
+   * `u <= v` with `LE_CASES`, and at `u = v` the two values are equal by congruence.
+   */
+  private def signedSlope(steps: Continuity.Steps, order: Order, meanValue: Kernel.Thm, unique: Kernel.Thm, strict: Boolean): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val u = Term.variable("u", Reals)
+    val v = Term.variable("v", Reals)
+    val m = Term.variable("m", Reals)
+    val relation = if (strict) "<" else "<="
+    val sign: String => String = t => s"0 $relation $t"
+    val transfer: (Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm] = (equal, signed) =>
+      lemma(s"!m:real n:real. m = n ==> 0 $relation n ==> 0 $relation m")
+        .flatMap(t => Term.destEq(equal.conclusion).toRight(NotOfForm("an equation", equal.conclusion))
+          .flatMap { case (l, r) => rules.specAll(t, List(l, r)) })
+        .flatMap(mp(_, Right(equal), Right(signed)))
+    val range = if (strict) "a:real <= u:real /\\ u < v:real /\\ v <= b:real" else "a:real <= u:real /\\ u <= v:real /\\ v <= b:real"
+    for {
+      step <- monotoneStep(steps, meanValue, unique, sign, transfer)
+      member <- proposition(range)
+      assumed <- LogicError.lift(Kernel.assume(member))
+      lower <- rules.conjElim1(assumed)
+      between <- rules.conjElim2(assumed).flatMap(rules.conjElim1)
+      upper <- rules.conjElim2(assumed).flatMap(rules.conjElim2)
+
+      apart <- for {
+        ordered <- if (strict) Right(between) else assume("u:real < v:real")
+        exists <- rules.specAll(step, List(u, v)).flatMap(mp(_, Right(lower), Right(ordered), Right(upper)))
+        body <- assume(s"${sign("m:real")} /\\ (f:real -> real) v - f u = m * (v:real - u:real)")
+        compared <- at(lemma(s"!A:real B:real m:real u:real v:real. 0 $relation m ==> B - A = m * (v - u) ==> u < v ==> A $relation B"),
+          "(f:real -> real) u", "(f:real -> real) v", "m:real", "u:real", "v:real")
+          .flatMap(mp(_, rules.conjElim1(body), rules.conjElim2(body), Right(ordered)))
+        result <- rules.existsElim(exists, m, compared)
+      } yield result
+
+      compared <-
+        if (strict) Right(apart)
+        else for {
+          cases <- order.leCases.flatMap(rules.specAll(_, List(u, v))).flatMap(rules.mp(_, between))
+          same <- assume("u:real = v:real")
+          values <- Conv.apTerm(f, same)
+          level <- order.leOfEq.flatMap(t => Term.destEq(values.conclusion).toRight(NotOfForm("an equation", values.conclusion))
+            .flatMap { case (l, r) => rules.specAll(t, List(l, r)) }).flatMap(rules.mp(_, values))
+          joined <- rules.disjElim(cases, apart, level)
+        } yield joined
+
+      everyPair <- rules.disch(member, compared).flatMap(rules.gen(v, _)).flatMap(rules.gen(u, _))
+      closed <- List(slopes(sign), ContinuousOnInterval)
+        .foldLeft[Either[LogicError, Kernel.Thm]](Right(everyPair)) { (acc, text) =>
+          for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+        }.flatMap(rules.genAll(_, List(f, a, b)))
+    } yield closed
+  }
+
+  /**
+   * [[Flat]]: the hypothesis `derivative f x 0` read as a slope that equals zero, [[monotoneStep]]
+   * from `a` to each `x` past it, and `LE_ANTISYMMETRIC` on the two inequalities `m = 0` gives. The
+   * one `Linarith` needs `a < x` beside `m = 0`, since what cancels the product is their product.
+   */
+  private def flatSlope(steps: Continuity.Steps, order: Order, meanValue: Kernel.Thm, unique: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val x = Term.variable("x", Reals)
+    val m = Term.variable("m", Reals)
+    val sign: String => String = t => s"$t = 0"
+    val transfer: (Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm] = (equal, signed) => Conv.trans(equal, signed)
+    val Zero = "!x:real. a:real < x /\\ x < b:real ==> derivative (f:real -> real) x 0"
+    for {
+      step <- monotoneStep(steps, meanValue, unique, sign, transfer)
+      zero <- real("0:real")
+
+      /* the hypothesis at `0`, read as a slope that equals zero */
+      level <- assume(Zero)
+      signed <- for {
+        member <- proposition("a:real < x:real /\\ x < b:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        at0 <- rules.spec(x, level).flatMap(rules.mp(_, assumed))
+        witnessed <- existential("?m:real. derivative (f:real -> real) x m /\\ m = 0")
+          .flatMap(p => conj(Right(at0), Right(Conv.refl(zero))).flatMap(rules.existsIntro(p, zero, _)))
+        result <- rules.disch(member, witnessed).flatMap(rules.gen(x, _))
+      } yield result
+      slopesTerm <- proposition(slopes(sign))
+      stepped <- rules.disch(slopesTerm, step).flatMap(rules.mp(_, signed))
+
+      member <- proposition("a:real <= x:real /\\ x <= b:real")
+      assumed <- LogicError.lift(Kernel.assume(member))
+      lower <- rules.conjElim1(assumed)
+      upper <- rules.conjElim2(assumed)
+      reflexive <- at(lemma("!a:real. a <= a"), "a:real")
+      apart <- for {
+        ordered <- assume("a:real < x:real")
+        found <- rules.specAll(stepped, List(a, x)).flatMap(mp(_, Right(reflexive), Right(ordered), Right(upper)))
+        body <- assume("m:real = 0 /\\ (f:real -> real) x - f a = m * (x:real - a:real)")
+        below <- at(lemma("!A:real B:real m:real a:real x:real. m = 0 ==> B - A = m * (x - a) ==> a < x ==> B <= A"),
+          "(f:real -> real) a", "(f:real -> real) x", "m:real", "a:real", "x:real")
+          .flatMap(mp(_, rules.conjElim1(body), rules.conjElim2(body), Right(ordered)))
+        above <- at(lemma("!A:real B:real m:real a:real x:real. m = 0 ==> B - A = m * (x - a) ==> a < x ==> A <= B"),
+          "(f:real -> real) a", "(f:real -> real) x", "m:real", "a:real", "x:real")
+          .flatMap(mp(_, rules.conjElim1(body), rules.conjElim2(body), Right(ordered)))
+        equal <- order.fact(Order.Antisymmetric).flatMap(t => at(Right(t), "(f:real -> real) x", "(f:real -> real) a"))
+          .flatMap(mp(_, Right(below), Right(above)))
+        result <- rules.existsElim(found, m, equal)
+      } yield result
+      same <- for {
+        ends <- assume("a:real = x:real")
+        values <- Conv.apTerm(f, ends).flatMap(Conv.sym)
+      } yield values
+      cases <- order.leCases.flatMap(rules.specAll(_, List(a, x))).flatMap(rules.mp(_, lower))
+      joined <- rules.disjElim(cases, apart, same)
+      everyPoint <- rules.disch(member, joined).flatMap(rules.gen(x, _))
+      closed <- List(Zero, ContinuousOnInterval)
+        .foldLeft[Either[LogicError, Kernel.Thm]](Right(everyPoint)) { (acc, text) =>
+          for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+        }.flatMap(rules.genAll(_, List(f, a, b)))
     } yield closed
   }
 }

@@ -120,10 +120,17 @@ class FiguresSpec extends AnyFlatSpec with Matchers {
     // And the same total is quoted a few hundred lines further down, in the table of what the
     // corpus is believed on. One measurement, two places, so the second is spelled from the
     // measurement rather than left to agree by luck.
+    //
+    // The sentence under that table called this total what a second checker has to replay, and
+    // this spelled the total into it. It stopped being true on 2026-09-25, when a report began
+    // counting a cited fact as one inference and the checker kept replaying it (`docs/adr/0047`),
+    // so what is held now is the sentence saying the two are different figures.
     withClue(s"the corpus is ${RingCost.inferences} inferences over ${RingCost.proved.size} proofs: ") {
       val evaluation = flowed(Evaluation.Document)
       evaluation should include(s"| inferences, all proofs together | ${RingCost.inferences} |")
-      evaluation should include(s"**${RingCost.inferences} inferences is what a second checker has to replay**")
+      evaluation should include(
+        "**The total is what these proofs did themselves, and not what a second checker replays.**"
+      )
     }
   }
 

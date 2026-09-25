@@ -375,10 +375,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // uniqueness, three on `MEAN_VALUE`. Tip plus this branch's delta.
     // 545 with the product rule's three, the same day: one on the continuity of a differentiable
     // function, two on the product rule.
-    // 553 with Fermat's little theorem, 2026-09-25, derived before the run: eight antecedents,
+    // 547 with the chain rule's two, the same day.
+    // 548 with the estimate's one, the same day; `DERIVATIVE_EXP` has no antecedent to drop.
+    // 554 with the sign of a derivative on an interval's six, the same day: two on each fact.
+    // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents,
     // three on `NUM_PRIME_DIVIDES_CHOOSE`, two on `NUM_PRIME_NOT_DIVIDES_FACT`, one each on
     // `NUM_DIVIDES_SUM`, `NUM_FRESHMAN` and `NUM_FERMAT`, none on the three equations.
-    proposals.size shouldBe 553
+    proposals.size shouldBe 562
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1267,10 +1270,21 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 444 with the product rule's two weakenings, the same day, read off a probe of `Propose.audit`
     // filtered by `from`: each drops one of the two slopes and keeps an implication. The third, the
     // continuity bridge's, is in `unreadable` below.
-    // 447 with Fermat's little theorem, 2026-09-25, measured by a probe of `Propose.audit` before
+    // 446 with the chain rule's two weakenings, the same day, read off a probe of `Propose.audit`
+    // filtered by `from`: each drops one of the two slopes and keeps an implication.
+    // 449 with the exponential's slope, the same day, read off a probe of `Propose.audit` filtered
+    // by `from`: all three residues are `EXP_NEAR_LINE`'s, its one weakening and its two
+    // substitutions, and each is about `exp`, which no procedure here has a value or a bound for,
+    // so each is taken and not settled. `DERIVATIVE_EXP` produces none.
+    // 455 with the sign of a derivative on an interval, the same day, read off a probe of
+    // `Propose.audit` filtered by `from`: six weakenings, each dropping the continuity or the slope
+    // and keeping an implication under `!f a b`, so each is taken and not settled. No
+    // substitution: the bodies carry a quantifier, which is a lambda here.
+    // 458 with Fermat's little theorem, the same day, measured by a probe of `Propose.audit` before
     // this line was edited: the three residues of `NUM_PRIME_DIVIDES_CHOOSE`, a divisibility the
-    // propositional address takes and cannot settle. The other five are `unreadable` below.
-    open shouldBe 447
+    // propositional address takes and cannot settle. The other five are `unreadable` below. Tip
+    // plus this branch's delta.
+    open shouldBe 458
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
