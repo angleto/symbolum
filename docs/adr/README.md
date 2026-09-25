@@ -80,3 +80,4 @@ the rejected option attractive, and they will.
 | [0047](0047-a-report-stops-at-a-cited-fact-and-a-checker-does-not.md) | A report stops at a cited fact, and a checker does not | accepted, decides 0016's open choice |
 | [0048](0048-a-width-lower-bound-is-stated-on-a-derived-clause.md) | A width lower bound is stated on a derived clause, and proved by critical assignments without a restriction | accepted, extends 0044 |
 | [0049](0049-the-integral-is-a-gauge-integral-over-an-inductive-relation-of-fine-sums.md) | The integral is a gauge integral, over an inductive relation of fine sums | accepted |
+| [0050](0050-the-licence-stays-gplv3-for-now.md) | The licence stays GPLv3 for now, and the question is answered rather than left open | accepted |
