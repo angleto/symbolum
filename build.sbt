@@ -132,6 +132,10 @@ lazy val identitySettings = Seq(
 
 ThisBuild / scalaVersion := "3.3.5"
 
+// One forked test JVM at a time, beside the launcher: two at once would put a third JVM's memory on
+// a machine the comment on `Test / fork` below measures, and the suites were never written to share.
+Global / concurrentRestrictions += Tags.limit(Tags.ForkedTestGroup, 1)
+
 ThisBuild / organization := "garden.xeno"
 
 lazy val commonSettings = Seq(
@@ -170,6 +174,44 @@ lazy val commonSettings = Seq(
   },
 
   Test / parallelExecution := false,
+
+  /*
+   * Each module's tests run in a JVM of their own, one module at a time, and the JVM ends with them.
+   *
+   * WHY, measured on 2026-09-25, Mycelium card bcb48d05. Run in the launcher, `tools/sbt test` died
+   * of `OutOfMemoryError` at its 1g heap in every aggregated run that evening, for two reasons that
+   * were each measured. The first is sbt 1.10.10's: a heap dump taken during `tactics` shows
+   * `theories`' `Chain.standard`, 260 MB of it, still reachable after that module's tests had
+   * finished, through `LayeredClassLoader` <- `sbt.Tests` <- `sbt.Task` <- a map in
+   * `sbt.internal.TaskProgress` <- the session's `State`, so a finished module's test state stays
+   * until the session ends. Four empty projects, each test holding 300 MB statically, reproduce it
+   * with `Test / parallelExecution := false` on 1.10.10 and do not on 1.12.9, so upstream has
+   * already repaired it. The second is not sbt's: on 1.12.9, with nothing forked, the aggregated
+   * run still died, in `theories`, because it runs several modules at once and their chains add up.
+   * Running each module as a command of its own, and one task execution per module, were both tried
+   * and both died. A forked JVM per module, one at a time, answers both: each module's classes and
+   * what they hold are on the other side of a process boundary, alone, and gone when it exits.
+   *
+   * WHAT IT COSTS is memory, and it was measured with `footprint`, not with `ps`, because this
+   * machine compresses memory and a resident-set figure leaves the compressed pages out: during the
+   * coverage gate the launcher stood at 1463 MB and the forked JVM at 1479 MB, where the first
+   * reading by resident set had said 1708 MB for both. That was with `-Xms1024m` on the fork. It is
+   * left out below, and it did not lower the peak: a whole `tools/sbt test` measured the same way
+   * peaked at 2924 MB, launcher 1486 and fork 1438, because `tactics` uses most of its heap anyway.
+   * What leaving it out saves is the smaller modules' footprint while they run. `-Xmx1024m` and
+   * `-Xss4M` are the launcher's own defaults, so every module is measured at the heap the whole
+   * suite used to share.
+   *
+   * WHAT IT DOES NOT COVER. Anything run in the launcher, `console` or `runMain`, still meets
+   * sbt 1.10.10's retention, which moving to 1.12.9 would remove and is a change of its own. And a
+   * single module whose own suites outgrow 1g will still die, on its own.
+   *
+   * The working directory is the build's root because the suites read `docs/` and the sources by
+   * paths relative to it, which is where the launcher ran them.
+   */
+  Test / fork := true,
+  Test / javaOptions ++= Seq("-Xmx1024m", "-Xss4M"),
+  Test / forkOptions := (Test / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value),
 
   /*
    * The JDK's own classes, so that a resolved `java.*` name renders as a link rather than as text.
