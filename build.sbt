@@ -57,6 +57,79 @@ ThisBuild / dynverVTagPrefix := false
 // build, and a fixed date says that as well as a moving one.
 ThisBuild / dynverCurrentDate := new java.util.Date(0)
 
+// What the classes were built from, written into them rather than said beside them.
+//
+// A consumer that certifies something against this prover has to say which kernel it ran, and
+// until 2026-09-25 the only place it could read that was the checkout: the Collatz repository's
+// `certify.sh` runs `git rev-parse HEAD` on this tree, then asks sbt for the classpath, and records
+// the first as the identity of the second. The two are different readings taken at different
+// moments. That script's own comment names both ways they came apart on one day: the tree acquired
+// a file between the two, and the classes under a hash that looked right were coverage-instrumented
+// ones. Neither is visible from the checkout, and both are visible from the classes if the classes
+// say what they are.
+//
+// So every module carries `META-INF/symbolum/build.properties`, written when its resources are
+// assembled, which is on every `fullClasspath`, `test`, `run` and `package`. The same name in every
+// module is deliberate: `ClassLoader.getResources` returns one per classpath entry, so a reader
+// finds every module that is present by its own presence and no list of modules is kept anywhere.
+// `garden.xeno.symbolum.kernel.Build` is that reader.
+//
+// What "dirty" counts is what the build reads, not what `git status` reads: tracked changes and
+// untracked files under `modules`, `project` and `build.sbt`. The criterion is the question the
+// flag answers, which is whether the classes can be rebuilt from the commit. `git status` whole
+// would answer "no" for the main checkout forever, because `.claude/` is untracked there and holds
+// nothing any compiler reads; dynver's own marker answers from tracked files only, so an untracked
+// source under `modules/`, which sbt compiles, would not move it. The two can therefore disagree,
+// and where they do this one is the reading of the build.
+//
+// What it does NOT establish: that the resource and the classes beside it were produced by the
+// same sbt invocation. An incremental build rewrites the resource from the tree as it is now and
+// recompiles only what changed, so a class left over from an earlier tree sits under an identity
+// that names this one. That is the `clean` hazard `CLAUDE.md` describes for the coverage report,
+// in a new place, and it is why a certifying run belongs in a fresh checkout. It does not detect
+// it; nothing that reads only the output of an incremental compiler can.
+lazy val buildIdentity = taskKey[Seq[(String, String)]](
+  "The commit and the build inputs that differ from it, read once per sbt invocation"
+)
+
+ThisBuild / buildIdentity := {
+  import scala.sys.process._
+  val root = (ThisBuild / baseDirectory).value
+  def git(arguments: String*): Option[String] = {
+    val out = new StringBuilder
+    val status = Process("git" +: "-C" +: root.getPath +: arguments)
+      .!(ProcessLogger(line => out.append(line).append('\n'), _ => ()))
+    if (status == 0) Some(out.toString) else None
+  }
+  // A tree with no git, a source archive for instance, records that the commit is unknown rather
+  // than inventing one; the reader turns that into an identity that is not reproducible.
+  git("rev-parse", "HEAD").map(_.trim) match {
+    case Some(commit) =>
+      val dirt = git("status", "--porcelain", "--untracked-files=all", "--", "modules", "project", "build.sbt")
+        .getOrElse(sys.error("git status failed on a tree whose HEAD it could read"))
+        .linesIterator.map(_.drop(3).trim).filter(_.nonEmpty).toVector.sorted
+      Seq("commit" -> commit, "dirty" -> dirt.mkString(","))
+    case None =>
+      Seq("commit" -> "unrecorded", "dirty" -> "")
+  }
+}
+
+lazy val identitySettings = Seq(
+  Compile / resourceGenerators += Def.task {
+    val target = (Compile / resourceManaged).value / "META-INF" / "symbolum" / "build.properties"
+    val lines = Seq(
+      "module" -> name.value.stripPrefix("symbolum-"),
+      "version" -> version.value
+    ) ++ (ThisBuild / buildIdentity).value ++ Seq(
+      "instrumented" -> coverageEnabled.value.toString
+    )
+    val text = lines.map { case (key, value) => s"$key=$value" }.mkString("", "\n", "\n")
+    // Written only when it changed, so that an unchanged identity does not make every jar new.
+    if (!target.exists || IO.read(target) != text) IO.write(target, text)
+    Seq(target)
+  }.taskValue
+)
+
 ThisBuild / scalaVersion := "3.3.5"
 
 ThisBuild / organization := "garden.xeno"
@@ -124,7 +197,7 @@ lazy val commonSettings = Seq(
   Compile / doc / scalacOptions ++= Seq(
     "-external-mappings:.*java.*::javadoc::https://docs.oracle.com/en/java/javase/17/docs/api/java.base/"
   )
-)
+) ++ identitySettings
 
 /**
  * The coverage floor, per module, set to the value measured rather than to a target.
