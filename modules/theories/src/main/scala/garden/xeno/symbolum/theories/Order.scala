@@ -52,7 +52,10 @@ import garden.xeno.symbolum.logic.*
  * numeral over a numeral, and cancelling that denominator needs `~(n = 0)`. They are cited here,
  * not derived a second time.
  */
-final class Order private (val ring: Ring, val facts: Map[String, Kernel.Thm]) {
+final class Order private (val ring: Ring, published: Map[String, Kernel.Thm]) {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   val reals: RealTheory = ring.reals
 

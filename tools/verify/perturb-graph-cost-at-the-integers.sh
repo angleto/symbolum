@@ -12,6 +12,10 @@
 # cannot check by looking at the spec.
 #
 # The control is the run before them, in the same tree, and it must be green.
+#
+# WHAT WAS SEEN, 2026-09-25, after `docs/adr/0047` moved both targets: control green at 18, both
+# red. The cap at `INT_REAL_PAIR: 500 was not greater than 1000`, the floor added for exactly this;
+# deduplication by equality at four tests, the carving one at `INT_REAL_PAIR: 126`.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
@@ -30,11 +34,13 @@ echo "### exit $? for 0-control" >> "$OUT/graph-cost.log"
 
 # 1. The count capped. A subject that reported a constant instead of a size would leave every
 # sentence about the cost of a report true-looking and unfounded. Expect red on:
-# "should carry the carving in every fact, which is what the graph costs at the first quotient"
+# "should carry the carving in every fact it replays, and read it in none", at the floor on what a
+# bridge fact reads. Retargeted on 2026-09-25 by card 5a54c044, when `size` began stopping at a
+# cited fact (`docs/adr/0047`) and the line it substitutes moved.
 echo "################ 1-size-is-capped" >> "$OUT/graph-cost.log"
 "$P" "$DERIVATION" \
-  'def size(theorem: Kernel.Thm): Int = walk(theorem).size' \
-  'def size(theorem: Kernel.Thm): Int = walk(theorem).size.min(500)' \
+  'def size(theorem: Kernel.Thm): Int = own(theorem).size' \
+  'def size(theorem: Kernel.Thm): Int = own(theorem).size.min(500)' \
   -- ./tools/sbt -batch "$SPEC" >> "$OUT/graph-cost.log" 2>&1
 echo "### exit $? for 1-size-is-capped" >> "$OUT/graph-cost.log"
 

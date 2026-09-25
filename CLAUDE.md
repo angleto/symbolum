@@ -385,7 +385,7 @@ to live. `WhatAClaimCosts` is the first one that does.
 
 Everything this system asks anyone to believe, and no one development is asked for all of it:
 
-1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1200 lines. The
+1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1220 lines. The
    directory also holds a printer, the refusal surface, the proof record and the reader of which
    commit the classes were built from, which are not counted and cannot construct a theorem, which
    a test checks rather than claims. `Kernel.Thm` is a class
@@ -393,7 +393,9 @@ Everything this system asks anyone to believe, and no one development is asked f
    `TrustBoundaryTwinSpec` casts the underlying pair and gets a `ClassCastException` where it used
    to get a theorem out of nothing. Ten primitive inference rules construct a theorem, and three
    theory extensions also do: defining a constant, defining a type, and asserting an axiom. Only
-   the last of those adds to what has to be believed. Term constructors are `private[kernel]`, so a
+   the last of those adds to what has to be believed. `Kernel.cite` builds one too and infers
+   nothing: it restates a published fact's sequent under the fact's name, which is where a report
+   on a proof stops walking, and `docs/adr/0047` is why. Term constructors are `private[kernel]`, so a
    term exists only because a checking constructor built it and is well-typed by construction. Type
    constructors are not private, because naming a type proves nothing: a type entering the system
    from outside is checked by `Theory.checkType`.
@@ -653,7 +655,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 719 lemmas, 474 have two or more leading quantifiers and **410 of
+caller meant: of the library's 730 lemmas, 485 have two or more leading quantifiers and **421 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -913,8 +915,9 @@ assembling them, and was the one development that sat beside the chain's extensi
 in it, because it declares nothing. It is one of three now: `Primes` and `Deduction` joined it on
 2026-09-14.
 
-**`Primes` holds theorems about the primes that are results rather than infrastructure**, and today
-that is two. Euclid's, `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
+**`Primes` holds theorems about the primes that are results rather than infrastructure**, and
+`docs/lemmas.md` is where they are counted; this paragraph said "today that is two" while the file
+held six, a count beside a generated document being the copy that drifts. The first two are Euclid's, `!n. ?p. NUM_PRIME p /\ NUM_LT n p`, which is what "there are infinitely many
 primes" says in a logic with no notion of an infinite set. And `NUM_SQUARE_NOT_DOUBLE`, that no
 square is twice a square at a positive denominator, which is the arithmetic content of the
 irrationality of the square root of two and is **not** that sentence. The sentence is
@@ -935,6 +938,22 @@ divisor above one rather than the textbook induction: the least one is prime for
 induction would want a negation pushed through a universal quantifier, which this logic had no law
 for until `Classical.NOT_FORALL` landed on 2026-09-15; the route is unchanged, since the least
 divisor asks for nothing beyond `NUM_LEAST`.
+
+**Fermat's little theorem is `NUM_FERMAT`, since 2026-09-25, and the binomial theorem on `num` came
+with it.** `NUM_CONG p (NUM_POW a p) a` at every prime `p` and every `a`, in the congruence form that
+needs no division, by induction on `a` over `NUM_FRESHMAN`, that `(a + 1)^p` is `a^p + 1` modulo
+`p`. What that rests on is `NUM_BINOMIAL` at `x + 1` and `NUM_PRIME_DIVIDES_CHOOSE`, that `p`
+divides every middle coefficient: `Coding.NUM_CHOOSE_FACTORIAL` at `p = k + (p - k)` puts `p!` on
+one side, `p` divides it, and Euclid's lemma applied twice meets `NUM_PRIME_NOT_DIVIDES_FACT` at
+both factorials on the other.
+
+**The binomial theorem is proved on `num` by Pascal's rule and is not carried across from
+`Series.POWER_BINOMIAL`**, and the reason is a measurement: the transported version worked and
+rested on seventeen axioms, the reals' sixteen among them, which
+`NothingOverNumRestsOnTheRealsSpec` refuses for a fact about the naturals. The native one costs the
+naturals' two. `Freshman.scala` is the derivation and is not a development; `FermatSpec` detaches
+the theorem at two, asserts the route, and refutes the statement with its hypothesis dropped at
+`p = 4, a = 2`, where `2^4` leaves nought on division by four.
 
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
@@ -1840,6 +1859,11 @@ one estimate rather than a rule: the addition theorem turns the error into
 the first-order one went through the reflection. It is the one fact of `Derivative` that spends a
 series, so it reaches `COMPLETENESS` and the naturals' axioms, and `DerivativeSpec` asserts it
 costs exactly what the estimate costs.
+**And the sign of a derivative on an interval, the same day**: `DERIVATIVE_ZERO_CONSTANT`,
+`DERIVATIVE_NONNEG_MONOTONE` and `DERIVATIVE_POS_LT_MONOTONE`, the mean value theorem between two
+points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hypothesis names. The
+hypothesis states the derivative and its sign in one existential, so it asks no second statement
+of differentiability; the three cost what the mean value theorem costs.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

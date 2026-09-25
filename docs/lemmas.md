@@ -162,8 +162,11 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_INTERIOR_MIN  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x u <= x w) ==> derivative x u v ==> v = 0
   DERIVATIVE_LINEAR        !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. !x1:real. derivative x z u ==> derivative y z v ==> derivative (\y1:real. w * x y1 + x1 * y y1) z (w * u + x1 * v)
   DERIVATIVE_NEG           !x:real -> real. !y:real. !z:real. derivative x y z ==> derivative (\u:real. 0 - x u) y (0 - z)
+  DERIVATIVE_NONNEG_MONOTONE !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 <= v)) ==> (!u:real. !v:real. y <= u /\ u <= v /\ v <= z ==> x u <= x v)
+  DERIVATIVE_POS_LT_MONOTONE !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 < v)) ==> (!u:real. !v:real. y <= u /\ u < v /\ v <= z ==> x u < x v)
   DERIVATIVE_PRODUCT       !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. derivative x z u ==> derivative y z v ==> derivative (\w:real. x w * y w) z (u * y z + x z * v)
   DERIVATIVE_UNIQUE        !x:real -> real. !y:real. !z:real. !u:real. derivative x y z ==> derivative x y u ==> z = u
+  DERIVATIVE_ZERO_CONSTANT !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> derivative x u 0) ==> (!u:real. y <= u /\ u <= z ==> x u = x y)
   MEAN_VALUE               !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))
   ROLLE                    !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)
 
@@ -697,12 +700,20 @@ they have least appetite for working out how it is produced.
 
 ## Primes
 
+  NUM_BINOMIAL             !x:num. !y:num. NUM_POW (SUC x) y = NUM_SUM (\z:num. NUM_CHOOSE y z * NUM_POW x z) (SUC y)
+  NUM_DIVIDES_SUM          !x:num. !y:num -> num. !z:num. (!u:num. u < z ==> NUM_DIVIDES x (y u)) ==> NUM_DIVIDES x (NUM_SUM y z)
   NUM_FACTORISATION        !x:num. SUC 0 < x ==> (?y:num -> num. ?z:num. 0 < z /\ (!u:num. u < z ==> NUM_PRIME (y u)) /\ (!u:num. !v:num. u < v /\ v < z ==> y u <= y v) /\ NUM_PROD y z = x)
   NUM_FACTORISATION_UNIQUE !x:num -> num. !y:num. !z:num -> num. !u:num. (!v:num. v < y ==> NUM_PRIME (x v)) ==> (!v:num. !w:num. v < w /\ w < y ==> x v <= x w) ==> (!v:num. v < u ==> NUM_PRIME (z v)) ==> (!v:num. !w:num. v < w /\ w < u ==> z v <= z w) ==> NUM_PROD x y = NUM_PROD z u ==> y = u /\ (!v:num. v < y ==> x v = z v)
+  NUM_FERMAT               !x:num. !y:num. NUM_PRIME x ==> NUM_CONG x (NUM_POW y x) y
+  NUM_FRESHMAN             !x:num. !y:num. NUM_PRIME x ==> NUM_CONG x (NUM_POW (SUC y) x) (NUM_POW y x + SUC 0)
+  NUM_PRIME_DIVIDES_CHOOSE !x:num. !y:num. NUM_PRIME x ==> 0 < y ==> y < x ==> NUM_DIVIDES x (NUM_CHOOSE x y)
   NUM_PRIME_DIVIDES_PROD   !x:num. !y:num -> num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_PROD y z) ==> (?u:num. u < z /\ NUM_DIVIDES x (y u))
+  NUM_PRIME_NOT_DIVIDES_FACT !x:num. !y:num. NUM_PRIME x ==> y < x ==> ~(NUM_DIVIDES x (NUM_FACT y))
   NUM_PRIME_PROD_ONE       !x:num -> num. !y:num. (!z:num. z < y ==> NUM_PRIME (x z)) ==> NUM_PROD x y = SUC 0 ==> y = 0
   NUM_PRIME_UNBOUNDED      !x:num. ?y:num. NUM_PRIME y /\ x < y
   NUM_SQUARE_NOT_DOUBLE    !x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))
+  NUM_SUM_ADD              !x:num -> num. !y:num -> num. !z:num. NUM_SUM (\u:num. x u + y u) z = NUM_SUM x z + NUM_SUM y z
+  NUM_SUM_MUL              !x:num -> num. !y:num. !z:num. NUM_SUM (\u:num. x u * y) z = NUM_SUM x z * y
 
 ## Product
 

@@ -45,6 +45,9 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   private def opened(theorem: Kernel.Thm): Kernel.Thm =
     force(Conv.betaNormalise(theorem.conclusion).flatMap(e => LogicError.lift(Kernel.eqMp(e, theorem))))
 
+  /** The facts about a whole interval rather than a point, which rest on the mean value theorem. */
+  private val onInterval: Set[String] = Set(Derivative.Flat, Derivative.NonDecreasing, Derivative.Increasing)
+
   private val realAxioms: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
   private val completeness: Term = force(chain.reals.axiom("COMPLETENESS")).conclusion
   private val select: Term = force(chain.classical.axiom("SELECT")).conclusion
@@ -81,13 +84,15 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     spent should contain(completeness)
     (spent -- realAxioms) shouldBe Set(select)
 
-    // The mean value theorem is Rolle at a combination, and costs what Rolle costs.
+    // The mean value theorem is Rolle at a combination, and costs what Rolle costs, and so do the
+    // three facts about the sign of a derivative on an interval, which are it and uniqueness.
     Derivation.axiomsOf(fact(Derivative.MeanValue)) shouldBe spent
+    for (name <- onInterval) withClue(name) { Derivation.axiomsOf(fact(name)) shouldBe spent }
 
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
-        if name != Derivative.Rolle && name != Derivative.MeanValue && name != Derivative.Exponential) {
+        if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential) ++ onInterval).contains(name)) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
@@ -308,6 +313,116 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     detached.hypotheses shouldBe empty
     derivative.show(detached.conclusion) shouldBe
       "?x:real. ?y:real. 0 < x /\\ x < 1 /\\ derivative (\\z:real. z) x y /\\ 1 - 0 = y * (1 - 0)"
+  }
+
+  it should "reach the sign of a derivative on an interval through the mean value theorem and uniqueness" in {
+    val route = Set(fact(Derivative.MeanValue).conclusion, fact(Derivative.Unique).conclusion)
+    for (name <- onInterval) withClue(name) { Derivation.restingOn(fact(name), route) shouldBe route }
+  }
+
+  /** `\y. y * y`, and at each `x` its slope `1 * x + x * 1` by the product rule at the identity twice. */
+  private val square: Term = force(derivative.term("\\y:real. y * y", functions))
+  private def squareSlope(x: Term): Kernel.Thm = {
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val slope = force(rules.spec(x, fact(Derivative.Identity)))
+    opened(force(rules.specAll(fact(Derivative.ProductRule), List(identity, identity, x, real("1:real"), real("1:real")))
+      .flatMap(rules.mp(_, slope)).flatMap(rules.mp(_, slope))))
+  }
+
+  /**
+   * The two hypotheses of the monotonicity facts at `\y. y * y` on `[0, 1]`: continuous there because
+   * it has a derivative there, and inside a slope whose sign `relation` states, from `0 < x`.
+   */
+  private def squareHypotheses(relation: String): Vector[Kernel.Thm] = {
+    val x = Term.variable("x", reals)
+    val m = real("1 * x:real + x * 1")
+    val continuousEverywhere = {
+      val inside = proposition("(0:real) <= x /\\ x <= 1")
+      val continuous = force(rules.specAll(fact(Derivative.Continuous), List(square, x, m)).flatMap(rules.mp(_, squareSlope(x))))
+      force(rules.disch(inside, continuous).flatMap(rules.gen(x, _)))
+    }
+    val signedInside = {
+      val insideText = "(0:real) < x /\\ x < 1"
+      val inside = proposition(insideText)
+      val assumed = force(LogicError.lift(Kernel.assume(inside)))
+      val positive = force(rules.conjElim1(assumed))
+      val signed = force(rules.mp(force(rules.spec(x, lemma(s"!x:real. 0 < x ==> 0 $relation 1 * x + x * 1"))), positive))
+      val both = force(rules.conjIntro(squareSlope(x), signed))
+      val exists = force(derivative.proposition(s"?m:real. derivative (\\y:real. y * y) x m /\\ 0 $relation m")
+        .flatMap(statement => logic.destExistsPredicate(statement).toRight(NotOfForm("an existential", statement)))
+        .flatMap(rules.existsIntro(_, m, both)))
+      force(rules.disch(inside, exists).flatMap(rules.gen(x, _)))
+    }
+    Vector(continuousEverywhere, signedInside)
+  }
+
+  it should "detach monotonicity at the square on [0, 1], where it says something the order does not" in {
+    // The slope `x + x` is positive strictly inside and zero at the left end, so the hypotheses hold
+    // only because they ask nothing at the ends; and `u * u < v * v` is not a fact about the order
+    // alone, which is what makes the conclusion worth reading.
+    val ends = List(real("0:real"), real("1:real"))
+    for ((name, relation, conclusion) <- Vector(
+        (Derivative.Increasing, "<", "!u:real. !v:real. 0 <= u /\\ u < v /\\ v <= 1 ==> u * u < v * v"),
+        (Derivative.NonDecreasing, "<=", "!u:real. !v:real. 0 <= u /\\ u <= v /\\ v <= 1 ==> u * u <= v * v"))) withClue(name) {
+      val instance = opened(force(rules.specAll(fact(name), square :: ends)))
+      val detached = squareHypotheses(relation).foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+      detached.hypotheses shouldBe empty
+      detached.conclusion shouldBe proposition(conclusion)
+    }
+  }
+
+  it should "detach the zero derivative at a constant function on [0, 1], with nothing assumed" in {
+    val one = force(derivative.term("\\y:real. (1:real)", functions))
+    val instance = opened(force(rules.specAll(fact(Derivative.Flat), List(one, real("0:real"), real("1:real")))))
+    val x = Term.variable("x", reals)
+    val continuousEverywhere = {
+      val inside = proposition("(0:real) <= x /\\ x <= 1")
+      val continuous = force(chain.continuity.fact(Continuity.Constant).flatMap(rules.specAll(_, List(real("1:real"), x))))
+      force(rules.disch(inside, continuous).flatMap(rules.gen(x, _)))
+    }
+    val flatInside = {
+      val inside = proposition("(0:real) < x /\\ x < 1")
+      val slope = force(rules.specAll(fact(Derivative.Constant), List(real("1:real"), x)))
+      force(rules.disch(inside, slope).flatMap(rules.gen(x, _)))
+    }
+    val detached = Vector(continuousEverywhere, flatInside).foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition("!x:real. 0 <= x /\\ x <= 1 ==> (1:real) = 1")
+  }
+
+  it should "need a positive slope for a strict increase, refuted at a constant function without it" in {
+    // A constant has slope zero everywhere, which is non-negative, so the strict conclusion with the
+    // non-strict hypothesis says `1 < 1` at the two ends of [0, 1].
+    val weakened = proposition(
+      "!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 <= m) ==> " +
+        "!u:real. !v:real. a <= u /\\ u < v /\\ v <= b ==> f u < f v")
+    val assumed = force(LogicError.lift(Kernel.assume(weakened)))
+    val one = force(derivative.term("\\y:real. (1:real)", functions))
+    val instance = opened(force(rules.specAll(assumed, List(one, real("0:real"), real("1:real")))))
+    val x = Term.variable("x", reals)
+    val continuousEverywhere = {
+      val inside = proposition("(0:real) <= x /\\ x <= 1")
+      val continuous = force(chain.continuity.fact(Continuity.Constant).flatMap(rules.specAll(_, List(real("1:real"), x))))
+      force(rules.disch(inside, continuous).flatMap(rules.gen(x, _)))
+    }
+    val signedInside = {
+      val inside = proposition("(0:real) < x /\\ x < 1")
+      val slope = force(rules.specAll(fact(Derivative.Constant), List(real("1:real"), x)))
+      val both = force(rules.conjIntro(slope, lemma("(0:real) <= 0")))
+      val exists = force(derivative.proposition("?m:real. derivative (\\y:real. (1:real)) x m /\\ 0 <= m")
+        .flatMap(statement => logic.destExistsPredicate(statement).toRight(NotOfForm("an existential", statement)))
+        .flatMap(rules.existsIntro(_, real("0:real"), both)))
+      force(rules.disch(inside, exists).flatMap(rules.gen(x, _)))
+    }
+    val everyPair = Vector(continuousEverywhere, signedInside).foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    val ends = force(rules.conjIntro(lemma("(0:real) <= 0"),
+      force(rules.conjIntro(lemma("(0:real) < 1"), lemma("(1:real) <= 1")))))
+    val strictlyAbove = force(rules.specAll(everyPair, List(real("0:real"), real("1:real"))).flatMap(rules.mp(_, ends)))
+    derivative.show(strictlyAbove.conclusion) shouldBe "1 < 1"
+    val absurd = force(rules.notElim(lemma("~((1:real) < 1)"), strictlyAbove))
+    val refused = force(rules.notIntro(weakened, absurd))
+    refused.hypotheses shouldBe empty
   }
 
   it should "need f a = f b, which is shown by refuting the theorem without it at the identity" in {

@@ -239,6 +239,12 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
     // turned an answer into a refusal for size. A bound a claim only just fits under is one the next
     // proof about the number one breaks, so what is asserted is that the shape this method was built
     // for sits well inside it. Going red here is a decision to take, not a number to raise.
+    //
+    // It went red on 2026-09-25 at **67**, from 64 on the line, when three lemmas about divisibility
+    // landed in `Primes`, and what was decided is the filter `Bridging.inert`: a lemma that speaks
+    // with one polarity about a constant neither the claim nor the axioms name is dropped exactly.
+    // Measured before this line was edited, it takes the set from 67 to **8**, all of them in
+    // `Peano`, and the lemma below is among them.
     withClue(s"the search space of the retry claim is ${tried.length} of ${Bridging.Candidates}: ") {
       tried.length * 2 should be <= Bridging.Candidates
     }
@@ -248,20 +254,24 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
     tried.map(_.name) should contain(Peano.BelowExcludesAtMost)
   }
 
-  it should "be past what one call could carry, which is why the search is one candidate at a time" in {
-    // The measurement under `docs/adr/0027`'s rejected alternative, rather than the argument for it.
-    // Handing the whole candidate set to `settle` at once is the obvious way to reach a claim that
-    // needs two lemmas, and the reason it is not the shape here is arithmetic: the instances are a
-    // PRODUCT over the subjects the claim names, and this set is past `Domain.Instances` on its own.
-    // So that route decides nothing at all, rather than deciding something expensive.
+  it should "settle in one call now, which is why what the search is for is the name" in {
+    // `docs/adr/0027` rejected handing the whole candidate set to `settle` at once for two reasons,
+    // cost and reporting, and until 2026-09-25 this test measured the first: the set was past
+    // `Domain.Instances` on its own and the call was refused before deciding anything. The exact
+    // filter took the set to eight lemmas, and one call now carries all of them and settles. What
+    // is left is the second reason, and this asserts it: the same theorem at the same price, and
+    // the one answer that names the lemma which carried the claim is the search's.
     val goal = force(Parser.proposition(retries.theory, retries.notation, retryClaim))
     val every = Bridging.candidates(retries, published, goal).map(_.theorem)
+    val searched = Bridging.settle(retries, chain.classical, published, goal)
 
-    retries.settle(chain.classical, goal, every) match {
-      case Domain.Verdict.Refused(why) =>
-        why should include(s"at most ${Domain.Instances} specialised axioms")
-      case other =>
-        fail(s"the whole candidate set at once is what `docs/adr/0027` rejects on this measurement: $other")
+    (retries.settle(chain.classical, goal, every), searched.verdict) match {
+      case (Domain.Verdict.Settled(joint, jointly), Domain.Verdict.Settled(found, spent)) =>
+        joint.conclusion shouldBe found.conclusion
+        jointly.foundational shouldBe spent.foundational
+        searched.bridges.map(_.name) shouldBe Vector(Peano.BelowExcludesAtMost)
+      case (joint, found) =>
+        fail(s"one call and the search should both settle the retry claim: $joint against $found")
     }
   }
 

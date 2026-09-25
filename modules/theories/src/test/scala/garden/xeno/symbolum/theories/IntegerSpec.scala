@@ -598,67 +598,83 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
   /* ------------------------------------------------------------------ what the graph costs */
 
   /**
-   * What a fact of the first quotient carries, which is the figure `docs/adr/0016` asks for here
-   * rather than at the end of the construction.
+   * What a fact of the first quotient carries, read two ways since `docs/adr/0047`.
    *
-   * That record says an asserted axiom has `Derivation.size` 1 and that after the sixteen become
-   * theorems every claim about a real carries the construction's shared graph, because
-   * `Derivation.walk` deduplicates by identity and walks it anyway. The first quotient is the first
-   * real number to extrapolate from, and taking it late means taking it when it is expensive to act
-   * on. So it is taken here, and it is an assertion rather than a probe for the reason
-   * `docs/adr/0034` gives: a measurement that can be a test is one.
+   * `docs/adr/0016` says an asserted axiom has `Derivation.size` 1 and that after the sixteen become
+   * theorems every claim about a real carries the construction's shared graph. The first quotient
+   * is the first real number to extrapolate from, and taking it late means taking it when it is
+   * expensive to act on, so it is taken here, as an assertion rather than a probe for the reason
+   * `docs/adr/0034` gives.
    *
-   * == What the two assertions are, and why neither is a pin ==
+   * == Two sizes since the boundary ==
    *
-   * A size is a property of a derivation, so pinning one would go red on every proof that is
-   * rewritten, which is a gate about nothing. What is asserted is the two things the extrapolation
-   * rests on, each with a margin measured against the reading of 2026-09-20 and stated here so a
-   * later reader can see how much room was left.
+   * **What a checker replays** is the whole graph: the written proof holds every cited fact's proof
+   * once, and counting its step records is that size. It is what 0016 extrapolated and it did not
+   * move: `INT_EQUAL` replays 7696 nodes, the 7687 of 2026-09-20 plus its nine citations.
    *
-   * **The type costs and the relation does not**, which is the quantitative twin of the axiom
-   * reading two tests above: `INT_SAME_REFL` is about equality and the arithmetic of `num` and read
-   * 38 nodes, while `INT_EQUAL` carries the carving and read 7687, a factor of 202. The assertion
-   * asks for 50, so a quotient whose facts stopped carrying the carving fails it and a proof made
-   * four times cheaper does not.
+   * **What a report reads** is `Derivation.size`, which stops at a cited fact. That is the one the
+   * boundary was for. Measured on 2026-09-25 against 2026-09-20: the median fact of `Integer` from
+   * 11107 to 1445, the bridge's nine from 12827–24362 to 3925–5975.
    *
-   * **A fact of the bridge into the reals is four figures**, between 1000 and 100000. The bridge's
-   * facts are the ones a claim about a real will carry once the construction lands, so the band is
-   * the order of magnitude 0016's extrapolation is written in: on 2026-09-20 they ran 12827 to
-   * 24362. Below
-   * the floor the extrapolation is stale and the record wants rereading; above the ceiling the cost
-   * arrived a stage earlier than predicted, which is the more interesting failure.
+   * == What is asserted, with the room each leaves ==
+   *
+   * **The carving is replayed and not read.** `INT_SAME_REFL` is about equality and the arithmetic
+   * of `num` and `INT_EQUAL` carries the carving of the type: replayed they are 39 and 7696, a
+   * factor of 197 against an assertion of 50, and `INT_EQUAL` read is 1443, a fifth of what it
+   * replays against an assertion of a half. A boundary that stopped holding fails the second, and a
+   * quotient whose facts stopped carrying the carving fails the first.
+   *
+   * **A fact of the bridge reads at most half of what it replays, cites something, and still reads
+   * four figures.** The ratio ran from 0.22 to 0.31 over the nine. The citation count is the guard
+   * against the ratio being empty: a fact with no citation in its proof reads what it replays, and
+   * it is the census that says whether a boundary was crossed at all. The floor of a thousand, under
+   * a least reading of 3925, is the guard on the other side: a size that stopped walking and
+   * reported a constant would pass the ratio and not this.
+   *
+   * **The replayed size stays in 0016's band**, four or five figures, which is the order of
+   * magnitude its extrapolation to the reals is written in. Below the floor that record wants
+   * rereading; above the ceiling the cost arrived a stage earlier than it predicted.
+   *
+   * Each of those was seen red on 2026-09-25 with one piece of the boundary taken away, which is
+   * `tools/verify/perturb-cited-fact-boundary.sh` and `perturb-graph-cost-at-the-integers.sh`.
    *
    * == What it does not cover ==
    *
-   * The wall clock, deliberately. What a walk costs in milliseconds is a property of the machine
-   * and of what else is running on it, which is why no figure of that kind is written down in this
-   * repository; the node count is a function of the proof and two machines agree on it. And it says
-   * nothing about the rationals or the cuts: the measurement is of one quotient, and the two above
-   * it are the thing being extrapolated to rather than measured.
+   * The wall clock, deliberately: a node count is a function of the proof and two machines agree
+   * on it. And what a bridge fact still reads, four to six thousand nodes, is its own proof and the
+   * procedures' lemmas that are not published facts; the boundary does not reach those, and the
+   * record says how far that leaves it.
    */
-  it should "carry the carving in every fact, which is what the graph costs at the first quotient" in {
-    val sizes = Integer.Statements.map { case (name, _) => (name, Derivation.size(fact(name))) }
-    val ordered = sizes.map(_._2).sorted
+  it should "carry the carving in every fact it replays, and read it in none" in {
+    def replayed(theorem: Kernel.Thm): Int =
+      Proof.write(theorem).linesIterator.count(_.startsWith("s "))
+    def quartiles(found: Vector[Int]): String = {
+      val ordered = found.sorted
+      s"${ordered(ordered.size / 4)}/${ordered(ordered.size / 2)}/${ordered(3 * ordered.size / 4)}"
+    }
+    val read = Integer.Statements.map { case (name, _) => Derivation.size(fact(name)) }.toVector
+    val whole = Integer.Statements.map { case (name, _) => replayed(fact(name)) }.toVector
     val bridge = Inclusion.Statements.map { case (name, _) =>
-      (name, Derivation.size(force(chain.inclusion.fact(name))))
+      val theorem = force(chain.inclusion.fact(name))
+      (name, Derivation.size(theorem), replayed(theorem), Derivation.census(theorem))
     }
 
-    info(s"${sizes.size} facts of the first quotient: smallest ${sizes.minBy(_._2)}, " +
-      s"quartiles ${ordered(ordered.size / 4)}/${ordered(ordered.size / 2)}/${ordered(3 * ordered.size / 4)}, " +
-      s"largest ${sizes.maxBy(_._2)}, sum ${ordered.map(_.toLong).sum}")
-    info(s"${bridge.size} facts of the bridge into the reals: smallest ${bridge.minBy(_._2)}, " +
-      s"largest ${bridge.maxBy(_._2)}")
-    info(s"the two scales `docs/adr/0016` compares against: an asserted axiom at " +
-      s"${Derivation.size(force(chain.reals.axiom("COMPLETENESS")))}, PAIR_SURJECTIVE at " +
-      s"${Derivation.size(force(chain.product.fact(Product.Surjective)))}")
+    info(s"${read.size} facts of the first quotient: read ${quartiles(read)}, replayed ${quartiles(whole)} by quartile")
+    bridge.foreach { case (name, reads, replays, census) =>
+      info(s"$name reads $reads, replays $replays, cites ${census.getOrElse("Citation", 0)}")
+    }
 
-    Derivation.size(fact(Integer.Equal)) should
-      be > 50 * Derivation.size(fact(Integer.SameReflexive))
+    val equal = fact(Integer.Equal)
+    replayed(equal) should be > 50 * replayed(fact(Integer.SameReflexive))
+    2 * Derivation.size(equal) should be < replayed(equal)
 
-    bridge.foreach { case (name, size) =>
+    bridge.foreach { case (name, reads, replays, census) =>
       withClue(s"$name: ") {
-        size should be > 1000
-        size should be < 100000
+        census.getOrElse("Citation", 0) should be > 0
+        2 * reads should be < replays
+        reads should be > 1000
+        replays should be > 1000
+        replays should be < 100000
       }
     }
   }

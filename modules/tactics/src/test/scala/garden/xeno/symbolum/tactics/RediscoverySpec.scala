@@ -331,8 +331,14 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 547 with the chain rule, the same day, derived before the run: its two antecedents.
     // 548 with the exponential's slope, the same day, derived before the run: the estimate's one
     // antecedent, and the slope has none.
-    // 551 with uniform continuity, the same day, derived before the run: its three antecedents.
-    propose.weakenings.size shouldBe 551
+    // 554 with the sign of a derivative on an interval, the same day, derived before the run: two
+    // antecedents on each of the three, the continuity and the slope; the `!x` or `!u v` after them
+    // is under a binder and is not peeled.
+    // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents over
+    // five facts, three, two, one, one and one; the binomial theorem and the two sums carry none.
+    // 565 with uniform continuity, the same day, derived before the run: its three antecedents.
+    // Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 565
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

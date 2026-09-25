@@ -6,7 +6,8 @@ import garden.xeno.symbolum.logic.*
 /**
  * The derivative of a real function at a point, the interior extremum lemma, Rolle's theorem, the
  * mean value theorem, and since the same day the product rule with the continuity it rests on, and
- * the chain rule, and since then the exponential's derivative.
+ * the chain rule, and since then the exponential's derivative and what the sign of a derivative
+ * says about the function on an interval.
  *
  * `derivative f x m` says that `f` has derivative `m` at `x`, and it is the epsilon-delta statement
  * written out, the way `continuous` and `converges` are: for every positive tolerance `e` there is
@@ -67,8 +68,11 @@ final class Derivative private (
   val notation: Notation,
   val logic: Logic,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** The equation defining `name`, as proved when the constant was introduced. */
   def definition(name: String): Either[LogicError, Kernel.Thm] =
@@ -205,6 +209,28 @@ object Derivative {
    */
   val Exponential: String = "DERIVATIVE_EXP"
 
+  /**
+   * `|- !f a b. (!x. a <= x /\ x <= b ==> continuous f x) ==> (!x. a < x /\ x < b ==> derivative f x 0) ==>
+   * !x. a <= x /\ x <= b ==> f x = f a`
+   *
+   * A function whose derivative is zero inside an interval, and which is continuous on it, is
+   * constant there. The mean value theorem from `a` to each point, and uniqueness.
+   */
+  val Flat: String = "DERIVATIVE_ZERO_CONSTANT"
+
+  /**
+   * `|- !f a b. (!x. a <= x /\ x <= b ==> continuous f x) ==> (!x. a < x /\ x < b ==> ?m. derivative f x m /\ 0 <= m) ==>
+   * !u v. a <= u /\ u <= v /\ v <= b ==> f u <= f v`
+   *
+   * A non-negative derivative inside makes `f` non-decreasing on the interval. The hypothesis states
+   * that the derivative exists and its sign in one existential, so it asks for no second statement
+   * of differentiability.
+   */
+  val NonDecreasing: String = "DERIVATIVE_NONNEG_MONOTONE"
+
+  /** The same with `0 < m`, and `f` strictly increasing: `a <= u /\ u < v /\ v <= b ==> f u < f v`. */
+  val Increasing: String = "DERIVATIVE_POS_LT_MONOTONE"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Constant -> "!c:real. !x:real. derivative (\\y:real. c) x 0",
@@ -236,7 +262,18 @@ object Derivative {
     ChainRule ->
       ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. derivative g x n ==> derivative f (g x) m ==> " +
         "derivative (\\y:real. f (g y)) x (m * n)"),
-    Exponential -> "!x:real. derivative exp x (exp x)"
+    Exponential -> "!x:real. derivative exp x (exp x)",
+    Flat ->
+      ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> derivative f x 0) ==> !x:real. a <= x /\\ x <= b ==> f x = f a"),
+    NonDecreasing ->
+      ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 <= m) ==> " +
+        "!u:real. !v:real. a <= u /\\ u <= v /\\ v <= b ==> f u <= f v"),
+    Increasing ->
+      ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 < m) ==> " +
+        "!u:real. !v:real. a <= u /\\ u < v /\\ v <= b ==> f u < f v")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -288,6 +325,9 @@ object Derivative {
       chainRule <- chainRuleFact(steps, reals, magnitude, continuity, continuous)
       nearLine <- logarithm.fact(Logarithm.NearLine)
       exponential <- exponentialSlope(steps, reals, magnitude, transcendental, logarithm, nearLine)
+      flat <- flatSlope(steps, magnitude.order, meanValue, unique)
+      nonDecreasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = false)
+      increasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = true)
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,
@@ -302,7 +342,10 @@ object Derivative {
         Continuous -> continuous,
         ProductRule -> productRuleFact,
         ChainRule -> chainRule,
-        Exponential -> exponential
+        Exponential -> exponential,
+        Flat -> flat,
+        NonDecreasing -> nonDecreasing,
+        Increasing -> increasing
       )
 
       // Each statement checked against the text a person reads it by, as `Continuity` does: a
@@ -1729,6 +1772,226 @@ object Derivative {
       value <- real("exp (x:real)")
       result <- foldDerivative(steps, exp, x, value, statement)
       closed <- rules.gen(x, result)
+    } yield closed
+  }
+
+  /* ================================================ the sign of the derivative on an interval */
+
+  private val ContinuousOnInterval = "!x:real. a:real <= x /\\ x <= b:real ==> continuous (f:real -> real) x"
+
+  private def slopes(sign: String => String): String =
+    s"!x:real. a:real < x /\\ x < b:real ==> ?m:real. derivative (f:real -> real) x m /\\ ${sign("m:real")}"
+
+  /**
+   * Under the two hypotheses on `[a, b]`, `|- a <= u ==> u < v ==> v <= b ==>
+   * ?m. R m /\ f v - f u = m * (v - u)`: the mean value theorem on `[u, v]`, with the slope it finds
+   * carried to the one the hypothesis gives at the same point, by uniqueness.
+   */
+  private def monotoneStep(
+    steps: Continuity.Steps,
+    meanValue: Kernel.Thm,
+    unique: Kernel.Thm,
+    sign: String => String,
+    transfer: (Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val u = Term.variable("u", Reals)
+    val v = Term.variable("v", Reals)
+    val x = Term.variable("x", Reals)
+    val c = Term.variable("c", Reals)
+    val m = Term.variable("m", Reals)
+    val n = Term.variable("n", Reals)
+    val Goal = s"?m:real. ${sign("m")} /\\ (f:real -> real) v - f u = m * (v:real - u:real)"
+    for {
+      continuous <- assume(ContinuousOnInterval)
+      slope <- assume(slopes(sign))
+      lower <- assume("a:real <= u:real")
+      ordered <- assume("u:real < v:real")
+      upper <- assume("v:real <= b:real")
+
+      within <- for {
+        member <- proposition("u:real <= x:real /\\ x <= v:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        left <- at(lemma("!a:real u:real x:real. a <= u ==> u <= x ==> a <= x"), "a:real", "u:real", "x:real")
+          .flatMap(mp(_, Right(lower), rules.conjElim1(assumed)))
+        right <- at(lemma("!x:real v:real b:real. x <= v ==> v <= b ==> x <= b"), "x:real", "v:real", "b:real")
+          .flatMap(mp(_, rules.conjElim2(assumed), Right(upper)))
+        result <- conj(Right(left), Right(right))
+          .flatMap(both => rules.spec(x, continuous).flatMap(rules.mp(_, both)))
+          .flatMap(rules.disch(member, _)).flatMap(rules.gen(x, _))
+      } yield result
+
+      differentiable <- for {
+        member <- proposition("u:real < x:real /\\ x < v:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        left <- at(lemma("!a:real u:real x:real. a <= u ==> u < x ==> a < x"), "a:real", "u:real", "x:real")
+          .flatMap(mp(_, Right(lower), rules.conjElim1(assumed)))
+        right <- at(lemma("!x:real v:real b:real. x < v ==> v <= b ==> x < b"), "x:real", "v:real", "b:real")
+          .flatMap(mp(_, rules.conjElim2(assumed), Right(upper)))
+        exists <- conj(Right(left), Right(right)).flatMap(both => rules.spec(x, slope).flatMap(rules.mp(_, both)))
+        body <- assume(s"derivative (f:real -> real) x n /\\ ${sign("n:real")}")
+        witnessed <- existential("?m:real. derivative (f:real -> real) x m")
+          .flatMap(p => rules.conjElim1(body).flatMap(rules.existsIntro(p, n, _)))
+        found <- rules.existsElim(exists, n, witnessed)
+        result <- rules.disch(member, found).flatMap(rules.gen(x, _))
+      } yield result
+
+      somewhere <- rules.specAll(meanValue, List(f, u, v))
+        .flatMap(mp(_, Right(ordered), Right(within), Right(differentiable)))
+
+      found <- for {
+        inside <- assume("u:real < c:real /\\ c < v:real /\\ derivative (f:real -> real) c m /\\ f v - f u = m * (v - u)")
+        left <- rules.conjElim1(inside)
+        right <- rules.conjElim2(inside).flatMap(rules.conjElim1)
+        own <- rules.conjElim2(inside).flatMap(rules.conjElim2).flatMap(rules.conjElim1)
+        balance <- rules.conjElim2(inside).flatMap(rules.conjElim2).flatMap(rules.conjElim2)
+        aBelow <- at(lemma("!a:real u:real c:real. a <= u ==> u < c ==> a < c"), "a:real", "u:real", "c:real")
+          .flatMap(mp(_, Right(lower), Right(left)))
+        bAbove <- at(lemma("!c:real v:real b:real. c < v ==> v <= b ==> c < b"), "c:real", "v:real", "b:real")
+          .flatMap(mp(_, Right(right), Right(upper)))
+        stated <- conj(Right(aBelow), Right(bAbove)).flatMap(both => rules.spec(c, slope).flatMap(rules.mp(_, both)))
+        body <- assume(s"derivative (f:real -> real) c n /\\ ${sign("n:real")}")
+        theirs <- rules.conjElim1(body)
+        signed <- rules.conjElim2(body)
+        equal <- rules.specAll(unique, List(f, c, m, n)).flatMap(mp(_, Right(own), Right(theirs)))
+        carried <- transfer(equal, signed)
+        witnessed <- existential(Goal).flatMap(p => conj(Right(carried), Right(balance)).flatMap(rules.existsIntro(p, m, _)))
+        result <- rules.existsElim(stated, n, witnessed)
+      } yield result
+
+      eliminated <- for {
+        exists <- assume("?m:real. u:real < c:real /\\ c < v:real /\\ derivative (f:real -> real) c m /\\ f v - f u = m * (v - u)")
+        byM <- rules.existsElim(exists, m, found)
+        byC <- rules.existsElim(somewhere, c, byM)
+      } yield byC
+      closed <- List("v:real <= b:real", "u:real < v:real", "a:real <= u:real")
+        .foldLeft[Either[LogicError, Kernel.Thm]](Right(eliminated)) { (acc, text) =>
+          for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+        }.flatMap(rules.genAll(_, List(u, v)))
+    } yield closed
+  }
+
+  /**
+   * [[NonDecreasing]] and, with `strict`, [[Increasing]]: [[monotoneStep]] between two points, and
+   * the sign of the slope it hands back read off `f v - f u = m * (v - u)`. The non-strict one splits
+   * `u <= v` with `LE_CASES`, and at `u = v` the two values are equal by congruence.
+   */
+  private def signedSlope(steps: Continuity.Steps, order: Order, meanValue: Kernel.Thm, unique: Kernel.Thm, strict: Boolean): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val u = Term.variable("u", Reals)
+    val v = Term.variable("v", Reals)
+    val m = Term.variable("m", Reals)
+    val relation = if (strict) "<" else "<="
+    val sign: String => String = t => s"0 $relation $t"
+    val transfer: (Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm] = (equal, signed) =>
+      lemma(s"!m:real n:real. m = n ==> 0 $relation n ==> 0 $relation m")
+        .flatMap(t => Term.destEq(equal.conclusion).toRight(NotOfForm("an equation", equal.conclusion))
+          .flatMap { case (l, r) => rules.specAll(t, List(l, r)) })
+        .flatMap(mp(_, Right(equal), Right(signed)))
+    val range = if (strict) "a:real <= u:real /\\ u < v:real /\\ v <= b:real" else "a:real <= u:real /\\ u <= v:real /\\ v <= b:real"
+    for {
+      step <- monotoneStep(steps, meanValue, unique, sign, transfer)
+      member <- proposition(range)
+      assumed <- LogicError.lift(Kernel.assume(member))
+      lower <- rules.conjElim1(assumed)
+      between <- rules.conjElim2(assumed).flatMap(rules.conjElim1)
+      upper <- rules.conjElim2(assumed).flatMap(rules.conjElim2)
+
+      apart <- for {
+        ordered <- if (strict) Right(between) else assume("u:real < v:real")
+        exists <- rules.specAll(step, List(u, v)).flatMap(mp(_, Right(lower), Right(ordered), Right(upper)))
+        body <- assume(s"${sign("m:real")} /\\ (f:real -> real) v - f u = m * (v:real - u:real)")
+        compared <- at(lemma(s"!A:real B:real m:real u:real v:real. 0 $relation m ==> B - A = m * (v - u) ==> u < v ==> A $relation B"),
+          "(f:real -> real) u", "(f:real -> real) v", "m:real", "u:real", "v:real")
+          .flatMap(mp(_, rules.conjElim1(body), rules.conjElim2(body), Right(ordered)))
+        result <- rules.existsElim(exists, m, compared)
+      } yield result
+
+      compared <-
+        if (strict) Right(apart)
+        else for {
+          cases <- order.leCases.flatMap(rules.specAll(_, List(u, v))).flatMap(rules.mp(_, between))
+          same <- assume("u:real = v:real")
+          values <- Conv.apTerm(f, same)
+          level <- order.leOfEq.flatMap(t => Term.destEq(values.conclusion).toRight(NotOfForm("an equation", values.conclusion))
+            .flatMap { case (l, r) => rules.specAll(t, List(l, r)) }).flatMap(rules.mp(_, values))
+          joined <- rules.disjElim(cases, apart, level)
+        } yield joined
+
+      everyPair <- rules.disch(member, compared).flatMap(rules.gen(v, _)).flatMap(rules.gen(u, _))
+      closed <- List(slopes(sign), ContinuousOnInterval)
+        .foldLeft[Either[LogicError, Kernel.Thm]](Right(everyPair)) { (acc, text) =>
+          for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+        }.flatMap(rules.genAll(_, List(f, a, b)))
+    } yield closed
+  }
+
+  /**
+   * [[Flat]]: the hypothesis `derivative f x 0` read as a slope that equals zero, [[monotoneStep]]
+   * from `a` to each `x` past it, and `LE_ANTISYMMETRIC` on the two inequalities `m = 0` gives. The
+   * one `Linarith` needs `a < x` beside `m = 0`, since what cancels the product is their product.
+   */
+  private def flatSlope(steps: Continuity.Steps, order: Order, meanValue: Kernel.Thm, unique: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val x = Term.variable("x", Reals)
+    val m = Term.variable("m", Reals)
+    val sign: String => String = t => s"$t = 0"
+    val transfer: (Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm] = (equal, signed) => Conv.trans(equal, signed)
+    val Zero = "!x:real. a:real < x /\\ x < b:real ==> derivative (f:real -> real) x 0"
+    for {
+      step <- monotoneStep(steps, meanValue, unique, sign, transfer)
+      zero <- real("0:real")
+
+      /* the hypothesis at `0`, read as a slope that equals zero */
+      level <- assume(Zero)
+      signed <- for {
+        member <- proposition("a:real < x:real /\\ x < b:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        at0 <- rules.spec(x, level).flatMap(rules.mp(_, assumed))
+        witnessed <- existential("?m:real. derivative (f:real -> real) x m /\\ m = 0")
+          .flatMap(p => conj(Right(at0), Right(Conv.refl(zero))).flatMap(rules.existsIntro(p, zero, _)))
+        result <- rules.disch(member, witnessed).flatMap(rules.gen(x, _))
+      } yield result
+      slopesTerm <- proposition(slopes(sign))
+      stepped <- rules.disch(slopesTerm, step).flatMap(rules.mp(_, signed))
+
+      member <- proposition("a:real <= x:real /\\ x <= b:real")
+      assumed <- LogicError.lift(Kernel.assume(member))
+      lower <- rules.conjElim1(assumed)
+      upper <- rules.conjElim2(assumed)
+      reflexive <- at(lemma("!a:real. a <= a"), "a:real")
+      apart <- for {
+        ordered <- assume("a:real < x:real")
+        found <- rules.specAll(stepped, List(a, x)).flatMap(mp(_, Right(reflexive), Right(ordered), Right(upper)))
+        body <- assume("m:real = 0 /\\ (f:real -> real) x - f a = m * (x:real - a:real)")
+        below <- at(lemma("!A:real B:real m:real a:real x:real. m = 0 ==> B - A = m * (x - a) ==> a < x ==> B <= A"),
+          "(f:real -> real) a", "(f:real -> real) x", "m:real", "a:real", "x:real")
+          .flatMap(mp(_, rules.conjElim1(body), rules.conjElim2(body), Right(ordered)))
+        above <- at(lemma("!A:real B:real m:real a:real x:real. m = 0 ==> B - A = m * (x - a) ==> a < x ==> A <= B"),
+          "(f:real -> real) a", "(f:real -> real) x", "m:real", "a:real", "x:real")
+          .flatMap(mp(_, rules.conjElim1(body), rules.conjElim2(body), Right(ordered)))
+        equal <- order.fact(Order.Antisymmetric).flatMap(t => at(Right(t), "(f:real -> real) x", "(f:real -> real) a"))
+          .flatMap(mp(_, Right(below), Right(above)))
+        result <- rules.existsElim(found, m, equal)
+      } yield result
+      same <- for {
+        ends <- assume("a:real = x:real")
+        values <- Conv.apTerm(f, ends).flatMap(Conv.sym)
+      } yield values
+      cases <- order.leCases.flatMap(rules.specAll(_, List(a, x))).flatMap(rules.mp(_, lower))
+      joined <- rules.disjElim(cases, apart, same)
+      everyPoint <- rules.disch(member, joined).flatMap(rules.gen(x, _))
+      closed <- List(Zero, ContinuousOnInterval)
+        .foldLeft[Either[LogicError, Kernel.Thm]](Right(everyPoint)) { (acc, text) =>
+          for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+        }.flatMap(rules.genAll(_, List(f, a, b)))
     } yield closed
   }
 }

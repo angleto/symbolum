@@ -168,8 +168,9 @@ carry.** `Cost` walks one report's graph three times, in `axiomsOf`, `size` and 
 `Check` and `foreignTo` walk it again where a caller asks. So a memoised walk is a constant factor
 of about three on a report and leaves the walk itself where it is; a boundary at a cited fact is
 what bounds the graph a report reads at all. The cheap one is not the one that answers the growth,
-which is the opposite of the order the gap was written in. Neither is decided here: what this
-paragraph hands on is that the choice is between a constant and an asymptote, and it is measured.
+which is the opposite of the order the gap was written in. Neither was decided here: what this
+paragraph handed on is that the choice is between a constant and an asymptote, and it is measured.
+`0047` took the boundary on 2026-09-25, and has the same table read both ways.
 
 **Analysis does not wait for any of this.** A supremum named by `select` over `COMPLETENESS`,
 sequences, limits, and a square root are built over the reals as they stand. By 0004's preserved

@@ -160,18 +160,18 @@ order to show the checker one.
 
 | Theorem | Inferences | Axioms reached |
 |---|---|---|
-| `0 < 1` | 1757 | 11 |
-| `0 < 12` | 2167 | 12 |
+| `0 < 1` | 1758 | 11 |
+| `0 < 12` | 2169 | 12 |
 | `12 * 12 = 144` | 1132 | 5 |
 | `(x + 1)^2` expanded | 2251 | 8 |
-| `x < y /\ y < z ==> x < z` | 4122 | 9 |
+| `x < y /\ y < z ==> x < z` | 4125 | 9 |
 | `(x * y) / y = x` | 1757 | 8 |
 | `p /\ q ==> p`, propositional | 199 | **0** |
-| `((p ==> q) ==> p) ==> p`, found by a solver | 1256 | 1 |
+| `((p ==> q) ==> p) ==> p`, found by a solver | 1257 | 1 |
 | an on-call rule's own claim | 295 | 1 |
 | `ADD_SYM`, an axiom of the reals | 1 | 1 |
-| the successor's properties | 403 | 2 |
-| induction over the naturals | 625 | **0** |
+| the successor's properties | 404 | 2 |
+| induction over the naturals | 626 | **0** |
 
 <!-- end generated: replay -->
 
@@ -184,8 +184,10 @@ one per use, and **that** one reached every row, induction included, which fell 
 hand derivation builds the same leaves as any other proof; what it does not build is the idle steps.
 
 **That last figure said 199 until 2026-09-12, and it was never true.** Nothing in the kernel, in
-`modules/logic` or in `Natural.scala` has changed since the day it was written, so the derivation
-being counted is the same one; it measures 625 and it measured 625 then. 199 is what the
+`modules/logic` or in `Natural.scala` had changed between the day it was written and that one, so
+the derivation counted then was the same; it measures 626 and it measured 625 then, the one more
+being a published fact the proof uses, which the checker replays through as a citation since
+`docs/adr/0047`. 199 is what the
 propositional theorem two rows above costs, and it was copied out of the wrong line of a test's
 output — which is also why the drop it implied, three quarters of the proof, never matched the 23%
 the repair removed everywhere else. The row is generated now, and that is the repair: the number in
@@ -413,20 +415,21 @@ stale from a different day, and neither of them was caught by anything.
 
 | rule | inferences over the 37 proofs |
 |---|---|
-| congruence | 35113 |
-| equality elimination | 24387 |
-| reflexivity | 15385 |
-| transitivity | 14912 |
-| instantiation | 12513 |
-| beta step | 9272 |
-| type instantiation | 5322 |
-| antisymmetry | 3572 |
-| abstraction | 1388 |
-| assumption | 560 |
-| axiom | 272 |
-| definition | 166 |
+| congruence | 30575 |
+| equality elimination | 20580 |
+| reflexivity | 13220 |
+| transitivity | 13158 |
+| instantiation | 10835 |
+| beta step | 8161 |
+| type instantiation | 4589 |
+| antisymmetry | 2549 |
+| abstraction | 1088 |
+| axiom | 227 |
+| definition | 145 |
+| assumption | 93 |
+| citation | 51 |
 
-They add up to 122862 inferences, of which 15385 are reflexivity, 12.5% of the corpus.
+They add up to 105271 inferences, of which 13220 are reflexivity, 12.6% of the corpus.
 
 <!-- end generated: census -->
 
@@ -437,8 +440,10 @@ both:
 
 All three rows are **hand-measured, on 2026-09-11**, and they are a history rather than a
 measurement of anything that exists now: the first two figures cannot be re-measured without
-reverting two repairs. The live figure is the one in the generated census above, and if the last row
-disagrees with it, the last row is the stale one.
+reverting two repairs. The live figure is the one in the generated census above, and since
+2026-09-25 it counts differently from all three: a fact another development published is one
+`Citation` there (`docs/adr/0047`), so the census is smaller without any proof having got shorter,
+and the rows below are comparable with each other and not with it.
 
 | | total | reflexivity |
 |---|---|---|
@@ -933,7 +938,7 @@ measured on 2026-09-10.
 | neither, with the point | 1 |
 | axioms the corpus reaches, of sixteen | 15 |
 | axioms a single proof reaches | 1 least, 8 median, 15 most |
-| inferences, all proofs together | 122862 |
+| inferences, all proofs together | 105271 |
 
 **Completeness is the one never reached**, by any proof in the file. A corpus about polynomial
 identities never asks for the axiom that makes these the reals rather than the rationals, and every
@@ -966,9 +971,12 @@ The floor row and the least column both moved on 2026-09-11 and neither for the 
 is why they are separate rows: the least came down when `Prove` began asking its library first, and
 the total came down when the rewriter stopped building a theorem to say it had done nothing.
 
-**122862 inferences is what a second checker has to replay**, and is the figure track R' is measured
-against. It did not exist before a theorem recorded its derivation, and neither did any of the rows
-above.
+**The total is what these proofs did themselves, and not what a second checker replays.** Since
+2026-09-25 a fact another development published counts as one inference in it, a `Citation`, and
+the checker replays that fact's proof as well; `docs/adr/0047` is why the report stops there and the
+checker does not. Until that day the two were one figure, 122862, and it is the one track R' was
+measured against. The replay table in the section on the second reading is the checker's side. None
+of these figures existed before a theorem recorded its derivation.
 
 ### The ladder, measured
 
@@ -1120,7 +1128,7 @@ which is the assertion that pins it.
 
 ## The exposure of the trusted base, and what the line count does not measure
 
-The project publishes one number about its trusted base: four files under 1200 lines, with a test
+The project publishes one number about its trusted base: four files under 1220 lines, with a test
 that measures it and a record for every time the bound moved. What it has never published, and had
 no way to say, is **how much hostile attention those lines have had**.
 
@@ -1459,7 +1467,7 @@ landed on 2026-09-11 and it is the one place where the proposal is arithmetic on
 check is a theorem: it computes a finite sum's first ten values, fits the polynomial through them by
 finite differences, states that they agree at every `n`, and puts that to `Induct`. Faulhaber's
 first four come back certified without anybody having told it the answer — `Sum (\i. i^3)` is a
-quartic found from the values 0, 0, 1, 9, 36, 100 and proved in 29456 inferences.
+quartic found from the values 0, 0, 1, 9, 36, 100 and proved in 22869 inferences.
 
 That is **not** the same activity as pointing a generator at a decidable region, and the difference
 is the reason this one was built. The fragment it works in has no decision procedure: `Induct`

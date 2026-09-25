@@ -94,6 +94,69 @@ class DerivationSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(defined) shouldBe empty
   }
 
+  /* ------------------------------------------------------------------ a cited fact */
+
+  /**
+   * A fact with a proof of several steps resting on one axiom, cited once, and a proof using it
+   * both through the citation and around it, which is the comparison `docs/adr/0047` is about.
+   */
+  private object Cited {
+    val theory: Theory = force(Theory.primitive.declareConstant("c", bool))
+    val statement: Term = force(theory.constant("c", bool))
+    val axiom: Kernel.Thm = force(Kernel.assertAxiom(theory, statement))._2
+    val fact: Kernel.Thm = force(
+      Kernel.eqMp(
+        Kernel.refl(statement),
+        force(Kernel.eqMp(Kernel.deductAntisym(axiom, axiom), axiom))
+      )
+    )
+    val cited: Kernel.Thm = Kernel.cite("F", fact)
+    val through: Kernel.Thm = force(Kernel.eqMp(Kernel.refl(statement), cited))
+    val around: Kernel.Thm = force(Kernel.eqMp(Kernel.refl(statement), fact))
+  }
+
+  "A citation" should "restate the fact's sequent and record which fact it is" in {
+    Cited.cited shouldBe Cited.fact
+    Cited.cited.derivation shouldBe Derivation.Citation("F", Cited.fact)
+    Derivation.premises(Cited.cited.derivation) shouldBe List(Cited.fact)
+  }
+
+  it should "be one inference to a proof that cites it, whatever the fact's own proof holds" in {
+    // The proof through the citation holds itself, a reflexivity and the citation: three, where
+    // the one around it holds those two and every step of the fact's proof. That difference is the
+    // whole of what the boundary is for, so both are measured rather than only the smaller one.
+    Derivation.size(Cited.fact) should be > 1
+    Derivation.size(Cited.through) shouldBe 3
+    Derivation.size(Cited.around) shouldBe 2 + Derivation.size(Cited.fact)
+    Derivation.census(Cited.through).get("Citation") shouldBe Some(1)
+  }
+
+  it should "still be the fact's proof when it is the thing asked about" in {
+    // A published fact asked about by name is asked about for its proof. Stopping at the root
+    // would answer one for every fact in a library, which is the vacuous reading of the boundary.
+    Derivation.size(Cited.cited) shouldBe Derivation.size(Cited.fact)
+    Derivation.census(Cited.cited) shouldBe Derivation.census(Cited.fact)
+  }
+
+  it should "leave what a proof rests on exactly what it was" in {
+    // Stopping the walk must not stop the answer: the axiom is under the citation and is reported
+    // through it, from the summary the citation keeps.
+    Derivation.axiomsOf(Cited.through) shouldBe Set(Cited.statement)
+    Derivation.axiomsOf(Cited.through) shouldBe Derivation.axiomsOf(Cited.around)
+    Derivation.foreignTo(Theory.primitive, Cited.through).axioms shouldBe Set(Cited.statement)
+
+    // And the named facts a proof used include the ones inside a cited fact, since that question
+    // is asked of any named collection and no summary kept on the citation could answer it.
+    Derivation.restingOn(Cited.through, Set(Cited.statement)) shouldBe Set(Cited.statement)
+  }
+
+  it should "be written out with its fact, so a checker replays the whole of it" in {
+    val written = Proof.write(Cited.through)
+
+    written.linesIterator.count(_.contains(" cite F ")) shouldBe 1
+    written.linesIterator.count(_.startsWith("s ")) shouldBe Derivation.size(Cited.around) + 1
+  }
+
   /* ----------------------------------------- whether a theorem is one this theory would sign */
 
   "A theorem resting on nothing" should "be foreign to no theory that can state it" in {
