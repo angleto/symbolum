@@ -76,3 +76,4 @@ the rejected option attractive, and they will.
 | [0043](0043-recursion-along-a-measure-asks-the-caller-for-admissibility.md) | Recursion along a measure asks the caller for admissibility, and is proved through the graph | accepted, extends 0042 |
 | [0044](0044-a-refutation-is-named-and-not-numbered.md) | A refutation is named and not numbered, its size is its step count, and its width is a recursion | accepted |
 | [0045](0045-a-polynomial-times-a-geometric-term-by-the-ratio-test-and-a-comparison.md) | A polynomial in the index times a geometric term: the ratio test at degree one, a comparison for each degree after it | accepted, extends 0041 |
+| [0048](0048-a-width-lower-bound-is-stated-on-a-derived-clause.md) | A width lower bound is stated on a derived clause, and proved by critical assignments without a restriction | accepted, extends 0044 |
