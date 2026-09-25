@@ -70,6 +70,51 @@ final class CommutativeRing private (
   /** A derived rule, by name. Nothing here is asserted. */
   def fact(name: String): Either[LogicError, Kernel.Thm] =
     facts.get(name).toRight(MissingDefinition(name))
+
+  /**
+   * `|- left = right` under premises `li = ri`, when `left - right` is `c1 * (l1 - r1) + ...` for the
+   * coefficients handed in with them. A ring only.
+   *
+   * This is how an equation that follows from others by substitution is decided without a
+   * procedure that reads hypotheses: `left` is the ring's identity with `right + sum ci * (li + -ri)`,
+   * the premises rewrite each `li` to its `ri` under a congruence, and what is left is the ring's
+   * identity with `right`. So the coefficients are the one thing the caller must know, and a wrong
+   * one is refused by the first or the last identity rather than producing anything. The premises'
+   * hypotheses are the result's.
+   */
+  def consequence(left: Term, right: Term, premises: List[(Kernel.Thm, Term)]): Either[LogicError, Kernel.Thm] = {
+    val carrier = operations.carrier
+    val holes = premises.indices.toList.map(index => Term.variable(s"hole_$index", carrier))
+    def app(fn: Term, arguments: Term*): Either[LogicError, Term] = LogicError.lift(Term.appAll(fn, arguments.toList))
+    for {
+      negate <- operations.negate.toRight(MissingDefinition("a negation, which a consequence is written with"))
+      sides <- premises.foldLeft[Either[LogicError, List[(Term, Term)]]](Right(Nil)) { case (acc, (premise, _)) =>
+        acc.flatMap(list => Term.destEq(premise.conclusion).toRight(NotOfForm("an equation", premise.conclusion)).map(list :+ _))
+      }
+      template <- premises.zip(holes).zip(sides).foldLeft[Either[LogicError, Term]](Right(right)) {
+        case (acc, (((_, coefficient), hole), (_, target))) =>
+          for {
+            sofar <- acc
+            negated <- app(negate, target)
+            difference <- app(operations.add, hole, negated)
+            scaled <- app(operations.multiply, coefficient, difference)
+            sum <- app(operations.add, sofar, scaled)
+          } yield sum
+      }
+      atLefts <- LogicError.lift(Term.substitute(holes.zip(sides.map(_._1)).toMap, template))
+      atRights <- LogicError.lift(Term.substitute(holes.zip(sides.map(_._2)).toMap, template))
+      opening <- prove(left, atLefts)
+      lambda <- LogicError.lift(Term.absAll(holes, template))
+      combined <- premises.foldLeft[Either[LogicError, Kernel.Thm]](Right(Conv.refl(lambda))) { case (acc, (premise, _)) =>
+        acc.flatMap(current => LogicError.lift(Kernel.mkComb(current, premise)))
+      }
+      leftReduced <- Conv.unfold(Conv.refl(lambda), sides.map(_._1))
+      rightReduced <- Conv.unfold(Conv.refl(lambda), sides.map(_._2))
+      substituted <- Conv.sym(leftReduced).flatMap(Conv.trans(_, combined)).flatMap(Conv.trans(_, rightReduced))
+      closing <- prove(atRights, right)
+      result <- Conv.trans(opening, substituted).flatMap(Conv.trans(_, closing))
+    } yield result
+  }
 }
 
 object CommutativeRing {
@@ -151,7 +196,13 @@ object CommutativeRing {
       case _ => Term.ordering.compare(left, right)
     }
 
+    // A negation adds no size, at any level: it is the last thing compared, so a term and its
+    // negation have to tie on everything before it. Counting the negation's node made `-m` larger
+    // than every monomial of `m`'s shape one level down, and the sorting then put it at the end of
+    // the sum instead of beside `m`, where the cancellation needs it: measured on the rationals'
+    // first obligation on 2026-09-25, which came back with `m` and `-m` four summands apart.
     private def size(term: Term): Int = term match {
+      case App(Const(name, _), argument) if negation.contains(name) => size(argument)
       case App(fn, argument) => size(fn) + size(argument)
       case Abs(_, body) => 1 + size(body)
       case _ => 1

@@ -1958,6 +1958,19 @@ what is missing is nothing: the paragraph below is where the rationals are, whic
 It is still the kind of list nothing goes red over, and the reason those two entries were built is
 that somebody gave them a card, which the third already had and they did not.
 
+**Identities of a commutative ring are decided by one builder since 2026-09-25, and the rationals
+have their operations.** `CommutativeRing` takes the constants and the axioms and derives every
+other rule a normaliser needs; `Semiring` is its `num` instance, with normal forms unchanged, and
+`Integer.ring` its `int` instance. Angelo decided for the generalisation over deriving the
+rationals' obligations by hand, and `docs/adr/0046` is the record. `CommutativeRing.consequence`
+closes an equation that follows from premises by substitution given the coefficient of each, which
+is the shape of every respectfulness obligation: `Fraction` lifts `RAT_ADD`, `RAT_NEG` and `RAT_MUL`
+through it, with `RAT_DENOMINATOR` reading the stored index `d * e + d + e` back as `SUC d * SUC e`.
+**The order is the thing to know before touching it**: compared under the negations, by size inside
+the recursion with a negation adding no size, and by the number of negations last; counting the
+negation's node sent `-m` to the end of a sum and the rationals' first obligation was refused, which
+`tools/verify/perturb-commutative-ring.sh` fires. `rat` is not yet an ordered field.
+
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated. The half of that
 which needed a primitive landed on 2026-09-25: `WellFounded` is recursion along a measure into
