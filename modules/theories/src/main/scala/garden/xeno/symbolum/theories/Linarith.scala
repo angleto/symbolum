@@ -1292,9 +1292,16 @@ final class Linarith private (
    * `a = b` weighed by `k` becomes `0 <= k * (b - a)`, for a `k` of either sign.
    *
    * What the multiplier multiplies is zero, so the sign is free and the fact is non-negative
-   * rather than positive. The equation is proved by rewriting the difference with the hypothesis
-   * itself, in one pass rather than to a fixed point: an equation whose sides share a subterm
-   * would otherwise be applied to its own result.
+   * rather than positive. The equation is proved by congruence at the one place `a` was put:
+   * `k * (b - a) = k * (b - b)` from the hypothesis, and `RING` closes `k * (b - b) = 0`.
+   *
+   * **Not by rewriting with the hypothesis**, which is what this did until 2026-09-25. A rewrite
+   * replaces `a` wherever it occurs, and when `a` occurs inside `b` it replaces it there too:
+   * `x = c * x` turned `k * (c * x - x)` into `k * (c * (c * x) - c * x)`, which is not zero, so
+   * `RING` refused a goal the linear fragment decides and the refusal named neither the goal nor
+   * the equation. Taking one pass rather than a fixed point did not help, because the occurrence
+   * inside `b` is reached in the same pass. Congruence cannot reach it: the function it applies is
+   * built with `b` already in place.
    */
   private def equalPart(factor: BigInt, hypothesis: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     for {
@@ -1305,15 +1312,23 @@ final class Linarith private (
       numeral <- reals.term(factor.toString)
       weighted <- Linarith.product(reals, numeral, difference)
 
-      rule <- Rewrite.Rule.of(reals.logic, hypothesis)
-      rewritten <- Rewrite.depthConv(Rewrite.rewriteConv(rule))(weighted)
+      subtractFrom <- difference match {
+        case App(fn, _) => Right(fn)
+        case other => Left(NotOfForm("a subtraction", other))
+      }
+      scaleBy <- weighted match {
+        case App(fn, _) => Right(fn)
+        case other => Left(NotOfForm("a product", other))
+      }
+      substituted <- Conv.apTerm(subtractFrom, hypothesis)
+      scaled <- Conv.apTerm(scaleBy, substituted)
       settled <- Term
-        .destEq(rewritten.conclusion)
-        .toRight(NotOfForm("an equation", rewritten.conclusion))
+        .destEq(scaled.conclusion)
+        .toRight(NotOfForm("an equation", scaled.conclusion))
 
       zero <- reals.term("0")
       collapses <- LogicError.lift(Term.eq(settled._2, zero)).flatMap(ring.prove)
-      isZero <- Conv.trans(rewritten, collapses)
+      isZero <- Conv.trans(scaled, collapses)
       backwards <- Conv.sym(isZero)
 
       lemma <- order.leOfEq
