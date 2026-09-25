@@ -591,6 +591,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     everyKernelRefusal.map(FromKernel.apply) ++ Vector(
       NotOfForm("an implication", x),
       DoesNotFollow(x, "LINARITH"),
+      // The procedure holds the opposite of the goal as a theorem, which is `Settled` like the one
+      // above and for a stronger reason: that one searched a fragment, this one refuted the goal.
+      Denied(x, Term.variable("y", realType), "Convergence"),
       // Two atoms and not one, because the remedy joins them and a single pair would run a
       // `mkString` over a vector of length one without ever exercising the separator.
       SkeletonFailsAt(x, Vector(x -> true, Term.variable("y", realType) -> false)),

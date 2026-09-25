@@ -633,8 +633,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under five names, none shared. `CLAUDE.md`'s figures move by **five** and **four**: all five
     // bind two or more leading quantifiers, and all but `CONTINUOUS_NEG`, whose `f` and `x` differ
     // in type, bind two reals among them.
-    library.entries.size shouldBe 654
-    library.names.distinct.size shouldBe 651
+    // 667 and 664 with the convergence criteria, 2026-09-25, derived before the run and met:
+    // ten facts in `Limit` and three in `Transcendental`, thirteen names none of them shared, and
+    // `diverges` is a definition, which is the register's rather than this count's. `CLAUDE.md`'s
+    // figures move by **seven** and **one**: seven of the thirteen bind two or more leading
+    // quantifiers, and only `SUM_SCALE_CONVERGES` binds two of one type, its `c` and its `l`.
+    library.entries.size shouldBe 667
+    library.names.distinct.size shouldBe 664
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

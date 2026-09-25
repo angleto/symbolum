@@ -408,4 +408,40 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     Remedy.of(reals, refusal).message should not include "BIT"
     Remedy.of(refusal).message should include("BIT")
   }
+
+  /**
+   * The two goals the series card measured on 2026-09-18 as unsettled, with the reason read off the
+   * refusal: not a procedure that tried and failed but an address that did not exist, so the goal
+   * went to nobody and was told to restate itself as an inequality. Both are settled now, at the
+   * address that was missing, and a divergence is a third shape the same address takes.
+   *
+   * The refusal half is the one a caller acts on: a convergence the procedure refutes comes back
+   * `Settled` in `Remedy`'s terms, naming the theorem that denies it, and not as advice to restate.
+   */
+  "A question about a series" should "have an address of its own and be settled there" in {
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+
+    Vector(
+      "?l:real. converges (Sum (\\i:num. Power ((1:real) / 2) i)) l",
+      "?l:real. converges (Sum (\\i:num. Power (1:real) i / real_of_num (NUM_FACT i))) l",
+      "diverges (Sum (\\i:num. Power (2:real) i))"
+    ).foreach { text =>
+      withClue(s"$text: ") {
+        val goal = force(wider.reals.proposition(text))
+        wider.addressOf(goal) shouldBe Prove.Address.Series
+        val theorem = force(wider(goal)).theorem
+        theorem.conclusion shouldBe goal
+        theorem.hypotheses shouldBe empty
+      }
+    }
+
+    wider("?l:real. converges (Sum (\\i:num. Power (2:real) i)) l") match {
+      case Right(outcome) => fail(s"expected a refusal, got ${wider.reals.show(outcome.theorem.conclusion)}")
+      case Left(error) =>
+        val remedy = Remedy.of(wider.reals, error)
+        remedy shouldBe a[Settled]
+        remedy.message should include("diverges (Sum")
+    }
+  }
 }

@@ -158,6 +158,22 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `Continuity` declares. A file of its own because it is longer than the file it belongs to.
     "ExtremeValue" -> NotADevelopment,
 
+    // Not a development, for `Trigonometric`'s reason: half of `Limit`. It declares nothing, and
+    // the criteria it derives are published in `Limit.facts` under names `Limit` declares, so what
+    // reaches `Library.of` does so as that development's.
+    "Criteria" -> NotADevelopment,
+
+    // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
+    // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
+    // fact of its own, and `Prove` reaches it through the chain it is constructed from.
+    "Convergence" -> DeclaresNothing,
+
+    // Not a development: a function of the chain that proves one fact about one investigation's
+    // series and declares nothing. It is not `BesideTheChain`, which is for a development that
+    // declares constants; what it shares with `Collatz` is the reason its fact is not in the
+    // library, which `Conjugacy` gives in its first paragraph, and `ConjugacySpec` builds it.
+    "Conjugacy" -> NotADevelopment,
+
     "Descent" -> DeclaresNothing,
 
     // Beside the chain, and the classification is the one this file exists to make somebody choose.

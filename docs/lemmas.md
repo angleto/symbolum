@@ -337,6 +337,7 @@ they have least appetite for working out how it is produced.
   CONVERGES_LE             !x:num -> real. !y:real. !z:real. !u:num. converges x y ==> (!v:num. u <= v ==> x v <= z) ==> y <= z
   CONVERGES_MUL            !x:num -> real. !y:num -> real. !z:real. !u:real. converges x z ==> converges y u ==> converges (\v:num. x v * y v) (z * u)
   CONVERGES_NEG            !x:num -> real. !y:real. converges x y ==> converges (\z:num. -(x z)) (-y)
+  CONVERGES_OFFSET         !x:num -> real. !y:real. !z:num. converges (\u:num. x (z + u)) y ==> converges x y
   CONVERGES_SHIFT          !x:num -> real. !y:real. converges x y ==> converges (\z:num. x (SUC z)) y
   CONVERGES_TAIL           !x:num -> real. !y:real. converges (Sum x) y ==> converges (\z:num. y - Sum x z) 0
   CONVERGES_TO_ZERO        !x:num -> real. !y:num -> real. (!z:num. abs (x z) <= y z) ==> converges y 0 ==> converges x 0
@@ -345,15 +346,24 @@ they have least appetite for working out how it is produced.
   LIM_OF_CONVERGES         !x:num -> real. !y:real. converges x y ==> lim x = y
   MONOTONE_CONVERGES       !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (?y:real. !z:num. x z <= y) ==> (?y:real. converges x y)
   MONOTONE_LE              !x:num -> real. (!y:num. x y <= x (SUC y)) ==> (!y:num. !z:num. y <= z ==> x y <= x z)
+  POWER_VANISHES           !x:real. abs x < 1 ==> converges (\y:num. Power x y) 0
   SUM_ABS                  !x:num -> real. !y:num. abs (Sum x y) <= Sum (\z:num. abs (x z)) y
   SUM_BELOW_LIMIT          !x:num -> real. !y:real. (!z:num. 0 <= x z) ==> converges (Sum x) y ==> (!z:num. Sum x z <= y)
   SUM_CAUCHY_BELOW_SQUARE  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) z <= Sum x z * Sum y z
   SUM_CAUCHY_PRODUCT       !x:num -> real. !y:num -> real. !z:real. !u:real. !v:real. !w:real. converges (Sum (\x1:num. abs (x x1))) v ==> converges (Sum (\x1:num. abs (y x1))) w ==> converges (Sum x) z ==> converges (Sum y) u ==> converges (Sum (\x1:num. Sum (\y1:num. x y1 * y (NUM_SUB x1 y1)) (SUC x1))) (z * u)
   SUM_CAUCHY_PRODUCT_NONNEG !x:num -> real. !y:num -> real. !z:real. !u:real. (!v:num. 0 <= x v) ==> (!v:num. 0 <= y v) ==> converges (Sum x) z ==> converges (Sum y) u ==> converges (Sum (\v:num. Sum (\w:num. x w * y (NUM_SUB v w)) (SUC v))) (z * u)
   SUM_COMPARISON           !x:num -> real. !y:num -> real. (!z:num. 0 <= x z) ==> (!z:num. x z <= y z) ==> (?z:real. !u:num. Sum y u <= z) ==> (?z:real. converges (Sum x) z)
+  SUM_DIVERGES             !x:num -> real. !y:real. !z:num. 0 < y ==> (!u:num. z <= u ==> y <= abs (x u)) ==> diverges (Sum x)
+  SUM_GEOMETRIC_CONVERGES  !x:real. abs x < 1 ==> converges (Sum (\y:num. Power x y)) (inv (1 - x))
+  SUM_GEOMETRIC_DIVERGES   !x:real. 1 <= abs x ==> diverges (Sum (\y:num. Power x y))
   SUM_GROWS                !x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. !z:num. y <= z ==> Sum x y <= Sum x z)
+  SUM_RATIO_DIVERGES       !x:num -> real. !y:num. ~(x y = 0) ==> (!z:num. y <= z ==> abs (x z) <= abs (x (SUC z))) ==> diverges (Sum x)
+  SUM_RATIO_TEST           !x:num -> real. !y:real. !z:num. 0 <= y ==> y < 1 ==> (!u:num. z <= u ==> abs (x (SUC u)) <= y * abs (x u)) ==> (?u:real. converges (Sum x) u)
+  SUM_SCALE_CONVERGES      !x:num -> real. !y:real. !z:real. converges (Sum x) z ==> converges (Sum (\u:num. y * x u)) (y * z)
+  SUM_SCALE_DIVERGES       !x:num -> real. !y:real. ~(y = 0) ==> diverges (Sum x) ==> diverges (Sum (\z:num. y * x z))
   SUM_SQUARE_BELOW_CAUCHY  !x:num -> real. !y:num -> real. !z:num. (!u:num. 0 <= x u) ==> (!u:num. 0 <= y u) ==> Sum x z * Sum y z <= Sum (\u:num. Sum (\v:num. x v * y (NUM_SUB u v)) (SUC u)) (z + z)
   SUM_TAIL_ABS             !x:num -> real. !y:num. !z:num. y <= z ==> abs (Sum x z - Sum x y) <= Sum (\u:num. abs (x u)) z - Sum (\u:num. abs (x u)) y
+  SUM_TERMS_VANISH         !x:num -> real. !y:real. converges (Sum x) y ==> converges x 0
 
 ## Listing
 
@@ -791,9 +801,11 @@ they have least appetite for working out how it is produced.
   COSH_SQUARED             !x:real. cosh x * cosh x - sinh x * sinh x = 1
   COSH_ZERO                cosh 0 = 1
   COS_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (z + z) / real_of_num (NUM_FACT (z + z)))))) y
+  COS_CONVERGES            !x:real. converges (Sum (\y:num. Power (0 - 1) y * (Power x (y + y) / real_of_num (NUM_FACT (y + y))))) (cos x)
   COS_ZERO                 cos 0 = 1
   EXP_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power x z / real_of_num (NUM_FACT z)))) y
   EXP_ADD                  !x:real. !y:real. exp (x + y) = exp x * exp y
+  EXP_CONVERGES            !x:real. converges (Sum (\y:num. Power x y / real_of_num (NUM_FACT y))) (exp x)
   EXP_CONVOLUTION          !x:real. !y:real. !z:num. Sum (\u:num. Power x u / real_of_num (NUM_FACT u) * (Power y (NUM_SUB z u) / real_of_num (NUM_FACT (NUM_SUB z u)))) (SUC z) = Power (x + y) z / real_of_num (NUM_FACT z)
   EXP_NEGATE               !x:real. exp x * exp (0 - x) = 1
   EXP_ONE_ABOVE_TWO        2 < exp 1
@@ -803,6 +815,7 @@ they have least appetite for working out how it is produced.
   MUL_INV_COMBINE          !x:real. !y:real. !z:real. !u:real. !v:real. !w:real. !x1:real. !y1:real. !z1:real. y * x1 = 1 ==> z * y1 = 1 ==> u * z1 = 1 ==> x * (y * z) = u ==> v * x1 * (w * y1) = x * (v * w) * z1
   SINH_ZERO                sinh 0 = 0
   SIN_ABSOLUTE             !x:real. ?y:real. converges (Sum (\z:num. abs (Power (0 - 1) z * (Power x (SUC (z + z)) / real_of_num (NUM_FACT (SUC (z + z))))))) y
+  SIN_CONVERGES            !x:real. converges (Sum (\y:num. Power (0 - 1) y * (Power x (SUC (y + y)) / real_of_num (NUM_FACT (SUC (y + y)))))) (sin x)
   SIN_COS_SQUARED          !x:real. sin x * sin x + cos x * cos x = 1
   SIN_ZERO                 sin 0 = 0
 

@@ -71,6 +71,7 @@ private[theories] object Trigonometric {
     series: Series,
     peano: Peano,
     coding: Coding,
+    exponentialDefinition: Kernel.Thm,
     sineDefinition: Kernel.Thm,
     cosineDefinition: Kernel.Thm,
     exponentialAbsolute: Kernel.Thm,
@@ -82,10 +83,22 @@ private[theories] object Trigonometric {
       cosineAbsolute <- absolutelyConvergent(pieces, cosineTerm, odd = false)
       sineAbsolute <- absolutelyConvergent(pieces, sineTerm, odd = true)
       squared <- pythagoras(pieces, cosineAbsolute, sineAbsolute)
+      exponentialValue <- toItsValue(
+        pieces,
+        "\\i:num. " + exponentialTerm("i"),
+        pieces.exponentialAbsolute,
+        x => Conv.unfold(pieces.exponentialDefinition, List(x)))
+      cosineValue <- toItsValue(
+        pieces, CosineTermsText, cosineAbsolute, respelled(pieces, pieces.cosineDefinition, _))
+      sineValue <- toItsValue(
+        pieces, SineTermsText, sineAbsolute, respelled(pieces, pieces.sineDefinition, _))
     } yield Map(
       Transcendental.CosineAbsolute -> cosineAbsolute,
       Transcendental.SineAbsolute -> sineAbsolute,
-      Transcendental.Pythagoras -> squared
+      Transcendental.Pythagoras -> squared,
+      Transcendental.ExponentialConverges -> exponentialValue,
+      Transcendental.CosineConverges -> cosineValue,
+      Transcendental.SineConverges -> sineValue
     )
 
   /* ======================================================================== small conversions */
@@ -947,6 +960,43 @@ private[theories] object Trigonometric {
       withoutA <- rules.existsElim(cosineConverges, a, withoutB)
       withoutQ <- rules.existsElim(sineMagnitudes, q, withoutA)
       result <- rules.existsElim(cosineMagnitudes, p, withoutQ).flatMap(rules.gen(x, _))
+    } yield result
+  }
+
+  /**
+   * `|- !x. converges (Sum terms) (f x)`, from the absolute convergence of `terms` and the
+   * definition of `f` as the limit of their partial sums.
+   *
+   * [[pythagoras]] opens the same two existentials and names the value inside its own derivation;
+   * this does it once per function and publishes the result, so the value of a series is a fact a
+   * caller can specialise rather than an argument each caller repeats.
+   */
+  private def toItsValue(
+    pieces: Pieces,
+    termsText: String,
+    absolute: Kernel.Thm,
+    definitionAt: Term => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = pieces.logic.rules
+    val x = Term.variable("x", values)
+    val p = Term.variable("P", values)
+    val a = Term.variable("A", values)
+    for {
+      terms <- Parser.term(pieces.theory, pieces.notation, termsText, Type.fun(numbers, values))
+      magnitudes <- rules.spec(x, absolute)
+      assumedP <- instanceAt(pieces, magnitudes, p).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      converging <- pieces.limit
+        .fact(Limit.Absolute)
+        .flatMap(rules.specAll(_, List(terms, p)))
+        .flatMap(opened)
+        .flatMap(rules.mp(_, assumedP))
+      assumedA <- instanceAt(pieces, converging, a).flatMap(t => LogicError.lift(Kernel.assume(t)))
+      definition <- definitionAt(x)
+      value <- valueOf(pieces, definition, terms, a, assumedA)
+      named <- Conv.sym(value).flatMap(Limit.rewriteWith(_, assumedA))
+      overA <- rules.existsElim(converging, a, named)
+      overP <- rules.existsElim(magnitudes, p, overA)
+      result <- rules.gen(x, overP)
     } yield result
   }
 

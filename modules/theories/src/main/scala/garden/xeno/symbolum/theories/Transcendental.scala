@@ -356,6 +356,29 @@ object Transcendental {
   val Pythagoras: String = "SIN_COS_SQUARED"
 
   /**
+   * `|- !x. converges (Sum (\i. x^i / i!)) (exp x)`
+   *
+   * The exponential's series converges, **to the exponential**, at every real. The definition says
+   * `exp x` is the limit of those partial sums and says nothing about whether they have one, so
+   * until this was published the value was reached only inside the derivations that needed it, by
+   * [[AbsolutelyConvergent]] and `Limit.CONVERGES_ABSOLUTE` opened in place each time. It is the
+   * first thing `Convergence` answers a series of this shape with.
+   */
+  val ExponentialConverges: String = "EXP_CONVERGES"
+
+  /**
+   * `|- !x. converges (Sum (\k. (0 - 1)^k * (x^(k + k) / (k + k)!))) (cos x)`
+   *
+   * In the additive spelling of the even index, for the reason [[CosineAbsolute]] gives: the
+   * definition writes `NUM_MUL 2 k`, and the crossing between the two is made once, inside
+   * `Trigonometric`, rather than by every caller.
+   */
+  val CosineConverges: String = "COS_CONVERGES"
+
+  /** `|- !x. converges (Sum (\k. (0 - 1)^k * (x^(SUC (k + k)) / (SUC (k + k))!))) (sin x)` */
+  val SineConverges: String = "SIN_CONVERGES"
+
+  /**
    * The dominating series for the exponential at one, written as a sum of two copies.
    *
    * `2 * Power (1/2) i` says the same thing and is the wrong shape: `SUM_ADD` splits a sum of two
@@ -416,7 +439,13 @@ object Transcendental {
     SineAbsolute ->
       ("!x:real. ?P:real. converges (Sum (\\k:num. abs (" + Trigonometric.sineTerm("k") +
         "))) P"),
-    Pythagoras -> "!x:real. sin x * sin x + cos x * cos x = 1"
+    Pythagoras -> "!x:real. sin x * sin x + cos x * cos x = 1",
+    ExponentialConverges ->
+      "!x:real. converges (Sum (\\i:num. Power x i / real_of_num (NUM_FACT i))) (exp x)",
+    CosineConverges ->
+      ("!x:real. converges (Sum (\\k:num. " + Trigonometric.cosineTerm("k") + ")) (cos x)"),
+    SineConverges ->
+      ("!x:real. converges (Sum (\\k:num. " + Trigonometric.sineTerm("k") + ")) (sin x)")
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)
@@ -564,7 +593,7 @@ object Transcendental {
       trigonometric <- Trigonometric.prove(
         Trigonometric.Pieces(
           logic, linarith, semiring, theory, notation, limit, series, peano, coding,
-          sineDefinition, cosineDefinition, absolute, convolution))
+          exponentialDefinition, sineDefinition, cosineDefinition, absolute, convolution))
     } yield new Transcendental(
       limit,
       series,
