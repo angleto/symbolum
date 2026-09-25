@@ -382,6 +382,23 @@ object Transcendental {
   val SineConverges: String = "SIN_CONVERGES"
 
   /**
+   * `|- !x y. cos (x + y) = cos x * cos y - sin x * sin y`
+   *
+   * [[Pythagoras]]'s argument at a second point: the convolution at `(x, y)` rather than at
+   * `(x, 0 - x)`, read by parity, with the two Cauchy products of the cosines and of the sines one
+   * index apart. It is what the derivatives of the two functions are made of.
+   */
+  val CosineAddition: String = "COS_ADD"
+
+  /**
+   * `|- !x y. sin (x + y) = sin x * cos y + cos x * sin y`
+   *
+   * The same convolution at an odd length, where the two places are the two mixed products and
+   * nothing is shifted.
+   */
+  val SineAddition: String = "SIN_ADD"
+
+  /**
    * The dominating series for the exponential at one, written as a sum of two copies.
    *
    * `2 * Power (1/2) i` says the same thing and is the wrong shape: `SUM_ADD` splits a sum of two
@@ -448,7 +465,9 @@ object Transcendental {
     CosineConverges ->
       ("!x:real. converges (Sum (\\k:num. " + Trigonometric.cosineTerm("k") + ")) (cos x)"),
     SineConverges ->
-      ("!x:real. converges (Sum (\\k:num. " + Trigonometric.sineTerm("k") + ")) (sin x)")
+      ("!x:real. converges (Sum (\\k:num. " + Trigonometric.sineTerm("k") + ")) (sin x)"),
+    CosineAddition -> "!x:real. !y:real. cos (x + y) = cos x * cos y - sin x * sin y",
+    SineAddition -> "!x:real. !y:real. sin (x + y) = sin x * cos y + cos x * sin y"
   )
 
   private val values: Type = TyApp(Real.TypeName, Nil)

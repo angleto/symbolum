@@ -79,6 +79,27 @@ object Logarithm {
    */
   val NearLine: String = "EXP_NEAR_LINE"
 
+  /**
+   * `|- !h. abs h <= 1 / 2 ==> !d. Sum (\z. abs (h^(2 + z) / (2 + z)!)) d <= h * h`
+   *
+   * The magnitudes of the exponential's terms from the third on, under the geometric series that
+   * [[NearLine]] puts them under, before any partial sum is read back. It is what the sine's and the
+   * cosine's estimates near zero are made of, their terms being those at the odd and the even places.
+   */
+  val TailBound: String = "EXP_TAIL_BOUND"
+
+  /**
+   * `|- !h. abs h <= 1 / 2 ==> abs (cos h - 1) <= h * h`
+   *
+   * The cosine's series after its first term has the exponential's terms at the even places from the
+   * second on, up to a sign, so its partial sums are under [[TailBound]]'s. It is what the
+   * derivatives of the sine and the cosine are made of, with [[SineNearLine]].
+   */
+  val CosineNearOne: String = "COS_NEAR_ONE"
+
+  /** `|- !h. abs h <= 1 / 2 ==> abs (sin h - h) <= h * h`, the same at the odd places. */
+  val SineNearLine: String = "SIN_NEAR_LINE"
+
   /** `|- !x. continuous exp x` */
   val Continuous: String = "EXP_CONTINUOUS"
 
@@ -115,6 +136,11 @@ object Logarithm {
     SmallAbove -> "!x:real. 0 < x ==> x <= 1 / 2 ==> exp x <= 1 + 2 * x",
     NearOne -> "!h:real. abs h <= 1 / 2 ==> abs (exp h - 1) <= 2 * abs h",
     NearLine -> "!h:real. abs h <= 1 / 2 ==> abs (exp h - 1 - h) <= h * h",
+    CosineNearOne -> "!h:real. abs h <= 1 / 2 ==> abs (cos h - 1) <= h * h",
+    SineNearLine -> "!h:real. abs h <= 1 / 2 ==> abs (sin h - h) <= h * h",
+    TailBound ->
+      ("!h:real. abs h <= 1 / 2 ==> !d:num. Sum (\\z:num. abs (Power h (SUC (SUC 0) + z) / " +
+        "real_of_num (NUM_FACT (SUC (SUC 0) + z)))) d <= h * h"),
     Continuous -> "!x:real. continuous exp x",
     StrictlyIncreasing -> "!a:real. !b:real. a < b ==> exp a < exp b",
     Injective -> "!a:real. !b:real. exp a = exp b ==> a = b",
@@ -227,7 +253,10 @@ object Logarithm {
       aboveLine <- exponentialAboveLine(steps)
       smallAbove <- exponentialSmallAbove(steps)
       nearOne <- exponentialNearOne(steps, aboveLine, smallAbove)
-      nearLine <- exponentialNearLine(steps)
+      lineAndTail <- exponentialNearLine(steps)
+      (nearLine, tailBound) = lineAndTail
+      cosineNear <- trigonometricNearZero(steps, tailBound, odd = false)
+      sineNear <- trigonometricNearZero(steps, tailBound, odd = true)
       continuous <- exponentialContinuous(steps, positive, nearOne)
       increasing <- exponentialIncreasing(steps, positive, aboveLine)
       injective <- exponentialInjective(steps, increasing)
@@ -243,6 +272,9 @@ object Logarithm {
         SmallAbove -> smallAbove,
         NearOne -> nearOne,
         NearLine -> nearLine,
+        TailBound -> tailBound,
+        CosineNearOne -> cosineNear,
+        SineNearLine -> sineNear,
         Continuous -> continuous,
         StrictlyIncreasing -> increasing,
         Injective -> injective,
@@ -552,7 +584,7 @@ object Logarithm {
    * computed as a numerator and a denominator walked separately and put back by congruence, since a
    * quotient walked whole leaves its denominator under `inv`, where the ring does not look.
    */
-  private def exponentialNearLine(steps: Steps): Either[LogicError, Kernel.Thm] = {
+  private def exponentialNearLine(steps: Steps): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
     import steps.*
     def sequence(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text, Type.fun(Numbers, Reals))
     val h = Term.variable("h", Reals)
@@ -667,6 +699,11 @@ object Logarithm {
       tailDown <- lemma("!SA:real B:real SM:real SH:real C:real T:real. -SA <= B ==> B <= SM ==> SM <= SH ==> SH <= 2 * C ==> C = T ==> -SA <= 2 * T")
         .flatMap(rules.specAll(_, List(sa, absSa, sm, sh, c, hh)))
         .flatMap(mp(_, Right(belowNeg), Right(absSum), Right(dominated), Right(shBound), Conv.trans(cIs, firstValue)))
+      // [[TailBound]], on the way: the magnitudes alone, before the partial sums are read back.
+      magnitudesBelow <- lemma("!SM:real SH:real C:real h:real. SM <= SH ==> SH <= 2 * C ==> C = h * h / 2 ==> SM <= h * h")
+        .flatMap(rules.specAll(_, List(sm, sh, c, h)))
+        .flatMap(mp(_, Right(dominated), Right(shBound), Conv.trans(cIs, firstValue)))
+      tailBound <- rules.gen(d, magnitudesBelow).flatMap(rules.disch(hypothesis, _)).flatMap(rules.gen(h, _))
       upper <- lemma("!SA:real Sv:real S2:real h:real. SA = Sv - S2 ==> S2 = 1 + h ==> SA <= 2 * (h * h / 2) ==> Sv <= 1 + h + h * h")
         .flatMap(rules.specAll(_, List(sa, sv, s2, h))).flatMap(mp(_, Right(reindexed), Right(twoTerms), Right(tailUp)))
       lower <- lemma("!SA:real Sv:real S2:real h:real. SA = Sv - S2 ==> S2 = 1 + h ==> -SA <= 2 * (h * h / 2) ==> 1 + h - h * h <= Sv")
@@ -710,7 +747,7 @@ object Logarithm {
           .flatMap(mp(_, Right(eq), Right(atLeast))))
       estimate <- rules.disjElim(cases, itself, negated)
       result <- rules.disch(hypothesis, estimate).flatMap(rules.gen(h, _))
-    } yield result
+    } yield (result, tailBound)
   }
 
   /** `|- text = value`, by walking `text` with `recurrences` and closing the gap with `Ring`. */
@@ -1165,6 +1202,233 @@ object Logarithm {
         .flatMap(rules.disch(bStatement, _))
         .flatMap(rules.disch(aStatement, _))
         .flatMap(rules.genAll(_, List(a, b)))
+    } yield result
+  }
+
+  /* ========================================================= the sine and the cosine near zero */
+
+  /**
+   * [[CosineNearOne]] and, with `odd`, [[SineNearLine]].
+   *
+   * The series after its first term is `Series.SUM_SHIFT`'s shifted sum. Its magnitude is at most the
+   * sum of its terms' magnitudes, each of which is at most the exponential's term at the same index,
+   * because `abs ((0 - 1)^k)` is at most `1^k`. Those indices are the even or the odd places from
+   * the third term of the exponential on, and `Series.SUM_EVEN_ODD` puts that sum under the whole of
+   * [[TailBound]]'s at twice the length, the other half being a sum of magnitudes. So every partial
+   * sum is within `h * h` of the first term, `1` or `h`, and `Limit.CONVERGES_LE` and
+   * `CONVERGES_GE` carry that to the value.
+   */
+  private def trigonometricNearZero(steps: Steps, tailBound: Kernel.Thm, odd: Boolean): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val sequences = Type.fun(Numbers, Reals)
+    def sequence(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text, sequences)
+    val h = Term.variable("h", Reals)
+    val n = Term.variable("n", Numbers)
+    val i = Term.variable("i", Numbers)
+    val k = Term.variable("k", Numbers)
+    val termOf: String => String = index =>
+      (if (odd) Trigonometric.sineTerm(index) else Trigonometric.cosineTerm(index)).replace("(x:real)", "(h:real)")
+    val exponentOf: String => String = index =>
+      if (odd) s"SUC (NUM_ADD ($index) ($index))" else s"NUM_ADD ($index) ($index)"
+    val first = if (odd) "h:real" else "1:real"
+    val function = if (odd) "sin" else "cos"
+    def sumOf(term: Term): Either[LogicError, Term] = term match {
+      case App(App(_, summand), _) => Right(summand)
+      case other                   => Left(NotOfForm("a partial sum", other))
+    }
+    def sides(theorem: Kernel.Thm): Either[LogicError, (Term, Term)] =
+      Term.destEq(theorem.conclusion).toRight(NotOfForm("an equation", theorem.conclusion))
+
+    for {
+      hypothesis <- proposition("abs (h:real) <= 1 / 2")
+      small <- LogicError.lift(Kernel.assume(hypothesis))
+      recurrences <- Vector(
+        series.fact(Series.AtSuccessor), series.fact(Series.AtZero),
+        series.fact(Series.PowerAtZero), series.fact(Series.PowerAtSuccessor),
+        coding.fact(Coding.FactorialAtZero), coding.fact(Coding.FactorialAtSuccessor),
+        peano.fact(Peano.MulAtZero), peano.fact(Peano.MulAtSuccessor),
+        peano.fact(Peano.AddAtZero), peano.fact(Peano.AddAtSuccessor), peano.fact(Peano.ZeroPlus),
+        peano.fact(Peano.EmbedsSuccessor), peano.fact(Peano.EmbedsZero)
+      ).foldRight[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+        case (next, rest) => next.flatMap(theorem => rest.map(theorem +: _))
+      }.flatMap(Rewrite.Rule.all(logic, _))
+      successorRules <- Vector(peano.fact(Peano.AddAtSuccessor), peano.fact(Peano.SuccessorPlus), peano.fact(Peano.ZeroPlus))
+        .foldRight[Either[LogicError, Vector[Kernel.Thm]]](Right(Vector.empty)) {
+          case (next, rest) => next.flatMap(theorem => rest.map(theorem +: _))
+        }.flatMap(Rewrite.Rule.all(logic, _))
+
+      /* ------------------------------------------------ the series after its first term */
+      terms <- sequence("\\k:num. " + termOf("k"))
+      shift <- series.fact(Series.Shift).flatMap(rules.specAll(_, List(terms, n))).flatMap(opened)
+      shiftedSum <- sides(shift).map(_._1)
+      shifted <- sumOf(shiftedSum)
+      firstTerm <- sides(shift).flatMap { case (_, right) =>
+        right match {
+          case App(App(_, _), t0) => Right(t0)
+          case other              => Left(NotOfForm("a difference", other))
+        }
+      }
+      firstWalked <- Rewrite.rewrite(recurrences, firstTerm)
+      firstValue <- real(first)
+      firstCloses <- rightOf(firstWalked).flatMap(w => LogicError.lift(Term.eq(w, firstValue))).flatMap(ring.prove)
+      firstIs <- Conv.trans(firstWalked, firstCloses)
+
+      /* ------------------------------------------------ under the magnitudes, then under the exponential's */
+      ofMagnitudes <- limit.fact(Limit.SumOfMagnitudes).flatMap(rules.specAll(_, List(shifted, n))).flatMap(opened)
+      magnitudesSum <- ofMagnitudes.conclusion match {
+        case App(App(_, _), right) => Right(right)
+        case other                 => Left(NotOfForm("an inequality", other))
+      }
+      magnitudes <- sumOf(magnitudesSum)
+      exponentials <- sequence(s"\\k:num. abs (Power (h:real) (${exponentOf("SUC k")}) / real_of_num (NUM_FACT (${exponentOf("SUC k")})))")
+      minusOne <- real("(0:real) - 1")
+      one <- real("1:real")
+      oneUp <- at(lemma("!m:real. m = -((0:real) - 1) ==> m <= 1"), "abs ((0:real) - 1)")
+        .flatMap(mp(_, at(magnitude.fact(Magnitude.OfNonPositive), "(0:real) - 1").flatMap(mp(_, lemma("(0:real) - 1 <= 0")))))
+      pointwise <- for {
+        atI <- LogicError.lift(Term.app(magnitudes, i)).flatMap(Conv.betaNormalise).flatMap(rightOf)
+        product <- atI match {
+          case App(_, inner) => Right(inner)
+          case other         => Left(NotOfForm("a magnitude", other))
+        }
+        factors <- product match {
+          case App(App(_, sign), exponential) => Right((sign, exponential))
+          case other                         => Left(NotOfForm("a product", other))
+        }
+        split <- magnitude.fact(Magnitude.Multiplicative).flatMap(rules.specAll(_, List(factors._1, factors._2)))
+        successorI <- number("SUC (i:num)")
+        signBelow <- limit.fact(Limit.PowerOfAMagnitude).flatMap(rules.specAll(_, List(minusOne, one, successorI)))
+          .flatMap(rules.mp(_, oneUp))
+        ones <- series.fact(Series.PowerOfOne).flatMap(rules.spec(successorI, _))
+        exponentialNonNegative <- magnitude.fact(Magnitude.AbsNonNegative).flatMap(rules.spec(factors._2, _))
+        signMagnitude <- signBelow.conclusion match {
+          case App(App(_, left), right) => Right((left, right))
+          case other                    => Left(NotOfForm("an inequality", other))
+        }
+        absolute <- Parser.term(theory, notation, "abs", Type.fun(Reals, Reals))
+        exponentialMagnitude <- LogicError.lift(Term.app(absolute, factors._2))
+        bounded <- lemma("!M:real P:real E:real Q:real. M = P * E ==> P <= Q ==> Q = 1 ==> 0 <= E ==> M <= E")
+          .flatMap(rules.specAll(_, List(atI, signMagnitude._1, exponentialMagnitude, signMagnitude._2)))
+          .flatMap(mp(_, Right(split), Right(signBelow), Right(ones), Right(exponentialNonNegative)))
+        result <- rules.gen(i, bounded)
+      } yield result
+      dominated <- series.fact(Series.Monotone).flatMap(rules.specAll(_, List(magnitudes, exponentials))).flatMap(opened)
+        .flatMap(rules.mp(_, pointwise)).flatMap(rules.spec(n, _))
+
+      /* ------------------------------------------------ those are one parity of the exponential's tail */
+      tail <- rules.spec(h, tailBound).flatMap(rules.mp(_, small))
+      tailSum <- tail.conclusion match {
+        case App(_, predicate) => LogicError.lift(Term.app(predicate, n)).flatMap(Conv.betaRoot).flatMap(rightOf).flatMap {
+            case App(App(_, sum), _) => sumOf(sum)
+            case other               => Left(NotOfForm("an inequality", other))
+          }
+        case other => Left(NotOfForm("a universal quantification", other))
+      }
+      doubled <- number("NUM_ADD (n:num) (n:num)")
+      whole <- rules.spec(doubled, tail)
+      halves <- series.fact(Series.EvenOdd).flatMap(rules.specAll(_, List(tailSum, n))).flatMap(opened)
+      halfSums <- sides(halves).flatMap { case (_, right) =>
+        right match {
+          case App(App(_, evens), odds) => Right((evens, odds))
+          case other                    => Left(NotOfForm("a sum of two sums", other))
+        }
+      }
+      (evensSum, oddsSum) = halfSums
+      mine = if (odd) oddsSum else evensSum
+      other = if (odd) evensSum else oddsSum
+      mineTerms <- sumOf(mine)
+      otherTerms <- sumOf(other)
+      reindexed <- for {
+        left <- LogicError.lift(Term.app(exponentials, k)).flatMap(Conv.betaNormalise).flatMap(rightOf)
+        right <- LogicError.lift(Term.app(mineTerms, k)).flatMap(Conv.betaNormalise).flatMap(rightOf)
+        leftWalked <- Rewrite.rewrite(successorRules, left)
+        rightWalked <- Rewrite.rewrite(successorRules, right)
+        joined <- Conv.sym(rightWalked).flatMap(Conv.trans(leftWalked, _))
+        result <- rules.gen(k, joined)
+      } yield result
+      sameSum <- series.fact(Series.Congruence).flatMap(rules.specAll(_, List(exponentials, mineTerms))).flatMap(opened)
+        .flatMap(rules.mp(_, reindexed)).flatMap(rules.spec(n, _))
+      otherNonNegative <- series.fact(Series.NonNegative).flatMap(rules.spec(otherTerms, _)).flatMap(opened)
+        .flatMap(theorem => for {
+          everyIndex <- LogicError.lift(Term.app(otherTerms, i)).flatMap(Conv.betaNormalise).flatMap(rightOf).flatMap {
+            case App(_, inner) => magnitude.fact(Magnitude.AbsNonNegative).flatMap(rules.spec(inner, _))
+            case other         => Left(NotOfForm("a magnitude", other))
+          }.flatMap(rules.gen(i, _))
+          result <- rules.mp(theorem, everyIndex).flatMap(rules.spec(n, _))
+        } yield result)
+
+      bound <- lemma("!A:real M:real X:real Y:real W:real O:real H:real. " +
+          "A <= M ==> M <= X ==> X = Y ==> " + (if (odd) "W = O + Y" else "W = Y + O") + " ==> 0 <= O ==> W <= H ==> A <= H")
+        .flatMap(theorem => ofMagnitudes.conclusion match {
+          case App(App(_, absolute), _) =>
+            for {
+              doubledSum <- sides(halves).map(_._1)
+              hh <- real("h:real * h")
+              dominating <- dominated.conclusion match {
+                case App(App(_, _), right) => Right(right)
+                case other                 => Left(NotOfForm("an inequality", other))
+              }
+              result <- rules.specAll(theorem, List(absolute, magnitudesSum, dominating, mine, doubledSum, other, hh))
+            } yield result
+          case other => Left(NotOfForm("an inequality", other))
+        })
+        .flatMap(mp(_, Right(ofMagnitudes), Right(dominated), Right(sameSum), Right(halves), Right(otherNonNegative), Right(whole)))
+
+      /* ------------------------------------------------ every partial sum, and the value */
+      partial <- sides(shift).flatMap { case (_, right) =>
+        right match {
+          case App(App(_, long), _) => Right(long)
+          case other                => Left(NotOfForm("a difference", other))
+        }
+      }
+      upperStep <- lemma("!S:real L:real F:real V:real A:real H:real. S = L - F ==> F = V ==> A <= H ==> S <= A ==> L <= V + H")
+      lowerStep <- lemma("!S:real L:real F:real V:real A:real H:real. S = L - F ==> F = V ==> A <= H ==> -S <= A ==> V - H <= L")
+      absolute <- ofMagnitudes.conclusion match {
+        case App(App(_, absolute), _) => Right(absolute)
+        case other                    => Left(NotOfForm("an inequality", other))
+      }
+      hh <- real("h:real * h")
+      plusA <- magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(shiftedSum, _))
+      minusA <- magnitude.fact(Magnitude.AbsAboveNegation).flatMap(rules.spec(shiftedSum, _))
+      upper <- rules.specAll(upperStep, List(shiftedSum, partial, firstTerm, firstValue, absolute, hh))
+        .flatMap(mp(_, Right(shift), Right(firstIs), Right(bound), Right(plusA)))
+      lower <- rules.specAll(lowerStep, List(shiftedSum, partial, firstTerm, firstValue, absolute, hh))
+        .flatMap(mp(_, Right(shift), Right(firstIs), Right(bound), Right(minusA)))
+
+      converging <- transcendental.fact(if (odd) Transcendental.SineConverges else Transcendental.CosineConverges)
+        .flatMap(rules.spec(h, _))
+      partials <- converging.conclusion match {
+        case App(App(_, sums), _) => Right(sums)
+        case other                => Left(NotOfForm("a convergence", other))
+      }
+      valueTerm <- real(s"$function (h:real)")
+      shiftedConverging <- limit.fact(Limit.Shifted).flatMap(rules.specAll(_, List(partials, valueTerm))).flatMap(opened)
+        .flatMap(rules.mp(_, converging))
+      shiftedSequence <- shiftedConverging.conclusion match {
+        case App(App(_, sequence), _) => Right(sequence)
+        case other                    => Left(NotOfForm("a convergence", other))
+      }
+      zero <- number("0:num")
+      guard <- proposition("NUM_LE 0 (n:num)")
+      ceiling <- real(s"$first + h:real * h")
+      floor <- real(s"$first - h:real * h")
+      atMost <- limit.fact(Limit.BelowBound).flatMap(rules.specAll(_, List(shiftedSequence, valueTerm, ceiling, zero))).flatMap(opened)
+        .flatMap(rules.mp(_, shiftedConverging))
+        .flatMap(theorem => rules.disch(guard, upper).flatMap(rules.gen(n, _)).flatMap(rules.mp(theorem, _)))
+      atLeast <- limit.fact(Limit.AboveBound).flatMap(rules.specAll(_, List(shiftedSequence, valueTerm, floor, zero))).flatMap(opened)
+        .flatMap(rules.mp(_, shiftedConverging))
+        .flatMap(theorem => rules.disch(guard, lower).flatMap(rules.gen(n, _)).flatMap(rules.mp(theorem, _)))
+
+      difference = s"$function (h:real) - $first"
+      cases <- at(magnitude.fact(Magnitude.AbsCases), difference)
+      itself <- assume(s"abs ($difference) = $difference").flatMap(eq =>
+        at(lemma("!A:real C:real V:real H:real. A = C - V ==> C <= V + H ==> A <= H"), s"abs ($difference)", s"$function (h:real)", first, "h:real * h")
+          .flatMap(mp(_, Right(eq), Right(atMost))))
+      negated <- assume(s"abs ($difference) = -($difference)").flatMap(eq =>
+        at(lemma("!A:real C:real V:real H:real. A = -(C - V) ==> V - H <= C ==> A <= H"), s"abs ($difference)", s"$function (h:real)", first, "h:real * h")
+          .flatMap(mp(_, Right(eq), Right(atLeast))))
+      estimate <- rules.disjElim(cases, itself, negated)
+      result <- rules.disch(hypothesis, estimate).flatMap(rules.gen(h, _))
     } yield result
   }
 }

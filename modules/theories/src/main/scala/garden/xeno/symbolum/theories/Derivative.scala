@@ -210,6 +210,18 @@ object Derivative {
   val Exponential: String = "DERIVATIVE_EXP"
 
   /**
+   * `|- !x. derivative sin x (cos x)`
+   *
+   * `Transcendental.SIN_ADD` turns the error at `x + h` into `sin x * (cos h - 1) + cos x * (sin h - h)`,
+   * `Logarithm.COS_NEAR_ONE` and `SIN_NEAR_LINE` put both brackets under `h * h`, and
+   * `SIN_COS_SQUARED` keeps both coefficients at most one, so the error is at most `2 * h * h`.
+   */
+  val Sine: String = "DERIVATIVE_SIN"
+
+  /** `|- !x. derivative cos x (0 - sin x)`, the same through `COS_ADD`. */
+  val Cosine: String = "DERIVATIVE_COS"
+
+  /**
    * `|- !f a b. (!x. a <= x /\ x <= b ==> continuous f x) ==> (!x. a < x /\ x < b ==> derivative f x 0) ==>
    * !x. a <= x /\ x <= b ==> f x = f a`
    *
@@ -263,6 +275,8 @@ object Derivative {
       ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. derivative g x n ==> derivative f (g x) m ==> " +
         "derivative (\\y:real. f (g y)) x (m * n)"),
     Exponential -> "!x:real. derivative exp x (exp x)",
+    Sine -> "!x:real. derivative sin x (cos x)",
+    Cosine -> "!x:real. derivative cos x (0 - sin x)",
     Flat ->
       ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "(!x:real. a < x /\\ x < b ==> derivative f x 0) ==> !x:real. a <= x /\\ x <= b ==> f x = f a"),
@@ -325,6 +339,8 @@ object Derivative {
       chainRule <- chainRuleFact(steps, reals, magnitude, continuity, continuous)
       nearLine <- logarithm.fact(Logarithm.NearLine)
       exponential <- exponentialSlope(steps, reals, magnitude, transcendental, logarithm, nearLine)
+      sineSlope <- trigonometricSlope(steps, magnitude, transcendental, logarithm, cosine = false)
+      cosineSlope <- trigonometricSlope(steps, magnitude, transcendental, logarithm, cosine = true)
       flat <- flatSlope(steps, magnitude.order, meanValue, unique)
       nonDecreasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = false)
       increasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = true)
@@ -343,6 +359,8 @@ object Derivative {
         ProductRule -> productRuleFact,
         ChainRule -> chainRule,
         Exponential -> exponential,
+        Sine -> sineSlope,
+        Cosine -> cosineSlope,
         Flat -> flat,
         NonDecreasing -> nonDecreasing,
         Increasing -> increasing
@@ -1771,6 +1789,124 @@ object Derivative {
       exp <- Parser.term(theory, notation, "exp", Functions)
       value <- real("exp (x:real)")
       result <- foldDerivative(steps, exp, x, value, statement)
+      closed <- rules.gen(x, result)
+    } yield closed
+  }
+
+  /* ============================================================ the sine's and the cosine's slopes */
+
+  /**
+   * [[Sine]] and, with `cosine`, [[Cosine]]. The error at `x + h` is `A * (cos h - 1) + B * (sin h - h)`
+   * by the addition formula, with `(A, B)` being `(sin x, cos x)` or `(cos x, 0 - sin x)`. Each of
+   * `A` and `B` is at most one in magnitude, because its square is at most `sin x * sin x + cos x *
+   * cos x`, which is one; each bracket is at most `h * h` inside `abs h <= 1 / 2`. So the error is at
+   * most `2 * abs h * abs h`, which is under `e * abs h` once `abs h` is under `e / 2`.
+   */
+  private def trigonometricSlope(
+    steps: Continuity.Steps,
+    magnitude: Magnitude,
+    transcendental: Transcendental,
+    logarithm: Logarithm,
+    cosine: Boolean
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val h = Term.variable("h", Reals)
+    val function = if (cosine) "cos" else "sin"
+    val slopeText = if (cosine) "0 - sin (x:real)" else "cos (x:real)"
+    val (first, second) = if (cosine) ("cos (x:real)", "0 - sin (x:real)") else ("sin (x:real)", "cos (x:real)")
+    val error = s"$function (x:real + h) - $function x - ($slopeText) * h"
+    val nearOne = "cos (h:real) - 1"
+    val nearLine = "sin (h:real) - h"
+    val regroupText =
+      if (cosine) "!C:real c:real s:real C1:real S1:real h:real. C = c * C1 - s * S1 ==> C - c - (0 - s) * h = c * (C1 - 1) + (0 - s) * (S1 - h)"
+      else "!S:real s:real c:real C1:real S1:real h:real. S = s * C1 + c * S1 ==> S - s - c * h = s * (C1 - 1) + c * (S1 - h)"
+    val regroupArguments =
+      if (cosine) List(s"cos (x:real + h)", "cos (x:real)", "sin (x:real)", "cos (h:real)", "sin (h:real)", "h:real")
+      else List(s"sin (x:real + h)", "sin (x:real)", "cos (x:real)", "cos (h:real)", "sin (h:real)", "h:real")
+
+    /** `|- abs t <= 1`, from its square being at most one. */
+    def atMostOne(t: String, square: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        squareNonNeg <- at(lemma("!t:real. 0 <= t * t"), t)
+        itself <- at(magnitude.fact(Magnitude.OfNonNegative), s"($t) * ($t)").flatMap(mp(_, Right(squareNonNeg)))
+        split <- at(magnitude.fact(Magnitude.Multiplicative), t, t)
+        product <- Conv.sym(split).flatMap(Conv.trans(_, itself))
+        nonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), t)
+        result <- at(lemma("!A:real T:real. A * A = T ==> T <= 1 ==> 0 <= A ==> A <= 1"), s"abs ($t)", s"($t) * ($t)")
+          .flatMap(mp(_, Right(product), Right(square), Right(nonNeg)))
+      } yield result
+
+    for {
+      positive <- proposition("0 < e:real")
+      ePositive <- LogicError.lift(Kernel.assume(positive))
+      halfPositive <- lemma("(0:real) < 1 / 2")
+      halfE <- at(lemma("!e:real. 0 < e ==> 0 < e / 2"), "e:real").flatMap(mp(_, Right(ePositive)))
+      radius = "min (1 / 2) (e:real / 2)"
+      radiusPositive <- Continuity.minimumOf(steps, magnitude, "1 / 2", "e:real / 2", halfPositive, halfE)
+
+      near <- proposition(s"0 < abs (h:real) /\\ abs h < $radius")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      hPositive <- rules.conjElim1(assumedNear)
+      hSmall <- rules.conjElim2(assumedNear)
+      belowHalf <- at(magnitude.fact(Magnitude.MinBelowLeft), "1 / 2", "e:real / 2")
+      hHalf <- at(lemma("!A:real w:real. A < w ==> w <= 1 / 2 ==> A <= 1 / 2"), "abs (h:real)", radius)
+        .flatMap(mp(_, Right(hSmall), Right(belowHalf)))
+      hBelowE <- at(magnitude.fact(Magnitude.MinBelowRight), "1 / 2", "e:real / 2")
+        .flatMap(b => at(lemma(Through), "abs (h:real)", radius, "e:real / 2").flatMap(mp(_, Right(hSmall), Right(b))))
+
+      /* ------------------------------------------ the error, split by the addition formula */
+      addition <- at(transcendental.fact(if (cosine) Transcendental.CosineAddition else Transcendental.SineAddition), "x:real", "h:real")
+      regrouped <- at(lemma(regroupText), regroupArguments*).flatMap(mp(_, Right(addition)))
+      absFn <- Parser.term(theory, notation, "abs", Functions)
+      sameAbs <- Conv.apTerm(absFn, regrouped)
+      triangle <- at(magnitude.fact(Magnitude.Triangle), s"($first) * ($nearOne)", s"($second) * ($nearLine)")
+      firstSplit <- at(magnitude.fact(Magnitude.Multiplicative), first, nearOne)
+      secondSplit <- at(magnitude.fact(Magnitude.Multiplicative), second, nearLine)
+
+      /* ------------------------------------------ the coefficients, and the brackets */
+      pythagoras <- at(transcendental.fact(Transcendental.Pythagoras), "x:real")
+      firstSquare <- at(lemma(s"!s:real c:real. s * s + c * c = 1 ==> 0 <= c * c ==> 0 <= s * s ==> " +
+          (if (cosine) "c * c <= 1" else "s * s <= 1")), "sin (x:real)", "cos (x:real)")
+        .flatMap(mp(_, Right(pythagoras), at(lemma("!t:real. 0 <= t * t"), "cos (x:real)"), at(lemma("!t:real. 0 <= t * t"), "sin (x:real)")))
+      secondSquare <- at(lemma(s"!s:real c:real. s * s + c * c = 1 ==> 0 <= c * c ==> 0 <= s * s ==> " +
+          (if (cosine) "(0 - s) * (0 - s) <= 1" else "c * c <= 1")), "sin (x:real)", "cos (x:real)")
+        .flatMap(mp(_, Right(pythagoras), at(lemma("!t:real. 0 <= t * t"), "cos (x:real)"), at(lemma("!t:real. 0 <= t * t"), "sin (x:real)")))
+      firstAtMost <- atMostOne(first, firstSquare)
+      secondAtMost <- atMostOne(second, secondSquare)
+      cosineNear <- logarithm.fact(Logarithm.CosineNearOne).flatMap(rules.spec(h, _)).flatMap(rules.mp(_, hHalf))
+      sineNear <- logarithm.fact(Logarithm.SineNearLine).flatMap(rules.spec(h, _)).flatMap(rules.mp(_, hHalf))
+      squareIs <- at(magnitude.fact(Magnitude.OfNonNegative), "h:real * h")
+        .flatMap(mp(_, at(lemma("!h:real. 0 <= h * h"), "h:real")))
+      squareSplit <- at(magnitude.fact(Magnitude.Multiplicative), "h:real", "h:real")
+      squareAbs <- Conv.sym(squareIs).flatMap(Conv.trans(_, squareSplit))
+      scale = "!A:real X:real Q:real S:real. 0 <= X ==> A <= 1 ==> X <= S ==> S = Q ==> A * X <= Q"
+      firstPart <- at(lemma(scale), s"abs ($first)", s"abs ($nearOne)", "abs (h:real) * abs h", "h:real * h")
+        .flatMap(mp(_, at(magnitude.fact(Magnitude.AbsNonNegative), nearOne), Right(firstAtMost), Right(cosineNear), Right(squareAbs)))
+      secondPart <- at(lemma(scale), s"abs ($second)", s"abs ($nearLine)", "abs (h:real) * abs h", "h:real * h")
+        .flatMap(mp(_, at(magnitude.fact(Magnitude.AbsNonNegative), nearLine), Right(secondAtMost), Right(sineNear), Right(squareAbs)))
+
+      /* ------------------------------------------ at most twice the square, under e times abs h */
+      sum = s"($first) * ($nearOne) + ($second) * ($nearLine)"
+      twice <- at(lemma("!R:real S:real P:real Q:real A:real B:real H:real. R = S ==> S <= P + Q ==> " +
+          "P = A ==> Q = B ==> A <= H ==> B <= H ==> R <= 2 * H"),
+          s"abs ($error)", s"abs ($sum)", s"abs (($first) * ($nearOne))", s"abs (($second) * ($nearLine))",
+          s"abs ($first) * abs ($nearOne)", s"abs ($second) * abs ($nearLine)", "abs (h:real) * abs h")
+        .flatMap(mp(_, Right(sameAbs), Right(triangle), Right(firstSplit), Right(secondSplit), Right(firstPart), Right(secondPart)))
+      within <- at(lemma("!R:real H:real e:real. R <= 2 * (H * H) ==> 0 < H ==> H < e / 2 ==> R < e * H"),
+          s"abs ($error)", "abs (h:real)", "e:real")
+        .flatMap(mp(_, Right(twice), Right(hPositive), Right(hBelowE)))
+
+      everyH <- rules.disch(near, within).flatMap(rules.gen(h, _))
+      both <- rules.conjIntro(radiusPositive, everyH)
+      radiusTerm <- real(radius)
+      witnessed <- existential(s"?d:real. 0 < d /\\ (!h:real. 0 < abs h /\\ abs h < d ==> abs ($error) < e:real * abs h)")
+        .flatMap(rules.existsIntro(_, radiusTerm, both))
+      statement <- rules.disch(positive, witnessed).flatMap(rules.gen(e, _))
+      f <- Parser.term(theory, notation, function, Functions)
+      value <- real(slopeText)
+      result <- foldDerivative(steps, f, x, value, statement)
       closed <- rules.gen(x, result)
     } yield closed
   }

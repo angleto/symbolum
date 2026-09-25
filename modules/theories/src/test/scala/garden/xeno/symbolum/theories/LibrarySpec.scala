@@ -701,8 +701,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `Integral` under nine names, none shared. `CLAUDE.md`'s figures move by **nine** and
     // **nine**: every one binds two or more leading quantifiers, and every one binds two functions
     // or two reals among them. Tip plus this branch's delta.
-    library.entries.size shouldBe 739
-    library.names.distinct.size shouldBe 736
+    // 746 and 743 with the sine's and the cosine's derivatives, the same day, derived before the
+    // run: seven facts under seven names, none shared, two in `Transcendental`, three in
+    // `Logarithm` and two in `Derivative`. `CLAUDE.md`'s figures move by **two** and **two**: the
+    // two addition formulas bind `x` and `y`, and the other five bind one leading quantifier each.
+    library.entries.size shouldBe 746
+    library.names.distinct.size shouldBe 743
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

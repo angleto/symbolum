@@ -92,7 +92,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
-        if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential) ++ onInterval).contains(name)) {
+        if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine) ++
+          onInterval).contains(name)) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
@@ -112,6 +113,52 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     spent should contain(completeness)
     val route = Set(nearLine.conclusion, force(chain.transcendental.fact(Transcendental.Addition)).conclusion)
     Derivation.restingOn(fact(Derivative.Exponential), route) shouldBe route
+  }
+
+  it should "price the sine's and the cosine's slopes at what their estimates cost, through the addition formulas" in {
+    // Measured on 2026-09-25 before it was written here: the two slopes spend what `COS_NEAR_ONE`
+    // spends, which is a series and so the supremum and the naturals. The route is the design: the
+    // addition formula splits the error, the two estimates bound its brackets and the square keeps
+    // its coefficients at most one.
+    val nearOne = force(chain.logarithm.fact(Logarithm.CosineNearOne))
+    val nearLine = force(chain.logarithm.fact(Logarithm.SineNearLine))
+    val squared = force(chain.transcendental.fact(Transcendental.Pythagoras))
+    for ((name, addition) <- List(Derivative.Sine -> Transcendental.SineAddition, Derivative.Cosine -> Transcendental.CosineAddition))
+      withClue(name) {
+        val spent = Derivation.axiomsOf(fact(name))
+        spent shouldBe Derivation.axiomsOf(nearOne)
+        spent should contain(completeness)
+        val route = Set(force(chain.transcendental.fact(addition)).conclusion, nearOne.conclusion, nearLine.conclusion, squared.conclusion)
+        Derivation.restingOn(fact(name), route) shouldBe route
+      }
+  }
+
+  it should "refuse the sine a slope of zero at zero and the cosine a slope of one, by uniqueness" in {
+    // Uniqueness turns a second slope into an equation with `cos 0` or `sin 0`, and `COS_ZERO` and
+    // `SIN_ZERO` contradict it: the published slopes are the only ones.
+    val zero = real("0:real")
+    val atZero = Map(
+      Derivative.Sine -> force(chain.transcendental.fact(Transcendental.CosineAtZero)),
+      Derivative.Cosine -> force(chain.transcendental.fact(Transcendental.SineAtZero)))
+    for ((name, function, wrong, contradiction) <- List(
+        (Derivative.Sine, "sin", "0:real", "!c:real. c = 0 ==> c = 1 ==> F"),
+        (Derivative.Cosine, "cos", "1:real", "!s:real. 0 - s = 1 ==> s = 0 ==> F"))) withClue(name) {
+      val f = force(derivative.term(function, functions))
+      val claim = proposition(s"derivative $function 0 $wrong")
+      val assumed = force(LogicError.lift(Kernel.assume(claim)))
+      val own = force(rules.spec(zero, fact(name)))
+      val slope = own.conclusion match {
+        case App(_, argument) => argument
+        case other            => fail(s"not a derivative: $other")
+      }
+      val same = force(rules.specAll(fact(Derivative.Unique), List(f, zero, slope, real(wrong)))
+        .flatMap(rules.mp(_, own)).flatMap(rules.mp(_, assumed)))
+      val value = force(Term.destEq(atZero(name).conclusion).map(_._1).toRight(NotOfForm("an equation", atZero(name).conclusion)))
+      val absurd = force(rules.specAll(lemma(contradiction), List(value))
+        .flatMap(rules.mp(_, same)).flatMap(rules.mp(_, atZero(name))))
+      val refused = force(rules.notIntro(claim, absurd))
+      refused.hypotheses shouldBe empty
+    }
   }
 
   it should "reach Rolle's theorem through the extreme value theorem and the interior lemma" in {

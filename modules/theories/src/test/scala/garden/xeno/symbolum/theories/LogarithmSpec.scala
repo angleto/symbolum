@@ -173,6 +173,27 @@ class LogarithmSpec extends AnyFlatSpec with Matchers {
     refute(unconditional, absurd)
   }
 
+  it should "carry the sign of the addition formula, which the sine's estimate refutes at one half" in {
+    // `COS_ADD` with a plus in place of the minus would make `sin (1/2) * sin (1/2)` zero, since the
+    // two formulas agree on `cos (1/2 + 1/2)`; `SIN_NEAR_LINE` puts `sin (1/2)` at least a quarter.
+    // So the estimate has content, and the sign in the published formula is load-bearing.
+    val plus = proposition("!x:real. !y:real. cos (x + y) = cos x * cos y + sin x * sin y")
+    val assumed = force(LogicError.lift(Kernel.assume(plus)))
+    val half = real("1 / 2")
+    val wrong = force(rules.specAll(assumed, List(half, half)))
+    val right = force(chain.transcendental.fact(Transcendental.CosineAddition).flatMap(rules.specAll(_, List(half, half))))
+    val near = mp(force(rules.spec(half, fact(Logarithm.SineNearLine))), lemma("abs ((1:real) / 2) <= 1 / 2"))
+    val below = force(chain.limit.magnitude.fact(Magnitude.AbsAboveNegation).flatMap(rules.spec(real("sin (1 / 2) - 1 / 2"), _)))
+    val quarter = mp(force(rules.specAll(
+      lemma("!s:real A:real. -(s - 1 / 2) <= A ==> A <= 1 / 2 * (1 / 2) ==> 1 / 4 <= s"),
+      List(real("sin (1 / 2)"), real("abs (sin (1 / 2) - 1 / 2)")))), below, near)
+    val absurd = mp(force(rules.specAll(
+      lemma("!C:real P:real s:real. C = P + s * s ==> C = P - s * s ==> 1 / 4 <= s ==> F"),
+      List(real("cos (1 / 2 + 1 / 2)"), real("cos (1 / 2) * cos (1 / 2)"), real("sin (1 / 2)")))),
+      wrong, right, quarter)
+    refute(plus, absurd)
+  }
+
   it should "need the positivity in EXP_LN, since the exponential is never zero" in {
     // At `0` the dropped form says `exp (ln 0) = 0`, and `EXP_POSITIVE` at `ln 0` says it is above.
     val everywhere = proposition("!x:real. exp (ln x) = x")

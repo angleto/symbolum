@@ -661,7 +661,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 739 lemmas, 494 have two or more leading quantifiers and **430 of
+caller meant: of the library's 746 lemmas, 496 have two or more leading quantifiers and **432 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1870,6 +1870,21 @@ costs exactly what the estimate costs.
 points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hypothesis names. The
 hypothesis states the derivative and its sign in one existential, so it asks no second statement
 of differentiability; the three cost what the mean value theorem costs.
+
+**The sine and the cosine are differentiable since the same day, and what stood in front of that was
+the addition formulas.** `Transcendental.COS_ADD` and `SIN_ADD` are `SIN_COS_SQUARED`'s argument at a
+second point: `EXP_CONVOLUTION` at `(x, y)` rather than at `(x, 0 - x)`, split by parity, whose even
+and odd places are the terms of the Cauchy products of the two series at `x` against the two at
+`y`, with the cosine's one index apart as in the square and the sine's not shifted. The general
+point is simpler than the special one: at `0 - x` a partner's power had to be carried back to `x`
+with `POWER_NEG_DOUBLE`, and at `y` it is the same atom on both sides, which `TranscendentalSpec`
+asserts by checking that neither formula rests on it. `Logarithm.COS_NEAR_ONE` and `SIN_NEAR_LINE`
+put `cos h - 1` and `sin h - h` under `h * h` for `abs h <= 1 / 2`, their terms being the
+exponential's at the even and the odd places under `EXP_TAIL_BOUND`; `Derivative.DERIVATIVE_SIN` and
+`DERIVATIVE_COS` follow, with `SIN_COS_SQUARED` keeping the coefficients at most one. The radius in
+the two estimates is the proof's and not the statement's: `1 - cos h <= h * h / 2` holds everywhere,
+so nothing refutes them without it, and what `LogarithmSpec` refutes instead is `COS_ADD` with the
+other sign, at one half, through `sin (1 / 2) >= 1 / 4`.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum
