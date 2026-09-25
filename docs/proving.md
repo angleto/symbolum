@@ -492,10 +492,12 @@ and `Farkas` solves it.
 **Refuses:** anything neither the linear form, the hypotheses multiplied, nor one completed square
 reaches. The pairs get to degree two, and a second round crossing those products with the
 hypotheses gets to degree three, run only when the goal names an atom the pairs did not reach, so
-a product of four unknowns is past what the products make. The square is the one fact in the pool
-that is not made from the goal's hypotheses, and it is what a goal with **no** hypotheses has: over
-an atom that is one unknown times itself the square is completed, and `SQUARE_NONNEG` at that
-argument is the fact, checked by the kernel like the others. `docs/adr/0032` is the decision.
+a product of four unknowns is past what the products make. The square is the one fact that is not
+read off the goal's own text, where every other one is a hypothesis, a product of hypotheses, or a
+disjunct or the denial of the goal; so it is what reaches a goal with **no** hypotheses, whose
+products are empty at every degree. Over an atom that is one unknown times itself the square is
+completed, and `SQUARE_NONNEG` at that argument is the fact, checked by the kernel like the others.
+`docs/adr/0032` is the decision.
 
 ```scala
 Linarith.standard.prove("!a:real. a * (2 - a) <= 1")
