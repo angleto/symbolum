@@ -313,16 +313,16 @@ obtained.
 
 ## The proof the kernel holds
 
-32358 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+32351 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 9598 | 29.7% |
+| Congruence | 9597 | 29.7% |
 | EqualityElimination | 6964 | 21.5% |
-| Instantiation | 2879 | 8.9% |
+| Instantiation | 2875 | 8.9% |
 | Reflexivity | 2845 | 8.8% |
 | Antisymmetry | 2653 | 8.2% |
-| Transitivity | 2332 | 7.2% |
+| Transitivity | 2330 | 7.2% |
 | BetaStep | 1951 | 6.0% |
 | TypeInstantiation | 1143 | 3.5% |
 | Assumption | 1068 | 3.3% |

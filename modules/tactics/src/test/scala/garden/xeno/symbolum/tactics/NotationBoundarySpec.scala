@@ -417,6 +417,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
     ("Language.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted"),
+    // `Pigeonhole.Builder.refuse`, the one site of its file. Every caller passes a literal or a
+    // literal interpolating a variable's or a published fact's name, and none renders a term: the
+    // one that did, a proof's statement through `show`, was taken out before this row was written.
+    ("Pigeonhole.scala", "what") ->
+      (Verdict.Text, "a caller's own description of the shape it wanted, naming at most a variable"),
     // The sentence this replaced was a literal interpolating `scheme.binders.size`, and it had a
     // row in `Classified` until `Prose.count` arrived in it on 2026-09-18: the call does not fit
     // the line, so the description is a name now and the scan sees an identifier. That is the

@@ -185,6 +185,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // library, which `Conjugacy` gives in its first paragraph, and `ConjugacySpec` builds it.
     "Conjugacy" -> NotADevelopment,
 
+    // 2026-09-25, `Conjugacy`'s standing for `Conjugacy`'s reason: a function of the chain proving
+    // a lower bound on resolution refutations of the pigeonhole principle, a family of clauses one
+    // investigation is about, declaring nothing. The injection bound it proves on the way belongs in
+    // `Peano`, and the file says so. `PigeonholeSpec` builds it.
+    "Pigeonhole" -> NotADevelopment,
+
     "Descent" -> DeclaresNothing,
 
     // Beside the chain, and the classification is the one this file exists to make somebody choose.
@@ -229,6 +235,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // caller and lands in the caller's theory. Its universe of trees is a term and not a constant,
     // which `docs/adr/0042` decides, so there is nothing of its own for `Chain.construct` to build.
     "Datatype" -> DeclaresNothing,
+
+    // A procedure, `Semiring`'s generalisation: handed constants and laws, it derives rules and
+    // returns a normaliser, and every theorem it produces is about the caller's operations. It
+    // declares nothing, so there is nothing for `Chain.construct` to extend; `Semiring` and
+    // `Integer.ring` are its two instances.
+    "CommutativeRing" -> DeclaresNothing,
 
     // Beside the chain by decision and not as a debt, which is the line that separates it from
     // `Fraction`: `pterm` is a second syntax of arithmetic beside the coded one `Language` holds,
