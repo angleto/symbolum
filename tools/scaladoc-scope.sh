@@ -78,12 +78,14 @@
 set -eu
 
 root=${1:-.}
-api_glob='target/scala-3.3.5/api'
+# sbt 2 writes each module's pages under the build's own `target/out`, in a directory named after
+# the project: `modules/core`'s are `target/out/jvm/scala-3.3.5/symbolum-core/api`.
+api_glob='target/out/jvm/scala-3.3.5/symbolum-*/api'
 
 # `[ ... ] && continue` would be an AND-OR list whose status is the test's, and whether `set -e`
 # ends the loop on it is a reading of the standard rather than a fact. Spelled as an `if`.
 report=$(
-  for api in "$root"/modules/*/"$api_glob"; do
+  for api in "$root"/$api_glob; do
     [ -d "$api" ] || continue
     find "$api" -name '*.html' ! -name 'index.html' -print
   done | while read -r page; do

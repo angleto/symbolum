@@ -224,7 +224,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scoverage-reports
-          path: modules/*/target/scala-3.3.5/scoverage-report/
+          path: target/out/jvm/scala-3.3.5/symbolum-*/scoverage-report/
           retention-days: 7
 
   # A gate, unlike the job below it, and the difference is whose work each one is about. This one
@@ -451,6 +451,6 @@ jobs:
         with:
           name: scala-build-artifacts
           path: |
-            modules/*/target/scala-3.3.5/*.jar
-            modules/*/target/scala-3.3.5/api/
+            target/out/jvm/scala-3.3.5/symbolum-*/*.jar
+            target/out/jvm/scala-3.3.5/symbolum-*/api/
           retention-days: 7
