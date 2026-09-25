@@ -158,6 +158,13 @@ object Spellings {
       .delimited("NUM_STEP_FROM", 4, "\\operatorname{step}_{#1}(#2, #3, #4)")
       .delimited("NUM_PROV_FROM", 2, "\\operatorname{Prov}_{#1}(#2)")
       .delimited("NUM_PA", 1, "\\operatorname{PA}(#1)")
+      // The value of a term and the truth of a formula at an environment, which is how the
+      // semantics of a first-order language is written: the double brackets for the value and a
+      // satisfaction turnstile for the truth, the environment on the left of it.
+      .delimited("NUM_VALUE", 2, "[\\![#1]\\!]_{#2}")
+      // `operator` and not `delimited`: neither argument is inside marks of its own.
+      .operator("NUM_TRUE", 2, "#2 \\vDash #1", Relation)
+      .delimited("NUM_TRI_GRAPH", 0, "\\ulcorner v_0 + v_0 = v_1 \\cdot S v_1 \\urcorner")
       // The object language's derived connectives. Set as named operations rather than with the
       // meta level's own symbols, which is the point of the row: `NUM_AND p q` is a NUMBER that
       // codes a conjunction, and writing it `#1 \\wedge #2` would put it in the same shape as the

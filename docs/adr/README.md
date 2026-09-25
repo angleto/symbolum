@@ -70,4 +70,5 @@ the rejected option attractive, and they will.
 | [0037](0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md) | The rewriter bounds the term and not only the steps | accepted |
 | [0038](0038-a-list-is-an-orientation-on-word-and-not-a-second-carrier.md) | A list is an orientation on `word` and not a second carrier | accepted |
 | [0039](0039-the-fold-is-a-catamorphism-and-a-link-of-its-own.md) | The fold discards the tail, and is a link of its own | accepted, extends 0038 |
+| [0040](0040-a-representation-is-a-formula-whose-truth-is-the-predicate.md) | A representation is a formula whose truth is the predicate, and provability comes once | accepted, extends 0013 |
 | [0041](0041-a-series-is-decided-against-closed-forms.md) | A series is decided against closed forms, and in both directions | accepted, extends 0017 and 0023 |

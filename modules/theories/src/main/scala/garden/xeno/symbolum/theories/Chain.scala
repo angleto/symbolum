@@ -207,6 +207,13 @@ final class Chain private (
    */
   val deduction: Deduction,
   /**
+   * The value of a term and the truth of a formula of the embedded theory, and the first
+   * representation built on them. `docs/adr/0040` is the decision: a representation is a formula
+   * whose truth is the predicate, so this is the half of the Goedel stack that says what a formula
+   * means, and nothing in it is about what PA proves.
+   */
+  val truth: Truth,
+  /**
    * Convergence and the limit of a sequence of reals, and the first analysis in the chain.
    *
    * It is above the arithmetisation rather than beside it for the reason every link above [[peano]]
@@ -538,13 +545,20 @@ object Chain {
       // developments, and a fact reachable from no library is in no document either.
       deduction <- Deduction.construct(provability)
 
+      // Landed 2026-09-25. It declares `NUM_VALUE`, `NUM_TRUE` and the code of the triangle's
+      // graph, so it extends the theory the embedded language ends at, and `limit` is built over
+      // it rather than over `provability` for the reason that binding gives: the extension order
+      // and the dependency order are different things.
+      truth <- Truth.construct(
+        language, numbering, provability, induct, successor, naturals)
+
       // The first analysis this repository has: what a sequence of reals converges to and the value
-      // it converges to, both definitions. It extends `provability.theory` rather than
+      // it converges to, both definitions. It extends `truth.theory` rather than
       // `magnitude.theory`, where its prerequisites are, for the reason `Rotation.construct`'s
       // comment gives: the extension order and the dependency order are different things, and
       // `widest` is built over the last extension.
       limit <- Limit.construct(
-        magnitude, peano, series, reals, induct, provability.theory, provability.notation)
+        magnitude, peano, series, reals, induct, truth.theory, truth.notation)
 
       // Landed 2026-09-15 and was the last link until `concatenation` went on top of it the next
       // day, which the binding below says of itself. It is the only one that needs a limit, and
@@ -646,6 +660,7 @@ object Chain {
       language,
       provability,
       deduction,
+      truth,
       limit,
       transcendental,
       concatenation,

@@ -819,6 +819,21 @@ they have least appetite for working out how it is produced.
   SIN_COS_SQUARED          !x:real. sin x * sin x + cos x * cos x = 1
   SIN_ZERO                 sin 0 = 0
 
+## Truth
+
+  NUM_TRI_DOUBLE           !x:num. NUM_TRI x + NUM_TRI x = x * SUC x
+  NUM_TRI_GRAPH_TRUE       !x:num -> num. NUM_TRUE NUM_TRI_GRAPH x = (x 0 = NUM_TRI (x 1))
+  NUM_TRUE_ALL             !x:num -> num. !y:num. !z:num. NUM_TRUE (NUM_CODE 8 (NUM_PAIR y z)) x = (!u:num. NUM_TRUE z (\v:num. COND (v = y) u (x v)))
+  NUM_TRUE_EQ              !x:num -> num. !y:num. !z:num. NUM_TRUE (NUM_CODE 5 (NUM_PAIR y z)) x = (NUM_VALUE y x = NUM_VALUE z x)
+  NUM_TRUE_IMP             !x:num -> num. !y:num. !z:num. NUM_TRUE (NUM_CODE 7 (NUM_PAIR y z)) x = (NUM_TRUE y x ==> NUM_TRUE z x)
+  NUM_TRUE_NOT             !x:num -> num. !y:num. NUM_TRUE (NUM_CODE 6 y) x = (~(NUM_TRUE y x))
+  NUM_VALUE_ADD            !x:num -> num. !y:num. !z:num. NUM_VALUE (NUM_CODE 3 (NUM_PAIR y z)) x = NUM_VALUE y x + NUM_VALUE z x
+  NUM_VALUE_MUL            !x:num -> num. !y:num. !z:num. NUM_VALUE (NUM_CODE 4 (NUM_PAIR y z)) x = NUM_VALUE y x * NUM_VALUE z x
+  NUM_VALUE_NUMERAL        !x:num -> num. !y:num. NUM_VALUE (NUM_NUMERAL y) x = y
+  NUM_VALUE_SUC            !x:num -> num. !y:num. NUM_VALUE (NUM_CODE 2 y) x = SUC (NUM_VALUE y x)
+  NUM_VALUE_VAR            !x:num -> num. !y:num. NUM_VALUE (NUM_CODE 0 y) x = x y
+  NUM_VALUE_ZERO           !x:num -> num. NUM_VALUE (NUM_CODE 1 0) x = 0
+
 ## Word
 
   WORD_ABS_REP             mk_word (dest_word (a:word('a))) = (a:word('a))

@@ -288,6 +288,7 @@ object Library {
         collect("Provability", chain.provability.facts) ++
         collect("Primes", chain.primes.facts) ++
         collect("Deduction", chain.deduction.facts) ++
+        collect("Truth", chain.truth.facts) ++
         // The two that landed on 2026-09-15, listed here in the same breath as they were written
         // rather than after somebody noticed: `Magnitude` and `Coding` were each invisible for a
         // few hours because a development in the chain but not collected here is a development

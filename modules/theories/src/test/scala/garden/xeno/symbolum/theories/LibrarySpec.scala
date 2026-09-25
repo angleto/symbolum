@@ -35,6 +35,8 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.rotation.facts.size + chain.magnitude.facts.size + chain.coding.facts.size +
       chain.numbering.facts.size + chain.language.facts.size +
       chain.provability.facts.size + chain.deduction.facts.size +
+      // The truth of the object language, 2026-09-25, added after this sum caught it.
+      chain.truth.facts.size +
       chain.primes.facts.size +
       // The two of 2026-09-15. This sum is the assertion's whole point and it caught them: they
       // were added to `Library.of` and not to this list, and what failed was the count rather than
@@ -638,8 +640,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `diverges` is a definition, which is the register's rather than this count's. `CLAUDE.md`'s
     // figures move by **seven** and **one**: seven of the thirteen bind two or more leading
     // quantifiers, and only `SUM_SCALE_CONVERGES` binds two of one type, its `c` and its `l`.
-    library.entries.size shouldBe 667
-    library.names.distinct.size shouldBe 664
+    // 679 and 676 with `Truth`, the same day, derived as that base plus this delta before the run:
+    // twelve facts under twelve names, none shared. `CLAUDE.md`'s figures move by **nine** and
+    // **five**: every clause but `NUM_VALUE_ZERO` binds the environment and at least one code,
+    // which is the nine, and the five are the ones binding two codes, `a` and `b` or `p` and `q`
+    // or `j` and `p`; the environment is `num -> num` and shares its type with nothing.
+    library.entries.size shouldBe 679
+    library.names.distinct.size shouldBe 676
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
