@@ -1115,8 +1115,8 @@ one estimate rather than a rule: the addition theorem turns the error into
 `abs h <= 1 / 2`. That estimate is `EXP_NEAR_ONE` one order higher, the tail after two terms under
 `EXP_TAIL_GEOMETRIC` at a ratio of a half, and it covers both signs of `h` in one argument where
 the first-order one went through the reflection. It is the one fact of `Derivative` that spends a
-series, so it reaches `COMPLETENESS` and the naturals' axioms, and `DerivativeSpec` asserts it
-costs exactly what the estimate costs.
+series, so it reaches `COMPLETENESS`, the naturals' axioms and eta, all nineteen of the chain, and
+`DerivativeSpec` asserts it costs exactly what the estimate costs and what the addition theorem costs.
 **And the sign of a derivative on an interval, the same day**: `DERIVATIVE_ZERO_CONSTANT`,
 `DERIVATIVE_NONNEG_MONOTONE` and `DERIVATIVE_POS_LT_MONOTONE`, the mean value theorem between two
 points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hypothesis names. The

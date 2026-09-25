@@ -436,6 +436,38 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
       Some(Matching.Refusal.ArgumentIsNotABinder(polymorphic))
   }
 
+  /**
+   * The decided route recurses: `F (F x)` hands `F x` back to the walk, which meets the decided
+   * `F` a second time inside its own argument. Nothing above has a decided variable inside the
+   * argument of its own recurrence, and the property the file exists for, that an answer turns the
+   * pattern into the target, was asserted over the shapes that predate this route and not over it.
+   *
+   * `\x. h (F x = c) (F (F x) = c)` against `\x. h (k x x = c) (k (k x x) (k x x) = c)`: the first
+   * place is a Miller pattern and decides `F := \x. k x x`, since `k x` holds the binder and so
+   * cannot be bound first order; the second is then decided twice over. Beside it the pair where
+   * the outer argument is not the decided term applied, which must be refused as a miss.
+   *
+   * Written by the verification of card eb258a45 on 2026-09-25 against `87175842`. What it catches
+   * is an answer the decided route gives that the substitution does not bear out, which no case
+   * above can see because none of them nests the variable.
+   */
+  it should "turn the pattern into the target where the decided variable recurs inside its own argument" in {
+    val twice = Term.variable("F", Type.fun(ground, ground))
+    val k = Term.variable("k", Type.fun(ground, Type.fun(ground, ground)))
+    def kk(left: Term, right: Term): Term = force(Term.appAll(k, List(left, right)))
+
+    val pattern = lam(x, both(equal(at(twice, x), c), equal(at(twice, at(twice, x)), c)))
+    val target = lam(x, both(equal(kk(x, x), c), equal(kk(kk(x, x), kk(x, x)), c)))
+
+    val found = Matching.matchTerm(Set(twice), pattern, target)
+    found.map(_.terms) shouldBe Some(Map(twice -> lam(x, kk(x, x))))
+    filled(found.get, pattern) shouldBe target
+
+    val notAnInstance = lam(x, both(equal(kk(x, x), c), equal(kk(kk(x, x), x), c)))
+    Matching.matchTerm(Set(twice), pattern, notAnInstance) shouldBe None
+    Matching.why(Set(twice), pattern, notAnInstance) shouldBe None
+  }
+
   it should "stop where the decided term mentions the pattern's own variable" in {
     // The target uses `P` itself, so the first place decides `P := P`. The second place is then
     // `P (s x)` against `P (t x)`, and handing `P (s x)` back to the walk would arrive here again
