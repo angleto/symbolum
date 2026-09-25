@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 654 lemmas, 426 have two or more leading quantifiers and **378 of
+caller meant: of the library's 667 lemmas, 433 have two or more leading quantifiers and **379 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1596,6 +1596,26 @@ hands back `?l. converges (Sum f) l`, and an existential is not a bound. Their h
 bound the terms respect from an index on rather than everywhere, and that is the whole of their
 usefulness: the lower bound worth having on an increasing sequence is one of its own terms, which
 is false below that term's index.
+
+**Whether a series converges is decided over a named fragment since 2026-09-25, and in both
+directions.** Until then the answer set was {converges, silence}: nothing in the proof side could say
+that a series fails to converge, and `?l. converges (Sum f) l` went to no procedure at all, because
+`Prove.addressOf` had no address for it and matching it against `SUM_COMPARISON` determines `f` and
+nothing about the dominating series. `diverges` is a constant of `Limit` now, and the criteria are
+published there in both directions and derived in `Criteria`: the term test, the geometric series at
+a symbolic ratio **with its value** `inv (1 - q)` and its divergence from magnitude one up, the ratio
+test and its other side, and a constant factor carried in and out. The powers of a fraction vanish
+without an Archimedean step, because their limit equals its own multiple by the fraction.
+
+`Convergence` is the procedure and `Prove.Address.Series` is where the three shapes of the question
+go. **It reads a summand against closed forms and does not apply the ratio test**, because applying
+the ratio test is a derivation per shape at a symbolic index and every closed form already has a
+published theorem; so the hypergeometric terms are outside the fragment and refused by name, a
+rational function of the index is refused as the class where the ratio tends to one, and a goal the
+procedure refutes comes back as `Denied`, the one refusal of standing `Decided` among the three.
+`docs/adr/0041` is the decision. `Conjugacy.GAMMA_CONVERGES` is the Collatz series it made
+statable, and it is one direction of section 3.1.10 B in the form the comparison test gives, which
+that file says in its first paragraph.
 
 **`Transcendental.EXP_ONE_ABOVE_TWO` is `2 < exp 1` and it is proved, since 2026-09-20.** It is
 the first fact here about a value this repository does not compute: every other one is a value at

@@ -291,6 +291,10 @@ object Spellings {
       // must carry its own marks around every argument and `\lim #1` carries none, so
       // `lim s + 1` would set as the limit of a sum.
       .operator("lim", 1, "\\lim #1", Multiplicative + 5)
+      // Delimited, because the books write "the series diverges" in words after the series and a
+      // template ending on its place promises nothing about where that place ends; the word in
+      // front of a bracket is the same claim with its marks on both sides.
+      .delimited("diverges", 1, "\\mathrm{diverges}(#1)")
       // The four transcendental functions, each as an operator tighter than multiplication rather
       // than as a delimited template: `\\sin(x)` is what a delimited row would give and
       // `\\sin x + 1` is what the books write, so the argument is bracketed by the context and

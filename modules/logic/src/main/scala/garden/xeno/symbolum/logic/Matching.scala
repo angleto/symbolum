@@ -367,6 +367,9 @@ object Matching {
       val (head, arguments) = spine(pattern)
 
       head match {
+        case variable: FVar if variables.contains(variable) && acc.terms.contains(variable) =>
+          decided(acc.terms(variable), arguments, target, binders, acc)
+
         case variable: FVar if variables.contains(variable) =>
           val applied = arguments.flatMap {
             case argument: FVar => binders.find(_._1 == argument).map(_._2).toList
@@ -389,8 +392,82 @@ object Matching {
       }
     }
 
+    /**
+     * A pattern variable an earlier occurrence has already decided, met again applied to arguments.
+     *
+     * It is not the fragment's question any more: a decided variable is a term, and `P (SUC n)`
+     * with `P` known to be `\n. n < 3` asks only whether `(\n. n < 3) (SUC n)`, reduced, is the
+     * target. Until 2026-09-25 this reached the Miller case, which does not look at what is
+     * decided, and was refused as a variable applied to a non-binder: `\n. P n ==> P (SUC n)`
+     * against `\n. n < 3 ==> SUC n < 3` came back `None`, and that target is an instance.
+     *
+     * Two routes, and which one depends on the types rather than on taste. Where the pattern has
+     * no type variables, the decided term applied to the pattern's own arguments is a pattern
+     * again, of the same types, and `go` matches it: a variable still unsolved inside an argument
+     * is solved there like anywhere else. Where it has type variables, the arguments are at the
+     * pattern's types and the decided term at the target's, so the arguments are first put at the
+     * target's types and at what is decided, which a variable nothing has solved cannot be; that
+     * case is refused, and [[why]] reports it as the fragment's.
+     *
+     * **The first route is closed to a decided term that mentions a pattern variable**, and the
+     * reason is termination rather than taste. A target can use the lemma's own names, which the
+     * library's scans do, so `P` can be decided as the target's `P`; then `P (f x)` against
+     * `P (g x)` applies `P` to `f x`, hands `P (f x)` back to `go`, which fails first order and
+     * arrives here again with nothing changed. Such a term goes by the second route, which
+     * compares and does not recurse. [[why]] does not see the decided term and does not mirror
+     * this corner: there it can report a pair as a first-order miss that this refused.
+     */
+    def decided(
+      value: Term,
+      arguments: List[Term],
+      target: Term,
+      binders: List[(FVar, FVar)],
+      acc: Instantiation
+    ): Option[Instantiation] =
+      if (solvable.isEmpty && !Term.freeVariables(value).exists(variables.contains))
+        Term.appAll(value, arguments).toOption.map(reduce(_, 0)).flatMap(go(_, target, binders, acc))
+      else if (!arguments.forall(solved(variables, acc.terms.keySet, _))) None
+      else {
+        val known = acc.terms.map { case (variable, term) => acc.at(variable) -> term }
+        arguments
+          .foldRight(Option(List.empty[Term])) { (argument, rest) =>
+            for {
+              done <- rest
+              instance <- Term.substitute(known, Term.substituteTypes(acc.types, argument)).toOption
+            } yield instance :: done
+          }
+          .flatMap(instances => Term.appAll(value, instances).toOption)
+          .map(reduce(_, 0))
+          .filter(_ == target)
+          .map(_ => acc)
+      }
+
+    /**
+     * The beta-normal form of a term, which is what a decided variable applied to its arguments
+     * has to be compared in: the kernel's `betaReduce` takes one step at the root.
+     *
+     * The names opened here start with the same prefix as the binders' and cannot meet them, since
+     * a binder's name is the prefix and a number and these carry a letter first.
+     */
+    def reduce(term: Term, depth: Int): Term = term match {
+      case App(fn, argument) =>
+        val applied = Term.app(reduce(fn, depth), reduce(argument, depth)).getOrElse(term)
+        Term.betaReduce(applied).map(reduce(_, depth)).getOrElse(applied)
+      case Abs(binderType, _) =>
+        val fresh = Term.variable(s"${prefix}r$depth", binderType)
+        (for {
+          body <- open(term, fresh)
+          closed <- Term.abs(fresh, reduce(body, depth + 1)).toOption
+        } yield closed).getOrElse(term)
+      case other => other
+    }
+
     go(pattern, target, Nil, Instantiation.empty).filter(_.expressible)
   }
+
+  /** Whether every pattern variable in `term` is one of `decided`. */
+  private def solved(variables: Set[FVar], decided: Set[FVar], term: Term): Boolean =
+    Term.freeVariables(term).forall(variable => !variables.contains(variable) || decided.contains(variable))
 
   /**
    * Which condition of the fragment a refused match met, for a caller that has to explain one.
@@ -415,41 +492,71 @@ object Matching {
    */
   def why(variables: Set[FVar], pattern: Term, target: Term): Option[Refusal] =
     if (matchTerm(variables, pattern, target).isDefined) None
-    else firstRefusal(variables, pattern, target, Nil)
+    else
+      firstRefusal(variables, Term.typeVariables(pattern).nonEmpty, pattern, target, Nil, Set.empty)._1
 
   /**
-   * The first condition of the Miller case this pair meets and fails, walking the same shape.
+   * The first condition of the Miller case this pair meets and fails, walking the same shape, and
+   * the pattern variables the walk has met by the end.
    *
    * The walk mirrors [[matchTerm]]'s: an application is decomposed first, because the first-order
    * route is tried first there too and reaching the higher-order case at all means that route had
    * no answer. What it does not mirror is the instantiation: nothing is bound here, so a pair that
    * this reports on may also have failed for a reason further along.
+   *
+   * **What it does follow is which variables are decided**, as the set of those met earlier in the
+   * walk, because since 2026-09-25 [[matchTerm]] checks a decided variable instead of refusing it,
+   * and a refusal reported there would be a limit the matcher no longer has. The criterion is
+   * [[matchTerm]]'s own: decided and, where the pattern has type variables, applied to arguments
+   * whose pattern variables are decided too.
    */
   private def firstRefusal(
     variables: Set[FVar],
+    polymorphic: Boolean,
     pattern: Term,
     target: Term,
-    binders: List[FVar]
-  ): Option[Refusal] = pattern match {
-    case Abs(_, _) =>
+    binders: List[(FVar, FVar)],
+    met: Set[FVar]
+  ): (Option[Refusal], Set[FVar]) = pattern match {
+    // One name at each side's own type, as `matchTerm` opens them. A single variable at the
+    // target's type, which is what this did until 2026-09-25, cannot be substituted into a pattern
+    // binder over a type variable, so every pair with such a binder came back `None`, "not refused
+    // by the fragment", however it was refused. `MatchingSpec` holds the pair that showed it.
+    case Abs(binderType, _) =>
       target match {
         case Abs(targetBinderType, _) =>
-          val binder = Term.variable(s"%${binders.length}", targetBinderType)
-          for {
-            patternBody <- open(pattern, binder)
-            targetBody <- open(target, binder)
-            found <- firstRefusal(variables, patternBody, targetBody, binder :: binders)
-          } yield found
+          val name = s"%${binders.length}"
+          val inPattern = Term.variable(name, binderType)
+          val inTarget = Term.variable(name, targetBinderType)
+          (for {
+            patternBody <- open(pattern, inPattern)
+            targetBody <- open(target, inTarget)
+          } yield firstRefusal(
+            variables,
+            polymorphic,
+            patternBody,
+            targetBody,
+            (inPattern, inTarget) :: binders,
+            met
+          )).getOrElse((None, met))
 
-        case _ => None
+        case _ => (None, met)
       }
 
     case App(_, _) =>
       val (head, arguments) = spine(pattern)
 
       val here = head match {
+        case variable: FVar
+            if variables.contains(variable) && met.contains(variable) &&
+              (!polymorphic || arguments.forall(solved(variables, met, _))) =>
+          None
+
         case variable: FVar if variables.contains(variable) =>
-          val applied = arguments.collect { case argument: FVar if binders.contains(argument) => argument }
+          val applied = arguments.flatMap {
+            case argument: FVar => binders.find(_._1 == argument).map(_._2).toList
+            case _ => Nil
+          }
 
           if (applied.length != arguments.length)
             Some(
@@ -458,7 +565,7 @@ object Matching {
             )
           else if (applied.distinct.length != applied.length) Some(Refusal.BinderAppliedTwice(variable))
           else {
-            val escaping = binders.filterNot(applied.toSet.contains)
+            val escaping = binders.map(_._2).filterNot(applied.toSet.contains)
             if (escaping.exists(Term.occursFree(_, target))) Some(Refusal.TargetSeesAnotherBinder(variable))
             else None
           }
@@ -466,14 +573,28 @@ object Matching {
         case _ => None
       }
 
-      here.orElse((pattern, target) match {
-        case (App(fn, argument), App(targetFn, targetArgument)) =>
-          firstRefusal(variables, fn, targetFn, binders)
-            .orElse(firstRefusal(variables, argument, targetArgument, binders))
-        case _ => None
-      })
+      here match {
+        case Some(_) => (here, met)
+        case None =>
+          val (inside, after) = (pattern, target) match {
+            case (App(fn, argument), App(targetFn, targetArgument)) =>
+              val (inFn, afterFn) = firstRefusal(variables, polymorphic, fn, targetFn, binders, met)
+              inFn match {
+                case Some(_) => (inFn, afterFn)
+                case None => firstRefusal(variables, polymorphic, argument, targetArgument, binders, afterFn)
+              }
+            case _ => (None, met)
+          }
+          val reached = head match {
+            case variable: FVar if variables.contains(variable) => after + variable
+            case _ => after
+          }
+          (inside, reached)
+      }
 
-    case _ => None
+    case variable: FVar if variables.contains(variable) => (None, met + variable)
+
+    case _ => (None, met)
   }
 
   /** The head of an application and its arguments, outermost first. */

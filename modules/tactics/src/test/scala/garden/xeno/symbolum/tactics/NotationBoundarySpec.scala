@@ -317,6 +317,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Limit.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
+    ("Criteria.scala", "Show.show(notation, target)") ->
+      (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
+    ("Convergence.scala", "Show.show(notation, goal)") ->
+      (Verdict.Crossing, "the goal, rendered at the raiser against the widest notation it reads in"),
     ("Linarith.scala", "LinearForm.factorsOf(atom).length") ->
       (Verdict.Number, "how many unknowns a product has"),
     ("Linarith.scala", "named") ->
@@ -416,6 +420,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Text, "a sentence built here from a literal and a count of the scheme's binders"),
     ("Quotient.scala", "what") ->
       (Verdict.Text, "which of the equivalence's three theorems was wanted, from a literal here"),
+    ("Convergence.scala", "Expected") ->
+      (Verdict.Text, "the three shapes of question the procedure is asked, written here"),
+    ("Convergence.scala", "Summands") ->
+      (Verdict.Text, "the summands the procedure reads, written here"),
+    ("Convergence.scala", "RatioTendsToOne") ->
+      (Verdict.Text, "why a rational function of the index is refused, written here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
       (Verdict.Text, "a constant sentence written with an interpolator it does not use")
   )

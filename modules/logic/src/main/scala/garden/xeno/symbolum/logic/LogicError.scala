@@ -255,6 +255,24 @@ final case class BoundReached(limit: String, reached: Int, allowed: Int, goal: T
 }
 
 /**
+ * A procedure proved the opposite of the goal: `proved` is a theorem, and it denies `goal`.
+ *
+ * The case `Convergence` needed on the day it landed, when a goal `?l. converges (Sum f) l` arrives
+ * about a series the procedure proves divergent. That is the strongest answer a refusal can carry
+ * and none of the others says it: [[NotOfForm]] would report that nothing was learned, which is
+ * false, and [[DoesNotFollow]] speaks of a combination of hypotheses, which is LINARITH's fragment
+ * and not this. Carried as terms for the reason [[NotEqualTo]] gives.
+ *
+ * `Decided`, and more than decided: unlike [[DoesNotFollow]] it does refute, because `proved` is a
+ * theorem of the theory the goal was asked in. What it does not say is anything about a goal the
+ * procedure did not read, and the procedure is named so a reader knows which fragment answered.
+ */
+final case class Denied(goal: Term, proved: Term, procedure: String) extends LogicError {
+  def message: String = s"$procedure proved $proved, which denies $goal"
+  def standing: LogicError.Standing = LogicError.Standing.Decided
+}
+
+/**
  * Two normal forms that do not meet, carried as terms rather than as a printed sentence.
  *
  * Its own case rather than a [[NotOfForm]] with the right-hand side interpolated, and the reason is
@@ -379,11 +397,13 @@ final case class Undetermined(variable: FVar) extends LogicError {
  *
  * Its own refusal rather than a [[NotOfForm]], and the difference is what the caller is told.
  * `NotOfForm("an instance of ...")` says the target is not an instance, and here nothing was
- * decided about that: the target may be one. `!P. !n. P n ==> P (SUC n)` against
- * `!n. n < 3 ==> SUC n < 3` **is** an instance, at `P := \n. n < 3`, and the matcher turns it down,
- * because the second occurrence of `P` is applied to `SUC n` and a variable applied to a term that
- * is not a binder is where the fragment stops. That pair was measured against the chain on
- * 2026-09-25, and `LogicSpec` holds the same shape over a type variable.
+ * decided about that: the target may be one. `P (SUC n)` under a binder for `n`, against
+ * `SUC n < 3`, **is** an instance, at `P := \m. m < 3`, and the matcher turns it down, because `P`
+ * is applied to `SUC n` with nothing earlier to decide it, and a variable applied to a term that
+ * is not a binder is where the fragment stops: in general it has several answers. `LogicSpec`
+ * holds that shape over a type variable, with the binder kept behind an implication so that
+ * `specTo` does not strip it as a leading quantifier. A variable that an earlier occurrence has decided is not this case, and since
+ * 2026-09-25 the matcher checks it instead of refusing it.
  *
  * `refusal` names the variable and the condition, and the repair is the caller's rather than a
  * rephrasing: name the term the variable stands for and specialise at it, which is how `Induct`

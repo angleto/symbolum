@@ -351,6 +351,11 @@ object Remedy {
           s"$procedure searched to the end of its fragment"
       )
 
+    // `Settled`, and with more reason than the case above: the procedure holds a theorem denying
+    // the goal, so no restatement of the goal's own shape can change the answer.
+    case Denied(goal, proved, procedure) =>
+      Settled(s"$procedure proved ${write(proved, reals)}, which denies ${write(goal, reals)}")
+
     // The two sides met a normal form each and the forms differ, which is what a false identity
     // looks like. It is a lead for a person rather than a shape to restate, and it is the one
     // refusal whose message has to print a term the reader recognises.

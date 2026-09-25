@@ -311,7 +311,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // facts, two each on `EXP_SMALL_ABOVE` and `LN_MUL` and one on six others.
     // 451 with the extreme value theorem, 2026-09-25, derived before the run: ten antecedents over
     // five facts, three on the gluing, one on the negation and two on each of the other three.
-    propose.weakenings.size shouldBe 451
+        // 466 with the convergence criteria, 2026-09-25, and the **fifteen** were derived before the
+    // run and met: three on `SUM_RATIO_TEST`, two each on `SUM_DIVERGES`, `SUM_RATIO_DIVERGES` and
+    // `SUM_SCALE_DIVERGES`, one each on the six other facts of `Limit`, and none on the three
+    // values in `Transcendental`, which are bare convergences.
+    propose.weakenings.size shouldBe 466
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
