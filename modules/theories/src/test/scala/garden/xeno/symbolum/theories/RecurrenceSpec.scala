@@ -8,9 +8,9 @@ import garden.xeno.symbolum.logic.*
 /**
  * A recurrence carried as a hypothesis, which is what induction is for before recursion exists.
  *
- * `2^t` cannot be **defined** here: defining a function by recursion on the naturals needs the
- * recursion theorem, which is not derived. That is a true statement and it is not what blocks a
- * development, and the difference is the whole of this file.
+ * `2^t` is not **defined** here, although it could be: `Recursion` derives the recursion theorem
+ * on the naturals and `Series` defines `Power` by it. This file declares the function instead, and what
+ * it shows is that a missing definition need not block a development, which is the whole of it.
  *
  * A function from the naturals to the reals can be **declared**, which costs nothing to believe,
  * and its recurrence assumed. Every theorem then carries the recurrence on the left of the
@@ -19,9 +19,10 @@ import garden.xeno.symbolum.logic.*
  *
  * == Why the chain runs naturals first and reals second ==
  *
- * The tactics are built over a `RealTheory`, so the reals have to be the last link if `Arithmetic`,
- * `Ring` and `Order` are to see `num`. The other order builds a signature with both types in it and
- * tactics that cannot read half of it.
+ * The tactics are built over a `RealTheory`, so the reals have to be built over the naturals if
+ * `Arithmetic`, `Ring` and `Order` are to see `num`. The other order builds a signature with both
+ * types in it and tactics that cannot read half of it. `Chain` says the same of the whole chain, and
+ * the reals are not its last link: every development after them is built over them in turn.
  */
 class RecurrenceSpec extends AnyFlatSpec with Matchers {
 

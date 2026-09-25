@@ -64,9 +64,9 @@ class FermatSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * What the eight facts cost, compared as a set with what Euclid's theorem costs, for the reason
-   * `PrimesSpec` compares the fundamental theorem that way: a count of two would pass whichever two
-   * they were.
+   * What each fact `Freshman.derive` hands back costs, the list below being those names, compared
+   * as a set with what Euclid's theorem costs, for the reason `PrimesSpec` compares the fundamental
+   * theorem that way: a count of two would pass whichever two they were.
    */
   it should "cost what Euclid's theorem costs and nothing else" in {
     val euclid = Derivation.axiomsOf(force(primes.fact(Primes.Unbounded)))
