@@ -343,9 +343,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `FINE_SUM_PIECE` and two on each of the other seven. Tip plus this branch's delta.
     // 586 with the sine's and the cosine's derivatives, the same day, derived before the run: the
     // three estimates near zero carry `abs h <= 1 / 2` each, and the other four carry nothing.
-    // 590 with the existence of the integral, the same day, derived before the run: two
+    // 600 with Euler's theorem, the same day, derived before the run: fourteen antecedents over
+    // seven of its nine facts. Tip plus this branch's delta.
+    // 604 with the existence of the integral, the same day, derived before the run: two
     // antecedents on each of `CONTINUOUS_HAS_INTEGRAL` and `CONTINUOUS_INTEGRAL`.
-    propose.weakenings.size shouldBe 590
+    propose.weakenings.size shouldBe 604
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

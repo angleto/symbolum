@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (148)
+## The definitions (149)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -261,6 +261,7 @@ axiom mentioning it means.
 | `definition NUM_SUM` | NUM_SUM = \x:num -> num. select (\y:num -> num. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x z)) | **NOT READ** |  |  |
 | `definition NUM_TAG` | NUM_TAG = \x:num. select (\y:num. ?z:num. x = NUM_CODE y z) | **NOT READ** |  |  |
 | `definition NUM_TERM` | NUM_TERM = select (\x:num -> bool. !y:num. x y = (?z:num. ?u:num. y = NUM_CODE z u /\ (z = 0 \/ z = 1 /\ u = 0 \/ z = 2 /\ x u \/ (z = 3 \/ z = 4) /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ x v /\ x w)))) | **NOT READ** |  |  |
+| `definition NUM_TOTIENT` | NUM_TOTIENT = \x:num. NUM_SUM (\y:num. COND (NUM_GCD y x = SUC 0) (SUC 0) 0) x | **NOT READ** |  |  |
 | `definition NUM_TRI` | NUM_TRI = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = x y + SUC y)) | **NOT READ** |  |  |
 | `definition NUM_TRI_GRAPH` | NUM_TRI_GRAPH = NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))) (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 2 (NUM_CODE 0 1))))) | **NOT READ** |  |  |
 | `definition NUM_TRUE` | NUM_TRUE = select (\x:num -> (num -> num) -> bool. !y:num. x y = COND (y = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. NUM_VALUE (NUM_FST (NUM_PAYLOAD y)) z = NUM_VALUE (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 6 (NUM_PAYLOAD y)) (\z:num -> num. ~(x (NUM_PAYLOAD y) z)) (COND (y = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z ==> x (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. !u:num. x (NUM_SND (NUM_PAYLOAD y)) (\v:num. COND (v = NUM_FST (NUM_PAYLOAD y)) u (z v))) (\z:num -> num. F))))) | **NOT READ** |  |  |

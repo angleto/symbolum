@@ -206,6 +206,51 @@ object Primes {
   val DividesChoose: String = "NUM_PRIME_DIVIDES_CHOOSE"
 
   /**
+   * `|- !n a. 0 < n ==> NUM_GCD a n = SUC 0 ==> NUM_CONG n (NUM_POW a (NUM_TOTIENT n)) (SUC 0)`
+   *
+   * Euler's theorem: `a` to the number of residues coprime to `n` leaves remainder one, for every
+   * `a` coprime to `n`. `Euler` derives it by permuting the product of the coprime residues, and says
+   * which permutation and why.
+   */
+  val Euler: String = "NUM_EULER"
+
+  /**
+   * `|- !f n s. (!i. i < n ==> s i < n) ==> (!i j. i < n ==> j < n ==> s i = s j ==> i = j) ==>
+   *     (!j. j < n ==> ?i. i < n /\ s i = j) ==> NUM_PROD (\i. f (s i)) n = NUM_PROD f n`
+   *
+   * A product over `[0, n)` does not change when its indices are permuted. Surjectivity is a
+   * hypothesis rather than a consequence of injectivity, for the reason `Euler` gives.
+   */
+  val ProdPermute: String = "NUM_PROD_PERMUTE"
+
+  /**
+   * `|- !f g k n. k < n ==> (!i. i < n ==> ~(i = k) ==> f i = g i) ==>
+   *     NUM_PROD f n * g k = NUM_PROD g n * f k`
+   *
+   * Two products that differ at one index trade the factor there. What the permutation's induction
+   * stitches with.
+   */
+  val ProdPoint: String = "NUM_PROD_POINT"
+
+  /** `|- !m f g n. (!i. i < n ==> NUM_CONG m (f i) (g i)) ==> NUM_CONG m (NUM_PROD f n) (NUM_PROD g n)` */
+  val ProdCongMod: String = "NUM_PROD_CONG_MOD"
+
+  /** `|- !f g n. NUM_PROD (\i. f i * g i) n = NUM_PROD f n * NUM_PROD g n` */
+  val ProdMul: String = "NUM_PROD_MUL"
+
+  /** `|- !p a n. NUM_PROD (\i. COND (p i) a (SUC 0)) n = NUM_POW a (NUM_SUM (\i. COND (p i) (SUC 0) 0) n)` */
+  val ProdCondPow: String = "NUM_PROD_COND_POW"
+
+  /** `|- !n a. 0 < n ==> NUM_GCD a n = SUC 0 ==> ?b. NUM_CONG n (a * b) (SUC 0)`: a coprime residue has an inverse. */
+  val Inverse: String = "NUM_INVERSE"
+
+  /** `|- !n x. 0 < n ==> NUM_GCD x n = SUC 0 ==> NUM_GCD (NUM_MOD x n) n = SUC 0` */
+  val GcdMod: String = "NUM_GCD_MOD"
+
+  /** `|- !n x y. 0 < n ==> NUM_CONG n (x * y) (SUC 0) ==> NUM_GCD y n = SUC 0`: an inverse is coprime. */
+  val UnitCoprime: String = "NUM_UNIT_COPRIME"
+
+  /**
    * The statement [[FactorisationUnique]] is proved through, which carries the value explicitly.
    *
    * The induction is on the value of the two products, and a statement that mentions the value
@@ -260,7 +305,29 @@ object Primes {
       "!p:num. !k:num. NUM_PRIME p ==> NUM_LT 0 k ==> NUM_LT k p ==> NUM_DIVIDES p (NUM_CHOOSE p k)",
     Freshman ->
       "!p:num. !a:num. NUM_PRIME p ==> NUM_CONG p (NUM_POW (SUC a) p) (NUM_ADD (NUM_POW a p) (SUC 0))",
-    Fermat -> "!p:num. !a:num. NUM_PRIME p ==> NUM_CONG p (NUM_POW a p) a"
+    Fermat -> "!p:num. !a:num. NUM_PRIME p ==> NUM_CONG p (NUM_POW a p) a",
+    ProdPoint ->
+      ("!f:num->num. !g:num->num. !k:num. !n:num. NUM_LT k n ==> " +
+        "(!i:num. NUM_LT i n ==> ~(i = k) ==> f i = g i) ==> NUM_PROD f n * g k = NUM_PROD g n * f k"),
+    ProdPermute ->
+      ("!f:num->num. !n:num. !s:num->num. (!i:num. NUM_LT i n ==> NUM_LT (s i) n) ==> " +
+        "(!i:num. !j:num. NUM_LT i n ==> NUM_LT j n ==> s i = s j ==> i = j) ==> " +
+        "(!j:num. NUM_LT j n ==> ?i:num. NUM_LT i n /\\ s i = j) ==> " +
+        "NUM_PROD (\\i:num. f (s i)) n = NUM_PROD f n"),
+    ProdCongMod ->
+      ("!m:num. !f:num->num. !g:num->num. !n:num. (!i:num. NUM_LT i n ==> NUM_CONG m (f i) (g i)) ==> " +
+        "NUM_CONG m (NUM_PROD f n) (NUM_PROD g n)"),
+    ProdMul ->
+      "!f:num->num. !g:num->num. !n:num. NUM_PROD (\\i:num. f i * g i) n = NUM_PROD f n * NUM_PROD g n",
+    ProdCondPow ->
+      ("!p:num->bool. !a:num. !n:num. NUM_PROD (\\i:num. COND (p i) a (SUC 0)) n = " +
+        "NUM_POW a (NUM_SUM (\\i:num. COND (p i) (SUC 0) 0) n)"),
+    Inverse -> "!n:num. !a:num. NUM_LT 0 n ==> NUM_GCD a n = SUC 0 ==> ?b:num. NUM_CONG n (a * b) (SUC 0)",
+    GcdMod -> "!n:num. !x:num. NUM_LT 0 n ==> NUM_GCD x n = SUC 0 ==> NUM_GCD (NUM_MOD x n) n = SUC 0",
+    UnitCoprime ->
+      "!n:num. !x:num. !y:num. NUM_LT 0 n ==> NUM_CONG n (x * y) (SUC 0) ==> NUM_GCD y n = SUC 0",
+    Euler ->
+      "!n:num. !a:num. NUM_LT 0 n ==> NUM_GCD a n = SUC 0 ==> NUM_CONG n (NUM_POW a (NUM_TOTIENT n)) (SUC 0)"
   )
 
   /** Build it over the arithmetic that holds the factorial. It extends nothing. */
@@ -272,6 +339,7 @@ object Primes {
         .orElse(peano.naturals.fact(name))
         .orElse(coding.modular.fact(name))
         .orElse(coding.fact(name))
+        .orElse(peano.naturals.classical.fact(name))
         .left
         .map(_ => MissingDefinition(name))
     val fermat =
@@ -280,7 +348,9 @@ object Primes {
         kit = garden.xeno.symbolum.theories.Freshman.Kit(
           coding.logic, coding.theory, coding.notation, semiring, induct, lookup)
         derived <- garden.xeno.symbolum.theories.Freshman.derive(kit)
-      } yield derived
+        totient <- coding.modular.definition(Modular.TotientName)
+        euler <- garden.xeno.symbolum.theories.Euler.derive(kit, totient)
+      } yield derived ++ euler
     try
       Right(
         new Primes(
