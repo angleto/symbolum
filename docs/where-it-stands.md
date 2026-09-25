@@ -162,6 +162,17 @@ leaving it in prose. The other half of the same sentence is the cost: a fold can
 measure that weighs a letter by where it sits, `S2_PHI` is the consumer that wants one, and the
 tally is not superseded.
 
+**A development that existed before the lists writes with them since 2026-09-25, and it is
+`Collatz`.** A new development was not what the card that asked for lists wanted, and Angelo held
+it to that. `S2_TAILFREE` and `S2_HEADFREE` are folds of conjunctions now, and their split over a
+concatenation is `LIST_FOLD_EVERY_CONCAT` at the marker, where it was 150 lines of index
+arithmetic. Nothing else in the file moved, because `LIST_FOLD_EVERY` is the bridge to the reading
+by position and the old definitional equation is **derived** from it and handed to the proofs that
+ran on it. What it cost is eta on six of its facts, every fact about a fold resting on the carved
+type's extensionality; the count and the decision are in `docs/adr/0039`, and so is why `Collatz`
+and no other candidate: `Forward` and `Rotation` sit below `Listing` in the chain, and `Collatz`
+sits beside it and can be built over `Folding`.
+
 **And what could have gone vacuous is guarded by spending both theorems at once.** An existential
 nobody discharges and an implication nobody detaches read exactly like facts. `ListingSpec` takes
 the witness at the step `\x. \w. \r. SUC r` and the start `ZERO`, observes that `WORD_LENGTH`

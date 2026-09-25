@@ -705,7 +705,18 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "a sum of `SUC 0`s down to a numeral, so a limit that ran out would leave an addition " +
         "unevaluated. It is not left to the limit to say so. What the caller does with the " +
         "answer is ask `NUM_SUC_INJECTIVE` to peel it, and a term still holding a `+` has no " +
-        "successor at its root, so the peeling refuses by name instead of continuing"),
+        "successor at its root, so the peeling refuses by name instead of continuing. Since " +
+        "2026-09-25 `listSplits` adds one: the definition of a marker-free predicate read " +
+        "backwards, a single closed rule, putting the predicate's name on the three folds of " +
+        "`LIST_FOLD_EVERY_CONCAT`. A limit that ran out would leave a fold standing, and the " +
+        "result is compared with the split as `Statements` writes it and refused by `NotOfForm` " +
+        "when it does not land there"),
+    "Folding.scala" ->
+      ("one call, `Rewrite.inTheorem` in `successorsKeepOrder`, with the two recurrences of " +
+        "addition read from the left turning `SUC ZERO + m` into `SUC m`. The rule set shrinks " +
+        "every term it touches and nothing for a limit to run out on remains once both sums are " +
+        "gone; that is not left to the limit either, because the result is compared with " +
+        "`!m n. NUM_LT m n ==> NUM_LT (SUC m) (SUC n)` and refused by `NotOfForm` otherwise"),
     "Forward.scala" ->
       ("two calls, both `Rewrite.inTheorem` and both moving a theorem between the two spellings " +
         "of one set, `INDUCTIVE op` and `WORD_RFC R`. The rule set each is given is a single " +

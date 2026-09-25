@@ -120,6 +120,28 @@ object Folding {
    */
   val FoldOfConcat: String = "LIST_FOLD_CONCAT"
 
+  /**
+   * `|- !P w. LIST_FOLD (\x r. P x /\ r) T w = (!i. NUM_LT i (WORD_LENGTH w) ==> P (WORD_NTH w i))`.
+   *
+   * "Every letter satisfies `P`", read two ways: as a fold, which is what a definition by lists
+   * writes, and by position, which is what every proof written before the lists reads. It is the
+   * bridge that lets a development move a predicate onto the lists without rewriting what is built
+   * on it, and `Collatz`'s two marker-free predicates are the first to cross it. `Listing.Induct` on
+   * `w`, and the step is the one fact about positions a cons has: position zero is its letter and
+   * position `SUC i` is the tail's `i`.
+   */
+  val FoldOfEvery: String = "LIST_FOLD_EVERY"
+
+  /**
+   * `|- !P u v. LIST_FOLD (\x r. P x /\ r) T (WORD_CONCAT u v) = (LIST_FOLD (\x r. P x /\ r) T u /\ LIST_FOLD (\x r. P x /\ r) T v)`.
+   *
+   * The same predicate split over a concatenation, from [[FoldOfConcat]] and one induction that
+   * moves a starting value out of a fold of conjunctions. Nothing positional is in it: no index, no
+   * length, no offset by `WORD_LENGTH u`, which is what the same statement proved by position has to
+   * carry through every step.
+   */
+  val FoldOfEveryConcat: String = "LIST_FOLD_EVERY_CONCAT"
+
   /* ------------------------------------------------------------------- the types */
 
   private val Element: Type = TyVar(Classical.TypeVariable)
@@ -148,7 +170,15 @@ object Folding {
         "LIST_FOLD g a (LIST_CONS x w) = g x (LIST_FOLD g a w)"),
     FoldOfConcat ->
       ("!g:'a->'b->'b. !a:'b. !u:word('a). !v:word('a). " +
-        "LIST_FOLD g a (WORD_CONCAT u v) = LIST_FOLD g (LIST_FOLD g a v) u")
+        "LIST_FOLD g a (WORD_CONCAT u v) = LIST_FOLD g (LIST_FOLD g a v) u"),
+    FoldOfEvery ->
+      ("!P:'a->bool. !w:word('a). LIST_FOLD (\\x:'a. \\r:bool. P x /\\ r) T w = " +
+        "(!i:num. NUM_LT i (WORD_LENGTH w) ==> P (WORD_NTH w i))"),
+    FoldOfEveryConcat ->
+      ("!P:'a->bool. !u:word('a). !v:word('a). " +
+        "LIST_FOLD (\\x:'a. \\r:bool. P x /\\ r) T (WORD_CONCAT u v) = " +
+        "(LIST_FOLD (\\x:'a. \\r:bool. P x /\\ r) T u /\\ " +
+        "LIST_FOLD (\\x:'a. \\r:bool. P x /\\ r) T v)")
   )
 
   /** The development in the chain's signature, which is the one a consumer reaches for. */
@@ -179,11 +209,16 @@ object Folding {
       overConcat <- foldOverAConcatenation(
         logic, theory, notation, consDefinition, induct,
         (atEmpty, atCons, emptyLeft, associative))
+      every <- foldOfEvery(logic, theory, notation, listing, (atEmpty, atCons))
+      everyConcat <- everyOverAConcatenation(
+        logic, theory, notation, induct, (atEmpty, atCons, overConcat))
 
       facts = Map(
         FoldOfEmpty -> atEmpty,
         FoldOfCons -> atCons,
-        FoldOfConcat -> overConcat
+        FoldOfConcat -> overConcat,
+        FoldOfEvery -> every,
+        FoldOfEveryConcat -> everyConcat
       )
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
@@ -392,6 +427,405 @@ object Folding {
         else Left(NotOfForm("the split as it is written", result.conclusion))
     } yield result
   }
+
+  /**
+   * [[FoldOfEvery]], by `Listing.Induct` on the word with `P` left free and bound at the end.
+   *
+   * The base is the fold's value at the empty list against a bound nothing is below, which
+   * `NUM_NOT_LT_ZERO` refuses; the step is [[FoldOfCons]], one beta step that opens the
+   * conjunction, the hypothesis under it, and [[everyOfACons]] to close.
+   */
+  private def foldOfEvery(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    listing: Listing,
+    held: (Kernel.Thm, Kernel.Thm)
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (atEmpty, atCons) = held
+    def read(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text)
+    def free(text: String): Either[LogicError, FVar] = read(text).flatMap {
+      case variable: FVar => Right(variable)
+      case other => Left(NotOfForm("a variable", other))
+    }
+
+    for {
+      goal <- Parser.proposition(theory, notation, Statements.toMap.apply(FoldOfEvery))
+      // The predicate the derivation runs over is the one read below, and it is bound at the end by
+      // that name: `stripForall` hands back a variable of its own choosing, which the derivation
+      // never mentions, so generalising over it would bind nothing and leave `P` free.
+      predicate <- free("P:'a->bool")
+      step <- read("\\x:'a. \\r:bool. (P:'a->bool) x /\\ r")
+      truth <- rules.truth
+      atEmptyBool = Kernel.instType(Map(Classical.CodomainVariable -> Type.Bool), atEmpty)
+      atConsBool = Kernel.instType(Map(Classical.CodomainVariable -> Type.Bool), atCons)
+      induct <- listing.fact(Listing.Induct)
+      emptyLength <- listing.concatenation.fact(Concatenation.EmptyLength)
+      notBelowZero <- listing.peano.fact(Peano.NotBelowZero)
+      consCase <- everyOfACons(logic, theory, notation, listing)
+
+      // `\w. LIST_FOLD step T w = (!i. NUM_LT i (WORD_LENGTH w) ==> P (WORD_NTH w i))`
+      subject <- read("\\w:word('a). LIST_FOLD (\\x:'a. \\r:bool. (P:'a->bool) x /\\ r) T w = " +
+        "(!i:num. NUM_LT i (WORD_LENGTH w) ==> P (WORD_NTH w i))")
+      instance <- rules.spec(subject, induct)
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      premises <- logic.destImp(opened.conclusion).toRight(NotOfForm("an implication", opened.conclusion))
+      halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
+      (baseTerm, stepTerm) = halves
+
+      // The base: nothing is below zero, so the claim about every position holds and equals `T`.
+      atZero <- rules.specAll(atEmptyBool, List(step, truth.conclusion))
+      index <- free("i:num")
+      below <- read("NUM_LT (i:num) (WORD_LENGTH (WORD_EMPTY:word('a)))")
+      assumed <- LogicError.lift(Kernel.assume(below))
+      belowTerm <- read("NUM_LT (i:num)")
+      atLength <- Conv.apTerm(belowTerm, emptyLength).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, assumed)))
+      refused <- rules.spec(index, notBelowZero)
+      absurd <- rules.notElim(refused, atLength)
+      letter <- read("(P:'a->bool) (WORD_NTH (WORD_EMPTY:word('a)) (i:num))")
+      anything <- rules.falsityElim(letter, absurd)
+      vacuous <- rules.disch(below, anything).flatMap(rules.gen(index, _))
+      asTruth <- rules.eqTruthIntro(vacuous).flatMap(Conv.sym)
+      base <- Conv.trans(atZero, asTruth)
+      _ <- if (base.conclusion == baseTerm) Right(())
+           else Left(NotOfForm("the claim at the empty list", base.conclusion))
+
+      // The step: one cons, the conjunction it opens, the hypothesis under it.
+      stepStripped <- Logic.stripForall(stepTerm)
+      head <- stepStripped._1.headOption.toRight(NotOfForm("a claim about every letter", stepTerm))
+      tail <- stepStripped._1.drop(1).headOption.toRight(NotOfForm("a claim about every word", stepTerm))
+      stepParts <- logic.destImp(stepStripped._2).toRight(NotOfForm("an implication", stepStripped._2))
+      hypothesis <- LogicError.lift(Kernel.assume(stepParts._1))
+      unrolled <- rules.specAll(atConsBool, List(step, truth.conclusion, head, tail))
+      applied <- rightOfEquation(unrolled.conclusion)
+      contracted <- Conv.betaNormalise(applied)
+      opening <- Conv.trans(unrolled, contracted)
+      conjunction <- rightOfEquation(opening.conclusion)
+      withLetter <- conjunction match {
+        case App(partial, _) => Right(partial)
+        case other => Left(NotOfForm("a conjunction", other))
+      }
+      carried <- Conv.apTerm(withLetter, hypothesis)
+      closed <- rules.specAll(consCase, List(head, tail))
+      reached <- Conv.trans(opening, carried).flatMap(Conv.trans(_, closed))
+      _ <- if (reached.conclusion == stepParts._2) Right(())
+           else Left(NotOfForm("the claim at a cons", reached.conclusion))
+      stepCase <- rules.disch(stepParts._1, reached).flatMap(rules.genAll(_, List(head, tail)))
+
+      everywhere <- rules.conjIntro(base, stepCase).flatMap(rules.mp(opened, _))
+      result <- rules.gen(predicate, everywhere)
+      _ <- if (result.conclusion == goal) Right(())
+           else Left(NotOfForm("every letter as it is written", result.conclusion))
+    } yield result
+  }
+
+  /**
+   * `|- !x w. ((P:'a->bool) x /\ (!i. NUM_LT i (WORD_LENGTH w) ==> P (WORD_NTH w i))) =
+   *    (!i. NUM_LT i (WORD_LENGTH (LIST_CONS x w)) ==> P (WORD_NTH (LIST_CONS x w) i))`, `P` free.
+   *
+   * The two positions a cons has, and each direction is one of them. Going down, position zero
+   * gives the letter and `SUC j` gives the tail's `j`, which needs `j < n` carried to
+   * `SUC j < SUC n`. Going up, `NUM_CASES` splits the index and `NUM_LT_SUC_CASES` brings
+   * `SUC y < SUC n` back to `y < n`. The two directions are joined by `Kernel.deductAntisym`, each
+   * one's conclusion being the other's hypothesis.
+   *
+   * That the letter is at position zero is not a fact `Listing` publishes, and it is not needed as
+   * one: `LIST_HEAD` is defined as the entry at zero and `LIST_HEAD_CONS` says it is the letter.
+   */
+  private def everyOfACons(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    listing: Listing
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val peano = listing.peano
+    def read(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text)
+    def free(text: String): Either[LogicError, FVar] = read(text).flatMap {
+      case variable: FVar => Right(variable)
+      case other => Left(NotOfForm("a variable", other))
+    }
+
+    for {
+      consLength <- listing.fact(Listing.ConsLength)
+      consNth <- listing.fact(Listing.ConsNth)
+      headOfCons <- listing.fact(Listing.HeadOfCons)
+      headDefinition <- listing.definition(Listing.Head)
+      zeroBelow <- peano.fact(Peano.SuccessorPositive)
+      belowSuccessor <- peano.fact(Peano.BelowSuccessor)
+      belowCases <- peano.fact(Peano.BelowSuccessorCases)
+      transitive <- peano.fact(Peano.StrictTransitive)
+      zeroOrSuccessor <- peano.naturals.fact(Natural.ZeroOrSuccessor)
+      keepsOrder <- successorsKeepOrder(logic, theory, notation, peano)
+
+      x <- free("x:'a")
+      w <- free("w:word('a)")
+      predicate <- read("P:'a->bool")
+      cons <- read("LIST_CONS (x:'a) (w:word('a))")
+      size <- read("WORD_LENGTH (w:word('a))")
+      zero <- read("ZERO")
+      nthOfCons <- read("WORD_NTH (LIST_CONS (x:'a) (w:word('a)))")
+      less <- read("NUM_LT")
+      ofCons <- read("!i:num. NUM_LT i (WORD_LENGTH (LIST_CONS (x:'a) (w:word('a)))) ==> " +
+        "(P:'a->bool) (WORD_NTH (LIST_CONS x w) i)")
+      split <- read("(P:'a->bool) (x:'a) /\\ (!i:num. NUM_LT i (WORD_LENGTH (w:word('a))) ==> " +
+        "P (WORD_NTH w i))")
+
+      length <- rules.specAll(consLength, List(x, w))
+      unfolded <- Conv.unfold(headDefinition, List(cons))
+      headAt <- rules.specAll(headOfCons, List(x, w))
+      atZero <- Conv.sym(unfolded).flatMap(Conv.trans(_, headAt))
+
+      // Down: from every position of the cons to the letter and every position of the tail.
+      every <- LogicError.lift(Kernel.assume(ofCons))
+      belowLength = (t: Term, proof: Kernel.Thm) =>
+        LogicError.lift(Term.app(less, t)).flatMap(Conv.apTerm(_, length)).flatMap(Conv.sym)
+          .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, proof)))
+      zeroLess <- rules.spec(size, zeroBelow)
+      zeroLessLength <- belowLength(zero, zeroLess)
+      atFirst <- rules.spec(zero, every).flatMap(rules.mp(_, zeroLessLength))
+      letter <- Conv.apTerm(predicate, atZero).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, atFirst)))
+      j <- free("j:num")
+      jBelow <- read("NUM_LT (j:num) (WORD_LENGTH (w:word('a)))")
+      jAssumed <- LogicError.lift(Kernel.assume(jBelow))
+      successorOfJ <- read("SUC (j:num)")
+      jMoved <- rules.specAll(keepsOrder, List(j, size)).flatMap(rules.mp(_, jAssumed))
+      jLess <- belowLength(successorOfJ, jMoved)
+      atNext <- rules.spec(successorOfJ, every).flatMap(rules.mp(_, jLess))
+      shifted <- rules.specAll(consNth, List(x, w, j)).flatMap(Conv.apTerm(predicate, _))
+      tailLetter <- LogicError.lift(Kernel.eqMp(shifted, atNext))
+      tailEvery <- rules.disch(jBelow, tailLetter).flatMap(rules.gen(j, _))
+      down <- rules.conjIntro(letter, tailEvery)
+
+      // Up: from the letter and every position of the tail to every position of the cons.
+      both <- LogicError.lift(Kernel.assume(split))
+      i <- free("i:num")
+      iBelow <- read("NUM_LT (i:num) (WORD_LENGTH (LIST_CONS (x:'a) (w:word('a))))")
+      iAssumed <- LogicError.lift(Kernel.assume(iBelow))
+      iLess <- LogicError.lift(Term.app(less, i)).flatMap(Conv.apTerm(_, length))
+        .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, iAssumed)))
+      cases <- rules.spec(i, zeroOrSuccessor)
+
+      isZero <- read("(i:num) = ZERO")
+      zeroAssumed <- LogicError.lift(Kernel.assume(isZero))
+      toZero <- Conv.apTerm(nthOfCons, zeroAssumed).flatMap(Conv.apTerm(predicate, _))
+      toLetter <- Conv.apTerm(predicate, atZero).flatMap(Conv.trans(toZero, _))
+      firstCase <- rules.conjElim1(both).flatMap(held => Conv.sym(toLetter)
+        .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, held))))
+
+      y <- free("y:num")
+      isSuccessor <- read("(i:num) = SUC (y:num)")
+      successorAssumed <- LogicError.lift(Kernel.assume(isSuccessor))
+      successorOfY <- read("SUC (y:num)")
+      bound <- read("SUC (WORD_LENGTH (w:word('a)))")
+      yMoved <- Conv.apTerm(less, successorAssumed).flatMap(Conv.apThm(_, bound))
+        .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, iLess)))
+      yCases <- rules.specAll(belowCases, List(size, successorOfY)).flatMap(rules.mp(_, yMoved))
+      yBelowItsSuccessor <- rules.spec(y, belowSuccessor)
+      strictlyBelow <- read("NUM_LT (SUC (y:num)) (WORD_LENGTH (w:word('a)))")
+      strictAssumed <- LogicError.lift(Kernel.assume(strictlyBelow))
+      viaTransitivity <- rules.conjIntro(yBelowItsSuccessor, strictAssumed)
+        .flatMap(pair => rules.specAll(transitive, List(y, successorOfY, size)).flatMap(rules.mp(_, pair)))
+      equalToSize <- read("SUC (y:num) = WORD_LENGTH (w:word('a))")
+      equalAssumed <- LogicError.lift(Kernel.assume(equalToSize))
+      yLessThan <- LogicError.lift(Term.app(less, y))
+      viaEquality <- Conv.apTerm(yLessThan, equalAssumed)
+        .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, yBelowItsSuccessor)))
+      yBelow <- rules.disjElim(yCases, viaTransitivity, viaEquality)
+      tailAtY <- rules.conjElim2(both).flatMap(rules.spec(y, _)).flatMap(rules.mp(_, yBelow))
+      consAtY <- rules.specAll(consNth, List(x, w, y)).flatMap(Conv.apTerm(predicate, _))
+        .flatMap(Conv.sym).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, tailAtY)))
+      backToI <- Conv.apTerm(nthOfCons, successorAssumed).flatMap(Conv.apTerm(predicate, _))
+        .flatMap(Conv.sym).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, consAtY)))
+      existential <- read("?y:num. (i:num) = SUC y")
+      existentialAssumed <- LogicError.lift(Kernel.assume(existential))
+      secondCase <- rules.existsElim(existentialAssumed, y, backToI)
+
+      atI <- rules.disjElim(cases, firstCase, secondCase)
+      up <- rules.disch(iBelow, atI).flatMap(rules.gen(i, _))
+
+      joined = Kernel.deductAntisym(down, up)
+      result <- rules.genAll(joined, List(x, w))
+    } yield result
+  }
+
+  /**
+   * `|- !m n. NUM_LT m n ==> NUM_LT (SUC m) (SUC n)`, which `Peano` does not publish.
+   *
+   * `NUM_ADD_LT_MONOTONE` at the summand `SUC ZERO`, with `SUC ZERO + m` rewritten to `SUC m` by the
+   * two recurrences of addition read from the left. Private here for the reason
+   * [[consOfAConcatenation]] gives: a fact about `num` belongs to `Peano`, and a second consumer is
+   * where it becomes worth moving there.
+   */
+  private def successorsKeepOrder(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    peano: Peano
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      monotone <- peano.fact(Peano.AddStrictlyMonotone)
+      zeroPlus <- peano.fact(Peano.ZeroPlus)
+      successorPlus <- peano.fact(Peano.SuccessorPlus)
+      one <- Parser.term(theory, notation, "SUC ZERO")
+      instance <- logic.rules.spec(one, monotone)
+      rules <- Rewrite.Rule.all(logic, Vector(successorPlus, zeroPlus))
+      result <- Rewrite.inTheorem(rules, instance)
+      expected <- Parser.proposition(theory, notation, "!m:num n:num. NUM_LT m n ==> NUM_LT (SUC m) (SUC n)")
+      _ <- if (result.conclusion == expected) Right(())
+           else Left(NotOfForm("the order carried across a successor", result.conclusion))
+    } yield result
+
+  /**
+   * [[FoldOfEveryConcat]]: [[FoldOfConcat]] puts the fold of `v` in the starting place of the fold
+   * of `u`, and a fold of conjunctions started at `b` is the fold started at `T`, conjoined with
+   * `b`. The second is `Listing.Induct` on `u` with `b` and `P` free; its step is one
+   * reassociation of a conjunction, derived rather than looked up.
+   */
+  private def everyOverAConcatenation(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    induct: Kernel.Thm,
+    held: (Kernel.Thm, Kernel.Thm, Kernel.Thm)
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    val (atEmpty, atCons, overConcat) = held
+    val toBool = Map(Classical.CodomainVariable -> Type.Bool)
+    def read(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text)
+
+    for {
+      goal <- Parser.proposition(theory, notation, Statements.toMap.apply(FoldOfEveryConcat))
+      stripped <- Logic.stripForall(goal)
+      variables = stripped._1
+      truth <- rules.truth
+      atEmptyBool = Kernel.instType(toBool, atEmpty)
+      atConsBool = Kernel.instType(toBool, atCons)
+      overConcatBool = Kernel.instType(toBool, overConcat)
+      step <- read("\\x:'a. \\r:bool. (P:'a->bool) x /\\ r")
+      start <- read("b:bool")
+      and <- read("T /\\ T").flatMap {
+        case App(App(operator, _), _) => Right(operator)
+        case other => Left(NotOfForm("a conjunction", other))
+      }
+
+      subject <- read("\\u:word('a). LIST_FOLD (\\x:'a. \\r:bool. (P:'a->bool) x /\\ r) (b:bool) u = " +
+        "(LIST_FOLD (\\x:'a. \\r:bool. P x /\\ r) T u /\\ b)")
+      instance <- rules.spec(subject, induct)
+      opened <- Conv
+        .betaNormalise(instance.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, instance)))
+      premises <- logic.destImp(opened.conclusion).toRight(NotOfForm("an implication", opened.conclusion))
+      halves <- logic.destConj(premises._1).toRight(NotOfForm("a conjunction", premises._1))
+      (baseTerm, stepTerm) = halves
+
+      // The base: `b` against `T /\ b`.
+      fromStart <- rules.specAll(atEmptyBool, List(step, start))
+      fromTruth <- rules.specAll(atEmptyBool, List(step, truth.conclusion))
+        .flatMap(Conv.apTerm(and, _)).flatMap(Conv.apThm(_, start))
+      startAlone <- LogicError.lift(Kernel.assume(start))
+      withTruth <- rules.conjIntro(truth, startAlone)
+      truthAnd <- read("T /\\ (b:bool)")
+      conjoined <- LogicError.lift(Kernel.assume(truthAnd))
+      dropped <- rules.conjElim2(conjoined)
+      unit = Kernel.deductAntisym(dropped, withTruth)
+      base <- Conv.sym(fromTruth).flatMap(Conv.trans(unit, _)).flatMap(Conv.trans(fromStart, _))
+      _ <- if (base.conclusion == baseTerm) Right(())
+           else Left(NotOfForm("the start moved out at the empty list", base.conclusion))
+
+      // The step.
+      stepStripped <- Logic.stripForall(stepTerm)
+      head <- stepStripped._1.headOption.toRight(NotOfForm("a claim about every letter", stepTerm))
+      tail <- stepStripped._1.drop(1).headOption.toRight(NotOfForm("a claim about every word", stepTerm))
+      stepParts <- logic.destImp(stepStripped._2).toRight(NotOfForm("an implication", stepStripped._2))
+      hypothesis <- LogicError.lift(Kernel.assume(stepParts._1))
+
+      leftUnrolled <- rules.specAll(atConsBool, List(step, start, head, tail))
+      leftOpened <- rightOfEquation(leftUnrolled.conclusion).flatMap(Conv.betaNormalise)
+        .flatMap(Conv.trans(leftUnrolled, _))
+      leftConjunction <- rightOfEquation(leftOpened.conclusion)
+      withLetter <- leftConjunction match {
+        case App(partial, _) => Right(partial)
+        case other => Left(NotOfForm("a conjunction", other))
+      }
+      letter <- withLetter match {
+        case App(_, argument) => Right(argument)
+        case other => Left(NotOfForm("a conjunction", other))
+      }
+      leftCarried <- Conv.apTerm(withLetter, hypothesis).flatMap(Conv.trans(leftOpened, _))
+
+      rightUnrolled <- rules.specAll(atConsBool, List(step, truth.conclusion, head, tail))
+      rightOpened <- rightOfEquation(rightUnrolled.conclusion).flatMap(Conv.betaNormalise)
+        .flatMap(Conv.trans(rightUnrolled, _))
+        .flatMap(Conv.apTerm(and, _)).flatMap(Conv.apThm(_, start))
+      rightConjunction <- rightOfEquation(rightOpened.conclusion)
+      inner <- rightConjunction match {
+        case App(App(_, App(App(_, _), folded)), _) => Right(folded)
+        case other => Left(NotOfForm("a conjunction of a conjunction", other))
+      }
+      associated <- reassociate(logic, and, letter, inner, start)
+      reached <- Conv.sym(rightOpened).flatMap(Conv.trans(associated, _)).flatMap(Conv.trans(leftCarried, _))
+      _ <- if (reached.conclusion == stepParts._2) Right(())
+           else Left(NotOfForm("the start moved out at a cons", reached.conclusion))
+      stepCase <- rules.disch(stepParts._1, reached).flatMap(rules.genAll(_, List(head, tail)))
+
+      moved <- rules.conjIntro(base, stepCase).flatMap(rules.mp(opened, _))
+      startFree <- start match {
+        case variable: FVar => Right(variable)
+        case other => Left(NotOfForm("a variable", other))
+      }
+      anyStart <- rules.gen(startFree, moved)
+
+      predicate <- read("P:'a->bool").flatMap {
+        case variable: FVar => Right(variable)
+        case other => Left(NotOfForm("a variable", other))
+      }
+      left <- variables.drop(1).headOption.toRight(NotOfForm("a claim about every word", goal))
+      right <- variables.drop(2).headOption.toRight(NotOfForm("a claim about every word", goal))
+      ofRight <- read("LIST_FOLD (\\x:'a. \\r:bool. (P:'a->bool) x /\\ r) T")
+        .flatMap(folded => LogicError.lift(Term.app(folded, right)))
+      split <- rules.specAll(overConcatBool, List(step, truth.conclusion, left, right))
+      movedOut <- rules.specAll(anyStart, List(ofRight, left))
+      result <- Conv.trans(split, movedOut).flatMap(rules.genAll(_, List(predicate, left, right)))
+      _ <- if (result.conclusion == goal) Right(())
+           else Left(NotOfForm("every letter of a concatenation as it is written", result.conclusion))
+    } yield result
+  }
+
+  /** `|- (p /\ (q /\ r)) = ((p /\ q) /\ r)`, from the conjunction's rules and nothing else. */
+  private def reassociate(
+    logic: Logic,
+    and: Term,
+    p: Term,
+    q: Term,
+    r: Term
+  ): Either[LogicError, Kernel.Thm] = {
+    val rules = logic.rules
+    for {
+      qr <- LogicError.lift(Term.appAll(and, List(q, r)))
+      nested <- LogicError.lift(Term.appAll(and, List(p, qr)))
+      pq <- LogicError.lift(Term.appAll(and, List(p, q)))
+      flat <- LogicError.lift(Term.appAll(and, List(pq, r)))
+      fromNested <- LogicError.lift(Kernel.assume(nested))
+      nestedP <- rules.conjElim1(fromNested)
+      nestedQR <- rules.conjElim2(fromNested)
+      nestedQ <- rules.conjElim1(nestedQR)
+      nestedR <- rules.conjElim2(nestedQR)
+      toFlat <- rules.conjIntro(nestedP, nestedQ).flatMap(rules.conjIntro(_, nestedR))
+      fromFlat <- LogicError.lift(Kernel.assume(flat))
+      flatPQ <- rules.conjElim1(fromFlat)
+      flatR <- rules.conjElim2(fromFlat)
+      flatP <- rules.conjElim1(flatPQ)
+      flatQ <- rules.conjElim2(flatPQ)
+      toNested <- rules.conjIntro(flatQ, flatR).flatMap(rules.conjIntro(flatP, _))
+    } yield Kernel.deductAntisym(toNested, toFlat)
+  }
+
+  private def rightOfEquation(term: Term): Either[LogicError, Term] =
+    Term.destEq(term).map(_._2).toRight(NotOfForm("an equation", term))
 
   /**
    * `|- WORD_CONCAT (LIST_CONS x u) v = LIST_CONS x (WORD_CONCAT u v)`.
