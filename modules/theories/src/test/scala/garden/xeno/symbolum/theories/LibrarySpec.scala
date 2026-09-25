@@ -674,8 +674,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under four names, none shared, `CONTINUOUS_LINEAR` in `Continuity` and three in `Derivative`.
     // `CLAUDE.md`'s figures move by **four** and **four**: each binds two functions, or two reals,
     // among two or more leading quantifiers. Tip plus this branch's delta.
-    library.entries.size shouldBe 713
-    library.names.distinct.size shouldBe 710
+    // 715 and 712 with the product rule and the continuity of a differentiable function, the same
+    // day, derived before the run: two facts under two names, none shared. `CLAUDE.md`'s figures
+    // move by **two** and **two**: `DERIVATIVE_CONTINUOUS` binds `x` and `m`, both real, and
+    // `DERIVATIVE_PRODUCT` two functions.
+    library.entries.size shouldBe 715
+    library.names.distinct.size shouldBe 712
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
