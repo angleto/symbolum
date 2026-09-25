@@ -20,8 +20,10 @@ import garden.xeno.symbolum.logic.*
  *
  * The operations exist since 2026-09-25, and the same day the rest of a commutative ring: the two
  * units, both associativities, the additive inverse and the distributive law, each compared below
- * with the text it is published as. What is not here is what makes it an ordered field, the
- * inverse of a non-zero rational and the order, because it is not in `Fraction` yet.
+ * with the text it is published as; and the order, `RAT_LE`, with the four laws of a total order and
+ * the pair of facts that keeps it from being the trivial one. What is not here is the inverse of a
+ * non-zero rational and the two laws tying the order to the operations, because they are not in
+ * `Fraction` yet.
  */
 class FractionSpec extends AnyFlatSpec with Matchers {
 
@@ -164,7 +166,25 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     (fractions.theory.constants.keySet -- before) shouldBe
       Set(Fraction.SameName, Fraction.Abstraction, Fraction.Representation, Fraction.Projection,
         Fraction.Names.representative, Fraction.Addition, Fraction.Negation, Fraction.Multiplication,
-        Fraction.Zero, Fraction.One)
+        Fraction.Zero, Fraction.One, Fraction.AtMost)
+  }
+
+  "The order" should "not be the trivial one, which every one of its four laws would also be" in {
+    // Reflexivity, transitivity, antisymmetry and totality all hold of the relation that relates
+    // everything, on a one-point type or on any other. What separates `RAT_LE` from it is one
+    // comparison that holds and one that does not, both derived with nothing assumed.
+    //
+    // What this has and has not been seen catching, measured on 2026-09-25: with the definition
+    // reversed, which is a total order too, the construction refused earlier, at the derivation of
+    // `RAT_LE_PAIRS`, because that statement fixes the direction. So no perturbation of the
+    // definition tried reaches this test; it holds the property against a change that keeps the
+    // pair fact and moves the constants, which nothing has made yet.
+    val upwards = fact(Fraction.ZeroAtMostOne)
+    val downwards = fact(Fraction.OneNotAtMostZero)
+    upwards.hypotheses shouldBe empty
+    downwards.hypotheses shouldBe empty
+    fractions.show(upwards.conclusion) shouldBe "RAT_LE RAT_ZERO RAT_ONE"
+    fractions.show(downwards.conclusion) shouldBe "~(RAT_LE RAT_ONE RAT_ZERO)"
   }
 
   "The units" should "be different rationals, stated on the published constants" in {

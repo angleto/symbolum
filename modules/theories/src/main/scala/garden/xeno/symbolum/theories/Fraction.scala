@@ -48,10 +48,16 @@ import garden.xeno.symbolum.logic.*
  * the distributive law, and `RAT_ZERO_NOT_ONE`, which is the one of them a one-point type would
  * fail. Each law is a pair-level identity carried to the classes, and `Lifting.laws` says how.
  *
- * Not here yet: the inverse of a non-zero rational and the order, which are what make `rat` an
- * ordered field and what the reals as cuts will ask of it. The inverse wants a case split on the
- * sign of the numerator, which the pair `(a, d)` holds as an integer rather than as a sign and a
- * size; the order wants `INT_LE` preserved by a positive factor.
+ * **And the order**, `RAT_LE`, defined through the chosen representatives because `Quotient` does
+ * not lift a relation of two arguments, with the four laws of a total order and the pair
+ * `RAT_ZERO_LE_ONE`, `RAT_NOT_ONE_LE_ZERO` that the trivial relation fails. Under it are two facts
+ * about `int` that nothing had needed: a natural factor preserves `INT_LE`, and a positive one
+ * comes off it. `Ordering` is the derivation.
+ *
+ * Not here yet: the inverse of a non-zero rational, which wants a case split on the sign of the
+ * numerator that the pair `(a, d)` holds as an integer rather than as a sign and a size; and the
+ * two laws tying the order to the operations, which with the inverse are what make `rat` an
+ * ordered field and what the reals as cuts will ask of it.
  *
  * == The one thing transitivity needs, and where it comes from ==
  *
@@ -185,6 +191,63 @@ object Fraction {
    */
   val UnitsDistinct: String = "RAT_ZERO_NOT_ONE"
 
+  /**
+   * `RAT_LE x y`: the order, defined through the representatives the quotient chose.
+   *
+   * `Quotient` lifts a relation of one argument and not of two, the reason `Integer` gives for
+   * its own `INT_LE`: `liftBinary`'s obligation relates two results and so wants them in the
+   * carrier. So the constant reads the chosen pairs directly, and [[Fraction.AtMostPairs]] is the
+   * fact that makes it usable at any pair.
+   */
+  val AtMost: String = "RAT_LE"
+
+  /**
+   * `|- !a b n. INT_LE a b ==> INT_LE (INT_MUL a (INT_OF_NUM n)) (INT_MUL b (INT_OF_NUM n))`
+   *
+   * A natural factor preserves the order of `int`, with no side condition because at `n = 0` both
+   * sides are zero. Through the pairs: `INT_LE_PAIRS` makes both orders comparisons of naturals,
+   * and the one after the product is the one before it multiplied by `n`, which `NUM_MUL_MONOTONE`
+   * gives and `Semiring` rearranges into.
+   *
+   * It is about `int` and it is here, with the next one, for the reason `INT_MUL_SWAP` is: this is
+   * the only consumer so far. A second one moves both down.
+   */
+  val IntAtMostScaled: String = "INT_LE_MUL_NUM"
+
+  /**
+   * `|- !a b d. INT_LE (INT_MUL a (INT_OF_NUM (SUC d))) (INT_MUL b (INT_OF_NUM (SUC d))) ==> INT_LE a b`
+   *
+   * A positive factor comes off a comparison. No induction and nothing strict: by totality either
+   * `a <= b` already, or `b <= a`, which scaled and set against the premise makes the two products
+   * equal, and `INT_MUL_CANCEL_NUM` makes `a` and `b` equal.
+   */
+  val IntAtMostCancels: String = "INT_LE_CANCEL_NUM"
+
+  /**
+   * `|- !p q r s. RAT_SAME p r ==> RAT_SAME q s ==> (the order at p q) ==> (the order at r s)`
+   *
+   * The respectfulness a lifted relation would have owed, stated at the pairs, and the whole of
+   * the arithmetic of the order: scale the premise by both of the new denominators, rewrite each
+   * side with one of the two premises, and take the product of the old denominators off.
+   */
+  val AtMostRespects: String = "RAT_LE_RESPECTS"
+
+  /** `|- !p q. RAT_LE (RAT_OF_PAIR p) (RAT_OF_PAIR q) = (the cross-multiplied order at p q)` */
+  val AtMostPairs: String = "RAT_LE_PAIRS"
+
+  val AtMostReflexive: String = "RAT_LE_REFL"
+  val AtMostTransitive: String = "RAT_LE_TRANS"
+  val AtMostAntisymmetric: String = "RAT_LE_ANTISYM"
+  val AtMostTotal: String = "RAT_LE_TOTAL"
+
+  /**
+   * `|- RAT_LE RAT_ZERO RAT_ONE` and `|- ~(RAT_LE RAT_ONE RAT_ZERO)`: the pair that separates this
+   * order from a trivial one. Reflexivity, transitivity, antisymmetry and totality all hold of the
+   * relation that relates everything on a one-point type, and of nothing else these two do not.
+   */
+  val ZeroAtMostOne: String = "RAT_ZERO_LE_ONE"
+  val OneNotAtMostZero: String = "RAT_NOT_ONE_LE_ZERO"
+
   /** `(a, d) + (b, e) = (a * (e + 1) + b * (d + 1), d * e + d + e)`, over the pair's own projections. */
   private val AddBody: String =
     "\\p:prod(int,num). \\q:prod(int,num). " +
@@ -201,6 +264,13 @@ object Fraction {
   /** `0/1` and `1/1`, where the stored index `ZERO` is the denominator `SUC ZERO`. */
   private val ZeroBody: String = "RAT_OF_PAIR (PAIR INT_ZERO ZERO)"
   private val OneBody: String = "RAT_OF_PAIR (PAIR INT_ONE ZERO)"
+
+  /** The cross-multiplied order at two pairs, which is the text every statement about it reads. */
+  private def crossed(p: String, q: String): String =
+    s"INT_LE (INT_MUL (FST $p) (INT_OF_NUM (SUC (SND $q)))) (INT_MUL (FST $q) (INT_OF_NUM (SUC (SND $p))))"
+
+  private val AtMostBody: String =
+    "\\x:rat. \\y:rat. " + crossed("(RAT_OF_PAIR_repr x)", "(RAT_OF_PAIR_repr y)")
 
   val Names: Quotient.Names =
     Quotient.Names(
@@ -241,7 +311,23 @@ object Fraction {
     MulAtOne -> "!x:rat. RAT_MUL x RAT_ONE = x",
     Distributive ->
       "!x:rat. !y:rat. !z:rat. RAT_MUL x (RAT_ADD y z) = RAT_ADD (RAT_MUL x y) (RAT_MUL x z)",
-    UnitsDistinct -> "~(RAT_ZERO = RAT_ONE)"
+    UnitsDistinct -> "~(RAT_ZERO = RAT_ONE)",
+    IntAtMostScaled ->
+      "!a:int. !b:int. !n:num. INT_LE a b ==> INT_LE (INT_MUL a (INT_OF_NUM n)) (INT_MUL b (INT_OF_NUM n))",
+    IntAtMostCancels ->
+      ("!a:int. !b:int. !d:num. INT_LE (INT_MUL a (INT_OF_NUM (SUC d))) (INT_MUL b (INT_OF_NUM (SUC d))) " +
+        "==> INT_LE a b"),
+    AtMostRespects ->
+      ("!p:prod(int,num). !q:prod(int,num). !r:prod(int,num). !s:prod(int,num). " +
+        "RAT_SAME p r ==> RAT_SAME q s ==> " + crossed("p", "q") + " ==> " + crossed("r", "s")),
+    AtMostPairs ->
+      ("!p:prod(int,num). !q:prod(int,num). RAT_LE (RAT_OF_PAIR p) (RAT_OF_PAIR q) = " + crossed("p", "q")),
+    AtMostReflexive -> "!x:rat. RAT_LE x x",
+    AtMostTransitive -> "!x:rat. !y:rat. !z:rat. RAT_LE x y ==> RAT_LE y z ==> RAT_LE x z",
+    AtMostAntisymmetric -> "!x:rat. !y:rat. RAT_LE x y ==> RAT_LE y x ==> x = y",
+    AtMostTotal -> "!x:rat. !y:rat. RAT_LE x y \\/ RAT_LE y x",
+    ZeroAtMostOne -> "RAT_LE RAT_ZERO RAT_ONE",
+    OneNotAtMostZero -> "~(RAT_LE RAT_ONE RAT_ZERO)"
   )
 
   private val numbers: Type = TyApp(Natural.TypeName, Nil)
@@ -343,6 +429,13 @@ object Fraction {
       laws <- arithmetic.laws(widened, Vector(addPairs, negPair, mulPairs, zeroDefinition, oneDefinition))
       distinct <- arithmetic.unitsDistinct(widened, zeroDefinition, oneDefinition, integer, peano)
 
+      atMostBody <- Parser.term(whole, notation, AtMostBody)
+      atMostDefined <- LogicError.lift(Kernel.defineConstant(whole, AtMost, atMostBody))
+      (ordered, atMostDefinition) = atMostDefined
+      orderedQuotient <- widened.over(ordered)
+      order <- Ordering(orderedQuotient, notation, arithmetic, integer, peano)
+        .facts(atMostDefinition, zeroDefinition, oneDefinition, symmetric)
+
       checked <- (Vector(
         (SwapFactors, swap),
         (SameReflexive, reflexive),
@@ -354,10 +447,10 @@ object Fraction {
         (MulPairs, mulPairs),
         (AddCommutative, addSymmetric),
         (MulCommutative, mulSymmetric)
-      ) ++ laws :+ (UnitsDistinct, distinct)).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
+      ) ++ laws ++ ((UnitsDistinct, distinct) +: order)).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
         case ((name, theorem), rest) =>
           for {
-            statement <- Parser.proposition(whole, notation, statementOf(name))
+            statement <- Parser.proposition(ordered, notation, statementOf(name))
             _ <-
               if (theorem.conclusion == statement) Right(())
               else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
@@ -370,10 +463,11 @@ object Fraction {
     } yield new Fraction(
       classical,
       integer,
-      whole,
+      ordered,
       notation,
-      widened,
-      Map(SameName -> sameDefinition, Zero -> zeroDefinition, One -> oneDefinition) ++ complete.definitions,
+      orderedQuotient,
+      Map(SameName -> sameDefinition, Zero -> zeroDefinition, One -> oneDefinition, AtMost -> atMostDefinition) ++
+        complete.definitions,
       checked.toMap
     )
 
@@ -976,6 +1070,466 @@ object Fraction {
         denominators <- Rewrite.Rule.all(logic, Vector(denominator, embeddedOne))
       } yield Lifting(logic, theory, notation, definition, projections, denominators, denominator, embeddedOne, ring)
     }
+  }
+
+  /* ------------------------------------------------------------------ the order */
+
+  /**
+   * The order: two facts about `int` under it, the respectfulness at the pairs, the fact that makes
+   * the constant usable at any pair, the four laws of a total order on classes, and the pair of
+   * facts that says the order is not the trivial one.
+   *
+   * Every law is proved at pairs, where it is a statement about `int`, and put on classes the way
+   * the ring laws are: the cross-multiplied order is folded back into `RAT_LE` of two projections,
+   * and the pair variables are specialised at the representatives the quotient chose.
+   */
+  private final case class Ordering(
+    quotient: Quotient,
+    notation: Notation,
+    lifting: Lifting,
+    integer: Integer,
+    peano: Peano
+  ) {
+    private val logic: Logic = quotient.logic
+    private val rules = logic.rules
+    private val theory: Theory = quotient.theory
+    private val ring: CommutativeRing = lifting.ring
+
+    private val intPairs: Type = TyApp(Product.TypeName, List(numbers, numbers))
+    private val a: FVar = Term.variable("a", integers)
+    private val b: FVar = Term.variable("b", integers)
+    private val n: FVar = Term.variable("n", numbers)
+    private val d: FVar = Term.variable("d", numbers)
+    private val u: FVar = Term.variable("u", intPairs)
+    private val w: FVar = Term.variable("w", intPairs)
+    private val p: FVar = Term.variable("p", Pairs)
+    private val q: FVar = Term.variable("q", Pairs)
+    private val r: FVar = Term.variable("r", Pairs)
+    private val s: FVar = Term.variable("s", Pairs)
+    private val x: FVar = Term.variable("x", Classes)
+    private val y: FVar = Term.variable("y", Classes)
+    private val z: FVar = Term.variable("z", Classes)
+
+    private def read(text: String): Either[LogicError, Term] = Parser.term(theory, notation, text)
+
+    private def assume(term: Term): Either[LogicError, Kernel.Thm] = LogicError.lift(Kernel.assume(term))
+
+    /** The two sides of an application of a binary constant. */
+    private def arguments(term: Term): Either[LogicError, (Term, Term)] =
+      term match {
+        case App(App(_, left), right) => Right((left, right))
+        case other => Left(NotOfForm("an application of two arguments", other))
+      }
+
+    /** From `|- INT_LE A B`, `|- A = C` and `|- B = D`, the theorem `|- INT_LE C D`. */
+    private def moved(order: Kernel.Thm, left: Kernel.Thm, right: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        atMost <- LogicError.lift(theory.constant(Integer.AtMost, Type.fun(integers, Type.fun(integers, Type.Bool))))
+        both <- Conv.apTerm(atMost, left).flatMap(partial => LogicError.lift(Kernel.mkComb(partial, right)))
+        result <- LogicError.lift(Kernel.eqMp(both, order))
+      } yield result
+
+    /** `INT_MUL left right`, built rather than parsed so that its sides are exactly the terms given. */
+    private def times(left: Term, right: Term): Either[LogicError, Term] =
+      for {
+        multiply <- LogicError.lift(theory.constant(Integer.Multiplication, Type.fun(integers, Type.fun(integers, integers))))
+        result <- LogicError.lift(Term.appAll(multiply, List(left, right)))
+      } yield result
+
+    /** `INT_OF_NUM (SUC (SND pair))`, the denominator of a fraction as an integer. */
+    private def denominatorOf(pair: FVar): Either[LogicError, Term] =
+      read(s"INT_OF_NUM (SUC (SND (${pair.name}:prod(int,num))))")
+
+    /** `SUC (SND pair)`, the natural a denominator is the embedding of. */
+    private def successorOf(pair: FVar): Either[LogicError, Term] =
+      read(s"SUC (SND (${pair.name}:prod(int,num)))")
+
+    private def crossedAt(left: FVar, right: FVar): Either[LogicError, Term] =
+      read(crossed(s"(${left.name}:prod(int,num))", s"(${right.name}:prod(int,num))"))
+
+    /** [[Fraction.IntAtMostScaled]], at pairs of naturals first and then over `int`. */
+    def scaled: Either[LogicError, Kernel.Thm] =
+      for {
+        semiring <- Semiring.construct(peano)
+        atMostPairs <- integer.fact(Integer.AtMostPairs)
+        mulPairs <- integer.fact(Integer.MulPairs)
+        monotone <- peano.fact(Peano.MulMonotone)
+        ofNaturalDefinition <- integer.definition(Integer.OfNatural)
+        ofNatural <- Conv.unfold(ofNaturalDefinition, List(n)).flatMap(rules.gen(n, _))
+        rewriting <- Rewrite.Rule.all(logic, Vector(ofNatural, mulPairs, atMostPairs)).map(_ ++ lifting.projections)
+
+        premise <- read("INT_LE (INT_OF_PAIR (u:prod(num,num))) (INT_OF_PAIR (w:prod(num,num)))")
+        goal <- read(
+          "INT_LE (INT_MUL (INT_OF_PAIR (u:prod(num,num))) (INT_OF_NUM (n:num))) " +
+            "(INT_MUL (INT_OF_PAIR (w:prod(num,num))) (INT_OF_NUM n))"
+        )
+        held <- assume(premise)
+        opened <- rules.specAll(atMostPairs, List(u, w)).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, held)))
+        bounds <- arguments(opened.conclusion)
+        multiplied <- rules.specAll(monotone, List(n, bounds._1, bounds._2)).flatMap(rules.mp(_, opened))
+        targets <- arguments(multiplied.conclusion)
+
+        goalRead <- Rewrite.rewrite(rewriting, goal)
+        readSides <- rightOfTheorem(goalRead).flatMap(arguments)
+        leftEqual <- semiring.prove(readSides._1, targets._1)
+        rightEqual <- semiring.prove(readSides._2, targets._2)
+        numAtMost <- LogicError.lift(theory.constant(Peano.NonStrictOrder, Type.fun(numbers, Type.fun(numbers, Type.Bool))))
+        bridge <- Conv.apTerm(numAtMost, leftEqual).flatMap(partial => LogicError.lift(Kernel.mkComb(partial, rightEqual)))
+        whole <- Conv.trans(goalRead, bridge)
+        proved <- Conv.sym(whole).flatMap(back => LogicError.lift(Kernel.eqMp(back, multiplied)))
+        atPairs <- rules.disch(premise, proved).flatMap(rules.genAll(_, List(u, w, n)))
+
+        chooser <- LogicError.lift(
+          integer.quotient.theory.constant(integer.quotient.names.representative, Type.fun(integers, intPairs))
+        )
+        chosenA <- LogicError.lift(Term.app(chooser, a))
+        chosenB <- LogicError.lift(Term.app(chooser, b))
+        back <- integer.quotient.fact(Quotient.ProjectionOfRepresentative).flatMap(Rewrite.Rule.of(logic, _))
+        result <- rules
+          .specAll(atPairs, List(chosenA, chosenB, n))
+          .flatMap(Rewrite.inTheorem(Vector(back), _))
+          .flatMap(rules.genAll(_, List(a, b, n)))
+      } yield result
+
+    /** [[Fraction.IntAtMostCancels]]: totality, and the other order makes the products equal. */
+    def cancels(scaledLaw: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        total <- integer.fact(Integer.AtMostTotal)
+        antisymmetric <- integer.fact(Integer.AtMostAntisymmetric)
+        reflexive <- integer.fact(Integer.AtMostReflexive)
+        positive <- integer.fact(Integer.CancelsPositive)
+
+        premise <- read("INT_LE (INT_MUL (a:int) (INT_OF_NUM (SUC (d:num)))) (INT_MUL (b:int) (INT_OF_NUM (SUC d)))")
+        target <- read("INT_LE (a:int) (b:int)")
+        other <- read("INT_LE (b:int) (a:int)")
+        successor <- read("SUC (d:num)")
+        held <- assume(premise)
+        products <- arguments(premise)
+
+        cases <- rules.specAll(total, List(a, b))
+        already <- assume(target)
+        reversed <- assume(other)
+        flipped <- rules.specAll(scaledLaw, List(b, a, successor)).flatMap(rules.mp(_, reversed))
+        productsEqual <- rules
+          .specAll(antisymmetric, List(products._1, products._2))
+          .flatMap(rules.mp(_, held))
+          .flatMap(rules.mp(_, flipped))
+        equal <- rules.specAll(positive, List(a, b, d)).flatMap(rules.mp(_, productsEqual))
+        atSelf <- rules.spec(a, reflexive)
+        atMost <- LogicError.lift(theory.constant(Integer.AtMost, Type.fun(integers, Type.fun(integers, Type.Bool))))
+        leftFixed <- LogicError.lift(Term.app(atMost, a))
+        fromOther <- Conv.apTerm(leftFixed, equal).flatMap(step => LogicError.lift(Kernel.eqMp(step, atSelf)))
+
+        settled <- rules.disjElim(cases, already, fromOther)
+        result <- rules.disch(premise, settled).flatMap(rules.genAll(_, List(a, b, d)))
+      } yield result
+
+    /** [[Fraction.AtMostRespects]]. */
+    def respects(scaledLaw: Kernel.Thm, cancelsLaw: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        first <- unfoldedAt(lifting.definition, lifting.projections, p, r)
+        second <- unfoldedAt(lifting.definition, lifting.projections, q, s)
+        firstPremise <- leftOf(first)
+        secondPremise <- leftOf(second)
+        firstEquation <- assume(firstPremise).flatMap(held => LogicError.lift(Kernel.eqMp(first, held)))
+        secondEquation <- assume(secondPremise).flatMap(held => LogicError.lift(Kernel.eqMp(second, held)))
+
+        premise <- crossedAt(p, q)
+        held <- assume(premise)
+        sides <- arguments(premise)
+
+        denominatorP <- denominatorOf(p)
+        denominatorQ <- denominatorOf(q)
+        denominatorR <- denominatorOf(r)
+        denominatorS <- denominatorOf(s)
+        successorR <- successorOf(r)
+        successorS <- successorOf(s)
+
+        // Scale by the denominator of `r`, then by the denominator of `s`.
+        once <- rules.specAll(scaledLaw, List(sides._1, sides._2, successorR)).flatMap(rules.mp(_, held))
+        onceSides <- arguments(once.conclusion)
+        twice <- rules.specAll(scaledLaw, List(onceSides._1, onceSides._2, successorS)).flatMap(rules.mp(_, once))
+        twiceSides <- arguments(twice.conclusion)
+
+        // Each side, rewritten by one premise into the new numerator times both old denominators.
+        target <- crossedAt(r, s)
+        newSides <- arguments(target)
+        oldDenominators <- times(denominatorP, denominatorQ)
+        leftTarget <- times(newSides._1, oldDenominators)
+        rightTarget <- times(newSides._2, oldDenominators)
+        leftCoefficient <- times(denominatorQ, denominatorS)
+        rightCoefficient <- times(denominatorP, denominatorR)
+        leftEqual <- ring.consequence(twiceSides._1, leftTarget, List(firstEquation -> leftCoefficient))
+        rightEqual <- ring.consequence(twiceSides._2, rightTarget, List(secondEquation -> rightCoefficient))
+        rearranged <- moved(twice, leftEqual, rightEqual)
+
+        // The product of the old denominators read as one embedded successor, and taken off.
+        indexP <- read("SND (p:prod(int,num))")
+        indexQ <- read("SND (q:prod(int,num))")
+        stored <- rules.specAll(lifting.denominator, List(indexP, indexQ)).flatMap(Conv.sym)
+        leftRead <- underFactor(newSides._1, stored)
+        rightRead <- underFactor(newSides._2, stored)
+        readBack <- moved(rearranged, leftRead, rightRead)
+        index <- rightOfTheorem(stored).flatMap(indexOf)
+        cancelled <- rules.specAll(cancelsLaw, List(newSides._1, newSides._2, index)).flatMap(rules.mp(_, readBack))
+
+        result <- rules
+          .disch(premise, cancelled)
+          .flatMap(rules.disch(secondPremise, _))
+          .flatMap(rules.disch(firstPremise, _))
+          .flatMap(rules.genAll(_, List(p, q, r, s)))
+      } yield result
+
+    /** From `|- D1 = D2`, the theorem `|- INT_MUL left D1 = INT_MUL left D2`. */
+    private def underFactor(left: Term, equation: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        multiply <- LogicError.lift(theory.constant(Integer.Multiplication, Type.fun(integers, Type.fun(integers, integers))))
+        partial <- LogicError.lift(Term.app(multiply, left))
+        result <- Conv.apTerm(partial, equation)
+      } yield result
+
+    /**
+     * [[Fraction.AtMostPairs]]: the constant at two projections is the order at the pairs.
+     *
+     * The constant reads the representatives, each related to the pair it was chosen for by
+     * `REPR_REL`, so the respectfulness carries the order across in both directions and the two
+     * implications are one equation.
+     */
+    def atPairs(definition: Kernel.Thm, respectsLaw: Kernel.Thm, symmetric: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        projectedP <- read("RAT_OF_PAIR (p:prod(int,num))")
+        projectedQ <- read("RAT_OF_PAIR (q:prod(int,num))")
+        unfolded <- Conv.unfold(definition, List(projectedP, projectedQ))
+        chooser <- LogicError.lift(theory.constant(quotient.names.representative, Type.fun(Classes, Pairs)))
+        chosenP <- LogicError.lift(Term.app(chooser, projectedP))
+        chosenQ <- LogicError.lift(Term.app(chooser, projectedQ))
+        related <- quotient.fact(Quotient.RelatedToRepresentative)
+        pToChosen <- rules.spec(p, related)
+        qToChosen <- rules.spec(q, related)
+        chosenToP <- rules.specAll(symmetric, List(p, chosenP)).flatMap(rules.mp(_, pToChosen))
+        chosenToQ <- rules.specAll(symmetric, List(q, chosenQ)).flatMap(rules.mp(_, qToChosen))
+
+        atChosen <- rightOfTheorem(unfolded)
+        atGiven <- crossedAt(p, q)
+        chosenHeld <- assume(atChosen)
+        givenHeld <- assume(atGiven)
+        forwards <- rules
+          .specAll(respectsLaw, List(chosenP, chosenQ, p, q))
+          .flatMap(rules.mp(_, chosenToP))
+          .flatMap(rules.mp(_, chosenToQ))
+          .flatMap(rules.mp(_, chosenHeld))
+        backwards <- rules
+          .specAll(respectsLaw, List(p, q, chosenP, chosenQ))
+          .flatMap(rules.mp(_, pToChosen))
+          .flatMap(rules.mp(_, qToChosen))
+          .flatMap(rules.mp(_, givenHeld))
+        equivalent = Kernel.deductAntisym(backwards, forwards)
+        result <- Conv.trans(unfolded, equivalent).flatMap(rules.genAll(_, List(p, q)))
+      } yield result
+
+    /**
+     * A law proved at pairs, with the order written out, put on classes: the order folded back into
+     * `RAT_LE` of two projections, the pair variables specialised at the chosen representatives, and
+     * each projection of a representative rewritten to the class it came from.
+     */
+    private def onClasses(
+      atPairsLaw: Kernel.Thm,
+      pairLaw: Kernel.Thm,
+      pairs: List[FVar],
+      classes: List[FVar]
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        folding <- rules
+          .specAll(atPairsLaw, List(p, q))
+          .flatMap(Conv.sym)
+          .flatMap(rules.genAll(_, List(p, q)))
+          .flatMap(Rewrite.Rule.of(logic, _))
+        chooser <- LogicError.lift(theory.constant(quotient.names.representative, Type.fun(Classes, Pairs)))
+        chosen <- classes.foldRight[Either[LogicError, List[Term]]](Right(Nil)) { (variable, rest) =>
+          rest.flatMap(tail => LogicError.lift(Term.app(chooser, variable)).map(_ :: tail))
+        }
+        back <- quotient.fact(Quotient.ProjectionOfRepresentative).flatMap(Rewrite.Rule.of(logic, _))
+        folded <- rules.genAll(pairLaw, pairs).flatMap(Rewrite.inTheorem(Vector(folding), _))
+        result <- rules
+          .specAll(folded, chosen)
+          .flatMap(Rewrite.inTheorem(Vector(back), _))
+          .flatMap(rules.genAll(_, classes))
+      } yield result
+
+    /** The four laws of a total order, at pairs and then on classes. */
+    def laws(
+      atPairsLaw: Kernel.Thm,
+      scaledLaw: Kernel.Thm,
+      cancelsLaw: Kernel.Thm
+    ): Either[LogicError, Vector[(String, Kernel.Thm)]] =
+      for {
+        reflexive <- integer.fact(Integer.AtMostReflexive)
+        transitive <- integer.fact(Integer.AtMostTransitive)
+        antisymmetric <- integer.fact(Integer.AtMostAntisymmetric)
+        total <- integer.fact(Integer.AtMostTotal)
+        equal <- quotient.fact(Quotient.ProjectionEqual)
+
+        // Reflexivity: the order at `p p` compares a product with itself.
+        atSelf <- crossedAt(p, p).flatMap(arguments)
+        reflexiveAtPairs <- rules.spec(atSelf._1, reflexive)
+        reflexiveLaw <- onClasses(atPairsLaw, reflexiveAtPairs, List(p), List(x))
+
+        // Totality: the order at `q p` is the order at `p q` with its sides exchanged.
+        atPQ <- crossedAt(p, q).flatMap(arguments)
+        totalAtPairs <- rules.specAll(total, List(atPQ._1, atPQ._2))
+        totalLaw <- onClasses(atPairsLaw, totalAtPairs, List(p, q), List(x, y))
+
+        // Antisymmetry: the two orders make the cross-products equal, which is the relation.
+        forwardsTerm <- crossedAt(p, q)
+        backwardsTerm <- crossedAt(q, p)
+        forwardsHeld <- assume(forwardsTerm)
+        backwardsHeld <- assume(backwardsTerm)
+        crossEqual <- rules
+          .specAll(antisymmetric, List(atPQ._1, atPQ._2))
+          .flatMap(rules.mp(_, forwardsHeld))
+          .flatMap(rules.mp(_, backwardsHeld))
+        relation <- unfoldedAt(lifting.definition, lifting.projections, p, q).flatMap(fold(_, crossEqual))
+        classesEqual <- rules
+          .specAll(equal, List(p, q))
+          .flatMap(Conv.sym)
+          .flatMap(back => LogicError.lift(Kernel.eqMp(back, relation)))
+        antisymmetricAtPairs <- rules.disch(backwardsTerm, classesEqual).flatMap(rules.disch(forwardsTerm, _))
+        antisymmetricLaw <- onClasses(atPairsLaw, antisymmetricAtPairs, List(p, q), List(x, y))
+
+        // Transitivity: scale the first by the denominator of `r` and the second by that of `p`,
+        // meet in the middle, and take the denominator of `q` off.
+        firstTerm <- crossedAt(p, q)
+        secondTerm <- crossedAt(q, r)
+        firstHeld <- assume(firstTerm)
+        secondHeld <- assume(secondTerm)
+        firstSides <- arguments(firstTerm)
+        secondSides <- arguments(secondTerm)
+        successorR <- successorOf(r)
+        successorP <- successorOf(p)
+        firstScaled <- rules
+          .specAll(scaledLaw, List(firstSides._1, firstSides._2, successorR))
+          .flatMap(rules.mp(_, firstHeld))
+        secondScaled <- rules
+          .specAll(scaledLaw, List(secondSides._1, secondSides._2, successorP))
+          .flatMap(rules.mp(_, secondHeld))
+        firstScaledSides <- arguments(firstScaled.conclusion)
+        secondScaledSides <- arguments(secondScaled.conclusion)
+        middle <- ring.prove(firstScaledSides._2, secondScaledSides._1)
+        firstMet <- moved(firstScaled, Conv.refl(firstScaledSides._1), middle)
+        chained <- rules
+          .specAll(transitive, List(firstScaledSides._1, secondScaledSides._1, secondScaledSides._2))
+          .flatMap(rules.mp(_, firstMet))
+          .flatMap(rules.mp(_, secondScaled))
+        target <- crossedAt(p, r).flatMap(arguments)
+        denominatorQ <- denominatorOf(q)
+        leftTarget <- times(target._1, denominatorQ)
+        rightTarget <- times(target._2, denominatorQ)
+        leftEqual <- ring.prove(firstScaledSides._1, leftTarget)
+        rightEqual <- ring.prove(secondScaledSides._2, rightTarget)
+        rearranged <- moved(chained, leftEqual, rightEqual)
+        indexQ <- read("SND (q:prod(int,num))")
+        cancelled <- rules.specAll(cancelsLaw, List(target._1, target._2, indexQ)).flatMap(rules.mp(_, rearranged))
+        transitiveAtPairs <- rules.disch(secondTerm, cancelled).flatMap(rules.disch(firstTerm, _))
+        transitiveLaw <- onClasses(atPairsLaw, transitiveAtPairs, List(p, q, r), List(x, y, z))
+      } yield Vector(
+        AtMostReflexive -> reflexiveLaw,
+        AtMostTransitive -> transitiveLaw,
+        AtMostAntisymmetric -> antisymmetricLaw,
+        AtMostTotal -> totalLaw
+      )
+
+    /**
+     * `|- RAT_LE c1 c2 = NUM_LE m n` for two of the constants, which is how both facts about the
+     * units are read: the definitions and [[Fraction.AtMostPairs]] bring the order to one between
+     * two products of `int`, the ring and `SUC ZERO` read as `INT_ONE` bring those to `INT_ZERO`
+     * or `INT_ONE`, and the embedding carries the comparison into `num`.
+     */
+    private def unitsAsNaturals(
+      statement: String,
+      atPairsLaw: Kernel.Thm,
+      constants: Vector[Kernel.Thm],
+      leftValue: String,
+      rightValue: String
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        subject <- read(statement)
+        rewriting <- Rewrite.Rule
+          .all(logic, constants :+ atPairsLaw :+ lifting.embeddedOne)
+          .map(_ ++ lifting.projections)
+        onIntegers <- Rewrite.rewrite(rewriting, subject)
+        sides <- rightOfTheorem(onIntegers).flatMap(arguments)
+        leftInteger <- read(leftValue)
+        rightInteger <- read(rightValue)
+        leftEqual <- ring.prove(sides._1, leftInteger)
+        rightEqual <- ring.prove(sides._2, rightInteger)
+        leftEmbedded <- embeddingOf(leftValue)
+        rightEmbedded <- embeddingOf(rightValue)
+        leftAll <- Conv.trans(leftEqual, leftEmbedded)
+        rightAll <- Conv.trans(rightEqual, rightEmbedded)
+        atMost <- LogicError.lift(theory.constant(Integer.AtMost, Type.fun(integers, Type.fun(integers, Type.Bool))))
+        onEmbedded <- Conv.apTerm(atMost, leftAll).flatMap(partial => LogicError.lift(Kernel.mkComb(partial, rightAll)))
+        leftNatural <- rightOfTheorem(leftEmbedded).flatMap(argumentOf)
+        rightNatural <- rightOfTheorem(rightEmbedded).flatMap(argumentOf)
+        naturals <- integer.fact(Integer.AtMostOfNatural).flatMap(rules.specAll(_, List(leftNatural, rightNatural)))
+        result <- Conv.trans(onIntegers, onEmbedded).flatMap(Conv.trans(_, naturals))
+      } yield result
+
+    /** `|- INT_ZERO = INT_OF_NUM ZERO` or `|- INT_ONE = INT_OF_NUM (SUC ZERO)`. */
+    private def embeddingOf(value: String): Either[LogicError, Kernel.Thm] =
+      value match {
+        case "INT_ZERO" => integer.fact(Integer.OfNaturalZero).flatMap(Conv.sym)
+        case "INT_ONE" => Conv.sym(lifting.embeddedOne)
+        case other => read(other).flatMap(term => Left(NotOfForm("INT_ZERO or INT_ONE", term)))
+      }
+
+    private def argumentOf(term: Term): Either[LogicError, Term] =
+      term match {
+        case App(_, argument) => Right(argument)
+        case other => Left(NotOfForm("an application", other))
+      }
+
+    /** [[Fraction.ZeroAtMostOne]] and [[Fraction.OneNotAtMostZero]]. */
+    def units(atPairsLaw: Kernel.Thm, zero: Kernel.Thm, one: Kernel.Thm): Either[LogicError, Vector[(String, Kernel.Thm)]] =
+      for {
+        upwards <- unitsAsNaturals("RAT_LE RAT_ZERO RAT_ONE", atPairsLaw, Vector(zero, one), "INT_ZERO", "INT_ONE")
+        downwards <- unitsAsNaturals("RAT_LE RAT_ONE RAT_ZERO", atPairsLaw, Vector(zero, one), "INT_ONE", "INT_ZERO")
+        least <- peano.fact(Peano.ZeroIsLeast)
+        atMostZero <- peano.fact(Peano.AtMostZero)
+        never <- peano.naturals.fact(Natural.SuccessorNotZero)
+        successorZero <- read("SUC ZERO")
+        zeroNumber <- read("ZERO")
+
+        below <- rules.spec(successorZero, least)
+        zeroAtMostOne <- Conv.sym(upwards).flatMap(back => LogicError.lift(Kernel.eqMp(back, below)))
+
+        premise <- leftOf(downwards)
+        held <- assume(premise)
+        onNaturals <- LogicError.lift(Kernel.eqMp(downwards, held))
+        collapsed <- rules.spec(successorZero, atMostZero).flatMap(rules.mp(_, onNaturals))
+        clash <- rules.spec(zeroNumber, never).flatMap(rules.notElim(_, collapsed))
+        oneNotAtMostZero <- rules.notIntro(premise, clash)
+      } yield Vector(ZeroAtMostOne -> zeroAtMostOne, OneNotAtMostZero -> oneNotAtMostZero)
+
+    /** Every fact of the order, in the order they are built. */
+    def facts(
+      definition: Kernel.Thm,
+      zero: Kernel.Thm,
+      one: Kernel.Thm,
+      symmetric: Kernel.Thm
+    ): Either[LogicError, Vector[(String, Kernel.Thm)]] =
+      for {
+        scaledLaw <- scaled
+        cancelsLaw <- cancels(scaledLaw)
+        respectsLaw <- respects(scaledLaw, cancelsLaw)
+        atPairsLaw <- atPairs(definition, respectsLaw, symmetric)
+        orderLaws <- laws(atPairsLaw, scaledLaw, cancelsLaw)
+        unitLaws <- units(atPairsLaw, zero, one)
+      } yield Vector(
+        IntAtMostScaled -> scaledLaw,
+        IntAtMostCancels -> cancelsLaw,
+        AtMostRespects -> respectsLaw,
+        AtMostPairs -> atPairsLaw
+      ) ++ orderLaws ++ unitLaws
   }
 
   private def rightOfTheorem(theorem: Kernel.Thm): Either[LogicError, Term] =
