@@ -762,10 +762,31 @@ as a written hypothesis rather than a hidden one: `num` has no negative numbers,
 answered below zero would be right above it and silently wrong under it, and the version with no
 condition at all wants the integers, which `docs/adr/0007` puts later.
 
-**`defineType` has three uses now and they were all built the same way.** `num`, then `prod` in
-`Product.scala`, carved out of `'a -> 'b -> bool` the way `pair.ml` does it, then `word` in
-`Word.scala`, a length and a padded function held together in a pair. The second and third exist
-because lists, matrices and index types were all one missing primitive, and it was the pair.
+**`defineType` is called by hand for the types the chain is built from, and by builders that
+carve a type from a description.** By hand: `num`, then `prod` in `Product.scala`, carved out of
+`'a -> 'b -> bool` the way `pair.ml` does it, then `word` in `Word.scala`, a length and a padded
+function held together in a pair; the second and third exist because lists, matrices and index
+types were all one missing primitive, and it was the pair. This paragraph counted those uses
+until 2026-09-25 and said three while `Quotient` was already the fourth, which is why it counts
+nothing now: `git grep -n "defineType(" -- 'modules/*/src/main/*.scala'` is the census, and its
+first line is the declaration. The file part of that pathspec is not decoration: without it the
+same command answers nothing, which reads exactly like a repository with no call site.
+
+The builders are `Quotient`, the classes of an equivalence relation, whose first consumer is
+`int`, and since 2026-09-25 **`Datatype`, an inductive type from a list of its constructors**, with
+its induction principle, case analysis, injectivity, distinctness and recursion theorem all derived
+and `Datatype.defineRecursive` to name a function by structural recursion. Every such type lives in
+one universe of labelled trees, `word(num) -> L -> bool`, and `docs/adr/0040` is the construction.
+The one discipline it asks of anyone editing it is that the node of the universe is a **term** and
+not a constant, so nothing in the builder may normalise a term holding one: every reduction there
+is at the root. Induction and case analysis spend no axiom; injectivity, distinctness and recursion
+spend choice, eta and infinity, which the chain already holds. Its consumer is `Syntax`, the terms of
+Peano arithmetic as a type `pterm` with the five constructors `Language` numbers, `PSUBST` by
+structural recursion, and `PSUBST_SELF` proved by induction; it sits beside the chain by decision,
+since in it every `PVAR` would sit next to a `NUM_CODE`. So a syntax can be a type here now, and
+the object level is still numbers for the reason `docs/adr/0014` gives: the embedded theory
+quantifies over codes. That the code of `PSUBST` of a term is `NUM_SUBST_TERM` of its code is
+statable now and not proved.
 
 `Rotation` needs two others at once: `Word` for the type it rebuilds and `Modular` for the
 `NUM_MOD` inside its own definition. That is why it is not in `Word.scala`: `Word.standard` is built

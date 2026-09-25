@@ -191,6 +191,19 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // build, which is the same position `Recursion` is in one primitive along.
     "Quotient" -> DeclaresNothing,
 
+    // `Quotient`'s standing, for `Quotient`'s reason, one type former along: `Datatype` calls
+    // `Kernel.defineType` and `Kernel.defineConstant`, and everything it declares — the type, its
+    // two bijections, the constructors and any function `defineRecursive` names — is named by the
+    // caller and lands in the caller's theory. Its universe of trees is a term and not a constant,
+    // which `docs/adr/0040` decides, so there is nothing of its own for `Chain.construct` to build.
+    "Datatype" -> DeclaresNothing,
+
+    // Beside the chain by decision and not as a debt, which is the line that separates it from
+    // `Fraction`: `pterm` is a second syntax of arithmetic beside the coded one `Language` holds,
+    // and in the chain every `PVAR` would sit next to a `NUM_CODE` in `Find` for a reader who asked
+    // about neither. It is `Datatype`'s consumer, and `SyntaxSpec` is the spec the standing asks.
+    "Syntax" -> BesideTheChain,
+
     // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
     // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being
     // outside is that its constants describe one object of one investigation; `rat` is mathematics

@@ -70,3 +70,4 @@ the rejected option attractive, and they will.
 | [0037](0037-the-rewriter-bounds-the-term-and-not-only-the-steps.md) | The rewriter bounds the term and not only the steps | accepted |
 | [0038](0038-a-list-is-an-orientation-on-word-and-not-a-second-carrier.md) | A list is an orientation on `word` and not a second carrier | accepted |
 | [0039](0039-the-fold-is-a-catamorphism-and-a-link-of-its-own.md) | The fold discards the tail, and is a link of its own | accepted, extends 0038 |
+| [0040](0040-an-inductive-type-is-built-from-its-constructors-over-one-universe-of-trees.md) | An inductive type is built from its constructors, over one universe of labelled trees | accepted, extends 0006 and 0020 |
