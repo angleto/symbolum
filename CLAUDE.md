@@ -653,7 +653,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 718 lemmas, 473 have two or more leading quantifiers and **409 of
+caller meant: of the library's 719 lemmas, 474 have two or more leading quantifiers and **410 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1792,6 +1792,13 @@ is the derivation. `ContinuitySpec` asserts all four reach exactly the reals' si
 that the two attainments rest on the gluing and on the negation rather than on some other route,
 detaches both at the identity on `[0, 1]`, refutes the maximum without its continuity hypothesis at
 `COND (y < 1) y 0`, and refutes the gluing without its gluing hypothesis at "shorter than one".
+
+**Uniform continuity is the gluing's third use, `CONTINUOUS_UNIFORM`, since 2026-09-25**: continuous
+on `[a, b]` gives one radius per tolerance for every pair of points of it, Heine and Cantor's
+theorem. What glues is **not** "one radius serves on `[u, v]`", whose pairs straddling the joint
+neither half covers, but "one radius serves every point of `[u, v]` against every point at all",
+which glues at the smaller radius. It costs what the extreme value theorem costs, and
+`ContinuitySpec` refutes it without continuity at the step `COND (0 < y) 1 0` on `[0, 1]`.
 
 **`ln` has its first facts, and they are `Logarithm`, a link since 2026-09-24 that declares
 nothing.** `EXP_LN` and `LN_EXP` are the two compositions, `LN_ONE` and `LN_MUL` follow by

@@ -6,7 +6,8 @@ import garden.xeno.symbolum.logic.*
 import Continuity.Steps
 
 /**
- * The extreme value theorem, and the compactness of `[a, b]` it needs, as one argument used twice.
+ * The extreme value theorem and uniform continuity, and the compactness of `[a, b]` both need, as one
+ * argument used three times.
  *
  * `Continuity` publishes the facts and this is their derivation, as `Trigonometric` is for
  * `SIN_COS_SQUARED`: the file that owns a constant says what is true of it, and a derivation long
@@ -20,9 +21,10 @@ import Continuity.Steps
  * which the property holds on `[a, x]`, and use continuity at `s` to carry it a little further. So
  * the argument is proved once, as [[Continuity.IntervalGluing]], over a property `P u v` of the
  * interval `[u, v]` that glues (`P u v` and `P v w` give `P u w`) and holds on every short enough
- * interval around each point; and it is spent twice. It is the local-to-global principle usually
+ * interval around each point; and it is spent twice for the extreme value theorem and, since
+ * 2026-09-25, once more for [[Continuity.Uniform]]. It is the local-to-global principle usually
  * obtained from Cousin's lemma, proved here directly by the supremum rather than through tagged
- * partitions, because both consumers read one radius per point off continuity and need nothing
+ * partitions, because every consumer reads one radius per point off continuity and needs nothing
  * finer.
  *
  * == The maximum, without a reciprocal ==
@@ -53,7 +55,7 @@ private[theories] object ExtremeValue {
   private val F = "(f:real -> real)"
   private val Everywhere = s"!x:real. a:real <= x /\\ x <= b:real ==> continuous $F x"
 
-  /** The five facts, by the names `Continuity` publishes them under. */
+  /** The six facts, by the names `Continuity` publishes them under. */
   def prove(
     steps: Steps,
     reals: RealTheory,
@@ -66,12 +68,14 @@ private[theories] object ExtremeValue {
       bounded <- boundedness(steps, reals, magnitude, glued)
       highest <- maximum(steps, reals, magnitude, classical, glued, bounded)
       lowest <- minimum(steps, highest, negated)
+      uniform <- uniformity(steps, reals, magnitude, glued)
     } yield Map(
       Continuity.IntervalGluing -> glued,
       Continuity.Negation -> negated,
       Continuity.Bounded -> bounded,
       Continuity.AttainsMaximum -> highest,
-      Continuity.AttainsMinimum -> lowest
+      Continuity.AttainsMinimum -> lowest,
+      Continuity.Uniform -> uniform
     )
 
   /* ------------------------------------------------------------------ the gluing */
@@ -800,6 +804,221 @@ private[theories] object ExtremeValue {
         .foldLeft[Either[LogicError, Kernel.Thm]](Right(opened)) { (acc, text) =>
           for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
         }.flatMap(rules.genAll(_, List(f, a, b)))
+    } yield result
+  }
+
+  /* ----------------------------------------------------------------- the uniformity */
+
+  /*
+   * `Continuity.Uniform`, the gluing's third use. What glues is not "one radius serves for `e` on
+   * `[u, v]`": two such intervals leave the pairs straddling `v` covered by neither radius. It is
+   * "one radius serves every point of `[u, v]` against **every** point at all", and that glues at
+   * the smaller of the two radii, since a point of `[u, w]` is in one of the halves and its partner
+   * is unrestricted. Near each point `x` it holds at half the radius continuity gives for half the
+   * tolerance: a point `z` of a short interval around `x` and anything within half a radius of `z`
+   * are both within a radius of `x`, so both values are within half the tolerance of `f x`.
+   *
+   * Every `abs` is taken apart into its two sides with `ABS_ABOVE` and `ABS_ABOVE_NEG`, the sides
+   * are compared by `Linarith`, and `ABS_CASES` puts them back, which is what `sides` and
+   * `joined` are. No triangle inequality is named: the two sides are linear and `Linarith` adds
+   * them.
+   */
+  /** `R u v`: one radius serves every point of `[u, v]` against every point at all. */
+  private def radiusFor(lo: String, hi: String, d: String): String =
+    s"!x:real. !y:real. $lo <= x /\\ x <= $hi /\\ abs (x - y) < $d ==> abs ($F x - $F y) < e:real"
+
+  /** `|- t < c` and `|- -(t) < c` from `|- abs (t) < c`. */
+  private def sides(steps: Steps, magnitude: Magnitude, t: String, c: String, bound: Kernel.Thm): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
+    import steps.*
+    for {
+      up <- at(lemma("!m:real a:real c:real. a <= m ==> m < c ==> a < c"), s"abs ($t)", s"$t", c)
+        .flatMap(mp(_, at(magnitude.fact(Magnitude.AbsAbove), t), Right(bound)))
+      down <- at(lemma("!m:real a:real c:real. -a <= m ==> m < c ==> -a < c"), s"abs ($t)", s"$t", c)
+        .flatMap(mp(_, at(magnitude.fact(Magnitude.AbsAboveNegation), t), Right(bound)))
+    } yield (up, down)
+  }
+
+  /** `|- abs (t) < c` from `|- t < c` and `|- -(t) < c`, by the two cases of `abs`. */
+  private def joined(steps: Steps, magnitude: Magnitude, t: String, c: String, up: Kernel.Thm, down: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val m = s"abs ($t)"
+    for {
+      cases <- at(magnitude.fact(Magnitude.AbsCases), t)
+      plain <- assume(s"$m = $t").flatMap(eq =>
+        at(lemma("!m:real a:real c:real. m = a ==> a < c ==> m < c"), m, t, c).flatMap(mp(_, Right(eq), Right(up))))
+      negated <- assume(s"$m = -($t)").flatMap(eq =>
+        at(lemma("!m:real a:real c:real. m = -a ==> -a < c ==> m < c"), m, t, c).flatMap(mp(_, Right(eq), Right(down))))
+      result <- rules.disjElim(cases, plain, negated)
+    } yield result
+  }
+
+  private def uniformity(steps: Steps, reals: RealTheory, magnitude: Magnitude, gluing: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val e = Term.variable("e", Reals)
+    val x = Term.variable("x", Reals)
+    val y = Term.variable("y", Reals)
+    val z = Term.variable("z", Reals)
+    val u = Term.variable("u", Reals)
+    val v = Term.variable("v", Reals)
+    val w = Term.variable("w", Reals)
+    val d = Term.variable("d", Reals)
+    val d1 = Term.variable("d1", Reals)
+    val d2 = Term.variable("d2", Reals)
+    val ordered = assume("a:real <= b:real")
+    val everywhere = assume(Everywhere)
+    val tolerance = assume("0 < e:real")
+    def some(lo: String, hi: String) = s"?d:real. 0 < d /\\ (${radiusFor(lo, hi, "d")})"
+
+    for {
+      total <- reals.axiom("LT_TOTAL")
+      relation <- Parser.term(theory, notation, s"\\u:real. \\v:real. ${some("u", "v")}", Relations)
+      instance <- rules.specAll(gluing, List(relation, a, b)).flatMap(reduced)
+      parts <- antecedents(steps, instance.conclusion, 3)
+      List(_, glueTerm, localTerm) = parts: @unchecked
+
+      /* ------------------------------------------------ two radii glue at the smaller */
+
+      glued <- {
+        val premise = s"u:real <= v:real /\\ v <= w:real /\\ (${some("u", "v")}) /\\ (${some("v", "w")})"
+        for {
+          premiseTerm <- proposition(premise)
+          assumed <- LogicError.lift(Kernel.assume(premiseTerm))
+          first <- rules.conjElim2(assumed).flatMap(rules.conjElim2).flatMap(rules.conjElim1)
+          second <- rules.conjElim2(assumed).flatMap(rules.conjElim2).flatMap(rules.conjElim2)
+          left <- assume(s"0 < d1:real /\\ (${radiusFor("u:real", "v:real", "d1")})")
+          right <- assume(s"0 < d2:real /\\ (${radiusFor("v:real", "w:real", "d2")})")
+          leftRadius <- rules.conjElim2(left)
+          rightRadius <- rules.conjElim2(right)
+          leftPositive <- rules.conjElim1(left)
+          rightPositive <- rules.conjElim1(right)
+          positive <- Continuity.minimumOfTwo(steps, magnitude, leftPositive, rightPositive)
+          pointText = "u:real <= x:real /\\ x <= w:real /\\ abs (x - y:real) < min d1 d2"
+          point <- proposition(pointText)
+          atPoint <- LogicError.lift(Kernel.assume(point))
+          ux <- rules.conjElim1(atPoint)
+          xw <- rules.conjElim2(atPoint).flatMap(rules.conjElim1)
+          close <- rules.conjElim2(atPoint).flatMap(rules.conjElim2)
+          shorter = (bound: String, below: Either[LogicError, Kernel.Thm]) =>
+            at(lemma("!m:real n:real p:real. m < n ==> n <= p ==> m < p"), "abs (x - y:real)", "min d1 d2", bound)
+              .flatMap(mp(_, Right(close), below))
+          value <- byOrder(steps, total, "x:real", "v:real",
+            xv => shorter("d1:real", at(magnitude.fact(Magnitude.MinBelowLeft), "d1:real", "d2:real")).flatMap(near =>
+              at(Right(leftRadius), "x:real", "y:real").flatMap(mp(_, conj(Right(ux), conj(Right(xv), Right(near)))))),
+            vx => shorter("d2:real", at(magnitude.fact(Magnitude.MinBelowRight), "d1:real", "d2:real")).flatMap(near =>
+              at(Right(rightRadius), "x:real", "y:real").flatMap(mp(_, conj(Right(vx), conj(Right(xw), Right(near)))))))
+          everyPoint <- rules.disch(point, value).flatMap(rules.genAll(_, List(x, y)))
+          radius <- real("min d1 d2")
+          both <- rules.conjIntro(positive, everyPoint)
+          witnessed <- existential(some("u:real", "w:real")).flatMap(rules.existsIntro(_, radius, both))
+          withD2 <- rules.existsElim(second, d2, witnessed)
+          withD1 <- rules.existsElim(first, d1, withD2)
+          result <- rules.disch(premiseTerm, withD1).flatMap(rules.genAll(_, List(u, v, w)))
+        } yield result
+      }
+
+      /* ------------------- continuity at half the tolerance serves a short interval, at half its radius */
+
+      local <- {
+        val small = "a:real <= u:real /\\ u <= x:real /\\ x <= v:real /\\ v <= b:real /\\ v - u < d / 2"
+        for {
+          point <- proposition("a:real <= x:real /\\ x <= b:real")
+          atPoint <- LogicError.lift(Kernel.assume(point))
+          continuous <- everywhere.flatMap(rules.spec(x, _)).flatMap(rules.mp(_, atPoint))
+          epsilonDelta <- unfolded(f, x).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, continuous)))
+          halfTolerance <- at(lemma("!e:real. 0 < e ==> 0 < e / 2"), "e:real").flatMap(mp(_, tolerance))
+          near <- at(Right(epsilonDelta), "e / 2").flatMap(mp(_, Right(halfTolerance)))
+          radius <- assume(s"0 < d:real /\\ (!y:real. abs (y - x:real) < d ==> abs ($F y - f x) < e / 2)")
+          dPositive <- rules.conjElim1(radius)
+          inside <- rules.conjElim2(radius)
+          halfRadius <- at(lemma("!d:real. 0 < d ==> 0 < d / 2"), "d:real").flatMap(mp(_, Right(dPositive)))
+          smallTerm <- proposition(small)
+          interval <- LogicError.lift(Kernel.assume(smallTerm))
+          ux <- rules.conjElim2(interval).flatMap(rules.conjElim1)
+          xv <- rules.conjElim2(interval).flatMap(rules.conjElim2).flatMap(rules.conjElim1)
+          short <- rules.conjElim2(interval).flatMap(rules.conjElim2).flatMap(rules.conjElim2).flatMap(rules.conjElim2)
+
+          // A point `z` of `[u, v]` and any `y` within `d / 2` of it are both within `d` of `x`.
+          pairText = "u:real <= z:real /\\ z <= v:real /\\ abs (z - y:real) < d / 2"
+          pair <- proposition(pairText)
+          atPair <- LogicError.lift(Kernel.assume(pair))
+          uz <- rules.conjElim1(atPair)
+          zv <- rules.conjElim2(atPair).flatMap(rules.conjElim1)
+          zy <- rules.conjElim2(atPair).flatMap(rules.conjElim2)
+          zyUp <- sides(steps, magnitude, "z - y:real", "d / 2", zy)
+          (zyBelow, zyAbove) = zyUp
+          // `z - x` and `x - z` are under `v - u`, which is under `d / 2`.
+          zxBelow <- at(lemma("!z:real x:real u:real v:real d:real. z <= v ==> u <= x ==> v - u < d / 2 ==> z - x < d / 2"),
+            "z:real", "x:real", "u:real", "v:real", "d:real").flatMap(mp(_, Right(zv), Right(ux), Right(short)))
+          zxAbove <- at(lemma("!z:real x:real u:real v:real d:real. u <= z ==> x <= v ==> v - u < d / 2 ==> -(z - x) < d / 2"),
+            "z:real", "x:real", "u:real", "v:real", "d:real").flatMap(mp(_, Right(uz), Right(xv), Right(short)))
+          zx <- joined(steps, magnitude, "z - x:real", "d / 2", zxBelow, zxAbove)
+          zxWide <- at(lemma("!m:real d:real. m < d / 2 ==> 0 < d ==> m < d"), "abs (z - x:real)", "d:real")
+            .flatMap(mp(_, Right(zx), Right(dPositive)))
+          yxBelow <- at(lemma("!z:real y:real x:real d:real. -(z - y) < d / 2 ==> z - x < d / 2 ==> y - x < d"),
+            "z:real", "y:real", "x:real", "d:real").flatMap(mp(_, Right(zyAbove), Right(zxBelow)))
+          yxAbove <- at(lemma("!z:real y:real x:real d:real. z - y < d / 2 ==> -(z - x) < d / 2 ==> -(y - x) < d"),
+            "z:real", "y:real", "x:real", "d:real").flatMap(mp(_, Right(zyBelow), Right(zxAbove)))
+          yx <- joined(steps, magnitude, "y - x:real", "d:real", yxBelow, yxAbove)
+          fz <- rules.spec(z, inside).flatMap(rules.mp(_, zxWide))
+          fy <- rules.spec(y, inside).flatMap(rules.mp(_, yx))
+          fzUp <- sides(steps, magnitude, s"$F z - f x", "e / 2", fz)
+          fyUp <- sides(steps, magnitude, s"$F y - f x", "e / 2", fy)
+          valuesBelow <- at(lemma("!p:real q:real r:real e:real. p - r < e / 2 ==> -(q - r) < e / 2 ==> p - q < e"),
+            s"$F z", s"$F y", s"$F x", "e:real").flatMap(mp(_, Right(fzUp._1), Right(fyUp._2)))
+          valuesAbove <- at(lemma("!p:real q:real r:real e:real. -(p - r) < e / 2 ==> q - r < e / 2 ==> -(p - q) < e"),
+            s"$F z", s"$F y", s"$F x", "e:real").flatMap(mp(_, Right(fzUp._2), Right(fyUp._1)))
+          values <- joined(steps, magnitude, s"$F z - f y", "e:real", valuesBelow, valuesAbove)
+          everyPair <- rules.disch(pair, values).flatMap(rules.genAll(_, List(z, y)))
+          radiusTerm <- real("d / 2")
+          serves <- rules.conjIntro(halfRadius, everyPair)
+          target <- existential(s"?d1:real. 0 < d1 /\\ (${radiusFor("u:real", "v:real", "d1")})")
+          served <- rules.existsIntro(target, radiusTerm, serves)
+          everyInterval <- rules.disch(smallTerm, served).flatMap(rules.genAll(_, List(u, v)))
+          both <- rules.conjIntro(halfRadius, everyInterval)
+          localTarget <- existential(
+            s"?r:real. 0 < r /\\ (!u:real. !v:real. a:real <= u /\\ u <= x:real /\\ x <= v /\\ v <= b:real /\\ v - u < r ==> " +
+              s"(${some("u", "v")}))")
+          witnessed <- rules.existsIntro(localTarget, radiusTerm, both)
+          opened <- rules.existsElim(near, d, witnessed)
+          result <- rules.disch(point, opened).flatMap(rules.gen(x, _))
+        } yield result
+      }
+
+      _ <- if (glued.conclusion == glueTerm) Right(()) else Left(NotOfForm("the gluing premise", glued.conclusion))
+      _ <- if (local.conclusion == localTerm) Right(()) else Left(NotOfForm("the local premise", local.conclusion))
+      concluded <- mp(instance, ordered, Right(glued), Right(local))
+
+      /* ------------------------------------------ the whole interval, read as the published form */
+
+      published <- {
+        val bothIn = "a:real <= x:real /\\ x <= b:real /\\ a <= y:real /\\ y <= b /\\ abs (x - y) < d"
+        for {
+          radius <- assume(s"0 < d:real /\\ (${radiusFor("a:real", "b:real", "d")})")
+          positive <- rules.conjElim1(radius)
+          serves <- rules.conjElim2(radius)
+          pointTerm <- proposition(bothIn)
+          atPoint <- LogicError.lift(Kernel.assume(pointTerm))
+          ax <- rules.conjElim1(atPoint)
+          xb <- rules.conjElim2(atPoint).flatMap(rules.conjElim1)
+          close <- rules.conjElim2(atPoint).flatMap(rules.conjElim2).flatMap(rules.conjElim2).flatMap(rules.conjElim2)
+          value <- at(Right(serves), "x:real", "y:real").flatMap(mp(_, conj(Right(ax), conj(Right(xb), Right(close)))))
+          everyPair <- rules.disch(pointTerm, value).flatMap(rules.genAll(_, List(x, y)))
+          both <- rules.conjIntro(positive, everyPair)
+          finalTarget <- existential(
+            s"?d:real. 0 < d /\\ (!x:real. !y:real. a:real <= x /\\ x <= b:real /\\ a <= y /\\ y <= b /\\ abs (x - y) < d ==> " +
+              s"abs ($F x - $F y) < e:real)")
+          witnessed <- rules.existsIntro(finalTarget, d, both)
+          result <- rules.existsElim(concluded, d, witnessed)
+        } yield result
+      }
+
+      result <- List("0 < e:real", Everywhere, "a:real <= b:real")
+        .foldLeft[Either[LogicError, Kernel.Thm]](Right(published)) { (acc, text) =>
+          for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+        }.flatMap(rules.genAll(_, List(f, a, b, e)))
     } yield result
   }
 }

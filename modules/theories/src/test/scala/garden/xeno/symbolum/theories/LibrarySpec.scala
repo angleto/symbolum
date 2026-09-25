@@ -683,8 +683,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 718 and 715 with the exponential's slope and the estimate under it, the same day, derived
     // before the run: two facts under two names, none shared. `CLAUDE.md`'s figures do not move:
     // `EXP_NEAR_LINE` binds one `h` and `DERIVATIVE_EXP` one `x`.
-    library.entries.size shouldBe 718
-    library.names.distinct.size shouldBe 715
+    // 719 and 716 with uniform continuity, the same day, derived before the run: one fact under one
+    // name. `CLAUDE.md`'s figures move by **one** and **one**: `CONTINUOUS_UNIFORM` binds a function
+    // and three reals, `a`, `b` and `e`.
+    library.entries.size shouldBe 719
+    library.names.distinct.size shouldBe 716
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
