@@ -320,6 +320,25 @@ class SideConditionSpec extends AnyFlatSpec with Matchers {
       ),
       "The kernel restates the cited sequent itself and cannot be handed another, so this is the " +
         "checker's alone. The case drops a hypothesis, which is the one change that would matter."
+    ),
+    Guarded(
+      "cite",
+      "the conclusion is the cited fact's",
+      None,
+      Some(() =>
+        checkerRefuses(Claim(Vector(ep), eq), Step.Citation("P"), Vector(Claim(Vector(ep), ep)))
+      ),
+      "Checker only, for the reason the row above gives. The hypotheses agree here and the " +
+        "conclusion does not, so this is the half of the sequent comparison the row above never reaches."
+    ),
+    Guarded(
+      "cite",
+      "there is a fact to cite",
+      None,
+      Some(() => checkerRefuses(Claim(Vector.empty, eq), Step.Citation("P"), Vector.empty)),
+      "The kernel's `cite` takes a theorem and cannot be called with none, so this is the " +
+        "checker's alone. In a proof text a `cite` line is a step like any other, and one citing " +
+        "nothing would be `|- q` out of a name."
     )
   )
 
@@ -379,7 +398,7 @@ class SideConditionSpec extends AnyFlatSpec with Matchers {
     // and always will be. The type definition's witness has its kernel case in
     // `SoundnessAttackSpec` instead of here. And one is a real gap on the other side: the escaping
     // type variable has no checker case.
-    oneSided.size shouldBe 8
+    oneSided.size shouldBe 10
   }
 
   "The conditions guarded on both sides" should "be the majority, which is the property claimed" in {
