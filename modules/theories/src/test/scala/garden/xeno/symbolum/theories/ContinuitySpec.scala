@@ -391,6 +391,28 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(fact(Continuity.Uniform), gluing) shouldBe gluing
   }
 
+  it should "spend in each compactness fact exactly what the intermediate value theorem spends, all sixteen and the choice" in {
+    // The two assertions above for these five, `contains COMPLETENESS` and `spent -- sixteen = {SELECT}`,
+    // are an equality outside the reals and a ceiling inside them: a derivation reaching five of the
+    // sixteen would pass both, while the prose beside them (this file's comments, `CLAUDE.md`, the
+    // extreme value card's criterion) says each spends all sixteen, the same set as the intermediate
+    // value theorem. Added by the verification of 2026-09-25 at `87175842`. Every mismatch is
+    // collected before asserting, so one red names all of them rather than the first.
+    val select = force(chain.classical.axiom("SELECT")).conclusion
+    val expected = realAxioms + select
+    val intermediate = Derivation.axiomsOf(fact(Continuity.IntermediateValue))
+    val names = List(Continuity.IntervalGluing, Continuity.Bounded, Continuity.AttainsMaximum,
+      Continuity.AttainsMinimum, Continuity.Uniform)
+    def describe(terms: Set[Term]): String = terms.map(continuity.show).mkString("; ")
+    val mismatches = (Continuity.IntermediateValue :: names).flatMap { name =>
+      val spent = Derivation.axiomsOf(fact(name))
+      Option.when(spent != expected)(s"$name misses [${describe(expected -- spent)}] and adds [${describe(spent -- expected)}]")
+    } ++ names.flatMap { name =>
+      Option.when(Derivation.axiomsOf(fact(name)) != intermediate)(s"$name differs from ${Continuity.IntermediateValue}")
+    }
+    mismatches shouldBe empty
+  }
+
   it should "detach uniform continuity at the identity on [0, 1], with nothing assumed" in {
     val identity = force(continuity.term("\\y:real. y", Type.fun(reals, reals)))
     val instance = opened(force(rules.specAll(fact(Continuity.Uniform), List(identity, real("0:real"), real("1:real"), real("1:real")))))
