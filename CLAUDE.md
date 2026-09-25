@@ -653,7 +653,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 715 lemmas, 472 have two or more leading quantifiers and **408 of
+caller meant: of the library's 716 lemmas, 473 have two or more leading quantifiers and **409 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1821,7 +1821,10 @@ goal has a quotient in it; the mean value theorem costs what Rolle costs. **The 
 `DERIVATIVE_PRODUCT`, landed after it**, with `DERIVATIVE_CONTINUOUS` under it: the error splits
 into three terms, each held under a quarter of `e * abs h`, and the one substitution inside a
 product is done by congruence, because `Linarith` would have to multiply an equation by a factor
-of unknown sign to do it and does not.
+of unknown sign to do it and does not. **And the chain rule, `DERIVATIVE_CHAIN`**, with no
+hypothesis that `g (x + h)` differs from `g x`: the error of `f` at the increment `k` is bounded in
+both cases, by the derivative when `k` is not zero and because it is zero when `k` is, which is
+the case the textbook's quotient cannot reach and `DerivativeSpec` detaches at a constant `g`.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
