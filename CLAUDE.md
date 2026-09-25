@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 667 lemmas, 433 have two or more leading quantifiers and **379 of
+caller meant: of the library's 679 lemmas, 442 have two or more leading quantifiers and **384 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1332,8 +1332,9 @@ rather than a derivation in PA per constant. `NUM_VALUE t e` and `NUM_TRUE p e` 
 term and the truth of a formula at an environment `e : num -> num`, both recursions on the code
 answering with a function of the environment, which the quantifier's clause forces: it reads the
 body at `e` updated at the bound index. `NUM_TRI_GRAPH`, the code of `v0 + v0 = v1 * S v1`, is the
-first representation, and `NUM_TRI_GRAPH_TRUE` says its truth is `e 0 = NUM_TRI (e 1)`. It sits
-beside the chain, as `Collatz` does, until completeness gives it a consumer there.
+first representation, and `NUM_TRI_GRAPH_TRUE` says its truth is `e 0 = NUM_TRI (e 1)`. It is a
+link, between `provability` and `limit`, and not a development beside the chain: that standing is
+for the constants of one investigation, which is what `ChainCoverageSpec` says of it.
 
 **Read that for what it is: nothing in it is about provability.** `NUM_TRI_GRAPH_TRUE` says what
 the formula means and not that PA proves it at any numeral, and a reader who rounds the first up to

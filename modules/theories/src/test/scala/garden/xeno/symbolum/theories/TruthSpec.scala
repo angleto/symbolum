@@ -25,8 +25,7 @@ import garden.xeno.symbolum.logic.*
 class TruthSpec extends AnyFlatSpec with Matchers {
 
   private lazy val chain: Chain = Chain.standard
-  private lazy val truth: Truth =
-    Truth.construct(chain).fold(error => fail(s"the development does not build: $error"), identity)
+  private lazy val truth: Truth = chain.truth
 
   private def force[E, T](result: Either[E, T]): T =
     result.fold(error => fail(s"unexpected refusal: $error"), identity)

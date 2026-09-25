@@ -207,30 +207,28 @@ object Truth {
     TriangleGraphTrue -> "!e:num -> num. NUM_TRUE NUM_TRI_GRAPH e = (e 0 = NUM_TRI (e 1))"
   )
 
-  /** Over the standard chain. */
-  lazy val standard: Truth =
-    construct(Chain.standard).fold(
-      error =>
-        throw new IllegalStateException(s"the truth of the object language does not build: $error"),
-      identity
-    )
+  /** The one the standard chain builds. */
+  lazy val standard: Truth = Chain.standard.truth
 
   /**
-   * Over a chain of one's own, extending what the embedded theory can prove.
+   * Over what the embedded theory can prove, extending its theory.
    *
-   * Beside the chain rather than in it, as `Collatz` is and for a narrower reason: nothing in the
-   * chain consumes it yet. It extends `provability.theory` so that completeness, when it lands,
-   * can state that a true formula is a provable one in one signature.
+   * A link of the chain, above `provability`, so that completeness can state that a true formula
+   * is a provable one in one signature, and so that `Find` and the library reach what is here.
    */
-  def construct(chain: Chain): Either[LogicError, Truth] = {
-    val language = chain.language
-    val numbering = chain.numbering
-    val provability = chain.provability
+  def construct(
+    language: Language,
+    numbering: Numbering,
+    provability: Provability,
+    induct: Induct,
+    successor: Successor,
+    naturals: Natural
+  ): Either[LogicError, Truth] = {
     val numbers = TyApp(Natural.TypeName, Nil)
     val environments = Type.fun(numbers, numbers)
 
     for {
-      descent <- Descent.construct(numbering.peano, chain.induct)
+      descent <- Descent.construct(numbering.peano, induct)
       recursion <- descent.theorem
       baseLogic <- numbering.logic.over(provability.theory)
 
@@ -261,7 +259,7 @@ object Truth {
           rule <- Rewrite.Rule.of(logic, fact)
         } yield found :+ rule
       }
-      clauses = new Clauses(numbering, logic, chain.successor, projections, statements)
+      clauses = new Clauses(numbering, logic, successor, projections, statements)
 
       valueVariable <- clauses.at(valueNamed, ValueVariable, Type.fun(environments, numbers))
       valueZero <- clauses.at(valueNamed, ValueZero, Type.fun(environments, numbers))
@@ -271,7 +269,7 @@ object Truth {
       numeralAtZero <- language.fact(Language.NumeralAtZero)
       numeralAtSuccessor <- language.fact(Language.NumeralAtSuccessor)
       valueNumeral <- numeralValue(
-        logic, statements, chain.naturals, numeralAtZero, numeralAtSuccessor, valueZero,
+        logic, statements, naturals, numeralAtZero, numeralAtSuccessor, valueZero,
         valueSuccessor)
 
       trueEquality <- clauses.at(truthNamed, TrueEquality, Type.fun(environments, Type.Bool))
@@ -280,7 +278,7 @@ object Truth {
       trueUniversal <- clauses.at(truthNamed, TrueUniversal, Type.fun(environments, Type.Bool))
 
       semiring <- Semiring.construct(numbering.peano)
-      doubled <- triangleDoubled(logic, statements, chain.naturals, numbering, semiring)
+      doubled <- triangleDoubled(logic, statements, naturals, numbering, semiring)
       graph <- triangleGraph(
         logic, statements, numbering, graphDefinition, doubled,
         Vector(valueVariable, valueSuccessor, valueSum, valueProduct, trueEquality))

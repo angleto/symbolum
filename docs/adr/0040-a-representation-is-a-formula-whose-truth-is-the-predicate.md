@@ -51,9 +51,14 @@ fixed parameter cannot say that.
 variables `1`, `2` and so on, in order. `NUM_TRI_GRAPH` is the first, and every one above follows
 it.
 
-**`Truth` sits beside the chain**, as `Collatz` does, extending `provability.theory`. It moves
-into the chain with its first consumer there, which will be completeness, since that theorem
-states that a true formula is a provable one and so needs both signatures at once.
+**`Truth` is a link of the chain**, above `provability` and below `limit`, which now extends it.
+It was written first as a development beside the chain, on the argument that nothing in the chain
+consumed it yet. When the suite first ran, `ChainCoverageSpec` asked for the file to be
+classified, and the classification it offers for a development outside the chain says what was
+wrong with the argument: outside it `Find`, `Ask` and the library cannot reach the constants, and
+that standing is for constants describing one object of one investigation, which a truth
+predicate for arithmetic is not. Completeness, the next consumer, needs this signature and `provability`'s at once, which a
+link gives it for nothing.
 
 ## Consequences
 

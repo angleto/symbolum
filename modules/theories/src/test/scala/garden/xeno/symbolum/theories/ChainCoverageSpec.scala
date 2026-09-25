@@ -90,6 +90,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Language" -> InTheChain,
     "Provability" -> InTheChain,
     "Deduction" -> InTheChain,
+    // 2026-09-25. `NUM_VALUE`, `NUM_TRUE` and the triangle's graph, between `provability` and
+    // `limit`. It was written first beside the chain, and the question this spec asked is what
+    // moved it: a truth predicate for the embedded arithmetic is not one investigation's object.
+    "Truth" -> InTheChain,
     // Beside the chain: soundness of a resolution step is a theorem ABOUT a proof system, and the
     // development declares no type, no constant and no definition. `ResolvingSpec` asserts that.
     "Resolving" -> DeclaresNothing,
