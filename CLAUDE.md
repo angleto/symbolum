@@ -1985,7 +1985,11 @@ through it, with `RAT_DENOMINATOR` reading the stored index `d * e + d + e` back
 **The order is the thing to know before touching it**: compared under the negations, by size inside
 the recursion with a negation adding no size, and by the number of negations last; counting the
 negation's node sent `-m` to the end of a sum and the rationals' first obligation was refused, which
-`tools/verify/perturb-commutative-ring.sh` fires. `rat` is not yet an ordered field.
+`tools/verify/perturb-commutative-ring.sh` fires. **`rat` is an ordered field since the same day**:
+`RAT_INV` is defined with the value at zero written by its conditional, `RAT_MUL_INV` holds off zero,
+and `RAT_LE_ADD` and `RAT_LE_MUL` tie the order to the operations. The existence of an inverse
+needed the sign of the numerator, which the pair holds as an integer, and `INT_OF_NUM_CASES` is that
+split; `tools/verify/perturb-rational-field.sh` fires the zero branch and the sign of the witness.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated. The half of that

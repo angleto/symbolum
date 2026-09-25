@@ -54,10 +54,17 @@ import garden.xeno.symbolum.logic.*
  * about `int` that nothing had needed: a natural factor preserves `INT_LE`, and a positive one
  * comes off it. `Ordering` is the derivation.
  *
- * Not here yet: the inverse of a non-zero rational, which wants a case split on the sign of the
- * numerator that the pair `(a, d)` holds as an integer rather than as a sign and a size; and the
- * two laws tying the order to the operations, which with the inverse are what make `rat` an
- * ordered field and what the reals as cuts will ask of it.
+ * **And, the same day, the ordered field.** `RAT_INV` is defined over the order's theory as
+ * `COND (x = RAT_ZERO) RAT_ZERO (select (\y. RAT_MUL x y = RAT_ONE))`, so the value at zero is a
+ * convention the definition writes and `RAT_INV_ZERO` reads it back; `RAT_INVERSE_EXISTS` is what
+ * makes the choice say something elsewhere, and `RAT_MUL_INV` is the two together. The pair
+ * `(a, d)` holds its numerator as an integer rather than as a sign and a size, so the existence
+ * needed the sign first: `INT_OF_NUM_CASES` writes every integer as `n` or `-n`, and the inverse of
+ * the class of `(k + 1, d)` is the class of `(d + 1, k)`, with the sign carried to the witness in
+ * the negative case. The two laws tying the order to the operations are `RAT_LE_ADD` and
+ * `RAT_LE_MUL`; under the second are `INT_NONNEG_OF_NUM`, that a non-negative integer is a natural,
+ * and `INT_LE_MUL_NONNEG`. None of them spends anything the rest of the file does not already
+ * spend. What the reals as cuts will ask beyond this is Archimedes and density, and neither is here.
  *
  * == The one thing transitivity needs, and where it comes from ==
  *
@@ -246,6 +253,36 @@ object Fraction {
    * relation that relates everything on a one-point type, and of nothing else these two do not.
    */
   val ZeroAtMostOne: String = "RAT_ZERO_LE_ONE"
+
+  /** `RAT_INV x`: the inverse of a non-zero rational, and zero at zero, which the definition writes. */
+  val Inverse: String = "RAT_INV"
+
+  /** `|- !a. (?n. a = INT_OF_NUM n) \/ (?n. a = INT_NEG (INT_OF_NUM n))`: the sign of an integer. */
+  val IntSign: String = "INT_OF_NUM_CASES"
+
+  /** `|- !a. INT_LE INT_ZERO a ==> ?n. a = INT_OF_NUM n`. */
+  val IntNonNegative: String = "INT_NONNEG_OF_NUM"
+
+  /** `|- !a b. INT_LE INT_ZERO a ==> INT_LE INT_ZERO b ==> INT_LE INT_ZERO (INT_MUL a b)`. */
+  val IntMulNonNegative: String = "INT_LE_MUL_NONNEG"
+
+  /** `|- !x y z. RAT_LE x y ==> RAT_LE (RAT_ADD x z) (RAT_ADD y z)`: the order with the sum. */
+  val AtMostAdd: String = "RAT_LE_ADD"
+
+  /** `|- !x y. RAT_LE RAT_ZERO x ==> RAT_LE RAT_ZERO y ==> RAT_LE RAT_ZERO (RAT_MUL x y)`. */
+  val AtMostMul: String = "RAT_LE_MUL"
+
+  /** `|- !x. ~(x = RAT_ZERO) ==> ?y. RAT_MUL x y = RAT_ONE`. */
+  val InverseExists: String = "RAT_INVERSE_EXISTS"
+
+  /** `|- !x. ~(x = RAT_ZERO) ==> RAT_MUL x (RAT_INV x) = RAT_ONE`. */
+  val MulInverse: String = "RAT_MUL_INV"
+
+  /** `|- RAT_INV RAT_ZERO = RAT_ZERO`. */
+  val InverseAtZero: String = "RAT_INV_ZERO"
+
+  private val InverseBody: String =
+    "\\x:rat. COND (x = RAT_ZERO) RAT_ZERO (select (\\y:rat. RAT_MUL x y = RAT_ONE))"
   val OneNotAtMostZero: String = "RAT_NOT_ONE_LE_ZERO"
 
   /** `(a, d) + (b, e) = (a * (e + 1) + b * (d + 1), d * e + d + e)`, over the pair's own projections. */
@@ -327,7 +364,16 @@ object Fraction {
     AtMostAntisymmetric -> "!x:rat. !y:rat. RAT_LE x y ==> RAT_LE y x ==> x = y",
     AtMostTotal -> "!x:rat. !y:rat. RAT_LE x y \\/ RAT_LE y x",
     ZeroAtMostOne -> "RAT_LE RAT_ZERO RAT_ONE",
-    OneNotAtMostZero -> "~(RAT_LE RAT_ONE RAT_ZERO)"
+    OneNotAtMostZero -> "~(RAT_LE RAT_ONE RAT_ZERO)",
+    IntSign -> "!a:int. (?n:num. a = INT_OF_NUM n) \\/ (?n:num. a = INT_NEG (INT_OF_NUM n))",
+    IntNonNegative -> "!a:int. INT_LE INT_ZERO a ==> (?n:num. a = INT_OF_NUM n)",
+    IntMulNonNegative ->
+      "!a:int. !b:int. INT_LE INT_ZERO a ==> INT_LE INT_ZERO b ==> INT_LE INT_ZERO (INT_MUL a b)",
+    AtMostAdd -> "!x:rat. !y:rat. !z:rat. RAT_LE x y ==> RAT_LE (RAT_ADD x z) (RAT_ADD y z)",
+    AtMostMul -> "!x:rat. !y:rat. RAT_LE RAT_ZERO x ==> RAT_LE RAT_ZERO y ==> RAT_LE RAT_ZERO (RAT_MUL x y)",
+    InverseExists -> "!x:rat. ~(x = RAT_ZERO) ==> (?y:rat. RAT_MUL x y = RAT_ONE)",
+    MulInverse -> "!x:rat. ~(x = RAT_ZERO) ==> RAT_MUL x (RAT_INV x) = RAT_ONE",
+    InverseAtZero -> "RAT_INV RAT_ZERO = RAT_ZERO"
   )
 
   private val numbers: Type = TyApp(Natural.TypeName, Nil)
@@ -433,8 +479,35 @@ object Fraction {
       atMostDefined <- LogicError.lift(Kernel.defineConstant(whole, AtMost, atMostBody))
       (ordered, atMostDefinition) = atMostDefined
       orderedQuotient <- widened.over(ordered)
-      order <- Ordering(orderedQuotient, notation, arithmetic, integer, peano)
-        .facts(atMostDefinition, zeroDefinition, oneDefinition, symmetric)
+      ordering = Ordering(orderedQuotient, notation, arithmetic, integer, peano)
+      order <- ordering.facts(atMostDefinition, zeroDefinition, oneDefinition, symmetric)
+
+      // The ordered field: the sign of an integer under the order's two compatibilities, then the
+      // inverse, which is defined over the order's theory and so needs a quotient over its own.
+      atPairsLaw <- order.collectFirst { case (AtMostPairs, law) => law }.toRight(MissingDefinition(AtMostPairs))
+      scaledLaw <- order.collectFirst { case (IntAtMostScaled, law) => law }.toRight(MissingDefinition(IntAtMostScaled))
+      sign <- ordering.intSign
+      nonNegative <- ordering.intNonNegative(sign)
+      productNonNegative <- ordering.intMulNonNegative(nonNegative, scaledLaw)
+      addMonotone <- ordering.addMonotone(atPairsLaw, scaledLaw, addOperation, addPairs)
+      mulNonNegative <- ordering.mulNonNegative(atPairsLaw, zeroDefinition, mulOperation, mulPairs, productNonNegative)
+      inverseBody <- Parser.term(ordered, notation, InverseBody)
+      inverseDefined <- LogicError.lift(Kernel.defineConstant(ordered, Inverse, inverseBody))
+      (fielded, inverseDefinition) = inverseDefined
+      fieldQuotient <- orderedQuotient.over(fielded)
+      inverses <- Ordering(fieldQuotient, notation, arithmetic, integer, peano)
+        .inverse(inverseDefinition, zeroDefinition, oneDefinition, mulOperation, mulPairs, sign)
+      (inverseExists, mulInverse, inverseAtZero) = inverses
+      field = Vector(
+        (IntSign, sign),
+        (IntNonNegative, nonNegative),
+        (IntMulNonNegative, productNonNegative),
+        (AtMostAdd, addMonotone),
+        (AtMostMul, mulNonNegative),
+        (InverseExists, inverseExists),
+        (MulInverse, mulInverse),
+        (InverseAtZero, inverseAtZero)
+      )
 
       checked <- (Vector(
         (SwapFactors, swap),
@@ -447,10 +520,10 @@ object Fraction {
         (MulPairs, mulPairs),
         (AddCommutative, addSymmetric),
         (MulCommutative, mulSymmetric)
-      ) ++ laws ++ ((UnitsDistinct, distinct) +: order)).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
+      ) ++ laws ++ ((UnitsDistinct, distinct) +: order) ++ field).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
         case ((name, theorem), rest) =>
           for {
-            statement <- Parser.proposition(ordered, notation, statementOf(name))
+            statement <- Parser.proposition(fielded, notation, statementOf(name))
             _ <-
               if (theorem.conclusion == statement) Right(())
               else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
@@ -463,10 +536,16 @@ object Fraction {
     } yield new Fraction(
       classical,
       integer,
-      ordered,
+      fielded,
       notation,
-      orderedQuotient,
-      Map(SameName -> sameDefinition, Zero -> zeroDefinition, One -> oneDefinition, AtMost -> atMostDefinition) ++
+      fieldQuotient,
+      Map(
+        SameName -> sameDefinition,
+        Zero -> zeroDefinition,
+        One -> oneDefinition,
+        AtMost -> atMostDefinition,
+        Inverse -> inverseDefinition
+      ) ++
         complete.definitions,
       checked.toMap
     )
@@ -761,7 +840,7 @@ object Fraction {
       } yield (statement, equation)
 
     /** `|- RAT_SAME s t` from the premises, scaled by the coefficients, with denominators read back. */
-    private def related(left: Term, right: Term, premises: List[(Kernel.Thm, Term)]): Either[LogicError, Kernel.Thm] =
+    def related(left: Term, right: Term, premises: List[(Kernel.Thm, Term)]): Either[LogicError, Kernel.Thm] =
       for {
         target <- unfoldedAt(definition, projections, left, right)
         sides <- sidesOf(target)
@@ -1336,7 +1415,8 @@ object Fraction {
       atPairsLaw: Kernel.Thm,
       pairLaw: Kernel.Thm,
       pairs: List[FVar],
-      classes: List[FVar]
+      classes: List[FVar],
+      unfolding: Vector[Rewrite.Rule] = Vector.empty
     ): Either[LogicError, Kernel.Thm] =
       for {
         folding <- rules
@@ -1349,7 +1429,11 @@ object Fraction {
           rest.flatMap(tail => LogicError.lift(Term.app(chooser, variable)).map(_ :: tail))
         }
         back <- quotient.fact(Quotient.ProjectionOfRepresentative).flatMap(Rewrite.Rule.of(logic, _))
-        folded <- rules.genAll(pairLaw, pairs).flatMap(Rewrite.inTheorem(Vector(folding), _))
+        // `unfolding` turns a projection of an operation's pair back into the operation on the
+        // projections, and of a constant's pair back into the constant: what a law about `RAT_ADD`
+        // or `RAT_ZERO` is stated with, where the order at pairs can only mention the pairs.
+        foldedOrder <- rules.genAll(pairLaw, pairs).flatMap(Rewrite.inTheorem(Vector(folding), _))
+        folded <- if (unfolding.isEmpty) Right(foldedOrder) else Rewrite.inTheorem(unfolding, foldedOrder)
         result <- rules
           .specAll(folded, chosen)
           .flatMap(Rewrite.inTheorem(Vector(back), _))
@@ -1511,6 +1595,487 @@ object Fraction {
       } yield Vector(ZeroAtMostOne -> zeroAtMostOne, OneNotAtMostZero -> oneNotAtMostZero)
 
     /** Every fact of the order, in the order they are built. */
+    /* ------------------------------------------------------------------ the ordered field */
+
+    /** `|- !x. ... ` turned round under its quantifiers, so that it rewrites right to left. */
+    private def reversed(theorem: Kernel.Thm, variables: List[FVar]): Either[LogicError, Rewrite.Rule] =
+      rules.specAll(theorem, variables).flatMap(Conv.sym).flatMap(rules.genAll(_, variables)).flatMap(Rewrite.Rule.of(logic, _))
+
+    /** A proposition read with the free pairs and integers this class declares. */
+    private def statement(text: String): Either[LogicError, Term] = Parser.proposition(theory, notation, text)
+
+    /** `crossed(A, B)` for two pair terms, built by substitution rather than by printing them. */
+    private def crossedOf(left: Term, right: Term): Either[LogicError, Term] =
+      for {
+        template <- crossedAt(p, q)
+        result <- LogicError.lift(Term.substitute(Map(p -> left, q -> right), template))
+      } yield result
+
+    /** `|- crossed(A, B) = INT_LE L R`, the projections read and the stored denominators read back. */
+    private def readOrder(order: Term): Either[LogicError, Kernel.Thm] =
+      Rewrite.rewrite(lifting.projections ++ lifting.denominators, order)
+
+    /** `f A B`, reduced, which is the pair an operation gives. */
+    private def applied(operation: Term, arguments: Term*): Either[LogicError, Term] =
+      for {
+        term <- LogicError.lift(Term.appAll(operation, arguments.toList))
+        equation <- Conv.betaNormalise(term)
+        result <- rightOfTheorem(equation)
+      } yield result
+
+    /**
+     * [[Fraction.IntSign]]: every integer is the embedding of a natural or its negation. An integer
+     * is the class of a pair `(m, k)`; the naturals are totally ordered, so `k + d = m` or
+     * `m + d = k` for some `d`, and the pair is related to `(d, 0)` or to `(0, d)`.
+     */
+    def intSign: Either[LogicError, Kernel.Thm] = {
+      val dd = Term.variable("d", numbers)
+      for {
+        semiring <- Semiring.construct(peano)
+        cases <- integer.fact(Integer.Cases)
+        equal <- integer.fact(Integer.Equal)
+        sameDefinition <- integer.definition(Integer.SameName)
+        ofNaturalDefinition <- integer.definition(Integer.OfNatural)
+        negPair <- integer.fact(Integer.NegPair)
+        total <- peano.fact(Peano.Total)
+        atMostDefinition <- peano.definition(Peano.NonStrictOrder)
+        goal <- statement("(?n:num. (a:int) = INT_OF_NUM n) \\/ (?n:num. (a:int) = INT_NEG (INT_OF_NUM n))")
+        goalParts <- logic.destDisj(goal).toRight(NotOfForm("a disjunction", goal))
+        (positiveGoal, negativeGoal) = goalParts
+        represented <- statement("(a:int) = INT_OF_PAIR (u:prod(num,num))")
+        heldRepresented <- assume(represented)
+        first <- read("FST (u:prod(num,num))")
+        second <- read("SND (u:prod(num,num))")
+        zero <- Parser.term(theory, notation, "0", numbers)
+        add <- LogicError.lift(theory.constant(Peano.Addition, Type.fun(numbers, Type.fun(numbers, numbers))))
+        pairing <- LogicError.lift(
+          theory.constant(Product.Pairing, Type.fun(numbers, Type.fun(numbers, TyApp(Product.TypeName, List(numbers, numbers)))))
+        )
+
+        // `|- INT_OF_PAIR u = INT_OF_PAIR target`, given the equation under `INT_SAME u target`
+        // once the projections of `target` are read, as a function of its two sides.
+        relatedTo = (target: Term, arithmetic: (Term, Term) => Either[LogicError, Kernel.Thm]) =>
+          for {
+            unfolded <- Conv.unfold(sameDefinition, List(u, target))
+            readBody <- Rewrite.rewrite(lifting.projections, rightOf(unfolded))
+            sides <- Term.destEq(rightOf(readBody)).toRight(NotOfForm("an equation", rightOf(readBody)))
+            proof <- arithmetic(sides._1, sides._2)
+            bodyHolds <- Conv.sym(readBody).flatMap(back => LogicError.lift(Kernel.eqMp(back, proof)))
+            sameHolds <- Conv.sym(unfolded).flatMap(back => LogicError.lift(Kernel.eqMp(back, bodyHolds)))
+            classes <- rules.specAll(equal, List(u, target)).flatMap(Conv.sym)
+              .flatMap(back => LogicError.lift(Kernel.eqMp(back, sameHolds)))
+          } yield classes
+
+        /** The witness of `NUM_LE left right` opened: the case's hypothesis, the existential, the body. */
+        opening = (left: Term, right: Term) =>
+          for {
+            atMost <- Conv.unfold(atMostDefinition, List(left, right))
+            caseStatement <- leftOf(atMost)
+            held <- assume(caseStatement)
+            opened <- LogicError.lift(Kernel.eqMp(atMost, held))
+            body <- logic.destExistsPredicate(opened.conclusion).toRight(NotOfForm("an existential", opened.conclusion))
+              .flatMap(pred => LogicError.lift(Term.app(pred, dd))).flatMap(Conv.betaRoot).map(rightOf)
+            witness <- assume(body)
+          } yield (opened, witness)
+
+        // `snd u + d = fst u`: `u` is related to `(d, 0)`, since `fst u + 0 = (snd u + d) + 0 = d + snd u`
+        positive <- {
+          for {
+            opened <- opening(second, first)
+            (existential, witness) = opened
+            target <- LogicError.lift(Term.appAll(pairing, List(dd, zero)))
+            classes <- relatedTo(target, (left, right) =>
+              for {
+                back <- Conv.sym(witness)
+                substituted <- Conv.apTerm(add, back).flatMap(Conv.apThm(_, zero))
+                closing <- semiring.prove(rightOf(substituted), right)
+                result <- Conv.trans(substituted, closing)
+              } yield result)
+            ofNatural <- Conv.unfold(ofNaturalDefinition, List(dd)).flatMap(Conv.sym)
+            equation <- Conv.trans(heldRepresented, classes).flatMap(Conv.trans(_, ofNatural))
+            witnessed <- logic.destExistsPredicate(positiveGoal).toRight(NotOfForm("an existential", positiveGoal))
+              .flatMap(pred => rules.existsIntro(pred, dd, equation))
+            injected <- rules.disjIntro1(negativeGoal, witnessed)
+            result <- rules.existsElim(existential, dd, injected)
+          } yield result
+        }
+
+        // `fst u + d = snd u`: `u` is related to `(0, d)`, since `fst u + d = 0 + (fst u + d) = 0 + snd u`
+        negative <- {
+          for {
+            opened <- opening(first, second)
+            (existential, witness) = opened
+            target <- LogicError.lift(Term.appAll(pairing, List(zero, dd)))
+            classes <- relatedTo(target, (left, right) =>
+              for {
+                sum <- LogicError.lift(Term.appAll(add, List(first, dd)))
+                shifted <- LogicError.lift(Term.appAll(add, List(zero, sum)))
+                opening <- semiring.prove(left, shifted)
+                substituted <- LogicError.lift(Term.app(add, zero)).flatMap(Conv.apTerm(_, witness))
+                result <- Conv.trans(opening, substituted)
+              } yield result)
+            ofNatural <- Conv.unfold(ofNaturalDefinition, List(dd))
+            negation <- LogicError.lift(theory.constant(Integer.Negation, Type.fun(integers, integers)))
+            negated <- Conv.apTerm(negation, ofNatural)
+            swapped <- rightOf(negated) match {
+              case App(_, App(_, pair)) => rules.spec(pair, negPair)
+              case other => Left(NotOfForm("a negated class", other))
+            }
+            readSwap <- Rewrite.rewrite(lifting.projections, rightOf(swapped))
+            chain <- Conv.trans(negated, swapped).flatMap(Conv.trans(_, readSwap)).flatMap(Conv.sym)
+            equation <- Conv.trans(heldRepresented, classes).flatMap(Conv.trans(_, chain))
+            witnessed <- logic.destExistsPredicate(negativeGoal).toRight(NotOfForm("an existential", negativeGoal))
+              .flatMap(pred => rules.existsIntro(pred, dd, equation))
+            injected <- rules.disjIntro2(positiveGoal, witnessed)
+            result <- rules.existsElim(existential, dd, injected)
+          } yield result
+        }
+
+        split <- rules.specAll(total, List(second, first))
+        byCases <- rules.disjElim(split, positive, negative)
+        atA <- rules.spec(a, cases)
+        eliminated <- rules.existsElim(atA, u, byCases)
+        result <- rules.gen(a, eliminated)
+      } yield result
+    }
+
+    /**
+     * [[Fraction.IntNonNegative]]: a non-negative integer is the embedding of a natural. The negative
+     * case `a = -N` gives `N <= 0` once `N` is added to both sides, so `N` is the embedding of `0`.
+     */
+    def intNonNegative(sign: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+      val nn = Term.variable("n", numbers)
+      for {
+        monotone <- integer.fact(Integer.AddMonotone)
+        ofNatural <- integer.fact(Integer.AtMostOfNatural)
+        ofNaturalZero <- integer.fact(Integer.OfNaturalZero)
+        atMostZero <- peano.fact(Peano.AtMostZero)
+        premise <- statement("INT_LE INT_ZERO (a:int)")
+        heldPremise <- assume(premise)
+        goal <- statement("?n:num. (a:int) = INT_OF_NUM n")
+        atA <- rules.spec(a, sign)
+        parts <- logic.destDisj(atA.conclusion).toRight(NotOfForm("a disjunction", atA.conclusion))
+        positive <- assume(parts._1)
+        negativeCase <- {
+          for {
+            negativeHeld <- assume(parts._2)
+            body <- logic.destExistsPredicate(parts._2).toRight(NotOfForm("an existential", parts._2))
+              .flatMap(pred => LogicError.lift(Term.app(pred, nn))).flatMap(Conv.betaRoot).flatMap(rightOfTheorem)
+            equation <- assume(body)
+            embedded <- read("INT_OF_NUM (n:num)")
+            zeroInt <- read("INT_ZERO")
+            atNegation <- moved(heldPremise, Conv.refl(zeroInt), equation)
+            shifted <- rules.specAll(monotone, List(zeroInt, rightOf(equation), embedded)).flatMap(rules.mp(_, atNegation))
+            sides <- arguments(shifted.conclusion)
+            leftEqual <- ring.prove(sides._1, embedded)
+            zeroNumeral <- Parser.term(theory, notation, "0", numbers)
+            embeddedZero <- LogicError.lift(Term.app(embeddedConstant, zeroNumeral))
+            rightEqual <- ring.prove(sides._2, zeroInt).flatMap(eq => Conv.sym(ofNaturalZero).flatMap(Conv.trans(eq, _)))
+            belowZero <- moved(shifted, leftEqual, rightEqual)
+            asNaturals <- rules.specAll(ofNatural, List(nn, zeroNumeral)).flatMap(eqn => LogicError.lift(Kernel.eqMp(eqn, belowZero)))
+            isZero <- rules.spec(nn, atMostZero).flatMap(rules.mp(_, asNaturals))
+            // a = -(INT_OF_NUM n) = -(INT_OF_NUM 0) = -INT_ZERO = INT_ZERO = INT_OF_NUM 0
+            negation <- LogicError.lift(theory.constant(Integer.Negation, Type.fun(integers, integers)))
+            atZero <- Conv.apTerm(embeddedConstant, isZero).flatMap(Conv.apTerm(negation, _))
+            throughZero <- Conv.apTerm(negation, ofNaturalZero)
+            negatedZero <- rightOfTheorem(throughZero)
+            collapsed <- ring.prove(negatedZero, zeroInt)
+            back <- Conv.sym(ofNaturalZero)
+            chain <- Conv.trans(equation, atZero).flatMap(Conv.trans(_, throughZero)).flatMap(Conv.trans(_, collapsed)).flatMap(Conv.trans(_, back))
+            witnessed <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
+              .flatMap(pred => rules.existsIntro(pred, zeroNumeral, chain))
+            result <- rules.existsElim(negativeHeld, nn, witnessed)
+          } yield result
+        }
+        byCases <- rules.disjElim(atA, positive, negativeCase)
+        result <- rules.disch(premise, byCases).flatMap(rules.gen(a, _))
+      } yield result
+    }
+
+    private def rightOf(theorem: Kernel.Thm): Term =
+      Term.destEq(theorem.conclusion).map(_._2).getOrElse(theorem.conclusion)
+
+    private def embeddedConstant: Term =
+      theory.constant(Integer.OfNatural, Type.fun(numbers, integers)).fold(error => throw new IllegalStateException(error.message), identity)
+
+    /**
+     * [[Fraction.IntMulNonNegative]]: the product of two non-negative integers is non-negative. The
+     * second is the embedding of a natural, and a natural factor preserves the order.
+     */
+    def intMulNonNegative(nonNegative: Kernel.Thm, scaledLaw: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+      val mm = Term.variable("m", numbers)
+      for {
+        first <- statement("INT_LE INT_ZERO (a:int)")
+        second <- statement("INT_LE INT_ZERO (b:int)")
+        heldFirst <- assume(first)
+        heldSecond <- assume(second)
+        natural <- rules.spec(b, nonNegative).flatMap(rules.mp(_, heldSecond))
+        body <- logic.destExistsPredicate(natural.conclusion).toRight(NotOfForm("an existential", natural.conclusion))
+          .flatMap(pred => LogicError.lift(Term.app(pred, mm))).flatMap(Conv.betaRoot).flatMap(rightOfTheorem)
+        equation <- assume(body)
+        zeroInt <- read("INT_ZERO")
+        scaledOrder <- rules.specAll(scaledLaw, List(zeroInt, a, mm)).flatMap(rules.mp(_, heldFirst))
+        sides <- arguments(scaledOrder.conclusion)
+        leftEqual <- ring.prove(sides._1, zeroInt)
+        product <- times(a, b)
+        rightEqual <- Conv.sym(equation).flatMap(underFactor(a, _))
+        result0 <- moved(scaledOrder, leftEqual, rightEqual)
+        eliminated <- rules.existsElim(natural, mm, result0)
+        result <- rules.disch(second, eliminated).flatMap(rules.disch(first, _)).flatMap(rules.genAll(_, List(a, b)))
+      } yield result
+    }
+
+    /**
+     * [[Fraction.AtMostAdd]]: adding a rational to both sides keeps the order. At pairs, with `F` the
+     * denominator of the rational added and `K` the cross term they share, the premise scaled twice by
+     * `F` and shifted by `K` is the conclusion read through the ring.
+     */
+    def addMonotone(atPairsLaw: Kernel.Thm, scaledLaw: Kernel.Thm, addOperation: Term, addPairs: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        monotone <- integer.fact(Integer.AddMonotone)
+        premise <- crossedAt(p, q)
+        held <- assume(premise)
+        sides <- arguments(premise)
+        successorR <- successorOf(r)
+        once <- rules.specAll(scaledLaw, List(sides._1, sides._2, successorR)).flatMap(rules.mp(_, held))
+        onceSides <- arguments(once.conclusion)
+        twice <- rules.specAll(scaledLaw, List(onceSides._1, onceSides._2, successorR)).flatMap(rules.mp(_, once))
+        twiceSides <- arguments(twice.conclusion)
+        shared <- read(
+          "INT_MUL (FST (r:prod(int,num))) (INT_MUL (INT_OF_NUM (SUC (SND (p:prod(int,num))))) " +
+            "(INT_MUL (INT_OF_NUM (SUC (SND (q:prod(int,num))))) (INT_OF_NUM (SUC (SND r)))))"
+        )
+        shifted <- rules.specAll(monotone, List(twiceSides._1, twiceSides._2, shared)).flatMap(rules.mp(_, twice))
+        shiftedSides <- arguments(shifted.conclusion)
+        leftPair <- applied(addOperation, p, r)
+        rightPair <- applied(addOperation, q, r)
+        goal <- crossedOf(leftPair, rightPair)
+        readGoal <- readOrder(goal)
+        goalSides <- rightOfTheorem(readGoal).flatMap(arguments)
+        leftEqual <- ring.prove(shiftedSides._1, goalSides._1)
+        rightEqual <- ring.prove(shiftedSides._2, goalSides._2)
+        atGoal <- moved(shifted, leftEqual, rightEqual)
+        proved <- Conv.sym(readGoal).flatMap(back => LogicError.lift(Kernel.eqMp(back, atGoal)))
+        pairLaw <- rules.disch(premise, proved)
+        unfolding <- reversed(addPairs, List(p, q))
+        result <- onClasses(atPairsLaw, pairLaw, List(p, q, r), List(x, y, z), Vector(unfolding))
+      } yield result
+
+    /**
+     * [[Fraction.AtMostMul]]: the product of two non-negative rationals is non-negative. At pairs the
+     * order against `(0, 0)` reads as `INT_LE INT_ZERO a`, and the integers' law does the rest.
+     */
+    def mulNonNegative(
+      atPairsLaw: Kernel.Thm,
+      zeroDefinition: Kernel.Thm,
+      mulOperation: Term,
+      mulPairs: Kernel.Thm,
+      productLaw: Kernel.Thm
+    ): Either[LogicError, Kernel.Thm] =
+      for {
+        zeroPair <- read("PAIR INT_ZERO ZERO")
+        zeroInt <- read("INT_ZERO")
+        // `crossed(Z, t)`, and `|- crossed(Z, t) = INT_LE L R` with `|- L = INT_ZERO` beside it
+        againstZero = (pair: Term) =>
+          for {
+            order <- crossedOf(zeroPair, pair)
+            readEquation <- readOrder(order)
+            sides <- arguments(rightOf(readEquation))
+            leftIsZero <- ring.prove(sides._1, zeroInt)
+          } yield (order, readEquation, leftIsZero, sides._2)
+        /** `|- INT_LE INT_ZERO (FST t)` from the held order against zero. */
+        numeratorNonNegative = (pair: FVar) =>
+          for {
+            reading <- againstZero(pair)
+            (order, readEquation, leftIsZero, right) = reading
+            held <- assume(order)
+            numerator <- read(s"FST (${pair.name}:prod(int,num))")
+            readHeld <- LogicError.lift(Kernel.eqMp(readEquation, held))
+            rightIsNumerator <- ring.prove(right, numerator)
+            result <- moved(readHeld, leftIsZero, rightIsNumerator)
+          } yield (order, numerator, result)
+        first <- numeratorNonNegative(p)
+        second <- numeratorNonNegative(q)
+        product <- rules.specAll(productLaw, List(first._2, second._2))
+          .flatMap(rules.mp(_, first._3)).flatMap(rules.mp(_, second._3))
+        productPair <- applied(mulOperation, p, q)
+        goal <- againstZero(productPair)
+        (goalOrder, goalRead, goalLeftIsZero, goalRight) = goal
+        productSides <- arguments(product.conclusion)
+        leftEqual <- Conv.sym(goalLeftIsZero)
+        rightEqual <- ring.prove(productSides._2, goalRight)
+        atRead <- moved(product, leftEqual, rightEqual)
+        proved <- Conv.sym(goalRead).flatMap(back => LogicError.lift(Kernel.eqMp(back, atRead)))
+        pairLaw <- rules.disch(second._1, proved).flatMap(rules.disch(first._1, _))
+        unfoldProduct <- reversed(mulPairs, List(p, q))
+        unfoldZero <- Conv.sym(zeroDefinition).flatMap(Rewrite.Rule.of(logic, _))
+        result <- onClasses(atPairsLaw, pairLaw, List(p, q), List(x, y), Vector(unfoldProduct, unfoldZero))
+      } yield result
+
+    /**
+     * [[Fraction.InverseExists]], [[Fraction.MulInverse]] and [[Fraction.InverseAtZero]].
+     *
+     * A rational that is not zero has a representative `(a, d)` with `a` not zero, [[Fraction.IntSign]]
+     * writes `a` as `k + 1` or its negation, and the class of `(d + 1, k)`, or of `(-(d + 1), k)`, is
+     * its inverse: the product is `(a * (d + 1), ...)`, whose denominator [[Fraction.Denominator]] reads
+     * as `(d + 1) * (k + 1)`. The constant chooses the inverse where one exists and is zero at zero,
+     * which is a convention the definition writes rather than an assumption.
+     */
+    def inverse(
+      inverseDefinition: Kernel.Thm,
+      zeroDefinition: Kernel.Thm,
+      oneDefinition: Kernel.Thm,
+      mulOperation: Term,
+      mulPairs: Kernel.Thm,
+      sign: Kernel.Thm
+    ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm)] = {
+      val nn = Term.variable("n", numbers)
+      val kk = Term.variable("k", numbers)
+      for {
+        chooser <- LogicError.lift(theory.constant(quotient.names.representative, Type.fun(Classes, Pairs)))
+        projection <- LogicError.lift(theory.constant(Projection, Type.fun(Pairs, Classes)))
+        multiply <- LogicError.lift(theory.constant(Multiplication, Type.fun(Classes, Type.fun(Classes, Classes))))
+        pairing <- LogicError.lift(theory.constant(Product.Pairing, Type.fun(integers, Type.fun(numbers, Pairs))))
+        negation <- LogicError.lift(theory.constant(Integer.Negation, Type.fun(integers, integers)))
+        equal <- quotient.fact(Quotient.ProjectionEqual)
+        representative <- quotient.fact(Quotient.ProjectionOfRepresentative)
+        cases <- peano.naturals.fact(Natural.ZeroOrSuccessor)
+        ofNaturalZero <- integer.fact(Integer.OfNaturalZero)
+        condTrue <- quotient.classical.fact(Classical.CondTrue).map(Kernel.instType(Map(Classical.TypeVariable -> Classes), _))
+        condFalse <- quotient.classical.fact(Classical.CondFalse).map(Kernel.instType(Map(Classical.TypeVariable -> Classes), _))
+        choice <- quotient.classical.axiom(Classical.Choice)
+        sameness <- LogicError.lift(theory.constant(SameName, Type.fun(Pairs, Type.fun(Pairs, Type.Bool))))
+
+        chosen <- LogicError.lift(Term.app(chooser, x))
+        back <- rules.spec(x, representative)
+        zeroPair <- read("PAIR INT_ZERO ZERO")
+        onePair <- read("PAIR INT_ONE ZERO")
+        zeroInt <- read("INT_ZERO")
+        oneInt <- read("INT_ONE")
+        nonZero <- statement("~((x:rat) = RAT_ZERO)")
+        heldNonZero <- assume(nonZero)
+        goal <- statement("?y:rat. RAT_MUL (x:rat) y = RAT_ONE")
+        goalPredicate <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
+
+        // the representative is not related to `(0, 0)`, since then `x` would be `RAT_ZERO`
+        notRelated <- {
+          for {
+            relation <- LogicError.lift(Term.appAll(sameness, List(chosen, zeroPair)))
+            held <- assume(relation)
+            classes <- rules.specAll(equal, List(chosen, zeroPair)).flatMap(Conv.sym)
+              .flatMap(backwards => LogicError.lift(Kernel.eqMp(backwards, held)))
+            isZero <- Conv.sym(back).flatMap(Conv.trans(_, classes)).flatMap(step => Conv.sym(zeroDefinition).flatMap(Conv.trans(step, _)))
+            absurd <- rules.notElim(heldNonZero, isZero)
+            result <- rules.notIntro(relation, absurd)
+          } yield result
+        }
+        numerator <- read("FST (t:prod(int,num))").flatMap(t =>
+          LogicError.lift(Term.substitute(Map(Term.variable("t", Pairs) -> chosen), t)))
+        // so its numerator is not zero
+        numeratorNonZero <- {
+          for {
+            zeroNumerator <- LogicError.lift(Term.eq(numerator, zeroInt))
+            held <- assume(zeroNumerator)
+            relation <- lifting.related(chosen, zeroPair, List(held -> oneInt))
+            absurd <- rules.notElim(notRelated, relation)
+            result <- rules.notIntro(zeroNumerator, absurd)
+          } yield result
+        }
+        denominator <- read("INT_OF_NUM (SUC (SND (t:prod(int,num))))").flatMap(t =>
+          LogicError.lift(Term.substitute(Map(Term.variable("t", Pairs) -> chosen), t)))
+
+        signAtA <- rules.spec(numerator, sign)
+        signParts <- logic.destDisj(signAtA.conclusion).toRight(NotOfForm("a disjunction", signAtA.conclusion))
+
+        /** One sign: `a = s (INT_OF_NUM n)` with `s` the identity or the negation. */
+        bySign = (existential: Term, negative: Boolean) =>
+          for {
+            heldExistential <- assume(existential)
+            body <- logic.destExistsPredicate(existential).toRight(NotOfForm("an existential", existential))
+              .flatMap(pred => LogicError.lift(Term.app(pred, nn))).flatMap(Conv.betaRoot).map(rightOf)
+            heldBody <- assume(body)
+            embedded <- LogicError.lift(Term.app(embeddedConstant, nn))
+            signed = (inner: Term) => if (negative) LogicError.lift(Term.app(negation, inner)) else Right(inner)
+            atN <- rules.spec(nn, cases)
+            caseParts <- logic.destDisj(atN.conclusion).toRight(NotOfForm("a disjunction", atN.conclusion))
+
+            // n = 0 makes the numerator zero, which it is not
+            zeroCase <- for {
+              held <- assume(caseParts._1)
+              embeddedZero <- Conv.apTerm(embeddedConstant, held).flatMap(Conv.trans(_, ofNaturalZero))
+              signedZero <- if (negative) Conv.apTerm(negation, embeddedZero) else Right(embeddedZero)
+              collapsed <- ring.prove(rightOf(signedZero), zeroInt)
+              isZero <- Conv.trans(heldBody, signedZero).flatMap(Conv.trans(_, collapsed))
+              absurd <- rules.notElim(numeratorNonZero, isZero)
+              result <- rules.falsityElim(goal, absurd)
+            } yield result
+
+            // n = SUC k: the inverse is the class of (s (d + 1), k)
+            successorCase <- for {
+              heldSuccessor <- assume(caseParts._2)
+              successorBody <- logic.destExistsPredicate(caseParts._2).toRight(NotOfForm("an existential", caseParts._2))
+                .flatMap(pred => LogicError.lift(Term.app(pred, kk))).flatMap(Conv.betaRoot).map(rightOf)
+              heldK <- assume(successorBody)
+              atSuccessor <- Conv.apTerm(embeddedConstant, heldK)
+              signedSuccessor <- if (negative) Conv.apTerm(negation, atSuccessor) else Right(atSuccessor)
+              numeratorIs <- Conv.trans(heldBody, signedSuccessor)
+              inverseNumerator <- signed(denominator)
+              inversePair <- LogicError.lift(Term.appAll(pairing, List(inverseNumerator, kk)))
+              productPair <- applied(mulOperation, chosen, inversePair)
+              coefficient <- signed(denominator)
+              // the relation comes back over the pair with its projections read, so the
+              // classes are equated there and the product's own pair is carried to it
+              reading <- Rewrite.rewrite(lifting.projections, productPair)
+              readPair = rightOf(reading)
+              relation <- lifting.related(readPair, onePair, List(numeratorIs -> coefficient))
+              classes <- rules.specAll(equal, List(readPair, onePair)).flatMap(Conv.sym)
+                .flatMap(backwards => LogicError.lift(Kernel.eqMp(backwards, relation)))
+              projectedReading <- Conv.apTerm(projection, reading)
+              lifted <- rules.specAll(mulPairs, List(chosen, inversePair))
+              projectedInverse <- LogicError.lift(Term.app(projection, inversePair))
+              atX <- Conv.sym(back).flatMap(Conv.apTerm(multiply, _)).flatMap(Conv.apThm(_, projectedInverse))
+              chain <- Conv.trans(atX, lifted).flatMap(Conv.trans(_, projectedReading)).flatMap(Conv.trans(_, classes))
+                .flatMap(step => Conv.sym(oneDefinition).flatMap(Conv.trans(step, _)))
+              witnessed <- rules.existsIntro(goalPredicate, projectedInverse, chain)
+              result <- rules.existsElim(heldSuccessor, kk, witnessed)
+            } yield result
+
+            byCases <- rules.disjElim(atN, zeroCase, successorCase)
+            result <- rules.existsElim(heldExistential, nn, byCases)
+          } yield result
+
+        positiveCase <- bySign(signParts._1, false)
+        negativeCase <- bySign(signParts._2, true)
+        exists <- rules.disjElim(signAtA, positiveCase, negativeCase)
+        existence <- rules.disch(nonZero, exists).flatMap(rules.gen(x, _))
+
+        // the constant at a non-zero rational is the chosen inverse
+        witness <- Classical.witnessFrom(logic, choice, exists)
+        reduced <- Conv.betaRoot(witness.conclusion).flatMap(eqn => LogicError.lift(Kernel.eqMp(eqn, witness)))
+        unfolded <- Conv.unfold(inverseDefinition, List(x))
+        parts <- rightOf(unfolded) match {
+          case App(App(App(_, test), yes), no) => Right((test, yes, no))
+          case other => Left(NotOfForm("a conditional", other))
+        }
+        (test, yes, no) = parts
+        chosenInverse <- rules.specAll(condFalse, List(test, yes, no)).flatMap(rules.mp(_, heldNonZero))
+        inverseIs <- Conv.trans(unfolded, chosenInverse)
+        product <- LogicError.lift(Term.app(multiply, x)).flatMap(Conv.apTerm(_, inverseIs))
+        mulInverse <- Conv.trans(product, reduced).flatMap(rules.disch(nonZero, _)).flatMap(rules.gen(x, _))
+
+        // and zero at zero
+        zeroClass <- read("RAT_ZERO")
+        unfoldedAtZero <- Conv.unfold(inverseDefinition, List(zeroClass))
+        zeroParts <- rightOf(unfoldedAtZero) match {
+          case App(App(App(_, zeroTest), zeroYes), zeroNo) => Right((zeroTest, zeroYes, zeroNo))
+          case other => Left(NotOfForm("a conditional", other))
+        }
+        atZero <- rules.specAll(condTrue, List(zeroParts._1, zeroParts._2, zeroParts._3))
+          .flatMap(rules.mp(_, Conv.refl(zeroClass)))
+        inverseAtZero <- Conv.trans(unfoldedAtZero, atZero)
+      } yield (existence, mulInverse, inverseAtZero)
+    }
+
     def facts(
       definition: Kernel.Thm,
       zero: Kernel.Thm,

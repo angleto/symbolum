@@ -21,9 +21,9 @@ import garden.xeno.symbolum.logic.*
  * The operations exist since 2026-09-25, and the same day the rest of a commutative ring: the two
  * units, both associativities, the additive inverse and the distributive law, each compared below
  * with the text it is published as; and the order, `RAT_LE`, with the four laws of a total order and
- * the pair of facts that keeps it from being the trivial one. What is not here is the inverse of a
- * non-zero rational and the two laws tying the order to the operations, because they are not in
- * `Fraction` yet.
+ * the pair of facts that keeps it from being the trivial one. The inverse of a non-zero rational and the
+ * two laws tying the order to the operations arrived the same day, and each is detached below at
+ * the units, so none of them is an implication whose antecedent nobody can meet.
  */
 class FractionSpec extends AnyFlatSpec with Matchers {
 
@@ -158,7 +158,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
       "~(RAT_OF_PAIR (PAIR INT_ZERO 0) = RAT_OF_PAIR (PAIR INT_ONE 0))"
   }
 
-  it should "declare `rat`, the quotient's own constants, the three operations and the two units, and nothing else" in {
+  it should "declare `rat`, the quotient's own constants, the operations, the two units, the order and the inverse, and nothing else" in {
     // The operations and the units since 2026-09-25, when the ring of `int` closed their
     // obligations; a constant arriving here beyond these would be a definition nobody listed,
     // which is what this reads for.
@@ -166,7 +166,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     (fractions.theory.constants.keySet -- before) shouldBe
       Set(Fraction.SameName, Fraction.Abstraction, Fraction.Representation, Fraction.Projection,
         Fraction.Names.representative, Fraction.Addition, Fraction.Negation, Fraction.Multiplication,
-        Fraction.Zero, Fraction.One, Fraction.AtMost)
+        Fraction.Zero, Fraction.One, Fraction.AtMost, Fraction.Inverse)
   }
 
   "The order" should "not be the trivial one, which every one of its four laws would also be" in {
@@ -209,6 +209,60 @@ class FractionSpec extends AnyFlatSpec with Matchers {
           Derivation.restingOn(fact(name), integerLaws) should not be empty
         }
       }
+  }
+
+  "The inverse" should "be detached at a rational that is not zero, with nothing left assumed" in {
+    // `RAT_MUL_INV` carries `~(x = RAT_ZERO)`, and an implication whose antecedent nobody can
+    // discharge reads exactly like a fact. `RAT_ONE` is not zero by the units' distinctness, so
+    // the antecedent is met at a published constant and the conclusion stands on its own.
+    val one = force(fractions.term("RAT_ONE", Fraction.Classes))
+    val nonZero = force(
+      for {
+        distinct <- Right(fact(Fraction.UnitsDistinct))
+        held <- LogicError.lift(Kernel.assume(force(fractions.proposition("RAT_ONE = RAT_ZERO"))))
+        flipped <- Conv.sym(held)
+        absurd <- rules.notElim(distinct, flipped)
+        result <- rules.notIntro(held.conclusion, absurd)
+      } yield result
+    )
+    val detached = force(rules.spec(one, fact(Fraction.MulInverse)).flatMap(rules.mp(_, nonZero)))
+    detached.hypotheses shouldBe empty
+    fractions.show(detached.conclusion) shouldBe "RAT_MUL RAT_ONE (RAT_INV RAT_ONE) = RAT_ONE"
+  }
+
+  it should "be zero at zero, which the definition writes rather than assumes" in {
+    // The convention a field's inverse has to take somewhere, and it is taken in the definition's
+    // conditional: `RAT_INV_ZERO` costs no axiom beyond what the conditional costs, so a proof of
+    // it that reached a fact about the order or the product would be a route nobody wrote.
+    // The positive control is the product off zero, which does rest on it: without that line an
+    // instrument that found nothing anywhere would pass the absence.
+    val atZero = fact(Fraction.InverseAtZero)
+    val product = Set(fact(Fraction.MulPairs).conclusion)
+    atZero.hypotheses shouldBe empty
+    Derivation.restingOn(fact(Fraction.MulInverse), product) should not be empty
+    Derivation.restingOn(atZero, product) shouldBe empty
+  }
+
+  "The order" should "be carried by the sum and by the product, detached at the units" in {
+    // The two laws that make an ordered field of an ordered ring, each spent with every antecedent
+    // discharged by `RAT_ZERO_LE_ONE`, so neither is an implication nobody can use.
+    val zero = force(fractions.term("RAT_ZERO", Fraction.Classes))
+    val one = force(fractions.term("RAT_ONE", Fraction.Classes))
+    val upwards = fact(Fraction.ZeroAtMostOne)
+
+    val shifted = force(
+      rules.specAll(fact(Fraction.AtMostAdd), List(zero, one, one)).flatMap(rules.mp(_, upwards))
+    )
+    shifted.hypotheses shouldBe empty
+    fractions.show(shifted.conclusion) shouldBe "RAT_LE (RAT_ADD RAT_ZERO RAT_ONE) (RAT_ADD RAT_ONE RAT_ONE)"
+
+    val product = force(
+      rules.specAll(fact(Fraction.AtMostMul), List(one, one))
+        .flatMap(rules.mp(_, upwards))
+        .flatMap(rules.mp(_, upwards))
+    )
+    product.hypotheses shouldBe empty
+    fractions.show(product.conclusion) shouldBe "RAT_LE RAT_ZERO (RAT_MUL RAT_ONE RAT_ONE)"
   }
 
   /* ------------------------------------------------------------------ what it costs */
