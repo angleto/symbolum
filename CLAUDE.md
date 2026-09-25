@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 697 lemmas, 456 have two or more leading quantifiers and **393 of
+caller meant: of the library's 703 lemmas, 461 have two or more leading quantifiers and **398 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1792,6 +1792,19 @@ each side of every positive number, from `1 + x <= exp x`. **The estimate needed
 dominated**, which is the thing to know before reaching for `EXP_ONE_ABOVE_TWO`'s route: at a ratio
 of at most a half, `t^i / i! <= t^i` because `i! >= 1`, and the geometric series does the rest.
 `LogarithmSpec` refutes the estimate without its radius at `h = 8`, where `exp 8 >= 81`.
+
+**The derivative and Rolle's theorem are `Derivative`, a link since 2026-09-25, and Rolle is the
+first thing to spend the extreme value theorem.** `derivative f x m` is written with no quotient:
+`abs (f (x + h) - f x - m * h) < e * abs h` for `0 < abs h < d`, which is the difference quotient
+multiplied through by `abs h` and keeps every goal of the derivation inside what `Linarith`
+decides. `DERIVATIVE_INTERIOR_MAX` is Fermat's lemma, by `LT_TOTAL` at the slope and a step of
+`min (d / 2)` of the gap, the step the intermediate value theorem takes; the minimum is the maximum
+at `\y. 0 - f y` through `DERIVATIVE_NEG`; and `ROLLE` takes both extremes from the extreme value
+theorem and, when neither is strictly inside, finds `f` level. One constant, no axiom, and Rolle
+costs exactly what the extreme value theorem costs, which `DerivativeSpec` asserts as an equality.
+**The mean value theorem is not here**, and what stands in front of it is written in
+`Derivative.scala`: continuity of a combination of functions, and linearity and uniqueness of the
+derivative.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

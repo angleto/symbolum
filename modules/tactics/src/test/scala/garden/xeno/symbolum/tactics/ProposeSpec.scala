@@ -366,7 +366,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and `RES_REFUTES`, one each on `RES_EMPTY_UNSATISFIABLE`, the width's bound and least bound,
     // and the two facts about a refutation; the width's two equations and its attainment carry
     // none. Tip plus this branch's delta.
-    proposals.size shouldBe 491
+    // 504 with the derivative's thirteen, the same day: four on each interior lemma, four on
+    // `ROLLE`, one on `DERIVATIVE_NEG`. Tip plus this branch's delta.
+    proposals.size shouldBe 504
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1238,7 +1240,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // naturals' model does find it, and `after` below is where that shows.
     // 393 with one of resolution's nineteen, read off the run and not identified. Tip plus this
     // branch's delta, and the delta was measured on the tree before the extreme value theorem.
-    open shouldBe 393
+    // 405 with twelve of the derivative's thirteen weakenings, the same day, read off a probe of
+    // `Propose.audit` filtered by `from`: the four of each interior lemma and the four of `ROLLE`,
+    // each an implication with an antecedent gone, taken at the propositional address and not
+    // settled. The thirteenth, `DERIVATIVE_NEG`'s, is in `unreadable` below, and the probe is what
+    // placed it, since that row sits behind this one. Tip plus this branch's delta.
+    open shouldBe 405
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1586,7 +1593,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `decidedFalse` and one in `open`, and the other seventeen each name a `RES_` constant or
     // apply a function variable, which no procedure here addresses. **It sat behind `open` again**,
     // so the pass that moved `open` did not reach it. Tip plus this branch's delta.
-    unreadable shouldBe 123
+    // 124 with `DERIVATIVE_NEG`'s one weakening, `!f x m. derivative (\y. 0 - f y) x (0 - m)`,
+    // from the same probe as `open`'s 405: false at the identity, and about `derivative`, which no
+    // procedure addresses and no model interprets. Tip plus this branch's delta.
+    unreadable shouldBe 124
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

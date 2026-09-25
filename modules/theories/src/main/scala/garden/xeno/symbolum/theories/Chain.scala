@@ -392,7 +392,17 @@ final class Chain private (
    * and a constant declared beside the chain is where nothing above can see it. Four constants, no
    * axiom.
    */
-  val resolving: Resolving
+  val resolving: Resolving,
+
+  /**
+   * The derivative at a point, the interior extremum lemma, and Rolle's theorem.
+   *
+   * The first thing to spend the extreme value theorem, and a link rather than a development beside
+   * the chain because `derivative` is a constant. It reads `continuous` and `abs` and nothing
+   * `Resolving` declares; it is above that link only because every link that declares extends
+   * whatever the end is when it is built. One constant, no axiom.
+   */
+  val derivative: Derivative
 ) {
 
   /**
@@ -420,7 +430,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = resolving
+  val widest: Signature = derivative
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -651,6 +661,11 @@ object Chain {
       // functions on `num` and nothing about the reals is read, so what it needs from below is
       // `Peano`'s order and induction and the case split `COND` asks for.
       resolving <- Resolving.construct(classical, peano, continuity.theory, continuity.notation)
+
+      // Over continuity, extending the chain's end: Rolle's theorem spends the extreme value
+      // theorem, and the definition reads `abs`; nothing `Resolving` declares is read.
+      derivative <- Derivative.construct(
+        classical, reals, magnitude, continuity, resolving.theory, resolving.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -690,6 +705,7 @@ object Chain {
       root,
       continuity,
       logarithm,
-      resolving
+      resolving,
+      derivative
     )
 }

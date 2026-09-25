@@ -332,7 +332,11 @@ object Library {
         // Resolution, 2026-09-25, in the change that made it a link. Its five soundness theorems
         // were derived beside the chain until then and were in no library, which is what a
         // development that declared nothing could afford and a link cannot.
-        collect("Resolving", chain.resolving.facts)
+        collect("Resolving", chain.resolving.facts) ++
+        // The derivative and Rolle's theorem, 2026-09-25, in the change that added them: a
+        // development of its own because a derivative is a statement about an increment and a
+        // slope, where continuity is one about a radius.
+        collect("Derivative", chain.derivative.facts)
     )
 
   /** A library over developments a caller names itself. */

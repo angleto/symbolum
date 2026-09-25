@@ -74,7 +74,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.logarithm.facts.size +
       // Resolution, 2026-09-25, in the change that made it a link: its five soundness theorems
       // were in no library while it sat beside the chain, and its seven over the names are new.
-      chain.resolving.facts.size
+      chain.resolving.facts.size +
+      // The derivative and Rolle's theorem, the same day, in the change that added the link.
+      chain.derivative.facts.size
 
     library.entries.size shouldBe expected
 
@@ -659,8 +661,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // three with no pair of one type are that one, `RES_WIDTH_SUC` and `RES_WIDTH_ATTAINED`, which
     // bind a length function and a number. The other nine each bind two numbers, or two
     // `num -> bool`.
-    library.entries.size shouldBe 697
-    library.names.distinct.size shouldBe 694
+    // 703 and 700 with the derivative and Rolle's theorem, the same day, derived before the run:
+    // six facts under six names, none shared. `CLAUDE.md`'s figures move by **five** and **five**:
+    // every fact but `DERIVATIVE_ID`, which binds one `x`, binds two or more, and each of those five
+    // binds two reals among them. Tip plus this branch's delta.
+    library.entries.size shouldBe 703
+    library.names.distinct.size shouldBe 700
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

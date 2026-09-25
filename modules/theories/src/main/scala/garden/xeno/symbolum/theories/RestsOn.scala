@@ -163,7 +163,9 @@ object Reach {
         // The logarithm, the same day, in the change that added it.
         "Logarithm" -> chain.logarithm.facts,
         // Resolution, 2026-09-25, in the change that made it a link.
-        "Resolving" -> chain.resolving.facts
+        "Resolving" -> chain.resolving.facts,
+        // The derivative and Rolle's theorem, 2026-09-25, in the change that added them.
+        "Derivative" -> chain.derivative.facts
       )
     )
 
