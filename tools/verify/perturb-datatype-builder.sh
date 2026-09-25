@@ -29,6 +29,14 @@
 #   2. Red at 1 of 12, the recursion's statement, printed with `'b` where `'b1` was expected: the
 #      builder proved a theorem about functions into the tree's own second parameter, and only the
 #      comparison with the written statement said so.
+#   3. Red at 9 of 12, and again not through the comparison. At `btree` the exchange reads a slot
+#      that does not exist (`IndexOutOfBoundsException: 3`); at `item`, where it type-checks, the
+#      builder refused in the recursion theorem: `transitivity: f0 a0' a1' a2' is not f0 a2' a1'
+#      a0'`. The recursion's uniqueness step rewrites a clause's arguments with the injectivity, so an
+#      injectivity that pairs the wrong arguments cannot close it. That is the finding worth
+#      carrying: the builder consumes its own injectivity, so a wrong-but-true injectivity is
+#      refused before any statement is compared, and of the three defects fired here only 2 is
+#      caught by the comparison alone.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
@@ -58,3 +66,15 @@ echo "################ 2-a-result-type-that-collides" >> "$OUT/datatype.log"
   '.find(_ => true).get' \
   -- ./tools/sbt -batch "$SPEC" >> "$OUT/datatype.log" 2>&1
 echo "### exit $? for 2-a-result-type-that-collides" >> "$OUT/datatype.log"
+
+# 3. Two slots of ONE type exchanged, which 1 could not reach. `item`'s first and third fixed
+# arguments are both `num`, so reading each from the other's slot type-checks, the derivation goes
+# through, and what comes out is a true theorem that is not the one published: `m = m'` where
+# `n = n'` was written. Only the statement comparison can read that, which is why this is the
+# perturbation the test's own title is about.
+echo "################ 3-two-slots-of-one-type-exchanged" >> "$OUT/datatype.log"
+"$P" "$SOURCE" \
+  'result = owned.map(slot => components(1 + slot))' \
+  'result = owned.map(slot => components(1 + (if (slot == 0) 2 else if (slot == 2) 0 else slot)))' \
+  -- ./tools/sbt -batch "$SPEC" >> "$OUT/datatype.log" 2>&1
+echo "### exit $? for 3-two-slots-of-one-type-exchanged" >> "$OUT/datatype.log"
