@@ -324,6 +324,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Limit.scala", "left") -> (Verdict.Crossing, "the term a congruence was to replace"),
     ("Criteria.scala", "Show.show(notation, target)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
+    ("Freshman.scala", "Show.show(notation, target)") ->
+      (Verdict.Crossing, "the goal, rendered at the raiser against a notation it chose itself"),
     ("Convergence.scala", "Show.show(notation, goal)") ->
       (Verdict.Crossing, "the goal, rendered at the raiser against the widest notation it reads in"),
     ("Linarith.scala", "LinearForm.factorsOf(atom).length") ->

@@ -375,7 +375,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // uniqueness, three on `MEAN_VALUE`. Tip plus this branch's delta.
     // 545 with the product rule's three, the same day: one on the continuity of a differentiable
     // function, two on the product rule.
-    proposals.size shouldBe 545
+    // 553 with Fermat's little theorem, 2026-09-25, derived before the run: eight antecedents,
+    // three on `NUM_PRIME_DIVIDES_CHOOSE`, two on `NUM_PRIME_NOT_DIVIDES_FACT`, one each on
+    // `NUM_DIVIDES_SUM`, `NUM_FRESHMAN` and `NUM_FERMAT`, none on the three equations.
+    proposals.size shouldBe 553
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1264,7 +1267,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 444 with the product rule's two weakenings, the same day, read off a probe of `Propose.audit`
     // filtered by `from`: each drops one of the two slopes and keeps an implication. The third, the
     // continuity bridge's, is in `unreadable` below.
-    open shouldBe 444
+    // 447 with Fermat's little theorem, 2026-09-25, measured by a probe of `Propose.audit` before
+    // this line was edited: the three residues of `NUM_PRIME_DIVIDES_CHOOSE`, a divisibility the
+    // propositional address takes and cannot settle. The other five are `unreadable` below.
+    open shouldBe 447
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1621,7 +1627,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 126 with `DERIVATIVE_CONTINUOUS`'s one weakening, `!f x. continuous f x`, from the same probe
     // as `open`'s 444: false at any function with a jump, and about `continuous`, which no procedure
     // addresses and no model interprets.
-    unreadable shouldBe 126
+    // 131 with the same probe: `NUM_FRESHMAN`'s, `NUM_FERMAT`'s and `NUM_DIVIDES_SUM`'s one each
+    // and `NUM_PRIME_NOT_DIVIDES_FACT`'s two, a congruence, a divisibility or its denial, which no
+    // procedure reads.
+    unreadable shouldBe 131
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1922,7 +1931,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // writes `NUM_LT` or `NUM_LE`, both on `named`, since a clause is indexed by `num` throughout.
     // Seventeen keep a `NUM_LT`; the width's bound and least bound lose theirs with the antecedent
     // and keep the `NUM_LE` of their conclusion.
-    aboutNumbers.size shouldBe 209
+    // 215 with six of Fermat's eight residues, 2026-09-25, by the same probe on this list: the
+    // three of `NUM_PRIME_DIVIDES_CHOOSE` and one of `NUM_PRIME_NOT_DIVIDES_FACT` keep `NUM_LT`,
+    // `NUM_FRESHMAN`'s keeps `SUC` and `NUM_DIVIDES_SUM`'s `NUM_SUM`; `NUM_FERMAT`'s and the other
+    // of the factorial's name nothing on it. None is refuted at a point, so `after` stays.
+    aboutNumbers.size shouldBe 215
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

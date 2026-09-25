@@ -151,3 +151,32 @@ did until today: a caller who knows their domain knows which lemma relates its c
 costs is measured rather than theoretical, and it is the shape of every real criterion: the caller
 has to know that `num` has two orders and that `NUM_LT_NOT_LE` is what relates them, which is
 knowledge about this library rather than about their rule.
+
+## A third exclusion, exact, and what it did to the first rejected alternative (2026-09-25)
+
+What is above is what was decided on 2026-09-18 and stays as it was written. This section is what
+moved since, and it moved because the bound went red.
+
+**The retry claim's candidate set read 64 on the line, exactly half of `Bridging.Candidates` and so
+exactly at the margin `BridgingSpec` asks for, and three lemmas about divisibility landing in
+`Primes` took it to 67.** Each of them names `<` on the way to concluding a divisibility the claim
+cannot see. That is the shape `Literal` was written against one level up: a bound whose subject
+grows with lemmas the claim is not about.
+
+**The repair is a third exclusion, `Bridging.inert`, and unlike `Literal` it is exact.** A constant
+that neither the claim nor any axiom of the domain names cannot reach an atom of the rest of the
+decision. If every atom of a lemma holding such a constant occurs with one polarity, those atoms can
+be fixed at the value that satisfies them, and a lemma that then simplifies to `T` can change no
+decision, intuitionistic or classical: substituting a formula for an atom preserves derivability in
+both, and the simplification uses only laws valid in both. The polarity is asked per constant rather
+than per atom because specialisation can make two atoms of one lemma the same atom. Measured before
+the spec was edited, the set went from **67 to 8**, all in `Peano`, `NUM_LT_NOT_LE` among them.
+
+**The first rejected alternative lost its cost reason for this claim and kept its reporting one.**
+The whole set of eight in one call to `settle` is inside `Domain.Instances` now and settles the
+retry claim, at the same price as the search: one axiom of the domain and the naturals' two. What it
+does not do is name `NUM_LT_NOT_LE`, because the cut-down does not publish which instances survived,
+and naming the lemma is what this search was built for. `BridgingSpec` asserted the refusal for size
+until this change and asserts that difference now. The decision stands, on the reason that is left.
+The consequence two sections up, that a combining search faces sets past `Domain.Instances`, is a
+statement about 2026-09-18 and is not re-measured here.

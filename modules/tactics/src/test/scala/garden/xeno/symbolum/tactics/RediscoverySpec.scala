@@ -328,7 +328,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // branch's delta.
     // 545 with the product rule, the same day, derived before the run: three antecedents over two
     // facts, one on `DERIVATIVE_CONTINUOUS` and two on `DERIVATIVE_PRODUCT`.
-    propose.weakenings.size shouldBe 545
+    // 553 with Fermat's little theorem, 2026-09-25, derived before the run: eight antecedents over
+    // five facts, three, two, one, one and one; the binomial theorem and the two sums carry none.
+    propose.weakenings.size shouldBe 553
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

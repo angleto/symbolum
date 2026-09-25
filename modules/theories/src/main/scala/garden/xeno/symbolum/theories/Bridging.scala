@@ -34,10 +34,13 @@ import garden.xeno.symbolum.logic.*
  * one call to `settle` per candidate and each of those is `2n + 1` decisions over its instances. A
  * claim whose constants hold more than [[Candidates]] such lemmas is refused rather than run.
  *
- * Two things cut that set down and they are not the same kind of thing. A lemma binding a type the
- * claim names no term of is dropped **exactly**: it produces no instance and can change no decision.
- * A lemma about what a numeral is built from is dropped as a **judgement** about what a claim is
- * about, which the `Literal` set states and names what it loses.
+ * Three things cut that set down and they are not all the same kind of thing. A lemma binding a
+ * type the claim names no term of is dropped **exactly**: it produces no instance and can change no
+ * decision. A lemma that is **inert** here is dropped exactly too, for a reason [[inert]] gives: it
+ * speaks, with one polarity, about a constant neither the claim nor the domain's axioms name, so
+ * every instance of it is true under an assignment the rest of the decision cannot see. A lemma
+ * about what a numeral is built from is dropped as a **judgement** about what a claim is about,
+ * which the `Literal` set states and names what it loses.
  *
  * == Why the report names the bridges, and why it is entitled to ==
  *
@@ -171,6 +174,7 @@ object Bridging {
       .flatMap(library.about)
       .distinctBy(entry => (entry.name, entry.theorem.conclusion))
       .filter(entry => specialisable(built, goal, entry.theorem))
+      .filterNot(entry => inert(built, goal, entry.theorem))
       .sortBy(entry => (entry.name, entry.development))
 
   /**
@@ -271,6 +275,100 @@ object Bridging {
     }
 
   /** A verdict that reached a theorem, which is the only kind a bridge can be read off. */
+  /**
+   * Whether a candidate can change no decision this claim puts to it, for a reason in the lemma.
+   *
+   * A constant that neither the claim nor any axiom of the domain names cannot reach an atom of
+   * the rest of the decision: the axioms' instances are built from the axioms and the claim's own
+   * subterms, and the candidate's instances carry the constant wherever the lemma had it. So if
+   * every atom of the lemma holding such a constant occurs with **one** polarity, each of those atoms
+   * can be put to the value that satisfies it, `T` where it occurs positively and `F` where it occurs
+   * negatively, and the rest of the decision does not notice. When the lemma then simplifies to `T`
+   * it is a tautology after a substitution for atoms, every instance of it is one too, and the claim
+   * follows with it exactly when it follows without it. That is the pure-literal rule, and it is
+   * sound **intuitionistically** as well as classically, which is what makes it exact here rather
+   * than for one of the two routes: substituting a formula for an atom preserves derivability in both
+   * logics, and the simplification below uses only `~F = T`, `~T = F`, and the laws of `/\`, `\/` and
+   * `==>` against `T` and `F`, all of them intuitionistic.
+   *
+   * **The polarity is per constant and not per atom**, and that is not caution. Two atoms of one
+   * lemma that differ can become the same atom once the binders are specialised, `NUM_DIVIDES x y`
+   * and `NUM_DIVIDES y x` at `x = y` being the one to picture; if they held one constant with two
+   * polarities between them, fixing both would fix one atom twice. Asking that every atom holding
+   * the constant has the same polarity rules that out whatever the specialisation does.
+   *
+   * What made it a decision rather than a tidy-up, on 2026-09-25: the retry claim's search space was
+   * **64**, exactly half of [[Candidates]] and so exactly at the margin `BridgingSpec` asks for, and
+   * three lemmas about divisibility landing in `Primes` took it to 67. Each of them concludes a
+   * divisibility the claim cannot see, which is the shape this drops. A bound whose subject grows
+   * with every lemma that mentions `<` on the way to saying something else is the bound on the wrong
+   * thing that `Literal` was already written against, and this is the exact half of that repair.
+   */
+  private def inert(built: Domain.Built, goal: Term, bridge: Kernel.Thm): Boolean = {
+    val present =
+      constantNames(goal) ++ built.axioms.values.flatMap(axiom => constantNames(axiom.conclusion))
+    val body = Logic.stripForall(bridge.conclusion).map(_._2).getOrElse(bridge.conclusion)
+    val occurrences = atoms(body, positive = true)
+
+    val pure: Set[String] = occurrences
+      .flatMap { case (atom, positive) => (constantNames(atom) -- present).toVector.map(_ -> positive) }
+      .groupMap(_._1)(_._2)
+      .collect { case (name, polarities) if polarities.distinct.size == 1 => name }
+      .toSet
+
+    // An atom holding a pure constant has one polarity, because every atom holding that constant
+    // does, so the value it is fixed at is read off any one of its occurrences.
+    val fixed: Map[Term, Boolean] = occurrences
+      .collect { case (atom, positive) if constantNames(atom).exists(pure.contains) => atom -> positive }
+      .toMap
+
+    pure.nonEmpty && valueOf(body, fixed).contains(true)
+  }
+
+  /** Every atom of a proposition with the polarity it occurs at, reading the five connectives. */
+  private def atoms(term: Term, positive: Boolean): Vector[(Term, Boolean)] = term match {
+    case Const(Logic.Truth, _) | Const(Logic.Falsity, _) => Vector.empty
+    case App(Const(Logic.Negation, _), inner) => atoms(inner, !positive)
+    case App(App(Const(Logic.Conjunction | Logic.Disjunction, _), left), right) =>
+      atoms(left, positive) ++ atoms(right, positive)
+    case App(App(Const(Logic.Implication, _), antecedent), consequent) =>
+      atoms(antecedent, !positive) ++ atoms(consequent, positive)
+    case atom => Vector(atom -> positive)
+  }
+
+  /** A proposition's value where the fixed atoms decide it, and nothing where they do not. */
+  private def valueOf(term: Term, fixed: Map[Term, Boolean]): Option[Boolean] = term match {
+    case Const(Logic.Truth, _) => Some(true)
+    case Const(Logic.Falsity, _) => Some(false)
+    case App(Const(Logic.Negation, _), inner) => valueOf(inner, fixed).map(!_)
+    case App(App(Const(Logic.Conjunction, _), left), right) =>
+      (valueOf(left, fixed), valueOf(right, fixed)) match {
+        case (Some(false), _) | (_, Some(false)) => Some(false)
+        case (Some(true), Some(true)) => Some(true)
+        case _ => None
+      }
+    case App(App(Const(Logic.Disjunction, _), left), right) =>
+      (valueOf(left, fixed), valueOf(right, fixed)) match {
+        case (Some(true), _) | (_, Some(true)) => Some(true)
+        case (Some(false), Some(false)) => Some(false)
+        case _ => None
+      }
+    case App(App(Const(Logic.Implication, _), antecedent), consequent) =>
+      (valueOf(antecedent, fixed), valueOf(consequent, fixed)) match {
+        case (Some(false), _) | (_, Some(true)) => Some(true)
+        case (Some(true), Some(false)) => Some(false)
+        case _ => None
+      }
+    case atom => fixed.get(atom)
+  }
+
+  private def constantNames(term: Term): Set[String] = term match {
+    case Const(name, _) => Set(name)
+    case App(fn, argument) => constantNames(fn) ++ constantNames(argument)
+    case Abs(_, inner) => constantNames(inner)
+    case _ => Set.empty
+  }
+
   private def carried(verdict: Domain.Verdict): Option[Domain.Verdict] = verdict match {
     case settled: Domain.Verdict.Settled => Some(settled)
     case cut: Domain.Verdict.CutShort => Some(cut)

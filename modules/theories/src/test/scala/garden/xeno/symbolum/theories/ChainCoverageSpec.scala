@@ -174,6 +174,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // beyond `Criteria` is the embedding of `num` in the reals, which nothing in `Criteria` does.
     "Degrees" -> NotADevelopment,
 
+    // Not a development, for `Criteria`'s reason: the binomial theorem on `num` and Fermat's little
+    // theorem, whose eight facts `Primes` publishes under names it declares. A file of its own
+    // because it is an induction toolkit over `NUM_SUM` that nothing else in `Primes` needs.
+    "Freshman" -> NotADevelopment,
+
     // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
     // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
     // fact of its own, and `Prove` reaches it through the chain it is constructed from.
