@@ -242,6 +242,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // which `docs/adr/0042` decides, so there is nothing of its own for `Chain.construct` to build.
     "Datatype" -> DeclaresNothing,
 
+    // The steps a hand derivation over `num` is made of, shared by the files that write one. It
+    // declares nothing and holds no fact: each function is a sequence of derived rules.
+    "Steps" -> DeclaresNothing,
+
     // A procedure, `Semiring`'s generalisation: handed constants and laws, it derives rules and
     // returns a normaliser, and every theorem it produces is about the caller's operations. It
     // declares nothing, so there is nothing for `Chain.construct` to extend; `Semiring` and
