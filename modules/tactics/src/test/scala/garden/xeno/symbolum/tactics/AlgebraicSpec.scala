@@ -11,10 +11,10 @@ import garden.xeno.symbolum.theories.Chain
 /**
  * The first source: a polynomial nobody supplied, found in the numbers and proved by the kernel.
  *
- * `RelationSpec` already pinned the numeric half — the minimal polynomial of `sqrt2 + sqrt3 + sqrt5`
- * comes back as `x^8 - 40x^6 + 352x^4 - 960x^2 + 576` at forty digits and as nine random-looking
- * numbers at sixteen. What it could not do was say anything a kernel would sign. This asks the whole
- * thing: does the polynomial that the lattice reduction found become a theorem.
+ * `RelationSpec` already pinned the numeric half: the minimal polynomial of `sqrt2 + sqrt3 + sqrt5`
+ * comes back as `x^8 - 40x^6 + 352x^4 - 960x^2 + 576` at the top of its ladder of precisions and as
+ * random-looking numbers at the bottom. What it could not do was say anything a kernel would sign.
+ * This asks the whole thing: does the polynomial that the lattice reduction found become a theorem.
  *
  * == What makes the positive rows worth anything, which is the negative ones ==
  *
@@ -27,8 +27,8 @@ import garden.xeno.symbolum.theories.Chain
  *  - a request that cannot be put at all.
  *
  * The second is the one to read. It is the architecture's own claim run as an experiment: the
- * untrusted search agreed with itself to fifty digits and the certification stopped it, which is
- * exactly what `docs/adr/0005` says the two halves are for.
+ * untrusted search agreed with itself to more digits than `Relation.Confirmation` asks for and the
+ * certification stopped it, which is exactly what `docs/adr/0005` says the two halves are for.
  */
 class AlgebraicSpec extends AnyFlatSpec with Matchers {
 
@@ -43,9 +43,9 @@ class AlgebraicSpec extends AnyFlatSpec with Matchers {
   /**
    * The largest case, run once and read twice.
    *
-   * A `lazy val` rather than a call in each test: the degree-eight certification is two and a half
-   * seconds of the suite, and asking for it a second time to print its cost would double that
-   * without asking a second question.
+   * A `lazy val` rather than a call in each test: the degree-eight certification was two and a
+   * half seconds of the suite when this was written on 2026-09-13, and asking for it a second time
+   * to print its cost would double that without asking a second question.
    */
   private lazy val threeRoots = found(algebraic.of(Vector(Root(2, 2), Root(2, 3), Root(2, 5))))
 
@@ -199,9 +199,9 @@ class AlgebraicSpec extends AnyFlatSpec with Matchers {
 
   it should "say it found nothing the digits support, which is not the same as no relation" in {
     // The row that keeps `NotCredible` from being a synonym for `NotInTheIdeal`. `RelationSpec`
-    // measures the same value at four precisions and shows it coming back as noise below thirty
-    // digits; here the whole source is run at twenty, walks every degree up to the bound, and
-    // reports that nothing it found was confirmed by enough digits to be worth reporting.
+    // measures the same value along a ladder of precisions and shows it coming back as noise at the
+    // low end of it; here the whole source is run at twenty, walks every degree up to the bound,
+    // and reports that nothing it found was confirmed by enough digits to be worth reporting.
     //
     // A reader acting on this raises the precision. A reader acting on `NotInTheIdeal` does not,
     // because no number of digits changes it, and `Remedy` sends the two to different places.
@@ -229,7 +229,7 @@ class AlgebraicSpec extends AnyFlatSpec with Matchers {
     algebraic.certifying(Vector.empty, Vector(BigInt(1))) shouldBe a[Outcome.Unusable]
   }
 
-  it should "name a fourth root and beyond, which three letters cannot" in {
+  it should "name a fourth root and beyond, which the letters alone cannot" in {
     // Read directly rather than by running a four-radical search, which would walk to degree
     // sixteen to answer a question about a string.
     Vector(0, 1, 2, 3, 4).map(Algebraic.nameOf) shouldBe Vector("x", "y", "z", "x4", "x5")

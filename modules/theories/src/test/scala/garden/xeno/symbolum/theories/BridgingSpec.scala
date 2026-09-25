@@ -104,7 +104,7 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
         spending.foundational should not be empty
 
         // The search looked at more than one thing, which is what says the answer was found rather
-        // than arrived at: `Library.about` over this claim's constants is tens of lemmas, and the
+        // than arrived at: `Library.about` over this claim's constants is many lemmas, and the
         // one that carried it is not distinguished in advance by anything but the decision.
         considered should be > 1
 
@@ -130,7 +130,7 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
         considered shouldBe 0
 
         // And it cost nothing at all: no bridge means no arithmetic, so the foundational column is
-        // empty where the claim above has the naturals' two axioms in it.
+        // empty where the claim above has the naturals' axioms in it.
         spending.foundational shouldBe empty
 
       case other => fail(s"a claim whose arithmetic is inert needs no bridge: $other")
@@ -216,9 +216,9 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
     val goal = force(Parser.proposition(retries.theory, retries.notation, retryClaim))
     val reached = retries.reaches(goal)
 
-    // Three constants and not one: `NUM_LT`, and the two the numeral `3` is built from. A reader
+    // More constants than one: `NUM_LT`, and those the numeral `3` is built from. A reader
     // expecting the search space to be "the lemmas about `<`" is reading the claim and not the
-    // term, and the search drops those two on purpose: what the claim is about is the order.
+    // term, and the search drops the numeral's on purpose: what the claim is about is the order.
     reached.size should be > 1
 
     val about = reached.toVector.sorted

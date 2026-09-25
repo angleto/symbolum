@@ -115,7 +115,7 @@ class LinarithProductsSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  "Degree four" should "be the limit, and be refused rather than searched for indefinitely" in {
+  "A degree past the cubic round" should "be refused rather than searched for indefinitely" in {
     refused(
       "!w:real x:real y:real. 0 < w /\\ 0 < x /\\ 0 < y /\\ 0 < z:real ==> 0 < w * x * y * z"
     )
@@ -147,9 +147,9 @@ class LinarithProductsSpec extends AnyFlatSpec with Matchers {
     // number anybody can be held to.
     //
     // What the gate does is observable without a clock. The search stops at the **pair** round,
-    // having manufactured a hundred and four facts against a bound of forty-eight, and never enters
-    // the cube round at all. Had it entered, the bound it reached would be the other one and the
-    // count would be larger. That is a function of the goal and of nothing else.
+    // having manufactured the count the assertion below pins, past the bound `Linarith.Facts` sets,
+    // and never enters the cube round at all. Had it entered, the bound it reached would be the
+    // other one and the count would be larger. That is a function of the goal and of nothing else.
     val size = 12
     val names = (0 to size).map(index => s"x$index:real").mkString(" ")
     val links = (0 until size).map(index => s"x$index:real < x${index + 1}:real").mkString(" /\\ ")
@@ -210,7 +210,7 @@ class LinarithProductsSpec extends AnyFlatSpec with Matchers {
     refusal.fold(_.message, _ => "") should include("non-negative combination of the hypotheses")
   }
 
-  it should "still name a denominator, which is the one thing that does stop here" in {
+  it should "still name a denominator, which the reader goes on turning away" in {
     // The narrowing is a narrowing and not a removal. A symbolic denominator asks for `~(y = 0)`,
     // which is `Field`'s to assume, and `inv 0` is an atom rather than a denominator: both keep the
     // message that names the denominator and whose price it is.

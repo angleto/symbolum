@@ -285,7 +285,7 @@ lands red here rather than going unmentioned.
 | `Listing` | `LIST_CONS`, `LIST_HEAD`, `LIST_TAIL` | The list interface over `word`, which is an orientation and not a carrier: `docs/adr/0038` measures that `word('a)` is already a type operator of arity one, already has `WORD_EMPTY`, `WORD_SINGLETON` and `WORD_CONCAT`, and that a second carve would be from the **same** predicate and inherit none of its facts. What was missing is one principle: `WORD_INDUCTION` extends a word on the right, and a definition by recursion on a sequence descends from the left. So `LIST_CONS x w` is `WORD_CONCAT (WORD_SINGLETON x) w` under a name, the empty list is `WORD_EMPTY` with no second name, and `LIST_INDUCT` is cons-induction. Three definitions, **no axiom and no type**. `LIST_RECURSION` is the principle a *definition* needs, where `LIST_INDUCT` only proves things: it is `Recursion.theorem` at the result type `word('a) -> 'b`, read at the word's own length, and it is why `LIST_HEAD` and `LIST_TAIL` are constants rather than terms built inside a proof. `LIST_RECURSION_UNIQUE` is the other half, since this logic has no unique-existence quantifier |
 | `Folding` | `LIST_FOLD` | The consumer of `LIST_RECURSION`, and the first thing here written with lists that `word` writes by index. `LIST_FOLD g a (LIST_CONS x w)` is `g x (LIST_FOLD g a w)`, so `LIST_FOLD_CONCAT` splits over an append with **no index correction** where `WORD_CONCAT_TALLY` carries `NUM_ADD (WORD_LENGTH u) i`. One definition, no axiom, no type. What a fold cannot express is the other half of that sentence: a measure weighing a letter by where it sits, which is what the tally is for and why it is not superseded |
 | `Root` | `sqrt` | The square root of a non-negative real, named by choice, and `SQRT_EXISTS`, which says what it names exists: the least upper bound of the numbers whose square is at most `x` squares to `x`, which is `COMPLETENESS` read a third time and the reason the existence rests on the reals alone. `SQRT`, `SQRT_UNIQUE` and `SQRT_SQUARE` read the choice back; nothing is said below zero, where the choice falls somewhere, and `RootSpec` refutes the unconditional statement at minus one |
-| `Continuity` | `continuous` | Continuity at a point, the epsilon-delta statement written out, and `INTERMEDIATE_VALUE`: a function continuous on `[a, b]` takes every value between `f a` and `f b` in it, which is `COMPLETENESS` read a fourth time. `CONTINUOUS_CONST` and `CONTINUOUS_ID` are the two functions everything else will be built from; `ContinuitySpec` shows a step is not continuous and refutes the theorem without its continuity hypothesis at that step |
+| `Continuity` | `continuous` | Continuity at a point, the epsilon-delta statement written out, and `INTERMEDIATE_VALUE`: a function continuous on `[a, b]` takes every value between `f a` and `f b` in it, which is `COMPLETENESS` read a fourth time. `CONTINUOUS_CONST` and `CONTINUOUS_ID` are the two functions everything else will be built from; `ContinuitySpec` shows a step is not continuous and refutes the theorem without its continuity hypothesis at that step. Since 2026-09-25 also the extreme value theorem, `CONTINUOUS_ATTAINS_MAX` and `CONTINUOUS_ATTAINS_MIN` with `CONTINUOUS_BOUNDED` under them, and all three are one lemma used twice: `INTERVAL_GLUING`, that a property of intervals which glues end to end and holds on every short interval around each point holds on `[a, b]`. `CONTINUOUS_NEG` is what turns the maximum into the minimum |
 | `Logarithm` | nothing | The first facts about `ln`, and what they wait on: the exponential positive, strictly increasing, continuous everywhere from one estimate near zero, and onto the positive reals by the intermediate value theorem; then `EXP_LN`, `LN_EXP`, `LN_ONE` and `LN_MUL`. It declares nothing, as `Deduction` does, because its subject is three constants declared below it |
 
 **This is not the front page's table and the two must not be merged.** `README.md` indexes by
@@ -484,10 +484,22 @@ Such an implication is valid exactly when the conclusion's difference is a non-n
 combination of the hypotheses' differences plus a non-negative constant, with an equality free to
 be weighed either way, or when the hypotheses cannot all hold at once; both are one linear program,
 and `Farkas` solves it.
-**Refuses:** anything neither the linear form nor the hypotheses multiplied reaches. The pairs get
-to degree two, and a second round crossing those products with the hypotheses gets to degree three,
-run only when the goal names an atom the pairs did not reach. Degree four is the limit, and the
-refusal says so by naming the atom and how many unknowns it multiplies.
+**Refuses:** anything neither the linear form, the hypotheses multiplied, nor one completed square
+reaches. The pairs get to degree two, and a second round crossing those products with the
+hypotheses gets to degree three, run only when the goal names an atom the pairs did not reach, so
+a product of four unknowns is past what the products make. The square is the one fact in the pool
+that is not made from the goal's hypotheses, and it is what a goal with **no** hypotheses has: over
+an atom that is one unknown times itself the square is completed, and `SQUARE_NONNEG` at that
+argument is the fact, checked by the kernel like the others. `docs/adr/0032` is the decision.
+
+```scala
+Linarith.standard.prove("!a:real. a * (2 - a) <= 1")
+```
+
+The refusal names the atom and how many unknowns it multiplies, and then which of two obstacles it
+met. A goal with hypotheses hears that the hypotheses multiplied reach three. A goal with none hears
+that the pool the products are built from is empty, so no degree of them exists, because telling
+that author about the degree would send them to restate a goal when what it lacks is a premise.
 
 **A product of two variables is an atom, and the hypotheses are multiplied to reach it.** No
 combination of forms over `x` and `y` gets to an atom `x * y`, so `0 < x /\ 0 < y ==> 0 < x * y`
@@ -849,12 +861,13 @@ Apply.candidates(logic, Order.standard.facts.toVector, goal)
 
 `Prove` asks this before it asks any decision procedure, over the facts of the developments it was
 built on. **`Prove.construct(chain)` is the one to reach for when you have a chain**: `Prove.standard` is
-over the reals alone, so a goal mentioning `num` cannot even be stated to it and the naturals'
-forty-seven lemmas are not in the library it can reach. That is why `!x:real. 0 <= x * x` is now
-proved rather than refused: it is
-`SQUARE_NONNEG`, LINARITH is the right address for an inequality and cannot take a goal whose atom
-is a product of unknowns, and until the lookup existed the answer was "nobody here can do this" from
-a system holding the lemma four lines away.
+over the reals alone, so a goal mentioning `num` cannot even be stated to it and none of the
+naturals' lemmas is in the library it can reach. That is why `!x:real. 0 <= x * x` was
+the first goal the lookup settled: it is `SQUARE_NONNEG`, and until the lookup existed the answer
+was "nobody here can do this" from a system holding the lemma four lines away, because LINARITH
+then took no goal whose atom is a product of unknowns without hypotheses to multiply. Since
+2026-09-18 it takes this one as well, by completing the square, and the lookup is still asked
+first.
 
 ### Asking whether a set of rules can all hold
 
@@ -2213,9 +2226,14 @@ cancellation.
    an atom nothing else mentioned; the negation of the goal took no part in the products, which is
    what put `0 < x * y /\ 0 < x ==> 0 < y` out of reach; and an equality took part in none either.
    Degree three fell with a second round of products, run only when the goal names an atom the
-   pairs did not reach, so `0 < x /\ 0 < y /\ 0 < z ==> 0 < x * y * z` is proved. **Degree four is
-   the limit now**, and it is the same limit one round up. The refusal says so: it names the atom
-   and how many unknowns it multiplies, rather than telling an author to restate as a combination
-   of hypotheses that no combination reaches.
+   pairs did not reach, so `0 < x /\ 0 < y /\ 0 < z ==> 0 < x * y * z` is proved. What came next
+   was not a fourth round: the two corpus goals that asked for more have **no hypotheses**, so the
+   pool the products are built from is empty for them at every degree, and since 2026-09-18 both
+   are settled by one completed square instead, which `docs/adr/0032` decides, saying why a
+   parametric degree was rejected. What is left is a general sum-of-squares certificate, a search
+   outside the trusted boundary with its answer checked inside, which is where the inequalities
+   `docs/adr/0029` calls genuinely hard would be spent. The refusal names the atom, how many
+   unknowns it multiplies, and whether what stopped it was the degree or an empty pool, rather
+   than telling an author to restate as a combination of hypotheses that no combination reaches.
 
 Each step unlocks the next and none of them is research. The mathematics beyond them is.

@@ -12,12 +12,12 @@ import garden.xeno.symbolum.theories.Chain
  * `docs/adr/0023` moved `Prove`'s propositional address from `Minimal` to the calculus under it,
  * and the figures that decided it are here rather than in a probe somebody ran once. The card
  * asking for the work named the corpus and the library as the population to measure, and that
- * measurement is in `Prove`'s own docstring: of the library's statements two carry a negation at
- * this address and both are `Classical`'s own, and of the Mathlib ring corpus and the statable slice
- * of miniF2F **none** reaches the address at all. Read as "the change buys nothing" that zero is an
- * absence reported by an instrument pointed at a subject that cannot contain the thing: those three
- * populations are arithmetic, and a goal reaches this address carrying a negation only where every
- * atom is a bare proposition.
+ * measurement is in `Prove`'s own docstring: on 2026-09-18, of the library's statements two carried
+ * a negation at this address and both were `Classical`'s own, and of the Mathlib ring corpus and
+ * the statable slice of miniF2F **none** reached the address at all. Read as "the change buys
+ * nothing" that zero is an absence reported by an instrument pointed at a subject that cannot
+ * contain the thing: those three populations are arithmetic, and a goal reaches this address
+ * carrying a negation only where every atom is a bare proposition.
  *
  * So the population here is the propositional formulas themselves, enumerated rather than sampled:
  * every formula over two atoms with at most [[Nodes]] nodes, which is [[Formulas]] of them. A bound
@@ -146,9 +146,10 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "have most of itself unused, measured rather than assumed" in {
-    // Zero above says nothing about how close anything came, and "nobody hit 256" is a weak
-    // sentence if the deepest goal used 255. So the net is lowered until the population's answers
-    // change, and the depth at which they first do is how much of it is actually in use.
+    // Zero above says nothing about how close anything came, and "nobody hit the net" is a weak
+    // sentence if the deepest goal used one unit less than it. So the net is lowered until the
+    // population's answers change, and the depth at which they first do is how much of it is
+    // actually in use.
     //
     // The whole answer vector is compared rather than a count, because two goals swapping which of
     // them is proved would leave a count alone. And the search at a lower depth is the same search:
@@ -195,11 +196,11 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "be a net whose size is a statement about the goal, which is what chose the number" in {
-    // The criterion `87e74c7f` asked for, and the reason 256 is a decision rather than a rounding:
-    // **the fuel a goal needs never exceeds the goal's own size**, counting one for each connective
-    // and one for each atom occurrence. Read forwards, `Intuitionistic.Fuel` at 256 is the promise
-    // that any goal of at most 256 nodes is answered rather than stopped, which is a sentence a
-    // reader can check a written claim against. The two tests above give the edge on one family;
+    // The criterion `87e74c7f` asked for, and the reason `Intuitionistic.Fuel` is a decision rather
+    // than a rounding: **the fuel a goal needs never exceeds the goal's own size**, counting one
+    // for each connective and one for each atom occurrence. Read forwards, the net is the promise
+    // that any goal of at most that many nodes is answered rather than stopped, which is a sentence
+    // a reader can check a written claim against. The two tests above give the edge on one family;
     // this gives the relation the number can be chosen by.
     //
     // It is also the assertion the net exists to be: the net is there against a mistake in the
@@ -240,8 +241,8 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     // about a number nothing comes near: without this it would pass just as well on a search that
     // spent one unit on everything.
     //
-    // **The bound is in fact ATTAINED, and where it is attained is why this assertion asks for
-    // four nodes rather than for equality.** `~p` and `~q` need 2 of 2, which is the ratio the
+    // **The bound is in fact ATTAINED, and where it is attained is why this assertion asks for four
+    // nodes rather than for equality.** `~p` and `~q` need their whole size, which is the ratio the
     // `info` below prints and which perturbation 1 of `tools/verify/perturb-the-nets-criterion.sh`
     // names when it fires. Equality at two nodes is trivial: a negation opens and the search is
     // done, so any calculus at all attains it, and an assertion on the ratio would be satisfied by
@@ -327,7 +328,7 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "have cost one axiom on the route it used to take" in {
+  it should "have cost choice on the route it used to take" in {
     // The price the zero above is read against. Every one of them is classically provable, and the
     // classical procedure closes with `DOUBLE_NEGATION`, so every one of them used to arrive
     // resting on the choice operator: same theorem, different accounting, which is the currency
@@ -371,9 +372,9 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     // guarded sentences covers the list, and six copies were not on it. Both files now carry the
     // other half, a walk that refuses the figure everywhere the list does not reach.
     //
-    // `docs/adr/0023` spells both figures four times and is deliberately NOT read here: an ADR is a
-    // dated record of a decision, superseded rather than maintained, so a test that forced it to
-    // track a moving count would be asking it to stop being one.
+    // `docs/adr/0023` spells both figures more than once and is deliberately NOT read here: an ADR
+    // is a dated record of a decision, superseded rather than maintained, so a test that forced it
+    // to track a moving count would be asking it to stop being one.
     val gainedCount = gained.size
     val classicalOnly = addressed.count(r => r.byClassical && !r.byCalculus)
 
@@ -498,9 +499,9 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
   it should "say nothing of the sort about the goals this repository actually holds" in {
     // The guard against the guard, and the measurement that says the case above is a real edge and
     // not the ordinary answer: over the whole enumerated population nothing is cut short. The
-    // library reads the same way — 184 of its statements take this address and the deepest uses 9
-    // of 256 — and that measurement is on the card rather than here, because it is about the
-    // library and this file is about the address.
+    // library read the same way on 2026-09-18, when 184 of its statements took this address and the
+    // deepest used 9 of `Intuitionistic.Fuel`, and that measurement is on the card rather than
+    // here, because it is about the library and this file is about the address.
     addressed.foreach { reading =>
       prover(reading.goal) match {
         case Right(Prove.Outcome.CutShort(_, _, _)) =>

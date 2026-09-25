@@ -9,10 +9,10 @@ import scala.jdk.CollectionConverters.*
  * This repository's own source files, for the assertions that are about where something is written
  * rather than about what it proves.
  *
- * Two claims this development makes are of that kind: that the trusted base is the kernel plus one
- * file, and that the module supplying `~(n = 0)` sits below the ring rather than above it. Neither
- * can be settled by proving anything, both stop being true silently, and a document saying them is
- * a document that gets believed after it goes stale.
+ * Two claims this development makes are of that kind: that the trusted base is the kernel plus
+ * the files `RealSpec` lists as its foundation, and that the module supplying `~(n = 0)` sits below
+ * the ring rather than above it. Neither can be settled by proving anything, both stop being true
+ * silently, and a document saying them is a document that gets believed after it goes stale.
  */
 object Sources {
 
@@ -53,10 +53,10 @@ object Sources {
    *
    * The decision of what a comment is moved to `garden.xeno.symbolum.scan.Comments` on 2026-09-16,
    * and what moved with it is a defect this site had: the pair of substitutions here dropped from a
-   * `//` to the end of the line whether or not the slashes were inside a string literal, and three
-   * lines of `Notebook.scala` are exactly that. The census this feeds is `RealSpec`'s over
-   * `assertAxiom`, so the shape of the defect was a line declaring an axiom that a census does not
-   * see.
+   * `//` to the end of the line whether or not the slashes were inside a string literal, and on
+   * that day three lines of `Notebook.scala` were exactly that. The census this feeds is
+   * `RealSpec`'s over `assertAxiom`, so the shape of the defect was a line declaring an axiom that
+   * a census does not see.
    */
   def code(relative: String): String =
     Comments.withoutComments(Files.readString(repositoryRoot().resolve(relative)))

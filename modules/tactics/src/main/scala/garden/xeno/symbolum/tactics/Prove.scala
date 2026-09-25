@@ -62,9 +62,10 @@ final class Prove private (
    * Asked before the decision procedures, and the reason is a measurement rather than an ordering
    * principle. `!x. 0 <= x * x` is `SQUARE_NONNEG`, a lemma sitting four lines from the prover, and
    * until 2026-09-11 asking for it got a refusal: LINARITH is the right address for an inequality
-   * and cannot take a goal whose atom is a product of unknowns, so the answer was "nobody here can
-   * do this" from a system that had it written down. Reading somebody else's benchmark is what
-   * turned that from a suspicion into a row.
+   * and then took no goal whose atom is a product of unknowns without hypotheses to multiply, so
+   * the answer was "nobody here can do this" from a system that had it written down. Reading
+   * somebody else's benchmark is what turned that from a suspicion into a row. LINARITH takes this
+   * goal as well since 2026-09-18, by completing the square, and the lookup is still asked first.
    *
    * A lookup rather than a search: `Apply` decides what the lemma's variables must be for its
    * conclusion to *be* the goal, and only a candidate that then owes **nothing** is used. A lemma

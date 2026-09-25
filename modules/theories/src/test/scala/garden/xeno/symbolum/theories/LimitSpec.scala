@@ -42,7 +42,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     limit.facts.keySet shouldBe Limit.Statements.map(_._1).toSet
   }
 
-  "The development" should "declare exactly the two constants it is about" in {
+  "The development" should "declare exactly the constants it is about" in {
     val before = chain.provability.theory.constants.keySet
     (limit.theory.constants.keySet -- before) shouldBe Set(Limit.Converges, Limit.Value)
   }

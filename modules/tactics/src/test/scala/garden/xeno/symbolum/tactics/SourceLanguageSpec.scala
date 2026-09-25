@@ -60,13 +60,14 @@ import org.scalatest.matchers.should.Matchers
  *
  * The defect above was found in Scala, so the population was Scala, and that is the population
  * being a habit rather than a decision. The prose it could not see was the denser half:
- * `build.sbt` alone carries 496 comment lines of 710, against `Rules.scala`'s 499 of 1030 in a
- * file three times as long, and a comment in `build.sbt` or in `ci.yml` is prose in exactly the
- * way a comment in a `.scala` is. Seven extensions are read now, through two comment readers,
- * and [[Formats]] carries the table, the per-format measurement, the two formats left out and why.
+ * on 2026-09-16 `build.sbt` alone carried 496 comment lines of 710, against `Rules.scala`'s 499
+ * of 1030 in a file three times as long, and a comment in `build.sbt` or in `ci.yml` is prose in
+ * exactly the way a comment in a `.scala` is. The extensions in [[Formats]] are read now, through
+ * two comment readers, and that table carries the per-format measurement, the formats left out
+ * and why.
  *
- * Widening it found nothing, and that is the answer rather than a disappointment: the three
- * markers over everything the widening added return zero, with `build.sbt` and the two workflows
+ * Widening it found nothing, and that is the answer rather than a disappointment: the markers
+ * over everything the widening added returned zero, with `build.sbt` and the workflows
  * carrying almost all of it. What it buys is the day somebody writes the next ledger entry in a
  * workflow or in the build.
  *
@@ -143,9 +144,9 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    * `.properties` alike.
    *
    * A second reader and not a second census: the block above answers the same question for the
-   * languages that open a block comment with a slash and a star. Two readers cover seven of this
-   * repository's formats because comment syntax is shared and file extensions are not, which is
-   * why [[Formats]] maps extensions to readers instead of one census per format.
+   * languages that open a block comment with a slash and a star. Two readers cover every format in
+   * [[Formats]] because comment syntax is shared and file extensions are not, which is why that
+   * table maps extensions to readers instead of one census per format.
    *
    * Spelled out rather than written, and it cost a compile: Scala nests block comments, so those
    * two characters inside a doc comment open a second one and the definition below is swallowed
@@ -170,17 +171,17 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    *
    * What each format contributes is printed by the assertion below rather than written here, for
    * the reason a count in prose goes stale silently. The part worth writing down is the part a
-   * count hides: `.js` and `.properties` hold **no comment at all** today, one file each, so their
-   * presence in this table is a commitment about the next comment written in them and not evidence
-   * that anything has been read. `.sc` holds one.
+   * count hides: on 2026-09-16 `.js` and `.properties` held **no comment at all**, one file each,
+   * so their presence in this table was a commitment about the next comment written in them and
+   * not evidence that anything had been read. `.sc` held one.
    *
    * `.yaml` is deliberately absent though it is the same format: no file here uses that spelling,
    * and the assertion below requires every declared format to have found a file, so declaring it
    * would fail. That is the table staying honest rather than an oversight, and the day a `.yaml`
    * lands the line to add is one.
    *
-   * `.css` is absent for a reason of its own: `notebook.css` holds no comment at all today, and
-   * `//` is not a comment in CSS while it does occur inside a URL, so the reader above would be
+   * `.css` is absent for a reason of its own: `notebook.css` held no comment at all on 2026-09-16,
+   * and `//` is not a comment in CSS while it does occur inside a URL, so the reader above would be
    * wrong on it the first time one lands. A third reader for one minified file buys less than it
    * costs, and this sentence is what it buys instead.
    *
@@ -217,7 +218,8 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    * Every file of a declared format, from the repository root rather than from `modules/`.
    *
    * The walk reads the whole tree and filters afterwards, which is the obvious inefficiency and is
-   * measured rather than assumed: 8123 files including build output, a tenth of a second.
+   * measured rather than assumed: on 2026-09-16 it was 8123 files including build output, in a
+   * tenth of a second.
    */
   private def population: Vector[Path] = {
     val stream = Files.walk(Paths.get("."))
@@ -259,10 +261,11 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
    * looked like it covered it: the commit that closed the list the build looks at left `sat`
    * outside the list no build looks at.
    *
-   * `StyleSpec` is that census today. Its six names miss ten files of `src/main` across four
-   * modules, and its own anti-vacuity floor is 59 against 143 found, so three module directories
-   * could vanish from it without the floor moving. A floor is a weaker check than an agreement
-   * between two readings, which is why the assertion below is the second kind.
+   * `StyleSpec` was that census on 2026-09-15. Its six names missed ten files of `src/main` across
+   * four modules, and its own anti-vacuity floor was 59 against 143 found, so three module
+   * directories could have vanished from it without the floor moving; it has read the directory
+   * since 2026-09-16. A floor is a weaker check than an agreement between two readings, which is
+   * why the assertion below is the second kind.
    *
    * Test sources are included because all six blocks that produced this spec were in test sources.
    * A scan of `src/main` alone would have found none of them.
@@ -320,11 +323,11 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "have found a file of every format it declares, so the table cannot name a dead one" in {
-    // The other half of the floor above, and the half a total cannot give: `.scala` is 96% of the
-    // population, so a format that stopped matching anything would cost 1 file of 356 and clear
-    // every floor here. An extension nobody uses, or one spelled `.yaml` where the tree writes
-    // `.yml`, reads as coverage and is not, which is the defect this spec was widened to repair
-    // arriving inside the repair.
+    // The other half of the floor above, and the half a total cannot give: `.scala` is most of the
+    // population, so a small format that stopped matching anything would cost a file or two and
+    // clear every floor here. An extension nobody uses, or one spelled `.yaml` where the tree
+    // writes `.yml`, reads as coverage and is not, which is the defect this spec was widened to
+    // repair arriving inside the repair.
     // Named `unmatched` and not `empty`, which is what it was for a minute: `empty` shadows the
     // matcher, so `empty shouldBe empty` compiles, compares the value with itself and passes
     // whatever the population holds. An assertion that cannot fail is the thing this file is about.
@@ -340,9 +343,10 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
 
   it should "reach every module, including any added after this was written" in {
     // Two readings that must agree, rather than a list written here. A list is what put `sat`
-    // outside `StyleSpec` and outside `root.aggregate`, and naming eight modules on a tree that has
-    // ten would pass while missing two. So: the modules the scan actually reached, against the
-    // directories under `modules/` that hold Scala at all, computed independently of the scan.
+    // outside `StyleSpec` and outside `root.aggregate`, and a list that names all but some of the
+    // modules on the tree would pass while missing them. So: the modules the scan actually reached,
+    // against the directories under `modules/` that hold Scala at all, computed independently of
+    // the scan.
     val reached = sources.map(_.toString.split("/")(1)).distinct.sorted
 
     val stream = Files.list(Paths.get("modules"))
@@ -370,9 +374,8 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
 
     reached shouldBe holdingScala
 
-    // And the floor, because two empty readings agree. Ten on 2026-09-15; `aggregate` is the
-    // eleventh directory and holds no source of its own, which is why this is not a count of
-    // `modules/`.
+    // And the floor, because two empty readings agree. Ten on 2026-09-15; `aggregate` is one more
+    // directory and holds no source of its own, which is why this is not a count of `modules/`.
     withClue(s"modules reached: ${reached.mkString(", ")}\n") {
       reached.size should be >= 10
     }
@@ -399,8 +402,8 @@ class SourceLanguageSpec extends AnyFlatSpec with Matchers {
 
   it should "read a `#` comment as a comment, and a `#` inside a literal as neither" in {
     // The same discipline as the block above, for the reader the widening added. The negative is
-    // taken from `publish.yml` rather than invented: that file echoes markdown headings, and all
-    // three `#` occurrences in this tree that are not comments are of that shape.
+    // taken from `publish.yml` rather than invented: that file echoes markdown headings, and on
+    // 2026-09-16 all three `#` occurrences in this tree that were not comments were of that shape.
     val sample =
       """# a line comment
         |sbt.version = 1.10.10

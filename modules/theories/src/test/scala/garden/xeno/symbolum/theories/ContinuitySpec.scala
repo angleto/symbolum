@@ -6,8 +6,8 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * Continuity and the intermediate value theorem: what they cost, what they rest on, and that what
- * they say is not vacuous.
+ * Continuity, the intermediate value theorem and the extreme value theorem: what they cost, what
+ * they rest on, and that what they say is not vacuous.
  *
  * **What it cost.** One defined constant and no axiom, asserted as a difference against the theory
  * below it rather than as a count.
@@ -49,7 +49,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------- what it cost */
 
-  "Continuity" should "add one constant and no axiom to the theory below it" in {
+  "Continuity" should "add its constant and no axiom to the theory below it" in {
     val below = chain.root.theory
     continuity.theory.axioms shouldBe below.axioms
     (continuity.theory.constants.keySet -- below.constants.keySet) shouldBe Set(Continuity.Continuous)
@@ -204,6 +204,155 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     val eliminated = force(rules.existsElim(somewhere, x, absurd))
     val refused = force(rules.notIntro(unconditional, eliminated))
 
+    refused.hypotheses shouldBe empty
+  }
+
+  /* ------------------------------------------------------- the extreme value theorem */
+
+  it should "prove the extreme value theorem from the reals alone, and through the gluing" in {
+    // The same equality as the intermediate value theorem's, for each of the four that take a
+    // supremum: all sixteen axioms of the reals, `COMPLETENESS` among them, and the choice that
+    // `abs`, `min`, `max` and the excluded middle are paid for with. Measured on 2026-09-25 before it
+    // was written here, at seventeen for each.
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val select = force(chain.classical.axiom("SELECT")).conclusion
+    for (name <- List(Continuity.IntervalGluing, Continuity.Bounded, Continuity.AttainsMaximum, Continuity.AttainsMinimum)) {
+      val spent = Derivation.axiomsOf(fact(name))
+      withClue(s"$name reaches: ${(spent -- realAxioms).map(continuity.show).mkString("; ")}\n") {
+        spent should contain(completeness)
+        (spent -- realAxioms) shouldBe Set(select)
+      }
+    }
+    // The negation picks its radius by hand and takes no supremum.
+    Derivation.axiomsOf(fact(Continuity.Negation)) should not contain completeness
+
+    // The route, which is the design and not a detail: both halves of the theorem are the gluing,
+    // and the minimum is the maximum of the negation. A derivation that took the textbook's second
+    // supremum argument instead would state the same theorem and fail here.
+    def published(names: String*): Set[Term] = names.map(fact(_).conclusion).toSet
+    Derivation.restingOn(fact(Continuity.AttainsMaximum), published(Continuity.IntervalGluing, Continuity.Bounded)) shouldBe
+      published(Continuity.IntervalGluing, Continuity.Bounded)
+    Derivation.restingOn(fact(Continuity.AttainsMinimum), published(Continuity.AttainsMaximum, Continuity.Negation)) shouldBe
+      published(Continuity.AttainsMaximum, Continuity.Negation)
+  }
+
+  /** `!x. 0 <= x /\ x <= 1 ==> continuous (\y. y) x`, the hypothesis both detachments discharge. */
+  private lazy val identityOnUnit: Kernel.Thm = {
+    val x = Term.variable("x", reals)
+    val inside = proposition("(0:real) <= x /\\ x <= 1")
+    val continuous = force(rules.spec(x, fact(Continuity.Identity)))
+    force(rules.disch(inside, continuous).flatMap(rules.gen(x, _)))
+  }
+
+  it should "detach the maximum and the minimum at the identity on [0, 1], with nothing assumed" in {
+    // The two hypotheses are ones something satisfies, and what comes out is the statement about
+    // that function rather than a consequence of an unsatisfiable premise.
+    val identity = force(continuity.term("\\y:real. y", Type.fun(reals, reals)))
+    def detached(name: String): Kernel.Thm = {
+      val instance = opened(force(rules.specAll(fact(name), List(identity, real("0:real"), real("1:real")))))
+      Vector(lemma("(0:real) <= 1"), identityOnUnit).foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    }
+    val highest = detached(Continuity.AttainsMaximum)
+    val lowest = detached(Continuity.AttainsMinimum)
+    highest.hypotheses shouldBe empty
+    lowest.hypotheses shouldBe empty
+    continuity.show(highest.conclusion) shouldBe "?x:real. 0 <= x /\\ x <= 1 /\\ (!y:real. 0 <= y /\\ y <= 1 ==> y <= x)"
+    continuity.show(lowest.conclusion) shouldBe "?x:real. 0 <= x /\\ x <= 1 /\\ (!y:real. 0 <= y /\\ y <= 1 ==> x <= y)"
+  }
+
+  /** `|- COND (at < 1) at 0 = at` or `= 0`, from the evidence for the guard or against it. */
+  private def sawValue(at: String, evidence: Kernel.Thm, below: Boolean): Kernel.Thm = {
+    val name = if (below) Classical.CondTrue else Classical.CondFalse
+    val conditional =
+      Kernel.instType(Map(Classical.TypeVariable -> reals), force(chain.classical.fact(name)))
+    val guard = proposition(s"$at < (1:real)")
+    force(rules.specAll(conditional, List(guard, real(at), real("0:real"))).flatMap(rules.mp(_, evidence)))
+  }
+
+  it should "need its continuity hypothesis, which is shown by refuting the maximum without it" in {
+    // `COND (y < 1) y 0` on `[0, 1]` climbs to one and drops to zero at one, so the least upper bound
+    // of its values is one and no point has it. Without continuity the maximum statement would hand
+    // back an `m`; below one the midpoint of `m` and one is higher, and at one the value is zero,
+    // which one half beats.
+    val saw = force(continuity.term("\\y:real. COND (y < 1) y (0:real)", Type.fun(reals, reals)))
+    val unconditional = proposition(
+      "!f:real -> real. !a:real. !b:real. a <= b ==> " +
+        "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f x <= f m)")
+    val assumed = force(LogicError.lift(Kernel.assume(unconditional)))
+    val instance = opened(force(rules.specAll(assumed, List(saw, real("0:real"), real("1:real")))))
+    val somewhere = force(rules.mp(instance, lemma("(0:real) <= 1")))
+
+    val m = Term.variable("m", reals)
+    val witness = force(LogicError.lift(Kernel.assume(proposition(
+      "0 <= m:real /\\ m <= 1 /\\ (!x:real. 0 <= x /\\ x <= 1 ==> COND (x < 1) x (0:real) <= COND (m < 1) m 0)"))))
+    val mAbove = force(rules.conjElim1(witness))
+    val highest = force(rules.conjElim2(witness).flatMap(rules.conjElim2))
+    def higherThanAt(point: String, inside: Kernel.Thm): Kernel.Thm =
+      force(rules.spec(real(point), highest).flatMap(rules.mp(_, inside)))
+
+    val belowOne = {
+      val guard = force(LogicError.lift(Kernel.assume(proposition("m:real < 1"))))
+      val atM = sawValue("m:real", guard, below = true)
+      val middle = "(m + 1) / 2"
+      val inside = force(rules.conjIntro(
+        force(rules.spec(m, lemma("!m:real. 0 <= m ==> 0 <= (m + 1) / 2")).flatMap(rules.mp(_, mAbove))),
+        force(rules.spec(m, lemma("!m:real. m < 1 ==> (m + 1) / 2 <= 1")).flatMap(rules.mp(_, guard)))))
+      val atMiddle = sawValue(middle, force(rules.spec(m, lemma("!m:real. m < 1 ==> (m + 1) / 2 < 1")).flatMap(rules.mp(_, guard))), below = true)
+      force(rules
+        .specAll(lemma("!p:real q:real m:real. p = (m + 1) / 2 ==> q = m ==> p <= q ==> m < 1 ==> F"),
+          List(real(s"COND ($middle < 1) ($middle) (0:real)"), real("COND (m < 1) m (0:real)"), m))
+        .flatMap(rules.mp(_, atMiddle)).flatMap(rules.mp(_, atM))
+        .flatMap(rules.mp(_, higherThanAt(middle, inside))).flatMap(rules.mp(_, guard)))
+    }
+    val atOne = {
+      val guard = force(LogicError.lift(Kernel.assume(proposition("~(m:real < 1)"))))
+      val atM = sawValue("m:real", guard, below = false)
+      val atHalf = sawValue("(1:real) / 2", lemma("(1:real) / 2 < 1"), below = true)
+      val inside = lemma("(0:real) <= (1:real) / 2 /\\ (1:real) / 2 <= 1")
+      force(rules
+        .specAll(lemma("!p:real q:real. p = 1 / 2 ==> q = 0 ==> p <= q ==> F"),
+          List(real("COND ((1:real) / 2 < 1) ((1:real) / 2) (0:real)"), real("COND (m < 1) m (0:real)")))
+        .flatMap(rules.mp(_, atHalf)).flatMap(rules.mp(_, atM))
+        .flatMap(rules.mp(_, higherThanAt("(1:real) / 2", inside))))
+    }
+    val middle = force(chain.classical.fact(Classical.ExcludedMiddle).flatMap(rules.spec(proposition("m:real < 1"), _)))
+    val absurd = force(rules.disjElim(middle, belowOne, atOne))
+    val refused = force(rules.existsElim(somewhere, m, absurd).flatMap(rules.notIntro(unconditional, _)))
+    refused.hypotheses shouldBe empty
+  }
+
+  it should "need the gluing hypothesis of the gluing, which is shown by refuting it without it" in {
+    // "Shorter than one" holds on every interval shorter than one, so it satisfies the local
+    // hypothesis at radius one everywhere, and it does not glue: `[0, 2]` is not shorter than one.
+    // So the statement with the gluing hypothesis dropped is false, and that hypothesis is where the
+    // content is.
+    val short = force(continuity.term("\\u:real. \\v:real. v - u < 1", Type.fun(reals, Type.fun(reals, Type.Bool))))
+    val unglued = proposition(
+      "!P:real -> real -> bool. !a:real. !b:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> ?d:real. 0 < d /\\ " +
+        "(!u:real. !v:real. a <= u /\\ u <= x /\\ x <= v /\\ v <= b /\\ v - u < d ==> P u v)) ==> P a b")
+    val assumed = force(LogicError.lift(Kernel.assume(unglued)))
+    val instance = opened(force(rules.specAll(assumed, List(short, real("0:real"), real("2:real")))))
+
+    val x = Term.variable("x", reals)
+    val u = Term.variable("u", reals)
+    val v = Term.variable("v", reals)
+    val smallText = "(0:real) <= u /\\ u <= x /\\ x <= v /\\ v <= 2 /\\ v - u < 1"
+    val small = proposition(smallText)
+    val shortEnough = force(rules.conjElim2(force(LogicError.lift(Kernel.assume(small))))
+      .flatMap(rules.conjElim2).flatMap(rules.conjElim2).flatMap(rules.conjElim2))
+    val everyInterval = force(rules.disch(small, shortEnough).flatMap(rules.genAll(_, List(u, v))))
+    val radius = force(rules.conjIntro(lemma("(0:real) < 1"), everyInterval))
+    val existential = proposition(
+      "?d:real. 0 < d /\\ (!u:real. !v:real. (0:real) <= u /\\ u <= x /\\ x <= v /\\ v <= 2 /\\ v - u < d ==> v - u < 1)")
+    val predicate = force(logic.destExistsPredicate(existential).toRight(NotOfForm("an existential", existential)))
+    val witnessed = force(rules.existsIntro(predicate, real("1:real"), radius))
+    val point = proposition("(0:real) <= x /\\ x <= 2")
+    val local = force(rules.disch(point, witnessed).flatMap(rules.gen(x, _)))
+
+    val concluded = force(rules.mp(instance, lemma("(0:real) <= 2")).flatMap(rules.mp(_, local)))
+    val absurd = force(rules.notElim(lemma("~((2:real) - 0 < 1)"), concluded))
+    val refused = force(rules.notIntro(unglued, absurd))
     refused.hypotheses shouldBe empty
   }
 

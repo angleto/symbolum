@@ -33,10 +33,10 @@ class SessionSpec extends AnyFlatSpec with Matchers {
    * One empty session, shared.
    *
    * A `val` rather than a `def` because a session is immutable and every operation returns a new
-   * one, so the fifteen uses below are fifteen readings of the same empty state. It matters to the
-   * suite's clock rather than to the assertions: `Session.standard` builds the tactic surface and
-   * the cost report, measured at 334 to 717 ms and 312 ms on 2026-09-13, and a `def` here would
-   * have put ten seconds into a file that asserts nothing about either.
+   * one, so every use below is a reading of the same empty state. It matters to the suite's clock
+   * rather than to the assertions: `Session.standard` builds the tactic surface and the cost
+   * report, measured at 334 to 717 ms and 312 ms on 2026-09-13, and a `def` here would have paid
+   * that once per use, in a file that asserts nothing about either.
    */
   private lazy val fresh: Session = Session.standard
 
@@ -430,7 +430,7 @@ class SessionSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "refuse a library name that two developments hold, rather than picking one" in {
-    // `Library.named` returns every entry of a name and its own docstring records that three names
+    // `Library.named` returns every entry of a name and its own docstring records that some names
     // are held by two developments each, so a lookup that took the first would pick by map
     // iteration order. The session resolves a name the library holds ONCE and refuses one it holds
     // twice with different statements, which is the honest answer.
@@ -533,7 +533,7 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     session.transcript shouldBe "declare p"
   }
 
-  "A command the theory refuses" should "come back refused at each of the four places" in {
+  "A command the theory refuses" should "come back refused at declare, define, assume or prove" in {
     // One per command that touches the theory, because they fail through four different paths and
     // a single case would leave three of them unread. The claims are chosen to fail at the reader
     // rather than at the prover, which is what keeps this test quick.
@@ -567,7 +567,7 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     fresh.render shouldBe "nothing run yet"
   }
 
-  it should "show each of the four outcomes in the shape that outcome has" in {
+  it should "show each outcome of a mixed session in the shape that outcome has" in {
     // The text form, which is what a caller with no browser reads, and the counterpart of the
     // page `Notebook` renders. One session carrying all four, because what is asserted is that
     // they stay apart: a refusal printed like a result is the same merge one layer out.

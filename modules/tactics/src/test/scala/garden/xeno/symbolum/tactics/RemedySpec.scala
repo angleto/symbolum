@@ -186,7 +186,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------- the seven model answers */
 
-  "The model search's seven outcomes" should "not collapse into fewer next steps" in {
+  "The model search's outcomes" should "not collapse into fewer next steps" in {
     // `Refutation` keeps seven answers apart because collapsing any two turns "I could not ask"
     // into "I asked and it was fine". The three that are not answers must stay three here too.
     val survived = Remedy.of(Refutation.Survived(300))
@@ -242,7 +242,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "A screened candidate" should "keep its disagreement, its agreement and its two absences apart" in {
+  "A screened candidate" should "keep its disagreement, its agreement and its absences apart" in {
     // Four real runs of the screen, and what is asserted is that the four answers do not collapse.
     // The candidate is the variable itself throughout, so what changes is only how many steps it is
     // screened against and where: at one step it disagrees with iteration, at none it agrees, past
@@ -278,10 +278,11 @@ class RemedySpec extends AnyFlatSpec with Matchers {
   //
   // The second of the two is not in the census the card of 2026-09-18 carried and was found by
   // reading the range rather than the site: `Relation.NotCredible` is produced only when
-  // `confirmed < Relation.Confirmation`, which is ten, and `confirmed` is `max(0, ...)`, so the
-  // number this message prints lives in 0 to 9 and one is inside it. That is what separates it
-  // from `Collatz`'s `${Rules.size} clauses`, where the count is the constant eleven.
-  "The two digit counts of this file" should "take the singular at one and the plural elsewhere" in {
+  // `confirmed < Relation.Confirmation` and `confirmed` is `max(0, ...)`, so the number this
+  // message prints lives from zero up to one below that constant, and one is inside it. That is
+  // what separates it from `Collatz`'s `${Rules.size} clauses`, where the count is the size of a
+  // fixed table of rules and is never one.
+  "The digit counts of this file" should "take the singular at one and the plural elsewhere" in {
     val separated = (agreement: Int) =>
       Remedy.of(Discovery.Separated(Var("x"), Var("y"), Map("x" -> BigDecimal(2)), agreement)).message
 
@@ -402,7 +403,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
    * search. The assertions on the defect carry the text after the noun, so the singular is not a
    * substring of what it replaced.
    */
-  "The two linear decisions of this file" should "agree with their count at one and elsewhere" in {
+  "The linear decisions of this file" should "agree with their count at one and elsewhere" in {
     val refutation = Refutation.standard
     def proposition(text: String): Term = force(reals.proposition(text))
 
@@ -607,6 +608,7 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       EscapingVariable(Term.variable("w", realType), "the conclusion"),
       MissingHypothesis(x, "eliminating an existential"),
       Undetermined(Term.variable("y", realType)),
+      BeyondMatching(x, x, Matching.Refusal.ArgumentIsNotABinder(Term.variable("P", Type.fun(realType, Type.Bool)))),
       PartialInstance(5, 4, x),
       // The driver below the reals, which holds no closer and says so. It is in the census as a
       // `ReportADefect` rather than a limit: the two refusals above it are procedures that looked
@@ -655,6 +657,16 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     remedies.count(_.isInstanceOf[ExtendTheTheory]) shouldBe 2
     remedies.count(_.isInstanceOf[ReportADefect]) shouldBe 7
     remedies.count(_.isInstanceOf[RestateTheProblem]) shouldBe 8
+  }
+
+  "A lemma the matcher could not specialise" should "ask for the variable it could not decide, by name" in {
+    // Not a restatement: the target may well be an instance, and `LogicError.BeyondMatching` says
+    // why that is not decided. What the caller can do is what `Induct` does with an induction
+    // principle, which is to supply the predicate and specialise at it.
+    val predicate = Term.variable("P", Type.fun(realType, Type.Bool))
+
+    Remedy.of(BeyondMatching(x, x, Matching.Refusal.ArgumentIsNotABinder(predicate))) shouldBe
+      ChooseATerm("P")
   }
 
   "Every model outcome and every verdict" should "produce a next step that says something" in {
@@ -773,9 +785,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
     //
     // Measured rather than argued, because the two enumerations are one word apart and excusing
     // the wrong one silences a gate that was right: `Prove.searches` is the only site in the
-    // repository that produces a `Search`, its callers are three assertions in
-    // `DocumentationSpec`, nothing under `src/main` outside `Prove.scala` names the type at all,
-    // and no case of `TacticError` carries one. So what this entry claims is the strong half of
+    // repository that produces a `Search`, its callers are all in `DocumentationSpec`'s tests,
+    // nothing under `src/main` outside `Prove.scala` names the type at all, and no case of
+    // `TacticError` carries one. So what this entry claims is the strong half of
     // what the paragraph above this list asks for: not that a caller meeting this type is not
     // meeting a refusal, but that no caller meets it.
     "Prove.Search",

@@ -139,9 +139,9 @@ class PropositionalSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "file that countermodel as `Unread`, and not because nothing ran" in {
-    // The half the test above cannot give, and the one that would go red if a fourth standing ever
-    // landed and this refusal were moved onto it. `decided` being false is satisfied by three of
-    // the standings, so asserting it pins the safety and not the filing.
+    // The half the test above cannot give, and the one that would go red if a new standing ever
+    // landed and this refusal were moved onto it. `decided` being false is satisfied by every
+    // standing but `Decided`, so asserting it pins the safety and not the filing.
     //
     // The second assertion is what stops the first from being vacuous, and it is the whole of why
     // `Unread` was rewritten on 2026-09-16 to mean "nothing about the goal was learned" rather than

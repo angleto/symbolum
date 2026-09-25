@@ -202,7 +202,7 @@ class SoundnessAttackSpec extends AnyFlatSpec with Matchers {
      * refusing everything cannot score well. A row that gets through **and should not** is a third
      * thing, and filing it under either of the other two would say something false: under
      * must-refuse the suite would go red for a defect nobody has repaired, and under must-accept
-     * the corpus would be claiming a limit as a feature. This repository keeps `Refutation`'s seven
+     * the corpus would be claiming a limit as a feature. This repository keeps `Refutation`'s
      * answers apart for the same reason.
      */
     known: Boolean = false

@@ -194,7 +194,7 @@ class FieldSpec extends AnyFlatSpec with Matchers {
     shown(result) shouldBe (List("0 < y"), "!x:real. x * y / y = x")
   }
 
-  "The theory it proves in" should "still assert only its sixteen axioms" in {
+  "The theory it proves in" should "still assert only the reals' axioms" in {
     // The constraint the task was written under: a tactic that reached for a new axiom would have
     // solved a different problem.
     reals.theory.axioms.length shouldBe Real.Axioms.length

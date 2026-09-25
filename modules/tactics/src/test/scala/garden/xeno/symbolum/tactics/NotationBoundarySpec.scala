@@ -52,7 +52,8 @@ import org.scalatest.matchers.should.Matchers
  *   4. **A `Type` in prose is not a crossing.** A type has exactly one rendering:
  *      `Show.show(ty: Type)` takes no notation, and `Remedy` writes types that way at its own
  *      surface with no theory in hand. So the question this census was asked, "a `Term` or a
- *      `Type`", has two different answers, and six sites that look like crossings are not.
+ *      `Type`", has two different answers, and the sites classified `TypeOnly` look like
+ *      crossings and are not.
  *
  * == Why the table is keyed by file and expression ==
  *
@@ -67,12 +68,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
   /**
    * Every module with sources, read off the filesystem rather than written out.
    *
-   * It was written out until 2026-09-15 and named nine of the ten that have a `src/main`. Both
+   * It was written out until 2026-09-15 and named nine of the ten that had a `src/main` then. Both
    * conclusions below survived the omission, because the module left out holds no `LogicError` and
    * no `Printer` at all -- which is exactly why nobody would have noticed: a scan that skips a
    * directory with nothing in it returns the same answer as a scan that reads it, and goes on
-   * returning it after somebody puts something there. The one missed was `dist`, whose single file
-   * is the distribution's REPL, a surface a reader actually types at and the likeliest place for
+   * returning it after somebody puts something there. The one missed was `dist`, whose source is
+   * the distribution's REPL, a surface a reader actually types at and the likeliest place for
    * the next term rendered where the refusal is raised.
    *
    * A hand-written list is the defect this whole file is about wearing different clothes: a census
@@ -396,10 +397,10 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
   /**
    * A description that interpolates nothing and is still not a literal.
    *
-   * A bare identifier or a concatenation. Three of the four pass another refusal's own message
-   * straight through, which is the laundering the scan cannot see into: whatever that message
-   * rendered is what arrives. They are listed because a list of what a scan cannot decide is the
-   * only honest form the undecided can take.
+   * A bare identifier or a concatenation. Some pass another refusal's own message straight through,
+   * which is the laundering the scan cannot see into: whatever that message rendered is what
+   * arrives. They are listed because a list of what a scan cannot decide is the only honest form
+   * the undecided can take.
    */
   private val UnrenderedEntries: Vector[((String, String), (Verdict, String))] = Vector(
     ("Propositional.scala", "why") ->
@@ -451,7 +452,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
 
   private val Unrendered: Map[(String, String), (Verdict, String)] = UnrenderedEntries.toMap
 
-  "Each of the three tables" should "not have absorbed a repeated key" in {
+  "Each of the tables" should "not have absorbed a repeated key" in {
     def repeated[K, V](entries: Vector[(K, V)]): Vector[K] =
       entries.map(_._1).groupBy(identity).filter(_._2.size > 1).keys.toVector
 
@@ -487,9 +488,9 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
    * Interpolation is why this is not a loop looking for the next quote, and the first version of
    * this file was that loop. `s"... ${xs.mkString(", ")}"` holds a quote and a comma inside the
    * interpolation; a scanner that ends the string at the inner quote leaves that comma at depth
-   * zero and splits the argument list on it. Four sites in this tree are shaped that way and one of
-   * them came out truncated. It was found by putting the extracted table beside a second pass, not
-   * by reading the scanner again.
+   * zero and splits the argument list on it. On 2026-09-15 four sites in this tree were shaped that
+   * way and one of them came out truncated. It was found by putting the extracted table beside a
+   * second pass, not by reading the scanner again.
    */
   private def stringEnd(text: String, from: Int): Int =
     if (text.startsWith("\"\"\"", from)) {

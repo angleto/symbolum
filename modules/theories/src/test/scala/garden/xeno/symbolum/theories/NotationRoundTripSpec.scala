@@ -70,11 +70,11 @@ class NotationRoundTripSpec extends AnyFlatSpec with Matchers with ScalaCheckDri
   /**
    * Two hundred, matching `RulesPropertySpec`, and measured rather than copied.
    *
-   * Each case is a print and a parse and no derivation, so the whole property runs in well under a
-   * second at this count against the five seconds a kernel-driven property costs. The count is what
-   * makes the two-operator `-` show up: at ScalaTest's default of ten, a generated statement
-   * containing both a negation and a subtraction at the same depth appears in roughly one run in
-   * three.
+   * Each case is a print and a parse and no derivation, so the whole property ran in well under a
+   * second at this count, measured no later than 2026-09-14, against the five seconds a
+   * kernel-driven property cost then. The count is what makes the two-operator `-` show up: at
+   * ScalaTest's default of ten, a generated statement containing both a negation and a subtraction
+   * at the same depth appeared in roughly one run in three.
    */
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration(minSuccessful = 200)
@@ -330,7 +330,7 @@ class NotationRoundTripSpec extends AnyFlatSpec with Matchers with ScalaCheckDri
   }
 
   "Every statement in docs/lemmas.md" should "read back as the theorem it was printed from" in {
-    // The repair the card asked for, and the population it asked for: all 186 of them, not a
+    // The repair the card asked for, and the population it asked for: all of them, not a
     // sample. Fourteen failed when this was first run, which is what a generator over `real` and
     // `num` could not have found: `Product` and `Word` print a type variable and nothing else here
     // does.

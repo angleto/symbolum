@@ -54,7 +54,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
       s"${count(Cost.Outcome.Conditional)} proved at a price")
   }
 
-  "The six that are not identities here" should "each name the denominator they need" in {
+  "The goals that are not identities here" should "each name the denominator they need" in {
     // Mathlib's inverse is total and this one is not, so a goal upstream states as an identity is
     // an identity away from zero here. That is a difference between two theories and not a
     // shortfall, and it is only visible because the condition comes back rather than being
@@ -66,7 +66,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
       Vector("~(x = 0)", "~(y = 0)", "~(z = 0)")
   }
 
-  "The three the corpus does not close either" should "come back with the point they fail at" in {
+  "The goals the corpus does not close either" should "come back with the point they fail at" in {
     // Not a shortfall of this system, and worth the assertion for that reason. Two of the three are
     // stated upstream with a hypothesis this extraction drops, so what is asked here is a different
     // and false claim; the third, `a - b - c - d = 0`, is closed upstream with `test_sorry` and is
@@ -82,7 +82,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------- what the corpus is believed on */
 
-  "The corpus as a whole" should "reach fifteen of the sixteen axioms, and not completeness" in {
+  "The corpus as a whole" should "reach every axiom of the reals but completeness" in {
     val reached = reports.filter(_.outcome == Cost.Outcome.Proved).flatMap(_.axioms).toSet
     val held = Real.standard.axioms.map(_._2.conclusion).toSet
 
@@ -99,8 +99,8 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
 
   it should "reach a different number of them per goal, which is what makes the question worth asking" in {
     // A single figure for the corpus would say what the theory permits. The spread is what says
-    // what each proof costs: ten goals rest on one axiom and seven on fifteen, and the difference
-    // is what settled them.
+    // what each proof costs: the assertions below pin how many goals rest on a single axiom and how
+    // many axioms the dearest one reaches, and the difference is what settled them.
     //
     // **The bottom of the spread moved on 2026-09-11, from three to one, and the reason is worth
     // reading.** `Prove` now asks its library before it asks a procedure, so a goal that IS a held
@@ -164,10 +164,10 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
     // **The repair landed on 2026-09-11 and this is what it did**, which is not what the shape of
     // the number suggests. The corpus went from 209k inferences to 154k, and the reflexivity in it
     // from 90k to 46k: nearly half of it gone, and gone along with the congruence and transitivity
-    // that existed only to carry it. What is left is still about three tenths, because a congruence
-    // needs an equation on both sides and the side that did not change is a reflexivity that is
-    // doing work. The fraction barely moved and the proof halved, which is why a fraction was the
-    // wrong thing to pin and the census is what this suite reports.
+    // that existed only to carry it. What was left that day was still about three tenths, because a
+    // congruence needs an equation on both sides and the side that did not change is a reflexivity
+    // that is doing work. The fraction barely moved and the proof halved, which is why a fraction
+    // was the wrong thing to pin and the census is what this suite reports.
     // The census is `RingCost`'s, which is the same one `docs/evaluation.md` prints: what this file
     // asserts about it and what that document shows a reader are one measurement.
     val proved = RingCost.proved

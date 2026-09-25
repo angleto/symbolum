@@ -307,10 +307,10 @@ class InductiveSpec extends AnyFlatSpec with Matchers {
    * `\S n. !m. m < n ==> S m`, the shape neither consumer of [[Monotone.prove]] exercises.
    *
    * The even numbers and `Reaching`'s derivations are both disjunctions of existentials, so between
-   * them they walk five of the seven positive shapes and leave the universal and the implication
-   * untouched. This is a real rule set rather than a shape invented for the test — it is the one a
-   * well-founded definition is written in, "in the set if everything below it is" — and it is the
-   * only place the positive side of an implication is carried.
+   * them they walk the positive shapes `Monotone` lists except the universal and the implication,
+   * which they leave untouched. This is a real rule set rather than a shape invented for the test
+   * (it is the one a well-founded definition is written in, "in the set if everything below it
+   * is"), and it is the only place the positive side of an implication is carried.
    */
   private val belowRules: Term =
     force(inductive.term("\\S:num->bool. \\n:num. !m:num. m < n ==> S m", numberOperators))

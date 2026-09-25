@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
  * **do two rules oblige and forbid the same thing?** That is satisfiability over declared atoms,
  * and until this file `Refutation.satisfying(Vector("p:bool", "~ p:bool"))` answered `Survived` —
  * no witness at the points tried, which is not "there is none". The distinction between those two
- * is exactly what `Refutation`'s seven outcomes exist to keep, and this is the place where the
+ * is exactly what the cases of `Refutation.Outcome` exist to keep, and this is the place where the
  * strong answer was missing.
  */
 class ConsistencySpec extends AnyFlatSpec with Matchers {

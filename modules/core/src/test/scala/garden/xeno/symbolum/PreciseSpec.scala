@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
  * An expression evaluated to fifty digits, and the one candidate that shows why it was needed.
  *
  * The precision corpus has a pair that agrees to nine digits and is not an identity:
- * `x + x/1000000000` against `x`. It survives the `Double` screen, whose tolerance is `1e-8`, and
+ * `x + x/1000000000` against `x`. It survives the `Double` screen at `Discovery.Tolerance`, and
  * the kernel refuses it afterwards. Nothing calls that a discovery today because nothing reports
  * the survivors of the screen, and a loop that proposed at volume would.
  *
@@ -97,8 +97,9 @@ class PreciseSpec extends AnyFlatSpec with Matchers {
   }
 
   "A place where the question has no answer" should "give nothing, and never throw" in {
-    // `Expr.eval` throws at three of these. A screening loop asks this of thousands of points and
-    // wants a value it can skip rather than a control transfer it has to catch.
+    // `Expr.eval` throws at all of these but the fractional power, where it answers NaN. A
+    // screening loop asks this of thousands of points and wants a value it can skip rather than a
+    // control transfer it has to catch.
     fifty.at(Div(Vector(x, Num(0))), at7) shouldBe None
     fifty.at(Log(Neg(x)), at7) shouldBe None
     fifty.at(Var("nobody"), at7) shouldBe None
@@ -134,10 +135,10 @@ class PreciseSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "The two that are declined" should "give nothing rather than fifty digits of a step size" in {
+  "The declined operations" should "give nothing rather than fifty digits of a step size" in {
     // Both are approximations in the `Double` evaluator as well, and their error is a property of
     // the step rather than of the arithmetic. Fifty digits of a five-point finite difference is
-    // fifty digits of which six are about the derivative.
+    // fifty digits of which only the leading few are about the derivative.
     fifty.at(Derivative(Mul(Vector(x, x)), "x"), at7) shouldBe None
     fifty.at(Integral(Mul(Vector(x, x)), "x", Some(Num(0)), Some(Num(1))), at7) shouldBe None
   }
@@ -167,8 +168,8 @@ private object PreciseSpec {
   /**
    * Whether a source file declares a subtype of `Expr`.
    *
-   * `extends Expr` and not `extends Expr`-anything: `ExpressionError` starts with the same seven
-   * letters and is not a node.
+   * `extends Expr` and not `extends Expr`-anything: `ExpressionError` starts with `Expr` and is not
+   * a node.
    */
   def extendsExpr(source: String): Boolean =
     source.linesIterator.exists { line =>

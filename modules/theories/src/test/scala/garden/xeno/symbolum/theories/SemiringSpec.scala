@@ -26,7 +26,7 @@ class SemiringSpec extends AnyFlatSpec with Matchers {
   private val peano = chain.peano
   private val semiring = force(Semiring.construct(peano))
 
-  "The semiring" should "derive the three rules Peano does not hold" in {
+  "The semiring" should "derive the rules Peano does not hold" in {
     Semiring.Statements.foreach { case (name, text) =>
       val theorem = force(semiring.prove(text.dropWhile(_ != '.').drop(1).trim))
       withClue(s"$name: ") {

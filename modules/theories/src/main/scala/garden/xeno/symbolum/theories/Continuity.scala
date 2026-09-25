@@ -4,7 +4,8 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * Continuity of a real function at a point, and the intermediate value theorem.
+ * Continuity of a real function at a point, the intermediate value theorem, and the extreme value
+ * theorem.
  *
  * `continuous f x` is the epsilon-delta statement written out, the way `converges` is the
  * epsilon-N one: for every positive tolerance there is a positive radius inside which `f` stays
@@ -12,7 +13,10 @@ import garden.xeno.symbolum.logic.*
  * [[Continuity.IntermediateValue]]: a function continuous on `[a, b]` takes every value between
  * `f a` and `f b` somewhere in `[a, b]`, which is what every fact about `ln` waits on, since `ln`
  * is the inverse of the exponential named by choice and a choice is silent until something says
- * the exponential reaches the value.
+ * the exponential reaches the value. And since 2026-09-25 it buys [[Continuity.AttainsMaximum]] and
+ * [[Continuity.AttainsMinimum]], that such a function takes a greatest and a least value on
+ * `[a, b]`, through [[Continuity.IntervalGluing]], the compactness of the interval stated for a
+ * property that glues. Their derivation is `ExtremeValue`, whose docstring is the argument.
  *
  * == Why this is the fourth thing `COMPLETENESS` buys ==
  *
@@ -26,8 +30,15 @@ import garden.xeno.symbolum.logic.*
  * before `s` is an upper bound already and `s` was not the least.
  *
  * `COMPLETENESS` is spent **inline** here, as it is in those three, rather than through a published
- * supremum. That is not a principle: it is the fourth consumer, and the moment a fifth wants the
- * supremum by name is the moment it belongs in a development of its own.
+ * supremum. This said until 2026-09-25 that the fifth consumer to want the supremum by name would
+ * move it into a development of its own. The fifth and sixth are `ExtremeValue`'s, and what they
+ * do with the axiom was read rather than predicted: each of the six specialises it at a set,
+ * beta-reduces, detaches the two premises and opens the existential, about five lines, and the
+ * axiom **is** already the statement a supremum development would publish. What such a development
+ * would add is the supremum as a term, a `sup S` to write in a statement, and none of the six
+ * writes one, since each opens the existential once and works under it. So the forecast is
+ * withdrawn rather than met, and the first statement that needs to name a supremum is what
+ * revives it.
  *
  * == The derivation has no quotient in it that a procedure is asked about ==
  *
@@ -91,10 +102,59 @@ object Continuity {
    * f a <= y ==> y <= f b ==> ?x. a <= x /\ x <= b /\ f x = y`
    *
    * The intermediate value theorem, for a value between `f a` and `f b` in that order. The other
-   * order is this one at `\x. 0 - f x`, which needs the continuity of a difference, and nothing has
-   * wanted it yet.
+   * order is this one at `\x. 0 - f x`, whose continuity is [[Negation]].
    */
   val IntermediateValue: String = "INTERMEDIATE_VALUE"
+
+  /**
+   * `|- !P a b. a <= b ==> (!u v w. u <= v /\ v <= w /\ P u v /\ P v w ==> P u w) ==>
+   * (!x. a <= x /\ x <= b ==> ?d. 0 < d /\ (!u v. a <= u /\ u <= x /\ x <= v /\ v <= b /\ v - u < d
+   * ==> P u v)) ==> P a b`
+   *
+   * The compactness of `[a, b]`, in the one form the facts below need: a property of intervals
+   * that glues end to end, and holds on every short enough interval around each point, holds on
+   * `[a, b]`. It is about no function and could live with the order; it is here because it is what
+   * continuity at every point of an interval is turned into a statement about the interval with,
+   * and [[Continuity.Bounded]] and [[AttainsMaximum]] are each one instance of it.
+   */
+  val IntervalGluing: String = "INTERVAL_GLUING"
+
+  /**
+   * `|- !f x. continuous f x ==> continuous (\y. 0 - f y) x`
+   *
+   * The one fact about combining continuous functions anything here has needed: [[AttainsMinimum]]
+   * is [[AttainsMaximum]] at the negation. A sum, a product and a quotient are not here, because
+   * nothing has asked for them.
+   */
+  val Negation: String = "CONTINUOUS_NEG"
+
+  /**
+   * `|- !f a b. a <= b ==> (!x. a <= x /\ x <= b ==> continuous f x) ==>
+   * ?M. !x. a <= x /\ x <= b ==> f x <= M`
+   *
+   * A function continuous on `[a, b]` is bounded above there. The bound below is this at
+   * `\y. 0 - f y`, or [[AttainsMinimum]], which says more.
+   */
+  val Bounded: String = "CONTINUOUS_BOUNDED"
+
+  /**
+   * `|- !f a b. a <= b ==> (!x. a <= x /\ x <= b ==> continuous f x) ==>
+   * ?m. a <= m /\ m <= b /\ (!x. a <= x /\ x <= b ==> f x <= f m)`
+   *
+   * The extreme value theorem, for the maximum: a function continuous on `[a, b]` takes a greatest
+   * value there. Like [[IntermediateValue]] it is false over the rationals, where `x * (2 - x * x)`
+   * on `[0, 2]` climbs towards its maximum at the square root of two-thirds and never reaches it, so
+   * it spends `COMPLETENESS`.
+   */
+  val AttainsMaximum: String = "CONTINUOUS_ATTAINS_MAX"
+
+  /**
+   * `|- !f a b. a <= b ==> (!x. a <= x /\ x <= b ==> continuous f x) ==>
+   * ?m. a <= m /\ m <= b /\ (!x. a <= x /\ x <= b ==> f m <= f x)`
+   *
+   * The extreme value theorem, for the minimum.
+   */
+  val AttainsMinimum: String = "CONTINUOUS_ATTAINS_MIN"
 
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
@@ -103,7 +163,22 @@ object Continuity {
     IntermediateValue ->
       ("!f:real -> real. !a:real. !b:real. !y:real. a <= b ==> " +
         "(!x:real. a <= x /\\ x <= b ==> continuous f x) ==> f a <= y ==> y <= f b ==> " +
-        "?x:real. a <= x /\\ x <= b /\\ f x = y")
+        "?x:real. a <= x /\\ x <= b /\\ f x = y"),
+    IntervalGluing ->
+      ("!P:real -> real -> bool. !a:real. !b:real. a <= b ==> " +
+        "(!u:real. !v:real. !w:real. u <= v /\\ v <= w /\\ P u v /\\ P v w ==> P u w) ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> ?d:real. 0 < d /\\ " +
+        "(!u:real. !v:real. a <= u /\\ u <= x /\\ x <= v /\\ v <= b /\\ v - u < d ==> P u v)) ==> P a b"),
+    Negation -> "!f:real -> real. !x:real. continuous f x ==> continuous (\\y:real. 0 - f y) x",
+    Bounded ->
+      ("!f:real -> real. !a:real. !b:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "?M:real. !x:real. a <= x /\\ x <= b ==> f x <= M"),
+    AttainsMaximum ->
+      ("!f:real -> real. !a:real. !b:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f x <= f m)"),
+    AttainsMinimum ->
+      ("!f:real -> real. !a:real. !b:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f m <= f x)")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -137,8 +212,9 @@ object Continuity {
       constant <- constantFunction(steps, magnitude)
       identity <- identityFunction(steps)
       intermediate <- intermediateValue(steps, reals, magnitude)
+      extremes <- ExtremeValue.prove(steps, reals, magnitude, classical)
 
-      facts = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate)
+      facts = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate) ++ extremes
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
       // a development that built something other than what it says it built must not be handed out.
@@ -160,7 +236,7 @@ object Continuity {
    * `lemma` is the one place anything is decided, `Linarith` on a closed schematic statement over
    * real variables, and everything else specialises, detaches and unfolds.
    */
-  private final case class Steps(
+  private[theories] final case class Steps(
     logic: Logic,
     linarith: Linarith,
     theory: Theory,
@@ -267,7 +343,7 @@ object Continuity {
   private val Goal: String = "?x:real. a:real <= x /\\ x <= b:real /\\ (f:real -> real) x = y:real"
 
   /** `w = min (d / 2) gap` is positive when `d` and the gap are, from `MIN_CASES`. */
-  private def minimumPositive(
+  private[theories] def minimumPositive(
     steps: Steps,
     magnitude: Magnitude,
     gap: String,

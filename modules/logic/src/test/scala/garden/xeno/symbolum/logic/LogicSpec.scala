@@ -271,11 +271,11 @@ class LogicSpec extends AnyFlatSpec with Matchers {
 
   "Specialising at fewer arguments than quantifiers" should "be refused, naming both numbers" in {
     // Until 2026-09-12 this was a partial instance rather than an error, and the theorem it gave
-    // went on to fail somewhere else: a session reached `NUM_DIVISION_UNIQUE`, which has five
-    // variables, holding `NUM_DIV_MOD_UNIQUE`'s four arguments, and read the first symptom at an
-    // unrelated `mp` with a message about an implication. Both numbers are in the refusal because
-    // the useful reading of them is together: three against two usually means a caller reached a
-    // different lemma from the one it meant to.
+    // went on to fail somewhere else: a session reached `NUM_DIVISION_UNIQUE` holding
+    // `NUM_DIV_MOD_UNIQUE`'s arguments, one fewer than it has variables, and read the first
+    // symptom at an unrelated `mp` with a message about an implication. Both numbers are in the
+    // refusal because the useful reading of them is together: three against two usually means a
+    // caller reached a different lemma from the one it meant to.
     rules.specAll(threeDeep, List(Term.variable("a", TyVar("A")))) match {
       case Left(PartialInstance(quantifiers, arguments, _)) =>
         quantifiers shouldBe 3
@@ -286,8 +286,8 @@ class LogicSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "still be reachable under a name that says so" in {
-    // One call in the suite wants a partial instance, in `SeriesSpec`, and that is the measurement
-    // that kept the operation. What it must not be is something a caller arrives at by accident.
+    // The call in `SeriesSpec` that wants a partial instance is the measurement that kept the
+    // operation. What it must not be is something a caller arrives at by accident.
     val partial = force(rules.specPrefix(threeDeep, List(Term.variable("a", TyVar("A")))))
 
     Logic.stripForall(partial.conclusion).map(_._1.length) shouldBe Right(2)
@@ -334,7 +334,7 @@ class LogicSpec extends AnyFlatSpec with Matchers {
     // The premise of the demonstration below, asserted rather than assumed: if the two binders had
     // different types the reversal would be a type error and there would be nothing to show. On
     // 2026-09-13 that is exactly why the consumer's build stopped instead of shipping a wrong
-    // theorem, and 142 of the library's 260 lemmas do not have that luck.
+    // theorem, and on that day 142 of the library's 260 lemmas did not have that luck.
     val left = force(Logic.stripForall(firstThenSecond.conclusion))._1
     val right = force(Logic.stripForall(secondThenFirst.conclusion))._1
 
@@ -368,6 +368,46 @@ class LogicSpec extends AnyFlatSpec with Matchers {
 
     rules.specTo(firstThenSecond, unreachable) should matchPattern {
       case Left(NotOfForm(_, _)) =>
+    }
+  }
+
+  it should "say the fragment was left, and not that the target is no instance, where the matcher cannot decide it" in {
+    // `!P. a = a ==> !x. P x ==> P (s x)` against `a = a ==> !x. x = a ==> s x = a`, which IS an
+    // instance at `P := \x. x = a`. The inner quantifier sits behind an implication so that
+    // `specTo` does not strip it with `P`: it has to stay a binder, since a variable applied to a
+    // non-binder is only the fragment's question when a binder is in scope. The matcher decides `P`
+    // from its first occurrence and then meets `P (s x)`, where the fragment stops. Until
+    // 2026-09-25 this came back as `NotOfForm("an instance of ...")`, which says the opposite of
+    // what is true. The refusal now names the variable, which is what the caller has to supply.
+    val predicate = Term.variable("P", Type.fun(alpha, Type.Bool))
+    val step = Term.variable("s", Type.fun(alpha, alpha))
+    val x = Term.variable("x", alpha)
+    val guard = force(Term.eq(a, a))
+
+    def behindGuard(body: Term): Term = force(logic.mkImp(guard, force(logic.mkForall(x, body))))
+
+    val principle = force(
+      Kernel.assume(
+        force(
+          logic.mkForall(
+            predicate,
+            behindGuard(
+              force(logic.mkImp(force(Term.app(predicate, x)), force(Term.app(predicate, force(Term.app(step, x))))))
+            )
+          )
+        )
+      )
+    )
+    val instance =
+      behindGuard(force(logic.mkImp(force(Term.eq(x, a)), force(Term.eq(force(Term.app(step, x)), a)))))
+
+    // Named by type and not by name, as the open quantifier is named in the test below: `specTo`
+    // opens the lemma's quantifiers with names coined from their position, so the variable the
+    // refusal carries is the lemma's first quantifier as the lemma prints, not the `P` built here.
+    rules.specTo(principle, instance) match {
+      case Left(BeyondMatching(_, _, Matching.Refusal.ArgumentIsNotABinder(variable))) =>
+        variable.ty shouldBe predicate.ty
+      case other => fail(s"expected the fragment's refusal naming the predicate, got $other")
     }
   }
 

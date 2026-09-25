@@ -132,7 +132,7 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------- the refusal, and what it is not */
 
-  "A numeral nothing determines" should "be refused where the signature reads two, and named" in {
+  "A numeral nothing determines" should "be refused where it has several readings, and named" in {
     val refusal = widest.term("2")
     refusal.isLeft shouldBe true
 
@@ -153,8 +153,9 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
 
   it should "read unannotated where the signature offers one encoding" in {
     // The other half of the same pairing, and the measurement behind the rule: a signature holding
-    // only the reals has no second reading to protect anybody from, and forty call sites in this
-    // module parse the bare text `"0"` and `"1"` against exactly such a signature.
+    // only the reals has no second reading to protect anybody from, and when this was written, no
+    // later than 2026-09-14, forty call sites in this module parsed the bare text `"0"` and `"1"`
+    // against exactly such a signature.
     Term.typeOf(force(reals.term("2"))) shouldBe real
     Term.typeOf(force(reals.term("0"))) shouldBe real
     Term.typeOf(force(reals.term("1"))) shouldBe real
@@ -201,7 +202,7 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------- what it cost, and what it buys */
 
-  "The three constants" should "be definitions, so the trusted base does not move" in {
+  "The new constants" should "be definitions, so the trusted base does not move" in {
     // Against the two theories this development was built over rather than against a number
     // written here, which is `ProductSpec`'s argument and the same one: a number written here
     // would have to be edited when a base moves for an unrelated reason, and editing it is the
@@ -262,7 +263,7 @@ class NumeralTypeSpec extends AnyFlatSpec with Matchers {
    * work, so a parser that had simply stopped reading `+` would fail the second half rather than go
    * on passing the first.
    */
-  "An operator nothing determines" should "be refused where the signature reads two, and named" in {
+  "An operator nothing determines" should "be refused where it has several readings, and named" in {
     val refusal = widest.proposition("0 < 1")
     refusal.isLeft shouldBe true
 

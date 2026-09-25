@@ -46,7 +46,7 @@ class SuccessorSpec extends AnyFlatSpec with Matchers {
     spelled.hypotheses shouldBe empty
   }
 
-  it should "rest on nothing, since the five facts it uses are all derived" in {
+  it should "rest on nothing, since the facts it uses are all derived" in {
     force(successor.spell(term("8:num"))).hypotheses shouldBe empty
   }
 
@@ -76,7 +76,7 @@ class SuccessorSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "leave a numeral that is not an exponent alone, and not because it fires on nothing" in {
-    // The reason the conversion is aimed rather than a rule set turned loose: the five rules
+    // The reason the conversion is aimed rather than a rule set turned loose: the encoding's rules
     // applied to a whole goal would open every numeral of `num` in it, and a modulus of ten
     // thousand would become a term with ten thousand nodes.
     val modulus = proposition("NUM_CONG (7:num) (a:num) (b:num)")
@@ -208,9 +208,9 @@ class SuccessorSpec extends AnyFlatSpec with Matchers {
 
   "The rewriter's own ceiling" should "refuse a walk it could not finish, in both places" in {
     // The second line, and the two refusals it makes reachable. At the slack this ships with, the
-    // longer walk costs `k + 2` and is allowed `k + 16`, so neither of these can fire and neither
-    // would ever have been seen to work: a guard nothing can be pointed at is a guard nobody has
-    // watched.
+    // longer walk costs `k + 2` and is allowed `k + Successor.Slack`, so neither of these can fire
+    // and neither would ever have been seen to work: a guard nothing can be pointed at is a guard
+    // nobody has watched.
     //
     // Below zero, and that is the measurement rather than a flourish: the two walks do not cost the
     // same. Opening `Power b k` takes `k + 2` steps and opening the numeral alone takes about half

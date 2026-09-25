@@ -32,8 +32,8 @@ class CurriedGoalSpec extends AnyFlatSpec with Matchers {
   }
 
   "The shape Order writes its own lemmas in" should "be readable, which is what this is about" in {
-    // `Order.addPositive` is literally the first of these, and `Order.scala` has fifty-three
-    // occurrences of `==>`. The entry point could not be handed the statements of the theorems
+    // `Order.addPositive` is literally the first of these, and `==>` runs through `Order.scala`
+    // from end to end. The entry point could not be handed the statements of the theorems
     // standing beside it.
     proved("!x:real y:real. 0 < x ==> 0 < y ==> 0 < x + y")
     proved("!x:real y:real. x < y ==> 0 < y - x")

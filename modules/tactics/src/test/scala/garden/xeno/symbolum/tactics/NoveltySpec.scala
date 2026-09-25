@@ -287,8 +287,8 @@ class NoveltySpec extends AnyFlatSpec with Matchers {
   /* ------------------------------------------------- the honest limit */
 
   "The scale" should "keep the report it read, rather than replacing it with a number" in {
-    // A caller that wants to know what a claim charges, or where it fails, reads the five answers
-    // `Cost` gathered. This file ranks; it does not summarise away the thing that was measured.
+    // A caller that wants to know what a claim charges, or where it fails, reads the answers `Cost`
+    // gathered. This file ranks; it does not summarise away the thing that was measured.
     val priced = reading("!x:real y:real. (x * y) / y = x")
 
     priced.report.outcome shouldBe Cost.Outcome.Conditional

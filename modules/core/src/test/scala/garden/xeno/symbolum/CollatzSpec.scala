@@ -61,7 +61,7 @@ class CollatzSpec extends AnyFlatSpec with Matchers {
     val simplified = collatz2.fullSimplify
     val output = simplified.toString
 
-    // Should be under 500 characters when simplified
+    // Simplified, it should stay under the length the assertion below sets
     output.length should be < 800
   }
 

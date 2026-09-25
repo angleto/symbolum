@@ -62,9 +62,9 @@ class ListingSpec extends AnyFlatSpec with Matchers {
 
   "The list interface" should "be defined rather than assumed, and add no type" in {
     // Against the theory it EXTENDS, which is `Inclusion`'s and not `Concatenation`'s. This
-    // development needs the concatenation and sits on top of the chain's end, and the two are
-    // different questions: a difference taken against `concatenation.theory` would come back
-    // holding every constant of the five links between them and say nothing about what this added.
+    // development needs the concatenation and sits on top of `Inclusion` in the chain, and the two
+    // are different questions: a difference taken against `concatenation.theory` would come back
+    // holding every constant of the links between them and say nothing about what this added.
     val below = Chain.standard.inclusion.theory
 
     listing.theory.axioms shouldBe below.axioms
@@ -75,8 +75,8 @@ class ListingSpec extends AnyFlatSpec with Matchers {
     )
 
     // The claim `docs/adr/0038` rests on, and the reason this line is here rather than in prose: a
-    // list that carved a carrier would show up as a sixth type operator, and nothing else in this
-    // file would notice.
+    // list that carved a carrier would show up as a type operator `Inclusion`'s theory does not
+    // have, and nothing else in this file would notice.
     listing.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
 
     Listing.Definitions.foreach { case (name, _) =>
@@ -84,14 +84,24 @@ class ListingSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "spend exactly choice, infinity and eta, measured as an equality" in {
-    // Written by the verification of cards 5d59c308 and 708faa52 on 2026-09-24, and it replaced a
-    // test titled "cost the naturals' two axioms and no more", which card 9084078b removed. That
-    // one was a ceiling though its comment called it an equality: `(spent -- naturals) shouldBe
-    // empty` passes when `spent` is empty, and `naturals` held both of the classical theory's
-    // axioms beside infinity, so it admitted three. The delivery said two; measured, the union is
-    // THREE, eta being the third. This pins what was measured, so a derivation that starts or
-    // stops spending any of them goes red, and the informer line names which each fact reaches.
+  it should "spend exactly choice, infinity and eta, measured as an equality per fact" in {
+    // An equality for EACH fact, against the set measured for it at `570e1e40`: every fact spends
+    // choice and infinity, and those from `LIST_TAIL_CONS` on spend eta as well. A fact that
+    // starts or stops spending any of the three goes red naming itself, and so does a fact added
+    // to `Listing.Statements` without a line here or a line left here for a fact that is gone,
+    // because what is compared is two maps rather than the entries of one. The distinctness line
+    // is there because `toMap` would fold a name written twice in the list into one entry.
+    //
+    // It replaced an equality over the UNION of the per-fact sets, whose comment made the claim
+    // above and whose assertion could not keep it: every fact spends choice and infinity, so any
+    // one of them could stop and the union would still be the same three. The verification of card
+    // 9084078b measured that on 2026-09-25. That union had itself replaced a test titled "cost the
+    // naturals' two axioms and no more", which was a ceiling (`(spent -- naturals) shouldBe empty`
+    // passes on an empty `spent`) and admitted eta among the axioms it counted as the naturals'.
+    //
+    // Where eta enters is the next test's subject, asserted as an equivalence with resting on
+    // `WORD_EXTENSIONALITY`. The two agree on which facts, and neither is derived from the
+    // other: this map is written down, that one is read off the derivations.
     val choice = Chain.standard.classical.axioms(Classical.Choice).conclusion
     val eta = Chain.standard.classical.axioms(Classical.Eta).conclusion
     val infinity = Chain.standard.naturals.axioms(Natural.Infinity).conclusion
@@ -106,18 +116,34 @@ class ListingSpec extends AnyFlatSpec with Matchers {
       }
       .mkString("; ")
     info(report)
+
+    val naturals = Set(choice, infinity)
+    val withEta = naturals + eta
+    val expected = Map(
+      Listing.ConsLength -> naturals,
+      Listing.HeadOfCons -> naturals,
+      Listing.ConsNth -> naturals,
+      Listing.ConsNotEmpty -> naturals,
+      Listing.TailOfCons -> withEta,
+      Listing.ConsInjective -> withEta,
+      Listing.Cases -> withEta,
+      Listing.Induct -> withEta,
+      Listing.RecursionTheorem -> withEta,
+      Listing.RecursionUnique -> withEta
+    )
+    perFact.map(_._1).distinct.size shouldBe perFact.size
     withClue(s"per fact: $report\n") {
-      perFact.flatMap(_._2).toSet shouldBe Set(choice, infinity, eta)
+      perFact.toMap shouldBe expected
     }
   }
 
   it should "spend eta exactly where it rests on the extensionality of words, and nowhere else" in {
     // Where the third axiom comes in, measured rather than read off the derivation. It is
     // `WORD_EXTENSIONALITY`, two words of one length agreeing below it being one word, which
-    // `LIST_TAIL_CONS` closes on and every fact after it inherits; the four facts before it do not
-    // reach it and do not spend eta. The equivalence per fact is what makes a fact that reached eta
-    // by another road go red naming itself, and the two counts at the end say it is not vacuous in
-    // either direction.
+    // `LIST_TAIL_CONS` closes on and every fact after it in `Listing.Statements` inherits; the
+    // facts before it do not reach it and do not spend eta. The equivalence per fact is what makes
+    // a fact that reached eta by another road go red naming itself, and the two counts at the end
+    // say it is not vacuous in either direction.
     //
     // **What it does not see**: `LIST_RECURSION_UNIQUE` pays for eta a second time, through
     // `Classical.ext` taken in this development's logic, which is a rule and not the published

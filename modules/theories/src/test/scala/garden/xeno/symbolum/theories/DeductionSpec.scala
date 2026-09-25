@@ -113,7 +113,7 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
    * of the reals would be a defect in the construction rather than in the proof, and `docs/adr`
    * records that the whole point of building the arithmetic over `num` is that it does not.
    */
-  it should "prove its own addition on numerals, at two axioms and no more" in {
+  it should "prove its own addition on numerals, at the naturals' cost" in {
     val theorem = force(deduction.fact(Deduction.NumeralAddition))
     theorem.hypotheses shouldBe empty
     Derivation.axiomsOf(theorem) should have size 2
@@ -138,7 +138,7 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
    * `NUM_PROV_NUMERAL_ADD` says. So the second brick cannot be laid before the first, and the
    * `restingOn` assertion below is what says it really was laid on it rather than beside it.
    */
-  it should "prove its own multiplication on numerals, at two axioms and no more" in {
+  it should "prove its own multiplication on numerals, at the naturals' cost" in {
     val theorem = force(deduction.fact(Deduction.NumeralMultiplication))
     theorem.hypotheses shouldBe empty
     Derivation.axiomsOf(theorem) should have size 2
@@ -369,7 +369,7 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
    * would be spending it on the embedded theory's behalf, which is the one number this whole
    * development is not allowed to move.
    */
-  it should "cost the naturals' two axioms and nothing else" in {
+  it should "cost what the naturals cost and nothing else" in {
     Deduction.Statements.foreach { case (name, _) =>
       withClue(s"$name: ") {
         Derivation.axiomsOf(force(deduction.fact(name))) should have size 2

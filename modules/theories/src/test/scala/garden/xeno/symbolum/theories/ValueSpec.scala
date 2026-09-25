@@ -43,7 +43,7 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     remainder.hypotheses shouldBe empty
   }
 
-  it should "rest on the two axioms the naturals cost, which is the whole design question" in {
+  it should "rest on the axioms the naturals cost, which is the whole design question" in {
     // The measurement that decided the route. Embedding into the reals, computing there and coming
     // back proves the same equations and charges sixteen, because `NUM_REAL_INJECTIVE` rests on
     // the reals; every characterisation this spends rests on two. A change of route would leave
@@ -270,11 +270,11 @@ class ValueSpec extends AnyFlatSpec with Matchers {
    * The counter's two-form overload, which landed with the site above and its neighbour in
    * `Remedy`.
    *
-   * `Prose.count` appends an `s` and says of itself that an irregular noun wants both forms
-   * written out; until 2026-09-22 there was nowhere to write them, so a caller needing
-   * `hypothesis`/`hypotheses` wrote `thing(s)`. The five per-module copies of this counter have
-   * taken both forms since 2026-09-20 for `entry`/`entries`, so this is the shared one catching
-   * up rather than a new mechanism.
+   * `Prose.count` appends an `s` and says of itself that an irregular noun wants both forms written
+   * out; until 2026-09-22 there was nowhere to write them, so a caller needing
+   * `hypothesis`/`hypotheses` wrote `thing(s)`. The per-module copies of this counter, one `Plural`
+   * in each module that cannot see this one, have taken both forms since 2026-09-20 for
+   * `entry`/`entries`, so this is the shared one catching up rather than a new mechanism.
    *
    * Zero takes the plural here as it does in the one-argument body, which is the case a reader
    * of the condition does not picture.

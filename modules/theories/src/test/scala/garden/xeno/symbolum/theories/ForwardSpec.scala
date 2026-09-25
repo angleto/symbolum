@@ -40,7 +40,7 @@ class ForwardSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "declare two constants and cost no axiom at all" in {
+  it should "declare the step and the closure, and cost no axiom at all" in {
     // The whole development is definitional, which is what makes it free to build on. Asserted as
     // an equality against the empty set rather than as a ceiling, so a fact that quietly started
     // spending something would be as much a defect as one that stopped.

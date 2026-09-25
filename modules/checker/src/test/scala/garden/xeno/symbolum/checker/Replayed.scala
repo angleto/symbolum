@@ -18,7 +18,7 @@ import garden.xeno.symbolum.theories.*
  * == What is in it ==
  *
  * Every theorem the suite puts to the checker, in the order the document shows them, which is
- * cheapest first with the two about the naturals last. The last two are the finding the record
+ * cheapest first with the ones about the naturals last. Those are the finding the record
  * surfaced and the reason the order is not arbitrary: the successor's properties rest on both of
  * the naturals' axioms and induction rests on neither, and a reader meets them next to each other.
  *
@@ -109,9 +109,9 @@ object Replayed {
    * `Intuitionistic`. A second implementation that never heard of any of that reads the proof and
    * agrees, which is what makes "a domain claim is a theorem like any other" a measurement.
    *
-   * Its axiom column is the point: the conclusion reaches **one** axiom, the domain's own, and no
-   * foundational one. Nothing else in this table costs nothing but the two that cost nothing
-   * because they assume nothing at all.
+   * Its axiom column is the point: the conclusion reaches the domain's own axiom and no
+   * foundational one. The only other entries that reach no foundational axiom are the ones that
+   * reach no axiom at all, because they assume nothing.
    */
   private def onCall: Entry = {
     val classical = garden.xeno.symbolum.logic.Classical.standard

@@ -95,7 +95,7 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
     reach.facts should contain(Series.AtSuccessor)
   }
 
-  "The three buckets" should "not overlap, so a name is in exactly one" in {
+  "The buckets" should "not overlap, so a name is in exactly one" in {
     val theorem = force(chain.order.positive(12))
     val reach = Reach.of(held, theorem)
 

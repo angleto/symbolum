@@ -6,7 +6,8 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * The integers: the fifth type operator, and the first thing built through the quotient builder.
+ * The integers: a type operator of their own, and the first thing built through the quotient
+ * builder.
  *
  * == The question this file exists to answer ==
  *
@@ -620,9 +621,10 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
    * asks for 50, so a quotient whose facts stopped carrying the carving fails it and a proof made
    * four times cheaper does not.
    *
-   * **A fact of the bridge into the reals is four figures**, between 1000 and 100000. Those nine
-   * are the facts a claim about a real will carry once the construction lands, so the band is the
-   * order of magnitude 0016's extrapolation is written in: measured, they run 12827 to 24362. Below
+   * **A fact of the bridge into the reals is four figures**, between 1000 and 100000. The bridge's
+   * facts are the ones a claim about a real will carry once the construction lands, so the band is
+   * the order of magnitude 0016's extrapolation is written in: on 2026-09-20 they ran 12827 to
+   * 24362. Below
    * the floor the extrapolation is stale and the record wants rereading; above the ceiling the cost
    * arrived a stage earlier than predicted, which is the more interesting failure.
    *

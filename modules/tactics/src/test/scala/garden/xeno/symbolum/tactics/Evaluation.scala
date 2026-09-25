@@ -15,13 +15,13 @@ import garden.xeno.symbolum.theories.Generated
  * before it and false of that one, because a hand derivation builds the same leaves as any other
  * proof.
  *
- * The three tables below are functions of the code, so they are written by the code.
+ * The tables below are functions of the code, so they are written by the code.
  *
  *   - **the second reading**, every proof `ReplaySpec` puts to `modules/checker`, with the steps and
  *     the axioms the checker counts for itself. Not `Derivation.size`: the column belongs to the
  *     second reader, and the whole of what the section claims is that something other than the
  *     kernel counted them;
- *   - **the serialised proof**, the three figures `SerialisedSpec` measures on `12 * 12 = 144`;
+ *   - **the serialised proof**, the figures `SerialisedSpec` measures on `12 * 12 = 144`;
  *   - **the census**, what the vendored ring corpus is made of, rule by rule.
  *
  * == Why it lives in a test scope ==
@@ -46,7 +46,7 @@ object Evaluation {
   /** Track R': every proof the checker replays, with what it counted. */
   val Replay: Generated = Generated("replay", Document, Command)
 
-  /** The three figures measured on a proof that left the process as text. */
+  /** The figures measured on a proof that left the process as text. */
   val Serialisation: Generated = Generated("serialisation", Document, Command)
 
   /** What the ring corpus is made of, rule by rule. */
@@ -101,7 +101,7 @@ object Evaluation {
    * The axiom count is written in bold when it is zero, which is the one piece of typesetting this
    * generator does and it is load-bearing: the prose under the table calls the last row the
    * finding, and the finding is that induction over the naturals reaches no axiom while the
-   * successor's properties, immediately above it, reach both.
+   * successor's properties, immediately above it, do reach some.
    */
   def replayTable(): Either[String, String] =
     for {

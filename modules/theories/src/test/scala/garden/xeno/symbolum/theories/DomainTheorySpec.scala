@@ -11,14 +11,14 @@ import garden.xeno.symbolum.logic.*
  * The declared purpose of this repository is not only mathematics: it is to state axioms and rules
  * from domains that are neither logical nor mathematical, and settle claims about them. Nothing had
  * ever done it. The card that carries the aim lists four things missing, and reads as though the
- * first of them blocks the rest: the eight entry points in `modules/tactics` take a `RealTheory`,
+ * first of them blocks the rest: the entry points in `modules/tactics` take a `RealTheory`,
  * and a domain theory is not one and never will be.
  *
  * **That is true and it does not block this.** The card's own acceptance criterion is a page: a
  * claim of some real domain formalised end to end, with the constants declared, the axioms asserted
  * and counted, the conclusion derived, and a report saying which of the assumptions it rests on and
  * which of them are foundational. Every piece of that is reachable with the kernel, the derived
- * rules and `Derivation`, and this file is the page. What the eight signatures would buy is
+ * rules and `Derivation`, and this file is the page. What those signatures would buy is
  * `Cost`'s formatting and the search tactics, which is convenience and automation rather than the
  * criterion.
  *
@@ -55,8 +55,8 @@ import garden.xeno.symbolum.logic.*
  * == The same claim by hand and by procedure, which is what this file measures ==
  *
  * Both routes are kept and the comparison is the finding rather than the theorem. The hand
- * derivation is forty lines of `for`-comprehension out of the derived rules; `Domain.Built.settle`
- * is one call, and what it does is what those lines do: specialise the axioms at the subject the
+ * derivation is a page of `for`-comprehension out of the derived rules; `Domain.Built.settle` is
+ * one call, and what it does is what those lines do: specialise the axioms at the subject the
  * claim names, decide the propositional skeleton with the domain's five constants as atoms given no
  * meaning, detach, and quantify again. Same conclusion, same one domain axiom.
  *
@@ -210,7 +210,7 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     derivedByTactic.hypotheses shouldBe empty
   }
 
-  it should "spend the same one of the four domain axioms" in {
+  it should "spend the same domain axiom the hand derivation spends" in {
     // The accounting the card calls the product, produced by the procedure instead of by reading a
     // hand derivation. Same answer: one of the four, and it is the converse.
     spending.ofTheDomain shouldBe Set("OnThoseGroundsOnly")
@@ -632,12 +632,12 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
    * and would move for reasons that are not defects; what the assertions below are about is the
    * relation between it and [[Domain.Instances]], which is the claim.
    *
-   * **Four atoms rather than two, and the reason is the first measurement's own weakness.** At two
-   * the free route is lost at exactly sixty-four links, which is [[Domain.Instances]] to the link:
-   * a reading at the boundary supports "reachable inside the bound" on one point, and a small
+   * **Four atoms rather than two, and the reason is the first measurement's own weakness.** On
+   * 2026-09-18, at two atoms, the free route was lost at exactly [[Domain.Instances]] links: a
+   * reading at the boundary supports "reachable inside the bound" on one point, and a small
    * change in the calculus's rules would move it to the other side and take the finding with it.
-   * Measured the same day at three, four and five atoms, the third and the fourth agree: still free
-   * at twenty-four links and cut short at thirty-two, which is half the bound. So the family here
+   * Measured the same day at three, four and five atoms, the third and the fourth agreed: still
+   * free at twenty-four links and cut short at thirty-two, half the bound. So the family here
    * is the one with margin, and what the width buys is nothing about the claim's difficulty —
    * every member of every one of these families is a chain of modus ponens.
    */
@@ -656,7 +656,8 @@ class DomainTheorySpec extends AnyFlatSpec with Matchers {
     // intuitionistic calculus first and falls to the classical decision when it refuses, and until
     // 2026-09-18 the two ways of refusing were one `None`. Whether that is worth a report at all
     // depends on whether anything reaches the net, and the figure this file used to rest on is
-    // `PropositionalRouteSpec`'s: the deepest of 1114 enumerated formulas needs 7 of the 256. That
+    // `PropositionalRouteSpec`'s: on 2026-09-18 the deepest of the formulas it enumerates needed 7
+    // of what `Intuitionistic.Fuel` allows. That
     // population is formulas of at most six nodes, and what this method builds is an implication
     // chain one link per specialised instance, so the figure does not travel to it.
     //

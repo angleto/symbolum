@@ -151,9 +151,10 @@ class SpectrumSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChec
   }
 
   "The transform" should "be linear" in {
-    // 100 pairs of signals of length 64, which runs in about a third of a second. The transform is
-    // linear by construction, so what this probes is the marshalling either side of it, and a
-    // hundred samples is where the time stopped being free and the coverage stopped changing.
+    // 100 pairs of signals of length 64, which ran in about a third of a second when measured,
+    // before 2026-09-14 where this repository's history begins. The transform is linear by
+    // construction, so what this probes is the marshalling either side of it, and a hundred
+    // samples is where the time stopped being free and the coverage stopped changing.
     //
     // Shrinking is off: a shrunk signal is a shorter one, the three stop agreeing on their length,
     // and what gets reported is an index out of bounds rather than the signals that failed.

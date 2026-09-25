@@ -629,8 +629,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under twelve names, none shared. `CLAUDE.md`'s figures move by **three** and **three**:
     // `EXP_LT_MONOTONE`, `EXP_INJECTIVE` and `LN_MUL` each bind two reals, and the other nine
     // bind one or none.
-    library.entries.size shouldBe 649
-    library.names.distinct.size shouldBe 646
+    // 654 and 651 with the extreme value theorem, 2026-09-25, derived before the run: five facts
+    // under five names, none shared. `CLAUDE.md`'s figures move by **five** and **four**: all five
+    // bind two or more leading quantifiers, and all but `CONTINUOUS_NEG`, whose `f` and `x` differ
+    // in type, bind two reals among them.
+    library.entries.size shouldBe 654
+    library.names.distinct.size shouldBe 651
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
@@ -807,9 +811,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       facts + definitional shouldBe distinct
     }
 
-    // One sentence rather than four loose figures, because four loose figures cannot fail. A bare
-    // `6` occurs five times in that document for unrelated reasons, so a check that looked for each
-    // number somewhere in the file would have passed whatever the definitional count really was.
+    // One sentence rather than four loose figures, because four loose figures cannot fail. A number
+    // as small as the definitional count can turn up in that document for unrelated reasons, so a
+    // check that looked for each number somewhere in the file would pass whatever the count was.
     // That is the vacuity this repository's conventions warn about, met while writing the guard
     // against a different one.
     val sentence =

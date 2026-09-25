@@ -43,7 +43,7 @@ class WordSpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------- what it cost */
 
-  "The word type and its four constants" should "be defined rather than assumed" in {
+  "The word type and its constants" should "be defined rather than assumed" in {
     words.theory.axioms shouldBe peano.theory.axioms
 
     (words.theory.typeOperators.keySet -- peano.theory.typeOperators.keySet) shouldBe
@@ -61,7 +61,7 @@ class WordSpec extends AnyFlatSpec with Matchers {
     Derived.foreach(name => withClue(s"$name: ")(fact(name).hypotheses shouldBe empty))
   }
 
-  it should "reach the two classical axioms and no axiom of arithmetic at all" in {
+  it should "reach the classical axioms and no axiom of arithmetic at all" in {
     // The measurement worth having: `num` enters this file as a **type** and nothing here adds,
     // multiplies or compares anything, so none of the sixteen axioms of the reals and not the
     // axiom of infinity is reached. `NUM_LT` appears in every statement and is never used as an

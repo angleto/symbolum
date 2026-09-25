@@ -236,8 +236,8 @@ class PolynomialSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenProp
   "Two ways of writing one value" should "reach the same term" in {
     // A hundred samples at depth three, which is the count `ArithmeticSpec` settled on and the
     // depth at which the generator starts producing coefficients the expanding form could not
-    // afford: measured while writing this, a depth-three sample reaches a coefficient above forty
-    // about one time in twenty.
+    // afford: measured while writing this, no later than 2026-09-14, a depth-three sample reached
+    // a coefficient above forty about one time in twenty.
     forAll(expression(3)) { case (one, other) =>
       formOf(collecting, one) shouldBe formOf(collecting, other)
     }
@@ -304,7 +304,7 @@ class PolynomialSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenProp
     ring.prove("!x:real. x * inv x = 1").left.map(_.getClass) shouldBe Left(classOf[NotEqualTo])
   }
 
-  "The theory it works in" should "still assert only its sixteen axioms" in {
+  "The theory it works in" should "still assert only the reals' axioms" in {
     reals.theory.axioms.length shouldBe Real.Axioms.length
   }
 }

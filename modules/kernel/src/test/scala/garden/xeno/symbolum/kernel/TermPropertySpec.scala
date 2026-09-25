@@ -35,9 +35,10 @@ class TermPropertySpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPr
   /**
    * ScalaTest's default is ten cases, which is a smoke test rather than a property check.
    *
-   * Two hundred, measured: no property here takes longer than a second at that count and the
-   * module's whole suite runs in six. Raise it if a property starts failing intermittently, which
-   * would mean the shapes that break it are rarer than this count reaches.
+   * The count below was measured, before 2026-09-14 where this repository's history begins: no
+   * property here took longer than a second at it and the module's whole suite ran in six. Raise
+   * it if a property starts failing intermittently, which would mean the shapes that break it are
+   * rarer than this count reaches.
    */
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration(minSuccessful = 200)

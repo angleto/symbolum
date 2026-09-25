@@ -79,9 +79,10 @@ class GuideSpec extends AnyFlatSpec with Matchers {
   }
 
   "The table's axiom column" should "say nothing where a derivation reaches no axiom" in {
-    // Not "0", and not an empty cell. Two of the nine are collected by this extension rather than
-    // bought by it, and a reader asking what the classical axioms cost has to be able to see that
-    // at a glance; `ClassicalSpec` asserts the same division against the derivations.
+    // Not "0", and not an empty cell. The statements the count below finds are collected by this
+    // extension rather than bought by it, and a reader asking what the classical axioms cost has
+    // to be able to see that at a glance; `ClassicalSpec` asserts the same division against the
+    // derivations.
     val generated = force(Guide.classicalTable(classical))
 
     generated.linesIterator.count(_.contains("| nothing |")) shouldBe
@@ -144,7 +145,7 @@ class GuideSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "not find another section's markers, which is why they are named" in {
-    // The reason the marker carries the section's name. `docs/evaluation.md` has three generated
+    // The reason the marker carries the section's name. `docs/evaluation.md` has several generated
     // regions pages apart, and an anonymous opening marker would make every splice after the first
     // start at the first one.
     val first = Generated("first", "nowhere.md", "a command nobody runs")

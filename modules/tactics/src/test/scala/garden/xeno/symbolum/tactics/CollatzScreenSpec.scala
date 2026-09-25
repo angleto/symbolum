@@ -70,9 +70,10 @@ class CollatzScreenSpec extends AnyFlatSpec with Matchers {
   }
 
   "A value past what a double holds exactly" should "be refused rather than compared" in {
-    // The refusal that keeps this honest. Beyond 2^53 a double no longer holds consecutive integers
-    // apart, so a comparison would be reporting the rounding and not the formula. The screen says
-    // which point it stopped at instead of returning a verdict it cannot support.
+    // The refusal that keeps this honest. Beyond `CollatzScreen.Exact` a double no longer holds
+    // consecutive integers apart, so a comparison would be reporting the rounding and not the
+    // formula. The screen says which point it stopped at instead of returning a verdict it cannot
+    // support.
     val huge = CollatzScreen.Exact * 4
 
     CollatzScreen.screen(n, 0, Vector(huge)) match {
@@ -82,7 +83,7 @@ class CollatzScreenSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "be told apart from a candidate that cannot be evaluated at all" in {
-    // Two absences that are not each other, which is the rule `Refutation` keeps seven outcomes for.
+    // Two absences that are not each other, which is the rule `Refutation.Outcome`'s cases keep.
     CollatzScreen.screen(Num(1) / (n - n), 1, Vector(BigInt(3))) match {
       case CollatzScreen.NotEvaluable(point) => point shouldBe BigInt(3)
       case other => fail(s"expected an inevaluable candidate, got $other")

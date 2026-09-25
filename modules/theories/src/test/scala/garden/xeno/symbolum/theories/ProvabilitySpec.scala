@@ -9,10 +9,10 @@ import garden.xeno.symbolum.logic.*
  * What the embedded theory can prove, and the two things a reader has to be shown about it.
  *
  * **That something is provable.** A predicate nothing satisfies satisfies every equation above it,
- * so the three definitions here are worth nothing until a formula is derived. `NUM_PROV_PA` and
- * `NUM_PROV_LOGIC` are that in general and are checked below at a **concrete** code, which is a
- * different assertion: it says the three definitions, the two axiom sets and the beta function
- * compose, rather than each being right on its own.
+ * so `NUM_STEP`, `NUM_PROOF` and `NUM_PROV` are worth nothing until a formula is derived.
+ * `NUM_PROV_PA` and `NUM_PROV_LOGIC` are that in general and are checked below at a **concrete**
+ * code, which is a different assertion: it says those definitions, `NUM_PA`, `NUM_LOGIC` and the
+ * beta function compose, rather than each being right on its own.
  *
  * **That the step relation is not everything.** The two rules of inference each need an earlier
  * step, and that bound is the only thing making a derivation well founded. Drop it and `NUM_PROV`
@@ -135,12 +135,13 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * What the three definitions cost, which is nothing, and what the two derivations cost.
+   * What `NUM_STEP`, `NUM_PROOF` and `NUM_PROV` cost, which is nothing, and what the facts derived
+   * over them cost.
    *
    * The same split `LanguageSpec` records for the axiom sets and for the same reason: a definition
-   * that does not descend into a code is settled by unfolding it. That all three are of that kind
-   * is the return on coding a sequence with the beta function, since a derivation walked rather
-   * than indexed would have been a recursion over its length.
+   * that does not descend into a code is settled by unfolding it. That each of these is of that
+   * kind is the return on coding a sequence with the beta function, since a derivation walked
+   * rather than indexed would have been a recursion over its length.
    */
   it should "define by cases and cost nothing for it" in {
     val equations = Vector(
@@ -220,9 +221,10 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
    * statement with the pair reversed refuses here rather than proving the other thing.
    *
    * What is **not** asserted, because it costs more than it is worth here: that `B ==> A` is not
-   * itself an axiom of either set. `NUM_PA_CASES` is six codes six deep and a scheme, and refuting
-   * membership in it is the seventy-line shape `LanguageSpec` pays for the term and formula
-   * refusals. That it is not an axiom is an observation about the tags, not a theorem here.
+   * itself an axiom of either set. `NUM_PA_CASES` is PA's fixed codes, each nested several
+   * constructors deep, and a scheme, and refuting membership in it is the long shape `LanguageSpec`
+   * pays for the term and formula refusals. That it is not an axiom is an observation about the
+   * tags, not a theorem here.
    */
   it should "derive a formula the two axiom sets do not hold, which is what closure is for" in {
     first should not be second
@@ -252,7 +254,7 @@ class ProvabilitySpec extends AnyFlatSpec with Matchers {
    * an index whether or not it occurs in the formula, and here it does not occur, which is the
    * vacuous case being a theorem rather than an oversight.
    */
-  it should "close under both rules, which with the eight schemes is the whole system" in {
+  it should "close under both rules, which with the schemes is the whole system" in {
     val conclusion = implies(second, first)
 
     def generalisedAt(index: Term): Kernel.Thm =

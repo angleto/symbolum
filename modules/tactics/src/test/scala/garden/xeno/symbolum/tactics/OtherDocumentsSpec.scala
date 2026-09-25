@@ -10,11 +10,11 @@ import garden.xeno.symbolum.tactics.DocumentBlocks.{Block, Compiles, Fate, NotRu
  * Every Scala block of every other document, compiled as the document holds it.
  *
  * `ReadmeSpec` takes `README.md` and `GuideBlocksSpec` takes `docs/proving.md`, which between them
- * are 71 of the repository's 112 blocks and none of the other four documents. This is the other
- * forty-one, and the reason they are in one file rather than four is the last test below: the
- * population is read off the repository and the three specs together have to cover it exactly, so a
- * document added with a Scala block in it lands red here rather than quietly joining the set nobody
- * compiles.
+ * hold most of the repository's blocks and none of the documents in `Documents` below. This is the
+ * rest, and the reason they are in one file rather than one per document is the last test below:
+ * the population is read off the repository and the three specs together have to cover it exactly,
+ * so a document added with a Scala block in it lands red here rather than quietly joining the set
+ * nobody compiles.
  *
  * == What it found ==
  *
@@ -55,7 +55,7 @@ class OtherDocumentsSpec extends AnyFlatSpec with Matchers {
   /**
    * The same, plus the expression the prose calls `expr`.
    *
-   * Two preludes and not one, because three blocks declare an `expr` of their own and a prelude
+   * Two preludes and not one, because some blocks declare an `expr` of their own and a prelude
    * carrying one would collide with it: a block is an object's body, so the prelude and the block
    * share a scope and `expr is already defined` is what comes back. That is the harness working as
    * intended -- the same collision is what stops a block from quietly using a name an earlier block
@@ -71,10 +71,11 @@ class OtherDocumentsSpec extends AnyFlatSpec with Matchers {
    * the prelude belonging to its predecessor.
    *
    * **A key beginning with `=` is the whole block**, compared against its trimmed text rather than
-   * looked for inside it. Four blocks of the configuration guide are a single expression naming a
-   * configuration, and a substring key for one of those names ten other blocks that mention it, so
-   * the ambiguity check below refuses it. It is the same trade `ReadmeSpec` records for positional
-   * keys, met from the other side: a key short enough to be stable can be too short to be unique.
+   * looked for inside it. Some blocks of the configuration guide are a single expression naming a
+   * configuration, and a substring key for one of those names every other block that mentions it,
+   * so the ambiguity check below refuses it. It is the same trade `ReadmeSpec` records for
+   * positional keys, met from the other side: a key short enough to be stable can be too short to
+   * be unique.
    */
   private val Documents: Vector[(String, Vector[(String, Fate)])] = Vector(
     "SIMPLIFICATION_CONFIG_GUIDE.md" -> Vector(
@@ -99,7 +100,7 @@ class OtherDocumentsSpec extends AnyFlatSpec with Matchers {
 
       // The four named configurations, each printed as the one expression that names it. These are
       // the whole-text keys: a block that IS `SimplificationConfig.Default` cannot be keyed by a
-      // substring, because ten other blocks on the page mention it too.
+      // substring, because other blocks on the page mention it too.
       "=SimplificationConfig.Default" -> Runs(Algebra),
       "=SimplificationConfig.Minimal" -> Runs(Algebra),
       "=SimplificationConfig.Aggressive" -> Runs(Algebra),
@@ -213,10 +214,10 @@ class OtherDocumentsSpec extends AnyFlatSpec with Matchers {
   /* -------------------------------------------------------------------- compiling and running */
 
   "Every block of those documents" should "compile as the document holds it, and run where it is run" in {
-    // One compilation for all four, not one each: a compile costs a full classpath scan, measured
-    // at 34 seconds for the first and about a second for each source after it, and isolation comes
-    // from a block being an object's body rather than from the file it was read out of. The key
-    // carries the document so that a failure names where to look.
+    // One compilation for every document, not one each: a compile costs a full classpath scan,
+    // measured on 2026-09-16 at 34 seconds for the first and about a second for each source after
+    // it, and isolation comes from a block being an object's body rather than from the file it was
+    // read out of. The key carries the document so that a failure names where to look.
     val prepared = Documents.flatMap { case (document, registry) =>
       val blocks = DocumentBlocks.blocksOf(document, DocumentBlocks.read(document))
 
@@ -245,7 +246,7 @@ class OtherDocumentsSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------------- the quotations */
 
-  "The two blocks that are not programs" should "still be what the source says" in {
+  "The blocks that are quotations" should "still be what the source says" in {
     // What a quotation buys that compiling does not: the configuration guide's copy of
     // `SimplificationConfig` would compile as a local class however far the real one had drifted,
     // and the `Expr` signatures do not compile at all. Both are compared against the file they are

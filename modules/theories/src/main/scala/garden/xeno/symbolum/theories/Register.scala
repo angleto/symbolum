@@ -43,8 +43,9 @@ import garden.xeno.symbolum.logic.*
  *    existed beside the chain. "Absent from this register" and "absent from the system" are two
  *    claims and only the first is made here. What makes the first worth something is the scan
  *    `RealSpec` runs over the sources for `Kernel.assertAxiom`, the one non-conservative kernel
- *    operation: outside the kernel's own file exactly three call it. So an axiom outside the
- *    chain's signature would have to come from one of three named places.
+ *    operation: outside the kernel's own file, the only callers are the files that scan names, the
+ *    ones asserting an axiom of their own and the ones asserting what a caller hands them. So an
+ *    axiom outside the chain's signature would have to come from one of those named places.
  *
  *    This paragraph named the operation by a fourteen-word periphrasis until 2026-09-12, and the
  *    reason is worth one sentence because the reason was a defect: the scan read the file whole,

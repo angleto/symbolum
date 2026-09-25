@@ -153,7 +153,7 @@ class RealSpec extends AnyFlatSpec with Matchers {
     "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Domain.scala"
   )
 
-  "The one operation that asserts an axiom" should "be called by the four that believe and the one that offers" in {
+  "The operation that asserts an axiom" should "be called by the files that believe and those that offer" in {
     // `Kernel.assertAxiom` is the non-conservative operation. Any main source that CALLS it is
     // trusted base, so the claim that the base is the kernel plus three files is checked here
     // rather than stated in a document. The kernel's own file is where it is defined.
@@ -231,9 +231,9 @@ class RealSpec extends AnyFlatSpec with Matchers {
     //
     // `Register.scala` produces `docs/reading-register.md`, and its docstring explains why that
     // document is worth anything: a scan over this operation says that an axiom outside the chain's
-    // signature would have to come from one of three named places. It is also the file the old
-    // guard drove into fourteen words of periphrasis where an identifier belonged, which is the
-    // defect this second assertion exists to keep repaired.
+    // signature would have to come from one of the files the assertion above names. It is also
+    // the file the old guard drove into fourteen words of periphrasis where an identifier belonged,
+    // which is the defect this second assertion exists to keep repaired.
     //
     // `Notebook.scala` argues that a cell running arbitrary Scala could reach `Kernel.assertAxiom`
     // and `Term.variable` unrecorded, which is the reason its command language is small and is not

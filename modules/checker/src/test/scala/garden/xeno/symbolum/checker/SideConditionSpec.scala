@@ -356,16 +356,18 @@ class SideConditionSpec extends AnyFlatSpec with Matchers {
 
     every(oneSided.map(_.note)) should not be empty
 
-    // Seven today, and I wrote six here before counting them, which is the small version of the
-    // habit this whole file exists against. The number is asserted so that an eighth is a decision
-    // rather than a drift, and so that a condition gaining its second side lowers it on purpose.
+    // The number is asserted below, and this comment once gave a smaller one before anybody had
+    // counted, which is the small version of the habit this whole file exists against. It is
+    // asserted so that one more is a decision rather than a drift, and so that a condition gaining
+    // its second side lowers it on purpose.
     //
-    // Five of the seven are unreachable on the kernel's side by construction, because the kernel
-    // BUILDS the thing the condition is about rather than being handed it: it computes the
-    // discharge, it constructs the constant, it produces both halves of a type definition. Those
-    // are the checker's alone and always will be. The other two are real gaps: the escaping type
-    // variable has no checker case, and the constant's identity has no kernel case because there is
-    // nothing there to get wrong.
+    // Most of them have no kernel case by construction, because the kernel BUILDS the thing the
+    // condition is about rather than being handed it: it builds the reflexive sequent, computes the
+    // discharge, applies a type substitution to the whole sequent, constructs the defined constant
+    // with its origin, and produces both halves of a type definition. Those are the checker's alone
+    // and always will be. The type definition's witness has its kernel case in
+    // `SoundnessAttackSpec` instead of here. And one is a real gap on the other side: the escaping
+    // type variable has no checker case.
     oneSided.size shouldBe 7
   }
 

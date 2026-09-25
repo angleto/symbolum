@@ -29,8 +29,9 @@ import garden.xeno.symbolum.logic.*
  * **That the system holds no axiom outside the chain.** The population this interrogates is named
  * in each assertion below, and it is `Chain.standard.widest`. An axiom asserted over a theory built
  * outside the chain would not be in it. That gap is covered elsewhere and by a different question:
- * `RealSpec` scans the sources for `Kernel.assertAxiom` and asserts that exactly three files call
- * it. The pair of checks is the claim; neither half is.
+ * `RealSpec` scans the sources for `Kernel.assertAxiom` and asserts that the files calling it are
+ * exactly the ones its two lists name, those asserting an axiom of their own and those asserting
+ * one a caller handed them. The pair of checks is the claim; neither half is.
  *
  * The 2026-09-11 defect is why that paragraph is written out rather than assumed. A spec asserted a
  * lemma was missing by asking `Library.of(Chain.standard)`, stayed green, and the lemma had been

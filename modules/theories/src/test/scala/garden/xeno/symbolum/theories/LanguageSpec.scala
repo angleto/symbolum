@@ -13,7 +13,7 @@ import garden.xeno.symbolum.logic.*
  * to, not a description of the term predicate that happens to lead: a predicate is shown to
  * accept and shown to refuse, and a group with only the first half is not checked.
  *
- * **That it accepts, and to any depth.** The five introduction rules are the easy half and a
+ * **That it accepts, and to any depth.** The introduction rules are the easy half and a
  * compound term is derived here rather than described: `0 + v7` is three codes nested two deep, and
  * it goes through by composing the rules, which is what says the recursion is usable and not only
  * provable.
@@ -32,7 +32,7 @@ import garden.xeno.symbolum.logic.*
  *
  * The axioms of PA are refused the cheapest way of any group here, and the contrast is worth the
  * line. The other refusals open the recursion equation and rule out each clause; this one costs
- * three lines, because `NUM_PA_FORM` says an axiom is a formula and the code of zero is already
+ * a few lines, because `NUM_PA_FORM` says an axiom is a formula and the code of zero is already
  * known not to be one. A group that has a fact about it does not need a derivation about it.
  */
 class LanguageSpec extends AnyFlatSpec with Matchers {
@@ -76,16 +76,17 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * the whole assertion until the axioms of PA landed, and those cost **nothing at all**.
    *
    * It is worth saying why rather than filing it as a pleasant surprise. `NUM_PA` is a disjunction
-   * of seven cases, so membership in it is settled by unfolding a definition and picking a
+   * of fixed cases, so membership in it is settled by unfolding a definition and picking a
    * disjunct; no clause of it reads the predicate being defined, so there is no recursion to
    * justify and no admissibility proof to pay for. That is the same fact as "PA is recursively
    * axiomatised" seen from inside: the property Goedel's argument needs of the axiom set is that a
    * machine can recognise it, and here it shows up as a proof that spends no axiom.
    *
    * So the assertion is two-sided, and the second side is the one with teeth: the free statements
-   * are exactly the eight about `NUM_PA` and no others, which fails if a later clause of the axiom
-   * set is written recursively, and fails equally if some fact that ought to cost the recursion
-   * quietly stops using it.
+   * are exactly the set named below, the facts about `NUM_PA` and `NUM_LOGIC`, the one about
+   * `NUM_CLOSED`, and the defining equations of the abbreviations, and no others. It fails if a
+   * later clause of an axiom set is written recursively, and fails equally if some fact that ought
+   * to cost the recursion quietly stops using it.
    */
   it should "cost what the naturals cost, except where a definition alone settles it" in {
     val recursion = force(chain.naturals.recursion)
@@ -103,7 +104,7 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
         Language.AxiomCases,
         Language.LogicCases,
         Language.ClosedCases,
-        // The six abbreviations join the free side for the reason `NUM_PA` is on it: each is a
+        // The abbreviations below join the free side for the reason `NUM_PA` is on it: each is a
         // constant defined by a body, so its equation is the definition unfolded and generalised
         // and no recursion is justified along the way. Their `NUM_FORM_` facts are on the other
         // side, because composing the introduction rules does spend what those rules cost.
@@ -127,16 +128,16 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    *
    * What this builds is `!v0. v0 < 1 ==> v0 = v0`, with `2` for the witness index and `0` for the
    * quantified one. The formula is trivial on purpose and is not what is being shown: what is
-   * being shown is that `NUM_FORM` accepts the code with **no hypotheses**, which says the six
+   * being shown is that `NUM_FORM` accepts the code with **no hypotheses**, which says the
    * abbreviations compose and that a bounded quantifier is now a sentence this repository can
    * write. Before they landed it was not one, because the object signature has no relation symbol
    * and tags `5` to `8` have no clause for a bound.
    *
    * **It is also the guard against the group being vacuous**, and it is the only assertion about
-   * the six that could fail for that reason. Every one of them is an implication, and an
-   * implication nothing can satisfy is a theorem: all six would be provable, every other assertion
-   * in this file would pass, and there would be no code anywhere that they applied to. Discharging
-   * the antecedents at an actual code is what rules that out.
+   * the abbreviations that could fail for that reason. Every one of their well-formedness rules is
+   * an implication, and an implication nothing can satisfy is a theorem: all of them would be
+   * provable, every other assertion in this file would pass, and there would be no code anywhere
+   * that they applied to. Discharging the antecedents at an actual code is what rules that out.
    */
   it should "build a bounded quantifier and accept the code with nothing assumed" in {
     val variable = term("NUM_CODE 0 ZERO")
@@ -179,16 +180,16 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * why they are here rather than in a comment: nothing an equation says about itself
    * distinguishes a guard that does work from one carried along.
    *
-   * **The population is the eight clauses whose statement carries a `COND`, and it is all eight.**
-   * Four of the six constants bind an index, so eight of the twelve clauses have a guard and four
-   * do not: `NUM_AND` and `NUM_OR` bind nothing, their four clauses answer with a disjunction or
-   * with a rebuilt code, and there is no conditional in them for a consequence to be about. Those
-   * four are held by the two assertions at the top of this file and by nothing else here, which is
-   * the honest coverage rather than a gap: a test asserting a consequence of a guard that does not
+   * **The population is the clauses whose statement carries a `COND`, and it is all of them.**
+   * The constants that bind an index are the ones whose clauses have a guard, and the others do
+   * not: `NUM_AND` and `NUM_OR` bind nothing, their clauses answer with a disjunction or with a
+   * rebuilt code, and there is no conditional in them for a consequence to be about. Those are
+   * held by the two assertions at the top of this file and by nothing else here, which is the
+   * honest coverage rather than a gap: a test asserting a consequence of a guard that does not
    * exist would be a test of nothing.
    *
    * **What is NOT here, said because a document claimed it was.** The sharpest attack on these
-   * twelve is to state each one with a guard dropped and check the derivation refuses it, and that
+   * clauses is to state each one with a guard dropped and check the derivation refuses it, and that
    * cannot be done from a spec: `Language.connectiveClauses` derives the statement published under
    * a name, so there is no way in to hand it a statement nobody published. That attack was run
    * outside the tree and is a measurement rather than a guard. These consequences are the in-tree
@@ -358,7 +359,7 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    *
    * Without the inner conditional the clause would put `NUM_SUBST_TERM 1 u t` there instead, which
    * is a different code for every `t` that mentions `1`. This is the assertion that separates the
-   * two, and it is the last of the eight guarded clauses to get one.
+   * two, and it is the last of the guarded clauses to get one.
    */
   it should "leave a bound alone when the witness is what is being replaced" in {
     val body: FVar = Term.variable("p", numbers)
@@ -403,30 +404,31 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
-   * The seven axioms are seven, and this is the guard the defect that occurred asks for.
+   * The axioms of PA are as many as their names, and this is the guard the defect that occurred
+   * asks for.
    *
    * `NUM_PA` is a right-nested disjunction and a membership proof enters it at its own position,
    * wrapped once per disjunct before it. Getting that nesting wrong is not a compile error and not
    * a kernel refusal: what comes out is a theorem, correctly proved, about the wrong disjunct. It
-   * happened while this was written, and every one of the seven still built.
+   * happened while this was written, and every one of the memberships still built.
    *
-   * So the assertion is that the seven conclusions are pairwise distinct terms. Under the defect
-   * they collapse onto one, and under a corrected version they cannot: two codes are equal only if
-   * their tags and payloads are, and the six axioms are six different formulas.
+   * So the assertion is that the conclusions are pairwise distinct terms. Under the defect they
+   * collapse onto one, and under a corrected version they cannot: two codes are equal only if
+   * their tags and payloads are, and the fixed axioms are different formulas.
    *
    * This is deliberately about the theorems rather than about `Axioms`, whose entries a reader can
    * see are different by looking. What is being checked is that the proof of each landed where its
    * name says, and the only way to see that is to read what was proved.
    */
-  it should "prove seven different memberships and not one of them seven times" in {
+  it should "prove a different membership for each axiom, not one of them repeated" in {
     val names = Language.Axioms.map(_._1) :+ Language.AxiomInduction
     val conclusions = names.map(name => force(language.fact(name)).conclusion)
 
     conclusions.distinct should have size names.size
   }
 
-  /** The same guard for the logical axioms, where every one of the eight is a scheme. */
-  it should "prove eight different logical axioms and not one of them eight times" in {
+  /** The same guard for the logical axioms, where every one of them is a scheme. */
+  it should "prove a different logical axiom for each name, not one of them repeated" in {
     val conclusions = Language.LogicalAxioms.map(name => force(language.fact(name)).conclusion)
 
     conclusions.distinct should have size Language.LogicalAxioms.size
@@ -435,8 +437,8 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   /**
    * An instance of specialisation, built at a concrete formula and a concrete closed term.
    *
-   * The eight schemes are provable and that is not the same as usable. This one is the hardest of
-   * the eight to use, because its third condition is `NUM_CLOSED t`, and nothing until this commit
+   * The schemes are provable and that is not the same as usable. This one is the hardest of them
+   * to use, because its third condition is `NUM_CLOSED t`, and nothing until this commit
    * could discharge such a condition at all: it needs freeness at every index, which is what the
    * previous piece of work was for.
    *
@@ -597,8 +599,9 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * A term two constructors deep goes through by composing the rules.
    *
    * `0 + v7`, whose code is `NUM_CODE 3 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 0 7))`. Nothing in the
-   * five rules mentions depth and nothing has to: the recursion `Descent` produced is what carries
-   * it, and this is the assertion that the produced equation is usable rather than merely true.
+   * introduction rules mentions depth and nothing has to: the recursion `Descent` produced is what
+   * carries it, and this is the assertion that the produced equation is usable rather than merely
+   * true.
    */
   it should "accept a term two constructors deep" in {
     val zeroTerm = term("NUM_CODE 1 0")
@@ -957,11 +960,11 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   /**
    * A code that is not an axiom, which is what every axiom being a formula buys.
    *
-   * The refusing half of `NUM_PA`, and it is three lines rather than the seventy the two above
-   * cost, because it does not go near the disjunction. `NUM_PA_FORM` says an axiom is a formula
-   * and the code of the object language's zero is already known not to be one, so the
-   * contrapositive settles it. Refuting it disjunct by disjunct would have worked and would have
-   * been the wrong shape: what makes the axiom set a set of formulas is one fact, not seven.
+   * The refusing half of `NUM_PA`, and it is a few lines where the two above run to pages,
+   * because it does not go near the disjunction. `NUM_PA_FORM` says an axiom is a formula and the
+   * code of the object language's zero is already known not to be one, so the contrapositive
+   * settles it. Refuting it disjunct by disjunct would have worked and would have been the wrong
+   * shape: what makes the axiom set a set of formulas is one fact, not one per disjunct.
    *
    * The measurement beside it is the point. The membership facts cost nothing and this costs the
    * naturals' two, because being a formula is decided by the recursion while being an axiom is
@@ -1048,7 +1051,7 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * The same shape as the refusals above and much cheaper, because freeness is a `COND` nest rather
    * than an existential: what decides both is `NUM_FREE_TERM_VAR`, whose right-hand side is the
    * comparison of the two indices. The first is a reflexivity and the second is two numerals of
-   * `num` differing, which is the fourth thing in this development resting on `Successor.distinct`.
+   * `num` differing, one more thing in this development resting on `Successor.distinct`.
    *
    * Without a pair like this every clause equation would still hold of the predicate that answers
    * `T` everywhere, and of the one that answers `F` everywhere the four recursive clauses would.
@@ -1173,10 +1176,10 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * `NUM_SUBST_VAR` says the answer at a variable is `COND (j = i) t (NUM_CODE 0 j)`, which is the
    * whole content and none of it: a conditional is not an answer until the guard is decided. So
    * both sides are decided here, at the variable being replaced and at another one, and the second
-   * needs two numerals of `num` to differ, which is the fourth thing in this development that does.
+   * needs two numerals of `num` to differ, as other things in this development do.
    *
-   * **A `NUM_SUBST` that returned its argument unchanged would satisfy four of the five published
-   * equations**, all but this one, and this one only up to a conditional nobody resolved. That is
+   * **A `NUM_SUBST` that returned its argument unchanged would satisfy every published equation
+   * but the one at a variable**, and this one only up to a conditional nobody resolved. That is
    * what makes these two derivations the assertion rather than the equations.
    */
   it should "replace the variable it was given and no other" in {
@@ -1262,8 +1265,8 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * equation does not say it: it says the answer is a conditional, which is not an answer until the
    * guard is decided. So both sides are decided here.
    *
-   * **A `NUM_SUBST_FORM` that recursed under every quantifier would satisfy three of the four
-   * equations**, and the fourth up to a conditional nobody resolved. It would also be wrong in the
+   * **A `NUM_SUBST_FORM` that recursed under every quantifier would satisfy every equation but the
+   * quantifier's**, and that one up to a conditional nobody resolved. It would also be wrong in the
    * way that matters most later: the diagonal lemma substitutes into a formula with a quantifier in
    * it, and a substitution that reached a bound variable would produce a different sentence.
    */
@@ -1435,7 +1438,7 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
    * `notFreeIn` existed nothing could supply that for any particular `h`: the theorem was proved
    * and applied to no formula anybody could name. So the assertion here is not that the walk
    * works, it is that **the two meet**: what comes out of the walk is exactly what the theorem
-   * asks for, at all six of the axioms with a fixed code.
+   * asks for, at every one of the axioms with a fixed code.
    *
    * The two doubly-quantified axioms are the ones worth having in the list. A code with one binder
    * exercises the quantifier clause once and could pass while the inequality it carries went
@@ -1478,7 +1481,7 @@ class LanguageSpec extends AnyFlatSpec with Matchers {
   /**
    * The shapes the axioms do not exercise, which is where the walk could have been wrong.
    *
-   * All six axioms above bind index zero, and most of them bind it once. That leaves the case the
+   * Every axiom above binds index zero, and most of them bind it once. That leaves the case the
    * implementation is least obviously right about: the bound indices are carried as a **list** and
    * looked up with `find`, which returns the first match, so a shadowed index is where "first" and
    * "innermost" could come apart. They do not, because the list is prepended to on the way down,

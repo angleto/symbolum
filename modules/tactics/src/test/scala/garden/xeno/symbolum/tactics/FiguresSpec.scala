@@ -130,7 +130,7 @@ class FiguresSpec extends AnyFlatSpec with Matchers {
   /* ----------------------------------------------------- the figures inside sentences */
 
   "`12 * 12 = 144`" should "be the same proof everywhere the documents quote it" in {
-    // Four documents quote this one proof, and on 2026-09-11 every one of them was wrong. Each
+    // Several documents quote this one proof, and on 2026-09-11 every one of them was wrong. Each
     // sentence is searched for with the measured number in it rather than asserted to contain a
     // literal, which is the arrangement `DocumentationSpec` uses for the axiom counts and the
     // reason those have never gone stale.
@@ -240,9 +240,9 @@ class FiguresSpec extends AnyFlatSpec with Matchers {
 
   "Every figure in the evaluation document" should "be alive or marked as a photograph" in {
     // The table that tells a reader which is which, extended on 2026-09-12 with the rows this
-    // change created. It is the honest half of the repair: three tables are generated and the rest
-    // of the document's numbers are hand-measured, and a reader who cannot tell them apart weighs
-    // a photograph as though somebody were still checking it.
+    // change created. It is the honest half of the repair: the tables `Evaluation.sections` writes
+    // are generated and the rest of the document's numbers are hand-measured, and a reader who
+    // cannot tell them apart weighs a photograph as though somebody were still checking it.
     val evaluation = flowed(Evaluation.Document)
 
     Vector(

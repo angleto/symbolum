@@ -12,8 +12,8 @@ import org.scalatest.matchers.should.Matchers
  * already true through `Modular.identity` once its rule set is widened by three lemmas `Peano`
  * already publishes, and that route was measured on 2026-09-18 before this was written: it proves
  * `17 = 5 * 3 + 2` and it charges the sixteen axioms of the reals. So the question this file
- * answers is not whether, it is at what cost, and the test below that pins two against eight is the
- * one that would notice the answer changing.
+ * answers is not whether, it is at what cost, and the test below that pins the cost over `num`
+ * against the cost over the reals is the one that would notice the answer changing.
  */
 class DigitsSpec extends AnyFlatSpec with Matchers {
 
@@ -57,7 +57,7 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "rest on the two axioms the naturals cost, and no more" in {
+  it should "rest on the axioms the naturals cost, and no more" in {
     for ((name, _) <- Digits.Lemmas) {
       val theorem = digits.lemma(name).fold(error => fail(error.message), identity)
       val axioms = Derivation.axiomsOf(theorem)
@@ -74,7 +74,7 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
     ) shouldBe empty
   }
 
-  "A sum and a product of numerals" should "be theorems about `num` at the naturals' two axioms" in {
+  "A sum and a product of numerals" should "be theorems about `num` at what the naturals cost" in {
     val sum = digits.add(2, 3).fold(error => fail(error.message), identity)
     val product = digits.multiply(12, 12).fold(error => fail(error.message), identity)
 
@@ -89,10 +89,11 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
     product.hypotheses shouldBe empty
   }
 
-  it should "cost a quarter of what the same arithmetic costs over the reals" in {
+  it should "rest on none of the axioms the same arithmetic rests on over the reals" in {
     // The measurement the file is for, and the guard on it. `12 * 12 = 144` is a theorem on both
     // sides of the embedding and the two answers rest on different things: over the reals it
-    // reaches eight of the sixteen, here it reaches choice and infinity and nothing else. A route
+    // reaches the axioms of the field that the count below pins, here it reaches choice and
+    // infinity and nothing else, and the two sets share nothing. A route
     // for `num` that went through the reals would pass every other test in this file and fail this
     // one, which is exactly the route that was tried and rejected.
     val overTheNaturals = digits.multiply(12, 12).fold(error => fail(error.message), identity)
@@ -110,7 +111,7 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
   }
 
   "The computation" should "hold across every carry pattern the digits have, not at one value" in {
-    // Thirteen by thirteen, sums and products, which is 338 theorems and was measured at 139 ms.
+    // Thirteen by thirteen, sums and products, which is 338 theorems and took 139 ms on 2026-09-18.
     // The bound is chosen rather than round: twelve is `NUM_BIT0 (NUM_BIT0 (NUM_BIT1 NUM_ONE))`,
     // so the sweep reaches every four-bit pattern and every carry between them, including the two
     // the table closes rather than recurses on, which are `ZERO` on either side.

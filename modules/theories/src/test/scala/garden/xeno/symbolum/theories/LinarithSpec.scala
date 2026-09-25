@@ -114,7 +114,7 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     LogicError.decided(unreadable) shouldBe false
   }
 
-  it should "say which of the three things happened, in the type" in {
+  it should "say in the type which standing it ended in" in {
     // Read together rather than one by one, because what the card is about is that they were one
     // answer. A caller that takes `isLeft` for "does not follow" gets the same `true` from all
     // three, which is the weak and honest reading; the decision is reachable only by naming it.
@@ -250,6 +250,24 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     // is that a definition and a bound can appear as premises at all.
     proves("!a:real b:real. a = 53 * b /\\ 0 < b ==> a <= 60 * b")
     proves("!v:real i:real j:real. 0 < v - i - j ==> j < v - i")
+  }
+
+  it should "be weighed when its left side occurs inside its right" in {
+    // Found on 2026-09-25 by the work on deciding a series, and not by reading: `x = c * x` was
+    // weighed by rewriting with it, and a rewrite put `c * x` for the `x` inside `c * x` as well,
+    // so the product it handed `RING` was not zero and the refusal named neither the goal nor the
+    // equation. The content is linear in the atoms `x` and `c * x`, which the last line shows by
+    // naming the right side: that one was proved all along.
+    proves("!c:real x:real. x = c * x ==> ~(0 < x - c * x)")
+    proves("!c:real x:real. 0 < (1 - c) * x ==> x = c * x ==> 0 < 0")
+    proves("!c:real x:real. 0 < (1 - c) * x ==> ~(x = c * x)")
+    proves("!c:real x:real y:real. y = c * x ==> x = y ==> ~(0 < (1 - c) * x)")
+  }
+
+  it should "reach a product with the negated goal when its left side occurs inside its right" in {
+    // The second case the same card named: `x = c * x` with `c < 1` makes `x` zero, which needs
+    // `(1 - c) * x` and so a product of the hypothesis `c < 1` with the negated goal `0 < x`.
+    proves("!c:real x:real. c < 1 ==> 0 <= x ==> x = c * x ==> x <= 0")
   }
 
   /* ------------------------------------------------- the products of the hypotheses */
@@ -511,7 +529,7 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(theorem).subsetOf(reals.theory.axioms.toSet) shouldBe true
   }
 
-  "The theory" should "still assert only its sixteen axioms" in {
+  "The theory" should "still assert only the axioms `Real.Axioms` lists" in {
     reals.theory.axioms.length shouldBe Real.Axioms.length
   }
 }

@@ -109,6 +109,12 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     //
     // It is the lower rung of the witness above, which is deliberate: the pair of assertions then
     // says that adding `ADD_NONNEG_LT` on top of it adds exactly one name to the list.
+    //
+    // It is also the guard on `Chaining`'s rule that a candidate owing a goal on the path costs
+    // nothing, and it was seen red without that rule: on 2026-09-25 `INTERVAL_GLUING` joined the
+    // library, a lemma concluding `P a b` that is a candidate at every goal and at this one owes
+    // this goal back, and the search came back `Depleted(Expansions, 10)`. Removing that one lemma
+    // from the library put it back, and so did the rule, with the library whole.
     val (_, used) = chained("!x:real. !y:real. 0 <= (x * x) * (y * y)")
     used shouldBe Vector("MUL_NONNEG_BOTH")
   }
@@ -137,13 +143,13 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     prove(read("!x:real. !y:real. 0 < (x * x) * (y * y) + 1")).isRight shouldBe true
   }
 
-  "The depth bound" should "stop a goal that needs three, and say so" in {
+  "The depth bound" should "stop a goal one lemma past it, and say so" in {
     // `inv` over the witness is one lemma deeper than it, so the default must not reach it.
     //
-    // **It was `inv (inv (x * x + 1))` until 2026-09-18, and that goal takes two lemmas now**, not
-    // three: the completed square settles the bottom rung, so the default reached it and this
-    // assertion read as a regression in the depth bound when what had moved was the procedure
-    // under it. The class comment carries the whole of that.
+    // **It was `inv (inv (x * x + 1))` until 2026-09-18, and on that day the goal took two
+    // lemmas**, not three: the completed square settles the bottom rung, so the default reached it
+    // and this assertion read as a regression in the depth bound when what had moved was the
+    // procedure under it. The class comment carries the whole of that.
     prove.searchFor(read("!x:real. !y:real. 0 < inv ((x * x) * (y * y) + 1)")) match {
       case Some(Chaining.Outcome.Depleted(_, _)) => succeed
       case other => fail(s"the default bounds must stop this: $other")
@@ -164,7 +170,7 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "be raised by a caller who wants the third step, which is what makes it a bound" in {
+  it should "be raised by a caller who wants the next step, which is what makes it a bound" in {
     // The other half: the goal above is not out of reach, it is out of budget. A bound no setting
     // could pass would be a limit wearing a bound's name.
     //

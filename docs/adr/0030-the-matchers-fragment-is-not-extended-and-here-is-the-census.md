@@ -75,8 +75,66 @@ is written down separately: 250 occurrences is not nothing, and they are dominat
 `P (SUC n)` — a pattern variable applied to a **term built from** a binder, which is what a
 recurrence wants. None of them is in the corpus, so none of them is a goal this system fails to
 settle today; every one is a consumer that already reached its answer another way or asked a
-question it did not need answered. Which of the two, per site, is the measurement this record does
-not have and `Matching.why` now makes cheap.
+question it did not need answered. Which of the two, per site, is the measurement this record did
+not have when it was written; the section "The disjunction, measured" below takes it.
+
+## The disjunction, measured (2026-09-25)
+
+The decision above rested on a disjunction it left open: every refusal of the boundary was a
+consumer that had already reached its answer another way, or one that asked a question it did not
+need answered. Measured at `570e1e40` over one run of `tactics/test`, **every refusal is the
+second, and the first bucket is empty.**
+
+**What was counted, and by what criterion.** The same condition the census above counted, at the
+same place in `miller`: a pattern variable applied to something that is not a binder, with binders
+in scope. For each event the probe asked whether an answer existed, and where one did, whether it
+completed the match the consumer was actually asking for, which is the outermost `matchTerm` call
+and not the subterm. A refusal whose local answer cannot complete the outer match is a question the
+consumer did not need answered, since a larger fragment would have returned the same `None`.
+
+| what the refused pair was | events |
+|---|---|
+| the variable already decided by an earlier occurrence, and applying it gives a different term | 210 |
+| the variable free, and the target uses a binder no argument covers | 38 |
+| an argument holding an unsolved pattern variable, and a binder of the target that no instance of an argument covers | 222 |
+| an argument holding an unsolved pattern variable, a local answer existing, and **no candidate completing the outer match** | 28 |
+| the variable already decided, and applying it gives **the target** | **0** |
+| a candidate answer completing the outer match | **0** |
+
+498 in all, against the 250 counted on 2026-09-18 by the same condition over a smaller library. The
+consumers are `Library.instantiatesTo` under `Novelty.follows` and `Library.stating` (406),
+`Rewrite` (66; the probe kept one example per class and consumer, and both of `Rewrite`'s are the
+binomial theorem's summand) and `Apply.decide` (26).
+
+**The zeros are read and not blind.** The probe was run first against eight pairs built for the
+purpose, one per class above plus one whose answer completes and one whose answer does not, and
+every class fired on its own pair. So "none completes" is an absence the instrument could have
+reported otherwise.
+
+**Two limits of that instrument, stated where the figure is.** The candidates tried for the 28 are
+the target itself as a constant body and the target with one binder-free subterm abstracted at
+every occurrence, at every type instance read off the target; an answer abstracting only some
+occurrences of a subterm, or several subterms at once, was not tried. And the probe is not in the
+tree: the census above was a patched source for the same reason this one is, since telling the two
+buckets apart needs the outer match, which `Matching.why` does not see. What `why` does make a call
+is the per-condition count, and the claim in the Decision section that the next census "costs a
+call" was true of that count and not of this one.
+
+**One finding the census did not produce and the instrument did.** The control pair for the empty
+row, `\n. P n ==> P (SUC n)` against `\n. n < 3 ==> SUC n < 3`, **is** an instance at
+`P := \n. n < 3`, and `matchTerm` refuses it: `P` is decided by its first occurrence, and the
+second, applied to `SUC n`, is refused as a variable applied to a non-binder instead of being
+checked against what was decided. That is not a larger fragment; a decided variable is no longer a
+pattern variable. The suite reaches it zero times, so nothing is extended here, and it is recorded
+on the board as a card of its own rather than built on a population of none.
+
+**What changed in the tree on the same day** is the half the card asked for that was not a
+measurement: `Matching.why` has a consumer. `Rules.specTo` and `specToReduced` report a refusal of
+the boundary as `BeyondMatching`, naming the variable and the condition, where they used to report
+`NotOfForm("an instance of ...")`, which says the target is not an instance and on the control pair
+above is false. `Remedy` maps it to supplying that variable. `Apply.decide` does not ask `why`: it
+fails on every candidate lemma a search tries, and a second walk there is a cost paid by the search
+for a message nobody reads.
 
 ## Consequences
 
