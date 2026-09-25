@@ -81,8 +81,11 @@ final class Datatype private (
   val carrier: Type,
   val constructors: Vector[Term],
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** The equation defining `name`, a constructor or the abstraction pair. */
   def definition(name: String): Either[LogicError, Kernel.Thm] =

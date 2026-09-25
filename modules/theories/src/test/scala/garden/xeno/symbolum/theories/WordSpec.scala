@@ -81,13 +81,16 @@ class WordSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "cost the number of inferences measured, within an order" in {
-    // Counted rather than timed. The figures on 2026-09-11 are 1214 for each half of the bijection,
-    // 1452 for the padding law, 1863 for each law of the constructor and 3452 for extensionality.
-    // A band rather than an equality, because each of them counts the shared derivations of `Rules`
-    // and of `Product` underneath it and a cheaper `existsIntro` would move all six.
+    // Counted rather than timed, and counted to the facts it cites since `docs/adr/0047`: what
+    // `Product` and the logic published is one inference each here, so the figures are this file's
+    // own work. On 2026-09-11, when they still counted everything underneath, they were 1214 for
+    // each half of the bijection, 1452 for the padding law, 1863 for each law of the constructor
+    // and 3452 for extensionality. A band rather than an equality, because a cheaper `existsIntro`
+    // would move all six.
     Derived.foreach { name =>
+      info(s"$name: ${Derivation.size(fact(name))}")
       withClue(s"$name: ") {
-        Derivation.size(fact(name)) should be > 500
+        Derivation.size(fact(name)) should be > 50
         Derivation.size(fact(name)) should be < 12000
       }
     }

@@ -89,8 +89,31 @@ object Derivation {
     half: Half
   ) extends Derivation
 
-  /** The theorems a node was built from, in order, which is what a walk over a proof needs. */
+  /**
+   * A fact a development published under `name`, used by a proof that did not derive it.
+   *
+   * The same sequent as `fact`, so a checker replays through it as through an identity. What it is
+   * for is the walks below, which stop here: a report on a proof reads that proof's own inferences
+   * and one node per fact it cites, where it used to read every inference of every fact beneath,
+   * and those grow with every development stacked under the one asking. `docs/adr/0047` has the
+   * measurement.
+   *
+   * The axioms the fact rests on are worked out once, on first asking, and kept here, which is
+   * what lets [[axiomsOf]] stop at the boundary and still answer for the whole proof. Lazily,
+   * because most citations are never asked about and the walk under one is the cost being avoided.
+   */
+  final case class Citation(name: String, fact: Kernel.Thm) extends Derivation {
+    lazy val axioms: Set[Term] = axiomsOf(fact)
+  }
+
+  /**
+   * The theorems a node was built from, in order, which is what a walk over a proof needs.
+   *
+   * A citation's premise is the fact it cites, so a checker and the written proof both reach the
+   * whole derivation; it is [[own]] that declines to follow it.
+   */
   def premises(derivation: Derivation): List[Kernel.Thm] = derivation match {
+    case Citation(_, fact) => List(fact)
     case Transitivity(left, right) => List(left, right)
     case Congruence(function, argument) => List(function, argument)
     case Abstraction(_, from) => List(from)
@@ -126,11 +149,15 @@ object Derivation {
    * Which one a document wants depends on what it is for. A front page telling a reader what they
    * are asked to believe wants `Theory.axioms`, because they accept all three whether anything
    * spends them or not. A spec pinning what a derivation cost wants this one.
+   *
+   * It answers for the whole proof, citations included, and walks only the proof's own part: what
+   * a cited fact rests on is the [[Citation]]'s to know, and it knows it after the first asking.
    */
   def axiomsOf(theorem: Kernel.Thm): Set[Term] =
-    walk(theorem).foldLeft(Set.empty[Term]) { (found, node) =>
+    own(theorem).foldLeft(Set.empty[Term]) { (found, node) =>
       node.derivation match {
         case Axiom(proposition) => found + proposition
+        case citation: Citation => found ++ citation.axioms
         case _ => found
       }
     }
@@ -152,6 +179,11 @@ object Derivation {
    *
    * Only a node with no hypotheses counts. An assumed proposition that happens to read like a lemma
    * is an assumption, and counting it would say a proof rested on something it had asked for.
+   *
+   * **The one walk here that goes through a [[Citation]]**, and it pays the whole graph for it. A
+   * fact used inside a cited fact is used by the proof, and the facts a caller asks about are any
+   * named collection rather than the published ones, so no summary kept on the citation could
+   * answer for them. Its callers are documents and a discovery loop, not the report on every proof.
    */
   def restingOn(theorem: Kernel.Thm, wanted: Set[Term]): Set[Term] =
     walk(theorem).foldLeft(Set.empty[Term]) { (found, node) =>
@@ -246,8 +278,16 @@ object Derivation {
     case _ => Set.empty
   }
 
-  /** How many inferences a proof holds, counting a step used twice once. */
-  def size(theorem: Kernel.Thm): Int = walk(theorem).size
+  /**
+   * How many inferences a proof holds, counting a step used twice once and a cited fact as one.
+   *
+   * **A cited fact is one inference here and not the length of its own proof**, since 2026-09-25
+   * and `docs/adr/0047`. The count is still a function of the proof and two machines still agree
+   * on it; what it counts is the proof's own work, which is what a report on it is about, where it
+   * used to count the work of every development underneath as well. A fact asked about directly is
+   * not cited by anything, so its own proof is what is counted.
+   */
+  def size(theorem: Kernel.Thm): Int = own(theorem).size
 
   /**
    * How many inferences of each rule a proof holds, which is [[size]] taken apart.
@@ -263,15 +303,51 @@ object Derivation {
    * that is worth repairing is a question about the rewriter; whether it is **true** is this.
    *
    * Keyed by the rule's simple name, because that is what a reader of the report wants and because
-   * a key that is the class itself would make the report depend on a package name.
+   * a key that is the class itself would make the report depend on a package name. A cited fact
+   * is a `Citation` here, for the reason [[size]] gives.
    */
   def census(theorem: Kernel.Thm): Map[String, Int] =
-    walk(theorem)
+    own(theorem)
       .groupBy(_.derivation.getClass.getSimpleName.stripSuffix("$"))
       .map { case (rule, nodes) => (rule, nodes.size) }
 
   /**
-   * Every node of a proof, each reached once.
+   * What [[foreignTo]] found, with the two answers separate.
+   *
+   * `clean` rather than `isEmpty`, because a caller reading `foreign.isEmpty` is one negation away
+   * from reading it backwards, and the two fields are what a caller reports when it is not.
+   */
+  final case class Foreign(axioms: Set[Term], constants: Set[Term]) {
+    def clean: Boolean = axioms.isEmpty && constants.isEmpty
+  }
+
+  /** Every node of a proof, each reached once, through every citation. */
+  private def walk(theorem: Kernel.Thm): Vector[Kernel.Thm] = reach(theorem, premises)
+
+  /**
+   * Every node of a proof's own part: each reached once, and a cited fact reached as its citation.
+   *
+   * The root is the exception. A theorem that is itself a citation is a published fact asked about
+   * by name, and what is being asked about is its proof, so the walk starts at what it cites; the
+   * alternative answers "one" for every fact in the library.
+   */
+  private def own(theorem: Kernel.Thm): Vector[Kernel.Thm] = {
+    @tailrec
+    def uncited(current: Kernel.Thm): Kernel.Thm = current.derivation match {
+      case Citation(_, fact) => uncited(fact)
+      case _ => current
+    }
+    reach(
+      uncited(theorem),
+      derivation => derivation match {
+        case Citation(_, _) => Nil
+        case _ => premises(derivation)
+      }
+    )
+  }
+
+  /**
+   * Every node reachable through `below`, each reached once.
    *
    * **By identity and not by equality**, which is the whole of why this is written out rather than
    * folded into a `Set`. Two theorems are equal when they are the same sequent, whatever derived
@@ -284,17 +360,10 @@ object Derivation {
    * `@tailrec` is what keeps that property visible: the compiler rejects the definition if the
    * recursion is ever moved out of tail position, where the previous `while` could only be read.
    */
-  /**
-   * What [[foreignTo]] found, with the two answers separate.
-   *
-   * `clean` rather than `isEmpty`, because a caller reading `foreign.isEmpty` is one negation away
-   * from reading it backwards, and the two fields are what a caller reports when it is not.
-   */
-  final case class Foreign(axioms: Set[Term], constants: Set[Term]) {
-    def clean: Boolean = axioms.isEmpty && constants.isEmpty
-  }
-
-  private def walk(theorem: Kernel.Thm): Vector[Kernel.Thm] = {
+  private def reach(
+    theorem: Kernel.Thm,
+    below: Derivation => List[Kernel.Thm]
+  ): Vector[Kernel.Thm] = {
     val seen = java.util.Collections.newSetFromMap(
       new java.util.IdentityHashMap[Kernel.Thm, java.lang.Boolean]
     )
@@ -304,7 +373,7 @@ object Derivation {
       pending match {
         case Nil => order
         case current :: rest =>
-          if (seen.add(current)) step(premises(current.derivation) ++ rest, order :+ current)
+          if (seen.add(current)) step(below(current.derivation) ++ rest, order :+ current)
           else step(rest, order)
       }
 

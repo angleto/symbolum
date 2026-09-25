@@ -116,7 +116,7 @@ class EssaySpec extends AnyFlatSpec with Matchers {
     withClue("ADD_SYM is no longer held in one inference, so it cannot exercise the singular: ") {
       singleSize shouldBe 1
     }
-    single should include("1 inference.")
+    single should include("1 inference of its own")
     single should not include "1 inferences"
 
     // The plural, on the same page and the same noun, so a helper that went singular everywhere
@@ -128,7 +128,7 @@ class EssaySpec extends AnyFlatSpec with Matchers {
     withClue(s"$$Magnitude.Triangle is held in $manySize inference(s), so it cannot exercise the plural: ") {
       manySize should be > 1
     }
-    many should include(s"$manySize inferences.")
+    many should include(s"$manySize inferences of its own")
   }
 
   it should "condition the step count the same way, on both sides" in {

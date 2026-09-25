@@ -621,7 +621,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
         s"$digits inference steps by `Derivation.size`", // live, asserted above
         s"| `SELECT` | $digits |"), // the generated table, `GuideSpec`
       "docs/theorems.md" -> Vector(
-        s"$digits inferences. The account above describes them"), // generated, `TheoremsSpec`
+        s"$digits inferences of its own, a published fact it uses"), // generated, `TheoremsSpec`
       "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Logic.scala" -> Vector(
         s"in $digits steps")) // live, asserted above
 

@@ -50,11 +50,27 @@ class SerialisedSpec extends AnyFlatSpec with Matchers {
   private val cases: Vector[Replayed.Entry] = Replayed.entries
 
   "Every proof" should "check when it arrives as text and nothing else" in {
+    // Every step, cited facts' included: the text holds a cited fact's proof under its citation,
+    // so what is checked is the whole graph, which the in-process reading also walks. The report's
+    // own count stops at a citation since `docs/adr/0047` and is the smaller of the two.
     cases.foreach { entry =>
       withClue(s"${entry.label}: ") {
-        checked(entry).steps shouldBe Derivation.size(entry.theorem)
+        val inProcess = Check.proof(entry.theorem, entry.theory) match {
+          case holds: Check.Holds => holds.steps
+          case other => fail(s"$other")
+        }
+        checked(entry).steps shouldBe inProcess
+        checked(entry).steps should be >= Derivation.size(entry.theorem)
       }
     }
+  }
+
+  it should "include proofs that cite a published fact, so the citation is checked as text" in {
+    // The guard against the test above passing because no proof here crosses a boundary.
+    val citing = cases.filter(entry => Proof.write(entry.theorem).linesIterator.exists(_.contains(" cite ")))
+
+    citing should not be empty
+    info(s"${citing.size} of ${cases.size} cite a published fact")
   }
 
   it should "reach the same axioms it reaches in this process" in {

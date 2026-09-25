@@ -38,8 +38,11 @@ import garden.xeno.symbolum.logic.*
  */
 final class Positivity private (
   val arithmetic: Arithmetic,
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   val reals: RealTheory = arithmetic.reals
 

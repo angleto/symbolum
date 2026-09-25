@@ -132,7 +132,7 @@ built it, because `p` does not occur in `|- F`; `SoundnessAttackSpec` asserts th
 than describing it, beside the axiom half answering no to both.
 
 So a method on `Theory` would have put the check inside the trusted base, for something that must
-not be trusted. `DocumentationSpec` bounds that base at 1200 lines and measures it over **the four
+not be trusted. `DocumentationSpec` bounds that base at 1220 lines, 1200 when this was decided, and measures it over **the four
 files a defect in which can produce a false theorem**, which is not the same as the directory:
 `Kernel.scala`, `Term.scala`, `Theory.scala` and `Type.scala`. `Derivation.scala` is one of the four
 that are out, classified as record and display, and the classification is checked rather than
@@ -145,10 +145,11 @@ Measured at `fb3f45a`: the four come to **1184 lines against the bound of 1200**
 sixteen and a method of this repository's comment density does not fit in it. Nor does moving the
 check to a new file in that directory buy the room, which is worth saying because it is the obvious
 escape: a second assertion pins the directory's contents to the union of the two lists, so a file
-nobody has classified fails that one instead. The bound has never moved — raised to 1400 once, on
-2026-09-10, and put back the same day, and the two records that spent against it deliberately,
-`0006` for the type definition rule and `0008` for the identity on constants, spent lines rather
-than raising it. Paying for this check means a third such record, which is a cost the table above
+nobody has classified fails that one instead. The bound had never moved when this was decided —
+raised to 1400 once, on 2026-09-10, and put back the same day, and the two records that spent
+against it deliberately, `0006` for the type definition rule and `0008` for the identity on
+constants, spent lines rather than raising it. It has moved once since, in `0047`, which raised it
+to 1220 for the citation rule. Paying for this check means a third such record, which is a cost the table above
 says option 3 does not have.
 
 **This decision is not deferred again.** The lesson of how this record came to be needed is that a

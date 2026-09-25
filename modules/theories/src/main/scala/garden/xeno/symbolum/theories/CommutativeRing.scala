@@ -52,9 +52,12 @@ import garden.xeno.symbolum.logic.*
 final class CommutativeRing private (
   val operations: CommutativeRing.Operations,
   val logic: Logic,
-  val facts: Map[String, Kernel.Thm],
+  published: Map[String, Kernel.Thm],
   val normalisation: Rewrite.Conversion
 ) {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** `|- left = right` for an identity of the structure, or a refusal naming what stopped. */
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
