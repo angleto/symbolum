@@ -384,7 +384,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 565 with uniform continuity's three, the same day, derived before the run: `a <= b`, the
     // continuity on `[a, b]` and `0 < e`. Tip plus this branch's delta.
     // 583 with the gauge integral's eighteen, the same day. Tip plus this branch's delta.
-    proposals.size shouldBe 583
+    // 586 with the three estimates near zero, one each, the same day.
+    proposals.size shouldBe 586
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1297,7 +1298,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // name `fine_sum`, `has_integral` or `derivative`, which no procedure settles, and six
     // substitutions of the order, the sum and the product. The twenty-fourth is in `unreadable`.
     // Tip plus this branch's delta, the delta probed on the tree before uniform continuity landed.
-    open shouldBe 484
+    // 495 with all eleven residues of the sine's and the cosine's derivatives, the same day, read
+    // off a probe of `Propose.audit` filtered by `from`: the three estimates' weakenings, each
+    // about `cos`, `sin` or a sum of the exponential's terms, which no procedure has a value for,
+    // and eight substitutions of the order, the sum and the product in the two addition formulas
+    // and the two estimates. None reached `unreadable`.
+    open shouldBe 495
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1964,7 +1970,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // three of `NUM_PRIME_DIVIDES_CHOOSE` and one of `NUM_PRIME_NOT_DIVIDES_FACT` keep `NUM_LT`,
     // `NUM_FRESHMAN`'s keeps `SUC` and `NUM_DIVIDES_SUM`'s `NUM_SUM`; `NUM_FERMAT`'s and the other
     // of the factorial's name nothing on it. None is refuted at a point, so `after` stays.
-    aboutNumbers.size shouldBe 215
+    // 216 with `EXP_TAIL_BOUND`'s weakening, 2026-09-25, which keeps a `Sum` of `Power`s at `SUC`
+    // indices and so is on this list; the other ten residues of the sine's and the cosine's
+    // derivatives name `sin`, `cos` and `abs` and nothing on it. Found by the run and not predicted
+    // before it: the probe that placed the buckets was read for the buckets and not for this list.
+    aboutNumbers.size shouldBe 216
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

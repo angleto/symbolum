@@ -834,7 +834,11 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`NUM_FACT` or a `Power` standing and the refusal is `Ring`'s. `Rewrite.inTheorem`, through " +
         "a one-rule helper, moves a ground equation into a theorem, and every result is handed to " +
         "`Rules.mp` against a schematic implication, to `existsElim` or to the development's check " +
-        "of each fact against its published text: a half-rewritten theorem matches none of them"),
+        "of each fact against its published text: a half-rewritten theorem matches none of them. " +
+        "The sine's and the cosine's estimates near zero add three walks of `Rewrite.rewrite`: one takes " +
+        "a series' first term to its value and hands it to `Ring` against `1` or `h`, and two open " +
+        "an index over successors on each side of a termwise equation and are joined by " +
+        "`Conv.trans`, which refuses two sides that did not meet"),
     // The file the third door exists for, and the only caller that reaches the rewriter through
     // `Recorder` rather than directly. It holds no `Rewrite.rewrite(` and no
     // `Rewrite.inTheorem(`, so it was invisible to this scan while the scan read two doors, which
@@ -1038,7 +1042,11 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "the identity and is handed to `Ring` against the sum of the two squares, with the same " +
         "effect. And the two `Rewrite.inTheorem` calls respell a definition's index: what comes " +
         "out is compared with the partial sums of the convergence it is joined to before anything " +
-        "is read off it, so a half-respelled sequence is refused by name"),
+        "is read off it, so a half-respelled sequence is refused by name. The addition formulas add " +
+        "three walks of the second kind: two open a length over successors and are joined by " +
+        "`Conv.trans` to an equation built without the rewriter, and one opens the sine's odd length " +
+        "and is carried by congruence into a partial sum that `Rules.mp` must then find in the parity " +
+        "split's own statement, which refuses a length still standing"),
     "Transcendental.scala" ->
       ("three, and none of them is left to the limit to report. One is `Rewrite.rewrite` on the " +
         "third partial sum of the exponential's series, which the recurrences of the sum, the " +

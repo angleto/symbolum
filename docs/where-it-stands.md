@@ -1158,6 +1158,21 @@ equalities, and keeps the definition from being empty four ways: Cousin detached
 gauge, the theorem detached at `y * y` on `[0, 1]`, a wrong value refused, and uniqueness refuted
 without `a <= b` on `[1, 0]`, where there are no fine sums and every number is an integral.
 
+**The sine and the cosine are differentiable since the same day, and what stood in front of that was
+the addition formulas.** `Transcendental.COS_ADD` and `SIN_ADD` are `SIN_COS_SQUARED`'s argument at a
+second point: `EXP_CONVOLUTION` at `(x, y)` rather than at `(x, 0 - x)`, split by parity, whose even
+and odd places are the terms of the Cauchy products of the two series at `x` against the two at
+`y`, with the cosine's one index apart as in the square and the sine's not shifted. The general
+point is simpler than the special one: at `0 - x` a partner's power had to be carried back to `x`
+with `POWER_NEG_DOUBLE`, and at `y` it is the same atom on both sides, which `TranscendentalSpec`
+asserts by checking that neither formula rests on it. `Logarithm.COS_NEAR_ONE` and `SIN_NEAR_LINE`
+put `cos h - 1` and `sin h - h` under `h * h` for `abs h <= 1 / 2`, their terms being the
+exponential's at the even and the odd places under `EXP_TAIL_BOUND`; `Derivative.DERIVATIVE_SIN` and
+`DERIVATIVE_COS` follow, with `SIN_COS_SQUARED` keeping the coefficients at most one. The radius in
+the two estimates is the proof's and not the statement's: `1 - cos h <= h * h / 2` holds everywhere,
+so nothing refutes them without it, and what `LogarithmSpec` refutes instead is `COS_ADD` with the
+other sign, at one half, through `sin (1 / 2) >= 1 / 4`.
+
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
 say something: the least upper bound `s` of the non-negative numbers whose square is at most `x`
