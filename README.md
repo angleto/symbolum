@@ -202,6 +202,16 @@ second regenerates two files under `docs/`, so anybody who resolved it would get
 writes into their working directory; and the third is read only by this repository's own checks,
 being the one place that decides what in a source here is a comment.
 
+**Which build is running is read from the classes, not from a checkout.** Every module carries
+`META-INF/symbolum/build.properties`: the module, the version, the commit its tree was at, the build
+inputs that differed from that commit, and whether a coverage plugin had rewritten the classes.
+`garden.xeno.symbolum.kernel.Build.reproducibleCommit()` answers with the one commit every module on
+the classpath was built from, or with every reason there is none: a module dirty, instrumented or
+without a commit, two modules naming different commits, or no kernel at all. A certificate that says
+which kernel checked it should take the answer from there, because a `git rev-parse` on the checkout
+describes the tree and not the classes. What it cannot see is a class left over from an earlier tree
+by an incremental build, so a certifying run belongs in a checkout that has not been built before.
+
 ## The distribution
 
 What a person installs, as against what a build tool resolves. `symbolum-7.0.1.tgz` is attached to

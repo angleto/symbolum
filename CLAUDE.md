@@ -386,8 +386,9 @@ to live. `WhatAClaimCosts` is the first one that does.
 Everything this system asks anyone to believe, and no one development is asked for all of it:
 
 1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1200 lines. The
-   directory also holds a printer, the refusal surface and the proof record, which are not counted
-   and cannot construct a theorem, which a test checks rather than claims. `Kernel.Thm` is a class
+   directory also holds a printer, the refusal surface, the proof record and the reader of which
+   commit the classes were built from, which are not counted and cannot construct a theorem, which
+   a test checks rather than claims. `Kernel.Thm` is a class
    with a private constructor rather than an opaque type, which erases to what it wraps:
    `TrustBoundaryTwinSpec` casts the underlying pair and gets a `ClassCastException` where it used
    to get a theorem out of nothing. Ten primitive inference rules construct a theorem, and three
