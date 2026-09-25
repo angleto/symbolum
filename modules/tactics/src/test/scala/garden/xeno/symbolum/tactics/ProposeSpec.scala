@@ -361,7 +361,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // each of six, and none on the three values in `Transcendental`.
     // 472 with the polynomial-times-geometric criteria's six, 2026-09-25, derived before the run:
     // one antecedent on each of the six facts.
-    proposals.size shouldBe 472
+    // 491 with resolution as a link, the same day, and the **nineteen** were derived before the
+    // run: six on `RES_STEP_SOUND_OF_RESOLVENT`, four on `RES_STEP_SOUND`, two each on `RES_SOUND`
+    // and `RES_REFUTES`, one each on `RES_EMPTY_UNSATISFIABLE`, the width's bound and least bound,
+    // and the two facts about a refutation; the width's two equations and its attainment carry
+    // none. Tip plus this branch's delta.
+    proposals.size shouldBe 491
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -585,7 +590,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 82 with ONE of the logarithm's residues, read off a probe of `Propose.audit` rather than
     // predicted: `EXP_INJECTIVE` weakens to `!x y. x = y`, false at any two distinct reals and
     // written in nothing but equality. The other twenty-four are in the two buckets below.
-    decidedFalse shouldBe 82
+    // 83 with ONE of resolution's nineteen, read off the run, and which one is derived from the
+    // constants rather than probed: `RES_REFUTATION_NONEMPTY` weakens to `!k v s inputs m. 0 < m`,
+    // false at `m = 0` and written in `NUM_LT` alone. Every other one of the nineteen names a
+    // `RES_` constant or applies a function variable, and no model here reads either.
+    decidedFalse shouldBe 83
 
     // Most of those come with the point they fail at, and some do not: the claim is decided false
     // by quantifier elimination and the abduction that would name a point comes back with none.
@@ -726,7 +735,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 77, moving with `decidedFalse` by the logarithm's one false residue, `!x y. x = y`, which the
     // search refutes at two distinct reals. **Not moved in the same pass as `decidedFalse`**, and
     // found the way the paragraph above says it is found: the next run, in which this line ran.
-    withAPoint shouldBe 77
+    // 78 with resolution's one false residue, `!k v s inputs m. 0 < m`, refuted at `m = 0`. **Not
+    // moved in the same pass as `decidedFalse` either**, and found the same way, on the second run.
+    withAPoint shouldBe 78
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1225,7 +1236,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // refuted here and is not**: it is false at `x = -1, n = 1`, the audit's search does not find
     // that point, and it lands at the order's address, taken and not settled. The sampler over the
     // naturals' model does find it, and `after` below is where that shows.
-    open shouldBe 392
+    // 393 with one of resolution's nineteen, read off the run and not identified. Tip plus this
+    // branch's delta, and the delta was measured on the tree before the extreme value theorem.
+    open shouldBe 393
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1569,7 +1582,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // Plus three, minus one.
     // 106 with `CONVERGES_BOUNDED`'s residue, `!s l. ?B. !n. abs (s n) <= B`, which is false and an
     // existential no address takes. Predicted and met.
-    unreadable shouldBe 106
+    // 123 with seventeen of resolution's nineteen, 2026-09-25, read off the second run: one is in
+    // `decidedFalse` and one in `open`, and the other seventeen each name a `RES_` constant or
+    // apply a function variable, which no procedure here addresses. **It sat behind `open` again**,
+    // so the pass that moved `open` did not reach it. Tip plus this branch's delta.
+    unreadable shouldBe 123
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -1866,7 +1883,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `after` below does not move.
     // 190 with five of the six polynomial-times-geometric residues, which write `Power`, `Sum` or
     // `real_of_num`; `CONVERGES_BOUNDED`'s writes none of `named`. Measured by the probe.
-    aboutNumbers.size shouldBe 190
+    // 209 with all nineteen of resolution's, 2026-09-25, derived before the run: every one of them
+    // writes `NUM_LT` or `NUM_LE`, both on `named`, since a clause is indexed by `num` throughout.
+    // Seventeen keep a `NUM_LT`; the width's bound and least bound lose theirs with the antecedent
+    // and keep the `NUM_LE` of their conclusion.
+    aboutNumbers.size shouldBe 209
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -1964,7 +1985,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 58 with `POWER_NONNEG`'s residue, `!x n. 0 <= Power x n`, refuted at a point by this sampler
     // where the audit's search above did not refute it: the model of the naturals computes `Power`
     // at a numeral exponent, which is the difference this pair of counts exists to show.
-    after shouldBe 58
+    // 59 with resolution's `!k v s inputs m. 0 < m`, which the sampler refutes at `m = 0`: the same
+    // residue as `decidedFalse`'s and `withAPoint`'s, so the three move together here, and this
+    // line sat behind `aboutNumbers` on the first run.
+    after shouldBe 59
   }
 
   /* ------------------------------------------------------ the false positive it produced */

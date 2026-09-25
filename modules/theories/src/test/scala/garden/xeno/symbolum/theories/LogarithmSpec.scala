@@ -44,7 +44,10 @@ class LogarithmSpec extends AnyFlatSpec with Matchers {
     logarithm.theory.constants shouldBe chain.continuity.theory.constants
     logarithm.theory.axioms shouldBe chain.continuity.theory.axioms
     logarithm.theory.typeOperators shouldBe chain.continuity.theory.typeOperators
-    chain.widest shouldBe chain.continuity
+    // That the three constants it is about are reachable from the chain's end, which is what this
+    // line is for. It said `chain.widest shouldBe chain.continuity` until 2026-09-25, when
+    // `Resolving` became a link above it; which link is last is `ChainSpec`'s to pin.
+    chain.widest.theory.constants.keySet should contain allElementsOf chain.continuity.theory.constants.keySet
   }
 
   it should "state every fact as it is written, with nothing assumed" in {

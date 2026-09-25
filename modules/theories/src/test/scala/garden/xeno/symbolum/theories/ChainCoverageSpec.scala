@@ -94,9 +94,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `limit`. It was written first beside the chain, and the question this spec asked is what
     // moved it: a truth predicate for the embedded arithmetic is not one investigation's object.
     "Truth" -> InTheChain,
-    // Beside the chain: soundness of a resolution step is a theorem ABOUT a proof system, and the
-    // development declares no type, no constant and no definition. `ResolvingSpec` asserts that.
-    "Resolving" -> DeclaresNothing,
+    // Beside the chain and declaring nothing until 2026-09-25, and a link since: a statement about
+    // every refutation of a family is written with `RES_REFUTATION` and `RES_WIDTH`, which have to
+    // be where the links above can see them. `ResolvingSpec` asserts the four constants.
+    "Resolving" -> InTheChain,
     "Primes" -> InTheChain,
     "Limit" -> InTheChain,
     "Transcendental" -> InTheChain,

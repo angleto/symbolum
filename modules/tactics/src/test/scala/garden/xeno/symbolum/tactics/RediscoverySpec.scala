@@ -317,7 +317,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // values in `Transcendental`, which are bare convergences.
     // 472 with the polynomial-times-geometric criteria, 2026-09-25, derived before the run: one
     // antecedent on each of the six.
-    propose.weakenings.size shouldBe 472
+    // 491 with resolution as a link, the same day, derived before the run: nineteen antecedents
+    // over twelve facts, which `ProposeSpec` lists one by one. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 491
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
