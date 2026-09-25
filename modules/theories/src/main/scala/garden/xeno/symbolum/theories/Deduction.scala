@@ -314,6 +314,33 @@ object Deduction {
    */
   val SumCongruence: String = "NUM_PROV_ADD_CONG"
 
+  /**
+   * A sum's right summand replaced by anything the embedded theory proves equal to it.
+   *
+   * `|- !t u w. ... ==> NUM_PROV (t = u) ==> NUM_PROV (w + t = w + u)`
+   *
+   * [[SumCongruence]] with the hole on the other side, and it is not that one read through
+   * commutativity: `x + y = y + x` is a theorem of PA only by induction, and nothing here derives
+   * it. What wanted it is evaluating a closed term, where both summands of a sum are replaced by
+   * their numerals, one after the other.
+   */
+  val SumCongruenceRight: String = "NUM_PROV_ADD_CONG_RIGHT"
+
+  /** [[SumCongruence]] for a product: `NUM_PROV (t = u) ==> NUM_PROV (t * w = u * w)`. */
+  val ProductCongruence: String = "NUM_PROV_MUL_CONG"
+
+  /** [[SumCongruenceRight]] for a product: `NUM_PROV (t = u) ==> NUM_PROV (w * t = w * u)`. */
+  val ProductCongruenceRight: String = "NUM_PROV_MUL_CONG_RIGHT"
+
+  /**
+   * `|- !t. NUM_TERM t ==> NUM_PROV (t = t)`
+   *
+   * The reflexivity axiom of `NUM_LOGIC` as a fact about provability, which every derivation here
+   * reached for as two lines of its own. Unlike the congruences it asks nothing of `t` but being a
+   * term: the axiom is a scheme over every term, closed or not.
+   */
+  val Reflexivity: String = "NUM_PROV_REFL"
+
   /** PA's first axiom for multiplication, at a closed term. [[AdditionAtZero]]'s counterpart. */
   val MultiplicationAtZero: String = "NUM_PROV_MUL_ZERO"
 
@@ -398,6 +425,22 @@ object Deduction {
         "NUM_TERM w ==> NUM_CLOSED w ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
         "(NUM_CODE 3 (NUM_PAIR t w)) (NUM_CODE 3 (NUM_PAIR u w))))"),
+    SumCongruenceRight ->
+      ("!t:num u:num w:num. NUM_TERM t ==> NUM_CLOSED t ==> NUM_TERM u ==> NUM_CLOSED u ==> " +
+        "NUM_TERM w ==> NUM_CLOSED w ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 3 (NUM_PAIR w t)) (NUM_CODE 3 (NUM_PAIR w u))))"),
+    ProductCongruence ->
+      ("!t:num u:num w:num. NUM_TERM t ==> NUM_CLOSED t ==> NUM_TERM u ==> NUM_CLOSED u ==> " +
+        "NUM_TERM w ==> NUM_CLOSED w ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 4 (NUM_PAIR t w)) (NUM_CODE 4 (NUM_PAIR u w))))"),
+    ProductCongruenceRight ->
+      ("!t:num u:num w:num. NUM_TERM t ==> NUM_CLOSED t ==> NUM_TERM u ==> NUM_CLOSED u ==> " +
+        "NUM_TERM w ==> NUM_CLOSED w ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR t u)) ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
+        "(NUM_CODE 4 (NUM_PAIR w t)) (NUM_CODE 4 (NUM_PAIR w u))))"),
+    Reflexivity -> "!t:num. NUM_TERM t ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR t t))",
     MultiplicationAtZero ->
       ("!t:num. NUM_TERM t ==> NUM_CLOSED t ==> " +
         "NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR t (NUM_CODE 1 0))) (NUM_CODE 1 0)))"),
@@ -441,6 +484,12 @@ object Deduction {
               builder.checked(AdditionAtSuccessor, builder.additionAtSuccessor),
             NumeralAddition -> builder.checked(NumeralAddition, builder.numeralAddition),
             SumCongruence -> builder.checked(SumCongruence, builder.sumCongruence),
+            SumCongruenceRight ->
+              builder.checked(SumCongruenceRight, builder.sumCongruenceRight),
+            ProductCongruence -> builder.checked(ProductCongruence, builder.productCongruence),
+            ProductCongruenceRight ->
+              builder.checked(ProductCongruenceRight, builder.productCongruenceRight),
+            Reflexivity -> builder.checked(Reflexivity, builder.reflexivity),
             MultiplicationAtZero ->
               builder.checked(MultiplicationAtZero, builder.multiplicationAtZero),
             MultiplicationAtSuccessor ->
@@ -1278,7 +1327,35 @@ object Deduction {
     }
 
     /** [[SumCongruence]]. [[successorCongruence]] with a binary hole, so the other summand idles. */
-    lazy val sumCongruence: Kernel.Thm = {
+    lazy val sumCongruence: Kernel.Thm =
+      binaryCongruence(objSum, sumIsTerm, acrossSum, onLeft = true)
+
+    /** [[SumCongruenceRight]], the same hole on the other side. */
+    lazy val sumCongruenceRight: Kernel.Thm =
+      binaryCongruence(objSum, sumIsTerm, acrossSum, onLeft = false)
+
+    /** [[ProductCongruence]], the same hole at the other tag. */
+    lazy val productCongruence: Kernel.Thm =
+      binaryCongruence(objProd, productIsTerm, acrossProd, onLeft = true)
+
+    /** [[ProductCongruenceRight]]. */
+    lazy val productCongruenceRight: Kernel.Thm =
+      binaryCongruence(objProd, productIsTerm, acrossProd, onLeft = false)
+
+    /**
+     * One operand of a binary term replaced by a provably equal one, the other operand idling.
+     *
+     * The four congruences differ in the constructor and in which side the hole is on, and in
+     * nothing else: the hole is `op(t, w) = op(v0, w)` or `op(w, t) = op(w, v0)`, one side already
+     * what it will be and the other where the replacement goes, and `w` comes back untouched in
+     * both instances because it is closed.
+     */
+    private def binaryCongruence(
+      operation: (Term, Term) => Term,
+      operationIsTerm: Kernel.Thm,
+      across: (Term, Term, Term, Term, Kernel.Thm, Kernel.Thm) => Kernel.Thm,
+      onLeft: Boolean
+    ): Kernel.Thm = {
       val t = Term.variable("t", numbers)
       val u = Term.variable("u", numbers)
       val w = Term.variable("w", numbers)
@@ -1291,45 +1368,50 @@ object Deduction {
       val closedW = assumed(isClosed(w))
       val premise = assumed(isProvable(objEq(t, u)))
 
-      def sumOf(a: Term, b: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm =
+      def built(x: Term): Term = if (onLeft) operation(x, w) else operation(w, x)
+      def builtIsTerm(x: Term, xIsTerm: Kernel.Thm): Kernel.Thm = {
+        val (first, second, firstIsTerm, secondIsTerm) =
+          if (onLeft) (x, w, xIsTerm, termW) else (w, x, termW, xIsTerm)
         force(
-          rules.specAll(sumIsTerm, List(a, b)).flatMap(rules.mp(_, left)).flatMap(rules.mp(_, right)))
+          rules
+            .specAll(operationIsTerm, List(first, second))
+            .flatMap(rules.mp(_, firstIsTerm))
+            .flatMap(rules.mp(_, secondIsTerm)))
+      }
 
       val variableIsATerm = force(rules.spec(index, variableIsTerm))
-
-      // The hole is `t + w = v0 + w`: the left side is already what it will be, the right side is
-      // where the replacement goes, and `w` is the summand that must come back untouched on both.
-      val hole = objEq(objSum(t, w), objSum(objVar(index), w))
+      val hole = objEq(built(t), built(objVar(index)))
       val holeIsFormula = force(
         rules
-          .specAll(formulaOfEquality, List(objSum(t, w), objSum(objVar(index), w)))
-          .flatMap(rules.mp(_, sumOf(t, w, termT, termW)))
-          .flatMap(rules.mp(_, sumOf(objVar(index), w, variableIsATerm, termW))))
+          .specAll(formulaOfEquality, List(built(t), built(objVar(index))))
+          .flatMap(rules.mp(_, builtIsTerm(t, termT)))
+          .flatMap(rules.mp(_, builtIsTerm(objVar(index), variableIsATerm))))
 
-      def instanceAt(replacement: Term, replacementIsTerm: Kernel.Thm): Kernel.Thm =
+      /** Substituting into `built(x)`, given what substituting into `x` gives. */
+      def acrossBuilt(replacement: Term, x: Term, xDone: Kernel.Thm): Kernel.Thm = {
+        val wStays = idle(index, replacement, w, termW, closedW)
+        if (onLeft) across(index, replacement, x, w, xDone, wStays)
+        else across(index, replacement, w, x, wStays, xDone)
+      }
+
+      def instanceAt(replacement: Term): Kernel.Thm =
         acrossEquality(
-          index, replacement, objSum(t, w), objSum(objVar(index), w),
-          acrossSum(
-            index, replacement, t, w,
-            idle(index, replacement, t, termT, closedT),
-            idle(index, replacement, w, termW, closedW)),
-          acrossSum(
-            index, replacement, objVar(index), w,
-            filled(index, replacement),
-            idle(index, replacement, w, termW, closedW)))
+          index, replacement, built(t), built(objVar(index)),
+          acrossBuilt(replacement, t, idle(index, replacement, t, termT, closedT)),
+          acrossBuilt(replacement, objVar(index), filled(index, replacement)))
 
       val opened = replaced(
         index, t, u, hole, holeIsFormula, termT, termU, closedT, closedU, premise,
-        instanceAt(t, termT), instanceAt(u, termU))
+        instanceAt(t), instanceAt(u))
 
-      val sumTW = objSum(t, w)
+      val start = built(t)
       val reflexivity = force(
         rules
-          .specTo(reflexive, imply(isTerm(sumTW), isLogical(objEq(sumTW, sumTW))))
-          .flatMap(rules.mp(_, sumOf(t, w, termT, termW))))
+          .specTo(reflexive, imply(isTerm(start), isLogical(objEq(start, start))))
+          .flatMap(rules.mp(_, builtIsTerm(t, termT))))
       val reached = detach(
-        objEq(sumTW, sumTW), objEq(sumTW, objSum(u, w)),
-        opened, axiom(objEq(sumTW, sumTW), reflexivity))
+        objEq(start, start), objEq(start, built(u)),
+        opened, axiom(objEq(start, start), reflexivity))
 
       force(
         rules
@@ -1341,6 +1423,20 @@ object Deduction {
           .flatMap(rules.disch(isClosed(t), _))
           .flatMap(rules.disch(isTerm(t), _))
           .flatMap(rules.genAll(_, List(t, u, w))))
+    }
+
+    /** [[Reflexivity]]: the scheme at `t`, and one step from an axiom to a theorem. */
+    lazy val reflexivity: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val termT = assumed(isTerm(t))
+      val logical = force(
+        rules
+          .specTo(reflexive, imply(isTerm(t), isLogical(objEq(t, t))))
+          .flatMap(rules.mp(_, termT)))
+      force(
+        rules
+          .disch(isTerm(t), axiom(objEq(t, t), logical))
+          .flatMap(rules.gen(t, _)))
     }
 
     /** [[MultiplicationAtZero]]. [[additionAtZero]] at the other tag, and the answer is `0`. */

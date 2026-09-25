@@ -665,12 +665,17 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // six facts under six names, none shared. `CLAUDE.md`'s figures move by **five** and **five**:
     // every fact but `DERIVATIVE_ID`, which binds one `x`, binds two or more, and each of those five
     // binds two reals among them. Tip plus this branch's delta.
-    // 707 and 704 with the mean value theorem, the same day, derived before the run: four facts
+    // 709 and 706 with the closed terms, the same day, tip plus this delta, derived before the
+    // run: six facts under six names, none shared, four in `Deduction` and two in `Truth`. `CLAUDE.md`'s figures move by
+    // **five** and **four**: the three new congruences bind `t`, `u` and `w`, all codes;
+    // `NUM_PROV_TRUE_EQ` binds the environment and two codes; `NUM_PROV_VALUE` binds the
+    // environment and one code, which share no type; `NUM_PROV_REFL` binds one.
+    // 713 and 710 with the mean value theorem, the same day, derived before the run: four facts
     // under four names, none shared, `CONTINUOUS_LINEAR` in `Continuity` and three in `Derivative`.
     // `CLAUDE.md`'s figures move by **four** and **four**: each binds two functions, or two reals,
-    // among two or more leading quantifiers.
-    library.entries.size shouldBe 707
-    library.names.distinct.size shouldBe 704
+    // among two or more leading quantifiers. Tip plus this branch's delta.
+    library.entries.size shouldBe 713
+    library.names.distinct.size shouldBe 710
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
