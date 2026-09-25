@@ -368,7 +368,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // none. Tip plus this branch's delta.
     // 504 with the derivative's thirteen, the same day: four on each interior lemma, four on
     // `ROLLE`, one on `DERIVATIVE_NEG`. Tip plus this branch's delta.
-    proposals.size shouldBe 504
+    // 513 with the mean value theorem's nine, the same day: two each on the two linearities and on
+    // uniqueness, three on `MEAN_VALUE`.
+    proposals.size shouldBe 513
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1245,7 +1247,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // each an implication with an antecedent gone, taken at the propositional address and not
     // settled. The thirteenth, `DERIVATIVE_NEG`'s, is in `unreadable` below, and the probe is what
     // placed it, since that row sits behind this one. Tip plus this branch's delta.
-    open shouldBe 405
+    // 414 with all nine of the mean value theorem's weakenings, the same day, read off a probe of
+    // `Propose.audit` filtered by `from`: each keeps an implication and sits at the propositional
+    // address, taken and not settled, so `unreadable` below does not move.
+    open shouldBe 414
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

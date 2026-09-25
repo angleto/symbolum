@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 703 lemmas, 461 have two or more leading quantifiers and **398 of
+caller meant: of the library's 707 lemmas, 465 have two or more leading quantifiers and **402 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1802,9 +1802,12 @@ decides. `DERIVATIVE_INTERIOR_MAX` is Fermat's lemma, by `LT_TOTAL` at the slope
 at `\y. 0 - f y` through `DERIVATIVE_NEG`; and `ROLLE` takes both extremes from the extreme value
 theorem and, when neither is strictly inside, finds `f` level. One constant, no axiom, and Rolle
 costs exactly what the extreme value theorem costs, which `DerivativeSpec` asserts as an equality.
-**The mean value theorem is not here**, and what stands in front of it is written in
-`Derivative.scala`: continuity of a combination of functions, and linearity and uniqueness of the
-derivative.
+**The mean value theorem is `MEAN_VALUE`, the same day**, and it is Rolle at
+`(b - a) * f y - (f b - f a) * y`, stated with no quotient: some interior `c` and slope `m` with
+`f b - f a = m * (b - a)`. What stood in front of it was three facts and not analysis:
+`CONTINUOUS_LINEAR`, `DERIVATIVE_LINEAR` and `DERIVATIVE_UNIQUE`. The two linearities give each
+term half of the tolerance through a reciprocal of `2 * (abs p + 1)`, `Root`'s arrangement, so no
+goal has a quotient in it; the mean value theorem costs what Rolle costs.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

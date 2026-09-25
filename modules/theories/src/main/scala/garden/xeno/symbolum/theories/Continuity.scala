@@ -122,9 +122,9 @@ object Continuity {
   /**
    * `|- !f x. continuous f x ==> continuous (\y. 0 - f y) x`
    *
-   * The one fact about combining continuous functions anything here has needed: [[AttainsMinimum]]
-   * is [[AttainsMaximum]] at the negation. A sum, a product and a quotient are not here, because
-   * nothing has asked for them.
+   * The first fact about combining continuous functions anything here needed: [[AttainsMinimum]] is
+   * [[AttainsMaximum]] at the negation. [[Linear]] is the general one since 2026-09-25; this stays
+   * because it is what the minimum is written with, and is shorter than that one at `-1` and `0`.
    */
   val Negation: String = "CONTINUOUS_NEG"
 
@@ -156,6 +156,17 @@ object Continuity {
    */
   val AttainsMinimum: String = "CONTINUOUS_ATTAINS_MIN"
 
+  /**
+   * `|- !f g x p q. continuous f x ==> continuous g x ==> continuous (\y. p * f y + q * g y) x`
+   *
+   * A linear combination of two functions continuous at a point is continuous there. It is what the
+   * mean value theorem asked for, at `(b - a) * f y - (f b - f a) * y`, and it is stated for any
+   * two functions and any two coefficients rather than for that one, since the special case would
+   * be the general one proved with the letters fixed. A product of two functions and a quotient are
+   * not here, because nothing has asked for them.
+   */
+  val Linear: String = "CONTINUOUS_LINEAR"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Constant -> "!c:real. !x:real. continuous (\\y:real. c) x",
@@ -178,7 +189,10 @@ object Continuity {
         "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f x <= f m)"),
     AttainsMinimum ->
       ("!f:real -> real. !a:real. !b:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
-        "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f m <= f x)")
+        "?m:real. a <= m /\\ m <= b /\\ (!x:real. a <= x /\\ x <= b ==> f m <= f x)"),
+    Linear ->
+      ("!f:real -> real. !g:real -> real. !x:real. !p:real. !q:real. continuous f x ==> continuous g x ==> " +
+        "continuous (\\y:real. p * f y + q * g y) x")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -213,8 +227,10 @@ object Continuity {
       identity <- identityFunction(steps)
       intermediate <- intermediateValue(steps, reals, magnitude)
       extremes <- ExtremeValue.prove(steps, reals, magnitude, classical)
+      linear <- linearCombination(steps, reals, magnitude)
 
-      facts = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate) ++ extremes
+      facts = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate, Linear -> linear) ++
+        extremes
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
       // a development that built something other than what it says it built must not be handed out.
@@ -364,6 +380,144 @@ object Continuity {
           .flatMap(mp(_, Right(assumed), gapPositive)))
       result <- rules.disjElim(cases, fromHalf, fromGap)
     } yield result
+  }
+
+  /**
+   * The tolerance `e * inv (2 * (abs p + 1))` a coefficient `p` is given, with `0 < T` and
+   * `2 * (abs p + 1) * T = e`, under the assumption `0 < e`.
+   *
+   * The reciprocal is `Root`'s arrangement: `MUL_INVERSE` at a denominator already known positive,
+   * and every step after it a closed statement `Linarith` decides with the reciprocal as a
+   * variable. `abs p + 1` rather than `abs p` because `p` may be zero, and the two because each of
+   * a pair of terms is given half of `e`. `Derivative`'s linearity spends the same share at `e *
+   * abs h`.
+   */
+  private[theories] final case class Share(term: String, positive: Kernel.Thm, equation: Kernel.Thm)
+
+  private[theories] def share(
+    steps: Steps,
+    reals: RealTheory,
+    magnitude: Magnitude,
+    coefficient: String,
+    ePositive: Kernel.Thm
+  ): Either[LogicError, Share] = {
+    import steps.*
+    val c = s"2 * (abs ($coefficient) + 1)"
+    val v = s"inv ($c)"
+    val t = s"e:real * $v"
+    for {
+      nonNegative <- at(magnitude.fact(Magnitude.AbsNonNegative), coefficient)
+      cPositive <- at(lemma("!P:real. 0 <= P ==> 0 < 2 * (P + 1)"), s"abs ($coefficient)").flatMap(mp(_, Right(nonNegative)))
+      nonZero <- at(lemma("!c:real. 0 < c ==> ~(c = 0)"), c).flatMap(mp(_, Right(cPositive)))
+      inverse <- at(reals.axiom("MUL_INVERSE"), c).flatMap(mp(_, Right(nonZero)))
+      positive <- at(lemma("!P:real v:real e:real. 0 <= P ==> 2 * (P + 1) * v = 1 ==> 0 < e ==> 0 < e * v"),
+        s"abs ($coefficient)", v, "e:real").flatMap(mp(_, Right(nonNegative), Right(inverse), Right(ePositive)))
+      equation <- at(lemma("!P:real v:real e:real. 0 <= P ==> 0 < e ==> 2 * (P + 1) * v = 1 ==> 2 * (P + 1) * (e * v) = e"),
+        s"abs ($coefficient)", v, "e:real").flatMap(mp(_, Right(nonNegative), Right(ePositive), Right(inverse)))
+    } yield Share(t, positive, equation)
+  }
+
+  /**
+   * `0 < min d1 d2`, from both: the radius two tolerances share, which `MIN_CASES` settles by
+   * whichever of the two it is.
+   */
+  private[theories] def minimumOfTwo(steps: Steps, magnitude: Magnitude, first: Kernel.Thm, second: Kernel.Thm) = {
+    import steps.*
+    val w = "min (d1:real) (d2:real)"
+    for {
+      cases <- at(magnitude.fact(Magnitude.MinCases), "d1:real", "d2:real")
+      left <- assume(s"$w = d1").flatMap(eq => at(lemma("!w:real d:real. w = d ==> 0 < d ==> 0 < w"), w, "d1:real").flatMap(mp(_, Right(eq), Right(first))))
+      right <- assume(s"$w = d2").flatMap(eq => at(lemma("!w:real d:real. w = d ==> 0 < d ==> 0 < w"), w, "d2:real").flatMap(mp(_, Right(eq), Right(second))))
+      result <- rules.disjElim(cases, left, right)
+    } yield result
+  }
+
+  /**
+   * [[Linear]]: each of the two is given its [[share]] of `e`, the radius is the smaller of the two
+   * they answer with, and the difference regroups into `p * (f y - f x) + q * (g y - g x)`, which
+   * `ABS_TRIANGLE` and `ABS_MUL` split into the two halves.
+   */
+  private def linearCombination(steps: Steps, reals: RealTheory, magnitude: Magnitude): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val x = Term.variable("x", Reals)
+    val p = Term.variable("p", Reals)
+    val q = Term.variable("q", Reals)
+    val e = Term.variable("e", Reals)
+    val y = Term.variable("y", Reals)
+    val d1 = Term.variable("d1", Reals)
+    val d2 = Term.variable("d2", Reals)
+    val df = "(f:real -> real) y - f x"
+    val dg = "(g:real -> real) y - g x"
+    val whole = "p:real * (f:real -> real) y + q:real * (g:real -> real) y - (p * f x + q * g x)"
+    for {
+      fHyp <- proposition("continuous (f:real -> real) x")
+      gHyp <- proposition("continuous (g:real -> real) x")
+      fAt <- LogicError.lift(Kernel.assume(fHyp)).flatMap(t => unfolded(f, x).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, t))))
+      gAt <- LogicError.lift(Kernel.assume(gHyp)).flatMap(t => unfolded(g, x).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, t))))
+
+      positive <- proposition("0 < e:real")
+      ePositive <- LogicError.lift(Kernel.assume(positive))
+      forP <- share(steps, reals, magnitude, "p:real", ePositive)
+      forQ <- share(steps, reals, magnitude, "q:real", ePositive)
+
+      nearF <- real(forP.term).flatMap(rules.spec(_, fAt)).flatMap(rules.mp(_, forP.positive))
+      nearG <- real(forQ.term).flatMap(rules.spec(_, gAt)).flatMap(rules.mp(_, forQ.positive))
+      radiusF <- assume(s"0 < d1:real /\\ (!y:real. abs (y - x:real) < d1 ==> abs ((f:real -> real) y - f x) < ${forP.term})")
+      radiusG <- assume(s"0 < d2:real /\\ (!y:real. abs (y - x:real) < d2 ==> abs ((g:real -> real) y - g x) < ${forQ.term})")
+      d1Positive <- rules.conjElim1(radiusF)
+      d2Positive <- rules.conjElim1(radiusG)
+      insideF <- rules.conjElim2(radiusF)
+      insideG <- rules.conjElim2(radiusG)
+      dPositive <- minimumOfTwo(steps, magnitude, d1Positive, d2Positive)
+
+      near <- proposition("abs (y - x:real) < min (d1:real) (d2:real)")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      below1 <- at(magnitude.fact(Magnitude.MinBelowLeft), "d1:real", "d2:real")
+      below2 <- at(magnitude.fact(Magnitude.MinBelowRight), "d1:real", "d2:real")
+      within1 <- at(lemma("!A:real w:real d:real. A < w ==> w <= d ==> A < d"), "abs (y - x:real)", "min (d1:real) (d2:real)", "d1:real")
+        .flatMap(mp(_, Right(assumedNear), Right(below1)))
+      within2 <- at(lemma("!A:real w:real d:real. A < w ==> w <= d ==> A < d"), "abs (y - x:real)", "min (d1:real) (d2:real)", "d2:real")
+        .flatMap(mp(_, Right(assumedNear), Right(below2)))
+      fClose <- rules.spec(y, insideF).flatMap(rules.mp(_, within1))
+      gClose <- rules.spec(y, insideG).flatMap(rules.mp(_, within2))
+
+      regrouped <- at(lemma("!p:real q:real F:real G:real F0:real G0:real. p * F + q * G - (p * F0 + q * G0) = p * (F - F0) + q * (G - G0)"),
+        "p:real", "q:real", "(f:real -> real) y", "(g:real -> real) y", "(f:real -> real) x", "(g:real -> real) x")
+      absFn <- Parser.term(theory, notation, "abs", Functions)
+      sameAbs <- Conv.apTerm(absFn, regrouped)
+      triangle <- at(magnitude.fact(Magnitude.Triangle), s"p:real * ($df)", s"q:real * ($dg)")
+      mulP <- at(magnitude.fact(Magnitude.Multiplicative), "p:real", df)
+      mulQ <- at(magnitude.fact(Magnitude.Multiplicative), "q:real", dg)
+      pNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), "p:real")
+      qNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), "q:real")
+      scaledP <- at(lemma("!P:real A:real T:real. 0 <= P ==> A < T ==> P * A <= P * T"), "abs (p:real)", s"abs ($df)", forP.term)
+        .flatMap(mp(_, Right(pNonNeg), Right(fClose)))
+      scaledQ <- at(lemma("!P:real A:real T:real. 0 <= P ==> A < T ==> P * A <= P * T"), "abs (q:real)", s"abs ($dg)", forQ.term)
+        .flatMap(mp(_, Right(qNonNeg), Right(gClose)))
+      halfP <- at(lemma("!R:real X:real P:real T:real e:real. R = X ==> X <= P * T ==> 0 <= P ==> 0 < T ==> 2 * (P + 1) * T = e ==> R < e / 2"),
+        s"abs (p:real * ($df))", s"abs (p:real) * abs ($df)", "abs (p:real)", forP.term, "e:real")
+        .flatMap(mp(_, Right(mulP), Right(scaledP), Right(pNonNeg), Right(forP.positive), Right(forP.equation)))
+      halfQ <- at(lemma("!R:real X:real P:real T:real e:real. R = X ==> X <= P * T ==> 0 <= P ==> 0 < T ==> 2 * (P + 1) * T = e ==> R < e / 2"),
+        s"abs (q:real * ($dg))", s"abs (q:real) * abs ($dg)", "abs (q:real)", forQ.term, "e:real")
+        .flatMap(mp(_, Right(mulQ), Right(scaledQ), Right(qNonNeg), Right(forQ.positive), Right(forQ.equation)))
+      combined <- at(lemma("!E:real S:real X:real Y:real e:real. E = S ==> S <= X + Y ==> X < e / 2 ==> Y < e / 2 ==> E < e"),
+        s"abs ($whole)", s"abs (p:real * ($df) + q:real * ($dg))", s"abs (p:real * ($df))", s"abs (q:real * ($dg))", "e:real")
+        .flatMap(mp(_, Right(sameAbs), Right(triangle), Right(halfP), Right(halfQ)))
+
+      everyY <- rules.disch(near, combined).flatMap(rules.gen(y, _))
+      radius <- rules.conjIntro(dPositive, everyY)
+      minimum <- real("min (d1:real) (d2:real)")
+      witnessed <- existential(s"?d:real. 0 < d /\\ (!y:real. abs (y - x:real) < d ==> abs ($whole) < e:real)")
+        .flatMap(rules.existsIntro(_, minimum, radius))
+      withoutG <- rules.existsElim(nearG, d2, witnessed)
+      withoutF <- rules.existsElim(nearF, d1, withoutG)
+      statement <- rules.disch(positive, withoutF).flatMap(rules.gen(e, _))
+      function <- Parser.term(theory, notation, "\\y:real. p:real * (f:real -> real) y + q:real * (g:real -> real) y", Functions)
+      result <- folded(function, x, statement)
+      closed <- rules.disch(gHyp, result).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x, p, q)))
+    } yield closed
   }
 
   /** [[IntermediateValue]], from `COMPLETENESS` at the points of `[a, b]` where `f` is at most `y`. */

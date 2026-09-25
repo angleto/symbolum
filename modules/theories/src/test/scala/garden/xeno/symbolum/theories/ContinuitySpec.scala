@@ -236,6 +236,28 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
       published(Continuity.AttainsMaximum, Continuity.Negation)
   }
 
+  it should "combine two continuous functions linearly, at no supremum, and detach at two it has" in {
+    // Measured on 2026-09-25 before it was written here: the reals' axioms without completeness,
+    // and the choice `abs` brings. A combination at one point is a statement about one point.
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val select = force(chain.classical.axiom("SELECT")).conclusion
+    val spent = Derivation.axiomsOf(fact(Continuity.Linear))
+    spent should not contain completeness
+    (spent -- realAxioms) shouldBe Set(select)
+
+    // Detached at the identity and a constant, with nothing assumed: the hypotheses are ones two
+    // functions this file already has meet, so the fact is not an implication nobody discharges.
+    val x = Term.variable("x", reals)
+    val identity = force(continuity.term("\\y:real. y", Type.fun(reals, reals)))
+    val two = force(continuity.term("\\y:real. (2:real)", Type.fun(reals, reals)))
+    val combined = force(rules.specAll(fact(Continuity.Linear), List(identity, two, x, real("3:real"), real("0 - 1")))
+      .flatMap(rules.mp(_, force(rules.spec(x, fact(Continuity.Identity)))))
+      .flatMap(rules.mp(_, force(rules.specAll(fact(Continuity.Constant), List(real("2:real"), x))))))
+    val reduced = opened(combined)
+    reduced.hypotheses shouldBe empty
+    continuity.show(reduced.conclusion) shouldBe "continuous (\\y:real. 3 * y + (0 - 1) * 2) x"
+  }
+
   /** `!x. 0 <= x /\ x <= 1 ==> continuous (\y. y) x`, the hypothesis both detachments discharge. */
   private lazy val identityOnUnit: Kernel.Thm = {
     val x = Term.variable("x", reals)
