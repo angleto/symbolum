@@ -1039,6 +1039,16 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "unfolded, and the three facts this file publishes are compared against " +
         "`Fraction.Statements` before the development is built, which is where a partial " +
         "reduction would surface as a statement nobody published"),
+    // 2026-09-25, with the rationals Archimedean and dense.
+    "Density.scala" ->
+      ("four, three `Rewrite.inTheorem` and one `Rewrite.rewrite`, and each rule set is ground or " +
+        "strictly reducing: the pair projections, `INT_OF_NUM ZERO = INT_ZERO`, " +
+        "`INT_OF_NUM (SUC ZERO) = INT_ONE`, and the stored denominator read back as a product, whose " +
+        "right side holds no stored index for it to fire on again. None is left to the limit to " +
+        "report: the one `rewrite` reads the cross-multiplied order, and a reading that stopped early " +
+        "leaves a comparison the `int` ring then refuses to close; the three `inTheorem` produce the " +
+        "values of `RAT_OF_NUM`, and every fact the file derives is compared against " +
+        "`Fraction.Statements` before the development is built"),
     // 2026-09-20, with `exp 1 > 2`.
     "Trigonometric.scala" ->
       ("five walks, and none of them is left to the limit to report. Two are the helper that " +

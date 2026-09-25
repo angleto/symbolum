@@ -23,11 +23,11 @@ import garden.xeno.symbolum.logic.*
  *
  * == It computes the gcd, and the quotient beside it ==
  *
- * `NUM_EUCLID_GCD a b = NUM_GCD a b` whenever `a` and `b` are not both zero, which is [[IsGcd]]
+ * `NUM_EUCLID_GCD a b = NUM_GCD a b` whenever `a` and `b` are not both zero, which is [[EuclidAlgorithm.IsGcd]]
  * and landed on 2026-09-25: strong induction on `b`, with the common divisors of `(a, b)` shown to be
  * those of `(b, a MOD b)`. Until then this was a computation with an equation and not a computation
  * of the gcd. `NUM_EUCLID_DIV` is the same arrangement for `NUM_DIV`, repeated subtraction by the
- * same recursion along a measure, and [[DivIsDiv]] is its theorem. `EuclidAlgorithmSpec` runs both
+ * same recursion along a measure, and [[EuclidAlgorithm.DivIsDiv]] is its theorem. `EuclidAlgorithmSpec` runs both
  * sets of equations at a point and carries the answer to the chosen constant, so `NUM_GCD 4 6 = 2`
  * is a theorem reached by computing.
  *

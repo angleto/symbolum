@@ -158,7 +158,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
       "~(RAT_OF_PAIR (PAIR INT_ZERO 0) = RAT_OF_PAIR (PAIR INT_ONE 0))"
   }
 
-  it should "declare `rat`, the quotient's own constants, the operations, the two units, the order and the inverse, and nothing else" in {
+  it should "declare `rat`, its operations, units, orders, inverse and naturals, and nothing else" in {
     // The operations and the units since 2026-09-25, when the ring of `int` closed their
     // obligations; a constant arriving here beyond these would be a definition nobody listed,
     // which is what this reads for.
@@ -166,7 +166,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     (fractions.theory.constants.keySet -- before) shouldBe
       Set(Fraction.SameName, Fraction.Abstraction, Fraction.Representation, Fraction.Projection,
         Fraction.Names.representative, Fraction.Addition, Fraction.Negation, Fraction.Multiplication,
-        Fraction.Zero, Fraction.One, Fraction.AtMost, Fraction.Inverse)
+        Fraction.Zero, Fraction.One, Fraction.AtMost, Fraction.Inverse, Fraction.LessThan, Fraction.OfNumber)
   }
 
   "The order" should "not be the trivial one, which every one of its four laws would also be" in {
@@ -263,6 +263,70 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     )
     product.hypotheses shouldBe empty
     fractions.show(product.conclusion) shouldBe "RAT_LE RAT_ZERO (RAT_MUL RAT_ONE RAT_ONE)"
+  }
+
+  /** `|- RAT_LT RAT_ZERO RAT_ONE`, from the definition and the refusal of `1 <= 0`, nothing assumed. */
+  private def zeroBelowOne: Kernel.Thm = force(
+    for {
+      zero <- fractions.term("RAT_ZERO", Fraction.Classes)
+      one <- fractions.term("RAT_ONE", Fraction.Classes)
+      definition <- fractions.definition(Fraction.LessThan)
+      unfolded <- Conv.unfold(definition, List(zero, one)).flatMap(Conv.sym)
+      result <- LogicError.lift(Kernel.eqMp(unfolded, fact(Fraction.OneNotAtMostZero)))
+    } yield result
+  )
+
+  "Density" should "be detached at `0 < 1`, so its antecedent is one a pair of rationals meets" in {
+    // `RAT_DENSE` is an implication, and one whose antecedent nobody can discharge reads exactly
+    // like a fact. `0 < 1` is the strict order at the units, derived from the definition and the
+    // pair that separates the order from the trivial one, and what comes back is the existence of
+    // a rational between them with nothing left assumed.
+    val zero = force(fractions.term("RAT_ZERO", Fraction.Classes))
+    val one = force(fractions.term("RAT_ONE", Fraction.Classes))
+    val between = force(rules.specAll(fact(Fraction.Dense), List(zero, one)).flatMap(rules.mp(_, zeroBelowOne)))
+    between.hypotheses shouldBe empty
+    between.conclusion shouldBe force(fractions.proposition("?z:rat. RAT_LT RAT_ZERO z /\\ RAT_LT z RAT_ONE"))
+  }
+
+  "Archimedes" should "be detached in the form a cut spends, at the tolerance one" in {
+    // The reciprocal form carries `0 < e`; at `e = 1` it is met by the same derivation as above.
+    val one = force(fractions.term("RAT_ONE", Fraction.Classes))
+    val small = force(rules.spec(one, fact(Fraction.ArchimedesInverse)).flatMap(rules.mp(_, zeroBelowOne)))
+    small.hypotheses shouldBe empty
+    small.conclusion shouldBe force(fractions.proposition("?n:num. RAT_LT (RAT_INV (RAT_OF_NUM (SUC n))) RAT_ONE"))
+  }
+
+  it should "bound by naturals that do not collapse, so the bound it names says something" in {
+    // Archimedes is a theorem whatever `RAT_OF_NUM` is, and with a constant embedding it would say
+    // that every rational sits below one value. What rules that out is two naturals landing on
+    // different rationals: `RAT_OF_NUM 0` is zero and `RAT_OF_NUM (SUC 0)` is `0 + 1`, which is one,
+    // and zero is not one. Derived here with nothing assumed.
+    //
+    // This replaced an assertion that Archimedes rests on the sign split and density does not.
+    // The second half was false when it was first run on 2026-09-25: density spends the inverse,
+    // whose existence is where the sign is split, and `Derivation.restingOn` reads a use through
+    // any number of lemmas, so it cannot tell the argument that opens a representative from one
+    // that inherits a fact which did.
+    val zero = force(fractions.term("0:num", TyApp(Natural.TypeName, Nil)))
+    val rationalZero = force(fractions.term("RAT_ZERO", Fraction.Classes))
+    val rationalOne = force(fractions.term("RAT_ONE", Fraction.Classes))
+    val distinct = force(
+      for {
+        zeroIs <- Right(fact(Fraction.OfNumberZero))
+        rewriting <- Rewrite.Rule.all(fractions.logic, Vector(zeroIs))
+        successor <- rules.spec(zero, fact(Fraction.OfNumberSuccessor)).flatMap(Rewrite.inTheorem(rewriting, _))
+        swapped <- rules.specAll(fact(Fraction.AddCommutative), List(rationalZero, rationalOne))
+        unit <- rules.spec(rationalOne, fact(Fraction.AddAtZero))
+        oneIs <- Conv.trans(successor, swapped).flatMap(Conv.trans(_, unit))
+        collapse <- fractions.proposition("RAT_OF_NUM 0 = RAT_OF_NUM (SUC 0)")
+        held <- LogicError.lift(Kernel.assume(collapse))
+        unitsEqual <- Conv.sym(zeroIs).flatMap(Conv.trans(_, held)).flatMap(Conv.trans(_, oneIs))
+        absurd <- rules.notElim(fact(Fraction.UnitsDistinct), unitsEqual)
+        result <- rules.notIntro(collapse, absurd)
+      } yield result
+    )
+    distinct.hypotheses shouldBe empty
+    distinct.conclusion shouldBe force(fractions.proposition("~(RAT_OF_NUM 0 = RAT_OF_NUM (SUC 0))"))
   }
 
   /* ------------------------------------------------------ the hypotheses the statements carry */

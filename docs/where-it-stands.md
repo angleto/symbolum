@@ -1353,6 +1353,17 @@ and `RAT_LE_ADD` and `RAT_LE_MUL` tie the order to the operations. The existence
 needed the sign of the numerator, which the pair holds as an integer, and `INT_OF_NUM_CASES` is that
 split; `tools/verify/perturb-rational-field.sh` fires the zero branch and the sign of the witness.
 
+**And Archimedean and dense, the same day**, which is what the reals as cuts ask of the rationals
+beyond the field. `RAT_LT x y` is defined as `~(RAT_LE y x)` and `RAT_OF_NUM n` as the class of
+`(INT_OF_NUM n, 0)`; `RAT_ARCHIMEDES` bounds every rational by a natural, `RAT_ARCHIMEDES_INV` is
+the form a cut spends, some `1 / (n + 1)` under every positive tolerance, and `RAT_DENSE` puts the
+midpoint between two rationals. `Density` is the derivation, and the thing to know before opening it
+is that it argues **on classes**: `CommutativeRing` instantiated at the laws of `rat` decides every
+identity, and `consequence` one that holds under a premise such as `2 * RAT_INV 2 = 1`. Only
+Archimedes and the two values of `RAT_OF_NUM` open a representative, and Archimedes is where the
+numerator's sign is spent. `tools/verify/perturb-rational-density.sh` fires the midpoint and the
+bound.
+
 `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated, and since 2026-09-25 each has a
 computing counterpart proved equal to it: `EuclidAlgorithm` defines `NUM_EUCLID_GCD` and
 `NUM_EUCLID_DIV` by `WellFounded`'s recursion along a measure, beside the chain, and

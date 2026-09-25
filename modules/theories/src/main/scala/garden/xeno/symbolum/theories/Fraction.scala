@@ -64,7 +64,12 @@ import garden.xeno.symbolum.logic.*
  * the negative case. The two laws tying the order to the operations are `RAT_LE_ADD` and
  * `RAT_LE_MUL`; under the second are `INT_NONNEG_OF_NUM`, that a non-negative integer is a natural,
  * and `INT_LE_MUL_NONNEG`. None of them spends anything the rest of the file does not already
- * spend. What the reals as cuts will ask beyond this is Archimedes and density, and neither is here.
+ * spend.
+ *
+ * **And Archimedean and dense, the same day**, which is what the reals as cuts ask beyond the
+ * field: `RAT_LT` and `RAT_OF_NUM` are two definitions over it, and `RAT_ARCHIMEDES`,
+ * `RAT_ARCHIMEDES_INV` and `RAT_DENSE` are derived in `Density`, mostly on classes through the ring
+ * of `rat` rather than at pairs.
  *
  * == The one thing transitivity needs, and where it comes from ==
  *
@@ -284,6 +289,42 @@ object Fraction {
   /** `|- RAT_INV RAT_ZERO = RAT_ZERO`. */
   val InverseAtZero: String = "RAT_INV_ZERO"
 
+  /** `RAT_LT x y`, defined as `~(RAT_LE y x)`: the strict order, which on a total order is that. */
+  val LessThan: String = "RAT_LT"
+
+  /** `RAT_OF_NUM n`, the class of `(INT_OF_NUM n, 0)`: the naturals inside `rat`. */
+  val OfNumber: String = "RAT_OF_NUM"
+
+  /** `|- !x y. RAT_LT x y ==> RAT_LE x y`. */
+  val LessWeakens: String = "RAT_LT_LE"
+
+  /** `|- !c x y. RAT_LE RAT_ZERO c ==> RAT_LE x y ==> RAT_LE (RAT_MUL c x) (RAT_MUL c y)`. */
+  val MulLeftMonotone: String = "RAT_LE_MUL_LEFT"
+
+  /** `|- !x. RAT_LT RAT_ZERO x ==> RAT_LT RAT_ZERO (RAT_INV x)`. */
+  val InversePositive: String = "RAT_INV_POS"
+
+  /** `|- RAT_OF_NUM ZERO = RAT_ZERO`. */
+  val OfNumberZero: String = "RAT_OF_NUM_ZERO"
+
+  /** `|- !n. RAT_OF_NUM (SUC n) = RAT_ADD (RAT_OF_NUM n) RAT_ONE`. */
+  val OfNumberSuccessor: String = "RAT_OF_NUM_SUC"
+
+  /** `|- !n. RAT_LE RAT_ZERO (RAT_OF_NUM n)`. */
+  val OfNumberNonNegative: String = "RAT_OF_NUM_NONNEG"
+
+  /** `|- !x. ?n. RAT_LE x (RAT_OF_NUM n)`: the rationals are Archimedean. */
+  val Archimedes: String = "RAT_ARCHIMEDES"
+
+  /** `|- !e. RAT_LT RAT_ZERO e ==> ?n. RAT_LT (RAT_INV (RAT_OF_NUM (SUC n))) e`: the form a cut spends. */
+  val ArchimedesInverse: String = "RAT_ARCHIMEDES_INV"
+
+  /** `|- !x y. RAT_LT x y ==> ?z. RAT_LT x z /\ RAT_LT z y`: the rationals are dense. */
+  val Dense: String = "RAT_DENSE"
+
+  private val LessBody: String = "\\x:rat. \\y:rat. ~(RAT_LE y x)"
+  private val OfNumberBody: String = "\\n:num. RAT_OF_PAIR (PAIR (INT_OF_NUM n) ZERO)"
+
   private val InverseBody: String =
     "\\x:rat. COND (x = RAT_ZERO) RAT_ZERO (select (\\y:rat. RAT_MUL x y = RAT_ONE))"
   val OneNotAtMostZero: String = "RAT_NOT_ONE_LE_ZERO"
@@ -376,7 +417,17 @@ object Fraction {
     AtMostMul -> "!x:rat. !y:rat. RAT_LE RAT_ZERO x ==> RAT_LE RAT_ZERO y ==> RAT_LE RAT_ZERO (RAT_MUL x y)",
     InverseExists -> "!x:rat. ~(x = RAT_ZERO) ==> (?y:rat. RAT_MUL x y = RAT_ONE)",
     MulInverse -> "!x:rat. ~(x = RAT_ZERO) ==> RAT_MUL x (RAT_INV x) = RAT_ONE",
-    InverseAtZero -> "RAT_INV RAT_ZERO = RAT_ZERO"
+    InverseAtZero -> "RAT_INV RAT_ZERO = RAT_ZERO",
+    LessWeakens -> "!x:rat. !y:rat. RAT_LT x y ==> RAT_LE x y",
+    MulLeftMonotone ->
+      "!c:rat. !x:rat. !y:rat. RAT_LE RAT_ZERO c ==> RAT_LE x y ==> RAT_LE (RAT_MUL c x) (RAT_MUL c y)",
+    InversePositive -> "!x:rat. RAT_LT RAT_ZERO x ==> RAT_LT RAT_ZERO (RAT_INV x)",
+    OfNumberZero -> "RAT_OF_NUM ZERO = RAT_ZERO",
+    OfNumberSuccessor -> "!n:num. RAT_OF_NUM (SUC n) = RAT_ADD (RAT_OF_NUM n) RAT_ONE",
+    OfNumberNonNegative -> "!n:num. RAT_LE RAT_ZERO (RAT_OF_NUM n)",
+    Archimedes -> "!x:rat. ?n:num. RAT_LE x (RAT_OF_NUM n)",
+    ArchimedesInverse -> "!e:rat. RAT_LT RAT_ZERO e ==> (?n:num. RAT_LT (RAT_INV (RAT_OF_NUM (SUC n))) e)",
+    Dense -> "!x:rat. !y:rat. RAT_LT x y ==> (?z:rat. RAT_LT x z /\\ RAT_LT z y)"
   )
 
   private val numbers: Type = TyApp(Natural.TypeName, Nil)
@@ -512,7 +563,7 @@ object Fraction {
         (InverseAtZero, inverseAtZero)
       )
 
-      checked <- (Vector(
+      proved = Vector(
         (SwapFactors, swap),
         (SameReflexive, reflexive),
         (SameSymmetric, symmetric),
@@ -523,10 +574,26 @@ object Fraction {
         (MulPairs, mulPairs),
         (AddCommutative, addSymmetric),
         (MulCommutative, mulSymmetric)
-      ) ++ laws ++ ((UnitsDistinct, distinct) +: order) ++ field).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
+      ) ++ laws ++ ((UnitsDistinct, distinct) +: order) ++ field
+
+      // Archimedes and density, over the strict order and the naturals inside `rat`, which are
+      // two definitions over the field's theory. `Density` is the derivation.
+      lessBody <- Parser.term(fielded, notation, LessBody)
+      lessDefined <- LogicError.lift(Kernel.defineConstant(fielded, LessThan, lessBody))
+      (withLess, lessDefinition) = lessDefined
+      numberBody <- Parser.term(withLess, notation, OfNumberBody)
+      numberDefined <- LogicError.lift(Kernel.defineConstant(withLess, OfNumber, numberBody))
+      (dense, numberDefinition) = numberDefined
+      denseQuotient <- fieldQuotient.over(dense)
+      density <- Density(
+        denseQuotient, notation, arithmetic, integer, peano, proved.toMap,
+        zeroDefinition, oneDefinition, lessDefinition, numberDefinition
+      ).facts
+
+      checked <- (proved ++ density).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
         case ((name, theorem), rest) =>
           for {
-            statement <- Parser.proposition(fielded, notation, statementOf(name))
+            statement <- Parser.proposition(dense, notation, statementOf(name))
             _ <-
               if (theorem.conclusion == statement) Right(())
               else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
@@ -539,15 +606,17 @@ object Fraction {
     } yield new Fraction(
       classical,
       integer,
-      fielded,
+      dense,
       notation,
-      fieldQuotient,
+      denseQuotient,
       Map(
         SameName -> sameDefinition,
         Zero -> zeroDefinition,
         One -> oneDefinition,
         AtMost -> atMostDefinition,
-        Inverse -> inverseDefinition
+        Inverse -> inverseDefinition,
+        LessThan -> lessDefinition,
+        OfNumber -> numberDefinition
       ) ++
         complete.definitions,
       checked.toMap
@@ -807,7 +876,7 @@ object Fraction {
    * the premises by substitution, which `CommutativeRing.consequence` decides given the
    * coefficient each premise is scaled by.
    */
-  private final case class Lifting(
+  private[theories] final case class Lifting(
     logic: Logic,
     theory: Theory,
     notation: Notation,

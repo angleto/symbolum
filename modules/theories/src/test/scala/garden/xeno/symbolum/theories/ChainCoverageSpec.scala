@@ -261,6 +261,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `Integer.ring` are its two instances.
     "CommutativeRing" -> DeclaresNothing,
 
+    // A derivation inside `Fraction`'s construction and not a development: `RAT_LT` and
+    // `RAT_OF_NUM` are defined by `Fraction.construct` before it is called, the facts it returns are
+    // published by `Fraction` under `Fraction.Statements`, and it has no theory of its own to hand on.
+    // It is a file of its own for size, which is `Ordering`'s position one step along.
+    "Density" -> DeclaresNothing,
+
     // Beside the chain by decision and not as a debt, which is the line that separates it from
     // `Fraction`: `pterm` is a second syntax of arithmetic beside the coded one `Language` holds,
     // and in the chain every `PVAR` would sit next to a `NUM_CODE` in `Find` for a reader who asked
