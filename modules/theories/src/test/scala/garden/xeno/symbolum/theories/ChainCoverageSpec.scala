@@ -216,6 +216,29 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // build, which is the same position `Recursion` is in one primitive along.
     "Quotient" -> DeclaresNothing,
 
+    // `Quotient`'s standing, for `Quotient`'s reason, one type former along: `Datatype` calls
+    // `Kernel.defineType` and `Kernel.defineConstant`, and everything it declares — the type, its
+    // two bijections, the constructors and any function `defineRecursive` names — is named by the
+    // caller and lands in the caller's theory. Its universe of trees is a term and not a constant,
+    // which `docs/adr/0042` decides, so there is nothing of its own for `Chain.construct` to build.
+    "Datatype" -> DeclaresNothing,
+
+    // Beside the chain by decision and not as a debt, which is the line that separates it from
+    // `Fraction`: `pterm` is a second syntax of arithmetic beside the coded one `Language` holds,
+    // and in the chain every `PVAR` would sit next to a `NUM_CODE` in `Find` for a reader who asked
+    // about neither. It is `Datatype`'s consumer, and `SyntaxSpec` is the spec the standing asks.
+    "Syntax" -> BesideTheChain,
+
+    // `Recursion`'s standing again: a theorem and nothing declared. What it proves is about the
+    // caller's measure and step, and the constant a caller names by it is the caller's.
+    "WellFounded" -> DeclaresNothing,
+
+    // `Fraction`'s standing, a debt and not a decision: Euclid's algorithm is arithmetic anyone
+    // would want, and wiring it into the chain moves `Chain.widest`, the reading register and the
+    // guide's map. The other half of the debt is the theorem it is for, `NUM_EUCLID_GCD = NUM_GCD` off
+    // both zero, which the file's own docstring names as not yet proved. `EuclidAlgorithmSpec` is the spec.
+    "EuclidAlgorithm" -> BesideTheChain,
+
     // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
     // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being
     // outside is that its constants describe one object of one investigation; `rat` is mathematics

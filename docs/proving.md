@@ -299,12 +299,16 @@ believe this one and fix that one: this table is compared against the library by
 table is prose.
 
 **What is not in the table, and why the absence is not an omission.** A development that publishes no
-lemma of its own has no heading in `lemmas.md` and no row here, and there are nine of them. They are
-drivers and procedures: `Induct` runs an induction over a goal, `Bounded` discharges
+lemma of its own has no heading in `lemmas.md` and no row here. They are drivers and procedures,
+and this sentence counted them until 2026-09-25, when a tenth made the count false: `Induct` runs
+an induction over a goal, `Bounded` discharges
 `!i. i < k ==> P i` at a concrete bound by proving the instances, `Successor` puts a numeral into
 successor form so that a recurrence can reach it, `Monotone` hands back `|- MONOTONE f` for an
 operator written in the usual shape, `Recursion` and `Quotient` define the **caller's** constant and
-the caller's type, `Descent` defines a predicate by recursion on a code, `Resolving` proves the
+the caller's type, `Datatype` defines the caller's inductive type from its constructors and a
+function on it by structural recursion (`docs/adr/0042`), `WellFounded` proves recursion along a
+measure for the caller's step (`docs/adr/0043`), `Descent` defines a predicate by recursion on a
+code, `Resolving` proves the
 soundness of a resolution step, and `Domain` builds a caller's own theory of a domain that is not
 mathematics. Nothing they produce belongs to them, which is why there is nothing of theirs to list.
 `Ring`, `Field`, `Linarith`, `Arithmetic` and `Order`'s procedures are the section below.

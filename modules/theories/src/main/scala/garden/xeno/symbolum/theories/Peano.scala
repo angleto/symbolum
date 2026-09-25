@@ -100,10 +100,11 @@ import garden.xeno.symbolum.logic.*
  * statement: `2` is `NUM_BIT0 NUM_ONE` and every recurrence in this file is stated at `SUC n`, so
  * a number written as a numeral hooks none of them until `Successor` opens it.
  *
- * **No definition by well-founded recursion.** The least-number principle is here since
- * 2026-09-11, [[Peano.LeastNumber]], and it is what an argument by descent needs; what is still not
- * here is a definition that recurses on it, which needs more than the principle: a recursion
- * theorem for a well-founded relation, in the shape `Recursion.theorem` has for the successor.
+ * **Definitions by well-founded recursion are `WellFounded`'s, since 2026-09-25**, as recursion
+ * along a measure into `num`, and [[Peano.StrongInduction]] is what its proof runs on. The
+ * least-number principle, [[Peano.LeastNumber]], is here since 2026-09-11 for arguments by descent.
+ * What is still not anywhere is a recursion theorem for a well-founded relation that is not a
+ * measure, which nothing has asked for.
  *
  * **Four of the operations are written infix, and three deliberately are not.** [[Peano.Addition]],
  * [[Peano.Multiplication]], [[Peano.StrictOrder]] and [[Peano.NonStrictOrder]] are read and printed
