@@ -69,11 +69,14 @@ import garden.xeno.symbolum.logic.*
 final class Coefficient private (
   val arithmetic: Arithmetic,
   val positivity: Positivity,
-  private val facts: Map[String, Kernel.Thm],
+  published: Map[String, Kernel.Thm],
   private val rules: Map[String, Rewrite.Rule],
   private val mulInverse: Kernel.Thm,
   private val syntax: Coefficient.Syntax
 ) {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  private val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   import Coefficient.*
 

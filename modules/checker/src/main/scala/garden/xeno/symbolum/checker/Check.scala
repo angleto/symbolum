@@ -401,6 +401,15 @@ object Check {
           case None => refuse("definition", "an equation")
         }
 
+      case Step.Citation(_) =>
+        premises match {
+          case Vector(fact) =>
+            require("citation", "the sequent of the fact it cites")(
+              claim.conclusion == fact.conclusion && claim.assumptions == fact.assumptions
+            )
+          case _ => refuse("citation", "one premise")
+        }
+
       case Step.Axiom(asserted) =>
         if (
           claim.conclusion == asserted && claim.hypotheses.isEmpty &&

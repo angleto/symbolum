@@ -131,9 +131,12 @@ final class Collatz private (
   val theory: Theory,
   val notation: Notation,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm],
+  published: Map[String, Kernel.Thm],
   private[theories] val tools: Collatz.Concrete
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /**
    * The eleven rules derived pairwise distinct, for the guard that the system is eleven rules.

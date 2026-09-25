@@ -62,8 +62,11 @@ final class Deduction private (
   val theory: Theory,
   val notation: Notation,
   val logic: Logic,
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   val language: Language = provability.language
 

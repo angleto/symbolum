@@ -117,7 +117,7 @@ final class Magnitude private (
    */
   val logic: Logic,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm],
+  published: Map[String, Kernel.Thm],
   /**
    * How each of these facts was derived, at the size it was written in.
    *
@@ -134,6 +134,9 @@ final class Magnitude private (
    */
   val scripts: Map[String, Script]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   val reals: RealTheory = order.reals
 

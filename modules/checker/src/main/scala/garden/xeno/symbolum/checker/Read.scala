@@ -61,6 +61,7 @@ object Read {
       Step.TypeInstantiation(substitution.map { case (name, replacement) => name -> ty(replacement) })
     case Derivation.Definition(name, body) => Step.Definition(name, expr(body))
     case Derivation.Axiom(proposition) => Step.Axiom(expr(proposition))
+    case Derivation.Citation(name, _) => Step.Citation(name)
     case Derivation.TypeDefinition(typeName, absName, repName, _, half) =>
       Step.TypeDefinition(typeName, absName, repName, half match {
         case Derivation.Half.AbstractionOfRepresentation => Step.Half.AbstractionOfRepresentation

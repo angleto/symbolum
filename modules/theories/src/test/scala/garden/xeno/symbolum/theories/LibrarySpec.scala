@@ -4,6 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
+import scala.jdk.CollectionConverters.*
 
 class LibrarySpec extends AnyFlatSpec with Matchers {
 
@@ -1043,5 +1044,49 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // legitimately in the listing: the assertion was wrong, not the page.
     page should not include "((< "
     page should not include "((+ "
+  }
+
+  "A published fact" should "reach its consumers as a citation, from every development that publishes" in {
+    // `docs/adr/0047` put the boundary where a development publishes, one line per development, and
+    // a development that leaves the line out is invisible: its facts still prove, every proof above
+    // it still checks, and every report on those proofs quietly walks the whole of it again. Two
+    // did on the day the boundary landed, `CommutativeRing` and `Pigeonhole`, merged hours earlier
+    // on another branch, and the rebase is what showed them. So both halves are asserted here.
+    //
+    // What the library collects, read at run time: every derived entry is a citation of its own
+    // name. The axioms and definitions are what the library also holds under `assumed` and
+    // `defined`, and those are records of an extension rather than facts anybody proved.
+    val derived = library.entries.filterNot(entry =>
+      entry.development.endsWith(", assumed") || entry.development.endsWith(", defined")
+    )
+    val uncited = derived.filterNot(entry => entry.theorem.derivation match {
+      case Derivation.Citation(name, _) => name == entry.name
+      case _ => false
+    })
+
+    derived.size should be > 100
+    withClue(s"published without a citation: ${uncited.map(e => s"${e.development}.${e.name}").take(10)}\n") {
+      uncited shouldBe empty
+    }
+
+    // And what the library does not collect, read off the sources: a development beside the chain
+    // publishes too, and `Library.of` names only the chain. A field of that name and type is what a
+    // consumer reads, so every one of them is the cited one.
+    val declaration = raw"val facts: Map\[String, Kernel\.Thm\]([^\n]*)".r
+    val sources = java.nio.file.Files
+      .walk(java.nio.file.Paths.get("modules"))
+      .iterator()
+      .asScala
+      .map(_.toString)
+      .filter(path => path.endsWith(".scala") && path.contains("/src/main/"))
+      .toVector
+    val fields = sources.flatMap { path =>
+      val text = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)), "UTF-8")
+      declaration.findAllMatchIn(text).map(found => (path, found.group(1).trim)).toVector
+    }
+    val bare = fields.filterNot { case (_, rest) => rest.startsWith("= Published.cite(") }
+
+    fields.size should be > 40
+    withClue(s"a facts field that is not cited: ${bare.map(_._1)}\n") { bare shouldBe empty }
   }
 }

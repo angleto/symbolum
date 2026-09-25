@@ -288,6 +288,16 @@ object Kernel {
     )
   }
 
+  /**
+   * `G |- p` gives `G |- p`, recorded as the published fact `name` rather than as its derivation.
+   *
+   * Not an inference: the sequent is the one given, so nothing is believed here that was not
+   * already. What changes is the record, which a report over a proof stops at and a checker
+   * replays through; `docs/adr/0047` is why the boundary is here.
+   */
+  def cite(name: String, theorem: Thm): Thm =
+    new Thm(theorem.hypotheses, theorem.conclusion, Derivation.Citation(name, theorem))
+
   /* ------------------------------------------------------- extending a theory */
 
   /**

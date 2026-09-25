@@ -28,6 +28,7 @@ import scala.annotation.tailrec
  * t 3 a 0 1                   an application: function then argument
  * t 4 l 2 3                   an abstraction: the binder's type then the body
  * s 0 refl 4 ; ; ; 7          a step: rule, its own fields, premises, hypotheses, conclusion
+ * s 1 cite NAT_ADD_SYM ; 0 ; ; 7   a published fact under its name, with its proof as the premise
  * end 12
  * }}}
  *
@@ -47,8 +48,13 @@ object Parse {
   /** A proof, ready for `Check.table`, or why the text is not one. */
   final case class Proof(nodes: Vector[Node], theorem: Int)
 
-  /** The version this reader understands. A different one is refused rather than guessed at. */
-  val Version: String = "proof 1"
+  /**
+   * The version this reader understands. A different one is refused rather than guessed at.
+   *
+   * Two since 2026-09-25, when `cite` became a rule: a reader of the first version would refuse a
+   * proof holding one as naming a rule that does not exist, which is safe and says the wrong thing.
+   */
+  val Version: String = "proof 2"
 
   /**
    * What has been read so far, threaded through the records in order.
@@ -273,6 +279,7 @@ object Parse {
         term(body).map(Step.Definition(decode(name), _)).toRight("`def` names a term already read")
       case ("axiom", Vector(proposition)) =>
         term(proposition).map(Step.Axiom.apply).toRight("`axiom` names a term already read")
+      case ("cite", Vector(name)) => Right(Step.Citation(decode(name)))
 
       case ("tydef", Vector(typeName, absName, repName, half)) =>
         val which = half match {

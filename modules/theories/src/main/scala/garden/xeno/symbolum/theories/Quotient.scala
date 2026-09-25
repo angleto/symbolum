@@ -132,8 +132,11 @@ final class Quotient private (
    */
   val names: Quotient.Names,
   val definitions: Map[String, Kernel.Thm],
-  val facts: Map[String, Kernel.Thm]
+  published: Map[String, Kernel.Thm]
 ) extends Signature {
+
+  /** The facts this development proved, each cited under its name: what a consumer reads. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
   /** The equation defining `name`, as proved when the constant was introduced. */
   def definition(name: String): Either[LogicError, Kernel.Thm] =

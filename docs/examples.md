@@ -157,23 +157,22 @@ obtained.
 
 ## The proof the kernel holds
 
-23549 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+1244 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 7360 | 31.3% |
-| EqualityElimination | 4879 | 20.7% |
-| Reflexivity | 1982 | 8.4% |
-| Instantiation | 1939 | 8.2% |
-| Antisymmetry | 1883 | 8.0% |
-| Transitivity | 1724 | 7.3% |
-| BetaStep | 1434 | 6.1% |
-| TypeInstantiation | 781 | 3.3% |
-| Assumption | 773 | 3.3% |
-| Abstraction | 770 | 3.3% |
-| Definition | 20 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| EqualityElimination | 292 | 23.5% |
+| Congruence | 280 | 22.5% |
+| Reflexivity | 135 | 10.9% |
+| Transitivity | 119 | 9.6% |
+| BetaStep | 105 | 8.4% |
+| Instantiation | 95 | 7.6% |
+| Antisymmetry | 91 | 7.3% |
+| TypeInstantiation | 46 | 3.7% |
+| Assumption | 30 | 2.4% |
+| Abstraction | 28 | 2.3% |
+| Citation | 15 | 1.2% |
+| Definition | 8 | 0.6% |
 
 ## How to get it
 
@@ -202,7 +201,8 @@ From Scala it is `Primes`'s, under the name `NUM_PRIME_UNBOUNDED`. Specialise it
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -313,23 +313,22 @@ obtained.
 
 ## The proof the kernel holds
 
-32351 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+3162 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 9597 | 29.7% |
-| EqualityElimination | 6964 | 21.5% |
-| Instantiation | 2875 | 8.9% |
-| Reflexivity | 2845 | 8.8% |
-| Antisymmetry | 2653 | 8.2% |
-| Transitivity | 2330 | 7.2% |
-| BetaStep | 1951 | 6.0% |
-| TypeInstantiation | 1143 | 3.5% |
-| Assumption | 1068 | 3.3% |
-| Abstraction | 901 | 2.8% |
-| Definition | 20 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 847 | 26.8% |
+| EqualityElimination | 683 | 21.6% |
+| Reflexivity | 346 | 10.9% |
+| Transitivity | 302 | 9.6% |
+| Instantiation | 290 | 9.2% |
+| BetaStep | 229 | 7.2% |
+| Antisymmetry | 196 | 6.2% |
+| TypeInstantiation | 116 | 3.7% |
+| Assumption | 68 | 2.2% |
+| Abstraction | 49 | 1.5% |
+| Citation | 28 | 0.9% |
+| Definition | 8 | 0.3% |
 
 ## How to get it
 
@@ -358,7 +357,8 @@ From Scala it is `Primes`'s, under the name `NUM_SQUARE_NOT_DOUBLE`. Specialise 
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -429,23 +429,22 @@ obtained.
 
 ## The proof the kernel holds
 
-11092 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+1624 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 3928 | 35.4% |
-| EqualityElimination | 2045 | 18.4% |
-| Reflexivity | 861 | 7.8% |
-| Transitivity | 812 | 7.3% |
-| Instantiation | 812 | 7.3% |
-| Antisymmetry | 806 | 7.3% |
-| BetaStep | 631 | 5.7% |
-| Abstraction | 514 | 4.6% |
-| Assumption | 340 | 3.1% |
-| TypeInstantiation | 320 | 2.9% |
-| Definition | 19 | 0.2% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| EqualityElimination | 392 | 24.1% |
+| Congruence | 328 | 20.2% |
+| Antisymmetry | 172 | 10.6% |
+| Reflexivity | 157 | 9.7% |
+| Instantiation | 156 | 9.6% |
+| Transitivity | 122 | 7.5% |
+| BetaStep | 100 | 6.2% |
+| Assumption | 85 | 5.2% |
+| TypeInstantiation | 51 | 3.1% |
+| Abstraction | 39 | 2.4% |
+| Citation | 11 | 0.7% |
+| Definition | 11 | 0.7% |
 
 ## How to get it
 
@@ -474,7 +473,8 @@ From Scala it is `Modular`'s, under the name `NUM_PRIME_TWO`. Specialise it with
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -552,23 +552,22 @@ obtained.
 
 ## The proof the kernel holds
 
-15475 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+2649 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 5082 | 32.8% |
-| EqualityElimination | 3078 | 19.9% |
-| Antisymmetry | 1298 | 8.4% |
-| Instantiation | 1266 | 8.2% |
-| Reflexivity | 1210 | 7.8% |
-| Transitivity | 1039 | 6.7% |
-| BetaStep | 851 | 5.5% |
-| Abstraction | 608 | 3.9% |
-| Assumption | 552 | 3.6% |
-| TypeInstantiation | 468 | 3.0% |
-| Definition | 19 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| EqualityElimination | 640 | 24.2% |
+| Congruence | 576 | 21.7% |
+| Antisymmetry | 281 | 10.6% |
+| Instantiation | 261 | 9.9% |
+| Reflexivity | 253 | 9.6% |
+| Transitivity | 184 | 6.9% |
+| BetaStep | 158 | 6.0% |
+| Assumption | 127 | 4.8% |
+| TypeInstantiation | 89 | 3.4% |
+| Abstraction | 55 | 2.1% |
+| Citation | 14 | 0.5% |
+| Definition | 11 | 0.4% |
 
 ## How to get it
 
@@ -597,7 +596,8 @@ From Scala it is `Modular`'s, under the name `NUM_PRIME_FACTOR`. Specialise it w
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -693,23 +693,23 @@ obtained.
 
 ## The proof the kernel holds
 
-24344 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+9098 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 7688 | 31.6% |
-| EqualityElimination | 5042 | 20.7% |
-| Instantiation | 2081 | 8.5% |
-| Reflexivity | 2022 | 8.3% |
-| Antisymmetry | 1978 | 8.1% |
-| Transitivity | 1673 | 6.9% |
-| BetaStep | 1401 | 5.8% |
-| TypeInstantiation | 831 | 3.4% |
-| Abstraction | 806 | 3.3% |
-| Assumption | 799 | 3.3% |
-| Definition | 19 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 2337 | 25.7% |
+| EqualityElimination | 2112 | 23.2% |
+| Instantiation | 884 | 9.7% |
+| Reflexivity | 867 | 9.5% |
+| Antisymmetry | 812 | 8.9% |
+| Transitivity | 617 | 6.8% |
+| BetaStep | 547 | 6.0% |
+| TypeInstantiation | 360 | 4.0% |
+| Assumption | 324 | 3.6% |
+| Abstraction | 197 | 2.2% |
+| Citation | 28 | 0.3% |
+| Definition | 12 | 0.1% |
+| Axiom | 1 | 0.0% |
 
 ## How to get it
 
@@ -738,7 +738,8 @@ From Scala it is `Modular`'s, under the name `NUM_BEZOUT`. Specialise it with `R
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -837,23 +838,23 @@ obtained.
 
 ## The proof the kernel holds
 
-25514 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+10271 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 7942 | 31.1% |
-| EqualityElimination | 5325 | 20.9% |
-| Instantiation | 2221 | 8.7% |
-| Reflexivity | 2143 | 8.4% |
-| Antisymmetry | 2091 | 8.2% |
-| Transitivity | 1769 | 6.9% |
-| BetaStep | 1471 | 5.8% |
-| TypeInstantiation | 874 | 3.4% |
-| Assumption | 840 | 3.3% |
-| Abstraction | 814 | 3.2% |
-| Definition | 20 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 2591 | 25.2% |
+| EqualityElimination | 2395 | 23.3% |
+| Instantiation | 1024 | 10.0% |
+| Reflexivity | 989 | 9.6% |
+| Antisymmetry | 925 | 9.0% |
+| Transitivity | 713 | 6.9% |
+| BetaStep | 617 | 6.0% |
+| TypeInstantiation | 403 | 3.9% |
+| Assumption | 365 | 3.6% |
+| Abstraction | 205 | 2.0% |
+| Citation | 30 | 0.3% |
+| Definition | 13 | 0.1% |
+| Axiom | 1 | 0.0% |
 
 ## How to get it
 
@@ -882,7 +883,8 @@ From Scala it is `Modular`'s, under the name `NUM_EUCLID`. Specialise it with `R
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -915,7 +917,7 @@ obtained.
 
 ## The proof the kernel holds
 
-215 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+215 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
@@ -958,7 +960,8 @@ From Scala it is `Modular`'s, under the name `NUM_PRIME_DIVISOR`. Specialise it 
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -1062,23 +1065,22 @@ obtained.
 
 ## The proof the kernel holds
 
-26547 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+4163 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 8492 | 32.0% |
-| EqualityElimination | 5464 | 20.6% |
-| Reflexivity | 2193 | 8.3% |
-| Instantiation | 2165 | 8.2% |
-| Antisymmetry | 2128 | 8.0% |
-| Transitivity | 1876 | 7.1% |
-| BetaStep | 1571 | 5.9% |
-| Abstraction | 897 | 3.4% |
-| TypeInstantiation | 877 | 3.3% |
-| Assumption | 859 | 3.2% |
-| Definition | 21 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 1323 | 31.8% |
+| EqualityElimination | 871 | 20.9% |
+| Reflexivity | 392 | 9.4% |
+| Instantiation | 314 | 7.5% |
+| Antisymmetry | 304 | 7.3% |
+| Transitivity | 300 | 7.2% |
+| BetaStep | 257 | 6.2% |
+| TypeInstantiation | 140 | 3.4% |
+| Abstraction | 115 | 2.8% |
+| Assumption | 109 | 2.6% |
+| Citation | 30 | 0.7% |
+| Definition | 8 | 0.2% |
 
 ## How to get it
 
@@ -1107,7 +1109,8 @@ From Scala it is `Primes`'s, under the name `NUM_FACTORISATION`. Specialise it w
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -1223,23 +1226,22 @@ obtained.
 
 ## The proof the kernel holds
 
-36730 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+5976 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 11223 | 30.6% |
-| EqualityElimination | 7846 | 21.4% |
-| Reflexivity | 3173 | 8.6% |
-| Instantiation | 3162 | 8.6% |
-| Antisymmetry | 3044 | 8.3% |
-| Transitivity | 2551 | 6.9% |
-| BetaStep | 2163 | 5.9% |
-| TypeInstantiation | 1261 | 3.4% |
-| Assumption | 1197 | 3.3% |
-| Abstraction | 1085 | 3.0% |
-| Definition | 21 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 1821 | 30.5% |
+| EqualityElimination | 1311 | 21.9% |
+| Reflexivity | 564 | 9.4% |
+| Antisymmetry | 508 | 8.5% |
+| Instantiation | 486 | 8.1% |
+| Transitivity | 387 | 6.5% |
+| BetaStep | 343 | 5.7% |
+| TypeInstantiation | 193 | 3.2% |
+| Assumption | 176 | 2.9% |
+| Abstraction | 154 | 2.6% |
+| Citation | 25 | 0.4% |
+| Definition | 8 | 0.1% |
 
 ## How to get it
 
@@ -1268,7 +1270,8 @@ From Scala it is `Primes`'s, under the name `NUM_FACTORISATION_UNIQUE`. Speciali
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -1391,23 +1394,23 @@ obtained.
 
 ## The proof the kernel holds
 
-37378 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+11373 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 11562 | 30.9% |
-| EqualityElimination | 7803 | 20.9% |
-| Instantiation | 3290 | 8.8% |
-| Reflexivity | 3266 | 8.7% |
-| Antisymmetry | 2949 | 7.9% |
-| Transitivity | 2697 | 7.2% |
-| BetaStep | 2212 | 5.9% |
-| TypeInstantiation | 1312 | 3.5% |
-| Assumption | 1155 | 3.1% |
-| Abstraction | 1105 | 3.0% |
-| Definition | 23 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 4180 | 36.8% |
+| EqualityElimination | 2025 | 17.8% |
+| Reflexivity | 976 | 8.6% |
+| Instantiation | 890 | 7.8% |
+| Transitivity | 853 | 7.5% |
+| Antisymmetry | 726 | 6.4% |
+| BetaStep | 630 | 5.5% |
+| Abstraction | 463 | 4.1% |
+| TypeInstantiation | 329 | 2.9% |
+| Assumption | 255 | 2.2% |
+| Citation | 35 | 0.3% |
+| Definition | 10 | 0.1% |
+| Axiom | 1 | 0.0% |
 
 ## How to get it
 
@@ -1436,7 +1439,8 @@ From Scala it is `Coding`'s, under the name `NUM_CRT`. Specialise it with `Rules
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -1512,23 +1516,23 @@ obtained.
 
 ## The proof the kernel holds
 
-13142 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+4503 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 4895 | 37.2% |
-| EqualityElimination | 2311 | 17.6% |
-| Transitivity | 1034 | 7.9% |
-| Reflexivity | 1014 | 7.7% |
-| Instantiation | 913 | 6.9% |
-| Antisymmetry | 827 | 6.3% |
-| BetaStep | 783 | 6.0% |
-| Abstraction | 613 | 4.7% |
-| TypeInstantiation | 392 | 3.0% |
-| Assumption | 337 | 2.6% |
-| Definition | 19 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 2062 | 45.8% |
+| EqualityElimination | 612 | 13.6% |
+| Abstraction | 329 | 7.3% |
+| Transitivity | 308 | 6.8% |
+| Reflexivity | 280 | 6.2% |
+| Antisymmetry | 249 | 5.5% |
+| Instantiation | 230 | 5.1% |
+| BetaStep | 221 | 4.9% |
+| Assumption | 102 | 2.3% |
+| TypeInstantiation | 88 | 2.0% |
+| Citation | 12 | 0.3% |
+| Definition | 9 | 0.2% |
+| Axiom | 1 | 0.0% |
 
 ## How to get it
 
@@ -1557,7 +1561,8 @@ From Scala it is `Coding`'s, under the name `NUM_FACT_DIVIDES`. Specialise it wi
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -1612,23 +1617,23 @@ obtained.
 
 ## The proof the kernel holds
 
-6818 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+5358 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 2637 | 38.7% |
-| EqualityElimination | 1141 | 16.7% |
-| Reflexivity | 488 | 7.2% |
-| Antisymmetry | 486 | 7.1% |
-| Transitivity | 462 | 6.8% |
-| Instantiation | 452 | 6.6% |
-| Abstraction | 410 | 6.0% |
-| BetaStep | 352 | 5.2% |
-| Assumption | 202 | 3.0% |
-| TypeInstantiation | 168 | 2.5% |
-| Definition | 16 | 0.2% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 2236 | 41.7% |
+| EqualityElimination | 832 | 15.5% |
+| Reflexivity | 360 | 6.7% |
+| Transitivity | 350 | 6.5% |
+| Abstraction | 350 | 6.5% |
+| Antisymmetry | 350 | 6.5% |
+| Instantiation | 323 | 6.0% |
+| BetaStep | 267 | 5.0% |
+| Assumption | 148 | 2.8% |
+| TypeInstantiation | 126 | 2.4% |
+| Definition | 11 | 0.2% |
+| Citation | 4 | 0.1% |
+| Axiom | 1 | 0.0% |
 
 ## How to get it
 
@@ -1657,7 +1662,8 @@ From Scala it is `Peano`'s, under the name `NUM_STRONG_INDUCTION`. Specialise it
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -1736,23 +1742,23 @@ obtained.
 
 ## The proof the kernel holds
 
-15546 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+11324 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 4952 | 31.9% |
-| EqualityElimination | 2945 | 18.9% |
-| Transitivity | 1530 | 9.8% |
-| Reflexivity | 1503 | 9.7% |
-| Instantiation | 1472 | 9.5% |
-| BetaStep | 932 | 6.0% |
-| Antisymmetry | 856 | 5.5% |
-| TypeInstantiation | 521 | 3.4% |
-| Abstraction | 483 | 3.1% |
-| Assumption | 317 | 2.0% |
-| Axiom | 17 | 0.1% |
-| Definition | 16 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
+| Congruence | 3962 | 35.0% |
+| EqualityElimination | 1972 | 17.4% |
+| Transitivity | 1161 | 10.3% |
+| Reflexivity | 1104 | 9.7% |
+| Instantiation | 973 | 8.6% |
+| BetaStep | 711 | 6.3% |
+| Antisymmetry | 454 | 4.0% |
+| Abstraction | 412 | 3.6% |
+| TypeInstantiation | 390 | 3.4% |
+| Assumption | 151 | 1.3% |
+| Citation | 12 | 0.1% |
+| Axiom | 12 | 0.1% |
+| Definition | 10 | 0.1% |
 
 ## How to get it
 
@@ -1781,7 +1787,8 @@ From Scala it is `Peano`'s, under the name `NUM_ARCHIMEDES`. Specialise it with 
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -1986,22 +1993,23 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 
 ## The proof the kernel holds
 
-7565 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+3873 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 1999 | 26.4% |
-| EqualityElimination | 1612 | 21.3% |
-| Reflexivity | 858 | 11.3% |
-| Transitivity | 816 | 10.8% |
-| Instantiation | 762 | 10.1% |
-| BetaStep | 519 | 6.9% |
-| Antisymmetry | 395 | 5.2% |
-| TypeInstantiation | 309 | 4.1% |
-| Assumption | 145 | 1.9% |
-| Abstraction | 129 | 1.7% |
-| Axiom | 11 | 0.1% |
-| Definition | 10 | 0.1% |
+| Congruence | 1023 | 26.4% |
+| EqualityElimination | 844 | 21.8% |
+| Reflexivity | 453 | 11.7% |
+| Transitivity | 401 | 10.4% |
+| Instantiation | 317 | 8.2% |
+| BetaStep | 309 | 8.0% |
+| TypeInstantiation | 177 | 4.6% |
+| Antisymmetry | 177 | 4.6% |
+| Abstraction | 91 | 2.3% |
+| Assumption | 61 | 1.6% |
+| Axiom | 9 | 0.2% |
+| Definition | 8 | 0.2% |
+| Citation | 3 | 0.1% |
 
 ## How to get it
 
@@ -2030,7 +2038,8 @@ From Scala it is `Magnitude`'s, under the name `ABS_TRIANGLE`. Specialise it wit
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 - Each step is one operation as it was recorded, and a step citing a name cites a fact whose
   statement is that name's.
 
@@ -2177,23 +2186,23 @@ obtained.
 
 ## The proof the kernel holds
 
-50605 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+18203 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 14851 | 29.3% |
-| EqualityElimination | 11019 | 21.8% |
-| Reflexivity | 4605 | 9.1% |
-| Instantiation | 4550 | 9.0% |
-| Antisymmetry | 4114 | 8.1% |
-| Transitivity | 3689 | 7.3% |
-| BetaStep | 3112 | 6.1% |
-| TypeInstantiation | 1831 | 3.6% |
-| Assumption | 1551 | 3.1% |
-| Abstraction | 1252 | 2.5% |
-| Definition | 27 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 6060 | 33.3% |
+| EqualityElimination | 3619 | 19.9% |
+| Reflexivity | 1707 | 9.4% |
+| Instantiation | 1469 | 8.1% |
+| Transitivity | 1386 | 7.6% |
+| Antisymmetry | 1224 | 6.7% |
+| BetaStep | 1122 | 6.2% |
+| TypeInstantiation | 600 | 3.3% |
+| Abstraction | 550 | 3.0% |
+| Assumption | 402 | 2.2% |
+| Citation | 50 | 0.3% |
+| Definition | 13 | 0.1% |
+| Axiom | 1 | 0.0% |
 
 ## How to get it
 
@@ -2222,7 +2231,8 @@ From Scala it is `Coding`'s, under the name `NUM_BETA_SEQUENCE`. Specialise it w
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -2339,23 +2349,23 @@ obtained.
 
 ## The proof the kernel holds
 
-53998 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+38404 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 17641 | 32.7% |
-| EqualityElimination | 11055 | 20.5% |
-| Reflexivity | 5002 | 9.3% |
-| Instantiation | 4563 | 8.5% |
-| Antisymmetry | 4024 | 7.5% |
-| Transitivity | 3822 | 7.1% |
-| BetaStep | 3220 | 6.0% |
-| TypeInstantiation | 1820 | 3.4% |
-| Assumption | 1445 | 2.7% |
-| Abstraction | 1371 | 2.5% |
-| Definition | 31 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 13385 | 34.9% |
+| EqualityElimination | 7519 | 19.6% |
+| Reflexivity | 3518 | 9.2% |
+| Instantiation | 3199 | 8.3% |
+| Transitivity | 2711 | 7.1% |
+| Antisymmetry | 2686 | 7.0% |
+| BetaStep | 2205 | 5.7% |
+| TypeInstantiation | 1225 | 3.2% |
+| Abstraction | 997 | 2.6% |
+| Assumption | 923 | 2.4% |
+| Citation | 22 | 0.1% |
+| Definition | 13 | 0.0% |
+| Axiom | 1 | 0.0% |
 
 ## How to get it
 
@@ -2384,7 +2394,8 @@ From Scala it is `Language`'s, under the name `NUM_PA_FORM`. Specialise it with 
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -2541,23 +2552,22 @@ obtained.
 
 ## The proof the kernel holds
 
-58947 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+6579 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 16731 | 28.4% |
-| EqualityElimination | 13130 | 22.3% |
-| Reflexivity | 5489 | 9.3% |
-| Instantiation | 5330 | 9.0% |
-| Antisymmetry | 4860 | 8.2% |
-| Transitivity | 4291 | 7.3% |
-| BetaStep | 3711 | 6.3% |
-| TypeInstantiation | 2201 | 3.7% |
-| Assumption | 1811 | 3.1% |
-| Abstraction | 1358 | 2.3% |
-| Definition | 31 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| EqualityElimination | 1640 | 24.9% |
+| Congruence | 1490 | 22.6% |
+| Reflexivity | 738 | 11.2% |
+| Instantiation | 596 | 9.1% |
+| Antisymmetry | 563 | 8.6% |
+| Transitivity | 489 | 7.4% |
+| BetaStep | 478 | 7.3% |
+| TypeInstantiation | 283 | 4.3% |
+| Assumption | 194 | 2.9% |
+| Abstraction | 76 | 1.2% |
+| Citation | 22 | 0.3% |
+| Definition | 10 | 0.2% |
 
 ## How to get it
 
@@ -2586,7 +2596,8 @@ From Scala it is `Provability`'s, under the name `NUM_PROV_MP`. Specialise it wi
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,
@@ -2754,23 +2765,22 @@ obtained.
 
 ## The proof the kernel holds
 
-69249 inferences. The account above describes them and is not a second proof: what the kernel checked is this, and its shape is
+557 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 20119 | 29.1% |
-| EqualityElimination | 15234 | 22.0% |
-| Reflexivity | 6286 | 9.1% |
-| Instantiation | 6155 | 8.9% |
-| Antisymmetry | 5753 | 8.3% |
-| Transitivity | 4916 | 7.1% |
-| BetaStep | 4263 | 6.2% |
-| TypeInstantiation | 2509 | 3.6% |
-| Assumption | 2175 | 3.1% |
-| Abstraction | 1799 | 2.6% |
-| Definition | 36 | 0.1% |
-| TypeDefinition | 2 | 0.0% |
-| Axiom | 2 | 0.0% |
+| Congruence | 127 | 22.8% |
+| EqualityElimination | 119 | 21.4% |
+| Transitivity | 65 | 11.7% |
+| Reflexivity | 59 | 10.6% |
+| BetaStep | 49 | 8.8% |
+| Antisymmetry | 40 | 7.2% |
+| Instantiation | 37 | 6.6% |
+| Abstraction | 26 | 4.7% |
+| TypeInstantiation | 17 | 3.1% |
+| Assumption | 9 | 1.6% |
+| Citation | 5 | 0.9% |
+| Definition | 4 | 0.7% |
 
 ## How to get it
 
@@ -2799,7 +2809,8 @@ From Scala it is `Deduction`'s, under the name `NUM_PROV_SELF`. Specialise it wi
   and gave the same term, which is what `Signature.readable` returns a pair for.
 - What it rests on is a walk over the derivation, and a name appears against a fact only
   where the sequents agree.
-- The inferences and their shape are counted from the same walk.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,

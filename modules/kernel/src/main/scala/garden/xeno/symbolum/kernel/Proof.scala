@@ -36,8 +36,8 @@ import scala.annotation.tailrec
  */
 object Proof {
 
-  /** The format's version, which a reader checks before anything else. */
-  val Version: String = "proof 1"
+  /** The format's version, which a reader checks before anything else; two since `cite`. */
+  val Version: String = "proof 2"
 
   /** A theorem, as text. */
   def write(theorem: Kernel.Thm): String = {
@@ -139,6 +139,8 @@ object Proof {
       ("def", Vector(encode(name), termId(body).toString))
 
     case Derivation.Axiom(proposition) => ("axiom", Vector(termId(proposition).toString))
+
+    case Derivation.Citation(name, _) => ("cite", Vector(encode(name)))
 
     case Derivation.TypeDefinition(typeName, absName, repName, _, half) =>
       val which = half match {

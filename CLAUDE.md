@@ -385,7 +385,7 @@ to live. `WhatAClaimCosts` is the first one that does.
 
 Everything this system asks anyone to believe, and no one development is asked for all of it:
 
-1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1200 lines. The
+1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1220 lines. The
    directory also holds a printer, the refusal surface, the proof record and the reader of which
    commit the classes were built from, which are not counted and cannot construct a theorem, which
    a test checks rather than claims. `Kernel.Thm` is a class
@@ -393,7 +393,9 @@ Everything this system asks anyone to believe, and no one development is asked f
    `TrustBoundaryTwinSpec` casts the underlying pair and gets a `ClassCastException` where it used
    to get a theorem out of nothing. Ten primitive inference rules construct a theorem, and three
    theory extensions also do: defining a constant, defining a type, and asserting an axiom. Only
-   the last of those adds to what has to be believed. Term constructors are `private[kernel]`, so a
+   the last of those adds to what has to be believed. `Kernel.cite` builds one too and infers
+   nothing: it restates a published fact's sequent under the fact's name, which is where a report
+   on a proof stops walking, and `docs/adr/0047` is why. Term constructors are `private[kernel]`, so a
    term exists only because a checking constructor built it and is well-typed by construction. Type
    constructors are not private, because naming a type proves nothing: a type entering the system
    from outside is checked by `Theory.checkType`.
