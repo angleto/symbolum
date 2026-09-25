@@ -655,7 +655,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 738 lemmas, 493 have two or more leading quantifiers and **429 of
+caller meant: of the library's 739 lemmas, 494 have two or more leading quantifiers and **430 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1812,6 +1812,13 @@ that the two attainments rest on the gluing and on the negation rather than on s
 detaches both at the identity on `[0, 1]`, refutes the maximum without its continuity hypothesis at
 `COND (y < 1) y 0`, and refutes the gluing without its gluing hypothesis at "shorter than one".
 
+**Uniform continuity is the gluing's third use, `CONTINUOUS_UNIFORM`, since 2026-09-25**: continuous
+on `[a, b]` gives one radius per tolerance for every pair of points of it, Heine and Cantor's
+theorem. What glues is **not** "one radius serves on `[u, v]`", whose pairs straddling the joint
+neither half covers, but "one radius serves every point of `[u, v]` against every point at all",
+which glues at the smaller radius. It costs what the extreme value theorem costs, and
+`ContinuitySpec` refutes it without continuity at the step `COND (0 < y) 1 0` on `[0, 1]`.
+
 **`ln` has its first facts, and they are `Logarithm`, a link since 2026-09-24 that declares
 nothing.** `EXP_LN` and `LN_EXP` are the two compositions, `LN_ONE` and `LN_MUL` follow by
 injectivity, and what they rest on is `EXP_ONTO`, the intermediate value theorem at the exponential.
@@ -2031,7 +2038,11 @@ through it, with `RAT_DENOMINATOR` reading the stored index `d * e + d + e` back
 **The order is the thing to know before touching it**: compared under the negations, by size inside
 the recursion with a negation adding no size, and by the number of negations last; counting the
 negation's node sent `-m` to the end of a sum and the rationals' first obligation was refused, which
-`tools/verify/perturb-commutative-ring.sh` fires. `rat` is not yet an ordered field.
+`tools/verify/perturb-commutative-ring.sh` fires. **`rat` is an ordered field since the same day**:
+`RAT_INV` is defined with the value at zero written by its conditional, `RAT_MUL_INV` holds off zero,
+and `RAT_LE_ADD` and `RAT_LE_MUL` tie the order to the operations. The existence of an inverse
+needed the sign of the numerator, which the pair holds as an integer, and `INT_OF_NUM_CASES` is that
+split; `tools/verify/perturb-rational-field.sh` fires the zero branch and the sign of the witness.
 
 What is not there yet, in the order the work seems to want it: a greatest common divisor anybody can
 **compute**, since `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated. The half of that

@@ -336,10 +336,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // is under a binder and is not peeled.
     // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents over
     // five facts, three, two, one, one and one; the binomial theorem and the two sums carry none.
-    // 580 with the gauge integral, the same day, derived before the run and read off the probe
+    // 565 with uniform continuity, the same day, derived before the run: its three antecedents.
+    // Tip plus this branch's delta.
+    // 583 with the gauge integral, the same day, derived before the run and read off the probe
     // after it: eighteen antecedents over nine facts, three on `HAS_INTEGRAL_UNIQUE`, one on
-    // `FINE_SUM_PIECE` and two on each of the other seven.
-    propose.weakenings.size shouldBe 580
+    // `FINE_SUM_PIECE` and two on each of the other seven. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 583
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

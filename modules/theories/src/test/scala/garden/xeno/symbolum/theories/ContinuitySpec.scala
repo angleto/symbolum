@@ -378,6 +378,86 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     refused.hypotheses shouldBe empty
   }
 
+  /* ------------------------------------------------------------ uniform continuity */
+
+  it should "prove uniform continuity from the reals alone, and through the gluing" in {
+    // Measured on 2026-09-25 before it was written here: seventeen, the extreme value theorem's cost.
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val select = force(chain.classical.axiom("SELECT")).conclusion
+    val spent = Derivation.axiomsOf(fact(Continuity.Uniform))
+    spent should contain(completeness)
+    (spent -- realAxioms) shouldBe Set(select)
+    val gluing = Set(fact(Continuity.IntervalGluing).conclusion)
+    Derivation.restingOn(fact(Continuity.Uniform), gluing) shouldBe gluing
+  }
+
+  it should "detach uniform continuity at the identity on [0, 1], with nothing assumed" in {
+    val identity = force(continuity.term("\\y:real. y", Type.fun(reals, reals)))
+    val instance = opened(force(rules.specAll(fact(Continuity.Uniform), List(identity, real("0:real"), real("1:real"), real("1:real")))))
+    val detached = Vector(lemma("(0:real) <= 1"), identityOnUnit, lemma("(0:real) < 1"))
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    continuity.show(detached.conclusion) shouldBe
+      "?x:real. 0 < x /\\ (!y:real. !z:real. 0 <= y /\\ y <= 1 /\\ 0 <= z /\\ z <= 1 /\\ abs (y - z) < x ==> abs (y - z) < 1)"
+  }
+
+  it should "need its continuity hypothesis, which is shown by refuting uniform continuity without it" in {
+    // The step `COND (0 < y) 1 0` on `[0, 1]` at tolerance one half: whatever radius `d` is offered,
+    // the point `min (d / 2) 1` is inside the interval, within `d` of zero and past the jump, where
+    // the step is one while it is zero at zero.
+    val unconditional = proposition(
+      "!f:real -> real. !a:real. !b:real. !e:real. a <= b ==> 0 < e ==> ?d:real. 0 < d /\\ " +
+        "(!x:real. !y:real. a <= x /\\ x <= b /\\ a <= y /\\ y <= b /\\ abs (x - y) < d ==> abs (f x - f y) < e)")
+    val assumed = force(LogicError.lift(Kernel.assume(unconditional)))
+    val instance = opened(force(rules.specAll(assumed, List(step, real("0:real"), real("1:real"), real("(1:real) / 2")))))
+    val somewhere = Vector(lemma("(0:real) <= 1"), lemma("(0:real) < (1:real) / 2"))
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+
+    val d = Term.variable("d", reals)
+    val radius = force(LogicError.lift(Kernel.assume(proposition(
+      "0 < d:real /\\ (!x:real. !y:real. 0 <= x /\\ x <= 1 /\\ 0 <= y /\\ y <= 1 /\\ abs (x - y) < d ==> " +
+        "abs (COND (0 < x) (1:real) 0 - COND (0 < y) (1:real) 0) < (1:real) / 2)"))))
+    val dPositive = force(rules.conjElim1(radius))
+    val serves = force(rules.conjElim2(radius))
+    val magnitude = chain.limit.magnitude
+
+    // `p = min (d / 2) 1` is positive, at most one and under `d`, by the two cases of `min`.
+    val p = "min (d / 2) (1:real)"
+    val cases = force(magnitude.fact(Magnitude.MinCases).flatMap(rules.specAll(_, List(real("d / 2"), real("1:real")))))
+    def fromCase(value: String, fact: String): Kernel.Thm = {
+      val equal = force(LogicError.lift(Kernel.assume(proposition(s"$p = $value"))))
+      force(rules.specAll(lemma(fact), List(real(p), d)).flatMap(rules.mp(_, equal)).flatMap(rules.mp(_, dPositive)))
+    }
+    val positive = force(rules.disjElim(cases,
+      fromCase("d / 2", "!p:real d:real. p = d / 2 ==> 0 < d ==> 0 < p"),
+      fromCase("1", "!p:real d:real. p = 1 ==> 0 < d ==> 0 < p")))
+    val atMostOne = force(magnitude.fact(Magnitude.MinBelowRight).flatMap(rules.specAll(_, List(real("d / 2"), real("1:real")))))
+    val atMostHalf = force(magnitude.fact(Magnitude.MinBelowLeft).flatMap(rules.specAll(_, List(real("d / 2"), real("1:real")))))
+    val nonNegative = force(rules.specAll(lemma("!p:real. 0 < p ==> 0 <= p - 0"), List(real(p))).flatMap(rules.mp(_, positive)))
+    val magnitudeIs = force(magnitude.fact(Magnitude.OfNonNegative).flatMap(rules.spec(real(s"$p - 0"), _)).flatMap(rules.mp(_, nonNegative)))
+    val close = force(rules.specAll(lemma("!m:real p:real d:real. m = p - 0 ==> p <= d / 2 ==> 0 < d ==> m < d"),
+      List(real(s"abs ($p - 0)"), real(p), d)).flatMap(rules.mp(_, magnitudeIs)).flatMap(rules.mp(_, atMostHalf)).flatMap(rules.mp(_, dPositive)))
+    val inside = Vector(
+      force(rules.specAll(lemma("!p:real. 0 < p ==> 0 <= p"), List(real(p))).flatMap(rules.mp(_, positive))),
+      atMostOne, lemma("(0:real) <= 0"), lemma("(0:real) <= 1"), close
+    ).reduceRight((a, b) => force(rules.conjIntro(a, b)))
+    val jump = force(rules.specAll(serves, List(real(p), real("0:real"))).flatMap(rules.mp(_, inside)))
+
+    val afterJump = stepValue(p, positive, positive = true)
+    val atJump = stepValue("0", lemma("~((0:real) < 0)"), positive = false)
+    val difference = s"COND (0 < $p) (1:real) 0 - COND ((0:real) < 0) 1 0"
+    val above = force(magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(real(difference), _)))
+    val absurd = force(rules
+      .specAll(
+        lemma("!p:real q:real m:real. p = 1 ==> q = 0 ==> p - q <= m ==> m < 1 / 2 ==> F"),
+        List(real(s"COND (0 < $p) (1:real) 0"), real("COND ((0:real) < 0) (1:real) 0"), real(s"abs ($difference)")))
+      .flatMap(rules.mp(_, afterJump)).flatMap(rules.mp(_, atJump))
+      .flatMap(rules.mp(_, above)).flatMap(rules.mp(_, jump)))
+
+    val refused = force(rules.existsElim(somewhere, d, absurd).flatMap(rules.notIntro(unconditional, _)))
+    refused.hypotheses shouldBe empty
+  }
+
   it should "be reachable from the chain's end, so that every development above the reals can name it" in {
     // It WAS the end until 2026-09-25, and this asserted the identity; `Resolving` is above it since.
     // What the test is for is the visibility, and which link is last is `ChainSpec`'s to pin.
