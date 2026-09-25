@@ -232,6 +232,18 @@ naturals' two. `Freshman.scala` is the derivation and is not a development; `Fer
 the theorem at two, asserts the route, and refutes the statement with its hypothesis dropped at
 `p = 4, a = 2`, where `2^4` leaves nought on division by four.
 
+**Euler's theorem is `NUM_EULER`, since 2026-09-25, and what it was waiting on is that a finite
+product does not change under a permutation of its indices.** `NUM_CONG n (NUM_POW a (NUM_TOTIENT n))
+(SUC 0)` for `0 < n` and `a` coprime to `n`, where `NUM_TOTIENT` is `Modular`'s, the count of `k < n`
+coprime to `n`. `NUM_PROD_PERMUTE` asks for surjectivity as a hypothesis beside injectivity, because
+deriving the first from the second is a pigeonhole this library does not have, and its induction runs
+`NUM_INDUCTION` over a predicate quantifying the map inside, since the step needs the claim at a
+different map. The permutation Euler uses multiplies the coprime residues by `a` and **fixes the
+others**, which is what keeps the proof to one direction of a coprimality fact. `Euler.scala` is the
+derivation and says why each of those; `EulerSpec` detaches the theorem at four and three with
+nothing assumed, derives `NUM_TOTIENT 2 = 1` from the definition, and refutes the statement at
+`n = 2, a = 2`.
+
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
 coded by the **beta function** rather than by iterated pairing or by a product of prime powers, on
