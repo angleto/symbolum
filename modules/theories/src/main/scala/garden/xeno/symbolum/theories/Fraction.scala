@@ -43,9 +43,15 @@ import garden.xeno.symbolum.logic.*
  * one lemma the obligations share: the index a product of two denominators is stored at, read back
  * as the product.
  *
- * Not here yet: associativity, the units, the inverse of a non-zero rational, the distributive law
- * and the order, which are what make `rat` an ordered field and what the reals as cuts will ask of
- * it. Each is a pair-level identity carried to the classes the way the two commutativities are.
+ * **Since the same day, the rest of a commutative ring**: `RAT_ZERO` and `RAT_ONE` as the classes
+ * of `(INT_ZERO, 0)` and `(INT_ONE, 0)`, the two associativities, both units, the additive inverse,
+ * the distributive law, and `RAT_ZERO_NOT_ONE`, which is the one of them a one-point type would
+ * fail. Each law is a pair-level identity carried to the classes, and `Lifting.laws` says how.
+ *
+ * Not here yet: the inverse of a non-zero rational and the order, which are what make `rat` an
+ * ordered field and what the reals as cuts will ask of it. The inverse wants a case split on the
+ * sign of the numerator, which the pair `(a, d)` holds as an integer rather than as a sign and a
+ * size; the order wants `INT_LE` preserved by a positive factor.
  *
  * == The one thing transitivity needs, and where it comes from ==
  *
@@ -154,6 +160,31 @@ object Fraction {
   val AddCommutative: String = "RAT_ADD_SYM"
   val MulCommutative: String = "RAT_MUL_SYM"
 
+  /** `RAT_ZERO` and `RAT_ONE`: the classes of `(INT_ZERO, 0)` and `(INT_ONE, 0)`, `0/1` and `1/1`. */
+  val Zero: String = "RAT_ZERO"
+  val One: String = "RAT_ONE"
+
+  /**
+   * The rest of the commutative ring, on classes: the names are `Integer`'s with `RAT` in front,
+   * because they are the same laws one quotient up and a reader looking for one looks for the other.
+   */
+  val AddAssociative: String = "RAT_ADD_ASSOC"
+  val AddAtZero: String = "RAT_ADD_ZERO"
+  val AddNegation: String = "RAT_ADD_NEG"
+  val MulAssociative: String = "RAT_MUL_ASSOC"
+  val MulAtOne: String = "RAT_MUL_ONE"
+  val Distributive: String = "RAT_MUL_DISTRIBUTE"
+
+  /**
+   * `|- ~(RAT_ZERO = RAT_ONE)`, the guard against a type of one point.
+   *
+   * Every other law here holds of a one-point type, and a quotient whose relation related everything
+   * would be one. `QuotientSpec` says it cannot carry this guard for a quotient in general; for this
+   * one it is a theorem, because the relation at the two pairs is `0 = 1` over `int` and that is
+   * `ZERO = SUC ZERO` over `num` by the embedding's injectivity.
+   */
+  val UnitsDistinct: String = "RAT_ZERO_NOT_ONE"
+
   /** `(a, d) + (b, e) = (a * (e + 1) + b * (d + 1), d * e + d + e)`, over the pair's own projections. */
   private val AddBody: String =
     "\\p:prod(int,num). \\q:prod(int,num). " +
@@ -166,6 +197,10 @@ object Fraction {
 
   /** `-(a, d) = (-a, d)`. */
   private val NegBody: String = "\\p:prod(int,num). PAIR (INT_NEG (FST p)) (SND p)"
+
+  /** `0/1` and `1/1`, where the stored index `ZERO` is the denominator `SUC ZERO`. */
+  private val ZeroBody: String = "RAT_OF_PAIR (PAIR INT_ZERO ZERO)"
+  private val OneBody: String = "RAT_OF_PAIR (PAIR INT_ONE ZERO)"
 
   val Names: Quotient.Names =
     Quotient.Names(
@@ -198,7 +233,15 @@ object Fraction {
       ("!p:prod(int,num). !q:prod(int,num). RAT_MUL (RAT_OF_PAIR p) (RAT_OF_PAIR q) = RAT_OF_PAIR " +
         "(PAIR (INT_MUL (FST p) (FST q)) (SND p * SND q + SND p + SND q))"),
     AddCommutative -> "!x:rat. !y:rat. RAT_ADD x y = RAT_ADD y x",
-    MulCommutative -> "!x:rat. !y:rat. RAT_MUL x y = RAT_MUL y x"
+    MulCommutative -> "!x:rat. !y:rat. RAT_MUL x y = RAT_MUL y x",
+    AddAssociative -> "!x:rat. !y:rat. !z:rat. RAT_ADD (RAT_ADD x y) z = RAT_ADD x (RAT_ADD y z)",
+    AddAtZero -> "!x:rat. RAT_ADD x RAT_ZERO = x",
+    AddNegation -> "!x:rat. RAT_ADD x (RAT_NEG x) = RAT_ZERO",
+    MulAssociative -> "!x:rat. !y:rat. !z:rat. RAT_MUL (RAT_MUL x y) z = RAT_MUL x (RAT_MUL y z)",
+    MulAtOne -> "!x:rat. RAT_MUL x RAT_ONE = x",
+    Distributive ->
+      "!x:rat. !y:rat. !z:rat. RAT_MUL x (RAT_ADD y z) = RAT_ADD (RAT_MUL x y) (RAT_MUL x z)",
+    UnitsDistinct -> "~(RAT_ZERO = RAT_ONE)"
   )
 
   private val numbers: Type = TyApp(Natural.TypeName, Nil)
@@ -290,7 +333,17 @@ object Fraction {
       addSymmetric <- arithmetic.commutative(complete, Addition, addOperation, addPairs)
       mulSymmetric <- arithmetic.commutative(complete, Multiplication, mulOperation, mulPairs)
 
-      checked <- Vector(
+      zeroBody <- Parser.term(complete.theory, notation, ZeroBody)
+      zeroDefined <- LogicError.lift(Kernel.defineConstant(complete.theory, Zero, zeroBody))
+      (withZero, zeroDefinition) = zeroDefined
+      oneBody <- Parser.term(withZero, notation, OneBody)
+      oneDefined <- LogicError.lift(Kernel.defineConstant(withZero, One, oneBody))
+      (whole, oneDefinition) = oneDefined
+      widened <- complete.over(whole)
+      laws <- arithmetic.laws(widened, Vector(addPairs, negPair, mulPairs, zeroDefinition, oneDefinition))
+      distinct <- arithmetic.unitsDistinct(widened, zeroDefinition, oneDefinition, integer, peano)
+
+      checked <- (Vector(
         (SwapFactors, swap),
         (SameReflexive, reflexive),
         (SameSymmetric, symmetric),
@@ -301,10 +354,10 @@ object Fraction {
         (MulPairs, mulPairs),
         (AddCommutative, addSymmetric),
         (MulCommutative, mulSymmetric)
-      ).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
+      ) ++ laws :+ (UnitsDistinct, distinct)).foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
         case ((name, theorem), rest) =>
           for {
-            statement <- Parser.proposition(complete.theory, notation, statementOf(name))
+            statement <- Parser.proposition(whole, notation, statementOf(name))
             _ <-
               if (theorem.conclusion == statement) Right(())
               else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
@@ -317,10 +370,10 @@ object Fraction {
     } yield new Fraction(
       classical,
       integer,
-      complete.theory,
+      whole,
       notation,
-      complete,
-      Map(SameName -> sameDefinition) ++ complete.definitions,
+      widened,
+      Map(SameName -> sameDefinition, Zero -> zeroDefinition, One -> oneDefinition) ++ complete.definitions,
       checked.toMap
     )
 
@@ -586,6 +639,7 @@ object Fraction {
     projections: Vector[Rewrite.Rule],
     denominators: Vector[Rewrite.Rule],
     denominator: Kernel.Thm,
+    embeddedOne: Kernel.Thm,
     ring: CommutativeRing
   ) {
     private val rules = logic.rules
@@ -692,6 +746,170 @@ object Fraction {
         result <- wide.genAll(openedP, List(p, q))
       } yield result
     }
+
+    /**
+     * The laws of the ring on classes, each by the route `Integer.Laws` takes one quotient down.
+     *
+     * A law is written at `RAT_OF_PAIR p` rather than at a class variable, because the route needs
+     * a pair to rewrite to: the three lifts and the two constants' definitions bring each side to
+     * `RAT_OF_PAIR` of one pair, the two pairs are related by the ring of `int` with no premise at
+     * all, and the quotient's central fact turns the relation into the equation of the classes. The
+     * representative the quotient chose for each class is what the pair variables are specialised
+     * at in the end, which is what puts the statement back over `rat`.
+     *
+     * The one law that needs more than the lifts is `x * 1 = x`. A constant stores the index
+     * `ZERO`, so the product's denominator reads `SUC d * SUC ZERO`, and the ring treats
+     * `INT_OF_NUM (SUC ZERO)` as an atom it knows nothing about: the second rule in `denominators`
+     * reads it as `INT_ONE`. Measured on 2026-09-25 with that rule removed: the construction was
+     * refused at `RAT_MUL_ONE`, naming the two products, and the four laws built before it held,
+     * `x + 0 = x` among them, because there the atom stands on both sides of the cross-multiplication.
+     */
+    def laws(quotient: Quotient, lifts: Vector[Kernel.Thm]): Either[LogicError, Vector[(String, Kernel.Thm)]] = {
+      val wide = quotient.logic
+      val p = Term.variable("p", Pairs)
+      val q = Term.variable("q", Pairs)
+      val r = Term.variable("r", Pairs)
+      val x = Term.variable("x", Classes)
+      val y = Term.variable("y", Classes)
+      val z = Term.variable("z", Classes)
+      val one = List(p) -> List(x)
+      val three = List(p, q, r) -> List(x, y, z)
+      val texts: Vector[(String, String, String, (List[FVar], List[FVar]))] = Vector(
+        (AddAssociative,
+          "RAT_ADD (RAT_ADD (RAT_OF_PAIR p) (RAT_OF_PAIR q)) (RAT_OF_PAIR r)",
+          "RAT_ADD (RAT_OF_PAIR p) (RAT_ADD (RAT_OF_PAIR q) (RAT_OF_PAIR r))", three),
+        (AddAtZero, "RAT_ADD (RAT_OF_PAIR p) RAT_ZERO", "RAT_OF_PAIR p", one),
+        (AddNegation, "RAT_ADD (RAT_OF_PAIR p) (RAT_NEG (RAT_OF_PAIR p))", "RAT_ZERO", one),
+        (MulAssociative,
+          "RAT_MUL (RAT_MUL (RAT_OF_PAIR p) (RAT_OF_PAIR q)) (RAT_OF_PAIR r)",
+          "RAT_MUL (RAT_OF_PAIR p) (RAT_MUL (RAT_OF_PAIR q) (RAT_OF_PAIR r))", three),
+        (MulAtOne, "RAT_MUL (RAT_OF_PAIR p) RAT_ONE", "RAT_OF_PAIR p", one),
+        (Distributive,
+          "RAT_MUL (RAT_OF_PAIR p) (RAT_ADD (RAT_OF_PAIR q) (RAT_OF_PAIR r))",
+          "RAT_ADD (RAT_MUL (RAT_OF_PAIR p) (RAT_OF_PAIR q)) (RAT_MUL (RAT_OF_PAIR p) (RAT_OF_PAIR r))", three)
+      )
+      for {
+        liftRules <- Rewrite.Rule.all(wide, lifts)
+        equal <- quotient.fact(Quotient.ProjectionEqual)
+        representative <- quotient.fact(Quotient.ProjectionOfRepresentative).flatMap(Rewrite.Rule.of(wide, _))
+        chooser <- LogicError.lift(
+          quotient.theory.constant(quotient.names.representative, Type.fun(Classes, Pairs))
+        )
+        proved <- texts.foldLeft[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
+          case (sofar, (name, leftText, rightText, (pairs, classes))) =>
+            for {
+              done <- sofar
+              theorem <- law(quotient, liftRules ++ projections, equal, representative, chooser, leftText, rightText, pairs, classes)
+                .left.flatMap(error => blaming(quotient, name, leftText, error))
+            } yield done :+ (name -> theorem)
+        }
+      } yield proved
+    }
+
+    private def law(
+      quotient: Quotient,
+      rules: Vector[Rewrite.Rule],
+      equal: Kernel.Thm,
+      representative: Rewrite.Rule,
+      chooser: Term,
+      leftText: String,
+      rightText: String,
+      pairs: List[FVar],
+      classes: List[FVar]
+    ): Either[LogicError, Kernel.Thm] = {
+      val wide = quotient.logic.rules
+      for {
+        left <- Parser.term(quotient.theory, notation, leftText, Classes)
+        right <- Parser.term(quotient.theory, notation, rightText, Classes)
+        leftNormal <- Rewrite.rewrite(rules, left)
+        rightNormal <- Rewrite.rewrite(rules, right)
+        leftPair <- rightOfTheorem(leftNormal).flatMap(projected)
+        rightPair <- rightOfTheorem(rightNormal).flatMap(projected)
+        same <- related(leftPair, rightPair, Nil)
+        classesEqual <- wide.specAll(equal, List(leftPair, rightPair))
+          .flatMap(Conv.sym)
+          .flatMap(back => LogicError.lift(Kernel.eqMp(back, same)))
+        chain <- Conv.trans(leftNormal, classesEqual)
+          .flatMap(step => Conv.sym(rightNormal).flatMap(Conv.trans(step, _)))
+        general <- wide.genAll(chain, pairs)
+        chosen <- classes.foldRight[Either[LogicError, List[Term]]](Right(Nil)) { (variable, rest) =>
+          rest.flatMap(tail => LogicError.lift(Term.app(chooser, variable)).map(_ :: tail))
+        }
+        instance <- wide.specAll(general, chosen)
+        rewritten <- Rewrite.inTheorem(Vector(representative), instance)
+        result <- wide.genAll(rewritten, classes)
+      } yield result
+    }
+
+    /**
+     * A refusal with the law's name in front of it, since every law is the same steps over a
+     * different pair of texts and the bare refusal would not say which one was being proved.
+     */
+    private def blaming(quotient: Quotient, name: String, text: String, error: LogicError): Either[LogicError, Kernel.Thm] =
+      Parser.term(quotient.theory, notation, text, Classes).flatMap(term =>
+        Left(NotOfForm(s"$name, which is ${error.message}, over", term))
+      )
+
+    /** The pair under `RAT_OF_PAIR`, or a refusal naming what the rewriting left instead. */
+    private def projected(term: Term): Either[LogicError, Term] =
+      term match {
+        case App(Const(Projection, _), pair) => Right(pair)
+        case other => Left(NotOfForm(s"a term the lifts bring to one $Projection", other))
+      }
+
+    /**
+     * `|- ~(RAT_ZERO = RAT_ONE)`.
+     *
+     * The classes are equal exactly where the pairs are related, the relation at `(0, 0)` and
+     * `(1, 0)` is `0 * 1 = 1 * 1` over `int` once `SUC ZERO` is read as `INT_ONE`, the ring reads
+     * that as `0 = 1`, and the embedding carries it to `ZERO = SUC ZERO`, which the naturals refuse.
+     * The steps are equations between propositions joined by transitivity, so the refusal at the end
+     * is one `eqMp` and one contradiction.
+     */
+    def unitsDistinct(
+      quotient: Quotient,
+      zeroDefinition: Kernel.Thm,
+      oneDefinition: Kernel.Thm,
+      integer: Integer,
+      peano: Peano
+    ): Either[LogicError, Kernel.Thm] = {
+      val wide = quotient.logic.rules
+      for {
+        zeroPair <- read("PAIR INT_ZERO ZERO")
+        onePair <- read("PAIR INT_ONE ZERO")
+        zeroInt <- read("INT_ZERO")
+        oneInt <- read("INT_ONE")
+        zeroNum <- read("ZERO")
+        equal <- quotient.fact(Quotient.ProjectionEqual)
+        asRelation <- wide.specAll(equal, List(zeroPair, onePair))
+        unfolded <- unfoldedAt(definition, projections, zeroPair, onePair)
+        relation <- rightOfTheorem(unfolded)
+        readBack <- Rewrite.rewrite(denominators, relation)
+        sides <- rightOfTheorem(readBack).flatMap(t => Term.destEq(t).toRight(NotOfForm("an equation", t)))
+        leftIsZero <- ring.prove(sides._1, zeroInt)
+        rightIsOne <- ring.prove(sides._2, oneInt)
+        onInts <- Conv.apTerm(Term.equalityAt(integers), leftIsZero)
+          .flatMap(partial => LogicError.lift(Kernel.mkComb(partial, rightIsOne)))
+        zeroEmbedded <- integer.fact(Integer.OfNaturalZero).flatMap(Conv.sym)
+        oneEmbedded <- Conv.sym(embeddedOne)
+        embedded <- Conv.apTerm(Term.equalityAt(integers), zeroEmbedded)
+          .flatMap(partial => LogicError.lift(Kernel.mkComb(partial, oneEmbedded)))
+        successorZero <- read("SUC ZERO")
+        injective <- integer.fact(Integer.OfNaturalInjective).flatMap(wide.specAll(_, List(zeroNum, successorZero)))
+        pairsToNaturals <- Vector(unfolded, readBack, onInts, embedded, injective)
+          .foldLeft[Either[LogicError, Kernel.Thm]](Right(asRelation))((sofar, next) => sofar.flatMap(Conv.trans(_, next)))
+        constants <- Conv.apTerm(Term.equalityAt(Classes), zeroDefinition)
+          .flatMap(partial => LogicError.lift(Kernel.mkComb(partial, oneDefinition)))
+        whole <- Conv.trans(constants, pairsToNaturals)
+        premise <- leftOf(whole)
+        assumed <- LogicError.lift(Kernel.assume(premise))
+        naturalsEqual <- LogicError.lift(Kernel.eqMp(whole, assumed))
+        flipped <- Conv.sym(naturalsEqual)
+        never <- peano.naturals.fact(Natural.SuccessorNotZero).flatMap(wide.spec(zeroNum, _))
+        clash <- wide.notElim(never, flipped)
+        result <- wide.notIntro(premise, clash)
+      } yield result
+    }
   }
 
   private object Lifting {
@@ -745,8 +963,18 @@ object Fraction {
         product <- integer.fact(Integer.OfNaturalProduct).flatMap(rules.specAll(_, List(successorD, successorE)))
         joined <- Conv.trans(embedded, product)
         denominator <- rules.genAll(joined, List(d, e))
-        denominators <- Rewrite.Rule.all(logic, Vector(denominator))
-      } yield Lifting(logic, theory, notation, definition, projections, denominators, denominator, ring)
+
+        // `INT_OF_NUM (SUC ZERO) = INT_ONE`, both sides unfolded to `INT_OF_PAIR (PAIR (SUC ZERO) ZERO)`.
+        // It is what the denominator of a constant stored at `ZERO` reads as, and nothing else here
+        // produces a `SUC ZERO`: every other stored index is a variable or a sum of them.
+        ofNaturalDefinition <- integer.definition(Integer.OfNatural)
+        integerOne <- integer.definition(Integer.One)
+        successorZero <- LogicError.lift(Term.app(successor, zero))
+        unfoldedOne <- Conv.unfold(ofNaturalDefinition, List(successorZero))
+        embeddedOne <- Conv.sym(integerOne).flatMap(Conv.trans(unfoldedOne, _))
+
+        denominators <- Rewrite.Rule.all(logic, Vector(denominator, embeddedOne))
+      } yield Lifting(logic, theory, notation, definition, projections, denominators, denominator, embeddedOne, ring)
     }
   }
 

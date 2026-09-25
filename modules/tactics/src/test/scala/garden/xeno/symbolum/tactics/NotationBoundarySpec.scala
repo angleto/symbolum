@@ -302,6 +302,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     // `Collatz.scala` already carry for the same expression: a fact's published name, compared
     // against what its derivation produced, in the refusal that says the two disagree.
     ("Fraction.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    // The ring laws of 2026-09-25 on classes, which refuse the way `Integer.scala`'s do one
+    // quotient down: the inner refusal behind the law's name, and the projection by its own name.
+    ("Fraction.scala", "error.message") ->
+      (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
+    ("Fraction.scala", "Projection") ->
+      (Verdict.Name, "the projection of the quotient, by its own published name"),
     // `Syntax.scala`, 2026-09-25, the same reading once more: the published name of a fact in the
     // refusal that says its derivation produced something other than its statement.
     ("Syntax.scala", "name") -> (Verdict.Name, "the fact's published name"),
