@@ -86,13 +86,27 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
 
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
-    for (name <- Derivative.Statements.map(_._1) if name != Derivative.Rolle && name != Derivative.MeanValue) {
+    for (name <- Derivative.Statements.map(_._1)
+        if name != Derivative.Rolle && name != Derivative.MeanValue && name != Derivative.Exponential) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
         (other -- realAxioms) shouldBe Set(select)
       }
     }
+  }
+
+  it should "price the exponential's slope at exactly what its second-order estimate costs" in {
+    // `DERIVATIVE_EXP` is one point too, and the one fact here that is not only about the reals: the
+    // estimate under it is a statement about a series, which spends the supremum through
+    // `MONOTONE_CONVERGES` and the naturals' axioms through the factorial. What the slope adds on
+    // top of the estimate is the addition theorem and the definition, which cost nothing more.
+    val nearLine = force(chain.logarithm.fact(Logarithm.NearLine))
+    val spent = Derivation.axiomsOf(fact(Derivative.Exponential))
+    spent shouldBe Derivation.axiomsOf(nearLine)
+    spent should contain(completeness)
+    val route = Set(nearLine.conclusion, force(chain.transcendental.fact(Transcendental.Addition)).conclusion)
+    Derivation.restingOn(fact(Derivative.Exponential), route) shouldBe route
   }
 
   it should "reach Rolle's theorem through the extreme value theorem and the interior lemma" in {
@@ -211,6 +225,25 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val refused = force(rules.notIntro(claim, absurd))
     refused.hypotheses shouldBe empty
     refused.conclusion shouldBe identityNotFlat.conclusion
+  }
+
+  it should "refuse the exponential a slope of zero at zero, by uniqueness against its value there" in {
+    // `DERIVATIVE_EXP` asks nothing, so there is no hypothesis to detach; what could make it empty is
+    // a slope the definition grants to anything. Uniqueness turns a second slope into `exp 0 = 0`,
+    // which `EXP_0` contradicts.
+    val zero = real("0:real")
+    val exp = force(derivative.term("exp", functions))
+    val claim = proposition("derivative exp 0 0")
+    val assumed = force(LogicError.lift(Kernel.assume(claim)))
+    val own = force(rules.spec(zero, fact(Derivative.Exponential)))
+    val same = force(rules.specAll(fact(Derivative.Unique), List(exp, zero, real("exp 0"), zero))
+      .flatMap(rules.mp(_, own)).flatMap(rules.mp(_, assumed)))
+    val atZero = force(chain.transcendental.fact(Transcendental.ExponentialAtZero))
+    val one = force(Conv.sym(same).flatMap(Conv.trans(_, atZero)))
+    val absurd = force(rules.notElim(lemma("~((0:real) = 1)"), one))
+    val refused = force(rules.notIntro(claim, absurd))
+    refused.hypotheses shouldBe empty
+    derivative.show(refused.conclusion) shouldBe "~(derivative exp 0 0)"
   }
 
   it should "detach the product rule at the identity times itself, with nothing assumed" in {

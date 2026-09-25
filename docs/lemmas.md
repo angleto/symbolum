@@ -155,6 +155,7 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_CHAIN         !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. derivative y z v ==> derivative x (y z) u ==> derivative (\w:real. x (y w)) z (u * v)
   DERIVATIVE_CONST         !x:real. !y:real. derivative (\z:real. x) y 0
   DERIVATIVE_CONTINUOUS    !x:real -> real. !y:real. !z:real. derivative x y z ==> continuous x y
+  DERIVATIVE_EXP           !x:real. derivative exp x (exp x)
   DERIVATIVE_ID            !x:real. derivative (\y:real. y) x 1
   DERIVATIVE_INTERIOR_MAX  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x w <= x u) ==> derivative x u v ==> v = 0
   DERIVATIVE_INTERIOR_MIN  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x u <= x w) ==> derivative x u v ==> v = 0
@@ -411,6 +412,7 @@ they have least appetite for working out how it is produced.
   EXP_INJECTIVE            !x:real. !y:real. exp x = exp y ==> x = y
   EXP_LN                   !x:real. 0 < x ==> exp (ln x) = x
   EXP_LT_MONOTONE          !x:real. !y:real. x < y ==> exp x < exp y
+  EXP_NEAR_LINE            !x:real. abs x <= 1 / 2 ==> abs (exp x - 1 - x) <= x * x
   EXP_NEAR_ONE             !x:real. abs x <= 1 / 2 ==> abs (exp x - 1) <= 2 * abs x
   EXP_ONTO                 !x:real. 0 < x ==> (?y:real. exp y = x)
   EXP_POSITIVE             !x:real. 0 < exp x
