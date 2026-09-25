@@ -123,6 +123,7 @@ they have least appetite for working out how it is produced.
   CONTINUOUS_ID            !x:real. continuous (\y:real. y) x
   CONTINUOUS_LINEAR        !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. continuous x z ==> continuous y z ==> continuous (\w:real. u * x w + v * y w) z
   CONTINUOUS_NEG           !x:real -> real. !y:real. continuous x y ==> continuous (\z:real. 0 - x z) y
+  CONTINUOUS_UNIFORM       !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> 0 < u ==> (?v:real. 0 < v /\ (!w:real. !x1:real. y <= w /\ w <= z /\ y <= x1 /\ x1 <= z /\ abs (w - x1) < v ==> abs (x w - x x1) < u))
   INTERMEDIATE_VALUE       !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)
   INTERVAL_GLUING          !x:real -> real -> bool. !y:real. !z:real. y <= z ==> (!u:real. !v:real. !w:real. u <= v /\ v <= w /\ x u v /\ x v w ==> x u w) ==> (!u:real. y <= u /\ u <= z ==> (?v:real. 0 < v /\ (!w:real. !x1:real. y <= w /\ w <= u /\ u <= x1 /\ x1 <= z /\ x1 - w < v ==> x w x1))) ==> x y z
 

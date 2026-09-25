@@ -381,7 +381,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents,
     // three on `NUM_PRIME_DIVIDES_CHOOSE`, two on `NUM_PRIME_NOT_DIVIDES_FACT`, one each on
     // `NUM_DIVIDES_SUM`, `NUM_FRESHMAN` and `NUM_FERMAT`, none on the three equations.
-    proposals.size shouldBe 562
+    // 565 with uniform continuity's three, the same day, derived before the run: `a <= b`, the
+    // continuity on `[a, b]` and `0 < e`. Tip plus this branch's delta.
+    proposals.size shouldBe 565
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1284,7 +1286,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // this line was edited: the three residues of `NUM_PRIME_DIVIDES_CHOOSE`, a divisibility the
     // propositional address takes and cannot settle. The other five are `unreadable` below. Tip
     // plus this branch's delta.
-    open shouldBe 458
+    // 461 with uniform continuity's three weakenings, the same day, read off the run on the tree
+    // before the sign of a derivative and Fermat landed and then confirmed by a second run in which
+    // every assertion after this row held: none went to `unreadable` or was refuted, each keeps an
+    // implication and sits at the propositional address, taken and not settled. Tip plus this
+    // branch's delta.
+    open shouldBe 461
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

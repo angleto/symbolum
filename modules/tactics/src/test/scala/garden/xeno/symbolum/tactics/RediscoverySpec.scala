@@ -336,7 +336,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // is under a binder and is not peeled.
     // 562 with Fermat's little theorem, the same day, derived before the run: eight antecedents over
     // five facts, three, two, one, one and one; the binomial theorem and the two sums carry none.
-    propose.weakenings.size shouldBe 562
+    // 565 with uniform continuity, the same day, derived before the run: its three antecedents.
+    // Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 565
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
