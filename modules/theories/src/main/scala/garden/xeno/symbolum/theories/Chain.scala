@@ -374,7 +374,16 @@ final class Chain private (
    * `exp`, `ln` and `continuous`, which are declared below it, and it is a link rather than a
    * development beside the chain because stating them needs all three, which only the end sees.
    */
-  val logarithm: Logarithm
+  val logarithm: Logarithm,
+
+  /**
+   * The derivative at a point, the interior extremum lemma, and Rolle's theorem.
+   *
+   * The first thing to spend the extreme value theorem, which is why it sits above `Continuity`,
+   * and a link rather than a development beside the chain because `derivative` is a constant. One
+   * constant, no axiom.
+   */
+  val derivative: Derivative
 ) {
 
   /**
@@ -402,7 +411,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = continuity
+  val widest: Signature = derivative
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -621,6 +630,11 @@ object Chain {
       // the first facts about `ln`, over the constants the three links below declared.
       logarithm <- Logarithm.construct(
         classical, reals, magnitude, series, peano, coding, limit, transcendental, continuity)
+
+      // Over continuity, extending the chain's end: Rolle's theorem spends the extreme value
+      // theorem, and the definition reads `abs` and nothing declared since.
+      derivative <- Derivative.construct(
+        classical, reals, magnitude, continuity, continuity.theory, continuity.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -658,6 +672,7 @@ object Chain {
       folding,
       root,
       continuity,
-      logarithm
+      logarithm,
+      derivative
     )
 }

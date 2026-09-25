@@ -145,6 +145,15 @@ they have least appetite for working out how it is produced.
   NUM_PROV_TRANS           !x:num. !y:num. !z:num. NUM_TERM x ==> NUM_TERM y ==> NUM_TERM z ==> NUM_CLOSED x ==> NUM_CLOSED y ==> NUM_CLOSED z ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x y)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR y z)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR x z))
   NUM_PROV_WEAKEN          !x:num. !y:num. NUM_FORM x ==> NUM_FORM y ==> NUM_PROV y ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x y))
 
+## Derivative
+
+  DERIVATIVE_CONST         !x:real. !y:real. derivative (\z:real. x) y 0
+  DERIVATIVE_ID            !x:real. derivative (\y:real. y) x 1
+  DERIVATIVE_INTERIOR_MAX  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x w <= x u) ==> derivative x u v ==> v = 0
+  DERIVATIVE_INTERIOR_MIN  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x u <= x w) ==> derivative x u v ==> v = 0
+  DERIVATIVE_NEG           !x:real -> real. !y:real. !z:real. derivative x y z ==> derivative (\u:real. 0 - x u) y (0 - z)
+  ROLLE                    !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)
+
 ## Divisibility
 
   DIVIDES_ELIM             !x:real. !y:real. Divides x y ==> (?z:real. y = x * z)

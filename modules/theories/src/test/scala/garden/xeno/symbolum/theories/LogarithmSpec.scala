@@ -44,7 +44,8 @@ class LogarithmSpec extends AnyFlatSpec with Matchers {
     logarithm.theory.constants shouldBe chain.continuity.theory.constants
     logarithm.theory.axioms shouldBe chain.continuity.theory.axioms
     logarithm.theory.typeOperators shouldBe chain.continuity.theory.typeOperators
-    chain.widest shouldBe chain.continuity
+    // It declares nothing, so it is never the widest signature: whatever link declared last is.
+    chain.widest should not be theSameInstanceAs(logarithm)
   }
 
   it should "state every fact as it is written, with nothing assumed" in {

@@ -311,7 +311,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // facts, two each on `EXP_SMALL_ABOVE` and `LN_MUL` and one on six others.
     // 451 with the extreme value theorem, 2026-09-25, derived before the run: ten antecedents over
     // five facts, three on the gluing, one on the negation and two on each of the other three.
-    propose.weakenings.size shouldBe 451
+    // 464 with the derivative and Rolle's theorem, 2026-09-25, derived before the run: thirteen
+    // antecedents over six facts, four on each interior lemma and on `ROLLE`, one on the negation.
+    propose.weakenings.size shouldBe 464
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

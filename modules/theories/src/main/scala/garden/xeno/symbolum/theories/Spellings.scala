@@ -307,6 +307,10 @@ object Spellings {
       // Continuity at a point, which books write in words and no symbol settles. Delimited, so the
       // function and the point are each bracketed by the template rather than by the context.
       .delimited("continuous", 2, "\\operatorname{cont}(#1, #2)")
+      // The derivative at a point, in words as continuity is and for the same reason. Not
+      // `f'(x) = m`: the constant is a proposition, and an equation inside a delimited template
+      // reads wrongly under a negation, where `\neg f'(x) = 0` hides which side is denied.
+      .delimited("derivative", 3, "\\operatorname{deriv}(#1, #2, #3)")
       /* ------------------------------------------------ the set defined by rules */
       // Both at arity ONE though each is written with two arguments, and that is the faithful
       // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set

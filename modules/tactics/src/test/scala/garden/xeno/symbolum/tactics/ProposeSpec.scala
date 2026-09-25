@@ -356,7 +356,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 441 with the logarithm's ten antecedents, the same day.
     // 451 with the extreme value theorem's ten, 2026-09-25: three on `INTERVAL_GLUING`, two each
     // on `CONTINUOUS_BOUNDED` and the two attainments, one on `CONTINUOUS_NEG`.
-    proposals.size shouldBe 451
+    // 464 with the derivative's thirteen, 2026-09-25: four on each interior lemma, four on
+    // `ROLLE`, one on `DERIVATIVE_NEG`.
+    proposals.size shouldBe 464
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1202,7 +1204,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // sits at the propositional address, which takes it and does not settle it. The tenth is in
     // `unreadable` below. The run that found this row red was the first to reach it; the probe is
     // what said where the other one went, since the row below had not run.
-    open shouldBe 374
+    // 386 with twelve of the derivative's thirteen weakenings, 2026-09-25, read off a probe of
+    // `Propose.audit` filtered by `from`: the four of each interior lemma and the four of `ROLLE`,
+    // each an implication with an antecedent gone, taken at the propositional address and not
+    // settled. The thirteenth, `DERIVATIVE_NEG`'s, is in `unreadable` below, and the probe is what
+    // placed it, since that row sits behind this one.
+    open shouldBe 386
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1540,7 +1547,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 103 with `CONTINUOUS_NEG`'s one weakening, `!f x. continuous (\y. 0 - f y) x`, from the same
     // probe: false at any function with a jump, and about `continuous`, which no procedure
     // addresses and no model interprets.
-    unreadable shouldBe 103
+    // 104 with `DERIVATIVE_NEG`'s one weakening, `!f x m. derivative (\y. 0 - f y) x (0 - m)`,
+    // from the same probe as `open`'s 386: false at the identity, and about `derivative`, which no
+    // procedure addresses and no model interprets.
+    unreadable shouldBe 104
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

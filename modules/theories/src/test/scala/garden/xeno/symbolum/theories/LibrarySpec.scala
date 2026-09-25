@@ -69,7 +69,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // about a sequence, nor anything `Root` is about.
       chain.continuity.facts.size +
       // The logarithm, the same day and the same discipline.
-      chain.logarithm.facts.size
+      chain.logarithm.facts.size +
+      // The derivative and Rolle's theorem, 2026-09-25, in the change that added the link.
+      chain.derivative.facts.size
 
     library.entries.size shouldBe expected
 
@@ -633,8 +635,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // under five names, none shared. `CLAUDE.md`'s figures move by **five** and **four**: all five
     // bind two or more leading quantifiers, and all but `CONTINUOUS_NEG`, whose `f` and `x` differ
     // in type, bind two reals among them.
-    library.entries.size shouldBe 654
-    library.names.distinct.size shouldBe 651
+    // 660 and 657 with the derivative and Rolle's theorem, the same day, derived before the run:
+    // six facts under six names, none shared. `CLAUDE.md`'s figures move by **five** and **five**:
+    // every fact but `DERIVATIVE_ID`, which binds one `x`, binds two or more, and each of those five
+    // binds two reals among them.
+    library.entries.size shouldBe 660
+    library.names.distinct.size shouldBe 657
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -327,7 +327,11 @@ object Library {
         collect("Continuity", chain.continuity.facts) ++
         // The first facts about `ln`, the same day: a development of its own because it is about
         // three constants declared by three developments below it.
-        collect("Logarithm", chain.logarithm.facts)
+        collect("Logarithm", chain.logarithm.facts) ++
+        // The derivative and Rolle's theorem, 2026-09-25, in the change that added them: a
+        // development of its own because a derivative is a statement about an increment and a
+        // slope, where continuity is one about a radius.
+        collect("Derivative", chain.derivative.facts)
     )
 
   /** A library over developments a caller names itself. */

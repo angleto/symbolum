@@ -159,7 +159,9 @@ object Reach {
         // Continuity, 2026-09-24, in the change that added it.
         "Continuity" -> chain.continuity.facts,
         // The logarithm, the same day, in the change that added it.
-        "Logarithm" -> chain.logarithm.facts
+        "Logarithm" -> chain.logarithm.facts,
+        // The derivative and Rolle's theorem, 2026-09-25, in the change that added them.
+        "Derivative" -> chain.derivative.facts
       )
     )
 

@@ -249,13 +249,15 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // about its subject.
     // **And again the same day**, to `Continuity`, the eleventh: continuity at a point and the
     // intermediate value theorem, which need the reals, their order and their magnitude.
-    chain.widest shouldBe chain.continuity
-    chain.widest.theory.constants.keySet shouldBe chain.continuity.theory.constants.keySet
+    // **And again on 2026-09-25**, to `Derivative`, the twelfth: the derivative at a point and
+    // Rolle's theorem, which spends the extreme value theorem and so sits above `Continuity`.
+    chain.widest shouldBe chain.derivative
+    chain.widest.theory.constants.keySet shouldBe chain.derivative.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
       chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
-      chain.listing, chain.folding, chain.root
+      chain.listing, chain.folding, chain.root, chain.continuity
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

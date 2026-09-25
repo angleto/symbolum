@@ -356,8 +356,9 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     refused.hypotheses shouldBe empty
   }
 
-  it should "be the chain's end, so that every development above the reals can name it" in {
-    chain.widest shouldBe continuity
+  it should "be in the chain's widest signature, so that every development above the reals can name it" in {
+    // It was the chain's end until 2026-09-25, when `Derivative` was built over it; what the
+    // sentence was for is that the constant is reachable from the top, which this asserts.
     chain.widest.theory.constants.keySet should contain(Continuity.Continuous)
   }
 }
