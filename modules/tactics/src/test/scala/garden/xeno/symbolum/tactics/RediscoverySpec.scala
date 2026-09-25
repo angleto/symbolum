@@ -347,7 +347,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // seven of its nine facts. Tip plus this branch's delta.
     // 604 with the existence of the integral, the same day, derived before the run: two
     // antecedents on each of `CONTINUOUS_HAS_INTEGRAL` and `CONTINUOUS_INTEGRAL`.
-    propose.weakenings.size shouldBe 604
+    // 637 with the textbook forms of the interval theorems, 2026-09-25, derived before the run:
+    // thirty-three antecedents over fourteen facts, the count `ProposeSpec` gives by fact.
+    propose.weakenings.size shouldBe 637
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -473,7 +475,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // and the two estimates near zero write a sum, a product or an order between reals with no
     // lambda in the body. `EXP_TAIL_BOUND` carries a quantifier inside and the two slopes write
     // none of the four.
-    propose.mutable.size shouldBe 111
+    // 112 with `CONTINUOUS_EXTENSION_AGREES`, 2026-09-25: it writes an order between reals, `x < a`
+    // and `b < x` inside `COND`, with no lambda in the body, and a probe of `Propose.audit` found its
+    // two substitutions and no other from the fourteen textbook forms. Every other one carries a
+    // quantifier inside, and `CONTINUOUS_WITHIN_OF_CONTINUOUS` writes none of the four.
+    propose.mutable.size shouldBe 112
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

@@ -1148,6 +1148,21 @@ points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hyp
 hypothesis states the derivative and its sign in one existential, so it asks no second statement
 of differentiability; the three cost what the mean value theorem costs.
 
+**Every interval theorem has a textbook form since 2026-09-25, stated with continuity relative to
+`[a, b]`.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
+`b`, for continuity from outside the interval as well, which no textbook does, and nothing said so
+until card 6257d0da. `continuous_within f a b x` is the relative notion, and one lemma carries
+every theorem across: `CONTINUOUS_EXTENSION`, that `f` extended by its value at the nearer end is
+continuous everywhere when `f` is continuous relative to the interval. Each `_WITHIN` form of the
+intermediate value theorem, the bound, the two extremes, uniform continuity, Rolle, the mean value
+theorem and the three facts about a derivative's sign is the two-sided one at the extension, read
+back through `CONTINUOUS_EXTENSION_AGREES`; `DERIVATIVE_LOCAL`, that a derivative is a fact about
+the points near it, carries the derivatives. Each costs what its two-sided form costs, and
+`ContinuitySpec` detaches `INTERMEDIATE_VALUE_WITHIN` at a step on `[-1, 0]` that it also proves
+not continuous at `0`, so the textbook form is not a renaming. The fundamental theorem is not
+among them: its hypothesis at the ends is a one-sided **derivative**, which a constant extension
+cannot carry, and card `494ca432` has it.
+
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum
 per piece and the common refinement of two partitions, neither of which is integration.

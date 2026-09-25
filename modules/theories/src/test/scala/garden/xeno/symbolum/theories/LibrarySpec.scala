@@ -718,8 +718,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 759 and 756 with the existence of the integral of a continuous function, the same day,
     // derived before the run: two facts in `Integral` under two names. `CLAUDE.md`'s figures move by
     // **two** and **two**: each binds `f`, `a` and `b`, the two ends real. Tip plus this branch's delta.
-    library.entries.size shouldBe 759
-    library.names.distinct.size shouldBe 756
+    // 773 and 770 with the textbook forms of the interval theorems, 2026-09-25, derived before the
+    // run: fourteen facts under fourteen names, none shared, eight in `Continuity` and six in
+    // `Derivative`. `CLAUDE.md`'s figures move by **fourteen** and **fourteen**: every one binds two
+    // or more leading quantifiers, and every one has two reals, or two functions, among them.
+    library.entries.size shouldBe 773
+    library.names.distinct.size shouldBe 770
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

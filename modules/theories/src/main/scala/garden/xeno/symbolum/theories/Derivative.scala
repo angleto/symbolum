@@ -243,6 +243,30 @@ object Derivative {
   /** The same with `0 < m`, and `f` strictly increasing: `a <= u /\ u < v /\ v <= b ==> f u < f v`. */
   val Increasing: String = "DERIVATIVE_POS_LT_MONOTONE"
 
+  /**
+   * `|- !f g x m r. 0 < r ==> (!y. abs (y - x) < r ==> g y = f y) ==> derivative f x m ==>
+   * derivative g x m`: a derivative is a fact about the points near `x`. What carries the
+   * textbook forms below across the extension `Within` builds; `DerivativeWithin` has the rest.
+   */
+  val Local: String = "DERIVATIVE_LOCAL"
+
+  /** [[Rolle]] with continuity relative to `[a, b]`. */
+  val RolleWithin: String = "ROLLE_WITHIN"
+
+  /** [[MeanValue]] with continuity relative to `[a, b]`. */
+  val MeanValueWithin: String = "MEAN_VALUE_WITHIN"
+
+  /** [[Flat]] with continuity relative to `[a, b]`. */
+  val FlatWithin: String = "DERIVATIVE_ZERO_CONSTANT_WITHIN"
+
+  /** [[NonDecreasing]] with continuity relative to `[a, b]`. */
+  val NonDecreasingWithin: String = "DERIVATIVE_NONNEG_MONOTONE_WITHIN"
+
+  /** [[Increasing]] with continuity relative to `[a, b]`. */
+  val IncreasingWithin: String = "DERIVATIVE_POS_LT_MONOTONE_WITHIN"
+
+  private val RelativeText: String = "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x)"
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Constant -> "!c:real. !x:real. derivative (\\y:real. c) x 0",
@@ -286,6 +310,28 @@ object Derivative {
         "!u:real. !v:real. a <= u /\\ u <= v /\\ v <= b ==> f u <= f v"),
     Increasing ->
       ("!f:real -> real. !a:real. !b:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 < m) ==> " +
+        "!u:real. !v:real. a <= u /\\ u < v /\\ v <= b ==> f u < f v"),
+    Local ->
+      ("!f:real -> real. !g:real -> real. !x:real. !m:real. !r:real. 0 < r ==> " +
+        "(!y:real. abs (y - x) < r ==> g y = f y) ==> derivative f x m ==> derivative g x m"),
+    RolleWithin ->
+      (s"!f:real -> real. !a:real. !b:real. a < b ==> $RelativeText ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m) ==> f a = f b ==> " +
+        "?c:real. a < c /\\ c < b /\\ derivative f c 0"),
+    MeanValueWithin ->
+      (s"!f:real -> real. !a:real. !b:real. a < b ==> $RelativeText ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m) ==> " +
+        "?c:real. ?m:real. a < c /\\ c < b /\\ derivative f c m /\\ f b - f a = m * (b - a)"),
+    FlatWithin ->
+      (s"!f:real -> real. !a:real. !b:real. $RelativeText ==> " +
+        "(!x:real. a < x /\\ x < b ==> derivative f x 0) ==> !x:real. a <= x /\\ x <= b ==> f x = f a"),
+    NonDecreasingWithin ->
+      (s"!f:real -> real. !a:real. !b:real. $RelativeText ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 <= m) ==> " +
+        "!u:real. !v:real. a <= u /\\ u <= v /\\ v <= b ==> f u <= f v"),
+    IncreasingWithin ->
+      (s"!f:real -> real. !a:real. !b:real. $RelativeText ==> " +
         "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 < m) ==> " +
         "!u:real. !v:real. a <= u /\\ u < v /\\ v <= b ==> f u < f v")
   )
@@ -344,6 +390,8 @@ object Derivative {
       flat <- flatSlope(steps, magnitude.order, meanValue, unique)
       nonDecreasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = false)
       increasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = true)
+      relative <- DerivativeWithin.prove(steps, magnitude, continuity, Map(
+        Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing))
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,
@@ -364,7 +412,7 @@ object Derivative {
         Flat -> flat,
         NonDecreasing -> nonDecreasing,
         Increasing -> increasing
-      )
+      ) ++ relative
 
       // Each statement checked against the text a person reads it by, as `Continuity` does: a
       // development that built something other than what it says it built must not be handed out.
@@ -382,7 +430,7 @@ object Derivative {
     } yield new Derivative(theory, notation, logic, Map(DerivativeName -> definition), facts)
 
   /** `|- derivative f x m = <the statement>`, reduced. */
-  private def unfoldDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term): Either[LogicError, Kernel.Thm] =
+  private[theories] def unfoldDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term): Either[LogicError, Kernel.Thm] =
     for {
       equation <- Conv.unfold(steps.definition, List(f, x, m))
       right <- Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion))
@@ -391,11 +439,11 @@ object Derivative {
     } yield joined
 
   /** A theorem `derivative f x m`, opened into its epsilon-delta statement. */
-  private def openDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term, theorem: Kernel.Thm) =
+  private[theories] def openDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term, theorem: Kernel.Thm) =
     unfoldDerivative(steps, f, x, m).flatMap(equation => LogicError.lift(Kernel.eqMp(equation, theorem)))
 
   /** `derivative f x m`, from a proof of its epsilon-delta statement. */
-  private def foldDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term, statement: Kernel.Thm) =
+  private[theories] def foldDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term, statement: Kernel.Thm) =
     for {
       equation <- unfoldDerivative(steps, f, x, m)
       backwards <- Conv.sym(equation)

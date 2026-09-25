@@ -390,7 +390,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_UNIT_COPRIME` and `NUM_EULER`, one on `NUM_PROD_CONG_MOD`. Tip plus this branch's delta.
     // 604 with the existence of the integral, the same day, derived before the run: two antecedents
     // on each of its two facts, `a <= b` and the continuity. Tip plus this branch's delta.
-    proposals.size shouldBe 604
+    // 637 with the textbook forms of the interval theorems, 2026-09-25, derived before the run:
+    // thirty-three antecedents over fourteen facts, four each on `INTERMEDIATE_VALUE_WITHIN` and
+    // `ROLLE_WITHIN`, three each on the uniform continuity, `DERIVATIVE_LOCAL` and the mean value
+    // theorem, two on each of seven more, and one each on `CONTINUOUS_WITHIN_OF_CONTINUOUS` and
+    // `CONTINUOUS_EXTENSION_AGREES`.
+    proposals.size shouldBe 637
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1316,7 +1321,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // earlier tree and confirmed by a second in which every assertion after this row held: each
     // keeps an implication and names `has_integral` or `integral`, which no procedure settles. Tip
     // plus this branch's delta.
-    open shouldBe 511
+    // 545 with thirty-four of the textbook forms' thirty-five residues, 2026-09-25, measured by a
+    // probe of `Propose.audit` filtered by `from` after a prediction of "thirty-three weakenings and
+    // one substitution" got the total right and the parts wrong: thirty-two weakenings, each keeping
+    // an implication or naming `continuous_within` or `derivative`, which no procedure settles, and
+    // BOTH of `CONTINUOUS_EXTENSION_AGREES`'s substitutions of its order. The thirty-third
+    // weakening is in `unreadable` below.
+    open shouldBe 545
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1681,7 +1692,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 134 with the same probe: `NUM_PROD_CONG_MOD`'s one residue, a congruence with its hypothesis
     // dropped, and one of `NUM_PROD_POINT`'s, whose conclusion is an equation between naturals, which
     // no procedure reads.
-    unreadable shouldBe 134
+    // 135 with `CONTINUOUS_WITHIN_OF_CONTINUOUS`'s one weakening, 2026-09-25, measured by the same
+    // probe: without its hypothesis it says every function is continuous relative to every
+    // interval at every point, and `continuous_within` has no reading in any procedure.
+    unreadable shouldBe 135
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
