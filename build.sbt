@@ -1340,15 +1340,7 @@ lazy val warningProbe = (project in file("tools/fatal-warnings-probe"))
     // one.
     coverageEnabled := false,
     Compile / scalacOptions ~= withoutInstrumentation,
-    Compile / compile / logManager := quietly,
-
-    // No cache, because the gate is the compiler being asked. sbt 2 keeps the outcome of a compile,
-    // a failed one included, and replays it on the next run with the same inputs: the probe's
-    // failure then comes out of the cache rather than out of the compiler, and its diagnostics are
-    // printed by the replay, around the quiet log manager above. Measured on 2026-09-25, the second
-    // `fatalWarnings` of a session read "cache 100%, 1 cached-failure cache hit" and put the
-    // probe's nine `[error]` lines into the log of a gate that passed.
-    cacheStores := Seq.empty
+    Compile / compile / logManager := quietly
   )
 
 // The same source under the same options minus the one flag. Its base directory holds no sources of
@@ -1374,10 +1366,7 @@ lazy val warningProbeControl = (project in file("tools/fatal-warnings-probe/cont
     // around.
     scalacOptions := (warningProbe / scalacOptions).value.filterNot(fatalWarningsFlags),
     Compile / scalacOptions ~= withoutInstrumentation,
-    Compile / compile / logManager := quietly,
-
-    // Uncached for the probe's reason: the control's success is only evidence if it was compiled.
-    cacheStores := Seq.empty
+    Compile / compile / logManager := quietly
   )
 
 // The gate itself, on the root project.
@@ -1485,11 +1474,12 @@ LocalRootProject / fatalWarnings := Def.uncached {
     case Result.Inc(_) => ()
   }
 
-  // The one line this gate prints when it passes. It is the whole of its output, which is the
-  // point: a suite run that says nothing else here is a suite run whose warnings are still fatal.
+  // The one line this gate prints when it passes. It was the whole of its output under sbt 1; under
+  // sbt 2 a probe failure served from the cache also prints the diagnostics the cache stored, and
+  // `CLAUDE.md` says why those are the expected ones whenever this line follows them.
   log.info(
     s"${fatalWarningsNamed(probeOptions)} reaches ${compiled.size} projects, and the compilation " +
-      "that had to fail did, quietly."
+      "that had to fail did."
   )
 }
 
