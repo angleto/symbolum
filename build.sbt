@@ -92,7 +92,12 @@ lazy val buildIdentity = taskKey[Seq[(String, String)]](
   "The commit and the build inputs that differ from it, read once per sbt invocation"
 )
 
-ThisBuild / buildIdentity := {
+// Uncached, and this is the one place in the build where the reason is the whole point. Its input
+// is the state of git, which sbt 2 cannot see, so a cached answer is keyed on nothing and is the
+// first answer forever: measured on 2026-09-25, `BuildSpec` read `4127a99b` from a tree at
+// `5318ffd1`, the commit its worktree had been opened on. An identity served from a cache is the
+// defect this record exists to prevent.
+ThisBuild / buildIdentity := Def.uncached {
   import scala.sys.process._
   val root = (ThisBuild / baseDirectory).value
   def git(arguments: String*): Option[String] = {
@@ -115,18 +120,22 @@ ThisBuild / buildIdentity := {
 }
 
 lazy val identitySettings = Seq(
+  // Uncached for `buildIdentity`'s reason, one step on: it writes the file as a side effect, and a
+  // result replayed from the cache hands back the path without writing what is in it now.
   Compile / resourceGenerators += Def.task {
-    val target = (Compile / resourceManaged).value / "META-INF" / "symbolum" / "build.properties"
-    val lines = Seq(
-      "module" -> name.value.stripPrefix("symbolum-"),
-      "version" -> version.value
-    ) ++ (ThisBuild / buildIdentity).value ++ Seq(
-      "instrumented" -> coverageEnabled.value.toString
-    )
-    val text = lines.map { case (key, value) => s"$key=$value" }.mkString("", "\n", "\n")
-    // Written only when it changed, so that an unchanged identity does not make every jar new.
-    if (!target.exists || IO.read(target) != text) IO.write(target, text)
-    Seq(target)
+    Def.uncached {
+      val target = (Compile / resourceManaged).value / "META-INF" / "symbolum" / "build.properties"
+      val lines = Seq(
+        "module" -> name.value.stripPrefix("symbolum-"),
+        "version" -> version.value
+      ) ++ (ThisBuild / buildIdentity).value ++ Seq(
+        "instrumented" -> coverageEnabled.value.toString
+      )
+      val text = lines.map { case (key, value) => s"$key=$value" }.mkString("", "\n", "\n")
+      // Written only when it changed, so that an unchanged identity does not make every jar new.
+      if (!target.exists || IO.read(target) != text) IO.write(target, text)
+      Seq(target)
+    }
   }.taskValue
 )
 
@@ -149,7 +158,12 @@ lazy val commonSettings = Seq(
     "-deprecation",
     "-feature",
     "-unchecked",
-    "-Xfatal-warnings"
+    "-Xfatal-warnings",
+    // The oldest JDK the library supports, `docs/adr/0051`, enforced where it can be: class files
+    // for 21, and the JDK's API as 21 has it, whatever JDK runs sbt. Without it a build on the 23
+    // this laptop runs would accept a call that exists only after 21 and fail at a consumer's.
+    "-java-output-version",
+    "21"
   ),
 
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
@@ -174,6 +188,22 @@ lazy val commonSettings = Seq(
   },
 
   Test / parallelExecution := false,
+
+  /*
+   * `test` runs every suite of the module, as it did under sbt 1. Decided by Angelo on 2026-09-25
+   * (Mycelium card 775d62f0).
+   *
+   * sbt 2 made `test` incremental: it runs the suites a change touched and answers the rest from
+   * what it remembers, and the whole suite became `testFull`. Here every figure, gate and handover
+   * reads `tools/sbt test` as the whole suite, and a green over part of the suite taken for a green
+   * over all of it is a mistake this repository has already recorded more than once, in shapes a
+   * log does not show. The incremental run is still one word away and is named for what it is:
+   * `tools/sbt testQuick`.
+   *
+   * Uncached, because what it returns is the suite's result and sbt 2 would otherwise remember it;
+   * `TestResult` has no serialisation either.
+   */
+  Test / test := Def.uncached((Test / testFull).value),
 
   /*
    * Each module's tests run in a JVM of their own, one module at a time, and the JVM ends with them.
@@ -211,7 +241,11 @@ lazy val commonSettings = Seq(
    */
   Test / fork := true,
   Test / javaOptions ++= Seq("-Xmx1024m", "-Xss4M"),
-  Test / forkOptions := (Test / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value),
+  // Uncached, because sbt 2 caches a task's result by serialising it and `ForkOptions` has no
+  // serialisation; the value is recomputed on every run, which costs nothing.
+  Test / forkOptions := Def.uncached(
+    (Test / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value)
+  ),
 
   /*
    * The JDK's own classes, so that a resolved `java.*` name renders as a link rather than as text.
@@ -224,10 +258,9 @@ lazy val commonSettings = Seq(
    * worth is the href: without it the rendered page carries the name as plain text, with it an
    * anchor to docs.oracle.com, checked 200 the same day.
    *
-   * The 17 in that URL is NOT this build's JDK and an earlier draft of this comment said it was.
-   * The job that runs `doc` pins 11, `coverage` pins 17 and the test matrix moves; the class is in
-   * every one of them, so the number decides which javadoc a reader lands on and says nothing
-   * about what compiled the page.
+   * The 21 in that URL is the oldest JDK the library supports since `docs/adr/0051`, and it is NOT
+   * the JDK that compiled the page, which is whatever runs sbt: 21 in CI, 23 on the laptop. The
+   * class is in every one of them, so the number decides which javadoc a reader lands on.
    *
    * It does NOT reach this build's own modules. Scaladoc runs once per module, so a reference from
    * `theories` to `logic` is outside the source set too, and there is no published URL for a module
@@ -237,7 +270,7 @@ lazy val commonSettings = Seq(
    * That criterion over-counts the backticks and is quoted with the figure for that reason.
    */
   Compile / doc / scalacOptions ++= Seq(
-    "-external-mappings:.*java.*::javadoc::https://docs.oracle.com/en/java/javase/17/docs/api/java.base/"
+    "-external-mappings:.*java.*::javadoc::https://docs.oracle.com/en/java/javase/21/docs/api/java.base/"
   )
 ) ++ identitySettings
 
@@ -606,11 +639,11 @@ lazy val publishSettings = Seq(
     sys.env.getOrElse("GITHUB_TOKEN", "")
   ),
 
-  licenses := Seq("GPL-3.0-or-later" -> url("https://www.gnu.org/licenses/gpl-3.0.html")),
-  homepage := Some(url("https://symbolum.xeno.garden")),
+  licenses := Seq("GPL-3.0-or-later" -> uri("https://www.gnu.org/licenses/gpl-3.0.html")),
+  homepage := Some(uri("https://symbolum.xeno.garden")),
   scmInfo := Some(
     ScmInfo(
-      url("https://github.com/angleto/symbolum"),
+      uri("https://github.com/angleto/symbolum"),
       "scm:git:git@github.com:angleto/symbolum.git"
     )
   ),
@@ -619,7 +652,7 @@ lazy val publishSettings = Seq(
       id = "angleto",
       name = "angleto",
       email = "",
-      url = url("https://github.com/angleto")
+      url = uri("https://github.com/angleto")
     )
   ),
   pomIncludeRepository := { _ => false }
@@ -1053,7 +1086,10 @@ lazy val tactics = (project in file("modules/tactics"))
     // would compile every block against almost nothing and report an error about `Var`.
     Test / resourceGenerators += Def.task {
       val file = (Test / resourceManaged).value / "test-classpath.txt"
-      val entries = (Test / dependencyClasspath).value.map(_.data) ++
+      // sbt 2 hands the classpath over as virtual file references, and the converter is what turns
+      // one into the path a compiler reading this file can open.
+      val converter = fileConverter.value
+      val entries = (Test / dependencyClasspath).value.map(entry => converter.toPath(entry.data).toFile) ++
         Seq((Compile / classDirectory).value, (Test / classDirectory).value)
       IO.write(file, entries.map(_.getAbsolutePath).mkString("\n"))
       Seq(file)
@@ -1367,7 +1403,12 @@ lazy val warningProbeControl = (project in file("tools/fatal-warnings-probe/cont
 // Every `.value` below is a dependency and runs before this body, which is why the compiler error
 // from the probe appears in the log ABOVE the line saying it was wanted. That ordering cannot be
 // changed from here and is why the messages say what they say.
-fatalWarnings := {
+// Uncached, and not for want of a serialisation: sbt 2 would otherwise answer this from a result
+// it remembers, and a gate that can be answered without looking is not a gate.
+// Scoped to the root by name: sbt 2 applies a setting written bare in this file to every
+// subproject, where sbt 1 applied it to the root alone, so the bare form would run the gate once
+// per project.
+LocalRootProject / fatalWarnings := Def.uncached {
   val log = streams.value.log
 
   val names = thisProject.all(everyProjectButTheControl).value.map(_.id)
@@ -1439,18 +1480,18 @@ fatalWarnings := {
   // logged into a stream nobody reads, so a red message here says where to look rather than
   // quoting what it saw.
   control match {
-    case sbt.Inc(_) =>
+    case Result.Inc(_) =>
       throw new MessageOnlyException(
         "the probe does NOT compile even with the option removed, so it is broken rather than " +
           "warning. Run `tools/sbt warningProbeControl/compile` to see its errors and repair " +
           "tools/fatal-warnings-probe/src/main/scala; until it compiles cleanly there, the other " +
           "half of this check establishes nothing."
       )
-    case sbt.Value(_) => ()
+    case Result.Value(_) => ()
   }
 
   probe match {
-    case sbt.Value(_) =>
+    case Result.Value(_) =>
       throw new MessageOnlyException(
         s"the probe COMPILED under this build's options, and one of two things is true. Either " +
           s"${fatalWarningsNamed(probeOptions)} is not reaching the compiler although the " +
@@ -1459,18 +1500,25 @@ fatalWarnings := {
           "tools/fatal-warnings-probe would do. `tools/sbt warningProbe/compile` is the same " +
           "compilation with its log restored and tells the two apart in one line."
       )
-    case sbt.Inc(_) => ()
+    case Result.Inc(_) => ()
   }
 
-  // The one line this gate prints when it passes. It is the whole of its output, which is the
-  // point: a suite run that says nothing else here is a suite run whose warnings are still fatal.
+  // The one line this gate prints when it passes. It was the whole of its output under sbt 1; under
+  // sbt 2 a probe failure served from the cache also prints the diagnostics the cache stored, and
+  // `CLAUDE.md` says why those are the expected ones whenever this line follows them.
   log.info(
     s"${fatalWarningsNamed(probeOptions)} reaches ${compiled.size} projects, and the compilation " +
-      "that had to fail did, quietly."
+      "that had to fail did."
   )
 }
 
 // What makes it a gate rather than a command. `sbt test` is what CI runs and what a person runs, so
 // this is where a check that must not be forgotten belongs; the root is the right project for it
 // because what is being checked is a property of the build rather than of any one module.
-Test / test := (Test / test).dependsOn(fatalWarnings).value
+// `test` is an input task in sbt 2, the incremental one, and `testFull` is the whole suite; the
+// gate rides both, so whichever of the two a run asks for pays for it.
+LocalRootProject / Test / test :=
+  (LocalRootProject / Test / test).dependsOn(LocalRootProject / fatalWarnings).evaluated
+LocalRootProject / Test / testFull := Def.uncached(
+  (LocalRootProject / Test / testFull).dependsOn(LocalRootProject / fatalWarnings).value
+)

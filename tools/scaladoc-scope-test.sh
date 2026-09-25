@@ -2,7 +2,7 @@
 # Run `tools/scaladoc-scope.sh` against generated documentation built for the purpose, one page
 # per answer it can give.
 #
-# WHY FIXTURES AND NOT THE REAL API DIRECTORY. The subject reads `modules/*/target`, which is build
+# WHY FIXTURES AND NOT THE REAL API DIRECTORY. The subject reads `target/out/jvm/scala-3.3.5/symbolum-*/api`, which is build
 # output: it exists on a machine that has just run `sbt clean doc` and on no runner that has not.
 # A test that needed it would be a test that runs after a ten-minute build or not at all, and the
 # half worth checking every time is the classification, which is decided by four shapes of `href`
@@ -36,7 +36,7 @@ harness_name=scaladoc-scope-test
 
 failures=0
 
-api="$work/modules/demo/target/scala-3.3.5/api/garden/xeno/demo"
+api="$work/target/out/jvm/scala-3.3.5/symbolum-demo/api/garden/xeno/demo"
 mkdir -p "$api"
 
 # A page with a member of its own, which is what an unqualified query is for. The member table
@@ -95,8 +95,8 @@ rm "$api/Resolution.html"
 # member's docstring appears there a second time and every one of them looks off-scope. Reading it
 # reported 47 of them on the real tree on 2026-09-18, all of them duplicates of links that are
 # fine where they are actually written.
-mkdir -p "$work/modules/demo/target/scala-3.3.5/api/garden/xeno/demo"
-cat > "$work/modules/demo/target/scala-3.3.5/api/garden/xeno/demo.html" <<'HTML'
+mkdir -p "$work/target/out/jvm/scala-3.3.5/symbolum-demo/api/garden/xeno/demo"
+cat > "$work/target/out/jvm/scala-3.3.5/symbolum-demo/api/garden/xeno/demo.html" <<'HTML'
 <div class="doc">
   <p>Brief of a member, re-rendered here: <a href="demo/Cnf$$Problem.html">Problem</a>.</p>
 </div>

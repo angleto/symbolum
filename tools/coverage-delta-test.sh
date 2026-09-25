@@ -41,7 +41,7 @@ stamp=$(($(date +%s) * 1000))
 # read, only its date.
 age() {
     find "$1/modules" -path '*/src/*' -type f -exec touch -t 202601010000 {} +
-    for report in "$1"/modules/*/target/scala-*/scoverage-report/scoverage.xml; do
+    for report in "$1"/target/out/jvm/scala-*/symbolum-*/scoverage-report/scoverage.xml; do
         [ -f "$report" ] || continue
         data="${report%/scoverage-report/scoverage.xml}/scoverage-data"
         mkdir -p "$data"
@@ -56,7 +56,7 @@ build() {
     name="$1"; added="$2"; covered="$3"
     repo="$work/$name"
     src="modules/demo/src/main/scala/Demo.scala"
-    mkdir -p "$repo/$(dirname "$src")" "$repo/modules/demo/target/scala-3.3.5/scoverage-report"
+    mkdir -p "$repo/$(dirname "$src")" "$repo/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-report"
     (
         cd "$repo"
         git_q init
@@ -95,7 +95,7 @@ build() {
             i=$((i + 1))
         done
         echo '</scoverage>'
-    } > "$repo/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+    } > "$repo/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-report/scoverage.xml"
     age "$repo"
 }
 
@@ -108,7 +108,7 @@ build_pair() {
     repo="$work/$name"
     for module in demo other; do
         src="modules/$module/src/main/scala/Demo.scala"
-        mkdir -p "$repo/$(dirname "$src")" "$repo/modules/$module/target/scala-3.3.5/scoverage-report"
+        mkdir -p "$repo/$(dirname "$src")" "$repo/target/out/jvm/scala-3.3.5/symbolum-$module/scoverage-report"
     done
     (
         cd "$repo"
@@ -140,7 +140,7 @@ build_pair() {
                 i=$((i + 1))
             done
             echo '</scoverage>'
-        } > "$repo/modules/$module/target/scala-3.3.5/scoverage-report/scoverage.xml"
+        } > "$repo/target/out/jvm/scala-3.3.5/symbolum-$module/scoverage-report/scoverage.xml"
     done
     (
         cd "$repo"
@@ -224,7 +224,7 @@ build comments 20 20
         i=$((i + 1))
     done
     echo '</scoverage>'
-} > "$work/comments/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+} > "$work/comments/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-report/scoverage.xml"
 age "$work/comments"
 run_subject comments HEAD~1
 holds "lines with no statement in any report are not called covered" "none of those lines carries a statement"
@@ -234,7 +234,7 @@ check "and exits green" "$status" "0"
 # 7. NO REPORT AT ALL is not the same as a report saying nothing, and is the one state the
 # subject refuses outright: there is nothing to have an opinion about.
 build missing 20 20
-rm -rf "$work/missing/modules/demo/target"
+rm -rf "$work/missing/target/out/jvm/scala-3.3.5/symbolum-demo"
 run_subject missing HEAD~1
 holds "no report at all is refused rather than passed" "no coverage report on disk"
 check "and exits 2, which is neither" "$status" "2"
@@ -294,7 +294,7 @@ holds "a change over two modules that both report is measured over both" "40 of 
 holds "and says so before the rate" "every one of the 2 module(s) it touches has a report"
 check "and exits green" "$status" "0"
 
-rm -rf "$work/pair/modules/other/target"
+rm -rf "$work/pair/target/out/jvm/scala-3.3.5/symbolum-other"
 run_subject pair HEAD~1
 holds "a module with changed lines and no report is named" "other"
 holds "and the subject refuses to rate the change over the rest" "invisible here"
@@ -313,7 +313,7 @@ build_pair quiet 20
     git_q commit -m "only demo moves"
 )
 age "$work/quiet"
-rm -rf "$work/quiet/modules/other/target"
+rm -rf "$work/quiet/target/out/jvm/scala-3.3.5/symbolum-other"
 run_subject quiet HEAD~1
 holds "a module that did not report and did not change is not a shortfall" "1 module(s) it touches has a report"
 check "and the change is measured" "$status" "0"
@@ -361,7 +361,7 @@ build dirty 20 20
         i=$((i + 1))
     done
     echo '</scoverage>'
-} > "$work/dirty/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+} > "$work/dirty/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-report/scoverage.xml"
 age "$work/dirty"
 run_subject dirty HEAD~1
 holds "the change is read in the working tree's coordinates, all twenty statements" "19 of 20 statement(s)"
@@ -382,14 +382,14 @@ check "and is refused rather than left out" "$status" "2"
 # 13. A REPORT NO BUILD WROTE. The shared checkout held `<statements/>`, fourteen bytes dated 2020,
 # in every module, and the subject passed a change of 199 lines over them.
 build stub 20 20
-printf '<statements/>' > "$work/stub/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+printf '<statements/>' > "$work/stub/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-report/scoverage.xml"
 run_subject stub HEAD~1
 holds "a report with no timestamp is named as not a build's" "no build of scoverage wrote them"
 check "and refused" "$status" "2"
 
 # 13b. A report OLDER than a changed file, which is a report of a tree without the change.
 build older 20 20
-touch -t 202512010000 "$work/older/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+touch -t 202512010000 "$work/older/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-report/scoverage.xml"
 run_subject older HEAD~1
 holds "a changed file newer than its module's report is named" "changed after their module's report"
 check "and refused" "$status" "2"
@@ -401,7 +401,7 @@ sept3=$(( $(date -u -d '2026-09-03 12:00' +%s 2>/dev/null || date -u -j -f '%Y-%
 sept22=$(( $(date -u -d '2026-09-22 12:00' +%s 2>/dev/null || date -u -j -f '%Y-%m-%d %H:%M' '2026-09-22 12:00' +%s) * 1000 ))
 for pair in "demo $sept3 202609031200" "other $sept22 202609221200"; do
     set -- $pair
-    file="$work/dated/modules/$1/target/scala-3.3.5/scoverage-report/scoverage.xml"
+    file="$work/dated/target/out/jvm/scala-3.3.5/symbolum-$1/scoverage-report/scoverage.xml"
     sed "s/timestamp=\"[0-9]*\"/timestamp=\"$2\"/" "$file" > "$file.next" && mv "$file.next" "$file"
     touch -t "$3" "$file"
 done
@@ -438,7 +438,7 @@ check "and exits green" "$status" "0"
 # change of six statements of which two were never run. A report's mtime says when it was
 # written, not what it was built from.
 build replayed 20 20
-data="$work/replayed/modules/demo/target/scala-3.3.5/scoverage-data"
+data="$work/replayed/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-data"
 mkdir -p "$data"
 printf 'instrumentation of the tree before the edit\n' > "$data/scoverage.coverage"
 touch -t 202601010000 "$data/scoverage.coverage"
@@ -447,7 +447,7 @@ touch -t 202601010000 "$data/scoverage.coverage"
     cat "$work/replayed/modules/demo/src/main/scala/Demo.scala"
 } > "$work/replayed/demo.next" && mv "$work/replayed/demo.next" "$work/replayed/modules/demo/src/main/scala/Demo.scala"
 touch -t 202601020000 "$work/replayed/modules/demo/src/main/scala/Demo.scala"
-touch -t 202601030000 "$work/replayed/modules/demo/target/scala-3.3.5/scoverage-report/scoverage.xml"
+touch -t 202601030000 "$work/replayed/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-report/scoverage.xml"
 run_subject replayed HEAD~1
 holds "a changed file newer than the instrumentation its report was written from is named" "Demo.scala"
 holds "and the reason is the compile, not the report" "instrumented compile"
@@ -457,7 +457,7 @@ check "and refused" "$status" "2"
 # the compile is what 16 reads, and without it there is nothing to compare, so the subject refuses
 # rather than falling back on the report's own date, which is the reading 16 shows is not enough.
 build bare 20 20
-rm -rf "$work/bare/modules/demo/target/scala-3.3.5/scoverage-data"
+rm -rf "$work/bare/target/out/jvm/scala-3.3.5/symbolum-demo/scoverage-data"
 run_subject bare HEAD~1
 holds "a report with no instrumentation is named" "no instrumentation beside them"
 check "and refused" "$status" "2"

@@ -48,7 +48,11 @@ it found** — a path from another process's environment or from a file in the t
 printed as the thing to do and is not executed, because a build that ran a program nobody in this
 session named would be a different tool with the same name.
 
-- **Tests:** `tools/sbt test`. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
+- **Tests:** `tools/sbt test`, which is **every** suite of every module. Under sbt 2 that is a
+  decision rather than the default: sbt 2's own `test` runs only what a change touched, and here
+  `test` is pointed at the whole suite, so that a green read off `tools/sbt test` means what it
+  meant under sbt 1. The incremental run is `tools/sbt testQuick`, and nothing that reports a
+  figure or closes a card should read one. Most of the wall clock is one suite: `ReachSpec` puts miniF2F's 244
   statements to the whole tactic surface and most of **that** is the ones it attempts and cannot
   settle. That cost is the prover's rather than the test's, and it is tracked. **How many they are
   is not written here**, for the reason the paragraph below gives about the wall clock: it was
@@ -90,11 +94,18 @@ session named would be a different tool with the same name.
   what it does not cover and names this task; what it adds is that the task is still wired to
   `Test / test`, since a gate can report a dead flag and cannot report that nobody runs it.
 
-  **A green run of it prints one line and no compiler output**, because both probe compilations
-  log into a stream nobody reads: a gate that rides `tools/sbt test` would otherwise put nine
-  `[error]` lines into every suite log, and a healthy log that looks unhealthy is how a reader
-  stops reading it. To see the probe's diagnostics, `tools/sbt warningProbe/compile` restores
-  them, and every refusal the gate prints says so.
+  **A green run of it prints one line of its own, and under sbt 2 it can also print the probe's
+  nine `[error]` lines.** Both probe compilations log into a stream nobody reads, because a gate
+  that rides `tools/sbt test` would otherwise put those lines into every suite log, and a healthy
+  log that looks unhealthy is how a reader stops reading it. sbt 2 keeps a compile's outcome, a
+  failed one included, and when it serves the probe's failure from that cache it prints the
+  diagnostics it stored, around the quiet log: measured on 2026-09-25, both runs of a
+  `fatalWarnings fatalWarnings` read `1 cached-failure cache hit` and showed them. **They are the
+  expected ones when the gate's own line says it passed.** A failure served from the cache is
+  still evidence, and that was measured rather than assumed: with `-Wconf:any:s` added to both
+  probe and control, so that only compiling could tell, sbt recompiled and the gate went red
+  saying the probe compiled. To see the diagnostics on purpose, `tools/sbt warningProbe/compile`
+  restores them, and every refusal the gate prints says so.
 
   The two probe projects are outside `modules/` and the root aggregates neither, which is what
   keeps `tools/sbt compile` green over a project that is supposed to fail. It also puts them

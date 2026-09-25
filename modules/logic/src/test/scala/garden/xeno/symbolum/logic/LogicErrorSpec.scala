@@ -108,7 +108,7 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
     // WHO COVERS IT: the `fatalWarnings` task in `build.sbt`, which reads the effective options of
     // every project holding sources and then compiles a source that has to fail because of the
     // flag, against a control compiling the same source without it. It is not a command somebody
-    // remembers: `Test / test` on the root depends on it, so it runs under `tools/sbt test` and in
+    // remembers: the root's `test` and `testFull` depend on it, so it runs under `tools/sbt test` and in
     // CI. A test in this suite cannot be that check -- nothing a compiled program reads at runtime
     // says which diagnostics were emitted when it was compiled -- which is why the strong half
     // lives in the build and this half stays here, beside the guard it is about.
@@ -142,9 +142,18 @@ class LogicErrorSpec extends AnyFlatSpec with Matchers {
     // file's own subject is about moved one step along. This is text again, and deliberately: what
     // it guards is a line rather than a value reaching a tool, so the failure that defeated the
     // assertion above has no counterpart here.
+    //
+    // Two lines since the build moved to sbt 2, where `test` is the incremental input task and
+    // `testFull` the whole suite: the gate rides both, so whichever a run asks for pays for it, and
+    // each is asserted because dropping either leaves a way to run the suite without the gate.
     withClue("`fatalWarnings` is defined and something runs it: ") {
       build should include("lazy val fatalWarnings = taskKey[Unit]")
-      build should include("Test / test := (Test / test).dependsOn(fatalWarnings).value")
+      build should include(
+        "(LocalRootProject / Test / test).dependsOn(LocalRootProject / fatalWarnings).evaluated"
+      )
+      build should include(
+        "(LocalRootProject / Test / testFull).dependsOn(LocalRootProject / fatalWarnings).value"
+      )
     }
   }
 

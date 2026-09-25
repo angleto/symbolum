@@ -46,7 +46,7 @@ it said when the perturbation was run.
 
 | perturbation | what the gate did |
 |---|---|
-| none (the tree as committed) | green, one line: `-Xfatal-warnings reaches 12 projects, and the compilation that had to fail did, quietly.` |
+| none (the tree as committed) | green, one line: `-Xfatal-warnings reaches 12 projects, and the compilation that had to fail did, quietly.` (the wording of sbt 1; under sbt 2 the line ends `did.`, and a failure served from sbt 2's cache prints the probe's diagnostics above it) |
 | `-Xfatal-warnings` deleted from `commonSettings` | red, exit 1: `-Werror or -Xfatal-warnings is not in the effective scalacOptions of: mark (Compile and Test), examples, sat, core, scan, warningProbe, theories, logic, checker, dist, tactics, kernel` -- all twelve, each with both configurations |
 | `theories / Compile / scalacOptions -= "-Xfatal-warnings"`, string left in `build.sbt` | red, exit 1: `-Werror or -Xfatal-warnings is not in the effective scalacOptions of: theories (Compile and Test)`, while `logic/testOnly ...LogicErrorSpec` stayed green at 5 tests. This is the defect class the card is about, reproduced: written and not arriving |
 | a project added to the build that never took `commonSettings` | red, exit 1, `forgot (Compile and Test)`: the check is over `inAnyProject` and a question to the disk, so a project nobody named is inside it |
@@ -90,3 +90,10 @@ parent and `Test` extends `Runtime` extends `Compile`.
   `LogicErrorSpec` asserts that line is present, which is a textual guard again, and deliberately:
   what it guards is a line rather than a value reaching a tool, so the failure mode that defeated
   the assertion it sits beside has no counterpart.
+
+## Under sbt 2, measured on 2026-09-25
+
+| perturbation | result |
+|---|---|
+| `-Wconf:any:s` on the probe's `Compile` options only | red: the probe and its control differ by more than the flag, before anything compiles |
+| `-Wconf:any:s` on the probe's project options, which the control derives from, so the two still differ by the flag alone | red: sbt 2 did not serve the probe from its cache, recompiled, and the gate said the probe COMPILED under this build's options |
