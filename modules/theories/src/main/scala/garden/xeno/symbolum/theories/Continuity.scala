@@ -394,43 +394,76 @@ object Continuity {
    */
   private[theories] final case class Share(term: String, positive: Kernel.Thm, equation: Kernel.Thm)
 
+  /**
+   * The general form of [[share]]: `T = e * inv (k * (P + 1))` for a measure `P` known not to be
+   * negative, with `0 < T` and `k * (P + 1) * T = e`, under the assumption `0 < e`. `k` is how many
+   * terms the tolerance is shared among; the product rule shares it four ways and a linear
+   * combination two. The term is written in brackets, so it reads as one factor wherever a caller
+   * multiplies it.
+   */
+  private[theories] def portion(
+    steps: Steps,
+    reals: RealTheory,
+    measure: String,
+    nonNegative: Kernel.Thm,
+    parts: Int,
+    ePositive: Kernel.Thm
+  ): Either[LogicError, Share] = {
+    import steps.*
+    val c = s"$parts * (($measure) + 1)"
+    val v = s"inv ($c)"
+    val t = s"(e:real * $v)"
+    for {
+      cPositive <- at(lemma(s"!P:real. 0 <= P ==> 0 < $parts * (P + 1)"), measure).flatMap(mp(_, Right(nonNegative)))
+      nonZero <- at(lemma("!c:real. 0 < c ==> ~(c = 0)"), c).flatMap(mp(_, Right(cPositive)))
+      inverse <- at(reals.axiom("MUL_INVERSE"), c).flatMap(mp(_, Right(nonZero)))
+      positive <- at(lemma(s"!P:real v:real e:real. 0 <= P ==> $parts * (P + 1) * v = 1 ==> 0 < e ==> 0 < e * v"),
+        measure, v, "e:real").flatMap(mp(_, Right(nonNegative), Right(inverse), Right(ePositive)))
+      equation <- at(
+        lemma(s"!P:real v:real e:real. 0 <= P ==> 0 < e ==> $parts * (P + 1) * v = 1 ==> $parts * (P + 1) * (e * v) = e"),
+        measure, v, "e:real").flatMap(mp(_, Right(nonNegative), Right(ePositive), Right(inverse)))
+    } yield Share(t, positive, equation)
+  }
+
+  /** The half of `e` a coefficient `p` is given in a combination of two: [[portion]] at `abs p`. */
   private[theories] def share(
     steps: Steps,
     reals: RealTheory,
     magnitude: Magnitude,
     coefficient: String,
     ePositive: Kernel.Thm
-  ): Either[LogicError, Share] = {
-    import steps.*
-    val c = s"2 * (abs ($coefficient) + 1)"
-    val v = s"inv ($c)"
-    val t = s"e:real * $v"
+  ): Either[LogicError, Share] =
     for {
-      nonNegative <- at(magnitude.fact(Magnitude.AbsNonNegative), coefficient)
-      cPositive <- at(lemma("!P:real. 0 <= P ==> 0 < 2 * (P + 1)"), s"abs ($coefficient)").flatMap(mp(_, Right(nonNegative)))
-      nonZero <- at(lemma("!c:real. 0 < c ==> ~(c = 0)"), c).flatMap(mp(_, Right(cPositive)))
-      inverse <- at(reals.axiom("MUL_INVERSE"), c).flatMap(mp(_, Right(nonZero)))
-      positive <- at(lemma("!P:real v:real e:real. 0 <= P ==> 2 * (P + 1) * v = 1 ==> 0 < e ==> 0 < e * v"),
-        s"abs ($coefficient)", v, "e:real").flatMap(mp(_, Right(nonNegative), Right(inverse), Right(ePositive)))
-      equation <- at(lemma("!P:real v:real e:real. 0 <= P ==> 0 < e ==> 2 * (P + 1) * v = 1 ==> 2 * (P + 1) * (e * v) = e"),
-        s"abs ($coefficient)", v, "e:real").flatMap(mp(_, Right(nonNegative), Right(ePositive), Right(inverse)))
-    } yield Share(t, positive, equation)
-  }
+      nonNegative <- steps.at(magnitude.fact(Magnitude.AbsNonNegative), coefficient)
+      result <- portion(steps, reals, s"abs ($coefficient)", nonNegative, 2, ePositive)
+    } yield result
 
   /**
-   * `0 < min d1 d2`, from both: the radius two tolerances share, which `MIN_CASES` settles by
+   * `0 < min l r`, from both: the radius two tolerances share, which `MIN_CASES` settles by
    * whichever of the two it is.
    */
-  private[theories] def minimumOfTwo(steps: Steps, magnitude: Magnitude, first: Kernel.Thm, second: Kernel.Thm) = {
+  private[theories] def minimumOf(
+    steps: Steps,
+    magnitude: Magnitude,
+    left: String,
+    right: String,
+    leftPositive: Kernel.Thm,
+    rightPositive: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
     import steps.*
-    val w = "min (d1:real) (d2:real)"
+    val w = s"min ($left) ($right)"
+    val equal = "!w:real d:real. w = d ==> 0 < d ==> 0 < w"
     for {
-      cases <- at(magnitude.fact(Magnitude.MinCases), "d1:real", "d2:real")
-      left <- assume(s"$w = d1").flatMap(eq => at(lemma("!w:real d:real. w = d ==> 0 < d ==> 0 < w"), w, "d1:real").flatMap(mp(_, Right(eq), Right(first))))
-      right <- assume(s"$w = d2").flatMap(eq => at(lemma("!w:real d:real. w = d ==> 0 < d ==> 0 < w"), w, "d2:real").flatMap(mp(_, Right(eq), Right(second))))
-      result <- rules.disjElim(cases, left, right)
+      cases <- at(magnitude.fact(Magnitude.MinCases), left, right)
+      l <- assume(s"$w = $left").flatMap(eq => at(lemma(equal), w, left).flatMap(mp(_, Right(eq), Right(leftPositive))))
+      r <- assume(s"$w = $right").flatMap(eq => at(lemma(equal), w, right).flatMap(mp(_, Right(eq), Right(rightPositive))))
+      result <- rules.disjElim(cases, l, r)
     } yield result
   }
+
+  /** [[minimumOf]] at the two radii named `d1` and `d2`, which is how every caller but one names them. */
+  private[theories] def minimumOfTwo(steps: Steps, magnitude: Magnitude, first: Kernel.Thm, second: Kernel.Thm) =
+    minimumOf(steps, magnitude, "d1:real", "d2:real", first, second)
 
   /**
    * [[Linear]]: each of the two is given its [[share]] of `e`, the radius is the smaller of the two
