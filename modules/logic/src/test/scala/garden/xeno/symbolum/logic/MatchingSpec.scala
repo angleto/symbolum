@@ -349,6 +349,103 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
     answer(Set(predicate), pattern, target) shouldBe None
   }
 
+  /* --------------------------------------------- a variable an earlier occurrence decided */
+
+  /**
+   * `\x. h (P x) (P (s x))`: the first occurrence of `P` is a Miller pattern and decides it, and
+   * the second is applied to `s x`, which is not a binder.
+   *
+   * Until 2026-09-25 the second occurrence reached the Miller case, which does not look at what is
+   * decided, and every pair of this shape was refused, instances included. The cases below are
+   * the ones the change has to keep apart: an instance, a pair that is not one, a variable still
+   * unsolved inside the argument, the same at a polymorphic pattern where it stays refused, and a
+   * decided term that mentions the pattern's own variable, which is the input that would make the
+   * check recurse forever if it were written the obvious way.
+   */
+  private val ground = TyApp("g", Nil)
+  private val predicate = Term.variable("P", Type.fun(ground, Type.Bool))
+  private val successor = Term.variable("s", Type.fun(ground, ground))
+  private val pair = Term.variable("h", Type.fun(Type.Bool, Type.fun(Type.Bool, Type.Bool)))
+  private val x = Term.variable("x", ground)
+  private val c = Term.variable("c", ground)
+
+  private def both(first: Term, second: Term): Term = force(Term.appAll(pair, List(first, second)))
+  private def at(function: Term, argument: Term): Term = force(Term.app(function, argument))
+  private def equal(left: Term, right: Term): Term = force(Term.eq(left, right))
+
+  /** `\x. h (P x) (P (s x))`, over whatever `P` and `s` are handed in. */
+  private def step(p: FVar, s: FVar, over: FVar): Term =
+    lam(over, both(at(p, over), at(p, at(s, over))))
+
+  "A variable an earlier occurrence decided" should "be checked where it recurs, and give the instance" in {
+    val target = lam(x, both(equal(x, c), equal(at(successor, x), c)))
+    val found = Matching.matchTerm(Set(predicate), step(predicate, successor, x), target)
+
+    found.map(_.terms) shouldBe Some(Map(predicate -> lam(x, equal(x, c))))
+    found.map(_.types) shouldBe Some(Map.empty)
+    filled(found.get, step(predicate, successor, x)) shouldBe target
+  }
+
+  it should "refuse a pair that is not an instance, and call it a miss rather than the fragment's limit" in {
+    // `P` decided as `\x. x = c`, and the second place holds `x = c` where `s x = c` was owed.
+    val target = lam(x, both(equal(x, c), equal(x, c)))
+
+    Matching.matchTerm(Set(predicate), step(predicate, successor, x), target) shouldBe None
+    Matching.why(Set(predicate), step(predicate, successor, x), target) shouldBe None
+  }
+
+  it should "solve a variable still unsolved inside the argument" in {
+    // `\x. h (P x) (P (s m))` against `\x. h (x = c) (s d = c)`: once `P` is known, the second
+    // place is `s m = c` against `s d = c`, which is first order and decides `m`.
+    val m = Term.variable("m", ground)
+    val d = Term.variable("d", ground)
+    val pattern = lam(x, both(at(predicate, x), at(predicate, at(successor, m))))
+    val target = lam(x, both(equal(x, c), equal(at(successor, d), c)))
+
+    answer(Set(predicate, m), pattern, target) shouldBe
+      Some((Map(predicate -> lam(x, equal(x, c)), m -> d), Map.empty))
+  }
+
+  it should "decide the types too, where the argument holds nothing unsolved" in {
+    // The same step over a type variable, against a target at `g`: the decided term is at `g` and
+    // the argument at `A`, so the argument is put at the target's types before it is applied. `s`
+    // is not a pattern variable here, which is what "nothing unsolved" means: it is compared by
+    // name and a type match, as the case below this one would need it solved and cannot.
+    val overA = Term.variable("x", alpha)
+    val polymorphic = Term.variable("P", Type.fun(alpha, Type.Bool))
+    val next = Term.variable("s", fn)
+    val target = lam(x, both(equal(x, c), equal(at(successor, x), c)))
+
+    val found = Matching.matchTerm(Set(polymorphic), step(polymorphic, next, overA), target)
+
+    found.map(_.types) shouldBe Some(Map("A" -> ground))
+    filled(found.get, step(polymorphic, next, overA)) shouldBe target
+  }
+
+  it should "stay refused at a polymorphic pattern whose argument holds an unsolved variable, and say so" in {
+    // The one case the check does not reach, and the refusal is the fragment's: the argument is at
+    // the pattern's types and cannot be put at the target's while `m` is unknown.
+    val overA = Term.variable("x", alpha)
+    val polymorphic = Term.variable("P", Type.fun(alpha, Type.Bool))
+    val m = Term.variable("m", alpha)
+    val pattern = lam(overA, both(at(polymorphic, overA), at(polymorphic, at(f, m))))
+    val target = lam(x, both(equal(x, c), equal(at(successor, c), c)))
+
+    Matching.matchTerm(Set(polymorphic, m, f), pattern, target) shouldBe None
+    Matching.why(Set(polymorphic, m, f), pattern, target) shouldBe
+      Some(Matching.Refusal.ArgumentIsNotABinder(polymorphic))
+  }
+
+  it should "stop where the decided term mentions the pattern's own variable" in {
+    // The target uses `P` itself, so the first place decides `P := P`. The second place is then
+    // `P (s x)` against `P (t x)`, and handing `P (s x)` back to the walk would arrive here again
+    // with nothing changed. It has to come back refused, and come back at all.
+    val other = Term.variable("t", Type.fun(ground, ground))
+    val target = lam(x, both(at(predicate, x), at(predicate, at(other, x))))
+
+    Matching.matchTerm(Set(predicate), step(predicate, successor, x), target) shouldBe None
+  }
+
   /* ------------------------------------------------- which condition a refusal met */
 
   /**
@@ -372,6 +469,22 @@ class MatchingSpec extends AnyFlatSpec with Matchers {
     val escaping = lam(q, lam(r, force(Term.app(predicate, q))))
     Matching.why(Set(predicate), escaping, lam(q, lam(r, force(Term.app(f, r))))) shouldBe
       Some(Matching.Refusal.TargetSeesAnotherBinder(predicate))
+  }
+
+  it should "name the condition under a binder over a type variable, as it does under a ground one" in {
+    // `\x:A. P (s x)` against `\x:g. s x = c`. Until 2026-09-25 `why` opened both binders with
+    // one variable at the target's type, which cannot be substituted into a binder over `A`, so
+    // this came back `None`, "not refused by the fragment", while `matchTerm` refused it at exactly
+    // this condition. Found by the case "stay refused at a polymorphic pattern" below, whose first
+    // red was this and not what it was written for.
+    val overA = Term.variable("x", alpha)
+    val polymorphic = Term.variable("P", Type.fun(alpha, Type.Bool))
+    val pattern = lam(overA, at(polymorphic, at(Term.variable("s", fn), overA)))
+    val target = lam(x, equal(at(successor, x), c))
+
+    Matching.matchTerm(Set(polymorphic), pattern, target) shouldBe None
+    Matching.why(Set(polymorphic), pattern, target) shouldBe
+      Some(Matching.Refusal.ArgumentIsNotABinder(polymorphic))
   }
 
   it should "call a first-order miss what it is, rather than a limit of the fragment" in {

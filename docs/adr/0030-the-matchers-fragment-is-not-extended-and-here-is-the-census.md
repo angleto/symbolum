@@ -120,13 +120,18 @@ buckets apart needs the outer match, which `Matching.why` does not see. What `wh
 is the per-condition count, and the claim in the Decision section that the next census "costs a
 call" was true of that count and not of this one.
 
-**One finding the census did not produce and the instrument did.** The control pair for the empty
-row, `\n. P n ==> P (SUC n)` against `\n. n < 3 ==> SUC n < 3`, **is** an instance at
-`P := \n. n < 3`, and `matchTerm` refuses it: `P` is decided by its first occurrence, and the
-second, applied to `SUC n`, is refused as a variable applied to a non-binder instead of being
-checked against what was decided. That is not a larger fragment; a decided variable is no longer a
-pattern variable. The suite reaches it zero times, so nothing is extended here, and it is recorded
-on the board as a card of its own rather than built on a population of none.
+**One finding the census did not produce and the instrument did, closed the same day.** The
+control pair for the empty row, `\n. P n ==> P (SUC n)` against `\n. n < 3 ==> SUC n < 3`, **is** an
+instance at `P := \n. n < 3`, and `matchTerm` refused it: `P` is decided by its first occurrence,
+and the second, applied to `SUC n`, reached the Miller case, which did not look at what was
+decided. That is not a larger fragment, since a decided variable is no longer a pattern variable,
+and it is why the row is not an argument against building it: the suite reaches it zero times and
+the fragment's decision does not turn on it. `matchTerm` now applies the decided term to the
+arguments, reduces, and compares; where the pattern has type variables and an argument holds a
+variable nothing has solved, it still refuses, and `why` reports that as the fragment's. The
+change found a defect in `why` on the way: it opened both binders with one variable at the
+target's type, which cannot enter a binder over a type variable, so every pair with one came
+back `None` whatever refused it. `MatchingSpec` holds both.
 
 **What changed in the tree on the same day** is the half the card asked for that was not a
 measurement: `Matching.why` has a consumer. `Rules.specTo` and `specToReduced` report a refusal of
