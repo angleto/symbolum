@@ -188,6 +188,8 @@ they have least appetite for working out how it is produced.
   LIST_FOLD_CONCAT         !x:'a -> 'b -> 'b. !y:'b. !z:word('a). !u:word('a). LIST_FOLD x y (WORD_CONCAT z u) = LIST_FOLD x (LIST_FOLD x y u) z
   LIST_FOLD_CONS           !x:'a -> 'b -> 'b. !y:'b. !z:'a. !u:word('a). LIST_FOLD x y (LIST_CONS z u) = x z (LIST_FOLD x y u)
   LIST_FOLD_EMPTY          !x:'a -> 'b -> 'b. !y:'b. LIST_FOLD x y WORD_EMPTY = y
+  LIST_FOLD_EVERY          !x:'a -> bool. !y:word('a). LIST_FOLD (\z:'a. \u:bool. x z /\ u) T y = (!z:num. z < WORD_LENGTH y ==> x (WORD_NTH y z))
+  LIST_FOLD_EVERY_CONCAT   !x:'a -> bool. !y:word('a). !z:word('a). LIST_FOLD (\u:'a. \v:bool. x u /\ v) T (WORD_CONCAT y z) = (LIST_FOLD (\u:'a. \v:bool. x u /\ v) T y /\ LIST_FOLD (\u:'a. \v:bool. x u /\ v) T z)
 
 ## Forward
 

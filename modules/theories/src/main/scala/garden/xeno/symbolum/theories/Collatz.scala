@@ -806,10 +806,24 @@ object Collatz {
   private val PotentialBody: String =
     "\\w:word(num). NUM_SUM (\\i:num. COND (WORD_NTH w i < 3) (NUM_SUB i 1) 0) (WORD_LENGTH w)"
 
+  /**
+   * The two marker-free predicates are folds, since 2026-09-25: "no letter is the marker" is a
+   * conjunction along the list, which `Folding.FoldOfEvery` says is the same as the reading by
+   * position below. The positional reading is what every proof in this file written before then
+   * runs on, and it is not rewritten: it is **derived** from the fold by [[byPosition]] and handed
+   * to those proofs in the definition's place, so what changed is how the predicate is written and
+   * how its split over a concatenation is proved, and nothing downstream of either.
+   */
   private val TailFreeBody: String =
-    "\\w:word(num). !i:num. i < WORD_LENGTH w ==> ~(WORD_NTH w i = S2_TAIL)"
+    "LIST_FOLD (\\x:num. \\r:bool. ~(x = S2_TAIL) /\\ r) T"
 
   private val HeadFreeBody: String =
+    "LIST_FOLD (\\x:num. \\r:bool. ~(x = S2_HEAD) /\\ r) T"
+
+  private val TailFreeByPosition: String =
+    "\\w:word(num). !i:num. i < WORD_LENGTH w ==> ~(WORD_NTH w i = S2_TAIL)"
+
+  private val HeadFreeByPosition: String =
     "\\w:word(num). !i:num. i < WORD_LENGTH w ==> ~(WORD_NTH w i = S2_HEAD)"
 
   /**
@@ -962,6 +976,7 @@ object Collatz {
    */
   def construct(
     forward: Forward,
+    folding: Folding,
     reaching: Reaching,
     numbering: Numbering,
     naturals: Natural,
@@ -1008,35 +1023,31 @@ object Collatz {
 
       logic <- forward.inductive.classical.logic.over(theory)
 
-      countedIsRule <- countedAreRules(logic, theory, notation, definitions)
-      inhabited <- inhabitedProof(logic, theory, notation, definitions)
+      tailFreeByPosition <- byPosition(
+        logic, forward.inductive.classical, folding, theory, notation,
+        definitions, TailFree, Tail, TailFreeByPosition)
+      headFreeByPosition <- byPosition(
+        logic, forward.inductive.classical, folding, theory, notation,
+        definitions, HeadFree, Head, HeadFreeByPosition)
+      // What the proofs below read the two predicates by. The published definitions stay the
+      // kernel's own, which are the folds.
+      positional = definitions ++ Map(TailFree -> tailFreeByPosition, HeadFree -> headFreeByPosition)
+
+      countedIsRule <- countedAreRules(logic, theory, notation, positional)
+      inhabited <- inhabitedProof(logic, theory, notation, positional)
       refused <- refusal(
-        logic, naturals, forward.concatenation, peano, theory, notation, definitions)
+        logic, naturals, forward.concatenation, peano, theory, notation, positional)
 
       numbers <- Arithmetic.of(peano, naturals)
-      tailFreeDefinition <- definitions.get(TailFree).toRight(MissingDefinition(TailFree))
-      markedDefinition <- definitions.get(Marked).toRight(MissingDefinition(Marked))
-      headFreeDefinition <- definitions.get(HeadFree).toRight(MissingDefinition(HeadFree))
-      anchoredDefinition <- definitions.get(Anchored).toRight(MissingDefinition(Anchored))
-      tailFreeConcat <- freeSplits(
-        logic,
-        theory,
-        forward.inductive.classical,
-        forward.concatenation,
-        numbers,
-        tailFreeDefinition,
-        Tail
-      )
-      headFreeConcat <- freeSplits(
-        logic,
-        theory,
-        forward.inductive.classical,
-        forward.concatenation,
-        numbers,
-        headFreeDefinition,
-        Head
-      )
-      potentialDefinition <- definitions.get(Potential).toRight(MissingDefinition(Potential))
+      tailFreeDefinition <- positional.get(TailFree).toRight(MissingDefinition(TailFree))
+      markedDefinition <- positional.get(Marked).toRight(MissingDefinition(Marked))
+      headFreeDefinition <- positional.get(HeadFree).toRight(MissingDefinition(HeadFree))
+      anchoredDefinition <- positional.get(Anchored).toRight(MissingDefinition(Anchored))
+      tailFreeConcat <- listSplits(
+        logic, folding, theory, notation, definitions, TailFree, Tail, TailFreeConcat)
+      headFreeConcat <- listSplits(
+        logic, folding, theory, notation, definitions, HeadFree, Head, HeadFreeConcat)
+      potentialDefinition <- positional.get(Potential).toRight(MissingDefinition(Potential))
       potentialConcat <- potentialSplits(
         logic, theory, notation, forward.concatenation, potentialDefinition)
       potentialBlocks <- potentialOfBlocks(logic, theory, potentialConcat)
@@ -1060,18 +1071,18 @@ object Collatz {
       )
 
       tools <- concreteTools(
-        logic, theory, notation, forward.concatenation, peano, naturals, successor, numbers, definitions)
+        logic, theory, notation, forward.concatenation, peano, naturals, successor, numbers, positional)
       // `COND` is polymorphic in the branches, so both rules arrive with a type variable where this
       // development has `num`, and a specialisation at a numeral would be refused for it.
       conditional <- forward.inductive.classical.fact(Classical.CondTrue).map(atNumbers)
       conditionalFalse <- forward.inductive.classical.fact(Classical.CondFalse).map(atNumbers)
       potentialAtAWord <- potentialOfWord(
-        tools, spell("/00."), definitions, conditional, conditionalFalse)
-      ruleNotEmpty <- rulesAreNotEmpty(tools, definitions)
-      markedStep <- markedRules(tools, definitions)
-      tailFreeStep <- freeRules(tools, definitions, Tail, TailFree, TailFreeStep)
-      headFreeStep <- freeRules(tools, definitions, Head, HeadFree, HeadFreeStep)
-      anchoredStep <- anchoredRules(tools, definitions)
+        tools, spell("/00."), positional, conditional, conditionalFalse)
+      ruleNotEmpty <- rulesAreNotEmpty(tools, positional)
+      markedStep <- markedRules(tools, positional)
+      tailFreeStep <- freeRules(tools, positional, Tail, TailFree, TailFreeStep)
+      headFreeStep <- freeRules(tools, positional, Head, HeadFree, HeadFreeStep)
+      anchoredStep <- anchoredRules(tools, positional)
 
       partial = Map(
         CountedIsRule -> countedIsRule,
@@ -1091,24 +1102,24 @@ object Collatz {
         PotentialAtAWord -> potentialAtAWord
       )
       potentialCountedStep <- potentialAcrossCounted(
-        tools, forward, forward.concatenation, definitions, partial, conditional, conditionalFalse)
+        tools, forward, forward.concatenation, positional, partial, conditional, conditionalFalse)
       potentialPlainStep <- potentialAcrossPlain(
         tools,
         forward,
         forward.concatenation,
         forward.inductive.classical,
-        definitions,
+        positional,
         partial,
         conditional,
         conditionalFalse
       )
-      markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, definitions, partial)
-      anchoredClosed <- anchoredUnderSteps(tools, forward, forward.concatenation, definitions, partial)
+      markedClosed <- closedUnderSteps(tools, forward, forward.concatenation, positional, partial)
+      anchoredClosed <- anchoredUnderSteps(tools, forward, forward.concatenation, positional, partial)
       markedInhabited <- markedWord(tools, BeforeTheStep)
       anchoredInhabited <- anchoredWord(tools, BeforeTheStep)
-      stepInhabited <- stepHolds(tools, forward.concatenation, forward, definitions)
+      stepInhabited <- stepHolds(tools, forward.concatenation, forward, positional)
       family <- digitFamily(
-        tools, forward, naturals, definitions, zerosAtZero, zerosAtSuccessor)
+        tools, forward, naturals, positional, zerosAtZero, zerosAtSuccessor)
       (familyWithF, familyWithTail) = family
       closureRefused <- closureIsProper(tools, forward, ruleNotEmpty)
       familySizes <- familyLengths(
@@ -1121,14 +1132,14 @@ object Collatz {
         AnchoredInhabited -> anchoredInhabited,
         StepInhabited -> stepInhabited
       )
-      runPotentialFact <- runPotential(tools, reaching, definitions, inClass)
-      runInhabited <- runHolds(tools, definitions, inClass)
+      runPotentialFact <- runPotential(tools, reaching, positional, inClass)
+      runInhabited <- runHolds(tools, positional, inClass)
       stemPotential <- potentialOfStem(
         tools,
         naturals,
         numbering,
         forward.concatenation,
-        definitions,
+        positional,
         inClass,
         zerosAtZero,
         zerosAtSuccessor,
@@ -1412,156 +1423,82 @@ object Collatz {
   /**
    * [[TailFreeConcat]] and [[HeadFreeConcat]]: freedom from a marker splits over a concatenation.
    *
-   * Both halves are the same two lemmas used in opposite directions. Going left to right, an index
-   * into `u` is an index into `u v` by `WORD_CONCAT_NTH_LEFT` and an index into `v` is the shifted
-   * one by `WORD_CONCAT_NTH_RIGHT`; going right to left, an index into `u v` is one or the other,
-   * and which it is comes from an excluded middle on `i < |u|` with the difference `i - |u|`
-   * placed by `NUM_SUB_ADD`. That is the same shape `Concatenation.associativity` has and a third
-   * of the size, because there are two blocks rather than three and no index arithmetic survives
-   * into the answer.
+   * By the lists since 2026-09-25, and that is the whole of the proof: the predicate is a fold of
+   * conjunctions, `Folding.FoldOfEveryConcat` is the split of such a fold, and the definition read
+   * backwards puts the predicate's name on each of the three folds. The version it replaces read
+   * every index of `u v` through `WORD_CONCAT_NTH_LEFT` and `WORD_CONCAT_NTH_RIGHT` with an
+   * excluded middle on `i < |u|` and the difference placed by `NUM_SUB_ADD`, and it was 150 lines.
    */
-  private def freeSplits(
+  private def listSplits(
     logic: Logic,
+    folding: Folding,
     theory: Theory,
+    notation: Notation,
+    definitions: Map[String, Kernel.Thm],
+    name: String,
+    markerName: String,
+    statement: String
+  ): Either[LogicError, Kernel.Thm] =
+    for {
+      definition <- definitions.get(name).toRight(MissingDefinition(name))
+      split <- folding.fact(Folding.FoldOfEveryConcat).map(atNumbers)
+      predicate <- Parser.term(theory, notation, s"\\x:num. ~(x = $markerName)")
+      specialised <- logic.rules.spec(predicate, split)
+      reduced <- Conv.betaNormalise(specialised.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised)))
+      named <- Conv.sym(definition).flatMap(back => Rewrite.Rule.all(logic, Vector(back)))
+      result <- Rewrite.inTheorem(named, reduced)
+      expected <- Parser.proposition(theory, notation, Statements.toMap.apply(statement))
+      _ <- if (result.conclusion == expected) Right(())
+           else Left(NotOfForm(s"$statement as it is written", result.conclusion))
+    } yield result
+
+  /**
+   * `|- S2_TAILFREE = \w. !i. i < WORD_LENGTH w ==> ~(WORD_NTH w i = S2_TAIL)`, and the same at the
+   * head marker: the definition these predicates had until 2026-09-25, derived now from the fold.
+   *
+   * `Folding.FoldOfEvery` at the predicate "is not the marker" gives the equation at every word, and
+   * eta turns an equation at every word into one between the two functions. What comes out is
+   * handed to the proofs of this file under the definition's name, so that none of them changed
+   * when the predicate did; the kernel's definition, the fold, is what the development publishes.
+   */
+  private def byPosition(
+    logic: Logic,
     classical: Classical,
-    concatenation: Concatenation,
-    numbers: Arithmetic,
-    freeDefinition: Kernel.Thm,
-    markerName: String
+    folding: Folding,
+    theory: Theory,
+    notation: Notation,
+    definitions: Map[String, Kernel.Thm],
+    name: String,
+    markerName: String,
+    positionalText: String
   ): Either[LogicError, Kernel.Thm] = {
     val rules = logic.rules
-    val u = Term.variable("u", Words)
-    val v = Term.variable("v", Words)
-
     for {
-      length <- concatenation.fact(Concatenation.Length).map(atNumbers)
-      nthLeft <- concatenation.fact(Concatenation.NthLeft).map(atNumbers)
-      nthRight <- concatenation.fact(Concatenation.NthRight).map(atNumbers)
-
-      concatConstant <- LogicError.lift(theory.constant(Concatenation.Name, ConcatType))
-      lengthConstant <- LogicError.lift(theory.constant(Word.Length, LengthType))
-      nthConstant <- LogicError.lift(theory.constant(Word.Nth, NthType))
-      strictOrder <- LogicError.lift(theory.constant(Peano.StrictOrder, OrderType))
-      plus <- LogicError.lift(theory.constant(Peano.Addition, BinaryNumbers))
-      minus <- LogicError.lift(theory.constant(Peano.Subtraction, BinaryNumbers))
-      marker <- LogicError.lift(theory.constant(markerName, Numbers))
-
-      joined <- LogicError.lift(Term.appAll(concatConstant, List(u, v)))
-      nthOfJoined <- LogicError.lift(Term.app(nthConstant, joined))
-      sizeU <- LogicError.lift(Term.app(lengthConstant, u))
-      sizeV <- LogicError.lift(Term.app(lengthConstant, v))
-      total <- LogicError.lift(Term.appAll(plus, List(sizeU, sizeV)))
-      lengths <- rules.specAll(length, List(u, v))
-
-      openedJoined <- Conv.unfold(freeDefinition, List(joined))
-      openedU <- Conv.unfold(freeDefinition, List(u))
-      openedV <- Conv.unfold(freeDefinition, List(v))
-      claimJoined <- leftOf(openedJoined)
-      claimU <- leftOf(openedU)
-      claimV <- leftOf(openedV)
-      everyJoinedTerm <- rightOf(openedJoined)
-      everyUTerm <- rightOf(openedU)
-      everyVTerm <- rightOf(openedV)
-      both <- logic.mkConj(claimU, claimV)
-
-      /* right to left: the whole word is tail-free, so each block is */
-      assumedJoined <- LogicError.lift(Kernel.assume(claimJoined))
-      everyJoined <- LogicError.lift(Kernel.eqMp(openedJoined, assumedJoined))
-      widened <- Conv.sym(lengths)
-
-      onU <- underTheBound(logic, everyUTerm) { (i, below) =>
-        for {
-          atMost <- rules.specAll(numbers.atMostSum, List(sizeU, sizeV))
-          pair <- rules.conjIntro(below, atMost)
-          belowSum <- rules
-            .specAll(numbers.belowThenAtMost, List(i, sizeU, total))
-            .flatMap(rules.mp(_, pair))
-          inJoined <- carryRight(strictOrder, i, widened, belowSum)
-          notMarker <- rules.spec(i, everyJoined).flatMap(rules.mp(_, inJoined))
-          entry <- rules.specAll(nthLeft, List(u, v, i)).flatMap(rules.mp(_, below))
-          result <- carryLeftNegated(logic, entry, marker, notMarker)
-        } yield result
+      definition <- definitions.get(name).toRight(MissingDefinition(name))
+      every <- folding.fact(Folding.FoldOfEvery).map(atNumbers)
+      predicate <- Parser.term(theory, notation, s"\\x:num. ~(x = $markerName)")
+      specialised <- rules.spec(predicate, every)
+      reduced <- Conv.betaNormalise(specialised.conclusion)
+        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, specialised)))
+      word <- Parser.term(theory, notation, "w:word(num)").flatMap {
+        case variable: FVar => Right(variable)
+        case other => Left(NotOfForm("a variable", other))
       }
-
-      onV <- underTheBound(logic, everyVTerm) { (i, below) =>
-        for {
-          shifted <- LogicError.lift(Term.appAll(plus, List(sizeU, i)))
-          belowSum <- rules
-            .specAll(numbers.addStrictlyMonotone, List(sizeU, i, sizeV))
-            .flatMap(rules.mp(_, below))
-          inJoined <- carryRight(strictOrder, shifted, widened, belowSum)
-          notMarker <- rules.spec(shifted, everyJoined).flatMap(rules.mp(_, inJoined))
-          entry <- rules.specAll(nthRight, List(u, v, i)).flatMap(rules.mp(_, below))
-          result <- carryLeftNegated(logic, entry, marker, notMarker)
-        } yield result
-      }
-
-      tailFreeU <- Conv.sym(openedU).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, onU)))
-      tailFreeV <- Conv.sym(openedV).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, onV)))
-      backward <- rules.conjIntro(tailFreeU, tailFreeV)
-
-      /* left to right: each block is tail-free, so the whole word is */
-      assumedBoth <- LogicError.lift(Kernel.assume(both))
-      fromU <- rules
-        .conjElim1(assumedBoth)
-        .flatMap(held => LogicError.lift(Kernel.eqMp(openedU, held)))
-      fromV <- rules
-        .conjElim2(assumedBoth)
-        .flatMap(held => LogicError.lift(Kernel.eqMp(openedV, held)))
-
-      onJoined <- underTheBound(logic, everyJoinedTerm) { (i, below) =>
-        for {
-          inSum <- carryRight(strictOrder, i, lengths, below)
-          belowU <- LogicError.lift(Term.appAll(strictOrder, List(i, sizeU)))
-
-          insideU <- LogicError.lift(Kernel.assume(belowU))
-          entryLeft <- rules.specAll(nthLeft, List(u, v, i)).flatMap(rules.mp(_, insideU))
-          notU <- rules.spec(i, fromU).flatMap(rules.mp(_, insideU))
-          firstCase <- Conv
-            .sym(entryLeft)
-            .flatMap(equation => carryLeftNegated(logic, equation, marker, notU))
-
-          notInsideU <- logic.mkNot(belowU)
-          assumedOutside <- LogicError.lift(Kernel.assume(notInsideU))
-          atLeast <- rules
-            .specAll(numbers.atMostFromNotBelow, List(i, sizeU))
-            .flatMap(rules.mp(_, assumedOutside))
-          difference <- LogicError.lift(Term.appAll(minus, List(i, sizeU)))
-          restored <- rules
-            .specAll(numbers.minusThenPlus, List(i, sizeU))
-            .flatMap(rules.mp(_, atLeast))
-          commuted <- rules.specAll(numbers.addCommutative, List(difference, sizeU))
-          placed <- Conv.sym(commuted).flatMap(Conv.trans(_, restored))
-          sumBelow <- carryLeft(strictOrder, placed, total, inSum)
-          inV <- rules
-            .specAll(numbers.addCancelsStrictOrder, List(sizeU, difference, sizeV))
-            .flatMap(rules.mp(_, sumBelow))
-          entryRight <- rules
-            .specAll(nthRight, List(u, v, difference))
-            .flatMap(rules.mp(_, inV))
-          atIndex <- Conv
-            .apTerm(nthOfJoined, placed)
-            .flatMap(Conv.sym)
-            .flatMap(Conv.trans(_, entryRight))
-          notV <- rules.spec(difference, fromV).flatMap(rules.mp(_, inV))
-          secondCase <- Conv
-            .sym(atIndex)
-            .flatMap(equation => carryLeftNegated(logic, equation, marker, notV))
-
-          cases <- classical.excludedMiddleAt(belowU)
-          settled <- rules.disjElim(cases, firstCase, secondCase)
-        } yield settled
-      }
-
-      forward <- Conv
-        .sym(openedJoined)
-        .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, onJoined)))
-
-      equated = Kernel.deductAntisym(forward, backward)
-      result <- rules.genAll(equated, List(u, v))
+      atWord <- rules.spec(word, reduced)
+      opened <- Conv.apThm(definition, word)
+      positional <- Parser.term(theory, notation, positionalText)
+      applied <- LogicError.lift(Term.app(positional, word))
+      contracted <- Conv.betaRoot(applied).flatMap(Conv.sym)
+      pointwise <- Conv.trans(opened, atWord).flatMap(Conv.trans(_, contracted))
+      general <- rules.gen(word, pointwise)
+      result <- classical.ext(logic, general)
+      constant <- leftOf(definition)
+      expected <- LogicError.lift(Term.eq(constant, positional))
+      _ <- if (result.conclusion == expected) Right(())
+           else Left(NotOfForm(s"$name read by position", result.conclusion))
     } yield result
   }
-
   /**
    * `|- WORD_NTH w (NUM_SUB k 1) = WORD_NTH w j` where `|- k = SUC j`: the last position, placed.
    *

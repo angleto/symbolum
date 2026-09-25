@@ -701,11 +701,16 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `Integral` under nine names, none shared. `CLAUDE.md`'s figures move by **nine** and
     // **nine**: every one binds two or more leading quantifiers, and every one binds two functions
     // or two reals among them. Tip plus this branch's delta.
-    // 741 and 738 with the existence of the integral of a continuous function, the same day,
+    // 741 and 738 with the two facts `Collatz` crosses onto the lists by, `LIST_FOLD_EVERY` and
+    // `LIST_FOLD_EVERY_CONCAT` in `Folding`, derived before the run: two facts under two names,
+    // none shared. `CLAUDE.md`'s figures move by **two** and **one**: the first binds a predicate
+    // and a word, two types; the second a predicate and two words, which share one. Tip plus this
+    // branch's delta.
+    // 743 and 740 with the existence of the integral of a continuous function, the same day,
     // derived before the run: two facts in `Integral` under two names. `CLAUDE.md`'s figures move by
     // **two** and **two**: each binds `f`, `a` and `b`, the two ends real. Tip plus this branch's delta.
-    library.entries.size shouldBe 741
-    library.names.distinct.size shouldBe 738
+    library.entries.size shouldBe 743
+    library.names.distinct.size shouldBe 740
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
