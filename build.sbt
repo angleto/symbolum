@@ -92,7 +92,12 @@ lazy val buildIdentity = taskKey[Seq[(String, String)]](
   "The commit and the build inputs that differ from it, read once per sbt invocation"
 )
 
-ThisBuild / buildIdentity := {
+// Uncached, and this is the one place in the build where the reason is the whole point. Its input
+// is the state of git, which sbt 2 cannot see, so a cached answer is keyed on nothing and is the
+// first answer forever: measured on 2026-09-25, `BuildSpec` read `4127a99b` from a tree at
+// `5318ffd1`, the commit its worktree had been opened on. An identity served from a cache is the
+// defect this record exists to prevent.
+ThisBuild / buildIdentity := Def.uncached {
   import scala.sys.process._
   val root = (ThisBuild / baseDirectory).value
   def git(arguments: String*): Option[String] = {
@@ -115,18 +120,22 @@ ThisBuild / buildIdentity := {
 }
 
 lazy val identitySettings = Seq(
+  // Uncached for `buildIdentity`'s reason, one step on: it writes the file as a side effect, and a
+  // result replayed from the cache hands back the path without writing what is in it now.
   Compile / resourceGenerators += Def.task {
-    val target = (Compile / resourceManaged).value / "META-INF" / "symbolum" / "build.properties"
-    val lines = Seq(
-      "module" -> name.value.stripPrefix("symbolum-"),
-      "version" -> version.value
-    ) ++ (ThisBuild / buildIdentity).value ++ Seq(
-      "instrumented" -> coverageEnabled.value.toString
-    )
-    val text = lines.map { case (key, value) => s"$key=$value" }.mkString("", "\n", "\n")
-    // Written only when it changed, so that an unchanged identity does not make every jar new.
-    if (!target.exists || IO.read(target) != text) IO.write(target, text)
-    Seq(target)
+    Def.uncached {
+      val target = (Compile / resourceManaged).value / "META-INF" / "symbolum" / "build.properties"
+      val lines = Seq(
+        "module" -> name.value.stripPrefix("symbolum-"),
+        "version" -> version.value
+      ) ++ (ThisBuild / buildIdentity).value ++ Seq(
+        "instrumented" -> coverageEnabled.value.toString
+      )
+      val text = lines.map { case (key, value) => s"$key=$value" }.mkString("", "\n", "\n")
+      // Written only when it changed, so that an unchanged identity does not make every jar new.
+      if (!target.exists || IO.read(target) != text) IO.write(target, text)
+      Seq(target)
+    }
   }.taskValue
 )
 
