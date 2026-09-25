@@ -146,27 +146,6 @@ private[theories] final case class Density(
       successor, natAdd, natZero, pairing
     )
 
-  /** The `rat` instance of `CommutativeRing`, over the laws `Fraction` proved about classes. */
-  private def ratRing(v: Vocabulary): Either[LogicError, CommutativeRing] =
-    for {
-      addAssociative <- fact(Fraction.AddAssociative)
-      addCommutative <- fact(Fraction.AddCommutative)
-      addZero <- fact(Fraction.AddAtZero)
-      mulAssociative <- fact(Fraction.MulAssociative)
-      mulCommutative <- fact(Fraction.MulCommutative)
-      mulOne <- fact(Fraction.MulAtOne)
-      distributive <- fact(Fraction.Distributive)
-      inverse <- fact(Fraction.AddNegation)
-      ring <- CommutativeRing.ring(
-        logic,
-        CommutativeRing.Operations(Fraction.Classes, v.add, v.mul, v.zero, v.one, Some(v.neg)),
-        CommutativeRing.Laws(
-          addAssociative, addCommutative, addZero, mulAssociative, mulCommutative, mulOne,
-          distributive, None, Some(inverse)
-        )
-      )
-    } yield ring
-
   /**
    * The moves an argument about the order is made of, each a derived rule over the published facts.
    * `moved` rewrites both sides of a comparison, and it is the same for `RAT_LE` and `INT_LE`.
@@ -313,7 +292,7 @@ private[theories] final case class Density(
   def facts: Either[LogicError, Vector[(String, Kernel.Thm)]] =
     for {
       v <- vocabulary
-      ring <- ratRing(v)
+      ring <- Fraction.ringOver(logic, theory, notation, fact)
       moves <- for {
         leAdd <- fact(Fraction.AtMostAdd)
         leMul <- fact(Fraction.AtMostMul)

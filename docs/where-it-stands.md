@@ -1379,6 +1379,20 @@ Archimedes and the two values of `RAT_OF_NUM` open a representative, and Archime
 numerator's sign is spent. `tools/verify/perturb-rational-density.sh` fires the midpoint and the
 bound.
 
+**The reals as cuts have started, and the first thing built is the axiom worth the most.** `Cut`,
+beside the chain as `Fraction` is, carves `cut` out of `rat -> bool` with `IS_CUT`: a lower cut
+holds something, not everything, is closed downwards and has no greatest element, the last clause
+being `RAT_DENSE`. The order is inclusion, and `CUT_COMPLETE` is `COMPLETENESS`, the sixteenth axiom
+of `Real.scala`, stated word for word over `cut` and **proved**: the least upper bound is the union.
+`docs/adr/0052` is the route, lower cuts with the sign handled at multiplication, and why the
+positive cone first lost now that `rat` exists. Addition and negation followed the same day:
+`CUT_ADD` holds `r` when some `p` in `x` leaves `r - p` in `y`, with its commutativity,
+associativity, zero, the order it carries and the embedding of `RAT_ADD`; `CUT_NEG x` holds `p` when
+some `r > 0` leaves `-p - r` outside `x`, and `CUT_ADD_NEG` is `x + -x = 0`, the one argument of the
+two where `RAT_ARCHIMEDES` is spent, which `CutSpec` asserts both ways. What is not here is
+multiplication and the inverse, and after them the sixteen as theorems under their own names.
+`tools/verify/perturb-cuts.sh` fires the union, the embedding and the step of the inverse.
+
 `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated, and since 2026-09-25 each has a
 computing counterpart proved equal to it: `EuclidAlgorithm` defines `NUM_EUCLID_GCD` and
 `NUM_EUCLID_DIV` by `WellFounded`'s recursion along a measure, beside the chain, and

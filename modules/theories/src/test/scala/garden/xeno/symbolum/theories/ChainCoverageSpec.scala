@@ -303,6 +303,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // arithmetic. Card `fa8737ad` carries the debt.
     "Fraction" -> BesideTheChain,
 
+    // `Fraction`'s standing for `Fraction`'s reason, one type along: the reals as cuts are built on
+    // `rat`, and what they will replace is the chain's own reals, so nothing in the chain can reach
+    // them until the sixteen axioms of `Real.scala` are theorems about this type, which is phase 5
+    // and `docs/adr/0052`'s last step. `CutSpec` is the spec that builds it.
+    "Cut" -> BesideTheChain,
+
     // `Domain`'s standing, one level up: a search over a library for the theorem that carries a
     // domain claim into arithmetic. It declares nothing, holds no fact of its own, and every
     // theorem it hands back was built by `Domain.Built.settle` out of the caller's own domain

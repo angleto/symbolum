@@ -112,7 +112,7 @@ the reader's time.
 | | Status |
 |---|---|
 | Higher-order logic, connectives, quantifiers | Yes, all definitional, no axioms |
-| The real numbers as a complete ordered field | Yes, on the axioms the table above counts, listed in one file |
+| The real numbers as a complete ordered field | Yes, on the axioms the table above counts, listed in one file. **The construction that will replace them has started**: `Cut` carves the reals as lower cuts on the rationals, proves `COMPLETENESS` over them as `CUT_COMPLETE`, and has addition and negation with `x + -x = 0`; multiplication is next, and only then do the sixteen become theorems (`docs/adr/0052`) |
 | The natural numbers, induction, recursion, finite sums | Yes, on the axioms the table above names, two of which the classical logic underneath asks of the formalism rather than of a domain. `num` itself is a defined type and costs no axiom, so induction, Peano's other axioms and the recursion theorem are derived rather than assumed |
 | Binary numerals, addition and multiplication on them | Yes, proved digit by digit |
 | Polynomial identities over the reals, with subtraction | Yes, `Ring` |

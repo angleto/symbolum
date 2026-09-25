@@ -112,9 +112,50 @@ final class Fraction private (
 
   /** A term as this development prints it. */
   def show(term: Term): String = Show.show(notation, term)
+
+  /** The `rat` instance of `CommutativeRing`, over the laws this development proved about classes. */
+  lazy val ring: Either[LogicError, CommutativeRing] = Fraction.ringOver(logic, theory, notation, fact)
 }
 
 object Fraction {
+
+  /**
+   * The `rat` instance of `CommutativeRing`, over the eight laws `fact` names. A function of the
+   * lookup rather than of a finished development because `Density` needs the ring inside the
+   * construction, before there is a `Fraction` to ask; `Cut` asks the finished one.
+   */
+  private[theories] def ringOver(
+    logic: Logic,
+    theory: Theory,
+    notation: Notation,
+    fact: String => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, CommutativeRing] = {
+    val binary = Type.fun(Classes, Type.fun(Classes, Classes))
+    def constant(name: String, ty: Type): Either[LogicError, Term] = Parser.term(theory, notation, name, ty)
+    for {
+      add <- constant(Addition, binary)
+      multiply <- constant(Multiplication, binary)
+      negate <- constant(Negation, Type.fun(Classes, Classes))
+      zero <- constant(Zero, Classes)
+      one <- constant(One, Classes)
+      addAssociative <- fact(AddAssociative)
+      addCommutative <- fact(AddCommutative)
+      addZero <- fact(AddAtZero)
+      mulAssociative <- fact(MulAssociative)
+      mulCommutative <- fact(MulCommutative)
+      mulOne <- fact(MulAtOne)
+      distributive <- fact(Distributive)
+      inverse <- fact(AddNegation)
+      ring <- CommutativeRing.ring(
+        logic,
+        CommutativeRing.Operations(Classes, add, multiply, zero, one, Some(negate)),
+        CommutativeRing.Laws(
+          addAssociative, addCommutative, addZero, mulAssociative, mulCommutative, mulOne,
+          distributive, None, Some(inverse)
+        )
+      )
+    } yield ring
+  }
 
   /* ------------------------------------------------------------------ the names */
 
