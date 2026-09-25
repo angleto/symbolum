@@ -571,7 +571,7 @@ object Chain {
       // it rather than over `provability` for the reason that binding gives: the extension order
       // and the dependency order are different things.
       truth <- Truth.construct(
-        language, numbering, provability, induct, successor, naturals)
+        language, numbering, provability, deduction, induct, successor, naturals)
 
       // The first analysis this repository has: what a sequence of reals converges to and the value
       // it converges to, both definitions. It extends `truth.theory` rather than

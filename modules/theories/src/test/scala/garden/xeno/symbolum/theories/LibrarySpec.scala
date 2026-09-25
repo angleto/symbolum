@@ -665,8 +665,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // six facts under six names, none shared. `CLAUDE.md`'s figures move by **five** and **five**:
     // every fact but `DERIVATIVE_ID`, which binds one `x`, binds two or more, and each of those five
     // binds two reals among them. Tip plus this branch's delta.
-    library.entries.size shouldBe 703
-    library.names.distinct.size shouldBe 700
+    // 709 and 706 with the closed terms, the same day, tip plus this delta, derived before the
+    // run: six facts under six names, none shared, four in `Deduction` and two in `Truth`. `CLAUDE.md`'s figures move by
+    // **five** and **four**: the three new congruences bind `t`, `u` and `w`, all codes;
+    // `NUM_PROV_TRUE_EQ` binds the environment and two codes; `NUM_PROV_VALUE` binds the
+    // environment and one code, which share no type; `NUM_PROV_REFL` binds one.
+    library.entries.size shouldBe 709
+    library.names.distinct.size shouldBe 706
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -652,7 +652,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 703 lemmas, 461 have two or more leading quantifiers and **398 of
+caller meant: of the library's 709 lemmas, 466 have two or more leading quantifiers and **402 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
@@ -1366,11 +1366,20 @@ first representation, and `NUM_TRI_GRAPH_TRUE` says its truth is `e 0 = NUM_TRI 
 link, between `provability` and `limit`, and not a development beside the chain: that standing is
 for the constants of one investigation, which is what `ChainCoverageSpec` says of it.
 
-**Read that for what it is: nothing in it is about provability.** `NUM_TRI_GRAPH_TRUE` says what
-the formula means and not that PA proves it at any numeral, and a reader who rounds the first up to
-the second has skipped the one theorem `docs/adr/0040` says is left to prove and doubts most.
+**Where truth first meets provability is the closed terms, since 2026-09-25.** `NUM_PROV_VALUE`
+says PA proves every closed term equal to the numeral of its value, by course-of-values induction
+on the code: each operand is replaced by its numeral under a congruence, and the two numerals are
+settled by `NUM_PROV_NUMERAL_ADD` or `_MUL`. The congruences it needed on the right of a sum and on
+both sides of a product were not there and are `Deduction`'s now, beside `NUM_PROV_REFL`.
+`NUM_PROV_TRUE_EQ` follows: a true closed equation is provable. That is completeness for the
+atomic formulas that hold and nothing more. `NUM_TRI_GRAPH_TRUE` still says only what its formula
+means: its instances are equations between terms that are not closed until a numeral is put in
+for each variable, and no lemma here yet relates the truth of a substituted formula to its truth
+at the environment the substitution describes.
 
-What is above that is not written: completeness for bounded formulas, the remaining
+What is above that is not written: the other half of the atomic case, a false closed equation
+with a provable negation, which wants PA to prove two different numerals different; then the
+connectives and the bounded quantifiers of completeness for bounded formulas; the remaining
 representations in the order Mycelium card `4102f131` gives, that object-level `Prov`, the diagonal
 lemma, and then D1, D2 and D3. `docs/adr/0013` says why the last of those is its own piece of work
 rather than a helper inside this one, and it is the part most likely to be underestimated.

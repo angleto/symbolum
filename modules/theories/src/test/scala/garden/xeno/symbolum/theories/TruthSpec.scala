@@ -206,4 +206,49 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     read.conclusion shouldBe
       proposition("NUM_VALUE (NUM_NUMERAL (SUC (SUC ZERO))) (\\k:num. SUC k) = SUC (SUC ZERO)")
   }
+
+  /* ------------------------------------------------------- where truth meets provability */
+
+  "A closed term" should "be proved equal to the numeral of its value, with nothing assumed" in {
+    // `NUM_PROV_VALUE` is an implication about every closed term, and an implication whose
+    // antecedents nobody can discharge is a theorem about nothing. This discharges both at the code
+    // of `S 0 + S 0`, from the facts that build a term and a closed term, and reads the answer.
+    val one = "NUM_CODE 2 (NUM_CODE 1 0)"
+    val sum = s"NUM_CODE 3 (NUM_PAIR ($one) ($one))"
+    val language = chain.language
+    def lf(name: String): Kernel.Thm = force(language.fact(name))
+    val oneIsTerm = force(rules.spec(term("NUM_CODE 1 0"), lf(Language.TermSuccessor))
+      .flatMap(rules.mp(_, lf(Language.TermZero))))
+    val oneIsClosed = force(rules.spec(term("NUM_CODE 1 0"), lf(Language.ClosedSuccessor))
+      .flatMap(rules.mp(_, lf(Language.ClosedZero))))
+    val sumIsTerm = force(rules.specAll(lf(Language.TermSum), List(term(one), term(one)))
+      .flatMap(rules.mp(_, oneIsTerm)).flatMap(rules.mp(_, oneIsTerm)))
+    val sumIsClosed = force(rules.specAll(lf(Language.ClosedSum), List(term(one), term(one)))
+      .flatMap(rules.mp(_, oneIsClosed)).flatMap(rules.mp(_, oneIsClosed)))
+
+    val proved = force(
+      rules.specAll(fact(Truth.ProvesValue), List(term("\\k:num. k"), term(sum)))
+        .flatMap(rules.mp(_, sumIsTerm))
+        .flatMap(rules.mp(_, sumIsClosed)))
+    proved.hypotheses shouldBe empty
+    val read = evaluate(proved.conclusion, Vector(
+      fact(Truth.ValueSum), fact(Truth.ValueSuccessor), fact(Truth.ValueZero)))
+    rightOf(read) shouldBe proposition(
+      s"NUM_PROV (NUM_CODE 5 (NUM_PAIR ($sum) (NUM_NUMERAL (NUM_ADD (SUC ZERO) (SUC ZERO)))))")
+
+    // And the equation half at the same term: `S 0 + S 0 = S 0 + S 0` is true at every
+    // environment, so it is provable, with the truth discharged rather than assumed.
+    val holds = force(
+      rules.specAll(fact(Truth.TrueEquality), List(term("\\k:num. k"), term(sum), term(sum)))
+        .flatMap(Conv.sym)
+        .flatMap(e => LogicError.lift(Kernel.eqMp(e, Kernel.refl(term(
+          s"NUM_VALUE ($sum) (\\k:num. k)"))))))
+    val equation = force(
+      rules.specAll(fact(Truth.ProvesTrueEquation), List(term("\\k:num. k"), term(sum), term(sum)))
+        .flatMap(rules.mp(_, sumIsTerm)).flatMap(rules.mp(_, sumIsClosed))
+        .flatMap(rules.mp(_, sumIsTerm)).flatMap(rules.mp(_, sumIsClosed))
+        .flatMap(rules.mp(_, holds)))
+    equation.hypotheses shouldBe empty
+    equation.conclusion shouldBe proposition(s"NUM_PROV (NUM_CODE 5 (NUM_PAIR ($sum) ($sum)))")
+  }
 }
