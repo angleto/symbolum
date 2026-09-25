@@ -104,7 +104,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   it should "price the exponential's slope at exactly what its second-order estimate costs" in {
     // `DERIVATIVE_EXP` is one point too, and the one fact here that is not only about the reals: the
     // estimate under it is a statement about a series, which spends the supremum through
-    // `MONOTONE_CONVERGES` and the naturals' axioms through the factorial. What the slope adds on
+    // `MONOTONE_CONVERGES`, the naturals' axioms through the factorial, and eta, which this comment
+    // left out until 2026-09-25: all nineteen of the chain. What the slope adds on
     // top of the estimate is the addition theorem and the definition, which cost nothing more.
     val nearLine = force(chain.logarithm.fact(Logarithm.NearLine))
     val spent = Derivation.axiomsOf(fact(Derivative.Exponential))
