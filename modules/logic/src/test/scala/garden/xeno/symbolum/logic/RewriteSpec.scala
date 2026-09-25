@@ -827,6 +827,15 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "there. The other tidies the closure premise before it is proved case by case, and each " +
         "case applies the caller's hypotheses by `Rules.mp`, which refuses a premise still holding a " +
         "projection; the development then compares every statement with its published text."),
+    "Steps.scala" ->
+      ("four calls to `Rewrite.rewrite`, all in `equate`, and none is read as a normal form. Two walk " +
+        "each side with ground equations the caller hands over, which is `Recorder.scala`'s reading: " +
+        "what a limit means depends on the caller's equations, and the caller is `EuclidAlgorithm`. " +
+        "Two walk with `SUC 0 -> 1` alone, whose right side does not contain its left. What comes out " +
+        "is one equation between the two sides handed to `SEMIRING`, which refuses unless they meet, " +
+        "so a walk that stopped early is a refusal there and never a theorem about the wrong term. " +
+        "Classified by the session that landed the integral of a continuous function, whose run " +
+        "found the file missing from this census."),
     "Logarithm.scala" ->
       ("two doors, and neither is left to the limit to report. `Rewrite.rewrite` walks the " +
         "exponential's partial sum at two down to numerals, and what it produces is handed to " +
