@@ -667,7 +667,7 @@ private[theories] object Integrability {
       generalised(discharged(result, texts*), "e", "g", "t", "e1", "g1", "t1")
     }
 
-    /** [[Integral]]'s `CONTINUOUS_HAS_INTEGRAL`. */
+    /** `Integral`'s `CONTINUOUS_HAS_INTEGRAL`. */
     lazy val hasIntegral: Kernel.Thm = {
       val ordered = assume("a <= b")
       val everywhere = assume(Everywhere)
@@ -744,7 +744,7 @@ private[theories] object Integrability {
       generalised(discharged(result, "a <= b", Everywhere), "f", "a", "b")
     }
 
-    /** [[Integral]]'s `CONTINUOUS_INTEGRAL`: the integral is one, so `integral` names it. */
+    /** `Integral`'s `CONTINUOUS_INTEGRAL`: the integral is one, so `integral` names it. */
     lazy val integralIsOne: Kernel.Thm = {
       val existing = mp(spec(hasIntegral, "f", "a", "b"), assume("a <= b"), assume(Everywhere))
       val result = opened(existing, "i") { has =>
