@@ -381,6 +381,33 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     proves("!x:real y:real. inv x < inv y ==> inv x + 1 < inv y + 1")
   }
 
+  it should "report a certificate it found and could not rebuild as that, and never as a decision" in {
+    // A true goal whose certificate needs the product of `c < 1` with the goal's denial, so it is
+    // found by an escalation, and at `57a2276d` the kernel refused the rebuilding of the
+    // contradiction it rests on. The escalation then reported the refusal from before it:
+    // `DoesNotFollow`, a decision against a goal whose proof the search had just found. Seen red
+    // that way on 2026-09-25 with the repair taken away at that one site, which is perturbation 1
+    // of `tools/verify/perturb-certificate-not-rebuilt.sh`, and recorded in `LogicError.NotRebuilt`.
+    //
+    // Either answer below is right, and which one arrives depends on whether the rebuilding has
+    // been repaired, which is a separate change: a theorem, or the refusal that says the search
+    // found one and names the goal. What must never arrive is a refusal carrying `Decided`.
+    val goal = "!c:real x:real. c < 1 ==> 0 <= x ==> x = c * x ==> x <= 0"
+    linarith.prove(goal) match {
+      case Right(theorem) => theorem.conclusion shouldBe force(reals.proposition(goal))
+      case Left(refusal) =>
+        withClue(s"${refusal.message}\n") {
+          LogicError.decided(Left(refusal)) shouldBe false
+          refusal match {
+            case NotRebuilt(named, procedure, _) =>
+              procedure shouldBe "LINARITH"
+              reals.show(named) should endWith("<= 0")
+            case other => fail(s"expected the certificate's refusal, got $other")
+          }
+        }
+    }
+  }
+
   "A proof" should "say which premises it rests on" in {
     // The upper bound a sequent carries becomes exact here, because the certificate names its own
     // support. Told that four premises give a conclusion, the useful answer is which two did.

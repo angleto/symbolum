@@ -618,6 +618,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       // and could not, and this one is a driver built with nothing to look with, so no restatement
       // of the goal and no raised limit reaches it.
       NoCloser(x, "the induction driver over num"),
+      // A certificate found and not rebuilt, whose inner reason is decided and whose own standing
+      // is not: the census holds it for the remedy, which is a defect whatever the inner reason.
+      NotRebuilt(x, "LINARITH", NotEqualTo(x, Term.variable("y", realType))),
       // Both arms of the one refusal that carries another: a caller's procedure that refused, and a
       // caller's procedure that returned something else. The remedy is read off the inner reason, so
       // the branch is only worth running when the two inner reasons take different arms there.

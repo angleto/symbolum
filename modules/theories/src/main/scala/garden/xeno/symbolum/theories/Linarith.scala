@@ -323,7 +323,16 @@ final class Linarith private (
       .sorted(using Term.ordering)
       .find(atom => LinearForm.factorsOf(atom).length > 1)
 
+    // A certificate that was found means the search had what it needed, so a sentence about the
+    // degree would replace the one true thing known with a false one.
+    val found = refusal match {
+      case _: NotRebuilt => true
+      case _ => false
+    }
+
     outOfReach match {
+      case _ if found => refusal
+
       case Some(atom) if LinearForm.obstacleIn(reals, conclusion).isEmpty && facts.isEmpty =>
         NotOfForm(
           s"a goal with a hypothesis, or one a square settles: ${reals.show(atom)} is a product " +
@@ -517,7 +526,33 @@ final class Linarith private (
    * escalation that stopped means the procedure did not finish, whichever of the two stopped it.
    */
   private def kept(escalation: LogicError, refusal: LogicError): LogicError =
-    if (escalation.standing.stoppedShort) escalation else refusal
+    if (surfaces(escalation)) escalation else refusal
+
+  /**
+   * Whether an escalation's failure is reported in place of the refusal from before it.
+   *
+   * Two kinds are, and they share the reason: neither is a fact about the goal. A search that
+   * stopped is the one [[kept]] was written for. A certificate that was found and not rebuilt is
+   * the second, since 2026-09-25: the escalation's search said the goal follows, so reporting the
+   * earlier `DoesNotFollow` in its place tells a caller the goal was decided against when its proof
+   * had just been found, and nothing a caller wrote is at fault either.
+   */
+  private def surfaces(escalation: LogicError): Boolean =
+    escalation.standing.stoppedShort || (escalation match {
+      case _: NotRebuilt => true
+      case _ => false
+    })
+
+  /**
+   * A certificate's rebuilding, with a refusal of it reported as the procedure's own failure.
+   *
+   * Every step after [[Certificate.find]] is assembly: the search has said the goal follows, and a
+   * refusal from here on is the kernel not accepting what was assembled, whatever the step that
+   * refused says of itself. Wrapped once, at the two places a certificate is rebuilt, so a
+   * `NotEqualTo` from the final RING check cannot reach a caller as a decision about the goal.
+   */
+  private def rebuilt(conclusion: Term, rebuilding: Either[LogicError, Kernel.Thm]): Either[LogicError, Kernel.Thm] =
+    rebuilding.left.map(NotRebuilt(conclusion, "LINARITH", _))
 
   /** The case where the goal's own relation holds strictly, which proves it either way it is put. */
   private def fromLess(
@@ -599,7 +634,7 @@ final class Linarith private (
         LinearForm.goal(reals, conclusion) match {
           case Some((form, strict)) =>
             Certificate.find(facts, form, strict) match {
-              case Some(certificate) => fromCertificate(certificate, facts, assumed, conclusion)
+              case Some(certificate) => rebuilt(conclusion, fromCertificate(certificate, facts, assumed, conclusion))
               case None => fromContradiction(facts, assumed, conclusion)
             }
 
@@ -651,6 +686,7 @@ final class Linarith private (
       // goal the caller asked about is not the goal the search was given.
       absurd <- attempt(facts :+ fact, assumed :+ hypothesis, reals.logic.falsity).left.map {
         case DoesNotFollow(_, procedure) => DoesNotFollow(conclusion, procedure)
+        case NotRebuilt(_, procedure, reason) => NotRebuilt(conclusion, procedure, reason)
         case other => other
       }
       result <- rules.notIntro(denied, absurd)
@@ -698,9 +734,11 @@ final class Linarith private (
 
               // A round that stopped survives the swallowing [[kept]] describes, and there is
               // nothing further to try when it does: the pairs are already too many, and the cubic
-              // round starts from them.
-              case Left(stopped) if stopped.standing.stoppedShort =>
-                Left(stopped)
+              // round starts from them. A certificate the pairs found and could not rebuild
+              // survives it for the reason [[surfaces]] gives, and the cubes are not tried over it:
+              // what failed is the rebuilding, and a larger search would only find more to rebuild.
+              case Left(surfaced) if surfaces(surfaced) =>
+                Left(surfaced)
 
               case Left(_) =>
                 val missing = unreached(facts, extra.map(_._1), conclusion)
@@ -1202,10 +1240,19 @@ final class Linarith private (
     assumed: Vector[Kernel.Thm],
     conclusion: Term
   ): Either[LogicError, Kernel.Thm] =
-    for {
-      certificate <- Certificate.find(facts, LinearForm.zero, strict = true)
-        .toRight(refusal(conclusion))
+    Certificate.find(facts, LinearForm.zero, strict = true) match {
+      case None => Left(refusal(conclusion))
+      case Some(certificate) => rebuilt(conclusion, absurdity(certificate, facts, assumed, conclusion))
+    }
 
+  /** The goal from a certificate that the hypotheses cannot all hold, which is [[fromContradiction]]'s rebuilding. */
+  private def absurdity(
+    certificate: Certificate,
+    facts: Vector[LinearFact],
+    assumed: Vector[Kernel.Thm],
+    conclusion: Term
+  ): Either[LogicError, Kernel.Thm] =
+    for {
       parts <- weigh(certificate, facts, assumed)
       combined <- combine(parts)
       summed <- combined match {
