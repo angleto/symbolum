@@ -45,7 +45,9 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it costs, and what it does not reach ==
  *
- * One constant, no axiom. Rolle spends exactly what the extreme value theorem spends, the sixteen
+ * No axiom, and the constants are `derivative` and [[Derivative.WithinName]], the second the
+ * derivative relative to `[a, b]` that the textbook forms of the fundamental theorem ask for at the
+ * ends. Rolle spends exactly what the extreme value theorem spends, the sixteen
  * axioms of the reals and the choice that `abs` is defined by; the interior lemma and the negation
  * spend no `COMPLETENESS`, because a derivative at one point is a statement about one point.
  * `DerivativeSpec` asserts both as equalities.
@@ -94,6 +96,19 @@ object Derivative {
   val DerivativeBody: String =
     "\\f:real -> real. \\x:real. \\m:real. !e:real. 0 < e ==> ?d:real. 0 < d /\\ " +
       "(!h:real. 0 < abs h /\\ abs h < d ==> abs (f (x + h) - f x - m * h) < e * abs h)"
+
+  /**
+   * `derivative_within f a b x m`: `f` has derivative `m` at `x` relative to `[a, b]`, which is
+   * [[DerivativeBody]] with the increments restricted to those that stay in the interval. At an end
+   * it is the one-sided derivative a textbook asks for there, and strictly inside it is the
+   * derivative itself, which is [[WithinInterior]]. Nothing is asked of `f` outside `[a, b]`.
+   */
+  val WithinName: String = "derivative_within"
+
+  /** The definition, as text: [[DerivativeBody]] over the increments `h` with `x + h` in `[a, b]`. */
+  val WithinBody: String =
+    "\\f:real -> real. \\a:real. \\b:real. \\x:real. \\m:real. !e:real. 0 < e ==> ?d:real. 0 < d /\\ " +
+      "(!h:real. 0 < abs h /\\ abs h < d /\\ a <= x + h /\\ x + h <= b ==> abs (f (x + h) - f x - m * h) < e * abs h)"
 
   /* ------------------------------------------------------------------- the facts */
 
@@ -265,6 +280,15 @@ object Derivative {
   /** [[Increasing]] with continuity relative to `[a, b]`. */
   val IncreasingWithin: String = "DERIVATIVE_POS_LT_MONOTONE_WITHIN"
 
+  /** A derivative is a derivative relative to every interval: fewer increments are asked about. */
+  val WithinOfDerivative: String = "DERIVATIVE_WITHIN_OF_DERIVATIVE"
+
+  /**
+   * Strictly inside `[a, b]` the relative derivative is the derivative: every increment short
+   * enough stays in the interval. What says [[WithinName]] means what it is named for.
+   */
+  val WithinInterior: String = "DERIVATIVE_WITHIN_INTERIOR"
+
   private val RelativeText: String = "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x)"
 
   /** What every derived fact says, as text, in the order they are derived. */
@@ -333,7 +357,13 @@ object Derivative {
     IncreasingWithin ->
       (s"!f:real -> real. !a:real. !b:real. $RelativeText ==> " +
         "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m /\\ 0 < m) ==> " +
-        "!u:real. !v:real. a <= u /\\ u < v /\\ v <= b ==> f u < f v")
+        "!u:real. !v:real. a <= u /\\ u < v /\\ v <= b ==> f u < f v"),
+    WithinOfDerivative ->
+      ("!f:real -> real. !a:real. !b:real. !x:real. !m:real. " +
+        "derivative f x m ==> derivative_within f a b x m"),
+    WithinInterior ->
+      ("!f:real -> real. !a:real. !b:real. !x:real. !m:real. a < x ==> x < b ==> " +
+        "derivative_within f a b x m ==> derivative f x m")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -363,7 +393,10 @@ object Derivative {
     for {
       body <- Parser.term(base, notation, DerivativeBody)
       defined <- LogicError.lift(Kernel.defineConstant(base, DerivativeName, body))
-      (theory, definition) = defined
+      (withDerivative, definition) = defined
+      withinBody <- Parser.term(withDerivative, notation, WithinBody)
+      definedWithin <- LogicError.lift(Kernel.defineConstant(withDerivative, WithinName, withinBody))
+      (theory, withinDefinition) = definedWithin
 
       logic <- classical.logic.over(theory)
       linarith <- Linarith.construct(magnitude.order)
@@ -390,7 +423,7 @@ object Derivative {
       flat <- flatSlope(steps, magnitude.order, meanValue, unique)
       nonDecreasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = false)
       increasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = true)
-      relative <- DerivativeWithin.prove(steps, magnitude, continuity, Map(
+      relative <- DerivativeWithin.prove(steps, magnitude, continuity, withinDefinition, Map(
         Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing))
 
       facts = Map[String, Kernel.Thm](
@@ -427,7 +460,8 @@ object Derivative {
             else Left(NotOfForm(s"$name as it is written", proved.conclusion))
         } yield ()
       }
-    } yield new Derivative(theory, notation, logic, Map(DerivativeName -> definition), facts)
+    } yield new Derivative(
+      theory, notation, logic, Map(DerivativeName -> definition, WithinName -> withinDefinition), facts)
 
   /** `|- derivative f x m = <the statement>`, reduced. */
   private[theories] def unfoldDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term): Either[LogicError, Kernel.Thm] =

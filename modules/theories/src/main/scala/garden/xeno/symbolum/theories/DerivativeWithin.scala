@@ -28,6 +28,7 @@ private[theories] object DerivativeWithin {
     steps: Steps,
     magnitude: Magnitude,
     continuity: Continuity,
+    withinDefinition: Kernel.Thm,
     held: Map[String, Kernel.Thm]
   ): Either[LogicError, Map[String, Kernel.Thm]] = {
     def fact(name: String) = held.get(name).toRight(MissingDefinition(name))
@@ -41,7 +42,11 @@ private[theories] object DerivativeWithin {
       flat <- fact(Derivative.Flat).flatMap(signWithin(tools, _, Derivative.FlatWithin))
       nonDecreasing <- fact(Derivative.NonDecreasing).flatMap(signWithin(tools, _, Derivative.NonDecreasingWithin))
       increasing <- fact(Derivative.Increasing).flatMap(signWithin(tools, _, Derivative.IncreasingWithin))
+      ofDerivative <- relativeOfTwoSided(steps, withinDefinition)
+      interior <- twoSidedInside(steps, magnitude, withinDefinition)
     } yield Map(
+      Derivative.WithinOfDerivative -> ofDerivative,
+      Derivative.WithinInterior -> interior,
       Derivative.Local -> local,
       Derivative.RolleWithin -> rolle,
       Derivative.MeanValueWithin -> meanValue,
@@ -58,6 +63,145 @@ private[theories] object DerivativeWithin {
     extension: Kernel.Thm,
     agrees: Kernel.Thm
   )
+
+  /* ------------------------------------------------------------------ the relative derivative */
+
+  /** The statement `derivative_within f a b x m` abbreviates, at `d` for the radius. */
+  private def relativeRadius(d: String): String =
+    s"0 < $d /\\ (!h:real. 0 < abs h /\\ abs h < $d /\\ a:real <= x:real + h /\\ x + h <= b:real ==> " +
+      s"abs ($F (x + h) - $F x - m:real * h) < e:real * abs h)"
+
+  /** The same for `derivative f x m`. */
+  private def twoSidedRadius(d: String): String =
+    s"0 < $d /\\ (!h:real. 0 < abs h /\\ abs h < $d ==> abs ($F (x:real + h) - $F x - m:real * h) < e:real * abs h)"
+
+  /** `|- derivative_within f a b x m = <the statement>`, reduced. */
+  private def unfoldWithin(steps: Steps, withinDefinition: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    for {
+      arguments <- List("f:real -> real", "a:real", "b:real", "x:real", "m:real")
+        .foldLeft[Either[LogicError, List[Term]]](Right(Nil))((acc, text) => acc.flatMap(found => term(steps, text).map(found :+ _)))
+      equation <- Conv.unfold(withinDefinition, arguments)
+      right <- Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion))
+      normal <- Conv.betaNormalise(right)
+      joined <- Conv.trans(equation, normal)
+    } yield joined
+
+  /**
+   * [[Derivative.WithinOfDerivative]]: the radius the derivative gives serves, since the relative
+   * statement asks the same bound of fewer increments.
+   */
+  private def relativeOfTwoSided(steps: Steps, withinDefinition: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      f <- variable(steps, "f:real -> real")
+      x <- variable(steps, "x:real")
+      m <- variable(steps, "m:real")
+      e <- variable(steps, "e:real")
+      d <- variable(steps, "d:real")
+      h <- variable(steps, "h:real")
+      supplied <- assume(s"derivative $F x:real m:real")
+      opened <- Derivative.openDerivative(steps, f, x, m, supplied)
+      positive <- proposition("0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      radii <- rules.spec(e, opened).flatMap(rules.mp(_, assumedPositive))
+      body <- assume(twoSidedRadius("d:real"))
+      dPositive <- rules.conjElim1(body)
+      serves <- rules.conjElim2(body)
+      inner <- proposition("0 < abs (h:real) /\\ abs h < d:real /\\ a:real <= x:real + h /\\ x + h <= b:real")
+      assumedInner <- LogicError.lift(Kernel.assume(inner))
+      nonZero <- rules.conjElim1(assumedInner)
+      small <- rules.conjElim2(assumedInner).flatMap(rules.conjElim1)
+      increment <- rules.conjIntro(nonZero, small)
+      value <- rules.spec(h, serves).flatMap(rules.mp(_, increment))
+      everyIncrement <- rules.disch(inner, value).flatMap(rules.gen(h, _))
+      pair <- rules.conjIntro(dPositive, everyIncrement)
+      witnessed <- existential(s"?d:real. ${relativeRadius("d")}").flatMap(rules.existsIntro(_, d, pair))
+      found <- rules.existsElim(radii, d, witnessed)
+      statement <- rules.disch(positive, found).flatMap(rules.gen(e, _))
+      unfolded <- unfoldWithin(steps, withinDefinition)
+      folded <- Conv.sym(unfolded).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, statement)))
+      result <- closeOver(steps, folded, List(s"derivative $F x:real m:real"),
+        List("f:real -> real", "a:real", "b:real", "x:real", "m:real"))
+    } yield result
+  }
+
+  /**
+   * [[Derivative.WithinInterior]]: at radius `min d r`, `r = min (x - a) (b - x)`, every increment
+   * the derivative is asked about keeps `x + h` in `[a, b]`, so the relative radius `d` answers it.
+   */
+  private def twoSidedInside(steps: Steps, magnitude: Magnitude, withinDefinition: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val r = "min (x:real - a:real) (b:real - x)"
+    val w = s"min (d:real) ($r)"
+    def positiveMinimum(left: String, right: String, leftPositive: Kernel.Thm, rightPositive: Kernel.Thm) =
+      for {
+        cases <- steps.at(magnitude.fact(Magnitude.MinCases), left, right)
+        isLeft <- assume(s"min ($left) ($right) = $left").flatMap(eq =>
+          steps.at(lemma("!w:real c:real. w = c ==> 0 < c ==> 0 < w"), s"min ($left) ($right)", left)
+            .flatMap(mp(_, Right(eq), Right(leftPositive))))
+        isRight <- assume(s"min ($left) ($right) = $right").flatMap(eq =>
+          steps.at(lemma("!w:real c:real. w = c ==> 0 < c ==> 0 < w"), s"min ($left) ($right)", right)
+            .flatMap(mp(_, Right(eq), Right(rightPositive))))
+        result <- rules.disjElim(cases, isLeft, isRight)
+      } yield result
+    for {
+      f <- variable(steps, "f:real -> real")
+      x <- variable(steps, "x:real")
+      m <- variable(steps, "m:real")
+      e <- variable(steps, "e:real")
+      d <- variable(steps, "d:real")
+      h <- variable(steps, "h:real")
+      above <- assume("a:real < x:real")
+      below <- assume("x:real < b:real")
+      supplied <- assume(s"derivative_within $F a:real b:real x:real m:real")
+      unfolded <- unfoldWithin(steps, withinDefinition)
+      opened <- LogicError.lift(Kernel.eqMp(unfolded, supplied))
+      positive <- proposition("0 < e:real")
+      assumedPositive <- LogicError.lift(Kernel.assume(positive))
+      radii <- rules.spec(e, opened).flatMap(rules.mp(_, assumedPositive))
+      body <- assume(relativeRadius("d:real"))
+      dPositive <- rules.conjElim1(body)
+      serves <- rules.conjElim2(body)
+
+      leftGap <- steps.at(lemma("!a:real x:real. a < x ==> 0 < x - a"), "a:real", "x:real").flatMap(mp(_, Right(above)))
+      rightGap <- steps.at(lemma("!x:real b:real. x < b ==> 0 < b - x"), "x:real", "b:real").flatMap(mp(_, Right(below)))
+      rPositive <- positiveMinimum("x:real - a:real", "b:real - x:real", leftGap, rightGap)
+      wPositive <- positiveMinimum("d:real", r, dPositive, rPositive)
+
+      inner <- proposition(s"0 < abs (h:real) /\\ abs h < $w")
+      assumedInner <- LogicError.lift(Kernel.assume(inner))
+      nonZero <- rules.conjElim1(assumedInner)
+      small <- rules.conjElim2(assumedInner)
+      through = "!s:real w:real c:real. s < w ==> w <= c ==> s < c"
+      belowD <- steps.at(lemma(through), "abs (h:real)", w, "d:real")
+        .flatMap(mp(_, Right(small), steps.at(magnitude.fact(Magnitude.MinBelowLeft), "d:real", r)))
+      belowR <- steps.at(lemma(through), "abs (h:real)", w, r)
+        .flatMap(mp(_, Right(small), steps.at(magnitude.fact(Magnitude.MinBelowRight), "d:real", r)))
+      belowLeftGap <- steps.at(lemma(through), "abs (h:real)", r, "x:real - a:real")
+        .flatMap(mp(_, Right(belowR), steps.at(magnitude.fact(Magnitude.MinBelowLeft), "x:real - a:real", "b:real - x:real")))
+      belowRightGap <- steps.at(lemma(through), "abs (h:real)", r, "b:real - x:real")
+        .flatMap(mp(_, Right(belowR), steps.at(magnitude.fact(Magnitude.MinBelowRight), "x:real - a:real", "b:real - x:real")))
+      leftSides <- ExtremeValue.sides(steps, magnitude, "h:real", "x:real - a:real", belowLeftGap)
+      rightSides <- ExtremeValue.sides(steps, magnitude, "h:real", "b:real - x:real", belowRightGap)
+      low <- steps.at(lemma("!a:real x:real h:real. -h < x - a ==> a <= x + h"), "a:real", "x:real", "h:real")
+        .flatMap(mp(_, Right(leftSides._2)))
+      high <- steps.at(lemma("!x:real b:real h:real. h < b - x ==> x + h <= b"), "x:real", "b:real", "h:real")
+        .flatMap(mp(_, Right(rightSides._1)))
+      increment <- rules.conjIntro(low, high).flatMap(rules.conjIntro(belowD, _)).flatMap(rules.conjIntro(nonZero, _))
+      value <- rules.spec(h, serves).flatMap(rules.mp(_, increment))
+
+      everyIncrement <- rules.disch(inner, value).flatMap(rules.gen(h, _))
+      pair <- rules.conjIntro(wPositive, everyIncrement)
+      radius <- term(steps, w)
+      witnessed <- existential(s"?d:real. ${twoSidedRadius("d")}").flatMap(rules.existsIntro(_, radius, pair))
+      found <- rules.existsElim(radii, d, witnessed)
+      statement <- rules.disch(positive, found).flatMap(rules.gen(e, _))
+      folded <- Derivative.foldDerivative(steps, f, x, m, statement)
+      result <- closeOver(steps, folded,
+        List(s"derivative_within $F a:real b:real x:real m:real", "x:real < b:real", "a:real < x:real"),
+        List("f:real -> real", "a:real", "b:real", "x:real", "m:real"))
+    } yield result
+  }
 
   /* ------------------------------------------------------------------ locality */
 

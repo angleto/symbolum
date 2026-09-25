@@ -80,13 +80,17 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
 
     val gluing = Derivation.axiomsOf(force(chain.continuity.fact(Continuity.IntervalGluing)))
     gluing shouldBe realAxioms + select
-    for (name <- List(Integral.Exists, Integral.HasUnique, Integral.Unique, Integral.Fundamental)) withClue(name) {
+    for (name <- List(Integral.Exists, Integral.HasUnique, Integral.Unique, Integral.Fundamental, Integral.FundamentalWithin))
+      withClue(name) {
       Derivation.axiomsOf(fact(name)) shouldBe gluing
     }
 
     // Every fine sum close to `F b - F a` is a statement about the sums there are, and needs none
     // to exist: the fundamental theorem as `has_integral` is the fifteen and the choice.
+    // The textbook form, relative to [a, b], is the same argument and costs the same; the two-sided
+    // form is derived from it through a fact that costs nothing.
     Derivation.axiomsOf(fact(Integral.HasFundamental)) shouldBe (realAxioms - completeness) + select
+    Derivation.axiomsOf(fact(Integral.HasFundamentalWithin)) shouldBe (realAxioms - completeness) + select
   }
 
   it should "reach Cousin through the gluing, and the value through uniqueness" in {
@@ -98,6 +102,12 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
 
     val underTheorem = Set(fact(Integral.HasFundamental).conclusion, fact(Integral.Unique).conclusion)
     Derivation.restingOn(fact(Integral.Fundamental), underTheorem) shouldBe underTheorem
+
+    // The two-sided theorem is the textbook one at a derivative read as a relative one, and not a
+    // second copy of the argument, which would read the same word for word.
+    val underTwoSided = Set(fact(Integral.HasFundamentalWithin).conclusion,
+      force(chain.derivative.fact(Derivative.WithinOfDerivative)).conclusion)
+    Derivation.restingOn(fact(Integral.HasFundamental), underTwoSided) shouldBe underTwoSided
   }
 
   /* ------------------------------------------------------ what keeps it from being empty */
@@ -134,6 +144,33 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     val detached = force(rules.mp(instance, lemma("(0:real) <= 1")).flatMap(rules.mp(_, slopes)))
     detached.hypotheses shouldBe empty
     detached.conclusion shouldBe proposition("integral (\\y:real. 1 * y + y * 1) 0 1 = 1 * 1 - 0 * 0")
+  }
+
+  /**
+   * The textbook form covers what the two-sided one does not, and `abs` on `[0, 1]` is the witness:
+   * relative to the interval its slope is `1` everywhere, so the textbook form detaches with nothing
+   * assumed, and at `0` it has no derivative at all, so the two-sided form's hypothesis is refuted
+   * there, also with nothing assumed. `AbsoluteAtAnEnd` derives both.
+   */
+  it should "detach the textbook form at abs on [0, 1], where the two-sided form's hypothesis is false" in {
+    val witness = new AbsoluteAtAnEnd(chain)
+    val absolute = function("abs")
+    val one = function("\\y:real. (1:real)")
+    val arguments = List(absolute, one, real("0:real"), real("1:real"))
+
+    val textbook = opened(force(rules.specAll(fact(Integral.HasFundamentalWithin), arguments)))
+    val detached = force(rules.mp(textbook, lemma("(0:real) <= 1")).flatMap(rules.mp(_, witness.relative)))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition("has_integral (\\y:real. (1:real)) 0 1 (abs 1 - abs 0)")
+
+    val twoSided = opened(force(rules.specAll(fact(Integral.HasFundamental), arguments)))
+    val slopes = force(rules.mp(twoSided, lemma("(0:real) <= 1")).flatMap(t =>
+      logic.destImp(t.conclusion).map(_._1).toRight(NotOfForm("an implication", t.conclusion))))
+    val supposed = force(LogicError.lift(Kernel.assume(slopes)))
+    val atZero = force(rules.spec(real("0:real"), supposed)
+      .flatMap(rules.mp(_, force(rules.conjIntro(lemma("(0:real) <= 0"), lemma("(0:real) <= 1"))))))
+    val refuted = force(rules.notElim(witness.noSlopeAtZero, atZero).flatMap(rules.notIntro(slopes, _)))
+    refuted.hypotheses shouldBe empty
   }
 
   /** `|- has_integral (\y. 1) 0 1 (1 - 0)`: the fundamental theorem at the identity. */

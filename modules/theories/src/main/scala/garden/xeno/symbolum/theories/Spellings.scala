@@ -324,6 +324,7 @@ object Spellings {
       // `f'(x) = m`: the constant is a proposition, and an equation inside a delimited template
       // reads wrongly under a negation, where `\neg f'(x) = 0` hides which side is denied.
       .delimited("derivative", 3, "\\operatorname{deriv}(#1, #2, #3)")
+      .delimited("derivative_within", 5, "\\operatorname{deriv}_{[#2, #3]}(#1, #4, #5)")
       // The integral and its two relations in words, for the reason `derivative` is: two of the
       // three are propositions, and the value is `select` applied to one of them.
       .delimited("fine_sum", 5, "\\operatorname{finesum}(#1, #2, #3, #4, #5)")
