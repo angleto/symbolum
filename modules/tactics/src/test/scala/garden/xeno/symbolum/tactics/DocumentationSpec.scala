@@ -1216,7 +1216,8 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
         .map(_.group(1)) shouldBe Some("Inductive")
     }
 
-    Vector("CLAUDE.md", "README.md", "docs/architecture.md", "docs/proving.md", "docs/evaluation.md")
+    Vector("CLAUDE.md", "README.md", "docs/architecture.md", "docs/proving.md", "docs/evaluation.md",
+      "docs/where-it-stands.md")
       .foreach { document =>
         val prose = read(document).replaceAll("\\s+", " ")
         val named = shape.findAllMatchIn(prose).map(_.group(1)).toVector.filterNot(_ == widest)

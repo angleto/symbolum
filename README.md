@@ -450,6 +450,7 @@ docs/notation.md       every symbol, the prerequisites, and where to look things
 docs/architecture.md   the correctness argument, and where a change is dangerous
 docs/examples.md       what has been proved, and how far the asked-for areas are
 docs/proving.md        how to state and prove things
+docs/where-it-stands.md  what the proof side reaches today, and what is not written
 docs/evaluation.md     benchmarks, measurements, and where a language model fits
 docs/numerics.md       the two capabilities that rest on a numeric library, and what that costs
 docs/adr            architectural decision records
@@ -721,6 +722,7 @@ Test coverage includes:
 | [docs/evaluation.md](docs/evaluation.md) | Where the system stands against the benchmarks, what can be measured today, where a language model fits and where it must not, and the order to build in |
 | [docs/numerics.md](docs/numerics.md) | The Fourier transform and the Perron eigenvalue: which library they rest on, what it costs a consumer of the published artifact, what stays exact, and why a number from them is never a theorem |
 | [docs/theorems.md](docs/theorems.md) | A dozen results worth reading, each as a full page: the statement in a form set for reading and a form that parses, what it rests on, the derivation where one was recorded, what it cost, and the exact command that gets it back. The showcase, where `docs/lemmas.md` is the index |
+| [docs/where-it-stands.md](docs/where-it-stands.md) | What the proof side reaches today, development by development, and the gaps between them stated as gaps; the order of the work that closes them is in the task tracker |
 | [docs/lemmas.md](docs/lemmas.md) | Every lemma the library holds, by development, with its statement: the list to search before proving something that is already there. Written by a command and compared against the code by `LibrarySpec`, so it breaks on the day somebody adds a lemma |
 | [docs/naming.md](docs/naming.md) | How a lemma is named, read off the names the library already holds rather than invented for them, and why the moment to write a convention down is before the size forces one |
 | [docs/reading-register.md](docs/reading-register.md) | Every axiom, every defined constant and every row of the precedence table, each with whether a person has read it, when, and against which source. Everything says NOT READ, which is the state and not an omission |
