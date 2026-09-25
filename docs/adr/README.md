@@ -74,3 +74,4 @@ the rejected option attractive, and they will.
 | [0041](0041-a-series-is-decided-against-closed-forms.md) | A series is decided against closed forms, and in both directions | accepted, extends 0017 and 0023 |
 | [0042](0042-an-inductive-type-is-built-from-its-constructors-over-one-universe-of-trees.md) | An inductive type is built from its constructors, over one universe of labelled trees | accepted, extends 0006 and 0020 |
 | [0043](0043-recursion-along-a-measure-asks-the-caller-for-admissibility.md) | Recursion along a measure asks the caller for admissibility, and is proved through the graph | accepted, extends 0042 |
+| [0045](0045-a-polynomial-times-a-geometric-term-by-the-ratio-test-and-a-comparison.md) | A polynomial in the index times a geometric term: the ratio test at degree one, a comparison for each degree after it | accepted, extends 0041 |

@@ -645,8 +645,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // **five**: every clause but `NUM_VALUE_ZERO` binds the environment and at least one code,
     // which is the nine, and the five are the ones binding two codes, `a` and `b` or `p` and `q`
     // or `j` and `p`; the environment is `num -> num` and shares its type with nothing.
-    library.entries.size shouldBe 679
-    library.names.distinct.size shouldBe 676
+    // 685 and 682 with the polynomial-times-geometric criteria, 2026-09-25, derived as that base
+    // plus this delta before the run: six facts under six names, none shared. `CLAUDE.md`'s figures
+    // move by **three** and **none**: `CONVERGES_BOUNDED` and the two polynomial facts bind two
+    // leading quantifiers each, of different types, and the other three bind one.
+    library.entries.size shouldBe 685
+    library.names.distinct.size shouldBe 682
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

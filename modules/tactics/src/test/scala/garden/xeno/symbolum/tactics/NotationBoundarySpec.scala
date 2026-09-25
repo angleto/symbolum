@@ -425,6 +425,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Text, "the three shapes of question the procedure is asked, written here"),
     ("Convergence.scala", "Summands") ->
       (Verdict.Text, "the summands the procedure reads, written here"),
+    ("Convergence.scala", "Unnamed") ->
+      (Verdict.Text, "why a value asked of a series the procedure shows converges is not given, written here"),
     ("Convergence.scala", "RatioTendsToOne") ->
       (Verdict.Text, "why a rational function of the index is refused, written here"),
     ("Language.scala", "s\"two branches that differ only by the function\"") ->
