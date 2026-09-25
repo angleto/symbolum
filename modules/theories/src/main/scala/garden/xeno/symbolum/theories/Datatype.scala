@@ -15,6 +15,7 @@ import garden.xeno.symbolum.logic.*
  * is the first that carves a type **from a description** rather than one written out. `Quotient` is
  * the precedent for the shape: a Scala function, not a constant of the object logic, so it adds no
  * link to the chain and moves neither `docs/lemmas.md` nor the reading register when it lands.
+ * `docs/adr/0042` is the decision and the alternatives it rejects.
  *
  * == The construction, which is HOL Light's and costs no axiom ==
  *
@@ -263,7 +264,7 @@ object Datatype {
   /* ================================================================== the moves */
 
   /** One theory and the few moves every derivation below makes over it. */
-  private final case class Tools(ground: Ground, logic: Logic, theory: Theory, notation: Notation) {
+  private[theories] final case class Tools(ground: Ground, logic: Logic, theory: Theory, notation: Notation) {
     val rules: Rules = logic.rules
     val intuitionistic: Intuitionistic = Intuitionistic(logic)
 
@@ -438,12 +439,27 @@ object Datatype {
 
     def witness(existential: Kernel.Thm): Either[LogicError, Kernel.Thm] =
       ground.classical.axiom(Classical.Choice).flatMap(Classical.witnessFrom(logic, _, existential))
+
+    /** `PAIR a b = PAIR c d` gives `a = c` and `b = d`, by `PAIR_INJECTIVE` at the pair's types. */
+    def pairParts(equation: Kernel.Thm): Either[LogicError, (Kernel.Thm, Kernel.Thm)] =
+      Term.destEq(equation.conclusion) match {
+        case Some((App(App(Const(Product.Pairing, _), a), b), App(App(Const(Product.Pairing, _), c), d))) =>
+          for {
+            injective <- ground.product.fact(Product.PairInjective)
+            typed = at(injective, Point -> Term.typeOf(a), Classical.CodomainVariable -> Term.typeOf(b))
+            instance <- rules.specAll(typed, List(a, b, c, d))
+            split <- LogicError.lift(Kernel.eqMp(instance, equation))
+            first <- rules.conjElim1(split)
+            second <- rules.conjElim2(split)
+          } yield (first, second)
+        case _ => Left(NotOfForm("an equation between two pairs", equation.conclusion))
+      }
   }
 
-  private def leftOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+  private[theories] def leftOf(theorem: Kernel.Thm): Either[LogicError, Term] =
     Term.destEq(theorem.conclusion).map(_._1).toRight(NotOfForm("an equation", theorem.conclusion))
 
-  private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+  private[theories] def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
     Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))
 
   /* ================================================================ the universe */
@@ -1861,21 +1877,8 @@ object Datatype {
     }
 
     /** `PAIR a b = PAIR c d` gives `a = c` and `b = d`. */
-    private def peelPair(carried: Carried, equation: Kernel.Thm): Either[LogicError, (Kernel.Thm, Kernel.Thm)] = {
-      import carried.tools.*
-      Term.destEq(equation.conclusion) match {
-        case Some((App(App(Const(Product.Pairing, _), a), b), App(App(Const(Product.Pairing, _), c), d))) =>
-          for {
-            injective <- carried.tools.ground.product.fact(Product.PairInjective)
-            typed = at(injective, Point -> Term.typeOf(a), Classical.CodomainVariable -> Term.typeOf(b))
-            instance <- rules.specAll(typed, List(a, b, c, d))
-            split <- LogicError.lift(Kernel.eqMp(instance, equation))
-            first <- rules.conjElim1(split)
-            second <- rules.conjElim2(split)
-          } yield (first, second)
-        case _ => Left(NotOfForm("an equation between two pairs", equation.conclusion))
-      }
-    }
+    private def peelPair(carried: Carried, equation: Kernel.Thm): Either[LogicError, (Kernel.Thm, Kernel.Thm)] =
+      carried.tools.pairParts(equation)
 
     /** `h (Ck xs) = fk xs (h y0) ...`, from the graph being functional. */
     private def equationAt(

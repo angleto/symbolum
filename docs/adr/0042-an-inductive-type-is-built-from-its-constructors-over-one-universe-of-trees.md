@@ -1,4 +1,4 @@
-# 0040. An inductive type is built from its constructors, over one universe of labelled trees
+# 0042. An inductive type is built from its constructors, over one universe of labelled trees
 
 - **Status:** accepted
 - **Date:** 2026-09-25

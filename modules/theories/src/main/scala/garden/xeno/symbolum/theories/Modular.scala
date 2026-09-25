@@ -146,11 +146,12 @@ import garden.xeno.symbolum.logic.*
  *
  * == What is still not here ==
  *
- * **A gcd anybody can compute.** [[Modular.GcdName]] is chosen and not calculated, so `NUM_GCD 6 4`
- * is a term no rewriting reduces. Euclid's algorithm would give one and it is a definition by
- * well-founded recursion, which this system does not have: the recursion theorem `Natural` derives
- * is for the successor. The same limit is why [[Modular.DivName]] is chosen rather than computed,
- * and it is the next thing that would change the character of this file rather than extend it.
+ * **A gcd anybody can compute, and what is missing is one theorem rather than a primitive.**
+ * [[Modular.GcdName]] is chosen and not calculated, so `NUM_GCD 6 4` is a term no rewriting reduces.
+ * Euclid's algorithm is a definition by recursion along a measure, which this system has had since
+ * 2026-09-25 as `WellFounded`, and `EuclidAlgorithm.NUM_EUCLID_GCD` is that definition, beside the chain, with
+ * equations that compute. What is not proved is that its value is this constant's off both zero.
+ * [[Modular.DivName]] is chosen for the same reason and can be defined the same way.
  *
  * **Coprimality as a constant**, which is `NUM_GCD a b = SUC ZERO` written out and has one consumer
  * so far, inside [[Modular.Euclid]]. One consumer is not enough to define a constant for.
@@ -350,9 +351,9 @@ object Modular {
    * **It is a choice and not a recursion**, and the difference shows at `a = b = ZERO`, where every
    * number is a common divisor, no greatest one exists and `select` returns something about which
    * nothing at all is provable. That is why all three facts below are guarded by
-   * `~(a = ZERO) \/ ~(b = ZERO)`. Euclid's algorithm would give a total function with no junk
-   * value, and it is a definition by well-founded recursion, which this system does not have: the
-   * recursion theorem `Natural` derives is for the successor.
+   * `~(a = ZERO) \/ ~(b = ZERO)`. Euclid's algorithm gives a total function with no junk value, and
+   * since 2026-09-25 it exists beside the chain as `EuclidAlgorithm.NUM_EUCLID_GCD`, defined by `WellFounded`'s
+   * recursion along a measure; that the two agree off both zero is not yet proved.
    */
   val GcdName: String = "NUM_GCD"
 

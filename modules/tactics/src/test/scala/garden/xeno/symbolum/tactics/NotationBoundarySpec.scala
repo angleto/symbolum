@@ -299,6 +299,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     // `Syntax.scala`, 2026-09-25, the same reading once more: the published name of a fact in the
     // refusal that says its derivation produced something other than its statement.
     ("Syntax.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    ("EuclidAlgorithm.scala", "name") -> (Verdict.Name, "the fact's published name"),
     ("Integer.scala", "error.message") ->
       (Verdict.Text, "the inner refusal's own sentence, put behind the law's name"),
     // The bridge into the reals, and the four are the three above plus one. `stage` is the reading

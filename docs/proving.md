@@ -305,8 +305,9 @@ an induction over a goal, `Bounded` discharges
 successor form so that a recurrence can reach it, `Monotone` hands back `|- MONOTONE f` for an
 operator written in the usual shape, `Recursion` and `Quotient` define the **caller's** constant and
 the caller's type, `Datatype` defines the caller's inductive type from its constructors and a
-function on it by structural recursion (`docs/adr/0040`), `Descent` defines a predicate by
-recursion on a code, `Resolving` proves the
+function on it by structural recursion (`docs/adr/0042`), `WellFounded` proves recursion along a
+measure for the caller's step (`docs/adr/0043`), `Descent` defines a predicate by recursion on a
+code, `Resolving` proves the
 soundness of a resolution step, and `Domain` builds a caller's own theory of a domain that is not
 mathematics. Nothing they produce belongs to them, which is why there is nothing of theirs to list.
 `Ring`, `Field`, `Linarith`, `Arithmetic` and `Order`'s procedures are the section below.
