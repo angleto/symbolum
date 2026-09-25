@@ -112,6 +112,26 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     spent should contain(completeness)
     val route = Set(nearLine.conclusion, force(chain.transcendental.fact(Transcendental.Addition)).conclusion)
     Derivation.restingOn(fact(Derivative.Exponential), route) shouldBe route
+
+    // Written by the verification of card a7214946, which asked for this price to be the addition
+    // theorem's. The equality above is with the estimate, and the two would move together: an
+    // estimate that began to spend a twentieth axiom would take the slope with it and nothing here
+    // would go red. The addition theorem is proved in another file by another route, so this pins
+    // the price to something the slope does not own. Measured on 2026-09-25 at `87175842`: both
+    // are the chain's nineteen, eta included.
+    spent shouldBe Derivation.axiomsOf(force(chain.transcendental.fact(Transcendental.Addition)))
+  }
+
+  it should "price the product rule, the chain rule and their bridge at the fifteen and the choice, exactly" in {
+    // Written by the verification of cards d83a54d3 and 513a27d9, which asked for these prices as
+    // equalities. The loop above asserts that past the reals they spend the choice alone and that
+    // completeness is not among the reals they spend, which leaves the other fifteen unpinned; this
+    // pins all of it, measured on 2026-09-25 at `87175842`. A derivation that stopped reaching an
+    // axiom of the field would be a proof of the same statement by another road and is worth a look
+    // rather than a silent pass.
+    for (name <- List(Derivative.Continuous, Derivative.ProductRule, Derivative.ChainRule)) withClue(name) {
+      Derivation.axiomsOf(fact(name)) shouldBe (realAxioms - completeness) + select
+    }
   }
 
   it should "reach Rolle's theorem through the extreme value theorem and the interior lemma" in {
@@ -287,6 +307,38 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val still = force(rules.mp(afterConstant, flat).flatMap(rules.mp(_, outerAtFive)))
     still.hypotheses shouldBe empty
     derivative.show(still.conclusion) shouldBe "derivative (\\y:real. 5) x (1 * 0)"
+  }
+
+  it should "compose the exponential's slope through the chain rule, with nothing assumed" in {
+    // Written by the verification of card a7214946, which asked for `DERIVATIVE_EXP` to be detached
+    // through the chain rule at `exp (2 * x)` or the like, to say that it composes. Two such: the
+    // exponential after itself, where the outer slope is read at `exp x` rather than at `x`, and the
+    // exponential after `1 * y + 1 * y`, which is `2 * y` as `DERIVATIVE_LINEAR` writes it. A slope
+    // of `exp` that held only at the points `DerivativeSpec` happened to name, or a chain rule whose
+    // outer hypothesis was read at `x` rather than at `g x`, fails the first.
+    val x = Term.variable("x", reals)
+    val exp = force(derivative.term("exp", functions))
+    val inner = force(rules.spec(x, fact(Derivative.Exponential)))
+    val outer = force(rules.spec(real("exp x"), fact(Derivative.Exponential)))
+    val twice = opened(force(rules.specAll(fact(Derivative.ChainRule), List(exp, exp, x, real("exp (exp x)"), real("exp x")))))
+    val composed = force(rules.mp(twice, inner).flatMap(rules.mp(_, outer)))
+    composed.hypotheses shouldBe empty
+    derivative.show(composed.conclusion) shouldBe "derivative (\\y:real. exp (exp y)) x (exp (exp x) * exp x)"
+
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val one = force(rules.spec(x, fact(Derivative.Identity)))
+    val doubled = opened(force(rules.specAll(fact(Derivative.Linear),
+      List(identity, identity, x, real("1:real"), real("1:real"), real("1:real"), real("1:real")))
+      .flatMap(rules.mp(_, one)).flatMap(rules.mp(_, one))))
+    derivative.show(doubled.conclusion) shouldBe "derivative (\\y:real. 1 * y + 1 * y) x (1 * 1 + 1 * 1)"
+    val double = force(derivative.term("\\y:real. 1 * y + 1 * y", functions))
+    val atDouble = force(rules.spec(real("1 * x + 1 * x"), fact(Derivative.Exponential)))
+    val instance = opened(force(rules.specAll(fact(Derivative.ChainRule),
+      List(exp, double, x, real("exp (1 * x + 1 * x)"), real("1 * 1 + 1 * 1")))))
+    val afterDouble = force(rules.mp(instance, doubled).flatMap(rules.mp(_, atDouble)))
+    afterDouble.hypotheses shouldBe empty
+    derivative.show(afterDouble.conclusion) shouldBe
+      "derivative (\\y:real. exp (1 * y + 1 * y)) x (exp (1 * x + 1 * x) * (1 * 1 + 1 * 1))"
   }
 
   it should "detach the mean value theorem at the identity on [0, 1], where the ends differ" in {
