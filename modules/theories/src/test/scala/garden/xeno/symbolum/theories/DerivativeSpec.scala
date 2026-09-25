@@ -59,12 +59,14 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------- what it cost */
 
-  "The derivative" should "add its constant and no axiom to the theory below it" in {
+  "The derivative" should "add its constants and no axiom to the theory below it" in {
     // The theory it extends is the chain's end when it is built, which is `Resolving`'s, and not
     // `Continuity`'s, whose constants it reads.
     val below = chain.resolving.theory
     derivative.theory.axioms shouldBe below.axioms
-    (derivative.theory.constants.keySet -- below.constants.keySet) shouldBe Set(Derivative.DerivativeName)
+    (derivative.theory.constants.keySet -- below.constants.keySet) shouldBe
+      Set(Derivative.DerivativeName, Derivative.WithinName)
+    derivative.definitions.keySet shouldBe Set(Derivative.DerivativeName, Derivative.WithinName)
     derivative.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
@@ -99,11 +101,15 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // already pays for.
     for (name <- withinInterval) withClue(name) { Derivation.axiomsOf(fact(name)) shouldBe spent }
 
+    // That a derivative is a relative one reads no fact about the reals at all: the radius is handed
+    // across unchanged, and the extra conjuncts of the increment are dropped.
+    Derivation.axiomsOf(fact(Derivative.WithinOfDerivative)) shouldBe empty
+
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
-        if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine) ++
-          onInterval ++ withinInterval).contains(name)) {
+        if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine,
+          Derivative.WithinOfDerivative) ++ onInterval ++ withinInterval).contains(name)) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
@@ -589,5 +595,40 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val refused = force(rules.notIntro(unconditional, eliminated))
 
     refused.hypotheses shouldBe empty
+  }
+
+  /**
+   * `abs` at the left end of `[0, 1]` has slope `1` relative to the interval and no derivative, which
+   * `AbsoluteAtAnEnd` derives. So [[Derivative.WithinInterior]] detaches strictly inside, at `1/2`,
+   * and without its `a < x` it would carry that relative slope at `0` to a derivative there: the
+   * statement with the hypothesis dropped is refuted with nothing assumed.
+   */
+  "The relative derivative" should "be the derivative strictly inside, and need a < x for it" in {
+    val witness = new AbsoluteAtAnEnd(chain)
+    val absolute = force(derivative.term("abs", Type.fun(reals, reals)))
+    def point(text: String) = force(derivative.term(text, reals))
+    def inside(x: String) = force(rules.conjIntro(
+      force(linarith.prove(s"(0:real) <= $x")), force(linarith.prove(s"$x <= (1:real)"))))
+
+    val half = "1 / (2:real)"
+    val relativeAtHalf = force(rules.spec(point(half), witness.relative).flatMap(rules.mp(_, inside(half))))
+    val interior = force(rules.specAll(fact(Derivative.WithinInterior),
+      List(absolute, point("0:real"), point("1:real"), point(half), point("1:real")))
+      .flatMap(rules.mp(_, force(linarith.prove(s"(0:real) < $half"))))
+      .flatMap(rules.mp(_, force(linarith.prove(s"$half < (1:real)"))))
+      .flatMap(rules.mp(_, relativeAtHalf)))
+    interior.hypotheses shouldBe empty
+    interior.conclusion shouldBe force(derivative.proposition(s"derivative abs ($half) 1"))
+
+    val dropped = force(derivative.proposition(
+      "!f:real -> real. !a:real. !b:real. !x:real. !m:real. x < b ==> derivative_within f a b x m ==> derivative f x m"))
+    val relativeAtZero = force(rules.spec(point("0:real"), witness.relative).flatMap(rules.mp(_, inside("0:real"))))
+    val absurd = force(LogicError.lift(Kernel.assume(dropped))
+      .flatMap(rules.specAll(_, List(absolute, point("0:real"), point("1:real"), point("0:real"), point("1:real"))))
+      .flatMap(rules.mp(_, force(linarith.prove("(0:real) < 1"))))
+      .flatMap(rules.mp(_, relativeAtZero))
+      .flatMap(rules.notElim(witness.noSlopeAtZero, _)))
+    absurd.hypotheses shouldBe List(dropped)
+    force(rules.notIntro(dropped, absurd)).hypotheses shouldBe empty
   }
 }

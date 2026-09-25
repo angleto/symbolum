@@ -1161,7 +1161,7 @@ the points near it, carries the derivatives. Each costs what its two-sided form 
 `ContinuitySpec` detaches `INTERMEDIATE_VALUE_WITHIN` at a step on `[-1, 0]` that it also proves
 not continuous at `0`, so the textbook form is not a renaming. The fundamental theorem is not
 among them: its hypothesis at the ends is a one-sided **derivative**, which a constant extension
-cannot carry, and card `494ca432` has it.
+cannot carry, and it got its textbook form another way, two paragraphs down.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum
@@ -1184,6 +1184,19 @@ is spent, and so uniqueness and the value `integral` spend it. `IntegralSpec` as
 equalities, and keeps the definition from being empty four ways: Cousin detached at a constant
 gauge, the theorem detached at `y * y` on `[0, 1]`, a wrong value refused, and uniqueness refuted
 without `a <= b` on `[1, 0]`, where there are no fine sums and every number is an integral.
+
+**The fundamental theorem has its textbook form too, since 2026-09-25**:
+`HAS_INTEGRAL_DERIVATIVE_WITHIN` and `INTEGRAL_DERIVATIVE_WITHIN` ask for
+`derivative_within F a b x (f x)` at every point of `[a, b]`, the derivative relative to the
+interval, one-sided at the two ends and blind to `F` outside. It needed no extension of `F`, though
+the card that asked for it had planned an affine one: the argument reads `F` only at the two ends
+of a piece, and the invariant over a division already keeps both inside `[a, b]`, so the relative
+derivative is enough as it stands. The two-sided theorems are derived from these through
+`DERIVATIVE_WITHIN_OF_DERIVATIVE`, which costs no axiom, and so cost the same.
+`DERIVATIVE_WITHIN_INTERIOR` says the relative derivative is the derivative strictly inside. `abs`
+on `[0, 1]` separates the two notions: `IntegralSpec` detaches the textbook form there and refutes
+the two-sided form's hypothesis at `0`, and `DerivativeSpec` refutes the interior fact at the same
+point with its `a < x` dropped.
 
 **A continuous function has an integral, `CONTINUOUS_HAS_INTEGRAL`, since 2026-09-25**, and
 `CONTINUOUS_INTEGRAL` says `integral` names it. `Integrability.scala` is the derivation and it never

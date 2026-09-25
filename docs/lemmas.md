@@ -179,6 +179,8 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_PRODUCT       !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. derivative x z u ==> derivative y z v ==> derivative (\w:real. x w * y w) z (u * y z + x z * v)
   DERIVATIVE_SIN           !x:real. derivative sin x (cos x)
   DERIVATIVE_UNIQUE        !x:real -> real. !y:real. !z:real. !u:real. derivative x y z ==> derivative x y u ==> z = u
+  DERIVATIVE_WITHIN_INTERIOR !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> derivative_within x y z u v ==> derivative x u v
+  DERIVATIVE_WITHIN_OF_DERIVATIVE !x:real -> real. !y:real. !z:real. !u:real. !v:real. derivative x u v ==> derivative_within x y z u v
   DERIVATIVE_ZERO_CONSTANT !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> derivative x u 0) ==> (!u:real. y <= u /\ u <= z ==> x u = x y)
   DERIVATIVE_ZERO_CONSTANT_WITHIN !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous_within x y z u) ==> (!u:real. y < u /\ u < z ==> derivative x u 0) ==> (!u:real. y <= u /\ u <= z ==> x u = x y)
   MEAN_VALUE               !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))
@@ -289,8 +291,10 @@ they have least appetite for working out how it is produced.
   FINE_SUM_JOIN            !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. !x1:real. fine_sum x y z u w ==> fine_sum x y u v x1 ==> fine_sum x y z v (w + x1)
   FINE_SUM_PIECE           !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. z <= v /\ v <= u /\ u - z < y v ==> fine_sum x y z u (x v * (u - z))
   HAS_INTEGRAL_DERIVATIVE  !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative x v (y v)) ==> has_integral y z u (x u - x z)
+  HAS_INTEGRAL_DERIVATIVE_WITHIN !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> has_integral y z u (x u - x z)
   HAS_INTEGRAL_UNIQUE      !x:real -> real. !y:real. !z:real. !u:real. !v:real. y <= z ==> has_integral x y z u ==> has_integral x y z v ==> u = v
   INTEGRAL_DERIVATIVE      !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative x v (y v)) ==> integral y z u = x u - x z
+  INTEGRAL_DERIVATIVE_WITHIN !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> integral y z u = x u - x z
   INTEGRAL_UNIQUE          !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> has_integral x y z u ==> integral x y z = u
 
 ## Language

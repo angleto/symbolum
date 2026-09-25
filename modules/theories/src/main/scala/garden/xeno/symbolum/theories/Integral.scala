@@ -134,6 +134,16 @@ object Integral {
   /** The fundamental theorem: the integral of a derivative is the change in what it is the derivative of. */
   val Fundamental: String = "INTEGRAL_DERIVATIVE"
 
+  /**
+   * [[HasFundamental]] as a textbook states it: the derivative relative to `[a, b]`, one-sided at the
+   * two ends, with nothing asked of `F` outside the interval. [[HasFundamental]] is derived from it.
+   */
+  val HasFundamentalWithin: String = "HAS_INTEGRAL_DERIVATIVE_WITHIN"
+
+  /** [[Fundamental]] with the derivative relative to `[a, b]`. */
+  val FundamentalWithin: String = "INTEGRAL_DERIVATIVE_WITHIN"
+
+
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
     Piece ->
@@ -169,7 +179,13 @@ object Integral {
         "(!x:real. a <= x /\\ x <= b ==> derivative F x (f x)) ==> has_integral f a b (F b - F a)"),
     Fundamental ->
       ("!F:real -> real. !f:real -> real. !a:real. !b:real. a <= b ==> " +
-        "(!x:real. a <= x /\\ x <= b ==> derivative F x (f x)) ==> integral f a b = F b - F a")
+        "(!x:real. a <= x /\\ x <= b ==> derivative F x (f x)) ==> integral f a b = F b - F a"),
+    HasFundamentalWithin ->
+      ("!F:real -> real. !f:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within F a b x (f x)) ==> has_integral f a b (F b - F a)"),
+    FundamentalWithin ->
+      ("!F:real -> real. !f:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within F a b x (f x)) ==> integral f a b = F b - F a")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -220,9 +236,12 @@ object Integral {
       gauge <- largerGauge(steps, induction, piece, join)
       hasUnique <- uniqueness(steps, magnitude, limit, hasDefinition, exists, gauge)
       unique <- integralIsTheIntegral(steps, classical, integralDefinition, hasUnique)
-      derivativeDefinition <- derivative.definition(Derivative.DerivativeName)
-      hasFundamental <- fundamental(steps, reals, magnitude, classical, hasDefinition, derivativeDefinition, induction)
-      fundamentalTheorem <- integralOfDerivative(steps, unique, hasFundamental)
+      withinDefinition <- derivative.definition(Derivative.WithinName)
+      hasFundamentalWithin <- fundamental(steps, reals, magnitude, classical, hasDefinition, withinDefinition, induction)
+      fundamentalWithin <- integralOfDerivative(steps, unique, hasFundamentalWithin, SlopesWithin)
+      ofDerivative <- derivative.fact(Derivative.WithinOfDerivative)
+      hasFundamental <- twoSided(steps, hasFundamentalWithin, ofDerivative)
+      fundamentalTheorem <- integralOfDerivative(steps, unique, hasFundamental, TwoSidedSlopes)
       continuous <- Integrability.prove(steps, reals, magnitude, classical, continuity, gluing, piece, join, induction,
         exists, gauge, hasDefinition, unique)
       (continuousHas, continuousIntegral) = continuous
@@ -237,6 +256,8 @@ object Integral {
         Unique -> unique,
         HasFundamental -> hasFundamental,
         Fundamental -> fundamentalTheorem,
+        HasFundamentalWithin -> hasFundamentalWithin,
+        FundamentalWithin -> fundamentalWithin,
         ContinuousHas -> continuousHas,
         ContinuousIntegral -> continuousIntegral
       )
@@ -852,11 +873,16 @@ object Integral {
   /* ------------------------------------------------------------------ the fundamental theorem */
 
   /**
-   * [[HasFundamental]]. At a tolerance `e`, `T = e * inv (1 * ((b - a) + 1))` is each point's share,
-   * and the gauge at `x` is chosen by `select` among the radii with `0 < d` that, where `x` is in
-   * `[a, b]`, keep `abs (F y - F x - f x * (y - x)) <= T * abs (y - x)` for every `y` nearer than
-   * `d`. Such a radius exists inside the interval by the derivative, including at `y = x` where the
-   * error is zero, and outside it `1` will do; the classical case split is where `SELECT` enters.
+   * [[HasFundamentalWithin]]. At a tolerance `e`, `T = e * inv (1 * ((b - a) + 1))` is each point's
+   * share, and the gauge at `x` is chosen by `select` among the radii with `0 < d` that, where `x` is
+   * in `[a, b]`, keep `abs (F y - F x - f x * (y - x)) <= T * abs (y - x)` for every `y` of `[a, b]`
+   * nearer than `d`. Such a radius exists inside the interval by the relative derivative, including
+   * at `y = x` where the error is zero, and outside it `1` will do; the classical case split is where
+   * `SELECT` enters.
+   *
+   * **Only points of `[a, b]` are ever read**, and that is why the relative derivative is enough and
+   * the textbook form is the one proved: the two ends of a piece are the only `y` the straddle asks
+   * about, and the invariant below carries `a <= u` and `v <= b`, so both are in the interval.
    *
    * Over a division fine for that gauge the invariant is `u <= v` and, inside `[a, b]`,
    * `abs (s - (F v - F u)) <= T * (v - u)`: on a piece it is the error from each end to the tag, the
@@ -868,7 +894,7 @@ object Integral {
     magnitude: Magnitude,
     classical: Classical,
     hasDefinition: Kernel.Thm,
-    derivativeDefinition: Kernel.Thm,
+    withinDefinition: Kernel.Thm,
     induction: Kernel.Thm
   ): Either[LogicError, Kernel.Thm] = {
     import steps.*
@@ -887,8 +913,9 @@ object Integral {
     val d = Term.variable("d", Reals)
     val F = "(Fn:real -> real)"
     val fx = "(f:real -> real) x:real"
-    val Slopes = s"!x:real. a:real <= x /\\ x <= b:real ==> derivative $F x ((f:real -> real) x)"
+    val Slopes = s"!x:real. a:real <= x /\\ x <= b:real ==> derivative_within $F a b x ((f:real -> real) x)"
     val Inside = "a:real <= x:real /\\ x <= b:real"
+    val Range = "a:real <= y:real /\\ y <= b:real"
 
     for {
       ordered <- assume("a:real <= b:real")
@@ -900,7 +927,7 @@ object Integral {
       tNonNegative <- at(lemma("!T:real. 0 < T ==> 0 <= T"), tol).flatMap(mp(_, Right(share.positive)))
 
       goodText = (radius: String) =>
-        s"0 < $radius /\\ ($Inside ==> !y:real. abs (y - x) < $radius ==> abs ($F y - $F x - $fx * (y - x)) <= $tol * abs (y - x))"
+        s"0 < $radius /\\ ($Inside ==> !y:real. $Range ==> abs (y - x) < $radius ==> abs ($F y - $F x - $fx * (y - x)) <= $tol * abs (y - x))"
       radiusPredicate <- Parser.term(theory, notation, s"\\d:real. ${goodText("d")}", Type.fun(Reals, Type.Bool))
       someRadius <- proposition(s"?d:real. ${goodText("d")}")
 
@@ -910,7 +937,7 @@ object Integral {
         assumedInside <- LogicError.lift(Kernel.assume(inside))
         slope <- rules.spec(x, slopes).flatMap(rules.mp(_, assumedInside))
         fxTerm <- real(fx)
-        opened <- Conv.unfold(derivativeDefinition, List(bigF, x, fxTerm))
+        opened <- Conv.unfold(withinDefinition, List(bigF, a, b, x, fxTerm))
           .flatMap(eq => rightOf(eq).flatMap(Conv.betaNormalise).flatMap(Conv.trans(eq, _)))
           .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, slope)))
         tTerm <- real(tol)
@@ -920,6 +947,8 @@ object Integral {
             assumed <- LogicError.lift(Kernel.assume(body))
             dPositive <- rules.conjElim1(assumed)
             within <- rules.conjElim2(assumed)
+            rangeTerm <- proposition(Range)
+            range <- LogicError.lift(Kernel.assume(rangeTerm))
             closeTerm <- proposition("abs (y:real - x:real) < d:real")
             close <- LogicError.lift(Kernel.assume(closeTerm))
             yNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), "y:real - x:real")
@@ -929,7 +958,11 @@ object Integral {
 
             apart <- for {
               away <- assume("0 < abs (y:real - x:real)")
-              admissible <- rules.conjIntro(away, close)
+              lowShift <- rules.conjElim1(range).flatMap(low =>
+                at(lemma("!a:real x:real y:real. a <= y ==> a <= x + (y - x)"), "a:real", "x:real", "y:real").flatMap(mp(_, Right(low))))
+              highShift <- rules.conjElim2(range).flatMap(high =>
+                at(lemma("!y:real b:real x:real. y <= b ==> x + (y - x) <= b"), "y:real", "b:real", "x:real").flatMap(mp(_, Right(high))))
+              admissible <- rules.conjIntro(lowShift, highShift).flatMap(rules.conjIntro(close, _)).flatMap(rules.conjIntro(away, _))
               h <- real("y:real - x:real")
               bound <- rules.spec(h, within).flatMap(rules.mp(_, admissible))
               argument <- at(lemma("!x:real y:real. x + (y - x) = y"), "x:real", "y:real")
@@ -960,7 +993,7 @@ object Integral {
             } yield result
 
             bounded <- rules.disjElim(split, apart, still)
-            everyY <- rules.disch(closeTerm, bounded).flatMap(rules.gen(y, _))
+            everyY <- rules.disch(closeTerm, bounded).flatMap(rules.disch(rangeTerm, _)).flatMap(rules.gen(y, _))
             guarded <- rules.disch(inside, everyY)
             both <- rules.conjIntro(dPositive, guarded)
             result <- introduce(logic, someRadius, List(d), target =>
@@ -1038,8 +1071,14 @@ object Integral {
           "abs (v:real - x:real)", "v:real", "x:real", "u:real", chosenRadius).flatMap(mp(_, Right(rightDistance), Right(ux), Right(short)))
         leftClose <- at(lemma("!A:real u:real x:real v:real G:real. A = -(u - x) ==> x <= v ==> v - u < G ==> A < G"),
           "abs (u:real - x:real)", "u:real", "x:real", "v:real", chosenRadius).flatMap(mp(_, Right(leftDistance), Right(xv), Right(short)))
-        atV <- rules.spec(v, straddle).flatMap(rules.mp(_, rightClose))
-        atU <- rules.spec(u, straddle).flatMap(rules.mp(_, leftClose))
+        av <- at(lemma("!a:real u:real x:real v:real. a <= u ==> u <= x ==> x <= v ==> a <= v"), "a:real", "u:real", "x:real", "v:real")
+          .flatMap(mp(_, Right(low), Right(ux), Right(xv)))
+        ub <- at(lemma("!u:real x:real v:real b:real. u <= x ==> x <= v ==> v <= b ==> u <= b"), "u:real", "x:real", "v:real", "b:real")
+          .flatMap(mp(_, Right(ux), Right(xv), Right(high)))
+        vIn <- conj(Right(av), Right(high))
+        uIn <- conj(Right(low), Right(ub))
+        atV <- rules.spec(v, straddle).flatMap(rules.mp(_, vIn)).flatMap(rules.mp(_, rightClose))
+        atU <- rules.spec(u, straddle).flatMap(rules.mp(_, uIn)).flatMap(rules.mp(_, leftClose))
         tMul <- Parser.term(theory, notation, s"real_mul ($tol)", Functions)
         rightScale <- Conv.apTerm(tMul, rightDistance)
         leftScale <- Conv.apTerm(tMul, leftDistance)
@@ -1156,14 +1195,49 @@ object Integral {
     } yield result
   }
 
-  /** [[Fundamental]]: [[HasFundamental]] read through [[Unique]]. */
-  private def integralOfDerivative(steps: Continuity.Steps, unique: Kernel.Thm, hasFundamental: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+  private val SlopesWithin: String =
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative_within (Fn:real -> real) a b x ((f:real -> real) x)"
+
+  private val TwoSidedSlopes: String = "!x:real. a:real <= x /\\ x <= b:real ==> derivative (Fn:real -> real) x ((f:real -> real) x)"
+
+  /**
+   * [[HasFundamental]] from [[HasFundamentalWithin]]: a derivative at a point is a derivative there
+   * relative to every interval, which is `Derivative.WithinOfDerivative`.
+   */
+  private def twoSided(steps: Continuity.Steps, within: Kernel.Thm, ofDerivative: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
     import steps.*
     val bigF = Term.variable("Fn", Functions)
     val f = Term.variable("f", Functions)
     val a = Term.variable("a", Reals)
     val b = Term.variable("b", Reals)
-    val Slopes = "!x:real. a:real <= x /\\ x <= b:real ==> derivative (Fn:real -> real) x ((f:real -> real) x)"
+    val x = Term.variable("x", Reals)
+    for {
+      ordered <- assume("a:real <= b:real")
+      slopes <- assume(TwoSidedSlopes)
+      insideTerm <- proposition("a:real <= x:real /\\ x <= b:real")
+      inside <- LogicError.lift(Kernel.assume(insideTerm))
+      slope <- rules.spec(x, slopes).flatMap(rules.mp(_, inside))
+      fx <- real("(f:real -> real) x:real")
+      relative <- rules.specAll(ofDerivative, List(bigF, a, b, x, fx)).flatMap(rules.mp(_, slope))
+      everyPoint <- rules.disch(insideTerm, relative).flatMap(rules.gen(x, _))
+      has <- rules.specAll(within, List(bigF, f, a, b)).flatMap(mp(_, Right(ordered), Right(everyPoint)))
+      result <- rules.disch(slopes.conclusion, has).flatMap(rules.disch(ordered.conclusion, _))
+        .flatMap(rules.genAll(_, List(bigF, f, a, b)))
+    } yield result
+  }
+
+  /** [[Fundamental]] or [[FundamentalWithin]]: the statement about `has_integral` read through [[Unique]]. */
+  private def integralOfDerivative(
+    steps: Continuity.Steps,
+    unique: Kernel.Thm,
+    hasFundamental: Kernel.Thm,
+    Slopes: String
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val bigF = Term.variable("Fn", Functions)
+    val f = Term.variable("f", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
     for {
       ordered <- assume("a:real <= b:real")
       slopes <- assume(Slopes)

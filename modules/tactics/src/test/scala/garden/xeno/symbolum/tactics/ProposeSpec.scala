@@ -395,7 +395,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `ROLLE_WITHIN`, three each on the uniform continuity, `DERIVATIVE_LOCAL` and the mean value
     // theorem, two on each of seven more, and one each on `CONTINUOUS_WITHIN_OF_CONTINUOUS` and
     // `CONTINUOUS_EXTENSION_AGREES`.
-    proposals.size shouldBe 637
+    // 645 with the fundamental theorem relative to `[a, b]`, the same day, derived before the run:
+    // eight antecedents over four facts, three on `DERIVATIVE_WITHIN_INTERIOR`, two on each form of
+    // the theorem and one on `DERIVATIVE_WITHIN_OF_DERIVATIVE`.
+    proposals.size shouldBe 645
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1327,7 +1330,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // an implication or naming `continuous_within` or `derivative`, which no procedure settles, and
     // BOTH of `CONTINUOUS_EXTENSION_AGREES`'s substitutions of its order. The thirty-third
     // weakening is in `unreadable` below.
-    open shouldBe 545
+    // 553 with eight of the nine residues of the fundamental theorem relative to `[a, b]` and the
+    // relative derivative, 2026-09-25, measured by a probe of `Propose.audit` filtered by `from`
+    // after a prediction of "all eight weakenings" got the total right and the parts wrong: seven
+    // weakenings, each keeping an implication or naming `derivative_within`, `has_integral` or
+    // `integral`, which no procedure settles, and one substitution of the order in
+    // `DERIVATIVE_WITHIN_INTERIOR`. The eighth weakening is in `unreadable` below.
+    open shouldBe 553
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1695,7 +1704,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 135 with `CONTINUOUS_WITHIN_OF_CONTINUOUS`'s one weakening, 2026-09-25, measured by the same
     // probe: without its hypothesis it says every function is continuous relative to every
     // interval at every point, and `continuous_within` has no reading in any procedure.
-    unreadable shouldBe 135
+    // 136 with `DERIVATIVE_WITHIN_OF_DERIVATIVE`'s one weakening, the same day and probe, for the
+    // same reason one notion over: without its hypothesis it gives every function every slope
+    // relative to every interval, and `derivative_within` has no reading in any procedure.
+    unreadable shouldBe 136
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
