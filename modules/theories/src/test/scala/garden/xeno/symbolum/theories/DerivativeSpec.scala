@@ -118,6 +118,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // function, which is why that fact is published beside it.
     val bridge = published(Derivative.Continuous)
     Derivation.restingOn(fact(Derivative.ProductRule), bridge) shouldBe bridge
+    // And so does the chain rule, which needs `g (x + h)` inside `f`'s radius.
+    Derivation.restingOn(fact(Derivative.ChainRule), bridge) shouldBe bridge
   }
 
   /* ------------------------------------------------------------- what it says */
@@ -227,6 +229,26 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val continuous = force(rules.specAll(fact(Derivative.Continuous), List(identity, x, real("1:real"))).flatMap(rules.mp(_, slope)))
     continuous.hypotheses shouldBe empty
     continuous.conclusion shouldBe force(chain.continuity.fact(Continuity.Identity).flatMap(rules.spec(x, _))).conclusion
+  }
+
+  it should "detach the chain rule at the identity after itself, and after a constant" in {
+    val x = Term.variable("x", reals)
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val atX = force(rules.spec(x, fact(Derivative.Identity)))
+    val twice = opened(force(rules.specAll(fact(Derivative.ChainRule), List(identity, identity, x, real("1:real"), real("1:real")))))
+    val composed = force(rules.mp(twice, atX).flatMap(rules.mp(_, atX)))
+    composed.hypotheses shouldBe empty
+    derivative.show(composed.conclusion) shouldBe "derivative (\\y:real. y) x (1 * 1)"
+
+    // After a constant, `g (x + h) - g x` is zero for every `h`, which is the case the textbook's
+    // quotient cannot reach: the rule has to hold there without ever dividing by the increment.
+    val five = force(derivative.term("\\y:real. (5:real)", functions))
+    val flat = force(rules.specAll(fact(Derivative.Constant), List(real("5:real"), x)))
+    val outerAtFive = force(rules.spec(real("5:real"), fact(Derivative.Identity)))
+    val afterConstant = opened(force(rules.specAll(fact(Derivative.ChainRule), List(identity, five, x, real("1:real"), real("0:real")))))
+    val still = force(rules.mp(afterConstant, flat).flatMap(rules.mp(_, outerAtFive)))
+    still.hypotheses shouldBe empty
+    derivative.show(still.conclusion) shouldBe "derivative (\\y:real. 5) x (1 * 0)"
   }
 
   it should "detach the mean value theorem at the identity on [0, 1], where the ends differ" in {
