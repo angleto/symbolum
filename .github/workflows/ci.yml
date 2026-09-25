@@ -16,11 +16,19 @@ on:
   pull_request:
     branches: [ '[0-9]*.[0-9]*' ]
 
-# Three commits pushed inside a minute would otherwise start three full runs, two of them already
-# obsolete. This keeps the newest and cancels the rest, per branch.
+# One run per branch at a time, and a run that has started is never cancelled. GitHub keeps at most
+# one run pending in a group and cancels the one that was waiting when a newer one queues, so a burst
+# of pushes costs the run in progress plus one run on the newest commit, and the tip always gets a
+# verdict. What it does not give is a verdict on each intermediate commit that arrived while a run
+# was already waiting.
+#
+# `cancel-in-progress` was `true` until 2026-09-25, written for three commits pushed inside a minute.
+# On a line where several sessions land all afternoon and a run takes 24 minutes, the next push
+# nearly always came before the verdict: on 2026-09-18 ten runs in a row were cancelled between
+# 14:19 and 16:04, and the line reached a verdict only when it stopped moving.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -131,8 +139,9 @@ jobs:
   # not fire: work lands on this line by pushing to it, so a gate that runs only on a pull request
   # runs about never, which is the sentence the `on:` block above already carries about the branches
   # it does not list. What it costs is measured: the first run took 24 minutes against the 26 the
-  # rest of the workflow spends, so a full run is about twice what it was, and the concurrency group
-  # above cancels the obsolete ones, which took 7 of the 24 runs on 2026-09-16.
+  # rest of the workflow spends, so a full run is about twice what it was. On 2026-09-16 the
+  # concurrency group above still cancelled a run in progress, and it cancelled 7 of the 24 runs
+  # that day.
   #
   # What that buys and what it risks are both small and both worth knowing. Every floor held on the
   # first run with between 1.9 and 43 statements of margin, and `build.sbt` carries the table. The
