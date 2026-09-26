@@ -976,8 +976,10 @@ published theorem; so the hypergeometric terms are outside the fragment and refu
 rational function of the index is refused as the class where the ratio tends to one, and a goal the
 procedure refutes comes back as `Denied`, carrying the theorem. A goal naming a value other than the
 one the procedure proved is `NotEqualTo`, decided, where both values are numbers built from
-numerals, and `ValueUnidentified`, not decided, where either holds an atom such as `exp 0`: the
-four are listed in `Convergence`'s docstring with which of them are decisions.
+numerals with every divisor shown apart from nought, and `ValueUnidentified`, not decided, where
+either holds an atom such as `exp 0` or a reciprocal nothing places, such as `inv 0`; a goal asking
+a value of a series the procedure only shows convergent is refused as unnamed, not decided. The five
+are listed in `Convergence`'s docstring with which of them are decisions.
 `docs/adr/0041` is the decision. **A polynomial in the index times a geometric term is in the
 fragment since the same night**, `docs/adr/0045`: degree one is the ratio test, which is that
 test's first consumer outside a spec, and each degree after it is a comparison that spends

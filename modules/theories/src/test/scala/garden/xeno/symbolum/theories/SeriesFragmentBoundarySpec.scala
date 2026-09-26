@@ -144,19 +144,17 @@ class SeriesFragmentBoundarySpec extends AnyFlatSpec with Matchers {
     // operations, so this is the one input where "both values are numbers" does not make differing
     // normal forms two different numbers.
     //
-    // Found by this file on 2026-09-26 at `1bcad72b`: the answer is `NotEqualTo`, standing
-    // `Decided`, so the assertion is held pending until the criterion in `Convergence.numeric`
-    // stops counting a reciprocal whose argument may be zero as a number. `pendingUntilFixed` turns
-    // red the day it passes, which is when the wrapper is to be removed.
+    // Found by this file on 2026-09-26 at `1bcad72b`: the answer was `NotEqualTo`, standing
+    // `Decided`, and the assertion was held pending. `Convergence.numeric` now counts a reciprocal
+    // or a divisor as a number only where LINARITH places it strictly on one side of nought, so
+    // this is `ValueUnidentified`; the wrapper came off in the change that repaired it.
     val text = "converges (Sum (\\i:num. Power ((1:real) / 2) i)) (2 + inv (0:real))"
     val result = answer(text)
     result match {
       case Right(theorem) => fail(s"$text was proved: ${theorem.conclusion}")
       case Left(error)    => info(s"refused, ${error.standing}: ${error.message}")
     }
-    pendingUntilFixed {
-      result.left.toOption.map(_.standing) should not be Some(LogicError.Standing.Decided)
-    }
+    result.left.toOption.map(_.standing) should not be Some(LogicError.Standing.Decided)
   }
 
   "A value that differs, written as numbers" should "stay a decision, which is the control for the two above" in {
