@@ -34,9 +34,20 @@ import garden.xeno.symbolum.logic.*
  * `CUT_COMPLETE` is `COMPLETENESS`, the sixteenth axiom of `Real.scala`, stated word for word over
  * `cut` and `CUT_LE`, and **proved**: the least upper bound of a non-empty bounded family of cuts is
  * the union of their members. It is the axiom that separates an ordered field from the reals, and
- * on this type it is not assumed. What is not here is the arithmetic: addition and negation are the
- * next card, multiplication the one after, and the sixteen become theorems under their own names only
- * when all of it is in place.
+ * on this type it is not assumed.
+ *
+ * == The arithmetic ==
+ *
+ * Addition holds `r` when some `p` in `x` leaves `r - p` in `y`, and negation holds `p` when some
+ * `r > 0` leaves `-p - r` outside `x`. The product is built in two layers. `CUT_PMUL` is the product
+ * on the **non-negative** cone rather than the positive one, so that zero needs no case of its own:
+ * the negatives, and every `r` below `p * q` for positive members. `CUT_MUL` then reads the signs with
+ * `COND` and puts the sign back on the core of the absolute values, and every law off the cone comes
+ * from the one on it through `(-x) * y = -(x * y)`, closed by a normaliser for the additive group.
+ * `CUT_INV` is `CUT_PINV` above zero, its negation's negated below, and zero at zero, which the
+ * definition writes. Both inverses spend `CUT_ESCAPE`, the one place the rationals being Archimedean
+ * reaches the cuts. What is left is phase 5: the sixteen of `Real.scala` as theorems about this type
+ * under their own names.
  */
 final class Cut private (
   val classical: Classical,
@@ -149,6 +160,93 @@ object Cut {
   /** `|- !x. CUT_ADD x (CUT_NEG x) = CUT_OF_RAT RAT_ZERO`: the additive inverse, where Archimedes is spent. */
   val AddNegation: String = "CUT_ADD_NEG"
 
+  /**
+   * `|- !x e f. dest_cut x e ==> 0 < f ==> ?p. dest_cut x p /\ e <= p /\ ~(dest_cut x (p + f))`: a
+   * member at least `e` whose step by `f` leaves the cut, which is where Archimedes is spent.
+   */
+  val Escape: String = "CUT_ESCAPE"
+
+  /** `|- !x y. 0 <= x ==> 0 <= y ==> 0 <= CUT_ADD x y`. */
+  val AddNonNegative: String = "CUT_ADD_NONNEG"
+
+  /**
+   * `CUT_PMUL x y`: the product on the non-negative cone, the negative rationals together with every
+   * `r` below `p * q` for positive members `p` of `x` and `q` of `y`. A cut whenever both are at least
+   * zero, including zero itself, which is why the cone is the non-negative one and not the positive.
+   */
+  val PosMul: String = "CUT_PMUL"
+
+  val PosMulIsCut: String = "CUT_PMUL_IS_CUT"
+  val PosMulMembers: String = "CUT_PMUL_DEST"
+  val PosMulCommutative: String = "CUT_PMUL_SYM"
+  val PosMulZero: String = "CUT_PMUL_ZERO"
+  val PosMulNonNegative: String = "CUT_PMUL_NONNEG"
+  val PosMulOne: String = "CUT_PMUL_ONE"
+  val PosMulAssociative: String = "CUT_PMUL_ASSOC"
+  val PosMulDistributive: String = "CUT_PMUL_ADD"
+
+  /** `|- !x. CUT_NEG (CUT_NEG x) = x`, and the two below: the additive group, derived from its four laws. */
+  val NegNeg: String = "CUT_NEG_NEG"
+  val NegZero: String = "CUT_NEG_ZERO"
+  val NegAdd: String = "CUT_NEG_ADD"
+
+  /** `|- !x y. CUT_LE x y ==> CUT_LE (CUT_NEG y) (CUT_NEG x)`. */
+  val AtMostNeg: String = "CUT_LE_NEG"
+
+  /** `|- !x. CUT_LE 0 x \/ CUT_LE 0 (CUT_NEG x)`: every cut has a sign, zero having both. */
+  val SignCases: String = "CUT_SIGN_CASES"
+
+  /**
+   * `CUT_MUL x y`: the product, the core on the signs' absolute values with the sign put back. Written
+   * with `COND` on `CUT_LE 0 x` and `CUT_LE 0 y`, so that at a non-negative pair it is the core.
+   */
+  val Multiplication: String = "CUT_MUL"
+
+  /** `|- !x y. 0 <= x ==> 0 <= y ==> CUT_MUL x y = CUT_PMUL x y`. */
+  val MulOnCone: String = "CUT_MUL_PMUL"
+
+  val MulCommutative: String = "CUT_MUL_SYM"
+  val MulOne: String = "CUT_MUL_ONE"
+  val MulZero: String = "CUT_MUL_ZERO"
+
+  /** `|- !x y. CUT_MUL (CUT_NEG x) y = CUT_NEG (CUT_MUL x y)`: what carries every law off the cone. */
+  val MulNegLeft: String = "CUT_MUL_NEG_LEFT"
+
+  val MulAssociative: String = "CUT_MUL_ASSOC"
+
+  /** `|- !x y z. CUT_MUL x (CUT_ADD y z) = CUT_ADD (CUT_MUL x y) (CUT_MUL x z)`. */
+  val MulDistributive: String = "CUT_MUL_ADD"
+
+  /** `CUT_LT x y`, defined as `~(CUT_LE y x)`: the strict order, which on a total order is that. */
+  val LessThan: String = "CUT_LT"
+
+  /** `|- !x y. 0 < x ==> 0 < y ==> 0 < CUT_PMUL x y`: a positive member of each puts zero in the core. */
+  val PosMulPositive: String = "CUT_PMUL_POSITIVE"
+
+  /** `|- !x y. CUT_LT 0 x /\ CUT_LT 0 y ==> CUT_LT 0 (CUT_MUL x y)`: `LT_MUL` of `Real.scala`, over cuts. */
+  val LessMul: String = "CUT_LT_MUL"
+
+  /**
+   * `CUT_PINV x`: the inverse of a positive cut, the non-positive rationals together with every `r`
+   * that some positive non-member `s` of `x` keeps below `1 / s`.
+   */
+  val PosInverse: String = "CUT_PINV"
+  val PosInverseIsCut: String = "CUT_PINV_IS_CUT"
+  val PosInverseMembers: String = "CUT_PINV_DEST"
+  val PosInverseNonNegative: String = "CUT_PINV_NONNEG"
+
+  /** `|- !x. 0 < x ==> CUT_PMUL x (CUT_PINV x) = CUT_OF_RAT RAT_ONE`. */
+  val PosMulInverse: String = "CUT_PMUL_PINV"
+
+  /** `CUT_INV x`: `CUT_PINV x` above zero, its negation's negated below, and zero at zero, which the definition writes. */
+  val Inverse: String = "CUT_INV"
+
+  /** `|- CUT_INV (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO`. */
+  val InverseZero: String = "CUT_INV_ZERO"
+
+  /** `|- !x. ~(x = 0) ==> CUT_MUL x (CUT_INV x) = CUT_OF_RAT RAT_ONE`: `MUL_INVERSE` of `Real.scala`, over cuts. */
+  val MulInverse: String = "CUT_MUL_INV"
+
   private val IsCutBody: String =
     "\\S:rat->bool. (?a:rat. S a) /\\ (?b:rat. ~(S b)) /\\ " +
       "(!a:rat. !b:rat. S b /\\ RAT_LT a b ==> S a) /\\ (!a:rat. S a ==> (?b:rat. S b /\\ RAT_LT a b))"
@@ -159,6 +257,28 @@ object Cut {
   private val NegSetText: String =
     "\\p:rat. ?r:rat. RAT_LT RAT_ZERO r /\\ ~(dest_cut x (RAT_ADD (RAT_NEG p) (RAT_NEG r)))"
   private val NegationBody: String = "\\x:cut. mk_cut (" + NegSetText + ")"
+  private val CoreMemberText: String =
+    "RAT_LT r RAT_ZERO \\/ (?p:rat. ?q:rat. dest_cut x p /\\ dest_cut y q /\\ " +
+      "RAT_LT RAT_ZERO p /\\ RAT_LT RAT_ZERO q /\\ RAT_LT r (RAT_MUL p q))"
+  private val CoreSetText: String = "\\r:rat. " + CoreMemberText
+  private val PosMulBody: String = "\\x:cut. \\y:cut. mk_cut (" + CoreSetText + ")"
+  private val NonNegativeX: String = "CUT_LE (CUT_OF_RAT RAT_ZERO) x"
+  private val NonNegativeY: String = "CUT_LE (CUT_OF_RAT RAT_ZERO) y"
+  private val NonNegativeZ: String = "CUT_LE (CUT_OF_RAT RAT_ZERO) z"
+  private val LessThanBody: String = "\\x:cut. \\y:cut. ~(CUT_LE y x)"
+  private val PinvMemberText: String =
+    "RAT_LE r RAT_ZERO \\/ (?s:rat. ~(dest_cut x s) /\\ RAT_LT RAT_ZERO s /\\ RAT_LT (RAT_MUL r s) RAT_ONE)"
+  private val PinvSetText: String = "\\r:rat. " + PinvMemberText
+  private val PosInverseBody: String = "\\x:cut. mk_cut (" + PinvSetText + ")"
+  private val InverseBody: String =
+    "\\x:cut. COND (CUT_LT (CUT_OF_RAT RAT_ZERO) x) (CUT_PINV x) " +
+      "(COND (CUT_LT x (CUT_OF_RAT RAT_ZERO)) (CUT_NEG (CUT_PINV (CUT_NEG x))) (CUT_OF_RAT RAT_ZERO))"
+  private val PositiveX: String = "CUT_LT (CUT_OF_RAT RAT_ZERO) x"
+  private val PositiveY: String = "CUT_LT (CUT_OF_RAT RAT_ZERO) y"
+  private val MultiplicationBody: String =
+    "\\x:cut. \\y:cut. COND (CUT_LE (CUT_OF_RAT RAT_ZERO) x) " +
+      "(COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_PMUL x y) (CUT_NEG (CUT_PMUL x (CUT_NEG y)))) " +
+      "(COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_NEG (CUT_PMUL (CUT_NEG x) y)) (CUT_PMUL (CUT_NEG x) (CUT_NEG y)))"
 
   /** Each fact with the text it is published as, which the construction compares against. */
   val Statements: Vector[(String, String)] = Vector(
@@ -184,7 +304,45 @@ object Cut {
     OfRationalAdd -> "!p:rat. !q:rat. CUT_OF_RAT (RAT_ADD p q) = CUT_ADD (CUT_OF_RAT p) (CUT_OF_RAT q)",
     NegIsCut -> ("!x:cut. IS_CUT (" + NegSetText + ")"),
     NegMembers -> ("!x:cut. dest_cut (CUT_NEG x) = (" + NegSetText + ")"),
-    AddNegation -> "!x:cut. CUT_ADD x (CUT_NEG x) = CUT_OF_RAT RAT_ZERO"
+    AddNegation -> "!x:cut. CUT_ADD x (CUT_NEG x) = CUT_OF_RAT RAT_ZERO",
+    Escape ->
+      ("!x:cut. !e:rat. !f:rat. dest_cut x e ==> RAT_LT RAT_ZERO f ==> " +
+        "(?p:rat. dest_cut x p /\\ RAT_LE e p /\\ ~(dest_cut x (RAT_ADD p f)))"),
+    AddNonNegative -> ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_ADD x y)"),
+    PosMulIsCut -> ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> IS_CUT (" + CoreSetText + ")"),
+    PosMulMembers ->
+      ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> dest_cut (CUT_PMUL x y) = (" + CoreSetText + ")"),
+    PosMulCommutative -> "!x:cut. !y:cut. CUT_PMUL x y = CUT_PMUL y x",
+    PosMulZero -> "!x:cut. CUT_PMUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
+    PosMulNonNegative ->
+      ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)"),
+    PosMulOne -> ("!x:cut. " + NonNegativeX + " ==> CUT_PMUL x (CUT_OF_RAT RAT_ONE) = x"),
+    PosMulAssociative ->
+      ("!x:cut. !y:cut. !z:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> " + NonNegativeZ +
+        " ==> CUT_PMUL (CUT_PMUL x y) z = CUT_PMUL x (CUT_PMUL y z)"),
+    PosMulDistributive ->
+      ("!x:cut. !y:cut. !z:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> " + NonNegativeZ +
+        " ==> CUT_PMUL x (CUT_ADD y z) = CUT_ADD (CUT_PMUL x y) (CUT_PMUL x z)"),
+    NegNeg -> "!x:cut. CUT_NEG (CUT_NEG x) = x",
+    NegZero -> "CUT_NEG (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
+    NegAdd -> "!x:cut. !y:cut. CUT_NEG (CUT_ADD x y) = CUT_ADD (CUT_NEG x) (CUT_NEG y)",
+    AtMostNeg -> "!x:cut. !y:cut. CUT_LE x y ==> CUT_LE (CUT_NEG y) (CUT_NEG x)",
+    SignCases -> ("!x:cut. " + NonNegativeX + " \\/ CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_NEG x)"),
+    MulOnCone -> ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_MUL x y = CUT_PMUL x y"),
+    MulCommutative -> "!x:cut. !y:cut. CUT_MUL x y = CUT_MUL y x",
+    MulOne -> "!x:cut. CUT_MUL x (CUT_OF_RAT RAT_ONE) = x",
+    MulZero -> "!x:cut. CUT_MUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
+    MulNegLeft -> "!x:cut. !y:cut. CUT_MUL (CUT_NEG x) y = CUT_NEG (CUT_MUL x y)",
+    MulAssociative -> "!x:cut. !y:cut. !z:cut. CUT_MUL (CUT_MUL x y) z = CUT_MUL x (CUT_MUL y z)",
+    MulDistributive -> "!x:cut. !y:cut. !z:cut. CUT_MUL x (CUT_ADD y z) = CUT_ADD (CUT_MUL x y) (CUT_MUL x z)",
+    PosMulPositive -> ("!x:cut. !y:cut. " + PositiveX + " ==> " + PositiveY + " ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)"),
+    LessMul -> ("!x:cut. !y:cut. " + PositiveX + " /\\ " + PositiveY + " ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_MUL x y)"),
+    PosInverseIsCut -> ("!x:cut. " + PositiveX + " ==> IS_CUT (" + PinvSetText + ")"),
+    PosInverseMembers -> ("!x:cut. " + PositiveX + " ==> dest_cut (CUT_PINV x) = (" + PinvSetText + ")"),
+    PosInverseNonNegative -> ("!x:cut. " + PositiveX + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PINV x)"),
+    PosMulInverse -> ("!x:cut. " + PositiveX + " ==> CUT_PMUL x (CUT_PINV x) = CUT_OF_RAT RAT_ONE"),
+    InverseZero -> "CUT_INV (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
+    MulInverse -> "!x:cut. ~(x = CUT_OF_RAT RAT_ZERO) ==> CUT_MUL x (CUT_INV x) = CUT_OF_RAT RAT_ONE"
   )
 
   private def statementOf(name: String): String =
@@ -219,16 +377,29 @@ object Cut {
       (withAtMost, atMostDefinition) = atMost
       ofRational <- define(withAtMost, OfRational, OfRationalBody)
       (withOfRational, ofRationalDefinition) = ofRational
-      addition <- define(withOfRational, Addition, AdditionBody)
+      lessThan <- define(withOfRational, LessThan, LessThanBody)
+      (withLessThan, lessThanDefinition) = lessThan
+      addition <- define(withLessThan, Addition, AdditionBody)
       (withAddition, additionDefinition) = addition
       negation <- define(withAddition, Negation, NegationBody)
-      (complete, negationDefinition) = negation
+      (withNegation, negationDefinition) = negation
+      posMul <- define(withNegation, PosMul, PosMulBody)
+      (withPosMul, posMulDefinition) = posMul
+      multiplication <- define(withPosMul, Multiplication, MultiplicationBody)
+      (withMultiplication, multiplicationDefinition) = multiplication
+      posInverse <- define(withMultiplication, PosInverse, PosInverseBody)
+      (withPosInverse, posInverseDefinition) = posInverse
+      inverse <- define(withPosInverse, Inverse, InverseBody)
+      (complete, inverseDefinition) = inverse
       induction <- peano.naturals.fact(Natural.Induction)
 
       wider <- classical.logic.over(complete)
       widerRationals = Rationals(wider, complete, notation, classical, fractions, ring)
       sets = Sets(widerRationals, isCutDefinition)
-      proved <- Cuts(sets, bijection, atMostDefinition, ofRationalDefinition, additionDefinition, negationDefinition, induction)
+      proved <- Cuts(
+        sets, bijection, atMostDefinition, ofRationalDefinition, additionDefinition, negationDefinition,
+        posMulDefinition, multiplicationDefinition, lessThanDefinition, posInverseDefinition, inverseDefinition, induction
+      )
         .facts(below)
 
       checked <- proved.foldRight[Either[LogicError, Vector[(String, Kernel.Thm)]]](Right(Vector.empty)) {
@@ -255,7 +426,12 @@ object Cut {
         AtMost -> atMostDefinition,
         OfRational -> ofRationalDefinition,
         Addition -> additionDefinition,
-        Negation -> negationDefinition
+        Negation -> negationDefinition,
+        PosMul -> posMulDefinition,
+        Multiplication -> multiplicationDefinition,
+        LessThan -> lessThanDefinition,
+        PosInverse -> posInverseDefinition,
+        Inverse -> inverseDefinition
       ),
       checked.toMap
     )
@@ -469,6 +645,84 @@ object Cut {
         case other => Left(NotOfForm("a comparison", other))
       }
 
+    def times(a: Term, b: Term): Either[LogicError, Term] = binaryConstant(Fraction.Multiplication).flatMap(app(_, a, b))
+
+    /**
+     * `0 < c` and `a < b` give `c * a < c * b`: if `c * b <= c * a`, scaling by `RAT_INV c`, which is
+     * not negative, gives `b <= a`. `RAT_LE_MUL_LEFT` is the non-strict half and this is its strict one.
+     */
+    def timesLeft(positive: Kernel.Thm, less: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        c <- binary(positive.conclusion).map(_._2)
+        ab <- binary(less.conclusion)
+        (a, b) = ab
+        ca <- times(c, a)
+        cb <- times(c, b)
+        inverse <- read(Fraction.Inverse, Type.fun(Fraction.Classes, Fraction.Classes)).flatMap(app(_, c))
+        inverseAbove <- fact(Fraction.InversePositive).flatMap(rules.spec(c, _)).flatMap(rules.mp(_, positive)).flatMap(weakened)
+        unit <- positiveNonZero(positive).flatMap(nonZero => fact(Fraction.MulInverse).flatMap(rules.spec(c, _)).flatMap(rules.mp(_, nonZero)))
+        result <- strict(ca, cb) { backwards =>
+          for {
+            scaled <- fact(Fraction.MulLeftMonotone)
+              .flatMap(rules.specAll(_, List(inverse, cb, ca)))
+              .flatMap(rules.mp(_, inverseAbove))
+              .flatMap(rules.mp(_, backwards))
+            sides <- binary(scaled.conclusion)
+            leftIs <- ring.consequence(sides._1, b, List(unit -> b))
+            rightIs <- ring.consequence(sides._2, a, List(unit -> a))
+            reversed <- compared(scaled, leftIs, rightIs)
+            falsity <- contradicts(less, reversed)
+          } yield falsity
+        }
+      } yield result
+
+    /** `0 < a` and `0 < b` give `0 < a * b`. */
+    def timesPositive(first: Kernel.Thm, second: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        a <- binary(first.conclusion).map(_._2)
+        b <- binary(second.conclusion).map(_._2)
+        zero <- read(Fraction.Zero, Fraction.Classes)
+        product <- times(a, b)
+        result <- timesLeft(first, second).flatMap(rearranged(_, zero, product))
+      } yield result
+
+    /** `0 < p < a` and `0 < q < b` give `p * q < a * b`: through `a * q`. */
+    def productBelow(pPositive: Kernel.Thm, pBelow: Kernel.Thm, qPositive: Kernel.Thm, qBelow: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        pa <- binary(pBelow.conclusion)
+        qb <- binary(qBelow.conclusion)
+        pq <- times(pa._1, qb._1)
+        aq <- times(pa._2, qb._1)
+        ab <- times(pa._2, qb._2)
+        first <- timesLeft(qPositive, pBelow).flatMap(rearranged(_, pq, aq))
+        aPositive <- lessTransitive(pPositive, pBelow)
+        second <- timesLeft(aPositive, qBelow).flatMap(rearranged(_, aq, ab))
+        result <- lessTransitive(first, second)
+      } yield result
+
+    /** `0 < p` and `q <= 0` give `p * q <= 0`. */
+    def productNonPositive(pPositive: Kernel.Thm, qAtMostZero: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        p <- binary(pPositive.conclusion).map(_._2)
+        q <- binary(qAtMostZero.conclusion).map(_._1)
+        zero <- read(Fraction.Zero, Fraction.Classes)
+        pNonNegative <- weakened(pPositive)
+        scaled <- fact(Fraction.MulLeftMonotone)
+          .flatMap(rules.specAll(_, List(p, q, zero)))
+          .flatMap(rules.mp(_, pNonNegative))
+          .flatMap(rules.mp(_, qAtMostZero))
+        product <- times(p, q)
+        result <- rearranged(scaled, product, zero)
+      } yield result
+
+    /** `a <= b` and `b < c` give `a < c`: if `c <= a` then `c <= b`. */
+    def atMostThenLess(order: Kernel.Thm, less: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      for {
+        a <- binary(order.conclusion).map(_._1)
+        c <- binary(less.conclusion).map(_._2)
+        result <- strict(a, c)(backwards => transitive(backwards, order).flatMap(contradicts(less, _)))
+      } yield result
+
     /** `|- RAT_LT (RAT_ADD q (RAT_NEG RAT_ONE)) q`: if `q <= q - 1`, adding `1 - q` gives `1 <= 0`. */
     def below(q: Term): Either[LogicError, Kernel.Thm] =
       for {
@@ -618,6 +872,11 @@ object Cut {
     ofRationalDefinition: Kernel.Thm,
     additionDefinition: Kernel.Thm,
     negationDefinition: Kernel.Thm,
+    posMulDefinition: Kernel.Thm,
+    multiplicationDefinition: Kernel.Thm,
+    lessThanDefinition: Kernel.Thm,
+    posInverseDefinition: Kernel.Thm,
+    inverseDefinition: Kernel.Thm,
     induction: Kernel.Thm
   ) {
     import sets.rationals.*
@@ -680,7 +939,7 @@ object Cut {
         order <- orderFact(members)
         injective <- injectiveFact(reflexive, order)
         complete <- completeFact(represents, rebuilds)
-        sums <- Sums(represents, rebuilds, antisymmetric, members).facts
+        sums <- Sums(represents, rebuilds, antisymmetric, members, total, transitive, reflexive).facts
       } yield Vector(
         (BelowIsCut, belowIsCut),
         (Represents, represents),
@@ -704,7 +963,10 @@ object Cut {
       represents: Kernel.Thm,
       rebuilds: Kernel.Thm,
       antisymmetric: Kernel.Thm,
-      members: Kernel.Thm
+      members: Kernel.Thm,
+      total: Kernel.Thm,
+      transitive: Kernel.Thm,
+      reflexive: Kernel.Thm
     ) {
       private val r = Term.variable("r", Fraction.Classes)
       private val e = Term.variable("e", Fraction.Classes)
@@ -792,7 +1054,12 @@ object Cut {
           embedded <- embeddedFact(addMembers)
           negIsCut <- negationIsCut
           negMembers <- negationMembers(negIsCut)
-          inverse <- inverseFact(addMembers, negMembers)
+          escape <- escapeFact
+          inverse <- inverseFact(addMembers, negMembers, escape)
+          addNonNegative <- addNonNegativeFact(addMembers)
+          products <- Products(addMembers, addNonNegative, escape).facts
+          group <- groupOf(associative, commutative, zero, inverse)
+          signed <- Signs(group, order, addNonNegative, products.toMap).facts
         } yield Vector(
           (AddIsCut, isCut),
           (AddMembers, addMembers),
@@ -803,8 +1070,10 @@ object Cut {
           (OfRationalAdd, embedded),
           (NegIsCut, negIsCut),
           (NegMembers, negMembers),
-          (AddNegation, inverse)
-        )
+          (Escape, escape),
+          (AddNegation, inverse),
+          (AddNonNegative, addNonNegative)
+        ) ++ products ++ group.facts ++ signed
 
       /**
        * [[Cut.AddIsCut]]. Inhabited by `e + f` for members `e`, `f`; not everything, since for
@@ -1317,7 +1586,7 @@ object Cut {
        * with `r = -u - h`. If none had, induction would put `e + n * h` in `x` for every `n` from a
        * member `e`, and `RAT_ARCHIMEDES` at `(a - e) / h` for a non-member `a` would put `a` there too.
        */
-      private def inverseFact(addMembers: Kernel.Thm, negMembers: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      private def inverseFact(addMembers: Kernel.Thm, negMembers: Kernel.Thm, escape: Kernel.Thm): Either[LogicError, Kernel.Thm] =
         for {
           sum <- addition
           negation <- read(Negation, Type.fun(cutType, cutType))
@@ -1373,104 +1642,28 @@ object Cut {
                   for {
                     partsH <- halves(pairH)
                     (hPositive, hBelow) = partsH
-                    stepped <- plus(p, f)
-                    escapeBody <- member(x, p).flatMap(inP => member(x, stepped).flatMap(logic.mkNot).flatMap(logic.mkConj(inP, _)))
-                    escapeTerm <- logic.mkExists(p, escapeBody)
-                    escapes <- assume(escapeTerm)
-
-                    // There is a member `p` with `p + h` outside: the witness `r = -u - h` works.
-                    viaEscape <- choosing(escapes, p) { pair =>
+                    // Some member `p` has `p + h` outside, and the witness `r = -u - h` works for it.
+                    result <- choosing(clausesX.inhabited, e) { inE =>
                       for {
-                        parts <- halves(pair)
-                        (inP, outside) = parts
-                        rest <- difference(u, p)
-                        radius <- difference(negatedU, f)
-                        negatedH <- minus(f)
-                        radiusPositive <- lessShifted(hBelow, negatedH).flatMap(rearranged(_, zero, radius))
-                        kept <- reflected(rest, radius).flatMap(carriedNot(outside, _))
-                        inNegRest <- intoNeg(x, rest, radius, radiusPositive, kept)
-                          .flatMap(ex => inNeg(negMembers, x, rest).flatMap(Conv.sym).flatMap(eqMp(_, ex)))
-                        inside <- intoSum(x, negX, u, p, inP, inNegRest)
-                        result <- toSum(addMembers, x, negX, u, inside)
-                      } yield result
-                    }
-
-                    // There is none: every member steps to a member, which Archimedes refutes.
-                    viaNone <- for {
-                      notEscapeTerm <- logic.mkNot(escapeTerm)
-                      notEscape <- assume(notEscapeTerm)
-                      steps <- for {
-                        inPTerm <- member(x, p)
-                        inP <- assume(inPTerm)
-                        inStepTerm <- member(x, stepped)
-                        positive <- assume(inStepTerm)
-                        negativeCase <- for {
-                          outside <- logic.mkNot(inStepTerm).flatMap(assume)
-                          both <- rules.conjIntro(inP, outside)
-                          predicate <- logic.destExistsPredicate(escapeTerm).toRight(NotOfForm("an existential", escapeTerm))
-                          witnessed <- rules.existsIntro(predicate, p, both)
-                          result <- rules.notElim(notEscape, witnessed).flatMap(rules.falsityElim(inStepTerm, _))
-                        } yield result
-                        result <- classical.cases(inStepTerm, positive, negativeCase)
-                          .flatMap(rules.disch(inPTerm, _))
-                          .flatMap(rules.gen(p, _))
-                      } yield result
-                      falsity <- choosing(clausesX.inhabited, e) { inE =>
-                        choosing(clausesX.proper, a) { notA =>
+                        escaped <- rules.specAll(escape, List(x, e, f)).flatMap(rules.mp(_, inE)).flatMap(rules.mp(_, hPositive))
+                        result <- choosing(escaped, p) { triple =>
                           for {
-                            walked <- proposition("!n:num. dest_cut x (RAT_ADD e (RAT_MUL (RAT_OF_NUM n) f))")
-                            driver = Induct.withCloser(logic, ring.prove, induction)
-                            minusF <- minus(f)
-                            everywhere <- driver.proveBy(
-                              walked,
-                              base =>
-                                base match {
-                                  case App(_, target) => carriedUnder(inE, target, List(ofNumberZero -> minusF))
-                                  case other => Left(NotOfForm("a membership", other))
-                                },
-                              step =>
-                                for {
-                                  reached <- pointOf(step.hypothesis)
-                                  next <- rules.spec(reached, steps).flatMap(rules.mp(_, step.hypothesis))
-                                  successor <- rules.spec(step.variable, ofNumberSuccessor)
-                                  target <- step.goal match {
-                                    case App(_, at) => Right(at)
-                                    case other => Left(NotOfForm("a membership", other))
-                                  }
-                                  result <- carriedUnder(next, target, List(successor -> minusF))
-                                } yield result
-                            )
-                            gap <- difference(a, e)
-                            inverseH <- app(inverseOf, f)
-                            ratio <- app(multiply, gap, inverseH)
-                            bounded <- fact(Fraction.Archimedes).flatMap(rules.spec(ratio, _))
-                            result <- choosing(bounded, n) { atMost =>
-                              for {
-                                hNonNegative <- weakened(hPositive)
-                                scaled <- fact(Fraction.MulLeftMonotone)
-                                  .flatMap(law => binary(atMost.conclusion).flatMap(sides => rules.specAll(law, List(f, sides._1, sides._2))))
-                                  .flatMap(rules.mp(_, hNonNegative))
-                                  .flatMap(rules.mp(_, atMost))
-                                unit <- positiveNonZero(hPositive)
-                                  .flatMap(nonZero => fact(Fraction.MulInverse).flatMap(rules.spec(f, _)).flatMap(rules.mp(_, nonZero)))
-                                sides <- binary(scaled.conclusion)
-                                gapIs <- ring.consequence(sides._1, gap, List(unit -> gap))
-                                gapBelow <- compared(scaled, gapIs, Conv.refl(sides._2))
-                                moved <- fact(Fraction.AtMostAdd).flatMap(rules.specAll(_, List(gap, sides._2, e))).flatMap(rules.mp(_, gapBelow))
-                                reachedN <- rules.spec(n, everywhere)
-                                far <- pointOf(reachedN)
-                                aBelow <- rearranged(moved, a, far)
-                                inA <- sets.downwardsAtMost(clausesX, destX, a, far, reachedN, aBelow)
-                                result <- rules.notElim(notA, inA)
-                              } yield result
-                            }
+                            parts <- halves(triple)
+                            (inP, farther) = parts
+                            outside <- rules.conjElim2(farther)
+                            rest <- difference(u, p)
+                            radius <- difference(negatedU, f)
+                            negatedH <- minus(f)
+                            radiusPositive <- lessShifted(hBelow, negatedH).flatMap(rearranged(_, zero, radius))
+                            kept <- reflected(rest, radius).flatMap(carriedNot(outside, _))
+                            inNegRest <- intoNeg(x, rest, radius, radiusPositive, kept)
+                              .flatMap(ex => inNeg(negMembers, x, rest).flatMap(Conv.sym).flatMap(eqMp(_, ex)))
+                            inside <- intoSum(x, negX, u, p, inP, inNegRest)
+                            result <- toSum(addMembers, x, negX, u, inside)
                           } yield result
                         }
-                      }
-                      result <- rules.falsityElim(goalTerm, falsity)
-                    } yield result
-
-                    result <- classical.cases(escapeTerm, viaEscape, viaNone)
+                      } yield result
+                    }
                   } yield result
                 }
               } yield result
@@ -1479,6 +1672,2206 @@ object Cut {
 
       private def binaryConstantRat(name: String): Either[LogicError, Term] =
         read(name, Type.fun(Fraction.Classes, Type.fun(Fraction.Classes, Fraction.Classes)))
+
+      /**
+       * [[Cut.Escape]]. From a member `e` and a step `f > 0`, some member `p` at least `e` has `p + f`
+       * outside the cut. Otherwise induction puts `e + n * f` in the cut for every `n`, since each of
+       * those is at least `e`, and `RAT_ARCHIMEDES` at `(a - e) / f` for a non-member `a` puts `a`
+       * there too. This is where the rationals being Archimedean reaches the cuts, once, for both
+       * inverses.
+       */
+      private def escapeFact: Either[LogicError, Kernel.Thm] =
+        for {
+          clausesX <- clausesOf(x)
+          destX <- dest.flatMap(app(_, x))
+          zero <- read(Fraction.Zero, Fraction.Classes)
+          number <- read(Fraction.OfNumber, Type.fun(TyApp(Natural.TypeName, Nil), Fraction.Classes))
+          multiply <- binaryConstantRat(Fraction.Multiplication)
+          inverseOf <- read(Fraction.Inverse, Type.fun(Fraction.Classes, Fraction.Classes))
+          ofNumberZero <- fact(Fraction.OfNumberZero)
+          ofNumberSuccessor <- fact(Fraction.OfNumberSuccessor)
+          ofNumberNonNeg <- fact(Fraction.OfNumberNonNegative)
+          n = Term.variable("n", TyApp(Natural.TypeName, Nil))
+
+          inETerm <- member(x, e)
+          inE <- assume(inETerm)
+          positiveTerm <- lt(zero, f)
+          positive <- assume(positiveTerm)
+          stepped <- plus(p, f)
+          body <- for {
+            inP <- member(x, p)
+            atLeast <- le(e, p)
+            outside <- member(x, stepped).flatMap(logic.mkNot)
+            rest <- logic.mkConj(atLeast, outside)
+            result <- logic.mkConj(inP, rest)
+          } yield result
+          goal <- logic.mkExists(p, body)
+          predicate <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
+          viaGoal <- assume(goal)
+
+          viaNone <- for {
+            notGoal <- logic.mkNot(goal).flatMap(assume)
+            steps <- for {
+              inPTerm <- member(x, p)
+              inP <- assume(inPTerm)
+              atLeastTerm <- le(e, p)
+              atLeast <- assume(atLeastTerm)
+              inStepTerm <- member(x, stepped)
+              positiveCase <- assume(inStepTerm)
+              negativeCase <- for {
+                outside <- logic.mkNot(inStepTerm).flatMap(assume)
+                witnessed <- rules.conjIntro(atLeast, outside).flatMap(rules.conjIntro(inP, _)).flatMap(rules.existsIntro(predicate, p, _))
+                result <- rules.notElim(notGoal, witnessed).flatMap(rules.falsityElim(inStepTerm, _))
+              } yield result
+              result <- classical.cases(inStepTerm, positiveCase, negativeCase)
+                .flatMap(rules.disch(atLeastTerm, _))
+                .flatMap(rules.disch(inPTerm, _))
+                .flatMap(rules.gen(p, _))
+            } yield result
+            fNonNeg <- weakened(positive)
+            /** `e <= e + OF k * f`, from `0 <= OF k` and `0 <= f`. */
+            aboveE = (k: Term) =>
+              for {
+                numberK <- app(number, k)
+                kf <- app(multiply, numberK, f)
+                nonNeg <- rules.spec(k, ofNumberNonNeg)
+                productNonNeg <- fact(Fraction.AtMostMul).flatMap(rules.specAll(_, List(numberK, f))).flatMap(rules.mp(_, nonNeg)).flatMap(rules.mp(_, fNonNeg))
+                shifted <- fact(Fraction.AtMostAdd).flatMap(rules.specAll(_, List(zero, kf, e))).flatMap(rules.mp(_, productNonNeg))
+                target <- plus(e, kf)
+                result <- rearranged(shifted, e, target)
+              } yield result
+            falsity <- choosing(clausesX.proper, a) { notA =>
+              for {
+                walked <- proposition("!n:num. dest_cut x (RAT_ADD e (RAT_MUL (RAT_OF_NUM n) f))")
+                driver = Induct.withCloser(logic, ring.prove, induction)
+                minusF <- minus(f)
+                everywhere <- driver.proveBy(
+                  walked,
+                  base =>
+                    base match {
+                      case App(_, target) => carriedUnder(inE, target, List(ofNumberZero -> minusF))
+                      case other => Left(NotOfForm("a membership", other))
+                    },
+                  step =>
+                    for {
+                      reached <- pointOf(step.hypothesis)
+                      bound <- aboveE(step.variable)
+                      next <- rules.spec(reached, steps).flatMap(rules.mp(_, step.hypothesis)).flatMap(rules.mp(_, bound))
+                      successor <- rules.spec(step.variable, ofNumberSuccessor)
+                      target <- step.goal match {
+                        case App(_, at) => Right(at)
+                        case other => Left(NotOfForm("a membership", other))
+                      }
+                      result <- carriedUnder(next, target, List(successor -> minusF))
+                    } yield result
+                )
+                gap <- difference(a, e)
+                inverseF <- app(inverseOf, f)
+                ratio <- app(multiply, gap, inverseF)
+                bounded <- fact(Fraction.Archimedes).flatMap(rules.spec(ratio, _))
+                result <- choosing(bounded, n) { atMost =>
+                  for {
+                    scaled <- fact(Fraction.MulLeftMonotone)
+                      .flatMap(law => binary(atMost.conclusion).flatMap(sides => rules.specAll(law, List(f, sides._1, sides._2))))
+                      .flatMap(rules.mp(_, fNonNeg))
+                      .flatMap(rules.mp(_, atMost))
+                    unit <- positiveNonZero(positive)
+                      .flatMap(nonZero => fact(Fraction.MulInverse).flatMap(rules.spec(f, _)).flatMap(rules.mp(_, nonZero)))
+                    sides <- binary(scaled.conclusion)
+                    gapIs <- ring.consequence(sides._1, gap, List(unit -> gap))
+                    gapBelow <- compared(scaled, gapIs, Conv.refl(sides._2))
+                    moved <- fact(Fraction.AtMostAdd).flatMap(rules.specAll(_, List(gap, sides._2, e))).flatMap(rules.mp(_, gapBelow))
+                    reachedN <- rules.spec(n, everywhere)
+                    far <- pointOf(reachedN)
+                    aBelow <- rearranged(moved, a, far)
+                    inA <- sets.downwardsAtMost(clausesX, destX, a, far, reachedN, aBelow)
+                    result <- rules.notElim(notA, inA)
+                  } yield result
+                }
+              } yield result
+            }
+            result <- rules.falsityElim(goal, falsity)
+          } yield result
+
+          result <- classical.cases(goal, viaGoal, viaNone)
+            .flatMap(rules.disch(positiveTerm, _))
+            .flatMap(rules.disch(inETerm, _))
+            .flatMap(rules.gen(f, _))
+            .flatMap(rules.gen(e, _))
+            .flatMap(rules.gen(x, _))
+        } yield result
+
+      /** [[Cut.AddNonNegative]]: a negative `u` splits as `a + (u - a)` with both halves negative. */
+      private def addNonNegativeFact(addMembers: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+        for {
+          zero <- read(Fraction.Zero, Fraction.Classes)
+          zeroCut <- read(OfRational, Type.fun(Fraction.Classes, cutType)).flatMap(app(_, zero))
+          atMost <- read(AtMost, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+          hx <- app(atMost, zeroCut, x).flatMap(assume)
+          hy <- app(atMost, zeroCut, y).flatMap(assume)
+          sumCut <- addition.flatMap(app(_, x, y))
+          order <- included(zeroCut, sumCut) { inZero =>
+            for {
+              negative <- memberOf(members, zero, u).flatMap(eqMp(_, inZero))
+              between <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(u, zero))).flatMap(rules.mp(_, negative))
+              result <- choosing(between, a) { pair =>
+                for {
+                  parts <- halves(pair)
+                  (uBelowA, aNegative) = parts
+                  inX <- memberOf(members, zero, a).flatMap(Conv.sym).flatMap(eqMp(_, aNegative)).flatMap(inside(hx, a, _))
+                  rest <- difference(u, a)
+                  negatedA <- minus(a)
+                  restNegative <- lessShifted(uBelowA, negatedA).flatMap(rearranged(_, rest, zero))
+                  inY <- memberOf(members, zero, rest).flatMap(Conv.sym).flatMap(eqMp(_, restNegative)).flatMap(inside(hy, rest, _))
+                  witnessed <- intoSum(x, y, u, a, inX, inY)
+                  result <- toSum(addMembers, x, y, u, witnessed)
+                } yield result
+              }
+            } yield result
+          }
+          result <- rules.disch(hy.conclusion, order)
+            .flatMap(rules.disch(hx.conclusion, _))
+            .flatMap(rules.gen(y, _))
+            .flatMap(rules.gen(x, _))
+        } yield result
+
+      /**
+       * The product on the non-negative cone. Every argument here is about a membership of the core,
+       * `r < 0 \/ ?p q. p in x /\ q in y /\ 0 < p /\ 0 < q /\ r < p * q`, taken apart by [[fromCore]]
+       * and put together by [[intoCore]], with the rationals' strict monotonicity doing the arithmetic.
+       */
+      private final case class Products(addMembers: Kernel.Thm, addNonNegative: Kernel.Thm, escape: Kernel.Thm) {
+        private val c1 = Term.variable("c1", Fraction.Classes)
+        private val c2 = Term.variable("c2", Fraction.Classes)
+        private val c3 = Term.variable("c3", Fraction.Classes)
+        private val c4 = Term.variable("c4", Fraction.Classes)
+        private val c5 = Term.variable("c5", Fraction.Classes)
+        /** The larger member [[inSumOf]] picks, apart from every witness a caller may hand it. */
+        private val c6 = Term.variable("c6", Fraction.Classes)
+        private val c7 = Term.variable("c7", Fraction.Classes)
+
+        private def zero: Either[LogicError, Term] = read(Fraction.Zero, Fraction.Classes)
+        private def one: Either[LogicError, Term] = read(Fraction.One, Fraction.Classes)
+        private def ofRational(q: Term): Either[LogicError, Term] = read(OfRational, Type.fun(Fraction.Classes, cutType)).flatMap(app(_, q))
+        private def product(left: Term, right: Term): Either[LogicError, Term] =
+          read(PosMul, Type.fun(cutType, Type.fun(cutType, cutType))).flatMap(app(_, left, right))
+        private def nonNegative(cut: Term): Either[LogicError, Term] =
+          for {
+            atMost <- read(AtMost, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            zeroCut <- zero.flatMap(ofRational)
+            result <- app(atMost, zeroCut, cut)
+          } yield result
+
+        private def coreMemberTerm(left: Term, right: Term, at: Term): Either[LogicError, Term] =
+          substituted(CoreMemberText, None, Map(x -> left, y -> right, r -> at))
+        private def coreSet(left: Term, right: Term): Either[LogicError, Term] =
+          substituted(CoreSetText, Some(setType), Map(x -> left, y -> right))
+
+        /** `0 <= c` and `at < 0` give `dest_cut c at`. */
+        private def holdsNegative(nonNeg: Kernel.Thm, less: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            at <- binary(less.conclusion).map(_._1)
+            zeroTerm <- zero
+            inZero <- memberOf(members, zeroTerm, at).flatMap(Conv.sym).flatMap(eqMp(_, less))
+            result <- inside(nonNeg, at, inZero)
+          } yield result
+
+        /** `0 <= c` and `~(dest_cut c a)` give `0 <= a`. */
+        private def outsideNonNegative(nonNeg: Kernel.Thm, outside: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          outside.conclusion match {
+            case App(_, App(_, at)) =>
+              for {
+                zeroTerm <- zero
+                lessTerm <- lt(at, zeroTerm)
+                less <- assume(lessTerm)
+                falsity <- holdsNegative(nonNeg, less).flatMap(rules.notElim(outside, _))
+                notLessThm <- rules.notIntro(lessTerm, falsity)
+                result <- notLess(notLessThm)
+              } yield result
+            case other => Left(NotOfForm("a negated membership", other))
+          }
+
+        private def intoCoreNegative(left: Term, right: Term, at: Term, less: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            target <- coreMemberTerm(left, right, at)
+            disjuncts <- logic.destDisj(target).toRight(NotOfForm("a disjunction", target))
+            result <- rules.disjIntro1(disjuncts._2, less)
+          } yield result
+
+        private def intoCore(
+          left: Term, right: Term, at: Term, pv: Term, qv: Term,
+          inP: Kernel.Thm, inQ: Kernel.Thm, pPositive: Kernel.Thm, qPositive: Kernel.Thm, less: Kernel.Thm
+        ): Either[LogicError, Kernel.Thm] =
+          for {
+            target <- coreMemberTerm(left, right, at)
+            disjuncts <- logic.destDisj(target).toRight(NotOfForm("a disjunction", target))
+            predicateP <- logic.destExistsPredicate(disjuncts._2).toRight(NotOfForm("an existential", disjuncts._2))
+            inner <- app(predicateP, pv).flatMap(Conv.betaRoot).flatMap(rightOf)
+            predicateQ <- logic.destExistsPredicate(inner).toRight(NotOfForm("an existential", inner))
+            tail <- rules.conjIntro(qPositive, less)
+            third <- rules.conjIntro(pPositive, tail)
+            second <- rules.conjIntro(inQ, third)
+            all <- rules.conjIntro(inP, second)
+            withQ <- rules.existsIntro(predicateQ, qv, all)
+            withP <- rules.existsIntro(predicateP, pv, withQ)
+            result <- rules.disjIntro2(disjuncts._1, withP)
+          } yield result
+
+        /** A membership of the core taken apart: the negative case, or witnesses `pv`, `qv` and five facts. */
+        private def fromCore(held: Kernel.Thm, pv: FVar, qv: FVar)(
+          negative: Kernel.Thm => Either[LogicError, Kernel.Thm],
+          positive: (Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+        ): Either[LogicError, Kernel.Thm] =
+          for {
+            parts <- logic.destDisj(held.conclusion).toRight(NotOfForm("a disjunction", held.conclusion))
+            negativeCase <- assume(parts._1).flatMap(negative)
+            positiveCase <- assume(parts._2).flatMap(existential =>
+              choosing(existential, pv) { inner =>
+                choosing(inner, qv) { all =>
+                  for {
+                    h1 <- halves(all)
+                    (inP, rest1) = h1
+                    h2 <- halves(rest1)
+                    (inQ, rest2) = h2
+                    h3 <- halves(rest2)
+                    (pPositive, rest3) = h3
+                    h4 <- halves(rest3)
+                    (qPositive, less) = h4
+                    result <- positive(inP, inQ, pPositive, qPositive, less)
+                  } yield result
+                }
+              })
+            result <- rules.disjElim(held, negativeCase, positiveCase)
+          } yield result
+
+        /** `|- dest_cut (CUT_PMUL left right) at = (the core's membership)`, from the members fact at the pair. */
+        private def inCore(atPair: Kernel.Thm, at: Term): Either[LogicError, Kernel.Thm] =
+          for {
+            applied <- Conv.apThm(atPair, at)
+            reduced <- rightOf(applied).flatMap(Conv.betaRoot)
+            result <- Conv.trans(applied, reduced)
+          } yield result
+        private def outOfCore(atPair: Kernel.Thm, held: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          pointOf(held).flatMap(at => inCore(atPair, at)).flatMap(eqMp(_, held))
+        private def backIntoCore(atPair: Kernel.Thm, at: Term, core: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          inCore(atPair, at).flatMap(Conv.sym).flatMap(eqMp(_, core))
+
+
+        /**
+         * A positive member of a cut known to be above zero: `~(c <= 0)` gives, by `NOT_FORALL`, a
+         * member `t` outside zero's cut, so `0 <= t`, and the cut's lack of a greatest element gives a
+         * larger member, which is positive. Handed to `body` as a witness under an elimination.
+         */
+        private def withPositiveMember(cut: Term, clauses: Clauses, positive: Kernel.Thm, first: FVar, second: FVar)(
+          body: (FVar, Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+        ): Either[LogicError, Kernel.Thm] =
+          for {
+            zeroTerm <- zero
+            zeroCut <- ofRational(zeroTerm)
+            notAtMost <- Conv.unfold(lessThanDefinition, List(zeroCut, cut)).flatMap(eqMp(_, positive))
+            opened <- atMostOpened(cut, zeroCut)
+            notAll <- notAtMost.conclusion match {
+              case App(not, _) => Conv.apTerm(not, opened).flatMap(eqMp(_, notAtMost))
+              case other => Left(NotOfForm("a negation", other))
+            }
+            inclusion <- rightOf(opened)
+            predicate <- logic.destForallPredicate(inclusion).toRight(NotOfForm("a universal", inclusion))
+            notForall <- classical.fact(Classical.NotForall)
+              .map(Kernel.instType(Map(Classical.TypeVariable -> Fraction.Classes), _))
+              .flatMap(rules.spec(predicate, _))
+            reduced <- Conv.betaNormalise(notForall.conclusion).flatMap(eqMp(_, notForall))
+            witness <- rules.mp(reduced, notAll)
+            result <- choosing(witness, first) { failure =>
+              for {
+                inCutTerm <- member(cut, first)
+                inZeroTerm <- member(zeroCut, first)
+                notInZero <- for {
+                  inZero <- assume(inZeroTerm)
+                  implication <- rules.disch(inCutTerm, inZero)
+                  falsity <- rules.notElim(failure, implication)
+                  result <- rules.notIntro(inZeroTerm, falsity)
+                } yield result
+                inCut <- for {
+                  positiveCase <- assume(inCutTerm)
+                  notIn <- logic.mkNot(inCutTerm).flatMap(assume)
+                  implication <- assume(inCutTerm)
+                    .flatMap(rules.notElim(notIn, _))
+                    .flatMap(rules.falsityElim(inZeroTerm, _))
+                    .flatMap(rules.disch(inCutTerm, _))
+                  negativeCase <- rules.notElim(failure, implication).flatMap(rules.falsityElim(inCutTerm, _))
+                  result <- classical.cases(inCutTerm, positiveCase, negativeCase)
+                } yield result
+                notNegative <- for {
+                  lessTerm <- lt(first, zeroTerm)
+                  less <- assume(lessTerm)
+                  falsity <- memberOf(members, zeroTerm, first).flatMap(Conv.sym).flatMap(eqMp(_, less)).flatMap(rules.notElim(notInZero, _))
+                  result <- rules.notIntro(lessTerm, falsity)
+                } yield result
+                nonNeg <- notLess(notNegative)
+                higher <- rules.spec(first, clauses.open).flatMap(rules.mp(_, inCut))
+                result <- choosing(higher, second) { pair =>
+                  for {
+                    parts <- halves(pair)
+                    (inHigher, below) = parts
+                    higherPositive <- atMostThenLess(nonNeg, below)
+                    result <- body(second, inHigher, higherPositive)
+                  } yield result
+                }
+              } yield result
+            }
+          } yield result
+
+        /** [[Cut.PosMulPositive]]: zero is in the core, below the product of two positive members. */
+        private def positiveFact(coreMembers: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            zeroTerm <- zero
+            zeroCut <- ofRational(zeroTerm)
+            lessConst <- read(LessThan, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            px <- app(lessConst, zeroCut, x).flatMap(assume)
+            py <- app(lessConst, zeroCut, y).flatMap(assume)
+            hx <- nonNegOfPositive(x, px)
+            hy <- nonNegOfPositive(y, py)
+            clausesX <- clausesOf(x)
+            clausesY <- clausesOf(y)
+            atPair <- membersAt(coreMembers, x, y, hx, hy)
+            xy <- product(x, y)
+            atMost <- read(AtMost, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            result <- withPositiveMember(x, clausesX, px, c1, c2) { (p, inP, pPositive) =>
+              withPositiveMember(y, clausesY, py, c3, c4) { (q, inQ, qPositive) =>
+                for {
+                  productPositive <- timesPositive(pPositive, qPositive)
+                  zeroIn <- intoCore(x, y, zeroTerm, p, q, inP, inQ, pPositive, qPositive, productPositive)
+                    .flatMap(backIntoCore(atPair, zeroTerm, _))
+                  belowTerm <- app(atMost, xy, zeroCut)
+                  below <- assume(belowTerm)
+                  inZero <- inside(below, zeroTerm, zeroIn)
+                  loop <- memberOf(members, zeroTerm, zeroTerm).flatMap(eqMp(_, inZero))
+                  falsity <- irreflexive(zeroTerm).flatMap(rules.notElim(_, loop))
+                  notBelow <- rules.notIntro(belowTerm, falsity)
+                  result <- Conv.unfold(lessThanDefinition, List(zeroCut, xy)).flatMap(Conv.sym).flatMap(eqMp(_, notBelow))
+                } yield result
+              }
+            }
+            discharged <- rules.disch(py.conclusion, result)
+              .flatMap(rules.disch(px.conclusion, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield discharged
+
+
+        private def pinvMemberTerm(of: Term, at: Term): Either[LogicError, Term] =
+          substituted(PinvMemberText, None, Map(x -> of, r -> at))
+        private def pinvSet(of: Term): Either[LogicError, Term] = substituted(PinvSetText, Some(setType), Map(x -> of))
+        private def inverseOf(t: Term): Either[LogicError, Term] =
+          read(Fraction.Inverse, Type.fun(Fraction.Classes, Fraction.Classes)).flatMap(app(_, t))
+        private def inversePositive(positive: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          binary(positive.conclusion).flatMap(ab => fact(Fraction.InversePositive).flatMap(rules.spec(ab._2, _)).flatMap(rules.mp(_, positive)))
+        /** `|- t * RAT_INV t = 1` for `0 < t`. */
+        private def unitAt(positive: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            t <- binary(positive.conclusion).map(_._2)
+            nonZero <- positiveNonZero(positive)
+            result <- fact(Fraction.MulInverse).flatMap(rules.spec(t, _)).flatMap(rules.mp(_, nonZero))
+          } yield result
+
+        private def intoPinvLow(of: Term, at: Term, atMost: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            target <- pinvMemberTerm(of, at)
+            disjuncts <- logic.destDisj(target).toRight(NotOfForm("a disjunction", target))
+            result <- rules.disjIntro1(disjuncts._2, atMost)
+          } yield result
+
+        private def intoPinv(of: Term, at: Term, sv: Term, outside: Kernel.Thm, sPositive: Kernel.Thm, below: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            target <- pinvMemberTerm(of, at)
+            disjuncts <- logic.destDisj(target).toRight(NotOfForm("a disjunction", target))
+            predicate <- logic.destExistsPredicate(disjuncts._2).toRight(NotOfForm("an existential", disjuncts._2))
+            tail <- rules.conjIntro(sPositive, below)
+            all <- rules.conjIntro(outside, tail)
+            witnessed <- rules.existsIntro(predicate, sv, all)
+            result <- rules.disjIntro2(disjuncts._1, witnessed)
+          } yield result
+
+        /** A membership of `CUT_PINV` taken apart: at most zero, or a witness `sv` and three facts. */
+        private def fromPinv(held: Kernel.Thm, sv: FVar)(
+          low: Kernel.Thm => Either[LogicError, Kernel.Thm],
+          high: (Kernel.Thm, Kernel.Thm, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+        ): Either[LogicError, Kernel.Thm] =
+          for {
+            parts <- logic.destDisj(held.conclusion).toRight(NotOfForm("a disjunction", held.conclusion))
+            lowCase <- assume(parts._1).flatMap(low)
+            highCase <- assume(parts._2).flatMap(existential =>
+              choosing(existential, sv) { all =>
+                for {
+                  h1 <- halves(all)
+                  (outside, rest) = h1
+                  h2 <- halves(rest)
+                  (sPositive, below) = h2
+                  result <- high(outside, sPositive, below)
+                } yield result
+              })
+            result <- rules.disjElim(held, lowCase, highCase)
+          } yield result
+
+        private def positiveHypothesis(cut: Term): Either[LogicError, Kernel.Thm] =
+          for {
+            lessConst <- read(LessThan, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            zeroCut <- zero.flatMap(ofRational)
+            result <- app(lessConst, zeroCut, cut).flatMap(assume)
+          } yield result
+
+        /**
+         * [[Cut.PosInverseIsCut]]. It holds zero; it does not hold `1 / p` for a positive member `p`,
+         * since a positive non-member `s` is above `p`, so `s / p > 1`; it is closed downwards because
+         * `s > 0`; and it has no greatest element, because `r * s < 1` leaves room below `1 / s`.
+         */
+        private def pinvIsCut: Either[LogicError, Kernel.Thm] =
+          for {
+            px <- positiveHypothesis(x)
+            clausesX <- clausesOf(x)
+            destX <- dest.flatMap(app(_, x))
+            zeroTerm <- zero
+            oneTerm <- one
+            set <- pinvSet(x)
+            body <- sets.unfolded(set).flatMap(rightOf)
+            clauseTerms <- body match {
+              case App(App(_, inhabited), App(App(_, proper), App(App(_, closed), open))) => Right((inhabited, proper, closed, open))
+              case other => Left(NotOfForm("the four clauses of IS_CUT", other))
+            }
+            (inhabitedTerm, properTerm, _, _) = clauseTerms
+
+            inhabited <- for {
+              reflexive <- fact(Fraction.AtMostReflexive).flatMap(rules.spec(zeroTerm, _))
+              member <- intoPinvLow(x, zeroTerm, reflexive)
+              predicate <- logic.destExistsPredicate(inhabitedTerm).toRight(NotOfForm("an existential", inhabitedTerm))
+              result <- rules.existsIntro(predicate, zeroTerm, member)
+            } yield result
+
+            proper <- withPositiveMember(x, clausesX, px, c1, c2) { (pv, inP, pPositive) =>
+              for {
+                t <- inverseOf(pv)
+                tPositive <- inversePositive(pPositive)
+                unit <- unitAt(pPositive)
+                memberTerm <- pinvMemberTerm(x, t)
+                held <- assume(memberTerm)
+                falsity <- fromPinv(held, c3)(
+                  atMostZero => contradicts(tPositive, atMostZero),
+                  (outside, _, below) =>
+                    for {
+                      pBelowS <- belowOutside(clausesX, destX, inP, outside)
+                      scaled <- timesLeft(tPositive, pBelowS)
+                      sides <- binary(scaled.conclusion)
+                      oneIs <- ring.consequence(sides._1, oneTerm, List(unit -> oneTerm))
+                      oneBelow <- compared(scaled, oneIs, Conv.refl(sides._2))
+                      loop <- lessTransitive(oneBelow, below)
+                      result <- irreflexive(oneTerm).flatMap(rules.notElim(_, loop))
+                    } yield result
+                )
+                notIn <- rules.notIntro(memberTerm, falsity)
+                predicate <- logic.destExistsPredicate(properTerm).toRight(NotOfForm("an existential", properTerm))
+                result <- rules.existsIntro(predicate, t, notIn)
+              } yield result
+            }
+
+            closed <- for {
+              inBTerm <- pinvMemberTerm(x, b)
+              less <- lt(a, b)
+              both <- logic.mkConj(inBTerm, less).flatMap(assume)
+              parts <- halves(both)
+              (inB, ab) = parts
+              reached <- fromPinv(inB, c3)(
+                atMostZero => weakened(ab).flatMap(sets.rationals.transitive(_, atMostZero)).flatMap(intoPinvLow(x, a, _)),
+                (outside, sPositive, below) =>
+                  for {
+                    as <- times(a, c3)
+                    bs <- times(b, c3)
+                    scaled <- timesLeft(sPositive, ab).flatMap(rearranged(_, as, bs))
+                    result <- lessTransitive(scaled, below).flatMap(intoPinv(x, a, c3, outside, sPositive, _))
+                  } yield result
+              )
+              result <- rules.disch(both.conclusion, reached).flatMap(rules.gen(b, _)).flatMap(rules.gen(a, _))
+            } yield result
+
+            open <- for {
+              inA <- pinvMemberTerm(x, a).flatMap(assume)
+              goal <- pinvMemberTerm(x, b).flatMap(ib => lt(a, b).flatMap(ab => logic.mkConj(ib, ab))).flatMap(body => lift(Term.abs(b, body)))
+              /** Room below `1 / s`: a `b` with `b * s < 1` strictly above `lower`, for `lower < 1 / s`. */
+              above = (lower: Term, lowerBelow: Kernel.Thm, sv: Term, outside: Kernel.Thm, sPositive: Kernel.Thm, atLeast: Kernel.Thm => Either[LogicError, Kernel.Thm]) =>
+                for {
+                  is <- inverseOf(sv)
+                  unit <- unitAt(sPositive)
+                  between <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(lower, is))).flatMap(rules.mp(_, lowerBelow))
+                  result <- choosing(between, c7) { pair =>
+                    for {
+                      parts <- halves(pair)
+                      (lowerBelowB, bBelow) = parts
+                      scaled <- timesLeft(sPositive, bBelow)
+                      sides <- binary(scaled.conclusion)
+                      bs <- times(c7, sv)
+                      bsIs <- same(sides._1, bs)
+                      oneIs <- ring.consequence(sides._2, oneTerm, List(unit -> oneTerm))
+                      bsBelow <- compared(scaled, bsIs, oneIs)
+                      member <- intoPinv(x, c7, sv, outside, sPositive, bsBelow)
+                      aBelowB <- atLeast(lowerBelowB)
+                      both <- rules.conjIntro(member, aBelowB)
+                      result <- rules.existsIntro(goal, c7, both)
+                    } yield result
+                  }
+                } yield result
+              reached <- fromPinv(inA, c3)(
+                atMostZero =>
+                  choosing(clausesX.proper, c4) { notS =>
+                    withPositiveMember(x, clausesX, px, c5, c6) { (pv, inP, pPositive) =>
+                      for {
+                        sPositive <- belowOutside(clausesX, destX, inP, notS).flatMap(lessTransitive(pPositive, _))
+                        isPositive <- inversePositive(sPositive)
+                        result <- above(zeroTerm, isPositive, c4, notS, sPositive, bPositive => atMostThenLess(atMostZero, bPositive))
+                      } yield result
+                    }
+                  },
+                (outside, sPositive, below) =>
+                  for {
+                    is <- inverseOf(c3)
+                    isPositive <- inversePositive(sPositive)
+                    unit <- unitAt(sPositive)
+                    scaled <- timesLeft(isPositive, below)
+                    sides <- binary(scaled.conclusion)
+                    aIs <- ring.consequence(sides._1, a, List(unit -> a))
+                    isIs <- same(sides._2, is)
+                    aBelow <- compared(scaled, aIs, isIs)
+                    result <- above(a, aBelow, c3, outside, sPositive, Right(_))
+                  } yield result
+              )
+              result <- rules.disch(inA.conclusion, reached).flatMap(rules.gen(a, _))
+            } yield result
+
+            isCut <- sets.closedFrom(set, inhabited, proper, closed, open)
+            result <- rules.disch(px.conclusion, isCut).flatMap(rules.gen(x, _))
+          } yield result
+
+        /** [[Cut.PosInverseMembers]]: the definition, then the characterisation. */
+        private def pinvMembersFact(isCut: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            px <- positiveHypothesis(x)
+            unfolded <- Conv.unfold(posInverseDefinition, List(x))
+            carriedDest <- dest.flatMap(Conv.apTerm(_, unfolded))
+            set <- pinvSet(x)
+            atSet <- rules.spec(x, isCut).flatMap(rules.mp(_, px))
+            back <- rules.spec(set, rebuilds).flatMap(rules.mp(_, atSet))
+            result <- Conv.trans(carriedDest, back).flatMap(rules.disch(px.conclusion, _)).flatMap(rules.gen(x, _))
+          } yield result
+
+        /** [[Cut.PosInverseNonNegative]]: every negative is at most zero, so in the set. */
+        private def pinvNonNegFact(inverseMembers: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            px <- positiveHypothesis(x)
+            zeroTerm <- zero
+            zeroCut <- ofRational(zeroTerm)
+            pinv <- read(PosInverse, Type.fun(cutType, cutType)).flatMap(app(_, x))
+            atX <- rules.spec(x, inverseMembers).flatMap(rules.mp(_, px))
+            order <- included(zeroCut, pinv) { inZero =>
+              for {
+                negative <- memberOf(members, zeroTerm, u).flatMap(eqMp(_, inZero))
+                member <- weakened(negative).flatMap(intoPinvLow(x, u, _))
+                result <- backIntoCore(atX, u, member)
+              } yield result
+            }
+            result <- rules.disch(px.conclusion, order).flatMap(rules.gen(x, _))
+          } yield result
+
+        /**
+         * [[Cut.PosMulInverse]]. A witness `p * q` with `q * s < 1` for a non-member `s > p` is below
+         * one. Conversely for `0 <= u < 1`: take `u < λ < 1`, a positive member `p0` and the step
+         * `h = p0 (1 - λ) / λ`; `CUT_ESCAPE` gives a member `p >= p0` with `s = p + h` outside, and
+         * then `λ s <= p`, so `u s < p`, and density puts a `q` with `u < p q` and `q s < 1`.
+         */
+        private def mulPinvFact(coreMembers: Kernel.Thm, inverseMembers: Kernel.Thm, inverseNonNeg: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            px <- positiveHypothesis(x)
+            hx <- nonNegOfPositive(x, px)
+            clausesX <- clausesOf(x)
+            destX <- dest.flatMap(app(_, x))
+            zeroTerm <- zero
+            oneTerm <- one
+            oneCut <- ofRational(oneTerm)
+            pinv <- read(PosInverse, Type.fun(cutType, cutType)).flatMap(app(_, x))
+            nnInv <- rules.spec(x, inverseNonNeg).flatMap(rules.mp(_, px))
+            atPair <- membersAt(coreMembers, x, pinv, hx, nnInv)
+            atInverse <- rules.spec(x, inverseMembers).flatMap(rules.mp(_, px))
+            positiveOne <- zeroBelowOne
+            productCut <- product(x, pinv)
+            result <- equalCuts(productCut, oneCut)(
+              held =>
+                for {
+                  core <- outOfCore(atPair, held)
+                  goal <- dest.flatMap(app(_, oneCut, u))
+                  result <- fromCore(core, c1, c2)(
+                    negative => lessTransitive(negative, positiveOne).flatMap(less => memberOf(members, oneTerm, u).flatMap(Conv.sym).flatMap(eqMp(_, less))),
+                    (inP, inQ, _, qPositive, less) =>
+                      for {
+                        inverseHeld <- outOfCore(atInverse, inQ)
+                        result <- fromPinv(inverseHeld, c3)(
+                          atMostZero => contradicts(qPositive, atMostZero).flatMap(rules.falsityElim(goal, _)),
+                          (outside, _, qsBelow) =>
+                            for {
+                              pBelowS <- belowOutside(clausesX, destX, inP, outside)
+                              pq <- times(c1, c2)
+                              qs <- times(c2, c3)
+                              scaled <- timesLeft(qPositive, pBelowS).flatMap(rearranged(_, pq, qs))
+                              uBelow <- lessTransitive(less, scaled).flatMap(lessTransitive(_, qsBelow))
+                              result <- memberOf(members, oneTerm, u).flatMap(Conv.sym).flatMap(eqMp(_, uBelow))
+                            } yield result
+                        )
+                      } yield result
+                  )
+                } yield result,
+              held =>
+                for {
+                  uBelowOne <- memberOf(members, oneTerm, u).flatMap(eqMp(_, held))
+                  negativeTerm <- lt(u, zeroTerm)
+                  viaNegative <- assume(negativeTerm)
+                    .flatMap(intoCoreNegative(x, pinv, u, _))
+                    .flatMap(backIntoCore(atPair, u, _))
+                  notNegative <- logic.mkNot(negativeTerm).flatMap(assume)
+                  uNonNeg <- notLess(notNegative)
+                  between <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(u, oneTerm))).flatMap(rules.mp(_, uBelowOne))
+                  viaNonNegative <- choosing(between, c1) { pairL =>
+                    for {
+                      partsL <- halves(pairL)
+                      (uBelowL, lBelowOne) = partsL
+                      lPositive <- atMostThenLess(uNonNeg, uBelowL)
+                      withPositiveResult <- withPositiveMember(x, clausesX, px, c2, c3) { (p0, inP0, p0Positive) =>
+                        for {
+                          negatedL <- minus(c1)
+                          oneMinus <- plus(oneTerm, negatedL)
+                          oneMinusPositive <- lessShifted(lBelowOne, negatedL).flatMap(rearranged(_, zeroTerm, oneMinus))
+                          il <- inverseOf(c1)
+                          ilPositive <- inversePositive(lPositive)
+                          unitL <- unitAt(lPositive)
+                          p0om <- times(p0, oneMinus)
+                          h <- times(p0om, il)
+                          hPositive <- timesPositive(p0Positive, oneMinusPositive).flatMap(timesPositive(_, ilPositive))
+                          escaped <- rules.specAll(escape, List(x, p0, h)).flatMap(rules.mp(_, inP0)).flatMap(rules.mp(_, hPositive))
+                          result <- choosing(escaped, c4) { triple =>
+                            for {
+                              parts <- halves(triple)
+                              (inP, farther) = parts
+                              p0AtMost <- rules.conjElim1(farther)
+                              outside <- rules.conjElim2(farther)
+                              pPositive <- lessThenAtMost(p0Positive, p0AtMost)
+                              sTerm <- plus(c4, h)
+                              sPositive <- lessShifted(hPositive, c4).flatMap(rearranged(_, c4, sTerm)).flatMap(lessTransitive(pPositive, _))
+                              // λ s <= p
+                              omNonNeg <- weakened(oneMinusPositive)
+                              scaledOm <- fact(Fraction.MulLeftMonotone).flatMap(rules.specAll(_, List(oneMinus, p0, c4))).flatMap(rules.mp(_, omNonNeg)).flatMap(rules.mp(_, p0AtMost))
+                              scaledSides <- binary(scaledOm.conclusion)
+                              lp <- times(c1, c4)
+                              added <- fact(Fraction.AtMostAdd).flatMap(rules.specAll(_, List(scaledSides._1, scaledSides._2, lp))).flatMap(rules.mp(_, scaledOm))
+                              addedSides <- binary(added.conclusion)
+                              ls <- times(c1, sTerm)
+                              omp0 <- times(oneMinus, p0)
+                              minusOmp0 <- minus(omp0)
+                              leftIs <- ring.consequence(addedSides._1, ls, List(unitL -> minusOmp0))
+                              rightIs <- same(addedSides._2, c4)
+                              key <- compared(added, leftIs, rightIs)
+                              us <- times(u, sTerm)
+                              usBelow <- timesLeft(sPositive, uBelowL).flatMap(rearranged(_, us, ls)).flatMap(lessThenAtMost(_, key))
+                              // u / p < q < 1 / s
+                              ip <- inverseOf(c4)
+                              is <- inverseOf(sTerm)
+                              ipPositive <- inversePositive(pPositive)
+                              isPositive <- inversePositive(sPositive)
+                              unitP <- unitAt(pPositive)
+                              unitS <- unitAt(sPositive)
+                              factorPositive <- timesPositive(ipPositive, isPositive)
+                              scaled <- timesLeft(factorPositive, usBelow)
+                              ratioSides <- binary(scaled.conclusion)
+                              uip <- times(u, ip)
+                              uipIs <- ring.consequence(ratioSides._1, uip, List(unitS -> uip))
+                              isIs <- ring.consequence(ratioSides._2, is, List(unitP -> is))
+                              ratioBelow <- compared(scaled, uipIs, isIs)
+                              uipNonNeg <- weakened(ipPositive).flatMap(ipNonNeg =>
+                                fact(Fraction.AtMostMul).flatMap(rules.specAll(_, List(u, ip))).flatMap(rules.mp(_, uNonNeg)).flatMap(rules.mp(_, ipNonNeg)))
+                              choice <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(uip, is))).flatMap(rules.mp(_, ratioBelow))
+                              result <- choosing(choice, c5) { pairQ =>
+                                for {
+                                  partsQ <- halves(pairQ)
+                                  (lowerBelowQ, qBelowIs) = partsQ
+                                  qPositive <- atMostThenLess(uipNonNeg, lowerBelowQ)
+                                  qsScaled <- timesLeft(sPositive, qBelowIs)
+                                  qsSides <- binary(qsScaled.conclusion)
+                                  qs <- times(c5, sTerm)
+                                  qsIs <- same(qsSides._1, qs)
+                                  oneIs <- ring.consequence(qsSides._2, oneTerm, List(unitS -> oneTerm))
+                                  qsBelow <- compared(qsScaled, qsIs, oneIs)
+                                  inQ <- intoPinv(x, c5, sTerm, outside, sPositive, qsBelow).flatMap(backIntoCore(atInverse, c5, _))
+                                  raised <- timesLeft(pPositive, lowerBelowQ)
+                                  raisedSides <- binary(raised.conclusion)
+                                  uIs <- ring.consequence(raisedSides._1, u, List(unitP -> u))
+                                  pq <- times(c4, c5)
+                                  pqIs <- same(raisedSides._2, pq)
+                                  uBelow <- compared(raised, uIs, pqIs)
+                                  result <- intoCore(x, pinv, u, c4, c5, inP, inQ, pPositive, qPositive, uBelow)
+                                    .flatMap(backIntoCore(atPair, u, _))
+                                } yield result
+                              }
+                            } yield result
+                          }
+                        } yield result
+                      }
+                    } yield withPositiveResult
+                  }
+                  result <- classical.cases(negativeTerm, viaNegative, viaNonNegative)
+                } yield result
+            )
+            discharged <- rules.disch(px.conclusion, result).flatMap(rules.gen(x, _))
+          } yield discharged
+
+        def facts: Either[LogicError, Vector[(String, Kernel.Thm)]] =
+          for {
+            isCut <- coreIsCut
+            coreMembers <- membersFact(isCut)
+            commutative <- commutativeFact
+            atZero <- zeroFact
+            nonNeg <- nonNegativeFact(coreMembers)
+            unit <- oneFact(coreMembers)
+            associative <- associativeFact(coreMembers, nonNeg)
+            distributive <- distributiveFact(coreMembers)
+            positive <- positiveFact(coreMembers)
+            inverseIsCut <- pinvIsCut
+            inverseMembers <- pinvMembersFact(inverseIsCut)
+            inverseNonNeg <- pinvNonNegFact(inverseMembers)
+            mulInverse <- mulPinvFact(coreMembers, inverseMembers, inverseNonNeg)
+          } yield Vector(
+            (PosMulIsCut, isCut),
+            (PosMulMembers, coreMembers),
+            (PosMulCommutative, commutative),
+            (PosMulZero, atZero),
+            (PosMulNonNegative, nonNeg),
+            (PosMulOne, unit),
+            (PosMulAssociative, associative),
+            (PosMulDistributive, distributive),
+            (PosMulPositive, positive),
+            (PosInverseIsCut, inverseIsCut),
+            (PosInverseMembers, inverseMembers),
+            (PosInverseNonNegative, inverseNonNeg),
+            (PosMulInverse, mulInverse)
+          )
+
+        /** The members fact at a pair, with its two hypotheses discharged. */
+        private def membersAt(coreMembers: Kernel.Thm, left: Term, right: Term, nnLeft: Kernel.Thm, nnRight: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          rules.specAll(coreMembers, List(left, right)).flatMap(rules.mp(_, nnLeft)).flatMap(rules.mp(_, nnRight))
+
+        /**
+         * [[Cut.PosMulIsCut]]. Inhabited by `-1`; not everything, since for non-members `e` of `x` and
+         * `f` of `y`, both at least zero because the cuts hold every negative, `e * f` is neither
+         * negative nor below `p * q` for members `p < e` and `q < f`; closed downwards trivially; and
+         * without a greatest element because a larger member `p'` of `x` gives `p * q < p' * q`.
+         */
+        private def coreIsCut: Either[LogicError, Kernel.Thm] =
+          for {
+            hx <- nonNegative(x).flatMap(assume)
+            hy <- nonNegative(y).flatMap(assume)
+            clausesX <- clausesOf(x)
+            clausesY <- clausesOf(y)
+            destX <- dest.flatMap(app(_, x))
+            zeroTerm <- zero
+            oneTerm <- one
+            set <- coreSet(x, y)
+            body <- sets.unfolded(set).flatMap(rightOf)
+            clauseTerms <- body match {
+              case App(App(_, inhabited), App(App(_, proper), App(App(_, closed), open))) => Right((inhabited, proper, closed, open))
+              case other => Left(NotOfForm("the four clauses of IS_CUT", other))
+            }
+            (inhabitedTerm, properTerm, _, _) = clauseTerms
+
+            inhabited <- for {
+              minusOne <- minus(oneTerm)
+              negative <- below(zeroTerm).flatMap(rearranged(_, minusOne, zeroTerm))
+              member <- intoCoreNegative(x, y, minusOne, negative)
+              predicate <- logic.destExistsPredicate(inhabitedTerm).toRight(NotOfForm("an existential", inhabitedTerm))
+              result <- rules.existsIntro(predicate, minusOne, member)
+            } yield result
+
+            proper <- choosing(clausesX.proper, e) { notE =>
+              choosing(clausesY.proper, f) { notF =>
+                for {
+                  eNonNeg <- outsideNonNegative(hx, notE)
+                  fNonNeg <- outsideNonNegative(hy, notF)
+                  ef <- times(e, f)
+                  efNonNeg <- fact(Fraction.AtMostMul).flatMap(rules.specAll(_, List(e, f))).flatMap(rules.mp(_, eNonNeg)).flatMap(rules.mp(_, fNonNeg))
+                  memberTerm <- coreMemberTerm(x, y, ef)
+                  held <- assume(memberTerm)
+                  falsity <- fromCore(held, c1, c2)(
+                    negative => contradicts(negative, efNonNeg),
+                    (inP, inQ, pPositive, qPositive, less) =>
+                      for {
+                        pBelow <- belowOutside(clausesX, destX, inP, notE)
+                        destY <- dest.flatMap(app(_, y))
+                        qBelow <- belowOutside(clausesY, destY, inQ, notF)
+                        bound <- productBelow(pPositive, pBelow, qPositive, qBelow)
+                        loop <- lessTransitive(less, bound)
+                        result <- irreflexive(ef).flatMap(rules.notElim(_, loop))
+                      } yield result
+                  )
+                  notIn <- rules.notIntro(memberTerm, falsity)
+                  predicate <- logic.destExistsPredicate(properTerm).toRight(NotOfForm("an existential", properTerm))
+                  result <- rules.existsIntro(predicate, ef, notIn)
+                } yield result
+              }
+            }
+
+            closed <- for {
+              inBTerm <- coreMemberTerm(x, y, b)
+              less <- lt(a, b)
+              both <- logic.mkConj(inBTerm, less).flatMap(assume)
+              parts <- halves(both)
+              (inB, ab) = parts
+              reached <- fromCore(inB, c1, c2)(
+                negative => lessTransitive(ab, negative).flatMap(intoCoreNegative(x, y, a, _)),
+                (inP, inQ, pPositive, qPositive, less2) =>
+                  lessTransitive(ab, less2).flatMap(intoCore(x, y, a, c1, c2, inP, inQ, pPositive, qPositive, _))
+              )
+              result <- rules.disch(both.conclusion, reached).flatMap(rules.gen(b, _)).flatMap(rules.gen(a, _))
+            } yield result
+
+            open <- for {
+              inA <- coreMemberTerm(x, y, a).flatMap(assume)
+              goal <- coreMemberTerm(x, y, b).flatMap(ib => lt(a, b).flatMap(ab => logic.mkConj(ib, ab))).flatMap(body => lift(Term.abs(b, body)))
+              reached <- fromCore(inA, c1, c2)(
+                negative =>
+                  for {
+                    between <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(a, zeroTerm))).flatMap(rules.mp(_, negative))
+                    result <- choosing(between, c3) { pair =>
+                      for {
+                        parts <- halves(pair)
+                        (aBelow, stillNegative) = parts
+                        member <- intoCoreNegative(x, y, c3, stillNegative)
+                        both <- rules.conjIntro(member, aBelow)
+                        result <- rules.existsIntro(goal, c3, both)
+                      } yield result
+                    }
+                  } yield result,
+                (inP, inQ, pPositive, qPositive, less) =>
+                  for {
+                    higher <- rules.spec(c1, clausesX.open).flatMap(rules.mp(_, inP))
+                    result <- choosing(higher, c3) { pair =>
+                      for {
+                        parts <- halves(pair)
+                        (inHigher, pBelow) = parts
+                        pq <- times(c1, c2)
+                        higherQ <- times(c3, c2)
+                        raised <- timesLeft(qPositive, pBelow).flatMap(rearranged(_, pq, higherQ))
+                        higherPositive <- lessTransitive(pPositive, pBelow)
+                        member <- intoCore(x, y, pq, c3, c2, inHigher, inQ, higherPositive, qPositive, raised)
+                        both <- rules.conjIntro(member, less)
+                        result <- rules.existsIntro(goal, pq, both)
+                      } yield result
+                    }
+                  } yield result
+              )
+              result <- rules.disch(inA.conclusion, reached).flatMap(rules.gen(a, _))
+            } yield result
+
+            isCut <- sets.closedFrom(set, inhabited, proper, closed, open)
+            result <- rules.disch(hy.conclusion, isCut)
+              .flatMap(rules.disch(hx.conclusion, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield result
+
+        /** [[Cut.PosMulMembers]]: the definition, then the characterisation at a set that is a cut. */
+        private def membersFact(isCut: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            hx <- nonNegative(x).flatMap(assume)
+            hy <- nonNegative(y).flatMap(assume)
+            unfolded <- Conv.unfold(posMulDefinition, List(x, y))
+            carriedDest <- dest.flatMap(Conv.apTerm(_, unfolded))
+            set <- coreSet(x, y)
+            atSet <- rules.specAll(isCut, List(x, y)).flatMap(rules.mp(_, hx)).flatMap(rules.mp(_, hy))
+            back <- rules.spec(set, rebuilds).flatMap(rules.mp(_, atSet))
+            result <- Conv.trans(carriedDest, back)
+              .flatMap(rules.disch(hy.conclusion, _))
+              .flatMap(rules.disch(hx.conclusion, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield result
+
+        /** Two sets equal pointwise, as the sets: each side beta-expanded at `r`, then `ext`. */
+        private def setsEqual(left: Term, right: Term, pointwise: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            atLeft <- app(left, r).flatMap(Conv.betaRoot)
+            atRight <- app(right, r).flatMap(Conv.betaRoot).flatMap(Conv.sym)
+            joined <- Conv.trans(atLeft, pointwise).flatMap(Conv.trans(_, atRight))
+            result <- rules.gen(r, joined).flatMap(classical.ext(logic, _))
+          } yield result
+
+        /** [[Cut.PosMulCommutative]]: the core's two sets are one, by swapping the witnesses, with no hypothesis. */
+        private def commutativeFact: Either[LogicError, Kernel.Thm] = {
+          def swap(from: (Term, Term), to: (Term, Term))(held: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+            fromCore(held, c1, c2)(
+              negative => intoCoreNegative(to._1, to._2, r, negative),
+              (inP, inQ, pPositive, qPositive, less) =>
+                times(c2, c1).flatMap(rearranged(less, r, _)).flatMap(intoCore(to._1, to._2, r, c2, c1, inQ, inP, qPositive, pPositive, _))
+            )
+          for {
+            leftTerm <- coreMemberTerm(x, y, r)
+            rightTerm <- coreMemberTerm(y, x, r)
+            forwards <- assume(leftTerm).flatMap(swap((x, y), (y, x)))
+            backwards <- assume(rightTerm).flatMap(swap((y, x), (x, y)))
+            pointwise = Kernel.deductAntisym(backwards, forwards)
+            leftSet <- coreSet(x, y)
+            rightSet <- coreSet(y, x)
+            sameSets <- setsEqual(leftSet, rightSet, pointwise)
+            maker <- make
+            carried <- Conv.apTerm(maker, sameSets)
+            leftUnfolded <- Conv.unfold(posMulDefinition, List(x, y))
+            rightUnfolded <- Conv.unfold(posMulDefinition, List(y, x)).flatMap(Conv.sym)
+            result <- Conv.trans(leftUnfolded, carried).flatMap(Conv.trans(_, rightUnfolded))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield result
+        }
+
+        /** [[Cut.PosMulZero]]: no positive rational is below zero, so the core is the negatives, with no hypothesis. */
+        private def zeroFact: Either[LogicError, Kernel.Thm] =
+          for {
+            zeroTerm <- zero
+            zeroCut <- ofRational(zeroTerm)
+            memberTerm <- coreMemberTerm(x, zeroCut, r)
+            negativeTerm <- lt(r, zeroTerm)
+            forwards <- assume(memberTerm).flatMap(held =>
+              fromCore(held, c1, c2)(
+                negative => Right(negative),
+                (_, inQ, _, qPositive, _) =>
+                  for {
+                    qNegative <- memberOf(members, zeroTerm, c2).flatMap(eqMp(_, inQ))
+                    loop <- lessTransitive(qPositive, qNegative)
+                    falsity <- irreflexive(zeroTerm).flatMap(rules.notElim(_, loop))
+                    result <- rules.falsityElim(negativeTerm, falsity)
+                  } yield result
+              ))
+            backwards <- assume(negativeTerm).flatMap(intoCoreNegative(x, zeroCut, r, _))
+            pointwise = Kernel.deductAntisym(backwards, forwards)
+            coreSetTerm <- coreSet(x, zeroCut)
+            unfoldedZero <- Conv.unfold(ofRationalDefinition, List(zeroTerm))
+            belowZero <- rightOf(unfoldedZero).flatMap {
+              case App(_, set) => Right(set)
+              case other => Left(NotOfForm("an application of mk_cut", other))
+            }
+            sameSets <- setsEqual(coreSetTerm, belowZero, pointwise)
+            maker <- make
+            carried <- Conv.apTerm(maker, sameSets)
+            unfolded <- Conv.unfold(posMulDefinition, List(x, zeroCut))
+            result <- Conv.sym(unfoldedZero).flatMap(back => Conv.trans(unfolded, carried).flatMap(Conv.trans(_, back)))
+              .flatMap(rules.gen(x, _))
+          } yield result
+
+        /** [[Cut.PosMulNonNegative]]: every negative is in the core. */
+        private def nonNegativeFact(coreMembers: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            hx <- nonNegative(x).flatMap(assume)
+            hy <- nonNegative(y).flatMap(assume)
+            zeroTerm <- zero
+            zeroCut <- ofRational(zeroTerm)
+            xy <- product(x, y)
+            atPair <- membersAt(coreMembers, x, y, hx, hy)
+            order <- included(zeroCut, xy) { inZero =>
+              for {
+                negative <- memberOf(members, zeroTerm, u).flatMap(eqMp(_, inZero))
+                core <- intoCoreNegative(x, y, u, negative)
+                result <- backIntoCore(atPair, u, core)
+              } yield result
+            }
+            result <- rules.disch(hy.conclusion, order)
+              .flatMap(rules.disch(hx.conclusion, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield result
+
+        /**
+         * [[Cut.PosMulOne]]. A witness `p * q` with `q < 1` is below `p`, so what the core holds is in
+         * `x`. Conversely a member `u` of `x` at least zero has a larger member `p`, and density puts
+         * some `q` strictly between `u / p` and `1`, which makes `u < p * q`.
+         */
+        private def oneFact(coreMembers: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            hx <- nonNegative(x).flatMap(assume)
+            clausesX <- clausesOf(x)
+            zeroTerm <- zero
+            oneTerm <- one
+            oneCut <- ofRational(oneTerm)
+            zeroCut <- ofRational(zeroTerm)
+            positiveOne <- zeroBelowOne
+            oneNonNeg <- included(zeroCut, oneCut) { inZero =>
+              memberOf(members, zeroTerm, u).flatMap(eqMp(_, inZero))
+                .flatMap(lessTransitive(_, positiveOne))
+                .flatMap(less => memberOf(members, oneTerm, u).flatMap(Conv.sym).flatMap(eqMp(_, less)))
+            }
+            atPair <- membersAt(coreMembers, x, oneCut, hx, oneNonNeg)
+            xOne <- product(x, oneCut)
+            result <- equalCuts(xOne, x)(
+              held =>
+                for {
+                  core <- outOfCore(atPair, held)
+                  result <- fromCore(core, c1, c2)(
+                    negative => holdsNegative(hx, negative),
+                    (inP, inQ, pPositive, _, less) =>
+                      for {
+                        qBelowOne <- memberOf(members, oneTerm, c2).flatMap(eqMp(_, inQ))
+                        pq <- times(c1, c2)
+                        shrunk <- timesLeft(pPositive, qBelowOne).flatMap(rearranged(_, pq, c1))
+                        uBelowP <- lessTransitive(less, shrunk)
+                        result <- sets.downwards(clausesX, u, c1, inP, uBelowP)
+                      } yield result
+                  )
+                } yield result,
+              held =>
+                for {
+                  negativeTerm <- lt(u, zeroTerm)
+                  viaNegative <- assume(negativeTerm)
+                    .flatMap(intoCoreNegative(x, oneCut, u, _))
+                    .flatMap(backIntoCore(atPair, u, _))
+                  notNegativeTerm <- logic.mkNot(negativeTerm)
+                  notNegative <- assume(notNegativeTerm)
+                  uNonNeg <- notLess(notNegative)
+                  higher <- rules.spec(u, clausesX.open).flatMap(rules.mp(_, held))
+                  viaNonNegative <- choosing(higher, c1) { pair =>
+                    for {
+                      parts <- halves(pair)
+                      (inP, uBelowP) = parts
+                      pPositive <- atMostThenLess(uNonNeg, uBelowP)
+                      inverse <- read(Fraction.Inverse, Type.fun(Fraction.Classes, Fraction.Classes)).flatMap(app(_, c1))
+                      inversePositive <- fact(Fraction.InversePositive).flatMap(rules.spec(c1, _)).flatMap(rules.mp(_, pPositive))
+                      unit <- positiveNonZero(pPositive)
+                        .flatMap(nonZero => fact(Fraction.MulInverse).flatMap(rules.spec(c1, _)).flatMap(rules.mp(_, nonZero)))
+                      ratio <- times(u, inverse)
+                      scaled <- timesLeft(inversePositive, uBelowP)
+                      sides <- binary(scaled.conclusion)
+                      ratioIs <- same(sides._1, ratio)
+                      oneIs <- ring.consequence(sides._2, oneTerm, List(unit -> oneTerm))
+                      ratioBelowOne <- compared(scaled, ratioIs, oneIs)
+                      ratioNonNeg <- weakened(inversePositive)
+                        .flatMap(invNonNeg => fact(Fraction.AtMostMul).flatMap(rules.specAll(_, List(u, inverse))).flatMap(rules.mp(_, uNonNeg)).flatMap(rules.mp(_, invNonNeg)))
+                      between <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(ratio, oneTerm))).flatMap(rules.mp(_, ratioBelowOne))
+                      result <- choosing(between, c2) { pairQ =>
+                        for {
+                          partsQ <- halves(pairQ)
+                          (ratioBelowQ, qBelowOne) = partsQ
+                          qPositive <- atMostThenLess(ratioNonNeg, ratioBelowQ)
+                          inQ <- memberOf(members, oneTerm, c2).flatMap(Conv.sym).flatMap(eqMp(_, qBelowOne))
+                          raised <- timesLeft(pPositive, ratioBelowQ)
+                          raisedSides <- binary(raised.conclusion)
+                          uIs <- ring.consequence(raisedSides._1, u, List(unit -> u))
+                          less <- compared(raised, uIs, Conv.refl(raisedSides._2))
+                          core <- intoCore(x, oneCut, u, c1, c2, inP, inQ, pPositive, qPositive, less)
+                          result <- backIntoCore(atPair, u, core)
+                        } yield result
+                      }
+                    } yield result
+                  }
+                  result <- classical.cases(negativeTerm, viaNegative, viaNonNegative)
+                } yield result
+            )
+            discharged <- rules.disch(hx.conclusion, result).flatMap(rules.gen(x, _))
+          } yield discharged
+
+        /**
+         * [[Cut.PosMulAssociative]]. A witness `w1 * w2` of `(x y) z` has `w1 < p * q` from `x y`, and
+         * then `p * (q * w2)` bounds it, with `q * w2` in `y z` by a larger member of `z`; the other
+         * direction is the same through a larger member of `x`.
+         */
+        private def associativeFact(coreMembers: Kernel.Thm, nonNeg: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            hx <- nonNegative(x).flatMap(assume)
+            hy <- nonNegative(y).flatMap(assume)
+            hz <- nonNegative(z).flatMap(assume)
+            clausesX <- clausesOf(x)
+            clausesZ <- clausesOf(z)
+            zeroTerm <- zero
+            xy <- product(x, y)
+            yz <- product(y, z)
+            left <- product(xy, z)
+            right <- product(x, yz)
+            nnXY <- rules.specAll(nonNeg, List(x, y)).flatMap(rules.mp(_, hx)).flatMap(rules.mp(_, hy))
+            nnYZ <- rules.specAll(nonNeg, List(y, z)).flatMap(rules.mp(_, hy)).flatMap(rules.mp(_, hz))
+            atXY <- membersAt(coreMembers, x, y, hx, hy)
+            atYZ <- membersAt(coreMembers, y, z, hy, hz)
+            atLeft <- membersAt(coreMembers, xy, z, nnXY, hz)
+            atRight <- membersAt(coreMembers, x, yz, hx, nnYZ)
+            result <- equalCuts(left, right)(
+              held =>
+                for {
+                  core <- outOfCore(atLeft, held)
+                  goal <- dest.flatMap(app(_, right, u))
+                  result <- fromCore(core, c1, c2)(
+                    negative => intoCoreNegative(x, yz, u, negative).flatMap(backIntoCore(atRight, u, _)),
+                    (inW1, inW2, w1Positive, w2Positive, less) =>
+                      for {
+                        inner <- outOfCore(atXY, inW1)
+                        result <- fromCore(inner, c3, c4)(
+                          negative =>
+                            lessTransitive(w1Positive, negative)
+                              .flatMap(loop => irreflexive(zeroTerm).flatMap(rules.notElim(_, loop)))
+                              .flatMap(rules.falsityElim(goal, _)),
+                          (inP, inQ, pPositive, qPositive, w1Below) =>
+                            for {
+                              higher <- rules.spec(c2, clausesZ.open).flatMap(rules.mp(_, inW2))
+                              result <- choosing(higher, c5) { pair =>
+                                for {
+                                  parts <- halves(pair)
+                                  (inHigher, w2Below) = parts
+                                  v <- times(c4, c2)
+                                  vHigher <- times(c4, c5)
+                                  vBelow <- timesLeft(qPositive, w2Below).flatMap(rearranged(_, v, vHigher))
+                                  higherPositive <- lessTransitive(w2Positive, w2Below)
+                                  inYZ <- intoCore(y, z, v, c4, c5, inQ, inHigher, qPositive, higherPositive, vBelow)
+                                    .flatMap(backIntoCore(atYZ, v, _))
+                                  vPositive <- timesPositive(qPositive, w2Positive)
+                                  w1w2 <- times(c1, c2)
+                                  pv <- times(c3, v)
+                                  bounded <- timesLeft(w2Positive, w1Below).flatMap(rearranged(_, w1w2, pv))
+                                  uBelow <- lessTransitive(less, bounded)
+                                  result <- intoCore(x, yz, u, c3, v, inP, inYZ, pPositive, vPositive, uBelow)
+                                    .flatMap(backIntoCore(atRight, u, _))
+                                } yield result
+                              }
+                            } yield result
+                        )
+                      } yield result
+                  )
+                } yield result,
+              held =>
+                for {
+                  core <- outOfCore(atRight, held)
+                  goal <- dest.flatMap(app(_, left, u))
+                  result <- fromCore(core, c1, c2)(
+                    negative => intoCoreNegative(xy, z, u, negative).flatMap(backIntoCore(atLeft, u, _)),
+                    (inP, inV, pPositive, vPositive, less) =>
+                      for {
+                        inner <- outOfCore(atYZ, inV)
+                        result <- fromCore(inner, c3, c4)(
+                          negative =>
+                            lessTransitive(vPositive, negative)
+                              .flatMap(loop => irreflexive(zeroTerm).flatMap(rules.notElim(_, loop)))
+                              .flatMap(rules.falsityElim(goal, _)),
+                          (inQ, inW, qPositive, wPositive, vBelow) =>
+                            for {
+                              higher <- rules.spec(c1, clausesX.open).flatMap(rules.mp(_, inP))
+                              result <- choosing(higher, c5) { pair =>
+                                for {
+                                  parts <- halves(pair)
+                                  (inHigher, pBelow) = parts
+                                  t <- times(c1, c3)
+                                  tHigher <- times(c5, c3)
+                                  tBelow <- timesLeft(qPositive, pBelow).flatMap(rearranged(_, t, tHigher))
+                                  higherPositive <- lessTransitive(pPositive, pBelow)
+                                  inXY <- intoCore(x, y, t, c5, c3, inHigher, inQ, higherPositive, qPositive, tBelow)
+                                    .flatMap(backIntoCore(atXY, t, _))
+                                  tPositive <- timesPositive(pPositive, qPositive)
+                                  pv <- times(c1, c2)
+                                  tw <- times(t, c4)
+                                  bounded <- timesLeft(pPositive, vBelow).flatMap(rearranged(_, pv, tw))
+                                  uBelow <- lessTransitive(less, bounded)
+                                  result <- intoCore(xy, z, u, t, c4, inXY, inW, tPositive, wPositive, uBelow)
+                                    .flatMap(backIntoCore(atLeft, u, _))
+                                } yield result
+                              }
+                            } yield result
+                        )
+                      } yield result
+                  )
+                } yield result
+            )
+            discharged <- rules.disch(hz.conclusion, result)
+              .flatMap(rules.disch(hy.conclusion, _))
+              .flatMap(rules.disch(hx.conclusion, _))
+              .flatMap(rules.gen(z, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield discharged
+
+        /**
+         * [[Cut.PosMulDistributive]]. A witness `p * s` of `x (y + z)` with `s = q + t` splits at any
+         * rational `a` strictly between `u - p * t` and `p * q`, which density supplies, and each half
+         * is in its product by the sign of `q` or `t`. The other direction adds two witnesses under the
+         * larger of their two members of `x`.
+         */
+        private def distributiveFact(coreMembers: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            hx <- nonNegative(x).flatMap(assume)
+            hy <- nonNegative(y).flatMap(assume)
+            hz <- nonNegative(z).flatMap(assume)
+            clausesY <- clausesOf(y)
+            clausesZ <- clausesOf(z)
+            zeroTerm <- zero
+            sum <- addition.flatMap(app(_, y, z))
+            nnSum <- rules.specAll(addNonNegative, List(y, z)).flatMap(rules.mp(_, hy)).flatMap(rules.mp(_, hz))
+            xy <- product(x, y)
+            xz <- product(x, z)
+            left <- product(x, sum)
+            right <- addition.flatMap(app(_, xy, xz))
+            atXY <- membersAt(coreMembers, x, y, hx, hy)
+            atXZ <- membersAt(coreMembers, x, z, hx, hz)
+            atLeft <- membersAt(coreMembers, x, sum, hx, nnSum)
+
+            /** `a < p * v` gives `a` in the core of `x` and `other`, by the sign of `v`. */
+            bySign = (other: Term, atPair: Kernel.Thm, at: Term, pv: Term, v: Term, inP: Kernel.Thm, inV: Kernel.Thm, pPositive: Kernel.Thm, less: Kernel.Thm) =>
+              for {
+                positiveTerm <- lt(zeroTerm, v)
+                viaPositive <- assume(positiveTerm)
+                  .flatMap(vPositive => intoCore(x, other, at, pv, v, inP, inV, pPositive, vPositive, less))
+                  .flatMap(backIntoCore(atPair, at, _))
+                notPositive <- logic.mkNot(positiveTerm).flatMap(assume)
+                viaNotPositive <- notLess(notPositive)
+                  .flatMap(productNonPositive(pPositive, _))
+                  .flatMap(lessThenAtMost(less, _))
+                  .flatMap(intoCoreNegative(x, other, at, _))
+                  .flatMap(backIntoCore(atPair, at, _))
+                result <- classical.cases(positiveTerm, viaPositive, viaNotPositive)
+              } yield result
+
+            /** `s` in `y + z` for a member `s` of `y` or of `z`, by a larger member of it and a negative in the other. */
+            inSumOf = (s: Term, inS: Kernel.Thm, ofY: Boolean) =>
+              for {
+                clauses <- Right(if (ofY) clausesY else clausesZ)
+                higher <- rules.spec(s, clauses.open).flatMap(rules.mp(_, inS))
+                result <- choosing(higher, c6) { pair =>
+                  for {
+                    parts <- halves(pair)
+                    (inHigher, sBelow) = parts
+                    gap <- difference(s, c6)
+                    negated <- minus(c6)
+                    gapNegative <- lessShifted(sBelow, negated).flatMap(rearranged(_, gap, zeroTerm))
+                    witnessed <-
+                      if (ofY)
+                        holdsNegative(hz, gapNegative).flatMap(intoSum(y, z, s, c6, inHigher, _))
+                      else
+                        for {
+                          inY <- holdsNegative(hy, gapNegative)
+                          back <- difference(s, gap).flatMap(carried(inHigher, _))
+                          result <- intoSum(y, z, s, gap, inY, back)
+                        } yield result
+                    result <- toSum(addMembers, y, z, s, witnessed)
+                  } yield result
+                }
+              } yield result
+
+            result <- equalCuts(left, right)(
+              held =>
+                for {
+                  core <- outOfCore(atLeft, held)
+                  result <- fromCore(core, c1, c2)(
+                    negative =>
+                      for {
+                        between <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(u, zeroTerm))).flatMap(rules.mp(_, negative))
+                        result <- choosing(between, c3) { pair =>
+                          for {
+                            parts <- halves(pair)
+                            (uBelow, aNegative) = parts
+                            inXY <- intoCoreNegative(x, y, c3, aNegative).flatMap(backIntoCore(atXY, c3, _))
+                            rest <- difference(u, c3)
+                            negatedA <- minus(c3)
+                            restNegative <- lessShifted(uBelow, negatedA).flatMap(rearranged(_, rest, zeroTerm))
+                            inXZ <- intoCoreNegative(x, z, rest, restNegative).flatMap(backIntoCore(atXZ, rest, _))
+                            result <- intoSum(xy, xz, u, c3, inXY, inXZ).flatMap(toSum(addMembers, xy, xz, u, _))
+                          } yield result
+                        }
+                      } yield result,
+                    (inP, inS, pPositive, _, less) =>
+                      for {
+                        split <- fromSum(addMembers, inS)
+                        result <- choosing(split, c3) { pairQ =>
+                          for {
+                            partsQ <- halves(pairQ)
+                            (inQ, inT) = partsQ
+                            tTerm <- difference(c2, c3)
+                            pq <- times(c1, c3)
+                            pt <- times(c1, tTerm)
+                            lower <- difference(u, pt)
+                            negatedPt <- minus(pt)
+                            lowerBelow <- lessShifted(less, negatedPt).flatMap(rearranged(_, lower, pq))
+                            between <- fact(Fraction.Dense).flatMap(rules.specAll(_, List(lower, pq))).flatMap(rules.mp(_, lowerBelow))
+                            result <- choosing(between, c4) { pairA =>
+                              for {
+                                partsA <- halves(pairA)
+                                (lowerBelowA, aBelow) = partsA
+                                inXY <- bySign(y, atXY, c4, c1, c3, inP, inQ, pPositive, aBelow)
+                                rest <- difference(u, c4)
+                                shift <- difference(pt, c4)
+                                restBelow <- lessShifted(lowerBelowA, shift).flatMap(rearranged(_, rest, pt))
+                                inXZ <- bySign(z, atXZ, rest, c1, tTerm, inP, inT, pPositive, restBelow)
+                                result <- intoSum(xy, xz, u, c4, inXY, inXZ).flatMap(toSum(addMembers, xy, xz, u, _))
+                              } yield result
+                            }
+                          } yield result
+                        }
+                      } yield result
+                  )
+                } yield result,
+              held =>
+                for {
+                  split <- fromSum(addMembers, held)
+                  result <- choosing(split, c1) { pair =>
+                    for {
+                      parts <- halves(pair)
+                      (inA, inRest) = parts
+                      rest <- difference(u, c1)
+                      coreA <- outOfCore(atXY, inA)
+                      coreRest <- outOfCore(atXZ, inRest)
+                      result <- fromCore(coreA, c2, c3)(
+                        aNegative =>
+                          fromCore(coreRest, c4, c5)(
+                            restNegative =>
+                              for {
+                                uBelowA <- lessShifted(restNegative, c1).flatMap(rearranged(_, u, c1))
+                                negative <- lessTransitive(uBelowA, aNegative)
+                                result <- intoCoreNegative(x, sum, u, negative).flatMap(backIntoCore(atLeft, u, _))
+                              } yield result,
+                            (inP, inT, pPositive, tPositive, restBelow) =>
+                              for {
+                                pt <- times(c4, c5)
+                                ptPlusA <- plus(pt, c1)
+                                first <- lessShifted(restBelow, c1).flatMap(rearranged(_, u, ptPlusA))
+                                second <- lessShifted(aNegative, pt).flatMap(rearranged(_, ptPlusA, pt))
+                                uBelow <- lessTransitive(first, second)
+                                inSum <- inSumOf(c5, inT, false)
+                                result <- intoCore(x, sum, u, c4, c5, inP, inSum, pPositive, tPositive, uBelow)
+                                  .flatMap(backIntoCore(atLeft, u, _))
+                              } yield result
+                          ),
+                        (inP, inQ, pPositive, qPositive, aBelow) =>
+                          fromCore(coreRest, c4, c5)(
+                            restNegative =>
+                              for {
+                                uBelowA <- lessShifted(restNegative, c1).flatMap(rearranged(_, u, c1))
+                                uBelow <- lessTransitive(uBelowA, aBelow)
+                                inSum <- inSumOf(c3, inQ, true)
+                                result <- intoCore(x, sum, u, c2, c3, inP, inSum, pPositive, qPositive, uBelow)
+                                  .flatMap(backIntoCore(atLeft, u, _))
+                              } yield result,
+                            (inP2, inT, p2Positive, tPositive, restBelow) =>
+                              for {
+                                pq <- times(c2, c3)
+                                pt <- times(c4, c5)
+                                s <- plus(c3, c5)
+                                both <- plus(pq, pt)
+                                aPlusPt <- plus(c1, pt)
+                                first <- lessShifted(restBelow, c1).flatMap(rearranged(_, u, aPlusPt))
+                                second <- lessShifted(aBelow, pt).flatMap(rearranged(_, aPlusPt, both))
+                                uBelowBoth <- lessTransitive(first, second)
+                                inS <- difference(s, c3)
+                                  .flatMap(carried(inT, _))
+                                  .flatMap(intoSum(y, z, s, c3, inQ, _))
+                                  .flatMap(toSum(addMembers, y, z, s, _))
+                                sPositive <- lessShifted(qPositive, c5).flatMap(rearranged(_, c5, s)).flatMap(lessTransitive(tPositive, _))
+                                qNonNeg <- weakened(qPositive)
+                                tNonNeg <- weakened(tPositive)
+                                total <- fact(Fraction.AtMostTotal).flatMap(rules.specAll(_, List(c2, c4)))
+                                // the larger member of `x` carries both witnesses
+                                viaSecond <- for {
+                                  order <- le(c2, c4).flatMap(assume)
+                                  scaled <- fact(Fraction.MulLeftMonotone)
+                                    .flatMap(rules.specAll(_, List(c3, c2, c4)))
+                                    .flatMap(rules.mp(_, qNonNeg))
+                                    .flatMap(rules.mp(_, order))
+                                  scaledSides <- binary(scaled.conclusion)
+                                  added <- fact(Fraction.AtMostAdd).flatMap(rules.specAll(_, List(scaledSides._1, scaledSides._2, pt))).flatMap(rules.mp(_, scaled))
+                                  larger <- times(c4, s)
+                                  bound <- rearranged(added, both, larger)
+                                  uBelow <- lessThenAtMost(uBelowBoth, bound)
+                                  result <- intoCore(x, sum, u, c4, s, inP2, inS, p2Positive, sPositive, uBelow)
+                                    .flatMap(backIntoCore(atLeft, u, _))
+                                } yield result
+                                viaFirst <- for {
+                                  order <- le(c4, c2).flatMap(assume)
+                                  scaled <- fact(Fraction.MulLeftMonotone)
+                                    .flatMap(rules.specAll(_, List(c5, c4, c2)))
+                                    .flatMap(rules.mp(_, tNonNeg))
+                                    .flatMap(rules.mp(_, order))
+                                  scaledSides <- binary(scaled.conclusion)
+                                  added <- fact(Fraction.AtMostAdd).flatMap(rules.specAll(_, List(scaledSides._1, scaledSides._2, pq))).flatMap(rules.mp(_, scaled))
+                                  larger <- times(c2, s)
+                                  bound <- rearranged(added, both, larger)
+                                  uBelow <- lessThenAtMost(uBelowBoth, bound)
+                                  result <- intoCore(x, sum, u, c2, s, inP, inS, pPositive, sPositive, uBelow)
+                                    .flatMap(backIntoCore(atLeft, u, _))
+                                } yield result
+                                result <- rules.disjElim(total, viaSecond, viaFirst)
+                              } yield result
+                          )
+                      )
+                    } yield result
+                  }
+                } yield result
+            )
+            discharged <- rules.disch(hz.conclusion, result)
+              .flatMap(rules.disch(hy.conclusion, _))
+              .flatMap(rules.disch(hx.conclusion, _))
+              .flatMap(rules.gen(z, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield discharged
+      }
+
+      /**
+       * The additive group of cuts as a normaliser, which is what every sign argument below closes
+       * with. Its rules are the four laws of addition and what they give: a left zero, the exchange,
+       * the two cancellations, and through the uniqueness of an inverse `--x = x`, `-0 = 0` and
+       * `-(x + y) = -x + -y`. `CommutativeRing.order` is the order because it compares under the
+       * negations, which is what puts `x` beside `-x` for a cancellation to meet.
+       */
+      /** `CUT_LT 0 c` gives `0 <= c`: the other side of totality contradicts it. */
+      private def nonNegOfPositive(cut: Term, positive: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+        for {
+          zeroCut <- read(Fraction.Zero, Fraction.Classes).flatMap(zr => read(OfRational, Type.fun(Fraction.Classes, cutType)).flatMap(app(_, zr)))
+          notBelow <- Conv.unfold(lessThanDefinition, List(zeroCut, cut)).flatMap(eqMp(_, positive))
+          cases <- rules.specAll(total, List(zeroCut, cut))
+          parts <- logic.destDisj(cases.conclusion).toRight(NotOfForm("a disjunction", cases.conclusion))
+          first <- assume(parts._1)
+          second <- assume(parts._2).flatMap(rules.notElim(notBelow, _)).flatMap(rules.falsityElim(parts._1, _))
+          result <- rules.disjElim(cases, first, second)
+        } yield result
+
+      private final case class Group(unconditional: Vector[Rewrite.Rule], ordered: Vector[Rewrite.Rule], facts: Vector[(String, Kernel.Thm)]) {
+        private val order = CommutativeRing.order(Some(Negation))
+
+        /** `|- left = right` for an identity of the group, with the extra ordered rules given. */
+        def equal(
+          left: Term,
+          right: Term,
+          extra: Vector[Rewrite.Rule] = Vector.empty,
+          extraUnconditional: Vector[Rewrite.Rule] = Vector.empty
+        ): Either[LogicError, Kernel.Thm] =
+          if (left == right) Right(Conv.refl(left))
+          else
+            lift(Term.eq(left, right)).flatMap(
+              Rewrite.proveEquation(logic, Rewrite.normaliser(unconditional ++ extraUnconditional, ordered ++ extra, order), _)
+            )
+      }
+
+      private def groupOf(associative: Kernel.Thm, commutative: Kernel.Thm, zero: Kernel.Thm, inverse: Kernel.Thm): Either[LogicError, Group] =
+        for {
+          sum <- addition
+          negation <- read(Negation, Type.fun(cutType, cutType))
+          zeroCut <- read(Fraction.Zero, Fraction.Classes).flatMap(zr => read(OfRational, Type.fun(Fraction.Classes, cutType)).flatMap(app(_, zr)))
+          nx <- app(negation, x)
+
+          zeroLeft <- rules.specAll(commutative, List(zeroCut, x))
+            .flatMap(swapped => rules.spec(x, zero).flatMap(Conv.trans(swapped, _)))
+            .flatMap(rules.gen(x, _))
+          exchange <- for {
+            s1 <- rules.specAll(associative, List(x, y, z)).flatMap(Conv.sym)
+            swapped <- rules.specAll(commutative, List(x, y))
+            s2 <- Conv.apTerm(sum, swapped).flatMap(Conv.apThm(_, z))
+            s3 <- rules.specAll(associative, List(y, x, z))
+            result <- Conv.trans(s1, s2).flatMap(Conv.trans(_, s3))
+              .flatMap(rules.gen(z, _)).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+          } yield result
+          negLeft <- rules.specAll(commutative, List(nx, x))
+            .flatMap(swapped => rules.spec(x, inverse).flatMap(Conv.trans(swapped, _)))
+            .flatMap(rules.gen(x, _))
+          cancel <- for {
+            s1 <- rules.specAll(associative, List(x, nx, y)).flatMap(Conv.sym)
+            s2 <- rules.spec(x, inverse).flatMap(Conv.apTerm(sum, _)).flatMap(Conv.apThm(_, y))
+            s3 <- rules.spec(y, zeroLeft)
+            result <- Conv.trans(s1, s2).flatMap(Conv.trans(_, s3)).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+          } yield result
+          cancelLeft <- for {
+            s1 <- rules.specAll(associative, List(nx, x, y)).flatMap(Conv.sym)
+            s2 <- rules.spec(x, negLeft).flatMap(Conv.apTerm(sum, _)).flatMap(Conv.apThm(_, y))
+            s3 <- rules.spec(y, zeroLeft)
+            result <- Conv.trans(s1, s2).flatMap(Conv.trans(_, s3)).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+          } yield result
+
+          /** `a + b = 0` gives `b = -a`: `b = (-a + a) + b = -a + (a + b) = -a + 0`. */
+          unique = (a: Term, b: Term, premise: Kernel.Thm) =>
+            for {
+              na <- app(negation, a)
+              s1 <- rules.spec(b, zeroLeft).flatMap(Conv.sym)
+              s2 <- rules.spec(a, negLeft).flatMap(Conv.sym).flatMap(Conv.apTerm(sum, _)).flatMap(Conv.apThm(_, b))
+              s3 <- rules.specAll(associative, List(na, a, b))
+              s4 <- app(sum, na).flatMap(Conv.apTerm(_, premise))
+              s5 <- rules.spec(na, zero)
+              result <- Conv.trans(s1, s2).flatMap(Conv.trans(_, s3)).flatMap(Conv.trans(_, s4)).flatMap(Conv.trans(_, s5))
+            } yield result
+
+          negNeg <- rules.spec(x, negLeft).flatMap(unique(nx, x, _)).flatMap(Conv.sym).flatMap(rules.gen(x, _))
+          negZero <- rules.spec(zeroCut, zero).flatMap(unique(zeroCut, zeroCut, _)).flatMap(Conv.sym)
+          baseUnconditional <- Rewrite.Rule.all(logic, Vector(associative, zero, zeroLeft, inverse, negLeft, cancel, cancelLeft))
+          ordered <- Rewrite.Rule.all(logic, Vector(commutative, exchange))
+          partial = Group(baseUnconditional, ordered, Vector.empty)
+          negAdd <- for {
+            xy <- app(sum, x, y)
+            ny <- app(negation, y)
+            both <- app(sum, nx, ny)
+            total <- app(sum, xy, both)
+            vanishes <- partial.equal(total, zeroCut)
+            result <- unique(xy, both, vanishes).flatMap(Conv.sym).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+          } yield result
+          extra <- Rewrite.Rule.all(logic, Vector(negNeg, negZero, negAdd))
+        } yield Group(baseUnconditional ++ extra, ordered, Vector((NegNeg, negNeg), (NegZero, negZero), (NegAdd, negAdd)))
+
+      /**
+       * The product off the cone. `CUT_MUL` picks a branch by the signs of its arguments, and
+       * [[evaluated]] reads the branch a pair of sign facts selects; every law is then an identity of
+       * the group over the core, closed by [[Group.equal]] with the core's commutativity as an ordered
+       * rule.
+       */
+      private final case class Signs(group: Group, atMostAdd: Kernel.Thm, addNonNegative: Kernel.Thm, products: Map[String, Kernel.Thm]) {
+        private def product(name: String): Either[LogicError, Kernel.Thm] = products.get(name).toRight(MissingDefinition(name))
+        private def zeroCut: Either[LogicError, Term] =
+          read(Fraction.Zero, Fraction.Classes).flatMap(zr => read(OfRational, Type.fun(Fraction.Classes, cutType)).flatMap(app(_, zr)))
+        private def oneCut: Either[LogicError, Term] =
+          read(Fraction.One, Fraction.Classes).flatMap(o => read(OfRational, Type.fun(Fraction.Classes, cutType)).flatMap(app(_, o)))
+        private def neg(t: Term): Either[LogicError, Term] = read(Negation, Type.fun(cutType, cutType)).flatMap(app(_, t))
+        private def mul(a: Term, b: Term): Either[LogicError, Term] =
+          read(Multiplication, Type.fun(cutType, Type.fun(cutType, cutType))).flatMap(app(_, a, b))
+        private def nn(t: Term): Either[LogicError, Term] =
+          for {
+            atMost <- read(AtMost, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            zc <- zeroCut
+            result <- app(atMost, zc, t)
+          } yield result
+        private def negation: Either[LogicError, Term] = read(Negation, Type.fun(cutType, cutType))
+        private def groupFact(name: String): Either[LogicError, Kernel.Thm] =
+          group.facts.collectFirst { case (`name`, theorem) => theorem }.toRight(MissingDefinition(name))
+
+        /** The core's commutativity, as an ordered rule for [[Group.equal]]. */
+        private def coreRules: Either[LogicError, Vector[Rewrite.Rule]] =
+          product(PosMulCommutative).flatMap(c => Rewrite.Rule.all(logic, Vector(c)))
+        private def equal(left: Term, right: Term): Either[LogicError, Kernel.Thm] =
+          coreRules.flatMap(group.equal(left, right, _))
+
+        private def conditional(held: Boolean): Either[LogicError, Kernel.Thm] =
+          classical.fact(if (held) Classical.CondTrue else Classical.CondFalse)
+            .map(Kernel.instType(Map(Classical.TypeVariable -> cutType), _))
+
+        /** `|- COND p a b = a` or `= b`, as the sign fact says `p` or `~p`. */
+        private def branch(term: Term, sign: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          term match {
+            case App(App(App(_, test), yes), no) =>
+              val holds = sign.conclusion == test
+              conditional(holds).flatMap(rules.specAll(_, List(test, yes, no))).flatMap(rules.mp(_, sign))
+            case other => Left(NotOfForm("a conditional", other))
+          }
+
+        /** `|- CUT_MUL a b = (the branch the two sign facts select)`. */
+        private def evaluated(a: Term, b: Term, signA: Kernel.Thm, signB: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            unfolded <- Conv.unfold(multiplicationDefinition, List(a, b))
+            outer <- rightOf(unfolded).flatMap(branch(_, signA))
+            stepped <- Conv.trans(unfolded, outer)
+            inner <- rightOf(stepped).flatMap(branch(_, signB))
+            result <- Conv.trans(stepped, inner)
+          } yield result
+
+        /** A case split on `0 <= t`, each branch handed the sign fact it assumed. */
+        private def bySign(t: Term)(body: Kernel.Thm => Either[LogicError, Kernel.Thm]): Either[LogicError, Kernel.Thm] =
+          for {
+            test <- nn(t)
+            positive <- assume(test).flatMap(body)
+            negative <- logic.mkNot(test).flatMap(assume).flatMap(body)
+            result <- classical.cases(test, positive, negative)
+          } yield result
+
+
+        private def mulConstant: Either[LogicError, Term] = read(Multiplication, Type.fun(cutType, Type.fun(cutType, cutType)))
+        private def posMulConstant: Either[LogicError, Term] = read(PosMul, Type.fun(cutType, Type.fun(cutType, cutType)))
+        private def pmul(a: Term, b: Term): Either[LogicError, Term] = posMulConstant.flatMap(app(_, a, b))
+        private def add(a: Term, b: Term): Either[LogicError, Term] = addition.flatMap(app(_, a, b))
+
+        /** `|- a * b = CUT_PMUL a b` on the cone. */
+        private def coneAt(cone: Kernel.Thm, a: Term, b: Term, ha: Kernel.Thm, hb: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          rules.specAll(cone, List(a, b)).flatMap(rules.mp(_, ha)).flatMap(rules.mp(_, hb))
+
+        /** `|- a * (-b) = -(a * b)`, by commutativity on both sides of the left law. */
+        private def negRightAt(negLeft: Kernel.Thm, commutative: Kernel.Thm, a: Term, b: Term): Either[LogicError, Kernel.Thm] =
+          for {
+            nb <- neg(b)
+            s1 <- rules.specAll(commutative, List(a, nb))
+            s2 <- rules.specAll(negLeft, List(b, a))
+            s3 <- rules.specAll(commutative, List(b, a)).flatMap(eq => negation.flatMap(Conv.apTerm(_, eq)))
+            result <- Conv.trans(s1, s2).flatMap(Conv.trans(_, s3))
+          } yield result
+
+        /** The two sign laws as unconditional rules: a negation is pulled out of either factor. */
+        private def signRules(negLeft: Kernel.Thm, commutative: Kernel.Thm): Either[LogicError, Vector[Rewrite.Rule]] =
+          for {
+            negRight <- negRightAt(negLeft, commutative, x, y).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+            result <- Rewrite.Rule.all(logic, Vector(negLeft, negRight))
+          } yield result
+
+        /** From `|- A = B` about `-v`, the same law about `v`: negate both sides and pull the signs out. */
+        private def transfer(law: Kernel.Thm, targetLeft: Term, targetRight: Term, pulled: Vector[Rewrite.Rule]): Either[LogicError, Kernel.Thm] =
+          for {
+            sides <- Term.destEq(law.conclusion).toRight(NotOfForm("an equation", law.conclusion))
+            negatedLeft <- neg(sides._1)
+            negatedRight <- neg(sides._2)
+            t1 <- group.equal(targetLeft, negatedLeft, extraUnconditional = pulled)
+            t2 <- negation.flatMap(Conv.apTerm(_, law))
+            t3 <- group.equal(negatedRight, targetRight, extraUnconditional = pulled)
+            result <- Conv.trans(t1, t2).flatMap(Conv.trans(_, t3))
+          } yield result
+
+        /** A case split on the sign of `t`: `0 <= t` or `0 <= -t`. */
+        private def byCases(signs: Kernel.Thm, t: Term)(
+          nonNeg: Kernel.Thm => Either[LogicError, Kernel.Thm],
+          negNonNeg: Kernel.Thm => Either[LogicError, Kernel.Thm]
+        ): Either[LogicError, Kernel.Thm] =
+          for {
+            cases <- rules.spec(t, signs)
+            parts <- logic.destDisj(cases.conclusion).toRight(NotOfForm("a disjunction", cases.conclusion))
+            first <- assume(parts._1).flatMap(nonNeg)
+            second <- assume(parts._2).flatMap(negNonNeg)
+            result <- rules.disjElim(cases, first, second)
+          } yield result
+
+        /**
+         * [[Cut.MulAssociative]]: the core's law on the cone, then each of the three variables in
+         * turn is carried off it by [[transfer]], the law at `-v` giving the law at `v`.
+         */
+        private def associativeFact(signs: Kernel.Thm, negLeft: Kernel.Thm, commutative: Kernel.Thm, cone: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+          def lhs(a: Term, b: Term, c: Term) = mul(a, b).flatMap(mul(_, c))
+          def rhs(a: Term, b: Term, c: Term) = mul(b, c).flatMap(mul(a, _))
+          def onCone(a: Term, b: Term, c: Term, ha: Kernel.Thm, hb: Kernel.Thm, hc: Kernel.Thm) =
+            for {
+              m <- mulConstant
+              ab <- coneAt(cone, a, b, ha, hb)
+              p <- rightOf(ab)
+              nnP <- product(PosMulNonNegative).flatMap(rules.specAll(_, List(a, b))).flatMap(rules.mp(_, ha)).flatMap(rules.mp(_, hb))
+              left1 <- Conv.apTerm(m, ab).flatMap(Conv.apThm(_, c))
+              left2 <- coneAt(cone, p, c, nnP, hc)
+              core <- product(PosMulAssociative).flatMap(rules.specAll(_, List(a, b, c)))
+                .flatMap(rules.mp(_, ha)).flatMap(rules.mp(_, hb)).flatMap(rules.mp(_, hc))
+              bc <- coneAt(cone, b, c, hb, hc)
+              q <- rightOf(bc)
+              nnQ <- product(PosMulNonNegative).flatMap(rules.specAll(_, List(b, c))).flatMap(rules.mp(_, hb)).flatMap(rules.mp(_, hc))
+              right1 <- app(m, a).flatMap(Conv.apTerm(_, bc))
+              right2 <- coneAt(cone, a, q, ha, nnQ)
+              back <- Conv.trans(right1, right2).flatMap(Conv.sym)
+              result <- Conv.trans(left1, left2).flatMap(Conv.trans(_, core)).flatMap(Conv.trans(_, back))
+            } yield result
+          for {
+            pulled <- signRules(negLeft, commutative)
+            level1 = (a: Term, b: Term, c: Term, hb: Kernel.Thm, hc: Kernel.Thm) =>
+              byCases(signs, a)(
+                ha => onCone(a, b, c, ha, hb, hc),
+                hna => for {
+                  na <- neg(a)
+                  law <- onCone(na, b, c, hna, hb, hc)
+                  tl <- lhs(a, b, c)
+                  tr <- rhs(a, b, c)
+                  result <- transfer(law, tl, tr, pulled)
+                } yield result
+              )
+            level2 = (a: Term, b: Term, c: Term, hc: Kernel.Thm) =>
+              byCases(signs, b)(
+                hb => level1(a, b, c, hb, hc),
+                hnb => for {
+                  nb <- neg(b)
+                  law <- level1(a, nb, c, hnb, hc)
+                  tl <- lhs(a, b, c)
+                  tr <- rhs(a, b, c)
+                  result <- transfer(law, tl, tr, pulled)
+                } yield result
+              )
+            result <- byCases(signs, z)(
+              hz => level2(x, y, z, hz),
+              hnz => for {
+                nz <- neg(z)
+                law <- level2(x, y, nz, hnz)
+                tl <- lhs(x, y, z)
+                tr <- rhs(x, y, z)
+                result <- transfer(law, tl, tr, pulled)
+              } yield result
+            )
+            general <- rules.gen(z, result).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+          } yield general
+        }
+
+        /**
+         * [[Cut.MulDistributive]]. On the cone it is the core's law. With `z` negative the sum is
+         * split by its own sign and the core's law is read at `(y + z, -z)` or at `(-(y + z), y)`;
+         * with both negative it is the cone at `(-y, -z)`; and a negative `x` is [[transfer]].
+         */
+        private def distributiveFact(signs: Kernel.Thm, negLeft: Kernel.Thm, commutative: Kernel.Thm, cone: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+          def lhs(a: Term, b: Term, c: Term) = add(b, c).flatMap(mul(a, _))
+          def rhs(a: Term, b: Term, c: Term) = mul(a, b).flatMap(ab => mul(a, c).flatMap(add(ab, _)))
+          def sumOf(left: Kernel.Thm, right: Kernel.Thm) = addition.flatMap(Conv.apTerm(_, left)).flatMap(p => lift(Kernel.mkComb(p, right)))
+          def negNegAt(t: Term) = groupFact(NegNeg).flatMap(rules.spec(t, _))
+
+          def onCone(a: Term, b: Term, c: Term, ha: Kernel.Thm, hb: Kernel.Thm, hc: Kernel.Thm) =
+            for {
+              s <- add(b, c)
+              hs <- rules.specAll(addNonNegative, List(b, c)).flatMap(rules.mp(_, hb)).flatMap(rules.mp(_, hc))
+              left <- coneAt(cone, a, s, ha, hs)
+              core <- product(PosMulDistributive).flatMap(rules.specAll(_, List(a, b, c)))
+                .flatMap(rules.mp(_, ha)).flatMap(rules.mp(_, hb)).flatMap(rules.mp(_, hc))
+              r1 <- coneAt(cone, a, b, ha, hb)
+              r2 <- coneAt(cone, a, c, ha, hc)
+              back <- sumOf(r1, r2).flatMap(Conv.sym)
+              result <- Conv.trans(left, core).flatMap(Conv.trans(_, back))
+            } yield result
+
+          /** `a * c = -(CUT_PMUL a (-c))` for `c` whose negation is on the cone. */
+          def negativeFactor(a: Term, c: Term, ha: Kernel.Thm, hnc: Kernel.Thm) =
+            for {
+              m <- mulConstant
+              w <- neg(c)
+              cw <- negNegAt(c).flatMap(Conv.sym)
+              s1 <- app(m, a).flatMap(Conv.apTerm(_, cw))
+              s2 <- negRightAt(negLeft, commutative, a, w)
+              s3 <- coneAt(cone, a, w, ha, hnc).flatMap(eq => negation.flatMap(Conv.apTerm(_, eq)))
+              result <- Conv.trans(s1, s2).flatMap(Conv.trans(_, s3))
+            } yield result
+
+          def mixed(a: Term, b: Term, c: Term, ha: Kernel.Thm, hb: Kernel.Thm, hnc: Kernel.Thm) =
+            for {
+              s <- add(b, c)
+              w <- neg(c)
+              pm <- posMulConstant
+              rab <- coneAt(cone, a, b, ha, hb)
+              rac <- negativeFactor(a, c, ha, hnc)
+              rhsEq <- sumOf(rab, rac)
+              pab <- pmul(a, b)
+              paw <- pmul(a, w)
+              result <- bySign(s) { signS =>
+                nn(s).flatMap { nonNegS =>
+                  if (signS.conclusion == nonNegS)
+                    for {
+                      core <- product(PosMulDistributive).flatMap(rules.specAll(_, List(a, s, w)))
+                        .flatMap(rules.mp(_, ha)).flatMap(rules.mp(_, signS)).flatMap(rules.mp(_, hnc))
+                      sw <- add(s, w)
+                      eqSW <- group.equal(sw, b)
+                      eq <- app(pm, a).flatMap(Conv.apTerm(_, eqSW)).flatMap(Conv.sym).flatMap(Conv.trans(_, core))
+                      lhsEq <- coneAt(cone, a, s, ha, signS)
+                      npaw <- neg(paw)
+                      substituted <- addition.flatMap(Conv.apTerm(_, eq)).flatMap(Conv.apThm(_, npaw))
+                      pas <- pmul(a, s)
+                      replaced <- rightOf(substituted)
+                      close <- group.equal(pas, replaced)
+                      result <- Conv.sym(substituted).flatMap(back => Conv.sym(rhsEq).flatMap(back2 =>
+                        Conv.trans(lhsEq, close).flatMap(Conv.trans(_, back)).flatMap(Conv.trans(_, back2))))
+                    } yield result
+                  else
+                    for {
+                      ht <- negatedSign(signs, signS, s)
+                      t <- neg(s)
+                      core <- product(PosMulDistributive).flatMap(rules.specAll(_, List(a, t, b)))
+                        .flatMap(rules.mp(_, ha)).flatMap(rules.mp(_, ht)).flatMap(rules.mp(_, hb))
+                      tb <- add(t, b)
+                      eqTB <- group.equal(tb, w)
+                      eq <- app(pm, a).flatMap(Conv.apTerm(_, eqTB)).flatMap(Conv.sym).flatMap(Conv.trans(_, core))
+                      lhsEq <- negativeFactor(a, s, ha, ht)
+                      substituted <- negation.flatMap(Conv.apTerm(_, eq)).flatMap(inner => addition.flatMap(ad => app(ad, pab)).flatMap(Conv.apTerm(_, inner)))
+                      pat <- pmul(a, t)
+                      npat <- neg(pat)
+                      replaced <- rightOf(substituted)
+                      close <- group.equal(npat, replaced)
+                      result <- Conv.sym(substituted).flatMap(back => Conv.sym(rhsEq).flatMap(back2 =>
+                        Conv.trans(lhsEq, close).flatMap(Conv.trans(_, back)).flatMap(Conv.trans(_, back2))))
+                    } yield result
+                }
+              }
+            } yield result
+
+          def bothNegative(a: Term, b: Term, c: Term, ha: Kernel.Thm, hnb: Kernel.Thm, hnc: Kernel.Thm) =
+            for {
+              m <- mulConstant
+              nb <- neg(b)
+              nc <- neg(c)
+              law <- onCone(a, nb, nc, ha, hnb, hnc)
+              bc <- add(b, c)
+              k1 <- negRightAt(negLeft, commutative, a, bc)
+              k2 <- groupFact(NegAdd).flatMap(rules.specAll(_, List(b, c))).flatMap(eq => app(m, a).flatMap(Conv.apTerm(_, eq)))
+              f1 <- Conv.sym(k1).flatMap(Conv.trans(_, k2)).flatMap(Conv.trans(_, law))
+              rb <- negRightAt(negLeft, commutative, a, b)
+              rc <- negRightAt(negLeft, commutative, a, c)
+              f2 <- sumOf(rb, rc).flatMap(Conv.trans(f1, _))
+              g <- negation.flatMap(Conv.apTerm(_, f2))
+              target <- lhs(a, b, c)
+              goalRight <- rhs(a, b, c)
+              gSides <- Term.destEq(g.conclusion).toRight(NotOfForm("an equation", g.conclusion))
+              t1 <- group.equal(target, gSides._1)
+              t3 <- group.equal(gSides._2, goalRight)
+              result <- Conv.trans(t1, g).flatMap(Conv.trans(_, t3))
+            } yield result
+
+          def level1(a: Term, b: Term, c: Term, ha: Kernel.Thm) =
+            byCases(signs, b)(
+              hb => byCases(signs, c)(hc => onCone(a, b, c, ha, hb, hc), hnc => mixed(a, b, c, ha, hb, hnc)),
+              hnb => byCases(signs, c)(
+                hc => for {
+                  m <- mulConstant
+                  law <- mixed(a, c, b, ha, hc, hnb)
+                  bc <- add(b, c)
+                  cb <- add(c, b)
+                  swapped <- group.equal(bc, cb).flatMap(eq => app(m, a).flatMap(Conv.apTerm(_, eq)))
+                  lawRight <- rightOf(law)
+                  goalRight <- rhs(a, b, c)
+                  reordered <- group.equal(lawRight, goalRight)
+                  result <- Conv.trans(swapped, law).flatMap(Conv.trans(_, reordered))
+                } yield result,
+                hnc => bothNegative(a, b, c, ha, hnb, hnc)
+              )
+            )
+
+          for {
+            pulled <- signRules(negLeft, commutative)
+            result <- byCases(signs, x)(
+              hx => level1(x, y, z, hx),
+              hnx => for {
+                nx <- neg(x)
+                law <- level1(nx, y, z, hnx)
+                tl <- lhs(x, y, z)
+                tr <- rhs(x, y, z)
+                result <- transfer(law, tl, tr, pulled)
+              } yield result
+            )
+            general <- rules.gen(z, result).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+          } yield general
+        }
+
+        /** [[Cut.LessMul]]: two positive cuts are on the cone, where the product is the core. */
+        private def lessMulFact(cone: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            zc <- zeroCut
+            lessConst <- read(LessThan, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            pxTerm <- app(lessConst, zc, x)
+            pyTerm <- app(lessConst, zc, y)
+            both <- logic.mkConj(pxTerm, pyTerm).flatMap(assume)
+            px <- rules.conjElim1(both)
+            py <- rules.conjElim2(both)
+            hx <- nonNegOfPositive(x, px)
+            hy <- nonNegOfPositive(y, py)
+            onTheCone <- coneAt(cone, x, y, hx, hy)
+            positive <- product(PosMulPositive).flatMap(rules.specAll(_, List(x, y))).flatMap(rules.mp(_, px)).flatMap(rules.mp(_, py))
+            carried <- app(lessConst, zc).flatMap(Conv.apTerm(_, onTheCone)).flatMap(Conv.sym).flatMap(eqMp(_, positive))
+            result <- rules.disch(both.conclusion, carried).flatMap(rules.gen(y, _)).flatMap(rules.gen(x, _))
+          } yield result
+
+
+        /**
+         * [[Cut.InverseZero]] and [[Cut.MulInverse]]. `CUT_INV` reads `0 < x` and then `x < 0`, so at
+         * zero both tests fail and the definition writes zero; above zero it is the positive inverse,
+         * and below it the negated inverse of `-x`, where the sign laws carry the product across.
+         */
+        private def inverseFacts(cone: Kernel.Thm, negLeft: Kernel.Thm, commutative: Kernel.Thm, signs: Kernel.Thm): Either[LogicError, (Kernel.Thm, Kernel.Thm)] =
+          for {
+            zc <- zeroCut
+            oc <- oneCut
+            lessConst <- read(LessThan, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            atMost <- read(AtMost, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            m <- mulConstant
+            reflexiveZero <- zeroNonNeg
+            notLessZero <- for {
+              lessTerm <- app(lessConst, zc, zc)
+              held <- assume(lessTerm)
+              opened <- Conv.unfold(lessThanDefinition, List(zc, zc)).flatMap(eqMp(_, held))
+              falsity <- rules.notElim(opened, reflexiveZero)
+              result <- rules.notIntro(lessTerm, falsity)
+            } yield result
+            atZero <- for {
+              unfolded <- Conv.unfold(inverseDefinition, List(zc))
+              outer <- rightOf(unfolded).flatMap(branch(_, notLessZero))
+              stepped <- Conv.trans(unfolded, outer)
+              inner <- rightOf(stepped).flatMap(branch(_, notLessZero))
+              result <- Conv.trans(stepped, inner)
+            } yield result
+
+            nonZeroTerm <- lift(Term.eq(x, zc)).flatMap(logic.mkNot)
+            nonZero <- assume(nonZeroTerm)
+            positiveTerm <- app(lessConst, zc, x)
+            invX <- read(Inverse, Type.fun(cutType, cutType)).flatMap(app(_, x))
+            pinvConst <- read(PosInverse, Type.fun(cutType, cutType))
+            viaPositive <- for {
+              positive <- assume(positiveTerm)
+              hx <- nonNegOfPositive(x, positive)
+              unfolded <- Conv.unfold(inverseDefinition, List(x))
+              choice <- rightOf(unfolded).flatMap(branch(_, positive)).flatMap(Conv.trans(unfolded, _))
+              carried <- app(m, x).flatMap(Conv.apTerm(_, choice))
+              pinv <- app(pinvConst, x)
+              nnInv <- product(PosInverseNonNegative).flatMap(rules.spec(x, _)).flatMap(rules.mp(_, positive))
+              onTheCone <- coneAt(cone, x, pinv, hx, nnInv)
+              unit <- product(PosMulInverse).flatMap(rules.spec(x, _)).flatMap(rules.mp(_, positive))
+              result <- Conv.trans(carried, onTheCone).flatMap(Conv.trans(_, unit))
+            } yield result
+            viaNegative <- for {
+              notPositive <- logic.mkNot(positiveTerm).flatMap(assume)
+              atMostZeroTerm <- app(atMost, x, zc)
+              doubled <- Conv.unfold(lessThanDefinition, List(zc, x))
+                .flatMap(eq => notPositive.conclusion match {
+                  case App(not, _) => Conv.apTerm(not, eq).flatMap(eqMp(_, notPositive))
+                  case other => Left(NotOfForm("a negation", other))
+                })
+              atMostZero <- classical.fact(Classical.DoubleNegation).flatMap(rules.spec(atMostZeroTerm, _)).flatMap(rules.mp(_, doubled))
+              negativeTerm <- app(lessConst, x, zc)
+              negative <- for {
+                aboveTerm <- app(atMost, zc, x)
+                above <- assume(aboveTerm)
+                isZero <- rules.specAll(antisymmetric, List(x, zc)).flatMap(rules.mp(_, atMostZero)).flatMap(rules.mp(_, above))
+                falsity <- rules.notElim(nonZero, isZero)
+                notAbove <- rules.notIntro(aboveTerm, falsity)
+                result <- Conv.unfold(lessThanDefinition, List(x, zc)).flatMap(Conv.sym).flatMap(eqMp(_, notAbove))
+              } yield result
+              unfolded <- Conv.unfold(inverseDefinition, List(x))
+              outer <- rightOf(unfolded).flatMap(branch(_, notPositive)).flatMap(Conv.trans(unfolded, _))
+              choice <- rightOf(outer).flatMap(branch(_, negative)).flatMap(Conv.trans(outer, _))
+              nx <- neg(x)
+              pnx <- for {
+                belowTerm <- app(atMost, nx, zc)
+                below <- assume(belowTerm)
+                flipped <- atMostNegFact.flatMap(rules.specAll(_, List(nx, zc))).flatMap(rules.mp(_, below))
+                negZero <- groupFact(NegZero)
+                negNeg <- groupFact(NegNeg).flatMap(rules.spec(x, _))
+                above <- compared(flipped, negZero, negNeg)
+                falsity <- Conv.unfold(lessThanDefinition, List(x, zc)).flatMap(eqMp(_, negative)).flatMap(rules.notElim(_, above))
+                notBelow <- rules.notIntro(belowTerm, falsity)
+                result <- Conv.unfold(lessThanDefinition, List(zc, nx)).flatMap(Conv.sym).flatMap(eqMp(_, notBelow))
+              } yield result
+              hnx <- nonNegOfPositive(nx, pnx)
+              pinvNeg <- app(pinvConst, nx)
+              nnInv <- product(PosInverseNonNegative).flatMap(rules.spec(nx, _)).flatMap(rules.mp(_, pnx))
+              unitNeg <- coneAt(cone, nx, pinvNeg, hnx, nnInv)
+                .flatMap(onTheCone => product(PosMulInverse).flatMap(rules.spec(nx, _)).flatMap(rules.mp(_, pnx)).flatMap(Conv.trans(onTheCone, _)))
+              carried <- app(m, x).flatMap(Conv.apTerm(_, choice))
+              pulledRight <- negRightAt(negLeft, commutative, x, pinvNeg)
+              pulledLeft <- rules.specAll(negLeft, List(x, pinvNeg)).flatMap(Conv.sym)
+              result <- Conv.trans(carried, pulledRight).flatMap(Conv.trans(_, pulledLeft)).flatMap(Conv.trans(_, unitNeg))
+            } yield result
+            mulInverse <- classical.cases(positiveTerm, viaPositive, viaNegative)
+              .flatMap(rules.disch(nonZeroTerm, _))
+              .flatMap(rules.gen(x, _))
+          } yield (atZero, mulInverse)
+
+        def facts: Either[LogicError, Vector[(String, Kernel.Thm)]] =
+          for {
+            flipped <- atMostNegFact
+            signs <- signCasesFact(flipped)
+            cone <- onConeFact
+            zero <- mulZeroFact
+            unit <- mulOneFact(signs)
+            commutative <- commutativeFact
+            negLeft <- negLeftFact(signs, commutative, zero)
+            associative <- associativeFact(signs, negLeft, commutative, cone)
+            distributive <- distributiveFact(signs, negLeft, commutative, cone)
+            lessMul <- lessMulFact(cone)
+            inverses <- inverseFacts(cone, negLeft, commutative, signs)
+          } yield Vector(
+            (AtMostNeg, flipped),
+            (SignCases, signs),
+            (MulOnCone, cone),
+            (MulZero, zero),
+            (MulOne, unit),
+            (MulCommutative, commutative),
+            (MulNegLeft, negLeft),
+            (MulAssociative, associative),
+            (MulDistributive, distributive),
+            (LessMul, lessMul),
+            (InverseZero, inverses._1),
+            (MulInverse, inverses._2)
+          )
+
+        /** [[Cut.AtMostNeg]]: add `-x + -y` to both sides. */
+        private def atMostNegFact: Either[LogicError, Kernel.Thm] =
+          for {
+            atMost <- read(AtMost, Type.fun(cutType, Type.fun(cutType, Type.Bool)))
+            held <- app(atMost, x, y).flatMap(assume)
+            nx <- neg(x)
+            ny <- neg(y)
+            shift <- addition.flatMap(app(_, nx, ny))
+            shifted <- rules.specAll(atMostAdd, List(x, y, shift)).flatMap(rules.mp(_, held))
+            sides <- binary(shifted.conclusion)
+            leftIs <- equal(sides._1, ny)
+            rightIs <- equal(sides._2, nx)
+            result <- compared(shifted, leftIs, rightIs)
+              .flatMap(rules.disch(held.conclusion, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield result
+
+        /** [[Cut.SignCases]]: totality at zero, and `x <= 0` flipped. */
+        private def signCasesFact(flipped: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            zc <- zeroCut
+            nx <- neg(x)
+            nonNegTerm <- nn(x)
+            negNonNegTerm <- nn(nx)
+            cases <- rules.specAll(total, List(zc, x))
+            viaFirst <- assume(nonNegTerm).flatMap(rules.disjIntro1(negNonNegTerm, _))
+            belowTerm <- read(AtMost, Type.fun(cutType, Type.fun(cutType, Type.Bool))).flatMap(app(_, x, zc))
+            viaSecond <- for {
+              below <- assume(belowTerm)
+              turned <- rules.specAll(flipped, List(x, zc)).flatMap(rules.mp(_, below))
+              negZero <- groupFact(NegZero)
+              result <- compared(turned, negZero, Conv.refl(nx)).flatMap(rules.disjIntro2(nonNegTerm, _))
+            } yield result
+            result <- rules.disjElim(cases, viaFirst, viaSecond).flatMap(rules.gen(x, _))
+          } yield result
+
+        /** `~(0 <= t)` gives `0 <= -t`. */
+        private def negatedSign(signs: Kernel.Thm, notNonNeg: Kernel.Thm, t: Term): Either[LogicError, Kernel.Thm] =
+          for {
+            cases <- rules.spec(t, signs)
+            nt <- neg(t)
+            target <- nn(nt)
+            first <- nn(t).flatMap(assume).flatMap(held => rules.notElim(notNonNeg, held)).flatMap(rules.falsityElim(target, _))
+            second <- assume(target)
+            result <- rules.disjElim(cases, first, second)
+          } yield result
+
+        /** [[Cut.MulOnCone]]: both tests hold, so both conditionals take their first branch. */
+        private def onConeFact: Either[LogicError, Kernel.Thm] =
+          for {
+            hx <- nn(x).flatMap(assume)
+            hy <- nn(y).flatMap(assume)
+            result <- evaluated(x, y, hx, hy)
+              .flatMap(rules.disch(hy.conclusion, _))
+              .flatMap(rules.disch(hx.conclusion, _))
+              .flatMap(rules.gen(y, _))
+              .flatMap(rules.gen(x, _))
+          } yield result
+
+        private def zeroNonNeg: Either[LogicError, Kernel.Thm] = zeroCut.flatMap(rules.spec(_, reflexive))
+
+        /** [[Cut.MulZero]]: the core at zero is zero, and so is its negation. */
+        private def mulZeroFact: Either[LogicError, Kernel.Thm] =
+          for {
+            zc <- zeroCut
+            nonNegZero <- zeroNonNeg
+            coreZero <- product(PosMulZero)
+            result <- bySign(x) { sign =>
+              for {
+                evaluatedAt <- evaluated(x, zc, sign, nonNegZero)
+                nonNegX <- nn(x)
+                closing <-
+                  if (sign.conclusion == nonNegX) rules.spec(x, coreZero)
+                  else
+                    for {
+                      nx <- neg(x)
+                      atNegX <- rules.spec(nx, coreZero)
+                      carried <- negation.flatMap(Conv.apTerm(_, atNegX))
+                      negZero <- groupFact(NegZero)
+                      result <- Conv.trans(carried, negZero)
+                    } yield result
+                result <- Conv.trans(evaluatedAt, closing)
+              } yield result
+            }
+            general <- rules.gen(x, result)
+          } yield general
+
+        /** [[Cut.MulOne]]: the core's unit on the cone, and `--x = x` off it. */
+        private def mulOneFact(signs: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            zc <- zeroCut
+            oc <- oneCut
+            zeroTerm <- read(Fraction.Zero, Fraction.Classes)
+            oneTerm <- read(Fraction.One, Fraction.Classes)
+            positiveOne <- zeroBelowOne
+            oneNonNeg <- included(zc, oc) { inZero =>
+              memberOf(members, zeroTerm, u).flatMap(eqMp(_, inZero))
+                .flatMap(lessTransitive(_, positiveOne))
+                .flatMap(less => memberOf(members, oneTerm, u).flatMap(Conv.sym).flatMap(eqMp(_, less)))
+            }
+            coreOne <- product(PosMulOne)
+            result <- bySign(x) { sign =>
+              for {
+                evaluatedAt <- evaluated(x, oc, sign, oneNonNeg)
+                nonNegX <- nn(x)
+                closing <-
+                  if (sign.conclusion == nonNegX) rules.spec(x, coreOne).flatMap(rules.mp(_, sign))
+                  else
+                    for {
+                      nx <- neg(x)
+                      negNonNeg <- negatedSign(signs, sign, x)
+                      unit <- rules.spec(nx, coreOne).flatMap(rules.mp(_, negNonNeg))
+                      carried <- negation.flatMap(Conv.apTerm(_, unit))
+                      negNeg <- groupFact(NegNeg).flatMap(rules.spec(x, _))
+                      result <- Conv.trans(carried, negNeg)
+                    } yield result
+                result <- Conv.trans(evaluatedAt, closing)
+              } yield result
+            }
+            general <- rules.gen(x, result)
+          } yield general
+
+        /** [[Cut.MulCommutative]]: in each of the four sign cases the branches differ by the core's order. */
+        private def commutativeFact: Either[LogicError, Kernel.Thm] =
+          for {
+            result <- bySign(x) { signX =>
+              bySign(y) { signY =>
+                for {
+                  forwards <- evaluated(x, y, signX, signY)
+                  backwards <- evaluated(y, x, signY, signX)
+                  left <- rightOf(forwards)
+                  right <- rightOf(backwards)
+                  bridge <- equal(left, right)
+                  result <- Conv.sym(backwards).flatMap(back => Conv.trans(forwards, bridge).flatMap(Conv.trans(_, back)))
+                } yield result
+              }
+            }
+            general <- rules.gen(y, result).flatMap(rules.gen(x, _))
+          } yield general
+
+        /**
+         * [[Cut.MulNegLeft]]. Where exactly one of `x` and `-x` is at least zero the two sides are
+         * branches that the group identifies; where both are, `x` is zero and both sides are zero.
+         */
+        private def negLeftFact(signs: Kernel.Thm, commutative: Kernel.Thm, mulZero: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+          for {
+            nx <- neg(x)
+            zc <- zeroCut
+            nonNegX <- nn(x)
+            nonNegNegX <- nn(nx)
+            result <- bySign(x) { signX =>
+              bySign(nx) { signNegX =>
+                val bothNonNeg = signX.conclusion == nonNegX && signNegX.conclusion == nonNegNegX
+                val neither = signX.conclusion != nonNegX && signNegX.conclusion != nonNegNegX
+                if (neither)
+                  for {
+                    cases <- rules.spec(x, signs)
+                    target <- mul(nx, y).flatMap(l => mul(x, y).flatMap(neg).flatMap(r => lift(Term.eq(l, r))))
+                    first <- assume(nonNegX).flatMap(rules.notElim(signX, _)).flatMap(rules.falsityElim(target, _))
+                    second <- assume(nonNegNegX).flatMap(rules.notElim(signNegX, _)).flatMap(rules.falsityElim(target, _))
+                    result <- rules.disjElim(cases, first, second)
+                  } yield result
+                else if (bothNonNeg)
+                  for {
+                    // `0 <= -x` flipped is `x <= 0`, so `x = 0`
+                    flipped <- atMostNegFact
+                    turned <- rules.specAll(flipped, List(zc, nx)).flatMap(rules.mp(_, signNegX))
+                    negZero <- groupFact(NegZero)
+                    negNeg <- groupFact(NegNeg).flatMap(rules.spec(x, _))
+                    below <- compared(turned, negNeg, negZero)
+                    isZero <- rules.specAll(antisymmetric, List(x, zc)).flatMap(rules.mp(_, below)).flatMap(rules.mp(_, signX))
+                    // both sides at zero
+                    zeroLeft <- rules.specAll(commutative, List(zc, y)).flatMap(swap => rules.spec(y, mulZero).flatMap(Conv.trans(swap, _)))
+                    negIsZero <- negation.flatMap(Conv.apTerm(_, isZero)).flatMap(Conv.trans(_, negZero))
+                    leftAtZero <- read(Multiplication, Type.fun(cutType, Type.fun(cutType, cutType)))
+                      .flatMap(m => Conv.apTerm(m, negIsZero)).flatMap(Conv.apThm(_, y)).flatMap(Conv.trans(_, zeroLeft))
+                    rightAtZero <- read(Multiplication, Type.fun(cutType, Type.fun(cutType, cutType)))
+                      .flatMap(m => Conv.apTerm(m, isZero)).flatMap(Conv.apThm(_, y)).flatMap(Conv.trans(_, zeroLeft))
+                      .flatMap(inner => negation.flatMap(Conv.apTerm(_, inner))).flatMap(Conv.trans(_, negZero))
+                    result <- Conv.sym(rightAtZero).flatMap(Conv.trans(leftAtZero, _))
+                  } yield result
+                else
+                  bySign(y) { signY =>
+                    for {
+                      left <- evaluated(nx, y, signNegX, signY)
+                      right <- evaluated(x, y, signX, signY)
+                      leftBranch <- rightOf(left)
+                      rightBranch <- rightOf(right).flatMap(neg)
+                      bridge <- equal(leftBranch, rightBranch)
+                      back <- negation.flatMap(Conv.apTerm(_, right)).flatMap(Conv.sym)
+                      result <- Conv.trans(left, bridge).flatMap(Conv.trans(_, back))
+                    } yield result
+                  }
+              }
+            }
+            general <- rules.gen(y, result).flatMap(rules.gen(x, _))
+          } yield general
+      }
     }
 
     /** [[Cut.Represents]]: the characterisation at `dest_cut x`, whose right side is `abs (rep x) = x` carried. */
