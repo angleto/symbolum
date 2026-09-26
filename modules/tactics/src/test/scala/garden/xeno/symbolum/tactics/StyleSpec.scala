@@ -268,6 +268,11 @@ class StyleSpec extends AnyFlatSpec with Matchers {
         "derivation. It is excused rather than reviewed away, and [[Excused]] carries the " +
         "measurement; what belongs here is that none of it escapes, since `Solver` is a private " +
         "class whose only public method returns an `Answer` built out of immutable values"),
+    "Integrability.scala" ->
+      ("one map from the text of a closed arithmetic fact to the theorem `Linarith` proved for it, " +
+        "so that a fact used dozens of times is one node of the derivation rather than dozens of " +
+        "copies of it; it lives as long as one builder, which is one call of `prove`, and never " +
+        "leaves it, and what it holds is theorems, which are immutable"),
     "Notebook.scala" ->
       ("one `AtomicReference` holding the current `Session`, which is the whole mutable state of " +
         "the server and is mutable because a page is a long-lived process and a session is not: " +

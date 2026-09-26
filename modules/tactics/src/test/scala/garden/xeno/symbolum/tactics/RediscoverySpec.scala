@@ -353,9 +353,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 646 with the logarithm's slope, 2026-09-26, derived before the run: its one antecedent, `0 < x`.
     // 652 with the integral's linearity, 2026-09-26, derived before the run and read off the probe:
     // two antecedents on each of the three.
-    // 685 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
+    // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // the run: four antecedents on `HAS_INTEGRAL_JOIN`, three on each of the two derivatives.
+    // 695 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
     // over fourteen facts, the count `ProposeSpec` gives by fact. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 685
+    propose.weakenings.size shouldBe 695
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -491,7 +493,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // none of the four.
     // 114 with the logarithm's slope, 2026-09-26, derived before the run: `0 < x` is an order
     // between reals with no lambda in the body.
-    propose.mutable.size shouldBe 114
+    // 115 with `HAS_INTEGRAL_JOIN`, the same day, derived and not probed: `u <= v` and `v <= w` are
+    // an order between reals with no lambda and no quantifier in the body. The two forms of the
+    // derivative of an integral carry a quantifier inside.
+    propose.mutable.size shouldBe 115
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

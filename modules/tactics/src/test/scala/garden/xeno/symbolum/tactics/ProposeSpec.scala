@@ -400,13 +400,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // the theorem and one on `DERIVATIVE_WITHIN_OF_DERIVATIVE`.
     // 646 with the logarithm's slope's one, 2026-09-26.
     // 652 with the integral's linearity's six, 2026-09-26.
-    // 685 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
+    // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // the run: four antecedents on `HAS_INTEGRAL_JOIN` and three on each derivative.
+    // 695 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
     // over fourteen facts, five on `NUM_VALUATION_DIV`, four on `NUM_DIV_VALUATION`, three each on
     // `NUM_VALUATION_MUL`, `NUM_VALUATION_OTHER_PRIME`, `NUM_VALUATION_EXT` and
-    // `NUM_DIVIDES_MUL_VALUATION`, two each on
-    // `NUM_VALUATION_UNIQUE`, `NUM_VALUATION_SPEC`, `NUM_VALUATION_DIVIDES` and
-    // `NUM_DIVIDES_VALUATION`, one on each of the other four. Tip plus this branch's delta.
-    proposals.size shouldBe 685
+    // `NUM_DIVIDES_MUL_VALUATION`, two each on `NUM_VALUATION_UNIQUE`, `NUM_VALUATION_SPEC`,
+    // `NUM_VALUATION_DIVIDES` and `NUM_DIVIDES_VALUATION`, one on each of the other four. Tip plus
+    // this branch's delta.
+    proposals.size shouldBe 695
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1358,11 +1360,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // fine sum, and keeps an implication or names `has_integral` or `fine_sum`, which no
     // procedure settles. None reached `unreadable`, and the three write no operator between reals
     // outside a lambda, so none is substituted. Tip plus this branch's delta.
-    // 583 with twenty-three of the p-adic valuation's thirty-three residues, 2026-09-26, read off a
+    // 572 with the residues of `HAS_INTEGRAL_JOIN`, `DERIVATIVE_WITHIN_INTEGRAL` and
+    // `DERIVATIVE_INTEGRAL`, 2026-09-26: twelve, read off the suite's own failure after a prediction
+    // of ten, so the total is measured and how it splits between weakenings and substitutions is not.
+    // 595 with twenty-three of the p-adic valuation's thirty-three residues, 2026-09-26, read off a
     // probe of `Propose.audit` filtered by `from` after the run had named the total: all
     // weakenings, each keeping an implication or naming `NUM_VALUATION`, which no procedure reads.
     // Nine are `unreadable` below and one is `decidedFalse` above. Tip plus this branch's delta.
-    open shouldBe 583
+    open shouldBe 595
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
