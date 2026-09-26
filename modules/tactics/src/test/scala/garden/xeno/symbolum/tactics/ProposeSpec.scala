@@ -399,10 +399,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // eight antecedents over four facts, three on `DERIVATIVE_WITHIN_INTERIOR`, two on each form of
     // the theorem and one on `DERIVATIVE_WITHIN_OF_DERIVATIVE`.
     // 646 with the logarithm's slope's one, 2026-09-26.
-    // 656 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // 652 with the integral's linearity's six, 2026-09-26. Tip plus this branch's delta.
+        // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
     // the run: four antecedents on `HAS_INTEGRAL_JOIN` and three on each derivative. Tip plus this
     // branch's delta.
-    proposals.size shouldBe 656
+    proposals.size shouldBe 662
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1344,11 +1345,16 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // order, `0 <= x ==> derivative ln x (inv x)`, keeps an implication and is taken and not settled.
     // Predicted at 555 before the run, counting both residues here, and the run said otherwise; the
     // probe of `Propose.audit` filtered by `from` placed the other one in `unreadable` below.
-    // 566 with the residues of `HAS_INTEGRAL_JOIN`, `DERIVATIVE_WITHIN_INTEGRAL` and
+    // 560 with all six of the integral's linearity's residues, 2026-09-26, read off a probe of
+    // `Propose.audit` filtered by `from`: each drops one integral, the order of the ends, or the
+    // fine sum, and keeps an implication or names `has_integral` or `fine_sum`, which no
+    // procedure settles. None reached `unreadable`, and the three write no operator between reals
+    // outside a lambda, so none is substituted. Tip plus this branch's delta.
+        // 572 with the residues of `HAS_INTEGRAL_JOIN`, `DERIVATIVE_WITHIN_INTEGRAL` and
     // `DERIVATIVE_INTEGRAL`, 2026-09-26: twelve, read off the suite's own failure after a prediction
     // of ten, so the total is measured and how it splits between weakenings and substitutions is not.
     // Tip plus this branch's delta.
-    open shouldBe 566
+    open shouldBe 572
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

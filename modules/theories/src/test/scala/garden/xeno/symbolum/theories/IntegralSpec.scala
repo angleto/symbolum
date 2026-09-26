@@ -184,6 +184,35 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     force(rules.mp(instance, lemma("(0:real) <= 1")).flatMap(rules.mp(_, slopes)))
   }
 
+  it should "combine linearly at the theorem's price, and name the combination's integral at uniqueness's" in {
+    // Measured on 2026-09-26: the statement about `has_integral` needs no division to exist, so it
+    // spends what the fundamental theorem as `has_integral` spends and not the supremum; the value
+    // `integral` goes through uniqueness and so through Cousin.
+    Derivation.axiomsOf(fact(Integral.HasLinear)) shouldBe (realAxioms - completeness) + select
+    Derivation.axiomsOf(fact(Integral.Linear)) shouldBe Derivation.axiomsOf(fact(Integral.HasUnique))
+    Derivation.axiomsOf(fact(Integral.SumLinear)) should not contain completeness
+    val route = Set(fact(Integral.SumLinear).conclusion, fact(Integral.Gauge).conclusion)
+    Derivation.restingOn(fact(Integral.HasLinear), route) shouldBe route
+  }
+
+  it should "detach linearity at one and at the square's derivative on [0, 1], to a value neither has alone" in {
+    // `3 * 1 + 5 * (1 * x + x * 1)` has integral `3 * (1 - 0) + 5 * (1 * 1 - 0 * 0)`, which is eight,
+    // from the two integrals the fundamental theorem gives, with nothing assumed.
+    val derivativeOfSquare = function("\\y:real. 1 * y + y * 1")
+    val x = Term.variable("x", reals)
+    val squareSlopes = force(rules.disch(proposition("(0:real) <= x /\\ x <= 1"), squareSlope(x)).flatMap(rules.gen(x, _)))
+    val squareIntegral = opened(force(rules.specAll(fact(Integral.HasFundamental),
+      List(square, derivativeOfSquare, real("0:real"), real("1:real")))
+      .flatMap(rules.mp(_, lemma("(0:real) <= 1"))).flatMap(rules.mp(_, squareSlopes))))
+    val one = function("\\y:real. (1:real)")
+    val combined = opened(force(rules.specAll(fact(Integral.HasLinear),
+      List(one, derivativeOfSquare, real("0:real"), real("1:real"), real("1 - 0:real"), real("1 * 1 - 0 * 0:real"), real("3:real"), real("5:real")))
+      .flatMap(rules.mp(_, oneOverUnit)).flatMap(rules.mp(_, squareIntegral))))
+    combined.hypotheses shouldBe empty
+    combined.conclusion shouldBe
+      proposition("has_integral (\\x:real. 3 * 1 + 5 * (1 * x + x * 1)) 0 1 (3 * (1 - 0) + 5 * (1 * 1 - 0 * 0))")
+  }
+
   it should "refuse a wrong value, so that the definition does not hold of every number" in {
     // Assumed, `has_integral (\y. 1) 0 1 0` meets the fundamental theorem's `1 - 0` in uniqueness,
     // and `0 = 1 - 0` is false.

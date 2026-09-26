@@ -1188,6 +1188,13 @@ equalities, and keeps the definition from being empty four ways: Cousin detached
 gauge, the theorem detached at `y * y` on `[0, 1]`, a wrong value refused, and uniqueness refuted
 without `a <= b` on `[1, 0]`, where there are no fine sums and every number is an integral.
 
+**The integral is linear since 2026-09-26.** `Integral.FINE_SUM_LINEAR` says a fine sum of
+`\x. p * f x + q * g x` is `p * s1 + q * s2` for fine sums of `f` and of `g` over the same division,
+an induction over the two rules; `HAS_INTEGRAL_LINEAR` takes each function's gauge at its share of
+the tolerance and their pointwise minimum, as uniqueness does; `INTEGRAL_LINEAR` names the value.
+The first two cost what the fundamental theorem as `has_integral` costs and not `COMPLETENESS`,
+being about the sums there are; the value goes through uniqueness and so through Cousin.
+
 **The fundamental theorem has its textbook form too, since 2026-09-25**:
 `HAS_INTEGRAL_DERIVATIVE_WITHIN` and `INTEGRAL_DERIVATIVE_WITHIN` ask for
 `derivative_within F a b x (f x)` at every point of `[a, b]`, the derivative relative to the

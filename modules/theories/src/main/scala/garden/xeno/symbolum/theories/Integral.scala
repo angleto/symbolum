@@ -156,6 +156,18 @@ object Integral {
   /** [[Fundamental]] with the derivative relative to `[a, b]`. */
   val FundamentalWithin: String = "INTEGRAL_DERIVATIVE_WITHIN"
 
+  /**
+   * A fine sum of `\x. p * f x + q * g x` is `p * s1 + q * s2` for fine sums `s1` of `f` and `s2` of
+   * `g` over the same division: induction over the relation, a piece and a join passing through both.
+   */
+  val SumLinear: String = "FINE_SUM_LINEAR"
+
+  /** `has_integral f a b i ==> has_integral g a b j ==> has_integral (\x. p * f x + q * g x) a b (p * i + q * j)` */
+  val HasLinear: String = "HAS_INTEGRAL_LINEAR"
+
+  /** The same for `integral`, where both integrals exist and `a <= b`. */
+  val Linear: String = "INTEGRAL_LINEAR"
+
 
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
@@ -207,7 +219,17 @@ object Integral {
         "(!x:real. a <= x /\\ x <= b ==> derivative_within F a b x (f x)) ==> has_integral f a b (F b - F a)"),
     FundamentalWithin ->
       ("!F:real -> real. !f:real -> real. !a:real. !b:real. a <= b ==> " +
-        "(!x:real. a <= x /\\ x <= b ==> derivative_within F a b x (f x)) ==> integral f a b = F b - F a")
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within F a b x (f x)) ==> integral f a b = F b - F a"),
+    SumLinear ->
+      ("!f:real -> real. !g:real -> real. !p:real. !q:real. !d:real -> real. !u:real. !v:real. !s:real. " +
+        "fine_sum (\\x:real. p * f x + q * g x) d u v s ==> " +
+        "?s1:real. ?s2:real. fine_sum f d u v s1 /\\ fine_sum g d u v s2 /\\ s = p * s1 + q * s2"),
+    HasLinear ->
+      ("!f:real -> real. !g:real -> real. !a:real. !b:real. !i:real. !j:real. !p:real. !q:real. " +
+        "has_integral f a b i ==> has_integral g a b j ==> has_integral (\\x:real. p * f x + q * g x) a b (p * i + q * j)"),
+    Linear ->
+      ("!f:real -> real. !g:real -> real. !a:real. !b:real. !i:real. !j:real. !p:real. !q:real. a <= b ==> " +
+        "has_integral f a b i ==> has_integral g a b j ==> integral (\\x:real. p * f x + q * g x) a b = p * i + q * j")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -266,6 +288,9 @@ object Integral {
       fundamentalTheorem <- integralOfDerivative(steps, unique, hasFundamental, TwoSidedSlopes)
       continuous <- Integrability.prove(steps, reals, magnitude, classical, continuity, gluing, piece, join, induction,
         exists, gauge, hasDefinition, unique, derivative)
+      sumLinear <- sumsOfCombination(steps, induction, piece, join)
+      hasLinear <- linearity(steps, reals, magnitude, hasDefinition, gauge, sumLinear)
+      linear <- integralOfCombination(steps, unique, hasLinear)
 
       facts = Map[String, Kernel.Thm](
         Piece -> piece,
@@ -283,7 +308,10 @@ object Integral {
         ContinuousIntegral -> continuous.integralIsOne,
         HasJoin -> continuous.join,
         DerivativeWithin -> continuous.derivativeWithin,
-        DerivativeOfIntegral -> continuous.derivativeInterior
+        DerivativeOfIntegral -> continuous.derivativeInterior,
+        SumLinear -> sumLinear,
+        HasLinear -> hasLinear,
+        Linear -> linear
       )
 
       // Each statement checked against the text a person reads it by: a development that built
@@ -1270,6 +1298,225 @@ object Integral {
       named <- rules.specAll(unique, List(f, a, b, value)).flatMap(mp(_, Right(ordered), Right(has)))
       result <- rules.disch(slopes.conclusion, named).flatMap(rules.disch(ordered.conclusion, _))
         .flatMap(rules.genAll(_, List(bigF, f, a, b)))
+    } yield result
+  }
+
+  /* ------------------------------------------------------------------ linearity */
+
+  /** The body of a universal quantification at a variable of this proof's choosing. */
+  private def forallAt(term: Term, variable: Term): Either[LogicError, Term] = term match {
+    case App(_, predicate) => LogicError.lift(Term.app(predicate, variable)).flatMap(Conv.betaRoot).flatMap(rightOf)
+    case other             => Left(NotOfForm("a universal quantification", other))
+  }
+
+  private def forallAtAll(term: Term, variables: List[Term]): Either[LogicError, Term] =
+    variables.foldLeft[Either[LogicError, Term]](Right(term))((acc, variable) => acc.flatMap(forallAt(_, variable)))
+
+  /**
+   * [[SumLinear]]: the induction at the property "splits into a sum for `f` and one for `g` over the
+   * same division". A piece of the combination is `(p * f x + q * g x) * (v - u)`, which is `p` times
+   * the piece of `f` plus `q` times the piece of `g` at the same tag; a join adds both splits.
+   */
+  private def sumsOfCombination(steps: Continuity.Steps, induction: Kernel.Thm, piece: Kernel.Thm, join: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val p = Term.variable("p", Reals)
+    val q = Term.variable("q", Reals)
+    val d = Term.variable("d", Functions)
+    val List(u, v, w, x, s, t, s1, s2, t1, t2) = List("u", "v", "w", "x", "s", "t", "s1", "s2", "t1", "t2").map(Term.variable(_, Reals)): @unchecked
+    def splits(uu: String, vv: String, ss: String) =
+      s"?s1:real. ?s2:real. fine_sum (f:real -> real) (d:real -> real) $uu $vv s1 /\\ fine_sum (g:real -> real) d $uu $vv s2 /\\ $ss = (p:real) * s1 + (q:real) * s2"
+    for {
+      combination <- Parser.term(theory, notation, "\\x:real. (p:real) * (f:real -> real) x + (q:real) * (g:real -> real) x", Functions)
+      property <- Parser.term(theory, notation, s"\\u:real. \\v:real. \\s:real. ${splits("u", "v", "s")}", Properties)
+      instance <- rules.specAll(induction, List(combination, d, property)).flatMap(reduced)
+      first <- logic.destImp(instance.conclusion).toRight(NotOfForm("an implication", instance.conclusion))
+      second <- logic.destImp(first._2).toRight(NotOfForm("an implication", first._2))
+      baseTerm = first._1
+      stepTerm = second._1
+
+      base <- for {
+        body <- forallAtAll(baseTerm, List(u, v, x))
+        implication <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+        (condition, split) = implication
+        assumed <- LogicError.lift(Kernel.assume(condition))
+        forF <- rules.specAll(piece, List(f, d, u, v, x)).flatMap(rules.mp(_, assumed))
+        forG <- rules.specAll(piece, List(g, d, u, v, x)).flatMap(rules.mp(_, assumed))
+        equation <- at(lemma("!p:real q:real F:real G:real v:real u:real. (p * F + q * G) * (v - u) = p * (F * (v - u)) + q * (G * (v - u))"),
+          "p:real", "q:real", "(f:real -> real) x", "(g:real -> real) x", "v:real", "u:real")
+        pieceF <- real("(f:real -> real) x * (v:real - u)")
+        pieceG <- real("(g:real -> real) x * (v:real - u)")
+        witnessed <- introduce(logic, split, List(pieceF, pieceG), target =>
+          conj(Right(forF), conj(Right(forG), Right(equation))).flatMap(proving(target, _)))
+        result <- rules.disch(condition, witnessed).flatMap(rules.genAll(_, List(u, v, x)))
+        _ <- proving(baseTerm, result)
+      } yield result
+
+      step <- for {
+        body <- forallAtAll(stepTerm, List(u, v, w, s, t))
+        firstImp <- logic.destImp(body).toRight(NotOfForm("an implication", body))
+        secondImp <- logic.destImp(firstImp._2).toRight(NotOfForm("an implication", firstImp._2))
+        (left, right, joined) = (firstImp._1, secondImp._1, secondImp._2)
+        opened <- eliminate(logic, left, List(s1, s2), leftBody =>
+          eliminate(logic, right, List(t1, t2), rightBody =>
+            for {
+              l <- LogicError.lift(Kernel.assume(leftBody)).flatMap(conjuncts(logic, _, 3))
+              r <- LogicError.lift(Kernel.assume(rightBody)).flatMap(conjuncts(logic, _, 3))
+              List(fs1, gs2, sIs) = l: @unchecked
+              List(ft1, gt2, tIs) = r: @unchecked
+              forF <- rules.specAll(join, List(f, d, u, v, w, s1, t1)).flatMap(mp(_, Right(fs1), Right(ft1)))
+              forG <- rules.specAll(join, List(g, d, u, v, w, s2, t2)).flatMap(mp(_, Right(gs2), Right(gt2)))
+              sums <- at(lemma("!s:real t:real p:real q:real a:real b:real c:real e:real. s = p * a + q * b ==> t = p * c + q * e ==> s + t = p * (a + c) + q * (b + e)"),
+                "s:real", "t:real", "p:real", "q:real", "s1:real", "s2:real", "t1:real", "t2:real")
+                .flatMap(mp(_, Right(sIs), Right(tIs)))
+              sumF <- real("s1:real + t1")
+              sumG <- real("s2:real + t2")
+              witnessed <- introduce(logic, joined, List(sumF, sumG), target =>
+                conj(Right(forF), conj(Right(forG), Right(sums))).flatMap(proving(target, _)))
+            } yield witnessed))
+        result <- rules.disch(right, opened).flatMap(rules.disch(left, _)).flatMap(rules.genAll(_, List(u, v, w, s, t)))
+        _ <- proving(stepTerm, result)
+      } yield result
+
+      everySum <- mp(instance, Right(base), Right(step))
+      result <- rules.specAll(everySum, List(u, v, s)).flatMap(rules.genAll(_, List(f, g, p, q, d, u, v, s)))
+    } yield result
+  }
+
+  /**
+   * [[HasLinear]]. At a tolerance `e`, `f` and `g` each have a gauge at their share of it, `Continuity`'s
+   * `share` for the coefficients `p` and `q`; their pointwise minimum is fine for both, and a fine sum of
+   * the combination splits by [[SumLinear]] into one of each over the same division. So its distance
+   * from `p * i + q * j` is at most `abs p` times the one and `abs q` times the other, each under half.
+   * It needs no `a <= b`: it is a statement about the sums there are.
+   */
+  private def linearity(
+    steps: Continuity.Steps,
+    reals: RealTheory,
+    magnitude: Magnitude,
+    hasDefinition: Kernel.Thm,
+    gauge: Kernel.Thm,
+    decomposed: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val i = Term.variable("i", Reals)
+    val j = Term.variable("j", Reals)
+    val p = Term.variable("p", Reals)
+    val q = Term.variable("q", Reals)
+    val e = Term.variable("e", Reals)
+    val x = Term.variable("x", Reals)
+    val s = Term.variable("s", Reals)
+    val s1 = Term.variable("s1", Reals)
+    val s2 = Term.variable("s2", Reals)
+    val g1 = Term.variable("g1", Functions)
+    val g2 = Term.variable("g2", Functions)
+    val Combination = "\\x:real. (p:real) * (f:real -> real) x + (q:real) * (g:real -> real) x"
+    def opened(function: Term, value: Term, text: String): Either[LogicError, (Kernel.Thm, Kernel.Thm)] =
+      for {
+        statement <- proposition(text)
+        assumed <- LogicError.lift(Kernel.assume(statement))
+        equation <- Conv.unfold(hasDefinition, List(function, a, b, value))
+        result <- LogicError.lift(Kernel.eqMp(equation, assumed))
+      } yield (assumed, result)
+    for {
+      forF <- opened(f, i, "has_integral (f:real -> real) a b i")
+      forG <- opened(g, j, "has_integral (g:real -> real) a b j")
+      positive <- assume("0 < e:real")
+      shareP <- Continuity.share(steps, reals, magnitude, "p:real", positive)
+      shareQ <- Continuity.share(steps, reals, magnitude, "q:real", positive)
+      tP <- real(shareP.term)
+      tQ <- real(shareQ.term)
+      gaugeF <- rules.spec(tP, forF._2).flatMap(rules.mp(_, shareP.positive))
+      gaugeG <- rules.spec(tQ, forG._2).flatMap(rules.mp(_, shareQ.positive))
+      combination <- Parser.term(theory, notation, Combination, Functions)
+      value <- real("(p:real) * i + (q:real) * j")
+      unfolded <- Conv.unfold(hasDefinition, List(combination, a, b, value))
+      statement <- rightOf(unfolded)
+      atE <- forallAt(statement, e)
+      target <- logic.destImp(atE).map(_._2).toRight(NotOfForm("an implication", atE))
+
+      witnessed <- eliminateFrom(logic, gaugeF, List(g1), bodyF =>
+        eliminateFrom(logic, gaugeG, List(g2), bodyG =>
+          for {
+            one <- LogicError.lift(Kernel.assume(bodyF))
+            two <- LogicError.lift(Kernel.assume(bodyG))
+            onePositive <- rules.conjElim1(one)
+            oneClose <- rules.conjElim2(one)
+            twoPositive <- rules.conjElim1(two)
+            twoClose <- rules.conjElim2(two)
+            smaller <- Parser.term(theory, notation, "\\x:real. min ((g1:real -> real) x) ((g2:real -> real) x)", Functions)
+            bothPositive <- for {
+              p1 <- rules.spec(x, onePositive)
+              p2 <- rules.spec(x, twoPositive)
+              least <- Continuity.minimumOf(steps, magnitude, "(g1:real -> real) x:real", "(g2:real -> real) x:real", p1, p2)
+              result <- rules.gen(x, least)
+            } yield result
+            minLeft <- at(magnitude.fact(Magnitude.MinBelowLeft), "(g1:real -> real) x:real", "(g2:real -> real) x:real").flatMap(rules.gen(x, _))
+            minRight <- at(magnitude.fact(Magnitude.MinBelowRight), "(g1:real -> real) x:real", "(g2:real -> real) x:real").flatMap(rules.gen(x, _))
+            sumTerm <- proposition(s"fine_sum ($Combination) (\\x:real. min ((g1:real -> real) x) ((g2:real -> real) x)) a b s")
+            sum <- LogicError.lift(Kernel.assume(sumTerm))
+            split <- rules.specAll(decomposed, List(f, g, p, q, smaller, a, b, s)).flatMap(rules.mp(_, sum))
+            close <- eliminateFrom(logic, split, List(s1, s2), body =>
+              for {
+                parts <- LogicError.lift(Kernel.assume(body)).flatMap(conjuncts(logic, _, 3))
+                List(fs1, gs2, sIs) = parts: @unchecked
+                forOne <- rules.specAll(gauge, List(f, smaller, g1, a, b, s1)).flatMap(reduced).flatMap(mp(_, Right(minLeft), Right(fs1)))
+                forTwo <- rules.specAll(gauge, List(g, smaller, g2, a, b, s2)).flatMap(reduced).flatMap(mp(_, Right(minRight), Right(gs2)))
+                nearI <- rules.spec(s1, oneClose).flatMap(rules.mp(_, forOne))
+                nearJ <- rules.spec(s2, twoClose).flatMap(rules.mp(_, forTwo))
+                regrouped <- at(lemma("!s:real p:real q:real a:real b:real i:real j:real. s = p * a + q * b ==> s - (p * i + q * j) = p * (a - i) + q * (b - j)"),
+                  "s:real", "p:real", "q:real", "s1:real", "s2:real", "i:real", "j:real").flatMap(mp(_, Right(sIs)))
+                absFn <- Parser.term(theory, notation, "abs", Functions)
+                sameAbs <- Conv.apTerm(absFn, regrouped)
+                triangle <- at(magnitude.fact(Magnitude.Triangle), "(p:real) * (s1 - i)", "(q:real) * (s2 - j)")
+                splitP <- at(magnitude.fact(Magnitude.Multiplicative), "p:real", "s1:real - i")
+                splitQ <- at(magnitude.fact(Magnitude.Multiplicative), "q:real", "s2:real - j")
+                scaled = "!Y:real P:real A:real T:real. Y = P * A ==> 0 <= P ==> A < T ==> Y <= P * T"
+                upP <- at(lemma(scaled), "abs ((p:real) * (s1 - i))", "abs (p:real)", "abs (s1:real - i)", shareP.term)
+                  .flatMap(mp(_, Right(splitP), at(magnitude.fact(Magnitude.AbsNonNegative), "p:real"), Right(nearI)))
+                upQ <- at(lemma(scaled), "abs ((q:real) * (s2 - j))", "abs (q:real)", "abs (s2:real - j)", shareQ.term)
+                  .flatMap(mp(_, Right(splitQ), at(magnitude.fact(Magnitude.AbsNonNegative), "q:real"), Right(nearJ)))
+                half = "!P:real T:real e:real. 2 * (P + 1) * T = e ==> 0 < T ==> P * T < e / 2"
+                halfP <- at(lemma(half), "abs (p:real)", shareP.term, "e:real").flatMap(mp(_, Right(shareP.equation), Right(shareP.positive)))
+                halfQ <- at(lemma(half), "abs (q:real)", shareQ.term, "e:real").flatMap(mp(_, Right(shareQ.equation), Right(shareQ.positive)))
+                result <- at(lemma("!E:real X:real Y:real Z:real Y1:real Z1:real e:real. E = X ==> X <= Y + Z ==> Y <= Y1 ==> Z <= Z1 ==> Y1 < e / 2 ==> Z1 < e / 2 ==> E < e"),
+                    "abs (s:real - ((p:real) * i + (q:real) * j))", "abs ((p:real) * (s1 - i) + (q:real) * (s2 - j))",
+                    "abs ((p:real) * (s1 - i))", "abs ((q:real) * (s2 - j))",
+                    s"abs (p:real) * ${shareP.term}", s"abs (q:real) * ${shareQ.term}", "e:real")
+                  .flatMap(mp(_, Right(sameAbs), Right(triangle), Right(upP), Right(upQ), Right(halfP), Right(halfQ)))
+              } yield result)
+            everySum <- rules.disch(sumTerm, close).flatMap(rules.gen(s, _))
+            body <- rules.conjIntro(bothPositive, everySum)
+            result <- introduce(logic, target, List(smaller), shapedTarget => shaped(shapedTarget, body))
+          } yield result))
+      everyTolerance <- rules.disch(positive.conclusion, witnessed).flatMap(rules.gen(e, _))
+      folded <- Conv.sym(unfolded).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, everyTolerance)))
+      result <- rules.disch(forG._1.conclusion, folded).flatMap(rules.disch(forF._1.conclusion, _))
+        .flatMap(rules.genAll(_, List(f, g, a, b, i, j, p, q)))
+    } yield result
+  }
+
+  /** [[Linear]]: [[HasLinear]] read through [[Unique]]. */
+  private def integralOfCombination(steps: Continuity.Steps, unique: Kernel.Thm, hasLinear: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val List(a, b, i, j, p, q) = List("a", "b", "i", "j", "p", "q").map(Term.variable(_, Reals)): @unchecked
+    for {
+      ordered <- assume("a:real <= b:real")
+      hasF <- assume("has_integral (f:real -> real) a b i")
+      hasG <- assume("has_integral (g:real -> real) a b j")
+      combined <- rules.specAll(hasLinear, List(f, g, a, b, i, j, p, q)).flatMap(mp(_, Right(hasF), Right(hasG)))
+      combination <- Parser.term(theory, notation, "\\x:real. (p:real) * (f:real -> real) x + (q:real) * (g:real -> real) x", Functions)
+      value <- real("(p:real) * i + (q:real) * j")
+      named <- rules.specAll(unique, List(combination, a, b, value)).flatMap(mp(_, Right(ordered), Right(combined)))
+      result <- rules.disch(hasG.conclusion, named).flatMap(rules.disch(hasF.conclusion, _)).flatMap(rules.disch(ordered.conclusion, _))
+        .flatMap(rules.genAll(_, List(f, g, a, b, i, j, p, q)))
     } yield result
   }
 }

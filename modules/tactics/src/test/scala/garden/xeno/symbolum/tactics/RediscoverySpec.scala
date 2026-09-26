@@ -351,9 +351,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // thirty-three antecedents over fourteen facts, the count `ProposeSpec` gives by fact.
     // 645 with the fundamental theorem relative to `[a, b]`, the same day: eight over four facts.
     // 646 with the logarithm's slope, 2026-09-26, derived before the run: its one antecedent, `0 < x`.
-    // 656 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // 652 with the integral's linearity, 2026-09-26, derived before the run and read off the probe:
+    // two antecedents on each of the three. Tip plus this branch's delta.
+        // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
     // the run: four antecedents on `HAS_INTEGRAL_JOIN`, three on each of the two derivatives.
-    propose.weakenings.size shouldBe 656
+    propose.weakenings.size shouldBe 662
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
