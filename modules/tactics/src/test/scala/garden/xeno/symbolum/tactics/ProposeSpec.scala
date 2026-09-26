@@ -399,7 +399,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // eight antecedents over four facts, three on `DERIVATIVE_WITHIN_INTERIOR`, two on each form of
     // the theorem and one on `DERIVATIVE_WITHIN_OF_DERIVATIVE`.
     // 646 with the logarithm's slope's one, 2026-09-26.
-    proposals.size shouldBe 646
+    // 652 with the integral's linearity's six, 2026-09-26. Tip plus this branch's delta.
+    proposals.size shouldBe 652
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1341,7 +1342,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // order, `0 <= x ==> derivative ln x (inv x)`, keeps an implication and is taken and not settled.
     // Predicted at 555 before the run, counting both residues here, and the run said otherwise; the
     // probe of `Propose.audit` filtered by `from` placed the other one in `unreadable` below.
-    open shouldBe 554
+    // 560 with all six of the integral's linearity's residues, 2026-09-26, read off a probe of
+    // `Propose.audit` filtered by `from`: each drops one integral, the order of the ends, or the
+    // fine sum, and keeps an implication or names `has_integral` or `fine_sum`, which no
+    // procedure settles. None reached `unreadable`, and the three write no operator between reals
+    // outside a lambda, so none is substituted. Tip plus this branch's delta.
+    open shouldBe 560
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
