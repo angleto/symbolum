@@ -358,7 +358,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 676 with integration by parts and the change of variables, 2026-09-26, derived before the run
     // and confirmed by it: four antecedents on each form of parts and three on each form of the
     // substitution. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 676
+    // 681 with Taylor's theorem, 2026-09-26, derived before the run and confirmed by it: two
+    // antecedents on `CONTINUOUS_MUL` and three on `TAYLOR`, and none on `DERIVATIVE_POWER`.
+    propose.weakenings.size shouldBe 681
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

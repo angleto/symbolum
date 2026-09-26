@@ -297,6 +297,29 @@ object Derivative {
    */
   val WithinInterior: String = "DERIVATIVE_WITHIN_INTERIOR"
 
+  /**
+   * `|- !x n. derivative (\y. Power y (SUC n)) x (real_of_num (SUC n) * Power x n)`
+   *
+   * The derivative of a power, at an exponent written as a successor so that no `PRE` appears in
+   * the slope. By induction through [[ProductRule]]. `TaylorExpansion` derives it, for the power
+   * of `b - t` in every term of a Taylor polynomial.
+   */
+  val Power: String = "DERIVATIVE_POWER"
+
+  /**
+   * `|- !D a b n. a < b ==> (!k x. NUM_LE k n ==> a <= x /\ x <= b ==> continuous (D k) x) ==>
+   * (!k x. NUM_LE k n ==> a < x /\ x < b ==> derivative (D k) x (D (SUC k) x)) ==>
+   * ?c. a < c /\ c < b /\ D ZERO b = Sum (\k. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) +
+   * inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)`
+   *
+   * Taylor's theorem with the remainder in Lagrange's form. The derivatives are a family `D` the
+   * caller hands in, `D (SUC k)` the derivative of `D k`, and the hypotheses are what Rolle asks of
+   * each: continuous on `[a, b]` and differentiable inside, up to the order `n`.
+   * `TaylorExpansion` is the derivation and says why the family is a hypothesis rather than a
+   * defined n-th derivative.
+   */
+  val Taylor: String = "TAYLOR"
+
   private val RelativeText: String = "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x)"
 
   /** What every derived fact says, as text, in the order they are derived. */
@@ -372,7 +395,15 @@ object Derivative {
         "derivative f x m ==> derivative_within f a b x m"),
     WithinInterior ->
       ("!f:real -> real. !a:real. !b:real. !x:real. !m:real. a < x ==> x < b ==> " +
-        "derivative_within f a b x m ==> derivative f x m")
+        "derivative_within f a b x m ==> derivative f x m"),
+    Power -> "!x:real. !n:num. derivative (\\y:real. Power y (SUC n)) x (real_of_num (SUC n) * Power x n)",
+    Taylor ->
+      ("!D:num -> real -> real. !a:real. !b:real. !n:num. a < b ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> a <= x /\\ x <= b ==> continuous (D k) x) ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> a < x /\\ x < b ==> derivative (D k) x (D (SUC k) x)) ==> " +
+        "?c:real. a < c /\\ c < b /\\ D ZERO b = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -396,6 +427,7 @@ object Derivative {
     continuity: Continuity,
     transcendental: Transcendental,
     logarithm: Logarithm,
+    coding: Coding,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Derivative] =
@@ -435,6 +467,9 @@ object Derivative {
       increasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = true)
       relative <- DerivativeWithin.prove(steps, magnitude, continuity, withinDefinition, Map(
         Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing))
+      taylor <- TaylorExpansion.prove(steps, transcendental, coding, continuity, Map(
+        Constant -> constant, Identity -> identity, Linear -> linear, ProductRule -> productRuleFact, ChainRule -> chainRule,
+        Rolle -> rolle, Unique -> unique))
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,
@@ -456,7 +491,7 @@ object Derivative {
         Flat -> flat,
         NonDecreasing -> nonDecreasing,
         Increasing -> increasing
-      ) ++ relative
+      ) ++ relative ++ taylor
 
       // Each statement checked against the text a person reads it by, as `Continuity` does: a
       // development that built something other than what it says it built must not be handed out.

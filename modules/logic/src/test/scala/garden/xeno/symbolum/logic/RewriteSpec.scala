@@ -826,6 +826,14 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "which is the caller. Only `rewriteIn` is a walk: `Recorder.rewrite` is `depthConv` on " +
         "its own, one traversal of a finite term, and `rewriteSides`, `rewriteRight` and " +
         "`replace` are single kernel applications with no limit between them"),
+    "TaylorExpansion.scala" ->
+      ("two calls to `Rewrite.rewrite`, both in `equalBy`, one per side of an equation, with the " +
+        "recurrences of the power, the factorial, the sum and the embedding of a product, and once " +
+        "the two sides of an equation already proved. Neither result is trusted as a normal form: " +
+        "the two are handed to `Field`, which refuses unless they meet, and the equation that comes " +
+        "back is compared with the one asked for before it is used. Every rule unfolds a constant at " +
+        "a successor or replaces a closed term by a smaller one, so the walk terminates, and a walk " +
+        "cut short leaves the two sides apart and is refused rather than read"),
     "Integral.scala" ->
       ("two calls to `Rewrite.rewrite`, both with `FST_PAIR` and `SND_PAIR` and nothing else, both in " +
         "the induction principle over a fine sum, and neither is read as a normal form. One reads the " +

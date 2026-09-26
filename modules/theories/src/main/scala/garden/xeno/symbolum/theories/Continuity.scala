@@ -170,10 +170,22 @@ object Continuity {
    * A linear combination of two functions continuous at a point is continuous there. It is what the
    * mean value theorem asked for, at `(b - a) * f y - (f b - f a) * y`, and it is stated for any
    * two functions and any two coefficients rather than for that one, since the special case would
-   * be the general one proved with the letters fixed. A product of two functions and a quotient are
-   * not here, because nothing has asked for them.
+   * be the general one proved with the letters fixed. The product is [[Product]]; a quotient is not
+   * here, because nothing has asked for one.
    */
   val Linear: String = "CONTINUOUS_LINEAR"
+
+  /**
+   * `|- !f g x. continuous f x ==> continuous g x ==> continuous (\y. f y * g y) x`
+   *
+   * The product of two functions continuous at a point is continuous there. Taylor's theorem asked
+   * for it: Rolle wants the remainder continuous at both ends of the interval, and every term of a
+   * Taylor polynomial is a derivative times a power. The argument splits `f y * g y - f x * g x` into
+   * `f y * (g y - g x) + g x * (f y - f x)`, and the first factor of the first term is held below
+   * `abs (f x) + 1` by `f`'s continuity at tolerance one, which is the third radius the two shares
+   * of `e` are taken under.
+   */
+  val Product: String = "CONTINUOUS_MUL"
 
   /**
    * `f` continuous on `[a, b]` is uniformly continuous there: for every tolerance one radius serves
@@ -251,6 +263,8 @@ object Continuity {
     Linear ->
       ("!f:real -> real. !g:real -> real. !x:real. !p:real. !q:real. continuous f x ==> continuous g x ==> " +
         "continuous (\\y:real. p * f y + q * g y) x"),
+    Product ->
+      "!f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous g x ==> continuous (\\y:real. f y * g y) x",
     Uniform ->
       ("!f:real -> real. !a:real. !b:real. !e:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "0 < e ==> ?d:real. 0 < d /\\ (!x:real. !y:real. a <= x /\\ x <= b /\\ a <= y /\\ y <= b /\\ " +
@@ -317,8 +331,9 @@ object Continuity {
       intermediate <- intermediateValue(steps, reals, magnitude)
       extremes <- ExtremeValue.prove(steps, reals, magnitude, classical)
       linear <- linearCombination(steps, reals, magnitude)
+      product <- productOfTwo(steps, reals, magnitude)
 
-      twoSided = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate, Linear -> linear) ++
+      twoSided = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate, Linear -> linear, Product -> product) ++
         extremes
       relative <- Within.prove(steps, withinDefinition, reals, magnitude, classical, twoSided)
       facts = twoSided ++ relative
@@ -642,6 +657,120 @@ object Continuity {
       function <- Parser.term(theory, notation, "\\y:real. p:real * (f:real -> real) y + q:real * (g:real -> real) y", Functions)
       result <- folded(function, x, statement)
       closed <- rules.disch(gHyp, result).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x, p, q)))
+    } yield closed
+  }
+
+  /**
+   * [[Product]]: `f`'s share of `e` is weighed against `abs (g x)` as in [[Linear]], `g`'s against
+   * `abs (f x) + 1`, which bounds `abs (f y)` wherever `f` is within one of `f x`, and the radius is
+   * the least of the three.
+   */
+  private def productOfTwo(steps: Steps, reals: RealTheory, magnitude: Magnitude): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val y = Term.variable("y", Reals)
+    val d1 = Term.variable("d1", Reals)
+    val d2 = Term.variable("d2", Reals)
+    val d3 = Term.variable("d3", Reals)
+    val fy = "(f:real -> real) y"
+    val fx = "(f:real -> real) x"
+    val gy = "(g:real -> real) y"
+    val gx = "(g:real -> real) x"
+    val df = s"$fy - $fx"
+    val dg = s"$gy - $gx"
+    val whole = s"$fy * $gy - $fx * $gx"
+    val bound = s"abs ($fx) + 1"
+    val through = "!A:real w:real d:real. A < w ==> w <= d ==> A < d"
+    val radius3 = "min (d1:real) (min (d2:real) (d3:real))"
+    val halfRule = "!R:real X:real P:real T:real e:real. R = X ==> X <= P * T ==> 0 <= P ==> 0 < T ==> 2 * (P + 1) * T = e ==> R < e / 2"
+    for {
+      fHyp <- proposition("continuous (f:real -> real) x")
+      gHyp <- proposition("continuous (g:real -> real) x")
+      fAt <- LogicError.lift(Kernel.assume(fHyp)).flatMap(t => unfolded(f, x).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, t))))
+      gAt <- LogicError.lift(Kernel.assume(gHyp)).flatMap(t => unfolded(g, x).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, t))))
+
+      positive <- proposition("0 < e:real")
+      ePositive <- LogicError.lift(Kernel.assume(positive))
+      forF <- share(steps, reals, magnitude, gx, ePositive)
+      absFNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), fx)
+      boundNonNeg <- at(lemma("!A:real. 0 <= A ==> 0 <= A + 1"), s"abs ($fx)").flatMap(mp(_, Right(absFNonNeg)))
+      forG <- portion(steps, reals, bound, boundNonNeg, 2, ePositive)
+
+      one <- real("1:real")
+      nearF <- real(forF.term).flatMap(rules.spec(_, fAt)).flatMap(rules.mp(_, forF.positive))
+      nearG <- real(forG.term).flatMap(rules.spec(_, gAt)).flatMap(rules.mp(_, forG.positive))
+      nearOne <- rules.spec(one, fAt).flatMap(mp(_, lemma("(0:real) < 1")))
+      radiusF <- assume(s"0 < d1:real /\\ (!y:real. abs (y - x:real) < d1 ==> abs ($df) < ${forF.term})")
+      radiusG <- assume(s"0 < d2:real /\\ (!y:real. abs (y - x:real) < d2 ==> abs ($dg) < ${forG.term})")
+      radiusOne <- assume(s"0 < d3:real /\\ (!y:real. abs (y - x:real) < d3 ==> abs ($df) < 1)")
+      d1Positive <- rules.conjElim1(radiusF)
+      d2Positive <- rules.conjElim1(radiusG)
+      d3Positive <- rules.conjElim1(radiusOne)
+      insideF <- rules.conjElim2(radiusF)
+      insideG <- rules.conjElim2(radiusG)
+      insideOne <- rules.conjElim2(radiusOne)
+      innerPositive <- minimumOf(steps, magnitude, "d2:real", "d3:real", d2Positive, d3Positive)
+      dPositive <- minimumOf(steps, magnitude, "d1:real", "min (d2:real) (d3:real)", d1Positive, innerPositive)
+
+      near <- proposition("abs (y - x:real) < min (d1:real) (min (d2:real) (d3:real))")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      outerLeft <- at(magnitude.fact(Magnitude.MinBelowLeft), "d1:real", "min (d2:real) (d3:real)")
+      outerRight <- at(magnitude.fact(Magnitude.MinBelowRight), "d1:real", "min (d2:real) (d3:real)")
+      innerLeft <- at(magnitude.fact(Magnitude.MinBelowLeft), "d2:real", "d3:real")
+      innerRight <- at(magnitude.fact(Magnitude.MinBelowRight), "d2:real", "d3:real")
+      within1 <- at(lemma(through), "abs (y - x:real)", radius3, "d1:real").flatMap(mp(_, Right(assumedNear), Right(outerLeft)))
+      withinInner <- at(lemma(through), "abs (y - x:real)", radius3, "min (d2:real) (d3:real)").flatMap(mp(_, Right(assumedNear), Right(outerRight)))
+      within2 <- at(lemma(through), "abs (y - x:real)", "min (d2:real) (d3:real)", "d2:real").flatMap(mp(_, Right(withinInner), Right(innerLeft)))
+      within3 <- at(lemma(through), "abs (y - x:real)", "min (d2:real) (d3:real)", "d3:real").flatMap(mp(_, Right(withinInner), Right(innerRight)))
+      fClose <- rules.spec(y, insideF).flatMap(rules.mp(_, within1))
+      gClose <- rules.spec(y, insideG).flatMap(rules.mp(_, within2))
+      fOne <- rules.spec(y, insideOne).flatMap(rules.mp(_, within3))
+
+      absFn <- Parser.term(theory, notation, "abs", Functions)
+      // abs (f y) <= abs (f x) + 1, by the triangle at (f y - f x) + f x.
+      rejoined <- at(lemma("!F:real F0:real. (F - F0) + F0 = F"), fy, fx)
+      sameAbsF <- Conv.apTerm(absFn, rejoined)
+      triangleF <- at(magnitude.fact(Magnitude.Triangle), df, fx)
+      fBounded <- at(lemma("!A:real B:real C:real D:real. B = A ==> B <= C + D ==> C < 1 ==> A <= D + 1"),
+        s"abs ($fy)", s"abs (($df) + $fx)", s"abs ($df)", s"abs ($fx)")
+        .flatMap(mp(_, Right(sameAbsF), Right(triangleF), Right(fOne)))
+
+      regrouped <- at(lemma("!F:real G:real F0:real G0:real. F * G - F0 * G0 = F * (G - G0) + G0 * (F - F0)"), fy, gy, fx, gx)
+      sameAbs <- Conv.apTerm(absFn, regrouped)
+      triangle <- at(magnitude.fact(Magnitude.Triangle), s"$fy * ($dg)", s"$gx * ($df)")
+      mulG <- at(magnitude.fact(Magnitude.Multiplicative), fy, dg)
+      mulF <- at(magnitude.fact(Magnitude.Multiplicative), gx, df)
+      fyNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), fy)
+      dgNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), dg)
+      gxNonNeg <- at(magnitude.fact(Magnitude.AbsNonNegative), gx)
+      scaledG <- at(lemma("!A:real B:real P:real T:real. 0 <= A ==> A <= P ==> 0 <= B ==> B < T ==> A * B <= P * T"),
+        s"abs ($fy)", s"abs ($dg)", bound, forG.term)
+        .flatMap(mp(_, Right(fyNonNeg), Right(fBounded), Right(dgNonNeg), Right(gClose)))
+      scaledF <- at(lemma("!P:real A:real T:real. 0 <= P ==> A < T ==> P * A <= P * T"), s"abs ($gx)", s"abs ($df)", forF.term)
+        .flatMap(mp(_, Right(gxNonNeg), Right(fClose)))
+      halfG <- at(lemma(halfRule), s"abs ($fy * ($dg))", s"abs ($fy) * abs ($dg)", bound, forG.term, "e:real")
+        .flatMap(mp(_, Right(mulG), Right(scaledG), Right(boundNonNeg), Right(forG.positive), Right(forG.equation)))
+      halfF <- at(lemma(halfRule), s"abs ($gx * ($df))", s"abs ($gx) * abs ($df)", s"abs ($gx)", forF.term, "e:real")
+        .flatMap(mp(_, Right(mulF), Right(scaledF), Right(gxNonNeg), Right(forF.positive), Right(forF.equation)))
+      combined <- at(lemma("!E:real S:real X:real Y:real e:real. E = S ==> S <= X + Y ==> X < e / 2 ==> Y < e / 2 ==> E < e"),
+        s"abs ($whole)", s"abs ($fy * ($dg) + $gx * ($df))", s"abs ($fy * ($dg))", s"abs ($gx * ($df))", "e:real")
+        .flatMap(mp(_, Right(sameAbs), Right(triangle), Right(halfG), Right(halfF)))
+
+      everyY <- rules.disch(near, combined).flatMap(rules.gen(y, _))
+      radius <- rules.conjIntro(dPositive, everyY)
+      minimum <- real(radius3)
+      witnessed <- existential(s"?d:real. 0 < d /\\ (!y:real. abs (y - x:real) < d ==> abs ($whole) < e:real)")
+        .flatMap(rules.existsIntro(_, minimum, radius))
+      withoutOne <- rules.existsElim(nearOne, d3, witnessed)
+      withoutG <- rules.existsElim(nearG, d2, withoutOne)
+      withoutF <- rules.existsElim(nearF, d1, withoutG)
+      statement <- rules.disch(positive, withoutF).flatMap(rules.gen(e, _))
+      function <- Parser.term(theory, notation, "\\y:real. (f:real -> real) y * (g:real -> real) y", Functions)
+      result <- folded(function, x, statement)
+      closed <- rules.disch(gHyp, result).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x)))
     } yield closed
   }
 
