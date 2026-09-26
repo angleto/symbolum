@@ -1209,6 +1209,13 @@ the tolerance and their pointwise minimum, as uniqueness does; `INTEGRAL_LINEAR`
 The first two cost what the fundamental theorem as `has_integral` costs and not `COMPLETENESS`,
 being about the sums there are; the value goes through uniqueness and so through Cousin.
 
+**Integration by parts and the change of variables, since the same day**, as `Integral.HAS_INTEGRAL_PARTS`,
+`INTEGRAL_PARTS`, `HAS_INTEGRAL_SUBST` and `INTEGRAL_SUBST`. Parts is the product rule, the
+fundamental theorem and linearity at one and minus one, with the function rewritten under the lambda
+by `Kernel.abs`, which costs no axiom; the substitution is the chain rule and the fundamental theorem
+at `\y. F (g y)`, with `F` asked a slope everywhere since the image of `g` is not stated. The
+`has_integral` forms cost what the fundamental theorem does and not `COMPLETENESS`.
+
 **The fundamental theorem has its textbook form too, since 2026-09-25**:
 `HAS_INTEGRAL_DERIVATIVE_WITHIN` and `INTEGRAL_DERIVATIVE_WITHIN` ask for
 `derivative_within F a b x (f x)` at every point of `[a, b]`, the derivative relative to the
@@ -1232,6 +1239,18 @@ and their fine sums, two of which are compared through a third that Cousin suppl
 gluing's price; `IntegralSpec` detaches it at the constant one and joins it to the fundamental
 theorem's value there. No control refutes it without continuity: Dirichlet's function is gauge
 integrable, so a counterexample has to be unbounded, and that is an argument of its own.
+
+**The second half of the fundamental theorem is `DERIVATIVE_WITHIN_INTEGRAL`, since 2026-09-26**: for
+`f` continuous on `[a, b]`, `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every
+point of it, and `DERIVATIVE_INTEGRAL` is the same strictly inside as a two-sided derivative, through
+`DERIVATIVE_WITHIN_INTERIOR`. What it needed first was `HAS_INTEGRAL_JOIN`, that integrals add over
+adjacent intervals, and that is the joint gauge of the existence again: it splits every fine sum at
+the join exactly, so additivity costs no supremum at all, fifteen of the reals' axioms and the
+choice. The increment is then read by additivity and uniqueness as the integral over the interval
+between `x` and `x + h`, on either side, and a sum fine for both that integral's gauge and the
+radius continuity gives puts it within half the tolerance of `f x * h`. In the relative form
+`a <= x` and `x <= b` carry no weight: outside the interval no small increment stays in it, so the
+relative derivative holds there at any slope.
 
 **The sine and the cosine are differentiable since the same day, and what stood in front of that was
 the addition formulas.** `Transcendental.COS_ADD` and `SIN_ADD` are `SIN_COS_SQUARED`'s argument at a

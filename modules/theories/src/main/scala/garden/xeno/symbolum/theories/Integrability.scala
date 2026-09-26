@@ -33,6 +33,16 @@ import garden.xeno.symbolum.logic.*
  * there once; the tolerance is shared with `Continuity.portion`, so no quotient with a symbolic
  * denominator appears.
  *
+ * == Additivity, and the second half of the fundamental theorem ==
+ *
+ * The joint gauge is also what makes integrals add: at half the tolerance each of two adjacent
+ * integrals has a gauge, and a sum fine for their joint gauge splits at the join into one sum for
+ * each, exactly. That costs no supremum, since it takes one fine sum at a time. With it the increment
+ * `integral f a (x + h) - integral f a x` is the integral between `x` and `x + h`, on either side,
+ * and that is within half the tolerance of `f x * h`: a sum fine both for its gauge and for the radius
+ * continuity at `x` gives is close to each. So `\y. integral f a y` has derivative `f x` relative to
+ * `[a, b]`, and strictly inside as a derivative.
+ *
  * Every step is written in direct style inside `Builder`, for the reason `Provability` gives.
  */
 private[theories] object Integrability {
@@ -51,13 +61,23 @@ private[theories] object Integrability {
     exists: Kernel.Thm,
     gauge: Kernel.Thm,
     hasDefinition: Kernel.Thm,
-    unique: Kernel.Thm
-  ): Either[LogicError, (Kernel.Thm, Kernel.Thm)] =
+    unique: Kernel.Thm,
+    derivative: Derivative
+  ): Either[LogicError, Integrability.Proved] =
     try {
       val builder = new Builder(steps, reals, magnitude, classical, continuity, gluing, piece, join, induction, exists, gauge,
-        hasDefinition, unique)
-      Right((builder.hasIntegral, builder.integralIsOne))
+        hasDefinition, unique, derivative)
+      Right(Proved(builder.hasIntegral, builder.integralIsOne, builder.joinIntegrals, builder.derivativeWithin, builder.derivativeInterior))
     } catch { case refused: RefusedHere => Left(refused.error) }
+
+  /** What this file proves, by the names `Integral` publishes them under. */
+  final case class Proved(
+    hasIntegral: Kernel.Thm,
+    integralIsOne: Kernel.Thm,
+    join: Kernel.Thm,
+    derivativeWithin: Kernel.Thm,
+    derivativeInterior: Kernel.Thm
+  )
 
   private final class RefusedHere(val error: LogicError) extends RuntimeException(error.message)
 
@@ -67,7 +87,7 @@ private[theories] object Integrability {
   /** The variables every text below uses, with their types, so a text is read at the types meant. */
   private val Types: Map[String, Type] =
     List("a", "b", "c", "d", "e", "i", "k", "m", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "s1", "s2",
-      "t1", "t2", "e1", "e2", "y1").map(_ -> Reals).toMap ++
+      "t1", "t2", "e1", "e2", "y1", "j").map(_ -> Reals).toMap ++
       List("f", "g", "g1", "g2", "h").map(_ -> Functions).toMap
 
   private val Written: Map[Type, String] = Map(Reals -> "real", Functions -> "real->real")
@@ -108,7 +128,8 @@ private[theories] object Integrability {
     exists: Kernel.Thm,
     gauge: Kernel.Thm,
     hasDefinition: Kernel.Thm,
-    unique: Kernel.Thm
+    unique: Kernel.Thm,
+    derivative: Derivative
   ) {
     private val logic = steps.logic
     private val rules = logic.rules
@@ -160,9 +181,17 @@ private[theories] object Integrability {
     private def absurd(negation: Kernel.Thm, positive: Kernel.Thm): Kernel.Thm = force(rules.notElim(negation, positive))
     private def exFalso(statement: Term, falsity: Kernel.Thm): Kernel.Thm = force(rules.falsityElim(statement, falsity))
 
-    /** A closed arithmetic fact, specialised at texts and detached against premises. */
+    /**
+     * Each closed arithmetic fact proved once per builder and shared. The derivations reuse a handful
+     * of them dozens of times, and a fact `Linarith` proved again is a second copy of its whole
+     * derivation in the graph every published theorem keeps: sharing took 3 to 18 percent off the
+     * `Derivation.size` of this file's facts, measured on 2026-09-26. The map lives as long as one
+     * `Builder`, which is one call of `prove`, and holds theorems, which are immutable.
+     */
+    private val proved = scala.collection.mutable.Map.empty[String, Kernel.Thm]
+
     private def arithmetic(fact: String, arguments: String*)(premises: Kernel.Thm*): Kernel.Thm =
-      mp(spec(force(steps.lemma(fact)), arguments*), premises*)
+      mp(spec(proved.getOrElseUpdate(fact, force(steps.lemma(fact))), arguments*), premises*)
 
     private def mag(name: String, arguments: String*): Kernel.Thm = spec(force(magnitude.fact(name)), arguments*)
 
@@ -180,6 +209,12 @@ private[theories] object Integrability {
     private def cases(statement: Term)(positive: Kernel.Thm => Kernel.Thm, negative: Kernel.Thm => Kernel.Thm): Kernel.Thm = {
       val denial = force(logic.mkNot(statement))
       force(classical.cases(statement, positive(assumeT(statement)), negative(assumeT(denial))))
+    }
+
+    /** `|- statement`, from falsity under its denial. */
+    private def byContradiction(statement: Term)(reach: Kernel.Thm => Kernel.Thm): Kernel.Thm = {
+      val denial = force(logic.mkNot(statement))
+      force(classical.contradiction(statement, reach(assumeT(denial))))
     }
 
     private def byDisjunction(disjunction: Kernel.Thm)(first: Kernel.Thm => Kernel.Thm, second: Kernel.Thm => Kernel.Thm): Kernel.Thm = {
@@ -469,6 +504,70 @@ private[theories] object Integrability {
 
     private val JointAt = (x: String) => s"COND ($x = v) (min (g1 v) (g2 v)) (min (min (g1 $x) (g2 $x)) (abs ($x - v)))"
 
+    /** What the gauge `JointAt` is, from the two gauges being positive everywhere. */
+    private final case class JointFacts(positive: Kernel.Thm, underFirst: Kernel.Thm, underSecond: Kernel.Thm, splits: Kernel.Thm)
+
+    /**
+     * `JointAt` is positive everywhere, at most `g1` and at most `g2`, and at most `abs (x - v)` away
+     * from `v`, which is what lets `split` cut a sum fine for it at `v` exactly.
+     */
+    private def jointFacts(g1Positive: Kernel.Thm, g2Positive: Kernel.Thm): JointFacts = {
+      val positive = {
+        val value = JointAt("x")
+        val found = cases(prop("x = v"))(
+          isV => {
+            val least = force(Continuity.minimumOf(steps, magnitude, annotated("g1 v"), annotated("g2 v"), spec(g1Positive, "v"), spec(g2Positive, "v")))
+            transport(sym(whenHolds(isV, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), "0 < zz", least)
+          },
+          other => {
+            val both = force(Continuity.minimumOf(steps, magnitude, annotated("g1 x"), annotated("g2 x"), spec(g1Positive, "x"), spec(g2Positive, "x")))
+            val apart = byDisjunction(spec(force(reals.axiom("LT_TOTAL")), "x", "v"))(
+              below => arithmetic("!m:real a:real. -a <= m ==> a < 0 ==> 0 < m", "abs (x - v)", "x - v")(
+                mag(Magnitude.AbsAboveNegation, "x - v"), arithmetic("!x:real v:real. x < v ==> x - v < 0", "x", "v")(below)),
+              rest => byDisjunction(rest)(
+                equal => exFalso(prop("0 < abs (x - v)"), absurd(other, equal)),
+                above => arithmetic("!m:real a:real. a <= m ==> 0 < a ==> 0 < m", "abs (x - v)", "x - v")(
+                  mag(Magnitude.AbsAbove, "x - v"), arithmetic("!x:real v:real. v < x ==> 0 < x - v", "x", "v")(above))
+              )
+            )
+            val least = force(Continuity.minimumOf(steps, magnitude, annotated("min (g1 x) (g2 x)"), annotated("abs (x - v)"), both, apart))
+            transport(sym(whenFails(other, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), "0 < zz", least)
+          }
+        )
+        generalised(found, "x")
+      }
+
+      def under(g: String, first: Boolean): Kernel.Thm = {
+        val (minAtV, minAtX) =
+          if (first) (Magnitude.MinBelowLeft, Magnitude.MinBelowLeft) else (Magnitude.MinBelowRight, Magnitude.MinBelowRight)
+        val found = cases(prop("x = v"))(
+          isV => {
+            val atV = mag(minAtV, "g1 v", "g2 v")
+            val same = force(Conv.apTerm(term(g, Functions), sym(isV)))
+            val toX = transport(same, s"min (g1 v) (g2 v) <= zz", atV)
+            transport(sym(whenHolds(isV, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), s"zz <= $g x", toX)
+          },
+          other => {
+            val outer = mag(Magnitude.MinBelowLeft, "min (g1 x) (g2 x)", "abs (x - v)")
+            val inner = mag(minAtX, "g1 x", "g2 x")
+            val chained = arithmetic("!p:real q:real r:real. p <= q ==> q <= r ==> p <= r",
+              "min (min (g1 x) (g2 x)) (abs (x - v))", "min (g1 x) (g2 x)", s"$g x")(outer, inner)
+            transport(sym(whenFails(other, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), s"zz <= $g x", chained)
+          }
+        )
+        generalised(found, "x")
+      }
+      val underFirst = under("g1", first = true)
+      val underSecond = under("g2", first = false)
+      val splits = {
+        val other = assume("~(x = v)")
+        val value = whenFails(other, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")
+        val bound = mag(Magnitude.MinBelowRight, "min (g1 x) (g2 x)", "abs (x - v)")
+        generalised(discharged(transport(sym(value), "zz <= abs (x - v)", bound), "~(x = v)"), "x")
+      }
+      JointFacts(positive, underFirst, underSecond, splits)
+    }
+
     /**
      * `|- u <= v /\ v <= w /\ C u v /\ C v w ==> C u w`, the gauge being `JointAt`, at most `abs (x - v)` away from `v`.
      */
@@ -482,59 +581,7 @@ private[theories] object Integrability {
           val g1Positive = left(first)
           val g2Positive = left(second)
 
-          val positive = {
-            val value = JointAt("x")
-            val found = cases(prop("x = v"))(
-              isV => {
-                val least = force(Continuity.minimumOf(steps, magnitude, annotated("g1 v"), annotated("g2 v"), spec(g1Positive, "v"), spec(g2Positive, "v")))
-                transport(sym(whenHolds(isV, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), "0 < zz", least)
-              },
-              other => {
-                val both = force(Continuity.minimumOf(steps, magnitude, annotated("g1 x"), annotated("g2 x"), spec(g1Positive, "x"), spec(g2Positive, "x")))
-                val apart = byDisjunction(spec(force(reals.axiom("LT_TOTAL")), "x", "v"))(
-                  below => arithmetic("!m:real a:real. -a <= m ==> a < 0 ==> 0 < m", "abs (x - v)", "x - v")(
-                    mag(Magnitude.AbsAboveNegation, "x - v"), arithmetic("!x:real v:real. x < v ==> x - v < 0", "x", "v")(below)),
-                  rest => byDisjunction(rest)(
-                    equal => exFalso(prop("0 < abs (x - v)"), absurd(other, equal)),
-                    above => arithmetic("!m:real a:real. a <= m ==> 0 < a ==> 0 < m", "abs (x - v)", "x - v")(
-                      mag(Magnitude.AbsAbove, "x - v"), arithmetic("!x:real v:real. v < x ==> 0 < x - v", "x", "v")(above))
-                  )
-                )
-                val least = force(Continuity.minimumOf(steps, magnitude, annotated("min (g1 x) (g2 x)"), annotated("abs (x - v)"), both, apart))
-                transport(sym(whenFails(other, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), "0 < zz", least)
-              }
-            )
-            generalised(found, "x")
-          }
-
-          def under(g: String, first: Boolean): Kernel.Thm = {
-            val (minAtV, minAtX) =
-              if (first) (Magnitude.MinBelowLeft, Magnitude.MinBelowLeft) else (Magnitude.MinBelowRight, Magnitude.MinBelowRight)
-            val found = cases(prop("x = v"))(
-              isV => {
-                val atV = mag(minAtV, "g1 v", "g2 v")
-                val same = force(Conv.apTerm(term(g, Functions), sym(isV)))
-                val toX = transport(same, s"min (g1 v) (g2 v) <= zz", atV)
-                transport(sym(whenHolds(isV, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), s"zz <= $g x", toX)
-              },
-              other => {
-                val outer = mag(Magnitude.MinBelowLeft, "min (g1 x) (g2 x)", "abs (x - v)")
-                val inner = mag(minAtX, "g1 x", "g2 x")
-                val chained = arithmetic("!p:real q:real r:real. p <= q ==> q <= r ==> p <= r",
-                  "min (min (g1 x) (g2 x)) (abs (x - v))", "min (g1 x) (g2 x)", s"$g x")(outer, inner)
-                transport(sym(whenFails(other, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")), s"zz <= $g x", chained)
-              }
-            )
-            generalised(found, "x")
-          }
-          val underFirst = under("g1", first = true)
-          val underSecond = under("g2", first = false)
-          val splits = {
-            val other = assume("~(x = v)")
-            val value = whenFails(other, "min (g1 v) (g2 v)", "min (min (g1 x) (g2 x)) (abs (x - v))")
-            val bound = mag(Magnitude.MinBelowRight, "min (g1 x) (g2 x)", "abs (x - v)")
-            generalised(discharged(transport(sym(value), "zz <= abs (x - v)", bound), "~(x = v)"), "x")
-          }
+          val JointFacts(positive, underFirst, underSecond, splits) = jointFacts(g1Positive, g2Positive)
 
           val joint = s"\\x:real. ${JointAt("x")}"
           val sFine = assume(s"fine_sum f ($joint) u w s")
@@ -752,6 +799,237 @@ private[theories] object Integrability {
         transport(sym(equal), "has_integral f a b zz", has)
       }
       generalised(discharged(result, "a <= b", Everywhere), "f", "a", "b")
+    }
+
+    /* ---------------------------------------------------- integrals add over intervals */
+
+    private def hasBody(a: String, b: String, i: String): Kernel.Thm = {
+      val equation = force(Conv.unfold(hasDefinition, List(term("f", Functions), real(a), real(b), real(i))))
+      val normal = force(Conv.betaNormalise(Term.destEq(equation.conclusion).map(_._2).getOrElse(refuse("an equation", equation.conclusion))))
+      trans(equation, normal)
+    }
+
+    /** `|- has_integral f a b i` from a proof of its epsilon-gauge statement, or the other way. */
+    private def folded(a: String, b: String, i: String, statement: Kernel.Thm): Kernel.Thm =
+      force(LogicError.lift(Kernel.eqMp(sym(hasBody(a, b, i)), statement)))
+    private def unfoldedHas(a: String, b: String, i: String, has: Kernel.Thm): Kernel.Thm =
+      force(LogicError.lift(Kernel.eqMp(hasBody(a, b, i), has)))
+
+    /**
+     * `|- u <= v ==> v <= w ==> has_integral f u v i ==> has_integral f v w j ==> has_integral f u w (i + j)`.
+     *
+     * At half the tolerance each integral has a gauge, and `JointAt` of the two is fine for both
+     * halves: a sum fine for it over `[u, w]` is a sum over `[u, v]` plus one over `[v, w]`, exactly,
+     * each within half the tolerance of its integral.
+     */
+    lazy val joinIntegrals: Kernel.Thm = {
+      val texts = List("u <= v", "v <= w", "has_integral f u v i", "has_integral f v w j")
+      val uv = assume(texts(0))
+      val vw = assume(texts(1))
+      val first = unfoldedHas("u", "v", "i", assume(texts(2)))
+      val second = unfoldedHas("v", "w", "j", assume(texts(3)))
+      val positive = assume("0 < e")
+      val half = arithmetic("!e:real. 0 < e ==> 0 < e / 2", "e")(positive)
+      val target = prop("?g:real -> real. (!x:real. 0 < g x) /\\ (!s:real. fine_sum f g u w s ==> abs (s - (i + j)) < e)")
+      val within = opened(mp(spec(first, "e / 2"), half), "g1") { one =>
+        opened(mp(spec(second, "e / 2"), half), "g2") { two =>
+          val JointFacts(jointPositive, underFirst, underSecond, splits) = jointFacts(left(one), left(two))
+          val joint = s"\\x:real. ${JointAt("x")}"
+          val sFine = assume(s"fine_sum f ($joint) u w s")
+          val parted = mp(spec(split, "f", joint, "v", "u", "w", "s"), splits, sFine, uv, vw)
+          val close = opened(parted, "s1") { afterFirst =>
+            opened(afterFirst, "s2") { parts =>
+              val oneFine = mp(spec(gauge, "f", joint, "g1", "u", "v", "s1"), underFirst, left(parts))
+              val twoFine = mp(spec(gauge, "f", joint, "g2", "v", "w", "s2"), underSecond, left(right(parts)))
+              val (aUp, aDown) = sides("s1 - i", "e / 2", mp(spec(right(one), "s1"), oneFine), strict = true)
+              val (bUp, bDown) = sides("s2 - j", "e / 2", mp(spec(right(two), "s2"), twoFine), strict = true)
+              val args = List("s", "s1", "s2", "i", "j", "e")
+              val up = arithmetic("!s:real p:real q:real i:real j:real e:real. s = p + q ==> p - i < e / 2 ==> q - j < e / 2 ==> " +
+                "s - (i + j) < e", args*)(right(right(parts)), aUp, bUp)
+              val down = arithmetic("!s:real p:real q:real i:real j:real e:real. s = p + q ==> -(p - i) < e / 2 ==> -(q - j) < e / 2 ==> " +
+                "-(s - (i + j)) < e", args*)(right(right(parts)), aDown, bDown)
+              joined("s - (i + j)", "e", up, down, strict = true)
+            }
+          }
+          val everySum = generalised(discharged(close, s"fine_sum f ($joint) u w s"), "s")
+          witnessed(target, List((ty: Type) => term(joint, ty)), conj(jointPositive, everySum))
+        }
+      }
+      val statement = generalised(discharged(within, "0 < e"), "e")
+      generalised(discharged(folded("u", "w", "i + j", statement), texts*), "f", "u", "v", "w", "i", "j")
+    }
+
+    /* ------------------------------------------------ an integral near a point, one value */
+
+    /**
+     * `|- Close ==> m <= x ==> x <= r ==> r - m < d ==> has_integral f m r i ==> abs (i - f x * (r - m)) <= k * (r - m)`.
+     *
+     * By contradiction at the gap: a gauge the integral has at the gap, met with the constant gauge
+     * `nearOnePoint` reads, gives by Cousin one sum within the gap of `i` and within `k` per unit of
+     * `f x`, so `i` is closer than the gap says it is.
+     */
+    private lazy val integralNear: Kernel.Thm = {
+      val texts = List(Close, "m <= x", "x <= r", "r - m < d", "has_integral f m r i")
+      val close = assume(texts(0))
+      val mx = assume(texts(1))
+      val xr = assume(texts(2))
+      val short = assume(texts(3))
+      val integral = unfoldedHas("m", "r", "i", assume(texts(4)))
+      val a = "abs (i - f x * (r - m))"
+      val bound = "k * (r - m)"
+      val result = byContradiction(prop(s"$a <= $bound")) { beyond =>
+        // `Linarith` reads no negated hypothesis, so the order's own fact turns the denial around.
+        val exceeds = mp(spec(force(magnitude.order.fact(Order.LtOfNotLe)), a, bound), beyond)
+        val gap = arithmetic("!A:real B:real. B < A ==> 0 < A - B", a, bound)(exceeds)
+        opened(mp(spec(integral, s"$a - $bound"), gap), "g1") { good =>
+          val dPositive = arithmetic("!m:real x:real r:real d:real. m <= x ==> x <= r ==> r - m < d ==> 0 < d", "m", "x", "r", "d")(mx, xr, short)
+          val smaller = "\\y:real. min (g1 y) d"
+          val positiveOn = generalised(discharged(
+            force(Continuity.minimumOf(steps, magnitude, annotated("g1 y"), annotated("d"), spec(left(good), "y"), dPositive)),
+            "m <= y /\\ y <= r"), "y")
+          val ordered = arithmetic("!m:real x:real r:real. m <= x ==> x <= r ==> m <= r", "m", "x", "r")(mx, xr)
+          opened(mp(spec(exists, "f", smaller, "m", "r"), ordered, positiveOn), "s") { sFine =>
+            val forG = mp(spec(gauge, "f", smaller, "g1", "m", "r", "s"), generalised(mag(Magnitude.MinBelowLeft, "g1 y", "d"), "y"), sFine)
+            val forD = mp(spec(gauge, "f", smaller, "\\y:real. d", "m", "r", "s"), generalised(mag(Magnitude.MinBelowRight, "g1 y", "d"), "y"), sFine)
+            val nearI = mp(spec(right(good), "s"), forG)
+            val nearValue = mp(spec(nearOnePoint, "f", "x", "d", "k", "m", "r", "s"), close, mx, xr, short, forD)
+            val (iUp, iDown) = sides("s - i", s"$a - $bound", nearI, strict = true)
+            val (vUp, vDown) = sides("s - f x * (r - m)", bound, nearValue, strict = false)
+            val args = List("s", "i", "f x * (r - m)", bound, s"$a - $bound")
+            val up = arithmetic("!s:real i:real Q:real B:real E:real. -(s - i) < E ==> s - Q <= B ==> i - Q < B + E", args*)(iDown, vUp)
+            val down = arithmetic("!s:real i:real Q:real B:real E:real. s - i < E ==> -(s - Q) <= B ==> -(i - Q) < B + E", args*)(iUp, vDown)
+            val closer = joined("i - f x * (r - m)", s"$bound + ($a - $bound)", up, down, strict = true)
+            arithmetic("!A:real B:real. A < B + (A - B) ==> F", a, bound)(closer)
+          }
+        }
+      }
+      generalised(discharged(result, texts*), "f", "x", "d", "k", "m", "r", "i")
+    }
+
+    /* ------------------------------------------------ the second half of the fundamental theorem */
+
+    private val EverywhereAB = "!x:real. a <= x /\\ x <= b ==> continuous f x"
+
+    /** `|- !t. lo <= t /\ t <= hi ==> continuous f t`, from the continuity on `[a, b]` and `a <= lo`, `hi <= b`. */
+    private def continuousOn(everywhere: Kernel.Thm, lo: String, hi: String, aLo: Kernel.Thm, hiB: Kernel.Thm): Kernel.Thm = {
+      val inside = assume(s"$lo <= t /\\ t <= $hi")
+      val at = mp(spec(everywhere, "t"), conj(
+        arithmetic("!a:real l:real t:real. a <= l ==> l <= t ==> a <= t", "a", lo, "t")(aLo, left(inside)),
+        arithmetic("!t:real h:real b:real. t <= h ==> h <= b ==> t <= b", "t", hi, "b")(right(inside), hiB)))
+      generalised(discharged(at, s"$lo <= t /\\ t <= $hi"), "t")
+    }
+
+    /** `|- has_integral f lo hi (integral f lo hi)`, for a subinterval of `[a, b]`. */
+    private def integralOn(everywhere: Kernel.Thm, lo: String, hi: String, ordered: Kernel.Thm, aLo: Kernel.Thm, hiB: Kernel.Thm): Kernel.Thm =
+      mp(spec(integralIsOne, "f", lo, hi), ordered, continuousOn(everywhere, lo, hi, aLo, hiB))
+
+    /**
+     * `|- EverywhereAB ==> a <= x ==> x <= b ==> derivative_within (\y. integral f a y) a b x (f x)`.
+     *
+     * Continuity at `x` at half the tolerance gives the radius. An increment `z` keeping `x + z` in
+     * `[a, b]` is read through additivity and uniqueness as the integral over the interval between
+     * `x` and `x + z`, on one side or the other, and `integralNear` puts that within half the
+     * tolerance of `f x * z` per unit of length.
+     */
+    lazy val derivativeWithin: Kernel.Thm = {
+      val texts = List(EverywhereAB, "a <= x", "x <= b")
+      val everywhere = assume(texts(0))
+      val ax = assume(texts(1))
+      val xb = assume(texts(2))
+      val function = "\\y:real. integral f a y"
+      val definition = force(derivative.definition(Derivative.WithinName))
+      val equation = {
+        val unfolded = force(Conv.unfold(definition, List(term(function, Functions), real("a"), real("b"), real("x"), real("f x"))))
+        trans(unfolded, force(Conv.betaNormalise(Term.destEq(unfolded.conclusion).map(_._2).getOrElse(refuse("an equation", unfolded.conclusion)))))
+      }
+      val continuous = {
+        val at = mp(spec(everywhere, "x"), conj(ax, xb))
+        val unfolded = force(Conv.unfold(force(continuity.definition(Continuity.Continuous)), List(term("f", Functions), real("x"))))
+        reduced(force(LogicError.lift(Kernel.eqMp(unfolded, at))))
+      }
+      val positive = assume("0 < e")
+      val half = arithmetic("!e:real. 0 < e ==> 0 < e / 2", "e")(positive)
+      val radiusTarget = prop("?d:real. 0 < d /\\ (!z:real. 0 < abs z /\\ abs z < d /\\ a <= x + z /\\ x + z <= b ==> " +
+        "abs (integral f a (x + z) - integral f a x - f x * z) < e * abs z)")
+      val within = opened(mp(spec(continuous, "e / 2"), half), "d") { radius =>
+        val dPositive = left(radius)
+        val close = right(radius)
+        val incrementText = "0 < abs z /\\ abs z < d /\\ a <= x + z /\\ x + z <= b"
+        val increment = assume(incrementText)
+        val nonZero = left(increment)
+        val small = left(right(increment))
+        val aY = left(right(right(increment)))
+        val yB = right(right(right(increment)))
+        val goal = prop("abs (integral f a (x + z) - integral f a x - f x * z) < e * abs z")
+        val ordered = spec(force(reals.axiom("LT_TOTAL")), "z", "0")
+        val found = byDisjunction(ordered)(
+          negative => {
+            val yx = arithmetic("!x:real z:real. z < 0 ==> x + z <= x", "x", "z")(negative)
+            val hay = integralOn(everywhere, "a", "x + z", aY, arithmetic("!a:real. a <= a", "a")(), arithmetic("!y:real x:real b:real. y <= x ==> x <= b ==> y <= b", "x + z", "x", "b")(yx, xb))
+            val hyx = integralOn(everywhere, "x + z", "x", yx, aY, xb)
+            val sum = mp(spec(joinIntegrals, "f", "a", "x + z", "x", "integral f a (x + z)", "integral f (x + z) x"), aY, yx, hay, hyx)
+            val split = mp(spec(unique, "f", "a", "x", "integral f a (x + z) + integral f (x + z) x"), ax, sum)
+            val length = arithmetic("!X:real z:real A:real d:real. z < 0 ==> -z <= A ==> A < d ==> X - (X + z) < d",
+              "x", "z", "abs z", "d")(negative, mag(Magnitude.AbsAboveNegation, "z"), small)
+            val near = mp(spec(integralNear, "f", "x", "d", "e / 2", "x + z", "x", "integral f (x + z) x"), close, yx,
+              arithmetic("!x:real. x <= x", "x")(), length, hyx)
+            val (nUp, nDown) = sides("integral f (x + z) x - f x * (x - (x + z))", "e / 2 * (x - (x + z))", near, strict = false)
+            val args = List("integral f a x", "integral f a (x + z)", "integral f (x + z) x", "f x", "x", "z", "e", "abs z")
+            val up = arithmetic("!G:real I:real Q:real P:real X:real Z:real E:real A:real. G = I + Q ==> " +
+              "-(Q - P * (X - (X + Z))) <= E / 2 * (X - (X + Z)) ==> Z < 0 ==> 0 < E ==> -Z <= A ==> I - G - P * Z < E * A", args*)(
+              split, nDown, negative, positive, mag(Magnitude.AbsAboveNegation, "z"))
+            val down = arithmetic("!G:real I:real Q:real P:real X:real Z:real E:real A:real. G = I + Q ==> " +
+              "Q - P * (X - (X + Z)) <= E / 2 * (X - (X + Z)) ==> Z < 0 ==> 0 < E ==> -Z <= A ==> -(I - G - P * Z) < E * A", args*)(
+              split, nUp, negative, positive, mag(Magnitude.AbsAboveNegation, "z"))
+            joined("integral f a (x + z) - integral f a x - f x * z", "e * abs z", up, down, strict = true)
+          },
+          rest => byDisjunction(rest)(
+            zero => {
+              val cases = mag(Magnitude.AbsCases, "z")
+              exFalso(goal, byDisjunction(cases)(
+                plain => arithmetic("!A:real Z:real. A = Z ==> Z = 0 ==> 0 < A ==> F", "abs z", "z")(plain, zero, nonZero),
+                negated => arithmetic("!A:real Z:real. A = -Z ==> Z = 0 ==> 0 < A ==> F", "abs z", "z")(negated, zero, nonZero)))
+            },
+            positiveZ => {
+              val xy = arithmetic("!x:real z:real. 0 < z ==> x <= x + z", "x", "z")(positiveZ)
+              val hax = integralOn(everywhere, "a", "x", ax, arithmetic("!a:real. a <= a", "a")(), xb)
+              val hxy = integralOn(everywhere, "x", "x + z", xy, ax, yB)
+              val sum = mp(spec(joinIntegrals, "f", "a", "x", "x + z", "integral f a x", "integral f x (x + z)"), ax, xy, hax, hxy)
+              val split = mp(spec(unique, "f", "a", "x + z", "integral f a x + integral f x (x + z)"), aY, sum)
+              val length = arithmetic("!X:real z:real A:real d:real. 0 < z ==> z <= A ==> A < d ==> (X + z) - X < d",
+                "x", "z", "abs z", "d")(positiveZ, mag(Magnitude.AbsAbove, "z"), small)
+              val near = mp(spec(integralNear, "f", "x", "d", "e / 2", "x", "x + z", "integral f x (x + z)"), close,
+                arithmetic("!x:real. x <= x", "x")(), xy, length, hxy)
+              val (nUp, nDown) = sides("integral f x (x + z) - f x * ((x + z) - x)", "e / 2 * ((x + z) - x)", near, strict = false)
+              val args = List("integral f a (x + z)", "integral f a x", "integral f x (x + z)", "f x", "x", "z", "e", "abs z")
+              val up = arithmetic("!Y:real I:real Q:real P:real X:real Z:real E:real A:real. Y = I + Q ==> " +
+                "Q - P * ((X + Z) - X) <= E / 2 * ((X + Z) - X) ==> 0 < Z ==> 0 < E ==> Z <= A ==> Y - I - P * Z < E * A", args*)(
+                split, nUp, positiveZ, positive, mag(Magnitude.AbsAbove, "z"))
+              val down = arithmetic("!Y:real I:real Q:real P:real X:real Z:real E:real A:real. Y = I + Q ==> " +
+                "-(Q - P * ((X + Z) - X)) <= E / 2 * ((X + Z) - X) ==> 0 < Z ==> 0 < E ==> Z <= A ==> -(Y - I - P * Z) < E * A", args*)(
+                split, nDown, positiveZ, positive, mag(Magnitude.AbsAbove, "z"))
+              joined("integral f a (x + z) - integral f a x - f x * z", "e * abs z", up, down, strict = true)
+            }
+          )
+        )
+        val everyIncrement = generalised(discharged(found, incrementText), "z")
+        witnessed(radiusTarget, at("d"), conj(dPositive, everyIncrement))
+      }
+      val statement = generalised(discharged(within, "0 < e"), "e")
+      val result = force(LogicError.lift(Kernel.eqMp(sym(equation), statement)))
+      generalised(discharged(result, texts*), "f", "a", "b", "x")
+    }
+
+    /** `|- EverywhereAB ==> a < x ==> x < b ==> derivative (\y. integral f a y) x (f x)`, strictly inside. */
+    lazy val derivativeInterior: Kernel.Thm = {
+      val texts = List(EverywhereAB, "a < x", "x < b")
+      val ax = assume(texts(1))
+      val xb = assume(texts(2))
+      val relative = mp(spec(derivativeWithin, "f", "a", "b", "x"), assume(texts(0)),
+        arithmetic("!a:real x:real. a < x ==> a <= x", "a", "x")(ax), arithmetic("!x:real b:real. x < b ==> x <= b", "x", "b")(xb))
+      val interior = force(derivative.fact(Derivative.WithinInterior))
+      val result = mp(spec(interior, "\\y:real. integral f a y", "a", "b", "x", "f x"), ax, xb, relative)
+      generalised(discharged(result, texts*), "f", "a", "b", "x")
     }
   }
 }
