@@ -334,7 +334,7 @@ final class Linarith private (
       .sorted(using Term.ordering)
       .filter(atom => LinearForm.factorsOf(atom).length > 1)
     val outOfReach = products.find(atom => !isSquare(atom)).orElse(products.headOption)
-    val squares = goalAtoms.filter(isSquare).toVector.sorted(using Term.ordering)
+    val squares = goalAtoms.filter(isSquare)
 
     // A certificate that was found means the search had what it needed, so a sentence about the
     // degree would replace the one true thing known with a false one.
@@ -354,7 +354,7 @@ final class Linarith private (
             "exists. Without hypotheses the only fact available is a square completed over an " +
             "atom that is one unknown times itself, and " +
             (if (squares.isEmpty) "this goal has none"
-             else s"the ones this goal holds, ${squares.map(reals.show).mkString(", ")}, do not reach it"),
+             else "the ones this goal holds do not reach it"),
           conclusion
         )
 

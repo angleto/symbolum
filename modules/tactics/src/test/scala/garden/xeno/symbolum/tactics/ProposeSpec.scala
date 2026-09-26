@@ -1375,7 +1375,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // probe of `Propose.audit` filtered by `from` after the run had named the total: all
     // weakenings, each keeping an implication or naming `NUM_VALUATION`, which no procedure reads.
     // Nine are `unreadable` below and one is `decidedFalse` above. Tip plus this branch's delta.
-    open shouldBe 609
+    // 627 with all eighteen residues of the integral's relative forms and their congruences,
+    // 2026-09-26, read off the suite's own failure: every one keeps an implication about
+    // `has_integral`, `fine_sum`, `integral` or `derivative_within`, which no procedure settles.
+    // The total matched the eighteen derived for `proposals` and no other bucket moved, so none
+    // reached `unreadable`. Tip plus this branch's delta.
+    open shouldBe 627
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
