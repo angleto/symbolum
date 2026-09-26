@@ -1573,10 +1573,10 @@ worth proving.
 
 # NUM_WILSON
 
-$$\forall x \colon \mathbb{N}.\ \mathrm{prime}(x) \Rightarrow x \mid \mathrm{suc}(\mathrm{pred}(x)!)$$
+$$\forall n \colon \mathbb{N}.\ \mathrm{prime}(n) \Rightarrow n \mid \mathrm{suc}(\mathrm{pred}(n)!)$$
 
 ```
-!x:num. NUM_PRIME x ==> NUM_DIVIDES x (SUC (NUM_FACT (PRE x)))
+!n:num. NUM_PRIME n ==> NUM_DIVIDES n (SUC (NUM_FACT (PRE n)))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1723,7 +1723,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_PRIME x ==> NUM_DIVIDES x (SUC (NUM_FACT (PRE x)))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. NUM_PRIME n ==> NUM_DIVIDES n (SUC (NUM_FACT (PRE n)))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
