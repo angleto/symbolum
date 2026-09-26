@@ -403,7 +403,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
         // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
     // the run: four antecedents on `HAS_INTEGRAL_JOIN` and three on each derivative. Tip plus this
     // branch's delta.
-    proposals.size shouldBe 662
+    // 676 with parts' and the substitution's fourteen, 2026-09-26. Tip plus this branch's delta.
+    proposals.size shouldBe 676
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1354,7 +1355,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `DERIVATIVE_INTEGRAL`, 2026-09-26: twelve, read off the suite's own failure after a prediction
     // of ten, so the total is measured and how it splits between weakenings and substitutions is not.
     // Tip plus this branch's delta.
-    open shouldBe 572
+    // 586 with all fourteen residues of parts and the substitution, 2026-09-26, derived before the
+    // run and confirmed by it: every fact has three antecedents or more, so dropping one leaves an
+    // implication about `has_integral`, `integral` or `derivative`, which no procedure settles. The
+    // bodies carry a quantifier, so nothing is substituted. Tip plus this branch's delta.
+    open shouldBe 586
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

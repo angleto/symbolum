@@ -248,6 +248,64 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     sums should not be theorem
   }
 
+  it should "integrate by parts and by substitution at the fundamental theorem's price, through the two rules" in {
+    // Measured on 2026-09-26: both `has_integral` forms spend what the fundamental theorem as
+    // `has_integral` spends, and both `integral` forms what uniqueness spends. The routes are the
+    // design: the product rule, the theorem and linearity for parts; the chain rule and the theorem
+    // for the substitution.
+    val theorem = Derivation.axiomsOf(fact(Integral.HasFundamental))
+    Derivation.axiomsOf(fact(Integral.HasParts)) shouldBe theorem
+    Derivation.axiomsOf(fact(Integral.HasSubstitution)) shouldBe theorem
+    Derivation.axiomsOf(fact(Integral.Parts)) shouldBe Derivation.axiomsOf(fact(Integral.HasUnique))
+    Derivation.axiomsOf(fact(Integral.Substitution)) shouldBe Derivation.axiomsOf(fact(Integral.HasUnique))
+    val partsRoute = Set(
+      force(chain.derivative.fact(Derivative.ProductRule)).conclusion,
+      fact(Integral.HasFundamental).conclusion,
+      fact(Integral.HasLinear).conclusion)
+    Derivation.restingOn(fact(Integral.HasParts), partsRoute) shouldBe partsRoute
+    val substitutionRoute = Set(force(chain.derivative.fact(Derivative.ChainRule)).conclusion, fact(Integral.HasFundamental).conclusion)
+    Derivation.restingOn(fact(Integral.HasSubstitution), substitutionRoute) shouldBe substitutionRoute
+  }
+
+  it should "detach the substitution at the square composed with itself on [0, 1]" in {
+    // `F` and `g` are both `\y. y * y`, with slope `1 * y + y * 1` by the product rule, so the
+    // integrand is `(1 * (x * x) + x * x * 1) * (1 * x + x * 1)` and its integral is
+    // `(1 * 1) * (1 * 1) - (0 * 0) * (0 * 0)`, with nothing assumed.
+    val slope = function("\\y:real. 1 * y + y * 1")
+    val y = Term.variable("y", reals)
+    val x = Term.variable("x", reals)
+    val everywhere = force(rules.gen(y, squareSlope(y)))
+    val inside = force(rules.disch(proposition("(0:real) <= x /\\ x <= 1"), squareSlope(x)).flatMap(rules.gen(x, _)))
+    val detached = opened(force(rules.specAll(fact(Integral.HasSubstitution), List(square, slope, square, slope, real("0:real"), real("1:real")))
+      .flatMap(rules.mp(_, lemma("(0:real) <= 1"))).flatMap(rules.mp(_, everywhere)).flatMap(rules.mp(_, inside))))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition(
+      "has_integral (\\x:real. (1 * (x * x) + x * x * 1) * (1 * x + x * 1)) 0 1 (1 * 1 * (1 * 1) - 0 * 0 * (0 * 0))")
+  }
+
+  it should "detach integration by parts at a constant and the identity on [0, 1]" in {
+    // `f = \x. 1` has slope `0` and `g = \x. x` has slope `1`, so the given integral is of `1 * 1`,
+    // which is the fundamental theorem's `1` over [0, 1] written under the lambda, and parts gives
+    // `0 * x` the integral `1 * 1 - 1 * 0 - (1 - 0)`.
+    val one = function("\\x:real. (1:real)")
+    val zero = function("\\x:real. (0:real)")
+    val identity = function("\\x:real. x")
+    val x = Term.variable("x", reals)
+    val constantSlope = force(rules.specAll(force(chain.derivative.fact(Derivative.Constant)), List(real("1:real"), x)))
+    val identitySlope = force(rules.spec(x, force(chain.derivative.fact(Derivative.Identity))))
+    val member = proposition("(0:real) <= x /\\ x <= 1")
+    val slopesF = force(rules.disch(member, constantSlope).flatMap(rules.gen(x, _)))
+    val slopesG = force(rules.disch(member, identitySlope).flatMap(rules.gen(x, _)))
+    val product = force(LogicError.lift(Kernel.abs(x, lemma("(1:real) * 1 = 1"))))
+    val hasConstant = force(integral.term("has_integral", Type.fun(functions, Type.fun(reals, Type.fun(reals, Type.fun(reals, Type.Bool))))))
+    val rewritten = force(Conv.apTerm(hasConstant, product).flatMap(Conv.apThm(_, real("0:real"))).flatMap(Conv.apThm(_, real("1:real")))
+      .flatMap(Conv.apThm(_, real("1 - 0:real"))).flatMap(Conv.sym).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, oneOverUnit))))
+    val detached = opened(force(rules.specAll(fact(Integral.HasParts), List(one, identity, zero, one, real("0:real"), real("1:real"), real("1 - 0:real")))
+      .flatMap(rules.mp(_, lemma("(0:real) <= 1"))).flatMap(rules.mp(_, slopesF)).flatMap(rules.mp(_, slopesG)).flatMap(rules.mp(_, rewritten))))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition("has_integral (\\x:real. 0 * x) 0 1 (1 * 1 - 1 * 0 - (1 - 0))")
+  }
+
   it should "refuse a wrong value, so that the definition does not hold of every number" in {
     // Assumed, `has_integral (\y. 1) 0 1 0` meets the fundamental theorem's `1 - 0` in uniqueness,
     // and `0 = 1 - 0` is false.
