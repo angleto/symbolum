@@ -887,6 +887,20 @@ had collapsed into one would pass the first and fail the second. They are not pu
 needs the rules to be distinct, it is a fact about the encoding, and facts about the encoding live in
 the spec that asks for them.
 
+**FRACTRAN is `Fractran`, beside the chain since 2026-09-26, and a run of a program is a theorem.**
+`FRACTRAN_STEP P n m` is one fold into `bool` over the program: the first fraction whose
+denominator divides `n` times its numerator decides, and a denominator of zero never applies.
+`FRACTRAN_HALTS` is the absence of a successor, and `FRACTRAN_REACHES P n k m` is `REACH` with the
+step as its own counted relation, so `k` is the length. `docs/adr/0054` is the decision. What it
+derives is the step at a head, the step as a function, and the two clauses of a run; what it spends
+is choice, infinity and eta, the price of the lists. The interpreter is a few lines of `BigInt`
+arithmetic that nothing believes. `Fractran.certify` hands each state it proposes to the kernel,
+and `FractranSpec` gets Conway's PRIMEGAME from `2` to `4` in nineteen steps that way. **What is not
+here** is anything a program computes: that `3/2` adds the exponents of `2` and `3` wants the
+valuation at a prime, which `docs/lemmas.md` does not hold, and it is card `626ad37f`. Whether
+Conway's generalised Collatz maps meet `Collatz` is card `b0d2ada9`, and it is a question rather
+than a plan.
+
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants
 and no axiom. `converges s l` is the epsilon-N statement written out and `lim s` is choice applied
@@ -1225,6 +1239,18 @@ and their fine sums, two of which are compared through a third that Cousin suppl
 gluing's price; `IntegralSpec` detaches it at the constant one and joins it to the fundamental
 theorem's value there. No control refutes it without continuity: Dirichlet's function is gauge
 integrable, so a counterexample has to be unbounded, and that is an argument of its own.
+
+**The second half of the fundamental theorem is `DERIVATIVE_WITHIN_INTEGRAL`, since 2026-09-26**: for
+`f` continuous on `[a, b]`, `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every
+point of it, and `DERIVATIVE_INTEGRAL` is the same strictly inside as a two-sided derivative, through
+`DERIVATIVE_WITHIN_INTERIOR`. What it needed first was `HAS_INTEGRAL_JOIN`, that integrals add over
+adjacent intervals, and that is the joint gauge of the existence again: it splits every fine sum at
+the join exactly, so additivity costs no supremum at all, fifteen of the reals' axioms and the
+choice. The increment is then read by additivity and uniqueness as the integral over the interval
+between `x` and `x + h`, on either side, and a sum fine for both that integral's gauge and the
+radius continuity gives puts it within half the tolerance of `f x * h`. In the relative form
+`a <= x` and `x <= b` carry no weight: outside the interval no small increment stays in it, so the
+relative derivative holds there at any slope.
 
 **The sine and the cosine are differentiable since the same day, and what stood in front of that was
 the addition formulas.** `Transcendental.COS_ADD` and `SIN_ADD` are `SIN_COS_SQUARED`'s argument at a

@@ -122,6 +122,19 @@ object Integral {
   /** The same through `integral`: a continuous function has the integral `integral` names. */
   val ContinuousIntegral: String = "CONTINUOUS_INTEGRAL"
 
+  /** Integrals add over two adjacent intervals: the joint gauge splits every fine sum at the join. */
+  val HasJoin: String = "HAS_INTEGRAL_JOIN"
+
+  /**
+   * The second half of the fundamental theorem, as a textbook states it: for `f` continuous on
+   * `[a, b]`, `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every point of it,
+   * one-sided at the two ends.
+   */
+  val DerivativeWithin: String = "DERIVATIVE_WITHIN_INTEGRAL"
+
+  /** The same strictly inside `[a, b]`, as a derivative with no side condition on the increment. */
+  val DerivativeOfIntegral: String = "DERIVATIVE_INTEGRAL"
+
   /** Over a non-empty interval an integral is unique. */
   val HasUnique: String = "HAS_INTEGRAL_UNIQUE"
 
@@ -201,6 +214,15 @@ object Integral {
     ContinuousIntegral ->
       ("!f:real -> real. !a:real. !b:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "has_integral f a b (integral f a b)"),
+    HasJoin ->
+      ("!f:real -> real. !u:real. !v:real. !w:real. !i:real. !j:real. u <= v ==> v <= w ==> " +
+        "has_integral f u v i ==> has_integral f v w j ==> has_integral f u w (i + j)"),
+    DerivativeWithin ->
+      ("!f:real -> real. !a:real. !b:real. !x:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "a <= x ==> x <= b ==> derivative_within (\\y:real. integral f a y) a b x (f x)"),
+    DerivativeOfIntegral ->
+      ("!f:real -> real. !a:real. !b:real. !x:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
+        "a < x ==> x < b ==> derivative (\\y:real. integral f a y) x (f x)"),
     HasUnique ->
       ("!f:real -> real. !a:real. !b:real. !i:real. !j:real. a <= b ==> " +
         "has_integral f a b i ==> has_integral f a b j ==> i = j"),
@@ -301,8 +323,7 @@ object Integral {
       hasFundamental <- twoSided(steps, hasFundamentalWithin, ofDerivative)
       fundamentalTheorem <- integralOfDerivative(steps, unique, hasFundamental, TwoSidedSlopes)
       continuous <- Integrability.prove(steps, reals, magnitude, classical, continuity, gluing, piece, join, induction,
-        exists, gauge, hasDefinition, unique)
-      (continuousHas, continuousIntegral) = continuous
+        exists, gauge, hasDefinition, unique, derivative)
       sumLinear <- sumsOfCombination(steps, induction, piece, join)
       hasLinear <- linearity(steps, reals, magnitude, hasDefinition, gauge, sumLinear)
       linear <- integralOfCombination(steps, unique, hasLinear)
@@ -329,8 +350,11 @@ object Integral {
         Fundamental -> fundamentalTheorem,
         HasFundamentalWithin -> hasFundamentalWithin,
         FundamentalWithin -> fundamentalWithin,
-        ContinuousHas -> continuousHas,
-        ContinuousIntegral -> continuousIntegral,
+        ContinuousHas -> continuous.hasIntegral,
+        ContinuousIntegral -> continuous.integralIsOne,
+        HasJoin -> continuous.join,
+        DerivativeWithin -> continuous.derivativeWithin,
+        DerivativeOfIntegral -> continuous.derivativeInterior,
         SumLinear -> sumLinear,
         HasLinear -> hasLinear,
         Linear -> linear,

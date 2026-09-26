@@ -250,6 +250,12 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Number, "the value asked to be below the other, when it is not"),
     ("Digits.scala", "right") ->
       (Verdict.Number, "the value it was asked to be below"),
+    ("Fractran.scala", "n") -> (Verdict.Number, "the state a step was asked from, as a number"),
+    ("Fractran.scala", "m") -> (Verdict.Number, "the state a step was asked to land on, as a number"),
+    ("Fractran.scala", "p") -> (Verdict.Number, "the numerator of the fraction that applies first"),
+    ("Fractran.scala", "q") -> (Verdict.Number, "its denominator"),
+    ("Fractran.scala", "n * p / q") -> (Verdict.Number, "where that fraction actually sends the state"),
+    ("Fractran.scala", "name") -> (Verdict.Name, "the fact's published name"),
     ("Prove.scala", "reals.show(computed.conclusion)") ->
       (Verdict.Crossing,
         "the equation the constant actually evaluates to, rendered where the refusal is raised; " +

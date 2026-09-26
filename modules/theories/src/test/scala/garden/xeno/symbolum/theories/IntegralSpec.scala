@@ -434,4 +434,42 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
   // function is gauge integrable, so a counterexample has to be unbounded, like `1 / x` near zero,
   // and showing that no number is its integral is an argument about unbounded fine sums of its own.
   // The existence is kept from vacuity by the detachment above instead.
+
+  /* ------------------------------------------ additivity and the second half of the theorem */
+
+  it should "add integrals over adjacent intervals with no supremum, and differentiate one with the gluing's price" in {
+    // Measured on 2026-09-26 before it was written here. Additivity takes one fine sum at a time and
+    // needs none to exist, so it is the fifteen and the choice; the derivative names `integral`, and
+    // so spends Cousin's lemma and the supremum.
+    Derivation.axiomsOf(fact(Integral.HasJoin)) shouldBe (realAxioms - completeness) + select
+    for (name <- List(Integral.DerivativeWithin, Integral.DerivativeOfIntegral)) withClue(name) {
+      Derivation.axiomsOf(fact(name)) shouldBe realAxioms + select
+    }
+    // The route: additivity and uniqueness read the increment as an integral, the existence supplies
+    // the integrals, and the two-sided form is the relative one strictly inside.
+    val underWithin = Set(Integral.HasJoin, Integral.ContinuousIntegral, Integral.Unique).map(fact(_).conclusion)
+    Derivation.restingOn(fact(Integral.DerivativeWithin), underWithin) shouldBe underWithin
+    val underInterior = Set(fact(Integral.DerivativeWithin).conclusion,
+      force(chain.derivative.fact(Derivative.WithinInterior)).conclusion)
+    Derivation.restingOn(fact(Integral.DerivativeOfIntegral), underInterior) shouldBe underInterior
+  }
+
+  it should "detach the second half at the constant one on [0, 1], at one half, with nothing assumed" in {
+    val one = function("\\y:real. (1:real)")
+    val instance = opened(force(rules.specAll(fact(Integral.DerivativeOfIntegral),
+      List(one, real("0:real"), real("1:real"), real("(1:real) / 2")))))
+    val x = Term.variable("x", reals)
+    val continuous = force(rules.specAll(force(chain.continuity.fact(Continuity.Constant)), List(real("1:real"), x)))
+    val everywhere = force(rules.disch(proposition("(0:real) <= x /\\ x <= 1"), continuous).flatMap(rules.gen(x, _)))
+    val detached = Vector(everywhere, lemma("(0:real) < (1:real) / 2"), lemma("(1:real) / 2 < 1"))
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition("derivative (\\y:real. integral (\\y:real. (1:real)) 0 y) ((1:real) / 2) 1")
+  }
+
+  // What is not here, and why. The relative form's `a <= x` and `x <= b` carry no weight, which is
+  // argued here and not derived in a test: outside `[a, b]` no increment small enough keeps `x + h` inside, so the
+  // relative derivative holds there at every slope and the statement stays true without them. The
+  // continuity hypothesis does carry weight, and a control refuting the theorem without it would
+  // need the integral of a discontinuous function as a value, which no fact here supplies.
 }
