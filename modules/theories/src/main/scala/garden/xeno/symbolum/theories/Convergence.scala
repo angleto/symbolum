@@ -44,7 +44,7 @@ import garden.xeno.symbolum.logic.*
  * symbolic ratio is answered where its sign and magnitude follow with no hypotheses, which is
  * rarely, and refused otherwise, naming the ratio.
  *
- * == Three refusals, and they are kept apart ==
+ * == Four refusals, and they are kept apart ==
  *
  *  - The summand is not in the fragment, and the refusal names it: nothing was learned.
  *  - The summand is a rational function of the index, which is where the ratio of consecutive terms
@@ -52,7 +52,14 @@ import garden.xeno.symbolum.logic.*
  *    Gauss's test and the p-series under them, and the refusal says so rather than calling the
  *    summand unreadable. Also nothing learned, and a different next move.
  *  - The procedure proved the opposite of the goal, which is `Denied`, carrying the theorem: a
- *    decided answer, and the only one of the three that is.
+ *    decided answer.
+ *  - The series converges, the procedure proved to what, and the goal names another value. That
+ *    is `NotEqualTo`, decided, when both values are built from numerals and the field operations
+ *    alone, since two normal forms that differ are then two numbers that differ; and it is
+ *    `ValueUnidentified`, not decided, when either holds an atom, a function such as `exp` or a
+ *    free variable, since then the forms differing says nothing about the values. Until
+ *    2026-09-26 both came out as `NotEqualTo`: `converges (Sum (\i. Power 0 i / real_of_num
+ *    (NUM_FACT i))) 1` is true, the series converging to `exp 0`, and it was refused as decided.
  *
  * == Why closed forms rather than the ratio test ==
  *
@@ -85,7 +92,7 @@ final class Convergence private (
   /** Whether `goal` is a question this procedure is asked: a convergence or a divergence of a series. */
   def reads(goal: Term): Boolean = Convergence.goalOf(logic, goal).isDefined
 
-  /** The theorem that is `goal`, or a refusal saying which of the three it is. */
+  /** The theorem that is `goal`, or a refusal saying which of the four it is. */
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
     Convergence.goalOf(logic, goal) match {
       case None => Left(NotOfForm(Expected, goal))
@@ -382,7 +389,7 @@ final class Convergence private (
               .flatMap(Limit.rewriteWith(_, theorem))
               .flatMap(sameAs(goal, _))
               .left
-              .map(_ => NotEqualTo(wanted, found))
+              .map(reason => unidentified(wanted, found, reason))
         }
 
       case (Question.Diverges(_), Answer.Diverges(theorem)) => sameAs(goal, theorem)
@@ -409,6 +416,28 @@ final class Convergence private (
           carried.flatMap(theorem =>
             linarith.prove(condition).flatMap(met => rules.disch(condition, theorem).flatMap(rules.mp(_, met))))
         }))
+
+  /**
+   * The refusal when two values were not identified, and whether it is a decision.
+   *
+   * It is one exactly when the comparison found two finished normal forms that differ **and**
+   * neither value holds anything the comparison reads as an atom: then the two forms are two
+   * numbers, and different numbers are a series converging somewhere other than where it was asked
+   * about. Anything else, a function like `exp` or a free variable, leaves the forms differing as
+   * polynomials in that atom and says nothing about the values, which is [[ValueUnidentified]].
+   */
+  private def unidentified(wanted: Term, found: Term, reason: LogicError): LogicError =
+    reason match {
+      case _: NotEqualTo if numeric(wanted) && numeric(found) => NotEqualTo(wanted, found)
+      case other => ValueUnidentified(wanted, found, other)
+    }
+
+  /** Whether `term` is built from the reals' numerals and field operations alone. */
+  private def numeric(term: Term): Boolean = term match {
+    case App(fn, arg) => numeric(fn) && numeric(arg)
+    case Const(name, _) => Arithmetical.contains(name)
+    case _ => false
+  }
 
   private def sameAs(goal: Term, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     if (theorem.conclusion == goal) Right(theorem)
@@ -446,6 +475,11 @@ object Convergence {
       "a rational function of the index, where it tends to one and no ratio test decides anything"
 
   private val values: Type = TyApp(Real.TypeName, Nil)
+
+  /** The constants a closed value may be built from and still be a number rather than an atom. */
+  private val Arithmetical: Set[String] = Set(
+    Real.Zero, Real.One, Real.Bit0, Real.Bit1, Real.Addition, Real.Multiplication,
+    Real.Negation, Real.Subtraction, Real.Inverse, Real.Division)
   private val numbers: Type = TyApp(Natural.TypeName, Nil)
 
   /** The theorems it answers with, named so that a missing one is a refusal to build. */

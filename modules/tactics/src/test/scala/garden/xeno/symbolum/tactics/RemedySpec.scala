@@ -621,6 +621,9 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       // A certificate found and not rebuilt, whose inner reason is decided and whose own standing
       // is not: the census holds it for the remedy, which is a defect whatever the inner reason.
       NotRebuilt(x, "LINARITH", NotEqualTo(x, Term.variable("y", realType))),
+      // A value established and not identified with the one asked about, whose inner reason is a
+      // decided comparison and whose own standing is not: a person looks, and nothing is settled.
+      ValueUnidentified(x, Term.variable("y", realType), NotEqualTo(x, Term.variable("y", realType))),
       // Both arms of the one refusal that carries another: a caller's procedure that refused, and a
       // caller's procedure that returned something else. The remedy is read off the inner reason, so
       // the branch is only worth running when the two inner reasons take different arms there.
