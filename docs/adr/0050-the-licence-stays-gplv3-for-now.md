@@ -49,11 +49,13 @@ agreement. The dependencies do not constrain the choice in either direction as f
 knows, and that is an unchecked statement rather than a measured one: nobody has audited their
 licences against a permissive alternative, and a change would start there.
 
-**One detail is recorded as it stands and was not part of what was decided.** The published
-metadata says `GPL-3.0-or-later`, which allows a recipient to use the terms of any later version of
-the GPL as well, while the decision was stated as "GPL3". The two are the same licence text and
-differ only in that permission. It is left as it is, and it is the kind of detail a future record
-about the licence should settle explicitly.
+**Which GPL version, settled on 2026-09-26.** The published metadata says `GPL-3.0-or-later`,
+which allows a recipient to use the terms of any later version of the GPL as well, while the
+decision above was stated as "GPL3". The two are the same licence text and differ only in that
+permission. When this record was accepted the difference was left open; the verification of the
+card that asked for it put the question to the author, and the answer is `GPL-3.0-or-later`, as
+`build.sbt` publishes it and as the POM of `symbolum-core_3:7.0.1` already granted it, which could
+not be withdrawn for that version in any case. The README says "version 3 or later" accordingly.
 
 ## Alternatives rejected
 
