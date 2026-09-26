@@ -32,7 +32,7 @@ class ExpanderPigeonholeSpec extends AnyFlatSpec with Matchers {
   private lazy val chain: Chain = Chain.standard
   private lazy val expander: ExpanderPigeonhole = ok(ExpanderPigeonhole.construct(chain))
   private lazy val moves: Pigeonhole.Builder = new ExpanderPigeonhole.Proof(chain).b
-  private lazy val fixture: ResolutionFixture = new ResolutionFixture(moves, chain, term => expander.show(term))
+  private lazy val fixture: ResolutionFixture.Fixture = ResolutionFixture(moves, chain, term => expander.show(term))
   import fixture.{numeral, antecedents, implication, opened, conjuncts, split, belowBound, below}
 
   private def fact(name: String): Kernel.Thm = ok(expander.fact(name))

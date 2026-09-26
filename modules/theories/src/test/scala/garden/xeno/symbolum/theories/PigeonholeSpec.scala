@@ -70,7 +70,7 @@ class PigeonholeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------ the moves */
 
-  private lazy val fixture = new ResolutionFixture(moves, chain, term => pigeonhole.show(term))
+  private lazy val fixture = ResolutionFixture(moves, chain, term => pigeonhole.show(term))
   import fixture.{numeral, antecedents, implication, opened, conjuncts, split, rightOf, argumentsOf, unfold, belowBound, below, noMoreThan}
 
   private lazy val One = numeral(1)
