@@ -941,7 +941,10 @@ go. **It reads a summand against closed forms and does not apply the ratio test*
 the ratio test is a derivation per shape at a symbolic index and every closed form already has a
 published theorem; so the hypergeometric terms are outside the fragment and refused by name, a
 rational function of the index is refused as the class where the ratio tends to one, and a goal the
-procedure refutes comes back as `Denied`, the one refusal of standing `Decided` among the three.
+procedure refutes comes back as `Denied`, carrying the theorem. A goal naming a value other than the
+one the procedure proved is `NotEqualTo`, decided, where both values are numbers built from
+numerals, and `ValueUnidentified`, not decided, where either holds an atom such as `exp 0`: the
+four are listed in `Convergence`'s docstring with which of them are decisions.
 `docs/adr/0041` is the decision. **A polynomial in the index times a geometric term is in the
 fragment since the same night**, `docs/adr/0045`: degree one is the ratio test, which is that
 test's first consumer outside a spec, and each degree after it is a comparison that spends

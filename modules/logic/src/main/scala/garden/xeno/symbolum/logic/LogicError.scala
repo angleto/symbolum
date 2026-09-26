@@ -326,6 +326,30 @@ final case class NotEqualTo(wanted: Term, found: Term) extends LogicError {
   def standing: LogicError.Standing = LogicError.Standing.Decided
 }
 
+/**
+ * A procedure established a value and could not say whether it is the one it was asked about.
+ *
+ * Its own case rather than [[NotEqualTo]], which is what it arrived as and what made it wrong.
+ * `NotEqualTo` is decided because two finished normal forms differ, and that decides an identity
+ * of the procedure's reading, which is a statement about two values only when nothing in them is
+ * read as an atom. `Convergence` proved that a series converges to `exp 0` and was asked about
+ * `1`; RING reads `exp 0` as an atom, found two forms that differ, and the refusal came out
+ * decided about a claim that is true. `reason` is what the comparison said, unchanged.
+ */
+final case class ValueUnidentified(wanted: Term, found: Term, reason: LogicError) extends LogicError {
+  def message: String =
+    s"the value established is $found, and whether it is $wanted is not established either way: " +
+      reason.message
+
+  // Never decided, for `NotRebuilt`'s reason: whatever the comparison decided, it decided about
+  // its own reading of the two terms. A comparison that stopped on a bound keeps saying so.
+  def standing: LogicError.Standing = reason.standing match {
+    case LogicError.Standing.Decided   => LogicError.Standing.Unread
+    case LogicError.Standing.Exhausted => LogicError.Standing.Exhausted
+    case LogicError.Standing.Unread    => LogicError.Standing.Unread
+  }
+}
+
 /** The text could not be read as a term. */
 final case class SyntaxError(detail: String, position: Int) extends LogicError {
   def message: String = s"$detail, at character $position"
