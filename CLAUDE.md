@@ -95,7 +95,7 @@ session named would be a different tool with the same name.
   `Test / test`, since a gate can report a dead flag and cannot report that nobody runs it.
 
   **A green run of it prints one line of its own, and under sbt 2 it can also print the probe's
-  nine `[error]` lines.** Both probe compilations log into a stream nobody reads, because a gate
+  eight `[error]` lines**, counted in five whole runs on 2026-09-26. Both probe compilations log into a stream nobody reads, because a gate
   that rides `tools/sbt test` would otherwise put those lines into every suite log, and a healthy
   log that looks unhealthy is how a reader stops reading it. sbt 2 keeps a compile's outcome, a
   failed one included, and when it serves the probe's failure from that cache it prints the
