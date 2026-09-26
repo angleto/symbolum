@@ -109,9 +109,12 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
 
   /**
    * The census the verification of card 6257d0da asked for, and it is structural rather than
-   * textual: a fact is counted when one of its antecedents is `!x. p x ==> continuous f x`, a
-   * two-sided continuity hypothesis over a set of points, and for each such fact the library must
-   * hold one named with `_WITHIN` appended whose statement names `continuous_within`. The textual
+   * textual: a fact is counted when one of its antecedents is `!x. p x ==> ... ==> continuous f x`,
+   * a two-sided continuity hypothesis over a set of points, and for each such fact the library must
+   * hold one named with `_WITHIN` appended whose statement names `continuous_within`. The chain of
+   * implications inside the hypothesis is followed to its end: the first version looked at one
+   * step and missed `TAYLOR`'s `!v w. v <= u ==> a <= w /\ w <= b ==> continuous (f v) w`, which
+   * landed the night this was written. The textual
    * reading this replaces also counted `CONTINUOUS_LINEAR` and `DERIVATIVE_CONTINUOUS`, whose
    * continuity is at one point and asks nothing of an interval.
    *
@@ -119,7 +122,9 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
    * and the change of variables ask and which is the same kind of excess one notion over. That is
    * a card of its own, `3caa8541`, and not this census.
    *
-   * Non-vacuity, asserted beside it: the census finds the fourteen facts it was written for, so a
+   * A fact without its twin is listed in `Pending` with the card that owes it, and the list is held
+   * both ways: a pending entry that has its twin fails, so the entry is removed when the card lands.
+   * Non-vacuity, asserted beside it: the census finds the fifteen facts it counts today, so a
    * selector that matched nothing could not pass it.
    */
   "Every interval theorem" should "have a textbook form, named with _WITHIN, stated with continuous_within" in {
@@ -140,17 +145,21 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
       case Abs(_, body) => mentions(body, name)
       case _ => false
     }
+    def conclusionOf(t: Term): Term = logic.destImp(t).map { case (_, rest) => conclusionOf(rest) }.getOrElse(t)
     def overAnInterval(hypothesis: Term): Boolean =
       Logic.stripForall(hypothesis).exists { case (bound, body) =>
-        bound.nonEmpty && logic.destImp(body).exists { case (_, concluded) => concludes(concluded, Continuity.Continuous) }
+        bound.nonEmpty && logic.destImp(body).isDefined && concludes(conclusionOf(body), Continuity.Continuous)
       }
+    val Pending = Map("TAYLOR" -> "3b7c74be")
     val twoSided = library.entries.filter(entry =>
       antecedents(strip(entry.theorem.conclusion)).exists(overAnInterval)).map(_.name).distinct
 
-    twoSided.size shouldBe 14
+    twoSided.size shouldBe 15
     val missing = twoSided.filterNot(name => names.contains(s"${name}_WITHIN"))
-    withClue(s"two-sided interval facts with no _WITHIN twin: ${missing.mkString(", ")}\n") { missing shouldBe empty }
-    twoSided.foreach { name =>
+    withClue(s"two-sided interval facts with no _WITHIN twin and no card owing one: ${missing.mkString(", ")}\n") {
+      missing.toSet shouldBe Pending.keySet
+    }
+    twoSided.filterNot(Pending.contains).foreach { name =>
       val twin = library.entries.find(_.name == s"${name}_WITHIN").map(_.theorem.conclusion).getOrElse(fail(name))
       withClue(s"${name}_WITHIN: ") { mentions(twin, Continuity.ContinuousWithin) shouldBe true }
     }

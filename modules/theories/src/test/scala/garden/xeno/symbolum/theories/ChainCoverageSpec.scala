@@ -172,6 +172,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Within" -> NotADevelopment,
     "DerivativeWithin" -> NotADevelopment,
 
+    // Not a development, for `DerivativeWithin`'s reason: the derivation of the power's slope and of
+    // Taylor's theorem, whose facts are the map `TaylorExpansion.prove` returns and are published
+    // by `Derivative`. It declares nothing.
+    "TaylorExpansion" -> NotADevelopment,
+
     // Not a development, for the same reason: the derivation that a continuous function has an
     // integral, whose facts are published in `Integral.facts` under names `Integral` declares.
     "Integrability" -> NotADevelopment,

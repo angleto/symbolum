@@ -1187,7 +1187,9 @@ hypothesis states the derivative and its sign in one existential, so it asks no 
 of differentiability; the three cost what the mean value theorem costs.
 
 **Every interval theorem about a continuous function has a textbook form, stated with continuity
-relative to `[a, b]`: the ones below since 2026-09-25 and the integral's four since 2026-09-26.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
+relative to `[a, b]`, but one: the ones below since 2026-09-25 and the integral's four since
+2026-09-26, and `TAYLOR`, which landed the same night asking two-sided continuity on `[a, b]`, is
+card `3b7c74be`.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
 `b`, for continuity from outside the interval as well, which no textbook does, and nothing said so
 until card 6257d0da. `continuous_within f a b x` is the relative notion, and one lemma carries
 every theorem across: `CONTINUOUS_EXTENSION`, that `f` extended by its value at the nearer end is
@@ -1316,6 +1318,23 @@ of `ln h` for small positive `h`, where `ln` is pinned and falls below every bou
 exists there, and `DerivativeSpec` derives `!m. ~(derivative ln 0 m)` and from it refutes the
 statement with `0 <= x`. At a negative point nothing here decides whether a slope exists, and that
 is an absence of a test rather than a proof that none could be written.
+
+**Taylor's theorem with the remainder in Lagrange's form is `Derivative.TAYLOR`, since 2026-09-26.**
+The derivatives are a family `D : num -> real -> real` the caller hands in, `D (SUC k)` the
+derivative of `D k`, continuous on `[a, b]` and differentiable inside up to the order `n`; the
+conclusion is a `c` strictly inside with `D 0 b` equal to the Taylor polynomial of degree `n` at `a`
+plus `inv ((n + 1)!) * D (n + 1) c * (b - a)^(n + 1)`, with no quotient. It is Rolle at a
+combination of the polynomial expanded at `t` and `(b - t)^(n + 1)`, whose derivative telescopes to
+one term, and it costs what `ROLLE` costs and infinity, which the factorial and the induction over
+the order are paid in. It asked for two facts nobody had written: `Continuity.CONTINUOUS_MUL`, the
+continuity of a product, because Rolle wants the combination continuous at both ends; and
+`DERIVATIVE_POWER`, the slope of `Power y (SUC n)`. Every equation between two terms in
+`TaylorExpansion` is the recurrences written out and `Field` on the result, with two decisions that
+file records: `real_of_num (SUC n)` stays an atom, since `n! * (n + 1)` multiplied out is a sum
+`Field` cannot take apart, and a sum over a lambda is handed over as a variable. `DerivativeSpec`
+detaches it at `\k. exp` on `[0, 1]` at every order and refutes it without the derivative hypothesis
+at `\k. \y. y`. What it is not: a textbook form with continuity relative to `[a, b]`, which `ROLLE`
+has and this does not yet, and anything about a Taylor series converging.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
