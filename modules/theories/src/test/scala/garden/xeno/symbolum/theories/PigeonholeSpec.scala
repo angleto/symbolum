@@ -9,12 +9,14 @@ import garden.xeno.symbolum.logic.*
  * The width of a resolution refutation of the pigeonhole principle, and what keeps the theorem from
  * being about nothing.
  *
- * **That its hypotheses are met, at the smallest instance with a derived step.** A lower bound whose
- * hypotheses nothing satisfies is true and empty, and it would pass every other test here. At
- * `n = 1` there are two pigeons and one hole, and the refutation has five steps: the two pigeon
- * clauses `x0` and `x1`, the hole clause `~x0 \/ ~x1`, the resolvent `~x1` of the first with the
- * third, and the empty clause, resolving the second with the fourth. Every hypothesis is derived for
- * it with nothing assumed and the theorem is detached there.
+ * **That its hypotheses are met, where the width conjunct is not free.** A lower bound whose
+ * hypotheses nothing satisfies is true and empty, and it would pass every other test here. The
+ * instance is three pigeons in two holes and the refutation of nineteen steps in
+ * `ResolutionFixture`; every hypothesis is derived for it with nothing assumed and the theorem is
+ * detached there. This read `n = 1` until 2026-09-26, and the verification of 2026-09-25 is why it
+ * does not: at `n = 1` the conjunct `1 <= SUC (k j)` holds of every step, so a theorem proving only
+ * `?j. inputs <= j /\ j < m` would have passed the same detachment. At `n = 2` the empty clause
+ * fails the conjunct, which is asserted beside it.
  *
  * **That `0 < n` is load-bearing.** At `n = 0` the one pigeon's clause is empty, so the refutation of
  * one step meets the other two hypotheses and has no derived step at all: the conclusion is refuted
@@ -68,296 +70,68 @@ class PigeonholeSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------ the moves */
 
-  private def numeral(value: Int): String = if (value == 0) "ZERO" else s"(SUC ${numeral(value - 1)})"
-  private val One = numeral(1)
-  private val Two = numeral(2)
-  private val Three = numeral(3)
-  private val Four = numeral(4)
-  private val Five = numeral(5)
+  private lazy val fixture = new ResolutionFixture(moves, chain, term => pigeonhole.show(term))
+  import fixture.{numeral, antecedents, implication, opened, conjuncts, split, rightOf, argumentsOf, unfold, belowBound, below, noMoreThan}
 
-  private def implication(term: Term): (Term, Term) =
-    moves.logic.destImp(term).getOrElse(fail(s"an implication: ${pigeonhole.show(term)}"))
+  private lazy val One = numeral(1)
+  private lazy val Two = numeral(2)
 
-  /** The antecedents and the conclusion of `a1 ==> ... ==> an ==> c`, `count` of them. */
-  private def antecedents(term: Term, count: Int): (List[Term], Term) =
-    if (count == 0) (Nil, term)
-    else {
-      val (first, rest) = implication(term)
-      val (more, conclusion) = antecedents(rest, count - 1)
-      (first :: more, conclusion)
-    }
+  /* ------------------------------------------- the refutation of three pigeons in two holes */
 
-  /** The body of `?x1 ... xn. body` or `!x. body` at the given witnesses, root-contracted. */
-  private def opened(quantified: Term, witnesses: String*): Term =
-    witnesses.foldLeft(quantified) { (current, text) =>
-      val predicate = moves.logic.destExistsPredicate(current)
-        .orElse(moves.logic.destForallPredicate(current)).getOrElse(fail("a quantification"))
-      val domain = Type.destFun(Term.typeOf(predicate)).map(_._1).getOrElse(fail("a predicate"))
-      val applied = ok(LogicError.lift(Term.app(predicate, moves.term(text, domain))))
-      Term.destEq(ok(Conv.betaRoot(applied)).conclusion).map(_._2).getOrElse(fail("an equation"))
-    }
+  private val Holes = 2
+  private lazy val refutation = fixture.threeIntoTwo
 
-  private def conjuncts(term: Term): List[Term] = moves.logic.destConj(term) match {
-    case Some((a, b)) => a :: conjuncts(b)
-    case None => List(term)
-  }
-
-  /** `|- goal[x]` from `|- x = c`... read backwards: from `|- c = x` and `|- goal[c]`. */
-  private def carried(equation: Kernel.Thm, variable: FVar, goal: Term, atValue: Kernel.Thm): Kernel.Thm = {
-    val zz = Term.variable("zz", variable.ty)
-    val lambda = ok(LogicError.lift(Term.abs(zz, ok(LogicError.lift(Term.substitute(Map(variable -> zz), goal))))))
-    val across = ok(Conv.apTerm(lambda, equation))
-    val (from, to) = Term.destEq(across.conclusion).getOrElse(fail("an equation"))
-    val joined = moves.trans(moves.trans(moves.sym(ok(Conv.betaRoot(from))), across), ok(Conv.betaRoot(to)))
-    ok(LogicError.lift(Kernel.eqMp(joined, atValue)))
-  }
-
-  /**
-   * `|- !x. NUM_LT x c ==> body[x]`, the goal given as a term, by proving the body at each numeral
-   * below `c` and carrying it back to `x`. `name` is the variable opened, which differs between a
-   * case analysis and one nested inside it, since the outer one's guard is still a hypothesis.
-   */
-  private def belowBound(goal: Term, bound: Int, name: String = "w")(atValue: (Int, Term) => Kernel.Thm): Kernel.Thm = {
-    val x = Term.variable(name, Num)
-    val (guard, body) = implication(opened(goal, name))
-    def split(upTo: Int, below: Kernel.Thm): Kernel.Thm =
-      if (upTo == 0) moves.exFalso(body, moves.absurd(moves.spec(moves.pf(Peano.NotBelowZero), name), below))
-      else {
-        val cases = moves.mp(moves.spec(moves.pf(Peano.BelowSuccessorCases), numeral(upTo - 1), name), below)
-        moves.byDisjunction(cases)(
-          earlier => split(upTo - 1, earlier),
-          same => {
-            val (_, bodyAtValue) = implication(opened(goal, numeral(upTo - 1)))
-            carried(moves.sym(same), x, body, atValue(upTo - 1, bodyAtValue))
-          }
-        )
-      }
-    ok(moves.rules.gen(x, ok(moves.rules.disch(guard, split(bound, moves.assumeT(guard))))))
-  }
-
-  /** `|- C a1 ... an = <its body>`, reduced, for a definition of `Resolving`. */
-  private def unfold(name: String, arguments: List[Term]): Kernel.Thm = {
-    val equation = ok(Conv.unfold(ok(chain.resolving.definition(name)), arguments))
-    val right = Term.destEq(equation.conclusion).map(_._2).getOrElse(fail("an equation"))
-    moves.trans(equation, ok(Conv.betaNormalise(right)))
-  }
-
-  private def rightOf(equation: Kernel.Thm): Term = Term.destEq(equation.conclusion).map(_._2).getOrElse(fail("an equation"))
-  private def split(term: Term): (Term, Term) = moves.logic.destConj(term).getOrElse(fail("a conjunction"))
-
-  /** `|- NUM_LT a b` for numerals `a < b`. */
-  private def below(a: Int, b: Int): Kernel.Thm =
-    if (b == a + 1) moves.spec(moves.pf(Peano.BelowSuccessor), numeral(a))
-    else moves.mp(moves.spec(moves.pf(Peano.StrictTransitive), numeral(a), numeral(b - 1), numeral(b)),
-      moves.conj(below(a, b - 1), moves.spec(moves.pf(Peano.BelowSuccessor), numeral(b - 1))))
-
-  /** `|- ~(a = b)` for two different numerals in successor form. */
-  private def distinct(a: Term, b: Term): Kernel.Thm = {
-    def inner(term: Term): Option[Term] = term match {
-      case App(Const("SUC", _), x) => Some(x)
-      case _ => None
-    }
-    val equal = ok(LogicError.lift(Term.eq(a, b)))
-    (inner(a), inner(b)) match {
-      case (Some(x), Some(y)) =>
-        val injective = moves.mp(moves.spec(moves.nf(Natural.SuccessorInjective), pigeonhole.show(x), pigeonhole.show(y)), moves.assumeT(equal))
-        ok(moves.rules.notIntro(equal, moves.absurd(distinct(x, y), injective)))
-      case (Some(x), None) => moves.spec(moves.nf(Natural.SuccessorNotZero), pigeonhole.show(x))
-      case (None, Some(y)) =>
-        val reversed = moves.spec(moves.nf(Natural.SuccessorNotZero), pigeonhole.show(y))
-        ok(moves.rules.notIntro(equal, moves.absurd(reversed, moves.sym(moves.assumeT(equal)))))
-      case _ => fail(s"two different numerals: ${pigeonhole.show(a)}, ${pigeonhole.show(b)}")
-    }
-  }
-
-  /** `|- t = t'`, every `COND` at the root whose guard compares two numerals decided. */
-  private def decided(term: Term): Kernel.Thm = term match {
-    case App(App(App(Const("COND", ty), guard), yes), no) =>
-      val (a, b) = Term.destEq(guard).getOrElse(fail("a guard that is an equation"))
-      val at = Type.destFun(ty).flatMap(t => Type.destFun(t._2)).map(_._1).getOrElse(fail("a conditional's type"))
-      def schema(name: String) = Kernel.instType(Map(Classical.TypeVariable -> at), ok(chain.classical.fact(name)))
-      val step =
-        if (a == b) moves.mp(ok(moves.rules.specAll(schema(Classical.CondTrue), List(guard, yes, no))), Conv.refl(a))
-        else moves.mp(ok(moves.rules.specAll(schema(Classical.CondFalse), List(guard, yes, no))), distinct(a, b))
-      moves.trans(step, decided(Term.destEq(step.conclusion).map(_._2).getOrElse(fail("an equation"))))
-    case other => Conv.refl(other)
-  }
-
-  /** A value hypothesis `lhs = rhs` or `!i. lhs = rhs` after instantiation, proved by deciding `lhs`. */
-  private def valueHolds(statement: Term): Kernel.Thm =
-    moves.logic.destForallPredicate(statement) match {
-      case Some(_) =>
-        val body = opened(statement, "i")
-        ok(moves.rules.gen(Term.variable("i", Num), valueHolds(body)))
-      case None =>
-        val (lhs, rhs) = Term.destEq(statement).getOrElse(fail("an equation"))
-        val proof = decided(lhs)
-        Term.destEq(proof.conclusion).map(_._2) shouldBe Some(rhs)
-        proof
-    }
-
-  /* ----------------------------------------------------- the refutation at n = 1 */
-
-  private def variableOf(pigeon: String): String = s"NUM_ADD (NUM_MUL $pigeon $One) ZERO"
-  private val X0 = variableOf("ZERO")
-  private val X1 = variableOf(One)
-
-  /** What the three functions are where the argument reads them, of free `k`, `v`, `s`. */
-  private val Values: List[String] = List(
-    s"k ZERO = $One", s"k $One = $One", s"k $Two = $Two", s"k $Three = $One", s"k $Four = ZERO",
-    s"!i:num. v ZERO i = $X0", s"!i:num. v $One i = $X1", s"v $Two ZERO = $X0", s"v $Two $One = $X1",
-    s"!i:num. v $Three i = $X1",
-    s"!i:num. s ZERO i = T", s"!i:num. s $One i = T", s"!i:num. s $Two i = F", s"!i:num. s $Three i = F"
-  )
-
-  private val Lengths = s"\\j:num. COND (j = $Four) ZERO (COND (j = $Two) $Two $One)"
-  private val Variables = s"\\j:num. \\i:num. COND (j = ZERO) ($X0) (COND (j = $Two) (COND (i = ZERO) ($X0) ($X1)) ($X1))"
-  private val Polarities = s"\\j:num. \\i:num. COND (j = $Two) F (COND (j = $Three) F T)"
-
-  private final case class Known(values: Map[String, Kernel.Thm]) {
-    def apply(text: String): Kernel.Thm = values.getOrElse(text, fail(s"no value $text"))
-    def at(text: String, index: String): Kernel.Thm = moves.spec(apply(text), index)
-  }
-
-  /** Every input is a clause of the principle, from the values alone. */
-  private def inputsAreClauses(goal: Term, known: Known): Kernel.Thm =
-    belowBound(goal, 3) { (c, body) =>
+  /** Every input is a clause of the principle for three pigeons, from the refutation's values. */
+  private def inputsAreClauses(goal: Term): Kernel.Thm =
+    belowBound(goal, refutation.inputs) { (c, body) =>
       val (pigeonPart, holePart) = moves.logic.destDisj(body).getOrElse(fail("a disjunction"))
-      val j = numeral(c)
-      if (c < 2) {
-        val x = if (c == 0) X0 else X1
-        val parts = conjuncts(opened(pigeonPart, j))
-        val atMost =
-          if (c == 0) moves.spec(moves.pf(Peano.ZeroIsLeast), One) else moves.spec(moves.pf(Peano.Reflexive), One)
-        val length = known(s"k $j = $One")
-        val literal = s"!i:num. v $j i = $x"
-        val positive = s"!i:num. s $j i = T"
-        // Every literal is `j` in some hole: the only hole, zero.
-        val everyLiteral = {
-          val (guard, inner) = implication(opened(parts(1), "i"))
-          val found = moves.witnessed(inner, List("ZERO"), moves.conj(below(0, 1), moves.conj(known.at(literal, "i"), known.at(positive, "i"))))
-          moves.generalised(ok(moves.rules.disch(guard, found)), "i")
+      val clause = refutation.clauses(c)
+      def literal(i: Int): Kernel.Thm = moves.conj(refutation.variableOf(c, i), refutation.polarityOf(c, i))
+      def present(i: Int, part: Term): Kernel.Thm =
+        moves.witnessed(part, List(numeral(i)), moves.conj(refutation.indexBelow(c, i), literal(i)))
+      if (clause.forall(_.positive)) {
+        val pigeon = clause.head.pigeon
+        val parts = conjuncts(opened(pigeonPart, numeral(pigeon)))
+        val every = refutation.forEachLiteral(parts(1), c) { (i, atI) =>
+          moves.witnessed(atI, List(numeral(clause(i).hole)), moves.conj(below(clause(i).hole, Holes), literal(i)))
         }
-        // Every hole has a literal: the hole is zero and the literal is the first.
-        val everyHole = belowBound(parts(2), 1, "t") { (_, atZero) =>
-          moves.witnessed(atZero, List("ZERO"), moves.conj(moves.transport(moves.sym(length), "NUM_LT ZERO zz", below(0, 1)),
-            moves.conj(known.at(literal, "ZERO"), known.at(positive, "ZERO"))))
-        }
-        moves.disjoined(body, moves.witnessed(pigeonPart, List(j), moves.conj(atMost, moves.conj(everyLiteral, everyHole))))
+        val holes = belowBound(parts(2), Holes, "t") { (h, atH) => present(clause.indexWhere(_.hole == h), atH) }
+        moves.disjoined(body, moves.witnessed(pigeonPart, List(numeral(pigeon)), moves.conj(noMoreThan(pigeon, Holes), moves.conj(every, holes))))
       } else {
-        val parts = conjuncts(opened(holePart, "ZERO", One, "ZERO"))
-        val length = known(s"k $Two = $Two")
-        val negative = s"!i:num. s $Two i = F"
-        val literals = Map(0 -> known(s"v $Two ZERO = $X0"), 1 -> known(s"v $Two $One = $X1"))
-        val every = {
-          val (guard, _) = implication(opened(parts(3), "i"))
-          val underTwo = moves.transport(length, "NUM_LT i zz", moves.assumeT(guard))
-          val lifted = moves.logic.mkForall(Term.variable("i", Num), ok(moves.logic.mkImp(
-            moves.prop(s"NUM_LT i $Two"), implication(opened(parts(3), "i"))._2)))
-          val byIndex = belowBound(ok(lifted), 2, "t") { (index, atIndex) =>
-            val (either, polarity) = moves.logic.destConj(atIndex).getOrElse(fail("a conjunction"))
-            moves.conj(moves.disjoined(either, literals(index)), known.at(negative, numeral(index)))
-          }
-          moves.generalised(ok(moves.rules.disch(guard, moves.mp(moves.spec(byIndex, "i"), underTwo))), "i")
+        val (first, second) = (clause(0), clause(1))
+        val at = List(numeral(first.pigeon), numeral(second.pigeon), numeral(first.hole))
+        val parts = conjuncts(opened(holePart, at*))
+        val every = refutation.forEachLiteral(parts(3), c) { (i, atI) =>
+          val (either, _) = split(atI)
+          moves.conj(moves.disjoined(either, refutation.variableOf(c, i)), refutation.polarityOf(c, i))
         }
-        def present(index: Int, part: Term): Kernel.Thm =
-          moves.witnessed(part, List(numeral(index)), moves.conj(
-            moves.transport(moves.sym(length), s"NUM_LT ${numeral(index)} zz", below(index, 2)),
-            moves.conj(literals(index), known.at(negative, numeral(index)))))
-        val proof = moves.conj(below(0, 1), moves.conj(moves.spec(moves.pf(Peano.Reflexive), One), moves.conj(below(0, 1),
-          moves.conj(every, moves.conj(present(0, parts(4)), present(1, parts(5)))))))
-        moves.disjoined(body, moves.witnessed(holePart, List("ZERO", One, "ZERO"), proof))
+        val proof = moves.conj(below(first.pigeon, second.pigeon), moves.conj(noMoreThan(second.pigeon, Holes),
+          moves.conj(below(first.hole, Holes), moves.conj(every, moves.conj(present(0, parts(4)), present(1, parts(5)))))))
+        moves.disjoined(body, moves.witnessed(holePart, at, proof))
       }
     }
 
-  /** `|- RES_JUSTIFIED k v s 3 j` opened, at `j` = 3 or 4, from the values. */
-  private def resolved(body: Term, step: Int, known: Known): Kernel.Thm = {
-    val (_, resolventPart) = moves.logic.destDisj(body).getOrElse(fail("a disjunction"))
-    val (first, second, pivot, pivotText) =
-      if (step == 3) (0, 2, X0, "ZERO") else (1, 3, X1, One)
-    val _ = pivotText
-    val parts = conjuncts(opened(resolventPart, numeral(first), numeral(second), s"($pivot)"))
-    // A parent whose every literal is the pivot at the pivot's own polarity carries nothing.
-    def carriesNothing(goal: Term, parent: Int): Kernel.Thm = {
-      val (guard, rest) = implication(opened(goal, "i"))
-      val (denial, conclusion) = implication(rest)
-      val literal = parent match {
-        case 0 => known.at(s"!i:num. v ZERO i = $X0", "i")
-        case 1 => known.at(s"!i:num. v $One i = $X1", "i")
-        case 3 => known.at(s"!i:num. v $Three i = $X1", "i")
-        case _ => fail("a parent of one literal")
-      }
-      val polarity = parent match {
-        case 0 => known.at("!i:num. s ZERO i = T", "i")
-        case 1 => known.at(s"!i:num. s $One i = T", "i")
-        case _ => known.at(s"!i:num. s $Three i = F", "i")
-      }
-      val contradicted = moves.absurd(moves.assumeT(denial), moves.conj(literal, polarity))
-      moves.generalised(ok(moves.rules.disch(guard, ok(moves.rules.disch(denial, moves.exFalso(conclusion, contradicted))))), "i")
-    }
-    // The hole clause resolved on `x0` leaves `~x1`, which step three is.
-    def carriesTheOther(goal: Term): Kernel.Thm = {
-      val (guard, _) = implication(opened(goal, "i"))
-      val underTwo = moves.transport(known(s"k $Two = $Two"), "NUM_LT i zz", moves.assumeT(guard))
-      val lifted = ok(moves.logic.mkForall(Term.variable("i", Num), ok(moves.logic.mkImp(
-        moves.prop(s"NUM_LT i $Two"), implication(opened(goal, "i"))._2))))
-      val byIndex = belowBound(lifted, 2, "t") { (index, atIndex) =>
-        val (denial, conclusion) = implication(atIndex)
-        if (index == 0) {
-          val pair = moves.conj(known(s"v $Two ZERO = $X0"), known.at(s"!i:num. s $Two i = F", "ZERO"))
-          ok(moves.rules.disch(denial, moves.exFalso(conclusion, moves.absurd(moves.assumeT(denial), pair))))
-        } else {
-          val sameVariable = moves.trans(known.at(s"!i:num. v $Three i = $X1", "ZERO"), moves.sym(known(s"v $Two $One = $X1")))
-          val samePolarity = moves.trans(known.at(s"!i:num. s $Three i = F", "ZERO"), moves.sym(known.at(s"!i:num. s $Two i = F", One)))
-          val witness = moves.transport(moves.sym(known(s"k $Three = $One")), "NUM_LT ZERO zz", below(0, 1))
-          ok(moves.rules.disch(denial, moves.witnessed(conclusion, List("ZERO"), moves.conj(witness, moves.conj(sameVariable, samePolarity)))))
-        }
-      }
-      moves.generalised(ok(moves.rules.disch(guard, moves.mp(moves.spec(byIndex, "i"), underTwo))), "i")
-    }
-    val carriesFirst = carriesNothing(parts(2), first)
-    val carriesSecond = if (step == 3) carriesTheOther(parts(3)) else carriesNothing(parts(3), second)
-    val proof = moves.conj(below(first, step), moves.conj(below(second, step), moves.conj(carriesFirst, carriesSecond)))
-    moves.disjoined(body, moves.witnessed(resolventPart, List(numeral(first), numeral(second), s"($pivot)"), proof))
-  }
-
-  /** `|- RES_REFUTATION k v s 3 5`, from the values. */
-  private def refutes(goal: Term, known: Known): Kernel.Thm = {
-    val opening = unfold(Resolving.Refutation, argumentsOf(goal))
-    val (everyStep, reachesEmpty) = split(rightOf(opening))
-    val steps = belowBound(everyStep, 5) { (j, justifiedAt) =>
-      val justifying = unfold(Resolving.JustifiedName, argumentsOf(justifiedAt))
-      val body = rightOf(justifying)
-      val proof =
-        if (j < 3) moves.disjoined(body, below(j, 3))
-        else resolved(body, j, known)
-      ok(LogicError.lift(Kernel.eqMp(moves.sym(justifying), proof)))
-    }
-    val empty = moves.witnessed(reachesEmpty, List(Four), moves.conj(below(4, 5), known(s"k $Four = ZERO")))
-    ok(LogicError.lift(Kernel.eqMp(moves.sym(opening), moves.conj(steps, empty))))
-  }
-
-  "The theorem" should "have hypotheses a refutation meets, and detach at it" in {
-    val general = moves.spec(fact(Pigeonhole.DerivedWidth), One, "k", "v", "s", Three, Five)
+  "The theorem" should "have hypotheses a refutation of three pigeons in two holes meets, and detach at it" in {
+    val general = moves.spec(fact(Pigeonhole.DerivedWidth), Two, "k", "v", "s", numeral(refutation.inputs), numeral(refutation.size))
     val (hypotheses, _) = antecedents(general.conclusion, 3)
-    val inputs = hypotheses(1)
-    val refutation = hypotheses(2)
-    val known = Known(Values.map(text => text -> moves.assume(text)).toMap)
-
-    val detached = moves.mp(general, below(0, 1), inputsAreClauses(inputs, known), refutes(refutation, known))
-    val closed = Values.reverse.foldLeft(detached)((current, text) => ok(moves.rules.disch(moves.prop(text), current)))
-
-    // Now the functions themselves: every value hypothesis is a conditional that decides.
-    val concrete = moves.inst(closed, "k" -> Lengths, "v" -> Variables, "s" -> Polarities)
-    val (valueTerms, conclusion) = antecedents(concrete.conclusion, Values.size)
-    val result = valueTerms.foldLeft(concrete)((current, value) => moves.mp(current, valueHolds(value)))
-
+    val detached = moves.mp(general, below(0, 2), inputsAreClauses(hypotheses(1)), refutation.refutes(hypotheses(2)))
+    val result = refutation.close(detached)
     result.hypotheses shouldBe empty
-    result.conclusion shouldBe conclusion
-    // What it says there: some step from the fourth on is at least `n - 1 = 0` long, the length
-    // being the conditional the refutation's lengths are written with.
-    result.conclusion shouldBe moves.prop(
-      s"?j:num. NUM_LE $Three j /\\ NUM_LT j $Five /\\ NUM_LE $One (SUC (COND (j = $Four) ZERO (COND (j = $Two) $Two $One)))")
+    val expected = moves.prop(s"?j:num. NUM_LE ${numeral(refutation.inputs)} j /\\ NUM_LT j ${numeral(refutation.size)} /\\ " +
+      s"NUM_LE $Two (SUC ((${refutation.lengths}) j))")
+    result.conclusion shouldBe rightOf(ok(Conv.betaNormalise(expected)))
+  }
+
+  it should "say something at that refutation: its last step is too narrow for the width conjunct" in {
+    // At `n = 1` the conjunct `1 <= SUC (k j)` held of every step, so a detachment there never read
+    // it. At `n = 2` the empty clause has `SUC 0 = 1 < 2`, so the witness has to be a step with a
+    // literal in it, and the conjunct is exercised.
+    val last = refutation.size - 1
+    refutation.clauses(last) shouldBe empty
+    val length = fixture.decided(rightOf(ok(Conv.betaNormalise(moves.term(s"(${refutation.lengths}) ${numeral(last)}", Num)))))
+    rightOf(length) shouldBe moves.term("ZERO", Num)
+    moves.mp(moves.spec(moves.pf(Peano.BelowExcludesAtMost), One, Two), below(1, 2)).conclusion shouldBe
+      moves.prop(s"~(NUM_LE $Two (SUC ZERO))")
   }
 
   it should "be false without 0 < n, at the one-step refutation of the empty pigeon clause" in {
@@ -415,11 +189,6 @@ class PigeonholeSpec extends AnyFlatSpec with Matchers {
     refuting.hypotheses.toSet shouldBe Set(moves.prop("k ZERO = ZERO"))
     positive shouldBe moves.prop("NUM_LT ZERO ZERO")
     moves.spec(moves.pf(Peano.StrictIrreflexive), "ZERO").conclusion shouldBe ok(moves.logic.mkNot(positive))
-  }
-
-  private def argumentsOf(term: Term, taken: List[Term] = Nil): List[Term] = term match {
-    case App(fn, argument) => argumentsOf(fn, argument :: taken)
-    case _ => taken
   }
 
   "The injection bound" should "need its injectivity: a constant function puts two into one" in {

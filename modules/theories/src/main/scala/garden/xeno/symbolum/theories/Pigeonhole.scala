@@ -32,6 +32,22 @@ import garden.xeno.symbolum.logic.*
  * measured difference is the whole reason for the conclusion's shape: without that conjunct the
  * theorem would be one step from `RES_WIDTH_BOUND`.
  *
+ * == What it is worth, which is little ==
+ *
+ * **Moving the bound to a derived clause moves the objection one step and does not remove it.** A
+ * resolvent with a pigeon clause as a parent keeps every literal of it but the pivot, so it already
+ * has `n - 1`. And some derived step has a pigeon parent: otherwise every derived step descends from
+ * hole clauses alone, which the all-false assignment satisfies, and `RES_STEP_SOUND` would carry
+ * that assignment to the empty clause. So the conclusion follows from one step and the definition
+ * of a justified step, for the reason the section above gives about `RES_WIDTH`: the inputs are as
+ * wide as the bound. It is a theorem about this encoding and not about proof complexity. The
+ * verification of Mycelium card `01520749` found this on 2026-09-25, and `docs/adr/0054` corrects the
+ * sentence of `docs/adr/0048` that called the constant better than asked.
+ *
+ * A width bound says something only where the inputs are short, and that is
+ * `ExpanderPigeonhole.RES_GPHP_WIDTH`: the principle over a bipartite graph of small degree, whose
+ * bound comes from the graph's expansion rather than from the inputs.
+ *
  * == The argument, which is the critical-assignment one ==
  *
  * A **critical assignment** for pigeon `p` puts every other pigeon in its own hole and leaves `p`
@@ -174,7 +190,7 @@ object Pigeonhole {
    * than carried on: a variable the parser typed differently from the one a theorem holds is a
    * different variable, and the mismatch would surface forty lines later as a refused `mp`.
    */
-  private val Types: Map[String, Type] = {
+  private[theories] val Types: Map[String, Type] = {
     val numbers = List(
       "n", "inputs", "m", "j", "p", "q", "r", "c", "d", "h", "u", "x", "y", "t", "a", "b", "e", "o",
       "i", "pa", "pb", "p1", "p2", "w"
@@ -196,7 +212,7 @@ object Pigeonhole {
   /** A function from pigeons to holes, as the text of its application to an argument. */
   private type Fn = String => String
 
-  private val Written: Map[Type, String] = Map(
+  private[theories] val Written: Map[Type, String] = Map(
     Num -> "num",
     Fun -> "num->num",
     Type.fun(Num, Fun) -> "num->num->num",
@@ -213,11 +229,17 @@ object Pigeonhole {
    * g y` being the plain case, and a name elaborated at an open type is refused. Annotating each by
    * hand was the first version, and it failed at the first run in eleven places.
    */
-  private def annotated(text: String): String =
+  private def annotated(text: String): String = annotatedWith(Types, Written)(text)
+
+  /**
+   * [[annotated]] over a table of the caller's, which is what lets a development with variables of
+   * its own reuse [[Builder]] rather than copy it.
+   */
+  private[theories] def annotatedWith(types: Map[String, Type], written: Map[Type, String])(text: String): String =
     Identifier.replaceAllIn(text, found => {
       val name = found.group(1)
       val rest = text.substring(found.end).dropWhile(_ == ' ')
-      Types.get(name).flatMap(Written.get) match {
+      types.get(name).flatMap(written.get) match {
         case Some(written) if !rest.startsWith(":") =>
           scala.util.matching.Regex.quoteReplacement(s"($name:$written)")
         case _ => scala.util.matching.Regex.quoteReplacement(name)
@@ -288,7 +310,13 @@ object Pigeonhole {
    * The derivation, and the moves it is written in. Package-visible so that `PigeonholeSpec`
    * derives its non-vacuity witness with the same moves rather than a second copy of them.
    */
-  private[theories] final class Builder(chain: Chain) {
+  private[theories] final class Builder(
+    chain: Chain,
+    types: Map[String, Type] = Types,
+    written: Map[Type, String] = Written
+  ) {
+    private def annotated(text: String): String = annotatedWith(types, written)(text)
+
     val signature = chain.widest
     val theory = signature.theory
     val notation = signature.notation
@@ -308,7 +336,7 @@ object Pigeonhole {
 
     def typed(term: Term, holes: Set[String]): Term = {
       Term.freeVariables(term).foreach { variable =>
-        if (!holes.contains(variable.name) && !Types.get(variable.name).contains(variable.ty))
+        if (!holes.contains(variable.name) && !types.get(variable.name).contains(variable.ty))
           refuse(s"the variable ${variable.name} at the type the derivation declares for it", variable)
       }
       term
@@ -317,7 +345,7 @@ object Pigeonhole {
     def prop(text: String): Term = typed(force(Parser.proposition(theory, notation, annotated(text))), Set.empty)
     def term(text: String, ty: Type): Term = typed(force(Parser.term(theory, notation, annotated(text), ty)), Set.empty)
     def variable(name: String): FVar =
-      Term.variable(name, Types.getOrElse(name, refuse("a declared variable", Term.variable(name, Type.Bool))))
+      Term.variable(name, types.getOrElse(name, refuse("a declared variable", Term.variable(name, Type.Bool))))
 
     def assumeT(statement: Term): Kernel.Thm = force(LogicError.lift(Kernel.assume(statement)))
     def assume(text: String): Kernel.Thm = assumeT(prop(text))
