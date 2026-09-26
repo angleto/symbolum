@@ -7,9 +7,9 @@ import org.scalatest.matchers.should.Matchers
 
 /**
  * The series procedure answers inside its fragment in both directions, and outside it refuses in
- * the one of three ways that says what was learned.
+ * the one of four ways that says what was learned.
  *
- * The three refusals are the file's subject as much as the answers are, for the reason
+ * The four refusals are the file's subject as much as the answers are, for the reason
  * `Refutation` keeps seven apart: a caller that reads "not in the fragment" as "decided against"
  * publishes a divergence nobody proved, and one that reads a refutation as "not in the fragment"
  * throws a theorem away. Each is asserted by its **standing**, which is what a caller branches on,
@@ -52,10 +52,38 @@ class ConvergenceSpec extends AnyFlatSpec with Matchers {
     proved("converges (Sum (\\i:num. Power ((1:real) / 2) i)) 2").hypotheses shouldBe empty
 
     refused("converges (Sum (\\i:num. Power ((1:real) / 2) i)) 3") match {
-      case NotEqualTo(wanted, found) =>
+      case error @ NotEqualTo(wanted, found) =>
         wanted shouldBe chain.widest.term("3:real", TyApp(Real.TypeName, Nil)).fold(e => fail(e.message), identity)
         chain.widest.show(found) should include("inv")
+        // Decided, because both values are numbers: `inv (1 - 1 / 2)` and `3` hold no atom.
+        error.standing shouldBe LogicError.Standing.Decided
       case other => fail(s"expected the value, got ${other.message}")
+    }
+  }
+
+  /**
+   * A value the procedure cannot compare is not a value it has decided against. The exponential's
+   * series at zero converges to `exp 0`, which is `1`; RING reads `exp 0` as an atom and finds two
+   * forms that differ, and until 2026-09-26 that came back decided about a claim that is true. The
+   * same with a free factor: `c * Power (1 / 2) i` converges to `c * inv (1 - 1 / 2)`, which is `3`
+   * at one `c` and not at another. Both are now refused without a decision, and the control is the
+   * case above, a numeral against a numeral, which stays decided.
+   */
+  it should "not decide against a value it could only compare as a polynomial in an atom" in {
+    Vector(
+      "converges (Sum (\\i:num. Power (0:real) i / real_of_num (NUM_FACT i))) 1" -> "exp",
+      "converges (Sum (\\i:num. c * Power ((1:real) / 2) i)) 3" -> "c"
+    ).foreach { case (text, atom) =>
+      withClue(s"$text: ") {
+        refused(text) match {
+          case error @ ValueUnidentified(_, found, reason) =>
+            error.standing shouldBe LogicError.Standing.Unread
+            chain.widest.show(found) should include(atom)
+            // What the comparison said is kept, and it is the decided refusal this case replaced.
+            reason shouldBe a[NotEqualTo]
+          case other => fail(s"expected an unidentified value, got ${other.message}")
+        }
+      }
     }
   }
 
