@@ -48,9 +48,9 @@ class CutSpec extends AnyFlatSpec with Matchers {
     cuts.facts.keySet shouldBe Cut.Statements.map(_._1).toSet
   }
 
-  it should "declare `cut`, the two halves of its bijection, the predicate, the order, the embedding, the sum and the negation, and nothing else" in {
+  it should "declare `cut`, the two halves of its bijection, the predicate, the order, the embedding, the sum, the negation, the two products, the strict order and the two inverses, and nothing else" in {
     (cuts.theory.constants.keySet -- fractions.theory.constants.keySet) shouldBe
-      Set(Cut.Abstraction, Cut.Representation, Cut.IsCut, Cut.AtMost, Cut.OfRational, Cut.Addition, Cut.Negation)
+      Set(Cut.Abstraction, Cut.Representation, Cut.IsCut, Cut.AtMost, Cut.OfRational, Cut.Addition, Cut.Negation, Cut.PosMul, Cut.Multiplication, Cut.LessThan, Cut.PosInverse, Cut.Inverse)
   }
 
   /* ------------------------------------------------------------------ what a one-point type fails */
@@ -142,6 +142,77 @@ class CutSpec extends AnyFlatSpec with Matchers {
     val archimedes = Set(force(fractions.fact(Fraction.Archimedes)).conclusion)
     Derivation.restingOn(fact(Cut.AddNegation), archimedes) should not be empty
     Derivation.restingOn(fact(Cut.AddZero), archimedes) shouldBe empty
+  }
+
+  /* ------------------------------------------------------------------ the product on the cone */
+
+  "The product on the non-negative cone" should "be detached at the cut of one, whose hypothesis a cut meets" in {
+    // Six of the core's laws carry `0 <= x`, and a law whose hypothesis no cut meets reads exactly
+    // like a fact. `0 <= CUT_OF_RAT 1` comes from `0 <= 1` through the embedding's order, derived
+    // here, and what the unit law says at that cut is then a theorem with nothing assumed.
+    val zero = rational("RAT_ZERO")
+    val one = rational("RAT_ONE")
+    val oneCut = cut("CUT_OF_RAT RAT_ONE")
+    val detached = force(
+      for {
+        nonNegative <- rules.specAll(fact(Cut.OfRationalOrder), List(zero, one))
+          .flatMap(Conv.sym)
+          .flatMap(equation => fractions.fact(Fraction.ZeroAtMostOne).flatMap(t => LogicError.lift(Kernel.eqMp(equation, t))))
+        result <- rules.spec(oneCut, fact(Cut.PosMulOne)).flatMap(rules.mp(_, nonNegative))
+      } yield result
+    )
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe force(cuts.proposition("CUT_PMUL (CUT_OF_RAT RAT_ONE) (CUT_OF_RAT RAT_ONE) = CUT_OF_RAT RAT_ONE"))
+  }
+
+  "The product" should "keep the positive cuts positive, detached at one times one" in {
+    // `CUT_LT_MUL` carries a conjunction, and one nobody can meet reads like a fact. `0 < CUT_OF_RAT 1`
+    // is `~(CUT_OF_RAT 1 <= CUT_OF_RAT 0)`, which the embedding's order turns into the refusal of
+    // `1 <= 0` on `rat`, so both conjuncts are met here and the product is positive with nothing assumed.
+    val zero = rational("RAT_ZERO")
+    val one = rational("RAT_ONE")
+    val oneCut = cut("CUT_OF_RAT RAT_ONE")
+    val zeroCut = cut("CUT_OF_RAT RAT_ZERO")
+    val detached = force(
+      for {
+        definition <- cuts.definition(Cut.LessThan)
+        backwardsTerm <- cuts.proposition("CUT_LE (CUT_OF_RAT RAT_ONE) (CUT_OF_RAT RAT_ZERO)")
+        backwards <- LogicError.lift(Kernel.assume(backwardsTerm))
+        rats <- rules.specAll(fact(Cut.OfRationalOrder), List(one, zero)).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, backwards)))
+        absurd <- fractions.fact(Fraction.OneNotAtMostZero).flatMap(rules.notElim(_, rats))
+        notBelow <- rules.notIntro(backwardsTerm, absurd)
+        positive <- Conv.unfold(definition, List(zeroCut, oneCut)).flatMap(Conv.sym).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, notBelow)))
+        both <- rules.conjIntro(positive, positive)
+        result <- rules.specAll(fact(Cut.LessMul), List(oneCut, oneCut)).flatMap(rules.mp(_, both))
+      } yield result
+    )
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe force(cuts.proposition("CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_MUL (CUT_OF_RAT RAT_ONE) (CUT_OF_RAT RAT_ONE))"))
+  }
+
+  "The multiplicative inverse" should "be detached at one, which is not zero, and spend Archimedes" in {
+    // `CUT_MUL_INV` carries `~(x = 0)`, met at the cut of one through the embedding's injectivity and
+    // the units of `rat` being distinct. And the inverse is the second place the rationals being
+    // Archimedean is needed, through `CUT_ESCAPE` as the additive one is: a proof that did not reach
+    // `RAT_ARCHIMEDES` would be some other argument than the one `Cut` describes.
+    val zero = rational("RAT_ZERO")
+    val one = rational("RAT_ONE")
+    val oneCut = cut("CUT_OF_RAT RAT_ONE")
+    val detached = force(
+      for {
+        collapseTerm <- cuts.proposition("CUT_OF_RAT RAT_ONE = CUT_OF_RAT RAT_ZERO")
+        collapse <- LogicError.lift(Kernel.assume(collapseTerm))
+        units <- rules.specAll(fact(Cut.OfRationalInjective), List(one, zero)).flatMap(rules.mp(_, collapse))
+        flipped <- Conv.sym(units)
+        absurd <- fractions.fact(Fraction.UnitsDistinct).flatMap(rules.notElim(_, flipped))
+        nonZero <- rules.notIntro(collapseTerm, absurd)
+        result <- rules.spec(oneCut, fact(Cut.MulInverse)).flatMap(rules.mp(_, nonZero))
+      } yield result
+    )
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe force(cuts.proposition("CUT_MUL (CUT_OF_RAT RAT_ONE) (CUT_INV (CUT_OF_RAT RAT_ONE)) = CUT_OF_RAT RAT_ONE"))
+    val archimedes = Set(force(fractions.fact(Fraction.Archimedes)).conclusion)
+    Derivation.restingOn(fact(Cut.MulInverse), archimedes) should not be empty
   }
 
   /* ------------------------------------------------------------------ what it costs */

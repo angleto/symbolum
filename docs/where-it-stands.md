@@ -1188,6 +1188,13 @@ equalities, and keeps the definition from being empty four ways: Cousin detached
 gauge, the theorem detached at `y * y` on `[0, 1]`, a wrong value refused, and uniqueness refuted
 without `a <= b` on `[1, 0]`, where there are no fine sums and every number is an integral.
 
+**The integral is linear since 2026-09-26.** `Integral.FINE_SUM_LINEAR` says a fine sum of
+`\x. p * f x + q * g x` is `p * s1 + q * s2` for fine sums of `f` and of `g` over the same division,
+an induction over the two rules; `HAS_INTEGRAL_LINEAR` takes each function's gauge at its share of
+the tolerance and their pointwise minimum, as uniqueness does; `INTEGRAL_LINEAR` names the value.
+The first two cost what the fundamental theorem as `has_integral` costs and not `COMPLETENESS`,
+being about the sums there are; the value goes through uniqueness and so through Cousin.
+
 **The fundamental theorem has its textbook form too, since 2026-09-25**:
 `HAS_INTEGRAL_DERIVATIVE_WITHIN` and `INTEGRAL_DERIVATIVE_WITHIN` ask for
 `derivative_within F a b x (f x)` at every point of `[a, b]`, the derivative relative to the
@@ -1413,9 +1420,18 @@ positive cone first lost now that `rat` exists. Addition and negation followed t
 `CUT_ADD` holds `r` when some `p` in `x` leaves `r - p` in `y`, with its commutativity,
 associativity, zero, the order it carries and the embedding of `RAT_ADD`; `CUT_NEG x` holds `p` when
 some `r > 0` leaves `-p - r` outside `x`, and `CUT_ADD_NEG` is `x + -x = 0`, the one argument of the
-two where `RAT_ARCHIMEDES` is spent, which `CutSpec` asserts both ways. What is not here is
-multiplication and the inverse, and after them the sixteen as theorems under their own names.
-`tools/verify/perturb-cuts.sh` fires the union, the embedding and the step of the inverse.
+two where `RAT_ARCHIMEDES` is spent, which `CutSpec` asserts both ways.
+
+**Multiplication and the inverse followed on 2026-09-26, so the cuts are an ordered field.**
+`CUT_PMUL` is the product on the non-negative cone, the negatives with every `r` below `p * q` for
+positive members, and it has its commutativity, associativity, unit, zero and distributivity there;
+`CUT_MUL` reads the signs with `COND` and carries every law off the cone through
+`CUT_MUL_NEG_LEFT`, `(-x) * y = -(x * y)`, with a normaliser for the additive group closing each case.
+`CUT_INV` is zero at zero by its definition, and `CUT_MUL_INV` is `x * inv x = 1` off zero. The
+Archimedean step both inverses need is one lemma, `CUT_ESCAPE`: from a member `e` and a step `f > 0`,
+some member at least `e` steps out of the cut. What is left is phase 5, the sixteen of `Real.scala`
+as theorems about `cut` under their own names. `tools/verify/perturb-cuts.sh` fires the union, the
+embedding, the escaping step, the inverse's step and a sign branch of the product.
 
 `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated, and since 2026-09-25 each has a
 computing counterpart proved equal to it: `EuclidAlgorithm` defines `NUM_EUCLID_GCD` and
