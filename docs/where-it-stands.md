@@ -255,8 +255,8 @@ same register of `c`, by strong induction on `b`. From those, one fraction `a/b`
 registers: `NUM_DIVIDES_MUL_VALUATION` says it applies to `n` exactly when every register of `b` is
 covered by `n`'s and `a`'s together, `NUM_VALUATION_DIV` that applying it adds `a`'s registers and
 takes `b`'s away, `NUM_VALUATION_EXT` that the registers determine the state, and
-`NUM_DIV_VALUATION` that the quotient is the one positive number with those registers. The
-simulation of a whole FRACTRAN program waits on the step relation. `Valuation.scala` is the
+`NUM_DIV_VALUATION` that the quotient is the one positive number with those registers. Those
+are what the FRACTRAN register machine below is proved from. `Valuation.scala` is the
 derivation; `ValuationSpec` composes `NUM_VALUATION 2 12 = 2` from the laws with nothing
 assumed, and refutes the product law at `p = 4` and the register reading at `n = 0`, where every
 other hypothesis holds.
@@ -913,10 +913,12 @@ derives is the step at a head, the step as a function, and the two clauses of a 
 is choice, infinity and eta, the price of the lists. The interpreter is a few lines of `BigInt`
 arithmetic that nothing believes. `Fractran.certify` hands each state it proposes to the kernel,
 and `FractranSpec` gets Conway's PRIMEGAME from `2` to `4` in nineteen steps that way. **What is not
-here** is anything a program computes: that `3/2` adds the exponents of `2` and `3` wants the
-valuation at a prime, which `docs/lemmas.md` does not hold, and it is card `626ad37f`. Whether
-Conway's generalised Collatz maps meet `Collatz` is card `b0d2ada9`, and it is a question rather
-than a plan.
+here** is whether Conway's generalised Collatz maps meet `Collatz`, which is card `b0d2ada9` and a
+question rather than a plan. **What a program computes is here since 2026-09-26**:
+`FRACTRAN_STEP_REGISTERS` says a step from a positive state under positive numerators is exactly a
+step of `FRACTRAN_REGISTER_STEP`, the same fold with each fraction's test and effect written on the
+prime registers, so that `3/2` adds one to the register of `3` and takes one from that of `2` is a
+theorem, and `FractranRegistersSpec` reads it off the certified step from `72`.
 
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants

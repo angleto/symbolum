@@ -299,6 +299,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // fractions. `docs/adr/0054` is the record, and `FractranSpec` is the spec.
     "Fractran" -> BesideTheChain,
 
+    // Not a development, for `Freshman`'s reason: FRACTRAN read as a register machine, whose one
+    // theorem `Fractran` publishes under a name it declares, over the constant it defines.
+    "FractranRegisters" -> NotADevelopment,
+
     // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
     // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being
     // outside is that its constants describe one object of one investigation; `rat` is mathematics
