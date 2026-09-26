@@ -350,7 +350,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 637 with the textbook forms of the interval theorems, 2026-09-25, derived before the run:
     // thirty-three antecedents over fourteen facts, the count `ProposeSpec` gives by fact.
     // 645 with the fundamental theorem relative to `[a, b]`, the same day: eight over four facts.
-    propose.weakenings.size shouldBe 645
+    // 655 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // the run: four antecedents on `HAS_INTEGRAL_JOIN`, three on each of the two derivatives.
+    propose.weakenings.size shouldBe 655
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -484,7 +486,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `x < b` are an order between reals with no lambda in the body. The two forms of the
     // fundamental theorem carry a quantifier inside, and `DERIVATIVE_WITHIN_OF_DERIVATIVE` writes
     // none of the four.
-    propose.mutable.size shouldBe 113
+    // 114 with `HAS_INTEGRAL_JOIN`, 2026-09-26, derived and not probed: `u <= v` and `v <= w` are
+    // an order between reals with no lambda and no quantifier in the body. The two forms of the
+    // derivative of an integral carry a quantifier inside.
+    propose.mutable.size shouldBe 114
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

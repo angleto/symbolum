@@ -1209,6 +1209,18 @@ gluing's price; `IntegralSpec` detaches it at the constant one and joins it to t
 theorem's value there. No control refutes it without continuity: Dirichlet's function is gauge
 integrable, so a counterexample has to be unbounded, and that is an argument of its own.
 
+**The second half of the fundamental theorem is `DERIVATIVE_WITHIN_INTEGRAL`, since 2026-09-26**: for
+`f` continuous on `[a, b]`, `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every
+point of it, and `DERIVATIVE_INTEGRAL` is the same strictly inside as a two-sided derivative, through
+`DERIVATIVE_WITHIN_INTERIOR`. What it needed first was `HAS_INTEGRAL_JOIN`, that integrals add over
+adjacent intervals, and that is the joint gauge of the existence again: it splits every fine sum at
+the join exactly, so additivity costs no supremum at all, fifteen of the reals' axioms and the
+choice. The increment is then read by additivity and uniqueness as the integral over the interval
+between `x` and `x + h`, on either side, and a sum fine for both that integral's gauge and the
+radius continuity gives puts it within half the tolerance of `f x * h`. In the relative form
+`a <= x` and `x <= b` carry no weight: outside the interval no small increment stays in it, so the
+relative derivative holds there at any slope.
+
 **The sine and the cosine are differentiable since the same day, and what stood in front of that was
 the addition formulas.** `Transcendental.COS_ADD` and `SIN_ADD` are `SIN_COS_SQUARED`'s argument at a
 second point: `EXP_CONVOLUTION` at `(x, y)` rather than at `(x, 0 - x)`, split by parity, whose even
