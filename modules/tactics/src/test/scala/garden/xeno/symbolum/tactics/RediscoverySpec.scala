@@ -350,7 +350,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 637 with the textbook forms of the interval theorems, 2026-09-25, derived before the run:
     // thirty-three antecedents over fourteen facts, the count `ProposeSpec` gives by fact.
     // 645 with the fundamental theorem relative to `[a, b]`, the same day: eight over four facts.
-    propose.weakenings.size shouldBe 645
+    // 651 with the integral's linearity, 2026-09-26, derived before the run and read off the probe:
+    // two antecedents on each of the three.
+    propose.weakenings.size shouldBe 651
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
