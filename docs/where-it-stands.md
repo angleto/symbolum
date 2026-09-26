@@ -1225,8 +1225,10 @@ without `a <= b` on `[1, 0]`, where there are no fine sums and every number is a
 `\x. p * f x + q * g x` is `p * s1 + q * s2` for fine sums of `f` and of `g` over the same division,
 an induction over the two rules; `HAS_INTEGRAL_LINEAR` takes each function's gauge at its share of
 the tolerance and their pointwise minimum, as uniqueness does; `INTEGRAL_LINEAR` names the value.
-The first two cost what the fundamental theorem as `has_integral` costs and not `COMPLETENESS`,
-being about the sums there are; the value goes through uniqueness and so through Cousin.
+`HAS_INTEGRAL_LINEAR` costs exactly what the fundamental theorem as `has_integral` costs and not
+`COMPLETENESS`, being about the sums there are; `FINE_SUM_LINEAR` costs strictly less than that,
+which `IntegralSpec` asserts as a proper subset; and the value goes through uniqueness and so
+through Cousin.
 
 **Integration by parts and the change of variables, since the same day**, as `Integral.HAS_INTEGRAL_PARTS`,
 `INTEGRAL_PARTS`, `HAS_INTEGRAL_SUBST` and `INTEGRAL_SUBST`. Parts is the product rule, the
