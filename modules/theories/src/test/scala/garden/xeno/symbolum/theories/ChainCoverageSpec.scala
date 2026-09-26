@@ -196,6 +196,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // statement needs, `NUM_TOTIENT`, is `Modular`'s.
     "Euler" -> NotADevelopment,
 
+    // Not a development, for `Euler`'s reason: Wilson's theorem and the product over paired indices
+    // it needs, whose facts `Primes` publishes under names it declares. 2026-09-26.
+    "Wilson" -> NotADevelopment,
+
     // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
     // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
     // fact of its own, and `Prove` reaches it through the chain it is constructed from.
@@ -266,6 +270,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // The steps a hand derivation over `num` is made of, shared by the files that write one. It
     // declares nothing and holds no fact: each function is a sequence of derived rules.
     "Steps" -> DeclaresNothing,
+
+    // The same moves in direct style, which `Pigeonhole` wrote first and `Wilson` needed where no
+    // chain exists yet. It declares nothing and holds no fact: each move is a derived rule or a
+    // sequence of them over the ground it is handed. 2026-09-26.
+    "Moves" -> DeclaresNothing,
 
     // A procedure, `Semiring`'s generalisation: handed constants and laws, it derives rules and
     // returns a normaliser, and every theorem it produces is about the caller's operations. It

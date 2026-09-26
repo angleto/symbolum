@@ -244,6 +244,22 @@ derivation and says why each of those; `EulerSpec` detaches the theorem at four 
 nothing assumed, derives `NUM_TOTIENT 2 = 1` from the definition, and refutes the statement at
 `n = 2, a = 2`.
 
+**Wilson's theorem is `NUM_WILSON`, since 2026-09-26, and what it was waiting on is a product over
+paired indices, which a permutation does not give.** `NUM_DIVIDES p (SUC (NUM_FACT (PRE p)))` for
+`p` prime, `(p - 1)! = -1 (mod p)` without a negative. Multiplying the residues by their inverses
+permutes them and yields only `P * P = 1`, which does not say which square root of one `P` is, so
+`NUM_PROD_PAIRED` says a product over `[0, n)` is one modulo `m` when an involution of `[0, n)` with no
+fixed point pairs each factor with one it multiplies to one. Its induction is strong, on the length:
+a swap brings the top index's partner next to it, `NUM_PROD_PERMUTE` leaves the product alone, and
+the swap conjugates the involution into one on the two shorter indices. Wilson pairs each residue
+from `2` to `p - 2` with its inverse, taken with `select` and reduced with `NUM_MOD`, which is never
+`0`, `1` or `p - 1` and never the residue itself, since `u * u = 1` would put `p` under
+`(u - 1) * (u + 1)`. `Wilson.scala` is the derivation and says why each of those; `WilsonSpec`
+detaches the theorem at five, whose primality it derives since the library proves only two's,
+refutes it at four, and refutes the pairing at one index with its no-fixed-point hypothesis false.
+The derivation is written with `Moves`, the direct-style moves `Pigeonhole` wrote first, which left
+that builder on the same day because `Primes` is built before any chain exists.
+
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
 coded by the **beta function** rather than by iterated pairing or by a product of prime powers, on

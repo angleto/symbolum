@@ -206,7 +206,7 @@ object ExpanderPigeonhole {
       val proof = new Proof(chain)
       val facts = Map(ExpanderWidth -> proof.checked(ExpanderWidth, proof.width))
       Right(new ExpanderPigeonhole(signature.theory, signature.notation, chain.logic, facts))
-    } catch { case refused: Pigeonhole.RefusedHere => Left(refused.error) }
+    } catch { case refused: Moves.RefusedHere => Left(refused.error) }
   }
 
   /** The development over the standard chain. */
@@ -217,7 +217,7 @@ object ExpanderPigeonhole {
 
   /** The derivation, over `Pigeonhole`'s moves and this file's variables. */
   private[theories] final class Proof(chain: Chain) {
-    val b = new Pigeonhole.Builder(chain, Types, Pigeonhole.Written)
+    val b = new Pigeonhole.Builder(chain, Types, Moves.Written)
     import b.*
 
     def mf(name: String): Kernel.Thm = force(chain.modular.fact(name))

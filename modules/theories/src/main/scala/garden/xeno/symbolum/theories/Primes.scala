@@ -241,6 +241,23 @@ object Primes {
   /** `|- !p a n. NUM_PROD (\i. COND (p i) a (SUC 0)) n = NUM_POW a (NUM_SUM (\i. COND (p i) (SUC 0) 0) n)` */
   val ProdCondPow: String = "NUM_PROD_COND_POW"
 
+  /**
+   * `|- !m f t n. <t is an involution of [0, n) with no fixed point> ==>
+   *     (!i. i < n ==> NUM_CONG m (f i * f (t i)) (SUC 0)) ==> NUM_CONG m (NUM_PROD f n) (SUC 0)`
+   *
+   * A product over indices an involution pairs off is the product of the pairs. What Wilson's
+   * theorem needs and a permutation does not give; `Wilson` has the argument.
+   */
+  val ProdPaired: String = "NUM_PROD_PAIRED"
+
+  /**
+   * `|- !p. NUM_PRIME p ==> NUM_DIVIDES p (SUC (NUM_FACT (PRE p)))`
+   *
+   * Wilson's theorem, `(p - 1)! = -1 (mod p)`, written without a negative. `Wilson` derives it by
+   * pairing each residue from `2` to `p - 2` with its inverse.
+   */
+  val Wilson: String = "NUM_WILSON"
+
   /** `|- !n a. 0 < n ==> NUM_GCD a n = SUC 0 ==> ?b. NUM_CONG n (a * b) (SUC 0)`: a coprime residue has an inverse. */
   val Inverse: String = "NUM_INVERSE"
 
@@ -327,7 +344,12 @@ object Primes {
     UnitCoprime ->
       "!n:num. !x:num. !y:num. NUM_LT 0 n ==> NUM_CONG n (x * y) (SUC 0) ==> NUM_GCD y n = SUC 0",
     Euler ->
-      "!n:num. !a:num. NUM_LT 0 n ==> NUM_GCD a n = SUC 0 ==> NUM_CONG n (NUM_POW a (NUM_TOTIENT n)) (SUC 0)"
+      "!n:num. !a:num. NUM_LT 0 n ==> NUM_GCD a n = SUC 0 ==> NUM_CONG n (NUM_POW a (NUM_TOTIENT n)) (SUC 0)",
+    ProdPaired ->
+      ("!m:num. !f:num->num. !t:num->num. !n:num. (!i:num. NUM_LT i n ==> NUM_LT (t i) n) ==> " +
+        "(!i:num. NUM_LT i n ==> t (t i) = i) ==> (!i:num. NUM_LT i n ==> ~(t i = i)) ==> " +
+        "(!i:num. NUM_LT i n ==> NUM_CONG m (f i * f (t i)) (SUC 0)) ==> NUM_CONG m (NUM_PROD f n) (SUC 0)"),
+    Wilson -> "!p:num. NUM_PRIME p ==> NUM_DIVIDES p (SUC (NUM_FACT (PRE p)))"
   )
 
   /** Build it over the arithmetic that holds the factorial. It extends nothing. */
@@ -350,7 +372,17 @@ object Primes {
         derived <- garden.xeno.symbolum.theories.Freshman.derive(kit)
         totient <- coding.modular.definition(Modular.TotientName)
         euler <- garden.xeno.symbolum.theories.Euler.derive(kit, totient)
-      } yield derived ++ euler
+        known = derived ++ euler
+        ground = Moves.Ground(
+          coding.theory,
+          coding.notation,
+          coding.logic,
+          peano.naturals.classical,
+          name => known.get(name).toRight(MissingDefinition(name)).orElse(lookup(name)),
+          coding.modular.definition
+        )
+        wilson <- garden.xeno.symbolum.theories.Wilson.derive(kit, ground)
+      } yield known ++ wilson
     try
       Right(
         new Primes(

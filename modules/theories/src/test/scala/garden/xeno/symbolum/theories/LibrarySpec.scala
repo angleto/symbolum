@@ -739,8 +739,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // the run: four facts in `Integral` under four names, none shared. `CLAUDE.md`'s figures move by
     // **four** and **four**: each binds several functions among its leading quantifiers. Tip plus
     // this branch's delta.
-    library.entries.size shouldBe 788
-    library.names.distinct.size shouldBe 785
+    // 790 and 787 with Wilson's theorem and the product over paired indices, 2026-09-26, derived
+    // before the run: two facts in `Primes` under two names, none shared. `CLAUDE.md`'s figures move
+    // by **one** and **one**: `NUM_PROD_PAIRED` binds `m`, `f`, `t` and `n`, two of them `num` and two
+    // `num -> num`, and `NUM_WILSON` binds only `p`. Measured on a snapshot of older classes as a
+    // delta of two, one and one, and applied to the tip. Tip plus this branch's delta.
+    library.entries.size shouldBe 790
+    library.names.distinct.size shouldBe 787
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
