@@ -164,7 +164,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
 
-## The definitions (151)
+## The definitions (152)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -265,6 +265,7 @@ axiom mentioning it means.
 | `definition NUM_TRI` | NUM_TRI = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = x y + SUC y)) | **NOT READ** |  |  |
 | `definition NUM_TRI_GRAPH` | NUM_TRI_GRAPH = NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))) (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 2 (NUM_CODE 0 1))))) | **NOT READ** |  |  |
 | `definition NUM_TRUE` | NUM_TRUE = select (\x:num -> (num -> num) -> bool. !y:num. x y = COND (y = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. NUM_VALUE (NUM_FST (NUM_PAYLOAD y)) z = NUM_VALUE (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 6 (NUM_PAYLOAD y)) (\z:num -> num. ~(x (NUM_PAYLOAD y) z)) (COND (y = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z ==> x (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. !u:num. x (NUM_SND (NUM_PAYLOAD y)) (\v:num. COND (v = NUM_FST (NUM_PAYLOAD y)) u (z v))) (\z:num -> num. F))))) | **NOT READ** |  |  |
+| `definition NUM_VALUATION` | NUM_VALUATION = \x:num. \y:num. select (\z:num. NUM_DIVIDES (NUM_POW x z) y /\ ~(NUM_DIVIDES (NUM_POW x (SUC z)) y)) | **NOT READ** |  |  |
 | `definition NUM_VALUE` | NUM_VALUE = select (\x:num -> (num -> num) -> num. !y:num. x y = COND (y = NUM_CODE 0 (NUM_PAYLOAD y)) (\z:num -> num. z (NUM_PAYLOAD y)) (COND (y = NUM_CODE 2 (NUM_PAYLOAD y)) (\z:num -> num. SUC (x (NUM_PAYLOAD y) z)) (COND (y = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z + x (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z * x (NUM_SND (NUM_PAYLOAD y)) z) (\z:num -> num. 0))))) | **NOT READ** |  |  |
 | `definition PAIR` | PAIR = \x:'a. \y:'b. mk_prod (mk_pair x y) | **NOT READ** |  |  |
 | `definition PRE` | PRE = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = y)) | **NOT READ** |  |  |

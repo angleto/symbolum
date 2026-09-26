@@ -399,12 +399,17 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // eight antecedents over four facts, three on `DERIVATIVE_WITHIN_INTERIOR`, two on each form of
     // the theorem and one on `DERIVATIVE_WITHIN_OF_DERIVATIVE`.
     // 646 with the logarithm's slope's one, 2026-09-26.
-    // 652 with the integral's linearity's six, 2026-09-26. Tip plus this branch's delta.
-        // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
-    // the run: four antecedents on `HAS_INTEGRAL_JOIN` and three on each derivative. Tip plus this
-    // branch's delta.
-    // 676 with parts' and the substitution's fourteen, 2026-09-26. Tip plus this branch's delta.
-    proposals.size shouldBe 676
+    // 652 with the integral's linearity's six, 2026-09-26.
+    // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // the run: four antecedents on `HAS_INTEGRAL_JOIN` and three on each derivative.
+    // 676 with parts' and the substitution's fourteen, 2026-09-26.
+    // 709 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
+    // over fourteen facts, five on `NUM_VALUATION_DIV`, four on `NUM_DIV_VALUATION`, three each on
+    // `NUM_VALUATION_MUL`, `NUM_VALUATION_OTHER_PRIME`, `NUM_VALUATION_EXT` and
+    // `NUM_DIVIDES_MUL_VALUATION`, two each on `NUM_VALUATION_UNIQUE`, `NUM_VALUATION_SPEC`,
+    // `NUM_VALUATION_DIVIDES` and `NUM_DIVIDES_VALUATION`, one on each of the other four. Tip plus
+    // this branch's delta.
+    proposals.size shouldBe 709
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -632,7 +637,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // constants rather than probed: `RES_REFUTATION_NONEMPTY` weakens to `!k v s inputs m. 0 < m`,
     // false at `m = 0` and written in `NUM_LT` alone. Every other one of the nineteen names a
     // `RES_` constant or applies a function variable, and no model here reads either.
-    decidedFalse shouldBe 83
+    // 84 with the p-adic valuation, 2026-09-26, read off a probe of `Propose.audit` filtered by
+    // `from`: one of its thirty-three residues, `NUM_VALUATION_EXT` with the agreement of the
+    // registers dropped, `!x y. 0 < x ==> 0 < y ==> x = y`, refuted at `x = 4, y = 8`.
+    decidedFalse shouldBe 84
 
     // Most of those come with the point they fail at, and some do not: the claim is decided false
     // by quantifier elimination and the abduction that would name a point comes back with none.
@@ -775,7 +783,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // found the way the paragraph above says it is found: the next run, in which this line ran.
     // 78 with resolution's one false residue, `!k v s inputs m. 0 < m`, refuted at `m = 0`. **Not
     // moved in the same pass as `decidedFalse` either**, and found the same way, on the second run.
-    withAPoint shouldBe 78
+    // 79 with the valuation's one false residue, the same as `decidedFalse`'s, which carries the
+    // point `x = 4, y = 8`. Moved in the same pass as `decidedFalse`, from the same probe.
+    withAPoint shouldBe 79
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1351,15 +1361,18 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // fine sum, and keeps an implication or names `has_integral` or `fine_sum`, which no
     // procedure settles. None reached `unreadable`, and the three write no operator between reals
     // outside a lambda, so none is substituted. Tip plus this branch's delta.
-        // 572 with the residues of `HAS_INTEGRAL_JOIN`, `DERIVATIVE_WITHIN_INTEGRAL` and
+    // 572 with the residues of `HAS_INTEGRAL_JOIN`, `DERIVATIVE_WITHIN_INTEGRAL` and
     // `DERIVATIVE_INTEGRAL`, 2026-09-26: twelve, read off the suite's own failure after a prediction
     // of ten, so the total is measured and how it splits between weakenings and substitutions is not.
-    // Tip plus this branch's delta.
     // 586 with all fourteen residues of parts and the substitution, 2026-09-26, derived before the
     // run and confirmed by it: every fact has three antecedents or more, so dropping one leaves an
     // implication about `has_integral`, `integral` or `derivative`, which no procedure settles. The
-    // bodies carry a quantifier, so nothing is substituted. Tip plus this branch's delta.
-    open shouldBe 586
+    // bodies carry a quantifier, so nothing is substituted.
+    // 609 with twenty-three of the p-adic valuation's thirty-three residues, 2026-09-26, read off a
+    // probe of `Propose.audit` filtered by `from` after the run had named the total: all
+    // weakenings, each keeping an implication or naming `NUM_VALUATION`, which no procedure reads.
+    // Nine are `unreadable` below and one is `decidedFalse` above. Tip plus this branch's delta.
+    open shouldBe 609
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1733,7 +1746,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 137 with the logarithm's slope's weakening, from the same probe as `open`'s 554: dropping its
     // only antecedent leaves a bare `derivative ln x (inv x)`, which no procedure reads, as
     // `DERIVATIVE_CONTINUOUS`'s did.
-    unreadable shouldBe 137
+    // 146 with nine of the p-adic valuation's residues, from the same probe as `open`'s 583: one
+    // each of `NUM_LT_POW`, `NUM_POW_DIVIDES_POW`, `NUM_VALUATION_NOT_DIVIDES`, `NUM_VALUATION_POW`
+    // and `NUM_VALUATION_UNIQUE`, and two each of `NUM_VALUATION_SPEC` and
+    // `NUM_VALUATION_OTHER_PRIME`: with the antecedent gone, what is left is a bare divisibility, a
+    // bare equation of valuations or a bare `NUM_PRIME`, and no procedure reads any of them.
+    unreadable shouldBe 146
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2044,7 +2062,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // before it: the probe that placed the buckets was read for the buckets and not for this list.
     // 229 with thirteen of Euler's fourteen residues, the same day, by the same probe on this list;
     // none is refuted at a point, so `after` stays. Tip plus this branch's delta.
-    aboutNumbers.size shouldBe 229
+    // 259 with thirty of the p-adic valuation's thirty-three residues, 2026-09-26, by the same
+    // probe on this list: the three that are not here are `NUM_POW_DIVIDES_POW`'s,
+    // `NUM_VALUATION_POW`'s and one of `NUM_VALUATION_UNIQUE`'s, which write `NUM_POW`,
+    // `NUM_DIVIDES` and `NUM_VALUATION` and nothing on `named`. One of the thirty is refuted at a point, so `after` moves by one.
+    aboutNumbers.size shouldBe 259
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -2145,7 +2167,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 59 with resolution's `!k v s inputs m. 0 < m`, which the sampler refutes at `m = 0`: the same
     // residue as `decidedFalse`'s and `withAPoint`'s, so the three move together here, and this
     // line sat behind `aboutNumbers` on the first run.
-    after shouldBe 59
+    // 60 with the valuation's `!x y. 0 < x ==> 0 < y ==> x = y`, refuted at `x = 4, y = 8`: the
+    // same residue as `decidedFalse`'s and `withAPoint`'s, the three moving together in one pass
+    // from one probe.
+    after shouldBe 60
   }
 
   /* ------------------------------------------------------ the false positive it produced */

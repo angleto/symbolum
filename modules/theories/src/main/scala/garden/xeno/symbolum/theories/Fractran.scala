@@ -39,12 +39,17 @@ import garden.xeno.symbolum.logic.*
  * the program does not produce comes back as a refusal and never as a theorem, and `FractranSpec`
  * feeds it such traces.
  *
+ * == The register machine ==
+ *
+ * [[Fractran.RegisterStepName]] is the same fold with each fraction's test and effect written on the
+ * prime registers `NUM_VALUATION p` of the state, and [[Fractran.StepRegisters]] says the two steps
+ * are one from a positive state under positive numerators. `FractranRegisters` has the argument and
+ * why each hypothesis is needed, so "`3/2` adds one to the register of `3` and takes one from the
+ * register of `2`" is a sentence here, and `FractranRegistersSpec` reads it off a certified step.
+ *
  * == What is not here ==
  *
- * What a program computes on the exponents of its primes, which is card `626ad37f` and wants the
- * valuation at a prime first; and whether Conway's generalised Collatz maps meet `Collatz`, which is
- * card `b0d2ada9`. Until the first lands, `3/2` sending `72` to `243` in three steps is a fact here and
- * "it adds the exponents" is not.
+ * Whether Conway's generalised Collatz maps meet `Collatz`, which is card `b0d2ada9`.
  *
  * It sits beside the chain, like `Collatz` and `EuclidAlgorithm`: nothing below needs its constants,
  * and making it a link moves `Chain.widest`, the reading register and the guide's map.
@@ -317,6 +322,13 @@ object Fractran {
   /** `FRACTRAN_REACHES P n k m`: `P` takes `n` to `m` in exactly `k` steps. */
   val ReachesName: String = "FRACTRAN_REACHES"
 
+  /**
+   * `FRACTRAN_REGISTER_STEP P n m`: the same walk over `P` with each fraction's test and effect read
+   * on the prime registers `NUM_VALUATION p` of the state. `FractranRegisters` says why it is the
+   * same fold and what the simulation theorem asks.
+   */
+  val RegisterStepName: String = "FRACTRAN_REGISTER_STEP"
+
   /** The definitions, in the order they are made: each names only what is above it. */
   val Bodies: Vector[(String, String)] = Vector(
     StepName ->
@@ -324,7 +336,13 @@ object Fractran {
         "COND (~(SND f = 0) /\\ NUM_DIVIDES (SND f) (n * FST f)) (m = NUM_DIV (n * FST f) (SND f)) r) F P"),
     HaltsName -> "\\P:word(prod(num,num)). \\n:num. !m:num. ~FRACTRAN_STEP P n m",
     ReachesName ->
-      "\\P:word(prod(num,num)). \\n:num. \\k:num. \\m:num. REACH (FRACTRAN_STEP P) (FRACTRAN_STEP P) n (PAIR m k)"
+      "\\P:word(prod(num,num)). \\n:num. \\k:num. \\m:num. REACH (FRACTRAN_STEP P) (FRACTRAN_STEP P) n (PAIR m k)",
+    RegisterStepName ->
+      ("\\P:word(prod(num,num)). \\n:num. \\m:num. LIST_FOLD (\\f:prod(num,num). \\r:bool. " +
+        "COND (~(SND f = 0) /\\ (!p:num. NUM_PRIME p ==> " +
+        "NUM_LE (NUM_VALUATION p (SND f)) (NUM_VALUATION p n + NUM_VALUATION p (FST f)))) " +
+        "(NUM_LT 0 m /\\ (!p:num. NUM_PRIME p ==> " +
+        "NUM_VALUATION p m + NUM_VALUATION p (SND f) = NUM_VALUATION p n + NUM_VALUATION p (FST f))) r) F P")
   )
 
   /** `|- !n m. ~FRACTRAN_STEP WORD_EMPTY n m`: the empty program halts everywhere. */
@@ -345,6 +363,12 @@ object Fractran {
   /** A run followed by a step is a run one longer. */
   val ReachesStep: String = "FRACTRAN_REACHES_STEP"
 
+  /**
+   * FRACTRAN is a register machine: from a positive state, under a program whose numerators are
+   * positive, a step on the number is exactly a step of [[RegisterStepName]] on its registers.
+   */
+  val StepRegisters: String = "FRACTRAN_STEP_REGISTERS"
+
   /** Everything published here, as the text a person checks it by. */
   val Statements: Vector[(String, String)] = Vector(
     StepEmpty -> "!n:num. !m:num. ~FRACTRAN_STEP (WORD_EMPTY:word(prod(num,num))) n m",
@@ -359,7 +383,11 @@ object Fractran {
     ReachesStart -> "!P:word(prod(num,num)). !n:num. FRACTRAN_REACHES P n 0 n",
     ReachesStep ->
       ("!P:word(prod(num,num)). !n:num. !k:num. !x:num. !m:num. " +
-        "FRACTRAN_REACHES P n k x /\\ FRACTRAN_STEP P x m ==> FRACTRAN_REACHES P n (SUC k) m")
+        "FRACTRAN_REACHES P n k x /\\ FRACTRAN_STEP P x m ==> FRACTRAN_REACHES P n (SUC k) m"),
+    StepRegisters ->
+      ("!P:word(prod(num,num)). !n:num. !m:num. NUM_LT 0 n ==> " +
+        "LIST_FOLD (\\f:prod(num,num). \\r:bool. NUM_LT 0 (FST f) /\\ r) T P ==> " +
+        "(FRACTRAN_STEP P n m = FRACTRAN_REGISTER_STEP P n m)")
   )
 
   /**
@@ -427,6 +455,7 @@ object Fractran {
           .orElse(chain.folding.fact(name))
           .orElse(chain.listing.fact(name))
           .orElse(chain.reaching.fact(name))
+          .orElse(chain.primes.fact(name))
       kit = Freshman.Kit(logic, theory, notation, semiring, chain.induct, lookup)
       step = definitions(StepName)
       reaches = definitions(ReachesName)
@@ -437,13 +466,17 @@ object Fractran {
       start <- Proofs.reachesStart(kit, reaches)
       further <- Proofs.reachesStep(kit, reaches)
       modZero <- Proofs.modZero(kit)
+      applies <- chain.primes.fact(Primes.FractionApplies)
+      lands <- chain.primes.fact(Primes.FractionLands)
+      registers <- FractranRegisters.simulation(kit, definitions(RegisterStepName), empty, cons, applies, lands)
       facts = Map(
         StepEmpty -> empty,
         StepCons -> cons,
         StepPair -> pair,
         StepFunctional -> functional,
         ReachesStart -> start,
-        ReachesStep -> further
+        ReachesStep -> further,
+        StepRegisters -> registers
       )
       _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
         for {
