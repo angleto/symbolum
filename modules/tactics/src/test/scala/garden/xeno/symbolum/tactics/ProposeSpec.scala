@@ -409,8 +409,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_DIVIDES_MUL_VALUATION`, two each on `NUM_VALUATION_UNIQUE`, `NUM_VALUATION_SPEC`,
     // `NUM_VALUATION_DIVIDES` and `NUM_DIVIDES_VALUATION`, one on each of the other four. Tip plus
     // this branch's delta.
-    // 714 with the five residues of `CONTINUOUS_MUL` and `TAYLOR`, 2026-09-26. Tip plus this branch's delta.
-    proposals.size shouldBe 714
+    // 714 with the five residues of `CONTINUOUS_MUL` and `TAYLOR`, 2026-09-26.
+    // 732 with the integral's relative forms, 2026-09-26, derived before the run: eighteen
+    // antecedents over seven facts, four on `DERIVATIVE_WITHIN_CONGRUENCE`, three each on the two
+    // derivative twins and two on each of the other four. Tip plus this branch's delta.
+    proposals.size shouldBe 732
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1375,8 +1378,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // Nine are `unreadable` below and one is `decidedFalse` above. Tip plus this branch's delta.
     // 614 with all five of `CONTINUOUS_MUL`'s and `TAYLOR`'s residues, 2026-09-26, measured by the
     // run: each is an implication about `continuous` or `derivative`, which no procedure settles.
-    // Tip plus this branch's delta.
-    open shouldBe 614
+    // 632 with all eighteen residues of the integral's relative forms and their congruences,
+    // 2026-09-26, read off the suite's own failure: every one keeps an implication about
+    // `has_integral`, `fine_sum`, `integral` or `derivative_within`, which no procedure settles.
+    // The total matched the eighteen derived for `proposals` and no other bucket moved, so none
+    // reached `unreadable`. Tip plus this branch's delta.
+    open shouldBe 632
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

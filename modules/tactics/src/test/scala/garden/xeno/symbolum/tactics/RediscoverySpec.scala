@@ -361,9 +361,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 709 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
     // over fourteen facts, the count `ProposeSpec` gives by fact. Tip plus this branch's delta.
     // 714 with Taylor's theorem, 2026-09-26, derived before the run and confirmed by it: two
-    // antecedents on `CONTINUOUS_MUL` and three on `TAYLOR`, and none on `DERIVATIVE_POWER`. Tip
-    // plus this branch's delta.
-    propose.weakenings.size shouldBe 714
+    // antecedents on `CONTINUOUS_MUL` and three on `TAYLOR`, and none on `DERIVATIVE_POWER`.
+    // 732 with the integral's relative forms, 2026-09-26, derived before the run: eighteen
+    // antecedents over seven facts, the count `ProposeSpec` gives by fact. Tip plus this branch's
+    // delta.
+    propose.weakenings.size shouldBe 732
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
