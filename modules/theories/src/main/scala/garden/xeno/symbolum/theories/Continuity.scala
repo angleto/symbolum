@@ -81,7 +81,9 @@ object Continuity {
    * `continuous f x`: `f` is continuous at `x`, **two-sided**, looking at the points on both sides
    * of `x` whatever interval a caller has in mind. So the interval theorems' hypothesis `!x. a <= x
    * /\ x <= b ==> continuous f x` asks more at the two ends than a textbook's "continuous on
-   * `[a, b]`" does, and each of them has a textbook form stated with [[ContinuousWithin]] beside it.
+   * `[a, b]`" does, and each of them has a textbook form stated with [[ContinuousWithin]]: this
+   * file's and `Derivative`'s since 2026-09-25, `Integral`'s since 2026-09-26, which the sentence
+   * here said of all of them a day before it was true. `IntegralWithinSpec` holds the census.
    */
   val Continuous: String = "continuous"
 

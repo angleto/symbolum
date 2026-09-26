@@ -360,7 +360,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // substitution.
     // 709 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
     // over fourteen facts, the count `ProposeSpec` gives by fact. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 709
+    // 727 with the integral's relative forms, 2026-09-26, derived before the run: eighteen
+    // antecedents over seven facts, the count `ProposeSpec` gives by fact.
+    propose.weakenings.size shouldBe 727
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

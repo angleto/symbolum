@@ -409,7 +409,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_DIVIDES_MUL_VALUATION`, two each on `NUM_VALUATION_UNIQUE`, `NUM_VALUATION_SPEC`,
     // `NUM_VALUATION_DIVIDES` and `NUM_DIVIDES_VALUATION`, one on each of the other four. Tip plus
     // this branch's delta.
-    proposals.size shouldBe 709
+    // 727 with the integral's relative forms, 2026-09-26, derived before the run: eighteen
+    // antecedents over seven facts, four on `DERIVATIVE_WITHIN_CONGRUENCE`, three each on the two
+    // derivative twins and two on each of the other four. Tip plus this branch's delta.
+    proposals.size shouldBe 727
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0

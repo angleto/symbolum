@@ -1186,8 +1186,8 @@ points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hyp
 hypothesis states the derivative and its sign in one existential, so it asks no second statement
 of differentiability; the three cost what the mean value theorem costs.
 
-**Every interval theorem has a textbook form since 2026-09-25, stated with continuity relative to
-`[a, b]`.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
+**Every interval theorem about a continuous function has a textbook form, stated with continuity
+relative to `[a, b]`: the ones below since 2026-09-25 and the integral's four since 2026-09-26.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
 `b`, for continuity from outside the interval as well, which no textbook does, and nothing said so
 until card 6257d0da. `continuous_within f a b x` is the relative notion, and one lemma carries
 every theorem across: `CONTINUOUS_EXTENSION`, that `f` extended by its value at the nearer end is
@@ -1197,9 +1197,21 @@ theorem and the three facts about a derivative's sign is the two-sided one at th
 back through `CONTINUOUS_EXTENSION_AGREES`; `DERIVATIVE_LOCAL`, that a derivative is a fact about
 the points near it, carries the derivatives. Each costs what its two-sided form costs, and
 `ContinuitySpec` detaches `INTERMEDIATE_VALUE_WITHIN` at a step on `[-1, 0]` that it also proves
-not continuous at `0`, so the textbook form is not a renaming. The fundamental theorem is not
-among them: its hypothesis at the ends is a one-sided **derivative**, which a constant extension
-cannot carry, and it got its textbook form another way, two paragraphs down.
+not continuous at `0`, so the textbook form is not a renaming. **This paragraph opened with "every"
+on 2026-09-25 while `CONTINUOUS_HAS_INTEGRAL`, `CONTINUOUS_INTEGRAL` and the two halves of the second
+fundamental theorem below had no relative form**, which the verification of card 6257d0da found.
+They have one since 2026-09-26, `_WITHIN` appended to each name, and they needed what the others did
+not: an integral is a statement about every fine sum over the interval and a relative derivative
+about every point near one, so carrying it back from the extension takes a congruence, that
+functions equal on `[a, b]` have the same fine sums, integrals and relative derivatives there.
+`IntegralWithinSpec` detaches the four at the same step and holds the census: every fact with a
+two-sided continuity hypothesis over an interval has a `_WITHIN` twin stated with
+`continuous_within`, with a floor on how many it finds so that a selector matching nothing fails.
+The first half of the
+fundamental theorem is a different case: its hypothesis at the ends is a one-sided
+**derivative**, which a constant extension cannot carry, and it got its textbook form another way,
+two paragraphs down. Integration by parts and the change of variables still ask a two-sided
+derivative over the interval, which is card `3caa8541`.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum
@@ -1253,7 +1265,9 @@ the two-sided form's hypothesis at `0`, and `DerivativeSpec` refutes the interio
 point with its `a < x` dropped.
 
 **A continuous function has an integral, `CONTINUOUS_HAS_INTEGRAL`, since 2026-09-25**, and
-`CONTINUOUS_INTEGRAL` says `integral` names it. `Integrability.scala` is the derivation and it never
+`CONTINUOUS_INTEGRAL` says `integral` names it. Both ask continuity at each point of `[a, b]`,
+two-sided at the ends; `CONTINUOUS_HAS_INTEGRAL_WITHIN` and `CONTINUOUS_INTEGRAL_WITHIN` ask it
+relative to the interval, as the paragraph on textbook forms above says. `Integrability.scala` is the derivation and it never
 compares two divisions directly: a Cauchy criterion, "some gauge keeps any two fine sums over
 `[u, w]` within `e * (w - u)`", glues through `INTERVAL_GLUING`, because a gauge at most
 `abs (x - v)` away from the joint `v` forces every piece containing `v` to be tagged `v`, and such a
@@ -1264,9 +1278,10 @@ theorem's value there. No control refutes it without continuity: Dirichlet's fun
 integrable, so a counterexample has to be unbounded, and that is an argument of its own.
 
 **The second half of the fundamental theorem is `DERIVATIVE_WITHIN_INTEGRAL`, since 2026-09-26**: for
-`f` continuous on `[a, b]`, `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every
-point of it, and `DERIVATIVE_INTEGRAL` is the same strictly inside as a two-sided derivative, through
-`DERIVATIVE_WITHIN_INTERIOR`. What it needed first was `HAS_INTEGRAL_JOIN`, that integrals add over
+`f` continuous at each point of `[a, b]`, two-sided at the ends, `\y. integral f a y` has derivative
+`f x` relative to `[a, b]` at every point of it, and `DERIVATIVE_INTEGRAL` is the same strictly
+inside as a two-sided derivative, through `DERIVATIVE_WITHIN_INTERIOR`; the two with continuity
+relative to `[a, b]` are the same names with `_WITHIN` appended. What it needed first was `HAS_INTEGRAL_JOIN`, that integrals add over
 adjacent intervals, and that is the joint gauge of the existence again: it splits every fine sum at
 the join exactly, so additivity costs no supremum at all, fifteen of the reals' axioms and the
 choice. The increment is then read by additivity and uniqueness as the integral over the interval

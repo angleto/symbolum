@@ -115,58 +115,13 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     continuity.show(detached.conclusion) shouldBe "?x:real. 0 <= x /\\ x <= 1 /\\ x = 1 / 2"
   }
 
-  /** The step `COND (0 < y) 1 0`, which both negative guards below spend. */
-  private val step: Term =
-    force(continuity.term("\\y:real. COND (0 < y) (1:real) 0", Type.fun(reals, reals)))
-
-  /** `|- COND (0 < at) 1 0 = 1` or `= 0`, from the evidence for the guard or against it. */
-  private def stepValue(at: String, evidence: Kernel.Thm, positive: Boolean): Kernel.Thm = {
-    val name = if (positive) Classical.CondTrue else Classical.CondFalse
-    val conditional =
-      Kernel.instType(Map(Classical.TypeVariable -> reals), force(chain.classical.fact(name)))
-    val guard = proposition(s"(0:real) < $at")
-    force(rules.specAll(conditional, List(guard, real("1:real"), real("0:real"))).flatMap(rules.mp(_, evidence)))
-  }
-
-  /** `|- ~(continuous step 0)`: at tolerance one half, every radius holds a point where the step is one. */
-  private lazy val stepRefused: Kernel.Thm = {
-    val continuous = force(continuity.term(Continuity.Continuous))
-    val claim = force(LogicError.lift(Term.app(continuous, step).flatMap(Term.app(_, real("0:real")))))
-    val assumed = force(LogicError.lift(Kernel.assume(claim)))
-    val unfolded = force(Conv.unfold(force(continuity.definition(Continuity.Continuous)), List(step, real("0:real"))))
-    val body = opened(force(LogicError.lift(Kernel.eqMp(unfolded, assumed))))
-    val near = force(rules.spec(real("(1:real) / 2"), body).flatMap(rules.mp(_, lemma("(0:real) < (1:real) / 2"))))
-
-    val d = Term.variable("d", reals)
-    val radius = force(LogicError.lift(Kernel.assume(proposition(
-      "0 < d:real /\\ (!y:real. abs (y - 0) < d ==> " +
-        "abs (COND (0 < y) (1:real) 0 - COND ((0:real) < 0) 1 0) < (1:real) / 2)"))))
-    val dPositive = force(rules.conjElim1(radius))
-    val inside = force(rules.conjElim2(radius))
-
-    val magnitude = force(chain.limit.magnitude.fact(Magnitude.OfNonNegative)
-      .flatMap(rules.spec(real("d / 2 - 0"), _))
-      .flatMap(rules.mp(_, force(rules.spec(d, lemma("!d:real. 0 < d ==> 0 <= d / 2 - 0")).flatMap(rules.mp(_, dPositive))))))
-    val close = force(rules.specAll(lemma("!m:real d:real. m = d / 2 - 0 ==> 0 < d ==> m < d"), List(real("abs (d / 2 - 0)"), d))
-      .flatMap(rules.mp(_, magnitude)).flatMap(rules.mp(_, dPositive)))
-    val jump = force(rules.spec(real("d / 2"), inside).flatMap(rules.mp(_, close)))
-
-    val halfPositive = force(rules.spec(d, lemma("!d:real. 0 < d ==> 0 < d / 2")).flatMap(rules.mp(_, dPositive)))
-    val afterJump = stepValue("d / 2", halfPositive, positive = true)
-    val atJump = stepValue("0", lemma("~((0:real) < 0)"), positive = false)
-    val difference = "COND (0 < d / 2) (1:real) 0 - COND ((0:real) < 0) 1 0"
-    val above = force(chain.limit.magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(real(difference), _)))
-    val absurd = force(rules
-      .specAll(
-        lemma("!p:real q:real m:real. p = 1 ==> q = 0 ==> p - q <= m ==> m < 1 / 2 ==> F"),
-        List(real("COND (0 < d / 2) (1:real) 0"), real("COND ((0:real) < 0) (1:real) 0"), real(s"abs ($difference)")))
-      .flatMap(rules.mp(_, afterJump)).flatMap(rules.mp(_, atJump))
-      .flatMap(rules.mp(_, above)).flatMap(rules.mp(_, jump)))
-
-    val eliminated = force(rules.existsElim(near, d, absurd))
-    val refused = force(rules.notIntro(claim, eliminated))
-    refused
-  }
+  /** The step `COND (0 < y) 1 0` on `[-1, 0]`, shared with `IntegralWithinSpec`. */
+  private lazy val stepAtAnEnd = new StepAtAnEnd(chain)
+  private def step: Term = stepAtAnEnd.step
+  private def stepRefused: Kernel.Thm = stepAtAnEnd.refused
+  private def flat(t: String, upper: Kernel.Thm): Kernel.Thm = stepAtAnEnd.flat(t, upper)
+  private def stepValue(at: String, evidence: Kernel.Thm, positive: Boolean): Kernel.Thm =
+    stepAtAnEnd.stepValue(at, evidence, positive)
 
   it should "refuse a step, so that the definition is not satisfied by everything" in {
     // `COND (0 < y) 1 0` jumps at zero. At tolerance one half, every radius `d` holds `d / 2`, where
@@ -182,46 +137,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     // `INTERMEDIATE_VALUE` cannot be detached at it on [-1, 0], its hypothesis failing at the end,
     // and `INTERMEDIATE_VALUE_WITHIN` is, below, with nothing left assumed. A relative hypothesis
     // that held only where the two-sided one does would make the textbook forms a renaming.
-    val steps = Continuity.Steps(logic, linarith, continuity.theory, continuity.notation,
-      force(continuity.definition(Continuity.Continuous)))
-    val within = force(continuity.definition(Continuity.ContinuousWithin))
-    val x = Term.variable("x", reals)
-    val y = Term.variable("y", reals)
-    val e = Term.variable("e", reals)
-
-    // `|- COND (0 < t) 1 0 = 0` from `|- t <= 0`.
-    def flat(t: String, upper: Kernel.Thm): Kernel.Thm =
-      stepValue(t, force(Within.notBelow(steps, chain.reals, "(0:real)", t, upper)), positive = false)
-
-    val inside = proposition("(0:real) - 1 <= x /\\ x <= 0")
-    val assumedInside = force(LogicError.lift(Kernel.assume(inside)))
-    val atX = flat("x:real", force(rules.conjElim2(assumedInside)))
-    val positive = proposition("0 < e:real")
-    val assumedPositive = force(LogicError.lift(Kernel.assume(positive)))
-    val near = proposition("(0:real) - 1 <= y /\\ y <= 0 /\\ abs (y - x) < 1")
-    val assumedNear = force(LogicError.lift(Kernel.assume(near)))
-    val atY = flat("y:real", force(rules.conjElim2(assumedNear).flatMap(rules.conjElim1)))
-
-    val zeroDistance = force(chain.limit.magnitude.fact(Magnitude.OfNonNegative)
-      .flatMap(rules.spec(real("(0:real) - 0"), _)).flatMap(rules.mp(_, lemma("(0:real) <= 0 - 0"))))
-    val same = force(rules.specAll(lemma("!m:real e:real. m = 0 - 0 ==> 0 < e ==> m < e"), List(real("abs ((0:real) - 0)"), e))
-      .flatMap(rules.mp(_, zeroDistance)).flatMap(rules.mp(_, assumedPositive)))
-    val target = proposition("abs (COND (0 < y:real) (1:real) 0 - COND (0 < x:real) (1:real) 0) < e:real")
-    val rewritten = force(Rewrite.Rule.all(logic, Vector(atY, atX)).flatMap(Rewrite.rewrite(_, target)))
-    val value = force(Conv.sym(rewritten).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, same))))
-
-    val everyPoint = force(rules.disch(near, value).flatMap(rules.gen(y, _)))
-    val pair = force(rules.conjIntro(lemma("(0:real) < 1"), everyPoint))
-    val shape = force(logic.destExistsPredicate(proposition(
-      "?d:real. 0 < d /\\ (!y:real. (0:real) - 1 <= y /\\ y <= 0 /\\ abs (y - x) < d ==> " +
-        "abs (COND (0 < y) (1:real) 0 - COND (0 < x:real) (1:real) 0) < e:real)")).toRight(NotOfForm("an existential", x)))
-    val witnessed = force(rules.existsIntro(shape, real("1:real"), pair))
-    val statement = force(rules.disch(positive, witnessed).flatMap(rules.gen(e, _)))
-    val unfolded = force(Conv.unfold(within, List(step, real("(0:real) - 1"), real("0:real"), x)))
-    val normal = force(Conv.betaNormalise(force(Term.destEq(unfolded.conclusion).map(_._2).toRight(NotOfForm("an equation", x)))))
-    val definition = force(Conv.trans(unfolded, normal))
-    val relative = force(Conv.sym(definition).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, statement))))
-    val everywhere = force(rules.disch(inside, relative).flatMap(rules.gen(x, _)))
+    val everywhere = stepAtAnEnd.relative
 
     val instance = opened(force(rules.specAll(
       fact(Continuity.IntermediateValueWithin),
