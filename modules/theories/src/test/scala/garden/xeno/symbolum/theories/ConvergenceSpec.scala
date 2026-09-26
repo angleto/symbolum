@@ -7,9 +7,9 @@ import org.scalatest.matchers.should.Matchers
 
 /**
  * The series procedure answers inside its fragment in both directions, and outside it refuses in
- * the one of four ways that says what was learned.
+ * the one of five ways that says what was learned.
  *
- * The four refusals are the file's subject as much as the answers are, for the reason
+ * The five refusals are the file's subject as much as the answers are, for the reason
  * `Refutation` keeps seven apart: a caller that reads "not in the fragment" as "decided against"
  * publishes a divergence nobody proved, and one that reads a refutation as "not in the fragment"
  * throws a theorem away. Each is asserted by its **standing**, which is what a caller branches on,
@@ -180,6 +180,7 @@ class ConvergenceSpec extends AnyFlatSpec with Matchers {
   it should "say that it names no value where a value is asked, and refute a divergence it disproves" in {
     val value = refused("converges (Sum (\\i:num. real_of_num i * Power ((1:real) / 2) i)) 2")
     value.message should include(Convergence.Unnamed)
+    value.standing should not be LogicError.Standing.Decided
     val denied = refused("diverges (Sum (\\i:num. real_of_num i * Power ((1:real) / 2) i))")
     denied shouldBe a[Denied]
     denied.standing shouldBe LogicError.Standing.Decided

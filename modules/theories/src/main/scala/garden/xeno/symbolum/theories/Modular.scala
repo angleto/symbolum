@@ -440,6 +440,23 @@ object Modular {
    */
   val TotientName: String = "NUM_TOTIENT"
 
+  /**
+   * `NUM_VALUATION p n` is `select (\k. NUM_DIVIDES (NUM_POW p k) n /\ ~(NUM_DIVIDES (NUM_POW p (SUC k)) n))`:
+   * the exponent of the largest power of `p` dividing `n`, the p-adic valuation.
+   *
+   * A choice over the characterisation rather than a count or a recursion, because the
+   * characterisation is what every use reads: the valuation is the `k` at which `p^k` still divides
+   * and `p^(k+1)` no longer does. Such a `k` exists when `1 < p` and `0 < n`, and it is unique for
+   * every `p` and `n`, since two of them would put the larger power under the smaller one's
+   * refusal. So `NUM_VALUATION_UNIQUE` carries no hypothesis at all and `NUM_VALUATION_SPEC` carries
+   * the two that existence needs. Outside them, at `n = 0` or `p <= 1`, the set chosen from is empty
+   * and the value is one nobody can name, which is the same arrangement as `NUM_GCD 0 0`: no fact is
+   * stated there, so none can be misread.
+   *
+   * Here and not in `Primes`, for [[TotientName]]'s reason: `Primes` extends nothing.
+   */
+  val ValuationName: String = "NUM_VALUATION"
+
   /** `|- !a b k. b = NUM_MUL a k ==> NUM_DIVIDES a b` */
   val DividesIntro: String = "NUM_DIVIDES_INTRO"
 
@@ -1060,6 +1077,11 @@ object Modular {
   private val TotientBody: String =
     "\\n:num. NUM_SUM (\\k:num. COND (NUM_GCD k n = SUC ZERO) (SUC ZERO) ZERO) n"
 
+  /** The body of [[ValuationName]], a choice over the exponent's characterisation. */
+  private val ValuationBody: String =
+    "\\p:num. \\n:num. select (\\k:num. NUM_DIVIDES (NUM_POW p k) n /\\ " +
+      "~(NUM_DIVIDES (NUM_POW p (SUC k)) n))"
+
   /** The body of [[PrimeName]], which is a predicate written out rather than a choice. */
   private val PrimeBody: String =
     "\\p:num. NUM_LT (SUC ZERO) p /\\ (!d:num. NUM_DIVIDES d p ==> d = SUC ZERO \\/ d = p)"
@@ -1187,7 +1209,11 @@ object Modular {
 
       totientBody <- Parser.term(primeTheory, notation, TotientBody)
       withTotient <- LogicError.lift(Kernel.defineConstant(primeTheory, TotientName, totientBody))
-      (theory, totientDefinition) = withTotient
+      (totientTheory, totientDefinition) = withTotient
+
+      valuationBody <- Parser.term(totientTheory, notation, ValuationBody)
+      withValuation <- LogicError.lift(Kernel.defineConstant(totientTheory, ValuationName, valuationBody))
+      (theory, valuationDefinition) = withValuation
 
       vocabulary <- Vocabulary.over(peano, theory, dividesDefinition, congruenceDefinition)
 
@@ -1276,7 +1302,8 @@ object Modular {
         DivName -> divDefinition,
         ModName -> modDefinition,
         PrimeName -> primeDefinition,
-        TotientName -> totientDefinition
+        TotientName -> totientDefinition,
+        ValuationName -> valuationDefinition
       ),
       Map(
         DividesIntro -> introduction,

@@ -244,6 +244,39 @@ derivation and says why each of those; `EulerSpec` detaches the theorem at four 
 nothing assumed, derives `NUM_TOTIENT 2 = 1` from the definition, and refutes the statement at
 `n = 2, a = 2`.
 
+**The p-adic valuation is `NUM_VALUATION`, since 2026-09-26, and divisibility between positive
+numbers is a comparison of its registers.** `NUM_VALUATION p n` is `Modular`'s, a choice of the `k`
+with `p^k | n` and not `p^(k+1) | n`; `NUM_VALUATION_UNIQUE` characterises it with no hypothesis and
+`NUM_VALUATION_SPEC` says it exists for `1 < p` and `0 < n`. At a prime it turns a product into a sum
+(`NUM_VALUATION_MUL`), reads a power back (`NUM_VALUATION_POW`) and is nought at another prime
+(`NUM_VALUATION_OTHER_PRIME`); `NUM_VALUATION_DIVIDES` says `p^k | n` exactly when the register holds
+at least `k`, and `NUM_DIVIDES_VALUATION` says `b | c` exactly when no register of `b` exceeds the
+same register of `c`, by strong induction on `b`. From those, one fraction `a/b` read on the
+registers: `NUM_DIVIDES_MUL_VALUATION` says it applies to `n` exactly when every register of `b` is
+covered by `n`'s and `a`'s together, `NUM_VALUATION_DIV` that applying it adds `a`'s registers and
+takes `b`'s away, `NUM_VALUATION_EXT` that the registers determine the state, and
+`NUM_DIV_VALUATION` that the quotient is the one positive number with those registers. Those
+are what the FRACTRAN register machine below is proved from. `Valuation.scala` is the
+derivation; `ValuationSpec` composes `NUM_VALUATION 2 12 = 2` from the laws with nothing
+assumed, and refutes the product law at `p = 4` and the register reading at `n = 0`, where every
+other hypothesis holds.
+
+**Wilson's theorem is `NUM_WILSON`, since 2026-09-26, and what it was waiting on is a product over
+paired indices, which a permutation does not give.** `NUM_DIVIDES p (SUC (NUM_FACT (PRE p)))` for
+`p` prime, `(p - 1)! = -1 (mod p)` without a negative. Multiplying the residues by their inverses
+permutes them and yields only `P * P = 1`, which does not say which square root of one `P` is, so
+`NUM_PROD_PAIRED` says a product over `[0, n)` is one modulo `m` when an involution of `[0, n)` with no
+fixed point pairs each factor with one it multiplies to one. Its induction is strong, on the length:
+a swap brings the top index's partner next to it, `NUM_PROD_PERMUTE` leaves the product alone, and
+the swap conjugates the involution into one on the two shorter indices. Wilson pairs each residue
+from `2` to `p - 2` with its inverse, taken with `select` and reduced with `NUM_MOD`, which is never
+`0`, `1` or `p - 1` and never the residue itself, since `u * u = 1` would put `p` under
+`(u - 1) * (u + 1)`. `Wilson.scala` is the derivation and says why each of those; `WilsonSpec`
+detaches the theorem at five, whose primality it derives since the library proves only two's,
+refutes it at four, and refutes the pairing at one index with its no-fixed-point hypothesis false.
+The derivation is written with `Moves`, the direct-style moves `Pigeonhole` wrote first, which left
+that builder on the same day because `Primes` is built before any chain exists.
+
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
 coded by the **beta function** rather than by iterated pairing or by a product of prime powers, on
@@ -896,10 +929,12 @@ derives is the step at a head, the step as a function, and the two clauses of a 
 is choice, infinity and eta, the price of the lists. The interpreter is a few lines of `BigInt`
 arithmetic that nothing believes. `Fractran.certify` hands each state it proposes to the kernel,
 and `FractranSpec` gets Conway's PRIMEGAME from `2` to `4` in nineteen steps that way. **What is not
-here** is anything a program computes: that `3/2` adds the exponents of `2` and `3` wants the
-valuation at a prime, which `docs/lemmas.md` does not hold, and it is card `626ad37f`. Whether
-Conway's generalised Collatz maps meet `Collatz` is card `b0d2ada9`, and it is a question rather
-than a plan.
+here** is whether Conway's generalised Collatz maps meet `Collatz`, which is card `b0d2ada9` and a
+question rather than a plan. **What a program computes is here since 2026-09-26**:
+`FRACTRAN_STEP_REGISTERS` says a step from a positive state under positive numerators is exactly a
+step of `FRACTRAN_REGISTER_STEP`, the same fold with each fraction's test and effect written on the
+prime registers, so that `3/2` adds one to the register of `3` and takes one from that of `2` is a
+theorem, and `FractranRegistersSpec` reads it off the certified step from `72`.
 
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants
@@ -957,8 +992,10 @@ published theorem; so the hypergeometric terms are outside the fragment and refu
 rational function of the index is refused as the class where the ratio tends to one, and a goal the
 procedure refutes comes back as `Denied`, carrying the theorem. A goal naming a value other than the
 one the procedure proved is `NotEqualTo`, decided, where both values are numbers built from
-numerals, and `ValueUnidentified`, not decided, where either holds an atom such as `exp 0`: the
-four are listed in `Convergence`'s docstring with which of them are decisions.
+numerals with every divisor shown apart from nought, and `ValueUnidentified`, not decided, where
+either holds an atom such as `exp 0` or a reciprocal nothing places, such as `inv 0`; a goal asking
+a value of a series the procedure only shows convergent is refused as unnamed, not decided. The five
+are listed in `Convergence`'s docstring with which of them are decisions.
 `docs/adr/0041` is the decision. **A polynomial in the index times a geometric term is in the
 fragment since the same night**, `docs/adr/0045`: degree one is the ratio test, which is that
 test's first consumer outside a spec, and each degree after it is a comparison that spends
@@ -1165,8 +1202,10 @@ points with the slope it finds carried by `DERIVATIVE_UNIQUE` to the one the hyp
 hypothesis states the derivative and its sign in one existential, so it asks no second statement
 of differentiability; the three cost what the mean value theorem costs.
 
-**Every interval theorem has a textbook form since 2026-09-25, stated with continuity relative to
-`[a, b]`.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
+**Every interval theorem about a continuous function has a textbook form, stated with continuity
+relative to `[a, b]`, but one: the ones below since 2026-09-25 and the integral's four since
+2026-09-26, and `TAYLOR`, which landed the same night asking two-sided continuity on `[a, b]`, is
+card `3b7c74be`.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
 `b`, for continuity from outside the interval as well, which no textbook does, and nothing said so
 until card 6257d0da. `continuous_within f a b x` is the relative notion, and one lemma carries
 every theorem across: `CONTINUOUS_EXTENSION`, that `f` extended by its value at the nearer end is
@@ -1176,9 +1215,21 @@ theorem and the three facts about a derivative's sign is the two-sided one at th
 back through `CONTINUOUS_EXTENSION_AGREES`; `DERIVATIVE_LOCAL`, that a derivative is a fact about
 the points near it, carries the derivatives. Each costs what its two-sided form costs, and
 `ContinuitySpec` detaches `INTERMEDIATE_VALUE_WITHIN` at a step on `[-1, 0]` that it also proves
-not continuous at `0`, so the textbook form is not a renaming. The fundamental theorem is not
-among them: its hypothesis at the ends is a one-sided **derivative**, which a constant extension
-cannot carry, and it got its textbook form another way, two paragraphs down.
+not continuous at `0`, so the textbook form is not a renaming. **This paragraph opened with "every"
+on 2026-09-25 while `CONTINUOUS_HAS_INTEGRAL`, `CONTINUOUS_INTEGRAL` and the two halves of the second
+fundamental theorem below had no relative form**, which the verification of card 6257d0da found.
+They have one since 2026-09-26, `_WITHIN` appended to each name, and they needed what the others did
+not: an integral is a statement about every fine sum over the interval and a relative derivative
+about every point near one, so carrying it back from the extension takes a congruence, that
+functions equal on `[a, b]` have the same fine sums, integrals and relative derivatives there.
+`IntegralWithinSpec` detaches the four at the same step and holds the census: every fact with a
+two-sided continuity hypothesis over an interval has a `_WITHIN` twin stated with
+`continuous_within`, with a floor on how many it finds so that a selector matching nothing fails.
+The first half of the
+fundamental theorem is a different case: its hypothesis at the ends is a one-sided
+**derivative**, which a constant extension cannot carry, and it got its textbook form another way,
+two paragraphs down. Integration by parts and the change of variables still ask a two-sided
+derivative over the interval, which is card `3caa8541`.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum
@@ -1206,8 +1257,10 @@ without `a <= b` on `[1, 0]`, where there are no fine sums and every number is a
 `\x. p * f x + q * g x` is `p * s1 + q * s2` for fine sums of `f` and of `g` over the same division,
 an induction over the two rules; `HAS_INTEGRAL_LINEAR` takes each function's gauge at its share of
 the tolerance and their pointwise minimum, as uniqueness does; `INTEGRAL_LINEAR` names the value.
-The first two cost what the fundamental theorem as `has_integral` costs and not `COMPLETENESS`,
-being about the sums there are; the value goes through uniqueness and so through Cousin.
+`HAS_INTEGRAL_LINEAR` costs exactly what the fundamental theorem as `has_integral` costs and not
+`COMPLETENESS`, being about the sums there are; `FINE_SUM_LINEAR` costs strictly less than that,
+which `IntegralSpec` asserts as a proper subset; and the value goes through uniqueness and so
+through Cousin.
 
 **Integration by parts and the change of variables, since the same day**, as `Integral.HAS_INTEGRAL_PARTS`,
 `INTEGRAL_PARTS`, `HAS_INTEGRAL_SUBST` and `INTEGRAL_SUBST`. Parts is the product rule, the
@@ -1230,7 +1283,9 @@ the two-sided form's hypothesis at `0`, and `DerivativeSpec` refutes the interio
 point with its `a < x` dropped.
 
 **A continuous function has an integral, `CONTINUOUS_HAS_INTEGRAL`, since 2026-09-25**, and
-`CONTINUOUS_INTEGRAL` says `integral` names it. `Integrability.scala` is the derivation and it never
+`CONTINUOUS_INTEGRAL` says `integral` names it. Both ask continuity at each point of `[a, b]`,
+two-sided at the ends; `CONTINUOUS_HAS_INTEGRAL_WITHIN` and `CONTINUOUS_INTEGRAL_WITHIN` ask it
+relative to the interval, as the paragraph on textbook forms above says. `Integrability.scala` is the derivation and it never
 compares two divisions directly: a Cauchy criterion, "some gauge keeps any two fine sums over
 `[u, w]` within `e * (w - u)`", glues through `INTERVAL_GLUING`, because a gauge at most
 `abs (x - v)` away from the joint `v` forces every piece containing `v` to be tagged `v`, and such a
@@ -1241,9 +1296,10 @@ theorem's value there. No control refutes it without continuity: Dirichlet's fun
 integrable, so a counterexample has to be unbounded, and that is an argument of its own.
 
 **The second half of the fundamental theorem is `DERIVATIVE_WITHIN_INTEGRAL`, since 2026-09-26**: for
-`f` continuous on `[a, b]`, `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every
-point of it, and `DERIVATIVE_INTEGRAL` is the same strictly inside as a two-sided derivative, through
-`DERIVATIVE_WITHIN_INTERIOR`. What it needed first was `HAS_INTEGRAL_JOIN`, that integrals add over
+`f` continuous at each point of `[a, b]`, two-sided at the ends, `\y. integral f a y` has derivative
+`f x` relative to `[a, b]` at every point of it, and `DERIVATIVE_INTEGRAL` is the same strictly
+inside as a two-sided derivative, through `DERIVATIVE_WITHIN_INTERIOR`; the two with continuity
+relative to `[a, b]` are the same names with `_WITHIN` appended. What it needed first was `HAS_INTEGRAL_JOIN`, that integrals add over
 adjacent intervals, and that is the joint gauge of the existence again: it splits every fine sum at
 the join exactly, so additivity costs no supremum at all, fifteen of the reals' axioms and the
 choice. The increment is then read by additivity and uniqueness as the integral over the interval
@@ -1272,8 +1328,29 @@ With `t = h * inv x` and `u = ln (1 + t)`, `LN_MUL` makes the error exactly `u -
 strict monotonicity keeps `abs u <= 1 / 2` once `abs t <= 1 / 4`, and `EXP_NEAR_LINE` at `u` does the
 rest. It costs what `DERIVATIVE_EXP` costs. **It is a derivation for this inverse and not a theorem
 about inverses**: the general one wants the inverse continuous at the point, which nothing states
-for `ln`, and `ln` is the only inverse the library holds. The hypothesis `0 < x` is not shown
-necessary and cannot be: at a point that is not positive `ln` is a choice nothing constrains.
+for `ln`, and `ln` is the only inverse the library holds. **The hypothesis `0 < x` is needed at
+nought, and that is derived**: `ln 0` is a choice nothing constrains, but a slope at `0` also speaks
+of `ln h` for small positive `h`, where `ln` is pinned and falls below every bound, so no slope at all
+exists there, and `DerivativeSpec` derives `!m. ~(derivative ln 0 m)` and from it refutes the
+statement with `0 <= x`. At a negative point nothing here decides whether a slope exists, and that
+is an absence of a test rather than a proof that none could be written.
+
+**Taylor's theorem with the remainder in Lagrange's form is `Derivative.TAYLOR`, since 2026-09-26.**
+The derivatives are a family `D : num -> real -> real` the caller hands in, `D (SUC k)` the
+derivative of `D k`, continuous on `[a, b]` and differentiable inside up to the order `n`; the
+conclusion is a `c` strictly inside with `D 0 b` equal to the Taylor polynomial of degree `n` at `a`
+plus `inv ((n + 1)!) * D (n + 1) c * (b - a)^(n + 1)`, with no quotient. It is Rolle at a
+combination of the polynomial expanded at `t` and `(b - t)^(n + 1)`, whose derivative telescopes to
+one term, and it costs what `ROLLE` costs and infinity, which the factorial and the induction over
+the order are paid in. It asked for two facts nobody had written: `Continuity.CONTINUOUS_MUL`, the
+continuity of a product, because Rolle wants the combination continuous at both ends; and
+`DERIVATIVE_POWER`, the slope of `Power y (SUC n)`. Every equation between two terms in
+`TaylorExpansion` is the recurrences written out and `Field` on the result, with two decisions that
+file records: `real_of_num (SUC n)` stays an atom, since `n! * (n + 1)` multiplied out is a sum
+`Field` cannot take apart, and a sum over a lambda is handed over as a variable. `DerivativeSpec`
+detaches it at `\k. exp` on `[0, 1]` at every order and refutes it without the derivative hypothesis
+at `\k. \y. y`. What it is not: a textbook form with continuity relative to `[a, b]`, which `ROLLE`
+has and this does not yet, and anything about a Taylor series converging.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

@@ -437,10 +437,11 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Prove.scala", "why") -> (Verdict.Text, "Address.Nobody's own sentence, passed through"),
     ("Language.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted"),
-    // `Pigeonhole.Builder.refuse`, the one site of its file. Every caller passes a literal or a
-    // literal interpolating a variable's or a published fact's name, and none renders a term: the
-    // one that did, a proof's statement through `show`, was taken out before this row was written.
-    ("Pigeonhole.scala", "what") ->
+    // `Moves.refuse`, the one site of its file, which was `Pigeonhole.Builder.refuse` until the moves
+    // left that builder on 2026-09-26. Every caller passes a literal or a literal interpolating a
+    // variable's or a published fact's name, and none renders a term: the one that did, a proof's
+    // statement through `show`, was taken out before this row was written.
+    ("Moves.scala", "what") ->
       (Verdict.Text, "a caller's own description of the shape it wanted, naming at most a variable"),
     // `Integrability.Builder.refuse`, the one site of its file, and `Pigeonhole`'s reading: every
     // caller passes a literal or one interpolating a variable's name, and none renders a term.

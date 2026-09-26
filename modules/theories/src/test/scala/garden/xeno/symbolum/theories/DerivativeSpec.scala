@@ -33,6 +33,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   private def rules: Rules = logic.rules
   private val reals: Type = TyApp(Real.TypeName, Nil)
   private val functions: Type = Type.fun(reals, reals)
+  private val numbers: Type = TyApp(Natural.TypeName, Nil)
 
   private def force[T](result: Either[LogicError, T]): T =
     result.fold(error => fail(s"unexpected refusal: ${error.message}"), identity)
@@ -109,7 +110,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
-          Derivative.WithinOfDerivative) ++ onInterval ++ withinInterval).contains(name)) {
+          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor) ++ onInterval ++ withinInterval).contains(name)) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
@@ -214,8 +215,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
 
   it should "refuse the logarithm a slope of zero at one, by uniqueness against inv 1" in {
     // `inv 1 = 1` is `MUL_INVERSE` at one, and uniqueness turns a second slope into `inv 1 = 0`.
-    // The hypothesis `0 < x` is not refuted here and cannot be: at a point that is not positive
-    // `ln` is a choice nothing constrains, so no derivation says the slope there is or is not `inv x`.
+    // What the hypothesis `0 < x` is needed for is the next two tests': at `0` no slope exists at all.
     val one = real("1:real")
     val ln = force(derivative.term("ln", functions))
     val claim = proposition("derivative ln 1 0")
@@ -229,6 +229,152 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
       .flatMap(rules.mp(_, inverse)).flatMap(rules.mp(_, same)))
     val refused = force(rules.notIntro(claim, absurd))
     refused.hypotheses shouldBe empty
+  }
+
+  /**
+   * `|- !m. ~(derivative ln 0 m)`, written by the verification of card 08d2af96.
+   *
+   * `ln 0` is a choice nothing constrains, but a slope at `0` is a statement about `ln h` for small
+   * positive `h` too, and there `ln` is pinned and falls below every bound. At tolerance one a radius
+   * `d` would keep `ln h` within `1 + abs m` of `ln 0` for `0 < h < d`; the point
+   * `h = exp t`, `t = 0 - (abs (ln d) + abs (ln 0) + abs m + 2)`, is inside that radius and below one,
+   * and `ln h = t` is more than that far below. So no slope at all exists at `0`, whatever `ln 0` is.
+   */
+  private lazy val lnNoSlopeAtZero: Kernel.Thm = {
+    def log(name: String): Kernel.Thm = force(chain.logarithm.fact(name))
+    def mag(name: String): Kernel.Thm = force(chain.magnitude.fact(name))
+    def mps(theorem: Kernel.Thm, antecedents: Kernel.Thm*): Kernel.Thm =
+      antecedents.foldLeft(theorem)((acc, antecedent) => force(rules.mp(acc, antecedent)))
+    def at(theorem: Kernel.Thm, arguments: Term*): Kernel.Thm = force(rules.specAll(theorem, arguments.toList))
+
+    val m = Term.variable("m", reals)
+    val d = Term.variable("d", reals)
+    val ln = force(derivative.term("ln", functions))
+    val zero = real("0:real")
+    val constant = force(derivative.term(Derivative.DerivativeName))
+    val claim = force(LogicError.lift(Term.app(constant, ln).flatMap(Term.app(_, zero)).flatMap(Term.app(_, m))))
+    val assumed = force(LogicError.lift(Kernel.assume(claim)))
+    val unfolded = force(Conv.unfold(force(derivative.definition(Derivative.DerivativeName)), List(ln, zero, m)))
+    val body = opened(force(LogicError.lift(Kernel.eqMp(unfolded, assumed))))
+    val near = mps(at(body, real("1:real")), lemma("(0:real) < 1"))
+
+    val radius = force(LogicError.lift(Kernel.assume(proposition(
+      "0 < d:real /\\ (!h:real. 0 < abs h /\\ abs h < d ==> abs (ln (0 + h) - ln 0 - m:real * h) < 1 * abs h)"))))
+    val dPositive = force(rules.conjElim1(radius))
+    val inside = force(rules.conjElim2(radius))
+
+    val tText = "0 - (abs (ln d) + abs (ln 0) + abs m + 2)"
+    val t = real(tText)
+    val e = real(s"exp ($tText)")
+    val lnD = real("ln d")
+    val lnZero = real("ln 0")
+    val absLnD = real("abs (ln d)")
+    val absLnZero = real("abs (ln 0)")
+    val absM = real("abs m")
+
+    val lnDBelow = at(mag(Magnitude.AbsAboveNegation), lnD)
+    val lnZeroBelow = at(mag(Magnitude.AbsAboveNegation), lnZero)
+    val mBelow = at(mag(Magnitude.AbsAboveNegation), m)
+    val lnDNonNegative = at(mag(Magnitude.AbsNonNegative), lnD)
+    val lnZeroNonNegative = at(mag(Magnitude.AbsNonNegative), lnZero)
+    val mNonNegative = at(mag(Magnitude.AbsNonNegative), m)
+
+    val tBelowLnD = mps(at(lemma("!A:real C:real a:real l:real. -l <= A ==> 0 <= C ==> 0 <= a ==> 0 - (A + C + a + 2) < l"),
+      absLnD, absLnZero, absM, lnD), lnDBelow, lnZeroNonNegative, mNonNegative)
+    val tNegative = mps(at(lemma("!A:real C:real a:real. 0 <= A ==> 0 <= C ==> 0 <= a ==> 0 - (A + C + a + 2) < 0"),
+      absLnD, absLnZero, absM), lnDNonNegative, lnZeroNonNegative, mNonNegative)
+    val tFarBelow = mps(at(lemma("!A:real C:real a:real c:real. 0 <= A ==> -c <= C ==> 0 - (A + C + a + 2) <= c - 2 - a"),
+      absLnD, absLnZero, absM, lnZero), lnDNonNegative, lnZeroBelow)
+
+    val ePositive = at(log(Logarithm.Positive), t)
+    val eBelowD = mps(at(lemma("!E:real X:real d:real. E < X ==> X = d ==> E < d"), e, real("exp (ln d)"), d),
+      mps(at(log(Logarithm.StrictlyIncreasing), t, lnD), tBelowLnD),
+      mps(at(log(Logarithm.ExpOfLn), d), dPositive))
+    val eBelowOne = mps(at(lemma("!E:real X:real. E < X ==> X = 1 ==> E < 1"), e, real("exp 0")),
+      mps(at(log(Logarithm.StrictlyIncreasing), t, zero), tNegative),
+      force(chain.transcendental.fact(Transcendental.ExponentialAtZero)))
+    val absE = mps(at(mag(Magnitude.OfNonNegative), e), mps(at(lemma("!E:real. 0 < E ==> 0 <= E"), e), ePositive))
+    val admissible = mps(at(lemma("!A:real E:real d:real. A = E ==> 0 < E ==> E < d ==> 0 < A /\\ A < d"),
+      real(s"abs (exp ($tText))"), e, d), absE, ePositive, eBelowD)
+    val bound = mps(at(inside, e), admissible)
+
+    // `ln (0 + h) = t`: the zero on the left is the point's, and `LN_EXP` reads the rest back.
+    val zeroPlus = force(Conv.trans(
+      at(force(chain.reals.axiom("ADD_SYM")), zero, e), at(force(chain.reals.axiom("ADD_ZERO")), e)))
+    val lnAtH = force(Conv.apTerm(ln, zeroPlus).flatMap(Conv.trans(_, at(log(Logarithm.LnOfExp), t))))
+
+    val increment = s"ln (0 + exp ($tText)) - ln 0 - m * exp ($tText)"
+    val incrementBelow = at(mag(Magnitude.AbsAboveNegation), real(increment))
+    // In steps rather than one, because `Linarith` multiplies its hypotheses pairwise and nine of
+    // them at once exceed the fact pool it allows.
+    val slopeTerm = mps(at(lemma("!m:real a:real E:real. -m <= a ==> 0 <= a ==> 0 < E ==> E < 1 ==> 0 - a <= m * E"),
+      m, absM, e), mBelow, mNonNegative, ePositive, eBelowOne)
+    val absIncrement = real(s"abs ($increment)")
+    val lnH = real(s"ln (0 + exp ($tText))")
+    val slope = real(s"m * exp ($tText)")
+    val belowE = mps(at(lemma("!B:real A:real E:real. B < 1 * A ==> A = E ==> B < E"),
+      absIncrement, real(s"abs (exp ($tText))"), e), bound, absE)
+    val lnHAbove = mps(at(lemma("!B:real L:real c:real k:real E:real. B < E ==> -(L - c - k) <= B ==> c + k - E < L"),
+      absIncrement, lnH, lnZero, slope, e), belowE, incrementBelow)
+    val absurd = mps(at(lemma(
+      "!L:real c:real k:real E:real a:real t:real. c + k - E < L ==> L = t ==> t <= c - 2 - a ==> E < 1 ==> 0 - a <= k ==> F"),
+      lnH, lnZero, slope, e, absM, t), lnHAbove, lnAtH, tFarBelow, eBelowOne, slopeTerm)
+
+    val eliminated = force(rules.existsElim(near, d, absurd))
+    force(rules.notIntro(claim, eliminated).flatMap(rules.gen(m, _)))
+  }
+
+  it should "refuse the logarithm every slope at zero, where the positive side pins it" in {
+    // Written by the verification of card 08d2af96. What this refutes is the sentence the delivery
+    // wrote beside the test above: that no point outside the positive reals can show `0 < x` needed.
+    lnNoSlopeAtZero.hypotheses shouldBe empty
+    lnNoSlopeAtZero.conclusion shouldBe proposition("!m:real. ~(derivative ln 0 m)")
+  }
+
+  it should "need 0 < x in DERIVATIVE_LN: the statement with 0 <= x is refuted at zero" in {
+    val weakened = proposition("!x:real. 0 <= x ==> derivative ln x (inv x)")
+    val assumed = force(LogicError.lift(Kernel.assume(weakened)))
+    val atZero = force(rules.spec(real("0:real"), assumed).flatMap(rules.mp(_, lemma("(0:real) <= 0"))))
+    val absurd = force(rules.spec(real("inv 0"), lnNoSlopeAtZero).flatMap(rules.notElim(_, atZero)))
+    val refused = force(rules.notIntro(weakened, absurd))
+    refused.hypotheses shouldBe empty
+  }
+
+  it should "carry the cosine's minus sign, which the sine at one half refutes where zero cannot" in {
+    // Written by the verification of card 64110aba. At `0` the sine vanishes, so `derivative cos 0 1`
+    // being refused says nothing about the sign in `0 - sin x`; at one half `SIN_NEAR_LINE` puts the
+    // sine at least a quarter, and a slope `sin x` meets `0 - sin x` in uniqueness there.
+    val flipped = proposition("!x:real. derivative cos x (sin x)")
+    val assumed = force(LogicError.lift(Kernel.assume(flipped)))
+    val half = real("1 / 2")
+    val cos = force(derivative.term("cos", functions))
+    val wrong = force(rules.spec(half, assumed))
+    val own = force(rules.spec(half, fact(Derivative.Cosine)))
+    val same = force(rules.specAll(fact(Derivative.Unique), List(cos, half, real("0 - sin (1 / 2)"), real("sin (1 / 2)")))
+      .flatMap(rules.mp(_, own)).flatMap(rules.mp(_, wrong)))
+    val magnitude = chain.magnitude
+    val halfIsItself = force(magnitude.fact(Magnitude.OfNonNegative).flatMap(rules.spec(half, _))
+      .flatMap(rules.mp(_, lemma("(0:real) <= 1 / 2"))))
+    val halfSmall = force(rules.spec(real("abs (1 / 2)"), lemma("!A:real. A = 1 / 2 ==> A <= 1 / 2")).flatMap(rules.mp(_, halfIsItself)))
+    val nearLine = force(chain.logarithm.fact(Logarithm.SineNearLine).flatMap(rules.spec(half, _)).flatMap(rules.mp(_, halfSmall)))
+    val below = force(magnitude.fact(Magnitude.AbsAboveNegation).flatMap(rules.spec(real("sin (1 / 2) - 1 / 2"), _)))
+    val absurd = force(rules.specAll(
+      lemma("!s:real A:real. 0 - s = s ==> -(s - 1 / 2) <= A ==> A <= 1 / 2 * (1 / 2) ==> F"),
+      List(real("sin (1 / 2)"), real("abs (sin (1 / 2) - 1 / 2)")))
+      .flatMap(rules.mp(_, same)).flatMap(rules.mp(_, below)).flatMap(rules.mp(_, nearLine)))
+    val refused = force(rules.notIntro(flipped, absurd))
+    refused.hypotheses shouldBe empty
+  }
+
+  it should "rest the three new slopes on the chain's axioms and nothing else" in {
+    // Written by the verification of cards 64110aba and 08d2af96: a ceiling taken from the theory
+    // itself, so an axiom asserted on the way would show here whatever the equalities above say.
+    val trusted = derivative.theory.axioms.toSet
+    for (name <- List(Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog, Derivative.Exponential)) withClue(name) {
+      val spent = Derivation.axiomsOf(fact(name))
+      spent.subsetOf(trusted) shouldBe true
+      info(s"$name rests on ${spent.size} of the theory's ${trusted.size} axioms")
+    }
   }
 
   it should "reach Rolle's theorem through the extreme value theorem and the interior lemma" in {
@@ -480,6 +626,105 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     detached.hypotheses shouldBe empty
     derivative.show(detached.conclusion) shouldBe
       "?x:real. ?y:real. 0 < x /\\ x < 1 /\\ derivative (\\z:real. z) x y /\\ 1 - 0 = y * (1 - 0)"
+  }
+
+  /* ------------------------------------------------------------- Taylor's theorem */
+
+  private val infinity: Term = chain.naturals.axioms("INFINITY").conclusion
+
+  it should "price the power's slope at the product rule's and Taylor's theorem at Rolle's, each with infinity" in {
+    // Measured on 2026-09-26 before it was written here, and equalities rather than ceilings. The one
+    // axiom each adds is the naturals': the power's exponent and the order of the expansion are
+    // numbers, and both facts are proved by induction on them.
+    Derivation.axiomsOf(fact(Derivative.Power)) shouldBe Derivation.axiomsOf(fact(Derivative.ProductRule)) + infinity
+    Derivation.axiomsOf(fact(Derivative.Taylor)) shouldBe Derivation.axiomsOf(fact(Derivative.Rolle)) + infinity
+
+    // The route: Rolle at a combination, uniqueness at Rolle's point, the power's slope and the
+    // product rule for each term, and the continuity of a product for the ends.
+    val route = Set(
+      fact(Derivative.Rolle), fact(Derivative.Unique), fact(Derivative.Power), fact(Derivative.ProductRule),
+      fact(Derivative.ChainRule), fact(Derivative.Linear),
+      force(chain.continuity.fact(Continuity.Product)), force(chain.continuity.fact(Continuity.Linear))
+    ).map(_.conclusion)
+    Derivation.restingOn(fact(Derivative.Taylor), route) shouldBe route
+  }
+
+  it should "detach Taylor's theorem at the exponential on [0, 1], at every order, with nothing assumed" in {
+    // `\k. exp` is the family every order of which is the exponential, so both hypotheses are
+    // met by the exponential's slope, and the order stays a variable.
+    val family = force(derivative.term("\\k:num. exp", Type.fun(numbers, functions)))
+    val n = Term.variable("n", numbers)
+    val k = Term.variable("k", numbers)
+    val x = Term.variable("x", reals)
+    val instance = opened(force(rules.specAll(fact(Derivative.Taylor), List(family, real("0:real"), real("1:real"), n))))
+    val slope = force(rules.spec(x, fact(Derivative.Exponential)))
+    val exponential = force(derivative.term("exp", functions))
+    val continuous = force(rules.specAll(fact(Derivative.Continuous), List(exponential, x, real("exp x:real"))).flatMap(rules.mp(_, slope)))
+    def everywhere(interval: String, fact: Kernel.Thm): Kernel.Thm =
+      force(rules.disch(proposition(interval), fact)
+        .flatMap(rules.disch(proposition("NUM_LE (k:num) (n:num)"), _))
+        .flatMap(rules.genAll(_, List(k, x))))
+    val detached = Vector(lemma("(0:real) < 1"), everywhere("(0:real) <= x /\\ x <= 1", continuous),
+      everywhere("(0:real) < x /\\ x < 1", slope))
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition(
+      "?c:real. 0 < c /\\ c < 1 /\\ exp 1 = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * exp 0 * Power (1 - 0) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * exp c * Power (1 - 0) (SUC n)")
+  }
+
+  it should "need its derivative hypothesis, which is shown by refuting the theorem without it at the identity family" in {
+    // `\k. \y. y` is continuous at every order and is not the family of its own derivatives. At order
+    // zero on [0, 1] the conclusion without the derivative hypothesis reads `1 = 0 + c` for a `c`
+    // below one, once the sum, the factorial and the power are written out.
+    val dropped = proposition(
+      "!D:num -> real -> real. !a:real. !b:real. !n:num. a < b ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> a <= x /\\ x <= b ==> continuous (D k) x) ==> " +
+        "?c:real. a < c /\\ c < b /\\ D ZERO b = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val family = force(derivative.term("\\k:num. \\y:real. y", Type.fun(numbers, functions)))
+    val zero = force(derivative.term("ZERO", numbers))
+    val instance = opened(force(rules.specAll(assumed, List(family, real("0:real"), real("1:real"), zero))))
+    val k = Term.variable("k", numbers)
+    val x = Term.variable("x", reals)
+    val continuousEverywhere = force(chain.continuity.fact(Continuity.Identity).flatMap(rules.spec(x, _))
+      .flatMap(rules.disch(proposition("(0:real) <= x /\\ x <= 1"), _))
+      .flatMap(rules.disch(proposition("NUM_LE (k:num) ZERO"), _))
+      .flatMap(rules.genAll(_, List(k, x))))
+    val somewhere = Vector(lemma("(0:real) < 1"), continuousEverywhere)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+
+    val c = Term.variable("c", reals)
+    val inside = force(somewhere.conclusion match {
+      case App(_, lambda) => LogicError.lift(Term.app(lambda, c)).flatMap(Conv.betaRoot)
+        .flatMap(eq => Term.destEq(eq.conclusion).map(_._2).toRight(NotOfForm("an equation", eq.conclusion)))
+      case other => Left(NotOfForm("an existential", other))
+    })
+    val witness = force(LogicError.lift(Kernel.assume(inside)))
+    val underOne = force(rules.conjElim2(witness).flatMap(rules.conjElim1))
+    val equation = force(rules.conjElim2(witness).flatMap(rules.conjElim2))
+    val written = force(Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion)))
+    val recurrences = Vector(
+      force(chain.series.fact(Series.AtSuccessor)), force(chain.series.fact(Series.AtZero)),
+      force(chain.series.fact(Series.PowerAtSuccessor)), force(chain.series.fact(Series.PowerAtZero)),
+      force(chain.coding.fact(Coding.FactorialAtSuccessor)), force(chain.coding.fact(Coding.FactorialAtZero)),
+      force(chain.peano.fact(Peano.EmbedsProduct)), force(chain.peano.fact(Peano.EmbedsSuccessor)),
+      force(chain.peano.fact(Peano.EmbedsZero)))
+    val value = force(for {
+      rules <- Rewrite.Rule.all(logic, recurrences)
+      rewritten <- Rewrite.rewrite(rules, written)
+      normal <- Term.destEq(rewritten.conclusion).map(_._2).toRight(NotOfForm("an equation", rewritten.conclusion))
+      closed <- LogicError.lift(Term.eq(normal, c)).flatMap(chain.ring.prove)
+      joined <- Conv.trans(rewritten, closed)
+    } yield joined)
+    val notBelow = force(rules.specAll(lemma("!c:real R:real. 1 = R ==> R = c ==> ~(c < 1)"), List(c, written))
+      .flatMap(rules.mp(_, equation)).flatMap(rules.mp(_, value)))
+    val absurd = force(rules.notElim(notBelow, underOne))
+    val eliminated = force(rules.existsElim(somewhere, c, absurd))
+    force(rules.notIntro(dropped, eliminated)).hypotheses shouldBe empty
   }
 
   it should "reach the sign of a derivative on an interval through the mean value theorem and uniqueness" in {

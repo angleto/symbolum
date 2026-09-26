@@ -241,6 +241,23 @@ object Primes {
   /** `|- !p a n. NUM_PROD (\i. COND (p i) a (SUC 0)) n = NUM_POW a (NUM_SUM (\i. COND (p i) (SUC 0) 0) n)` */
   val ProdCondPow: String = "NUM_PROD_COND_POW"
 
+  /**
+   * `|- !m f t n. <t is an involution of [0, n) with no fixed point> ==>
+   *     (!i. i < n ==> NUM_CONG m (f i * f (t i)) (SUC 0)) ==> NUM_CONG m (NUM_PROD f n) (SUC 0)`
+   *
+   * A product over indices an involution pairs off is the product of the pairs. What Wilson's
+   * theorem needs and a permutation does not give; `Wilson` has the argument.
+   */
+  val ProdPaired: String = "NUM_PROD_PAIRED"
+
+  /**
+   * `|- !p. NUM_PRIME p ==> NUM_DIVIDES p (SUC (NUM_FACT (PRE p)))`
+   *
+   * Wilson's theorem, `(p - 1)! = -1 (mod p)`, written without a negative. `Wilson` derives it by
+   * pairing each residue from `2` to `p - 2` with its inverse.
+   */
+  val Wilson: String = "NUM_WILSON"
+
   /** `|- !n a. 0 < n ==> NUM_GCD a n = SUC 0 ==> ?b. NUM_CONG n (a * b) (SUC 0)`: a coprime residue has an inverse. */
   val Inverse: String = "NUM_INVERSE"
 
@@ -249,6 +266,113 @@ object Primes {
 
   /** `|- !n x y. 0 < n ==> NUM_CONG n (x * y) (SUC 0) ==> NUM_GCD y n = SUC 0`: an inverse is coprime. */
   val UnitCoprime: String = "NUM_UNIT_COPRIME"
+
+  /**
+   * `|- !p n. NUM_LT (SUC 0) p ==> NUM_LT n (NUM_POW p n)`
+   *
+   * A power of anything above one outgrows its exponent. What bounds the exponents whose power
+   * divides a positive number, which the existence of [[ValuationSpec]] needs.
+   */
+  val BelowPower: String = "NUM_LT_POW"
+
+  /** `|- !p j k. NUM_LE j k ==> NUM_DIVIDES (NUM_POW p j) (NUM_POW p k)`: a smaller power divides a larger. */
+  val PowerDividesPower: String = "NUM_POW_DIVIDES_POW"
+
+  /**
+   * `|- !p n k. NUM_DIVIDES (NUM_POW p k) n ==> ~(NUM_DIVIDES (NUM_POW p (SUC k)) n) ==> NUM_VALUATION p n = k`
+   *
+   * The characterisation of the p-adic valuation, with no hypothesis on `p` or `n`: an exponent
+   * whose power divides and whose next power does not is the valuation. Every other fact about
+   * `NUM_VALUATION` is proved by exhibiting such an exponent. `Valuation` has the argument.
+   */
+  val ValuationUnique: String = "NUM_VALUATION_UNIQUE"
+
+  /**
+   * `|- !p n. NUM_LT (SUC 0) p ==> NUM_LT 0 n ==> NUM_DIVIDES (NUM_POW p (NUM_VALUATION p n)) n /\
+   *     ~(NUM_DIVIDES (NUM_POW p (SUC (NUM_VALUATION p n))) n)`
+   *
+   * The valuation passes its own test, wherever the test has a passing exponent: above one and at a
+   * positive number. Outside that the definition's choice is over an empty set and nothing is said.
+   */
+  val ValuationSpec: String = "NUM_VALUATION_SPEC"
+
+  /**
+   * `|- !p n k. NUM_LT (SUC 0) p ==> NUM_LT 0 n ==>
+   *     (NUM_DIVIDES (NUM_POW p k) n = NUM_LE k (NUM_VALUATION p n))`
+   *
+   * The register reading of divisibility by a prime power: `p^k` divides `n` exactly when the
+   * register of `p` in `n` holds at least `k`.
+   */
+  val ValuationDivides: String = "NUM_VALUATION_DIVIDES"
+
+  /** `|- !p n. ~(NUM_DIVIDES p n) ==> NUM_VALUATION p n = 0` */
+  val ValuationNotDivides: String = "NUM_VALUATION_NOT_DIVIDES"
+
+  /** `|- !p k. NUM_PRIME p ==> NUM_VALUATION p (NUM_POW p k) = k` */
+  val ValuationPower: String = "NUM_VALUATION_POW"
+
+  /**
+   * `|- !p a b. NUM_PRIME p ==> NUM_LT 0 a ==> NUM_LT 0 b ==>
+   *     NUM_VALUATION p (a * b) = NUM_VALUATION p a + NUM_VALUATION p b`
+   *
+   * The valuation at a prime turns a product into a sum: multiplying by a number adds its
+   * registers. The prime is what Euclid's lemma needs, and both positivities are what existence
+   * needs; `Valuation` says why neither can be dropped.
+   */
+  val ValuationMul: String = "NUM_VALUATION_MUL"
+
+  /**
+   * `|- !b c. NUM_LT 0 b ==> NUM_LT 0 c ==>
+   *     (NUM_DIVIDES b c = (!p. NUM_PRIME p ==> NUM_LE (NUM_VALUATION p b) (NUM_VALUATION p c)))`
+   *
+   * Divisibility between positive numbers, read one prime register at a time: `b` divides `c`
+   * exactly when no register of `b` holds more than the same register of `c`. It is what turns
+   * FRACTRAN's test, whether a denominator divides the state, into a comparison of registers.
+   */
+  val DividesByValuations: String = "NUM_DIVIDES_VALUATION"
+
+  /**
+   * `|- !m n. NUM_LT 0 m ==> NUM_LT 0 n ==>
+   *     (!p. NUM_PRIME p ==> NUM_VALUATION p m = NUM_VALUATION p n) ==> m = n`
+   *
+   * A positive number is determined by its registers: the uniqueness of factorisation in the form
+   * a register machine reads it, and what identifies the state after a FRACTRAN step.
+   */
+  val ValuationDetermines: String = "NUM_VALUATION_EXT"
+
+  /**
+   * `|- !n a b. NUM_LT 0 n ==> NUM_LT 0 a ==> NUM_LT 0 b ==>
+   *     (NUM_DIVIDES b (n * a) = (!p. NUM_PRIME p ==> NUM_LE (NUM_VALUATION p b) (NUM_VALUATION p n + NUM_VALUATION p a)))`
+   *
+   * Whether the fraction `a/b` applies to the state `n`, read on the registers.
+   */
+  val FractionApplies: String = "NUM_DIVIDES_MUL_VALUATION"
+
+  /**
+   * `|- !p n a b. NUM_PRIME p ==> NUM_LT 0 n ==> NUM_LT 0 a ==> NUM_LT 0 b ==> NUM_DIVIDES b (n * a) ==>
+   *     NUM_VALUATION p (NUM_DIV (n * a) b) + NUM_VALUATION p b = NUM_VALUATION p n + NUM_VALUATION p a`
+   *
+   * What applying `a/b` does to the register of `p`: the numerator's is added and the
+   * denominator's taken away, stated with the subtraction on the other side.
+   */
+  val FractionEffect: String = "NUM_VALUATION_DIV"
+
+  /**
+   * `|- !n a q m. NUM_LT 0 n ==> NUM_LT 0 a ==> NUM_LT 0 q ==> NUM_DIVIDES q (n * a) ==>
+   *     ((m = NUM_DIV (n * a) q) = (NUM_LT 0 m /\
+   *       (!p. NUM_PRIME p ==> NUM_VALUATION p m + NUM_VALUATION p q = NUM_VALUATION p n + NUM_VALUATION p a)))`
+   *
+   * Where a fraction that applies sends the state, on the registers and in both directions: the
+   * quotient is the one positive number with those registers.
+   */
+  val FractionLands: String = "NUM_DIV_VALUATION"
+
+  /**
+   * `|- !p q. NUM_PRIME p ==> NUM_PRIME q ==> ~(q = p) ==> NUM_VALUATION p q = 0`
+   *
+   * A prime holds nothing in another prime's register.
+   */
+  val ValuationOtherPrime: String = "NUM_VALUATION_OTHER_PRIME"
 
   /**
    * The statement [[FactorisationUnique]] is proved through, which carries the value explicitly.
@@ -327,7 +451,49 @@ object Primes {
     UnitCoprime ->
       "!n:num. !x:num. !y:num. NUM_LT 0 n ==> NUM_CONG n (x * y) (SUC 0) ==> NUM_GCD y n = SUC 0",
     Euler ->
-      "!n:num. !a:num. NUM_LT 0 n ==> NUM_GCD a n = SUC 0 ==> NUM_CONG n (NUM_POW a (NUM_TOTIENT n)) (SUC 0)"
+      "!n:num. !a:num. NUM_LT 0 n ==> NUM_GCD a n = SUC 0 ==> NUM_CONG n (NUM_POW a (NUM_TOTIENT n)) (SUC 0)",
+    BelowPower -> "!p:num. !n:num. NUM_LT (SUC 0) p ==> NUM_LT n (NUM_POW p n)",
+    PowerDividesPower ->
+      "!p:num. !j:num. !k:num. NUM_LE j k ==> NUM_DIVIDES (NUM_POW p j) (NUM_POW p k)",
+    ValuationUnique ->
+      ("!p:num. !n:num. !k:num. NUM_DIVIDES (NUM_POW p k) n ==> " +
+        "~(NUM_DIVIDES (NUM_POW p (SUC k)) n) ==> NUM_VALUATION p n = k"),
+    ValuationSpec ->
+      ("!p:num. !n:num. NUM_LT (SUC 0) p ==> NUM_LT 0 n ==> " +
+        "NUM_DIVIDES (NUM_POW p (NUM_VALUATION p n)) n /\\ " +
+        "~(NUM_DIVIDES (NUM_POW p (SUC (NUM_VALUATION p n))) n)"),
+    ValuationDivides ->
+      ("!p:num. !n:num. !k:num. NUM_LT (SUC 0) p ==> NUM_LT 0 n ==> " +
+        "(NUM_DIVIDES (NUM_POW p k) n = NUM_LE k (NUM_VALUATION p n))"),
+    ValuationNotDivides -> "!p:num. !n:num. ~(NUM_DIVIDES p n) ==> NUM_VALUATION p n = 0",
+    ValuationPower -> "!p:num. !k:num. NUM_PRIME p ==> NUM_VALUATION p (NUM_POW p k) = k",
+    ValuationMul ->
+      ("!p:num. !a:num. !b:num. NUM_PRIME p ==> NUM_LT 0 a ==> NUM_LT 0 b ==> " +
+        "NUM_VALUATION p (a * b) = NUM_VALUATION p a + NUM_VALUATION p b"),
+    ValuationOtherPrime ->
+      "!p:num. !q:num. NUM_PRIME p ==> NUM_PRIME q ==> ~(q = p) ==> NUM_VALUATION p q = 0",
+    DividesByValuations ->
+      ("!b:num. !c:num. NUM_LT 0 b ==> NUM_LT 0 c ==> (NUM_DIVIDES b c = " +
+        "(!p:num. NUM_PRIME p ==> NUM_LE (NUM_VALUATION p b) (NUM_VALUATION p c)))"),
+    ValuationDetermines ->
+      ("!m:num. !n:num. NUM_LT 0 m ==> NUM_LT 0 n ==> " +
+        "(!p:num. NUM_PRIME p ==> NUM_VALUATION p m = NUM_VALUATION p n) ==> m = n"),
+    FractionApplies ->
+      ("!n:num. !a:num. !b:num. NUM_LT 0 n ==> NUM_LT 0 a ==> NUM_LT 0 b ==> (NUM_DIVIDES b (n * a) = " +
+        "(!p:num. NUM_PRIME p ==> NUM_LE (NUM_VALUATION p b) (NUM_VALUATION p n + NUM_VALUATION p a)))"),
+    FractionEffect ->
+      ("!p:num. !n:num. !a:num. !b:num. NUM_PRIME p ==> NUM_LT 0 n ==> NUM_LT 0 a ==> NUM_LT 0 b ==> " +
+        "NUM_DIVIDES b (n * a) ==> " +
+        "NUM_VALUATION p (NUM_DIV (n * a) b) + NUM_VALUATION p b = NUM_VALUATION p n + NUM_VALUATION p a"),
+    FractionLands ->
+      ("!n:num. !a:num. !q:num. !m:num. NUM_LT 0 n ==> NUM_LT 0 a ==> NUM_LT 0 q ==> NUM_DIVIDES q (n * a) ==> " +
+        "((m = NUM_DIV (n * a) q) = (NUM_LT 0 m /\\ (!p:num. NUM_PRIME p ==> " +
+        "NUM_VALUATION p m + NUM_VALUATION p q = NUM_VALUATION p n + NUM_VALUATION p a)))"),
+    ProdPaired ->
+      ("!m:num. !f:num->num. !t:num->num. !n:num. (!i:num. NUM_LT i n ==> NUM_LT (t i) n) ==> " +
+        "(!i:num. NUM_LT i n ==> t (t i) = i) ==> (!i:num. NUM_LT i n ==> ~(t i = i)) ==> " +
+        "(!i:num. NUM_LT i n ==> NUM_CONG m (f i * f (t i)) (SUC 0)) ==> NUM_CONG m (NUM_PROD f n) (SUC 0)"),
+    Wilson -> "!p:num. NUM_PRIME p ==> NUM_DIVIDES p (SUC (NUM_FACT (PRE p)))"
   )
 
   /** Build it over the arithmetic that holds the factorial. It extends nothing. */
@@ -350,7 +516,24 @@ object Primes {
         derived <- garden.xeno.symbolum.theories.Freshman.derive(kit)
         totient <- coding.modular.definition(Modular.TotientName)
         euler <- garden.xeno.symbolum.theories.Euler.derive(kit, totient)
-      } yield derived ++ euler
+        strictOrder <- peano.definition(Peano.StrictOrder)
+        nonStrictOrder <- peano.definition(Peano.NonStrictOrder)
+        valuationDefinition <- coding.modular.definition(Modular.ValuationName)
+        choice <- peano.naturals.classical.axiom(Classical.Choice)
+        valuation <- garden.xeno.symbolum.theories.Valuation.derive(
+          kit,
+          garden.xeno.symbolum.theories.Valuation.Definitions(strictOrder, nonStrictOrder, valuationDefinition, choice))
+        known = derived ++ euler
+        ground = Moves.Ground(
+          coding.theory,
+          coding.notation,
+          coding.logic,
+          peano.naturals.classical,
+          name => known.get(name).toRight(MissingDefinition(name)).orElse(lookup(name)),
+          coding.modular.definition
+        )
+        wilson <- garden.xeno.symbolum.theories.Wilson.derive(kit, ground)
+      } yield known ++ valuation ++ wilson
     try
       Right(
         new Primes(

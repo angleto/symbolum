@@ -58,7 +58,8 @@ object Examples {
       "NUM_FACTORISATION",
       "NUM_FACTORISATION_UNIQUE",
       "NUM_CRT",
-      "NUM_FACT_DIVIDES"
+      "NUM_FACT_DIVIDES",
+      "NUM_WILSON"
     ),
     "The naturals, and what separates the reals from an ordered field" -> Vector(
       "NUM_STRONG_INDUCTION",

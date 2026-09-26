@@ -33,7 +33,7 @@ each measured against what the library actually holds rather than estimated.
 | The incompleteness theorems | **in progress.** The object language, both axiom sets, the proof predicate, closure under both rules of inference, and the first derivations of the embedded theory | `Prov` as a formula **of the object language** does not exist; what exists is `NUM_PROV`, a predicate of the ambient logic. D1, D2 and D3 are statements about that formula, so none of the three can be stated yet. `docs/adr/0013` is the plan |
 | Analysis | **here for a first course, since 2026-09-25, and the pages are in the Analysis section below.** `Limit`, `Transcendental`, `Root`, `Continuity`, `Logarithm`, `Derivative` and `Integral` declare the limit, the six series functions, `sqrt`, continuity, the derivative and the gauge integral, and none of them costs an axiom. What is proved runs from `sqrt 2` being irrational and `exp (x + y) = exp x * exp y` through the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem to both halves of the fundamental theorem; `docs/proving.md` lists every fact under its development rather than this row copying them. **Nothing primitive was missing** for any of it: each was expressible over the theory as it stood, which is what this row claimed on 2026-09-14 when it said nothing was here | Measured against `docs/lemmas.md` on 2026-09-26, not estimated: continuity is closed under negation and under a linear map and **not** under a sum, a product or a composition, so a claim like "a polynomial is continuous" is one derivation per polynomial rather than a lemma; the derivative has the product and chain rules and no general rule for a sum; and there is no Taylor's theorem, no L'Hopital, and no series of functions |
 | The fundamental theorem of algebra | **out of reach, and nothing about it is a decision** | It wants the complex numbers, so it wants the reals as a construction with the integers and the rationals under them, which `docs/adr/0007` puts in that order and which has not started. Then it wants an argument of its own: the route through Liouville wants a derivative, the route through winding numbers wants a topology, and neither exists here. Unlike the four colour theorem below it, what stands in the way is work rather than a recorded decision |
-| The fundamental theorem of calculus | **here, both halves, since 2026-09-26** | `INTEGRAL_DERIVATIVE_WITHIN` is the first half in the form a textbook states it, the derivative one-sided at the ends, and over the gauge integral `docs/adr/0049` decides it needs no integrability hypothesis. `DERIVATIVE_INTEGRAL` is the second: the integral from `a` of a function continuous on `[a, b]` has that function as its derivative inside. Both have pages below. What it waited on was a derivative, then an integral, then additivity over intervals, and not the construction of the reals |
+| The fundamental theorem of calculus | **here, both halves, since 2026-09-26** | `INTEGRAL_DERIVATIVE_WITHIN` is the first half in the form a textbook states it, the derivative one-sided at the ends, and over the gauge integral `docs/adr/0049` decides it needs no integrability hypothesis. `DERIVATIVE_INTEGRAL` is the second: the integral from `a` of a function continuous at each point of `[a, b]`, two-sided at the ends, has that function as its derivative inside, and `DERIVATIVE_INTEGRAL_WITHIN` asks the continuity relative to `[a, b]` as a textbook does. Both have pages below. What it waited on was a derivative, then an integral, then additivity over intervals, and not the construction of the reals |
 | The four colour theorem | **out of reach, and not only by size** | It needs graphs and finite sets, which do not exist, and the only proof anyone has runs a computation over 633 configurations. `docs/adr/0010` decides there is **no computing rule in the kernel** and that there will not be one while the trusted base is the argument, so the route Gonthier took is closed here by a recorded decision rather than by effort |
 | Hilbert's solved problems | **out of reach, with one exception worth naming** | Most need machinery nothing here is near. The tenth, Matiyasevich's theorem, is the exception: it is a statement about Diophantine definability, and the beta function, the coding of sequences and the arithmetisation of syntax that the incompleteness work is building are the same ground floor. It is the one entry on this list that the current work walks towards rather than away from |
 
@@ -1554,6 +1554,190 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_FACT_DIVIDES"
 ```
 
 From Scala it is `Coding`'s, under the name `NUM_FACT_DIVIDES`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# NUM_WILSON
+
+$$\forall x \colon \mathbb{N}.\ \mathrm{prime}(x) \Rightarrow x \mid \mathrm{suc}(\mathrm{pred}(x)!)$$
+
+```
+!x:num. NUM_PRIME x ==> NUM_DIVIDES x (SUC (NUM_FACT (PRE x)))
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+2 axioms reached, 0 of them named below, and 102 named facts in all.
+
+| what | where |
+|---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `NUM_PROD_CONG` | Coding |
+| `NUM_PROD_SUC` | Coding |
+| `NUM_PROD_ZERO` | Coding |
+| `NUM_BEZOUT` | Modular |
+| `NUM_BEZOUT_EXISTS` | Modular |
+| `NUM_CONG_ADD` | Modular |
+| `NUM_CONG_ELIM` | Modular |
+| `NUM_CONG_INTRO` | Modular |
+| `NUM_CONG_MUL` | Modular |
+| `NUM_CONG_REFL` | Modular |
+| `NUM_CONG_SYM` | Modular |
+| `NUM_CONG_TRANS` | Modular |
+| `NUM_DIVIDES_ADD` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_SUMMAND` | Modular |
+| `NUM_DIVIDES_ZERO` | Modular |
+| `NUM_DIVISION` | Modular |
+| `NUM_DIVISION_UNIQUE` | Modular |
+| `NUM_DIV_MOD` | Modular |
+| `NUM_DIV_ZERO` | Modular |
+| `NUM_EUCLID` | Modular |
+| `NUM_GCD_DIVIDES_LEFT` | Modular |
+| `NUM_GCD_DIVIDES_RIGHT` | Modular |
+| `NUM_GCD_GREATEST` | Modular |
+| `NUM_MOD_LT` | Modular |
+| `NUM_MOD_OF_CONG` | Modular |
+| `NUM_MOD_ZERO` | Modular |
+| `NUM_ONE_DIVIDES` | Modular |
+| `NUM_PRIME_ABOVE_ONE` | Modular |
+| `NUM_PRIME_DIVISOR` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_CANCEL_LEFT` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_LT_MONOTONE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_GREATEST` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_LT_TRANS` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_OF_LT_SUC` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_LE_TRANS` | Peano |
+| `NUM_LT_NOT_LE` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_ONE_SUC` | Peano |
+| `NUM_PRE_SUC` | Peano |
+| `NUM_STRONG_INDUCTION` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `NUM_INVERSE` | Primes |
+| `NUM_PROD_PAIRED` | Primes |
+| `NUM_PROD_PERMUTE` | Primes |
+| `NUM_PROD_POINT` | Primes |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+54552 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 25855 | 47.4% |
+| EqualityElimination | 6370 | 11.7% |
+| Reflexivity | 5665 | 10.4% |
+| Instantiation | 5418 | 9.9% |
+| Transitivity | 4731 | 8.7% |
+| BetaStep | 2084 | 3.8% |
+| Antisymmetry | 1866 | 3.4% |
+| TypeInstantiation | 1022 | 1.9% |
+| Abstraction | 799 | 1.5% |
+| Assumption | 673 | 1.2% |
+| Citation | 60 | 0.1% |
+| Definition | 8 | 0.0% |
+| Axiom | 1 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_PRIME x ==> NUM_DIVIDES x (SUC (NUM_FACT (PRE x)))"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_WILSON"
+```
+
+From Scala it is `Primes`'s, under the name `NUM_WILSON`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 

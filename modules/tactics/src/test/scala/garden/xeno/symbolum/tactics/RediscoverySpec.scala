@@ -352,13 +352,23 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 645 with the fundamental theorem relative to `[a, b]`, the same day: eight over four facts.
     // 646 with the logarithm's slope, 2026-09-26, derived before the run: its one antecedent, `0 < x`.
     // 652 with the integral's linearity, 2026-09-26, derived before the run and read off the probe:
-    // two antecedents on each of the three. Tip plus this branch's delta.
-        // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // two antecedents on each of the three.
+    // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
     // the run: four antecedents on `HAS_INTEGRAL_JOIN`, three on each of the two derivatives.
     // 676 with integration by parts and the change of variables, 2026-09-26, derived before the run
     // and confirmed by it: four antecedents on each form of parts and three on each form of the
-    // substitution. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 676
+    // substitution.
+    // 709 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
+    // over fourteen facts, the count `ProposeSpec` gives by fact. Tip plus this branch's delta.
+    // 714 with Taylor's theorem, 2026-09-26, derived before the run and confirmed by it: two
+    // antecedents on `CONTINUOUS_MUL` and three on `TAYLOR`, and none on `DERIVATIVE_POWER`.
+    // 732 with the integral's relative forms, 2026-09-26, derived before the run: eighteen
+    // antecedents over seven facts, the count `ProposeSpec` gives by fact. Tip plus this branch's
+    // delta.
+    // 737 with Wilson's theorem and the product over paired indices, 2026-09-26, derived before the
+    // run: four antecedents on `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's
+    // delta.
+    propose.weakenings.size shouldBe 737
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
