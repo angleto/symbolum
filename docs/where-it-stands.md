@@ -887,6 +887,20 @@ had collapsed into one would pass the first and fail the second. They are not pu
 needs the rules to be distinct, it is a fact about the encoding, and facts about the encoding live in
 the spec that asks for them.
 
+**FRACTRAN is `Fractran`, beside the chain since 2026-09-26, and a run of a program is a theorem.**
+`FRACTRAN_STEP P n m` is one fold into `bool` over the program: the first fraction whose
+denominator divides `n` times its numerator decides, and a denominator of zero never applies.
+`FRACTRAN_HALTS` is the absence of a successor, and `FRACTRAN_REACHES P n k m` is `REACH` with the
+step as its own counted relation, so `k` is the length. `docs/adr/0054` is the decision. What it
+derives is the step at a head, the step as a function, and the two clauses of a run; what it spends
+is choice, infinity and eta, the price of the lists. The interpreter is a few lines of `BigInt`
+arithmetic that nothing believes. `Fractran.certify` hands each state it proposes to the kernel,
+and `FractranSpec` gets Conway's PRIMEGAME from `2` to `4` in nineteen steps that way. **What is not
+here** is anything a program computes: that `3/2` adds the exponents of `2` and `3` wants the
+valuation at a prime, which `docs/lemmas.md` does not hold, and it is card `626ad37f`. Whether
+Conway's generalised Collatz maps meet `Collatz` is card `b0d2ada9`, and it is a question rather
+than a plan.
+
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants
 and no axiom. `converges s l` is the epsilon-N statement written out and `lim s` is choice applied

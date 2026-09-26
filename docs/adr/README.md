@@ -83,4 +83,5 @@ the rejected option attractive, and they will.
 | [0050](0050-the-licence-stays-gplv3-for-now.md) | The licence stays GPLv3 for now, and the question is answered rather than left open | accepted |
 | [0051](0051-sbt-2-with-test-as-the-whole-suite-and-jdk-21.md) | The build moves to sbt 2, `test` stays the whole suite, and the library asks for JDK 21 | accepted |
 | [0052](0052-the-reals-are-lower-cuts-on-the-rationals.md) | The reals are lower cuts on the rationals, with the sign handled at multiplication | accepted |
+| [0054](0054-a-fractran-step-is-a-fold-into-bool-and-a-run-is-reach.md) | A FRACTRAN step is a fold into `bool`, and a run is `REACH` | accepted |
 | [0055](0055-a-width-bound-that-says-something-is-on-an-expanding-graph.md) | A width bound that says something is on an expanding graph, and the one on the complete principle is a one-step argument | accepted, extends 0048 and corrects one sentence of it |
