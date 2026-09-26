@@ -339,6 +339,21 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     continuity.show(reduced.conclusion) shouldBe "continuous (\\y:real. 3 * y + (0 - 1) * 2) x"
   }
 
+  it should "multiply two continuous functions at the linear combination's price, and detach at the square" in {
+    // Measured on 2026-09-26 before it was written here: the same set as the linear combination,
+    // whose shares of `e` the product reuses, with a third radius at tolerance one and no supremum.
+    Derivation.axiomsOf(fact(Continuity.Product)) shouldBe Derivation.axiomsOf(fact(Continuity.Linear))
+
+    // Detached at the identity twice, with nothing assumed.
+    val x = Term.variable("x", reals)
+    val identity = force(continuity.term("\\y:real. y", Type.fun(reals, reals)))
+    val identityAt = force(rules.spec(x, fact(Continuity.Identity)))
+    val squared = opened(force(rules.specAll(fact(Continuity.Product), List(identity, identity, x))
+      .flatMap(rules.mp(_, identityAt)).flatMap(rules.mp(_, identityAt))))
+    squared.hypotheses shouldBe empty
+    continuity.show(squared.conclusion) shouldBe "continuous (\\y:real. y * y) x"
+  }
+
   /** `!x. 0 <= x /\ x <= 1 ==> continuous (\y. y) x`, the hypothesis both detachments discharge. */
   private lazy val identityOnUnit: Kernel.Thm = {
     val x = Term.variable("x", reals)

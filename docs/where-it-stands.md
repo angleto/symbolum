@@ -1294,6 +1294,23 @@ about inverses**: the general one wants the inverse continuous at the point, whi
 for `ln`, and `ln` is the only inverse the library holds. The hypothesis `0 < x` is not shown
 necessary and cannot be: at a point that is not positive `ln` is a choice nothing constrains.
 
+**Taylor's theorem with the remainder in Lagrange's form is `Derivative.TAYLOR`, since 2026-09-26.**
+The derivatives are a family `D : num -> real -> real` the caller hands in, `D (SUC k)` the
+derivative of `D k`, continuous on `[a, b]` and differentiable inside up to the order `n`; the
+conclusion is a `c` strictly inside with `D 0 b` equal to the Taylor polynomial of degree `n` at `a`
+plus `inv ((n + 1)!) * D (n + 1) c * (b - a)^(n + 1)`, with no quotient. It is Rolle at a
+combination of the polynomial expanded at `t` and `(b - t)^(n + 1)`, whose derivative telescopes to
+one term, and it costs what `ROLLE` costs and infinity, which the factorial and the induction over
+the order are paid in. It asked for two facts nobody had written: `Continuity.CONTINUOUS_MUL`, the
+continuity of a product, because Rolle wants the combination continuous at both ends; and
+`DERIVATIVE_POWER`, the slope of `Power y (SUC n)`. Every equation between two terms in
+`TaylorExpansion` is the recurrences written out and `Field` on the result, with two decisions that
+file records: `real_of_num (SUC n)` stays an atom, since `n! * (n + 1)` multiplied out is a sum
+`Field` cannot take apart, and a sum over a lambda is handed over as a variable. `DerivativeSpec`
+detaches it at `\k. exp` on `[0, 1]` at every order and refutes it without the derivative hypothesis
+at `\k. \y. y`. What it is not: a textbook form with continuity relative to `[a, b]`, which `ROLLE`
+has and this does not yet, and anything about a Taylor series converging.
+
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
 say something: the least upper bound `s` of the non-negative numbers whose square is at most `x`

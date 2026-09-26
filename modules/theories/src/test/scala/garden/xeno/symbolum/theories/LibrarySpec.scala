@@ -742,8 +742,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // the library does not collect. `CLAUDE.md`'s figures move by **fourteen** and **fourteen**:
     // every one binds two or more leading quantifiers, all of them `num`. Tip plus this branch's
     // delta.
-    library.entries.size shouldBe 802
-    library.names.distinct.size shouldBe 799
+    // 805 and 802 with Taylor's theorem, 2026-09-26, derived before the run and confirmed by it:
+    // `CONTINUOUS_MUL`, `DERIVATIVE_POWER` and `TAYLOR`, three names none shared. `CLAUDE.md`'s
+    // figures move by three and **two**: `DERIVATIVE_POWER` binds a real and a number. Tip plus this
+    // branch's delta.
+    library.entries.size shouldBe 805
+    library.names.distinct.size shouldBe 802
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
