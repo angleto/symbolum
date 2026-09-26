@@ -290,6 +290,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // both zero, which the file's own docstring names as not yet proved. `EuclidAlgorithmSpec` is the spec.
     "EuclidAlgorithm" -> BesideTheChain,
 
+    // `Collatz`'s standing, and by decision rather than as a debt: its three constants describe one
+    // language, FRACTRAN, and nothing below it or in the tactic surface asks about a program of
+    // fractions. `docs/adr/0054` is the record, and `FractranSpec` is the spec.
+    "Fractran" -> BesideTheChain,
+
     // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
     // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being
     // outside is that its constants describe one object of one investigation; `rat` is mathematics
