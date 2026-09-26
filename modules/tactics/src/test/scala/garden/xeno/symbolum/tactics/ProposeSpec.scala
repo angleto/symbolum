@@ -398,10 +398,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 645 with the fundamental theorem relative to `[a, b]`, the same day, derived before the run:
     // eight antecedents over four facts, three on `DERIVATIVE_WITHIN_INTERIOR`, two on each form of
     // the theorem and one on `DERIVATIVE_WITHIN_OF_DERIVATIVE`.
-    // 655 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // 646 with the logarithm's slope's one, 2026-09-26.
+    // 656 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
     // the run: four antecedents on `HAS_INTEGRAL_JOIN` and three on each derivative. Tip plus this
     // branch's delta.
-    proposals.size shouldBe 655
+    proposals.size shouldBe 656
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1339,10 +1340,15 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // weakenings, each keeping an implication or naming `derivative_within`, `has_integral` or
     // `integral`, which no procedure settles, and one substitution of the order in
     // `DERIVATIVE_WITHIN_INTERIOR`. The eighth weakening is in `unreadable` below.
-    // 565 with the residues of `HAS_INTEGRAL_JOIN`, `DERIVATIVE_WITHIN_INTEGRAL` and
-    // `DERIVATIVE_INTEGRAL`, 2026-09-26, read off the suite's own failure after a prediction of ten:
-    // the total is measured and how it splits between weakenings and substitutions is not.
-    open shouldBe 565
+    // 554 with one of the logarithm's slope's two residues, 2026-09-26: the substitution of the
+    // order, `0 <= x ==> derivative ln x (inv x)`, keeps an implication and is taken and not settled.
+    // Predicted at 555 before the run, counting both residues here, and the run said otherwise; the
+    // probe of `Propose.audit` filtered by `from` placed the other one in `unreadable` below.
+    // 566 with the residues of `HAS_INTEGRAL_JOIN`, `DERIVATIVE_WITHIN_INTEGRAL` and
+    // `DERIVATIVE_INTEGRAL`, 2026-09-26: twelve, read off the suite's own failure after a prediction
+    // of ten, so the total is measured and how it splits between weakenings and substitutions is not.
+    // Tip plus this branch's delta.
+    open shouldBe 566
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1713,7 +1719,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 136 with `DERIVATIVE_WITHIN_OF_DERIVATIVE`'s one weakening, the same day and probe, for the
     // same reason one notion over: without its hypothesis it gives every function every slope
     // relative to every interval, and `derivative_within` has no reading in any procedure.
-    unreadable shouldBe 136
+    // 137 with the logarithm's slope's weakening, from the same probe as `open`'s 554: dropping its
+    // only antecedent leaves a bare `derivative ln x (inv x)`, which no procedure reads, as
+    // `DERIVATIVE_CONTINUOUS`'s did.
+    unreadable shouldBe 137
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

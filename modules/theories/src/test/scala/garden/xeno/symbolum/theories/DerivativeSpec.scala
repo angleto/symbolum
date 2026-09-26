@@ -108,7 +108,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
-        if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine,
+        if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
           Derivative.WithinOfDerivative) ++ onInterval ++ withinInterval).contains(name)) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
@@ -196,6 +196,39 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
       val refused = force(rules.notIntro(claim, absurd))
       refused.hypotheses shouldBe empty
     }
+  }
+
+  it should "price the logarithm's slope at the exponential's, through its estimate, its monotonicity and ln's product" in {
+    // Measured on 2026-09-26 before it was written here: the same axioms as `DERIVATIVE_EXP`, since
+    // what it spends past the reals is the exponential's series. The route is the design: `LN_MUL`
+    // splits `ln (x + h)`, the monotonicity keeps `ln (1 + t)` small, and the estimate does the rest.
+    val slope = fact(Derivative.NaturalLog)
+    Derivation.axiomsOf(slope) shouldBe Derivation.axiomsOf(fact(Derivative.Exponential))
+    val route = Set(
+      force(chain.logarithm.fact(Logarithm.NearLine)).conclusion,
+      force(chain.logarithm.fact(Logarithm.Multiplicative)).conclusion,
+      force(chain.logarithm.fact(Logarithm.ExpOfLn)).conclusion,
+      force(chain.logarithm.fact(Logarithm.StrictlyIncreasing)).conclusion)
+    Derivation.restingOn(slope, route) shouldBe route
+  }
+
+  it should "refuse the logarithm a slope of zero at one, by uniqueness against inv 1" in {
+    // `inv 1 = 1` is `MUL_INVERSE` at one, and uniqueness turns a second slope into `inv 1 = 0`.
+    // The hypothesis `0 < x` is not refuted here and cannot be: at a point that is not positive
+    // `ln` is a choice nothing constrains, so no derivation says the slope there is or is not `inv x`.
+    val one = real("1:real")
+    val ln = force(derivative.term("ln", functions))
+    val claim = proposition("derivative ln 1 0")
+    val assumed = force(LogicError.lift(Kernel.assume(claim)))
+    val own = force(rules.spec(one, fact(Derivative.NaturalLog)).flatMap(rules.mp(_, lemma("(0:real) < 1"))))
+    val same = force(rules.specAll(fact(Derivative.Unique), List(ln, one, real("inv 1"), real("0:real")))
+      .flatMap(rules.mp(_, own)).flatMap(rules.mp(_, assumed)))
+    val inverse = force(chain.reals.axiom("MUL_INVERSE").flatMap(rules.spec(one, _))
+      .flatMap(rules.mp(_, lemma("~((1:real) = 0)"))))
+    val absurd = force(rules.specAll(lemma("!v:real. 1 * v = 1 ==> v = 0 ==> F"), List(real("inv 1")))
+      .flatMap(rules.mp(_, inverse)).flatMap(rules.mp(_, same)))
+    val refused = force(rules.notIntro(claim, absurd))
+    refused.hypotheses shouldBe empty
   }
 
   it should "reach Rolle's theorem through the extreme value theorem and the interior lemma" in {

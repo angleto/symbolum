@@ -170,6 +170,7 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_INTERIOR_MAX  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x w <= x u) ==> derivative x u v ==> v = 0
   DERIVATIVE_INTERIOR_MIN  !x:real -> real. !y:real. !z:real. !u:real. !v:real. y < u ==> u < z ==> (!w:real. y <= w /\ w <= z ==> x u <= x w) ==> derivative x u v ==> v = 0
   DERIVATIVE_LINEAR        !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. !x1:real. derivative x z u ==> derivative y z v ==> derivative (\y1:real. w * x y1 + x1 * y y1) z (w * u + x1 * v)
+  DERIVATIVE_LN            !x:real. 0 < x ==> derivative ln x (inv x)
   DERIVATIVE_LOCAL         !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. 0 < v ==> (!w:real. abs (w - z) < v ==> y w = x w) ==> derivative x z u ==> derivative y z u
   DERIVATIVE_NEG           !x:real -> real. !y:real. !z:real. derivative x y z ==> derivative (\u:real. 0 - x u) y (0 - z)
   DERIVATIVE_NONNEG_MONOTONE !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 <= v)) ==> (!u:real. !v:real. y <= u /\ u <= v /\ v <= z ==> x u <= x v)

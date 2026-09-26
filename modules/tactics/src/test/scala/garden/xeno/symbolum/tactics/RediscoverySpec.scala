@@ -350,9 +350,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 637 with the textbook forms of the interval theorems, 2026-09-25, derived before the run:
     // thirty-three antecedents over fourteen facts, the count `ProposeSpec` gives by fact.
     // 645 with the fundamental theorem relative to `[a, b]`, the same day: eight over four facts.
-    // 655 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
+    // 646 with the logarithm's slope, 2026-09-26, derived before the run: its one antecedent, `0 < x`.
+    // 656 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
     // the run: four antecedents on `HAS_INTEGRAL_JOIN`, three on each of the two derivatives.
-    propose.weakenings.size shouldBe 655
+    propose.weakenings.size shouldBe 656
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -486,10 +487,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `x < b` are an order between reals with no lambda in the body. The two forms of the
     // fundamental theorem carry a quantifier inside, and `DERIVATIVE_WITHIN_OF_DERIVATIVE` writes
     // none of the four.
-    // 114 with `HAS_INTEGRAL_JOIN`, 2026-09-26, derived and not probed: `u <= v` and `v <= w` are
+    // 114 with the logarithm's slope, 2026-09-26, derived before the run: `0 < x` is an order
+    // between reals with no lambda in the body.
+    // 115 with `HAS_INTEGRAL_JOIN`, the same day, derived and not probed: `u <= v` and `v <= w` are
     // an order between reals with no lambda and no quantifier in the body. The two forms of the
     // derivative of an integral carry a quantifier inside.
-    propose.mutable.size shouldBe 114
+    propose.mutable.size shouldBe 115
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
