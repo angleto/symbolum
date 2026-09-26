@@ -157,6 +157,27 @@ class TermPropertySpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPr
     }
   }
 
+  /**
+   * `App` and `Abs` keep the hash they compute when built, and that is sound only if a term equal
+   * to another has the same kept hash however it was built. The term compared here is rebuilt by
+   * abstracting a variable out of it and reducing the application back, so it is a new object
+   * made of new nodes, which the first assertion checks rather than assumes: two references to
+   * one object would pass the second for any hash at all.
+   */
+  "A term's kept hash" should "be the same for an equal term built another way" in {
+    forAll(typedTerms) { case (_, term) =>
+      val variable = Term.freeVariables(term).headOption.getOrElse(Term.variable("w", Type.Bool))
+      val rebuilt = Term.app(lam(variable, term), variable).toOption.flatMap(Term.betaReduce)
+        .getOrElse(fail("the round trip above did not come back"))
+      whenever(term.isInstanceOf[App] || term.isInstanceOf[Abs]) {
+        (rebuilt eq term) shouldBe false
+        rebuilt shouldBe term
+        rebuilt.hashCode shouldBe term.hashCode
+        term.hashCode shouldBe scala.util.hashing.MurmurHash3.productHash(term.asInstanceOf[Product])
+      }
+    }
+  }
+
   "The order on terms" should "call two terms equal exactly when they are equal" in {
     // Hypothesis sets are kept sorted and duplicate-free by this order. An order that called two
     // distinct hypotheses equal would make the set depend on the route a proof took.

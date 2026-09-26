@@ -90,13 +90,21 @@ object Const {
     }
 }
 
-/** An application. Well-typed by construction: see [[Term.app]]. */
-final case class App private[kernel] (fn: Term, arg: Term) extends Term
-
 /**
- * A lambda abstraction. The bound variable has no name, only the type recorded here.
+ * An application. Well-typed by construction: see [[Term.app]]. Its hash, like [[Abs]]'s, is the
+ * case class's own, computed once from the children's and kept: a term is immutable, and a set of
+ * statements asked about every node of a proof rehashed each whole statement per node.
  */
-final case class Abs private[kernel] (binderType: Type, body: Term) extends Term
+final case class App private[kernel] (fn: Term, arg: Term) extends Term {
+  private val hash = scala.util.hashing.MurmurHash3.productHash(this)
+  override def hashCode(): Int = hash
+}
+
+/** A lambda abstraction. The bound variable has no name, only the type recorded here. */
+final case class Abs private[kernel] (binderType: Type, body: Term) extends Term {
+  private val hash = scala.util.hashing.MurmurHash3.productHash(this)
+  override def hashCode(): Int = hash
+}
 
 object Term {
 
