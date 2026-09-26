@@ -32,7 +32,7 @@ import garden.xeno.symbolum.logic.*
  * refutation of the principle for `n + 1` pigeons **derives** a clause at least `n - 1` long. It is
  * a bound on width and not Haken's on size, and it is stated on a derived clause because
  * [[Resolving.Width]] counts the inputs, whose pigeon clauses already have `n` literals. That bound
- * follows from one step, as `docs/adr/0054` records; the one with content is
+ * follows from one step, as `docs/adr/0055` records; the one with content is
  * `ExpanderPigeonhole.RES_GPHP_WIDTH`, since 2026-09-26, on the principle over an expanding graph.
  *
  * == Nothing is coded, and the card that asked for this expected the opposite ==

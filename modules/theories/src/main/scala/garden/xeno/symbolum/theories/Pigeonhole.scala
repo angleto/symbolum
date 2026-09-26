@@ -41,7 +41,7 @@ import garden.xeno.symbolum.logic.*
  * that assignment to the empty clause. So the conclusion follows from one step and the definition
  * of a justified step, for the reason the section above gives about `RES_WIDTH`: the inputs are as
  * wide as the bound. It is a theorem about this encoding and not about proof complexity. The
- * verification of Mycelium card `01520749` found this on 2026-09-25, and `docs/adr/0054` corrects the
+ * verification of Mycelium card `01520749` found this on 2026-09-25, and `docs/adr/0055` corrects the
  * sentence of `docs/adr/0048` that called the constant better than asked.
  *
  * A width bound says something only where the inputs are short, and that is

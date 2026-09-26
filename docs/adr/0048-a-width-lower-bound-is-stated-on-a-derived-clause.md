@@ -1,6 +1,6 @@
 # 0048. A width lower bound is stated on a derived clause, and proved by critical assignments without a restriction
 
-- **Status:** accepted, extends 0044; its sentence calling the constant better than asked is corrected by 0054
+- **Status:** accepted, extends 0044; its sentence calling the constant better than asked is corrected by 0055
 - **Date:** 2026-09-25
 
 ## Context

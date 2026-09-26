@@ -1,4 +1,4 @@
-# 0054. A width bound that says something is on an expanding graph, and the one on the complete principle is a one-step argument
+# 0055. A width bound that says something is on an expanding graph, and the one on the complete principle is a one-step argument
 
 - **Status:** accepted, extends 0048 and corrects one sentence of it
 - **Date:** 2026-09-26
