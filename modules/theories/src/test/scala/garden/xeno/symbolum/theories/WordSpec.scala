@@ -142,7 +142,7 @@ class WordSpec extends AnyFlatSpec with Matchers {
       rules.specAll(fact(Word.MakeLength), List(zero, pad)).flatMap(rules.mp(_, padded))
     )
 
-    words.show(length.conclusion) shouldBe "WORD_LENGTH (WORD_MAKE 0 (\\x:num. WORD_PAD)) = 0"
+    words.show(length.conclusion) shouldBe "WORD_LENGTH (WORD_MAKE 0 (\\n:num. WORD_PAD)) = 0"
     length.hypotheses shouldBe empty
   }
 
@@ -155,8 +155,8 @@ class WordSpec extends AnyFlatSpec with Matchers {
     )
 
     words.show(instantiated.conclusion) shouldBe
-      "!x:word(num). !y:word(num). WORD_LENGTH x = WORD_LENGTH y /\\ (!z:num. z < WORD_LENGTH x " +
-        "==> WORD_NTH x z = WORD_NTH y z) ==> x = y"
+      "!x:word(num). !y:word(num). WORD_LENGTH x = WORD_LENGTH y /\\ (!n:num. n < WORD_LENGTH x " +
+        "==> WORD_NTH x n = WORD_NTH y n) ==> x = y"
   }
 
   /* ------------------------------------------------- the rotation that is not here */
@@ -195,7 +195,7 @@ class WordSpec extends AnyFlatSpec with Matchers {
     // `select` of the division theorem's own predicate is a closed term this signature accepts, and
     // the parser building it is the proof of that.
     val remainder = words.term(
-      "select (\\x:num. ?y:num. m = n * y + x /\\ x < n)"
+      "select (\\k:num. ?n1:num. m = n * n1 + k /\\ k < n)"
     )
 
     remainder.isRight shouldBe true

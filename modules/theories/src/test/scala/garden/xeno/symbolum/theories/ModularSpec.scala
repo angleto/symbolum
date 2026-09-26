@@ -56,9 +56,9 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     )
 
     modular.show(force(modular.definition(Modular.DividesName)).conclusion) shouldBe
-      "NUM_DIVIDES = (\\x:num. \\y:num. ?z:num. y = x * z)"
+      "NUM_DIVIDES = (\\n:num. \\m:num. ?k:num. m = n * k)"
     modular.show(force(modular.definition(Modular.CongruenceName)).conclusion) shouldBe
-      "NUM_CONG = (\\x:num. \\y:num. \\z:num. ?u:num. ?v:num. y + x * u = z + x * v)"
+      "NUM_CONG = (\\n:num. \\m:num. \\k:num. ?i:num. ?j:num. m + n * i = k + n * j)"
   }
 
   it should "carry every fact without a hypothesis left standing" in {
@@ -128,36 +128,36 @@ class ModularSpec extends AnyFlatSpec with Matchers {
 
   "Divisibility" should "read as the text this development is checked by" in {
     statement(Modular.DividesIntro) shouldBe
-      "!x:num. !y:num. !z:num. y = x * z ==> NUM_DIVIDES x y"
+      "!n:num. !m:num. !k:num. m = n * k ==> NUM_DIVIDES n m"
     statement(Modular.DividesElim) shouldBe
-      "!x:num. !y:num. NUM_DIVIDES x y ==> (?z:num. y = x * z)"
-    statement(Modular.DividesRefl) shouldBe "!x:num. NUM_DIVIDES x x"
+      "!n:num. !m:num. NUM_DIVIDES n m ==> (?k:num. m = n * k)"
+    statement(Modular.DividesRefl) shouldBe "!n:num. NUM_DIVIDES n n"
     statement(Modular.DividesTrans) shouldBe
-      "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES y z ==> NUM_DIVIDES x z"
+      "!n:num. !m:num. !k:num. NUM_DIVIDES n m ==> NUM_DIVIDES m k ==> NUM_DIVIDES n k"
     statement(Modular.DividesMul) shouldBe
-      "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (y * z)"
+      "!n:num. !m:num. !k:num. NUM_DIVIDES n m ==> NUM_DIVIDES n (m * k)"
     statement(Modular.DividesAdd) shouldBe
-      "!x:num. !y:num. !z:num. NUM_DIVIDES x y /\\ NUM_DIVIDES x z ==> NUM_DIVIDES x (y + z)"
-    statement(Modular.DividesZero) shouldBe "!x:num. NUM_DIVIDES x 0"
-    statement(Modular.OneDivides) shouldBe "!x:num. NUM_DIVIDES (SUC 0) x"
-    statement(Modular.ZeroDivides) shouldBe "!x:num. NUM_DIVIDES 0 x = (x = 0)"
+      "!n:num. !m:num. !k:num. NUM_DIVIDES n m /\\ NUM_DIVIDES n k ==> NUM_DIVIDES n (m + k)"
+    statement(Modular.DividesZero) shouldBe "!n:num. NUM_DIVIDES n 0"
+    statement(Modular.OneDivides) shouldBe "!n:num. NUM_DIVIDES (SUC 0) n"
+    statement(Modular.ZeroDivides) shouldBe "!n:num. NUM_DIVIDES 0 n = (n = 0)"
     statement(Modular.DividesBound) shouldBe
-      "!x:num. !y:num. NUM_DIVIDES x y ==> x <= y \\/ y = 0"
+      "!n:num. !m:num. NUM_DIVIDES n m ==> n <= m \\/ m = 0"
   }
 
   "The congruence" should "read as the text this development is checked by" in {
-    statement(Modular.CongRefl) shouldBe "!x:num. !y:num. NUM_CONG x y y"
+    statement(Modular.CongRefl) shouldBe "!n:num. !m:num. NUM_CONG n m m"
     statement(Modular.CongSym) shouldBe
-      "!x:num. !y:num. !z:num. NUM_CONG x y z ==> NUM_CONG x z y"
+      "!n:num. !m:num. !k:num. NUM_CONG n m k ==> NUM_CONG n k m"
     statement(Modular.CongTrans) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. NUM_CONG x y z ==> NUM_CONG x z u ==> NUM_CONG x y u"
+      "!n:num. !m:num. !k:num. !i:num. NUM_CONG n m k ==> NUM_CONG n k i ==> NUM_CONG n m i"
     statement(Modular.CongAdd) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x " +
-        "(y + u) (z + v)"
+      "!n:num. !m:num. !k:num. !i:num. !j:num. NUM_CONG n m k ==> NUM_CONG n i j ==> NUM_CONG n " +
+        "(m + i) (k + j)"
     statement(Modular.CongMul) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. !v:num. NUM_CONG x y z ==> NUM_CONG x u v ==> NUM_CONG x " +
-        "(y * u) (z * v)"
-    statement(Modular.CongModulus) shouldBe "!x:num. !y:num. NUM_CONG x (y + x) y"
+      "!n:num. !m:num. !k:num. !i:num. !j:num. NUM_CONG n m k ==> NUM_CONG n i j ==> NUM_CONG n " +
+        "(m * i) (k * j)"
+    statement(Modular.CongModulus) shouldBe "!n:num. !m:num. NUM_CONG n (m + n) m"
   }
 
   /* ----------------------------------------- what moving to `num` actually bought */
@@ -165,7 +165,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
   "Antisymmetry" should "be a theorem here, where over the reals it cannot be one" in {
     // The assertion this file exists for, and both halves are executed rather than described.
     statement(Modular.DividesAntisym) shouldBe
-      "!x:num. !y:num. NUM_DIVIDES x y /\\ NUM_DIVIDES y x ==> x = y"
+      "!n:num. !m:num. NUM_DIVIDES n m /\\ NUM_DIVIDES m n ==> n = m"
     fact(Modular.DividesAntisym).hypotheses shouldBe empty
   }
 
@@ -288,7 +288,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     )
 
     modular.show(theorem.conclusion) shouldBe
-      "?x:num. ?y:num. SUC (SUC (SUC (SUC (SUC 0)))) = SUC (SUC 0) * x + y /\\ y < SUC (SUC 0)"
+      "?n:num. ?m:num. SUC (SUC (SUC (SUC (SUC 0)))) = SUC (SUC 0) * n + m /\\ m < SUC (SUC 0)"
     theorem.hypotheses shouldBe empty
   }
 
@@ -299,13 +299,13 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     val unique = fact(Modular.DivisionUnique)
 
     statement(Modular.DivisionUnique) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. !v:num. x * y + z = x * u + v /\\ z < x /\\ v < x ==> y = " +
-        "u /\\ z = v"
+      "!n:num. !m:num. !k:num. !i:num. !j:num. n * m + k = n * i + j /\\ k < n /\\ j < n ==> m = i " +
+        "/\\ k = j"
     unique.hypotheses shouldBe empty
 
     // It needs no hypothesis that the modulus is positive, and that is not an omission: a bound
-    // strictly below `x` already says `x` is not `ZERO`.
-    modular.show(unique.conclusion) should not include "0 < x"
+    // strictly below `n` already says `n` is not `ZERO`.
+    modular.show(unique.conclusion) should not include "0 < n"
 
     // The two constants were asserted absent here until 2026-09-12, on the ground that nothing in
     // this development needed them. What changed is not this lemma but the consumer: the quotient
@@ -404,8 +404,8 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     modular.theory.definitions.keySet should contain(Modular.GcdName)
 
     modular.show(force(modular.definition(Modular.GcdName)).conclusion) shouldBe
-      "NUM_GCD = (\\x:num. \\y:num. select (\\z:num. (NUM_DIVIDES z x /\\ NUM_DIVIDES z y) /\\ " +
-        "(!u:num. NUM_DIVIDES u x /\\ NUM_DIVIDES u y ==> u <= z)))"
+      "NUM_GCD = (\\n:num. \\m:num. select (\\k:num. (NUM_DIVIDES k n /\\ NUM_DIVIDES k m) /\\ (!i:num. NUM_DIVIDES " +
+        "i n /\\ NUM_DIVIDES i m ==> i <= k)))"
 
     // And it costs no axiom the theory did not already carry, which is the same check the two
     // relations get above: a constant introduced by `select` is a definition and not an assumption.
@@ -445,15 +445,15 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // its own make every other one divide it. That ground has not moved: the two statements are
     // still different, and the second is a theorem now because Bezout was derived, not because the
     // first implies it. So the assertion becomes the distinction rather than the absence.
-    statement(Modular.GcdGreatest) should include("z <= NUM_GCD x y")
-    statement(Modular.GcdGreatest) should not include "NUM_DIVIDES z (NUM_GCD"
-    statement(Modular.GcdDivides) should include("NUM_DIVIDES z (NUM_GCD x y)")
+    statement(Modular.GcdGreatest) should include("k <= NUM_GCD n m")
+    statement(Modular.GcdGreatest) should not include "NUM_DIVIDES k (NUM_GCD"
+    statement(Modular.GcdDivides) should include("NUM_DIVIDES k (NUM_GCD n m)")
     statement(Modular.GcdDivides) should not include "NUM_LE"
 
     // Both are guarded by the same disjunction, which is the honest domain of `NUM_GCD` and not a
     // convenience: at the origin every number is a common divisor and there is no greatest.
     Vector(Modular.GcdGreatest, Modular.GcdDivides).foreach { name =>
-      withClue(s"$name: ")(statement(name) should include("~(x = 0) \\/ ~(y = 0)"))
+      withClue(s"$name: ")(statement(name) should include("~(n = 0) \\/ ~(m = 0)"))
     }
   }
 
@@ -464,11 +464,11 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // remainder chosen from a predicate of its own would be some remainder, not the one that goes
     // with `NUM_DIV m n`.
     modular.show(force(modular.definition(Modular.DivName)).conclusion) shouldBe
-      "NUM_DIV = (\\x:num. \\y:num. select (\\z:num. (?u:num. x = y * z + u /\\ u < y) \\/ y = 0 " +
-        "/\\ z = 0))"
+      "NUM_DIV = (\\n:num. \\m:num. select (\\k:num. (?i:num. n = m * k + i /\\ i < m) \\/ m = 0 /\\ k = " +
+        "0))"
     modular.show(force(modular.definition(Modular.ModName)).conclusion) shouldBe
-      "NUM_MOD = (\\x:num. \\y:num. select (\\z:num. x = y * NUM_DIV x y + z /\\ z < y \\/ y = 0 " +
-        "/\\ z = x))"
+      "NUM_MOD = (\\n:num. \\m:num. select (\\k:num. n = m * NUM_DIV n m + k /\\ k < m \\/ m = 0 /\\ " +
+        "k = n))"
 
     // And the trusted base does not move, which is what "defined" means here.
     modular.theory.axioms shouldBe peano.theory.axioms
@@ -484,9 +484,9 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // library. That is measured rather than argued, in this file's own history: the first form of
     // this lemma hung a suite for an hour.
     statement(Modular.DivisionAt) shouldBe
-      "!x:num. !y:num. y * NUM_DIV x y + NUM_MOD x y = x"
-    statement(Modular.DivAtZero) shouldBe "!x:num. NUM_DIV x 0 = 0"
-    statement(Modular.ModAtZero) shouldBe "!x:num. NUM_MOD x 0 = x"
+      "!n:num. !m:num. m * NUM_DIV n m + NUM_MOD n m = n"
+    statement(Modular.DivAtZero) shouldBe "!n:num. NUM_DIV n 0 = 0"
+    statement(Modular.ModAtZero) shouldBe "!n:num. NUM_MOD n 0 = n"
 
     Vector(Modular.DivisionAt, Modular.DivAtZero, Modular.ModAtZero).foreach { name =>
       withClue(s"$name: ")(fact(name).hypotheses shouldBe empty)
@@ -503,7 +503,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
   it should "bound the remainder, which is the one thing a modulus of 0 cannot have" in {
     // The guard stays here and no definition could remove it: nothing at all is below `ZERO`.
     statement(Modular.ModBelow) shouldBe
-      "!x:num. !y:num. 0 < y ==> NUM_MOD x y < y"
+      "!n:num. !m:num. 0 < m ==> NUM_MOD n m < m"
   }
 
   it should "determine the pair, which is what makes the two names honest" in {
@@ -511,8 +511,8 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // and a consumer holding a quotient of its own could not conclude it held *the* quotient, which
     // is the whole content of calling either one a function.
     statement(Modular.DivisionDetermined) shouldBe
-      "!x:num. !y:num. !z:num. !u:num. x = y * z + u /\\ u < y ==> z = NUM_DIV x y /\\ u = " +
-        "NUM_MOD x y"
+      "!n:num. !m:num. !k:num. !i:num. n = m * k + i /\\ i < m ==> k = NUM_DIV n m /\\ i = NUM_MOD " +
+        "n m"
 
     // Five by two, end to end: two and one satisfy the two conditions, so they are the pair the
     // constants name. The point of the probe is that nothing here mentions the definitions.
@@ -555,11 +555,11 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // negatives, so the term that would have been negated moves to the other side, and which one
     // moves depends on the pair. A statement that fixed the side would be false for half of them.
     statement(Modular.BezoutExists) shouldBe
-      "!x:num. !y:num. ?z:num. ?u:num. ?v:num. NUM_DIVIDES z x /\\ NUM_DIVIDES z y /\\ (x * u = y " +
-        "* v + z \\/ y * u = x * v + z)"
+      "!n:num. !m:num. ?k:num. ?i:num. ?j:num. NUM_DIVIDES k n /\\ NUM_DIVIDES k m /\\ (n * i = m * " +
+        "j + k \\/ m * i = n * j + k)"
     statement(Modular.Bezout) shouldBe
-      "!x:num. !y:num. ~(x = 0) \\/ ~(y = 0) ==> (?z:num. ?u:num. x * z = y * u + NUM_GCD x y \\/ " +
-        "y * z = x * u + NUM_GCD x y)"
+      "!n:num. !m:num. ~(n = 0) \\/ ~(m = 0) ==> (?k:num. ?i:num. n * k = m * i + NUM_GCD n m \\/ m " +
+        "* k = n * i + NUM_GCD n m)"
 
     // The first is unguarded and the second is not, and that is the difference between a common
     // divisor and *the* greatest one: at the origin the first has `ZERO` for every witness and the
@@ -573,7 +573,7 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // is `a | x /\\ a | y ==> a | (y - x)`; here the difference cannot be written, so the statement
     // is additive and the proof does what the subtraction would have done.
     statement(Modular.DividesSummand) shouldBe
-      "!x:num. !y:num. !z:num. NUM_DIVIDES x y ==> NUM_DIVIDES x (y + z) ==> NUM_DIVIDES x z"
+      "!n:num. !m:num. !k:num. NUM_DIVIDES n m ==> NUM_DIVIDES n (m + k) ==> NUM_DIVIDES n k"
   }
 
   it should "make every common divisor divide the greatest one, at a pair a consumer writes" in {
@@ -622,17 +622,17 @@ class ModularSpec extends AnyFlatSpec with Matchers {
     // The first conjunct is what keeps one out, which the second alone does not: one is divisible
     // only by one and by itself, and those are the same number there.
     modular.show(force(modular.definition(Modular.PrimeName)).conclusion) shouldBe
-      "NUM_PRIME = (\\x:num. SUC 0 < x /\\ (!y:num. NUM_DIVIDES y x ==> y = SUC 0 \\/ y = x))"
+      "NUM_PRIME = (\\n:num. SUC 0 < n /\\ (!m:num. NUM_DIVIDES m n ==> m = SUC 0 \\/ m = n))"
 
-    statement(Modular.PrimeAboveOne) shouldBe "!x:num. NUM_PRIME x ==> SUC 0 < x"
+    statement(Modular.PrimeAboveOne) shouldBe "!n:num. NUM_PRIME n ==> SUC 0 < n"
     statement(Modular.PrimeDivisor) shouldBe
-      "!x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \\/ y = x"
+      "!n:num. !m:num. NUM_PRIME n ==> NUM_DIVIDES m n ==> m = SUC 0 \\/ m = n"
   }
 
   "Euclid's lemma" should "read as the text it is checked by, and apply to a square" in {
     statement(Modular.Euclid) shouldBe
-      "!x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x y \\/ " +
-        "NUM_DIVIDES x z"
+      "!n:num. !m:num. !k:num. NUM_PRIME n ==> NUM_DIVIDES n (m * k) ==> NUM_DIVIDES n m \\/ " +
+        "NUM_DIVIDES n k"
 
     // The use a consumer makes of it first: a prime dividing a square divides the root. Both
     // branches of the disjunction are the same proposition there, so the case analysis collapses,

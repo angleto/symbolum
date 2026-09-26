@@ -248,13 +248,15 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
     // a refusal that was removed at its cause. `Counterpart` kept the row for `-`, whose two
     // readings really are different operations, and `CounterpartSpec` is where the surviving half
     // is asserted.
-    val page = Ask.of("!n:num. n + 0 = n")
+    val page = Ask.of("!k:num. k + 0 = k")
 
-    // `!x:num.` and not `!n:num.` in the first line: a bound name is not part of a term, so the
+    // `!n:num.` and not `!k:num.` in the first line: a bound name is not part of a term, so the
     // page prints the printer's name and says so on its last line. The claim as the reader wrote it
     // is echoed there, which is what this asserts rather than reaching for the printer's spelling.
-    page should startWith("Proved: !x:num. x + 0 = x")
-    page should include("as asked: !n:num. n + 0 = n")
+    // Written about `k` since 2026-09-26, when the printer began naming a natural `n`: the claim
+    // this test used to put, about `n`, would print the same both ways and separate nothing.
+    page should startWith("Proved: !n:num. n + 0 = n")
+    page should include("as asked: !k:num. k + 0 = k")
     page should not include "real and num cannot be the same type"
   }
 

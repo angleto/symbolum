@@ -469,8 +469,8 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
       case found: Family.Outcome.Found =>
         found.degree shouldBe 3
         Chain.standard.widest.show(found.claim) should include(
-          "real_of_num x * (real_of_num x - 1) / 2 + " +
-            "real_of_num x * (real_of_num x - 1) * (real_of_num x - 2) / 3"
+          "real_of_num n * (real_of_num n - 1) / 2 + " +
+            "real_of_num n * (real_of_num n - 1) * (real_of_num n - 2) / 3"
         )
         found.theorem.hypotheses shouldBe empty
       case other => fail(s"expected a closed form, got $other")

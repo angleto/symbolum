@@ -75,13 +75,13 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
   "Each constant" should "be defined as the series it is published as" in {
     val expected = Map(
       Transcendental.Exponential ->
-        "exp = (\\x:real. lim (\\y:num. Sum (\\z:num. Power x z / real_of_num (NUM_FACT z)) y))",
+        "exp = (\\x:real. lim (\\n:num. Sum (\\m:num. Power x m / real_of_num (NUM_FACT m)) n))",
       Transcendental.Sine ->
-        ("sin = (\\x:real. lim (\\y:num. Sum (\\z:num. Power (0 - 1) z * (Power x (2 * z + 1) / " +
-          "real_of_num (NUM_FACT (2 * z + 1)))) y))"),
+        ("sin = (\\x:real. lim (\\n:num. Sum (\\m:num. Power (0 - 1) m * (Power x (2 * m + 1) / real_of_num " +
+          "(NUM_FACT (2 * m + 1)))) n))"),
       Transcendental.Cosine ->
-        ("cos = (\\x:real. lim (\\y:num. Sum (\\z:num. Power (0 - 1) z * (Power x (2 * z) / " +
-          "real_of_num (NUM_FACT (2 * z)))) y))"),
+        ("cos = (\\x:real. lim (\\n:num. Sum (\\m:num. Power (0 - 1) m * (Power x (2 * m) / real_of_num " +
+          "(NUM_FACT (2 * m)))) n))"),
       Transcendental.Logarithm -> "ln = (\\x:real. select (\\y:real. exp y = x))",
       Transcendental.HyperbolicSine -> "sinh = (\\x:real. (exp x - exp (0 - x)) / 2)",
       Transcendental.HyperbolicCosine -> "cosh = (\\x:real. (exp x + exp (0 - x)) / 2)"
@@ -177,7 +177,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
       Derivation.axiomsOf(force(transcendental.fact(name))).toSet
 
     val extra = axioms(Transcendental.SineAtZero) -- axioms(Transcendental.ExponentialAtZero)
-    extra.map(transcendental.show) shouldBe Set("!x:'a -> 'b. (\\y:'a. x y) = x")
+    extra.map(transcendental.show) shouldBe Set("!f:'a -> 'b. (\\x:'a. f x) = f")
 
     axioms(Transcendental.CosineAtZero) -- axioms(Transcendental.ExponentialAtZero) shouldBe extra
   }

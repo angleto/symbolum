@@ -42,7 +42,7 @@ class FamilySpec extends AnyFlatSpec with Matchers {
     outcome.degree shouldBe 2
     outcome.samples.take(6).map(_.toString) shouldBe Vector("0", "0", "1", "3", "6", "10")
     signature.show(outcome.claim) shouldBe
-      "!x:num. Sum (\\y:num. real_of_num y) x = real_of_num x * (real_of_num x - 1) / 2"
+      "!n:num. Sum (\\m:num. real_of_num m) n = real_of_num n * (real_of_num n - 1) / 2"
 
     outcome.theorem.conclusion shouldBe outcome.claim
     outcome.theorem.hypotheses shouldBe empty

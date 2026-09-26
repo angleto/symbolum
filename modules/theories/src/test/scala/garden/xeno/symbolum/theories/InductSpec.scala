@@ -94,17 +94,20 @@ class InductSpec extends AnyFlatSpec with Matchers {
 
   "The step" should "be told which variable the driver opened, since it cannot be guessed" in {
     // The second half of what a consumer met on 2026-09-11, reported as two problems because it
-    // fails in two different places. `Logic.stripForall` freshens every bound variable against
-    // what is free, so a statement written about `n` is opened about `x`, and a step that builds a
-    // term with the letter the caller wrote builds a term that does not occur in the goal. Nothing
-    // complains there: the refusal arrives later from whichever procedure was handed the result,
-    // saying something true about the merits and nothing about what happened.
+    // fails in two different places. `Logic.stripForall` names every bound variable afresh, by its
+    // type and against what is free, so a statement written about `k` is opened about `n`, and a
+    // step that builds a term with the letter the caller wrote builds a term that does not occur in
+    // the goal. Nothing complains there: the refusal arrives later from whichever procedure was
+    // handed the result, saying something true about the merits and nothing about what happened.
     //
     // Asserted both ways round, because the trap is the second half. The variable is in the goal
     // and the caller's own letter is not, and a step holding only the goal would have to dig the
     // first back out by matching on the goal's shape, which is what every step in this repository
-    // did until the record existed.
-    val statement = force(chain.series.proposition("!n:num. Sum (\\i:num. 0) n = 0"))
+    // did until the record existed. Written about `k` and not `n` since 2026-09-26, when the opened
+    // variable of a `num` binder became `n`: a statement about `n` would make the caller's letter
+    // and the driver's agree by accident, and both assertions below would pass for a step that
+    // guessed.
+    val statement = force(chain.series.proposition("!k:num. Sum (\\m:num. 0) k = 0"))
 
     var seen: Option[FVar] = None
     val theorem = force(
@@ -115,7 +118,7 @@ class InductSpec extends AnyFlatSpec with Matchers {
           seen = Some(opened.variable)
 
           Term.freeVariables(opened.goal) should contain(opened.variable)
-          Term.freeVariables(opened.goal).map(_.name) should not contain "n"
+          Term.freeVariables(opened.goal).map(_.name) should not contain "k"
 
           Rewrite.Rule
             .of(chain.logic, opened.hypothesis)
@@ -129,7 +132,7 @@ class InductSpec extends AnyFlatSpec with Matchers {
     )
 
     theorem.conclusion shouldBe statement
-    seen.map(_.name) should not be Some("n")
+    seen.map(_.name) should not be Some("k")
   }
 
   "A step the caller's procedure cannot close" should "be refused rather than reported as false" in {
@@ -137,7 +140,7 @@ class InductSpec extends AnyFlatSpec with Matchers {
     // asks it: a rule set that does not settle makes the closer fail in a way indistinguishable
     // from the claim being false, and the two send a reader to different places.
     val statement = force(
-      chain.series.proposition("!n:num. Sum (\\i:num. 2) n <= Sum (\\i:num. 1) n")
+      chain.series.proposition("!n:num. Sum (\\m:num. 2) n <= Sum (\\m:num. 1) n")
     )
 
     chain.induct.proveAssuming(statement, recurrences)(linarith.prove).isLeft shouldBe true

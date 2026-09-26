@@ -119,7 +119,7 @@ class ProductSpec extends AnyFlatSpec with Matchers {
     product.show(fact(Product.AbstractionOfRepresentation).conclusion) shouldBe
       "mk_prod (dest_prod a) = a"
     product.show(fact(Product.Characterisation).conclusion) shouldBe
-      "(\\x:'a -> 'b -> bool. ?y:'a. ?z:'b. x = mk_pair y z) r = (dest_prod (mk_prod r) = r)"
+      "(\\f:'a -> 'b -> bool. ?x:'a. ?y:'b. f = mk_pair x y) r = (dest_prod (mk_prod r) = r)"
   }
 
   it should "name every fact the way the convention names one" in {

@@ -52,11 +52,11 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
     // `PRE ZERO = ZERO` is the choice that makes `PRE` a function rather than a partial one, and it
     // is what `NUM_SUB` inherits at every step: the recursion bottoms out there and stays.
     peano.show(fact(Peano.PreAtZero).conclusion) shouldBe "PRE 0 = 0"
-    peano.show(fact(Peano.PreAtSuccessor).conclusion) shouldBe "!x:num. PRE (SUC x) = x"
+    peano.show(fact(Peano.PreAtSuccessor).conclusion) shouldBe "!n:num. PRE (SUC n) = n"
 
-    peano.show(fact(Peano.SubAtZero).conclusion) shouldBe "!x:num. NUM_SUB x 0 = x"
+    peano.show(fact(Peano.SubAtZero).conclusion) shouldBe "!n:num. NUM_SUB n 0 = n"
     peano.show(fact(Peano.SubAtSuccessor).conclusion) shouldBe
-      "!x:num. !y:num. NUM_SUB x (SUC y) = PRE (NUM_SUB x y)"
+      "!n:num. !m:num. NUM_SUB n (SUC m) = PRE (NUM_SUB n m)"
 
     peano.theory.definitions.keySet should contain allOf (Peano.Predecessor, Peano.Subtraction)
   }
@@ -85,7 +85,7 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
     // put there. Checked at a point as well as read off the statement, because the statement is
     // what a reader trusts and the point is what a consumer meets.
     peano.show(fact(Peano.SumMinus).conclusion) shouldBe
-      "!x:num. !y:num. NUM_SUB (x + y) y = x"
+      "!n:num. !m:num. NUM_SUB (n + m) m = n"
 
     val instance = force(rules.specAll(fact(Peano.SumMinus), List(two, three)))
     instance.hypotheses shouldBe empty
@@ -195,11 +195,11 @@ class SubtractionSpec extends AnyFlatSpec with Matchers {
     // A reader who expects the integers' subtraction is wrong about this file, and the file says so
     // in prose. Prose is not checked; `NUM_SUB_EQ_ZERO` is.
     peano.show(fact(Peano.SubIsZero).conclusion) shouldBe
-      "!x:num. !y:num. x <= y ==> NUM_SUB x y = 0"
+      "!n:num. !m:num. n <= m ==> NUM_SUB n m = 0"
     peano.show(fact(Peano.Truncates).conclusion) shouldBe
-      "!x:num. !y:num. NUM_SUB x (x + y) = 0"
+      "!n:num. !m:num. NUM_SUB n (n + m) = 0"
     peano.show(fact(Peano.SubBelow).conclusion) shouldBe
-      "!x:num. !y:num. NUM_SUB x y <= x"
+      "!n:num. !m:num. NUM_SUB n m <= n"
   }
 
   "Every fact about the difference" should "rest on nothing this development did not already cost" in {

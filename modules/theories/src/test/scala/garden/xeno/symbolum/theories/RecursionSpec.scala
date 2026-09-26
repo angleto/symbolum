@@ -23,7 +23,7 @@ class RecursionSpec extends AnyFlatSpec with Matchers {
   "The recursion theorem" should "be derived, and be the statement as it is written" in {
     theorem.hypotheses shouldBe empty
     naturals.show(theorem.conclusion) shouldBe
-      "!x:'a. !y:'a -> num -> 'a. ?z:num -> 'a. z ZERO = x /\\ (!u:num. z (SUC u) = y (z u) u)"
+      "!x:'a. !f:'a -> num -> 'a. ?g:num -> 'a. g ZERO = x /\\ (!n:num. g (SUC n) = f (g n) n)"
 
     theorem.conclusion shouldBe force(naturals.proposition(Recursion.Statement))
   }
@@ -53,12 +53,12 @@ class RecursionSpec extends AnyFlatSpec with Matchers {
 
     val atNumbers = Kernel.instType(Map("a" -> numbers), theorem)
     val zero = force(LogicError.lift(naturals.theory.constant(Natural.NumberZero, numbers)))
-    val step = force(naturals.term("\\v:num. \\i:num. SUC v"))
+    val step = force(naturals.term("\\n:num. \\m:num. SUC n"))
 
     val instance = force(rules.specAll(atNumbers, List(zero, step)))
 
     naturals.show(instance.conclusion) shouldBe
-      "?x:num -> num. x ZERO = ZERO /\\ (!y:num. x (SUC y) = (\\z:num. \\u:num. SUC z) (x y) y)"
+      "?f:num -> num. f ZERO = ZERO /\\ (!n:num. f (SUC n) = (\\m:num. \\k:num. SUC m) (f n) n)"
     instance.hypotheses shouldBe empty
   }
 

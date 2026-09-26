@@ -142,9 +142,9 @@ class LatexSpec extends AnyFlatSpec with Matchers {
     // The two forms carry different halves of what a reader needs: the printed one says `+` where
     // the legible one says `NUM_ADD`, and the legible one is the text that reads back. Neither is
     // the other's improvement.
-    legible("NUM_ADD_SYM") shouldBe "!x:num. !y:num. x + y = y + x"
+    legible("NUM_ADD_SYM") shouldBe "!n:num. !m:num. n + m = m + n"
     printed("NUM_ADD_SYM") shouldBe
-      """\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ x + y = y + x"""
+      """\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ n + m = m + n"""
   }
 
   "The congruence" should "put the modulus where the reader expects it" in {
@@ -153,10 +153,10 @@ class LatexSpec extends AnyFlatSpec with Matchers {
     // and about the wrong pair. No coverage check can see that, so the one reading that caught it
     // is written down here.
     printed("NUM_CONG_ADD") shouldBe
-      """\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \forall z \colon \mathbb{N}.\ """ +
-        """\forall u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ """ +
-        """y \equiv z \pmod{x} \Rightarrow u \equiv v \pmod{x} \Rightarrow """ +
-        """y + u \equiv z + v \pmod{x}"""
+      """\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ \forall k \colon \mathbb{N}.\ """ +
+        """\forall i \colon \mathbb{N}.\ \forall j \colon \mathbb{N}.\ """ +
+        """m \equiv k \pmod{n} \Rightarrow i \equiv j \pmod{n} \Rightarrow """ +
+        """m + i \equiv k + j \pmod{n}"""
   }
 
   "A matrix type" should "keep the brackets that say it is a pair of pairs" in {

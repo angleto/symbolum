@@ -52,8 +52,8 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // The quotes arrived on 2026-09-12: both axioms are schemas over a type variable, and the
     // printer now writes one as `'a`, which is what the parser reads it back from.
     classical.theory.axioms.map(classical.show) shouldBe Vector(
-      "!x:'a -> bool. !y:'a. x y ==> x (select x)",
-      "!x:'a -> 'b. (\\y:'a. x y) = x"
+      "!f:'a -> bool. !x:'a. f x ==> f (select f)",
+      "!f:'a -> 'b. (\\x:'a. f x) = f"
     )
 
     // The letters are the printer's: bound variables have no name in the term, so the predicate the
@@ -217,7 +217,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     val extensionality = force(classical.fact(Classical.FunctionExtensionality))
 
     classical.show(extensionality.conclusion) shouldBe
-      "!x:'a -> 'b. !y:'a -> 'b. (!z:'a. x z = y z) ==> x = y"
+      "!f:'a -> 'b. !g:'a -> 'b. (!x:'a. f x = g x) ==> f = g"
 
     Classical.Axioms.map(_._1) should not contain Classical.FunctionExtensionality
   }
@@ -239,7 +239,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     classical.show(equal.conclusion) shouldBe "f = g"
     // The hypothesis is carried rather than discharged, which is what makes it a rule usable in the
     // middle of a derivation: the caller discharges it when they are ready to.
-    equal.hypotheses.map(classical.show) shouldBe List("!x:bool. f x = g x")
+    equal.hypotheses.map(classical.show) shouldBe List("!p:bool. f p = g p")
   }
 
   it should "refuse a body that is not an application of two functions to the variable" in {
@@ -321,9 +321,9 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // `~(p \/ q)` both follow directly. The second is here rather than in `Logic` only because a
     // reader looking for De Morgan should find both in one place.
     classical.show(force(classical.fact(Classical.DeMorganDisjunction)).conclusion) shouldBe
-      "!x:bool. !y:bool. (~(x \\/ y)) = (~x /\\ ~y)"
+      "!p:bool. !q:bool. (~(p \\/ q)) = (~p /\\ ~q)"
     classical.show(force(classical.fact(Classical.DeMorganConjunction)).conclusion) shouldBe
-      "!x:bool. !y:bool. (~(x /\\ y)) = (~x \\/ ~y)"
+      "!p:bool. !q:bool. (~(p /\\ q)) = (~p \\/ ~q)"
 
     Derivation.axiomsOf(force(classical.fact(Classical.DeMorganDisjunction))) shouldBe empty
     Derivation.axiomsOf(force(classical.fact(Classical.DeMorganConjunction))) should have size 1
@@ -351,12 +351,12 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // would hand over `(= (select ...))`, the predicate that holds of that one term: the first
     // defines the type asked for and the second defines a singleton.
     classical.show(named.conclusion) shouldBe
-      "(\\x:bool. x = T) (select (\\x:bool. x = T))"
+      "(\\p:bool. p = T) (select (\\p:bool. p = T))"
 
     named.conclusion match {
       case App(carried, chosen) =>
         carried shouldBe predicate
-        classical.show(chosen) shouldBe "select (\\x:bool. x = T)"
+        classical.show(chosen) shouldBe "select (\\p:bool. p = T)"
       case other => fail(s"expected an application, got $other")
     }
 
@@ -386,7 +386,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     val defining = force(classical.definition(Classical.Conditional))
     defining.hypotheses shouldBe empty
     classical.show(defining.conclusion) shouldBe
-      "COND = (\\x:bool. \\y:'a. \\z:'a. select (\\u:'a. (x ==> u = y) /\\ (~x ==> u = z)))"
+      "COND = (\\p:bool. \\x:'a. \\y:'a. select (\\z:'a. (p ==> z = x) /\\ (~p ==> z = y)))"
   }
 
   it should "be declared at a schema over the type of its two branches" in {

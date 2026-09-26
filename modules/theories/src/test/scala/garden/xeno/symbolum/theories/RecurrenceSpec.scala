@@ -55,7 +55,7 @@ class RecurrenceSpec extends AnyFlatSpec with Matchers {
     // Statable, which is the thing that was not true before the two developments could be chained.
     reals.show(force(reals.proposition("pow ZERO = 1"))) shouldBe "pow ZERO = 1"
     reals.show(force(reals.proposition("!t:num. pow (SUC t) = 2 * pow t"))) shouldBe
-      "!x:num. pow (SUC x) = 2 * pow x"
+      "!n:num. pow (SUC n) = 2 * pow n"
   }
 
   "A claim about a function defined by a recurrence" should "be proved by induction from it" in {
@@ -119,12 +119,12 @@ class RecurrenceSpec extends AnyFlatSpec with Matchers {
 
     val proved = force(rules.conjIntro(base, closed).flatMap(rules.mp(opened, _)))
 
-    reals.show(proved.conclusion) shouldBe "!x:num. 0 < pow x"
+    reals.show(proved.conclusion) shouldBe "!n:num. 0 < pow n"
 
     // And it rests on the recurrence and on nothing else. That is the point: the assumption is
     // visible in the theorem, which is what an axiom would not be.
     proved.hypotheses.map(reals.show).sorted shouldBe
-      Vector("!x:num. pow (SUC x) = 2 * pow x", "pow ZERO = 1")
+      Vector("!n:num. pow (SUC n) = 2 * pow n", "pow ZERO = 1")
   }
 
   "The declared function" should "cost nothing to believe, which is why this is not an axiom" in {

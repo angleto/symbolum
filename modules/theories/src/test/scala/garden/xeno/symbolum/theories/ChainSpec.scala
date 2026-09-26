@@ -36,7 +36,7 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     val everywhere = force(chain.series.fact(Series.AtZero))
     val ordered = force(chain.order.zeroLessOne)
 
-    chain.series.show(everywhere.conclusion) shouldBe "!x:num -> real. Sum x 0 = 0"
+    chain.series.show(everywhere.conclusion) shouldBe "!f:num -> real. Sum f 0 = 0"
     chain.reals.show(ordered.conclusion) shouldBe "0 < 1"
     // Nineteen since eta landed in `Classical.scala` on 2026-09-10: sixteen of the field, and the
     // classical logic's two and infinity underneath them.
@@ -181,7 +181,7 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     )
 
     chain.widest.show(atReal.conclusion) shouldBe
-      "!x:bool. !y:real. !z:real. x ==> COND x y z = y"
+      "!p:bool. !x:real. !y:real. p ==> COND p x y = x"
   }
 
   it should "put the arithmetic of the naturals under the sums, which is what a summand needs" in {
@@ -453,7 +453,7 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     val congruence = force(chain.series.fact(Series.Congruence))
 
     chain.series.show(congruence.conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. (!z:num. x z = y z) ==> (!z:num. Sum x z = Sum y z)"
+      "!f:num -> real. !g:num -> real. (!n:num. f n = g n) ==> (!n:num. Sum f n = Sum g n)"
     congruence.hypotheses shouldBe empty
   }
 

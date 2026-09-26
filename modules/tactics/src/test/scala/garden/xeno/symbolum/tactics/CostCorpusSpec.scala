@@ -92,7 +92,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
     val untouched = held.diff(reached)
     untouched.size shouldBe 1
     reals.show(untouched.head) should include("<=")
-    reals.show(untouched.head) should startWith("!x:real -> bool")
+    reals.show(untouched.head) should startWith("!f:real -> bool")
 
     info(s"never reached by any of these proofs: ${reals.show(untouched.head)}")
   }

@@ -323,7 +323,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     under.hypotheses shouldBe
       List(proposition("converges (Sum (\\i:num. Power ((1:real) / 2) i)) (l:real)"))
     limit.show(under.conclusion) shouldBe
-      "!x:num. Sum (\\y:num. Power (1 / 2) y) x <= l"
+      "!n:num. Sum (\\m:num. Power (1 / 2) m) n <= l"
 
     // And the tail, carried out of the existential the comparison test hands over.
     val vanishing = force(
@@ -401,9 +401,9 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     val lowerOfTriangle = leftOf(triangle)
     val upperOfSquare = rightOf(square)
     limit.show(lowerOfTriangle) shouldBe
-      "Sum (\\x:num. Sum (\\y:num. a y * b (NUM_SUB x y)) (SUC x)) n"
+      "Sum (\\m:num. Sum (\\k:num. a k * b (NUM_SUB m k)) (SUC m)) n"
     limit.show(upperOfSquare) shouldBe
-      "Sum (\\x:num. Sum (\\y:num. a y * b (NUM_SUB x y)) (SUC x)) (n + n)"
+      "Sum (\\m:num. Sum (\\k:num. a k * b (NUM_SUB m k)) (SUC m)) (n + n)"
   }
 
   "An absolutely convergent series" should "converge, where the comparison test cannot reach it" in {
@@ -635,7 +635,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     val d = Term.variable("d", TyApp(Real.TypeName, Nil))
 
     val converges = force(rules.spec(c, force(limit.constantSequence)))
-    limit.show(converges.conclusion) shouldBe "converges (\\x:num. c) c"
+    limit.show(converges.conclusion) shouldBe "converges (\\n:num. c) c"
 
     // At the other value: assume it converges there too, and uniqueness closes it.
     val other = proposition("converges (\\n:num. c:real) (d:real)")
@@ -659,7 +659,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
         .flatMap(assumedDifferent => rules.notElim(assumedDifferent, equal))
         .flatMap(clash => rules.notIntro(other, clash))
     )
-    limit.show(refusal.conclusion) shouldBe "~(converges (\\x:num. c) d)"
+    limit.show(refusal.conclusion) shouldBe "~(converges (\\n:num. c) d)"
     refusal.hypotheses.map(limit.show).toList shouldBe List("~(c = d)")
   }
 
@@ -677,7 +677,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
         .specAll(force(limit.valueOfConverges), List(sequence, c))
         .flatMap(rules.mp(_, converges))
     )
-    limit.show(value.conclusion) shouldBe "lim (\\x:num. c) = c"
+    limit.show(value.conclusion) shouldBe "lim (\\n:num. c) = c"
   }
 
   /**

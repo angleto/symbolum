@@ -144,9 +144,9 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 
 | Key | Statement | Read by | When | Against |
 | --- | --- | --- | --- | --- |
-| `axiom SELECT` | !x:'a -> bool. !y:'a. x y ==> x (select x) | **NOT READ** |  |  |
-| `axiom ETA` | !x:'a -> 'b. (\y:'a. x y) = x | **NOT READ** |  |  |
-| `axiom INFINITY` | ?x:ind -> ind. ?y:ind. (!z:ind. !u:ind. x z = x u ==> z = u) /\ (!z:ind. ~(x z = y)) | **NOT READ** |  |  |
+| `axiom SELECT` | !f:'a -> bool. !x:'a. f x ==> f (select f) | **NOT READ** |  |  |
+| `axiom ETA` | !f:'a -> 'b. (\x:'a. f x) = f | **NOT READ** |  |  |
+| `axiom INFINITY` | ?f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\ (!y:ind. ~(f y = x)) | **NOT READ** |  |  |
 | `axiom ADD_SYM` | !x:real. !y:real. x + y = y + x | **NOT READ** |  |  |
 | `axiom ADD_ASSOC` | !x:real. !y:real. !z:real. x + y + z = x + (y + z) | **NOT READ** |  |  |
 | `axiom ADD_ZERO` | !x:real. x + 0 = x | **NOT READ** |  |  |
@@ -162,7 +162,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom LT_TOTAL` | !x:real. !y:real. x < y \/ x = y \/ y < x | **NOT READ** |  |  |
 | `axiom LT_ADD` | !x:real. !y:real. !z:real. x < y ==> x + z < y + z | **NOT READ** |  |  |
 | `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
-| `axiom COMPLETENESS` | !x:real -> bool. (?y:real. x y) /\ (?y:real. !z:real. x z ==> z <= y) ==> (?y:real. (!z:real. x z ==> z <= y) /\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z)) | **NOT READ** |  |  |
+| `axiom COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
 ## The definitions (151)
 
@@ -171,34 +171,34 @@ axiom mentioning it means.
 
 | Key | Statement | Read by | When | Against |
 | --- | --- | --- | --- | --- |
-| `definition !` | ! = \x:'A -> bool. x = (\y:'A. T) | **NOT READ** |  |  |
-| `definition /\` | /\ = \x:bool. \y:bool. (\z:bool -> bool -> bool. z x y) = (\z:bool -> bool -> bool. z T T) | **NOT READ** |  |  |
-| `definition ==>` | ==> = \x:bool. \y:bool. (x /\ y) = x | **NOT READ** |  |  |
-| `definition ?` | ? = \x:'A -> bool. !y:bool. (!z:'A. x z ==> y) ==> y | **NOT READ** |  |  |
+| `definition !` | ! = \f:'A -> bool. f = (\x:'A. T) | **NOT READ** |  |  |
+| `definition /\` | /\ = \p:bool. \q:bool. (\f:bool -> bool -> bool. f p q) = (\f:bool -> bool -> bool. f T T) | **NOT READ** |  |  |
+| `definition ==>` | ==> = \p:bool. \q:bool. (p /\ q) = p | **NOT READ** |  |  |
+| `definition ?` | ? = \f:'A -> bool. !p:bool. (!x:'A. f x ==> p) ==> p | **NOT READ** |  |  |
 | `definition BIT0` | BIT0 = \x:real. x + x | **NOT READ** |  |  |
 | `definition BIT1` | BIT1 = \x:real. x + x + 1 | **NOT READ** |  |  |
-| `definition COND` | COND = \x:bool. \y:'a. \z:'a. select (\u:'a. (x ==> u = y) /\ (~x ==> u = z)) | **NOT READ** |  |  |
+| `definition COND` | COND = \p:bool. \x:'a. \y:'a. select (\z:'a. (p ==> z = x) /\ (~p ==> z = y)) | **NOT READ** |  |  |
 | `definition Divides` | Divides = \x:real. \y:real. ?z:real. y = x * z | **NOT READ** |  |  |
-| `definition F` | F = !x:bool. x | **NOT READ** |  |  |
+| `definition F` | F = !p:bool. p | **NOT READ** |  |  |
 | `definition FST` | FST = \x:prod('a, 'b). select (\y:'a. ?z:'b. x = PAIR y z) | **NOT READ** |  |  |
-| `definition INDUCTIVE` | INDUCTIVE = \x:('a -> bool) -> 'a -> bool. \y:'a. !z:'a -> bool. (!u:'a. x z u ==> z u) ==> z y | **NOT READ** |  |  |
+| `definition INDUCTIVE` | INDUCTIVE = \f:('a -> bool) -> 'a -> bool. \x:'a. !g:'a -> bool. (!y:'a. f g y ==> g y) ==> g x | **NOT READ** |  |  |
 | `definition IND_0` | IND_0 = select (\x:ind. (!y:ind. !z:ind. IND_SUC y = IND_SUC z ==> y = z) /\ (!y:ind. ~(IND_SUC y = x))) | **NOT READ** |  |  |
-| `definition IND_SUC` | IND_SUC = select (\x:ind -> ind. ?y:ind. (!z:ind. !u:ind. x z = x u ==> z = u) /\ (!z:ind. ~(x z = y))) | **NOT READ** |  |  |
+| `definition IND_SUC` | IND_SUC = select (\f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\ (!y:ind. ~(f y = x))) | **NOT READ** |  |  |
 | `definition INT_ADD` | INT_ADD = \x:int. \y:int. INT_OF_PAIR (PAIR (FST (INT_OF_PAIR_repr x) + FST (INT_OF_PAIR_repr y)) (SND (INT_OF_PAIR_repr x) + SND (INT_OF_PAIR_repr y))) | **NOT READ** |  |  |
 | `definition INT_DIVIDES` | INT_DIVIDES = \x:int. \y:int. ?z:int. y = INT_MUL x z | **NOT READ** |  |  |
 | `definition INT_LE` | INT_LE = \x:int. \y:int. FST (INT_OF_PAIR_repr x) + SND (INT_OF_PAIR_repr y) <= FST (INT_OF_PAIR_repr y) + SND (INT_OF_PAIR_repr x) | **NOT READ** |  |  |
 | `definition INT_MUL` | INT_MUL = \x:int. \y:int. INT_OF_PAIR (PAIR (FST (INT_OF_PAIR_repr x) * FST (INT_OF_PAIR_repr y) + SND (INT_OF_PAIR_repr x) * SND (INT_OF_PAIR_repr y)) (FST (INT_OF_PAIR_repr x) * SND (INT_OF_PAIR_repr y) + SND (INT_OF_PAIR_repr x) * FST (INT_OF_PAIR_repr y))) | **NOT READ** |  |  |
 | `definition INT_NEG` | INT_NEG = \x:int. INT_OF_PAIR (PAIR (SND (INT_OF_PAIR_repr x)) (FST (INT_OF_PAIR_repr x))) | **NOT READ** |  |  |
-| `definition INT_OF_NUM` | INT_OF_NUM = \x:num. INT_OF_PAIR (PAIR x 0) | **NOT READ** |  |  |
+| `definition INT_OF_NUM` | INT_OF_NUM = \n:num. INT_OF_PAIR (PAIR n 0) | **NOT READ** |  |  |
 | `definition INT_OF_PAIR` | INT_OF_PAIR = \x:prod(num, num). mk_int (INT_SAME x) | **NOT READ** |  |  |
 | `definition INT_OF_PAIR_repr` | INT_OF_PAIR_repr = \x:int. select (\y:prod(num, num). x = INT_OF_PAIR y) | **NOT READ** |  |  |
 | `definition INT_ONE` | INT_ONE = INT_OF_PAIR (PAIR (SUC 0) 0) | **NOT READ** |  |  |
 | `definition INT_SAME` | INT_SAME = \x:prod(num, num). \y:prod(num, num). FST x + SND y = FST y + SND x | **NOT READ** |  |  |
 | `definition INT_ZERO` | INT_ZERO = INT_OF_PAIR (PAIR 0 0) | **NOT READ** |  |  |
 | `definition LIST_CONS` | LIST_CONS = \x:'a. \y:word('a). WORD_CONCAT (WORD_SINGLETON x) y | **NOT READ** |  |  |
-| `definition LIST_FOLD` | LIST_FOLD = \x:'a -> 'b -> 'b. \y:'b. select (\z:word('a) -> 'b. z WORD_EMPTY = y /\ (!u:'a. !v:word('a). z (LIST_CONS u v) = x u (z v))) | **NOT READ** |  |  |
+| `definition LIST_FOLD` | LIST_FOLD = \f:'a -> 'b -> 'b. \x:'b. select (\g:word('a) -> 'b. g WORD_EMPTY = x /\ (!y:'a. !z:word('a). g (LIST_CONS y z) = f y (g z))) | **NOT READ** |  |  |
 | `definition LIST_HEAD` | LIST_HEAD = \x:word('a). WORD_NTH x 0 | **NOT READ** |  |  |
-| `definition LIST_TAIL` | LIST_TAIL = \x:word('a). WORD_MAKE (PRE (WORD_LENGTH x)) (\y:num. COND (y < PRE (WORD_LENGTH x)) (WORD_NTH x (SUC y)) WORD_PAD) | **NOT READ** |  |  |
+| `definition LIST_TAIL` | LIST_TAIL = \x:word('a). WORD_MAKE (PRE (WORD_LENGTH x)) (\n:num. COND (n < PRE (WORD_LENGTH x)) (WORD_NTH x (SUC n)) WORD_PAD) | **NOT READ** |  |  |
 | `definition MAT2` | MAT2 = \x:real. \y:real. \z:real. \u:real. PAIR (PAIR x y) (PAIR z u) | **NOT READ** |  |  |
 | `definition MAT_ADD` | MAT_ADD = \x:prod(prod(real, real), prod(real, real)). \y:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x + MAT_E11 y) (MAT_E12 x + MAT_E12 y) (MAT_E21 x + MAT_E21 y) (MAT_E22 x + MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_DET` | MAT_DET = \x:prod(prod(real, real), prod(real, real)). MAT_E11 x * MAT_E22 x - MAT_E12 x * MAT_E21 x | **NOT READ** |  |  |
@@ -210,118 +210,118 @@ axiom mentioning it means.
 | `definition MAT_MUL` | MAT_MUL = \x:prod(prod(real, real), prod(real, real)). \y:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x * MAT_E11 y + MAT_E12 x * MAT_E21 y) (MAT_E11 x * MAT_E12 y + MAT_E12 x * MAT_E22 y) (MAT_E21 x * MAT_E11 y + MAT_E22 x * MAT_E21 y) (MAT_E21 x * MAT_E12 y + MAT_E22 x * MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_SMUL` | MAT_SMUL = \x:real. \y:prod(prod(real, real), prod(real, real)). MAT2 (x * MAT_E11 y) (x * MAT_E12 y) (x * MAT_E21 y) (x * MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_TRANSPOSE` | MAT_TRANSPOSE = \x:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x) (MAT_E21 x) (MAT_E12 x) (MAT_E22 x) | **NOT READ** |  |  |
-| `definition MONOTONE` | MONOTONE = \x:('a -> bool) -> 'a -> bool. !y:'a -> bool. !z:'a -> bool. (!u:'a. y u ==> z u) ==> (!u:'a. x y u ==> x z u) | **NOT READ** |  |  |
-| `definition NUM_ADD` | NUM_ADD = \x:num. select (\y:num -> num. y 0 = x /\ (!z:num. y (SUC z) = SUC (y z))) | **NOT READ** |  |  |
-| `definition NUM_ALL_BELOW` | NUM_ALL_BELOW = \x:num. \y:num. \z:num. \u:num. NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR (NUM_LESS x (NUM_CODE 0 y) z) u))) | **NOT READ** |  |  |
-| `definition NUM_AND` | NUM_AND = \x:num. \y:num. NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR x (NUM_CODE 6 y))) | **NOT READ** |  |  |
-| `definition NUM_BETA` | NUM_BETA = \x:num. \y:num. \z:num. NUM_MOD x (SUC (SUC z * y)) | **NOT READ** |  |  |
-| `definition NUM_BIT0` | NUM_BIT0 = \x:num. x + x | **NOT READ** |  |  |
-| `definition NUM_BIT1` | NUM_BIT1 = \x:num. SUC (x + x) | **NOT READ** |  |  |
-| `definition NUM_CEIL` | NUM_CEIL = \x:real. select (\y:num. x <= real_of_num y /\ real_of_num y < x + 1) | **NOT READ** |  |  |
-| `definition NUM_CHOOSE` | NUM_CHOOSE = select (\x:num -> num -> num. x 0 = (\y:num. COND (y = 0) (SUC 0) 0) /\ (!y:num. x (SUC y) = (\z:num. COND (z = 0) (SUC 0) (x y (PRE z) + x y z)))) | **NOT READ** |  |  |
-| `definition NUM_CLOSED` | NUM_CLOSED = \x:num. !y:num. ~(NUM_FREE_TERM y x) | **NOT READ** |  |  |
-| `definition NUM_CODE` | NUM_CODE = \x:num. \y:num. SUC (NUM_PAIR x y) | **NOT READ** |  |  |
-| `definition NUM_CONG` | NUM_CONG = \x:num. \y:num. \z:num. ?u:num. ?v:num. y + x * u = z + x * v | **NOT READ** |  |  |
-| `definition NUM_DIV` | NUM_DIV = \x:num. \y:num. select (\z:num. (?u:num. x = y * z + u /\ u < y) \/ y = 0 /\ z = 0) | **NOT READ** |  |  |
-| `definition NUM_DIVIDES` | NUM_DIVIDES = \x:num. \y:num. ?z:num. y = x * z | **NOT READ** |  |  |
-| `definition NUM_EXISTS` | NUM_EXISTS = \x:num. \y:num. NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR x (NUM_CODE 6 y))) | **NOT READ** |  |  |
-| `definition NUM_EXISTS_BELOW` | NUM_EXISTS_BELOW = \x:num. \y:num. \z:num. \u:num. NUM_EXISTS y (NUM_AND (NUM_LESS x (NUM_CODE 0 y) z) u) | **NOT READ** |  |  |
-| `definition NUM_FACT` | NUM_FACT = select (\x:num -> num. x 0 = SUC 0 /\ (!y:num. x (SUC y) = x y * SUC y)) | **NOT READ** |  |  |
-| `definition NUM_FLOOR` | NUM_FLOOR = \x:real. select (\y:num. real_of_num y <= x /\ x < real_of_num y + 1) | **NOT READ** |  |  |
-| `definition NUM_FORM` | NUM_FORM = select (\x:num -> bool. !y:num. x y = (?z:num. ?u:num. y = NUM_CODE z u /\ (z = 5 /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ NUM_TERM v /\ NUM_TERM w) \/ z = 6 /\ x u \/ z = 7 /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ x v /\ x w) \/ z = 8 /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ x w)))) | **NOT READ** |  |  |
-| `definition NUM_FREE_FORM` | NUM_FREE_FORM = \x:num. select (\y:num -> bool. !z:num. y z = COND (z = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD z)) (NUM_SND (NUM_PAYLOAD z)))) (NUM_FREE_TERM x (NUM_FST (NUM_PAYLOAD z)) \/ NUM_FREE_TERM x (NUM_SND (NUM_PAYLOAD z))) (COND (z = NUM_CODE 6 (NUM_PAYLOAD z)) (y (NUM_PAYLOAD z)) (COND (z = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD z)) (NUM_SND (NUM_PAYLOAD z)))) (y (NUM_FST (NUM_PAYLOAD z)) \/ y (NUM_SND (NUM_PAYLOAD z))) (COND (z = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD z)) (NUM_SND (NUM_PAYLOAD z)))) (COND (NUM_FST (NUM_PAYLOAD z) = x) F (y (NUM_SND (NUM_PAYLOAD z)))) F)))) | **NOT READ** |  |  |
-| `definition NUM_FREE_TERM` | NUM_FREE_TERM = \x:num. select (\y:num -> bool. !z:num. y z = COND (z = NUM_CODE 0 (NUM_PAYLOAD z)) (NUM_PAYLOAD z = x) (COND (z = NUM_CODE 2 (NUM_PAYLOAD z)) (y (NUM_PAYLOAD z)) (COND (z = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD z)) (NUM_SND (NUM_PAYLOAD z)))) (y (NUM_FST (NUM_PAYLOAD z)) \/ y (NUM_SND (NUM_PAYLOAD z))) (COND (z = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD z)) (NUM_SND (NUM_PAYLOAD z)))) (y (NUM_FST (NUM_PAYLOAD z)) \/ y (NUM_SND (NUM_PAYLOAD z))) F)))) | **NOT READ** |  |  |
-| `definition NUM_FST` | NUM_FST = \x:num. select (\y:num. ?z:num. x = NUM_PAIR y z) | **NOT READ** |  |  |
-| `definition NUM_GCD` | NUM_GCD = \x:num. \y:num. select (\z:num. (NUM_DIVIDES z x /\ NUM_DIVIDES z y) /\ (!u:num. NUM_DIVIDES u x /\ NUM_DIVIDES u y ==> u <= z)) | **NOT READ** |  |  |
-| `definition NUM_LE` | NUM_LE = \x:num. \y:num. ?z:num. x + z = y | **NOT READ** |  |  |
-| `definition NUM_LESS` | NUM_LESS = \x:num. \y:num. \z:num. NUM_EXISTS x (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR y (NUM_CODE 2 (NUM_CODE 0 x)))) z)) | **NOT READ** |  |  |
-| `definition NUM_LOGIC` | NUM_LOGIC = \x:num. (?y:num. ?z:num. NUM_FORM y /\ NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z y)))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM y /\ NUM_FORM z /\ NUM_FORM u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z u)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR y z)) (NUM_CODE 7 (NUM_PAIR y u)))))) \/ (?y:num. ?z:num. NUM_FORM y /\ NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 y) (NUM_CODE 6 z))) (NUM_CODE 7 (NUM_PAIR z y)))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM u /\ NUM_TERM z /\ NUM_CLOSED z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y u)) (NUM_SUBST_FORM y z u))) \/ (?y:num. ?z:num. ?u:num. NUM_FORM z /\ NUM_FORM u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z u)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y z)) (NUM_CODE 8 (NUM_PAIR y u)))))) \/ (?y:num. ?z:num. NUM_FORM z /\ ~(NUM_FREE_FORM y z) /\ x = NUM_CODE 7 (NUM_PAIR z (NUM_CODE 8 (NUM_PAIR y z)))) \/ (?y:num. NUM_TERM y /\ x = NUM_CODE 5 (NUM_PAIR y y)) \/ (?y:num. ?z:num. ?u:num. ?v:num. NUM_FORM v /\ NUM_TERM z /\ NUM_TERM u /\ NUM_CLOSED z /\ NUM_CLOSED u /\ x = NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR z u)) (NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM y z v) (NUM_SUBST_FORM y u v))))) | **NOT READ** |  |  |
-| `definition NUM_LT` | NUM_LT = \x:num. \y:num. SUC x <= y | **NOT READ** |  |  |
-| `definition NUM_MOD` | NUM_MOD = \x:num. \y:num. select (\z:num. x = y * NUM_DIV x y + z /\ z < y \/ y = 0 /\ z = x) | **NOT READ** |  |  |
-| `definition NUM_MUL` | NUM_MUL = \x:num. select (\y:num -> num. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x)) | **NOT READ** |  |  |
-| `definition NUM_NUMERAL` | NUM_NUMERAL = select (\x:num -> num. x 0 = NUM_CODE 1 0 /\ (!y:num. x (SUC y) = NUM_CODE 2 (x y))) | **NOT READ** |  |  |
+| `definition MONOTONE` | MONOTONE = \f:('a -> bool) -> 'a -> bool. !g:'a -> bool. !h:'a -> bool. (!x:'a. g x ==> h x) ==> (!x:'a. f g x ==> f h x) | **NOT READ** |  |  |
+| `definition NUM_ADD` | NUM_ADD = \n:num. select (\f:num -> num. f 0 = n /\ (!m:num. f (SUC m) = SUC (f m))) | **NOT READ** |  |  |
+| `definition NUM_ALL_BELOW` | NUM_ALL_BELOW = \n:num. \m:num. \k:num. \i:num. NUM_CODE 8 (NUM_PAIR m (NUM_CODE 7 (NUM_PAIR (NUM_LESS n (NUM_CODE 0 m) k) i))) | **NOT READ** |  |  |
+| `definition NUM_AND` | NUM_AND = \n:num. \m:num. NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR n (NUM_CODE 6 m))) | **NOT READ** |  |  |
+| `definition NUM_BETA` | NUM_BETA = \n:num. \m:num. \k:num. NUM_MOD n (SUC (SUC k * m)) | **NOT READ** |  |  |
+| `definition NUM_BIT0` | NUM_BIT0 = \n:num. n + n | **NOT READ** |  |  |
+| `definition NUM_BIT1` | NUM_BIT1 = \n:num. SUC (n + n) | **NOT READ** |  |  |
+| `definition NUM_CEIL` | NUM_CEIL = \x:real. select (\n:num. x <= real_of_num n /\ real_of_num n < x + 1) | **NOT READ** |  |  |
+| `definition NUM_CHOOSE` | NUM_CHOOSE = select (\f:num -> num -> num. f 0 = (\n:num. COND (n = 0) (SUC 0) 0) /\ (!n:num. f (SUC n) = (\m:num. COND (m = 0) (SUC 0) (f n (PRE m) + f n m)))) | **NOT READ** |  |  |
+| `definition NUM_CLOSED` | NUM_CLOSED = \n:num. !m:num. ~(NUM_FREE_TERM m n) | **NOT READ** |  |  |
+| `definition NUM_CODE` | NUM_CODE = \n:num. \m:num. SUC (NUM_PAIR n m) | **NOT READ** |  |  |
+| `definition NUM_CONG` | NUM_CONG = \n:num. \m:num. \k:num. ?i:num. ?j:num. m + n * i = k + n * j | **NOT READ** |  |  |
+| `definition NUM_DIV` | NUM_DIV = \n:num. \m:num. select (\k:num. (?i:num. n = m * k + i /\ i < m) \/ m = 0 /\ k = 0) | **NOT READ** |  |  |
+| `definition NUM_DIVIDES` | NUM_DIVIDES = \n:num. \m:num. ?k:num. m = n * k | **NOT READ** |  |  |
+| `definition NUM_EXISTS` | NUM_EXISTS = \n:num. \m:num. NUM_CODE 6 (NUM_CODE 8 (NUM_PAIR n (NUM_CODE 6 m))) | **NOT READ** |  |  |
+| `definition NUM_EXISTS_BELOW` | NUM_EXISTS_BELOW = \n:num. \m:num. \k:num. \i:num. NUM_EXISTS m (NUM_AND (NUM_LESS n (NUM_CODE 0 m) k) i) | **NOT READ** |  |  |
+| `definition NUM_FACT` | NUM_FACT = select (\f:num -> num. f 0 = SUC 0 /\ (!n:num. f (SUC n) = f n * SUC n)) | **NOT READ** |  |  |
+| `definition NUM_FLOOR` | NUM_FLOOR = \x:real. select (\n:num. real_of_num n <= x /\ x < real_of_num n + 1) | **NOT READ** |  |  |
+| `definition NUM_FORM` | NUM_FORM = select (\f:num -> bool. !n:num. f n = (?m:num. ?k:num. n = NUM_CODE m k /\ (m = 5 /\ (?i:num. ?j:num. k = NUM_PAIR i j /\ NUM_TERM i /\ NUM_TERM j) \/ m = 6 /\ f k \/ m = 7 /\ (?i:num. ?j:num. k = NUM_PAIR i j /\ f i /\ f j) \/ m = 8 /\ (?i:num. ?j:num. k = NUM_PAIR i j /\ f j)))) | **NOT READ** |  |  |
+| `definition NUM_FREE_FORM` | NUM_FREE_FORM = \n:num. select (\f:num -> bool. !m:num. f m = COND (m = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD m)) (NUM_SND (NUM_PAYLOAD m)))) (NUM_FREE_TERM n (NUM_FST (NUM_PAYLOAD m)) \/ NUM_FREE_TERM n (NUM_SND (NUM_PAYLOAD m))) (COND (m = NUM_CODE 6 (NUM_PAYLOAD m)) (f (NUM_PAYLOAD m)) (COND (m = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD m)) (NUM_SND (NUM_PAYLOAD m)))) (f (NUM_FST (NUM_PAYLOAD m)) \/ f (NUM_SND (NUM_PAYLOAD m))) (COND (m = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD m)) (NUM_SND (NUM_PAYLOAD m)))) (COND (NUM_FST (NUM_PAYLOAD m) = n) F (f (NUM_SND (NUM_PAYLOAD m)))) F)))) | **NOT READ** |  |  |
+| `definition NUM_FREE_TERM` | NUM_FREE_TERM = \n:num. select (\f:num -> bool. !m:num. f m = COND (m = NUM_CODE 0 (NUM_PAYLOAD m)) (NUM_PAYLOAD m = n) (COND (m = NUM_CODE 2 (NUM_PAYLOAD m)) (f (NUM_PAYLOAD m)) (COND (m = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD m)) (NUM_SND (NUM_PAYLOAD m)))) (f (NUM_FST (NUM_PAYLOAD m)) \/ f (NUM_SND (NUM_PAYLOAD m))) (COND (m = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD m)) (NUM_SND (NUM_PAYLOAD m)))) (f (NUM_FST (NUM_PAYLOAD m)) \/ f (NUM_SND (NUM_PAYLOAD m))) F)))) | **NOT READ** |  |  |
+| `definition NUM_FST` | NUM_FST = \n:num. select (\m:num. ?k:num. n = NUM_PAIR m k) | **NOT READ** |  |  |
+| `definition NUM_GCD` | NUM_GCD = \n:num. \m:num. select (\k:num. (NUM_DIVIDES k n /\ NUM_DIVIDES k m) /\ (!i:num. NUM_DIVIDES i n /\ NUM_DIVIDES i m ==> i <= k)) | **NOT READ** |  |  |
+| `definition NUM_LE` | NUM_LE = \n:num. \m:num. ?k:num. n + k = m | **NOT READ** |  |  |
+| `definition NUM_LESS` | NUM_LESS = \n:num. \m:num. \k:num. NUM_EXISTS n (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR m (NUM_CODE 2 (NUM_CODE 0 n)))) k)) | **NOT READ** |  |  |
+| `definition NUM_LOGIC` | NUM_LOGIC = \n:num. (?m:num. ?k:num. NUM_FORM m /\ NUM_FORM k /\ n = NUM_CODE 7 (NUM_PAIR m (NUM_CODE 7 (NUM_PAIR k m)))) \/ (?m:num. ?k:num. ?i:num. NUM_FORM m /\ NUM_FORM k /\ NUM_FORM i /\ n = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR m (NUM_CODE 7 (NUM_PAIR k i)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR m k)) (NUM_CODE 7 (NUM_PAIR m i)))))) \/ (?m:num. ?k:num. NUM_FORM m /\ NUM_FORM k /\ n = NUM_CODE 7 (NUM_PAIR (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 m) (NUM_CODE 6 k))) (NUM_CODE 7 (NUM_PAIR k m)))) \/ (?m:num. ?k:num. ?i:num. NUM_FORM i /\ NUM_TERM k /\ NUM_CLOSED k /\ n = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR m i)) (NUM_SUBST_FORM m k i))) \/ (?m:num. ?k:num. ?i:num. NUM_FORM k /\ NUM_FORM i /\ n = NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR m (NUM_CODE 7 (NUM_PAIR k i)))) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR m k)) (NUM_CODE 8 (NUM_PAIR m i)))))) \/ (?m:num. ?k:num. NUM_FORM k /\ ~(NUM_FREE_FORM m k) /\ n = NUM_CODE 7 (NUM_PAIR k (NUM_CODE 8 (NUM_PAIR m k)))) \/ (?m:num. NUM_TERM m /\ n = NUM_CODE 5 (NUM_PAIR m m)) \/ (?m:num. ?k:num. ?i:num. ?j:num. NUM_FORM j /\ NUM_TERM k /\ NUM_TERM i /\ NUM_CLOSED k /\ NUM_CLOSED i /\ n = NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR k i)) (NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM m k j) (NUM_SUBST_FORM m i j))))) | **NOT READ** |  |  |
+| `definition NUM_LT` | NUM_LT = \n:num. \m:num. SUC n <= m | **NOT READ** |  |  |
+| `definition NUM_MOD` | NUM_MOD = \n:num. \m:num. select (\k:num. n = m * NUM_DIV n m + k /\ k < m \/ m = 0 /\ k = n) | **NOT READ** |  |  |
+| `definition NUM_MUL` | NUM_MUL = \n:num. select (\f:num -> num. f 0 = 0 /\ (!m:num. f (SUC m) = f m + n)) | **NOT READ** |  |  |
+| `definition NUM_NUMERAL` | NUM_NUMERAL = select (\f:num -> num. f 0 = NUM_CODE 1 0 /\ (!n:num. f (SUC n) = NUM_CODE 2 (f n))) | **NOT READ** |  |  |
 | `definition NUM_ONE` | NUM_ONE = SUC 0 | **NOT READ** |  |  |
-| `definition NUM_OR` | NUM_OR = \x:num. \y:num. NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 x) y) | **NOT READ** |  |  |
-| `definition NUM_PA` | NUM_PA = \x:num. x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1)))))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0)))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))))))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 1 0)))) \/ x = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))) (NUM_CODE 0 0)))))))) \/ (?y:num. ?z:num. NUM_FORM z /\ x = NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM y (NUM_CODE 1 0) z) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR y (NUM_CODE 7 (NUM_PAIR z (NUM_SUBST_FORM y (NUM_CODE 2 (NUM_CODE 0 y)) z))))) (NUM_CODE 8 (NUM_PAIR y z)))))) | **NOT READ** |  |  |
-| `definition NUM_PAIR` | NUM_PAIR = \x:num. \y:num. NUM_TRI (x + y) + x | **NOT READ** |  |  |
-| `definition NUM_PAYLOAD` | NUM_PAYLOAD = \x:num. select (\y:num. ?z:num. x = NUM_CODE z y) | **NOT READ** |  |  |
-| `definition NUM_POW` | NUM_POW = \x:num. select (\y:num -> num. y 0 = SUC 0 /\ (!z:num. y (SUC z) = y z * x)) | **NOT READ** |  |  |
-| `definition NUM_PRIME` | NUM_PRIME = \x:num. SUC 0 < x /\ (!y:num. NUM_DIVIDES y x ==> y = SUC 0 \/ y = x) | **NOT READ** |  |  |
-| `definition NUM_PROD` | NUM_PROD = \x:num -> num. select (\y:num -> num. y 0 = SUC 0 /\ (!z:num. y (SUC z) = y z * x z)) | **NOT READ** |  |  |
-| `definition NUM_PROOF` | NUM_PROOF = \x:num. \y:num. ?z:num. ?u:num. ?v:num. x = NUM_PAIR z (NUM_PAIR u v) /\ NUM_BETA u v z = y /\ (!w:num. w <= z ==> NUM_STEP u v w) | **NOT READ** |  |  |
-| `definition NUM_PROV` | NUM_PROV = \x:num. ?y:num. NUM_PROOF y x | **NOT READ** |  |  |
-| `definition NUM_PROV_FROM` | NUM_PROV_FROM = \x:num. \y:num. ?z:num. ?u:num. ?v:num. NUM_BETA u v z = y /\ (!w:num. w <= z ==> NUM_STEP_FROM x u v w) | **NOT READ** |  |  |
-| `definition NUM_REP` | NUM_REP = \x:ind. !y:ind -> bool. y IND_0 /\ (!z:ind. y z ==> y (IND_SUC z)) ==> y x | **NOT READ** |  |  |
-| `definition NUM_SND` | NUM_SND = \x:num. select (\y:num. ?z:num. x = NUM_PAIR z y) | **NOT READ** |  |  |
-| `definition NUM_STEP` | NUM_STEP = \x:num. \y:num. \z:num. NUM_PA (NUM_BETA x y z) \/ NUM_LOGIC (NUM_BETA x y z) \/ (?u:num. ?v:num. u < z /\ v < z /\ NUM_BETA x y u = NUM_CODE 7 (NUM_PAIR (NUM_BETA x y v) (NUM_BETA x y z))) \/ (?u:num. ?v:num. u < z /\ NUM_BETA x y z = NUM_CODE 8 (NUM_PAIR v (NUM_BETA x y u))) | **NOT READ** |  |  |
-| `definition NUM_STEP_FROM` | NUM_STEP_FROM = \x:num. \y:num. \z:num. \u:num. NUM_FORM (NUM_BETA y z u) /\ (NUM_STEP y z u \/ NUM_BETA y z u = x) | **NOT READ** |  |  |
-| `definition NUM_SUB` | NUM_SUB = \x:num. select (\y:num -> num. y 0 = x /\ (!z:num. y (SUC z) = PRE (y z))) | **NOT READ** |  |  |
-| `definition NUM_SUBST_FORM` | NUM_SUBST_FORM = \x:num. \y:num. select (\z:num -> num. !u:num. z u = COND (u = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 5 (NUM_PAIR (NUM_SUBST_TERM x y (NUM_FST (NUM_PAYLOAD u))) (NUM_SUBST_TERM x y (NUM_SND (NUM_PAYLOAD u))))) (COND (u = NUM_CODE 6 (NUM_PAYLOAD u)) (NUM_CODE 6 (z (NUM_PAYLOAD u))) (COND (u = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 7 (NUM_PAIR (z (NUM_FST (NUM_PAYLOAD u))) (z (NUM_SND (NUM_PAYLOAD u))))) (COND (u = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (COND (NUM_FST (NUM_PAYLOAD u) = x) u (NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (z (NUM_SND (NUM_PAYLOAD u)))))) u)))) | **NOT READ** |  |  |
-| `definition NUM_SUBST_TERM` | NUM_SUBST_TERM = \x:num. \y:num. select (\z:num -> num. !u:num. z u = COND (u = NUM_CODE 0 (NUM_PAYLOAD u)) (COND (NUM_PAYLOAD u = x) y u) (COND (u = NUM_CODE 2 (NUM_PAYLOAD u)) (NUM_CODE 2 (z (NUM_PAYLOAD u))) (COND (u = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 3 (NUM_PAIR (z (NUM_FST (NUM_PAYLOAD u))) (z (NUM_SND (NUM_PAYLOAD u))))) (COND (u = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD u)) (NUM_SND (NUM_PAYLOAD u)))) (NUM_CODE 4 (NUM_PAIR (z (NUM_FST (NUM_PAYLOAD u))) (z (NUM_SND (NUM_PAYLOAD u))))) u)))) | **NOT READ** |  |  |
-| `definition NUM_SUM` | NUM_SUM = \x:num -> num. select (\y:num -> num. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x z)) | **NOT READ** |  |  |
-| `definition NUM_TAG` | NUM_TAG = \x:num. select (\y:num. ?z:num. x = NUM_CODE y z) | **NOT READ** |  |  |
-| `definition NUM_TERM` | NUM_TERM = select (\x:num -> bool. !y:num. x y = (?z:num. ?u:num. y = NUM_CODE z u /\ (z = 0 \/ z = 1 /\ u = 0 \/ z = 2 /\ x u \/ (z = 3 \/ z = 4) /\ (?v:num. ?w:num. u = NUM_PAIR v w /\ x v /\ x w)))) | **NOT READ** |  |  |
-| `definition NUM_TOTIENT` | NUM_TOTIENT = \x:num. NUM_SUM (\y:num. COND (NUM_GCD y x = SUC 0) (SUC 0) 0) x | **NOT READ** |  |  |
-| `definition NUM_TRI` | NUM_TRI = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = x y + SUC y)) | **NOT READ** |  |  |
+| `definition NUM_OR` | NUM_OR = \n:num. \m:num. NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 n) m) | **NOT READ** |  |  |
+| `definition NUM_PA` | NUM_PA = \n:num. n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 1 0))))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 7 (NUM_PAIR (NUM_CODE 5 (NUM_PAIR (NUM_CODE 2 (NUM_CODE 0 0)) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 5 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1)))))))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 0 0)))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))))))))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 1 0))) (NUM_CODE 1 0)))) \/ n = NUM_CODE 8 (NUM_PAIR 0 (NUM_CODE 8 (NUM_PAIR 1 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 2 (NUM_CODE 0 1)))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 1))) (NUM_CODE 0 0)))))))) \/ (?m:num. ?k:num. NUM_FORM k /\ n = NUM_CODE 7 (NUM_PAIR (NUM_SUBST_FORM m (NUM_CODE 1 0) k) (NUM_CODE 7 (NUM_PAIR (NUM_CODE 8 (NUM_PAIR m (NUM_CODE 7 (NUM_PAIR k (NUM_SUBST_FORM m (NUM_CODE 2 (NUM_CODE 0 m)) k))))) (NUM_CODE 8 (NUM_PAIR m k)))))) | **NOT READ** |  |  |
+| `definition NUM_PAIR` | NUM_PAIR = \n:num. \m:num. NUM_TRI (n + m) + n | **NOT READ** |  |  |
+| `definition NUM_PAYLOAD` | NUM_PAYLOAD = \n:num. select (\m:num. ?k:num. n = NUM_CODE k m) | **NOT READ** |  |  |
+| `definition NUM_POW` | NUM_POW = \n:num. select (\f:num -> num. f 0 = SUC 0 /\ (!m:num. f (SUC m) = f m * n)) | **NOT READ** |  |  |
+| `definition NUM_PRIME` | NUM_PRIME = \n:num. SUC 0 < n /\ (!m:num. NUM_DIVIDES m n ==> m = SUC 0 \/ m = n) | **NOT READ** |  |  |
+| `definition NUM_PROD` | NUM_PROD = \f:num -> num. select (\g:num -> num. g 0 = SUC 0 /\ (!n:num. g (SUC n) = g n * f n)) | **NOT READ** |  |  |
+| `definition NUM_PROOF` | NUM_PROOF = \n:num. \m:num. ?k:num. ?i:num. ?j:num. n = NUM_PAIR k (NUM_PAIR i j) /\ NUM_BETA i j k = m /\ (!n1:num. n1 <= k ==> NUM_STEP i j n1) | **NOT READ** |  |  |
+| `definition NUM_PROV` | NUM_PROV = \n:num. ?m:num. NUM_PROOF m n | **NOT READ** |  |  |
+| `definition NUM_PROV_FROM` | NUM_PROV_FROM = \n:num. \m:num. ?k:num. ?i:num. ?j:num. NUM_BETA i j k = m /\ (!n1:num. n1 <= k ==> NUM_STEP_FROM n i j n1) | **NOT READ** |  |  |
+| `definition NUM_REP` | NUM_REP = \x:ind. !f:ind -> bool. f IND_0 /\ (!y:ind. f y ==> f (IND_SUC y)) ==> f x | **NOT READ** |  |  |
+| `definition NUM_SND` | NUM_SND = \n:num. select (\m:num. ?k:num. n = NUM_PAIR k m) | **NOT READ** |  |  |
+| `definition NUM_STEP` | NUM_STEP = \n:num. \m:num. \k:num. NUM_PA (NUM_BETA n m k) \/ NUM_LOGIC (NUM_BETA n m k) \/ (?i:num. ?j:num. i < k /\ j < k /\ NUM_BETA n m i = NUM_CODE 7 (NUM_PAIR (NUM_BETA n m j) (NUM_BETA n m k))) \/ (?i:num. ?j:num. i < k /\ NUM_BETA n m k = NUM_CODE 8 (NUM_PAIR j (NUM_BETA n m i))) | **NOT READ** |  |  |
+| `definition NUM_STEP_FROM` | NUM_STEP_FROM = \n:num. \m:num. \k:num. \i:num. NUM_FORM (NUM_BETA m k i) /\ (NUM_STEP m k i \/ NUM_BETA m k i = n) | **NOT READ** |  |  |
+| `definition NUM_SUB` | NUM_SUB = \n:num. select (\f:num -> num. f 0 = n /\ (!m:num. f (SUC m) = PRE (f m))) | **NOT READ** |  |  |
+| `definition NUM_SUBST_FORM` | NUM_SUBST_FORM = \n:num. \m:num. select (\f:num -> num. !k:num. f k = COND (k = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD k)) (NUM_SND (NUM_PAYLOAD k)))) (NUM_CODE 5 (NUM_PAIR (NUM_SUBST_TERM n m (NUM_FST (NUM_PAYLOAD k))) (NUM_SUBST_TERM n m (NUM_SND (NUM_PAYLOAD k))))) (COND (k = NUM_CODE 6 (NUM_PAYLOAD k)) (NUM_CODE 6 (f (NUM_PAYLOAD k))) (COND (k = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD k)) (NUM_SND (NUM_PAYLOAD k)))) (NUM_CODE 7 (NUM_PAIR (f (NUM_FST (NUM_PAYLOAD k))) (f (NUM_SND (NUM_PAYLOAD k))))) (COND (k = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD k)) (NUM_SND (NUM_PAYLOAD k)))) (COND (NUM_FST (NUM_PAYLOAD k) = n) k (NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD k)) (f (NUM_SND (NUM_PAYLOAD k)))))) k)))) | **NOT READ** |  |  |
+| `definition NUM_SUBST_TERM` | NUM_SUBST_TERM = \n:num. \m:num. select (\f:num -> num. !k:num. f k = COND (k = NUM_CODE 0 (NUM_PAYLOAD k)) (COND (NUM_PAYLOAD k = n) m k) (COND (k = NUM_CODE 2 (NUM_PAYLOAD k)) (NUM_CODE 2 (f (NUM_PAYLOAD k))) (COND (k = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD k)) (NUM_SND (NUM_PAYLOAD k)))) (NUM_CODE 3 (NUM_PAIR (f (NUM_FST (NUM_PAYLOAD k))) (f (NUM_SND (NUM_PAYLOAD k))))) (COND (k = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD k)) (NUM_SND (NUM_PAYLOAD k)))) (NUM_CODE 4 (NUM_PAIR (f (NUM_FST (NUM_PAYLOAD k))) (f (NUM_SND (NUM_PAYLOAD k))))) k)))) | **NOT READ** |  |  |
+| `definition NUM_SUM` | NUM_SUM = \f:num -> num. select (\g:num -> num. g 0 = 0 /\ (!n:num. g (SUC n) = g n + f n)) | **NOT READ** |  |  |
+| `definition NUM_TAG` | NUM_TAG = \n:num. select (\m:num. ?k:num. n = NUM_CODE m k) | **NOT READ** |  |  |
+| `definition NUM_TERM` | NUM_TERM = select (\f:num -> bool. !n:num. f n = (?m:num. ?k:num. n = NUM_CODE m k /\ (m = 0 \/ m = 1 /\ k = 0 \/ m = 2 /\ f k \/ (m = 3 \/ m = 4) /\ (?i:num. ?j:num. k = NUM_PAIR i j /\ f i /\ f j)))) | **NOT READ** |  |  |
+| `definition NUM_TOTIENT` | NUM_TOTIENT = \n:num. NUM_SUM (\m:num. COND (NUM_GCD m n = SUC 0) (SUC 0) 0) n | **NOT READ** |  |  |
+| `definition NUM_TRI` | NUM_TRI = select (\f:num -> num. f 0 = 0 /\ (!n:num. f (SUC n) = f n + SUC n)) | **NOT READ** |  |  |
 | `definition NUM_TRI_GRAPH` | NUM_TRI_GRAPH = NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_CODE 0 0) (NUM_CODE 0 0))) (NUM_CODE 4 (NUM_PAIR (NUM_CODE 0 1) (NUM_CODE 2 (NUM_CODE 0 1))))) | **NOT READ** |  |  |
-| `definition NUM_TRUE` | NUM_TRUE = select (\x:num -> (num -> num) -> bool. !y:num. x y = COND (y = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. NUM_VALUE (NUM_FST (NUM_PAYLOAD y)) z = NUM_VALUE (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 6 (NUM_PAYLOAD y)) (\z:num -> num. ~(x (NUM_PAYLOAD y) z)) (COND (y = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z ==> x (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. !u:num. x (NUM_SND (NUM_PAYLOAD y)) (\v:num. COND (v = NUM_FST (NUM_PAYLOAD y)) u (z v))) (\z:num -> num. F))))) | **NOT READ** |  |  |
-| `definition NUM_VALUE` | NUM_VALUE = select (\x:num -> (num -> num) -> num. !y:num. x y = COND (y = NUM_CODE 0 (NUM_PAYLOAD y)) (\z:num -> num. z (NUM_PAYLOAD y)) (COND (y = NUM_CODE 2 (NUM_PAYLOAD y)) (\z:num -> num. SUC (x (NUM_PAYLOAD y) z)) (COND (y = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z + x (NUM_SND (NUM_PAYLOAD y)) z) (COND (y = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD y)) (NUM_SND (NUM_PAYLOAD y)))) (\z:num -> num. x (NUM_FST (NUM_PAYLOAD y)) z * x (NUM_SND (NUM_PAYLOAD y)) z) (\z:num -> num. 0))))) | **NOT READ** |  |  |
+| `definition NUM_TRUE` | NUM_TRUE = select (\f:num -> (num -> num) -> bool. !n:num. f n = COND (n = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (\g:num -> num. NUM_VALUE (NUM_FST (NUM_PAYLOAD n)) g = NUM_VALUE (NUM_SND (NUM_PAYLOAD n)) g) (COND (n = NUM_CODE 6 (NUM_PAYLOAD n)) (\g:num -> num. ~(f (NUM_PAYLOAD n) g)) (COND (n = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (\g:num -> num. f (NUM_FST (NUM_PAYLOAD n)) g ==> f (NUM_SND (NUM_PAYLOAD n)) g) (COND (n = NUM_CODE 8 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (\g:num -> num. !m:num. f (NUM_SND (NUM_PAYLOAD n)) (\k:num. COND (k = NUM_FST (NUM_PAYLOAD n)) m (g k))) (\g:num -> num. F))))) | **NOT READ** |  |  |
+| `definition NUM_VALUE` | NUM_VALUE = select (\f:num -> (num -> num) -> num. !n:num. f n = COND (n = NUM_CODE 0 (NUM_PAYLOAD n)) (\g:num -> num. g (NUM_PAYLOAD n)) (COND (n = NUM_CODE 2 (NUM_PAYLOAD n)) (\g:num -> num. SUC (f (NUM_PAYLOAD n) g)) (COND (n = NUM_CODE 3 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (\g:num -> num. f (NUM_FST (NUM_PAYLOAD n)) g + f (NUM_SND (NUM_PAYLOAD n)) g) (COND (n = NUM_CODE 4 (NUM_PAIR (NUM_FST (NUM_PAYLOAD n)) (NUM_SND (NUM_PAYLOAD n)))) (\g:num -> num. f (NUM_FST (NUM_PAYLOAD n)) g * f (NUM_SND (NUM_PAYLOAD n)) g) (\g:num -> num. 0))))) | **NOT READ** |  |  |
 | `definition PAIR` | PAIR = \x:'a. \y:'b. mk_prod (mk_pair x y) | **NOT READ** |  |  |
-| `definition PRE` | PRE = select (\x:num -> num. x 0 = 0 /\ (!y:num. x (SUC y) = y)) | **NOT READ** |  |  |
-| `definition Power` | Power = \x:real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = x * y z)) | **NOT READ** |  |  |
-| `definition Prod` | Prod = \x:num -> real. select (\y:num -> real. y 0 = 1 /\ (!z:num. y (SUC z) = y z * x z)) | **NOT READ** |  |  |
-| `definition REACH` | REACH = \x:'a -> 'a -> bool. \y:'a -> 'a -> bool. \z:'a. INDUCTIVE (\u:prod('a, num) -> bool. \v:prod('a, num). v = PAIR z 0 \/ (?w:prod('a, num). u w /\ x (FST w) (FST v) /\ (y (FST w) (FST v) /\ SND v = SUC (SND w) \/ ~(y (FST w) (FST v)) /\ SND v = SND w))) | **NOT READ** |  |  |
-| `definition RES_JUSTIFIED` | RES_JUSTIFIED = \x:num -> num. \y:num -> num -> num. \z:num -> num -> bool. \u:num. \v:num. v < u \/ (?w:num. ?x1:num. ?y1:num. w < v /\ x1 < v /\ (!z1:num. z1 < x w ==> ~(y w z1 = y1 /\ z w z1 = T) ==> (?u1:num. u1 < x v /\ y v u1 = y w z1 /\ z v u1 = z w z1)) /\ (!z1:num. z1 < x x1 ==> ~(y x1 z1 = y1 /\ z x1 z1 = F) ==> (?u1:num. u1 < x v /\ y v u1 = y x1 z1 /\ z v u1 = z x1 z1))) | **NOT READ** |  |  |
-| `definition RES_REFUTATION` | RES_REFUTATION = \x:num -> num. \y:num -> num -> num. \z:num -> num -> bool. \u:num. \v:num. (!w:num. w < v ==> RES_JUSTIFIED x y z u w) /\ (?w:num. w < v /\ x w = 0) | **NOT READ** |  |  |
-| `definition RES_SAT` | RES_SAT = \x:num -> bool. \y:num -> num. \z:num -> num -> num. \u:num -> num -> bool. \v:num. ?w:num. w < y v /\ x (z v w) = u v w | **NOT READ** |  |  |
-| `definition RES_WIDTH` | RES_WIDTH = \x:num -> num. select (\y:num -> num. y 0 = 0 /\ (!z:num. y (SUC z) = COND (x z <= y z) (y z) (x z))) | **NOT READ** |  |  |
+| `definition PRE` | PRE = select (\f:num -> num. f 0 = 0 /\ (!n:num. f (SUC n) = n)) | **NOT READ** |  |  |
+| `definition Power` | Power = \x:real. select (\f:num -> real. f 0 = 1 /\ (!n:num. f (SUC n) = x * f n)) | **NOT READ** |  |  |
+| `definition Prod` | Prod = \f:num -> real. select (\g:num -> real. g 0 = 1 /\ (!n:num. g (SUC n) = g n * f n)) | **NOT READ** |  |  |
+| `definition REACH` | REACH = \f:'a -> 'a -> bool. \g:'a -> 'a -> bool. \x:'a. INDUCTIVE (\h:prod('a, num) -> bool. \y:prod('a, num). y = PAIR x 0 \/ (?z:prod('a, num). h z /\ f (FST z) (FST y) /\ (g (FST z) (FST y) /\ SND y = SUC (SND z) \/ ~(g (FST z) (FST y)) /\ SND y = SND z))) | **NOT READ** |  |  |
+| `definition RES_JUSTIFIED` | RES_JUSTIFIED = \f:num -> num. \g:num -> num -> num. \h:num -> num -> bool. \n:num. \m:num. m < n \/ (?k:num. ?i:num. ?j:num. k < m /\ i < m /\ (!n1:num. n1 < f k ==> ~(g k n1 = j /\ h k n1 = T) ==> (?m1:num. m1 < f m /\ g m m1 = g k n1 /\ h m m1 = h k n1)) /\ (!n1:num. n1 < f i ==> ~(g i n1 = j /\ h i n1 = F) ==> (?m1:num. m1 < f m /\ g m m1 = g i n1 /\ h m m1 = h i n1))) | **NOT READ** |  |  |
+| `definition RES_REFUTATION` | RES_REFUTATION = \f:num -> num. \g:num -> num -> num. \h:num -> num -> bool. \n:num. \m:num. (!k:num. k < m ==> RES_JUSTIFIED f g h n k) /\ (?k:num. k < m /\ f k = 0) | **NOT READ** |  |  |
+| `definition RES_SAT` | RES_SAT = \f:num -> bool. \g:num -> num. \h:num -> num -> num. \f1:num -> num -> bool. \n:num. ?m:num. m < g n /\ f (h n m) = f1 n m | **NOT READ** |  |  |
+| `definition RES_WIDTH` | RES_WIDTH = \f:num -> num. select (\g:num -> num. g 0 = 0 /\ (!n:num. g (SUC n) = COND (f n <= g n) (g n) (f n))) | **NOT READ** |  |  |
 | `definition SND` | SND = \x:prod('a, 'b). select (\y:'b. ?z:'a. x = PAIR z y) | **NOT READ** |  |  |
-| `definition SUC` | SUC = \x:num. mk_num (IND_SUC (dest_num x)) | **NOT READ** |  |  |
-| `definition Sum` | Sum = \x:num -> real. select (\y:num -> real. y 0 = 0 /\ (!z:num. y (SUC z) = y z + x z)) | **NOT READ** |  |  |
-| `definition T` | T = (\x:bool. x) = (\x:bool. x) | **NOT READ** |  |  |
-| `definition WORD_CONCAT` | WORD_CONCAT = \x:word('a). \y:word('a). WORD_MAKE (WORD_LENGTH x + WORD_LENGTH y) (\z:num. COND (z < WORD_LENGTH x + WORD_LENGTH y) (COND (z < WORD_LENGTH x) (WORD_NTH x z) (WORD_NTH y (NUM_SUB z (WORD_LENGTH x)))) WORD_PAD) | **NOT READ** |  |  |
-| `definition WORD_EMPTY` | WORD_EMPTY = WORD_MAKE 0 (\x:num. WORD_PAD) | **NOT READ** |  |  |
+| `definition SUC` | SUC = \n:num. mk_num (IND_SUC (dest_num n)) | **NOT READ** |  |  |
+| `definition Sum` | Sum = \f:num -> real. select (\g:num -> real. g 0 = 0 /\ (!n:num. g (SUC n) = g n + f n)) | **NOT READ** |  |  |
+| `definition T` | T = (\p:bool. p) = (\p:bool. p) | **NOT READ** |  |  |
+| `definition WORD_CONCAT` | WORD_CONCAT = \x:word('a). \y:word('a). WORD_MAKE (WORD_LENGTH x + WORD_LENGTH y) (\n:num. COND (n < WORD_LENGTH x + WORD_LENGTH y) (COND (n < WORD_LENGTH x) (WORD_NTH x n) (WORD_NTH y (NUM_SUB n (WORD_LENGTH x)))) WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_EMPTY` | WORD_EMPTY = WORD_MAKE 0 (\n:num. WORD_PAD) | **NOT READ** |  |  |
 | `definition WORD_FACTOR` | WORD_FACTOR = \x:word('a). \y:word('a). ?z:word('a). ?u:word('a). y = WORD_CONCAT (WORD_CONCAT z x) u | **NOT READ** |  |  |
 | `definition WORD_LENGTH` | WORD_LENGTH = \x:word('a). FST (dest_word x) | **NOT READ** |  |  |
-| `definition WORD_MAKE` | WORD_MAKE = \x:num. \y:num -> 'a. mk_word (PAIR x y) | **NOT READ** |  |  |
+| `definition WORD_MAKE` | WORD_MAKE = \n:num. \f:num -> 'a. mk_word (PAIR n f) | **NOT READ** |  |  |
 | `definition WORD_NTH` | WORD_NTH = \x:word('a). SND (dest_word x) | **NOT READ** |  |  |
 | `definition WORD_PAD` | WORD_PAD = select (\x:'a. T) | **NOT READ** |  |  |
 | `definition WORD_PREFIX` | WORD_PREFIX = \x:word('a). \y:word('a). ?z:word('a). y = WORD_CONCAT x z | **NOT READ** |  |  |
-| `definition WORD_RFC` | WORD_RFC = \x:word('a) -> word('a) -> bool. INDUCTIVE (\y:word('a) -> bool. \z:word('a). (?u:word('a). x u z) \/ (?u:word('a). y u /\ WORD_STEP x u z) \/ (?u:word('a). ?v:word('a). ?w:word('a). ?x1:word('a). y (WORD_CONCAT u v) /\ x (WORD_CONCAT v w) x1 /\ ~(v = WORD_EMPTY) /\ ~(w = WORD_EMPTY) /\ z = WORD_CONCAT u x1)) | **NOT READ** |  |  |
-| `definition WORD_ROTATE` | WORD_ROTATE = \x:num. \y:word('a). WORD_MAKE (WORD_LENGTH y) (\z:num. COND (z < WORD_LENGTH y) (WORD_NTH y (NUM_MOD (z + x) (WORD_LENGTH y))) WORD_PAD) | **NOT READ** |  |  |
-| `definition WORD_SINGLETON` | WORD_SINGLETON = \x:'a. WORD_MAKE (SUC 0) (\y:num. COND (y < SUC 0) x WORD_PAD) | **NOT READ** |  |  |
-| `definition WORD_STEP` | WORD_STEP = \x:word('a) -> word('a) -> bool. \y:word('a). \z:word('a). ?u:word('a). ?v:word('a). ?w:word('a). ?x1:word('a). x v w /\ y = WORD_CONCAT (WORD_CONCAT u v) x1 /\ z = WORD_CONCAT (WORD_CONCAT u w) x1 | **NOT READ** |  |  |
+| `definition WORD_RFC` | WORD_RFC = \f:word('a) -> word('a) -> bool. INDUCTIVE (\g:word('a) -> bool. \x:word('a). (?y:word('a). f y x) \/ (?y:word('a). g y /\ WORD_STEP f y x) \/ (?y:word('a). ?z:word('a). ?u:word('a). ?v:word('a). g (WORD_CONCAT y z) /\ f (WORD_CONCAT z u) v /\ ~(z = WORD_EMPTY) /\ ~(u = WORD_EMPTY) /\ x = WORD_CONCAT y v)) | **NOT READ** |  |  |
+| `definition WORD_ROTATE` | WORD_ROTATE = \n:num. \x:word('a). WORD_MAKE (WORD_LENGTH x) (\m:num. COND (m < WORD_LENGTH x) (WORD_NTH x (NUM_MOD (m + n) (WORD_LENGTH x))) WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_SINGLETON` | WORD_SINGLETON = \x:'a. WORD_MAKE (SUC 0) (\n:num. COND (n < SUC 0) x WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_STEP` | WORD_STEP = \f:word('a) -> word('a) -> bool. \x:word('a). \y:word('a). ?z:word('a). ?u:word('a). ?v:word('a). ?w:word('a). f u v /\ x = WORD_CONCAT (WORD_CONCAT z u) w /\ y = WORD_CONCAT (WORD_CONCAT z v) w | **NOT READ** |  |  |
 | `definition WORD_SUFFIX` | WORD_SUFFIX = \x:word('a). \y:word('a). ?z:word('a). y = WORD_CONCAT z x | **NOT READ** |  |  |
 | `definition ZERO` | ZERO = mk_num IND_0 | **NOT READ** |  |  |
-| `definition \/` | \/ = \x:bool. \y:bool. !z:bool. (x ==> z) ==> (y ==> z) ==> z | **NOT READ** |  |  |
+| `definition \/` | \/ = \p:bool. \q:bool. !r:bool. (p ==> r) ==> (q ==> r) ==> r | **NOT READ** |  |  |
 | `definition abs` | abs = \x:real. max x (-x) | **NOT READ** |  |  |
-| `definition continuous` | continuous = \x:real -> real. \y:real. !z:real. 0 < z ==> (?u:real. 0 < u /\ (!v:real. abs (v - y) < u ==> abs (x v - x y) < z)) | **NOT READ** |  |  |
-| `definition continuous_within` | continuous_within = \x:real -> real. \y:real. \z:real. \u:real. !v:real. 0 < v ==> (?w:real. 0 < w /\ (!x1:real. y <= x1 /\ x1 <= z /\ abs (x1 - u) < w ==> abs (x x1 - x u) < v)) | **NOT READ** |  |  |
-| `definition converges` | converges = \x:num -> real. \y:real. !z:real. 0 < z ==> (?u:num. !v:num. u <= v ==> abs (x v - y) < z) | **NOT READ** |  |  |
-| `definition cos` | cos = \x:real. lim (\y:num. Sum (\z:num. Power (0 - 1) z * (Power x (2 * z) / real_of_num (NUM_FACT (2 * z)))) y) | **NOT READ** |  |  |
+| `definition continuous` | continuous = \f:real -> real. \x:real. !y:real. 0 < y ==> (?z:real. 0 < z /\ (!u:real. abs (u - x) < z ==> abs (f u - f x) < y)) | **NOT READ** |  |  |
+| `definition continuous_within` | continuous_within = \f:real -> real. \x:real. \y:real. \z:real. !u:real. 0 < u ==> (?v:real. 0 < v /\ (!w:real. x <= w /\ w <= y /\ abs (w - z) < v ==> abs (f w - f z) < u)) | **NOT READ** |  |  |
+| `definition converges` | converges = \f:num -> real. \x:real. !y:real. 0 < y ==> (?n:num. !m:num. n <= m ==> abs (f m - x) < y) | **NOT READ** |  |  |
+| `definition cos` | cos = \x:real. lim (\n:num. Sum (\m:num. Power (0 - 1) m * (Power x (2 * m) / real_of_num (NUM_FACT (2 * m)))) n) | **NOT READ** |  |  |
 | `definition cosh` | cosh = \x:real. (exp x + exp (0 - x)) / 2 | **NOT READ** |  |  |
-| `definition derivative` | derivative = \x:real -> real. \y:real. \z:real. !u:real. 0 < u ==> (?v:real. 0 < v /\ (!w:real. 0 < abs w /\ abs w < v ==> abs (x (y + w) - x y - z * w) < u * abs w)) | **NOT READ** |  |  |
-| `definition derivative_within` | derivative_within = \x:real -> real. \y:real. \z:real. \u:real. \v:real. !w:real. 0 < w ==> (?x1:real. 0 < x1 /\ (!y1:real. 0 < abs y1 /\ abs y1 < x1 /\ y <= u + y1 /\ u + y1 <= z ==> abs (x (u + y1) - x u - v * y1) < w * abs y1)) | **NOT READ** |  |  |
+| `definition derivative` | derivative = \f:real -> real. \x:real. \y:real. !z:real. 0 < z ==> (?u:real. 0 < u /\ (!v:real. 0 < abs v /\ abs v < u ==> abs (f (x + v) - f x - y * v) < z * abs v)) | **NOT READ** |  |  |
+| `definition derivative_within` | derivative_within = \f:real -> real. \x:real. \y:real. \z:real. \u:real. !v:real. 0 < v ==> (?w:real. 0 < w /\ (!x1:real. 0 < abs x1 /\ abs x1 < w /\ x <= z + x1 /\ z + x1 <= y ==> abs (f (z + x1) - f z - u * x1) < v * abs x1)) | **NOT READ** |  |  |
 | `definition div` | div = \x:real. \y:real. x * inv y | **NOT READ** |  |  |
-| `definition diverges` | diverges = \x:num -> real. ~(?y:real. converges x y) | **NOT READ** |  |  |
-| `definition exp` | exp = \x:real. lim (\y:num. Sum (\z:num. Power x z / real_of_num (NUM_FACT z)) y) | **NOT READ** |  |  |
-| `definition fine_sum` | fine_sum = \x:real -> real. \y:real -> real. \z:real. \u:real. \v:real. INDUCTIVE (\w:prod(real, prod(real, real)) -> bool. \x1:prod(real, prod(real, real)). (?y1:real. ?z1:real. ?u1:real. x1 = PAIR y1 (PAIR z1 (x u1 * (z1 - y1))) /\ y1 <= u1 /\ u1 <= z1 /\ z1 - y1 < y u1) \/ (?y1:real. ?z1:real. ?u1:real. ?v1:real. ?w1:real. x1 = PAIR y1 (PAIR u1 (v1 + w1)) /\ w (PAIR y1 (PAIR z1 v1)) /\ w (PAIR z1 (PAIR u1 w1)))) (PAIR z (PAIR u v)) | **NOT READ** |  |  |
-| `definition has_integral` | has_integral = \x:real -> real. \y:real. \z:real. \u:real. !v:real. 0 < v ==> (?w:real -> real. (!x1:real. 0 < w x1) /\ (!x1:real. fine_sum x w y z x1 ==> abs (x1 - u) < v)) | **NOT READ** |  |  |
-| `definition integral` | integral = \x:real -> real. \y:real. \z:real. select (\u:real. has_integral x y z u) | **NOT READ** |  |  |
-| `definition lim` | lim = \x:num -> real. select (\y:real. converges x y) | **NOT READ** |  |  |
+| `definition diverges` | diverges = \f:num -> real. ~(?x:real. converges f x) | **NOT READ** |  |  |
+| `definition exp` | exp = \x:real. lim (\n:num. Sum (\m:num. Power x m / real_of_num (NUM_FACT m)) n) | **NOT READ** |  |  |
+| `definition fine_sum` | fine_sum = \f:real -> real. \g:real -> real. \x:real. \y:real. \z:real. INDUCTIVE (\h:prod(real, prod(real, real)) -> bool. \u:prod(real, prod(real, real)). (?v:real. ?w:real. ?x1:real. u = PAIR v (PAIR w (f x1 * (w - v))) /\ v <= x1 /\ x1 <= w /\ w - v < g x1) \/ (?v:real. ?w:real. ?x1:real. ?y1:real. ?z1:real. u = PAIR v (PAIR x1 (y1 + z1)) /\ h (PAIR v (PAIR w y1)) /\ h (PAIR w (PAIR x1 z1)))) (PAIR x (PAIR y z)) | **NOT READ** |  |  |
+| `definition has_integral` | has_integral = \f:real -> real. \x:real. \y:real. \z:real. !u:real. 0 < u ==> (?g:real -> real. (!v:real. 0 < g v) /\ (!v:real. fine_sum f g x y v ==> abs (v - z) < u)) | **NOT READ** |  |  |
+| `definition integral` | integral = \f:real -> real. \x:real. \y:real. select (\z:real. has_integral f x y z) | **NOT READ** |  |  |
+| `definition lim` | lim = \f:num -> real. select (\x:real. converges f x) | **NOT READ** |  |  |
 | `definition ln` | ln = \x:real. select (\y:real. exp y = x) | **NOT READ** |  |  |
 | `definition max` | max = \x:real. \y:real. select (\z:real. (z = x \/ z = y) /\ x <= z /\ y <= z) | **NOT READ** |  |  |
 | `definition min` | min = \x:real. \y:real. x + y - max x y | **NOT READ** |  |  |
 | `definition mk_pair` | mk_pair = \x:'a. \y:'b. \z:'a. \u:'b. z = x /\ u = y | **NOT READ** |  |  |
 | `definition real_le` | real_le = \x:real. \y:real. x < y \/ x = y | **NOT READ** |  |  |
 | `definition real_of_int` | real_of_int = \x:int. real_of_num (FST (INT_OF_PAIR_repr x)) - real_of_num (SND (INT_OF_PAIR_repr x)) | **NOT READ** |  |  |
-| `definition real_of_num` | real_of_num = select (\x:num -> real. x 0 = 0 /\ (!y:num. x (SUC y) = x y + 1)) | **NOT READ** |  |  |
+| `definition real_of_num` | real_of_num = select (\f:num -> real. f 0 = 0 /\ (!n:num. f (SUC n) = f n + 1)) | **NOT READ** |  |  |
 | `definition sgn` | sgn = \x:real. select (\y:real. x < 0 /\ y = -1 \/ x = 0 /\ y = 0 \/ 0 < x /\ y = 1) | **NOT READ** |  |  |
-| `definition sin` | sin = \x:real. lim (\y:num. Sum (\z:num. Power (0 - 1) z * (Power x (2 * z + 1) / real_of_num (NUM_FACT (2 * z + 1)))) y) | **NOT READ** |  |  |
+| `definition sin` | sin = \x:real. lim (\n:num. Sum (\m:num. Power (0 - 1) m * (Power x (2 * m + 1) / real_of_num (NUM_FACT (2 * m + 1)))) n) | **NOT READ** |  |  |
 | `definition sinh` | sinh = \x:real. (exp x - exp (0 - x)) / 2 | **NOT READ** |  |  |
 | `definition sqrt` | sqrt = \x:real. select (\y:real. 0 <= y /\ y * y = x) | **NOT READ** |  |  |
 | `definition sub` | sub = \x:real. \y:real. x + -y | **NOT READ** |  |  |
-| `definition ~` | ~ = \x:bool. x ==> F | **NOT READ** |  |  |
+| `definition ~` | ~ = \p:bool. p ==> F | **NOT READ** |  |  |
 
 ## The notation (27)
 

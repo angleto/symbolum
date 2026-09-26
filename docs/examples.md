@@ -65,10 +65,10 @@ of work per theorem, and nothing below suggests the next one will be faster.
 
 # NUM_PRIME_UNBOUNDED
 
-$$\forall x \colon \mathbb{N}.\ \exists y \colon \mathbb{N}.\ \mathrm{prime}(y) \land x < y$$
+$$\forall n \colon \mathbb{N}.\ \exists m \colon \mathbb{N}.\ \mathrm{prime}(m) \land n < m$$
 
 ```
-!x:num. ?y:num. NUM_PRIME y /\ x < y
+!n:num. ?m:num. NUM_PRIME m /\ n < m
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -179,7 +179,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. ?y:num. NUM_PRIME y /\ x < y"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. ?m:num. NUM_PRIME m /\ n < m"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -213,10 +213,10 @@ worth proving.
 
 # NUM_SQUARE_NOT_DOUBLE
 
-$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < y \Rightarrow \lnot \left( x \cdot x = \mathrm{suc}(\mathrm{suc}(0)) \cdot \left( y \cdot y \right) \right)$$
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ 0 < m \Rightarrow \lnot \left( n \cdot n = \mathrm{suc}(\mathrm{suc}(0)) \cdot \left( m \cdot m \right) \right)$$
 
 ```
-!x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))
+!n:num. !m:num. 0 < m ==> ~(n * n = SUC (SUC 0) * (m * m))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -335,7 +335,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. 0 < m ==> ~(n * n = SUC (SUC 0) * (m * m))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -485,10 +485,10 @@ worth proving.
 
 # NUM_PRIME_FACTOR
 
-$$\forall x \colon \mathbb{N}.\ \mathrm{suc}(0) < x \Rightarrow \left( \exists y \colon \mathbb{N}.\ \mathrm{prime}(y) \land y \mid x \right)$$
+$$\forall n \colon \mathbb{N}.\ \mathrm{suc}(0) < n \Rightarrow \left( \exists m \colon \mathbb{N}.\ \mathrm{prime}(m) \land m \mid n \right)$$
 
 ```
-!x:num. SUC 0 < x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)
+!n:num. SUC 0 < n ==> (?m:num. NUM_PRIME m /\ NUM_DIVIDES m n)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -574,7 +574,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. SUC 0 < x ==> (?y:num. NUM_PRIME y /\ NUM_DIVIDES y x)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. SUC 0 < n ==> (?m:num. NUM_PRIME m /\ NUM_DIVIDES m n)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -608,10 +608,10 @@ worth proving.
 
 # NUM_BEZOUT
 
-$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \lnot \left( x = 0 \right) \lor \lnot \left( y = 0 \right) \Rightarrow \left( \exists z \colon \mathbb{N}.\ \exists u \colon \mathbb{N}.\ x \cdot z = y \cdot u + \gcd(x, y) \lor y \cdot z = x \cdot u + \gcd(x, y) \right)$$
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ \lnot \left( n = 0 \right) \lor \lnot \left( m = 0 \right) \Rightarrow \left( \exists k \colon \mathbb{N}.\ \exists i \colon \mathbb{N}.\ n \cdot k = m \cdot i + \gcd(n, m) \lor m \cdot k = n \cdot i + \gcd(n, m) \right)$$
 
 ```
-!x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. x * z = y * u + NUM_GCD x y \/ y * z = x * u + NUM_GCD x y)
+!n:num. !m:num. ~(n = 0) \/ ~(m = 0) ==> (?k:num. ?i:num. n * k = m * i + NUM_GCD n m \/ m * k = n * i + NUM_GCD n m)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -693,20 +693,20 @@ obtained.
 
 ## The proof the kernel holds
 
-9098 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+8809 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 2337 | 25.7% |
-| EqualityElimination | 2112 | 23.2% |
-| Instantiation | 884 | 9.7% |
-| Reflexivity | 867 | 9.5% |
-| Antisymmetry | 812 | 8.9% |
-| Transitivity | 617 | 6.8% |
-| BetaStep | 547 | 6.0% |
-| TypeInstantiation | 360 | 4.0% |
-| Assumption | 324 | 3.6% |
-| Abstraction | 197 | 2.2% |
+| Congruence | 2247 | 25.5% |
+| EqualityElimination | 2053 | 23.3% |
+| Instantiation | 858 | 9.7% |
+| Reflexivity | 836 | 9.5% |
+| Antisymmetry | 809 | 9.2% |
+| Transitivity | 582 | 6.6% |
+| BetaStep | 521 | 5.9% |
+| TypeInstantiation | 344 | 3.9% |
+| Assumption | 324 | 3.7% |
+| Abstraction | 194 | 2.2% |
 | Citation | 28 | 0.3% |
 | Definition | 12 | 0.1% |
 | Axiom | 1 | 0.0% |
@@ -716,7 +716,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. ~(x = 0) \/ ~(y = 0) ==> (?z:num. ?u:num. x * z = y * u + NUM_GCD x y \/ y * z = x * u + NUM_GCD x y)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. ~(n = 0) \/ ~(m = 0) ==> (?k:num. ?i:num. n * k = m * i + NUM_GCD n m \/ m * k = n * i + NUM_GCD n m)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -750,10 +750,10 @@ worth proving.
 
 # NUM_EUCLID
 
-$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \forall z \colon \mathbb{N}.\ \mathrm{prime}(x) \Rightarrow x \mid y \cdot z \Rightarrow x \mid y \lor x \mid z$$
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ \forall k \colon \mathbb{N}.\ \mathrm{prime}(n) \Rightarrow n \mid m \cdot k \Rightarrow n \mid m \lor n \mid k$$
 
 ```
-!x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z
+!n:num. !m:num. !k:num. NUM_PRIME n ==> NUM_DIVIDES n (m * k) ==> NUM_DIVIDES n m \/ NUM_DIVIDES n k
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -838,16 +838,16 @@ obtained.
 
 ## The proof the kernel holds
 
-10271 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+10238 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 2591 | 25.2% |
-| EqualityElimination | 2395 | 23.3% |
-| Instantiation | 1024 | 10.0% |
-| Reflexivity | 989 | 9.6% |
+| Congruence | 2576 | 25.2% |
+| EqualityElimination | 2395 | 23.4% |
+| Instantiation | 1014 | 9.9% |
+| Reflexivity | 988 | 9.7% |
 | Antisymmetry | 925 | 9.0% |
-| Transitivity | 713 | 6.9% |
+| Transitivity | 706 | 6.9% |
 | BetaStep | 617 | 6.0% |
 | TypeInstantiation | 403 | 3.9% |
 | Assumption | 365 | 3.6% |
@@ -861,7 +861,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (y * z) ==> NUM_DIVIDES x y \/ NUM_DIVIDES x z"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. !k:num. NUM_PRIME n ==> NUM_DIVIDES n (m * k) ==> NUM_DIVIDES n m \/ NUM_DIVIDES n k"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -895,10 +895,10 @@ worth proving.
 
 # NUM_PRIME_DIVISOR
 
-$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \mathrm{prime}(x) \Rightarrow y \mid x \Rightarrow y = \mathrm{suc}(0) \lor y = x$$
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ \mathrm{prime}(n) \Rightarrow m \mid n \Rightarrow m = \mathrm{suc}(0) \lor m = n$$
 
 ```
-!x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \/ y = x
+!n:num. !m:num. NUM_PRIME n ==> NUM_DIVIDES m n ==> m = SUC 0 \/ m = n
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -938,7 +938,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_PRIME x ==> NUM_DIVIDES y x ==> y = SUC 0 \/ y = x"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. NUM_PRIME n ==> NUM_DIVIDES m n ==> m = SUC 0 \/ m = n"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -972,10 +972,10 @@ worth proving.
 
 # NUM_FACTORISATION
 
-$$\forall x \colon \mathbb{N}.\ \mathrm{suc}(0) < x \Rightarrow \left( \exists y \colon \mathbb{N} \to \mathbb{N}.\ \exists z \colon \mathbb{N}.\ 0 < z \land \left( \forall u \colon \mathbb{N}.\ u < z \Rightarrow \mathrm{prime}(y(u)) \right) \land \left( \forall u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ u < v \land v < z \Rightarrow y(u) \le y(v) \right) \land \prod_{i < z} y(i) = x \right)$$
+$$\forall n \colon \mathbb{N}.\ \mathrm{suc}(0) < n \Rightarrow \left( \exists f \colon \mathbb{N} \to \mathbb{N}.\ \exists m \colon \mathbb{N}.\ 0 < m \land \left( \forall k \colon \mathbb{N}.\ k < m \Rightarrow \mathrm{prime}(f(k)) \right) \land \left( \forall k \colon \mathbb{N}.\ \forall i \colon \mathbb{N}.\ k < i \land i < m \Rightarrow f(k) \le f(i) \right) \land \prod_{i < m} f(i) = n \right)$$
 
 ```
-!x:num. SUC 0 < x ==> (?y:num -> num. ?z:num. 0 < z /\ (!u:num. u < z ==> NUM_PRIME (y u)) /\ (!u:num. !v:num. u < v /\ v < z ==> y u <= y v) /\ NUM_PROD y z = x)
+!n:num. SUC 0 < n ==> (?f:num -> num. ?m:num. 0 < m /\ (!k:num. k < m ==> NUM_PRIME (f k)) /\ (!k:num. !i:num. k < i /\ i < m ==> f k <= f i) /\ NUM_PROD f m = n)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1087,7 +1087,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. SUC 0 < x ==> (?y:num -> num. ?z:num. 0 < z /\ (!u:num. u < z ==> NUM_PRIME (y u)) /\ (!u:num. !v:num. u < v /\ v < z ==> y u <= y v) /\ NUM_PROD y z = x)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. SUC 0 < n ==> (?f:num -> num. ?m:num. 0 < m /\ (!k:num. k < m ==> NUM_PRIME (f k)) /\ (!k:num. !i:num. k < i /\ i < m ==> f k <= f i) /\ NUM_PROD f m = n)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1121,10 +1121,10 @@ worth proving.
 
 # NUM_FACTORISATION_UNIQUE
 
-$$\forall x \colon \mathbb{N} \to \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \forall z \colon \mathbb{N} \to \mathbb{N}.\ \forall u \colon \mathbb{N}.\ \left( \forall v \colon \mathbb{N}.\ v < y \Rightarrow \mathrm{prime}(x(v)) \right) \Rightarrow \left( \forall v \colon \mathbb{N}.\ \forall w \colon \mathbb{N}.\ v < w \land w < y \Rightarrow x(v) \le x(w) \right) \Rightarrow \left( \forall v \colon \mathbb{N}.\ v < u \Rightarrow \mathrm{prime}(z(v)) \right) \Rightarrow \left( \forall v \colon \mathbb{N}.\ \forall w \colon \mathbb{N}.\ v < w \land w < u \Rightarrow z(v) \le z(w) \right) \Rightarrow \prod_{i < y} x(i) = \prod_{i < u} z(i) \Rightarrow y = u \land \left( \forall v \colon \mathbb{N}.\ v < y \Rightarrow x(v) = z(v) \right)$$
+$$\forall f \colon \mathbb{N} \to \mathbb{N}.\ \forall n \colon \mathbb{N}.\ \forall g \colon \mathbb{N} \to \mathbb{N}.\ \forall m \colon \mathbb{N}.\ \left( \forall k \colon \mathbb{N}.\ k < n \Rightarrow \mathrm{prime}(f(k)) \right) \Rightarrow \left( \forall k \colon \mathbb{N}.\ \forall i \colon \mathbb{N}.\ k < i \land i < n \Rightarrow f(k) \le f(i) \right) \Rightarrow \left( \forall k \colon \mathbb{N}.\ k < m \Rightarrow \mathrm{prime}(g(k)) \right) \Rightarrow \left( \forall k \colon \mathbb{N}.\ \forall i \colon \mathbb{N}.\ k < i \land i < m \Rightarrow g(k) \le g(i) \right) \Rightarrow \prod_{i < n} f(i) = \prod_{i < m} g(i) \Rightarrow n = m \land \left( \forall k \colon \mathbb{N}.\ k < n \Rightarrow f(k) = g(k) \right)$$
 
 ```
-!x:num -> num. !y:num. !z:num -> num. !u:num. (!v:num. v < y ==> NUM_PRIME (x v)) ==> (!v:num. !w:num. v < w /\ w < y ==> x v <= x w) ==> (!v:num. v < u ==> NUM_PRIME (z v)) ==> (!v:num. !w:num. v < w /\ w < u ==> z v <= z w) ==> NUM_PROD x y = NUM_PROD z u ==> y = u /\ (!v:num. v < y ==> x v = z v)
+!f:num -> num. !n:num. !g:num -> num. !m:num. (!k:num. k < n ==> NUM_PRIME (f k)) ==> (!k:num. !i:num. k < i /\ i < n ==> f k <= f i) ==> (!k:num. k < m ==> NUM_PRIME (g k)) ==> (!k:num. !i:num. k < i /\ i < m ==> g k <= g i) ==> NUM_PROD f n = NUM_PROD g m ==> n = m /\ (!k:num. k < n ==> f k = g k)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1226,13 +1226,13 @@ obtained.
 
 ## The proof the kernel holds
 
-5976 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+5972 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
 | Congruence | 1821 | 30.5% |
-| EqualityElimination | 1311 | 21.9% |
-| Reflexivity | 564 | 9.4% |
+| EqualityElimination | 1311 | 22.0% |
+| Reflexivity | 560 | 9.4% |
 | Antisymmetry | 508 | 8.5% |
 | Instantiation | 486 | 8.1% |
 | Transitivity | 387 | 6.5% |
@@ -1248,7 +1248,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num. !z:num -> num. !u:num. (!v:num. v < y ==> NUM_PRIME (x v)) ==> (!v:num. !w:num. v < w /\ w < y ==> x v <= x w) ==> (!v:num. v < u ==> NUM_PRIME (z v)) ==> (!v:num. !w:num. v < w /\ w < u ==> z v <= z w) ==> NUM_PROD x y = NUM_PROD z u ==> y = u /\ (!v:num. v < y ==> x v = z v)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:num -> num. !n:num. !g:num -> num. !m:num. (!k:num. k < n ==> NUM_PRIME (f k)) ==> (!k:num. !i:num. k < i /\ i < n ==> f k <= f i) ==> (!k:num. k < m ==> NUM_PRIME (g k)) ==> (!k:num. !i:num. k < i /\ i < m ==> g k <= g i) ==> NUM_PROD f n = NUM_PROD g m ==> n = m /\ (!k:num. k < n ==> f k = g k)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1282,10 +1282,10 @@ worth proving.
 
 # NUM_CRT
 
-$$\forall x \colon \mathbb{N} \to \mathbb{N}.\ \forall y \colon \mathbb{N} \to \mathbb{N}.\ \forall z \colon \mathbb{N}.\ \left( \forall u \colon \mathbb{N}.\ u < z \Rightarrow 0 < x(u) \right) \Rightarrow \left( \forall u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ u < z \land v < z \land \lnot \left( u = v \right) \Rightarrow \gcd(x(u), x(v)) = \mathrm{suc}(0) \right) \Rightarrow \left( \exists u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ v < z \Rightarrow u \equiv y(v) \pmod{x(v)} \right)$$
+$$\forall f \colon \mathbb{N} \to \mathbb{N}.\ \forall g \colon \mathbb{N} \to \mathbb{N}.\ \forall n \colon \mathbb{N}.\ \left( \forall m \colon \mathbb{N}.\ m < n \Rightarrow 0 < f(m) \right) \Rightarrow \left( \forall m \colon \mathbb{N}.\ \forall k \colon \mathbb{N}.\ m < n \land k < n \land \lnot \left( m = k \right) \Rightarrow \gcd(f(m), f(k)) = \mathrm{suc}(0) \right) \Rightarrow \left( \exists m \colon \mathbb{N}.\ \forall k \colon \mathbb{N}.\ k < n \Rightarrow m \equiv g(k) \pmod{f(k)} \right)$$
 
 ```
-!x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> 0 < x u) ==> (!u:num. !v:num. u < z /\ v < z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. v < z ==> NUM_CONG (x v) u (y v))
+!f:num -> num. !g:num -> num. !n:num. (!m:num. m < n ==> 0 < f m) ==> (!m:num. !k:num. m < n /\ k < n /\ ~(m = k) ==> NUM_GCD (f m) (f k) = SUC 0) ==> (?m:num. !k:num. k < n ==> NUM_CONG (f k) m (g k))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1394,13 +1394,13 @@ obtained.
 
 ## The proof the kernel holds
 
-11373 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+11370 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
 | Congruence | 4180 | 36.8% |
 | EqualityElimination | 2025 | 17.8% |
-| Reflexivity | 976 | 8.6% |
+| Reflexivity | 973 | 8.6% |
 | Instantiation | 890 | 7.8% |
 | Transitivity | 853 | 7.5% |
 | Antisymmetry | 726 | 6.4% |
@@ -1417,7 +1417,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num -> num. !z:num. (!u:num. u < z ==> 0 < x u) ==> (!u:num. !v:num. u < z /\ v < z /\ ~(u = v) ==> NUM_GCD (x u) (x v) = SUC 0) ==> (?u:num. !v:num. v < z ==> NUM_CONG (x v) u (y v))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:num -> num. !g:num -> num. !n:num. (!m:num. m < n ==> 0 < f m) ==> (!m:num. !k:num. m < n /\ k < n /\ ~(m = k) ==> NUM_GCD (f m) (f k) = SUC 0) ==> (?m:num. !k:num. k < n ==> NUM_CONG (f k) m (g k))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1451,10 +1451,10 @@ worth proving.
 
 # NUM_FACT_DIVIDES
 
-$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < x \land x \le y \Rightarrow x \mid y!$$
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ 0 < n \land n \le m \Rightarrow n \mid m!$$
 
 ```
-!x:num. !y:num. 0 < x /\ x <= y ==> NUM_DIVIDES x (NUM_FACT y)
+!n:num. !m:num. 0 < n /\ n <= m ==> NUM_DIVIDES n (NUM_FACT m)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1516,7 +1516,7 @@ obtained.
 
 ## The proof the kernel holds
 
-4503 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+4501 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
@@ -1524,7 +1524,7 @@ obtained.
 | EqualityElimination | 612 | 13.6% |
 | Abstraction | 329 | 7.3% |
 | Transitivity | 308 | 6.8% |
-| Reflexivity | 280 | 6.2% |
+| Reflexivity | 278 | 6.2% |
 | Antisymmetry | 249 | 5.5% |
 | Instantiation | 230 | 5.1% |
 | BetaStep | 221 | 4.9% |
@@ -1539,7 +1539,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. 0 < x /\ x <= y ==> NUM_DIVIDES x (NUM_FACT y)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. 0 < n /\ n <= m ==> NUM_DIVIDES n (NUM_FACT m)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1575,10 +1575,10 @@ worth proving.
 
 # NUM_STRONG_INDUCTION
 
-$$\forall x \colon \mathbb{N} \to \mathbb{B}.\ \left( \forall y \colon \mathbb{N}.\ \left( \forall z \colon \mathbb{N}.\ z < y \Rightarrow x(z) \right) \Rightarrow x(y) \right) \Rightarrow \left( \forall y \colon \mathbb{N}.\ x(y) \right)$$
+$$\forall f \colon \mathbb{N} \to \mathbb{B}.\ \left( \forall n \colon \mathbb{N}.\ \left( \forall m \colon \mathbb{N}.\ m < n \Rightarrow f(m) \right) \Rightarrow f(n) \right) \Rightarrow \left( \forall n \colon \mathbb{N}.\ f(n) \right)$$
 
 ```
-!x:num -> bool. (!y:num. (!z:num. z < y ==> x z) ==> x y) ==> (!y:num. x y)
+!f:num -> bool. (!n:num. (!m:num. m < n ==> f m) ==> f n) ==> (!n:num. f n)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1617,13 +1617,13 @@ obtained.
 
 ## The proof the kernel holds
 
-5358 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+5356 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
 | Congruence | 2236 | 41.7% |
 | EqualityElimination | 832 | 15.5% |
-| Reflexivity | 360 | 6.7% |
+| Reflexivity | 358 | 6.7% |
 | Transitivity | 350 | 6.5% |
 | Abstraction | 350 | 6.5% |
 | Antisymmetry | 350 | 6.5% |
@@ -1640,7 +1640,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> bool. (!y:num. (!z:num. z < y ==> x z) ==> x y) ==> (!y:num. x y)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:num -> bool. (!n:num. (!m:num. m < n ==> f m) ==> f n) ==> (!n:num. f n)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -1674,10 +1674,10 @@ worth proving.
 
 # NUM_ARCHIMEDES
 
-$$\forall x \colon \mathbb{R}.\ \exists y \colon \mathbb{N}.\ x < y_{\mathbb{R}}$$
+$$\forall x \colon \mathbb{R}.\ \exists n \colon \mathbb{N}.\ x < n_{\mathbb{R}}$$
 
 ```
-!x:real. ?y:num. x < real_of_num y
+!x:real. ?n:num. x < real_of_num n
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -1742,14 +1742,14 @@ obtained.
 
 ## The proof the kernel holds
 
-11324 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+11323 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
 | Congruence | 3962 | 35.0% |
 | EqualityElimination | 1972 | 17.4% |
 | Transitivity | 1161 | 10.3% |
-| Reflexivity | 1104 | 9.7% |
+| Reflexivity | 1103 | 9.7% |
 | Instantiation | 973 | 8.6% |
 | BetaStep | 711 | 6.3% |
 | Antisymmetry | 454 | 4.0% |
@@ -1765,7 +1765,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. ?y:num. x < real_of_num y"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. ?n:num. x < real_of_num n"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -2054,10 +2054,10 @@ worth proving.
 
 # SQRT_TWO_IRRATIONAL
 
-$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < y \Rightarrow \lnot \left( \sqrt{2} = x_{\mathbb{R}} / y_{\mathbb{R}} \right)$$
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ 0 < m \Rightarrow \lnot \left( \sqrt{2} = n_{\mathbb{R}} / m_{\mathbb{R}} \right)$$
 
 ```
-!x:num. !y:num. 0 < y ==> ~(sqrt 2 = real_of_num x / real_of_num y)
+!n:num. !m:num. 0 < m ==> ~(sqrt 2 = real_of_num n / real_of_num m)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -2226,7 +2226,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. 0 < y ==> ~(sqrt 2 = real_of_num x / real_of_num y)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. 0 < m ==> ~(sqrt 2 = real_of_num n / real_of_num m)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -2475,7 +2475,7 @@ obtained.
 
 ## The proof the kernel holds
 
-34825 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+34824 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
@@ -2483,7 +2483,7 @@ obtained.
 | EqualityElimination | 6074 | 17.4% |
 | Transitivity | 4632 | 13.3% |
 | Instantiation | 4451 | 12.8% |
-| Reflexivity | 3915 | 11.2% |
+| Reflexivity | 3914 | 11.2% |
 | BetaStep | 2025 | 5.8% |
 | Antisymmetry | 1309 | 3.8% |
 | TypeInstantiation | 1019 | 2.9% |
@@ -2760,7 +2760,7 @@ obtained.
 
 ## The proof the kernel holds
 
-62017 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+62016 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
@@ -2768,7 +2768,7 @@ obtained.
 | EqualityElimination | 9176 | 14.8% |
 | Transitivity | 8589 | 13.8% |
 | Instantiation | 8296 | 13.4% |
-| Reflexivity | 6638 | 10.7% |
+| Reflexivity | 6637 | 10.7% |
 | BetaStep | 3032 | 4.9% |
 | Antisymmetry | 1844 | 3.0% |
 | TypeInstantiation | 1450 | 2.3% |
@@ -2817,10 +2817,10 @@ worth proving.
 
 # INTERMEDIATE_VALUE
 
-$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \forall u \colon \mathbb{R}.\ y \le z \Rightarrow \left( \forall v \colon \mathbb{R}.\ y \le v \land v \le z \Rightarrow \operatorname{cont}(x, v) \right) \Rightarrow x(y) \le u \Rightarrow u \le x(z) \Rightarrow \left( \exists v \colon \mathbb{R}.\ y \le v \land v \le z \land x(v) = u \right)$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ x \le y \Rightarrow \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow \operatorname{cont}(f, u) \right) \Rightarrow f(x) \le z \Rightarrow z \le f(y) \Rightarrow \left( \exists u \colon \mathbb{R}.\ x \le u \land u \le y \land f(u) = z \right)$$
 
 ```
-!x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)
+!f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous f u) ==> f x <= z ==> z <= f y ==> (?u:real. x <= u /\ u <= y /\ f u = z)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -2916,7 +2916,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous f u) ==> f x <= z ==> z <= f y ==> (?u:real. x <= u /\ u <= y /\ f u = z)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -2950,10 +2950,10 @@ worth proving.
 
 # CONTINUOUS_ATTAINS_MAX
 
-$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ y \le z \Rightarrow \left( \forall u \colon \mathbb{R}.\ y \le u \land u \le z \Rightarrow \operatorname{cont}(x, u) \right) \Rightarrow \left( \exists u \colon \mathbb{R}.\ y \le u \land u \le z \land \left( \forall v \colon \mathbb{R}.\ y \le v \land v \le z \Rightarrow x(v) \le x(u) \right) \right)$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x \le y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}(f, z) \right) \Rightarrow \left( \exists z \colon \mathbb{R}.\ x \le z \land z \le y \land \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow f(u) \le f(z) \right) \right)$$
 
 ```
-!x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. y <= u /\ u <= z /\ (!v:real. y <= v /\ v <= z ==> x v <= x u))
+!f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3047,7 +3047,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. y <= u /\ u <= z /\ (!v:real. y <= v /\ v <= z ==> x v <= x u))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3081,10 +3081,10 @@ worth proving.
 
 # ROLLE
 
-$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ y < z \Rightarrow \left( \forall u \colon \mathbb{R}.\ y \le u \land u \le z \Rightarrow \operatorname{cont}(x, u) \right) \Rightarrow \left( \forall u \colon \mathbb{R}.\ y < u \land u < z \Rightarrow \left( \exists v \colon \mathbb{R}.\ \operatorname{deriv}(x, u, v) \right) \right) \Rightarrow x(y) = x(z) \Rightarrow \left( \exists u \colon \mathbb{R}.\ y < u \land u < z \land \operatorname{deriv}(x, u, 0) \right)$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x < y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}(f, z) \right) \Rightarrow \left( \forall z \colon \mathbb{R}.\ x < z \land z < y \Rightarrow \left( \exists u \colon \mathbb{R}.\ \operatorname{deriv}(f, z, u) \right) \right) \Rightarrow f(x) = f(y) \Rightarrow \left( \exists z \colon \mathbb{R}.\ x < z \land z < y \land \operatorname{deriv}(f, z, 0) \right)$$
 
 ```
-!x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)
+!f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> f x = f y ==> (?z:real. x < z /\ z < y /\ derivative f z 0)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3190,7 +3190,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> f x = f y ==> (?z:real. x < z /\ z < y /\ derivative f z 0)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3224,10 +3224,10 @@ worth proving.
 
 # MEAN_VALUE
 
-$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ y < z \Rightarrow \left( \forall u \colon \mathbb{R}.\ y \le u \land u \le z \Rightarrow \operatorname{cont}(x, u) \right) \Rightarrow \left( \forall u \colon \mathbb{R}.\ y < u \land u < z \Rightarrow \left( \exists v \colon \mathbb{R}.\ \operatorname{deriv}(x, u, v) \right) \right) \Rightarrow \left( \exists u \colon \mathbb{R}.\ \exists v \colon \mathbb{R}.\ y < u \land u < z \land \operatorname{deriv}(x, u, v) \land x(z) - x(y) = v \cdot \left( z - y \right) \right)$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x < y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}(f, z) \right) \Rightarrow \left( \forall z \colon \mathbb{R}.\ x < z \land z < y \Rightarrow \left( \exists u \colon \mathbb{R}.\ \operatorname{deriv}(f, z, u) \right) \right) \Rightarrow \left( \exists z \colon \mathbb{R}.\ \exists u \colon \mathbb{R}.\ x < z \land z < y \land \operatorname{deriv}(f, z, u) \land f(y) - f(x) = u \cdot \left( y - x \right) \right)$$
 
 ```
-!x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))
+!f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3344,7 +3344,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3378,10 +3378,10 @@ worth proving.
 
 # INTEGRAL_DERIVATIVE_WITHIN
 
-$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R} \to \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \forall u \colon \mathbb{R}.\ z \le u \Rightarrow \left( \forall v \colon \mathbb{R}.\ z \le v \land v \le u \Rightarrow \operatorname{deriv}_{[z, u]}(x, v, y(v)) \right) \Rightarrow \operatorname{integral}(y, z, u) = x(u) - x(z)$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall g \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x \le y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{deriv}_{[x, y]}(f, z, g(z)) \right) \Rightarrow \operatorname{integral}(g, x, y) = f(y) - f(x)$$
 
 ```
-!x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> integral y z u = x u - x z
+!f:real -> real. !g:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> derivative_within f x y z (g z)) ==> integral g x y = f y - f x
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3498,7 +3498,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> integral y z u = x u - x z"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !g:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> derivative_within f x y z (g z)) ==> integral g x y = f y - f x"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3532,10 +3532,10 @@ worth proving.
 
 # DERIVATIVE_INTEGRAL
 
-$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \forall u \colon \mathbb{R}.\ \left( \forall v \colon \mathbb{R}.\ y \le v \land v \le z \Rightarrow \operatorname{cont}(x, v) \right) \Rightarrow y < u \Rightarrow u < z \Rightarrow \operatorname{deriv}(\lambda v \colon \mathbb{R}.\ \operatorname{integral}(x, y, v), u, x(u))$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow \operatorname{cont}(f, u) \right) \Rightarrow x < z \Rightarrow z < y \Rightarrow \operatorname{deriv}(\lambda u \colon \mathbb{R}.\ \operatorname{integral}(f, x, u), z, f(z))$$
 
 ```
-!x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous x v) ==> y < u ==> u < z ==> derivative (\v:real. integral x y v) u (x u)
+!f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous f u) ==> x < z ==> z < y ==> derivative (\u:real. integral f x u) z (f z)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3659,7 +3659,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous x v) ==> y < u ==> u < z ==> derivative (\v:real. integral x y v) u (x u)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous f u) ==> x < z ==> z < y ==> derivative (\u:real. integral f x u) z (f z)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3695,10 +3695,10 @@ worth proving.
 
 # NUM_BETA_SEQUENCE
 
-$$\forall x \colon \mathbb{N} \to \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \exists z \colon \mathbb{N}.\ \exists u \colon \mathbb{N}.\ \forall v \colon \mathbb{N}.\ v < y \Rightarrow \beta(z, u, v) = x(v)$$
+$$\forall f \colon \mathbb{N} \to \mathbb{N}.\ \forall n \colon \mathbb{N}.\ \exists m \colon \mathbb{N}.\ \exists k \colon \mathbb{N}.\ \forall i \colon \mathbb{N}.\ i < n \Rightarrow \beta(m, k, i) = f(i)$$
 
 ```
-!x:num -> num. !y:num. ?z:num. ?u:num. !v:num. v < y ==> NUM_BETA z u v = x v
+!f:num -> num. !n:num. ?m:num. ?k:num. !i:num. i < n ==> NUM_BETA m k i = f i
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3827,13 +3827,13 @@ obtained.
 
 ## The proof the kernel holds
 
-18203 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+18200 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
 | Congruence | 6060 | 33.3% |
 | EqualityElimination | 3619 | 19.9% |
-| Reflexivity | 1707 | 9.4% |
+| Reflexivity | 1704 | 9.4% |
 | Instantiation | 1469 | 8.1% |
 | Transitivity | 1386 | 7.6% |
 | Antisymmetry | 1224 | 6.7% |
@@ -3850,7 +3850,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num -> num. !y:num. ?z:num. ?u:num. !v:num. v < y ==> NUM_BETA z u v = x v"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:num -> num. !n:num. ?m:num. ?k:num. !i:num. i < n ==> NUM_BETA m k i = f i"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3884,10 +3884,10 @@ worth proving.
 
 # NUM_PA_FORM
 
-$$\forall x \colon \mathbb{N}.\ \operatorname{PA}(x) \Rightarrow \operatorname{Fm}(x)$$
+$$\forall n \colon \mathbb{N}.\ \operatorname{PA}(n) \Rightarrow \operatorname{Fm}(n)$$
 
 ```
-!x:num. NUM_PA x ==> NUM_FORM x
+!n:num. NUM_PA n ==> NUM_FORM n
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3990,13 +3990,13 @@ obtained.
 
 ## The proof the kernel holds
 
-38404 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+38400 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
 | Congruence | 13385 | 34.9% |
 | EqualityElimination | 7519 | 19.6% |
-| Reflexivity | 3518 | 9.2% |
+| Reflexivity | 3514 | 9.2% |
 | Instantiation | 3199 | 8.3% |
 | Transitivity | 2711 | 7.1% |
 | Antisymmetry | 2686 | 7.0% |
@@ -4013,7 +4013,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_PA x ==> NUM_FORM x"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. NUM_PA n ==> NUM_FORM n"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -4047,10 +4047,10 @@ worth proving.
 
 # NUM_PROV_MP
 
-$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ \operatorname{Prov}(\lceil 7, \langle x, y \rangle \rceil) \Rightarrow \operatorname{Prov}(x) \Rightarrow \operatorname{Prov}(y)$$
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ \operatorname{Prov}(\lceil 7, \langle n, m \rangle \rceil) \Rightarrow \operatorname{Prov}(n) \Rightarrow \operatorname{Prov}(m)$$
 
 ```
-!x:num. !y:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV x ==> NUM_PROV y
+!n:num. !m:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_PROV n ==> NUM_PROV m
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -4215,7 +4215,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR x y)) ==> NUM_PROV x ==> NUM_PROV y"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. NUM_PROV (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_PROV n ==> NUM_PROV m"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -4249,10 +4249,10 @@ worth proving.
 
 # NUM_PROV_SELF
 
-$$\forall x \colon \mathbb{N}.\ \operatorname{Fm}(x) \Rightarrow \operatorname{Prov}(\lceil 7, \langle x, x \rangle \rceil)$$
+$$\forall n \colon \mathbb{N}.\ \operatorname{Fm}(n) \Rightarrow \operatorname{Prov}(\lceil 7, \langle n, n \rangle \rceil)$$
 
 ```
-!x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))
+!n:num. NUM_FORM n ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n n))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -4428,7 +4428,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_FORM x ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR x x))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. NUM_FORM n ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n n))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the

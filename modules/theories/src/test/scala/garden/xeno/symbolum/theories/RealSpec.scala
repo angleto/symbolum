@@ -46,8 +46,8 @@ class RealSpec extends AnyFlatSpec with Matchers {
     // The bound names are the printer's, since a bound variable has no name of its own: `x` is
     // the predicate, `y` its witness and bound, `z` and `u` the elements compared.
     "COMPLETENESS" ->
-      ("!x:real -> bool. (?y:real. x y) /\\ (?y:real. !z:real. x z ==> z <= y) ==> " +
-        "(?y:real. (!z:real. x z ==> z <= y) /\\ (!z:real. (!u:real. x u ==> u <= z) ==> y <= z))")
+      ("!f:real -> bool. (?x:real. f x) /\\ (?x:real. !y:real. f y ==> y <= x) ==> " +
+        "(?x:real. (!y:real. f y ==> y <= x) /\\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y))")
   )
 
   "The theory of the reals" should "build" in {

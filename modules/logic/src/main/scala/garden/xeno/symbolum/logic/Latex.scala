@@ -231,7 +231,7 @@ final class Latex private (
     avoid: Set[String]
   ): String = arguments match {
     case Abs(_, body) :: limit :: Nil =>
-      val name = freshName(bound, avoid)
+      val name = Show.indexName(candidate => bound.contains(candidate) || avoid.contains(candidate))
       spelling.template
         .replace("#b", name)
         .replace("#1", render(notation, body, name :: bound, spelling.inner, avoid))
@@ -259,7 +259,7 @@ final class Latex private (
     context: Int,
     avoid: Set[String]
   ): String = {
-    val name = freshName(bound, avoid)
+    val name = Show.binderName(binderType, candidate => bound.contains(candidate) || avoid.contains(candidate))
     val inner = render(notation, body, name :: bound, 0, avoid)
     bracket(s"${printed(symbol)} $name \\colon ${showType(binderType)}.\\ $inner", context, 0)
   }
@@ -269,18 +269,7 @@ final class Latex private (
   private def bracket(text: String, context: Int, precedence: Int): String =
     if (context > precedence) s"\\left( $text \\right)" else text
 
-  private def freshName(bound: List[String], avoid: Set[String]): String = {
-    val names = Show.binderNames
-    Iterator
-      .from(0)
-      .map { index =>
-        val base = names(index % names.length)
-        val round = index / names.length
-        if (round == 0) base else s"$base$round"
-      }
-      .find(candidate => !bound.contains(candidate) && !avoid.contains(candidate))
-      .get
-  }
+
 }
 
 object Latex {

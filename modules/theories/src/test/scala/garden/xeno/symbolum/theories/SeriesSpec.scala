@@ -60,7 +60,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // Two equations that are consequences of a definition. A development had to carry them as
     // hypotheses before the recursion theorem existed, which cost every theorem two it could never
     // discharge; `RecurrenceSpec` is that arrangement and this is what replaces it.
-    series.show(fact(Series.AtZero).conclusion) shouldBe "!x:num -> real. Sum x 0 = 0"
+    series.show(fact(Series.AtZero).conclusion) shouldBe "!f:num -> real. Sum f 0 = 0"
     // The quantifiers of the step read summand-then-index since the night of 2026-09-12, and used
     // to read index-then-summand. Nothing about the sum changed: `Series` built its own copy of the
     // recursion driver, that copy generalised the two variables in the other order, and the three
@@ -69,7 +69,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // so a caller specialising both recurrences of one function had to swap its arguments between
     // them. `Recursion.scala` is the single driver now and carries the count behind "the only".
     series.show(fact(Series.AtSuccessor).conclusion) shouldBe
-      "!x:num -> real. !y:num. Sum x (SUC y) = Sum x y + x y"
+      "!f:num -> real. !n:num. Sum f (SUC n) = Sum f n + f n"
 
     series.theory.definitions.keySet should contain(Series.SumName)
     // Nineteen since eta landed in `Classical.scala` on 2026-09-10, and none of the difference is
@@ -84,7 +84,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     series.show(fact(Series.PowerAtZero).conclusion) shouldBe "!x:real. Power x 0 = 1"
     // Base then exponent, for the reason the sum's step above carries.
     series.show(fact(Series.PowerAtSuccessor).conclusion) shouldBe
-      "!x:real. !y:num. Power x (SUC y) = x * Power x y"
+      "!x:real. !n:num. Power x (SUC n) = x * Power x n"
 
     fact(Series.PowerAtZero).hypotheses shouldBe empty
     fact(Series.PowerAtSuccessor).hypotheses shouldBe empty
@@ -97,10 +97,10 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // driver rather than out of a second copy of it. The driver is `Recursion.define` and since
     // the night of 2026-09-12 it is also the one the arithmetic on `num` is built by, so the
     // invariant now reaches across the two developments instead of holding inside each.
-    series.show(fact(Series.ProdAtZero).conclusion) shouldBe "!x:num -> real. Prod x 0 = 1"
+    series.show(fact(Series.ProdAtZero).conclusion) shouldBe "!f:num -> real. Prod f 0 = 1"
     // Summand then index, for the reason the sum's step above carries.
     series.show(fact(Series.ProdAtSuccessor).conclusion) shouldBe
-      "!x:num -> real. !y:num. Prod x (SUC y) = Prod x y * x y"
+      "!f:num -> real. !n:num. Prod f (SUC n) = Prod f n * f n"
 
     fact(Series.ProdAtZero).hypotheses shouldBe empty
     fact(Series.ProdAtSuccessor).hypotheses shouldBe empty
@@ -115,8 +115,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
   "Linearity" should "hold for every scalar, every pair of summands and every length" in {
     series.show(fact(Series.Linear).conclusion) shouldBe
-      "!x:real. !y:num -> real. !z:num -> real. !u:num. " +
-        "Sum (\\v:num. x * y v + z v) u = x * Sum y u + Sum z u"
+      "!x:real. !f:num -> real. !g:num -> real. !n:num. " +
+        "Sum (\\m:num. x * f m + g m) n = x * Sum f n + Sum g n"
   }
 
   it should "be instantiable at the summand a reader would write, and not only at the one spec leaves" in {
@@ -178,13 +178,13 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // is the label `POWER_MUL` carries, and the file says so rather than claiming a consumer that
     // withdrew. Checked absent before it was proved, by name, by constant and by shape;
     // `NUM_POW_ONE` is the same statement over `num` and is a different lemma.
-    series.show(fact(Series.PowerOfOne).conclusion) shouldBe "!x:num. Power 1 x = 1"
+    series.show(fact(Series.PowerOfOne).conclusion) shouldBe "!n:num. Power 1 n = 1"
     fact(Series.PowerOfOne).hypotheses shouldBe empty
   }
 
   "The telescoping sum" should "collapse to its ends" in {
     series.show(fact(Series.Telescoping).conclusion) shouldBe
-      "!x:num -> real. !y:num. Sum (\\z:num. x (SUC z) - x z) y = x y - x 0"
+      "!f:num -> real. !n:num. Sum (\\m:num. f (SUC m) - f m) n = f n - f 0"
   }
 
   "Summation by parts" should "hold at every length, which is the point of having it" in {
@@ -192,9 +192,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // closed forms and as sign lemmas; what was missing in the middle was this, at a length that is
     // a variable rather than at two instances.
     series.show(fact(Series.ByParts).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. !z:num. " +
-        "Sum (\\u:num. x u * (y (SUC u) - y u)) z = " +
-        "x z * y z - x 0 * y 0 - Sum (\\u:num. y (SUC u) * (x (SUC u) - x u)) z"
+      "!f:num -> real. !g:num -> real. !n:num. " +
+        "Sum (\\m:num. f m * (g (SUC m) - g m)) n = " +
+        "f n * g n - f 0 * g 0 - Sum (\\m:num. g (SUC m) * (f (SUC m) - f m)) n"
   }
 
   "A sum of two summands" should "split, at the summand anybody would write" in {
@@ -202,7 +202,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // and a rewrite rule is matched syntactically, so the scalar version does not answer a goal
     // written without a scalar. The invariant is that this is a separate fact and not a corollary.
     series.show(fact(Series.Additive).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. !z:num. Sum (\\u:num. x u + y u) z = Sum x z + Sum y z"
+      "!f:num -> real. !g:num -> real. !n:num. Sum (\\m:num. f m + g m) n = Sum f n + Sum g n"
   }
 
   "A constant factor" should "come out of a sum from either side, and both are published" in {
@@ -212,9 +212,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // over the whole summand rather than a rewrite. Neither is `SUM_LINEAR` specialised, for the
     // reason `SUM_ADD` is not either: `Linear` at `g := \i. 0` gives the summand `a * f i + 0`.
     series.show(fact(Series.Scaled).conclusion) shouldBe
-      "!x:real. !y:num -> real. !z:num. Sum (\\u:num. x * y u) z = x * Sum y z"
+      "!x:real. !f:num -> real. !n:num. Sum (\\m:num. x * f m) n = x * Sum f n"
     series.show(fact(Series.ScaledRight).conclusion) shouldBe
-      "!x:real. !y:num -> real. !z:num. Sum (\\u:num. y u * x) z = Sum y z * x"
+      "!x:real. !f:num -> real. !n:num. Sum (\\m:num. f m * x) n = Sum f n * x"
   }
 
   "Every product of a term with a term" should "add up to the product of the two sums" in {
@@ -222,8 +222,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // of indices. The two lengths are independent, which is what makes it usable where the two
     // series are cut at different points.
     series.show(fact(Series.Product).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. !z:num. !u:num. " +
-        "Sum (\\v:num. Sum (\\w:num. x v * y w) z) u = Sum x u * Sum y z"
+      "!f:num -> real. !g:num -> real. !n:num. !m:num. " +
+        "Sum (\\k:num. Sum (\\i:num. f k * g i) n) m = Sum f m * Sum g n"
   }
 
   /**
@@ -238,9 +238,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
    */
   "The triangle of index pairs" should "add up the same by antidiagonals and by rows" in {
     series.show(fact(Series.Diagonal).conclusion) shouldBe
-      "!x:num -> num -> real. !y:num. " +
-        "Sum (\\z:num. Sum (\\u:num. x u (NUM_SUB z u)) (SUC z)) y = " +
-        "Sum (\\z:num. Sum (\\u:num. x z u) (NUM_SUB y z)) y"
+      "!f:num -> num -> real. !n:num. " +
+        "Sum (\\m:num. Sum (\\k:num. f k (NUM_SUB m k)) (SUC m)) n = " +
+        "Sum (\\m:num. Sum (\\k:num. f m k) (NUM_SUB n m)) n"
 
     val table = Term.variable(
       "f",
@@ -299,9 +299,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
    */
   "The binomial theorem" should "hold, and expand to a square a reader can check" in {
     series.show(fact(Series.Binomial).conclusion) shouldBe
-      "!x:real. !y:real. !z:num. Power (x + y) z = " +
-        "Sum (\\u:num. real_of_num (NUM_CHOOSE z u) * " +
-        "(Power x u * Power y (NUM_SUB z u))) (SUC z)"
+      "!x:real. !y:real. !n:num. Power (x + y) n " +
+        "= Sum (\\m:num. real_of_num (NUM_CHOOSE n m) " +
+        "* (Power x m * Power y (NUM_SUB n m))) (SUC n)"
 
     val real = TyApp(Real.TypeName, Nil)
     val a = Term.variable("a", real)
@@ -366,13 +366,13 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
    */
   "The Cauchy product" should "have a closed partial sum, and a gap that is the corner" in {
     series.show(fact(Series.Cauchy).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. !z:num. " +
-        "Sum (\\u:num. Sum (\\v:num. x v * y (NUM_SUB u v)) (SUC u)) z = " +
-        "Sum (\\u:num. x u * Sum y (NUM_SUB z u)) z"
+      "!f:num -> real. !g:num -> real. !n:num. " +
+        "Sum (\\m:num. Sum (\\k:num. f k * g (NUM_SUB m k)) (SUC m)) n = " +
+        "Sum (\\m:num. f m * Sum g (NUM_SUB n m)) n"
     series.show(fact(Series.CauchyGap).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. !z:num. " +
-        "Sum x z * Sum y z - Sum (\\u:num. Sum (\\v:num. x v * y (NUM_SUB u v)) (SUC u)) z = " +
-        "Sum (\\u:num. x u * (Sum y z - Sum y (NUM_SUB z u))) z"
+      "!f:num -> real. !g:num -> real. !n:num. " +
+        "Sum f n * Sum g n - Sum (\\m:num. Sum (\\k:num. f k * g (NUM_SUB m k)) (SUC m)) n = " +
+        "Sum (\\m:num. f m * (Sum g n - Sum g (NUM_SUB n m))) n"
 
     val real = TyApp(Real.TypeName, Nil)
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -434,8 +434,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
    */
   "The bounded monotone" should "compare where the unbounded one cannot" in {
     series.show(fact(Series.MonotoneBelow).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. !z:num. " +
-        "(!u:num. u < z ==> x u <= y u) ==> Sum x z <= Sum y z"
+      "!f:num -> real. !g:num -> real. !n:num. " +
+        "(!m:num. m < n ==> f m <= g m) ==> Sum f n <= Sum g n"
 
     val real = TyApp(Real.TypeName, Nil)
     val numbers = TyApp(Natural.TypeName, Nil)
@@ -481,7 +481,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
         .flatMap(rules.mp(_, below)))
     compared.hypotheses shouldBe empty
     series.show(compared.conclusion) shouldBe
-      "Sum (\\x:num. real_of_num x) (SUC 0) <= Sum (\\x:num. 0) (SUC 0)"
+      "Sum (\\n:num. real_of_num n) (SUC 0) <= Sum (\\n:num. 0) (SUC 0)"
 
     // And the unbounded hypothesis is false at the bound itself, derived rather than asserted:
     // `real_of_num (SUC ZERO)` is `real_of_num ZERO + 1`, which is one.
@@ -491,7 +491,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
           force(rules.spec(force(series.term("ZERO", numbers)), force(peano.fact(Peano.EmbedsSuccessor)))),
           force(
             linarith
-              .prove("!z:real. z = 0 ==> z + 1 = 1")
+              .prove("!x:real. x = 0 ==> x + 1 = 1")
               .flatMap(rules.spec(force(series.term("real_of_num ZERO", real)), _))
               .flatMap(rules.mp(_, force(peano.fact(Peano.EmbedsZero)))))))
     val refused = force(
@@ -506,7 +506,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
   "A sum of zeroes" should "be zero at every length, which SUM_ZERO does not say" in {
     // The two read alike and are different facts: `SUM_ZERO` is about a sum of length zero, this is
     // about a summand of value zero. Keeping them apart is what lets an emptied inner sum collapse.
-    series.show(fact(Series.OfZero).conclusion) shouldBe "!x:num. Sum (\\y:num. 0) x = 0"
+    series.show(fact(Series.OfZero).conclusion) shouldBe "!n:num. Sum (\\m:num. 0) n = 0"
   }
 
   "A sum of a constant" should "be the constant times the length, which counts a range" in {
@@ -514,7 +514,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // a summand of value zero, and this is a summand of any fixed value; only the third says how
     // long a range is, and until it existed this library could not say that at all.
     series.show(fact(Series.Constant).conclusion) shouldBe
-      "!x:real. !y:num. Sum (\\z:num. x) y = real_of_num y * x"
+      "!x:real. !n:num. Sum (\\m:num. x) n = real_of_num n * x"
     fact(Series.Constant).hypotheses shouldBe empty
   }
 
@@ -524,7 +524,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // which is why it does not carry an operation in its name: that pattern is taken, and a
     // reader who has met the other two parses `POWER_PRODUCT` as a third law of exponents.
     series.show(fact(Series.Multiplicative).conclusion) shouldBe
-      "!x:real. !y:real. !z:num. Power (x * y) z = Power x z * Power y z"
+      "!x:real. !y:real. !n:num. Power (x * y) n = Power x n * Power y n"
     fact(Series.Multiplicative).hypotheses shouldBe empty
   }
 
@@ -570,7 +570,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // Stated at `NUM_ADD n n` rather than at a parity predicate, which is why it has no exception
     // at any length: an exponent written as a sum with itself is even by construction.
     series.show(fact(Series.NegatedDouble).conclusion) shouldBe
-      "!x:real. !y:num. Power (0 - x) (y + y) = Power x (y + y)"
+      "!x:real. !n:num. Power (0 - x) (n + n) = Power x (n + n)"
     fact(Series.NegatedDouble).hypotheses shouldBe empty
   }
 
@@ -584,7 +584,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // it. If a later library makes that route work, this goes red and the docstring gets
     // rewritten by whoever it stops.
     val statement = force(series.proposition(
-      "!x:real. !y:num. Power (0 - x) (y + y) = Power x (y + y)"))
+      "!x:real. !n:num. Power (0 - x) (n + n) = Power x (n + n)"))
     val induction = force(naturals.fact(Natural.Induction))
     val driver = Induct(series.logic, ring, induction)
     val sketch = force(Rewrite.Rule.all(series.logic, Vector(
@@ -612,8 +612,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
   "A sum of even length" should "be its even places plus its odd ones" in {
     series.show(fact(Series.EvenOdd).conclusion) shouldBe
-      "!x:num -> real. !y:num. Sum x (y + y) = " +
-      "Sum (\\z:num. x (z + z)) y + Sum (\\z:num. x (SUC (z + z))) y"
+      "!f:num -> real. !n:num. Sum f (n + n) " +
+      "= Sum (\\m:num. f (m + m)) n + Sum (\\m:num. f (SUC (m + m))) n"
     fact(Series.EvenOdd).hypotheses shouldBe empty
   }
 
@@ -650,7 +650,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // hypothesis `q != 1` at all: at q = 1 both sides are zero, which is true and uninformative
     // rather than wrong, and that is the right behaviour for a lemma instantiated without looking.
     series.show(fact(Series.Geometric).conclusion) shouldBe
-      "!x:real. !y:num. (x - 1) * Sum (\\z:num. Power x z) y = Power x y - 1"
+      "!x:real. !n:num. (x - 1) * Sum (\\m:num. Power x m) n = Power x n - 1"
     fact(Series.Geometric).hypotheses shouldBe empty
   }
 
@@ -713,14 +713,14 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // The product's answer to linearity, and the one fact that ties the two definitions in the file
     // to each other rather than each to the recursion theorem.
     series.show(fact(Series.ProdScales).conclusion) shouldBe
-      "!x:real. !y:num -> real. !z:num. Prod (\\u:num. x * y u) z = Power x z * Prod y z"
+      "!x:real. !f:num -> real. !n:num. Prod (\\m:num. x * f m) n = Power x n * Prod f n"
   }
 
   /* ---------------------------------------------------------------- the bounds */
 
   "A positive base" should "give a positive power at every exponent, spendably" in {
     series.show(fact(Series.PowerPositive).conclusion) shouldBe
-      "!x:real. 0 < x ==> (!y:num. 0 < Power x y)"
+      "!x:real. 0 < x ==> (!n:num. 0 < Power x n)"
 
     // The invariant a printed statement cannot show: that the hypothesis is one a caller can
     // actually discharge. Spent at a numeral it has to leave a closed theorem behind, and if the
@@ -728,7 +728,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     val atTwo = force(rules.specAll(fact(Series.PowerPositive), List(numeral(2))))
     val spent = force(rules.mp(atTwo, force(order.positive(BigInt(2)))))
 
-    series.show(spent.conclusion) shouldBe "!x:num. 0 < Power 2 x"
+    series.show(spent.conclusion) shouldBe "!n:num. 0 < Power 2 n"
     spent.hypotheses shouldBe empty
   }
 
@@ -737,7 +737,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // is a different fact, wants `1 <= b` rather than `0 < a`, and says nothing about two bases.
     // This is the one a bound on a measured quantity wants, where the base is what is imprecise.
     series.show(fact(Series.PowerMonotone).conclusion) shouldBe
-      "!x:real. !y:real. 0 < x ==> x <= y ==> (!z:num. Power x z <= Power y z)"
+      "!x:real. !y:real. 0 < x ==> x <= y ==> (!n:num. Power x n <= Power y n)"
 
     val atPair = force(rules.specAll(fact(Series.PowerMonotone), List(numeral(2), numeral(3))))
     val spent = force(
@@ -746,13 +746,13 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
         .flatMap(rules.mp(_, atMost(2, 3)))
     )
 
-    series.show(spent.conclusion) shouldBe "!x:num. Power 2 x <= Power 3 x"
+    series.show(spent.conclusion) shouldBe "!n:num. Power 2 n <= Power 3 n"
     spent.hypotheses shouldBe empty
   }
 
   "A summand that is never negative" should "give a sum that is never negative" in {
     series.show(fact(Series.NonNegative).conclusion) shouldBe
-      "!x:num -> real. (!y:num. 0 <= x y) ==> (!y:num. 0 <= Sum x y)"
+      "!f:num -> real. (!n:num. 0 <= f n) ==> (!n:num. 0 <= Sum f n)"
 
     // Spent on a summand nobody interpreted, which is the case the lemma exists for: a development
     // that quantifies over its summand has a bare symbol and no lambda, so the pointwise premise
@@ -764,7 +764,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
       rules.mp(force(rules.specAll(fact(Series.NonNegative), List(summand))), assumed)
     )
 
-    series.show(spent.conclusion) shouldBe "!x:num. 0 <= Sum ff x"
+    series.show(spent.conclusion) shouldBe "!n:num. 0 <= Sum ff n"
     spent.hypotheses should contain(pointwise)
     spent.hypotheses should have size 1
   }
@@ -773,13 +773,13 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // The congruence lemma with `<=` for `=`, and it exists for the same reason: bare summand
     // symbols, no redex for the rewriter to enter, so the comparison has to be carried by a lemma.
     series.show(fact(Series.Monotone).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. (!z:num. x z <= y z) ==> (!z:num. Sum x z <= Sum y z)"
+      "!f:num -> real. !g:num -> real. (!n:num. f n <= g n) ==> (!n:num. Sum f n <= Sum g n)"
     fact(Series.Monotone).hypotheses shouldBe empty
   }
 
   "A product of positives" should "be positive, which is what makes it usable as a denominator" in {
     series.show(fact(Series.ProdPositive).conclusion) shouldBe
-      "!x:num -> real. (!y:num. 0 < x y) ==> (!y:num. 0 < Prod x y)"
+      "!f:num -> real. (!n:num. 0 < f n) ==> (!n:num. 0 < Prod f n)"
     fact(Series.ProdPositive).hypotheses shouldBe empty
   }
 
@@ -832,9 +832,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // rather than believed, and what it asserts is that the two lemmas are the same shape at
     // different constants and that neither is derivable from the other.
     series.show(fact(Series.Congruence).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. (!z:num. x z = y z) ==> (!z:num. Sum x z = Sum y z)"
+      "!f:num -> real. !g:num -> real. (!n:num. f n = g n) ==> (!n:num. Sum f n = Sum g n)"
     series.show(fact(Series.ProdCongruence).conclusion) shouldBe
-      "!x:num -> real. !y:num -> real. (!z:num. x z = y z) ==> (!z:num. Prod x z = Prod y z)"
+      "!f:num -> real. !g:num -> real. (!n:num. f n = g n) ==> (!n:num. Prod f n = Prod g n)"
 
     fact(Series.Congruence).hypotheses shouldBe empty
     fact(Series.ProdCongruence).hypotheses shouldBe empty
@@ -871,7 +871,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
   "Reindexing" should "reach the offset of one, which is what SUC alone can say" in {
     series.show(fact(Series.Shift).conclusion) shouldBe
-      "!x:num -> real. !y:num. Sum (\\z:num. x (SUC z)) y = Sum x (SUC y) - x 0"
+      "!f:num -> real. !n:num. Sum (\\m:num. f (SUC m)) n = Sum f (SUC n) - f 0"
     fact(Series.Shift).hypotheses shouldBe empty
   }
 
@@ -892,7 +892,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // `Peano`, `NUM_ADD m i` is a term of the theory the sum is defined in, and the induction
     // `SUM_SHIFT`'s note wrote out in advance closes it unchanged.
     series.show(fact(Series.Reindex).conclusion) shouldBe
-      "!x:num -> real. !y:num. !z:num. Sum (\\u:num. x (y + u)) z = Sum x (y + z) - Sum x y"
+      "!f:num -> real. !n:num. !m:num. Sum (\\k:num. f (n + k)) m = Sum f (n + m) - Sum f n"
     fact(Series.Reindex).hypotheses shouldBe empty
   }
 
@@ -926,7 +926,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // `Power 2 a * Power 2 b` were two terms with no relation, and a development whose exponents
     // are partial sums could not state a single step that moved one.
     series.show(fact(Series.PowerOfSum).conclusion) shouldBe
-      "!x:real. !y:num. !z:num. Power x (y + z) = Power x y * Power x z"
+      "!x:real. !n:num. !m:num. Power x (n + m) = Power x n * Power x m"
     fact(Series.PowerOfSum).hypotheses shouldBe empty
   }
 
@@ -947,7 +947,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // blocked nothing. It costs one line: the step rewrites `NUM_MUL m (SUC n)` into
     // `NUM_ADD (NUM_MUL m n) m`, and from there `POWER_ADD` is exactly what carries it.
     series.show(fact(Series.PowerOfProduct).conclusion) shouldBe
-      "!x:real. !y:num. !z:num. Power x (y * z) = Power (Power x y) z"
+      "!x:real. !n:num. !m:num. Power x (n * m) = Power (Power x n) m"
     fact(Series.PowerOfProduct).hypotheses shouldBe empty
   }
 
@@ -980,8 +980,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // and the inner one rides along as a parameter, so nothing here ever adds two indices. The
     // expectation being wrong is the finding; the lemma is the evidence.
     series.show(fact(Series.Swapped).conclusion) shouldBe
-      "!x:num -> num -> real. !y:num. !z:num. " +
-        "Sum (\\u:num. Sum (\\v:num. x u v) y) z = Sum (\\u:num. Sum (\\v:num. x v u) z) y"
+      "!f:num -> num -> real. !n:num. !m:num. " +
+        "Sum (\\k:num. Sum (\\i:num. f k i) n) m = Sum (\\k:num. Sum (\\i:num. f i k) m) n"
     fact(Series.Swapped).hypotheses shouldBe empty
   }
 
@@ -1007,17 +1007,17 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
     // Nothing under a binder: the recurrence applies, which nobody doubted.
     rewritten("Sum (\\i:num. (ff:num->real) i) (SUC (k:num))") shouldBe
-      "Sum (\\x:num. ff x) k + ff k"
+      "Sum (\\n:num. ff n) k + ff k"
 
     // The case the swap needs: the inner summand mentions the outer binder's variable, and the
     // inner recurrence still fires.
     rewritten("Sum (\\j:num. Sum (\\i:num. (gg:num->num->real) i j) (SUC (k:num))) (m:num)") shouldBe
-      "Sum (\\x:num. Sum (\\y:num. gg y x) k + gg k x) m"
+      "Sum (\\n:num. Sum (\\i:num. gg i n) k + gg k n) m"
 
     // And the case that stays put, because there is no `SUC` to match rather than because of any
     // binder: a length that is the bound variable itself.
     rewritten("Sum (\\j:num. Sum (\\i:num. (ff:num->real) i) j) (m:num)") shouldBe
-      "Sum (\\x:num. Sum (\\y:num. ff y) x) m"
+      "Sum (\\n:num. Sum (\\k:num. ff k) n) m"
   }
 
   /* ------------------------------------------------------------- the whole file */

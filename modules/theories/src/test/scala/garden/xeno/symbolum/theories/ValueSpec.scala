@@ -102,7 +102,7 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     // about the constant carries the same condition.
     for (name <- List(Modular.GcdDividesLeft, Modular.GcdDividesRight, Modular.GcdDivides)) {
       val fact = chain.modular.fact(name).fold(error => fail(error.message), identity)
-      chain.widest.show(fact.conclusion) should include("~(x = 0)")
+      chain.widest.show(fact.conclusion) should include("~(n = 0)")
     }
   }
 

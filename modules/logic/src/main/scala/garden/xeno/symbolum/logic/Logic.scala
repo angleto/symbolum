@@ -190,9 +190,8 @@ object Logic {
               // mentions cannot be quantified again and stays free in what comes back. A theorem
               // about `a1` where the goal said `y` is a theorem about a different statement, so
               // the two namings are held together rather than left to coincide.
-              val preferred = Show.binderNames(variables.length % Show.binderNames.length)
-              val variable =
-                Conv.freshVariable(preferred, domain, Term.freeVariables(current) ++ variables.toSet)
+              val taken = (Term.freeVariables(current) ++ variables).map(_.name)
+              val variable = Term.variable(Show.binderName(domain, taken.contains), domain)
 
               for {
                 applied <- LogicError.lift(Term.app(predicate, variable))

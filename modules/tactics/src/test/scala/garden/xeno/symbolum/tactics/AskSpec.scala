@@ -135,7 +135,7 @@ class AskSpec extends AnyFlatSpec with Matchers {
     // statement that cannot be read, and `CostSpec` exercises it on a term that cannot.
     val page = Ask.of("!x:num. !y:num. NUM_ADD x y = NUM_ADD y x")
 
-    page should include("believed on: !x:'a -> bool. !y:'a. x y ==> x (select x)")
+    page should include("believed on: !f:'a -> bool. !x:'a. f x ==> f (select f)")
     page should not include "does not read back"
     page should include("rests on:")
   }

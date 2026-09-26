@@ -32,9 +32,9 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     // it. That is what "the axioms live where what they are about lives" costs, and `Classical`
     // reaching two rather than one is why this list is three rather than two.
     naturals.theory.axioms.map(naturals.show) shouldBe Vector(
-      "!x:'a -> bool. !y:'a. x y ==> x (select x)",
-      "!x:'a -> 'b. (\\y:'a. x y) = x",
-      "?x:ind -> ind. ?y:ind. (!z:ind. !u:ind. x z = x u ==> z = u) /\\ (!z:ind. ~(x z = y))"
+      "!f:'a -> bool. !x:'a. f x ==> f (select f)",
+      "!f:'a -> 'b. (\\x:'a. f x) = f",
+      "?f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\\ (!y:ind. ~(f y = x))"
     )
   }
 
@@ -45,7 +45,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     // rather than only in the source, because it is a difference in what is believed.
     val infinity = force(naturals.axiom(Natural.Infinity))
 
-    naturals.show(infinity.conclusion) should include("?x:ind -> ind. ?y:ind.")
+    naturals.show(infinity.conclusion) should include("?f:ind -> ind. ?x:ind.")
     naturals.show(infinity.conclusion) should not include "ONTO"
   }
 
@@ -98,7 +98,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     val definition = force(naturals.definition(Natural.Representation))
 
     naturals.show(definition.conclusion) shouldBe
-      "NUM_REP = (\\x:ind. !y:ind -> bool. y IND_0 /\\ (!z:ind. y z ==> y (IND_SUC z)) ==> y x)"
+      "NUM_REP = (\\x:ind. !f:ind -> bool. f IND_0 /\\ (!y:ind. f y ==> f (IND_SUC y)) ==> f x)"
   }
 
   "Induction" should "be derived, and be the statement as it is written" in {
@@ -109,7 +109,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
 
     induction.hypotheses shouldBe empty
     naturals.show(induction.conclusion) shouldBe
-      "!x:num -> bool. x ZERO /\\ (!y:num. x y ==> x (SUC y)) ==> (!y:num. x y)"
+      "!f:num -> bool. f ZERO /\\ (!n:num. f n ==> f (SUC n)) ==> (!n:num. f n)"
 
     // And it is the same proposition as the text the file states it by, compared as a term rather
     // than as printing: the letters above are the printer's, since a bound variable has no name.
@@ -124,9 +124,9 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     val injective = force(naturals.fact(Natural.SuccessorInjective))
     val cases = force(naturals.fact(Natural.ZeroOrSuccessor))
 
-    naturals.show(notZero.conclusion) shouldBe "!x:num. ~(SUC x = ZERO)"
-    naturals.show(injective.conclusion) shouldBe "!x:num. !y:num. SUC x = SUC y ==> x = y"
-    naturals.show(cases.conclusion) shouldBe "!x:num. x = ZERO \\/ (?y:num. x = SUC y)"
+    naturals.show(notZero.conclusion) shouldBe "!n:num. ~(SUC n = ZERO)"
+    naturals.show(injective.conclusion) shouldBe "!n:num. !m:num. SUC n = SUC m ==> n = m"
+    naturals.show(cases.conclusion) shouldBe "!n:num. n = ZERO \\/ (?m:num. n = SUC m)"
 
     Vector(notZero, injective, cases).foreach(_.hypotheses shouldBe empty)
   }
@@ -151,7 +151,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     val represents = force(naturals.fact(Natural.RepresentationOfNumber))
 
     naturals.show(closed.conclusion) shouldBe "!x:ind. NUM_REP x ==> NUM_REP (IND_SUC x)"
-    naturals.show(represents.conclusion) shouldBe "!x:num. NUM_REP (dest_num x)"
+    naturals.show(represents.conclusion) shouldBe "!n:num. NUM_REP (dest_num n)"
 
     closed.hypotheses shouldBe empty
     represents.hypotheses shouldBe empty
@@ -194,7 +194,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
 
     proved.hypotheses shouldBe empty
     proved.conclusion shouldBe conclusion
-    naturals.show(proved.conclusion) shouldBe "!x:num. x = x"
+    naturals.show(proved.conclusion) shouldBe "!n:num. n = n"
   }
 
   "The two developments" should "compose into one signature when a caller asks for both" in {
@@ -222,7 +222,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     val claim = force(
       Parser.proposition(bridged, together.notation, "!n:num. 0 < size n ==> 0 < size n + 1")
     )
-    Show.show(together.notation, claim) shouldBe "!x:num. 0 < size x ==> 0 < size x + 1"
+    Show.show(together.notation, claim) shouldBe "!n:num. 0 < size n ==> 0 < size n + 1"
 
     // And the price of asking for both is stated: nineteen, not sixteen. It was eighteen until eta
     // landed in `Classical.scala` on 2026-09-10, and the ones that are not the field's are

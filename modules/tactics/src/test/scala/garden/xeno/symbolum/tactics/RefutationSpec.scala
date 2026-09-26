@@ -70,8 +70,8 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
     // Base then exponent, which is how `POWER_SUC` reads since the night of 2026-09-12 and so how
     // `Propose` would swap it: these texts claim to be what it produces from the library, and a
     // text that mirrored the old shape would be claiming that and not doing it.
-    aboutNumbers("!x:real. !y:num. Power x (SUC y) = x + Power x y") shouldBe a[Refutation.Found]
-    aboutNumbers("!x:real. !y:num. 0 < Power x y") shouldBe a[Refutation.Found]
+    aboutNumbers("!x:real. !n:num. Power x (SUC n) = x + Power x n") shouldBe a[Refutation.Found]
+    aboutNumbers("!x:real. !n:num. 0 < Power x n") shouldBe a[Refutation.Found]
     aboutNumbers("!x:num. !y:num. NUM_ADD x y = NUM_MUL x y") shouldBe a[Refutation.Found]
   }
 
@@ -95,13 +95,13 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
     // and `!f n. 0 <= Sum f n` cannot be refuted by an assignment with nothing to put in `f`. The
     // sampled function is a real function: it answers the same way every time it is asked about the
     // same index, which is what makes the witness one.
-    val outcome = aboutNumbers("!x:num -> real. !y:num. 0 <= Sum x y")
+    val outcome = aboutNumbers("!f:num -> real. !n:num. 0 <= Sum f n")
 
     outcome match {
       case Refutation.Found(witness, _) =>
         info(s"false at ${witness.toVector.sortBy(_._1).map { case (n, v) => s"$n=${Model.show(v)}" }.mkString(", ")}")
 
-        witness("x") match {
+        witness("f") match {
           case Mapping(_, apply) =>
             val first = apply(Whole(3))
             val again = apply(Whole(3))

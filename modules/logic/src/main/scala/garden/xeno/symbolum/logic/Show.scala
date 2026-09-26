@@ -1,6 +1,5 @@
 package garden.xeno.symbolum.logic
 
-import scala.annotation.tailrec
 import garden.xeno.symbolum.kernel.*
 
 /**
@@ -20,16 +19,59 @@ import garden.xeno.symbolum.kernel.*
 object Show {
 
   /**
-   * The names a binder is given, in order.
+   * The names a binder of a given type is offered, in order.
+   *
+   * A term holds indices where a reader expects names, so every name a binder prints with is
+   * invented here. Until 2026-09-26 the invention ignored the type and went x, y, z by position,
+   * and measured that day 163 of the library's 733 statements bound a FUNCTION called `x`: the mean
+   * value theorem read `!x:real -> real. !y:real. !z:real. y < z ==> ...`. So the choice is by the
+   * type, which the term does hold: a function is `f`, `g`, `h`, a proposition `p`, `q`, `r`, a
+   * natural `n`, `m`, `k`, `i`, `j`, and everything else what it always was. The names the author
+   * wrote are not recoverable, and this does not pretend to recover them.
    *
    * Public because a bound variable that is freed has to be named by somebody, and if that
    * somebody chooses differently then a goal written `!x y. ...` comes back as a statement about
-   * `a1`, which is a statement the reader did not write. [[Logic.stripForall]] takes its names
-   * from here so that the two agree.
+   * `a1`, which is a statement the reader did not write. [[Logic.stripForall]] and the LaTeX
+   * printer take their names from [[binderName]] so that the three agree.
    */
-  val binderNames: Vector[String] = Vector("x", "y", "z", "u", "v", "w")
+  def binderNames(binderType: Type): Vector[String] = binderType match {
+    case TyApp("fun", List(_, _)) => Functions
+    case TyApp("bool", Nil) => Propositions
+    case TyApp("num", Nil) => Naturals
+    case _ => Values
+  }
 
-  private val Names: Vector[String] = binderNames
+  private val Functions: Vector[String] = Vector("f", "g", "h")
+  private val Propositions: Vector[String] = Vector("p", "q", "r")
+  private val Naturals: Vector[String] = Vector("n", "m", "k", "i", "j")
+  private val Values: Vector[String] = Vector("x", "y", "z", "u", "v", "w")
+
+  /**
+   * The first name offered to a binder of this type that is not `taken`, going round the offer
+   * again with a digit once it is spent: `f`, `g`, `h`, `f1`, `g1`, ...
+   */
+  def binderName(binderType: Type, taken: String => Boolean): String =
+    firstFree(binderNames(binderType), taken)
+
+  /**
+   * The name of the index a large operator binds, `i`, `j`, `k`: a sum over `n` terms written
+   * `\sum_{n < m}` would name its index the way the text names a bound, and the page already
+   * writes `i` where the summand is not a lambda and there is no binder to name.
+   */
+  def indexName(taken: String => Boolean): String = firstFree(Indices, taken)
+
+  private val Indices: Vector[String] = Vector("i", "j", "k")
+
+  private def firstFree(names: Vector[String], taken: String => Boolean): String =
+    Iterator
+      .from(0)
+      .map { index =>
+        val round = index / names.length
+        val base = names(index % names.length)
+        if (round == 0) base else s"$base$round"
+      }
+      .find(candidate => !taken(candidate))
+      .get
 
   /** A term, in the standard notation of the logic. */
   def show(term: Term): String = show(Notation.standard, term)
@@ -212,7 +254,7 @@ object Show {
     avoid: Set[String],
     annotateFree: Boolean
   ): String = {
-    val name = freshName(bound, avoid)
+    val name = binderName(binderType, candidate => bound.contains(candidate) || avoid.contains(candidate))
     val inner = render(notation, body, name :: bound, 0, avoid, annotateFree)
     parenthesise(s"$symbol$name:${show(binderType)}. $inner", context, 0)
   }
@@ -220,15 +262,5 @@ object Show {
   private def parenthesise(text: String, context: Int, precedence: Int): String =
     if (context > precedence) s"($text)" else text
 
-  private def freshName(bound: List[String], avoid: Set[String]): String = {
-    @tailrec
-    def pick(index: Int): String = {
-      val base = Names(index % Names.length)
-      val round = index / Names.length
-      val candidate = if (round == 0) base else s"$base$round"
-      if (!bound.contains(candidate) && !avoid.contains(candidate)) candidate else pick(index + 1)
-    }
 
-    pick(0)
-  }
 }
