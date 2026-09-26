@@ -104,25 +104,30 @@ miniF2F the prover settles, re-proved and read the same two ways. Nodes: **19991
 because a proof the tactics produce is almost all its own work. Time, in one JVM over three
 alternated rounds: the three accounting walks **872 ms against 1082**, and `Reach.of` **3177 ms**
 on both sides, so a report's walks as a whole are **4049 ms against 4259**, about five per cent.
-`ReachSpec` asserts the node half; the time is printed.
+`ReachSpec` asserts the direction of the node figures, that fewer nodes are read than replayed and
+that no proof reads larger than its replay, and prints the two counts and every time: none of the
+figures in this paragraph is asserted.
 
-**The walk that dominates is `Reach.of`, and the boundary does not reach it.** It is
+**`Reach.of` was the walk that dominated a report, and since 2026-09-26 it is not.** It is
 `Library.restingOn`, which the decision above leaves walking through every citation because the
-facts it asks about are any named collection. On these statements it costs three times the three
-accounting walks together. Bounding it would take a summary per citation of the named facts under
-it, which is a different decision about memory and about what `Reach` means, and it is card `0c00cac9`
-rather than a sentence here.
+facts it asks about are any named collection, and in the rounds above it cost 3177 ms against 872
+for the three accounting walks together. What it spent that on was not the walk: card `0c00cac9`
+measured, over eight large facts of the chain, 547 ms to visit every node and 4697 ms to check each
+node's statement against the library's, because `App` and `Abs` recomputed their hash from the whole
+term at every lookup. They keep it now, computed once from the children's when a node is built and
+by the same function the case class used, so no set iterates in another order. Over the same eight
+the check took 877 ms, and in `ReachSpec`'s rounds on the 23 statements `Reach.of` read **460 ms
+against 3177**, which puts a report's walks at 1308 ms rather than 4049; like the figures above,
+those times are printed and not asserted.
 
-**Card `0c00cac9` measured it first and did not need that decision, 2026-09-26.** The walk was never
-the cost: over eight large facts of the chain, walking every node took 547 ms and checking each
-node's statement against the library's took 4697 ms, because `App` and `Abs` recomputed their hash
-from the whole term at every lookup. They keep it now, computed once from the children's when a
-node is built, and by the same function the case class used, so no set iterates in another order.
-Over the same eight the check took 877 ms, and in `ReachSpec`'s rounds on the 23 statements above
-`Reach.of` read **460 ms against 3177**, which puts a report's walks at 1308 ms rather than 4049.
-The summary per citation stays unbuilt, and so does the decision about what `Reach` would mean
-with one. `TermPropertySpec` holds the kept hash to the structural one over generated terms, and
-went red when the hash was perturbed to an identity hash.
+The boundary still does not reach `Reach.of`. Bounding it would take a summary per citation of the
+named facts under it, which is a different decision about memory and about what `Reach` means, and
+neither the summary nor that decision was needed for the cost, so both stay unmade. What guards the
+repair is structural rather than a time: `TermPropertySpec` holds the kept hash to the structural one
+over generated terms, and went red when the hash was perturbed to an identity hash; it also holds
+that asking a node for its hash does not walk the term, which a shared term makes exponential; and
+`RestsOnSpec` holds that a proof citing a published fact is counted short and still names what the
+fact used.
 
 **What moved elsewhere in the repository, read off the suite rather than predicted.** The figures
 that count a report are smaller wherever a proof uses a fact another development published: the
