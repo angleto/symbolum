@@ -31,9 +31,9 @@ each measured against what the library actually holds rather than estimated.
 |---|---|---|
 | Number theory over `num` | **partly here.** Bezout, Euclid's lemma, division with remainder, congruences, the gcd, the Chinese remainder theorem, the factorial, and since 2026-09-16 **unique factorisation**, both halves | The statement was what blocked it and the way round is worth knowing: uniqueness is usually a claim about a multiset of primes, and this system has no lists, no finite sets and no multisets. A factorisation here is a family and a length with the family asked to be **non-decreasing**, and then uniqueness is an equation between two families. What is still missing above it is anything that quantifies over "the divisors of `n`" as a collection, which wants the same absent machinery |
 | The incompleteness theorems | **in progress.** The object language, both axiom sets, the proof predicate, closure under both rules of inference, and the first derivations of the embedded theory | `Prov` as a formula **of the object language** does not exist; what exists is `NUM_PROV`, a predicate of the ambient logic. D1, D2 and D3 are statements about that formula, so none of the three can be stated yet. `docs/adr/0013` is the plan |
-| Analysis | **partly here, since 2026-09-15.** `Limit` declares `converges` and `lim`, `Transcendental` declares `exp`, `sin`, `cos`, `ln`, `sinh` and `cosh` as their power series through that limit, and between them they cost no axiom. Proved over them: the value of each function at zero, that a limit is unique, the monotone convergence theorem, which is where `COMPLETENESS` is read a second time and the first thing here that obtains a limit rather than assuming one, the comparison test, and since 2026-09-16 the two facts that say where a limit obtained that way sits, `CONVERGES_LE` and `CONVERGES_GE` | The comparison test is spent on the geometric series at one half, whose limit `LimitSpec` puts between zero and two, and since 2026-09-20 on the exponential: `2 < exp 1` is `EXP_ONE_ABOVE_TWO`, the first fact here about a value the system does not compute, and the rung it waited on was arithmetic rather than analysis, `2^i <= 2 * i!` on `num`. Since 2026-09-21 the Cauchy product is proved, and with it `exp (x + y) = exp x * exp y` and the hyperbolic identity `cosh x * cosh x - sinh x * sinh x = 1`; and since 2026-09-24 `Root` declares `sqrt` and proves it exists, which is `COMPLETENESS` read a third time. Since 2026-09-24 the trigonometric identity is `SIN_COS_SQUARED`, which is not the hyperbolic one with symbols changed: `sin` and `cos` meet `exp` only through a square root of minus one, so it is the Cauchy product at their own series. The same day `Continuity` defined continuity at a point and proved the intermediate value theorem from `COMPLETENESS`; `Logarithm` then proves the exponential continuous and onto the positive reals, which gives `ln` its first facts. Since 2026-09-25 a function continuous on `[a, b]` is bounded there, takes a greatest and a least value and is uniformly continuous, `CONTINUOUS_ATTAINS_MAX`, `CONTINUOUS_ATTAINS_MIN` and `CONTINUOUS_UNIFORM`, all through one compactness lemma, `INTERVAL_GLUING`; and the same day `Derivative` and `Integral` carried the calculus from Rolle's theorem and the mean value theorem to the fundamental theorem, whose facts are listed under those two developments in `docs/proving.md` rather than copied here. **Nothing primitive was missing** for any of it: each was expressible over the theory as it stood |
+| Analysis | **here for a first course, since 2026-09-25, and the pages are in the Analysis section below.** `Limit`, `Transcendental`, `Root`, `Continuity`, `Logarithm`, `Derivative` and `Integral` declare the limit, the six series functions, `sqrt`, continuity, the derivative and the gauge integral, and none of them costs an axiom. What is proved runs from `sqrt 2` being irrational and `exp (x + y) = exp x * exp y` through the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem to both halves of the fundamental theorem; `docs/proving.md` lists every fact under its development rather than this row copying them. **Nothing primitive was missing** for any of it: each was expressible over the theory as it stood, which is what this row claimed on 2026-09-14 when it said nothing was here | Measured against `docs/lemmas.md` on 2026-09-26, not estimated: continuity is closed under negation and under a linear map and **not** under a sum, a product or a composition, so a claim like "a polynomial is continuous" is one derivation per polynomial rather than a lemma; the derivative has the product and chain rules and no general rule for a sum; and there is no Taylor's theorem, no L'Hopital, and no series of functions |
 | The fundamental theorem of algebra | **out of reach, and nothing about it is a decision** | It wants the complex numbers, so it wants the reals as a construction with the integers and the rationals under them, which `docs/adr/0007` puts in that order and which has not started. Then it wants an argument of its own: the route through Liouville wants a derivative, the route through winding numbers wants a topology, and neither exists here. Unlike the four colour theorem below it, what stands in the way is work rather than a recorded decision |
-| The fundamental theorem of calculus | **here, since 2026-09-25** | `INTEGRAL_DERIVATIVE`, over the gauge integral `docs/adr/0049` decides, with no integrability hypothesis, and in the form a textbook states it, with the derivative one-sided at the ends, as `INTEGRAL_DERIVATIVE_WITHIN`. It did **not** wait on the construction of the reals, which is the difference from the row above: what it waited on was a derivative and then an integral, as this row said until it moved |
+| The fundamental theorem of calculus | **here, both halves, since 2026-09-26** | `INTEGRAL_DERIVATIVE_WITHIN` is the first half in the form a textbook states it, the derivative one-sided at the ends, and over the gauge integral `docs/adr/0049` decides it needs no integrability hypothesis. `DERIVATIVE_INTEGRAL` is the second: the integral from `a` of a function continuous on `[a, b]` has that function as its derivative inside. Both have pages below. What it waited on was a derivative, then an integral, then additivity over intervals, and not the construction of the reals |
 | The four colour theorem | **out of reach, and not only by size** | It needs graphs and finite sets, which do not exist, and the only proof anyone has runs a computation over 633 configurations. `docs/adr/0010` decides there is **no computing rule in the kernel** and that there will not be one while the trusted base is the argument, so the route Gonthier took is closed here by a recorded decision rather than by effort |
 | Hilbert's solved problems | **out of reach, with one exception worth naming** | Most need machinery nothing here is near. The tenth, Matiyasevich's theorem, is the exception: it is a statement about Diophantine definability, and the beta function, the coding of sequences and the arithmetisation of syntax that the incompleteness work is building are the same ground floor. It is the one entry on this list that the current work walks towards rather than away from |
 
@@ -2042,6 +2042,1647 @@ From Scala it is `Magnitude`'s, under the name `ABS_TRIANGLE`. Specialise it wit
   fact: the fact's own proof was checked when its development was built.
 - Each step is one operation as it was recorded, and a step citing a name cites a fact whose
   statement is that name's.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+## Analysis
+
+# SQRT_TWO_IRRATIONAL
+
+$$\forall x \colon \mathbb{N}.\ \forall y \colon \mathbb{N}.\ 0 < y \Rightarrow \lnot \left( \sqrt{2} = x_{\mathbb{R}} / y_{\mathbb{R}} \right)$$
+
+```
+!x:num. !y:num. 0 < y ==> ~(sqrt 2 = real_of_num x / real_of_num y)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+18 axioms reached, 16 of them named below, and 124 named facts in all.
+
+| what | where |
+|---|---|
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_BEZOUT` | Modular |
+| `NUM_BEZOUT_EXISTS` | Modular |
+| `NUM_DIVIDES_ADD` | Modular |
+| `NUM_DIVIDES_ELIM` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_SUMMAND` | Modular |
+| `NUM_DIVIDES_ZERO` | Modular |
+| `NUM_DIVISION` | Modular |
+| `NUM_EUCLID` | Modular |
+| `NUM_GCD_DIVIDES_LEFT` | Modular |
+| `NUM_GCD_DIVIDES_RIGHT` | Modular |
+| `NUM_GCD_GREATEST` | Modular |
+| `NUM_ONE_DIVIDES` | Modular |
+| `NUM_PRIME_ABOVE_ONE` | Modular |
+| `NUM_PRIME_DIVISOR` | Modular |
+| `NUM_PRIME_TWO` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_CANCEL_LEFT` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_GREATEST` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ADD` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_CANCEL_LEFT` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_LT_MONOTONE` | Peano |
+| `NUM_MUL_MONOTONE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_REAL_ADD` | Peano |
+| `NUM_REAL_INJECTIVE` | Peano |
+| `NUM_REAL_LE` | Peano |
+| `NUM_REAL_LT` | Peano |
+| `NUM_REAL_MUL` | Peano |
+| `NUM_REAL_NONNEG` | Peano |
+| `NUM_REAL_SUC` | Peano |
+| `NUM_REAL_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `NUM_SQUARE_NOT_DOUBLE` | Primes |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `SQRT` | Root |
+| `SQRT_EXISTS` | Root |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+48229 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 14100 | 29.2% |
+| EqualityElimination | 7776 | 16.1% |
+| Transitivity | 7414 | 15.4% |
+| Instantiation | 7407 | 15.4% |
+| Reflexivity | 5329 | 11.0% |
+| BetaStep | 2623 | 5.4% |
+| Antisymmetry | 1812 | 3.8% |
+| TypeInstantiation | 1175 | 2.4% |
+| Assumption | 354 | 0.7% |
+| Abstraction | 193 | 0.4% |
+| Citation | 20 | 0.0% |
+| Axiom | 14 | 0.0% |
+| Definition | 12 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. !y:num. 0 < y ==> ~(sqrt 2 = real_of_num x / real_of_num y)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SQRT_TWO_IRRATIONAL"
+```
+
+From Scala it is `Root`'s, under the name `SQRT_TWO_IRRATIONAL`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# EXP_ADD
+
+$$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \exp \left( x + y \right) = \exp x \cdot \exp y$$
+
+```
+!x:real. !y:real. exp (x + y) = exp x * exp y
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+19 axioms reached, 16 of them named below, and 190 named facts in all.
+
+| what | where |
+|---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `NOT_FORALL` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_CHOOSE_FACTORIAL` | Coding |
+| `NUM_FACT_POSITIVE` | Coding |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `CONVERGES_ABSOLUTE` | Limit |
+| `CONVERGES_ADD` | Limit |
+| `CONVERGES_EVENTUALLY` | Limit |
+| `CONVERGES_GE` | Limit |
+| `CONVERGES_LE` | Limit |
+| `CONVERGES_MUL` | Limit |
+| `CONVERGES_NEG` | Limit |
+| `CONVERGES_TO_ZERO` | Limit |
+| `CONVERGES_UNIQUE` | Limit |
+| `LE_BELOW_EVERY_POSITIVE` | Limit |
+| `LIM_OF_CONVERGES` | Limit |
+| `MONOTONE_CONVERGES` | Limit |
+| `MONOTONE_LE` | Limit |
+| `SUM_ABS` | Limit |
+| `SUM_BELOW_LIMIT` | Limit |
+| `SUM_CAUCHY_BELOW_SQUARE` | Limit |
+| `SUM_CAUCHY_PRODUCT` | Limit |
+| `SUM_CAUCHY_PRODUCT_NONNEG` | Limit |
+| `SUM_COMPARISON` | Limit |
+| `SUM_GROWS` | Limit |
+| `SUM_SQUARE_BELOW_CAUCHY` | Limit |
+| `SUM_TAIL_ABS` | Limit |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_MUL` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `ABS_TRIANGLE` | Magnitude |
+| `ABS_ZERO` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `ADD_LE` | Order |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `INV_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_MUL_BOTH` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_MUL_BOTH` | Order |
+| `LT_OF_NOT_LE` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUB` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_ARCHIMEDES` | Peano |
+| `NUM_CEIL_LE` | Peano |
+| `NUM_CHOOSE_ABOVE` | Peano |
+| `NUM_CHOOSE_ALL` | Peano |
+| `NUM_CHOOSE_EMPTY` | Peano |
+| `NUM_CHOOSE_SUC` | Peano |
+| `NUM_CHOOSE_ZERO` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ADD` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_DOUBLE_SUB` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_OF_LT_SUC` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_PRE_LE` | Peano |
+| `NUM_PRE_SUC` | Peano |
+| `NUM_PRE_ZERO` | Peano |
+| `NUM_REAL_ADD` | Peano |
+| `NUM_REAL_LE` | Peano |
+| `NUM_REAL_LT` | Peano |
+| `NUM_REAL_MUL` | Peano |
+| `NUM_REAL_NONNEG` | Peano |
+| `NUM_REAL_SUC` | Peano |
+| `NUM_REAL_ZERO` | Peano |
+| `NUM_SUB_ADD` | Peano |
+| `NUM_SUB_LE` | Peano |
+| `NUM_SUB_REFL` | Peano |
+| `NUM_SUB_SUC` | Peano |
+| `NUM_SUB_SUC_SUC` | Peano |
+| `NUM_SUB_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_SUC_SUB` | Peano |
+| `NUM_SUC_SUB_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `POWER_BINOMIAL` | Series |
+| `POWER_POSITIVE` | Series |
+| `POWER_SUC` | Series |
+| `POWER_ZERO` | Series |
+| `SUM_ADD` | Series |
+| `SUM_CAUCHY` | Series |
+| `SUM_CAUCHY_GAP` | Series |
+| `SUM_CONGRUENCE` | Series |
+| `SUM_CONGRUENCE_BELOW` | Series |
+| `SUM_DIAGONAL` | Series |
+| `SUM_GEOMETRIC` | Series |
+| `SUM_HALVES` | Series |
+| `SUM_MONOTONE` | Series |
+| `SUM_MONOTONE_BELOW` | Series |
+| `SUM_NONNEGATIVE` | Series |
+| `SUM_REINDEX` | Series |
+| `SUM_SCALE` | Series |
+| `SUM_SCALE_RIGHT` | Series |
+| `SUM_SHIFT` | Series |
+| `SUM_SUC` | Series |
+| `SUM_ZERO` | Series |
+| `EXP_ABSOLUTE` | Transcendental |
+| `EXP_CONVOLUTION` | Transcendental |
+| `EXP_TAIL_GEOMETRIC` | Transcendental |
+| `EXP_TERM_HALVES` | Transcendental |
+| `MUL_INV_COMBINE` | Transcendental |
+
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+34825 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 10775 | 30.9% |
+| EqualityElimination | 6074 | 17.4% |
+| Transitivity | 4632 | 13.3% |
+| Instantiation | 4451 | 12.8% |
+| Reflexivity | 3915 | 11.2% |
+| BetaStep | 2025 | 5.8% |
+| Antisymmetry | 1309 | 3.8% |
+| TypeInstantiation | 1019 | 2.9% |
+| Abstraction | 318 | 0.9% |
+| Assumption | 221 | 0.6% |
+| Citation | 60 | 0.2% |
+| Axiom | 13 | 0.0% |
+| Definition | 13 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. !y:real. exp (x + y) = exp x * exp y"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find EXP_ADD"
+```
+
+From Scala it is `Transcendental`'s, under the name `EXP_ADD`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# SIN_COS_SQUARED
+
+$$\forall x \colon \mathbb{R}.\ \sin x \cdot \sin x + \cos x \cdot \cos x = 1$$
+
+```
+!x:real. sin x * sin x + cos x * cos x = 1
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+19 axioms reached, 16 of them named below, and 203 named facts in all.
+
+| what | where |
+|---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `NOT_FORALL` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_CHOOSE_FACTORIAL` | Coding |
+| `NUM_FACT_POSITIVE` | Coding |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `ABS_POWER_LE` | Limit |
+| `CONVERGES_ABSOLUTE` | Limit |
+| `CONVERGES_ADD` | Limit |
+| `CONVERGES_CONSTANT` | Limit |
+| `CONVERGES_EVENTUALLY` | Limit |
+| `CONVERGES_GE` | Limit |
+| `CONVERGES_LE` | Limit |
+| `CONVERGES_MUL` | Limit |
+| `CONVERGES_NEG` | Limit |
+| `CONVERGES_SHIFT` | Limit |
+| `CONVERGES_TO_ZERO` | Limit |
+| `CONVERGES_UNIQUE` | Limit |
+| `LE_BELOW_EVERY_POSITIVE` | Limit |
+| `LIM_OF_CONVERGES` | Limit |
+| `MONOTONE_CONVERGES` | Limit |
+| `MONOTONE_LE` | Limit |
+| `SUM_ABS` | Limit |
+| `SUM_BELOW_LIMIT` | Limit |
+| `SUM_CAUCHY_BELOW_SQUARE` | Limit |
+| `SUM_CAUCHY_PRODUCT` | Limit |
+| `SUM_CAUCHY_PRODUCT_NONNEG` | Limit |
+| `SUM_COMPARISON` | Limit |
+| `SUM_GROWS` | Limit |
+| `SUM_SQUARE_BELOW_CAUCHY` | Limit |
+| `SUM_TAIL_ABS` | Limit |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_MUL` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `ABS_TRIANGLE` | Magnitude |
+| `ABS_ZERO` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `ADD_LE` | Order |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `INV_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_MUL_BOTH` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_MUL_BOTH` | Order |
+| `LT_OF_NOT_LE` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUB` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_ARCHIMEDES` | Peano |
+| `NUM_BIT0_ADD` | Peano |
+| `NUM_CEIL_LE` | Peano |
+| `NUM_CHOOSE_ABOVE` | Peano |
+| `NUM_CHOOSE_ALL` | Peano |
+| `NUM_CHOOSE_EMPTY` | Peano |
+| `NUM_CHOOSE_SUC` | Peano |
+| `NUM_CHOOSE_ZERO` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ADD` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_DOUBLE_SUB` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_OF_LT_SUC` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_ONE_SUC` | Peano |
+| `NUM_PRE_LE` | Peano |
+| `NUM_PRE_SUC` | Peano |
+| `NUM_PRE_ZERO` | Peano |
+| `NUM_REAL_ADD` | Peano |
+| `NUM_REAL_LE` | Peano |
+| `NUM_REAL_LT` | Peano |
+| `NUM_REAL_MUL` | Peano |
+| `NUM_REAL_NONNEG` | Peano |
+| `NUM_REAL_SUC` | Peano |
+| `NUM_REAL_ZERO` | Peano |
+| `NUM_SUB_ADD` | Peano |
+| `NUM_SUB_LE` | Peano |
+| `NUM_SUB_REFL` | Peano |
+| `NUM_SUB_SUC` | Peano |
+| `NUM_SUB_SUC_SUC` | Peano |
+| `NUM_SUB_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_SUC_SUB` | Peano |
+| `NUM_SUC_SUB_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `NUM_ZERO_SUB` | Peano |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `POWER_ADD` | Series |
+| `POWER_BINOMIAL` | Series |
+| `POWER_NEG_DOUBLE` | Series |
+| `POWER_ONE` | Series |
+| `POWER_POSITIVE` | Series |
+| `POWER_SUC` | Series |
+| `POWER_ZERO` | Series |
+| `SUM_ADD` | Series |
+| `SUM_CAUCHY` | Series |
+| `SUM_CAUCHY_GAP` | Series |
+| `SUM_CONGRUENCE` | Series |
+| `SUM_CONGRUENCE_BELOW` | Series |
+| `SUM_DIAGONAL` | Series |
+| `SUM_EVEN_ODD` | Series |
+| `SUM_GEOMETRIC` | Series |
+| `SUM_HALVES` | Series |
+| `SUM_MONOTONE` | Series |
+| `SUM_MONOTONE_BELOW` | Series |
+| `SUM_NONNEGATIVE` | Series |
+| `SUM_OF_ZERO` | Series |
+| `SUM_REINDEX` | Series |
+| `SUM_SCALE` | Series |
+| `SUM_SCALE_RIGHT` | Series |
+| `SUM_SHIFT` | Series |
+| `SUM_SUC` | Series |
+| `SUM_ZERO` | Series |
+| `COS_ABSOLUTE` | Transcendental |
+| `EXP_ABSOLUTE` | Transcendental |
+| `EXP_CONVOLUTION` | Transcendental |
+| `EXP_TAIL_GEOMETRIC` | Transcendental |
+| `EXP_TERM_HALVES` | Transcendental |
+| `MUL_INV_COMBINE` | Transcendental |
+| `SIN_ABSOLUTE` | Transcendental |
+
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+62017 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 22017 | 35.5% |
+| EqualityElimination | 9176 | 14.8% |
+| Transitivity | 8589 | 13.8% |
+| Instantiation | 8296 | 13.4% |
+| Reflexivity | 6638 | 10.7% |
+| BetaStep | 3032 | 4.9% |
+| Antisymmetry | 1844 | 3.0% |
+| TypeInstantiation | 1450 | 2.3% |
+| Abstraction | 535 | 0.9% |
+| Assumption | 322 | 0.5% |
+| Citation | 91 | 0.1% |
+| Definition | 14 | 0.0% |
+| Axiom | 13 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real. sin x * sin x + cos x * cos x = 1"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SIN_COS_SQUARED"
+```
+
+From Scala it is `Transcendental`'s, under the name `SIN_COS_SQUARED`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# INTERMEDIATE_VALUE
+
+$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \forall u \colon \mathbb{R}.\ y \le z \Rightarrow \left( \forall v \colon \mathbb{R}.\ y \le v \land v \le z \Rightarrow \operatorname{cont}(x, v) \right) \Rightarrow x(y) \le u \Rightarrow u \le x(z) \Rightarrow \left( \exists v \colon \mathbb{R}.\ y \le v \land v \le z \land x(v) = u \right)$$
+
+```
+!x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+17 axioms reached, 16 of them named below, and 51 named facts in all.
+
+| what | where |
+|---|---|
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+
+1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+28128 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 7856 | 27.9% |
+| EqualityElimination | 5396 | 19.2% |
+| Transitivity | 3699 | 13.2% |
+| Instantiation | 3416 | 12.1% |
+| Reflexivity | 3223 | 11.5% |
+| BetaStep | 1828 | 6.5% |
+| Antisymmetry | 1333 | 4.7% |
+| TypeInstantiation | 901 | 3.2% |
+| Assumption | 233 | 0.8% |
+| Abstraction | 192 | 0.7% |
+| Citation | 26 | 0.1% |
+| Axiom | 13 | 0.0% |
+| Definition | 12 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> x y <= u ==> u <= x z ==> (?v:real. y <= v /\ v <= z /\ x v = u)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find INTERMEDIATE_VALUE"
+```
+
+From Scala it is `Continuity`'s, under the name `INTERMEDIATE_VALUE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# CONTINUOUS_ATTAINS_MAX
+
+$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ y \le z \Rightarrow \left( \forall u \colon \mathbb{R}.\ y \le u \land u \le z \Rightarrow \operatorname{cont}(x, u) \right) \Rightarrow \left( \exists u \colon \mathbb{R}.\ y \le u \land u \le z \land \left( \forall v \colon \mathbb{R}.\ y \le v \land v \le z \Rightarrow x(v) \le x(u) \right) \right)$$
+
+```
+!x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. y <= u /\ u <= z /\ (!v:real. y <= v /\ v <= z ==> x v <= x u))
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+17 axioms reached, 16 of them named below, and 49 named facts in all.
+
+| what | where |
+|---|---|
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `CONTINUOUS_BOUNDED` | Continuity |
+| `INTERVAL_GLUING` | Continuity |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+
+1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+49522 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 14070 | 28.4% |
+| EqualityElimination | 9298 | 18.8% |
+| Transitivity | 6382 | 12.9% |
+| Instantiation | 6241 | 12.6% |
+| Reflexivity | 5492 | 11.1% |
+| BetaStep | 2960 | 6.0% |
+| Antisymmetry | 2587 | 5.2% |
+| TypeInstantiation | 1487 | 3.0% |
+| Assumption | 516 | 1.0% |
+| Abstraction | 436 | 0.9% |
+| Citation | 28 | 0.1% |
+| Axiom | 13 | 0.0% |
+| Definition | 12 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. y <= u /\ u <= z /\ (!v:real. y <= v /\ v <= z ==> x v <= x u))"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find CONTINUOUS_ATTAINS_MAX"
+```
+
+From Scala it is `Continuity`'s, under the name `CONTINUOUS_ATTAINS_MAX`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# ROLLE
+
+$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ y < z \Rightarrow \left( \forall u \colon \mathbb{R}.\ y \le u \land u \le z \Rightarrow \operatorname{cont}(x, u) \right) \Rightarrow \left( \forall u \colon \mathbb{R}.\ y < u \land u < z \Rightarrow \left( \exists v \colon \mathbb{R}.\ \operatorname{deriv}(x, u, v) \right) \right) \Rightarrow x(y) = x(z) \Rightarrow \left( \exists u \colon \mathbb{R}.\ y < u \land u < z \land \operatorname{deriv}(x, u, 0) \right)$$
+
+```
+!x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+17 axioms reached, 16 of them named below, and 61 named facts in all.
+
+| what | where |
+|---|---|
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `CONTINUOUS_ATTAINS_MAX` | Continuity |
+| `CONTINUOUS_ATTAINS_MIN` | Continuity |
+| `CONTINUOUS_BOUNDED` | Continuity |
+| `CONTINUOUS_NEG` | Continuity |
+| `INTERVAL_GLUING` | Continuity |
+| `DERIVATIVE_INTERIOR_MAX` | Derivative |
+| `DERIVATIVE_INTERIOR_MIN` | Derivative |
+| `DERIVATIVE_NEG` | Derivative |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+
+1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+57270 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 15972 | 27.9% |
+| EqualityElimination | 10874 | 19.0% |
+| Transitivity | 7638 | 13.3% |
+| Instantiation | 7250 | 12.7% |
+| Reflexivity | 6504 | 11.4% |
+| BetaStep | 3692 | 6.4% |
+| Antisymmetry | 2896 | 5.1% |
+| TypeInstantiation | 1724 | 3.0% |
+| Assumption | 406 | 0.7% |
+| Abstraction | 259 | 0.5% |
+| Citation | 31 | 0.1% |
+| Axiom | 12 | 0.0% |
+| Definition | 12 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find ROLLE"
+```
+
+From Scala it is `Derivative`'s, under the name `ROLLE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# MEAN_VALUE
+
+$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ y < z \Rightarrow \left( \forall u \colon \mathbb{R}.\ y \le u \land u \le z \Rightarrow \operatorname{cont}(x, u) \right) \Rightarrow \left( \forall u \colon \mathbb{R}.\ y < u \land u < z \Rightarrow \left( \exists v \colon \mathbb{R}.\ \operatorname{deriv}(x, u, v) \right) \right) \Rightarrow \left( \exists u \colon \mathbb{R}.\ \exists v \colon \mathbb{R}.\ y < u \land u < z \land \operatorname{deriv}(x, u, v) \land x(z) - x(y) = v \cdot \left( z - y \right) \right)$$
+
+```
+!x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+17 axioms reached, 16 of them named below, and 72 named facts in all.
+
+| what | where |
+|---|---|
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `CONTINUOUS_ATTAINS_MAX` | Continuity |
+| `CONTINUOUS_ATTAINS_MIN` | Continuity |
+| `CONTINUOUS_BOUNDED` | Continuity |
+| `CONTINUOUS_ID` | Continuity |
+| `CONTINUOUS_LINEAR` | Continuity |
+| `CONTINUOUS_NEG` | Continuity |
+| `INTERVAL_GLUING` | Continuity |
+| `DERIVATIVE_ID` | Derivative |
+| `DERIVATIVE_INTERIOR_MAX` | Derivative |
+| `DERIVATIVE_INTERIOR_MIN` | Derivative |
+| `DERIVATIVE_LINEAR` | Derivative |
+| `DERIVATIVE_NEG` | Derivative |
+| `DERIVATIVE_UNIQUE` | Derivative |
+| `ROLLE` | Derivative |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_MUL` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `ABS_TRIANGLE` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `ADD_LE` | Order |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_OF_NOT_LE` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+
+1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+122855 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 34710 | 28.3% |
+| EqualityElimination | 22758 | 18.5% |
+| Transitivity | 16666 | 13.6% |
+| Instantiation | 16432 | 13.4% |
+| Reflexivity | 13816 | 11.2% |
+| BetaStep | 7611 | 6.2% |
+| Antisymmetry | 6108 | 5.0% |
+| TypeInstantiation | 3496 | 2.8% |
+| Assumption | 759 | 0.6% |
+| Abstraction | 438 | 0.4% |
+| Citation | 37 | 0.0% |
+| Axiom | 12 | 0.0% |
+| Definition | 12 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find MEAN_VALUE"
+```
+
+From Scala it is `Derivative`'s, under the name `MEAN_VALUE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# INTEGRAL_DERIVATIVE_WITHIN
+
+$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R} \to \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \forall u \colon \mathbb{R}.\ z \le u \Rightarrow \left( \forall v \colon \mathbb{R}.\ z \le v \land v \le u \Rightarrow \operatorname{deriv}_{[z, u]}(x, v, y(v)) \right) \Rightarrow \operatorname{integral}(y, z, u) = x(u) - x(z)$$
+
+```
+!x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> integral y z u = x u - x z
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+17 axioms reached, 16 of them named below, and 72 named facts in all.
+
+| what | where |
+|---|---|
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `INTERVAL_GLUING` | Continuity |
+| `INDUCTIVE_INDUCT` | Inductive |
+| `INDUCTIVE_INTRO` | Inductive |
+| `FINE_SUM_EXISTS` | Integral |
+| `FINE_SUM_GAUGE` | Integral |
+| `FINE_SUM_INDUCT` | Integral |
+| `FINE_SUM_JOIN` | Integral |
+| `FINE_SUM_PIECE` | Integral |
+| `HAS_INTEGRAL_DERIVATIVE_WITHIN` | Integral |
+| `HAS_INTEGRAL_UNIQUE` | Integral |
+| `INTEGRAL_UNIQUE` | Integral |
+| `LE_BELOW_EVERY_POSITIVE` | Limit |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `ABS_ZERO` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `FST_PAIR` | Product |
+| `PAIR_INJECTIVE` | Product |
+| `PROD_REP_ABS` | Product |
+| `PROD_REP_PAIR` | Product |
+| `SND_PAIR` | Product |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+
+1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+67633 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 21802 | 32.2% |
+| EqualityElimination | 10425 | 15.4% |
+| Instantiation | 9404 | 13.9% |
+| Transitivity | 9398 | 13.9% |
+| Reflexivity | 7277 | 10.8% |
+| BetaStep | 3354 | 5.0% |
+| Antisymmetry | 2759 | 4.1% |
+| TypeInstantiation | 1664 | 2.5% |
+| Abstraction | 815 | 1.2% |
+| Assumption | 669 | 1.0% |
+| Citation | 38 | 0.1% |
+| Definition | 16 | 0.0% |
+| Axiom | 12 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> integral y z u = x u - x z"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find INTEGRAL_DERIVATIVE_WITHIN"
+```
+
+From Scala it is `Integral`'s, under the name `INTEGRAL_DERIVATIVE_WITHIN`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# DERIVATIVE_INTEGRAL
+
+$$\forall x \colon \mathbb{R} \to \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \forall u \colon \mathbb{R}.\ \left( \forall v \colon \mathbb{R}.\ y \le v \land v \le z \Rightarrow \operatorname{cont}(x, v) \right) \Rightarrow y < u \Rightarrow u < z \Rightarrow \operatorname{deriv}(\lambda v \colon \mathbb{R}.\ \operatorname{integral}(x, y, v), u, x(u))$$
+
+```
+!x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous x v) ==> y < u ==> u < z ==> derivative (\v:real. integral x y v) u (x u)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+17 axioms reached, 16 of them named below, and 79 named facts in all.
+
+| what | where |
+|---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `INTERVAL_GLUING` | Continuity |
+| `DERIVATIVE_WITHIN_INTERIOR` | Derivative |
+| `INDUCTIVE_INDUCT` | Inductive |
+| `INDUCTIVE_INTRO` | Inductive |
+| `CONTINUOUS_HAS_INTEGRAL` | Integral |
+| `CONTINUOUS_INTEGRAL` | Integral |
+| `DERIVATIVE_WITHIN_INTEGRAL` | Integral |
+| `FINE_SUM_EXISTS` | Integral |
+| `FINE_SUM_GAUGE` | Integral |
+| `FINE_SUM_INDUCT` | Integral |
+| `FINE_SUM_JOIN` | Integral |
+| `FINE_SUM_PIECE` | Integral |
+| `HAS_INTEGRAL_JOIN` | Integral |
+| `HAS_INTEGRAL_UNIQUE` | Integral |
+| `INTEGRAL_UNIQUE` | Integral |
+| `LE_BELOW_EVERY_POSITIVE` | Limit |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_ZERO` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_OF_NOT_LE` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `FST_PAIR` | Product |
+| `PAIR_INJECTIVE` | Product |
+| `PROD_REP_ABS` | Product |
+| `PROD_REP_PAIR` | Product |
+| `SND_PAIR` | Product |
+| `ADD_ASSOC` | Real, assumed |
+| `ADD_INVERSE` | Real, assumed |
+| `ADD_SYM` | Real, assumed |
+| `ADD_ZERO` | Real, assumed |
+| `COMPLETENESS` | Real, assumed |
+| `DISTRIBUTE` | Real, assumed |
+| `LT_ADD` | Real, assumed |
+| `LT_IRREFLEXIVE` | Real, assumed |
+| `LT_MUL` | Real, assumed |
+| `LT_TOTAL` | Real, assumed |
+| `LT_TRANSITIVE` | Real, assumed |
+| `MUL_ASSOC` | Real, assumed |
+| `MUL_INVERSE` | Real, assumed |
+| `MUL_ONE` | Real, assumed |
+| `MUL_SYM` | Real, assumed |
+| `ONE_NOT_ZERO` | Real, assumed |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+
+1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+152276 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 51396 | 33.8% |
+| EqualityElimination | 25410 | 16.7% |
+| Instantiation | 18985 | 12.5% |
+| Transitivity | 18681 | 12.3% |
+| Reflexivity | 15774 | 10.4% |
+| BetaStep | 7923 | 5.2% |
+| Antisymmetry | 7061 | 4.6% |
+| TypeInstantiation | 3964 | 2.6% |
+| Assumption | 1521 | 1.0% |
+| Abstraction | 1490 | 1.0% |
+| Citation | 40 | 0.0% |
+| Definition | 17 | 0.0% |
+| Axiom | 14 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous x v) ==> y < u ==> u < z ==> derivative (\v:real. integral x y v) u (x u)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find DERIVATIVE_INTEGRAL"
+```
+
+From Scala it is `Integral`'s, under the name `DERIVATIVE_INTEGRAL`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
 
 Not checked, and not claimed: that the statement says what somebody meant, which is what the
 readable form is printed for; that a constant is spelled the way the literature spells it,

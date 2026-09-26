@@ -160,4 +160,48 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
     one.get._2.summary should startWith("1 named fact,")
     several.get._2.summary should startWith(s"${several.get._2.facts.size} named facts,")
   }
+
+  /**
+   * `docs/adr/0047` splits a report in two at a cited fact, and this holds both halves on a fact
+   * the chain really publishes. The accounting stops there: a proof going through the citation is
+   * three inferences whatever the fact's own proof holds, and it rests on the same axioms as the
+   * same proof written around the citation. The reach does not stop there, by that record's
+   * decision: a named fact used **inside** the cited proof is one the proof used.
+   *
+   * The inner fact is chosen with a statement different from the cited one, which is what the
+   * kernel's own case in `DerivationSpec` cannot do: there the only named statement is the cited
+   * fact's, which the root of the proof already concludes, so a reach that stopped at the citation
+   * would still find it. Here a reach that stopped at the citation loses the inner names.
+   */
+  "A proof citing a published fact" should "be counted short and still name what the fact used" in {
+    def forced[T](result: Either[KernelError, T]): T =
+      result.fold(error => fail(s"unexpected refusal: ${error.message}"), identity)
+
+    val found = held.entries.iterator.flatMap { entry =>
+      entry.theorem.derivation match {
+        case Derivation.Citation(_, proof) if Derivation.size(proof) > 3 =>
+          val inner = held.restingOn(proof)
+            .filterNot(_.theorem.conclusion == entry.theorem.conclusion)
+          if (inner.isEmpty) None else Some((entry, proof, inner))
+        case _ => None
+      }
+    }.nextOption()
+    val (entry, proof, inner) =
+      found.getOrElse(fail("no fact of the library is cited and rests on another named fact"))
+
+    val statement = entry.theorem.conclusion
+    val through = forced(Kernel.eqMp(Kernel.refl(statement), entry.theorem))
+    val around = forced(Kernel.eqMp(Kernel.refl(statement), proof))
+
+    Derivation.size(through) shouldBe 3
+    Derivation.size(around) shouldBe 2 + Derivation.size(proof)
+    Derivation.census(through).get("Citation") shouldBe Some(1)
+    Derivation.axiomsOf(through) shouldBe Derivation.axiomsOf(around)
+
+    val reached = held.restingOn(through).map(_.name).toSet
+    reached should contain(entry.name)
+    reached should contain allElementsOf inner.map(_.name)
+    Reach.of(held, through) shouldBe Reach.of(held, around)
+    info(s"${entry.name}: ${Derivation.size(proof)} steps behind the citation, ${inner.size} named facts inside it")
+  }
 }

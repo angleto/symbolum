@@ -201,6 +201,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // statement needs, `NUM_TOTIENT`, is `Modular`'s.
     "Euler" -> NotADevelopment,
 
+    // Not a development, for `Freshman`'s reason: the p-adic valuation, whose fourteen facts
+    // `Primes` publishes under names it declares. The constant, `NUM_VALUATION`, is `Modular`'s.
+    "Valuation" -> NotADevelopment,
+
     // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
     // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
     // fact of its own, and `Prove` reaches it through the chain it is constructed from.
@@ -304,6 +308,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // language, FRACTRAN, and nothing below it or in the tactic surface asks about a program of
     // fractions. `docs/adr/0054` is the record, and `FractranSpec` is the spec.
     "Fractran" -> BesideTheChain,
+
+    // Not a development, for `Freshman`'s reason: FRACTRAN read as a register machine, whose one
+    // theorem `Fractran` publishes under a name it declares, over the constant it defines.
+    "FractranRegisters" -> NotADevelopment,
 
     // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
     // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being

@@ -4,7 +4,8 @@
 # `Root.SQRT_TWO_IRRATIONAL` is checked against its published text when the development is built,
 # and the showcase says which of its pages the tactic surface settles. The two perturbations are
 # the two ways that can drift: a statement published as something the derivation did not prove,
-# and a showcase that stops carrying the sentence its neighbour says it is not.
+# and a showcase that stops carrying the sentence its neighbour says it is not. The third was added
+# by the verification: a derivation that stops resting on the proved descent.
 #
 # The strings are literal and were unique when this was written. perturb.sh REFUSES a perturbation
 # that did not apply rather than running against unperturbed code.
@@ -51,5 +52,15 @@ run "2-page-dropped" "$SHOWCASE" \
   '    "SQRT_TWO_IRRATIONAL_ABSENT" ->' \
   -- ./tools/sbt -batch "$SHOWCASESPEC"
 
-echo "### both fired" >> "$LOG"
+# 3. The descent asserted as an axiom of the same statement instead of taken from `Primes`. Added
+#    by the verification of this card: `Derivation.restingOn` finds a node with the descent's
+#    conclusion either way, so it is the axiom accounting beside it that has to go red.
+# Expect red on: RootSpec, "state the irrationality ... carrying the descent across", at the
+#    `it reaches:` clue naming the descent as an axiom. Observed so on its first run.
+run "3-descent-asserted" "$SOURCE" \
+  'descent <- primes.fact(Primes.SquareNotDouble)' \
+  'descent <- primes.fact(Primes.SquareNotDouble).flatMap(d => LogicError.lift(Kernel.assertAxiom(theory, d.conclusion)).map(_._2))' \
+  -- ./tools/sbt -batch "$ROOTSPEC"
+
+echo "### all three fired" >> "$LOG"
 git status --porcelain >> "$LOG"
