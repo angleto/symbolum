@@ -127,6 +127,7 @@ they have least appetite for working out how it is produced.
   CONTINUOUS_EXTENSION_AGREES !x:real -> real. !y:real. !z:real. !u:real. y <= u /\ u <= z ==> COND (u < y) (x y) (COND (z < u) (x z) (x u)) = x u
   CONTINUOUS_ID            !x:real. continuous (\y:real. y) x
   CONTINUOUS_LINEAR        !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. continuous x z ==> continuous y z ==> continuous (\w:real. u * x w + v * y w) z
+  CONTINUOUS_MUL           !x:real -> real. !y:real -> real. !z:real. continuous x z ==> continuous y z ==> continuous (\u:real. x u * y u) z
   CONTINUOUS_NEG           !x:real -> real. !y:real. continuous x y ==> continuous (\z:real. 0 - x z) y
   CONTINUOUS_UNIFORM       !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous x v) ==> 0 < u ==> (?v:real. 0 < v /\ (!w:real. !x1:real. y <= w /\ w <= z /\ y <= x1 /\ x1 <= z /\ abs (w - x1) < v ==> abs (x w - x x1) < u))
   CONTINUOUS_UNIFORM_WITHIN !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> (!v:real. y <= v /\ v <= z ==> continuous_within x y z v) ==> 0 < u ==> (?v:real. 0 < v /\ (!w:real. !x1:real. y <= w /\ w <= z /\ y <= x1 /\ x1 <= z /\ abs (w - x1) < v ==> abs (x w - x x1) < u))
@@ -177,6 +178,7 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_NONNEG_MONOTONE_WITHIN !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous_within x y z u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 <= v)) ==> (!u:real. !v:real. y <= u /\ u <= v /\ v <= z ==> x u <= x v)
   DERIVATIVE_POS_LT_MONOTONE !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 < v)) ==> (!u:real. !v:real. y <= u /\ u < v /\ v <= z ==> x u < x v)
   DERIVATIVE_POS_LT_MONOTONE_WITHIN !x:real -> real. !y:real. !z:real. (!u:real. y <= u /\ u <= z ==> continuous_within x y z u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v /\ 0 < v)) ==> (!u:real. !v:real. y <= u /\ u < v /\ v <= z ==> x u < x v)
+  DERIVATIVE_POWER         !x:real. !y:num. derivative (\z:real. Power z (SUC y)) x (real_of_num (SUC y) * Power x y)
   DERIVATIVE_PRODUCT       !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. derivative x z u ==> derivative y z v ==> derivative (\w:real. x w * y w) z (u * y z + x z * v)
   DERIVATIVE_SIN           !x:real. derivative sin x (cos x)
   DERIVATIVE_UNIQUE        !x:real -> real. !y:real. !z:real. !u:real. derivative x y z ==> derivative x y u ==> z = u
@@ -188,6 +190,7 @@ they have least appetite for working out how it is produced.
   MEAN_VALUE_WITHIN        !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous_within x y z u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> (?u:real. ?v:real. y < u /\ u < z /\ derivative x u v /\ x z - x y = v * (z - y))
   ROLLE                    !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)
   ROLLE_WITHIN             !x:real -> real. !y:real. !z:real. y < z ==> (!u:real. y <= u /\ u <= z ==> continuous_within x y z u) ==> (!u:real. y < u /\ u < z ==> (?v:real. derivative x u v)) ==> x y = x z ==> (?u:real. y < u /\ u < z /\ derivative x u 0)
+  TAYLOR                   !x:num -> real -> real. !y:real. !z:real. !u:num. y < z ==> (!v:num. !w:real. v <= u ==> y <= w /\ w <= z ==> continuous (x v) w) ==> (!v:num. !w:real. v <= u ==> y < w /\ w < z ==> derivative (x v) w (x (SUC v) w)) ==> (?v:real. y < v /\ v < z /\ x 0 z = Sum (\w:num. inv (real_of_num (NUM_FACT w)) * x w y * Power (z - y) w) (SUC u) + inv (real_of_num (NUM_FACT (SUC u))) * x (SUC u) v * Power (z - y) (SUC u))
 
 ## Divisibility
 
