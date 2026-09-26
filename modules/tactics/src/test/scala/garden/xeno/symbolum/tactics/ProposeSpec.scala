@@ -409,10 +409,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `NUM_DIVIDES_MUL_VALUATION`, two each on `NUM_VALUATION_UNIQUE`, `NUM_VALUATION_SPEC`,
     // `NUM_VALUATION_DIVIDES` and `NUM_DIVIDES_VALUATION`, one on each of the other four. Tip plus
     // this branch's delta.
-    // 714 with the five residues of `CONTINUOUS_MUL` and `TAYLOR`, 2026-09-26. Tip plus this branch's delta.
-    // 719 with Wilson's five, 2026-09-26, derived before the run: four antecedents on
+    // 714 with the five residues of `CONTINUOUS_MUL` and `TAYLOR`, 2026-09-26.
+    // 732 with the integral's relative forms, 2026-09-26, derived before the run: eighteen
+    // antecedents over seven facts, four on `DERIVATIVE_WITHIN_CONGRUENCE`, three each on the two
+    // derivative twins and two on each of the other four. Tip plus this branch's delta.
+    // 737 with Wilson's five, 2026-09-26, derived before the run: four antecedents on
     // `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's delta.
-    proposals.size shouldBe 719
+    proposals.size shouldBe 737
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1377,13 +1380,17 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // Nine are `unreadable` below and one is `decidedFalse` above. Tip plus this branch's delta.
     // 614 with all five of `CONTINUOUS_MUL`'s and `TAYLOR`'s residues, 2026-09-26, measured by the
     // run: each is an implication about `continuous` or `derivative`, which no procedure settles.
-    // Tip plus this branch's delta.
-    // 615 with one of Wilson's five residues, 2026-09-26, and the other four are in `unreadable`
+    // 632 with all eighteen residues of the integral's relative forms and their congruences,
+    // 2026-09-26, read off the suite's own failure: every one keeps an implication about
+    // `has_integral`, `fine_sum`, `integral` or `derivative_within`, which no procedure settles.
+    // The total matched the eighteen derived for `proposals` and no other bucket moved, so none
+    // reached `unreadable`. Tip plus this branch's delta.
+    // 633 with one of Wilson's five residues, 2026-09-26, and the other four are in `unreadable`
     // below. Read off a probe of this file with its numeric assertions printed rather than
     // asserted, run over the branch's own classes before the valuation and Taylor landed, after
     // the suite's first failure had stopped this test at this line; which residue went where was
     // not measured. Tip plus this branch's delta.
-    open shouldBe 615
+    open shouldBe 633
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

@@ -232,9 +232,11 @@ lazy val commonSettings = Seq(
    * `-Xss4M` are the launcher's own defaults, so every module is measured at the heap the whole
    * suite used to share.
    *
-   * WHAT IT DOES NOT COVER. Anything run in the launcher, `console` or `runMain`, still meets
-   * sbt 1.10.10's retention, which moving to 1.12.9 would remove and is a change of its own. And a
-   * single module whose own suites outgrow 1g will still die, on its own.
+   * WHAT IT DOES NOT COVER. The first reason was measured on sbt 1.10.10, and this build has run
+   * sbt 2.0.9 since 2026-09-25: whether sbt 2 keeps a finished module's test state was not measured,
+   * so what runs in the launcher, `console` or `runMain`, is not known to be free of it, and the fork
+   * stays for the second reason, which is not sbt's. And a single module whose own suites outgrow 1g
+   * will still die, on its own.
    *
    * The working directory is the build's root because the suites read `docs/` and the sources by
    * paths relative to it, which is where the launcher ran them.

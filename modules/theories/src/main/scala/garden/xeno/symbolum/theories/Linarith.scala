@@ -317,11 +317,24 @@ final class Linarith private (
     // the atom they name is the one this find selected, so the number they print is at least two
     // and no counter is wanted. Both messages read the same `factorsOf` and both are covered by
     // the one guard, which is worth saying because there is one guard and two sentences.
-    val outOfReach = goalAtoms
+    //
+    // A square of one unknown is not named while a product of different unknowns is out of reach
+    // too: the completed square covers an atom that is one unknown times itself, so in
+    // `x * x + y * y >= 2 * (x * y)` the obstacle is `x * y`, and naming `x * x` first, which is
+    // what term order did until the verification of card `bacfaba5` on 2026-09-26, sent the
+    // caller to repair the half the procedure had already handled. A square is named only when
+    // nothing else is out of reach.
+    def isSquare(atom: Term): Boolean = LinearForm.factorsOf(atom) match {
+      case Vector(left, right) => left == right
+      case _ => false
+    }
+    val products = goalAtoms
       .diff(reachable)
       .toVector
       .sorted(using Term.ordering)
-      .find(atom => LinearForm.factorsOf(atom).length > 1)
+      .filter(atom => LinearForm.factorsOf(atom).length > 1)
+    val outOfReach = products.find(atom => !isSquare(atom)).orElse(products.headOption)
+    val squares = goalAtoms.filter(isSquare)
 
     // A certificate that was found means the search had what it needed, so a sentence about the
     // degree would replace the one true thing known with a false one.
@@ -339,7 +352,9 @@ final class Linarith private (
             s"of ${LinearForm.factorsOf(atom).length} unknowns, and this goal has no hypotheses " +
             "at all, so the pool the products are built from is empty and no degree of them " +
             "exists. Without hypotheses the only fact available is a square completed over an " +
-            "atom that is one unknown times itself, and this goal has none",
+            "atom that is one unknown times itself, and " +
+            (if (squares.isEmpty) "this goal has none"
+             else "the ones this goal holds do not reach it"),
           conclusion
         )
 

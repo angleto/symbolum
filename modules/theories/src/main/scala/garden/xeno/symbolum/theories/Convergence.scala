@@ -44,7 +44,7 @@ import garden.xeno.symbolum.logic.*
  * symbolic ratio is answered where its sign and magnitude follow with no hypotheses, which is
  * rarely, and refused otherwise, naming the ratio.
  *
- * == Four refusals, and they are kept apart ==
+ * == Five refusals, and they are kept apart ==
  *
  *  - The summand is not in the fragment, and the refusal names it: nothing was learned.
  *  - The summand is a rational function of the index, which is where the ratio of consecutive terms
@@ -55,11 +55,17 @@ import garden.xeno.symbolum.logic.*
  *    decided answer.
  *  - The series converges, the procedure proved to what, and the goal names another value. That
  *    is `NotEqualTo`, decided, when both values are built from numerals and the field operations
- *    alone, since two normal forms that differ are then two numbers that differ; and it is
- *    `ValueUnidentified`, not decided, when either holds an atom, a function such as `exp` or a
- *    free variable, since then the forms differing says nothing about the values. Until
- *    2026-09-26 both came out as `NotEqualTo`: `converges (Sum (\i. Power 0 i / real_of_num
- *    (NUM_FACT i))) 1` is true, the series converging to `exp 0`, and it was refused as decided.
+ *    alone with every divisor shown apart from nought, since two normal forms that differ are then
+ *    two numbers that differ; and it is `ValueUnidentified`, not decided, when either holds an
+ *    atom, a function such as `exp`, a free variable, or a reciprocal LINARITH cannot place, such
+ *    as `inv 0`, since then the forms differing says nothing about the values. Until 2026-09-26
+ *    both came out as `NotEqualTo`: `converges (Sum (\i. Power 0 i / real_of_num (NUM_FACT i))) 1`
+ *    is true, the series converging to `exp 0`, and it was refused as decided; and `2 + inv 0`,
+ *    which the axioms neither prove nor refute to be the value, was refused as decided until the
+ *    divisor condition landed the same day.
+ *  - The series converges, the procedure proved only that it does, and the goal asks for a value.
+ *    The theorem is an existential with no value in it, so the refusal is [[Convergence.Unnamed]]
+ *    and not a decision: nothing about the value was learned.
  *
  * == Why closed forms rather than the ratio test ==
  *
@@ -432,12 +438,33 @@ final class Convergence private (
       case other => ValueUnidentified(wanted, found, other)
     }
 
-  /** Whether `term` is built from the reals' numerals and field operations alone. */
+  /**
+   * Whether `term` is built from the reals' numerals and field operations alone, with every
+   * reciprocal and every divisor shown not to be nought.
+   *
+   * The second half is what makes differing normal forms two different numbers. `inv 0` is a real
+   * the sixteen axioms say nothing about, so `2 + inv 0` against `2` differ as forms and the theory
+   * decides neither that they are equal nor that they are not; a comparison reading them as two
+   * numbers answered `NotEqualTo` with standing `Decided`, which the verification of card
+   * `d3fd8018` found on 2026-09-26 and `SeriesFragmentBoundarySpec` holds. A divisor counts as apart
+   * from nought when LINARITH proves it strictly positive or strictly negative; one it cannot place
+   * leaves the value an atom of unknown size, and the refusal is [[ValueUnidentified]].
+   */
   private def numeric(term: Term): Boolean = term match {
+    case App(Const(Real.Inverse, _), argument) => numeric(argument) && apart(argument)
+    case App(App(Const(Real.Division, _), dividend), divisor) =>
+      numeric(dividend) && numeric(divisor) && apart(divisor)
     case App(fn, arg) => numeric(fn) && numeric(arg)
     case Const(name, _) => Arithmetical.contains(name)
     case _ => false
   }
+
+  /** Whether LINARITH proves `0 < t` or `t < 0`. */
+  private def apart(t: Term): Boolean =
+    LogicError.lift(theory.constant(Real.Order, Type.fun(values, Type.fun(values, Type.Bool)))).exists { below =>
+      Seq(List(zero, t), List(t, zero)).exists(sides =>
+        LogicError.lift(Term.appAll(below, sides)).flatMap(linarith.prove).isRight)
+    }
 
   private def sameAs(goal: Term, theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
     if (theorem.conclusion == goal) Right(theorem)

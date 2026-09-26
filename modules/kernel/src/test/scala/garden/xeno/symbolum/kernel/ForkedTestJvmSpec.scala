@@ -22,15 +22,24 @@ import org.scalatest.matchers.should.Matchers
  * property is asserted where it holds, in the JVM the tests are running in.
  *
  * What it reads is `sun.java.command`, which names the main class of this process. A test forked by
- * sbt runs under `sbt.ForkMain`; a test run inside the launcher runs under the launcher's jar. Any
- * other runner, an IDE's for instance, is neither, and the tests below cancel there rather than
- * fail, because what they guard is this build's configuration and not every way of running a
- * suite.
+ * sbt 1 runs under `sbt.ForkMain` and one forked by sbt 2, which this build has run since
+ * 2026-09-25, under `sbt.internal.worker1.WorkerMain`; a test run inside the launcher runs under the
+ * launcher's jar. Any other runner, an IDE's for instance, is none of those, and the tests below
+ * cancel there rather than fail, because what they guard is this build's configuration and not
+ * every way of running a suite.
+ *
+ * **Until 2026-09-26 it knew only `sbt.ForkMain`, and under sbt 2 all three tests cancelled**: the
+ * verification of card 775d62f0 read `succeeded 0, canceled 3` from `kernel/testOnly` with
+ * `sun.java.command` naming `WorkerMain`, and the whole suite had reported kernel as green with
+ * three cancelled, which is this guard switched off and read as a pass. A cancellation counts as
+ * nothing failing, so a guard whose precondition stops matching goes quiet rather than red. The
+ * worker's name is matched on its package prefix `sbt.internal.worker`, not on the `1`.
  *
  * Seen failing on 2026-09-25 against the defect it is for: `tools/sbt "set kernel / Test / fork :=
  * false" "kernel/testOnly ...ForkedTestJvmSpec"` failed the first test, `sun.java.command` naming
  * the launcher's `sbt-launch.jar`, and passed the other two, the launcher's own heap being 1g too.
- * The same spec passed all three in a whole `tools/sbt test` with the fork in place.
+ * The verification of 775d62f0 saw the same red under sbt 2 on 2026-09-26. What this file says
+ * about the run with the fork in place under sbt 2 is in the card, and the run is recorded there.
  *
  * WHAT IT DOES NOT COVER. It runs in `kernel`, so a project that does not take `commonSettings` could
  * run its tests in the launcher and nothing here would see it; and it says nothing about the forks
@@ -42,7 +51,7 @@ class ForkedTestJvmSpec extends AnyFlatSpec with Matchers {
   private val command = Option(System.getProperty("sun.java.command")).getOrElse("")
 
   private def runBySbt(): Unit = {
-    val forked = command.startsWith("sbt.ForkMain")
+    val forked = command.startsWith("sbt.ForkMain") || command.startsWith("sbt.internal.worker")
     val launcher = command.contains("sbt-launch") || command.contains("xsbt.boot")
     assume(forked || launcher, s"not run by sbt (sun.java.command is `$command`), so this build's settings are not what is asked")
   }
@@ -50,7 +59,7 @@ class ForkedTestJvmSpec extends AnyFlatSpec with Matchers {
   "The tests of this module" should "run in a JVM sbt forked for them, not in the launcher" in {
     runBySbt()
     withClue(s"sun.java.command is `$command`; `Test / fork := true` in build.sbt's commonSettings is gone: ") {
-      command should startWith("sbt.ForkMain")
+      (command.startsWith("sbt.ForkMain") || command.startsWith("sbt.internal.worker")) shouldBe true
     }
   }
 

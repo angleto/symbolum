@@ -114,8 +114,10 @@ object Integral {
   val Gauge: String = "FINE_SUM_GAUGE"
 
   /**
-   * Every function continuous on `[a, b]` has an integral there. A Cauchy criterion that glues, and
-   * one supremum; `Integrability` is the derivation.
+   * Every function continuous at each point of `[a, b]` has an integral there, continuity being
+   * two-sided and so asked at the ends from outside the interval too; [[ContinuousHasWithin]] is the
+   * form a textbook states. A Cauchy criterion that glues, and one supremum; `Integrability` is the
+   * derivation.
    */
   val ContinuousHas: String = "CONTINUOUS_HAS_INTEGRAL"
 
@@ -126,9 +128,10 @@ object Integral {
   val HasJoin: String = "HAS_INTEGRAL_JOIN"
 
   /**
-   * The second half of the fundamental theorem, as a textbook states it: for `f` continuous on
-   * `[a, b]`, `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every point of it,
-   * one-sided at the two ends.
+   * The second half of the fundamental theorem: for `f` continuous at each point of `[a, b]`,
+   * `\y. integral f a y` has derivative `f x` relative to `[a, b]` at every point of it, one-sided at
+   * the two ends. The derivative is the textbook's and the continuity is not, being two-sided at the
+   * ends; [[DerivativeWithinWithin]] asks it relative to `[a, b]`.
    */
   val DerivativeWithin: String = "DERIVATIVE_WITHIN_INTEGRAL"
 
@@ -137,6 +140,34 @@ object Integral {
 
   /** Over a non-empty interval an integral is unique. */
   val HasUnique: String = "HAS_INTEGRAL_UNIQUE"
+
+  /** Two functions equal on `[a, b]` have the same fine sums there. `IntegralWithin` derives it. */
+  val SumCongruence: String = "FINE_SUM_CONGRUENCE"
+
+  /** Two functions equal on `[a, b]` have the same integrals there: the same gauge serves both. */
+  val HasCongruence: String = "HAS_INTEGRAL_CONGRUENCE"
+
+  /**
+   * Two functions equal on `[a, b]` have the same derivative relative to `[a, b]` at a point of it:
+   * the increments the definition quantifies over stay in the interval. Published here rather than
+   * by `Derivative` because the integral's relative forms are its only consumer.
+   */
+  val WithinCongruence: String = "DERIVATIVE_WITHIN_CONGRUENCE"
+
+  /**
+   * [[ContinuousHas]] as a textbook states it: continuity relative to `[a, b]`, one-sided at the
+   * ends, nothing asked of `f` outside. `IntegralWithin` derives it and the three below.
+   */
+  val ContinuousHasWithin: String = "CONTINUOUS_HAS_INTEGRAL_WITHIN"
+
+  /** [[ContinuousIntegral]] with continuity relative to `[a, b]`. */
+  val ContinuousIntegralWithin: String = "CONTINUOUS_INTEGRAL_WITHIN"
+
+  /** [[DerivativeWithin]] with continuity relative to `[a, b]`. */
+  val DerivativeWithinWithin: String = "DERIVATIVE_WITHIN_INTEGRAL_WITHIN"
+
+  /** [[DerivativeOfIntegral]] with continuity relative to `[a, b]`. */
+  val DerivativeOfIntegralWithin: String = "DERIVATIVE_INTEGRAL_WITHIN"
 
   /** `integral f a b` is the integral wherever there is one. */
   val Unique: String = "INTEGRAL_UNIQUE"
@@ -223,6 +254,28 @@ object Integral {
     DerivativeOfIntegral ->
       ("!f:real -> real. !a:real. !b:real. !x:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "a < x ==> x < b ==> derivative (\\y:real. integral f a y) x (f x)"),
+    SumCongruence ->
+      ("!f:real -> real. !g:real -> real. !d:real -> real. !a:real. !b:real. !s:real. " +
+        "(!x:real. a <= x /\\ x <= b ==> f x = g x) ==> fine_sum g d a b s ==> fine_sum f d a b s"),
+    HasCongruence ->
+      ("!f:real -> real. !g:real -> real. !a:real. !b:real. !i:real. " +
+        "(!x:real. a <= x /\\ x <= b ==> f x = g x) ==> has_integral f a b i ==> has_integral g a b i"),
+    WithinCongruence ->
+      ("!g:real -> real. !k:real -> real. !a:real. !b:real. !t:real. !m:real. " +
+        "(!y:real. a <= y /\\ y <= b ==> g y = k y) ==> a <= t ==> t <= b ==> " +
+        "derivative_within g a b t m ==> derivative_within k a b t m"),
+    ContinuousHasWithin ->
+      ("!f:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x) ==> ?i:real. has_integral f a b i"),
+    ContinuousIntegralWithin ->
+      ("!f:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x) ==> has_integral f a b (integral f a b)"),
+    DerivativeWithinWithin ->
+      ("!f:real -> real. !a:real. !b:real. !t:real. (!x:real. a <= x /\\ x <= b ==> continuous_within f a b x) ==> " +
+        "a <= t ==> t <= b ==> derivative_within (\\y:real. integral f a y) a b t (f t)"),
+    DerivativeOfIntegralWithin ->
+      ("!f:real -> real. !a:real. !b:real. !t:real. (!x:real. a <= x /\\ x <= b ==> continuous_within f a b x) ==> " +
+        "a < t ==> t < b ==> derivative (\\y:real. integral f a y) t (f t)"),
     HasUnique ->
       ("!f:real -> real. !a:real. !b:real. !i:real. !j:real. a <= b ==> " +
         "has_integral f a b i ==> has_integral f a b j ==> i = j"),
@@ -337,6 +390,12 @@ object Integral {
       substitution <- namedByUniqueness(steps, unique, hasSubstitution, SubstitutionHypotheses,
         List("Fn", "f", "g", "dg").map(Term.variable(_, Functions)) ++ List("a", "b").map(Term.variable(_, Reals)),
         "\\x:real. (f:real -> real) ((g:real -> real) x) * (dg:real -> real) x", "(Fn:real -> real) ((g:real -> real) b) - Fn (g a)")
+      extension <- continuity.fact(Continuity.Extension)
+      agrees <- continuity.fact(Continuity.ExtensionAgrees)
+      withinInterior <- derivative.fact(Derivative.WithinInterior)
+      relative <- IntegralWithin.prove(steps, IntegralWithin.Held(extension, agrees, piece, join, induction,
+        hasDefinition, withinDefinition, continuous.hasIntegral, continuous.integralIsOne, unique,
+        continuous.derivativeWithin, withinInterior))
 
       facts = Map[String, Kernel.Thm](
         Piece -> piece,
@@ -362,7 +421,7 @@ object Integral {
         Parts -> parts,
         HasSubstitution -> hasSubstitution,
         Substitution -> substitution
-      )
+      ) ++ relative
 
       // Each statement checked against the text a person reads it by: a development that built
       // something other than what it says it built must not be handed out.

@@ -288,15 +288,22 @@ they have least appetite for working out how it is produced.
 ## Integral
 
   CONTINUOUS_HAS_INTEGRAL  !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> (?u:real. has_integral x y z u)
+  CONTINUOUS_HAS_INTEGRAL_WITHIN !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous_within x y z u) ==> (?u:real. has_integral x y z u)
   CONTINUOUS_INTEGRAL      !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous x u) ==> has_integral x y z (integral x y z)
+  CONTINUOUS_INTEGRAL_WITHIN !x:real -> real. !y:real. !z:real. y <= z ==> (!u:real. y <= u /\ u <= z ==> continuous_within x y z u) ==> has_integral x y z (integral x y z)
   DERIVATIVE_INTEGRAL      !x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous x v) ==> y < u ==> u < z ==> derivative (\v:real. integral x y v) u (x u)
+  DERIVATIVE_INTEGRAL_WITHIN !x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous_within x y z v) ==> y < u ==> u < z ==> derivative (\v:real. integral x y v) u (x u)
+  DERIVATIVE_WITHIN_CONGRUENCE !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. (!x1:real. z <= x1 /\ x1 <= u ==> x x1 = y x1) ==> z <= v ==> v <= u ==> derivative_within x z u v w ==> derivative_within y z u v w
   DERIVATIVE_WITHIN_INTEGRAL !x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous x v) ==> y <= u ==> u <= z ==> derivative_within (\v:real. integral x y v) y z u (x u)
+  DERIVATIVE_WITHIN_INTEGRAL_WITHIN !x:real -> real. !y:real. !z:real. !u:real. (!v:real. y <= v /\ v <= z ==> continuous_within x y z v) ==> y <= u ==> u <= z ==> derivative_within (\v:real. integral x y v) y z u (x u)
+  FINE_SUM_CONGRUENCE      !x:real -> real. !y:real -> real. !z:real -> real. !u:real. !v:real. !w:real. (!x1:real. u <= x1 /\ x1 <= v ==> x x1 = y x1) ==> fine_sum y z u v w ==> fine_sum x z u v w
   FINE_SUM_EXISTS          !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> 0 < y v) ==> (?v:real. fine_sum x y z u v)
   FINE_SUM_GAUGE           !x:real -> real. !y:real -> real. !z:real -> real. !u:real. !v:real. !w:real. (!x1:real. y x1 <= z x1) ==> fine_sum x y u v w ==> fine_sum x z u v w
   FINE_SUM_INDUCT          !x:real -> real. !y:real -> real. !z:real -> real -> real -> bool. (!u:real. !v:real. !w:real. u <= w /\ w <= v /\ v - u < y w ==> z u v (x w * (v - u))) ==> (!u:real. !v:real. !w:real. !x1:real. !y1:real. z u v x1 ==> z v w y1 ==> z u w (x1 + y1)) ==> (!u:real. !v:real. !w:real. fine_sum x y u v w ==> z u v w)
   FINE_SUM_JOIN            !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. !x1:real. fine_sum x y z u w ==> fine_sum x y u v x1 ==> fine_sum x y z v (w + x1)
   FINE_SUM_LINEAR          !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real -> real. !w:real. !x1:real. !y1:real. fine_sum (\z1:real. z * x z1 + u * y z1) v w x1 y1 ==> (?z1:real. ?u1:real. fine_sum x v w x1 z1 /\ fine_sum y v w x1 u1 /\ y1 = z * z1 + u * u1)
   FINE_SUM_PIECE           !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. z <= v /\ v <= u /\ u - z < y v ==> fine_sum x y z u (x v * (u - z))
+  HAS_INTEGRAL_CONGRUENCE  !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. (!w:real. z <= w /\ w <= u ==> x w = y w) ==> has_integral x z u v ==> has_integral y z u v
   HAS_INTEGRAL_DERIVATIVE  !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative x v (y v)) ==> has_integral y z u (x u - x z)
   HAS_INTEGRAL_DERIVATIVE_WITHIN !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> has_integral y z u (x u - x z)
   HAS_INTEGRAL_JOIN        !x:real -> real. !y:real. !z:real. !u:real. !v:real. !w:real. y <= z ==> z <= u ==> has_integral x y z v ==> has_integral x z u w ==> has_integral x y u (v + w)

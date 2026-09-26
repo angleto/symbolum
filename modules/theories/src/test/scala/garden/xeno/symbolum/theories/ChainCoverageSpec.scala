@@ -205,6 +205,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `Primes` publishes under names it declares. The constant, `NUM_VALUATION`, is `Modular`'s.
     "Valuation" -> NotADevelopment,
 
+    // Not a development, for `Freshman`'s reason: the integral's forms with continuity relative to
+    // `[a, b]` and the three congruences they are carried by, which `Integral` publishes.
+    "IntegralWithin" -> NotADevelopment,
+
     // Not a development, for `Euler`'s reason: Wilson's theorem and the product over paired indices
     // it needs, whose facts `Primes` publishes under names it declares. 2026-09-26.
     "Wilson" -> NotADevelopment,
