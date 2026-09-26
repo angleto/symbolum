@@ -65,6 +65,17 @@ object Examples {
       "NUM_ARCHIMEDES",
       "ABS_TRIANGLE"
     ),
+    "Analysis" -> Vector(
+      "SQRT_TWO_IRRATIONAL",
+      "EXP_ADD",
+      "SIN_COS_SQUARED",
+      "INTERMEDIATE_VALUE",
+      "CONTINUOUS_ATTAINS_MAX",
+      "ROLLE",
+      "MEAN_VALUE",
+      "INTEGRAL_DERIVATIVE_WITHIN",
+      "DERIVATIVE_INTEGRAL"
+    ),
     "Towards the incompleteness theorems" -> Vector(
       "NUM_BETA_SEQUENCE",
       "NUM_PA_FORM",
