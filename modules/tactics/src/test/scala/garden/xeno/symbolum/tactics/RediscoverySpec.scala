@@ -350,9 +350,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 637 with the textbook forms of the interval theorems, 2026-09-25, derived before the run:
     // thirty-three antecedents over fourteen facts, the count `ProposeSpec` gives by fact.
     // 645 with the fundamental theorem relative to `[a, b]`, the same day: eight over four facts.
-    // 651 with the integral's linearity, 2026-09-26, derived before the run and read off the probe:
-    // two antecedents on each of the three.
-    propose.weakenings.size shouldBe 651
+    // 646 with the logarithm's slope, 2026-09-26, derived before the run: its one antecedent, `0 < x`.
+    // 652 with the integral's linearity, 2026-09-26, derived before the run and read off the probe:
+    // two antecedents on each of the three. Tip plus this branch's delta.
+    propose.weakenings.size shouldBe 652
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -486,7 +487,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `x < b` are an order between reals with no lambda in the body. The two forms of the
     // fundamental theorem carry a quantifier inside, and `DERIVATIVE_WITHIN_OF_DERIVATIVE` writes
     // none of the four.
-    propose.mutable.size shouldBe 113
+    // 114 with the logarithm's slope, 2026-09-26, derived before the run: `0 < x` is an order
+    // between reals with no lambda in the body.
+    propose.mutable.size shouldBe 114
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

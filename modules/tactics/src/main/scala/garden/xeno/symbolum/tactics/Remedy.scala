@@ -365,6 +365,14 @@ object Remedy {
           "forms differ: either the identity is false, or this prover cannot see that it is true"
       )
 
+    // A person rather than a restatement, for `NotEqualTo`'s reason, and without its verdict: the
+    // two values were neither identified nor told apart, so the sentence says both are possible.
+    case ValueUnidentified(wanted, found, _) =>
+      APersonLooks(
+        s"the value established is ${write(found, reals)}, and it was neither shown equal to " +
+          s"${write(wanted, reals)} nor shown different from it"
+      )
+
     case NotNormalised(term) =>
       RaiseALimit("the rewriting step limit", s"${write(term, reals)}, which still changes")
 

@@ -941,7 +941,10 @@ go. **It reads a summand against closed forms and does not apply the ratio test*
 the ratio test is a derivation per shape at a symbolic index and every closed form already has a
 published theorem; so the hypergeometric terms are outside the fragment and refused by name, a
 rational function of the index is refused as the class where the ratio tends to one, and a goal the
-procedure refutes comes back as `Denied`, the one refusal of standing `Decided` among the three.
+procedure refutes comes back as `Denied`, carrying the theorem. A goal naming a value other than the
+one the procedure proved is `NotEqualTo`, decided, where both values are numbers built from
+numerals, and `ValueUnidentified`, not decided, where either holds an atom such as `exp 0`: the
+four are listed in `Convergence`'s docstring with which of them are decisions.
 `docs/adr/0041` is the decision. **A polynomial in the index times a geometric term is in the
 fragment since the same night**, `docs/adr/0045`: degree one is the ratio test, which is that
 test's first consumer outside a spec, and each degree after it is a comparison that spends
@@ -1230,6 +1233,14 @@ exponential's at the even and the odd places under `EXP_TAIL_BOUND`; `Derivative
 the two estimates is the proof's and not the statement's: `1 - cos h <= h * h / 2` holds everywhere,
 so nothing refutes them without it, and what `LogarithmSpec` refutes instead is `COS_ADD` with the
 other sign, at one half, through `sin (1 / 2) >= 1 / 4`.
+
+**The logarithm's slope is `DERIVATIVE_LN`, since 2026-09-26**: `0 < x ==> derivative ln x (inv x)`.
+With `t = h * inv x` and `u = ln (1 + t)`, `LN_MUL` makes the error exactly `u - t`; the exponential's
+strict monotonicity keeps `abs u <= 1 / 2` once `abs t <= 1 / 4`, and `EXP_NEAR_LINE` at `u` does the
+rest. It costs what `DERIVATIVE_EXP` costs. **It is a derivation for this inverse and not a theorem
+about inverses**: the general one wants the inverse continuous at the point, which nothing states
+for `ln`, and `ln` is the only inverse the library holds. The hypothesis `0 < x` is not shown
+necessary and cannot be: at a point that is not positive `ln` is a choice nothing constrains.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
