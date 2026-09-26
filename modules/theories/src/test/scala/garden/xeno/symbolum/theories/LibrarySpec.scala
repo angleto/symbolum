@@ -731,8 +731,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // in `Integral` under three names, none shared. `CLAUDE.md`'s figures move by **three** and
     // **three**: each binds two functions among two or more leading quantifiers. Tip plus this
     // branch's delta.
-    library.entries.size shouldBe 781
-    library.names.distinct.size shouldBe 778
+    // 785 and 782 with integration by parts and the change of variables, 2026-09-26, derived before
+    // the run: four facts in `Integral` under four names, none shared. `CLAUDE.md`'s figures move by
+    // **four** and **four**: each binds several functions among its leading quantifiers.
+    library.entries.size shouldBe 785
+    library.names.distinct.size shouldBe 782
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

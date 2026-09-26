@@ -155,6 +155,26 @@ object Integral {
   /** The same for `integral`, where both integrals exist and `a <= b`. */
   val Linear: String = "INTEGRAL_LINEAR"
 
+  /**
+   * Integration by parts: with `f` and `g` having slopes `df` and `dg` on `[a, b]`, an integral `i`
+   * of `f * dg` makes `f b * g b - f a * g a - i` an integral of `df * g`. The product rule and
+   * [[HasFundamental]] integrate the sum, and [[HasLinear]] at one and minus one takes `f * dg` away.
+   */
+  val HasParts: String = "HAS_INTEGRAL_PARTS"
+
+  /** [[HasParts]] for `integral`. */
+  val Parts: String = "INTEGRAL_PARTS"
+
+  /**
+   * The change of variables: with `g` having slope `dg` on `[a, b]` and `F` having slope `f`
+   * everywhere, `\x. f (g x) * dg x` has integral `F (g b) - F (g a)`. The chain rule and
+   * [[HasFundamental]] at `\y. F (g y)`.
+   */
+  val HasSubstitution: String = "HAS_INTEGRAL_SUBST"
+
+  /** [[HasSubstitution]] for `integral`. */
+  val Substitution: String = "INTEGRAL_SUBST"
+
 
   /** What every derived fact says, as text, in the order they are derived. */
   val Statements: Vector[(String, String)] = Vector(
@@ -207,7 +227,23 @@ object Integral {
         "has_integral f a b i ==> has_integral g a b j ==> has_integral (\\x:real. p * f x + q * g x) a b (p * i + q * j)"),
     Linear ->
       ("!f:real -> real. !g:real -> real. !a:real. !b:real. !i:real. !j:real. !p:real. !q:real. a <= b ==> " +
-        "has_integral f a b i ==> has_integral g a b j ==> integral (\\x:real. p * f x + q * g x) a b = p * i + q * j")
+        "has_integral f a b i ==> has_integral g a b j ==> integral (\\x:real. p * f x + q * g x) a b = p * i + q * j"),
+    HasParts ->
+      ("!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !a:real. !b:real. !i:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative f x (df x)) ==> (!x:real. a <= x /\\ x <= b ==> derivative g x (dg x)) ==> " +
+        "has_integral (\\x:real. f x * dg x) a b i ==> has_integral (\\x:real. df x * g x) a b (f b * g b - f a * g a - i)"),
+    Parts ->
+      ("!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !a:real. !b:real. !i:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative f x (df x)) ==> (!x:real. a <= x /\\ x <= b ==> derivative g x (dg x)) ==> " +
+        "has_integral (\\x:real. f x * dg x) a b i ==> integral (\\x:real. df x * g x) a b = f b * g b - f a * g a - i"),
+    HasSubstitution ->
+      ("!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!y:real. derivative F y (f y)) ==> (!x:real. a <= x /\\ x <= b ==> derivative g x (dg x)) ==> " +
+        "has_integral (\\x:real. f (g x) * dg x) a b (F (g b) - F (g a))"),
+    Substitution ->
+      ("!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!y:real. derivative F y (f y)) ==> (!x:real. a <= x /\\ x <= b ==> derivative g x (dg x)) ==> " +
+        "integral (\\x:real. f (g x) * dg x) a b = F (g b) - F (g a)")
   )
 
   private val Reals: Type = TyApp(Real.TypeName, Nil)
@@ -270,6 +306,16 @@ object Integral {
       sumLinear <- sumsOfCombination(steps, induction, piece, join)
       hasLinear <- linearity(steps, reals, magnitude, hasDefinition, gauge, sumLinear)
       linear <- integralOfCombination(steps, unique, hasLinear)
+      productRule <- derivative.fact(Derivative.ProductRule)
+      chainRule <- derivative.fact(Derivative.ChainRule)
+      hasParts <- byParts(steps, productRule, hasFundamental, hasLinear)
+      hasSubstitution <- bySubstitution(steps, chainRule, hasFundamental)
+      parts <- namedByUniqueness(steps, unique, hasParts, PartsHypotheses,
+        List("f", "g", "df", "dg").map(Term.variable(_, Functions)) ++ List("a", "b", "i").map(Term.variable(_, Reals)),
+        "\\x:real. (df:real -> real) x * (g:real -> real) x", "(f:real -> real) b * (g:real -> real) b - f a * g a - i:real")
+      substitution <- namedByUniqueness(steps, unique, hasSubstitution, SubstitutionHypotheses,
+        List("Fn", "f", "g", "dg").map(Term.variable(_, Functions)) ++ List("a", "b").map(Term.variable(_, Reals)),
+        "\\x:real. (f:real -> real) ((g:real -> real) x) * (dg:real -> real) x", "(Fn:real -> real) ((g:real -> real) b) - Fn (g a)")
 
       facts = Map[String, Kernel.Thm](
         Piece -> piece,
@@ -287,7 +333,11 @@ object Integral {
         ContinuousIntegral -> continuousIntegral,
         SumLinear -> sumLinear,
         HasLinear -> hasLinear,
-        Linear -> linear
+        Linear -> linear,
+        HasParts -> hasParts,
+        Parts -> parts,
+        HasSubstitution -> hasSubstitution,
+        Substitution -> substitution
       )
 
       // Each statement checked against the text a person reads it by: a development that built
@@ -1494,5 +1544,137 @@ object Integral {
       result <- rules.disch(hasG.conclusion, named).flatMap(rules.disch(hasF.conclusion, _)).flatMap(rules.disch(ordered.conclusion, _))
         .flatMap(rules.genAll(_, List(f, g, a, b, i, j, p, q)))
     } yield result
+  }
+
+  /* ------------------------------------------------------------------ by parts, by substitution */
+
+  private val PartsSlopes: List[String] = List(
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative (f:real -> real) x ((df:real -> real) x)",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative (g:real -> real) x ((dg:real -> real) x)")
+  private val PartsHypotheses: List[String] =
+    "a:real <= b:real" :: PartsSlopes ::: List("has_integral (\\x:real. (f:real -> real) x * (dg:real -> real) x) a b i")
+  private val SubstitutionHypotheses: List[String] = List(
+    "a:real <= b:real",
+    "!y:real. derivative (Fn:real -> real) y ((f:real -> real) y)",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative (g:real -> real) x ((dg:real -> real) x)")
+
+  /** `theorem` with `hypotheses` discharged in reverse, so the first is the outermost antecedent. */
+  private def dischargedAll(steps: Continuity.Steps, theorem: Kernel.Thm, hypotheses: List[String]): Either[LogicError, Kernel.Thm] =
+    hypotheses.reverse.foldLeft[Either[LogicError, Kernel.Thm]](Right(theorem)) { (acc, text) =>
+      for { current <- acc; hypothesis <- steps.proposition(text); next <- steps.rules.disch(hypothesis, current) } yield next
+    }
+
+  /**
+   * [[HasParts]]. The product rule at each point gives `\y. f y * g y` the slope `df x * g x + f x * dg x`,
+   * [[HasFundamental]] integrates that sum to `f b * g b - f a * g a`, and [[HasLinear]] at one and
+   * minus one subtracts `f * dg`. What is left is written under the lambda by `Kernel.abs` from the
+   * identity of the ring at each `x`, which costs no axiom.
+   */
+  private def byParts(steps: Continuity.Steps, productRule: Kernel.Thm, hasFundamental: Kernel.Thm, hasLinear: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val df = Term.variable("df", Functions)
+    val dg = Term.variable("dg", Functions)
+    val List(a, b, i, x) = List("a", "b", "i", "x").map(Term.variable(_, Reals)): @unchecked
+    for {
+      hypotheses <- PartsHypotheses.foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) { (acc, text) =>
+        for { done <- acc; one <- assume(text) } yield done :+ one
+      }
+      List(ordered, slopeF, slopeG, integralOfProduct) = hypotheses: @unchecked
+      productFn <- Parser.term(theory, notation, "\\y:real. (f:real -> real) y * (g:real -> real) y", Functions)
+      sumFn <- Parser.term(theory, notation, "\\x:real. (df:real -> real) x * (g:real -> real) x + (f:real -> real) x * (dg:real -> real) x", Functions)
+      otherFn <- Parser.term(theory, notation, "\\x:real. (f:real -> real) x * (dg:real -> real) x", Functions)
+      slopes <- for {
+        member <- proposition("a:real <= x:real /\\ x <= b:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        atF <- rules.spec(x, slopeF).flatMap(rules.mp(_, assumed))
+        atG <- rules.spec(x, slopeG).flatMap(rules.mp(_, assumed))
+        m <- real("(df:real -> real) x:real")
+        n <- real("(dg:real -> real) x:real")
+        joined <- rules.specAll(productRule, List(f, g, x, m, n)).flatMap(mp(_, Right(atF), Right(atG)))
+        result <- rules.disch(member, joined).flatMap(rules.gen(x, _))
+      } yield result
+      whole <- rules.specAll(hasFundamental, List(productFn, sumFn, a, b)).flatMap(reduced)
+        .flatMap(mp(_, Right(ordered), Right(slopes)))
+      value <- real("(f:real -> real) b * (g:real -> real) b - f a * g a")
+      one <- real("1:real")
+      minusOne <- real("0 - 1:real")
+      combined <- rules.specAll(hasLinear, List(sumFn, otherFn, a, b, value, i, one, minusOne)).flatMap(reduced)
+        .flatMap(mp(_, Right(whole), Right(integralOfProduct)))
+
+      pointwise <- at(lemma("!P:real Q:real. 1 * (P + Q) + (0 - 1) * Q = P"), "(df:real -> real) x:real * (g:real -> real) x", "(f:real -> real) x:real * (dg:real -> real) x")
+      functions <- LogicError.lift(Kernel.abs(x, pointwise))
+      values <- at(lemma("!V:real i:real. 1 * V + (0 - 1) * i = V - i"), "(f:real -> real) b * (g:real -> real) b - f a * g a", "i:real")
+      hasConstant <- Parser.term(theory, notation, "has_integral", Type.fun(Functions, Type.fun(Reals, Type.fun(Reals, Type.fun(Reals, Type.Bool)))))
+      restated <- Conv.apTerm(hasConstant, functions).flatMap(Conv.apThm(_, a)).flatMap(Conv.apThm(_, b))
+        .flatMap(eq => LogicError.lift(Kernel.mkComb(eq, values)))
+      result <- LogicError.lift(Kernel.eqMp(restated, combined))
+      closed <- dischargedAll(steps, result, PartsHypotheses).flatMap(rules.genAll(_, List(f, g, df, dg, a, b, i)))
+    } yield closed
+  }
+
+  /**
+   * [[HasSubstitution]]. The chain rule gives `\y. F (g y)` the slope `f (g x) * dg x` wherever `g` has
+   * one, since `F` has one at `g x` whatever `g x` is, and [[HasFundamental]] integrates it.
+   */
+  private def bySubstitution(steps: Continuity.Steps, chainRule: Kernel.Thm, hasFundamental: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val bigF = Term.variable("Fn", Functions)
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val dg = Term.variable("dg", Functions)
+    val List(a, b, x) = List("a", "b", "x").map(Term.variable(_, Reals)): @unchecked
+    for {
+      hypotheses <- SubstitutionHypotheses.foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) { (acc, text) =>
+        for { done <- acc; one <- assume(text) } yield done :+ one
+      }
+      List(ordered, slopeF, slopeG) = hypotheses: @unchecked
+      composed <- Parser.term(theory, notation, "\\y:real. (Fn:real -> real) ((g:real -> real) y)", Functions)
+      integrand <- Parser.term(theory, notation, "\\x:real. (f:real -> real) ((g:real -> real) x) * (dg:real -> real) x", Functions)
+      slopes <- for {
+        member <- proposition("a:real <= x:real /\\ x <= b:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        inner <- rules.spec(x, slopeG).flatMap(rules.mp(_, assumed))
+        gx <- real("(g:real -> real) x:real")
+        outer <- rules.spec(gx, slopeF)
+        m <- real("(f:real -> real) ((g:real -> real) x:real)")
+        n <- real("(dg:real -> real) x:real")
+        joined <- rules.specAll(chainRule, List(bigF, g, x, m, n)).flatMap(mp(_, Right(inner), Right(outer)))
+        result <- rules.disch(member, joined).flatMap(rules.gen(x, _))
+      } yield result
+      whole <- rules.specAll(hasFundamental, List(composed, integrand, a, b)).flatMap(reduced)
+        .flatMap(mp(_, Right(ordered), Right(slopes)))
+      closed <- dischargedAll(steps, whole, SubstitutionHypotheses).flatMap(rules.genAll(_, List(bigF, f, g, dg, a, b)))
+    } yield closed
+  }
+
+  /**
+   * The `integral` form of a `has_integral` fact whose hypotheses are `hypotheses`, the first being
+   * `a <= b`: [[Unique]] at the function and the value the fact concludes with.
+   */
+  private def namedByUniqueness(
+    steps: Continuity.Steps,
+    unique: Kernel.Thm,
+    fact: Kernel.Thm,
+    hypotheses: List[String],
+    variables: List[FVar],
+    function: String,
+    value: String
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    for {
+      assumed <- hypotheses.foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) { (acc, text) =>
+        for { done <- acc; one <- assume(text) } yield done :+ one
+      }
+      instance <- rules.specAll(fact, variables).flatMap(theorem =>
+        assumed.foldLeft[Either[LogicError, Kernel.Thm]](Right(theorem))((acc, h) => acc.flatMap(rules.mp(_, h))))
+      functionTerm <- Parser.term(theory, notation, function, Functions)
+      valueTerm <- real(value)
+      a = Term.variable("a", Reals)
+      b = Term.variable("b", Reals)
+      named <- rules.specAll(unique, List(functionTerm, a, b, valueTerm)).flatMap(mp(_, Right(assumed.head), Right(instance)))
+      closed <- dischargedAll(steps, named, hypotheses).flatMap(rules.genAll(_, variables))
+    } yield closed
   }
 }

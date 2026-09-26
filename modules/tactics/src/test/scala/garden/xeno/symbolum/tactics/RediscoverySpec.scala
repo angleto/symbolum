@@ -353,7 +353,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 646 with the logarithm's slope, 2026-09-26, derived before the run: its one antecedent, `0 < x`.
     // 652 with the integral's linearity, 2026-09-26, derived before the run and read off the probe:
     // two antecedents on each of the three. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 652
+    // 666 with integration by parts and the change of variables, 2026-09-26, derived before the run:
+    // four antecedents on each form of parts and three on each form of the substitution.
+    propose.weakenings.size shouldBe 666
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
