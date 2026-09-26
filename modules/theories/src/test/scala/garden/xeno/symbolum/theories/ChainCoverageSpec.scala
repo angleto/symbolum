@@ -196,6 +196,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // statement needs, `NUM_TOTIENT`, is `Modular`'s.
     "Euler" -> NotADevelopment,
 
+    // Not a development, for `Freshman`'s reason: the p-adic valuation, whose fourteen facts
+    // `Primes` publishes under names it declares. The constant, `NUM_VALUATION`, is `Modular`'s.
+    "Valuation" -> NotADevelopment,
+
     // A procedure, for `Monotone`'s reason: handed a goal it returns a theorem about the CALLER's
     // series, built out of facts `Limit` and `Transcendental` already publish. No constant, no
     // fact of its own, and `Prove` reaches it through the chain it is constructed from.

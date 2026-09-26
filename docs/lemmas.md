@@ -744,7 +744,10 @@ they have least appetite for working out how it is produced.
 ## Primes
 
   NUM_BINOMIAL             !x:num. !y:num. NUM_POW (SUC x) y = NUM_SUM (\z:num. NUM_CHOOSE y z * NUM_POW x z) (SUC y)
+  NUM_DIVIDES_MUL_VALUATION !x:num. !y:num. !z:num. 0 < x ==> 0 < y ==> 0 < z ==> NUM_DIVIDES z (x * y) = (!u:num. NUM_PRIME u ==> NUM_VALUATION u z <= NUM_VALUATION u x + NUM_VALUATION u y)
   NUM_DIVIDES_SUM          !x:num. !y:num -> num. !z:num. (!u:num. u < z ==> NUM_DIVIDES x (y u)) ==> NUM_DIVIDES x (NUM_SUM y z)
+  NUM_DIVIDES_VALUATION    !x:num. !y:num. 0 < x ==> 0 < y ==> NUM_DIVIDES x y = (!z:num. NUM_PRIME z ==> NUM_VALUATION z x <= NUM_VALUATION z y)
+  NUM_DIV_VALUATION        !x:num. !y:num. !z:num. !u:num. 0 < x ==> 0 < y ==> 0 < z ==> NUM_DIVIDES z (x * y) ==> u = NUM_DIV (x * y) z = (0 < u /\ (!v:num. NUM_PRIME v ==> NUM_VALUATION v u + NUM_VALUATION v z = NUM_VALUATION v x + NUM_VALUATION v y))
   NUM_EULER                !x:num. !y:num. 0 < x ==> NUM_GCD y x = SUC 0 ==> NUM_CONG x (NUM_POW y (NUM_TOTIENT x)) (SUC 0)
   NUM_FACTORISATION        !x:num. SUC 0 < x ==> (?y:num -> num. ?z:num. 0 < z /\ (!u:num. u < z ==> NUM_PRIME (y u)) /\ (!u:num. !v:num. u < v /\ v < z ==> y u <= y v) /\ NUM_PROD y z = x)
   NUM_FACTORISATION_UNIQUE !x:num -> num. !y:num. !z:num -> num. !u:num. (!v:num. v < y ==> NUM_PRIME (x v)) ==> (!v:num. !w:num. v < w /\ w < y ==> x v <= x w) ==> (!v:num. v < u ==> NUM_PRIME (z v)) ==> (!v:num. !w:num. v < w /\ w < u ==> z v <= z w) ==> NUM_PROD x y = NUM_PROD z u ==> y = u /\ (!v:num. v < y ==> x v = z v)
@@ -752,6 +755,8 @@ they have least appetite for working out how it is produced.
   NUM_FRESHMAN             !x:num. !y:num. NUM_PRIME x ==> NUM_CONG x (NUM_POW (SUC y) x) (NUM_POW y x + SUC 0)
   NUM_GCD_MOD              !x:num. !y:num. 0 < x ==> NUM_GCD y x = SUC 0 ==> NUM_GCD (NUM_MOD y x) x = SUC 0
   NUM_INVERSE              !x:num. !y:num. 0 < x ==> NUM_GCD y x = SUC 0 ==> (?z:num. NUM_CONG x (y * z) (SUC 0))
+  NUM_LT_POW               !x:num. !y:num. SUC 0 < x ==> y < NUM_POW x y
+  NUM_POW_DIVIDES_POW      !x:num. !y:num. !z:num. y <= z ==> NUM_DIVIDES (NUM_POW x y) (NUM_POW x z)
   NUM_PRIME_DIVIDES_CHOOSE !x:num. !y:num. NUM_PRIME x ==> 0 < y ==> y < x ==> NUM_DIVIDES x (NUM_CHOOSE x y)
   NUM_PRIME_DIVIDES_PROD   !x:num. !y:num -> num. !z:num. NUM_PRIME x ==> NUM_DIVIDES x (NUM_PROD y z) ==> (?u:num. u < z /\ NUM_DIVIDES x (y u))
   NUM_PRIME_NOT_DIVIDES_FACT !x:num. !y:num. NUM_PRIME x ==> y < x ==> ~(NUM_DIVIDES x (NUM_FACT y))
@@ -766,6 +771,15 @@ they have least appetite for working out how it is produced.
   NUM_SUM_ADD              !x:num -> num. !y:num -> num. !z:num. NUM_SUM (\u:num. x u + y u) z = NUM_SUM x z + NUM_SUM y z
   NUM_SUM_MUL              !x:num -> num. !y:num. !z:num. NUM_SUM (\u:num. x u * y) z = NUM_SUM x z * y
   NUM_UNIT_COPRIME         !x:num. !y:num. !z:num. 0 < x ==> NUM_CONG x (y * z) (SUC 0) ==> NUM_GCD z x = SUC 0
+  NUM_VALUATION_DIV        !x:num. !y:num. !z:num. !u:num. NUM_PRIME x ==> 0 < y ==> 0 < z ==> 0 < u ==> NUM_DIVIDES u (y * z) ==> NUM_VALUATION x (NUM_DIV (y * z) u) + NUM_VALUATION x u = NUM_VALUATION x y + NUM_VALUATION x z
+  NUM_VALUATION_DIVIDES    !x:num. !y:num. !z:num. SUC 0 < x ==> 0 < y ==> NUM_DIVIDES (NUM_POW x z) y = z <= NUM_VALUATION x y
+  NUM_VALUATION_EXT        !x:num. !y:num. 0 < x ==> 0 < y ==> (!z:num. NUM_PRIME z ==> NUM_VALUATION z x = NUM_VALUATION z y) ==> x = y
+  NUM_VALUATION_MUL        !x:num. !y:num. !z:num. NUM_PRIME x ==> 0 < y ==> 0 < z ==> NUM_VALUATION x (y * z) = NUM_VALUATION x y + NUM_VALUATION x z
+  NUM_VALUATION_NOT_DIVIDES !x:num. !y:num. ~(NUM_DIVIDES x y) ==> NUM_VALUATION x y = 0
+  NUM_VALUATION_OTHER_PRIME !x:num. !y:num. NUM_PRIME x ==> NUM_PRIME y ==> ~(y = x) ==> NUM_VALUATION x y = 0
+  NUM_VALUATION_POW        !x:num. !y:num. NUM_PRIME x ==> NUM_VALUATION x (NUM_POW x y) = y
+  NUM_VALUATION_SPEC       !x:num. !y:num. SUC 0 < x ==> 0 < y ==> NUM_DIVIDES (NUM_POW x (NUM_VALUATION x y)) y /\ ~(NUM_DIVIDES (NUM_POW x (SUC (NUM_VALUATION x y))) y)
+  NUM_VALUATION_UNIQUE     !x:num. !y:num. !z:num. NUM_DIVIDES (NUM_POW x z) y ==> ~(NUM_DIVIDES (NUM_POW x (SUC z)) y) ==> NUM_VALUATION x y = z
 
 ## Product
 

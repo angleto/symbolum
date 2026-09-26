@@ -729,10 +729,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // one name. `CLAUDE.md`'s figures do not move: it binds one leading quantifier.
     // 781 and 778 with the integral's linearity, 2026-09-26, derived before the run: three facts
     // in `Integral` under three names, none shared. `CLAUDE.md`'s figures move by **three** and
-    // **three**: each binds two functions among two or more leading quantifiers. Tip plus this
-    // branch's delta.
-    library.entries.size shouldBe 781
-    library.names.distinct.size shouldBe 778
+    // **three**: each binds two functions among two or more leading quantifiers.
+    // 795 and 792 with the p-adic valuation, 2026-09-26, derived before the run: fourteen facts in
+    // `Primes` under fourteen names, none shared; `NUM_VALUATION` is a definition of `Modular`, which
+    // the library does not collect. `CLAUDE.md`'s figures move by **fourteen** and **fourteen**:
+    // every one binds two or more leading quantifiers, all of them `num`. Tip plus this branch's
+    // delta.
+    library.entries.size shouldBe 795
+    library.names.distinct.size shouldBe 792
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -244,6 +244,23 @@ derivation and says why each of those; `EulerSpec` detaches the theorem at four 
 nothing assumed, derives `NUM_TOTIENT 2 = 1` from the definition, and refutes the statement at
 `n = 2, a = 2`.
 
+**The p-adic valuation is `NUM_VALUATION`, since 2026-09-26, and divisibility between positive
+numbers is a comparison of its registers.** `NUM_VALUATION p n` is `Modular`'s, a choice of the `k`
+with `p^k | n` and not `p^(k+1) | n`; `NUM_VALUATION_UNIQUE` characterises it with no hypothesis and
+`NUM_VALUATION_SPEC` says it exists for `1 < p` and `0 < n`. At a prime it turns a product into a sum
+(`NUM_VALUATION_MUL`), reads a power back (`NUM_VALUATION_POW`) and is nought at another prime
+(`NUM_VALUATION_OTHER_PRIME`); `NUM_VALUATION_DIVIDES` says `p^k | n` exactly when the register holds
+at least `k`, and `NUM_DIVIDES_VALUATION` says `b | c` exactly when no register of `b` exceeds the
+same register of `c`, by strong induction on `b`. From those, one fraction `a/b` read on the
+registers: `NUM_DIVIDES_MUL_VALUATION` says it applies to `n` exactly when every register of `b` is
+covered by `n`'s and `a`'s together, `NUM_VALUATION_DIV` that applying it adds `a`'s registers and
+takes `b`'s away, `NUM_VALUATION_EXT` that the registers determine the state, and
+`NUM_DIV_VALUATION` that the quotient is the one positive number with those registers. The
+simulation of a whole FRACTRAN program waits on the step relation. `Valuation.scala` is the
+derivation; `ValuationSpec` composes `NUM_VALUATION 2 12 = 2` from the laws with nothing
+assumed, and refutes the product law at `p = 4` and the register reading at `n = 0`, where every
+other hypothesis holds.
+
 **The arithmetic Goedel's coding needs is `Coding`, and it is finished as of 2026-09-14.**
 `docs/adr/0013` decides that the embedded theory is Peano arithmetic and that a finite sequence is
 coded by the **beta function** rather than by iterated pairing or by a product of prime powers, on
