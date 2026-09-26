@@ -1293,8 +1293,12 @@ With `t = h * inv x` and `u = ln (1 + t)`, `LN_MUL` makes the error exactly `u -
 strict monotonicity keeps `abs u <= 1 / 2` once `abs t <= 1 / 4`, and `EXP_NEAR_LINE` at `u` does the
 rest. It costs what `DERIVATIVE_EXP` costs. **It is a derivation for this inverse and not a theorem
 about inverses**: the general one wants the inverse continuous at the point, which nothing states
-for `ln`, and `ln` is the only inverse the library holds. The hypothesis `0 < x` is not shown
-necessary and cannot be: at a point that is not positive `ln` is a choice nothing constrains.
+for `ln`, and `ln` is the only inverse the library holds. **The hypothesis `0 < x` is needed at
+nought, and that is derived**: `ln 0` is a choice nothing constrains, but a slope at `0` also speaks
+of `ln h` for small positive `h`, where `ln` is pinned and falls below every bound, so no slope at all
+exists there, and `DerivativeSpec` derives `!m. ~(derivative ln 0 m)` and from it refutes the
+statement with `0 <= x`. At a negative point nothing here decides whether a slope exists, and that
+is an absence of a test rather than a proof that none could be written.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
