@@ -178,6 +178,34 @@ class TermPropertySpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPr
     }
   }
 
+  /**
+   * The property above holds for a hash recomputed at every asking too, so it cannot say the hash
+   * is kept, which is what `docs/adr/0047` credits for what `Reach.of` stopped costing. A wall
+   * clock would be a figure of one machine. This asks instead for the hash of a term built in
+   * levels, each applying a function to the level below twice, shared: a hash computed from the
+   * children at every asking visits a number of leaves exponential in the levels and never
+   * returns at the depth below, and a kept one is a field. So the property is asymptotic rather than timed, and the timeout below is only how a
+   * test that never returns is made to fail rather than hang: it is not a budget, and no machine is
+   * slow enough to spend it on a field read.
+   *
+   * Built with `App` directly, which this package may do, because `Term.app` checks the argument
+   * is locally closed by walking it, and that walk is as exponential over sharing as the hash. And
+   * built inside the wait, because a node that computed its hash when built from children that
+   * recompute theirs would never finish building either.
+   */
+  it should "not walk the term when asked, which a shared term makes exponential" in {
+    import scala.concurrent.{Await, ExecutionContext, Future}
+    import scala.concurrent.duration.*
+    val twice = Term.variable("f", Type.fun(Type.Bool, Type.fun(Type.Bool, Type.Bool)))
+    val asked = Future {
+      val shared = (1 to 64).foldLeft(Term.variable("p", Type.Bool): Term)((below, _) =>
+        App(App(twice, below), below))
+      (shared, shared.hashCode)
+    }(ExecutionContext.global)
+    val (shared, hash) = Await.result(asked, 30.seconds)
+    hash shouldBe scala.util.hashing.MurmurHash3.productHash(shared.asInstanceOf[Product])
+  }
+
   "The order on terms" should "call two terms equal exactly when they are equal" in {
     // Hypothesis sets are kept sorted and duplicate-free by this order. An order that called two
     // distinct hypotheses equal would make the set depend on the route a proof took.
