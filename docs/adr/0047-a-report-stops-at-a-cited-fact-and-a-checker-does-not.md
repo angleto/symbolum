@@ -113,6 +113,17 @@ accounting walks together. Bounding it would take a summary per citation of the 
 it, which is a different decision about memory and about what `Reach` means, and it is card `0c00cac9`
 rather than a sentence here.
 
+**Card `0c00cac9` measured it first and did not need that decision, 2026-09-26.** The walk was never
+the cost: over eight large facts of the chain, walking every node took 547 ms and checking each
+node's statement against the library's took 4697 ms, because `App` and `Abs` recomputed their hash
+from the whole term at every lookup. They keep it now, computed once from the children's when a
+node is built, and by the same function the case class used, so no set iterates in another order.
+Over the same eight the check took 877 ms, and in `ReachSpec`'s rounds on the 23 statements above
+`Reach.of` read **460 ms against 3177**, which puts a report's walks at 1308 ms rather than 4049.
+The summary per citation stays unbuilt, and so does the decision about what `Reach` would mean
+with one. `TermPropertySpec` holds the kept hash to the structural one over generated terms, and
+went red when the hash was perturbed to an identity hash.
+
 **What moved elsewhere in the repository, read off the suite rather than predicted.** The figures
 that count a report are smaller wherever a proof uses a fact another development published: the
 ring corpus census in `docs/evaluation.md` from 122862 to 105271, with 51 citations in it; `Family`'s
