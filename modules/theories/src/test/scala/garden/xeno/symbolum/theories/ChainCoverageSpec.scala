@@ -172,6 +172,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Within" -> NotADevelopment,
     "DerivativeWithin" -> NotADevelopment,
 
+    // Not a development, for `DerivativeWithin`'s reason: the derivation of the power's slope and of
+    // Taylor's theorem, whose facts are the map `TaylorExpansion.prove` returns and are published
+    // by `Derivative`. It declares nothing.
+    "TaylorExpansion" -> NotADevelopment,
+
     // Not a development, for the same reason: the derivation that a continuous function has an
     // integral, whose facts are published in `Integral.facts` under names `Integral` declares.
     "Integrability" -> NotADevelopment,
@@ -195,6 +200,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // theorem, whose facts `Primes` publishes under names it declares. The one constant the
     // statement needs, `NUM_TOTIENT`, is `Modular`'s.
     "Euler" -> NotADevelopment,
+
+    // Not a development, for `Freshman`'s reason: the p-adic valuation, whose fourteen facts
+    // `Primes` publishes under names it declares. The constant, `NUM_VALUATION`, is `Modular`'s.
+    "Valuation" -> NotADevelopment,
 
     // Not a development, for `Euler`'s reason: Wilson's theorem and the product over paired indices
     // it needs, whose facts `Primes` publishes under names it declares. 2026-09-26.
@@ -308,6 +317,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // language, FRACTRAN, and nothing below it or in the tactic surface asks about a program of
     // fractions. `docs/adr/0054` is the record, and `FractranSpec` is the spec.
     "Fractran" -> BesideTheChain,
+
+    // Not a development, for `Freshman`'s reason: FRACTRAN read as a register machine, whose one
+    // theorem `Fractran` publishes under a name it declares, over the constant it defines.
+    "FractranRegisters" -> NotADevelopment,
 
     // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
     // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being

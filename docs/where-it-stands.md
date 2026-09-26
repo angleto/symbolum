@@ -244,6 +244,23 @@ derivation and says why each of those; `EulerSpec` detaches the theorem at four 
 nothing assumed, derives `NUM_TOTIENT 2 = 1` from the definition, and refutes the statement at
 `n = 2, a = 2`.
 
+**The p-adic valuation is `NUM_VALUATION`, since 2026-09-26, and divisibility between positive
+numbers is a comparison of its registers.** `NUM_VALUATION p n` is `Modular`'s, a choice of the `k`
+with `p^k | n` and not `p^(k+1) | n`; `NUM_VALUATION_UNIQUE` characterises it with no hypothesis and
+`NUM_VALUATION_SPEC` says it exists for `1 < p` and `0 < n`. At a prime it turns a product into a sum
+(`NUM_VALUATION_MUL`), reads a power back (`NUM_VALUATION_POW`) and is nought at another prime
+(`NUM_VALUATION_OTHER_PRIME`); `NUM_VALUATION_DIVIDES` says `p^k | n` exactly when the register holds
+at least `k`, and `NUM_DIVIDES_VALUATION` says `b | c` exactly when no register of `b` exceeds the
+same register of `c`, by strong induction on `b`. From those, one fraction `a/b` read on the
+registers: `NUM_DIVIDES_MUL_VALUATION` says it applies to `n` exactly when every register of `b` is
+covered by `n`'s and `a`'s together, `NUM_VALUATION_DIV` that applying it adds `a`'s registers and
+takes `b`'s away, `NUM_VALUATION_EXT` that the registers determine the state, and
+`NUM_DIV_VALUATION` that the quotient is the one positive number with those registers. Those
+are what the FRACTRAN register machine below is proved from. `Valuation.scala` is the
+derivation; `ValuationSpec` composes `NUM_VALUATION 2 12 = 2` from the laws with nothing
+assumed, and refutes the product law at `p = 4` and the register reading at `n = 0`, where every
+other hypothesis holds.
+
 **Wilson's theorem is `NUM_WILSON`, since 2026-09-26, and what it was waiting on is a product over
 paired indices, which a permutation does not give.** `NUM_DIVIDES p (SUC (NUM_FACT (PRE p)))` for
 `p` prime, `(p - 1)! = -1 (mod p)` without a negative. Multiplying the residues by their inverses
@@ -912,10 +929,12 @@ derives is the step at a head, the step as a function, and the two clauses of a 
 is choice, infinity and eta, the price of the lists. The interpreter is a few lines of `BigInt`
 arithmetic that nothing believes. `Fractran.certify` hands each state it proposes to the kernel,
 and `FractranSpec` gets Conway's PRIMEGAME from `2` to `4` in nineteen steps that way. **What is not
-here** is anything a program computes: that `3/2` adds the exponents of `2` and `3` wants the
-valuation at a prime, which `docs/lemmas.md` does not hold, and it is card `626ad37f`. Whether
-Conway's generalised Collatz maps meet `Collatz` is card `b0d2ada9`, and it is a question rather
-than a plan.
+here** is whether Conway's generalised Collatz maps meet `Collatz`, which is card `b0d2ada9` and a
+question rather than a plan. **What a program computes is here since 2026-09-26**:
+`FRACTRAN_STEP_REGISTERS` says a step from a positive state under positive numerators is exactly a
+step of `FRACTRAN_REGISTER_STEP`, the same fold with each fraction's test and effect written on the
+prime registers, so that `3/2` adds one to the register of `3` and takes one from that of `2` is a
+theorem, and `FractranRegistersSpec` reads it off the certified step from `72`.
 
 **The first analysis is `Limit`, and the transcendental functions are `Transcendental`.** Both
 landed on 2026-09-15, both are links in the chain, and between them they declare eight constants
@@ -1290,6 +1309,23 @@ rest. It costs what `DERIVATIVE_EXP` costs. **It is a derivation for this invers
 about inverses**: the general one wants the inverse continuous at the point, which nothing states
 for `ln`, and `ln` is the only inverse the library holds. The hypothesis `0 < x` is not shown
 necessary and cannot be: at a point that is not positive `ln` is a choice nothing constrains.
+
+**Taylor's theorem with the remainder in Lagrange's form is `Derivative.TAYLOR`, since 2026-09-26.**
+The derivatives are a family `D : num -> real -> real` the caller hands in, `D (SUC k)` the
+derivative of `D k`, continuous on `[a, b]` and differentiable inside up to the order `n`; the
+conclusion is a `c` strictly inside with `D 0 b` equal to the Taylor polynomial of degree `n` at `a`
+plus `inv ((n + 1)!) * D (n + 1) c * (b - a)^(n + 1)`, with no quotient. It is Rolle at a
+combination of the polynomial expanded at `t` and `(b - t)^(n + 1)`, whose derivative telescopes to
+one term, and it costs what `ROLLE` costs and infinity, which the factorial and the induction over
+the order are paid in. It asked for two facts nobody had written: `Continuity.CONTINUOUS_MUL`, the
+continuity of a product, because Rolle wants the combination continuous at both ends; and
+`DERIVATIVE_POWER`, the slope of `Power y (SUC n)`. Every equation between two terms in
+`TaylorExpansion` is the recurrences written out and `Field` on the result, with two decisions that
+file records: `real_of_num (SUC n)` stays an atom, since `n! * (n + 1)` multiplied out is a sum
+`Field` cannot take apart, and a sum over a lambda is handed over as a variable. `DerivativeSpec`
+detaches it at `\k. exp` on `[0, 1]` at every order and refutes it without the derivative hypothesis
+at `\k. \y. y`. What it is not: a textbook form with continuity relative to `[a, b]`, which `ROLLE`
+has and this does not yet, and anything about a Taylor series converging.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

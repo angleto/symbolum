@@ -729,23 +729,30 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // one name. `CLAUDE.md`'s figures do not move: it binds one leading quantifier.
     // 781 and 778 with the integral's linearity, 2026-09-26, derived before the run: three facts
     // in `Integral` under three names, none shared. `CLAUDE.md`'s figures move by **three** and
-    // **three**: each binds two functions among two or more leading quantifiers. Tip plus this
-    // branch's delta.
+    // **three**: each binds two functions among two or more leading quantifiers.
     // 784 and 781 with additivity and the second half of the fundamental theorem, the same day,
     // derived before the run: three facts in `Integral` under three names. `CLAUDE.md`'s figures
     // move by **three** and **three**: `HAS_INTEGRAL_JOIN` binds a function and five reals, the other
-    // two a function and three reals. Tip plus this branch's delta.
+    // two a function and three reals.
     // 788 and 785 with integration by parts and the change of variables, 2026-09-26, derived before
     // the run: four facts in `Integral` under four names, none shared. `CLAUDE.md`'s figures move by
-    // **four** and **four**: each binds several functions among its leading quantifiers. Tip plus
-    // this branch's delta.
-    // 790 and 787 with Wilson's theorem and the product over paired indices, 2026-09-26, derived
+    // **four** and **four**: each binds several functions among its leading quantifiers.
+    // 802 and 799 with the p-adic valuation, 2026-09-26, derived before the run: fourteen facts in
+    // `Primes` under fourteen names, none shared; `NUM_VALUATION` is a definition of `Modular`, which
+    // the library does not collect. `CLAUDE.md`'s figures move by **fourteen** and **fourteen**:
+    // every one binds two or more leading quantifiers, all of them `num`. Tip plus this branch's
+    // delta.
+    // 805 and 802 with Taylor's theorem, 2026-09-26, derived before the run and confirmed by it:
+    // `CONTINUOUS_MUL`, `DERIVATIVE_POWER` and `TAYLOR`, three names none shared. `CLAUDE.md`'s
+    // figures move by three and **two**: `DERIVATIVE_POWER` binds a real and a number. Tip plus this
+    // branch's delta.
+    // 807 and 804 with Wilson's theorem and the product over paired indices, 2026-09-26, derived
     // before the run: two facts in `Primes` under two names, none shared. `CLAUDE.md`'s figures move
     // by **one** and **one**: `NUM_PROD_PAIRED` binds `m`, `f`, `t` and `n`, two of them `num` and two
-    // `num -> num`, and `NUM_WILSON` binds only `p`. Measured on a snapshot of older classes as a
-    // delta of two, one and one, and applied to the tip. Tip plus this branch's delta.
-    library.entries.size shouldBe 790
-    library.names.distinct.size shouldBe 787
+    // `num -> num`, and `NUM_WILSON` binds only `p`. Measured as a delta of two, one and one on the
+    // branch before the valuation and Taylor landed. Tip plus this branch's delta.
+    library.entries.size shouldBe 807
+    library.names.distinct.size shouldBe 804
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -33,6 +33,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   private def rules: Rules = logic.rules
   private val reals: Type = TyApp(Real.TypeName, Nil)
   private val functions: Type = Type.fun(reals, reals)
+  private val numbers: Type = TyApp(Natural.TypeName, Nil)
 
   private def force[T](result: Either[LogicError, T]): T =
     result.fold(error => fail(s"unexpected refusal: ${error.message}"), identity)
@@ -109,7 +110,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
-          Derivative.WithinOfDerivative) ++ onInterval ++ withinInterval).contains(name)) {
+          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor) ++ onInterval ++ withinInterval).contains(name)) {
       val other = Derivation.axiomsOf(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
@@ -625,6 +626,105 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     detached.hypotheses shouldBe empty
     derivative.show(detached.conclusion) shouldBe
       "?x:real. ?y:real. 0 < x /\\ x < 1 /\\ derivative (\\z:real. z) x y /\\ 1 - 0 = y * (1 - 0)"
+  }
+
+  /* ------------------------------------------------------------- Taylor's theorem */
+
+  private val infinity: Term = chain.naturals.axioms("INFINITY").conclusion
+
+  it should "price the power's slope at the product rule's and Taylor's theorem at Rolle's, each with infinity" in {
+    // Measured on 2026-09-26 before it was written here, and equalities rather than ceilings. The one
+    // axiom each adds is the naturals': the power's exponent and the order of the expansion are
+    // numbers, and both facts are proved by induction on them.
+    Derivation.axiomsOf(fact(Derivative.Power)) shouldBe Derivation.axiomsOf(fact(Derivative.ProductRule)) + infinity
+    Derivation.axiomsOf(fact(Derivative.Taylor)) shouldBe Derivation.axiomsOf(fact(Derivative.Rolle)) + infinity
+
+    // The route: Rolle at a combination, uniqueness at Rolle's point, the power's slope and the
+    // product rule for each term, and the continuity of a product for the ends.
+    val route = Set(
+      fact(Derivative.Rolle), fact(Derivative.Unique), fact(Derivative.Power), fact(Derivative.ProductRule),
+      fact(Derivative.ChainRule), fact(Derivative.Linear),
+      force(chain.continuity.fact(Continuity.Product)), force(chain.continuity.fact(Continuity.Linear))
+    ).map(_.conclusion)
+    Derivation.restingOn(fact(Derivative.Taylor), route) shouldBe route
+  }
+
+  it should "detach Taylor's theorem at the exponential on [0, 1], at every order, with nothing assumed" in {
+    // `\k. exp` is the family every order of which is the exponential, so both hypotheses are
+    // met by the exponential's slope, and the order stays a variable.
+    val family = force(derivative.term("\\k:num. exp", Type.fun(numbers, functions)))
+    val n = Term.variable("n", numbers)
+    val k = Term.variable("k", numbers)
+    val x = Term.variable("x", reals)
+    val instance = opened(force(rules.specAll(fact(Derivative.Taylor), List(family, real("0:real"), real("1:real"), n))))
+    val slope = force(rules.spec(x, fact(Derivative.Exponential)))
+    val exponential = force(derivative.term("exp", functions))
+    val continuous = force(rules.specAll(fact(Derivative.Continuous), List(exponential, x, real("exp x:real"))).flatMap(rules.mp(_, slope)))
+    def everywhere(interval: String, fact: Kernel.Thm): Kernel.Thm =
+      force(rules.disch(proposition(interval), fact)
+        .flatMap(rules.disch(proposition("NUM_LE (k:num) (n:num)"), _))
+        .flatMap(rules.genAll(_, List(k, x))))
+    val detached = Vector(lemma("(0:real) < 1"), everywhere("(0:real) <= x /\\ x <= 1", continuous),
+      everywhere("(0:real) < x /\\ x < 1", slope))
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition(
+      "?c:real. 0 < c /\\ c < 1 /\\ exp 1 = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * exp 0 * Power (1 - 0) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * exp c * Power (1 - 0) (SUC n)")
+  }
+
+  it should "need its derivative hypothesis, which is shown by refuting the theorem without it at the identity family" in {
+    // `\k. \y. y` is continuous at every order and is not the family of its own derivatives. At order
+    // zero on [0, 1] the conclusion without the derivative hypothesis reads `1 = 0 + c` for a `c`
+    // below one, once the sum, the factorial and the power are written out.
+    val dropped = proposition(
+      "!D:num -> real -> real. !a:real. !b:real. !n:num. a < b ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> a <= x /\\ x <= b ==> continuous (D k) x) ==> " +
+        "?c:real. a < c /\\ c < b /\\ D ZERO b = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val family = force(derivative.term("\\k:num. \\y:real. y", Type.fun(numbers, functions)))
+    val zero = force(derivative.term("ZERO", numbers))
+    val instance = opened(force(rules.specAll(assumed, List(family, real("0:real"), real("1:real"), zero))))
+    val k = Term.variable("k", numbers)
+    val x = Term.variable("x", reals)
+    val continuousEverywhere = force(chain.continuity.fact(Continuity.Identity).flatMap(rules.spec(x, _))
+      .flatMap(rules.disch(proposition("(0:real) <= x /\\ x <= 1"), _))
+      .flatMap(rules.disch(proposition("NUM_LE (k:num) ZERO"), _))
+      .flatMap(rules.genAll(_, List(k, x))))
+    val somewhere = Vector(lemma("(0:real) < 1"), continuousEverywhere)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+
+    val c = Term.variable("c", reals)
+    val inside = force(somewhere.conclusion match {
+      case App(_, lambda) => LogicError.lift(Term.app(lambda, c)).flatMap(Conv.betaRoot)
+        .flatMap(eq => Term.destEq(eq.conclusion).map(_._2).toRight(NotOfForm("an equation", eq.conclusion)))
+      case other => Left(NotOfForm("an existential", other))
+    })
+    val witness = force(LogicError.lift(Kernel.assume(inside)))
+    val underOne = force(rules.conjElim2(witness).flatMap(rules.conjElim1))
+    val equation = force(rules.conjElim2(witness).flatMap(rules.conjElim2))
+    val written = force(Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion)))
+    val recurrences = Vector(
+      force(chain.series.fact(Series.AtSuccessor)), force(chain.series.fact(Series.AtZero)),
+      force(chain.series.fact(Series.PowerAtSuccessor)), force(chain.series.fact(Series.PowerAtZero)),
+      force(chain.coding.fact(Coding.FactorialAtSuccessor)), force(chain.coding.fact(Coding.FactorialAtZero)),
+      force(chain.peano.fact(Peano.EmbedsProduct)), force(chain.peano.fact(Peano.EmbedsSuccessor)),
+      force(chain.peano.fact(Peano.EmbedsZero)))
+    val value = force(for {
+      rules <- Rewrite.Rule.all(logic, recurrences)
+      rewritten <- Rewrite.rewrite(rules, written)
+      normal <- Term.destEq(rewritten.conclusion).map(_._2).toRight(NotOfForm("an equation", rewritten.conclusion))
+      closed <- LogicError.lift(Term.eq(normal, c)).flatMap(chain.ring.prove)
+      joined <- Conv.trans(rewritten, closed)
+    } yield joined)
+    val notBelow = force(rules.specAll(lemma("!c:real R:real. 1 = R ==> R = c ==> ~(c < 1)"), List(c, written))
+      .flatMap(rules.mp(_, equation)).flatMap(rules.mp(_, value)))
+    val absurd = force(rules.notElim(notBelow, underOne))
+    val eliminated = force(rules.existsElim(somewhere, c, absurd))
+    force(rules.notIntro(dropped, eliminated)).hypotheses shouldBe empty
   }
 
   it should "reach the sign of a derivative on an interval through the mean value theorem and uniqueness" in {
