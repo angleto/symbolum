@@ -295,10 +295,14 @@ they have least appetite for working out how it is produced.
   HAS_INTEGRAL_DERIVATIVE  !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative x v (y v)) ==> has_integral y z u (x u - x z)
   HAS_INTEGRAL_DERIVATIVE_WITHIN !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> has_integral y z u (x u - x z)
   HAS_INTEGRAL_LINEAR      !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. !x1:real. !y1:real. has_integral x z u v ==> has_integral y z u w ==> has_integral (\z1:real. x1 * x z1 + y1 * y z1) z u (x1 * v + y1 * w)
+  HAS_INTEGRAL_PARTS       !x:real -> real. !y:real -> real. !z:real -> real. !u:real -> real. !v:real. !w:real. !x1:real. v <= w ==> (!y1:real. v <= y1 /\ y1 <= w ==> derivative x y1 (z y1)) ==> (!y1:real. v <= y1 /\ y1 <= w ==> derivative y y1 (u y1)) ==> has_integral (\y1:real. x y1 * u y1) v w x1 ==> has_integral (\y1:real. z y1 * y y1) v w (x w * y w - x v * y v - x1)
+  HAS_INTEGRAL_SUBST       !x:real -> real. !y:real -> real. !z:real -> real. !u:real -> real. !v:real. !w:real. v <= w ==> (!x1:real. derivative x x1 (y x1)) ==> (!x1:real. v <= x1 /\ x1 <= w ==> derivative z x1 (u x1)) ==> has_integral (\x1:real. y (z x1) * u x1) v w (x (z w) - x (z v))
   HAS_INTEGRAL_UNIQUE      !x:real -> real. !y:real. !z:real. !u:real. !v:real. y <= z ==> has_integral x y z u ==> has_integral x y z v ==> u = v
   INTEGRAL_DERIVATIVE      !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative x v (y v)) ==> integral y z u = x u - x z
   INTEGRAL_DERIVATIVE_WITHIN !x:real -> real. !y:real -> real. !z:real. !u:real. z <= u ==> (!v:real. z <= v /\ v <= u ==> derivative_within x z u v (y v)) ==> integral y z u = x u - x z
   INTEGRAL_LINEAR          !x:real -> real. !y:real -> real. !z:real. !u:real. !v:real. !w:real. !x1:real. !y1:real. z <= u ==> has_integral x z u v ==> has_integral y z u w ==> integral (\z1:real. x1 * x z1 + y1 * y z1) z u = x1 * v + y1 * w
+  INTEGRAL_PARTS           !x:real -> real. !y:real -> real. !z:real -> real. !u:real -> real. !v:real. !w:real. !x1:real. v <= w ==> (!y1:real. v <= y1 /\ y1 <= w ==> derivative x y1 (z y1)) ==> (!y1:real. v <= y1 /\ y1 <= w ==> derivative y y1 (u y1)) ==> has_integral (\y1:real. x y1 * u y1) v w x1 ==> integral (\y1:real. z y1 * y y1) v w = x w * y w - x v * y v - x1
+  INTEGRAL_SUBST           !x:real -> real. !y:real -> real. !z:real -> real. !u:real -> real. !v:real. !w:real. v <= w ==> (!x1:real. derivative x x1 (y x1)) ==> (!x1:real. v <= x1 /\ x1 <= w ==> derivative z x1 (u x1)) ==> integral (\x1:real. y (z x1) * u x1) v w = x (z w) - x (z v)
   INTEGRAL_UNIQUE          !x:real -> real. !y:real. !z:real. !u:real. y <= z ==> has_integral x y z u ==> integral x y z = u
 
 ## Language
