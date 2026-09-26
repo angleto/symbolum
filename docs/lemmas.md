@@ -775,6 +775,7 @@ they have least appetite for working out how it is produced.
   NUM_PROD_COND_POW        !x:num -> bool. !y:num. !z:num. NUM_PROD (\u:num. COND (x u) y (SUC 0)) z = NUM_POW y (NUM_SUM (\u:num. COND (x u) (SUC 0) 0) z)
   NUM_PROD_CONG_MOD        !x:num. !y:num -> num. !z:num -> num. !u:num. (!v:num. v < u ==> NUM_CONG x (y v) (z v)) ==> NUM_CONG x (NUM_PROD y u) (NUM_PROD z u)
   NUM_PROD_MUL             !x:num -> num. !y:num -> num. !z:num. NUM_PROD (\u:num. x u * y u) z = NUM_PROD x z * NUM_PROD y z
+  NUM_PROD_PAIRED          !x:num. !y:num -> num. !z:num -> num. !u:num. (!v:num. v < u ==> z v < u) ==> (!v:num. v < u ==> z (z v) = v) ==> (!v:num. v < u ==> ~(z v = v)) ==> (!v:num. v < u ==> NUM_CONG x (y v * y (z v)) (SUC 0)) ==> NUM_CONG x (NUM_PROD y u) (SUC 0)
   NUM_PROD_PERMUTE         !x:num -> num. !y:num. !z:num -> num. (!u:num. u < y ==> z u < y) ==> (!u:num. !v:num. u < y ==> v < y ==> z u = z v ==> u = v) ==> (!u:num. u < y ==> (?v:num. v < y /\ z v = u)) ==> NUM_PROD (\u:num. x (z u)) y = NUM_PROD x y
   NUM_PROD_POINT           !x:num -> num. !y:num -> num. !z:num. !u:num. z < u ==> (!v:num. v < u ==> ~(v = z) ==> x v = y v) ==> NUM_PROD x u * y z = NUM_PROD y u * x z
   NUM_SQUARE_NOT_DOUBLE    !x:num. !y:num. 0 < y ==> ~(x * x = SUC (SUC 0) * (y * y))
@@ -790,6 +791,7 @@ they have least appetite for working out how it is produced.
   NUM_VALUATION_POW        !x:num. !y:num. NUM_PRIME x ==> NUM_VALUATION x (NUM_POW x y) = y
   NUM_VALUATION_SPEC       !x:num. !y:num. SUC 0 < x ==> 0 < y ==> NUM_DIVIDES (NUM_POW x (NUM_VALUATION x y)) y /\ ~(NUM_DIVIDES (NUM_POW x (SUC (NUM_VALUATION x y))) y)
   NUM_VALUATION_UNIQUE     !x:num. !y:num. !z:num. NUM_DIVIDES (NUM_POW x z) y ==> ~(NUM_DIVIDES (NUM_POW x (SUC z)) y) ==> NUM_VALUATION x y = z
+  NUM_WILSON               !x:num. NUM_PRIME x ==> NUM_DIVIDES x (SUC (NUM_FACT (PRE x)))
 
 ## Product
 
