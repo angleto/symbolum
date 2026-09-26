@@ -2,7 +2,9 @@
 # Fire the guard that keeps the width bound on resolution refutations from being empty, card 01520749.
 #
 # The guard is the test in `PigeonholeSpec` that derives all three hypotheses of
-# `RES_PHP_DERIVED_WIDTH` for a five-step refutation at `n = 1` and detaches the theorem there. A
+# `RES_PHP_DERIVED_WIDTH` for the nineteen-step refutation of three pigeons in two holes in
+# `ResolutionFixture`, and detaches the theorem there; until 2026-09-26 it was a five-step one at
+# `n = 1`, where the width conjunct holds of every step. A
 # lower bound whose hypotheses nothing meets is true and says nothing, and every other test in the
 # file would pass on it. The perturbation makes the hole clause's "every literal is one of the two"
 # conjunct also demand `NUM_LT i ZERO`, in the published `Clause` and in the macro the derivation
@@ -10,7 +12,7 @@
 # that conjunct, so the theorem is still proved and published; what cannot go through is the
 # witness, whose hole clause has two literals.
 #
-# Expected: exactly the non-vacuity test red, at the conjunct asking for `NUM_LT ZERO ZERO`, and the
+# Expected: exactly the non-vacuity test red, at a conjunct asking for `NUM_LT ZERO ZERO`, and the
 # publication, axiom and resting-on tests green, which is the point: those three read the theorem,
 # and a theorem about nothing reads exactly like one about something.
 #
@@ -24,7 +26,8 @@
 # NUM_LT ZERO ZERO ... is not ... (s (SUC (SUC ZERO))) ZERO = F`, the three tests reading the theorem
 # green, prediction met. The same run also showed a second red, the `0 < n` test, which was a defect
 # of that test's own assertion comparing a `List` of hypotheses with a `Set`, present on the
-# unperturbed tree as well and repaired before the control above.
+# unperturbed tree as well and repaired before the control above. That run was at `n = 1`; the
+# guard's move to `n = 2` on 2026-09-26 is measured in `perturb-expander-width.sh`'s record.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}

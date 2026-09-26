@@ -1228,6 +1228,13 @@ the tolerance and their pointwise minimum, as uniqueness does; `INTEGRAL_LINEAR`
 The first two cost what the fundamental theorem as `has_integral` costs and not `COMPLETENESS`,
 being about the sums there are; the value goes through uniqueness and so through Cousin.
 
+**Integration by parts and the change of variables, since the same day**, as `Integral.HAS_INTEGRAL_PARTS`,
+`INTEGRAL_PARTS`, `HAS_INTEGRAL_SUBST` and `INTEGRAL_SUBST`. Parts is the product rule, the
+fundamental theorem and linearity at one and minus one, with the function rewritten under the lambda
+by `Kernel.abs`, which costs no axiom; the substitution is the chain rule and the fundamental theorem
+at `\y. F (g y)`, with `F` asked a slope everywhere since the image of `g` is not stated. The
+`has_integral` forms cost what the fundamental theorem does and not `COMPLETENESS`.
+
 **The fundamental theorem has its textbook form too, since 2026-09-25**:
 `HAS_INTEGRAL_DERIVATIVE_WITHIN` and `INTEGRAL_DERIVATIVE_WITHIN` ask for
 `derivative_within F a b x (f x)` at every point of `[a, b]`, the derivative relative to the

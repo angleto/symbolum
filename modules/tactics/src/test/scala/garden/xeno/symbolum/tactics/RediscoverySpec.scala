@@ -355,9 +355,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // two antecedents on each of the three.
     // 662 with additivity and the second half of the fundamental theorem, 2026-09-26, derived before
     // the run: four antecedents on `HAS_INTEGRAL_JOIN`, three on each of the two derivatives.
-    // 695 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
+    // 676 with integration by parts and the change of variables, 2026-09-26, derived before the run
+    // and confirmed by it: four antecedents on each form of parts and three on each form of the
+    // substitution.
+    // 709 with the p-adic valuation, 2026-09-26, derived before the run: thirty-three antecedents
     // over fourteen facts, the count `ProposeSpec` gives by fact. Tip plus this branch's delta.
-    propose.weakenings.size shouldBe 695
+    propose.weakenings.size shouldBe 709
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

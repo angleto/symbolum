@@ -217,6 +217,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `Peano`, and the file says so. `PigeonholeSpec` builds it.
     "Pigeonhole" -> NotADevelopment,
 
+    // 2026-09-26, `Pigeonhole`'s standing for its reason: the width bound on the principle over an
+    // expanding bipartite graph, declaring nothing, built on `Pigeonhole`'s moves and injection
+    // bound. `ExpanderPigeonholeSpec` builds it.
+    "ExpanderPigeonhole" -> NotADevelopment,
+
     "Descent" -> DeclaresNothing,
 
     // Beside the chain, and the classification is the one this file exists to make somebody choose.
