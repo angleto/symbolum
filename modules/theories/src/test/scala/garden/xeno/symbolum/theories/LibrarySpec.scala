@@ -725,8 +725,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 777 and 774 with the fundamental theorem relative to `[a, b]`, the same day, derived before
     // the run: two facts in `Derivative` and two in `Integral`, under four names. `CLAUDE.md`'s
     // figures move by **four** and **four**: each binds at least two reals, or two functions.
-    library.entries.size shouldBe 777
-    library.names.distinct.size shouldBe 774
+    // 778 and 775 with the logarithm's slope, 2026-09-26, derived before the run: one fact under
+    // one name. `CLAUDE.md`'s figures do not move: it binds one leading quantifier.
+    library.entries.size shouldBe 778
+    library.names.distinct.size shouldBe 775
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

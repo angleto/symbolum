@@ -398,7 +398,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 645 with the fundamental theorem relative to `[a, b]`, the same day, derived before the run:
     // eight antecedents over four facts, three on `DERIVATIVE_WITHIN_INTERIOR`, two on each form of
     // the theorem and one on `DERIVATIVE_WITHIN_OF_DERIVATIVE`.
-    proposals.size shouldBe 645
+    // 646 with the logarithm's slope's one, 2026-09-26.
+    proposals.size shouldBe 646
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1336,7 +1337,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // weakenings, each keeping an implication or naming `derivative_within`, `has_integral` or
     // `integral`, which no procedure settles, and one substitution of the order in
     // `DERIVATIVE_WITHIN_INTERIOR`. The eighth weakening is in `unreadable` below.
-    open shouldBe 553
+    // 555 with the logarithm's slope's two residues, 2026-09-26, derived before the run rather than
+    // probed: the weakening and the substitution of the order both keep `derivative`, which no
+    // procedure reads and no model interprets, so each is taken and not settled.
+    open shouldBe 555
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

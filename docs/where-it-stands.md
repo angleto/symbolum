@@ -1224,6 +1224,14 @@ the two estimates is the proof's and not the statement's: `1 - cos h <= h * h / 
 so nothing refutes them without it, and what `LogarithmSpec` refutes instead is `COS_ADD` with the
 other sign, at one half, through `sin (1 / 2) >= 1 / 4`.
 
+**The logarithm's slope is `DERIVATIVE_LN`, since 2026-09-26**: `0 < x ==> derivative ln x (inv x)`.
+With `t = h * inv x` and `u = ln (1 + t)`, `LN_MUL` makes the error exactly `u - t`; the exponential's
+strict monotonicity keeps `abs u <= 1 / 2` once `abs t <= 1 / 4`, and `EXP_NEAR_LINE` at `u` does the
+rest. It costs what `DERIVATIVE_EXP` costs. **It is a derivation for this inverse and not a theorem
+about inverses**: the general one wants the inverse continuous at the point, which nothing states
+for `ln`, and `ln` is the only inverse the library holds. The hypothesis `0 < x` is not shown
+necessary and cannot be: at a point that is not positive `ln` is a choice nothing constrains.
+
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
 say something: the least upper bound `s` of the non-negative numbers whose square is at most `x`
