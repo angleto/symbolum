@@ -296,9 +296,14 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // another program had at a load average of two hundred. A guard a third party can trip is a
     // guard that teaches a reader to ignore the suite, and the thing it was guarding is visible in
     // the reading.
-    val started = System.nanoTime()
-    force(Chain.construct(Classical.standard))
-    val elapsed = (System.nanoTime() - started) / 1000000
+    //
+    // **Read off the one build rather than timed on a second, since 2026-09-26.** This test built a
+    // whole chain beside `Chain.standard` to time it, so the JVM held two, each about half a
+    // gigabyte, under the forked test JVM's `-Xmx1024m`; measured that day, `theories/test` on
+    // `7.0` passed and the same suite with one more derivation in the chain died here of an
+    // `OutOfMemoryError`. The build `Chain.standard` already does is the same reading.
+    val elapsed = Chain.standardMilliseconds
+    elapsed should be >= 0L
 
     info(s"the chain builds in $elapsed ms, which is a reading and not an assertion")
   }

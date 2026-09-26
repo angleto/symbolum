@@ -468,11 +468,30 @@ final class Chain private (
 object Chain {
 
   /** The standard chain, built once. */
-  lazy val standard: Chain =
-    construct(Classical.standard).fold(
+  lazy val standard: Chain = {
+    val started = System.nanoTime()
+    val built = construct(Classical.standard).fold(
       error => throw new IllegalStateException(s"the standard chain does not build: ${error.message}"),
       identity
     )
+    standardBuild = (System.nanoTime() - started) / 1000000
+    built
+  }
+
+  @volatile private var standardBuild: Long = -1
+
+  /**
+   * How long [[standard]] took to build, in milliseconds, read when it was built.
+   *
+   * A reading and not a figure anything asserts. It exists so that a suite reporting what a chain
+   * costs does not build a second one to find out: two chains are about twice the half a gigabyte
+   * one holds, and on 2026-09-26 that was what put the forked test JVM of `theories`, at its
+   * `-Xmx1024m`, out of memory in `ChainSpec` once one more derivation had joined the chain.
+   */
+  def standardMilliseconds: Long = {
+    standard
+    standardBuild
+  }
 
   /**
    * The chain over a classical logic of one's own.
