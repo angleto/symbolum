@@ -82,12 +82,11 @@ class LinarithSquareBoundarySpec extends AnyFlatSpec with Matchers {
     // of reach and ends "an atom that is one unknown times itself, and this goal has none", while
     // `x * x` and `y * y` are exactly such atoms and the one out of reach is `x * y`. `naming`
     // picks the first goal atom outside the products by term order and does not leave out the
-    // atoms a square covers. Held pending until the message names the obstacle it met, which is
-    // the acceptance criterion of card `bacfaba5` that says the refusal keeps naming it.
+    // atoms a square covers. It was held pending until the message named the obstacle it met, which
+    // is the acceptance criterion of card `bacfaba5` that says the refusal keeps naming it, and the
+    // wrapper came off in the change to `naming` that made it pass.
     val message = refused("!x:real y:real. x * x + y * y >= 2 * (x * y)").message
-    pendingUntilFixed {
-      message should include("x * y")
-      message should not include "this goal has none"
-    }
+    message should include("x * y")
+    message should not include "this goal has none"
   }
 }
