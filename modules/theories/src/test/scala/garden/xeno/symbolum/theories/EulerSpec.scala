@@ -217,4 +217,83 @@ class EulerSpec extends AnyFlatSpec with Matchers {
     refuted.hypotheses shouldBe empty
     refuted.conclusion shouldBe proposition(s"~($claimText)")
   }
+
+  private def spelled(n: Int): Term = term(("SUC (" * n) + "0" + (")" * n))
+  private lazy val evaluator = force(Value.construct(chain))
+
+  /**
+   * `|- NUM_TOTIENT n = m`, from the definition, with each `NUM_GCD k n` supplied by `Value` and
+   * carried into successor form by `Successor.spell`. Nothing in it knows what the count should be:
+   * the summand at each index is settled by the gcd the kernel was handed, `COND` is read off that,
+   * and the sum is taken by the recursion equations.
+   */
+  private def totientAt(n: Int): Kernel.Thm = {
+    val condTrue = Kernel.instType(Map(Classical.TypeVariable -> numbers), lemma(Classical.CondTrue))
+    val condFalse = Kernel.instType(Map(Classical.TypeVariable -> numbers), lemma(Classical.CondFalse))
+    def rightOf(th: Kernel.Thm): Term = Term.destEq(th.conclusion).map(_._2).getOrElse(fail("an equation"))
+    def leftOf(th: Kernel.Thm): Term = Term.destEq(th.conclusion).map(_._1).getOrElse(fail("an equation"))
+    def function(t: Term): Term = t match {
+      case App(f, _) => f
+      case other => fail(s"an application was expected: $other")
+    }
+    def spell(value: Int): Kernel.Thm = force(chain.successor.spell(term(value.toString)))
+
+    val big = spelled(n)
+    val unfolded = force(Conv.unfold(force(chain.modular.definition(Modular.TotientName)), List(big)))
+    val sum = rightOf(unfolded)
+    val summand = sum match {
+      case App(App(_, f), _) => f
+      case other => fail(s"a sum was expected: $other")
+    }
+
+    val summandValues = (0 until n).map { k =>
+      val chosen = force(evaluator.of(Modular.GcdName, Vector(BigInt(k), BigInt(n))))
+      val g = BigInt(k).gcd(BigInt(n)).toInt
+      val firstMoved = force(Conv.apTerm(function(function(leftOf(chosen))), spell(k)).flatMap(Conv.apThm(_, term(n.toString))))
+      val secondMoved = force(Conv.apTerm(function(rightOf(firstMoved)), spell(n)))
+      val atSuccessors = force(Conv.trans(firstMoved, secondMoved).flatMap(Conv.sym).flatMap(Conv.trans(_, chosen)))
+      val test = force(LogicError.lift(Term.eq(leftOf(atSuccessors), one)))
+      if (g == 1) {
+        val coprime = force(Conv.trans(atSuccessors, spell(1)))
+        force(rules.specAll(condTrue, List(test, one, zero)).flatMap(rules.mp(_, coprime)))
+      } else {
+        val not = force(
+          for {
+            assumedTest <- LogicError.lift(Kernel.assume(test))
+            toOne <- Conv.sym(atSuccessors).flatMap(Conv.trans(_, assumedTest)).flatMap(eq => Conv.sym(spell(1)).flatMap(Conv.trans(eq, _)))
+            apart <- chain.successor.distinct(term(g.toString), term("1"))
+            absurd <- rules.notElim(apart, toOne)
+            result <- rules.notIntro(test, absurd)
+          } yield result)
+        force(rules.specAll(condFalse, List(test, one, zero)).flatMap(rules.mp(_, not)))
+      }
+    }
+    val expansions = (0 until n).map(j => force(rules.specAll(lemma("NUM_SUM_SUC"), List(summand, spelled(j))).flatMap(Limit.normalised)))
+    val steps = expansions ++ summandValues ++ Vector(
+      force(rules.spec(summand, lemma("NUM_SUM_ZERO"))),
+      lemma(Peano.AddAtZero),
+      lemma(Peano.AddAtSuccessor))
+    val counted = force(Rewrite.Rule.all(logic, steps.toVector).flatMap(Rewrite.rewrite(_, sum)))
+    force(Conv.trans(unfolded, counted))
+  }
+
+  /**
+   * `NUM_TOTIENT` against Euler's function at every `n` from one to ten, where the reference is the
+   * textbook count of `1 <= k <= n` coprime to `n` computed in Scala. The definition counts
+   * `0 <= k < n` instead, and the two differ only in trading `k = n` for `k = 0`, which are coprime to
+   * `n` exactly when `n` is one: so `n = 1` is the point that separates the definition from a count
+   * that starts at one, and the primes and composites up to ten are the points that separate it
+   * from a count of anything but coprimality. Added by the verification of card a3b112c1.
+   */
+  "NUM_TOTIENT" should "be Euler's function at every n from one to ten" in {
+    (1 to 10).foreach { n =>
+      withClue(s"at $n: ") {
+        val phi = (1 to n).count(k => BigInt(k).gcd(BigInt(n)) == 1)
+        val derived = totientAt(n)
+        derived.hypotheses shouldBe empty
+        derived.conclusion shouldBe proposition(s"NUM_TOTIENT (${spelled(n)}) = ${spelled(phi)}")
+      }
+    }
+    (1 to 10).map(n => (1 to n).count(k => BigInt(k).gcd(BigInt(n)) == 1)) shouldBe Vector(1, 1, 2, 2, 4, 2, 6, 4, 6, 4)
+  }
 }
