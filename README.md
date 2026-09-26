@@ -850,6 +850,8 @@ Built with Scala 3.3.5. The algebra half follows the tradition of Mathematica, M
 proof half follows LCF and the HOL family, and `docs/adr/0001` says why that tradition and not
 another.
 
-One piece of third-party material is vendored here, under its own licence and with its own notice:
-Mathlib's test file for its `ring` tactic, which this system is measured against rather than
-compared with by hand. See [third-party/mathlib/README.md](third-party/mathlib/README.md).
+Third-party material is vendored here from two projects, each under the Apache License 2.0 and
+with its own notice: Mathlib's test files for its `ring` and `linarith` tactics, which this system
+is measured against rather than compared with by hand, and the Lean statements of miniF2F, which
+`ReachSpec` puts to the tactic surface. See [third-party/mathlib/README.md](third-party/mathlib/README.md)
+and [third-party/minif2f/README.md](third-party/minif2f/README.md).
