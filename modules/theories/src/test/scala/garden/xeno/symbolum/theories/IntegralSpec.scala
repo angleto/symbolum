@@ -195,9 +195,11 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(fact(Integral.HasLinear), route) shouldBe route
   }
 
-  it should "detach linearity at one and at the square's derivative on [0, 1], to a value neither has alone" in {
-    // `3 * 1 + 5 * (1 * x + x * 1)` has integral `3 * (1 - 0) + 5 * (1 * 1 - 0 * 0)`, which is eight,
-    // from the two integrals the fundamental theorem gives, with nothing assumed.
+  /**
+   * `|- has_integral (\x. 3 * 1 + 5 * (1 * x + x * 1)) 0 1 (3 * (1 - 0) + 5 * (1 * 1 - 0 * 0))`:
+   * linearity at one and at the square's derivative, from the two integrals the fundamental theorem gives.
+   */
+  private lazy val combination: Kernel.Thm = {
     val derivativeOfSquare = function("\\y:real. 1 * y + y * 1")
     val x = Term.variable("x", reals)
     val squareSlopes = force(rules.disch(proposition("(0:real) <= x /\\ x <= 1"), squareSlope(x)).flatMap(rules.gen(x, _)))
@@ -208,9 +210,42 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     val combined = opened(force(rules.specAll(fact(Integral.HasLinear),
       List(one, derivativeOfSquare, real("0:real"), real("1:real"), real("1 - 0:real"), real("1 * 1 - 0 * 0:real"), real("3:real"), real("5:real")))
       .flatMap(rules.mp(_, oneOverUnit)).flatMap(rules.mp(_, squareIntegral))))
-    combined.hypotheses shouldBe empty
-    combined.conclusion shouldBe
+    combined
+  }
+
+  it should "detach linearity at one and at the square's derivative on [0, 1], to a value neither has alone" in {
+    // `3 * 1 + 5 * (1 * x + x * 1)` has integral `3 * (1 - 0) + 5 * (1 * 1 - 0 * 0)`, which is eight,
+    // from the two integrals the fundamental theorem gives, with nothing assumed.
+    combination.hypotheses shouldBe empty
+    combination.conclusion shouldBe
       proposition("has_integral (\\x:real. 3 * 1 + 5 * (1 * x + x * 1)) 0 1 (3 * (1 - 0) + 5 * (1 * 1 - 0 * 0))")
+  }
+
+  it should "refuse the combination the integral of its first part alone, so the detached value carries weight" in {
+    // Written by the verification of card 61b8b2f1. A linearity that held because `has_integral` at
+    // this function held of every number would pass the test above; uniqueness on [0, 1] against the
+    // value three, which is what `3 * 1` alone integrates to, shows it does not.
+    val combined = function("\\x:real. 3 * 1 + 5 * (1 * x + x * 1)")
+    val wrong = proposition("has_integral (\\x:real. 3 * 1 + 5 * (1 * x + x * 1)) 0 1 3")
+    val assumed = force(LogicError.lift(Kernel.assume(wrong)))
+    val same = force(rules.specAll(fact(Integral.HasUnique),
+      List(combined, real("0:real"), real("1:real"), real("3 * (1 - 0) + 5 * (1 * 1 - 0 * 0)"), real("3:real")))
+      .flatMap(rules.mp(_, lemma("(0:real) <= 1"))).flatMap(rules.mp(_, combination)).flatMap(rules.mp(_, assumed)))
+    val absurd = force(rules.notElim(lemma("~((3:real) * (1 - 0) + 5 * (1 * 1 - 0 * 0) = 3)"), same))
+    val refused = force(rules.notIntro(wrong, absurd))
+    refused.hypotheses shouldBe empty
+  }
+
+  it should "cost, for the combination's fine sums, no more than the fundamental theorem as has_integral" in {
+    // Written by the verification of card 61b8b2f1. The test above asserts the price of
+    // `HAS_INTEGRAL_LINEAR` exactly and of `FINE_SUM_LINEAR` only that it holds no `COMPLETENESS`.
+    // Measured on 2026-09-26 at 1bcad72b: twelve against sixteen, so the sums cost strictly less than
+    // the theorem, which a sentence saying the two cost the same gets wrong.
+    val sums = Derivation.axiomsOf(fact(Integral.SumLinear))
+    val theorem = Derivation.axiomsOf(fact(Integral.HasFundamental))
+    info(s"FINE_SUM_LINEAR rests on ${sums.size} axioms, HAS_INTEGRAL_DERIVATIVE on ${theorem.size}")
+    sums.subsetOf(theorem) shouldBe true
+    sums should not be theorem
   }
 
   it should "integrate by parts and by substitution at the fundamental theorem's price, through the two rules" in {
@@ -392,6 +427,27 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     val same = force(Conv.sym(atZero).flatMap(Conv.trans(_, atIdentity)))
     val absurd = force(rules.notElim(lemma("~((0:real) - 0 = 0 - 1)"), same))
     absurd.hypotheses shouldBe List(dropped)
+    val refused = force(rules.notIntro(dropped, absurd))
+    refused.hypotheses shouldBe empty
+  }
+
+  it should "need a <= b for INTEGRAL_LINEAR, refuted on [1, 0] where HAS_INTEGRAL_LINEAR still holds" in {
+    // Written by the verification of card 61b8b2f1. Over `[1, 0]` every number is an integral, so
+    // `HAS_INTEGRAL_LINEAR` is true there without asking anything, and the statement about
+    // `integral` with `a <= b` dropped would name one value for the combination as `1 * 0 + 1 * 0`
+    // and as `1 * 1 + 1 * 0` at once.
+    val dropped = proposition(
+      "!f:real -> real. !g:real -> real. !a:real. !b:real. !i:real. !j:real. !p:real. !q:real. " +
+        "has_integral f a b i ==> has_integral g a b j ==> integral (\\x:real. p * f x + q * g x) a b = p * i + q * j")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val zero = function("\\y:real. (0:real)")
+    val one = real("1:real")
+    val nought = real("0:real")
+    def at(value: String): Kernel.Thm =
+      opened(force(rules.specAll(assumed, List(zero, zero, one, nought, real(value), nought, one, one))
+        .flatMap(rules.mp(_, overTheEmptyInterval(value))).flatMap(rules.mp(_, overTheEmptyInterval("0")))))
+    val same = force(Conv.sym(at("0")).flatMap(Conv.trans(_, at("1"))))
+    val absurd = force(rules.notElim(lemma("~((1:real) * 0 + 1 * 0 = 1 * 1 + 1 * 0)"), same))
     val refused = force(rules.notIntro(dropped, absurd))
     refused.hypotheses shouldBe empty
   }
