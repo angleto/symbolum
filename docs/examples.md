@@ -1571,6 +1571,190 @@ worth proving.
 
 ---
 
+# NUM_WILSON
+
+$$\forall x \colon \mathbb{N}.\ \mathrm{prime}(x) \Rightarrow x \mid \mathrm{suc}(\mathrm{pred}(x)!)$$
+
+```
+!x:num. NUM_PRIME x ==> NUM_DIVIDES x (SUC (NUM_FACT (PRE x)))
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+2 axioms reached, 0 of them named below, and 102 named facts in all.
+
+| what | where |
+|---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `NUM_PROD_CONG` | Coding |
+| `NUM_PROD_SUC` | Coding |
+| `NUM_PROD_ZERO` | Coding |
+| `NUM_BEZOUT` | Modular |
+| `NUM_BEZOUT_EXISTS` | Modular |
+| `NUM_CONG_ADD` | Modular |
+| `NUM_CONG_ELIM` | Modular |
+| `NUM_CONG_INTRO` | Modular |
+| `NUM_CONG_MUL` | Modular |
+| `NUM_CONG_REFL` | Modular |
+| `NUM_CONG_SYM` | Modular |
+| `NUM_CONG_TRANS` | Modular |
+| `NUM_DIVIDES_ADD` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_LE` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `NUM_DIVIDES_REFL` | Modular |
+| `NUM_DIVIDES_SUMMAND` | Modular |
+| `NUM_DIVIDES_ZERO` | Modular |
+| `NUM_DIVISION` | Modular |
+| `NUM_DIVISION_UNIQUE` | Modular |
+| `NUM_DIV_MOD` | Modular |
+| `NUM_DIV_ZERO` | Modular |
+| `NUM_EUCLID` | Modular |
+| `NUM_GCD_DIVIDES_LEFT` | Modular |
+| `NUM_GCD_DIVIDES_RIGHT` | Modular |
+| `NUM_GCD_GREATEST` | Modular |
+| `NUM_MOD_LT` | Modular |
+| `NUM_MOD_OF_CONG` | Modular |
+| `NUM_MOD_ZERO` | Modular |
+| `NUM_ONE_DIVIDES` | Modular |
+| `NUM_PRIME_ABOVE_ONE` | Modular |
+| `NUM_PRIME_DIVISOR` | Modular |
+| `NUM_ZERO_DIVIDES` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_CANCEL_LEFT` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_LT_MONOTONE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_GREATEST` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_LT_TRANS` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_OF_LT_SUC` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_LE_TRANS` | Peano |
+| `NUM_LT_NOT_LE` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_ONE_SUC` | Peano |
+| `NUM_PRE_SUC` | Peano |
+| `NUM_STRONG_INDUCTION` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `NUM_INVERSE` | Primes |
+| `NUM_PROD_PAIRED` | Primes |
+| `NUM_PROD_PERMUTE` | Primes |
+| `NUM_PROD_POINT` | Primes |
+
+2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+54552 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 25855 | 47.4% |
+| EqualityElimination | 6370 | 11.7% |
+| Reflexivity | 5665 | 10.4% |
+| Instantiation | 5418 | 9.9% |
+| Transitivity | 4731 | 8.7% |
+| BetaStep | 2084 | 3.8% |
+| Antisymmetry | 1866 | 3.4% |
+| TypeInstantiation | 1022 | 1.9% |
+| Abstraction | 799 | 1.5% |
+| Assumption | 673 | 1.2% |
+| Citation | 60 | 0.1% |
+| Definition | 8 | 0.0% |
+| Axiom | 1 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !x:num. NUM_PRIME x ==> NUM_DIVIDES x (SUC (NUM_FACT (PRE x)))"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find NUM_WILSON"
+```
+
+From Scala it is `Primes`'s, under the name `NUM_WILSON`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
 ## The naturals, and what separates the reals from an ordered field
 
 # NUM_STRONG_INDUCTION
