@@ -1437,9 +1437,18 @@ positive cone first lost now that `rat` exists. Addition and negation followed t
 `CUT_ADD` holds `r` when some `p` in `x` leaves `r - p` in `y`, with its commutativity,
 associativity, zero, the order it carries and the embedding of `RAT_ADD`; `CUT_NEG x` holds `p` when
 some `r > 0` leaves `-p - r` outside `x`, and `CUT_ADD_NEG` is `x + -x = 0`, the one argument of the
-two where `RAT_ARCHIMEDES` is spent, which `CutSpec` asserts both ways. What is not here is
-multiplication and the inverse, and after them the sixteen as theorems under their own names.
-`tools/verify/perturb-cuts.sh` fires the union, the embedding and the step of the inverse.
+two where `RAT_ARCHIMEDES` is spent, which `CutSpec` asserts both ways.
+
+**Multiplication and the inverse followed on 2026-09-26, so the cuts are an ordered field.**
+`CUT_PMUL` is the product on the non-negative cone, the negatives with every `r` below `p * q` for
+positive members, and it has its commutativity, associativity, unit, zero and distributivity there;
+`CUT_MUL` reads the signs with `COND` and carries every law off the cone through
+`CUT_MUL_NEG_LEFT`, `(-x) * y = -(x * y)`, with a normaliser for the additive group closing each case.
+`CUT_INV` is zero at zero by its definition, and `CUT_MUL_INV` is `x * inv x = 1` off zero. The
+Archimedean step both inverses need is one lemma, `CUT_ESCAPE`: from a member `e` and a step `f > 0`,
+some member at least `e` steps out of the cut. What is left is phase 5, the sixteen of `Real.scala`
+as theorems about `cut` under their own names. `tools/verify/perturb-cuts.sh` fires the union, the
+embedding, the escaping step, the inverse's step and a sign branch of the product.
 
 `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated, and since 2026-09-25 each has a
 computing counterpart proved equal to it: `EuclidAlgorithm` defines `NUM_EUCLID_GCD` and

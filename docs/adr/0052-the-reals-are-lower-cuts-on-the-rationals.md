@@ -48,6 +48,14 @@ has to exist. Then multiplication on the positive cone, extended by sign, with t
 place do the sixteen of `Real.scala` become theorems under their own names, which is phase 5 and not
 this record.
 
+**Addendum, 2026-09-26: how multiplication landed.** As decided, with two choices the record did
+not make. The core is the product on the **non-negative** cone rather than the positive one: its set
+is the negatives together with every `r` below `p * q` for positive members, which is a cut for every
+pair of non-negative cuts including zero, so zero needs no case of its own. And the extension by sign
+is a `COND` on `0 <= x` and `0 <= y`, with every law carried off the cone by `(-x) * y = -(x * y)`
+rather than by a case analysis per law. The Archimedean step the additive inverse spent was lifted
+into `CUT_ESCAPE` so that the multiplicative inverse spends the same lemma.
+
 ## Consequences
 
 **The construction declares the type beside the chain, as `Fraction` is.** `Cut` sits beside the
