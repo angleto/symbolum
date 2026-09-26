@@ -16,15 +16,15 @@
 #      RED at the control `6, 10`: a trace the interpreter misreads cannot be certified, because
 #      there is no nonzero remainder of 30 by 3 to prove.
 #
-# WHAT WAS SEEN, 2026-09-26, with the same two substitutions compiled by scala-cli against the
-# classes of 1bcad72b rather than through this script, the sbt queue being eight builds deep.
+# WHAT WAS SEEN, 2026-09-26, this script through sbt at 4a86b323. Control green at 10 tests,
+# restore verified clean after each run.
 #
-#   1. Refused, by `modus ponens on an equation`: the theorem at hand said
-#      `10 = NUM_DIV (6 * 5) 3` and the certification asked for `9`. The control was certified.
-#   2. Refused, `expected a value below 0, and 0 is not one`: the remainder of 30 by 3, which
+#   1. Green at 10 tests, exit 0, as predicted: the refusal of `6, 9` survives without the check.
+#      Run by hand with scala-cli the same afternoon, the refusal read `modus ponens on an
+#      equation`: the theorem at hand said `10 = NUM_DIV (6 * 5) 3` and the one asked for said `9`.
+#   2. Red at 9 of 10, exit 1, as predicted, and at the control named above: `unexpected
+#      refusal: expected a value below 0, and 0 is not one`, the remainder of 30 by 3, which
 #      `Digits.below` will not put above zero.
-#
-# This script has not yet been run through sbt. Record its first run here when it is.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}

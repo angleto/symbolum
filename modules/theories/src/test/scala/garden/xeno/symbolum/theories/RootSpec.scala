@@ -84,6 +84,34 @@ class RootSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "say the irrationality in the theory's constants, with no name left free" in {
+    // The assertion above compares the theorem with the text parsed in this same theory, and an
+    // unknown letter-initial name parses as a free variable on both sides alike: a statement about
+    // an arbitrary function spelled `sqrt`, or an arbitrary order spelled `<`, would pass it. So the
+    // conclusion is read here as a term: closed, and naming the root, the embedding, the division of
+    // the reals and the strict order of `num` as constants of the theory. Written for the
+    // verification of card 9f861d27, which read the statement off the kernel rather than the text.
+    val conclusion = fact(Root.TwoIrrational).conclusion
+    def constantsIn(term: Term): Set[String] = term match {
+      case Const(name, _) => Set(name)
+      case App(fn, argument) => constantsIn(fn) ++ constantsIn(argument)
+      case Abs(_, body) => constantsIn(body)
+      case _ => Set.empty
+    }
+
+    Term.freeVariables(conclusion) shouldBe empty
+    val named = constantsIn(conclusion)
+    named should contain allOf (Root.SquareRoot, Peano.EmbeddingName, Real.Division, Peano.StrictOrder)
+    // The positive denominator is an order on the naturals, not on their images in the reals.
+    named should not contain Real.Order
+    named.foreach(name => root.theory.constants.keySet should contain(name))
+
+    // And the instrument sees what it is for: the same sentence about a name this theory does not
+    // declare parses, and what it parses to has that name free.
+    val impostor = force(root.proposition("!p:num q:num. 0 < q ==> ~(sqrtz (2:real) = real_of_num p / real_of_num q)"))
+    Term.freeVariables(impostor).map(_.name) shouldBe Set("sqrtz")
+  }
+
   it should "detach at a denominator, so that its hypothesis is one something satisfies" in {
     // A negation under a hypothesis nothing satisfies is a theorem about nothing, and it would pass
     // every assertion above. `0 < SUC 0` is a fact of `num`, so the instance at one over one
