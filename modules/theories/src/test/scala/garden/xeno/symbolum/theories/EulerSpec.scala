@@ -109,7 +109,7 @@ class EulerSpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(force(primes.fact(Primes.Euler)), route) shouldBe route
   }
 
-  /** What the nine facts cost, as a set equal to what Euclid's theorem costs, for `FermatSpec`'s reason. */
+  /** What the facts in the list below cost, as a set equal to what Euclid's theorem costs, for `FermatSpec`'s reason. */
   it should "cost what Euclid's theorem costs and nothing else" in {
     val euclid = Derivation.axiomsOf(force(primes.fact(Primes.Unbounded)))
     Vector(

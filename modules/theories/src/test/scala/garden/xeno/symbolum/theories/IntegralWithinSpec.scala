@@ -124,8 +124,8 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
    *
    * A fact without its twin is listed in `Pending` with the card that owes it, and the list is held
    * both ways: a pending entry that has its twin fails, so the entry is removed when the card lands.
-   * Non-vacuity, asserted beside it: the census finds the fifteen facts it counts today, so a
-   * selector that matched nothing could not pass it.
+   * Non-vacuity, asserted beside it: the count the census finds is pinned in the test, so a selector
+   * that matched nothing could not pass it.
    */
   "Every interval theorem" should "have a textbook form, named with _WITHIN, stated with continuous_within" in {
     val library = Library.of(chain)
