@@ -23,7 +23,9 @@ object Show {
    *
    * A term holds indices where a reader expects names, so every name a binder prints with is
    * invented here. Until 2026-09-26 the invention ignored the type and went x, y, z by position,
-   * and measured that day 163 of the library's 733 statements bound a FUNCTION called `x`: the mean
+   * and measured that day on `docs/lemmas.md` at `e0ac66a5` 163 statements bound a FUNCTION called
+   * `x` under `!` or `?` with a domain of `real` or `num`. The library held 784 statements then; the
+   * 733 first quoted beside the 163 counts only those opening with `!`, a different unit. The mean
    * value theorem read `!x:real -> real. !y:real. !z:real. y < z ==> ...`. So the choice is by the
    * type, which the term does hold: a function is `f`, `g`, `h`, a proposition `p`, `q`, `r`, a
    * natural `n`, `m`, `k`, `i`, `j`, and everything else what it always was. The names the author
