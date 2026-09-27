@@ -128,10 +128,10 @@ final class Field private (
       denominators <- denominatorsOf(sides._1, sides._2)
       whole <- cancellationRules(denominators)
 
-      proved <- Rewrite.proveWith(normalisation(Vector.empty, whole), sides._1, sides._2) match {
+      proved <- (Rewrite.proveWith(normalisation(Vector.empty, whole), sides._1, sides._2) match {
         case Right(theorem) => Right(theorem)
         case Left(refusal) => bySplitting(denominators, sides._1, sides._2, refusal)
-      }
+      }).left.map(coefficient.asRead)
 
       general <- generalise(proved, stripped._1)
     } yield general
