@@ -1393,7 +1393,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // asserted, run over the branch's own classes before the valuation and Taylor landed, after
     // the suite's first failure had stopped this test at this line; which residue went where was
     // not measured. Tip plus this branch's delta.
-    open shouldBe 633
+    // 651 with all eighteen residues of parts and the change of variables relative to `[a, b]`,
+    // 2026-09-27, read off the suite's own failure: each keeps an implication about `derivative`,
+    // `derivative_within`, `has_integral` or `integral`, which no procedure settles. The total
+    // matched the eighteen derived for `proposals` and no other bucket moved. Tip plus this
+    // branch's delta.
+    open shouldBe 651
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
