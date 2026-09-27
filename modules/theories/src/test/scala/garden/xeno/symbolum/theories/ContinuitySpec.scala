@@ -53,9 +53,10 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     val below = chain.root.theory
     continuity.theory.axioms shouldBe below.axioms
     // Two since 2026-09-25: continuity relative to an interval is a constant of its own, and the
-    // textbook forms of the interval theorems are stated with it.
+    // textbook forms of the interval theorems are stated with it. Three since 2026-09-27: the limit
+    // of a function at a point, which L'Hopital is stated with.
     (continuity.theory.constants.keySet -- below.constants.keySet) shouldBe
-      Set(Continuity.Continuous, Continuity.ContinuousWithin)
+      Set(Continuity.Continuous, Continuity.ContinuousWithin, Continuity.Tends)
     continuity.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 

@@ -826,6 +826,12 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "which is the caller. Only `rewriteIn` is a walk: `Recorder.rewrite` is `depthConv` on " +
         "its own, one traversal of a finite term, and `rewriteSides`, `rewriteRight` and " +
         "`replace` are single kernel applications with no limit between them"),
+    "LHopitalRule.scala" ->
+      ("one call to `Rewrite.inTheorem`, putting the four values the hypotheses and uniqueness give " +
+        "(`f x = 0`, `g x = 0`, and the two slopes at Cauchy's point) into Cauchy's balance. Every " +
+        "rule replaces a term by a smaller one, so the walk terminates, and the result is not read as " +
+        "a normal form: it goes to `Linarith` as the one premise of the cross-multiplied equation it " +
+        "must yield, which refuses if a value was left standing"),
     "TaylorExpansion.scala" ->
       ("two calls to `Rewrite.rewrite`, both in `equalBy`, one per side of an equation, with the " +
         "recurrences of the power, the factorial, the sum and the embedding of a product, and once " +

@@ -1359,6 +1359,20 @@ is `TAYLOR` at the family of extensions of the `D k` by their values at the two 
 `DerivativeSpec` detaches it at the step `COND (0 < y) 1 0` on `[-1, 0]`, where `TAYLOR`'s own
 hypothesis is false at zero. What neither is: anything about a Taylor series converging.
 
+**The limit of a function at a point is `Continuity.tends`, and L'Hopital's rule is
+`Derivative.LHOPITAL`, since 2026-09-27.** `tends f x l` is the epsilon-delta statement over the
+points other than `x`, a defined constant and no axiom, and `CONTINUOUS_TENDS` says a continuous
+function tends to its value. Until it landed the rule could not be stated: the library had the
+limit of a sequence and nothing for a function. `CAUCHY_MEAN_VALUE` is Rolle at
+`(g b - g a) * f y - (f b - f a) * g y`, with no quotient, and `CAUCHY_MEAN_VALUE_WITHIN` its form with
+continuity relative to `[a, b]`, and the rule is the `0 / 0` form at a
+point: `f` and `g` differentiable on a punctured neighbourhood where `g`'s slope never vanishes,
+continuous and zero at `x`, and the ratio of the slopes tending to `l`. Cauchy between `x` and each
+nearby `y` gives the same ratio at a nearer point, and Rolle once more says `g y` is not zero there.
+Both cost what `ROLLE` costs. `DerivativeSpec` detaches it at `sin y / y`, which tends to one at
+zero, and refutes it without `f x = 0` at `1 / y`. What is not here: the one-sided and infinite
+forms, and a limit at infinity.
+
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice
 say something: the least upper bound `s` of the non-negative numbers whose square is at most `x`
