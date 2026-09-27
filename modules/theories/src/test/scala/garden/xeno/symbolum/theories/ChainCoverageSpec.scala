@@ -209,6 +209,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `[a, b]` and the three congruences they are carried by, which `Integral` publishes.
     "IntegralWithin" -> NotADevelopment,
 
+    // Not a development, for `Freshman`'s reason: parts and the change of variables with the
+    // derivatives relative to `[a, b]`, and the tangent extension they are carried by.
+    "IntegralRulesWithin" -> NotADevelopment,
+
     // Not a development, for `Euler`'s reason: Wilson's theorem and the product over paired indices
     // it needs, whose facts `Primes` publishes under names it declares. 2026-09-26.
     "Wilson" -> NotADevelopment,

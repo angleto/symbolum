@@ -414,8 +414,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // antecedents over seven facts, four on `DERIVATIVE_WITHIN_CONGRUENCE`, three each on the two
     // derivative twins and two on each of the other four. Tip plus this branch's delta.
     // 737 with Wilson's five, 2026-09-26, derived before the run: four antecedents on
-    // `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's delta.
-    proposals.size shouldBe 737
+    // `NUM_PROD_PAIRED` and one on `NUM_WILSON`.
+    // 755 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived before the
+    // run: eighteen antecedents over five facts, four each on `DERIVATIVE_WITHIN_TANGENT` and the two
+    // forms of parts, three on each form of the change of variables. Tip plus this branch's delta.
+    proposals.size shouldBe 755
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0

@@ -1225,11 +1225,16 @@ functions equal on `[a, b]` have the same fine sums, integrals and relative deri
 `IntegralWithinSpec` detaches the four at the same step and holds the census: every fact with a
 two-sided continuity hypothesis over an interval has a `_WITHIN` twin stated with
 `continuous_within`, with a floor on how many it finds so that a selector matching nothing fails.
-The first half of the
-fundamental theorem is a different case: its hypothesis at the ends is a one-sided
-**derivative**, which a constant extension cannot carry, and it got its textbook form another way,
-two paragraphs down. Integration by parts and the change of variables still ask a two-sided
-derivative over the interval, which is card `3caa8541`.
+The first half of the fundamental theorem is a different case: its hypothesis at the ends is a
+one-sided **derivative**, which a constant extension cannot carry, and it got its textbook form
+another way, two paragraphs down. **Integration by parts and the change of variables have theirs
+since 2026-09-27**, `_WITHIN` appended, with the derivatives relative to `[a, b]`: a function with
+relative slopes on `[a, b]` is extended past each end by its tangent line there, and
+`DERIVATIVE_WITHIN_TANGENT` says the extension has the two-sided derivative at every point of the
+interval, inside by locality and at an end by gluing the tangent line's side to the function's. The
+two-sided rules then apply at the extensions and the congruence carries the result back.
+`IntegralRulesWithinSpec` detaches both at `abs` on `[0, 1]`, which has no derivative at `0`, and
+`IntegralWithinSpec` holds a second census, of two-sided derivatives asked on a closed interval.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum

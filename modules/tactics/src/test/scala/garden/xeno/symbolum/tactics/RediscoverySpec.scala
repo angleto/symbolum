@@ -366,9 +366,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // antecedents over seven facts, the count `ProposeSpec` gives by fact. Tip plus this branch's
     // delta.
     // 737 with Wilson's theorem and the product over paired indices, 2026-09-26, derived before the
-    // run: four antecedents on `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's
-    // delta.
-    propose.weakenings.size shouldBe 737
+    // run: four antecedents on `NUM_PROD_PAIRED` and one on `NUM_WILSON`.
+    // 755 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived before the
+    // run: eighteen antecedents over five facts, the count `ProposeSpec` gives by fact. Tip plus this
+    // branch's delta.
+    propose.weakenings.size shouldBe 755
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
