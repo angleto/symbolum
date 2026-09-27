@@ -1027,6 +1027,21 @@ document and a pattern matching all of them would have been built by reading the
 reading it was meant to replace. A count of copies is itself a copy, and this one counted the
 repair instead of the population, which is the shape of error the sentence it sits in is about.
 
+**`Transcendental.EXP_ONE_IRRATIONAL` is that `exp 1` is not a ratio of naturals, since
+2026-09-27**, in the form `Root.SQRT_TWO_IRRATIONAL` has: `!p q. 0 < q ==> ~(exp 1 = real_of_num p
+/ real_of_num q)`. The proof is Fourier's and `Fourier` carries it: a partial sum of the series
+times a factorial is a natural, the rest times the same factorial lies strictly between zero and
+one, and no natural does. Two things in it are not the textbook's. It is run one index past the
+denominator, at `q + 1`, because the geometric tail this library has is `EXP_TAIL_GEOMETRIC`'s, of
+ratio one half, and at `q` that bound ends at exactly one when `q = 1`; one index along it ends at
+`2 / (q + 2)`, so the strict inequality comes from a margin and no strict comparison of limits had
+to be built. And the partial sum times the factorial is shown to be a natural by an induction on
+its last index, so no quotient `b! / i!` is formed. What it rests on is asserted in
+`TranscendentalSpec`, and `tools/verify/perturb-exp-one-irrational.sh` takes the margin away and
+watches the last step refuse. **Whether `0 < q` can be dropped is open**: at `q = 0` the ratio is
+`p * inv 0`, and nothing about `inv 0` is published for the reals, so unlike
+`NUM_SQUARE_NOT_DOUBLE`'s hypothesis this one is neither shown necessary nor shown idle.
+
 **The Cauchy product is proved, in two theorems, and both landed on 2026-09-21.**
 `Limit.SUM_CAUCHY_PRODUCT_NONNEG` is the case where both series have non-negative terms and
 `SUM_CAUCHY_PRODUCT` is the case where they do not, the second asking absolute convergence of

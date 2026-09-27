@@ -427,7 +427,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // run: eighteen antecedents over five facts, four each on `DERIVATIVE_WITHIN_TANGENT` and the two
     // forms of parts, three on each form of the change of variables. Base 826 plus that branch's
     // delta of eighteen, merged after the crash of 2026-09-27.
-    proposals.size shouldBe 844
+    // 821 with `EXP_ONE_IRRATIONAL`'s one residue, 2026-09-27, measured as one by the run over
+    // 7a15f023. Plus one over the base above.
+    proposals.size shouldBe 845
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1417,7 +1419,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 713 with all eighteen residues of parts and the change of variables relative to `[a, b]`,
     // 2026-09-27, measured by the full suite before that branch's merge, where all eighteen went here
     // and no other bucket moved. Base 695 plus that delta.
-    open shouldBe 713
+    // 690 with `EXP_ONE_IRRATIONAL`'s residue, 2026-09-27, measured as one by the run over
+    // 7a15f023. That run stopped this test here, so the buckets below were not read by it. Plus one
+    // over the base above.
+    open shouldBe 714
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2133,7 +2138,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 274 with four residues of the facts of `Fraction` and `Cut`, 2026-09-27, card `e4a90d43`, by
     // the probe the `open` row names; which four was not read. None is refuted at a point, so
     // `after` does not move, measured by the same probe.
-    aboutNumbers.size shouldBe 274
+    // 275 with `EXP_ONE_IRRATIONAL`'s residue, 2026-09-27, measured as one by the run over
+    // 7a15f023: it keeps `NUM_LT`, and `after` did not move. Tip plus this branch's delta.
+    aboutNumbers.size shouldBe 275
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

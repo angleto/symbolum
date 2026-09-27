@@ -780,8 +780,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 929 and 926 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
     // before the run: five facts in `Integral` under five names, none shared. `CLAUDE.md`'s figures
     // move by **five** and **five**. Base 924 and 921 plus that branch's delta.
-    library.entries.size shouldBe 929
-    library.names.distinct.size shouldBe 926
+    // 922 and 919 with `EXP_ONE_IRRATIONAL`, 2026-09-27, measured as one entry, one name and one
+    // fact by the run over 7a15f023: `CLAUDE.md`'s three figures move by one each, its binders
+    // being two naturals. Plus one over the base above.
+    library.entries.size shouldBe 930
+    library.names.distinct.size shouldBe 927
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
