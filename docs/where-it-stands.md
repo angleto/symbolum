@@ -929,8 +929,12 @@ derives is the step at a head, the step as a function, and the two clauses of a 
 is choice, infinity and eta, the price of the lists. The interpreter is a few lines of `BigInt`
 arithmetic that nothing believes. `Fractran.certify` hands each state it proposes to the kernel,
 and `FractranSpec` gets Conway's PRIMEGAME from `2` to `4` in nineteen steps that way. **What is not
-here** is whether Conway's generalised Collatz maps meet `Collatz`, which is card `b0d2ada9` and a
-question rather than a plan. **What a program computes is here since 2026-09-26**:
+here is a bridge to `Collatz`, and card `b0d2ada9` found on 2026-09-26 that there is none to
+build**: `Collatz` is the rewriting system S_2 on words and declares no map on `num`, and the one
+Collatz map in the repository, `T` in `core`'s `CollatzSeries`, has a nonzero offset on every class
+holding an odd number, where a FRACTRAN step multiplies by one fixed fraction on each class modulo
+the denominators, or halts on all of it. That last fact is Conway's observation, checked here in
+numbers and proved nowhere. **What a program computes is here since 2026-09-26**:
 `FRACTRAN_STEP_REGISTERS` says a step from a positive state under positive numerators is exactly a
 step of `FRACTRAN_REGISTER_STEP`, the same fold with each fraction's test and effect written on the
 prime registers, so that `3/2` adds one to the register of `3` and takes one from that of `2` is a
