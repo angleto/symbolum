@@ -25,9 +25,15 @@ import garden.xeno.symbolum.logic.*
  * derived there at `w = 20`, with the inputs and the refutation, and the conclusion is refuted: with
  * the positivity hypothesis dropped the statement is false for the same reason as above.
  *
- * What this does not show is a graph where `w` exceeds the degree, which is where the theorem says
- * something about proof complexity; the smallest expanders with that property are far past what a
- * refutation written out by hand can reach.
+ * What this does not show is a graph where `w` exceeds the widest input, which is where the theorem
+ * says something about proof complexity. On `K(3, 2)` at `w = 2` the conclusion is met by any pigeon
+ * clause among the inputs, and every refutation has one, so the detachment above shows that the
+ * hypotheses can hold together and not that the bound is ever more than the inputs' width. Such a
+ * graph needs no refutation written out: the theorem quantifies over every refutation, so proving
+ * `MATCHABLE` and `EXPANDING` of the graph is the whole of the detachment. The smallest candidates
+ * need `r >= 2`, since at `r = 1` the boundary of one pigeon is its degree; ten lines of the affine
+ * plane over three elements, as pigeons, with its nine points as holes, have degree three, every
+ * pair of pigeons matchable and at least four unique-neighbour holes, which is `r = 2` and `w = 4`.
  */
 class ExpanderPigeonholeSpec extends AnyFlatSpec with Matchers {
 
