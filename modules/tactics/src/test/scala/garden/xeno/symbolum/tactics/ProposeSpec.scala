@@ -416,7 +416,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 737 with Wilson's five, 2026-09-26, derived before the run: four antecedents on
     // `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's delta.
     // 740 with `TAYLOR_WITHIN`'s three residues, 2026-09-27.
-    proposals.size shouldBe 740
+    // 753 with the thirteen residues of `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE` and `LHOPITAL`, 2026-09-27.
+    proposals.size shouldBe 753
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1393,7 +1394,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // not measured. Tip plus this branch's delta.
     // 636 with `TAYLOR_WITHIN`'s three residues, 2026-09-27, predicted from `TAYLOR`'s, which went
     // here: each is an implication about `continuous_within` or `derivative`.
-    open shouldBe 636
+    // 642 with six of the thirteen residues of `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE` and `LHOPITAL`,
+    // 2026-09-27, measured by the run.
+    open shouldBe 642
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1779,7 +1782,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `real_mul` and `real_lt`, are equations naming the operator the mutation swaps. Each swap
     // gives `real_add = CUT_MUL` and its two siblings, an equation between two functions that no
     // procedure reads. Tip plus this branch's delta.
-    unreadable shouldBe 153
+    // 160 with seven of the thirteen residues of `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE` and `LHOPITAL`,
+    // 2026-09-27, measured by the run; the other six are open.
+    unreadable shouldBe 160
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

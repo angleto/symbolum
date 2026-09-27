@@ -759,8 +759,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // binds no leading quantifier. Tip plus this branch's delta.
     // 822 and 819 with `TAYLOR_WITHIN`, 2026-09-27, derived before the run: one fact, one name,
     // and `CLAUDE.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
-    library.entries.size shouldBe 822
-    library.names.distinct.size shouldBe 819
+    // 825 and 822 with the limit of a function and L'Hopital, 2026-09-27, measured by the run:
+    // `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE` and `LHOPITAL`. `CLAUDE.md`'s figures move by three
+    // and **two**: `CONTINUOUS_TENDS` binds a function and a real.
+    library.entries.size shouldBe 825
+    library.names.distinct.size shouldBe 822
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -177,6 +177,10 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // by `Derivative`. It declares nothing.
     "TaylorExpansion" -> NotADevelopment,
 
+    // Not a development, for the same reason: the derivation of L'Hopital's rule, published by
+    // `Derivative` under `LHOPITAL`. It declares nothing; the limit it is stated with is `Continuity`'s.
+    "LHopitalRule" -> NotADevelopment,
+
     // Not a development, for the same reason: the derivation that a continuous function has an
     // integral, whose facts are published in `Integral.facts` under names `Integral` declares.
     "Integrability" -> NotADevelopment,

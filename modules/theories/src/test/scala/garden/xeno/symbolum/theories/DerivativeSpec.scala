@@ -110,7 +110,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
-          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorWithin) ++ onInterval ++
+          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorWithin,
+          Derivative.CauchyMeanValue, Derivative.LHopital) ++ onInterval ++
           withinInterval).contains(name)) {
       val other = Real.spent(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
@@ -789,6 +790,167 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     detached.hypotheses shouldBe empty
     witness.refused.hypotheses shouldBe empty
     witness.refused.conclusion shouldBe proposition("~(continuous (\\y:real. COND (0 < y) (1:real) 0) 0)")
+  }
+
+  /* ------------------------------------------------------------- L'Hopital */
+
+  private def tendsOpened(function: Term, point: Term, limit: Term): Kernel.Thm = {
+    val unfolded = force(Conv.unfold(force(chain.continuity.definition(Continuity.Tends)), List(function, point, limit)))
+    val right = force(Term.destEq(unfolded.conclusion).map(_._2).toRight(NotOfForm("an equation", unfolded.conclusion)))
+    force(Conv.betaNormalise(right).flatMap(Conv.trans(unfolded, _)))
+  }
+
+  it should "price Cauchy's mean value theorem and L'Hopital's rule at Rolle's, through the routes that are the design" in {
+    // Measured on 2026-09-27 before it was written here, as equalities: each is Rolle at one more
+    // combination, and the rule is Cauchy at every nearby point with Rolle once more for `g y`.
+    val rolle = Real.spent(fact(Derivative.Rolle))
+    Real.spent(fact(Derivative.CauchyMeanValue)) shouldBe rolle
+    Real.spent(fact(Derivative.LHopital)) shouldBe rolle
+    val cauchyRoute = Set(fact(Derivative.Rolle), fact(Derivative.Unique), fact(Derivative.Linear),
+      force(chain.continuity.fact(Continuity.Linear))).map(_.conclusion)
+    Derivation.restingOn(fact(Derivative.CauchyMeanValue), cauchyRoute) shouldBe cauchyRoute
+    val ruleRoute = Set(fact(Derivative.CauchyMeanValue), fact(Derivative.Rolle), fact(Derivative.Unique),
+      fact(Derivative.Continuous)).map(_.conclusion)
+    Derivation.restingOn(fact(Derivative.LHopital), ruleRoute) shouldBe ruleRoute
+    // That a continuous function tends to its value asks nothing of the reals at all.
+    Real.spent(force(chain.continuity.fact(Continuity.ContinuousTends))) shouldBe empty
+  }
+
+  it should "detach L'Hopital's rule at sin y / y, which tends to one at zero, with nothing assumed" in {
+    val y = Term.variable("y", reals)
+    val sine = force(derivative.term("sin", functions))
+    val cosine = force(derivative.term("cos", functions))
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val one = force(derivative.term("\\y:real. (1:real)", functions))
+    val zero = real("0:real")
+    val instance = opened(force(rules.specAll(fact(Derivative.LHopital),
+      List(sine, identity, cosine, one, zero, real("1:real"), real("1:real")))))
+
+    val neighbourhood = {
+      val near = proposition("0 < abs (y - 0) /\\ abs (y - 0) < (1:real)")
+      val slopes = force(conjoined(List(
+        force(rules.spec(y, fact(Derivative.Sine))),
+        force(rules.spec(y, fact(Derivative.Identity))),
+        lemma("~((1:real) = 0)"))))
+      force(rules.disch(near, slopes).flatMap(rules.gen(y, _)))
+    }
+    val sineContinuous = force(rules.specAll(fact(Derivative.Continuous), List(sine, zero, real("cos 0")))
+      .flatMap(rules.mp(_, force(rules.spec(zero, fact(Derivative.Sine))))))
+    val identityContinuous = force(rules.spec(zero, force(chain.continuity.fact(Continuity.Identity))))
+    val sineAtZero = force(chain.transcendental.sineAtZero)
+    val identityAtZero = Kernel.refl(zero)
+
+    // `\y. cos y / 1` is continuous at zero, as a combination of `cos` with itself, and so tends to
+    // its value, `cos 0 / 1`, which is one.
+    val ratio = force(derivative.term("\\y:real. cos y / 1", functions))
+    val cosineContinuous = force(rules.specAll(fact(Derivative.Continuous), List(cosine, zero, real("0 - sin 0")))
+      .flatMap(rules.mp(_, force(rules.spec(zero, fact(Derivative.Cosine))))))
+    val combined = opened(force(rules.specAll(force(chain.continuity.fact(Continuity.Linear)),
+      List(cosine, cosine, zero, real("1:real"), real("0:real"))).flatMap(rules.mp(_, cosineContinuous)).flatMap(rules.mp(_, cosineContinuous))))
+    val pointwise = force(chain.ring.prove(proposition("1 * cos y + 0 * cos y = cos y / 1")))
+    val sameFunction = force(LogicError.lift(Kernel.abs(y, pointwise)))
+    val continuousHead = force(derivative.term("continuous", Type.fun(functions, Type.fun(reals, Type.Bool))))
+    val ratioContinuous = force(Conv.apTerm(continuousHead, sameFunction).flatMap(Conv.apThm(_, zero))
+      .flatMap(eq => LogicError.lift(Kernel.eqMp(eq, combined))))
+    val tendsToValue = opened(force(rules.specAll(force(chain.continuity.fact(Continuity.ContinuousTends)), List(ratio, zero))
+      .flatMap(rules.mp(_, ratioContinuous))))
+    val valueIsOne = force(rules.specAll(lemma("!C:real. C = 1 ==> C / 1 = 1"), List(real("cos 0")))
+      .flatMap(rules.mp(_, force(chain.transcendental.cosineAtZero))))
+    val tendsHead = tendsToValue.conclusion match { case App(prefix, _) => prefix; case other => fail(s"not a limit: $other") }
+    val ratioTends = force(Conv.apTerm(tendsHead, valueIsOne).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, tendsToValue))))
+
+    val detached = Vector(lemma("(0:real) < 1"), neighbourhood, sineContinuous, identityContinuous, sineAtZero, identityAtZero, ratioTends)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition("tends (\\y:real. sin y / y) 0 1")
+  }
+
+  it should "need f x = 0, which is shown by refuting the rule without it at 1 / y" in {
+    // Dropped, the hypothesis leaves a statement every other premise of which `f = \y. 1` and
+    // `g = \y. y` meet at zero, with the ratio of the slopes `0 / 1`; its conclusion is that `1 / y`
+    // tends to zero there, and at the tolerance one no radius serves.
+    val dropped = proposition(
+      "!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !x:real. !l:real. !r:real. 0 < r ==> " +
+        "(!y:real. 0 < abs (y - x) /\\ abs (y - x) < r ==> derivative f y (df y) /\\ derivative g y (dg y) /\\ ~(dg y = 0)) ==> " +
+        "continuous f x ==> continuous g x ==> g x = 0 ==> " +
+        "tends (\\y:real. df y / dg y) x l ==> tends (\\y:real. f y / g y) x l")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val y = Term.variable("y", reals)
+    val zero = real("0:real")
+    val constantOne = force(derivative.term("\\y:real. (1:real)", functions))
+    val constantZero = force(derivative.term("\\y:real. (0:real)", functions))
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val instance = opened(force(rules.specAll(assumed, List(constantOne, identity, constantZero, constantOne, zero, zero, real("1:real")))))
+
+    val neighbourhood = {
+      val near = proposition("0 < abs (y - 0) /\\ abs (y - 0) < (1:real)")
+      val slopes = force(conjoined(List(
+        force(rules.specAll(fact(Derivative.Constant), List(real("1:real"), y))),
+        force(rules.spec(y, fact(Derivative.Identity))),
+        lemma("~((1:real) = 0)"))))
+      force(rules.disch(near, slopes).flatMap(rules.gen(y, _)))
+    }
+    val oneContinuous = force(rules.specAll(force(chain.continuity.fact(Continuity.Constant)), List(real("1:real"), zero)))
+    val identityContinuous = force(rules.spec(zero, force(chain.continuity.fact(Continuity.Identity))))
+    val ratio = force(derivative.term("\\y:real. (0:real) / 1", functions))
+    val ratioContinuous = force(rules.specAll(force(chain.continuity.fact(Continuity.Constant)), List(real("(0:real) / 1"), zero)))
+    val tendsToValue = opened(force(rules.specAll(force(chain.continuity.fact(Continuity.ContinuousTends)), List(ratio, zero))
+      .flatMap(rules.mp(_, ratioContinuous))))
+    val valueIsZero = lemma("(0:real) / 1 = 0")
+    val tendsHead = tendsToValue.conclusion match { case App(prefix, _) => prefix; case other => fail(s"not a limit: $other") }
+    val ratioTends = force(Conv.apTerm(tendsHead, valueIsZero).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, tendsToValue))))
+    val claimed = Vector(lemma("(0:real) < 1"), neighbourhood, oneContinuous, identityContinuous, Kernel.refl(zero), ratioTends)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+
+    // The claim opened at tolerance one, and a point below both d / 2 and 1 / 2 where 1 / y is at least two.
+    val reciprocal = force(derivative.term("\\y:real. 1 / y", functions))
+    claimed.conclusion shouldBe force(LogicError.lift(Term.app(tendsHead match { case App(App(tends, _), _) => tends; case o => o }, reciprocal)
+      .flatMap(Term.app(_, zero)).flatMap(Term.app(_, zero))))
+    val opened0 = force(LogicError.lift(Kernel.eqMp(tendsOpened(reciprocal, zero, zero), claimed)))
+    val near = force(rules.spec(real("1:real"), opened0).flatMap(rules.mp(_, lemma("(0:real) < 1"))))
+    val d = Term.variable("d", reals)
+    val radius = force(LogicError.lift(Kernel.assume(proposition(
+      "0 < d:real /\\ (!y:real. 0 < abs (y - 0) /\\ abs (y - 0) < d ==> abs (1 / y - 0) < 1)"))))
+    val dPositive = force(rules.conjElim1(radius))
+    val inside = force(rules.conjElim2(radius))
+    val magnitude = chain.limit.magnitude
+    val point = "min (d / 2) ((1:real) / 2)"
+    val belowD = force(magnitude.fact(Magnitude.MinBelowLeft).flatMap(rules.specAll(_, List(real("d / 2"), real("(1:real) / 2")))))
+    val belowHalf = force(magnitude.fact(Magnitude.MinBelowRight).flatMap(rules.specAll(_, List(real("d / 2"), real("(1:real) / 2")))))
+    val cases = force(magnitude.fact(Magnitude.MinCases).flatMap(rules.specAll(_, List(real("d / 2"), real("(1:real) / 2")))))
+    val halfOfD = force(LogicError.lift(Kernel.assume(proposition(s"$point = d / 2"))))
+    val half = force(LogicError.lift(Kernel.assume(proposition(s"$point = (1:real) / 2"))))
+    val positiveIfHalfOfD = force(rules.specAll(lemma("!m:real d:real. m = d / 2 ==> 0 < d ==> 0 < m"), List(real(point), d))
+      .flatMap(rules.mp(_, halfOfD)).flatMap(rules.mp(_, dPositive)))
+    val positiveIfHalf = force(rules.specAll(lemma("!m:real. m = (1:real) / 2 ==> 0 < m"), List(real(point)))
+      .flatMap(rules.mp(_, half)))
+    val positive = force(rules.disjElim(cases, positiveIfHalfOfD, positiveIfHalf))
+    val itself = force(magnitude.fact(Magnitude.OfNonNegative).flatMap(rules.spec(real(s"$point - 0"), _))
+      .flatMap(rules.mp(_, force(rules.spec(real(point), lemma("!m:real. 0 < m ==> 0 <= m - 0")).flatMap(rules.mp(_, positive))))))
+    val membership = force(rules.conjIntro(
+      force(rules.specAll(lemma("!A:real m:real. A = m - 0 ==> 0 < m ==> 0 < A"), List(real(s"abs ($point - 0)"), real(point)))
+        .flatMap(rules.mp(_, itself)).flatMap(rules.mp(_, positive))),
+      force(rules.specAll(lemma("!A:real m:real d:real. A = m - 0 ==> m <= d / 2 ==> 0 < d ==> A < d"), List(real(s"abs ($point - 0)"), real(point), d))
+        .flatMap(rules.mp(_, itself)).flatMap(rules.mp(_, belowD)).flatMap(rules.mp(_, dPositive)))))
+    val small = force(rules.spec(real(point), inside).flatMap(rules.mp(_, membership)))
+    val nonZero = force(rules.spec(real(point), lemma("!m:real. 0 < m ==> ~(m = 0)")).flatMap(rules.mp(_, positive)))
+    val inverse = force(chain.reals.axiom("MUL_INVERSE").flatMap(rules.spec(real(point), _)).flatMap(rules.mp(_, nonZero)))
+    val above = force(magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(real(s"1 / $point - 0"), _)))
+    // `/` is a defined constant, `\x y. x * inv y`, which the ring unfolds and `Linarith` reads as an atom.
+    val quotient = force(LogicError.lift(Term.eq(real(s"1 / $point"), real(s"inv ($point)"))).flatMap(chain.ring.prove))
+    val absurd = force(rules.specAll(
+      lemma("!m:real v:real w:real A:real. w = v ==> m * v = 1 ==> 0 < m ==> m <= 1 / 2 ==> w - 0 <= A ==> A < 1 ==> F"),
+      List(real(point), real(s"inv ($point)"), real(s"1 / $point"), real(s"abs (1 / $point - 0)")))
+      .flatMap(rules.mp(_, quotient)).flatMap(rules.mp(_, inverse)).flatMap(rules.mp(_, positive)).flatMap(rules.mp(_, belowHalf))
+      .flatMap(rules.mp(_, above)).flatMap(rules.mp(_, small)))
+    val eliminated = force(rules.existsElim(near, d, absurd))
+    force(rules.notIntro(dropped, eliminated)).hypotheses shouldBe empty
+  }
+
+  private def conjoined(parts: List[Kernel.Thm]): Either[LogicError, Kernel.Thm] = parts match {
+    case last :: Nil   => Right(last)
+    case first :: rest => conjoined(rest).flatMap(rules.conjIntro(first, _))
+    case Nil           => Left(NotOfForm("a conjunct", proposition("T")))
   }
 
   it should "reach the sign of a derivative on an interval through the mean value theorem and uniqueness" in {
