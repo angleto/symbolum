@@ -757,12 +757,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // are defined as the cut operations they name, so seven definitional entries under seven names
     // that were declared and not defined before. `CLAUDE.md`'s figures do not move: a definition
     // binds no leading quantifier. Tip plus this branch's delta.
-    // 824 and 821 with the sum and the composition of continuous functions and the sum rule,
+    // 822 and 819 with `TAYLOR_WITHIN`, 2026-09-27, derived before the run: one fact, one name,
+    // and `CLAUDE.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
+    // 825 and 822 with the sum and the composition of continuous functions and the sum rule,
     // 2026-09-27, derived before the run: three facts under three names, two in `Continuity` and one
     // in `Derivative`. `CLAUDE.md`'s figures move by **three** and **three**: each binds two
     // functions among two or more leading quantifiers.
-    library.entries.size shouldBe 824
-    library.names.distinct.size shouldBe 821
+    library.entries.size shouldBe 825
+    library.names.distinct.size shouldBe 822
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -415,9 +415,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // derivative twins and two on each of the other four. Tip plus this branch's delta.
     // 737 with Wilson's five, 2026-09-26, derived before the run: four antecedents on
     // `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's delta.
-    // 743 with the sum and the composition of continuous functions and the sum rule, 2026-09-27,
+    // 740 with `TAYLOR_WITHIN`'s three residues, 2026-09-27.
+    // 746 with the sum and the composition of continuous functions and the sum rule, 2026-09-27,
     // derived before the run: two antecedents on each of the three. Tip plus this branch's delta.
-    proposals.size shouldBe 743
+    proposals.size shouldBe 746
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1392,11 +1393,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // asserted, run over the branch's own classes before the valuation and Taylor landed, after
     // the suite's first failure had stopped this test at this line; which residue went where was
     // not measured. Tip plus this branch's delta.
-    // 639 with the six residues of `CONTINUOUS_ADD`, `CONTINUOUS_COMPOSE` and `DERIVATIVE_ADD`,
+    // 636 with `TAYLOR_WITHIN`'s three residues, 2026-09-27, predicted from `TAYLOR`'s, which went
+    // here: each is an implication about `continuous_within` or `derivative`.
+    // 642 with the six residues of `CONTINUOUS_ADD`, `CONTINUOUS_COMPOSE` and `DERIVATIVE_ADD`,
     // 2026-09-27, read off the suite's failure after a prediction of six: each keeps an implication
     // or names `continuous` or `derivative`, which no procedure settles, and `unreadable` did not
     // move. Tip plus this branch's delta.
-    open shouldBe 639
+    open shouldBe 642
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2103,7 +2106,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 267 with all five of Wilson's residues, 2026-09-26: every one keeps `NUM_CONG`, `NUM_PROD`,
     // `NUM_LT`, `NUM_DIVIDES` or `NUM_FACT`. None is refuted at a point, so `after` does not move for
     // them, which the same probe measured. Tip plus this branch's delta.
-    aboutNumbers.size shouldBe 267
+    // 270 with `TAYLOR_WITHIN`'s three residues, 2026-09-27, predicted from `TAYLOR`'s: each
+    // keeps the `Sum` and the `Power` of the conclusion.
+    aboutNumbers.size shouldBe 270
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

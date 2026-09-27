@@ -44,6 +44,7 @@ private[theories] object DerivativeWithin {
       increasing <- fact(Derivative.Increasing).flatMap(signWithin(tools, _, Derivative.IncreasingWithin))
       ofDerivative <- relativeOfTwoSided(steps, withinDefinition)
       interior <- twoSidedInside(steps, magnitude, withinDefinition)
+      taylor <- fact(Derivative.Taylor).flatMap(taylorWithin(tools, _))
     } yield Map(
       Derivative.WithinOfDerivative -> ofDerivative,
       Derivative.WithinInterior -> interior,
@@ -52,7 +53,8 @@ private[theories] object DerivativeWithin {
       Derivative.MeanValueWithin -> meanValue,
       Derivative.FlatWithin -> flat,
       Derivative.NonDecreasingWithin -> nonDecreasing,
-      Derivative.IncreasingWithin -> increasing
+      Derivative.IncreasingWithin -> increasing,
+      Derivative.TaylorWithin -> taylor
     )
   }
 
@@ -413,6 +415,132 @@ private[theories] object DerivativeWithin {
       opened <- rules.existsElim(found, c, witnessed)
       result <- closeOver(steps, opened, List(s"$F a:real = $F b:real", interior, Relative, "a:real < b:real"),
         List("f:real -> real", "a:real", "b:real"))
+    } yield result
+  }
+
+  /**
+   * [[Derivative.TaylorWithin]]: [[Derivative.Taylor]] at the family of extensions `\k. E (D k)`.
+   * Each is continuous everywhere by the extension's own fact, has `D k`'s derivatives inside by
+   * [[across]], and its value at an interior point is `D (SUC k)`'s there, so the slope hypothesis
+   * holds of the family; the conclusion is read back at `a`, `b` and Rolle's point, where every
+   * extension agrees with the function it extends, under the sum's binder as well.
+   */
+  private def taylorWithin(tools: Tools, twoSided: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    val steps = tools.steps
+    import steps.*
+    val family = "(D:num -> real -> real)"
+    val weight = (k: String) => s"inv (real_of_num (NUM_FACT $k))"
+    val conclusion =
+      s"?c:real. a:real < c /\\ c < b:real /\\ $family ZERO b = " +
+        s"Sum (\\k:num. ${weight("k")} * $family k a * Power (b - a) k) (SUC n:num) + " +
+        s"${weight("(SUC n)")} * $family (SUC n) c * Power (b - a) (SUC n)"
+    val relativeHypothesis =
+      s"!k:num. !x:real. NUM_LE k n:num ==> a:real <= x /\\ x <= b:real ==> continuous_within ($family k) a b x"
+    val slopeHypothesis =
+      s"!k:num. !x:real. NUM_LE k n:num ==> a:real < x /\\ x < b:real ==> derivative ($family k) x ($family (SUC k) x)"
+    for {
+      f <- variable(steps, "f:real -> real")
+      d <- variable(steps, "D:num -> real -> real")
+      a <- variable(steps, "a:real")
+      b <- variable(steps, "b:real")
+      c <- variable(steps, "c:real")
+      k <- variable(steps, "k:num")
+      n <- variable(steps, "n:num")
+      x <- variable(steps, "x:real")
+      m <- variable(steps, "m:real")
+
+      /* ------------------------------------------------ the three facts about one extension, for every f */
+      everywhere <- extensionOnInterval(tools)
+        .flatMap(t => proposition(Relative).flatMap(rules.disch(_, t)))
+        .flatMap(t => proposition("a:real <= b:real").flatMap(rules.disch(_, t)))
+        .flatMap(rules.gen(f, _))
+      inside <- for {
+        supplied <- assume("derivative (f:real -> real) (x:real) (m:real)")
+        carried <- across(tools, "x:real", "m:real", supplied, toExtension = true)
+        closed <- List("derivative (f:real -> real) (x:real) (m:real)", "x:real < b:real", "a:real < x:real", "a:real <= b:real")
+          .foldLeft[Either[LogicError, Kernel.Thm]](Right(carried))((acc, text) => acc.flatMap(t => proposition(text).flatMap(rules.disch(_, t))))
+          .flatMap(rules.genAll(_, List(f, x, m)))
+      } yield closed
+      agreeing = (t: String) =>
+        agreesAt(steps, tools.agrees, t)
+          .flatMap(r => proposition(s"$t <= b:real").flatMap(rules.disch(_, r)))
+          .flatMap(r => proposition(s"a:real <= $t").flatMap(rules.disch(_, r)))
+          .flatMap(rules.gen(f, _))
+
+      strictly <- assume("a:real < b:real")
+      ordered <- steps.at(lemma("!a:real b:real. a < b ==> a <= b"), "a:real", "b:real").flatMap(mp(_, Right(strictly)))
+      relative <- assume(relativeHypothesis)
+      slopes <- assume(slopeHypothesis)
+      extended <- Parser.term(theory, notation,
+        s"\\k:num. \\y:real. COND (y < a:real) ($family k a) (COND (b:real < y) ($family k b) ($family k y))",
+        Type.fun(TyApp(Natural.TypeName, Nil), Functions))
+      instance <- rules.specAll(twoSided, List(extended, a, b, n)).flatMap(reduced)
+
+      /* ------------------------------------------------ the family of extensions meets both hypotheses */
+      continuous <- for {
+        le <- assume("NUM_LE k:num n:num")
+        member <- proposition("a:real <= x:real /\\ x <= b:real")
+        assumedMember <- LogicError.lift(Kernel.assume(member))
+        dk <- term(steps, s"$family k:num")
+        relativeK <- for {
+          point <- rules.specAll(relative, List(k, x)).flatMap(mp(_, Right(le), Right(assumedMember)))
+          closed <- rules.disch(member, point).flatMap(rules.gen(x, _))
+        } yield closed
+        atK <- rules.spec(dk, everywhere).flatMap(reduced).flatMap(mp(_, Right(ordered), Right(relativeK)))
+        atX <- rules.spec(x, atK).flatMap(rules.mp(_, assumedMember))
+        closed <- rules.disch(member, atX).flatMap(rules.disch(le.conclusion, _)).flatMap(rules.genAll(_, List(k, x)))
+      } yield closed
+      differentiable <- for {
+        le <- assume("NUM_LE k:num n:num")
+        member <- proposition("a:real < x:real /\\ x < b:real")
+        assumedMember <- LogicError.lift(Kernel.assume(member))
+        left <- rules.conjElim1(assumedMember)
+        right <- rules.conjElim2(assumedMember)
+        dk <- term(steps, s"$family k:num")
+        next <- term(steps, s"$family (SUC k:num)")
+        slope <- term(steps, s"$family (SUC k:num) x:real")
+        supplied <- rules.specAll(slopes, List(k, x)).flatMap(mp(_, Right(le), Right(assumedMember)))
+        carried <- rules.specAll(inside, List(dk, x, slope)).flatMap(reduced)
+          .flatMap(mp(_, Right(ordered), Right(left), Right(right), Right(supplied)))
+        lower <- steps.at(lemma("!a:real x:real. a < x ==> a <= x"), "a:real", "x:real").flatMap(rules.mp(_, left))
+        upper <- steps.at(lemma("!x:real b:real. x < b ==> x <= b"), "x:real", "b:real").flatMap(rules.mp(_, right))
+        agrees <- agreeing("x:real").flatMap(rules.spec(next, _)).flatMap(reduced).flatMap(mp(_, Right(lower), Right(upper)))
+        back <- Conv.sym(agrees)
+        head <- carried.conclusion match {
+          case App(prefix, _) => Right(prefix)
+          case other          => Left(NotOfForm("a derivative", other))
+        }
+        restated <- Conv.apTerm(head, back).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, carried)))
+        closed <- rules.disch(member, restated).flatMap(rules.disch(le.conclusion, _)).flatMap(rules.genAll(_, List(k, x)))
+      } yield closed
+      found <- mp(instance, Right(strictly), Right(continuous), Right(differentiable))
+
+      /* ------------------------------------------------ read back at a, b and Rolle's point */
+      aReflexive <- steps.at(lemma("!a:real. a <= a"), "a:real")
+      bReflexive <- steps.at(lemma("!b:real. b <= b"), "b:real")
+      atA <- agreeing("a:real").flatMap(t => rules.spec(f, t)).flatMap(mp(_, Right(aReflexive), Right(ordered))).flatMap(rules.gen(f, _))
+      atB <- agreeing("b:real").flatMap(t => rules.spec(f, t)).flatMap(mp(_, Right(ordered), Right(bReflexive))).flatMap(rules.gen(f, _))
+      inner <- found.conclusion match {
+        case App(_, lambda) => LogicError.lift(Term.app(lambda, c)).flatMap(Conv.betaRoot)
+          .flatMap(eq => Term.destEq(eq.conclusion).map(_._2).toRight(NotOfForm("an equation", eq.conclusion)))
+        case other => Left(NotOfForm("an existential", other))
+      }
+      body <- LogicError.lift(Kernel.assume(inner))
+      cLeft <- rules.conjElim1(body)
+      cRight <- rules.conjElim2(body).flatMap(rules.conjElim1)
+      equation <- rules.conjElim2(body).flatMap(rules.conjElim2)
+      cLower <- steps.at(lemma("!a:real x:real. a < x ==> a <= x"), "a:real", "c:real").flatMap(rules.mp(_, cLeft))
+      cUpper <- steps.at(lemma("!x:real b:real. x < b ==> x <= b"), "c:real", "b:real").flatMap(rules.mp(_, cRight))
+      atC <- agreeing("c:real").flatMap(t => rules.spec(f, t)).flatMap(mp(_, Right(cLower), Right(cUpper))).flatMap(rules.gen(f, _))
+      readBack <- Within.forward(steps, Vector(atA, atB, atC), equation)
+      pair <- conj(Right(cLeft), conj(Right(cRight), Right(readBack)))
+      goal <- proposition(conclusion)
+      predicate <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
+      witnessed <- rules.existsIntro(predicate, c, pair)
+      opened <- rules.existsElim(found, c, witnessed)
+      result <- List(slopes, relative, strictly).foldLeft[Either[LogicError, Kernel.Thm]](Right(opened)) { (acc, h) =>
+        acc.flatMap(rules.disch(h.conclusion, _))
+      }.flatMap(rules.genAll(_, List(d, a, b, n)))
     } yield result
   }
 

@@ -1203,9 +1203,8 @@ hypothesis states the derivative and its sign in one existential, so it asks no 
 of differentiability; the three cost what the mean value theorem costs.
 
 **Every interval theorem about a continuous function has a textbook form, stated with continuity
-relative to `[a, b]`, but one: the ones below since 2026-09-25 and the integral's four since
-2026-09-26, and `TAYLOR`, which landed the same night asking two-sided continuity on `[a, b]`, is
-card `3b7c74be`.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
+relative to `[a, b]`: the ones below since 2026-09-25, the integral's four since 2026-09-26, and
+`TAYLOR_WITHIN` since 2026-09-27.** `continuous` is two-sided, so "`continuous f x` for `a <= x <= b`" asks, at `a` and at
 `b`, for continuity from outside the interval as well, which no textbook does, and nothing said so
 until card 6257d0da. `continuous_within f a b x` is the relative notion, and one lemma carries
 every theorem across: `CONTINUOUS_EXTENSION`, that `f` extended by its value at the nearer end is
@@ -1349,8 +1348,11 @@ continuity of a product, because Rolle wants the combination continuous at both 
 file records: `real_of_num (SUC n)` stays an atom, since `n! * (n + 1)` multiplied out is a sum
 `Field` cannot take apart, and a sum over a lambda is handed over as a variable. `DerivativeSpec`
 detaches it at `\k. exp` on `[0, 1]` at every order and refutes it without the derivative hypothesis
-at `\k. \y. y`. What it is not: a textbook form with continuity relative to `[a, b]`, which `ROLLE`
-has and this does not yet, and anything about a Taylor series converging.
+at `\k. \y. y`. `TAYLOR_WITHIN` is its textbook form since 2026-09-27, with `continuous_within (D k) a b x`: it
+is `TAYLOR` at the family of extensions of the `D k` by their values at the two ends, read back at
+`a`, `b` and Rolle's point, under the sum's binder as well, and it costs what `TAYLOR` costs.
+`DerivativeSpec` detaches it at the step `COND (0 < y) 1 0` on `[-1, 0]`, where `TAYLOR`'s own
+hypothesis is false at zero. What neither is: anything about a Taylor series converging.
 
 **The square root is `Root`, a link since 2026-09-24, and it is the third thing `COMPLETENESS`
 buys.** `sqrt x` is `select (\y. 0 <= y /\ y * y = x)`, and `SQRT_EXISTS` is what makes the choice

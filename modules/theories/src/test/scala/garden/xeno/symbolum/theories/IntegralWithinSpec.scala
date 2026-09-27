@@ -150,7 +150,8 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
       Logic.stripForall(hypothesis).exists { case (bound, body) =>
         bound.nonEmpty && logic.destImp(body).isDefined && concludes(conclusionOf(body), Continuity.Continuous)
       }
-    val Pending = Map("TAYLOR" -> "3b7c74be")
+    // Empty since 2026-09-27, when `TAYLOR_WITHIN` landed for card `3b7c74be`, the one entry there was.
+    val Pending: Map[String, String] = Map.empty
     val twoSided = library.entries.filter(entry =>
       antecedents(strip(entry.theorem.conclusion)).exists(overAnInterval)).map(_.name).distinct
 

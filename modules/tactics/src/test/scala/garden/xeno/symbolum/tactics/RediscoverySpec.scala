@@ -368,9 +368,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 737 with Wilson's theorem and the product over paired indices, 2026-09-26, derived before the
     // run: four antecedents on `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's
     // delta.
-    // 743 with the sum and the composition of continuous functions and the sum rule, 2026-09-27,
+    // 740 with `TAYLOR_WITHIN`'s three antecedents, 2026-09-27, derived before the run.
+    // 746 with the sum and the composition of continuous functions and the sum rule, 2026-09-27,
     // derived before the run: two antecedents on each of the three.
-    propose.weakenings.size shouldBe 743
+    propose.weakenings.size shouldBe 746
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

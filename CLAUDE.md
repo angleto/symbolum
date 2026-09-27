@@ -640,10 +640,13 @@ back at baseline and keeps every goal. A candidate whose obligations are smaller
 making progress and one whose obligations are larger is not.
 
 **`Linarith`'s fragment is named rather than measured by a degree, and since 2026-09-18 it holds
-one fact nobody wrote.** Linear inequalities over the atoms, where a product of unknowns is an
-atom; the hypotheses multiplied by each other and then by the hypotheses again, which reaches
-degree three; and one square completed over an atom that is one unknown times itself, justified by
-`Order.SQUARE_NONNEG` and so checked by the kernel like every other fact. `docs/adr/0032` is the
+facts nobody wrote.** Linear inequalities over the atoms, where a product of unknowns is an atom;
+the hypotheses multiplied by each other and then by the hypotheses again, which reaches degree
+three; and squares of linear forms, each justified by `Order.SQUARE_NONNEG` and so checked by the
+kernel like every other fact: one completed over an atom that is one unknown times itself, and
+since 2026-09-27 the squares a quadratic form decomposes into, which reach the cross terms, so
+`x * x + y * y >= 2 * (x * y)` is proved. `docs/adr/0056` is the second and why it needs no
+semidefinite search: over monomials of degree one the Gram matrix is unique. `docs/adr/0032` is the
 decision and the measurement that chose it is the one to carry: **the fact pool is generated from
 the goal's hypotheses and nothing else**, so a goal with none has an empty pool, and an empty pool
 has no products at any degree. Widening the schedule to a parametric degree therefore settles
@@ -674,7 +677,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 824 lemmas, 565 have two or more leading quantifiers and **499 of
+caller meant: of the library's 825 lemmas, 566 have two or more leading quantifiers and **500 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different
