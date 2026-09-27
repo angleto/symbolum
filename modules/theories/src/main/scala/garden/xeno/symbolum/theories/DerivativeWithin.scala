@@ -45,6 +45,7 @@ private[theories] object DerivativeWithin {
       ofDerivative <- relativeOfTwoSided(steps, withinDefinition)
       interior <- twoSidedInside(steps, magnitude, withinDefinition)
       taylor <- fact(Derivative.Taylor).flatMap(taylorWithin(tools, _))
+      cauchy <- fact(Derivative.CauchyMeanValue).flatMap(cauchyWithin(tools, _))
     } yield Map(
       Derivative.WithinOfDerivative -> ofDerivative,
       Derivative.WithinInterior -> interior,
@@ -54,7 +55,8 @@ private[theories] object DerivativeWithin {
       Derivative.FlatWithin -> flat,
       Derivative.NonDecreasingWithin -> nonDecreasing,
       Derivative.IncreasingWithin -> increasing,
-      Derivative.TaylorWithin -> taylor
+      Derivative.TaylorWithin -> taylor,
+      Derivative.CauchyMeanValueWithin -> cauchy
     )
   }
 
@@ -541,6 +543,105 @@ private[theories] object DerivativeWithin {
       result <- List(slopes, relative, strictly).foldLeft[Either[LogicError, Kernel.Thm]](Right(opened)) { (acc, h) =>
         acc.flatMap(rules.disch(h.conclusion, _))
       }.flatMap(rules.genAll(_, List(d, a, b, n)))
+    } yield result
+  }
+
+  /**
+   * [[Derivative.CauchyMeanValueWithin]]: [[Derivative.CauchyMeanValue]] at the extensions of `f`
+   * and of `g`, each of the three facts about one extension proved for every function and then
+   * specialised twice, and the conclusion read back at Cauchy's point and at the two ends.
+   */
+  private def cauchyWithin(tools: Tools, twoSided: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    val steps = tools.steps
+    import steps.*
+    def interior(h: String) = s"!x:real. a:real < x /\\ x < b:real ==> ?m:real. derivative $h x m"
+    def relative(h: String) = s"!x:real. a:real <= x /\\ x <= b:real ==> continuous_within $h a b x"
+    val G = "(g:real -> real)"
+    val goal = s"?c:real. ?m:real. ?n:real. a:real < c /\\ c < b:real /\\ derivative $F c m /\\ derivative $G c n /\\ " +
+      s"($F b - $F a) * n = ($G b - $G a) * m"
+    for {
+      f <- variable(steps, "f:real -> real")
+      g <- variable(steps, "g:real -> real")
+      a <- variable(steps, "a:real")
+      b <- variable(steps, "b:real")
+      c <- variable(steps, "c:real")
+      m <- variable(steps, "m:real")
+      n <- variable(steps, "n:real")
+      strictly <- assume("a:real < b:real")
+      ordered <- steps.at(lemma("!a:real b:real. a < b ==> a <= b"), "a:real", "b:real").flatMap(mp(_, Right(strictly)))
+
+      /* ------------------------------------------------ the facts about one extension, for every f */
+      continuousEvery <- extensionOnInterval(tools).flatMap(rules.proveHyp(ordered, _))
+        .flatMap(t => proposition(Relative).flatMap(rules.disch(_, t))).flatMap(rules.gen(f, _))
+      slopesEvery <- assume(interior(F)).flatMap(interiorAtExtension(tools, _, None, None)).flatMap(rules.proveHyp(ordered, _))
+        .flatMap(t => proposition(interior(F)).flatMap(rules.disch(_, t))).flatMap(rules.gen(f, _))
+      backEvery <- assume(s"derivative $Extended c:real m:real")
+        .flatMap(slope => across(tools, "c:real", "m:real", slope, toExtension = false).flatMap(rules.proveHyp(ordered, _))
+          .flatMap(rules.disch(slope.conclusion, _)))
+        .flatMap(rules.genAll(_, List(f, m)))
+      aReflexive <- steps.at(lemma("!a:real. a <= a"), "a:real")
+      bReflexive <- steps.at(lemma("!b:real. b <= b"), "b:real")
+      atA <- agreesAt(steps, tools.agrees, "a:real").flatMap(rules.proveHyp(aReflexive, _)).flatMap(rules.proveHyp(ordered, _)).flatMap(rules.gen(f, _))
+      atB <- agreesAt(steps, tools.agrees, "b:real").flatMap(rules.proveHyp(bReflexive, _)).flatMap(rules.proveHyp(ordered, _)).flatMap(rules.gen(f, _))
+
+      relativeF <- assume(relative(F))
+      relativeG <- assume(relative(G))
+      interiorF <- assume(interior(F))
+      interiorG <- assume(interior(G))
+      continuousF <- rules.spec(f, continuousEvery).flatMap(rules.mp(_, relativeF))
+      continuousG <- rules.spec(g, continuousEvery).flatMap(rules.mp(_, relativeG))
+      slopesF <- rules.spec(f, slopesEvery).flatMap(rules.mp(_, interiorF))
+      slopesG <- rules.spec(g, slopesEvery).flatMap(rules.mp(_, interiorG))
+      extendedF <- Logic.stripForall(continuousF.conclusion).flatMap(p => logic.destImp(p._2).toRight(NotOfForm("an implication", p._2)))
+        .map(parts => parts._2).flatMap {
+          case App(App(_, function), _) => Right(function)
+          case other                    => Left(NotOfForm("a continuity", other))
+        }
+      extendedG <- Logic.stripForall(continuousG.conclusion).flatMap(p => logic.destImp(p._2).toRight(NotOfForm("an implication", p._2)))
+        .map(parts => parts._2).flatMap {
+          case App(App(_, function), _) => Right(function)
+          case other                    => Left(NotOfForm("a continuity", other))
+        }
+      instance <- rules.specAll(twoSided, List(extendedF, extendedG, a, b)).flatMap(reduced)
+      found <- mp(instance, Right(strictly), Right(continuousF), Right(continuousG), Right(slopesF), Right(slopesG))
+
+      /* ------------------------------------------------ read back at Cauchy's point and the two ends */
+      opened <- {
+        def bodyAt(existential: Term, witness: Term): Either[LogicError, Term] =
+          for {
+            predicate <- logic.destExistsPredicate(existential).toRight(NotOfForm("an existential", existential))
+            applied <- LogicError.lift(Term.app(predicate, witness))
+            body <- Conv.betaRoot(applied).flatMap(eq => Term.destEq(eq.conclusion).map(_._2).toRight(NotOfForm("an equation", eq.conclusion)))
+          } yield body
+        for {
+          overC <- bodyAt(found.conclusion, c)
+          overM <- bodyAt(overC, m)
+          body <- bodyAt(overM, n)
+          assumedBody <- LogicError.lift(Kernel.assume(body))
+          cLeft <- rules.conjElim1(assumedBody)
+          cRight <- rules.conjElim2(assumedBody).flatMap(rules.conjElim1)
+          slopeF <- rules.conjElim2(assumedBody).flatMap(rules.conjElim2).flatMap(rules.conjElim1)
+          slopeG <- rules.conjElim2(assumedBody).flatMap(rules.conjElim2).flatMap(rules.conjElim2).flatMap(rules.conjElim1)
+          balance <- rules.conjElim2(assumedBody).flatMap(rules.conjElim2).flatMap(rules.conjElim2).flatMap(rules.conjElim2)
+          backF <- rules.specAll(backEvery, List(f, m)).flatMap(rules.mp(_, slopeF))
+            .flatMap(rules.proveHyp(cLeft, _)).flatMap(rules.proveHyp(cRight, _))
+          backG <- rules.specAll(backEvery, List(g, n)).flatMap(rules.mp(_, slopeG))
+            .flatMap(rules.proveHyp(cLeft, _)).flatMap(rules.proveHyp(cRight, _))
+          read <- forward(steps, Vector(atA, atB), balance)
+          all <- conj(Right(cLeft), conj(Right(cRight), conj(Right(backF), conj(Right(backG), Right(read)))))
+          goalTerm <- proposition(goal)
+          withN <- bodyAt(goalTerm, c).flatMap(bodyAt(_, m)).flatMap(e => logic.destExistsPredicate(e).toRight(NotOfForm("an existential", e)))
+            .flatMap(rules.existsIntro(_, n, all))
+          withM <- bodyAt(goalTerm, c).flatMap(e => logic.destExistsPredicate(e).toRight(NotOfForm("an existential", e)))
+            .flatMap(rules.existsIntro(_, m, withN))
+          withC <- logic.destExistsPredicate(goalTerm).toRight(NotOfForm("an existential", goalTerm)).flatMap(rules.existsIntro(_, c, withM))
+          elimN <- LogicError.lift(Kernel.assume(overM)).flatMap(rules.existsElim(_, n, withC))
+          elimM <- LogicError.lift(Kernel.assume(overC)).flatMap(rules.existsElim(_, m, elimN))
+          elimC <- rules.existsElim(found, c, elimM)
+        } yield elimC
+      }
+      result <- closeOver(steps, opened, List(interior(G), interior(F), relative(G), relative(F), "a:real < b:real"),
+        List("f:real -> real", "g:real -> real", "a:real", "b:real"))
     } yield result
   }
 
