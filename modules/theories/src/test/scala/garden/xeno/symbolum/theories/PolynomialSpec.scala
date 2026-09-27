@@ -301,7 +301,10 @@ class PolynomialSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenProp
     // the forms differ, which is a different finding from "this was not the shape I needed" and now
     // has its own case carrying both terms.
     ring.prove("!x:real. x + x = 3 * x").left.map(_.getClass) shouldBe Left(classOf[NotEqualTo])
-    ring.prove("!x:real. x * inv x = 1").left.map(_.getClass) shouldBe Left(classOf[NotEqualTo])
+    // Refused over the atom `inv x`, which is not free, so not decided: `NotEqualAsRead` since
+    // 2026-09-27, Mycelium card `7bf9d8a2`. The claim is false at zero, and a difference over
+    // `x` and `inv x` cannot tell that apart from `inv 0 = 0`, which is true.
+    ring.prove("!x:real. x * inv x = 1").left.map(_.getClass) shouldBe Left(classOf[NotEqualAsRead])
   }
 
   "The theory it works in" should "still assert only the reals' axioms" in {
