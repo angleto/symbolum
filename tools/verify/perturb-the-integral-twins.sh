@@ -9,9 +9,9 @@
 #
 #   1. A twin goes missing: `CONTINUOUS_INTEGRAL_WITHIN` is published under another name.
 #      Expect red on the census, naming `CONTINUOUS_INTEGRAL`.
-#   2. The pending entry is dropped: `TAYLOR` is then a two-sided fact without a twin and without a
-#      card. Expect red on the census, naming `TAYLOR`, which also shows the selector sees TAYLOR's
-#      hypothesis through its two implications.
+#   2. `TAYLOR_WITHIN` is published under another name: `TAYLOR` is then a two-sided fact without a
+#      twin, and `Pending` has been empty since that twin landed. Expect red on the census, naming
+#      `TAYLOR`, which also shows the selector sees TAYLOR's hypothesis through its two implications.
 #   3. The edge, and the expectation is GREEN: `HAS_INTEGRAL_DERIVATIVE_WITHIN` is published under
 #      another name. Its two-sided form's hypothesis is a two-sided DERIVATIVE over the interval,
 #      which the census does not count by its own docstring (card 3caa8541 owns that class), so the
@@ -19,9 +19,13 @@
 #
 # WHAT WAS SEEN, 2026-09-27, at 4e71a188 (7.0 at 2cb685b7 plus this harness and the spec's price
 # read through `Real.spent`). Control green, 5 of 5. Perturbation 1 red on the census alone, 4 of 5,
-# clue "no _WITHIN twin and no card owing one: TAYLOR, CONTINUOUS_INTEGRAL". Perturbation 2 red on
-# the census alone, clue "TAYLOR". Perturbation 3 green, 5 of 5, as expected: the census does not
-# see a missing twin of a fact whose interval hypothesis is a derivative. Every restore verified.
+# clue "no _WITHIN twin and no card owing one: TAYLOR, CONTINUOUS_INTEGRAL" (TAYLOR was pending then
+# and is listed with every missing twin). Perturbation 3 green, 5 of 5, as expected: the census does
+# not see a missing twin of a fact whose interval hypothesis is a derivative. Every restore verified.
+# Perturbation 2 ran then in another form, dropping the entry `Map("TAYLOR" -> "3b7c74be")` from
+# `Pending`, and went red on the census alone with the clue "TAYLOR". `TAYLOR_WITHIN` landed on 7.0
+# the same hour and emptied `Pending`, so the perturbation now renames the twin instead; in this form
+# it has not been run yet.
 #
 # The strings are literal. perturb.sh REFUSES a perturbation that did not apply rather than running
 # against unperturbed code.
@@ -36,7 +40,6 @@ cd "$WT" || exit 2
 
 LOG="$OUT/integral-twins.log"
 THEORIES=modules/theories/src/main/scala/garden/xeno/symbolum/theories
-TESTS=modules/theories/src/test/scala/garden/xeno/symbolum/theories
 CENSUS='theories/testOnly garden.xeno.symbolum.theories.IntegralWithinSpec'
 
 run() { n="$1"; shift
@@ -55,9 +58,9 @@ run "1-a-twin-goes-missing" "$THEORIES/Integral.scala" \
   'val ContinuousIntegralWithin: String = "CONTINUOUS_INTEGRAL_RELATIVE"' \
   -- ./tools/sbt -batch "$CENSUS"
 
-run "2-the-pending-entry-is-dropped" "$TESTS/IntegralWithinSpec.scala" \
-  'val Pending = Map("TAYLOR" -> "3b7c74be")' \
-  'val Pending = Map.empty[String, String]' \
+run "2-taylor-loses-its-twin" "$THEORIES/Derivative.scala" \
+  'val TaylorWithin: String = "TAYLOR_WITHIN"' \
+  'val TaylorWithin: String = "TAYLOR_RELATIVE"' \
   -- ./tools/sbt -batch "$CENSUS"
 
 run "3-a-derivative-twin-goes-missing-expect-green" "$THEORIES/Integral.scala" \

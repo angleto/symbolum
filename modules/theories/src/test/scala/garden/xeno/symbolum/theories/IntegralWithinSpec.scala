@@ -92,8 +92,10 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
     // `Derivation.axiomsOf` on 2026-09-26 and meaningful then; since `docs/adr/0053` proved the
     // sixteen from the cuts, the bare reading answers the foundation's axioms for every fact about
     // the reals, so an equality of two such readings no longer separated anything. The verification
-    // of card 6257d0da (second round, 2026-09-27) measured that and moved the assertion here; the
-    // non-vacuity below is what a reading that answers the same for everything cannot pass.
+    // of card 6257d0da (second round, 2026-09-27, at 7.0 2cb685b7) measured it: the bare reading
+    // gave CONTINUOUS_HAS_INTEGRAL_WITHIN and HAS_INTEGRAL_LINEAR the same three axioms, where
+    // `Real.spent` gives seventeen and sixteen. The non-vacuity below is what a reading that answers
+    // the same for everything cannot pass.
     for ((relative, twoSided) <- Vector(
         Integral.ContinuousHasWithin -> Integral.ContinuousHas,
         Integral.ContinuousIntegralWithin -> Integral.ContinuousIntegral,
