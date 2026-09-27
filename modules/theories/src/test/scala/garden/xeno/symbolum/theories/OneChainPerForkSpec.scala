@@ -23,7 +23,8 @@ import scala.jdk.CollectionConverters.*
  * guards the property rather than the one suite that once broke it.
  *
  * Seen red on 2026-09-27 with a call appended to `ChainSpec`'s code, naming that file, and green
- * with the same call in a comment, through scala-cli over the classes of the tree that landed it;
+ * with the same call in a comment, through scala-cli reading this tree's sources over another
+ * worktree's compiled classes, which the spec does not depend on since it reads text;
  * `tools/verify/perturb-one-chain-per-fork.sh` is the same pair through sbt.
  *
  * WHAT IT DOES NOT COVER. A call spelled otherwise, `construct(` after an `import Chain.*`, or a
