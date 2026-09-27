@@ -87,3 +87,4 @@ the rejected option attractive, and they will.
 | [0054](0054-a-fractran-step-is-a-fold-into-bool-and-a-run-is-reach.md) | A FRACTRAN step is a fold into `bool`, and a run is `REACH` | accepted |
 | [0055](0055-a-width-bound-that-says-something-is-on-an-expanding-graph.md) | A width bound that says something is on an expanding graph, and the one on the complete principle is a one-step argument | accepted, extends 0048 and corrects one sentence of it |
 | [0056](0056-the-second-source-of-squares-is-a-gram-matrix-and-needs-no-search.md) | The second source of squares is a Gram matrix, and at degree two it needs no search | accepted, extends 0032 |
+| [0058](0058-one-instance-per-type.md) | One instance per type, because a chain spelt 808 types with 4.4 million objects | accepted |

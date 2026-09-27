@@ -231,6 +231,13 @@ class StyleSpec extends AnyFlatSpec with Matchers {
    * `Matcher` the caller never shares.
    */
   private val ReviewedMutableState: Map[String, String] = Map(
+    "Type.scala" ->
+      ("the table that gives every type one instance, since `docs/adr/0058`: a whole chain spelt 808 " +
+        "distinct types with 4.4 million objects, about 280 MB of a 700 MB chain, and the fork of " +
+        "`theories/test` died of it. Keyed by structural equality, which is also what every " +
+        "comparison of two types still uses, so the instance a caller holds decides nothing; " +
+        "`putIfAbsent` makes the first insertion safe under concurrent suites, and the table grows " +
+        "with the distinct types a process spells and never with their uses"),
     "Derivation.scala" ->
       ("an identity-keyed set, so that two structurally equal theorems built by different " +
         "derivations count as two nodes; a `Set` on equality would fold `trans(refl p, refl p)` " +
