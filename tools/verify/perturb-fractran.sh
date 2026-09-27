@@ -25,6 +25,12 @@
 #   2. Red at 9 of 10, exit 1, as predicted, and at the control named above: `unexpected
 #      refusal: expected a value below 0, and 0 is not one`, the remainder of 30 by 3, which
 #      `Digits.below` will not put above zero.
+#
+# ADDED BY THE VERIFICATION, 2026-09-27. Every run now takes `FractranSemanticsSpec` beside
+# `FractranSpec`, so the counts above are FractranSpec's alone, and there is a third perturbation:
+#
+#   3. The interpreter proposes the LAST fraction that applies rather than the first. Expected RED,
+#      and red by refusal: the kernel is asked for steps the definition does not make.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
@@ -35,7 +41,7 @@ restores and verifies the restore; see tools/verify/README.md}
 cd "$WT" || exit 2
 
 SOURCE=modules/theories/src/main/scala/garden/xeno/symbolum/theories/Fractran.scala
-SPEC='theories/testOnly garden.xeno.symbolum.theories.FractranSpec'
+SPEC='theories/testOnly garden.xeno.symbolum.theories.FractranSpec garden.xeno.symbolum.theories.FractranSemanticsSpec'
 
 echo "################ 0-control" >> "$OUT/fractran.log"
 ./tools/sbt -batch "$SPEC" >> "$OUT/fractran.log" 2>&1
@@ -58,5 +64,14 @@ echo "################ 2-a-fraction-misread" >> "$OUT/fractran.log"
   'if (q != 0 && (n * p) % q == 0 && !(p == 5 && q == 3))' \
   -- ./tools/sbt -batch "$SPEC" >> "$OUT/fractran.log" 2>&1
 echo "### exit $? for 2-a-fraction-misread" >> "$OUT/fractran.log"
+
+# 3. Expected red. The interpreter proposes the last applicable fraction rather than the first,
+# which reads "first" as an order the fold does not have.
+echo "################ 3-last-not-first" >> "$OUT/fractran.log"
+"$P" "$SOURCE" \
+  'fractions.collectFirst { case (p, q) if q != 0' \
+  'fractions.reverse.collectFirst { case (p, q) if q != 0' \
+  -- ./tools/sbt -batch "$SPEC" >> "$OUT/fractran.log" 2>&1
+echo "### exit $? for 3-last-not-first" >> "$OUT/fractran.log"
 
 cd "$WT" && git status --porcelain >> "$OUT/fractran.log"
