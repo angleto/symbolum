@@ -118,9 +118,11 @@ class LinarithSquareBoundarySpec extends AnyFlatSpec with Matchers {
       // one is printed `x * y`, which the first run of this test on 2026-09-27 found and this set
       // now says: the order of the letters in the text is what is varied, not the atom.
       "!b:real a:real. b * b + a * a >= 2 * (a * b)" -> Set("x * y", "y * x"),
-      "!x:real y:real. x * x + y * y >= x * x * y" -> Set("x * x * y", "y * x * x", "x * y * x"),
+      // A product of three or four factors is printed right-nested, `x * (x * y)`, which is how
+      // `LinearForm` keys the atom; the set holds that spelling and the obvious ones beside it.
+      "!x:real y:real. x * x + y * y >= x * x * y" -> Set("x * (x * y)", "x * x * y"),
       "!x:real y:real. 0 < y ==> x * x + y * y >= 2 * (x * y)" -> Set("x * y", "y * x"),
-      "!x:real y:real. 0 < y ==> x * x * y * y >= 0" -> Set("x * x * y * y", "y * y * x * x")
+      "!x:real y:real. 0 < y ==> x * x * y * y >= 0" -> Set("x * (x * (y * y))", "x * x * y * y")
     ).flatMap { case (text, expected) =>
       // Every case is asked before anything is asserted, so a red names all the misses at once
       // rather than hiding the ones after the first.
