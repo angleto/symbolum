@@ -189,6 +189,33 @@ object Derivative {
   val MeanValue: String = "MEAN_VALUE"
 
   /**
+   * `|- !f g a b. a < b ==> (!x. a <= x /\ x <= b ==> continuous f x) ==> (!x. a <= x /\ x <= b ==> continuous g x) ==>
+   * (!x. a < x /\ x < b ==> ?m. derivative f x m) ==> (!x. a < x /\ x < b ==> ?m. derivative g x m) ==>
+   * ?c m n. a < c /\ c < b /\ derivative f c m /\ derivative g c n /\ (f b - f a) * n = (g b - g a) * m`
+   *
+   * Cauchy's mean value theorem, with no quotient, which is what lets it ask nothing of `g`'s
+   * slope: Rolle at `(g b - g a) * f y - (f b - f a) * g y`, which takes one value at both ends.
+   * [[MeanValue]] is the case `g = \y. y`. [[LHopital]] is what it is for.
+   */
+  val CauchyMeanValue: String = "CAUCHY_MEAN_VALUE"
+
+  /** [[CauchyMeanValue]] with continuity relative to `[a, b]`, for both functions. */
+  val CauchyMeanValueWithin: String = "CAUCHY_MEAN_VALUE_WITHIN"
+
+  /**
+   * `|- !f g df dg x l r. 0 < r ==>
+   * (!y. 0 < abs (y - x) /\ abs (y - x) < r ==> derivative f y (df y) /\ derivative g y (dg y) /\ ~(dg y = 0)) ==>
+   * continuous f x ==> continuous g x ==> f x = 0 ==> g x = 0 ==>
+   * tends (\y. df y / dg y) x l ==> tends (\y. f y / g y) x l`
+   *
+   * L'Hopital's rule for `0 / 0` at a point. `f` and `g` are differentiable on a punctured
+   * neighbourhood of `x`, where `g`'s slope never vanishes, and continuous at `x`, where both are
+   * zero. `LHopitalRule` is the derivation: [[CauchyMeanValue]] between `x` and each nearby `y`,
+   * and [[Rolle]] for `g y` not being zero there.
+   */
+  val LHopital: String = "LHOPITAL"
+
+  /**
    * `|- !f x m. derivative f x m ==> continuous f x`
    *
    * A function with a derivative at a point is continuous there. It is the bridge between the two
@@ -354,6 +381,21 @@ object Derivative {
         "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m) ==> " +
         "?c:real. ?m:real. a < c /\\ c < b /\\ derivative f c m /\\ f b - f a = m * (b - a)"),
     Continuous -> "!f:real -> real. !x:real. !m:real. derivative f x m ==> continuous f x",
+    CauchyMeanValue ->
+      ("!f:real -> real. !g:real -> real. !a:real. !b:real. a < b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> continuous f x) ==> (!x:real. a <= x /\\ x <= b ==> continuous g x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m) ==> (!x:real. a < x /\\ x < b ==> ?m:real. derivative g x m) ==> " +
+        "?c:real. ?m:real. ?n:real. a < c /\\ c < b /\\ derivative f c m /\\ derivative g c n /\\ (f b - f a) * n = (g b - g a) * m"),
+    CauchyMeanValueWithin ->
+      ("!f:real -> real. !g:real -> real. !a:real. !b:real. a < b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x) ==> (!x:real. a <= x /\\ x <= b ==> continuous_within g a b x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m) ==> (!x:real. a < x /\\ x < b ==> ?m:real. derivative g x m) ==> " +
+        "?c:real. ?m:real. ?n:real. a < c /\\ c < b /\\ derivative f c m /\\ derivative g c n /\\ (f b - f a) * n = (g b - g a) * m"),
+    LHopital ->
+      ("!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !x:real. !l:real. !r:real. 0 < r ==> " +
+        "(!y:real. 0 < abs (y - x) /\\ abs (y - x) < r ==> derivative f y (df y) /\\ derivative g y (dg y) /\\ ~(dg y = 0)) ==> " +
+        "continuous f x ==> continuous g x ==> f x = 0 ==> g x = 0 ==> " +
+        "tends (\\y:real. df y / dg y) x l ==> tends (\\y:real. f y / g y) x l"),
     ProductRule ->
       ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. derivative f x m ==> derivative g x n ==> " +
         "derivative (\\y:real. f y * g y) x (m * g x + f x * n)"),
@@ -469,6 +511,12 @@ object Derivative {
       continuousIdentity <- continuity.fact(Continuity.Identity)
       meanValue <- meanValueTheorem(steps, continuity, continuousLinear, continuousIdentity, identity, linear, unique, rolle)
       continuous <- continuousWhereDifferentiable(steps, reals, magnitude, continuity)
+      cauchy <- cauchyMeanValue(steps, continuousLinear, linear, unique, rolle)
+      field <- Field.construct(transcendental.series.ring.arithmetic)
+      tendsDefinition <- continuity.definition(Continuity.Tends)
+      total <- reals.axiom("LT_TOTAL")
+      lhopital <- LHopitalRule.prove(
+        LHopitalRule.Sources(steps, magnitude, field, tendsDefinition, total, continuous, rolle, unique, cauchy))
       productRuleFact <- productRule(steps, reals, magnitude, continuity, continuous)
       chainRule <- chainRuleFact(steps, reals, magnitude, continuity, continuous)
       nearLine <- logarithm.fact(Logarithm.NearLine)
@@ -485,7 +533,7 @@ object Derivative {
       relative <- taylor.get(Taylor).toRight(MissingDefinition(Taylor)).flatMap(taylorFact =>
         DerivativeWithin.prove(steps, magnitude, continuity, withinDefinition, Map(
           Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing,
-          Taylor -> taylorFact)))
+          Taylor -> taylorFact, CauchyMeanValue -> cauchy)))
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,
@@ -498,6 +546,8 @@ object Derivative {
         Unique -> unique,
         MeanValue -> meanValue,
         Continuous -> continuous,
+        CauchyMeanValue -> cauchy,
+        LHopital -> lhopital,
         ProductRule -> productRuleFact,
         ChainRule -> chainRule,
         Exponential -> exponential,
@@ -1357,6 +1407,129 @@ object Derivative {
       ).foldLeft[Either[LogicError, Kernel.Thm]](Right(eliminated)) { (acc, text) =>
         for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
       }.flatMap(rules.genAll(_, List(f, a, b)))
+    } yield closed
+  }
+
+  /**
+   * [[CauchyMeanValue]]: Rolle at `\y. p * f y + q * g y` with `p = g b - g a` and `q = 0 - (f b - f a)`,
+   * which is level at the ends; at Rolle's point its slope `p * m + q * n` is zero by uniqueness.
+   */
+  private def cauchyMeanValue(
+    steps: Continuity.Steps,
+    continuousLinear: Kernel.Thm,
+    derivativeLinear: Kernel.Thm,
+    unique: Kernel.Thm,
+    rolle: Kernel.Thm
+  ): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val x = Term.variable("x", Reals)
+    val c = Term.variable("c", Reals)
+    val m = Term.variable("m", Reals)
+    val n = Term.variable("n", Reals)
+    val p = "(g:real -> real) b:real - g a:real"
+    val q = "0 - ((f:real -> real) b:real - f a:real)"
+    val combination = s"\\y:real. ($p) * (f:real -> real) y + ($q) * (g:real -> real) y"
+    val Goal = "?c:real. ?m:real. ?n:real. a:real < c /\\ c < b:real /\\ derivative (f:real -> real) c m /\\ " +
+      "derivative (g:real -> real) c n /\\ (f b - f a) * n = (g b - g a) * m"
+    val hypotheses = List(
+      "!x:real. a:real < x /\\ x < b:real ==> ?m:real. derivative (g:real -> real) x m",
+      "!x:real. a:real < x /\\ x < b:real ==> ?m:real. derivative (f:real -> real) x m",
+      "!x:real. a:real <= x /\\ x <= b:real ==> continuous (g:real -> real) x",
+      "!x:real. a:real <= x /\\ x <= b:real ==> continuous (f:real -> real) x",
+      "a:real < b:real")
+
+    /** The combination's slope at `point` from `f`'s `m` and `g`'s `n` there, both assumed. */
+    def slopeAt(point: FVar): Either[LogicError, Kernel.Thm] =
+      for {
+        pTerm <- real(p)
+        qTerm <- real(q)
+        slopeF <- assume(s"derivative (f:real -> real) (${point.name}:real) (m:real)")
+        slopeG <- assume(s"derivative (g:real -> real) (${point.name}:real) (n:real)")
+        result <- rules.specAll(derivativeLinear, List(f, g, point, m, n, pTerm, qTerm)).flatMap(reduced)
+          .flatMap(mp(_, Right(slopeF), Right(slopeG)))
+      } yield result
+
+    def reduced(theorem: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+      Conv.betaNormalise(theorem.conclusion).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, theorem)))
+
+    for {
+      pTerm <- real(p)
+      qTerm <- real(q)
+      h <- Parser.term(theory, notation, combination, Functions)
+      ordered <- assume("a:real < b:real")
+      continuousF <- assume("!x:real. a:real <= x /\\ x <= b:real ==> continuous (f:real -> real) x")
+      continuousG <- assume("!x:real. a:real <= x /\\ x <= b:real ==> continuous (g:real -> real) x")
+      differentiableF <- assume("!x:real. a:real < x /\\ x < b:real ==> ?m:real. derivative (f:real -> real) x m")
+      differentiableG <- assume("!x:real. a:real < x /\\ x < b:real ==> ?m:real. derivative (g:real -> real) x m")
+
+      hContinuous <- for {
+        member <- proposition("a:real <= x:real /\\ x <= b:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        atF <- rules.spec(x, continuousF).flatMap(rules.mp(_, assumed))
+        atG <- rules.spec(x, continuousG).flatMap(rules.mp(_, assumed))
+        combined <- rules.specAll(continuousLinear, List(f, g, x, pTerm, qTerm)).flatMap(reduced).flatMap(mp(_, Right(atF), Right(atG)))
+        closed <- rules.disch(member, combined).flatMap(rules.gen(x, _))
+      } yield closed
+
+      hDifferentiable <- for {
+        member <- proposition("a:real < x:real /\\ x < b:real")
+        assumed <- LogicError.lift(Kernel.assume(member))
+        existsF <- rules.spec(x, differentiableF).flatMap(rules.mp(_, assumed))
+        existsG <- rules.spec(x, differentiableG).flatMap(rules.mp(_, assumed))
+        slope <- slopeAt(x)
+        value <- real(s"($p) * m:real + ($q) * n:real")
+        witnessed <- proposition(s"?m:real. derivative ($combination) x:real m")
+          .flatMap(t => logic.destExistsPredicate(t).toRight(NotOfForm("an existential", t)))
+          .flatMap(rules.existsIntro(_, value, slope))
+        withoutG <- rules.existsElim(existsG, n, witnessed)
+        withoutF <- rules.existsElim(existsF, m, withoutG)
+        closed <- rules.disch(member, withoutF).flatMap(rules.gen(x, _))
+      } yield closed
+
+      level <- at(lemma("!A:real B:real C:real D:real. (D - C) * A + (0 - (B - A)) * C = (D - C) * B + (0 - (B - A)) * D"),
+        "(f:real -> real) a:real", "(f:real -> real) b:real", "(g:real -> real) a:real", "(g:real -> real) b:real")
+      flatSomewhere <- rules.specAll(rolle, List(h, a, b)).flatMap(reduced)
+        .flatMap(mp(_, Right(ordered), Right(hContinuous), Right(hDifferentiable), Right(level)))
+
+      found <- for {
+        inside <- assume(s"a:real < c:real /\\ c < b:real /\\ derivative ($combination) c 0")
+        above <- rules.conjElim1(inside)
+        below <- rules.conjElim2(inside).flatMap(rules.conjElim1)
+        flat <- rules.conjElim2(inside).flatMap(rules.conjElim2)
+        member <- rules.conjIntro(above, below)
+        existsF <- rules.spec(c, differentiableF).flatMap(rules.mp(_, member))
+        existsG <- rules.spec(c, differentiableG).flatMap(rules.mp(_, member))
+        slopeF <- assume("derivative (f:real -> real) c:real m:real")
+        slopeG <- assume("derivative (g:real -> real) c:real n:real")
+        slope <- slopeAt(c)
+        value <- real(s"($p) * m:real + ($q) * n:real")
+        zero <- real("0:real")
+        vanishing <- rules.specAll(unique, List(h, c, value, zero)).flatMap(mp(_, Right(slope), Right(flat)))
+        balance <- at(lemma("!A:real B:real C:real D:real m:real n:real. (D - C) * m + (0 - (B - A)) * n = 0 ==> (B - A) * n = (D - C) * m"),
+          "(f:real -> real) a:real", "(f:real -> real) b:real", "(g:real -> real) a:real", "(g:real -> real) b:real", "m:real", "n:real")
+          .flatMap(rules.mp(_, vanishing))
+        conjunction <- conj(Right(above), conj(Right(below), conj(Right(slopeF), conj(Right(slopeG), Right(balance)))))
+        innermost <- proposition("?n:real. a:real < c:real /\\ c < b:real /\\ derivative (f:real -> real) c m:real /\\ " +
+          "derivative (g:real -> real) c n /\\ (f b - f a) * n = (g b - g a) * m")
+          .flatMap(t => logic.destExistsPredicate(t).toRight(NotOfForm("an existential", t)))
+          .flatMap(rules.existsIntro(_, n, conjunction))
+        middle <- proposition("?m:real. ?n:real. a:real < c:real /\\ c < b:real /\\ derivative (f:real -> real) c m /\\ " +
+          "derivative (g:real -> real) c n /\\ (f b - f a) * n = (g b - g a) * m")
+          .flatMap(t => logic.destExistsPredicate(t).toRight(NotOfForm("an existential", t)))
+          .flatMap(rules.existsIntro(_, m, innermost))
+        outer <- existential(Goal).flatMap(rules.existsIntro(_, c, middle))
+        withoutG <- rules.existsElim(existsG, n, outer)
+        result <- rules.existsElim(existsF, m, withoutG)
+      } yield result
+
+      eliminated <- rules.existsElim(flatSomewhere, c, found)
+      closed <- hypotheses.foldLeft[Either[LogicError, Kernel.Thm]](Right(eliminated)) { (acc, text) =>
+        for { theorem <- acc; hypothesis <- proposition(text); next <- rules.disch(hypothesis, theorem) } yield next
+      }.flatMap(rules.genAll(_, List(f, g, a, b)))
     } yield closed
   }
 

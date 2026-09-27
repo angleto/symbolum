@@ -356,6 +356,9 @@ object Spellings {
       // function and the point are each bracketed by the template rather than by the context.
       .delimited("continuous", 2, "\\operatorname{cont}(#1, #2)")
       .delimited("continuous_within", 4, "\\operatorname{cont}_{[#2, #3]}(#1, #4)")
+      // The limit of a function at a point, in words for `derivative`'s reason: the constant is a
+      // proposition, and `\lim_{y \to x} f y = l` inside a delimited template hides what a negation denies.
+      .delimited("tends", 3, "\\operatorname{tends}(#1, #2, #3)")
       // The derivative at a point, in words as continuity is and for the same reason. Not
       // `f'(x) = m`: the constant is a proposition, and an equation inside a delimited template
       // reads wrongly under a negation, where `\neg f'(x) = 0` hides which side is denied.
