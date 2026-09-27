@@ -17,6 +17,12 @@
 #      which the census does not count by its own docstring (card 3caa8541 owns that class), so the
 #      census stays green. This is the measurement of the scope limit, not a guard firing.
 #
+# WHAT WAS SEEN, 2026-09-27, at 4e71a188 (7.0 at 2cb685b7 plus this harness and the spec's price
+# read through `Real.spent`). Control green, 5 of 5. Perturbation 1 red on the census alone, 4 of 5,
+# clue "no _WITHIN twin and no card owing one: TAYLOR, CONTINUOUS_INTEGRAL". Perturbation 2 red on
+# the census alone, clue "TAYLOR". Perturbation 3 green, 5 of 5, as expected: the census does not
+# see a missing twin of a fact whose interval hypothesis is a derivative. Every restore verified.
+#
 # The strings are literal. perturb.sh REFUSES a perturbation that did not apply rather than running
 # against unperturbed code.
 set -u
