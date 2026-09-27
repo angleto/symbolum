@@ -70,17 +70,22 @@ class ConvergenceSpec extends AnyFlatSpec with Matchers {
    * case above, a numeral against a numeral, which stays decided.
    */
   it should "not decide against a value it could only compare as a polynomial in an atom" in {
+    // The third column is what the comparison inside said. It was the decided `NotEqualTo` for
+    // both until 2026-09-27 (card `7bf9d8a2`), when RING stopped deciding over an atom that is not
+    // free: `exp 0` is such an atom and arrives as `NotEqualAsRead`, while `2 * c` against `3` is a
+    // difference over the free variable `c`, which RING still decides, and it is `Convergence` that
+    // does not read a value with a free variable in it as a number.
     Vector(
-      "converges (Sum (\\i:num. Power (0:real) i / real_of_num (NUM_FACT i))) 1" -> "exp",
-      "converges (Sum (\\i:num. c * Power ((1:real) / 2) i)) 3" -> "c"
-    ).foreach { case (text, atom) =>
+      ("converges (Sum (\\i:num. Power (0:real) i / real_of_num (NUM_FACT i))) 1", "exp", classOf[NotEqualAsRead]),
+      ("converges (Sum (\\i:num. c * Power ((1:real) / 2) i)) 3", "c", classOf[NotEqualTo])
+    ).foreach { case (text, atom, compared) =>
       withClue(s"$text: ") {
         refused(text) match {
           case error @ ValueUnidentified(_, found, reason) =>
             error.standing shouldBe LogicError.Standing.Unread
             chain.widest.show(found) should include(atom)
-            // What the comparison said is kept, and it is the decided refusal this case replaced.
-            reason shouldBe a[NotEqualTo]
+            // What the comparison said is kept, as the column above names it.
+            reason.getClass shouldBe compared
           case other => fail(s"expected an unidentified value, got ${other.message}")
         }
       }

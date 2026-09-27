@@ -73,9 +73,11 @@ class FieldSpec extends AnyFlatSpec with Matchers {
 
   it should "refuse an equation that is not an identity even where the denominator is not zero" in {
     // Assuming `~(x = 0)` and `~(y = 0)` does not make this true, and the tactic does not pretend
-    // otherwise: what it assumes buys cancellation and nothing else.
+    // otherwise: what it assumes buys cancellation and nothing else. The refusal is not a decision
+    // since 2026-09-27 (card `7bf9d8a2`): the forms differ over `inv x` and `inv y`, atoms that are
+    // not free, so it is `NotEqualAsRead`.
     field.prove("!x:real y:real. x / y = y / x").left.map(_.getClass) shouldBe
-      Left(classOf[NotEqualTo])
+      Left(classOf[NotEqualAsRead])
   }
 
   it should "take an inverse of a product apart, and charge only for the factors in doubt" in {

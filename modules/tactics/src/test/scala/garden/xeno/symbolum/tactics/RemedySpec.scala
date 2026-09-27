@@ -624,6 +624,8 @@ class RemedySpec extends AnyFlatSpec with Matchers {
       // A value established and not identified with the one asked about, whose inner reason is a
       // decided comparison and whose own standing is not: a person looks, and nothing is settled.
       ValueUnidentified(x, Term.variable("y", realType), NotEqualTo(x, Term.variable("y", realType))),
+      // Two forms that differ over an atom that is not free: a person looks, and it is not decided.
+      NotEqualAsRead(x, Term.variable("y", realType), Vector(x)),
       // Both arms of the one refusal that carries another: a caller's procedure that refused, and a
       // caller's procedure that returned something else. The remedy is read off the inner reason, so
       // the branch is only worth running when the two inner reasons take different arms there.
