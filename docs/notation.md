@@ -129,7 +129,7 @@ reader will meet both numbers on the same page:
 
 Neither figure is wrong when they disagree; they answer different questions about different
 populations, and no check on a single number catches the substitution. The reals as a development
-ask for sixteen; a given theorem about the reals may spend three of them and no more.
+ask for three since `docs/adr/0053`; `LT_IRREFLEXIVE`, proved from the cuts, spends none of them.
 
 ## Why the logic is higher-order
 

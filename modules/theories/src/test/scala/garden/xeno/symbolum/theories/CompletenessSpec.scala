@@ -112,7 +112,7 @@ class CompletenessSpec extends AnyFlatSpec with Matchers {
     theorem.conclusion shouldBe goal
     theorem.hypotheses shouldBe empty
 
-    val reached = Derivation.axiomsOf(theorem)
+    val reached = Real.spent(theorem)
     withClue(s"the proof reaches ${reached.size} axioms and completeness is not among them\n") {
       reached should contain(completeness.conclusion)
     }

@@ -83,15 +83,15 @@ class LinarithProductsSpec extends AnyFlatSpec with Matchers {
 
   it should "come from LT_TOTAL and not from a classical step" in {
     // There is no excluded middle here to reach for, and none is needed: the three cases of
-    // trichotomy are one of the sixteen axioms, and each case is an ordinary run with one more
+    // trichotomy are one of the sixteen, and each case is an ordinary run with one more
     // fact. So this reaches no axiom the procedure did not already reach.
     val theorem = linarith
       .prove("!n:real d:real b:real. n * d = b /\\ 0 < n /\\ 0 < b ==> 0 < d")
       .fold(error => fail(error.message), identity)
 
     theorem.hypotheses shouldBe empty
-    garden.xeno.symbolum.kernel.Derivation
-      .axiomsOf(theorem)
+    Real
+      .spent(theorem)
       .map(Real.standard.show) should contain("!x:real. !y:real. x < y \\/ x = y \\/ y < x")
   }
 

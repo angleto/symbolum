@@ -94,12 +94,12 @@ class CriteriaSpec extends AnyFlatSpec with Matchers {
 
   it should "reach no supremum, because a divergence is read off the terms and not obtained" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
-    Derivation.axiomsOf(fact(Limit.TermTest)) should not contain completeness
-    Derivation.axiomsOf(fact(Limit.TermsVanish)) should not contain completeness
+    Real.spent(fact(Limit.TermTest)) should not contain completeness
+    Real.spent(fact(Limit.TermsVanish)) should not contain completeness
 
     // The convergence half does, through monotone convergence under the powers: the one place the
     // geometric series obtains a limit rather than carrying one it was handed.
-    Derivation.axiomsOf(fact(Limit.GeometricConverges)) should contain(completeness)
+    Real.spent(fact(Limit.GeometricConverges)) should contain(completeness)
   }
 
   /**

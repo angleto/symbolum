@@ -122,12 +122,13 @@ from. `MirrorSpellingSpec` pins all of that, the term identity first.
 
 ## The theory
 
-Sixteen axioms, in [`Real.scala`](../modules/theories/src/main/scala/garden/xeno/symbolum/theories/Real.scala),
-stating a complete ordered field, and a test asserts the theory holds exactly those and in that
-order. They are the whole non-definitional content of the *theory*; since 2026-09-10 there are two
-more about the *logic*, a choice operator and eta in `Classical.scala`, which a development takes
-only by asking for them. `docs/adr/0007` is the record of the first and `docs/adr/0009` of the
-second, and the subsection below is what the pair of them buys and what it did not have to.
+Sixteen statements, in [`Real.scala`](../modules/theories/src/main/scala/garden/xeno/symbolum/theories/Real.scala),
+stating a complete ordered field, and a test pins them and in that order. They were axioms until
+2026-09-26 and are theorems since, proved about the cuts on the rationals under their old names
+(`docs/adr/0053`), so `axiom("ADD_SYM")` still answers. What a development about the reals is asked
+to believe is the three the naturals cost: a choice operator and eta about the *logic*, in
+`Classical.scala`, and infinity. `docs/adr/0007` is the record of the first and `docs/adr/0009` of
+the second, and the subsection below is what the pair of them buys and what it did not have to.
 
 ```
 ADD_SYM         !x y. x + y = y + x
@@ -207,8 +208,7 @@ off the derivations themselves. A change that moves them fails the suite naming 
 The last two rows are the conditional, and they are the reason the table has nine. `COND p a b` is
 **defined**, not assumed: `select` names the thing satisfying `(p ==> x = a) /\ (~p ==> x = b)`, and
 something satisfies that whichever way `p` falls, which is the content of the two equations. So the
-chain gained a conditional on 2026-09-12 and the count of nineteen did not move, which `ChainSpec`
-asserts. Before that date there was no conditional constant anywhere in it, and a function defined
+chain gained a conditional on 2026-09-12 and its count of axioms, nineteen that day, did not move. Before that date there was no conditional constant anywhere in it, and a function defined
 by cases had nothing at all to write its cases with.
 
 They rest on `SELECT` and never reach `EXCLUDED_MIDDLE`, which is worth a line. The obvious proof of
@@ -238,7 +238,7 @@ false statement, and writing the De Morgan entries without the parentheses is ho
 
 ## What the chain holds, development by development
 
-The sixteen axioms above are what the *reals* are, and most of what this system can state is not
+The sixteen statements above are what the *reals* are, and most of what this system can state is not
 about them. The naturals, the pair, the word, the matrix, number theory on `num`, the arithmetisation
 of this system's own syntax and the first analysis are developments stacked into one chain, and that
 is what lets a claim name a constant of any of them: they share one signature rather than each
@@ -255,7 +255,7 @@ lands red here rather than going unmentioned.
 | Development | What it puts in the signature | What it is for |
 |---|---|---|
 | `Classical` | `COND` | A case split about a proposition, and a function defined by cases. It holds the excluded middle, both De Morgans, double negation, function extensionality and `NOT_FORALL`, every one of them derived; what it costs is the two axioms of the logic, `SELECT` and `ETA` |
-| `Real` | `+`, `*`, `-`, `/`, `inv`, `<`, `<=`, `0`, `1` and the two numeral bits | The complete ordered field of the sixteen axioms above. Subtraction, division, the non-strict order and the bits are definitions, which is why what a reader is asked to believe is sixteen and not twenty-one |
+| `Real` | `+`, `*`, `-`, `/`, `inv`, `<`, `<=`, `0`, `1` and the two numeral bits | The complete ordered field of the sixteen statements above, each a theorem about the cuts. The seven primitives are defined as the operations on cuts they name, and subtraction, division, the non-strict order and the bits as abbreviations over them |
 | `Positivity` | nothing | Three facts about `0 <` that `Order` re-exports. The listing shows both holders rather than one, because a lookup returning the first would be picking by map iteration order |
 | `Order` | nothing | The order worked out: antisymmetry, the case split, cancellation on both sides, `SQUARE_NONNEG`, and the two lemmas that turn a negated comparison into the other one without costing anything classical |
 | `Natural` | the type `num`, `ZERO`, `SUC`, and the type `ind` with `IND_0` and `IND_SUC` under it | The naturals as a **defined** type, carved out of an infinite one as the smallest inductive subset. Induction, Peano's other axioms and the recursion theorem are all derived here rather than assumed; what is assumed is `INFINITY`, and that is the whole of what the type costs |
@@ -775,7 +775,7 @@ theory" and the library looks empty rather than unreachable.
 
 ### The one that could not be used before
 
-`COMPLETENESS` is the only one of the sixteen axioms that quantifies over a predicate, and the only
+`COMPLETENESS` is the only one of the sixteen that quantifies over a predicate, and the only
 one that separates the reals from the rationals. Everything else in this development is true of the
 rationals word for word.
 
@@ -1452,24 +1452,21 @@ println(cost.render(cost.of("!x:real y:real. (x * y) / y = x").toOption.get).toO
 
 ```
 Conditional: !x:real. !y:real. x * y / y = x
-  1757 inferences over 8 axioms
+  1757 inferences over 3 axioms
   charges: ~(y = 0)
-  believed on: !x:real. !y:real. !z:real. x * (y + z) = x * y + x * z
-  believed on: !x:real. !y:real. !z:real. x * y * z = x * (y * z)
-  believed on: !x:real. !y:real. !z:real. x + y + z = x + (y + z)
-  believed on: !x:real. !y:real. x * y = y * x
-  believed on: !x:real. x * 1 = x
-  believed on: !x:real. x + -x = 0
-  believed on: !x:real. x + 0 = x
-  believed on: !x:real. ~(x = 0) ==> x * inv x = 1
+  believed on: !f:'a -> 'b. (\x:'a. f x) = f
+  believed on: !f:'a -> bool. !x:'a. f x ==> f (select f)
+  believed on: ?f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\ (!y:ind. ~(f y = x))
+  of the sixteen of the reals: ADD_ASSOC, ADD_ZERO, ADD_INVERSE, MUL_SYM, MUL_ASSOC, MUL_ONE, MUL_INVERSE, DISTRIBUTE
 ```
 
 Three facts about that claim, none of which a prover normally reports. It is **not true and not
 false**: it holds away from zero, and the condition is on the left of the turnstile where a reader
-sees it rather than in a comment. It is **believed on eight of the sixteen axioms**, and the eight
-absent are the interesting half: nothing about the order and nothing about completeness takes part
-in cancelling a denominator, and the inverse axiom appears exactly because one was cancelled. And
-it cost **1757 inferences**, which is what a second checker will have to replay.
+sees it rather than in a comment. It **rests on eight of the sixteen**, and the eight absent are the
+interesting half: nothing about the order and nothing about completeness takes part in cancelling a
+denominator, and the inverse law appears exactly because one was cancelled. And it cost **134457
+inferences**, which is what a second checker will have to replay: 1757 of them its own, and the rest
+the construction of those eight laws from the cuts, which it cites since `docs/adr/0053`.
 
 A claim that does not hold gets the other half of the report:
 
@@ -1854,8 +1851,8 @@ for {
 ```
 
 **Declaring costs nothing to believe.** A constant with no definition and no axiom about it proves
-exactly what its absence proves, so the theory still holds sixteen axioms and the scan that keeps
-`assertAxiom` in one file still finds it there. That is what makes this the cheap half of a domain
+exactly what its absence proves, so the theory still holds the axioms it held and the scan that
+keeps `assertAxiom` to its files still finds it there. That is what makes this the cheap half of a domain
 model.
 
 **The expensive half is not axioms either.** A model's assumptions belong on the left of the
@@ -1899,8 +1896,8 @@ Minimal(domain).prove(reads(
 Three things about that, in order of how easy each is to miss.
 
 **It costs zero axioms**, not few. The premises are on the left of the arrow where a reader can
-argue with them, the connectives are definitional extensions, and nothing reaches the sixteen, the
-choice operator or infinity.
+argue with them, the connectives are definitional extensions, and nothing reaches the choice
+operator, eta or infinity.
 
 **The case split is done by the machine.** *A gate means a review or a signature* is a disjunction
 and the argument has to go both ways round it. That is `Minimal` on the fragment with no negation in
@@ -2165,10 +2162,9 @@ cancellation.
 
    Both live in an extension beside `Logic.standard` rather than in it, so that a development can be
    asked which of its results need them. `Logic.standard` holds no axiom and proves exactly what
-   the empty theory proves, `Real.standard` holds the sixteen and neither of these two, and a
-   development over the naturals holds these two and infinity, which is three and is
-   `NaturalSpec`'s measurement rather than this document's. A chain holding both the reals and the
-   naturals holds nineteen, and that figure is `ChainSpec`'s.
+   the empty theory proves, and a development over the naturals holds these two and infinity,
+   which is three and is `NaturalSpec`'s measurement rather than this document's. The reals are
+   such a development since `docs/adr/0053` built them from the cuts, and so is the chain.
 
    **What is still not asserted, anywhere.** The third of HOL Light's three axioms is infinity, and
    it is not in the logic: it belongs with the naturals and `Natural.scala` has it. Nothing else

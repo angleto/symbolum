@@ -160,8 +160,25 @@ final class Library private (val entries: Vector[Library.Entry]) {
    * What this does **not** answer is "no earlier theorem touched it", which needs a memory of what
    * earlier theorems touched. That is the ledger's, not this class's: nothing here remembers.
    */
+  /**
+   * The statements of [[Library.RealsDerived]] this library holds, which is what a report stops at:
+   * facts named and not entered.
+   */
+  lazy val interface: Set[Term] =
+    entries.filter(_.development == Library.RealsDerived).map(_.theorem.conclusion).toSet
+
   def restingOn(theorem: Kernel.Thm): Vector[Library.Entry] = {
     val used = Derivation.restingOn(theorem, entries.map(_.theorem.conclusion).toSet)
+    entries.filter(entry => used.contains(entry.theorem.conclusion))
+  }
+
+  /**
+   * The same, with the walk stopped at the facts whose statements are in `interface`, which are
+   * reported and not entered: `Derivation.restingOn` with an interface says why a construction
+   * under an interface wants it.
+   */
+  def restingOn(theorem: Kernel.Thm, interface: Set[Term]): Vector[Library.Entry] = {
+    val used = Derivation.restingOn(theorem, entries.map(_.theorem.conclusion).toSet, interface)
     entries.filter(entry => used.contains(entry.theorem.conclusion))
   }
 
@@ -204,6 +221,15 @@ final class Library private (val entries: Vector[Library.Entry]) {
 }
 
 object Library {
+
+  /**
+   * The label of the sixteen statements of the reals, which a report reads as an interface.
+   *
+   * They were `Real, assumed` until `docs/adr/0053` proved them from the cuts on the rationals.
+   * One label written once, because two places read it: the reach report and the pages that say
+   * what a theorem rests on, and a label spelled twice is one that can drift apart.
+   */
+  val RealsDerived: String = "Real, derived"
 
   /**
    * What marks a statement in the listing that cannot be read back through the signature it was
@@ -252,7 +278,7 @@ object Library {
       // excluded middle is exactly the theorem that would have been.
       collect("Classical, derived", chain.classical.facts) ++
         collect("Classical, defined", chain.classical.definitions) ++
-        collect("Real, assumed", chain.reals.axioms) ++
+        collect(RealsDerived, chain.reals.axioms) ++
         collect("Real, defined", chain.reals.definitions) ++
         collect("Positivity", chain.ring.positivity.facts) ++
         collect("Order", chain.order.facts) ++

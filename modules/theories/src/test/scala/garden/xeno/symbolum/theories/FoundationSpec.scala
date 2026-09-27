@@ -62,36 +62,36 @@ class FoundationSpec extends AnyFlatSpec with Matchers {
 
     counts.size shouldBe 3
     counts.map(_(2)) shouldBe Vector(
-      reals.theory.axioms.size.toString,
       naturals.theory.axioms.size.toString,
+      reals.theory.axioms.size.toString,
       both.theory.axioms.size.toString
     )
   }
 
-  "The row for both" should "hold the claim its own cell makes, that the two above share none" in {
-    // The cell says "the two rows above, added", which is a sentence about the theories and not a
-    // rendering of a third number. It is true because the reals sit over `Logic.standard`, which has
-    // no axioms, and the naturals over `Classical`, which has two: nothing is counted twice. An
-    // axiom asserted in both places would make the union smaller than the sum and the cell would
-    // start lying while every count in the table stayed correct, which is the one failure the
-    // comparison against the command cannot see.
-    both.theory.axioms.size shouldBe reals.theory.axioms.size + naturals.theory.axioms.size
-    reals.theory.axioms.toSet.intersect(naturals.theory.axioms.toSet) shouldBe empty
+  "The rows for the reals and for everything" should "hold the claim their labels make, that they are built on the naturals" in {
+    // The labels say the reals are built from the naturals and the chain holds everything, which is a
+    // sentence about the theories and not a rendering of a number. It is true because `Real.standard`
+    // is the construction over `Natural.standard` since `docs/adr/0053`: every axiom of the naturals
+    // is one of the reals', and the reals add none. Until then the reals sat over `Logic.standard`
+    // and this file asserted the opposite, that the two shared none and the chain held their sum.
+    reals.theory.axioms.toSet shouldBe naturals.theory.axioms.toSet
+    naturals.theory.axioms.toSet.subsetOf(both.theory.axioms.toSet) shouldBe true
   }
 
-  "The row for the naturals" should "name as many axioms as it counts, and leave none unnamed" in {
-    // The guard against the assertion above being vacuous. The names are resolved by matching each
-    // axiom's conclusion against the maps of three developments, and a term nothing matched would
-    // come back as "an unnamed axiom": the count and the list would then disagree, and a reader
+  "Every row" should "name as many axioms as it counts, and leave none unnamed" in {
+    // The guard against the assertions above being vacuous. The names are resolved by matching each
+    // axiom's conclusion against the maps of the logic and the naturals, and a term nothing matched
+    // would come back as "an unnamed axiom": the count and the list would then disagree, and a reader
     // shown three and told two names has no way to tell which is the mistake.
-    val row = generated.linesIterator
-      .find(_.startsWith("| the naturals alone |"))
-      .getOrElse(fail("the table has no row for the naturals alone"))
-
-    val listed = row.split('|').map(_.trim).toVector(3).split(",").map(_.trim).toVector
-
-    listed should not contain "an unnamed axiom"
-    listed.size shouldBe naturals.theory.axioms.size
-    listed.foreach(name => name should startWith("`"))
+    val rows = generated.linesIterator.filter(_.startsWith("| ")).drop(1).map(_.split('|').map(_.trim).toVector).toVector
+    rows.size shouldBe 3
+    rows.foreach { cells =>
+      withClue(s"${cells(1)}: ") {
+        val listed = cells(3).split(",").map(_.trim).toVector
+        listed should not contain "an unnamed axiom"
+        listed.size shouldBe cells(2).toInt
+        listed.foreach(name => name should startWith("`"))
+      }
+    }
   }
 }

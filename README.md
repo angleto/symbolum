@@ -46,7 +46,9 @@ it, and the bridge is what makes it possible not to.
 
 Counted from the code rather than written here, because these figures went stale once already:
 the row for the naturals said two and the row for both said eighteen from 2026-09-10, when eta
-landed, until 2026-09-14. Regenerate with
+landed, until 2026-09-14. The reals asked for sixteen axioms of their own until 2026-09-26, when
+[`docs/adr/0053`](docs/adr/0053-the-sixteen-are-theorems-and-real-is-the-cut-type.md) proved them
+from the cuts on the rationals, and every row has read the same three since. Regenerate with
 `sbt "theories/runMain garden.xeno.symbolum.theories.Foundation"`; `FoundationSpec` fails when the table
 and the code disagree.
 
@@ -54,9 +56,9 @@ and the code disagree.
 
 | A development built on | Axioms it asks you to believe | Which they are |
 |---|---|---|
-| the reals alone | 16 | a complete ordered field, listed in `Real.scala` and in [docs/lemmas.md](docs/lemmas.md) |
-| the naturals alone | 3 | `ETA`, `INFINITY`, `SELECT` |
-| both, which is what the standard chain assembles | 19 | the two rows above, added, since they share none |
+| the naturals | 3 | `ETA`, `INFINITY`, `SELECT` |
+| the reals, built from the naturals through the rationals | 3 | `ETA`, `INFINITY`, `SELECT` |
+| everything, which is what the standard chain assembles | 3 | `ETA`, `INFINITY`, `SELECT` |
 
 <!-- end generated: trusted-base -->
 

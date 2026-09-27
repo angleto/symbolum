@@ -314,6 +314,9 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     // `Cut.scala`, 2026-09-25: the same two refusals, a fact's published name against what its
     // derivation produced, in the check the construction runs before it hands anything on.
     ("Cut.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    // `Real.scala`, 2026-09-26: the same check one link up, a statement of the reals against the
+    // fact of `Cut` it unfolds to, named by the statement's name.
+    ("Real.scala", "name") -> (Verdict.Name, "the statement's name among the sixteen"),
     // The ring laws of 2026-09-25 on classes, which refuse the way `Integer.scala`'s do one
     // quotient down: the inner refusal behind the law's name, and the projection by its own name.
     ("Fraction.scala", "error.message") ->

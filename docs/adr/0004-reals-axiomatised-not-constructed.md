@@ -1,6 +1,6 @@
 # 0004. The reals are axiomatised, not constructed
 
-- **Status:** accepted, revised by 0007
+- **Status:** superseded by [0053](0053-the-sixteen-are-theorems-and-real-is-the-cut-type.md), revised by 0007
 - **Date:** 2026-09-03
 
 ## Context

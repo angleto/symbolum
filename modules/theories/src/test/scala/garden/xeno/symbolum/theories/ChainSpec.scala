@@ -38,22 +38,29 @@ class ChainSpec extends AnyFlatSpec with Matchers {
 
     chain.series.show(everywhere.conclusion) shouldBe "!f:num -> real. Sum f 0 = 0"
     chain.reals.show(ordered.conclusion) shouldBe "0 < 1"
-    // Nineteen since eta landed in `Classical.scala` on 2026-09-10: sixteen of the field, and the
-    // classical logic's two and infinity underneath them.
-    chain.series.theory.axioms.size shouldBe 19
+    // The classical logic's two and infinity, and nothing else: the sixteen of the field are
+    // theorems about the cuts since `docs/adr/0053`. It was nineteen from eta's landing on
+    // 2026-09-10 until then.
+    chain.series.theory.axioms.toSet shouldBe chain.naturals.theory.axioms.toSet
+    chain.series.theory.axioms should have size 3
 
-    // And nineteen still after the five developments went in on 2026-09-12 and the matrices after
-    // them, which is the claim `docs/adr/0006` makes about `defineType` and the one
-    // `Kernel.defineConstant` makes about a definition. Asserted at the top and at each of the five
-    // stages, because a conservative extension that stopped being one would do it at exactly one of
-    // them and the total would not say which.
+    // And the same three at each stage, the construction below the reals included, which is the
+    // claim `docs/adr/0006` makes about `defineType` and the one `Kernel.defineConstant` makes about
+    // a definition. Asserted at each stage, because a conservative extension that stopped being one
+    // would do it at exactly one of them and the total would not say which. Until `docs/adr/0053`
+    // this was two lists, nineteen above the reals and three below them.
     Vector(
+      chain.pure.theory,
+      chain.product.theory,
+      chain.fractions.integers.theory,
+      chain.fractions.theory,
+      chain.cuts.theory,
+      chain.reals.theory,
       chain.divisibility.theory,
       chain.modular.theory,
-      chain.product.theory,
       chain.word.theory,
       chain.matrix.theory
-    ).foreach(theory => theory.axioms.size shouldBe 19)
+    ).foreach(theory => theory.axioms.toSet shouldBe chain.naturals.theory.axioms.toSet)
   }
 
   it should "hold the five that were beside it, so that one signature can state a claim about any" in {
@@ -123,9 +130,9 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // defined in a development is unavailable to every link **below** it, and anything at all can
     // be defined by cases.
     //
-    // The assertion is the pair. A definition is conservative, so the nineteen do not move, and the
+    // The assertion is the pair. A definition is conservative, so the axioms do not move, and the
     // constant is in the widest signature, so a claim can name it at any type the chain has.
-    chain.widest.theory.axioms.size shouldBe 19
+    chain.widest.theory.axioms.toSet shouldBe chain.naturals.theory.axioms.toSet
 
     // And the type operators counted, not merely searched for, which until 2026-09-13 nothing here
     // did: this suite asserted memberships (`contain`), the difference between two adjacent
@@ -159,13 +166,15 @@ class ChainSpec extends AnyFlatSpec with Matchers {
       "int" -> 0,
       "num" -> 0,
       "prod" -> 2,
+      // The rationals and the cuts, in the chain since phase 5 put the construction of the reals
+      // below them on 2026-09-26. Both carved from closed predicates, so of arity nought.
+      "rat" -> 0,
       "real" -> 0,
       "word" -> 1
     )
 
     chain.widest.theory.definitions.keySet should contain(Classical.Conditional)
-    chain.widest.theory.axioms.size shouldBe
-      Real.Axioms.size + Classical.Axioms.size + Natural.Axioms.size
+    chain.widest.theory.axioms.size shouldBe Classical.Axioms.size + Natural.Axioms.size
 
     force(chain.widest.proposition("!x:real. COND (x < 0) (0 - x) x = COND (0 < x) x (0 - x)"))
     force(chain.widest.proposition("!m:num. !n:num. COND (NUM_LE m n) m n = m"))
@@ -468,7 +477,7 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // `SUM_CONGRUENCE` is still proved and still exported, because a caller holding the pointwise
     // hypothesis should not have to know which of the two routes is cheaper. What changed is that
     // the next binding operator does not need one of its own.
-    chain.series.theory.axioms.size shouldBe 19
+    chain.series.theory.axioms.toSet shouldBe chain.naturals.theory.axioms.toSet
     chain.series.theory.definitions.keySet should contain(Series.SumName)
   }
 }

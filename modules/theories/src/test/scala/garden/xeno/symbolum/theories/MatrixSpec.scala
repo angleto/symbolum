@@ -72,18 +72,18 @@ class MatrixSpec extends AnyFlatSpec with Matchers {
 
     Derived.foreach { name =>
       withClue(s"$name: ") {
-        Derivation.axiomsOf(fact(name)) should not contain eta
-        Derivation.axiomsOf(fact(name)) should not contain infinity
+        Real.spent(fact(name)) should not contain eta
+        Real.spent(fact(name)) should not contain infinity
       }
     }
 
     // The four accessor laws cost the projections and nothing else. `FST` is defined by choice, so
     // choice is what they reach, and no axiom of the reals appears in a statement that never adds
     // or multiplies anything.
-    Derivation.axiomsOf(fact(Matrix.Entry11OfConstructor)) shouldBe Set(choice)
+    Real.spent(fact(Matrix.Entry11OfConstructor)) shouldBe Set(choice)
 
     // And the target reaches both halves: choice through the accessors, the field through `Ring`.
-    val determinant = Derivation.axiomsOf(fact(Matrix.DeterminantMul))
+    val determinant = Real.spent(fact(Matrix.DeterminantMul))
     determinant should contain(choice)
     determinant.size should be > 1
   }

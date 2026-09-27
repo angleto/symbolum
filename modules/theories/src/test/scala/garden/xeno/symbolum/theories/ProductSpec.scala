@@ -146,7 +146,7 @@ class ProductSpec extends AnyFlatSpec with Matchers {
       Product.RepresentationOfPair,
       Product.PairInjective,
       Product.Cases
-    ).foreach(name => withClue(s"$name: ")(Derivation.axiomsOf(fact(name)) shouldBe empty))
+    ).foreach(name => withClue(s"$name: ")(Real.spent(fact(name)) shouldBe empty))
   }
 
   "The two projections" should "rest on the choice axiom and on nothing else" in {
@@ -156,14 +156,14 @@ class ProductSpec extends AnyFlatSpec with Matchers {
     val choice = force(classical.axiom(Classical.Choice)).conclusion
 
     Vector(Product.FirstOfPair, Product.SecondOfPair, Product.Surjective).foreach { name =>
-      withClue(s"$name: ")(Derivation.axiomsOf(fact(name)) shouldBe Set(choice))
+      withClue(s"$name: ")(Real.spent(fact(name)) shouldBe Set(choice))
     }
   }
 
   it should "reach eta nowhere, which is what says no extensionality was used" in {
     val eta = force(classical.axiom(Classical.Eta)).conclusion
 
-    Derived.foreach(name => withClue(s"$name: ")(Derivation.axiomsOf(fact(name)) should not contain eta)
+    Derived.foreach(name => withClue(s"$name: ")(Real.spent(fact(name)) should not contain eta)
     )
   }
 
@@ -234,9 +234,10 @@ class ProductSpec extends AnyFlatSpec with Matchers {
     // product. This is the smallest execution of the claim that they now are: `prod(num, num)` in
     // the chain's own signature, with the projection law holding at that instance.
     val chain = Chain.standard
-    val naturals = force(
-      Product.construct(chain.classical, chain.peano.theory, chain.peano.notation)
-    )
+    // The chain's own pair, which is built below the reals over the naturals' arithmetic since
+    // phase 5 of `docs/adr/0007`; building a second one over `chain.peano.theory` is refused, since
+    // that theory holds this one.
+    val naturals = chain.product
 
     naturals.theory.axioms shouldBe chain.peano.theory.axioms
 

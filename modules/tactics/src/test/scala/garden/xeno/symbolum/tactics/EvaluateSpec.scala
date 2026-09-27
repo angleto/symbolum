@@ -80,7 +80,14 @@ class EvaluateSpec extends AnyFlatSpec with Matchers {
     // whose body is a choice over a predicate, and choice is not something a model of this shape
     // computes. This is the measurement that says so, and it is why `Model.Numbers` is consulted
     // rather than shadowed.
-    chain.reals.definitions.keySet shouldBe Set("BIT0", "BIT1", "div", Real.NonStrictOrder, "sub")
+    //
+    // The reals' seven primitives joined the list with `docs/adr/0053`: each is defined as an
+    // operation on cuts, carved by a type definition and reached by `mk_cut`, and a model of this
+    // shape computes a cut no more than it computes a choice. So they are read from the model too.
+    chain.reals.definitions.keySet shouldBe Set(
+      "BIT0", "BIT1", "div", Real.NonStrictOrder, "sub",
+      Real.Zero, Real.One, Real.Addition, Real.Multiplication, Real.Negation, Real.Inverse, Real.Order
+    )
     Model.Numbers.constants.keySet should contain("NUM_ADD")
   }
 

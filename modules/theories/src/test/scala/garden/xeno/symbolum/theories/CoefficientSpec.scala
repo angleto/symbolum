@@ -182,6 +182,7 @@ class CoefficientSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "add nothing to what has to be believed" in {
-    reals.theory.axioms should have length 16
+    // The foundation the reals are built on, and nothing added (`docs/adr/0053`).
+    reals.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 }

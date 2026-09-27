@@ -22,7 +22,7 @@ class ProofRecordSpec extends AnyFlatSpec with Matchers {
   private val reals = ring.reals
 
   private def axiomsOf(theorem: Kernel.Thm): Vector[String] =
-    Derivation.axiomsOf(theorem).toVector.map(reals.show).sorted
+    Real.spent(theorem).toVector.map(reals.show).sorted
 
   "An arithmetic identity" should "name the axioms it needs and no others" in {
     // The five it uses are the ring's, and the list is worth reading for what is absent: the whole
@@ -47,8 +47,8 @@ class ProofRecordSpec extends AnyFlatSpec with Matchers {
     val completeness = force(reals.axiom("COMPLETENESS")).conclusion
     val identity = force(ring.prove("!x:real. (x + 1) * (x + 1) = x * x + 2 * x + 1"))
 
-    Derivation.axiomsOf(identity) should not contain completeness
-    Derivation.axiomsOf(force(Arithmetic.standard.add(1000, 1000))) should not contain completeness
+    Real.spent(identity) should not contain completeness
+    Real.spent(force(Arithmetic.standard.add(1000, 1000))) should not contain completeness
   }
 
   "An order fact" should "rest on the order axioms, which the arithmetic does not" in {
@@ -69,7 +69,7 @@ class ProofRecordSpec extends AnyFlatSpec with Matchers {
     val product = force(Arithmetic.standard.multiply(12, 12))
     val size = Derivation.size(product)
 
-    info(s"12 * 12 = 144 is $size inferences over ${Derivation.axiomsOf(product).size} axioms")
+    info(s"12 * 12 = 144 is $size inferences over ${Real.spent(product).size} axioms")
     size should be > 100
   }
 
@@ -91,6 +91,6 @@ class ProofRecordSpec extends AnyFlatSpec with Matchers {
       } yield theorem
     )
 
-    Derivation.axiomsOf(commuted) shouldBe empty
+    Real.spent(commuted) shouldBe empty
   }
 }

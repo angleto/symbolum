@@ -19,9 +19,10 @@ import garden.xeno.symbolum.logic.*
  * == What a cut is here ==
  *
  * A **lower** cut: a set of rationals that holds something, does not hold everything, is closed
- * downwards and has no greatest element. `IS_CUT` says those four things and `cut` is carved out of
- * `rat -> bool` by it; the witness is the cut of zero, and the fourth clause of it is `RAT_DENSE`,
- * which is what that fact was built for.
+ * downwards and has no greatest element. `IS_CUT` says those four things and the type is carved out
+ * of `rat -> bool` by it; the witness is the cut of zero, and the fourth clause of it is `RAT_DENSE`,
+ * which is what that fact was built for. The type is `real`: it was called `cut` until
+ * `docs/adr/0053` made it the one type of real number, which `Real` defines its constants over.
  *
  * The order is inclusion, which is why three of its four laws are one line each and the fourth is
  * the one argument in the file: two cuts are comparable because if `x` is not inside `y` then some
@@ -31,8 +32,8 @@ import garden.xeno.symbolum.logic.*
  *
  * == The one fact worth the file ==
  *
- * `CUT_COMPLETE` is `COMPLETENESS`, the sixteenth axiom of `Real.scala`, stated word for word over
- * `cut` and `CUT_LE`, and **proved**: the least upper bound of a non-empty bounded family of cuts is
+ * `CUT_COMPLETE` is `COMPLETENESS`, the sixteenth of `Real.scala`, stated word for word over the
+ * cuts and `CUT_LE`, and **proved**: the least upper bound of a non-empty bounded family of cuts is
  * the union of their members. It is the axiom that separates an ordered field from the reals, and
  * on this type it is not assumed.
  *
@@ -88,7 +89,11 @@ object Cut {
   /* ------------------------------------------------------------------ the names */
 
   /** The type operator, and the two halves of the bijection the kernel returns for it. */
-  val TypeName: String = "cut"
+  /**
+   * `real`: since phase 5 (`docs/adr/0052`) the type the cuts are carved as **is** the type of the
+   * real numbers, so there is one type of real and `Real` defines its constants over this one.
+   */
+  val TypeName: String = Real.TypeName
   val Abstraction: String = "mk_cut"
   val Representation: String = "dest_cut"
 
@@ -124,7 +129,7 @@ object Cut {
   /** `|- !p q. CUT_OF_RAT p = CUT_OF_RAT q ==> p = q`. */
   val OfRationalInjective: String = "CUT_OF_RAT_INJ"
 
-  /** `COMPLETENESS` over `cut`: a non-empty family with an upper bound has a least one. */
+  /** `COMPLETENESS` over the cuts: a non-empty family with an upper bound has a least one. */
   val Complete: String = "CUT_COMPLETE"
 
   /** `CUT_ADD x y`: the rationals `r` with some `p` in `x` and `r - p` in `y`. */
@@ -250,99 +255,99 @@ object Cut {
   private val IsCutBody: String =
     "\\S:rat->bool. (?a:rat. S a) /\\ (?b:rat. ~(S b)) /\\ " +
       "(!a:rat. !b:rat. S b /\\ RAT_LT a b ==> S a) /\\ (!a:rat. S a ==> (?b:rat. S b /\\ RAT_LT a b))"
-  private val AtMostBody: String = "\\x:cut. \\y:cut. !q:rat. dest_cut x q ==> dest_cut y q"
+  private val AtMostBody: String = "\\x:real. \\y:real. !q:rat. dest_cut x q ==> dest_cut y q"
   private val OfRationalBody: String = "\\q:rat. mk_cut (\\p:rat. RAT_LT p q)"
   private val SumSetText: String = "\\r:rat. ?p:rat. dest_cut x p /\\ dest_cut y (RAT_ADD r (RAT_NEG p))"
-  private val AdditionBody: String = "\\x:cut. \\y:cut. mk_cut (" + SumSetText + ")"
+  private val AdditionBody: String = "\\x:real. \\y:real. mk_cut (" + SumSetText + ")"
   private val NegSetText: String =
     "\\p:rat. ?r:rat. RAT_LT RAT_ZERO r /\\ ~(dest_cut x (RAT_ADD (RAT_NEG p) (RAT_NEG r)))"
-  private val NegationBody: String = "\\x:cut. mk_cut (" + NegSetText + ")"
+  private val NegationBody: String = "\\x:real. mk_cut (" + NegSetText + ")"
   private val CoreMemberText: String =
     "RAT_LT r RAT_ZERO \\/ (?p:rat. ?q:rat. dest_cut x p /\\ dest_cut y q /\\ " +
       "RAT_LT RAT_ZERO p /\\ RAT_LT RAT_ZERO q /\\ RAT_LT r (RAT_MUL p q))"
   private val CoreSetText: String = "\\r:rat. " + CoreMemberText
-  private val PosMulBody: String = "\\x:cut. \\y:cut. mk_cut (" + CoreSetText + ")"
+  private val PosMulBody: String = "\\x:real. \\y:real. mk_cut (" + CoreSetText + ")"
   private val NonNegativeX: String = "CUT_LE (CUT_OF_RAT RAT_ZERO) x"
   private val NonNegativeY: String = "CUT_LE (CUT_OF_RAT RAT_ZERO) y"
   private val NonNegativeZ: String = "CUT_LE (CUT_OF_RAT RAT_ZERO) z"
-  private val LessThanBody: String = "\\x:cut. \\y:cut. ~(CUT_LE y x)"
+  private val LessThanBody: String = "\\x:real. \\y:real. ~(CUT_LE y x)"
   private val PinvMemberText: String =
     "RAT_LE r RAT_ZERO \\/ (?s:rat. ~(dest_cut x s) /\\ RAT_LT RAT_ZERO s /\\ RAT_LT (RAT_MUL r s) RAT_ONE)"
   private val PinvSetText: String = "\\r:rat. " + PinvMemberText
-  private val PosInverseBody: String = "\\x:cut. mk_cut (" + PinvSetText + ")"
+  private val PosInverseBody: String = "\\x:real. mk_cut (" + PinvSetText + ")"
   private val InverseBody: String =
-    "\\x:cut. COND (CUT_LT (CUT_OF_RAT RAT_ZERO) x) (CUT_PINV x) " +
+    "\\x:real. COND (CUT_LT (CUT_OF_RAT RAT_ZERO) x) (CUT_PINV x) " +
       "(COND (CUT_LT x (CUT_OF_RAT RAT_ZERO)) (CUT_NEG (CUT_PINV (CUT_NEG x))) (CUT_OF_RAT RAT_ZERO))"
   private val PositiveX: String = "CUT_LT (CUT_OF_RAT RAT_ZERO) x"
   private val PositiveY: String = "CUT_LT (CUT_OF_RAT RAT_ZERO) y"
   private val MultiplicationBody: String =
-    "\\x:cut. \\y:cut. COND (CUT_LE (CUT_OF_RAT RAT_ZERO) x) " +
+    "\\x:real. \\y:real. COND (CUT_LE (CUT_OF_RAT RAT_ZERO) x) " +
       "(COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_PMUL x y) (CUT_NEG (CUT_PMUL x (CUT_NEG y)))) " +
       "(COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_NEG (CUT_PMUL (CUT_NEG x) y)) (CUT_PMUL (CUT_NEG x) (CUT_NEG y)))"
 
   /** Each fact with the text it is published as, which the construction compares against. */
   val Statements: Vector[(String, String)] = Vector(
     BelowIsCut -> "!q:rat. IS_CUT (\\p:rat. RAT_LT p q)",
-    Represents -> "!x:cut. IS_CUT (dest_cut x)",
+    Represents -> "!x:real. IS_CUT (dest_cut x)",
     Rebuilds -> "!S:rat->bool. IS_CUT S ==> dest_cut (mk_cut S) = S",
-    AtMostReflexive -> "!x:cut. CUT_LE x x",
-    AtMostTransitive -> "!x:cut. !y:cut. !z:cut. CUT_LE x y ==> CUT_LE y z ==> CUT_LE x z",
-    AtMostAntisymmetric -> "!x:cut. !y:cut. CUT_LE x y ==> CUT_LE y x ==> x = y",
-    AtMostTotal -> "!x:cut. !y:cut. CUT_LE x y \\/ CUT_LE y x",
+    AtMostReflexive -> "!x:real. CUT_LE x x",
+    AtMostTransitive -> "!x:real. !y:real. !z:real. CUT_LE x y ==> CUT_LE y z ==> CUT_LE x z",
+    AtMostAntisymmetric -> "!x:real. !y:real. CUT_LE x y ==> CUT_LE y x ==> x = y",
+    AtMostTotal -> "!x:real. !y:real. CUT_LE x y \\/ CUT_LE y x",
     OfRationalMembers -> "!q:rat. dest_cut (CUT_OF_RAT q) = (\\p:rat. RAT_LT p q)",
     OfRationalOrder -> "!p:rat. !q:rat. CUT_LE (CUT_OF_RAT p) (CUT_OF_RAT q) = RAT_LE p q",
     OfRationalInjective -> "!p:rat. !q:rat. CUT_OF_RAT p = CUT_OF_RAT q ==> p = q",
     Complete ->
-      ("!P:cut->bool. (?x:cut. P x) /\\ (?b:cut. !x:cut. P x ==> CUT_LE x b) ==> " +
-        "(?s:cut. (!x:cut. P x ==> CUT_LE x s) /\\ (!b:cut. (!x:cut. P x ==> CUT_LE x b) ==> CUT_LE s b))"),
-    AddIsCut -> ("!x:cut. !y:cut. IS_CUT (" + SumSetText + ")"),
-    AddMembers -> ("!x:cut. !y:cut. dest_cut (CUT_ADD x y) = (" + SumSetText + ")"),
-    AddCommutative -> "!x:cut. !y:cut. CUT_ADD x y = CUT_ADD y x",
-    AddAssociative -> "!x:cut. !y:cut. !z:cut. CUT_ADD (CUT_ADD x y) z = CUT_ADD x (CUT_ADD y z)",
-    AddZero -> "!x:cut. CUT_ADD x (CUT_OF_RAT RAT_ZERO) = x",
-    AtMostAdd -> "!x:cut. !y:cut. !z:cut. CUT_LE x y ==> CUT_LE (CUT_ADD x z) (CUT_ADD y z)",
+      ("!P:real->bool. (?x:real. P x) /\\ (?b:real. !x:real. P x ==> CUT_LE x b) ==> " +
+        "(?s:real. (!x:real. P x ==> CUT_LE x s) /\\ (!b:real. (!x:real. P x ==> CUT_LE x b) ==> CUT_LE s b))"),
+    AddIsCut -> ("!x:real. !y:real. IS_CUT (" + SumSetText + ")"),
+    AddMembers -> ("!x:real. !y:real. dest_cut (CUT_ADD x y) = (" + SumSetText + ")"),
+    AddCommutative -> "!x:real. !y:real. CUT_ADD x y = CUT_ADD y x",
+    AddAssociative -> "!x:real. !y:real. !z:real. CUT_ADD (CUT_ADD x y) z = CUT_ADD x (CUT_ADD y z)",
+    AddZero -> "!x:real. CUT_ADD x (CUT_OF_RAT RAT_ZERO) = x",
+    AtMostAdd -> "!x:real. !y:real. !z:real. CUT_LE x y ==> CUT_LE (CUT_ADD x z) (CUT_ADD y z)",
     OfRationalAdd -> "!p:rat. !q:rat. CUT_OF_RAT (RAT_ADD p q) = CUT_ADD (CUT_OF_RAT p) (CUT_OF_RAT q)",
-    NegIsCut -> ("!x:cut. IS_CUT (" + NegSetText + ")"),
-    NegMembers -> ("!x:cut. dest_cut (CUT_NEG x) = (" + NegSetText + ")"),
-    AddNegation -> "!x:cut. CUT_ADD x (CUT_NEG x) = CUT_OF_RAT RAT_ZERO",
+    NegIsCut -> ("!x:real. IS_CUT (" + NegSetText + ")"),
+    NegMembers -> ("!x:real. dest_cut (CUT_NEG x) = (" + NegSetText + ")"),
+    AddNegation -> "!x:real. CUT_ADD x (CUT_NEG x) = CUT_OF_RAT RAT_ZERO",
     Escape ->
-      ("!x:cut. !e:rat. !f:rat. dest_cut x e ==> RAT_LT RAT_ZERO f ==> " +
+      ("!x:real. !e:rat. !f:rat. dest_cut x e ==> RAT_LT RAT_ZERO f ==> " +
         "(?p:rat. dest_cut x p /\\ RAT_LE e p /\\ ~(dest_cut x (RAT_ADD p f)))"),
-    AddNonNegative -> ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_ADD x y)"),
-    PosMulIsCut -> ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> IS_CUT (" + CoreSetText + ")"),
+    AddNonNegative -> ("!x:real. !y:real. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_ADD x y)"),
+    PosMulIsCut -> ("!x:real. !y:real. " + NonNegativeX + " ==> " + NonNegativeY + " ==> IS_CUT (" + CoreSetText + ")"),
     PosMulMembers ->
-      ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> dest_cut (CUT_PMUL x y) = (" + CoreSetText + ")"),
-    PosMulCommutative -> "!x:cut. !y:cut. CUT_PMUL x y = CUT_PMUL y x",
-    PosMulZero -> "!x:cut. CUT_PMUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
+      ("!x:real. !y:real. " + NonNegativeX + " ==> " + NonNegativeY + " ==> dest_cut (CUT_PMUL x y) = (" + CoreSetText + ")"),
+    PosMulCommutative -> "!x:real. !y:real. CUT_PMUL x y = CUT_PMUL y x",
+    PosMulZero -> "!x:real. CUT_PMUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
     PosMulNonNegative ->
-      ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)"),
-    PosMulOne -> ("!x:cut. " + NonNegativeX + " ==> CUT_PMUL x (CUT_OF_RAT RAT_ONE) = x"),
+      ("!x:real. !y:real. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)"),
+    PosMulOne -> ("!x:real. " + NonNegativeX + " ==> CUT_PMUL x (CUT_OF_RAT RAT_ONE) = x"),
     PosMulAssociative ->
-      ("!x:cut. !y:cut. !z:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> " + NonNegativeZ +
+      ("!x:real. !y:real. !z:real. " + NonNegativeX + " ==> " + NonNegativeY + " ==> " + NonNegativeZ +
         " ==> CUT_PMUL (CUT_PMUL x y) z = CUT_PMUL x (CUT_PMUL y z)"),
     PosMulDistributive ->
-      ("!x:cut. !y:cut. !z:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> " + NonNegativeZ +
+      ("!x:real. !y:real. !z:real. " + NonNegativeX + " ==> " + NonNegativeY + " ==> " + NonNegativeZ +
         " ==> CUT_PMUL x (CUT_ADD y z) = CUT_ADD (CUT_PMUL x y) (CUT_PMUL x z)"),
-    NegNeg -> "!x:cut. CUT_NEG (CUT_NEG x) = x",
+    NegNeg -> "!x:real. CUT_NEG (CUT_NEG x) = x",
     NegZero -> "CUT_NEG (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
-    NegAdd -> "!x:cut. !y:cut. CUT_NEG (CUT_ADD x y) = CUT_ADD (CUT_NEG x) (CUT_NEG y)",
-    AtMostNeg -> "!x:cut. !y:cut. CUT_LE x y ==> CUT_LE (CUT_NEG y) (CUT_NEG x)",
-    SignCases -> ("!x:cut. " + NonNegativeX + " \\/ CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_NEG x)"),
-    MulOnCone -> ("!x:cut. !y:cut. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_MUL x y = CUT_PMUL x y"),
-    MulCommutative -> "!x:cut. !y:cut. CUT_MUL x y = CUT_MUL y x",
-    MulOne -> "!x:cut. CUT_MUL x (CUT_OF_RAT RAT_ONE) = x",
-    MulZero -> "!x:cut. CUT_MUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
-    MulNegLeft -> "!x:cut. !y:cut. CUT_MUL (CUT_NEG x) y = CUT_NEG (CUT_MUL x y)",
-    MulAssociative -> "!x:cut. !y:cut. !z:cut. CUT_MUL (CUT_MUL x y) z = CUT_MUL x (CUT_MUL y z)",
-    MulDistributive -> "!x:cut. !y:cut. !z:cut. CUT_MUL x (CUT_ADD y z) = CUT_ADD (CUT_MUL x y) (CUT_MUL x z)",
-    PosMulPositive -> ("!x:cut. !y:cut. " + PositiveX + " ==> " + PositiveY + " ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)"),
-    LessMul -> ("!x:cut. !y:cut. " + PositiveX + " /\\ " + PositiveY + " ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_MUL x y)"),
-    PosInverseIsCut -> ("!x:cut. " + PositiveX + " ==> IS_CUT (" + PinvSetText + ")"),
-    PosInverseMembers -> ("!x:cut. " + PositiveX + " ==> dest_cut (CUT_PINV x) = (" + PinvSetText + ")"),
-    PosInverseNonNegative -> ("!x:cut. " + PositiveX + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PINV x)"),
-    PosMulInverse -> ("!x:cut. " + PositiveX + " ==> CUT_PMUL x (CUT_PINV x) = CUT_OF_RAT RAT_ONE"),
+    NegAdd -> "!x:real. !y:real. CUT_NEG (CUT_ADD x y) = CUT_ADD (CUT_NEG x) (CUT_NEG y)",
+    AtMostNeg -> "!x:real. !y:real. CUT_LE x y ==> CUT_LE (CUT_NEG y) (CUT_NEG x)",
+    SignCases -> ("!x:real. " + NonNegativeX + " \\/ CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_NEG x)"),
+    MulOnCone -> ("!x:real. !y:real. " + NonNegativeX + " ==> " + NonNegativeY + " ==> CUT_MUL x y = CUT_PMUL x y"),
+    MulCommutative -> "!x:real. !y:real. CUT_MUL x y = CUT_MUL y x",
+    MulOne -> "!x:real. CUT_MUL x (CUT_OF_RAT RAT_ONE) = x",
+    MulZero -> "!x:real. CUT_MUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
+    MulNegLeft -> "!x:real. !y:real. CUT_MUL (CUT_NEG x) y = CUT_NEG (CUT_MUL x y)",
+    MulAssociative -> "!x:real. !y:real. !z:real. CUT_MUL (CUT_MUL x y) z = CUT_MUL x (CUT_MUL y z)",
+    MulDistributive -> "!x:real. !y:real. !z:real. CUT_MUL x (CUT_ADD y z) = CUT_ADD (CUT_MUL x y) (CUT_MUL x z)",
+    PosMulPositive -> ("!x:real. !y:real. " + PositiveX + " ==> " + PositiveY + " ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)"),
+    LessMul -> ("!x:real. !y:real. " + PositiveX + " /\\ " + PositiveY + " ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_MUL x y)"),
+    PosInverseIsCut -> ("!x:real. " + PositiveX + " ==> IS_CUT (" + PinvSetText + ")"),
+    PosInverseMembers -> ("!x:real. " + PositiveX + " ==> dest_cut (CUT_PINV x) = (" + PinvSetText + ")"),
+    PosInverseNonNegative -> ("!x:real. " + PositiveX + " ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PINV x)"),
+    PosMulInverse -> ("!x:real. " + PositiveX + " ==> CUT_PMUL x (CUT_PINV x) = CUT_OF_RAT RAT_ONE"),
     InverseZero -> "CUT_INV (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO",
-    MulInverse -> "!x:cut. ~(x = CUT_OF_RAT RAT_ZERO) ==> CUT_MUL x (CUT_INV x) = CUT_OF_RAT RAT_ONE"
+    MulInverse -> "!x:real. ~(x = CUT_OF_RAT RAT_ZERO) ==> CUT_MUL x (CUT_INV x) = CUT_OF_RAT RAT_ONE"
   )
 
   private def statementOf(name: String): String =
@@ -352,7 +357,7 @@ object Cut {
 
   /* ------------------------------------------------------------------ the construction */
 
-  def construct(fractions: Fraction, peano: Peano): Either[LogicError, Cut] = {
+  def construct(fractions: Fraction, peano: NaturalArithmetic): Either[LogicError, Cut] = {
     val classical = fractions.classical
     val notation = fractions.notation
 
@@ -4100,18 +4105,18 @@ object Cut {
       val b = Term.variable("b", Fraction.Classes)
       val bound = Term.variable("b", cutType)
       for {
-        hypothesisTerm <- proposition("(?x:cut. P x) /\\ (?b:cut. !x:cut. P x ==> CUT_LE x b)")
+        hypothesisTerm <- proposition("(?x:real. P x) /\\ (?b:real. !x:real. P x ==> CUT_LE x b)")
         hypothesis <- assume(hypothesisTerm)
         nonEmpty <- rules.conjElim1(hypothesis)
         bounded <- rules.conjElim2(hypothesis)
-        union <- read("\\q:rat. ?x:cut. P x /\\ dest_cut x q", setType)
+        union <- read("\\q:rat. ?x:real. P x /\\ dest_cut x q", setType)
         unionBody <- sets.unfolded(union).flatMap(rightOf)
         clauseTerms <- unionBody match {
           case App(App(_, inhabited), App(App(_, proper), App(App(_, closed), open))) => Right((inhabited, proper, closed, open))
           case other => Left(NotOfForm("the four clauses of IS_CUT", other))
         }
         (inhabitedTerm, properTerm, _, _) = clauseTerms
-        inUnion = (rational: Term) => proposition("?x:cut. P x /\\ dest_cut x q").flatMap(text => lift(Term.substitute(Map(q -> rational), text)))
+        inUnion = (rational: Term) => proposition("?x:real. P x /\\ dest_cut x q").flatMap(text => lift(Term.substitute(Map(q -> rational), text)))
         intoUnion = (cut: Term, rational: Term, inFamily: Kernel.Thm, isMember: Kernel.Thm) =>
           for {
             target <- inUnion(rational)
@@ -4133,7 +4138,7 @@ object Cut {
         } yield result
 
         proper <- for {
-          boundedBy <- proposition("!x:cut. P x ==> CUT_LE x b").flatMap(assume)
+          boundedBy <- proposition("!x:real. P x ==> CUT_LE x b").flatMap(assume)
           clauses <- rules.spec(bound, represents).flatMap(sets.clauses)
           missing <- member(bound, b).flatMap(logic.mkNot).flatMap(assume)
           inUTerm <- inUnion(b)
@@ -4220,7 +4225,7 @@ object Cut {
         } yield result
 
         least <- for {
-          boundedBy <- proposition("!x:cut. P x ==> CUT_LE x b").flatMap(assume)
+          boundedBy <- proposition("!x:real. P x ==> CUT_LE x b").flatMap(assume)
           order <- included(supremum, bound) { inS =>
             for {
               inU <- inSupremum(u).flatMap(eqMp(_, inS))
@@ -4239,7 +4244,7 @@ object Cut {
 
         both <- rules.conjIntro(upper, least)
         goal <- proposition(
-          "?s:cut. (!x:cut. P x ==> CUT_LE x s) /\\ (!b:cut. (!x:cut. P x ==> CUT_LE x b) ==> CUT_LE s b)"
+          "?s:real. (!x:real. P x ==> CUT_LE x s) /\\ (!b:real. (!x:real. P x ==> CUT_LE x b) ==> CUT_LE s b)"
         )
         predicate <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
         introduced <- rules.existsIntro(predicate, supremum, both)

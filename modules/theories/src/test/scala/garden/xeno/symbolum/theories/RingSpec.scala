@@ -150,6 +150,8 @@ class RingSpec extends AnyFlatSpec with Matchers {
   }
 
   "The theory it proves in" should "still assert only the reals' axioms" in {
-    reals.theory.axioms.length shouldBe Real.Axioms.length
+    // The sixteen are theorems since `docs/adr/0053`, so what the theory asserts is the foundation
+    // the reals are built on, read from the two developments that assert it.
+    reals.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 }

@@ -1771,7 +1771,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // bare equation of valuations or a bare `NUM_PRIME`, and no procedure reads any of them.
     // 150 with four of Wilson's five residues, 2026-09-26, by the probe the `open` row names: this
     // line had not run in the suite, because the assertion above it was red. Tip plus this delta.
-    unreadable shouldBe 150
+    // 153 with the reals built from the cuts, 2026-09-26, read off a probe of `Propose.audit`: the
+    // seven primitives are definitional entries of the library now, and three of them, `real_add`,
+    // `real_mul` and `real_lt`, are equations naming the operator the mutation swaps. Each swap
+    // gives `real_add = CUT_MUL` and its two siblings, an equation between two functions that no
+    // procedure reads. Tip plus this branch's delta.
+    unreadable shouldBe 153
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

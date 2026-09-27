@@ -326,24 +326,15 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // theorem `Fractran` publishes under a name it declares, over the constant it defines.
     "FractranRegisters" -> NotADevelopment,
 
-    // `Fraction` is the one entry here whose standing is a **debt and not a decision**, and it is
-    // written that way rather than quietly taking `Collatz`'s slot. What justifies `Collatz` being
-    // outside is that its constants describe one object of one investigation; `rat` is mathematics
-    // anyone would want, and being outside the chain means `Ask`, `Find` and the library cannot
-    // reach it, which the standing's own docstring calls usually a defect.
-    //
-    // What it is instead: `docs/adr/0036` and the carrier landed on 2026-09-20 with the type and
-    // its three equivalence facts, and the chain wiring is a piece of its own because it moves
-    // `Chain.widest`, the reading register and the guide's map. `FractionSpec` is the spec the
-    // standing asks of anything outside the chain, and this line moves to `InTheChain` with the
-    // arithmetic. Card `fa8737ad` carries the debt.
-    "Fraction" -> BesideTheChain,
-
-    // `Fraction`'s standing for `Fraction`'s reason, one type along: the reals as cuts are built on
-    // `rat`, and what they will replace is the chain's own reals, so nothing in the chain can reach
-    // them until the sixteen axioms of `Real.scala` are theorems about this type, which is phase 5
-    // and `docs/adr/0052`'s last step. `CutSpec` is the spec that builds it.
-    "Cut" -> BesideTheChain,
+    // In the chain since phase 5 of `docs/adr/0007`, both of them: `Real.construction` builds the
+    // rationals and the cuts below the reals, and `docs/adr/0053` made the cuts' type the reals' one
+    // type. Both were beside the chain as a debt until then, `rat` being mathematics anyone would
+    // want. What is still owed is the other half the standing's docstring names: their facts are not
+    // collected by `Library.of`, so `Ask` and `Find` do not reach a lemma about `rat` or about a cut.
+    // That is a piece of its own, since it grows the library a tactic searches, and Mycelium card
+    // `e4a90d43` carries it.
+    "Fraction" -> InTheChain,
+    "Cut" -> InTheChain,
 
     // `Domain`'s standing, one level up: a search over a library for the theorem that carries a
     // domain claim into arithmetic. It declares nothing, holds no fact of its own, and every
@@ -464,11 +455,19 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "agree with `Chain` about which developments it builds" in {
+    // The chain's head, the construction below the reals, is `Real.construction` since phase 5b,
+    // and `Chain.construct` builds the naturals and calls it before its own comprehension starts; so
+    // the comprehension's arrows are read in both places, and the two calls that open the chain are
+    // read as what they are. `Real` builds itself inside its own construction, unprefixed.
     val source = Files.readString(directory.resolve("Chain.scala"))
-    val built = "<- ([A-Z][A-Za-z]*)\\.construct".r
-      .findAllMatchIn(source)
-      .map(_.group(1))
-      .toSet
+    val real = Files.readString(directory.resolve("Real.scala"))
+    val head = real.slice(real.indexOf("def construction("), real.indexOf("lazy val constructed"))
+    def arrows(text: String): Set[String] =
+      "<- ([A-Z][A-Za-z]*)\\.construct".r.findAllMatchIn(text).map(_.group(1)).toSet
+    val opening =
+      (if (source.contains("Natural.construct(classical).flatMap(Real.construction(")) Set("Natural", "Real") else Set.empty) ++
+        (if (head.contains("<- construct(classical.logic, cuts)")) Set("Real") else Set.empty)
+    val built = arrows(source) ++ arrows(head) ++ opening
 
     // Read off `Chain.scala` rather than off the `Chain` value, because what is being checked is
     // that the classification above and the construction agree, and a classification checked

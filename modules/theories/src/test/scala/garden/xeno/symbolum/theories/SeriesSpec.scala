@@ -25,7 +25,8 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
   private val classical = Classical.standard
   private val naturals = force(Natural.construct(classical))
-  private val reals = force(Real.construct(classical.logic, naturals.theory))
+  private val construction = force(Real.construction(classical, naturals))
+  private val reals = construction.reals
   private val ring = force(
     for {
       arithmetic <- Arithmetic.construct(reals)
@@ -33,7 +34,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     } yield built
   )
   private val order = force(Order.construct(ring))
-  private val peano = force(Peano.construct(naturals, ring))
+  private val peano = force(Peano.construct(naturals, ring, order, construction.pure))
   private val series = force(Series.construct(peano, order))
   private val logic = force(naturals.classical.logic.over(reals.theory))
   private val rules = logic.rules
@@ -72,9 +73,9 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
       "!f:num -> real. !n:num. Sum f (SUC n) = Sum f n + f n"
 
     series.theory.definitions.keySet should contain(Series.SumName)
-    // Nineteen since eta landed in `Classical.scala` on 2026-09-10, and none of the difference is
+    // The naturals' three, the reals being built over them since `docs/adr/0053`, and none of it
     // this file's: the sum is a definition and costs nothing.
-    series.theory.axioms.size shouldBe 19
+    series.theory.axioms.toSet shouldBe naturals.theory.axioms.toSet
   }
 
   "The power" should "be defined by the same construction, so `2 ^ t` is a definition" in {
@@ -105,10 +106,10 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     fact(Series.ProdAtZero).hypotheses shouldBe empty
     fact(Series.ProdAtSuccessor).hypotheses shouldBe empty
     series.theory.definitions.keySet should contain(Series.ProdName)
-    // Nineteen, and none of the difference is this file's: eta landed in `Classical.scala` hours
-    // after this test was written, and a product is a definition and costs nothing. The number is
-    // asserted here rather than described because that is what caught the collision.
-    series.theory.axioms.size shouldBe 19
+    // The naturals' three, and none of it this file's: a product is a definition and costs nothing.
+    // Asserted here rather than described because that is what caught the collision when eta landed
+    // in `Classical.scala` hours after this test was written.
+    series.theory.axioms.toSet shouldBe naturals.theory.axioms.toSet
   }
 
   /* ------------------------------------------------------------- the identities */
@@ -548,7 +549,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     series.show(reproved.conclusion) shouldBe series.show(fact(Series.Multiplicative).conclusion)
     info(
       s"POWER_MULTIPLICATIVE: ${Derivation.size(fact(Series.Multiplicative))} inferences over " +
-        s"${Derivation.axiomsOf(fact(Series.Multiplicative)).size} axioms"
+        s"${Real.spent(fact(Series.Multiplicative)).size} axioms"
     )
   }
 
@@ -794,14 +795,14 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
     Vector(Series.PowerPositive, Series.PowerMonotone, Series.ProdPositive).foreach { name =>
       withClue(s"$name should reach LT_MUL: ") {
-        Derivation.axiomsOf(fact(name)) should contain(productOfPositives)
+        Real.spent(fact(name)) should contain(productOfPositives)
       }
     }
 
     Vector(Series.Monotone, Series.NonNegative, Series.Linear, Series.ByParts, Series.ProdScales)
       .foreach { name =>
         withClue(s"$name should not reach LT_MUL: ") {
-          Derivation.axiomsOf(fact(name)) should not contain productOfPositives
+          Real.spent(fact(name)) should not contain productOfPositives
         }
       }
   }
@@ -853,7 +854,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
 
     Vector(Series.Congruence, Series.ProdCongruence).foreach { name =>
       val theorem = fact(name)
-      val axioms = Derivation.axiomsOf(theorem)
+      val axioms = Real.spent(theorem)
 
       withClue(s"$name rests on ${axioms.size} axioms\n") {
         axioms should contain(eta)
@@ -1028,19 +1029,19 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // carries a hypothesis, and no derivation reached an axiom that is not one of the theory's, so
     // the theory's own axioms, counted at the end of this test, are still the whole of what this
     // file asks anyone to believe.
-    val believed = series.theory.axioms.toSet
+    val believed = series.theory.axioms.toSet ++ Real.sixteen
 
     series.facts should not be empty
     series.facts.foreach { case (name, theorem) =>
       withClue(s"$name: ") {
         theorem.hypotheses shouldBe empty
-        Derivation.axiomsOf(theorem).diff(believed) shouldBe empty
+        Real.spent(theorem).diff(believed) shouldBe empty
       }
     }
 
-    // Nineteen since eta, and this is the assertion that says so where it matters: every theorem
-    // above reaches only what the theory already believed, and the count says how much that is.
-    series.theory.axioms.size shouldBe 19
+    // And this is the assertion that says what the theory believes where it matters: every theorem
+    // above reaches only that, the sixteen read as the reals' interface, and the naturals' three.
+    series.theory.axioms.toSet shouldBe naturals.theory.axioms.toSet
   }
 
   "The size of each proof" should "be reported, since these are the largest here" in {
@@ -1064,7 +1065,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
       val theorem = fact(name)
       info(
         s"$name: ${Derivation.size(theorem)} inferences over " +
-          s"${Derivation.axiomsOf(theorem).size} axioms"
+          s"${Real.spent(theorem).size} axioms"
       )
       Derivation.size(theorem) should be > 1000
     }

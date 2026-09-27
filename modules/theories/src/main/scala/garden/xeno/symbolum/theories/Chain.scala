@@ -56,6 +56,12 @@ import garden.xeno.symbolum.logic.*
 final class Chain private (
   val classical: Classical,
   val naturals: Natural,
+  /** The arithmetic of `num` that names no real, built below the reals since phase 5. */
+  val pure: PureArithmetic,
+  /** The rationals, built below the reals from the integers there. */
+  val fractions: Fraction,
+  /** The cuts on the rationals, which the reals will be built from. */
+  val cuts: Cut,
   val reals: RealTheory,
   val arithmetic: Arithmetic,
   val ring: Ring,
@@ -479,7 +485,7 @@ object Chain {
    */
   private lazy val built: (Chain, Long) = {
     val started = System.nanoTime()
-    val chain = construct(Classical.standard).fold(
+    val chain = construct(Classical.standard, Real.constructed).fold(
       error => throw new IllegalStateException(s"the standard chain does not build: ${error.message}"),
       identity
     )
@@ -492,20 +498,34 @@ object Chain {
   /** How long [[standard]] took to build, in milliseconds, read when it was built. */
   def standardMilliseconds: Long = built._2
 
+  /** The chain over a classical logic of one's own, the construction of the reals included. */
+  def construct(classical: Classical): Either[LogicError, Chain] =
+    Natural.construct(classical).flatMap(Real.construction(classical, _)).flatMap(construct(classical, _))
+
   /**
-   * The chain over a classical logic of one's own.
+   * The chain over a construction of the reals already built, which is how [[standard]] shares
+   * `Real.constructed` rather than holding a second copy of the same derivations.
    *
    * Written as one comprehension deliberately: the order is the content of this function, and a
-   * reader checking it should be able to read it top to bottom without following a call.
+   * reader checking it should be able to read it top to bottom without following a call. The one
+   * call is its head, the construction below the reals, which is `docs/adr/0016`'s order and lives
+   * in `Real.construction` because `Real.standard` is that and nothing more. The integers there
+   * lack the two facts that need number theory on `num`, which is built over the reals; they are
+   * added further up.
    */
-  def construct(classical: Classical): Either[LogicError, Chain] =
+  def construct(classical: Classical, construction: Real.Construction): Either[LogicError, Chain] = {
+    val naturals = construction.naturals
+    val pure = construction.pure
+    val product = construction.product
+    val integersBelow = construction.integers
+    val fractions = construction.fractions
+    val cuts = construction.cuts
+    val reals = construction.reals
     for {
-      naturals <- Natural.construct(classical)
-      reals <- Real.construct(classical.logic, naturals.theory)
       arithmetic <- Arithmetic.construct(reals)
       ring <- Ring.construct(arithmetic)
       order <- Order.construct(ring)
-      peano <- Peano.construct(naturals, ring, order)
+      peano <- Peano.construct(naturals, ring, order, pure)
       series <- Series.construct(peano, order)
 
       // The five that were beside this chain until 2026-09-12, in the order their prerequisites
@@ -517,13 +537,12 @@ object Chain {
       // holds `num`.
       divisibility <- Divisibility.construct(ring, series.theory)
       modular <- Modular.construct(peano, divisibility.theory)
-      product <- Product.construct(classical, modular.theory, peano.notation)
-      word <- Word.construct(peano, product)
+      word <- Word.construct(peano, product, modular.theory)
 
       // The sixth, and the one that was never beside the chain. It needs `Product` for the type it
       // is a pair of pairs of, and `Ring` for every component equation; it needs nothing from
       // `Word`, and extends it only because a development with no prerequisite belongs last.
-      matrix <- Matrix.construct(ring, product, word.theory)
+      matrix <- Matrix.construct(ring, product, word.theory, peano.notation)
 
       // The seventh, and the last until `Magnitude` joined on 2026-09-13, because it needs two of
       // the others at once: `Word` for the type it rebuilds and `Modular` for the `NUM_MOD` inside
@@ -653,8 +672,8 @@ object Chain {
       // `DocumentationSpec` holds the `widest` claim and says in writing that a positional "is
       // last" has no shape it can separate from the prose around it, so which link is the end is
       // read off `widest` and is not written here.
-      integers <- Integer.construct(
-        classical, peano, product, modular, successor, forward.theory, forward.notation)
+      integers <- Integer.withDivisibility(
+        classical, integersBelow, peano, product, modular, successor, forward.theory, forward.notation)
 
       // The one part of the integers that mentions a real, and so the one part that cannot move
       // below `Real` when the construction arrives. It needs `integers` for the quotient it lifts
@@ -702,6 +721,9 @@ object Chain {
     } yield new Chain(
       classical,
       naturals,
+      pure,
+      fractions,
+      cuts,
       reals,
       arithmetic,
       ring,
@@ -742,4 +764,5 @@ object Chain {
       derivative,
       integral
     )
+  }
 }

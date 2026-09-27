@@ -197,7 +197,8 @@ class FieldSpec extends AnyFlatSpec with Matchers {
   "The theory it proves in" should "still assert only the reals' axioms" in {
     // The constraint the task was written under: a tactic that reached for a new axiom would have
     // solved a different problem.
-    reals.theory.axioms.length shouldBe Real.Axioms.length
+    // Since `docs/adr/0053` the reals assert only the foundation they are built on.
+    reals.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 
   /* ------------------------------------- what it charges is exact, not an upper bound */

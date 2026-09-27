@@ -46,8 +46,11 @@ class WordSpec extends AnyFlatSpec with Matchers {
   "The word type and its constants" should "be defined rather than assumed" in {
     words.theory.axioms shouldBe peano.theory.axioms
 
+    // The pair is below the reals since phase 5, so `peano` already holds `prod` and the words add
+    // their own type alone; until then this development built a pair of its own over `peano`.
     (words.theory.typeOperators.keySet -- peano.theory.typeOperators.keySet) shouldBe
-      Set(Product.TypeName, Word.TypeName)
+      Set(Word.TypeName)
+    peano.theory.typeOperators.keySet should contain(Product.TypeName)
     words.theory.typeOperators(Word.TypeName) shouldBe 1
 
     words.theory.definitions.keySet should contain allOf (
@@ -70,14 +73,14 @@ class WordSpec extends AnyFlatSpec with Matchers {
     val eta = force(classical.axiom(Classical.Eta)).conclusion
 
     Derived.foreach { name =>
-      withClue(s"$name: ")(Derivation.axiomsOf(fact(name)).diff(Set(choice, eta)) shouldBe empty)
+      withClue(s"$name: ")(Real.spent(fact(name)).diff(Set(choice, eta)) shouldBe empty)
     }
 
     // And the split inside those two, which is not decoration: extensionality is the one fact that
     // turns a pointwise agreement into an equation between functions, so it is the one that reaches
     // eta. Everything else gets by with the choice `WORD_PAD` and the projections already cost.
-    Derivation.axiomsOf(fact(Word.Extensionality)) shouldBe Set(choice, eta)
-    Derivation.axiomsOf(fact(Word.NthAbove)) shouldBe Set(choice)
+    Real.spent(fact(Word.Extensionality)) shouldBe Set(choice, eta)
+    Real.spent(fact(Word.NthAbove)) shouldBe Set(choice)
   }
 
   it should "cost the number of inferences measured, within an order" in {

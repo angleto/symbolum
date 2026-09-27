@@ -29,11 +29,15 @@ class AskSpec extends AnyFlatSpec with Matchers {
     // substring of "inferences over 1 axioms" and an `include` would have passed before the repair
     // as well as after it: the check would have been of the assertion's own wording and not of the
     // page. The inference count is not written in, since it moves whenever a derivation does.
+    //
+    // It read one axiom, `ADD_ZERO`, until `docs/adr/0053` proved the sixteen from the cuts: the
+    // axioms are the foundation's three now, and the law the claim used is named on the line the
+    // page gives the sixteen, which is where a reader of this claim looks for it.
     page.linesIterator.find(_.contains(" over ")).map(_.trim) match {
-      case Some(proof) => proof should endWith(" inferences over 1 axiom")
+      case Some(proof) => proof should endWith(" inferences over 3 axioms")
       case None => fail(s"no proof line on the page:\n$page")
     }
-    page should include("believed on: !x:real. x + 0 = x")
+    page should include("of the sixteen of the reals: ADD_ZERO")
   }
 
   it should "reach the naturals, which is what asking over the chain buys" in {

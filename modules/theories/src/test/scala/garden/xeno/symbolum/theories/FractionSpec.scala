@@ -33,9 +33,8 @@ class FractionSpec extends AnyFlatSpec with Matchers {
   private def lift[T](result: Either[KernelError, T]): T = force(LogicError.lift(result))
 
   private val chain = Chain.standard
-  private val fractions = force(
-    Fraction.construct(chain.classical, chain.integers, chain.product, chain.peano)
-  )
+  // The chain's own since phase 5, built below the reals from the integers there.
+  private val fractions = chain.fractions
   private val rules = fractions.logic.rules
 
   private def fact(name: String): Kernel.Thm = force(fractions.fact(name))
@@ -92,7 +91,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     val successor = force(fractions.term("SUC (0:num)", nums))
     val embedded = force(fractions.term("INT_OF_NUM (SUC (0:num))", ints))
     val one = force(fractions.term("INT_ONE", ints))
-    val integers = chain.integers
+    val integers = fractions.integers
 
     val projections = force(
       Vector(chain.product.fact(Product.FirstOfPair), chain.product.fact(Product.SecondOfPair))
@@ -162,7 +161,9 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     // The operations and the units since 2026-09-25, when the ring of `int` closed their
     // obligations; a constant arriving here beyond these would be a definition nobody listed,
     // which is what this reads for.
-    val before = chain.integers.theory.constants.keySet
+    // The integers the rationals were built from, and not `chain.integers`: that one is re-based
+    // above `Modular` onto a theory holding everything, against which the difference is empty.
+    val before = fractions.integers.theory.constants.keySet
     (fractions.theory.constants.keySet -- before) shouldBe
       Set(Fraction.SameName, Fraction.Abstraction, Fraction.Representation, Fraction.Projection,
         Fraction.Names.representative, Fraction.Addition, Fraction.Negation, Fraction.Multiplication,
@@ -202,7 +203,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     // some other way, and the argument in `Fraction.Lifting.laws` would be describing a route
     // nothing took.
     val integerLaws = Set(Integer.MulCommutative, Integer.AddCommutative, Integer.MulAssociative)
-      .map(name => force(chain.integers.fact(name)).conclusion)
+      .map(name => force(fractions.integers.fact(name)).conclusion)
     Vector(Fraction.AddAssociative, Fraction.MulAssociative, Fraction.Distributive, Fraction.MulAtOne)
       .foreach { name =>
         withClue(s"$name: ") {
@@ -467,7 +468,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     // `INT_LE_CANCEL_NUM` with the factor `INT_OF_NUM (SUC d)` weakened to `INT_OF_NUM d` says
     // `a * 0 <= b * 0` gives `a <= b`, and at `a = 1`, `b = 0` the premise is `0 <= 0` and the
     // conclusion is `NUM_LE (SUC 0) 0` through the embedding, which `NUM_LE_ZERO` refuses.
-    val integers = chain.integers
+    val integers = fractions.integers
     val ints = TyApp(Integer.TypeName, Nil)
     val nums = TyApp(Natural.TypeName, Nil)
     val zeroNum = force(fractions.term("ZERO", nums))

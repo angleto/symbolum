@@ -832,7 +832,22 @@ they have least appetite for working out how it is produced.
   REACH_POTENTIAL          !f:'a -> 'a -> bool. !g:'a -> 'a -> bool. !h:'a -> num. !x:'a. (!y:'a. !z:'a. g y z ==> h y = SUC (h z)) /\ (!y:'a. !z:'a. f y z /\ ~(g y z) ==> h y <= h z) ==> (!y:prod('a, num). REACH f g x y ==> h x <= SND y + h (FST y))
   REACH_START              !f:'a -> 'a -> bool. !g:'a -> 'a -> bool. !x:'a. REACH f g x (PAIR x 0)
 
-## Real, assumed
+## Real, defined
+
+  BIT0                     BIT0 = (\x:real. x + x)
+  BIT1                     BIT1 = (\x:real. x + x + 1)
+  div                      div = (\x:real. \y:real. x * inv y)
+  inv                      inv = CUT_INV
+  neg                      neg = CUT_NEG
+  real_add                 real_add = CUT_ADD
+  real_le                  real_le = (\x:real. \y:real. x < y \/ x = y)
+  real_lt                  real_lt = CUT_LT
+  real_mul                 real_mul = CUT_MUL
+  real_one                 1 = CUT_OF_RAT RAT_ONE
+  real_zero                0 = CUT_OF_RAT RAT_ZERO
+  sub                      sub = (\x:real. \y:real. x + -y)
+
+## Real, derived
 
   ADD_ASSOC                !x:real. !y:real. !z:real. x + y + z = x + (y + z)
   ADD_INVERSE              !x:real. x + -x = 0
@@ -850,14 +865,6 @@ they have least appetite for working out how it is produced.
   MUL_ONE                  !x:real. x * 1 = x
   MUL_SYM                  !x:real. !y:real. x * y = y * x
   ONE_NOT_ZERO             ~((1:real) = (0:real))
-
-## Real, defined
-
-  BIT0                     BIT0 = (\x:real. x + x)
-  BIT1                     BIT1 = (\x:real. x + x + 1)
-  div                      div = (\x:real. \y:real. x * inv y)
-  real_le                  real_le = (\x:real. \y:real. x < y \/ x = y)
-  sub                      sub = (\x:real. \y:real. x + -y)
 
 ## Resolving
 

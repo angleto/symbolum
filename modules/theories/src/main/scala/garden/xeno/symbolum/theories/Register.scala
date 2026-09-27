@@ -260,9 +260,10 @@ object Register {
    * has no row because somebody forgot, and those are the two cases this closes: every constant of
    * the widest signature is either a definition above or a name here, which `RegisterSpec` asserts.
    *
-   * Three kinds end up here and the reasons differ. `+`, `*`, `<`, `inv`, `neg`, `0` and `1` are
-   * declared by the reals and their whole meaning is the axioms above, which are rows; `select` is
-   * the same arrangement over `SELECT`. The abstraction and representation of each defined type,
+   * Two kinds end up here and the reasons differ. `select` is declared by the logic and its whole
+   * meaning is `SELECT`, which is a row above; `+`, `*`, `<`, `inv`, `neg`, `0` and `1` were the same
+   * arrangement over the sixteen axioms of the reals until `docs/adr/0053` defined them as operations
+   * on cuts, and they are definition rows since. The abstraction and representation of each defined type,
    * `mk_num` and `dest_num` and their four siblings, are introduced by `Kernel.defineType` together
    * with two theorems relating them, and a theorem is proved rather than read. Equality is the
    * kernel's and is in the primitive theory before any of this starts.

@@ -216,16 +216,18 @@ object Natural {
   /**
    * The same, over a theory that already holds something else.
    *
-   * What it is for: `Real.construct(classical.logic, classical.theory)` and then this over the
-   * result puts the reals and the naturals in **one** signature, where a function from one to the
-   * other can be stated. Two chains from one root cannot do that, however compatible they are:
-   * neither theory can read the other's theorems, which is a fact about the signature and not
-   * about the mathematics.
+   * What it was for: the reals were axiomatised over the classical logic until phase 5b, and this
+   * over them put the reals and the naturals in **one** signature, where a function from one to the
+   * other can be stated. The reals are built over the naturals now, so that composition is
+   * `Real.construction` and nothing calls this with a base other than the logic's; it stays for a
+   * development over a theory that already holds something else. Two chains from one root cannot
+   * share a signature however compatible they are: neither theory can read the other's theorems,
+   * which is a fact about the signature and not about the mathematics.
    *
-   * **The notation comes with the theory and is not the logic's.** A chain that goes through the
-   * reals reads `0 < x + 1`, and the logic's notation does not know `<` or `+`; a version of this
-   * that kept `classical.notation` built the theory and then could not read a proposition in it,
-   * which is how that came to be a parameter.
+   * **The notation comes with the theory and is not the logic's.** A theory that holds the reals
+   * reads `0 < x + 1`, and the logic's notation does not know `<` or `+`; a version of this that
+   * kept `classical.notation` built the theory and then could not read a proposition in it, which
+   * is how that came to be a parameter.
    */
   def construct(
     classical: Classical,

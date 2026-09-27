@@ -139,7 +139,9 @@ class ArgumentSpec extends AnyFlatSpec with Matchers {
     // outcome to aim for: three declared constants cost nothing to believe, and every assumption
     // sits on the left of a turnstile where somebody can disagree with it.
     reading.domainAxioms shouldBe empty
-    reading.foundational should have size 13
+    // Thirteen of the sixteen of the reals until `docs/adr/0053` proved them; the foundation's
+    // three since, which every claim over the reals reaches through the construction.
+    reading.foundational should have size 3
 
     info(
       s"${reading.lines.length} claims, ${reading.inferences} inferences, " +
@@ -271,8 +273,11 @@ class ArgumentSpec extends AnyFlatSpec with Matchers {
     // of a dozen lines is a hundred and fifty lines saying one thing, and the count stays on every
     // line because a claim that reached three and a claim that reached thirteen are not the same
     // claim.
-    lines.count(_.contains("believed on")) shouldBe 13
-    lines.count(_.contains("inferences over 13 axioms")) shouldBe 3
+    //
+    // Thirteen until `docs/adr/0053`; the foundation's three since, so the count no longer tells two
+    // claims apart and the line naming which of the sixteen each used is what does.
+    lines.count(_.contains("believed on")) shouldBe 3
+    lines.count(_.contains("inferences over 3 axioms")) shouldBe 3
 
     page should include("weighed 1, from ARS 2022, table 4: load <= 60 * rate")
     page should include("assumed and never weighed: 0 < load (ARS 2022, table 7)")

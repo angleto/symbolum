@@ -27,10 +27,31 @@ object Read {
   def expr(source: Term): Expr = source match {
     case BVar(index) => Expr.Bound(index)
     case FVar(name, kind) => Expr.Free(name, ty(kind))
-    case constant: Const => Expr.Constant(constant.name, ty(constant.ty), constant.origin.map(expr))
+    case constant: Const => Expr.Constant(constant.name, ty(constant.ty), constant.origin.map(origin))
     case App(fn, argument) => Expr.Apply(expr(fn), expr(argument))
     case Abs(binder, body) => Expr.Lambda(ty(binder), expr(body))
   }
+
+  /**
+   * An origin, read once per term and shared by every constant that carries it.
+   *
+   * Reading it afresh at each occurrence was harmless while the reals' primitives were declared
+   * and had none. Since `docs/adr/0053` they are defined as operations on cuts, whose origins carry
+   * constants whose origins go down through the rationals and the integers, and a statement about
+   * the reals read into a tree that copied that chain at every occurrence of `+`: the suite ran out
+   * of heap reading one chained theorem. The kernel shares an origin by reference, so the reading
+   * does too, keyed by the same identity; an `Expr` is immutable, so what is shared cannot change
+   * under anybody, and what a comparison concludes about two constants does not depend on it.
+   */
+  private val origins: java.util.Map[Term, Expr] =
+    java.util.Collections.synchronizedMap(new java.util.IdentityHashMap[Term, Expr])
+
+  private def origin(term: Term): Expr =
+    Option(origins.get(term)).getOrElse {
+      val read = expr(term)
+      origins.put(term, read)
+      read
+    }
 
   /** A sequent: what a theorem claims, with no view on whether it holds. */
   def claim(theorem: Kernel.Thm): Claim =

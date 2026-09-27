@@ -400,7 +400,7 @@ to live. `WhatAClaimCosts` is the first one that does.
 
 ## The trusted base, exactly
 
-Everything this system asks anyone to believe, and no one development is asked for all of it:
+Everything this system asks anyone to believe:
 
 1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1220 lines. The
    directory also holds a printer, the refusal surface, the proof record and the reader of which
@@ -416,9 +416,7 @@ Everything this system asks anyone to believe, and no one development is asked f
    term exists only because a checking constructor built it and is well-typed by construction. Type
    constructors are not private, because naming a type proves nothing: a type entering the system
    from outside is checked by `Theory.checkType`.
-2. **The sixteen axioms in `modules/theories/.../Real.scala`**, which state a complete ordered
-   field. `RealSpec` asserts the theory holds exactly those and in that order.
-3. **Three axioms added on 2026-09-10**: a choice operator and eta in
+2. **Three axioms added on 2026-09-10**: a choice operator and eta in
    `modules/logic/.../Classical.scala`, and infinity in `modules/theories/.../Natural.scala`. The
    first two are asked of the formalism rather than of a domain, and the third of a type nothing
    else interprets. `docs/adr/0007` is the record of choice and of infinity, `docs/adr/0009` of
@@ -463,13 +461,17 @@ Everything this system asks anyone to believe, and no one development is asked f
 
    It has moved twice, 983 to 829 when `Conv.refl` began sharing an atom's reflexivity, and 829 to
    841 on 2026-09-16 when `Rules.mp` stopped accepting an antecedent differing from the
-   implication's by a beta redex. Which of the axioms a session pays for depends on what it builds on, and
-   `NaturalSpec` measures each case: sixteen over the reals alone, three over the naturals alone,
-   nineteen for a development holding both, which is what `Chain.standard` assembles and `ChainSpec`
-   asserts. `docs/adr/0007` decides that the reals will be constructed rather than axiomatised, so
-   this count goes up before it comes down: the sixteen become theorems at the end of that work and
-   what is left is the foundation. A session in the middle sees a larger trusted base than the one
-   before it, and that is the decision rather than a defect.
+   implication's by a beta redex.
+
+**The sixteen statements of a complete ordered field in `modules/theories/.../Real.scala` are
+theorems since 2026-09-26**, and they were axioms until then. `docs/adr/0007` decided the reals
+would be constructed and `docs/adr/0053` is the last step: the type the cuts on the rationals are
+carved as is `real`, each primitive constant is defined as the operation on cuts it names, and each
+of the sixteen is proved under its old name, so `axiom("ADD_SYM")` still answers and rests on the
+three above. `RealSpec` pins their printed forms and asserts that the reals' theory asserts exactly
+the logic's two and the naturals' one. The price is that a development about the reals is asked to
+believe choice, which the axiomatised reals over `Logic.standard` were not; `NaturalSpec` measures
+it, three for the reals as for the naturals.
 
 Everything else is proved. The connectives are definitional extensions, the numerals are
 definitions, and every arithmetic lemma is derived. If a change makes the axiom count move, it is
@@ -672,7 +674,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 814 lemmas, 562 have two or more leading quantifiers and **496 of
+caller meant: of the library's 821 lemmas, 562 have two or more leading quantifiers and **496 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different

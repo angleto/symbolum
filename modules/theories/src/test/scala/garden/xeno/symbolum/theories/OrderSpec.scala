@@ -45,7 +45,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
   it should "add nothing to what has to be believed" in {
     // The whole point of deriving it rather than asserting it. If this number moves, something
     // reached for `assertAxiom` and the derivation stopped being one.
-    order.reals.theory.axioms should have length 16
+    order.reals.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
     Real.Axioms should have length 16
   }
 
@@ -112,7 +112,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
       "!x:real. selectivity < x ==> selectivity < x + 1"
 
     // And declaring cost nothing: the trusted base is what it was.
-    extended.theory.axioms should have length 16
+    extended.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 
   it should "not let a declared type be said to be inhabited" in {
@@ -123,7 +123,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
     val statement = force(extended.proposition("?x:agent. T"))
 
     Linarith.standard.prove(statement).isLeft shouldBe true
-    extended.theory.axioms should have length 16
+    extended.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 
   "The ordered field lemmas" should "each state what they claim" in {
@@ -213,8 +213,8 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
     times.hypotheses shouldBe empty
     reciprocal.hypotheses shouldBe empty
 
-    val timesAxioms = Derivation.axiomsOf(times)
-    val reciprocalAxioms = Derivation.axiomsOf(reciprocal)
+    val timesAxioms = Real.spent(times)
+    val reciprocalAxioms = Real.spent(reciprocal)
     val inverseAxiom = force(reals.axiom("MUL_INVERSE")).conclusion
 
     timesAxioms should not contain inverseAxiom
@@ -437,7 +437,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
     List(Order.LeOfNotLt, Order.LtOfNotLe).foreach { name =>
       val proved = force(order.fact(name))
       withClue(s"$name: ") {
-        Derivation.axiomsOf(proved).toSet shouldBe Set(trichotomy)
+        Real.spent(proved).toSet shouldBe Set(trichotomy)
         proved.hypotheses shouldBe empty
       }
     }

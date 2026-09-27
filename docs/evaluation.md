@@ -45,8 +45,11 @@ P is covered by property tests, two of which were written for another purpose. N
 now unmeasured.
 
 - **What a theorem rests on, which is not a track and is what the record bought first.** A proof
-  names the axioms it reaches, so `12 * 12 = 144` is 1132 inferences over five of the sixteen and
-  touches neither the order nor completeness, and `0 < 1` touches the order and not the ring. A
+  names the axioms it reaches, so `12 * 12 = 144` is 102250 inferences over three axioms and rests on
+  five of the sixteen, touching neither the order nor completeness, and `0 < 1` touches the order and
+  not the ring. The three are the foundation's since `docs/adr/0053` proved the sixteen from the cuts,
+  and the five are named by reading the sixteen as the reals' interface; the inferences are what a
+  checker replays, the construction of those five included, and 1132 of them are the proof's own. A
   sequent has always said what was assumed; this is the first time anything said what was
   *believed*. `ProofRecordSpec` asserts it per theorem, and the cost was measured beside it:
   twenty proofs of a squared binomial retained 2.4 MB for 64800 inferences, about thirty-seven bytes
@@ -160,16 +163,16 @@ order to show the checker one.
 
 | Theorem | Inferences | Axioms reached |
 |---|---|---|
-| `0 < 1` | 1758 | 11 |
-| `0 < 12` | 2169 | 12 |
-| `12 * 12 = 144` | 1132 | 5 |
-| `(x + 1)^2` expanded | 2251 | 8 |
-| `x < y /\ y < z ==> x < z` | 4125 | 9 |
-| `(x * y) / y = x` | 1757 | 8 |
+| `0 < 1` | 107241 | 3 |
+| `0 < 12` | 108094 | 3 |
+| `12 * 12 = 144` | 102250 | 3 |
+| `(x + 1)^2` expanded | 113026 | 3 |
+| `x < y /\ y < z ==> x < z` | 105910 | 3 |
+| `(x * y) / y = x` | 134457 | 3 |
 | `p /\ q ==> p`, propositional | 199 | **0** |
 | `((p ==> q) ==> p) ==> p`, found by a solver | 1256 | 1 |
 | an on-call rule's own claim | 295 | 1 |
-| `ADD_SYM`, an axiom of the reals | 1 | 1 |
+| `SELECT`, the choice axiom | 1 | 1 |
 | the successor's properties | 404 | 2 |
 | induction over the naturals | 626 | **0** |
 
@@ -215,16 +218,16 @@ the writer, and nothing else.
 
 | Measured on `12 * 12 = 144` | As text |
 |---|---|
-| steps, and the distinct terms they are written over | 1132 steps, 2048 terms |
-| the nodes a writer without sharing would have emitted | 40860 nodes, a sharing factor of 20.0 |
-| its size | 66690 characters, 58.9 a step |
+| steps, and the distinct terms they are written over | 102250 steps, 112914 terms |
+| the nodes a writer without sharing would have emitted | 6361693 nodes, a sharing factor of 56.3 |
+| its size | 6231424 characters, 60.9 a step |
 
 <!-- end generated: serialisation -->
 
 **A term is written once however many steps use it**, which is the property that decides whether
-this is usable: those 2048 records stand in for **40860** term nodes the steps would otherwise have
-written out, a factor of twenty, and a format that copied a term into every step would be quadratic
-in the thing that is already the largest number here. References go backwards only, so the
+this is usable: those 112914 records stand in for **6361693** term nodes the steps would otherwise
+have written out, a factor of fifty-six, and a format that copied a term into every step would be
+quadratic in the thing that is already the largest number here. References go backwards only, so the
 reader is one pass with no fixup.
 
 The comparison used to be made against the step count, and it stopped working on 2026-09-11 without
@@ -424,10 +427,9 @@ stale from a different day, and neither of them was caught by anything.
 | type instantiation | 4589 |
 | antisymmetry | 2549 |
 | abstraction | 1088 |
-| axiom | 227 |
+| citation | 278 |
 | definition | 145 |
 | assumption | 93 |
-| citation | 51 |
 
 They add up to 105271 inferences, of which 13220 are reflexivity, 12.6% of the corpus.
 

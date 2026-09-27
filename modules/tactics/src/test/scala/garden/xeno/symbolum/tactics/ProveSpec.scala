@@ -175,7 +175,12 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     val goal = force(wider.reals.proposition("!n:num. NUM_LE ZERO n"))
 
     force(wider(goal)).theorem.hypotheses shouldBe empty
-    Prove.standard.reals.proposition("!n:num. NUM_LE ZERO n").isLeft shouldBe true
+    // The first of the three stopped being true with `docs/adr/0053`: the reals are built over the
+    // naturals, so `Prove.standard` can state the goal. The second still holds, and it is the one
+    // that decides: its library does not carry the naturals' lemmas, so it refuses what the chain's
+    // proves.
+    val standardGoal = force(Prove.standard.reals.proposition("!n:num. NUM_LE ZERO n"))
+    Prove.standard(standardGoal).isLeft shouldBe true
   }
 
   it should "reach a POLYMORPHIC lemma at the instance a goal asks for" in {
@@ -331,7 +336,9 @@ class ProveSpec extends AnyFlatSpec with Matchers {
         val theorem = force(wider(goal)).theorem
         theorem.conclusion shouldBe goal
         theorem.hypotheses shouldBe empty
-        Derivation.axiomsOf(theorem).size shouldBe axioms
+        // The sixteen read as the reals' interface since `docs/adr/0053`, which is what this count
+        // read while they were axioms.
+        garden.xeno.symbolum.theories.Real.spent(theorem).size shouldBe axioms
       }
     }
   }

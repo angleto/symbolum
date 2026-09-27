@@ -832,7 +832,7 @@ object Prove {
         (
           Library.of(
             Vector(
-              "Real, assumed" -> order.reals.axioms,
+              "Real, derived" -> order.reals.axioms,
               "Real, defined" -> order.reals.definitions,
               "Positivity" -> order.ring.positivity.facts,
               "Order" -> order.facts

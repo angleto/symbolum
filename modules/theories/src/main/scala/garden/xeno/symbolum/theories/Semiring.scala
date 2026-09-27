@@ -74,7 +74,7 @@ import garden.xeno.symbolum.logic.*
  * a subtraction truncates is outside this fragment and is refused rather than decided.
  */
 final class Semiring private (
-  val peano: Peano,
+  val peano: NaturalArithmetic,
   val normalisation: Rewrite.Conversion
 ) {
 
@@ -149,7 +149,7 @@ object Semiring {
    * fragment and the six that were not were all this one shape. `SUC t` stays an atom
    * **additively**, which is the line the class comment draws.
    */
-  def construct(peano: Peano): Either[LogicError, Semiring] = {
+  def construct(peano: NaturalArithmetic): Either[LogicError, Semiring] = {
     val numbers = TyApp(Natural.TypeName, Nil)
     val binary = Type.fun(numbers, Type.fun(numbers, numbers))
     for {

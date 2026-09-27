@@ -73,7 +73,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
 
   it should "prove the intermediate value theorem from the reals alone, completeness among them" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
-    val spent = Derivation.axiomsOf(fact(Continuity.IntermediateValue))
+    val spent = Real.spent(fact(Continuity.IntermediateValue))
 
     spent should contain(completeness)
     // An equality and not a ceiling: the choice arrives through `abs` in the definition, and a
@@ -86,8 +86,8 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     }
 
     // The facts about a particular function spend no supremum: they pick a radius by hand.
-    Derivation.axiomsOf(fact(Continuity.Constant)) should not contain completeness
-    Derivation.axiomsOf(fact(Continuity.Identity)) shouldBe empty
+    Real.spent(fact(Continuity.Constant)) should not contain completeness
+    Real.spent(fact(Continuity.Identity)) shouldBe empty
   }
 
   /* ------------------------------------------------------------- what it says */
@@ -161,7 +161,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
         Continuity.AttainsMaximumWithin -> Continuity.AttainsMaximum,
         Continuity.AttainsMinimumWithin -> Continuity.AttainsMinimum,
         Continuity.UniformWithin -> Continuity.Uniform))
-      withClue(relative) { Derivation.axiomsOf(fact(relative)) shouldBe Derivation.axiomsOf(fact(twoSided)) }
+      withClue(relative) { Real.spent(fact(relative)) shouldBe Real.spent(fact(twoSided)) }
   }
 
   it should "need its continuity hypothesis, which is shown by refuting the theorem without it" in {
@@ -214,14 +214,14 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
     val select = force(chain.classical.axiom("SELECT")).conclusion
     for (name <- List(Continuity.IntervalGluing, Continuity.Bounded, Continuity.AttainsMaximum, Continuity.AttainsMinimum)) {
-      val spent = Derivation.axiomsOf(fact(name))
+      val spent = Real.spent(fact(name))
       withClue(s"$name reaches: ${(spent -- realAxioms).map(continuity.show).mkString("; ")}\n") {
         spent should contain(completeness)
         (spent -- realAxioms) shouldBe Set(select)
       }
     }
     // The negation picks its radius by hand and takes no supremum.
-    Derivation.axiomsOf(fact(Continuity.Negation)) should not contain completeness
+    Real.spent(fact(Continuity.Negation)) should not contain completeness
 
     // The route, which is the design and not a detail: both halves of the theorem are the gluing,
     // and the minimum is the maximum of the negation. A derivation that took the textbook's second
@@ -238,7 +238,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     // and the choice `abs` brings. A combination at one point is a statement about one point.
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
     val select = force(chain.classical.axiom("SELECT")).conclusion
-    val spent = Derivation.axiomsOf(fact(Continuity.Linear))
+    val spent = Real.spent(fact(Continuity.Linear))
     spent should not contain completeness
     (spent -- realAxioms) shouldBe Set(select)
 
@@ -396,7 +396,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     // Measured on 2026-09-25 before it was written here: seventeen, the extreme value theorem's cost.
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
     val select = force(chain.classical.axiom("SELECT")).conclusion
-    val spent = Derivation.axiomsOf(fact(Continuity.Uniform))
+    val spent = Real.spent(fact(Continuity.Uniform))
     spent should contain(completeness)
     (spent -- realAxioms) shouldBe Set(select)
     val gluing = Set(fact(Continuity.IntervalGluing).conclusion)
@@ -412,15 +412,15 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     // collected before asserting, so one red names all of them rather than the first.
     val select = force(chain.classical.axiom("SELECT")).conclusion
     val expected = realAxioms + select
-    val intermediate = Derivation.axiomsOf(fact(Continuity.IntermediateValue))
+    val intermediate = Real.spent(fact(Continuity.IntermediateValue))
     val names = List(Continuity.IntervalGluing, Continuity.Bounded, Continuity.AttainsMaximum,
       Continuity.AttainsMinimum, Continuity.Uniform)
     def describe(terms: Set[Term]): String = terms.map(continuity.show).mkString("; ")
     val mismatches = (Continuity.IntermediateValue :: names).flatMap { name =>
-      val spent = Derivation.axiomsOf(fact(name))
+      val spent = Real.spent(fact(name))
       Option.when(spent != expected)(s"$name misses [${describe(expected -- spent)}] and adds [${describe(spent -- expected)}]")
     } ++ names.flatMap { name =>
-      Option.when(Derivation.axiomsOf(fact(name)) != intermediate)(s"$name differs from ${Continuity.IntermediateValue}")
+      Option.when(Real.spent(fact(name)) != intermediate)(s"$name differs from ${Continuity.IntermediateValue}")
     }
     mismatches shouldBe empty
   }

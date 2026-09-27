@@ -4,26 +4,22 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * The real numbers, as a complete ordered field asserted by axiom.
+ * The real numbers, as a complete ordered field built from the cuts on the rationals.
  *
- * This is where the trusted base grows for the first time since the kernel. Everything before it
- * is definitional: the logic's eight connectives add no axiom, and neither does anything derived
- * from them. The propositions in [[Real.Axioms]] are believed rather than proved, and they are the
- * whole of what this system asks anyone to believe beyond the ten inference rules.
+ * Until phase 5 of `docs/adr/0007` this file asserted the sixteen propositions of [[Real.Axioms]],
+ * and they were the whole of what this system asked anyone to believe about a domain.
+ * `docs/adr/0004` recorded why they were asserted, and `docs/adr/0053` is what supersedes it: the
+ * type `real` is `Cut`'s, each primitive constant is defined as the operation on cuts it names, and
+ * each of the sixteen is proved under its old name. `axiom` still answers under those names,
+ * because they are what every consumer asks for; what it hands back rests on choice, eta and
+ * infinity, which the naturals and the rationals already cost, and on nothing else.
  *
- * The decision to assert them rather than construct the reals from the naturals is recorded, with
- * what it costs, in `docs/adr/0004-reals-axiomatised-not-constructed.md`. The short version: the
- * construction is months of work upstream of every result the project wants, and the risk it
- * removes is bounded here by three things instead. The axioms are in one file. They are written in
- * the concrete syntax a person can check against a textbook rather than as builder calls nobody
- * reads. And a test pins the printed form of each of them and scans the sources for any other
- * call of `assertAxiom`, so the list can neither change nor grow by accident.
+ * == What is defined, and what is proved ==
  *
- * == What is asserted and what is defined ==
- *
- * Asserted: the field operations, the order, and completeness. Defined, and therefore adding
- * nothing to what has to be believed: subtraction, division and the non-strict order, each an
- * abbreviation for a combination of the asserted ones.
+ * Defined: the seven primitives, each an alias of `Cut`'s (`real_add` is `CUT_ADD`), and the five
+ * abbreviations over them, subtraction, division, the non-strict order and the two numeral bits.
+ * Proved: the field laws, the order and completeness, each from a fact of `Cut` read through the
+ * aliases, and five of them by a short argument written here.
  */
 final class RealTheory private[theories] (
   val logic: Logic,
@@ -53,8 +49,7 @@ final class RealTheory private[theories] (
    * == It costs nothing to believe ==
    *
    * Declaring is conservative: a theory full of undeclared-meaning constants proves exactly what
-   * the empty one proves, so the sixteen axioms stay sixteen and `RealSpec`'s scan still finds
-   * `assertAxiom` in one file. A domain model states its assumptions as hypotheses of the theorems
+   * the empty one proves, so the trusted base does not move. A domain model states its assumptions as hypotheses of the theorems
    * that use them, not as axioms; `docs/proving.md` says how, and why the two are not the same.
    *
    * == What it does not give you ==
@@ -145,9 +140,6 @@ object Real {
    */
   val realType: Type = TyApp(TypeName, Nil)
 
-  private val binary: Type = Type.fun(realType, Type.fun(realType, realType))
-  private val relation: Type = Type.fun(realType, Type.fun(realType, Type.Bool))
-
   /**
    * Precedences, above those of the logic so that arithmetic binds tighter than any connective.
    *
@@ -166,22 +158,6 @@ object Real {
   val AdditionPrecedence: Int = 60
   val MultiplicationPrecedence: Int = 70
   private val NegationPrecedence: Int = 80
-
-  /**
-   * The constants this theory introduces without defining them.
-   *
-   * Declaring a constant is conservative: an uninterpreted name proves nothing. What these cost is
-   * paid by the axioms below, which say what they mean.
-   */
-  private val Declarations: Vector[(String, Type)] = Vector(
-    Zero -> realType,
-    One -> realType,
-    Addition -> binary,
-    Multiplication -> binary,
-    Negation -> Type.fun(realType, realType),
-    Inverse -> Type.fun(realType, realType),
-    Order -> relation
-  )
 
   /**
    * The abbreviations, in the order they are introduced.
@@ -207,11 +183,12 @@ object Real {
   )
 
   /**
-   * The axioms, by name.
+   * The sixteen statements of a complete ordered field, by name, each proved by [[construct]].
    *
-   * Read them against a source. That is the point of writing them this way, and it is the only
-   * check there is on this list: a mis-stated axiom makes everything provable, and every test in
-   * this repository would still pass.
+   * They were asserted until phase 5, and this list was then the only check on them: a mis-stated
+   * axiom makes everything provable and every test would still pass. A mis-stated one now fails to
+   * be proved, so the construction refuses to build; what reading them against a textbook still
+   * checks is that they say what a complete ordered field is, which no derivation can.
    */
   val Axioms: Vector[(String, String)] = Vector(
     // A field.
@@ -261,50 +238,134 @@ object Real {
       .withNumerals(Zero, One, Bit0, Bit1)
 
   /**
-   * The theory.
+   * What the reals are built from, one link each, the reals last.
    *
-   * Built once. A failure is a defect in this file rather than a condition a caller could handle,
-   * so it is raised; [[construct]] is public so a test can assert it succeeds without provoking an
+   * The naturals, the arithmetic of `num` that names no real, the pairs, the integers, the
+   * rationals and the cuts: the order is `docs/adr/0016`'s, and it is the head of `Chain` too, which
+   * builds its own over the logic it is handed and shares this one when that logic is the standard.
+   */
+  final class Construction private[theories] (
+    val naturals: Natural,
+    val pure: PureArithmetic,
+    val product: Product,
+    val integers: Integer,
+    val fractions: Fraction,
+    val cuts: Cut,
+    val reals: RealTheory
+  )
+
+  /** The construction over a classical logic and the naturals built on it. */
+  def construction(classical: Classical, naturals: Natural): Either[LogicError, Construction] =
+    for {
+      pure <- Peano.pure(naturals)
+      product <- Product.construct(classical, pure.theory, pure.notation)
+      integers <- Integer.construct(classical, pure, product, product.theory, pure.notation)
+      fractions <- Fraction.construct(classical, integers, product, pure)
+      cuts <- Cut.construct(fractions, pure)
+      reals <- construct(classical.logic, cuts)
+    } yield new Construction(naturals, pure, product, integers, fractions, cuts, reals)
+
+  /**
+   * The construction over the standard classical logic, built once.
+   *
+   * A failure is a defect in the construction rather than a condition a caller could handle, so it
+   * is raised; [[construction]] is public so a test can assert it succeeds without provoking an
    * initialisation error to find out.
    */
-  lazy val standard: RealTheory =
-    construct().fold(
-      error => throw new IllegalStateException(s"the theory of the reals does not build: ${error.message}"),
+  lazy val constructed: Construction =
+    construction(Classical.standard, Natural.standard).fold(
+      error => throw new IllegalStateException(s"the reals do not build: ${error.message}"),
       identity
     )
 
-  /** Build the theory over the plain logic: declare, define, then assert. */
-  def construct(): Either[LogicError, RealTheory] =
-    construct(Logic.standard, Logic.standard.theory)
+  /**
+   * The theory of the reals, as the construction leaves it.
+   *
+   * It sat over `Logic.standard` with its sixteen asserted until phase 5, so a development about the
+   * reals was not asked to believe the choice operator; a construction cannot offer that, since the
+   * cuts are carved and the rationals quotiented, and both spend choice. What it asks instead is the
+   * three the naturals cost, which is fewer than the sixteen it replaces.
+   */
+  lazy val standard: RealTheory = constructed.reals
+
+  /** The sixteen statements, as the terms the construction proved. */
+  lazy val sixteen: Set[Term] = Axioms.map { case (name, _) => standard.axioms(name).conclusion }.toSet
 
   /**
-   * The same, over a theory that already holds something else.
-   *
-   * The reals and the naturals were two chains from one root until 2026-09-10, and a chain cannot
-   * see the other's names: `Natural.standard.theory` cannot read a theorem about the reals and the
-   * reals cannot read one about the naturals, so no theory existed in which a function from one to
-   * the other could even be stated. Measured, not argued: the two share exactly `bool`, `fun` and
-   * the nine logical constants, agreeing on every one of them, which is why mixing their theorems
-   * happens to be harmless and why nothing detects that it is.
-   *
-   * This is how they are put in one chain instead. A caller wanting both builds the reals over
-   * `Classical`, and the naturals over the result, and everything then lives in one signature.
-   *
-   * **`Real.standard` deliberately does not do that.** It stays over `Logic.standard`, which has no
-   * axioms, so a development about the reals is not asked to believe the choice operator. The two
-   * configurations are the point rather than an oversight, and `ClassicalSpec` asserts the first.
+   * What a theorem spends, the sixteen read as the reals' interface: the foundation's axioms it
+   * reaches outside them, and those of the sixteen it rests on. It is what `Derivation.axiomsOf`
+   * answered while the sixteen were asserted, and `Derivation.axiomsOf` with an interface is why it
+   * still can; a theorem built over another construction of the reals is read the same way, since
+   * its sixteen are the same terms.
    */
-  def construct(logic: Logic, base: Theory): Either[LogicError, RealTheory] = {
+  def spent(theorem: Kernel.Thm): Set[Term] = Derivation.axiomsOf(theorem, sixteen)
+
+  /**
+   * The seven primitive constants, each defined as the operation of `Cut` it names.
+   *
+   * An alias rather than a renaming: `Cut` publishes its facts about `CUT_ADD`, and what the
+   * statements of [[Axioms]] say about `real_add` is the same fact once the definition is unfolded.
+   */
+  private val Aliases: Vector[(String, String)] = Vector(
+    Zero -> "CUT_OF_RAT RAT_ZERO",
+    One -> "CUT_OF_RAT RAT_ONE",
+    Addition -> "CUT_ADD",
+    Multiplication -> "CUT_MUL",
+    Negation -> "CUT_NEG",
+    Inverse -> "CUT_INV",
+    Order -> "CUT_LT"
+  )
+
+  /**
+   * The axioms that are a fact of `Cut` word for word once the aliases, `<` and `<=` are unfolded.
+   *
+   * The five absent are proved in [[Constructed]]: `ONE_NOT_ZERO` from the injectivity of the
+   * embedding, and the four about the strict order from the facts about `CUT_LE` it abbreviates.
+   */
+  private val Readings: Map[String, String] = Map(
+    "ADD_SYM" -> Cut.AddCommutative,
+    "ADD_ASSOC" -> Cut.AddAssociative,
+    "ADD_ZERO" -> Cut.AddZero,
+    "ADD_INVERSE" -> Cut.AddNegation,
+    "MUL_SYM" -> Cut.MulCommutative,
+    "MUL_ASSOC" -> Cut.MulAssociative,
+    "MUL_ONE" -> Cut.MulOne,
+    "MUL_INVERSE" -> Cut.MulInverse,
+    "DISTRIBUTE" -> Cut.MulDistributive,
+    "LT_MUL" -> Cut.LessMul,
+    "COMPLETENESS" -> Cut.Complete
+  )
+
+  /**
+   * The reals built from the cuts: the same constants, the same notation and the same sixteen
+   * statements, and not one of them asserted.
+   *
+   * `cuts.theory` already holds the type `real`, carved by `Cut` out of `rat -> bool`, so nothing is
+   * declared here. Each primitive constant is defined as the operation it names, the
+   * abbreviations of [[Definitions]] follow exactly as over an asserted theory, and each statement
+   * of [[Axioms]] is proved: unfolded to a statement about the cuts and compared, as a term, with
+   * the theorem that proves it. `axiom` still answers under the sixteen names, which is what every
+   * consumer asks for; what it hands back is a theorem that rests on the foundation, choice, eta and
+   * infinity, and on nothing about the reals. Each is cited under its name, as every published fact
+   * is, so a report over a proof stops at `ADD_SYM` rather than walking into the cuts, which is what
+   * it showed while the sixteen were axioms. `docs/adr/0053` is the decision.
+   */
+  def construct(logic: Logic, cuts: Cut): Either[LogicError, RealTheory] = {
     val syntax = notation
 
-    def declare(theory: Theory): Either[LogicError, Theory] =
-      Declarations.foldLeft(LogicError.lift(theory.declareTypeOperator(TypeName, 0))) {
-        case (acc, (name, ty)) => acc.flatMap(current => LogicError.lift(current.declareConstant(name, ty)))
+    def alias(theory: Theory): Either[LogicError, (Theory, Map[String, Kernel.Thm])] =
+      Aliases.foldLeft(
+        Right((theory, Map.empty[String, Kernel.Thm])): Either[LogicError, (Theory, Map[String, Kernel.Thm])]
+      ) {
+        case (acc, (name, text)) =>
+          for {
+            current <- acc
+            body <- Parser.term(current._1, cuts.notation, text)
+            extended <- LogicError.lift(Kernel.defineConstant(current._1, name, body))
+          } yield (extended._1, current._2.updated(name, extended._2))
       }
 
-    def define(
-      theory: Theory
-    ): Either[LogicError, (Theory, Map[String, Kernel.Thm])] =
+    def define(theory: Theory): Either[LogicError, (Theory, Map[String, Kernel.Thm])] =
       Definitions.foldLeft(
         Right((theory, Map.empty[String, Kernel.Thm])): Either[LogicError, (Theory, Map[String, Kernel.Thm])]
       ) {
@@ -316,20 +377,238 @@ object Real {
           } yield (extended._1, current._2.updated(name, extended._2))
       }
 
-    def assert(theory: Theory): Either[LogicError, (Theory, Map[String, Kernel.Thm])] =
-      Axioms.foldLeft(Right((theory, Map.empty[String, Kernel.Thm])): Either[LogicError, (Theory, Map[String, Kernel.Thm])]) {
+    for {
+      aliased <- alias(cuts.theory)
+      defined <- define(aliased._1)
+      theory = defined._1
+      definitions = aliased._2 ++ defined._2
+      constructed = new Constructed(cuts)
+      unfolding <- constructed.unfolding(definitions)
+      axioms <- Axioms.foldLeft(Right(Map.empty[String, Kernel.Thm]): Either[LogicError, Map[String, Kernel.Thm]]) {
         case (acc, (name, text)) =>
           for {
-            current <- acc
-            statement <- Parser.proposition(current._1, syntax, text)
-            asserted <- LogicError.lift(Kernel.assertAxiom(current._1, statement))
-          } yield (asserted._1, current._2.updated(name, asserted._2))
+            done <- acc
+            statement <- Parser.proposition(theory, syntax, text)
+            source <- Readings.get(name) match {
+              case Some(fact) => cuts.fact(fact)
+              case None => constructed.proof(name)
+            }
+            proved <- unfolding.carry(name, statement, source)
+          } yield done.updated(name, proved)
       }
+    } yield new RealTheory(logic, theory, syntax, Published.cite(axioms), definitions)
+  }
 
-    for {
-      declared <- declare(base)
-      defined <- define(declared)
-      result <- assert(defined._1)
-    } yield new RealTheory(logic, result._1, syntax, result._2, defined._2)
+  /**
+   * What turns a fact about the cuts into one of the sixteen, and the five that are not a fact of
+   * `Cut` as they stand.
+   *
+   * Unfolding goes one way only, from the statement towards the cuts: the aliases and `<=` first,
+   * then `CUT_LT` into the negation of `CUT_LE` it abbreviates, and last `x < y \/ x = y` into
+   * `CUT_LE x y`, which is the one step that is a lemma rather than a definition and is proved here
+   * as [[Constructed.atMost]]. The source theorem's conclusion is unfolded by the same conversion,
+   * so a fact of `Cut` written with `CUT_LT` and one written with `~(CUT_LE ...)` meet at one term,
+   * and the comparison of the two normal forms is the whole check.
+   */
+  private final class Constructed(cuts: Cut) {
+    private val rules = cuts.logic.rules
+    private val x = Term.variable("x", Cut.Classes)
+    private val y = Term.variable("y", Cut.Classes)
+    private val z = Term.variable("z", Cut.Classes)
+
+    private def prop(text: String): Either[LogicError, Term] = cuts.proposition(text)
+    private def fact(name: String): Either[LogicError, Kernel.Thm] = cuts.fact(name)
+    private def assume(text: String): Either[LogicError, Kernel.Thm] =
+      prop(text).flatMap(t => LogicError.lift(Kernel.assume(t)))
+
+    /** Nothing is sorted: every rule here is used left to right, so the order is never consulted. */
+    private val unordered: Ordering[Term] = Ordering.by(_.toString)
+
+    private def rightOf(theorem: Kernel.Thm): Either[LogicError, Term] =
+      Term.destEq(theorem.conclusion).map(_._2).toRight(NotOfForm("an equation", theorem.conclusion))
+
+    final class Unfolding(first: Rewrite.Conversion, second: Rewrite.Conversion) {
+      private def normalForm(term: Term): Either[LogicError, Kernel.Thm] =
+        for {
+          outer <- first(term)
+          middle <- rightOf(outer)
+          inner <- second(middle)
+          both <- Conv.trans(outer, inner)
+        } yield both
+
+      def carry(name: String, statement: Term, source: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+        for {
+          wanted <- normalForm(statement)
+          held <- second(source.conclusion)
+          reading <- rightOf(wanted)
+          reached <- rightOf(held)
+          _ <- Either.cond(
+            reading == reached,
+            (),
+            NotOfForm(s"$name read on the cuts", reached)
+          )
+          onCuts <- LogicError.lift(Kernel.eqMp(held, source))
+          back <- Conv.sym(wanted)
+          result <- LogicError.lift(Kernel.eqMp(back, onCuts))
+        } yield result
+    }
+
+    def unfolding(definitions: Map[String, Kernel.Thm]): Either[LogicError, Unfolding] =
+      for {
+        outer <- (Aliases.map(_._1) :+ NonStrictOrder).foldLeft(Right(Vector.empty): Either[LogicError, Vector[Kernel.Thm]]) {
+          (acc, name) => acc.flatMap(done => definitions.get(name).toRight(MissingDefinition(name)).map(done :+ _))
+        }
+        outerRules <- Rewrite.Rule.all(cuts.logic, outer)
+        lessThan <- cuts.definition(Cut.LessThan)
+        between <- atMost
+        innerRules <- Rewrite.Rule.all(cuts.logic, Vector(lessThan, between))
+      } yield new Unfolding(
+        Rewrite.normaliser(outerRules, Vector.empty, unordered),
+        Rewrite.normaliser(innerRules, Vector.empty, unordered)
+      )
+
+    /** `!x y. (~(CUT_LE y x) \/ x = y) = CUT_LE x y`: the non-strict order, read on the cuts. */
+    def atMost: Either[LogicError, Kernel.Thm] =
+      for {
+        either <- prop("~(CUT_LE y x) \\/ x = y")
+        atMostTerm <- prop("CUT_LE x y")
+        above <- prop("CUT_LE y x")
+        notAbove <- prop("~(CUT_LE y x)")
+        equal <- prop("(x:real) = (y:real)")
+        // From the disjunction to the order: a cut not above `x` is above it, by totality, and an
+        // equal one is reflexivity.
+        heldEither <- LogicError.lift(Kernel.assume(either))
+        heldNotAbove <- LogicError.lift(Kernel.assume(notAbove))
+        total <- fact(Cut.AtMostTotal).flatMap(rules.specAll(_, List(x, y)))
+        heldAtMost <- LogicError.lift(Kernel.assume(atMostTerm))
+        heldAbove <- LogicError.lift(Kernel.assume(above))
+        absurd <- rules.notElim(heldNotAbove, heldAbove)
+        fromAbove <- rules.falsityElim(atMostTerm, absurd)
+        fromNotAbove <- rules.disjElim(total, heldAtMost, fromAbove)
+        heldEqual <- LogicError.lift(Kernel.assume(equal))
+        reflexive <- fact(Cut.AtMostReflexive).flatMap(rules.spec(x, _))
+        moved <- atMostTerm match {
+          case App(relation, _) => Conv.apTerm(relation, heldEqual)
+          case other => Left(NotOfForm("a comparison", other))
+        }
+        fromEqual <- LogicError.lift(Kernel.eqMp(moved, reflexive))
+        forwards <- rules.disjElim(heldEither, fromNotAbove, fromEqual)
+        // Back: where `y <= x` as well, antisymmetry gives the equation; otherwise the left side.
+        antisymmetric <- fact(Cut.AtMostAntisymmetric).flatMap(rules.specAll(_, List(x, y)))
+        equation <- rules.mp(antisymmetric, heldAtMost).flatMap(rules.mp(_, heldAbove))
+        rightCase <- rules.disjIntro2(notAbove, equation)
+        leftCase <- rules.disjIntro1(equal, heldNotAbove)
+        backwards <- cuts.classical.cases(above, rightCase, leftCase)
+        both = Kernel.deductAntisym(backwards, forwards)
+        result <- rules.genAll(both, List(x, y))
+      } yield result
+
+    def proof(name: String): Either[LogicError, Kernel.Thm] = name match {
+      case "ONE_NOT_ZERO" => oneNotZero
+      case "LT_IRREFLEXIVE" => irreflexive
+      case "LT_TRANSITIVE" => transitive
+      case "LT_TOTAL" => total
+      case "LT_ADD" => additive
+      case other => Left(MissingDefinition(other))
+    }
+
+    /** `~(CUT_OF_RAT RAT_ONE = CUT_OF_RAT RAT_ZERO)`, from injectivity and the rationals' own. */
+    private def oneNotZero: Either[LogicError, Kernel.Thm] =
+      for {
+        collapse <- prop("CUT_OF_RAT RAT_ONE = CUT_OF_RAT RAT_ZERO")
+        held <- LogicError.lift(Kernel.assume(collapse))
+        one <- cuts.term("RAT_ONE", Fraction.Classes)
+        zero <- cuts.term("RAT_ZERO", Fraction.Classes)
+        units <- fact(Cut.OfRationalInjective).flatMap(rules.specAll(_, List(one, zero))).flatMap(rules.mp(_, held))
+        swapped <- Conv.sym(units)
+        absurd <- cuts.fractions.fact(Fraction.UnitsDistinct).flatMap(rules.notElim(_, swapped))
+        result <- rules.notIntro(collapse, absurd)
+      } yield result
+
+    /** `!x. ~~(CUT_LE x x)`, which is `~(x < x)` unfolded. */
+    private def irreflexive: Either[LogicError, Kernel.Thm] =
+      for {
+        denial <- prop("~(CUT_LE x x)")
+        held <- LogicError.lift(Kernel.assume(denial))
+        reflexive <- fact(Cut.AtMostReflexive).flatMap(rules.spec(x, _))
+        absurd <- rules.notElim(held, reflexive)
+        result <- rules.notIntro(denial, absurd).flatMap(rules.gen(x, _))
+      } yield result
+
+    /** `x < y /\ y < z ==> x < z` unfolded: were `z <= x`, totality puts `x <= y` and so `z <= y`. */
+    private def transitive: Either[LogicError, Kernel.Thm] =
+      for {
+        both <- prop("~(CUT_LE y x) /\\ ~(CUT_LE z y)")
+        held <- LogicError.lift(Kernel.assume(both))
+        notYX <- rules.conjElim1(held)
+        notZY <- rules.conjElim2(held)
+        zx <- prop("CUT_LE z x")
+        heldZX <- LogicError.lift(Kernel.assume(zx))
+        total <- fact(Cut.AtMostTotal).flatMap(rules.specAll(_, List(x, y)))
+        heldXY <- assume("CUT_LE x y")
+        zy <- fact(Cut.AtMostTransitive).flatMap(rules.specAll(_, List(z, x, y)))
+          .flatMap(rules.mp(_, heldZX)).flatMap(rules.mp(_, heldXY))
+        first <- rules.notElim(notZY, zy)
+        heldYX <- assume("CUT_LE y x")
+        second <- rules.notElim(notYX, heldYX)
+        absurd <- rules.disjElim(total, first, second)
+        denied <- rules.notIntro(zx, absurd)
+        result <- rules.disch(both, denied).flatMap(rules.genAll(_, List(x, y, z)))
+      } yield result
+
+    /** `x < y \/ x = y \/ y < x` unfolded, by cases on `y <= x` and then on `x <= y`. */
+    private def total: Either[LogicError, Kernel.Thm] =
+      for {
+        above <- prop("CUT_LE y x")
+        below <- prop("CUT_LE x y")
+        notAbove <- prop("~(CUT_LE y x)")
+        notBelow <- prop("~(CUT_LE x y)")
+        equal <- prop("(x:real) = (y:real)")
+        rest <- prop("x = y \\/ ~(CUT_LE x y)")
+        heldNotAbove <- LogicError.lift(Kernel.assume(notAbove))
+        whenNotAbove <- rules.disjIntro1(rest, heldNotAbove)
+        heldAbove <- LogicError.lift(Kernel.assume(above))
+        heldBelow <- LogicError.lift(Kernel.assume(below))
+        equation <- fact(Cut.AtMostAntisymmetric).flatMap(rules.specAll(_, List(x, y)))
+          .flatMap(rules.mp(_, heldBelow)).flatMap(rules.mp(_, heldAbove))
+        whenBelow <- rules.disjIntro1(notBelow, equation).flatMap(rules.disjIntro2(notAbove, _))
+        heldNotBelow <- LogicError.lift(Kernel.assume(notBelow))
+        whenNotBelow <- rules.disjIntro2(equal, heldNotBelow).flatMap(rules.disjIntro2(notAbove, _))
+        whenAbove <- cuts.classical.cases(below, whenBelow, whenNotBelow)
+        split <- cuts.classical.cases(above, whenAbove, whenNotAbove)
+        result <- rules.genAll(split, List(x, y))
+      } yield result
+
+    /** `x < y ==> x + z < y + z` unfolded: adding `-z` to `y + z <= x + z` gives `y <= x`. */
+    private def additive: Either[LogicError, Kernel.Thm] =
+      for {
+        notAbove <- prop("~(CUT_LE y x)")
+        held <- LogicError.lift(Kernel.assume(notAbove))
+        shifted <- prop("CUT_LE (CUT_ADD y z) (CUT_ADD x z)")
+        heldShifted <- LogicError.lift(Kernel.assume(shifted))
+        yz <- cuts.term("CUT_ADD y z", Cut.Classes)
+        xz <- cuts.term("CUT_ADD x z", Cut.Classes)
+        negZ <- cuts.term("CUT_NEG z", Cut.Classes)
+        added <- fact(Cut.AtMostAdd).flatMap(rules.specAll(_, List(yz, xz, negZ))).flatMap(rules.mp(_, heldShifted))
+        cancel <- cancellation
+        cancelRules <- Rewrite.Rule.all(cuts.logic, Vector(cancel))
+        tidied <- Rewrite.normaliser(cancelRules, Vector.empty, unordered)(added.conclusion)
+        above <- LogicError.lift(Kernel.eqMp(tidied, added))
+        absurd <- rules.notElim(held, above)
+        denied <- rules.notIntro(shifted, absurd)
+        result <- rules.disch(notAbove, denied).flatMap(rules.genAll(_, List(x, y, z)))
+      } yield result
+
+    /** `!x z. CUT_ADD (CUT_ADD x z) (CUT_NEG z) = x`, from the group laws `Cut` publishes. */
+    private def cancellation: Either[LogicError, Kernel.Thm] =
+      for {
+        negZ <- cuts.term("CUT_NEG z", Cut.Classes)
+        associated <- fact(Cut.AddAssociative).flatMap(rules.specAll(_, List(x, z, negZ)))
+        inverse <- fact(Cut.AddNegation).flatMap(rules.spec(z, _))
+        addX <- cuts.term("CUT_ADD x", Type.fun(Cut.Classes, Cut.Classes))
+        inside <- Conv.apTerm(addX, inverse)
+        zero <- fact(Cut.AddZero).flatMap(rules.spec(x, _))
+        result <- Conv.trans(associated, inside).flatMap(Conv.trans(_, zero)).flatMap(rules.genAll(_, List(x, z)))
+      } yield result
   }
 }

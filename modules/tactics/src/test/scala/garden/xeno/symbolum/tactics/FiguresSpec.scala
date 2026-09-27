@@ -146,10 +146,15 @@ class FiguresSpec extends AnyFlatSpec with Matchers {
     val text = Proof.write(entry.theorem)
     val terms = text.linesIterator.count(_.startsWith("t "))
 
+    // The axioms are the foundation's since `docs/adr/0053`, and which of the sixteen it rests on is
+    // read with them as the reals' interface, so the sentence carries both counts.
+    val laws = garden.xeno.symbolum.theories.Real.spent(entry.theorem)
+      .intersect(garden.xeno.symbolum.theories.Real.sixteen).size
     val evaluation = flowed(Evaluation.Document)
-    withClue(s"the inference count is ${holds.steps} over ${holds.axioms.size} axioms: ") {
+    withClue(s"the inference count is ${holds.steps} over ${holds.axioms.size} axioms and $laws laws: ") {
       evaluation should include(
-        s"`12 * 12 = 144` is ${holds.steps} inferences over ${FiguresSpec.spelled(holds.axioms.size)} of the sixteen"
+        s"`12 * 12 = 144` is ${holds.steps} inferences over ${FiguresSpec.spelled(holds.axioms.size)} axioms and rests on " +
+          s"${FiguresSpec.spelled(laws)} of the sixteen"
       )
     }
 

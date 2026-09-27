@@ -29,14 +29,31 @@ object Expr {
   /** A free variable: a name and a type together. */
   final case class Free(name: String, ty: Ty) extends Expr
 
-  /** A constant at a type, carrying whatever gave it its identity. */
-  final case class Constant(name: String, ty: Ty, origin: Option[Expr]) extends Expr
+  /**
+   * A constant at a type, carrying whatever gave it its identity.
+   *
+   * Its hash, like [[Apply]]'s and [[Lambda]]'s, is computed once and kept, which the kernel's `App`
+   * and `Abs` do for the same reason. Since `docs/adr/0053` the primitives of the reals are defined
+   * as operations on cuts, so an origin is a definition whose own constants carry origins down
+   * through the rationals and the integers; `Read` shares each origin it reads, and a hash computed
+   * afresh would walk that shared graph as a tree at every asking.
+   */
+  final case class Constant(name: String, ty: Ty, origin: Option[Expr]) extends Expr {
+    private val hash = scala.util.hashing.MurmurHash3.productHash(this)
+    override def hashCode(): Int = hash
+  }
 
   /** An application, not assumed to be well-typed: [[typeOf]] is where that is found out. */
-  final case class Apply(fn: Expr, argument: Expr) extends Expr
+  final case class Apply(fn: Expr, argument: Expr) extends Expr {
+    private val hash = scala.util.hashing.MurmurHash3.productHash(this)
+    override def hashCode(): Int = hash
+  }
 
   /** An abstraction. The bound name does not exist. */
-  final case class Lambda(binder: Ty, body: Expr) extends Expr
+  final case class Lambda(binder: Ty, body: Expr) extends Expr {
+    private val hash = scala.util.hashing.MurmurHash3.productHash(this)
+    override def hashCode(): Int = hash
+  }
 
   /** The name equality goes by, which this checker knows for the same reason the kernel does. */
   val EqualityName: String = "="

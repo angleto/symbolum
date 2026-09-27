@@ -507,7 +507,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 115 with `HAS_INTEGRAL_JOIN`, the same day, derived and not probed: `u <= v` and `v <= w` are
     // an order between reals with no lambda and no quantifier in the body. The two forms of the
     // derivative of an integral carry a quantifier inside.
-    propose.mutable.size shouldBe 115
+    // 118 with the reals built from the cuts, 2026-09-26, read off a probe: `real_add`, `real_mul`
+    // and `real_lt` are definitional entries since `docs/adr/0053`, each an equation that writes the
+    // operator itself with no lambda in the body. Tip plus this branch's delta.
+    propose.mutable.size shouldBe 118
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

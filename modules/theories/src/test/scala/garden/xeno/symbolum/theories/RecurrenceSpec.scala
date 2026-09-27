@@ -35,7 +35,7 @@ class RecurrenceSpec extends AnyFlatSpec with Matchers {
   private val classical = Classical.standard
   private val naturals = force(Natural.construct(classical))
   private val reals = force(
-    force(Real.construct(classical.logic, naturals.theory))
+    force(Real.construction(classical, naturals)).reals
       .extended(Vector.empty, Vector("pow" -> Type.fun(num, real)))
   )
   private val order = force(
@@ -49,8 +49,9 @@ class RecurrenceSpec extends AnyFlatSpec with Matchers {
 
   "One signature" should "hold both types and the tactics that read them" in {
     reals.theory.typeOperators.keySet should contain allOf ("real", "num", "ind")
-    // Nineteen since eta landed in `Classical.scala` on 2026-09-10.
-    reals.theory.axioms.size shouldBe 19
+    // The naturals' three, since the reals are built over them (`docs/adr/0053`); nineteen from
+    // eta's landing on 2026-09-10 until then.
+    reals.theory.axioms.toSet shouldBe naturals.theory.axioms.toSet
 
     // Statable, which is the thing that was not true before the two developments could be chained.
     reals.show(force(reals.proposition("pow ZERO = 1"))) shouldBe "pow ZERO = 1"
@@ -128,9 +129,9 @@ class RecurrenceSpec extends AnyFlatSpec with Matchers {
   }
 
   "The declared function" should "cost nothing to believe, which is why this is not an axiom" in {
-    // Declaring is conservative: `pow` says exactly what its absence says, so the nineteen axioms
-    // are still nineteen and the recurrence is a hypothesis rather than part of the theory.
-    reals.theory.axioms.size shouldBe 19
+    // Declaring is conservative: `pow` says exactly what its absence says, so the axioms are still
+    // the naturals' and the recurrence is a hypothesis rather than part of the theory.
+    reals.theory.axioms.toSet shouldBe naturals.theory.axioms.toSet
     reals.theory.definitions.get("pow") shouldBe None
   }
 }

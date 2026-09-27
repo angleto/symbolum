@@ -197,22 +197,16 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     naturals.show(proved.conclusion) shouldBe "!n:num. n = n"
   }
 
-  "The two developments" should "compose into one signature when a caller asks for both" in {
-    // What "siblings, not a chain" costs, and how a caller pays it instead. Neither standard
-    // development can read the other's theorems, because neither theory holds the other's names, so
-    // there is no signature in which a function from one to the other can even be stated. Measured
-    // rather than argued, both ways round, and then built.
+  "The reals" should "be built over the naturals, so one signature holds both" in {
+    // The two were siblings until phase 5b, each over the classical logic and neither able to read
+    // the other's theorems, and a caller wanting both built the reals first and the naturals over
+    // them. The reals are built from the cuts now, over the rationals, the integers and the
+    // naturals, so the composition is the construction: the naturals still cannot read a theorem
+    // about the reals, and the reals read every theorem about the naturals.
     Natural.standard.theory.checkTerm(force(Real.standard.axiom("ADD_SYM")).conclusion).isLeft shouldBe true
-    Real.standard.theory.checkTerm(force(naturals.fact(Natural.Induction)).conclusion).isLeft shouldBe true
+    Real.standard.theory.checkTerm(force(naturals.fact(Natural.Induction)).conclusion).isRight shouldBe true
 
-    val classical = Classical.standard
-    val reals = force(Real.construct(classical.logic, classical.theory))
-    // The notation comes with the theory: a chain through the reals reads `0 < x + 1`, which the
-    // logic's own notation cannot. Passing the wrong one builds a theory that cannot read a
-    // proposition in itself, which is how that became a parameter.
-    val together = force(Natural.construct(classical, reals.theory, reals.notation))
-
-    // One signature with both, and a statement neither of the two standard developments can make.
+    val together = Real.standard
     together.theory.typeOperators.keySet should contain allOf ("real", "num", "ind")
     val bridged = force(
       LogicError.lift(
@@ -224,18 +218,10 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     )
     Show.show(together.notation, claim) shouldBe "!n:num. 0 < size n ==> 0 < size n + 1"
 
-    // And the price of asking for both is stated: nineteen, not sixteen. It was eighteen until eta
-    // landed in `Classical.scala` on 2026-09-10, and the ones that are not the field's are
-    // `Classical.Axioms` and `Natural`'s infinity.
-    together.theory.axioms.size shouldBe 19
-  }
-
-  "The reals" should "be untouched by any of this, since nothing here is built over them" in {
-    // The two developments are siblings and not a chain: `Real.standard` is over `Logic.standard`,
-    // which has no axioms, and this is over `Classical.standard`, which asserts `Classical.Axioms`.
-    // A session that proves something about the reals is not asked to believe choice or eta.
-    Real.standard.theory.axioms.size shouldBe 16
-    Real.standard.theory.typeOperators.get(Natural.TypeName) shouldBe None
-    Real.standard.theory.constants.get(Classical.Select) shouldBe None
+    // And the price of the reals is stated: the naturals' three, which are the logic's two and
+    // infinity. It was sixteen over `Logic.standard` and nineteen for both until the sixteen
+    // became theorems.
+    together.theory.axioms.toSet shouldBe naturals.theory.axioms.toSet
+    together.theory.axioms should have size 3
   }
 }

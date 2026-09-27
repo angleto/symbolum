@@ -104,6 +104,10 @@ object Derivation {
    */
   final case class Citation(name: String, fact: Kernel.Thm) extends Derivation {
     lazy val axioms: Set[Term] = axiomsOf(fact)
+
+    /** What the fact spends under each interface it has been read against, known after the first asking. */
+    private[kernel] val readings: scala.collection.concurrent.TrieMap[Set[Term], Set[Term]] =
+      scala.collection.concurrent.TrieMap.empty
   }
 
   /**
@@ -163,6 +167,38 @@ object Derivation {
     }
 
   /**
+   * [[axiomsOf]] with some published facts read as premises in their own right: a node citing one
+   * of `interface` counts as that fact, and the walk goes no further into it.
+   *
+   * What it is for is a construction under an interface. The sixteen statements of a complete
+   * ordered field were axioms until `docs/adr/0053` proved them about the cuts on the rationals,
+   * and since then every theorem about the reals rests on choice, eta and infinity and on nothing
+   * that says which laws of the field it used. That was the informative half of the answer: a fact
+   * about limits that reaches completeness and one that does not are different facts. Read with
+   * the sixteen as the interface, it is the same answer it was while they were asserted.
+   *
+   * Every other citation is entered, since a cited fact about limits rests on the sixteen too and
+   * its own summary has already walked past them; each is entered once per interface and the answer
+   * kept on the citation, as [[Citation.axioms]] is. A theorem that
+   * is itself a citation of one of `interface` answers with its own conclusion.
+   */
+  def axiomsOf(theorem: Kernel.Thm, interface: Set[Term]): Set[Term] = {
+    def spent(current: Kernel.Thm): Set[Term] =
+      own(current).foldLeft(Set.empty[Term]) { (found, node) =>
+        node.derivation match {
+          case Axiom(proposition) => found + proposition
+          case Citation(_, _) if interface.contains(node.conclusion) => found + node.conclusion
+          case citation @ Citation(_, fact) => found ++ citation.readings.getOrElseUpdate(interface, spent(fact))
+          case _ => found
+        }
+      }
+    theorem.derivation match {
+      case Citation(_, _) if interface.contains(theorem.conclusion) => Set(theorem.conclusion)
+      case _ => spent(theorem)
+    }
+  }
+
+  /**
    * Which of a named collection of facts this proof actually rests on.
    *
    * The other half of [[axiomsOf]], and the half a discovery loop needs. "What is this believed on"
@@ -187,6 +223,28 @@ object Derivation {
    */
   def restingOn(theorem: Kernel.Thm, wanted: Set[Term]): Set[Term] =
     walk(theorem).foldLeft(Set.empty[Term]) { (found, node) =>
+      if (node.hypotheses.isEmpty && wanted.contains(node.conclusion)) found + node.conclusion
+      else found
+    }
+
+  /**
+   * [[restingOn]] with the walk stopped at the cited facts of `interface`: such a fact is reached
+   * and counted when it is wanted, and what it was proved from is not entered.
+   *
+   * The other half of [[axiomsOf]] with an interface, for the same construction: once the sixteen
+   * statements of the reals were proved from the cuts, a walk through every citation found the
+   * rationals, the integers and the classical axioms under every fact about the reals, and a report
+   * over it said that `0 < 12` rests on choice. That is true of the construction and says nothing
+   * about the claim.
+   */
+  def restingOn(theorem: Kernel.Thm, wanted: Set[Term], interface: Set[Term]): Set[Term] =
+    reach(
+      theorem,
+      derivation => derivation match {
+        case Citation(_, fact) if interface.contains(fact.conclusion) => Nil
+        case other => premises(other)
+      }
+    ).foldLeft(Set.empty[Term]) { (found, node) =>
       if (node.hypotheses.isEmpty && wanted.contains(node.conclusion)) found + node.conclusion
       else found
     }

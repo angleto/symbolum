@@ -53,7 +53,7 @@ final class Digits private (
   private val multiplicationRules: Vector[Rewrite.Rule]
 ) {
 
-  val peano: Peano = semiring.peano
+  val peano: NaturalArithmetic = semiring.peano
 
   /** The lemma named, as proved when this was built. */
   def lemma(name: String): Either[LogicError, Kernel.Thm] =
@@ -365,7 +365,7 @@ object Digits {
   }
 
   /** The four rules that open a numeral and move a successor out of a sum. */
-  private def lifting(peano: Peano): Either[LogicError, Vector[Rewrite.Rule]] =
+  private def lifting(peano: NaturalArithmetic): Either[LogicError, Vector[Rewrite.Rule]] =
     for {
       one <- peano.fact(Peano.NumeralOneIsSuccessorOfZero)
       bit0 <- peano.fact(Peano.NumeralBit0Doubles)

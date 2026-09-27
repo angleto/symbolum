@@ -9,7 +9,7 @@ import garden.xeno.symbolum.logic.*
  * What `IS_CUT` refuses, and what the theory of cuts holds beyond the one it is built on.
  *
  * Written by the verification of cards 709a37d4 and c71986c3. `CutSpec` shows that the sets the
- * development builds are cuts and that `cut` does not collapse; nothing there shows that the
+ * development builds are cuts and that the type does not collapse; nothing there shows that the
  * predicate **refuses** anything, and a predicate weaker than the one written in `Cut` would pass
  * every assertion in that file, since each of them proves `IS_CUT` of a set rather than its
  * negation. So each clause is made to bite here, at a set that meets the other three and fails that
@@ -38,8 +38,10 @@ class CutDefinitionSpec extends AnyFlatSpec with Matchers {
     result.fold(error => fail(s"unexpected refusal: ${error.message}"), identity)
 
   private val chain = Chain.standard
-  private val fractions = force(Fraction.construct(chain.classical, chain.integers, chain.product, chain.peano))
-  private val cuts = force(Cut.construct(fractions, chain.peano))
+  // The chain's own, since phase 5 builds the rationals and the cuts below the reals: building them
+  // again over the chain would declare `RAT_SAME` a second time.
+  private val fractions = chain.fractions
+  private val cuts = chain.cuts
   private val rules = cuts.logic.rules
   private val rats = Fraction.Classes
 

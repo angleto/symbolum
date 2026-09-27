@@ -81,7 +81,7 @@ class LogarithmSpec extends AnyFlatSpec with Matchers {
     // The range spends completeness, which the rationals could not pay: `exp` restricted to them
     // misses every value whose logarithm is irrational.
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
-    Derivation.axiomsOf(onto) should contain(completeness)
+    Real.spent(onto) should contain(completeness)
   }
 
   it should "detach at two, so that its hypotheses are ones something satisfies" in {

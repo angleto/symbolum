@@ -145,7 +145,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
    */
   "What the values at zero rest on" should "be what they were measured to rest on" in {
     def axioms(name: String): Int =
-      Derivation.axiomsOf(force(transcendental.fact(name))).size
+      Real.spent(force(transcendental.fact(name))).size
 
     axioms(Transcendental.ExponentialAtZero) shouldBe 17
     axioms(Transcendental.SineAtZero) shouldBe 18
@@ -174,7 +174,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
 
   it should "differ between the exponential and the other two by eta alone" in {
     def axioms(name: String): Set[Term] =
-      Derivation.axiomsOf(force(transcendental.fact(name))).toSet
+      Real.spent(force(transcendental.fact(name))).toSet
 
     val extra = axioms(Transcendental.SineAtZero) -- axioms(Transcendental.ExponentialAtZero)
     extra.map(transcendental.show) shouldBe Set("!f:'a -> 'b. (\\x:'a. f x) = f")
@@ -289,7 +289,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
       Set(comparison)) shouldBe Set(comparison)
 
     // And completeness is reached, through the monotone convergence and nowhere else.
-    Derivation.axiomsOf(absolute) should contain(
+    Real.spent(absolute) should contain(
       force(chain.reals.axiom("COMPLETENESS")).conclusion)
   }
   /**
@@ -388,8 +388,8 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     // And it adds **no** axiom to what the addition theorem already cost, which is the half that
     // says it is bought rather than proved again: a derivation through the two series would
     // reach the same statement and would spend the Cauchy product a second time.
-    Derivation.axiomsOf(pythagoras) shouldBe
-      Derivation.axiomsOf(force(transcendental.fact(Transcendental.Addition)))
+    Real.spent(pythagoras) shouldBe
+      Real.spent(force(transcendental.fact(Transcendental.Addition)))
   }
 
   /**
@@ -439,7 +439,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     // exponential's, and the sign `(0 - 1)^k` costs nothing past the magnitude facts `EXP_ABSOLUTE`
     // already reaches.
     def axioms(name: String): Set[Term] =
-      Derivation.axiomsOf(force(transcendental.fact(name))).toSet
+      Real.spent(force(transcendental.fact(name))).toSet
 
     axioms(Transcendental.Pythagoras) shouldBe axioms(Transcendental.Addition)
     axioms(Transcendental.CosineAbsolute) shouldBe axioms(Transcendental.AbsolutelyConvergent)
@@ -450,7 +450,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     // Measured on 2026-09-25: both cost what `SIN_COS_SQUARED` costs. And what the second point
     // removes is measured rather than said: the square carried a partner's power at `0 - x` back to
     // `x` with `POWER_NEG_DOUBLE`, and neither formula rests on it.
-    def axioms(name: String): Set[Term] = Derivation.axiomsOf(force(transcendental.fact(name))).toSet
+    def axioms(name: String): Set[Term] = Real.spent(force(transcendental.fact(name))).toSet
     val route = Set(
       force(chain.limit.fact(Limit.Cauchy)).conclusion,
       force(transcendental.fact(Transcendental.Convolution)).conclusion,

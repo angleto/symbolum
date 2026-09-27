@@ -521,10 +521,8 @@ object Integer {
    */
   def construct(
     classical: Classical,
-    peano: Peano,
+    peano: NaturalArithmetic,
     product: Product,
-    modular: Modular,
-    successor: Successor,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Integer] =
@@ -621,12 +619,6 @@ object Integer {
       // Last, and over `entire` rather than over `whole`: nothing here needs the order, and taking
       // the constants from the theory the development ends at is what keeps every term in the file
       // built from one origin, which is the argument `Carrier` makes about `docs/adr/0008`.
-      embedded <- Embedded.over(
-        classical, carrier, modular, successor, entire, notation, proved, divisibility,
-        equal, cases, mulPairs, ofNaturalDefinition
-      )
-      faithful <- embedded.prove
-
       // Last of all, and over `entire` for the reason the embedding gives: what this needs is the
       // multiplication of the ring and the embedding of a natural, both of which are behind it.
       whole1 <- classical.logic.over(entire)
@@ -656,7 +648,50 @@ object Integer {
         NegPair -> negPair,
         MulPairs -> mulPairs,
         CancelsPositive -> cancelling
-      ) ++ proved ++ divisibility ++ comparison ++ faithful
+      ) ++ proved ++ divisibility ++ comparison
+    )
+
+  /**
+   * The same integers over a later theory, with the two facts that need number theory on `num`:
+   * [[DividesOfNatural]] and [[TwoDoesNotDivide]].
+   *
+   * They are the only facts of this development that read `Modular` and `Successor`, and both of
+   * those are built over the reals. So since phase 5 (`docs/adr/0016`) the integers are built
+   * **below** the reals without them, which is what lets the rationals and the cuts be built there
+   * too, and this adds them above `Modular`, where the chain's `integers` is. Nothing is defined
+   * here: the carrier is re-read over `base`, which holds every constant `construct` defined.
+   */
+  def withDivisibility(
+    classical: Classical,
+    integers: Integer,
+    peano: NaturalArithmetic,
+    product: Product,
+    modular: Modular,
+    successor: Successor,
+    base: Theory,
+    notation: Notation
+  ): Either[LogicError, Integer] =
+    for {
+      semiring <- Semiring.construct(peano)
+      sameDefinition <- integers.definition(SameName)
+      ofNaturalDefinition <- integers.definition(OfNatural)
+      carrier <- Carrier.over(classical, semiring, product, base, notation, sameDefinition)
+      equal <- integers.fact(Equal)
+      cases <- integers.fact(Cases)
+      mulPairs <- integers.fact(MulPairs)
+      embedded <- Embedded.over(
+        classical, carrier, modular, successor, base, notation, integers.facts, integers.facts,
+        equal, cases, mulPairs, ofNaturalDefinition
+      )
+      faithful <- embedded.prove
+      rebased <- integers.quotient.over(base)
+    } yield new Integer(
+      classical,
+      base,
+      notation,
+      rebased,
+      integers.definitions,
+      integers.facts ++ faithful
     )
 
   /* ------------------------------------------------------------------ the carrier */
@@ -929,7 +964,7 @@ object Integer {
    */
   private def sameTransitive(
     carrier: Carrier,
-    peano: Peano
+    peano: NaturalArithmetic
   ): Either[LogicError, Kernel.Thm] =
     for {
       first <- carrier.unfoldedAt(p, q)
@@ -998,7 +1033,7 @@ object Integer {
     logic: Logic,
     carrier: Carrier,
     quotient: Quotient,
-    peano: Peano,
+    peano: NaturalArithmetic,
     theory: Theory,
     notation: Notation,
     equal: Kernel.Thm,
@@ -1718,7 +1753,7 @@ object Integer {
    */
   private def orderRespects(
     carrier: Carrier,
-    peano: Peano,
+    peano: NaturalArithmetic,
     logic: Logic,
     atMost: Term
   ): Either[LogicError, Kernel.Thm] = {
@@ -1811,7 +1846,7 @@ object Integer {
    */
   private def oneDirection(
     logic: Logic,
-    peano: Peano,
+    peano: NaturalArithmetic,
     atMost: Term,
     assumedOrder: (Term, Term),
     summand: Term,
@@ -1892,7 +1927,7 @@ object Integer {
     val carrier: Carrier,
     val quotient: Quotient,
     val logic: Logic,
-    val peano: Peano,
+    val peano: NaturalArithmetic,
     val definition: Kernel.Thm,
     val equal: Kernel.Thm,
     val representative: Rewrite.Rule,
@@ -2301,7 +2336,7 @@ object Integer {
       classical: Classical,
       carrier: Carrier,
       quotient: Quotient,
-      peano: Peano,
+      peano: NaturalArithmetic,
       base: Theory,
       equal: Kernel.Thm,
       representative: Rewrite.Rule,

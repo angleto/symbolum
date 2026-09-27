@@ -65,7 +65,14 @@ object Reach {
    */
   private val Foundational: Set[String] = Set("Classical", "Natural, assumed")
 
-  /** The developments whose statements are assumed about their own subject. */
+  /**
+   * The developments whose statements are assumed about their own subject.
+   *
+   * The sixteen of the reals were the one member until `docs/adr/0053` proved them, which is the
+   * day `RestsOnSpec` had simulated in advance: their names moved to the facts bucket rather than
+   * disappearing. The bucket stays, because what it says is a kind of statement and a domain
+   * assumed by axiom is still a thing a report has to be able to say.
+   */
   private val Domain: Set[String] = Set("Real, assumed")
 
   /**
@@ -90,7 +97,7 @@ object Reach {
         "Classical, derived" -> chain.classical.facts,
         "Classical, defined" -> chain.classical.definitions,
         "Natural, assumed" -> chain.naturals.axioms,
-        "Real, assumed" -> chain.reals.axioms,
+        Library.RealsDerived -> chain.reals.axioms,
         "Real, defined" -> chain.reals.definitions,
         "Positivity" -> chain.ring.positivity.facts,
         "Order" -> chain.order.facts,
@@ -173,7 +180,10 @@ object Reach {
 
   /** What a theorem rests on, over a library already built. */
   def of(held: Library, theorem: Kernel.Thm): Reach = {
-    val used = held.restingOn(theorem)
+    // Stopped at the sixteen of the reals, which are named and not entered: entered, their proofs
+    // reach the rationals and the classical axioms under every fact about the reals, and the report
+    // would say that `0 < 12` rests on choice, true of the construction and nothing about the claim.
+    val used = held.restingOn(theorem, held.interface)
 
     def named(which: Set[String]): Vector[String] =
       used.filter(entry => which.contains(entry.development)).map(_.name).distinct.sorted

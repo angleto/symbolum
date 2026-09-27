@@ -87,31 +87,31 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // An equality and not a ceiling, measured on 2026-09-25 before it was written here: seventeen,
     // the sixteen and the choice. A Rolle that reached completeness by a road of its own, or began
     // to spend eta or infinity, would fail here rather than pass.
-    val spent = Derivation.axiomsOf(fact(Derivative.Rolle))
-    spent shouldBe Derivation.axiomsOf(force(chain.continuity.fact(Continuity.AttainsMaximum)))
+    val spent = Real.spent(fact(Derivative.Rolle))
+    spent shouldBe Real.spent(force(chain.continuity.fact(Continuity.AttainsMaximum)))
     spent should contain(completeness)
     (spent -- realAxioms) shouldBe Set(select)
 
     // The mean value theorem is Rolle at a combination, and costs what Rolle costs, and so do the
     // three facts about the sign of a derivative on an interval, which are it and uniqueness.
-    Derivation.axiomsOf(fact(Derivative.MeanValue)) shouldBe spent
-    for (name <- onInterval) withClue(name) { Derivation.axiomsOf(fact(name)) shouldBe spent }
+    Real.spent(fact(Derivative.MeanValue)) shouldBe spent
+    for (name <- onInterval) withClue(name) { Real.spent(fact(name)) shouldBe spent }
 
     // Their textbook forms, with continuity relative to [a, b], cost the same and nothing more: the
     // extension they are carried by is built from the reals' order and `COND`, which the choice
     // already pays for.
-    for (name <- withinInterval) withClue(name) { Derivation.axiomsOf(fact(name)) shouldBe spent }
+    for (name <- withinInterval) withClue(name) { Real.spent(fact(name)) shouldBe spent }
 
     // That a derivative is a relative one reads no fact about the reals at all: the radius is handed
     // across unchanged, and the extra conjuncts of the increment are dropped.
-    Derivation.axiomsOf(fact(Derivative.WithinOfDerivative)) shouldBe empty
+    Real.spent(fact(Derivative.WithinOfDerivative)) shouldBe empty
 
     // Everything else is about one point, and takes no supremum; past the reals they spend the
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
           Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor) ++ onInterval ++ withinInterval).contains(name)) {
-      val other = Derivation.axiomsOf(fact(name))
+      val other = Real.spent(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
         (other -- realAxioms) shouldBe Set(select)
@@ -126,8 +126,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // left out until 2026-09-25: all nineteen of the chain. What the slope adds on
     // top of the estimate is the addition theorem and the definition, which cost nothing more.
     val nearLine = force(chain.logarithm.fact(Logarithm.NearLine))
-    val spent = Derivation.axiomsOf(fact(Derivative.Exponential))
-    spent shouldBe Derivation.axiomsOf(nearLine)
+    val spent = Real.spent(fact(Derivative.Exponential))
+    spent shouldBe Real.spent(nearLine)
     spent should contain(completeness)
     val route = Set(nearLine.conclusion, force(chain.transcendental.fact(Transcendental.Addition)).conclusion)
     Derivation.restingOn(fact(Derivative.Exponential), route) shouldBe route
@@ -138,7 +138,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // would go red. The addition theorem is proved in another file by another route, so this pins
     // the price to something the slope does not own. Measured on 2026-09-25 at `87175842`: both
     // are the chain's nineteen, eta included.
-    spent shouldBe Derivation.axiomsOf(force(chain.transcendental.fact(Transcendental.Addition)))
+    spent shouldBe Real.spent(force(chain.transcendental.fact(Transcendental.Addition)))
   }
 
   it should "price the product rule, the chain rule and their bridge at the fifteen and the choice, exactly" in {
@@ -149,7 +149,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // axiom of the field would be a proof of the same statement by another road and is worth a look
     // rather than a silent pass.
     for (name <- List(Derivative.Continuous, Derivative.ProductRule, Derivative.ChainRule)) withClue(name) {
-      Derivation.axiomsOf(fact(name)) shouldBe (realAxioms - completeness) + select
+      Real.spent(fact(name)) shouldBe (realAxioms - completeness) + select
     }
   }
 
@@ -163,8 +163,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val squared = force(chain.transcendental.fact(Transcendental.Pythagoras))
     for ((name, addition) <- List(Derivative.Sine -> Transcendental.SineAddition, Derivative.Cosine -> Transcendental.CosineAddition))
       withClue(name) {
-        val spent = Derivation.axiomsOf(fact(name))
-        spent shouldBe Derivation.axiomsOf(nearOne)
+        val spent = Real.spent(fact(name))
+        spent shouldBe Real.spent(nearOne)
         spent should contain(completeness)
         val route = Set(force(chain.transcendental.fact(addition)).conclusion, nearOne.conclusion, nearLine.conclusion, squared.conclusion)
         Derivation.restingOn(fact(name), route) shouldBe route
@@ -204,7 +204,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // what it spends past the reals is the exponential's series. The route is the design: `LN_MUL`
     // splits `ln (x + h)`, the monotonicity keeps `ln (1 + t)` small, and the estimate does the rest.
     val slope = fact(Derivative.NaturalLog)
-    Derivation.axiomsOf(slope) shouldBe Derivation.axiomsOf(fact(Derivative.Exponential))
+    Real.spent(slope) shouldBe Real.spent(fact(Derivative.Exponential))
     val route = Set(
       force(chain.logarithm.fact(Logarithm.NearLine)).conclusion,
       force(chain.logarithm.fact(Logarithm.Multiplicative)).conclusion,

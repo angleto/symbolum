@@ -17,12 +17,12 @@ rules and the three theory extensions in that object are the only things that ca
 well-typed by construction, because their constructors are private to the kernel package and every
 public builder checks. Therefore: everything outside `modules/kernel` may be arbitrarily wrong, and
 the worst it can do is fail to produce a theorem. The computer algebra system, the rewriting engine,
-the tactics, the parser and the printer are all outside. What has to be believed is the kernel, the
-sixteen axioms of the theory of the reals, and, since 2026-09-10, three more: a choice operator and
-eta in `modules/logic/.../Classical.scala`, and infinity in `modules/theories/.../Natural.scala`.
-`docs/adr/0007` is the record of the first and the third and `docs/adr/0009` of the second, and the
-first of those says why the count is going up before it comes down. A development over the reals
-takes none of the three.
+the tactics, the parser and the printer are all outside. What has to be believed is the kernel and
+three axioms: a choice operator and eta in `modules/logic/.../Classical.scala`, and infinity in
+`modules/theories/.../Natural.scala`. `docs/adr/0007` is the record of the first and the third and
+`docs/adr/0009` of the second. The sixteen axioms of a complete ordered field were believed as well
+from the first day until 2026-09-26, when `docs/adr/0053` made them theorems about the cuts on the
+rationals; a development over the reals takes all three since then, where it took none of them.
 
 ## The trusted base, exactly
 
@@ -30,7 +30,6 @@ takes none of the three.
 |---|---|---|
 | The kernel | `Kernel`, `Term`, `Type`, `Theory` | under 1220 lines, and see below for what that number does and does not say |
 | Beside it, and not counted | `Printer`, `KernelError`, `Derivation`, `Proof` | display, refusals, the proof record and the writing of it out: none can build a theorem |
-| The axioms of the reals | `Real.Axioms` in `modules/theories/.../Real.scala` | 16 propositions, a complete ordered field |
 | The axioms about the formalism | `Classical.Axioms` in `modules/logic/.../Classical.scala` | 2 propositions, both from HOL Light's `class.ml`: choice, `SELECT_AX` with `select` for a character this lexer cannot read, and eta, `ETA_AX` over `'a` and `'b` |
 | The axiom about a type nothing else interprets | `Natural.Axioms` in `modules/theories/.../Natural.scala` | infinity, in the form the naturals are carved out of rather than the one upstream asserts |
 
@@ -46,9 +45,10 @@ begins, the table already held **seven** rows and seven findings in the trusted 
 holds eight and seven. A count of another document's table is wrong on the day that table grows,
 and the question worth asking of one is whether it was ever right, which here it was not.
 
-That is the whole of it, and the three axiom rows are not a list kept by hand: `RealSpec` scans the
+That is the whole of it, and the two axiom rows are not a list kept by hand: `RealSpec` scans the
 main sources for `Kernel.assertAxiom` and asserts the exact set of files that name it, which is
-those three and the kernel file where the operation is defined. A fourth source of axioms cannot
+those two and the kernel file where the operation is defined, beside the two that assert what a
+caller hands them. A fourth source of axioms cannot
 appear without that assertion changing in the same commit.
 
 **The count moved on 2026-09-10 and the file list did not**, which is the property that scan exists
@@ -56,11 +56,11 @@ for. Eta went into the file choice was already in, so what has to be believed gr
 places it can grow from stayed at four; a third axiom in a third file would have failed the scan
 instead of only the counts. `docs/adr/0009` records it.
 
-No one development holds all of them, and `NaturalSpec` measures that rather than arguing it:
-`Real.standard` holds the sixteen and neither of the logic's two, `Natural.standard` holds those two
-and infinity and none of the sixteen, and a chain built through both holds nineteen. What
-`docs/adr/0007` says about the direction of travel is that the sixteen are what the work at the end
-of it turns into theorems, so the row that is largest here is the row that goes.
+The reals hold all three, and `NaturalSpec` measures that rather than arguing it: `Real.standard`
+is built over the naturals and holds exactly their axioms. Until `docs/adr/0053` it held the
+sixteen and neither of the logic's two, `Natural.standard` held those two and infinity, and a chain
+built through both held nineteen; `docs/adr/0007` said the sixteen were what the construction would
+turn into theorems, and the row that was largest here is the row that went.
 
 The two numbers are a reader's to check rather than a claim they have to accept, and
 `DocumentationSpec` pins both here so that neither can go stale on its own. The first is a bound
@@ -77,9 +77,10 @@ Four properties hold the boundary in place, each asserted by a test rather than 
   until 2026-09-10, and an opaque type erases to what it wraps, so a cast from the pair produced a
   theorem out of nothing while the assertion about typechecking passed the whole time. A class does
   not erase, and the twin asserts that the same cast now raises.
-- `RealSpec` pins the sixteen axioms, as printed, in a copy written out in the test itself, checks
-  that each is closed and mentions only declared constants, and runs the scan above, so that the
-  set of files allowed to assert an axiom is asserted rather than promised. `ClassicalSpec` runs the
+- `RealSpec` pins the sixteen statements of the reals, as printed, in a copy written out in the test
+  itself, checks that each is proved with nothing assumed, closed and mentioning only declared
+  constants, and runs the scan above, so that the set of files allowed to assert an axiom is
+  asserted rather than promised. `ClassicalSpec` runs the
   same scan over the logic module alone, where the answer is one file. An axiom introduced or
   altered by accident would fail no other test: it would make more things provable, which looks
   like progress.
@@ -208,8 +209,10 @@ type. Two consequences, and they are the reason for the choice:
   in this process and read the kernel's terms through the kernel's extractors, so a defect in
   **those** would have told it the same story they tell everyone. `Kernel.Proof` now writes a
   derivation out as text and `Parse` in the checker reads one back, naming no kernel type at all, so
-  the extractors are out of the argument: `12 * 12 = 144` is 1132 steps over 2048 distinct terms in
-  65 KB, and the two routes agree about which axioms it reaches. What is left shared is the
+  the extractors are out of the argument: `12 * 12 = 144` is 102250 steps over 112914 distinct terms
+  in 6085 KB, and the two routes agree about which axioms it reaches. It was 1132 steps in 65 KB
+  until `docs/adr/0053`: those are still its own, and the rest is the construction of the five laws
+  of the reals it cites, which a checker replays. What is left shared is the
   **writer**, and nothing can remove that: something has to put the proof down, and a writer that
   puts down a proof other than the one derived produces a table that fails to check.
 - **Theory lineage, narrowed on 2026-09-10 rather than closed.** A theorem still does not record
@@ -226,8 +229,8 @@ type. Two consequences, and they are the reason for the choice:
   **What this does not cover, and it is the half the theory is mostly made of.**
   `Theory.declareConstant` records no origin, and `Theory.constant` reads the origin table, so a
   constant that is declared and then given its meaning by axiom carries no origin at all. `+`, `*`,
-  `<`, `inv`, `0` and `1` are all of that kind: `Real.scala` introduces them without defining them
-  and the sixteen axioms are what say anything about them. Two theories that axiomatise one of those
+  `<`, `inv`, `0` and `1` were all of that kind until `docs/adr/0053` defined them as operations on
+  cuts, and a domain theory's constants still are. Two theories that axiomatise one of those
   names differently therefore produce constants that compare **equal**, and their theorems mix,
   which is the scenario this bullet used to describe in full and now describes for definitions only.
   Found by an adversarial audit on 2026-09-10 and not repaired here; a repair is a kernel change and
@@ -269,8 +272,7 @@ type. Two consequences, and they are the reason for the choice:
   cost two of the ten signatures and leave `Term.variable` open, which is a worse arrangement than
   the one written down: a guard that looks complete and is not.
 
-- **No consistency claim.** Nothing here establishes that the axioms are consistent. The sixteen
-  are standard and their consistency is a known result; choice and eta are `SELECT_AX` and `ETA_AX`
+- **No consistency claim.** Nothing here establishes that the axioms are consistent. Choice and eta are `SELECT_AX` and `ETA_AX`
   under their own spellings, and infinity is not upstream's form but a statement `Natural.scala`
   argues holds in the same intended model. That those three files state what they mean to state is
   ours alone.
@@ -280,16 +282,16 @@ Each of these is written where it lives, on the type it concerns, rather than on
 ## The definitional discipline
 
 Everything above the axioms is definitional, and that is what keeps the trusted base to the kernel
-and the three files that assert an axiom.
+and the two files that assert an axiom of their own.
 
 | Layer | How it extends the theory | Conservative? |
 |---|---|---|
 | The eight connectives | `defineConstant` | Yes |
 | Binary numerals `BIT0`, `BIT1` | `defineConstant` | Yes |
 | Subtraction, division, `<=` | `defineConstant` | Yes |
-| Every arithmetic lemma | proved from the axioms | Yes, it is a theorem |
+| Every arithmetic lemma | proved from the sixteen | Yes, it is a theorem |
+| The sixteen statements of the reals | proved from the cuts on the rationals | Yes, they are theorems since `docs/adr/0053` |
 | The excluded middle | proved from choice | Yes, it is a theorem, and `ClassicalSpec` pins the axioms it reaches |
-| The sixteen axioms | `assertAxiom` | **No.** This is the non-conservative content of the theory |
 | The choice axiom and eta | `assertAxiom` | **No.** The non-conservative content of the logic, and the two of them are all of it |
 | The axiom of infinity | `assertAxiom` | **No.** What the naturals are carved out of |
 | The type `num` | `defineType` | **Yes.** Defined, so it adds nothing to the three above it |

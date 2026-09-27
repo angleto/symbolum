@@ -48,7 +48,7 @@ final class NothingOverNumRestsOnTheRealsSpec extends AnyFlatSpec with Matchers 
   )
 
   private def reachesAReal(theorem: Kernel.Thm): Boolean =
-    Derivation.axiomsOf(theorem).exists(realAxioms.contains)
+    Real.spent(theorem).exists(realAxioms.contains)
 
   "The reals" should "be believed on the reals' axioms, which is what the check is against" in {
     // Not the point of the file and it is here because everything below is a `diff` against this

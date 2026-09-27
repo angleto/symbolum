@@ -15,9 +15,10 @@ import garden.xeno.symbolum.logic.*
  * different road. A report counting named facts says "this rests on completeness" whether
  * completeness is assumed or derived.
  *
- * The last test is the one that matters: it builds a library where a fact that is an axiom today is
- * labelled as something else, and checks the name still comes back. That is the construction
- * simulated, at the only point where it can be simulated before it happens.
+ * The test that matters built a library where a fact that was then an axiom was labelled as
+ * derived, and checked the name still came back: the construction simulated, at the only point
+ * where it could be simulated before it happened. `docs/adr/0053` made it happen, and the test
+ * reads the standard library now.
  */
 class RestsOnSpec extends AnyFlatSpec with Matchers {
 
@@ -35,7 +36,9 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
     val reach = Reach.of(held, theorem)
 
     reach.foundational shouldBe empty
-    reach.domain should not be empty
+    // The subject is the sixteen of the reals, named facts since `docs/adr/0053` and assumed until
+    // then; the half of the assertion that says the reading is about the subject at all.
+    reach.facts.toSet.intersect(Real.Axioms.map(_._1).toSet) should not be empty
     info(s"0 < 12: ${reach.summary}")
   }
 
@@ -104,37 +107,26 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
     reach.domain.intersect(reach.facts) shouldBe empty
   }
 
-  "A fact that stops being an axiom" should "still be named by a proof that rests on it" in {
-    // `docs/adr/0007` simulated. The same theorem is read against a library where the sixteen are
-    // labelled "Real, derived" instead of "Real, assumed", which is what the day after the
-    // construction looks like: the domain bucket empties and **the names move to the facts bucket
-    // rather than disappearing**.
-    //
-    // If this reading counted axioms, the second answer would be strictly less informative than the
-    // first, which is the failure the card was opened to prevent.
+  "A fact that stopped being an axiom" should "still be named by a proof that rests on it" in {
+    // `docs/adr/0007` happened: `docs/adr/0053` proved the sixteen from the cuts on the rationals.
+    // This test simulated that day before it came, by reading one theorem against a library where
+    // the sixteen were labelled derived, and asserted that the domain bucket emptied and the names
+    // moved to the facts bucket rather than disappearing. That is now the report itself, measured
+    // on the standard library rather than on a relabelled copy.
     val theorem = force(chain.order.positive(12))
+    val reach = Reach.of(held, theorem)
+    val sixteen = Real.Axioms.map(_._1).toSet
 
-    val afterConstruction = Library.of(
-      Vector(
-        "Classical" -> chain.classical.axioms,
-        "Natural, assumed" -> chain.naturals.axioms,
-        "Real, derived" -> chain.reals.axioms,
-        "Real, defined" -> chain.reals.definitions,
-        "Positivity" -> chain.ring.positivity.facts,
-        "Order" -> chain.order.facts
-      )
-    )
-
-    val before = Reach.of(held, theorem)
-    val after = Reach.of(afterConstruction, theorem)
-
-    after.domain shouldBe empty
-    before.domain.foreach(name => after.facts should contain(name))
-
-    withClue(s"before: ${before.summary}; after: ${after.summary}\n") {
-      (after.facts ++ after.domain ++ after.foundational).toSet shouldBe
-        (before.facts ++ before.domain ++ before.foundational).toSet
+    reach.domain shouldBe empty
+    reach.foundational shouldBe empty
+    withClue(s"${reach.summary}\n") {
+      reach.facts.toSet.intersect(sixteen) should not be empty
     }
+
+    // What keeps it informative is where the walk stops. Entered, the sixteen's own proofs reach the
+    // rationals and the classical axioms, and the same theorem would be reported as resting on
+    // choice: true of the construction and nothing a reader of `0 < 12` needs.
+    held.restingOn(theorem).map(_.development) should contain("Classical")
   }
 
   /**
@@ -146,16 +138,19 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
    * are searched for one whose reading holds exactly one, and the search has to find it.
    */
   "The one-line reading" should "take the singular at one named fact and the plural elsewhere" in {
-    val readings = chain.order.facts.toVector.sortBy(_._1).map { case (name, theorem) =>
-      name -> Reach.of(held, theorem)
+    // Searched over the whole library in name order since `docs/adr/0053`: the lemmas of `Order`
+    // were enough until the sixteen became named facts, after which none of them rests on exactly
+    // one.
+    val readings = held.entries.sortBy(_.name).view.map { entry =>
+      entry.name -> Reach.of(held, entry.theorem)
     }
     val one = readings.find(_._2.facts.size == 1)
     val several = readings.find(_._2.facts.size > 1)
 
-    withClue("no lemma of Order rests on exactly one named fact, so the site is not reached: ") {
+    withClue("no lemma rests on exactly one named fact, so the site is not reached: ") {
       one should not be empty
     }
-    withClue("no lemma of Order rests on more than one: ") { several should not be empty }
+    withClue("no lemma rests on more than one: ") { several should not be empty }
 
     one.get._2.summary should startWith("1 named fact,")
     several.get._2.summary should startWith(s"${several.get._2.facts.size} named facts,")

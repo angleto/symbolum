@@ -215,28 +215,18 @@ object Word {
    * silent.
    */
   lazy val standard: Word =
-    construct(Chain.standard.peano).fold(
+    construct(Chain.standard.peano, Chain.standard.product, Chain.standard.peano.theory).fold(
       error => throw new IllegalStateException(s"the words do not build: ${error.message}"),
       identity
     )
 
   /**
-   * The development over a `Peano` of one's own, with its own `Product` built on top.
-   *
-   * The product is built here rather than taken as a parameter because it has to be the one over
-   * **this** theory: a `Product` built beside the naturals rather than over them declares a `PAIR`
-   * that is a different constant, and `docs/adr/0008` is why the two would not combine.
-   */
-  def construct(peano: Peano): Either[LogicError, Word] =
-    Product
-      .construct(peano.naturals.classical, peano.theory, peano.notation)
-      .flatMap(construct(peano, _))
-
-  /**
-   * The same, over a `Product` the caller already built.
+   * The development over a `Peano` and a `Product` the caller already built.
    *
    * The chain entry point, added on 2026-09-12 when the five developments beside `Chain` went into
-   * it. The constraint the one-argument version encodes has not moved: the product has to be the
+   * it. A one-argument version built its own product over `peano.theory` until phase 5b, and every
+   * `Peano` theory holds the pair since the construction moved below the reals, so that one could
+   * only refuse; the constraint it encoded has not moved: the product has to be the
    * one over **this** theory, because a `PAIR` declared beside the naturals is a different constant
    * from a `PAIR` declared over them and `docs/adr/0008` is why the two would not combine. What
    * changed is who checks it. A chain that built a product for its own signature and then let this
@@ -247,7 +237,15 @@ object Word {
    * The base this extends is `product.theory` rather than `peano.theory`: the product is where the
    * pair came from and everything below it is still there.
    */
-  def construct(peano: Peano, product: Product): Either[LogicError, Word] = {
+  def construct(peano: Peano, product: Product): Either[LogicError, Word] =
+    construct(peano, product, product.theory)
+
+  /**
+   * Over a theory the caller holds, which extends `product.theory`. The chain's is the one to pass:
+   * since phase 5 (`docs/adr/0016`) the pair is built below the reals, so `product.theory` is no
+   * longer the chain's tip when the words are, and building over it would drop every link between.
+   */
+  def construct(peano: Peano, product: Product, base: Theory): Either[LogicError, Word] = {
     val classical = peano.naturals.classical
     val notation = peano.notation
 
@@ -262,7 +260,7 @@ object Word {
       } yield defined
 
     for {
-      pad <- define(product.theory, Pad, Definitions(0)._2)
+      pad <- define(base, Pad, Definitions(0)._2)
       (withPad, padDefinition) = pad
 
       predicate <- Parser.term(withPad, notation, RepresentationBody)

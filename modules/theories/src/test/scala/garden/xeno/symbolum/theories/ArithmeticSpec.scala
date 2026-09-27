@@ -175,8 +175,10 @@ class ArithmeticSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenProp
   }
 
   "The arithmetic" should "assert nothing of its own" in {
-    // Every lemma above is proved from the sixteen axioms and the definitions. If this number ever
-    // moves, something in this file stopped being a proof.
-    reals.theory.axioms.length shouldBe Real.Axioms.length
+    // Every lemma above is proved from the sixteen and the definitions. If this set ever moves,
+    // something in this file stopped being a proof.
+    // The sixteen are theorems since `docs/adr/0053`, so what the theory asserts is the foundation
+    // the reals are built on, read from the two developments that assert it.
+    reals.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 }

@@ -65,9 +65,10 @@ class ListsConsumerSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  "Every fact of the development" should "rest on the chain's nineteen axioms and nothing else" in {
+  "Every fact of the development" should "rest on the chain's axioms and nothing else" in {
+    // Three since `docs/adr/0053` proved the sixteen of the reals, nineteen until then.
     val believed = chain.widest.theory.axioms.toSet
-    believed.size shouldBe 19
+    believed.size shouldBe 3
     Collatz.Statements.map(_._1).foreach { name =>
       val theorem = system.fact(name).fold(error => fail(error.message), identity)
       withClue(s"$name: ") { Derivation.axiomsOf(theorem).diff(believed) shouldBe empty }

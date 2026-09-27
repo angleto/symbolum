@@ -2,7 +2,7 @@ package garden.xeno.symbolum.tactics
 
 import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
-import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, Order, Prose, Reach, RealTheory, Signature}
+import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, Order, Prose, Reach, Real, RealTheory, Signature}
 
 /**
  * Everything this system can say about one claim, gathered in one place.
@@ -14,8 +14,10 @@ import garden.xeno.symbolum.theories.{Chain, Field, Library, Linarith, Order, Pr
  *  - **what it charges.** `Field` proves an identity that needs a denominator to be non-zero and
  *    hands the condition back in the sequent, so `(x * y) / y = x` costs `~(y = 0)` and says so.
  *  - **what it is believed on.** A theorem records its derivation, so the axioms its proof reaches
- *    are a set that can be printed: `12 * 12 = 144` reaches five of the sixteen and touches neither
- *    the order nor completeness.
+ *    are a set that can be printed, and beside them the named facts it rests on. `12 * 12 = 144`
+ *    reached five of the sixteen axioms of the reals and touched neither the order nor
+ *    completeness; the sixteen are theorems since `docs/adr/0053`, so the axioms are the
+ *    foundation's and the same five are named as the facts they are.
  *  - **where it fails.** `Refutation` names a point at which the premises hold and the conclusion
  *    does not, which a reader can check without trusting anything here.
  *  - **what is missing.** `Abduce` proposes what would have to be assumed, keeps apart a premise
@@ -42,10 +44,9 @@ final class Cost private (
   /**
    * The library a proof's reach is read against, when the caller has a chain to build one from.
    *
-   * `axioms` answers "which unproved things did this use" and stops answering the day the reals
-   * are constructed, which `docs/adr/0007` decides they will be: the sixteen become theorems and
-   * the count says "choice, eta, infinity" for everything, which is exactly Lean's uninformative
-   * answer. `Reach` asks "which **named facts** did this use" instead, and a fact keeps its name
+   * `axioms` answers "which unproved things did this use" and stopped answering the day the reals
+   * were constructed, `docs/adr/0053`: the sixteen are theorems and the count says "choice, eta,
+   * infinity" for everything, which is exactly Lean's uninformative answer. `Reach` asks "which **named facts** did this use" instead, and a fact keeps its name
    * when it stops being an axiom.
    *
    * `None` is a caller with no chain, and then the report carries the axioms and says nothing
@@ -85,6 +86,7 @@ final class Cost private (
           inferences = Derivation.size(theorem),
           census = Derivation.census(theorem),
           reach = reachOf(theorem),
+          laws = lawsOf(theorem),
           // The one thing this report cannot compute from the theorem, and the reason it is carried
           // rather than derived: `axioms` says the choice axiom is there and cannot say whether the
           // claim needed it or a bound chose it. `Prove` is the only place that knows, and until
@@ -119,6 +121,9 @@ final class Cost private (
           }
       }
   }
+
+  /** Which of the sixteen statements of the reals a theorem rests on. */
+  private def lawsOf(theorem: Kernel.Thm): Set[Term] = Real.spent(theorem).intersect(Real.sixteen)
 
   /** What a theorem rests on, when this was built over something that can say. */
   private def reachOf(theorem: Kernel.Thm): Option[Reach] =
@@ -172,7 +177,8 @@ final class Cost private (
           axioms = Derivation.axiomsOf(theorem),
           inferences = Derivation.size(theorem),
           census = Derivation.census(theorem),
-          reach = reachOf(theorem)
+          reach = reachOf(theorem),
+          laws = lawsOf(theorem)
         )
     }
 
@@ -199,6 +205,8 @@ final class Cost private (
    * copy of this that drifts.
    */
   def page(report: Report, believed: Boolean): Either[TacticError, Vector[String]] = {
+    def lawNamed(name: String): Term = Real.standard.axioms(name).conclusion
+
     def believedLine(axiom: Term): String =
       Readback.of(reals, axiom) match {
         case Right(text) => s"  believed on: $text"
@@ -241,6 +249,14 @@ final class Cost private (
         .filter(_.domain.nonEmpty)
         .map(found => s"  assumed about the subject: ${found.domain.mkString(", ")}")
         .toVector
+      // The sixteen of the reals were named on the line above while they were assumed. Since
+      // `docs/adr/0053` they are theorems about the cuts and the axiom list above says "choice, eta,
+      // infinity" for every claim about the reals, which is true and says nothing about which laws
+      // of the field this one used; so they are named here, as the facts they now are.
+      field = Option(Real.Axioms.collect { case (name, _) if report.laws.contains(lawNamed(name)) => name })
+        .filter(_.nonEmpty)
+        .map(laws => s"  of the sixteen of the reals: ${laws.mkString(", ")}")
+        .toVector
     } yield {
       val head = s"${report.outcome}: $claim"
       // Both counts go through `Prose.count`, and both reach one. The page this line is the whole
@@ -280,7 +296,7 @@ final class Cost private (
       }
       val why = report.refusal.map(refusal => s"  $label: ${Remedy.of(reals, refusal).message}").toVector
 
-      Vector(head) ++ proof ++ caveat ++ charged ++ axioms ++ resting ++ named ++ why ++ where ++
+      Vector(head) ++ proof ++ caveat ++ charged ++ axioms ++ resting ++ named ++ field ++ why ++ where ++
         missing ++ circular ++ vacuous ++ unchecked
     }
   }
@@ -390,11 +406,21 @@ object Cost {
      * What the proof rests on read as mathematics, when a library was there to read it against.
      *
      * Beside `axioms` rather than instead of it, because the two answer different questions and one
-     * of them is about to stop being interesting: `axioms` says which unproved things a proof used,
-     * and `docs/adr/0007` turns the sixteen into theorems. `Reach` says which **named facts** it
-     * used, which survives that.
+     * of them stopped being interesting: `axioms` says which unproved things a proof used, and
+     * `docs/adr/0053` turned the sixteen into theorems. `Reach` says which **named facts** it used,
+     * which survives that.
      */
-    reach: Option[Reach] = None
+    reach: Option[Reach] = None,
+    /**
+     * Which of the sixteen statements of the reals the proof rests on, read with them as the reals'
+     * interface: `Real.spent`, cut down to the sixteen.
+     *
+     * What `axioms` answered while the sixteen were asserted, kept because it is the part of that
+     * answer a reader of a claim about the reals uses: a proof that reaches completeness and one
+     * that does not are different proofs. It needs no chain, unlike `reach`, since the sixteen are
+     * the same terms in every construction of the reals.
+     */
+    laws: Set[Term] = Set.empty
   )
 
   /** Over the standard theory. */

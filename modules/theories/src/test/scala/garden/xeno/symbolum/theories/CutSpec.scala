@@ -14,7 +14,7 @@ import garden.xeno.symbolum.logic.*
  * A type carved by a predicate nothing satisfies cannot be defined, so the type exists; what could
  * still be wrong is that it is too small or its order too coarse, and every law of a total order and
  * the least-upper-bound statement itself hold of a one-point type. So the first assertions are the
- * two that a one-point `cut` fails: the rationals zero and one land on different cuts, and the order
+ * two that a one-point type fails: the rationals zero and one land on different cuts, and the order
  * between them goes one way and not the other. `CUT_COMPLETE` is an implication, and one whose
  * antecedent no family meets would read like a fact, so it is detached at a concrete family.
  */
@@ -24,8 +24,9 @@ class CutSpec extends AnyFlatSpec with Matchers {
     result.fold(error => fail(s"unexpected refusal: ${error.message}"), identity)
 
   private val chain = Chain.standard
-  private val fractions = force(Fraction.construct(chain.classical, chain.integers, chain.product, chain.peano))
-  private val cuts = force(Cut.construct(fractions, chain.peano))
+  // The chain's own since phase 5, built below the reals.
+  private val fractions = chain.fractions
+  private val cuts = chain.cuts
   private val rules = cuts.logic.rules
 
   private def fact(name: String): Kernel.Thm = force(cuts.fact(name))
@@ -48,7 +49,7 @@ class CutSpec extends AnyFlatSpec with Matchers {
     cuts.facts.keySet shouldBe Cut.Statements.map(_._1).toSet
   }
 
-  it should "declare `cut`, the two halves of its bijection, the predicate, the order, the embedding, the sum, the negation, the two products, the strict order and the two inverses, and nothing else" in {
+  it should "declare the type, the two halves of its bijection, the predicate, the order, the embedding, the sum, the negation, the two products, the strict order and the two inverses, and nothing else" in {
     (cuts.theory.constants.keySet -- fractions.theory.constants.keySet) shouldBe
       Set(Cut.Abstraction, Cut.Representation, Cut.IsCut, Cut.AtMost, Cut.OfRational, Cut.Addition, Cut.Negation, Cut.PosMul, Cut.Multiplication, Cut.LessThan, Cut.PosInverse, Cut.Inverse)
   }
@@ -101,7 +102,7 @@ class CutSpec extends AnyFlatSpec with Matchers {
     // member is it and the order is reflexive. What comes back is a least upper bound with nothing
     // assumed.
     val zeroCut = cut("CUT_OF_RAT RAT_ZERO")
-    val family = force(cuts.term("\\x:cut. x = CUT_OF_RAT RAT_ZERO", Type.fun(Cut.Classes, Type.Bool)))
+    val family = force(cuts.term("\\x:real. x = CUT_OF_RAT RAT_ZERO", Type.fun(Cut.Classes, Type.Bool)))
     val x = Term.variable("x", Cut.Classes)
     val detached = force(
       for {
@@ -217,20 +218,20 @@ class CutSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------------------------ what it costs */
 
-  "Every fact of the development" should "cost the foundation and none of the reals' sixteen" in {
-    // `CUT_COMPLETE` is `COMPLETENESS` read on this type, and the whole point is that it does not
-    // rest on that axiom or any other of the reals: a derivation reaching one would be a proof of
-    // the axiom from itself.
+  "Every fact of the development" should "cost the foundation and nothing else" in {
+    // `CUT_COMPLETE` is `COMPLETENESS` read on this type. Until `docs/adr/0053` this test also
+    // asserted that no fact here reached any of the sixteen axioms of the reals, since a derivation
+    // reaching one would have been a proof of the axiom from itself. The sixteen are theorems
+    // proved from these facts now, built after them, so no fact here can cite one: the assertion
+    // would have been true by the order of construction and would have guarded nothing. What is left
+    // is that the construction spends the foundation and no more.
     val eta = force(chain.classical.axiom(Classical.Eta)).conclusion
     val choice = force(chain.classical.axiom(Classical.Choice)).conclusion
     val infinity = force(chain.naturals.axiom(Natural.Infinity)).conclusion
     val foundation = Set(choice, eta, infinity)
-    val realAxioms = Real.Axioms.map { case (name, _) => force(chain.reals.axiom(name)).conclusion }.toSet
-    realAxioms should have size 16
 
     Cut.Statements.foreach { case (name, _) =>
       withClue(s"$name: ") {
-        Derivation.axiomsOf(fact(name)) should contain noElementsOf realAxioms
         Derivation.axiomsOf(fact(name)).diff(foundation) shouldBe empty
       }
     }

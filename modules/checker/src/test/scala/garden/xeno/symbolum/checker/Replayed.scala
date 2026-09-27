@@ -164,7 +164,13 @@ object Replayed {
       garden.xeno.symbolum.logic.Classical.standard.theory
     ),
     onCall,
-    Entry("`ADD_SYM`, an axiom of the reals", force(Real.standard.axiom("ADD_SYM")), reals),
+    // `ADD_SYM` stood here, as an axiom of the reals, until `docs/adr/0053` proved it from the cuts;
+    // the entry is for an axiom, and choice is one.
+    Entry(
+      "`SELECT`, the choice axiom",
+      force(garden.xeno.symbolum.logic.Classical.standard.axiom(garden.xeno.symbolum.logic.Classical.Choice)),
+      garden.xeno.symbolum.logic.Classical.standard.theory
+    ),
     Entry(
       "the successor's properties",
       force(naturals.fact(Natural.SuccessorProperties)),

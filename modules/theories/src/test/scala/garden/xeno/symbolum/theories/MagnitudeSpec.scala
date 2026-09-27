@@ -211,8 +211,9 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
     // A second *use* of an axiom already believed adds nothing to what has to be believed, so the
     // theory here holds the axioms of `Real.Axioms` and `Classical.Axioms` and no more, as it did
     // before `sgn` existed. What is asserted is that the count did not move and that `sgn` is
-    // nevertheless a constant of its own.
-    magnitude.theory.axioms should have length (Real.Axioms.length + Classical.Axioms.length)
+    // nevertheless a constant of its own. Since `docs/adr/0053` the reals hold the classical axioms
+    // themselves, so "no more" is the reals' own set.
+    magnitude.theory.axioms.toSet shouldBe Real.standard.theory.axioms.toSet
     magnitude.definitions.keySet should contain(Magnitude.SignName)
   }
 
@@ -257,37 +258,24 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
   }
 
   "The price of having a greatest of two reals at all" should "be choice, with eta beside it" in {
-    // The claim the whole file exists to make, asserted by counting rather than by prose. The
-    // numbers are the code's: `Real.Axioms` plus `Classical.Axioms` against `Real.Axioms` alone,
-    // both spelled in the assertion below rather than written here. A `max` that had cost nothing
-    // would make these equal and a `max` that had cost more would make the first larger.
-    magnitude.theory.axioms should have length (Real.Axioms.length + Classical.Axioms.length)
-    Real.standard.theory.axioms should have length Real.Axioms.length
-
-    // And the choice axiom itself is among what the classical logic adds, which is the one naming a
-    // greatest of two needs; eta arrives beside it with that logic.
+    // The claim the whole file exists to make, asserted by measuring rather than by prose. It was a
+    // count of theory axioms, the reals' sixteen against those plus the classical logic's, until
+    // `docs/adr/0053` built the reals over that logic and made the two theories hold the same set.
+    // So it is read off derivations now, with the sixteen as the reals' interface: a fact about the
+    // order spends none of the classical axioms, and a fact about `sgn` spends choice.
     val choice = force(Classical.standard.axiom(Classical.Choice)).conclusion
-    magnitude.theory.axioms should contain(choice)
+    Real.spent(force(magnitude.signPositive)) should contain(choice)
+    Real.spent(force(order.zeroLessOne)) should not contain choice
   }
 
-  it should "be refused rather than worked around when the order has no choice in it" in {
-    // The other half of the same claim, and the one that would catch a future route that quietly
-    // named `max` without choice: `Order.standard` is built over `Real.standard`, which sits over
-    // the axiom-free logic on purpose, so its signature has no `select`. Asked for the magnitude
-    // constants over that order, this refuses and says which operator is missing. It does not fall
-    // back to a definition of its own, because there is none over **that** signature: `COND` is
-    // defined in `Classical`, which `Order.standard` does not sit over, so it is as absent there as
-    // `select` is, and `p \/ ~p` is not derivable there either. A definition by cases has nothing
-    // to split on and no case expression to split into.
-    val refused = Magnitude.construct(Classical.standard, Order.standard)
-
-    refused.isLeft shouldBe true
-    refused.left.map(_.message) match {
-      case Left(message) =>
-        message should include(Classical.Select)
-        message should include(Magnitude.MaxName)
-      case Right(built) => fail(s"expected a refusal, got a development with ${built.facts.size} facts")
-    }
+  it should "be built over the standard order, which holds choice since the reals are constructed" in {
+    // This asserted the opposite until `docs/adr/0053`: `Order.standard` sat over reals axiomatised
+    // over the axiom-free logic, its signature had no `select`, and asked for these constants it
+    // refused naming the operator. The reals are built from the rationals now, which spends choice,
+    // so no signature of the reals lacks it and the refusal has no configuration left to happen in.
+    // What is asserted is that the standard order is such a signature and the development builds.
+    Order.standard.reals.theory.constants.keySet should contain(Classical.Select)
+    Magnitude.construct(Classical.standard, Order.standard).isRight shouldBe true
   }
 
   "The same facts over a chain that also carries the naturals" should "be the caller's signature and not a second one" in {
@@ -296,13 +284,12 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
     // chains from one root could not state a theorem mentioning both, which is the failure
     // `Chain`'s own note describes.
     //
-    // The axiom count is the code's again, and it is the third of the three configurations: the
-    // reals' alone, then the classical logic's added, then `Natural`'s infinity added as well.
+    // The axioms are the naturals' three, as they are for the reals themselves since `docs/adr/0053`;
+    // until then this was the third of three configurations, each count larger than the last.
     val chain = Chain.standard
     val overChain = force(Magnitude.construct(chain.classical, chain.order))
 
-    overChain.theory.axioms should have length
-      (Real.Axioms.length + Classical.Axioms.length + Natural.Axioms.length)
+    overChain.theory.axioms.toSet shouldBe chain.naturals.theory.axioms.toSet
 
     // The facts are the same statements, not merely the same names, and they are stated in a theory
     // that can also read a claim about `num`.

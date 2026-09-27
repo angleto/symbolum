@@ -63,14 +63,17 @@ class RegisterSpec extends AnyFlatSpec with Matchers {
     val listed = Register.axiomRows(chain).map(_.key)
     listed.size shouldBe statements.size
 
-    // Spelled as the sum rather than as a number, so that an axiom added to any of the three files
-    // that may assert one moves this without anybody editing it. The number it comes to is the
-    // sixteen plus three `CLAUDE.md` describes, and the literal is here so that a change to the
-    // trusted base cannot pass as a change to a sum.
-    statements.size shouldBe Real.Axioms.size + Classical.Axioms.size + Natural.Axioms.size
-    statements.size shouldBe 19
+    // Spelled as the sum rather than as a number, so that an axiom added to either of the two files
+    // that may assert one moves this without anybody editing it. The number it comes to is the three
+    // `CLAUDE.md` describes, and the literal is here so that a change to the trusted base cannot pass
+    // as a change to a sum. It was nineteen, the sixteen of the reals among them, until
+    // `docs/adr/0053` proved those.
+    statements.size shouldBe Classical.Axioms.size + Natural.Axioms.size
+    statements.size shouldBe 3
 
-    val missing = (Real.Axioms.map(_._1) ++ Classical.Axioms.map(_._1) ++ Natural.Axioms.map(_._1))
+    // The sixteen of the reals are not among them since `docs/adr/0053`: they are theorems, and their
+    // readings are the definitions of the seven primitives, which are rows under `definition`.
+    val missing = (Classical.Axioms.map(_._1) ++ Natural.Axioms.map(_._1))
       .filterNot(name => listed.contains(s"axiom $name"))
     withClue(s"asserted by a development and not in the register: ${missing.mkString(", ")}\n") {
       missing shouldBe empty
@@ -186,12 +189,12 @@ class RegisterSpec extends AnyFlatSpec with Matchers {
     // statement is printed from the code and the reading is printed from the file, and neither has
     // to know about the other.
     val reading = Register.Attestation("A Reader", "2026-01-01", "Some Book, 2nd ed., section 4")
-    val key = "axiom ADD_SYM"
+    val key = "axiom SELECT"
     rows.map(_.key) should contain(key)
 
     val listing = Register.listing(chain, Map(key -> reading))
     listing.linesIterator.find(_.startsWith(s"| `$key` |")) shouldBe
-      Some(s"| `$key` | !x:real. !y:real. x + y = y + x | A Reader | 2026-01-01 | Some Book, 2nd ed., section 4 |")
+      Some(s"| `$key` | !f:'a -> bool. !x:'a. f x ==> f (select f) | A Reader | 2026-01-01 | Some Book, 2nd ed., section 4 |")
 
     // And every other row is untouched by it.
     val unread = Register.listing(chain, Map.empty)
@@ -222,7 +225,7 @@ class RegisterSpec extends AnyFlatSpec with Matchers {
     // decides: re-key it, or read the new statement.
     val stale = Register.Attestation("A Reader", "2026-01-01", "Some Book")
     Register.orphaned(rows, Map("axiom NO_SUCH_AXIOM" -> stale)) shouldBe Vector("axiom NO_SUCH_AXIOM")
-    Register.orphaned(rows, Map("axiom ADD_SYM" -> stale)) shouldBe empty
+    Register.orphaned(rows, Map("axiom SELECT" -> stale)) shouldBe empty
   }
 
   it should "be on disk in a file that exists, since an absent file is not an empty one" in {

@@ -45,7 +45,7 @@ class RootSpec extends AnyFlatSpec with Matchers {
 
   it should "prove its existence from the reals alone, and name it with choice on top" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
-    val exists = Derivation.axiomsOf(fact(Root.Exists))
+    val exists = Real.spent(fact(Root.Exists))
 
     // The existence spends the sixteenth axiom, and nothing but the reals'.
     exists should contain(completeness)
@@ -58,7 +58,7 @@ class RootSpec extends AnyFlatSpec with Matchers {
     // spend infinity or eta would fail here rather than pass under a bound.
     val select = force(chain.classical.axiom("SELECT")).conclusion
     Root.Statements.map(_._1).filterNot(Set(Root.Exists, Root.TwoIrrational)).foreach { name =>
-      val spent = Derivation.axiomsOf(fact(name))
+      val spent = Real.spent(fact(name))
       withClue(s"$name reaches: ${(spent -- reals).map(root.show).mkString("; ")}\n") {
         (spent -- reals) shouldBe Set(select)
         spent should contain(completeness)
@@ -78,7 +78,7 @@ class RootSpec extends AnyFlatSpec with Matchers {
 
     val select = force(chain.classical.axiom("SELECT")).conclusion
     val infinity = force(chain.naturals.axiom(Natural.Infinity)).conclusion
-    val spent = Derivation.axiomsOf(theorem)
+    val spent = Real.spent(theorem)
     withClue(s"it reaches: ${(spent -- reals).map(root.show).mkString("; ")}\n") {
       (spent -- reals) shouldBe Set(select, infinity)
     }

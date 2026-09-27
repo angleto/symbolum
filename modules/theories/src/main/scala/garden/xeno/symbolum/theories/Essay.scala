@@ -250,7 +250,11 @@ object Essay {
     // compares anything: a lemma re-derived on the way is the same fact and is still not a premise
     // of itself. The instance measurement of this morning made the same mistake, which is why the
     // line is here rather than being noticed a third time.
-    val named = library.restingOn(theorem).filterNot(_.theorem.conclusion == theorem.conclusion)
+    //
+    // The walk stops at the sixteen of the reals, which are named and not entered since
+    // `docs/adr/0053` proved them from the cuts: entered, every theorem about the reals would list
+    // the rationals and the integers the construction went through, and nothing about the claim.
+    val named = library.restingOn(theorem, library.interface).filterNot(_.theorem.conclusion == theorem.conclusion)
     val namedAxioms = named.filter(entry => axioms.contains(entry.theorem.conclusion))
     val unnamed = axioms.size - namedAxioms.map(_.theorem.conclusion).distinct.size
 

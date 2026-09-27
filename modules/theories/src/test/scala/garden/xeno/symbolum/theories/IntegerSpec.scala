@@ -78,16 +78,19 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
    * for `zork`, and it is what makes this assertion worth making in both directions: a claim about
    * `int` against the link below would not have been refused if `int` were a name rather than a
    * type operator, it would have been a claim about something else. So the reading is taken against
-   * `forward`, which is the link this one extends, rather than against a development chosen for
-   * being far away.
+   * `product`, which is the link the construction of `int` extends, rather than against a development
+   * chosen for being far away. That link was `forward` until phase 5, when the integers moved below
+   * the reals: `chain.integers` still extends `forward`, but `int` was declared long before it, by
+   * `chain.fractions.integers`, and `forward` types a claim about `int` because the type is its own.
    */
   "The chain" should "declare `int`, which the link under this one does not" in {
     integers.proposition("!a:int. a = a") should be(Symbol("right"))
+    chain.fractions.integers.proposition("!a:int. a = a") should be(Symbol("right"))
 
-    chain.forward.proposition("!a:int. a = a") match {
+    chain.product.proposition("!a:int. a = a") match {
       case Left(_) => succeed
       case Right(term) =>
-        fail(s"the link below this one typed a claim about `int`: ${chain.forward.show(term)}")
+        fail(s"the link below this one typed a claim about `int`: ${chain.product.show(term)}")
     }
   }
 
@@ -213,7 +216,7 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
   it should "separate zero from one, which is what says the type did not collapse" in {
     separated.hypotheses shouldBe empty
     integers.show(separated.conclusion) should include(Integer.Projection)
-    Derivation.axiomsOf(separated) should not be empty
+    Real.spent(separated) should not be empty
   }
 
   /**
@@ -388,7 +391,7 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
     // And it rests on nothing of the reals, which is the whole point of building the ring rather
     // than borrowing one. All sixteen and not one of them: the guard at the foot of this file
     // says why the single-axiom reading was not enough.
-    Derivation.axiomsOf(settled) should contain noElementsOf realAxioms
+    Real.spent(settled) should contain noElementsOf realAxioms
   }
 
   /**
@@ -549,11 +552,11 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
     realAxioms should have size 16
     realAxioms should contain noElementsOf foundation
 
-    Derivation.axiomsOf(fact(Integer.Equal)) shouldBe foundation
+    Real.spent(fact(Integer.Equal)) shouldBe foundation
 
     Integer.Statements.foreach { case (name, _) =>
-      withClue(s"$name: ")(Derivation.axiomsOf(fact(name)) should contain noElementsOf realAxioms)
-      withClue(s"$name: ")(Derivation.axiomsOf(fact(name)).diff(foundation) shouldBe empty)
+      withClue(s"$name: ")(Real.spent(fact(name)) should contain noElementsOf realAxioms)
+      withClue(s"$name: ")(Real.spent(fact(name)).diff(foundation) shouldBe empty)
     }
   }
 
@@ -573,11 +576,11 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
     val completeness = force(chain.reals.axiom("COMPLETENESS"))
     val addSym = force(chain.reals.axiom("ADD_SYM")).conclusion
 
-    Derivation.axiomsOf(completeness) shouldBe Set(completeness.conclusion)
-    Derivation.axiomsOf(completeness) should not contain addSym
+    Real.spent(completeness) shouldBe Set(completeness.conclusion)
+    Real.spent(completeness) should not contain addSym
 
-    Derivation.axiomsOf(completeness) should contain atLeastOneElementOf realAxioms
-    Derivation.axiomsOf(completeness).diff(foundation) should not be empty
+    Real.spent(completeness) should contain atLeastOneElementOf realAxioms
+    Real.spent(completeness).diff(foundation) should not be empty
   }
 
   /**
@@ -590,9 +593,9 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
    * through the representative the builder chooses.
    */
   it should "spend less on the relation than on the type built from it" in {
-    Derivation.axiomsOf(fact(Integer.SameReflexive)) should not contain choice
-    Derivation.axiomsOf(fact(Integer.SameSymmetric)) should not contain choice
-    Derivation.axiomsOf(fact(Integer.Equal)) should contain(choice)
+    Real.spent(fact(Integer.SameReflexive)) should not contain choice
+    Real.spent(fact(Integer.SameSymmetric)) should not contain choice
+    Real.spent(fact(Integer.Equal)) should contain(choice)
   }
 
   /* ------------------------------------------------------------------ what the graph costs */
@@ -631,9 +634,13 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
    * a least reading of 3925, is the guard on the other side: a size that stopped walking and
    * reported a constant would pass the ratio and not this.
    *
-   * **The replayed size stays in 0016's band**, four or five figures, which is the order of
-   * magnitude its extrapolation to the reals is written in. Below the floor that record wants
-   * rereading; above the ceiling the cost arrived a stage earlier than it predicted.
+   * **The replayed size stays in the band the reals' construction sets**, five or six figures.
+   * 0016's band was four or five figures, and it held while the sixteen were asserted: on
+   * 2026-09-26, before `docs/adr/0053`, the nine replayed 12837 to 24386. Proving the sixteen from
+   * the cuts is what 0016 said would move it, and it moved at that stage and not earlier: after,
+   * the same nine replay 105911 to 127984, while what each **reads** is unchanged to the node, 3925
+   * to 5975, which is the citation boundary holding across the change. Below the floor that record
+   * wants rereading; above the ceiling the cost grew past the construction.
    *
    * Each of those was seen red on 2026-09-25 with one piece of the boundary taken away, which is
    * `tools/verify/perturb-cited-fact-boundary.sh` and `perturb-graph-cost-at-the-integers.sh`.
@@ -674,7 +681,7 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
         2 * reads should be < replays
         reads should be > 1000
         replays should be > 1000
-        replays should be < 100000
+        replays should be < 1000000
       }
     }
   }

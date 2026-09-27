@@ -54,10 +54,11 @@ echo "################ 0-control" >> "$LOG"
 ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 0-control" >> "$LOG"
 
+# The binder read `?x:cut.` until `docs/adr/0053` named the type `real`; repaired in that change.
 echo "################ 1-the-union-of-every-cut" >> "$LOG"
 "$P" "$SOURCE" \
-  'read("\\q:rat. ?x:cut. P x /\\ dest_cut x q", setType)' \
-  'read("\\q:rat. ?x:cut. dest_cut x q", setType)' \
+  'read("\\q:rat. ?x:real. P x /\\ dest_cut x q", setType)' \
+  'read("\\q:rat. ?x:real. dest_cut x q", setType)' \
   -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 1-the-union-of-every-cut" >> "$LOG"
 

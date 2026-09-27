@@ -75,22 +75,22 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
   it should "spend the gluing's price for Cousin, uniqueness and the value, and no completeness for the theorem itself" in {
     // Measured on 2026-09-25 before it was written here. The two rules of the relation spend
     // nothing; the price of the supremum arrives with Cousin's lemma and nowhere earlier.
-    Derivation.axiomsOf(fact(Integral.Piece)) shouldBe empty
-    Derivation.axiomsOf(fact(Integral.Join)) shouldBe empty
+    Real.spent(fact(Integral.Piece)) shouldBe empty
+    Real.spent(fact(Integral.Join)) shouldBe empty
 
-    val gluing = Derivation.axiomsOf(force(chain.continuity.fact(Continuity.IntervalGluing)))
+    val gluing = Real.spent(force(chain.continuity.fact(Continuity.IntervalGluing)))
     gluing shouldBe realAxioms + select
     for (name <- List(Integral.Exists, Integral.HasUnique, Integral.Unique, Integral.Fundamental, Integral.FundamentalWithin))
       withClue(name) {
-      Derivation.axiomsOf(fact(name)) shouldBe gluing
+      Real.spent(fact(name)) shouldBe gluing
     }
 
     // Every fine sum close to `F b - F a` is a statement about the sums there are, and needs none
     // to exist: the fundamental theorem as `has_integral` is the fifteen and the choice.
     // The textbook form, relative to [a, b], is the same argument and costs the same; the two-sided
     // form is derived from it through a fact that costs nothing.
-    Derivation.axiomsOf(fact(Integral.HasFundamental)) shouldBe (realAxioms - completeness) + select
-    Derivation.axiomsOf(fact(Integral.HasFundamentalWithin)) shouldBe (realAxioms - completeness) + select
+    Real.spent(fact(Integral.HasFundamental)) shouldBe (realAxioms - completeness) + select
+    Real.spent(fact(Integral.HasFundamentalWithin)) shouldBe (realAxioms - completeness) + select
   }
 
   it should "reach Cousin through the gluing, and the value through uniqueness" in {
@@ -188,9 +188,9 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     // Measured on 2026-09-26: the statement about `has_integral` needs no division to exist, so it
     // spends what the fundamental theorem as `has_integral` spends and not the supremum; the value
     // `integral` goes through uniqueness and so through Cousin.
-    Derivation.axiomsOf(fact(Integral.HasLinear)) shouldBe (realAxioms - completeness) + select
-    Derivation.axiomsOf(fact(Integral.Linear)) shouldBe Derivation.axiomsOf(fact(Integral.HasUnique))
-    Derivation.axiomsOf(fact(Integral.SumLinear)) should not contain completeness
+    Real.spent(fact(Integral.HasLinear)) shouldBe (realAxioms - completeness) + select
+    Real.spent(fact(Integral.Linear)) shouldBe Real.spent(fact(Integral.HasUnique))
+    Real.spent(fact(Integral.SumLinear)) should not contain completeness
     val route = Set(fact(Integral.SumLinear).conclusion, fact(Integral.Gauge).conclusion)
     Derivation.restingOn(fact(Integral.HasLinear), route) shouldBe route
   }
@@ -241,8 +241,8 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     // `HAS_INTEGRAL_LINEAR` exactly and of `FINE_SUM_LINEAR` only that it holds no `COMPLETENESS`.
     // Measured on 2026-09-26 at 1bcad72b: twelve against sixteen, so the sums cost strictly less than
     // the theorem, which a sentence saying the two cost the same gets wrong.
-    val sums = Derivation.axiomsOf(fact(Integral.SumLinear))
-    val theorem = Derivation.axiomsOf(fact(Integral.HasFundamental))
+    val sums = Real.spent(fact(Integral.SumLinear))
+    val theorem = Real.spent(fact(Integral.HasFundamental))
     info(s"FINE_SUM_LINEAR rests on ${sums.size} axioms, HAS_INTEGRAL_DERIVATIVE on ${theorem.size}")
     sums.subsetOf(theorem) shouldBe true
     sums should not be theorem
@@ -253,11 +253,11 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     // `has_integral` spends, and both `integral` forms what uniqueness spends. The routes are the
     // design: the product rule, the theorem and linearity for parts; the chain rule and the theorem
     // for the substitution.
-    val theorem = Derivation.axiomsOf(fact(Integral.HasFundamental))
-    Derivation.axiomsOf(fact(Integral.HasParts)) shouldBe theorem
-    Derivation.axiomsOf(fact(Integral.HasSubstitution)) shouldBe theorem
-    Derivation.axiomsOf(fact(Integral.Parts)) shouldBe Derivation.axiomsOf(fact(Integral.HasUnique))
-    Derivation.axiomsOf(fact(Integral.Substitution)) shouldBe Derivation.axiomsOf(fact(Integral.HasUnique))
+    val theorem = Real.spent(fact(Integral.HasFundamental))
+    Real.spent(fact(Integral.HasParts)) shouldBe theorem
+    Real.spent(fact(Integral.HasSubstitution)) shouldBe theorem
+    Real.spent(fact(Integral.Parts)) shouldBe Real.spent(fact(Integral.HasUnique))
+    Real.spent(fact(Integral.Substitution)) shouldBe Real.spent(fact(Integral.HasUnique))
     val partsRoute = Set(
       force(chain.derivative.fact(Derivative.ProductRule)).conclusion,
       fact(Integral.HasFundamental).conclusion,
@@ -459,7 +459,7 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     // same as Cousin's lemma. `COMPLETENESS` is spent by the gluing and once more for the supremum.
     val gluing = force(chain.continuity.fact(Continuity.IntervalGluing)).conclusion
     for (name <- List(Integral.ContinuousHas, Integral.ContinuousIntegral)) withClue(name) {
-      Derivation.axiomsOf(fact(name)) shouldBe realAxioms + select
+      Real.spent(fact(name)) shouldBe realAxioms + select
     }
     // The route: the criterion glues, and the sums the supremum compares come from Cousin.
     val route = Set(gluing, fact(Integral.Exists).conclusion, fact(Integral.Gauge).conclusion)
@@ -497,9 +497,9 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     // Measured on 2026-09-26 before it was written here. Additivity takes one fine sum at a time and
     // needs none to exist, so it is the fifteen and the choice; the derivative names `integral`, and
     // so spends Cousin's lemma and the supremum.
-    Derivation.axiomsOf(fact(Integral.HasJoin)) shouldBe (realAxioms - completeness) + select
+    Real.spent(fact(Integral.HasJoin)) shouldBe (realAxioms - completeness) + select
     for (name <- List(Integral.DerivativeWithin, Integral.DerivativeOfIntegral)) withClue(name) {
-      Derivation.axiomsOf(fact(name)) shouldBe realAxioms + select
+      Real.spent(fact(name)) shouldBe realAxioms + select
     }
     // The route: additivity and uniqueness read the increment as an integral, the existence supplies
     // the integrals, and the two-sided form is the relative one strictly inside.

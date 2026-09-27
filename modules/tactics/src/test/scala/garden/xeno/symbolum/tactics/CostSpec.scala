@@ -84,22 +84,25 @@ class CostSpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------- what it is believed on */
 
-  "A proved claim" should "carry the axioms its own derivation reaches, not the theory's" in {
-    // Sixteen are asserted and eight are reached. The ones absent are the point: nothing about the
-    // order and nothing about completeness is used to multiply two sums out, and before a theorem
-    // recorded its derivation there was no way to say so.
+  "A proved claim" should "carry the laws its own derivation reaches, not the theory's" in {
+    // Eight of the sixteen are reached. The ones absent are the point: nothing about the order and
+    // nothing about completeness is used to multiply two sums out, and before a theorem recorded its
+    // derivation there was no way to say so. They were axioms and read off `axioms` until
+    // `docs/adr/0053`; they are theorems about the cuts now, and `axioms` holds the foundation's
+    // three for every claim about the reals, so they are read off `laws`.
     val settled = report("!x:real y:real. (x + y) * (x + y) = x * x + 2 * (x * y) + y * y")
 
-    settled.axioms.size shouldBe 8
-    settled.axioms.map(reals.show) should contain("!x:real. !y:real. x * y = y * x")
-    settled.axioms.map(reals.show) should not contain "!x:real. ~(x = 0) ==> x * inv x = 1"
+    settled.laws.size shouldBe 8
+    settled.laws.map(reals.show) should contain("!x:real. !y:real. x * y = y * x")
+    settled.laws.map(reals.show) should not contain "!x:real. ~(x = 0) ==> x * inv x = 1"
+    settled.axioms.size shouldBe 3
     settled.inferences should be > 1000
   }
 
-  it should "reach the inverse axiom exactly when a denominator was cancelled" in {
+  it should "reach the inverse law exactly when a denominator was cancelled" in {
     val priced = report("!x:real y:real. (x * y) / y = x")
 
-    priced.axioms.map(reals.show) should contain("!x:real. ~(x = 0) ==> x * inv x = 1")
+    priced.laws.map(reals.show) should contain("!x:real. ~(x = 0) ==> x * inv x = 1")
   }
 
   /* ------------------------------------------- whether the quantifiers are the right way round */
@@ -159,7 +162,10 @@ class CostSpec extends AnyFlatSpec with Matchers {
 
     printed should startWith("Conditional: !x:real. !y:real. x * y / y = x")
     printed should include("charges: ~(y = 0)")
-    printed should include("inferences over 8 axioms")
+    // Eight of the sixteen, named on their own line since `docs/adr/0053`; the axioms are the
+    // foundation's three.
+    printed should include("inferences over 3 axioms")
+    printed should include("of the sixteen of the reals: ")
     printed should not include "(div "
   }
 
@@ -224,14 +230,17 @@ class CostSpec extends AnyFlatSpec with Matchers {
     val overChain = Cost.construct(garden.xeno.symbolum.theories.Chain.standard).fold(error => fail(error.message), identity)
     val found = overChain.of("!x:real. x * 1 = x").fold(error => fail(error.message), identity)
 
+    // The day came with `docs/adr/0053`, and the report is what this test said it would be: the
+    // domain bucket empty, the law named as a fact, and the page naming it where a reader of a
+    // claim about the reals looks.
     found.reach should not be empty
-    found.reach.get.domain should not be empty
+    found.reach.get.domain shouldBe empty
+    found.reach.get.facts should contain("MUL_ONE")
 
     val printed = overChain.render(found).fold(error => fail(error.message), identity)
 
     printed should include("rests on:")
-    printed should include("named facts")
-    printed should include("assumed about the subject:")
+    printed should include("of the sixteen of the reals: MUL_ONE")
   }
 
   it should "say nothing about the reach when the caller had no library, rather than nothing at all" in {

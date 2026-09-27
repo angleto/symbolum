@@ -212,11 +212,11 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     val theorem = fact(Peano.Archimedean)
     val completeness = force(ring.reals.axiom("COMPLETENESS")).conclusion
 
-    Derivation.axiomsOf(theorem) should contain(completeness)
+    Real.spent(theorem) should contain(completeness)
     peano.show(theorem.conclusion) shouldBe "!x:real. ?n:num. x < real_of_num n"
     theorem.hypotheses shouldBe empty
 
-    info(s"${Derivation.size(theorem)} inferences over ${Derivation.axiomsOf(theorem).size} axioms")
+    info(s"${Derivation.size(theorem)} inferences over ${Real.spent(theorem).size} axioms")
   }
 
   it should "be a fact a caller can actually use, at a real it names" in {
@@ -234,7 +234,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // The whole reason they are named by `select` rather than asserted: an axiom count that moved
     // would be the wrong trade for a convenience. `RealSpec` and `NaturalSpec` count what the
     // theories assert; this counts what naming two more constants did to it, which is nothing.
-    peano.theory.axioms.size shouldBe 19
+    peano.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
     peano.definitions.keySet should contain(Peano.Floor)
     peano.definitions.keySet should contain(Peano.Ceiling)
   }
@@ -377,7 +377,9 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // top of it. Compared against that theory rather than against a number written here, so the
     // assertion cannot drift from what the chain actually holds.
     peano.theory.axioms shouldBe ring.reals.theory.axioms
-    peano.theory.axioms.size shouldBe Chain.standard.naturals.theory.axioms.size + Real.Axioms.size
+    // The reals assert nothing of their own since `docs/adr/0053`, so what the chain holds is the
+    // naturals' three; until then this was those plus the sixteen.
+    peano.theory.axioms.toSet shouldBe Chain.standard.naturals.theory.axioms.toSet
   }
 
   it should "divide over the axioms where the mathematics says it should" in {
@@ -385,15 +387,15 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // infinity, both through the recursion theorem: `Recursion` spends the two Peano facts and
     // nothing above it needs them again. A fact about the embedding reaches the reals' as well,
     // because its step is closed by `Ring`, and that is the price of meeting the tactics.
-    Derivation.axiomsOf(fact(Peano.AddCommutative)) should have size 2
-    Derivation.axiomsOf(fact(Peano.MulCommutative)) should have size 2
-    Derivation.axiomsOf(fact(Peano.AntiSymmetric)) should have size 2
-    Derivation.axiomsOf(fact(Peano.Trichotomy)) should have size 2
+    Real.spent(fact(Peano.AddCommutative)) should have size 2
+    Real.spent(fact(Peano.MulCommutative)) should have size 2
+    Real.spent(fact(Peano.AntiSymmetric)) should have size 2
+    Real.spent(fact(Peano.Trichotomy)) should have size 2
 
-    Derivation.axiomsOf(fact(Peano.EmbedsSum)).size should be > 2
+    Real.spent(fact(Peano.EmbedsSum)).size should be > 2
     info(
       s"${Peano.EmbedsSum}: ${Derivation.size(fact(Peano.EmbedsSum))} inferences over " +
-        s"${Derivation.axiomsOf(fact(Peano.EmbedsSum)).size} axioms"
+        s"${Real.spent(fact(Peano.EmbedsSum)).size} axioms"
     )
   }
 
@@ -624,7 +626,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
 
     // It is a corollary of the least-number principle rather than a second induction, which the
     // proof record shows: it rests on the same two axioms and is the larger derivation of the two.
-    Derivation.axiomsOf(greatest) shouldBe Derivation.axiomsOf(fact(Peano.LeastNumber))
+    Real.spent(greatest) shouldBe Real.spent(fact(Peano.LeastNumber))
     Derivation.size(greatest) should be > Derivation.size(fact(Peano.LeastNumber))
 
     info(
@@ -652,8 +654,8 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
 
     // It costs what every other definition in this file costs and not more, which is the question
     // a new constant has to answer: the recursion theorem, and nothing else.
-    Derivation.axiomsOf(fact(Peano.PartialSumAtZero)) shouldBe
-      Derivation.axiomsOf(fact(Peano.AddAtZero))
+    Real.spent(fact(Peano.PartialSumAtZero)) shouldBe
+      Real.spent(fact(Peano.AddAtZero))
   }
 
   it should "carry its congruence with the bound, which is the form a consumer can use" in {
@@ -708,7 +710,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // enough to matter it would be a different finding wanting a different fix.
     val chain = Chain.standard
     val started = System.nanoTime()
-    force(Peano.construct(chain.naturals, chain.ring))
+    force(Peano.pure(chain.naturals).flatMap(Peano.construct(chain.naturals, chain.ring, chain.order, _)))
     val elapsed = (System.nanoTime() - started) / 1000000
 
     info(s"the arithmetic of the naturals builds in $elapsed ms, a reading and not an assertion")
@@ -724,7 +726,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     )
       .foreach { name =>
         val theorem = fact(name)
-        info(s"$name: ${Derivation.size(theorem)} inferences over ${Derivation.axiomsOf(theorem).size} axioms")
+        info(s"$name: ${Derivation.size(theorem)} inferences over ${Real.spent(theorem).size} axioms")
         Derivation.size(theorem) should be > 100
       }
   }
@@ -747,7 +749,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
    */
   "Course-of-values induction" should "be instantiable and dischargeable" in {
     val principle = fact(Peano.StrongInduction)
-    Derivation.axiomsOf(principle) should have size 2
+    Real.spent(principle) should have size 2
     principle.hypotheses shouldBe empty
 
     val index = Term.variable("n", numbers)
@@ -780,6 +782,6 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     val everywhere = force(rules.mp(instance, discharged))
     everywhere.conclusion shouldBe conclusion
     everywhere.hypotheses shouldBe empty
-    Derivation.axiomsOf(everywhere) should have size 2
+    Real.spent(everywhere) should have size 2
   }
 }

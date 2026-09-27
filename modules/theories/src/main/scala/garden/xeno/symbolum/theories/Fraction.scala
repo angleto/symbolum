@@ -487,7 +487,7 @@ object Fraction {
   /* ------------------------------------------------------------------ the construction */
 
   /** Over the development that holds the integers, which is where the carrier's arithmetic is. */
-  def construct(classical: Classical, integer: Integer, product: Product, peano: Peano): Either[LogicError, Fraction] =
+  def construct(classical: Classical, integer: Integer, product: Product, peano: NaturalArithmetic): Either[LogicError, Fraction] =
     construct(classical, integer, product, peano, integer.theory, integer.notation)
 
   /**
@@ -498,7 +498,7 @@ object Fraction {
     classical: Classical,
     integer: Integer,
     product: Product,
-    peano: Peano,
+    peano: NaturalArithmetic,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Fraction] =
@@ -1157,7 +1157,7 @@ object Fraction {
       zeroDefinition: Kernel.Thm,
       oneDefinition: Kernel.Thm,
       integer: Integer,
-      peano: Peano
+      peano: NaturalArithmetic
     ): Either[LogicError, Kernel.Thm] = {
       val wide = quotient.logic.rules
       for {
@@ -1210,7 +1210,7 @@ object Fraction {
       theory: Theory,
       notation: Notation,
       integer: Integer,
-      peano: Peano,
+      peano: NaturalArithmetic,
       definition: Kernel.Thm,
       projections: Vector[Rewrite.Rule]
     ): Either[LogicError, Lifting] = {
@@ -1280,7 +1280,7 @@ object Fraction {
     notation: Notation,
     lifting: Lifting,
     integer: Integer,
-    peano: Peano
+    peano: NaturalArithmetic
   ) {
     private val logic: Logic = quotient.logic
     private val rules = logic.rules

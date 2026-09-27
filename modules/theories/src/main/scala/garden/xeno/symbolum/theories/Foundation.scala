@@ -22,21 +22,18 @@ import garden.xeno.symbolum.logic.*
  * == Why the three counts are read off `Real.standard`, `Natural.standard` and `Chain.standard` ==
  *
  * Because that is what the sentence means. The claim is about **whichever development you build
- * on**, and the reals and the naturals are siblings rather than a chain: `Real.standard` sits over
- * `Logic.standard`, which has no axioms, so a session proving something about the reals is not asked
- * to believe the choice operator or eta. `NaturalSpec` asserts exactly that division, and it is the
- * reason this table has three rows rather than one number.
+ * on**. Until `docs/adr/0053` the reals and the naturals were siblings, the reals over
+ * `Logic.standard` with sixteen axioms of their own and no choice, and the three rows said three
+ * different numbers; the reals are built over the naturals now, so the three rows read the same
+ * three axioms, and the table still reads each off its development rather than saying so once,
+ * because the day one of them differs is the day the page has to show it.
  *
- * `Chain.standard` is the third row because a development holding both is what the chain assembles,
- * and `widest` is where to read it: which development is last changes whenever a link is added, and
- * naming one here would be the same defect this file exists to remove, one layer up.
+ * `Chain.standard` is the third row because a development holding everything is what the chain
+ * assembles, and `widest` is where to read it: which development is last changes whenever a link is
+ * added, and naming one here would be the same defect this file exists to remove, one layer up.
  *
- * == What is not in the table, deliberately ==
- *
- * The sixteen names of the field. A row listing them would be sixteen identifiers wide on the front
- * page, and `docs/lemmas.md` already lists every one of them under the development that holds it.
- * The three of the naturals **are** named, because the page named them by hand before this file
- * existed and dropping that would have made the document say less than it used to.
+ * Every row names its axioms, read off the theory: the page named the naturals' three by hand
+ * before this file existed, and dropping that would have made the document say less than it used to.
  */
 object Foundation {
 
@@ -56,8 +53,8 @@ object Foundation {
    * an axiom it could not name would show a count and a list that disagree, which is worse on this
    * page than anywhere else in the repository.
    */
-  private def named(naturals: Natural, reals: RealTheory): Map[Term, String] =
-    (naturals.classical.axioms ++ naturals.axioms ++ reals.axioms).map { case (name, axiom) =>
+  private def named(naturals: Natural): Map[Term, String] =
+    (naturals.classical.axioms ++ naturals.axioms).map { case (name, axiom) =>
       axiom.conclusion -> name
     }
 
@@ -72,27 +69,16 @@ object Foundation {
    * built to the same question, which is what stops this from being a second copy of the figures.
    */
   def trustedBaseTable(naturals: Natural, reals: RealTheory, both: Signature): String = {
-    val names = named(naturals, reals)
-    val three = heldBy(naturals.theory, names)
+    val names = named(naturals)
+    def row(label: String, theory: Theory): Vector[String] =
+      Vector(label, theory.axioms.size.toString, heldBy(theory, names).map(name => s"`$name`").mkString(", "))
 
     Generated.table(
       Vector("A development built on", "Axioms it asks you to believe", "Which they are"),
       Vector(
-        Vector(
-          "the reals alone",
-          reals.theory.axioms.size.toString,
-          "a complete ordered field, listed in `Real.scala` and in [docs/lemmas.md](docs/lemmas.md)"
-        ),
-        Vector(
-          "the naturals alone",
-          naturals.theory.axioms.size.toString,
-          three.map(name => s"`$name`").mkString(", ")
-        ),
-        Vector(
-          "both, which is what the standard chain assembles",
-          both.theory.axioms.size.toString,
-          "the two rows above, added, since they share none"
-        )
+        row("the naturals", naturals.theory),
+        row("the reals, built from the naturals through the rationals", reals.theory),
+        row("everything, which is what the standard chain assembles", both.theory)
       )
     )
   }

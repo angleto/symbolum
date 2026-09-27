@@ -20,7 +20,7 @@ the telescoping sum and summation by parts. `Peano` adds the arithmetic, the two
 embedding into the reals, and since 2026-09-11 the predecessor and a truncated subtraction, which is
 the only subtraction `num` can have and which the file says of itself in its first paragraph.
 
-**The sixteenth axiom of the reals is read by exactly one thing, and it arrived on 2026-09-13.**
+**The sixteenth axiom of the reals was read by exactly one thing when that arrived on 2026-09-13.**
 `COMPLETENESS` had never been used: fifteen of the sixteen were worked and the one that separates an
 ordered field from the reals was not. `Peano.NUM_ARCHIMEDES` is what spends it, and it has to be
 proved rather than assumed because an ordered field need not be Archimedean. What it bought
@@ -1539,18 +1539,28 @@ positive members, and it has its commutativity, associativity, unit, zero and di
 `CUT_MUL_NEG_LEFT`, `(-x) * y = -(x * y)`, with a normaliser for the additive group closing each case.
 `CUT_INV` is zero at zero by its definition, and `CUT_MUL_INV` is `x * inv x = 1` off zero. The
 Archimedean step both inverses need is one lemma, `CUT_ESCAPE`: from a member `e` and a step `f > 0`,
-some member at least `e` steps out of the cut. What is left is phase 5, the sixteen of `Real.scala`
-as theorems about `cut` under their own names. `tools/verify/perturb-cuts.sh` fires the union, the
+some member at least `e` steps out of the cut. `tools/verify/perturb-cuts.sh` fires the union, the
 embedding, the escaping step, the inverse's step and a sign branch of the product.
+
+**And the sixteen of `Real.scala` are theorems since the same day, so the reals are constructed.**
+Phase 5a moved the construction below the reals inside the chain: the arithmetic of `num` that
+names no real, the pairs, the integers, the rationals and the cuts come first, and the integers'
+two facts that need number theory on `num` are added over the chain further up. Phase 5b is
+`docs/adr/0053`: the type the cuts are carved as is `real`, each of the seven primitives is defined
+as the operation on cuts it names, and each of the sixteen is proved under its old name, eleven as
+facts `Cut` publishes read through the aliases and five by a short argument in `Real.scala`.
+`Real.standard` is that construction and `Chain.standard` shares it. What a development about the
+reals is asked to believe is choice, eta and infinity, where it was sixteen statements and no
+choice.
 
 `NUM_GCD` and `NUM_DIV` are both chosen rather than calculated, and since 2026-09-25 each has a
 computing counterpart proved equal to it: `EuclidAlgorithm` defines `NUM_EUCLID_GCD` and
 `NUM_EUCLID_DIV` by `WellFounded`'s recursion along a measure, beside the chain, and
 `NUM_EUCLID_GCD_IS_GCD` and `NUM_EUCLID_DIV_IS_DIV` are the two equalities, off both zero and off a
 zero divisor. What is not done is wiring that development into the chain, which is why `Ask` and
-`Find` do not reach either. The reals are still axiomatised: `docs/adr/0004` records
-why, and why the same reasoning does not extend to the naturals, and `docs/adr/0007` orders their
-construction, which `docs/adr/0006` is the rule that unlocked.
+`Find` do not reach either. The reals are constructed since `docs/adr/0053`, which supersedes
+`docs/adr/0004` and completes the order `docs/adr/0007` set, which `docs/adr/0006` is the rule that
+unlocked.
 
 **A theory of a domain that is not mathematics is a theory like any other, and one exists as a
 test rather than as a description.** `DomainTheorySpec` declares a type and five constants nothing

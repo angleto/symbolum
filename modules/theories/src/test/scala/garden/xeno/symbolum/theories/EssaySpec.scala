@@ -108,12 +108,13 @@ class EssaySpec extends AnyFlatSpec with Matchers {
   // being a shared helper makes exactly that mistake cheap: one wrong comparison turns every count
   // on the page singular and a one-sided test calls it fixed.
   it should "write the singular where the count is one and the plural where it is not" in {
-    // An asserted axiom is what the kernel holds in a single inference, so every one of the
-    // sixteen of the reals reads this way. `ADD_SYM` is the one the spec above already uses.
-    val single = page("ADD_SYM")
-    val singleSize = garden.xeno.symbolum.kernel.Derivation.size(library.named("ADD_SYM").head.theorem)
+    // A definition is what the kernel holds in a single inference. The sixteen of the reals were the
+    // subject here while they were asserted, an axiom being one inference too; they are proved since
+    // `docs/adr/0053`, and `BIT0`'s defining equation is the library's entry that stays one step.
+    val single = page(Real.Bit0)
+    val singleSize = garden.xeno.symbolum.kernel.Derivation.size(library.named(Real.Bit0).head.theorem)
 
-    withClue("ADD_SYM is no longer held in one inference, so it cannot exercise the singular: ") {
+    withClue("BIT0 is no longer held in one inference, so it cannot exercise the singular: ") {
       singleSize shouldBe 1
     }
     single should include("1 inference of its own")

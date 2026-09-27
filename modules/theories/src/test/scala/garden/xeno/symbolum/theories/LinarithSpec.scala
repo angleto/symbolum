@@ -556,7 +556,8 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
     Derivation.axiomsOf(theorem).subsetOf(reals.theory.axioms.toSet) shouldBe true
   }
 
-  "The theory" should "still assert only the axioms `Real.Axioms` lists" in {
-    reals.theory.axioms.length shouldBe Real.Axioms.length
+  "The theory" should "still assert only the axioms the reals are built on" in {
+    // The foundation the reals are built on since `docs/adr/0053`, and nothing the procedure adds.
+    reals.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 }

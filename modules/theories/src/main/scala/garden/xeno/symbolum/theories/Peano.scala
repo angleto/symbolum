@@ -4,6 +4,51 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
+ * The arithmetic of `num`, whether or not the reals are in the theory: what the construction of the
+ * integers, the rationals and the cuts reads from `Peano`, and all it reads.
+ *
+ * Two things implement it. [[Peano]] is the whole development, whose later stages embed `num` in the
+ * reals. [[PureArithmetic]] is the stages that name no real, built over a theory where `real` is not
+ * declared, which is what lets the construction of the reals be built **below** them rather than
+ * over a theory that already asserts what it is meant to prove. `docs/adr/0016` fixes that order and
+ * calls the move phase 5.
+ */
+trait NaturalArithmetic extends Signature {
+  def naturals: Natural
+  def fact(name: String): Either[LogicError, Kernel.Thm]
+  def definition(name: String): Either[LogicError, Kernel.Thm]
+}
+
+/**
+ * The stages of `num`'s arithmetic that name no real, as a development of their own: `NUM_ADD`
+ * through the numerals, over `naturals.theory` and with `naturals.notation` widened by the numerals'
+ * spelling. [[Peano.construct]] re-reads the same stages over the reals' theory rather than defining
+ * them again, which would declare every constant twice.
+ */
+final class PureArithmetic private[theories] (
+  val naturals: Natural,
+  private[theories] val stages: Peano.Arithmetic
+) extends NaturalArithmetic {
+  val theory: Theory = stages.theory
+  val notation: Notation = stages.notation
+  val logic: Logic = stages.logic
+
+  /** The facts these stages proved, each cited under its name. */
+  val facts: Map[String, Kernel.Thm] = Published.cite(stages.facts)
+
+  def fact(name: String): Either[LogicError, Kernel.Thm] = facts.get(name).toRight(MissingDefinition(name))
+  def definition(name: String): Either[LogicError, Kernel.Thm] =
+    stages.definitions.get(name).toRight(MissingDefinition(name))
+
+  /** The same stages read over a theory extending theirs, in the notation given. */
+  private[theories] def over(base: Theory, spelled: Notation): Either[LogicError, Peano.Arithmetic] =
+    for {
+      logic <- naturals.classical.logic.over(base)
+      induction <- naturals.fact(Natural.Induction)
+    } yield stages.copy(theory = base, notation = spelled, logic = logic, driver = Induct.overNaturals(logic, induction))
+}
+
+/**
  * Arithmetic on the naturals: addition, multiplication, the order, and the map into the reals.
  *
  * `Natural` carves `num` out of an infinite type and derives Peano's axioms; what it leaves is a
@@ -145,7 +190,7 @@ final class Peano private (
   val logic: Logic,
   val definitions: Map[String, Kernel.Thm],
   published: Map[String, Kernel.Thm]
-) extends Signature {
+) extends NaturalArithmetic {
 
   /** The facts this development proved, each cited under its name: what a consumer reads. */
   val facts: Map[String, Kernel.Thm] = Published.cite(published)
@@ -1400,12 +1445,14 @@ object Peano {
 
   /* ------------------------------------------------------------ construction */
 
-  /** The standard development, over the chain that has both types in one signature. */
-  lazy val standard: Peano =
-    construct(Chain.standard.naturals, Chain.standard.ring).fold(
-      error => throw new IllegalStateException(s"the arithmetic of the naturals does not build: ${error.message}"),
-      identity
-    )
+  /**
+   * The standard development, which is the chain's own.
+   *
+   * It was built a second time over the chain's naturals and ring until phase 5b, when the stages
+   * that name no real moved below the reals: a second build would declare `NUM_ADD` again in a
+   * theory that already holds it, and the one the chain built is the same development anyway.
+   */
+  lazy val standard: Peano = Chain.standard.peano
 
   /**
    * The development over the naturals and the reals of a chain of one's own.
@@ -1439,44 +1486,33 @@ object Peano {
     arithmeticStages(naturals, naturals.theory, naturals.notation)
       .map(stages => (stages.theory, stages.notation, stages.definitions, stages.facts))
 
-  def construct(naturals: Natural, ring: Ring): Either[LogicError, Peano] =
-    construct(naturals, ring, ring.reals.theory)
+  /** The stages that name no real, built over `naturals` alone, which is where the construction reads them. */
+  def pure(naturals: Natural): Either[LogicError, PureArithmetic] =
+    arithmeticStages(naturals, naturals.theory, naturals.notation).map(new PureArithmetic(naturals, _))
 
   /**
-   * The same, for a caller that has already built the order facts.
+   * Over stages already built below the reals, which is phase 5's order: the stages are re-read over
+   * the reals' theory, which extends theirs, and only the embedding and what rests on it are built
+   * here. Defining them again would declare `NUM_ADD` twice.
    *
-   * `Chain` builds an `Order` before this line and would otherwise pay for a second one. The order
-   * is here at all because of the three lemmas that carry a bound on an index into the reals: they
-   * are closed by `LINARITH`, which is built over an order, and there is no counterpart to it over
-   * `num` to close them with instead.
+   * The only way in since phase 5b. Four overloads built the stages over the reals' theory, for a
+   * caller holding reals and naturals from two separate constructions, and every theory of the
+   * reals holds the stages now, so each of the four could only refuse.
    */
-  def construct(naturals: Natural, ring: Ring, order: Order): Either[LogicError, Peano] =
-    construct(naturals, ring, ring.reals.theory, order)
+  def construct(naturals: Natural, ring: Ring, bounds: Order, pure: PureArithmetic): Either[LogicError, Peano] =
+    embed(naturals, ring, bounds, pure.over(ring.reals.theory, spelledOver(ring.reals.notation)))
 
-  /**
-   * The same, extending a theory that already holds something else.
-   *
-   * `Chain` does not use it any more and it is not dead: it is what a caller with a development of
-   * its own over the reals reaches for, and the parameter is the reason the chain could be built
-   * either way round while the question of which was open. `Series` is now built over **this**
-   * rather than the other way about, because a constant declared after a definition cannot appear
-   * inside it: see `Chain.peano` for the whole of that argument.
-   */
-  def construct(naturals: Natural, ring: Ring, base: Theory): Either[LogicError, Peano] =
-    Order.construct(ring).flatMap(construct(naturals, ring, base, _))
-
-  /** The same again, over a theory and an order the caller holds. */
-  def construct(
+  private def embed(
     naturals: Natural,
     ring: Ring,
-    base: Theory,
-    bounds: Order
+    bounds: Order,
+    built: Either[LogicError, Arithmetic]
   ): Either[LogicError, Peano] = {
     val notation = ring.reals.notation
 
     for {
       linarith <- Linarith.construct(bounds)
-      stages <- arithmeticStages(naturals, base, notation)
+      stages <- built
       logic = stages.logic
       recursion = stages.recursion
 
@@ -1615,7 +1651,7 @@ object Peano {
    * Seventeen values was past the point where a tuple is readable, and the fields are what
    * [[Peano.construct]] threads into the stages that do name a real.
    */
-  private final case class Arithmetic(
+  private[theories] final case class Arithmetic(
     theory: Theory,
     notation: Notation,
     logic: Logic,
@@ -6817,6 +6853,28 @@ object Peano {
   }
 
   /**
+   * A notation widened to read `num`'s numerals and its four overloaded operators: the half of
+   * [[numerals]] that defines nothing, which is what lets the stages built below the reals be read
+   * again over them without defining the numerals twice. Why these four operators and these
+   * precedences is written at the call in [[numerals]]; why `>` and `>=` too is written here.
+   */
+  private[theories] def spelledOver(notation: Notation): Notation =
+    // `>` and `>=` are the same two relations read from the other end, so they are declared
+    // here for the reason `Real` declares them: not overloading them would leave `!n:num. n < n`
+    // reading and `!n:num. n > n` refused, an asymmetry a reader meets on their second line and
+    // which this change would have INTRODUCED. `Counterpart` used to answer that refusal and
+    // cannot any more, since the row it answered from is one of the four overloading removed.
+    // No constant and no axiom: `a > b` builds the term `b < a`, to the node.
+    notation
+      .withNumerals(Natural.NumberZero, NumeralOne, NumeralBit0, NumeralBit1)
+      .withInfix("+", Addition, Real.AdditionPrecedence)
+      .withInfix("*", Multiplication, Real.MultiplicationPrecedence)
+      .withInfix("<", StrictOrder, Real.OrderPrecedence)
+      .withInfix("<=", NonStrictOrder, Real.OrderPrecedence)
+      .withFlippedInfix(">", StrictOrder, Real.OrderPrecedence)
+      .withFlippedInfix(">=", NonStrictOrder, Real.OrderPrecedence)
+
+  /**
    * The binary numerals of `num`: three definitions, their equations, and the three that cross.
    *
    * Last, and it has to be: [[EmbedsNumeralOne]] and the two below it mention `real_of_num`, the
@@ -6867,21 +6925,7 @@ object Peano {
       // The precedences are the reals' own, which is not a convenience: one symbol with two
       // precedences is an ambiguous grammar rather than an overload, since the reader picks the
       // precedence before anything is known about types and so cannot pick it per candidate.
-      spelled = notation
-        .withNumerals(Natural.NumberZero, NumeralOne, NumeralBit0, NumeralBit1)
-        .withInfix("+", Addition, Real.AdditionPrecedence)
-        .withInfix("*", Multiplication, Real.MultiplicationPrecedence)
-        .withInfix("<", StrictOrder, Real.OrderPrecedence)
-        .withInfix("<=", NonStrictOrder, Real.OrderPrecedence)
-        // `>` and `>=` are the same two relations read from the other end, so they are declared
-        // here for the reason `Real` declares them: not overloading them would leave `!n:num. n < n`
-        // reading and `!n:num. n > n` refused, an asymmetry a reader meets on their second line and
-        // which this change would have INTRODUCED. `Counterpart` used to answer that refusal and
-        // cannot any more, since the row it answered from is one of the four overloading removed.
-        // No constant and no axiom: `a > b` builds the term `b < a`, to the node.
-        .withFlippedInfix(">", StrictOrder, Real.OrderPrecedence)
-        .withFlippedInfix(">=", NonStrictOrder, Real.OrderPrecedence)
-
+      spelled = spelledOver(notation)
       oneIsSuccessor <- checked(theory, spelled, NumeralOneIsSuccessorOfZero, oneDefinition)
 
       bit0At <- Conv.unfold(bit0Definition, List(n))

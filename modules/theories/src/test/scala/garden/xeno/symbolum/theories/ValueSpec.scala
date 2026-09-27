@@ -52,8 +52,8 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     val characterisation =
       chain.modular.fact(Modular.DivisionDetermined).fold(error => fail(error.message), identity)
 
-    Derivation.axiomsOf(quotient) should have size 2
-    Derivation.axiomsOf(quotient) shouldBe Derivation.axiomsOf(characterisation)
+    Real.spent(quotient) should have size 2
+    Real.spent(quotient) shouldBe Real.spent(characterisation)
   }
 
   it should "divide exactly where it divides exactly, and by zero where the lemma cannot reach" in {
@@ -77,7 +77,7 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     evaluate(Modular.GcdName, 7, 13).conclusion shouldBe written("NUM_GCD (7:num) 13 = 1")
     evaluate(Modular.GcdName, 48, 180).conclusion shouldBe written("NUM_GCD (48:num) 180 = 12")
 
-    Derivation.axiomsOf(evaluate(Modular.GcdName, 12, 18)) should have size 2
+    Real.spent(evaluate(Modular.GcdName, 12, 18)) should have size 2
   }
 
   it should "answer where one side is zero, which is not the case the lemmas exclude" in {
@@ -147,8 +147,8 @@ class ValueSpec extends AnyFlatSpec with Matchers {
     // real cannot be cheaper than the reals, and a row about `num` must not become dearer. What
     // would break this is a route for the naturals that went through the embedding, which is the
     // thing `Digits` exists to avoid and which no other test here would notice.
-    val floor = Derivation.axiomsOf(evaluate(Peano.Floor, 7, 2))
-    val quotient = Derivation.axiomsOf(evaluate(Modular.DivName, 17, 5))
+    val floor = Real.spent(evaluate(Peano.Floor, 7, 2))
+    val quotient = Real.spent(evaluate(Modular.DivName, 17, 5))
 
     info(s"a floor rests on ${floor.size} axioms and a quotient on ${quotient.size}")
     floor should have size 18

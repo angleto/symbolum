@@ -376,8 +376,15 @@ object Matrix {
    * The ring is the one `base` was built from and is used unchanged: a theorem of a theory is a
    * theorem of every extension of it, and every component equation below is settled by it.
    */
-  def construct(ring: Ring, product: Product, base: Theory): Either[LogicError, Matrix] = {
-    val notation = product.notation
+  def construct(ring: Ring, product: Product, base: Theory): Either[LogicError, Matrix] =
+    construct(ring, product, base, product.notation)
+
+  /**
+   * The same, reading its entries in the notation given. The entries are reals, so what reads them
+   * has to know the reals' operators: since phase 5 (`docs/adr/0016`) the pair is built below the
+   * reals, so `product.notation` no longer does, and the chain hands this its own.
+   */
+  def construct(ring: Ring, product: Product, base: Theory, notation: Notation): Either[LogicError, Matrix] = {
 
     def define(
       theory: Theory,

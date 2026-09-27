@@ -753,8 +753,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // by **one** and **one**: `NUM_PROD_PAIRED` binds `m`, `f`, `t` and `n`, two of them `num` and two
     // `num -> num`, and `NUM_WILSON` binds only `p`. Measured as a delta of two, one and one on the
     // branch before the valuation and Taylor landed. Tip plus this branch's delta.
-    library.entries.size shouldBe 814
-    library.names.distinct.size shouldBe 811
+    // 821 and 818 with the reals built from the cuts, 2026-09-26: the seven primitives of `Real`
+    // are defined as the cut operations they name, so seven definitional entries under seven names
+    // that were declared and not defined before. `CLAUDE.md`'s figures do not move: a definition
+    // binds no leading quantifier. Tip plus this branch's delta.
+    library.entries.size shouldBe 821
+    library.names.distinct.size shouldBe 818
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
@@ -1040,7 +1044,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // apart would call every arithmetic proof equally unsurprising.
     val twelve = chain.order.positive(12).fold(error => fail(error.message), identity)
 
-    val axioms = Derivation.axiomsOf(twelve).size
+    val axioms = Real.spent(twelve).size
     val lemmas = library.restingOn(twelve).map(_.name).distinct.size
 
     withClue(s"$axioms axioms and $lemmas named lemmas\n") {
@@ -1103,7 +1107,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
 
     page should include("## Order")
     page should include("## Series")
-    page should include("## Real, assumed")
+    page should include("## Real, derived")
 
     // The kernel's printer writes an application as `((< x) y)`. The theory's writes `x < y`. A
     // first version of this test looked for `BIT1` and failed on the DEFINITION of `BIT1`, which is

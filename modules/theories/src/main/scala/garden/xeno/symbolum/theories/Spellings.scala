@@ -290,6 +290,41 @@ object Spellings {
       .delimited("real_of_int", 1, "\\iota(#1)")
       .delimited("mk_int", 1, "\\mathrm{mk\\_int}(#1)")
       .delimited("dest_int", 2, "\\mathrm{dest\\_int}(#1, #2)")
+      /* --------------------------------------------------------- the rationals */
+      // In the chain's signature since phase 5 put the construction of the reals below them, and set
+      // the way the integers are and for the same reason: the ordinary signs, with the quotient's own
+      // vocabulary shown as the naming it is.
+      .operator("RAT_ADD", 2, "#1 + #2", Additive)
+      .operator("RAT_MUL", 2, "#1 \\cdot #2", Multiplicative)
+      .operator("RAT_NEG", 1, "-#1", Multiplicative + 5)
+      .operator("RAT_INV", 1, "#1^{-1}", Multiplicative + 5)
+      .delimited("RAT_ZERO", 0, "0_{\\mathbb{Q}}")
+      .delimited("RAT_ONE", 0, "1_{\\mathbb{Q}}")
+      .operator("RAT_LE", 2, "#1 \\leq #2", Relation)
+      .operator("RAT_LT", 2, "#1 < #2", Relation)
+      .operator("RAT_OF_NUM", 1, "#1_{\\mathbb{Q}}", Multiplicative + 5)
+      .delimited("RAT_OF_PAIR", 1, "[#1]")
+      .delimited("RAT_OF_PAIR_repr", 1, "\\mathrm{repr}(#1)")
+      .operator("RAT_SAME", 2, "#1 \\sim #2", Relation)
+      .delimited("mk_rat", 1, "\\mathrm{mk\\_rat}(#1)")
+      .delimited("dest_rat", 2, "\\mathrm{dest\\_rat}(#1, #2)")
+      /* ------------------------------------------------------------- the cuts */
+      // Set as the construction showing through, by name, and not with the reals' signs. Since
+      // `docs/adr/0053` each primitive of the reals is defined as one of these, so `real_add` and
+      // `CUT_ADD` are the same function; a statement written with the second is one about how the
+      // reals were built, and a reader should see that it is.
+      .delimited("IS_CUT", 1, "\\mathrm{cut}(#1)")
+      .delimited("mk_cut", 1, "\\mathrm{mk\\_cut}(#1)")
+      .delimited("dest_cut", 2, "\\mathrm{dest\\_cut}(#1, #2)")
+      .delimited("CUT_OF_RAT", 1, "\\mathrm{cut}_{<}(#1)")
+      .delimited("CUT_LE", 2, "\\mathrm{cut\\_le}(#1, #2)")
+      .delimited("CUT_LT", 2, "\\mathrm{cut\\_lt}(#1, #2)")
+      .delimited("CUT_ADD", 2, "\\mathrm{cut\\_add}(#1, #2)")
+      .delimited("CUT_NEG", 1, "\\mathrm{cut\\_neg}(#1)")
+      .delimited("CUT_MUL", 2, "\\mathrm{cut\\_mul}(#1, #2)")
+      .delimited("CUT_PMUL", 2, "\\mathrm{cut\\_pmul}(#1, #2)")
+      .delimited("CUT_INV", 1, "\\mathrm{cut\\_inv}(#1)")
+      .delimited("CUT_PINV", 1, "\\mathrm{cut\\_pinv}(#1)")
       /* --------------------------------------------- limits and the series */
       // Convergence is a relation, because `converges s l` says the sequence approaches the value
       // and `\to` is what says that; a function-application spelling would hide it. The index

@@ -138,7 +138,7 @@ Do not edit the table. It is overwritten by the command above, which is what the
 
 <!-- generated, do not edit below this line -->
 
-## The axioms (19)
+## The axioms (3)
 
 In the order the chain asserts them, which is the order `Theory.axioms` reports.
 
@@ -147,24 +147,8 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom SELECT` | !f:'a -> bool. !x:'a. f x ==> f (select f) | **NOT READ** |  |  |
 | `axiom ETA` | !f:'a -> 'b. (\x:'a. f x) = f | **NOT READ** |  |  |
 | `axiom INFINITY` | ?f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\ (!y:ind. ~(f y = x)) | **NOT READ** |  |  |
-| `axiom ADD_SYM` | !x:real. !y:real. x + y = y + x | **NOT READ** |  |  |
-| `axiom ADD_ASSOC` | !x:real. !y:real. !z:real. x + y + z = x + (y + z) | **NOT READ** |  |  |
-| `axiom ADD_ZERO` | !x:real. x + 0 = x | **NOT READ** |  |  |
-| `axiom ADD_INVERSE` | !x:real. x + -x = 0 | **NOT READ** |  |  |
-| `axiom MUL_SYM` | !x:real. !y:real. x * y = y * x | **NOT READ** |  |  |
-| `axiom MUL_ASSOC` | !x:real. !y:real. !z:real. x * y * z = x * (y * z) | **NOT READ** |  |  |
-| `axiom MUL_ONE` | !x:real. x * 1 = x | **NOT READ** |  |  |
-| `axiom MUL_INVERSE` | !x:real. ~(x = 0) ==> x * inv x = 1 | **NOT READ** |  |  |
-| `axiom DISTRIBUTE` | !x:real. !y:real. !z:real. x * (y + z) = x * y + x * z | **NOT READ** |  |  |
-| `axiom ONE_NOT_ZERO` | ~(1 = 0) | **NOT READ** |  |  |
-| `axiom LT_IRREFLEXIVE` | !x:real. ~(x < x) | **NOT READ** |  |  |
-| `axiom LT_TRANSITIVE` | !x:real. !y:real. !z:real. x < y /\ y < z ==> x < z | **NOT READ** |  |  |
-| `axiom LT_TOTAL` | !x:real. !y:real. x < y \/ x = y \/ y < x | **NOT READ** |  |  |
-| `axiom LT_ADD` | !x:real. !y:real. !z:real. x < y ==> x + z < y + z | **NOT READ** |  |  |
-| `axiom LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
-| `axiom COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
-## The definitions (152)
+## The definitions (181)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -178,6 +162,15 @@ axiom mentioning it means.
 | `definition BIT0` | BIT0 = \x:real. x + x | **NOT READ** |  |  |
 | `definition BIT1` | BIT1 = \x:real. x + x + 1 | **NOT READ** |  |  |
 | `definition COND` | COND = \p:bool. \x:'a. \y:'a. select (\z:'a. (p ==> z = x) /\ (~p ==> z = y)) | **NOT READ** |  |  |
+| `definition CUT_ADD` | CUT_ADD = \x:real. \y:real. mk_cut (\z:rat. ?u:rat. dest_cut x u /\ dest_cut y (RAT_ADD z (RAT_NEG u))) | **NOT READ** |  |  |
+| `definition CUT_INV` | CUT_INV = \x:real. COND (CUT_LT (CUT_OF_RAT RAT_ZERO) x) (CUT_PINV x) (COND (CUT_LT x (CUT_OF_RAT RAT_ZERO)) (CUT_NEG (CUT_PINV (CUT_NEG x))) (CUT_OF_RAT RAT_ZERO)) | **NOT READ** |  |  |
+| `definition CUT_LE` | CUT_LE = \x:real. \y:real. !z:rat. dest_cut x z ==> dest_cut y z | **NOT READ** |  |  |
+| `definition CUT_LT` | CUT_LT = \x:real. \y:real. ~(CUT_LE y x) | **NOT READ** |  |  |
+| `definition CUT_MUL` | CUT_MUL = \x:real. \y:real. COND (CUT_LE (CUT_OF_RAT RAT_ZERO) x) (COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_PMUL x y) (CUT_NEG (CUT_PMUL x (CUT_NEG y)))) (COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_NEG (CUT_PMUL (CUT_NEG x) y)) (CUT_PMUL (CUT_NEG x) (CUT_NEG y))) | **NOT READ** |  |  |
+| `definition CUT_NEG` | CUT_NEG = \x:real. mk_cut (\y:rat. ?z:rat. RAT_LT RAT_ZERO z /\ ~(dest_cut x (RAT_ADD (RAT_NEG y) (RAT_NEG z)))) | **NOT READ** |  |  |
+| `definition CUT_OF_RAT` | CUT_OF_RAT = \x:rat. mk_cut (\y:rat. RAT_LT y x) | **NOT READ** |  |  |
+| `definition CUT_PINV` | CUT_PINV = \x:real. mk_cut (\y:rat. RAT_LE y RAT_ZERO \/ (?z:rat. ~(dest_cut x z) /\ RAT_LT RAT_ZERO z /\ RAT_LT (RAT_MUL y z) RAT_ONE)) | **NOT READ** |  |  |
+| `definition CUT_PMUL` | CUT_PMUL = \x:real. \y:real. mk_cut (\z:rat. RAT_LT z RAT_ZERO \/ (?u:rat. ?v:rat. dest_cut x u /\ dest_cut y v /\ RAT_LT RAT_ZERO u /\ RAT_LT RAT_ZERO v /\ RAT_LT z (RAT_MUL u v))) | **NOT READ** |  |  |
 | `definition Divides` | Divides = \x:real. \y:real. ?z:real. y = x * z | **NOT READ** |  |  |
 | `definition F` | F = !p:bool. p | **NOT READ** |  |  |
 | `definition FST` | FST = \x:prod('a, 'b). select (\y:'a. ?z:'b. x = PAIR y z) | **NOT READ** |  |  |
@@ -195,6 +188,7 @@ axiom mentioning it means.
 | `definition INT_ONE` | INT_ONE = INT_OF_PAIR (PAIR (SUC 0) 0) | **NOT READ** |  |  |
 | `definition INT_SAME` | INT_SAME = \x:prod(num, num). \y:prod(num, num). FST x + SND y = FST y + SND x | **NOT READ** |  |  |
 | `definition INT_ZERO` | INT_ZERO = INT_OF_PAIR (PAIR 0 0) | **NOT READ** |  |  |
+| `definition IS_CUT` | IS_CUT = \f:rat -> bool. (?x:rat. f x) /\ (?x:rat. ~(f x)) /\ (!x:rat. !y:rat. f y /\ RAT_LT x y ==> f x) /\ (!x:rat. f x ==> (?y:rat. f y /\ RAT_LT x y)) | **NOT READ** |  |  |
 | `definition LIST_CONS` | LIST_CONS = \x:'a. \y:word('a). WORD_CONCAT (WORD_SINGLETON x) y | **NOT READ** |  |  |
 | `definition LIST_FOLD` | LIST_FOLD = \f:'a -> 'b -> 'b. \x:'b. select (\g:word('a) -> 'b. g WORD_EMPTY = x /\ (!y:'a. !z:word('a). g (LIST_CONS y z) = f y (g z))) | **NOT READ** |  |  |
 | `definition LIST_HEAD` | LIST_HEAD = \x:word('a). WORD_NTH x 0 | **NOT READ** |  |  |
@@ -271,6 +265,18 @@ axiom mentioning it means.
 | `definition PRE` | PRE = select (\f:num -> num. f 0 = 0 /\ (!n:num. f (SUC n) = n)) | **NOT READ** |  |  |
 | `definition Power` | Power = \x:real. select (\f:num -> real. f 0 = 1 /\ (!n:num. f (SUC n) = x * f n)) | **NOT READ** |  |  |
 | `definition Prod` | Prod = \f:num -> real. select (\g:num -> real. g 0 = 1 /\ (!n:num. g (SUC n) = g n * f n)) | **NOT READ** |  |  |
+| `definition RAT_ADD` | RAT_ADD = \x:rat. \y:rat. RAT_OF_PAIR (PAIR (INT_ADD (INT_MUL (FST (RAT_OF_PAIR_repr x)) (INT_OF_NUM (SUC (SND (RAT_OF_PAIR_repr y))))) (INT_MUL (FST (RAT_OF_PAIR_repr y)) (INT_OF_NUM (SUC (SND (RAT_OF_PAIR_repr x)))))) (SND (RAT_OF_PAIR_repr x) * SND (RAT_OF_PAIR_repr y) + SND (RAT_OF_PAIR_repr x) + SND (RAT_OF_PAIR_repr y))) | **NOT READ** |  |  |
+| `definition RAT_INV` | RAT_INV = \x:rat. COND (x = RAT_ZERO) RAT_ZERO (select (\y:rat. RAT_MUL x y = RAT_ONE)) | **NOT READ** |  |  |
+| `definition RAT_LE` | RAT_LE = \x:rat. \y:rat. INT_LE (INT_MUL (FST (RAT_OF_PAIR_repr x)) (INT_OF_NUM (SUC (SND (RAT_OF_PAIR_repr y))))) (INT_MUL (FST (RAT_OF_PAIR_repr y)) (INT_OF_NUM (SUC (SND (RAT_OF_PAIR_repr x))))) | **NOT READ** |  |  |
+| `definition RAT_LT` | RAT_LT = \x:rat. \y:rat. ~(RAT_LE y x) | **NOT READ** |  |  |
+| `definition RAT_MUL` | RAT_MUL = \x:rat. \y:rat. RAT_OF_PAIR (PAIR (INT_MUL (FST (RAT_OF_PAIR_repr x)) (FST (RAT_OF_PAIR_repr y))) (SND (RAT_OF_PAIR_repr x) * SND (RAT_OF_PAIR_repr y) + SND (RAT_OF_PAIR_repr x) + SND (RAT_OF_PAIR_repr y))) | **NOT READ** |  |  |
+| `definition RAT_NEG` | RAT_NEG = \x:rat. RAT_OF_PAIR (PAIR (INT_NEG (FST (RAT_OF_PAIR_repr x))) (SND (RAT_OF_PAIR_repr x))) | **NOT READ** |  |  |
+| `definition RAT_OF_NUM` | RAT_OF_NUM = \n:num. RAT_OF_PAIR (PAIR (INT_OF_NUM n) 0) | **NOT READ** |  |  |
+| `definition RAT_OF_PAIR` | RAT_OF_PAIR = \x:prod(int, num). mk_rat (RAT_SAME x) | **NOT READ** |  |  |
+| `definition RAT_OF_PAIR_repr` | RAT_OF_PAIR_repr = \x:rat. select (\y:prod(int, num). x = RAT_OF_PAIR y) | **NOT READ** |  |  |
+| `definition RAT_ONE` | RAT_ONE = RAT_OF_PAIR (PAIR INT_ONE 0) | **NOT READ** |  |  |
+| `definition RAT_SAME` | RAT_SAME = \x:prod(int, num). \y:prod(int, num). INT_MUL (FST x) (INT_OF_NUM (SUC (SND y))) = INT_MUL (FST y) (INT_OF_NUM (SUC (SND x))) | **NOT READ** |  |  |
+| `definition RAT_ZERO` | RAT_ZERO = RAT_OF_PAIR (PAIR INT_ZERO 0) | **NOT READ** |  |  |
 | `definition REACH` | REACH = \f:'a -> 'a -> bool. \g:'a -> 'a -> bool. \x:'a. INDUCTIVE (\h:prod('a, num) -> bool. \y:prod('a, num). y = PAIR x 0 \/ (?z:prod('a, num). h z /\ f (FST z) (FST y) /\ (g (FST z) (FST y) /\ SND y = SUC (SND z) \/ ~(g (FST z) (FST y)) /\ SND y = SND z))) | **NOT READ** |  |  |
 | `definition RES_JUSTIFIED` | RES_JUSTIFIED = \f:num -> num. \g:num -> num -> num. \h:num -> num -> bool. \n:num. \m:num. m < n \/ (?k:num. ?i:num. ?j:num. k < m /\ i < m /\ (!n1:num. n1 < f k ==> ~(g k n1 = j /\ h k n1 = T) ==> (?m1:num. m1 < f m /\ g m m1 = g k n1 /\ h m m1 = h k n1)) /\ (!n1:num. n1 < f i ==> ~(g i n1 = j /\ h i n1 = F) ==> (?m1:num. m1 < f m /\ g m m1 = g i n1 /\ h m m1 = h i n1))) | **NOT READ** |  |  |
 | `definition RES_REFUTATION` | RES_REFUTATION = \f:num -> num. \g:num -> num -> num. \h:num -> num -> bool. \n:num. \m:num. (!k:num. k < m ==> RES_JUSTIFIED f g h n k) /\ (?k:num. k < m /\ f k = 0) | **NOT READ** |  |  |
@@ -309,14 +315,21 @@ axiom mentioning it means.
 | `definition fine_sum` | fine_sum = \f:real -> real. \g:real -> real. \x:real. \y:real. \z:real. INDUCTIVE (\h:prod(real, prod(real, real)) -> bool. \u:prod(real, prod(real, real)). (?v:real. ?w:real. ?x1:real. u = PAIR v (PAIR w (f x1 * (w - v))) /\ v <= x1 /\ x1 <= w /\ w - v < g x1) \/ (?v:real. ?w:real. ?x1:real. ?y1:real. ?z1:real. u = PAIR v (PAIR x1 (y1 + z1)) /\ h (PAIR v (PAIR w y1)) /\ h (PAIR w (PAIR x1 z1)))) (PAIR x (PAIR y z)) | **NOT READ** |  |  |
 | `definition has_integral` | has_integral = \f:real -> real. \x:real. \y:real. \z:real. !u:real. 0 < u ==> (?g:real -> real. (!v:real. 0 < g v) /\ (!v:real. fine_sum f g x y v ==> abs (v - z) < u)) | **NOT READ** |  |  |
 | `definition integral` | integral = \f:real -> real. \x:real. \y:real. select (\z:real. has_integral f x y z) | **NOT READ** |  |  |
+| `definition inv` | inv = CUT_INV | **NOT READ** |  |  |
 | `definition lim` | lim = \f:num -> real. select (\x:real. converges f x) | **NOT READ** |  |  |
 | `definition ln` | ln = \x:real. select (\y:real. exp y = x) | **NOT READ** |  |  |
 | `definition max` | max = \x:real. \y:real. select (\z:real. (z = x \/ z = y) /\ x <= z /\ y <= z) | **NOT READ** |  |  |
 | `definition min` | min = \x:real. \y:real. x + y - max x y | **NOT READ** |  |  |
 | `definition mk_pair` | mk_pair = \x:'a. \y:'b. \z:'a. \u:'b. z = x /\ u = y | **NOT READ** |  |  |
+| `definition neg` | neg = CUT_NEG | **NOT READ** |  |  |
+| `definition real_add` | real_add = CUT_ADD | **NOT READ** |  |  |
 | `definition real_le` | real_le = \x:real. \y:real. x < y \/ x = y | **NOT READ** |  |  |
+| `definition real_lt` | real_lt = CUT_LT | **NOT READ** |  |  |
+| `definition real_mul` | real_mul = CUT_MUL | **NOT READ** |  |  |
 | `definition real_of_int` | real_of_int = \x:int. real_of_num (FST (INT_OF_PAIR_repr x)) - real_of_num (SND (INT_OF_PAIR_repr x)) | **NOT READ** |  |  |
 | `definition real_of_num` | real_of_num = select (\f:num -> real. f 0 = 0 /\ (!n:num. f (SUC n) = f n + 1)) | **NOT READ** |  |  |
+| `definition real_one` | real_one = CUT_OF_RAT RAT_ONE | **NOT READ** |  |  |
+| `definition real_zero` | real_zero = CUT_OF_RAT RAT_ZERO | **NOT READ** |  |  |
 | `definition sgn` | sgn = \x:real. select (\y:real. x < 0 /\ y = -1 \/ x = 0 /\ y = 0 \/ 0 < x /\ y = 1) | **NOT READ** |  |  |
 | `definition sin` | sin = \x:real. lim (\n:num. Sum (\m:num. Power (0 - 1) m * (Power x (2 * m + 1) / real_of_num (NUM_FACT (2 * m + 1)))) n) | **NOT READ** |  |  |
 | `definition sinh` | sinh = \x:real. (exp x - exp (0 - x)) / 2 | **NOT READ** |  |  |
@@ -359,7 +372,7 @@ precedence and is not an entry of the table.
 | `notation numerals via NUM_ONE` | a digit string is read in binary through `ZERO`, `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1`: `12` is `NUM_BIT0 (NUM_BIT0 (NUM_BIT1 NUM_ONE))` | **NOT READ** |  |  |
 | `notation application` | `f x` binds tighter than every operator above, at precedence 1000 | **NOT READ** |  |  |
 
-## Declared and never defined (17)
+## Declared and never defined (14)
 
 Not rows, and listed so that a constant with no row is a constant somebody decided about. The
 seven of the reals and `select` are declared and say nothing by themselves: their whole meaning
@@ -368,21 +381,18 @@ arrive from `Kernel.defineType` with two theorems relating them, and a theorem i
 than read. Equality is the kernel's, and is in the theory before any of this starts.
 
 - `= : 'A -> 'A -> bool`
+- `dest_cut : real -> rat -> bool`
 - `dest_int : int -> prod(num, num) -> bool`
 - `dest_num : num -> ind`
 - `dest_prod : prod('a, 'b) -> 'a -> 'b -> bool`
+- `dest_rat : rat -> prod(int, num) -> bool`
 - `dest_word : word('a) -> prod(num, num -> 'a)`
-- `inv : real -> real`
+- `mk_cut : (rat -> bool) -> real`
 - `mk_int : (prod(num, num) -> bool) -> int`
 - `mk_num : ind -> num`
 - `mk_prod : ('a -> 'b -> bool) -> prod('a, 'b)`
+- `mk_rat : (prod(int, num) -> bool) -> rat`
 - `mk_word : prod(num, num -> 'a) -> word('a)`
-- `neg : real -> real`
-- `real_add : real -> real -> real`
-- `real_lt : real -> real -> bool`
-- `real_mul : real -> real -> real`
-- `real_one : real`
-- `real_zero : real`
 - `select : ('a -> bool) -> 'a`
 
 <!-- end generated -->

@@ -52,6 +52,35 @@ final class ArithmeticBelowTheRealsSpec extends AnyFlatSpec with Matchers {
     theory.checkType(realType).isLeft shouldBe true
   }
 
+  "The construction of the reals" should "be built, link by link, over theories that do not declare them" in {
+    // Phase 5a: the pure arithmetic, the pair, the integers, the rationals and the cuts come before
+    // `Real` in the chain. The same assertion as above, made of every link of the construction up to
+    // the cuts, and the same reason for its shape: what cannot go vacuous is that each builds over a
+    // theory in which the type is not declared. The cuts themselves are where `real` is declared
+    // since `docs/adr/0053`, carved out of `rat -> bool`, which the test below asserts.
+    val chain = Chain.standard
+    val links = Vector(
+      "the pure arithmetic" -> chain.pure.theory,
+      "the integers" -> chain.fractions.integers.theory,
+      "the rationals" -> chain.fractions.theory
+    )
+    links.foreach { case (name, below) =>
+      withClue(s"$name: ") {
+        below.checkType(realType).isLeft shouldBe true
+      }
+    }
+  }
+
+  it should "be what the reals are built over, which is the order and not only an absence" in {
+    // The positive control for the test above, from both sides: the instrument sees `real` where it
+    // is declared, and it is declared by the cuts, whose type is the reals' one type, so the
+    // construction is below the reals rather than merely somewhere without them.
+    val chain = Chain.standard
+    chain.cuts.theory.checkType(realType).isRight shouldBe true
+    Cut.Classes shouldBe realType
+    chain.reals.theory.checkType(realType).isRight shouldBe true
+  }
+
   "The arithmetic" should "hold every fact of the chain's Peano that names no real" in {
     val chainFacts = Chain.standard.peano.facts
     val pure = chainFacts.filterNot { case (_, theorem) => touchesReal(theorem.conclusion) }
@@ -79,11 +108,11 @@ final class ArithmeticBelowTheRealsSpec extends AnyFlatSpec with Matchers {
     // Nothing beyond what the naturals' induction and recursion spend. A ceiling and not an
     // equality: it refuses a fact that starts spending something new, and it lets through one that
     // quietly stops spending one of them, which is the half the equality `CodingSpec` uses covers.
-    val expected = Derivation.axiomsOf(force(naturals.fact(Natural.Induction)))
-      .union(Derivation.axiomsOf(force(naturals.recursion)))
+    val expected = Real.spent(force(naturals.fact(Natural.Induction)))
+      .union(Real.spent(force(naturals.recursion)))
 
     facts.values.foreach { theorem =>
-      Derivation.axiomsOf(theorem).diff(expected) shouldBe empty
+      Real.spent(theorem).diff(expected) shouldBe empty
     }
   }
 

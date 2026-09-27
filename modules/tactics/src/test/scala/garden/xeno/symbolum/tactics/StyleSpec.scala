@@ -234,7 +234,15 @@ class StyleSpec extends AnyFlatSpec with Matchers {
     "Derivation.scala" ->
       ("an identity-keyed set, so that two structurally equal theorems built by different " +
         "derivations count as two nodes; a `Set` on equality would fold `trans(refl p, refl p)` " +
-        "into `refl p` and a test says so"),
+        "into `refl p` and a test says so. And since `docs/adr/0053` a `TrieMap` on each citation, " +
+        "what the cited fact spends under an interface, kept after the first asking as the " +
+        "citation's `axioms` already is: the answer is a function of the fact and the interface"),
+    "Read.scala" ->
+      ("an identity-keyed map from a constant's origin to its reading, since `docs/adr/0053`: the " +
+        "reals' primitives are defined as operations on cuts, whose origins go down through the " +
+        "rationals and the integers, and reading them afresh at every occurrence ran the suite out " +
+        "of heap. Keyed by identity because the kernel shares an origin by reference, and what it " +
+        "holds is immutable, so sharing it changes nothing a comparison concludes"),
     "Proof.scala" ->
       ("the same identity-keyed set and map for the printed proof's node numbering, plus a " +
         "`StringBuilder` for the text itself; the walk is iterative because the numeral " +

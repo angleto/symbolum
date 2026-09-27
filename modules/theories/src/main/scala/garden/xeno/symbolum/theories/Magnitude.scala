@@ -396,8 +396,9 @@ object Magnitude {
    */
   def chain(classical: Classical): Either[LogicError, Magnitude] =
     for {
-      reals <- Real.construct(classical.logic, classical.theory)
-      arithmetic <- Arithmetic.construct(reals)
+      naturals <- Natural.construct(classical)
+      built <- Real.construction(classical, naturals)
+      arithmetic <- Arithmetic.construct(built.reals)
       ring <- Ring.construct(arithmetic)
       order <- Order.construct(ring)
       magnitude <- construct(classical, order)

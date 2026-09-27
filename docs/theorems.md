@@ -232,7 +232,7 @@ $$\forall x \colon \mathbb{R}.\ \exists n \colon \mathbb{N}.\ x < n_{\mathbb{R}}
 
 ### What it rests on
 
-17 axioms reached, 15 of them named below, and 43 named facts in all.
+3 axioms reached, 0 of them named below, and 43 named facts in all.
 
 | what | where |
 |---|---|
@@ -262,25 +262,25 @@ $$\forall x \colon \mathbb{R}.\ \exists n \colon \mathbb{N}.\ x < n_{\mathbb{R}}
 | `NUM_REAL_SUC` | Peano |
 | `ADD_POSITIVE` | Positivity |
 | `ZERO_LT_ONE` | Positivity |
-| `ADD_ASSOC` | Real, assumed |
-| `ADD_INVERSE` | Real, assumed |
-| `ADD_SYM` | Real, assumed |
-| `ADD_ZERO` | Real, assumed |
-| `COMPLETENESS` | Real, assumed |
-| `DISTRIBUTE` | Real, assumed |
-| `LT_ADD` | Real, assumed |
-| `LT_IRREFLEXIVE` | Real, assumed |
-| `LT_MUL` | Real, assumed |
-| `LT_TOTAL` | Real, assumed |
-| `LT_TRANSITIVE` | Real, assumed |
-| `MUL_ASSOC` | Real, assumed |
-| `MUL_ONE` | Real, assumed |
-| `MUL_SYM` | Real, assumed |
-| `ONE_NOT_ZERO` | Real, assumed |
 | `real_le` | Real, defined |
 | `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `COMPLETENESS` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `LT_ADD` | Real, derived |
+| `LT_IRREFLEXIVE` | Real, derived |
+| `LT_MUL` | Real, derived |
+| `LT_TOTAL` | Real, derived |
+| `LT_TRANSITIVE` | Real, derived |
+| `MUL_ASSOC` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
+| `ONE_NOT_ZERO` | Real, derived |
 
-2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
 
 ### The derivation
 
@@ -304,9 +304,9 @@ obtained.
 | Abstraction | 412 | 3.6% |
 | TypeInstantiation | 390 | 3.4% |
 | Assumption | 151 | 1.3% |
-| Citation | 12 | 0.1% |
-| Axiom | 12 | 0.1% |
+| Citation | 23 | 0.2% |
 | Definition | 10 | 0.1% |
+| Axiom | 1 | 0.0% |
 
 ### How to get it
 
@@ -359,7 +359,7 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 
 ### What it rests on
 
-11 axioms reached, 10 of them named below, and 30 named facts in all.
+3 axioms reached, 0 of them named below, and 30 named facts in all.
 
 | what | where |
 |---|---|
@@ -381,20 +381,20 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 | `LT_FROM_ZERO` | Order |
 | `LT_TO_ZERO` | Order |
 | `ADD_POSITIVE` | Positivity |
-| `ADD_ASSOC` | Real, assumed |
-| `ADD_INVERSE` | Real, assumed |
-| `ADD_SYM` | Real, assumed |
-| `ADD_ZERO` | Real, assumed |
-| `DISTRIBUTE` | Real, assumed |
-| `LT_ADD` | Real, assumed |
-| `LT_TOTAL` | Real, assumed |
-| `LT_TRANSITIVE` | Real, assumed |
-| `MUL_ONE` | Real, assumed |
-| `MUL_SYM` | Real, assumed |
 | `real_le` | Real, defined |
 | `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `LT_ADD` | Real, derived |
+| `LT_TOTAL` | Real, derived |
+| `LT_TRANSITIVE` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
 
-1 axiom it reaches is not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
 
 ### The derivation
 
@@ -557,9 +557,9 @@ $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \lvert x + y \rver
 | Antisymmetry | 177 | 4.6% |
 | Abstraction | 91 | 2.3% |
 | Assumption | 61 | 1.6% |
-| Axiom | 9 | 0.2% |
+| Citation | 11 | 0.3% |
 | Definition | 8 | 0.2% |
-| Citation | 3 | 0.1% |
+| Axiom | 1 | 0.0% |
 
 ### How to get it
 
@@ -614,7 +614,7 @@ $$\forall f \colon \mathbb{N} \to \mathbb{R}.\ \forall n \colon \mathbb{N}.\ \su
 
 ### What it rests on
 
-9 axioms reached, 7 of them named below, and 19 named facts in all.
+3 axioms reached, 0 of them named below, and 19 named facts in all.
 
 | what | where |
 |---|---|
@@ -627,18 +627,18 @@ $$\forall f \colon \mathbb{N} \to \mathbb{R}.\ \forall n \colon \mathbb{N}.\ \su
 | `NUM_REP_SUC` | Natural |
 | `NUM_SUC_INJECTIVE` | Natural |
 | `NUM_SUC_NOT_ZERO` | Natural |
-| `ADD_ASSOC` | Real, assumed |
-| `ADD_INVERSE` | Real, assumed |
-| `ADD_SYM` | Real, assumed |
-| `ADD_ZERO` | Real, assumed |
-| `DISTRIBUTE` | Real, assumed |
-| `MUL_ONE` | Real, assumed |
-| `MUL_SYM` | Real, assumed |
 | `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
 | `SUM_SUC` | Series |
 | `SUM_ZERO` | Series |
 
-2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
 
 ### The derivation
 
@@ -662,9 +662,9 @@ obtained.
 | TypeInstantiation | 244 | 3.4% |
 | Antisymmetry | 240 | 3.3% |
 | Assumption | 81 | 1.1% |
+| Citation | 10 | 0.1% |
 | Definition | 9 | 0.1% |
-| Axiom | 8 | 0.1% |
-| Citation | 3 | 0.0% |
+| Axiom | 1 | 0.0% |
 
 ### How to get it
 
@@ -717,7 +717,7 @@ $$\forall f \colon \mathbb{N} \to \mathbb{R}.\ \forall g \colon \mathbb{N} \to \
 
 ### What it rests on
 
-10 axioms reached, 8 of them named below, and 20 named facts in all.
+3 axioms reached, 0 of them named below, and 20 named facts in all.
 
 | what | where |
 |---|---|
@@ -730,19 +730,19 @@ $$\forall f \colon \mathbb{N} \to \mathbb{R}.\ \forall g \colon \mathbb{N} \to \
 | `NUM_REP_SUC` | Natural |
 | `NUM_SUC_INJECTIVE` | Natural |
 | `NUM_SUC_NOT_ZERO` | Natural |
-| `ADD_ASSOC` | Real, assumed |
-| `ADD_INVERSE` | Real, assumed |
-| `ADD_SYM` | Real, assumed |
-| `ADD_ZERO` | Real, assumed |
-| `DISTRIBUTE` | Real, assumed |
-| `MUL_ASSOC` | Real, assumed |
-| `MUL_ONE` | Real, assumed |
-| `MUL_SYM` | Real, assumed |
 | `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `MUL_ASSOC` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
 | `SUM_SUC` | Series |
 | `SUM_ZERO` | Series |
 
-2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
 
 ### The derivation
 
@@ -766,9 +766,9 @@ obtained.
 | TypeInstantiation | 303 | 3.4% |
 | Antisymmetry | 254 | 2.8% |
 | Assumption | 81 | 0.9% |
-| Axiom | 9 | 0.1% |
+| Citation | 11 | 0.1% |
 | Definition | 9 | 0.1% |
-| Citation | 3 | 0.0% |
+| Axiom | 1 | 0.0% |
 
 ### How to get it
 
@@ -1905,7 +1905,7 @@ $$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ 0 < m \Rightarrow 
 
 ### What it rests on
 
-18 axioms reached, 16 of them named below, and 124 named facts in all.
+3 axioms reached, 0 of them named below, and 124 named facts in all.
 
 | what | where |
 |---|---|
@@ -2011,30 +2011,30 @@ $$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ 0 < m \Rightarrow 
 | `POSITIVE_NOT_ZERO` | Positivity |
 | `ZERO_LT_ONE` | Positivity |
 | `NUM_SQUARE_NOT_DOUBLE` | Primes |
-| `ADD_ASSOC` | Real, assumed |
-| `ADD_INVERSE` | Real, assumed |
-| `ADD_SYM` | Real, assumed |
-| `ADD_ZERO` | Real, assumed |
-| `COMPLETENESS` | Real, assumed |
-| `DISTRIBUTE` | Real, assumed |
-| `LT_ADD` | Real, assumed |
-| `LT_IRREFLEXIVE` | Real, assumed |
-| `LT_MUL` | Real, assumed |
-| `LT_TOTAL` | Real, assumed |
-| `LT_TRANSITIVE` | Real, assumed |
-| `MUL_ASSOC` | Real, assumed |
-| `MUL_INVERSE` | Real, assumed |
-| `MUL_ONE` | Real, assumed |
-| `MUL_SYM` | Real, assumed |
-| `ONE_NOT_ZERO` | Real, assumed |
 | `BIT0` | Real, defined |
 | `div` | Real, defined |
 | `real_le` | Real, defined |
 | `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `COMPLETENESS` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `LT_ADD` | Real, derived |
+| `LT_IRREFLEXIVE` | Real, derived |
+| `LT_MUL` | Real, derived |
+| `LT_TOTAL` | Real, derived |
+| `LT_TRANSITIVE` | Real, derived |
+| `MUL_ASSOC` | Real, derived |
+| `MUL_INVERSE` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
+| `ONE_NOT_ZERO` | Real, derived |
 | `SQRT` | Root |
 | `SQRT_EXISTS` | Root |
 
-2 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
 
 ### The derivation
 
@@ -2058,9 +2058,9 @@ obtained.
 | TypeInstantiation | 1175 | 2.4% |
 | Assumption | 354 | 0.7% |
 | Abstraction | 193 | 0.4% |
-| Citation | 20 | 0.0% |
-| Axiom | 14 | 0.0% |
+| Citation | 33 | 0.1% |
 | Definition | 12 | 0.0% |
+| Axiom | 1 | 0.0% |
 
 ### How to get it
 

@@ -60,7 +60,7 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
   it should "rest on the axioms the naturals cost, and no more" in {
     for ((name, _) <- Digits.Lemmas) {
       val theorem = digits.lemma(name).fold(error => fail(error.message), identity)
-      val axioms = Derivation.axiomsOf(theorem)
+      val axioms = Real.spent(theorem)
       withClue(s"$name rests on: ${axioms.map(show).toVector.sorted.mkString(", ")}\n") {
         axioms.size should be <= 2
       }
@@ -69,7 +69,7 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
     // And one of them costs nothing at all, which is worth asserting rather than leaving inside the
     // bound above: `1 + 1 = 2` is the definition of the even digit read backwards and reaches no
     // axiom, so a change that made every lemma here cost two would pass the loop and fail this.
-    Derivation.axiomsOf(
+    Real.spent(
       digits.lemma("NUM_ADD_ONE_ONE").fold(error => fail(error.message), identity)
     ) shouldBe empty
   }
@@ -83,8 +83,8 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
     product.conclusion shouldBe
       chain.peano.proposition("(12:num) * 12 = 144").fold(error => fail(error.message), identity)
 
-    Derivation.axiomsOf(sum) should have size 2
-    Derivation.axiomsOf(product) should have size 2
+    Real.spent(sum) should have size 2
+    Real.spent(product) should have size 2
     sum.hypotheses shouldBe empty
     product.hypotheses shouldBe empty
   }
@@ -101,8 +101,8 @@ class DigitsSpec extends AnyFlatSpec with Matchers {
       .multiply(12, 12)
       .fold(error => fail(error.message), identity)
 
-    val naturals = Derivation.axiomsOf(overTheNaturals)
-    val reals = Derivation.axiomsOf(overTheReals)
+    val naturals = Real.spent(overTheNaturals)
+    val reals = Real.spent(overTheReals)
 
     info(s"12 * 12 = 144 rests on ${naturals.size} axioms over num and ${reals.size} over the reals")
     naturals should have size 2

@@ -107,7 +107,14 @@ class SerialisedSpec extends AnyFlatSpec with Matchers {
     val terms = text.linesIterator.count(_.startsWith("t "))
     val steps = text.linesIterator.count(_.startsWith("s "))
 
-    steps shouldBe Derivation.size(theorem)
+    // The text replays every cited fact and `Derivation.size` counts the proof's own part, which
+    // `docs/adr/0047` separates; the two agreed on this proof while the sixteen of the reals were
+    // asserted and it cited nothing. Since `docs/adr/0053` it cites the ones it uses, and the count
+    // the text has to match is the checker's, which replays the same way.
+    steps shouldBe (Check.proof(theorem) match {
+      case Check.Holds(counted, _) => counted
+      case other => fail(s"the checker refused the proof: $other")
+    })
 
     val written = Replayed.nodesOf(theorem)
     terms should be < written / 10

@@ -35,7 +35,7 @@ private[theories] final case class Density(
   notation: Notation,
   lifting: Fraction.Lifting,
   integer: Integer,
-  peano: Peano,
+  peano: NaturalArithmetic,
   known: Map[String, Kernel.Thm],
   zeroDefinition: Kernel.Thm,
   oneDefinition: Kernel.Thm,

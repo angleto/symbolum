@@ -120,23 +120,24 @@ class ReplaySpec extends AnyFlatSpec with Matchers {
     induction.axioms shouldBe empty
   }
 
-  it should "be refused against a theory that asserts neither of the axioms they rest on" in {
+  it should "be refused against a theory that asserts only one of the axioms they rest on" in {
     // The other half of the test above, and the reason the theory is a parameter rather than a
-    // constant. The successor's properties rest on choice and on infinity; the theory of the reals
-    // asserts sixteen axioms and neither of those is among them. So this proof is a proof, and it
-    // is not a proof **there**, and until 2026-09-11 the checker had no way to say so.
+    // constant. The successor's properties rest on choice and on infinity; the classical logic
+    // asserts choice and not infinity. So this proof is a proof, and it is not a proof **there**,
+    // and until 2026-09-11 the checker had no way to say so. The theory here was the reals' until
+    // `docs/adr/0053` built them over the naturals, after which it asserts both.
     val properties = force(Natural.standard.fact(Natural.SuccessorProperties))
 
-    Check.proof(properties, Order.standard.reals.theory) shouldBe a[Check.RestsOnUnvouched]
+    Check.proof(properties, garden.xeno.symbolum.logic.Classical.standard.theory) shouldBe a[Check.RestsOnUnvouched]
     Check.proof(properties, Natural.standard.theory) shouldBe a[Check.Holds]
   }
 
   "A proof of a theorem that rests on an axiom" should "report that axiom and not verify it" in {
     // The one node nothing can check, which is what a trusted base is. A checker that claimed to
     // have verified an axiom would be claiming the thing that cannot be claimed.
-    val entry = Replayed.entry("`ADD_SYM`, an axiom of the reals")
+    val entry = Replayed.entry("`SELECT`, the choice axiom")
     val axiom = entry.theorem
-    val verdict = holds("commutativity of addition", axiom, entry.theory)
+    val verdict = holds("the choice axiom", axiom, entry.theory)
 
     verdict.steps shouldBe 1
     verdict.axioms should have size 1

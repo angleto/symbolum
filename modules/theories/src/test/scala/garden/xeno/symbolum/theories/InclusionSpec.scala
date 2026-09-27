@@ -111,8 +111,10 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
    * here rather than in `QuotientSpec` because the refusal is about a real pair of theories and
    * that file's quotient is a toy over `NUM_CONG 2` with nothing below it to fail against.
    *
-   * `forward` is the link the integers extend, so its theory is genuinely below the quotient's:
-   * it declares none of the constants the quotient introduced, and the refusal names them.
+   * `product` is the link the construction of the integers extends, so its theory is genuinely
+   * below the quotient's: it declares none of the constants the quotient introduced, and the
+   * refusal names them. It was `forward` until phase 5 moved the integers below the reals, after
+   * which `forward` holds the quotient and extends it.
    *
    * The positive control is the second half and is not decoration. A `Logic.over` that refused
    * everything would pass the first assertion, and this development would then not build at all —
@@ -120,7 +122,7 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
    * loosened rather than when it is removed.
    */
   "Re-basing the quotient" should "refuse a theory that does not extend the one it was built over" in {
-    integers.quotient.over(chain.forward.theory) match {
+    integers.quotient.over(chain.product.theory) match {
       case Left(error) => error.message should include(Integer.SameName)
       case Right(_) =>
         fail("a theory below the quotient's own was accepted as one extending it")
@@ -325,12 +327,12 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
 
     Inclusion.Statements.foreach { case (name, _) =>
       withClue(s"$name: ") {
-        val spent = Derivation.axiomsOf(fact(name))
+        val spent = Real.spent(fact(name))
         (spent intersect field) should not be empty
         (spent -- field) shouldBe carrier
       }
     }
 
-    Derivation.axiomsOf(force(integers.fact(Integer.Equal))) intersect field shouldBe empty
+    Real.spent(force(integers.fact(Integer.Equal))) intersect field shouldBe empty
   }
 }

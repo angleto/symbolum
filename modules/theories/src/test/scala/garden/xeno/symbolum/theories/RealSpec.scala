@@ -7,12 +7,14 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * The theory of the reals, and the check that it asserts what it says it asserts.
+ * The theory of the reals, and the check that it proves what it says it proves.
  *
- * The pinned list below is the test that matters. Everything this system will ever prove rests on
- * those sixteen propositions, and the list is short only as long as nobody adds to it or changes
- * one without meaning to. An axiom introduced or altered by accident would not fail a single other
- * test: it would make more things provable, which looks like progress.
+ * The pinned list below is the test that matters. Until phase 5 the sixteen were asserted, and an
+ * axiom altered by accident would not have failed a single other test: it would have made more
+ * things provable, which looks like progress. They are proved from the cuts now, so a mis-stated one
+ * fails to build; what the pin still catches is a statement that was **changed** into something
+ * the cuts happen to prove as well, since the construction would prove that one too and nothing
+ * else would notice that `ADD_SYM` had stopped saying commutativity.
  *
  * The first version of this file compared the theory against `Real.Axioms` parsed again, which is
  * the list compared with itself: an edit to an axiom passed. An audit pointed it out. The copy here
@@ -26,7 +28,7 @@ class RealSpec extends AnyFlatSpec with Matchers {
 
   private val reals = Real.standard
 
-  /** The sixteen axioms as the theory prints them. Change this only with a textbook open. */
+  /** The sixteen statements as the theory prints them. Change this only with a textbook open. */
   private val Pinned: Vector[(String, String)] = Vector(
     "ADD_SYM" -> "!x:real. !y:real. x + y = y + x",
     "ADD_ASSOC" -> "!x:real. !y:real. !z:real. x + y + z = x + (y + z)",
@@ -51,16 +53,40 @@ class RealSpec extends AnyFlatSpec with Matchers {
   )
 
   "The theory of the reals" should "build" in {
-    Real.construct() should matchPattern { case Right(_) => }
+    Real.construction(Classical.standard, Natural.standard) should matchPattern { case Right(_) => }
   }
 
-  it should "assert exactly the axioms pinned in this file, in that order" in {
-    reals.theory.axioms.map(reals.show) shouldBe Pinned.map { case (_, text) => text }.toList
+  it should "prove exactly the statements pinned in this file, in that order, with nothing assumed" in {
     Real.Axioms.map { case (name, _) => name } shouldBe Pinned.map { case (name, _) => name }
+    Pinned.foreach { case (name, text) =>
+      val proved = force(reals.axiom(name))
+      withClue(s"$name: ") {
+        reals.show(proved.conclusion) shouldBe text
+        proved.hypotheses shouldBe empty
+      }
+    }
   }
 
-  it should "take every one of its axioms from this file and none from the logic" in {
-    Logic.standard.theory.axioms shouldBe empty
+  it should "assert nothing of its own: its theory's axioms are the logic's two and the naturals' one" in {
+    // The sixteen are theorems, so what the theory asserts is what it was built on. The comparison
+    // is with the two developments that assert something rather than with a count, which would pass
+    // over a swap.
+    val foundation = Classical.standard.theory.axioms.toSet ++ Natural.standard.theory.axioms
+    foundation should have size 3
+    reals.theory.axioms.toSet shouldBe foundation
+  }
+
+  it should "spend the foundation on the sixteen and nothing else" in {
+    val foundation = reals.theory.axioms.toSet
+    Real.Axioms.foreach { case (name, _) =>
+      withClue(s"$name: ") {
+        Derivation.axiomsOf(force(reals.axiom(name))).diff(foundation) shouldBe empty
+      }
+    }
+    // The positive control for the line above: an instrument that found no axiom anywhere would
+    // pass it. Completeness is the union of a family of cuts, and two cuts with the same members
+    // are one cut only by extensionality.
+    Derivation.axiomsOf(force(reals.axiom("COMPLETENESS"))) should not be empty
   }
 
   it should "add nothing to the trusted base by defining an abbreviation" in {
@@ -71,18 +97,20 @@ class RealSpec extends AnyFlatSpec with Matchers {
     )
   }
 
-  it should "declare the operations it does not define" in {
-    reals.theory.undefinedConstants should contain allOf (
-      Real.Zero, Real.One, Real.Addition, Real.Multiplication,
-      Real.Negation, Real.Inverse, Real.Order
-    )
+  it should "define each of its operations as the operation on cuts it names" in {
+    // They were declared and left undefined until phase 5, which is what the sixteen then said
+    // something about. Each is an alias now, so none of the seven is undefined.
+    val primitives = Set(Real.Zero, Real.One, Real.Addition, Real.Multiplication, Real.Negation, Real.Inverse, Real.Order)
+    reals.theory.definitions.keySet should contain allElementsOf primitives
+    reals.theory.undefinedConstants.toSet.intersect(primitives) shouldBe empty
+    Show.show(force(reals.definition(Real.Addition)).conclusion) shouldBe "real_add = CUT_ADD"
   }
 
-  "Every axiom" should "be closed and mention only constants the theory declares" in {
-    // An axiom with a free variable would be a schema, and one mentioning an undeclared constant
+  "Every one of the sixteen" should "be closed and mention only constants the theory declares" in {
+    // A statement with a free variable would be a schema, and one mentioning an undeclared constant
     // would be about nothing. The kernel refuses both; this says so from the outside, on the
     // sixteen that matter.
-    reals.theory.axioms.foreach { axiom =>
+    Real.Axioms.map { case (name, _) => force(reals.axiom(name)).conclusion }.foreach { axiom =>
       withClue(s"${reals.show(axiom)}\n") {
         Term.freeVariables(axiom) shouldBe empty
         constantsIn(axiom).diff(reals.theory.constants.keySet) shouldBe empty
@@ -104,15 +132,15 @@ class RealSpec extends AnyFlatSpec with Matchers {
   /**
    * The sources that assert an axiom **this repository itself believes**.
    *
-   * These four are the trusted base as `CLAUDE.md` enumerates it, and each asserts a fixed,
-   * enumerated proposition written in the file beside the call: the sixteen of the reals, choice
-   * and eta, infinity. The list grows by one file per axiom, in the commit that adds it.
+   * These three are the trusted base as `CLAUDE.md` enumerates it, and each asserts a fixed,
+   * enumerated proposition written in the file beside the call: choice and eta, infinity. The list
+   * grows by one file per axiom, in the commit that adds it; it shrank once, when phase 5 proved the
+   * sixteen of the reals and `Real.scala` left it.
    */
   private val Foundation: Vector[String] = Vector(
     "modules/kernel/src/main/scala/garden/xeno/symbolum/kernel/Kernel.scala",
     "modules/logic/src/main/scala/garden/xeno/symbolum/logic/Classical.scala",
-    "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Natural.scala",
-    "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Real.scala"
+    "modules/theories/src/main/scala/garden/xeno/symbolum/theories/Natural.scala"
   )
 
   /**
@@ -175,7 +203,8 @@ class RealSpec extends AnyFlatSpec with Matchers {
       .filter(relative => Sources.code(relative).contains("assertAxiom"))
       .sorted
 
-    // Four files since 2026-09-10, and the two that arrived are what `docs/adr/0007` starts: the
+    // Four files from 2026-09-10 until phase 5 took `Real.scala` off the list by proving its sixteen,
+    // and three since. The two that arrived on that first day are what `docs/adr/0007` starts: the
     // choice operator, which is the first thing this system asks anyone to believe about the
     // formalism rather than about a domain, and infinity, which is asked of a type nothing else
     // interprets. The list grows by one file per axiom, in the commit that adds it, so the trusted

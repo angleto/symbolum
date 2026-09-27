@@ -969,7 +969,9 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     )
 
     extended.show(theorem.conclusion) shouldBe "!x:real. selectivity < x ==> selectivity < x + 1"
-    extended.theory.axioms should have length 16
+    // The foundation the reals are built on since `docs/adr/0053`, and nothing declaring added.
+    extended.theory.axioms.toSet shouldBe
+      (garden.xeno.symbolum.logic.Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
   }
 
   "The guide's lemma example" should "be provable the way it is written" in {
@@ -1001,7 +1003,10 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // says sixteen, whatever the theory holds; this fails the moment the two disagree, in either
     // direction. The axiom counts moved twice on 2026-09-10 alone, so the difference is not
     // theoretical.
-    architecture should include(s"${Real.Axioms.length} propositions, a complete ordered field")
+    // The reals' row is gone since `docs/adr/0053` proved the sixteen, and a row that came back
+    // would be the document asserting what the code no longer does.
+    Real.standard.theory.axioms.toSet.intersect(Real.sixteen) shouldBe empty
+    architecture should not include "The axioms of the reals"
     architecture should include(s"${garden.xeno.symbolum.logic.Classical.Axioms.length} propositions, both from")
 
     // The other half of the trusted base is its size, and until this was written the documents
@@ -1601,7 +1606,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
   "The guide's map of the chain" should "name every development the library holds, and no others" in {
     // The population is the library's own, which is where `docs/lemmas.md` gets its headings: a
     // development the chain assembles and nobody collected is `ChainCoverageSpec`'s defect and not
-    // this one. The label carries what it was collected under, `Real, assumed` beside
+    // this one. The label carries what it was collected under, `Real, derived` beside
     // `Real, defined`, and the map has one row per development rather than one per label, so the
     // comparison is on the name before the comma.
     val guide = read("docs/proving.md")

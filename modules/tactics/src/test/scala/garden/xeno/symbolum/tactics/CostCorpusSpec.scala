@@ -82,8 +82,9 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
 
   /* ------------------------------------------------- what the corpus is believed on */
 
-  "The corpus as a whole" should "reach every axiom of the reals but completeness" in {
-    val reached = reports.filter(_.outcome == Cost.Outcome.Proved).flatMap(_.axioms).toSet
+  "The corpus as a whole" should "reach every law of the reals but completeness" in {
+    // Read off `laws` since `docs/adr/0053` proved the sixteen, for the reason `CostSpec` gives.
+    val reached = reports.filter(_.outcome == Cost.Outcome.Proved).flatMap(_.laws).toSet
     val held = Real.standard.axioms.map(_._2.conclusion).toSet
 
     held.size shouldBe 16
@@ -108,7 +109,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
     // normalisation. Ten of these are of that kind, and one axiom is exactly right for them: the
     // proof reaches the axiom the lemma is, and nothing else. The figure went down because the
     // proofs got cheaper, which is the direction this number is supposed to move in.
-    val reach = reports.filter(_.outcome == Cost.Outcome.Proved).map(_.axioms.size)
+    val reach = reports.filter(_.outcome == Cost.Outcome.Proved).map(_.laws.size)
     info(s"axioms per proof: ${reach.sorted.mkString(", ")}")
 
     reach.min shouldBe 1

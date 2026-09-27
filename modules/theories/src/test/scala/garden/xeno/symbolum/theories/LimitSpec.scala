@@ -65,7 +65,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * which is the one step in that proof that leaves the linear fragment.
    */
   "What each fact rests on" should "be what it was measured to rest on" in {
-    def axioms(name: String): Int = Derivation.axiomsOf(force(limit.fact(name))).size
+    def axioms(name: String): Int = Real.spent(force(limit.fact(name))).size
 
     axioms(Limit.Eventually) shouldBe 2
     // The same two and for the same reason: it moves an index along the naturals' order and a
@@ -97,13 +97,13 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   it should "reach the sixteenth axiom, and only where the comparison test does" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
 
-    Derivation.axiomsOf(force(limit.absolute)) should contain(completeness)
-    Derivation.axiomsOf(force(limit.comparison)) should contain(completeness)
+    Real.spent(force(limit.absolute)) should contain(completeness)
+    Real.spent(force(limit.comparison)) should contain(completeness)
 
     // The other three it rests on do not, which is what leaves the comparison test as the door.
-    Derivation.axiomsOf(force(limit.added)) should not contain completeness
-    Derivation.axiomsOf(force(limit.negated)) should not contain completeness
-    Derivation.axiomsOf(force(limit.eventually)) should not contain completeness
+    Real.spent(force(limit.added)) should not contain completeness
+    Real.spent(force(limit.negated)) should not contain completeness
+    Real.spent(force(limit.eventually)) should not contain completeness
   }
 
   /**
@@ -121,7 +121,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * rather than repeated.
    */
   it should "cost the same on both sides of the bound, and not the halving" in {
-    def axioms(name: String): Set[Term] = Derivation.axiomsOf(force(limit.fact(name)))
+    def axioms(name: String): Set[Term] = Real.spent(force(limit.fact(name)))
 
     axioms(Limit.BelowBound) shouldBe axioms(Limit.AboveBound)
 
@@ -139,12 +139,12 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   it should "spend the choice axiom on the value and not on the epsilon principle" in {
     val choice = force(chain.classical.axiom(Classical.Choice)).conclusion
 
-    Derivation.axiomsOf(force(limit.fact(Limit.ValueOfConverges))) should contain(choice)
+    Real.spent(force(limit.fact(Limit.ValueOfConverges))) should contain(choice)
 
     // And not here, which is the claim the file's own docstring makes about the route it takes:
     // the epsilon principle is a disjunction elimination over `LE_CASES` rather than a
     // contradiction, so nothing classical is reached.
-    Derivation.axiomsOf(force(limit.fact(Limit.BelowEveryPositive))) should not contain choice
+    Real.spent(force(limit.fact(Limit.BelowEveryPositive))) should not contain choice
   }
 
   /**
@@ -157,12 +157,12 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    */
   "The monotone convergence theorem" should "be where the sixteenth axiom is spent" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
-    val spent = Derivation.axiomsOf(force(limit.monotoneConverges))
+    val spent = Real.spent(force(limit.monotoneConverges))
 
     spent should contain(completeness)
 
     // And the order fact under it does not, which says the induction is about the order alone.
-    Derivation.axiomsOf(force(limit.monotoneBelow)) should not contain completeness
+    Real.spent(force(limit.monotoneBelow)) should not contain completeness
   }
 
   /**
@@ -696,18 +696,18 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * are under: a number copied out of a run is a transcription and not a check.
    */
   "The algebra of limits" should "cost the halving where it halves and not where it does not" in {
-    def axioms(name: String): Int = Derivation.axiomsOf(force(limit.fact(name))).size
+    def axioms(name: String): Int = Real.spent(force(limit.fact(name))).size
 
     axioms(Limit.Added) shouldBe axioms(Limit.Unique)
 
     val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
     val nonTrivial = force(chain.reals.axiom("ONE_NOT_ZERO")).conclusion
 
-    Derivation.axiomsOf(force(limit.added)) should contain(inverse)
-    Derivation.axiomsOf(force(limit.added)) should contain(nonTrivial)
+    Real.spent(force(limit.added)) should contain(inverse)
+    Real.spent(force(limit.added)) should contain(nonTrivial)
 
-    Derivation.axiomsOf(force(limit.negated)) should not contain inverse
-    Derivation.axiomsOf(force(limit.negated)) should not contain nonTrivial
+    Real.spent(force(limit.negated)) should not contain inverse
+    Real.spent(force(limit.negated)) should not contain nonTrivial
   }
 
   /**
@@ -736,7 +736,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * would pass a derivation that quietly stopped spending something.
    */
   it should "cost what the sum costs, reaching the reciprocal for a different reason" in {
-    def axioms(name: String): Set[Term] = Derivation.axiomsOf(force(limit.fact(name)))
+    def axioms(name: String): Set[Term] = Real.spent(force(limit.fact(name)))
 
     val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
@@ -795,8 +795,8 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   it should "not reach the sixteenth axiom, because no supremum is involved" in {
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
 
-    Derivation.axiomsOf(force(limit.added)) should not contain completeness
-    Derivation.axiomsOf(force(limit.negated)) should not contain completeness
+    Real.spent(force(limit.added)) should not contain completeness
+    Real.spent(force(limit.negated)) should not contain completeness
   }
 
   /**
@@ -950,7 +950,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
 
     // And the comparison test, which is the one door completeness comes through: the sandwich
     // brackets the partial sums and brackets alone converge nothing.
-    Derivation.axiomsOf(theorem) should contain(force(chain.reals.axiom("COMPLETENESS")).conclusion)
+    Real.spent(theorem) should contain(force(chain.reals.axiom("COMPLETENESS")).conclusion)
   }
   /**
    * The general Cauchy product, detached at a series a reader can name, with nothing assumed.
@@ -1100,9 +1100,9 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     // nowhere else: the squeeze and the two triangle inequalities have no supremum in them.
     val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
 
-    Derivation.axiomsOf(theorem) should contain(completeness)
-    Derivation.axiomsOf(force(limit.squeezed)) should not contain completeness
-    Derivation.axiomsOf(force(limit.sumOfMagnitudes)) should not contain completeness
-    Derivation.axiomsOf(force(limit.stretchOfMagnitudes)) should not contain completeness
+    Real.spent(theorem) should contain(completeness)
+    Real.spent(force(limit.squeezed)) should not contain completeness
+    Real.spent(force(limit.sumOfMagnitudes)) should not contain completeness
+    Real.spent(force(limit.stretchOfMagnitudes)) should not contain completeness
   }
 }
