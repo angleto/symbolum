@@ -31,6 +31,15 @@
 #
 #   3. The interpreter proposes the LAST fraction that applies rather than the first. Expected RED,
 #      and red by refusal: the kernel is asked for steps the definition does not make.
+#
+# WHAT WAS SEEN, 2026-09-27, this script through sbt at 1a2a4f73 (7.0 at 7a15f023 plus the
+# verification), one queue slot. Control green at 17 (FractranSpec 10, FractranSemanticsSpec 7).
+#   1. Green at 17, exit 0: the altered and shortened PRIMEGAME traces are refused without the check.
+#   2. Red at 2 of 17, exit 1: FractranSpec's control `6, 10` and the theorem `~FRACTRAN_STEP P 6 9`,
+#      both at `expected a value below 0, and 0 is not one`.
+#   3. Red at 5 of 17, exit 1, every red a refusal or a numeric mismatch and none a wrong theorem:
+#      PRIMEGAME proposed as `2, 110, ...` is refused at its first step, and the trajectory as OEIS
+#      lists it is still certified, because `certifyTrace` never asks the interpreter.
 set -u
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 WT=${WT:-$ROOT}
