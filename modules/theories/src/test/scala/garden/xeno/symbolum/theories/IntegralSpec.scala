@@ -322,10 +322,11 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
 
   /**
    * `|- has_integral f 1 0 i` for every `i`: over `[1, 0]` no fine sum exists, because every sum's
-   * interval has its ends in order, so "every fine sum is close to `i`" holds of every `i`.
+   * interval has its ends in order, so "every fine sum is close to `i`" holds of every `i`. The
+   * argument never reads `f`, which is the zero function unless a caller names another.
    */
-  private def overTheEmptyInterval(value: String): Kernel.Thm = {
-    val f = function("\\y:real. (0:real)")
+  private def overTheEmptyInterval(value: String, integrand: String = "\\y:real. (0:real)"): Kernel.Thm = {
+    val f = function(integrand)
     val gauge = function("\\y:real. (1:real)")
     val ordered = Parser.term(integral.theory, integral.notation, "\\u:real. \\v:real. \\s:real. u <= v",
       Type.fun(reals, Type.fun(reals, Type.fun(reals, Type.Bool))))
@@ -350,7 +351,7 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     val ends = force(rules.mp(instance, base).flatMap(rules.mp(_, step)))
 
     val e = Term.variable("e", reals)
-    val sumTerm = proposition(s"fine_sum (\\y:real. (0:real)) (\\y:real. (1:real)) 1 0 s")
+    val sumTerm = proposition(s"fine_sum ($integrand) (\\y:real. (1:real)) 1 0 s")
     val sum = force(LogicError.lift(Kernel.assume(sumTerm)))
     val backwards = force(rules.specAll(ends, List(real("1:real"), real("0:real"), s)).flatMap(rules.mp(_, sum)))
     val absurd = force(rules.notElim(lemma("~((1:real) <= 0)"), backwards))
@@ -452,6 +453,66 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     refused.hypotheses shouldBe empty
   }
 
+  /** `!x. 1 <= x /\ x <= 0 ==> derivative g x slope`: a slope over `[1, 0]`, which asks nothing. */
+  private def slopeOverTheEmptyInterval(g: String, slope: String): Kernel.Thm = {
+    val x = Term.variable("x", reals)
+    val inside = proposition("(1:real) <= x /\\ x <= 0")
+    val nowhere = force(rules.spec(x, lemma("!x:real. 1 <= x /\\ x <= 0 ==> F"))
+      .flatMap(rules.mp(_, force(LogicError.lift(Kernel.assume(inside))))))
+    force(rules.falsityElim(proposition(s"derivative ($g) x $slope"), nowhere)
+      .flatMap(rules.disch(inside, _)).flatMap(rules.gen(x, _)))
+  }
+
+  it should "need a <= b for INTEGRAL_SUBST, refuted on [1, 0] where only F's slope is asked" in {
+    // Written by the verification of cards 26c19544 and 44643499. Over `[1, 0]` the slope of the
+    // inner function is asked nowhere, so with `F` the identity, `f` one and `dg` zero the integrand
+    // is `\x. 1 * 0` whatever the inner function is, and the statement with `a <= b` dropped names
+    // `integral (\x. 1 * 0) 1 0` as `0 - 0` at the inner function zero and as `0 - 1` at the identity.
+    // `HAS_INTEGRAL_SUBST` stays true without the hypothesis, every number being an integral there.
+    val dropped = proposition(
+      "!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. " +
+        "(!x:real. derivative F x (f x)) ==> (!x:real. a <= x /\\ x <= b ==> derivative g x (dg x)) ==> " +
+        "integral (\\x:real. f (g x) * dg x) a b = F (g b) - F (g a)")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val identity = function("\\y:real. y")
+    val x = Term.variable("x", reals)
+    val everywhere = force(rules.spec(x, force(chain.derivative.fact(Derivative.Identity))).flatMap(rules.gen(x, _)))
+    def at(inner: String): Kernel.Thm =
+      force(rules.mp(opened(force(rules.specAll(assumed, List(identity, function("\\y:real. (1:real)"), function(inner),
+        function("\\y:real. (0:real)"), real("1:real"), real("0:real"))))), everywhere)
+        .flatMap(rules.mp(_, slopeOverTheEmptyInterval(inner, "0"))))
+    val atZero = at("\\y:real. (0:real)")
+    val atIdentity = at("\\y:real. y")
+    atZero.conclusion shouldBe proposition("integral (\\x:real. (1:real) * 0) 1 0 = 0 - 0")
+    atIdentity.conclusion shouldBe proposition("integral (\\x:real. (1:real) * 0) 1 0 = 0 - 1")
+    val same = force(Conv.sym(atZero).flatMap(Conv.trans(_, atIdentity)))
+    val absurd = force(rules.notElim(lemma("~((0:real) - 0 = 0 - 1)"), same))
+    absurd.hypotheses shouldBe List(dropped)
+    force(rules.notIntro(dropped, absurd)).hypotheses shouldBe empty
+  }
+
+  it should "need a <= b for INTEGRAL_PARTS, refuted on [1, 0] where the given integral is any number" in {
+    // Written by the verification of cards 26c19544 and 44643499. Over `[1, 0]` both slopes are asked
+    // nowhere and `has_integral (\x. 0 * 0) 1 0 i` holds of every `i`, so the statement with `a <= b`
+    // dropped names `integral (\x. 0 * 0) 1 0` as `0 * 0 - 0 * 0 - 0` and as `0 * 0 - 0 * 0 - 1`.
+    val dropped = proposition(
+      "!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !a:real. !b:real. !i:real. " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative f x (df x)) ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative g x (dg x)) ==> " +
+        "has_integral (\\x:real. f x * dg x) a b i ==> " +
+        "integral (\\x:real. df x * g x) a b = f b * g b - f a * g a - i")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val zero = function("\\y:real. (0:real)")
+    val slopes = slopeOverTheEmptyInterval("\\y:real. (0:real)", "0")
+    def at(value: String): Kernel.Thm =
+      force(rules.mp(opened(force(rules.specAll(assumed, List(zero, zero, zero, zero, real("1:real"), real("0:real"), real(value))))), slopes)
+        .flatMap(rules.mp(_, slopes)).flatMap(rules.mp(_, overTheEmptyInterval(value, "\\y:real. (0:real) * 0"))))
+    val same = force(Conv.sym(at("0")).flatMap(Conv.trans(_, at("1"))))
+    val absurd = force(rules.notElim(lemma("~((0:real) * 0 - 0 * 0 - 0 = 0 * 0 - 0 * 0 - 1)"), same))
+    absurd.hypotheses shouldBe List(dropped)
+    force(rules.notIntro(dropped, absurd)).hypotheses shouldBe empty
+  }
+
   /* --------------------------------------------------- a continuous function has one */
 
   it should "give every continuous function an integral at the gluing's price, through Cousin and the supremum" in {
@@ -523,9 +584,57 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
     detached.conclusion shouldBe proposition("derivative (\\y:real. integral (\\y:real. (1:real)) 0 y) ((1:real) / 2) 1")
   }
 
+  /**
+   * Written by the verification of cards 26c19544 and 44643499: each ordering hypothesis of
+   * `HAS_INTEGRAL_JOIN` carries weight. Over `[1, 0]` every number is an integral of `\y. 1`, so with
+   * either one dropped the join names two different integrals of `\y. 1` over a one-point interval,
+   * where `HAS_INTEGRAL_UNIQUE` applies: `[0, 1]` then `[1, 0]` gives `[0, 0]`, and `[1, 0]` then
+   * `[0, 1]` gives `[1, 1]`.
+   */
+  it should "need both orderings for HAS_INTEGRAL_JOIN, each refuted with [1, 0] as one of the halves" in {
+    val one = function("\\y:real. (1:real)")
+    val ones = "\\y:real. (1:real)"
+    // `instance(w)` concludes `has_integral (\y. 1) p p value` with `w` inside `value`; uniqueness at
+    // the point `p` makes the values at `w = 0` and `w = 1` equal, which `contradiction` denies.
+    def refute(dropped: Term, instance: String => Kernel.Thm, point: String, contradiction: String): Unit = {
+      val (first, second) = (instance("0"), instance("1"))
+      def value(theorem: Kernel.Thm): Term = theorem.conclusion match {
+        case App(_, value) => value
+        case other => fail(s"not an application: $other")
+      }
+      val same = force(rules.specAll(fact(Integral.HasUnique), List(one, real(s"$point:real"), real(s"$point:real"), value(first), value(second)))
+        .flatMap(rules.mp(_, lemma(s"($point:real) <= $point"))).flatMap(rules.mp(_, first)).flatMap(rules.mp(_, second)))
+      val absurd = force(rules.notElim(lemma(contradiction), same))
+      absurd.hypotheses shouldBe List(dropped)
+      force(rules.notIntro(dropped, absurd)).hypotheses shouldBe empty
+    }
+
+    val withoutRight = proposition(
+      "!f:real -> real. !x:real. !y:real. !z:real. !u:real. !v:real. " +
+        "x <= y ==> has_integral f x y u ==> has_integral f y z v ==> has_integral f x z (u + v)")
+    val right = force(LogicError.lift(Kernel.assume(withoutRight)))
+    refute(withoutRight, v => force(rules.specAll(right, List(one, real("0:real"), real("1:real"), real("0:real"), real("1 - 0:real"), real(v)))
+      .flatMap(rules.mp(_, lemma("(0:real) <= 1"))).flatMap(rules.mp(_, oneOverUnit)).flatMap(rules.mp(_, overTheEmptyInterval(v, ones)))),
+      "0", "~((1:real) - 0 + 0 = 1 - 0 + 1)")
+
+    val withoutLeft = proposition(
+      "!f:real -> real. !x:real. !y:real. !z:real. !u:real. !v:real. " +
+        "y <= z ==> has_integral f x y u ==> has_integral f y z v ==> has_integral f x z (u + v)")
+    val left = force(LogicError.lift(Kernel.assume(withoutLeft)))
+    refute(withoutLeft, u => force(rules.specAll(left, List(one, real("1:real"), real("0:real"), real("1:real"), real(u), real("1 - 0:real")))
+      .flatMap(rules.mp(_, lemma("(0:real) <= 1"))).flatMap(rules.mp(_, overTheEmptyInterval(u, ones))).flatMap(rules.mp(_, oneOverUnit))),
+      "1", "~((0:real) + (1 - 0) = 1 + (1 - 0))")
+  }
+
   // What is not here, and why. The relative form's `a <= x` and `x <= b` carry no weight, which is
   // argued here and not derived in a test: outside `[a, b]` no increment small enough keeps `x + h` inside, so the
   // relative derivative holds there at every slope and the statement stays true without them. The
   // continuity hypothesis does carry weight, and a control refuting the theorem without it would
   // need the integral of a discontinuous function as a value, which no fact here supplies.
+  //
+  // Argued by the verification of card 26c19544 and not derived: `DERIVATIVE_INTEGRAL`'s strict
+  // `a < x` carries weight. At `x = a` with `f` the constant one, `integral f a y` is `y - a` to the
+  // right, and to the left it is one number whatever `y` is, since over a reversed interval every
+  // number is an integral and `select` is asked the same question; a constant `c` beside `y - a`
+  // has no two-sided slope `1` at `a`, whether `c` is `0` or not.
 }
