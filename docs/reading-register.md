@@ -148,7 +148,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom ETA` | !f:'a -> 'b. (\x:'a. f x) = f | **NOT READ** |  |  |
 | `axiom INFINITY` | ?f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\ (!y:ind. ~(f y = x)) | **NOT READ** |  |  |
 
-## The definitions (182)
+## The definitions (184)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -302,6 +302,7 @@ axiom mentioning it means.
 | `definition ZERO` | ZERO = mk_num IND_0 | **NOT READ** |  |  |
 | `definition \/` | \/ = \p:bool. \q:bool. !r:bool. (p ==> r) ==> (q ==> r) ==> r | **NOT READ** |  |  |
 | `definition abs` | abs = \x:real. max x (-x) | **NOT READ** |  |  |
+| `definition acos` | acos = \x:real. select (\y:real. 0 <= y /\ y <= pi /\ cos y = x) | **NOT READ** |  |  |
 | `definition continuous` | continuous = \f:real -> real. \x:real. !y:real. 0 < y ==> (?z:real. 0 < z /\ (!u:real. abs (u - x) < z ==> abs (f u - f x) < y)) | **NOT READ** |  |  |
 | `definition continuous_within` | continuous_within = \f:real -> real. \x:real. \y:real. \z:real. !u:real. 0 < u ==> (?v:real. 0 < v /\ (!w:real. x <= w /\ w <= y /\ abs (w - z) < v ==> abs (f w - f z) < u)) | **NOT READ** |  |  |
 | `definition converges` | converges = \f:num -> real. \x:real. !y:real. 0 < y ==> (?n:num. !m:num. n <= m ==> abs (f m - x) < y) | **NOT READ** |  |  |
@@ -322,6 +323,7 @@ axiom mentioning it means.
 | `definition min` | min = \x:real. \y:real. x + y - max x y | **NOT READ** |  |  |
 | `definition mk_pair` | mk_pair = \x:'a. \y:'b. \z:'a. \u:'b. z = x /\ u = y | **NOT READ** |  |  |
 | `definition neg` | neg = CUT_NEG | **NOT READ** |  |  |
+| `definition pi` | pi = 2 * select (\x:real. 0 <= x /\ x <= 2 /\ cos x = 0) | **NOT READ** |  |  |
 | `definition real_add` | real_add = CUT_ADD | **NOT READ** |  |  |
 | `definition real_le` | real_le = \x:real. \y:real. x < y \/ x = y | **NOT READ** |  |  |
 | `definition real_lt` | real_lt = CUT_LT | **NOT READ** |  |  |
