@@ -337,6 +337,12 @@ object Library {
         // first paragraph gives, and a development of its own is a development this list has to
         // name: that is what the two paragraphs above are about.
         collect("Inclusion", chain.inclusion.facts) ++
+        // The rationals and the cuts on them, collected on 2026-09-27 by card `e4a90d43`. Both were
+        // links of the chain from phase 5 of `docs/adr/0007` and in no library, so `Ask` and `Find`
+        // reached no lemma about `rat` or about a cut and `docs/lemmas.md` listed none. `Density`
+        // is not a third entry: its facts are published by `Fraction` and arrive with it.
+        collect("Fraction", chain.fractions.facts) ++
+        collect("Cut", chain.cuts.facts) ++
         // The list interface, 2026-09-23, in the change that added the link, for the reason the
         // three notes above give. It declares no type: `docs/adr/0038` is why a list here is an
         // orientation on `word` rather than a carrier of its own.

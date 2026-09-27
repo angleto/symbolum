@@ -136,6 +136,60 @@ they have least appetite for working out how it is produced.
   INTERMEDIATE_VALUE_WITHIN !f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous_within f x y u) ==> f x <= z ==> z <= f y ==> (?u:real. x <= u /\ u <= y /\ f u = z)
   INTERVAL_GLUING          !f:real -> real -> bool. !x:real. !y:real. x <= y ==> (!z:real. !u:real. !v:real. z <= u /\ u <= v /\ f z u /\ f u v ==> f z v) ==> (!z:real. x <= z /\ z <= y ==> (?u:real. 0 < u /\ (!v:real. !w:real. x <= v /\ v <= z /\ z <= w /\ w <= y /\ w - v < u ==> f v w))) ==> f x y
 
+## Cut
+
+  CUT_ADD_ASSOC            !x:real. !y:real. !z:real. CUT_ADD (CUT_ADD x y) z = CUT_ADD x (CUT_ADD y z)
+  CUT_ADD_DEST             !x:real. !y:real. dest_cut (CUT_ADD x y) = (\z:rat. ?u:rat. dest_cut x u /\ dest_cut y (RAT_ADD z (RAT_NEG u)))
+  CUT_ADD_IS_CUT           !x:real. !y:real. IS_CUT (\z:rat. ?u:rat. dest_cut x u /\ dest_cut y (RAT_ADD z (RAT_NEG u)))
+  CUT_ADD_NEG              !x:real. CUT_ADD x (CUT_NEG x) = CUT_OF_RAT RAT_ZERO
+  CUT_ADD_NONNEG           !x:real. !y:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) y ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_ADD x y)
+  CUT_ADD_SYM              !x:real. !y:real. CUT_ADD x y = CUT_ADD y x
+  CUT_ADD_ZERO             !x:real. CUT_ADD x (CUT_OF_RAT RAT_ZERO) = x
+  CUT_BELOW                !x:rat. IS_CUT (\y:rat. RAT_LT y x)
+  CUT_COMPLETE             !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> CUT_LE y x) ==> (?x:real. (!y:real. f y ==> CUT_LE y x) /\ (!y:real. (!z:real. f z ==> CUT_LE z y) ==> CUT_LE x y))
+  CUT_DEST_MK              !f:rat -> bool. IS_CUT f ==> dest_cut (mk_cut f) = f
+  CUT_ESCAPE               !x:real. !y:rat. !z:rat. dest_cut x y ==> RAT_LT RAT_ZERO z ==> (?u:rat. dest_cut x u /\ RAT_LE y u /\ ~(dest_cut x (RAT_ADD u z)))
+  CUT_INV_ZERO             CUT_INV (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO
+  CUT_IS_CUT               !x:real. IS_CUT (dest_cut x)
+  CUT_LE_ADD               !x:real. !y:real. !z:real. CUT_LE x y ==> CUT_LE (CUT_ADD x z) (CUT_ADD y z)
+  CUT_LE_ANTISYM           !x:real. !y:real. CUT_LE x y ==> CUT_LE y x ==> x = y
+  CUT_LE_NEG               !x:real. !y:real. CUT_LE x y ==> CUT_LE (CUT_NEG y) (CUT_NEG x)
+  CUT_LE_REFL              !x:real. CUT_LE x x
+  CUT_LE_TOTAL             !x:real. !y:real. CUT_LE x y \/ CUT_LE y x
+  CUT_LE_TRANS             !x:real. !y:real. !z:real. CUT_LE x y ==> CUT_LE y z ==> CUT_LE x z
+  CUT_LT_MUL               !x:real. !y:real. CUT_LT (CUT_OF_RAT RAT_ZERO) x /\ CUT_LT (CUT_OF_RAT RAT_ZERO) y ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_MUL x y)
+  CUT_MUL_ADD              !x:real. !y:real. !z:real. CUT_MUL x (CUT_ADD y z) = CUT_ADD (CUT_MUL x y) (CUT_MUL x z)
+  CUT_MUL_ASSOC            !x:real. !y:real. !z:real. CUT_MUL (CUT_MUL x y) z = CUT_MUL x (CUT_MUL y z)
+  CUT_MUL_INV              !x:real. ~(x = CUT_OF_RAT RAT_ZERO) ==> CUT_MUL x (CUT_INV x) = CUT_OF_RAT RAT_ONE
+  CUT_MUL_NEG_LEFT         !x:real. !y:real. CUT_MUL (CUT_NEG x) y = CUT_NEG (CUT_MUL x y)
+  CUT_MUL_ONE              !x:real. CUT_MUL x (CUT_OF_RAT RAT_ONE) = x
+  CUT_MUL_PMUL             !x:real. !y:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) y ==> CUT_MUL x y = CUT_PMUL x y
+  CUT_MUL_SYM              !x:real. !y:real. CUT_MUL x y = CUT_MUL y x
+  CUT_MUL_ZERO             !x:real. CUT_MUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO
+  CUT_NEG_ADD              !x:real. !y:real. CUT_NEG (CUT_ADD x y) = CUT_ADD (CUT_NEG x) (CUT_NEG y)
+  CUT_NEG_DEST             !x:real. dest_cut (CUT_NEG x) = (\y:rat. ?z:rat. RAT_LT RAT_ZERO z /\ ~(dest_cut x (RAT_ADD (RAT_NEG y) (RAT_NEG z))))
+  CUT_NEG_IS_CUT           !x:real. IS_CUT (\y:rat. ?z:rat. RAT_LT RAT_ZERO z /\ ~(dest_cut x (RAT_ADD (RAT_NEG y) (RAT_NEG z))))
+  CUT_NEG_NEG              !x:real. CUT_NEG (CUT_NEG x) = x
+  CUT_NEG_ZERO             CUT_NEG (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO
+  CUT_OF_RAT_ADD           !x:rat. !y:rat. CUT_OF_RAT (RAT_ADD x y) = CUT_ADD (CUT_OF_RAT x) (CUT_OF_RAT y)
+  CUT_OF_RAT_DEST          !x:rat. dest_cut (CUT_OF_RAT x) = (\y:rat. RAT_LT y x)
+  CUT_OF_RAT_INJ           !x:rat. !y:rat. CUT_OF_RAT x = CUT_OF_RAT y ==> x = y
+  CUT_OF_RAT_LE            !x:rat. !y:rat. CUT_LE (CUT_OF_RAT x) (CUT_OF_RAT y) = RAT_LE x y
+  CUT_PINV_DEST            !x:real. CUT_LT (CUT_OF_RAT RAT_ZERO) x ==> dest_cut (CUT_PINV x) = (\y:rat. RAT_LE y RAT_ZERO \/ (?z:rat. ~(dest_cut x z) /\ RAT_LT RAT_ZERO z /\ RAT_LT (RAT_MUL y z) RAT_ONE))
+  CUT_PINV_IS_CUT          !x:real. CUT_LT (CUT_OF_RAT RAT_ZERO) x ==> IS_CUT (\y:rat. RAT_LE y RAT_ZERO \/ (?z:rat. ~(dest_cut x z) /\ RAT_LT RAT_ZERO z /\ RAT_LT (RAT_MUL y z) RAT_ONE))
+  CUT_PINV_NONNEG          !x:real. CUT_LT (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PINV x)
+  CUT_PMUL_ADD             !x:real. !y:real. !z:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) y ==> CUT_LE (CUT_OF_RAT RAT_ZERO) z ==> CUT_PMUL x (CUT_ADD y z) = CUT_ADD (CUT_PMUL x y) (CUT_PMUL x z)
+  CUT_PMUL_ASSOC           !x:real. !y:real. !z:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) y ==> CUT_LE (CUT_OF_RAT RAT_ZERO) z ==> CUT_PMUL (CUT_PMUL x y) z = CUT_PMUL x (CUT_PMUL y z)
+  CUT_PMUL_DEST            !x:real. !y:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) y ==> dest_cut (CUT_PMUL x y) = (\z:rat. RAT_LT z RAT_ZERO \/ (?u:rat. ?v:rat. dest_cut x u /\ dest_cut y v /\ RAT_LT RAT_ZERO u /\ RAT_LT RAT_ZERO v /\ RAT_LT z (RAT_MUL u v)))
+  CUT_PMUL_IS_CUT          !x:real. !y:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) y ==> IS_CUT (\z:rat. RAT_LT z RAT_ZERO \/ (?u:rat. ?v:rat. dest_cut x u /\ dest_cut y v /\ RAT_LT RAT_ZERO u /\ RAT_LT RAT_ZERO v /\ RAT_LT z (RAT_MUL u v)))
+  CUT_PMUL_NONNEG          !x:real. !y:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_LE (CUT_OF_RAT RAT_ZERO) y ==> CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)
+  CUT_PMUL_ONE             !x:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x ==> CUT_PMUL x (CUT_OF_RAT RAT_ONE) = x
+  CUT_PMUL_PINV            !x:real. CUT_LT (CUT_OF_RAT RAT_ZERO) x ==> CUT_PMUL x (CUT_PINV x) = CUT_OF_RAT RAT_ONE
+  CUT_PMUL_POSITIVE        !x:real. !y:real. CUT_LT (CUT_OF_RAT RAT_ZERO) x ==> CUT_LT (CUT_OF_RAT RAT_ZERO) y ==> CUT_LT (CUT_OF_RAT RAT_ZERO) (CUT_PMUL x y)
+  CUT_PMUL_SYM             !x:real. !y:real. CUT_PMUL x y = CUT_PMUL y x
+  CUT_PMUL_ZERO            !x:real. CUT_PMUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO
+  CUT_SIGN_CASES           !x:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x \/ CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_NEG x)
+
 ## Deduction
 
   NUM_PROV_ADD_CONG        !n:num. !m:num. !k:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TERM k ==> NUM_CLOSED k ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR n k)) (NUM_CODE 3 (NUM_PAIR m k))))
@@ -220,6 +274,53 @@ they have least appetite for working out how it is produced.
   WORD_RFC_INDUCT          !f:word('a) -> word('a) -> bool. !g:word('a) -> bool. (!x:word('a). (?y:word('a). f y x) ==> g x) /\ (!x:word('a). (?y:word('a). g y /\ WORD_STEP f y x) ==> g x) /\ (!x:word('a). (?y:word('a). ?z:word('a). ?u:word('a). ?v:word('a). g (WORD_CONCAT y z) /\ f (WORD_CONCAT z u) v /\ ~(z = WORD_EMPTY) /\ ~(u = WORD_EMPTY) /\ x = WORD_CONCAT y v) ==> g x) ==> (!x:word('a). WORD_RFC f x ==> g x)
   WORD_RFC_INSIDE          !f:word('a) -> word('a) -> bool. !x:word('a). !y:word('a). WORD_RFC f x /\ WORD_STEP f x y ==> WORD_RFC f y
   WORD_RFC_RIGHT           !f:word('a) -> word('a) -> bool. !x:word('a). !y:word('a). f x y ==> WORD_RFC f y
+
+## Fraction
+
+  INT_LE_CANCEL_NUM        !x:int. !y:int. !n:num. INT_LE (INT_MUL x (INT_OF_NUM (SUC n))) (INT_MUL y (INT_OF_NUM (SUC n))) ==> INT_LE x y
+  INT_LE_MUL_NONNEG        !x:int. !y:int. INT_LE INT_ZERO x ==> INT_LE INT_ZERO y ==> INT_LE INT_ZERO (INT_MUL x y)
+  INT_LE_MUL_NUM           !x:int. !y:int. !n:num. INT_LE x y ==> INT_LE (INT_MUL x (INT_OF_NUM n)) (INT_MUL y (INT_OF_NUM n))
+  INT_MUL_SWAP             !x:int. !y:int. !z:int. INT_MUL (INT_MUL x y) z = INT_MUL (INT_MUL x z) y
+  INT_NONNEG_OF_NUM        !x:int. INT_LE INT_ZERO x ==> (?n:num. x = INT_OF_NUM n)
+  INT_OF_NUM_CASES         !x:int. (?n:num. x = INT_OF_NUM n) \/ (?n:num. x = INT_NEG (INT_OF_NUM n))
+  RAT_ADD_ASSOC            !x:rat. !y:rat. !z:rat. RAT_ADD (RAT_ADD x y) z = RAT_ADD x (RAT_ADD y z)
+  RAT_ADD_NEG              !x:rat. RAT_ADD x (RAT_NEG x) = RAT_ZERO
+  RAT_ADD_PAIRS            !x:prod(int, num). !y:prod(int, num). RAT_ADD (RAT_OF_PAIR x) (RAT_OF_PAIR y) = RAT_OF_PAIR (PAIR (INT_ADD (INT_MUL (FST x) (INT_OF_NUM (SUC (SND y)))) (INT_MUL (FST y) (INT_OF_NUM (SUC (SND x))))) (SND x * SND y + SND x + SND y))
+  RAT_ADD_SYM              !x:rat. !y:rat. RAT_ADD x y = RAT_ADD y x
+  RAT_ADD_ZERO             !x:rat. RAT_ADD x RAT_ZERO = x
+  RAT_ARCHIMEDES           !x:rat. ?n:num. RAT_LE x (RAT_OF_NUM n)
+  RAT_ARCHIMEDES_INV       !x:rat. RAT_LT RAT_ZERO x ==> (?n:num. RAT_LT (RAT_INV (RAT_OF_NUM (SUC n))) x)
+  RAT_DENOMINATOR          !n:num. !m:num. INT_OF_NUM (SUC (n * m + n + m)) = INT_MUL (INT_OF_NUM (SUC n)) (INT_OF_NUM (SUC m))
+  RAT_DENSE                !x:rat. !y:rat. RAT_LT x y ==> (?z:rat. RAT_LT x z /\ RAT_LT z y)
+  RAT_INVERSE_EXISTS       !x:rat. ~(x = RAT_ZERO) ==> (?y:rat. RAT_MUL x y = RAT_ONE)
+  RAT_INV_POS              !x:rat. RAT_LT RAT_ZERO x ==> RAT_LT RAT_ZERO (RAT_INV x)
+  RAT_INV_ZERO             RAT_INV RAT_ZERO = RAT_ZERO
+  RAT_LE_ADD               !x:rat. !y:rat. !z:rat. RAT_LE x y ==> RAT_LE (RAT_ADD x z) (RAT_ADD y z)
+  RAT_LE_ANTISYM           !x:rat. !y:rat. RAT_LE x y ==> RAT_LE y x ==> x = y
+  RAT_LE_MUL               !x:rat. !y:rat. RAT_LE RAT_ZERO x ==> RAT_LE RAT_ZERO y ==> RAT_LE RAT_ZERO (RAT_MUL x y)
+  RAT_LE_MUL_LEFT          !x:rat. !y:rat. !z:rat. RAT_LE RAT_ZERO x ==> RAT_LE y z ==> RAT_LE (RAT_MUL x y) (RAT_MUL x z)
+  RAT_LE_PAIRS             !x:prod(int, num). !y:prod(int, num). RAT_LE (RAT_OF_PAIR x) (RAT_OF_PAIR y) = INT_LE (INT_MUL (FST x) (INT_OF_NUM (SUC (SND y)))) (INT_MUL (FST y) (INT_OF_NUM (SUC (SND x))))
+  RAT_LE_REFL              !x:rat. RAT_LE x x
+  RAT_LE_RESPECTS          !x:prod(int, num). !y:prod(int, num). !z:prod(int, num). !u:prod(int, num). RAT_SAME x z ==> RAT_SAME y u ==> INT_LE (INT_MUL (FST x) (INT_OF_NUM (SUC (SND y)))) (INT_MUL (FST y) (INT_OF_NUM (SUC (SND x)))) ==> INT_LE (INT_MUL (FST z) (INT_OF_NUM (SUC (SND u)))) (INT_MUL (FST u) (INT_OF_NUM (SUC (SND z))))
+  RAT_LE_TOTAL             !x:rat. !y:rat. RAT_LE x y \/ RAT_LE y x
+  RAT_LE_TRANS             !x:rat. !y:rat. !z:rat. RAT_LE x y ==> RAT_LE y z ==> RAT_LE x z
+  RAT_LT_LE                !x:rat. !y:rat. RAT_LT x y ==> RAT_LE x y
+  RAT_MUL_ASSOC            !x:rat. !y:rat. !z:rat. RAT_MUL (RAT_MUL x y) z = RAT_MUL x (RAT_MUL y z)
+  RAT_MUL_DISTRIBUTE       !x:rat. !y:rat. !z:rat. RAT_MUL x (RAT_ADD y z) = RAT_ADD (RAT_MUL x y) (RAT_MUL x z)
+  RAT_MUL_INV              !x:rat. ~(x = RAT_ZERO) ==> RAT_MUL x (RAT_INV x) = RAT_ONE
+  RAT_MUL_ONE              !x:rat. RAT_MUL x RAT_ONE = x
+  RAT_MUL_PAIRS            !x:prod(int, num). !y:prod(int, num). RAT_MUL (RAT_OF_PAIR x) (RAT_OF_PAIR y) = RAT_OF_PAIR (PAIR (INT_MUL (FST x) (FST y)) (SND x * SND y + SND x + SND y))
+  RAT_MUL_SYM              !x:rat. !y:rat. RAT_MUL x y = RAT_MUL y x
+  RAT_NEG_PAIR             !x:prod(int, num). RAT_NEG (RAT_OF_PAIR x) = RAT_OF_PAIR (PAIR (INT_NEG (FST x)) (SND x))
+  RAT_NOT_ONE_LE_ZERO      ~(RAT_LE RAT_ONE RAT_ZERO)
+  RAT_OF_NUM_NONNEG        !n:num. RAT_LE RAT_ZERO (RAT_OF_NUM n)
+  RAT_OF_NUM_SUC           !n:num. RAT_OF_NUM (SUC n) = RAT_ADD (RAT_OF_NUM n) RAT_ONE
+  RAT_OF_NUM_ZERO          RAT_OF_NUM 0 = RAT_ZERO
+  RAT_SAME_REFL            !x:prod(int, num). RAT_SAME x x
+  RAT_SAME_SYM             !x:prod(int, num). !y:prod(int, num). RAT_SAME x y ==> RAT_SAME y x
+  RAT_SAME_TRANS           !x:prod(int, num). !y:prod(int, num). !z:prod(int, num). RAT_SAME x y ==> RAT_SAME y z ==> RAT_SAME x z
+  RAT_ZERO_LE_ONE          RAT_LE RAT_ZERO RAT_ONE
+  RAT_ZERO_NOT_ONE         ~(RAT_ZERO = RAT_ONE)
 
 ## Inclusion
 
