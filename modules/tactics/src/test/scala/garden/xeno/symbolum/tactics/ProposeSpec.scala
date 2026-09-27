@@ -419,9 +419,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 802 with the rationals and the cuts collected, 2026-09-27, card `e4a90d43`: sixty-two
     // antecedents over the facts of `Fraction` and `Cut`, measured and not derived, by a probe of this
     // file with its numeric assertions printed over the classes of `4d63882b`.
-    // 808 with the sum and the composition of continuous functions and the sum rule, 2026-09-27,
+    // 820 with the eighteen residues of `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE`, its relative form and
+    // `LHOPITAL`, 2026-09-27. Tip plus this branch's delta.
+    // 826 with the sum and the composition of continuous functions and the sum rule, 2026-09-27,
     // derived before the run: two antecedents on each of the three. Tip plus this branch's delta.
-    proposals.size shouldBe 808
+    proposals.size shouldBe 826
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1401,11 +1403,14 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 678 with forty-two of the sixty-two residues of `Fraction` and `Cut`, 2026-09-27, card
     // `e4a90d43`, read off a probe of this file with its numeric assertions printed over the classes
     // of `4d63882b`; the other twenty are in `unreadable` below and none in `decidedFalse`.
-    // 684 with the six residues of `CONTINUOUS_ADD`, `CONTINUOUS_COMPOSE` and `DERIVATIVE_ADD`,
+    // 689 with eleven of the eighteen residues of `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE`, its relative
+    // form and `LHOPITAL`, 2026-09-27, measured by the run: all five of the relative form's are here.
+    // Tip plus this branch's delta.
+    // 695 with the six residues of `CONTINUOUS_ADD`, `CONTINUOUS_COMPOSE` and `DERIVATIVE_ADD`,
     // 2026-09-27, read off the suite's failure after a prediction of six: each keeps an implication
     // or names `continuous` or `derivative`, which no procedure settles, and `unreadable` did not
     // move. Tip plus this branch's delta.
-    open shouldBe 684
+    open shouldBe 695
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1793,7 +1798,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // procedure reads. Tip plus this branch's delta.
     // 173 with twenty of the sixty-two residues of `Fraction` and `Cut`, 2026-09-27, by the probe the
     // `open` row names; which twenty was not measured.
-    unreadable shouldBe 173
+    // 180 with the other seven of those eighteen residues, 2026-09-27, measured by the run. Tip plus
+    // this branch's delta.
+    unreadable shouldBe 180
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

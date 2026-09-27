@@ -116,14 +116,12 @@ they have least appetite for working out how it is produced.
 
 ## Continuity
 
-  CONTINUOUS_ADD           !f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous g x ==> continuous (\y:real. f y + g y) x
   CONTINUOUS_ATTAINS_MAX   !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
   CONTINUOUS_ATTAINS_MAX_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
   CONTINUOUS_ATTAINS_MIN   !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f z <= f u))
   CONTINUOUS_ATTAINS_MIN_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f z <= f u))
   CONTINUOUS_BOUNDED       !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. !u:real. x <= u /\ u <= y ==> f u <= z)
   CONTINUOUS_BOUNDED_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. !u:real. x <= u /\ u <= y ==> f u <= z)
-  CONTINUOUS_COMPOSE       !f:real -> real. !g:real -> real. !x:real. continuous g x ==> continuous f (g x) ==> continuous (\y:real. f (g y)) x
   CONTINUOUS_CONST         !x:real. !y:real. continuous (\z:real. x) y
   CONTINUOUS_EXTENSION     !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. continuous (\u:real. COND (u < x) (f x) (COND (y < u) (f y) (f u))) z)
   CONTINUOUS_EXTENSION_AGREES !f:real -> real. !x:real. !y:real. !z:real. x <= z /\ z <= y ==> COND (z < x) (f x) (COND (y < z) (f y) (f z)) = f z
@@ -131,6 +129,7 @@ they have least appetite for working out how it is produced.
   CONTINUOUS_LINEAR        !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. continuous f x ==> continuous g x ==> continuous (\u:real. y * f u + z * g u) x
   CONTINUOUS_MUL           !f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous g x ==> continuous (\y:real. f y * g y) x
   CONTINUOUS_NEG           !f:real -> real. !x:real. continuous f x ==> continuous (\y:real. 0 - f y) x
+  CONTINUOUS_TENDS         !f:real -> real. !x:real. continuous f x ==> tends f x (f x)
   CONTINUOUS_UNIFORM       !f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous f u) ==> 0 < z ==> (?u:real. 0 < u /\ (!v:real. !w:real. x <= v /\ v <= y /\ x <= w /\ w <= y /\ abs (v - w) < u ==> abs (f v - f w) < z))
   CONTINUOUS_UNIFORM_WITHIN !f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous_within f x y u) ==> 0 < z ==> (?u:real. 0 < u /\ (!v:real. !w:real. x <= v /\ v <= y /\ x <= w /\ w <= y /\ abs (v - w) < u ==> abs (f v - f w) < z))
   CONTINUOUS_WITHIN_OF_CONTINUOUS !f:real -> real. !x:real. !y:real. !z:real. continuous f z ==> continuous_within f x y z
@@ -218,7 +217,8 @@ they have least appetite for working out how it is produced.
 
 ## Derivative
 
-  DERIVATIVE_ADD           !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. derivative f x y ==> derivative g x z ==> derivative (\u:real. f u + g u) x (y + z)
+  CAUCHY_MEAN_VALUE        !f:real -> real. !g:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x <= z /\ z <= y ==> continuous g z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative g z u)) ==> (?z:real. ?u:real. ?v:real. x < z /\ z < y /\ derivative f z u /\ derivative g z v /\ (f y - f x) * v = (g y - g x) * u)
+  CAUCHY_MEAN_VALUE_WITHIN !f:real -> real. !g:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x <= z /\ z <= y ==> continuous_within g x y z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative g z u)) ==> (?z:real. ?u:real. ?v:real. x < z /\ z < y /\ derivative f z u /\ derivative g z v /\ (f y - f x) * v = (g y - g x) * u)
   DERIVATIVE_CHAIN         !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. derivative g x z ==> derivative f (g x) y ==> derivative (\u:real. f (g u)) x (y * z)
   DERIVATIVE_CONST         !x:real. !y:real. derivative (\z:real. x) y 0
   DERIVATIVE_CONTINUOUS    !f:real -> real. !x:real. !y:real. derivative f x y ==> continuous f x
@@ -243,6 +243,7 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_WITHIN_OF_DERIVATIVE !f:real -> real. !x:real. !y:real. !z:real. !u:real. derivative f z u ==> derivative_within f x y z u
   DERIVATIVE_ZERO_CONSTANT !f:real -> real. !x:real. !y:real. (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> derivative f z 0) ==> (!z:real. x <= z /\ z <= y ==> f z = f x)
   DERIVATIVE_ZERO_CONSTANT_WITHIN !f:real -> real. !x:real. !y:real. (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x < z /\ z < y ==> derivative f z 0) ==> (!z:real. x <= z /\ z <= y ==> f z = f x)
+  LHOPITAL                 !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. !z:real. 0 < z ==> (!u:real. 0 < abs (u - x) /\ abs (u - x) < z ==> derivative f u (h u) /\ derivative g u (f1 u) /\ ~(f1 u = 0)) ==> continuous f x ==> continuous g x ==> f x = 0 ==> g x = 0 ==> tends (\u:real. h u / f1 u) x y ==> tends (\u:real. f u / g u) x y
   MEAN_VALUE               !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))
   MEAN_VALUE_WITHIN        !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))
   ROLLE                    !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> f x = f y ==> (?z:real. x < z /\ z < y /\ derivative f z 0)

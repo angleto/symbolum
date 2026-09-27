@@ -231,6 +231,25 @@ object Continuity {
     "\\f:real -> real. \\a:real. \\b:real. \\x:real. !e:real. 0 < e ==> ?d:real. 0 < d /\\ " +
       "(!y:real. a <= y /\\ y <= b /\\ abs (y - x) < d ==> abs (f y - f x) < e)"
 
+  /**
+   * `tends f x l`: `f` tends to `l` at `x`, the epsilon-delta statement over the points **other
+   * than** `x`, so nothing is asked of `f x` and `f` need not be defined sensibly there. What a
+   * limit of a function is, as `converges` is a limit of a sequence; `Derivative`'s L'Hopital is
+   * its first consumer, where the function is a quotient whose denominator vanishes at `x`.
+   */
+  val Tends: String = "tends"
+
+  /** The definition, as text: [[ContinuousBody]] with `0 < abs (y - x)` among the conditions on `y`. */
+  val TendsBody: String =
+    "\\f:real -> real. \\x:real. \\l:real. !e:real. 0 < e ==> " +
+      "?d:real. 0 < d /\\ (!y:real. 0 < abs (y - x) /\\ abs (y - x) < d ==> abs (f y - l) < e)"
+
+  /**
+   * `|- !f x. continuous f x ==> tends f x (f x)`: a continuous function tends to its value, the
+   * radius of the continuity serving the limit, which asks less of the points near `x`.
+   */
+  val ContinuousTends: String = "CONTINUOUS_TENDS"
+
   /** `|- !f a b x. continuous f x ==> continuous_within f a b x`: the relative hypothesis is the weaker. */
   val WithinOfContinuous: String = "CONTINUOUS_WITHIN_OF_CONTINUOUS"
 
@@ -300,6 +319,7 @@ object Continuity {
         "abs (x - y) < d ==> abs (f x - f y) < e)"),
     WithinOfContinuous ->
       "!f:real -> real. !a:real. !b:real. !x:real. continuous f x ==> continuous_within f a b x",
+    ContinuousTends -> "!f:real -> real. !x:real. continuous f x ==> tends f x (f x)",
     ExtensionAgrees ->
       ("!f:real -> real. !a:real. !b:real. !x:real. a <= x /\\ x <= b ==> " +
         "COND (x < a) (f a) (COND (b < x) (f b) (f x)) = f x"),
@@ -349,7 +369,10 @@ object Continuity {
       (withContinuous, definition) = defined
       withinBody <- Parser.term(withContinuous, notation, ContinuousWithinBody)
       withinDefined <- LogicError.lift(Kernel.defineConstant(withContinuous, ContinuousWithin, withinBody))
-      (theory, withinDefinition) = withinDefined
+      (withWithin, withinDefinition) = withinDefined
+      tendsBody <- Parser.term(withWithin, notation, TendsBody)
+      tendsDefined <- LogicError.lift(Kernel.defineConstant(withWithin, Tends, tendsBody))
+      (theory, tendsDefinition) = tendsDefined
 
       logic <- classical.logic.over(theory)
       linarith <- Linarith.construct(magnitude.order)
@@ -368,7 +391,8 @@ object Continuity {
         Sum -> sum, Compose -> composed) ++
         extremes
       relative <- Within.prove(steps, withinDefinition, reals, magnitude, classical, twoSided)
-      facts = twoSided ++ relative
+      tends <- continuousTends(steps, tendsDefinition)
+      facts = twoSided ++ relative + (ContinuousTends -> tends)
 
       // Each statement checked against the text a person reads it by, here rather than in the spec:
       // a development that built something other than what it says it built must not be handed out.
@@ -384,7 +408,8 @@ object Continuity {
         } yield ()
       }
     } yield new Continuity(
-      theory, notation, logic, Map(Continuous -> definition, ContinuousWithin -> withinDefinition), facts)
+      theory, notation, logic,
+      Map(Continuous -> definition, ContinuousWithin -> withinDefinition, Tends -> tendsDefinition), facts)
 
   /**
    * The few moves every derivation below makes, over one theory, which is `Root`'s arrangement:
@@ -887,6 +912,44 @@ object Continuity {
       function <- Parser.term(theory, notation, "\\y:real. (f:real -> real) y * (g:real -> real) y", Functions)
       result <- folded(function, x, statement)
       closed <- rules.disch(gHyp, result).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x)))
+    } yield closed
+  }
+
+  /**
+   * [[ContinuousTends]]: the radius continuity gives at `e` serves the limit at `e`, whose statement
+   * asks about the same points less `x` itself.
+   */
+  private def continuousTends(steps: Steps, tendsDefinition: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val d = Term.variable("d", Reals)
+    val y = Term.variable("y", Reals)
+    for {
+      hypothesis <- proposition("continuous (f:real -> real) x:real")
+      opened <- LogicError.lift(Kernel.assume(hypothesis)).flatMap(t => unfolded(f, x).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, t))))
+      positive <- proposition("0 < e:real")
+      near <- LogicError.lift(Kernel.assume(positive)).flatMap(p => rules.spec(e, opened).flatMap(rules.mp(_, p)))
+      radius <- assume("0 < d:real /\\ (!y:real. abs (y - x:real) < d ==> abs ((f:real -> real) y - f x) < e:real)")
+      dPositive <- rules.conjElim1(radius)
+      inside <- rules.conjElim2(radius)
+      punctured <- proposition("0 < abs (y:real - x:real) /\\ abs (y - x) < d:real")
+      close <- LogicError.lift(Kernel.assume(punctured)).flatMap(rules.conjElim2).flatMap(member => rules.spec(y, inside).flatMap(rules.mp(_, member)))
+      everyY <- rules.disch(punctured, close).flatMap(rules.gen(y, _))
+      pair <- rules.conjIntro(dPositive, everyY)
+      witnessed <- existential("?d:real. 0 < d /\\ (!y:real. 0 < abs (y - x:real) /\\ abs (y - x) < d ==> abs ((f:real -> real) y - f x) < e:real)")
+        .flatMap(rules.existsIntro(_, d, pair))
+      eliminated <- rules.existsElim(near, d, witnessed)
+      statement <- rules.disch(positive, eliminated).flatMap(rules.gen(e, _))
+      value <- real("(f:real -> real) x:real")
+      unfoldedTends <- Conv.unfold(tendsDefinition, List(f, x, value))
+      right <- Term.destEq(unfoldedTends.conclusion).map(_._2).toRight(NotOfForm("an equation", unfoldedTends.conclusion))
+      normal <- Conv.betaNormalise(right)
+      equation <- Conv.trans(unfoldedTends, normal)
+      back <- Conv.sym(equation)
+      folded <- LogicError.lift(Kernel.eqMp(back, statement))
+      closed <- rules.disch(hypothesis, folded).flatMap(rules.genAll(_, List(f, x)))
     } yield closed
   }
 

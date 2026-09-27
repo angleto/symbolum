@@ -28,7 +28,7 @@ number appears here, which was also wrong. Three hand-maintained counts inside t
 argues against hand-maintained counts, which is the fourth time this document has recorded that
 shape and the first time it was the passage itself.
 
-    the library holds 920 entries, 917 distinct names, 904 facts and 13 definitional entries
+    the library holds 924 entries, 921 distinct names, 908 facts and 13 definitional entries
 
 Pinning them is the third repair this paragraph has needed and the first that can hold. It said
 120 on 2026-09-11 and 132 later that day, and neither could be reproduced from the library it

@@ -148,7 +148,7 @@ In the order the chain asserts them, which is the order `Theory.axioms` reports.
 | `axiom ETA` | !f:'a -> 'b. (\x:'a. f x) = f | **NOT READ** |  |  |
 | `axiom INFINITY` | ?f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\ (!y:ind. ~(f y = x)) | **NOT READ** |  |  |
 
-## The definitions (181)
+## The definitions (182)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -335,6 +335,7 @@ axiom mentioning it means.
 | `definition sinh` | sinh = \x:real. (exp x - exp (0 - x)) / 2 | **NOT READ** |  |  |
 | `definition sqrt` | sqrt = \x:real. select (\y:real. 0 <= y /\ y * y = x) | **NOT READ** |  |  |
 | `definition sub` | sub = \x:real. \y:real. x + -y | **NOT READ** |  |  |
+| `definition tends` | tends = \f:real -> real. \x:real. \y:real. !z:real. 0 < z ==> (?u:real. 0 < u /\ (!v:real. 0 < abs (v - x) /\ abs (v - x) < u ==> abs (f v - y) < z)) | **NOT READ** |  |  |
 | `definition ~` | ~ = \p:bool. p ==> F | **NOT READ** |  |  |
 
 ## The notation (27)
