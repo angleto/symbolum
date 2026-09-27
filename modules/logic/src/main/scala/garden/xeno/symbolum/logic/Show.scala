@@ -23,8 +23,9 @@ object Show {
    *
    * A term holds indices where a reader expects names, so every name a binder prints with is
    * invented here. Until 2026-09-26 the invention ignored the type and went x, y, z by position,
-   * and measured that day 163 of the library's 733 statements bound a FUNCTION called `x`: the mean
-   * value theorem read `!x:real -> real. !y:real. !z:real. y < z ==> ...`. So the choice is by the
+   * and 185 of the library's 784 statements bound a FUNCTION called `x`, counted on `docs/lemmas.md`
+   * at `e0ac66a5` as every binder named `x` whose type has an arrow at its top: the mean value
+   * theorem read `!x:real -> real. !y:real. !z:real. y < z ==> ...`. So the choice is by the
    * type, which the term does hold: a function is `f`, `g`, `h`, a proposition `p`, `q`, `r`, a
    * natural `n`, `m`, `k`, `i`, `j`, and everything else what it always was. The names the author
    * wrote are not recoverable, and this does not pretend to recover them.
