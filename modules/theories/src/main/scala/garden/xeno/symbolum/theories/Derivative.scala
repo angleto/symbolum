@@ -199,6 +199,9 @@ object Derivative {
    */
   val CauchyMeanValue: String = "CAUCHY_MEAN_VALUE"
 
+  /** [[CauchyMeanValue]] with continuity relative to `[a, b]`, for both functions. */
+  val CauchyMeanValueWithin: String = "CAUCHY_MEAN_VALUE_WITHIN"
+
   /**
    * `|- !f g df dg x l r. 0 < r ==>
    * (!y. 0 < abs (y - x) /\ abs (y - x) < r ==> derivative f y (df y) /\ derivative g y (dg y) /\ ~(dg y = 0)) ==>
@@ -383,6 +386,11 @@ object Derivative {
         "(!x:real. a <= x /\\ x <= b ==> continuous f x) ==> (!x:real. a <= x /\\ x <= b ==> continuous g x) ==> " +
         "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m) ==> (!x:real. a < x /\\ x < b ==> ?m:real. derivative g x m) ==> " +
         "?c:real. ?m:real. ?n:real. a < c /\\ c < b /\\ derivative f c m /\\ derivative g c n /\\ (f b - f a) * n = (g b - g a) * m"),
+    CauchyMeanValueWithin ->
+      ("!f:real -> real. !g:real -> real. !a:real. !b:real. a < b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x) ==> (!x:real. a <= x /\\ x <= b ==> continuous_within g a b x) ==> " +
+        "(!x:real. a < x /\\ x < b ==> ?m:real. derivative f x m) ==> (!x:real. a < x /\\ x < b ==> ?m:real. derivative g x m) ==> " +
+        "?c:real. ?m:real. ?n:real. a < c /\\ c < b /\\ derivative f c m /\\ derivative g c n /\\ (f b - f a) * n = (g b - g a) * m"),
     LHopital ->
       ("!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !x:real. !l:real. !r:real. 0 < r ==> " +
         "(!y:real. 0 < abs (y - x) /\\ abs (y - x) < r ==> derivative f y (df y) /\\ derivative g y (dg y) /\\ ~(dg y = 0)) ==> " +
@@ -525,7 +533,7 @@ object Derivative {
       relative <- taylor.get(Taylor).toRight(MissingDefinition(Taylor)).flatMap(taylorFact =>
         DerivativeWithin.prove(steps, magnitude, continuity, withinDefinition, Map(
           Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing,
-          Taylor -> taylorFact)))
+          Taylor -> taylorFact, CauchyMeanValue -> cauchy)))
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,

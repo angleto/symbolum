@@ -111,7 +111,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
           Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorWithin,
-          Derivative.CauchyMeanValue, Derivative.LHopital) ++ onInterval ++
+          Derivative.CauchyMeanValue, Derivative.CauchyMeanValueWithin, Derivative.LHopital) ++ onInterval ++
           withinInterval).contains(name)) {
       val other = Real.spent(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
@@ -790,6 +790,64 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     detached.hypotheses shouldBe empty
     witness.refused.hypotheses shouldBe empty
     witness.refused.conclusion shouldBe proposition("~(continuous (\\y:real. COND (0 < y) (1:real) 0) 0)")
+  }
+
+  /**
+   * `!x. -1 < x /\ x < 0 ==> derivative step x 0`: inside [-1, 0] the step `COND (0 < y) 1 0` is zero
+   * within `0 - x` of `x`, so it has the constant zero's slope there, by locality.
+   */
+  private def stepFlatInside(witness: StepAtAnEnd): Kernel.Thm = {
+    val magnitude = chain.limit.magnitude
+    val x = Term.variable("x", reals)
+    val y = Term.variable("y", reals)
+    val inside = proposition("(0:real) - 1 < x /\\ x < 0")
+    val assumedInside = force(LogicError.lift(Kernel.assume(inside)))
+    val negative = force(rules.conjElim2(assumedInside))
+    val zero = force(rules.specAll(fact(Derivative.Constant), List(real("0:real"), x)))
+    val near = force(LogicError.lift(Kernel.assume(proposition("abs (y - x:real) < 0 - x"))))
+    val above = force(magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(real("y - x:real"), _)))
+    val nonPositive = force(rules.specAll(lemma("!y:real x:real A:real. y - x <= A ==> A < 0 - x ==> y <= 0"),
+      List(y, x, real("abs (y - x:real)"))).flatMap(rules.mp(_, above)).flatMap(rules.mp(_, near)))
+    val agrees = force(rules.disch(near.conclusion, witness.flat("y:real", nonPositive)).flatMap(rules.gen(y, _)))
+    val constantFn = force(derivative.term("\\y:real. (0:real)", functions))
+    val local = opened(force(rules.specAll(fact(Derivative.Local),
+      List(constantFn, witness.step, x, real("0:real"), real("0 - x:real")))))
+    val slope = force(rules.mp(local, force(rules.spec(x, lemma("!x:real. x < 0 ==> 0 < 0 - x")).flatMap(rules.mp(_, negative))))
+      .flatMap(rules.mp(_, agrees)).flatMap(rules.mp(_, zero)))
+    force(rules.disch(inside, slope).flatMap(rules.gen(x, _)))
+  }
+
+  it should "price Cauchy's mean value theorem relative to [a, b] at the two-sided one's, and detach it at the step" in {
+    // Measured on 2026-09-27: the extension is paid for already. Detached at the step and the identity
+    // on [-1, 0], the step being continuous relative to the interval and not at 0.
+    Real.spent(fact(Derivative.CauchyMeanValueWithin)) shouldBe Real.spent(fact(Derivative.CauchyMeanValue))
+    val witness = new StepAtAnEnd(chain)
+    val x = Term.variable("x", reals)
+    val identity = force(derivative.term("\\y:real. y", functions))
+    val instance = opened(force(rules.specAll(fact(Derivative.CauchyMeanValueWithin),
+      List(witness.step, identity, real("0 - 1"), real("0:real")))))
+    val identityRelative = {
+      val member = proposition("(0:real) - 1 <= x /\\ x <= 0")
+      val continuous = force(rules.spec(x, force(chain.continuity.fact(Continuity.Identity))))
+      val relative = force(rules.specAll(force(chain.continuity.fact(Continuity.WithinOfContinuous)),
+        List(identity, real("0 - 1"), real("0:real"), x)).flatMap(rules.mp(_, continuous)))
+      force(rules.disch(member, relative).flatMap(rules.gen(x, _)))
+    }
+    def someSlope(function: String, flat: Kernel.Thm, slope: String): Kernel.Thm = {
+      val member = proposition("(0:real) - 1 < x /\\ x < 0")
+      val at = force(rules.spec(x, flat).flatMap(rules.mp(_, force(LogicError.lift(Kernel.assume(member))))))
+      val exists = force(derivative.proposition(s"?m:real. derivative ($function) x m")
+        .flatMap(statement => logic.destExistsPredicate(statement).toRight(NotOfForm("an existential", statement)))
+        .flatMap(rules.existsIntro(_, real(slope), at)))
+      force(rules.disch(member, exists).flatMap(rules.gen(x, _)))
+    }
+    val identitySlopes = force(rules.disch(proposition("(0:real) - 1 < x /\\ x < 0"), force(rules.spec(x, fact(Derivative.Identity))))
+      .flatMap(rules.gen(x, _)))
+    val detached = Vector(lemma("(0:real) - 1 < 0"), witness.relative, identityRelative,
+      someSlope("\\y:real. COND (0 < y) (1:real) 0", stepFlatInside(witness), "0:real"),
+      someSlope("\\y:real. y", identitySlopes, "1:real"))
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
   }
 
   /* ------------------------------------------------------------- L'Hopital */

@@ -1359,7 +1359,8 @@ hypothesis is false at zero. What neither is: anything about a Taylor series con
 points other than `x`, a defined constant and no axiom, and `CONTINUOUS_TENDS` says a continuous
 function tends to its value. Until it landed the rule could not be stated: the library had the
 limit of a sequence and nothing for a function. `CAUCHY_MEAN_VALUE` is Rolle at
-`(g b - g a) * f y - (f b - f a) * g y`, with no quotient, and the rule is the `0 / 0` form at a
+`(g b - g a) * f y - (f b - f a) * g y`, with no quotient, and `CAUCHY_MEAN_VALUE_WITHIN` its form with
+continuity relative to `[a, b]`, and the rule is the `0 / 0` form at a
 point: `f` and `g` differentiable on a punctured neighbourhood where `g`'s slope never vanishes,
 continuous and zero at `x`, and the ratio of the slopes tending to `l`. Cauchy between `x` and each
 nearby `y` gives the same ratio at a nearer point, and Rolle once more says `g y` is not zero there.

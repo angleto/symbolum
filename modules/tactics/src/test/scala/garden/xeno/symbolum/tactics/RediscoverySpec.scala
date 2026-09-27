@@ -369,9 +369,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // run: four antecedents on `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's
     // delta.
     // 740 with `TAYLOR_WITHIN`'s three antecedents, 2026-09-27, derived before the run.
-    // 753 with L'Hopital, 2026-09-27, measured by the run: one antecedent on `CONTINUOUS_TENDS`,
-    // five on `CAUCHY_MEAN_VALUE` and seven on `LHOPITAL`.
-    propose.weakenings.size shouldBe 753
+    // 758 with L'Hopital, 2026-09-27, measured by the run: one antecedent on `CONTINUOUS_TENDS`,
+    // five on `CAUCHY_MEAN_VALUE` and on its relative form, and seven on `LHOPITAL`.
+    propose.weakenings.size shouldBe 758
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
