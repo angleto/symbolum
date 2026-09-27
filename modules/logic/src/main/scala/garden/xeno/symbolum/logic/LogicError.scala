@@ -327,6 +327,31 @@ final case class NotEqualTo(wanted: Term, found: Term) extends LogicError {
 }
 
 /**
+ * Two finished normal forms differ over atoms that are not free variables, so the difference is a
+ * fact about the procedure's reading and not about the claim.
+ *
+ * [[NotEqualTo]] is decided because a ring procedure reads everything it cannot take apart as an
+ * atom, and two polynomials that differ over **independent** atoms differ as functions: choose the
+ * atoms and the sides come apart. That argument needs the atoms to be free. `inv 0`, `exp 0` and
+ * `inv x` are atoms of the reading and not free: `inv 0` has been a value the chain knows since the
+ * reals were constructed, and `inv 0 = 0` is a theorem of it that RING refused as `Decided` until
+ * 2026-09-27 (Mycelium card `7bf9d8a2`). What the refusal carries is the atoms that are not free,
+ * because they are why nothing was decided, and a reader acts on them.
+ *
+ * Raised by the procedures that know which subterms of their normal form are coefficients, which a
+ * rewriting in this module does not: `Rewrite` still raises [[NotEqualTo]] and they read it again.
+ */
+final case class NotEqualAsRead(wanted: Term, found: Term, bound: Vector[Term]) extends LogicError {
+  def message: String =
+    s"$found and $wanted differ as polynomials over their atoms, and ${bound.mkString(", ")} " +
+      "is not a free variable, so the atoms need not be independent and the claim is not decided"
+
+  // A search over a reading of the goal so coarse that what it settled was not the goal, which is
+  // the last of `Unread`'s causes and the one this is.
+  def standing: LogicError.Standing = LogicError.Standing.Unread
+}
+
+/**
  * A procedure established a value and could not say whether it is the one it was asked about.
  *
  * Its own case rather than [[NotEqualTo]], which is what it arrived as and what made it wrong.
