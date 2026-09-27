@@ -489,15 +489,17 @@ Such an implication is valid exactly when the conclusion's difference is a non-n
 combination of the hypotheses' differences plus a non-negative constant, with an equality free to
 be weighed either way, or when the hypotheses cannot all hold at once; both are one linear program,
 and `Farkas` solves it.
-**Refuses:** anything neither the linear form, the hypotheses multiplied, nor one completed square
-reaches. The pairs get to degree two, and a second round crossing those products with the
+**Refuses:** anything neither the linear form, the hypotheses multiplied, nor the squares below
+reach. The pairs get to degree two, and a second round crossing those products with the
 hypotheses gets to degree three, run only when the goal names an atom the pairs did not reach, so
-a product of four unknowns is past what the products make. The square is the one fact that is not
+a product of four unknowns is past what the products make. The squares are the facts that are not
 read off the goal's own text, where every other one is a hypothesis, a product of hypotheses, or a
-disjunct or the denial of the goal; so it is what reaches a goal with **no** hypotheses, whose
+disjunct or the denial of the goal; so they are what reaches a goal with **no** hypotheses, whose
 products are empty at every degree. Over an atom that is one unknown times itself the square is
-completed, and `SQUARE_NONNEG` at that argument is the fact, checked by the kernel like the others.
-`docs/adr/0032` is the decision.
+completed, which `docs/adr/0032` decides; and a quadratic form is decomposed into squares of linear
+forms, which reaches a cross term like `x * y` and which `docs/adr/0056` decides. Either way
+`SQUARE_NONNEG` at the argument is the fact, checked by the kernel like the others, and nothing past
+degree two is reached.
 
 ```scala
 Linarith.standard.prove("!a:real. a * (2 - a) <= 1")
@@ -599,7 +601,7 @@ Two of the three premises, with their weights, and `z < w` named as carrying not
 question an argument gets asked: not whether it follows, but which of its assumptions it needed.
 
 The second field is empty here and is not decoration. Since 2026-09-18 the procedure may give
-itself one fact nobody wrote, a square completed over a quadratic atom, and a goal settled with
+itself facts nobody wrote, squares of linear forms over the goal's atoms, and a goal settled with
 one rests on something that is in no premise. Reporting it among the premises would answer a
 question nobody asked; leaving it out would make such a proof report an empty list, which is
 already what a goal needing none of its premises reports. So it comes back beside them, and

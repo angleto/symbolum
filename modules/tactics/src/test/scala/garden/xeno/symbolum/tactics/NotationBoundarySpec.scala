@@ -351,6 +351,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Crossing, "the goal, rendered at the raiser against the widest notation it reads in"),
     ("Linarith.scala", "LinearForm.factorsOf(atom).length") ->
       (Verdict.Number, "how many unknowns a product has"),
+    ("Linarith.scala", "degree") ->
+      (Verdict.Number, "how many unknowns a product has, named once for the sentence and its branch"),
     ("Linarith.scala", "named") ->
       (Verdict.Crossing, "a sentence LinearForm.obstacleIn has already rendered through reals.show"),
     ("Linarith.scala", "reals.show(atom)") ->
