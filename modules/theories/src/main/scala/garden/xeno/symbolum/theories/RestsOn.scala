@@ -157,6 +157,9 @@ object Reach {
         // `Library.of`'s are maintained by hand and have drifted once; what keeps them together is
         // `RestsOnSpec`, which asserts the agreement and names whichever development is missing.
         "Inclusion" -> chain.inclusion.facts,
+        // The rationals and the cuts, 2026-09-27, in the change that put them into `Library.of`.
+        "Fraction" -> chain.fractions.facts,
+        "Cut" -> chain.cuts.facts,
         // The list interface, 2026-09-23, in the change that added the link. It declares no
         // type, so the only place it shows up is here and in the two lists beside this one:
         // `docs/adr/0038` is why a list is an orientation on `word` and not a carrier.

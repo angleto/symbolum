@@ -333,10 +333,9 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // In the chain since phase 5 of `docs/adr/0007`, both of them: `Real.construction` builds the
     // rationals and the cuts below the reals, and `docs/adr/0053` made the cuts' type the reals' one
     // type. Both were beside the chain as a debt until then, `rat` being mathematics anyone would
-    // want. What is still owed is the other half the standing's docstring names: their facts are not
-    // collected by `Library.of`, so `Ask` and `Find` do not reach a lemma about `rat` or about a cut.
-    // That is a piece of its own, since it grows the library a tactic searches, and Mycelium card
-    // `e4a90d43` carries it.
+    // want. Their facts were collected by neither `Library.of` nor `Reach.library` until 2026-09-27,
+    // so `Ask` and `Find` reached no lemma about `rat` or about a cut; Mycelium card `e4a90d43`
+    // collected both, and `RestsOnSpec` holds the two lists together.
     "Fraction" -> InTheChain,
     "Cut" -> InTheChain,
 
