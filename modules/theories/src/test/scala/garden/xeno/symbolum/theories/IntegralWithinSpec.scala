@@ -88,14 +88,22 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
    * the definitions do not.
    */
   it should "cost what the two-sided forms cost" in {
+    // Read with the sixteen as the interface, `Real.spent`. This compared the bare
+    // `Derivation.axiomsOf` until 2026-09-27, which meant something when it was written the day
+    // before; since `docs/adr/0053` proved the sixteen, the bare reading answers the foundation's
+    // three for every fact about the reals and the equality separated nothing (card `8fb6da8b`).
+    // The last two lines are what a reading that answers the same for everything cannot pass.
     for ((relative, twoSided) <- Vector(
         Integral.ContinuousHasWithin -> Integral.ContinuousHas,
         Integral.ContinuousIntegralWithin -> Integral.ContinuousIntegral,
         Integral.DerivativeWithinWithin -> Integral.DerivativeWithin,
         Integral.DerivativeOfIntegralWithin -> Integral.DerivativeOfIntegral
       )) withClue(s"$relative: ") {
-      Derivation.axiomsOf(fact(relative)) shouldBe Derivation.axiomsOf(fact(twoSided))
+      Real.spent(fact(relative)) shouldBe Real.spent(fact(twoSided))
     }
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    Real.spent(fact(Integral.ContinuousHasWithin)) should contain(completeness)
+    Real.spent(fact(Integral.HasLinear)) should not contain completeness
   }
 
   /** The route, asserted rather than described: the extension, and the congruence that carries it back. */

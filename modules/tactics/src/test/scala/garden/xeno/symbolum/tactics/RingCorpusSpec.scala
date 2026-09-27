@@ -181,21 +181,18 @@ class RingCorpusSpec extends AnyFlatSpec with Matchers {
    * function with `0⁻¹ = 0`, so `(a * b)⁻¹ = a⁻¹ * b⁻¹` holds everywhere, zero included, and the
    * identity needs no hypothesis.
    *
-   * Here it is not a theorem. `inv` is the field axiom's inverse and the theory says nothing
-   * whatever about `inv 0`, so at `x = 0` these compare two terms nobody has constrained. RING is
-   * right to refuse them and `Field` proves all three assuming `~(x = 0)`, which `FieldCorpusSpec`
-   * asserts. So the entry records a difference between two theories rather than a limit of a
-   * tactic, and the way to remove it is a decision about the theory, which is not a decision a test
-   * may take.
+   * Until the reals were constructed it was not a theorem here, and asserting `inv 0 = 0` would have
+   * been a seventeenth axiom that is not a field axiom. `docs/adr/0007` removed the question instead
+   * of answering it, and `docs/adr/0053` landed it: `inv` is the inverse on the cuts, zero at zero,
+   * so `inv 0 = 0` is a theorem of the chain costing no axiom, and these three hold everywhere as
+   * they do upstream. Mathlib admits `0⁻¹ = 0` as a field of the `GroupWithZero` class, an axiom
+   * there and merely uncounted; HOL Light proves it because it constructs, as this system now does.
    *
-   * **That decision was taken on 2026-09-10 and is recorded in `docs/adr/0007`: not by adopting the
-   * convention, but by removing the question.** `inv 0 = 0` is not free anywhere. Mathlib admits it
-   * as a field of the `GroupWithZero` class these declarations sit under, so it is an axiom there
-   * too and merely uncounted; HOL Light proves it, because HOL Light constructs its reals. Asserting
-   * it here would be a seventeenth axiom that is not a field axiom, which spends the property that
-   * the sixteen can be read against a textbook. Since the reals are to be constructed, `inv` becomes
-   * a defined constant and the convention becomes a choice inside a definition, costing no axiom.
-   * Until then these three stay, and this list keeps recording what it records.
+   * **What keeps them on this list is the procedures, not the theory.** The theorem is proved in
+   * `Cut` and published under no name of the reals, so RING refuses the three, without deciding
+   * since 2026-09-27 (`NotEqualAsRead`, the forms differing over `inv x`), and `Field` proves them
+   * assuming `~(x = 0)`, which `FieldCorpusSpec` asserts. Publishing it to the procedures is the
+   * decision that would empty this list, and it is not one a test may take.
    */
   private val KnownUnproved: Set[Int] = Set(65, 66, 70)
 

@@ -679,8 +679,8 @@ Both multiplication axioms had to be put to work first, which is the difference 
 a code and a fact a derivation can use: `NUM_PA_MUL_ZERO` says `!v0. v0 * 0 = 0` and
 `NUM_PROV_MUL_ZERO` is that axiom at a closed term. The successor one is where the substitution
 walk is longer than addition's, because `v0 * S v1 = v0 * v1 + v0` puts a product **inside** a sum
-and the walk descends through both. Four facts, **zero axioms**, and the trusted base stays at
-nineteen.
+and the walk descends through both. Four facts, **zero axioms**, and the trusted base stayed at
+the nineteen it held that day.
 
 Why it is the bottom of the stack rather than a lemma somebody wanted: every pure-arithmetic
 representation `docs/adr/0013`'s coding needs, which is `NUM_TRI`, `NUM_PAIR`, `NUM_CODE` and the
@@ -1194,7 +1194,8 @@ one estimate rather than a rule: the addition theorem turns the error into
 `abs h <= 1 / 2`. That estimate is `EXP_NEAR_ONE` one order higher, the tail after two terms under
 `EXP_TAIL_GEOMETRIC` at a ratio of a half, and it covers both signs of `h` in one argument where
 the first-order one went through the reflection. It is the one fact of `Derivative` that spends a
-series, so it reaches `COMPLETENESS`, the naturals' axioms and eta, all nineteen of the chain, and
+series, so it reaches `COMPLETENESS`, the naturals' axioms and eta, all nineteen of the chain as it
+stood before `docs/adr/0053` made the sixteen theorems, and
 `DerivativeSpec` asserts it costs exactly what the estimate costs and what the addition theorem costs.
 **And the sign of a derivative on an interval, the same day**: `DERIVATIVE_ZERO_CONSTANT`,
 `DERIVATIVE_NONNEG_MONOTONE` and `DERIVATIVE_POS_LT_MONOTONE`, the mean value theorem between two

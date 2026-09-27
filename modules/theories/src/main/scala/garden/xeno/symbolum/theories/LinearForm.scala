@@ -92,7 +92,7 @@ object LinearForm {
    *
    * A numeral, a negated one, an inverse of a non-zero numeral, and a quotient of two of those.
    * **Zero is not a denominator here**, which is the rule `Ring` already keeps: `inv 0` is an atom
-   * the theory says nothing about, so `x / 0` is an unknown and not a scaled `x`. A symbolic
+   * this search holds no fact about, so `x / 0` is an unknown and not a scaled `x`. A symbolic
    * denominator is not one either, and it never becomes one by looking harder: whether `inv y` is
    * anything at all needs `~(y = 0)`, which is `Field`'s to charge for and not this procedure's.
    */

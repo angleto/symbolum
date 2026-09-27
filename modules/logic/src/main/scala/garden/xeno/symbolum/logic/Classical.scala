@@ -40,8 +40,8 @@ import garden.xeno.symbolum.kernel.*
  * had nothing to write its cases with. The case that surfaced it was extending a word by one
  * letter, which is three branches on a condition.
  *
- * It is a definition and not an axiom, so the count of nineteen `CLAUDE.md` describes does not move
- * and `ChainSpec` says so. What it does cost is a constant in the trusted signature and a row in
+ * It is a definition and not an axiom, so the chain's count of axioms does not move, and
+ * `ChainSpec` says so. What it does cost is a constant in the trusted signature and a row in
  * `docs/reading-register.md`, which enters as `NOT READ` like every other row there.
  *
  * == Why the conditional is here and not in a development ==

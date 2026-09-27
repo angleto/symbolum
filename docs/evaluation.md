@@ -553,20 +553,23 @@ that has stopped failing as well as on one that has not.
 and 70 are `(1/x)^2 = 1/x^2`, that again, and `1/x^2/y = 1/(y * x^2)`, and they became readable the
 same evening when the reader learned `⁻¹`. Upstream closes each with plain `ring` and upstream is
 right: in Mathlib `⁻¹` is a **total** function with `0⁻¹ = 0`, so `(a * b)⁻¹ = a⁻¹ * b⁻¹` holds
-everywhere and the identity needs no hypothesis. Here it is not a theorem. `inv` is the field
-axiom's inverse and the theory says nothing whatever about `inv 0`, so at `x = 0` these compare two
-terms nobody has constrained. RING is right to refuse them, and `Field` proves all three assuming
-that a variable is not zero, which track F asserts. The entry records a difference between two
-theories, and closing it is a decision about this one rather than a tactic to write.
+everywhere and the identity needs no hypothesis. Until the reals were constructed it was not a
+theorem here: `inv` was the field axiom's inverse and the theory said nothing about `inv 0`.
 
-**That decision was taken on 2026-09-10, and it removes the question instead of answering it.**
-`docs/adr/0007` has it: the reals are to be constructed, so `inv` becomes a defined constant and
-whether `inv 0` is zero becomes a choice inside a definition rather than a seventeenth axiom. The
-comparison that decided it is worth keeping here, because this table invites it. Mathlib does not
-have `0⁻¹ = 0` for free either: it is a field of the `GroupWithZero` class, so an axiom there too,
-and the difference is that this system counts its axioms in one place and publishes the number.
-HOL Light proves it, because HOL Light constructs. Until the construction reaches this far, these
-three stay in the row above.
+**The decision that removed the question was taken on 2026-09-10 and landed on 2026-09-27.**
+`docs/adr/0007` decided to construct the reals, so that whether `inv 0` is zero would be a choice
+inside a definition rather than a seventeenth axiom, and `docs/adr/0053` made `inv` the inverse on
+the cuts, which is zero at zero. So `inv 0 = 0` is a theorem of the chain, resting on the
+foundation's three axioms, and these three identities hold everywhere here as they do upstream.
+Mathlib does not have `0⁻¹ = 0` for free either: it is a field of the `GroupWithZero` class, an
+axiom there and merely uncounted; HOL Light proves it, because HOL Light constructs, and so does
+this system now.
+
+**What keeps the three in the row above is no longer the theory but the procedures.** The theorem is
+proved in `Cut` and not published under a name of the reals, so RING refuses them, and since
+2026-09-27 refuses them without deciding (`NotEqualAsRead`: the forms differ over `inv x`, an atom
+that is not free), while `Field` proves all three assuming that a variable is not zero, which track
+F asserts. Publishing it to the procedures is the open decision that would close this entry.
 
 The other rows say where the distance is, and it is not mostly in the prover. The eleven not read
 are written with `•`, `↑`, a lambda, or a type ascription that could be a coercion: that is the

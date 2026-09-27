@@ -124,8 +124,9 @@ class FamilySpec extends AnyFlatSpec with Matchers {
   "A summand the recurrences cannot reduce" should "be unreadable, not an empty fit" in {
     // A summand naming something with no value leaves a term this cannot evaluate, and there is
     // nothing to fit. The message names where the reduction stopped, because that is what a caller
-    // acts on: here it is `inv 0`, which this theory leaves an atom rather than a number, so the
-    // first sample already has no value and the family is not one this can be asked about.
+    // acts on: here it is `inv 0`, which the recurrences leave an atom rather than a number (the
+    // chain proves it zero, and nothing they hold says so), so the first sample already has no value
+    // and the family is not one this can be asked about.
     family.of("\\i:num. inv (real_of_num i)") match {
       case Family.Outcome.Unreadable(why) =>
         // The message says which of the two things happened, and here it is the first: the

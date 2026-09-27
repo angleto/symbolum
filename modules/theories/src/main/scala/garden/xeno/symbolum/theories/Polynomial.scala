@@ -627,8 +627,10 @@ final class Polynomial private (
    * it, so `inv (2 / 3)` arrives as `inv (2 * inv 3)` and is read, while `inv (1 + 1)` arrives as
    * `inv 2`. Deciding earlier would make two terms of equal value reach two different normal forms.
    *
-   * Zero is not a coefficient to invert, so `inv 0` stays an atom. That is not a gap: nothing the
-   * theory knows says what `inv 0` is, and giving it a normal form would be inventing one.
+   * Zero is not a coefficient to invert, so `inv 0` stays an atom. That is not a gap: nothing this
+   * normal form holds says what `inv 0` is, and giving it one here would be inventing it. The chain
+   * proves `inv 0 = 0` since the reals were constructed, through `CUT_INV_ZERO`, a fact published
+   * under no name of the reals, and until one is, a refusal over the atom is not a decision.
    */
   private def denominatorOf(term: Term): Option[(BigInt, BigInt)] = term match {
     case Inv(argument) => coefficient.valueOf(argument).filter { case (top, _) => top != 0 }

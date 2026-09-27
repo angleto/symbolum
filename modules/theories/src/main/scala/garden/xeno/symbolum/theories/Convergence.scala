@@ -61,8 +61,8 @@ import garden.xeno.symbolum.logic.*
  *    as `inv 0`, since then the forms differing says nothing about the values. Until 2026-09-26
  *    both came out as `NotEqualTo`: `converges (Sum (\i. Power 0 i / real_of_num (NUM_FACT i))) 1`
  *    is true, the series converging to `exp 0`, and it was refused as decided; and `2 + inv 0`,
- *    which the axioms neither prove nor refute to be the value, was refused as decided until the
- *    divisor condition landed the same day.
+ *    which is the value since the reals were constructed but which no procedure here can show is,
+ *    was refused as decided until the divisor condition landed the same day.
  *  - The series converges, the procedure proved only that it does, and the goal asks for a value.
  *    The theorem is an existential with no value in it, so the refusal is [[Convergence.Unnamed]]
  *    and not a decision: nothing about the value was learned.
@@ -442,10 +442,10 @@ final class Convergence private (
    * Whether `term` is built from the reals' numerals and field operations alone, with every
    * reciprocal and every divisor shown not to be nought.
    *
-   * The second half is what makes differing normal forms two different numbers. `inv 0` is a real
-   * the sixteen axioms say nothing about, so `2 + inv 0` against `2` differ as forms and the theory
-   * decides neither that they are equal nor that they are not; a comparison reading them as two
-   * numbers answered `NotEqualTo` with standing `Decided`, which the verification of card
+   * The second half is what makes differing normal forms two different numbers. `inv 0` is zero in
+   * the chain only through `CUT_INV_ZERO`, a fact no procedure here holds, so `2 + inv 0` against
+   * `2` differ as forms while being equal; a comparison reading them as two numbers answered
+   * `NotEqualTo` with standing `Decided`, which the verification of card
    * `d3fd8018` found on 2026-09-26 and `SeriesFragmentBoundarySpec` holds. A divisor counts as apart
    * from nought when LINARITH proves it strictly positive or strictly negative; one it cannot place
    * leaves the value an atom of unknown size, and the refusal is [[ValueUnidentified]].

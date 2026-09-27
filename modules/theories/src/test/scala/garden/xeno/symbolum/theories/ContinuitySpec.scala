@@ -259,7 +259,10 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
   it should "multiply two continuous functions at the linear combination's price, and detach at the square" in {
     // Measured on 2026-09-26 before it was written here: the same set as the linear combination,
     // whose shares of `e` the product reuses, with a third radius at tolerance one and no supremum.
-    Derivation.axiomsOf(fact(Continuity.Product)) shouldBe Derivation.axiomsOf(fact(Continuity.Linear))
+    // Read with the sixteen as the interface since 2026-09-27 (card `8fb6da8b`): the bare
+    // `Derivation.axiomsOf` answers the foundation's three for every fact about the reals since
+    // `docs/adr/0053`, and the equality would hold whatever the product spent.
+    Real.spent(fact(Continuity.Product)) shouldBe Real.spent(fact(Continuity.Linear))
 
     // Detached at the identity twice, with nothing assumed.
     val x = Term.variable("x", reals)

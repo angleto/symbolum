@@ -177,9 +177,11 @@ object Model {
    * them here as well would be a second statement of the same thing, free to disagree with the
    * first.
    *
-   * `inv 0` is undefined rather than infinite, which matches the theory: `MUL_INVERSE` holds only
-   * under `~(x = 0)`, so there is nothing for a model to say at zero. An undefined point is skipped
-   * by every caller here, because a place where the question was not asked is not a counterexample.
+   * `inv 0` is undefined rather than infinite. That matched the theory while `MUL_INVERSE`, which
+   * holds only under `~(x = 0)`, was all it said; since the reals were constructed the chain proves
+   * `inv 0 = 0`, and this model does not say so. An undefined point is skipped by every caller here,
+   * because a place where the question was not asked is not a counterexample, so what the gap costs
+   * is points not asked.
    */
   val Reals: Model = Model(
     carriers = Map.empty,

@@ -491,7 +491,7 @@ about an order. `Classical.standard` now has the excluded middle, `cases`, `cont
 **A function defined by cases is written with `COND`, which `Classical` defines.** Until 2026-09-12
 there was no conditional constant anywhere in the chain, so a definition by cases had nothing at all
 to write its cases with. `COND p a b` is `select (\x. (p ==> x = a) /\ (~p ==> x = b))` and costs no
-axiom, which is why the count of nineteen above did not move when it landed; what it costs is a
+axiom, which is why the chain's count of axioms did not move when it landed; what it costs is a
 constant in the signature and a row in `docs/reading-register.md`. It lives in
 `modules/logic/.../Classical.scala` rather than in a development, because a constant defined in a
 development is unreachable from every link below it. It has **no spelling of its own**: it is

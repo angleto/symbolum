@@ -371,6 +371,9 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   it should "rest the three new slopes on the chain's axioms and nothing else" in {
     // Written by the verification of cards 64110aba and 08d2af96: a ceiling taken from the theory
     // itself, so an axiom asserted on the way would show here whatever the equalities above say.
+    // A ceiling and nothing more since `docs/adr/0053`: every fact about the reals now rests on the
+    // foundation's three, so this separates an axiom asserted on the way and not which of the
+    // sixteen a slope spends, which the `Real.spent` assertions above read.
     val trusted = derivative.theory.axioms.toSet
     for (name <- List(Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog, Derivative.Exponential)) withClue(name) {
       val spent = Derivation.axiomsOf(fact(name))

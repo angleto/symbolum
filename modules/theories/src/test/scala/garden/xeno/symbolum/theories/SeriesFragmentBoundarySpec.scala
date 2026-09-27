@@ -13,8 +13,8 @@ import org.scalatest.matchers.should.Matchers
  * answers in the fragment and refuses outside it. This file states them from the outside, with
  * series chosen because they **look** like members: a summand one letter away from a closed form,
  * a divergent series whose terms stay bounded, a factor that is zero written as a difference, a
- * value equal to the true one written in another spelling, and a value whose truth the theory
- * leaves open. For each, what is asserted is the one thing a caller may rely on: an answer is a
+ * value equal to the true one written in another spelling, and a value equal to it only through
+ * `inv 0 = 0`, which the chain proves and the procedure does not hold. For each, what is asserted is the one thing a caller may rely on: an answer is a
  * kernel theorem of exactly the goal or of its denial, resting on the chain's axioms and nothing
  * else, and anything else is a refusal whose standing does not claim a decision.
  */
@@ -138,23 +138,25 @@ class SeriesFragmentBoundarySpec extends AnyFlatSpec with Matchers {
       }
   }
 
-  "A value whose truth the theory leaves open" should "not be refused as a decision either" in {
-    // `inv 0` is unconstrained by the reals' sixteen axioms, so whether the series converges to
-    // `2 + inv 0` is neither provable nor refutable here. `numeric` counts `inv` among the field
-    // operations, so this is the one input where "both values are numbers" does not make differing
-    // normal forms two different numbers.
+  "A value equal to the true one only through inv 0 = 0" should "be proved or refused without a decision" in {
+    // The series converges to `2`, and `2 + inv 0` is `2` since the reals were constructed:
+    // `inv 0 = 0` is a theorem of `Cut`, so the claim is TRUE. What no procedure here holds is
+    // that theorem, so the two values differ as forms over the atom `inv 0` while being equal, and
+    // the one thing a caller may not be told is that the claim was decided against. A proof is
+    // welcome and `answer` checks it is exactly the goal.
     //
     // Found by this file on 2026-09-26 at `1bcad72b`: the answer was `NotEqualTo`, standing
-    // `Decided`, and the assertion was held pending. `Convergence.numeric` now counts a reciprocal
-    // or a divisor as a number only where LINARITH places it strictly on one side of nought, so
-    // this is `ValueUnidentified`; the wrapper came off in the change that repaired it.
+    // `Decided`. `Convergence.numeric` then learned to count a reciprocal as a number only where
+    // LINARITH places it strictly on one side of nought. This test also failed a PROOF until
+    // 2026-09-27, when the claim was still thought to be open; card `8fb6da8b` took that branch out
+    // once the construction had made the claim true.
     val text = "converges (Sum (\\i:num. Power ((1:real) / 2) i)) (2 + inv (0:real))"
-    val result = answer(text)
-    result match {
-      case Right(theorem) => fail(s"$text was proved: ${theorem.conclusion}")
-      case Left(error)    => info(s"refused, ${error.standing}: ${error.message}")
+    answer(text) match {
+      case Right(theorem) => info(s"proved: ${theorem.conclusion}")
+      case Left(error) =>
+        info(s"refused, ${error.standing}: ${error.message}")
+        error.standing should not be LogicError.Standing.Decided
     }
-    result.left.toOption.map(_.standing) should not be Some(LogicError.Standing.Decided)
   }
 
   "A value that differs, written as numbers" should "stay a decision, which is the control for the two above" in {
