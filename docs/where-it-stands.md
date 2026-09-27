@@ -1124,6 +1124,19 @@ that a statement about the limits. `Trigonometric.scala` is the derivation and i
 argument. It costs exactly what `EXP_ADD` costs and does not rest on it, which `TranscendentalSpec`
 asserts both ways.
 
+**`pi` is `Circle`, a link since 2026-09-27, and it is twice the zero of `cos` in `[0, 2]`.**
+`docs/adr/0056` is the decision. The zero is chosen, and the choice pins it because `cos` changes
+sign between `3/2` and `8/5` and falls strictly on `[0, 2]`. What makes `cos` computable to a sign at
+a written point is six polynomial bounds from zero on, `SIN_LE_LINE` to `COS_GE_SEXTIC`, the Taylor
+polynomials alternately above and below. Each is proved by monotonicity from the one before, over
+derivatives `Slope` builds and the kernel checks. `PI_BOUNDS` is `3 < pi < 16/5`. From `pi`: the
+quarter, half and whole turns (`COS_SHIFT` to `SIN_PERIODIC`), the values at `pi`, `sin` positive on
+`(0, pi)`, `cos` strictly decreasing and one-to-one on `[0, pi]`, and `acos`, whose specification
+`ACOS_SPEC` is the intermediate value theorem on `[0, pi]` read through the choice. Two constants,
+no axiom; the facts rest on choice, eta and infinity. **What is not here** is the complex numbers,
+which are card `92c368a1` and the reason this link exists, and the parity of `sin` and `cos`, which
+nothing has asked for yet.
+
 **Continuity at a point and the intermediate value theorem are `Continuity`, a link since
 2026-09-24, and the theorem is the fourth thing `COMPLETENESS` buys.** `continuous f x` is the
 epsilon-delta statement written out, the way `converges` is the epsilon-N one, and

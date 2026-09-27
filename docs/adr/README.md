@@ -86,3 +86,4 @@ the rejected option attractive, and they will.
 | [0053](0053-the-sixteen-are-theorems-and-real-is-the-cut-type.md) | The sixteen are theorems: `real` is the type of the cuts, and its constants are aliases | accepted, completes 0007, supersedes 0004 |
 | [0054](0054-a-fractran-step-is-a-fold-into-bool-and-a-run-is-reach.md) | A FRACTRAN step is a fold into `bool`, and a run is `REACH` | accepted |
 | [0055](0055-a-width-bound-that-says-something-is-on-an-expanding-graph.md) | A width bound that says something is on an expanding graph, and the one on the complete principle is a one-step argument | accepted, extends 0048 and corrects one sentence of it |
+| [0056](0056-pi-is-twice-the-zero-of-cos-and-the-bounds-are-taylor-polynomials.md) | pi is twice the zero of cos, and the bounds that pin it are Taylor polynomials reached through the derivative | accepted |

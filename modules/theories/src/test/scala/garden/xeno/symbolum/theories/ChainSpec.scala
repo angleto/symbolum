@@ -267,13 +267,17 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // for the same rule and nothing about its subject.
     // **And again the same day**, to `Integral`, the fourteenth: the gauge integral and the
     // fundamental theorem, which names `derivative` and so sits above it.
-    chain.widest shouldBe chain.integral
-    chain.widest.theory.constants.keySet shouldBe chain.integral.theory.constants.keySet
+    // **And again on 2026-09-27**, to `Circle`, the fifteenth: `pi` and `acos`, which read the
+    // derivative's monotonicity and nothing the integral declares, and are at the end for the same
+    // rule and nothing about their subject.
+    chain.widest shouldBe chain.circle
+    chain.widest.theory.constants.keySet shouldBe chain.circle.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
       chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
-      chain.listing, chain.folding, chain.root, chain.continuity, chain.resolving, chain.derivative
+      chain.listing, chain.folding, chain.root, chain.continuity, chain.resolving, chain.derivative,
+      chain.integral
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )
