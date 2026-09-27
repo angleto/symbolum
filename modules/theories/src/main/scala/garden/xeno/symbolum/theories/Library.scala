@@ -372,7 +372,10 @@ object Library {
         // The gauge integral and the fundamental theorem, 2026-09-25, in the change that added
         // them: a link of its own because an integral is a statement about every division of an
         // interval, where a derivative is one about a point.
-        collect("Integral", chain.integral.facts)
+        collect("Integral", chain.integral.facts) ++
+        // pi, the periods and acos, 2026-09-27, in the change that added them: a link of its own
+        // because pi is a constant, where the six bounds under it would have fitted `Derivative`.
+        collect("Circle", chain.circle.facts)
     )
 
   /** A library over developments a caller names itself. */

@@ -418,7 +418,18 @@ final class Chain private (
    * an integral is typed in. `docs/adr/0049` is why the integral is the gauge one. Three
    * constants, no axiom.
    */
-  val integral: Integral
+  val integral: Integral,
+
+  /**
+   * `pi`, the periods of `sin` and `cos`, and `acos`.
+   *
+   * A link rather than a development beside the chain because `pi` is a constant every question
+   * about an angle is typed in. It reads `derivative`, `continuous` and the square identity and
+   * nothing the integral declares; it is above that link only because every link that declares
+   * extends whatever the end is when it is built. `docs/adr/0057` is the decision. Two constants,
+   * no axiom.
+   */
+  val circle: Circle
 ) {
 
   /**
@@ -446,7 +457,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = integral
+  val widest: Signature = circle
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -718,6 +729,11 @@ object Chain {
       // and the sums are `Inductive`'s closure over `Product`'s triples.
       integral <- Integral.construct(
         classical, reals, magnitude, product, inductive, continuity, limit, derivative, derivative.theory, derivative.notation)
+
+      // Over the integral, extending the chain's end: `pi` is the zero of `cos` the derivative's
+      // monotonicity pins, and nothing the integral declares is read.
+      circle <- Circle.construct(
+        classical, reals, magnitude, ring, order, transcendental, continuity, derivative, integral.theory, integral.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -762,7 +778,8 @@ object Chain {
       logarithm,
       resolving,
       derivative,
-      integral
+      integral,
+      circle
     )
   }
 }

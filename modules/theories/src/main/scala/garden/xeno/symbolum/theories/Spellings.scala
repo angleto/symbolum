@@ -369,6 +369,10 @@ object Spellings {
       .delimited("fine_sum", 5, "\\operatorname{finesum}(#1, #2, #3, #4, #5)")
       .delimited("has_integral", 4, "\\operatorname{hasintegral}(#1, #2, #3, #4)")
       .delimited("integral", 3, "\\operatorname{integral}(#1, #2, #3)")
+      // `pi` is the letter, and `acos` an operator for the reason `cos` is one: `\\arccos y` is what
+      // the books write, with the argument bracketed by the context only where it needs it.
+      .delimited("pi", 0, "\\pi")
+      .operator("acos", 1, "\\arccos #1", Multiplicative + 5)
       /* ------------------------------------------------ the set defined by rules */
       // Both at arity ONE though each is written with two arguments, and that is the faithful
       // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set

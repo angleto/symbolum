@@ -85,7 +85,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       chain.derivative.facts.size +
       // The gauge integral, the same day. Added after this sum caught it, which is the sixth time
       // the comments here record: the link was in `Library.of` and its first full run went red.
-      chain.integral.facts.size
+      chain.integral.facts.size +
+      // pi, the periods and acos, 2026-09-27, in the change that added the link.
+      chain.circle.facts.size
 
     library.entries.size shouldBe expected
 
@@ -783,8 +785,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 922 and 919 with `EXP_ONE_IRRATIONAL`, 2026-09-27, measured as one entry, one name and one
     // fact by the run over 7a15f023: `CLAUDE.md`'s three figures move by one each, its binders
     // being two naturals. Plus one over the base above.
-    library.entries.size shouldBe 930
-    library.names.distinct.size shouldBe 927
+    // 951 and 948 with `Circle`, 2026-09-27: twenty-one facts under twenty-one names, none shared.
+    // `CLAUDE.md`'s figures move by **two** and **two**: `COS_DECREASING` and `COS_INJECTIVE` bind
+    // `x` and `y`, both real, and the other nineteen bind at most one. Measured over `2cb685b7` and
+    // merged as base 930 and 927 plus that delta.
+    library.entries.size shouldBe 951
+    library.names.distinct.size shouldBe 948
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
