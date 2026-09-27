@@ -24,8 +24,11 @@
 # not see a missing twin of a fact whose interval hypothesis is a derivative. Every restore verified.
 # Perturbation 2 ran then in another form, dropping the entry `Map("TAYLOR" -> "3b7c74be")` from
 # `Pending`, and went red on the census alone with the clue "TAYLOR". `TAYLOR_WITHIN` landed on 7.0
-# the same hour and emptied `Pending`, so the perturbation now renames the twin instead; in this form
-# it has not been run yet.
+# the same hour and emptied `Pending`, so the perturbation now renames the twin instead.
+#
+# RUN AGAIN, 2026-09-27, at 170c4b5f (7.0 at 676ae9f4 plus this harness). Control 5 of 5. 1 red on
+# the census alone, clue "CONTINUOUS_INTEGRAL". 2 red on the census alone, clue "TAYLOR". 3 green,
+# 5 of 5, as expected. Every restore verified, the tree clean afterwards.
 #
 # The strings are literal. perturb.sh REFUSES a perturbation that did not apply rather than running
 # against unperturbed code.
