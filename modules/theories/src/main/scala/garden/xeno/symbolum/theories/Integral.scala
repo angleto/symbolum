@@ -169,6 +169,25 @@ object Integral {
   /** [[DerivativeOfIntegral]] with continuity relative to `[a, b]`. */
   val DerivativeOfIntegralWithin: String = "DERIVATIVE_INTEGRAL_WITHIN"
 
+  /**
+   * A relative derivative on `[a, b]` is a two-sided one at the tangent extension: `f` extended past
+   * each end by its tangent line there has derivative `df x` at every point of `[a, b]`.
+   * `IntegralRulesWithin` derives it and the four forms below from it.
+   */
+  val TangentSlope: String = "DERIVATIVE_WITHIN_TANGENT"
+
+  /** [[HasParts]] with the derivatives relative to `[a, b]`, as a textbook states it. */
+  val HasPartsWithin: String = "HAS_INTEGRAL_PARTS_WITHIN"
+
+  /** [[Parts]] with the derivatives relative to `[a, b]`. */
+  val PartsWithin: String = "INTEGRAL_PARTS_WITHIN"
+
+  /** [[HasSubstitution]] with the inner derivative relative to `[a, b]`. */
+  val HasSubstitutionWithin: String = "HAS_INTEGRAL_SUBST_WITHIN"
+
+  /** [[Substitution]] with the inner derivative relative to `[a, b]`. */
+  val SubstitutionWithin: String = "INTEGRAL_SUBST_WITHIN"
+
   /** `integral f a b` is the integral wherever there is one. */
   val Unique: String = "INTEGRAL_UNIQUE"
 
@@ -200,9 +219,10 @@ object Integral {
   val Linear: String = "INTEGRAL_LINEAR"
 
   /**
-   * Integration by parts: with `f` and `g` having slopes `df` and `dg` on `[a, b]`, an integral `i`
-   * of `f * dg` makes `f b * g b - f a * g a - i` an integral of `df * g`. The product rule and
-   * [[HasFundamental]] integrate the sum, and [[HasLinear]] at one and minus one takes `f * dg` away.
+   * Integration by parts: with `f` and `g` having slopes `df` and `dg` at each point of `[a, b]`,
+   * two-sided at the ends, an integral `i` of `f * dg` makes `f b * g b - f a * g a - i` an integral
+   * of `df * g`. The product rule and [[HasFundamental]] integrate the sum, and [[HasLinear]] at one
+   * and minus one takes `f * dg` away. [[HasPartsWithin]] asks the slopes relative to `[a, b]`.
    */
   val HasParts: String = "HAS_INTEGRAL_PARTS"
 
@@ -210,9 +230,10 @@ object Integral {
   val Parts: String = "INTEGRAL_PARTS"
 
   /**
-   * The change of variables: with `g` having slope `dg` on `[a, b]` and `F` having slope `f`
-   * everywhere, `\x. f (g x) * dg x` has integral `F (g b) - F (g a)`. The chain rule and
-   * [[HasFundamental]] at `\y. F (g y)`.
+   * The change of variables: with `g` having slope `dg` at each point of `[a, b]`, two-sided at the
+   * ends, and `F` having slope `f` everywhere, `\x. f (g x) * dg x` has integral `F (g b) - F (g a)`.
+   * The chain rule and [[HasFundamental]] at `\y. F (g y)`. [[HasSubstitutionWithin]] asks `g`'s
+   * slope relative to `[a, b]`.
    */
   val HasSubstitution: String = "HAS_INTEGRAL_SUBST"
 
@@ -254,6 +275,28 @@ object Integral {
     DerivativeOfIntegral ->
       ("!f:real -> real. !a:real. !b:real. !x:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "a < x ==> x < b ==> derivative (\\y:real. integral f a y) x (f x)"),
+    TangentSlope ->
+      ("!f:real -> real. !df:real -> real. !a:real. !b:real. !x:real. a <= b ==> " +
+        "(!y:real. a <= y /\\ y <= b ==> derivative_within f a b y (df y)) ==> a <= x ==> x <= b ==> " +
+        "derivative (\\y:real. COND (y < a) (f a + df a * (y - a)) (COND (b < y) (f b + df b * (y - b)) (f y))) x (df x)"),
+    HasPartsWithin ->
+      ("!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !a:real. !b:real. !i:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within f a b x (df x)) ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within g a b x (dg x)) ==> " +
+        "has_integral (\\x:real. f x * dg x) a b i ==> has_integral (\\x:real. df x * g x) a b (f b * g b - f a * g a - i)"),
+    PartsWithin ->
+      ("!f:real -> real. !g:real -> real. !df:real -> real. !dg:real -> real. !a:real. !b:real. !i:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within f a b x (df x)) ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within g a b x (dg x)) ==> " +
+        "has_integral (\\x:real. f x * dg x) a b i ==> integral (\\x:real. df x * g x) a b = f b * g b - f a * g a - i"),
+    HasSubstitutionWithin ->
+      ("!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!y:real. derivative F y (f y)) ==> (!x:real. a <= x /\\ x <= b ==> derivative_within g a b x (dg x)) ==> " +
+        "has_integral (\\x:real. f (g x) * dg x) a b (F (g b) - F (g a))"),
+    SubstitutionWithin ->
+      ("!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. a <= b ==> " +
+        "(!y:real. derivative F y (f y)) ==> (!x:real. a <= x /\\ x <= b ==> derivative_within g a b x (dg x)) ==> " +
+        "integral (\\x:real. f (g x) * dg x) a b = F (g b) - F (g a)"),
     SumCongruence ->
       ("!f:real -> real. !g:real -> real. !d:real -> real. !a:real. !b:real. !s:real. " +
         "(!x:real. a <= x /\\ x <= b ==> f x = g x) ==> fine_sum g d a b s ==> fine_sum f d a b s"),
@@ -396,6 +439,24 @@ object Integral {
       relative <- IntegralWithin.prove(steps, IntegralWithin.Held(extension, agrees, piece, join, induction,
         hasDefinition, withinDefinition, continuous.hasIntegral, continuous.integralIsOne, unique,
         continuous.derivativeWithin, withinInterior))
+      derivativeDefinition <- derivative.definition(Derivative.DerivativeName)
+      constantSlope <- derivative.fact(Derivative.Constant)
+      identitySlope <- derivative.fact(Derivative.Identity)
+      linearSlope <- derivative.fact(Derivative.Linear)
+      localSlope <- derivative.fact(Derivative.Local)
+      withinCongruence <- relative.get(WithinCongruence).toRight(MissingDefinition(WithinCongruence))
+      hasCongruence <- relative.get(HasCongruence).toRight(MissingDefinition(HasCongruence))
+      relativeRules <- IntegralRulesWithin.prove(steps, IntegralRulesWithin.Held(reals, magnitude, classical, derivativeDefinition,
+        withinDefinition, constantSlope, identitySlope, linearSlope, localSlope, withinInterior, ofDerivative,
+        withinCongruence, hasCongruence, hasParts, hasSubstitution))
+      hasPartsWithin <- relativeRules.get(HasPartsWithin).toRight(MissingDefinition(HasPartsWithin))
+      hasSubstitutionWithin <- relativeRules.get(HasSubstitutionWithin).toRight(MissingDefinition(HasSubstitutionWithin))
+      partsWithin <- namedByUniqueness(steps, unique, hasPartsWithin, PartsWithinHypotheses,
+        List("f", "g", "df", "dg").map(Term.variable(_, Functions)) ++ List("a", "b", "i").map(Term.variable(_, Reals)),
+        "\\x:real. (df:real -> real) x * (g:real -> real) x", "(f:real -> real) b * (g:real -> real) b - f a * g a - i:real")
+      substitutionWithin <- namedByUniqueness(steps, unique, hasSubstitutionWithin, SubstitutionWithinHypotheses,
+        List("Fn", "f", "g", "dg").map(Term.variable(_, Functions)) ++ List("a", "b").map(Term.variable(_, Reals)),
+        "\\x:real. (f:real -> real) ((g:real -> real) x) * (dg:real -> real) x", "(Fn:real -> real) ((g:real -> real) b) - Fn (g a)")
 
       facts = Map[String, Kernel.Thm](
         Piece -> piece,
@@ -421,7 +482,7 @@ object Integral {
         Parts -> parts,
         HasSubstitution -> hasSubstitution,
         Substitution -> substitution
-      ) ++ relative
+      ) ++ relative ++ relativeRules + (PartsWithin -> partsWithin) + (SubstitutionWithin -> substitutionWithin)
 
       // Each statement checked against the text a person reads it by: a development that built
       // something other than what it says it built must not be handed out.
@@ -1636,6 +1697,15 @@ object Integral {
     "!x:real. a:real <= x /\\ x <= b:real ==> derivative (g:real -> real) x ((dg:real -> real) x)")
   private val PartsHypotheses: List[String] =
     "a:real <= b:real" :: PartsSlopes ::: List("has_integral (\\x:real. (f:real -> real) x * (dg:real -> real) x) a b i")
+  private val PartsWithinHypotheses: List[String] = List(
+    "a:real <= b:real",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative_within (f:real -> real) a b x ((df:real -> real) x)",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative_within (g:real -> real) a b x ((dg:real -> real) x)",
+    "has_integral (\\x:real. (f:real -> real) x * (dg:real -> real) x) a b i")
+  private val SubstitutionWithinHypotheses: List[String] = List(
+    "a:real <= b:real",
+    "!y:real. derivative (Fn:real -> real) y ((f:real -> real) y)",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative_within (g:real -> real) a b x ((dg:real -> real) x)")
   private val SubstitutionHypotheses: List[String] = List(
     "a:real <= b:real",
     "!y:real. derivative (Fn:real -> real) y ((f:real -> real) y)",

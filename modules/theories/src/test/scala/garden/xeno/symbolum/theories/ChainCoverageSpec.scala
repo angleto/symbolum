@@ -96,7 +96,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Truth" -> InTheChain,
     // Beside the chain and declaring nothing until 2026-09-25, and a link since: a statement about
     // every refutation of a family is written with `RES_REFUTATION` and `RES_WIDTH`, which have to
-    // be where the links above can see them. `ResolvingSpec` asserts the four constants.
+    // be where the links above can see them. `ResolvingSpec` asserts the constants.
     "Resolving" -> InTheChain,
     "Primes" -> InTheChain,
     "Limit" -> InTheChain,
@@ -205,13 +205,17 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // statement needs, `NUM_TOTIENT`, is `Modular`'s.
     "Euler" -> NotADevelopment,
 
-    // Not a development, for `Freshman`'s reason: the p-adic valuation, whose fourteen facts
+    // Not a development, for `Freshman`'s reason: the p-adic valuation, whose facts
     // `Primes` publishes under names it declares. The constant, `NUM_VALUATION`, is `Modular`'s.
     "Valuation" -> NotADevelopment,
 
     // Not a development, for `Freshman`'s reason: the integral's forms with continuity relative to
     // `[a, b]` and the three congruences they are carried by, which `Integral` publishes.
     "IntegralWithin" -> NotADevelopment,
+
+    // Not a development, for `Freshman`'s reason: parts and the change of variables with the
+    // derivatives relative to `[a, b]`, and the tangent extension they are carried by.
+    "IntegralRulesWithin" -> NotADevelopment,
 
     // Not a development, for `Euler`'s reason: Wilson's theorem and the product over paired indices
     // it needs, whose facts `Primes` publishes under names it declares. 2026-09-26.

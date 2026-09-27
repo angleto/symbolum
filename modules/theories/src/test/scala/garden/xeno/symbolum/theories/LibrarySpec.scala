@@ -761,7 +761,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 821 and 818 with the reals built from the cuts, 2026-09-26: the seven primitives of `Real`
     // are defined as the cut operations they name, so seven definitional entries under seven names
     // that were declared and not defined before. `CLAUDE.md`'s figures do not move: a definition
-    // binds no leading quantifier. Tip plus this branch's delta.
+    // binds no leading quantifier.
     // 822 and 819 with `TAYLOR_WITHIN`, 2026-09-27, derived before the run: one fact, one name,
     // and `CLAUDE.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
     // 917 and 914 with the rationals and the cuts collected, 2026-09-27, card `e4a90d43`: 44 facts
@@ -777,8 +777,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 2026-09-27, derived before the run: three facts under three names, two in `Continuity` and one
     // in `Derivative`. `CLAUDE.md`'s figures move by **three** and **three**: each binds two
     // functions among two or more leading quantifiers.
-    library.entries.size shouldBe 924
-    library.names.distinct.size shouldBe 921
+    // 929 and 926 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
+    // before the run: five facts in `Integral` under five names, none shared. `CLAUDE.md`'s figures
+    // move by **five** and **five**. Base 924 and 921 plus that branch's delta.
+    library.entries.size shouldBe 929
+    library.names.distinct.size shouldBe 926
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

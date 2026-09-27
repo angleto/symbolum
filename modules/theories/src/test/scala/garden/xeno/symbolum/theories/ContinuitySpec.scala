@@ -407,7 +407,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(fact(Continuity.Uniform), gluing) shouldBe gluing
   }
 
-  it should "spend in each compactness fact exactly what the intermediate value theorem spends, all sixteen and the choice" in {
+  it should "spend in each compactness fact exactly what the intermediate value theorem spends, every axiom of the reals and the choice" in {
     // The two assertions above for these five, `contains COMPLETENESS` and `spent -- sixteen = {SELECT}`,
     // are an equality outside the reals and a ceiling inside them: a derivation reaching five of the
     // sixteen would pass both, while the prose beside them (this file's comments, `CLAUDE.md`, the

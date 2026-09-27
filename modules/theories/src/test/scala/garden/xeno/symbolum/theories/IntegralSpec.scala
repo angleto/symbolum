@@ -57,7 +57,7 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
 
   /* --------------------------------------------------------------- what it cost */
 
-  "The integral" should "add its three constants and no axiom to the theory below it" in {
+  "The integral" should "add its constants and no axiom to the theory below it" in {
     val below = chain.derivative.theory
     integral.theory.axioms shouldBe below.axioms
     (integral.theory.constants.keySet -- below.constants.keySet) shouldBe
