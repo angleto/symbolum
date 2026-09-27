@@ -383,6 +383,8 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "RestsOn" -> NotADevelopment,
     "Signature" -> NotADevelopment,
     "Spellings" -> NotADevelopment,
+    // The Gram decomposition behind `Linarith`'s squares, `docs/adr/0056`: untrusted, like `LinearForm`.
+    "SumOfSquares" -> NotADevelopment,
     "Theorems" -> NotADevelopment
   )
 

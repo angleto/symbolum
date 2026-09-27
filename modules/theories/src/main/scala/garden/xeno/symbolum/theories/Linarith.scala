@@ -318,12 +318,12 @@ final class Linarith private (
     // and no counter is wanted. Both messages read the same `factorsOf` and both are covered by
     // the one guard, which is worth saying because there is one guard and two sentences.
     //
-    // A square of one unknown is not named while a product of different unknowns is out of reach
-    // too: the completed square covers an atom that is one unknown times itself, so in
-    // `x * x + y * y >= 2 * (x * y)` the obstacle is `x * y`, and naming `x * x` first, which is
-    // what term order did until the verification of card `bacfaba5` on 2026-09-26, sent the
-    // caller to repair the half the procedure had already handled. A square is named only when
-    // nothing else is out of reach.
+    // Which atom to name, when several are out of reach, is the one the procedure is furthest from.
+    // An atom of more than two factors comes first, since neither source of squares reaches past
+    // degree two and every other obstacle is secondary to it. Then a product of different unknowns
+    // before a square of one: naming `x * x` in `x * x + y * y >= 2 * (x * y)`, which is what term
+    // order did until the verification of card `bacfaba5` on 2026-09-26, sent the caller to repair
+    // the half the procedure had already handled.
     def isSquare(atom: Term): Boolean = LinearForm.factorsOf(atom) match {
       case Vector(left, right) => left == right
       case _ => false
@@ -333,8 +333,10 @@ final class Linarith private (
       .toVector
       .sorted(using Term.ordering)
       .filter(atom => LinearForm.factorsOf(atom).length > 1)
-    val outOfReach = products.find(atom => !isSquare(atom)).orElse(products.headOption)
-    val squares = goalAtoms.filter(isSquare)
+    val outOfReach = products
+      .find(atom => LinearForm.factorsOf(atom).length > 2)
+      .orElse(products.find(atom => !isSquare(atom)))
+      .orElse(products.headOption)
 
     // A certificate that was found means the search had what it needed, so a sentence about the
     // degree would replace the one true thing known with a false one.
@@ -346,15 +348,19 @@ final class Linarith private (
     outOfReach match {
       case _ if found => refusal
 
+      // Without hypotheses the squares are the only facts there are, so the sentence says what they
+      // reach. It said until `docs/adr/0056` that the only one was a square completed over one
+      // unknown times itself, which stopped being true in the change that made `x * y` reachable.
       case Some(atom) if LinearForm.obstacleIn(reals, conclusion).isEmpty && facts.isEmpty =>
+        val degree = LinearForm.factorsOf(atom).length
         NotOfForm(
-          s"a goal with a hypothesis, or one a square settles: ${reals.show(atom)} is a product " +
-            s"of ${LinearForm.factorsOf(atom).length} unknowns, and this goal has no hypotheses " +
-            "at all, so the pool the products are built from is empty and no degree of them " +
-            "exists. Without hypotheses the only fact available is a square completed over an " +
-            "atom that is one unknown times itself, and " +
-            (if (squares.isEmpty) "this goal has none"
-             else "the ones this goal holds do not reach it"),
+          s"a goal with a hypothesis, or one a sum of squares settles: ${reals.show(atom)} is a " +
+            s"product of $degree unknowns, and this goal has no hypotheses at all, so the pool " +
+            "the products are built from is empty and no degree of them exists. Without " +
+            "hypotheses the only facts available are squares of linear forms over the goal's " +
+            "atoms, and " +
+            (if (degree > 2) "those reach degree two"
+             else "this goal's quadratic part is not a sum of them with what its strictness needs"),
           conclusion
         )
 
@@ -401,11 +407,14 @@ final class Linarith private (
    * degree: `a * (2 - a) <= 1` was refused for that reason and not for a degree, which is the
    * measurement that record is taken with.
    *
-   * What it emits is the completion of the square. Over an atom `x * x` carrying `alpha` and the
-   * atom `x` carrying `beta` in the same form, `0 <= (x + beta / (2 * alpha)) * (x + ...)` is
-   * `Order.SQUARE_NONNEG` at one argument, and that is the fact. Exact rational arithmetic and no
-   * search: the quadratic case is linear algebra, and what wants a semidefinite program is the
-   * general sum of squares, which is a second source behind this same interface and is not here.
+   * What it emits comes from two sources, and each fact is `Order.SQUARE_NONNEG` at one argument.
+   * The first completes the square over one unknown: over an atom `x * x` carrying `alpha` and the
+   * atom `x` carrying `beta` in the same form, `0 <= (x + beta / (2 * alpha)) * (x + ...)`. The
+   * second, since `docs/adr/0056`, is [[SumOfSquares]]: the form's Gram matrix over the unknowns and
+   * the constant, decomposed in exact arithmetic, which reaches the cross terms the first cannot, so
+   * `x * x + y * y >= 2 * (x * y)` is settled by `0 <= (x - y) * (x - y)`. Both are linear algebra
+   * rather than a search, because over monomials of degree one the Gram matrix is unique; what would
+   * want a semidefinite program is a degree past two, and neither source reaches it.
    *
    * **Nothing has to normalise the theorem before it is read.** [[LinearForm.of]] multiplies a
    * product of two unknowns out rather than keying it whole, so `(x + c) * (x + c)` arrives as
@@ -433,11 +442,18 @@ final class Linarith private (
       if !leading.isZero
     } yield (factors(0), form.at(factors(0)) / (leading + leading))
 
-    val built = completions.distinct.flatMap { case (base, shift) =>
-      val argument =
-        if (shift.isZero) Right(base)
-        else Linarith.constant(reals, shift).flatMap(Linarith.sum(reals, base, _))
+    val completed = completions.distinct.map { case (base, shift) =>
+      if (shift.isZero) Right(base)
+      else Linarith.constant(reals, shift).flatMap(Linarith.sum(reals, base, _))
+    }
 
+    val summed = forms
+      .flatMap(SumOfSquares.of(_, LinearForm.factorsOf))
+      .map(_.base)
+      .distinct
+      .map(termOf)
+
+    val built = (completed ++ summed).flatMap { argument =>
       (for {
         term <- argument
         lemma <- order.squareNonNegative
@@ -447,6 +463,37 @@ final class Linarith private (
     }
 
     built.distinctBy(_._1.form)
+  }
+
+  /**
+   * A linear form as a term the form reader reads back as that form: each unknown at its
+   * coefficient, in the order the atoms sort in, and the constant last when it is not zero.
+   *
+   * A negative coefficient after the first is written as a subtraction, so the base of the square
+   * `x * x + y * y >= 2 * (x * y)` is settled with prints as `x - y` and not as `x + --1 * y`. That
+   * is for the reader of `Linarith.Support.squares`, which carries this term; the form reader
+   * gives the same form back either way.
+   */
+  private def termOf(form: LinearForm): Either[LogicError, Term] = {
+    def scaled(coefficient: Rational, atom: Term): Either[LogicError, Term] =
+      if (coefficient == Rational.one) Right(atom)
+      else Linarith.constant(reals, coefficient).flatMap(Linarith.product(reals, _, atom))
+
+    val parts = form.atoms.toVector.sorted(using Term.ordering).map(atom => (form.at(atom), Option(atom))) ++
+      (if (form.constant.isZero) Vector.empty else Vector((form.constant, None)))
+
+    def part(coefficient: Rational, atom: Option[Term]): Either[LogicError, Term] =
+      atom.fold(Linarith.constant(reals, coefficient))(scaled(coefficient, _))
+
+    parts.headOption match {
+      case None => Linarith.constant(reals, Rational.zero)
+      case Some((coefficient, atom)) =>
+        parts.tail.foldLeft(part(coefficient, atom)) { case (acc, (next, nextAtom)) =>
+          if (next.isNegative)
+            acc.flatMap(left => part(-next, nextAtom).flatMap(Linarith.difference(reals, left, _)))
+          else acc.flatMap(left => part(next, nextAtom).flatMap(Linarith.sum(reals, left, _)))
+        }
+    }
   }
 
   /**
