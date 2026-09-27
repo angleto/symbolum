@@ -402,7 +402,7 @@ to live. `WhatAClaimCosts` is the first one that does.
 
 Everything this system asks anyone to believe:
 
-1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1220 lines. The
+1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1240 lines. The
    directory also holds a printer, the refusal surface, the proof record and the reader of which
    commit the classes were built from, which are not counted and cannot construct a theorem, which
    a test checks rather than claims. `Kernel.Thm` is a class
