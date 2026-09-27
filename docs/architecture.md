@@ -28,7 +28,7 @@ rationals; a development over the reals takes all three since then, where it too
 
 | What | Where | Size |
 |---|---|---|
-| The kernel | `Kernel`, `Term`, `Type`, `Theory` | under 1220 lines, and see below for what that number does and does not say |
+| The kernel | `Kernel`, `Term`, `Type`, `Theory` | under 1240 lines, and see below for what that number does and does not say |
 | Beside it, and not counted | `Printer`, `KernelError`, `Derivation`, `Proof` | display, refusals, the proof record and the writing of it out: none can build a theorem |
 | The axioms about the formalism | `Classical.Axioms` in `modules/logic/.../Classical.scala` | 2 propositions, both from HOL Light's `class.ml`: choice, `SELECT_AX` with `select` for a character this lexer cannot read, and eta, `ETA_AX` over `'a` and `'b` |
 | The axiom about a type nothing else interprets | `Natural.Axioms` in `modules/theories/.../Natural.scala` | infinity, in the form the naturals are carved out of rather than the one upstream asserts |
