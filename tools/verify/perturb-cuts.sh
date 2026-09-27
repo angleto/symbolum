@@ -16,10 +16,22 @@
 #    consequence refuses it.
 # 5. `CUT_MUL` negates the core in the mixed-sign branches. Leaving one un-negated gives a product
 #    that is not commutative across signs, and the commutativity derivation refuses.
+# 6. Written by the verification of c72f04ee, for `CutSignSpec`, which unfolds `CUT_MUL` and
+#    `CUT_INV` at one and minus one and compares the branch each picks with the text it should
+#    pick. Swapping the factors of the core in the non-negative-by-negative branch is a product
+#    with the same value, so the laws may still be derived; what must go red is `CutSignSpec`'s
+#    reading of that branch. This one runs `CutSignSpec` beside `CutSpec`, so the log says whether
+#    the red came from the construction or from the reading.
 #
 # CutSpec is the spec: every fact is derived inside `Cut.construct`, so a refusal aborts the suite at
 # construction, which is the red this expects. The control before must be green. Each target was
 # counted before the first run and occurs once in `Cut.scala`.
+#
+# WHAT WAS SEEN, 2026-09-27, for 6 alone at 7a15f023: the construction did NOT refuse, CutSpec was
+# green at 12, and CutSignSpec went red at exactly one test, the non-negative-by-negative branch,
+# reading `CUT_NEG (CUT_PMUL (CUT_NEG (CUT_NEG 1)) 1)` where the text says
+# `CUT_NEG (CUT_PMUL 1 (CUT_NEG (CUT_NEG 1)))`; restore verified. So the laws do not see the order
+# of the core's factors in a branch, which is right since the value is the same, and the reading does.
 #
 # WHAT WAS SEEN, 2026-09-26, with the product and the inverse: control green at 12 tests, all five
 # perturbed runs aborted construction, restore verified after each. 1 and 2 as recorded below. 3
@@ -89,3 +101,10 @@ echo "################ 5-a-mixed-sign-branch-unnegated" >> "$LOG"
   '"(COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_PMUL x y) (CUT_PMUL x (CUT_NEG y))) " +' \
   -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 5-a-mixed-sign-branch-unnegated" >> "$LOG"
+
+echo "################ 6-a-mixed-sign-branch-with-its-factors-swapped" >> "$LOG"
+"$P" "$SOURCE" \
+  '"(COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_PMUL x y) (CUT_NEG (CUT_PMUL x (CUT_NEG y)))) " +' \
+  '"(COND (CUT_LE (CUT_OF_RAT RAT_ZERO) y) (CUT_PMUL x y) (CUT_NEG (CUT_PMUL (CUT_NEG y) x))) " +' \
+  -- ./tools/sbt -batch "$SPEC garden.xeno.symbolum.theories.CutSignSpec" >> "$LOG" 2>&1
+echo "### exit $? for 6-a-mixed-sign-branch-with-its-factors-swapped" >> "$LOG"

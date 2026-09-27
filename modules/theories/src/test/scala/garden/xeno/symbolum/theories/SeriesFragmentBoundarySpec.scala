@@ -168,4 +168,94 @@ class SeriesFragmentBoundarySpec extends AnyFlatSpec with Matchers {
       }
     }
   }
+
+  // Second round of the verification of card `d3fd8018`, 2026-09-27, over the repair in `ba68dcbc`:
+  // `Convergence.numeric` counts a reciprocal or a divisor as a number only where LINARITH places it
+  // strictly on one side of nought. The attack is on the neighbours of the one case the repair was
+  // written for. Every value in the first group is 2 in the constructed reals, where `inv 0 = 0` is
+  // a theorem (the last test of this file), so the only wrong answer there is a decision that it is
+  // not; a proof is right and a refusal that claims no decision is sound.
+  private def outcome(text: String): String = answer(text) match {
+    case Right(_)    => "proved"
+    case Left(error) => s"${error.getClass.getSimpleName}, ${error.standing}"
+  }
+
+  private def series(value: String): String = s"converges (Sum (\\i:num. Power ((1:real) / 2) i)) ($value)"
+
+  private def neverDecided(value: String): Unit = {
+    val text = series(value)
+    val result = answer(text)
+    info(s"$value: ${result.fold(e => s"${e.getClass.getSimpleName}, ${e.standing}", _ => "proved")}")
+    result match {
+      case Right(_)    => ()
+      case Left(error) =>
+        withClue(s"$text: ${error.message}\n") { error.standing should not be LogicError.Standing.Decided }
+    }
+  }
+
+  "A value that is 2 once a reciprocal of nought is read" should "never be refused as a decision" in {
+    Vector(
+      "2 + 1 / (0:real)", "2 + inv (1 - (1:real))", "2 + inv (inv (0:real))",
+      "2 + inv (inv (2:real) - inv 2)", "2 + inv (2 * inv (2:real) - 1)", "2 + 0 * inv (0:real)",
+      "2 + (3:real) / (1 - 1)", "(1:real) + 1 + inv (0 * 3)"
+    ).foreach(neverDecided)
+  }
+
+  "A value that is 2 with every divisor placed" should "never be refused as a decision, and the plain one be proved" in {
+    Vector(
+      "4 * inv ((1:real) + 1)", "inv (1 - inv (2:real))", "inv (inv (3:real) + inv 6)",
+      "2 * inv (inv (2:real) * 2)", "inv (inv (inv (inv (2:real))))"
+    ).foreach(neverDecided)
+    answer(series("4 * inv ((1:real) + 1)")).isRight shouldBe true
+  }
+
+  "A value that is not 2 over a divisor LINARITH places" should "still be a decision" in {
+    Vector("inv ((1:real) + 1)", "3 * inv ((1:real) + 1)").foreach { value =>
+      val text = series(value)
+      info(s"$value: ${outcome(text)}")
+      answer(text) match {
+        case Left(error: NotEqualTo) => error.standing shouldBe LogicError.Standing.Decided
+        case other                   => fail(s"$text: expected a decided NotEqualTo, got $other")
+      }
+    }
+  }
+
+  "A value that differs only inside a reciprocal" should "be answered by the discipline, whatever it is" in {
+    // Not 2 in any reading: 3 + inv 0 is 3 in the construction, and the others are 3, 7 and 8.
+    // What is recorded is which of a decision and a refusal each gets; a proof would be a kernel
+    // theorem of a false statement, and `answer` checks the conclusion.
+    Vector("3 + inv (0:real)", "1 + inv (inv (3:real) + inv 6)", "1 + inv (inv (2:real) * inv 3)",
+      "inv (inv (8:real))").foreach { value =>
+      val text = series(value)
+      info(s"$value: ${outcome(text)}")
+      answer(text).isRight shouldBe false
+    }
+  }
+
+  "inv 0 = 0" should "be a theorem of the reals as the chain builds them, so the case above is not open" in {
+    // `docs/adr/0053`: `inv` is `CUT_INV` and `real_zero` is `CUT_OF_RAT RAT_ZERO` by definition, and
+    // `CUT_INV_ZERO` is proved. Unfolding the two aliases, as `Real.construct` does for the sixteen,
+    // carries that fact to the reals' own names.
+    val reals = Real.standard
+    val cuts = Real.constructed.cuts
+    val derived = for {
+      inverse <- reals.definition(Real.Inverse)
+      zero <- reals.definition(Real.Zero)
+      rules <- Rewrite.Rule.all(cuts.logic, Vector(inverse, zero))
+      conversion = Rewrite.normaliser(rules, Vector.empty, Ordering.by[Term, String](_.toString))
+      statement <- reals.proposition("inv (0:real) = 0")
+      unfolded <- conversion(statement)
+      fact <- cuts.fact(Cut.InverseZero)
+      back <- Conv.sym(unfolded)
+      theorem <- LogicError.lift(Kernel.eqMp(back, fact))
+    } yield (statement, theorem)
+    derived match {
+      case Left(error) => fail(error.message)
+      case Right((statement, theorem)) =>
+        theorem.conclusion shouldBe statement
+        theorem.hypotheses shouldBe empty
+        Derivation.axiomsOf(theorem).diff(reals.theory.axioms.toSet) shouldBe empty
+        info(s"derived: ${reals.show(theorem.conclusion)}")
+    }
+  }
 }
