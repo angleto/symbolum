@@ -191,6 +191,28 @@ object Continuity {
   val Product: String = "CONTINUOUS_MUL"
 
   /**
+   * `|- !f g x. continuous f x ==> continuous g x ==> continuous (\y. f y + g y) x`
+   *
+   * The sum of two functions continuous at a point is continuous there. It is [[Linear]] at the
+   * coefficients one and one, and nothing more is proved for it: the kernel's abstraction rule
+   * carries `1 * f y + 1 * g y = f y + g y` under the binder, so the function is the sum as written
+   * and no extensionality is spent.
+   */
+  val Sum: String = "CONTINUOUS_ADD"
+
+  /**
+   * `|- !f g x. continuous g x ==> continuous f (g x) ==> continuous (\y. f (g y)) x`
+   *
+   * A function continuous at `g x` composed with a function continuous at `x` is continuous at `x`.
+   * The radius `f` answers at `g x` is handed to `g` as its tolerance, which is the whole argument
+   * and why no share of `e` is taken; it compares nothing, and so reaches no axiom, which
+   * `ContinuitySpec` asserts. With [[Sum]], [[Product]], [[Constant]] and [[Identity]] it
+   * is what makes a polynomial, or a continuous function of one, continuous by composing lemmas
+   * rather than by a derivation of its own.
+   */
+  val Compose: String = "CONTINUOUS_COMPOSE"
+
+  /**
    * `f` continuous on `[a, b]` is uniformly continuous there: for every tolerance one radius serves
    * every pair of points of the interval. Heine and Cantor's theorem, and the gluing's third use,
    * over "one radius serves every point of `[u, v]` against every point at all", which is the form
@@ -268,6 +290,10 @@ object Continuity {
         "continuous (\\y:real. p * f y + q * g y) x"),
     Product ->
       "!f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous g x ==> continuous (\\y:real. f y * g y) x",
+    Sum ->
+      "!f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous g x ==> continuous (\\y:real. f y + g y) x",
+    Compose ->
+      "!f:real -> real. !g:real -> real. !x:real. continuous g x ==> continuous f (g x) ==> continuous (\\y:real. f (g y)) x",
     Uniform ->
       ("!f:real -> real. !a:real. !b:real. !e:real. a <= b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "0 < e ==> ?d:real. 0 < d /\\ (!x:real. !y:real. a <= x /\\ x <= b /\\ a <= y /\\ y <= b /\\ " +
@@ -335,8 +361,11 @@ object Continuity {
       extremes <- ExtremeValue.prove(steps, reals, magnitude, classical)
       linear <- linearCombination(steps, reals, magnitude)
       product <- productOfTwo(steps, reals, magnitude)
+      sum <- sumOfTwo(steps, linear)
+      composed <- composition(steps, reals, magnitude)
 
-      twoSided = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate, Linear -> linear, Product -> product) ++
+      twoSided = Map(Constant -> constant, Identity -> identity, IntermediateValue -> intermediate, Linear -> linear, Product -> product,
+        Sum -> sum, Compose -> composed) ++
         extremes
       relative <- Within.prove(steps, withinDefinition, reals, magnitude, classical, twoSided)
       facts = twoSided ++ relative
@@ -660,6 +689,90 @@ object Continuity {
       function <- Parser.term(theory, notation, "\\y:real. p:real * (f:real -> real) y + q:real * (g:real -> real) y", Functions)
       result <- folded(function, x, statement)
       closed <- rules.disch(gHyp, result).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x, p, q)))
+    } yield closed
+  }
+
+  /**
+   * `|- (\y. 1 * f y + 1 * g y) = (\y. f y + g y)`, by the abstraction rule over the pointwise
+   * equation, at the two functions named `f` and `g`. [[Sum]] and `Derivative.Sum` both read their
+   * function off [[Linear]]'s this way.
+   */
+  private[theories] def unitCombination(steps: Steps): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val y = Term.variable("y", Reals)
+    for {
+      pointwise <- at(lemma("!A:real B:real. 1 * A + 1 * B = A + B"), "(f:real -> real) y", "(g:real -> real) y")
+      lambdas <- LogicError.lift(Kernel.abs(y, pointwise))
+    } yield lambdas
+  }
+
+  /** [[Sum]]: [[Linear]] at one and one, its function rewritten by [[unitCombination]]. */
+  private def sumOfTwo(steps: Steps, linear: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val x = Term.variable("x", Reals)
+    for {
+      one <- real("1:real")
+      instance <- rules.specAll(linear, List(f, g, x, one, one))
+      fHyp <- proposition("continuous (f:real -> real) x")
+      gHyp <- proposition("continuous (g:real -> real) x")
+      combined <- mp(instance, LogicError.lift(Kernel.assume(fHyp)), LogicError.lift(Kernel.assume(gHyp)))
+      lambdas <- unitCombination(steps)
+      continuous <- Parser.term(theory, notation, Continuous, Type.fun(Functions, Type.fun(Reals, Type.Bool)))
+      atX <- Conv.apTerm(continuous, lambdas).flatMap(Conv.apThm(_, x))
+      summed <- LogicError.lift(Kernel.eqMp(atX, combined))
+      closed <- rules.disch(gHyp, summed).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x)))
+    } yield closed
+  }
+
+  /**
+   * [[Compose]]: `f` at `g x` answers `e` with a radius `d1`, `g` at `x` answers `d1` with a radius
+   * `d2`, and within `d2` of `x` the value `g y` is within `d1` of `g x`, where `f` is within `e`.
+   */
+  private def composition(steps: Steps, reals: RealTheory, magnitude: Magnitude): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val x = Term.variable("x", Reals)
+    val e = Term.variable("e", Reals)
+    val y = Term.variable("y", Reals)
+    val d1 = Term.variable("d1", Reals)
+    val d2 = Term.variable("d2", Reals)
+    for {
+      gHyp <- proposition("continuous (g:real -> real) x")
+      fHyp <- proposition("continuous (f:real -> real) ((g:real -> real) x)")
+      gx <- real("(g:real -> real) x")
+      gAt <- LogicError.lift(Kernel.assume(gHyp)).flatMap(t => unfolded(g, x).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, t))))
+      fAt <- LogicError.lift(Kernel.assume(fHyp)).flatMap(t => unfolded(f, gx).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, t))))
+
+      positive <- proposition("0 < e:real")
+      ePositive <- LogicError.lift(Kernel.assume(positive))
+      nearF <- rules.spec(e, fAt).flatMap(rules.mp(_, ePositive))
+      radiusF <- assume("0 < d1:real /\\ (!y:real. abs (y - (g:real -> real) x) < d1 ==> abs ((f:real -> real) y - f (g x)) < e:real)")
+      d1Positive <- rules.conjElim1(radiusF)
+      insideF <- rules.conjElim2(radiusF)
+      nearG <- rules.spec(d1, gAt).flatMap(rules.mp(_, d1Positive))
+      radiusG <- assume("0 < d2:real /\\ (!y:real. abs (y - x:real) < d2 ==> abs ((g:real -> real) y - g x) < d1:real)")
+      d2Positive <- rules.conjElim1(radiusG)
+      insideG <- rules.conjElim2(radiusG)
+
+      near <- proposition("abs (y - x:real) < d2:real")
+      assumedNear <- LogicError.lift(Kernel.assume(near))
+      gClose <- rules.spec(y, insideG).flatMap(rules.mp(_, assumedNear))
+      gy <- real("(g:real -> real) y")
+      fClose <- rules.spec(gy, insideF).flatMap(rules.mp(_, gClose))
+
+      everyY <- rules.disch(near, fClose).flatMap(rules.gen(y, _))
+      radius <- rules.conjIntro(d2Positive, everyY)
+      witnessed <- existential("?d:real. 0 < d /\\ (!y:real. abs (y - x:real) < d ==> abs ((f:real -> real) ((g:real -> real) y) - f (g x)) < e:real)")
+        .flatMap(rules.existsIntro(_, d2, radius))
+      withoutG <- rules.existsElim(nearG, d2, witnessed)
+      withoutF <- rules.existsElim(nearF, d1, withoutG)
+      statement <- rules.disch(positive, withoutF).flatMap(rules.gen(e, _))
+      function <- Parser.term(theory, notation, "\\y:real. (f:real -> real) ((g:real -> real) y)", Functions)
+      result <- folded(function, x, statement)
+      closed <- rules.disch(fHyp, result).flatMap(rules.disch(gHyp, _)).flatMap(rules.genAll(_, List(f, g, x)))
     } yield closed
   }
 

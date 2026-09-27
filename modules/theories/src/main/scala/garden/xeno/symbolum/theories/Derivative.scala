@@ -168,6 +168,15 @@ object Derivative {
   val Linear: String = "DERIVATIVE_LINEAR"
 
   /**
+   * `|- !f g x m n. derivative f x m ==> derivative g x n ==> derivative (\y. f y + g y) x (m + n)`
+   *
+   * The sum rule. [[Linear]] at the coefficients one and one, with the function and the slope
+   * rewritten, which is `Continuity.Sum`'s arrangement: the abstraction rule carries the pointwise
+   * equation under the binder, so no extensionality is spent and nothing is re-proved.
+   */
+  val Sum: String = "DERIVATIVE_ADD"
+
+  /**
    * `|- !f x m n. derivative f x m ==> derivative f x n ==> m = n`
    *
    * A function has at most one derivative at a point. It is what lets the definition be read as
@@ -341,6 +350,9 @@ object Derivative {
     Linear ->
       ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. !p:real. !q:real. " +
         "derivative f x m ==> derivative g x n ==> derivative (\\y:real. p * f y + q * g y) x (p * m + q * n)"),
+    Sum ->
+      ("!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. " +
+        "derivative f x m ==> derivative g x n ==> derivative (\\y:real. f y + g y) x (m + n)"),
     Unique -> "!f:real -> real. !x:real. !m:real. !n:real. derivative f x m ==> derivative f x n ==> m = n",
     MeanValue ->
       ("!f:real -> real. !a:real. !b:real. a < b ==> (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
@@ -454,6 +466,7 @@ object Derivative {
       continuousLinear <- continuity.fact(Continuity.Linear)
       continuousIdentity <- continuity.fact(Continuity.Identity)
       meanValue <- meanValueTheorem(steps, continuity, continuousLinear, continuousIdentity, identity, linear, unique, rolle)
+      sum <- sumOfTwo(steps, linear)
       continuous <- continuousWhereDifferentiable(steps, reals, magnitude, continuity)
       productRuleFact <- productRule(steps, reals, magnitude, continuity, continuous)
       chainRule <- chainRuleFact(steps, reals, magnitude, continuity, continuous)
@@ -479,6 +492,7 @@ object Derivative {
         InteriorMinimum -> interiorMin,
         Rolle -> rolle,
         Linear -> linear,
+        Sum -> sum,
         Unique -> unique,
         MeanValue -> meanValue,
         Continuous -> continuous,
@@ -517,6 +531,30 @@ object Derivative {
       normal <- Conv.betaNormalise(right)
       joined <- Conv.trans(equation, normal)
     } yield joined
+
+  /** [[Sum]]: [[Linear]] at one and one, its function and its slope rewritten. */
+  private def sumOfTwo(steps: Continuity.Steps, linear: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val f = Term.variable("f", Functions)
+    val g = Term.variable("g", Functions)
+    val x = Term.variable("x", Reals)
+    val m = Term.variable("m", Reals)
+    val n = Term.variable("n", Reals)
+    for {
+      one <- real("1:real")
+      instance <- rules.specAll(linear, List(f, g, x, m, n, one, one))
+      fHyp <- proposition("derivative (f:real -> real) x m")
+      gHyp <- proposition("derivative (g:real -> real) x n")
+      combined <- mp(instance, LogicError.lift(Kernel.assume(fHyp)), LogicError.lift(Kernel.assume(gHyp)))
+      lambdas <- Continuity.unitCombination(steps)
+      slopes <- at(lemma("!A:real B:real. 1 * A + 1 * B = A + B"), "m:real", "n:real")
+      derivative <- Parser.term(theory, notation, DerivativeName, Type.fun(Functions, Type.fun(Reals, Type.fun(Reals, Type.Bool))))
+      atX <- Conv.apTerm(derivative, lambdas).flatMap(Conv.apThm(_, x))
+      both <- LogicError.lift(Kernel.mkComb(atX, slopes))
+      summed <- LogicError.lift(Kernel.eqMp(both, combined))
+      closed <- rules.disch(gHyp, summed).flatMap(rules.disch(fHyp, _)).flatMap(rules.genAll(_, List(f, g, x, m, n)))
+    } yield closed
+  }
 
   /** A theorem `derivative f x m`, opened into its epsilon-delta statement. */
   private[theories] def openDerivative(steps: Continuity.Steps, f: Term, x: Term, m: Term, theorem: Kernel.Thm) =

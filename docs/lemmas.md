@@ -116,12 +116,14 @@ they have least appetite for working out how it is produced.
 
 ## Continuity
 
+  CONTINUOUS_ADD           !f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous g x ==> continuous (\y:real. f y + g y) x
   CONTINUOUS_ATTAINS_MAX   !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
   CONTINUOUS_ATTAINS_MAX_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
   CONTINUOUS_ATTAINS_MIN   !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f z <= f u))
   CONTINUOUS_ATTAINS_MIN_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f z <= f u))
   CONTINUOUS_BOUNDED       !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. !u:real. x <= u /\ u <= y ==> f u <= z)
   CONTINUOUS_BOUNDED_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. !u:real. x <= u /\ u <= y ==> f u <= z)
+  CONTINUOUS_COMPOSE       !f:real -> real. !g:real -> real. !x:real. continuous g x ==> continuous f (g x) ==> continuous (\y:real. f (g y)) x
   CONTINUOUS_CONST         !x:real. !y:real. continuous (\z:real. x) y
   CONTINUOUS_EXTENSION     !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. continuous (\u:real. COND (u < x) (f x) (COND (y < u) (f y) (f u))) z)
   CONTINUOUS_EXTENSION_AGREES !f:real -> real. !x:real. !y:real. !z:real. x <= z /\ z <= y ==> COND (z < x) (f x) (COND (y < z) (f y) (f z)) = f z
@@ -162,6 +164,7 @@ they have least appetite for working out how it is produced.
 
 ## Derivative
 
+  DERIVATIVE_ADD           !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. derivative f x y ==> derivative g x z ==> derivative (\u:real. f u + g u) x (y + z)
   DERIVATIVE_CHAIN         !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. derivative g x z ==> derivative f (g x) y ==> derivative (\u:real. f (g u)) x (y * z)
   DERIVATIVE_CONST         !x:real. !y:real. derivative (\z:real. x) y 0
   DERIVATIVE_CONTINUOUS    !f:real -> real. !x:real. !y:real. derivative f x y ==> continuous f x
