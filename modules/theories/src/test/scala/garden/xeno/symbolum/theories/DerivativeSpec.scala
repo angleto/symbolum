@@ -110,7 +110,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
-          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor) ++ onInterval ++ withinInterval).contains(name)) {
+          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorWithin) ++ onInterval ++
+          withinInterval).contains(name)) {
       val other = Real.spent(fact(name))
       withClue(s"$name reaches: ${(other -- realAxioms).map(derivative.show).mkString("; ")}\n") {
         other should not contain completeness
@@ -636,8 +637,11 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // Measured on 2026-09-26 before it was written here, and equalities rather than ceilings. The one
     // axiom each adds is the naturals': the power's exponent and the order of the expansion are
     // numbers, and both facts are proved by induction on them.
-    Derivation.axiomsOf(fact(Derivative.Power)) shouldBe Derivation.axiomsOf(fact(Derivative.ProductRule)) + infinity
-    Derivation.axiomsOf(fact(Derivative.Taylor)) shouldBe Derivation.axiomsOf(fact(Derivative.Rolle)) + infinity
+    Real.spent(fact(Derivative.Power)) shouldBe Real.spent(fact(Derivative.ProductRule)) + infinity
+    Real.spent(fact(Derivative.Taylor)) shouldBe Real.spent(fact(Derivative.Rolle)) + infinity
+    // Read with the sixteen as an interface, which is what makes the infinity visible: through the
+    // construction of the reals every one of these already reaches it.
+    Real.spent(fact(Derivative.Rolle)) should not contain infinity
 
     // The route: Rolle at a combination, uniqueness at Rolle's point, the power's slope and the
     // product rule for each term, and the continuity of a product for the ends.
@@ -725,6 +729,66 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val absurd = force(rules.notElim(notBelow, underOne))
     val eliminated = force(rules.existsElim(somewhere, c, absurd))
     force(rules.notIntro(dropped, eliminated)).hypotheses shouldBe empty
+  }
+
+  it should "price Taylor's theorem relative to [a, b] at the two-sided theorem's, through the extension" in {
+    // Measured on 2026-09-27 before it was written here: the extension it is carried across is built
+    // from the order and `COND`, which the two-sided theorem already pays for.
+    Real.spent(fact(Derivative.TaylorWithin)) shouldBe Real.spent(fact(Derivative.Taylor))
+    val route = Set(
+      fact(Derivative.Taylor), fact(Derivative.Local),
+      force(chain.continuity.fact(Continuity.Extension)), force(chain.continuity.fact(Continuity.ExtensionAgrees))
+    ).map(_.conclusion)
+    Derivation.restingOn(fact(Derivative.TaylorWithin), route) shouldBe route
+  }
+
+  it should "detach Taylor's theorem relative to [-1, 0] at the step, where the two-sided form's hypothesis is false" in {
+    // Every order of the family is the step `COND (0 < y) 1 0`, which is continuous relative to
+    // [-1, 0] and not continuous at 0, and inside the interval is zero near every point, so each has
+    // the next as its derivative there. The two-sided theorem cannot be asked: its hypothesis at the
+    // order zero and the point zero is refused below.
+    val witness = new StepAtAnEnd(chain)
+    val magnitude = chain.limit.magnitude
+    val family = force(derivative.term("\\k:num. \\y:real. COND (0 < y) (1:real) 0", Type.fun(numbers, functions)))
+    val n = Term.variable("n", numbers)
+    val k = Term.variable("k", numbers)
+    val x = Term.variable("x", reals)
+    val y = Term.variable("y", reals)
+    val instance = opened(force(rules.specAll(fact(Derivative.TaylorWithin), List(family, real("0 - 1"), real("0:real"), n))))
+
+    val relative = force(rules.spec(x, witness.relative)
+      .flatMap(rules.disch(proposition("NUM_LE (k:num) (n:num)"), _))
+      .flatMap(rules.genAll(_, List(k, x))))
+
+    val slopes = {
+      val inside = proposition("(0:real) - 1 < x /\\ x < 0")
+      val assumedInside = force(LogicError.lift(Kernel.assume(inside)))
+      val negative = force(rules.conjElim2(assumedInside))
+      val zero = force(rules.specAll(fact(Derivative.Constant), List(real("0:real"), x)))
+      // Within `0 - x` of `x` every point is negative, where the step is zero.
+      val near = force(LogicError.lift(Kernel.assume(proposition("abs (y - x:real) < 0 - x"))))
+      val above = force(magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(real("y - x:real"), _)))
+      val nonPositive = force(rules.specAll(lemma("!y:real x:real A:real. y - x <= A ==> A < 0 - x ==> y <= 0"),
+        List(y, x, real("abs (y - x:real)"))).flatMap(rules.mp(_, above)).flatMap(rules.mp(_, near)))
+      val agrees = force(rules.disch(near.conclusion, witness.flat("y:real", nonPositive)).flatMap(rules.gen(y, _)))
+      val constantFn = force(derivative.term("\\y:real. (0:real)", functions))
+      val local = opened(force(rules.specAll(fact(Derivative.Local),
+        List(constantFn, witness.step, x, real("0:real"), real("0 - x:real")))))
+      val slope = force(rules.mp(local, force(rules.spec(x, lemma("!x:real. x < 0 ==> 0 < 0 - x")).flatMap(rules.mp(_, negative))))
+        .flatMap(rules.mp(_, agrees)).flatMap(rules.mp(_, zero)))
+      val atX = witness.flat("x:real", force(rules.spec(x, lemma("!x:real. x < 0 ==> x <= 0")).flatMap(rules.mp(_, negative))))
+      val derivativeOfStep = force(derivative.term("derivative (\\y:real. COND (0 < y) (1:real) 0) x", Type.fun(reals, Type.Bool)))
+      val restated = force(Conv.sym(atX).flatMap(Conv.apTerm(derivativeOfStep, _)).flatMap(eq => LogicError.lift(Kernel.eqMp(eq, slope))))
+      force(rules.disch(inside, restated)
+        .flatMap(rules.disch(proposition("NUM_LE (k:num) (n:num)"), _))
+        .flatMap(rules.genAll(_, List(k, x))))
+    }
+
+    val detached = Vector(lemma("(0:real) - 1 < 0"), relative, slopes)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    witness.refused.hypotheses shouldBe empty
+    witness.refused.conclusion shouldBe proposition("~(continuous (\\y:real. COND (0 < y) (1:real) 0) 0)")
   }
 
   it should "reach the sign of a derivative on an interval through the mean value theorem and uniqueness" in {

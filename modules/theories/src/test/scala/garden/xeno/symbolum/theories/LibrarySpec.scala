@@ -757,12 +757,14 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // are defined as the cut operations they name, so seven definitional entries under seven names
     // that were declared and not defined before. `CLAUDE.md`'s figures do not move: a definition
     // binds no leading quantifier.
-    // 826 and 823 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
+    // 822 and 819 with `TAYLOR_WITHIN`, 2026-09-27, derived before the run: one fact, one name,
+    // and `CLAUDE.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
+    // 827 and 824 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
     // before the run: five facts in `Integral` under five names, none shared, the tangent extension
     // and four `_WITHIN` twins. `CLAUDE.md`'s figures move by **five** and **five**: each binds two or
     // more functions among its leading quantifiers. Tip plus this branch's delta.
-    library.entries.size shouldBe 826
-    library.names.distinct.size shouldBe 823
+    library.entries.size shouldBe 827
+    library.names.distinct.size shouldBe 824
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
