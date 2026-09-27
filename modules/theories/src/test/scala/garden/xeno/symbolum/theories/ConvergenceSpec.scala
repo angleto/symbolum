@@ -79,8 +79,10 @@ class ConvergenceSpec extends AnyFlatSpec with Matchers {
           case error @ ValueUnidentified(_, found, reason) =>
             error.standing shouldBe LogicError.Standing.Unread
             chain.widest.show(found) should include(atom)
-            // What the comparison said is kept, and it is the decided refusal this case replaced.
-            reason shouldBe a[NotEqualTo]
+            // What the comparison said is kept. It was the decided `NotEqualTo` this case replaced,
+            // and since 2026-09-27 (card `7bf9d8a2`) RING itself does not decide over an atom that
+            // is not free, so the comparison arrives as `NotEqualAsRead`.
+            reason shouldBe a[NotEqualAsRead]
           case other => fail(s"expected an unidentified value, got ${other.message}")
         }
       }

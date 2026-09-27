@@ -140,13 +140,14 @@ class RingSpec extends AnyFlatSpec with Matchers {
     // with the hypothesis missing. `Field` is where it becomes provable, and what it returns
     // carries `~(y = 0)` where a reader can see it.
     ring.prove("!x:real y:real. (x * y) / y = x").left.map(_.getClass) shouldBe
-      Left(classOf[NotEqualTo])
+      Left(classOf[NotEqualAsRead])
   }
 
   it should "refuse an identity that needs the multiplicative inverse" in {
     // `inv` has an axiom only under the hypothesis that its argument is not zero, so no amount of
-    // rewriting settles this one.
-    ring.prove("!x:real. x * inv x = 1").left.map(_.getClass) shouldBe Left(classOf[NotEqualTo])
+    // rewriting settles this one. Refused and not decided since 2026-09-27 (card `7bf9d8a2`): the
+    // forms differ over `inv x`, an atom that is not free, which is `NotEqualAsRead`.
+    ring.prove("!x:real. x * inv x = 1").left.map(_.getClass) shouldBe Left(classOf[NotEqualAsRead])
   }
 
   "The theory it proves in" should "still assert only the reals' axioms" in {
