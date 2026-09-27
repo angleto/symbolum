@@ -9,12 +9,13 @@
 #   1. The hole clause's "every literal is one of the two" conjunct also demands `NUM_LT i ZERO`,
 #      in the published `Clause`, so no hole clause with a literal exists. The derivation never
 #      reads that conjunct, so the theorem is still proved and published. Expected: red exactly the
-#      two tests that derive the inputs, the detachment and the w = 20 control; green the
-#      publication, axiom and resting-on tests, and the narrow-steps test, which reads only data.
+#      three tests that derive the inputs, the detachment, the w = 20 control and the r = 0
+#      control; green the publication, axiom and resting-on tests, and the narrow-steps test, which
+#      reads only data.
 #   2. The refutation's seventeenth step names the wrong pivot, (1, 1) where it is (1, 0). The
 #      fixture's check of a resolution step must then refuse, since the parent's literal x(1, 0) is
-#      neither the pivot nor in the resolvent. Expected: red the detachment and the w = 20 control
-#      here, and the n = 2 detachment in `PigeonholeSpec`; green everything else. A checker that
+#      neither the pivot nor in the resolvent. Expected: red the detachment and the w = 20 and r = 0
+#      controls here, and the n = 2 detachment in `PigeonholeSpec`; green everything else. A checker that
 #      accepted it would be a checker that reads nothing.
 #
 # The control is the run before them, in the same tree, and it must be green.
