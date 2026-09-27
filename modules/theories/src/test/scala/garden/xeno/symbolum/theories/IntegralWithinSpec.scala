@@ -88,14 +88,28 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
    * the definitions do not.
    */
   it should "cost what the two-sided forms cost" in {
+    // Read with the sixteen as the interface, which is what `Real.spent` does. Written with the bare
+    // `Derivation.axiomsOf` on 2026-09-26 and meaningful then; since `docs/adr/0053` proved the
+    // sixteen from the cuts, the bare reading answers the foundation's axioms for every fact about
+    // the reals, so an equality of two such readings no longer separated anything. The verification
+    // of card 6257d0da (second round, 2026-09-27) measured that and moved the assertion here; the
+    // non-vacuity below is what a reading that answers the same for everything cannot pass.
     for ((relative, twoSided) <- Vector(
         Integral.ContinuousHasWithin -> Integral.ContinuousHas,
         Integral.ContinuousIntegralWithin -> Integral.ContinuousIntegral,
         Integral.DerivativeWithinWithin -> Integral.DerivativeWithin,
         Integral.DerivativeOfIntegralWithin -> Integral.DerivativeOfIntegral
       )) withClue(s"$relative: ") {
-      Derivation.axiomsOf(fact(relative)) shouldBe Derivation.axiomsOf(fact(twoSided))
+      Real.spent(fact(relative)) shouldBe Real.spent(fact(twoSided))
     }
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    Real.spent(fact(Integral.ContinuousHasWithin)) should contain(completeness)
+    Real.spent(fact(Integral.HasLinear)) should not contain completeness
+    info(s"bare reading: CONTINUOUS_HAS_INTEGRAL_WITHIN ${Derivation.axiomsOf(fact(Integral.ContinuousHasWithin)).size} " +
+      s"axioms, HAS_INTEGRAL_LINEAR ${Derivation.axiomsOf(fact(Integral.HasLinear)).size}, equal: " +
+      s"${Derivation.axiomsOf(fact(Integral.ContinuousHasWithin)) == Derivation.axiomsOf(fact(Integral.HasLinear))}; " +
+      s"interface reading: ${Real.spent(fact(Integral.ContinuousHasWithin)).size} against " +
+      s"${Real.spent(fact(Integral.HasLinear)).size}")
   }
 
   /** The route, asserted rather than described: the extension, and the congruence that carries it back. */
