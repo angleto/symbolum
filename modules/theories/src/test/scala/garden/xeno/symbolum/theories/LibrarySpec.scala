@@ -56,6 +56,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // link above that mentions a real, and it is a development of its own for the reason
       // `Inclusion`'s first paragraph gives, so it is a development this sum has to name.
       chain.inclusion.facts.size +
+      // The rationals and the cuts, 2026-09-27, in the change that collected them. Both were links
+      // of the chain from phase 5 of `docs/adr/0007` and in no library, which this sum could not
+      // see: it counts what `Library.of` should hold, and nobody had written these two into it.
+      chain.fractions.facts.size +
+      chain.cuts.facts.size +
       // The list interface, 2026-09-23, added here in the change that added the link rather
       // than after this sum caught it, which is what the four comments above record happening
       // four times.
@@ -759,12 +764,16 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // binds no leading quantifier.
     // 822 and 819 with `TAYLOR_WITHIN`, 2026-09-27, derived before the run: one fact, one name,
     // and `CLAUDE.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
-    // 827 and 824 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
-    // before the run: five facts in `Integral` under five names, none shared, the tangent extension
-    // and four `_WITHIN` twins. `CLAUDE.md`'s figures move by **five** and **five**: each binds two or
-    // more functions among its leading quantifiers. Tip plus this branch's delta.
-    library.entries.size shouldBe 827
-    library.names.distinct.size shouldBe 824
+    // 917 and 914 with the rationals and the cuts collected, 2026-09-27, card `e4a90d43`: 44 facts
+    // of `Fraction` and 51 of `Cut`, which were links of the chain and in no library. Measured at
+    // `7a15f023` as a delta of 95 and 95, the two figures moving together being the measurement
+    // that none of the new names was already held; `CLAUDE.md`'s figures moved by 52 and 52. Tip
+    // plus this branch's delta.
+    // 922 and 919 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
+    // before the run: five facts in `Integral` under five names, none shared. `CLAUDE.md`'s figures
+    // move by **five** and **five**. Tip plus this branch's delta.
+    library.entries.size shouldBe 922
+    library.names.distinct.size shouldBe 919
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

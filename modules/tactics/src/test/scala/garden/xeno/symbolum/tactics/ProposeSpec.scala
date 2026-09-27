@@ -416,10 +416,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 737 with Wilson's five, 2026-09-26, derived before the run: four antecedents on
     // `NUM_PROD_PAIRED` and one on `NUM_WILSON`.
     // 740 with `TAYLOR_WITHIN`'s three residues, 2026-09-27.
-    // 758 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived before the
+    // 802 with the rationals and the cuts collected, 2026-09-27, card `e4a90d43`: sixty-two
+    // antecedents over the facts of `Fraction` and `Cut`, measured and not derived, by a probe of this
+    // file with its numeric assertions printed over the classes of `4d63882b`.
+    // 820 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived before the
     // run: eighteen antecedents over five facts, four each on `DERIVATIVE_WITHIN_TANGENT` and the two
     // forms of parts, three on each form of the change of variables. Tip plus this branch's delta.
-    proposals.size shouldBe 758
+    proposals.size shouldBe 820
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1396,12 +1399,13 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // not measured. Tip plus this branch's delta.
     // 636 with `TAYLOR_WITHIN`'s three residues, 2026-09-27, predicted from `TAYLOR`'s, which went
     // here: each is an implication about `continuous_within` or `derivative`.
-    // 654 with all eighteen residues of parts and the change of variables relative to `[a, b]`,
-    // 2026-09-27, read off the suite's own failure: each keeps an implication about `derivative`,
-    // `derivative_within`, `has_integral` or `integral`, which no procedure settles. The total
-    // matched the eighteen derived for `proposals` and no other bucket moved. Tip plus this
-    // branch's delta.
-    open shouldBe 654
+    // 678 with forty-two of the sixty-two residues of `Fraction` and `Cut`, 2026-09-27, card
+    // `e4a90d43`, read off a probe of this file with its numeric assertions printed over the classes
+    // of `4d63882b`; the other twenty are in `unreadable` below and none in `decidedFalse`.
+    // 696 with all eighteen residues of parts and the change of variables relative to `[a, b]`,
+    // 2026-09-27, measured by the full suite at the tree before this merge, where all eighteen went
+    // here and no other bucket moved. Tip plus this branch's delta.
+    open shouldBe 696
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1787,7 +1791,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `real_mul` and `real_lt`, are equations naming the operator the mutation swaps. Each swap
     // gives `real_add = CUT_MUL` and its two siblings, an equation between two functions that no
     // procedure reads. Tip plus this branch's delta.
-    unreadable shouldBe 153
+    // 173 with twenty of the sixty-two residues of `Fraction` and `Cut`, 2026-09-27, by the probe the
+    // `open` row names; which twenty was not measured.
+    unreadable shouldBe 173
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2110,7 +2116,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // them, which the same probe measured. Tip plus this branch's delta.
     // 270 with `TAYLOR_WITHIN`'s three residues, 2026-09-27, predicted from `TAYLOR`'s: each
     // keeps the `Sum` and the `Power` of the conclusion.
-    aboutNumbers.size shouldBe 270
+    // 274 with four residues of the facts of `Fraction` and `Cut`, 2026-09-27, card `e4a90d43`, by
+    // the probe the `open` row names; which four was not read. None is refuted at a point, so
+    // `after` does not move, measured by the same probe.
+    aboutNumbers.size shouldBe 274
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
