@@ -19,9 +19,9 @@ import garden.xeno.symbolum.logic.*
  *
  * == What is proved about them today, and what is not ==
  *
- * The value of each at zero; `2 < exp 1`; the exponential's addition theorem and its absolute
- * convergence at every real; the hyperbolic identity; and the trigonometric one,
- * `sin x * sin x + cos x * cos x = 1`. The facts at zero are reachable because there every series
+ * The value of each at zero; `2 < exp 1`, and that `exp 1` is not a ratio of naturals; the
+ * exponential's addition theorem and its absolute convergence at every real; the hyperbolic
+ * identity; and the trigonometric one, `sin x * sin x + cos x * cos x = 1`. The facts at zero are reachable because there every series
  * **stops moving**: past the first term every summand carries a power of zero, so
  * `Limit.CONVERGES_EVENTUALLY` with `Limit.CONVERGES_CONSTANT` settles them without any convergence
  * theorem at all. Everything after them needs a series to converge before `lim` says anything, and
@@ -29,7 +29,8 @@ import garden.xeno.symbolum.logic.*
  *
  * **Every fact about a value away from zero is an identity or a bound, and none names a number**,
  * which is the same silence `NUM_GCD ZERO ZERO` leaves and is stated here rather than left to be
- * discovered: `exp 1` is above `2`, and what it is, this repository cannot say.
+ * discovered: `exp 1` is above `2` and is not `p / q` for any naturals with `0 < q`, and what it
+ * is, this repository cannot say.
  *
  * `ln` has **no fact here**, and its facts are in `Logarithm`: every one of them wants the
  * exponential to be onto the positives, which is `Continuity.INTERMEDIATE_VALUE` at the exponential,
@@ -226,6 +227,21 @@ object Transcendental {
    * analysis: `1 / i!` sits under `2 * (1/2)^i` exactly when `2^i <= 2 * i!`.
    */
   val ExponentialAboveTwo: String = "EXP_ONE_ABOVE_TWO"
+
+  /**
+   * `|- !p q. 0 < q ==> ~(exp 1 = real_of_num p / real_of_num q)`
+   *
+   * `exp 1` is not a ratio of naturals, in the form `Root.SQRT_TWO_IRRATIONAL` gives the square
+   * root of two. Fourier's proof, which `Fourier` carries and says step by step: a partial sum of
+   * the series times a factorial is a natural, the rest of the series times the same factorial
+   * lies strictly between zero and one, and no natural does.
+   *
+   * Over naturals rather than integers for the reason that fact gives: `exp 1` is positive, so a
+   * ratio equal to it has both terms of one sign. Whether `0 < q` is needed is **not** settled
+   * here: at `q = 0` the ratio is `real_of_num p * inv 0`, and what `inv 0` is has not been
+   * published for the reals.
+   */
+  val ExponentialOneIrrational: String = "EXP_ONE_IRRATIONAL"
 
   /**
    * `|- !x i. 2 * abs x <= real_of_num (SUC i) ==>
@@ -429,6 +445,7 @@ object Transcendental {
     CosinePlusSine -> "!x:real. cosh x + sinh x = exp x",
     CosineMinusSine -> "!x:real. cosh x - sinh x = exp (0 - x)",
     ExponentialAboveTwo -> "2 < exp 1",
+    ExponentialOneIrrational -> "!p:num q:num. 0 < q ==> ~(exp 1 = real_of_num p / real_of_num q)",
     TermsHalve ->
       ("!x:real. !i:num. 2 * abs x <= real_of_num (SUC i) ==> " +
         "abs (Power x (SUC i) / real_of_num (NUM_FACT (SUC i))) <= " +
@@ -616,6 +633,14 @@ object Transcendental {
         Trigonometric.Pieces(
           logic, linarith, semiring, theory, notation, limit, series, peano, coding,
           exponentialDefinition, sineDefinition, cosineDefinition, absolute, convolution))
+
+      // After the trigonometric facts because the series' value is published there, and it is
+      // the one fact about `exp 1` the argument starts from.
+      converges <- trigonometric.get(ExponentialConverges).toRight(MissingDefinition(ExponentialConverges))
+      irrational <- Fourier.prove(
+        Fourier.Pieces(
+          logic, linarith, theory, notation, limit, series, peano, coding, induct,
+          converges, geometricTail))
     } yield new Transcendental(
       limit,
       series,
@@ -634,6 +659,7 @@ object Transcendental {
         SineAtZero -> sine,
         CosineAtZero -> cosine,
         ExponentialAboveTwo -> aboveTwo,
+        ExponentialOneIrrational -> irrational,
         TermsHalve -> halving,
         TailIsGeometric -> geometricTail,
         AbsolutelyConvergent -> absolute,

@@ -2442,6 +2442,239 @@ worth proving.
 
 ---
 
+# EXP_ONE_IRRATIONAL
+
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ 0 < m \Rightarrow \lnot \left( \exp 1 = n_{\mathbb{R}} / m_{\mathbb{R}} \right)$$
+
+```
+!n:num. !m:num. 0 < m ==> ~(exp 1 = real_of_num n / real_of_num m)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+3 axioms reached, 0 of them named below, and 152 named facts in all.
+
+| what | where |
+|---|---|
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `NOT_FORALL` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_FACT_DIVIDES` | Coding |
+| `NUM_FACT_POSITIVE` | Coding |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `CONVERGES_ABSOLUTE` | Limit |
+| `CONVERGES_ADD` | Limit |
+| `CONVERGES_EVENTUALLY` | Limit |
+| `CONVERGES_GE` | Limit |
+| `CONVERGES_LE` | Limit |
+| `CONVERGES_NEG` | Limit |
+| `CONVERGES_UNIQUE` | Limit |
+| `LE_BELOW_EVERY_POSITIVE` | Limit |
+| `LIM_OF_CONVERGES` | Limit |
+| `MONOTONE_CONVERGES` | Limit |
+| `MONOTONE_LE` | Limit |
+| `POWER_NONNEG` | Limit |
+| `SUM_BELOW_LIMIT` | Limit |
+| `SUM_COMPARISON` | Limit |
+| `SUM_GROWS` | Limit |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_MUL` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `ABS_ZERO` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `NUM_DIVIDES_ELIM` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_MUL_BOTH` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_OF_NOT_LE` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_ARCHIMEDES` | Peano |
+| `NUM_CEIL_LE` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ADD` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_REAL_ADD` | Peano |
+| `NUM_REAL_LE` | Peano |
+| `NUM_REAL_LT` | Peano |
+| `NUM_REAL_MUL` | Peano |
+| `NUM_REAL_NONNEG` | Peano |
+| `NUM_REAL_SUC` | Peano |
+| `NUM_REAL_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `BIT0` | Real, defined |
+| `BIT1` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `COMPLETENESS` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `LT_ADD` | Real, derived |
+| `LT_IRREFLEXIVE` | Real, derived |
+| `LT_MUL` | Real, derived |
+| `LT_TOTAL` | Real, derived |
+| `LT_TRANSITIVE` | Real, derived |
+| `MUL_ASSOC` | Real, derived |
+| `MUL_INVERSE` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
+| `ONE_NOT_ZERO` | Real, derived |
+| `POWER_ONE` | Series |
+| `POWER_POSITIVE` | Series |
+| `POWER_SUC` | Series |
+| `POWER_ZERO` | Series |
+| `SUM_ADD` | Series |
+| `SUM_GEOMETRIC` | Series |
+| `SUM_MONOTONE` | Series |
+| `SUM_REINDEX` | Series |
+| `SUM_SCALE_RIGHT` | Series |
+| `SUM_SUC` | Series |
+| `SUM_ZERO` | Series |
+| `EXP_ABSOLUTE` | Transcendental |
+| `EXP_CONVERGES` | Transcendental |
+| `EXP_TAIL_GEOMETRIC` | Transcendental |
+| `EXP_TERM_HALVES` | Transcendental |
+
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+67814 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 20530 | 30.3% |
+| EqualityElimination | 11282 | 16.6% |
+| Transitivity | 9701 | 14.3% |
+| Instantiation | 9632 | 14.2% |
+| Reflexivity | 7812 | 11.5% |
+| BetaStep | 3696 | 5.5% |
+| Antisymmetry | 2631 | 3.9% |
+| TypeInstantiation | 1684 | 2.5% |
+| Assumption | 439 | 0.6% |
+| Abstraction | 316 | 0.5% |
+| Citation | 77 | 0.1% |
+| Definition | 14 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. 0 < m ==> ~(exp 1 = real_of_num n / real_of_num m)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find EXP_ONE_IRRATIONAL"
+```
+
+From Scala it is `Transcendental`'s, under the name `EXP_ONE_IRRATIONAL`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
 # EXP_ADD
 
 $$\forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \exp \left( x + y \right) = \exp x \cdot \exp y$$

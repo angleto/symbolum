@@ -68,6 +68,7 @@ object Examples {
     ),
     "Analysis" -> Vector(
       "SQRT_TWO_IRRATIONAL",
+      "EXP_ONE_IRRATIONAL",
       "EXP_ADD",
       "SIN_COS_SQUARED",
       "INTERMEDIATE_VALUE",

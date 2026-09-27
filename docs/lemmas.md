@@ -1063,6 +1063,7 @@ they have least appetite for working out how it is produced.
   EXP_CONVOLUTION          !x:real. !y:real. !n:num. Sum (\m:num. Power x m / real_of_num (NUM_FACT m) * (Power y (NUM_SUB n m) / real_of_num (NUM_FACT (NUM_SUB n m)))) (SUC n) = Power (x + y) n / real_of_num (NUM_FACT n)
   EXP_NEGATE               !x:real. exp x * exp (0 - x) = 1
   EXP_ONE_ABOVE_TWO        2 < exp 1
+  EXP_ONE_IRRATIONAL       !n:num. !m:num. 0 < m ==> ~(exp 1 = real_of_num n / real_of_num m)
   EXP_TAIL_GEOMETRIC       !x:real. !n:num. 2 * abs x <= real_of_num n ==> (!m:num. abs (Power x (n + m) / real_of_num (NUM_FACT (n + m))) <= Power (1 / 2) m * abs (Power x n / real_of_num (NUM_FACT n)))
   EXP_TERM_HALVES          !x:real. !n:num. 2 * abs x <= real_of_num (SUC n) ==> abs (Power x (SUC n) / real_of_num (NUM_FACT (SUC n))) <= 1 / 2 * abs (Power x n / real_of_num (NUM_FACT n))
   EXP_ZERO                 exp 0 = 1

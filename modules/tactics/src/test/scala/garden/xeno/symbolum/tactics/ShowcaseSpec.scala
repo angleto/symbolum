@@ -149,6 +149,9 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
         // before the run, on the reading that the library holds it and `docs/adr/0025` lets a
         // lemma that is the goal answer, and checked by the run.
         "SQRT_TWO_IRRATIONAL",
+        // 2026-09-27, predicted settled before the run on the same reading as the line above: the
+        // library holds it and it is the goal.
+        "EXP_ONE_IRRATIONAL",
         "NUM_PROV_DEDUCTION"
       )
     }

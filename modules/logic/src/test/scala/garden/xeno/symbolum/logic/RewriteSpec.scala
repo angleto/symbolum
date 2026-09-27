@@ -1102,7 +1102,20 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "and is refused by name. On termination, every rule strictly reduces: the recurrences " +
         "open one successor each, the embedding rules move `real_of_num` under a constructor, and " +
         "the three ground `Ring` equations that fold `0 + 1`, `1 + 1` and `1 * 1` have right sides " +
-        "their own left sides do not contain")
+        "their own left sides do not contain"),
+    // 2026-09-27, with the irrationality of `exp 1`.
+    "Fourier.scala" ->
+      ("one call, `Rewrite.inTheorem` inside the helper `rewritten`, used six times, and none is " +
+        "left to the limit to report: every result is handed either to `settle`, which is " +
+        "`Linarith` on an implication written over the facts' own conclusions, or to `Rules.mp` " +
+        "against a proof that wants a fixed antecedent. A walk that stopped early leaves a " +
+        "factorial of a successor, a division or an `abs` standing, which `Linarith` holds as an " +
+        "atom unrelated to the ones the goal names, so the refusal is the procedure's rather than " +
+        "a weaker theorem. On termination, every rule strictly reduces or is ground: the " +
+        "factorial's recurrence and the embedding's successor rule each open one successor, the " +
+        "product rule moves `real_of_num` under a product, the definition of division is a " +
+        "constant replaced once by a lambda, and the two ground equations, `abs (f n) = f n` and " +
+        "one commutation of an addition, have right sides their left sides do not match")
   )
 
   /**
