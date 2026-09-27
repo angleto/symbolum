@@ -365,6 +365,15 @@ object Remedy {
           "forms differ: either the identity is false, or this prover cannot see that it is true"
       )
 
+    // A person, for `NotEqualTo`'s reason, and without its verdict: the forms differ over atoms that
+    // are not free, so the sentence names them and says the claim may hold all the same.
+    case NotEqualAsRead(wanted, found, bound) =>
+      APersonLooks(
+        s"${write(found, reals)} and ${write(wanted, reals)} differ as polynomials over their " +
+          s"atoms, and ${bound.map(write(_, reals)).mkString(", ")} is not a free variable, so the " +
+          "identity may hold for a reason this prover does not read"
+      )
+
     // A person rather than a restatement, for `NotEqualTo`'s reason, and without its verdict: the
     // two values were neither identified nor told apart, so the sentence says both are possible.
     case ValueUnidentified(wanted, found, _) =>

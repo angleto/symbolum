@@ -121,6 +121,37 @@ final class Coefficient private (
           } yield whole
     } yield result
 
+  /**
+   * The atoms of a normal form: every maximal subterm under the sums, products and negations that
+   * is not a coefficient. What [[valueOf]] reads is a number and is never one of them.
+   */
+  def atomsOf(term: Term): Vector[Term] =
+    if (valueOf(term).isDefined) Vector.empty
+    else
+      term match {
+        case App(App(Const(Real.Addition | Real.Multiplication | Real.Subtraction, _), left), right) =>
+          atomsOf(left) ++ atomsOf(right)
+        case App(Const(Real.Negation, _), argument) => atomsOf(argument)
+        case atom => Vector(atom)
+      }
+
+  /**
+   * A refusal from comparing two normal forms, read again by what their atoms are.
+   *
+   * `NotEqualTo` is a decision only over atoms that are free variables; anything else an atom can
+   * be, `inv 0` or `exp 0` or `inv x`, may be related to the rest, and the refusal becomes
+   * `NotEqualAsRead` naming those atoms. Every other refusal passes through unchanged.
+   */
+  def asRead(refusal: LogicError): LogicError = refusal match {
+    case NotEqualTo(wanted, found) =>
+      val bound = (atomsOf(found) ++ atomsOf(wanted)).distinct.filter {
+        case _: FVar => false
+        case _ => true
+      }
+      if (bound.isEmpty) refusal else NotEqualAsRead(wanted, found, bound)
+    case other => other
+  }
+
   /** The value a signed numeral denotes, which is a coefficient whose denominator is one. */
   def signedValue(term: Term): Option[BigInt] = term match {
     case Neg(inner) => Numeral.valueOf(reals, inner).map(-_)

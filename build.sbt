@@ -924,36 +924,6 @@ lazy val theories = (project in file("modules/theories"))
   .settings(coverageSettings)
   .settings(
     name := "symbolum-theories",
-    /*
-     * `ChainSpec` runs in a JVM of its own, and every other suite of this module shares one.
-     *
-     * WHY, measured on 2026-09-26, Mycelium card 4222de0a. A chain keeps every derivation it
-     * published, because a citation holds the fact it cites, and `Chain.standard` is a lazy value
-     * every suite here shares, so once any suite has touched it the fork holds one chain until it
-     * exits. `ChainSpec` builds a second one, to report what building it costs, and while it does
-     * both are alive. Live heap after a collection, the classes of 7.0 at `01a7b7f2`: 507 MB with
-     * one chain, 960 MB with two, against a heap of 1024. The next link past that tree, the
-     * fundamental theorem's second half, read 518 and 981 and `theories/test` died of
-     * `OutOfMemoryError` in `ChainSpec` twice out of two, while `ChainSpec` alone passed. So the
-     * two-chain peak was the module's, and it came from one test that asserts nothing.
-     *
-     * The test stays: it is kept so that nobody re-proposes the chain as a cache, which its own
-     * comment says. Raising the heap was the alternative and was rejected, since every link spends
-     * the margin again and the machine this runs on is short of physical memory.
-     *
-     * WHAT IT DOES NOT COVER. A suite added later that builds a chain of its own is not on this
-     * list and will meet the same peak; `Chain.construct(` under `src/test` is the census, and at
-     * that date it answered `ChainSpec` alone. The JVM gets the same options as the module's fork,
-     * because it is read from `Test / forkOptions`.
-     */
-    Test / testGrouping := Def.uncached {
-      val options = (Test / forkOptions).value
-      val (own, shared) = (Test / definedTests).value.partition(_.name.endsWith(".ChainSpec"))
-      Seq(
-        Tests.Group("shared", shared, Tests.SubProcess(options)),
-        Tests.Group("ChainSpec", own, Tests.SubProcess(options))
-      ).filter(_.tests.nonEmpty)
-    },
     // Measured 96.77% on 2026-09-03 and 96.28% on 2026-09-04; the floor stayed a point below.
     // 97.42% on 2026-09-05, and this one is a real rise rather than a sample: the order facts, the
     // certificate search and the exact satisfiability search all arrived with their own suites, and

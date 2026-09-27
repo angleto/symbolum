@@ -50,8 +50,12 @@ import garden.xeno.symbolum.logic.*
  * arithmetic computes anyway.
  *
  * Zero is where that stops. `inv 0` stays an atom, because nothing the theory knows multiplies it
- * to one, and the atom is a refusal rather than a gap: `x / 0 + x / 0 = 2 * (x / 0)` is proved
- * with nothing assumed and `x / 0 = 0` is refused, which is the pair `FieldSpec` pins.
+ * to one: `x / 0 + x / 0 = 2 * (x / 0)` is proved with nothing assumed and `x / 0 = 0` is refused,
+ * which is the pair `FieldSpec` pins. **Refused and not decided**: `inv 0 = 0` has been a theorem of
+ * the chain since the reals were constructed, so two forms differing over the atom `inv 0` say
+ * nothing about the claim. A refusal is `NotEqualTo`, decided, only when every atom of both forms
+ * is a free variable, and `NotEqualAsRead` naming the other atoms otherwise, which
+ * [[Coefficient.asRead]] decides and `RingDecidesOnlyFreeAtomsSpec` holds.
  *
  * Division is covered, and used not to be. `x / y` abbreviates `x * inv y`, and unfolding an
  * abbreviation asks for nothing; what asks for `~(y = 0)` is the cancelling, which is a different
@@ -72,7 +76,9 @@ final class Ring private (
    * `~(n = 0)` for a numeral, and nothing below the order can prove it.
    */
   val positivity: Positivity,
-  private val normalisation: Rewrite.Conversion
+  private val normalisation: Rewrite.Conversion,
+  /** What is a number in a normal form and what is an atom, which decides what a refusal says. */
+  private val coefficient: Coefficient
 ) {
 
   val reals: RealTheory = arithmetic.reals
@@ -87,7 +93,7 @@ final class Ring private (
    * to distribute.
    */
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
-    Rewrite.proveEquation(reals.logic, normalisation, goal)
+    Rewrite.proveEquation(reals.logic, normalisation, goal).left.map(coefficient.asRead)
 
   /** Prove an equation written in the theory's notation. */
   def prove(text: String): Either[LogicError, Kernel.Thm] =
@@ -120,7 +126,7 @@ object Ring {
       positivity <- Positivity.construct(arithmetic)
       coefficient <- Coefficient.construct(arithmetic, positivity)
       collecting <- Polynomial.construct(coefficient)
-    } yield new Ring(arithmetic, positivity, collecting.normalisation)
+    } yield new Ring(arithmetic, positivity, collecting.normalisation, coefficient)
 
   /**
    * The same tactic over the expanding normal form, which is kept for measuring against.
@@ -131,5 +137,8 @@ object Ring {
    * so it cannot be removed while that one exists.
    */
   def expanding(arithmetic: Arithmetic): Either[LogicError, Ring] =
-    Positivity.construct(arithmetic).map(new Ring(arithmetic, _, arithmetic.normalisation))
+    for {
+      positivity <- Positivity.construct(arithmetic)
+      coefficient <- Coefficient.construct(arithmetic, positivity)
+    } yield new Ring(arithmetic, positivity, arithmetic.normalisation, coefficient)
 }
