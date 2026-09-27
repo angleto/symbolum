@@ -148,17 +148,22 @@ class LinarithSquareBoundarySpec extends AnyFlatSpec with Matchers {
 
   "The atom a refusal names" should "be one no square covers, whenever the goal holds such an atom" in {
     Vector(
-      "!x:real y:real z:real. x * x + y * y + z * z >= x * y + y * z + z * x" -> Set("x * y", "y * z", "x * z", "z * x", "y * x", "z * y"),
-      "!x:real y:real. 3 * (x * x) + y * y >= x * y" -> Set("x * y", "y * x"),
+      // The goals here are FALSE on purpose (the cross-term ones at x = y = z = 1, `x * x * y` at
+      // x = 100 and y = 2, the last at x = 0), so that
+      // they stay refused however strong the procedure gets. Four of them read true until 2026-09-27,
+      // when the sum-of-squares search (07d82cd2) proved two and this test went red on goals it no
+      // longer refuses; the atom each names is unchanged by the change of constant.
+      "!x:real y:real z:real. x * x + y * y + z * z >= 2 * (x * y + y * z + z * x)" -> Set("x * y", "y * z", "x * z", "z * x", "y * x", "z * y"),
+      "!x:real y:real. x * x + y * y >= 3 * (x * y)" -> Set("x * y", "y * x"),
       // The binders are renamed by the reader before LINARITH sees them, so the cross term of this
       // one is printed `x * y`, which the first run of this test on 2026-09-27 found and this set
       // now says: the order of the letters in the text is what is varied, not the atom.
-      "!b:real a:real. b * b + a * a >= 2 * (a * b)" -> Set("x * y", "y * x"),
+      "!b:real a:real. b * b + a * a >= 3 * (a * b)" -> Set("x * y", "y * x"),
       // A product of three or four factors is printed right-nested, `x * (x * y)`, which is how
       // `LinearForm` keys the atom; the set holds that spelling and the obvious ones beside it.
       "!x:real y:real. x * x + y * y >= x * x * y" -> Set("x * (x * y)", "x * x * y"),
-      "!x:real y:real. 0 < y ==> x * x + y * y >= 2 * (x * y)" -> Set("x * y", "y * x"),
-      "!x:real y:real. 0 < y ==> x * x * y * y >= 0" -> Set("x * (x * (y * y))", "x * x * y * y")
+      "!x:real y:real. 0 < y ==> x * x + y * y >= 3 * (x * y)" -> Set("x * y", "y * x"),
+      "!x:real y:real. 0 < y ==> x * x * y * y >= 1" -> Set("x * (x * (y * y))", "x * x * y * y")
     ).flatMap { case (text, expected) =>
       // Every case is asked before anything is asserted, so a red names all the misses at once
       // rather than hiding the ones after the first.
