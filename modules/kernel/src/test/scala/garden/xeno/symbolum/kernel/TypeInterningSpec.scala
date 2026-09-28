@@ -61,4 +61,16 @@ class TypeInterningSpec extends AnyFlatSpec with Matchers {
       built.forall(_ eq built.head) shouldBe true
     } finally pool.shutdown()
   }
+
+  "A type built through the case class's mirror" should "be the one instance as well" in {
+    // Verification of card `78c1381d`, 2026-09-28 at `4756739d`: the constructor is private and the
+    // copy method with it, but Scala 3 synthesises a public `fromProduct` on the companion that
+    // calls `new` directly. Seen from source through scala-cli before this test was written:
+    // `TyApp.fromProduct(("bool", Nil))` is `==` to `Type.Bool` and not `eq` to it. Nothing in the
+    // repository calls it and no equality depends on the instance, so this is the docstring's
+    // "Built only by TyApp.apply" and the title above being false, not a question of soundness.
+    val mirrored = TyApp.fromProduct(("bool", Nil))
+    (mirrored == Type.Bool) shouldBe true
+    (mirrored eq Type.Bool) shouldBe true
+  }
 }
