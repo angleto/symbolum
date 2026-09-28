@@ -61,26 +61,31 @@ import garden.xeno.symbolum.logic.*
  * anything else as atoms. A numeral is opened by [[Peano.NumeralOneIsSuccessorOfZero]] and the two
  * bit lemmas, so `2` becomes `SUC ZERO + SUC ZERO` and `x * 2` normalises to `x + x`.
  *
- * **`SUC t` for anything but `ZERO` is an atom**, deliberately and not yet. Opening it would mean
- * rewriting `SUC t` to `t + SUC ZERO`, which turns every successor in the goal into a sum and makes
- * a statement about `SUC (SUC (SUC ZERO))` into a term with three sums in it; `Successor` already
- * exists for callers who want that, aimed rather than turned loose, and its own docstring gives the
- * reason. The consequence to know is that `NUM_MUL (SUC x) y = NUM_ADD (NUM_MUL x y) y` is **not**
- * decided here, though it is `Peano.SuccessorTimes` and is one specialisation away.
+ * **`SUC t` for anything but `ZERO` is opened under a product and is an atom under a sum.** Under a
+ * product `Peano.MulAtSuccessor` and `Peano.SuccessorTimes` open it, since the conversion of
+ * `Modular` on 2026-09-13 measured that the identities it needed outside this fragment were all that
+ * shape, so `NUM_MUL (SUC x) y = NUM_ADD (NUM_MUL x y) y` is decided. Under a sum it stays an atom,
+ * deliberately: opening it would rewrite `SUC t` to `t + SUC ZERO` everywhere and make a statement
+ * about `SUC (SUC (SUC ZERO))` into a term with three sums in it; `Successor` already exists for
+ * callers who want that, aimed rather than turned loose, and its own docstring gives the reason.
  *
  * `NUM_SUB`, `PRE`, `NUM_DIV`, `NUM_MOD` and `NUM_GCD` are atoms, which is the same treatment
  * `Modular.identity` gives them and for the same reason: a truncated difference is not the
  * difference of a ring, and no rule here pretends otherwise. An identity that is true only because
- * a subtraction truncates is outside this fragment and is refused rather than decided.
+ * a subtraction truncates, or because a successor under a sum is one more, is outside this fragment
+ * and is refused rather than decided: the refusal is `NotEqualAsRead` naming the atom, never a
+ * `NotEqualTo` standing `Decided`, which `CommutativeRing.prove` is where that is read.
  */
 final class Semiring private (
   val peano: NaturalArithmetic,
-  val normalisation: Rewrite.Conversion
+  ring: CommutativeRing
 ) {
 
+  /** The conversion to the normal form, which is the ring's. */
+  val normalisation: Rewrite.Conversion = ring.normalisation
+
   /** `|- left = right` for an identity of the semiring, or a refusal naming what stopped. */
-  def prove(goal: Term): Either[LogicError, Kernel.Thm] =
-    Rewrite.proveEquation(peano.logic, normalisation, goal)
+  def prove(goal: Term): Either[LogicError, Kernel.Thm] = ring.prove(goal)
 
   /** The same, for an equation written in the development's notation. */
   def prove(text: String): Either[LogicError, Kernel.Thm] =
@@ -210,6 +215,6 @@ object Semiring {
             else Left(NotOfForm(s"the statement published for $name", theorem.conclusion))
         } yield ()
       }
-    } yield new Semiring(peano, built.normalisation)
+    } yield new Semiring(peano, built)
   }
 }

@@ -59,9 +59,48 @@ final class CommutativeRing private (
   /** The facts this development proved, each cited under its name: what a consumer reads. */
   val facts: Map[String, Kernel.Thm] = Published.cite(published)
 
-  /** `|- left = right` for an identity of the structure, or a refusal naming what stopped. */
+  /**
+   * `|- left = right` for an identity of the structure, or a refusal naming what stopped.
+   *
+   * Two normal forms that differ are a decision only over atoms that are free variables, and the
+   * refusal is read again here to say so: `Rewrite` raises `NotEqualTo` whatever the atoms are,
+   * because it does not know which subterms are the structure's and which are atoms. Until
+   * 2026-09-28 nothing read it again, and the semiring of `num` refused `NUM_SUB n n = 0`, which is
+   * `NUM_SUB_REFL`, with standing `Decided` (Mycelium card `22eb8f25`, the naturals' half of what
+   * `Coefficient.asRead` did for RING and FIELD). A truncated difference, a successor under a sum or
+   * any other constant applied is an atom of this reading and not independent of the rest.
+   *
+   * WHAT THE DECISION OVER FREE ATOMS RESTS ON: two different polynomials over free variables are
+   * different functions, which holds over an infinite carrier with no zero divisors, the naturals
+   * and the integers here and every carrier this is built at today. Over a finite one it fails,
+   * `x * x = x` holding in two elements, so a carrier of that kind would need this decision taken
+   * away rather than inherited.
+   */
   def prove(goal: Term): Either[LogicError, Kernel.Thm] =
-    Rewrite.proveEquation(logic, normalisation, goal)
+    Rewrite.proveEquation(logic, normalisation, goal).left.map(asRead)
+
+  /**
+   * The atoms of a normal form: every maximal subterm under the structure's sums, products and
+   * negations that is not its zero or its one.
+   */
+  def atomsOf(term: Term): Vector[Term] = term match {
+    case constant if constant == operations.zero || constant == operations.one => Vector.empty
+    case App(App(operation, left), right) if operation == operations.add || operation == operations.multiply =>
+      atomsOf(left) ++ atomsOf(right)
+    case App(negation, argument) if operations.negate.contains(negation) => atomsOf(argument)
+    case atom => Vector(atom)
+  }
+
+  /** A `NotEqualTo` over an atom that is not a free variable becomes `NotEqualAsRead` naming it. */
+  private def asRead(refusal: LogicError): LogicError = refusal match {
+    case NotEqualTo(wanted, found) =>
+      val bound = (atomsOf(found) ++ atomsOf(wanted)).distinct.filter {
+        case _: FVar => false
+        case _ => true
+      }
+      if (bound.isEmpty) refusal else NotEqualAsRead(wanted, found, bound)
+    case other => other
+  }
 
   /** The same, for two terms rather than an equation. */
   def prove(left: Term, right: Term): Either[LogicError, Kernel.Thm] =
