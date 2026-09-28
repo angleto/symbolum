@@ -163,8 +163,9 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
       antecedents(strip(entry.theorem.conclusion)).exists(overAnInterval)).map(_.name).distinct
 
     // 16 since 2026-09-27: `CAUCHY_MEAN_VALUE` asks two-sided continuity on [a, b] of both functions,
-    // and `CAUCHY_MEAN_VALUE_WITHIN` landed with it.
-    twoSided.size shouldBe 16
+    // and `CAUCHY_MEAN_VALUE_WITHIN` landed with it. 17 since 2026-09-28: `TAYLOR_LEFT` asks it on
+    // [b, a], and this census is what asked for `TAYLOR_LEFT_WITHIN` in the same change.
+    twoSided.size shouldBe 17
     val missing = twoSided.filterNot(name => names.contains(s"${name}_WITHIN"))
     withClue(s"two-sided interval facts with no _WITHIN twin and no card owing one: ${missing.mkString(", ")}\n") {
       missing.toSet shouldBe Pending.keySet

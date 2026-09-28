@@ -789,8 +789,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `CLAUDE.md`'s figures move by **two** and **two**: `COS_DECREASING` and `COS_INJECTIVE` bind
     // `x` and `y`, both real, and the other nineteen bind at most one. Measured over `2cb685b7` and
     // merged as base 930 and 927 plus that delta.
-    library.entries.size shouldBe 951
-    library.names.distinct.size shouldBe 948
+    // 932 and 929 with `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, 2026-09-28, derived before the run:
+    // two facts in `Derivative` under two names. `CLAUDE.md`'s figures move by two each: each binds
+    // a family, two reals and a natural, and the two reals share a type. Plus two over the base above.
+    // 953 and 950 with both, merged on 2026-09-28 as base 930 and 927 plus `Circle`'s twenty-one and
+    // the Taylor pair's two; `CLAUDE.md`'s figures likewise, 953, 632 and 565.
+    library.entries.size shouldBe 953
+    library.names.distinct.size shouldBe 950
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

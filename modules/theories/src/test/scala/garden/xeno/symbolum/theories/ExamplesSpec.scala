@@ -45,6 +45,22 @@ class ExamplesSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  it should "show the textbook's form of a theorem wherever the library holds one" in {
+    // Card `fd256345`, from its verification of 2026-09-27: five pages showed a theorem with its
+    // continuity two-sided at the ends of `[a, b]`, stronger than the textbook's hypothesis, while the
+    // library held the textbook's form under the same name with `_WITHIN`, and no page said which it
+    // was. A reader of a showcase compares a page with the statement they know, so the form shown is
+    // the one that asks no more. Seen red at `2df36b66` before the names moved: INTERMEDIATE_VALUE,
+    // CONTINUOUS_ATTAINS_MAX, ROLLE, MEAN_VALUE and DERIVATIVE_INTEGRAL.
+    val library = Library.of(Chain.standard)
+    val stronger = Examples.Chosen.flatMap(_._2).filter(name => library.named(s"${name}_WITHIN").nonEmpty)
+    withClue(s"chosen where the library holds the form relative to [a, b]: ${stronger.mkString(", ")}\n") {
+      stronger shouldBe empty
+    }
+    // Non-vacuity: the suffix is one the library does use, so an empty result above is a finding.
+    library.named("ROLLE_WITHIN") should not be empty
+  }
+
   it should "refuse rather than skip when a chosen name stops resolving" in {
     // The assertion that the paragraph above is true rather than intended. A generator that dropped
     // an unresolvable name would leave a document that is smaller and still looks finished, and

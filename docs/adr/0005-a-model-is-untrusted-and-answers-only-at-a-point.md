@@ -192,5 +192,5 @@ to see that the domain was the sample. Declining is what keeps `Survived` and `t
 **Put the model on the trusted side and let a proof appeal to it.** A finite model can settle a
 finite claim, and a system that enumerated a three-element domain could in principle emit a theorem.
 Rejected by `0003`: this would put an evaluator, its arithmetic, and its tolerance inside the trusted
-base, which is currently under 1220 lines and readable in an afternoon. The whole value of the
+base, which is currently under 1240 lines and readable in an afternoon. The whole value of the
 propose-and-check arrangement is that the proposing half can be wrong.

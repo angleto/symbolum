@@ -429,7 +429,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // delta of eighteen, merged after the crash of 2026-09-27.
     // 821 with `EXP_ONE_IRRATIONAL`'s one residue, 2026-09-27, measured as one by the run over
     // 7a15f023. Plus one over the base above.
-    proposals.size shouldBe 845
+    // 851 with `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, three residues each, 2026-09-28, derived
+    // before the run and read off it. Plus six over the base above.
+    proposals.size shouldBe 851
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1422,7 +1424,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 690 with `EXP_ONE_IRRATIONAL`'s residue, 2026-09-27, measured as one by the run over
     // 7a15f023. That run stopped this test here, so the buckets below were not read by it. Plus one
     // over the base above.
-    open shouldBe 714
+    // 720 with the six residues of `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, 2026-09-28, measured by
+    // the run: all six here, as `TAYLOR`'s went, each keeping the `Sum` and the `Power`. Plus six.
+    open shouldBe 720
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2140,7 +2144,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `after` does not move, measured by the same probe.
     // 275 with `EXP_ONE_IRRATIONAL`'s residue, 2026-09-27, measured as one by the run over
     // 7a15f023: it keeps `NUM_LT`, and `after` did not move. Tip plus this branch's delta.
-    aboutNumbers.size shouldBe 275
+    // 281 with the six residues of `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, 2026-09-28, measured by the
+    // run: each keeps the `Sum` and the `Power` of the conclusion, as `TAYLOR`'s do. Plus six.
+    aboutNumbers.size shouldBe 281
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

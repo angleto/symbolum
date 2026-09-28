@@ -71,10 +71,11 @@ class SemiringSpec extends AnyFlatSpec with Matchers {
   /**
    * The edge of the fragment, asserted rather than described.
    *
-   * A successor of anything but zero is an atom, so a true identity that needs it opened is refused
-   * here and is `Peano.SuccessorTimes` one specialisation away. A truncated difference is an atom
-   * too, which is not the same thing: identities **about** it are decided, as long as they are true
-   * of any atom whatever, and that is exactly what `Modular.identity` does with it.
+   * A successor of anything but zero is opened under a product and is an atom under a sum, so a true
+   * identity that needs one opened under a sum is refused here, and refused without a decision, which
+   * `SemiringDecidesOnlyFreeAtomsSpec` asserts. A truncated difference is an atom too, which is not
+   * the same thing: identities **about** it are decided, as long as they are true of any atom
+   * whatever, and that is exactly what `Modular.identity` does with it.
    */
   it should "open a successor under a product and not under a sum, and treat a difference as an atom" in {
     // A successor multiplied is opened, which was not so until the conversion of `Modular` on

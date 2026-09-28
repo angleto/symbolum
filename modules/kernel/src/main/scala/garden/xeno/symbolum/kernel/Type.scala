@@ -23,8 +23,31 @@ final case class TyVar(name: String) extends Type
  * The arity is not checked here. It is checked where a type enters the system from outside, by
  * [[Theory.checkType]], because that is where a name is being trusted; a type produced by
  * instantiating a type that was already checked cannot become ill-formed.
+ *
+ * Built only by [[TyApp.apply]], which hands back one instance per value. Equality is still the
+ * structural one, so nothing is decided by which instance a caller holds: `docs/adr/0058`.
+ * `fromProduct` is written out because Scala 3 otherwise synthesises a public one calling `new`.
  */
-final case class TyApp(operator: String, arguments: List[Type]) extends Type
+final case class TyApp private (operator: String, arguments: List[Type]) extends Type {
+  private val hash = scala.util.hashing.MurmurHash3.productHash(this)
+  override def hashCode(): Int = hash
+}
+
+/** The table grows with the distinct types a process spells, which a whole chain puts at 808. */
+object TyApp {
+  private val interned = new java.util.concurrent.ConcurrentHashMap[TyApp, TyApp]
+
+  def apply(operator: String, arguments: List[Type]): TyApp = {
+    val fresh = new TyApp(operator, arguments)
+    Option(interned.putIfAbsent(fresh, fresh)).getOrElse(fresh)
+  }
+
+  def fromProduct(product: Product): TyApp = product.productIterator.toList match {
+    case List(operator: String, arguments: List[?]) if arguments.forall(_.isInstanceOf[Type]) =>
+      apply(operator, arguments.collect { case argument: Type => argument })
+    case _ => throw new IllegalArgumentException(s"not the fields of a type application: $product")
+  }
+}
 
 object Type {
 

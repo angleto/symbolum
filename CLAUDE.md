@@ -402,7 +402,7 @@ to live. `WhatAClaimCosts` is the first one that does.
 
 Everything this system asks anyone to believe:
 
-1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1220 lines. The
+1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1240 lines. The
    directory also holds a printer, the refusal surface, the proof record and the reader of which
    commit the classes were built from, which are not counted and cannot construct a theorem, which
    a test checks rather than claims. `Kernel.Thm` is a class
@@ -677,7 +677,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 951 lemmas, 630 have two or more leading quantifiers and **563 of
+caller meant: of the library's 953 lemmas, 632 have two or more leading quantifiers and **565 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different

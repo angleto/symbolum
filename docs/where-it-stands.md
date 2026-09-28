@@ -1256,7 +1256,8 @@ about every point near one, so carrying it back from the extension takes a congr
 functions equal on `[a, b]` have the same fine sums, integrals and relative derivatives there.
 `IntegralWithinSpec` detaches the four at the same step and holds the census: every fact with a
 two-sided continuity hypothesis over an interval has a `_WITHIN` twin stated with
-`continuous_within`, with a floor on how many it finds so that a selector matching nothing fails.
+`continuous_within`, with the number it finds asserted exactly, so that a selector matching nothing
+fails and a fact added without its twin does too.
 The first half of the fundamental theorem is a different case: its hypothesis at the ends is a
 one-sided **derivative**, which a constant extension cannot carry, and it got its textbook form
 another way, two paragraphs down. **Integration by parts and the change of variables have theirs
@@ -1266,7 +1267,9 @@ relative slopes on `[a, b]` is extended past each end by its tangent line there,
 interval, inside by locality and at an end by gluing the tangent line's side to the function's. The
 two-sided rules then apply at the extensions and the congruence carries the result back.
 `IntegralRulesWithinSpec` detaches both at `abs` on `[0, 1]`, which has no derivative at `0`, and
-`IntegralWithinSpec` holds a second census, of two-sided derivatives asked on a closed interval.
+`IntegralWithinSpec` holds a second census, of two-sided derivatives asked on a closed interval. What
+the relative change of variables does not relax is the outer function: `F` is still asked a slope
+at every real, where a textbook asks it only on the image of `[a, b]`; card `454c2a9f` owes that form.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum
@@ -1390,7 +1393,14 @@ at `\k. \y. y`. `TAYLOR_WITHIN` is its textbook form since 2026-09-27, with `con
 is `TAYLOR` at the family of extensions of the `D k` by their values at the two ends, read back at
 `a`, `b` and Rolle's point, under the sum's binder as well, and it costs what `TAYLOR` costs.
 `DerivativeSpec` detaches it at the step `COND (0 < y) 1 0` on `[-1, 0]`, where `TAYLOR`'s own
-hypothesis is false at zero. What neither is: anything about a Taylor series converging.
+hypothesis is false at zero. `TAYLOR_LEFT` is the other side of the point, since 2026-09-28: the
+same formula read at a `b` below the `a` it expands at, with `b < a` and Rolle's point between
+them, which `TAYLOR` does not cover because it asks `a < b`. It is `TAYLOR` at the reflected family
+`\k. \t. Power (0 - 1) k * D k (0 - t)` over `[0 - a, 0 - b]`, costs what `TAYLOR` costs, has `TAYLOR_LEFT_WITHIN` for its textbook form with
+`continuous_within (D k) b a x`, carried across the extensions as `TAYLOR_WITHIN` is, and
+`DerivativeSpec` detaches it at `\k. exp` expanded at 0 and read at -1 and refutes it without the
+derivative hypothesis at `\k. \y. y`. What none of them is: anything about a Taylor series
+converging.
 
 **The limit of a function at a point is `Continuity.tends`, and L'Hopital's rule is
 `Derivative.LHOPITAL`, since 2026-09-27.** `tends f x l` is the epsilon-delta statement over the

@@ -1133,7 +1133,7 @@ which is the assertion that pins it.
 
 ## The exposure of the trusted base, and what the line count does not measure
 
-The project publishes one number about its trusted base: four files under 1220 lines, with a test
+The project publishes one number about its trusted base: four files under 1240 lines, with a test
 that measures it and a record for every time the bound moved. What it has never published, and had
 no way to say, is **how much hostile attention those lines have had**.
 

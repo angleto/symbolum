@@ -360,6 +360,8 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
       (Verdict.Crossing, "an atom, in the raiser's notation"),
     ("Linarith.scala", "reals.show(unread)") ->
       (Verdict.Crossing, "a hypothesis, in the raiser's notation"),
+    ("Linarith.scala", "rest") ->
+      (Verdict.Crossing, "what a goal asks beyond its squares, rendered through reals.show by beyondSquares"),
     ("Logic.scala", "missing.keys.mkString(\", \")") ->
       (Verdict.Name, "the constants a theory does not declare, by name"),
     ("Magnitude.scala", "Classical.Select") -> (Verdict.Name, "the choice constant's name"),
