@@ -11,11 +11,11 @@
 #      half. Expected GREEN, and it is the control: the tree differs from the line only in prose
 #      the spec says it does not check, so a red here means the line itself is red.
 #   2. A figure on a generated page is edited by hand: the intermediate value theorem's count of
-#      inferences goes up by one. Expected RED, at "be what the command produces".
-#   3. A statement on a generated page is edited by hand, in the direction a reader comparing with
-#      a textbook would want: the intermediate value theorem's two-sided `cont` is written as a
-#      continuity relative to [x, y]. Expected RED, at the same test.
-#   4. The theorem changes and the page is not regenerated: `ROLLE` becomes `ROLLE_WITHIN` in
+#      inferences goes up by one (its `_WITHIN` page since 2026-09-28, which is the one shown). Expected RED, at "be what the command produces".
+#   3. A statement on a generated page is edited by hand: the intermediate value theorem's
+#      continuity relative to [x, y] is written as the two-sided `cont`, which is what the page said
+#      until 2026-09-28. Expected RED, at the same test.
+#   4. The theorem changes and the page is not regenerated: `ROLLE_WITHIN` becomes `ROLLE` in
 #      `Examples.Chosen`. Expected RED, at the same test, naming the command to run.
 #
 # WHAT WAS SEEN, 2026-09-27, this script through sbt at 7a15f023, restore verified after each run.
@@ -25,6 +25,9 @@
 #   3. Red at 3 of 4, exit 1, at the same test.
 #   4. Red at 3 of 4, exit 1, at the same test, after compiling the one perturbed source; the
 #      difference printed is the ROLLE page against the ROLLE_WITHIN one.
+#
+# The targets of 2, 3 and 4 moved on 2026-09-28, when the analysis pages took their `_WITHIN`
+# forms (card fd256345); the run recorded above is of the targets before that move.
 #
 # What 1 says is a limit rather than a defect of the spec, which says so in its own comment: the
 # hand-written rows can drift from the library and nothing here goes red.
@@ -51,21 +54,21 @@ echo "### exit $? for 1-prose-above-the-marker" >> "$LOG"
 
 echo "################ 2-a-figure-on-a-page" >> "$LOG"
 "$P" "$PAGE" \
-  '28128 inferences of its own' \
-  '28129 inferences of its own' \
+  '45862 inferences of its own' \
+  '45863 inferences of its own' \
   -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 2-a-figure-on-a-page" >> "$LOG"
 
 echo "################ 3-a-statement-on-a-page" >> "$LOG"
 "$P" "$PAGE" \
-  '\operatorname{cont}(f, u) \right) \Rightarrow f(x) \le z' \
   '\operatorname{cont}_{[x, y]}(f, u) \right) \Rightarrow f(x) \le z' \
+  '\operatorname{cont}(f, u) \right) \Rightarrow f(x) \le z' \
   -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 3-a-statement-on-a-page" >> "$LOG"
 
 echo "################ 4-the-theorem-changes" >> "$LOG"
 "$P" "$SOURCE" \
-  '"ROLLE",' \
   '"ROLLE_WITHIN",' \
+  '"ROLLE",' \
   -- ./tools/sbt -batch "$SPEC" >> "$LOG" 2>&1
 echo "### exit $? for 4-the-theorem-changes" >> "$LOG"
