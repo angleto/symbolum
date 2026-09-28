@@ -79,8 +79,9 @@ class CoefficientSpec extends AnyFlatSpec with Matchers {
   }
 
   "Zero" should "have no inverse here, so that inv 0 stays an atom" in {
-    // Not a gap. Nothing the theory knows says what `inv 0` is, and nothing multiplies it to one,
-    // so giving it a normal form would be inventing one.
+    // Not a gap. Nothing this arithmetic holds says what `inv 0` is, and nothing multiplies it to
+    // one, so giving it a normal form here would be inventing one; the chain proves it zero through
+    // `CUT_INV_ZERO`, which is not a fact of this class.
     coefficients.ofInverse(0, 1).isLeft shouldBe true
   }
 

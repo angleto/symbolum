@@ -679,8 +679,8 @@ Both multiplication axioms had to be put to work first, which is the difference 
 a code and a fact a derivation can use: `NUM_PA_MUL_ZERO` says `!v0. v0 * 0 = 0` and
 `NUM_PROV_MUL_ZERO` is that axiom at a closed term. The successor one is where the substitution
 walk is longer than addition's, because `v0 * S v1 = v0 * v1 + v0` puts a product **inside** a sum
-and the walk descends through both. Four facts, **zero axioms**, and the trusted base stays at
-nineteen.
+and the walk descends through both. Four facts, **zero axioms**, and the trusted base stayed at
+the nineteen it held that day.
 
 Why it is the bottom of the stack rather than a lemma somebody wanted: every pure-arithmetic
 representation `docs/adr/0013`'s coding needs, which is `NUM_TRI`, `NUM_PAIR`, `NUM_CODE` and the
@@ -929,8 +929,12 @@ derives is the step at a head, the step as a function, and the two clauses of a 
 is choice, infinity and eta, the price of the lists. The interpreter is a few lines of `BigInt`
 arithmetic that nothing believes. `Fractran.certify` hands each state it proposes to the kernel,
 and `FractranSpec` gets Conway's PRIMEGAME from `2` to `4` in nineteen steps that way. **What is not
-here** is whether Conway's generalised Collatz maps meet `Collatz`, which is card `b0d2ada9` and a
-question rather than a plan. **What a program computes is here since 2026-09-26**:
+here is a bridge to `Collatz`, and card `b0d2ada9` found on 2026-09-26 that there is none to
+build**: `Collatz` is the rewriting system S_2 on words and declares no map on `num`, and the one
+Collatz map in the repository, `T` in `core`'s `CollatzSeries`, has a nonzero offset on every class
+holding an odd number, where a FRACTRAN step multiplies by one fixed fraction on each class modulo
+the denominators, or halts on all of it. That last fact is Conway's observation, checked here in
+numbers and proved nowhere. **What a program computes is here since 2026-09-26**:
 `FRACTRAN_STEP_REGISTERS` says a step from a positive state under positive numerators is exactly a
 step of `FRACTRAN_REGISTER_STEP`, the same fold with each fraction's test and effect written on the
 prime registers, so that `3/2` adds one to the register of `3` and takes one from that of `2` is a
@@ -1026,6 +1030,21 @@ commits' own diffs rather than a pattern, because the claim is spelled different
 document and a pattern matching all of them would have been built by reading them, which is the
 reading it was meant to replace. A count of copies is itself a copy, and this one counted the
 repair instead of the population, which is the shape of error the sentence it sits in is about.
+
+**`Transcendental.EXP_ONE_IRRATIONAL` is that `exp 1` is not a ratio of naturals, since
+2026-09-27**, in the form `Root.SQRT_TWO_IRRATIONAL` has: `!p q. 0 < q ==> ~(exp 1 = real_of_num p
+/ real_of_num q)`. The proof is Fourier's and `Fourier` carries it: a partial sum of the series
+times a factorial is a natural, the rest times the same factorial lies strictly between zero and
+one, and no natural does. Two things in it are not the textbook's. It is run one index past the
+denominator, at `q + 1`, because the geometric tail this library has is `EXP_TAIL_GEOMETRIC`'s, of
+ratio one half, and at `q` that bound ends at exactly one when `q = 1`; one index along it ends at
+`2 / (q + 2)`, so the strict inequality comes from a margin and no strict comparison of limits had
+to be built. And the partial sum times the factorial is shown to be a natural by an induction on
+its last index, so no quotient `b! / i!` is formed. What it rests on is asserted in
+`TranscendentalSpec`, and `tools/verify/perturb-exp-one-irrational.sh` takes the margin away and
+watches the last step refuse. **Whether `0 < q` can be dropped is open**: at `q = 0` the ratio is
+`p * inv 0`, and nothing about `inv 0` is published for the reals, so unlike
+`NUM_SQUARE_NOT_DOUBLE`'s hypothesis this one is neither shown necessary nor shown idle.
 
 **The Cauchy product is proved, in two theorems, and both landed on 2026-09-21.**
 `Limit.SUM_CAUCHY_PRODUCT_NONNEG` is the case where both series have non-negative terms and
@@ -1194,7 +1213,8 @@ one estimate rather than a rule: the addition theorem turns the error into
 `abs h <= 1 / 2`. That estimate is `EXP_NEAR_ONE` one order higher, the tail after two terms under
 `EXP_TAIL_GEOMETRIC` at a ratio of a half, and it covers both signs of `h` in one argument where
 the first-order one went through the reflection. It is the one fact of `Derivative` that spends a
-series, so it reaches `COMPLETENESS`, the naturals' axioms and eta, all nineteen of the chain, and
+series, so it reaches `COMPLETENESS`, the naturals' axioms and eta, all nineteen of the chain as it
+stood before `docs/adr/0053` made the sixteen theorems, and
 `DerivativeSpec` asserts it costs exactly what the estimate costs and what the addition theorem costs.
 **And the sign of a derivative on an interval, the same day**: `DERIVATIVE_ZERO_CONSTANT`,
 `DERIVATIVE_NONNEG_MONOTONE` and `DERIVATIVE_POS_LT_MONOTONE`, the mean value theorem between two
@@ -1224,11 +1244,16 @@ functions equal on `[a, b]` have the same fine sums, integrals and relative deri
 `IntegralWithinSpec` detaches the four at the same step and holds the census: every fact with a
 two-sided continuity hypothesis over an interval has a `_WITHIN` twin stated with
 `continuous_within`, with a floor on how many it finds so that a selector matching nothing fails.
-The first half of the
-fundamental theorem is a different case: its hypothesis at the ends is a one-sided
-**derivative**, which a constant extension cannot carry, and it got its textbook form another way,
-two paragraphs down. Integration by parts and the change of variables still ask a two-sided
-derivative over the interval, which is card `3caa8541`.
+The first half of the fundamental theorem is a different case: its hypothesis at the ends is a
+one-sided **derivative**, which a constant extension cannot carry, and it got its textbook form
+another way, two paragraphs down. **Integration by parts and the change of variables have theirs
+since 2026-09-27**, `_WITHIN` appended, with the derivatives relative to `[a, b]`: a function with
+relative slopes on `[a, b]` is extended past each end by its tangent line there, and
+`DERIVATIVE_WITHIN_TANGENT` says the extension has the two-sided derivative at every point of the
+interval, inside by locality and at an end by gluing the tangent line's side to the function's. The
+two-sided rules then apply at the extensions and the congruence carries the result back.
+`IntegralRulesWithinSpec` detaches both at `abs` on `[0, 1]`, which has no derivative at `0`, and
+`IntegralWithinSpec` holds a second census, of two-sided derivatives asked on a closed interval.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum

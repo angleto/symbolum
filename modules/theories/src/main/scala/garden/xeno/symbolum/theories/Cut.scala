@@ -4,8 +4,8 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * The reals as Dedekind cuts on the rationals, first stage: the type, its order, the rationals inside
- * it, and least upper bounds as a theorem.
+ * The reals as Dedekind cuts on the rationals: the type, its order, the rationals inside it, least
+ * upper bounds as a theorem, and the arithmetic, which is what `Real` defines its constants over.
  *
  * == The route ==
  *

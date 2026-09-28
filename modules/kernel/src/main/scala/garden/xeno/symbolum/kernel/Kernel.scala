@@ -40,9 +40,9 @@ package garden.xeno.symbolum.kernel
  * that map, so such a constant carries no origin and two absent origins compare equal. Two theories
  * that declare one name and assert different axioms about it are each consistent, their two `c`s
  * are the same term, and symmetry and transitivity chain `|- c = T` with `|- c = F` into `|- T = F`
- * exactly as before. It is the shape the developments here are built in rather than a corner: the
- * operations `RealSpec` asserts are declared rather than defined are the ones the sixteen axioms
- * give their meaning to, and `Classical.Select` is declared and axiomatised the same way. An
+ * exactly as before. It was the shape the reals were built in until `docs/adr/0053` defined their
+ * operations from the cuts, and it is still the shape of `Classical.Select`, declared and then
+ * axiomatised, and of any theory a caller asserts axioms into. An
  * adversarial audit found this on 2026-09-10, no test pins it, and it is unrepaired.
  *
  * The origin cannot reach that half, a declared constant having no defining term to carry. A

@@ -612,7 +612,7 @@ private[theories] object Degrees {
     } yield result
 
   /**
-   * The six facts `Limit` publishes from this file, under the names it gives them.
+   * The facts `Limit` publishes from this file, under the names it gives them.
    *
    * `CONVERGES_BOUNDED` and `POWER_NONNEG` are published because they are general and each has a
    * second consumer here; the non-negative-ratio forms of the degree-one and degree-`k` lemmas are

@@ -259,7 +259,10 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
   it should "multiply two continuous functions at the linear combination's price, and detach at the square" in {
     // Measured on 2026-09-26 before it was written here: the same set as the linear combination,
     // whose shares of `e` the product reuses, with a third radius at tolerance one and no supremum.
-    Derivation.axiomsOf(fact(Continuity.Product)) shouldBe Derivation.axiomsOf(fact(Continuity.Linear))
+    // Read with the sixteen as the interface since 2026-09-27 (card `8fb6da8b`): the bare
+    // `Derivation.axiomsOf` answers the foundation's three for every fact about the reals since
+    // `docs/adr/0053`, and the equality would hold whatever the product spent.
+    Real.spent(fact(Continuity.Product)) shouldBe Real.spent(fact(Continuity.Linear))
 
     // Detached at the identity twice, with nothing assumed.
     val x = Term.variable("x", reals)
@@ -404,7 +407,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(fact(Continuity.Uniform), gluing) shouldBe gluing
   }
 
-  it should "spend in each compactness fact exactly what the intermediate value theorem spends, all sixteen and the choice" in {
+  it should "spend in each compactness fact exactly what the intermediate value theorem spends, every axiom of the reals and the choice" in {
     // The two assertions above for these five, `contains COMPLETENESS` and `spent -- sixteen = {SELECT}`,
     // are an equality outside the reals and a ceiling inside them: a derivation reaching five of the
     // sixteen would pass both, while the prose beside them (this file's comments, `CLAUDE.md`, the
@@ -491,6 +494,84 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
 
     val refused = force(rules.existsElim(somewhere, d, absurd).flatMap(rules.notIntro(unconditional, _)))
     refused.hypotheses shouldBe empty
+  }
+
+  private def lambda(text: String): Term = force(continuity.term(text, Type.fun(reals, reals)))
+
+  /* ------------------------------------------------------- sums and composition */
+
+  /** `|- (\y. A y) = (\y. B y)` at the pointwise equation a lemma gives, `y` free in both. */
+  private def underBinder(pointwise: Kernel.Thm): Kernel.Thm =
+    force(LogicError.lift(Kernel.abs(Term.variable("y", reals), pointwise)))
+
+  private def continuousAt(function: Kernel.Thm, point: Term): Kernel.Thm = {
+    val constant = force(continuity.term(Continuity.Continuous, Type.fun(Type.fun(reals, reals), Type.fun(reals, Type.Bool))))
+    force(Conv.apTerm(constant, function).flatMap(Conv.apThm(_, point)))
+  }
+
+  "Sums and composition" should "detach at the identity and a constant, and at a square of a shifted identity" in {
+    // What makes a polynomial continuous by composing lemmas: `y + c` from the sum, and
+    // `(y + 1) * (y + 1)` from the product composed with it, each with nothing assumed.
+    val x = real("x:real")
+    val identity = force(rules.spec(x, fact(Continuity.Identity)))
+    val constant = force(rules.specAll(fact(Continuity.Constant), List(real("c:real"), x)))
+    val sum = opened(force(rules.specAll(fact(Continuity.Sum), List(lambda("\\y:real. y"), lambda("\\y:real. c:real"), x))
+      .flatMap(rules.mp(_, identity)).flatMap(rules.mp(_, constant))))
+    sum.hypotheses shouldBe empty
+    sum.conclusion shouldBe proposition("continuous (\\y:real. y + c:real) x")
+
+    val one = opened(force(rules.specAll(fact(Continuity.Sum), List(lambda("\\y:real. y"), lambda("\\y:real. 1:real"), x))
+      .flatMap(rules.mp(_, identity)).flatMap(rules.mp(_, force(rules.specAll(fact(Continuity.Constant), List(real("1:real"), x)))))))
+    val atShift = real("x + 1:real")
+    val squareThere = opened(force(rules.specAll(fact(Continuity.Product), List(lambda("\\y:real. y"), lambda("\\y:real. y"), atShift))
+      .flatMap(rules.mp(_, force(rules.spec(atShift, fact(Continuity.Identity)))))
+      .flatMap(rules.mp(_, force(rules.spec(atShift, fact(Continuity.Identity)))))))
+    // Opened before detaching: at `g := \y. y + 1` the second antecedent reads `(\y. y + 1) x`, a
+    // redex `mp` does not look through.
+    val composeInstance = opened(force(rules.specAll(fact(Continuity.Compose), List(lambda("\\y:real. y * y"), lambda("\\y:real. y + 1"), x))))
+    val composed = force(rules.mp(composeInstance, one).flatMap(rules.mp(_, squareThere)))
+    composed.hypotheses shouldBe empty
+    composed.conclusion shouldBe proposition("continuous (\\y:real. (y + 1) * (y + 1)) x")
+  }
+
+  it should "need each hypothesis, which the step refutes with one of them dropped" in {
+    // The sum without `g`'s continuity: at `f = 0` and `g` the step, the sum is `0 + step`, which the
+    // abstraction rule makes the step itself, and the step is refused at zero. The composition
+    // without `f`'s continuity at `g x`: at `f` the step and `g` the identity, the composite is the
+    // step. Each is a derivation of falsity from the statement with that one hypothesis removed.
+    val zero = real("0:real")
+    val stepAt = force(continuity.term("\\y:real. COND (0 < y) (1:real) 0", Type.fun(reals, reals)))
+
+    val sumDropped = proposition(
+      "!f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous (\\y:real. f y + g y) x")
+    val sumAssumed = force(LogicError.lift(Kernel.assume(sumDropped)))
+    val zeroFunction = lambda("\\y:real. (0:real)")
+    val sumInstance = opened(force(rules.specAll(sumAssumed, List(zeroFunction, stepAt, zero))
+      .flatMap(rules.mp(_, force(rules.specAll(fact(Continuity.Constant), List(zero, zero)))))))
+    val plainStep = underBinder(force(rules.specAll(lemma("!A:real. 0 + A = A"), List(real("COND (0 < y:real) (1:real) 0")))))
+    val sumIsStep = force(LogicError.lift(Kernel.eqMp(continuousAt(plainStep, zero), sumInstance)))
+    val sumFalse = force(rules.notElim(stepRefused, sumIsStep))
+    sumFalse.hypotheses shouldBe List(sumDropped)
+
+    val composeDropped = proposition(
+      "!f:real -> real. !g:real -> real. !x:real. continuous g x ==> continuous (\\y:real. f (g y)) x")
+    val composeAssumed = force(LogicError.lift(Kernel.assume(composeDropped)))
+    val composeInstance = opened(force(rules.specAll(composeAssumed, List(stepAt, lambda("\\y:real. y"), zero))
+      .flatMap(rules.mp(_, force(rules.spec(zero, fact(Continuity.Identity)))))))
+    val composeFalse = force(rules.notElim(stepRefused, composeInstance))
+    composeFalse.hypotheses shouldBe List(composeDropped)
+  }
+
+  it should "cost what the combination costs for the sum, and nothing at all for the composition" in {
+    Derivation.axiomsOf(fact(Continuity.Sum)) shouldBe Derivation.axiomsOf(fact(Continuity.Linear))
+    // Measured on 2026-09-27 and asserted since: the composition reaches no axiom at all. Its
+    // argument hands one radius to the other and compares nothing, so it is logic over the
+    // definition, and a derivation of it that reached for an order fact would be doing more than
+    // the theorem needs.
+    Derivation.axiomsOf(fact(Continuity.Compose)) shouldBe empty
+    val linear = fact(Continuity.Linear).conclusion
+    Derivation.restingOn(fact(Continuity.Sum), Set(linear)) shouldBe Set(linear)
+    Derivation.restingOn(fact(Continuity.Compose), Set(linear)) shouldBe empty
   }
 
   it should "be reachable from the chain's end, so that every development above the reals can name it" in {

@@ -130,6 +130,11 @@ object Theorems {
         "one is the arithmetic content of, stated about `sqrt`, which `Root` defines and proves to " +
         "exist from the completeness of the reals; the proof clears the ratio, squares it, and " +
         "carries the equation back into the naturals, where the descent already refused it."),
+    "EXP_ONE_IRRATIONAL" ->
+      ("`exp 1`, which is `e`, is not a ratio of naturals either, by a different argument: " +
+        "Fourier's, where a partial sum of the series times a factorial is a natural and the rest " +
+        "of the series times the same factorial lies strictly between zero and one. What it knows " +
+        "about `e` is the series converging to it and that series' tail, and nothing else."),
     "NUM_PROV_DEDUCTION" ->
       ("The deduction theorem, for **Peano arithmetic as this system encodes it inside itself**. " +
         "Not a fact about the logic these pages are written in: a fact about an arithmetic whose " +

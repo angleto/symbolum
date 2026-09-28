@@ -414,14 +414,22 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // antecedents over seven facts, four on `DERIVATIVE_WITHIN_CONGRUENCE`, three each on the two
     // derivative twins and two on each of the other four. Tip plus this branch's delta.
     // 737 with Wilson's five, 2026-09-26, derived before the run: four antecedents on
-    // `NUM_PROD_PAIRED` and one on `NUM_WILSON`. Tip plus this branch's delta.
+    // `NUM_PROD_PAIRED` and one on `NUM_WILSON`.
     // 740 with `TAYLOR_WITHIN`'s three residues, 2026-09-27.
     // 802 with the rationals and the cuts collected, 2026-09-27, card `e4a90d43`: sixty-two
     // antecedents over the facts of `Fraction` and `Cut`, measured and not derived, by a probe of this
     // file with its numeric assertions printed over the classes of `4d63882b`.
     // 820 with the eighteen residues of `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE`, its relative form and
-    // `LHOPITAL`, 2026-09-27. Tip plus this branch's delta.
-    proposals.size shouldBe 820
+    // `LHOPITAL`, 2026-09-27.
+    // 826 with the sum and the composition of continuous functions and the sum rule, 2026-09-27,
+    // derived before the run: two antecedents on each of the three.
+    // 844 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived before the
+    // run: eighteen antecedents over five facts, four each on `DERIVATIVE_WITHIN_TANGENT` and the two
+    // forms of parts, three on each form of the change of variables. Base 826 plus that branch's
+    // delta of eighteen, merged after the crash of 2026-09-27.
+    // 821 with `EXP_ONE_IRRATIONAL`'s one residue, 2026-09-27, measured as one by the run over
+    // 7a15f023. Plus one over the base above.
+    proposals.size shouldBe 845
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1404,7 +1412,17 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 689 with eleven of the eighteen residues of `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE`, its relative
     // form and `LHOPITAL`, 2026-09-27, measured by the run: all five of the relative form's are here.
     // Tip plus this branch's delta.
-    open shouldBe 689
+    // 695 with the six residues of `CONTINUOUS_ADD`, `CONTINUOUS_COMPOSE` and `DERIVATIVE_ADD`,
+    // 2026-09-27, read off the suite's failure after a prediction of six: each keeps an implication
+    // or names `continuous` or `derivative`, which no procedure settles, and `unreadable` did not
+    // move.
+    // 713 with all eighteen residues of parts and the change of variables relative to `[a, b]`,
+    // 2026-09-27, measured by the full suite before that branch's merge, where all eighteen went here
+    // and no other bucket moved. Base 695 plus that delta.
+    // 690 with `EXP_ONE_IRRATIONAL`'s residue, 2026-09-27, measured as one by the run over
+    // 7a15f023. That run stopped this test here, so the buckets below were not read by it. Plus one
+    // over the base above.
+    open shouldBe 714
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2120,7 +2138,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 274 with four residues of the facts of `Fraction` and `Cut`, 2026-09-27, card `e4a90d43`, by
     // the probe the `open` row names; which four was not read. None is refuted at a point, so
     // `after` does not move, measured by the same probe.
-    aboutNumbers.size shouldBe 274
+    // 275 with `EXP_ONE_IRRATIONAL`'s residue, 2026-09-27, measured as one by the run over
+    // 7a15f023: it keeps `NUM_LT`, and `after` did not move. Tip plus this branch's delta.
+    aboutNumbers.size shouldBe 275
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

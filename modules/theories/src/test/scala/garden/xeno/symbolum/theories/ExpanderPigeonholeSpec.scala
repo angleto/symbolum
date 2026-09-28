@@ -20,9 +20,20 @@ import garden.xeno.symbolum.logic.*
  * `w = 20` the other four hypotheses still hold at the same refutation, and the conclusion is
  * refuted there: no step has twenty literals. With `EXPANDING` dropped the statement is false.
  *
- * What this does not show is a graph where `w` exceeds the degree, which is where the theorem says
- * something about proof complexity; the smallest expanders with that property are far past what a
- * refutation written out by hand can reach.
+ * **That `0 < r` is load-bearing too.** At `r = 0` no size `t` has `t <= r < 2t`, so `EXPANDING`
+ * asks nothing and holds at every `w`, and `MATCHABLE` asks about the empty set only. Both are
+ * derived there at `w = 20`, with the inputs and the refutation, and the conclusion is refuted: with
+ * the positivity hypothesis dropped the statement is false for the same reason as above.
+ *
+ * What this does not show is a graph where `w` exceeds the widest input, which is where the theorem
+ * says something about proof complexity. On `K(3, 2)` at `w = 2` the conclusion is met by any pigeon
+ * clause among the inputs, and every refutation has one, so the detachment above shows that the
+ * hypotheses can hold together and not that the bound is ever more than the inputs' width. Such a
+ * graph needs no refutation written out: the theorem quantifies over every refutation, so proving
+ * `MATCHABLE` and `EXPANDING` of the graph is the whole of the detachment. The smallest candidates
+ * need `r >= 2`, since at `r = 1` the boundary of one pigeon is its degree; ten lines of the affine
+ * plane over three elements, as pigeons, with its nine points as holes, have degree three, every
+ * pair of pigeons matchable and at least four unique-neighbour holes, which is `r = 2` and `w = 4`.
  */
 class ExpanderPigeonholeSpec extends AnyFlatSpec with Matchers {
 
@@ -244,6 +255,65 @@ class ExpanderPigeonholeSpec extends AnyFlatSpec with Matchers {
       moves.absurd(moves.mp(moves.spec(everyNarrow, "j"), moves.left(body)), moves.right(body))
     }))
     val closed = refutation.close(moves.conj(moves.conj(inputs, refuting), denial))
+    closed.hypotheses shouldBe empty
+  }
+
+  /* ------------------------------------------ what r = 0 makes of the two graph hypotheses */
+
+  /** `MATCHABLE` at `r = 0`: a set injecting into `[0, 0)` has no member, so any map matches it. */
+  private def matchableAtZero(goal: Term): Kernel.Thm = {
+    val (guard, body) = implication(opened(goal, "sx"))
+    val sized = moves.assumeT(guard)
+    val range = moves.generalised(moves.discharged(moves.conj(below(0, Holes), truth),
+      s"NUM_LT p0 ${numeral(Pigeons)}", "sx p0"), "p0")
+    val injective = moves.opened(sized, "g1") { g =>
+      val underZero = moves.mp(moves.spec(moves.left(g), "p0"), moves.assume(s"NUM_LT p0 ${numeral(Pigeons)}"), moves.assume("sx p0"))
+      val none = moves.absurd(moves.spec(moves.pf(Peano.NotBelowZero), "g1 p0"), underZero)
+      moves.generalised(moves.discharged(moves.exFalso(moves.prop("p0 = q0"), none), s"NUM_LT p0 ${numeral(Pigeons)}",
+        s"NUM_LT q0 ${numeral(Pigeons)}", "sx p0", "sx q0", "ZERO = ZERO"), "p0", "q0")
+    }
+    val matched = moves.witnessed(body, List("\\y:num. ZERO"), moves.conj(range, injective))
+    moves.generalised(ok(moves.rules.disch(guard, matched)), "sx")
+  }
+
+  /** `EXPANDING` at `r = 0`, for every `w`: `t <= 0` and `0 < t + t` never hold together. */
+  private def expandingAtZero(goal: Term): Kernel.Thm = {
+    val (hypotheses, body) = antecedents(opened(goal, "sx", "t"), 4)
+    val tZero = moves.mp(moves.spec(moves.pf(Peano.AtMostZero), "t"), moves.assumeT(hypotheses(0)))
+    val doubled = moves.substituted(tZero, moves.assumeT(hypotheses(1)))
+    val atZero = moves.transport(moves.spec(moves.pf(Peano.AddAtZero), "ZERO"), "NUM_LT ZERO zz", doubled)
+    val none = moves.absurd(moves.spec(moves.pf(Peano.StrictIrreflexive), "ZERO"), atZero)
+    val closed = hypotheses.reverse.foldLeft(moves.exFalso(body, none))((current, hypothesis) => ok(moves.rules.disch(hypothesis, current)))
+    moves.generalised(closed, "sx", "t")
+  }
+
+  it should "be false without 0 < r: at r = 0 both graph hypotheses hold for every w, and no step is twenty wide" in {
+    // What makes the statement trivially true is an empty range of set sizes: at r = 0 no t has
+    // t <= r < 2t, so EXPANDING asks nothing and holds at any w. The positivity hypothesis is the
+    // only thing standing between that and a false theorem, and this shows it: every other
+    // hypothesis is derived here at w = 20, and the conclusion is refuted at the same refutation.
+    val Wide = 20
+    val stated = moves.spec(fact(ExpanderPigeonhole.ExpanderWidth), numeral(Pigeons), numeral(Holes), Complete, numeral(0),
+      numeral(Wide), "k", "v", "s", numeral(refutation.inputs), numeral(refutation.size))
+    val (hypotheses, conclusion) = antecedents(stated.conclusion, 5)
+    moves.spec(moves.pf(Peano.StrictIrreflexive), "ZERO").conclusion shouldBe ok(moves.logic.mkNot(hypotheses(0)))
+    val matched = matchableAtZero(hypotheses(1))
+    val expanded = expandingAtZero(hypotheses(2))
+    val inputs = inputsAreClauses(hypotheses(3))
+    val refuting = refutation.refutes(hypotheses(4))
+    List(matched, expanded, inputs, refuting).map(_.conclusion) shouldBe hypotheses.drop(1)
+    List(matched, expanded).foreach(_.hypotheses shouldBe empty)
+
+    val everyNarrow = belowBound(moves.prop(s"!w:num. NUM_LT w ${numeral(refutation.size)} ==> ~(NUM_LE ${numeral(Wide)} (k w))"),
+      refutation.size) { (j, _) =>
+      val size = refutation.clauses(j).size
+      val excluded = moves.mp(moves.spec(moves.pf(Peano.BelowExcludesAtMost), numeral(size), numeral(Wide)), below(size, Wide))
+      moves.transport(moves.sym(refutation.lengthOf(j)), s"~(NUM_LE ${numeral(Wide)} zz)", excluded)
+    }
+    val denial = ok(moves.rules.notIntro(conclusion, moves.opened(moves.assumeT(conclusion), "j") { body =>
+      moves.absurd(moves.mp(moves.spec(everyNarrow, "j"), moves.left(body)), moves.right(body))
+    }))
+    val closed = refutation.close(moves.conj(moves.conj(moves.conj(matched, expanded), moves.conj(inputs, refuting)), denial))
     closed.hypotheses shouldBe empty
   }
 }

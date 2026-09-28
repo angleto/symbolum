@@ -124,10 +124,11 @@ class FieldSpec extends AnyFlatSpec with Matchers {
     // `inv x` comes back with **`~(inv x = 0)`**, which is the condition a caller has to discharge
     // and is not the same sentence.
     //
-    // It is sound rather than a defect, and knowing why is the reason to pin it: this theory gives
-    // `inv 0` no axiom at all, so `inv x = 0` is not provably equivalent to `x = 0` and the tactic
-    // cannot trade one for the other. What it could do instead is recurse, since `unitReversed`
-    // says `inv d * d = 1`, and then the condition would be about `x`. Nothing here needs that
+    // It is sound rather than a defect, and knowing why is the reason to pin it: the tactic holds no
+    // fact about `inv 0`. The chain proves `inv 0 = 0` since the reals were constructed, which with
+    // `MUL_INVERSE` makes `inv x = 0` equivalent to `x = 0`, but nothing hands that to this tactic,
+    // so it cannot trade one condition for the other. What it could do instead is recurse, since
+    // `unitReversed` says `inv d * d = 1`, and then the condition would be about `x`. Nothing here needs that
     // today, and a caller meeting this hypothesis should know it is asking about the inverse.
     val theorem = force(field.prove("!x:real y:real. (y * inv x) / inv x = y"))
 
@@ -169,8 +170,10 @@ class FieldSpec extends AnyFlatSpec with Matchers {
 
   it should "leave a zero denominator alone, because inv 0 is an atom and not a denominator" in {
     // The line that separates this from inventing an answer. `x / 0 + x / 0 = 2 * (x / 0)` holds
-    // whatever `inv 0` is, and it says nothing about what that is; `x / 0 = 0` does not hold and
-    // is refused. The pair is what makes the atom an atom rather than a gap.
+    // whatever `inv 0` is, and the procedure proves it without knowing; `x / 0 = 0` holds too since
+    // the reals were constructed, `inv 0 = 0` being a theorem of `Cut`, and it is refused because no
+    // fact of the procedure says so. The refusal is not a decision (`NotEqualAsRead`, card
+    // `7bf9d8a2`): the pair is what makes the atom an atom rather than an answer.
     force(Ring.standard.prove("!x:real. x / 0 + x / 0 = 2 * (x / 0)")).hypotheses shouldBe empty
     Ring.standard.prove("!x:real. x / 0 = 0").isLeft shouldBe true
   }

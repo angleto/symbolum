@@ -491,7 +491,7 @@ about an order. `Classical.standard` now has the excluded middle, `cases`, `cont
 **A function defined by cases is written with `COND`, which `Classical` defines.** Until 2026-09-12
 there was no conditional constant anywhere in the chain, so a definition by cases had nothing at all
 to write its cases with. `COND p a b` is `select (\x. (p ==> x = a) /\ (~p ==> x = b))` and costs no
-axiom, which is why the count of nineteen above did not move when it landed; what it costs is a
+axiom, which is why the chain's count of axioms did not move when it landed; what it costs is a
 constant in the signature and a row in `docs/reading-register.md`. It lives in
 `modules/logic/.../Classical.scala` rather than in a development, because a constant defined in a
 development is unreachable from every link below it. It has **no spelling of its own**: it is
@@ -677,7 +677,7 @@ and on 2026-09-13 a derivation rewritten for an unrelated reason reversed the bi
 `POWER_SUC` and `PROD_SUC`. A consumer specialising those positionally stopped building, and it
 stopped only because the two arguments had different types. Where two leading quantifiers share a
 type the reversal is invisible and what comes out is a theorem that is true and is not the one the
-caller meant: of the library's 921 lemmas, 619 have two or more leading quantifiers and **552 of
+caller meant: of the library's 930 lemmas, 628 have two or more leading quantifiers and **561 of
 those have two that share a type**. `Rules.specTo` takes the body to be obtained and finds the
 instantiation by matching, so the order is nowhere in the call; `Rules.specToReduced` is the same
 where the caller's argument is a lambda and the instance carries a redex, which is a **different

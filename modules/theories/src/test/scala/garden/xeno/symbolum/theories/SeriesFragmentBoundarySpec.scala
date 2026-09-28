@@ -13,8 +13,8 @@ import org.scalatest.matchers.should.Matchers
  * answers in the fragment and refuses outside it. This file states them from the outside, with
  * series chosen because they **look** like members: a summand one letter away from a closed form,
  * a divergent series whose terms stay bounded, a factor that is zero written as a difference, a
- * value equal to the true one written in another spelling, and a value whose truth the theory
- * leaves open. For each, what is asserted is the one thing a caller may rely on: an answer is a
+ * value equal to the true one written in another spelling, and a value equal to it only through
+ * `inv 0 = 0`, which the chain proves and the procedure does not hold. For each, what is asserted is the one thing a caller may rely on: an answer is a
  * kernel theorem of exactly the goal or of its denial, resting on the chain's axioms and nothing
  * else, and anything else is a refusal whose standing does not claim a decision.
  */
@@ -138,23 +138,25 @@ class SeriesFragmentBoundarySpec extends AnyFlatSpec with Matchers {
       }
   }
 
-  "A value whose truth the theory leaves open" should "not be refused as a decision either" in {
-    // `inv 0` is unconstrained by the reals' sixteen axioms, so whether the series converges to
-    // `2 + inv 0` is neither provable nor refutable here. `numeric` counts `inv` among the field
-    // operations, so this is the one input where "both values are numbers" does not make differing
-    // normal forms two different numbers.
+  "A value equal to the true one only through inv 0 = 0" should "be proved or refused without a decision" in {
+    // The series converges to `2`, and `2 + inv 0` is `2` since the reals were constructed:
+    // `inv 0 = 0` is a theorem of `Cut`, so the claim is TRUE. What no procedure here holds is
+    // that theorem, so the two values differ as forms over the atom `inv 0` while being equal, and
+    // the one thing a caller may not be told is that the claim was decided against. A proof is
+    // welcome and `answer` checks it is exactly the goal.
     //
     // Found by this file on 2026-09-26 at `1bcad72b`: the answer was `NotEqualTo`, standing
-    // `Decided`, and the assertion was held pending. `Convergence.numeric` now counts a reciprocal
-    // or a divisor as a number only where LINARITH places it strictly on one side of nought, so
-    // this is `ValueUnidentified`; the wrapper came off in the change that repaired it.
+    // `Decided`. `Convergence.numeric` then learned to count a reciprocal as a number only where
+    // LINARITH places it strictly on one side of nought. This test also failed a PROOF until
+    // 2026-09-27, when the claim was still thought to be open; card `8fb6da8b` took that branch out
+    // once the construction had made the claim true.
     val text = "converges (Sum (\\i:num. Power ((1:real) / 2) i)) (2 + inv (0:real))"
-    val result = answer(text)
-    result match {
-      case Right(theorem) => fail(s"$text was proved: ${theorem.conclusion}")
-      case Left(error)    => info(s"refused, ${error.standing}: ${error.message}")
+    answer(text) match {
+      case Right(theorem) => info(s"proved: ${theorem.conclusion}")
+      case Left(error) =>
+        info(s"refused, ${error.standing}: ${error.message}")
+        error.standing should not be LogicError.Standing.Decided
     }
-    result.left.toOption.map(_.standing) should not be Some(LogicError.Standing.Decided)
   }
 
   "A value that differs, written as numbers" should "stay a decision, which is the control for the two above" in {
@@ -164,6 +166,96 @@ class SeriesFragmentBoundarySpec extends AnyFlatSpec with Matchers {
         case Left(error: NotEqualTo) => error.standing shouldBe LogicError.Standing.Decided
         case other                   => fail(s"$text: expected NotEqualTo, got $other")
       }
+    }
+  }
+
+  // Second round of the verification of card `d3fd8018`, 2026-09-27, over the repair in `ba68dcbc`:
+  // `Convergence.numeric` counts a reciprocal or a divisor as a number only where LINARITH places it
+  // strictly on one side of nought. The attack is on the neighbours of the one case the repair was
+  // written for. Every value in the first group is 2 in the constructed reals, where `inv 0 = 0` is
+  // a theorem (the last test of this file), so the only wrong answer there is a decision that it is
+  // not; a proof is right and a refusal that claims no decision is sound.
+  private def outcome(text: String): String = answer(text) match {
+    case Right(_)    => "proved"
+    case Left(error) => s"${error.getClass.getSimpleName}, ${error.standing}"
+  }
+
+  private def series(value: String): String = s"converges (Sum (\\i:num. Power ((1:real) / 2) i)) ($value)"
+
+  private def neverDecided(value: String): Unit = {
+    val text = series(value)
+    val result = answer(text)
+    info(s"$value: ${result.fold(e => s"${e.getClass.getSimpleName}, ${e.standing}", _ => "proved")}")
+    result match {
+      case Right(_)    => ()
+      case Left(error) =>
+        withClue(s"$text: ${error.message}\n") { error.standing should not be LogicError.Standing.Decided }
+    }
+  }
+
+  "A value that is 2 once a reciprocal of nought is read" should "never be refused as a decision" in {
+    Vector(
+      "2 + 1 / (0:real)", "2 + inv (1 - (1:real))", "2 + inv (inv (0:real))",
+      "2 + inv (inv (2:real) - inv 2)", "2 + inv (2 * inv (2:real) - 1)", "2 + 0 * inv (0:real)",
+      "2 + (3:real) / (1 - 1)", "(1:real) + 1 + inv (0 * 3)"
+    ).foreach(neverDecided)
+  }
+
+  "A value that is 2 with every divisor placed" should "never be refused as a decision, and the plain one be proved" in {
+    Vector(
+      "4 * inv ((1:real) + 1)", "inv (1 - inv (2:real))", "inv (inv (3:real) + inv 6)",
+      "2 * inv (inv (2:real) * 2)", "inv (inv (inv (inv (2:real))))"
+    ).foreach(neverDecided)
+    answer(series("4 * inv ((1:real) + 1)")).isRight shouldBe true
+  }
+
+  "A value that is not 2 over a divisor LINARITH places" should "still be a decision" in {
+    Vector("inv ((1:real) + 1)", "3 * inv ((1:real) + 1)").foreach { value =>
+      val text = series(value)
+      info(s"$value: ${outcome(text)}")
+      answer(text) match {
+        case Left(error: NotEqualTo) => error.standing shouldBe LogicError.Standing.Decided
+        case other                   => fail(s"$text: expected a decided NotEqualTo, got $other")
+      }
+    }
+  }
+
+  "A value that differs only inside a reciprocal" should "be answered by the discipline, whatever it is" in {
+    // Not 2 in any reading: 3 + inv 0 is 3 in the construction, and the others are 3, 7 and 8.
+    // What is recorded is which of a decision and a refusal each gets; a proof would be a kernel
+    // theorem of a false statement, and `answer` checks the conclusion.
+    Vector("3 + inv (0:real)", "1 + inv (inv (3:real) + inv 6)", "1 + inv (inv (2:real) * inv 3)",
+      "inv (inv (8:real))").foreach { value =>
+      val text = series(value)
+      info(s"$value: ${outcome(text)}")
+      answer(text).isRight shouldBe false
+    }
+  }
+
+  "inv 0 = 0" should "be a theorem of the reals as the chain builds them, so the case above is not open" in {
+    // `docs/adr/0053`: `inv` is `CUT_INV` and `real_zero` is `CUT_OF_RAT RAT_ZERO` by definition, and
+    // `CUT_INV_ZERO` is proved. Unfolding the two aliases, as `Real.construct` does for the sixteen,
+    // carries that fact to the reals' own names.
+    val reals = Real.standard
+    val cuts = Real.constructed.cuts
+    val derived = for {
+      inverse <- reals.definition(Real.Inverse)
+      zero <- reals.definition(Real.Zero)
+      rules <- Rewrite.Rule.all(cuts.logic, Vector(inverse, zero))
+      conversion = Rewrite.normaliser(rules, Vector.empty, Ordering.by[Term, String](_.toString))
+      statement <- reals.proposition("inv (0:real) = 0")
+      unfolded <- conversion(statement)
+      fact <- cuts.fact(Cut.InverseZero)
+      back <- Conv.sym(unfolded)
+      theorem <- LogicError.lift(Kernel.eqMp(back, fact))
+    } yield (statement, theorem)
+    derived match {
+      case Left(error) => fail(error.message)
+      case Right((statement, theorem)) =>
+        theorem.conclusion shouldBe statement
+        theorem.hypotheses shouldBe empty
+        Derivation.axiomsOf(theorem).diff(reals.theory.axioms.toSet) shouldBe empty
+        info(s"derived: ${reals.show(theorem.conclusion)}")
     }
   }
 }

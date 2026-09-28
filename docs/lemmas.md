@@ -116,12 +116,14 @@ they have least appetite for working out how it is produced.
 
 ## Continuity
 
+  CONTINUOUS_ADD           !f:real -> real. !g:real -> real. !x:real. continuous f x ==> continuous g x ==> continuous (\y:real. f y + g y) x
   CONTINUOUS_ATTAINS_MAX   !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
   CONTINUOUS_ATTAINS_MAX_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
   CONTINUOUS_ATTAINS_MIN   !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f z <= f u))
   CONTINUOUS_ATTAINS_MIN_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f z <= f u))
   CONTINUOUS_BOUNDED       !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. !u:real. x <= u /\ u <= y ==> f u <= z)
   CONTINUOUS_BOUNDED_WITHIN !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. !u:real. x <= u /\ u <= y ==> f u <= z)
+  CONTINUOUS_COMPOSE       !f:real -> real. !g:real -> real. !x:real. continuous g x ==> continuous f (g x) ==> continuous (\y:real. f (g y)) x
   CONTINUOUS_CONST         !x:real. !y:real. continuous (\z:real. x) y
   CONTINUOUS_EXTENSION     !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. continuous (\u:real. COND (u < x) (f x) (COND (y < u) (f y) (f u))) z)
   CONTINUOUS_EXTENSION_AGREES !f:real -> real. !x:real. !y:real. !z:real. x <= z /\ z <= y ==> COND (z < x) (f x) (COND (y < z) (f y) (f z)) = f z
@@ -219,6 +221,7 @@ they have least appetite for working out how it is produced.
 
   CAUCHY_MEAN_VALUE        !f:real -> real. !g:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x <= z /\ z <= y ==> continuous g z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative g z u)) ==> (?z:real. ?u:real. ?v:real. x < z /\ z < y /\ derivative f z u /\ derivative g z v /\ (f y - f x) * v = (g y - g x) * u)
   CAUCHY_MEAN_VALUE_WITHIN !f:real -> real. !g:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x <= z /\ z <= y ==> continuous_within g x y z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative g z u)) ==> (?z:real. ?u:real. ?v:real. x < z /\ z < y /\ derivative f z u /\ derivative g z v /\ (f y - f x) * v = (g y - g x) * u)
+  DERIVATIVE_ADD           !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. derivative f x y ==> derivative g x z ==> derivative (\u:real. f u + g u) x (y + z)
   DERIVATIVE_CHAIN         !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. derivative g x z ==> derivative f (g x) y ==> derivative (\u:real. f (g u)) x (y * z)
   DERIVATIVE_CONST         !x:real. !y:real. derivative (\z:real. x) y 0
   DERIVATIVE_CONTINUOUS    !f:real -> real. !x:real. !y:real. derivative f x y ==> continuous f x
@@ -402,6 +405,7 @@ they have least appetite for working out how it is produced.
   DERIVATIVE_WITHIN_CONGRUENCE !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. !u:real. (!v:real. x <= v /\ v <= y ==> f v = g v) ==> x <= z ==> z <= y ==> derivative_within f x y z u ==> derivative_within g x y z u
   DERIVATIVE_WITHIN_INTEGRAL !f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous f u) ==> x <= z ==> z <= y ==> derivative_within (\u:real. integral f x u) x y z (f z)
   DERIVATIVE_WITHIN_INTEGRAL_WITHIN !f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous_within f x y u) ==> x <= z ==> z <= y ==> derivative_within (\u:real. integral f x u) x y z (f z)
+  DERIVATIVE_WITHIN_TANGENT !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> derivative_within f x y u (g u)) ==> x <= z ==> z <= y ==> derivative (\u:real. COND (u < x) (f x + g x * (u - x)) (COND (y < u) (f y + g y * (u - y)) (f u))) z (g z)
   FINE_SUM_CONGRUENCE      !f:real -> real. !g:real -> real. !h:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> f u = g u) ==> fine_sum g h x y z ==> fine_sum f h x y z
   FINE_SUM_EXISTS          !f:real -> real. !g:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> 0 < g z) ==> (?z:real. fine_sum f g x y z)
   FINE_SUM_GAUGE           !f:real -> real. !g:real -> real. !h:real -> real. !x:real. !y:real. !z:real. (!u:real. g u <= h u) ==> fine_sum f g x y z ==> fine_sum f h x y z
@@ -415,13 +419,17 @@ they have least appetite for working out how it is produced.
   HAS_INTEGRAL_JOIN        !f:real -> real. !x:real. !y:real. !z:real. !u:real. !v:real. x <= y ==> y <= z ==> has_integral f x y u ==> has_integral f y z v ==> has_integral f x z (u + v)
   HAS_INTEGRAL_LINEAR      !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. !u:real. !v:real. !w:real. has_integral f x y z ==> has_integral g x y u ==> has_integral (\x1:real. v * f x1 + w * g x1) x y (v * z + w * u)
   HAS_INTEGRAL_PARTS       !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> derivative f u (h u)) ==> (!u:real. x <= u /\ u <= y ==> derivative g u (f1 u)) ==> has_integral (\u:real. f u * f1 u) x y z ==> has_integral (\u:real. h u * g u) x y (f y * g y - f x * g x - z)
+  HAS_INTEGRAL_PARTS_WITHIN !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> derivative_within f x y u (h u)) ==> (!u:real. x <= u /\ u <= y ==> derivative_within g x y u (f1 u)) ==> has_integral (\u:real. f u * f1 u) x y z ==> has_integral (\u:real. h u * g u) x y (f y * g y - f x * g x - z)
   HAS_INTEGRAL_SUBST       !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. x <= y ==> (!z:real. derivative f z (g z)) ==> (!z:real. x <= z /\ z <= y ==> derivative h z (f1 z)) ==> has_integral (\z:real. g (h z) * f1 z) x y (f (h y) - f (h x))
+  HAS_INTEGRAL_SUBST_WITHIN !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. x <= y ==> (!z:real. derivative f z (g z)) ==> (!z:real. x <= z /\ z <= y ==> derivative_within h x y z (f1 z)) ==> has_integral (\z:real. g (h z) * f1 z) x y (f (h y) - f (h x))
   HAS_INTEGRAL_UNIQUE      !f:real -> real. !x:real. !y:real. !z:real. !u:real. x <= y ==> has_integral f x y z ==> has_integral f x y u ==> z = u
   INTEGRAL_DERIVATIVE      !f:real -> real. !g:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> derivative f z (g z)) ==> integral g x y = f y - f x
   INTEGRAL_DERIVATIVE_WITHIN !f:real -> real. !g:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> derivative_within f x y z (g z)) ==> integral g x y = f y - f x
   INTEGRAL_LINEAR          !f:real -> real. !g:real -> real. !x:real. !y:real. !z:real. !u:real. !v:real. !w:real. x <= y ==> has_integral f x y z ==> has_integral g x y u ==> integral (\x1:real. v * f x1 + w * g x1) x y = v * z + w * u
   INTEGRAL_PARTS           !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> derivative f u (h u)) ==> (!u:real. x <= u /\ u <= y ==> derivative g u (f1 u)) ==> has_integral (\u:real. f u * f1 u) x y z ==> integral (\u:real. h u * g u) x y = f y * g y - f x * g x - z
+  INTEGRAL_PARTS_WITHIN    !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> derivative_within f x y u (h u)) ==> (!u:real. x <= u /\ u <= y ==> derivative_within g x y u (f1 u)) ==> has_integral (\u:real. f u * f1 u) x y z ==> integral (\u:real. h u * g u) x y = f y * g y - f x * g x - z
   INTEGRAL_SUBST           !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. x <= y ==> (!z:real. derivative f z (g z)) ==> (!z:real. x <= z /\ z <= y ==> derivative h z (f1 z)) ==> integral (\z:real. g (h z) * f1 z) x y = f (h y) - f (h x)
+  INTEGRAL_SUBST_WITHIN    !f:real -> real. !g:real -> real. !h:real -> real. !f1:real -> real. !x:real. !y:real. x <= y ==> (!z:real. derivative f z (g z)) ==> (!z:real. x <= z /\ z <= y ==> derivative_within h x y z (f1 z)) ==> integral (\z:real. g (h z) * f1 z) x y = f (h y) - f (h x)
   INTEGRAL_UNIQUE          !f:real -> real. !x:real. !y:real. !z:real. x <= y ==> has_integral f x y z ==> integral f x y = z
 
 ## Language
@@ -1063,6 +1071,7 @@ they have least appetite for working out how it is produced.
   EXP_CONVOLUTION          !x:real. !y:real. !n:num. Sum (\m:num. Power x m / real_of_num (NUM_FACT m) * (Power y (NUM_SUB n m) / real_of_num (NUM_FACT (NUM_SUB n m)))) (SUC n) = Power (x + y) n / real_of_num (NUM_FACT n)
   EXP_NEGATE               !x:real. exp x * exp (0 - x) = 1
   EXP_ONE_ABOVE_TWO        2 < exp 1
+  EXP_ONE_IRRATIONAL       !n:num. !m:num. 0 < m ==> ~(exp 1 = real_of_num n / real_of_num m)
   EXP_TAIL_GEOMETRIC       !x:real. !n:num. 2 * abs x <= real_of_num n ==> (!m:num. abs (Power x (n + m) / real_of_num (NUM_FACT (n + m))) <= Power (1 / 2) m * abs (Power x n / real_of_num (NUM_FACT n)))
   EXP_TERM_HALVES          !x:real. !n:num. 2 * abs x <= real_of_num (SUC n) ==> abs (Power x (SUC n) / real_of_num (NUM_FACT (SUC n))) <= 1 / 2 * abs (Power x n / real_of_num (NUM_FACT n))
   EXP_ZERO                 exp 0 = 1

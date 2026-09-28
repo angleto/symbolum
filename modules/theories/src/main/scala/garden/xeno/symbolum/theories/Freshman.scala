@@ -612,7 +612,7 @@ private[theories] object Freshman {
     } yield result
   }
 
-  /** The eight facts `Primes` publishes from this file, under the names it gives them. */
+  /** The facts `Primes` publishes from this file, under the names it gives them. */
   def derive(kit: Kit): Either[LogicError, Map[String, Kernel.Thm]] =
     for {
       add <- sumAdd(kit)

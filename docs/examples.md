@@ -31,7 +31,7 @@ each measured against what the library actually holds rather than estimated.
 |---|---|---|
 | Number theory over `num` | **partly here.** Bezout, Euclid's lemma, division with remainder, congruences, the gcd, the Chinese remainder theorem, the factorial, and since 2026-09-16 **unique factorisation**, both halves | The statement was what blocked it and the way round is worth knowing: uniqueness is usually a claim about a multiset of primes, and this system has no lists, no finite sets and no multisets. A factorisation here is a family and a length with the family asked to be **non-decreasing**, and then uniqueness is an equation between two families. What is still missing above it is anything that quantifies over "the divisors of `n`" as a collection, which wants the same absent machinery |
 | The incompleteness theorems | **in progress.** The object language, both axiom sets, the proof predicate, closure under both rules of inference, and the first derivations of the embedded theory | `Prov` as a formula **of the object language** does not exist; what exists is `NUM_PROV`, a predicate of the ambient logic. D1, D2 and D3 are statements about that formula, so none of the three can be stated yet. `docs/adr/0013` is the plan |
-| Analysis | **here for a first course, since 2026-09-25, and the pages are in the Analysis section below.** `Limit`, `Transcendental`, `Root`, `Continuity`, `Logarithm`, `Derivative` and `Integral` declare the limit, the six series functions, `sqrt`, continuity, the derivative and the gauge integral, and none of them costs an axiom. What is proved runs from `sqrt 2` being irrational and `exp (x + y) = exp x * exp y` through the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem to both halves of the fundamental theorem and Taylor's theorem; `docs/proving.md` lists every fact under its development rather than this row copying them. **Nothing primitive was missing** for any of it: each was expressible over the theory as it stood, which is what this row claimed on 2026-09-14 when it said nothing was here | Measured against `docs/lemmas.md` on 2026-09-27, not estimated, and it moved in the day since the first measurement: Taylor's theorem with the Lagrange remainder, the continuity of a product, integration by parts and the change of variables have landed, and on 2026-09-27 the limit of a function at a point with L'Hopital's rule for `0 / 0`. What is still absent: continuity is closed under negation, a linear map and a product and **not** under a sum or a composition; the derivative has the product, chain and power rules and no general rule for a sum; L'Hopital is the `0 / 0` form at a point only, with no one-sided, infinite or at-infinity form; and there is no series of functions |
+| Analysis | **here for a first course, since 2026-09-25, and the pages are in the Analysis section below.** `Limit`, `Transcendental`, `Root`, `Continuity`, `Logarithm`, `Derivative` and `Integral` declare the limit, the six series functions, `sqrt`, continuity, the derivative and the gauge integral, and none of them costs an axiom. What is proved runs from `sqrt 2` being irrational and `exp (x + y) = exp x * exp y` through the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem to both halves of the fundamental theorem and Taylor's theorem; `docs/proving.md` lists every fact under its development rather than this row copying them. **Nothing primitive was missing** for any of it: each was expressible over the theory as it stood, which is what this row claimed on 2026-09-14 when it said nothing was here | Measured against `docs/lemmas.md` on 2026-09-27, not estimated, and it moved in the day since the first measurement: Taylor's theorem with the Lagrange remainder, the continuity of a product, integration by parts and the change of variables have landed, and on 2026-09-27 the limit of a function at a point with L'Hopital's rule for `0 / 0`. Since 2026-09-27 continuity is closed under a sum and a composition as well as a product, and the derivative has the sum rule beside the product, chain and power rules, so a polynomial is continuous by composing lemmas rather than by a derivation of its own. What is still absent: a quotient; L'Hopital is the `0 / 0` form at a point only, with no one-sided, infinite or at-infinity form; and there is no series of functions |
 | The fundamental theorem of algebra | **out of reach, and nothing about it is a decision** | It wants the complex numbers, so it wants the reals as a construction with the integers and the rationals under them, which `docs/adr/0007` puts in that order and which has not started. Then it wants an argument of its own: the route through Liouville wants a derivative, the route through winding numbers wants a topology, and neither exists here. Unlike the four colour theorem below it, what stands in the way is work rather than a recorded decision |
 | The fundamental theorem of calculus | **here, both halves, since 2026-09-26** | `INTEGRAL_DERIVATIVE_WITHIN` is the first half in the form a textbook states it, the derivative one-sided at the ends, and over the gauge integral `docs/adr/0049` decides it needs no integrability hypothesis. `DERIVATIVE_INTEGRAL` is the second: the integral from `a` of a function continuous at each point of `[a, b]`, two-sided at the ends, has that function as its derivative inside, and `DERIVATIVE_INTEGRAL_WITHIN` asks the continuity relative to `[a, b]` as a textbook does. Both have pages below. What it waited on was a derivative, then an integral, then additivity over intervals, and not the construction of the reals |
 | The four colour theorem | **out of reach, and not only by size** | It needs graphs and finite sets, which do not exist, and the only proof anyone has runs a computation over 633 configurations. `docs/adr/0010` decides there is **no computing rule in the kernel** and that there will not be one while the trusted base is the argument, so the route Gonthier took is closed here by a recorded decision rather than by effort |
@@ -2425,6 +2425,239 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Find SQRT_TWO_IRRATIONAL"
 ```
 
 From Scala it is `Root`'s, under the name `SQRT_TWO_IRRATIONAL`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# EXP_ONE_IRRATIONAL
+
+$$\forall n \colon \mathbb{N}.\ \forall m \colon \mathbb{N}.\ 0 < m \Rightarrow \lnot \left( \exp 1 = n_{\mathbb{R}} / m_{\mathbb{R}} \right)$$
+
+```
+!n:num. !m:num. 0 < m ==> ~(exp 1 = real_of_num n / real_of_num m)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+3 axioms reached, 0 of them named below, and 152 named facts in all.
+
+| what | where |
+|---|---|
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `NOT_FORALL` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_FACT_DIVIDES` | Coding |
+| `NUM_FACT_POSITIVE` | Coding |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `CONVERGES_ABSOLUTE` | Limit |
+| `CONVERGES_ADD` | Limit |
+| `CONVERGES_EVENTUALLY` | Limit |
+| `CONVERGES_GE` | Limit |
+| `CONVERGES_LE` | Limit |
+| `CONVERGES_NEG` | Limit |
+| `CONVERGES_UNIQUE` | Limit |
+| `LE_BELOW_EVERY_POSITIVE` | Limit |
+| `LIM_OF_CONVERGES` | Limit |
+| `MONOTONE_CONVERGES` | Limit |
+| `MONOTONE_LE` | Limit |
+| `POWER_NONNEG` | Limit |
+| `SUM_BELOW_LIMIT` | Limit |
+| `SUM_COMPARISON` | Limit |
+| `SUM_GROWS` | Limit |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_MUL` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `ABS_ZERO` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `NUM_DIVIDES_ELIM` | Modular |
+| `NUM_DIVIDES_INTRO` | Modular |
+| `NUM_DIVIDES_MUL` | Modular |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_MUL_BOTH` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_OF_NOT_LE` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_ARCHIMEDES` | Peano |
+| `NUM_CEIL_LE` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ADD` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_CASES` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_REAL_ADD` | Peano |
+| `NUM_REAL_LE` | Peano |
+| `NUM_REAL_LT` | Peano |
+| `NUM_REAL_MUL` | Peano |
+| `NUM_REAL_NONNEG` | Peano |
+| `NUM_REAL_SUC` | Peano |
+| `NUM_REAL_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `BIT0` | Real, defined |
+| `BIT1` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `COMPLETENESS` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `LT_ADD` | Real, derived |
+| `LT_IRREFLEXIVE` | Real, derived |
+| `LT_MUL` | Real, derived |
+| `LT_TOTAL` | Real, derived |
+| `LT_TRANSITIVE` | Real, derived |
+| `MUL_ASSOC` | Real, derived |
+| `MUL_INVERSE` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
+| `ONE_NOT_ZERO` | Real, derived |
+| `POWER_ONE` | Series |
+| `POWER_POSITIVE` | Series |
+| `POWER_SUC` | Series |
+| `POWER_ZERO` | Series |
+| `SUM_ADD` | Series |
+| `SUM_GEOMETRIC` | Series |
+| `SUM_MONOTONE` | Series |
+| `SUM_REINDEX` | Series |
+| `SUM_SCALE_RIGHT` | Series |
+| `SUM_SUC` | Series |
+| `SUM_ZERO` | Series |
+| `EXP_ABSOLUTE` | Transcendental |
+| `EXP_CONVERGES` | Transcendental |
+| `EXP_TAIL_GEOMETRIC` | Transcendental |
+| `EXP_TERM_HALVES` | Transcendental |
+
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+67814 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 20530 | 30.3% |
+| EqualityElimination | 11282 | 16.6% |
+| Transitivity | 9701 | 14.3% |
+| Instantiation | 9632 | 14.2% |
+| Reflexivity | 7812 | 11.5% |
+| BetaStep | 3696 | 5.5% |
+| Antisymmetry | 2631 | 3.9% |
+| TypeInstantiation | 1684 | 2.5% |
+| Assumption | 439 | 0.6% |
+| Abstraction | 316 | 0.5% |
+| Citation | 77 | 0.1% |
+| Definition | 14 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !n:num. !m:num. 0 < m ==> ~(exp 1 = real_of_num n / real_of_num m)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find EXP_ONE_IRRATIONAL"
+```
+
+From Scala it is `Transcendental`'s, under the name `EXP_ONE_IRRATIONAL`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 

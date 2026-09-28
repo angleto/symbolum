@@ -761,7 +761,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 821 and 818 with the reals built from the cuts, 2026-09-26: the seven primitives of `Real`
     // are defined as the cut operations they name, so seven definitional entries under seven names
     // that were declared and not defined before. `CLAUDE.md`'s figures do not move: a definition
-    // binds no leading quantifier. Tip plus this branch's delta.
+    // binds no leading quantifier.
     // 822 and 819 with `TAYLOR_WITHIN`, 2026-09-27, derived before the run: one fact, one name,
     // and `CLAUDE.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
     // 917 and 914 with the rationals and the cuts collected, 2026-09-27, card `e4a90d43`: 44 facts
@@ -773,8 +773,18 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE`, its relative form and `LHOPITAL`. `CLAUDE.md`'s figures
     // move by four, four and **three**: `CONTINUOUS_TENDS` binds a function and a real. Tip plus this
     // branch's delta.
-    library.entries.size shouldBe 921
-    library.names.distinct.size shouldBe 918
+    // 924 and 921 with the sum and the composition of continuous functions and the sum rule,
+    // 2026-09-27, derived before the run: three facts under three names, two in `Continuity` and one
+    // in `Derivative`. `CLAUDE.md`'s figures move by **three** and **three**: each binds two
+    // functions among two or more leading quantifiers.
+    // 929 and 926 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
+    // before the run: five facts in `Integral` under five names, none shared. `CLAUDE.md`'s figures
+    // move by **five** and **five**. Base 924 and 921 plus that branch's delta.
+    // 922 and 919 with `EXP_ONE_IRRATIONAL`, 2026-09-27, measured as one entry, one name and one
+    // fact by the run over 7a15f023: `CLAUDE.md`'s three figures move by one each, its binders
+    // being two naturals. Plus one over the base above.
+    library.entries.size shouldBe 930
+    library.names.distinct.size shouldBe 927
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

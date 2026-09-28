@@ -49,7 +49,10 @@ import garden.xeno.symbolum.logic.*
  *
  * == What is not here ==
  *
- * Whether Conway's generalised Collatz maps meet `Collatz`, which is card `b0d2ada9`.
+ * A bridge to `Collatz`, and card `b0d2ada9` found there is none to build: `Collatz` is a rewriting
+ * system on words with no map on `num`, and `T` in `core`'s `CollatzSeries` has a nonzero offset on
+ * every class holding an odd number, where a step here multiplies by one fixed fraction on each
+ * class modulo the denominators. `docs/where-it-stands.md` has the rest.
  *
  * It sits beside the chain, like `Collatz` and `EuclidAlgorithm`: nothing below needs its constants,
  * and making it a link moves `Chain.widest`, the reading register and the guide's map.

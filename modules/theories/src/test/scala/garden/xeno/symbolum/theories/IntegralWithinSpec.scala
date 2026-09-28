@@ -88,14 +88,22 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
    * the definitions do not.
    */
   it should "cost what the two-sided forms cost" in {
+    // Read with the sixteen as the interface, `Real.spent`. This compared the bare
+    // `Derivation.axiomsOf` until 2026-09-27, which meant something when it was written the day
+    // before; since `docs/adr/0053` proved the sixteen, the bare reading answers the foundation's
+    // three for every fact about the reals and the equality separated nothing (card `8fb6da8b`).
+    // The last two lines are what a reading that answers the same for everything cannot pass.
     for ((relative, twoSided) <- Vector(
         Integral.ContinuousHasWithin -> Integral.ContinuousHas,
         Integral.ContinuousIntegralWithin -> Integral.ContinuousIntegral,
         Integral.DerivativeWithinWithin -> Integral.DerivativeWithin,
         Integral.DerivativeOfIntegralWithin -> Integral.DerivativeOfIntegral
       )) withClue(s"$relative: ") {
-      Derivation.axiomsOf(fact(relative)) shouldBe Derivation.axiomsOf(fact(twoSided))
+      Real.spent(fact(relative)) shouldBe Real.spent(fact(twoSided))
     }
+    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    Real.spent(fact(Integral.ContinuousHasWithin)) should contain(completeness)
+    Real.spent(fact(Integral.HasLinear)) should not contain completeness
   }
 
   /** The route, asserted rather than described: the extension, and the congruence that carries it back. */
@@ -118,9 +126,8 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
    * reading this replaces also counted `CONTINUOUS_LINEAR` and `DERIVATIVE_CONTINUOUS`, whose
    * continuity is at one point and asks nothing of an interval.
    *
-   * What it does not count: a two-sided **derivative** over an interval, which integration by parts
-   * and the change of variables ask and which is the same kind of excess one notion over. That is
-   * a card of its own, `3caa8541`, and not this census.
+   * What it does not count: a two-sided **derivative** over an interval, which is the same kind of
+   * excess one notion over and has the census below, written for card 3caa8541.
    *
    * A fact without its twin is listed in `Pending` with the card that owes it, and the list is held
    * both ways: a pending entry that has its twin fails, so the entry is removed when the card lands.
@@ -165,6 +172,56 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
     twoSided.filterNot(Pending.contains).foreach { name =>
       val twin = library.entries.find(_.name == s"${name}_WITHIN").map(_.theorem.conclusion).getOrElse(fail(name))
       withClue(s"${name}_WITHIN: ") { mentions(twin, Continuity.ContinuousWithin) shouldBe true }
+    }
+  }
+
+  /**
+   * The same census one notion over, which card 3caa8541 asked for: a fact is counted when one of
+   * its antecedents is `!x. a <= x /\ x <= b ==> ... ==> derivative f x m`, a two-sided derivative at
+   * every point of a **closed** interval, which asks at the ends about points outside it. A derivative
+   * asked only inside, `a < x /\ x < b`, is the textbook's already and is not counted: that is
+   * `MEAN_VALUE`'s and `TAYLOR`'s. Each counted fact must have a `_WITHIN` twin naming
+   * `derivative_within`, and the count is pinned so that a selector matching nothing fails.
+   */
+  "Every rule asking a derivative on a closed interval" should "have a _WITHIN twin stated with derivative_within" in {
+    val library = Library.of(chain)
+    val names = library.entries.map(_.name).toSet
+    def strip(t: Term): Term = Logic.stripForall(t).map(_._2).getOrElse(t)
+    def antecedents(t: Term): Vector[Term] = logic.destImp(t) match {
+      case Some((first, rest)) => first +: antecedents(rest)
+      case None => Vector.empty
+    }
+    def conclusionOf(t: Term): Term = logic.destImp(t).map { case (_, rest) => conclusionOf(rest) }.getOrElse(t)
+    def isNonStrict(t: Term): Boolean = t match {
+      case App(App(Const(Real.NonStrictOrder, _), _), _) => true
+      case _ => false
+    }
+    def closed(premise: Term): Boolean = logic.destConj(premise).exists { case (l, r) => isNonStrict(l) && isNonStrict(r) }
+    def slopeOnClosed(hypothesis: Term): Boolean =
+      Logic.stripForall(hypothesis).exists { case (bound, body) =>
+        bound.nonEmpty && logic.destImp(body).exists { case (premise, _) => closed(premise) } &&
+          (conclusionOf(body) match {
+            case App(App(App(Const(Derivative.DerivativeName, _), _), _), _) => true
+            case _ => false
+          })
+      }
+    def mentions(t: Term, name: String): Boolean = t match {
+      case Const(`name`, _) => true
+      case App(f, x) => mentions(f, name) || mentions(x, name)
+      case Abs(_, body) => mentions(body, name)
+      case _ => false
+    }
+    val counted = library.entries.filter(entry =>
+      antecedents(strip(entry.theorem.conclusion)).exists(slopeOnClosed)).map(_.name).distinct
+
+    withClue(s"counted: ${counted.mkString(", ")}\n") { counted.size shouldBe 6 }
+    val missing = counted.filterNot(name => names.contains(s"${name}_WITHIN"))
+    withClue(s"two-sided derivative facts on a closed interval with no _WITHIN twin: ${missing.mkString(", ")}\n") {
+      missing shouldBe empty
+    }
+    counted.foreach { name =>
+      val twin = library.entries.find(_.name == s"${name}_WITHIN").map(_.theorem.conclusion).getOrElse(fail(name))
+      withClue(s"${name}_WITHIN: ") { mentions(twin, Derivative.WithinName) shouldBe true }
     }
   }
 }

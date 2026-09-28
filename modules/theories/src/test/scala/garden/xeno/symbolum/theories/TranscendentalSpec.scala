@@ -485,4 +485,80 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
 
     transcendental.show(moved.conclusion) shouldBe "0 * 0 + 1 * 1 = 1"
   }
+
+  /**
+   * `exp 1` is not a ratio of naturals, and the assertions are about which proof that is and that
+   * the sentence says something.
+   *
+   * **The route.** Fourier's argument uses exactly three facts about the series, and what makes
+   * it this argument rather than another reaching the same sentence is that it rests on them:
+   * the value of the series (`EXP_CONVERGES`), its tail under a geometric one
+   * (`EXP_TAIL_GEOMETRIC`), and the denominator dividing a factorial (`NUM_FACT_DIVIDES`), with the
+   * two limit facts that place `exp 1` above one partial sum and below a bound. It does not rest
+   * on `EXP_ONE_ABOVE_TWO`, which is the other fact about the same number and plays no part.
+   *
+   * **The cost.** Measured on 2026-09-27 and pinned as an equality, for `CodingSpec`'s reason: of
+   * the chain's three axioms it spends choice and infinity and not eta, and all sixteen laws of the
+   * reals, `COMPLETENESS` among them.
+   *
+   * **That it is not about nothing.** A negation under a hypothesis nothing satisfies would pass
+   * everything above, so the sentence is detached at one over one with nothing assumed. What this
+   * file does **not** assert is that `0 < q` is needed: at `q = 0` the ratio is `p * inv 0`, and no
+   * fact about `inv 0` is published for the reals, so the unconditional sentence is neither proved
+   * nor refuted here and a test claiming either would be claiming more than the library knows.
+   */
+  "The irrationality of exp 1" should "rest on the series, its geometric tail and a factorial's divisors" in {
+    val theorem = force(transcendental.fact(Transcendental.ExponentialOneIrrational))
+    val route = Set(
+      force(transcendental.fact(Transcendental.ExponentialConverges)).conclusion,
+      force(transcendental.fact(Transcendental.TailIsGeometric)).conclusion,
+      force(chain.coding.fact(Coding.FactorialDivides)).conclusion,
+      force(chain.limit.belowLimit).conclusion,
+      force(chain.limit.belowBound).conclusion)
+    Derivation.restingOn(theorem, route) shouldBe route
+
+    val aboveTwo = force(transcendental.fact(Transcendental.ExponentialAboveTwo)).conclusion
+    Derivation.restingOn(theorem, Set(aboveTwo)) shouldBe empty
+  }
+
+  it should "spend choice and infinity, not eta, and every law of the reals" in {
+    val theorem = force(transcendental.fact(Transcendental.ExponentialOneIrrational))
+    val reals = chain.reals.axioms.values.map(_.conclusion).toSet
+    val select = force(chain.classical.axiom("SELECT")).conclusion
+    val infinity = force(chain.naturals.axiom(Natural.Infinity)).conclusion
+    val spent = Real.spent(theorem)
+
+    withClue(s"it reaches: ${(spent -- reals).map(transcendental.show).mkString("; ")}\n") {
+      (spent -- reals) shouldBe Set(select, infinity)
+    }
+    (spent intersect reals) shouldBe reals
+    spent should contain(force(chain.reals.axiom("COMPLETENESS")).conclusion)
+  }
+
+  it should "say it in the theory's constants, and detach at a denominator something satisfies" in {
+    val theorem = force(transcendental.fact(Transcendental.ExponentialOneIrrational))
+    def constantsIn(term: Term): Set[String] = term match {
+      case Const(name, _) => Set(name)
+      case App(fn, argument) => constantsIn(fn) ++ constantsIn(argument)
+      case Abs(_, body) => constantsIn(body)
+      case _ => Set.empty
+    }
+    Term.freeVariables(theorem.conclusion) shouldBe empty
+    val named = constantsIn(theorem.conclusion)
+    named should contain allOf (Transcendental.Exponential, Peano.EmbeddingName, Real.Division, Peano.StrictOrder)
+    // The denominator is positive as a natural, not as its image in the reals.
+    named should not contain Real.Order
+
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val rules = transcendental.logic.rules
+    val one = force(Parser.term(transcendental.theory, transcendental.notation, "SUC 0", numbers))
+    val zero = force(Parser.term(transcendental.theory, transcendental.notation, "0", numbers))
+    val atOne = force(rules.specAll(theorem, List(one, one)))
+    val positive = force(rules.spec(zero, force(chain.peano.fact(Peano.SuccessorPositive))))
+    val detached = force(rules.mp(atOne, positive))
+
+    detached.hypotheses shouldBe empty
+    transcendental.show(detached.conclusion) shouldBe
+      "~(exp 1 = real_of_num (SUC 0) / real_of_num (SUC 0))"
+  }
 }

@@ -371,6 +371,9 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
   it should "rest the three new slopes on the chain's axioms and nothing else" in {
     // Written by the verification of cards 64110aba and 08d2af96: a ceiling taken from the theory
     // itself, so an axiom asserted on the way would show here whatever the equalities above say.
+    // A ceiling and nothing more since `docs/adr/0053`: every fact about the reals now rests on the
+    // foundation's three, so this separates an axiom asserted on the way and not which of the
+    // sixteen a slope spends, which the `Real.spent` assertions above read.
     val trusted = derivative.theory.axioms.toSet
     for (name <- List(Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog, Derivative.Exponential)) withClue(name) {
       val spent = Derivation.axiomsOf(fact(name))
@@ -1192,5 +1195,53 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
       .flatMap(rules.notElim(witness.noSlopeAtZero, _)))
     absurd.hypotheses shouldBe List(dropped)
     force(rules.notIntro(dropped, absurd)).hypotheses shouldBe empty
+  }
+
+  private def lambda(text: String): Term = force(derivative.term(text, functions))
+
+  /* ------------------------------------------------------------------ the sum rule */
+
+  "The sum rule" should "detach at the identity twice, with nothing assumed" in {
+    val x = real("x:real")
+    val identity = force(rules.spec(x, fact(Derivative.Identity)))
+    val doubled = opened(force(rules.specAll(fact(Derivative.Sum),
+      List(lambda("\\y:real. y"), lambda("\\y:real. y"), x, real("1:real"), real("1:real")))
+      .flatMap(rules.mp(_, identity)).flatMap(rules.mp(_, identity))))
+    doubled.hypotheses shouldBe empty
+    doubled.conclusion shouldBe proposition("derivative (\\y:real. y + y) x (1 + 1)")
+  }
+
+  it should "need the second function's slope, which abs at zero refutes with that hypothesis dropped" in {
+    // At `f = 0` with slope `0` and `g = abs` with the claimed slope `1`, the conclusion is that
+    // `\y. 0 + abs y` has slope `0 + 1` at zero. The abstraction rule makes the function `\y. abs y`,
+    // eta makes it `abs`, and `abs` has no slope `1` at zero: `AbsoluteAtAnEnd` derives that.
+    val zero = real("0:real")
+    val dropped = proposition(
+      "!f:real -> real. !g:real -> real. !x:real. !m:real. !n:real. derivative f x m ==> " +
+        "derivative (\\y:real. f y + g y) x (m + n)")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val absolute = force(derivative.term("abs", functions))
+    val instance = opened(force(rules.specAll(assumed, List(lambda("\\y:real. (0:real)"), absolute, zero, zero, real("1:real")))
+      .flatMap(rules.mp(_, force(rules.specAll(fact(Derivative.Constant), List(zero, zero)))))))
+
+    val y = Term.variable("y", reals)
+    val plain = force(LogicError.lift(Kernel.abs(y, force(rules.specAll(lemma("!A:real. 0 + A = A"), List(real("abs (y:real)")))))))
+    val eta = force(rules.spec(absolute,
+      Kernel.instType(Map(Classical.TypeVariable -> reals, Classical.CodomainVariable -> reals), chain.classical.axioms(Classical.Eta))))
+    val function = force(Conv.trans(plain, eta))
+    val slope = lemma("(0:real) + 1 = 1")
+    val derivativeConstant = force(derivative.term(Derivative.DerivativeName, Type.fun(functions, Type.fun(reals, Type.fun(reals, Type.Bool)))))
+    val rewrite = force(Conv.apTerm(derivativeConstant, function).flatMap(Conv.apThm(_, zero))
+      .flatMap(atZero => LogicError.lift(Kernel.mkComb(atZero, slope))))
+    val claimed = force(LogicError.lift(Kernel.eqMp(rewrite, instance)))
+    val witness = new AbsoluteAtAnEnd(chain)
+    val absurd = force(rules.notElim(witness.noSlopeAtZero, claimed))
+    absurd.hypotheses shouldBe List(dropped)
+  }
+
+  it should "cost what the combination costs, and rest on it" in {
+    Derivation.axiomsOf(fact(Derivative.Sum)) shouldBe Derivation.axiomsOf(fact(Derivative.Linear))
+    val linear = fact(Derivative.Linear).conclusion
+    Derivation.restingOn(fact(Derivative.Sum), Set(linear)) shouldBe Set(linear)
   }
 }

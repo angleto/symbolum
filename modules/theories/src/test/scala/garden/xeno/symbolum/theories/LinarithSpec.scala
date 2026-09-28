@@ -366,8 +366,8 @@ class LinarithSpec extends AnyFlatSpec with Matchers {
 
   it should "be told apart from a division by zero, which no hypothesis repairs" in {
     // Two refusals rather than one, because the two repairs are different: a symbolic denominator
-    // is a condition somebody can assume, and `x / 0` is not. `inv 0` is an atom this theory says
-    // nothing about, so `x / 0` is an unknown rather than a scaled `x`, and a message offering
+    // is a condition somebody can assume, and `x / 0` is not. `inv 0` is an atom this procedure holds
+    // no fact about, so `x / 0` is an unknown rather than a scaled `x`, and a message offering
     // `~(0 = 0)` would send a caller after a hypothesis that is false.
     val message = refusalFor("!x:real. 0 < x ==> 0 < x / 0")
 
