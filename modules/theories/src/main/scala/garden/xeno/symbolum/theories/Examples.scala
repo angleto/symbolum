@@ -71,12 +71,12 @@ object Examples {
       "EXP_ONE_IRRATIONAL",
       "EXP_ADD",
       "SIN_COS_SQUARED",
-      "INTERMEDIATE_VALUE",
-      "CONTINUOUS_ATTAINS_MAX",
-      "ROLLE",
-      "MEAN_VALUE",
+      "INTERMEDIATE_VALUE_WITHIN",
+      "CONTINUOUS_ATTAINS_MAX_WITHIN",
+      "ROLLE_WITHIN",
+      "MEAN_VALUE_WITHIN",
       "INTEGRAL_DERIVATIVE_WITHIN",
-      "DERIVATIVE_INTEGRAL"
+      "DERIVATIVE_INTEGRAL_WITHIN"
     ),
     "Towards the incompleteness theorems" -> Vector(
       "NUM_BETA_SEQUENCE",

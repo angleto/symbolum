@@ -32,8 +32,8 @@ each measured against what the library actually holds rather than estimated.
 | Number theory over `num` | **partly here.** Bezout, Euclid's lemma, division with remainder, congruences, the gcd, the Chinese remainder theorem, the factorial, and since 2026-09-16 **unique factorisation**, both halves | The statement was what blocked it and the way round is worth knowing: uniqueness is usually a claim about a multiset of primes, and this system has no lists, no finite sets and no multisets. A factorisation here is a family and a length with the family asked to be **non-decreasing**, and then uniqueness is an equation between two families. What is still missing above it is anything that quantifies over "the divisors of `n`" as a collection, which wants the same absent machinery |
 | The incompleteness theorems | **in progress.** The object language, both axiom sets, the proof predicate, closure under both rules of inference, and the first derivations of the embedded theory | `Prov` as a formula **of the object language** does not exist; what exists is `NUM_PROV`, a predicate of the ambient logic. D1, D2 and D3 are statements about that formula, so none of the three can be stated yet. `docs/adr/0013` is the plan |
 | Analysis | **here for a first course, since 2026-09-25, and the pages are in the Analysis section below.** `Limit`, `Transcendental`, `Root`, `Continuity`, `Logarithm`, `Derivative` and `Integral` declare the limit, the six series functions, `sqrt`, continuity, the derivative and the gauge integral, and none of them costs an axiom. What is proved runs from `sqrt 2` being irrational and `exp (x + y) = exp x * exp y` through the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem to both halves of the fundamental theorem and Taylor's theorem; `docs/proving.md` lists every fact under its development rather than this row copying them. **Nothing primitive was missing** for any of it: each was expressible over the theory as it stood, which is what this row claimed on 2026-09-14 when it said nothing was here | Measured against `docs/lemmas.md` on 2026-09-27, not estimated, and it moved in the day since the first measurement: Taylor's theorem with the Lagrange remainder, the continuity of a product, integration by parts and the change of variables have landed, and on 2026-09-27 the limit of a function at a point with L'Hopital's rule for `0 / 0`. Since 2026-09-27 continuity is closed under a sum and a composition as well as a product, and the derivative has the sum rule beside the product, chain and power rules, so a polynomial is continuous by composing lemmas rather than by a derivation of its own. What is still absent: a quotient; L'Hopital is the `0 / 0` form at a point only, with no one-sided, infinite or at-infinity form; and there is no series of functions |
-| The fundamental theorem of algebra | **out of reach, and nothing about it is a decision** | It wants the complex numbers, so it wants the reals as a construction with the integers and the rationals under them, which `docs/adr/0007` puts in that order and which has not started. Then it wants an argument of its own: the route through Liouville wants a derivative, the route through winding numbers wants a topology, and neither exists here. Unlike the four colour theorem below it, what stands in the way is work rather than a recorded decision |
-| The fundamental theorem of calculus | **here, both halves, since 2026-09-26** | `INTEGRAL_DERIVATIVE_WITHIN` is the first half in the form a textbook states it, the derivative one-sided at the ends, and over the gauge integral `docs/adr/0049` decides it needs no integrability hypothesis. `DERIVATIVE_INTEGRAL` is the second: the integral from `a` of a function continuous at each point of `[a, b]`, two-sided at the ends, has that function as its derivative inside, and `DERIVATIVE_INTEGRAL_WITHIN` asks the continuity relative to `[a, b]` as a textbook does. Both have pages below. What it waited on was a derivative, then an integral, then additivity over intervals, and not the construction of the reals |
+| The fundamental theorem of algebra | **out of reach, and nothing about it is a decision** | It wants the complex numbers, and those want the reals as a construction with the integers and the rationals under them, which `docs/adr/0007` put in that order and which is done since 2026-09-27 (`docs/adr/0053`); the complex numbers themselves are not. Then it wants an argument of its own: the route through Liouville wants a derivative, the route through winding numbers wants a topology, and neither exists here. Unlike the four colour theorem below it, what stands in the way is work rather than a recorded decision |
+| The fundamental theorem of calculus | **here, both halves, since 2026-09-26** | `INTEGRAL_DERIVATIVE_WITHIN` is the first half in the form a textbook states it, the derivative one-sided at the ends, and over the gauge integral `docs/adr/0049` decides it needs no integrability hypothesis. `DERIVATIVE_INTEGRAL_WITHIN` is the second, in the same form: the integral from `a` of a function continuous relative to `[a, b]` has that function as its derivative inside, and `DERIVATIVE_INTEGRAL` is the same with the continuity two-sided at the ends, which asks more. The pages below show the textbook's forms, and so do those of the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem. What it waited on was a derivative, then an integral, then additivity over intervals, and not the construction of the reals |
 | The four colour theorem | **out of reach, and not only by size** | It needs graphs and finite sets, which do not exist, and the only proof anyone has runs a computation over 633 configurations. `docs/adr/0010` decides there is **no computing rule in the kernel** and that there will not be one while the trusted base is the argument, so the route Gonthier took is closed here by a recorded decision rather than by effort |
 | Hilbert's solved problems | **out of reach, with one exception worth naming** | Most need machinery nothing here is near. The tenth, Matiyasevich's theorem, is the exception: it is a statement about Diophantine definability, and the beta function, the coding of sequences and the arithmetisation of syntax that the incompleteness work is building are the same ground floor. It is the one entry on this list that the current work walks towards rather than away from |
 
@@ -3230,22 +3230,30 @@ worth proving.
 
 ---
 
-# INTERMEDIATE_VALUE
+# INTERMEDIATE_VALUE_WITHIN
 
-$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ x \le y \Rightarrow \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow \operatorname{cont}(f, u) \right) \Rightarrow f(x) \le z \Rightarrow z \le f(y) \Rightarrow \left( \exists u \colon \mathbb{R}.\ x \le u \land u \le y \land f(u) = z \right)$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ x \le y \Rightarrow \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow \operatorname{cont}_{[x, y]}(f, u) \right) \Rightarrow f(x) \le z \Rightarrow z \le f(y) \Rightarrow \left( \exists u \colon \mathbb{R}.\ x \le u \land u \le y \land f(u) = z \right)$$
 
 ```
-!f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous f u) ==> f x <= z ==> z <= f y ==> (?u:real. x <= u /\ u <= y /\ f u = z)
+!f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous_within f x y u) ==> f x <= z ==> z <= f y ==> (?u:real. x <= u /\ u <= y /\ f u = z)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
 
 ## What it rests on
 
-3 axioms reached, 0 of them named below, and 51 named facts in all.
+3 axioms reached, 0 of them named below, and 60 named facts in all.
 
 | what | where |
 |---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `CONTINUOUS_EXTENSION` | Continuity |
+| `CONTINUOUS_EXTENSION_AGREES` | Continuity |
+| `INTERMEDIATE_VALUE` | Continuity |
 | `ABS_ABOVE` | Magnitude |
 | `ABS_ABOVE_NEG` | Magnitude |
 | `ABS_CASES` | Magnitude |
@@ -3268,6 +3276,7 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 | `LE_FROM_ZERO` | Order |
 | `LE_OF_EQ` | Order |
 | `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
 | `LE_TO_ZERO` | Order |
 | `LT_FROM_ZERO` | Order |
 | `LT_TO_ZERO` | Order |
@@ -3308,29 +3317,29 @@ obtained.
 
 ## The proof the kernel holds
 
-28128 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+45862 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 7856 | 27.9% |
-| EqualityElimination | 5396 | 19.2% |
-| Transitivity | 3699 | 13.2% |
-| Instantiation | 3416 | 12.1% |
-| Reflexivity | 3223 | 11.5% |
-| BetaStep | 1828 | 6.5% |
-| Antisymmetry | 1333 | 4.7% |
-| TypeInstantiation | 901 | 3.2% |
-| Assumption | 233 | 0.8% |
-| Abstraction | 192 | 0.7% |
-| Citation | 39 | 0.1% |
-| Definition | 12 | 0.0% |
+| Congruence | 12998 | 28.3% |
+| EqualityElimination | 8449 | 18.4% |
+| Transitivity | 6197 | 13.5% |
+| Instantiation | 5892 | 12.8% |
+| Reflexivity | 5215 | 11.4% |
+| BetaStep | 2746 | 6.0% |
+| Antisymmetry | 2182 | 4.8% |
+| TypeInstantiation | 1357 | 3.0% |
+| Assumption | 471 | 1.0% |
+| Abstraction | 298 | 0.6% |
+| Citation | 44 | 0.1% |
+| Definition | 13 | 0.0% |
 
 ## How to get it
 
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous f u) ==> f x <= z ==> z <= f y ==> (?u:real. x <= u /\ u <= y /\ f u = z)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. !z:real. x <= y ==> (!u:real. x <= u /\ u <= y ==> continuous_within f x y u) ==> f x <= z ==> z <= f y ==> (?u:real. x <= u /\ u <= y /\ f u = z)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3341,10 +3350,10 @@ shell's quotes are gone before the command sees them.
 Look it up instead, by name or by shape:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Find INTERMEDIATE_VALUE"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find INTERMEDIATE_VALUE_WITHIN"
 ```
 
-From Scala it is `Continuity`'s, under the name `INTERMEDIATE_VALUE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+From Scala it is `Continuity`'s, under the name `INTERMEDIATE_VALUE_WITHIN`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -3362,142 +3371,12 @@ worth proving.
 
 ---
 
-# CONTINUOUS_ATTAINS_MAX
+# CONTINUOUS_ATTAINS_MAX_WITHIN
 
-$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x \le y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}(f, z) \right) \Rightarrow \left( \exists z \colon \mathbb{R}.\ x \le z \land z \le y \land \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow f(u) \le f(z) \right) \right)$$
-
-```
-!f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
-```
-
-*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
-
-## What it rests on
-
-3 axioms reached, 0 of them named below, and 49 named facts in all.
-
-| what | where |
-|---|---|
-| `EXCLUDED_MIDDLE` | Classical, derived |
-| `TRUTH_NOT_FALSITY` | Classical, derived |
-| `CONTINUOUS_BOUNDED` | Continuity |
-| `INTERVAL_GLUING` | Continuity |
-| `ABS_ABOVE` | Magnitude |
-| `ABS_CASES` | Magnitude |
-| `MAX_ABOVE_LEFT` | Magnitude |
-| `MAX_ABOVE_RIGHT` | Magnitude |
-| `MAX_CASES` | Magnitude |
-| `MIN_BELOW_LEFT` | Magnitude |
-| `MIN_BELOW_RIGHT` | Magnitude |
-| `MIN_CASES` | Magnitude |
-| `ADD_NONNEG` | Order |
-| `ADD_NONNEG_LT` | Order |
-| `ADD_POSITIVE` | Order |
-| `CANCEL_POSITIVE` | Order |
-| `LE_CASES` | Order |
-| `LE_FROM_ZERO` | Order |
-| `LE_OF_EQ` | Order |
-| `LE_OF_LT` | Order |
-| `LE_TO_ZERO` | Order |
-| `LT_FROM_ZERO` | Order |
-| `LT_TO_ZERO` | Order |
-| `MUL_NONNEG` | Order |
-| `POSITIVE_NOT_ZERO` | Order |
-| `ZERO_LT_ONE` | Order |
-| `ADD_POSITIVE` | Positivity |
-| `POSITIVE_NOT_ZERO` | Positivity |
-| `ZERO_LT_ONE` | Positivity |
-| `BIT0` | Real, defined |
-| `div` | Real, defined |
-| `real_le` | Real, defined |
-| `sub` | Real, defined |
-| `ADD_ASSOC` | Real, derived |
-| `ADD_INVERSE` | Real, derived |
-| `ADD_SYM` | Real, derived |
-| `ADD_ZERO` | Real, derived |
-| `COMPLETENESS` | Real, derived |
-| `DISTRIBUTE` | Real, derived |
-| `LT_ADD` | Real, derived |
-| `LT_IRREFLEXIVE` | Real, derived |
-| `LT_MUL` | Real, derived |
-| `LT_TOTAL` | Real, derived |
-| `LT_TRANSITIVE` | Real, derived |
-| `MUL_ASSOC` | Real, derived |
-| `MUL_INVERSE` | Real, derived |
-| `MUL_ONE` | Real, derived |
-| `MUL_SYM` | Real, derived |
-| `ONE_NOT_ZERO` | Real, derived |
-
-3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
-
-## The derivation
-
-Not recorded. The development that proved this has not been converted to record its steps,
-so the page can say what the theorem rests on and what it cost and cannot say how it was
-obtained.
-
-## The proof the kernel holds
-
-49522 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
-
-| rule | inferences | share |
-|---|---|---|
-| Congruence | 14070 | 28.4% |
-| EqualityElimination | 9298 | 18.8% |
-| Transitivity | 6382 | 12.9% |
-| Instantiation | 6241 | 12.6% |
-| Reflexivity | 5492 | 11.1% |
-| BetaStep | 2960 | 6.0% |
-| Antisymmetry | 2587 | 5.2% |
-| TypeInstantiation | 1487 | 3.0% |
-| Assumption | 516 | 1.0% |
-| Abstraction | 436 | 0.9% |
-| Citation | 41 | 0.1% |
-| Definition | 12 | 0.0% |
-
-## How to get it
-
-Put the claim to the prover, which puts it to the whole tactic surface:
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x \le y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}_{[x, y]}(f, z) \right) \Rightarrow \left( \exists z \colon \mathbb{R}.\ x \le z \land z \le y \land \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow f(u) \le f(z) \right) \right)$$
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))"
-```
-
-The claim is **not** quoted: `sbt` hands the arguments over already split, so the
-shell's quotes are gone before the command sees them.
-
-**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
-
-Look it up instead, by name or by shape:
-
-```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Find CONTINUOUS_ATTAINS_MAX"
-```
-
-From Scala it is `Continuity`'s, under the name `CONTINUOUS_ATTAINS_MAX`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
-
-## What on this page is checked
-
-- The statement, in both forms, is rendered from the theorem. The second form was read back
-  and gave the same term, which is what `Signature.readable` returns a pair for.
-- What it rests on is a walk over the derivation, and a name appears against a fact only
-  where the sequents agree.
-- The inferences and their shape are counted from the same walk, which stops at a published
-  fact: the fact's own proof was checked when its development was built.
-
-Not checked, and not claimed: that the statement says what somebody meant, which is what the
-readable form is printed for; that a constant is spelled the way the literature spells it,
-which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
-worth proving.
-
----
-
-# ROLLE
-
-$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x < y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}(f, z) \right) \Rightarrow \left( \forall z \colon \mathbb{R}.\ x < z \land z < y \Rightarrow \left( \exists u \colon \mathbb{R}.\ \operatorname{deriv}(f, z, u) \right) \right) \Rightarrow f(x) = f(y) \Rightarrow \left( \exists z \colon \mathbb{R}.\ x < z \land z < y \land \operatorname{deriv}(f, z, 0) \right)$$
-
-```
-!f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> f x = f y ==> (?z:real. x < z /\ z < y /\ derivative f z 0)
+!f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
@@ -3508,22 +3387,21 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 
 | what | where |
 |---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
 | `EXCLUDED_MIDDLE` | Classical, derived |
 | `TRUTH_NOT_FALSITY` | Classical, derived |
 | `CONTINUOUS_ATTAINS_MAX` | Continuity |
-| `CONTINUOUS_ATTAINS_MIN` | Continuity |
 | `CONTINUOUS_BOUNDED` | Continuity |
-| `CONTINUOUS_NEG` | Continuity |
+| `CONTINUOUS_EXTENSION` | Continuity |
+| `CONTINUOUS_EXTENSION_AGREES` | Continuity |
 | `INTERVAL_GLUING` | Continuity |
-| `DERIVATIVE_INTERIOR_MAX` | Derivative |
-| `DERIVATIVE_INTERIOR_MIN` | Derivative |
-| `DERIVATIVE_NEG` | Derivative |
 | `ABS_ABOVE` | Magnitude |
 | `ABS_ABOVE_NEG` | Magnitude |
 | `ABS_CASES` | Magnitude |
 | `ABS_NONNEG` | Magnitude |
 | `ABS_OF_NONNEG` | Magnitude |
-| `ABS_OF_NONPOS` | Magnitude |
 | `MAX_ABOVE_LEFT` | Magnitude |
 | `MAX_ABOVE_RIGHT` | Magnitude |
 | `MAX_CASES` | Magnitude |
@@ -3540,6 +3418,7 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 | `LE_FROM_ZERO` | Order |
 | `LE_OF_EQ` | Order |
 | `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
 | `LE_TO_ZERO` | Order |
 | `LT_FROM_ZERO` | Order |
 | `LT_TO_ZERO` | Order |
@@ -3580,29 +3459,29 @@ obtained.
 
 ## The proof the kernel holds
 
-57270 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+66679 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 15972 | 27.9% |
-| EqualityElimination | 10874 | 19.0% |
-| Transitivity | 7638 | 13.3% |
-| Instantiation | 7250 | 12.7% |
-| Reflexivity | 6504 | 11.4% |
-| BetaStep | 3692 | 6.4% |
-| Antisymmetry | 2896 | 5.1% |
-| TypeInstantiation | 1724 | 3.0% |
-| Assumption | 406 | 0.7% |
-| Abstraction | 259 | 0.5% |
-| Citation | 43 | 0.1% |
-| Definition | 12 | 0.0% |
+| Congruence | 19037 | 28.6% |
+| EqualityElimination | 12238 | 18.4% |
+| Transitivity | 8805 | 13.2% |
+| Instantiation | 8655 | 13.0% |
+| Reflexivity | 7427 | 11.1% |
+| BetaStep | 3840 | 5.8% |
+| Antisymmetry | 3408 | 5.1% |
+| TypeInstantiation | 1926 | 2.9% |
+| Assumption | 744 | 1.1% |
+| Abstraction | 540 | 0.8% |
+| Citation | 46 | 0.1% |
+| Definition | 13 | 0.0% |
 
 ## How to get it
 
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> f x = f y ==> (?z:real. x < z /\ z < y /\ derivative f z 0)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x <= y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (?z:real. x <= z /\ z <= y /\ (!u:real. x <= u /\ u <= y ==> f u <= f z))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3613,10 +3492,10 @@ shell's quotes are gone before the command sees them.
 Look it up instead, by name or by shape:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Find ROLLE"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find CONTINUOUS_ATTAINS_MAX_WITHIN"
 ```
 
-From Scala it is `Derivative`'s, under the name `ROLLE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+From Scala it is `Continuity`'s, under the name `CONTINUOUS_ATTAINS_MAX_WITHIN`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -3634,27 +3513,182 @@ worth proving.
 
 ---
 
-# MEAN_VALUE
+# ROLLE_WITHIN
 
-$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x < y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}(f, z) \right) \Rightarrow \left( \forall z \colon \mathbb{R}.\ x < z \land z < y \Rightarrow \left( \exists u \colon \mathbb{R}.\ \operatorname{deriv}(f, z, u) \right) \right) \Rightarrow \left( \exists z \colon \mathbb{R}.\ \exists u \colon \mathbb{R}.\ x < z \land z < y \land \operatorname{deriv}(f, z, u) \land f(y) - f(x) = u \cdot \left( y - x \right) \right)$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x < y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}_{[x, y]}(f, z) \right) \Rightarrow \left( \forall z \colon \mathbb{R}.\ x < z \land z < y \Rightarrow \left( \exists u \colon \mathbb{R}.\ \operatorname{deriv}(f, z, u) \right) \right) \Rightarrow f(x) = f(y) \Rightarrow \left( \exists z \colon \mathbb{R}.\ x < z \land z < y \land \operatorname{deriv}(f, z, 0) \right)$$
 
 ```
-!f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))
+!f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> f x = f y ==> (?z:real. x < z /\ z < y /\ derivative f z 0)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
 
 ## What it rests on
 
-3 axioms reached, 0 of them named below, and 72 named facts in all.
+3 axioms reached, 0 of them named below, and 69 named facts in all.
 
 | what | where |
 |---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
 | `EXCLUDED_MIDDLE` | Classical, derived |
 | `TRUTH_NOT_FALSITY` | Classical, derived |
 | `CONTINUOUS_ATTAINS_MAX` | Continuity |
 | `CONTINUOUS_ATTAINS_MIN` | Continuity |
 | `CONTINUOUS_BOUNDED` | Continuity |
+| `CONTINUOUS_EXTENSION` | Continuity |
+| `CONTINUOUS_EXTENSION_AGREES` | Continuity |
+| `CONTINUOUS_NEG` | Continuity |
+| `INTERVAL_GLUING` | Continuity |
+| `DERIVATIVE_INTERIOR_MAX` | Derivative |
+| `DERIVATIVE_INTERIOR_MIN` | Derivative |
+| `DERIVATIVE_LOCAL` | Derivative |
+| `DERIVATIVE_NEG` | Derivative |
+| `ROLLE` | Derivative |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `ZERO_LT_ONE` | Order |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `BIT0` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `COMPLETENESS` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `LT_ADD` | Real, derived |
+| `LT_IRREFLEXIVE` | Real, derived |
+| `LT_MUL` | Real, derived |
+| `LT_TOTAL` | Real, derived |
+| `LT_TRANSITIVE` | Real, derived |
+| `MUL_ASSOC` | Real, derived |
+| `MUL_INVERSE` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
+| `ONE_NOT_ZERO` | Real, derived |
+
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+77379 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 21941 | 28.4% |
+| EqualityElimination | 14125 | 18.3% |
+| Transitivity | 10622 | 13.7% |
+| Instantiation | 10216 | 13.2% |
+| Reflexivity | 8739 | 11.3% |
+| BetaStep | 4664 | 6.0% |
+| Antisymmetry | 3780 | 4.9% |
+| TypeInstantiation | 2198 | 2.8% |
+| Assumption | 655 | 0.8% |
+| Abstraction | 382 | 0.5% |
+| Citation | 45 | 0.1% |
+| Definition | 12 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> f x = f y ==> (?z:real. x < z /\ z < y /\ derivative f z 0)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find ROLLE_WITHIN"
+```
+
+From Scala it is `Derivative`'s, under the name `ROLLE_WITHIN`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+# MEAN_VALUE_WITHIN
+
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ x < y \Rightarrow \left( \forall z \colon \mathbb{R}.\ x \le z \land z \le y \Rightarrow \operatorname{cont}_{[x, y]}(f, z) \right) \Rightarrow \left( \forall z \colon \mathbb{R}.\ x < z \land z < y \Rightarrow \left( \exists u \colon \mathbb{R}.\ \operatorname{deriv}(f, z, u) \right) \right) \Rightarrow \left( \exists z \colon \mathbb{R}.\ \exists u \colon \mathbb{R}.\ x < z \land z < y \land \operatorname{deriv}(f, z, u) \land f(y) - f(x) = u \cdot \left( y - x \right) \right)$$
+
+```
+!f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+3 axioms reached, 0 of them named below, and 80 named facts in all.
+
+| what | where |
+|---|---|
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `CONTINUOUS_ATTAINS_MAX` | Continuity |
+| `CONTINUOUS_ATTAINS_MIN` | Continuity |
+| `CONTINUOUS_BOUNDED` | Continuity |
+| `CONTINUOUS_EXTENSION` | Continuity |
+| `CONTINUOUS_EXTENSION_AGREES` | Continuity |
 | `CONTINUOUS_ID` | Continuity |
 | `CONTINUOUS_LINEAR` | Continuity |
 | `CONTINUOUS_NEG` | Continuity |
@@ -3663,8 +3697,10 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 | `DERIVATIVE_INTERIOR_MAX` | Derivative |
 | `DERIVATIVE_INTERIOR_MIN` | Derivative |
 | `DERIVATIVE_LINEAR` | Derivative |
+| `DERIVATIVE_LOCAL` | Derivative |
 | `DERIVATIVE_NEG` | Derivative |
 | `DERIVATIVE_UNIQUE` | Derivative |
+| `MEAN_VALUE` | Derivative |
 | `ROLLE` | Derivative |
 | `ABS_ABOVE` | Magnitude |
 | `ABS_ABOVE_NEG` | Magnitude |
@@ -3691,6 +3727,7 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 | `LE_FROM_ZERO` | Order |
 | `LE_OF_EQ` | Order |
 | `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
 | `LE_TO_ZERO` | Order |
 | `LT_FROM_ZERO` | Order |
 | `LT_OF_NOT_LE` | Order |
@@ -3733,21 +3770,21 @@ obtained.
 
 ## The proof the kernel holds
 
-122855 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+143083 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 34710 | 28.3% |
-| EqualityElimination | 22758 | 18.5% |
-| Transitivity | 16666 | 13.6% |
-| Instantiation | 16432 | 13.4% |
-| Reflexivity | 13816 | 11.2% |
-| BetaStep | 7611 | 6.2% |
-| Antisymmetry | 6108 | 5.0% |
-| TypeInstantiation | 3496 | 2.8% |
-| Assumption | 759 | 0.6% |
-| Abstraction | 438 | 0.4% |
-| Citation | 49 | 0.0% |
+| Congruence | 40706 | 28.4% |
+| EqualityElimination | 26040 | 18.2% |
+| Transitivity | 19654 | 13.7% |
+| Instantiation | 19413 | 13.6% |
+| Reflexivity | 16059 | 11.2% |
+| BetaStep | 8589 | 6.0% |
+| Antisymmetry | 7007 | 4.9% |
+| TypeInstantiation | 3976 | 2.8% |
+| Assumption | 1012 | 0.7% |
+| Abstraction | 564 | 0.4% |
+| Citation | 51 | 0.0% |
 | Definition | 12 | 0.0% |
 
 ## How to get it
@@ -3755,7 +3792,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous f z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. x < y ==> (!z:real. x <= z /\ z <= y ==> continuous_within f x y z) ==> (!z:real. x < z /\ z < y ==> (?u:real. derivative f z u)) ==> (?z:real. ?u:real. x < z /\ z < y /\ derivative f z u /\ f y - f x = u * (y - x))"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -3766,10 +3803,10 @@ shell's quotes are gone before the command sees them.
 Look it up instead, by name or by shape:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Find MEAN_VALUE"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find MEAN_VALUE_WITHIN"
 ```
 
-From Scala it is `Derivative`'s, under the name `MEAN_VALUE`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+From Scala it is `Derivative`'s, under the name `MEAN_VALUE_WITHIN`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
@@ -3941,19 +3978,19 @@ worth proving.
 
 ---
 
-# DERIVATIVE_INTEGRAL
+# DERIVATIVE_INTEGRAL_WITHIN
 
-$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow \operatorname{cont}(f, u) \right) \Rightarrow x < z \Rightarrow z < y \Rightarrow \operatorname{deriv}(\lambda u \colon \mathbb{R}.\ \operatorname{integral}(f, x, u), z, f(z))$$
+$$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \forall y \colon \mathbb{R}.\ \forall z \colon \mathbb{R}.\ \left( \forall u \colon \mathbb{R}.\ x \le u \land u \le y \Rightarrow \operatorname{cont}_{[x, y]}(f, u) \right) \Rightarrow x < z \Rightarrow z < y \Rightarrow \operatorname{deriv}(\lambda u \colon \mathbb{R}.\ \operatorname{integral}(f, x, u), z, f(z))$$
 
 ```
-!f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous f u) ==> x < z ==> z < y ==> derivative (\u:real. integral f x u) z (f z)
+!f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous_within f x y u) ==> x < z ==> z < y ==> derivative (\u:real. integral f x u) z (f z)
 ```
 
 *The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
 
 ## What it rests on
 
-3 axioms reached, 0 of them named below, and 79 named facts in all.
+3 axioms reached, 0 of them named below, and 87 named facts in all.
 
 | what | where |
 |---|---|
@@ -3963,18 +4000,24 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 | `DOUBLE_NEGATION` | Classical, derived |
 | `EXCLUDED_MIDDLE` | Classical, derived |
 | `TRUTH_NOT_FALSITY` | Classical, derived |
+| `CONTINUOUS_EXTENSION` | Continuity |
+| `CONTINUOUS_EXTENSION_AGREES` | Continuity |
 | `INTERVAL_GLUING` | Continuity |
 | `DERIVATIVE_WITHIN_INTERIOR` | Derivative |
 | `INDUCTIVE_INDUCT` | Inductive |
 | `INDUCTIVE_INTRO` | Inductive |
 | `CONTINUOUS_HAS_INTEGRAL` | Integral |
 | `CONTINUOUS_INTEGRAL` | Integral |
+| `DERIVATIVE_WITHIN_CONGRUENCE` | Integral |
 | `DERIVATIVE_WITHIN_INTEGRAL` | Integral |
+| `DERIVATIVE_WITHIN_INTEGRAL_WITHIN` | Integral |
+| `FINE_SUM_CONGRUENCE` | Integral |
 | `FINE_SUM_EXISTS` | Integral |
 | `FINE_SUM_GAUGE` | Integral |
 | `FINE_SUM_INDUCT` | Integral |
 | `FINE_SUM_JOIN` | Integral |
 | `FINE_SUM_PIECE` | Integral |
+| `HAS_INTEGRAL_CONGRUENCE` | Integral |
 | `HAS_INTEGRAL_JOIN` | Integral |
 | `HAS_INTEGRAL_UNIQUE` | Integral |
 | `INTEGRAL_UNIQUE` | Integral |
@@ -3983,6 +4026,7 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 | `ABS_ABOVE_NEG` | Magnitude |
 | `ABS_CASES` | Magnitude |
 | `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
 | `ABS_ZERO` | Magnitude |
 | `MAX_ABOVE_LEFT` | Magnitude |
 | `MAX_ABOVE_RIGHT` | Magnitude |
@@ -4000,6 +4044,7 @@ $$\forall f \colon \mathbb{R} \to \mathbb{R}.\ \forall x \colon \mathbb{R}.\ \fo
 | `LE_FROM_ZERO` | Order |
 | `LE_OF_EQ` | Order |
 | `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
 | `LE_TO_ZERO` | Order |
 | `LT_FROM_ZERO` | Order |
 | `LT_OF_NOT_LE` | Order |
@@ -4047,21 +4092,21 @@ obtained.
 
 ## The proof the kernel holds
 
-152276 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+160849 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
 
 | rule | inferences | share |
 |---|---|---|
-| Congruence | 51396 | 33.8% |
-| EqualityElimination | 25410 | 16.7% |
-| Instantiation | 18985 | 12.5% |
-| Transitivity | 18681 | 12.3% |
-| Reflexivity | 15774 | 10.4% |
-| BetaStep | 7923 | 5.2% |
-| Antisymmetry | 7061 | 4.6% |
-| TypeInstantiation | 3964 | 2.6% |
-| Assumption | 1521 | 1.0% |
-| Abstraction | 1490 | 1.0% |
-| Citation | 53 | 0.0% |
+| Congruence | 54403 | 33.8% |
+| EqualityElimination | 26907 | 16.7% |
+| Instantiation | 19926 | 12.4% |
+| Transitivity | 19577 | 12.2% |
+| Reflexivity | 16541 | 10.3% |
+| BetaStep | 8356 | 5.2% |
+| Antisymmetry | 7563 | 4.7% |
+| TypeInstantiation | 4203 | 2.6% |
+| Assumption | 1660 | 1.0% |
+| Abstraction | 1640 | 1.0% |
+| Citation | 55 | 0.0% |
 | Definition | 17 | 0.0% |
 | Axiom | 1 | 0.0% |
 
@@ -4070,7 +4115,7 @@ obtained.
 Put the claim to the prover, which puts it to the whole tactic surface:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous f u) ==> x < z ==> z < y ==> derivative (\u:real. integral f x u) z (f z)"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:real -> real. !x:real. !y:real. !z:real. (!u:real. x <= u /\ u <= y ==> continuous_within f x y u) ==> x < z ==> z < y ==> derivative (\u:real. integral f x u) z (f z)"
 ```
 
 The claim is **not** quoted: `sbt` hands the arguments over already split, so the
@@ -4081,10 +4126,10 @@ shell's quotes are gone before the command sees them.
 Look it up instead, by name or by shape:
 
 ```
-sbt "tactics/runMain garden.xeno.symbolum.tactics.Find DERIVATIVE_INTEGRAL"
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find DERIVATIVE_INTEGRAL_WITHIN"
 ```
 
-From Scala it is `Integral`'s, under the name `DERIVATIVE_INTEGRAL`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+From Scala it is `Integral`'s, under the name `DERIVATIVE_INTEGRAL_WITHIN`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 
