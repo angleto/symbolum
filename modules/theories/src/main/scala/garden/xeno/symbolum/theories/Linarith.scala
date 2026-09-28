@@ -295,6 +295,12 @@ final class Linarith private (
    * The same discipline again, and the reason it is worth the branch rather than a longer
    * sentence covering both: a reader acts on the first thing a refusal names, and "degree" and
    * "no hypotheses" send them to different places.
+   *
+   * **A third obstacle is not a product at all.** When every product out of reach is one unknown
+   * times itself, the squares cover all of them, and what stops the goal is what it asks beyond its
+   * squares: `x * x >= 1` less the square `x * x` is `-1 >= 0`. The refusal names that remainder
+   * rather than a product, since the product it named until 2026-09-28 was one the procedure had
+   * already handled.
    */
   private def naming(
     facts: Vector[LinearFact],
@@ -313,7 +319,8 @@ final class Linarith private (
     // by its own name, and a message about its degree would be both wrong and a step backwards
     // from one that was right.
     //
-    // The `> 1` is also why neither of the two refusals below ever says `a product of 1 unknowns`:
+    // The `> 1` is also why neither of the two refusals below that print a count ever says `a
+    // product of 1 unknowns`:
     // the atom they name is the one this find selected, so the number they print is at least two
     // and no counter is wanted. Both messages read the same `factorsOf` and both are covered by
     // the one guard, which is worth saying because there is one guard and two sentences.
@@ -323,7 +330,8 @@ final class Linarith private (
     // degree two and every other obstacle is secondary to it. Then a product of different unknowns
     // before a square of one: naming `x * x` in `x * x + y * y >= 2 * (x * y)`, which is what term
     // order did until the verification of card `bacfaba5` on 2026-09-26, sent the caller to repair
-    // the half the procedure had already handled.
+    // the half the procedure had already handled. A square is found last and is never named: when
+    // it is all there is, the refusal below names what the goal asks beyond the squares instead.
     def isSquare(atom: Term): Boolean = LinearForm.factorsOf(atom) match {
       case Vector(left, right) => left == right
       case _ => false
@@ -345,8 +353,35 @@ final class Linarith private (
       case _ => false
     }
 
+    // What the goal asks beyond its own squares: its form less every square the decomposition finds
+    // in it, which is exact, so what is left is the part no square covers. For `x * x >= 1` it is
+    // `-1 >= 0`, and the constant is the obstacle.
+    def beyondSquares: Option[String] =
+      LinearForm.goal(reals, conclusion).flatMap { case (form, strict) =>
+        val rest = SumOfSquares.of(form, LinearForm.factorsOf).foldLeft(form) { (left, square) =>
+          left + -square.base.times(square.base, LinearForm.productAtom(reals, _, _)).scaled(square.weight)
+        }
+        termOf(rest).toOption.map(term => s"${reals.show(term)} ${if (strict) ">" else ">="} 0")
+      }
+
     outOfReach match {
       case _ if found => refusal
+
+      // Every product out of reach is one unknown times itself, so the order above had nothing
+      // better to name, and a square is what both sources of squares cover: naming it sent the
+      // caller to repair the half the procedure had handled, measured on `x * x >= 1` on 2026-09-28
+      // (card `9fefbf75`). What is missing is what the goal asks once its squares are completed, and
+      // whether there were hypotheses to give it decides how the sentence ends.
+      case Some(atom) if isSquare(atom) && LinearForm.obstacleIn(reals, conclusion).isEmpty =>
+        beyondSquares.fold(refusal) { rest =>
+          NotOfForm(
+            "a goal its squares settle: every product in it is one unknown times itself, which " +
+              s"the completed squares cover, and what it asks beyond them is $rest, " +
+              (if (facts.isEmpty) "which no square gives and no hypothesis is there to give"
+               else "which no non-negative combination of its hypotheses and their products gives"),
+            conclusion
+          )
+        }
 
       // Without hypotheses the squares are the only facts there are, so the sentence says what they
       // reach. It said until `docs/adr/0056` that the only one was a square completed over one

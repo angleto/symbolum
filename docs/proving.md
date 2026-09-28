@@ -507,10 +507,14 @@ degree two is reached.
 Linarith.standard.prove("!a:real. a * (2 - a) <= 1")
 ```
 
-The refusal names the atom and how many unknowns it multiplies, and then which of two obstacles it
-met. A goal with hypotheses hears that the hypotheses multiplied reach three. A goal with none hears
-that the pool the products are built from is empty, so no degree of them exists, because telling
-that author about the degree would send them to restate a goal when what it lacks is a premise.
+A refusal past this names which of three obstacles it met. When a product out of reach is not one
+unknown times itself, it names that atom and how many unknowns it multiplies: a goal with
+hypotheses hears that the hypotheses multiplied reach three, and a goal with none hears that the
+pool the products are built from is empty, so no degree of them exists, because telling that author
+about the degree would send them to restate a goal when what it lacks is a premise. When every
+product out of reach is a square, no product is the obstacle, since the squares cover them all, and
+the refusal names what the goal asks once they are taken out: `!x:real. x * x >= 1` asks `-1 >= 0`
+beyond its square, and `!a:real. a * (2 - a) < 1` asks `0 > 0`.
 
 **A product of two variables is an atom, and the hypotheses are multiplied to reach it.** No
 combination of forms over `x` and `y` gets to an atom `x * y`, so `0 < x /\ 0 < y ==> 0 < x * y`
