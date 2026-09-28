@@ -26,6 +26,15 @@
 #   4. Red at 3 of 4, exit 1, at the same test, after compiling the one perturbed source; the
 #      difference printed is the ROLLE page against the ROLLE_WITHIN one.
 #
+# WHAT WAS SEEN, 2026-09-28, at 0e199ea0 after the targets moved, restore verified (clean tree).
+#
+#   1. Green at 5 of 5, exit 0.
+#   2. Red at 4 of 5, exit 1, at "be what the command produces".
+#   3. Red at 4 of 5, exit 1, at the same test.
+#   4. Red at 3 of 5, exit 1: the same test, and "show the textbook's form of a theorem wherever
+#      the library holds one", naming ROLLE, which is the guard this card added firing on the
+#      perturbation it exists for.
+#
 # The targets of 2, 3 and 4 moved on 2026-09-28, when the analysis pages took their `_WITHIN`
 # forms (card fd256345); the run recorded above is of the targets before that move.
 #
