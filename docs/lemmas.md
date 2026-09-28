@@ -56,6 +56,30 @@ they have least appetite for working out how it is produced.
 
 <!-- generated: lemmas, do not edit below this line -->
 
+## Circle
+
+  ACOS_SPEC                !x:real. 0 - 1 <= x /\ x <= 1 ==> 0 <= acos x /\ acos x <= pi /\ cos (acos x) = x
+  COS_ADD_PI               !x:real. cos (x + pi) = 0 - cos x
+  COS_DECREASING           !x:real. !y:real. 0 <= x /\ x < y /\ y <= pi ==> cos y < cos x
+  COS_GE_QUADRATIC         !x:real. 0 <= x ==> 1 - x * x / 2 <= cos x
+  COS_GE_SEXTIC            !x:real. 0 <= x ==> 1 - x * x / 2 + x * x * x * x / 24 - x * x * x * x * x * x / 720 <= cos x
+  COS_INJECTIVE            !x:real. !y:real. 0 <= x /\ x <= pi /\ 0 <= y /\ y <= pi /\ cos x = cos y ==> x = y
+  COS_LE_QUARTIC           !x:real. 0 <= x ==> cos x <= 1 - x * x / 2 + x * x * x * x / 24
+  COS_PERIODIC             !x:real. cos (x + 2 * pi) = cos x
+  COS_PI                   cos pi = 0 - 1
+  COS_PI_HALF              cos (pi / 2) = 0
+  COS_SHIFT                !x:real. cos (x + pi / 2) = 0 - sin x
+  PI_BOUNDS                3 < pi /\ pi < 16 / 5
+  SIN_ADD_PI               !x:real. sin (x + pi) = 0 - sin x
+  SIN_GE_CUBIC             !x:real. 0 <= x ==> x - x * x * x / 6 <= sin x
+  SIN_LE_LINE              !x:real. 0 <= x ==> sin x <= x
+  SIN_LE_QUINTIC           !x:real. 0 <= x ==> sin x <= x - x * x * x / 6 + x * x * x * x * x / 120
+  SIN_PERIODIC             !x:real. sin (x + 2 * pi) = sin x
+  SIN_PI                   sin pi = 0
+  SIN_PI_HALF              sin (pi / 2) = 1
+  SIN_POSITIVE             !x:real. 0 < x /\ x < pi ==> 0 < sin x
+  SIN_SHIFT                !x:real. sin (x + pi / 2) = cos x
+
 ## Classical, defined
 
   COND                     COND = (\p:bool. \x:'a. \y:'a. select (\z:'a. (p ==> z = x) /\ (~p ==> z = y)))

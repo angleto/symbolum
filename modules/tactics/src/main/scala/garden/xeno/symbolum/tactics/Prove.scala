@@ -320,7 +320,7 @@ final class Prove private (
 
   /** Built once, because the index over the library is what makes a question milliseconds. */
   private val chaining: Option[Chaining] =
-    library.map { case (lemmas, logic) => Chaining(logic, lemmas) }
+    library.map { case (lemmas, logic) => Chaining(logic, lemmas, refutation = Some(Refutation.standard)) }
 
   /**
    * The searches this prover reaches, which is not the same as the searches that exist.

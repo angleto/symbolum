@@ -177,7 +177,9 @@ object Reach {
         // The derivative and Rolle's theorem, 2026-09-25, in the change that added them.
         "Derivative" -> chain.derivative.facts,
         // The gauge integral and the fundamental theorem, 2026-09-25, in the change that added them.
-        "Integral" -> chain.integral.facts
+        "Integral" -> chain.integral.facts,
+        // pi, the periods and acos, 2026-09-27, in the change that added them.
+        "Circle" -> chain.circle.facts
       )
     )
 

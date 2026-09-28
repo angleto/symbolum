@@ -212,6 +212,25 @@ class ChainingSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  "A candidate owing something the model refutes" should "be passed over without spending the budget" in {
+    // Card `4bcfc8b9`, 2026-09-28. `LE_OF_EQ` matches the one-lemma witness and owes
+    // `0 = (x * x) * (y * y)`, false at `x = y = 1`; under that equation every injectivity lemma is a
+    // candidate, and with `Circle`'s `COS_INJECTIVE` in the library the search spent its ten
+    // expansions there and came back `Depleted(Expansions, 10)`: the two tests above that read the
+    // witness through `Prove` were seen red for that reason at `22ac47c6`, before the screen.
+    // Asserted here at the default bounds with the screen `Prove` installs; the same search without
+    // it is printed, because whether it still depletes is a fact about the library and not a rule.
+    val goal = read("!x:real. !y:real. 0 <= (x * x) * (y * y)")
+    def at(refutation: Option[Refutation]) =
+      Chaining(chain.widest.logic, Library.of(chain), Chaining.Default, refutation)
+        .prove(goal, target => prove.directly(target).toOption)
+    info(s"without the screen: ${at(None)}")
+    at(Some(Refutation.standard)) match {
+      case Chaining.Outcome.Proved(_, used) => used should not contain "LE_OF_EQ"
+      case other => fail(s"the screen must let the witness through at the default bounds: $other")
+    }
+  }
+
   "A chained theorem" should "be replayed by the second checker, which is what makes a search believable" in {
     // The half of the arrangement the rest of this file cannot assert. Everything above checks what
     // `Chaining` says about its own answer, and `Chaining` is a search: untrusted here by the same

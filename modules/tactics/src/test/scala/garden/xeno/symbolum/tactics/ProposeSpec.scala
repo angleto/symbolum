@@ -431,7 +431,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 7a15f023. Plus one over the base above.
     // 851 with `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, three residues each, 2026-09-28, derived
     // before the run and read off it. Plus six over the base above.
-    proposals.size shouldBe 851
+    // 861 with `Circle`, 2026-09-28: one residue on each of ten facts (`ACOS_SPEC`, `COS_DECREASING`,
+    // `COS_INJECTIVE`, `SIN_POSITIVE` and the six polynomial bounds), counted from `docs/lemmas.md`
+    // before the run and equal to it. Plus ten over the base above.
+    proposals.size shouldBe 861
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -662,7 +665,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 84 with the p-adic valuation, 2026-09-26, read off a probe of `Propose.audit` filtered by
     // `from`: one of its thirty-three residues, `NUM_VALUATION_EXT` with the agreement of the
     // registers dropped, `!x y. 0 < x ==> 0 < y ==> x = y`, refuted at `x = 4, y = 8`.
-    decidedFalse shouldBe 84
+    // 85 with `Circle`'s `COS_INJECTIVE`, 2026-09-28, derived from its statement and matched by the
+    // run: its one antecedent dropped leaves `!x y. x = y`, which is `EXP_INJECTIVE`'s row above.
+    decidedFalse shouldBe 85
 
     // Most of those come with the point they fail at, and some do not: the claim is decided false
     // by quantifier elimination and the abduction that would name a point comes back with none.
@@ -807,7 +812,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // moved in the same pass as `decidedFalse` either**, and found the same way, on the second run.
     // 79 with the valuation's one false residue, the same as `decidedFalse`'s, which carries the
     // point `x = 4, y = 8`. Moved in the same pass as `decidedFalse`, from the same probe.
-    withAPoint shouldBe 79
+    // 80 with `COS_INJECTIVE`'s false residue, `!x y. x = y`, refuted at two distinct reals like the
+    // logarithm's. **Not moved in the same pass as `decidedFalse`**, 2026-09-28: the paragraph above
+    // said how it would be found, and it was found that way, by the next run.
+    withAPoint shouldBe 80
   }
 
   it should "leave the rest in the two buckets that mean different things" in {
@@ -1426,7 +1434,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // over the base above.
     // 720 with the six residues of `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, 2026-09-28, measured by
     // the run: all six here, as `TAYLOR`'s went, each keeping the `Sum` and the `Power`. Plus six.
-    open shouldBe 720
+    // 757 with `Circle`, 2026-09-28, read off the run and not decomposed: its ten weakenings less the
+    // one decided above, and the proposals of the other sources over its twenty-one facts. Plus
+    // thirty-seven over the base above.
+    open shouldBe 757
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

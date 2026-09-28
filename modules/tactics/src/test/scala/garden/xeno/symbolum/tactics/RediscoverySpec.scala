@@ -382,7 +382,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // run over 7a15f023. Plus one over the base above.
     // 851 with `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, three antecedents each, 2026-09-28, derived
     // before the run and read off it. Plus six over the base above.
-    propose.weakenings.size shouldBe 851
+    // 861 with `Circle`, 2026-09-28: one antecedent on each of ten facts (`ACOS_SPEC`, `COS_DECREASING`,
+    // `COS_INJECTIVE`, `SIN_POSITIVE` and the six polynomial bounds), counted from `docs/lemmas.md`
+    // before the run and equal to it. Plus ten over the base above.
+    propose.weakenings.size shouldBe 861
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -524,7 +527,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 118 with the reals built from the cuts, 2026-09-26, read off a probe: `real_add`, `real_mul`
     // and `real_lt` are definitional entries since `docs/adr/0053`, each an equation that writes the
     // operator itself with no lambda in the body. Tip plus this branch's delta.
-    propose.mutable.size shouldBe 118
+    // 135 with `Circle`, 2026-09-28, read off the run over the branch that brought it, and the same
+    // figure its first run on 2026-09-27 read: seventeen of its facts write an operator with no
+    // lambda in the body. Plus seventeen over the base above.
+    propose.mutable.size shouldBe 135
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

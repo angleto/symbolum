@@ -121,6 +121,7 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "Logarithm" -> InTheChain,
     "Derivative" -> InTheChain,
     "Integral" -> InTheChain,
+    "Circle" -> InTheChain,
     "Collatz" -> BesideTheChain,
     "Divisibility" -> InTheChain,
     "Induct" -> InTheChain,
@@ -296,6 +297,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // The steps a hand derivation over `num` is made of, shared by the files that write one. It
     // declares nothing and holds no fact: each function is a sequence of derived rules.
     "Steps" -> DeclaresNothing,
+
+    // A derivative the kernel checks, for the polynomials in `sin` and `cos` that `Circle` spends.
+    // It declares nothing and holds no fact: each call is `Derivative`'s published facts at the
+    // pieces, carried to the function the caller wrote by `Ring` and extensionality.
+    "Slope" -> DeclaresNothing,
 
     // The same moves in direct style, which `Pigeonhole` wrote first and `Wilson` needed where no
     // chain exists yet. It declares nothing and holds no fact: each move is a derived rule or a

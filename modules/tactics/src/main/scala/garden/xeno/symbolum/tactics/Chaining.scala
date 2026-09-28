@@ -55,7 +55,8 @@ import garden.xeno.symbolum.theories.Library
 final class Chaining private (
   val logic: Logic,
   val library: Library,
-  val bounds: Chaining.Bounds
+  val bounds: Chaining.Bounds,
+  val refutation: Option[Refutation]
 ) {
 
   import Chaining.*
@@ -270,6 +271,43 @@ final class Chaining private (
   private def assumed(under: Option[Context]): Set[Term] =
     under.map(_.allowed).getOrElse(Set.empty)
 
+  /**
+   * Whether the model finds a point where an obligation is false, under the goal's own hypotheses
+   * where a caller assumed them.
+   *
+   * **Why a search may skip on a model's word.** The order in [[cost]] ranks candidates and prunes
+   * none, so every candidate that matches is expanded until the budget runs out, and a candidate
+   * owing a false statement spends expansions on a subtree that cannot close. Measured on
+   * 2026-09-28 (card `4bcfc8b9`): with `Circle` in the library, `ChainingSpec`'s one-lemma witness
+   * `0 <= (x * x) * (y * y)` came back `Depleted(Expansions, 10)`, because `LE_OF_EQ` owes
+   * `0 = (x * x) * (y * y)`, false at `x = y = 1`, and under that equation every injectivity lemma
+   * (`EXP_INJECTIVE`, and `COS_INJECTIVE` new with `Circle`) is a candidate, since `x = y` matches
+   * every equation. Raising the budget, removing the lemma or moving the witness would each hide
+   * that; skipping an obligation the model refutes removes the subtree for the reason it is dead.
+   *
+   * **What it may not do is take a refusal away or add a theorem**, and it does neither: a skipped
+   * candidate is one fewer thing tried, so the worst a wrong answer here costs is a proof the search
+   * would otherwise have found. Nothing the model says reaches a theorem.
+   *
+   * **A point found in floating point counts here, and that is a decision rather than a lapse.** The
+   * first version asked `Refutation.exactly` as well, the test a reported refutation has to pass, and
+   * a probe on the same day showed it answering no for every obligation over the reals, the one above
+   * included: the model computes a real through `Double`, so nothing over `real` is exact and the
+   * screen skipped nothing. What a sampled point is instead is false beyond `Evaluate`'s tolerance,
+   * which is loose on purpose and errs towards "equal" and "not less", so a true obligation is read
+   * as false only where rounding exceeds that tolerance, and the price of that is one route, never a
+   * wrong theorem. A report would be misled by the same point; a search is only made narrower. An
+   * obligation the model says nothing about, a constant it does not interpret, is never skipped, and
+   * with no refutation the search is what it was.
+   */
+  private def refuted(under: Option[Context])(owed: Term): Boolean =
+    refutation.exists { screen =>
+      screen.counterexample(under.toVector.flatMap(_.assumed), owed) match {
+        case Refutation.Found(_, _) | Refutation.Solved(_, _) => true
+        case _ => false
+      }
+    }
+
   /** The candidates in order, until one reaches the target or the budget runs out. */
   private def first(
     candidates: Vector[(String, Apply.Application)],
@@ -284,6 +322,11 @@ final class Chaining private (
       case None => (None, budget)
 
       case Some(_) if budget.left <= 0 => (None, budget.stoppedAt(Bound.Expansions))
+
+      // A candidate owing something false cannot succeed, so it is passed over without spending an
+      // expansion. See [[refuted]] for what "false" has to mean before this may skip anything.
+      case Some((_, application)) if application.obligations.exists(refuted(under)) =>
+        first(candidates.tail, target, depth, above, leaf, under, budget)
 
       case Some((name, application)) =>
         discharge(name, application, target, depth, above, leaf, under, budget.spend) match {
@@ -426,6 +469,11 @@ object Chaining {
   }
 
   /** Over a library and the logic its lemmas are stated in. */
-  def apply(logic: Logic, library: Library, bounds: Bounds = Default): Chaining =
-    new Chaining(logic, library, bounds)
+  def apply(
+    logic: Logic,
+    library: Library,
+    bounds: Bounds = Default,
+    refutation: Option[Refutation] = None
+  ): Chaining =
+    new Chaining(logic, library, bounds, refutation)
 }
