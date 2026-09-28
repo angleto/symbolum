@@ -380,7 +380,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // run: eighteen antecedents over five facts. Base 826 plus that branch's delta.
     // 821 with `EXP_ONE_IRRATIONAL`'s one antecedent, `0 < q`, 2026-09-27, measured as one by the
     // run over 7a15f023. Plus one over the base above.
-    propose.weakenings.size shouldBe 845
+    // 851 with `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, three antecedents each, 2026-09-28, derived
+    // before the run and read off it. Plus six over the base above.
+    propose.weakenings.size shouldBe 851
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

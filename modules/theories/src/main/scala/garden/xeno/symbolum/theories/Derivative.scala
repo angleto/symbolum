@@ -370,6 +370,9 @@ object Derivative {
    */
   val TaylorLeft: String = "TAYLOR_LEFT"
 
+  /** [[TaylorLeft]] with continuity relative to `[b, a]`, as [[TaylorWithin]] is to [[Taylor]]. */
+  val TaylorLeftWithin: String = "TAYLOR_LEFT_WITHIN"
+
   private val RelativeText: String = "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x)"
 
   /** What every derived fact says, as text, in the order they are derived. */
@@ -479,6 +482,13 @@ object Derivative {
         "?c:real. b < c /\\ c < a /\\ D ZERO b = " +
         "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
         "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)"),
+    TaylorLeftWithin ->
+      ("!D:num -> real -> real. !a:real. !b:real. !n:num. b < a ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> b <= x /\\ x <= a ==> continuous_within (D k) b a x) ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> b < x /\\ x < a ==> derivative (D k) x (D (SUC k) x)) ==> " +
+        "?c:real. b < c /\\ c < a /\\ D ZERO b = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)"),
     TaylorWithin ->
       ("!D:num -> real -> real. !a:real. !b:real. !n:num. a < b ==> " +
         "(!k:num. !x:real. NUM_LE k n ==> a <= x /\\ x <= b ==> continuous_within (D k) a b x) ==> " +
@@ -557,10 +567,11 @@ object Derivative {
       taylor <- TaylorExpansion.prove(steps, transcendental, coding, continuity, Map(
         Constant -> constant, Identity -> identity, Negation -> negation, Linear -> linear, ProductRule -> productRuleFact,
         ChainRule -> chainRule, Rolle -> rolle, Unique -> unique))
-      relative <- taylor.get(Taylor).toRight(MissingDefinition(Taylor)).flatMap(taylorFact =>
-        DerivativeWithin.prove(steps, magnitude, continuity, withinDefinition, Map(
-          Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing,
-          Taylor -> taylorFact, CauchyMeanValue -> cauchy)))
+      taylorFact <- taylor.get(Taylor).toRight(MissingDefinition(Taylor))
+      taylorLeftFact <- taylor.get(TaylorLeft).toRight(MissingDefinition(TaylorLeft))
+      relative <- DerivativeWithin.prove(steps, magnitude, continuity, withinDefinition, Map(
+        Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing,
+        Taylor -> taylorFact, TaylorLeft -> taylorLeftFact, CauchyMeanValue -> cauchy))
 
       facts = Map[String, Kernel.Thm](
         Constant -> constant,

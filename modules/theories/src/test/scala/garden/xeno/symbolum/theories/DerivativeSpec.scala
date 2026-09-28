@@ -110,7 +110,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
-          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorLeft, Derivative.TaylorWithin,
+          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorLeft, Derivative.TaylorWithin, Derivative.TaylorLeftWithin,
           Derivative.CauchyMeanValue, Derivative.CauchyMeanValueWithin, Derivative.LHopital) ++ onInterval ++
           withinInterval).contains(name)) {
       val other = Real.spent(fact(name))
@@ -746,6 +746,17 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(fact(Derivative.TaylorWithin), route) shouldBe route
   }
 
+  it should "price Taylor's theorem to the left relative to [b, a] at the two-sided one's, through the extension" in {
+    // Card `ed53f670`: the census of `IntegralWithinSpec` asks every two-sided interval fact for its
+    // textbook form, and `TAYLOR_LEFT` is one.
+    Real.spent(fact(Derivative.TaylorLeftWithin)) shouldBe Real.spent(fact(Derivative.TaylorLeft))
+    val route = Set(
+      fact(Derivative.TaylorLeft), fact(Derivative.Local),
+      force(chain.continuity.fact(Continuity.Extension)), force(chain.continuity.fact(Continuity.ExtensionAgrees))
+    ).map(_.conclusion)
+    Derivation.restingOn(fact(Derivative.TaylorLeftWithin), route) shouldBe route
+  }
+
   it should "detach Taylor's theorem relative to [-1, 0] at the step, where the two-sided form's hypothesis is false" in {
     // Every order of the family is the step `COND (0 < y) 1 0`, which is continuous relative to
     // [-1, 0] and not continuous at 0, and inside the interval is zero near every point, so each has
@@ -791,6 +802,11 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val detached = Vector(lemma("(0:real) - 1 < 0"), relative, slopes)
       .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
     detached.hypotheses shouldBe empty
+    // The left-hand form over the same interval, expanded at 0 and read at -1: its hypotheses are the
+    // same three propositions, so the same proofs discharge them (card `ed53f670`).
+    val leftInstance = opened(force(rules.specAll(fact(Derivative.TaylorLeftWithin), List(family, real("0:real"), real("0 - 1"), n))))
+    Vector(lemma("(0:real) - 1 < 0"), relative, slopes)
+      .foldLeft(leftInstance)((theorem, premise) => force(rules.mp(theorem, premise))).hypotheses shouldBe empty
     witness.refused.hypotheses shouldBe empty
     witness.refused.conclusion shouldBe proposition("~(continuous (\\y:real. COND (0 < y) (1:real) 0) 0)")
   }
