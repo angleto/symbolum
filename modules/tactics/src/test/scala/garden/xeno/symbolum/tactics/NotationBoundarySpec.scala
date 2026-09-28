@@ -45,10 +45,11 @@ import org.scalatest.matchers.should.Matchers
  *      `Option[String]` already rendered through `reals.show`, and the two sites that raise it
  *      interpolate `$obstacle` and `$named`. The scan sees an identifier. Both are recorded below
  *      as what they are, and the first assertion is what covers this class in the one place it can.
- *   3. **It reads construction sites, not messages.** Every case's own `message` interpolates its
- *      terms, deliberately: that is the last-resort rendering for a caller with no theory, which is
- *      what `Remedy.write` falls back to. The defect is prose frozen where the refusal is raised,
- *      after which the values are gone and no surface can render them.
+ *   3. **It reads construction sites, not messages.** Every case renders its terms through the
+ *      `show` its caller passes to `render`, and `message` is that rendering with the kernel's
+ *      printer, for a caller with no theory, which is what `Remedy.write` falls back to. The
+ *      defect is prose frozen where the refusal is raised, after which the values are gone and no
+ *      surface can render them.
  *   4. **A `Type` in prose is not a crossing.** A type has exactly one rendering:
  *      `Show.show(ty: Type)` takes no notation, and `Remedy` writes types that way at its own
  *      surface with no theory in hand. So the question this census was asked, "a `Term` or a

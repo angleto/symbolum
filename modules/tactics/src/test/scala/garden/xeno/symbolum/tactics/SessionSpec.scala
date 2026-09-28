@@ -193,6 +193,33 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  "A refusal of a goal the session can read" should "write the goal in the session's notation" in {
+    // Card 9fefbf75. The reason was the error's `message`, which writes terms in the kernel's
+    // printing, so a cell reading `x * x >= 1` was answered `found ((real_le real_one) ((real_mul
+    // x) x))`, and the second goal came back with `BIT1 real_one` for its 3.
+    //
+    // The negatives alone would pass on a reason that stopped naming the goal at all, which a
+    // rewording could do, so each reason is also asserted to carry the goal in the reals' notation.
+    val claims = Vector(
+      "prove SQUARE_AT_LEAST_ONE : !x:real. x * x >= 1" -> "1 <= x * x",
+      "prove SQUARES_DOMINATE : !x:real y:real. x * x + y * y >= 3 * (x * y)" -> "3 * (x * y)"
+    )
+    val session = fresh.runAll(claims.map(_._1))
+
+    session.entries.zip(claims).foreach { case (entry, (_, written)) =>
+      entry.outcome match {
+        case Session.Outcome.Refused(reason, _) =>
+          info(reason)
+          reason should include(written)
+          Vector("real_le", "real_mul", "real_one", "BIT1").foreach { name =>
+            reason should not include name
+          }
+          entry.render(session.state) should not include "real_le"
+        case other => fail(s"a false inequality was not refused: $other")
+      }
+    }
+  }
+
   /* ---------------------------------------------------- what a session can spend by hand */
 
   "A hand derivation" should "let a session's own axiom reach a conclusion, which no tactic can" in {

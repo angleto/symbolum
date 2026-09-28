@@ -474,18 +474,25 @@ object Session {
     /**
      * A refusal with its next step, asked of `Remedy` while the error is still a value.
      *
-     * Three overloads because there are three refusal types and `Remedy` maps each; the kernel's
-     * has no signature-taking form, and does not need one. Turning an error into its message before
-     * this point is what `RemedySpec` exists to prevent, and it is what this file did first.
+     * The reason is rendered with the session's own theory as well, and until 2026-09-28 it was
+     * not: it was the error's `message`, which writes terms in the kernel's printing, so a `prove`
+     * that LINARITH refused showed `found ((real_le real_one) ((real_mul x) x))` under a cell
+     * reading `x * x >= 1`, while `ask` on the same claim was clean because it went through
+     * `Remedy`. `SessionSpec` asserts the rendering on that cell. Turning an error into its message
+     * before this point is what `RemedySpec` exists to prevent, and it is what this file did first.
+     *
+     * Three overloads because there are three refusal types and `Remedy` maps each. The kernel's has
+     * no signature-taking form in `Remedy`, and does not need one; its reason is still rendered
+     * with the theory, because a declaration the kernel refuses can name terms too.
      */
     private def refusal(signature: Signature, error: LogicError): Outcome =
-      Outcome.Refused(error.message, Some(Remedy.of(signature, error).message))
+      Outcome.Refused(error.render(signature.show), Some(Remedy.of(signature, error).message))
 
     private def refusal(signature: Signature, error: TacticError): Outcome =
-      Outcome.Refused(error.message, Some(Remedy.of(signature, error).message))
+      Outcome.Refused(error.render(signature.show), Some(Remedy.of(signature, error).message))
 
-    private def refusal(error: KernelError): Outcome =
-      Outcome.Refused(error.message, Some(Remedy.of(error).message))
+    private def refusal(signature: Signature, error: KernelError): Outcome =
+      Outcome.Refused(error.render(signature.show), Some(Remedy.of(error).message))
 
     /**
      * Declare a constant, which costs a name and no belief, and is half of the hazard.
@@ -498,7 +505,7 @@ object Session {
     private def declare(state: State, name: String, schema: String): (Outcome, State) =
       (for {
         parsed <- Parser.parseType(state.theory, schema).left.map(refusal(state, _))
-        extended <- state.theory.declareConstant(name, parsed).left.map(refusal)
+        extended <- state.theory.declareConstant(name, parsed).left.map(refusal(state, _))
         widened <- state.logic.over(extended).left.map(refusal(state, _))
       } yield (Outcome.Extended(s"declared $name : ${schema.trim}"), state.extended(theory = extended, logic = widened)))
         .fold(refused => (refused, state), identity)
@@ -506,7 +513,7 @@ object Session {
     private def define(state: State, name: String, body: String): (Outcome, State) =
       (for {
         term <- state.term(body).left.map(refusal(state, _))
-        pair <- Kernel.defineConstant(state.theory, name, term).left.map(refusal)
+        pair <- Kernel.defineConstant(state.theory, name, term).left.map(refusal(state, _))
         widened <- state.logic.over(pair._1).left.map(refusal(state, _))
       } yield (
         Outcome.Proved(name, pair._2),
@@ -525,7 +532,7 @@ object Session {
     private def assume(state: State, name: String, claim: String): (Outcome, State) =
       (for {
         proposition <- state.proposition(claim).left.map(refusal(state, _))
-        pair <- Kernel.assertAxiom(state.theory, proposition).left.map(refusal)
+        pair <- Kernel.assertAxiom(state.theory, proposition).left.map(refusal(state, _))
       } yield (
         Outcome.Proved(name, pair._2),
         state.extended(

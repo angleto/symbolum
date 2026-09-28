@@ -10,17 +10,29 @@ package garden.xeno.symbolum.kernel
  * There is one exception, [[KernelInvariantViolation]], which is thrown. It is not a refusal.
  */
 sealed trait KernelError {
-  def message: String
+
+  /**
+   * The refusal as a sentence, with every term in it written by `show`.
+   *
+   * The refusal carries its terms as values and the caller that holds a theory renders them,
+   * because only the caller knows which notation its reader wrote: this module knows none, and a
+   * term it writes itself reaches a reader in the encoding, `((real_le real_one) ((real_mul x) x))`
+   * where they wrote `1 <= x * x`. A type needs no such argument, since it has one rendering.
+   */
+  def render(show: Term => String): String
+
+  /** The same sentence for a caller with no theory to hand, in the kernel's own printing. */
+  final def message: String = render(_.toString)
 }
 
 /** A term was applied to an argument of the wrong type. */
 final case class TypeMismatch(expected: Type, found: Type, context: String) extends KernelError {
-  def message: String = s"$context: expected $expected, found $found"
+  def render(show: Term => String): String = s"$context: expected $expected, found $found"
 }
 
 /** Something in a function position was not of function type. */
 final case class NotAFunction(found: Type) extends KernelError {
-  def message: String = s"expected a function type, found $found"
+  def render(show: Term => String): String = s"expected a function type, found $found"
 }
 
 /**
@@ -33,22 +45,23 @@ final case class NotAFunction(found: Type) extends KernelError {
  * are equal follows in two steps.
  */
 final case class NotLocallyClosed(found: Term) extends KernelError {
-  def message: String = s"$found has an index with no binder above it"
+  def render(show: Term => String): String = s"${show(found)} has an index with no binder above it"
 }
 
 /** A rule needed an equation and was given something else. */
 final case class NotAnEquation(found: Term) extends KernelError {
-  def message: String = s"expected an equation, found $found"
+  def render(show: Term => String): String = s"expected an equation, found ${show(found)}"
 }
 
 /** Beta conversion was asked for on a term that is not an application of a lambda. */
 final case class NotABetaRedex(found: Term) extends KernelError {
-  def message: String = s"not a beta redex: $found"
+  def render(show: Term => String): String = s"not a beta redex: ${show(found)}"
 }
 
 /** A rule needed a proposition and was given a term of another type. */
 final case class NotAProposition(found: Term, ty: Type) extends KernelError {
-  def message: String = s"expected a term of type bool, found $found of type $ty"
+  def render(show: Term => String): String =
+    s"expected a term of type bool, found ${show(found)} of type $ty"
 }
 
 /**
@@ -61,9 +74,9 @@ final case class NotAProposition(found: Term, ty: Type) extends KernelError {
  * has to name.
  */
 final case class TermsDiffer(left: Term, right: Term, context: String) extends KernelError {
-  def message: String = {
-    val shown = s"$context: $left is not $right"
-    if (Printer.show(left) != Printer.show(right)) shown
+  def render(show: Term => String): String = {
+    val shown = s"$context: ${show(left)} is not ${show(right)}"
+    if (show(left) != show(right)) shown
     else
       TermsDiffer.differingConstant(left, right) match {
         case Some(name) =>
@@ -88,12 +101,12 @@ object TermsDiffer {
 
 /** A name was used that the theory does not declare. */
 final case class UnknownConstant(name: String) extends KernelError {
-  def message: String = s"no constant named $name in this theory"
+  def render(show: Term => String): String = s"no constant named $name in this theory"
 }
 
 /** A type operator was used that the theory does not declare. */
 final case class UnknownTypeOperator(name: String) extends KernelError {
-  def message: String = s"no type operator named $name in this theory"
+  def render(show: Term => String): String = s"no type operator named $name in this theory"
 }
 
 /**
@@ -108,17 +121,19 @@ final case class UnknownTypeOperator(name: String) extends KernelError {
  * line somebody has to read and believe.
  */
 final case class ArityMismatch(name: String, expected: Int, found: Int) extends KernelError {
-  def message: String = s"type operator $name, arity $expected, arguments given: $found"
+  def render(show: Term => String): String =
+    s"type operator $name, arity $expected, arguments given: $found"
 }
 
 /** A use of a constant at a type that is not an instance of its declared type. */
 final case class NotAnInstance(name: String, declared: Type, requested: Type) extends KernelError {
-  def message: String = s"$requested is not an instance of the declared type $declared of $name"
+  def render(show: Term => String): String =
+    s"$requested is not an instance of the declared type $declared of $name"
 }
 
 /** A name was introduced that the theory already has. */
 final case class AlreadyDeclared(name: String) extends KernelError {
-  def message: String = s"$name is already declared in this theory"
+  def render(show: Term => String): String = s"$name is already declared in this theory"
 }
 
 /**
@@ -139,13 +154,15 @@ final case class AlreadyDeclared(name: String) extends KernelError {
  */
 final case class VariableIsFreeInHypotheses(variable: Term, blocking: List[Term])
   extends KernelError {
-  def message: String =
-    s"$variable occurs free in ${blocking.size} of the hypotheses: ${blocking.mkString("; ")}"
+  def render(show: Term => String): String =
+    s"${show(variable)} occurs free in ${blocking.size} of the hypotheses: " +
+      blocking.map(show).mkString("; ")
 }
 
 /** A definition mentioned a free variable, so it does not define a single value. */
 final case class DefinitionIsNotClosed(free: Set[Term]) extends KernelError {
-  def message: String = s"the definition has free variables: ${free.mkString(", ")}"
+  def render(show: Term => String): String =
+    s"the definition has free variables: ${free.map(show).mkString(", ")}"
 }
 
 /**
@@ -156,7 +173,7 @@ final case class DefinitionIsNotClosed(free: Set[Term]) extends KernelError {
  * apparently harmless definitional extension.
  */
 final case class TypeVariablesEscape(names: Set[String]) extends KernelError {
-  def message: String =
+  def render(show: Term => String): String =
     s"the type variables ${names.mkString(", ")} occur in the definition but not in its type"
 }
 
@@ -169,13 +186,13 @@ final case class TypeVariablesEscape(names: Set[String]) extends KernelError {
  * inhabited on a condition nobody records.
  */
 final case class TheoremHasHypotheses(hypotheses: List[Term]) extends KernelError {
-  def message: String =
-    s"the theorem assumes ${hypotheses.mkString(", ")}, where it has to hold outright"
+  def render(show: Term => String): String =
+    s"the theorem assumes ${hypotheses.map(show).mkString(", ")}, where it has to hold outright"
 }
 
 /** A term was needed in the form `f x` and was not an application. */
 final case class NotAnApplication(found: Term) extends KernelError {
-  def message: String = s"$found is not an application"
+  def render(show: Term => String): String = s"${show(found)} is not an application"
 }
 
 /**

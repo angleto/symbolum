@@ -211,8 +211,9 @@ class LinarithSquareBoundarySpec extends AnyFlatSpec with Matchers {
 
   it should "write what it names in the reals' notation and carry the goal as a term" in {
     // The second half of card `9fefbf75`: the sentence a procedure writes is rendered by the theory it
-    // holds, and the goal travels as a value for the surface to render, which is what `Remedy` does
-    // with the reader's notation and `message` does, as its last resort, with the kernel's printer.
+    // holds, and the goal travels as a value for the surface to render: `render` with the reader's
+    // notation where the surface holds a theory, as `Session` does, and `message`, the same
+    // rendering with the kernel's printer, where it holds none.
     // So the kernel's constant names must be absent from the sentence and present only in the term.
     val text = "!x:real y:real. x * x + y * y >= 1"
     refused(text) match {
