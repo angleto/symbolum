@@ -63,4 +63,38 @@ class SemiringDecidesOnlyFreeAtomsSpec extends AnyFlatSpec with Matchers {
       }
     }
   }
+
+  // Verification of 2026-09-28 at `4756739d`. The reading lives in `CommutativeRing`, so the
+  // integers take it too: a true statement over an atom that is not a free variable is refused
+  // without a decision there as well, and a false one over free variables is still decided.
+  private lazy val integers = chain.integers
+  private lazy val ring = integers.ring.fold(error => fail(error.message), identity)
+
+  private def intRefusal(text: String): LogicError =
+    integers.proposition(text).flatMap(ring.prove).fold(identity, _ => fail(s"proved $text"))
+
+  "A statement the integers prove over an atom that is not free" should "not be refused as decided" in {
+    Vector("!x:int. INT_ADD x (INT_OF_NUM 0) = x", "!x:int. INT_MUL x (INT_OF_NUM 1) = x").foreach { text =>
+      val outcome = integers.proposition(text).flatMap(ring.prove)
+      info(s"$text: ${outcome.fold(e => s"${e.getClass.getSimpleName}, ${e.standing}", _ => "proved")}")
+      outcome.left.foreach(error => withClue(s"$text: ${error.message}\n") {
+        error.standing should not be LogicError.Standing.Decided
+      })
+    }
+  }
+
+  it should "leave a false statement over free variables decided, which is the control" in {
+    val error = intRefusal("!x:int. INT_ADD x INT_ONE = x")
+    withClue(s"${error.message}\n") {
+      error shouldBe a[NotEqualTo]
+      error.standing shouldBe LogicError.Standing.Decided
+    }
+  }
+
+  "A numeral other than 0 and 1 beside free variables" should "be reported, decided or not" in {
+    Vector("NUM_ADD n 2 = n", "NUM_MUL 2 n = n", "NUM_MUL n 2 = NUM_ADD n n").foreach { text =>
+      val outcome = semiring.prove(text)
+      info(s"$text: ${outcome.fold(e => s"${e.getClass.getSimpleName}, ${e.standing}: ${e.message}", _ => "proved")}")
+    }
+  }
 }

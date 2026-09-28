@@ -209,6 +209,18 @@ class SeriesFragmentBoundarySpec extends AnyFlatSpec with Matchers {
     answer(series("4 * inv ((1:real) + 1)")).isRight shouldBe true
   }
 
+  // Verification of card `1d70cd51`, 2026-09-28 at `4756739d`: the promotion now reads
+  // `NotEqualAsRead` too, so a value that is 2, passes `numeric`, and that RING and FIELD do not
+  // close would be decided false. Division and nested reciprocals are the shapes most likely to
+  // leave FIELD an atom.
+  "A value that is 2 written with a division" should "never be refused as a decision" in {
+    Vector(
+      "(4:real) / 2", "1 / ((1:real) / 2)", "inv ((1:real) / 2)", "(1:real) / inv 2",
+      "6 / ((1:real) + 2)", "(1:real) / 2 + 3 / 2", "inv (inv (2:real) * inv 2) / 2",
+      "2 * (3 / (3:real))", "inv (1 / (3:real) + 1 / 6)", "(1:real) / (1 - 1 / 2)"
+    ).foreach(neverDecided)
+  }
+
   "A value that is not 2 over a divisor LINARITH places" should "still be a decision" in {
     Vector("inv ((1:real) + 1)", "3 * inv ((1:real) + 1)").foreach { value =>
       val text = series(value)
