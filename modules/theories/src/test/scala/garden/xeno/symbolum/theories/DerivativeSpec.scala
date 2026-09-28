@@ -110,7 +110,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     // choice `abs` is paid for with and nothing else.
     for (name <- Derivative.Statements.map(_._1)
         if !(Set(Derivative.Rolle, Derivative.MeanValue, Derivative.Exponential, Derivative.Sine, Derivative.Cosine, Derivative.NaturalLog,
-          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorWithin,
+          Derivative.WithinOfDerivative, Derivative.Power, Derivative.Taylor, Derivative.TaylorLeft, Derivative.TaylorWithin,
           Derivative.CauchyMeanValue, Derivative.CauchyMeanValueWithin, Derivative.LHopital) ++ onInterval ++
           withinInterval).contains(name)) {
       val other = Real.spent(fact(name))
@@ -793,6 +793,94 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     detached.hypotheses shouldBe empty
     witness.refused.hypotheses shouldBe empty
     witness.refused.conclusion shouldBe proposition("~(continuous (\\y:real. COND (0 < y) (1:real) 0) 0)")
+  }
+
+  it should "price Taylor's theorem to the left at the right-hand one's, through the reflection" in {
+    // Card `ed53f670`. The reflection spends the continuity and the slope of a negation, a
+    // composition and a constant factor, none of which reaches past what `TAYLOR` already reads.
+    Real.spent(fact(Derivative.TaylorLeft)) shouldBe Real.spent(fact(Derivative.Taylor))
+    val route = Set(
+      fact(Derivative.Taylor), fact(Derivative.ChainRule), fact(Derivative.ProductRule), fact(Derivative.Negation),
+      force(chain.continuity.fact(Continuity.Compose)), force(chain.continuity.fact(Continuity.Product))
+    ).map(_.conclusion)
+    Derivation.restingOn(fact(Derivative.TaylorLeft), route) shouldBe route
+  }
+
+  it should "detach Taylor's theorem to the left at the exponential, expanded at 0 and read at -1, with nothing assumed" in {
+    // The same family as the right-hand detachment, on the other side of the point expanded at, so
+    // the power in the formula is of a negative number: `Power ((0 - 1) - 0) k`.
+    val family = force(derivative.term("\\k:num. exp", Type.fun(numbers, functions)))
+    val n = Term.variable("n", numbers)
+    val k = Term.variable("k", numbers)
+    val x = Term.variable("x", reals)
+    val instance = opened(force(rules.specAll(fact(Derivative.TaylorLeft), List(family, real("0:real"), real("0 - 1"), n))))
+    val slope = force(rules.spec(x, fact(Derivative.Exponential)))
+    val exponential = force(derivative.term("exp", functions))
+    val continuous = force(rules.specAll(fact(Derivative.Continuous), List(exponential, x, real("exp x:real"))).flatMap(rules.mp(_, slope)))
+    def everywhere(interval: String, fact: Kernel.Thm): Kernel.Thm =
+      force(rules.disch(proposition(interval), fact)
+        .flatMap(rules.disch(proposition("NUM_LE (k:num) (n:num)"), _))
+        .flatMap(rules.genAll(_, List(k, x))))
+    val detached = Vector(lemma("(0:real) - 1 < 0"), everywhere("(0:real) - 1 <= x /\\ x <= 0", continuous),
+      everywhere("(0:real) - 1 < x /\\ x < 0", slope))
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+    detached.hypotheses shouldBe empty
+    detached.conclusion shouldBe proposition(
+      "?c:real. 0 - 1 < c /\\ c < 0 /\\ exp (0 - 1) = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * exp 0 * Power ((0 - 1) - 0) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * exp c * Power ((0 - 1) - 0) (SUC n)")
+  }
+
+  it should "need its derivative hypothesis to the left too, refuted without it at the identity family" in {
+    // At order zero, expanded at 0 and read at -1, the conclusion without the derivative hypothesis
+    // reads `0 - 1 = 0 + c * (0 - 1)`, so `c = 1`, for a `c` below zero.
+    val dropped = proposition(
+      "!D:num -> real -> real. !a:real. !b:real. !n:num. b < a ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> b <= x /\\ x <= a ==> continuous (D k) x) ==> " +
+        "?c:real. b < c /\\ c < a /\\ D ZERO b = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)")
+    val assumed = force(LogicError.lift(Kernel.assume(dropped)))
+    val family = force(derivative.term("\\k:num. \\y:real. y", Type.fun(numbers, functions)))
+    val zero = force(derivative.term("ZERO", numbers))
+    val instance = opened(force(rules.specAll(assumed, List(family, real("0:real"), real("0 - 1"), zero))))
+    val k = Term.variable("k", numbers)
+    val x = Term.variable("x", reals)
+    val continuousEverywhere = force(chain.continuity.fact(Continuity.Identity).flatMap(rules.spec(x, _))
+      .flatMap(rules.disch(proposition("(0:real) - 1 <= x /\\ x <= 0"), _))
+      .flatMap(rules.disch(proposition("NUM_LE (k:num) ZERO"), _))
+      .flatMap(rules.genAll(_, List(k, x))))
+    val somewhere = Vector(lemma("(0:real) - 1 < 0"), continuousEverywhere)
+      .foldLeft(instance)((theorem, premise) => force(rules.mp(theorem, premise)))
+
+    val c = Term.variable("c", reals)
+    val inside = force(somewhere.conclusion match {
+      case App(_, lambda) => LogicError.lift(Term.app(lambda, c)).flatMap(Conv.betaRoot)
+        .flatMap(eq => Term.destEq(eq.conclusion).map(_._2).toRight(NotOfForm("an equation", eq.conclusion)))
+      case other => Left(NotOfForm("an existential", other))
+    })
+    val witness = force(LogicError.lift(Kernel.assume(inside)))
+    val belowZero = force(rules.conjElim2(witness).flatMap(rules.conjElim1))
+    val equation = force(rules.conjElim2(witness).flatMap(rules.conjElim2))
+    val written = force(Term.destEq(equation.conclusion).map(_._2).toRight(NotOfForm("an equation", equation.conclusion)))
+    val recurrences = Vector(
+      force(chain.series.fact(Series.AtSuccessor)), force(chain.series.fact(Series.AtZero)),
+      force(chain.series.fact(Series.PowerAtSuccessor)), force(chain.series.fact(Series.PowerAtZero)),
+      force(chain.coding.fact(Coding.FactorialAtSuccessor)), force(chain.coding.fact(Coding.FactorialAtZero)),
+      force(chain.peano.fact(Peano.EmbedsProduct)), force(chain.peano.fact(Peano.EmbedsSuccessor)),
+      force(chain.peano.fact(Peano.EmbedsZero)))
+    val value = force(for {
+      rules <- Rewrite.Rule.all(logic, recurrences)
+      rewritten <- Rewrite.rewrite(rules, written)
+      normal <- Term.destEq(rewritten.conclusion).map(_._2).toRight(NotOfForm("an equation", rewritten.conclusion))
+      closed <- LogicError.lift(Term.eq(normal, force(derivative.term("0 - c:real", reals)))).flatMap(chain.ring.prove)
+      joined <- Conv.trans(rewritten, closed)
+    } yield joined)
+    val notBelow = force(rules.specAll(lemma("!c:real R:real. 0 - 1 = R ==> R = 0 - c ==> ~(c < 0)"), List(c, written))
+      .flatMap(rules.mp(_, equation)).flatMap(rules.mp(_, value)))
+    val absurd = force(rules.notElim(notBelow, belowZero))
+    val eliminated = force(rules.existsElim(somewhere, c, absurd))
+    force(rules.notIntro(dropped, eliminated)).hypotheses shouldBe empty
   }
 
   /**

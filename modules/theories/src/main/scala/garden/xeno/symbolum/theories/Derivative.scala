@@ -363,6 +363,13 @@ object Derivative {
    */
   val TaylorWithin: String = "TAYLOR_WITHIN"
 
+  /**
+   * [[Taylor]] read at a point `b` below the point `a` it expands at: the same formula, with
+   * `b < a` and Rolle's point between them. The textbook's theorem holds on either side, and
+   * [[Taylor]] asks `a < b`; `TaylorExpansion` gets this one from it by reflecting the family.
+   */
+  val TaylorLeft: String = "TAYLOR_LEFT"
+
   private val RelativeText: String = "(!x:real. a <= x /\\ x <= b ==> continuous_within f a b x)"
 
   /** What every derived fact says, as text, in the order they are derived. */
@@ -465,6 +472,13 @@ object Derivative {
         "?c:real. a < c /\\ c < b /\\ D ZERO b = " +
         "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
         "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)"),
+    TaylorLeft ->
+      ("!D:num -> real -> real. !a:real. !b:real. !n:num. b < a ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> b <= x /\\ x <= a ==> continuous (D k) x) ==> " +
+        "(!k:num. !x:real. NUM_LE k n ==> b < x /\\ x < a ==> derivative (D k) x (D (SUC k) x)) ==> " +
+        "?c:real. b < c /\\ c < a /\\ D ZERO b = " +
+        "Sum (\\k:num. inv (real_of_num (NUM_FACT k)) * D k a * Power (b - a) k) (SUC n) + " +
+        "inv (real_of_num (NUM_FACT (SUC n))) * D (SUC n) c * Power (b - a) (SUC n)"),
     TaylorWithin ->
       ("!D:num -> real -> real. !a:real. !b:real. !n:num. a < b ==> " +
         "(!k:num. !x:real. NUM_LE k n ==> a <= x /\\ x <= b ==> continuous_within (D k) a b x) ==> " +
@@ -541,8 +555,8 @@ object Derivative {
       nonDecreasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = false)
       increasing <- signedSlope(steps, magnitude.order, meanValue, unique, strict = true)
       taylor <- TaylorExpansion.prove(steps, transcendental, coding, continuity, Map(
-        Constant -> constant, Identity -> identity, Linear -> linear, ProductRule -> productRuleFact, ChainRule -> chainRule,
-        Rolle -> rolle, Unique -> unique))
+        Constant -> constant, Identity -> identity, Negation -> negation, Linear -> linear, ProductRule -> productRuleFact,
+        ChainRule -> chainRule, Rolle -> rolle, Unique -> unique))
       relative <- taylor.get(Taylor).toRight(MissingDefinition(Taylor)).flatMap(taylorFact =>
         DerivativeWithin.prove(steps, magnitude, continuity, withinDefinition, Map(
           Rolle -> rolle, MeanValue -> meanValue, Flat -> flat, NonDecreasing -> nonDecreasing, Increasing -> increasing,
