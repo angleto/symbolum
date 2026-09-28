@@ -426,15 +426,23 @@ final class Convergence private (
   /**
    * The refusal when two values were not identified, and whether it is a decision.
    *
-   * It is one exactly when the comparison found two finished normal forms that differ **and**
-   * neither value holds anything the comparison reads as an atom: then the two forms are two
-   * numbers, and different numbers are a series converging somewhere other than where it was asked
-   * about. Anything else, a function like `exp` or a free variable, leaves the forms differing as
-   * polynomials in that atom and says nothing about the values, which is [[ValueUnidentified]].
+   * It is one exactly when the comparison found two finished normal forms that differ **and** both
+   * values are [[numeric]]: then the two forms are two numbers, and different numbers are a series
+   * converging somewhere other than where it was asked about. Anything else, a function like `exp`
+   * or a free variable, leaves the forms differing as polynomials in that atom and says nothing
+   * about the values, which is [[ValueUnidentified]].
+   *
+   * "The forms differ" arrives as either of two refusals, and both are read. Since `24faf99a` RING
+   * and FIELD say `NotEqualTo` only when every atom of the two forms is a free variable, and
+   * `NotEqualAsRead` when one is not; `inv (1 + 1)` is such an atom, so from that day `1/2` asked
+   * about as `2` came here as `NotEqualAsRead` and was refused as unidentified, which
+   * `SeriesFragmentBoundarySpec` found. Those two procedures cannot tell the reciprocal of a number
+   * from an atom of unknown size and [[numeric]] can, which is why the decision is taken here: what
+   * makes it one is the two values, not which of the two readings the difference came back under.
    */
   private def unidentified(wanted: Term, found: Term, reason: LogicError): LogicError =
     reason match {
-      case _: NotEqualTo if numeric(wanted) && numeric(found) => NotEqualTo(wanted, found)
+      case _: (NotEqualTo | NotEqualAsRead) if numeric(wanted) && numeric(found) => NotEqualTo(wanted, found)
       case other => ValueUnidentified(wanted, found, other)
     }
 
