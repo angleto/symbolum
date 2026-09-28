@@ -62,6 +62,13 @@ private[theories] object TaylorExpansion {
   private val SlopeHypothesis: String =
     s"!k:num. !x:real. NUM_LE k n:num ==> a:real < x /\\ x < b:real ==> derivative ($D k) x ($D (SUC k) x)"
 
+  /** The same three for [[Derivative.TaylorLeft]], where the point read is below the one expanded at. */
+  private val LeftConclusion: String = s"?c:real. b:real < c /\\ c < a:real /\\ $D ZERO b = $AtA + $Remainder"
+  private val LeftContinuousHypothesis: String =
+    s"!k:num. !x:real. NUM_LE k n:num ==> b:real <= x /\\ x <= a:real ==> continuous ($D k) x"
+  private val LeftSlopeHypothesis: String =
+    s"!k:num. !x:real. NUM_LE k n:num ==> b:real < x /\\ x < a:real ==> derivative ($D k) x ($D (SUC k) x)"
+
   /** What every fact here needs: the steps, the field tactic, induction, and the three rule sets. */
   private final case class Kit(
     steps: Continuity.Steps,
@@ -124,7 +131,8 @@ private[theories] object TaylorExpansion {
       rolle <- fact(Derivative.Rolle)
       unique <- fact(Derivative.Unique)
       theorem <- taylor(kit, rolle, unique, powers, continuousSums, slopes, atEnd, reflected)
-    } yield Map(Derivative.Power -> power, Derivative.Taylor -> theorem)
+      left <- taylorLeft(kit, theorem)
+    } yield Map(Derivative.Power -> power, Derivative.Taylor -> theorem, Derivative.TaylorLeft -> left)
   }
 
   /* ------------------------------------------------------------------ shared pieces */
@@ -774,6 +782,195 @@ private[theories] object TaylorExpansion {
 
       closed <- List(slopeHypothesis, continuousHypothesis, ordered).foldLeft[Either[LogicError, Kernel.Thm]](Right(found)) { (acc, h) =>
         acc.flatMap(rules.disch(h.conclusion, _))
+      }.flatMap(rules.genAll(_, List(family, a, b, n)))
+    } yield closed
+  }
+
+  /* ------------------------------------------------------------------ expanding to the left */
+
+  /**
+   * [[Derivative.TaylorLeft]]: the same expansion at `a` read at a point `b` **below** it, which is
+   * the half of the textbook's statement [[Derivative.Taylor]] does not cover, since it asks `a < b`.
+   *
+   * By reflection rather than by a second Rolle argument: [[Derivative.Taylor]] at the family
+   * `E k t = Power (0 - 1) k * D k (0 - t)` over `[0 - a, 0 - b]`. Each `E k` is continuous where
+   * `D k` is at the mirrored point, by composition with `\t. 0 - t` and a constant factor, and its
+   * derivative is `E (SUC k)`, by the chain rule: the inner slope is `0 - 1` and it is absorbed into
+   * the sign's exponent. What comes back is read at `0 - a`, `0 - b` and the mirrored Rolle point,
+   * where `Power (0 - 1) k * Power ((0 - b) - (0 - a)) k` is `Power (b - a) k` once both are written
+   * over `Power (a - b) k`; that identity is the only algebra here, and `Field` checks it pointwise
+   * under the sum's binder.
+   *
+   * A separate statement rather than one with `~(a = b)` and the point between the two, because every
+   * caller knows which side it is on and a disjunction in the conclusion would make each of them
+   * split it. The conclusion's formula is word for word the right-hand one's, so a reader compares
+   * the two by the order hypotheses alone.
+   */
+  private def taylorLeft(kit: Kit, taylor: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import kit.steps.*
+    val family = Term.variable("D", Family)
+    val a = Term.variable("a", Reals)
+    val b = Term.variable("b", Reals)
+    val x = Term.variable("x", Reals)
+    val z = Term.variable("z", Reals)
+    val n = Term.variable("n", Numbers)
+    val k = Term.variable("k", Numbers)
+    val reflection = s"\\k:num. \\t:real. Power (0 - 1) k * $D k (0 - t)"
+
+    /** `b <= 0 - x /\ 0 - x <= a` from the mirrored membership, or the strict one. */
+    def mirrored(member: Kernel.Thm, strict: Boolean): Either[LogicError, Kernel.Thm] = {
+      val le = if (strict) "<" else "<="
+      for {
+        lower <- at(lemma(s"!a:real b:real x:real. 0 - a $le x /\\ x $le 0 - b ==> b $le 0 - x"), "a:real", "b:real", "x:real")
+          .flatMap(rules.mp(_, member))
+        upper <- at(lemma(s"!a:real b:real x:real. 0 - a $le x /\\ x $le 0 - b ==> 0 - x $le a"), "a:real", "b:real", "x:real")
+          .flatMap(rules.mp(_, member))
+        both <- rules.conjIntro(lower, upper)
+      } yield both
+    }
+
+    for {
+      ordered <- assume("b:real < a:real")
+      continuousHypothesis <- assume(LeftContinuousHypothesis)
+      slopeHypothesis <- assume(LeftSlopeHypothesis)
+      family0 <- Parser.term(theory, notation, reflection, Family)
+      minusA <- real("0 - a:real")
+      minusB <- real("0 - b:real")
+      instance <- rules.specAll(taylor, List(family0, minusA, minusB, n)).flatMap(reduced)
+      flipped <- at(lemma("!a:real b:real. b < a ==> 0 - a < 0 - b"), "a:real", "b:real").flatMap(rules.mp(_, ordered))
+      point <- real("0 - x:real")
+      sign <- real("Power (0 - 1) k:num")
+      dk <- Parser.term(theory, notation, s"$D k:num", Functions)
+      identityFn <- Parser.term(theory, notation, "\\y:real. y", Functions)
+      zero <- real("0:real")
+      one <- real("1:real")
+
+      /* ---------------------------------------------------------- each E k is continuous */
+      continuous <- for {
+        le <- assume("NUM_LE k:num n:num")
+        member <- proposition("0 - a:real <= x:real /\\ x <= 0 - b:real")
+        assumedMember <- LogicError.lift(Kernel.assume(member))
+        there <- mirrored(assumedMember, strict = false)
+        outer <- rules.specAll(continuousHypothesis, List(k, point)).flatMap(mp(_, Right(le), Right(there)))
+        identity <- kit.fact(Continuity.Identity).flatMap(rules.spec(x, _))
+        inner <- kit.fact(Continuity.Negation).flatMap(rules.specAll(_, List(identityFn, x))).flatMap(reduced)
+          .flatMap(rules.mp(_, identity))
+        innerFn <- functionOf(inner)
+        composed <- kit.fact(Continuity.Compose).flatMap(rules.specAll(_, List(dk, innerFn, x))).flatMap(reduced)
+          .flatMap(mp(_, Right(inner), Right(outer)))
+        constant <- kit.fact(Continuity.Constant).flatMap(rules.specAll(_, List(sign, x)))
+        constantFn <- functionOf(constant)
+        composedFn <- functionOf(composed)
+        product <- kit.fact(Continuity.Product).flatMap(rules.specAll(_, List(constantFn, composedFn, x))).flatMap(reduced)
+          .flatMap(mp(_, Right(constant), Right(composed)))
+        closed <- rules.disch(member, product).flatMap(rules.disch(le.conclusion, _)).flatMap(rules.genAll(_, List(k, x)))
+      } yield closed
+
+      /* ---------------------------------------------------------- and has E (SUC k) for its slope */
+      differentiable <- for {
+        le <- assume("NUM_LE k:num n:num")
+        member <- proposition("0 - a:real < x:real /\\ x < 0 - b:real")
+        assumedMember <- LogicError.lift(Kernel.assume(member))
+        there <- mirrored(assumedMember, strict = true)
+        outer <- rules.specAll(slopeHypothesis, List(k, point)).flatMap(mp(_, Right(le), Right(there)))
+        identity <- kit.fact(Derivative.Identity).flatMap(rules.spec(x, _))
+        inner <- kit.fact(Derivative.Negation).flatMap(rules.specAll(_, List(identityFn, x, one))).flatMap(reduced)
+          .flatMap(rules.mp(_, identity))
+        innerFn <- functionOf(inner)
+        outerSlope <- slopeOf(outer)
+        innerSlope <- slopeOf(inner)
+        chained <- kit.fact(Derivative.ChainRule).flatMap(rules.specAll(_, List(dk, innerFn, x, outerSlope, innerSlope)))
+          .flatMap(reduced).flatMap(mp(_, Right(inner), Right(outer)))
+        chainedFn <- functionOf(chained)
+        chainedSlope <- slopeOf(chained)
+        constant <- kit.fact(Derivative.Constant).flatMap(rules.specAll(_, List(sign, x)))
+        constantFn <- functionOf(constant)
+        product <- kit.fact(Derivative.ProductRule).flatMap(rules.specAll(_, List(constantFn, chainedFn, x, zero, chainedSlope)))
+          .flatMap(reduced).flatMap(mp(_, Right(constant), Right(chained)))
+        target <- proposition(
+          s"derivative (\\t:real. Power (0 - 1) (k:num) * $D k (0 - t)) (x:real) (Power (0 - 1) (SUC k) * $D (SUC k) (0 - x))")
+        restated <- restate(kit, kit.arithmetic, product, target, plainly(kit))
+        closed <- rules.disch(member, restated).flatMap(rules.disch(le.conclusion, _)).flatMap(rules.genAll(_, List(k, x)))
+      } yield closed
+
+      found <- mp(instance, Right(flipped), Right(continuous), Right(differentiable))
+
+      /* ---------------------------------------------------------- read back at a, b and 0 - z */
+      power <- real("Power x:real k:num").map(t => spine(t)._1)
+      doubleNegation <- lemma("!x:real. 0 - (0 - x) = x")
+      shifted <- for {
+        base <- at(lemma("!a:real b:real. (0 - b) - (0 - a) = a - b"), "a:real", "b:real")
+        onPower <- Conv.apTerm(power, base)
+        applied <- LogicError.lift(Kernel.mkComb(onPower, Kernel.refl(k)))
+        closed <- rules.gen(k, applied)
+      } yield closed
+      signed <- for {
+        base <- at(lemma("!a:real b:real. b - a = (0 - 1) * (a - b)"), "a:real", "b:real")
+        onPower <- Conv.apTerm(power, base)
+        applied <- LogicError.lift(Kernel.mkComb(onPower, Kernel.refl(k)))
+        minusOne <- real("0 - 1:real")
+        distance <- real("a:real - b:real")
+        split <- kit.fact(Series.Multiplicative).flatMap(rules.specAll(_, List(minusOne, distance, k)))
+        joined <- Conv.trans(applied, split)
+        closed <- rules.gen(k, joined)
+      } yield closed
+      atZero <- kit.fact(Series.PowerAtZero)
+      readRules <- Rewrite.Rule.all(logic, Vector(doubleNegation, shifted, signed, atZero))
+
+      result <- for {
+        inside <- found.conclusion match {
+          case App(_, lambda) => LogicError.lift(Term.app(lambda, z)).flatMap(Conv.betaRoot).flatMap(rightOf)
+          case other          => Left(NotOfForm("an existential", other))
+        }
+        assumed <- LogicError.lift(Kernel.assume(inside))
+        above <- rules.conjElim1(assumed)
+        below <- rules.conjElim2(assumed).flatMap(rules.conjElim1)
+        equation <- rules.conjElim2(assumed).flatMap(rules.conjElim2)
+        cAbove <- at(lemma("!b:real z:real. z < 0 - b ==> b < 0 - z"), "b:real", "z:real").flatMap(rules.mp(_, below))
+        cBelow <- at(lemma("!a:real z:real. 0 - a < z ==> 0 - z < a"), "a:real", "z:real").flatMap(rules.mp(_, above))
+
+        sides <- Term.destEq(equation.conclusion).toRight(NotOfForm("an equation", equation.conclusion))
+        (reflectedEnd, reflectedRight) = sides
+        parts <- spine(reflectedRight) match {
+          case (plus, List(sum, remainder)) => Right((plus, sum, remainder))
+          case _                            => Left(NotOfForm("a sum of two terms", reflectedRight))
+        }
+        (plus, reflectedSum, reflectedRemainder) = parts
+        goal <- proposition(LeftConclusion)
+        predicate <- logic.destExistsPredicate(goal).toRight(NotOfForm("an existential", goal))
+        witness <- real("0 - z:real")
+        wanted <- LogicError.lift(Term.app(predicate, witness)).flatMap(Conv.betaRoot).flatMap(rightOf)
+        wantedEquation <- LogicError.lift(Kernel.assume(wanted)).flatMap(rules.conjElim2).flatMap(rules.conjElim2)
+          .map(_.conclusion)
+        wantedSides <- Term.destEq(wantedEquation).toRight(NotOfForm("an equation", wantedEquation))
+        (atB, wantedRight) = wantedSides
+        wantedParts <- spine(wantedRight) match {
+          case (_, List(sum, remainder)) => Right((sum, remainder))
+          case _                         => Left(NotOfForm("a sum of two terms", wantedRight))
+        }
+        (wantedSum, wantedRemainder) = wantedParts
+
+        endEq <- equalBy(kit, readRules, reflectedEnd, atB, plainly(kit))
+        sumEq <- (spine(reflectedSum), spine(wantedSum)) match {
+          case ((sumConstant, List(have, bound)), (_, List(want, _))) =>
+            for {
+              summands <- functionsEqual(kit, readRules, Term.variable("k", Numbers), have, want, plainly(kit))
+              onSum <- Conv.apTerm(sumConstant, summands)
+              applied <- LogicError.lift(Kernel.mkComb(onSum, Kernel.refl(bound)))
+            } yield applied
+          case _ => Left(NotOfForm("a sum over a lambda", reflectedSum))
+        }
+        remainderEq <- equalBy(kit, readRules, reflectedRemainder, wantedRemainder, plainly(kit))
+        rightEq <- Conv.apTerm(plus, sumEq).flatMap(eq => LogicError.lift(Kernel.mkComb(eq, remainderEq)))
+        back <- Conv.sym(endEq)
+        readBack <- Conv.trans(back, equation).flatMap(Conv.trans(_, rightEq))
+        conjunction <- conj(Right(cAbove), conj(Right(cBelow), Right(readBack)))
+        witnessed <- rules.existsIntro(predicate, witness, conjunction)
+        eliminated <- rules.existsElim(found, z, witnessed)
+      } yield eliminated
+
+      closed <- List(slopeHypothesis, continuousHypothesis, ordered).foldLeft[Either[LogicError, Kernel.Thm]](Right(result)) {
+        (acc, h) => acc.flatMap(rules.disch(h.conclusion, _))
       }.flatMap(rules.genAll(_, List(family, a, b, n)))
     } yield closed
   }

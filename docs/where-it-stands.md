@@ -1377,7 +1377,14 @@ at `\k. \y. y`. `TAYLOR_WITHIN` is its textbook form since 2026-09-27, with `con
 is `TAYLOR` at the family of extensions of the `D k` by their values at the two ends, read back at
 `a`, `b` and Rolle's point, under the sum's binder as well, and it costs what `TAYLOR` costs.
 `DerivativeSpec` detaches it at the step `COND (0 < y) 1 0` on `[-1, 0]`, where `TAYLOR`'s own
-hypothesis is false at zero. What neither is: anything about a Taylor series converging.
+hypothesis is false at zero. `TAYLOR_LEFT` is the other side of the point, since 2026-09-28: the
+same formula read at a `b` below the `a` it expands at, with `b < a` and Rolle's point between
+them, which `TAYLOR` does not cover because it asks `a < b`. It is `TAYLOR` at the reflected family
+`\k. \t. Power (0 - 1) k * D k (0 - t)` over `[0 - a, 0 - b]`, costs what `TAYLOR` costs, has `TAYLOR_LEFT_WITHIN` for its textbook form with
+`continuous_within (D k) b a x`, carried across the extensions as `TAYLOR_WITHIN` is, and
+`DerivativeSpec` detaches it at `\k. exp` expanded at 0 and read at -1 and refutes it without the
+derivative hypothesis at `\k. \y. y`. What none of them is: anything about a Taylor series
+converging.
 
 **The limit of a function at a point is `Continuity.tends`, and L'Hopital's rule is
 `Derivative.LHOPITAL`, since 2026-09-27.** `tends f x l` is the epsilon-delta statement over the
