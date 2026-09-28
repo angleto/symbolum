@@ -64,6 +64,13 @@ handed back the wrong instance for a key would change what a term says, which is
 of defect the counted files are the ones that can have. `DocumentationSpec` holds the bound and the
 documents that quote it.
 
+**On 2026-09-28 the verification of card `78c1381d` found a second route.** A private constructor
+makes `copy` private too, but Scala 3 still synthesises a public `fromProduct` on the companion,
+and it called `new` directly: `TyApp.fromProduct(("bool", Nil))` was equal to `Type.Bool` and not
+the same instance. Nothing called it, so no result changed; the sentence "built only by `apply`"
+was false. The companion now writes `fromProduct` out through `apply`, seven lines inside the same
+bound, and `TypeInterningSpec` asks both it and the derived mirror.
+
 ## Measured
 
 Same probe, same flags, on `integrate-0927` with only the kernel's classes replaced by the

@@ -7,7 +7,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 /**
- * One instance per type, which is what `docs/adr/0058` spends sixteen lines of the trusted base on.
+ * One instance per type, which is what `docs/adr/0058` spends lines of the trusted base on.
  *
  * What is asserted is identity, `eq`, and never equality: equality was structural before the
  * change and still is, so a test of `==` would pass on the kernel this replaced and would guard
@@ -69,8 +69,11 @@ class TypeInterningSpec extends AnyFlatSpec with Matchers {
     // `TyApp.fromProduct(("bool", Nil))` is `==` to `Type.Bool` and not `eq` to it. Nothing in the
     // repository calls it and no equality depends on the instance, so this is the docstring's
     // "Built only by TyApp.apply" and the title above being false, not a question of soundness.
+    // Red at `5f4f5ab9` on the `eq` line; `TyApp.fromProduct` is now written out and goes through
+    // `apply`, and the derived mirror is asked too, since it is what reaches `fromProduct` unnamed.
     val mirrored = TyApp.fromProduct(("bool", Nil))
     (mirrored == Type.Bool) shouldBe true
     (mirrored eq Type.Bool) shouldBe true
+    (summon[scala.deriving.Mirror.ProductOf[TyApp]].fromProduct(("bool", Nil)) eq Type.Bool) shouldBe true
   }
 }
