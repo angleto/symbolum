@@ -47,8 +47,8 @@ import garden.xeno.symbolum.logic.*
  * from the one on it through `(-x) * y = -(x * y)`, closed by a normaliser for the additive group.
  * `CUT_INV` is `CUT_PINV` above zero, its negation's negated below, and zero at zero, which the
  * definition writes. Both inverses spend `CUT_ESCAPE`, the one place the rationals being Archimedean
- * reaches the cuts. What is left is phase 5: the sixteen of `Real.scala` as theorems about this type
- * under their own names.
+ * reaches the cuts. `Real` proves the statements of `Real.Axioms` from these, as theorems about this
+ * type under their old names, which is `docs/adr/0053`.
  */
 final class Cut private (
   val classical: Classical,
@@ -90,7 +90,7 @@ object Cut {
 
   /** The type operator, and the two halves of the bijection the kernel returns for it. */
   /**
-   * `real`: since phase 5 (`docs/adr/0052`) the type the cuts are carved as **is** the type of the
+   * `real`: since phase 5 (`docs/adr/0053`) the type the cuts are carved as **is** the type of the
    * real numbers, so there is one type of real and `Real` defines its constants over this one.
    */
   val TypeName: String = Real.TypeName

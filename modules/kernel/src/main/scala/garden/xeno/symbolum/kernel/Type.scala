@@ -26,6 +26,7 @@ final case class TyVar(name: String) extends Type
  *
  * Built only by [[TyApp.apply]], which hands back one instance per value. Equality is still the
  * structural one, so nothing is decided by which instance a caller holds: `docs/adr/0058`.
+ * `fromProduct` is written out because Scala 3 otherwise synthesises a public one calling `new`.
  */
 final case class TyApp private (operator: String, arguments: List[Type]) extends Type {
   private val hash = scala.util.hashing.MurmurHash3.productHash(this)
@@ -39,6 +40,12 @@ object TyApp {
   def apply(operator: String, arguments: List[Type]): TyApp = {
     val fresh = new TyApp(operator, arguments)
     Option(interned.putIfAbsent(fresh, fresh)).getOrElse(fresh)
+  }
+
+  def fromProduct(product: Product): TyApp = product.productIterator.toList match {
+    case List(operator: String, arguments: List[?]) if arguments.forall(_.isInstanceOf[Type]) =>
+      apply(operator, arguments.collect { case argument: Type => argument })
+    case _ => throw new IllegalArgumentException(s"not the fields of a type application: $product")
   }
 }
 

@@ -174,11 +174,55 @@ class LinarithSquareBoundarySpec extends AnyFlatSpec with Matchers {
     } shouldBe empty
   }
 
-  "A goal whose only products are squares" should "be refused, and the verdict reads what it names" in {
-    // No atom out of reach is anything but a square here, so the fallback names one. Recorded rather
-    // than asserted, because whether that sentence is right is the question the verdict answers.
-    Vector("!x:real. x * x >= 1", "!x:real y:real. x * x + y * y >= 1").foreach { text =>
-      info(s"named: ${named(text)}")
+  "A goal whose only products are squares" should "be refused naming what it asks beyond them, not a square" in {
+    // Card `9fefbf75`. Every product here is one unknown times itself, which the completed squares
+    // cover, so no product is the obstacle; until 2026-09-28 the refusal named one anyway, `x * x is
+    // a product of 2 unknowns`, which this file recorded with `info` while the question was open.
+    // What stops each goal is the remainder once its squares are taken out: a constant below zero,
+    // or a zero asked to be positive. Every goal is false somewhere (x = 0, or x = y = 0), so they
+    // stay refused however strong the procedure gets.
+    //
+    // Seen red at `5f4f5ab9` before the change: all four named their square as the product out of
+    // reach, and no message held a remainder.
+    val cases = Vector(
+      "!x:real. x * x >= 1" -> "-1 >= 0",
+      "!x:real y:real. x * x + y * y >= 1" -> "-1 >= 0",
+      "!a:real. a * (2 - a) < 1" -> "0 > 0",
+      "!x:real y:real. 0 < y ==> x * x >= 1" -> "-1 >= 0"
+    )
+    cases.flatMap { case (text, rest) =>
+      val error = refused(text)
+      val message = error.message
+      Vector(
+        Option.when(named(text).nonEmpty)(s"$text named a product: $message"),
+        Option.when(!message.contains(s"what it asks beyond them is $rest"))(
+          s"$text did not name the remainder $rest: $message"
+        )
+      ).flatten
+    } shouldBe empty
+  }
+
+  it should "say whether hypotheses were there to give the remainder" in {
+    refused("!x:real. x * x >= 1").message should include("no hypothesis is there to give")
+    refused("!x:real y:real. 0 < y ==> x * x >= 1").message should include(
+      "no non-negative combination of its hypotheses and their products gives"
+    )
+  }
+
+  it should "write what it names in the reals' notation and carry the goal as a term" in {
+    // The second half of card `9fefbf75`: the sentence a procedure writes is rendered by the theory it
+    // holds, and the goal travels as a value for the surface to render, which is what `Remedy` does
+    // with the reader's notation and `message` does, as its last resort, with the kernel's printer.
+    // So the kernel's constant names must be absent from the sentence and present only in the term.
+    val text = "!x:real y:real. x * x + y * y >= 1"
+    refused(text) match {
+      case NotOfForm(expected, found) =>
+        withClue(s"$expected\n") {
+          expected should not include "real_"
+          expected should not include "BIT"
+        }
+        linarith.reals.show(found) shouldBe "1 <= x * x + y * y"
+      case other => fail(s"$text was refused as ${other.getClass.getSimpleName}: ${other.message}")
     }
   }
 }
