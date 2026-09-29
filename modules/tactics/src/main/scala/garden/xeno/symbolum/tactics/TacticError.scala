@@ -16,7 +16,15 @@ import garden.xeno.symbolum.logic.LogicError
  * added here without a next step named stops compiling rather than reaching a session unusable.
  */
 sealed trait TacticError {
-  def message: String
+
+  /**
+   * The refusal as a sentence, with every term in it written by `show`, as `LogicError.render` is
+   * and for its reason: the caller holding a theory knows the reader's notation and this does not.
+   */
+  def render(show: Term => String): String
+
+  /** The same sentence for a caller with no theory to hand, in the kernel's own printing. */
+  final def message: String = render(_.toString)
 }
 
 /**
@@ -27,7 +35,7 @@ sealed trait TacticError {
  * say anything about, and saying so is more useful than failing later for an obscure reason.
  */
 final case class OutsideFragment(expression: Expr, reason: String) extends TacticError {
-  def message: String = s"$expression is outside the fragment: $reason"
+  def render(show: Term => String): String = s"$expression is outside the fragment: $reason"
 }
 
 /**
@@ -38,7 +46,7 @@ final case class OutsideFragment(expression: Expr, reason: String) extends Tacti
  * to see that it is right. Both are honest outcomes and neither produces a theorem.
  */
 final case class NotCertified(claim: String, reason: LogicError) extends TacticError {
-  def message: String = s"could not certify $claim: ${reason.message}"
+  def render(show: Term => String): String = s"could not certify $claim: ${reason.render(show)}"
 }
 
 /**
@@ -55,7 +63,7 @@ final case class NotCertified(claim: String, reason: LogicError) extends TacticE
  * worth waiting for belongs to whoever is waiting.
  */
 final case class BeyondBudget(claim: String, largest: BigInt) extends TacticError {
-  def message: String =
+  def render(show: Term => String): String =
     s"$claim carries the numeral $largest, whose arithmetic costs more than a caller should wait for"
 }
 
@@ -71,9 +79,9 @@ final case class BeyondBudget(claim: String, largest: BigInt) extends TacticErro
  * are defects in this repository rather than in what the caller asked, and `Remedy` says so.
  */
 final case class NotLegible(term: Term, readBack: Option[Term]) extends TacticError {
-  def message: String = readBack match {
-    case Some(other) => s"$term prints as text that reads back as $other"
-    case None => s"$term prints as text that does not read back at all"
+  def render(show: Term => String): String = readBack match {
+    case Some(other) => s"${show(term)} prints as text that reads back as ${show(other)}"
+    case None => s"${show(term)} prints as text that does not read back at all"
   }
 }
 
@@ -92,13 +100,14 @@ final case class NotLegible(term: Term, readBack: Option[Term]) extends TacticEr
  * are carried as terms because an error carries values and the surface renders them.
  */
 final case class ProvableOnlyUnder(goal: Term, conditions: Vector[Term]) extends TacticError {
-  def message: String =
-    s"$goal is not a theorem as written; it holds where ${conditions.mkString(" and ")}"
+  def render(show: Term => String): String =
+    s"${show(goal)} is not a theorem as written; it holds where " +
+      conditions.map(show).mkString(" and ")
 }
 
 /** A failure from the layer below. */
 final case class FromLogic(error: LogicError) extends TacticError {
-  def message: String = error.message
+  def render(show: Term => String): String = error.render(show)
 }
 
 object TacticError {

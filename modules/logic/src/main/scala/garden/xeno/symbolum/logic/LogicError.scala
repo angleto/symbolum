@@ -11,7 +11,19 @@ import garden.xeno.symbolum.kernel.{FVar, KernelError, Term}
  * caller here arrives wrapped, so the boundary it crossed stays visible in the value.
  */
 sealed trait LogicError {
-  def message: String
+
+  /**
+   * The refusal as a sentence, with every term in it written by `show`.
+   *
+   * A refusal carries values and the caller that holds a theory renders them, the rule
+   * [[NotEqualTo]] states. This module knows no notation, so a sentence it finished itself would
+   * put the kernel's encoding in front of a reader who wrote `1 <= x * x`. A refusal wrapping
+   * another renders the inner one with the same `show`, so the notation reaches every level.
+   */
+  def render(show: Term => String): String
+
+  /** The same sentence for a caller with no theory to hand, in the kernel's own printing. */
+  final def message: String = render(_.toString)
 
   /**
    * What this refusal is about, which is the question a caller writing a negative check is asking.
@@ -25,7 +37,7 @@ sealed trait LogicError {
 
 /** A rule of the kernel refused. */
 final case class FromKernel(error: KernelError) extends LogicError {
-  def message: String = error.message
+  def render(show: Term => String): String = error.render(show)
 
   // The question was never put. A kernel rule refusing mid-derivation says the assembly above it
   // handed the kernel something a correct tactic would not have built, which is a defect in this
@@ -35,7 +47,7 @@ final case class FromKernel(error: KernelError) extends LogicError {
 
 /** A term or a theorem was not of the shape the rule needed. */
 final case class NotOfForm(expected: String, found: Term) extends LogicError {
-  def message: String = s"expected $expected, found $found"
+  def render(show: Term => String): String = s"expected $expected, found ${show(found)}"
   def standing: LogicError.Standing = LogicError.Standing.Unread
 }
 
@@ -85,9 +97,10 @@ final case class NotOfForm(expected: String, found: Term) extends LogicError {
  * about the question and never about the world.
  */
 final case class DoesNotFollow(goal: Term, procedure: String) extends LogicError {
-  def message: String =
-    s"$procedure searched to the end: no non-negative combination of the hypotheses gives $goal, " +
-      "and they are not contradictory either, so this is decided rather than merely unproved"
+  def render(show: Term => String): String =
+    s"$procedure searched to the end: no non-negative combination of the hypotheses gives " +
+      s"${show(goal)}, and they are not contradictory either, so this is decided rather than " +
+      "merely unproved"
 
   def standing: LogicError.Standing = LogicError.Standing.Decided
 }
@@ -109,9 +122,10 @@ final case class DoesNotFollow(goal: Term, procedure: String) extends LogicError
  * `reason` is the step that refused, unchanged, so the defect can be found from the message.
  */
 final case class NotRebuilt(goal: Term, procedure: String, reason: LogicError) extends LogicError {
-  def message: String =
-    s"$procedure found a combination of the hypotheses giving $goal and could not rebuild it in " +
-      s"the kernel, so nothing about the goal is established either way: ${reason.message}"
+  def render(show: Term => String): String =
+    s"$procedure found a combination of the hypotheses giving ${show(goal)} and could not " +
+      "rebuild it in the kernel, so nothing about the goal is established either way: " +
+      reason.render(show)
 
   // Never decided, whatever the step that refused says of itself: a step deciding that the
   // assembled combination is not the goal's is a statement about the assembly. A step that stopped
@@ -198,12 +212,9 @@ final case class NotRebuilt(goal: Term, procedure: String, reason: LogicError) e
 final case class SkeletonFailsAt(goal: Term, assignment: Vector[(Term, Boolean)])
     extends LogicError {
 
-  // The kernel's printer by way of `toString`, which is the last resort every case here falls back
-  // to and is not the defect this case was split out of: a `message` is read where nobody supplied
-  // a theory, and `Remedy` renders the same pairs in the reader's notation where somebody did.
-  def message: String =
-    s"the propositional skeleton of $goal fails at " +
-      assignment.map { case (atom, value) => s"$atom := $value" }.mkString(", ") +
+  def render(show: Term => String): String =
+    s"the propositional skeleton of ${show(goal)} fails at " +
+      assignment.map { case (atom, value) => s"${show(atom)} := $value" }.mkString(", ") +
       ": the atoms are uninterpreted, so this is about the skeleton and not about the goal"
 
   def standing: LogicError.Standing = LogicError.Standing.Unread
@@ -218,9 +229,9 @@ final case class SkeletonFailsAt(goal: Term, assignment: Vector[(Term, Boolean)]
  * stop believing the identity. Until this was separated they produced the same `Left`.
  */
 final case class NotNormalised(term: Term) extends LogicError {
-  def message: String =
-    s"rewriting stopped before finishing: $term still changes, so the two sides differing " +
-      "is not evidence about the identity"
+  def render(show: Term => String): String =
+    s"rewriting stopped before finishing: ${show(term)} still changes, so the two sides " +
+      "differing is not evidence about the identity"
 
   def standing: LogicError.Standing = LogicError.Standing.Exhausted
 }
@@ -249,11 +260,11 @@ final case class NotNormalised(term: Term) extends LogicError {
  * repairs.
  */
 final case class GrewPastCeiling(term: Term, reached: Int, allowed: Int) extends LogicError {
-  def message: String =
+  def render(show: Term => String): String =
     s"rewriting stopped because the term was growing: one pass took it to " +
       s"${Plural.count(reached, "node", "nodes")} where the ceiling in nodes is $allowed, " +
       s"so the rules multiply rather than settle and a higher " +
-      s"limit makes this worse, not better. What was reached before that pass is $term"
+      s"limit makes this worse, not better. What was reached before that pass is ${show(term)}"
 
   def standing: LogicError.Standing = LogicError.Standing.Exhausted
 }
@@ -278,9 +289,9 @@ final case class GrewPastCeiling(term: Term, reached: Int, allowed: Int) extends
  */
 final case class BoundReached(limit: String, reached: Int, allowed: Int, goal: Term)
     extends LogicError {
-  def message: String =
+  def render(show: Term => String): String =
     s"$limit stopped the search at $reached, where it allows $allowed: this is not evidence " +
-      s"about $goal either way"
+      s"about ${show(goal)} either way"
 
   def standing: LogicError.Standing = LogicError.Standing.Exhausted
 }
@@ -299,7 +310,8 @@ final case class BoundReached(limit: String, reached: Int, allowed: Int, goal: T
  * procedure did not read, and the procedure is named so a reader knows which fragment answered.
  */
 final case class Denied(goal: Term, proved: Term, procedure: String) extends LogicError {
-  def message: String = s"$procedure proved $proved, which denies $goal"
+  def render(show: Term => String): String =
+    s"$procedure proved ${show(proved)}, which denies ${show(goal)}"
   def standing: LogicError.Standing = LogicError.Standing.Decided
 }
 
@@ -316,7 +328,7 @@ final case class Denied(goal: Term, proved: Term, procedure: String) extends Log
  * when it has one.
  */
 final case class NotEqualTo(wanted: Term, found: Term) extends LogicError {
-  def message: String = s"$found is not equal to $wanted"
+  def render(show: Term => String): String = s"${show(found)} is not equal to ${show(wanted)}"
 
   // Decided, and it is the ring's half of [[DoesNotFollow]]. This is raised only where both sides
   // reached a fixed point of the same conversion, so the forms differing is a statement about the
@@ -342,8 +354,9 @@ final case class NotEqualTo(wanted: Term, found: Term) extends LogicError {
  * rewriting in this module does not: `Rewrite` still raises [[NotEqualTo]] and they read it again.
  */
 final case class NotEqualAsRead(wanted: Term, found: Term, bound: Vector[Term]) extends LogicError {
-  def message: String =
-    s"$found and $wanted differ as polynomials over their atoms, and ${bound.mkString(", ")} " +
+  def render(show: Term => String): String =
+    s"${show(found)} and ${show(wanted)} differ as polynomials over their atoms, and " +
+      s"${bound.map(show).mkString(", ")} " +
       "is not a free variable, so the atoms need not be independent and the claim is not decided"
 
   // A search over a reading of the goal so coarse that what it settled was not the goal, which is
@@ -362,9 +375,10 @@ final case class NotEqualAsRead(wanted: Term, found: Term, bound: Vector[Term]) 
  * decided about a claim that is true. `reason` is what the comparison said, unchanged.
  */
 final case class ValueUnidentified(wanted: Term, found: Term, reason: LogicError) extends LogicError {
-  def message: String =
-    s"the value established is $found, and whether it is $wanted is not established either way: " +
-      reason.message
+  def render(show: Term => String): String =
+    s"the value established is ${show(found)}, and whether it is ${show(wanted)} is not " +
+      "established either way: " +
+      reason.render(show)
 
   // Never decided, for `NotRebuilt`'s reason: whatever the comparison decided, it decided about
   // its own reading of the two terms. A comparison that stopped on a bound keeps saying so.
@@ -377,7 +391,7 @@ final case class ValueUnidentified(wanted: Term, found: Term, reason: LogicError
 
 /** The text could not be read as a term. */
 final case class SyntaxError(detail: String, position: Int) extends LogicError {
-  def message: String = s"$detail, at character $position"
+  def render(show: Term => String): String = s"$detail, at character $position"
   def standing: LogicError.Standing = LogicError.Standing.Unread
 }
 
@@ -389,13 +403,13 @@ final case class SyntaxError(detail: String, position: Int) extends LogicError {
  * axiom in concrete syntax is that someone can.
  */
 final case class TypeError(detail: String) extends LogicError {
-  def message: String = detail
+  def render(show: Term => String): String = detail
   def standing: LogicError.Standing = LogicError.Standing.Unread
 }
 
 /** A constant the standard theory should define was not there. */
 final case class MissingDefinition(name: String) extends LogicError {
-  def message: String = s"no definition of $name in this theory"
+  def render(show: Term => String): String = s"no definition of $name in this theory"
   def standing: LogicError.Standing = LogicError.Standing.Unread
 }
 
@@ -410,7 +424,7 @@ final case class MissingDefinition(name: String) extends LogicError {
  * occurring in the predicate would have the existential name the thing it exists to hide.
  */
 final case class EscapingVariable(variable: FVar, where: String) extends LogicError {
-  def message: String = s"${variable.name} must not occur in $where"
+  def render(show: Term => String): String = s"${variable.name} must not occur in $where"
   def standing: LogicError.Standing = LogicError.Standing.Unread
 }
 
@@ -422,7 +436,7 @@ final case class EscapingVariable(variable: FVar, where: String) extends LogicEr
  * this has to go back and assume something, not restate anything.
  */
 final case class MissingHypothesis(expected: Term, rule: String) extends LogicError {
-  def message: String = s"$rule needs a theorem assuming $expected"
+  def render(show: Term => String): String = s"$rule needs a theorem assuming ${show(expected)}"
   def standing: LogicError.Standing = LogicError.Standing.Unread
 }
 
@@ -447,7 +461,8 @@ final case class MissingHypothesis(expected: Term, rule: String) extends LogicEr
  * caller's step is wrong either way and `reason` is what tells the two apart.
  */
 final case class InstanceRefused(index: Int, goal: Term, reason: LogicError) extends LogicError {
-  def message: String = s"the instance at $index, $goal, was not settled: ${reason.message}"
+  def render(show: Term => String): String =
+    s"the instance at $index, ${show(goal)}, was not settled: ${reason.render(show)}"
 
   // The caller's own, for the reason `reason` is carried at all: a walk over a family adds nothing
   // to what is known about the claim, so what the instance settled is what the family settled. An
@@ -467,7 +482,7 @@ final case class InstanceRefused(index: Int, goal: Term, reason: LogicError) ext
  * defect in either: a caller has to supply the middle, and this says which one it is.
  */
 final case class Undetermined(variable: FVar) extends LogicError {
-  def message: String = s"the goal does not say what ${variable.name} must be"
+  def render(show: Term => String): String = s"the goal does not say what ${variable.name} must be"
   def standing: LogicError.Standing = LogicError.Standing.Unread
 }
 
@@ -496,8 +511,8 @@ final case class Undetermined(variable: FVar) extends LogicError {
  */
 final case class BeyondMatching(pattern: Term, target: Term, refusal: Matching.Refusal)
   extends LogicError {
-  def message: String =
-    s"whether $target is an instance of $pattern is not decided here: " +
+  def render(show: Term => String): String =
+    s"whether ${show(target)} is an instance of ${show(pattern)} is not decided here: " +
       s"${refusal.variable.name} is ${refusal.condition}, which is outside the fragment this " +
       s"matcher decides; supply ${refusal.variable.name} and specialise at it"
 
@@ -521,8 +536,8 @@ final case class BeyondMatching(pattern: Term, target: Term, refusal: Matching.R
  * asked at all.
  */
 final case class NoCloser(goal: Term, driver: String) extends LogicError {
-  def message: String =
-    s"$driver was built with no closer, so nothing was asked about $goal: " +
+  def render(show: Term => String): String =
+    s"$driver was built with no closer, so nothing was asked about ${show(goal)}: " +
       "what the rewriting left is undecided rather than unprovable"
 
   def standing: LogicError.Standing = LogicError.Standing.Unread
@@ -555,7 +570,7 @@ final case class NoCloser(goal: Term, driver: String) extends LogicError {
  */
 final case class PartialInstance(quantifiers: Int, arguments: Int, theorem: Term)
   extends LogicError {
-  def message: String =
+  def render(show: Term => String): String =
     s"this theorem has ${Plural.count(quantifiers, "leading quantifier", "leading quantifiers")} " +
       s"and was given ${Plural.count(arguments, "argument", "arguments")}: " +
       s"supply $quantifiers, or ask specPrefix for a partial instance"
