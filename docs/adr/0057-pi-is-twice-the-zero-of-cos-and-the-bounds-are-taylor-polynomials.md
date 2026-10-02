@@ -45,7 +45,8 @@ angle is typed in, so it has to be reachable from `Ask`, `Find` and the library.
 
 ## Consequences
 
-- Twenty-one facts, two constants, no axiom. Every fact rests on choice, eta and infinity, and no
+- Twenty-one facts when this was decided, two more since 2026-10-02 (the rejection of "least"
+  below says which), two constants, no axiom. Every fact rests on choice, eta and infinity, and no
   axiom of the reals is among them, because since `docs/adr/0053` the reals have none.
   `CircleSpec` asserts the set.
 - The six bounds are results in their own right, with the same statements a first course states.
@@ -70,6 +71,13 @@ angle is typed in, so it has to be reachable from `Ask`, `Find` and the library.
   are the same argument one order at a time, without the family.
 - **`pi` as the least positive zero, or as the period.** "Least" wants the set of positive zeros to
   have a least element, and the period wants periodicity before `pi` exists. The zero in `[0, 2]`
-  is characterised by a closed interval and a monotonicity proved in the same file.
+  is characterised by a closed interval and a monotonicity proved in the same file. **The
+  textbook's definition is a theorem about this one rather than an alternative to it**, and until
+  2026-10-02 it was only asserted in prose: a verification on 2026-09-28 asked the prover whether
+  `cos` is positive below `pi / 2` and whether a non-negative zero can come before it, and both were
+  unsettled. `COS_POSITIVE` is `cos` falling strictly to its zero at `pi / 2`, and
+  `PI_HALF_LEAST_ZERO` (`0 < x /\ cos x = 0 ==> pi / 2 <= x`) is its contrapositive, so with
+  `COS_PI_HALF` the chosen zero is the least positive one. `CircleSpec` composes the three into
+  the textbook's sentence.
 - **`pi` asserted as an axiom with its properties.** That would add to what the reader has to
   believe, and nothing needs it.

@@ -10,7 +10,7 @@ import garden.xeno.symbolum.logic.*
  *
  * Statements that match their text say the right thing was proved; they do not say it can be used.
  * So two values a reader knows are derived here from the published facts alone, `acos 0 = pi / 2`
- * and `sin (2 * pi) = 0`, and the differentiator the bounds rest on is shown refusing, once for a
+ * and `sin (2 * pi) = 0`, and the textbook's definition of `pi` is stated in its own words, and the differentiator the bounds rest on is shown refusing, once for a
  * wrong slope and once for a function outside its grammar, beside the same call that succeeds.
  */
 class CircleSpec extends AnyFlatSpec with Matchers {
@@ -73,6 +73,19 @@ class CircleSpec extends AnyFlatSpec with Matchers {
     val answered = force(rules.mp(injective, premise))
     answered.hypotheses shouldBe empty
     answered.conclusion shouldBe proposition("acos 0 = pi / 2")
+  }
+
+  /**
+   * The textbook defines `pi` as twice the least positive zero of `cos`, and this file chooses the
+   * zero in `[0, 2]` instead. The two agree, and that is checked here in the textbook's words from
+   * the published facts alone: `pi / 2` is positive, is a zero, and no positive zero is below it.
+   * The bound is attained at `pi / 2` itself, so `PI_HALF_LEAST_ZERO` is not true of an empty set.
+   */
+  "pi / 2" should "be the least positive zero of cos, which is how a textbook defines pi" in {
+    val positive = conclude(Seq(fact(Circle.PiBounds)), proposition("(0:real) < pi / 2"))
+    val stated = force(rules.conjIntro(fact(Circle.CosPiHalf), fact(Circle.PiHalfLeastZero)).flatMap(rules.conjIntro(positive, _)))
+    stated.hypotheses shouldBe empty
+    stated.conclusion shouldBe proposition("0 < pi / 2 /\\ cos (pi / 2) = 0 /\\ (!x:real. 0 < x /\\ cos x = 0 ==> pi / 2 <= x)")
   }
 
   "The period" should "carry sin 0 to sin (2 * pi)" in {

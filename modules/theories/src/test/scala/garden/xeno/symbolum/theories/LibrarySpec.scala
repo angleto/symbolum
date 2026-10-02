@@ -797,8 +797,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 955 and 952 with `HAS_INTEGRAL_SUBST_IMAGE` and `INTEGRAL_SUBST_IMAGE`, 2026-10-02, measured by
     // the run over the branch: two facts in `Integral` under two names. `CLAUDE.md`'s figures move by
     // two each, each binding four functions and four reals. Plus two over the base above.
-    library.entries.size shouldBe 955
-    library.names.distinct.size shouldBe 952
+    // 957 and 954 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02, card `4bcfc8b9`: two facts
+    // in `Circle` under two names, read off the run over that branch. `CLAUDE.md`'s first figure
+    // moves by two and the other two do not: each binds one real. Plus two over the base above.
+    library.entries.size shouldBe 957
+    library.names.distinct.size shouldBe 954
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

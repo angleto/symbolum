@@ -1150,7 +1150,9 @@ a written point is six polynomial bounds from zero on, `SIN_LE_LINE` to `COS_GE_
 polynomials alternately above and below. Each is proved by monotonicity from the one before, over
 derivatives `Slope` builds and the kernel checks. `PI_BOUNDS` is `3 < pi < 16/5`. From `pi`: the
 quarter, half and whole turns (`COS_SHIFT` to `SIN_PERIODIC`), the values at `pi`, `sin` positive on
-`(0, pi)`, `cos` strictly decreasing and one-to-one on `[0, pi]`, and `acos`, whose specification
+`(0, pi)`, `cos` strictly decreasing and one-to-one on `[0, pi]`, `cos` positive below `pi / 2` and
+`pi / 2` the least positive zero (`PI_HALF_LEAST_ZERO`, so the textbook's definition of `pi` is
+a theorem here), and `acos`, whose specification
 `ACOS_SPEC` is the intermediate value theorem on `[0, pi]` read through the choice. Two constants,
 no axiom; the facts rest on choice, eta and infinity. **What is not here** is the complex numbers,
 which are card `92c368a1` and the reason this link exists, and the parity of `sin` and `cos`, which

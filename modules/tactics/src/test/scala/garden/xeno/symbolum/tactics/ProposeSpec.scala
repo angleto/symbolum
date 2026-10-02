@@ -436,7 +436,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // before the run and equal to it. Plus ten over the base above.
     // 869 with `HAS_INTEGRAL_SUBST_IMAGE` and `INTEGRAL_SUBST_IMAGE`, 2026-10-02, four residues each,
     // measured by the run. Plus eight over the base above.
-    proposals.size shouldBe 869
+    // 871 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02: one residue each, read off the
+    // run over that branch. Plus two over the base above.
+    proposals.size shouldBe 871
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1441,7 +1443,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // thirty-seven over the base above.
     // 765 with the eight residues of `HAS_INTEGRAL_SUBST_IMAGE` and `INTEGRAL_SUBST_IMAGE`,
     // 2026-10-02, measured by the run: all eight here, as the relative forms' went. Plus eight.
-    open shouldBe 765
+    // 771 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02, read off the run over that branch
+    // and not decomposed: their two weakenings and the proposals of the other sources over the two
+    // facts. Plus six over the base above. It read one fewer while the second was stated from
+    // `0 <= x` rather than `0 < x`, so the hypothesis's strictness moves one proposal into this bucket.
+    open shouldBe 771
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
