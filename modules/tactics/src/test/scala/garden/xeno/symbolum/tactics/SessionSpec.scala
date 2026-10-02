@@ -735,4 +735,18 @@ class SessionSpec extends AnyFlatSpec with Matchers {
     text should include("SQ")
     text should include("library")
   }
+
+  "A refusal of a claim naming the session's own constant" should "write the goal in the session's notation" in {
+    // Card 7405215c, the branch the repair of 9fefbf75 did not reach: a refused goal naming a
+    // constant the session declared builds its own sentence, and that sentence interpolated
+    // `message`. Seen red at 7.0 2b8f266e: `found ((real_le real_one) ((real_mul c) c))`.
+    val session = fresh.runAll(Vector("declare c : real", "prove C_SQUARED : c * c >= 1"))
+    session.entries.last.outcome match {
+      case Session.Outcome.Refused(reason, _) =>
+        info(reason)
+        KernelSpelling.in(reason) shouldBe empty
+        reason should include("1 <= c * c")
+      case other => fail(s"a false inequality was not refused: $other")
+    }
+  }
 }

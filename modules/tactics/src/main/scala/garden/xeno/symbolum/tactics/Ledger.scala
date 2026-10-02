@@ -5,7 +5,7 @@ import java.time.Instant
 import scala.jdk.CollectionConverters.*
 import scala.util.control.NonFatal
 import garden.xeno.symbolum.Expr
-import garden.xeno.symbolum.theories.Prose
+import garden.xeno.symbolum.theories.{Prose, Signature}
 
 /**
  * What has already been asked of this system, and what came of it.
@@ -138,9 +138,16 @@ final class Ledger private (val file: Path, private val now: () => Instant) {
     entry
   }
 
-  /** The same, from an outcome the loop produced. */
-  def record(outcome: Discovery.Outcome): Entry =
-    record(statementOf(outcome), verdictOf(outcome), evidenceOf(outcome))
+  /**
+   * The same, from an outcome the loop produced, with the terms in its evidence written by `reals`.
+   *
+   * The signature is asked for because an open pair carries the refusal that left it open, and the
+   * refusal carries terms: written with the kernel's printer, `x * x = x` came back as
+   * `((real_mul x) x) is not equal to x`. The outcome knows nothing of the theory it was settled in,
+   * and the ledger has none of its own, so the one that settled it is the one to name.
+   */
+  def record(outcome: Discovery.Outcome, reals: Signature): Entry =
+    record(statementOf(outcome), verdictOf(outcome), evidenceOf(outcome, reals))
 
   /**
    * The same, from a reading of a claim the generator proposed.
@@ -171,7 +178,8 @@ final class Ledger private (val file: Path, private val now: () => Instant) {
     right: Expr,
     samples: Vector[Map[String, Double]]
   ): Entry =
-    settled(statementFor(left, right)).getOrElse(record(discovery.settle(left, right, samples)))
+    settled(statementFor(left, right))
+      .getOrElse(record(discovery.settle(left, right, samples), discovery.oracle.reals))
 }
 
 object Ledger {
@@ -258,7 +266,7 @@ object Ledger {
     s"${reading.standing}: ${Prose.count(reading.inferences, "inference")} over " +
       s"${Prose.count(reading.axioms, "axiom")}"
 
-  private def evidenceOf(outcome: Discovery.Outcome): String = outcome match {
+  private def evidenceOf(outcome: Discovery.Outcome, reals: Signature): String = outcome match {
     case _: Discovery.Proved => "certified by the kernel"
     case disproved: Discovery.Disproved =>
       val point = disproved.witness.toVector.sortBy(_._1).map { case (name, value) =>
@@ -271,7 +279,7 @@ object Ledger {
       }
       s"agreed to ${Prose.count(separated.agreement, "digit")} at ${point.mkString(", ")}"
     case unsettled: Discovery.Unsettled =>
-      s"${Prose.count(unsettled.pointsTried, "point")} tried: ${unsettled.reason.message}"
+      s"${Prose.count(unsettled.pointsTried, "point")} tried: ${unsettled.reason.render(reals.show)}"
   }
 
   private def render(entry: Entry): String =

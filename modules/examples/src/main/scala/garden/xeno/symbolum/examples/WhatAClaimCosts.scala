@@ -63,7 +63,7 @@ object WhatAClaimCosts {
         report <- cost.of(text)
         rendered <- cost.render(report)
       } yield rendered
-      println(page.fold(error => s"  not put to the surface at all: ${error.message}", identity))
+      println(page.fold(error => s"  not put to the surface at all: ${error.render(cost.reals.show)}", identity))
     }
   }
 }

@@ -295,7 +295,7 @@ object Remedy {
 
     case NotCertified(claim, reason) =>
       APersonLooks(
-        s"the algebra system proposed $claim and the kernel would not certify it (${reason.message}): " +
+        s"the algebra system proposed $claim and the kernel would not certify it (${reason.render(write(_, reals))}): " +
           "either the proposal is wrong or this prover cannot see that it is right"
       )
 
@@ -417,7 +417,7 @@ object Remedy {
     case NotRebuilt(goal, procedure, reason) =>
       ReportADefect(
         s"$procedure found a certificate for ${write(goal, reals)} and its rebuilding was refused: " +
-          reason.message
+          reason.render(write(_, reals))
       )
 
     // The same shape one procedure over, and the reason `BoundReached` is its own case: a search

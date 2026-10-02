@@ -1012,4 +1012,20 @@ class RemedySpec extends AnyFlatSpec with Matchers {
 
     search(Paths.get("").toAbsolutePath, 5)
   }
+
+  "A remedy whose sentence quotes a refusal" should "write the refusal's terms in the reals' notation" in {
+    // Card 7405215c. Both sentences interpolated the inner refusal's `message`, so a remedy built
+    // with the reals in hand still read `found (! (\x:real. ((real_le real_one) ((real_mul x)
+    // x))))`. Seen red at 7.0 2b8f266e on both, with `real_one`, `real_mul` and `real_le` named.
+    val goal = force(reals.proposition("!x:real. x * x >= 1"))
+    val refusal = NotOfForm("a linear relation", goal)
+    Vector(
+      Remedy.of(reals, NotCertified("the claim", refusal)),
+      Remedy.of(reals, NotRebuilt(goal, "LINARITH", refusal))
+    ).map(_.message).foreach { sentence =>
+      info(sentence)
+      KernelSpelling.in(sentence) shouldBe empty
+      sentence should include("1 <= x * x")
+    }
+  }
 }

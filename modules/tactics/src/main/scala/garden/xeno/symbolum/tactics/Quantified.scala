@@ -97,7 +97,7 @@ final class Quantified private (val linarith: Linarith) {
           val variable =
             Conv.freshVariable("q", domain, Term.freeVariables(term) ++ bound.collect { case v: FVar => v })
           for {
-            applied <- Term.app(predicate, variable).left.map(_.message)
+            applied <- Term.app(predicate, variable).left.map(_.render(reals.show))
             body <- Term.betaReduce(applied).toRight("a quantifier applied to a lambda")
           } yield (variable, body)
       }
@@ -198,7 +198,7 @@ final class Quantified private (val linarith: Linarith) {
     if (term == reals.logic.truth) Right(True)
     else if (term == reals.logic.falsity) Right(False)
     else
-      LinearFact.relation(reals, term).left.map(_.message).flatMap { fact =>
+      LinearFact.relation(reals, term).left.map(_.render(reals.show)).flatMap { fact =>
         fact.form.atoms.find(!bound.contains(_)) match {
           case Some(opaque) =>
             Left(s"a linear statement; ${reals.show(opaque)} is an atom this procedure cannot range over")

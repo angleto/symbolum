@@ -844,6 +844,72 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     }
   }
 
+  /* ------------------------------------------------------- the surfaces holding a theory */
+
+  /**
+   * The other end of the rule this file is about: a refusal that carries its terms is only as good
+   * as the caller that renders it, and `message` is the rendering for a caller with no theory.
+   *
+   * Above `modules/theories` every refusal is on its way to a reader, and the code there holds the
+   * signature the reader wrote in, so it calls `render` with that signature's `show`. Card 7405215c
+   * found six surfaces printing `message` instead, each measured printing `real_le` and `BIT0` to
+   * a reader who had written `<=` and `2`, and `SessionSpec`, `ArgumentSpec`, `LedgerSpec`,
+   * `QuantifiedSpec`, `ReadbackSpec` and `RemedySpec` each hold the one for its surface. This is
+   * what stops a seventh, which an example per surface cannot.
+   *
+   * **It is a scan of lines, with the limits of one.** A `message` reached through a helper in
+   * another module is invisible to it, and it cannot tell a refusal's `message` from any other
+   * member of that name. Two shapes are excused, and both are named rather than inferred: a
+   * construction that throws because a chain does not build, which is a defect raised before there
+   * is a theory to render with, and a remedy's own `message`, which `Remedy` already wrote with the
+   * theory it was handed. A line is judged on what is left once the excused occurrences are taken
+   * out of it, so an excused remedy does not carry a raw refusal on the same line past the scan.
+   *
+   * Seen red on the tree that landed it, with `Argument.scala`'s repaired line put back to
+   * `refusal.message` and nothing else changed: one line reported, that one.
+   */
+  private val RawMessage = """\.message\b""".r
+
+  private val ExcusedLine = """IllegalStateException\(""".r
+
+  private val ExcusedOccurrence = """Remedy\.(?:of|spelling)\([^()]*\)\.message\b|\bremedy\.message\b""".r
+
+  private def printsRawMessage(line: String): Boolean =
+    ExcusedLine.findFirstIn(line).isEmpty &&
+      RawMessage.findFirstIn(ExcusedOccurrence.replaceAllIn(line, "")).isDefined
+
+  "A surface above modules/theories" should "render a refusal with its theory rather than print its message" in {
+    // The control is the line `Readback.report` carried at 7.0 2b8f266e: a raw refusal beside an
+    // excused remedy, which is the shape a whole-line excuse would have let through.
+    printsRawMessage(
+      """Right(s"not proved: ${error.message}\nnext: ${Remedy.of(reals, error).message}")"""
+    ) shouldBe true
+    printsRawMessage("""Right(s"next: ${Remedy.of(reals, error).message}")""") shouldBe false
+
+    val roots = Vector("tactics", "examples", "dist").map(module => Paths.get(s"modules/$module/src/main"))
+    roots.foreach(root => withClue(s"$root: ")(Files.isDirectory(root) shouldBe true))
+
+    val scanned = for {
+      root <- roots
+      path <- mainSources(root)
+      (line, index) <- Files.readString(path).linesIterator.zipWithIndex
+      if !line.trim.startsWith("*") && !line.trim.startsWith("//")
+      if RawMessage.findFirstIn(line).isDefined
+    } yield (s"$path:${index + 1}: ${line.trim}", printsRawMessage(line))
+
+    // An absence from a scan is worth something only once the scan has been seen finding: the
+    // excused lines are `message` it read and let through.
+    scanned.count(!_._2) should be > 0
+
+    val printed = scanned.collect { case (site, true) => site }
+    withClue(
+      s"${printed.size} line(s) print a refusal's message where a theory is in hand; call " +
+        s"`render(signature.show)` with the signature the surface holds:\n${printed.mkString("\n")}\n"
+    ) {
+      printed shouldBe empty
+    }
+  }
+
   /* -------------------------------------------------------------------- the debt, counted */
 
   // Reported rather than pinned at a number: the two pairs of assertions above already fail on a

@@ -24,6 +24,7 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
   private val different: Expr = Add(Vector(Pow(x, Num(2)), Num(1)))
 
   private val discovery = Discovery.standard
+  private val reals = discovery.oracle.reals
 
   private def samplesFor(expressions: Expr*): Vector[Map[String, Double]] =
     Discovery.grid(expressions.toVector, 12)
@@ -88,9 +89,9 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
   "The verdicts" should "say what each outcome means for asking again" in {
     val (ledger, _, _) = freshLedger()
 
-    ledger.record(discovery.settle(square, expanded, samplesFor(square, expanded))).verdict shouldBe
+    ledger.record(discovery.settle(square, expanded, samplesFor(square, expanded)), reals).verdict shouldBe
       Ledger.Verdict.Proved
-    ledger.record(discovery.settle(square, different, samplesFor(square, different))).verdict shouldBe
+    ledger.record(discovery.settle(square, different, samplesFor(square, different)), reals).verdict shouldBe
       Ledger.Verdict.Disproved
 
     // `(2 * x) / 2 = x` was the witness here and is proved since 2026-09-09, when a numeral
@@ -99,22 +100,22 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
     // the ledger's distinction between "nobody can state this" and "this is stated and unsettled"
     // is what the witness has to sit on, and it moved one construction along.
     val quotient = Div(Vector(Mul(Vector(Num(2), x)), x))
-    ledger.record(discovery.settle(quotient, Num(2), samplesFor(quotient, Num(2)))).verdict shouldBe
+    ledger.record(discovery.settle(quotient, Num(2), samplesFor(quotient, Num(2))), reals).verdict shouldBe
       Ledger.Verdict.Open
 
     // True at every point and unstateable here: the theory has no trigonometric constant. The
     // witness has to be an identity that *holds*, or sampling disproves it and the pair never
     // reaches the reader at all.
     val trig = Add(Vector(Pow(Sin(x), Num(2)), Pow(Cos(x), Num(2))))
-    ledger.record(discovery.settle(trig, Num(1), samplesFor(trig, Num(1)))).verdict shouldBe
+    ledger.record(discovery.settle(trig, Num(1), samplesFor(trig, Num(1))), reals).verdict shouldBe
       Ledger.Verdict.Outside
 
     val large = Mul(Vector(Num(1e13), x))
-    ledger.record(discovery.settle(large, large, samplesFor(large))).verdict shouldBe
+    ledger.record(discovery.settle(large, large, samplesFor(large)), reals).verdict shouldBe
       Ledger.Verdict.TooLarge
 
     // The lead: `x * x = x` holds at 1 and a sample of one point lets it past the screening.
-    ledger.record(discovery.settle(Mul(Vector(x, x)), x, Vector(Map("x" -> 1.0)))).verdict shouldBe
+    ledger.record(discovery.settle(Mul(Vector(x, x)), x, Vector(Map("x" -> 1.0))), reals).verdict shouldBe
       Ledger.Verdict.Open
 
     // The one no input produces, mapped where the mapping happens. See `DiscoverySpec`.
@@ -126,7 +127,8 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
           Discovery.Why.RewriterRanOut,
           OutsideFragment(x, "stands in for a rewriter that ran out"),
           12
-        )
+        ),
+        reals
       )
       .verdict shouldBe Ledger.Verdict.Unfinished
   }
@@ -134,12 +136,12 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
   "The evidence" should "be what the answer rested on, which differs by answer" in {
     val (ledger, _, _) = freshLedger()
 
-    val disproved = ledger.record(discovery.settle(square, different, samplesFor(square, different)))
+    val disproved = ledger.record(discovery.settle(square, different, samplesFor(square, different)), reals)
     // Worth nothing without the point: a disproof a reader cannot check is a rumour.
     disproved.evidence should include("differs by")
     disproved.evidence should include("x=")
 
-    val open = ledger.record(discovery.settle(Mul(Vector(x, x)), x, Vector(Map("x" -> 1.0))))
+    val open = ledger.record(discovery.settle(Mul(Vector(x, x)), x, Vector(Map("x" -> 1.0))), reals)
     // Agreement at one point is not a lead and agreement at three hundred is, so the count is the
     // evidence and the reader needs it to know whether to look.
     //
@@ -155,7 +157,7 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
     // test below this one exists for, so asking again about `x * x` would read back the entry with
     // one point in it and assert nothing. `x^3` and `x` agree at 0 and at 1 and are not equal.
     val cube = Pow(x, Num(3))
-    val two = ledger.record(discovery.settle(cube, x, Vector(Map("x" -> 0.0), Map("x" -> 1.0))))
+    val two = ledger.record(discovery.settle(cube, x, Vector(Map("x" -> 0.0), Map("x" -> 1.0))), reals)
 
     withClue(s"the fixture was meant to be unsettled at two points and read ${two.verdict}: ") {
       two.verdict shouldBe Ledger.Verdict.Open
@@ -223,7 +225,7 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
 
     def evidence(agreement: Int): String =
       ledger
-        .record(Discovery.Separated(square, expanded, Map("x" -> BigDecimal(2)), agreement))
+        .record(Discovery.Separated(square, expanded, Map("x" -> BigDecimal(2)), agreement), reals)
         .evidence
 
     evidence(1) should startWith("agreed to 1 digit at ")
@@ -304,5 +306,18 @@ class LedgerSpec extends AnyFlatSpec with Matchers {
     first.record("x = x", Ledger.Verdict.Proved, "certified by the kernel")
 
     Ledger.at(file).entries.map(_.statement) shouldBe Vector("x = x")
+  }
+
+  "The evidence for a pair left open" should "write the refusal's terms in the reals' notation" in {
+    // Card 7405215c. The ledger holds no theory, so it printed the refusal with the kernel's:
+    // `1 point tried: could not certify x * x = x: ((real_mul x) x) is not equal to x`, seen red at
+    // 7.0 2b8f266e. The positive is the refusal's own sentence and not the statement, which the
+    // evidence carried in the reader's notation before the repair as well.
+    val ledger = Ledger.at(Files.createTempFile("ledger-notation", ".tsv"))
+    val open = ledger.record(discovery.settle(Mul(Vector(x, x)), x, Vector(Map("x" -> 1.0))), reals)
+    info(open.evidence)
+    open.verdict shouldBe Ledger.Verdict.Open
+    KernelSpelling.in(open.evidence) shouldBe empty
+    open.evidence should include("x * x is not equal to x")
   }
 }

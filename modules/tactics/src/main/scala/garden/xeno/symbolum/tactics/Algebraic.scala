@@ -151,7 +151,7 @@ final class Algebraic private (val chain: Chain, val arithmetic: Arbitrary, val 
         derive(names, degrees, radicands, coefficients, cofactors) match {
           case Right(theorem) =>
             Outcome.Found(theorem, coefficients, None, Derivation.size(theorem))
-          case Left(error) => Outcome.NotCertified(error.message, coefficients)
+          case Left(error) => Outcome.NotCertified(error.render(signature.show), coefficients)
         }
     }
 

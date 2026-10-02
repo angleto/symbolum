@@ -177,7 +177,7 @@ final class Argument private (
             text <- Readback.of(register.reals, propositionOf(premise))
           } yield done :+ s"  ${labelOf(premise)}: $text"
       }
-      unnamed = line.whyNoPremises.map(refusal => s"  no certificate: ${refusal.message}").toVector
+      unnamed = line.whyNoPremises.map(refusal => s"  no certificate: ${refusal.render(register.reals.show)}").toVector
       asked <- asAsked(line)
     } yield (costed ++ premises ++ unnamed ++ asked).mkString("\n")
 

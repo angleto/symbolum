@@ -64,7 +64,7 @@ final class Consistency private (val reals: Signature) {
    */
   def reading(texts: Vector[String]): Verdict =
     texts.foldLeft(Right(Vector.empty): Either[String, Vector[Term]]) { (acc, text) =>
-      acc.flatMap(done => reals.proposition(text).left.map(_.message).map(done :+ _))
+      acc.flatMap(done => reals.proposition(text).left.map(_.render(reals.show)).map(done :+ _))
     } match {
       case Left(why) => Verdict.Refused(s"a proposition this development can read: $why")
       case Right(premises) => of(premises)
@@ -102,7 +102,7 @@ final class Consistency private (val reals: Signature) {
    */
   def denialOf(claim: Term): Verdict =
     logic.mkNot(claim) match {
-      case Left(error) => Verdict.Refused(error.message)
+      case Left(error) => Verdict.Refused(error.render(reals.show))
       case Right(denied) => of(Vector(denied))
     }
 

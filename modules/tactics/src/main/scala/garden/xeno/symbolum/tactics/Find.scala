@@ -108,7 +108,7 @@ object Find {
   private def byShape(signature: Signature, held: Library, query: String): String =
     signature.proposition(query) match {
       case Left(refusal) =>
-        s"by shape: not a proposition of this theory, so nothing was asked\n  ${refusal.message}"
+        s"by shape: not a proposition of this theory, so nothing was asked\n  ${refusal.render(signature.show)}"
 
       case Right(_: FVar) =>
         "by shape: that reads as a bare variable, which matches every lemma there is, " +

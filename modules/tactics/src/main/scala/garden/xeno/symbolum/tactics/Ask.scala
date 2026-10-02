@@ -82,7 +82,7 @@ object Ask {
   def of(signature: Signature, cost: Cost, claim: String): String =
     signature.proposition(claim) match {
       case Left(refusal) =>
-        (Vector(s"unreadable: $claim", s"  ${refusal.message}") ++
+        (Vector(s"unreadable: $claim", s"  ${refusal.render(signature.show)}") ++
           Remedy.spelling(signature, claim, refusal).map(remedy => s"  ${remedy.message}"))
           .mkString("\n")
 
@@ -126,7 +126,7 @@ object Ask {
     (for {
       report <- cost.of(claim)
       rendered <- cost.render(report)
-    } yield rendered).fold(refusal => s"refused: ${refusal.message}", identity)
+    } yield rendered).fold(refusal => s"refused: ${refusal.render(cost.reals.show)}", identity)
 
   /** The pages for a list of claims, one after another. */
   def report(claims: Vector[String]): String = claims.map(of).mkString("\n")
