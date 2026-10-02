@@ -83,7 +83,8 @@ object Apply {
       opened <- Logic.stripForall(goal)
       (generalising, target) = opened
       antecedents = peel(logic, body, Vector.empty)
-      decided <- decide(logic, held, antecedents, target)
+      matched <- decide(logic, held, antecedents, target)
+      (decided, owed) = matched
       arguments <- held.foldLeft(Right(Vector.empty[Term]): Either[LogicError, Vector[Term]]) {
         (acc, variable) =>
           for {
@@ -101,7 +102,15 @@ object Apply {
       instance <- reduced(specialised)
     } yield Application(
       instance,
-      peel(logic, instance.conclusion, Vector.empty)._1,
+      // What was moved to the bill to make the rest match, and nothing past it. Until 2026-10-02
+      // this was every antecedent of the instance, so a lemma whose whole body matched owed its own
+      // premises and a lemma that IS the goal was refused by every caller that takes only what owes
+      // nothing: `COS_INJECTIVE` and `PI_HALF_LEAST_ZERO` asked of the prover verbatim came back
+      // unsettled, and were reached at all only when the search under the goal's hypotheses
+      // happened to rank them inside its budget. Counting from the lemma rather than from the
+      // instance also keeps a predicate variable instantiated at an implication, which reduces to
+      // one more arrow in the instance, from being read as one more obligation.
+      peel(logic, instance.conclusion, Vector.empty)._1.take(owed),
       decided,
       generalising
     )
@@ -150,19 +159,21 @@ object Apply {
    * What the lemma's variables have to be, reading as much of the body as still matches.
    *
    * Fewest obligations first, which is why the fold runs from the whole body down: `k` antecedents
-   * kept means `k` fewer things to prove.
+   * kept means `k` fewer things to prove. The count dropped comes back beside the instantiation,
+   * because it is the number of obligations and nothing else records it.
    */
   private def decide(
     logic: Logic,
     held: Vector[FVar],
     peeled: (Vector[Term], Term),
     goal: Term
-  ): Either[LogicError, Matching.Instantiation] = {
+  ): Either[LogicError, (Matching.Instantiation, Int)] = {
     val (antecedents, conclusion) = peeled
 
     val attempts = (0 to antecedents.size).view.flatMap { dropped =>
       rebuild(logic, antecedents.drop(dropped), conclusion)
         .flatMap(pattern => Matching.matchTerm(held.toSet, pattern, goal))
+        .map(_ -> dropped)
     }
 
     attempts.headOption.toRight(NotOfForm("a lemma whose conclusion is this goal", goal))

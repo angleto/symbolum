@@ -237,8 +237,55 @@ final class Chaining private (
           .filterNot { case (_, application) => application.obligations.exists(owed => path.contains(bodyOf(owed))) }
           .sortBy { case (_, application) => cost(application.obligations) }
 
-        first(applied, target, depth, path, leaf, under, budget)
+        closedByLeaf(applied, target, depth, path, leaf, under, budget) match {
+          case Some(found) => (Some(found), budget)
+          case None => first(applied, target, depth, path, leaf, under, budget)
+        }
     }
+
+  /**
+   * A candidate whose every obligation the leaf settles, looked for across all of them before any
+   * is expanded: one level of iterative deepening, at the levels where expanding means recursing.
+   *
+   * **Why the order in [[cost]] is not enough on its own.** It ranks by what a candidate owes and
+   * not by whether what it owes is already known, and the two part exactly where a goal's premise is
+   * an obligation. Measured on 2026-10-02 (card `39429606`): under the hypotheses of
+   * `!x. 0 < x ==> cos x = 0 ==> pi / 2 <= x`, the lemma that settles it is `PI_HALF_LEAST_ZERO`,
+   * owing the conjunction of the two premises, and it ranked sixth of seven, behind `LE_OF_LT`,
+   * `LE_OF_EQ`, `LE_OF_NOT_LT`, `DOUBLE_NEGATION` and `LE_FROM_ZERO`. Each of those owes the goal
+   * restated, so each is the same size as the target, sorts ahead of a candidate owing more, and
+   * spends its expansion on a subtree that cannot close: `LE_OF_EQ` owes `pi / 2 = x`, and every
+   * lemma concluding an equation is a candidate for that. Ten expansions ran out before the sixth.
+   * A bigger budget finds it, and so would a different order on this goal; neither says why.
+   *
+   * **What it costs, and why it is free where it would duplicate.** One leaf question per obligation
+   * of each candidate, stopping at the first the leaf refuses, and nothing is spent from the
+   * expansion budget because nothing recurses: that bound is on recursion, which is what its own
+   * comment says it counts. It runs only where `depth > 1`, because at depth one the expansions
+   * below are leaf questions already and this would ask each of them twice. Whatever this finds,
+   * the expansions below would also have found inside a large enough budget, so it can only add a
+   * theorem the bound was hiding, and the theorem goes through the same check in [[discharge]].
+   *
+   * The budget a probe returns is dropped: a leaf-only discharge reaching depth zero marks the
+   * depth bound as hit, and a pass that only looked must not decide what the search reports.
+   */
+  private def closedByLeaf(
+    candidates: Vector[(String, Apply.Application)],
+    target: Term,
+    depth: Int,
+    above: Set[Term],
+    leaf: Term => Option[Kernel.Thm],
+    under: Option[Context],
+    budget: Budget
+  ): Found =
+    if (depth <= 1) None
+    else
+      candidates.view
+        .filterNot { case (_, application) => application.obligations.exists(refuted(under)) }
+        .flatMap { case (name, application) =>
+          discharge(name, application, target, 1, above, leaf, under, budget)._1
+        }
+        .headOption
 
   /**
    * A goal without its leading universals, which is what "the same goal" means on the path.

@@ -209,6 +209,57 @@ class ProveSpec extends AnyFlatSpec with Matchers {
     info(s"proved in ${Derivation.size(theorem)} inferences")
   }
 
+  it should "settle a lemma with premises asked verbatim, by the scan and before any search" in {
+    // Card 39429606, 2026-10-02. Both came back `Unsettled` from `Ask`, typed exactly as
+    // `docs/lemmas.md` prints them: `Apply` read the instance's own premises as obligations, so the
+    // scan turned away the lemma that IS the goal, and the search under the goal's hypotheses found
+    // it only when it ranked inside the budget of ten. These two ranked sixth and fifth, behind
+    // `LE_OF_EQ` and `EXP_INJECTIVE`, and the equation among their premises was what they had in
+    // common rather than the cause.
+    //
+    // `directly` is the prover with neither search, so a pass here says which route took them. A
+    // search that later reaches them inside its budget would not make this pass, which is the point:
+    // a lemma that is the goal must not depend on where a search ranks it.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+
+    Vector(
+      garden.xeno.symbolum.theories.Circle.CosInjective ->
+        "!x:real. !y:real. 0 <= x /\\ x <= pi /\\ 0 <= y /\\ y <= pi /\\ cos x = cos y ==> x = y",
+      garden.xeno.symbolum.theories.Circle.PiHalfLeastZero ->
+        "!x:real. 0 < x /\\ cos x = 0 ==> pi / 2 <= x"
+    ).foreach { case (name, text) =>
+      withClue(s"$name: ") {
+        val goal = force(wider.reals.proposition(text))
+        // What keeps this from being about some other claim: the text is the lemma, term for term.
+        goal shouldBe chain.circle.facts(name).conclusion
+
+        val theorem = force(wider.directly(goal))
+        theorem.conclusion shouldBe goal
+        theorem.hypotheses shouldBe empty
+      }
+    }
+  }
+
+  it should "settle the same lemma curried, where the search has to find it under the premises" in {
+    // The third statement of card 39429606, and the one the scan cannot take: the lemma conjoins
+    // its premises and this goal curries them, so they are two terms. Under the goal's hypotheses
+    // `PI_HALF_LEAST_ZERO` owes the conjunction of the two facts, and it ranked sixth of the seven
+    // candidates, behind five that owe the goal restated and spent the ten expansions between them.
+    // What finds it is `Chaining.closedByLeaf`, which asks the leaf of every candidate before
+    // expanding any; with `Apply` repaired and that pass absent, `Ask` still answered `Unsettled`.
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val wider = force(Prove.construct(chain))
+    val goal = force(wider.reals.proposition("!x:real. 0 < x ==> cos x = 0 ==> pi / 2 <= x"))
+
+    // The control that makes the pass the subject: neither the scan nor a procedure settles it.
+    wider.directly(goal).isLeft shouldBe true
+
+    val theorem = force(wider(goal)).theorem
+    theorem.conclusion shouldBe goal
+    theorem.hypotheses shouldBe empty
+  }
+
   it should "address a propositional goal to the fragment that costs no axiom" in {
     // The other side of the line above, added the day it moved: `p ==> p` is not nobody's any more.
     val goal = force(reals.proposition("!p:bool. p ==> p"))

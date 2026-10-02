@@ -55,10 +55,11 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
     //
     // **The witness lost its hypothesis on 2026-09-18 and that is the interesting part.** It was
     // `!x. 0 < x ==> 0 < inv x`, which is `INV_POSITIVE` written out, and the surface refused it:
-    // a lemma that IS the goal owes its own antecedent, because `Apply` reads the specialised
-    // implication's antecedents as obligations. Since the goal's premises became facts
-    // (`docs/adr/0025`) that one is proved, so the goal here is the same claim with nothing
-    // assumed, which no premise can reach and which still has the denominator in it.
+    // `Apply` read the specialised implication's antecedents as obligations, so a lemma that IS the
+    // goal owed its own antecedent. The goal's premises becoming facts (`docs/adr/0025`) proved it
+    // that day, and since 2026-10-02 `Apply` owes only the antecedents it dropped, so the library
+    // scan takes it before any search does. The goal here is the same claim with nothing assumed,
+    // which no premise and no lemma reaches and which still has the denominator in it.
     refusalFor("!x:real. 0 < inv x") should include("inv x divides by x")
 
     // Asserted to the end of the sentence, because the end is the half worth having. Naming the

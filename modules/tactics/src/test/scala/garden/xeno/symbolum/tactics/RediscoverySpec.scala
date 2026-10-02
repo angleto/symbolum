@@ -540,22 +540,25 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
-  it should "prove every one, with the price separating them" in {
+  it should "prove every one, at the price of citing the lemma it reaches" in {
     // Every one comes back `Proved`, which is the least surprising fact here: they are lemmas this
     // library holds, so a failure would be a finding about the tactic surface and not about the
     // generator. It is asserted because that is exactly why it is worth knowing.
     //
-    // **The interesting half is the price.** The ones the ring normalisation settles at once come
-    // back `Immediate`, at 77 and 108 inferences; the rest are order facts the ring does not
-    // decide, come back `Known`, and cost between 3706 and 7351. Forty to seventy times more for a
-    // claim of the same standing, and the novelty scale calls every one of them not-news
-    // either way, which is correct and is the scale doing its job on its own hardest case: a
-    // rediscovery is precisely a claim that looks new and is not.
-    // **The two that arrived on 2026-09-18 are both `Known` and neither is `Immediate`**, which is
-    // the split staying where it was rather than moving: four is still the number the ring
-    // normalisation settles outright, and the order pair the generator now travels costs what every
-    // other order fact here costs. A reader who expected the four to move was expecting a new
-    // lemma to be an identity, and `LE_MUL_BOTH` is not one.
+    // **The price used to separate the two standings, and that separation was a defect.** The ones
+    // the ring normalisation settles at once come back `Immediate`; the rest are order facts with
+    // premises, come back `Known`, and until 2026-10-02 cost between 1152 and 5296 inferences
+    // against 77 and 108, which this test asserted as the interesting half. They cost that because
+    // nothing cited them: `Apply` read a lemma's own premises as obligations, so the library scan
+    // turned away the lemma the claim restates and LINARITH derived the fact again from the order's
+    // axioms. Card `39429606` repaired `Apply`, and the fourteen now cost between 81 and 114, the
+    // price of specialising the lemma the generator reached. The novelty scale calls every one
+    // not-news either way, which was always the scale's job and never the price's.
+    //
+    // So what is asserted is the route rather than a range: each claim costs exactly what the scan
+    // pays to specialise the lemma it reached, measured by building that specialisation here. A
+    // regression that sent these back to a decision procedure would show as a price that is not
+    // that one, whatever its size.
     readings.size shouldBe 18
     readings.map(_.report.outcome).distinct shouldBe Vector(Cost.Outcome.Proved)
 
@@ -563,8 +566,28 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     readings.count(_.standing == Novelty.Standing.Known) shouldBe 14
     readings.count(_.standing == Novelty.Standing.Earned) shouldBe 0
 
-    val immediate = readings.filter(_.standing == Novelty.Standing.Immediate).map(_.inferences)
-    val known = readings.filter(_.standing == Novelty.Standing.Known).map(_.inferences)
-    immediate.max should be < known.min
+    val chain = garden.xeno.symbolum.theories.Chain.standard
+    val library = garden.xeno.symbolum.theories.Library.of(chain)
+    val logic = chain.widest.logic.over(chain.widest.theory)
+      .fold(error => fail(s"the logic does not widen: $error"), identity)
+
+    val known = recoveries.flatMap(recovery =>
+      propose.novelty.of(recovery.proposal.claim).toOption
+        .filter(_.standing == Novelty.Standing.Known)
+        .map(recovery -> _)
+    )
+    known should have size 14
+
+    known.foreach { case (recovery, reading) =>
+      withClue(s"${recovery.reached}: ") {
+        val lemma = library.entries.find(_.name == recovery.reached)
+          .getOrElse(fail("the lemma the generator reached is not in the library"))
+        val cited = garden.xeno.symbolum.logic.Apply.to(logic, lemma.theorem, recovery.proposal.claim)
+          .flatMap(applied => logic.rules.genAll(applied.theorem, applied.generalising.toList))
+          .fold(error => fail(s"the lemma does not apply to the claim: $error"), identity)
+
+        reading.inferences shouldBe garden.xeno.symbolum.kernel.Derivation.size(cited)
+      }
+    }
   }
 }
