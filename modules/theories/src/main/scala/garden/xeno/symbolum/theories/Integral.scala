@@ -172,7 +172,7 @@ object Integral {
   /**
    * A relative derivative on `[a, b]` is a two-sided one at the tangent extension: `f` extended past
    * each end by its tangent line there has derivative `df x` at every point of `[a, b]`.
-   * `IntegralRulesWithin` derives it and the four forms below from it.
+   * `IntegralRulesWithin` derives it and the relative rules below from it.
    */
   val TangentSlope: String = "DERIVATIVE_WITHIN_TANGENT"
 
@@ -187,6 +187,18 @@ object Integral {
 
   /** [[Substitution]] with the inner derivative relative to `[a, b]`. */
   val SubstitutionWithin: String = "INTEGRAL_SUBST_WITHIN"
+
+  /**
+   * The change of variables as a textbook states it: `g` maps `[a, b]` into `[c, d]`, and `F` is
+   * asked its slope only on `[c, d]` and relative to it, so nothing outside that interval is asked of
+   * `F`. `c <= d` is not a hypothesis, since `g a` lies between them. [[HasSubstitutionWithin]] stays
+   * beside it for an `F` with a slope everywhere, because this one costs its caller an interval
+   * holding the image of `g`.
+   */
+  val HasSubstitutionImage: String = "HAS_INTEGRAL_SUBST_IMAGE"
+
+  /** [[HasSubstitutionImage]] for `integral`. */
+  val SubstitutionImage: String = "INTEGRAL_SUBST_IMAGE"
 
   /** `integral f a b` is the integral wherever there is one. */
   val Unique: String = "INTEGRAL_UNIQUE"
@@ -296,6 +308,18 @@ object Integral {
     SubstitutionWithin ->
       ("!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. a <= b ==> " +
         "(!y:real. derivative F y (f y)) ==> (!x:real. a <= x /\\ x <= b ==> derivative_within g a b x (dg x)) ==> " +
+        "integral (\\x:real. f (g x) * dg x) a b = F (g b) - F (g a)"),
+    HasSubstitutionImage ->
+      ("!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. !c:real. !d:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> c <= g x /\\ g x <= d) ==> " +
+        "(!y:real. c <= y /\\ y <= d ==> derivative_within F c d y (f y)) ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within g a b x (dg x)) ==> " +
+        "has_integral (\\x:real. f (g x) * dg x) a b (F (g b) - F (g a))"),
+    SubstitutionImage ->
+      ("!F:real -> real. !f:real -> real. !g:real -> real. !dg:real -> real. !a:real. !b:real. !c:real. !d:real. a <= b ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> c <= g x /\\ g x <= d) ==> " +
+        "(!y:real. c <= y /\\ y <= d ==> derivative_within F c d y (f y)) ==> " +
+        "(!x:real. a <= x /\\ x <= b ==> derivative_within g a b x (dg x)) ==> " +
         "integral (\\x:real. f (g x) * dg x) a b = F (g b) - F (g a)"),
     SumCongruence ->
       ("!f:real -> real. !g:real -> real. !d:real -> real. !a:real. !b:real. !s:real. " +
@@ -426,7 +450,10 @@ object Integral {
       productRule <- derivative.fact(Derivative.ProductRule)
       chainRule <- derivative.fact(Derivative.ChainRule)
       hasParts <- byParts(steps, productRule, hasFundamental, hasLinear)
-      hasSubstitution <- bySubstitution(steps, chainRule, hasFundamental)
+      hasSubstitution <- bySubstitution(steps, chainRule, hasFundamental, SubstitutionHypotheses,
+        (slopeF, _, gx, _) => steps.rules.spec(gx, slopeF))
+      hasSubstitutionAtImage <- bySubstitution(steps, chainRule, hasFundamental, SubstitutionAtImageHypotheses,
+        (slopeF, x, _, member) => steps.rules.spec(x, slopeF).flatMap(steps.rules.mp(_, member)))
       parts <- namedByUniqueness(steps, unique, hasParts, PartsHypotheses,
         List("f", "g", "df", "dg").map(Term.variable(_, Functions)) ++ List("a", "b", "i").map(Term.variable(_, Reals)),
         "\\x:real. (df:real -> real) x * (g:real -> real) x", "(f:real -> real) b * (g:real -> real) b - f a * g a - i:real")
@@ -448,7 +475,7 @@ object Integral {
       hasCongruence <- relative.get(HasCongruence).toRight(MissingDefinition(HasCongruence))
       relativeRules <- IntegralRulesWithin.prove(steps, IntegralRulesWithin.Held(reals, magnitude, classical, derivativeDefinition,
         withinDefinition, constantSlope, identitySlope, linearSlope, localSlope, withinInterior, ofDerivative,
-        withinCongruence, hasCongruence, hasParts, hasSubstitution))
+        withinCongruence, hasCongruence, hasParts, hasSubstitution, hasSubstitutionAtImage))
       hasPartsWithin <- relativeRules.get(HasPartsWithin).toRight(MissingDefinition(HasPartsWithin))
       hasSubstitutionWithin <- relativeRules.get(HasSubstitutionWithin).toRight(MissingDefinition(HasSubstitutionWithin))
       partsWithin <- namedByUniqueness(steps, unique, hasPartsWithin, PartsWithinHypotheses,
@@ -456,6 +483,10 @@ object Integral {
         "\\x:real. (df:real -> real) x * (g:real -> real) x", "(f:real -> real) b * (g:real -> real) b - f a * g a - i:real")
       substitutionWithin <- namedByUniqueness(steps, unique, hasSubstitutionWithin, SubstitutionWithinHypotheses,
         List("Fn", "f", "g", "dg").map(Term.variable(_, Functions)) ++ List("a", "b").map(Term.variable(_, Reals)),
+        "\\x:real. (f:real -> real) ((g:real -> real) x) * (dg:real -> real) x", "(Fn:real -> real) ((g:real -> real) b) - Fn (g a)")
+      hasSubstitutionImage <- relativeRules.get(HasSubstitutionImage).toRight(MissingDefinition(HasSubstitutionImage))
+      substitutionImage <- namedByUniqueness(steps, unique, hasSubstitutionImage, SubstitutionImageHypotheses,
+        List("Fn", "f", "g", "dg").map(Term.variable(_, Functions)) ++ List("a", "b", "c", "d").map(Term.variable(_, Reals)),
         "\\x:real. (f:real -> real) ((g:real -> real) x) * (dg:real -> real) x", "(Fn:real -> real) ((g:real -> real) b) - Fn (g a)")
 
       facts = Map[String, Kernel.Thm](
@@ -482,7 +513,8 @@ object Integral {
         Parts -> parts,
         HasSubstitution -> hasSubstitution,
         Substitution -> substitution
-      ) ++ relative ++ relativeRules + (PartsWithin -> partsWithin) + (SubstitutionWithin -> substitutionWithin)
+      ) ++ relative ++ relativeRules + (PartsWithin -> partsWithin) + (SubstitutionWithin -> substitutionWithin) +
+        (SubstitutionImage -> substitutionImage)
 
       // Each statement checked against the text a person reads it by: a development that built
       // something other than what it says it built must not be handed out.
@@ -1706,6 +1738,16 @@ object Integral {
     "a:real <= b:real",
     "!y:real. derivative (Fn:real -> real) y ((f:real -> real) y)",
     "!x:real. a:real <= x /\\ x <= b:real ==> derivative_within (g:real -> real) a b x ((dg:real -> real) x)")
+  private val SubstitutionImageHypotheses: List[String] = List(
+    "a:real <= b:real",
+    "!x:real. a:real <= x /\\ x <= b:real ==> c:real <= (g:real -> real) x /\\ g x <= d:real",
+    "!y:real. c:real <= y /\\ y <= d:real ==> derivative_within (Fn:real -> real) c d y ((f:real -> real) y)",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative_within (g:real -> real) a b x ((dg:real -> real) x)")
+  /** [[HasSubstitution]]'s hypotheses with `F`'s slope asked only at `g x`, for `x` in `[a, b]`. */
+  private val SubstitutionAtImageHypotheses: List[String] = List(
+    "a:real <= b:real",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative (Fn:real -> real) ((g:real -> real) x) ((f:real -> real) ((g:real -> real) x))",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative (g:real -> real) x ((dg:real -> real) x)")
   private val SubstitutionHypotheses: List[String] = List(
     "a:real <= b:real",
     "!y:real. derivative (Fn:real -> real) y ((f:real -> real) y)",
@@ -1769,9 +1811,21 @@ object Integral {
 
   /**
    * [[HasSubstitution]]. The chain rule gives `\y. F (g y)` the slope `f (g x) * dg x` wherever `g` has
-   * one, since `F` has one at `g x` whatever `g x` is, and [[HasFundamental]] integrates it.
+   * one, since `F` has one at `g x`, and [[HasFundamental]] integrates it.
+   *
+   * `hypotheses` say what `F` is asked, second of three, and `slopeAt` reads `derivative F (g x)
+   * (f (g x))` off that hypothesis at `x`, given the term `g x` and `a <= x /\ x <= b`. Asked
+   * everywhere, this is [[HasSubstitution]]; asked only at `g x` for `x` in `[a, b]`, it is the form
+   * `IntegralRulesWithin` carries to [[HasSubstitutionImage]], whose `F` is a tangent extension and has
+   * the slope `f` only on the interval it extends.
    */
-  private def bySubstitution(steps: Continuity.Steps, chainRule: Kernel.Thm, hasFundamental: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+  private def bySubstitution(
+    steps: Continuity.Steps,
+    chainRule: Kernel.Thm,
+    hasFundamental: Kernel.Thm,
+    hypotheses: List[String],
+    slopeAt: (Kernel.Thm, FVar, Term, Kernel.Thm) => Either[LogicError, Kernel.Thm]
+  ): Either[LogicError, Kernel.Thm] = {
     import steps.*
     val bigF = Term.variable("Fn", Functions)
     val f = Term.variable("f", Functions)
@@ -1779,10 +1833,10 @@ object Integral {
     val dg = Term.variable("dg", Functions)
     val List(a, b, x) = List("a", "b", "x").map(Term.variable(_, Reals)): @unchecked
     for {
-      hypotheses <- SubstitutionHypotheses.foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) { (acc, text) =>
+      taken <- hypotheses.foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) { (acc, text) =>
         for { done <- acc; one <- assume(text) } yield done :+ one
       }
-      List(ordered, slopeF, slopeG) = hypotheses: @unchecked
+      List(ordered, slopeF, slopeG) = taken: @unchecked
       composed <- Parser.term(theory, notation, "\\y:real. (Fn:real -> real) ((g:real -> real) y)", Functions)
       integrand <- Parser.term(theory, notation, "\\x:real. (f:real -> real) ((g:real -> real) x) * (dg:real -> real) x", Functions)
       slopes <- for {
@@ -1790,7 +1844,7 @@ object Integral {
         assumed <- LogicError.lift(Kernel.assume(member))
         inner <- rules.spec(x, slopeG).flatMap(rules.mp(_, assumed))
         gx <- real("(g:real -> real) x:real")
-        outer <- rules.spec(gx, slopeF)
+        outer <- slopeAt(slopeF, x, gx, assumed)
         m <- real("(f:real -> real) ((g:real -> real) x:real)")
         n <- real("(dg:real -> real) x:real")
         joined <- rules.specAll(chainRule, List(bigF, g, x, m, n)).flatMap(mp(_, Right(inner), Right(outer)))
@@ -1798,7 +1852,7 @@ object Integral {
       } yield result
       whole <- rules.specAll(hasFundamental, List(composed, integrand, a, b)).flatMap(reduced)
         .flatMap(mp(_, Right(ordered), Right(slopes)))
-      closed <- dischargedAll(steps, whole, SubstitutionHypotheses).flatMap(rules.genAll(_, List(bigF, f, g, dg, a, b)))
+      closed <- dischargedAll(steps, whole, hypotheses).flatMap(rules.genAll(_, List(bigF, f, g, dg, a, b)))
     } yield closed
   }
 

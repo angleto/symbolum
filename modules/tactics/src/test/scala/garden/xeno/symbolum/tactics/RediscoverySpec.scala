@@ -385,7 +385,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 861 with `Circle`, 2026-09-28: one antecedent on each of ten facts (`ACOS_SPEC`, `COS_DECREASING`,
     // `COS_INJECTIVE`, `SIN_POSITIVE` and the six polynomial bounds), counted from `docs/lemmas.md`
     // before the run and equal to it. Plus ten over the base above.
-    propose.weakenings.size shouldBe 861
+    // 869 with `HAS_INTEGRAL_SUBST_IMAGE` and `INTEGRAL_SUBST_IMAGE`, 2026-10-02, four antecedents
+    // each, measured by the run. Plus eight over the base above.
+    propose.weakenings.size shouldBe 869
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
