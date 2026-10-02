@@ -794,8 +794,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // a family, two reals and a natural, and the two reals share a type. Plus two over the base above.
     // 953 and 950 with both, merged on 2026-09-28 as base 930 and 927 plus `Circle`'s twenty-one and
     // the Taylor pair's two; `CLAUDE.md`'s figures likewise, 953, 632 and 565.
-    library.entries.size shouldBe 953
-    library.names.distinct.size shouldBe 950
+    // 955 and 952 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02, card `4bcfc8b9`: two facts
+    // in `Circle` under two names, read off the run over the branch. `CLAUDE.md`'s first figure moves
+    // by two and the other two do not: each binds one real. Plus two over the base above.
+    library.entries.size shouldBe 955
+    library.names.distinct.size shouldBe 952
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

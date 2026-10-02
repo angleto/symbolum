@@ -68,8 +68,10 @@ they have least appetite for working out how it is produced.
   COS_PERIODIC             !x:real. cos (x + 2 * pi) = cos x
   COS_PI                   cos pi = 0 - 1
   COS_PI_HALF              cos (pi / 2) = 0
+  COS_POSITIVE             !x:real. 0 <= x /\ x < pi / 2 ==> 0 < cos x
   COS_SHIFT                !x:real. cos (x + pi / 2) = 0 - sin x
   PI_BOUNDS                3 < pi /\ pi < 16 / 5
+  PI_HALF_LEAST_ZERO       !x:real. 0 < x /\ cos x = 0 ==> pi / 2 <= x
   SIN_ADD_PI               !x:real. sin (x + pi) = 0 - sin x
   SIN_GE_CUBIC             !x:real. 0 <= x ==> x - x * x * x / 6 <= sin x
   SIN_LE_LINE              !x:real. 0 <= x ==> sin x <= x

@@ -385,7 +385,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 861 with `Circle`, 2026-09-28: one antecedent on each of ten facts (`ACOS_SPEC`, `COS_DECREASING`,
     // `COS_INJECTIVE`, `SIN_POSITIVE` and the six polynomial bounds), counted from `docs/lemmas.md`
     // before the run and equal to it. Plus ten over the base above.
-    propose.weakenings.size shouldBe 861
+    // 863 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02: one antecedent each, read off the
+    // run over the branch. Plus two over the base above.
+    propose.weakenings.size shouldBe 863
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -530,7 +532,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 135 with `Circle`, 2026-09-28, read off the run over the branch that brought it, and the same
     // figure its first run on 2026-09-27 read: seventeen of its facts write an operator with no
     // lambda in the body. Plus seventeen over the base above.
-    propose.mutable.size shouldBe 135
+    // 137 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02, read off the run over the branch:
+    // both write an order with no lambda in the body. Plus two over the base above.
+    propose.mutable.size shouldBe 137
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

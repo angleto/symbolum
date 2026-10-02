@@ -43,7 +43,9 @@ import garden.xeno.symbolum.logic.*
  * The quarter turn from `COS_ADD` and `SIN_ADD` at `pi / 2`, the half turn as two quarters, the
  * whole turn as two halves, and the values at `pi`. `sin` is positive on `(0, pi)`, below `pi / 2`
  * by the cubic bound and above it through the quarter turn, so `cos` falls strictly on `[0, pi]`
- * and is one-to-one there. [[Circle.AcosSpec]] is the intermediate value theorem on `[0, pi]` read
+ * and is one-to-one there. Falling to zero at `pi / 2`, `cos` is positive before it, and
+ * [[Circle.PiHalfLeastZero]] says no positive zero comes earlier: the textbook's `pi`, twice the
+ * least positive zero, is a theorem about the one chosen here. [[Circle.AcosSpec]] is the intermediate value theorem on `[0, pi]` read
  * through the choice; it is what a polar form wants, which is the next development.
  */
 final class Circle private (
@@ -103,6 +105,15 @@ object Circle {
   val CosDecreasing: String = "COS_DECREASING"
   val CosInjective: String = "COS_INJECTIVE"
 
+  /** `cos` is positive below `pi / 2`, which is half of what makes `pi / 2` its first zero. */
+  val CosPositive: String = "COS_POSITIVE"
+
+  /**
+   * No positive zero of `cos` comes before `pi / 2`. With `COS_PI_HALF` this is the textbook's
+   * definition of `pi`, the double of the least positive zero, proved of the one chosen here.
+   */
+  val PiHalfLeastZero: String = "PI_HALF_LEAST_ZERO"
+
   /** `-1 <= y <= 1` gives `acos y` in `[0, pi]` with `cos (acos y) = y`. */
   val AcosSpec: String = "ACOS_SPEC"
 
@@ -129,6 +140,8 @@ object Circle {
     SinPositive -> "!x:real. 0 < x /\\ x < pi ==> 0 < sin x",
     CosDecreasing -> "!x:real. !y:real. 0 <= x /\\ x < y /\\ y <= pi ==> cos y < cos x",
     CosInjective -> "!x:real. !y:real. 0 <= x /\\ x <= pi /\\ 0 <= y /\\ y <= pi /\\ cos x = cos y ==> x = y",
+    CosPositive -> "!x:real. 0 <= x /\\ x < pi / 2 ==> 0 < cos x",
+    PiHalfLeastZero -> "!x:real. 0 < x /\\ cos x = 0 ==> pi / 2 <= x",
     AcosSpec -> "!x:real. 0 - 1 <= x /\\ x <= 1 ==> 0 <= acos x /\\ acos x <= pi /\\ cos (acos x) = x"
   )
 
@@ -642,6 +655,38 @@ object Circle {
           out <- rules.disch(hT, result).flatMap(rules.genAll(_, List(a, b)))
         } yield out
 
+        // cos is positive on [0, pi / 2): it falls strictly to its value at pi / 2, which is zero
+        cosPositive <- for {
+          hT <- proposition("(0:real) <= x /\\ x < pi / 2")
+          h <- assume(hT)
+          instance <- rules.specAll(cosDecreasing, List(x, half))
+          wanted <- premise(instance)
+          held <- conclude(Seq(h, piBounds), wanted)
+          compared <- rules.mp(instance, held)
+          result <- concludeText(Seq(compared, cosHalf), "(0:real) < cos x")
+          out <- rules.disch(hT, result).flatMap(rules.gen(x, _))
+        } yield out
+
+        // so a positive zero is not below pi / 2: the case below contradicts cosPositive
+        piHalfLeast <- for {
+          hT <- proposition("(0:real) < x /\\ cos x = 0")
+          h <- assume(hT)
+          belowT <- proposition("(x:real) < pi / 2")
+          below <- for {
+            b <- assume(belowT)
+            inRange <- concludeText(Seq(h, b), "(0:real) <= x /\\ x < pi / 2")
+            positive <- rules.spec(x, cosPositive).flatMap(rules.mp(_, inRange))
+            out <- concludeText(Seq(h, positive), "pi / 2 <= x")
+          } yield out
+          notBelow <- logic.mkNot(belowT)
+          above <- for {
+            negated <- assume(notBelow)
+            out <- fact("LE_OF_NOT_LT").flatMap(rules.specAll(_, List(x, half))).flatMap(rules.mp(_, negated))
+          } yield out
+          cased <- classical.cases(belowT, below, above)
+          out <- rules.disch(hT, cased).flatMap(rules.gen(x, _))
+        } yield out
+
         // acos, by the intermediate value theorem on [0, pi] and the definition's choice
         acosSpec <- for {
           rangeT <- proposition("(0:real) - 1 <= x /\\ x <= 1")
@@ -670,6 +715,7 @@ object Circle {
         CosShift -> cosShift, SinShift -> sinShift, CosAddPi -> cosAddPi, SinAddPi -> sinAddPi,
         CosPeriodic -> cosPeriodic, SinPeriodic -> sinPeriodic, CosPi -> cosPi, SinPi -> sinPi,
         SinPositive -> sinPositive, CosDecreasing -> cosDecreasing, CosInjective -> cosInjective,
+        CosPositive -> cosPositive, PiHalfLeastZero -> piHalfLeast,
         AcosSpec -> acosSpec
       )
   }
