@@ -112,4 +112,18 @@ class ReadbackSpec extends AnyFlatSpec with Matchers {
       case Right(text) => fail(s"expected a refusal, got $text")
     }
   }
+
+  "The report of a refused goal" should "write the refusal's terms in the reals' notation" in {
+    // Card 7405215c. The line under the formalisation interpolated the refusal's `message`, which
+    // is the one place `report` exists to keep the reader's notation. Seen red at 7.0 2b8f266e:
+    // `not proved: expected a linear relation, found (! (\x:real. ((real_le real_one) ...`.
+    val goal = force(reals.proposition("!x:real. x * x >= 1"))
+    val page = force(
+      Readback.report(reals, "a square is at least one", goal, Left(FromLogic(NotOfForm("a linear relation", goal))))
+    )
+    info(page)
+    val verdict = page.linesIterator.filter(_.startsWith("not proved:")).mkString("\n")
+    KernelSpelling.in(verdict) shouldBe empty
+    verdict should include("1 <= x * x")
+  }
 }

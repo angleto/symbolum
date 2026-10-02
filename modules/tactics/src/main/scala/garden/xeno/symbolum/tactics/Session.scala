@@ -587,7 +587,7 @@ object Session {
             case Left(failure) if named.nonEmpty =>
               (
                 Outcome.Refused(
-                  s"${failure.message}; this claim names ${named.toVector.sorted.mkString(", ")}, which this " +
+                  s"${failure.render(state.show)}; this claim names ${named.toVector.sorted.mkString(", ")}, which this " +
                     "session introduced, and no tactic here searches over a constant the chain never saw",
                   Some("derive it by hand from what you assumed, or state it over the chain's own constants")
                 ),
@@ -662,7 +662,7 @@ object Session {
       }
 
       def term(text: String, expected: Option[Type]): Either[String, Term] =
-        expected.fold(state.term(text))(state.term(text, _)).left.map(_.message)
+        expected.fold(state.term(text))(state.term(text, _)).left.map(_.render(state.show))
 
       def terms(text: String, expected: Vector[Type]): Either[String, List[Term]] =
         text.split(",").toVector.map(_.trim).filter(_.nonEmpty) match {

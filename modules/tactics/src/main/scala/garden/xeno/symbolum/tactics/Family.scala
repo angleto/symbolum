@@ -79,7 +79,7 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
    */
   def of(text: String): Outcome =
     signature.term(text, Type.fun(natural, real)) match {
-      case Left(error) => Outcome.Unreadable(error.message)
+      case Left(error) => Outcome.Unreadable(error.render(signature.show))
       case Right(summand) => of(summand)
     }
 
@@ -107,7 +107,7 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
                 chain.induct.prove(claim, held) match {
                   case Right(theorem) =>
                     Outcome.Found(claim, theorem, coefficients.length - 1, values)
-                  case Left(refusal) => Outcome.NotCertified(claim, refusal.message)
+                  case Left(refusal) => Outcome.NotCertified(claim, refusal.render(signature.show))
                 }
             }
         }
@@ -129,7 +129,7 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
           done <- acc
           length <- numeralOfNaturals(k)
           applied <- sumOf(summand, length)
-          equation <- Rewrite.rewrite(rules, applied).left.map(_.message)
+          equation <- Rewrite.rewrite(rules, applied).left.map(_.render(signature.show))
           reduced <- Term.destEq(equation.conclusion).map(_._2).toRight("the rewriting lost its shape")
           value <- valueOf(reduced).toRight(whyNotANumber(applied, reduced))
         } yield done :+ value
@@ -158,19 +158,19 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
           s"finishing, so ${signature.show(reduced)} is not what this family reduces to"
       case Left(error) =>
         s"${signature.show(applied)} did not reduce to a number, and whether the rewriting " +
-          s"finished could not be asked: ${error.message}"
+          s"finished could not be asked: ${error.render(signature.show)}"
     }
 
   /** `SUC (SUC ... ZERO)`, which is the only way to write a particular natural here. */
   private def numeralOfNaturals(value: Int): Either[String, Term] =
     for {
-      zero <- signature.theory.constant(Natural.NumberZero, natural).left.map(_.message)
+      zero <- signature.theory.constant(Natural.NumberZero, natural).left.map(_.render(signature.show))
       successor <- signature.theory
         .constant(Natural.NumberSuccessor, Type.fun(natural, natural))
         .left
-        .map(_.message)
+        .map(_.render(signature.show))
       built <- (1 to value).foldLeft(Right(zero): Either[String, Term]) { (acc, _) =>
-        acc.flatMap(inner => Term.app(successor, inner).left.map(_.message))
+        acc.flatMap(inner => Term.app(successor, inner).left.map(_.render(signature.show)))
       }
     } yield built
 
@@ -179,8 +179,8 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
       sum <- signature.theory
         .constant(Series.SumName, Type.fun(Type.fun(natural, real), Type.fun(natural, real)))
         .left
-        .map(_.message)
-      applied <- Term.appAll(sum, List(summand, length)).left.map(_.message)
+        .map(_.render(signature.show))
+      applied <- Term.appAll(sum, List(summand, length)).left.map(_.render(signature.show))
     } yield applied
 
   /**
@@ -241,12 +241,12 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
       embedding <- signature.theory
         .constant(Peano.EmbeddingName, Type.fun(natural, real))
         .left
-        .map(_.message)
-      embedded <- Term.app(embedding, index).left.map(_.message)
+        .map(_.render(signature.show))
+      embedded <- Term.app(embedding, index).left.map(_.render(signature.show))
       polynomial <- polynomialOf(embedded, coefficients)
       left <- sumOf(summand, index)
-      equation <- Term.eq(left, polynomial).left.map(_.message)
-      closed <- logic.mkForall(index, equation).left.map(_.message)
+      equation <- Term.eq(left, polynomial).left.map(_.render(signature.show))
+      closed <- logic.mkForall(index, equation).left.map(_.render(signature.show))
     } yield closed
   }
 
@@ -298,15 +298,15 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
 
   private def numeralOfReals(value: Rational): Either[String, Term] =
     if (value.denominator != 1) Left(s"$value is not a numeral of this theory")
-    else if (value.numerator >= 0) Numeral.of(signature, value.numerator).left.map(_.message)
+    else if (value.numerator >= 0) Numeral.of(signature, value.numerator).left.map(_.render(signature.show))
     else
       for {
-        positive <- Numeral.of(signature, -value.numerator).left.map(_.message)
+        positive <- Numeral.of(signature, -value.numerator).left.map(_.render(signature.show))
         negation <- signature.theory
           .constant(Real.Negation, Type.fun(real, real))
           .left
-          .map(_.message)
-        applied <- Term.app(negation, positive).left.map(_.message)
+          .map(_.render(signature.show))
+        applied <- Term.app(negation, positive).left.map(_.render(signature.show))
       } yield applied
 
   private def binary(name: String, left: Term, right: Term): Either[String, Term] =
@@ -314,8 +314,8 @@ final class Family private (val chain: Chain, val rules: Vector[Rewrite.Rule]) {
       operator <- signature.theory
         .constant(name, Type.fun(real, Type.fun(real, real)))
         .left
-        .map(_.message)
-      applied <- Term.appAll(operator, List(left, right)).left.map(_.message)
+        .map(_.render(signature.show))
+      applied <- Term.appAll(operator, List(left, right)).left.map(_.render(signature.show))
     } yield applied
 
   private def factorial(n: Int): BigInt = (1 to n).foldLeft(BigInt(1))(_ * _)

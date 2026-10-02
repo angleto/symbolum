@@ -107,7 +107,7 @@ object Readback {
         // a message that prints the binary encoding of the numerals is the defect `NotEqualTo`
         // exists to prevent.
         case Left(error) =>
-          Right(s"not proved: ${error.message}\nnext: ${Remedy.of(reals, error).message}")
+          Right(s"not proved: ${error.render(reals.show)}\nnext: ${Remedy.of(reals, error).message}")
       }
     } yield s"source: $source\nformalised: $formalised\n$verdict"
 

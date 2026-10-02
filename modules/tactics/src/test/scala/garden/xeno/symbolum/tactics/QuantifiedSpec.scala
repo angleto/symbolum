@@ -141,4 +141,18 @@ class QuantifiedSpec extends AnyFlatSpec with Matchers {
     source should include("Fourier-Motzkin")
     decide("!x:real. x < x + 1") shouldBe Quantified.Holds
   }
+
+  "A refusal about an atom that is not a relation" should "write the atom in the reals' notation" in {
+    // Card 7405215c. An equation between propositions is not a relation between two reals, and
+    // the refusal naming it was flattened with `message`. Seen red at 7.0 2b8f266e: `found
+    // (((real_lt q) real_one) = ((real_lt ((real_mul q) q)) (BIT0 real_one)))`. The bound name is
+    // `q` rather than `x` because the elimination opens the quantifier with a fresh variable.
+    quantified.decide("!x:real. (x < 1) = (x * x < 2)") match {
+      case Right(Quantified.Refused(why)) =>
+        info(why)
+        KernelSpelling.in(why) shouldBe empty
+        why should include("q * q < 2")
+      case other => fail(s"an equation between propositions was answered: $other")
+    }
+  }
 }

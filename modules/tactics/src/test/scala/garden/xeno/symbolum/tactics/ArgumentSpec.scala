@@ -328,4 +328,17 @@ class ArgumentSpec extends AnyFlatSpec with Matchers {
       startWith("2 claims, 2 proved, 0 decided, 0 open; 0 axioms of the domain")
     line(2, 0, 0, 3) should include("0 idle citations and 3 stale citations")
   }
+
+  "A line with no linear certificate" should "say why in the reals' notation" in {
+    // Card 7405215c. The line interpolated the refusal's `message`, so a page that writes every
+    // other term through the register's reals said `found (((real_mul ((real_add x) real_one))
+    // ...` here, seen red at 7.0 2b8f266e with `BIT0` for the 2.
+    val ringed = forced(argument.read(Vector("!x:real. (x + 1) * (x + 1) = x * x + 2 * x + 1")))
+    val page = forced(argument.render(ringed))
+    info(page)
+    val why = page.linesIterator.filter(_.contains("no certificate:")).mkString("\n")
+    why should not be empty
+    KernelSpelling.in(why) shouldBe empty
+    why should include("(x + 1) * (x + 1)")
+  }
 }
