@@ -502,10 +502,13 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
    * reals, `COMPLETENESS` among them.
    *
    * **That it is not about nothing.** A negation under a hypothesis nothing satisfies would pass
-   * everything above, so the sentence is detached at one over one with nothing assumed. What this
-   * file does **not** assert is that `0 < q` is needed: at `q = 0` the ratio is `p * inv 0`, and no
-   * fact about `inv 0` is published for the reals, so the unconditional sentence is neither proved
-   * nor refuted here and a test claiming either would be claiming more than the library knows.
+   * everything above, so the sentence is detached at one over one with nothing assumed.
+   *
+   * **That `0 < q` is idle.** At `q = 0` the ratio is `p * inv 0`, and the constructed reals prove
+   * `inv 0 = 0` from their definitions, though nothing publishes it under a name of the reals; so
+   * the sentence there says `exp 1` is not `0`, which `EXP_ONE_ABOVE_TWO` settles. The last test
+   * derives that case with nothing assumed. The hypothesis is kept for the form
+   * `SQRT_TWO_IRRATIONAL` has, and a test making it necessary is impossible rather than missing.
    */
   "The irrationality of exp 1" should "rest on the series, its geometric tail and a factorial's divisors" in {
     val theorem = force(transcendental.fact(Transcendental.ExponentialOneIrrational))
@@ -560,5 +563,35 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
     detached.hypotheses shouldBe empty
     transcendental.show(detached.conclusion) shouldBe
       "~(exp 1 = real_of_num (SUC 0) / real_of_num (SUC 0))"
+  }
+
+  /**
+   * `!p. ~(exp 1 = real_of_num p / real_of_num 0)`, with nothing assumed: the case the hypothesis
+   * `0 < q` leaves out, which holds anyway. The division is unfolded to `p * inv 0`, `inv 0` is `0`
+   * by `InverseAtZero`, and `exp 1 = p * 0` contradicts `2 < exp 1`.
+   */
+  it should "need no 0 < q, since at a denominator of zero the ratio is zero and exp 1 is above two" in {
+    val logic = transcendental.logic
+    val rules = logic.rules
+    val numbers = TyApp(Natural.TypeName, Nil)
+    val p = Term.variable("p", numbers)
+    val ratio = proposition("exp 1 = real_of_num (p:num) / real_of_num 0")
+    val assumed = force(LogicError.lift(Kernel.assume(ratio)))
+    def rewritten(equations: Vector[Kernel.Thm], theorem: Kernel.Thm): Kernel.Thm =
+      force(Rewrite.Rule.all(logic, equations).flatMap(Rewrite.inTheorem(_, theorem)).flatMap(Within.reduced))
+    val unfolded = rewritten(Vector(force(chain.reals.definition(Real.Division))), assumed)
+    val atZero = rewritten(Vector(force(chain.peano.fact(Peano.EmbedsZero)), InverseAtZero.theorem), unfolded)
+    transcendental.show(atZero.conclusion) shouldBe "exp 1 = real_of_num p * 0"
+
+    val linarith = force(Linarith.construct(chain.order))
+    val exp = force(Parser.term(transcendental.theory, transcendental.notation, "exp 1", TyApp(Real.TypeName, Nil)))
+    val embedded = force(Parser.term(transcendental.theory, transcendental.notation, "real_of_num (p:num)", TyApp(Real.TypeName, Nil)))
+    val apart = force(linarith.prove("!x:real y:real. 2 < x ==> ~(x = y * 0)").flatMap(rules.specAll(_, List(exp, embedded))))
+    val aboveTwo = force(transcendental.fact(Transcendental.ExponentialAboveTwo))
+    val absurd = force(rules.mp(apart, aboveTwo).flatMap(rules.notElim(_, atZero)))
+    val idle = force(rules.notIntro(ratio, absurd).flatMap(rules.gen(p, _)))
+
+    idle.hypotheses shouldBe empty
+    idle.conclusion shouldBe proposition("!p:num. ~(exp 1 = real_of_num p / real_of_num 0)")
   }
 }

@@ -1042,9 +1042,12 @@ ratio one half, and at `q` that bound ends at exactly one when `q = 1`; one inde
 to be built. And the partial sum times the factorial is shown to be a natural by an induction on
 its last index, so no quotient `b! / i!` is formed. What it rests on is asserted in
 `TranscendentalSpec`, and `tools/verify/perturb-exp-one-irrational.sh` takes the margin away and
-watches the last step refuse. **Whether `0 < q` can be dropped is open**: at `q = 0` the ratio is
-`p * inv 0`, and nothing about `inv 0` is published for the reals, so unlike
-`NUM_SQUARE_NOT_DOUBLE`'s hypothesis this one is neither shown necessary nor shown idle.
+watches the last step refuse. **`0 < q` is idle, and `TranscendentalSpec` derives the case it
+leaves out**: at `q = 0` the ratio is `p * inv 0`, the constructed reals prove `inv 0 = 0` from
+their definitions though nothing publishes it under a name of the reals, and `exp 1 = 0`
+contradicts `EXP_ONE_ABOVE_TWO`. The hypothesis is kept for the form `SQRT_TWO_IRRATIONAL` has.
+Until 2026-10-02 this paragraph called the question open, reading "nothing published about
+`inv 0`" as "nothing known about it", which `InverseAtZeroSpec` had already refuted.
 
 **The Cauchy product is proved, in two theorems, and both landed on 2026-09-21.**
 `Limit.SUM_CAUCHY_PRODUCT_NONNEG` is the case where both series have non-negative terms and
