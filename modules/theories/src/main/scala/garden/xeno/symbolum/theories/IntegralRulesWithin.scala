@@ -9,6 +9,8 @@ import Within.{closeOver, forward, notBelow, aboveOf, reduced, term, variable}
 /**
  * Integration by parts and the change of variables with the derivative relative to `[a, b]`, which
  * is how a textbook states them, and the lemma that carries a relative derivative to a two-sided one.
+ * The change of variables comes twice: with `F` asked a slope everywhere, and with `F` asked it
+ * only relative to an interval holding the image of `[a, b]`, where `F` is extended as `g` is.
  *
  * Not a development: `Integral` publishes what this derives, under names it declares.
  *
@@ -56,16 +58,17 @@ private[theories] object IntegralRulesWithin {
     withinCongruence: Kernel.Thm,
     hasCongruence: Kernel.Thm,
     hasParts: Kernel.Thm,
-    hasSubstitution: Kernel.Thm
+    hasSubstitution: Kernel.Thm,
+    hasSubstitutionAtImage: Kernel.Thm
   )
 
-  /** The tangent extension of `fn` with slopes `dfn`, as a lambda. */
-  private[theories] def tangent(fn: String, dfn: String): String =
-    s"(\\y:real. COND (y < a:real) ($fn a + $dfn a * (y - a)) (COND (b:real < y) ($fn b + $dfn b * (y - b)) ($fn y)))"
+  /** The tangent extension of `fn` with slopes `dfn` past `lo` and `hi`, as a lambda. */
+  private[theories] def tangent(fn: String, dfn: String, lo: String = "a:real", hi: String = "b:real"): String =
+    s"(\\y:real. COND (y < ($lo)) ($fn ($lo) + $dfn ($lo) * (y - ($lo))) (COND (($hi) < y) ($fn ($hi) + $dfn ($hi) * (y - ($hi))) ($fn y)))"
 
   /** The same at a point, reduced. */
-  private def tangentAt(fn: String, dfn: String, u: String): String =
-    s"COND ($u < a:real) ($fn a + $dfn a * ($u - a)) (COND (b:real < $u) ($fn b + $dfn b * ($u - b)) ($fn $u))"
+  private def tangentAt(fn: String, dfn: String, u: String, lo: String = "a:real", hi: String = "b:real"): String =
+    s"COND (($u) < ($lo)) ($fn ($lo) + $dfn ($lo) * (($u) - ($lo))) (COND (($hi) < ($u)) ($fn ($hi) + $dfn ($hi) * (($u) - ($hi))) ($fn ($u)))"
 
   private val F = "(f:real -> real)"
   private val DF = "(df:real -> real)"
@@ -80,10 +83,12 @@ private[theories] object IntegralRulesWithin {
       extension <- tangentSlope(steps, held, glued, line)
       parts <- partsWithin(steps, held, extension)
       substitution <- substitutionWithin(steps, held, extension)
+      image <- substitutionImage(steps, held, extension)
     } yield Map(
       Integral.TangentSlope -> extension,
       Integral.HasPartsWithin -> parts,
-      Integral.HasSubstitutionWithin -> substitution
+      Integral.HasSubstitutionWithin -> substitution,
+      Integral.HasSubstitutionImage -> image
     )
 
   /* ------------------------------------------------------------------ small parts */
@@ -499,22 +504,25 @@ private[theories] object IntegralRulesWithin {
 
   /* ------------------------------------------------------------------ the two rules */
 
-  /** `T x = f x` for every `x` in `[a, b]`, at the tangent extension of `fn` with slopes `dfn`. */
-  private def agreesOn(steps: Steps, held: Held, fn: String, dfn: String): Either[LogicError, Kernel.Thm] = {
+  /**
+   * `T x = f x` for every `x` in `[lo, hi]`, at the tangent extension of `fn` with slopes `dfn` past
+   * `lo` and `hi`.
+   */
+  private def agreesOn(steps: Steps, held: Held, fn: String, dfn: String, lo: String = "a:real", hi: String = "b:real"): Either[LogicError, Kernel.Thm] = {
     import steps.*
     val condFalse = Within.condition(held.classical, Classical.CondFalse)
     for {
       xv <- variable(steps, "x:real")
-      member <- proposition("a:real <= x:real /\\ x <= b:real")
+      member <- proposition(s"($lo) <= x:real /\\ x <= ($hi)")
       pm <- LogicError.lift(Kernel.assume(member))
       ax <- rules.conjElim1(pm)
       xb <- rules.conjElim2(pm)
-      notLeft <- notBelow(steps, held.reals, "x:real", "a:real", ax)
-      notRight <- notBelow(steps, held.reals, "b:real", "x:real", xb)
+      notLeft <- notBelow(steps, held.reals, "x:real", lo, ax)
+      notRight <- notBelow(steps, held.reals, hi, "x:real", xb)
       cf <- condFalse
-      outer <- specialised(steps, cf, "x:real < a:real", s"$fn a + $dfn a * (x:real - a:real)",
-        s"COND (b:real < x:real) ($fn b + $dfn b * (x - b)) ($fn x)").flatMap(rules.mp(_, notLeft))
-      inner <- specialised(steps, cf, "b:real < x:real", s"$fn b + $dfn b * (x:real - b:real)", s"$fn x:real").flatMap(rules.mp(_, notRight))
+      outer <- specialised(steps, cf, s"x:real < ($lo)", s"$fn ($lo) + $dfn ($lo) * (x:real - ($lo))",
+        s"COND (($hi) < x:real) ($fn ($hi) + $dfn ($hi) * (x - ($hi))) ($fn x)").flatMap(rules.mp(_, notLeft))
+      inner <- specialised(steps, cf, s"($hi) < x:real", s"$fn ($hi) + $dfn ($hi) * (x:real - ($hi))", s"$fn x:real").flatMap(rules.mp(_, notRight))
       joined <- Conv.trans(outer, inner)
       result <- rules.disch(member, joined).flatMap(rules.gen(xv, _))
     } yield result
@@ -640,6 +648,88 @@ private[theories] object IntegralRulesWithin {
       read <- forward(steps, Vector(atA, atB), onG)
       result <- closeOver(steps, read, SubstitutionRelative.reverse,
         List("Fn:real -> real", "f:real -> real", "g:real -> real", "dg:real -> real", "a:real", "b:real"))
+    } yield result
+  }
+
+  private val SubstitutionImageRelative = List(
+    "a:real <= b:real",
+    "!x:real. a:real <= x /\\ x <= b:real ==> c:real <= (g:real -> real) x /\\ g x <= d:real",
+    "!y:real. c:real <= y /\\ y <= d:real ==> derivative_within (Fn:real -> real) c d y ((f:real -> real) y)",
+    "!x:real. a:real <= x /\\ x <= b:real ==> derivative_within (g:real -> real) a b x ((dg:real -> real) x)")
+
+  /**
+   * `|- !F f g dg a b c d. a <= b ==> (!x. a <= x /\ x <= b ==> c <= g x /\ g x <= d) ==>
+   *     (!y. c <= y /\ y <= d ==> derivative_within F c d y (f y)) ==>
+   *     (!x. a <= x /\ x <= b ==> derivative_within g a b x (dg x)) ==>
+   *     has_integral (\x. f (g x) * dg x) a b (F (g b) - F (g a))`
+   *
+   * Both functions are extended by their tangent lines, `g` past `a` and `b` and `F` past `c` and
+   * `d`. The extension of `F` has the two-sided slope `f y` only on `[c, d]`, so the rule applied is
+   * the one asking `F`'s slope at `g x` alone, and `g x` is in `[c, d]` because the extension of `g`
+   * is `g` on `[a, b]`. The integrand and the two values are then read back, `F`'s at `g a` and
+   * `g b`, which lie in `[c, d]` too.
+   */
+  private def substitutionImage(steps: Steps, held: Held, extension: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+    import steps.*
+    val (bigF, fn, gn, dgn) = ("(Fn:real -> real)", "(f:real -> real)", "(g:real -> real)", "(dg:real -> real)")
+    val (lo, hi) = ("c:real", "d:real")
+    val tF = tangent(bigF, fn, lo, hi)
+    val tg = tangent(gn, dgn)
+    for {
+      assumed <- SubstitutionImageRelative.foldLeft[Either[LogicError, List[Kernel.Thm]]](Right(Nil)) { (acc, text) =>
+        for { done <- acc; one <- assume(text) } yield done :+ one
+      }
+      List(ab, image, slopesF, slopesG0) = assumed: @unchecked
+      aa <- steps.at(lemma("!a:real. a <= a"), "a:real")
+      bb <- steps.at(lemma("!b:real. b <= b"), "b:real")
+      aIn <- rules.conjIntro(aa, ab)
+      bIn <- rules.conjIntro(ab, bb)
+      imageA <- specialised(steps, image, "a:real").flatMap(rules.mp(_, aIn))
+      imageB <- specialised(steps, image, "b:real").flatMap(rules.mp(_, bIn))
+      cga <- rules.conjElim1(imageA)
+      gad <- rules.conjElim2(imageA)
+      cd <- steps.at(lemma("!u:real v:real w:real. u <= v ==> v <= w ==> u <= w"), lo, s"$gn a:real", hi)
+        .flatMap(mp(_, Right(cga), Right(gad)))
+      slopesG <- extendedSlopes(steps, extension, gn, dgn, slopesG0, ab)
+      agreeG <- agreesOn(steps, held, gn, dgn)
+      agreeF <- agreesOn(steps, held, bigF, fn, lo, hi)
+      xv <- variable(steps, "x:real")
+      // the extension of F has slope f at the extension of g, at every x in [a, b]
+      outer <- for {
+        member <- proposition("a:real <= x:real /\\ x <= b:real")
+        pm <- LogicError.lift(Kernel.assume(member))
+        inImage <- specialised(steps, image, "x:real").flatMap(rules.mp(_, pm))
+        low <- rules.conjElim1(inImage)
+        high <- rules.conjElim2(inImage)
+        atG <- specialised(steps, extension, bigF, fn, lo, hi, s"$gn x:real")
+          .flatMap(mp(_, Right(cd), Right(slopesF), Right(low), Right(high)))
+        toExtension <- rules.spec(xv, agreeG).flatMap(rules.mp(_, pm)).flatMap(Conv.sym)
+        atT <- moved(steps, s"\\t:real. derivative $tF t ($fn t)", toExtension, atG)
+        r <- rules.disch(member, atT).flatMap(rules.gen(xv, _))
+      } yield r
+      rule <- specialised(steps, held.hasSubstitutionAtImage, tF, fn, tg, dgn, "a:real", "b:real")
+        .flatMap(mp(_, Right(ab), Right(outer), Right(slopesG)))
+      // the integrand, back from the extension of g
+      back <- for {
+        member <- proposition("a:real <= x:real /\\ x <= b:real")
+        pm <- LogicError.lift(Kernel.assume(member))
+        atX <- rules.spec(xv, agreeG).flatMap(rules.mp(_, pm))
+        product <- term(steps, s"$fn (${tangentAt(gn, dgn, "x:real")}) * $dgn x:real")
+        composed <- moved(steps, s"\\t:real. $fn (${tangentAt(gn, dgn, "x:real")}) * $dgn x = $fn t * $dgn x", atX, Kernel.refl(product))
+        r <- rules.disch(member, composed).flatMap(rules.gen(xv, _))
+      } yield r
+      valueAt = (u: String) => tangentAt(bigF, fn, tangentAt(gn, dgn, u), lo, hi)
+      onG <- specialised(steps, held.hasCongruence, s"\\x:real. $fn (${tangentAt(gn, dgn, "x")}) * $dgn x", s"\\x:real. $fn ($gn x) * $dgn x",
+        "a:real", "b:real", s"${valueAt("b:real")} - ${valueAt("a:real")}")
+        .flatMap(mp(_, Right(back), Right(rule)))
+      // and the two values: the extension of g is g at a and b, and the extension of F is F at g a and g b
+      atA <- specialised(steps, agreeG, "a:real").flatMap(rules.mp(_, aIn))
+      atB <- specialised(steps, agreeG, "b:real").flatMap(rules.mp(_, bIn))
+      atFA <- specialised(steps, agreeF, s"$gn a:real").flatMap(rules.mp(_, imageA))
+      atFB <- specialised(steps, agreeF, s"$gn b:real").flatMap(rules.mp(_, imageB))
+      read <- forward(steps, Vector(atA, atB), onG).flatMap(forward(steps, Vector(atFA, atFB), _))
+      result <- closeOver(steps, read, SubstitutionImageRelative.reverse,
+        List("Fn:real -> real", "f:real -> real", "g:real -> real", "dg:real -> real", "a:real", "b:real", "c:real", "d:real"))
     } yield result
   }
 }

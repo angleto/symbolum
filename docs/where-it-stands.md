@@ -1269,9 +1269,16 @@ relative slopes on `[a, b]` is extended past each end by its tangent line there,
 interval, inside by locality and at an end by gluing the tangent line's side to the function's. The
 two-sided rules then apply at the extensions and the congruence carries the result back.
 `IntegralRulesWithinSpec` detaches both at `abs` on `[0, 1]`, which has no derivative at `0`, and
-`IntegralWithinSpec` holds a second census, of two-sided derivatives asked on a closed interval. What
-the relative change of variables does not relax is the outer function: `F` is still asked a slope
-at every real, where a textbook asks it only on the image of `[a, b]`; card `454c2a9f` owes that form.
+`IntegralWithinSpec` holds a second census, of two-sided derivatives asked on a closed interval.
+`HAS_INTEGRAL_SUBST_WITHIN` still asks the outer function `F` a slope at every real. **The form a
+textbook states has been beside it since 2026-10-02**, as `HAS_INTEGRAL_SUBST_IMAGE` and
+`INTEGRAL_SUBST_IMAGE`: `g` maps `[a, b]` into `[c, d]`, and `F` is asked its slope relative to
+`[c, d]` and nowhere else. `F` is extended by its tangent lines too, and since that extension has
+the slope `f` only on `[c, d]`, the rule underneath asks `F`'s slope only at the points `g x`, which
+is how `HAS_INTEGRAL_SUBST` was proved anyway. The form with a global `F` stays, because the image
+form costs its caller an interval holding the image of `g`. `IntegralRulesWithinSpec` detaches the
+pair at `abs` relative to `[1, 2]` and `g = \y. y + 1` on `[0, 1]`, where the global form asks a
+slope of `abs` at `0`.
 
 **The integral is `Integral`, a link since 2026-09-25, and it is the gauge integral rather than
 Riemann's.** `docs/adr/0049` is the decision and what it rejects is Darboux, which wanted a supremum

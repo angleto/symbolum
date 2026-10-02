@@ -15,6 +15,10 @@ import garden.xeno.symbolum.logic.*
  * two-sided rules cannot be detached there; that the tangent extension of `abs` has a two-sided
  * derivative at `0`, which is the whole of what the lemma adds; and that each relative rule costs
  * what its two-sided form costs and rests on it through the extension.
+ *
+ * The change of variables with `F` relative to an interval holding the image is detached at `abs`
+ * relative to `[1, 2]` and `g = \y. y + 1` on `[0, 1]`: `abs` has no derivative at `0`, which lies
+ * outside `[1, 2]`, so the form asking `F` a slope at every real cannot be detached there.
  */
 class IntegralRulesWithinSpec extends AnyFlatSpec with Matchers {
 
@@ -59,6 +63,50 @@ class IntegralRulesWithinSpec extends AnyFlatSpec with Matchers {
     mp(at(fact(Integral.HasSubstitutionWithin), function("\\y:real. y"), function("\\y:real. (1:real)"),
       function("abs"), function("\\x:real. (1:real)"), real(zero), real(one)),
       lemma("(0:real) <= 1"), slope(Derivative.Identity), witness.relative)
+
+  /** `|- !x. 0 <= x /\ x <= 1 ==> derivative_within (\y. y + 1) 0 1 x (1 + 0)`. */
+  private lazy val shiftRelative: Kernel.Thm = {
+    val x = Term.variable("x", reals)
+    val sum = mp(at(slope(Derivative.Sum), function("\\y:real. y"), function("\\y:real. (1:real)"), x, real(one), real(zero)),
+      mp(at(slope(Derivative.Identity), x)), mp(at(slope(Derivative.Constant), real(one), x)))
+    val relative = mp(at(slope(Derivative.WithinOfDerivative), function("\\y:real. y + 1"), real(zero), real(one), x, real("1 + 0")), sum)
+    force(rules.disch(proposition("(0:real) <= x:real /\\ x <= 1"), relative).flatMap(rules.gen(x, _)))
+  }
+
+  /** `|- !y. 1 <= y /\ y <= 2 ==> derivative_within abs 1 2 y 1`: `abs` is the identity there. */
+  private lazy val absoluteOnOneTwo: Kernel.Thm = {
+    val y = Term.variable("y", reals)
+    val member = proposition("(1:real) <= y:real /\\ y <= 2")
+    val inside = force(LogicError.lift(Kernel.assume(member)))
+    val low = force(rules.conjElim1(inside))
+    val high = force(rules.conjElim2(inside))
+    val agree = {
+      val u = Term.variable("u", reals)
+      val m = proposition("(1:real) <= u:real /\\ u <= 2")
+      val within = force(LogicError.lift(Kernel.assume(m)))
+      val nonNegative = mp(at(lemma("!u:real. 1 <= u ==> 0 <= u"), u), force(rules.conjElim1(within)))
+      val value = mp(at(force(chain.magnitude.fact(Magnitude.OfNonNegative)), u), nonNegative)
+      force(Conv.sym(value).flatMap(rules.disch(m, _)).flatMap(rules.gen(u, _)))
+    }
+    val identity = mp(at(slope(Derivative.WithinOfDerivative), function("\\y:real. y"), real(one), real("2:real"), y, real(one)),
+      mp(at(slope(Derivative.Identity), y)))
+    val carried = mp(at(fact(Integral.WithinCongruence), function("\\y:real. y"), function("abs"), real(one), real("2:real"), y, real(one)),
+      agree, low, high, identity)
+    force(rules.disch(member, carried).flatMap(rules.gen(y, _)))
+  }
+
+  /** `|- !x. 0 <= x /\ x <= 1 ==> 1 <= x + 1 /\ x + 1 <= 2`: the shift maps `[0, 1]` onto `[1, 2]`. */
+  private lazy val shiftImage: Kernel.Thm = {
+    val x = Term.variable("x", reals)
+    val member = proposition("(0:real) <= x:real /\\ x <= 1")
+    val inside = force(LogicError.lift(Kernel.assume(member)))
+    val low = mp(at(lemma("!x:real. 0 <= x ==> 1 <= x + 1"), x), force(rules.conjElim1(inside)))
+    val high = mp(at(lemma("!x:real. x <= 1 ==> x + 1 <= 2"), x), force(rules.conjElim2(inside)))
+    force(rules.conjIntro(low, high).flatMap(rules.disch(member, _)).flatMap(rules.gen(x, _)))
+  }
+
+  private def imageArguments: Vector[Term] = Vector(function("abs"), function("\\y:real. (1:real)"), function("\\y:real. y + 1"),
+    function("\\x:real. (1:real) + 0"), real(zero), real(one), real(one), real("2:real"))
 
   "The tangent extension" should "give abs a two-sided slope at 0, where abs itself has none" in {
     witness.noSlopeAtZero.hypotheses shouldBe empty
@@ -108,12 +156,37 @@ class IntegralRulesWithinSpec extends AnyFlatSpec with Matchers {
     named.hypotheses shouldBe empty
   }
 
+  /**
+   * `F = abs` relative to `[1, 2]` and `g = \y. y + 1` on `[0, 1]`. The form asking `F` a slope at
+   * every real asks `derivative abs 0 1`, which `AbsoluteAtAnEnd` refutes, and `0` is outside
+   * `[1, 2]`: that point is what the image form stops asking about.
+   */
+  it should "detach the change of variables with F asked a slope only on the image's interval" in {
+    val has = mp(at(fact(Integral.HasSubstitutionImage), imageArguments*),
+      lemma("(0:real) <= 1"), shiftImage, absoluteOnOneTwo, shiftRelative)
+    has.hypotheses shouldBe empty
+    has.conclusion shouldBe proposition("has_integral (\\x:real. 1 * (1 + 0)) 0 1 (abs (1 + 1) - abs (0 + 1))")
+
+    val named = mp(at(fact(Integral.SubstitutionImage), imageArguments*),
+      lemma("(0:real) <= 1"), shiftImage, absoluteOnOneTwo, shiftRelative)
+    named.hypotheses shouldBe empty
+    named.conclusion shouldBe proposition("integral (\\x:real. 1 * (1 + 0)) 0 1 = abs (1 + 1) - abs (0 + 1)")
+
+    // and what the form with a global F asks of abs is false, at 0
+    val everywhere = proposition("!y:real. derivative abs y 1")
+    val assumed = force(LogicError.lift(Kernel.assume(everywhere)))
+    val refused = force(rules.notElim(witness.noSlopeAtZero, at(assumed, real(zero))).flatMap(rules.notIntro(everywhere, _)))
+    refused.hypotheses shouldBe empty
+  }
+
   it should "cost what the two-sided rules cost" in {
     for ((relative, twoSided) <- Vector(
         Integral.HasPartsWithin -> Integral.HasParts,
         Integral.PartsWithin -> Integral.Parts,
         Integral.HasSubstitutionWithin -> Integral.HasSubstitution,
-        Integral.SubstitutionWithin -> Integral.Substitution
+        Integral.SubstitutionWithin -> Integral.Substitution,
+        Integral.HasSubstitutionImage -> Integral.HasSubstitution,
+        Integral.SubstitutionImage -> Integral.Substitution
       )) withClue(s"$relative: ") {
       Derivation.axiomsOf(fact(relative)) shouldBe Derivation.axiomsOf(fact(twoSided))
     }
@@ -125,5 +198,8 @@ class IntegralRulesWithinSpec extends AnyFlatSpec with Matchers {
     Derivation.restingOn(fact(Integral.HasPartsWithin), parts) shouldBe parts
     val substitution = Set(tangent, fact(Integral.HasSubstitution).conclusion)
     Derivation.restingOn(fact(Integral.HasSubstitutionWithin), substitution) shouldBe substitution
+    // the image form extends F as well as g, and never passes through the form asking F everywhere
+    val image = Set(tangent, fact(Integral.HasCongruence).conclusion)
+    Derivation.restingOn(fact(Integral.HasSubstitutionImage), image + fact(Integral.HasSubstitution).conclusion) shouldBe image
   }
 }
