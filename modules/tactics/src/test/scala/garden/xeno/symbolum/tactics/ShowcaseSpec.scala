@@ -126,15 +126,31 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
     // goal was refused because `Apply` reads the specialised implication's own antecedents as
     // obligations. So the surface was refusing claims it had written down, and the six that moved
     // are the measure of that rather than of a new proof: nothing derives Euclid's lemma here, the
-    // library is asked for it and now it can answer. `NUM_INDUCTION` and `NUM_CRT` stay refused,
-    // and **why** those two and not the rest is not measured here: the two vectors are what this
-    // run reported, and the cause is a question for whoever next moves one of them.
+    // library is asked for it and now it can answer. `NUM_INDUCTION` and `NUM_CRT` stayed refused,
+    // and why those two was left to whoever next moved one of them.
+    //
+    // **All of them since 2026-10-02, and the two that moved were the same defect one layer down.**
+    // Both are lemmas this library holds, written on the page term for term as the library states
+    // them, and both were refused by every route: measured that day, `Prove.directly` and the whole
+    // prover answered no for each before the change and yes after it. The goal's premises becoming
+    // facts reached the other six only because their conclusions were ones a search under those
+    // facts could close; it never repaired `Apply`, which still read the instance's own antecedents
+    // as obligations, so the scan kept refusing every lemma with a premise. Card `39429606` found it
+    // on `COS_INJECTIVE` and repaired `Apply` itself, and the library scan now takes these two
+    // before any search runs.
+    //
+    // So the refused side is empty, and it is asserted empty rather than dropped. What used to keep
+    // the pair from being vacuous was that each side held something; what keeps it now is the first
+    // test in this file, which pins the population to the selection by name, so an empty refusal
+    // list here is a measurement about sixteen claims and not about an extraction that found none.
     val (settled, refused) = published.collect { case (name, Some(claim)) => (name, claim) }
       .partition { case (_, claim) => settles(claim) }
 
     withClue(s"settled: ${settled.map(_._1).mkString(", ")}\n") {
       settled.map(_._1) shouldBe Vector(
         "EXCLUDED_MIDDLE",
+        // 2026-10-02, the library scan taking the lemma that is the goal.
+        "NUM_INDUCTION",
         "NUM_ARCHIMEDES",
         "ABS_TRIANGLE",
         "SUM_TELESCOPES",
@@ -143,6 +159,8 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
         "NUM_EUCLID",
         "NUM_FACTORISATION",
         "NUM_FACTORISATION_UNIQUE",
+        // 2026-10-02, the same.
+        "NUM_CRT",
         "NUM_PRIME_UNBOUNDED",
         "NUM_SQUARE_NOT_DOUBLE",
         // 2026-09-24, the classical sentence beside its arithmetic content. Predicted settled
@@ -157,14 +175,9 @@ class ShowcaseSpec extends AnyFlatSpec with Matchers {
     }
 
     withClue(s"refused: ${refused.map(_._1).mkString(", ")}\n") {
-      refused.map(_._1) shouldBe Vector("NUM_INDUCTION", "NUM_CRT")
+      refused.map(_._1) shouldBe empty
     }
 
-    // And neither side is empty, which is what makes the two assertions above say something about
-    // this document rather than about an empty population. A showcase of only settled claims would
-    // make the notice above look like caution nobody needed; one of only refused claims would mean
-    // the first route on every page is decoration.
-    settled should not be empty
-    refused should not be empty
+    settled.size shouldBe Theorems.Showcase.size
   }
 }

@@ -1144,6 +1144,26 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     proved.hypotheses shouldBe empty
   }
 
+  "A lemma with premises, applied to itself" should "owe nothing, and owe its premises only where they were dropped" in {
+    // `Apply` reads the whole body first and promises that a lemma matching the goal whole owes
+    // nothing. Until 2026-10-02 it then counted every antecedent of the instance as an obligation,
+    // so the promise held only for lemmas with no premises and the prover's scan turned away
+    // `COS_INJECTIVE` asked verbatim (card 39429606). The second half is the control: the same lemma
+    // applied to its bare conclusion must still owe the premise, or the first half would pass on an
+    // `Apply` that had stopped owing anything at all.
+    val logic = force(chain.widest.logic.over(chain.widest.theory))
+    val lemma = chain.circle.facts(Circle.CosInjective)
+
+    val whole = force(Apply.to(logic, lemma, lemma.conclusion))
+    whole.obligations shouldBe empty
+    force(logic.rules.genAll(whole.theorem, whole.generalising.toList)).conclusion shouldBe
+      lemma.conclusion
+
+    val bare = force(Apply.to(logic, lemma, force(chain.widest.proposition("!x:real. !y:real. x = y"))))
+    bare.obligations.map(chain.widest.show) shouldBe
+      Vector("0 <= x /\\ x <= pi /\\ 0 <= y /\\ y <= pi /\\ cos x = cos y")
+  }
+
   "The listing" should "print in the signature's own notation, not the kernel's" in {
     // A lemma printed in the kernel's notation is a lemma about a claim the reader did not write.
     val page = library.listing(chain.series)

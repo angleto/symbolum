@@ -776,6 +776,13 @@ It hands back what is left to prove rather than proving it. A caller that discha
 obligations reaches the goal with `rules.mp`; a caller that cannot has learned what the lemma would
 have cost, which is more than a refusal tells them.
 
+What is left is only what had to be set aside for the rest to match. Asked of `0 < 2 ==> 0 < inv 2`
+instead, the same lemma matches whole and owes nothing, because the goal already carries the
+premise. Until 2026-10-02 it owed its own premise there too, so the prover's library lookup, which
+takes only a lemma owing nothing, turned away every lemma with a premise asked as written, and only
+the search under the goal's own hypotheses reached some of them, when it ranked them inside its
+budget.
+
 **The widening is not optional and the reason is worth knowing.** `Real.standard` sits over
 `Logic.standard`, which has no axioms and has never heard of the type operator `real`. Specialising
 a universal means asking the theory for the quantifier constant *at the type it ranges over*, so
