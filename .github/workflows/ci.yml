@@ -171,7 +171,17 @@ jobs:
   coverage:
     name: Coverage, with the floors enforced
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # 90 since 2026-10-03, decided by Angelo, and the 60 it replaces was a figure nobody had measured
+    # against this job: the four runs between 2026-10-02 and 2026-10-03 were all cancelled at it, so
+    # the floors were never asked. The first three stopped inside `SweepSpec`, which the tactics
+    # suite then stopped running six times over (`StandardSweep` has that measurement). The fourth,
+    # 37147535345 on `39a63eaa`, had `tactics` finish in 21 minutes and was cancelled with `theories`
+    # at 120 of its 125 suites, 57 minutes in: on this runner's 4 vCPUs the two modules run side by
+    # side and slow each other. So what is measured is a lower bound above 60, not the job's length,
+    # and 90 is that bound plus room for the five suites, `dist` and the report. The limit is here to
+    # stop a hung job rather than to budget a healthy one, so a run reaching it is a finding to read
+    # in the log, never a reason to raise it again unmeasured.
+    timeout-minutes: 90
 
     steps:
       # The whole history, because the step at the end of this job diffs against where the change
