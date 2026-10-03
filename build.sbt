@@ -1327,16 +1327,28 @@ def withoutInstrumentation(options: Seq[String]): Seq[String] =
 // of which one named the probe's path and eight were echoed source, carets and `one error found`.
 // A marker to grep out would have had to be matched on eight lines carrying nothing to match.
 //
-// So both compilations log into a stream nobody reads, and what a reader gets is the one line this
-// gate prints at the end. Two consequences, the second being why this is written down: the warning
-// the control produces is swallowed too, and somebody debugging the probe sees nothing until they
-// run `tools/sbt warningProbe/compile`, which every red message below names.
+// So both compilations log into a stream nobody reads. What that silences is a compilation that
+// actually runs, and under sbt 2 it is not the whole of what a reader can get: sbt 2 caches a
+// compile's outcome, a failed one included, and on a hit it replays the stored diagnostics into
+// the build's own log (`ActionCache.cache` calls `failure.replay(config.logger)`, and
+// `Def.cacheConfiguration` hands it `state.log`), where neither this logger nor any reporter
+// reaches, since on a hit the compiler never runs. So a green gate prints its one line when the
+// probe was compiled, and the probe's eight `[error]` lines above it when the failure was served;
+// `CLAUDE.md` has the measurement that a served failure is still evidence. Two consequences of the
+// silencing, the second being why it is written down: the warning the control produces is
+// swallowed too, and somebody debugging the probe sees nothing until they run `tools/sbt
+// warningProbe/compile`, which every red message below names.
 //
-// `sbt.internal` is reached into for it, knowingly. The supported key would be `compilerReporter`,
-// and sbt 1.10.10 does not have one: `javap sbt.Keys` lists `bspReporter` alone, typed to an
-// internal build-server class, and a `compilerReporter :=` fails to load the build. Between an
-// internal setting and a gate that makes a healthy log look unhealthy, this is the one that fails
-// visibly and at once on an sbt upgrade.
+// `sbt.internal` is reached into for it, knowingly, and sbt offers no supported route. The key
+// that would be one is `compilerReporter`, and it is `private[sbt]` on 2.0.9 as it was absent on
+// 1.10.10: `javap sbt.Keys` on `main_3-2.0.9` lists it as public, because a qualified private is
+// not a bytecode modifier, but measured on 2026-10-03 against a build of one source,
+// `Compile / compile / compilerReporter :=` fails to load with `Not found: compilerReporter`, and
+// written `sbt.Keys.compilerReporter` with `private[sbt] value compilerReporter can only be
+// accessed from package sbt`, where the same build with `logManager` in its place compiles. And
+// a reporter would not reach the replay above either. Between an internal setting and a gate
+// that makes a healthy log look unhealthy, this is the one that fails visibly and at once on an
+// sbt upgrade, and it survived the one to 2.0.9.
 //
 // And sbt's own lint has to be told, because it reads this as a setting nobody consumes: the
 // compile task takes its logger through `streams` rather than through another setting, so

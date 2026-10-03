@@ -23,17 +23,26 @@ as warnings under an exit 0 while the textual assertion stayed green. Nothing a 
 reads at runtime says which diagnostics were emitted when it was compiled, so a test in the suite
 cannot be this check. A compilation that has to fail can.
 
-## What a healthy run prints, which is one line
+## What a healthy run prints: one line, or one line and the probe's eight
 
-Both compilations log into a stream nobody reads, so a green gate contributes one `[info]` line to
-a suite log and no compiler output at all. That is not cosmetic. The gate rides `Test / test`, so
-its expected error would otherwise land in every full suite log, and three sessions here were
-reading a run by counting `[error]` lines against zero, after a run reporting `827 succeeded, 0
-failed` turned out to be a module that had not compiled with the modules under it never started.
-Measured before the silencing: nine `[error]` lines on a GREEN run, of which one named the probe's
-path and eight were echoed source, carets and `one error found`. After: zero.
+Both compilations log into a stream nobody reads. That is not cosmetic. The gate rides `Test /
+test`, so its expected error would otherwise land in every full suite log, and three sessions here
+were reading a run by counting `[error]` lines against zero, after a run reporting `827 succeeded,
+0 failed` turned out to be a module that had not compiled with the modules under it never started.
+Measured before the silencing, under sbt 1: nine `[error]` lines on a GREEN run, of which one named
+the probe's path and eight were echoed source, carets and `one error found`. After: zero.
 
-What it costs is that debugging the probe needs `tools/sbt warningProbe/compile` or
+Under sbt 2 the silencing holds for a compilation that runs, and a green gate then contributes one
+`[info]` line and no compiler output. But sbt 2 caches a compile's outcome, a failed one included,
+and when it serves the probe's failure from that cache it replays the stored diagnostics into the
+build's own log rather than the compile's, so neither the quiet logger nor a compiler reporter
+reaches them: eight `[error]` lines, all E029 on `NonExhaustiveMatch.scala`, naming the path of
+whichever checkout first compiled the probe, above the gate's line. Counted in five whole runs on
+2026-09-26 and again on 2026-09-28. The count to read a run against is therefore zero where the
+probe was compiled and eight where it was served, and `CLAUDE.md` has the measurement that a served
+failure is still evidence.
+
+What the silencing costs is that debugging the probe needs `tools/sbt warningProbe/compile` or
 `tools/sbt warningProbeControl/compile`, which restores the log, and every red message from the
 gate says so.
 
@@ -80,8 +89,9 @@ parent and `Test` extends `Runtime` extends `Compile`.
   the match, both compilations succeed, and what the gate sees is the probe compiling, which is
   also what a dead option looks like. It goes red either way, so nothing passes quietly, and the
   message names both causes and the one command that separates them. Telling them apart inside the
-  gate would want the compiler's diagnostics back, and `compilerReporter` is not a key on sbt
-  1.10.10.
+  gate would want the compiler's diagnostics back, and no supported key hands them over:
+  `compilerReporter` was absent on sbt 1.10.10 and is `private[sbt]` on 2.0.9, where a build
+  setting it fails to load (measured on 2026-10-03; `build.sbt` has the two refusals).
 - **This directory is outside every scan that reads `modules/`**: the style scan, the language scan
   and the comment census do not read it. What stands in for them is that it is one short source and
   that the gate reads it twice, once expecting failure and once expecting success.
