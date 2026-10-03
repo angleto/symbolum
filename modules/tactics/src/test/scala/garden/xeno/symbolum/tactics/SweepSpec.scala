@@ -36,18 +36,20 @@ class SweepSpec extends AnyFlatSpec with Matchers {
 
   private val propose = Propose.standard
 
+  // The three tests below read one first pass, `StandardSweep`, rather than each running its own;
+  // that file has the measurement. Each of them used to start from a fresh ledger, and what that
+  // bought was independence from a pass nobody else had touched, which `StandardSweep.entries`
+  // keeps: it is the ledger as the first pass left it, taken before the second pass below writes.
+
   "A second pass over the same ledger" should "settle nothing, which is the whole reason the file exists" in {
     // The property the ledger was built for and that nothing exercised over a generator's output
     // until this file. It is asserted as an identity rather than as a ratio: one claim re-settled
     // is one certification paid for twice, and there is no threshold at which that is acceptable.
-    val (ledger, _) = freshLedger()
-    val sweep = Sweep(propose, ledger)
-
-    val first = sweep.run()
+    val first = StandardSweep.report
     first.lines.foreach(info(_))
     first.settled should be > 0
 
-    val second = sweep.run()
+    val second = Sweep(propose, StandardSweep.ledger).run()
 
     withClue(s"the second pass settled ${second.settled} of ${second.offered}:\n${second.lines.mkString("\n")}\n") {
       second.settled shouldBe 0
@@ -59,11 +61,11 @@ class SweepSpec extends AnyFlatSpec with Matchers {
     // The file and the tally have to agree, or one of the two is describing a different run. The
     // generator can propose the same claim twice from two lemmas, so the comparison is against the
     // distinct statements rather than against the count.
-    val (ledger, _) = freshLedger()
-    val report = Sweep(propose, ledger).run()
+    val report = StandardSweep.report
+    val entries = StandardSweep.entries
 
-    ledger.entries.map(_.statement).distinct.size shouldBe ledger.entries.size
-    ledger.entries.size shouldBe report.settled
+    entries.map(_.statement).distinct.size shouldBe entries.size
+    entries.size shouldBe report.settled
   }
 
   "Each source" should "report what it adds to the file per claim it settles" in {
@@ -71,8 +73,7 @@ class SweepSpec extends AnyFlatSpec with Matchers {
     // sources apart. It is printed and not asserted: it measures this repository's library and
     // moves when the library does. What IS asserted is that both sources answered, because a
     // report with one source in it would make the comparison vacuous.
-    val (ledger, _) = freshLedger()
-    val report = Sweep(propose, ledger).run()
+    val report = StandardSweep.report
 
     report.lines.foreach(info(_))
     report.tallies.map(_.source).toSet shouldBe Propose.Source.values.toSet

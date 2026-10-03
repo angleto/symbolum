@@ -487,8 +487,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // The numbers in the guide are a photograph of one run against this repository's library and
     // move when the library does, so what is pinned is the shape. A figure worth pinning would have
     // to be about something that does not change every time somebody proves a lemma.
-    val directory = java.nio.file.Files.createTempDirectory("symbolum-guide-sweep")
-    val report = Sweep(Propose.standard, Ledger.at(directory.resolve("run.tsv"))).run()
+    //
+    // The pass is `StandardSweep`'s, which is the guide's call (`Sweep(Propose.standard,
+    // Ledger.at(...))` on a ledger in a temporary directory) run once for the module rather than
+    // once here and three times in `SweepSpec`; that file has the measurement.
+    val report = StandardSweep.report
 
     report.lines should have size Propose.Source.values.length
     every(report.lines) should include("offered")

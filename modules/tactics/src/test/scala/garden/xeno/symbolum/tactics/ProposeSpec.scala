@@ -1884,7 +1884,12 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // was `ZERO` left this bucket that day without anything about them changing, and the bucket
     // shrinking is the exact failure the comment above this list warns about. A constant is a node
     // of the term whatever the printer does with it.
-    val aboutNumbers = propose.audit.filter(finding => mentions(finding.proposal.claim, named))
+    //
+    // `findings` and not a second `propose.audit`, which this read until 2026-10-03: the audit puts
+    // every proposal of the library to the prover and is the same over a fixed library, so a second
+    // one bought nothing and cost 1m11s of a plain run and 9m58s under coverage, where the
+    // CI job was being cancelled at its sixty-minute limit.
+    val aboutNumbers = findings.filter(finding => mentions(finding.proposal.claim, named))
 
     def witnesses(model: Model): Int = {
       val search = Refutation(Evaluate.over(chain.reals, model))
