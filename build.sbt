@@ -145,6 +145,34 @@ ThisBuild / scalaVersion := "3.3.5"
 // a machine the comment on `Test / fork` below measures, and the suites were never written to share.
 Global / concurrentRestrictions += Tags.limit(Tags.ForkedTestGroup, 1)
 
+// An instrumented compilation is never answered from sbt 2's disk cache, because what it produces
+// is more than the cache restores. scoverage writes `scoverage-data/scoverage.coverage`, the
+// catalogue of statements, beside the classes, and the instrumented classes carry that
+// directory's absolute path; the cache keeps the classes and not the directory. So after `clean`
+// a cache hit brings back classes whose every executed statement writes into a directory that is
+// gone: measured on 2026-10-03 and again on 2026-10-04, `tools/sbt clean coverage sat/test` run
+// twice in one worktree was green and then red with `FileNotFoundException: .../symbolum-sat/
+// scoverage-data/scoverage.measurements...`, and a second `tools/coverage-gate.sh` on one tree
+// died the same way in 43 seconds. Making the directory would be worse than the failure: the
+// catalogue would still be missing, and the report would cover only what happened to recompile.
+//
+// `cacheVersion` enters the key of every cached result, and sbt offers no narrower lever: the
+// compile is cached through a task sbt keeps private. A value drawn when the settings are
+// evaluated is a fresh key each time `coverage` sets `coverageEnabled`, so `clean coverage ...`
+// always compiles; without coverage the version is sbt's own, from `-Dsbt.cacheversion` or 0, and
+// nothing changes. `cleanFull`, which empties the disk store, was the alternative and is not taken
+// because that store is shared by every checkout on this machine.
+//
+// WHAT IT DOES NOT COVER: a second `clean` inside one sbt session after `coverage` was set, with no
+// new `set` between them, compiles under the same version and meets the same defect. Nothing in
+// this repository issues that sequence; the gate is `clean coverage testFull coverageReport`. And
+// what coverage gives up is the cache itself, so an instrumented run compiles everything, which is
+// what `clean` meant under sbt 1 and what every floor in this file was measured with.
+Global / cacheVersion := {
+  val sbtDefault = sys.props.get("sbt.cacheversion").flatMap(_.toLongOption).getOrElse(0L)
+  if ((ThisBuild / coverageEnabled).value) System.nanoTime() else sbtDefault
+}
+
 ThisBuild / organization := "garden.xeno"
 
 lazy val commonSettings = Seq(
