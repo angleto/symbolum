@@ -151,8 +151,8 @@ object Comments {
     text.linesIterator.toVector.zipWithIndex
       .map { case (line, index) =>
         val at = hashOutsideQuotes(line, 0, quote = None)
-        val split = at.getOrElse(line.length)
-        Line(index + 1, line, line.take(split), line.drop(split))
+        val cut = at.getOrElse(line.length)
+        Line(index + 1, line, line.take(cut), line.drop(cut))
       }
       .filter(_.isComment)
 
