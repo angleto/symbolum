@@ -12,7 +12,7 @@ import garden.xeno.symbolum.logic.*
  * The guard that keeps `docs/reading-register.md` from going quietly backwards.
  *
  * `Register` writes the register; this is the half that makes it a measurement. A new axiom, a new
- * definition or a new spelling has to appear in the document, as `NOT READ`, before this passes,
+ * law, a new definition or a new spelling has to appear in the document, as `NOT READ`, before this passes,
  * which is the same discipline `DocumentationSpec` applies to the kernel directory: a file landing
  * there has to be put in one of two lists deliberately or the build stops.
  *
@@ -71,13 +71,44 @@ class RegisterSpec extends AnyFlatSpec with Matchers {
     statements.size shouldBe Classical.Axioms.size + Natural.Axioms.size
     statements.size shouldBe 3
 
-    // The sixteen of the reals are not among them since `docs/adr/0053`: they are theorems, and their
-    // readings are the definitions of the seven primitives, which are rows under `definition`.
+    // The sixteen of the reals are not among them since `docs/adr/0053`: they are theorems, and they
+    // are rows under `law`, which the next test holds.
     val missing = (Classical.Axioms.map(_._1) ++ Natural.Axioms.map(_._1))
       .filterNot(name => listed.contains(s"axiom $name"))
     withClue(s"asserted by a development and not in the register: ${missing.mkString(", ")}\n") {
       missing shouldBe empty
     }
+  }
+
+  /* ------------------------------------------------------------------- the laws */
+
+  it should "hold every law of the reals, once each, and none of them as an axiom" in {
+    // The population that went missing. From 2026-09-27 until 2026-10-05 the sixteen had no row:
+    // the axioms are read off `theory.axioms`, a theorem is not there, and the comment above said
+    // their reading was the seven primitives' definitions. Those say `real_add` is `CUT_ADD`, which
+    // is not a statement about what a complete ordered field is, and that is the one question about
+    // the sixteen no derivation answers. Seen red on 2026-10-05 with the population emptied, naming
+    // all sixteen: `tools/verify/perturb-register-laws.sh`.
+    val listed = Register.lawRows(chain).map(_.key)
+
+    val missing = Real.Laws.map(_._1).filterNot(name => listed.contains(s"law $name"))
+    withClue(s"a law of the reals not in the register: ${missing.mkString(", ")}\n") {
+      missing shouldBe empty
+    }
+
+    // Read from the declaration rather than from the map it collapses into, so that a name written
+    // twice in `Real.Laws` shows up here instead of disappearing into one key.
+    listed.distinct.size shouldBe listed.size
+    listed.size shouldBe Real.Laws.size
+    listed.size shouldBe chain.reals.laws.size
+
+    // The literal, for the same reason the axioms carry one: an interface that lost a law would
+    // otherwise pass as a smaller sum.
+    listed.size shouldBe 16
+
+    // A law is a theorem, and the register does not count one as believed.
+    val asserted = chain.widest.theory.axioms.toSet
+    Real.Laws.map(_._1).filter(name => asserted.contains(chain.reals.laws(name).conclusion)) shouldBe empty
   }
 
   /* ------------------------------------------------------------ the definitions */
@@ -177,8 +208,8 @@ class RegisterSpec extends AnyFlatSpec with Matchers {
     }
 
     rows.size shouldBe
-      Register.axiomRows(chain).size + Register.definitionRows(chain).size +
-        Register.notationRows(chain).size
+      Register.axiomRows(chain).size + Register.lawRows(chain).size +
+        Register.definitionRows(chain).size + Register.notationRows(chain).size
   }
 
   /* ------------------------------------------------------------ the attestations */
