@@ -1000,6 +1000,17 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "premise and the detachment refuses. It cannot produce a wrong value, because the value is " +
         "what the two characterisations and the trichotomy settle and this equation only lets " +
         "`Linarith` read an atom as a number"),
+    "Complex.scala" ->
+      ("several calls, and none reads what comes back as a normal form on trust. The component " +
+        "rules and the characterisation compare the rewritten side against the statement's own " +
+        "right side and refuse as `NotOfForm` naming what they stopped at. The driver hands every " +
+        "real part to `Induct.afterRewriting`, which is `Induct`'s arrangement and asks " +
+        "`finished` on the failing path, and rewrites the FACTS it gives `Linarith` with " +
+        "`inTheorem`: a fact left short of the form the goal was brought to is one `Linarith` " +
+        "cannot use, so an exhausted limit is a refusal and never a theorem. The remaining calls " +
+        "are joined to separately derived equations by `Conv.trans`, which refuses unless the two " +
+        "meet, and every published fact is compared with its written statement before the " +
+        "development is handed out"),
     "Matrix.scala" ->
       ("four calls, and none of them reads what comes back as a normal form on trust. Two require " +
         "it to be `MAT2` applied to four terms and refuse by naming the term they stopped at, so " +

@@ -87,7 +87,9 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // the comments here record: the link was in `Library.of` and its first full run went red.
       chain.integral.facts.size +
       // pi, the periods and acos, 2026-09-27, in the change that added the link.
-      chain.circle.facts.size
+      chain.circle.facts.size +
+      // The complex numbers, 2026-10-05, in the change that added the link.
+      chain.complex.facts.size
 
     library.entries.size shouldBe expected
 
@@ -800,8 +802,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 957 and 954 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02, card `4bcfc8b9`: two facts
     // in `Circle` under two names, read off the run over that branch. `CLAUDE.md`'s first figure
     // moves by two and the other two do not: each binds one real. Plus two over the base above.
-    library.entries.size shouldBe 957
-    library.names.distinct.size shouldBe 954
+    // 1037 and 1034 with `Complex`, 2026-10-05, card `92c368a1`: eighty facts under eighty names,
+    // none shared, derived from `Complex.Statements` before the run and equal to it. `CLAUDE.md`'s
+    // figures move by eighty, thirty-eight and twenty-nine, read off the run.
+    library.entries.size shouldBe 1037
+    library.names.distinct.size shouldBe 1034
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

@@ -90,3 +90,4 @@ the rejected option attractive, and they will.
 | [0057](0057-pi-is-twice-the-zero-of-cos-and-the-bounds-are-taylor-polynomials.md) | pi is twice the zero of cos, and the bounds that pin it are Taylor polynomials reached through the derivative | accepted |
 | [0058](0058-one-instance-per-type.md) | One instance per type, because a chain spelt 808 types with 4.4 million objects | accepted |
 | [0059](0059-the-sixteen-are-laws-and-axioms-are-what-a-theory-asserts.md) | The sixteen are laws: `axioms` names only what a theory asserts | accepted, extends 0053 |
+| [0060](0060-complex-is-a-type-of-its-own-because-the-operators-are-shared.md) | `complex` is a type of its own over the pairs of reals, because the operators it shares are picked by type | accepted, extends 0018 |

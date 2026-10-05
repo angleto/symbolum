@@ -438,7 +438,11 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // measured by the run. Plus eight over the base above.
     // 871 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02: one residue each, read off the
     // run over that branch. Plus two over the base above.
-    proposals.size shouldBe 871
+    // 882 with `Complex`, 2026-10-05: one residue on each of eleven facts (`COMPLEX_MUL_INVERSE`,
+    // `COMPLEX_ENTIRE`, the two norm-zero facts, `COMPLEX_POW_ZERO_BASE`, `SIN_NONNEG`, `CIS_NOT_ONE`,
+    // `COMPLEX_ROOT`, `ROOT_OF_UNITY` and the two sums), counted from `docs/lemmas.md` before the
+    // run and equal to it. Plus eleven over the base above.
+    proposals.size shouldBe 882
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1447,7 +1451,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // and not decomposed: their two weakenings and the proposals of the other sources over the two
     // facts. Plus six over the base above. It read one fewer while the second was stated from
     // `0 <= x` rather than `0 < x`, so the hypothesis's strictness moves one proposal into this bucket.
-    open shouldBe 771
+    // 787 with `Complex`, 2026-10-05, read off the run over that branch and not decomposed: its
+    // eleven weakenings and the proposals of the other sources over its eighty facts, less what
+    // went to the other buckets. Plus sixteen over the base above.
+    open shouldBe 787
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1837,7 +1844,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `open` row names; which twenty was not measured.
     // 180 with the other seven of those eighteen residues, 2026-09-27, measured by the run. Tip plus
     // this branch's delta.
-    unreadable shouldBe 180
+    // 197 with `Complex`, 2026-10-05, measured by the run and not decomposed: residues and
+    // substitutions over a `complex` that no procedure reads. Plus seventeen over the base above.
+    unreadable shouldBe 197
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2172,7 +2181,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 7a15f023: it keeps `NUM_LT`, and `after` did not move. Tip plus this branch's delta.
     // 281 with the six residues of `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, 2026-09-28, measured by the
     // run: each keeps the `Sum` and the `Power` of the conclusion, as `TAYLOR`'s do. Plus six.
-    aboutNumbers.size shouldBe 281
+    // 287 with `Complex`, 2026-10-05, measured by the run and not decomposed: six of its residues
+    // keep a constant of the naturals, `NUM_DIVIDES`, `real_of_num` or the power's exponent.
+    aboutNumbers.size shouldBe 287
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

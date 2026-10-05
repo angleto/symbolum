@@ -375,7 +375,11 @@ object Library {
         collect("Integral", chain.integral.facts) ++
         // pi, the periods and acos, 2026-09-27, in the change that added them: a link of its own
         // because pi is a constant, where the six bounds under it would have fitted `Derivative`.
-        collect("Circle", chain.circle.facts)
+        collect("Circle", chain.circle.facts) ++
+        // The complex numbers, 2026-10-05, in the change that added them: a link of its own
+        // because `complex` is a type, and a type declared beside the chain is one no claim
+        // mentioning `pi` or `Sum` can be stated over.
+        collect("Complex", chain.complex.facts)
     )
 
   /** A library over developments a caller names itself. */

@@ -252,6 +252,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Digits.scala", "right") ->
       (Verdict.Number, "the value it was asked to be below"),
     ("Circle.scala", "name") -> (Verdict.Name, "the fact's published name"),
+    ("Complex.scala", "name") -> (Verdict.Name, "the fact's published name"),
     ("Fractran.scala", "n") -> (Verdict.Number, "the state a step was asked from, as a number"),
     ("Fractran.scala", "m") -> (Verdict.Number, "the state a step was asked to land on, as a number"),
     ("Fractran.scala", "p") -> (Verdict.Number, "the numerator of the fraction that applies first"),

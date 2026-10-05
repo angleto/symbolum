@@ -184,7 +184,7 @@ together they state a complete ordered field, which no derivation can.
 | `law LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `law COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
-## The definitions (184)
+## The definitions (201)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -197,6 +197,7 @@ axiom mentioning it means.
 | `definition ?` | ? = \f:'A -> bool. !p:bool. (!x:'A. f x ==> p) ==> p | **NOT READ** |  |  |
 | `definition BIT0` | BIT0 = \x:real. x + x | **NOT READ** |  |  |
 | `definition BIT1` | BIT1 = \x:real. x + x + 1 | **NOT READ** |  |  |
+| `definition COMPLEX` | COMPLEX = \x:real. \y:real. mk_complex (PAIR x y) | **NOT READ** |  |  |
 | `definition COND` | COND = \p:bool. \x:'a. \y:'a. select (\z:'a. (p ==> z = x) /\ (~p ==> z = y)) | **NOT READ** |  |  |
 | `definition CUT_ADD` | CUT_ADD = \x:real. \y:real. mk_cut (\z:rat. ?u:rat. dest_cut x u /\ dest_cut y (RAT_ADD z (RAT_NEG u))) | **NOT READ** |  |  |
 | `definition CUT_INV` | CUT_INV = \x:real. COND (CUT_LT (CUT_OF_RAT RAT_ZERO) x) (CUT_PINV x) (COND (CUT_LT x (CUT_OF_RAT RAT_ZERO)) (CUT_NEG (CUT_PINV (CUT_NEG x))) (CUT_OF_RAT RAT_ZERO)) | **NOT READ** |  |  |
@@ -225,6 +226,7 @@ axiom mentioning it means.
 | `definition INT_SAME` | INT_SAME = \x:prod(num, num). \y:prod(num, num). FST x + SND y = FST y + SND x | **NOT READ** |  |  |
 | `definition INT_ZERO` | INT_ZERO = INT_OF_PAIR (PAIR 0 0) | **NOT READ** |  |  |
 | `definition IS_CUT` | IS_CUT = \f:rat -> bool. (?x:rat. f x) /\ (?x:rat. ~(f x)) /\ (!x:rat. !y:rat. f y /\ RAT_LT x y ==> f x) /\ (!x:rat. f x ==> (?y:rat. f y /\ RAT_LT x y)) | **NOT READ** |  |  |
+| `definition Im` | Im = \x:complex. SND (dest_complex x) | **NOT READ** |  |  |
 | `definition LIST_CONS` | LIST_CONS = \x:'a. \y:word('a). WORD_CONCAT (WORD_SINGLETON x) y | **NOT READ** |  |  |
 | `definition LIST_FOLD` | LIST_FOLD = \f:'a -> 'b -> 'b. \x:'b. select (\g:word('a) -> 'b. g WORD_EMPTY = x /\ (!y:'a. !z:word('a). g (LIST_CONS y z) = f y (g z))) | **NOT READ** |  |  |
 | `definition LIST_HEAD` | LIST_HEAD = \x:word('a). WORD_NTH x 0 | **NOT READ** |  |  |
@@ -318,6 +320,7 @@ axiom mentioning it means.
 | `definition RES_REFUTATION` | RES_REFUTATION = \f:num -> num. \g:num -> num -> num. \h:num -> num -> bool. \n:num. \m:num. (!k:num. k < m ==> RES_JUSTIFIED f g h n k) /\ (?k:num. k < m /\ f k = 0) | **NOT READ** |  |  |
 | `definition RES_SAT` | RES_SAT = \f:num -> bool. \g:num -> num. \h:num -> num -> num. \f1:num -> num -> bool. \n:num. ?m:num. m < g n /\ f (h n m) = f1 n m | **NOT READ** |  |  |
 | `definition RES_WIDTH` | RES_WIDTH = \f:num -> num. select (\g:num -> num. g 0 = 0 /\ (!n:num. g (SUC n) = COND (f n <= g n) (g n) (f n))) | **NOT READ** |  |  |
+| `definition Re` | Re = \x:complex. FST (dest_complex x) | **NOT READ** |  |  |
 | `definition SND` | SND = \x:prod('a, 'b). select (\y:'b. ?z:'a. x = PAIR z y) | **NOT READ** |  |  |
 | `definition SUC` | SUC = \n:num. mk_num (IND_SUC (dest_num n)) | **NOT READ** |  |  |
 | `definition Sum` | Sum = \f:num -> real. select (\g:num -> real. g 0 = 0 /\ (!n:num. g (SUC n) = g n + f n)) | **NOT READ** |  |  |
@@ -339,6 +342,19 @@ axiom mentioning it means.
 | `definition \/` | \/ = \p:bool. \q:bool. !r:bool. (p ==> r) ==> (q ==> r) ==> r | **NOT READ** |  |  |
 | `definition abs` | abs = \x:real. max x (-x) | **NOT READ** |  |  |
 | `definition acos` | acos = \x:real. select (\y:real. 0 <= y /\ y <= pi /\ cos y = x) | **NOT READ** |  |  |
+| `definition cis` | cis = \x:real. COMPLEX (cos x) (sin x) | **NOT READ** |  |  |
+| `definition cnj` | cnj = \x:complex. COMPLEX (Re x) (-(Im x)) | **NOT READ** |  |  |
+| `definition complex_add` | complex_add = \x:complex. \y:complex. COMPLEX (Re x + Re y) (Im x + Im y) | **NOT READ** |  |  |
+| `definition complex_arg` | complex_arg = \x:complex. select (\y:real. 0 <= y /\ y < 2 * pi /\ x = complex_of_real (complex_norm x) * cis y) | **NOT READ** |  |  |
+| `definition complex_inv` | complex_inv = \x:complex. COMPLEX (Re x / complex_norm_sq x) (-(Im x) / complex_norm_sq x) | **NOT READ** |  |  |
+| `definition complex_mul` | complex_mul = \x:complex. \y:complex. COMPLEX (Re x * Re y - Im x * Im y) (Re x * Im y + Im x * Re y) | **NOT READ** |  |  |
+| `definition complex_neg` | complex_neg = \x:complex. COMPLEX (-(Re x)) (-(Im x)) | **NOT READ** |  |  |
+| `definition complex_norm` | complex_norm = \x:complex. sqrt (complex_norm_sq x) | **NOT READ** |  |  |
+| `definition complex_norm_sq` | complex_norm_sq = \x:complex. Re x * Re x + Im x * Im x | **NOT READ** |  |  |
+| `definition complex_of_real` | complex_of_real = \x:real. COMPLEX x 0 | **NOT READ** |  |  |
+| `definition complex_pow` | complex_pow = \x:complex. select (\f:num -> complex. f 0 = complex_of_real 1 /\ (!n:num. f (SUC n) = x * f n)) | **NOT READ** |  |  |
+| `definition complex_sub` | complex_sub = \x:complex. \y:complex. COMPLEX (Re x - Re y) (Im x - Im y) | **NOT READ** |  |  |
+| `definition complex_sum` | complex_sum = \f:num -> complex. \n:num. COMPLEX (Sum (\m:num. Re (f m)) n) (Sum (\m:num. Im (f m)) n) | **NOT READ** |  |  |
 | `definition continuous` | continuous = \f:real -> real. \x:real. !y:real. 0 < y ==> (?z:real. 0 < z /\ (!u:real. abs (u - x) < z ==> abs (f u - f x) < y)) | **NOT READ** |  |  |
 | `definition continuous_within` | continuous_within = \f:real -> real. \x:real. \y:real. \z:real. !u:real. 0 < u ==> (?v:real. 0 < v /\ (!w:real. x <= w /\ w <= y /\ abs (w - z) < v ==> abs (f w - f z) < u)) | **NOT READ** |  |  |
 | `definition converges` | converges = \f:num -> real. \x:real. !y:real. 0 < y ==> (?n:num. !m:num. n <= m ==> abs (f m - x) < y) | **NOT READ** |  |  |
@@ -351,6 +367,7 @@ axiom mentioning it means.
 | `definition exp` | exp = \x:real. lim (\n:num. Sum (\m:num. Power x m / real_of_num (NUM_FACT m)) n) | **NOT READ** |  |  |
 | `definition fine_sum` | fine_sum = \f:real -> real. \g:real -> real. \x:real. \y:real. \z:real. INDUCTIVE (\h:prod(real, prod(real, real)) -> bool. \u:prod(real, prod(real, real)). (?v:real. ?w:real. ?x1:real. u = PAIR v (PAIR w (f x1 * (w - v))) /\ v <= x1 /\ x1 <= w /\ w - v < g x1) \/ (?v:real. ?w:real. ?x1:real. ?y1:real. ?z1:real. u = PAIR v (PAIR x1 (y1 + z1)) /\ h (PAIR v (PAIR w y1)) /\ h (PAIR w (PAIR x1 z1)))) (PAIR x (PAIR y z)) | **NOT READ** |  |  |
 | `definition has_integral` | has_integral = \f:real -> real. \x:real. \y:real. \z:real. !u:real. 0 < u ==> (?g:real -> real. (!v:real. 0 < g v) /\ (!v:real. fine_sum f g x y v ==> abs (v - z) < u)) | **NOT READ** |  |  |
+| `definition ii` | ii = COMPLEX 0 1 | **NOT READ** |  |  |
 | `definition integral` | integral = \f:real -> real. \x:real. \y:real. select (\z:real. has_integral f x y z) | **NOT READ** |  |  |
 | `definition inv` | inv = CUT_INV | **NOT READ** |  |  |
 | `definition lim` | lim = \f:num -> real. select (\x:real. converges f x) | **NOT READ** |  |  |
@@ -376,7 +393,7 @@ axiom mentioning it means.
 | `definition tends` | tends = \f:real -> real. \x:real. \y:real. !z:real. 0 < z ==> (?u:real. 0 < u /\ (!v:real. 0 < abs (v - x) /\ abs (v - x) < u ==> abs (f v - y) < z)) | **NOT READ** |  |  |
 | `definition ~` | ~ = \p:bool. p ==> F | **NOT READ** |  |  |
 
-## The notation (27)
+## The notation (30)
 
 One row per spelling the parser and the printer share, and one for application, which has a
 precedence and is not an entry of the table.
@@ -402,6 +419,9 @@ precedence and is not an entry of the table.
 | `notation infix <= via NUM_LE` | `x <= y` is `NUM_LE x y`, precedence 50, left-associative | **NOT READ** |  |  |
 | `notation infix > via NUM_LT` | `x > y` is `NUM_LT y x`, precedence 50, left-associative, read only, never printed | **NOT READ** |  |  |
 | `notation infix >= via NUM_LE` | `x >= y` is `NUM_LE y x`, precedence 50, left-associative, read only, never printed | **NOT READ** |  |  |
+| `notation infix + via complex_add` | `x + y` is `complex_add x y`, precedence 60, left-associative | **NOT READ** |  |  |
+| `notation infix - via complex_sub` | `x - y` is `complex_sub x y`, precedence 60, left-associative | **NOT READ** |  |  |
+| `notation infix * via complex_mul` | `x * y` is `complex_mul x y`, precedence 70, left-associative | **NOT READ** |  |  |
 | `notation prefix ~` | `~ x` is `~ x`, precedence 35 | **NOT READ** |  |  |
 | `notation prefix -` | `- x` is `neg x`, precedence 80 | **NOT READ** |  |  |
 | `notation binder \` | `\x. body` is a lambda, and the body extends as far right as it can | **NOT READ** |  |  |
@@ -411,7 +431,7 @@ precedence and is not an entry of the table.
 | `notation numerals via NUM_ONE` | a digit string is read in binary through `ZERO`, `NUM_ONE`, `NUM_BIT0` and `NUM_BIT1`: `12` is `NUM_BIT0 (NUM_BIT0 (NUM_BIT1 NUM_ONE))` | **NOT READ** |  |  |
 | `notation application` | `f x` binds tighter than every operator above, at precedence 1000 | **NOT READ** |  |  |
 
-## Declared and never defined (14)
+## Declared and never defined (16)
 
 Not rows, and listed so that a constant with no row is a constant somebody decided about.
 `select` is declared and says nothing by itself: its whole meaning is `SELECT` above, which is a
@@ -420,12 +440,14 @@ arrive from `Kernel.defineType` with two theorems relating them, and a theorem i
 than read. Equality is the kernel's, and is in the theory before any of this starts.
 
 - `= : 'A -> 'A -> bool`
+- `dest_complex : complex -> prod(real, real)`
 - `dest_cut : real -> rat -> bool`
 - `dest_int : int -> prod(num, num) -> bool`
 - `dest_num : num -> ind`
 - `dest_prod : prod('a, 'b) -> 'a -> 'b -> bool`
 - `dest_rat : rat -> prod(int, num) -> bool`
 - `dest_word : word('a) -> prod(num, num -> 'a)`
+- `mk_complex : prod(real, real) -> complex`
 - `mk_cut : (rat -> bool) -> real`
 - `mk_int : (prod(num, num) -> bool) -> int`
 - `mk_num : ind -> num`

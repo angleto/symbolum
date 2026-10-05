@@ -1146,6 +1146,22 @@ that a statement about the limits. `Trigonometric.scala` is the derivation and i
 argument. It costs exactly what `EXP_ADD` costs and does not rest on it, which `TranscendentalSpec`
 asserts both ways.
 
+**The complex numbers are `Complex`, a link since 2026-10-05, and `complex` is a type carved out
+of the whole of `prod(real, real)`.** `docs/adr/0060` is the decision, and what decides it against
+`Matrix`'s spelled-out pairs is that `+`, `*` and `-` are picked by type: they are the complex
+operations at `complex`, and over a shared pair type they would be read at every pair of reals. The
+field is proved part by part: `COMPLEX_EQ` splits an identity into `Re` and `Im`, a rule per
+operation opens it, and `Ring` closes the rest, which is also `Complex.prove` for a consumer's own
+identity. On that: the inverse (and `complex_inv 0 = 0` without a case split), the conjugate, the
+norm and its multiplicativity, the powers and the finite sums, `cis` with its addition law and
+period, `DE_MOIVRE`, the polar form with an argument chosen in `[0, 2 pi)` (`ARG_SPEC`), an `n`-th
+root of every number (`COMPLEX_ROOT`), and the roots of unity with both halves of the orthogonality
+of their powers. It also publishes four facts about the reals nothing had asked for before:
+`COS_NEG`, `SIN_NEG`, `SIN_NONNEG` on `[0, pi]` and `EXP_POWER`. No axiom; every fact rests on
+choice, eta and infinity. **What is not here**: the complex exponential and logarithm, any limit or
+continuity at `complex`, and the fundamental theorem of algebra and the Fourier form of the Collatz
+formula, which are the two cards this one was opened for.
+
 **`pi` is `Circle`, a link since 2026-09-27, and it is twice the zero of `cos` in `[0, 2]`.**
 `docs/adr/0057` is the decision. The zero is chosen, and the choice pins it because `cos` changes
 sign between `3/2` and `8/5` and falls strictly on `[0, 2]`. What makes `cos` computable to a sign at
@@ -1157,9 +1173,9 @@ quarter, half and whole turns (`COS_SHIFT` to `SIN_PERIODIC`), the values at `pi
 `pi / 2` the least positive zero (`PI_HALF_LEAST_ZERO`, so the textbook's definition of `pi` is
 a theorem here), and `acos`, whose specification
 `ACOS_SPEC` is the intermediate value theorem on `[0, pi]` read through the choice. Two constants,
-no axiom; the facts rest on choice, eta and infinity. **What is not here** is the complex numbers,
-which are card `92c368a1` and the reason this link exists, and the parity of `sin` and `cos`, which
-nothing has asked for yet.
+no axiom; the facts rest on choice, eta and infinity. The complex numbers, which are the reason
+this link exists, are the next one, and the parity of `sin` and `cos` landed there because the polar
+form was the first thing to ask for it.
 
 **Continuity at a point and the intermediate value theorem are `Continuity`, a link since
 2026-09-24, and the theorem is the fourth thing `COMPLETENESS` buys.** `continuous f x` is the
