@@ -878,8 +878,8 @@ object Limit {
       logic <- classical.logic.over(theory)
       linarith <- Linarith.construct(magnitude.order)
 
-      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
-      completeness <- reals.axiom("COMPLETENESS")
+      irreflexive <- reals.law("LT_IRREFLEXIVE")
+      completeness <- reals.law("COMPLETENESS")
       leCases <- magnitude.order.leCases
       leOfEq <- magnitude.order.leOfEq
       notForall <- classical.fact(Classical.NotForall)
@@ -909,10 +909,10 @@ object Limit {
 
       absTriangle <- magnitude.triangle
       absMultiplicative <- magnitude.fact(Magnitude.Multiplicative)
-      mulSymmetric <- reals.axiom("MUL_SYM")
-      mulUnit <- reals.axiom("MUL_ONE")
-      mulInverse <- reals.axiom("MUL_INVERSE")
-      mulPositive <- reals.axiom("LT_MUL")
+      mulSymmetric <- reals.law("MUL_SYM")
+      mulUnit <- reals.law("MUL_ONE")
+      mulInverse <- reals.law("MUL_INVERSE")
+      mulPositive <- reals.law("LT_MUL")
       zeroLessOne <- magnitude.order.fact(Order.ZeroLessOne)
       positiveNotZero <- magnitude.order.fact(Order.NonZero)
       inversePositive <- magnitude.order.fact(Order.InversePositive)
@@ -971,7 +971,7 @@ object Limit {
       atMostFromBelow <- peano.fact(Peano.AtMostFromBelow)
       atMostDouble <- peano.fact(Peano.AtMostDoubleMinus)
       multiplyLe <- magnitude.order.fact(Order.MultiplyLe)
-      mulSymmetric <- reals.axiom("MUL_SYM")
+      mulSymmetric <- reals.law("MUL_SYM")
       squareUnderTriangle <- squareUnderCauchy(
         logic,
         linarith,
@@ -1057,7 +1057,7 @@ object Limit {
       powerPositive <- series.fact(Series.PowerPositive)
       geometricSum <- series.fact(Series.Geometric)
       leOfLt <- magnitude.order.fact(Order.LeOfLt)
-      total <- reals.axiom("LT_TOTAL")
+      total <- reals.law("LT_TOTAL")
       associative <- peano.fact(Peano.AddAssociative)
       sumScaled <- series.fact(Series.Scaled)
       sumCongruence <- series.fact(Series.Congruence)

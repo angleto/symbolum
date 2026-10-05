@@ -543,7 +543,7 @@ class FractionSpec extends AnyFlatSpec with Matchers {
     val infinity = force(chain.naturals.axiom(Natural.Infinity)).conclusion
     val foundation = Set(choice, eta, infinity)
     val realAxioms =
-      Real.Axioms.map { case (name, _) => force(chain.reals.axiom(name)).conclusion }.toSet
+      Real.Laws.map { case (name, _) => force(chain.reals.law(name)).conclusion }.toSet
 
     // Not empty, which is the guard against the guard: a reading that returned nothing for
     // everything would satisfy both lines below and say nothing at all.

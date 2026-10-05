@@ -210,7 +210,7 @@ class PeanoSpec extends AnyFlatSpec with Matchers {
     // This is also the first use of that axiom anywhere in the repository, which is why the
     // assertion is on the axiom and not on the shape of the proof.
     val theorem = fact(Peano.Archimedean)
-    val completeness = force(ring.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(ring.reals.law("COMPLETENESS")).conclusion
 
     Real.spent(theorem) should contain(completeness)
     peano.show(theorem.conclusion) shouldBe "!x:real. ?n:num. x < real_of_num n"

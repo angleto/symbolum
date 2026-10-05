@@ -51,8 +51,8 @@ class IntegralSpec extends AnyFlatSpec with Matchers {
   private def shaped(target: Term, theorem: Kernel.Thm): Kernel.Thm =
     force(Conv.betaNormalise(target).flatMap(Conv.sym).flatMap(e => LogicError.lift(Kernel.eqMp(e, theorem))))
 
-  private val realAxioms: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
-  private val completeness: Term = force(chain.reals.axiom("COMPLETENESS")).conclusion
+  private val realAxioms: Set[Term] = chain.reals.laws.values.map(_.conclusion).toSet
+  private val completeness: Term = force(chain.reals.law("COMPLETENESS")).conclusion
   private val select: Term = force(chain.classical.axiom("SELECT")).conclusion
 
   /* --------------------------------------------------------------- what it cost */

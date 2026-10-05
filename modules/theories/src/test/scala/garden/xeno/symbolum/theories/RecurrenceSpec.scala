@@ -104,7 +104,7 @@ class RecurrenceSpec extends AnyFlatSpec with Matchers {
     )
     val product = force(
       rules
-        .specAll(force(reals.axiom("LT_MUL")), List(force(reals.term("2")), atT))
+        .specAll(force(reals.law("LT_MUL")), List(force(reals.term("2")), atT))
         .flatMap { instance =>
           rules.conjIntro(force(order.positive(2)), assumedBefore).flatMap(rules.mp(instance, _))
         }

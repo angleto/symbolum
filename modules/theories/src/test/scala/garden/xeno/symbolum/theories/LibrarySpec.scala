@@ -28,7 +28,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // caught that the moment the library gained it and the sum did not, which is what a sum asserts
     // that a literal cannot.
     val expected = chain.classical.definitions.size + chain.classical.facts.size +
-      chain.reals.axioms.size + chain.reals.definitions.size +
+      chain.reals.laws.size + chain.reals.definitions.size +
       chain.ring.positivity.facts.size + chain.order.facts.size +
       chain.naturals.facts.size + chain.peano.facts.size + chain.series.facts.size +
       chain.divisibility.facts.size + chain.modular.facts.size +

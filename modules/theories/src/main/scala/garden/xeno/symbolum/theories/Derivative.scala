@@ -551,7 +551,7 @@ object Derivative {
       cauchy <- cauchyMeanValue(steps, continuousLinear, linear, unique, rolle)
       field <- Field.construct(transcendental.series.ring.arithmetic)
       tendsDefinition <- continuity.definition(Continuity.Tends)
-      total <- reals.axiom("LT_TOTAL")
+      total <- reals.law("LT_TOTAL")
       lhopital <- LHopitalRule.prove(
         LHopitalRule.Sources(steps, magnitude, field, tendsDefinition, total, continuous, rolle, unique, cauchy))
       productRuleFact <- productRule(steps, reals, magnitude, continuity, continuous)
@@ -876,7 +876,7 @@ object Derivative {
     }
 
     for {
-      total <- reals.axiom("LT_TOTAL")
+      total <- reals.law("LT_TOTAL")
       zero <- real("0:real")
       trichotomy <- rules.specAll(total, List(zero, m))
 
@@ -1347,7 +1347,7 @@ object Derivative {
       mHyp <- assume("derivative (f:real -> real) x m")
       nHyp <- assume("derivative (f:real -> real) x n")
       goal <- proposition("m:real = n")
-      total <- reals.axiom("LT_TOTAL")
+      total <- reals.law("LT_TOTAL")
       trichotomy <- rules.specAll(total, List(m, n))
       below <- assume("m:real < n")
         .flatMap(order => rules.specAll(apart, List(f, x, m, n)).flatMap(mp(_, Right(mHyp), Right(nHyp), Right(order))))
@@ -2338,7 +2338,7 @@ object Derivative {
     for {
       positiveX <- assume("0 < x:real")
       notZero <- at(lemma("!x:real. 0 < x ==> ~(x = 0)"), "x:real").flatMap(mp(_, Right(positiveX)))
-      inverse <- reals.axiom("MUL_INVERSE").flatMap(rules.spec(x, _)).flatMap(rules.mp(_, notZero))
+      inverse <- reals.law("MUL_INVERSE").flatMap(rules.spec(x, _)).flatMap(rules.mp(_, notZero))
       wPositive <- magnitude.order.fact(Order.InversePositive).flatMap(rules.spec(x, _)).flatMap(rules.mp(_, positiveX))
       wNonNeg <- at(lemma("!W:real. 0 < W ==> 0 <= W"), W).flatMap(mp(_, Right(wPositive)))
       kPositive <- at(lemma("!W:real. 0 < W ==> 0 < 4 * (W * W)"), W).flatMap(mp(_, Right(wPositive)))

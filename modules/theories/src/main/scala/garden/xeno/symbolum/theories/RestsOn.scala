@@ -97,7 +97,7 @@ object Reach {
         "Classical, derived" -> chain.classical.facts,
         "Classical, defined" -> chain.classical.definitions,
         "Natural, assumed" -> chain.naturals.axioms,
-        Library.RealsDerived -> chain.reals.axioms,
+        Library.RealsDerived -> chain.reals.laws,
         "Real, defined" -> chain.reals.definitions,
         "Positivity" -> chain.ring.positivity.facts,
         "Order" -> chain.order.facts,

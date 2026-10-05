@@ -209,10 +209,10 @@ class MagnitudeSpec extends AnyFlatSpec with Matchers {
     // The distinction the file turns on, and the one easiest to get wrong in a report: `sgn` is a
     // three-way split, so it cannot be assembled out of `max` and needs its own appeal to choice.
     // A second *use* of an axiom already believed adds nothing to what has to be believed, so the
-    // theory here holds the axioms of `Real.Axioms` and `Classical.Axioms` and no more, as it did
-    // before `sgn` existed. What is asserted is that the count did not move and that `sgn` is
-    // nevertheless a constant of its own. Since `docs/adr/0053` the reals hold the classical axioms
-    // themselves, so "no more" is the reals' own set.
+    // theory here holds the reals' own axioms and no more, as it did before `sgn` existed. What is
+    // asserted is that the count did not move and that `sgn` is nevertheless a constant of its own.
+    // Since `docs/adr/0053` those are the classical two and infinity rather than sixteen of the
+    // reals' own.
     magnitude.theory.axioms.toSet shouldBe Real.standard.theory.axioms.toSet
     magnitude.definitions.keySet should contain(Magnitude.SignName)
   }

@@ -32,7 +32,7 @@ class RootSpec extends AnyFlatSpec with Matchers {
 
   private def fact(name: String): Kernel.Thm = force(root.fact(name))
 
-  private val reals: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
+  private val reals: Set[Term] = chain.reals.laws.values.map(_.conclusion).toSet
 
   /* --------------------------------------------------------------- what it cost */
 
@@ -44,7 +44,7 @@ class RootSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "prove its existence from the reals alone, and name it with choice on top" in {
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     val exists = Real.spent(fact(Root.Exists))
 
     // The existence spends the sixteenth axiom, and nothing but the reals'.

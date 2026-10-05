@@ -213,7 +213,7 @@ object Positivity {
       goal <- proposition("0 < 1")
 
       trichotomy <- reals
-        .axiom("LT_TOTAL")
+        .law("LT_TOTAL")
         .flatMap(rules.spec(zero, _))
         .flatMap(rules.spec(one, _))
 
@@ -224,14 +224,14 @@ object Positivity {
       // The second contradicts the one axiom that separates the two numerals.
       equated <- proposition("0 = 1").flatMap(term => LogicError.lift(Kernel.assume(term)))
       reversed <- Conv.sym(equated)
-      distinct <- reals.axiom("ONE_NOT_ZERO")
+      distinct <- reals.law("ONE_NOT_ZERO")
       absurd <- rules.notElim(distinct, reversed)
       second <- rules.falsityElim(goal, absurd)
 
       // The third adds `-1` to both sides, squares, and lands on the goal.
       below <- proposition("1 < 0").flatMap(term => LogicError.lift(Kernel.assume(term)))
       addition <- reals
-        .axiom("LT_ADD")
+        .law("LT_ADD")
         .flatMap(rules.spec(one, _))
         .flatMap(rules.spec(zero, _))
         .flatMap(rules.spec(minusOne, _))
@@ -240,7 +240,7 @@ object Positivity {
       absorbs <- identity("0 + -1 = -1")
       negative <- Conv.rewriteSides(cancels, absorbs, shifted)
       product <- reals
-        .axiom("LT_MUL")
+        .law("LT_MUL")
         .flatMap(rules.spec(minusOne, _))
         .flatMap(rules.spec(minusOne, _))
       squared <- rules.conjIntro(negative, negative).flatMap(rules.mp(product, _))
@@ -269,8 +269,8 @@ object Positivity {
     val y = Term.variable("y", real)
 
     for {
-      ltAdd <- reals.axiom("LT_ADD")
-      ltTransitive <- reals.axiom("LT_TRANSITIVE")
+      ltAdd <- reals.law("LT_ADD")
+      ltTransitive <- reals.law("LT_TRANSITIVE")
 
       zero <- reals.term("0")
       sum <- reals.term("x:real + y:real")
@@ -308,7 +308,7 @@ object Positivity {
     val x = Term.variable("x", real)
 
     for {
-      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
+      irreflexive <- reals.law("LT_IRREFLEXIVE")
       zero <- reals.term("0")
 
       positive <- reals.proposition("0 < x:real")

@@ -834,7 +834,7 @@ object Coefficient {
     val logic = reals.logic
 
     def named(name: String): Either[LogicError, Kernel.Thm] =
-      reals.axiom(name).orElse(arithmetic.lemma(name))
+      reals.law(name).orElse(arithmetic.lemma(name))
 
     for {
       syntax <- readSyntax(reals)
@@ -874,7 +874,7 @@ object Coefficient {
         Rewrite.Rule.of(logic, theorem).map(name -> _)
       })
 
-      mulInverse <- reals.axiom("MUL_INVERSE")
+      mulInverse <- reals.law("MUL_INVERSE")
     } yield new Coefficient(
       arithmetic,
       positivity,
@@ -923,12 +923,12 @@ object Coefficient {
         toOne <- Conv.sym(scaled).flatMap(Conv.trans(_, unit))
         vanishes <- context.arithmetic.lemma(Arithmetic.ZeroTimes).flatMap(derived.spec(y, _))
         zeroIsOne <- Conv.sym(vanishes).flatMap(Conv.trans(_, toOne))
-        distinct <- reals.axiom("ONE_NOT_ZERO")
+        distinct <- reals.law("ONE_NOT_ZERO")
         absurd <- Conv.sym(zeroIsOne).flatMap(derived.notElim(distinct, _))
         notZero <- derived.notIntro(isZero.conclusion, absurd)
 
         cancels <- reals
-          .axiom("MUL_INVERSE")
+          .law("MUL_INVERSE")
           .flatMap(derived.spec(x, _))
           .flatMap(derived.mp(_, notZero))
 

@@ -17,11 +17,13 @@ update it.*
 [architecture.md](architecture.md) ranks where a change is dangerous, and the second entry is not
 the kernel:
 
-> **`Real.Axioms`.** A mis-stated axiom makes everything provable, and the only test that fails is
-> the pinned copy in `RealSpec`, which fails because the text changed and not because it is wrong.
-> Read a changed axiom against a textbook, out loud, and change the pinned copy in the same commit.
-> The same goes for a definition body in `Real.Definitions` and for the notation: both decide what
-> an axiom string means, and neither is checked by anything but a reader.
+> **`Real.Laws`, and what decides what they mean.** [...] What nothing checks is that they state a
+> complete ordered field. [...] The same goes for a definition body in `Real.Definitions` and for
+> the notation: both decide what a statement string means, and neither is checked by anything but a
+> reader. The three axioms the chain does assert are a mis-statement away from proving everything.
+
+The sixteen laws themselves have had no row here since they stopped being axioms on 2026-09-27,
+which is a gap and not a decision: Mycelium card `f327c976` is the population that would hold them.
 
 So for these three populations the entire defence is a person reading, and the reading had never
 been done. Forty-five findings had reviewed the machinery of this repository and none had reviewed
@@ -77,9 +79,9 @@ statement.
 Each statement is printed out of the theory through the chain's widest notation, not quoted from the
 source text beside it, so that what a reader checks is what the kernel holds. The printer renames
 bound variables as it goes, which is worth knowing before the reading starts: `COMPLETENESS` is
-written over a predicate `P` in `Real.Axioms` and prints here quantified over `x:real -> bool`, and
+written over a predicate `P` in `Real.Laws` and prints here quantified over `x:real -> bool`, and
 `SELECT` prints the same way. The statement is the same statement; the letter is the printer's. A
-reader who wants the source spelling as well as the term wants `Real.Axioms`, `Classical.Axioms` and
+reader who wants the source spelling as well as the term wants `Classical.Axioms` and
 `Natural.Axioms`, and `RealSpec` and `ClassicalSpec` pin those against the theory.
 
 ## What is not a row, and why

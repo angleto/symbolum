@@ -128,8 +128,8 @@ private[theories] object ExtremeValue {
     def reflexive(point: String) = at(lemma("!a:real. a <= a"), point)
 
     for {
-      completeness <- reals.axiom("COMPLETENESS")
-      total <- reals.axiom("LT_TOTAL")
+      completeness <- reals.law("COMPLETENESS")
+      total <- reals.law("LT_TOTAL")
       leCases <- magnitude.order.fact(Order.LeCases)
       goal <- proposition(s"$Relation a:real b:real")
       memberStatement <- proposition(Member)
@@ -421,7 +421,7 @@ private[theories] object ExtremeValue {
       s"!x:real. $lo <= x /\\ x <= $hi ==> $F x <= $bound"
 
     for {
-      total <- reals.axiom("LT_TOTAL")
+      total <- reals.law("LT_TOTAL")
       relation <- Parser.term(theory, notation,
         s"\\u:real. \\v:real. ?M:real. ${boundedOn("u", "v", "M")}", Relations)
       instance <- rules.specAll(gluing, List(relation, a, b)).flatMap(reduced)
@@ -555,8 +555,8 @@ private[theories] object ExtremeValue {
       s"!x:real. $lo <= x /\\ x <= $hi ==> $F x <= M:real - $gap"
 
     for {
-      total <- reals.axiom("LT_TOTAL")
-      completeness <- reals.axiom("COMPLETENESS")
+      total <- reals.law("LT_TOTAL")
+      completeness <- reals.law("COMPLETENESS")
       goal <- proposition(Goal)
       falsity = logic.falsity
 
@@ -873,7 +873,7 @@ private[theories] object ExtremeValue {
     def some(lo: String, hi: String) = s"?d:real. 0 < d /\\ (${radiusFor(lo, hi, "d")})"
 
     for {
-      total <- reals.axiom("LT_TOTAL")
+      total <- reals.law("LT_TOTAL")
       relation <- Parser.term(theory, notation, s"\\u:real. \\v:real. ${some("u", "v")}", Relations)
       instance <- rules.specAll(gluing, List(relation, a, b)).flatMap(reduced)
       parts <- antecedents(steps, instance.conclusion, 3)

@@ -107,7 +107,7 @@ object Conjugacy {
       multiplyLe <- chain.order.fact(Order.MultiplyLe)
       inversePositive <- chain.order.fact(Order.InversePositive)
       nonZero <- chain.order.fact(Order.NonZero)
-      productPositive <- chain.reals.axiom("LT_MUL")
+      productPositive <- chain.reals.law("LT_MUL")
 
       assumedNonNegative <- assume("0 <= b:real")
       (nonNegative, isNonNegative) = assumedNonNegative

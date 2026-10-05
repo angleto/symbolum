@@ -46,7 +46,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
     // The whole point of deriving it rather than asserting it. If this number moves, something
     // reached for `assertAxiom` and the derivation stopped being one.
     order.reals.theory.axioms.toSet shouldBe (Classical.standard.theory.axioms ++ Natural.standard.theory.axioms).toSet
-    Real.Axioms should have length 16
+    Real.Laws should have length 16
   }
 
   it should "build from the ring rather than from a fixed instance" in {
@@ -74,7 +74,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
 
     val trichotomy = force(
       reals
-        .axiom("LT_TOTAL")
+        .law("LT_TOTAL")
         .flatMap(rules.spec(force(reals.term("0")), _))
         .flatMap(rules.spec(force(reals.term("1")), _))
     )
@@ -215,7 +215,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
 
     val timesAxioms = Real.spent(times)
     val reciprocalAxioms = Real.spent(reciprocal)
-    val inverseAxiom = force(reals.axiom("MUL_INVERSE")).conclusion
+    val inverseAxiom = force(reals.law("MUL_INVERSE")).conclusion
 
     timesAxioms should not contain inverseAxiom
     reciprocalAxioms should contain(inverseAxiom)
@@ -432,7 +432,7 @@ class OrderSpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPropertyC
    * still prove these two and would show here.
    */
   "Turning a negated comparison round" should "rest on trichotomy and on nothing else" in {
-    val trichotomy = force(order.ring.arithmetic.reals.axiom("LT_TOTAL")).conclusion
+    val trichotomy = force(order.ring.arithmetic.reals.law("LT_TOTAL")).conclusion
 
     List(Order.LeOfNotLt, Order.LtOfNotLe).foreach { name =>
       val proved = force(order.fact(name))

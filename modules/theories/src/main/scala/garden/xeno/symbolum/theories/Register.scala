@@ -10,12 +10,12 @@ import garden.xeno.symbolum.logic.*
  * The command that writes `docs/reading-register.md`: what has been read, and by whom, and against
  * what.
  *
- * `docs/architecture.md` says where a change is dangerous and the second entry is the axioms: *"a
- * mis-stated axiom makes everything provable, and the only test that fails is the pinned copy in
- * `RealSpec`, which fails because the text changed and not because it is wrong"*, and the same
- * paragraph extends that to the definitions and to the notation. So for three populations in this
- * repository **the whole defence is a person reading**, and until this file was written nothing
- * recorded whether anyone had.
+ * `docs/architecture.md` says where a change is dangerous, and its second entry is what nothing
+ * but a reader checks: whether the statements say what they are meant to, and the definitions and
+ * the notation that decide what a statement string means. An axiom the chain asserts is one
+ * mis-statement away from proving everything. So for three populations in this repository **the
+ * whole defence is a person reading**, and until this file was written nothing recorded whether
+ * anyone had.
  *
  * That is the gap: forty-five findings had reviewed the machinery and none had reviewed the
  * content. A register does not close it. What it does is make the reading a thing with a state:
@@ -135,7 +135,7 @@ object Register {
    * a text that is re-parsed here would agree with the theory only as long as the parse does.
    */
   private def axiomNames(chain: Chain): Map[Term, String] =
-    (chain.classical.axioms ++ chain.naturals.axioms ++ chain.reals.axioms).map {
+    (chain.classical.axioms ++ chain.naturals.axioms ++ chain.reals.laws).map {
       case (name, theorem) => theorem.conclusion -> name
     }
 

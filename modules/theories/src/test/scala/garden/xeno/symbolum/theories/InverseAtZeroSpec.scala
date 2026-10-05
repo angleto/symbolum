@@ -44,7 +44,7 @@ class InverseAtZeroSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "be a theorem the sixteen do not publish, which is what the ADR records" in {
-    val sixteen = Real.Axioms.map { case (name, _) => force(reals.axiom(name)).conclusion }
+    val sixteen = Real.Laws.map { case (name, _) => force(reals.law(name)).conclusion }
     sixteen should not contain inverseAtZero.conclusion
   }
 

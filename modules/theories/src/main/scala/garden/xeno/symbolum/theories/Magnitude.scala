@@ -762,7 +762,7 @@ object Magnitude {
       record.both(aboveLeft, aboveRight).flatMap(record.both(isOneOfThem, _))
 
     for {
-      trichotomy <- record.quoted("the order is total")(reals.axiom("LT_TOTAL"))
+      trichotomy <- record.quoted("the order is total")(reals.law("LT_TOTAL"))
       statement <- Recorded.quiet(reals.proposition(Greatest))
       predicate <- Recorded.quiet(
         logic
@@ -857,7 +857,7 @@ object Magnitude {
       } yield (outer._1, inner._1, inner._2)
 
     for {
-      trichotomy <- record.quoted("the order is total")(reals.axiom("LT_TOTAL"))
+      trichotomy <- record.quoted("the order is total")(reals.law("LT_TOTAL"))
       statement <- Recorded.quiet(Parser.proposition(theory, notation, Sign))
       predicate <- Recorded.quiet(
         logic
@@ -1320,8 +1320,8 @@ object Magnitude {
      */
     val shared: Recorded[SignPieces] = for {
       characterisation <- characterised
-      irreflexive <- record.quoted("nothing is below itself")(reals.axiom("LT_IRREFLEXIVE"))
-      transitive <- record.quoted("the order is transitive")(reals.axiom("LT_TRANSITIVE"))
+      irreflexive <- record.quoted("nothing is below itself")(reals.law("LT_IRREFLEXIVE"))
+      transitive <- record.quoted("the order is transitive")(reals.law("LT_TRANSITIVE"))
       zero <- Recorded.quiet(Parser.term(theory, notation, "0", real))
       neverAtPoint <- record.specialiseOne(x, irreflexive)
       neverAtZero <- record.specialiseOne(zero, irreflexive)

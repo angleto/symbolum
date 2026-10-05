@@ -353,7 +353,7 @@ private[theories] object Fourier {
     val asProduct = rewritten(claim, division)
     val qPositive = settle(s"0 < real_of_num $Q", zeroEmbeds, mp(atNumbers(peano.fact(Peano.EmbedsStrictOrder), "0", Q), positive))
     val qNonZero = settle(s"~(real_of_num $Q = 0)", qPositive)
-    val reciprocal = mp(atTerms(reals.axiom("MUL_INVERSE"), real(s"real_of_num $Q")), qNonZero)
+    val reciprocal = mp(atTerms(reals.law("MUL_INVERSE"), real(s"real_of_num $Q")), qNonZero)
     val cleared = settle(s"$E * real_of_num $Q = real_of_num $P",
       asProduct, reciprocal, qPositive, atNumbers(peano.fact(Peano.EmbedsNonNegative), P))
 
@@ -437,7 +437,7 @@ private[theories] object Fourier {
       val atLeastOne = mp(atNumbers(peano.fact(Peano.EmbedsStrictOrder), "0", s"NUM_FACT $index"),
         atNumbers(coding.fact(Coding.FactorialPositive), index))
       val nonZero = settle(s"~($factorialText = 0)", zeroEmbeds, atLeastOne)
-      val inverse = mp(atTerms(reals.axiom("MUL_INVERSE"), real(factorialText)), nonZero)
+      val inverse = mp(atTerms(reals.law("MUL_INVERSE"), real(factorialText)), nonZero)
       generalised("i", numbers,
         proposition(s"$factorialText * (Power (1:real) $index / $factorialText) = 1").flatMap { goal =>
           byRewriting(goal, division, series.fact(Series.PowerOfOne)) { rest => settle(rest, inverse) }

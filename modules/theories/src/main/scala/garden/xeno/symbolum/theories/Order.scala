@@ -165,7 +165,7 @@ final class Order private (val ring: Ring, published: Map[String, Kernel.Thm]) {
 
         // `!x y z. x < y ==> x + z < y + z`, at `0`, the difference, and the smaller numeral.
         addition <- reals
-          .axiom("LT_ADD")
+          .law("LT_ADD")
           .flatMap(rules.spec(zero, _))
           .flatMap(rules.spec(difference, _))
           .flatMap(rules.spec(below, _))
@@ -423,8 +423,8 @@ object Order {
     val y = Term.variable("y", real)
 
     for {
-      ltAdd <- reals.axiom("LT_ADD")
-      inverse <- reals.axiom("ADD_INVERSE")
+      ltAdd <- reals.law("LT_ADD")
+      inverse <- reals.law("ADD_INVERSE")
       subtraction <- reals.definition(Real.Subtraction)
 
       negated <- reals.term("-x:real")
@@ -459,7 +459,7 @@ object Order {
     val y = Term.variable("y", real)
 
     for {
-      ltAdd <- reals.axiom("LT_ADD")
+      ltAdd <- reals.law("LT_ADD")
 
       zero <- reals.term("0")
       difference <- reals.term("y:real - x:real")
@@ -502,10 +502,10 @@ object Order {
     val x = Term.variable("x", real)
 
     for {
-      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
-      ltAdd <- reals.axiom("LT_ADD")
-      ltMul <- reals.axiom("LT_MUL")
-      trichotomy <- reals.axiom("LT_TOTAL")
+      irreflexive <- reals.law("LT_IRREFLEXIVE")
+      ltAdd <- reals.law("LT_ADD")
+      ltMul <- reals.law("LT_MUL")
+      trichotomy <- reals.law("LT_TOTAL")
 
       zero <- reals.term("0")
       goal <- reals.proposition("0 < x:real")
@@ -592,7 +592,7 @@ object Order {
     val y = Term.variable("y", real)
 
     for {
-      ltMul <- reals.axiom("LT_MUL")
+      ltMul <- reals.law("LT_MUL")
 
       positiveFactor <- reals.proposition("0 < c:real")
       factorAssumed <- LogicError.lift(Kernel.assume(positiveFactor))
@@ -643,7 +643,7 @@ object Order {
     val x = Term.variable("x", real)
 
     for {
-      mulInverse <- reals.axiom("MUL_INVERSE")
+      mulInverse <- reals.law("MUL_INVERSE")
 
       premise <- reals.proposition("0 < x:real")
       assumed <- LogicError.lift(Kernel.assume(premise))
@@ -859,7 +859,7 @@ object Order {
     val x = Term.variable("x", real)
 
     for {
-      ltMul <- reals.axiom("LT_MUL")
+      ltMul <- reals.law("LT_MUL")
       zero <- reals.term("0")
       product <- reals.term("c:real * x:real")
 
@@ -970,10 +970,10 @@ object Order {
     val x = Term.variable("x", real)
 
     for {
-      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
-      ltAdd <- reals.axiom("LT_ADD")
-      ltMul <- reals.axiom("LT_MUL")
-      trichotomy <- reals.axiom("LT_TOTAL")
+      irreflexive <- reals.law("LT_IRREFLEXIVE")
+      ltAdd <- reals.law("LT_ADD")
+      ltMul <- reals.law("LT_MUL")
+      trichotomy <- reals.law("LT_TOTAL")
 
       zero <- reals.term("0")
       product <- reals.term("c:real * x:real")
@@ -1169,7 +1169,7 @@ object Order {
     val y = Term.variable("y", real)
 
     for {
-      trichotomy <- reals.axiom("LT_TOTAL")
+      trichotomy <- reals.law("LT_TOTAL")
 
       absent <- reals.proposition(if (strict) "x:real <= y:real" else "x:real < y:real")
       goal <- reals.proposition(if (strict) "y:real < x:real" else "y:real <= x:real")
@@ -1243,8 +1243,8 @@ object Order {
     val y = Term.variable("y", real)
 
     for {
-      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
-      transitive <- reals.axiom("LT_TRANSITIVE")
+      irreflexive <- reals.law("LT_IRREFLEXIVE")
+      transitive <- reals.law("LT_TRANSITIVE")
 
       goal <- reals.proposition("x:real = y:real")
       first <- reals.proposition("x:real <= y:real")
@@ -1439,7 +1439,7 @@ object Order {
       strictly <- reals.proposition("x:real < y:real")
       strictlyAssumed <- LogicError.lift(Kernel.assume(strictly))
       zero <- reals.term("0:real")
-      transitive <- reals.axiom("LT_TRANSITIVE")
+      transitive <- reals.law("LT_TRANSITIVE")
       fromStrict <- rules
         .conjIntro(positiveAssumed, strictlyAssumed)
         .flatMap(pair => rules.specAll(transitive, List(zero, x, y)).flatMap(rules.mp(_, pair)))
@@ -1460,7 +1460,7 @@ object Order {
         .conjIntro(inverseLeft, inverseRight)
         .flatMap(pair =>
           reals
-            .axiom("LT_MUL")
+            .law("LT_MUL")
             .flatMap(rules.specAll(_, List(leftInverse, rightInverse)))
             .flatMap(rules.mp(_, pair))
         )
@@ -1473,7 +1473,7 @@ object Order {
         .flatMap(rules.mp(_, orderedAssumed))
 
       // And each side read back, `x * inv x` and `y * inv y` both being one.
-      inverseAxiom <- reals.axiom("MUL_INVERSE")
+      inverseAxiom <- reals.law("MUL_INVERSE")
       leftNotZero <- rules.spec(x, notZero).flatMap(rules.mp(_, positiveAssumed))
       rightNotZero <- rules.spec(y, notZero).flatMap(rules.mp(_, positiveRight))
       leftIsOne <- rules.spec(x, inverseAxiom).flatMap(rules.mp(_, leftNotZero))
@@ -1526,9 +1526,9 @@ object Order {
     val x = Term.variable("x", real)
 
     for {
-      ltAdd <- reals.axiom("LT_ADD")
-      ltMul <- reals.axiom("LT_MUL")
-      trichotomy <- reals.axiom("LT_TOTAL")
+      ltAdd <- reals.law("LT_ADD")
+      ltMul <- reals.law("LT_MUL")
+      trichotomy <- reals.law("LT_TOTAL")
 
       zero <- reals.term("0")
       square <- reals.term("x:real * x")

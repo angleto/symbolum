@@ -224,7 +224,7 @@ private[theories] object Integrability {
 
     /** By `p <= q` or `q <= p`, from the order's totality, which is an axiom and costs nothing classical. */
     private def byOrder(p: String, q: String)(below: Kernel.Thm => Kernel.Thm, above: Kernel.Thm => Kernel.Thm): Kernel.Thm = {
-      val trichotomy = spec(force(reals.axiom("LT_TOTAL")), p, q)
+      val trichotomy = spec(force(reals.law("LT_TOTAL")), p, q)
       byDisjunction(trichotomy)(
         strict => below(arithmetic("!p:real q:real. p < q ==> p <= q", p, q)(strict)),
         rest => byDisjunction(rest)(
@@ -521,7 +521,7 @@ private[theories] object Integrability {
           },
           other => {
             val both = force(Continuity.minimumOf(steps, magnitude, annotated("g1 x"), annotated("g2 x"), spec(g1Positive, "x"), spec(g2Positive, "x")))
-            val apart = byDisjunction(spec(force(reals.axiom("LT_TOTAL")), "x", "v"))(
+            val apart = byDisjunction(spec(force(reals.law("LT_TOTAL")), "x", "v"))(
               below => arithmetic("!m:real a:real. -a <= m ==> a < 0 ==> 0 < m", "abs (x - v)", "x - v")(
                 mag(Magnitude.AbsAboveNegation, "x - v"), arithmetic("!x:real v:real. x < v ==> x - v < 0", "x", "v")(below)),
               rest => byDisjunction(rest)(
@@ -720,7 +720,7 @@ private[theories] object Integrability {
       val everywhere = assume(Everywhere)
       def criterionAt(tolerance: String, positive: Kernel.Thm): Kernel.Thm = mp(spec(criterion, tolerance), positive, ordered, everywhere)
       val setText = s"\\y:real. ${member("y")}"
-      val completeness = spec(force(reals.axiom("COMPLETENESS")), setText)
+      val completeness = spec(force(reals.law("COMPLETENESS")), setText)
 
       // Something is in the set: at tolerance one, a good gauge and a sum fine for it.
       val one = arithmetic("0 < (1:real)")()
@@ -961,7 +961,7 @@ private[theories] object Integrability {
         val aY = left(right(right(increment)))
         val yB = right(right(right(increment)))
         val goal = prop("abs (integral f a (x + z) - integral f a x - f x * z) < e * abs z")
-        val ordered = spec(force(reals.axiom("LT_TOTAL")), "z", "0")
+        val ordered = spec(force(reals.law("LT_TOTAL")), "z", "0")
         val found = byDisjunction(ordered)(
           negative => {
             val yx = arithmetic("!x:real z:real. z < 0 ==> x + z <= x", "x", "z")(negative)

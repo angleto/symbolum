@@ -205,7 +205,7 @@ final class Cost private (
    * copy of this that drifts.
    */
   def page(report: Report, believed: Boolean): Either[TacticError, Vector[String]] = {
-    def lawNamed(name: String): Term = Real.standard.axioms(name).conclusion
+    def lawNamed(name: String): Term = Real.standard.laws(name).conclusion
 
     def believedLine(axiom: Term): String =
       Readback.of(reals, axiom) match {
@@ -253,7 +253,7 @@ final class Cost private (
       // `docs/adr/0053` they are theorems about the cuts and the axiom list above says "choice, eta,
       // infinity" for every claim about the reals, which is true and says nothing about which laws
       // of the field this one used; so they are named here, as the facts they now are.
-      field = Option(Real.Axioms.collect { case (name, _) if report.laws.contains(lawNamed(name)) => name })
+      field = Option(Real.Laws.collect { case (name, _) if report.laws.contains(lawNamed(name)) => name })
         .filter(_.nonEmpty)
         .map(laws => s"  of the sixteen of the reals: ${laws.mkString(", ")}")
         .toVector

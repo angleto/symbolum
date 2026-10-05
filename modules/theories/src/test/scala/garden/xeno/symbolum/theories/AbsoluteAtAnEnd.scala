@@ -135,7 +135,7 @@ private[theories] final class AbsoluteAtAnEnd(chain: Chain) {
       errorSize, errorValue, stepSize, dPositive)
     val itself = mp(at(lemma("!M:real H:real. M < H ==> H <= M ==> M < M"), s"abs ($error)", s"1 * abs ($step)"),
       claimed, above)
-    val irreflexive = force(chain.reals.axiom("LT_IRREFLEXIVE"))
+    val irreflexive = force(chain.reals.law("LT_IRREFLEXIVE"))
     val absurd = force(rules.spec(real(s"abs ($error)"), irreflexive).flatMap(rules.notElim(_, itself)))
 
     // `absurd` rests on the body at this `d`, which is what eliminating the existential discharges.

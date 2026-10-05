@@ -890,7 +890,7 @@ object Polynomial {
     val logic = reals.logic
 
     def named(name: String): Either[LogicError, Kernel.Thm] =
-      reals.axiom(name).orElse(arithmetic.lemma(name))
+      reals.law(name).orElse(arithmetic.lemma(name))
 
     for {
       syntax <- readSyntax(reals)

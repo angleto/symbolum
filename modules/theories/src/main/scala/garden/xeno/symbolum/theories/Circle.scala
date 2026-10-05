@@ -180,7 +180,7 @@ object Circle {
           .orElse(transcendental.fact(name))
           .orElse(continuity.fact(name))
           .orElse(order.fact(name))
-          .orElse(reals.axiom(name))
+          .orElse(reals.law(name))
       slope = Slope(logic, classical, ring, theory, notation, lookup)
       proofs = Proofs(slope, classical, linarith, lookup)
       facts <- proofs.all(definitions(PiName), definitions(AcosName))

@@ -45,7 +45,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
   private def opened(theorem: Kernel.Thm): Kernel.Thm =
     force(Conv.betaNormalise(theorem.conclusion).flatMap(e => LogicError.lift(Kernel.eqMp(e, theorem))))
 
-  private val realAxioms: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
+  private val realAxioms: Set[Term] = chain.reals.laws.values.map(_.conclusion).toSet
 
   /* --------------------------------------------------------------- what it cost */
 
@@ -73,7 +73,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
   /* ---------------------------------------------------------- what it rests on */
 
   it should "prove the intermediate value theorem from the reals alone, completeness among them" in {
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     val spent = Real.spent(fact(Continuity.IntermediateValue))
 
     spent should contain(completeness)
@@ -212,7 +212,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
     // supremum: all sixteen axioms of the reals, `COMPLETENESS` among them, and the choice that
     // `abs`, `min`, `max` and the excluded middle are paid for with. Measured on 2026-09-25 before it
     // was written here, at seventeen for each.
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     val select = force(chain.classical.axiom("SELECT")).conclusion
     for (name <- List(Continuity.IntervalGluing, Continuity.Bounded, Continuity.AttainsMaximum, Continuity.AttainsMinimum)) {
       val spent = Real.spent(fact(name))
@@ -237,7 +237,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
   it should "combine two continuous functions linearly, at no supremum, and detach at two it has" in {
     // Measured on 2026-09-25 before it was written here: the reals' axioms without completeness,
     // and the choice `abs` brings. A combination at one point is a statement about one point.
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     val select = force(chain.classical.axiom("SELECT")).conclusion
     val spent = Real.spent(fact(Continuity.Linear))
     spent should not contain completeness
@@ -398,7 +398,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
 
   it should "prove uniform continuity from the reals alone, and through the gluing" in {
     // Measured on 2026-09-25 before it was written here: seventeen, the extreme value theorem's cost.
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     val select = force(chain.classical.axiom("SELECT")).conclusion
     val spent = Real.spent(fact(Continuity.Uniform))
     spent should contain(completeness)

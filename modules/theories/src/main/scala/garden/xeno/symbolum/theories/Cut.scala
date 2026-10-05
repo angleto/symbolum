@@ -47,7 +47,7 @@ import garden.xeno.symbolum.logic.*
  * from the one on it through `(-x) * y = -(x * y)`, closed by a normaliser for the additive group.
  * `CUT_INV` is `CUT_PINV` above zero, its negation's negated below, and zero at zero, which the
  * definition writes. Both inverses spend `CUT_ESCAPE`, the one place the rationals being Archimedean
- * reaches the cuts. `Real` proves the statements of `Real.Axioms` from these, as theorems about this
+ * reaches the cuts. `Real` proves the statements of `Real.Laws` from these, as theorems about this
  * type under their old names, which is `docs/adr/0053`.
  */
 final class Cut private (

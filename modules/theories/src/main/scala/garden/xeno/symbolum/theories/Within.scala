@@ -150,7 +150,7 @@ private[theories] object Within {
       below <- proposition(s"$x < $a")
       assumedBelow <- LogicError.lift(Kernel.assume(below))
       self <- steps.at(lemma("!x:real a:real. x < a ==> a <= x ==> x < x"), x, a).flatMap(mp(_, Right(assumedBelow), Right(lower)))
-      irreflexive <- steps.at(reals.axiom("LT_IRREFLEXIVE"), x)
+      irreflexive <- steps.at(reals.law("LT_IRREFLEXIVE"), x)
       absurd <- rules.notElim(irreflexive, self)
       result <- rules.notIntro(below, absurd)
     } yield result

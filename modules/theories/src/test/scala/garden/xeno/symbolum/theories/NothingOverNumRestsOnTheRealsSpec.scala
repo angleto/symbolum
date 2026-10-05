@@ -28,7 +28,7 @@ final class NothingOverNumRestsOnTheRealsSpec extends AnyFlatSpec with Matchers 
   private val chain = Chain.standard
 
   /** What the reals ask anyone to believe, as the sixteen propositions themselves. */
-  private val realAxioms: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
+  private val realAxioms: Set[Term] = chain.reals.laws.values.map(_.conclusion).toSet
 
   /**
    * The developments that are about `num` and nothing else, by name.

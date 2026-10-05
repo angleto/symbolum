@@ -791,7 +791,7 @@ class SeriesSpec extends AnyFlatSpec with Matchers {
     // non-strict throughout and close their steps by adding and multiplying non-negatives, which
     // needs no axiom of its own beyond what `Order` already derived: `SUM_MONOTONE` proves an
     // inequality about a product-free sum and never touches it.
-    val productOfPositives = force(reals.axiom("LT_MUL")).conclusion
+    val productOfPositives = force(reals.law("LT_MUL")).conclusion
 
     Vector(Series.PowerPositive, Series.PowerMonotone, Series.ProdPositive).foreach { name =>
       withClue(s"$name should reach LT_MUL: ") {
