@@ -521,9 +521,9 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
   /** The three the carrier costs, which is the whole of what anything here is allowed to spend. */
   private lazy val foundation: Set[Term] = Set(choice, eta, infinity)
 
-  /** All sixteen of the reals, read off `Real.Axioms` rather than named one at a time. */
+  /** All sixteen of the reals, read off `Real.Laws` rather than named one at a time. */
   private lazy val realAxioms: Set[Term] =
-    Real.Axioms.map { case (name, _) => force(chain.reals.axiom(name)).conclusion }.toSet
+    Real.Laws.map { case (name, _) => force(chain.reals.law(name)).conclusion }.toSet
 
   /**
    * The type costs what the carrier cost and not one axiom more, and so does everything over it.
@@ -573,8 +573,8 @@ class IntegerSpec extends AnyFlatSpec with Matchers {
    * and without perturbing anything.
    */
   it should "refuse what the single-axiom reading accepted" in {
-    val completeness = force(chain.reals.axiom("COMPLETENESS"))
-    val addSym = force(chain.reals.axiom("ADD_SYM")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS"))
+    val addSym = force(chain.reals.law("ADD_SYM")).conclusion
 
     Real.spent(completeness) shouldBe Set(completeness.conclusion)
     Real.spent(completeness) should not contain addSym

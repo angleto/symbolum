@@ -46,7 +46,7 @@ class CompletenessSpec extends AnyFlatSpec with Matchers {
   private val rules = logic.rules
 
   private val real: Type = TyApp(Real.TypeName, Nil)
-  private val completeness = reals.axioms("COMPLETENESS")
+  private val completeness = reals.laws("COMPLETENESS")
 
   private val goal = force(
     reals.proposition(

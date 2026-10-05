@@ -309,11 +309,16 @@ In descending order of how much damage a mistake does:
    Read the whole file you are changing, not the function. The tests in `modules/kernel/src/test`
    cover each rule in the case where it applies and the case where it must refuse, and the refusals
    are the half that matters.
-2. **`Real.Axioms`.** A mis-stated axiom makes everything provable, and the only test that fails
-   is the pinned copy in `RealSpec`, which fails because the text changed and not because it is
-   wrong. Read a changed axiom against a textbook, out loud, and change the pinned copy in the
-   same commit. The same goes for a definition body in `Real.Definitions` and for the notation:
-   both decide what an axiom string means, and neither is checked by anything but a reader.
+2. **`Real.Laws`, and what decides what they mean.** The sixteen are theorems since 2026-09-26,
+   so a mis-stated one no longer makes everything provable: the construction fails to prove it and
+   refuses to build. What nothing checks is that they state a complete ordered field. A law true
+   of the cuts but weaker than the textbook's builds, and the only test that fails is the pinned
+   copy in `RealSpec`, which fails because the text changed and not because it is wrong. Read a
+   changed law against a textbook, out loud, and change the pinned copy in the same commit. The
+   same goes for a definition body in `Real.Definitions` and for the notation: both decide what a
+   statement string means, and neither is checked by anything but a reader. The three axioms the
+   chain does assert are a mis-statement away from proving everything, which is the old danger
+   and lives in `Classical.Axioms` and `Natural.Axioms` now.
    [reading-register.md](reading-register.md) is where that reading is recorded, one row per axiom,
    per defined constant and per spelling, generated from the code and pinned by `RegisterSpec`. It
    checks none of them and could not; what it does is give the reading a state, so that a statement

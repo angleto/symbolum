@@ -1287,7 +1287,7 @@ object Peano {
   /**
    * Everything this development proves, as the text a person checks it by.
    *
-   * The same discipline `Real.Axioms` follows for the axioms and for the same reason: a statement
+   * The same discipline `Real.Laws` follows for the sixteen and for the same reason: a statement
    * is checked by reading it, and builder calls are not read. Every theorem below is compared
    * against its entry here before it is recorded, so a derivation that reaches something else is a
    * refusal rather than a fact under the wrong name.
@@ -1589,8 +1589,8 @@ object Peano {
       // Last, and over the finished signature, because these two are the only derivations in this
       // file that reason classically: `Classical.contradiction` and `Classical.cases` want the
       // connectives, and the steps above were checked against a narrower theory.
-      realTrichotomy <- ring.reals.axiom("LT_TOTAL")
-      realCompleteness <- ring.reals.axiom("COMPLETENESS")
+      realTrichotomy <- ring.reals.law("LT_TOTAL")
+      realCompleteness <- ring.reals.law("COMPLETENESS")
       embedsSuccessorFact <- embeddingFacts
         .get(EmbedsSuccessor)
         .toRight(MissingDefinition(EmbedsSuccessor))

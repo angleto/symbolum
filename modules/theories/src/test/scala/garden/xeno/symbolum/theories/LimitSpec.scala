@@ -95,7 +95,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * only door it can have come through is that one.
    */
   it should "reach the sixteenth axiom, and only where the comparison test does" in {
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
 
     Real.spent(force(limit.absolute)) should contain(completeness)
     Real.spent(force(limit.comparison)) should contain(completeness)
@@ -125,9 +125,9 @@ class LimitSpec extends AnyFlatSpec with Matchers {
 
     axioms(Limit.BelowBound) shouldBe axioms(Limit.AboveBound)
 
-    val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
-    val nonTrivial = force(chain.reals.axiom("ONE_NOT_ZERO")).conclusion
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val inverse = force(chain.reals.law("MUL_INVERSE")).conclusion
+    val nonTrivial = force(chain.reals.law("ONE_NOT_ZERO")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
 
     axioms(Limit.BelowBound) should not contain inverse
     axioms(Limit.BelowBound) should not contain nonTrivial
@@ -156,7 +156,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
    * **not** reach the sixteenth axiom would be a derivation of something else.
    */
   "The monotone convergence theorem" should "be where the sixteenth axiom is spent" in {
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     val spent = Real.spent(force(limit.monotoneConverges))
 
     spent should contain(completeness)
@@ -700,8 +700,8 @@ class LimitSpec extends AnyFlatSpec with Matchers {
 
     axioms(Limit.Added) shouldBe axioms(Limit.Unique)
 
-    val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
-    val nonTrivial = force(chain.reals.axiom("ONE_NOT_ZERO")).conclusion
+    val inverse = force(chain.reals.law("MUL_INVERSE")).conclusion
+    val nonTrivial = force(chain.reals.law("ONE_NOT_ZERO")).conclusion
 
     Real.spent(force(limit.added)) should contain(inverse)
     Real.spent(force(limit.added)) should contain(nonTrivial)
@@ -738,8 +738,8 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   it should "cost what the sum costs, reaching the reciprocal for a different reason" in {
     def axioms(name: String): Set[Term] = Real.spent(force(limit.fact(name)))
 
-    val inverse = force(chain.reals.axiom("MUL_INVERSE")).conclusion
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val inverse = force(chain.reals.law("MUL_INVERSE")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
 
     axioms(Limit.Multiplied) should contain(inverse)
     axioms(Limit.Multiplied) should not contain completeness
@@ -793,7 +793,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "not reach the sixteenth axiom, because no supremum is involved" in {
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
 
     Real.spent(force(limit.added)) should not contain completeness
     Real.spent(force(limit.negated)) should not contain completeness
@@ -950,7 +950,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
 
     // And the comparison test, which is the one door completeness comes through: the sandwich
     // brackets the partial sums and brackets alone converge nothing.
-    Real.spent(theorem) should contain(force(chain.reals.axiom("COMPLETENESS")).conclusion)
+    Real.spent(theorem) should contain(force(chain.reals.law("COMPLETENESS")).conclusion)
   }
   /**
    * The general Cauchy product, detached at a series a reader can name, with nothing assumed.
@@ -1098,7 +1098,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
 
     // And it reaches completeness, through the non-negative theorem's comparison test and
     // nowhere else: the squeeze and the two triangle inequalities have no supremum in them.
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
 
     Real.spent(theorem) should contain(completeness)
     Real.spent(force(limit.squeezed)) should not contain completeness

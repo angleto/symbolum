@@ -2805,6 +2805,6 @@ object Series {
 
     /** Over the order facts and the ring the rest of the file is built on. */
     def of(order: Order, ring: Ring, logic: Logic): Either[LogicError, Bounds] =
-      order.reals.axiom("LT_MUL").map(new Bounds(order, ring, logic, _))
+      order.reals.law("LT_MUL").map(new Bounds(order, ring, logic, _))
   }
 }

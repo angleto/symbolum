@@ -6,13 +6,15 @@ import garden.xeno.symbolum.logic.*
 /**
  * The real numbers, as a complete ordered field built from the cuts on the rationals.
  *
- * Until phase 5 of `docs/adr/0007` this file asserted the sixteen propositions of [[Real.Axioms]],
+ * Until phase 5 of `docs/adr/0007` this file asserted the sixteen propositions of [[Real.Laws]],
  * and they were the whole of what this system asked anyone to believe about a domain.
  * `docs/adr/0004` recorded why they were asserted, and `docs/adr/0053` is what supersedes it: the
  * type `real` is `Cut`'s, each primitive constant is defined as the operation on cuts it names, and
- * each of the sixteen is proved under its old name. `axiom` still answers under those names,
- * because they are what every consumer asks for; what it hands back rests on choice, eta and
- * infinity, which the naturals and the rationals already cost, and on nothing else.
+ * each of the sixteen is proved under its old name. They are asked for by `law`, which answers
+ * under those names; what it hands back rests on choice, eta and infinity, which the naturals and
+ * the rationals already cost, and on nothing else. What this theory asserts is in
+ * `theory.axioms`, and it is not the sixteen: `docs/adr/0059` is why the two stopped sharing a
+ * name.
  *
  * == What is defined, and what is proved ==
  *
@@ -25,7 +27,7 @@ final class RealTheory private[theories] (
   val logic: Logic,
   val theory: Theory,
   val notation: Notation,
-  val axioms: Map[String, Kernel.Thm],
+  val laws: Map[String, Kernel.Thm],
   val definitions: Map[String, Kernel.Thm]
 ) extends Signature {
 
@@ -33,9 +35,9 @@ final class RealTheory private[theories] (
   def definition(name: String): Either[LogicError, Kernel.Thm] =
     definitions.get(name).toRight(MissingDefinition(name))
 
-  /** The axiom named, as a theorem with no hypotheses. */
-  def axiom(name: String): Either[LogicError, Kernel.Thm] =
-    axioms.get(name).toRight(MissingDefinition(name))
+  /** The law of a complete ordered field named, as a theorem with no hypotheses. */
+  def law(name: String): Either[LogicError, Kernel.Thm] =
+    laws.get(name).toRight(MissingDefinition(name))
 
   /**
    * The same theory with types and constants of a domain declared over it.
@@ -75,7 +77,7 @@ final class RealTheory private[theories] (
         case (acc, (name, ty)) =>
           acc.flatMap(current => LogicError.lift(current.declareConstant(name, ty)))
       }
-    } yield new RealTheory(logic, withConstants, notation, axioms, definitions)
+    } yield new RealTheory(logic, withConstants, notation, laws, definitions)
 }
 
 object Real {
@@ -190,7 +192,7 @@ object Real {
    * be proved, so the construction refuses to build; what reading them against a textbook still
    * checks is that they say what a complete ordered field is, which no derivation can.
    */
-  val Axioms: Vector[(String, String)] = Vector(
+  val Laws: Vector[(String, String)] = Vector(
     // A field.
     "ADD_SYM" -> "!x:real y:real. x + y = y + x",
     "ADD_ASSOC" -> "!x:real y:real z:real. (x + y) + z = x + (y + z)",
@@ -289,7 +291,7 @@ object Real {
   lazy val standard: RealTheory = constructed.reals
 
   /** The sixteen statements, as the terms the construction proved. */
-  lazy val sixteen: Set[Term] = Axioms.map { case (name, _) => standard.axioms(name).conclusion }.toSet
+  lazy val sixteen: Set[Term] = Laws.map { case (name, _) => standard.laws(name).conclusion }.toSet
 
   /**
    * What a theorem spends, the sixteen read as the reals' interface: the foundation's axioms it
@@ -304,7 +306,7 @@ object Real {
    * The seven primitive constants, each defined as the operation of `Cut` it names.
    *
    * An alias rather than a renaming: `Cut` publishes its facts about `CUT_ADD`, and what the
-   * statements of [[Axioms]] say about `real_add` is the same fact once the definition is unfolded.
+   * statements of [[Laws]] say about `real_add` is the same fact once the definition is unfolded.
    */
   private val Aliases: Vector[(String, String)] = Vector(
     Zero -> "CUT_OF_RAT RAT_ZERO",
@@ -317,7 +319,7 @@ object Real {
   )
 
   /**
-   * The axioms that are a fact of `Cut` word for word once the aliases, `<` and `<=` are unfolded.
+   * The laws that are a fact of `Cut` word for word once the aliases, `<` and `<=` are unfolded.
    *
    * The five absent are proved in [[Constructed]]: `ONE_NOT_ZERO` from the injectivity of the
    * embedding, and the four about the strict order from the facts about `CUT_LE` it abbreviates.
@@ -343,9 +345,9 @@ object Real {
    * `cuts.theory` already holds the type `real`, carved by `Cut` out of `rat -> bool`, so nothing is
    * declared here. Each primitive constant is defined as the operation it names, the
    * abbreviations of [[Definitions]] follow exactly as over an asserted theory, and each statement
-   * of [[Axioms]] is proved: unfolded to a statement about the cuts and compared, as a term, with
-   * the theorem that proves it. `axiom` still answers under the sixteen names, which is what every
-   * consumer asks for; what it hands back is a theorem that rests on the foundation, choice, eta and
+   * of [[Laws]] is proved: unfolded to a statement about the cuts and compared, as a term, with
+   * the theorem that proves it. `law` answers under the sixteen names, which is what every consumer
+   * asks for; what it hands back is a theorem that rests on the foundation, choice, eta and
    * infinity, and on nothing about the reals. Each is cited under its name, as every published fact
    * is, so a report over a proof stops at `ADD_SYM` rather than walking into the cuts, which is what
    * it showed while the sixteen were axioms. `docs/adr/0053` is the decision.
@@ -384,7 +386,7 @@ object Real {
       definitions = aliased._2 ++ defined._2
       constructed = new Constructed(cuts)
       unfolding <- constructed.unfolding(definitions)
-      axioms <- Axioms.foldLeft(Right(Map.empty[String, Kernel.Thm]): Either[LogicError, Map[String, Kernel.Thm]]) {
+      laws <- Laws.foldLeft(Right(Map.empty[String, Kernel.Thm]): Either[LogicError, Map[String, Kernel.Thm]]) {
         case (acc, (name, text)) =>
           for {
             done <- acc
@@ -396,7 +398,7 @@ object Real {
             proved <- unfolding.carry(name, statement, source)
           } yield done.updated(name, proved)
       }
-    } yield new RealTheory(logic, theory, syntax, Published.cite(axioms), definitions)
+    } yield new RealTheory(logic, theory, syntax, Published.cite(laws), definitions)
   }
 
   /**

@@ -156,7 +156,7 @@ class BridgingSpec extends AnyFlatSpec with Matchers {
     // derivation carrying it. The two entries are indistinguishable by their conclusions, which is
     // the sharpest form this test has: nothing but the accounting separates them.
     val statement = cheapest.conclusion
-    val realAxiom = force(chain.reals.axiom("ADD_SYM"))
+    val realAxiom = force(chain.reals.law("ADD_SYM"))
     val costlier = force(logic.rules.conjIntro(cheapest, realAxiom).flatMap(logic.rules.conjElim1))
 
     costlier.conclusion shouldBe statement

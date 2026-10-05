@@ -467,8 +467,8 @@ Everything this system asks anyone to believe:
 theorems since 2026-09-26**, and they were axioms until then. `docs/adr/0007` decided the reals
 would be constructed and `docs/adr/0053` is the last step: the type the cuts on the rationals are
 carved as is `real`, each primitive constant is defined as the operation on cuts it names, and each
-of the sixteen is proved under its old name, so `axiom("ADD_SYM")` still answers and rests on the
-three above. `RealSpec` pins their printed forms and asserts that the reals' theory asserts exactly
+of the sixteen is proved under its old name, so `law("ADD_SYM")` answers and rests on the three
+above; the accessor was `axiom` until `docs/adr/0059`. `RealSpec` pins their printed forms and asserts that the reals' theory asserts exactly
 the logic's two and the naturals' one. The price is that a development about the reals is asked to
 believe choice, which the axiomatised reals over `Logic.standard` were not; `NaturalSpec` measures
 it, three for the reals as for the naturals.

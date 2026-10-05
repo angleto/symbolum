@@ -54,8 +54,8 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     Derivative.RolleWithin, Derivative.MeanValueWithin, Derivative.FlatWithin,
     Derivative.NonDecreasingWithin, Derivative.IncreasingWithin)
 
-  private val realAxioms: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
-  private val completeness: Term = force(chain.reals.axiom("COMPLETENESS")).conclusion
+  private val realAxioms: Set[Term] = chain.reals.laws.values.map(_.conclusion).toSet
+  private val completeness: Term = force(chain.reals.law("COMPLETENESS")).conclusion
   private val select: Term = force(chain.classical.axiom("SELECT")).conclusion
 
   /* --------------------------------------------------------------- what it cost */
@@ -225,7 +225,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
     val own = force(rules.spec(one, fact(Derivative.NaturalLog)).flatMap(rules.mp(_, lemma("(0:real) < 1"))))
     val same = force(rules.specAll(fact(Derivative.Unique), List(ln, one, real("inv 1"), real("0:real")))
       .flatMap(rules.mp(_, own)).flatMap(rules.mp(_, assumed)))
-    val inverse = force(chain.reals.axiom("MUL_INVERSE").flatMap(rules.spec(one, _))
+    val inverse = force(chain.reals.law("MUL_INVERSE").flatMap(rules.spec(one, _))
       .flatMap(rules.mp(_, lemma("~((1:real) = 0)"))))
     val absurd = force(rules.specAll(lemma("!v:real. 1 * v = 1 ==> v = 0 ==> F"), List(real("inv 1")))
       .flatMap(rules.mp(_, inverse)).flatMap(rules.mp(_, same)))
@@ -302,7 +302,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
 
     // `ln (0 + h) = t`: the zero on the left is the point's, and `LN_EXP` reads the rest back.
     val zeroPlus = force(Conv.trans(
-      at(force(chain.reals.axiom("ADD_SYM")), zero, e), at(force(chain.reals.axiom("ADD_ZERO")), e)))
+      at(force(chain.reals.law("ADD_SYM")), zero, e), at(force(chain.reals.law("ADD_ZERO")), e)))
     val lnAtH = force(Conv.apTerm(ln, zeroPlus).flatMap(Conv.trans(_, at(log(Logarithm.LnOfExp), t))))
 
     val increment = s"ln (0 + exp ($tText)) - ln 0 - m * exp ($tText)"
@@ -1099,7 +1099,7 @@ class DerivativeSpec extends AnyFlatSpec with Matchers {
         .flatMap(rules.mp(_, itself)).flatMap(rules.mp(_, belowD)).flatMap(rules.mp(_, dPositive)))))
     val small = force(rules.spec(real(point), inside).flatMap(rules.mp(_, membership)))
     val nonZero = force(rules.spec(real(point), lemma("!m:real. 0 < m ==> ~(m = 0)")).flatMap(rules.mp(_, positive)))
-    val inverse = force(chain.reals.axiom("MUL_INVERSE").flatMap(rules.spec(real(point), _)).flatMap(rules.mp(_, nonZero)))
+    val inverse = force(chain.reals.law("MUL_INVERSE").flatMap(rules.spec(real(point), _)).flatMap(rules.mp(_, nonZero)))
     val above = force(magnitude.fact(Magnitude.AbsAbove).flatMap(rules.spec(real(s"1 / $point - 0"), _)))
     // `/` is a defined constant, `\x y. x * inv y`, which the ring unfolds and `Linarith` reads as an atom.
     val quotient = force(LogicError.lift(Term.eq(real(s"1 / $point"), real(s"inv ($point)"))).flatMap(chain.ring.prove))

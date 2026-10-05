@@ -3083,7 +3083,7 @@ object Transcendental {
         .flatMap(rules.spec(denominator, _))
         .flatMap(rules.mp(_, positive))
       result <- order.ring.reals
-        .axiom("MUL_INVERSE")
+        .law("MUL_INVERSE")
         .flatMap(rules.spec(denominator, _))
         .flatMap(rules.mp(_, nonZero))
     } yield result

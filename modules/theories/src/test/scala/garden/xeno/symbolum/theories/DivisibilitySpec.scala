@@ -240,7 +240,7 @@ class DivisibilitySpec extends AnyFlatSpec with Matchers {
         instance <- rules.spec(one, lemma)
         reversed <- Conv.sym(instance)
         rule <- Rewrite.Rule.of(logic, reversed)
-        notZero <- reals.axiom("ONE_NOT_ZERO")
+        notZero <- reals.law("ONE_NOT_ZERO")
         negated <- Rewrite.inTheorem(Vector(rule), notZero)
       } yield negated
     )

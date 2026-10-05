@@ -580,7 +580,7 @@ object Continuity {
     for {
       cPositive <- at(lemma(s"!P:real. 0 <= P ==> 0 < $parts * (P + 1)"), measure).flatMap(mp(_, Right(nonNegative)))
       nonZero <- at(lemma("!c:real. 0 < c ==> ~(c = 0)"), c).flatMap(mp(_, Right(cPositive)))
-      inverse <- at(reals.axiom("MUL_INVERSE"), c).flatMap(mp(_, Right(nonZero)))
+      inverse <- at(reals.law("MUL_INVERSE"), c).flatMap(mp(_, Right(nonZero)))
       positive <- at(lemma(s"!P:real v:real e:real. 0 <= P ==> $parts * (P + 1) * v = 1 ==> 0 < e ==> 0 < e * v"),
         measure, v, "e:real").flatMap(mp(_, Right(nonNegative), Right(inverse), Right(ePositive)))
       equation <- at(
@@ -974,8 +974,8 @@ object Continuity {
     val everywhere = assume("!x:real. a:real <= x /\\ x <= b:real ==> continuous (f:real -> real) x")
 
     for {
-      completeness <- reals.axiom("COMPLETENESS")
-      total <- reals.axiom("LT_TOTAL")
+      completeness <- reals.law("COMPLETENESS")
+      total <- reals.law("LT_TOTAL")
       leCases <- magnitude.order.fact(Order.LeCases)
       goal <- proposition(Goal)
       memberStatement <- proposition(Member)

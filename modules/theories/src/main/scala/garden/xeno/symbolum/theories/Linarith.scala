@@ -583,7 +583,7 @@ final class Linarith private (
 
       case Some((left, right, strict)) =>
         val attempted = for {
-          total <- reals.axiom("LT_TOTAL")
+          total <- reals.law("LT_TOTAL")
           cases <- specialise(total, List(left, right))
 
           split <- reals.logic
@@ -1125,7 +1125,7 @@ final class Linarith private (
         theorem <-
           if (kind == Kind.Strict)
             for {
-              axiom <- reals.axiom("LT_MUL")
+              axiom <- reals.law("LT_MUL")
               instance <- specialise(axiom, List(firstSide, secondSide))
               both <- rules.conjIntro(first, second)
               result <- rules.mp(instance, both)
@@ -1363,7 +1363,7 @@ final class Linarith private (
       vanishes <- ring.prove(equation)
       atZero <- Conv.rewriteRight(summed, vanishes)
 
-      irreflexive <- reals.axiom("LT_IRREFLEXIVE")
+      irreflexive <- reals.law("LT_IRREFLEXIVE")
       never <- rules.spec(zero, irreflexive)
       absurd <- rules.notElim(never, atZero)
       result <- rules.falsityElim(conclusion, absurd)
@@ -1494,7 +1494,7 @@ final class Linarith private (
         numeral <- Numeral.of(reals, factor)
         positiveFactor <- order.positive(factor)
         side <- Order.destLess(reals, positive.conclusion).map(_._2)
-        ltMul <- reals.axiom("LT_MUL")
+        ltMul <- reals.law("LT_MUL")
         instance <- specialise(ltMul, List(numeral, side))
         both <- rules.conjIntro(positiveFactor, positive)
         result <- rules.mp(instance, both)

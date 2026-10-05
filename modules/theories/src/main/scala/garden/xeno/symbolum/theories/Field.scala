@@ -507,8 +507,8 @@ object Field {
       unitOfProduct <- Coefficient.unitOfProduct(arithmetic)
       unitOfNegation <- Coefficient.unitOfNegation(arithmetic)
       unitReversed <- Coefficient.unitReversed(arithmetic)
-      mulInverse <- reals.axiom("MUL_INVERSE")
-      mulAssoc <- reals.axiom("MUL_ASSOC")
+      mulInverse <- reals.law("MUL_INVERSE")
+      mulAssoc <- reals.law("MUL_ASSOC")
       oneOnTheLeft <- arithmetic.lemma(Arithmetic.OneOnTheLeft)
       zero <- reals.term("0")
       times <- LogicError.lift(

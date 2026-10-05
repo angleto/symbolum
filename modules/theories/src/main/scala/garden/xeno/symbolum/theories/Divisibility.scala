@@ -813,7 +813,7 @@ object Divisibility {
     val b = variable("b")
 
     for {
-      axiom <- vocabulary.reals.axiom("MUL_INVERSE")
+      axiom <- vocabulary.reals.law("MUL_INVERSE")
       atA <- rules.spec(a, axiom)
       parts <- logic.destImp(atA.conclusion).toRight(NotOfForm("an implication", atA.conclusion))
       (antecedent, _) = parts

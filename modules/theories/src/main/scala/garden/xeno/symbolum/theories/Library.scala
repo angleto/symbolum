@@ -278,7 +278,7 @@ object Library {
       // excluded middle is exactly the theorem that would have been.
       collect("Classical, derived", chain.classical.facts) ++
         collect("Classical, defined", chain.classical.definitions) ++
-        collect(RealsDerived, chain.reals.axioms) ++
+        collect(RealsDerived, chain.reals.laws) ++
         collect("Real, defined", chain.reals.definitions) ++
         collect("Positivity", chain.ring.positivity.facts) ++
         collect("Order", chain.order.facts) ++

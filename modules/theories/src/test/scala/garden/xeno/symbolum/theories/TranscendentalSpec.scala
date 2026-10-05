@@ -104,7 +104,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
    */
   "The constants" should "not all be the same function" in {
     val rules = transcendental.logic.rules
-    val notZero = force(chain.reals.axiom("ONE_NOT_ZERO"))
+    val notZero = force(chain.reals.law("ONE_NOT_ZERO"))
 
     val atZero = force(transcendental.exponentialAtZero)
     val sineAtZero = force(transcendental.sineAtZero)
@@ -290,7 +290,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
 
     // And completeness is reached, through the monotone convergence and nowhere else.
     Real.spent(absolute) should contain(
-      force(chain.reals.axiom("COMPLETENESS")).conclusion)
+      force(chain.reals.law("COMPLETENESS")).conclusion)
   }
   /**
    * The addition theorem, and what it does **not** say.
@@ -526,7 +526,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
 
   it should "spend choice and infinity, not eta, and every law of the reals" in {
     val theorem = force(transcendental.fact(Transcendental.ExponentialOneIrrational))
-    val reals = chain.reals.axioms.values.map(_.conclusion).toSet
+    val reals = chain.reals.laws.values.map(_.conclusion).toSet
     val select = force(chain.classical.axiom("SELECT")).conclusion
     val infinity = force(chain.naturals.axiom(Natural.Infinity)).conclusion
     val spent = Real.spent(theorem)
@@ -535,7 +535,7 @@ class TranscendentalSpec extends AnyFlatSpec with Matchers {
       (spent -- reals) shouldBe Set(select, infinity)
     }
     (spent intersect reals) shouldBe reals
-    spent should contain(force(chain.reals.axiom("COMPLETENESS")).conclusion)
+    spent should contain(force(chain.reals.law("COMPLETENESS")).conclusion)
   }
 
   it should "say it in the theory's constants, and detach at a denominator something satisfies" in {

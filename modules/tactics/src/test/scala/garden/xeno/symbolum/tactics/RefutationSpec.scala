@@ -668,9 +668,9 @@ class RefutationSpec extends AnyFlatSpec with Matchers {
     // because equality here is the relative tolerance the screening uses everywhere. That is the
     // tolerance earning its place rather than a detail: without it the intended model would be a
     // counterexample to the theory it is a model of.
-    val outcomes = Real.Axioms.map { case (name, _) =>
+    val outcomes = Real.Laws.map { case (name, _) =>
       val statement = reals
-        .axiom(name)
+        .law(name)
         .fold(error => fail(s"could not read the axiom $name: ${error.message}"), identity)
 
       name -> refutation.counterexample(Vector.empty, statement.conclusion, 200)

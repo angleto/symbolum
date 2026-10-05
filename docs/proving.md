@@ -125,7 +125,8 @@ from. `MirrorSpellingSpec` pins all of that, the term identity first.
 Sixteen statements, in [`Real.scala`](../modules/theories/src/main/scala/garden/xeno/symbolum/theories/Real.scala),
 stating a complete ordered field, and a test pins them and in that order. They were axioms until
 2026-09-26 and are theorems since, proved about the cuts on the rationals under their old names
-(`docs/adr/0053`), so `axiom("ADD_SYM")` still answers. What a development about the reals is asked
+(`docs/adr/0053`), so `law("ADD_SYM")` answers with one of them (`docs/adr/0059` is why it is not
+`axiom`). What a development about the reals is asked
 to believe is the three the naturals cost: a choice operator and eta about the *logic*, in
 `Classical.scala`, and infinity. `docs/adr/0007` is the record of the first and `docs/adr/0009` of
 the second, and the subsection below is what the pair of them buys and what it did not have to.
@@ -803,7 +804,7 @@ by somebody writing the predicate out themselves. Nobody ever did.
 val goal = reals.proposition(
   "?s:real. (!x:real. x < 1 ==> x <= s) /\\ (!b:real. (!x:real. x < 1 ==> x <= b) ==> s <= b)")
 
-Apply.to(logic, reals.axioms("COMPLETENESS"), goal.toOption.get)
+Apply.to(logic, reals.laws("COMPLETENESS"), goal.toOption.get)
 // the instantiation says  P := \x:real. x < 1
 // the obligation says     (?x:real. x < 1) /\ (?x:real. !y:real. y < 1 ==> y <= x)
 ```
@@ -993,7 +994,7 @@ val a = Term.variable("a", TyApp("real", Nil))
 val b = Term.variable("b", TyApp("real", Nil))
 
 for {
-  commutativity <- reals.axiom("ADD_SYM")
+  commutativity <- reals.law("ADD_SYM")
   atA <- rules.spec(a, commutativity)
   atB <- rules.spec(b, atA)
 } yield atB

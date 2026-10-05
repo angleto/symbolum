@@ -16,7 +16,7 @@ import garden.xeno.symbolum.logic.*
  * the cuts happen to prove as well, since the construction would prove that one too and nothing
  * else would notice that `ADD_SYM` had stopped saying commutativity.
  *
- * The first version of this file compared the theory against `Real.Axioms` parsed again, which is
+ * The first version of this file compared the theory against `Real.Laws` parsed again, which is
  * the list compared with itself: an edit to an axiom passed. An audit pointed it out. The copy here
  * is written out by hand, in the form the theory prints, so that an edit fails until the same
  * commit edits this file too, which is the moment of attention the check exists to force.
@@ -57,9 +57,9 @@ class RealSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "prove exactly the statements pinned in this file, in that order, with nothing assumed" in {
-    Real.Axioms.map { case (name, _) => name } shouldBe Pinned.map { case (name, _) => name }
+    Real.Laws.map { case (name, _) => name } shouldBe Pinned.map { case (name, _) => name }
     Pinned.foreach { case (name, text) =>
-      val proved = force(reals.axiom(name))
+      val proved = force(reals.law(name))
       withClue(s"$name: ") {
         reals.show(proved.conclusion) shouldBe text
         proved.hypotheses shouldBe empty
@@ -78,15 +78,15 @@ class RealSpec extends AnyFlatSpec with Matchers {
 
   it should "spend the foundation on the sixteen and nothing else" in {
     val foundation = reals.theory.axioms.toSet
-    Real.Axioms.foreach { case (name, _) =>
+    Real.Laws.foreach { case (name, _) =>
       withClue(s"$name: ") {
-        Derivation.axiomsOf(force(reals.axiom(name))).diff(foundation) shouldBe empty
+        Derivation.axiomsOf(force(reals.law(name))).diff(foundation) shouldBe empty
       }
     }
     // The positive control for the line above: an instrument that found no axiom anywhere would
     // pass it. Completeness is the union of a family of cuts, and two cuts with the same members
     // are one cut only by extensionality.
-    Derivation.axiomsOf(force(reals.axiom("COMPLETENESS"))) should not be empty
+    Derivation.axiomsOf(force(reals.law("COMPLETENESS"))) should not be empty
   }
 
   it should "add nothing to the trusted base by defining an abbreviation" in {
@@ -110,7 +110,7 @@ class RealSpec extends AnyFlatSpec with Matchers {
     // A statement with a free variable would be a schema, and one mentioning an undeclared constant
     // would be about nothing. The kernel refuses both; this says so from the outside, on the
     // sixteen that matter.
-    Real.Axioms.map { case (name, _) => force(reals.axiom(name)).conclusion }.foreach { axiom =>
+    Real.Laws.map { case (name, _) => force(reals.law(name)).conclusion }.foreach { axiom =>
       withClue(s"${reals.show(axiom)}\n") {
         Term.freeVariables(axiom) shouldBe empty
         constantsIn(axiom).diff(reals.theory.constants.keySet) shouldBe empty
@@ -119,8 +119,8 @@ class RealSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "print back as something that reads as the same statement" in {
-    Real.Axioms.foreach { case (name, _) =>
-      val statement = force(reals.axiom(name)).conclusion
+    Real.Laws.foreach { case (name, _) =>
+      val statement = force(reals.law(name)).conclusion
       val printed = reals.show(statement)
 
       withClue(s"$name printed as $printed\n") {
@@ -299,7 +299,7 @@ class RealSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "print an axiom the way it was written" in {
-    reals.show(force(reals.axiom("ADD_SYM")).conclusion) shouldBe
+    reals.show(force(reals.law("ADD_SYM")).conclusion) shouldBe
       "!x:real. !y:real. x + y = y + x"
   }
 
@@ -310,7 +310,7 @@ class RealSpec extends AnyFlatSpec with Matchers {
 
     val theorem = force(
       for {
-        commutativity <- reals.axiom("ADD_SYM")
+        commutativity <- reals.law("ADD_SYM")
         atA <- rules.spec(a, commutativity)
         atB <- rules.spec(b, atA)
       } yield atB

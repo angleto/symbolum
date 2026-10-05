@@ -85,7 +85,7 @@ class CostCorpusSpec extends AnyFlatSpec with Matchers {
   "The corpus as a whole" should "reach every law of the reals but completeness" in {
     // Read off `laws` since `docs/adr/0053` proved the sixteen, for the reason `CostSpec` gives.
     val reached = reports.filter(_.outcome == Cost.Outcome.Proved).flatMap(_.laws).toSet
-    val held = Real.standard.axioms.map(_._2.conclusion).toSet
+    val held = Real.standard.laws.map(_._2.conclusion).toSet
 
     held.size shouldBe 16
     reached.size shouldBe 15

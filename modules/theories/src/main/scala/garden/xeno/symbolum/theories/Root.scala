@@ -166,9 +166,9 @@ object Root {
 
       logic <- classical.logic.over(theory)
       linarith <- Linarith.construct(order)
-      completeness <- reals.axiom("COMPLETENESS")
-      inverse <- reals.axiom("MUL_INVERSE")
-      total <- reals.axiom("LT_TOTAL")
+      completeness <- reals.law("COMPLETENESS")
+      inverse <- reals.law("MUL_INVERSE")
+      total <- reals.law("LT_TOTAL")
 
       steps = Steps(logic, linarith, theory, notation)
       exists <- existence(steps, completeness, inverse, total)
@@ -502,7 +502,7 @@ object Root {
       injective <- peano.fact(Peano.EmbedsInjectively)
       descent <- primes.fact(Primes.SquareNotDouble)
       division <- reals.definition(Real.Division)
-      inverse <- reals.axiom("MUL_INVERSE")
+      inverse <- reals.law("MUL_INVERSE")
 
       positiveText = "0 < q:num"
       positive <- assume(positiveText)

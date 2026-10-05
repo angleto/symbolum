@@ -93,7 +93,7 @@ class CriteriaSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "reach no supremum, because a divergence is read off the terms and not obtained" in {
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     Real.spent(fact(Limit.TermTest)) should not contain completeness
     Real.spent(fact(Limit.TermsVanish)) should not contain completeness
 

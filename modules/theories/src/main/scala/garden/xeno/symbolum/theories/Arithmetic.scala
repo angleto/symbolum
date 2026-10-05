@@ -219,13 +219,13 @@ object Arithmetic {
    */
   def derivedFacts(reals: RealTheory): Either[LogicError, Map[String, Kernel.Thm]] =
     for {
-      addAssoc <- reals.axiom("ADD_ASSOC")
-      addSym <- reals.axiom("ADD_SYM")
-      mulAssoc <- reals.axiom("MUL_ASSOC")
-      mulSym <- reals.axiom("MUL_SYM")
-      addZero <- reals.axiom("ADD_ZERO")
-      mulOne <- reals.axiom("MUL_ONE")
-      distribute <- reals.axiom("DISTRIBUTE")
+      addAssoc <- reals.law("ADD_ASSOC")
+      addSym <- reals.law("ADD_SYM")
+      mulAssoc <- reals.law("MUL_ASSOC")
+      mulSym <- reals.law("MUL_SYM")
+      addZero <- reals.law("ADD_ZERO")
+      mulOne <- reals.law("MUL_ONE")
+      distribute <- reals.law("DISTRIBUTE")
 
       addExchange <- exchange(reals, addAssoc, addSym)
       mulExchange <- exchange(reals, mulAssoc, mulSym)
@@ -379,7 +379,7 @@ object Arithmetic {
     val x = Term.variable("x", real)
 
     for {
-      inverseAxiom <- reals.axiom("ADD_INVERSE")
+      inverseAxiom <- reals.law("ADD_INVERSE")
       zero <- reals.term("0")
       product <- reals.term("x:real * 0")
       negated <- reals.term("-(x:real * 0)")
@@ -433,8 +433,8 @@ object Arithmetic {
   /** `|- !x. -x + x = 0`, the inverse axiom from the other side. */
   def inverseOnTheLeft(reals: RealTheory): Either[LogicError, Kernel.Thm] =
     for {
-      addSym <- reals.axiom("ADD_SYM")
-      inverse <- reals.axiom("ADD_INVERSE")
+      addSym <- reals.law("ADD_SYM")
+      inverse <- reals.law("ADD_INVERSE")
       result <- flip(reals, addSym, inverse)
     } yield result
 
@@ -450,9 +450,9 @@ object Arithmetic {
     val z = Term.variable("z", real)
 
     for {
-      addAssoc <- reals.axiom("ADD_ASSOC")
-      inverse <- reals.axiom("ADD_INVERSE")
-      zeroLeft <- unitOnTheLeft(reals, force(reals.axiom("ADD_SYM")), force(reals.axiom("ADD_ZERO")), "0")
+      addAssoc <- reals.law("ADD_ASSOC")
+      inverse <- reals.law("ADD_INVERSE")
+      zeroLeft <- unitOnTheLeft(reals, force(reals.law("ADD_SYM")), force(reals.law("ADD_ZERO")), "0")
 
       negated <- reals.term("-x:real")
       associated <- specialise(rules, addAssoc, List(x, negated, z))
@@ -485,9 +485,9 @@ object Arithmetic {
     val y = Term.variable("y", real)
 
     for {
-      addAssoc <- reals.axiom("ADD_ASSOC")
-      addZero <- reals.axiom("ADD_ZERO")
-      addSym <- reals.axiom("ADD_SYM")
+      addAssoc <- reals.law("ADD_ASSOC")
+      addZero <- reals.law("ADD_ZERO")
+      addSym <- reals.law("ADD_SYM")
       zeroLeft <- unitOnTheLeft(reals, addSym, addZero, "0")
       inverseLeft <- inverseOnTheLeft(reals)
 
@@ -533,9 +533,9 @@ object Arithmetic {
     for {
       unique <- uniqueInverse(reals)
       inverseLeft <- inverseOnTheLeft(reals)
-      addZero <- reals.axiom("ADD_ZERO")
-      mulSym <- reals.axiom("MUL_SYM")
-      distribute <- reals.axiom("DISTRIBUTE")
+      addZero <- reals.law("ADD_ZERO")
+      mulSym <- reals.law("MUL_SYM")
+      distribute <- reals.law("DISTRIBUTE")
       rightDistribute <- rightDistribution(reals, mulSym, distribute)
 
       negatedX <- reals.term("-x:real")
@@ -590,12 +590,12 @@ object Arithmetic {
     val rules = reals.logic.rules
 
     for {
-      inverse <- reals.axiom("ADD_INVERSE")
-      mulSym <- reals.axiom("MUL_SYM")
-      addZero <- reals.axiom("ADD_ZERO")
-      addSym <- reals.axiom("ADD_SYM")
-      addAssoc <- reals.axiom("ADD_ASSOC")
-      distribute <- reals.axiom("DISTRIBUTE")
+      inverse <- reals.law("ADD_INVERSE")
+      mulSym <- reals.law("MUL_SYM")
+      addZero <- reals.law("ADD_ZERO")
+      addSym <- reals.law("ADD_SYM")
+      addAssoc <- reals.law("ADD_ASSOC")
+      distribute <- reals.law("DISTRIBUTE")
 
       negated <- reals.term("-x:real")
       timesZeroFact <- timesZero(reals, addZero, addSym, addAssoc, distribute)
@@ -757,12 +757,12 @@ object Arithmetic {
       if (negation) Vector(NegAdd, NegMulLeft, NegMulRight, NegNeg, NegZero) else Vector.empty
 
     for {
-      addAssoc <- reals.axiom("ADD_ASSOC")
-      addSym <- reals.axiom("ADD_SYM")
-      mulAssoc <- reals.axiom("MUL_ASSOC")
-      mulSym <- reals.axiom("MUL_SYM")
-      distribute <- reals.axiom("DISTRIBUTE")
-      inverse <- reals.axiom("ADD_INVERSE")
+      addAssoc <- reals.law("ADD_ASSOC")
+      addSym <- reals.law("ADD_SYM")
+      mulAssoc <- reals.law("MUL_ASSOC")
+      mulSym <- reals.law("MUL_SYM")
+      distribute <- reals.law("DISTRIBUTE")
+      inverse <- reals.law("ADD_INVERSE")
       bit0 <- reals.definition(Real.Bit0)
       bit1 <- reals.definition(Real.Bit1)
       subtraction <- reals.definition(Real.Subtraction)

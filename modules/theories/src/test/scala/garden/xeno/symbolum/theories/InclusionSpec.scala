@@ -187,7 +187,7 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
     val overReals = force(Rewrite.inTheorem(values, applied))
     val reversed = force(Conv.sym(overReals))
 
-    val distinct = force(chain.reals.axiom("ONE_NOT_ZERO"))
+    val distinct = force(chain.reals.law("ONE_NOT_ZERO"))
     val absurd = force(rules.notElim(distinct, reversed))
     val negation = force(rules.notIntro(goal, absurd))
 
@@ -305,7 +305,7 @@ class InclusionSpec extends AnyFlatSpec with Matchers {
   private lazy val infinity: Term = force(chain.naturals.axiom(Natural.Infinity)).conclusion
 
   /** The sixteen, read off the theory of the reals rather than listed again here. */
-  private lazy val field: Set[Term] = chain.reals.axioms.values.map(_.conclusion).toSet
+  private lazy val field: Set[Term] = chain.reals.laws.values.map(_.conclusion).toSet
 
   "The link" should "assert no axiom of its own" in {
     // The size of the trusted base is a number rather than a matter of opinion, which is

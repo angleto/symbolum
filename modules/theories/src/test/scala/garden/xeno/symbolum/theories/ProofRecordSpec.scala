@@ -44,7 +44,7 @@ class ProofRecordSpec extends AnyFlatSpec with Matchers {
     // Stated on its own because it is the one to notice. `COMPLETENESS` is the axiom that separates
     // the reals from the rationals, it is by far the largest thing on the list, and no identity in
     // the arithmetic goes anywhere near it.
-    val completeness = force(reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(reals.law("COMPLETENESS")).conclusion
     val identity = force(ring.prove("!x:real. (x + 1) * (x + 1) = x * x + 2 * x + 1"))
 
     Real.spent(identity) should not contain completeness

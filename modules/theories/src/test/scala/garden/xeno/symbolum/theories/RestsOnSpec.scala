@@ -38,7 +38,7 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
     reach.foundational shouldBe empty
     // The subject is the sixteen of the reals, named facts since `docs/adr/0053` and assumed until
     // then; the half of the assertion that says the reading is about the subject at all.
-    reach.facts.toSet.intersect(Real.Axioms.map(_._1).toSet) should not be empty
+    reach.facts.toSet.intersect(Real.Laws.map(_._1).toSet) should not be empty
     info(s"0 < 12: ${reach.summary}")
   }
 
@@ -115,7 +115,7 @@ class RestsOnSpec extends AnyFlatSpec with Matchers {
     // on the standard library rather than on a relabelled copy.
     val theorem = force(chain.order.positive(12))
     val reach = Reach.of(held, theorem)
-    val sixteen = Real.Axioms.map(_._1).toSet
+    val sixteen = Real.Laws.map(_._1).toSet
 
     reach.domain shouldBe empty
     reach.foundational shouldBe empty

@@ -203,7 +203,7 @@ class NaturalSpec extends AnyFlatSpec with Matchers {
     // them. The reals are built from the cuts now, over the rationals, the integers and the
     // naturals, so the composition is the construction: the naturals still cannot read a theorem
     // about the reals, and the reals read every theorem about the naturals.
-    Natural.standard.theory.checkTerm(force(Real.standard.axiom("ADD_SYM")).conclusion).isLeft shouldBe true
+    Natural.standard.theory.checkTerm(force(Real.standard.law("ADD_SYM")).conclusion).isLeft shouldBe true
     Real.standard.theory.checkTerm(force(naturals.fact(Natural.Induction)).conclusion).isRight shouldBe true
 
     val together = Real.standard

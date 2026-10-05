@@ -423,7 +423,7 @@ object Logarithm {
         .flatMap(rules.spec(factorial, _))
         .flatMap(rules.mp(_, atLeastOne))
       nonZero <- magnitude.order.fact(Order.NonZero).flatMap(rules.spec(factorial, _)).flatMap(rules.mp(_, positive))
-      cancels <- reals.axiom("MUL_INVERSE").flatMap(rules.spec(factorial, _)).flatMap(rules.mp(_, nonZero))
+      cancels <- reals.law("MUL_INVERSE").flatMap(rules.spec(factorial, _)).flatMap(rules.mp(_, nonZero))
       inversePositive <- magnitude.order.fact(Order.InversePositive)
         .flatMap(rules.spec(factorial, _)).flatMap(rules.mp(_, positive))
       power <- Parser.term(theory, notation, "Power", Type.fun(Reals, Type.fun(Numbers, Reals)))
@@ -838,7 +838,7 @@ object Logarithm {
           .flatMap(mp(_, Right(distanceIs), Right(magnitudeIs), Right(shortfall), Right(above)))
       } yield result
 
-      trichotomy <- at(reals.axiom("LT_TOTAL"), "0:real", "h:real")
+      trichotomy <- at(reals.law("LT_TOTAL"), "0:real", "h:real")
       rest <- assume("0 = h:real \\/ h:real < 0").flatMap(rules.disjElim(_, zeroCase, negativeCase))
       cases <- rules.disjElim(trichotomy, positiveCase, rest)
       result <- rules.disch(hypothesis, cases).flatMap(rules.gen(h, _))
@@ -873,7 +873,7 @@ object Logarithm {
       cPositive <- at(lemma("!p:real. 0 < p ==> 0 < 2 * p + 1"), "exp (x:real)").flatMap(mp(_, Right(valuePositive)))
       cTerm <- real(c)
       cancels <- magnitude.order.fact(Order.NonZero).flatMap(rules.spec(cTerm, _)).flatMap(rules.mp(_, cPositive))
-        .flatMap(nonZero => reals.axiom("MUL_INVERSE").flatMap(rules.spec(cTerm, _)).flatMap(rules.mp(_, nonZero)))
+        .flatMap(nonZero => reals.law("MUL_INVERSE").flatMap(rules.spec(cTerm, _)).flatMap(rules.mp(_, nonZero)))
       wTimesC <- at(lemma("!e:real c:real v:real. 0 < e ==> c * v = 1 ==> (e * v) * c = e"), "e:real", c, s"inv ($c)")
         .flatMap(mp(_, Right(assumedTolerance), Right(cancels)))
       wPositive <- at(lemma("!e:real c:real w:real. 0 < e ==> 0 < c ==> w * c = e ==> 0 < w"), "e:real", c, w)
@@ -1001,7 +1001,7 @@ object Logarithm {
           .flatMap(mp(_, Right(strict), Right(same)))
         result <- rules.falsityElim(goal, absurd)
       } yield result
-      trichotomy <- at(reals.axiom("LT_TOTAL"), "a:real", "b:real")
+      trichotomy <- at(reals.law("LT_TOTAL"), "a:real", "b:real")
       rest <- assume("(a:real) = b \\/ (b:real) < a").flatMap(rules.disjElim(_, equal, above))
       result <- rules.disjElim(trichotomy, below, rest)
         .flatMap(rules.disch(hypothesis, _))
@@ -1071,7 +1071,7 @@ object Logarithm {
       belowOne <- for {
         under <- assume("(y:real) < 1")
         nonZero <- magnitude.order.fact(Order.NonZero).flatMap(rules.spec(y, _)).flatMap(rules.mp(_, positive))
-        cancels <- reals.axiom("MUL_INVERSE").flatMap(rules.spec(y, _)).flatMap(rules.mp(_, nonZero))
+        cancels <- reals.law("MUL_INVERSE").flatMap(rules.spec(y, _)).flatMap(rules.mp(_, nonZero))
         inversePositive <- magnitude.order.fact(Order.InversePositive).flatMap(rules.spec(y, _)).flatMap(rules.mp(_, positive))
         aboveOne <- at(lemma("!y:real v:real. y * v = 1 ==> 0 < y ==> y < 1 ==> 0 < v ==> 1 <= v"), "y:real", "inv (y:real)")
           .flatMap(mp(_, Right(cancels), Right(positive), Right(under), Right(inversePositive)))
@@ -1110,7 +1110,7 @@ object Logarithm {
 
       // `disjElim` discharges each disjunct itself: the second case is proved under exactly the
       // assumption `LT_TOTAL`'s second disjunct names.
-      trichotomy <- at(reals.axiom("LT_TOTAL"), "y:real", "1:real")
+      trichotomy <- at(reals.law("LT_TOTAL"), "y:real", "1:real")
       settled <- rules.disjElim(trichotomy, belowOne, atLeastOne)
       result <- rules.disch(hypothesis, settled).flatMap(rules.gen(y, _))
     } yield result

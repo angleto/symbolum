@@ -101,7 +101,7 @@ class IntegralWithinSpec extends AnyFlatSpec with Matchers {
       )) withClue(s"$relative: ") {
       Real.spent(fact(relative)) shouldBe Real.spent(fact(twoSided))
     }
-    val completeness = force(chain.reals.axiom("COMPLETENESS")).conclusion
+    val completeness = force(chain.reals.law("COMPLETENESS")).conclusion
     Real.spent(fact(Integral.ContinuousHasWithin)) should contain(completeness)
     Real.spent(fact(Integral.HasLinear)) should not contain completeness
   }

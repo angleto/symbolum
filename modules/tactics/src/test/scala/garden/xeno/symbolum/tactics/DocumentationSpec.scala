@@ -16,8 +16,8 @@ import garden.xeno.symbolum.theories.*
  *
  * A document that shows what a system does is believed, and a document whose examples stopped
  * working some months ago is believed anyway, which is why this file exists. Every example in
- * `docs/proving.md` and in the front of `README.md` is run here, and the axiom table in the guide
- * is compared with the axioms the theory actually holds.
+ * `docs/proving.md` and in the front of `README.md` is run here, and the table of the reals' laws
+ * in the guide is compared with the sixteen the theory actually proves.
  *
  * **What "run here" means, precisely, since it did not mean what it said until 2026-09-16.** What
  * this file runs is a Scala program written beside the assertion that says what the document's
@@ -589,7 +589,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // asserts the same instantiation and the same obligation, and then discharges them, which is
     // more than this file could assert without becoming a second copy of it. What is checked here
     // is that the guide still points at an axiom the theory holds under that name.
-    Real.standard.axioms.keySet should contain("COMPLETENESS")
+    Real.standard.laws.keySet should contain("COMPLETENESS")
     read("docs/proving.md") should include("P := \\x:real. x < 1")
   }
 
@@ -800,7 +800,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
   }
 
   "The guide's table of order facts" should "name exactly the facts the order holds" in {
-    // The same guard as the axiom table below, for the same reason: a fact added to `Order` and
+    // The same guard as the table of laws below, for the same reason: a fact added to `Order` and
     // not written down is a fact nobody outside this repository can find.
     //
     // **It read the whole document and one direction until 2026-09-18, and both halves of that let
@@ -864,7 +864,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
 
     val theorem = force(
       for {
-        commutativity <- reals.axiom("ADD_SYM")
+        commutativity <- reals.law("ADD_SYM")
         atA <- rules.spec(a, commutativity)
         atB <- rules.spec(b, atA)
       } yield atB
@@ -981,11 +981,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     force(reals.proposition("x:real * (y:real + 1) = x * y + x").flatMap(ring.prove))
   }
 
-  /* ------------------------------------------------------ the axiom table */
+  /* --------------------------------------------------------- the table of laws */
 
-  "The axiom table in the guide" should "name exactly the axioms the theory holds, in order" in {
+  "The table of the reals' laws in the guide" should "name exactly the sixteen the theory proves, in order" in {
     val guide = read("docs/proving.md")
-    val names = Real.Axioms.map { case (name, _) => name }
+    val names = Real.Laws.map { case (name, _) => name }
 
     val quoted = names.filter(name => guide.contains(name))
     withClue(s"missing from docs/proving.md: ${names.diff(quoted).mkString(", ")}\n") {
