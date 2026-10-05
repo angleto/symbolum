@@ -13,7 +13,7 @@ import garden.xeno.symbolum.logic.*
  * `docs/architecture.md` says where a change is dangerous, and its second entry is what nothing
  * but a reader checks: whether the statements say what they are meant to, and the definitions and
  * the notation that decide what a statement string means. An axiom the chain asserts is one
- * mis-statement away from proving everything. So for three populations in this repository **the
+ * mis-statement away from proving everything. So for four populations in this repository **the
  * whole defence is a person reading**, and until this file was written nothing recorded whether
  * anyone had.
  *
@@ -27,7 +27,7 @@ import garden.xeno.symbolum.logic.*
  * **Nothing here checks that an axiom, a definition or a precedence is right.** If such a check
  * were possible the square would not be unprotected and no register would be needed; a test that
  * appeared to check it would be worse than none, because it would retire the reading. The guard in
- * `RegisterSpec` checks exactly one thing: that every statement in the three populations has a row.
+ * `RegisterSpec` checks exactly one thing: that every statement in the four populations has a row.
  * A row saying `NOT READ` is the true statement about this repository and it is the one this
  * command writes.
  *
@@ -35,7 +35,7 @@ import garden.xeno.symbolum.logic.*
  * or that the source they name says what the row says. The register records a claim and puts a name
  * against it, which is what a register is for.
  *
- * == The three populations, and which one each row comes from ==
+ * == The four populations, and which one each row comes from ==
  *
  *  - **The axioms**, taken from `Chain.standard.widest.theory.axioms`, which is the whole chain and
  *    not one development. The distinction bit this project on 2026-09-11, when a spec asserted a
@@ -52,6 +52,13 @@ import garden.xeno.symbolum.logic.*
  *    comments included, so naming the operation here put this file in the trusted base and turned
  *    the suite red. It strips comments now and lists the files that only discuss the rule
  *    separately from the files that use it, which is why this sentence can be written at all.
+ *  - **The laws**, taken from `Real.Laws` over `chain.reals`: the sixteen statements of a complete
+ *    ordered field, each a theorem about the cuts since `docs/adr/0053`. A law false of the cuts is
+ *    not proved and the chain does not build, so what is left for a reader is what no derivation
+ *    can check: that the sixteen state a complete ordered field and not something true of the cuts
+ *    and weaker. They were rows under `axiom` while they were asserted and had none from
+ *    2026-09-27 until 2026-10-05, because the first population is read off `theory.axioms` and a
+ *    theorem is not there; the change that proved them took their rows with it.
  *  - **The definitions**, taken from `Chain.standard.widest.theory.definitions`, which is every
  *    constant the chain defines: the eight connectives, the numerals, the abbreviations of the
  *    reals, and everything the developments above them introduce. A definition is conservative and
@@ -135,7 +142,7 @@ object Register {
    * a text that is re-parsed here would agree with the theory only as long as the parse does.
    */
   private def axiomNames(chain: Chain): Map[Term, String] =
-    (chain.classical.axioms ++ chain.naturals.axioms ++ chain.reals.laws).map {
+    (chain.classical.axioms ++ chain.naturals.axioms).map {
       case (name, theorem) => theorem.conclusion -> name
     }
 
@@ -158,6 +165,15 @@ object Register {
       named.get(statement).map(name => Row(s"axiom $name", chain.widest.show(statement)))
     }
   }
+
+  /**
+   * The sixteen laws of the reals, in the order `Real.Laws` writes them, each printed from the
+   * theorem the construction proved rather than from the text it was proved against.
+   */
+  def lawRows(chain: Chain): Vector[Row] =
+    Real.Laws.map { case (name, _) =>
+      Row(s"law $name", chain.widest.show(chain.reals.laws(name).conclusion))
+    }
 
   /**
    * Every constant the chain defines, with the body that defines it, sorted by name.
@@ -250,7 +266,7 @@ object Register {
 
   /** Every row of the register, which is every statement nothing but a reader checks. */
   def rows(chain: Chain): Vector[Row] =
-    axiomRows(chain) ++ definitionRows(chain) ++ notationRows(chain)
+    axiomRows(chain) ++ lawRows(chain) ++ definitionRows(chain) ++ notationRows(chain)
 
   /**
    * The constants the chain declares and never defines, with their types.
@@ -348,6 +364,7 @@ object Register {
    */
   def listing(chain: Chain, attested: Map[String, Attestation]): String = {
     val axioms = axiomRows(chain)
+    val laws = lawRows(chain)
     val definitions = definitionRows(chain)
     val notation = notationRows(chain)
     val declared = declaredConstants(chain)
@@ -358,6 +375,14 @@ object Register {
       "In the order the chain asserts them, which is the order `Theory.axioms` reports.",
       "",
       table(axioms, attested),
+      "",
+      s"## The laws of the reals (${laws.size})",
+      "",
+      "The statements of a complete ordered field, in the order `Real.Laws` writes them. Each is a",
+      "theorem about the cuts and adds nothing to the axioms above; what a reading checks is that",
+      "together they state a complete ordered field, which no derivation can.",
+      "",
+      table(laws, attested),
       "",
       s"## The definitions (${definitions.size})",
       "",
@@ -375,9 +400,9 @@ object Register {
       "",
       s"## Declared and never defined (${declared.size})",
       "",
-      "Not rows, and listed so that a constant with no row is a constant somebody decided about. The",
-      "seven of the reals and `select` are declared and say nothing by themselves: their whole meaning",
-      "is the axioms above, which are rows. The abstraction and representation of each defined type",
+      "Not rows, and listed so that a constant with no row is a constant somebody decided about.",
+      "`select` is declared and says nothing by itself: its whole meaning is `SELECT` above, which is a",
+      "row. The abstraction and representation of each defined type",
       "arrive from `Kernel.defineType` with two theorems relating them, and a theorem is proved rather",
       "than read. Equality is the kernel's, and is in the theory before any of this starts.",
       "",

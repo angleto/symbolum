@@ -320,10 +320,10 @@ In descending order of how much damage a mistake does:
    chain does assert are a mis-statement away from proving everything, which is the old danger
    and lives in `Classical.Axioms` and `Natural.Axioms` now.
    [reading-register.md](reading-register.md) is where that reading is recorded, one row per axiom,
-   per defined constant and per spelling, generated from the code and pinned by `RegisterSpec`. It
-   checks none of them and could not; what it does is give the reading a state, so that a statement
-   enters the system unread, its absence from the list fails the build, and a rename takes its
-   attestation with it.
+   per law, per defined constant and per spelling, generated from the code and pinned by
+   `RegisterSpec`. It checks none of them and could not; what it does is give the reading a state,
+   so that a statement enters the system unread, its absence from the list fails the build, and a
+   rename takes its attestation with it.
 3. **`Arithmetic.ringOrder`.** The rewriting sorts by it, and cancellation is a rewrite between
    neighbours. Changing it to the obvious structural order puts a term and its negation at opposite
    ends of a sum, where they never meet, and cancellation silently stops working. The comment there
