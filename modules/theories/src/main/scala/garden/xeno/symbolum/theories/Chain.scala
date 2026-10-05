@@ -429,7 +429,20 @@ final class Chain private (
    * extends whatever the end is when it is built. `docs/adr/0057` is the decision. Two constants,
    * no axiom.
    */
-  val circle: Circle
+  val circle: Circle,
+
+  /**
+   * The complex numbers: a type over the pairs of reals, its field, `cis`, De Moivre, the polar
+   * form, the `n`-th roots and the roots of unity.
+   *
+   * A link rather than a development beside the chain because `complex` is a type and its
+   * operations are constants, and a constant declared beside the chain is where nothing above can
+   * see it. It reads `pi` and `acos` from [[circle]], `exp` and `ln` for the roots, and the sums for
+   * the roots of unity; what it extends is the chain's end, for the reason `Rotation.construct`'s
+   * comment gives. It also widens the notation: `+`, `*` and `-` are the complex operations at
+   * `complex`, which `docs/adr/0060` decides. A type and its operations, and no axiom.
+   */
+  val complex: Complex
 ) {
 
   /**
@@ -457,7 +470,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = circle
+  val widest: Signature = complex
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -734,6 +747,20 @@ object Chain {
       // monotonicity pins, and nothing the integral declares is read.
       circle <- Circle.construct(
         classical, reals, magnitude, ring, order, transcendental, continuity, derivative, integral.theory, integral.notation)
+
+      // Over the circle, extending the chain's end: `cis` pairs `cos` with `sin`, the polar form
+      // spends `acos` and `pi`, the roots spend `exp` and `ln`, and the roots of unity the sums and
+      // the division of `num`. What it reads is named, by the links that hold it.
+      below = Library.of(Vector(
+        "Reals" -> reals.laws, "Real, defined" -> reals.definitions, "Order" -> order.facts,
+        "Natural" -> naturals.facts, "Peano" -> peano.facts, "Series" -> series.facts,
+        "Modular" -> modular.facts, "Product" -> product.facts, "Root" -> root.facts,
+        "Transcendental" -> transcendental.facts, "Logarithm" -> logarithm.facts, "Circle" -> circle.facts
+      ))
+      complex <- Complex.construct(
+        classical, naturals, ring, magnitude, product,
+        name => below.named(name).headOption.map(_.theorem).toRight(MissingDefinition(name)),
+        circle.theory, circle.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -779,7 +806,8 @@ object Chain {
       resolving,
       derivative,
       integral,
-      circle
+      circle,
+      complex
     )
   }
 }

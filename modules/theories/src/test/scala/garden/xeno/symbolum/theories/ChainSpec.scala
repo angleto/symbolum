@@ -164,6 +164,9 @@ class ChainSpec extends AnyFlatSpec with Matchers {
       // **closed** predicate, and `INT_SAME` names both of its components, so nothing about the
       // carrier is left free for the new operator to be parameterised by.
       "int" -> 0,
+      // The complex numbers, carved on 2026-10-05 from the whole of `prod(real,real)` by a closed
+      // predicate, so of arity nought like the integers.
+      "complex" -> 0,
       "num" -> 0,
       "prod" -> 2,
       // The rationals and the cuts, in the chain since phase 5 put the construction of the reals
@@ -270,14 +273,16 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // **And again on 2026-09-27**, to `Circle`, the fifteenth: `pi` and `acos`, which read the
     // derivative's monotonicity and nothing the integral declares, and are at the end for the same
     // rule and nothing about their subject.
-    chain.widest shouldBe chain.circle
-    chain.widest.theory.constants.keySet shouldBe chain.circle.theory.constants.keySet
+    // **And again on 2026-10-05**, to `Complex`, the sixteenth: a type and its operations, which
+    // read `pi` and `acos` and so sit above the circle.
+    chain.widest shouldBe chain.complex
+    chain.widest.theory.constants.keySet shouldBe chain.complex.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
       chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
       chain.listing, chain.folding, chain.root, chain.continuity, chain.resolving, chain.derivative,
-      chain.integral
+      chain.integral, chain.circle
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

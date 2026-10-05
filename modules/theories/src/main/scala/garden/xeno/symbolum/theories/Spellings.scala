@@ -373,6 +373,27 @@ object Spellings {
       // the books write, with the argument bracketed by the context only where it needs it.
       .delimited("pi", 0, "\\pi")
       .operator("acos", 1, "\\arccos #1", Multiplicative + 5)
+      /* ------------------------------------------------------ the complex numbers */
+      // The book's letters where it has them. `cis` stays a name rather than becoming `e^{it}`,
+      // because nothing here defines the complex exponential and the page must not promise one.
+      // The constructor is a pair marked as complex, not `x + y i`, which would be read as a sum
+      // this signature does not hold at that type.
+      .delimited("COMPLEX", 2, "\\langle #1, #2 \\rangle_{\\mathbb{C}}")
+      .delimited("mk_complex", 1, "\\mathrm{mk\\_complex}(#1)")
+      .delimited("dest_complex", 1, "\\mathrm{dest\\_complex}(#1)")
+      .operator("Re", 1, "\\operatorname{Re} #1", Multiplicative + 5)
+      .operator("Im", 1, "\\operatorname{Im} #1", Multiplicative + 5)
+      .operator("complex_of_real", 1, "#1_{\\mathbb{C}}", Multiplicative + 5)
+      .delimited("ii", 0, "i")
+      .operator("complex_neg", 1, "-#1", Multiplicative + 5)
+      .delimited("cnj", 1, "\\overline{#1}")
+      .delimited("complex_norm_sq", 1, "|#1|^{2}")
+      .delimited("complex_norm", 1, "|#1|")
+      .delimited("complex_inv", 1, "\\left(#1\\right)^{-1}")
+      .binding("complex_sum", "\\sum_{#b < #2} #1")
+      .operator("complex_pow", 2, "#1^{#2}", Multiplicative + 5)
+      .operator("complex_arg", 1, "\\arg #1", Multiplicative + 5)
+      .operator("cis", 1, "\\operatorname{cis} #1", Multiplicative + 5)
       /* ------------------------------------------------ the set defined by rules */
       // Both at arity ONE though each is written with two arguments, and that is the faithful
       // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set

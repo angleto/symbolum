@@ -49,14 +49,19 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // the non-strict and back again. So a lemma added to close a gap in the order added exactly the
     // two rows this loop exists to produce, and it was the loop that said so rather than the person
     // who added it.
-    recoveries.size shouldBe 18
-    recoveries.map(_.reached).distinct.size shouldBe 14
+    // **20 and 16 since 2026-10-05, and again a matched pair.** `Complex` published `SIN_NONNEG`,
+    // `0 <= x /\ x <= pi ==> 0 <= sin x`, because the polar form needed it, and it is `SIN_POSITIVE`
+    // with `real_lt` become `real_le` throughout; the mutation the other way gives `SIN_POSITIVE`
+    // back. Read off the run, which printed the two pairs.
+    recoveries.size shouldBe 20
+    recoveries.map(_.reached).distinct.size shouldBe 16
 
     val pairs = recoveries.map(r => (r.proposal.from, r.proposal.change, r.reached)).toSet
     pairs should contain(("ADD_SYM", "real_add became real_mul", "MUL_SYM"))
     pairs should contain(("MUL_SYM", "real_mul became real_add", "ADD_SYM"))
     pairs should contain(("ADD_ASSOC", "real_add became real_mul", "MUL_ASSOC"))
     pairs should contain(("LE_FROM_ZERO", "real_le became real_lt", "LT_FROM_ZERO"))
+    pairs should contain(("SIN_POSITIVE", "real_lt became real_le", "SIN_NONNEG"))
   }
 
   it should "reach none of them by dropping a hypothesis, which the file predicted and nobody had measured" in {
@@ -389,7 +394,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // each, measured by the run. Plus eight over the base above.
     // 871 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02: one antecedent each, read off the
     // run over that branch. Plus two over the base above.
-    propose.weakenings.size shouldBe 871
+    // 882 with `Complex`, 2026-10-05: one antecedent on each of eleven facts (`COMPLEX_MUL_INVERSE`,
+    // `COMPLEX_ENTIRE`, the two norm-zero facts, `COMPLEX_POW_ZERO_BASE`, `SIN_NONNEG`, `CIS_NOT_ONE`,
+    // `COMPLEX_ROOT`, `ROOT_OF_UNITY` and the two sums), counted from `docs/lemmas.md` before the
+    // run and equal to it. Plus eleven over the base above.
+    propose.weakenings.size shouldBe 882
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -536,7 +545,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // lambda in the body. Plus seventeen over the base above.
     // 137 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02, read off the run over that branch:
     // both write an order with no lambda in the body. Plus two over the base above.
-    propose.mutable.size shouldBe 137
+    // 156 with `Complex`, 2026-10-05, read off the run over the branch that brought it: nineteen of
+    // its facts write an operator with no lambda in the body. Plus nineteen over the base above.
+    propose.mutable.size shouldBe 156
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
@@ -559,19 +570,38 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // pays to specialise the lemma it reached, measured by building that specialisation here. A
     // regression that sent these back to a decision procedure would show as a price that is not
     // that one, whatever its size.
-    readings.size shouldBe 18
-    readings.map(_.report.outcome).distinct shouldBe Vector(Cost.Outcome.Proved)
+    //
+    // **Two are excepted by name since 2026-10-05, and the exception is a limit of `Novelty`, not of
+    // the claims.** `SIN_POSITIVE` and `SIN_NONNEG` reach each other, and `Novelty.standard` puts them
+    // to a `Prove` built over `Order` and `Series`, whose library is what an `Order` can reach: the
+    // reals and the order, not `Circle` or `Complex`. So neither lemma is there to cite, LINARITH
+    // cannot take `sin`, and both come back `Unsettled`, where `Ask`, over the whole chain, proves
+    // each by citing the other's twin. Every rediscovery before these was a fact of `Order`, which
+    // is why the limit had not shown. The two are pinned as refused, so the day `Novelty` reads the
+    // chain's library this goes red and the exception is deleted rather than left standing.
+    val excepted = Set("SIN_POSITIVE", "SIN_NONNEG")
+    val outside = recoveries.filter(r => excepted(r.reached))
+      .flatMap(r => propose.novelty.of(r.proposal.claim).toOption)
+    outside.map(_.report.outcome) shouldBe Vector(Cost.Outcome.Unsettled, Cost.Outcome.Unsettled)
+    val inside = recoveries.filterNot(r => excepted(r.reached))
+      .flatMap(r => propose.novelty.of(r.proposal.claim).toOption)
 
-    readings.count(_.standing == Novelty.Standing.Immediate) shouldBe 4
-    readings.count(_.standing == Novelty.Standing.Known) shouldBe 14
-    readings.count(_.standing == Novelty.Standing.Earned) shouldBe 0
+    readings.size shouldBe 20
+    inside.size shouldBe 18
+    inside.map(_.report.outcome).distinct shouldBe Vector(Cost.Outcome.Proved)
+
+    inside.count(_.standing == Novelty.Standing.Immediate) shouldBe 4
+    inside.count(_.standing == Novelty.Standing.Known) shouldBe 14
+    inside.count(_.standing == Novelty.Standing.Earned) shouldBe 0
 
     val chain = garden.xeno.symbolum.theories.Chain.standard
     val library = garden.xeno.symbolum.theories.Library.of(chain)
     val logic = chain.widest.logic.over(chain.widest.theory)
       .fold(error => fail(s"the logic does not widen: $error"), identity)
 
-    val known = recoveries.flatMap(recovery =>
+    // The two excepted above are `Known` too, because the library holds them, and are left out here
+    // for the reason they are excepted: their price is the refusal's, not a citation's.
+    val known = recoveries.filterNot(r => excepted(r.reached)).flatMap(recovery =>
       propose.novelty.of(recovery.proposal.claim).toOption
         .filter(_.standing == Novelty.Standing.Known)
         .map(recovery -> _)

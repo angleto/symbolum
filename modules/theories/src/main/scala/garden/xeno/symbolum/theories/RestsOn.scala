@@ -179,7 +179,9 @@ object Reach {
         // The gauge integral and the fundamental theorem, 2026-09-25, in the change that added them.
         "Integral" -> chain.integral.facts,
         // pi, the periods and acos, 2026-09-27, in the change that added them.
-        "Circle" -> chain.circle.facts
+        "Circle" -> chain.circle.facts,
+        // The complex numbers, 2026-10-05, in the change that added them.
+        "Complex" -> chain.complex.facts
       )
     )
 

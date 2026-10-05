@@ -120,6 +120,89 @@ they have least appetite for working out how it is produced.
   NUM_PROD_SUC             !f:num -> num. !n:num. NUM_PROD f (SUC n) = NUM_PROD f n * f n
   NUM_PROD_ZERO            !f:num -> num. NUM_PROD f 0 = SUC 0
 
+## Complex
+
+  ARG_SPEC                 !x:complex. 0 <= complex_arg x /\ complex_arg x < 2 * pi /\ x = complex_of_real (complex_norm x) * cis (complex_arg x)
+  CIS_ADD                  !x:real. !y:real. cis (x + y) = cis x * cis y
+  CIS_NOT_ONE              !x:real. 0 < x /\ x < 2 * pi ==> ~(cis x = complex_of_real 1)
+  CIS_PERIODIC             !x:real. cis (x + 2 * pi) = cis x
+  CIS_ZERO                 cis 0 = complex_of_real 1
+  CNJ_ADD                  !x:complex. !y:complex. cnj (x + y) = cnj x + cnj y
+  CNJ_CNJ                  !x:complex. cnj (cnj x) = x
+  CNJ_MUL                  !x:complex. !y:complex. cnj (x * y) = cnj x * cnj y
+  COMPLEX_ADD_ASSOC        !x:complex. !y:complex. !z:complex. x + y + z = x + (y + z)
+  COMPLEX_ADD_INVERSE      !x:complex. x + complex_neg x = complex_of_real 0
+  COMPLEX_ADD_SYM          !x:complex. !y:complex. x + y = y + x
+  COMPLEX_ADD_ZERO         !x:complex. x + complex_of_real 0 = x
+  COMPLEX_DISTRIBUTE       !x:complex. !y:complex. !z:complex. x * (y + z) = x * y + x * z
+  COMPLEX_ENTIRE           !x:complex. !y:complex. x * y = complex_of_real 0 ==> x = complex_of_real 0 \/ y = complex_of_real 0
+  COMPLEX_EQ               !x:complex. !y:complex. x = y = (Re x = Re y /\ Im x = Im y)
+  COMPLEX_GEOMETRIC        !x:complex. !n:num. (complex_of_real 1 - x) * complex_sum (\m:num. complex_pow x m) n = complex_of_real 1 - complex_pow x n
+  COMPLEX_INJECTIVE        !x:real. !y:real. !z:real. !u:real. COMPLEX x y = COMPLEX z u = (x = z /\ y = u)
+  COMPLEX_INV_ZERO         complex_inv (complex_of_real 0) = complex_of_real 0
+  COMPLEX_MUL_ASSOC        !x:complex. !y:complex. !z:complex. x * y * z = x * (y * z)
+  COMPLEX_MUL_CNJ          !x:complex. x * cnj x = complex_of_real (complex_norm_sq x)
+  COMPLEX_MUL_INVERSE      !x:complex. ~(x = complex_of_real 0) ==> x * complex_inv x = complex_of_real 1
+  COMPLEX_MUL_ONE          !x:complex. x * complex_of_real 1 = x
+  COMPLEX_MUL_POW          !x:complex. !y:complex. !n:num. complex_pow (x * y) n = complex_pow x n * complex_pow y n
+  COMPLEX_MUL_SYM          !x:complex. !y:complex. x * y = y * x
+  COMPLEX_NORM_CIS         !x:real. complex_norm (cis x) = 1
+  COMPLEX_NORM_MUL         !x:complex. !y:complex. complex_norm (x * y) = complex_norm x * complex_norm y
+  COMPLEX_NORM_NONNEG      !x:complex. 0 <= complex_norm x
+  COMPLEX_NORM_SQUARED     !x:complex. complex_norm x * complex_norm x = complex_norm_sq x
+  COMPLEX_NORM_SQ_MUL      !x:complex. !y:complex. complex_norm_sq (x * y) = complex_norm_sq x * complex_norm_sq y
+  COMPLEX_NORM_SQ_NONNEG   !x:complex. 0 <= complex_norm_sq x
+  COMPLEX_NORM_SQ_ZERO     !x:complex. complex_norm_sq x = 0 ==> x = complex_of_real 0
+  COMPLEX_NORM_ZERO        !x:complex. complex_norm x = 0 ==> x = complex_of_real 0
+  COMPLEX_OF_REAL_ADD      !x:real. !y:real. complex_of_real (x + y) = complex_of_real x + complex_of_real y
+  COMPLEX_OF_REAL_MUL      !x:real. !y:real. complex_of_real (x * y) = complex_of_real x * complex_of_real y
+  COMPLEX_ONE_NOT_ZERO     ~(complex_of_real 1 = complex_of_real 0)
+  COMPLEX_POLAR            !x:complex. ?y:real. x = complex_of_real (complex_norm x) * cis y
+  COMPLEX_POW_ADD          !x:complex. !n:num. !m:num. complex_pow x (n + m) = complex_pow x n * complex_pow x m
+  COMPLEX_POW_MUL          !x:complex. !n:num. !m:num. complex_pow x (n * m) = complex_pow (complex_pow x n) m
+  COMPLEX_POW_OF_REAL      !x:real. !n:num. complex_pow (complex_of_real x) n = complex_of_real (Power x n)
+  COMPLEX_POW_ONE          !n:num. complex_pow (complex_of_real 1) n = complex_of_real 1
+  COMPLEX_POW_SUC          !x:complex. !n:num. complex_pow x (SUC n) = x * complex_pow x n
+  COMPLEX_POW_ZERO         !x:complex. complex_pow x 0 = complex_of_real 1
+  COMPLEX_POW_ZERO_BASE    !n:num. 0 < n ==> complex_pow (complex_of_real 0) n = complex_of_real 0
+  COMPLEX_ROOT             !x:complex. !n:num. 0 < n ==> (?y:complex. complex_pow y n = x)
+  COMPLEX_SUB              !x:complex. !y:complex. x - y = x + complex_neg y
+  COMPLEX_SUM_ONE          !n:num. complex_sum (\m:num. complex_of_real 1) n = complex_of_real (real_of_num n)
+  COMPLEX_SUM_SUC          !f:num -> complex. !n:num. complex_sum f (SUC n) = complex_sum f n + f n
+  COMPLEX_SUM_ZERO         !f:num -> complex. complex_sum f 0 = complex_of_real 0
+  COMPLEX_SURJECTIVE       !x:complex. x = COMPLEX (Re x) (Im x)
+  COS_NEG                  !x:real. cos (-x) = cos x
+  DE_MOIVRE                !x:real. !n:num. complex_pow (cis x) n = cis (real_of_num n * x)
+  EXP_POWER                !x:real. !n:num. Power (exp x) n = exp (real_of_num n * x)
+  II_SQUARED               ii * ii = complex_neg (complex_of_real 1)
+  IM_ADD                   !x:complex. !y:complex. Im (x + y) = Im x + Im y
+  IM_CIS                   !x:real. Im (cis x) = sin x
+  IM_CNJ                   !x:complex. Im (cnj x) = -(Im x)
+  IM_COMPLEX               !x:real. !y:real. Im (COMPLEX x y) = y
+  IM_II                    Im ii = 1
+  IM_INV                   !x:complex. Im (complex_inv x) = -(Im x) / complex_norm_sq x
+  IM_MUL                   !x:complex. !y:complex. Im (x * y) = Re x * Im y + Im x * Re y
+  IM_NEG                   !x:complex. Im (complex_neg x) = -(Im x)
+  IM_OF_REAL               !x:real. Im (complex_of_real x) = 0
+  IM_SUB                   !x:complex. !y:complex. Im (x - y) = Im x - Im y
+  IM_SUM                   !f:num -> complex. !n:num. Im (complex_sum f n) = Sum (\m:num. Im (f m)) n
+  RE_ADD                   !x:complex. !y:complex. Re (x + y) = Re x + Re y
+  RE_CIS                   !x:real. Re (cis x) = cos x
+  RE_CNJ                   !x:complex. Re (cnj x) = Re x
+  RE_COMPLEX               !x:real. !y:real. Re (COMPLEX x y) = x
+  RE_II                    Re ii = 0
+  RE_INV                   !x:complex. Re (complex_inv x) = Re x / complex_norm_sq x
+  RE_MUL                   !x:complex. !y:complex. Re (x * y) = Re x * Re y - Im x * Im y
+  RE_NEG                   !x:complex. Re (complex_neg x) = -(Re x)
+  RE_OF_REAL               !x:real. Re (complex_of_real x) = x
+  RE_SUB                   !x:complex. !y:complex. Re (x - y) = Re x - Re y
+  RE_SUM                   !f:num -> complex. !n:num. Re (complex_sum f n) = Sum (\m:num. Re (f m)) n
+  ROOTS_OF_UNITY_SUM_DIVIDES !n:num. !m:num. 0 < n /\ NUM_DIVIDES n m ==> complex_sum (\k:num. complex_pow (cis (2 * pi / real_of_num n)) (m * k)) n = complex_of_real (real_of_num n)
+  ROOTS_OF_UNITY_SUM_NOT_DIVIDES !n:num. !m:num. 0 < n /\ ~(NUM_DIVIDES n m) ==> complex_sum (\k:num. complex_pow (cis (2 * pi / real_of_num n)) (m * k)) n = complex_of_real 0
+  ROOT_OF_UNITY            !n:num. 0 < n ==> complex_pow (cis (2 * pi / real_of_num n)) n = complex_of_real 1
+  SIN_NEG                  !x:real. sin (-x) = -(sin x)
+  SIN_NONNEG               !x:real. 0 <= x /\ x <= pi ==> 0 <= sin x
+
 ## Concatenation
 
   WORD_CONCAT_ASSOC        !x:word('a). !y:word('a). !z:word('a). WORD_CONCAT (WORD_CONCAT x y) z = WORD_CONCAT x (WORD_CONCAT y z)
