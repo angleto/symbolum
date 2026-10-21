@@ -1158,9 +1158,23 @@ period, `DE_MOIVRE`, the polar form with an argument chosen in `[0, 2 pi)` (`ARG
 root of every number (`COMPLEX_ROOT`), and the roots of unity with both halves of the orthogonality
 of their powers. It also publishes four facts about the reals nothing had asked for before:
 `COS_NEG`, `SIN_NEG`, `SIN_NONNEG` on `[0, pi]` and `EXP_POWER`. No axiom; every fact rests on
-choice, eta and infinity. **What is not here**: the complex exponential and logarithm, any limit or
-continuity at `complex`, and the fundamental theorem of algebra and the Fourier form of the Collatz
-formula, which are the two cards this one was opened for.
+choice, eta and infinity.
+
+**The fundamental theorem of algebra is `FUNDAMENTAL_THEOREM_OF_ALGEBRA`, since 2026-10-21**:
+every `complex_sum (\k. c k * complex_pow z k) (SUC n)` with `0 < n` and `~(c n = 0)` vanishes
+somewhere. `docs/adr/0061` is the decision and `Fundamental.scala`, beside `Complex.scala`, the
+derivation. The route is polar: `COMPLEX_POLY_MINIMUM` (the modulus has a least value over the
+plane) and `DALEMBERT` (a value that is not zero is not the least). The minimum needs no
+Bolzano-Weierstrass, because `|p|` is Lipschitz on bounded sets with a constant read off the
+coefficients, so the one-variable extreme value theorem taken on vertical lines and then across them
+finds the least point of a square, and a growth estimate makes that point least everywhere. The
+shift `p (z + w)` that d'Alembert's lemma needs is built by Horner's form, not by the binomial
+theorem. It also publishes four facts of the norm: `COMPLEX_NORM_OF_REAL`, `COMPLEX_NORM_NEG`,
+`COMPLEX_NORM_POW` and `COMPLEX_NORM_TRIANGLE`. **What is not here**: the complex exponential and
+logarithm, any limit or continuity at `complex` as a notion of its own, Bolzano-Weierstrass in any
+dimension, the factorisation of a polynomial into linear factors, which is the theorem iterated
+with a division by `z - z0` nothing here defines, and the Fourier form of the Collatz formula, which
+is the other card the complex numbers were opened for.
 
 **`pi` is `Circle`, a link since 2026-09-27, and it is twice the zero of `cos` in `[0, 2]`.**
 `docs/adr/0057` is the decision. The zero is chosen, and the choice pins it because `cos` changes

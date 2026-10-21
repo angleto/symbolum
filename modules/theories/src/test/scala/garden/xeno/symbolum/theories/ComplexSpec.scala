@@ -193,4 +193,101 @@ class ComplexSpec extends AnyFlatSpec with Matchers {
     root.hypotheses shouldBe empty
     root.conclusion shouldBe proposition(s"?w:complex. complex_pow w ($two) = ii")
   }
+
+  /** `1 + z + z^2`, whose coefficients are all one: a polynomial of degree two with no real root. */
+  private val ones = "\\k:num. complex_of_real 1"
+  private def polynomial(z: String, degree: String): String =
+    s"complex_sum (\\k:num. complex_of_real 1 * complex_pow ($z) k) (SUC ($degree))"
+  private def leading: Kernel.Thm = fact("COMPLEX_ONE_NOT_ZERO")
+  private def coefficients: Term = term(ones, Type.fun(Numbers, Complex.Complexes))
+
+  /** The driver, opening sums and powers term by term: what evaluating a polynomial written out is. */
+  private lazy val expanding: Complex.Driver = {
+    val components = Complex.Components.map(c => fact(c._1)) :+ force(complex.definition(Complex.NormSquared))
+    Complex.Driver(complex.logic, chain.ring, linarith, complex.theory, complex.notation, fact(Complex.Extensional), components)
+      .using(fact("COMPLEX_SUM_SUC"), fact("COMPLEX_SUM_ZERO"), fact("COMPLEX_POW_SUC"), fact("COMPLEX_POW_ZERO"))
+  }
+
+  /** `thm` with the coefficient function applied where the statement applies it. */
+  private def reduced(thm: Kernel.Thm): Kernel.Thm =
+    force(Conv.betaNormalise(thm.conclusion).flatMap(e => LogicError.lift(Kernel.eqMp(e, thm))))
+
+  /** The degree and the leading coefficient of `1 + z + z^2`, which every theorem below asks for. */
+  private def hypotheses: Kernel.Thm = force(rules.conjIntro(positive(two), leading))
+
+  "The fundamental theorem of algebra" should "give a root of 1 + z + z^2, whose hypotheses hold" in {
+    val root = reduced(force(rules.specAll(fact("FUNDAMENTAL_THEOREM_OF_ALGEBRA"), List(coefficients, number(two))).flatMap(rules.mp(_, hypotheses))))
+    root.hypotheses shouldBe empty
+    root.conclusion shouldBe proposition(s"?z:complex. ${polynomial("z", two)} = complex_of_real 0")
+  }
+
+  /**
+   * The root above is not real, and that is what makes the theorem about the complex numbers rather
+   * than an existence any field would have: `1 + x + x^2` is `((2x + 1)^2 + 3) / 4` at a real `x`.
+   */
+  it should "have found a root no real number is, since 1 + x + x^2 vanishes at none" in {
+    val x = Term.variable("x", Reals)
+    val atX = force(expanding.identity(proposition(s"${polynomial("complex_of_real x", two)} = complex_of_real ((1:real) + x + x * x)")))
+    val vanishes = proposition(s"${polynomial("complex_of_real x", two)} = complex_of_real 0")
+    val assumed = force(LogicError.lift(Kernel.assume(vanishes)))
+    val real = force(for {
+      joined <- Conv.sym(atX).flatMap(Conv.trans(_, assumed))
+      re <- LogicError.lift(complex.theory.constant(Complex.RealPart, Type.fun(Complex.Complexes, Reals)))
+      parts <- Conv.apTerm(re, joined)
+      set <- Rewrite.Rule.all(complex.logic, Vector(fact("RE_OF_REAL")))
+      out <- Rewrite.inTheorem(set, parts)
+    } yield out)
+    real.conclusion shouldBe proposition("(1:real) + x + x * x = 0")
+    val square = force(rules.spec(term("2 * x + 1", Reals), lemma("SQUARE_NONNEG")))
+    val absurd = conclude(Seq(real, square), proposition("F"))
+    val never = force(rules.notIntro(vanishes, absurd).flatMap(rules.gen(x, _)))
+    never.hypotheses shouldBe empty
+    never.conclusion shouldBe proposition(s"!x:real. ~(${polynomial("complex_of_real x", two)} = complex_of_real 0)")
+  }
+
+  /**
+   * At degree zero the claim would be false, and this is the proof: the polynomial is the constant
+   * one, which no point sends to zero. So `0 < n` in the statement is a hypothesis the theorem needs.
+   */
+  it should "need its degree to be positive, since the constant polynomial one has no root" in {
+    val constant = force(expanding.identity(proposition(s"!z:complex. ${polynomial("z", "0")} = complex_of_real 1")))
+    val z = Term.variable("z", Complex.Complexes)
+    val rooted = proposition(s"${polynomial("z", "0")} = complex_of_real 0")
+    val existsT = proposition(s"?z:complex. ${polynomial("z", "0")} = complex_of_real 0")
+    val noRoot = force(for {
+      ex <- LogicError.lift(Kernel.assume(existsT))
+      assumed <- LogicError.lift(Kernel.assume(rooted))
+      one <- rules.spec(z, constant)
+      oneIsZero <- Conv.sym(one).flatMap(Conv.trans(_, assumed))
+      absurd <- rules.notElim(leading, oneIsZero)
+      out <- rules.existsElim(ex, z, absurd)
+      result <- rules.notIntro(existsT, out)
+    } yield result)
+    noRoot.hypotheses shouldBe empty
+    noRoot.conclusion shouldBe proposition(s"~(?z:complex. ${polynomial("z", "0")} = complex_of_real 0)")
+  }
+
+  "The least modulus" should "exist for 1 + z + z^2" in {
+    val least = force(rules.specAll(fact("COMPLEX_POLY_MINIMUM"), List(coefficients, number(two))).flatMap(rules.mp(_, hypotheses)))
+    least.hypotheses shouldBe empty
+  }
+
+  /** At zero the polynomial is one, which is not zero, so d'Alembert's lemma applies there. */
+  "d'Alembert's lemma" should "lower the modulus of 1 + z + z^2 at zero, where it is one" in {
+    val zero = term("complex_of_real 0", Complex.Complexes)
+    val atZero = force(expanding.identity(proposition(s"${polynomial("complex_of_real 0", two)} = complex_of_real 1")))
+    val notZero = force(for {
+      t <- complex.proposition(s"${polynomial("complex_of_real 0", two)} = complex_of_real 0")
+      assumed <- LogicError.lift(Kernel.assume(t))
+      oneIsZero <- Conv.sym(atZero).flatMap(Conv.trans(_, assumed))
+      absurd <- rules.notElim(leading, oneIsZero)
+      out <- rules.notIntro(t, absurd)
+    } yield out)
+    val all = force(rules.conjIntro(leading, notZero).flatMap(rules.conjIntro(positive(two), _)))
+    val lower = reduced(force(rules.specAll(fact("DALEMBERT"), List(coefficients, number(two), zero)).flatMap(rules.mp(_, all))))
+    lower.hypotheses shouldBe empty
+    lower.conclusion shouldBe proposition(
+      s"?w:complex. complex_norm (${polynomial("w", two)}) < complex_norm (${polynomial("complex_of_real 0", two)})")
+  }
 }
+

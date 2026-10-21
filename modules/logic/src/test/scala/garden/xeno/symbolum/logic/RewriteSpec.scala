@@ -711,6 +711,16 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "`LIST_FOLD_EVERY_CONCAT`. A limit that ran out would leave a fold standing, and the " +
         "result is compared with the split as `Statements` writes it and refused by `NotOfForm` " +
         "when it does not land there"),
+    "Fundamental.scala" ->
+      ("many calls, through three helpers, and none of them is believed on its own. `rewriting` hands " +
+        "the goal to `Induct.afterRewriting` and closes it with `Ring` or `Linarith`, which refuse a " +
+        "goal left short of the form they read. `rw` is `Rewrite.inTheorem` with one closed equation, " +
+        "and what it returns is detached by `mp`, joined by `Conv.trans` or handed to `Linarith`, each " +
+        "of which refuses a theorem that is not exactly what it expected: a half-rewritten instance is " +
+        "an antecedent that does not match, a side that does not meet, or a fact `Linarith` cannot " +
+        "read. The three places a lemma is read off another lemma's own antecedent compare the two " +
+        "and refuse by `NotOfForm`, and every published fact is compared with its written statement " +
+        "in `Complex.construct`"),
     "Within.scala" ->
       ("two calls, `Rewrite.inTheorem` in `forward` and `Rewrite.rewrite` in `backward`, both over " +
         "the agreement of the extension with `f` at one or two points: closed equations whose right " +

@@ -433,13 +433,14 @@ final class Chain private (
 
   /**
    * The complex numbers: a type over the pairs of reals, its field, `cis`, De Moivre, the polar
-   * form, the `n`-th roots and the roots of unity.
+   * form, the `n`-th roots, the roots of unity and the fundamental theorem of algebra.
    *
    * A link rather than a development beside the chain because `complex` is a type and its
    * operations are constants, and a constant declared beside the chain is where nothing above can
-   * see it. It reads `pi` and `acos` from [[circle]], `exp` and `ln` for the roots, and the sums for
-   * the roots of unity; what it extends is the chain's end, for the reason `Rotation.construct`'s
-   * comment gives. It also widens the notation: `+`, `*` and `-` are the complex operations at
+   * see it. It reads `pi` and `acos` from [[circle]], `exp` and `ln` for the roots, the sums for
+   * the roots of unity, and `abs`, `min` and the extreme value theorem relative to an interval for
+   * the fundamental theorem (`docs/adr/0061`); what it extends is the chain's end, for the reason
+   * `Rotation.construct`'s comment gives. It also widens the notation: `+`, `*` and `-` are the complex operations at
    * `complex`, which `docs/adr/0060` decides. A type and its operations, and no axiom.
    */
   val complex: Complex
@@ -749,18 +750,22 @@ object Chain {
         classical, reals, magnitude, ring, order, transcendental, continuity, derivative, integral.theory, integral.notation)
 
       // Over the circle, extending the chain's end: `cis` pairs `cos` with `sin`, the polar form
-      // spends `acos` and `pi`, the roots spend `exp` and `ln`, and the roots of unity the sums and
-      // the division of `num`. What it reads is named, by the links that hold it.
+      // spends `acos` and `pi`, the roots spend `exp` and `ln`, the roots of unity the sums and the
+      // division of `num`, and the fundamental theorem `abs`, `min` and the extreme value theorem.
+      // What it reads is named, by the links that hold it.
       below = Library.of(Vector(
         "Reals" -> reals.laws, "Real, defined" -> reals.definitions, "Order" -> order.facts,
         "Natural" -> naturals.facts, "Peano" -> peano.facts, "Series" -> series.facts,
         "Modular" -> modular.facts, "Product" -> product.facts, "Root" -> root.facts,
-        "Transcendental" -> transcendental.facts, "Logarithm" -> logarithm.facts, "Circle" -> circle.facts
+        "Transcendental" -> transcendental.facts, "Logarithm" -> logarithm.facts, "Circle" -> circle.facts,
+        "Classical, derived" -> classical.facts, "Magnitude" -> magnitude.facts, "Limit" -> limit.facts,
+        "Continuity" -> continuity.facts
       ))
+      within <- continuity.definition(Continuity.ContinuousWithin)
       complex <- Complex.construct(
         classical, naturals, ring, magnitude, product,
         name => below.named(name).headOption.map(_.theorem).toRight(MissingDefinition(name)),
-        circle.theory, circle.notation)
+        reals, within, circle.theory, circle.notation)
     } yield new Chain(
       classical,
       naturals,

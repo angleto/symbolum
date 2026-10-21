@@ -173,6 +173,11 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // it is longer than the file it belongs to.
     "ExtremeValue" -> NotADevelopment,
 
+    // Not a development, for `ExtremeValue`'s reason: the derivation of the fundamental theorem of
+    // algebra and its two halves, whose facts are the map `Fundamental.prove` returns and are
+    // published in `Complex.facts` under names `Fundamental.Statements` gives. It declares nothing.
+    "Fundamental" -> NotADevelopment,
+
     // Not a development, for `ExtremeValue`'s reason: continuity relative to `[a, b]` and the
     // interval theorems in that form, published in `Continuity.facts`, and the same for the
     // derivative's, published in `Derivative.facts`. Each declares nothing of its own.

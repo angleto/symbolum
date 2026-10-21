@@ -43,6 +43,12 @@ import garden.xeno.symbolum.logic.*
  * `exp (ln |z| / n) cis (t / n)`, by De Moivre and `Power (exp u) n = exp (n u)`. The sum of a root
  * of unity's powers is the geometric series, which vanishes unless the root is one, and `cis t` is not
  * one strictly between `0` and `2 pi` because `cos` falls on `[0, pi]`.
+ *
+ * == The fundamental theorem of algebra ==
+ *
+ * Published here and derived in [[Fundamental]], by the polar route `docs/adr/0061` records: the
+ * modulus of a polynomial attains a least value over the plane, and d'Alembert's lemma, which spends
+ * the roots above, says that a value which is not zero is not the least.
  */
 final class Complex private (
   val theory: Theory,
@@ -242,7 +248,7 @@ object Complex {
       Surjective -> "!z:complex. z = COMPLEX (Re z) (Im z)",
       Injective -> "!a:real. !b:real. !c:real. !d:real. (COMPLEX a b = COMPLEX c d) = (a = c /\\ b = d)",
       Extensional -> "!z:complex. !w:complex. (z = w) = (Re z = Re w /\\ Im z = Im w)"
-    ) ++ Components ++ Identities ++ Derived
+    ) ++ Components ++ Identities ++ Derived ++ Fundamental.Statements
 
   /** `complex`. */
   val Complexes: Type = TyApp(TypeName, Nil)
@@ -267,6 +273,8 @@ object Complex {
     magnitude: Magnitude,
     product: Product,
     lookup: String => Either[LogicError, Kernel.Thm],
+    reals: RealTheory,
+    within: Kernel.Thm,
     base: Theory,
     notation: Notation
   ): Either[LogicError, Complex] = {
@@ -327,7 +335,10 @@ object Complex {
           } yield made + (name -> proved)
       }
       derived <- proofs.derived(driver, characterised ++ components ++ identities, powerAtZero, powerAtSuccessor)
-      facts = characterised ++ components ++ identities ++ derived
+      fundamental <- Fundamental.prove(
+        logic, classical, theory, read, ring, linarith, driver, induction,
+        characterised ++ components ++ identities ++ derived, lookup, definitions, within, reals)
+      facts = characterised ++ components ++ identities ++ derived ++ fundamental
 
       _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
         for {
@@ -421,7 +432,7 @@ object Complex {
     }
 
   /** `goal` from `facts` by `Linarith`, as one implication, its quotients abstracted, detached. */
-  private def conclude(logic: Logic, linarith: Linarith, facts: Seq[Kernel.Thm], goal: Term): Either[LogicError, Kernel.Thm] =
+  private[theories] def conclude(logic: Logic, linarith: Linarith, facts: Seq[Kernel.Thm], goal: Term): Either[LogicError, Kernel.Thm] =
     for {
       implication <- facts.reverse.foldLeft[Either[LogicError, Term]](Right(goal)) { (acc, f) =>
         acc.flatMap(g => logic.mkImp(f.conclusion, g))

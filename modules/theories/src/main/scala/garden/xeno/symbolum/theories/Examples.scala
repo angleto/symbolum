@@ -78,6 +78,9 @@ object Examples {
       "INTEGRAL_DERIVATIVE_WITHIN",
       "DERIVATIVE_INTEGRAL_WITHIN"
     ),
+    "The complex numbers" -> Vector(
+      "FUNDAMENTAL_THEOREM_OF_ALGEBRA"
+    ),
     "Towards the incompleteness theorems" -> Vector(
       "NUM_BETA_SEQUENCE",
       "NUM_PA_FORM",

@@ -148,16 +148,21 @@ they have least appetite for working out how it is produced.
   COMPLEX_MUL_SYM          !x:complex. !y:complex. x * y = y * x
   COMPLEX_NORM_CIS         !x:real. complex_norm (cis x) = 1
   COMPLEX_NORM_MUL         !x:complex. !y:complex. complex_norm (x * y) = complex_norm x * complex_norm y
+  COMPLEX_NORM_NEG         !x:complex. complex_norm (complex_neg x) = complex_norm x
   COMPLEX_NORM_NONNEG      !x:complex. 0 <= complex_norm x
+  COMPLEX_NORM_OF_REAL     !x:real. complex_norm (complex_of_real x) = abs x
+  COMPLEX_NORM_POW         !x:complex. !n:num. complex_norm (complex_pow x n) = Power (complex_norm x) n
   COMPLEX_NORM_SQUARED     !x:complex. complex_norm x * complex_norm x = complex_norm_sq x
   COMPLEX_NORM_SQ_MUL      !x:complex. !y:complex. complex_norm_sq (x * y) = complex_norm_sq x * complex_norm_sq y
   COMPLEX_NORM_SQ_NONNEG   !x:complex. 0 <= complex_norm_sq x
   COMPLEX_NORM_SQ_ZERO     !x:complex. complex_norm_sq x = 0 ==> x = complex_of_real 0
+  COMPLEX_NORM_TRIANGLE    !x:complex. !y:complex. complex_norm (x + y) <= complex_norm x + complex_norm y
   COMPLEX_NORM_ZERO        !x:complex. complex_norm x = 0 ==> x = complex_of_real 0
   COMPLEX_OF_REAL_ADD      !x:real. !y:real. complex_of_real (x + y) = complex_of_real x + complex_of_real y
   COMPLEX_OF_REAL_MUL      !x:real. !y:real. complex_of_real (x * y) = complex_of_real x * complex_of_real y
   COMPLEX_ONE_NOT_ZERO     ~(complex_of_real 1 = complex_of_real 0)
   COMPLEX_POLAR            !x:complex. ?y:real. x = complex_of_real (complex_norm x) * cis y
+  COMPLEX_POLY_MINIMUM     !f:num -> complex. !n:num. 0 < n /\ ~(f n = complex_of_real 0) ==> (?x:complex. !y:complex. complex_norm (complex_sum (\m:num. f m * complex_pow x m) (SUC n)) <= complex_norm (complex_sum (\m:num. f m * complex_pow y m) (SUC n)))
   COMPLEX_POW_ADD          !x:complex. !n:num. !m:num. complex_pow x (n + m) = complex_pow x n * complex_pow x m
   COMPLEX_POW_MUL          !x:complex. !n:num. !m:num. complex_pow x (n * m) = complex_pow (complex_pow x n) m
   COMPLEX_POW_OF_REAL      !x:real. !n:num. complex_pow (complex_of_real x) n = complex_of_real (Power x n)
@@ -172,8 +177,10 @@ they have least appetite for working out how it is produced.
   COMPLEX_SUM_ZERO         !f:num -> complex. complex_sum f 0 = complex_of_real 0
   COMPLEX_SURJECTIVE       !x:complex. x = COMPLEX (Re x) (Im x)
   COS_NEG                  !x:real. cos (-x) = cos x
+  DALEMBERT                !f:num -> complex. !n:num. !x:complex. 0 < n /\ ~(f n = complex_of_real 0) /\ ~(complex_sum (\m:num. f m * complex_pow x m) (SUC n) = complex_of_real 0) ==> (?y:complex. complex_norm (complex_sum (\m:num. f m * complex_pow y m) (SUC n)) < complex_norm (complex_sum (\m:num. f m * complex_pow x m) (SUC n)))
   DE_MOIVRE                !x:real. !n:num. complex_pow (cis x) n = cis (real_of_num n * x)
   EXP_POWER                !x:real. !n:num. Power (exp x) n = exp (real_of_num n * x)
+  FUNDAMENTAL_THEOREM_OF_ALGEBRA !f:num -> complex. !n:num. 0 < n /\ ~(f n = complex_of_real 0) ==> (?x:complex. complex_sum (\m:num. f m * complex_pow x m) (SUC n) = complex_of_real 0)
   II_SQUARED               ii * ii = complex_neg (complex_of_real 1)
   IM_ADD                   !x:complex. !y:complex. Im (x + y) = Im x + Im y
   IM_CIS                   !x:real. Im (cis x) = sin x
