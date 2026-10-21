@@ -178,6 +178,17 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // published in `Complex.facts` under names `Fundamental.Statements` gives. It declares nothing.
     "Fundamental" -> NotADevelopment,
 
+    // Not a development, for `ExtremeValue`'s reason: the inversion of the finite Fourier transform
+    // and its real reading, and the Collatz iterate as one of its series, whose facts are the maps
+    // `FiniteFourier.prove` and `CollatzFourier.prove` return and are published in `Complex.facts`
+    // under the names their `Statements` give. Neither declares anything.
+    "FiniteFourier" -> NotADevelopment,
+    "CollatzFourier" -> NotADevelopment,
+
+    // Not a development and no derivation either: the steps the three files above are written in,
+    // each a line of `Rules`, `Conv` or `Linarith` under a name, proving nothing of its own.
+    "ComplexKit" -> NotADevelopment,
+
     // Not a development, for `ExtremeValue`'s reason: continuity relative to `[a, b]` and the
     // interval theorems in that form, published in `Continuity.facts`, and the same for the
     // derivative's, published in `Derivative.facts`. Each declares nothing of its own.

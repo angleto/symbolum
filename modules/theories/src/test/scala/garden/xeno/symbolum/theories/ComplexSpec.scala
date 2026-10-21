@@ -11,8 +11,10 @@ import garden.xeno.symbolum.logic.*
  * A statement matching its text says the right thing was proved; it does not say the hypotheses
  * can ever be met. So every published implication whose antecedent is not trivially true is
  * discharged here at a value somebody can name: the inverse at `ii`, `cis` away from one at `pi`,
- * a root of unity of order one, both sums of the square roots of unity, and a square root of `ii`.
- * And the driver every identity is proved with is shown refusing two false ones beside a true one
+ * a root of unity of order one, both sums of the square roots of unity, a square root of `ii`, the
+ * fundamental theorem of algebra and its two halves at `1 + z + z^2`, and both Fourier inversions at
+ * modulus two. The Collatz theorems are implications from four equations, and what is checked for
+ * them is that `COLLATZ_SHORTCUT_EXISTS` exhibits exactly those. And the driver every identity is proved with is shown refusing two false ones beside a true one
  * that nothing published states.
  */
 class ComplexSpec extends AnyFlatSpec with Matchers {
@@ -289,5 +291,78 @@ class ComplexSpec extends AnyFlatSpec with Matchers {
     lower.conclusion shouldBe proposition(
       s"?w:complex. complex_norm (${polynomial("w", two)}) < complex_norm (${polynomial("complex_of_real 0", two)})")
   }
-}
 
+  /** `1`, the constant every transform below is taken of: a function that is never zero. */
+  private val unit = "\\r:num. complex_of_real 1"
+  private def synthesis(modulus: String): String =
+    s"complex_of_real (inv (real_of_num ($modulus))) * complex_sum (\\h:num. complex_sum (\\r:num. complex_of_real 1 * " +
+      s"complex_pow (cnj (cis (2 * pi / real_of_num ($modulus)))) (h * r)) ($modulus) * " +
+      s"complex_pow (cis (2 * pi / real_of_num ($modulus))) (h * n)) ($modulus)"
+
+  "The finite Fourier inversion" should "be met at modulus two, at the complex and at the real reading" in {
+    val n = Term.variable("n", Numbers)
+    val f = Term.variable("f", Type.fun(Numbers, Complex.Complexes))
+    val g = Term.variable("g", Type.fun(Numbers, Reals))
+    val atTwo = force(rules.specAll(fact("COMPLEX_DFT_INVERSION"), List(f, number(two), n)).flatMap(rules.mp(_, positive(two))))
+    atTwo.hypotheses shouldBe empty
+    val realAtTwo = force(rules.specAll(fact("REAL_DFT_INVERSION"), List(g, number(two), n)).flatMap(rules.mp(_, positive(two))))
+    realAtTwo.hypotheses shouldBe empty
+  }
+
+  /**
+   * At modulus zero the claim would be false, and this is the proof: the synthesis is `inv 0` times a
+   * sum of no terms, which is zero whatever `inv 0` is, and the constant one is not. So `0 < m` is a
+   * hypothesis the inversion needs.
+   */
+  it should "need its modulus to be positive, since at zero the synthesis of one is zero" in {
+    val synthesisIsZero = force(expanding.identity(proposition(s"!n:num. ${synthesis("0")} = complex_of_real 0")))
+    val n = Term.variable("n", Numbers)
+    val claimed = proposition(s"complex_of_real 1 = ${synthesis("0")}")
+    val refuted = force(for {
+      assumed <- LogicError.lift(Kernel.assume(claimed))
+      zero <- rules.spec(n, synthesisIsZero)
+      oneIsZero <- Conv.trans(assumed, zero)
+      absurd <- rules.notElim(leading, oneIsZero)
+      out <- rules.notIntro(claimed, absurd)
+    } yield out)
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe proposition(s"~(complex_of_real 1 = ${synthesis("0")})")
+  }
+
+  /**
+   * The two Collatz theorems are implications from the four equations of the shortcut map, and an
+   * implication from something nothing satisfies says nothing. `COLLATZ_SHORTCUT_EXISTS` is the
+   * witness; what is checked here is that what it exhibits is exactly what both theorems assume.
+   */
+  "The Collatz iterate" should "assume exactly the equations a published map and iterate satisfy" in {
+    val step = Term.variable("step", Type.fun(Numbers, Numbers))
+    val iterate = Term.variable("iterate", Type.fun(Numbers, Type.fun(Numbers, Numbers)))
+    def opened(existential: Term, witness: Term): Term = force(for {
+      predicate <- complex.logic.destExistsPredicate(existential).toRight(NotOfForm("an existential", existential))
+      applied <- LogicError.lift(Term.app(predicate, witness))
+      root <- Conv.betaRoot(applied)
+      body <- Term.destEq(root.conclusion).map(_._2).toRight(NotOfForm("an equation", root.conclusion))
+    } yield body)
+    val exhibited = opened(opened(fact("COLLATZ_SHORTCUT_EXISTS").conclusion, step), iterate)
+    Seq("COLLATZ_AFFINE_ON_CLASSES", "COLLATZ_DFT_FORM").foreach { name =>
+      withClue(s"$name: ") {
+        val assumed = force(rules.specAll(fact(name), List(step, iterate)))
+        complex.logic.destImp(assumed.conclusion).map(_._1) shouldBe Some(exhibited)
+      }
+    }
+  }
+
+  /**
+   * The equations are the source's map and not another one: `T n` is `n / 2` on an even `n` and
+   * `(3 n + 1) / 2` on an odd one, in `collatz@8b991e5` `documents/02-closed-form-formula.md` section
+   * 0, and the two clauses are that map at `2 k` and at `2 k + 1`. Read in `Long` over a range,
+   * because what is being compared is a transcription and not a theorem.
+   */
+  it should "be the source's shortcut map, read off both clauses" in {
+    def shortcut(n: Long): Long = if (n % 2 == 0) n / 2 else (3 * n + 1) / 2
+    (0L until 5000L).foreach { k =>
+      shortcut(2 * k) shouldBe k
+      shortcut(2 * k + 1) shouldBe 3 * k + 2
+    }
+  }
+}

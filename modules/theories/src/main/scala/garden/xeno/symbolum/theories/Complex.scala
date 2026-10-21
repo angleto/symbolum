@@ -7,10 +7,11 @@ import garden.xeno.symbolum.logic.*
  * The complex numbers, as a type defined over the pairs of reals, with `cis`, De Moivre, the polar
  * form, the `n`-th roots and the roots of unity.
  *
- * `docs/adr/0060` is the decision. `complex` is the seventh type `Kernel.defineType` carves, and it
- * carves the **whole** of `prod(real,real)`: the predicate is `\p. T`. That is the case `Matrix`
- * argues against for its own type, and the argument is right there: a bijection with every pair buys
- * a name and costs a bijection to cross. What decides the other way here is the notation. `+`, `*`
+ * `docs/adr/0060` is the decision. `complex` is the seventh type `Kernel.defineType` carves in the
+ * chain and the eighth in the repository, `pterm` beside the chain being the other, and it carves
+ * the **whole** of `prod(real,real)`: the predicate is `\p. T`. That is the case `Matrix` argues
+ * against for its own type, and the argument is right there: a bijection with every pair buys a
+ * name and costs a bijection to cross. What decides the other way here is the notation. `+`, `*`
  * and `-` stand for the complex operations as they stand for the reals' (`docs/adr/0018`), and the
  * elaborator picks a constant by the type its operands settle. Over `prod(real,real)` that type is
  * also a row of a matrix and the carrier of anything else built from two reals, so `p * q` would read
@@ -49,6 +50,13 @@ import garden.xeno.symbolum.logic.*
  * Published here and derived in [[Fundamental]], by the polar route `docs/adr/0061` records: the
  * modulus of a polynomial attains a least value over the plane, and d'Alembert's lemma, which spends
  * the roots above, says that a value which is not zero is not the least.
+ *
+ * == The finite Fourier transform, and the Collatz iterate ==
+ *
+ * Published here and derived in [[FiniteFourier]] and [[CollatzFourier]], as `docs/adr/0062`
+ * records: the transform over the roots of unity inverts, by their orthogonality, and its real
+ * reading writes the `t`-th iterate of the shortcut Collatz map as a series over the residues modulo
+ * `2^t` whose coefficients are the transforms of each class's slope and offset.
  */
 final class Complex private (
   val theory: Theory,
@@ -248,7 +256,8 @@ object Complex {
       Surjective -> "!z:complex. z = COMPLEX (Re z) (Im z)",
       Injective -> "!a:real. !b:real. !c:real. !d:real. (COMPLEX a b = COMPLEX c d) = (a = c /\\ b = d)",
       Extensional -> "!z:complex. !w:complex. (z = w) = (Re z = Re w /\\ Im z = Im w)"
-    ) ++ Components ++ Identities ++ Derived ++ Fundamental.Statements
+    ) ++ Components ++ Identities ++ Derived ++ Fundamental.Statements ++ FiniteFourier.Statements ++
+      CollatzFourier.Statements
 
   /** `complex`. */
   val Complexes: Type = TyApp(TypeName, Nil)
@@ -269,6 +278,7 @@ object Complex {
   def construct(
     classical: Classical,
     naturals: Natural,
+    peano: Peano,
     ring: Ring,
     magnitude: Magnitude,
     product: Product,
@@ -335,10 +345,14 @@ object Complex {
           } yield made + (name -> proved)
       }
       derived <- proofs.derived(driver, characterised ++ components ++ identities, powerAtZero, powerAtSuccessor)
-      fundamental <- Fundamental.prove(
-        logic, classical, theory, read, ring, linarith, driver, induction,
-        characterised ++ components ++ identities ++ derived, lookup, definitions, within, reals)
-      facts = characterised ++ components ++ identities ++ derived ++ fundamental
+      base = characterised ++ components ++ identities ++ derived
+      kit = ComplexKit(logic, classical, theory, read, ring, linarith, driver, induction,
+        name => base.get(name).toRight(MissingDefinition(name)).orElse(lookup(name)), within, reals, definitions)
+      fundamental <- Fundamental.prove(kit, base)
+      semiring <- Semiring.construct(peano)
+      fourier <- FiniteFourier.prove(kit, semiring, base ++ fundamental)
+      collatz <- CollatzFourier.prove(kit, semiring, recursion, base ++ fundamental ++ fourier)
+      facts = base ++ fundamental ++ fourier ++ collatz
 
       _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
         for {

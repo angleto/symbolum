@@ -1172,9 +1172,25 @@ shift `p (z + w)` that d'Alembert's lemma needs is built by Horner's form, not b
 theorem. It also publishes four facts of the norm: `COMPLEX_NORM_OF_REAL`, `COMPLEX_NORM_NEG`,
 `COMPLEX_NORM_POW` and `COMPLEX_NORM_TRIANGLE`. **What is not here**: the complex exponential and
 logarithm, any limit or continuity at `complex` as a notion of its own, Bolzano-Weierstrass in any
-dimension, the factorisation of a polynomial into linear factors, which is the theorem iterated
-with a division by `z - z0` nothing here defines, and the Fourier form of the Collatz formula, which
-is the other card the complex numbers were opened for.
+dimension, and the factorisation of a polynomial into linear factors, which is the theorem iterated
+with a division by `z - z0` nothing here defines.
+
+**The finite Fourier transform inverts, and the Collatz iterate is one of its series, since
+2026-10-21.** `COMPLEX_DFT_INVERSION` is `f (n mod m) = (1/m) sum[h < m] F_h w^(h n)` with
+`F_h = sum[r < m] f r cnj(w)^(h r)` and `w = cis (2 pi / m)`, for every `f` and every `m > 0`, and
+`REAL_DFT_INVERSION` is its real reading in cosines and sines. `docs/adr/0062` is the decision and
+`FiniteFourier.scala` the derivation: at `m = SUC p` the conjugate of the root is its `p`-th power, so
+the right side is one double sum of powers, and exchanging the sums leaves the orthogonality of the
+roots, which keeps the one term at the residue of `n`. `CollatzFourier.scala` takes it to form (C)
+of `collatz@8b991e5` `documents/02-closed-form-formula.md` section 2.3: over any `step` and `iterate`
+satisfying the four equations of the shortcut map and its iterate, `COLLATZ_AFFINE_ON_CLASSES` says
+the `t`-th iterate is affine on each class modulo `2^t`, and `COLLATZ_DFT_FORM` writes it as the sum
+over `s < 2^t` of `(A_s n + B_s) cos (2 pi s n / 2^t) + (C_s n + D_s) sin (2 pi s n / 2^t)`, each
+coefficient the transform of the class's slope or offset. `COLLATZ_SHORTCUT_EXISTS` exhibits a map and
+an iterate that satisfy the four, so neither implication is vacuous. The class form is proved by a
+shift, `iterate (r + 2^t q) t = iterate r t + c q`, rather than through the parity sequence.
+**What is not here**: the slope as `3^s / 2^t` (the source's Theorem 1), the forms (A) and (B), and
+any closed form of the coefficients, which the source says has none.
 
 **`pi` is `Circle`, a link since 2026-09-27, and it is twice the zero of `cos` in `[0, 2]`.**
 `docs/adr/0057` is the decision. The zero is chosen, and the choice pins it because `cos` changes
