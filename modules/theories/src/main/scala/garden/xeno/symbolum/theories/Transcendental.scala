@@ -237,9 +237,10 @@ object Transcendental {
    * lies strictly between zero and one, and no natural does.
    *
    * Over naturals rather than integers for the reason that fact gives: `exp 1` is positive, so a
-   * ratio equal to it has both terms of one sign. Whether `0 < q` is needed is **not** settled
-   * here: at `q = 0` the ratio is `real_of_num p * inv 0`, and what `inv 0` is has not been
-   * published for the reals.
+   * ratio equal to it has both terms of one sign. `0 < q` is idle rather than needed: at `q = 0`
+   * the ratio is `real_of_num p * inv 0`, the constructed reals have `inv 0 = 0`, and `exp 1` is
+   * above two, so the sentence holds there too, which `TranscendentalSpec`'s last test derives.
+   * It stays in the statement for the shape `SQRT_TWO_IRRATIONAL` has.
    */
   val ExponentialOneIrrational: String = "EXP_ONE_IRRATIONAL"
 
