@@ -95,9 +95,11 @@ parent and `Test` extends `Runtime` extends `Compile`.
 - **This directory is outside every scan that reads `modules/`**: the style scan, the language scan
   and the comment census do not read it. What stands in for them is that it is one short source and
   that the gate reads it twice, once expecting failure and once expecting success.
-- **The hook is the weak link and is guarded by text.** If `Test / test := (Test / test).dependsOn(
-  fatalWarnings).value` is deleted from `build.sbt`, nothing here runs and nothing here can notice.
-  `LogicErrorSpec` asserts that line is present, which is a textual guard again, and deliberately:
+- **The hook is the weak link and is guarded by text.** It is two settings on the root since sbt 2,
+  `(LocalRootProject / Test / test).dependsOn(LocalRootProject / fatalWarnings).evaluated` and the
+  same on `Test / testFull` with `.value`, and if either is deleted from `build.sbt` the run that
+  goes through it reaches nothing here and nothing here can notice. `LogicErrorSpec` asserts both
+  lines are present, which is a textual guard again, and deliberately:
   what it guards is a line rather than a value reaching a tool, so the failure mode that defeated
   the assertion it sits beside has no counterpart.
 
