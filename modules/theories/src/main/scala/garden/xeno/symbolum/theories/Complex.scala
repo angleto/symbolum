@@ -7,7 +7,7 @@ import garden.xeno.symbolum.logic.*
  * The complex numbers, as a type defined over the pairs of reals, with `cis`, De Moivre, the polar
  * form, the `n`-th roots and the roots of unity.
  *
- * `docs/adr/0060` is the decision. `complex` is the sixth type `Kernel.defineType` carves, and it
+ * `docs/adr/0060` is the decision. `complex` is the seventh type `Kernel.defineType` carves, and it
  * carves the **whole** of `prod(real,real)`: the predicate is `\p. T`. That is the case `Matrix`
  * argues against for its own type, and the argument is right there: a bijection with every pair buys
  * a name and costs a bijection to cross. What decides the other way here is the notation. `+`, `*`
