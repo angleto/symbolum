@@ -398,7 +398,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `COMPLEX_ENTIRE`, the two norm-zero facts, `COMPLEX_POW_ZERO_BASE`, `SIN_NONNEG`, `CIS_NOT_ONE`,
     // `COMPLEX_ROOT`, `ROOT_OF_UNITY` and the two sums), counted from `docs/lemmas.md` before the
     // run and equal to it. Plus eleven over the base above.
-    propose.weakenings.size shouldBe 882
+    // 885 with the fundamental theorem of algebra, 2026-10-21, card `b244157b`: one antecedent on each
+    // of `COMPLEX_POLY_MINIMUM`, `DALEMBERT` and `FUNDAMENTAL_THEOREM_OF_ALGEBRA`, a conjunction each,
+    // and none on the four norm facts; counted from `Fundamental.Statements` and read off the run.
+    propose.weakenings.size shouldBe 885
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -547,7 +550,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // both write an order with no lambda in the body. Plus two over the base above.
     // 156 with `Complex`, 2026-10-05, read off the run over the branch that brought it: nineteen of
     // its facts write an operator with no lambda in the body. Plus nineteen over the base above.
-    propose.mutable.size shouldBe 156
+    // 157 with the fundamental theorem of algebra, 2026-10-21, derived and read off the run:
+    // `COMPLEX_NORM_TRIANGLE` writes `+` and `<=` with no lambda in the body; the three norm
+    // equations write no operator, and the three about polynomials carry the sum's lambda.
+    propose.mutable.size shouldBe 157
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

@@ -32,7 +32,7 @@ each measured against what the library actually holds rather than estimated.
 | Number theory over `num` | **partly here.** Bezout, Euclid's lemma, division with remainder, congruences, the gcd, the Chinese remainder theorem, the factorial, and since 2026-09-16 **unique factorisation**, both halves | The statement was what blocked it and the way round is worth knowing: uniqueness is usually a claim about a multiset of primes, and this system has no lists, no finite sets and no multisets. A factorisation here is a family and a length with the family asked to be **non-decreasing**, and then uniqueness is an equation between two families. What is still missing above it is anything that quantifies over "the divisors of `n`" as a collection, which wants the same absent machinery |
 | The incompleteness theorems | **in progress.** The object language, both axiom sets, the proof predicate, closure under both rules of inference, and the first derivations of the embedded theory | `Prov` as a formula **of the object language** does not exist; what exists is `NUM_PROV`, a predicate of the ambient logic. D1, D2 and D3 are statements about that formula, so none of the three can be stated yet. `docs/adr/0013` is the plan |
 | Analysis | **here for a first course, since 2026-09-25, and the pages are in the Analysis section below.** `Limit`, `Transcendental`, `Root`, `Continuity`, `Logarithm`, `Derivative` and `Integral` declare the limit, `exp`, `sin`, `cos`, `sinh` and `cosh` as series, `ln` as the inverse of `exp` chosen by `select`, `sqrt`, continuity, the derivative and the gauge integral, and none of them costs an axiom. What is proved runs from `sqrt 2` and `exp 1` being irrational, `exp (x + y) = exp x * exp y` and `pi` as twice the least positive zero of `cos` through the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem to both halves of the fundamental theorem and Taylor's theorem; `docs/proving.md` lists every fact under its development rather than this row copying them. **Nothing primitive was missing** for any of it: each was expressible over the theory as it stood, which is what this row claimed on 2026-09-14 when it said nothing was here | Measured against `docs/lemmas.md` on 2026-09-27, not estimated, and it moved in the day since the first measurement: Taylor's theorem with the Lagrange remainder, the continuity of a product, integration by parts and the change of variables have landed, and on 2026-09-27 the limit of a function at a point with L'Hopital's rule for `0 / 0`. Since 2026-09-27 continuity is closed under a sum and a composition as well as a product, and the derivative has the sum rule beside the product, chain and power rules, so a polynomial is continuous by composing lemmas rather than by a derivation of its own. What is still absent: a quotient; L'Hopital is the `0 / 0` form at a point only, with no one-sided, infinite or at-infinity form; and there is no series of functions |
-| The fundamental theorem of algebra | **out of reach, and nothing about it is a decision** | It wants the complex numbers, and those want the reals as a construction with the integers and the rationals under them, which `docs/adr/0007` put in that order and which is done since 2026-09-27 (`docs/adr/0053`); the complex numbers themselves are not. Then it wants an argument of its own: the route through Liouville wants a **complex** derivative, holomorphy, which the derivative here is not, since it is a derivative of a real function of a real variable; the route through winding numbers wants a topology of the plane; and neither exists here. The polar route wants neither: it asks that `|p|` attain a minimum on a closed disc, an extreme value theorem in two real variables where the library has one in one, and d'Alembert's lemma, that away from a root some direction lowers `|p|`, which is algebra over the complex numbers; card `b244157b` plans it. Unlike the four colour theorem below it, what stands in the way is work rather than a recorded decision |
+| The fundamental theorem of algebra | **here, since 2026-10-21, and its page is in the section The complex numbers below.** `FUNDAMENTAL_THEOREM_OF_ALGEBRA`: a polynomial with complex coefficients and degree at least one has a complex root | Nothing for the statement. The route is the polar one, `docs/adr/0061`: the modulus attains a least value over the plane and d'Alembert's lemma says a value that is not zero is not the least. What the route did not need and so did not build is worth knowing before the next request: there is still **no Bolzano-Weierstrass**, in one dimension or two, because the minimum here comes from a Lipschitz bound a polynomial carries and a merely continuous function does not; there is no **complex derivative**, so the route through Liouville is as far away as it was; and the factorisation into linear factors wants a division of polynomials by `z - z0`, which nothing defines |
 | The fundamental theorem of calculus | **here, both halves, since 2026-09-26** | `INTEGRAL_DERIVATIVE_WITHIN` is the first half in the form a textbook states it, the derivative one-sided at the ends, and over the gauge integral `docs/adr/0049` decides it needs no integrability hypothesis. `DERIVATIVE_INTEGRAL_WITHIN` is the second, in the same form: the integral from `a` of a function continuous relative to `[a, b]` has that function as its derivative inside, and `DERIVATIVE_INTEGRAL` is the same with the continuity two-sided at the ends, which asks more. The pages below show the textbook's forms, and so do those of the intermediate value theorem, the extreme value theorem, Rolle and the mean value theorem. What it waited on was a derivative, then an integral, then additivity over intervals, and not the construction of the reals |
 | The four colour theorem | **out of reach, and not only by size** | It needs graphs and finite sets, which do not exist, and the only proof anyone has runs a computation over 633 configurations. `docs/adr/0010` decides there is **no computing rule in the kernel** and that there will not be one while the trusted base is the argument, so the route Gonthier took is closed here by a recorded decision rather than by effort |
 | Hilbert's solved problems | **out of reach, with one exception worth naming** | Most need machinery nothing here is near. The tenth, Matiyasevich's theorem, is the exception: it is a statement about Diophantine definability, and the beta function, the coding of sequences and the arithmetisation of syntax that the incompleteness work is building are the same ground floor. It is the one entry on this list that the current work walks towards rather than away from |
@@ -4130,6 +4130,434 @@ sbt "tactics/runMain garden.xeno.symbolum.tactics.Find DERIVATIVE_INTEGRAL_WITHI
 ```
 
 From Scala it is `Integral`'s, under the name `DERIVATIVE_INTEGRAL_WITHIN`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
+
+## What on this page is checked
+
+- The statement, in both forms, is rendered from the theorem. The second form was read back
+  and gave the same term, which is what `Signature.readable` returns a pair for.
+- What it rests on is a walk over the derivation, and a name appears against a fact only
+  where the sequents agree.
+- The inferences and their shape are counted from the same walk, which stops at a published
+  fact: the fact's own proof was checked when its development was built.
+
+Not checked, and not claimed: that the statement says what somebody meant, which is what the
+readable form is printed for; that a constant is spelled the way the literature spells it,
+which is a reading and is recorded in `docs/reading-register.md`; and that the theorem is
+worth proving.
+
+---
+
+## The complex numbers
+
+# FUNDAMENTAL_THEOREM_OF_ALGEBRA
+
+$$\forall f \colon \mathbb{N} \to \mathrm{complex}.\ \forall n \colon \mathbb{N}.\ 0 < n \land \lnot \left( f(n) = 0_{\mathbb{C}} \right) \Rightarrow \left( \exists x \colon \mathrm{complex}.\ \sum_{i < \mathrm{suc}(n)} \left( f(i) \cdot x^{i} \right) = 0_{\mathbb{C}} \right)$$
+
+```
+!f:num -> complex. !n:num. 0 < n /\ ~(f n = complex_of_real 0) ==> (?x:complex. complex_sum (\m:num. f m * complex_pow x m) (SUC n) = complex_of_real 0)
+```
+
+*The formula above is set for reading and **does not read back**. The line under it is the text the page was generated from: that is the one to compare against a source, or to paste into `Ask`.*
+
+## What it rests on
+
+3 axioms reached, 0 of them named below, and 343 named facts in all.
+
+| what | where |
+|---|---|
+| `ACOS_SPEC` | Circle |
+| `COS_ADD_PI` | Circle |
+| `COS_GE_QUADRATIC` | Circle |
+| `COS_GE_SEXTIC` | Circle |
+| `COS_LE_QUARTIC` | Circle |
+| `COS_PERIODIC` | Circle |
+| `COS_PI` | Circle |
+| `COS_PI_HALF` | Circle |
+| `COS_SHIFT` | Circle |
+| `PI_BOUNDS` | Circle |
+| `SIN_ADD_PI` | Circle |
+| `SIN_GE_CUBIC` | Circle |
+| `SIN_LE_LINE` | Circle |
+| `SIN_LE_QUINTIC` | Circle |
+| `SIN_PERIODIC` | Circle |
+| `SIN_PI` | Circle |
+| `SIN_PI_HALF` | Circle |
+| `SIN_POSITIVE` | Circle |
+| `SIN_SHIFT` | Circle |
+| `COND` | Classical, defined |
+| `COND_FALSE` | Classical, derived |
+| `COND_TRUE` | Classical, derived |
+| `DOUBLE_NEGATION` | Classical, derived |
+| `EXCLUDED_MIDDLE` | Classical, derived |
+| `NOT_FORALL` | Classical, derived |
+| `TRUTH_NOT_FALSITY` | Classical, derived |
+| `NUM_CHOOSE_FACTORIAL` | Coding |
+| `NUM_FACT_POSITIVE` | Coding |
+| `NUM_FACT_SUC` | Coding |
+| `NUM_FACT_ZERO` | Coding |
+| `ARG_SPEC` | Complex |
+| `CIS_ADD` | Complex |
+| `CIS_ZERO` | Complex |
+| `COMPLEX_ADD_ZERO` | Complex |
+| `COMPLEX_EQ` | Complex |
+| `COMPLEX_MUL_INVERSE` | Complex |
+| `COMPLEX_MUL_POW` | Complex |
+| `COMPLEX_NORM_MUL` | Complex |
+| `COMPLEX_NORM_NEG` | Complex |
+| `COMPLEX_NORM_NONNEG` | Complex |
+| `COMPLEX_NORM_OF_REAL` | Complex |
+| `COMPLEX_NORM_POW` | Complex |
+| `COMPLEX_NORM_SQUARED` | Complex |
+| `COMPLEX_NORM_SQ_MUL` | Complex |
+| `COMPLEX_NORM_SQ_NONNEG` | Complex |
+| `COMPLEX_NORM_SQ_ZERO` | Complex |
+| `COMPLEX_NORM_TRIANGLE` | Complex |
+| `COMPLEX_NORM_ZERO` | Complex |
+| `COMPLEX_POW_ADD` | Complex |
+| `COMPLEX_POW_OF_REAL` | Complex |
+| `COMPLEX_POW_SUC` | Complex |
+| `COMPLEX_POW_ZERO` | Complex |
+| `COMPLEX_POW_ZERO_BASE` | Complex |
+| `COMPLEX_ROOT` | Complex |
+| `COMPLEX_SUM_SUC` | Complex |
+| `COMPLEX_SUM_ZERO` | Complex |
+| `COMPLEX_SURJECTIVE` | Complex |
+| `COS_NEG` | Complex |
+| `DALEMBERT` | Complex |
+| `DE_MOIVRE` | Complex |
+| `EXP_POWER` | Complex |
+| `IM_ADD` | Complex |
+| `IM_CIS` | Complex |
+| `IM_COMPLEX` | Complex |
+| `IM_INV` | Complex |
+| `IM_MUL` | Complex |
+| `IM_NEG` | Complex |
+| `IM_OF_REAL` | Complex |
+| `IM_SUB` | Complex |
+| `IM_SUM` | Complex |
+| `RE_ADD` | Complex |
+| `RE_CIS` | Complex |
+| `RE_COMPLEX` | Complex |
+| `RE_INV` | Complex |
+| `RE_MUL` | Complex |
+| `RE_NEG` | Complex |
+| `RE_OF_REAL` | Complex |
+| `RE_SUB` | Complex |
+| `RE_SUM` | Complex |
+| `SIN_NEG` | Complex |
+| `SIN_NONNEG` | Complex |
+| `CONTINUOUS_ATTAINS_MAX` | Continuity |
+| `CONTINUOUS_ATTAINS_MIN` | Continuity |
+| `CONTINUOUS_ATTAINS_MIN_WITHIN` | Continuity |
+| `CONTINUOUS_BOUNDED` | Continuity |
+| `CONTINUOUS_EXTENSION` | Continuity |
+| `CONTINUOUS_EXTENSION_AGREES` | Continuity |
+| `CONTINUOUS_ID` | Continuity |
+| `CONTINUOUS_LINEAR` | Continuity |
+| `CONTINUOUS_NEG` | Continuity |
+| `INTERMEDIATE_VALUE` | Continuity |
+| `INTERVAL_GLUING` | Continuity |
+| `DERIVATIVE_CONST` | Derivative |
+| `DERIVATIVE_CONTINUOUS` | Derivative |
+| `DERIVATIVE_COS` | Derivative |
+| `DERIVATIVE_ID` | Derivative |
+| `DERIVATIVE_INTERIOR_MAX` | Derivative |
+| `DERIVATIVE_INTERIOR_MIN` | Derivative |
+| `DERIVATIVE_LINEAR` | Derivative |
+| `DERIVATIVE_NEG` | Derivative |
+| `DERIVATIVE_NONNEG_MONOTONE` | Derivative |
+| `DERIVATIVE_POS_LT_MONOTONE` | Derivative |
+| `DERIVATIVE_PRODUCT` | Derivative |
+| `DERIVATIVE_SIN` | Derivative |
+| `DERIVATIVE_UNIQUE` | Derivative |
+| `MEAN_VALUE` | Derivative |
+| `ROLLE` | Derivative |
+| `ABS_POWER_LE` | Limit |
+| `CONVERGES_ABSOLUTE` | Limit |
+| `CONVERGES_ADD` | Limit |
+| `CONVERGES_CONSTANT` | Limit |
+| `CONVERGES_EVENTUALLY` | Limit |
+| `CONVERGES_GE` | Limit |
+| `CONVERGES_LE` | Limit |
+| `CONVERGES_MUL` | Limit |
+| `CONVERGES_NEG` | Limit |
+| `CONVERGES_SHIFT` | Limit |
+| `CONVERGES_TO_ZERO` | Limit |
+| `CONVERGES_UNIQUE` | Limit |
+| `LE_BELOW_EVERY_POSITIVE` | Limit |
+| `LIM_OF_CONVERGES` | Limit |
+| `MONOTONE_CONVERGES` | Limit |
+| `MONOTONE_LE` | Limit |
+| `POWER_NONNEG` | Limit |
+| `SUM_ABS` | Limit |
+| `SUM_BELOW_LIMIT` | Limit |
+| `SUM_CAUCHY_BELOW_SQUARE` | Limit |
+| `SUM_CAUCHY_PRODUCT` | Limit |
+| `SUM_CAUCHY_PRODUCT_NONNEG` | Limit |
+| `SUM_COMPARISON` | Limit |
+| `SUM_GROWS` | Limit |
+| `SUM_SQUARE_BELOW_CAUCHY` | Limit |
+| `SUM_TAIL_ABS` | Limit |
+| `COS_NEAR_ONE` | Logarithm |
+| `EXP_ABOVE_LINE` | Logarithm |
+| `EXP_CONTINUOUS` | Logarithm |
+| `EXP_LN` | Logarithm |
+| `EXP_NEAR_ONE` | Logarithm |
+| `EXP_ONTO` | Logarithm |
+| `EXP_POSITIVE` | Logarithm |
+| `EXP_SMALL_ABOVE` | Logarithm |
+| `EXP_TAIL_BOUND` | Logarithm |
+| `SIN_NEAR_LINE` | Logarithm |
+| `ABS_ABOVE` | Magnitude |
+| `ABS_ABOVE_NEG` | Magnitude |
+| `ABS_CASES` | Magnitude |
+| `ABS_MUL` | Magnitude |
+| `ABS_NONNEG` | Magnitude |
+| `ABS_OF_NONNEG` | Magnitude |
+| `ABS_OF_NONPOS` | Magnitude |
+| `ABS_TRIANGLE` | Magnitude |
+| `ABS_ZERO` | Magnitude |
+| `MAX_ABOVE_LEFT` | Magnitude |
+| `MAX_ABOVE_RIGHT` | Magnitude |
+| `MAX_CASES` | Magnitude |
+| `MIN_BELOW_LEFT` | Magnitude |
+| `MIN_BELOW_RIGHT` | Magnitude |
+| `MIN_CASES` | Magnitude |
+| `IND_SUC_0` | Natural |
+| `NUM_ABS_REP` | Natural |
+| `NUM_CASES` | Natural |
+| `NUM_INDUCTION` | Natural |
+| `NUM_REP_0` | Natural |
+| `NUM_REP_ABS` | Natural |
+| `NUM_REP_DEST` | Natural |
+| `NUM_REP_SUC` | Natural |
+| `NUM_SUC_INJECTIVE` | Natural |
+| `NUM_SUC_NOT_ZERO` | Natural |
+| `ADD_LE` | Order |
+| `ADD_NONNEG` | Order |
+| `ADD_NONNEG_LT` | Order |
+| `ADD_POSITIVE` | Order |
+| `CANCEL_NONNEG` | Order |
+| `CANCEL_POSITIVE` | Order |
+| `INV_POSITIVE` | Order |
+| `LE_ANTISYMMETRIC` | Order |
+| `LE_CASES` | Order |
+| `LE_FROM_ZERO` | Order |
+| `LE_MUL_BOTH` | Order |
+| `LE_OF_EQ` | Order |
+| `LE_OF_LT` | Order |
+| `LE_OF_NOT_LT` | Order |
+| `LE_TO_ZERO` | Order |
+| `LT_FROM_ZERO` | Order |
+| `LT_MUL_BOTH` | Order |
+| `LT_OF_NOT_LE` | Order |
+| `LT_TO_ZERO` | Order |
+| `MUL_NONNEG` | Order |
+| `MUL_NONNEG_BOTH` | Order |
+| `POSITIVE_NOT_ZERO` | Order |
+| `SQUARE_NONNEG` | Order |
+| `ZERO_LT_ONE` | Order |
+| `NUM_ADD_ASSOC` | Peano |
+| `NUM_ADD_CANCEL` | Peano |
+| `NUM_ADD_EQ_ZERO` | Peano |
+| `NUM_ADD_EXCHANGE` | Peano |
+| `NUM_ADD_MONOTONE` | Peano |
+| `NUM_ADD_SHIFT` | Peano |
+| `NUM_ADD_SUB` | Peano |
+| `NUM_ADD_SUC` | Peano |
+| `NUM_ADD_SYM` | Peano |
+| `NUM_ADD_ZERO` | Peano |
+| `NUM_ARCHIMEDES` | Peano |
+| `NUM_BIT0_ADD` | Peano |
+| `NUM_CEIL_LE` | Peano |
+| `NUM_CHOOSE_ABOVE` | Peano |
+| `NUM_CHOOSE_ALL` | Peano |
+| `NUM_CHOOSE_EMPTY` | Peano |
+| `NUM_CHOOSE_SUC` | Peano |
+| `NUM_CHOOSE_ZERO` | Peano |
+| `NUM_LEAST` | Peano |
+| `NUM_LE_ADD` | Peano |
+| `NUM_LE_ANTISYM` | Peano |
+| `NUM_LE_DOUBLE_SUB` | Peano |
+| `NUM_LE_OF_LT` | Peano |
+| `NUM_LE_OF_LT_SUC` | Peano |
+| `NUM_LE_OF_NOT_LT` | Peano |
+| `NUM_LE_REFL` | Peano |
+| `NUM_LE_SUC` | Peano |
+| `NUM_LE_TOTAL` | Peano |
+| `NUM_LE_TRANS` | Peano |
+| `NUM_LE_ZERO` | Peano |
+| `NUM_LT_IRREFL` | Peano |
+| `NUM_LT_SUC` | Peano |
+| `NUM_LT_SUC_CASES` | Peano |
+| `NUM_LT_TOTAL` | Peano |
+| `NUM_LT_TRANS` | Peano |
+| `NUM_MUL_ASSOC` | Peano |
+| `NUM_MUL_DISTRIBUTE` | Peano |
+| `NUM_MUL_POSITIVE` | Peano |
+| `NUM_MUL_SUC` | Peano |
+| `NUM_MUL_SYM` | Peano |
+| `NUM_MUL_ZERO` | Peano |
+| `NUM_NOT_LT_ZERO` | Peano |
+| `NUM_ONE_SUC` | Peano |
+| `NUM_PRE_LE` | Peano |
+| `NUM_PRE_SUC` | Peano |
+| `NUM_PRE_ZERO` | Peano |
+| `NUM_REAL_ADD` | Peano |
+| `NUM_REAL_LE` | Peano |
+| `NUM_REAL_LT` | Peano |
+| `NUM_REAL_MUL` | Peano |
+| `NUM_REAL_NONNEG` | Peano |
+| `NUM_REAL_SUC` | Peano |
+| `NUM_REAL_ZERO` | Peano |
+| `NUM_SUB_ADD` | Peano |
+| `NUM_SUB_LE` | Peano |
+| `NUM_SUB_REFL` | Peano |
+| `NUM_SUB_SUC` | Peano |
+| `NUM_SUB_SUC_SUC` | Peano |
+| `NUM_SUB_ZERO` | Peano |
+| `NUM_SUC_ADD` | Peano |
+| `NUM_SUC_MUL` | Peano |
+| `NUM_SUC_NOT_SELF` | Peano |
+| `NUM_SUC_SUB` | Peano |
+| `NUM_SUC_SUB_SELF` | Peano |
+| `NUM_ZERO_ADD` | Peano |
+| `NUM_ZERO_LE` | Peano |
+| `NUM_ZERO_LT_SUC` | Peano |
+| `NUM_ZERO_MUL` | Peano |
+| `NUM_ZERO_SUB` | Peano |
+| `ADD_POSITIVE` | Positivity |
+| `POSITIVE_NOT_ZERO` | Positivity |
+| `ZERO_LT_ONE` | Positivity |
+| `FST_PAIR` | Product |
+| `PAIR_INJECTIVE` | Product |
+| `PAIR_SURJECTIVE` | Product |
+| `PROD_ABS_REP` | Product |
+| `PROD_CASES` | Product |
+| `PROD_REP_ABS` | Product |
+| `PROD_REP_PAIR` | Product |
+| `SND_PAIR` | Product |
+| `BIT0` | Real, defined |
+| `BIT1` | Real, defined |
+| `div` | Real, defined |
+| `real_le` | Real, defined |
+| `sub` | Real, defined |
+| `ADD_ASSOC` | Real, derived |
+| `ADD_INVERSE` | Real, derived |
+| `ADD_SYM` | Real, derived |
+| `ADD_ZERO` | Real, derived |
+| `COMPLETENESS` | Real, derived |
+| `DISTRIBUTE` | Real, derived |
+| `LT_ADD` | Real, derived |
+| `LT_IRREFLEXIVE` | Real, derived |
+| `LT_MUL` | Real, derived |
+| `LT_TOTAL` | Real, derived |
+| `LT_TRANSITIVE` | Real, derived |
+| `MUL_ASSOC` | Real, derived |
+| `MUL_INVERSE` | Real, derived |
+| `MUL_ONE` | Real, derived |
+| `MUL_SYM` | Real, derived |
+| `ONE_NOT_ZERO` | Real, derived |
+| `SQRT` | Root |
+| `SQRT_EXISTS` | Root |
+| `SQRT_SQUARE` | Root |
+| `SQRT_UNIQUE` | Root |
+| `SQRT_ZERO` | Root |
+| `POWER_ADD` | Series |
+| `POWER_BINOMIAL` | Series |
+| `POWER_NEG_DOUBLE` | Series |
+| `POWER_ONE` | Series |
+| `POWER_POSITIVE` | Series |
+| `POWER_SUC` | Series |
+| `POWER_ZERO` | Series |
+| `SUM_ADD` | Series |
+| `SUM_CAUCHY` | Series |
+| `SUM_CAUCHY_GAP` | Series |
+| `SUM_CONGRUENCE` | Series |
+| `SUM_CONGRUENCE_BELOW` | Series |
+| `SUM_CONSTANT` | Series |
+| `SUM_DIAGONAL` | Series |
+| `SUM_EVEN_ODD` | Series |
+| `SUM_GEOMETRIC` | Series |
+| `SUM_HALVES` | Series |
+| `SUM_LINEAR` | Series |
+| `SUM_MONOTONE` | Series |
+| `SUM_MONOTONE_BELOW` | Series |
+| `SUM_NONNEGATIVE` | Series |
+| `SUM_OF_ZERO` | Series |
+| `SUM_REINDEX` | Series |
+| `SUM_SCALE` | Series |
+| `SUM_SCALE_RIGHT` | Series |
+| `SUM_SHIFT` | Series |
+| `SUM_SUC` | Series |
+| `SUM_ZERO` | Series |
+| `COS_ABSOLUTE` | Transcendental |
+| `COS_ADD` | Transcendental |
+| `COS_CONVERGES` | Transcendental |
+| `COS_ZERO` | Transcendental |
+| `EXP_ABSOLUTE` | Transcendental |
+| `EXP_ADD` | Transcendental |
+| `EXP_CONVOLUTION` | Transcendental |
+| `EXP_NEGATE` | Transcendental |
+| `EXP_TAIL_GEOMETRIC` | Transcendental |
+| `EXP_TERM_HALVES` | Transcendental |
+| `EXP_ZERO` | Transcendental |
+| `MUL_INV_COMBINE` | Transcendental |
+| `SIN_ABSOLUTE` | Transcendental |
+| `SIN_ADD` | Transcendental |
+| `SIN_CONVERGES` | Transcendental |
+| `SIN_COS_SQUARED` | Transcendental |
+| `SIN_ZERO` | Transcendental |
+
+3 axioms it reaches are not named above: `Library.of` holds no classical axiom, and says in its own comment why.
+
+## The derivation
+
+Not recorded. The development that proved this has not been converted to record its steps,
+so the page can say what the theorem rests on and what it cost and cannot say how it was
+obtained.
+
+## The proof the kernel holds
+
+298647 inferences of its own, a published fact it uses counting as one `Citation`. The account above describes them and is not a second proof: what the kernel checked for this proof is this, and its shape is
+
+| rule | inferences | share |
+|---|---|---|
+| Congruence | 105045 | 35.2% |
+| Instantiation | 51194 | 17.1% |
+| Transitivity | 47587 | 15.9% |
+| EqualityElimination | 36259 | 12.1% |
+| Reflexivity | 34377 | 11.5% |
+| BetaStep | 10216 | 3.4% |
+| Antisymmetry | 6707 | 2.2% |
+| TypeInstantiation | 4122 | 1.4% |
+| Assumption | 1609 | 0.5% |
+| Abstraction | 1407 | 0.5% |
+| Citation | 93 | 0.0% |
+| Definition | 28 | 0.0% |
+| TypeDefinition | 2 | 0.0% |
+| Axiom | 1 | 0.0% |
+
+## How to get it
+
+Put the claim to the prover, which puts it to the whole tactic surface:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask !f:num -> complex. !n:num. 0 < n /\ ~(f n = complex_of_real 0) ==> (?x:complex. complex_sum (\m:num. f m * complex_pow x m) (SUC n) = complex_of_real 0)"
+```
+
+The claim is **not** quoted: `sbt` hands the arguments over already split, so the
+shell's quotes are gone before the command sees them.
+
+**A refusal here is not evidence against the theorem.** The surface decides a few fragments and chains library lemmas for the rest, so a theorem obtained by a hand derivation is one it can refuse, and what it prints then is the obstacle it met rather than a verdict on the claim. In particular an assignment like `P x := true, Q x := false` is a countermodel of the claim's **propositional skeleton**, whose atoms are uninterpreted: `!x:real. 1 < x ==> 0 < x \/ x = 99` is true and produces one. The theorem is the one the kernel holds, counted above, and the two routes below reach it whatever this one answers.
+
+Look it up instead, by name or by shape:
+
+```
+sbt "tactics/runMain garden.xeno.symbolum.tactics.Find FUNDAMENTAL_THEOREM_OF_ALGEBRA"
+```
+
+From Scala it is `Complex`'s, under the name `FUNDAMENTAL_THEOREM_OF_ALGEBRA`. Specialise it with `Rules.specTo`, which takes the instance wanted and finds the instantiation by matching: the order the binders were written in is not part of any contract here.
 
 ## What on this page is checked
 

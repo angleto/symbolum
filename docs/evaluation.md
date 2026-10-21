@@ -29,14 +29,16 @@ same reason, which is not about proving power. Of the other two, one stopped bei
 | Kernel re-checking (the Lean Kernel Arena shape) | a proof object a second checker can replay | **Measured since 2026-09-10.** A theorem records its derivation and `modules/checker` reads one without touching a kernel rule, over a serialised proof or in this process, so this row is differential where it used to be adversarial. See the section below |
 
 The owner's own targets are in the first row. A Collatz statement needs an integer index, a
-binomial coefficient and a cosine, none of which the theory can write; P versus NP needs machines
-and asymptotics; the Riemann hypothesis needs the complex numbers and analytic continuation. These
-are not hard for the tactics. They cannot be written down. The type-definition rule that had to come
-first landed on 2026-09-10 and the naturals with it. `docs/adr/0007` is the order for what comes
-after, the integers and the rationals as quotients and then the reals as a completion, and
-[proving.md](proving.md) keeps the list of what is missing beside what has landed. Neither order
-reaches all three targets above: machines, asymptotics and the complex numbers are past the end of
-both.
+binomial coefficient and a cosine, none of which the theory could write when this row was measured;
+P versus NP needs machines and asymptotics; the Riemann hypothesis needs analytic continuation over
+the complex numbers. These are not hard for the tactics. They could not be written down. The
+type-definition rule that had to come first landed on 2026-09-10 and the naturals with it.
+`docs/adr/0007` is the order for what comes after, the integers and the rationals as quotients and
+then the reals as a completion, and [proving.md](proving.md) keeps the list of what is missing
+beside what has landed. The complex numbers came after the end of that order, on 2026-10-05
+(`docs/adr/0060`), as a type with its field, its roots and, since 2026-10-21, the fundamental
+theorem of algebra, but with no limit, derivative or series of their own, so analytic continuation
+is as far away as it was. Machines and asymptotics are past the end of every order written here.
 
 ## What can be measured today
 
