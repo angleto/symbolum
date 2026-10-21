@@ -1339,12 +1339,18 @@ def fatalWarningsNamed(options: Seq[String]): String =
 lazy val everyProjectButTheControl = ScopeFilter(inAnyProject -- inProjects(warningProbeControl))
 
 // Instrumentation, which the probe compilations are stripped of. Under `coverage` scoverage adds
-// `-Xplugin:` and a per-module `-P:scoverage:dataDir:`, and a probe compiled with those writes
-// coverage data about a source that is not part of any module into that module's measurement.
-// Whether a warning is fatal has nothing to do with an instrumentation plugin, so the two questions
-// are kept apart here rather than left to the order of two commands.
+// `-coverage-out:<module>/scoverage-data` on Scala 3 (and `-Xplugin:` with `-P:scoverage:dataDir:`
+// on Scala 2, which this build does not compile), and it adds it to `Compile / compile /
+// scalacOptions`, the task's own scope, so that is where the filter has to sit: applied to `Compile
+// / scalacOptions` it never sees the option. A probe compiled with it writes coverage data about a
+// source that is not part of any module. `coverageEnabled := false` on both projects is the first
+// layer and this the second; with the first removed, `coverage "show warningProbe/Compile/compile/
+// scalacOptions"` printed `-coverage-out:` on 2026-10-22 until this filter moved to the task scope
+// and named the Scala 3 option, and printed nothing of it after. Whether a warning is fatal has
+// nothing to do with instrumentation, so the two questions are kept apart here.
 def withoutInstrumentation(options: Seq[String]): Seq[String] =
-  options.filterNot(option => option.startsWith("-Xplugin") || option.startsWith("-P:"))
+  options.filterNot(option =>
+    option.startsWith("-coverage-out") || option.startsWith("-Xplugin") || option.startsWith("-P:"))
 
 // WHY THE TWO PROBE COMPILATIONS SAY NOTHING, which is a decision about other people's logs. The
 // gate rides `Test / test`, so its expected compiler error lands in the log of every full suite
@@ -1410,7 +1416,7 @@ lazy val warningProbe = (project in file("tools/fatal-warnings-probe"))
     // coverage, and the options it compiles under are stripped of the plugin that would make it
     // one.
     coverageEnabled := false,
-    Compile / scalacOptions ~= withoutInstrumentation,
+    Compile / compile / scalacOptions ~= withoutInstrumentation,
     Compile / compile / logManager := quietly
   )
 
@@ -1436,7 +1442,7 @@ lazy val warningProbeControl = (project in file("tools/fatal-warnings-probe/cont
     // printed by the build on the way to a gate about warnings is not a thing to leave lying
     // around.
     scalacOptions := (warningProbe / scalacOptions).value.filterNot(fatalWarningsFlags),
-    Compile / scalacOptions ~= withoutInstrumentation,
+    Compile / compile / scalacOptions ~= withoutInstrumentation,
     Compile / compile / logManager := quietly
   )
 
