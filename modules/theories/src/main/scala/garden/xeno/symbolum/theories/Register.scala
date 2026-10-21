@@ -158,11 +158,21 @@ object Register {
     chain.widest.theory.axioms.toVector.filterNot(named.contains)
   }
 
+  /**
+   * A statement as `docs/lemmas.md` prints it: plain where the plain text reads back as this term,
+   * annotated where it does not, and plain again where neither reads back. `law ONE_NOT_ZERO`
+   * printed `~(1 = 0)` until 2026-10-22, which says nothing about whether `1` is a real or a
+   * natural, beside `~((1:real) = (0:real))` in the lemmas; a row a person checks against a
+   * textbook has to say which type it is about.
+   */
+  private def printed(chain: Chain, statement: Term): String =
+    chain.widest.legible(statement).getOrElse(chain.widest.show(statement))
+
   /** The axioms, in the order the chain asserted them, which is the order a reader checks them in. */
   def axiomRows(chain: Chain): Vector[Row] = {
     val named = axiomNames(chain)
     chain.widest.theory.axioms.toVector.flatMap { statement =>
-      named.get(statement).map(name => Row(s"axiom $name", chain.widest.show(statement)))
+      named.get(statement).map(name => Row(s"axiom $name", printed(chain, statement)))
     }
   }
 
@@ -172,7 +182,7 @@ object Register {
    */
   def lawRows(chain: Chain): Vector[Row] =
     Real.Laws.map { case (name, _) =>
-      Row(s"law $name", chain.widest.show(chain.reals.laws(name).conclusion))
+      Row(s"law $name", printed(chain, chain.reals.laws(name).conclusion))
     }
 
   /**
@@ -185,7 +195,7 @@ object Register {
    */
   def definitionRows(chain: Chain): Vector[Row] =
     chain.widest.theory.definitions.toVector.sortBy(_._1).map { case (name, body) =>
-      Row(s"definition $name", s"$name = ${chain.widest.show(body)}")
+      Row(s"definition $name", s"$name = ${printed(chain, body)}")
     }
 
   /**
@@ -357,10 +367,11 @@ object Register {
    *
    * **One known defect shows through here and is not repaired in this file.** The printer omits the
    * type annotation on a free variable at the outermost level, and fourteen polymorphic lemmas do
-   * not read back through the parser; a repair is in hand elsewhere. Nothing in the three
-   * populations is affected by the first, since an axiom is closed and a definition body is closed,
+   * not read back through the parser; a repair is in hand elsewhere. Nothing in the four
+   * populations is affected by the first, since an axiom, a law and a definition body are closed,
    * and rows that are affected by the second are still exactly what the theory holds: this table is
-   * compared as text and is never parsed back.
+   * compared as text and is never parsed back. A statement is printed through `legible`, so a row
+   * whose plain text would read back as another term carries the types that tell them apart.
    */
   def listing(chain: Chain, attested: Map[String, Attestation]): String = {
     val axioms = axiomRows(chain)
@@ -427,7 +438,7 @@ object Register {
     else
       Left(
         s"the chain holds ${unnamed.size} axiom(s) no development names, so they can have no row: " +
-          unnamed.map(chain.widest.show).mkString("; ")
+          unnamed.map(printed(chain, _)).mkString("; ")
       )
   }
 
