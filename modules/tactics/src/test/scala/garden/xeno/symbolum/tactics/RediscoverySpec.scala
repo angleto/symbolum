@@ -608,27 +608,20 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // regression that sent these back to a decision procedure would show as a price that is not
     // that one, whatever its size.
     //
-    // **Two are excepted by name since 2026-10-05, and the exception is a limit of `Novelty`, not of
-    // the claims.** `SIN_POSITIVE` and `SIN_NONNEG` reach each other, and `Novelty.standard` puts them
-    // to a `Prove` built over `Order` and `Series`, whose library is what an `Order` can reach: the
-    // reals and the order, not `Circle` or `Complex`. So neither lemma is there to cite, LINARITH
-    // cannot take `sin`, and both come back `Unsettled`, where `Ask`, over the whole chain, proves
-    // each by citing the other's twin. Every rediscovery before these was a fact of `Order`, which
-    // is why the limit had not shown. The two are pinned as refused, so the day `Novelty` reads the
-    // chain's library this goes red and the exception is deleted rather than left standing.
-    val excepted = Set("SIN_POSITIVE", "SIN_NONNEG")
-    val outside = recoveries.filter(r => excepted(r.reached))
-      .flatMap(r => propose.novelty.of(r.proposal.claim).toOption)
-    outside.map(_.report.outcome) shouldBe Vector(Cost.Outcome.Unsettled, Cost.Outcome.Unsettled)
-    val inside = recoveries.filterNot(r => excepted(r.reached))
-      .flatMap(r => propose.novelty.of(r.proposal.claim).toOption)
+    // **Two were excepted by name from 2026-10-05 to 2026-10-24, and the exception was a limit of
+    // `Novelty`, not of the claims.** `SIN_POSITIVE` and `SIN_NONNEG` reach each other, and
+    // `Novelty.standard` put them to a `Prove` built over `Order` and `Series`, whose library holds
+    // neither, so both came back `Unsettled` where `Ask` proved them. Card `cab4b920` gave
+    // `Novelty.standard` the prover the whole chain deserves, as `Ask` has, and the exception went
+    // with the limit, as this test said it would.
+    val inside = recoveries.flatMap(r => propose.novelty.of(r.proposal.claim).toOption)
 
     readings.size shouldBe 20
-    inside.size shouldBe 18
+    inside.size shouldBe 20
     inside.map(_.report.outcome).distinct shouldBe Vector(Cost.Outcome.Proved)
 
     inside.count(_.standing == Novelty.Standing.Immediate) shouldBe 4
-    inside.count(_.standing == Novelty.Standing.Known) shouldBe 14
+    inside.count(_.standing == Novelty.Standing.Known) shouldBe 16
     inside.count(_.standing == Novelty.Standing.Earned) shouldBe 0
 
     val chain = garden.xeno.symbolum.theories.Chain.standard
@@ -636,14 +629,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     val logic = chain.widest.logic.over(chain.widest.theory)
       .fold(error => fail(s"the logic does not widen: $error"), identity)
 
-    // The two excepted above are `Known` too, because the library holds them, and are left out here
-    // for the reason they are excepted: their price is the refusal's, not a citation's.
-    val known = recoveries.filterNot(r => excepted(r.reached)).flatMap(recovery =>
+    val known = recoveries.flatMap(recovery =>
       propose.novelty.of(recovery.proposal.claim).toOption
         .filter(_.standing == Novelty.Standing.Known)
         .map(recovery -> _)
     )
-    known should have size 14
+    known should have size 16
 
     known.foreach { case (recovery, reading) =>
       withClue(s"${recovery.reached}: ") {

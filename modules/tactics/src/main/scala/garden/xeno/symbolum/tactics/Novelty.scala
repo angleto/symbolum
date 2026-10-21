@@ -289,12 +289,13 @@ object Novelty {
   lazy val standard: Novelty = {
     val chain = garden.xeno.symbolum.theories.Chain.standard
 
-    // Reading in the chain's own signature rather than the plain theory of the reals, and the two
-    // have to agree: the library holds `Series` lemmas about `num`, so a reader that cannot parse
-    // `num` could never find a claim to be a corollary of one of them. A first version had them
-    // disagree and the test that caught it is the one about a corollary.
+    // The prover a chain deserves, the one `Ask` asks: the widest signature and the whole chain's
+    // library. The reader and the library have to agree, and a first version had them disagree,
+    // which the test about a corollary caught. Until card `cab4b920` this was
+    // `Prove.construct(chain.order, chain.series)`, whose library is what an `Order` reaches, so a
+    // claim restating a lemma above `Order` came back unsettled here and proved through `Ask`.
     val prove = Prove
-      .construct(chain.order, chain.series)
+      .construct(chain)
       .fold(error => throw new IllegalStateException(s"the standard novelty does not build: ${error.message}"), identity)
 
     new Novelty(

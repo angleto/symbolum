@@ -1498,7 +1498,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // weakenings, claims about `run`, `g` and `iterate` that no procedure reads. Plus nine.
     // 862 with Gilbreath's table, 2026-10-24, read off the run and not decomposed: claims about the
     // table `d` that no procedure reads. Plus six.
-    open shouldBe 862
+    // 843 with `Novelty.standard` over the whole chain's prover, 2026-10-24, card `cab4b920`, read
+    // off the run and not decomposed: claims the prover over `Order` and `Series` could not take and
+    // the chain's settles. Minus nineteen.
+    open shouldBe 843
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
