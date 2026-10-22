@@ -401,7 +401,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 885 with the fundamental theorem of algebra, 2026-10-21, card `b244157b`: one antecedent on each
     // of `COMPLEX_POLY_MINIMUM`, `DALEMBERT` and `FUNDAMENTAL_THEOREM_OF_ALGEBRA`, a conjunction each,
     // and none on the four norm facts; counted from `Fundamental.Statements` and read off the run.
-    propose.weakenings.size shouldBe 885
+    // 889 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, card `1ab3b15f`: one
+    // antecedent on each of the two inversions (`0 < m`) and on each of the two Collatz theorems (the
+    // four equations, a conjunction), none on `COLLATZ_SHORTCUT_EXISTS`; counted from the two
+    // `Statements` before the run and equal to it.
+    propose.weakenings.size shouldBe 889
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

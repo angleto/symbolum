@@ -130,10 +130,14 @@ they have least appetite for working out how it is produced.
   CNJ_ADD                  !x:complex. !y:complex. cnj (x + y) = cnj x + cnj y
   CNJ_CNJ                  !x:complex. cnj (cnj x) = x
   CNJ_MUL                  !x:complex. !y:complex. cnj (x * y) = cnj x * cnj y
+  COLLATZ_AFFINE_ON_CLASSES !f:num -> num. !g:num -> num -> num. (!n:num. f (2 * n) = n) /\ (!n:num. f (2 * n + 1) = 3 * n + 2) /\ (!n:num. g n 0 = n) /\ (!n:num. !m:num. g n (SUC m) = f (g n m)) ==> (!n:num. ?h:num -> real. ?f1:num -> real. !m:num. real_of_num (g m n) = h (NUM_MOD m (NUM_POW 2 n)) * real_of_num m + f1 (NUM_MOD m (NUM_POW 2 n)))
+  COLLATZ_DFT_FORM         !f:num -> num. !g:num -> num -> num. (!n:num. f (2 * n) = n) /\ (!n:num. f (2 * n + 1) = 3 * n + 2) /\ (!n:num. g n 0 = n) /\ (!n:num. !m:num. g n (SUC m) = f (g n m)) ==> (!n:num. ?h:num -> real. ?f1:num -> real. (!m:num. real_of_num (g m n) = h (NUM_MOD m (NUM_POW 2 n)) * real_of_num m + f1 (NUM_MOD m (NUM_POW 2 n))) /\ (!m:num. real_of_num (g m n) = Sum (\k:num. (Sum (\i:num. h i * cos (2 * pi * real_of_num (k * i) / real_of_num (NUM_POW 2 n))) (NUM_POW 2 n) / real_of_num (NUM_POW 2 n) * real_of_num m + Sum (\i:num. f1 i * cos (2 * pi * real_of_num (k * i) / real_of_num (NUM_POW 2 n))) (NUM_POW 2 n) / real_of_num (NUM_POW 2 n)) * cos (2 * pi * real_of_num (k * m) / real_of_num (NUM_POW 2 n)) + (Sum (\i:num. h i * sin (2 * pi * real_of_num (k * i) / real_of_num (NUM_POW 2 n))) (NUM_POW 2 n) / real_of_num (NUM_POW 2 n) * real_of_num m + Sum (\i:num. f1 i * sin (2 * pi * real_of_num (k * i) / real_of_num (NUM_POW 2 n))) (NUM_POW 2 n) / real_of_num (NUM_POW 2 n)) * sin (2 * pi * real_of_num (k * m) / real_of_num (NUM_POW 2 n))) (NUM_POW 2 n)))
+  COLLATZ_SHORTCUT_EXISTS  ?f:num -> num. ?g:num -> num -> num. (!n:num. f (2 * n) = n) /\ (!n:num. f (2 * n + 1) = 3 * n + 2) /\ (!n:num. g n 0 = n) /\ (!n:num. !m:num. g n (SUC m) = f (g n m))
   COMPLEX_ADD_ASSOC        !x:complex. !y:complex. !z:complex. x + y + z = x + (y + z)
   COMPLEX_ADD_INVERSE      !x:complex. x + complex_neg x = complex_of_real 0
   COMPLEX_ADD_SYM          !x:complex. !y:complex. x + y = y + x
   COMPLEX_ADD_ZERO         !x:complex. x + complex_of_real 0 = x
+  COMPLEX_DFT_INVERSION    !f:num -> complex. !n:num. !m:num. 0 < n ==> f (NUM_MOD m n) = complex_of_real (inv (real_of_num n)) * complex_sum (\k:num. complex_sum (\i:num. f i * complex_pow (cnj (cis (2 * pi / real_of_num n))) (k * i)) n * complex_pow (cis (2 * pi / real_of_num n)) (k * m)) n
   COMPLEX_DISTRIBUTE       !x:complex. !y:complex. !z:complex. x * (y + z) = x * y + x * z
   COMPLEX_ENTIRE           !x:complex. !y:complex. x * y = complex_of_real 0 ==> x = complex_of_real 0 \/ y = complex_of_real 0
   COMPLEX_EQ               !x:complex. !y:complex. x = y = (Re x = Re y /\ Im x = Im y)
@@ -193,6 +197,7 @@ they have least appetite for working out how it is produced.
   IM_OF_REAL               !x:real. Im (complex_of_real x) = 0
   IM_SUB                   !x:complex. !y:complex. Im (x - y) = Im x - Im y
   IM_SUM                   !f:num -> complex. !n:num. Im (complex_sum f n) = Sum (\m:num. Im (f m)) n
+  REAL_DFT_INVERSION       !f:num -> real. !n:num. !m:num. 0 < n ==> f (NUM_MOD m n) = Sum (\k:num. Sum (\i:num. f i * cos (2 * pi * real_of_num (k * i) / real_of_num n)) n / real_of_num n * cos (2 * pi * real_of_num (k * m) / real_of_num n) + Sum (\i:num. f i * sin (2 * pi * real_of_num (k * i) / real_of_num n)) n / real_of_num n * sin (2 * pi * real_of_num (k * m) / real_of_num n)) n
   RE_ADD                   !x:complex. !y:complex. Re (x + y) = Re x + Re y
   RE_CIS                   !x:real. Re (cis x) = cos x
   RE_CNJ                   !x:complex. Re (cnj x) = Re x

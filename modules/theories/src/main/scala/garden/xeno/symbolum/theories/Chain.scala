@@ -433,7 +433,8 @@ final class Chain private (
 
   /**
    * The complex numbers: a type over the pairs of reals, its field, `cis`, De Moivre, the polar
-   * form, the `n`-th roots, the roots of unity and the fundamental theorem of algebra.
+   * form, the `n`-th roots, the roots of unity, the fundamental theorem of algebra and the
+   * inversion of the finite Fourier transform, with the Collatz iterate as one of its series.
    *
    * A link rather than a development beside the chain because `complex` is a type and its
    * operations are constants, and a constant declared beside the chain is where nothing above can
@@ -751,7 +752,8 @@ object Chain {
 
       // Over the circle, extending the chain's end: `cis` pairs `cos` with `sin`, the polar form
       // spends `acos` and `pi`, the roots spend `exp` and `ln`, the roots of unity the sums and the
-      // division of `num`, and the fundamental theorem `abs`, `min` and the extreme value theorem.
+      // division of `num`, the fundamental theorem `abs`, `min` and the extreme value theorem, and
+      // the Fourier inversion `Peano`'s semiring, where its exponents and residues are decided.
       // What it reads is named, by the links that hold it.
       below = Library.of(Vector(
         "Reals" -> reals.laws, "Real, defined" -> reals.definitions, "Order" -> order.facts,
@@ -763,7 +765,7 @@ object Chain {
       ))
       within <- continuity.definition(Continuity.ContinuousWithin)
       complex <- Complex.construct(
-        classical, naturals, ring, magnitude, product,
+        classical, naturals, peano, ring, magnitude, product,
         name => below.named(name).headOption.map(_.theorem).toRight(MissingDefinition(name)),
         reals, within, circle.theory, circle.notation)
     } yield new Chain(

@@ -92,3 +92,4 @@ the rejected option attractive, and they will.
 | [0059](0059-the-sixteen-are-laws-and-axioms-are-what-a-theory-asserts.md) | The sixteen are laws: `axioms` names only what a theory asserts | accepted, extends 0053 |
 | [0060](0060-complex-is-a-type-of-its-own-because-the-operators-are-shared.md) | `complex` is a type of its own over the pairs of reals, because the operators it shares are picked by type | accepted, extends 0018 |
 | [0061](0061-the-fundamental-theorem-of-algebra-by-the-polar-route-with-a-lipschitz-bound-for-compactness.md) | The fundamental theorem of algebra by the polar route, with a Lipschitz bound standing in for compactness in the plane | accepted |
+| [0062](0062-the-finite-fourier-inversion-and-the-collatz-iterate-over-characterising-equations.md) | The finite Fourier inversion, and the Collatz iterate as its instance over the equations that characterise the map | accepted |
