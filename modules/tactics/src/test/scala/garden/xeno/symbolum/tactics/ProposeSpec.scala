@@ -448,7 +448,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 889 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, card `1ab3b15f`: one
     // residue on each of the two inversions and the two Collatz theorems, counted from their
     // `Statements` before the run and equal to it. Plus four over the base above.
-    proposals.size shouldBe 889
+    // 923 with negation and implication in the embedded arithmetic, 2026-10-22, card `4102f131`: one
+    // residue per hypothesis of nine facts, the count `RediscoverySpec` gives beside the same figure.
+    // Plus thirty-four over the base above.
+    proposals.size shouldBe 923
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1467,7 +1470,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 791 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, read off the run and
     // not decomposed: their four weakenings and the other sources' proposals over their five facts,
     // less what went to the other buckets. Plus two over the base above.
-    open shouldBe 791
+    // 822 with negation and implication in the embedded arithmetic, 2026-10-22, card `4102f131`,
+    // read off the run and not decomposed: thirty-one of the thirty-four new weakenings, each a
+    // claim about `NUM_PROV` that no procedure has a reading of. Plus thirty-one.
+    open shouldBe 822
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1864,7 +1870,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 202 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, read off the run and
     // not decomposed: proposals over the complex synthesis, which no procedure reads, and which the
     // first run did not reach because `open` above was red. Plus two over the base.
-    unreadable shouldBe 202
+    // 205 with negation and implication in the embedded arithmetic, 2026-10-22, card `4102f131`,
+    // read off the run: the three of the thirty-four new weakenings that `open` above did not take,
+    // so the two rows account for all of them. Plus three over the base.
+    unreadable shouldBe 205
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

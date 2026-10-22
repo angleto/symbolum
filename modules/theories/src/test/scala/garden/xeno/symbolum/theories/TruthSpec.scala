@@ -250,5 +250,35 @@ class TruthSpec extends AnyFlatSpec with Matchers {
         .flatMap(rules.mp(_, holds)))
     equation.hypotheses shouldBe empty
     equation.conclusion shouldBe proposition(s"NUM_PROV (NUM_CODE 5 (NUM_PAIR ($sum) ($sum)))")
+
+    // And the other half: `S 0 + S 0 = S 0` is false, so its negation is provable. The falsity is
+    // derived from the clauses and the naturals, not assumed: a premise nobody can discharge would
+    // make the provability a statement about nothing.
+    val denied = s"NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR ($sum) ($one)))"
+    val fails = proposition(s"NUM_TRUE ($denied) (\\k:num. k)")
+    val reading = evaluate(fails, Vector(
+      fact(Truth.TrueNegation), fact(Truth.TrueEquality), fact(Truth.ValueSum),
+      fact(Truth.ValueSuccessor), fact(Truth.ValueZero),
+      force(chain.peano.fact(Peano.AddAtSuccessor)), force(chain.peano.fact(Peano.AddAtZero))))
+    rightOf(reading) shouldBe proposition("~(SUC (SUC ZERO) = SUC ZERO)")
+    val equal = proposition("SUC (SUC ZERO) = SUC ZERO")
+    val peeled = force(
+      rules.specAll(force(chain.naturals.fact(Natural.SuccessorInjective)),
+        List(term("SUC ZERO"), term("ZERO")))
+        .flatMap(rules.mp(_, force(LogicError.lift(Kernel.assume(equal))))))
+    val falsity = force(
+      chain.naturals.fact(Natural.SuccessorNotZero).flatMap(rules.spec(term("ZERO"), _))
+        .flatMap(rules.notElim(_, peeled))
+        .flatMap(rules.notIntro(equal, _))
+        .flatMap(apart => Conv.sym(reading).flatMap(e => LogicError.lift(Kernel.eqMp(e, apart)))))
+    falsity.hypotheses shouldBe empty
+
+    val refuted = force(
+      rules.specAll(fact(Truth.ProvesFalseEquation), List(term("\\k:num. k"), term(sum), term(one)))
+        .flatMap(rules.mp(_, sumIsTerm)).flatMap(rules.mp(_, sumIsClosed))
+        .flatMap(rules.mp(_, oneIsTerm)).flatMap(rules.mp(_, oneIsClosed))
+        .flatMap(rules.mp(_, falsity)))
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe proposition(s"NUM_PROV ($denied)")
   }
 }

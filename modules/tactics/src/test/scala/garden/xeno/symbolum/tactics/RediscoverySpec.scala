@@ -405,7 +405,12 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // antecedent on each of the two inversions (`0 < m`) and on each of the two Collatz theorems (the
     // four equations, a conjunction), none on `COLLATZ_SHORTCUT_EXISTS`; counted from the two
     // `Statements` before the run and equal to it.
-    propose.weakenings.size shouldBe 889
+    // 923 with negation and implication in the embedded arithmetic, 2026-10-22, card `4102f131`: one
+    // antecedent per hypothesis of nine facts, 1 + 1 + 3 + 5 + 11 + 1 + 5 for the seven of
+    // `NUM_PROV_NOT_NOT_ELIM` .. `NUM_PROV_FALSE_EQ` (`NUM_FORM`, `NUM_TERM`, `NUM_CLOSED` and the
+    // provability premises) and 3 + 4 for `NUM_PROV_IMP_DENIED` and `NUM_PROV_NOT_IMP`. The 27 were
+    // read off a run before the last two joined and equal to the count; the 7 are derived.
+    propose.weakenings.size shouldBe 923
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

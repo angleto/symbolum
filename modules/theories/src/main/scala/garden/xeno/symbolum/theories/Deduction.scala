@@ -37,6 +37,14 @@ import garden.xeno.symbolum.logic.*
  * Both cost the naturals' two axioms and nothing else, which `DeductionSpec` asserts as an equality
  * rather than as a ceiling.
  *
+ * And negation, which until 2026-10-22 had no derived fact at all: contraposition is the only axiom
+ * that mentions `~`, so [[Deduction.DoubleNegationElimination]], its converse and
+ * [[Deduction.Contraposition]] as a rule are derivations from it, and they are what lets PA deny
+ * an equation. [[Deduction.NumeralsDistinct]] is the first such denial, two different numerals
+ * proved different. [[Deduction.ImplicationOfDenial]] and [[Deduction.DeniedImplication]] are the
+ * two cases of an implication between decided formulas that [[Deduction.Weaken]] does not cover,
+ * so every connective completeness meets has its fact.
+ *
  * And the three rules the **deduction theorem** is assembled from, one per way a step can be
  * justified: [[Deduction.Weaken]] for the axiom cases, [[Deduction.ImplicationModusPonens]] for the
  * modus ponens case, and [[Deduction.ImplicationGeneralisation]] for the generalisation case, which
@@ -376,6 +384,97 @@ object Deduction {
    */
   val NumeralMultiplication: String = "NUM_PROV_NUMERAL_MUL"
 
+  /**
+   * `|- !p. NUM_FORM p ==> NUM_PROV (~~p ==> p)`
+   *
+   * The first theorem here about the object language's negation, and the one the other two stand
+   * on. The only axiom that mentions `~` is contraposition, `(~p ==> ~q) ==> (q ==> p)`, so every
+   * fact about negation is a derivation from it, and this is the textbook one written without the
+   * deduction theorem, which wants a closed hypothesis and `p` is any formula. Writing `n` for one
+   * more negation:
+   *
+   * {{{
+   * K nn (nnnn)              :  nn ==> (nnnn ==> nn)
+   * contrapose at nnn, n     :  (nnnn ==> nn) ==> (n ==> nnn)
+   * contrapose at p, nn      :  (n ==> nnn) ==> (nn ==> p)
+   * two syllogisms           :  nn ==> (nn ==> p)
+   * distribute, detach, p==>p:  nn ==> p
+   * }}}
+   */
+  val DoubleNegationElimination: String = "NUM_PROV_NOT_NOT_ELIM"
+
+  /**
+   * `|- !p. NUM_FORM p ==> NUM_PROV (p ==> ~~p)`
+   *
+   * One contraposition of [[DoubleNegationElimination]] taken at `~p`, which is why it comes second.
+   */
+  val DoubleNegationIntroduction: String = "NUM_PROV_NOT_NOT_INTRO"
+
+  /**
+   * `|- !p q. NUM_FORM p ==> NUM_FORM q ==> NUM_PROV (p ==> q) ==> NUM_PROV (~q ==> ~p)`
+   *
+   * Contraposition as a rule in the direction a derivation uses it, which is the converse of the
+   * axiom: the axiom takes negations away and this puts them on. Both double negations are what
+   * it costs, `~~p ==> p ==> q ==> ~~q` and then the axiom at `~p` and `~q`. A caller that holds
+   * `NUM_PROV ~q` as well has modus tollens in one more detachment.
+   */
+  val Contraposition: String = "NUM_PROV_CONTRAPOSE"
+
+  /**
+   * `|- !t u. ... ==> NUM_PROV ~(t = u) ==> NUM_PROV ~(u = t)`, for closed terms.
+   *
+   * [[Symmetry]] for an equation that is denied, and not that rule read twice: what flips here is
+   * an implication `(u = t) ==> (t = u)` inside the theory, replacement at the hole `v0 = u`
+   * carried by reflexivity, and the denial travels back along it by [[Contraposition]].
+   */
+  val DeniedSymmetry: String = "NUM_PROV_NOT_EQ_SYMM"
+
+  /**
+   * `|- !t u a b. ... ==> NUM_PROV (t = a) ==> NUM_PROV (u = b) ==> NUM_PROV ~(a = b) ==>
+   * NUM_PROV ~(t = u)`, for closed terms.
+   *
+   * A denied equation carried onto two terms the theory proves equal to its sides. The two
+   * replacements give `(t = u) ==> (a = u)` and `(a = u) ==> (a = b)`, and the denial travels back
+   * through their composite. It is what turns a statement about numerals into one about the terms
+   * whose values they are.
+   */
+  val DeniedCongruence: String = "NUM_PROV_NOT_EQ_CONG"
+
+  /**
+   * PA proves two different numerals different.
+   *
+   * `|- !m n. ~(m = n) ==> NUM_PROV (code of "~(numeral m = numeral n)")`
+   *
+   * The other half of what the atomic case of completeness needs, beside [[NumeralAddition]] and
+   * [[NumeralMultiplication]], which say what a closed term IS: this says what it is NOT. The
+   * induction is on `m` at the meta level with `n` quantified inside, so the hypothesis is available
+   * at the predecessor of whichever `n` the step meets, and a case split on `n` gives the three
+   * shapes. Zero against a successor and a successor against zero are PA's `S x != 0`, once
+   * through [[DeniedSymmetry]]; two successors are its injectivity, contraposed, applied to the
+   * hypothesis.
+   */
+  val NumeralsDistinct: String = "NUM_PROV_NUMERAL_DISTINCT"
+
+  /**
+   * `|- !p q. NUM_FORM p ==> NUM_FORM q ==> NUM_PROV ~p ==> NUM_PROV (p ==> q)`
+   *
+   * A denied antecedent makes the implication provable, which is ex falso read as a rule. Weakening
+   * gives `~p ==> (~q ==> ~p)`, the contraposition axiom `(~q ==> ~p) ==> (p ==> q)`, and a
+   * syllogism joins them. With [[Weaken]], which is the case of a provable consequent, it is what
+   * completeness for closed formulas needs of an implication that holds.
+   */
+  val ImplicationOfDenial: String = "NUM_PROV_IMP_DENIED"
+
+  /**
+   * `|- !p q. NUM_FORM p ==> NUM_FORM q ==> NUM_PROV p ==> NUM_PROV ~q ==> NUM_PROV ~(p ==> q)`
+   *
+   * The implication that fails, and the one case of the three that reasons under a hypothesis
+   * inside the theory: under `p ==> q`, the hypothesis itself by [[SelfImplication]] and `p` by
+   * weakening give `q` by distribution, so `(p ==> q) ==> q` is provable, and the denial of `q`
+   * travels back along it by modus tollens.
+   */
+  val DeniedImplication: String = "NUM_PROV_NOT_IMP"
+
   val Statements: Vector[(String, String)] = Vector(
     SelfImplication -> "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p p))",
     Weaken ->
@@ -455,7 +554,33 @@ object Deduction {
     NumeralMultiplication ->
       ("!m:num n:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR " +
         "(NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL m) (NUM_NUMERAL n))) " +
-        "(NUM_NUMERAL (NUM_MUL m n))))")
+        "(NUM_NUMERAL (NUM_MUL m n))))"),
+    DoubleNegationElimination ->
+      "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 (NUM_CODE 6 p)) p))",
+    DoubleNegationIntroduction ->
+      "!p:num. NUM_FORM p ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p (NUM_CODE 6 (NUM_CODE 6 p))))",
+    Contraposition ->
+      ("!p:num q:num. NUM_FORM p ==> NUM_FORM q ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR p q)) ==> " +
+        "NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 q) (NUM_CODE 6 p)))"),
+    DeniedSymmetry ->
+      ("!t:num u:num. NUM_TERM t ==> NUM_TERM u ==> NUM_CLOSED t ==> NUM_CLOSED u ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR t u))) ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR u t)))"),
+    DeniedCongruence ->
+      ("!t:num u:num a:num b:num. NUM_TERM t ==> NUM_TERM u ==> NUM_TERM a ==> NUM_TERM b ==> " +
+        "NUM_CLOSED t ==> NUM_CLOSED u ==> NUM_CLOSED a ==> NUM_CLOSED b ==> " +
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR t a)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR u b)) ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR a b))) ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR t u)))"),
+    NumeralsDistinct ->
+      ("!m:num n:num. ~(m = n) ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL m) (NUM_NUMERAL n))))"),
+    ImplicationOfDenial ->
+      ("!p:num q:num. NUM_FORM p ==> NUM_FORM q ==> NUM_PROV (NUM_CODE 6 p) ==> " +
+        "NUM_PROV (NUM_CODE 7 (NUM_PAIR p q))"),
+    DeniedImplication ->
+      ("!p:num q:num. NUM_FORM p ==> NUM_FORM q ==> NUM_PROV p ==> NUM_PROV (NUM_CODE 6 q) ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR p q)))")
   )
 
   /** Build it over what the embedded theory can prove. It extends nothing. */
@@ -498,7 +623,17 @@ object Deduction {
             MultiplicationAtSuccessor ->
               builder.checked(MultiplicationAtSuccessor, builder.multiplicationAtSuccessor),
             NumeralMultiplication ->
-              builder.checked(NumeralMultiplication, builder.numeralMultiplication)
+              builder.checked(NumeralMultiplication, builder.numeralMultiplication),
+            DoubleNegationElimination ->
+              builder.checked(DoubleNegationElimination, builder.doubleNegationElimination),
+            DoubleNegationIntroduction ->
+              builder.checked(DoubleNegationIntroduction, builder.doubleNegationIntroduction),
+            Contraposition -> builder.checked(Contraposition, builder.contraposition),
+            DeniedSymmetry -> builder.checked(DeniedSymmetry, builder.deniedSymmetry),
+            DeniedCongruence -> builder.checked(DeniedCongruence, builder.deniedCongruence),
+            NumeralsDistinct -> builder.checked(NumeralsDistinct, builder.numeralsDistinct),
+            ImplicationOfDenial -> builder.checked(ImplicationOfDenial, builder.implicationOfDenial),
+            DeniedImplication -> builder.checked(DeniedImplication, builder.deniedImplication)
           )
         )
       )
@@ -2288,6 +2423,570 @@ object Deduction {
     }
 
     /** A finished derivation against the statement this development publishes for it. */
+    private val six = force(Parser.term(theory, notation, "6", numbers))
+
+    /** The object language's negation, as a code. */
+    private def neg(inner: Term): Term = applied(coding, List(six, inner))
+
+    private val formulaOfNegation = force(language.fact(Language.FormulaNegation))
+    private val contraposing = force(language.fact("NUM_LOGIC_CONTRAPOSE"))
+    private val substituteNegation = force(language.fact(Language.FormulaSubstituteNegation))
+    private val substituteImplication =
+      force(language.fact(Language.FormulaSubstituteImplication))
+    private lazy val syllogismRule = checked(Syllogism, syllogism)
+    private lazy val selfRule = checked(SelfImplication, selfImplication)
+    private lazy val reflexivityRule = checked(Reflexivity, reflexivity)
+
+    /** `NUM_FORM x` gives `NUM_FORM ~x`. */
+    private def formNot(x: Term, inner: Kernel.Thm): Kernel.Thm =
+      force(rules.spec(x, formulaOfNegation).flatMap(rules.mp(_, inner)))
+
+    /** `NUM_TERM a` and `NUM_TERM b` give `NUM_FORM (a = b)`. */
+    private def formEq(a: Term, b: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm =
+      force(
+        rules
+          .specAll(formulaOfEquality, List(a, b))
+          .flatMap(rules.mp(_, left))
+          .flatMap(rules.mp(_, right)))
+
+    /** `|- NUM_PROV ((~x ==> ~y) ==> (y ==> x))`, the one axiom that mentions negation. */
+    private def contrapose(x: Term, y: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm = {
+      val code = imp(imp(neg(x), neg(y)), imp(y, x))
+      axiom(
+        code,
+        force(
+          rules
+            .specTo(contraposing, imply(isFormula(x), imply(isFormula(y), isLogical(code))))
+            .flatMap(rules.mp(_, left))
+            .flatMap(rules.mp(_, right))
+        )
+      )
+    }
+
+    /** [[Syllogism]] at three formulas: `x ==> y` and `y ==> z` give `x ==> z`. */
+    private def chained(
+      x: Term, y: Term, z: Term,
+      formulaX: Kernel.Thm, formulaY: Kernel.Thm, formulaZ: Kernel.Thm,
+      first: Kernel.Thm, second: Kernel.Thm
+    ): Kernel.Thm =
+      force(
+        rules
+          .specTo(
+            syllogismRule,
+            imply(isFormula(x), imply(isFormula(y), imply(isFormula(z),
+              imply(isProvable(imp(x, y)), imply(isProvable(imp(y, z)), isProvable(imp(x, z))))))))
+          .flatMap(rules.mp(_, formulaX))
+          .flatMap(rules.mp(_, formulaY))
+          .flatMap(rules.mp(_, formulaZ))
+          .flatMap(rules.mp(_, first))
+          .flatMap(rules.mp(_, second)))
+
+    /** `h ==> (x ==> y)` and `h ==> x` give `h ==> y`: distribution, detached twice. */
+    private def underHypothesis(
+      h: Term, x: Term, y: Term,
+      formulaH: Kernel.Thm, formulaX: Kernel.Thm, formulaY: Kernel.Thm,
+      both: Kernel.Thm, antecedent: Kernel.Thm
+    ): Kernel.Thm = {
+      val shape = distribute(h, x, y, formulaH, formulaX, formulaY)
+      val middle = detach(imp(h, imp(x, y)), imp(imp(h, x), imp(h, y)), shape, both)
+      detach(imp(h, x), imp(h, y), middle, antecedent)
+    }
+
+    /** [[DoubleNegationElimination]] at one formula. The derivation is in that name's docstring. */
+    private def doubleNegationAt(x: Term, formula: Kernel.Thm): Kernel.Thm = {
+      val n1 = neg(x)
+      val n2 = neg(n1)
+      val n3 = neg(n2)
+      val n4 = neg(n3)
+      val f1 = formNot(x, formula)
+      val f2 = formNot(n1, f1)
+      val f3 = formNot(n2, f2)
+      val f4 = formNot(n3, f3)
+      val f42 = formImp(n4, n2, f4, f2)
+      val f13 = formImp(n1, n3, f1, f3)
+      val f2x = formImp(n2, x, f2, formula)
+
+      val lifted = weaken(n2, n4, f2, f4)
+      val first = contrapose(n3, n1, f3, f1)
+      val second = contrapose(x, n2, formula, f2)
+      val joined = chained(imp(n4, n2), imp(n1, n3), imp(n2, x), f42, f13, f2x, first, second)
+      val twice = chained(n2, imp(n4, n2), imp(n2, x), f2, f42, f2x, lifted, joined)
+      val self = force(rules.spec(n2, selfRule).flatMap(rules.mp(_, f2)))
+      underHypothesis(n2, n2, x, f2, f2, formula, twice, self)
+    }
+
+    /** [[DoubleNegationIntroduction]] at one formula: the axiom at `~~x` and `x`, detached. */
+    private def doubleNegationIntroducedAt(x: Term, formula: Kernel.Thm): Kernel.Thm = {
+      val n1 = neg(x)
+      val f1 = formNot(x, formula)
+      val f2 = formNot(n1, f1)
+      val axiomAt = contrapose(neg(n1), x, f2, formula)
+      detach(imp(neg(neg(n1)), n1), imp(x, neg(n1)), axiomAt, doubleNegationAt(n1, f1))
+    }
+
+    /** [[Contraposition]] at two formulas, applied to a provable implication. */
+    private def contraposedAt(
+      x: Term, y: Term, formulaX: Kernel.Thm, formulaY: Kernel.Thm, implication: Kernel.Thm
+    ): Kernel.Thm = {
+      val nx = neg(x)
+      val ny = neg(y)
+      val fnx = formNot(x, formulaX)
+      val fny = formNot(y, formulaY)
+      val fnnx = formNot(nx, fnx)
+      val fnny = formNot(ny, fny)
+      val toY = chained(neg(nx), x, y, fnnx, formulaX, formulaY,
+        doubleNegationAt(x, formulaX), implication)
+      val toNotNotY = chained(neg(nx), y, neg(ny), fnnx, formulaY, fnny,
+        toY, doubleNegationIntroducedAt(y, formulaY))
+      detach(imp(neg(nx), neg(ny)), imp(ny, nx), contrapose(nx, ny, fnx, fny), toNotNotY)
+    }
+
+    /** `NUM_PROV (x ==> y)` and `NUM_PROV ~y` give `NUM_PROV ~x`. */
+    private def tollens(
+      x: Term, y: Term, formulaX: Kernel.Thm, formulaY: Kernel.Thm,
+      implication: Kernel.Thm, denial: Kernel.Thm
+    ): Kernel.Thm =
+      detach(neg(y), neg(x), contraposedAt(x, y, formulaX, formulaY, implication), denial)
+
+    /**
+     * Replacement at a hole, NOT detached, with both instances computed away:
+     * `NUM_PROV ((from = to) ==> (hole[from] ==> hole[to]))`.
+     *
+     * [[replaced]] detaches the equation because every caller before this one held it as a
+     * theorem. A denied equation is the case where the implication itself is what is wanted.
+     */
+    private def replacement(
+      index: Term, from: Term, to: Term, hole: Term,
+      holeIsFormula: Kernel.Thm,
+      fromIsTerm: Kernel.Thm, toIsTerm: Kernel.Thm,
+      fromIsClosed: Kernel.Thm, toIsClosed: Kernel.Thm,
+      atFrom: Kernel.Thm, atTo: Kernel.Thm
+    ): Kernel.Thm = {
+      val left = substituted(index, from, hole)
+      val right = substituted(index, to, hole)
+      val instance = force(
+        rules
+          .specAll(replacing, List(index, from, to, hole))
+          .flatMap(rules.mp(_, holeIsFormula))
+          .flatMap(rules.mp(_, fromIsTerm))
+          .flatMap(rules.mp(_, toIsTerm))
+          .flatMap(rules.mp(_, fromIsClosed))
+          .flatMap(rules.mp(_, toIsClosed))
+      )
+      val law = axiom(imp(objEq(from, to), imp(left, right)), instance)
+      val ruleSet = force(Rewrite.Rule.all(logic, Vector(atFrom, atTo)))
+      force(Rewrite.inTheorem(ruleSet, law))
+    }
+
+    /** What substituting under a negation gives, with the inside already settled. */
+    private def acrossNegation(
+      index: Term, replacement: Term, inner: Term, innerDone: Kernel.Thm
+    ): Kernel.Thm = {
+      val clause = force(rules.specAll(substituteNegation, List(index, replacement, inner)))
+      force(Conv.trans(clause, codeCongruence(six, innerDone)))
+    }
+
+    /** What substituting under an implication gives, with both sides already settled. */
+    private def acrossImplication(
+      index: Term, replacement: Term, left: Term, right: Term,
+      leftDone: Kernel.Thm, rightDone: Kernel.Thm
+    ): Kernel.Thm =
+      acrossBinary(
+        substituteImplication, seven, index, replacement, left, right, leftDone, rightDone)
+
+    /** `NUM_PROV ((u = t) ==> (t = u))` for closed terms: replacement at `v0 = u`, then `u = u`. */
+    private def flipping(
+      t: Term, u: Term,
+      termT: Kernel.Thm, termU: Kernel.Thm, closedT: Kernel.Thm, closedU: Kernel.Thm
+    ): Kernel.Thm = {
+      val index = zeroTag
+      val variable = objVar(index)
+      val variableIsATerm = force(rules.spec(index, variableIsTerm))
+      val hole = objEq(variable, u)
+      val stays = (r: Term) => idle(index, r, u, termU, closedU)
+      val atU = acrossEquality(index, u, variable, u, filled(index, u), stays(u))
+      val atT = acrossEquality(index, t, variable, u, filled(index, t), stays(t))
+      val law = replacement(
+        index, u, t, hole, formEq(variable, u, variableIsATerm, termU),
+        termU, termT, closedU, closedT, atU, atT)
+
+      val reversed = objEq(u, t)
+      val wanted = objEq(t, u)
+      val same = objEq(u, u)
+      val formulaGiven = formEq(u, t, termU, termT)
+      val formulaSame = formEq(u, u, termU, termU)
+      val reflexive = force(rules.spec(u, reflexivityRule).flatMap(rules.mp(_, termU)))
+      val always = detach(same, imp(reversed, same),
+        weaken(same, reversed, formulaSame, formulaGiven), reflexive)
+      underHypothesis(reversed, same, wanted, formulaGiven, formulaSame,
+        formEq(t, u, termT, termU), law, always)
+    }
+
+    /** [[DeniedSymmetry]] at two closed terms. */
+    private def flippedDenial(
+      t: Term, u: Term,
+      termT: Kernel.Thm, termU: Kernel.Thm, closedT: Kernel.Thm, closedU: Kernel.Thm,
+      denial: Kernel.Thm
+    ): Kernel.Thm =
+      tollens(
+        objEq(u, t), objEq(t, u), formEq(u, t, termU, termT), formEq(t, u, termT, termU),
+        flipping(t, u, termT, termU, closedT, closedU), denial)
+
+    /** [[ImplicationOfDenial]]. */
+    lazy val implicationOfDenial: Kernel.Thm = {
+      val p = Term.variable("p", numbers)
+      val q = Term.variable("q", numbers)
+      val formulaP = assumed(isFormula(p))
+      val formulaQ = assumed(isFormula(q))
+      val denial = isProvable(neg(p))
+      val np = neg(p)
+      val nq = neg(q)
+      val fnp = formNot(p, formulaP)
+      val fnq = formNot(q, formulaQ)
+      val backwards = imp(nq, np)
+      val lifted = weaken(np, nq, fnp, fnq)
+      val joined = chained(np, backwards, imp(p, q), fnp, formImp(nq, np, fnq, fnp),
+        formImp(p, q, formulaP, formulaQ), lifted, contrapose(q, p, formulaQ, formulaP))
+      val reached = detach(np, imp(p, q), joined, assumed(denial))
+      force(
+        rules
+          .disch(denial, reached)
+          .flatMap(rules.disch(isFormula(q), _))
+          .flatMap(rules.disch(isFormula(p), _))
+          .flatMap(rules.genAll(_, List(p, q))))
+    }
+
+    /** [[DeniedImplication]]. */
+    lazy val deniedImplication: Kernel.Thm = {
+      val p = Term.variable("p", numbers)
+      val q = Term.variable("q", numbers)
+      val formulaP = assumed(isFormula(p))
+      val formulaQ = assumed(isFormula(q))
+      val holds = isProvable(p)
+      val denial = isProvable(neg(q))
+      val h = imp(p, q)
+      val formulaH = formImp(p, q, formulaP, formulaQ)
+      val itself = force(rules.spec(h, selfRule).flatMap(rules.mp(_, formulaH)))
+      val underIt = detach(p, imp(h, p), weaken(p, h, formulaP, formulaH), assumed(holds))
+      val modusPonens = underHypothesis(h, p, q, formulaH, formulaP, formulaQ, itself, underIt)
+      val reached = tollens(h, q, formulaH, formulaQ, modusPonens, assumed(denial))
+      force(
+        rules
+          .disch(denial, reached)
+          .flatMap(rules.disch(holds, _))
+          .flatMap(rules.disch(isFormula(q), _))
+          .flatMap(rules.disch(isFormula(p), _))
+          .flatMap(rules.genAll(_, List(p, q))))
+    }
+
+    /** [[DoubleNegationElimination]]. */
+    lazy val doubleNegationElimination: Kernel.Thm = {
+      val p = Term.variable("p", numbers)
+      val reached = doubleNegationAt(p, assumed(isFormula(p)))
+      force(rules.disch(isFormula(p), reached).flatMap(rules.gen(p, _)))
+    }
+
+    /** [[DoubleNegationIntroduction]]. */
+    lazy val doubleNegationIntroduction: Kernel.Thm = {
+      val p = Term.variable("p", numbers)
+      val reached = doubleNegationIntroducedAt(p, assumed(isFormula(p)))
+      force(rules.disch(isFormula(p), reached).flatMap(rules.gen(p, _)))
+    }
+
+    /** [[Contraposition]]. */
+    lazy val contraposition: Kernel.Thm = {
+      val p = Term.variable("p", numbers)
+      val q = Term.variable("q", numbers)
+      val reached = contraposedAt(
+        p, q, assumed(isFormula(p)), assumed(isFormula(q)), assumed(isProvable(imp(p, q))))
+      force(
+        rules
+          .disch(isProvable(imp(p, q)), reached)
+          .flatMap(rules.disch(isFormula(q), _))
+          .flatMap(rules.disch(isFormula(p), _))
+          .flatMap(rules.genAll(_, List(p, q))))
+    }
+
+    /** [[DeniedSymmetry]]. */
+    lazy val deniedSymmetry: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val u = Term.variable("u", numbers)
+      val denial = isProvable(neg(objEq(t, u)))
+      val reached = flippedDenial(
+        t, u, assumed(isTerm(t)), assumed(isTerm(u)), assumed(isClosed(t)), assumed(isClosed(u)),
+        assumed(denial))
+      force(
+        rules
+          .disch(denial, reached)
+          .flatMap(rules.disch(isClosed(u), _))
+          .flatMap(rules.disch(isClosed(t), _))
+          .flatMap(rules.disch(isTerm(u), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.genAll(_, List(t, u))))
+    }
+
+    /** [[DeniedCongruence]]. Two replacements composed, and the denial carried back through them. */
+    lazy val deniedCongruence: Kernel.Thm = {
+      val t = Term.variable("t", numbers)
+      val u = Term.variable("u", numbers)
+      val a = Term.variable("a", numbers)
+      val b = Term.variable("b", numbers)
+      val termT = assumed(isTerm(t))
+      val termU = assumed(isTerm(u))
+      val termA = assumed(isTerm(a))
+      val termB = assumed(isTerm(b))
+      val closedT = assumed(isClosed(t))
+      val closedU = assumed(isClosed(u))
+      val closedA = assumed(isClosed(a))
+      val closedB = assumed(isClosed(b))
+      val leftEqual = isProvable(objEq(t, a))
+      val rightEqual = isProvable(objEq(u, b))
+      val denial = isProvable(neg(objEq(a, b)))
+
+      val index = zeroTag
+      val variable = objVar(index)
+      val variableIsATerm = force(rules.spec(index, variableIsTerm))
+
+      // `t = u` to `a = u`, replacing at the left: the hole is `v0 = u`.
+      val leftHole = objEq(variable, u)
+      val leftMoved = replaced(
+        index, t, a, leftHole, formEq(variable, u, variableIsATerm, termU),
+        termT, termA, closedT, closedA, assumed(leftEqual),
+        acrossEquality(index, t, variable, u, filled(index, t), idle(index, t, u, termU, closedU)),
+        acrossEquality(index, a, variable, u, filled(index, a), idle(index, a, u, termU, closedU)))
+
+      // `a = u` to `a = b`, replacing at the right: the hole is `a = v0`.
+      val rightHole = objEq(a, variable)
+      val rightMoved = replaced(
+        index, u, b, rightHole, formEq(a, variable, termA, variableIsATerm),
+        termU, termB, closedU, closedB, assumed(rightEqual),
+        acrossEquality(index, u, a, variable, idle(index, u, a, termA, closedA), filled(index, u)),
+        acrossEquality(index, b, a, variable, idle(index, b, a, termA, closedA), filled(index, b)))
+
+      val formulaTU = formEq(t, u, termT, termU)
+      val formulaAU = formEq(a, u, termA, termU)
+      val formulaAB = formEq(a, b, termA, termB)
+      val through = chained(
+        objEq(t, u), objEq(a, u), objEq(a, b), formulaTU, formulaAU, formulaAB,
+        leftMoved, rightMoved)
+      val reached = tollens(
+        objEq(t, u), objEq(a, b), formulaTU, formulaAB, through, assumed(denial))
+
+      force(
+        rules
+          .disch(denial, reached)
+          .flatMap(rules.disch(rightEqual, _))
+          .flatMap(rules.disch(leftEqual, _))
+          .flatMap(rules.disch(isClosed(b), _))
+          .flatMap(rules.disch(isClosed(a), _))
+          .flatMap(rules.disch(isClosed(u), _))
+          .flatMap(rules.disch(isClosed(t), _))
+          .flatMap(rules.disch(isTerm(b), _))
+          .flatMap(rules.disch(isTerm(a), _))
+          .flatMap(rules.disch(isTerm(u), _))
+          .flatMap(rules.disch(isTerm(t), _))
+          .flatMap(rules.genAll(_, List(t, u, a, b))))
+    }
+
+    /** PA's `S x != 0` at a closed term, with the substitution computed. */
+    private def successorNotZeroAt(t: Term, termT: Kernel.Thm, closedT: Kernel.Thm): Kernel.Thm = {
+      val index = zeroTag
+      val variable = objVar(index)
+      val variableIsATerm = force(rules.spec(index, variableIsTerm))
+      val successorIsATerm =
+        force(rules.spec(variable, successorIsTerm).flatMap(rules.mp(_, variableIsATerm)))
+      val equation = objEq(objSucc(variable), objZero)
+      val body = neg(equation)
+      val bodyIsFormula = formNot(equation,
+        formEq(objSucc(variable), objZero, successorIsATerm, zeroIsTerm))
+      val computed = acrossNegation(index, t, equation,
+        acrossEquality(index, t, objSucc(variable), objZero,
+          acrossSuccessor(index, t, variable, filled(index, t)), zeroStays(index, t)))
+      axiomAt("NUM_PA_SUC_NOT_ZERO", index, t, body, bodyIsFormula, termT, closedT, computed)
+    }
+
+    /** PA's injectivity of the successor at two closed terms: `NUM_PROV (S a = S b ==> a = b)`. */
+    private def successorInjectiveAt(
+      a: Term, b: Term,
+      termA: Kernel.Thm, closedA: Kernel.Thm, termB: Kernel.Thm, closedB: Kernel.Thm
+    ): Kernel.Thm = {
+      val outer = zeroTag
+      val inner = oneTag
+      val first = objVar(outer)
+      val second = objVar(inner)
+      val firstIsTerm = force(rules.spec(outer, variableIsTerm))
+      val secondIsTerm = force(rules.spec(inner, variableIsTerm))
+      def succOf(x: Term, isTermThm: Kernel.Thm): Kernel.Thm =
+        force(rules.spec(x, successorIsTerm).flatMap(rules.mp(_, isTermThm)))
+
+      // The axiom's innermost formula, `S v0 = S v1 ==> v0 = v1`.
+      def core(x: Term, y: Term): Term = imp(objEq(objSucc(x), objSucc(y)), objEq(x, y))
+      def coreIsFormula(x: Term, y: Term, termX: Kernel.Thm, termY: Kernel.Thm): Kernel.Thm =
+        formImp(
+          objEq(objSucc(x), objSucc(y)), objEq(x, y),
+          formEq(objSucc(x), objSucc(y), succOf(x, termX), succOf(y, termY)),
+          formEq(x, y, termX, termY))
+
+      val body = forAll(inner, core(first, second))
+      val bodyIsFormula = force(
+        rules
+          .specAll(formulaOfUniversal, List(inner, core(first, second)))
+          .flatMap(rules.mp(_, coreIsFormula(first, second, firstIsTerm, secondIsTerm))))
+
+      // First: `v0` becomes `a`, under the binder for `v1`.
+      val other = missed(outer, a, inner)
+      val coreAtA = acrossImplication(
+        outer, a, objEq(objSucc(first), objSucc(second)), objEq(first, second),
+        acrossEquality(outer, a, objSucc(first), objSucc(second),
+          acrossSuccessor(outer, a, first, filled(outer, a)),
+          acrossSuccessor(outer, a, second, other)),
+        acrossEquality(outer, a, first, second, filled(outer, a), other))
+      val underBinder = acrossUniversal(outer, a, inner, core(first, second), coreAtA)
+      val once = axiomAt(
+        "NUM_PA_SUC_INJECTIVE", outer, a, body, bodyIsFormula, termA, closedA, underBinder)
+
+      // Second: `v1` becomes `b`, and `a` comes back untouched.
+      val stays = idle(inner, b, a, termA, closedA)
+      val coreAtB = acrossImplication(
+        inner, b, objEq(objSucc(a), objSucc(second)), objEq(a, second),
+        acrossEquality(inner, b, objSucc(a), objSucc(second),
+          acrossSuccessor(inner, b, a, stays),
+          acrossSuccessor(inner, b, second, filled(inner, b))),
+        acrossEquality(inner, b, a, second, stays, filled(inner, b)))
+      atClosedTerm(
+        once, inner, b, core(a, second), coreIsFormula(a, second, termA, secondIsTerm),
+        termB, closedB, coreAtB)
+    }
+
+    /** [[NumeralsDistinct]]. Induction on `m` with `n` inside, and a case split on `n`. */
+    lazy val numeralsDistinct: Kernel.Thm = {
+      val peanoTheory = language.numbering.peano
+      val naturals = peanoTheory.naturals
+      val numeralConstant = constant(Language.NumeralName, Type.fun(numbers, numbers))
+      val successorConstant = constant(Natural.NumberSuccessor, Type.fun(numbers, numbers))
+      val zero = constant(Natural.NumberZero, numbers)
+      def numeral(x: Term): Term = applied(numeralConstant, List(x))
+      def suc(x: Term): Term = applied(successorConstant, List(x))
+      def numeralTerm(x: Term): Kernel.Thm =
+        force(rules.spec(x, force(language.fact(Language.NumeralIsTerm))))
+      def numeralClosed(x: Term): Kernel.Thm =
+        force(rules.spec(x, force(language.fact(Language.NumeralIsClosed))))
+      val atZero = force(language.fact(Language.NumeralAtZero))
+      def atSuccessor(x: Term): Kernel.Thm =
+        force(rules.spec(x, force(language.fact(Language.NumeralAtSuccessor))))
+      def eq(left: Term, right: Term): Term = force(LogicError.lift(Term.eq(left, right)))
+      def not(claim: Term): Term = force(logic.mkNot(claim))
+
+      def denied(m: Term, n: Term): Term = isProvable(neg(objEq(numeral(m), numeral(n))))
+      def claim(m: Term, n: Term): Term = imply(not(eq(m, n)), denied(m, n))
+
+      /** `PROV ~(x = y)` read at the numerals whose unfolded forms `x` and `y` are. */
+      def folded(m: Term, n: Term, left: Kernel.Thm, right: Kernel.Thm, proved: Kernel.Thm)
+        : Kernel.Thm = {
+        val codes = codeCongruence(six, pairCongruence(five, left, right))
+        force(
+          Conv
+            .apTerm(provableConstant, codes)
+            .flatMap(Conv.sym)
+            .flatMap(back => LogicError.lift(Kernel.eqMp(back, proved))))
+      }
+
+      /** The goal at `n`, from the goal at a term `n` is assumed equal to. */
+      def at(m: Term, n: Term, equal: Kernel.Thm, proved: Kernel.Thm): Kernel.Thm = {
+        val hole = Conv.freshVariable("x", numbers,
+          Term.freeVariables(proved.conclusion) ++ Term.freeVariables(equal.conclusion))
+        val context = force(LogicError.lift(Term.abs(hole, claim(m, hole))))
+        val moved = force(Conv.sym(equal).flatMap(Conv.apTerm(context, _)).flatMap(Conv.betaSides))
+        force(LogicError.lift(Kernel.eqMp(moved, proved)))
+      }
+
+      /** The claim at `m` and every `n`, from its two cases on `n`. */
+      def byCases(m: Term, n: FVar, whenZero: Kernel.Thm, whenSuccessor: FVar => Kernel.Thm)
+        : Kernel.Thm = {
+        val split = force(rules.spec(n, force(naturals.fact(Natural.ZeroOrSuccessor))))
+        val (isZero, isSuccessor) = logic.destDisj(split.conclusion)
+          .getOrElse(throw new RefusedHere(NotOfForm("a disjunction", split.conclusion)))
+        val zeroCase = at(m, n, assumed(isZero), whenZero)
+        val successorCase = openAt(assumed(isSuccessor), "k", Term.freeVariables(claim(m, n))) {
+          (k, equal) => at(m, n, equal, whenSuccessor(k))
+        }
+        force(rules.disjElim(split, zeroCase, successorCase).flatMap(rules.gen(n, _)))
+      }
+
+      /** `~(x = x)` assumed, and anything at all from it. */
+      def absurd(x: Term, goal: Term): Kernel.Thm = {
+        val never = not(eq(x, x))
+        force(
+          rules
+            .notElim(assumed(never), Kernel.refl(x))
+            .flatMap(rules.falsityElim(goal, _))
+            .flatMap(rules.disch(never, _)))
+      }
+
+      val n = Term.variable("n", numbers)
+      val zeroNumeral = numeral(zero)
+
+      // `m = 0`. Against zero the hypothesis is false; against `SUC k` it is `0 != S k`, flipped.
+      val base = byCases(zero, n, absurd(zero, denied(zero, zero)), k => {
+        val inner = numeral(k)
+        val successor = objSucc(inner)
+        val termS = force(rules.spec(inner, successorIsTerm).flatMap(rules.mp(_, numeralTerm(k))))
+        val closedS = force(
+          rules
+            .spec(inner, force(language.fact(Language.ClosedSuccessor)))
+            .flatMap(rules.mp(_, numeralClosed(k))))
+        val closedZero = force(language.fact(Language.ClosedZero))
+        val flipped = flippedDenial(
+          successor, objZero, termS, zeroIsTerm, closedS, closedZero,
+          successorNotZeroAt(inner, numeralTerm(k), numeralClosed(k)))
+        val reached = folded(zero, suc(k), atZero, atSuccessor(k), flipped)
+        force(rules.disch(not(eq(zero, suc(k))), reached))
+      })
+
+      // `m = SUC j`, with the claim at `j` for every `n` as the hypothesis.
+      val j = Term.variable("j", numbers)
+      val hypothesis = force(logic.mkForall(n, claim(j, n)))
+      val step = byCases(suc(j), n, {
+        val inner = numeral(j)
+        val reached = folded(suc(j), zero, atSuccessor(j), atZero,
+          successorNotZeroAt(inner, numeralTerm(j), numeralClosed(j)))
+        force(rules.disch(not(eq(suc(j), zero)), reached))
+      }, k => {
+        val apart = not(eq(suc(j), suc(k)))
+        val same = eq(j, k)
+        val distinct = force(
+          Conv
+            .apTerm(successorConstant, assumed(same))
+            .flatMap(rules.notElim(assumed(apart), _))
+            .flatMap(rules.notIntro(same, _)))
+        val below = force(
+          rules.spec(k, assumed(hypothesis)).flatMap(rules.mp(_, distinct)))
+        val (nj, nk) = (numeral(j), numeral(k))
+        val termJ = numeralTerm(j)
+        val termK = numeralTerm(k)
+        def succTerm(x: Term, inner: Kernel.Thm): Kernel.Thm =
+          force(rules.spec(x, successorIsTerm).flatMap(rules.mp(_, inner)))
+        val injective =
+          successorInjectiveAt(nj, nk, termJ, numeralClosed(j), termK, numeralClosed(k))
+        val reached = tollens(
+          objEq(objSucc(nj), objSucc(nk)), objEq(nj, nk),
+          formEq(objSucc(nj), objSucc(nk), succTerm(nj, termJ), succTerm(nk, termK)),
+          formEq(nj, nk, termJ, termK),
+          injective, below)
+        force(rules.disch(apart, folded(suc(j), suc(k), atSuccessor(j), atSuccessor(k), reached)))
+      })
+
+      val induction = force(naturals.fact(Natural.Induction))
+      val m = Term.variable("m", numbers)
+      val predicate = force(LogicError.lift(Term.abs(m, force(logic.mkForall(n, claim(m, n))))))
+      val instance = normalised(force(rules.spec(predicate, induction)))
+      val stepClosed = force(
+        rules.disch(hypothesis, step).flatMap(rules.gen(j, _)))
+      val everything = force(
+        rules.conjIntro(base, stepClosed).flatMap(rules.mp(instance, _)))
+      force(rules.spec(m, everything).flatMap(rules.gen(m, _)))
+    }
+
     def checked(name: String, theorem: Kernel.Thm): Kernel.Thm = {
       val wanted = force(
         Statements
