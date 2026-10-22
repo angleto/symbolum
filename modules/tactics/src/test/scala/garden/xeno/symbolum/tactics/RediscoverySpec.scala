@@ -410,7 +410,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // `NUM_PROV_NOT_NOT_ELIM` .. `NUM_PROV_FALSE_EQ` (`NUM_FORM`, `NUM_TERM`, `NUM_CLOSED` and the
     // provability premises) and 3 + 4 for `NUM_PROV_IMP_DENIED` and `NUM_PROV_NOT_IMP`. The 27 were
     // read off a run before the last two joined and equal to the count; the 7 are derived.
-    propose.weakenings.size shouldBe 923
+    // 888 with `DERIVATIVE_WITHIN_TANGENT` stated without `a <= b`, 2026-10-22, card `514c3cd7`: the
+    // hypothesis followed from the point's two bounds, so the fact has one antecedent fewer. Derived
+    // before the run and equal to it. Minus one from the base above.
+    // 922 with both, merged 2026-10-22: 923 less the one antecedent the tangent lemma dropped.
+    propose.weakenings.size shouldBe 922
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

@@ -288,7 +288,7 @@ object Integral {
       ("!f:real -> real. !a:real. !b:real. !x:real. (!x:real. a <= x /\\ x <= b ==> continuous f x) ==> " +
         "a < x ==> x < b ==> derivative (\\y:real. integral f a y) x (f x)"),
     TangentSlope ->
-      ("!f:real -> real. !df:real -> real. !a:real. !b:real. !x:real. a <= b ==> " +
+      ("!f:real -> real. !df:real -> real. !a:real. !b:real. !x:real. " +
         "(!y:real. a <= y /\\ y <= b ==> derivative_within f a b y (df y)) ==> a <= x ==> x <= b ==> " +
         "derivative (\\y:real. COND (y < a) (f a + df a * (y - a)) (COND (b < y) (f b + df b * (y - b)) (f y))) x (df x)"),
     HasPartsWithin ->

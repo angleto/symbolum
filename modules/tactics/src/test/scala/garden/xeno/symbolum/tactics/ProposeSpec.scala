@@ -451,7 +451,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 923 with negation and implication in the embedded arithmetic, 2026-10-22, card `4102f131`: one
     // residue per hypothesis of nine facts, the count `RediscoverySpec` gives beside the same figure.
     // Plus thirty-four over the base above.
-    proposals.size shouldBe 923
+    // 888 with `DERIVATIVE_WITHIN_TANGENT` stated without its redundant `a <= b`, 2026-10-22, card
+    // `514c3cd7`: one residue fewer, derived before the run and equal to it.
+    // 922 with both, merged 2026-10-22: 923 less the one residue the tangent lemma dropped.
+    proposals.size shouldBe 922
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1473,7 +1476,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 822 with negation and implication in the embedded arithmetic, 2026-10-22, card `4102f131`,
     // read off the run and not decomposed: thirty-one of the thirty-four new weakenings, each a
     // claim about `NUM_PROV` that no procedure has a reading of. Plus thirty-one.
-    open shouldBe 822
+    // 790 with `DERIVATIVE_WITHIN_TANGENT` stated without its redundant `a <= b`, 2026-10-22, card
+    // `514c3cd7`: the residue that left was this bucket's, read off the run. Minus one.
+    // 821 with both, merged 2026-10-22: 822 less the one residue that left this bucket.
+    open shouldBe 821
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
