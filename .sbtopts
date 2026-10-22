@@ -3,3 +3,15 @@
 # nobody queued for, and a client joins every argument into one command line. `--server` runs sbt
 # in the foreground, as sbt 1 did, for every invocation that starts here: people, tools and CI.
 --server
+# The launcher's heap, which since the tests left it on 2026-09-25 is the compiler's and nothing
+# else's. 1024 MB, the runner's default, stopped holding the instrumented compile of `theories` on
+# 2026-10-21: the coverage job on CI died of `OutOfMemoryError` in it, and here the same compile
+# spent 86 to 89% of its time collecting. Measured on 2026-10-22 under a 3 GB ceiling with a GC log,
+# `clean coverage theories/compile` keeps 1178 MB live after a young or mixed collection, so 2048
+# leaves about 850 MB, and the next time it stops holding the cause is the module's size, which is
+# a question about splitting `theories` rather than about this number.
+#
+# `--mem` and not `-J-Xmx2g`: the runner drops ALL its memory defaults when it sees any `-Xmx`,
+# `-Xms` or `-Xss`, so `-J-Xmx2g` alone runs the compiler without `-Xss4M`. `--mem` moves the heap
+# and keeps the rest.
+--mem 2048

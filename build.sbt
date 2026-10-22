@@ -257,8 +257,9 @@ lazy val commonSettings = Seq(
    * left out below, and it did not lower the peak: a whole `tools/sbt test` measured the same way
    * peaked at 2924 MB, launcher 1486 and fork 1438, because `tactics` uses most of its heap anyway.
    * What leaving it out saves is the smaller modules' footprint while they run. `-Xmx1024m` and
-   * `-Xss4M` are the launcher's own defaults, so every module is measured at the heap the whole
-   * suite used to share.
+   * `-Xss4M` are the runner's own defaults, which the launcher ran at until 2026-10-22, so every
+   * module is measured at the heap the whole suite used to share. The launcher has 2048 MB since
+   * then, for the compiler, and `.sbtopts` says why; those figures above are from before it.
    *
    * WHAT IT DOES NOT COVER. The first reason was measured on sbt 1.10.10, and this build has run
    * sbt 2.0.9 since 2026-09-25: whether sbt 2 keeps a finished module's test state was not measured,

@@ -129,11 +129,12 @@ jobs:
   # `target/`; `clean` is kept anyway so that this line and the one a person types are the same
   # line.
   #
-  # No `-J-Xmx`, and since 2026-09-25 it would not reach the tests anyway. Each module's tests run
-  # in a JVM sbt forks for them, one module at a time, at the `-Xmx1024m` `Test / javaOptions` sets
-  # in `build.sbt`, which is the launcher's default and the heap every floor there was measured at
-  # while the suite still ran inside the launcher. `-J-Xmx` now reaches only the launcher, which
-  # compiles; the comment on `Test / fork` is why the tests left it.
+  # No `-J-Xmx` here: the launcher's heap is in `.sbtopts`, which this runner reads as a laptop does,
+  # so the two compile under the same 2048 MB, and that file says why it is `--mem` and why 2048.
+  # The tests never see it. Each module's run in a JVM sbt forks for them, one module at a time, at
+  # the `-Xmx1024m` `Test / javaOptions` sets in `build.sbt`, the heap every floor there was
+  # measured at while the suite still ran inside the launcher; the comment on `Test / fork` is why
+  # the tests left it.
   #
   # One JDK where the suite above runs two. What a floor gates is which statements execute, and that
   # is the same question on 11 and on 17, so a second copy doubles the minutes and not the answer.
