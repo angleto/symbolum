@@ -184,7 +184,7 @@ together they state a complete ordered field, which no derivation can.
 | `law LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `law COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
-## The definitions (201)
+## The definitions (206)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -195,8 +195,10 @@ axiom mentioning it means.
 | `definition /\` | /\ = \p:bool. \q:bool. (\f:bool -> bool -> bool. f p q) = (\f:bool -> bool -> bool. f T T) | **NOT READ** |  |  |
 | `definition ==>` | ==> = \p:bool. \q:bool. (p /\ q) = p | **NOT READ** |  |  |
 | `definition ?` | ? = \f:'A -> bool. !p:bool. (!x:'A. f x ==> p) ==> p | **NOT READ** |  |  |
+| `definition Argmax` | Argmax = \f:num -> real. select (\g:num -> num. g 0 = 0 /\ (!n:num. g (SUC n) = COND (Maximum f n < f (SUC n)) (SUC n) (g n))) | **NOT READ** |  |  |
 | `definition BIT0` | BIT0 = \x:real. x + x | **NOT READ** |  |  |
 | `definition BIT1` | BIT1 = \x:real. x + x + 1 | **NOT READ** |  |  |
+| `definition CHANNEL` | CHANNEL = \n:num. \m:num. \f:num -> num -> real. !k:num. k < n ==> DISTRIBUTION m (f k) | **NOT READ** |  |  |
 | `definition COMPLEX` | COMPLEX = \x:real. \y:real. mk_complex (PAIR x y) | **NOT READ** |  |  |
 | `definition COND` | COND = \p:bool. \x:'a. \y:'a. select (\z:'a. (p ==> z = x) /\ (~p ==> z = y)) | **NOT READ** |  |  |
 | `definition CUT_ADD` | CUT_ADD = \x:real. \y:real. mk_cut (\z:rat. ?u:rat. dest_cut x u /\ dest_cut y (RAT_ADD z (RAT_NEG u))) | **NOT READ** |  |  |
@@ -208,6 +210,7 @@ axiom mentioning it means.
 | `definition CUT_OF_RAT` | CUT_OF_RAT = \x:rat. mk_cut (\y:rat. RAT_LT y x) | **NOT READ** |  |  |
 | `definition CUT_PINV` | CUT_PINV = \x:real. mk_cut (\y:rat. RAT_LE y RAT_ZERO \/ (?z:rat. ~(dest_cut x z) /\ RAT_LT RAT_ZERO z /\ RAT_LT (RAT_MUL y z) RAT_ONE)) | **NOT READ** |  |  |
 | `definition CUT_PMUL` | CUT_PMUL = \x:real. \y:real. mk_cut (\z:rat. RAT_LT z RAT_ZERO \/ (?u:rat. ?v:rat. dest_cut x u /\ dest_cut y v /\ RAT_LT RAT_ZERO u /\ RAT_LT RAT_ZERO v /\ RAT_LT z (RAT_MUL u v))) | **NOT READ** |  |  |
+| `definition DISTRIBUTION` | DISTRIBUTION = \n:num. \f:num -> real. (!m:num. m < n ==> 0 <= f m) /\ Sum f n = 1 | **NOT READ** |  |  |
 | `definition Divides` | Divides = \x:real. \y:real. ?z:real. y = x * z | **NOT READ** |  |  |
 | `definition F` | F = !p:bool. p | **NOT READ** |  |  |
 | `definition FST` | FST = \x:prod('a, 'b). select (\y:'a. ?z:'b. x = PAIR y z) | **NOT READ** |  |  |
@@ -243,6 +246,7 @@ axiom mentioning it means.
 | `definition MAT_SMUL` | MAT_SMUL = \x:real. \y:prod(prod(real, real), prod(real, real)). MAT2 (x * MAT_E11 y) (x * MAT_E12 y) (x * MAT_E21 y) (x * MAT_E22 y) | **NOT READ** |  |  |
 | `definition MAT_TRANSPOSE` | MAT_TRANSPOSE = \x:prod(prod(real, real), prod(real, real)). MAT2 (MAT_E11 x) (MAT_E21 x) (MAT_E12 x) (MAT_E22 x) | **NOT READ** |  |  |
 | `definition MONOTONE` | MONOTONE = \f:('a -> bool) -> 'a -> bool. !g:'a -> bool. !h:'a -> bool. (!x:'a. g x ==> h x) ==> (!x:'a. f g x ==> f h x) | **NOT READ** |  |  |
+| `definition Maximum` | Maximum = \f:num -> real. select (\g:num -> real. g 0 = f 0 /\ (!n:num. g (SUC n) = max (g n) (f (SUC n)))) | **NOT READ** |  |  |
 | `definition NUM_ADD` | NUM_ADD = \n:num. select (\f:num -> num. f 0 = n /\ (!m:num. f (SUC m) = SUC (f m))) | **NOT READ** |  |  |
 | `definition NUM_ALL_BELOW` | NUM_ALL_BELOW = \n:num. \m:num. \k:num. \i:num. NUM_CODE 8 (NUM_PAIR m (NUM_CODE 7 (NUM_PAIR (NUM_LESS n (NUM_CODE 0 m) k) i))) | **NOT READ** |  |  |
 | `definition NUM_AND` | NUM_AND = \n:num. \m:num. NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR n (NUM_CODE 6 m))) | **NOT READ** |  |  |
@@ -325,6 +329,7 @@ axiom mentioning it means.
 | `definition SUC` | SUC = \n:num. mk_num (IND_SUC (dest_num n)) | **NOT READ** |  |  |
 | `definition Sum` | Sum = \f:num -> real. select (\g:num -> real. g 0 = 0 /\ (!n:num. g (SUC n) = g n + f n)) | **NOT READ** |  |  |
 | `definition T` | T = (\p:bool. p) = (\p:bool. p) | **NOT READ** |  |  |
+| `definition VALUE` | VALUE = \n:num. \m:num. \k:num. \f:num -> real. \g:num -> num -> real. \h:num -> num -> real. Sum (\i:num. Maximum (\j:num. Sum (\n1:num. f n1 * g n1 i * h j n1) n) k) m | **NOT READ** |  |  |
 | `definition WORD_CONCAT` | WORD_CONCAT = \x:word('a). \y:word('a). WORD_MAKE (WORD_LENGTH x + WORD_LENGTH y) (\n:num. COND (n < WORD_LENGTH x + WORD_LENGTH y) (COND (n < WORD_LENGTH x) (WORD_NTH x n) (WORD_NTH y (NUM_SUB n (WORD_LENGTH x)))) WORD_PAD) | **NOT READ** |  |  |
 | `definition WORD_EMPTY` | WORD_EMPTY = WORD_MAKE (0:num) (\n:num. (WORD_PAD:'a)) | **NOT READ** |  |  |
 | `definition WORD_FACTOR` | WORD_FACTOR = \x:word('a). \y:word('a). ?z:word('a). ?u:word('a). y = WORD_CONCAT (WORD_CONCAT z x) u | **NOT READ** |  |  |

@@ -275,14 +275,16 @@ class ChainSpec extends AnyFlatSpec with Matchers {
     // rule and nothing about their subject.
     // **And again on 2026-10-05**, to `Complex`, the sixteenth: a type and its operations, which
     // read `pi` and `acos` and so sit above the circle.
-    chain.widest shouldBe chain.complex
-    chain.widest.theory.constants.keySet shouldBe chain.complex.theory.constants.keySet
+    // **And again on 2026-10-22**, to `Decision`, the seventeenth: finite distributions and the
+    // value of an experiment, written in the complex numbers' steps and so above them.
+    chain.widest shouldBe chain.decision
+    chain.widest.theory.constants.keySet shouldBe chain.decision.theory.constants.keySet
     Vector(
       chain.series, chain.peano, chain.modular, chain.product, chain.word, chain.matrix,
       chain.rotation, chain.magnitude, chain.coding, chain.numbering, chain.provability, chain.limit,
       chain.transcendental, chain.concatenation, chain.inductive, chain.integers, chain.inclusion,
       chain.listing, chain.folding, chain.root, chain.continuity, chain.resolving, chain.derivative,
-      chain.integral, chain.circle
+      chain.integral, chain.circle, chain.complex
     ).foreach(earlier =>
       chain.widest.theory.constants.keySet should contain allElementsOf earlier.theory.constants.keySet
     )

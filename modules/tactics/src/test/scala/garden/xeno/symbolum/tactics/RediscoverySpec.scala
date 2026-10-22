@@ -414,7 +414,11 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // hypothesis followed from the point's two bounds, so the fact has one antecedent fewer. Derived
     // before the run and equal to it. Minus one from the base above.
     // 922 with both, merged 2026-10-22: 923 less the one antecedent the tangent lemma dropped.
-    propose.weakenings.size shouldBe 922
+    // 900 with `Decision`, 2026-10-22, cards `38b56577`, `a5c6f793`, `443e4c06`: one antecedent on
+    // each of ten facts and two on `ARGMAX_UNIQUE`, counted from `Decision.Statements` before the
+    // run and equal to it. Plus eleven over the base above.
+    // 933 with all three, merged 2026-10-22: 922 plus `Decision`'s eleven.
+    propose.weakenings.size shouldBe 933
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -566,7 +570,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 157 with the fundamental theorem of algebra, 2026-10-21, derived and read off the run:
     // `COMPLEX_NORM_TRIANGLE` writes `+` and `<=` with no lambda in the body; the three norm
     // equations write no operator, and the three about polynomials carry the sum's lambda.
-    propose.mutable.size shouldBe 157
+    // 159 with `Decision`, 2026-10-22, read off the run: two of its facts write an operator with no
+    // lambda in the body. Plus two over the base above.
+    propose.mutable.size shouldBe 159
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

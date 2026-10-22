@@ -89,7 +89,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       // pi, the periods and acos, 2026-09-27, in the change that added the link.
       chain.circle.facts.size +
       // The complex numbers, 2026-10-05, in the change that added the link.
-      chain.complex.facts.size
+      chain.complex.facts.size +
+      // Finite distributions and Blackwell's easy direction, 2026-10-22, in the change that added
+      // the link, and added before the run rather than after it caught the sum.
+      chain.decision.facts.size
 
     library.entries.size shouldBe expected
 
@@ -816,8 +819,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // facts under nine names, none shared, eight in `Deduction` and `NUM_PROV_FALSE_EQ` in `Truth`.
     // Seven of them moved `CLAUDE.md`'s figures by seven, five and five, read off a run before the
     // two about implication joined them.
-    library.entries.size shouldBe 1058
-    library.names.distinct.size shouldBe 1055
+    // 1067 and 1064 with `Decision`, 2026-10-22, cards `38b56577`, `a5c6f793`, `443e4c06`: eighteen
+    // facts under eighteen names, none shared, derived from `Decision.Statements` before the run and
+    // equal to it. `CLAUDE.md`'s figures move by eighteen, sixteen and ten, read off the run.
+    // 1076 and 1073 with both, merged 2026-10-22: nine from negation and implication and eighteen
+    // from `Decision`, none shared.
+    library.entries.size shouldBe 1076
+    library.names.distinct.size shouldBe 1073
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {
