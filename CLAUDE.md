@@ -163,19 +163,22 @@ session named would be a different tool with the same name.
   worktree that has never been built or after `clean`. There is no check for this, and `build.sbt`
   says why there cannot easily be one.
 
-  **Never pass `-J-Xmx` to it, and the reason is measured rather than cautious.** Since
-  2026-09-25 each module's tests run in a JVM of their own, one module at a time, at `-Xmx1024m
-  -Xss4M`, which is what `Test / javaOptions` in `build.sbt` says and what the launcher's own
-  default is; before that day nothing forked and the whole suite shared the launcher's 1g, which
-  is the heap **every floor in `build.sbt` was measured at**. So `-J-Xmx` now reaches only the
-  launcher, which compiles and no longer runs a test. Why the tests left it is in the comment on
-  `Test / fork`: `tools/sbt test` died of `OutOfMemoryError` in every aggregated run on 2026-09-24
-  and 25, because sbt 1.10.10 keeps a finished module's test state for the whole session and
-  because the aggregated run holds several modules' chains at once. The price is a second JVM:
-  2924 MB of physical footprint at the peak of one `tools/sbt test`, launcher and fork together,
-  measured with `footprint`, since `ps` leaves out the pages this machine compresses.
+  **The launcher's heap is 2048 MB, set once in `.sbtopts`, and nothing passes `-J-Xmx` on a
+  command line.** Since 2026-09-25 each module's tests run in a JVM of their own, one module at a
+  time, at `-Xmx1024m -Xss4M`, which is what `Test / javaOptions` in `build.sbt` says; before that
+  day nothing forked and the whole suite shared the launcher's 1g, which is the heap **every floor
+  in `build.sbt` was measured at**, and it is still the heap every test runs at. Why the tests left
+  the launcher is in the comment on `Test / fork`. What the launcher does since then is compile, and
+  on 2026-10-21 the instrumented compile of `theories` stopped fitting in the runner's default 1g:
+  CI's coverage job died of `OutOfMemoryError` in it, so the floors were never asked. Measured the
+  next day, that compile keeps 1178 MB live, and `.sbtopts` carries the measurement and why the
+  setting is `--mem 2048`: a `-J-Xmx` drops every memory default the runner has, `-Xss4M` with it.
+  One file and not a flag because laptop, tools and CI all read it, so a figure measured in one
+  place was measured under the heap of the others. The price is the launcher's footprint, 2 GB of
+  heap beside a 1 GB fork. When 2048 stops holding, the cause is the size of one module and the
+  question is splitting it, not this number.
 
-  Before that change, granting more made the run likelier to die, which is the opposite of what it looked like. Measured
+  Before the tests left the launcher, granting it more made the run likelier to die, which is the opposite of what it looked like. Measured
   on 2026-09-16 against `4b96fe1`, same command, same tree, quiet machine, the two runs minutes
   apart: at the default the gate **landed in 10m15s with a peak resident set of 1922 MB**; at
   `-J-Xmx2g` it **died after about 8.5 minutes having written no report**, with a peak of 2380 MB.
