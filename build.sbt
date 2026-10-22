@@ -1414,8 +1414,8 @@ lazy val warningProbe = (project in file("tools/fatal-warnings-probe"))
     publish / skip := true,
 
     // Measured rather than instrumented, in both senses: this project is no part of any module's
-    // coverage, and the options it compiles under are stripped of the plugin that would make it
-    // one.
+    // coverage. `coverageEnabled := false` is what keeps it out, and the filter strips the option
+    // scoverage would add, as a second layer.
     coverageEnabled := false,
     Compile / compile / scalacOptions ~= withoutInstrumentation,
     Compile / compile / logManager := quietly
