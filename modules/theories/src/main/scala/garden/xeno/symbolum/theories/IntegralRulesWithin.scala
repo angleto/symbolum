@@ -285,8 +285,9 @@ private[theories] object IntegralRulesWithin {
   /* ------------------------------------------------------------------ the extension's slope */
 
   /**
-   * `|- !f df a b x. a <= b ==> (!y. a <= y /\ y <= b ==> derivative_within f a b y (df y)) ==>
-   *     a <= x ==> x <= b ==> derivative T x (df x)`, `T` the tangent extension.
+   * `|- !f df a b x. (!y. a <= y /\ y <= b ==> derivative_within f a b y (df y)) ==>
+   *     a <= x ==> x <= b ==> derivative T x (df x)`, `T` the tangent extension. `a <= b` is not
+   *     asked: it follows from the point's two bounds, and the derivation reads it off them.
    */
   private def tangentSlope(steps: Steps, held: Held, glued: Kernel.Thm, line: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
     import steps.*
@@ -413,10 +414,11 @@ private[theories] object IntegralRulesWithin {
       } yield result
 
     for {
-      ab <- assume("a:real <= b:real")
       slopes <- assume(Slopes)
       ax <- assume("a:real <= x:real")
       xb <- assume("x:real <= b:real")
+      ab <- steps.at(lemma("!a:real x:real b:real. a <= x ==> x <= b ==> a <= b"), "a:real", "x:real", "b:real")
+        .flatMap(mp(_, Right(ax), Right(xb)))
       target = s"\\t:real. derivative $T t ($DF t)"
       result0 <- split(steps, held, "a:real < x:real")(
         strictlyAbove =>
@@ -497,7 +499,7 @@ private[theories] object IntegralRulesWithin {
             result <- moved(steps, target, back, atA)
           } yield result
       )
-      result <- closeOver(steps, result0, List("x:real <= b:real", "a:real <= x:real", Slopes, "a:real <= b:real"),
+      result <- closeOver(steps, result0, List("x:real <= b:real", "a:real <= x:real", Slopes),
         List("f:real -> real", "df:real -> real", "a:real", "b:real", "x:real"))
     } yield result
   }
@@ -529,7 +531,7 @@ private[theories] object IntegralRulesWithin {
   }
 
   /** `!x. a <= x /\ x <= b ==> derivative T x (dfn x)`, from the relative slopes of `fn`. */
-  private def extendedSlopes(steps: Steps, extension: Kernel.Thm, fn: String, dfn: String, relative: Kernel.Thm, ab: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
+  private def extendedSlopes(steps: Steps, extension: Kernel.Thm, fn: String, dfn: String, relative: Kernel.Thm): Either[LogicError, Kernel.Thm] = {
     import steps.*
     for {
       xv <- variable(steps, "x:real")
@@ -538,7 +540,7 @@ private[theories] object IntegralRulesWithin {
       ax <- rules.conjElim1(pm)
       xb <- rules.conjElim2(pm)
       slope <- specialised(steps, extension, fn, dfn, "a:real", "b:real", "x:real")
-        .flatMap(mp(_, Right(ab), Right(relative), Right(ax), Right(xb)))
+        .flatMap(mp(_, Right(relative), Right(ax), Right(xb)))
       result <- rules.disch(member, slope).flatMap(rules.gen(xv, _))
     } yield result
   }
@@ -564,8 +566,8 @@ private[theories] object IntegralRulesWithin {
         for { done <- acc; one <- assume(text) } yield done :+ one
       }
       ab = assumed(0)
-      slopesF <- extendedSlopes(steps, extension, fn, dfn, assumed(1), ab)
-      slopesG <- extendedSlopes(steps, extension, gn, dgn, assumed(2), ab)
+      slopesF <- extendedSlopes(steps, extension, fn, dfn, assumed(1))
+      slopesG <- extendedSlopes(steps, extension, gn, dgn, assumed(2))
       agreeF <- agreesOn(steps, held, fn, dfn)
       agreeG <- agreesOn(steps, held, gn, dgn)
       xv <- variable(steps, "x:real")
@@ -625,7 +627,7 @@ private[theories] object IntegralRulesWithin {
         for { done <- acc; one <- assume(text) } yield done :+ one
       }
       ab = assumed(0)
-      slopesG <- extendedSlopes(steps, extension, gn, dgn, assumed(2), ab)
+      slopesG <- extendedSlopes(steps, extension, gn, dgn, assumed(2))
       rule <- specialised(steps, held.hasSubstitution, bigF, fn, tg, dgn, "a:real", "b:real")
         .flatMap(mp(_, Right(ab), Right(assumed(1)), Right(slopesG)))
       agreeG <- agreesOn(steps, held, gn, dgn)
@@ -686,11 +688,7 @@ private[theories] object IntegralRulesWithin {
       bIn <- rules.conjIntro(ab, bb)
       imageA <- specialised(steps, image, "a:real").flatMap(rules.mp(_, aIn))
       imageB <- specialised(steps, image, "b:real").flatMap(rules.mp(_, bIn))
-      cga <- rules.conjElim1(imageA)
-      gad <- rules.conjElim2(imageA)
-      cd <- steps.at(lemma("!u:real v:real w:real. u <= v ==> v <= w ==> u <= w"), lo, s"$gn a:real", hi)
-        .flatMap(mp(_, Right(cga), Right(gad)))
-      slopesG <- extendedSlopes(steps, extension, gn, dgn, slopesG0, ab)
+      slopesG <- extendedSlopes(steps, extension, gn, dgn, slopesG0)
       agreeG <- agreesOn(steps, held, gn, dgn)
       agreeF <- agreesOn(steps, held, bigF, fn, lo, hi)
       xv <- variable(steps, "x:real")
@@ -702,7 +700,7 @@ private[theories] object IntegralRulesWithin {
         low <- rules.conjElim1(inImage)
         high <- rules.conjElim2(inImage)
         atG <- specialised(steps, extension, bigF, fn, lo, hi, s"$gn x:real")
-          .flatMap(mp(_, Right(cd), Right(slopesF), Right(low), Right(high)))
+          .flatMap(mp(_, Right(slopesF), Right(low), Right(high)))
         toExtension <- rules.spec(xv, agreeG).flatMap(rules.mp(_, pm)).flatMap(Conv.sym)
         atT <- moved(steps, s"\\t:real. derivative $tF t ($fn t)", toExtension, atG)
         r <- rules.disch(member, atT).flatMap(rules.gen(xv, _))

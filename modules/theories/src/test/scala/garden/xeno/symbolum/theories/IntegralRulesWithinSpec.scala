@@ -111,7 +111,7 @@ class IntegralRulesWithinSpec extends AnyFlatSpec with Matchers {
   "The tangent extension" should "give abs a two-sided slope at 0, where abs itself has none" in {
     witness.noSlopeAtZero.hypotheses shouldBe empty
     val extended = mp(at(fact(Integral.TangentSlope), function("abs"), function("\\x:real. (1:real)"),
-      real(zero), real(one), real(zero)), lemma("(0:real) <= 1"), witness.relative, lemma("(0:real) <= 0"), lemma("(0:real) <= 1"))
+      real(zero), real(one), real(zero)), witness.relative, lemma("(0:real) <= 0"), lemma("(0:real) <= 1"))
     extended.hypotheses shouldBe empty
     extended.conclusion shouldBe proposition(
       "derivative (\\y:real. COND (y < 0) (abs 0 + 1 * (y - 0)) (COND (1 < y) (abs 1 + 1 * (y - 1)) (abs y))) 0 1")

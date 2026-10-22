@@ -448,7 +448,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 889 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, card `1ab3b15f`: one
     // residue on each of the two inversions and the two Collatz theorems, counted from their
     // `Statements` before the run and equal to it. Plus four over the base above.
-    proposals.size shouldBe 889
+    // 888 with `DERIVATIVE_WITHIN_TANGENT` stated without its redundant `a <= b`, 2026-10-22, card
+    // `514c3cd7`: one residue fewer, derived before the run and equal to it.
+    proposals.size shouldBe 888
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1467,7 +1469,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 791 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, read off the run and
     // not decomposed: their four weakenings and the other sources' proposals over their five facts,
     // less what went to the other buckets. Plus two over the base above.
-    open shouldBe 791
+    // 790 with `DERIVATIVE_WITHIN_TANGENT` stated without its redundant `a <= b`, 2026-10-22, card
+    // `514c3cd7`: the residue that left was this bucket's, read off the run. Minus one.
+    open shouldBe 790
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:

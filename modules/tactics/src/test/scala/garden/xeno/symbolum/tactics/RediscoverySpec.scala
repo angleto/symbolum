@@ -405,7 +405,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // antecedent on each of the two inversions (`0 < m`) and on each of the two Collatz theorems (the
     // four equations, a conjunction), none on `COLLATZ_SHORTCUT_EXISTS`; counted from the two
     // `Statements` before the run and equal to it.
-    propose.weakenings.size shouldBe 889
+    // 888 with `DERIVATIVE_WITHIN_TANGENT` stated without `a <= b`, 2026-10-22, card `514c3cd7`: the
+    // hypothesis followed from the point's two bounds, so the fact has one antecedent fewer. Derived
+    // before the run and equal to it. Minus one from the base above.
+    propose.weakenings.size shouldBe 888
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
