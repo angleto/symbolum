@@ -176,7 +176,7 @@ together they state a complete ordered field, which no derivation can.
 | `law MUL_ONE` | !x:real. x * 1 = x | **NOT READ** |  |  |
 | `law MUL_INVERSE` | !x:real. ~(x = 0) ==> x * inv x = 1 | **NOT READ** |  |  |
 | `law DISTRIBUTE` | !x:real. !y:real. !z:real. x * (y + z) = x * y + x * z | **NOT READ** |  |  |
-| `law ONE_NOT_ZERO` | ~(1 = 0) | **NOT READ** |  |  |
+| `law ONE_NOT_ZERO` | ~((1:real) = (0:real)) | **NOT READ** |  |  |
 | `law LT_IRREFLEXIVE` | !x:real. ~(x < x) | **NOT READ** |  |  |
 | `law LT_TRANSITIVE` | !x:real. !y:real. !z:real. x < y /\ y < z ==> x < z | **NOT READ** |  |  |
 | `law LT_TOTAL` | !x:real. !y:real. x < y \/ x = y \/ y < x | **NOT READ** |  |  |
@@ -326,7 +326,7 @@ axiom mentioning it means.
 | `definition Sum` | Sum = \f:num -> real. select (\g:num -> real. g 0 = 0 /\ (!n:num. g (SUC n) = g n + f n)) | **NOT READ** |  |  |
 | `definition T` | T = (\p:bool. p) = (\p:bool. p) | **NOT READ** |  |  |
 | `definition WORD_CONCAT` | WORD_CONCAT = \x:word('a). \y:word('a). WORD_MAKE (WORD_LENGTH x + WORD_LENGTH y) (\n:num. COND (n < WORD_LENGTH x + WORD_LENGTH y) (COND (n < WORD_LENGTH x) (WORD_NTH x n) (WORD_NTH y (NUM_SUB n (WORD_LENGTH x)))) WORD_PAD) | **NOT READ** |  |  |
-| `definition WORD_EMPTY` | WORD_EMPTY = WORD_MAKE 0 (\n:num. WORD_PAD) | **NOT READ** |  |  |
+| `definition WORD_EMPTY` | WORD_EMPTY = WORD_MAKE (0:num) (\n:num. (WORD_PAD:'a)) | **NOT READ** |  |  |
 | `definition WORD_FACTOR` | WORD_FACTOR = \x:word('a). \y:word('a). ?z:word('a). ?u:word('a). y = WORD_CONCAT (WORD_CONCAT z x) u | **NOT READ** |  |  |
 | `definition WORD_LENGTH` | WORD_LENGTH = \x:word('a). FST (dest_word x) | **NOT READ** |  |  |
 | `definition WORD_MAKE` | WORD_MAKE = \n:num. \f:num -> 'a. mk_word (PAIR n f) | **NOT READ** |  |  |

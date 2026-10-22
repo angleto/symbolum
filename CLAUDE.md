@@ -343,8 +343,9 @@ session named would be a different tool with the same name.
   twenty-six leaks its counter and forty-six seals a pocket, and `MarkSpec` asserts all five.
 - **Regenerating `docs/reading-register.md`:**
   `tools/sbt "theories/runMain garden.xeno.symbolum.theories.Register"`. The same arrangement as the lemmas, for the
-  three things nothing but a reader checks: every axiom, every defined constant and every row of the
-  precedence table, each with whether somebody has read it, when, and against which source.
+  four things nothing but a reader checks: every axiom, every law of the reals, every defined
+  constant and every row of the precedence table, each with whether somebody has read it, when, and
+  against which source.
   Everything says **NOT READ**, because nothing has been. The attestations are written by hand in
   `docs/reading-register-attestations.txt` and are folded in by the generator, so a reading survives
   the regeneration and nothing is ever recorded by editing the generated block. `RegisterSpec` fails
