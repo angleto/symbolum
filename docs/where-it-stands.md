@@ -1192,6 +1192,21 @@ shift, `iterate (r + 2^t q) t = iterate r t + c q`, rather than through the pari
 **What is not here**: the slope as `3^s / 2^t` (the source's Theorem 1), the forms (A) and (B), and
 any closed form of the coefficients, which the source says has none.
 
+**Finite distributions and Blackwell's easy direction are `Decision`, a link since 2026-10-22.**
+`docs/adr/0063` is the decision. A distribution on `n` outcomes is a function on `[0, n)` that
+`DISTRIBUTION` says is one, a channel is a distribution of signals per state, and `VALUE` is the
+expected utility of the Bayes-optimal action, written before conditioning so that a signal of
+probability zero asks for no case; `VALUE_POSTERIOR` is the textbook's posterior form wherever every
+signal has positive probability. `Maximum` and `Argmax` are a finite maximum and the first index
+taking it, by recursion. `BLACKWELL_GARBLING` says that an experiment obtained from another through a
+channel is worth no more for any prior, any actions and any utility, and its only hypothesis is that
+the garbling is a channel. `DecisionSpec` certifies the essay's case E5
+(`thinktank/utitlita_e_danno`): `7/20` with the signal alone, `9/16` with the frame on average and
+`1/8` for the same reader on new tasks, three theorems with nothing assumed, so the monotonicity holds
+on average over the tasks and not conditioned on the task. **What is not here**: the converse,
+Blackwell–Sherman–Stein, which needs a separating hyperplane in the simplex of posteriors; and any
+distribution not on an initial segment of `num`.
+
 **`pi` is `Circle`, a link since 2026-09-27, and it is twice the zero of `cos` in `[0, 2]`.**
 `docs/adr/0057` is the decision. The zero is chosen, and the choice pins it because `cos` changes
 sign between `3/2` and `8/5` and falls strictly on `[0, 2]`. What makes `cos` computable to a sign at

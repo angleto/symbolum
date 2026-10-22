@@ -722,6 +722,14 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "read. The places a lemma is read off another lemma's antecedent compare the two and refuse " +
         "by `NotOfForm`, and every published fact is compared with its written statement in " +
         "`Complex.construct`"),
+    "Decision.scala" ->
+      ("one call, `Rewrite.rewrite` in `closedBy`, which rewrites the goal of `ARGMAX_ATTAINS`'s " +
+        "low half with the one equation that names the rule at that step, `Argmax f 0 = 0` or the " +
+        "conditional's branch, and hands the result to `Kernel.eqMp` against a fact already held. " +
+        "A limit that ran out would leave a goal that is not that fact, and `eqMp` refuses it rather " +
+        "than proving anything: the rewriting is a search for the fact's form, never its source. The " +
+        "other rewriting here goes through `ComplexKit`, whose entry above says what it owes, and every " +
+        "published fact is compared with its written statement in `Decision.construct`"),
     "Within.scala" ->
       ("two calls, `Rewrite.inTheorem` in `forward` and `Rewrite.rewrite` in `backward`, both over " +
         "the agreement of the extension with `f` at one or two points: closed equations whose right " +

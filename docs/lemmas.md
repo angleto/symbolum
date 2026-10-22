@@ -314,6 +314,27 @@ they have least appetite for working out how it is produced.
   CUT_PMUL_ZERO            !x:real. CUT_PMUL x (CUT_OF_RAT RAT_ZERO) = CUT_OF_RAT RAT_ZERO
   CUT_SIGN_CASES           !x:real. CUT_LE (CUT_OF_RAT RAT_ZERO) x \/ CUT_LE (CUT_OF_RAT RAT_ZERO) (CUT_NEG x)
 
+## Decision
+
+  ARGMAX_ATTAINS           !f:num -> real. !n:num. Argmax f n <= n /\ f (Argmax f n) = Maximum f n
+  ARGMAX_SUC               !f:num -> real. !n:num. Argmax f (SUC n) = COND (Maximum f n < f (SUC n)) (SUC n) (Argmax f n)
+  ARGMAX_UNIQUE            !f:num -> real. !n:num. !m:num. m <= n ==> (!k:num. k <= n ==> ~(k = m) ==> f k < f m) ==> Argmax f n = m
+  ARGMAX_ZERO              !f:num -> real. Argmax f 0 = 0
+  BLACKWELL_GARBLING       !n:num. !m:num. !k:num. !i:num. !f:num -> real. !g:num -> num -> real. !h:num -> num -> real. !f1:num -> num -> real. CHANNEL m k h ==> VALUE n k i f (\j:num. \n1:num. Sum (\m1:num. g j m1 * h m1 n1) m) f1 <= VALUE n m i f g f1
+  MAXIMUM_ATTAINED         !f:num -> real. !n:num. ?m:num. m <= n /\ Maximum f n = f m
+  MAXIMUM_CONGRUENCE_BELOW !f:num -> real. !g:num -> real. !n:num. (!m:num. m <= n ==> f m = g m) ==> Maximum f n = Maximum g n
+  MAXIMUM_LEAST            !f:num -> real. !n:num. !x:real. (!m:num. m <= n ==> f m <= x) ==> Maximum f n <= x
+  MAXIMUM_MONOTONE         !f:num -> real. !g:num -> real. !n:num. (!m:num. m <= n ==> f m <= g m) ==> Maximum f n <= Maximum g n
+  MAXIMUM_SCALE            !f:num -> real. !x:real. !n:num. 0 <= x ==> Maximum (\m:num. x * f m) n = x * Maximum f n
+  MAXIMUM_SUC              !f:num -> real. !n:num. Maximum f (SUC n) = max (Maximum f n) (f (SUC n))
+  MAXIMUM_UPPER            !f:num -> real. !n:num. !m:num. m <= n ==> f m <= Maximum f n
+  MAXIMUM_ZERO             !f:num -> real. Maximum f 0 = f 0
+  SUM_COND_COUNT           !x:real. !y:real. !n:num. !m:num. m < n ==> Sum (\k:num. COND (k = m) x y) n = x + (real_of_num n - 1) * y
+  SUM_GROUPS               !f:num -> real. !n:num. !m:num. Sum f (n * m) = Sum (\k:num. Sum (\i:num. f (n * k + i)) n) m
+  SUM_INDICATOR            !f:num -> real. !n:num. !m:num. m < n ==> Sum (\k:num. f k * COND (k = m) 1 0) n = f m
+  VALUE_GARBLED_TERM       !n:num. !m:num. !f:num -> real. !g:num -> num -> real. !h:num -> num -> real. !f1:num -> num -> real. !k:num. !i:num. Sum (\j:num. f j * Sum (\n1:num. g j n1 * h n1 i) m * f1 k j) n = Sum (\j:num. h j i * Sum (\n1:num. f n1 * g n1 j * f1 k n1) n) m
+  VALUE_POSTERIOR          !n:num. !m:num. !k:num. !f:num -> real. !g:num -> num -> real. !h:num -> num -> real. (!i:num. i < m ==> 0 < Sum (\j:num. f j * g j i) n) ==> VALUE n m k f g h = Sum (\i:num. Sum (\j:num. f j * g j i) n * Maximum (\j:num. Sum (\n1:num. f n1 * g n1 i * inv (Sum (\m1:num. f m1 * g m1 i) n) * h j n1) n) k) m
+
 ## Deduction
 
   NUM_PROV_ADD_CONG        !n:num. !m:num. !k:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TERM k ==> NUM_CLOSED k ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR n k)) (NUM_CODE 3 (NUM_PAIR m k))))

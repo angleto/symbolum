@@ -448,7 +448,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 889 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, card `1ab3b15f`: one
     // residue on each of the two inversions and the two Collatz theorems, counted from their
     // `Statements` before the run and equal to it. Plus four over the base above.
-    proposals.size shouldBe 889
+    // 900 with `Decision`, 2026-10-22, the eleven antecedents `RediscoverySpec` counts beside the same
+    // figure. Plus eleven over the base above.
+    proposals.size shouldBe 900
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1467,7 +1469,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 791 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, read off the run and
     // not decomposed: their four weakenings and the other sources' proposals over their five facts,
     // less what went to the other buckets. Plus two over the base above.
-    open shouldBe 791
+    // 802 with `Decision`, 2026-10-22, read off the run and not decomposed: its eleven weakenings,
+    // claims about `Maximum`, `Argmax`, `VALUE` and `CHANNEL` that no procedure has a reading of,
+    // and nothing else moved into this bucket. Plus eleven.
+    open shouldBe 802
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1864,7 +1869,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 202 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, read off the run and
     // not decomposed: proposals over the complex synthesis, which no procedure reads, and which the
     // first run did not reach because `open` above was red. Plus two over the base.
-    unreadable shouldBe 202
+    // 204 with `Decision`, 2026-10-22, read off the run and not decomposed: proposals over its facts
+    // that no procedure reads, which the first run did not reach because `open` above was red.
+    // Plus two.
+    unreadable shouldBe 204
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2206,7 +2214,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 294 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, derived and read off
     // the run: each of the four residues drops its antecedent and keeps `NUM_MOD`, `real_of_num` or
     // `NUM_POW` in the conclusion. Plus four.
-    aboutNumbers.size shouldBe 294
+    // 302 with `Decision`, 2026-10-22, read off the run and not decomposed: proposals over its
+    // eighteen facts that keep a constant of the naturals, an index bound or the `SUC` of a length.
+    // Plus eight.
+    aboutNumbers.size shouldBe 302
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -2310,7 +2321,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 60 with the valuation's `!x y. 0 < x ==> 0 < y ==> x = y`, refuted at `x = 4, y = 8`: the
     // same residue as `decidedFalse`'s and `withAPoint`'s, the three moving together in one pass
     // from one probe.
-    after shouldBe 60
+    // 62 with `Decision`, 2026-10-22, read off the run: two of its residues lose the bound on an index
+    // and the sampler refutes them at a point outside it, which the first run did not reach because
+    // `aboutNumbers` above was red. Plus two.
+    after shouldBe 62
   }
 
   /* ------------------------------------------------------ the false positive it produced */

@@ -181,7 +181,9 @@ object Reach {
         // pi, the periods and acos, 2026-09-27, in the change that added them.
         "Circle" -> chain.circle.facts,
         // The complex numbers, 2026-10-05, in the change that added them.
-        "Complex" -> chain.complex.facts
+        "Complex" -> chain.complex.facts,
+        // Finite distributions and Blackwell's easy direction, 2026-10-22, in the change that added them.
+        "Decision" -> chain.decision.facts
       )
     )
 

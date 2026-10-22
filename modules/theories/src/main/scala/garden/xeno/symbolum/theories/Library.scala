@@ -379,7 +379,11 @@ object Library {
         // The complex numbers, 2026-10-05, in the change that added them: a link of its own
         // because `complex` is a type, and a type declared beside the chain is one no claim
         // mentioning `pi` or `Sum` can be stated over.
-        collect("Complex", chain.complex.facts)
+        collect("Complex", chain.complex.facts) ++
+        // Finite distributions and Blackwell's easy direction, 2026-10-22, in the change that added
+        // them: a link of its own because `Maximum`, `Argmax`, `DISTRIBUTION`, `CHANNEL` and `VALUE`
+        // are constants.
+        collect("Decision", chain.decision.facts)
     )
 
   /** A library over developments a caller names itself. */

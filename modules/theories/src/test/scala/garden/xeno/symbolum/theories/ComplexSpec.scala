@@ -68,8 +68,9 @@ class ComplexSpec extends AnyFlatSpec with Matchers {
     complex.theory.axioms shouldBe chain.circle.theory.axioms
   }
 
-  "The chain" should "end at the complex numbers, so that every constant they declare can be stated" in {
-    chain.widest shouldBe complex
+  "The chain" should "carry the complex numbers to its end, so that every constant they declare can be stated" in {
+    // It said `chain.widest shouldBe complex` until 2026-10-22, when `Decision` became a link above
+    // it; which link is last is `ChainSpec`'s to pin.
     Complex.Bodies.map(_._1).foreach { name =>
       withClue(s"$name: ")(chain.widest.theory.constants.contains(name) shouldBe true)
     }

@@ -212,6 +212,7 @@ class NotationBoundarySpec extends AnyFlatSpec with Matchers {
     ("Collatz.scala", "offset") ->
       (Verdict.Number, "which end of a commutation's two-letter block is being read, 0 or 1"),
     ("Deduction.scala", "name") -> (Verdict.Name, "the lemma's published name"),
+    ("Decision.scala", "name") -> (Verdict.Name, "the lemma's published name"),
     // `Listing.scala`'s one site is `Deduction.scala`'s reading exactly: the development compares
     // each fact it built against the text `Listing.Statements` publishes it under, and the refusal
     // names that key. A published name is a name, so nothing crosses the notation boundary here.

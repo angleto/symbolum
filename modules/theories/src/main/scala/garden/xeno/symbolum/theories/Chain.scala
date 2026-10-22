@@ -444,7 +444,18 @@ final class Chain private (
    * `Rotation.construct`'s comment gives. It also widens the notation: `+`, `*` and `-` are the complex operations at
    * `complex`, which `docs/adr/0060` decides. A type and its operations, and no axiom.
    */
-  val complex: Complex
+  val complex: Complex,
+  /**
+   * Finite distributions, the value of an experiment to a Bayesian decision maker, and the easy
+   * direction of Blackwell's theorem, `docs/adr/0063`.
+   *
+   * Over [[complex]], extending the chain's end: what it reads is the sums of [[series]], `max` of
+   * [[magnitude]] and the order of `num`, and it declares `Maximum`, `Argmax`, `DISTRIBUTION`,
+   * `CHANNEL` and `VALUE`. Its derivations are written in the complex numbers' steps over its own
+   * theory, which is why it sits above them rather than beside the reals. Five constants and no
+   * axiom.
+   */
+  val decision: Decision
 ) {
 
   /**
@@ -472,7 +483,7 @@ final class Chain private (
    * generate a document of lemmas nobody can parse back, and the same goes for `MAT_DET_MUL` and
    * for `WORD_ROTATE`.
    */
-  val widest: Signature = complex
+  val widest: Signature = decision
 
   /**
    * The logic, read against the widest signature of the chain, which is what a caller wants.
@@ -768,6 +779,16 @@ object Chain {
         classical, naturals, peano, ring, magnitude, product,
         name => below.named(name).headOption.map(_.theorem).toRight(MissingDefinition(name)),
         reals, within, circle.theory, circle.notation)
+
+      // Over the complex numbers, extending the chain's end: the distributions and the value of an
+      // experiment read the sums, `max` and the order of `num`, and the steps they are derived in
+      // are the complex numbers', taken over this link's own theory. What it reads is named, by the
+      // links that hold it.
+      decision <- Decision.construct(
+        classical, naturals, ring, magnitude,
+        name => complex.facts.get(name).toRight(MissingDefinition(name))
+          .orElse(below.named(name).headOption.map(_.theorem).toRight(MissingDefinition(name))),
+        reals, within, complex.theory, complex.notation)
     } yield new Chain(
       classical,
       naturals,
@@ -814,7 +835,8 @@ object Chain {
       derivative,
       integral,
       circle,
-      complex
+      complex,
+      decision
     )
   }
 }

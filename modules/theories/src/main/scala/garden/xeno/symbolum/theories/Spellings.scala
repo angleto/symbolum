@@ -394,6 +394,16 @@ object Spellings {
       .operator("complex_pow", 2, "#1^{#2}", Multiplicative + 5)
       .operator("complex_arg", 1, "\\arg #1", Multiplicative + 5)
       .operator("cis", 1, "\\operatorname{cis} #1", Multiplicative + 5)
+      /* ------------------------------------------- finite distributions and decisions */
+      // The maximum and its first index bind the way the sums do, over a closed interval, which is
+      // what `\le` says and what `Maximum f n` means. The three predicates and the value are words,
+      // as `RES_WIDTH` is: the literature writes `V(E)` for the value and nothing all of them share
+      // for the rest, and the subscripts carry the sizes so the arguments are the objects.
+      .binding("Maximum", "\\max_{#b \\le #2} #1")
+      .binding("Argmax", "\\operatorname{argmax}_{#b \\le #2} #1")
+      .delimited("DISTRIBUTION", 2, "\\operatorname{dist}_{#1}(#2)")
+      .delimited("CHANNEL", 3, "\\operatorname{channel}_{#1 \\to #2}(#3)")
+      .delimited("VALUE", 6, "V_{#1, #2, #3}(#4, #5, #6)")
       /* ------------------------------------------------ the set defined by rules */
       // Both at arity ONE though each is written with two arguments, and that is the faithful
       // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set

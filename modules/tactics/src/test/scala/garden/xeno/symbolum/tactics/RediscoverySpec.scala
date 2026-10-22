@@ -405,7 +405,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // antecedent on each of the two inversions (`0 < m`) and on each of the two Collatz theorems (the
     // four equations, a conjunction), none on `COLLATZ_SHORTCUT_EXISTS`; counted from the two
     // `Statements` before the run and equal to it.
-    propose.weakenings.size shouldBe 889
+    // 900 with `Decision`, 2026-10-22, cards `38b56577`, `a5c6f793`, `443e4c06`: one antecedent on
+    // each of ten facts and two on `ARGMAX_UNIQUE`, counted from `Decision.Statements` before the
+    // run and equal to it. Plus eleven over the base above.
+    propose.weakenings.size shouldBe 900
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -557,7 +560,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 157 with the fundamental theorem of algebra, 2026-10-21, derived and read off the run:
     // `COMPLEX_NORM_TRIANGLE` writes `+` and `<=` with no lambda in the body; the three norm
     // equations write no operator, and the three about polynomials carry the sum's lambda.
-    propose.mutable.size shouldBe 157
+    // 159 with `Decision`, 2026-10-22, read off the run: two of its facts write an operator with no
+    // lambda in the body. Plus two over the base above.
+    propose.mutable.size shouldBe 159
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 
