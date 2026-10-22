@@ -130,6 +130,117 @@ class DeductionSpec extends AnyFlatSpec with Matchers {
   }
 
   /**
+   * PA tells two numerals apart, in both orders, with the difference discharged rather than assumed.
+   *
+   * The two orders are not the same test twice: the induction on `m` meets `0` against a successor
+   * at its base, which goes through `S x != 0` flipped by the denied symmetry, and a successor
+   * against `0` in its step, which does not. `2` against `1` reaches the second through one use of
+   * the hypothesis, and `0` against `3` the first directly, so between them every case of the proof
+   * runs. And an implication whose antecedent nobody can discharge is a theorem about nothing, so
+   * `~(m = n)` is derived here from the naturals' own `SUC n != 0` and injectivity.
+   */
+  it should "prove two different numerals different, in both orders, at the naturals' cost" in {
+    val theorem = force(deduction.fact(Deduction.NumeralsDistinct))
+    theorem.hypotheses shouldBe empty
+    Derivation.axiomsOf(theorem) should have size 2
+
+    val naturals = chain.naturals
+    val notZero = force(naturals.fact(Natural.SuccessorNotZero))
+    val injective = force(naturals.fact(Natural.SuccessorInjective))
+    def apart(bigger: String, smaller: String, peeled: Int): Kernel.Thm = {
+      // `SUC^peeled (x) = SUC^peeled (ZERO)` collapses to `x = ZERO` by injectivity, which the
+      // successor axiom then refutes; `x` is `SUC something`.
+      val equation = proposition(s"$bigger = $smaller")
+      def peel(theorem: Kernel.Thm, left: Int): Kernel.Thm =
+        if (left == 0) theorem
+        else theorem.conclusion match {
+          case App(App(_, App(_, l)), App(_, r)) =>
+            peel(force(rules.specAll(injective, List(l, r)).flatMap(rules.mp(_, theorem))), left - 1)
+          case other => fail(s"not an equation between successors: $other")
+        }
+      val bottom = peel(force(LogicError.lift(Kernel.assume(equation))), peeled)
+      val residue = bottom.conclusion match {
+        case App(App(_, App(_, inner)), _) => inner
+        case other => fail(s"not a successor against zero: $other")
+      }
+      force(rules.spec(residue, notZero).flatMap(rules.notElim(_, bottom))
+        .flatMap(rules.notIntro(equation, _)))
+    }
+
+    val two = "SUC (SUC ZERO)"
+    val one = "SUC ZERO"
+    val three = "SUC (SUC (SUC ZERO))"
+    val twoOne = force(rules.specAll(theorem, List(term(two), term(one)))
+      .flatMap(rules.mp(_, apart(two, one, 1))))
+    twoOne.hypotheses shouldBe empty
+    twoOne.conclusion shouldBe proposition(
+      s"NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL ($two)) (NUM_NUMERAL ($one)))))")
+
+    val zeroIsNotThree = force(
+      Conv.sym(force(LogicError.lift(Kernel.assume(proposition(s"ZERO = $three")))))
+        .flatMap(reversed => rules.spec(term(s"SUC (SUC ZERO)"), notZero)
+          .flatMap(rules.notElim(_, reversed)))
+        .flatMap(rules.notIntro(proposition(s"ZERO = $three"), _)))
+    val zeroThree = force(rules.specAll(theorem, List(term("ZERO"), term(three)))
+      .flatMap(rules.mp(_, zeroIsNotThree)))
+    zeroThree.hypotheses shouldBe empty
+    zeroThree.conclusion shouldBe proposition(
+      s"NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL ZERO) (NUM_NUMERAL ($three)))))")
+  }
+
+  /**
+   * The two facts an implication between closed formulas needs beyond `NUM_PROV_WEAKEN`, at the
+   * smallest closed equations that tell them apart: `0 = 0` holds and `1 = 0` does not, so the
+   * implication from the first to the second is refuted. Ex falso is taken from `1 = 0` to `0 = 1`,
+   * whose consequent is false as well, because that fact already reaches every implication with a
+   * provable consequent and an instance it reaches would not tell the new fact from it.
+   */
+  it should "decide an implication between closed equations, refuted by tollens and held by ex falso" in {
+    val language = chain.language
+    val notZero = force(chain.naturals.fact(Natural.SuccessorNotZero))
+    val zero = term("NUM_NUMERAL ZERO")
+    val one = term("NUM_NUMERAL (SUC ZERO)")
+    def equation(a: Term, b: Term): Term =
+      applied(coding, List(term("5"), applied(pairing, List(a, b))))
+    def numeralIsTerm(n: String): Kernel.Thm =
+      force(rules.spec(term(n), force(language.fact(Language.NumeralIsTerm))))
+    def formulaOf(a: Term, b: Term, left: Kernel.Thm, right: Kernel.Thm): Kernel.Thm =
+      force(rules.specAll(force(language.fact(Language.FormulaEquality)), List(a, b))
+        .flatMap(rules.mp(_, left)).flatMap(rules.mp(_, right)))
+
+    val same = equation(zero, zero)
+    val apart = equation(one, zero)
+    val flipped = equation(zero, one)
+    val formulaSame = formulaOf(zero, zero, numeralIsTerm("ZERO"), numeralIsTerm("ZERO"))
+    val formulaApart = formulaOf(one, zero, numeralIsTerm("SUC ZERO"), numeralIsTerm("ZERO"))
+    val formulaFlipped = formulaOf(zero, one, numeralIsTerm("ZERO"), numeralIsTerm("SUC ZERO"))
+    val holds = force(rules.spec(zero, force(deduction.fact(Deduction.Reflexivity)))
+      .flatMap(rules.mp(_, numeralIsTerm("ZERO"))))
+    val denied = force(rules.specAll(force(deduction.fact(Deduction.NumeralsDistinct)),
+      List(term("SUC ZERO"), term("ZERO"))).flatMap(rules.mp(_, force(rules.spec(term("ZERO"), notZero)))))
+
+    val refuted = force(rules.specAll(force(deduction.fact(Deduction.DeniedImplication)), List(same, apart))
+      .flatMap(rules.mp(_, formulaSame)).flatMap(rules.mp(_, formulaApart))
+      .flatMap(rules.mp(_, holds)).flatMap(rules.mp(_, denied)))
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL ZERO) (NUM_NUMERAL ZERO))) " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_NUMERAL ZERO))))))")
+
+    val held = force(rules.specAll(force(deduction.fact(Deduction.ImplicationOfDenial)), List(apart, flipped))
+      .flatMap(rules.mp(_, formulaApart)).flatMap(rules.mp(_, formulaFlipped)).flatMap(rules.mp(_, denied)))
+    held.hypotheses shouldBe empty
+    held.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 7 (NUM_PAIR " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL (SUC ZERO)) (NUM_NUMERAL ZERO))) " +
+        "(NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL ZERO) (NUM_NUMERAL (SUC ZERO))))))")
+
+    Derivation.axiomsOf(refuted) should have size 2
+    Derivation.axiomsOf(held) should have size 2
+  }
+
+  /**
    * The object theory's multiplication on numerals, which stands on the addition above it.
    *
    * The same two assertions for the same two reasons, and one more that is about the ORDER rather

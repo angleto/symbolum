@@ -142,11 +142,23 @@ object Truth {
    * `|- !e a b. ... ==> NUM_TRUE (a = b) e ==> NUM_PROV (a = b)`, for closed terms `a` and `b`.
    *
    * A true closed equation is provable, which is completeness for the atomic formulas that hold.
-   * Both sides are proved equal to the numeral of one value and the two proofs are joined. The
-   * other half of the atomic case, that a FALSE closed equation has a provable negation, needs PA
-   * to prove two different numerals different, which is not here yet.
+   * Both sides are proved equal to the numeral of one value and the two proofs are joined.
+   * [[ProvesFalseEquation]] is the other half of the atomic case.
    */
   val ProvesTrueEquation: String = "NUM_PROV_TRUE_EQ"
+
+  /**
+   * `|- !e a b. ... ==> NUM_TRUE ~(a = b) e ==> NUM_PROV ~(a = b)`, for closed terms `a` and `b`.
+   *
+   * A false closed equation has a provable negation, the half of the atomic case that needs PA to
+   * tell numbers apart. Each side is proved equal to the numeral of its value, as for a true
+   * equation; the two values differ, so `NUM_PROV_NUMERAL_DISTINCT` denies the equation between
+   * the numerals, and `NUM_PROV_NOT_EQ_CONG` carries the denial back onto `a` and `b`. With
+   * [[ProvesTrueEquation]] it says that PA decides every closed equation, which is completeness for
+   * the atomic formulas and their negations and nothing more: the connectives and the bounded
+   * quantifiers are the next step.
+   */
+  val ProvesFalseEquation: String = "NUM_PROV_FALSE_EQ"
 
   /**
    * The step of the value, as text.
@@ -238,7 +250,11 @@ object Truth {
     ProvesTrueEquation ->
       ("!e:num -> num. !a:num. !b:num. NUM_TERM a ==> NUM_CLOSED a ==> " +
         "NUM_TERM b ==> NUM_CLOSED b ==> NUM_TRUE (NUM_CODE 5 (NUM_PAIR a b)) e ==> " +
-        "NUM_PROV (NUM_CODE 5 (NUM_PAIR a b))")
+        "NUM_PROV (NUM_CODE 5 (NUM_PAIR a b))"),
+    ProvesFalseEquation ->
+      ("!e:num -> num. !a:num. !b:num. NUM_TERM a ==> NUM_CLOSED a ==> " +
+        "NUM_TERM b ==> NUM_CLOSED b ==> NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR a b))) e ==> " +
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR a b)))")
   )
 
   /** The one the standard chain builds. */
@@ -320,7 +336,7 @@ object Truth {
 
       evaluation <- Evaluation.of(
         logic, theory, provability.notation, language, numbering, deduction, statements,
-        valueZero, valueSuccessor, valueSum, valueProduct, trueEquality)
+        valueZero, valueSuccessor, valueSum, valueProduct, trueEquality, trueNegation)
     } yield new Truth(
       language,
       theory,
@@ -345,7 +361,8 @@ object Truth {
         TriangleDoubled -> doubled,
         TriangleGraphTrue -> graph,
         ProvesValue -> evaluation._1,
-        ProvesTrueEquation -> evaluation._2
+        ProvesTrueEquation -> evaluation._2,
+        ProvesFalseEquation -> evaluation._3
       )
     )
   }
@@ -690,16 +707,18 @@ object Truth {
       valueSuccessor: Kernel.Thm,
       valueSum: Kernel.Thm,
       valueProduct: Kernel.Thm,
-      trueEquality: Kernel.Thm
-    ): Either[LogicError, (Kernel.Thm, Kernel.Thm)] =
+      trueEquality: Kernel.Thm,
+      trueNegation: Kernel.Thm
+    ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm)] =
       try {
         val built = new Evaluation(
           logic, theory, notation, language, numbering, deduction,
-          valueZero, valueSuccessor, valueSum, valueProduct, trueEquality)
+          valueZero, valueSuccessor, valueSum, valueProduct, trueEquality, trueNegation)
         for {
           value <- statements.checked(ProvesValue, built.provesValue)
           equation <- statements.checked(ProvesTrueEquation, built.provesTrueEquation(value))
-        } yield (value, equation)
+          denial <- statements.checked(ProvesFalseEquation, built.provesFalseEquation(value))
+        } yield (value, equation, denial)
       } catch { case refused: RefusedHere => Left(refused.error) }
   }
 
@@ -714,7 +733,8 @@ object Truth {
     valueSuccessor: Kernel.Thm,
     valueSum: Kernel.Thm,
     valueProduct: Kernel.Thm,
-    trueEquality: Kernel.Thm
+    trueEquality: Kernel.Thm,
+    trueNegation: Kernel.Thm
   ) {
     private val rules = logic.rules
     private val numbers = TyApp(Natural.TypeName, Nil)
@@ -750,7 +770,7 @@ object Truth {
     private val free = constant(Language.FreeName, Type.fun(numbers, property))
     private val below = constant(Peano.StrictOrder, Type.fun(numbers, property))
     private val tags: Vector[Term] =
-      (0 to 5).toVector.map(k => force(Parser.term(theory, notation, k.toString, numbers)))
+      (0 to 6).toVector.map(k => force(Parser.term(theory, notation, k.toString, numbers)))
 
     private def code(tag: Int, payload: Term): Term = applied(coding, List(tags(tag), payload))
     private def pair(left: Term, right: Term): Term = applied(pairing, List(left, right))
@@ -1127,6 +1147,45 @@ object Truth {
       force(
         rules
           .disch(holds, joined)
+          .flatMap(rules.disch(isClosed(b), _))
+          .flatMap(rules.disch(isTerm(b), _))
+          .flatMap(rules.disch(isClosed(a), _))
+          .flatMap(rules.disch(isTerm(a), _))
+          .flatMap(rules.genAll(_, List(environment, a, b))))
+    }
+
+    /** [[ProvesFalseEquation]]: both sides to their numerals, the numerals apart, carried back. */
+    def provesFalseEquation(provesValue: Kernel.Thm): Kernel.Thm = {
+      val a = Term.variable("a", numbers)
+      val b = Term.variable("b", numbers)
+      val aIsTerm = assumed(isTerm(a))
+      val aIsClosed = assumed(isClosed(a))
+      val bIsTerm = assumed(isTerm(b))
+      val bIsClosed = assumed(isClosed(b))
+      val denied = code(6, equation(a, b))
+      val fails = applied(truth, List(denied, environment))
+      val apart = force(
+        for {
+          negation <- rules.specAll(trueNegation, List(environment, equation(a, b)))
+          unfolded <- LogicError.lift(Kernel.eqMp(negation, assumed(fails)))
+          equality <- rules.specAll(trueEquality, List(environment, a, b))
+          moved <- Conv.apTerm(constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)), equality)
+          result <- LogicError.lift(Kernel.eqMp(moved, unfolded))
+        } yield result)
+
+      val atA = apply(provesValue, List(environment, a), aIsTerm, aIsClosed)
+      val atB = apply(provesValue, List(environment, b), bIsTerm, bIsClosed)
+      val (va, vb) = (valueOf(a), valueOf(b))
+      val numerals = apply(deductionFact(Deduction.NumeralsDistinct), List(va, vb), apart)
+      val carried = apply(
+        deductionFact(Deduction.DeniedCongruence), List(a, b, numeral(va), numeral(vb)),
+        aIsTerm, bIsTerm, numeralTerm(va), numeralTerm(vb),
+        aIsClosed, bIsClosed, numeralClosed(va), numeralClosed(vb),
+        atA, atB, numerals)
+
+      force(
+        rules
+          .disch(fails, carried)
           .flatMap(rules.disch(isClosed(b), _))
           .flatMap(rules.disch(isTerm(b), _))
           .flatMap(rules.disch(isClosed(a), _))

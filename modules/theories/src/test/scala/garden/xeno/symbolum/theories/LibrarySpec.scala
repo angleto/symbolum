@@ -812,8 +812,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `1ab3b15f`: five facts under five names, none shared, derived from `FiniteFourier.Statements`
     // and `CollatzFourier.Statements` before the run and equal to them. `CLAUDE.md`'s figures move
     // by five, four and two, read off the run.
-    library.entries.size shouldBe 1049
-    library.names.distinct.size shouldBe 1046
+    // 1058 and 1055 with negation in the embedded arithmetic, 2026-10-22, card `4102f131`: nine
+    // facts under nine names, none shared, eight in `Deduction` and `NUM_PROV_FALSE_EQ` in `Truth`.
+    // Seven of them moved `CLAUDE.md`'s figures by seven, five and five, read off a run before the
+    // two about implication joined them.
+    library.entries.size shouldBe 1058
+    library.names.distinct.size shouldBe 1055
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

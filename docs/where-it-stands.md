@@ -719,9 +719,20 @@ means: its instances are equations between terms that are not closed until a num
 for each variable, and no lemma here yet relates the truth of a substituted formula to its truth
 at the environment the substitution describes.
 
-Not written above that: a false closed equation with a provable negation, which wants PA to prove
-two different numerals different; the connectives and the bounded quantifiers of completeness for
-bounded formulas; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so
+**And a false closed equation has a provable negation, since 2026-10-22.** `NUM_PROV_FALSE_EQ` is
+the other half of the atomic case, so PA decides every closed equation. What it needed is PA
+telling numbers apart, `NUM_PROV_NUMERAL_DISTINCT`, by induction on the first number with a case
+split on the second, from `S x != 0` and the injectivity of the successor. The object language
+had no derived fact about negation at all: contraposition is its only axiom mentioning `~`, so
+`Deduction` now derives both double negations and contraposition as a rule from it, and the two
+facts that carry a denied equation across the theory's own equality, `NUM_PROV_NOT_EQ_SYMM` and
+`NUM_PROV_NOT_EQ_CONG`. The same day gave an implication its three cases: a provable consequent is
+`NUM_PROV_WEAKEN`, which was there, a denied antecedent is `NUM_PROV_IMP_DENIED`, ex falso, and a
+provable antecedent with a denied consequent is `NUM_PROV_NOT_IMP`.
+
+Not written above that: completeness itself, even for the closed formulas without a quantifier,
+whose every case is now a fact and whose induction over the code is not written; the bounded
+quantifiers, where `NUM_LESS` is itself an existential and PA has to prove `x < S n` splits; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale

@@ -320,14 +320,22 @@ they have least appetite for working out how it is produced.
   NUM_PROV_ADD_CONG_RIGHT  !n:num. !m:num. !k:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TERM k ==> NUM_CLOSED k ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR k n)) (NUM_CODE 3 (NUM_PAIR k m))))
   NUM_PROV_ADD_SUC         !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR n (NUM_CODE 2 m))) (NUM_CODE 2 (NUM_CODE 3 (NUM_PAIR n m)))))
   NUM_PROV_ADD_ZERO        !n:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR n (NUM_CODE 1 0))) n))
+  NUM_PROV_CONTRAPOSE      !n:num. !m:num. NUM_FORM n ==> NUM_FORM m ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 m) (NUM_CODE 6 n)))
   NUM_PROV_DEDUCTION       !n:num. !m:num. NUM_FORM n ==> (!k:num. ~(NUM_FREE_FORM k n)) ==> NUM_PROV_FROM n m ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n m))
+  NUM_PROV_IMP_DENIED      !n:num. !m:num. NUM_FORM n ==> NUM_FORM m ==> NUM_PROV (NUM_CODE 6 n) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n m))
   NUM_PROV_IMP_GEN         !n:num. !m:num. !k:num. NUM_FORM m ==> NUM_FORM k ==> ~(NUM_FREE_FORM n m) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR m k)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR m (NUM_CODE 8 (NUM_PAIR n k))))
   NUM_PROV_IMP_MP          !n:num. !m:num. !k:num. NUM_FORM n ==> NUM_FORM m ==> NUM_FORM k ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n (NUM_CODE 7 (NUM_PAIR m k)))) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n k))
   NUM_PROV_MUL_CONG        !n:num. !m:num. !k:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TERM k ==> NUM_CLOSED k ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR n k)) (NUM_CODE 4 (NUM_PAIR m k))))
   NUM_PROV_MUL_CONG_RIGHT  !n:num. !m:num. !k:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TERM k ==> NUM_CLOSED k ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR k n)) (NUM_CODE 4 (NUM_PAIR k m))))
   NUM_PROV_MUL_SUC         !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR n (NUM_CODE 2 m))) (NUM_CODE 3 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR n m)) n))))
   NUM_PROV_MUL_ZERO        !n:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR n (NUM_CODE 1 0))) (NUM_CODE 1 0)))
+  NUM_PROV_NOT_EQ_CONG     !n:num. !m:num. !k:num. !i:num. NUM_TERM n ==> NUM_TERM m ==> NUM_TERM k ==> NUM_TERM i ==> NUM_CLOSED n ==> NUM_CLOSED m ==> NUM_CLOSED k ==> NUM_CLOSED i ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n k)) ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR m i)) ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR k i))) ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m)))
+  NUM_PROV_NOT_EQ_SYMM     !n:num. !m:num. NUM_TERM n ==> NUM_TERM m ==> NUM_CLOSED n ==> NUM_CLOSED m ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m))) ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR m n)))
+  NUM_PROV_NOT_IMP         !n:num. !m:num. NUM_FORM n ==> NUM_FORM m ==> NUM_PROV n ==> NUM_PROV (NUM_CODE 6 m) ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 7 (NUM_PAIR n m)))
+  NUM_PROV_NOT_NOT_ELIM    !n:num. NUM_FORM n ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR (NUM_CODE 6 (NUM_CODE 6 n)) n))
+  NUM_PROV_NOT_NOT_INTRO   !n:num. NUM_FORM n ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n (NUM_CODE 6 (NUM_CODE 6 n))))
   NUM_PROV_NUMERAL_ADD     !n:num. !m:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 3 (NUM_PAIR (NUM_NUMERAL n) (NUM_NUMERAL m))) (NUM_NUMERAL (n + m))))
+  NUM_PROV_NUMERAL_DISTINCT !n:num. !m:num. ~(n = m) ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_NUMERAL n) (NUM_NUMERAL m))))
   NUM_PROV_NUMERAL_MUL     !n:num. !m:num. NUM_PROV (NUM_CODE 5 (NUM_PAIR (NUM_CODE 4 (NUM_PAIR (NUM_NUMERAL n) (NUM_NUMERAL m))) (NUM_NUMERAL (n * m))))
   NUM_PROV_REFL            !n:num. NUM_TERM n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n n))
   NUM_PROV_SELF            !n:num. NUM_FORM n ==> NUM_PROV (NUM_CODE 7 (NUM_PAIR n n))
@@ -1210,6 +1218,7 @@ they have least appetite for working out how it is produced.
 
 ## Truth
 
+  NUM_PROV_FALSE_EQ        !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m))) f ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m)))
   NUM_PROV_TRUE_EQ         !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m))
   NUM_PROV_VALUE           !f:num -> num. !n:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n (NUM_NUMERAL (NUM_VALUE n f))))
   NUM_TRI_DOUBLE           !n:num. NUM_TRI n + NUM_TRI n = n * SUC n
