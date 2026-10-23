@@ -824,8 +824,12 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // equal to it. `CLAUDE.md`'s figures move by eighteen, sixteen and ten, read off the run.
     // 1076 and 1073 with both, merged 2026-10-22: nine from negation and implication and eighteen
     // from `Decision`, none shared.
-    library.entries.size shouldBe 1076
-    library.names.distinct.size shouldBe 1073
+    // 1081 and 1078 with the ground completeness, 2026-10-23, card `4102f131`: five facts under five
+    // names, none shared, `NUM_PROV_GROUND` and the four clauses of `NUM_GROUND`, derived from
+    // `Truth.Statements` before the run and equal to it. `CLAUDE.md`'s figures move by five, four and
+    // three, read off the run.
+    library.entries.size shouldBe 1081
+    library.names.distinct.size shouldBe 1078
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

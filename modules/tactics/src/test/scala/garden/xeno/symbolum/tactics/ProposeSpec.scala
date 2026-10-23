@@ -457,7 +457,8 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 900 with `Decision`, 2026-10-22, the eleven antecedents `RediscoverySpec` counts beside the same
     // figure. Plus eleven over the base above.
     // 933 with all three, merged 2026-10-22: 922 plus `Decision`'s eleven.
-    proposals.size shouldBe 933
+    // 935 with the ground completeness, 2026-10-23: the two antecedents `RediscoverySpec` counts.
+    proposals.size shouldBe 935
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1890,7 +1891,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // that no procedure reads, which the first run did not reach because `open` above was red.
     // Plus two.
     // 207 with both, merged 2026-10-22: 202, plus three from negation and two from `Decision`.
-    unreadable shouldBe 207
+    // 209 with the ground completeness, 2026-10-23, read off the run: its two residues, claims about
+    // `NUM_PROV` and `NUM_TRUE` that no procedure reads. Plus two.
+    unreadable shouldBe 209
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +

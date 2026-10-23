@@ -730,9 +730,16 @@ facts that carry a denied equation across the theory's own equality, `NUM_PROV_N
 `NUM_PROV_WEAKEN`, which was there, a denied antecedent is `NUM_PROV_IMP_DENIED`, ex falso, and a
 provable antecedent with a denied consequent is `NUM_PROV_NOT_IMP`.
 
-Not written above that: completeness itself, even for the closed formulas without a quantifier,
-whose every case is now a fact and whose induction over the code is not written; the bounded
-quantifiers, where `NUM_LESS` is itself an existential and PA has to prove `x < S n` splits; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so
+**And PA decides every closed formula without a quantifier, since 2026-10-22.** `NUM_PROV_GROUND`
+proves the true ones and refutes the false ones, for every `p` that `NUM_FORM` and `NUM_GROUND`
+accept, `NUM_GROUND` being the formulas with no quantifier whose terms are all closed. It is a
+strong induction on the code with one case per connective: an equation is the two facts above, a
+negation the hypothesis at its body with `Deduction`'s double negation for the false one, and an
+implication `NUM_PROV_WEAKEN`, `NUM_PROV_IMP_DENIED` or `NUM_PROV_NOT_IMP` by the truth of its two
+sides. `TruthSpec` discharges both conditions at `~(0 = 0)` and gets `NUM_PROV ~~(0 = 0)` back.
+
+Not written above that: the bounded quantifiers, where `NUM_LESS` is itself an existential and PA
+has to prove `x < S n` splits; any representation other than `NUM_TRI_GRAPH`; the object-level `Prov`, and so
 neither the diagonal lemma nor D1, D2 and D3. `docs/adr/0013` says why the last of those is its own
 piece of work rather than a helper inside this one. The order of that work is kept in Mycelium, in
 card `4102f131` and its parent `89712313`, and not here: a list of what is missing goes stale
