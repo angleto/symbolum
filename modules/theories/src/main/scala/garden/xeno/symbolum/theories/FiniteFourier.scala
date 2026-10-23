@@ -594,14 +594,6 @@ private[theories] object FiniteFourier {
       } yield general
     }
 
-    /** `Sum F n = Sum G n` from `F k = G k` at a variable `k` nothing assumes. */
-    private def sumCongReal(kv: FVar, pointwise: Kernel.Thm, bound: Term): R[Kernel.Thm] =
-      for {
-        lambdas <- LogicError.lift(Kernel.abs(kv, pointwise))
-        summation <- LogicError.lift(theory.constant(Series.SumName, Type.fun(Type.fun(Numbers, Reals), Type.fun(Numbers, Reals))))
-        out <- Conv.apTerm(summation, lambdas).flatMap(Conv.apThm(_, bound))
-      } yield out
-
     /** The two orders of a finite double sum agree. */
     def sumSwap: R[Kernel.Thm] =
       for {

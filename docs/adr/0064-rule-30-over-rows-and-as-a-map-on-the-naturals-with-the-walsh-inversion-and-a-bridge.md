@@ -97,7 +97,8 @@ the other, and it is the cheaper of the two halves.
 `Complex` publishes fifteen more facts and declares nothing. `RuleThirty` sits beside
 `CollatzFourier`, reads none of the complex numbers, and is there because the steps it is written
 in are that link's; `ComplexKit` now also holds the helpers the two had each written for
-themselves (`substitute`, `predicateOf`, `introduce`, `sumCongReal`).
+themselves (`substitute`, `predicateOf`, `introduce`, `sumCongReal`), and `FiniteFourier`'s own copy
+of `sumCongReal` is gone with them.
 
 Nothing here settles a problem of the prize, and the reason is stated with the theorems rather than
 left to a reader: the bridge says the centre column is bit `t` of `F^t(1)`, and every structural fact

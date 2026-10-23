@@ -1208,7 +1208,7 @@ private[theories] object RuleThirty {
      * The inversion of the Walsh transform on `k` bits, in the form `REAL_DFT_INVERSION` has: a
      * function at a residue modulo `2^k` is the sum over the subsets of its transform times their
      * character. By orthogonality: the double sum is swapped, the inner one is `2^k` on the residue
-     * and 0 elsewhere, and what is left is `SUM_INDICATOR`.
+     * and 0 elsewhere, and what is left is `PICK`, this file's own copy of `Decision`'s `SUM_INDICATOR`.
      */
     def walshInversion: R[Kernel.Thm] = {
       val f = Term.variable("f", Type.fun(Numbers, Reals))

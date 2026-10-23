@@ -421,7 +421,7 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 950 with the rest of the distributions and the ground completeness, 2026-10-23: 933 plus one
     // antecedent per hypothesis of seven facts of card `38b56577`, 2 + 2 + 2 + 1 + 2 + 2 + 4, and the
     // two antecedents of `NUM_PROV_GROUND`, card `4102f131`, each derived before its run.
-    // 962 with Rule 30, 2026-10-23, card `25c7d137`: one outer antecedent on each of eleven facts of
+    // 962 with Rule 30, 2026-10-23, card `25c7d137`: one outer antecedent on each of ten facts of
     // `RuleThirty.Statements` and two on `RULE_THIRTY_BRIDGE`, counted before the run and equal to it.
     // Plus twelve over the base above.
     propose.weakenings.size shouldBe 962
