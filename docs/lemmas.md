@@ -185,6 +185,12 @@ they have least appetite for working out how it is produced.
   DE_MOIVRE                !x:real. !n:num. complex_pow (cis x) n = cis (real_of_num n * x)
   EXP_POWER                !x:real. !n:num. Power (exp x) n = exp (real_of_num n * x)
   FUNDAMENTAL_THEOREM_OF_ALGEBRA !f:num -> complex. !n:num. 0 < n /\ ~(f n = complex_of_real 0) ==> (?x:complex. complex_sum (\m:num. f m * complex_pow x m) (SUC n) = complex_of_real 0)
+  GILBREATH_EQUIVALENT     !f:num -> num -> num. (!n:num. !m:num. f (SUC n) m = NUM_SUB (f n (m + 1)) (f n m) + NUM_SUB (f n m) (f n (m + 1))) ==> f 1 0 = 1 ==> (!n:num. 0 < n ==> f n 0 = 1) = (!n:num. 0 < n ==> f n 1 = 0 \/ f n 1 = 2)
+  GILBREATH_EVEN           !f:num -> num -> num. (!n:num. !m:num. f (SUC n) m = NUM_SUB (f n (m + 1)) (f n m) + NUM_SUB (f n m) (f n (m + 1))) ==> (!n:num. (!m:num. 0 < m ==> NUM_MOD (f n m) 2 = 0) ==> (!m:num. 0 < m ==> NUM_MOD (f (SUC n) m) 2 = 0))
+  GILBREATH_EXISTS         !f:num -> num. ?g:num -> num -> num. (!n:num. g 0 n = f n) /\ (!n:num. !m:num. g (SUC n) m = NUM_SUB (g n (m + 1)) (g n m) + NUM_SUB (g n m) (g n (m + 1)))
+  GILBREATH_FRONT          !f:num -> num -> num. (!n:num. !m:num. f (SUC n) m = NUM_SUB (f n (m + 1)) (f n m) + NUM_SUB (f n m) (f n (m + 1))) ==> (!n:num. f n 0 = 1 ==> f (SUC n) 0 = 1 = (f n 1 = 0 \/ f n 1 = 2))
+  GILBREATH_HEAD           !f:num -> num -> num. (!n:num. !m:num. f (SUC n) m = NUM_SUB (f n (m + 1)) (f n m) + NUM_SUB (f n m) (f n (m + 1))) ==> (!n:num. !m:num. f n 0 = 1 /\ (!k:num. 0 < k /\ k <= SUC m ==> f n k = 0 \/ f n k = 2) ==> f (SUC n) 0 = 1 /\ (!k:num. 0 < k /\ k <= m ==> f (SUC n) k = 0 \/ f (SUC n) k = 2))
+  GILBREATH_WINDOW         !f:num -> num -> num. (!n:num. !m:num. f (SUC n) m = NUM_SUB (f n (m + 1)) (f n m) + NUM_SUB (f n m) (f n (m + 1))) ==> (!n:num. !m:num. f m 0 = 1 /\ (!k:num. 0 < k /\ k <= n ==> f m k = 0 \/ f m k = 2) ==> (!k:num. k <= n ==> f (m + k) 0 = 1))
   II_SQUARED               ii * ii = complex_neg (complex_of_real 1)
   IM_ADD                   !x:complex. !y:complex. Im (x + y) = Im x + Im y
   IM_CIS                   !x:real. Im (cis x) = sin x

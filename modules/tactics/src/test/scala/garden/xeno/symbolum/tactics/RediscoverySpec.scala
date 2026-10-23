@@ -424,7 +424,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 962 with Rule 30, 2026-10-23, card `25c7d137`: one outer antecedent on each of ten facts of
     // `RuleThirty.Statements` and two on `RULE_THIRTY_BRIDGE`, counted before the run and equal to it.
     // Plus twelve over the base above.
-    propose.weakenings.size shouldBe 962
+    // 968 with Gilbreath's table, 2026-10-24, card `ddd1ba96`: the table's equation on each of
+    // five facts of `Gilbreath.Statements` and the second row's 1 on `GILBREATH_EQUIVALENT`,
+    // counted before the run and equal to it. Plus six.
+    propose.weakenings.size shouldBe 968
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

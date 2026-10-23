@@ -1229,6 +1229,16 @@ where the three problems of the Rule 30 prize are; the balance of the map over r
 `2^k` for every `j < k`, which needs a sum reindexed by a permutation; and the periods of the
 diagonals, which are measured in Mycelium note 917b3939 and not proved.
 
+**Gilbreath's table is in the kernel over any first row since 2026-10-24.** `docs/adr/0065` is the
+decision and `Gilbreath.scala` the derivation, published by `Complex` beside Rule 30. Over any `d`
+whose row `k + 1` holds the absolute differences of neighbours in row `k`, written with `NUM_SUB`: a
+row starting with 1 passes the 1 on exactly when position 1 holds 0 or 2 (`GILBREATH_FRONT`), so the
+conjecture is that condition at every row (`GILBREATH_EQUIVALENT`); even entries stay even; and a
+head of `n + 1` entries in `{0, 2}` behind the 1 passes on a head of `n`, which guarantees the 1 for
+`n` rows (`GILBREATH_HEAD`, `GILBREATH_WINDOW`). `GILBREATH_EXISTS` exhibits a table for every first
+row. **What is not here**: the primes, which the library does not enumerate, and the conjecture
+itself, which is whether the head lasts; note 917b3939 section 12 measures that and nothing proves it.
+
 **Finite distributions and Blackwell's easy direction are `Decision`, a link since 2026-10-22.**
 `docs/adr/0063` is the decision. A distribution on `n` outcomes is a function on `[0, n)` that
 `DISTRIBUTION` says is one, a channel is a distribution of signals per state, and `VALUE` is the

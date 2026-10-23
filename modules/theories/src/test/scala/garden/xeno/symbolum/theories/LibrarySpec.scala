@@ -833,8 +833,11 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 1104 and 1101 with Rule 30, 2026-10-23, card `25c7d137`: fifteen facts under fifteen new names
     // from `RuleThirty.Statements`, derived before the run and equal to it. `CLAUDE.md`'s figures
     // move by fifteen, eight and two, read off the run.
-    library.entries.size shouldBe 1104
-    library.names.distinct.size shouldBe 1101
+    // 1110 and 1107 with Gilbreath's table, 2026-10-24, card `ddd1ba96`: six facts under six new
+    // names from `Gilbreath.Statements`. Each has one leading quantifier, so `CLAUDE.md`'s two other
+    // figures do not move, read off the run.
+    library.entries.size shouldBe 1110
+    library.names.distinct.size shouldBe 1107
   }
 
   it should "show where the developments overlap rather than pick one arbitrarily" in {

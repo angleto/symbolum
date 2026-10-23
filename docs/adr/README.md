@@ -95,3 +95,4 @@ the rejected option attractive, and they will.
 | [0062](0062-the-finite-fourier-inversion-and-the-collatz-iterate-over-characterising-equations.md) | The finite Fourier inversion, and the Collatz iterate as its instance over the equations that characterise the map | accepted |
 | [0063](0063-finite-distributions-are-functions-on-an-initial-segment-and-the-value-of-an-experiment-divides-by-nothing.md) | Finite distributions are functions on an initial segment, and the value of an experiment divides by nothing | accepted |
 | [0064](0064-rule-30-over-rows-and-as-a-map-on-the-naturals-with-the-walsh-inversion-and-a-bridge.md) | Rule 30 over rows and as a map on the naturals, with the Walsh inversion and a bridge between them | accepted |
+| [0065](0065-gilbreaths-table-over-any-first-row-and-the-conjecture-as-a-condition-on-the-second-entry.md) | Gilbreath's table over any first row, and the conjecture as a condition on the second entry | accepted |

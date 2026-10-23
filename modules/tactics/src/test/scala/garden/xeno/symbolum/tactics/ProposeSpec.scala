@@ -461,7 +461,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // fifteen and the two antecedents `RediscoverySpec` counts beside the same figure.
     // 962 with Rule 30, 2026-10-23, card `25c7d137`: the twelve antecedents `RediscoverySpec`
     // counts beside the same figure. Plus twelve over the base above.
-    proposals.size shouldBe 962
+    // 968 with Gilbreath's table, 2026-10-24, card `ddd1ba96`: the six antecedents
+    // `RediscoverySpec` counts beside the same figure. Plus six.
+    proposals.size shouldBe 968
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1494,7 +1496,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // claims about `DISTRIBUTION`, `CHANNEL` and `INDEPENDENT` that no procedure reads. Plus fifteen.
     // 856 with Rule 30, 2026-10-23, read off the run and not decomposed: nine of its twelve
     // weakenings, claims about `run`, `g` and `iterate` that no procedure reads. Plus nine.
-    open shouldBe 856
+    // 862 with Gilbreath's table, 2026-10-24, read off the run and not decomposed: claims about the
+    // table `d` that no procedure reads. Plus six.
+    open shouldBe 862
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2252,7 +2256,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // proposals over its seven facts that keep an index bound or `NUM_DIV`/`NUM_MOD`. Plus thirteen.
     // 325 with Rule 30, 2026-10-23, read off the run and not decomposed: proposals over its fifteen
     // facts that keep `NUM_MOD`, `NUM_POW`, `NUM_DIV` or a cell's index. Plus ten.
-    aboutNumbers.size shouldBe 325
+    // 331 with Gilbreath's table, 2026-10-24, read off the run and not decomposed: proposals over
+    // its facts, every one of which keeps `NUM_SUB` or an entry's index. Plus six.
+    aboutNumbers.size shouldBe 331
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
