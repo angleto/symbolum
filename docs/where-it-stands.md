@@ -1223,7 +1223,10 @@ channel is worth no more for any prior, any actions and any utility, and its onl
 the garbling is a channel. `DecisionSpec` certifies the essay's case E5
 (`thinktank/utitlita_e_danno`): `7/20` with the signal alone, `9/16` with the frame on average and
 `1/8` for the same reader on new tasks, three theorems with nothing assumed, so the monotonicity holds
-on average over the tasks and not conditioned on the task. **What is not here**: the converse,
+on average over the tasks and not conditioned on the task. And its case E6a, a memory that keeps the
+condition beside the frame with reliability `r`: at `r = 1` the reader is right always on familiar
+tasks, `7/20` of the time on new ones and `27/40` on average, and at `r = 9/10` `187/200`, `131/400`
+and `101/160`, six theorems with nothing assumed. **What is not here**: the converse,
 Blackwell–Sherman–Stein, which needs a separating hyperplane in the simplex of posteriors; and any
 distribution not on an initial segment of `num`.
 

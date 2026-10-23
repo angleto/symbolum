@@ -27,7 +27,8 @@ import garden.xeno.symbolum.logic.*
  *
  * The maximum at each signal is found by hand rather than computed: at `t = 8 s + g` the reader's
  * score for answer `a` is `1/8 * P(s | a) * P(g | a)`, largest at `a = g` and strictly, which three
- * case splits on `a = g`, `s = a` and `s = g` settle with the numbers `49/2240 < 117/2240`. The
+ * case splits on `a = g`, `s = a` and `s = g` settle, the closest comparison being
+ * `49/2240 < 117/2240` between the products `P(s | a) P(g | a)`, the common `1/8` left out. The
  * sums over the signals then close by `SUM_GROUPS`, `SUM_INDICATOR` and `SUM_COND_COUNT`.
  */
 private[theories] object EssayCase {
@@ -55,73 +56,10 @@ private[theories] object EssayCase {
   final case class Values(empty: Kernel.Thm, average: Kernel.Thm, newTask: Kernel.Thm)
 
   def derive(decision: Decision, successor: Successor): R[Values] = {
-    val steps = decision.steps
-    import steps.*
-    import steps.kit.*
-
-    val Q = "((7:real) / 20)"
-    val Qr = "((13:real) / 140)"
-    val H = "((9:real) / 16)"
-    val Hr = "((1:real) / 16)"
-
-    def numeral(text: String): R[Term] = nm(text)
-
-    // |- SUC 7 = 8, from the two spellings
-    val sucSevenIsEight: R[Kernel.Thm] =
-      for {
-        seven <- numeral("7").flatMap(successor.spell)
-        eight <- numeral("8").flatMap(successor.spell)
-        suc <- term("SUC", Type.fun(TyApp(Natural.TypeName, Nil), TyApp(Natural.TypeName, Nil)))
-        lifted <- Conv.apTerm(suc, seven)
-        back <- Conv.sym(eight)
-        out <- trans(lifted, back)
-      } yield out
-
-    def belowEight(x: String, le: Kernel.Thm): R[Kernel.Thm] =
-      for {
-        eight <- sucSevenIsEight
-        step <- at(fact("NUM_LT_SUC"), "(7:num) < SUC 7")
-        both <- conj(le, step)
-        lt <- at(fact("NUM_LE_LT_TRANS"), s"$x <= 7 /\\ 7 < SUC 7 ==> $x < SUC 7").flatMap(mp(_, both))
-        out <- rw(eight, lt)
-      } yield out
-
-    def atMostSeven(x: String, lt: Kernel.Thm): R[Kernel.Thm] =
-      for {
-        eight <- sucSevenIsEight
-        back <- Conv.sym(eight)
-        moved <- rw(back, lt)
-        out <- at(fact("NUM_LE_OF_LT_SUC"), s"$x < SUC 7 ==> $x <= 7").flatMap(mp(_, moved))
-      } yield out
-
-    val realNumerals: R[Seq[Kernel.Thm]] =
-      for {
-        b0 <- fact("NUM_REAL_BIT0")
-        b1 <- fact("NUM_REAL_BIT1")
-        one <- fact("NUM_REAL_ONE")
-      } yield Seq(b0, b1, one)
-
-    /**
-     * The goal rewritten with `equations` and closed by `Linarith` from `facts`, with the rational
-     * numerals kept as numbers: `linAfter` abstracts every quotient into a fresh atom, which is
-     * right for `x / y` and turns `8 * (1 / 8) = 1` into `8 * q = 1`.
-     */
-    def exact(equations: Seq[Kernel.Thm], facts: Seq[Kernel.Thm], goal: Term): R[Kernel.Thm] =
-      rewriting(equations, goal) { g =>
-        for {
-          implication <- facts.reverse.foldLeft[R[Term]](Right(g))((acc, f) => acc.flatMap(logic.mkImp(f.conclusion, _)))
-          general <- linarith.prove(implication)
-          out <- facts.foldLeft[R[Kernel.Thm]](Right(general))((acc, f) => acc.flatMap(rules.mp(_, f)))
-        } yield out
-      }
-
-    /** A COND on an equation, settled by whether the equation holds. */
-    def condOn(eq: String, x: String, z: String, holds: Kernel.Thm): R[Kernel.Thm] =
-      at(fact("COND_TRUE"), s"$eq ==> COND ($eq) $x $z = $x").flatMap(mp(_, holds))
-    def condOff(eq: String, x: String, z: String, fails: Kernel.Thm): R[Kernel.Thm] =
-      at(fact("COND_FALSE"), s"~($eq) ==> COND ($eq) $x $z = $z").flatMap(mp(_, fails))
-
-    def num(x: FVar): String = v(x)
+    val shared = new EssaySteps(decision, successor)
+    import shared.*
+    import shared.steps.*
+    import shared.steps.kit.*
 
     /* ---------------------------------------------------------------- V(0) */
 
@@ -187,43 +125,6 @@ private[theories] object EssayCase {
     }
 
     /* ------------------------------------------------- the pair (s, g) of one signal */
-
-    def variable(text: String): R[FVar] =
-      prop0(text).flatMap {
-        case x: FVar => Right(x)
-        case other => Left(NotOfForm("a variable", other))
-      }
-
-    /** `|- (a = b) = (b = a)` at two numbers: either orientation makes the two spellings one. */
-    def flip(a: String, b: String): R[Kernel.Thm] =
-      for {
-        ab <- prop(s"$a = $b")
-        ba <- prop(s"$b = $a")
-        one <- LogicError.lift(Kernel.assume(ab)).flatMap(Conv.sym)
-        two <- LogicError.lift(Kernel.assume(ba)).flatMap(Conv.sym)
-      } yield Kernel.deductAntisym(two, one)
-
-    /** `NUM_DIV (8 * s + g) 8 = s` and `NUM_MOD (8 * s + g) 8 = g`, for `g < 8`. */
-    def coordinates(S: String, G: String, gBelow: Kernel.Thm): R[Seq[Kernel.Thm]] =
-      for {
-        t <- nm(s"8 * $S + $G")
-        both <- conj(Kernel.refl(t), gBelow)
-        unique <- at(fact("NUM_DIV_MOD_UNIQUE"),
-          s"8 * $S + $G = 8 * $S + $G /\\ $G < 8 ==> $S = NUM_DIV (8 * $S + $G) 8 /\\ $G = NUM_MOD (8 * $S + $G) 8")
-          .flatMap(mp(_, both))
-        parts <- split(unique)
-        div <- Conv.sym(parts(0))
-        mod <- Conv.sym(parts(1))
-      } yield Seq(div, mod)
-
-    /** A term rewritten with `equations`, as an equation. */
-    def rewritten(equations: Seq[Kernel.Thm], text: String): R[Kernel.Thm] =
-      for {
-        t <- prop0(text)
-        set <- Rewrite.Rule.all(logic, equations.toVector)
-        out <- Rewrite.rewrite(set, t)
-      } yield out
-
     /** The reader's score for answer `a` at the pair `(s, g)`, once the inner sum is collapsed. */
     def score(S: String, G: String, A: String): String =
       s"(1:real) / 8 * (COND ($S = $A) $Q $Qr * COND ($G = $A) $H $Hr)"
@@ -245,7 +146,7 @@ private[theories] object EssayCase {
         }
       } yield out
 
-    /** Away from `g` the score is strictly below the score at `g`: `49/2240 < 117/2240` and the like. */
+    /** Away from `g` the score is strictly below the score at `g`: `49/17920 < 117/17920` and the like. */
     def strictlyBelow(S: String, G: String, A: String, other: Kernel.Thm): R[Kernel.Thm] =
       for {
         goal <- prop(s"${score(S, G, A)} < ${score(S, G, G)}")
@@ -289,7 +190,7 @@ private[theories] object EssayCase {
           .flatMap(mp(_, pointwise))
         fT <- prop0(s"\\a:num. ${score(S, G, "a")}")
         sevenT <- nm("7")
-        gV <- variable(G)
+        gV <- numVar(G)
         upper <- spec(k(Decision.MaximumUpper), fT, sevenT, gV).flatMap(mp(_, gLe))
         bound <- prop(s"!a:num. a <= 7 ==> (\\a:num. ${score(S, G, "a")}) a <= ${score(S, G, G)}")
         bounded <- every(bound) { (as, _, g) =>
@@ -432,4 +333,127 @@ private[theories] object EssayCase {
       n <- newTask
     } yield Values(e, a, n)
   }
+}
+
+/**
+ * The steps the essay's cases are written in, over `Decision`'s theory: the arithmetic of the
+ * indices below eight, the conditionals settled by an equation, the coordinates of a signal read
+ * back by `NUM_DIV` and `NUM_MOD`, and the closing step that keeps rational numerals as numbers.
+ */
+private[theories] final class EssaySteps(decision: Decision, successor: Successor) {
+  type R[A] = Either[LogicError, A]
+
+  val steps: Decision.Proofs = decision.steps
+  import steps.*
+  import steps.kit.*
+
+  val Q = "((7:real) / 20)"
+  val Qr = "((13:real) / 140)"
+  val H = "((9:real) / 16)"
+  val Hr = "((1:real) / 16)"
+
+  def numeral(text: String): R[Term] = nm(text)
+
+  // |- SUC 7 = 8, from the two spellings
+  val sucSevenIsEight: R[Kernel.Thm] =
+    for {
+      seven <- numeral("7").flatMap(successor.spell)
+      eight <- numeral("8").flatMap(successor.spell)
+      suc <- term("SUC", Type.fun(TyApp(Natural.TypeName, Nil), TyApp(Natural.TypeName, Nil)))
+      lifted <- Conv.apTerm(suc, seven)
+      back <- Conv.sym(eight)
+      out <- trans(lifted, back)
+    } yield out
+
+  def belowEight(x: String, le: Kernel.Thm): R[Kernel.Thm] =
+    for {
+      eight <- sucSevenIsEight
+      step <- at(fact("NUM_LT_SUC"), "(7:num) < SUC 7")
+      both <- conj(le, step)
+      lt <- at(fact("NUM_LE_LT_TRANS"), s"$x <= 7 /\\ 7 < SUC 7 ==> $x < SUC 7").flatMap(mp(_, both))
+      out <- rw(eight, lt)
+    } yield out
+
+  def atMostSeven(x: String, lt: Kernel.Thm): R[Kernel.Thm] =
+    for {
+      eight <- sucSevenIsEight
+      back <- Conv.sym(eight)
+      moved <- rw(back, lt)
+      out <- at(fact("NUM_LE_OF_LT_SUC"), s"$x < SUC 7 ==> $x <= 7").flatMap(mp(_, moved))
+    } yield out
+
+  val realNumerals: R[Seq[Kernel.Thm]] =
+    for {
+      b0 <- fact("NUM_REAL_BIT0")
+      b1 <- fact("NUM_REAL_BIT1")
+      one <- fact("NUM_REAL_ONE")
+    } yield Seq(b0, b1, one)
+
+  /**
+   * The goal rewritten with `equations` and closed by `Linarith` from `facts`, with the rational
+   * numerals kept as numbers: `linAfter` abstracts every quotient into a fresh atom, which is
+   * right for `x / y` and turns `8 * (1 / 8) = 1` into `8 * q = 1`.
+   */
+  def exact(equations: Seq[Kernel.Thm], facts: Seq[Kernel.Thm], goal: Term): R[Kernel.Thm] =
+    rewriting(equations, goal) { g =>
+      Term.destEq(g) match {
+        // a rewriting that has already met the other side wants no arithmetic at all
+        case Some((l, r)) if facts.isEmpty && l == r => Right(Kernel.refl(l))
+        // an equation from nothing is a ring identity, and `Ring` derives a ground one in half
+        // of what `Linarith` spends on it, measured on E6a's six totals on 2026-10-23
+        case Some(_) if facts.isEmpty => driver.identity(g)
+        case _ =>
+          for {
+            implication <- facts.reverse.foldLeft[R[Term]](Right(g))((acc, f) => acc.flatMap(logic.mkImp(f.conclusion, _)))
+            general <- linarith.prove(implication)
+            out <- facts.foldLeft[R[Kernel.Thm]](Right(general))((acc, f) => acc.flatMap(rules.mp(_, f)))
+          } yield out
+      }
+    }
+
+  /** A COND on an equation, settled by whether the equation holds. */
+  def condOn(eq: String, x: String, z: String, holds: Kernel.Thm): R[Kernel.Thm] =
+    at(fact("COND_TRUE"), s"$eq ==> COND ($eq) $x $z = $x").flatMap(mp(_, holds))
+  def condOff(eq: String, x: String, z: String, fails: Kernel.Thm): R[Kernel.Thm] =
+    at(fact("COND_FALSE"), s"~($eq) ==> COND ($eq) $x $z = $z").flatMap(mp(_, fails))
+
+  def num(x: FVar): String = v(x)
+
+
+  def numVar(text: String): R[FVar] =
+    prop0(text).flatMap {
+      case x: FVar => Right(x)
+      case other => Left(NotOfForm("a variable", other))
+    }
+
+  /** `|- (a = b) = (b = a)` at two numbers: either orientation makes the two spellings one. */
+  def flip(a: String, b: String): R[Kernel.Thm] =
+    for {
+      ab <- prop(s"$a = $b")
+      ba <- prop(s"$b = $a")
+      one <- LogicError.lift(Kernel.assume(ab)).flatMap(Conv.sym)
+      two <- LogicError.lift(Kernel.assume(ba)).flatMap(Conv.sym)
+    } yield Kernel.deductAntisym(two, one)
+
+  /** `NUM_DIV (8 * s + g) 8 = s` and `NUM_MOD (8 * s + g) 8 = g`, for `g < 8`. */
+  def coordinates(S: String, G: String, gBelow: Kernel.Thm): R[Seq[Kernel.Thm]] =
+    for {
+      t <- nm(s"8 * $S + $G")
+      both <- conj(Kernel.refl(t), gBelow)
+      unique <- at(fact("NUM_DIV_MOD_UNIQUE"),
+        s"8 * $S + $G = 8 * $S + $G /\\ $G < 8 ==> $S = NUM_DIV (8 * $S + $G) 8 /\\ $G = NUM_MOD (8 * $S + $G) 8")
+        .flatMap(mp(_, both))
+      parts <- split(unique)
+      div <- Conv.sym(parts(0))
+      mod <- Conv.sym(parts(1))
+    } yield Seq(div, mod)
+
+  /** A term rewritten with `equations`, as an equation. */
+  def rewritten(equations: Seq[Kernel.Thm], text: String): R[Kernel.Thm] =
+    for {
+      t <- prop0(text)
+      set <- Rewrite.Rule.all(logic, equations.toVector)
+      out <- Rewrite.rewrite(set, t)
+    } yield out
+
 }

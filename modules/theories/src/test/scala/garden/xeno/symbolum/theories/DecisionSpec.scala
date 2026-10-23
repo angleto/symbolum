@@ -262,4 +262,24 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
     force(linarith.prove(proposition("(7:real) / 20 <= 9 / 16")))
     force(linarith.prove(proposition("(1:real) / 8 < 7 / 20")))
   }
+
+  /**
+   * The essay's case E6a, `EssayMemory`: the memory keeps the condition beside the frame, and at
+   * reliability `r` the reader's rule is scored on average, on familiar tasks and on new ones. Six
+   * values, for `r = 1` and `r = 9/10`, recomputed outside the kernel on 2026-10-22 with exact
+   * fractions and equal to `sim.py`'s `e6_exact`; no tie at any of the hundred and twenty-eight
+   * signals at either `r`. At `r = 1` the condition tells the reader which kind of task it is on, so
+   * the new tasks get back the `7/20` of the signal alone that E5's frame took away.
+   */
+  "The essay's case E6a" should "have its six values, each a theorem with nothing assumed" in {
+    val values = force(EssayMemory.derive(decision, chain.successor))
+    values.keySet shouldBe EssayMemory.Statements.map(_._1).toSet
+    EssayMemory.Statements.foreach { case (name, text) =>
+      withClue(s"$name: ") {
+        values(name).conclusion shouldBe force(steps.kit.prop(text))
+        values(name).hypotheses shouldBe empty
+        Derivation.axiomsOf(values(name)) shouldBe threeAxioms
+      }
+    }
+  }
 }
