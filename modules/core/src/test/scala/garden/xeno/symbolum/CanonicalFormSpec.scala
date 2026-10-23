@@ -105,6 +105,14 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
     // 3814697265625. Seed -1600853951632219810.
     case Neg(inner) => errorScale(inner)
 
+    // And through a product, where the error of each factor is multiplied by the size of the
+    // others: a cancelling sum times a large coefficient loses the sum's digits at the
+    // coefficient's scale. Found on 2026-10-22 by a generated case, `(x + 1^0 + y - 5) *
+    // -5^2^3^2`, whose sum is exactly zero at the sample point and whose evaluation left one unit
+    // in the last place of it, 2^-52, times 5^12 = 244140625: 5.4e-8 against a tolerance of 1e-8,
+    // because a product fell through to the case below and read the scale off its own value.
+    case Mul(factors) if factors.nonEmpty => factors.foldLeft(1.0)((acc, f) => acc * errorScale(f))
+
     case Div(parts) if parts.nonEmpty =>
       val divisor = parts.tail.foldLeft(1.0)((acc, p) => acc * valueAt(p).fold(1.0)(math.abs))
 
@@ -149,6 +157,30 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
       math.max(1.0, math.abs(result)) should be < 1e3
 
       math.abs(original - result) should be < Tolerance * errorScale(simplified)
+    }
+  }
+
+  /**
+   * The case that made the value property fail on 2026-10-22, pinned for the reason the one above
+   * is: a cancelling sum, here exactly zero at the sample point, multiplied by a coefficient of
+   * 244140625, so one unit in the last place of the sum is 5.4e-8 after the product. The scale has
+   * to see the coefficient, which is what the `Mul` case of `errorScale` is for.
+   */
+  property("a cancelling sum under a product is compared at the precision it can deliver") {
+    val x = Var("x")
+    val y = Var("y")
+    val expr = Mul(Vector(
+      Sub(Vector(Add(Vector(x, Pow(Num(1), Num(0)), y)), Num(5))),
+      Pow(Pow(Pow(Num(-5), Num(2)), Num(3)), Num(2))
+    ))
+    val simplified = expr.fullSimplify
+    val original = valueAt(expr).getOrElse(fail("the compact form does not evaluate"))
+    val result = valueAt(simplified).getOrElse(fail("the simplified form does not evaluate"))
+    withClue(s"$expr  ->  $simplified\n") {
+      // what makes the case: the result is zero to within rounding, and the scale sees the coefficient
+      math.abs(result) should be < 1e-6
+      errorScale(simplified) should be > 2e8
+      math.abs(original - result) should be < Tolerance * math.max(errorScale(expr), errorScale(simplified))
     }
   }
 
@@ -426,7 +458,8 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
           original <- valueAt(expr)
           result <- valueAt(simplified)
         } withClue(s"[$name] $expr  ->  $simplified\n") {
-          math.abs(original - result) should be < Tolerance * errorScale(simplified)
+          // both sides are evaluated in floating point, so the allowance is the worse of the two
+          math.abs(original - result) should be < Tolerance * math.max(errorScale(expr), errorScale(simplified))
         }
       }
     }
