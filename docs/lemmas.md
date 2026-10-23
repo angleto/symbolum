@@ -1246,7 +1246,12 @@ they have least appetite for working out how it is produced.
 
 ## Truth
 
+  NUM_GROUND_ALL           !n:num. !m:num. NUM_GROUND (NUM_CODE 8 (NUM_PAIR n m)) = F
+  NUM_GROUND_EQ            !n:num. !m:num. NUM_GROUND (NUM_CODE 5 (NUM_PAIR n m)) = (NUM_CLOSED n /\ NUM_CLOSED m)
+  NUM_GROUND_IMP           !n:num. !m:num. NUM_GROUND (NUM_CODE 7 (NUM_PAIR n m)) = (NUM_GROUND n /\ NUM_GROUND m)
+  NUM_GROUND_NOT           !n:num. NUM_GROUND (NUM_CODE 6 n) = NUM_GROUND n
   NUM_PROV_FALSE_EQ        !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m))) f ==> NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR n m)))
+  NUM_PROV_GROUND          !f:num -> num. !n:num. NUM_FORM n ==> NUM_GROUND n ==> (NUM_TRUE n f ==> NUM_PROV n) /\ (~(NUM_TRUE n f) ==> NUM_PROV (NUM_CODE 6 n))
   NUM_PROV_TRUE_EQ         !f:num -> num. !n:num. !m:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_TERM m ==> NUM_CLOSED m ==> NUM_TRUE (NUM_CODE 5 (NUM_PAIR n m)) f ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n m))
   NUM_PROV_VALUE           !f:num -> num. !n:num. NUM_TERM n ==> NUM_CLOSED n ==> NUM_PROV (NUM_CODE 5 (NUM_PAIR n (NUM_NUMERAL (NUM_VALUE n f))))
   NUM_TRI_DOUBLE           !n:num. NUM_TRI n + NUM_TRI n = n * SUC n

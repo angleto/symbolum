@@ -77,7 +77,7 @@ class TruthSpec extends AnyFlatSpec with Matchers {
     val below = chain.provability.theory
     truth.theory.axioms shouldBe below.axioms
     (truth.theory.constants.keySet -- below.constants.keySet) shouldBe
-      Set(Truth.ValueName, Truth.TrueName, Truth.TriangleGraphName)
+      Set(Truth.ValueName, Truth.TrueName, Truth.GroundName, Truth.TriangleGraphName)
     truth.theory.typeOperators.keySet shouldBe below.typeOperators.keySet
   }
 
@@ -280,5 +280,56 @@ class TruthSpec extends AnyFlatSpec with Matchers {
         .flatMap(rules.mp(_, falsity)))
     refuted.hypotheses shouldBe empty
     refuted.conclusion shouldBe proposition(s"NUM_PROV ($denied)")
+  }
+
+  /**
+   * `~(0 = 0)` is a closed formula with no quantifier and it is false, so `NUM_PROV_GROUND` refutes
+   * it: the negation case and the equation case met at once, with both of the theorem's conditions
+   * discharged here rather than assumed. What comes back is `NUM_PROV ~~(0 = 0)`.
+   */
+  it should "refute a false closed formula without a quantifier, with both conditions discharged" in {
+    val language = chain.language
+    val zero = term("NUM_CODE 1 0")
+    val equation = term("NUM_CODE 5 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 1 0))")
+    val denial = term("NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 1 0)))")
+    val zeroTerm = force(language.fact(Language.TermZero))
+    val zeroClosed = force(language.fact(Language.ClosedZero))
+    val equationForm = force(rules.specAll(force(language.fact(Language.FormulaEquality)), List(zero, zero))
+      .flatMap(rules.mp(_, zeroTerm)).flatMap(rules.mp(_, zeroTerm)))
+    val denialForm = force(rules.spec(equation, force(language.fact(Language.FormulaNegation)))
+      .flatMap(rules.mp(_, equationForm)))
+    val equationGround = force(for {
+      clause <- rules.specAll(fact(Truth.GroundEquality), List(zero, zero))
+      back <- Conv.sym(clause)
+      closed <- rules.conjIntro(zeroClosed, zeroClosed)
+      out <- LogicError.lift(Kernel.eqMp(back, closed))
+    } yield out)
+    val denialGround = force(for {
+      clause <- rules.spec(equation, fact(Truth.GroundNegation))
+      back <- Conv.sym(clause)
+      out <- LogicError.lift(Kernel.eqMp(back, equationGround))
+    } yield out)
+
+    val e = Term.variable("e", Type.fun(numbers, numbers))
+    val decided = force(rules.specAll(fact(Truth.ProvesGround), List(e, denial))
+      .flatMap(rules.mp(_, denialForm)).flatMap(rules.mp(_, denialGround)))
+    // the denial is false at every environment: `0 = 0` is true there
+    val equationTrue = force(for {
+      clause <- rules.specAll(fact(Truth.TrueEquality), List(e, zero, zero))
+      back <- Conv.sym(clause)
+      out <- LogicError.lift(Kernel.eqMp(back, Kernel.refl(term("NUM_VALUE (NUM_CODE 1 0) (e:num -> num)"))))
+    } yield out)
+    val denialTrue = proposition("NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 1 0)))) (e:num -> num)")
+    val denialFalse = force(for {
+      clause <- rules.specAll(fact(Truth.TrueNegation), List(e, equation))
+      assumed <- LogicError.lift(Kernel.assume(denialTrue))
+      opened <- LogicError.lift(Kernel.eqMp(clause, assumed))
+      absurd <- rules.notElim(opened, equationTrue)
+      out <- rules.notIntro(denialTrue, absurd)
+    } yield out)
+    val refuted = force(rules.conjElim2(decided).flatMap(rules.mp(_, denialFalse)))
+    refuted.hypotheses shouldBe empty
+    refuted.conclusion shouldBe proposition(
+      "NUM_PROV (NUM_CODE 6 (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR (NUM_CODE 1 0) (NUM_CODE 1 0)))))")
   }
 }

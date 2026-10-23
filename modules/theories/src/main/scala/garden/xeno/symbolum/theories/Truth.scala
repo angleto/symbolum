@@ -155,10 +155,43 @@ object Truth {
    * equation; the two values differ, so `NUM_PROV_NUMERAL_DISTINCT` denies the equation between
    * the numerals, and `NUM_PROV_NOT_EQ_CONG` carries the denial back onto `a` and `b`. With
    * [[ProvesTrueEquation]] it says that PA decides every closed equation, which is completeness for
-   * the atomic formulas and their negations and nothing more: the connectives and the bounded
+   * the atomic formulas and their negations. The connectives are [[ProvesGround]], and the bounded
    * quantifiers are the next step.
    */
   val ProvesFalseEquation: String = "NUM_PROV_FALSE_EQ"
+
+  /**
+   * `NUM_GROUND p` says `p` codes a formula with no quantifier whose terms are all closed: the
+   * formulas completeness is proved for first, and the ones whose truth does not depend on the
+   * environment.
+   */
+  val GroundName: String = "NUM_GROUND"
+
+  /** `|- !a b. NUM_GROUND (a = b) = (NUM_CLOSED a /\ NUM_CLOSED b)`, coded. */
+  val GroundEquality: String = "NUM_GROUND_EQ"
+
+  /** `|- !p. NUM_GROUND ~p = NUM_GROUND p`, coded. */
+  val GroundNegation: String = "NUM_GROUND_NOT"
+
+  /** `|- !p q. NUM_GROUND (p ==> q) = (NUM_GROUND p /\ NUM_GROUND q)`, coded. */
+  val GroundImplication: String = "NUM_GROUND_IMP"
+
+  /** `|- !j p. NUM_GROUND (!v_j. p) = F`, coded: a quantifier is what this class leaves out. */
+  val GroundUniversal: String = "NUM_GROUND_ALL"
+
+  /**
+   * `|- !e p. NUM_FORM p ==> NUM_GROUND p ==>
+   *        (NUM_TRUE p e ==> NUM_PROV p) /\ (~NUM_TRUE p e ==> NUM_PROV ~p)`
+   *
+   * PA decides every closed formula without a quantifier: it proves the true ones and refutes the
+   * false ones. By strong induction on the code, with one case per connective. An equation is
+   * [[ProvesTrueEquation]] or [[ProvesFalseEquation]]. A negation is the hypothesis at its body,
+   * with `Deduction`'s double negation for the false one. An implication is `NUM_PROV_WEAKEN`
+   * when its consequent holds, `NUM_PROV_IMP_DENIED` when its antecedent fails, and
+   * `NUM_PROV_NOT_IMP` when it is false. The quantifier is the case `NUM_GROUND` rules out, and the
+   * bounded ones are the next step.
+   */
+  val ProvesGround: String = "NUM_PROV_GROUND"
 
   /**
    * The step of the value, as text.
@@ -254,8 +287,26 @@ object Truth {
     ProvesFalseEquation ->
       ("!e:num -> num. !a:num. !b:num. NUM_TERM a ==> NUM_CLOSED a ==> " +
         "NUM_TERM b ==> NUM_CLOSED b ==> NUM_TRUE (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR a b))) e ==> " +
-        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR a b)))")
+        "NUM_PROV (NUM_CODE 6 (NUM_CODE 5 (NUM_PAIR a b)))"),
+    GroundEquality -> "!a:num. !b:num. NUM_GROUND (NUM_CODE 5 (NUM_PAIR a b)) = (NUM_CLOSED a /\\ NUM_CLOSED b)",
+    GroundNegation -> "!p:num. NUM_GROUND (NUM_CODE 6 p) = NUM_GROUND p",
+    GroundImplication -> "!p:num. !q:num. NUM_GROUND (NUM_CODE 7 (NUM_PAIR p q)) = (NUM_GROUND p /\\ NUM_GROUND q)",
+    GroundUniversal -> "!j:num. !p:num. NUM_GROUND (NUM_CODE 8 (NUM_PAIR j p)) = F",
+    ProvesGround ->
+      ("!e:num -> num. !p:num. NUM_FORM p ==> NUM_GROUND p ==> " +
+        "(NUM_TRUE p e ==> NUM_PROV p) /\\ (~(NUM_TRUE p e) ==> NUM_PROV (NUM_CODE 6 p))")
   )
+
+  /** The step of the ground predicate, as text, with the guards the truth's step has. */
+  val GroundStepText: String =
+    "\\f:num -> bool. \\s:num. " +
+      "COND (s = NUM_CODE 5 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) (NUM_SND (NUM_PAYLOAD s)))) " +
+      "     (NUM_CLOSED (NUM_FST (NUM_PAYLOAD s)) /\\ NUM_CLOSED (NUM_SND (NUM_PAYLOAD s))) " +
+      "     (COND (s = NUM_CODE 6 (NUM_PAYLOAD s)) " +
+      "           (f (NUM_PAYLOAD s)) " +
+      "           (COND (s = NUM_CODE 7 (NUM_PAIR (NUM_FST (NUM_PAYLOAD s)) (NUM_SND (NUM_PAYLOAD s)))) " +
+      "                 (f (NUM_FST (NUM_PAYLOAD s)) /\\ f (NUM_SND (NUM_PAYLOAD s))) " +
+      "                 F))"
 
   /** The one the standard chain builds. */
   lazy val standard: Truth = Chain.standard.truth
@@ -295,8 +346,13 @@ object Truth {
       (truthTheory, truthDefinition, truthNamed) = withTruth
       truthLogic <- numbering.logic.over(truthTheory)
 
-      graphBody <- Parser.term(truthTheory, provability.notation, TriangleGraphText, numbers)
-      withGraph <- LogicError.lift(Kernel.defineConstant(truthTheory, TriangleGraphName, graphBody))
+      withGround <- Language.defineShaped(
+        numbering, recursion, truthTheory, provability.notation, truthLogic,
+        GroundName, GroundStepText, Type.Bool, Nil)
+      (groundTheory, groundDefinition, groundNamed) = withGround
+
+      graphBody <- Parser.term(groundTheory, provability.notation, TriangleGraphText, numbers)
+      withGraph <- LogicError.lift(Kernel.defineConstant(groundTheory, TriangleGraphName, graphBody))
       (theory, graphDefinition) = withGraph
       logic <- numbering.logic.over(theory)
 
@@ -327,6 +383,12 @@ object Truth {
       trueNegation <- clauses.at(truthNamed, TrueNegation, Type.fun(environments, Type.Bool))
       trueImplication <- clauses.at(truthNamed, TrueImplication, Type.fun(environments, Type.Bool))
       trueUniversal <- clauses.at(truthNamed, TrueUniversal, Type.fun(environments, Type.Bool))
+      groundEquality <- clauses.plain(groundNamed, GroundEquality)
+      groundNegation <- clauses.plain(groundNamed, GroundNegation)
+      groundImplication <- clauses.plain(groundNamed, GroundImplication)
+      groundUniversal <- clauses.plain(groundNamed, GroundUniversal)
+      modusPonens <- provability.fact(Provability.ModusPonens)
+      doubleNegation <- naturals.classical.fact(Classical.DoubleNegation)
 
       semiring <- Semiring.construct(numbering.peano)
       doubled <- triangleDoubled(logic, statements, naturals, numbering, semiring)
@@ -336,7 +398,9 @@ object Truth {
 
       evaluation <- Evaluation.of(
         logic, theory, provability.notation, language, numbering, deduction, statements,
-        valueZero, valueSuccessor, valueSum, valueProduct, trueEquality, trueNegation)
+        valueZero, valueSuccessor, valueSum, valueProduct, trueEquality, trueNegation,
+        Grounding(trueImplication, groundEquality, groundNegation, groundImplication, groundUniversal,
+          modusPonens, doubleNegation, naturals.classical))
     } yield new Truth(
       language,
       theory,
@@ -345,6 +409,7 @@ object Truth {
       Map(
         ValueName -> valueDefinition,
         TrueName -> truthDefinition,
+        GroundName -> groundDefinition,
         TriangleGraphName -> graphDefinition
       ),
       Map(
@@ -362,7 +427,12 @@ object Truth {
         TriangleGraphTrue -> graph,
         ProvesValue -> evaluation._1,
         ProvesTrueEquation -> evaluation._2,
-        ProvesFalseEquation -> evaluation._3
+        ProvesFalseEquation -> evaluation._3,
+        GroundEquality -> groundEquality,
+        GroundNegation -> groundNegation,
+        GroundImplication -> groundImplication,
+        GroundUniversal -> groundUniversal,
+        ProvesGround -> evaluation._4
       )
     )
   }
@@ -405,6 +475,27 @@ object Truth {
     statements: Statements
   ) {
     private val rules = logic.rules
+
+    /** A clause of a recursion that answers with a truth value and reads no environment. */
+    def plain(named: Kernel.Thm, name: String): Either[LogicError, Kernel.Thm] =
+      for {
+        statement <- statements.statement(name)
+        stripped <- Logic.stripForall(statement)
+        (variables, body) = stripped
+        sides <- Term.destEq(body).toRight(NotOfForm("an equation", body))
+        code <- sides._1 match {
+          case App(_, coded) => Right(coded)
+          case other => Left(NotOfForm("a predicate read at a code", other))
+        }
+        instance <- rules.spec(code, named)
+        cleaned <- Rewrite.inTheorem(projections, instance)
+        settled <- Language.settleGuards(numbering, logic, successor, Type.Bool, cleaned)
+        reduced <- Conv
+          .betaNormalise(settled.conclusion)
+          .flatMap(equation => LogicError.lift(Kernel.eqMp(equation, settled)))
+        general <- rules.genAll(reduced, variables.toList)
+        result <- statements.checked(name, general)
+      } yield result
 
     def at(named: Kernel.Thm, name: String, answers: Type): Either[LogicError, Kernel.Thm] =
       for {
@@ -693,6 +784,18 @@ object Truth {
    * [[ProvesValue]] and [[ProvesTrueEquation]], written in direct style the way `Deduction`'s
    * derivations are, because the induction below is five cases deep and each is a dozen steps.
    */
+  /** What the ground completeness reads beyond the evaluation's own facts. */
+  private final case class Grounding(
+    trueImplication: Kernel.Thm,
+    groundEquality: Kernel.Thm,
+    groundNegation: Kernel.Thm,
+    groundImplication: Kernel.Thm,
+    groundUniversal: Kernel.Thm,
+    modusPonens: Kernel.Thm,
+    doubleNegation: Kernel.Thm,
+    classical: Classical
+  )
+
   private object Evaluation {
 
     def of(
@@ -708,8 +811,9 @@ object Truth {
       valueSum: Kernel.Thm,
       valueProduct: Kernel.Thm,
       trueEquality: Kernel.Thm,
-      trueNegation: Kernel.Thm
-    ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm)] =
+      trueNegation: Kernel.Thm,
+      grounding: Grounding
+    ): Either[LogicError, (Kernel.Thm, Kernel.Thm, Kernel.Thm, Kernel.Thm)] =
       try {
         val built = new Evaluation(
           logic, theory, notation, language, numbering, deduction,
@@ -718,7 +822,8 @@ object Truth {
           value <- statements.checked(ProvesValue, built.provesValue)
           equation <- statements.checked(ProvesTrueEquation, built.provesTrueEquation(value))
           denial <- statements.checked(ProvesFalseEquation, built.provesFalseEquation(value))
-        } yield (value, equation, denial)
+          ground <- statements.checked(ProvesGround, built.provesGround(equation, denial, grounding))
+        } yield (value, equation, denial, ground)
       } catch { case refused: RefusedHere => Left(refused.error) }
   }
 
@@ -770,7 +875,7 @@ object Truth {
     private val free = constant(Language.FreeName, Type.fun(numbers, property))
     private val below = constant(Peano.StrictOrder, Type.fun(numbers, property))
     private val tags: Vector[Term] =
-      (0 to 6).toVector.map(k => force(Parser.term(theory, notation, k.toString, numbers)))
+      (0 to 8).toVector.map(k => force(Parser.term(theory, notation, k.toString, numbers)))
 
     private def code(tag: Int, payload: Term): Term = applied(coding, List(tags(tag), payload))
     private def pair(left: Term, right: Term): Term = applied(pairing, List(left, right))
@@ -1118,6 +1223,201 @@ object Truth {
     }
 
     /** [[ProvesTrueEquation]], from [[ProvesValue]] at both sides. */
+    /** [[ProvesGround]], by strong induction on the code and one case per connective. */
+    def provesGround(trueEq: Kernel.Thm, falseEq: Kernel.Thm, g: Grounding): Kernel.Thm = {
+      val groundPredicate = constant(GroundName, property)
+      val formPredicate = constant(Language.FormulaName, property)
+      def ground(subject: Term): Term = applied(groundPredicate, List(subject))
+      def isForm(subject: Term): Term = applied(formPredicate, List(subject))
+      def truthAt(subject: Term): Term = applied(truth, List(subject, environment))
+      def neg(subject: Term): Term = code(6, subject)
+      def not(t: Term): Term = force(logic.mkNot(t))
+      def both(l: Term, r: Term): Term = force(logic.mkConj(l, r))
+      def decided(subject: Term): Term =
+        both(imp(truthAt(subject), provable(subject)), imp(not(truthAt(subject)), provable(neg(subject))))
+      def claimG(subject: Term): Term = imp(isForm(subject), imp(ground(subject), decided(subject)))
+
+      /** `PROV q` from `PROV (p ==> q)` and `PROV p`. */
+      def detach(p: Term, q: Term, implication: Kernel.Thm, antecedent: Kernel.Thm): Kernel.Thm =
+        apply(g.modusPonens, List(p, q), implication, antecedent)
+      /** `NUM_TRUE x e = <clause>` read forwards or backwards. */
+      def through(clause: Kernel.Thm, held: Kernel.Thm): Kernel.Thm = force(LogicError.lift(Kernel.eqMp(clause, held)))
+      def backwards(clause: Kernel.Thm, held: Kernel.Thm): Kernel.Thm =
+        force(Conv.sym(clause).flatMap(c => LogicError.lift(Kernel.eqMp(c, held))))
+      def cases(p: Term)(yes: Kernel.Thm => Kernel.Thm, no: Kernel.Thm => Kernel.Thm): Kernel.Thm =
+        force(g.classical.cases(p, yes(assumed(p)), no(assumed(not(p)))))
+      def absurd(goal: Term, contradiction: Kernel.Thm): Kernel.Thm = force(rules.falsityElim(goal, contradiction))
+      def decidedFrom(subject: Term, whenTrue: Kernel.Thm => Kernel.Thm, whenFalse: Kernel.Thm => Kernel.Thm): Kernel.Thm = {
+        val t = truthAt(subject)
+        val a = force(rules.disch(t, whenTrue(assumed(t))))
+        val b = force(rules.disch(not(t), whenFalse(assumed(not(t)))))
+        force(rules.conjIntro(a, b))
+      }
+
+      val y = Term.variable("y", numbers)
+      val z = Term.variable("z", numbers)
+      val strong = force(numbering.peano.fact(Peano.StrongInduction))
+      val predicate = force(LogicError.lift(Term.abs(y, claimG(y))))
+      val instance = force(
+        rules.spec(predicate, strong).flatMap(theorem =>
+          Conv.betaNormalise(theorem.conclusion).flatMap(reduced => LogicError.lift(Kernel.eqMp(reduced, theorem)))))
+      val hypothesis = force(logic.mkForall(z, imp(applied(below, List(z, y)), claimG(z))))
+      val earlier = assumed(hypothesis)
+      val yIsForm = assumed(isForm(y))
+      val yIsGround = assumed(ground(y))
+
+      def atComponent(part: Term, isBelow: Kernel.Thm, partIsForm: Kernel.Thm, partIsGround: Kernel.Thm): Kernel.Thm =
+        force(rules.spec(part, earlier).flatMap(rules.mp(_, isBelow)).flatMap(rules.mp(_, partIsForm))
+          .flatMap(rules.mp(_, partIsGround)))
+
+      val shapes = force(rules.spec(y, languageFact(Language.FormulaCases)).flatMap(unfolded =>
+        LogicError.lift(Kernel.eqMp(unfolded, yIsForm))))
+      val taken = Set(y, z, environment)
+
+      val reached = opened(shapes, "a", taken) { (a, withTag) =>
+        opened(withTag, "b", taken + a) { (b, shaped) =>
+          val yIsCode = force(rules.conjElim1(shaped))
+          val alternatives = force(rules.conjElim2(shaped))
+          def back(template: Term => Term, atShape: Kernel.Thm, yIsShape: Kernel.Thm): Kernel.Thm =
+            moved(template, force(Conv.sym(yIsShape)), atShape)
+          def forth(template: Term => Term, atY: Kernel.Thm, yIsShape: Kernel.Thm): Kernel.Thm =
+            moved(template, yIsShape, atY)
+          def belowY(isBelowShape: Kernel.Thm, part: Term, yIsShape: Kernel.Thm): Kernel.Thm =
+            moved(x => applied(below, List(part, x)), force(Conv.sym(yIsShape)), isBelowShape)
+
+          val (equality, rest1) = logic.destDisj(alternatives.conclusion).getOrElse(
+            throw new RefusedHere(NotOfForm("the four shapes of a formula", alternatives.conclusion)))
+          val (negation, rest2) = logic.destDisj(rest1).getOrElse(throw new RefusedHere(NotOfForm("three shapes", rest1)))
+          val (implication, universal) = logic.destDisj(rest2).getOrElse(throw new RefusedHere(NotOfForm("two shapes", rest2)))
+
+          // an equation between closed terms: the atomic case, already proved both ways
+          val asEquality = {
+            val held = assumed(equality)
+            val tagIs = force(rules.conjElim1(held))
+            opened(force(rules.conjElim2(held)), "u", taken + a + b) { (u, withLeft) =>
+              opened(withLeft, "v", taken + a + b + u) { (v, parts) =>
+                val payloadIs = force(rules.conjElim1(parts))
+                val terms = force(rules.conjElim2(parts))
+                val uIsTerm = force(rules.conjElim1(terms))
+                val vIsTerm = force(rules.conjElim2(terms))
+                val shape = code(5, pair(u, v))
+                val yIsShape = force(Conv.trans(yIsCode, codeCongruence(tagIs, payloadIs)))
+                val closedBoth = through(apply(g.groundEquality, List(u, v)), forth(ground, yIsGround, yIsShape))
+                val uIsClosed = force(rules.conjElim1(closedBoth))
+                val vIsClosed = force(rules.conjElim2(closedBoth))
+                val atShape = decidedFrom(shape,
+                  holds => apply(trueEq, List(environment, u, v), uIsTerm, uIsClosed, vIsTerm, vIsClosed, holds),
+                  fails => {
+                    val negated = backwards(apply(trueNegation, List(environment, shape)), fails)
+                    apply(falseEq, List(environment, u, v), uIsTerm, uIsClosed, vIsTerm, vIsClosed, negated)
+                  })
+                back(decided, atShape, yIsShape)
+              }
+            }
+          }
+
+          // a negation: the hypothesis at the body, and the double negation for the false one
+          val asNegation = {
+            val held = assumed(negation)
+            val tagIs = force(rules.conjElim1(held))
+            val bodyIsForm = force(rules.conjElim2(held))
+            val shape = neg(b)
+            val yIsShape = force(Conv.trans(yIsCode, codeCongruence(tagIs, refl(b))))
+            val bodyIsGround = through(apply(g.groundNegation, List(b)), forth(ground, yIsGround, yIsShape))
+            val atBody = atComponent(b, belowY(belowCode(6, b), b, yIsShape), bodyIsForm, bodyIsGround)
+            val bodyTrue = force(rules.conjElim1(atBody))
+            val bodyFalse = force(rules.conjElim2(atBody))
+            val atShape = decidedFrom(shape,
+              holds => force(rules.mp(bodyFalse, through(apply(trueNegation, List(environment, b)), holds))),
+              fails => {
+                val notNot = through(force(Conv.apTerm(constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)),
+                  apply(trueNegation, List(environment, b)))), fails)
+                val bodyHolds = force(rules.spec(truthAt(b), g.doubleNegation).flatMap(rules.mp(_, notNot)))
+                val provedBody = force(rules.mp(bodyTrue, bodyHolds))
+                val introduce = apply(deductionFact(Deduction.DoubleNegationIntroduction), List(b), bodyIsForm)
+                detach(b, neg(neg(b)), introduce, provedBody)
+              })
+            back(decided, atShape, yIsShape)
+          }
+
+          // an implication: weakening, ex falso, or its refutation, by the truth of the two sides
+          val asImplication = {
+            val held = assumed(implication)
+            val tagIs = force(rules.conjElim1(held))
+            opened(force(rules.conjElim2(held)), "u", taken + a + b) { (u, withLeft) =>
+              opened(withLeft, "v", taken + a + b + u) { (v, parts) =>
+                val payloadIs = force(rules.conjElim1(parts))
+                val forms = force(rules.conjElim2(parts))
+                val uIsForm = force(rules.conjElim1(forms))
+                val vIsForm = force(rules.conjElim2(forms))
+                val shape = code(7, pair(u, v))
+                val yIsShape = force(Conv.trans(yIsCode, codeCongruence(tagIs, payloadIs)))
+                val grounds = through(apply(g.groundImplication, List(u, v)), forth(ground, yIsGround, yIsShape))
+                val atU = atComponent(u, belowY(belowPair(7, u, v, first = true), u, yIsShape), uIsForm, force(rules.conjElim1(grounds)))
+                val atV = atComponent(v, belowY(belowPair(7, u, v, first = false), v, yIsShape), vIsForm, force(rules.conjElim2(grounds)))
+                val clause = apply(g.trueImplication, List(environment, u, v))
+                val tu = truthAt(u)
+                val tv = truthAt(v)
+                val atShape = decidedFrom(shape,
+                  holds => {
+                    val arrow = through(clause, holds)
+                    cases(tv)(
+                      vHolds => apply(deductionFact(Deduction.Weaken), List(u, v), uIsForm, vIsForm,
+                        force(rules.mp(force(rules.conjElim1(atV)), vHolds))),
+                      vFails => cases(tu)(
+                        uHolds => absurd(provable(shape), force(rules.notElim(vFails, force(rules.mp(arrow, uHolds))))),
+                        uFails => apply(deductionFact(Deduction.ImplicationOfDenial), List(u, v), uIsForm, vIsForm,
+                          force(rules.mp(force(rules.conjElim2(atU)), uFails)))
+                      )
+                    )
+                  },
+                  fails => {
+                    val notArrow = through(force(Conv.apTerm(constant(Logic.Negation, Type.fun(Type.Bool, Type.Bool)), clause)), fails)
+                    // ~(tu ==> tv) gives tu and ~tv
+                    val uHolds = cases(tu)(
+                      yes => yes,
+                      no => absurd(tu, force(rules.notElim(notArrow,
+                        force(rules.disch(tu, absurd(tv, force(rules.notElim(no, assumed(tu))))))))))
+                    val vFails = cases(tv)(
+                      yes => absurd(not(tv), force(rules.notElim(notArrow, force(rules.disch(tu, yes))))),
+                      no => no)
+                    apply(deductionFact(Deduction.DeniedImplication), List(u, v), uIsForm, vIsForm,
+                      force(rules.mp(force(rules.conjElim1(atU)), uHolds)),
+                      force(rules.mp(force(rules.conjElim2(atV)), vFails)))
+                  })
+                back(decided, atShape, yIsShape)
+              }
+            }
+          }
+
+          // a quantifier: not ground, so nothing to prove
+          val asUniversal = {
+            val held = assumed(universal)
+            val tagIs = force(rules.conjElim1(held))
+            opened(force(rules.conjElim2(held)), "u", taken + a + b) { (u, withLeft) =>
+              opened(withLeft, "v", taken + a + b + u) { (v, parts) =>
+                val payloadIs = force(rules.conjElim1(parts))
+                val yIsShape = force(Conv.trans(yIsCode, codeCongruence(tagIs, payloadIs)))
+                val nothing = through(apply(g.groundUniversal, List(u, v)), forth(ground, yIsGround, yIsShape))
+                absurd(decided(y), nothing)
+              }
+            }
+          }
+
+          val lastTwo = force(rules.disjElim(assumed(rest2), asImplication, asUniversal))
+          val lastThree = force(rules.disjElim(assumed(rest1), asNegation, lastTwo))
+          force(rules.disjElim(alternatives, asEquality, lastThree))
+        }
+      }
+
+      val step = force(
+        rules.disch(ground(y), reached).flatMap(rules.disch(isForm(y), _))
+          .flatMap(rules.disch(hypothesis, _)).flatMap(rules.gen(y, _)))
+      val everywhere = force(rules.mp(instance, step))
+      val p = Term.variable("p", numbers)
+      force(rules.spec(p, everywhere).flatMap(rules.gen(p, _)).flatMap(rules.gen(environment, _)))
+    }
+
     def provesTrueEquation(provesValue: Kernel.Thm): Kernel.Thm = {
       val a = Term.variable("a", numbers)
       val b = Term.variable("b", numbers)
