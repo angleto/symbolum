@@ -421,7 +421,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 950 with the rest of the distributions and the ground completeness, 2026-10-23: 933 plus one
     // antecedent per hypothesis of seven facts of card `38b56577`, 2 + 2 + 2 + 1 + 2 + 2 + 4, and the
     // two antecedents of `NUM_PROV_GROUND`, card `4102f131`, each derived before its run.
-    propose.weakenings.size shouldBe 950
+    // 962 with Rule 30, 2026-10-23, card `25c7d137`: one outer antecedent on each of eleven facts of
+    // `RuleThirty.Statements` and two on `RULE_THIRTY_BRIDGE`, counted before the run and equal to it.
+    // Plus twelve over the base above.
+    propose.weakenings.size shouldBe 962
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 
@@ -575,7 +578,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // equations write no operator, and the three about polynomials carry the sum's lambda.
     // 159 with `Decision`, 2026-10-22, read off the run: two of its facts write an operator with no
     // lambda in the body. Plus two over the base above.
-    propose.mutable.size shouldBe 159
+    // 160 with Rule 30, 2026-10-23, read off the run: `RULE_THIRTY_SIGNED` writes `*`, `+` and `-`
+    // with no lambda in the body, and the other fourteen carry a quantifier's or a sum's lambda.
+    // Plus one over the base above.
+    propose.mutable.size shouldBe 160
     recoveries.map(_.reached).distinct.foreach(name => propose.mutable should contain(name))
   }
 

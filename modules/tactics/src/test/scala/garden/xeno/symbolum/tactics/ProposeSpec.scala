@@ -459,7 +459,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 933 with all three, merged 2026-10-22: 922 plus `Decision`'s eleven.
     // 950 with the rest of the distributions and the ground completeness, 2026-10-23: 933 plus the
     // fifteen and the two antecedents `RediscoverySpec` counts beside the same figure.
-    proposals.size shouldBe 950
+    // 962 with Rule 30, 2026-10-23, card `25c7d137`: the twelve antecedents `RediscoverySpec`
+    // counts beside the same figure. Plus twelve over the base above.
+    proposals.size shouldBe 962
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1490,7 +1492,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 832 with all three, merged 2026-10-22: 821 plus `Decision`'s eleven.
     // 847 with the rest of the distributions, 2026-10-23, read off the run: all fifteen weakenings,
     // claims about `DISTRIBUTION`, `CHANNEL` and `INDEPENDENT` that no procedure reads. Plus fifteen.
-    open shouldBe 847
+    // 856 with Rule 30, 2026-10-23, read off the run and not decomposed: nine of its twelve
+    // weakenings, claims about `run`, `g` and `iterate` that no procedure reads. Plus nine.
+    open shouldBe 856
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -1896,7 +1900,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 207 with both, merged 2026-10-22: 202, plus three from negation and two from `Decision`.
     // 209 with the ground completeness, 2026-10-23, read off the run: its two residues, claims about
     // `NUM_PROV` and `NUM_TRUE` that no procedure reads. Plus two.
-    unreadable shouldBe 209
+    // 214 with Rule 30, 2026-10-23, read off the run and not decomposed: proposals over `run`, `g`
+    // and `iterate` that no procedure reads, which the first run did not reach because `open` above
+    // was red. Plus five.
+    unreadable shouldBe 214
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2243,7 +2250,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // Plus eight.
     // 315 with the rest of the distributions, 2026-10-23, read off the run and not decomposed:
     // proposals over its seven facts that keep an index bound or `NUM_DIV`/`NUM_MOD`. Plus thirteen.
-    aboutNumbers.size shouldBe 315
+    // 325 with Rule 30, 2026-10-23, read off the run and not decomposed: proposals over its fifteen
+    // facts that keep `NUM_MOD`, `NUM_POW`, `NUM_DIV` or a cell's index. Plus ten.
+    aboutNumbers.size shouldBe 325
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

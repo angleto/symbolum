@@ -4,11 +4,12 @@ import garden.xeno.symbolum.kernel.*
 import garden.xeno.symbolum.logic.*
 
 /**
- * The steps the derivations beside `Complex` are written in: `Fundamental` and `FiniteFourier`.
+ * The steps the derivations beside `Complex` are written in: `Fundamental`, `FiniteFourier`,
+ * `CollatzFourier`, `RuleThirty` and `Decision`.
  *
  * Each is a line or two of `Rules`, `Conv` or `Linarith` under a name that says what the step is,
  * and none decides anything a reader has to trust: what comes out is a theorem the kernel built or a
- * refusal. They are one class rather than a copy in each file because the two derivations open
+ * refusal. They are one class rather than a copy in each file because the derivations open
  * existentials, split conjunctions, induct and rewrite under binders in the same way, and a copy is
  * where the two would start to disagree.
  *
@@ -195,6 +196,37 @@ private[theories] final case class ComplexKit(
   /** `thm` specialised to the instance written in `text`, redexes contracted: by matching, never by position. */
   def at(thm: Kernel.Thm, text: String): Either[LogicError, Kernel.Thm] = prop(text).flatMap(rules.specToReduced(thm, _))
   def at(thm: Either[LogicError, Kernel.Thm], text: String): Either[LogicError, Kernel.Thm] = thm.flatMap(at(_, text))
+
+  /** `term` with free variables replaced, through the kernel's own substitution. */
+  def substitute(map: Map[FVar, Term], term: Term): Either[LogicError, Term] =
+    LogicError.lift(Kernel.inst(map, Conv.refl(term))).flatMap(th =>
+      Term.destEq(th.conclusion).map(_._1).toRight(NotOfForm("an equation", th.conclusion)))
+
+  /** The predicate of the existential written in `text`. */
+  def predicateOf(text: String): Either[LogicError, Term] =
+    prop(text).flatMap(e => logic.destExistsPredicate(e).toRight(NotOfForm("an existential", e)))
+
+  /** `?x. P x` from `holds`, which proves `P witness` up to beta. */
+  def introduce(predicate: Term, witness: Term, holds: Kernel.Thm): Either[LogicError, Kernel.Thm] =
+    for {
+      applied <- LogicError.lift(Term.app(predicate, witness))
+      root <- Conv.betaRoot(applied)
+      wanted <- Term.destEq(root.conclusion).map(_._2).toRight(NotOfForm("an equation", root.conclusion))
+      toNormal <- Conv.betaNormalise(wanted)
+      fromHolds <- Conv.betaNormalise(holds.conclusion)
+      back <- Conv.sym(toNormal)
+      bridge <- Conv.trans(fromHolds, back)
+      moved <- LogicError.lift(Kernel.eqMp(bridge, holds))
+      out <- rules.existsIntro(predicate, witness, moved)
+    } yield out
+
+  /** `Sum F n = Sum G n` over the reals, from `F k = G k` at a variable `k` nothing assumes. */
+  def sumCongReal(k: FVar, pointwise: Kernel.Thm, n: Term): Either[LogicError, Kernel.Thm] =
+    for {
+      lambdas <- LogicError.lift(Kernel.abs(k, pointwise))
+      summation <- LogicError.lift(theory.constant(Series.SumName, Type.fun(Type.fun(Numbers, Reals), Type.fun(Numbers, Reals))))
+      out <- Conv.apTerm(summation, lambdas).flatMap(Conv.apThm(_, n))
+    } yield out
 
   /** Equations chained left to right. */
   def trans(first: Kernel.Thm, rest: Kernel.Thm*): Either[LogicError, Kernel.Thm] =

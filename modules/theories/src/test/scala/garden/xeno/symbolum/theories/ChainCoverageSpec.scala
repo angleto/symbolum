@@ -186,7 +186,12 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     "FiniteFourier" -> NotADevelopment,
     "CollatzFourier" -> NotADevelopment,
 
-    // Not a development and no derivation either: the steps the three files above are written in,
+    // Not a development, for the same reason: Rule 30 over rows and as a map on the naturals, whose
+    // facts are the map `RuleThirty.prove` returns and are published in `Complex.facts` under the
+    // names `RuleThirty.Statements` gives. It declares nothing.
+    "RuleThirty" -> NotADevelopment,
+
+    // Not a development and no derivation either: the steps the files above are written in,
     // each a line of `Rules`, `Conv` or `Linarith` under a name, proving nothing of its own.
     "ComplexKit" -> NotADevelopment,
 

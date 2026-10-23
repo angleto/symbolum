@@ -712,7 +712,7 @@ class RewriteSpec extends AnyFlatSpec with Matchers {
         "result is compared with the split as `Statements` writes it and refused by `NotOfForm` " +
         "when it does not land there"),
     "ComplexKit.scala" ->
-      ("two calls, in the two helpers `Fundamental`, `FiniteFourier` and `CollatzFourier` rewrite " +
+      ("two calls, in the two helpers `Fundamental`, `FiniteFourier`, `CollatzFourier` and `RuleThirty` rewrite " +
         "through, and none of what they return is believed on its own. `rewriting` hands the goal to " +
         "`Induct.afterRewriting` and closes it with `Ring`, `Linarith`, `Semiring` or reflexivity, which " +
         "refuse a goal left short of the form they read. `rw` is `Rewrite.inTheorem` with one equation, " +

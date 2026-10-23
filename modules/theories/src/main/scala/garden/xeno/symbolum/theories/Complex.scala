@@ -57,6 +57,14 @@ import garden.xeno.symbolum.logic.*
  * records: the transform over the roots of unity inverts, by their orthogonality, and its real
  * reading writes the `t`-th iterate of the shortcut Collatz map as a series over the residues modulo
  * `2^t` whose coefficients are the transforms of each class's slope and offset.
+ *
+ * == Rule 30 ==
+ *
+ * Published here and derived in [[RuleThirty]], as `docs/adr/0064` records: the automaton over rows
+ * and the map `n XOR (2 n OR 4 n)` on the naturals, each over the equations that characterise it,
+ * the inversion of the Walsh transform on the low bits in the form the finite Fourier inversion
+ * takes, and the theorem that the two formulations agree. It reads none of the complex numbers;
+ * it is here because the steps it is written in are this link's.
  */
 final class Complex private (
   val theory: Theory,
@@ -257,7 +265,7 @@ object Complex {
       Injective -> "!a:real. !b:real. !c:real. !d:real. (COMPLEX a b = COMPLEX c d) = (a = c /\\ b = d)",
       Extensional -> "!z:complex. !w:complex. (z = w) = (Re z = Re w /\\ Im z = Im w)"
     ) ++ Components ++ Identities ++ Derived ++ Fundamental.Statements ++ FiniteFourier.Statements ++
-      CollatzFourier.Statements
+      CollatzFourier.Statements ++ RuleThirty.Statements
 
   /** `complex`. */
   val Complexes: Type = TyApp(TypeName, Nil)
@@ -352,7 +360,8 @@ object Complex {
       semiring <- Semiring.construct(peano)
       fourier <- FiniteFourier.prove(kit, semiring, base ++ fundamental)
       collatz <- CollatzFourier.prove(kit, semiring, recursion, base ++ fundamental ++ fourier)
-      facts = base ++ fundamental ++ fourier ++ collatz
+      ruleThirty <- RuleThirty.prove(kit, semiring, recursion, base ++ fundamental ++ fourier)
+      facts = base ++ fundamental ++ fourier ++ collatz ++ ruleThirty
 
       _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
         for {

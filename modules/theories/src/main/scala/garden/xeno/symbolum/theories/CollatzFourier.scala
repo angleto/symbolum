@@ -312,31 +312,9 @@ private[theories] object CollatzFourier {
         } yield proved
       }
 
-    /** `term` with free variables replaced, through the kernel's own substitution. */
-    private def substitute(map: Map[FVar, Term], term: Term): R[Term] =
-      LogicError.lift(Kernel.inst(map, Conv.refl(term))).flatMap(th =>
-        Term.destEq(th.conclusion).map(_._1).toRight(NotOfForm("an equation", th.conclusion)))
-
-    /** `?x. P x` from `holds`, which proves `P witness` up to beta. */
-    private def introduce(predicate: Term, witness: Term, holds: Kernel.Thm): R[Kernel.Thm] =
-      for {
-        applied <- LogicError.lift(Term.app(predicate, witness))
-        root <- Conv.betaRoot(applied)
-        wanted <- Term.destEq(root.conclusion).map(_._2).toRight(NotOfForm("an equation", root.conclusion))
-        toNormal <- Conv.betaNormalise(wanted)
-        fromHolds <- Conv.betaNormalise(holds.conclusion)
-        back <- Conv.sym(toNormal)
-        bridge <- Conv.trans(fromHolds, back)
-        moved <- LogicError.lift(Kernel.eqMp(bridge, holds))
-        out <- rules.existsIntro(predicate, witness, moved)
-      } yield out
-
     /** `a * w = b * w` from `a = b`, for `times` the product. */
     private def scaleRight(times: Term, eq: Kernel.Thm, w: Term): R[Kernel.Thm] =
       Conv.apTerm(times, eq).flatMap(Conv.apThm(_, w))
-
-    private def predicateOf(text: String): R[Term] =
-      prop(text).flatMap(e => logic.destExistsPredicate(e).toRight(NotOfForm("an existential", e)))
 
     /**
      * On each class modulo `2^t` the `t`-th iterate is affine in the start.
@@ -473,13 +451,6 @@ private[theories] object CollatzFourier {
         } yield general
       }
 
-    /** `Sum F n = Sum G n` from `F k = G k` at a variable `k` nothing assumes. */
-    private def sumCongReal(kv: FVar, pointwise: Kernel.Thm, bound: Term): R[Kernel.Thm] =
-      for {
-        lambdas <- LogicError.lift(Kernel.abs(kv, pointwise))
-        summation <- LogicError.lift(theory.constant(Series.SumName, Type.fun(Type.fun(Numbers, Reals), Type.fun(Numbers, Reals))))
-        out <- Conv.apTerm(summation, lambdas).flatMap(Conv.apThm(_, bound))
-      } yield out
     /**
      * The hypotheses can all hold at once, so the two theorems over them are not vacuous: the map
      * by cases on the remainder, and its iterate by the recursion theorem at `num -> num`.

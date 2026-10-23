@@ -1210,6 +1210,25 @@ shift, `iterate (r + 2^t q) t = iterate r t + c q`, rather than through the pari
 **What is not here**: the slope as `3^s / 2^t` (the source's Theorem 1), the forms (A) and (B), and
 any closed form of the coefficients, which the source says has none.
 
+**Rule 30 is in the kernel twice since 2026-10-23, over rows and as a map on the naturals, with a
+theorem that the two agree.** `docs/adr/0064` is the decision and `RuleThirty.scala` the derivation,
+published by `Complex` beside the Collatz iterate. Over any `run` satisfying the automaton's two
+equations, in a frame that moves one cell per step: the step as a polynomial in the signs
+`(-1)^b` (`RULE_THIRTY_SIGNED`), invariance under translation, the light cone (cell `(t, i)` reads
+cells `i .. i + 2t`), left permutivity, the Walsh form of a cell, and the balance over all
+`2^(2t+1)` windows. Over any `g` and `iterate` satisfying the two equations on halving that give
+`F n = n XOR (2 n OR 4 n)`: the residues modulo `2^k` of `F^t(n)` depend on those of `n`, `F^t` is
+injective there, `F^t(1)` has `2t + 1` bits, bit `j` is balanced over the residues modulo
+`2^(j+1)`, and bit `j` has a Walsh form. `WALSH_INVERSION` is stated as `REAL_DFT_INVERSION` is, at a
+residue modulo `2^k`, with the characters of the bits for the roots of unity, and
+`RULE_THIRTY_BRIDGE` says that on the row made of the bits of `n` the cell `(t, i)` is bit `k - i` of
+`F^t(n)`, so the centre column from one cell is bit `t` of `F^t(1)`. `RULE_THIRTY_EXISTS` and
+`RULE_THIRTY_MAP_EXISTS` exhibit the objects, the second built with a counter because the halving
+equations are not a primitive recursion. **What is not here**: anything about one orbit, which is
+where the three problems of the Rule 30 prize are; the balance of the map over residues modulo
+`2^k` for every `j < k`, which needs a sum reindexed by a permutation; and the periods of the
+diagonals, which are measured in Mycelium note 917b3939 and not proved.
+
 **Finite distributions and Blackwell's easy direction are `Decision`, a link since 2026-10-22.**
 `docs/adr/0063` is the decision. A distribution on `n` outcomes is a function on `[0, n)` that
 `DISTRIBUTION` says is one, a channel is a distribution of signals per state, and `VALUE` is the
