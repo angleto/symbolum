@@ -76,9 +76,20 @@ what makes them theorems of the kernel and not computations beside it.
 ## Consequences
 
 One link, `Decision`, over the end of the chain, reading `Series` for the sums and `Magnitude` for
-`max`. Five defined constants, `Maximum`, `Argmax`, `DISTRIBUTION`, `CHANNEL` and `VALUE`, and no
-axiom; `Derivation.axiomsOf` over every fact is asserted equal to the chain's three. Five rows join
-`docs/reading-register.md`, one per constant.
+`max`. Six defined constants, `Maximum`, `Argmax`, `DISTRIBUTION`, `CHANNEL`, `VALUE` and
+`INDEPENDENT`, and no axiom; `Derivation.axiomsOf` over every fact is asserted equal to the chain's
+three. Six rows join `docs/reading-register.md`, one per constant.
+
+**The rest of a distribution's arithmetic is facts, not constants**, and the second change on the
+link added it on 2026-10-22: a marginal through a channel is a distribution
+(`DISTRIBUTION_MARGINAL`), two channels in a row are a channel (`CHANNEL_COMPOSE`), the expectation
+`Sum (\i. p i * f i) n` is monotone and keeps a constant (`EXPECTATION_MONOTONE`,
+`EXPECTATION_CONSTANT`; its linearity is `SUM_LINEAR` and needs no distribution), the product of two
+distributions on `[0, m * n)` read at `m * a + b` is one (`DISTRIBUTION_PRODUCT`) and is independent
+(`PRODUCT_INDEPENDENT`), and the posterior at a signal below `m` of positive probability is a
+distribution (`POSTERIOR_DISTRIBUTION`). Independence is the one that is a constant, because it is a
+property a joint distribution has or lacks rather than an operation, and a statement about it has to
+be able to name it.
 
 The derivations are written in `ComplexKit`'s steps over this link's own theory, with a driver whose
 complex components are empty: every goal here is real, and the driver closes a real goal with `RING`
@@ -109,7 +120,8 @@ Measured after it, on 2026-10-22: the kernel derives the three values of E5 with
 58 to 80 seconds after the chain is built, on a machine running two other builds. It does not
 compute sixty-four maxima of eight numbers. At the signal `8 s + g` the score of answer `a` is
 `1/8 * P(s | a) * P(g | a)`, and three case splits on `a = g`, `s = a` and `s = g` show it largest at
-`a = g`, strictly, with `49/2240 < 117/2240` the closest comparison. The sums over the signals then
+`a = g`, strictly, the closest comparison being `49/2240 < 117/2240` between the products
+`P(s | a) P(g | a)`, the factor `1/8` common to both sides left out. The sums over the signals then
 close by `SUM_GROUPS`, `SUM_INDICATOR` and `SUM_COND_COUNT`. The strictness is what `ARGMAX_UNIQUE`
 needs to name the reader's rule for the third value, so the absence of ties measured outside the
 kernel is also a theorem inside it.

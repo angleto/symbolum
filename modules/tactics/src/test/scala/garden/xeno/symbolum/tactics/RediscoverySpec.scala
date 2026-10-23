@@ -418,7 +418,9 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // each of ten facts and two on `ARGMAX_UNIQUE`, counted from `Decision.Statements` before the
     // run and equal to it. Plus eleven over the base above.
     // 933 with all three, merged 2026-10-22: 922 plus `Decision`'s eleven.
-    propose.weakenings.size shouldBe 933
+    // 948 with the rest of the distributions, 2026-10-23, card `38b56577`: one antecedent per
+    // hypothesis of seven facts, 2 + 2 + 2 + 1 + 2 + 2 + 4, derived before the run and equal to it.
+    propose.weakenings.size shouldBe 948
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

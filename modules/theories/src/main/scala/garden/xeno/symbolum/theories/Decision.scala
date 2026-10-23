@@ -17,6 +17,7 @@ import garden.xeno.symbolum.logic.*
  *   CHANNEL n m k     =  !y. y < n ==> DISTRIBUTION m (k y)
  *   Maximum f n       =  max (f 0) ... (f n), by recursion
  *   Argmax f n        =  the first i <= n with f i = Maximum f n, by recursion
+ *   INDEPENDENT n m j =  j (m a + b) is the product of its two marginals, for a < n and b < m
  *   VALUE n m top prior k u
  *                     =  Sum (\s. Maximum (\a. Sum (\y. prior y * k y s * u a y) n) top) m
  * }}}
@@ -42,7 +43,7 @@ import garden.xeno.symbolum.logic.*
  *
  * == What it spends ==
  *
- * Choice, eta and infinity, as every fact about the constructed reals does. It declares five
+ * Choice, eta and infinity, as every fact about the constructed reals does. It declares six
  * constants and asserts nothing.
  */
 final class Decision private (
@@ -143,7 +144,31 @@ object Decision {
   /** The value agrees with the posterior form where every signal has positive probability. */
   val ValueByPosterior: String = "VALUE_POSTERIOR"
 
-  /** The bodies of the three constants defined outright, as text. */
+  /** `INDEPENDENT n m j`: the joint `j` on `[0, m * n)`, read at `m * a + b`, is the product of its marginals. */
+  val IndependentName: String = "INDEPENDENT"
+
+  /** `|- !n m p k. DISTRIBUTION n p ==> CHANNEL n m k ==> DISTRIBUTION m (\s. Sum (\y. p y * k y s) n)` */
+  val DistributionMarginal: String = "DISTRIBUTION_MARGINAL"
+
+  /** `|- !n m r k g. CHANNEL n m k ==> CHANNEL m r g ==> CHANNEL n r (\y t. Sum (\s. k y s * g s t) m)` */
+  val ChannelCompose: String = "CHANNEL_COMPOSE"
+
+  /** `|- !n p f g. DISTRIBUTION n p ==> (!i. i < n ==> f i <= g i) ==> E[f] <= E[g]` */
+  val ExpectationMonotone: String = "EXPECTATION_MONOTONE"
+
+  /** `|- !n p c. DISTRIBUTION n p ==> Sum (\i. p i * c) n = c` */
+  val ExpectationConstant: String = "EXPECTATION_CONSTANT"
+
+  /** The product of two distributions, on `[0, m * n)` read at `m * a + b`, is one. */
+  val DistributionProduct: String = "DISTRIBUTION_PRODUCT"
+
+  /** And it is independent, in the sense [[IndependentName]] defines. */
+  val ProductIndependent: String = "PRODUCT_INDEPENDENT"
+
+  /** The posterior at a signal of positive probability is a distribution. */
+  val PosteriorDistribution: String = "POSTERIOR_DISTRIBUTION"
+
+  /** The bodies of the four constants defined outright, as text. */
   val Bodies: Vector[(String, String)] = Vector(
     DistributionName ->
       "\\n:num. \\p:num->real. (!i:num. i < n ==> (0:real) <= p i) /\\ Sum p n = 1",
@@ -151,7 +176,10 @@ object Decision {
       "\\n:num. \\m:num. \\k:num->num->real. !y:num. y < n ==> DISTRIBUTION m (k y)",
     ValueName ->
       ("\\n:num. \\m:num. \\top:num. \\prior:num->real. \\k:num->num->real. \\u:num->num->real. " +
-        "Sum (\\s:num. Maximum (\\a:num. Sum (\\y:num. prior y * k y s * u a y) n) top) m")
+        "Sum (\\s:num. Maximum (\\a:num. Sum (\\y:num. prior y * k y s * u a y) n) top) m"),
+    IndependentName ->
+      ("\\n:num. \\m:num. \\j:num->real. !a:num. !b:num. a < n ==> b < m ==> " +
+        "j (m * a + b) = Sum (\\c:num. j (m * a + c)) m * Sum (\\d:num. j (m * d + b)) n")
   )
 
   /** What this development publishes, as the text a person checks it by. */
@@ -189,7 +217,28 @@ object Decision {
     Blackwell ->
       ("!n:num. !m:num. !r:num. !top:num. !prior:num->real. !k:num->num->real. !g:num->num->real. " +
         "!u:num->num->real. CHANNEL m r g ==> " +
-        "VALUE n r top prior (\\y:num. \\t:num. Sum (\\s:num. k y s * g s t) m) u <= VALUE n m top prior k u")
+        "VALUE n r top prior (\\y:num. \\t:num. Sum (\\s:num. k y s * g s t) m) u <= VALUE n m top prior k u"),
+    DistributionMarginal ->
+      ("!n:num. !m:num. !p:num->real. !k:num->num->real. DISTRIBUTION n p ==> CHANNEL n m k ==> " +
+        "DISTRIBUTION m (\\s:num. Sum (\\y:num. p y * k y s) n)"),
+    ChannelCompose ->
+      ("!n:num. !m:num. !r:num. !k:num->num->real. !g:num->num->real. CHANNEL n m k ==> CHANNEL m r g ==> " +
+        "CHANNEL n r (\\y:num. \\t:num. Sum (\\s:num. k y s * g s t) m)"),
+    ExpectationMonotone ->
+      ("!n:num. !p:num->real. !f:num->real. !g:num->real. DISTRIBUTION n p ==> (!i:num. i < n ==> f i <= g i) ==> " +
+        "Sum (\\i:num. p i * f i) n <= Sum (\\i:num. p i * g i) n"),
+    ExpectationConstant ->
+      "!n:num. !p:num->real. !c:real. DISTRIBUTION n p ==> Sum (\\i:num. p i * c) n = c",
+    DistributionProduct ->
+      ("!n:num. !m:num. !p:num->real. !q:num->real. DISTRIBUTION n p ==> DISTRIBUTION m q ==> " +
+        "DISTRIBUTION (m * n) (\\t:num. p (NUM_DIV t m) * q (NUM_MOD t m))"),
+    ProductIndependent ->
+      ("!n:num. !m:num. !p:num->real. !q:num->real. DISTRIBUTION n p ==> DISTRIBUTION m q ==> " +
+        "INDEPENDENT n m (\\t:num. p (NUM_DIV t m) * q (NUM_MOD t m))"),
+    PosteriorDistribution ->
+      ("!n:num. !m:num. !p:num->real. !k:num->num->real. !s:num. DISTRIBUTION n p ==> CHANNEL n m k ==> " +
+        "s < m ==> 0 < Sum (\\y:num. p y * k y s) n ==> " +
+        "DISTRIBUTION n (\\y:num. p y * k y s * inv (Sum (\\z:num. p z * k z s) n))")
   )
 
   private lazy val StatementsMap: Map[String, String] = Statements.toMap
@@ -209,7 +258,14 @@ object Decision {
     ArgmaxUnique -> (_.argmaxUnique),
     GarbledTerm -> (_.garbledTerm),
     Blackwell -> (_.blackwell),
-    ValueByPosterior -> (_.byPosterior)
+    ValueByPosterior -> (_.byPosterior),
+    DistributionMarginal -> (_.marginal),
+    ChannelCompose -> (_.compose),
+    ExpectationMonotone -> (_.expectationMonotone),
+    ExpectationConstant -> (_.expectationConstant),
+    DistributionProduct -> (_.product),
+    ProductIndependent -> (_.productIndependent),
+    PosteriorDistribution -> (_.posterior)
   )
 
   /**
@@ -294,6 +350,7 @@ object Decision {
    * essay's E5 in the test scope, is written in the same steps over the same theory rather than in
    * a copy of them.
    */
+
   private[theories] final class Proofs(val kit: ComplexKit, known: Map[String, Kernel.Thm]) {
     import kit.*
 
@@ -306,13 +363,32 @@ object Decision {
     def v(x: FVar): String = s"(${x.name}:num)"
 
     /** `!x. A ==> ... ==> B` proved by `body` from the variables and the antecedents assumed. */
-    def every(goal: Term)(body: (Vector[FVar], Vector[Kernel.Thm], Term) => R[Kernel.Thm]): R[Kernel.Thm] =
+    def every(goal: Term)(body: (Vector[FVar], Vector[Kernel.Thm], Term) => R[Kernel.Thm]): R[Kernel.Thm] = {
+      def attempt(vars: Vector[FVar], inner: Term): R[Kernel.Thm] =
+        underHyps(inner)((hyps, conclusion) => body(vars, hyps, conclusion)).flatMap(proved =>
+          rules.genAll(proved, vars.toList) match {
+            case Right(out) => Right(out)
+            case Left(_) =>
+              // `stripForall` names a binder against the term's own free variables, and an
+              // `every` nested inside another holds hypotheses the term does not show: it named
+              // `y` as `m` while `k < m` was assumed, and the generalisation was refused. So the
+              // proof is made again, once, under names fresh for those hypotheses as well.
+              val taken = proved.hypotheses.flatMap(Term.freeVariables).toSet ++ Term.freeVariables(goal)
+              val renamed = vars.foldLeft(Vector.empty[FVar]) { (done, x) =>
+                done :+ (if (taken.exists(_.name == x.name)) Conv.freshVariable(x.name, x.ty, taken ++ vars ++ done) else x)
+              }
+              for {
+                again <- LogicError.lift(Term.substitute(vars.zip(renamed).toMap, inner))
+                reproved <- underHyps(again)((hyps, conclusion) => body(renamed, hyps, conclusion))
+                out <- rules.genAll(reproved, renamed.toList)
+              } yield out
+          })
       for {
         stripped <- Logic.stripForall(goal)
         (vars, inner) = stripped
-        proved <- underHyps(inner)((hyps, conclusion) => body(vars, hyps, conclusion))
-        out <- rules.genAll(proved, vars.toList)
+        out <- attempt(vars, inner)
       } yield out
+    }
 
     /** `G |- p \/ q` eliminated by a proof of the conclusion under each disjunct. */
     def byCases(disjunction: Kernel.Thm)(left: Kernel.Thm => R[Kernel.Thm], right: Kernel.Thm => R[Kernel.Thm]): R[Kernel.Thm] =
@@ -1064,5 +1140,340 @@ object Decision {
         out <- closed(discharged, ValueByPosterior)
       } yield out
     }
+
+    /* ------------------------------------------------------------ distributions themselves */
+
+    /** The two halves of `DISTRIBUTION n f`, read off a theorem of it. */
+    def distParts(nT: String, fT: String, dist: Kernel.Thm): R[Vector[Kernel.Thm]] =
+      for {
+        opened <- unfold(DistributionName, nT, fT)
+        held <- LogicError.lift(Kernel.eqMp(opened, dist))
+        out <- split(held)
+      } yield out
+
+    /** `DISTRIBUTION n f` from its two halves. */
+    def makeDist(nT: String, fT: String, nonneg: Kernel.Thm, total: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        opened <- unfold(DistributionName, nT, fT)
+        both <- conj(nonneg, total)
+        back <- Conv.sym(opened)
+        out <- LogicError.lift(Kernel.eqMp(back, both))
+      } yield out
+
+    /** `!y. y < n ==> DISTRIBUTION m (k y)`, read off `CHANNEL n m k`. */
+    def channelRows(nT: String, mT: String, kT: String, channel: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        opened <- unfold(ChannelName, nT, mT, kT)
+        out <- LogicError.lift(Kernel.eqMp(opened, channel))
+      } yield out
+
+    /** `0 <= Sum f n` from `0 <= f i` below `n`. */
+    def nonnegSum(fBody: String, iName: String, nT: String, pointwise: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        mono <- at(fact("SUM_MONOTONE_BELOW"),
+          s"(!$iName:num. $iName < $nT ==> (\\$iName:num. (0:real)) $iName <= $fBody) ==> " +
+            s"Sum (\\$iName:num. (0:real)) $nT <= Sum (\\$iName:num. $fBody) $nT").flatMap(mp(_, pointwise))
+        zero <- at(fact("SUM_OF_ZERO"), s"Sum (\\$iName:num. (0:real)) $nT = 0")
+        out <- lin(Seq(mono, zero), s"(0:real) <= Sum (\\$iName:num. $fBody) $nT")
+      } yield out
+
+    /** [[DistributionMarginal]]: non-negative as a sum of products of non-negatives, and one by the exchange. */
+    def marginal: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(DistributionMarginal))
+        out <- every(goal) { (vs, hs, _) =>
+          val N = v(vs(0)); val M = v(vs(1))
+          val Pf = s"(${vs(2).name}:num->real)"; val Kf = s"(${vs(3).name}:num->num->real)"
+          for {
+            weights <- distParts(N, Pf, hs(0))
+            rows <- channelRows(N, M, Kf, hs(1))
+            row = (y: String, yBelow: Kernel.Thm) =>
+              at(rows, s"$y < $N ==> DISTRIBUTION $M ($Kf $y)").flatMap(mp(_, yBelow)).flatMap(distParts(M, s"($Kf $y)", _))
+            nonnegGoal <- prop(s"!s:num. s < $M ==> (0:real) <= Sum (\\y:num. $Pf y * $Kf y s) $N")
+            nonneg <- every(nonnegGoal) { (ss, shs, _) =>
+              val S = v(ss(0))
+              for {
+                each <- prop(s"!y:num. y < $N ==> (0:real) <= $Pf y * $Kf y $S")
+                terms <- every(each) { (ys, yhs, g) =>
+                  val Y = v(ys(0))
+                  for {
+                    pn <- at(weights(0), s"$Y < $N ==> (0:real) <= $Pf $Y").flatMap(mp(_, yhs(0)))
+                    kn <- row(Y, yhs(0)).flatMap(r => at(r(0), s"$S < $M ==> (0:real) <= $Kf $Y $S")).flatMap(mp(_, shs(0)))
+                    out <- linT(Seq(pn, kn), g)
+                  } yield out
+                }
+                out <- nonnegSum(s"$Pf y * $Kf y $S", "y", N, terms)
+              } yield out
+            }
+            swap <- at(fact("SUM_SWAP"), s"Sum (\\s:num. Sum (\\y:num. $Pf y * $Kf y s) $N) $M = " +
+              s"Sum (\\y:num. Sum (\\s:num. $Pf y * $Kf y s) $M) $N")
+            eachRow <- prop(s"!y:num. y < $N ==> Sum (\\s:num. $Pf y * $Kf y s) $M = $Pf y")
+            rowsAre <- every(eachRow) { (ys, yhs, g) =>
+              val Y = v(ys(0))
+              for {
+                sc <- at(fact("SUM_SCALE"), s"Sum (\\s:num. $Pf $Y * $Kf $Y s) $M = $Pf $Y * Sum ($Kf $Y) $M")
+                one <- row(Y, yhs(0)).map(_(1))
+                out <- linAfter(Seq(sc, one), Seq.empty, g)
+              } yield out
+            }
+            collapse <- at(fact("SUM_CONGRUENCE_BELOW"),
+              s"(!y:num. y < $N ==> Sum (\\s:num. $Pf y * $Kf y s) $M = $Pf y) ==> " +
+                s"Sum (\\y:num. Sum (\\s:num. $Pf y * $Kf y s) $M) $N = Sum $Pf $N").flatMap(mp(_, rowsAre))
+            totalGoal <- prop(s"Sum (\\s:num. Sum (\\y:num. $Pf y * $Kf y s) $N) $M = 1")
+            total <- linAfter(Seq(swap, collapse, weights(1)), Seq.empty, totalGoal)
+            out <- makeDist(M, s"\\s:num. Sum (\\y:num. $Pf y * $Kf y s) $N", nonneg, total)
+          } yield out
+        }
+      } yield out
+
+    /** [[ChannelCompose]]: each row of the composite is the marginal of a row of `k` through `g`. */
+    def compose: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(ChannelCompose))
+        out <- every(goal) { (vs, hs, _) =>
+          val N = v(vs(0)); val M = v(vs(1)); val Rn = v(vs(2))
+          val Kf = s"(${vs(3).name}:num->num->real)"; val Gf = s"(${vs(4).name}:num->num->real)"
+          val composite = s"\\y:num. \\t:num. Sum (\\s:num. $Kf y s * $Gf s t) $M"
+          for {
+            rows <- channelRows(N, M, Kf, hs(0))
+            each <- prop(s"!y:num. y < $N ==> DISTRIBUTION $Rn (($composite) y)")
+            rowsOut <- every(each) { (ys, yhs, _) =>
+              val Y = v(ys(0))
+              for {
+                rowK <- at(rows, s"$Y < $N ==> DISTRIBUTION $M ($Kf $Y)").flatMap(mp(_, yhs(0)))
+                out <- at(k(DistributionMarginal),
+                  s"DISTRIBUTION $M ($Kf $Y) ==> CHANNEL $M $Rn $Gf ==> DISTRIBUTION $Rn (\\s:num. Sum (\\y:num. $Kf $Y y * $Gf y s) $M)")
+                  .flatMap(mp(_, rowK, hs(1)))
+              } yield out
+            }
+            opened <- unfold(ChannelName, N, Rn, composite)
+            back <- Conv.sym(opened)
+            out <- LogicError.lift(Kernel.eqMp(back, rowsOut))
+          } yield out
+        }
+      } yield out
+
+    /** [[ExpectationMonotone]]: a non-negative weight keeps the order term by term. */
+    def expectationMonotone: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(ExpectationMonotone))
+        out <- every(goal) { (vs, hs, _) =>
+          val N = v(vs(0)); val Pf = s"(${vs(1).name}:num->real)"
+          val Ff = s"(${vs(2).name}:num->real)"; val Gf = s"(${vs(3).name}:num->real)"
+          for {
+            weights <- distParts(N, Pf, hs(0))
+            each <- prop(s"!i:num. i < $N ==> $Pf i * $Ff i <= $Pf i * $Gf i")
+            terms <- every(each) { (is, ihs, g) =>
+              val I = v(is(0))
+              for {
+                pn <- at(weights(0), s"$I < $N ==> (0:real) <= $Pf $I").flatMap(mp(_, ihs(0)))
+                le <- at(hs(1), s"$I < $N ==> $Ff $I <= $Gf $I").flatMap(mp(_, ihs(0)))
+                out <- linT(Seq(pn, le), g)
+              } yield out
+            }
+            out <- at(fact("SUM_MONOTONE_BELOW"),
+              s"(!i:num. i < $N ==> $Pf i * $Ff i <= $Pf i * $Gf i) ==> Sum (\\i:num. $Pf i * $Ff i) $N <= Sum (\\i:num. $Pf i * $Gf i) $N")
+              .flatMap(mp(_, terms))
+          } yield out
+        }
+      } yield out
+
+    /** [[ExpectationConstant]]: the constant comes out of the sum, and the weights sum to one. */
+    def expectationConstant: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(ExpectationConstant))
+        out <- every(goal) { (vs, hs, g) =>
+          val N = v(vs(0)); val Pf = s"(${vs(1).name}:num->real)"; val C = s"(${vs(2).name}:real)"
+          for {
+            weights <- distParts(N, Pf, hs(0))
+            pulled <- at(fact("SUM_SCALE_RIGHT"), s"Sum (\\i:num. $Pf i * $C) $N = Sum $Pf $N * $C")
+            out <- linAfter(Seq(pulled, weights(1)), Seq.empty, g)
+          } yield out
+        }
+      } yield out
+
+    /** `0 < m` from `DISTRIBUTION m q`: on an empty support nothing sums to one. */
+    def positiveSupport(mT: String, qT: String, total: Kernel.Thm): R[Kernel.Thm] =
+      for {
+        goal <- prop(s"0 < $mT")
+        out <- cases(s"0 < $mT")(
+          yes => Right(yes),
+          no =>
+            for {
+              le <- at(fact("NUM_LE_OF_NOT_LT"), s"~(0 < $mT) ==> $mT <= 0").flatMap(mp(_, no))
+              zero <- at(fact("NUM_LE_ZERO"), s"$mT <= 0 ==> $mT = 0").flatMap(mp(_, le))
+              moved <- rw(zero, total)
+              empty <- fact("SUM_ZERO")
+              nothing <- rw(empty, moved)
+              absurd <- lin(Seq(nothing), "F")
+              out <- rules.falsityElim(goal, absurd)
+            } yield out
+        )
+      } yield out
+
+    /** `NUM_DIV t m < n` from `t < m * n`: were it not, `m * n <= m * NUM_DIV t m <= t`. */
+    def quotientBelow(T: String, M: String, N: String, tBelow: Kernel.Thm): R[Kernel.Thm] = {
+      val D = s"NUM_DIV $T $M"
+      for {
+        goal <- prop(s"$D < $N")
+        out <- cases(s"$D < $N")(
+          yes => Right(yes),
+          no =>
+            for {
+              le <- at(fact("NUM_LE_OF_NOT_LT"), s"~($D < $N) ==> $N <= $D").flatMap(mp(_, no))
+              mono <- at(fact("NUM_MUL_MONOTONE"), s"$N <= $D ==> $M * $N <= $M * $D").flatMap(mp(_, le))
+              add <- at(fact("NUM_LE_ADD"), s"$M * $D <= $M * $D + NUM_MOD $T $M")
+              whole <- at(fact("NUM_DIV_MOD"), s"$M * $D + NUM_MOD $T $M = $T")
+              upTo <- rw(whole, add)
+              both <- conj(mono, upTo)
+              chain <- at(fact("NUM_LE_TRANS"), s"$M * $N <= $M * $D /\\ $M * $D <= $T ==> $M * $N <= $T").flatMap(mp(_, both))
+              never <- at(fact("NUM_LT_NOT_LE"), s"$T < $M * $N ==> ~($M * $N <= $T)").flatMap(mp(_, tBelow))
+              absurd <- rules.notElim(never, chain)
+              out <- rules.falsityElim(goal, absurd)
+            } yield out
+        )
+      } yield out
+    }
+
+    /** `NUM_DIV (m * s + g) m = s` and `NUM_MOD (m * s + g) m = g`, for `g < m`. */
+    def decodeAt(M: String, S: String, G: String, gBelow: Kernel.Thm): R[Seq[Kernel.Thm]] =
+      for {
+        t <- nm(s"$M * $S + $G")
+        both <- conj(Kernel.refl(t), gBelow)
+        unique <- at(fact("NUM_DIV_MOD_UNIQUE"),
+          s"$M * $S + $G = $M * $S + $G /\\ $G < $M ==> $S = NUM_DIV ($M * $S + $G) $M /\\ $G = NUM_MOD ($M * $S + $G) $M")
+          .flatMap(mp(_, both))
+        parts <- split(unique)
+        div <- Conv.sym(parts(0))
+        mod <- Conv.sym(parts(1))
+      } yield Seq(div, mod)
+
+    /** [[DistributionProduct]]: non-negative where both factors are, and summed in blocks of `m`. */
+    def product: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(DistributionProduct))
+        out <- every(goal) { (vs, hs, _) =>
+          val N = v(vs(0)); val M = v(vs(1))
+          val Pf = s"(${vs(2).name}:num->real)"; val Qf = s"(${vs(3).name}:num->real)"
+          def cell(t: String): String = s"$Pf (NUM_DIV $t $M) * $Qf (NUM_MOD $t $M)"
+          for {
+            pw <- distParts(N, Pf, hs(0))
+            qw <- distParts(M, Qf, hs(1))
+            mPos <- positiveSupport(M, Qf, qw(1))
+            nonnegGoal <- prop(s"!tt:num. tt < $M * $N ==> (0:real) <= ${cell("tt")}")
+            nonneg <- every(nonnegGoal) { (ts, ths, g) =>
+              val T = v(ts(0))
+              for {
+                d <- quotientBelow(T, M, N, ths(0))
+                r <- at(fact("NUM_MOD_LT"), s"0 < $M ==> NUM_MOD $T $M < $M").flatMap(mp(_, mPos))
+                pn <- at(pw(0), s"NUM_DIV $T $M < $N ==> (0:real) <= $Pf (NUM_DIV $T $M)").flatMap(mp(_, d))
+                qn <- at(qw(0), s"NUM_MOD $T $M < $M ==> (0:real) <= $Qf (NUM_MOD $T $M)").flatMap(mp(_, r))
+                out <- linT(Seq(pn, qn), g)
+              } yield out
+            }
+            groups <- at(k(SumGroups),
+              s"Sum (\\tt:num. ${cell("tt")}) ($M * $N) = Sum (\\ss:num. Sum (\\gg:num. ${cell(s"($M * ss + gg)")}) $M) $N")
+            rowGoal <- prop(s"!ss:num. ss < $N ==> Sum (\\gg:num. ${cell(s"($M * ss + gg)")}) $M = $Pf ss")
+            rows <- every(rowGoal) { (ss, _, g) =>
+              val S = v(ss(0))
+              for {
+                cellGoal <- prop(s"!gg:num. gg < $M ==> ${cell(s"($M * $S + gg)")} = $Pf $S * $Qf gg")
+                cells <- every(cellGoal) { (gs, ghs, cg) =>
+                  decodeAt(M, S, v(gs(0)), ghs(0)).flatMap(codes => linAfter(codes, Seq.empty, cg))
+                }
+                spread <- at(fact("SUM_CONGRUENCE_BELOW"),
+                  s"(!gg:num. gg < $M ==> ${cell(s"($M * $S + gg)")} = $Pf $S * $Qf gg) ==> " +
+                    s"Sum (\\gg:num. ${cell(s"($M * $S + gg)")}) $M = Sum (\\gg:num. $Pf $S * $Qf gg) $M").flatMap(mp(_, cells))
+                scaled <- at(fact("SUM_SCALE"), s"Sum (\\gg:num. $Pf $S * $Qf gg) $M = $Pf $S * Sum $Qf $M")
+                out <- linAfter(Seq(spread, scaled, qw(1)), Seq.empty, g)
+              } yield out
+            }
+            collapse <- at(fact("SUM_CONGRUENCE_BELOW"),
+              s"(!ss:num. ss < $N ==> Sum (\\gg:num. ${cell(s"($M * ss + gg)")}) $M = $Pf ss) ==> " +
+                s"Sum (\\ss:num. Sum (\\gg:num. ${cell(s"($M * ss + gg)")}) $M) $N = Sum $Pf $N").flatMap(mp(_, rows))
+            totalGoal <- prop(s"Sum (\\tt:num. ${cell("tt")}) ($M * $N) = 1")
+            total <- linAfter(Seq(groups, collapse, pw(1)), Seq.empty, totalGoal)
+            out <- makeDist(s"($M * $N)", s"\\tt:num. ${cell("tt")}", nonneg, total)
+          } yield out
+        }
+      } yield out
+
+    /** [[ProductIndependent]]: at `m * a + b` the product is `p a * q b`, and each marginal sums the other away. */
+    def productIndependent: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(ProductIndependent))
+        out <- every(goal) { (vs, hs, _) =>
+          val N = v(vs(0)); val M = v(vs(1))
+          val Pf = s"(${vs(2).name}:num->real)"; val Qf = s"(${vs(3).name}:num->real)"
+          def cell(t: String): String = s"$Pf (NUM_DIV $t $M) * $Qf (NUM_MOD $t $M)"
+          val joint = s"\\tt:num. ${cell("tt")}"
+          for {
+            pw <- distParts(N, Pf, hs(0))
+            qw <- distParts(M, Qf, hs(1))
+            opened <- unfold(IndependentName, N, M, joint)
+            body <- Term.destEq(opened.conclusion).map(_._2).toRight(NotOfForm("an equation", opened.conclusion))
+            proved <- every(body) { (abs, hyps, g) =>
+              val A = v(abs(0)); val B = v(abs(1))
+              for {
+                at_ <- decodeAt(M, A, B, hyps(1))
+                rowGoal <- prop(s"!cc:num. cc < $M ==> ${cell(s"($M * $A + cc)")} = $Pf $A * $Qf cc")
+                rowCells <- every(rowGoal) { (cs, chs, cg) =>
+                  decodeAt(M, A, v(cs(0)), chs(0)).flatMap(codes => linAfter(codes, Seq.empty, cg))
+                }
+                rowSpread <- at(fact("SUM_CONGRUENCE_BELOW"),
+                  s"(!cc:num. cc < $M ==> ${cell(s"($M * $A + cc)")} = $Pf $A * $Qf cc) ==> " +
+                    s"Sum (\\cc:num. ${cell(s"($M * $A + cc)")}) $M = Sum (\\cc:num. $Pf $A * $Qf cc) $M").flatMap(mp(_, rowCells))
+                rowScaled <- at(fact("SUM_SCALE"), s"Sum (\\cc:num. $Pf $A * $Qf cc) $M = $Pf $A * Sum $Qf $M")
+                colGoal <- prop(s"!dd:num. dd < $N ==> ${cell(s"($M * dd + $B)")} = $Pf dd * $Qf $B")
+                colCells <- every(colGoal) { (ds, _, dg) =>
+                  decodeAt(M, v(ds(0)), B, hyps(1)).flatMap(codes => linAfter(codes, Seq.empty, dg))
+                }
+                colSpread <- at(fact("SUM_CONGRUENCE_BELOW"),
+                  s"(!dd:num. dd < $N ==> ${cell(s"($M * dd + $B)")} = $Pf dd * $Qf $B) ==> " +
+                    s"Sum (\\dd:num. ${cell(s"($M * dd + $B)")}) $N = Sum (\\dd:num. $Pf dd * $Qf $B) $N").flatMap(mp(_, colCells))
+                colScaled <- at(fact("SUM_SCALE_RIGHT"), s"Sum (\\dd:num. $Pf dd * $Qf $B) $N = Sum $Pf $N * $Qf $B")
+                out <- linAfter(at_ ++ Seq(rowSpread, rowScaled, qw(1), colSpread, colScaled, pw(1)), Seq.empty, g)
+              } yield out
+            }
+            back <- Conv.sym(opened)
+            out <- LogicError.lift(Kernel.eqMp(back, proved))
+          } yield out
+        }
+      } yield out
+
+    /** [[PosteriorDistribution]]: non-negative as a product of non-negatives, and the marginal divides itself. */
+    def posterior: R[Kernel.Thm] =
+      for {
+        goal <- prop(StatementsMap(PosteriorDistribution))
+        out <- every(goal) { (vs, hs, _) =>
+          val N = v(vs(0)); val M = v(vs(1))
+          val Pf = s"(${vs(2).name}:num->real)"; val Kf = s"(${vs(3).name}:num->num->real)"; val S = v(vs(4))
+          val Q = s"Sum (\\z:num. $Pf z * $Kf z $S) $N"
+          for {
+            pw <- distParts(N, Pf, hs(0))
+            rows <- channelRows(N, M, Kf, hs(1))
+            qinv <- at(fact("INV_POSITIVE"), s"0 < $Q ==> 0 < inv ($Q)").flatMap(mp(_, hs(3)))
+            nonnegGoal <- prop(s"!y:num. y < $N ==> (0:real) <= $Pf y * $Kf y $S * inv ($Q)")
+            nonneg <- every(nonnegGoal) { (ys, yhs, g) =>
+              val Y = v(ys(0))
+              for {
+                pn <- at(pw(0), s"$Y < $N ==> (0:real) <= $Pf $Y").flatMap(mp(_, yhs(0)))
+                row <- at(rows, s"$Y < $N ==> DISTRIBUTION $M ($Kf $Y)").flatMap(mp(_, yhs(0))).flatMap(distParts(M, s"($Kf $Y)", _))
+                kn <- at(row(0), s"$S < $M ==> (0:real) <= $Kf $Y $S").flatMap(mp(_, hs(2)))
+                pkGoal <- prop(s"(0:real) <= $Pf $Y * $Kf $Y $S")
+                pk <- linT(Seq(pn, kn), pkGoal)
+                out <- linT(Seq(pk, qinv), g)
+              } yield out
+            }
+            pulled <- at(fact("SUM_SCALE_RIGHT"),
+              s"Sum (\\y:num. $Pf y * $Kf y $S * inv ($Q)) $N = Sum (\\y:num. $Pf y * $Kf y $S) $N * inv ($Q)")
+            nonzero <- at(fact("POSITIVE_NOT_ZERO"), s"0 < $Q ==> ~($Q = 0)").flatMap(mp(_, hs(3)))
+            cancel <- at(fact("MUL_INVERSE"), s"~($Q = 0) ==> $Q * inv ($Q) = 1").flatMap(mp(_, nonzero))
+            totalGoal <- prop(s"Sum (\\y:num. $Pf y * $Kf y $S * inv ($Q)) $N = 1")
+            total <- linAfter(Seq(pulled, cancel), Seq.empty, totalGoal)
+            out <- makeDist(N, s"\\y:num. $Pf y * $Kf y $S * inv ($Q)", nonneg, total)
+          } yield out
+        }
+      } yield out
   }
 }

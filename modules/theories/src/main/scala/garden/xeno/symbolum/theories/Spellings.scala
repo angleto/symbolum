@@ -404,6 +404,7 @@ object Spellings {
       .delimited("DISTRIBUTION", 2, "\\operatorname{dist}_{#1}(#2)")
       .delimited("CHANNEL", 3, "\\operatorname{channel}_{#1 \\to #2}(#3)")
       .delimited("VALUE", 6, "V_{#1, #2, #3}(#4, #5, #6)")
+      .delimited("INDEPENDENT", 3, "\\operatorname{indep}_{#1, #2}(#3)")
       /* ------------------------------------------------ the set defined by rules */
       // Both at arity ONE though each is written with two arguments, and that is the faithful
       // reading rather than a shortcut: `INDUCTIVE f` IS the set, and `INDUCTIVE f x` is that set

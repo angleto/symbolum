@@ -457,7 +457,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 900 with `Decision`, 2026-10-22, the eleven antecedents `RediscoverySpec` counts beside the same
     // figure. Plus eleven over the base above.
     // 933 with all three, merged 2026-10-22: 922 plus `Decision`'s eleven.
-    proposals.size shouldBe 933
+    // 948 with the rest of the distributions, 2026-10-23: the fifteen antecedents `RediscoverySpec`
+    // counts beside the same figure.
+    proposals.size shouldBe 948
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1486,7 +1488,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // claims about `Maximum`, `Argmax`, `VALUE` and `CHANNEL` that no procedure has a reading of,
     // and nothing else moved into this bucket. Plus eleven.
     // 832 with all three, merged 2026-10-22: 821 plus `Decision`'s eleven.
-    open shouldBe 832
+    // 847 with the rest of the distributions, 2026-10-23, read off the run: all fifteen weakenings,
+    // claims about `DISTRIBUTION`, `CHANNEL` and `INDEPENDENT` that no procedure reads. Plus fifteen.
+    open shouldBe 847
     // 7 earlier on 2026-09-11, when the library gained thirty lemmas about `num` and a weakening of
     // one of those was a claim about a type the arithmetic procedures have no reading of. **2 since
     // the model learned the naturals**, and the five that left are the point of this whole bucket:
@@ -2235,7 +2239,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 302 with `Decision`, 2026-10-22, read off the run and not decomposed: proposals over its
     // eighteen facts that keep a constant of the naturals, an index bound or the `SUC` of a length.
     // Plus eight.
-    aboutNumbers.size shouldBe 302
+    // 315 with the rest of the distributions, 2026-10-23, read off the run and not decomposed:
+    // proposals over its seven facts that keep an index bound or `NUM_DIV`/`NUM_MOD`. Plus thirteen.
+    aboutNumbers.size shouldBe 315
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both
@@ -2342,7 +2348,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 62 with `Decision`, 2026-10-22, read off the run: two of its residues lose the bound on an index
     // and the sampler refutes them at a point outside it, which the first run did not reach because
     // `aboutNumbers` above was red. Plus two.
-    after shouldBe 62
+    // 63 with the rest of the distributions, 2026-10-23, read off the run: one of its residues loses
+    // an index bound and the sampler refutes it at a point outside it. Plus one.
+    after shouldBe 63
   }
 
   /* ------------------------------------------------------ the false positive it produced */

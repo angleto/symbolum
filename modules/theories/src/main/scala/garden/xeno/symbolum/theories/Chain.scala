@@ -451,9 +451,9 @@ final class Chain private (
    *
    * Over [[complex]], extending the chain's end: what it reads is the sums of [[series]], `max` of
    * [[magnitude]] and the order of `num`, and it declares `Maximum`, `Argmax`, `DISTRIBUTION`,
-   * `CHANNEL` and `VALUE`. Its derivations are written in the complex numbers' steps over its own
-   * theory, which is why it sits above them rather than beside the reals. Five constants and no
-   * axiom.
+   * `CHANNEL`, `VALUE` and `INDEPENDENT`. Its derivations are written in the complex numbers' steps
+   * over its own theory, which is why it sits above them rather than beside the reals. Six constants
+   * and no axiom.
    */
   val decision: Decision
 ) {
