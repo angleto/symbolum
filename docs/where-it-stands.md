@@ -1209,7 +1209,9 @@ any closed form of the coefficients, which the source says has none.
 expected utility of the Bayes-optimal action, written before conditioning so that a signal of
 probability zero asks for no case; `VALUE_POSTERIOR` is the textbook's posterior form wherever every
 signal has positive probability. `Maximum` and `Argmax` are a finite maximum and the first index
-taking it, by recursion. `BLACKWELL_GARBLING` says that an experiment obtained from another through a
+taking it, by recursion. Marginals, the composition of channels, the expectation's monotonicity, the
+product of two distributions and its independence, and the posterior as a distribution are facts
+beside them, and `INDEPENDENT` the sixth constant. `BLACKWELL_GARBLING` says that an experiment obtained from another through a
 channel is worth no more for any prior, any actions and any utility, and its only hypothesis is that
 the garbling is a channel. `DecisionSpec` certifies the essay's case E5
 (`thinktank/utitlita_e_danno`): `7/20` with the signal alone, `9/16` with the frame on average and

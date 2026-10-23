@@ -184,7 +184,7 @@ together they state a complete ordered field, which no derivation can.
 | `law LT_MUL` | !x:real. !y:real. 0 < x /\ 0 < y ==> 0 < x * y | **NOT READ** |  |  |
 | `law COMPLETENESS` | !f:real -> bool. (?x:real. f x) /\ (?x:real. !y:real. f y ==> y <= x) ==> (?x:real. (!y:real. f y ==> y <= x) /\ (!y:real. (!z:real. f z ==> z <= y) ==> x <= y)) | **NOT READ** |  |  |
 
-## The definitions (206)
+## The definitions (207)
 
 Every constant the chain defines, by name. Each is conservative and each decides what an
 axiom mentioning it means.
@@ -214,6 +214,7 @@ axiom mentioning it means.
 | `definition Divides` | Divides = \x:real. \y:real. ?z:real. y = x * z | **NOT READ** |  |  |
 | `definition F` | F = !p:bool. p | **NOT READ** |  |  |
 | `definition FST` | FST = \x:prod('a, 'b). select (\y:'a. ?z:'b. x = PAIR y z) | **NOT READ** |  |  |
+| `definition INDEPENDENT` | INDEPENDENT = \n:num. \m:num. \f:num -> real. !k:num. !i:num. k < n ==> i < m ==> f (m * k + i) = Sum (\j:num. f (m * k + j)) m * Sum (\j:num. f (m * j + i)) n | **NOT READ** |  |  |
 | `definition INDUCTIVE` | INDUCTIVE = \f:('a -> bool) -> 'a -> bool. \x:'a. !g:'a -> bool. (!y:'a. f g y ==> g y) ==> g x | **NOT READ** |  |  |
 | `definition IND_0` | IND_0 = select (\x:ind. (!y:ind. !z:ind. IND_SUC y = IND_SUC z ==> y = z) /\ (!y:ind. ~(IND_SUC y = x))) | **NOT READ** |  |  |
 | `definition IND_SUC` | IND_SUC = select (\f:ind -> ind. ?x:ind. (!y:ind. !z:ind. f y = f z ==> y = z) /\ (!y:ind. ~(f y = x))) | **NOT READ** |  |  |

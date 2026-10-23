@@ -321,6 +321,11 @@ they have least appetite for working out how it is produced.
   ARGMAX_UNIQUE            !f:num -> real. !n:num. !m:num. m <= n ==> (!k:num. k <= n ==> ~(k = m) ==> f k < f m) ==> Argmax f n = m
   ARGMAX_ZERO              !f:num -> real. Argmax f 0 = 0
   BLACKWELL_GARBLING       !n:num. !m:num. !k:num. !i:num. !f:num -> real. !g:num -> num -> real. !h:num -> num -> real. !f1:num -> num -> real. CHANNEL m k h ==> VALUE n k i f (\j:num. \n1:num. Sum (\m1:num. g j m1 * h m1 n1) m) f1 <= VALUE n m i f g f1
+  CHANNEL_COMPOSE          !n:num. !m:num. !k:num. !f:num -> num -> real. !g:num -> num -> real. CHANNEL n m f ==> CHANNEL m k g ==> CHANNEL n k (\i:num. \j:num. Sum (\n1:num. f i n1 * g n1 j) m)
+  DISTRIBUTION_MARGINAL    !n:num. !m:num. !f:num -> real. !g:num -> num -> real. DISTRIBUTION n f ==> CHANNEL n m g ==> DISTRIBUTION m (\k:num. Sum (\i:num. f i * g i k) n)
+  DISTRIBUTION_PRODUCT     !n:num. !m:num. !f:num -> real. !g:num -> real. DISTRIBUTION n f ==> DISTRIBUTION m g ==> DISTRIBUTION (m * n) (\k:num. f (NUM_DIV k m) * g (NUM_MOD k m))
+  EXPECTATION_CONSTANT     !n:num. !f:num -> real. !x:real. DISTRIBUTION n f ==> Sum (\m:num. f m * x) n = x
+  EXPECTATION_MONOTONE     !n:num. !f:num -> real. !g:num -> real. !h:num -> real. DISTRIBUTION n f ==> (!m:num. m < n ==> g m <= h m) ==> Sum (\m:num. f m * g m) n <= Sum (\m:num. f m * h m) n
   MAXIMUM_ATTAINED         !f:num -> real. !n:num. ?m:num. m <= n /\ Maximum f n = f m
   MAXIMUM_CONGRUENCE_BELOW !f:num -> real. !g:num -> real. !n:num. (!m:num. m <= n ==> f m = g m) ==> Maximum f n = Maximum g n
   MAXIMUM_LEAST            !f:num -> real. !n:num. !x:real. (!m:num. m <= n ==> f m <= x) ==> Maximum f n <= x
@@ -329,6 +334,8 @@ they have least appetite for working out how it is produced.
   MAXIMUM_SUC              !f:num -> real. !n:num. Maximum f (SUC n) = max (Maximum f n) (f (SUC n))
   MAXIMUM_UPPER            !f:num -> real. !n:num. !m:num. m <= n ==> f m <= Maximum f n
   MAXIMUM_ZERO             !f:num -> real. Maximum f 0 = f 0
+  POSTERIOR_DISTRIBUTION   !n:num. !m:num. !f:num -> real. !g:num -> num -> real. !k:num. DISTRIBUTION n f ==> CHANNEL n m g ==> k < m ==> 0 < Sum (\i:num. f i * g i k) n ==> DISTRIBUTION n (\i:num. f i * g i k * inv (Sum (\j:num. f j * g j k) n))
+  PRODUCT_INDEPENDENT      !n:num. !m:num. !f:num -> real. !g:num -> real. DISTRIBUTION n f ==> DISTRIBUTION m g ==> INDEPENDENT n m (\k:num. f (NUM_DIV k m) * g (NUM_MOD k m))
   SUM_COND_COUNT           !x:real. !y:real. !n:num. !m:num. m < n ==> Sum (\k:num. COND (k = m) x y) n = x + (real_of_num n - 1) * y
   SUM_GROUPS               !f:num -> real. !n:num. !m:num. Sum f (n * m) = Sum (\k:num. Sum (\i:num. f (n * k + i)) n) m
   SUM_INDICATOR            !f:num -> real. !n:num. !m:num. m < n ==> Sum (\k:num. f k * COND (k = m) 1 0) n = f m

@@ -54,10 +54,10 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
     decision.theory.axioms shouldBe chain.complex.theory.axioms
   }
 
-  it should "declare its five constants and no type" in {
+  it should "declare its six constants and no type" in {
     val declared = decision.theory.constants.keySet -- chain.complex.theory.constants.keySet
     declared shouldBe Set(Decision.MaximumName, Decision.ArgmaxName, Decision.DistributionName,
-      Decision.ChannelName, Decision.ValueName)
+      Decision.ChannelName, Decision.ValueName, Decision.IndependentName)
     decision.theory.typeOperators shouldBe chain.complex.theory.typeOperators
   }
 
