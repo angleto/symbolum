@@ -159,6 +159,9 @@ object Decision {
   /** `|- !n p c. DISTRIBUTION n p ==> Sum (\i. p i * c) n = c` */
   val ExpectationConstant: String = "EXPECTATION_CONSTANT"
 
+  /** `|- !n p f g a b. E[a * f + b * g] = a * E[f] + b * E[g]`, over any weights and not only a distribution's */
+  val ExpectationLinear: String = "EXPECTATION_LINEAR"
+
   /** The product of two distributions, on `[0, m * n)` read at `m * a + b`, is one. */
   val DistributionProduct: String = "DISTRIBUTION_PRODUCT"
 
@@ -229,6 +232,9 @@ object Decision {
         "Sum (\\i:num. p i * f i) n <= Sum (\\i:num. p i * g i) n"),
     ExpectationConstant ->
       "!n:num. !p:num->real. !c:real. DISTRIBUTION n p ==> Sum (\\i:num. p i * c) n = c",
+    ExpectationLinear ->
+      ("!n:num. !p:num->real. !f:num->real. !g:num->real. !a:real. !b:real. " +
+        "Sum (\\i:num. p i * (a * f i + b * g i)) n = a * Sum (\\i:num. p i * f i) n + b * Sum (\\i:num. p i * g i) n"),
     DistributionProduct ->
       ("!n:num. !m:num. !p:num->real. !q:num->real. DISTRIBUTION n p ==> DISTRIBUTION m q ==> " +
         "DISTRIBUTION (m * n) (\\t:num. p (NUM_DIV t m) * q (NUM_MOD t m))"),
@@ -263,6 +269,7 @@ object Decision {
     ChannelCompose -> (_.compose),
     ExpectationMonotone -> (_.expectationMonotone),
     ExpectationConstant -> (_.expectationConstant),
+    ExpectationLinear -> (_.expectationLinear),
     DistributionProduct -> (_.product),
     ProductIndependent -> (_.productIndependent),
     PosteriorDistribution -> (_.posterior)
@@ -1291,6 +1298,28 @@ object Decision {
           } yield out
         }
       } yield out
+
+    /**
+     * [[ExpectationLinear]]: the weight distributed over the combination, then [[Series.Linear]] and
+     * [[Series.Scaled]]. It assumes nothing of `p`, since the identity is one about finite sums.
+     */
+    def expectationLinear: R[Kernel.Thm] = {
+      val i = fresh("i", Numbers)
+      val Pf = "(p:num->real)"; val Ff = "(f:num->real)"; val Gf = "(g:num->real)"
+      for {
+        inner <- identity(s"$Pf (i:num) * ((a:real) * $Ff i + (b:real) * $Gf i) = a * ($Pf i * $Ff i) + b * ($Pf i * $Gf i)")
+        summed <- cong("Sum", i, inner, "(n:num)")
+        linear <- at(fact("SUM_LINEAR"),
+          s"Sum (\\i:num. (a:real) * ($Pf i * $Ff i) + (b:real) * ($Pf i * $Gf i)) (n:num) = " +
+            s"a * Sum (\\i:num. $Pf i * $Ff i) n + Sum (\\i:num. b * ($Pf i * $Gf i)) n")
+        scaled <- at(fact("SUM_SCALE"),
+          s"Sum (\\i:num. (b:real) * ($Pf i * $Gf i)) (n:num) = b * Sum (\\i:num. $Pf i * $Gf i) n")
+        out <- linAfterText(Seq(summed, linear, scaled), Seq.empty,
+          s"Sum (\\i:num. $Pf i * ((a:real) * $Ff i + (b:real) * $Gf i)) (n:num) = " +
+            s"a * Sum (\\i:num. $Pf i * $Ff i) n + b * Sum (\\i:num. $Pf i * $Gf i) n")
+        result <- closed(out, ExpectationLinear)
+      } yield result
+    }
 
     /** `0 < m` from `DISTRIBUTION m q`: on an empty support nothing sums to one. */
     def positiveSupport(mT: String, qT: String, total: Kernel.Thm): R[Kernel.Thm] =

@@ -84,12 +84,18 @@ three. Six rows join `docs/reading-register.md`, one per constant.
 link added it on 2026-10-22: a marginal through a channel is a distribution
 (`DISTRIBUTION_MARGINAL`), two channels in a row are a channel (`CHANNEL_COMPOSE`), the expectation
 `Sum (\i. p i * f i) n` is monotone and keeps a constant (`EXPECTATION_MONOTONE`,
-`EXPECTATION_CONSTANT`; its linearity is `SUM_LINEAR` and needs no distribution), the product of two
+`EXPECTATION_CONSTANT`) and is linear (`EXPECTATION_LINEAR`, which assumes nothing of `p`), the product of two
 distributions on `[0, m * n)` read at `m * a + b` is one (`DISTRIBUTION_PRODUCT`) and is independent
 (`PRODUCT_INDEPENDENT`), and the posterior at a signal below `m` of positive probability is a
 distribution (`POSTERIOR_DISTRIBUTION`). Independence is the one that is a constant, because it is a
 property a joint distribution has or lacks rather than an operation, and a statement about it has to
 be able to name it.
+
+**The linearity was left to `SUM_LINEAR` on 2026-10-22 and is a fact of its own since 2026-10-23**,
+for the reason `Series` publishes `SUM_ADD` beside `SUM_LINEAR`: a rewrite rule is matched
+syntactically, and `SUM_LINEAR` reads a summand `a * f i + g i`, where an expectation of a
+combination is written `p i * (a * f i + b * g i)`. Reaching one from the other takes a pointwise
+identity, a congruence under the sum and `SUM_SCALE`, which is the derivation `EXPECTATION_LINEAR` is.
 
 The derivations are written in `ComplexKit`'s steps over this link's own theory, with a driver whose
 complex components are empty: every goal here is real, and the driver closes a real goal with `RING`

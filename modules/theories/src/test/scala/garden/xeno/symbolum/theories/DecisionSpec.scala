@@ -13,7 +13,9 @@ import garden.xeno.symbolum.logic.*
  * met, so the two that are not trivially met are discharged here: `CHANNEL` at the identity garbling
  * on two signals, which turns `BLACKWELL_GARBLING` into an inequality with no hypothesis, and the
  * positive marginals of `VALUE_POSTERIOR` at a uniform experiment. `ARGMAX_UNIQUE` is discharged by
- * the essay's case, whose third value is the reader's rule at each of sixty-four signals.
+ * the essay's case, whose third value is the reader's rule at each of sixty-four signals. The facts
+ * about distributions, marginals, channels, products and posteriors have every hypothesis met at
+ * the uniform weight on two points, the posterior's positivity included.
  *
  * The essay's case E5 is the last test: three values, each a theorem with no hypothesis, and the
  * two comparisons the essay reads off them.
@@ -134,6 +136,107 @@ class DecisionSpec extends AnyFlatSpec with Matchers {
         "inv (Sum (\\z:num. (\\y:num. (1:real) / 2) z * (\\y:num. \\s:num. (1:real) / 2) z s) 2) * u a y) 2) top) 2"))
     val detached = force(decision.logic.rules.mp(instance, positive))
     detached.hypotheses shouldBe empty
+  }
+
+  private val Uniform = "(\\y:num. (1:real) / 2)"
+  private val UniformRows = "(\\y:num. \\s:num. (1:real) / 2)"
+  private val Identity = "(\\s:num. \\t:num. COND (t = s) (1:real) 0)"
+
+  /** `DISTRIBUTION 2 (\y. 1/2)`: a half is non-negative, and two halves are one by `SUM_CONSTANT`. */
+  private lazy val uniform: Kernel.Thm = {
+    import steps.*
+    import steps.kit.*
+    force(for {
+      opened <- unfold(Decision.DistributionName, "2:num", Uniform)
+      nonneg <- prop("!i:num. i < 2 ==> (0:real) <= 1 / 2")
+      signs <- steps.every(nonneg)((_, _, g) => linarith.prove(g))
+      constant <- at(fact("SUM_CONSTANT"), s"Sum $Uniform 2 = real_of_num 2 * (1 / 2)")
+      goal <- prop(s"Sum $Uniform 2 = 1")
+      b0 <- fact("NUM_REAL_BIT0")
+      b1 <- fact("NUM_REAL_BIT1")
+      one <- fact("NUM_REAL_ONE")
+      total <- rewriting(Seq(constant), goal)(h => rewriting(Seq(b0, b1, one), h)(linarith.prove))
+      both <- conj(signs, total)
+      back <- Conv.sym(opened)
+      out <- LogicError.lift(Kernel.eqMp(back, both))
+    } yield out)
+  }
+
+  /** `CHANNEL 2 2 (\y s. 1/2)`: every row is [[uniform]]. */
+  private lazy val uniformChannel: Kernel.Thm = {
+    import steps.*
+    import steps.kit.*
+    force(for {
+      rows <- prop(s"!y:num. y < 2 ==> DISTRIBUTION 2 $Uniform")
+      each <- steps.every(rows)((_, _, _) => Right(uniform))
+      opened <- unfold(Decision.ChannelName, "2:num", "2:num", UniformRows)
+      back <- Conv.sym(opened)
+      out <- LogicError.lift(Kernel.eqMp(back, each))
+    } yield out)
+  }
+
+  /** `published(name)` at `instance`, detached from each of `premises` in turn, with nothing left over. */
+  private def discharged(name: String, instance: String, conclusion: String, premises: Kernel.Thm*): Unit =
+    withClue(s"$name: ") {
+      val specialised = force(steps.kit.at(published(name), instance))
+      val out = premises.foldLeft(specialised)((thm, premise) => force(decision.logic.rules.mp(thm, premise)))
+      // the kernel holds the instance beta-normal, so the text is read the way `at` reads it
+      out.conclusion shouldBe force(steps.kit.prop(conclusion))
+      out.hypotheses shouldBe empty
+      Derivation.axiomsOf(out) shouldBe threeAxioms
+    }
+
+  "The facts about distributions" should "have every hypothesis met at the uniform weight on two points" in {
+    import steps.*
+    import steps.kit.*
+    uniform.hypotheses shouldBe empty
+    uniformChannel.hypotheses shouldBe empty
+    val P = Uniform
+    val K = UniformRows
+    val order = force(prop("!i:num. i < 2 ==> (0:real) <= 1").flatMap(steps.every(_)((_, _, g) => linarith.prove(g))))
+    val zeroBelowTwo = force(for {
+      spelled <- nm("2").flatMap(chain.successor.spell)
+      lt <- at(fact("NUM_ZERO_LT_SUC"), "0 < SUC (SUC 0)")
+      back <- Conv.sym(spelled)
+      out <- rw(back, lt)
+    } yield out)
+    zeroBelowTwo.conclusion shouldBe proposition("(0:num) < 2")
+    val positive = force(for {
+      goal <- prop(s"0 < Sum (\\y:num. $P y * $K y 0) 2")
+      constant <- at(fact("SUM_CONSTANT"), "Sum (\\y:num. (1:real) / 2 * (1 / 2)) 2 = real_of_num 2 * ((1:real) / 2 * (1 / 2))")
+      b0 <- fact("NUM_REAL_BIT0")
+      b1 <- fact("NUM_REAL_BIT1")
+      one <- fact("NUM_REAL_ONE")
+      out <- rewriting(Seq(constant), goal)(h => rewriting(Seq(b0, b1, one), h)(linarith.prove))
+    } yield out)
+
+    val marginal = s"DISTRIBUTION 2 (\\s:num. Sum (\\y:num. $P y * $K y s) 2)"
+    discharged(Decision.DistributionMarginal,
+      s"DISTRIBUTION 2 $P ==> CHANNEL 2 2 $K ==> $marginal", marginal, uniform, uniformChannel)
+    val composed = s"CHANNEL 2 2 (\\y:num. \\t:num. Sum (\\s:num. $K y s * $Identity s t) 2)"
+    discharged(Decision.ChannelCompose,
+      s"CHANNEL 2 2 $K ==> CHANNEL 2 2 $Identity ==> $composed", composed, uniformChannel, identityChannel)
+    val monotone = s"Sum (\\i:num. $P i * (\\i:num. (0:real)) i) 2 <= Sum (\\i:num. $P i * (\\i:num. (1:real)) i) 2"
+    discharged(Decision.ExpectationMonotone,
+      s"DISTRIBUTION 2 $P ==> (!i:num. i < 2 ==> (\\i:num. (0:real)) i <= (\\i:num. (1:real)) i) ==> $monotone",
+      monotone, uniform, order)
+    val constant = s"Sum (\\i:num. $P i * (3:real)) 2 = 3"
+    discharged(Decision.ExpectationConstant, s"DISTRIBUTION 2 $P ==> $constant", constant, uniform)
+    val product = s"(\\t:num. $P (NUM_DIV t 2) * $P (NUM_MOD t 2))"
+    discharged(Decision.DistributionProduct,
+      s"DISTRIBUTION 2 $P ==> DISTRIBUTION 2 $P ==> DISTRIBUTION (2 * 2) $product",
+      s"DISTRIBUTION (2 * 2) $product", uniform, uniform)
+    discharged(Decision.ProductIndependent,
+      s"DISTRIBUTION 2 $P ==> DISTRIBUTION 2 $P ==> INDEPENDENT 2 2 $product",
+      s"INDEPENDENT 2 2 $product", uniform, uniform)
+    val posterior = s"DISTRIBUTION 2 (\\y:num. $P y * $K y 0 * inv (Sum (\\z:num. $P z * $K z 0) 2))"
+    discharged(Decision.PosteriorDistribution,
+      s"DISTRIBUTION 2 $P ==> CHANNEL 2 2 $K ==> (0:num) < 2 ==> 0 < Sum (\\y:num. $P y * $K y 0) 2 ==> $posterior",
+      posterior, uniform, uniformChannel, zeroBelowTwo, positive)
+    val linear =
+      s"Sum (\\i:num. $P i * ((2:real) * real_of_num i + 3 * (\\i:num. (1:real)) i)) 2 = " +
+        s"2 * Sum (\\i:num. $P i * real_of_num i) 2 + 3 * Sum (\\i:num. $P i * (\\i:num. (1:real)) i) 2"
+    discharged(Decision.ExpectationLinear, linear, linear)
   }
 
   /**

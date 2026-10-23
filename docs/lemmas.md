@@ -325,6 +325,7 @@ they have least appetite for working out how it is produced.
   DISTRIBUTION_MARGINAL    !n:num. !m:num. !f:num -> real. !g:num -> num -> real. DISTRIBUTION n f ==> CHANNEL n m g ==> DISTRIBUTION m (\k:num. Sum (\i:num. f i * g i k) n)
   DISTRIBUTION_PRODUCT     !n:num. !m:num. !f:num -> real. !g:num -> real. DISTRIBUTION n f ==> DISTRIBUTION m g ==> DISTRIBUTION (m * n) (\k:num. f (NUM_DIV k m) * g (NUM_MOD k m))
   EXPECTATION_CONSTANT     !n:num. !f:num -> real. !x:real. DISTRIBUTION n f ==> Sum (\m:num. f m * x) n = x
+  EXPECTATION_LINEAR       !n:num. !f:num -> real. !g:num -> real. !h:num -> real. !x:real. !y:real. Sum (\m:num. f m * (x * g m + y * h m)) n = x * Sum (\m:num. f m * g m) n + y * Sum (\m:num. f m * h m) n
   EXPECTATION_MONOTONE     !n:num. !f:num -> real. !g:num -> real. !h:num -> real. DISTRIBUTION n f ==> (!m:num. m < n ==> g m <= h m) ==> Sum (\m:num. f m * g m) n <= Sum (\m:num. f m * h m) n
   MAXIMUM_ATTAINED         !f:num -> real. !n:num. ?m:num. m <= n /\ Maximum f n = f m
   MAXIMUM_CONGRUENCE_BELOW !f:num -> real. !g:num -> real. !n:num. (!m:num. m <= n ==> f m = g m) ==> Maximum f n = Maximum g n
