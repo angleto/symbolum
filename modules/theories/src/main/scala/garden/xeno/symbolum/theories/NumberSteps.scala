@@ -5,7 +5,7 @@ import garden.xeno.symbolum.logic.*
 
 /**
  * Steps over the naturals and over propositions that the derivations beside `Complex` share:
- * `RuleThirty` and `Gilbreath`. Each is a line or two over `ComplexKit` and decides nothing a
+ * `RuleThirty`, `Gilbreath` and `Triangular`. Each is a line or two over `ComplexKit` and decides nothing a
  * reader has to trust; what comes out is a theorem the kernel built or a refusal.
  *
  * `numLin` settles a comparison of naturals by carrying it to the reals, where `Linarith` reads it,
@@ -17,7 +17,11 @@ import garden.xeno.symbolum.logic.*
  *
  * Two facts these steps rest on are proved here once per instance: `eqImpTheorem`, which is
  * `(a = b) = ((a ==> b) /\ (b ==> a))` for propositions, and `notLeTheorem`, which is `n < m` from
- * `~(m <= n)`.
+ * `~(m <= n)`. Six more are about remainders modulo a power of two and the bits they hold, which
+ * `RuleThirty` and `Triangular` both need: `modSplitTheorem` and `modEqSplitTheorem` split a
+ * remainder modulo `2^(k + 1)` into the one modulo `2^k` and bit `k`, `bitAboveTheorem` and
+ * `bitTopTheorem` read bit `k` below and just above `2^k`, and `modOneTheorem` and
+ * `modModTheorem` are the remainder modulo 1 and the remainder of a remainder.
  */
 private[theories] final class NumberSteps(val kit: ComplexKit, val semiring: Semiring) {
   import kit.*
@@ -456,4 +460,172 @@ private[theories] final class NumberSteps(val kit: ComplexKit, val semiring: Sem
       proved <- body(h, parts._2)
       out <- rules.disch(parts._1, proved).flatMap(gen(_, a, b))
     } yield out
+
+  /* ------------------------------------------------------------ remainders modulo a power of two */
+
+  /** Bit `j` of `y`. */
+  def bitText(j: String, y: String): String = s"NUM_MOD (NUM_DIV ($y) (NUM_POW 2 ($j))) 2 = 1"
+
+  lazy val modSplitTheorem: R[Kernel.Thm] = modSplit
+  lazy val modEqSplitTheorem: R[Kernel.Thm] = modEqSplit
+  lazy val bitAboveTheorem: R[Kernel.Thm] = bitAbove
+  lazy val bitTopTheorem: R[Kernel.Thm] = bitTop
+  lazy val modOneTheorem: R[Kernel.Thm] = modOne
+  lazy val modModTheorem: R[Kernel.Thm] = modMod
+
+  /** The remainder modulo `2^(SUC k)` is the remainder modulo `2^k` plus bit `k` in its place. */
+  def modSplit: R[Kernel.Thm] = {
+    val yv = Term.variable("y", Numbers); val kv = Term.variable("k", Numbers)
+    val M = "NUM_POW 2 (k:num)"; val Q = s"NUM_DIV (y:num) ($M)"; val Rr = s"NUM_MOD (y:num) ($M)"
+    val B = s"NUM_MOD ($Q) 2"; val Q2 = s"NUM_DIV ($Q) 2"; val P2 = "NUM_POW 2 (SUC (k:num))"
+    for {
+      dm1 <- at(fact("NUM_DIV_MOD"), s"$M * $Q + $Rr = y")
+      dm2 <- at(fact("NUM_DIV_MOD"), s"2 * $Q2 + $B = $Q")
+      positive <- two.flatMap(t2 => at(fact("NUM_POW_POSITIVE"), s"(0:num) < 2 ==> 0 < $M").flatMap(mp(_, t2)))
+      rLt <- at(fact("NUM_MOD_LT"), s"0 < $M ==> $Rr < $M").flatMap(mp(_, positive))
+      bLt <- two.flatMap(t2 => at(fact("NUM_MOD_LT"), s"(0:num) < 2 ==> $B < 2").flatMap(mp(_, t2)))
+      powSuc <- at(fact("NUM_POW_SUC"), s"$P2 = $M * 2")
+      regroup <- num(s"$M * (2 * $Q2 + $B) + $Rr = $M * 2 * $Q2 + ($Rr + $M * $B)")
+      split_ <- rw(dm2, regroup).flatMap(rw(dm1, _)).flatMap(e => Conv.sym(powSuc).flatMap(rw(_, e)))
+      goalT <- prop(s"$Rr + $M * $B < $P2")
+      mulZero <- at(fact("NUM_MUL_ZERO"), s"$M * 0 = 0")
+      mulOne <- num(s"$M * 1 = $M")
+      bound <- for {
+        either <- binary(B, bLt)
+        zero <- for {
+          h <- assumed(s"$B = 0")
+          out <- rewriting(Seq(h._2, mulZero), goalT)(numLin(Seq(rLt, powSuc), _))
+        } yield out
+        unit <- for {
+          h <- assumed(s"$B = 1")
+          out <- rewriting(Seq(h._2, mulOne), goalT)(numLin(Seq(rLt, powSuc), _))
+        } yield out
+        out <- rules.disjElim(either, zero, unit)
+      } yield out
+      unique <- at(fact("NUM_DIV_MOD_UNIQUE"),
+        s"y = $P2 * $Q2 + ($Rr + $M * $B) /\\ $Rr + $M * $B < $P2 ==> $Q2 = NUM_DIV y ($P2) /\\ $Rr + $M * $B = NUM_MOD y ($P2)")
+      out <- conj(split_, bound).flatMap(mp(unique, _)).flatMap(rules.conjElim2).flatMap(Conv.sym).flatMap(gen(_, yv, kv))
+    } yield out
+  }
+
+  /** Two numbers agree modulo `2^(SUC k)` exactly when they agree modulo `2^k` and at bit `k`. */
+  def modEqSplit: R[Kernel.Thm] = {
+    val (yv, nv, kv) = (Term.variable("y", Numbers), Term.variable("n", Numbers), Term.variable("k", Numbers))
+    val M = "NUM_POW 2 (k:num)"; val P2 = "NUM_POW 2 (SUC (k:num))"
+    def Rr(z: String) = s"NUM_MOD ($z:num) ($M)"
+    def B(z: String) = s"NUM_MOD (NUM_DIV ($z:num) ($M)) 2"
+    val E = s"NUM_MOD (y:num) ($P2) = NUM_MOD (n:num) ($P2)"
+    val C = s"${Rr("y")} = ${Rr("n")} /\\ ((${B("y")} = 1) = (${B("n")} = 1))"
+    for {
+      sy <- at(modSplitTheorem, s"NUM_MOD (y:num) ($P2) = ${Rr("y")} + $M * ${B("y")}")
+      sn <- at(modSplitTheorem, s"NUM_MOD (n:num) ($P2) = ${Rr("n")} + $M * ${B("n")}")
+      positive <- two.flatMap(t2 => at(fact("NUM_POW_POSITIVE"), s"(0:num) < 2 ==> 0 < $M").flatMap(mp(_, t2)))
+      lowY <- at(fact("NUM_MOD_LT"), s"0 < $M ==> ${Rr("y")} < $M").flatMap(mp(_, positive))
+      lowN <- at(fact("NUM_MOD_LT"), s"0 < $M ==> ${Rr("n")} < $M").flatMap(mp(_, positive))
+      bY <- two.flatMap(t2 => at(fact("NUM_MOD_LT"), s"(0:num) < 2 ==> ${B("y")} < 2").flatMap(mp(_, t2)))
+      bN <- two.flatMap(t2 => at(fact("NUM_MOD_LT"), s"(0:num) < 2 ==> ${B("n")} < 2").flatMap(mp(_, t2)))
+      forward <- for {
+        h <- assumed(E)
+        sums <- rw(sy, h._2).flatMap(rw(sn, _))
+        swapY <- num(s"${Rr("y")} + $M * ${B("y")} = $M * ${B("y")} + ${Rr("y")}")
+        swapN <- num(s"${Rr("n")} + $M * ${B("n")} = $M * ${B("n")} + ${Rr("n")}")
+        ordered <- rw(swapY, sums).flatMap(rw(swapN, _))
+        unique <- at(fact("NUM_DIVISION_UNIQUE"),
+          s"$M * ${B("y")} + ${Rr("y")} = $M * ${B("n")} + ${Rr("n")} /\\ ${Rr("y")} < $M /\\ ${Rr("n")} < $M ==> " +
+            s"${B("y")} = ${B("n")} /\\ ${Rr("y")} = ${Rr("n")}")
+        parts <- conjs(ordered, lowY, lowN).flatMap(mp(unique, _)).flatMap(split)
+        bits <- prop(s"(${B("y")} = 1) = (${B("n")} = 1)").flatMap(g => rewriting(Seq(parts(0)), g)(byBeta))
+        out <- conj(parts(1), bits)
+      } yield out
+      backward <- for {
+        h <- assumed(C)
+        parts <- split(h._2)
+        goal <- prop(E)
+        zeroOne <- zeroNotOne
+        equalBits <- for {
+          ey <- binary(B("y"), bY)
+          en <- binary(B("n"), bN)
+          wanted <- prop(s"${B("y")} = ${B("n")}")
+          same = (a: Kernel.Thm, b: Kernel.Thm) => rewriting(Seq(a, b), wanted)(byBeta)
+          mixed = (a: Kernel.Thm, b: Kernel.Thm) =>
+            for {
+              iff <- rw(a, parts(1)).flatMap(rw(b, _))
+              one <- nm("1").map(Conv.refl)
+              zeroIsOne <- LogicError.lift(Kernel.eqMp(iff, one)).orElse(Conv.sym(iff).flatMap(s => LogicError.lift(Kernel.eqMp(s, one))))
+              contra <- rules.notElim(zeroOne, zeroIsOne)
+              out <- rules.falsityElim(wanted, contra)
+            } yield out
+          out <- for {
+            y0 <- assumed(s"${B("y")} = 0"); y1 <- assumed(s"${B("y")} = 1")
+            n0 <- assumed(s"${B("n")} = 0"); n1 <- assumed(s"${B("n")} = 1")
+            c00 <- same(y0._2, n0._2); c01 <- mixed(y0._2, n1._2)
+            c10 <- mixed(y1._2, n0._2); c11 <- same(y1._2, n1._2)
+            whenY0 <- rules.disjElim(en, c00, c01)
+            whenY1 <- rules.disjElim(en, c10, c11)
+            out <- rules.disjElim(ey, whenY0, whenY1)
+          } yield out
+        } yield out
+        out <- rewriting(Seq(sy, sn, parts(0), equalBits), goal)(byBeta)
+      } yield out
+      out <- gen(Kernel.deductAntisym(backward, forward), yv, nv, kv)
+    } yield out
+  }
+
+  /** Below `2^k`, bit `k` is off. */
+  def bitAbove: R[Kernel.Thm] = {
+    val kv = Term.variable("k", Numbers)
+    val c = Term.variable("c", Numbers)
+    for {
+      held <- assumed("(c:num) < NUM_POW 2 (k:num)")
+      (belowT, below) = held
+      zero <- at(fact("NUM_DIV_MOD_BELOW"), "(c:num) < NUM_POW 2 (k:num) ==> NUM_DIV c (NUM_POW 2 k) = 0 /\\ NUM_MOD c (NUM_POW 2 k) = c")
+        .flatMap(mp(_, below)).flatMap(rules.conjElim1)
+      modZero <- two.flatMap(t2 => at(fact("NUM_DIV_MOD_BELOW"), "(0:num) < 2 ==> NUM_DIV 0 2 = 0 /\\ NUM_MOD 0 2 = 0").flatMap(mp(_, t2)))
+        .flatMap(rules.conjElim2)
+      apart <- zeroNotOne
+      goal <- prop(s"~(${bitText("k:num", "c:num")})")
+      closed <- rewriting(Seq(zero, modZero), goal)(landsOn(apart))
+      out <- rules.disch(belowT, closed).flatMap(gen(_, kv, c))
+    } yield out
+  }
+
+  /** `2^k + c` has bit `k` on, for `c` below `2^k`. */
+  def bitTop: R[Kernel.Thm] = {
+    val kv = Term.variable("k", Numbers)
+    val c = Term.variable("c", Numbers)
+    for {
+      held <- assumed("(c:num) < NUM_POW 2 (k:num)")
+      (belowT, below) = held
+      step <- at(fact("NUM_DIV_MOD_STEP"),
+        "(c:num) < NUM_POW 2 (k:num) ==> NUM_DIV (NUM_POW 2 k + c) (NUM_POW 2 k) = SUC 0 /\\ NUM_MOD (NUM_POW 2 k + c) (NUM_POW 2 k) = c")
+        .flatMap(mp(_, below)).flatMap(rules.conjElim1)
+      oneBelow <- numLinText(Seq.empty, "SUC 0 < 2")
+      modOne <- at(fact("NUM_DIV_MOD_BELOW"), "SUC 0 < 2 ==> NUM_DIV (SUC 0) 2 = 0 /\\ NUM_MOD (SUC 0) 2 = SUC 0")
+        .flatMap(mp(_, oneBelow)).flatMap(rules.conjElim2)
+      one <- fact("NUM_ONE_SUC").flatMap(Conv.sym)
+      goal <- prop(bitText("k:num", "NUM_POW 2 (k:num) + (c:num)"))
+      closed <- rewriting(Seq(step, modOne), goal)(landsOn(one))
+      out <- rules.disch(belowT, closed).flatMap(gen(_, kv, c))
+    } yield out
+  }
+
+  /** `NUM_MOD x 1 = 0`. */
+  def modOne: R[Kernel.Thm] =
+    for {
+      unit <- numLinText(Seq.empty, "(0:num) < SUC 0")
+      lt <- at(fact("NUM_MOD_LT"), "(0:num) < SUC 0 ==> NUM_MOD (x:num) (SUC 0) < SUC 0").flatMap(mp(_, unit))
+      out <- numLinText(Seq(lt), "NUM_MOD (x:num) (SUC 0) = 0").flatMap(gen(_, Term.variable("x", Numbers)))
+    } yield out
+
+  /** A residue modulo `2^k` is its own residue. */
+  def modMod: R[Kernel.Thm] = {
+    val (nv, kv) = (Term.variable("n", Numbers), Term.variable("k", Numbers))
+    val M = "NUM_POW 2 (k:num)"; val Rr = s"NUM_MOD (n:num) ($M)"
+    for {
+      positive <- two.flatMap(t2 => at(fact("NUM_POW_POSITIVE"), s"(0:num) < 2 ==> 0 < $M").flatMap(mp(_, t2)))
+      lt <- at(fact("NUM_MOD_LT"), s"0 < $M ==> $Rr < $M").flatMap(mp(_, positive))
+      out <- at(fact("NUM_DIV_MOD_BELOW"), s"$Rr < $M ==> NUM_DIV ($Rr) ($M) = 0 /\\ NUM_MOD ($Rr) ($M) = $Rr")
+        .flatMap(mp(_, lt)).flatMap(rules.conjElim2).flatMap(gen(_, nv, kv))
+    } yield out
+  }
 }

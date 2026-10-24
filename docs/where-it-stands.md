@@ -1227,7 +1227,21 @@ residue modulo `2^k`, with the characters of the bits for the roots of unity, an
 equations are not a primitive recursion. **What is not here**: anything about one orbit, which is
 where the three problems of the Rule 30 prize are; the balance of the map over residues modulo
 `2^k` for every `j < k`, which needs a sum reindexed by a permutation; and the periods of the
-diagonals, which are measured in Mycelium note 917b3939 and not proved.
+diagonals, which are measured in Mycelium note 917b3939 and not proved, beyond what the paragraph
+below gives.
+
+**Rule 30's map, `n -> 3n + 1` and their kin are instances of one hypothesis since 2026-10-24.**
+`docs/adr/0066` is the decision and `Triangular.scala` the derivation, published by `Complex` and
+read by `RuleThirty`. A map is triangular when it keeps agreement modulo every `2^k` and keeps a
+disagreement that first appears at bit `k`. Such a map is injective on residues and conversely
+(`TRIANGULAR_INJECTIVE`, `TRIANGULAR_OF_INJECTIVE`), the class is closed under composition and
+iteration, every bit is balanced over the residues one bit wider (`TRIANGULAR_BALANCED`), and an
+orbit back modulo `2^k` after `p` steps is back modulo `2^(k + 1)` after `2p` (`TRIANGULAR_PERIOD`),
+so every period of an orbit modulo a power of two is a power of two, by an induction the kernel does
+not hold. `TRIANGULAR_AFFINE` makes `n -> a n + b` an instance for odd `a`, and
+`RULE_THIRTY_MAP_TRIANGULAR` makes Rule 30's map one; the map's residues, injectivity and balance
+are now read off it. **What is not here**: the linear map `n XOR 2n`, which needs a construction
+and has its own card, and Collatz's own map, which halves and so is not triangular.
 
 **Gilbreath's table is in the kernel over any first row since 2026-10-24.** `docs/adr/0065` is the
 decision and `Gilbreath.scala` the derivation, published by `Complex` beside Rule 30. Over any `d`

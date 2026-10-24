@@ -427,7 +427,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 968 with Gilbreath's table, 2026-10-24, card `ddd1ba96`: the table's equation on each of
     // five facts of `Gilbreath.Statements` and the second row's 1 on `GILBREATH_EQUIVALENT`,
     // counted before the run and equal to it. Plus six.
-    propose.weakenings.size shouldBe 968
+    // 976 with triangular maps, 2026-10-24, card `09bca345`: the seven facts of
+    // `Triangular.Statements` and `RULE_THIRTY_MAP_TRIANGULAR`, read off the run and not decomposed.
+    // Plus eight.
+    propose.weakenings.size shouldBe 976
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

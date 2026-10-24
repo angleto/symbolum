@@ -27,7 +27,11 @@ import garden.xeno.symbolum.logic.*
  * `g p q n`, the map with the two bits below `n` given as `p` and `q`: `g p q (2 m)` and
  * `g p q (2 m + 1)` are the low bit of the value plus twice `g` at `m`. Both hold at `m = 0`, which
  * forces `g F F 0 = 0`, so they need no base case. `G_STEP` folds them into one equation, and every
- * fact about the map is an induction on the number of low bits that goes through it.
+ * fact about the map itself is an induction on the number of low bits that goes through it. Two of
+ * those, `G_RESIDUES` and `G_INJECTIVE`, make the map triangular in the sense of [[Triangular]]
+ * (`RULE_THIRTY_MAP_TRIANGULAR`, `docs/adr/0066`), and what holds of its iterates over residues, that
+ * they keep them, separate them and balance every bit, is read off the theorems about triangular
+ * maps rather than proved again here.
  * `RULE_THIRTY_MAP_EXISTS` builds `g` with a counter that halves its argument a given number of
  * times and stops changing once two to that number passes the argument.
  *
@@ -120,6 +124,7 @@ private[theories] object RuleThirty {
         s"${transform(Width, y => sign(s"$Run (\\p:num. ${bit("p", y)}) t 0"))} * ${character("s", j => s"x (i + $j)", Width)}) (NUM_POW 2 ($Width))"),
     "RULE_THIRTY_BALANCED" -> over(
       s"!t:num. Sum (\\y:num. ${sign(s"$Run (\\p:num. ${bit("p", "y")}) t 0")}) (NUM_POW 2 ($Width)) = 0"),
+    "RULE_THIRTY_MAP_TRIANGULAR" -> overMap(Triangular.triangular(x => s"$G F F ($x)")),
     "RULE_THIRTY_MAP_RESIDUES" -> overMap(
       s"!t:num. !k:num. !n:num. NUM_MOD ($It n t) (NUM_POW 2 k) = NUM_MOD ($It (NUM_MOD n (NUM_POW 2 k)) t) (NUM_POW 2 k)"),
     "RULE_THIRTY_MAP_INJECTIVE" -> overMap(
@@ -149,14 +154,14 @@ private[theories] object RuleThirty {
     "RULE_THIRTY_LEFT_PERMUTIVE" -> (_.permutive),
     "MOD_TWO_SHIFT" -> (_.modTwoShift),
     "BIT_SHIFT" -> (_.bitShift),
-    "BIT_ABOVE" -> (_.bitAbove),
-    "BIT_TOP" -> (_.bitTop),
+    "BIT_ABOVE" -> (_.steps.bitAboveTheorem),
+    "BIT_TOP" -> (_.steps.bitTopTheorem),
     "BIT_BELOW_TOP" -> (_.bitBelowTop),
     "BIT_OF_MOD" -> (_.bitOfMod),
     "BIT_HALVE" -> (_.bitHalve),
     "PROD_CONGRUENCE_BELOW" -> (_.prodCongruenceBelow),
-    "MOD_SPLIT" -> (_.modSplit),
-    "MOD_EQ_SPLIT" -> (_.modEqSplit),
+    "MOD_SPLIT" -> (_.steps.modSplitTheorem),
+    "MOD_EQ_SPLIT" -> (_.steps.modEqSplitTheorem),
     "CHI_TOP_SHIFT" -> (_.chiTopShift),
     "WALSH_ORTHOGONAL" -> (_.orthogonal),
     "PICK" -> (_.pick),
@@ -165,14 +170,15 @@ private[theories] object RuleThirty {
     "RULE_THIRTY_WALSH_FORM" -> (_.walshFormRows),
     "RULE_THIRTY_BALANCED" -> (_.balancedRows),
     "COND_BELOW_TWO" -> (_.condBelowTwo),
-    "MOD_ONE" -> (_.modOne),
-    "MOD_MOD" -> (_.modMod),
+    "MOD_ONE" -> (_.steps.modOneTheorem),
+    "MOD_MOD" -> (_.steps.modModTheorem),
     "MOD_DOUBLE" -> (_.modDouble),
     "DIV_MOD_SHIFT" -> (_.divModShift),
     "G_STEP" -> (_.gStep),
     "G_RESIDUES" -> (_.gResidues),
-    "RULE_THIRTY_MAP_RESIDUES" -> (_.mapResidues),
     "G_INJECTIVE" -> (_.gInjective),
+    "RULE_THIRTY_MAP_TRIANGULAR" -> (_.mapTriangular),
+    "RULE_THIRTY_MAP_RESIDUES" -> (_.mapResidues),
     "RULE_THIRTY_MAP_INJECTIVE" -> (_.mapInjective),
     "NUM_NOT_LE" -> (_.steps.notLeTheorem),
     "G_ZERO" -> (_.gZero),
@@ -512,43 +518,7 @@ private[theories] object RuleThirty {
       } yield out
     }
 
-    /** Below `2^k`, bit `k` is off. */
-    def bitAbove: R[Kernel.Thm] = {
-      val kv = Term.variable("k", Numbers)
-      val c = Term.variable("c", Numbers)
-      for {
-        held <- assumed("(c:num) < NUM_POW 2 (k:num)")
-        (belowT, below) = held
-        zero <- at(fact("NUM_DIV_MOD_BELOW"), "(c:num) < NUM_POW 2 (k:num) ==> NUM_DIV c (NUM_POW 2 k) = 0 /\\ NUM_MOD c (NUM_POW 2 k) = c")
-          .flatMap(mp(_, below)).flatMap(rules.conjElim1)
-        modZero <- two.flatMap(t2 => at(fact("NUM_DIV_MOD_BELOW"), "(0:num) < 2 ==> NUM_DIV 0 2 = 0 /\\ NUM_MOD 0 2 = 0").flatMap(mp(_, t2)))
-          .flatMap(rules.conjElim2)
-        apart <- zeroNotOne
-        goal <- prop(s"~(${bit("k:num", "c:num")})")
-        closed <- rewriting(Seq(zero, modZero), goal)(landsOn(apart))
-        out <- rules.disch(belowT, closed).flatMap(gen(_, kv, c))
-      } yield out
-    }
 
-    /** `2^k + c` has bit `k` on, for `c` below `2^k`. */
-    def bitTop: R[Kernel.Thm] = {
-      val kv = Term.variable("k", Numbers)
-      val c = Term.variable("c", Numbers)
-      for {
-        held <- assumed("(c:num) < NUM_POW 2 (k:num)")
-        (belowT, below) = held
-        step <- at(fact("NUM_DIV_MOD_STEP"),
-          "(c:num) < NUM_POW 2 (k:num) ==> NUM_DIV (NUM_POW 2 k + c) (NUM_POW 2 k) = SUC 0 /\\ NUM_MOD (NUM_POW 2 k + c) (NUM_POW 2 k) = c")
-          .flatMap(mp(_, below)).flatMap(rules.conjElim1)
-        oneBelow <- numLinText(Seq.empty, "SUC 0 < 2")
-        modOne <- at(fact("NUM_DIV_MOD_BELOW"), "SUC 0 < 2 ==> NUM_DIV (SUC 0) 2 = 0 /\\ NUM_MOD (SUC 0) 2 = SUC 0")
-          .flatMap(mp(_, oneBelow)).flatMap(rules.conjElim2)
-        one <- fact("NUM_ONE_SUC").flatMap(Conv.sym)
-        goal <- prop(bit("k:num", "NUM_POW 2 (k:num) + (c:num)"))
-        closed <- rewriting(Seq(step, modOne), goal)(landsOn(one))
-        out <- rules.disch(belowT, closed).flatMap(gen(_, kv, c))
-      } yield out
-    }
 
     /** `k = j + SUC (k - SUC j)` from `j < k`. */
     private def gap(below: Kernel.Thm, J: String, K: String): R[Kernel.Thm] =
@@ -657,103 +627,7 @@ private[theories] object RuleThirty {
       } yield out
     }
 
-    /** The remainder modulo `2^(SUC k)` is the remainder modulo `2^k` plus bit `k` in its place. */
-    def modSplit: R[Kernel.Thm] = {
-      val yv = Term.variable("y", Numbers); val kv = Term.variable("k", Numbers)
-      val M = "NUM_POW 2 (k:num)"; val Q = s"NUM_DIV (y:num) ($M)"; val Rr = s"NUM_MOD (y:num) ($M)"
-      val B = s"NUM_MOD ($Q) 2"; val Q2 = s"NUM_DIV ($Q) 2"; val P2 = "NUM_POW 2 (SUC (k:num))"
-      for {
-        dm1 <- at(fact("NUM_DIV_MOD"), s"$M * $Q + $Rr = y")
-        dm2 <- at(fact("NUM_DIV_MOD"), s"2 * $Q2 + $B = $Q")
-        positive <- two.flatMap(t2 => at(fact("NUM_POW_POSITIVE"), s"(0:num) < 2 ==> 0 < $M").flatMap(mp(_, t2)))
-        rLt <- at(fact("NUM_MOD_LT"), s"0 < $M ==> $Rr < $M").flatMap(mp(_, positive))
-        bLt <- two.flatMap(t2 => at(fact("NUM_MOD_LT"), s"(0:num) < 2 ==> $B < 2").flatMap(mp(_, t2)))
-        powSuc <- at(fact("NUM_POW_SUC"), s"$P2 = $M * 2")
-        regroup <- num(s"$M * (2 * $Q2 + $B) + $Rr = $M * 2 * $Q2 + ($Rr + $M * $B)")
-        split_ <- rw(dm2, regroup).flatMap(rw(dm1, _)).flatMap(e => Conv.sym(powSuc).flatMap(rw(_, e)))
-        goalT <- prop(s"$Rr + $M * $B < $P2")
-        mulZero <- at(fact("NUM_MUL_ZERO"), s"$M * 0 = 0")
-        mulOne <- num(s"$M * 1 = $M")
-        bound <- for {
-          either <- binary(B, bLt)
-          zero <- for {
-            h <- assumed(s"$B = 0")
-            out <- rewriting(Seq(h._2, mulZero), goalT)(numLin(Seq(rLt, powSuc), _))
-          } yield out
-          unit <- for {
-            h <- assumed(s"$B = 1")
-            out <- rewriting(Seq(h._2, mulOne), goalT)(numLin(Seq(rLt, powSuc), _))
-          } yield out
-          out <- rules.disjElim(either, zero, unit)
-        } yield out
-        unique <- at(fact("NUM_DIV_MOD_UNIQUE"),
-          s"y = $P2 * $Q2 + ($Rr + $M * $B) /\\ $Rr + $M * $B < $P2 ==> $Q2 = NUM_DIV y ($P2) /\\ $Rr + $M * $B = NUM_MOD y ($P2)")
-        out <- conj(split_, bound).flatMap(mp(unique, _)).flatMap(rules.conjElim2).flatMap(Conv.sym).flatMap(gen(_, yv, kv))
-      } yield out
-    }
 
-    /** Two numbers agree modulo `2^(SUC k)` exactly when they agree modulo `2^k` and at bit `k`. */
-    def modEqSplit: R[Kernel.Thm] = {
-      val (yv, nv, kv) = (Term.variable("y", Numbers), Term.variable("n", Numbers), Term.variable("k", Numbers))
-      val M = "NUM_POW 2 (k:num)"; val P2 = "NUM_POW 2 (SUC (k:num))"
-      def Rr(z: String) = s"NUM_MOD ($z:num) ($M)"
-      def B(z: String) = s"NUM_MOD (NUM_DIV ($z:num) ($M)) 2"
-      val E = s"NUM_MOD (y:num) ($P2) = NUM_MOD (n:num) ($P2)"
-      val C = s"${Rr("y")} = ${Rr("n")} /\\ ((${B("y")} = 1) = (${B("n")} = 1))"
-      for {
-        sy <- at(k("MOD_SPLIT"), s"NUM_MOD (y:num) ($P2) = ${Rr("y")} + $M * ${B("y")}")
-        sn <- at(k("MOD_SPLIT"), s"NUM_MOD (n:num) ($P2) = ${Rr("n")} + $M * ${B("n")}")
-        positive <- two.flatMap(t2 => at(fact("NUM_POW_POSITIVE"), s"(0:num) < 2 ==> 0 < $M").flatMap(mp(_, t2)))
-        lowY <- at(fact("NUM_MOD_LT"), s"0 < $M ==> ${Rr("y")} < $M").flatMap(mp(_, positive))
-        lowN <- at(fact("NUM_MOD_LT"), s"0 < $M ==> ${Rr("n")} < $M").flatMap(mp(_, positive))
-        bY <- two.flatMap(t2 => at(fact("NUM_MOD_LT"), s"(0:num) < 2 ==> ${B("y")} < 2").flatMap(mp(_, t2)))
-        bN <- two.flatMap(t2 => at(fact("NUM_MOD_LT"), s"(0:num) < 2 ==> ${B("n")} < 2").flatMap(mp(_, t2)))
-        forward <- for {
-          h <- assumed(E)
-          sums <- rw(sy, h._2).flatMap(rw(sn, _))
-          swapY <- num(s"${Rr("y")} + $M * ${B("y")} = $M * ${B("y")} + ${Rr("y")}")
-          swapN <- num(s"${Rr("n")} + $M * ${B("n")} = $M * ${B("n")} + ${Rr("n")}")
-          ordered <- rw(swapY, sums).flatMap(rw(swapN, _))
-          unique <- at(fact("NUM_DIVISION_UNIQUE"),
-            s"$M * ${B("y")} + ${Rr("y")} = $M * ${B("n")} + ${Rr("n")} /\\ ${Rr("y")} < $M /\\ ${Rr("n")} < $M ==> " +
-              s"${B("y")} = ${B("n")} /\\ ${Rr("y")} = ${Rr("n")}")
-          parts <- conjs(ordered, lowY, lowN).flatMap(mp(unique, _)).flatMap(split)
-          bits <- prop(s"(${B("y")} = 1) = (${B("n")} = 1)").flatMap(g => rewriting(Seq(parts(0)), g)(byBeta))
-          out <- conj(parts(1), bits)
-        } yield out
-        backward <- for {
-          h <- assumed(C)
-          parts <- split(h._2)
-          goal <- prop(E)
-          zeroOne <- zeroNotOne
-          equalBits <- for {
-            ey <- binary(B("y"), bY)
-            en <- binary(B("n"), bN)
-            wanted <- prop(s"${B("y")} = ${B("n")}")
-            same = (a: Kernel.Thm, b: Kernel.Thm) => rewriting(Seq(a, b), wanted)(byBeta)
-            mixed = (a: Kernel.Thm, b: Kernel.Thm) =>
-              for {
-                iff <- rw(a, parts(1)).flatMap(rw(b, _))
-                one <- nm("1").map(Conv.refl)
-                zeroIsOne <- LogicError.lift(Kernel.eqMp(iff, one)).orElse(Conv.sym(iff).flatMap(s => LogicError.lift(Kernel.eqMp(s, one))))
-                contra <- rules.notElim(zeroOne, zeroIsOne)
-                out <- rules.falsityElim(wanted, contra)
-              } yield out
-            out <- for {
-              y0 <- assumed(s"${B("y")} = 0"); y1 <- assumed(s"${B("y")} = 1")
-              n0 <- assumed(s"${B("n")} = 0"); n1 <- assumed(s"${B("n")} = 1")
-              c00 <- same(y0._2, n0._2); c01 <- mixed(y0._2, n1._2)
-              c10 <- mixed(y1._2, n0._2); c11 <- same(y1._2, n1._2)
-              whenY0 <- rules.disjElim(en, c00, c01)
-              whenY1 <- rules.disjElim(en, c10, c11)
-              out <- rules.disjElim(ey, whenY0, whenY1)
-            } yield out
-          } yield out
-          out <- rewriting(Seq(sy, sn, parts(0), equalBits), goal)(byBeta)
-        } yield out
-        out <- gen(Kernel.deductAntisym(backward, forward), yv, nv, kv)
-      } yield out
-    }
 
     /* ------------------------------------------------------------ the Walsh transform */
 
@@ -1212,25 +1086,7 @@ private[theories] object RuleThirty {
       } yield out
     }
 
-    /** `NUM_MOD x 1 = 0`. */
-    def modOne: R[Kernel.Thm] =
-      for {
-        unit <- numLinText(Seq.empty, "(0:num) < SUC 0")
-        lt <- at(fact("NUM_MOD_LT"), "(0:num) < SUC 0 ==> NUM_MOD (x:num) (SUC 0) < SUC 0").flatMap(mp(_, unit))
-        out <- numLinText(Seq(lt), "NUM_MOD (x:num) (SUC 0) = 0").flatMap(gen(_, Term.variable("x", Numbers)))
-      } yield out
 
-    /** A residue modulo `2^k` is its own residue. */
-    def modMod: R[Kernel.Thm] = {
-      val (nv, kv) = (Term.variable("n", Numbers), Term.variable("k", Numbers))
-      val M = "NUM_POW 2 (k:num)"; val Rr = s"NUM_MOD (n:num) ($M)"
-      for {
-        positive <- two.flatMap(t2 => at(fact("NUM_POW_POSITIVE"), s"(0:num) < 2 ==> 0 < $M").flatMap(mp(_, t2)))
-        lt <- at(fact("NUM_MOD_LT"), s"0 < $M ==> $Rr < $M").flatMap(mp(_, positive))
-        out <- at(fact("NUM_DIV_MOD_BELOW"), s"$Rr < $M ==> NUM_DIV ($Rr) ($M) = 0 /\\ NUM_MOD ($Rr) ($M) = $Rr")
-          .flatMap(mp(_, lt)).flatMap(rules.conjElim2).flatMap(gen(_, nv, kv))
-      } yield out
-    }
 
     /** `NUM_MOD (2 m + e) (2^(SUC k)) = 2 (NUM_MOD m (2^k)) + e` for `e < 2`. */
     def modDouble: R[Kernel.Thm] = {
@@ -1346,35 +1202,53 @@ private[theories] object RuleThirty {
         } yield proved
       }
 
-    /** The low `k` bits of the `t`-th iterate depend only on the low `k` bits of the start. */
+    /** The map is triangular: `G_RESIDUES` keeps agreement modulo `2^k`, and `G_INJECTIVE` separates residues. */
+    def mapTriangular: R[Kernel.Thm] =
+      mapRule { _ =>
+        val (kv, mv, nv) = (Term.variable("kb", Numbers), Term.variable("mb", Numbers), Term.variable("nb", Numbers))
+        val Kb = "(kb:num)"; val Mb = "(mb:num)"; val Nb = "(nb:num)"; val M = s"NUM_POW 2 $Kb"
+        val map = (x: String) => s"$G F F ($x)"
+        for {
+          residues <- underMap("G_RESIDUES")
+          injective <- underMap("G_INJECTIVE")
+          keeps <- for {
+            held <- assumed(Triangular.agree(Mb, Nb, Kb))
+            rm <- at(residues, s"NUM_MOD (${map(Mb)}) ($M) = NUM_MOD (${map(s"NUM_MOD $Mb ($M)")}) ($M)")
+            rn <- at(residues, s"NUM_MOD (${map(Nb)}) ($M) = NUM_MOD (${map(s"NUM_MOD $Nb ($M)")}) ($M)")
+            moved <- rw(held._2, rm)
+            out <- Conv.sym(rn).flatMap(trans(moved, _)).flatMap(rules.disch(held._1, _)).flatMap(gen(_, kv, mv, nv))
+          } yield out
+          separates <- at(injective, s"${Triangular.agree(map(Mb), map(Nb), Kb)} ==> ${Triangular.agree(Mb, Nb, Kb)}").flatMap(gen(_, kv, mv, nv))
+          both <- conj(keeps, separates)
+          out <- at(k("TRIANGULAR_OF_INJECTIVE"), s"${Triangular.keepsAndSeparates(map)} ==> ${Triangular.triangular(map)}").flatMap(mp(_, both))
+        } yield out
+      }
+
+    /** Every iterate of the map is triangular, by `TRIANGULAR_ITERATE`, at the `t` written. */
+    private def iterateTriangular(hs: Vector[Kernel.Thm], T: String): R[Kernel.Thm] = {
+      val map = (x: String) => s"$G F F ($x)"
+      val Iteration = s"(!n:num. $It n 0 = n) /\\ (!n:num. !t:num. $It n (SUC t) = $G F F ($It n t))"
+      for {
+        once <- underMap("RULE_THIRTY_MAP_TRIANGULAR")
+        clauses <- split(once)
+        premises <- conjs(clauses(0), clauses(1), hs(2), hs(3))
+        every <- at(k("TRIANGULAR_ITERATE"), s"${Triangular.triangular(map)} /\\ $Iteration ==> !t:num. ${Triangular.triangular(x => s"$It ($x) t")}")
+          .flatMap(mp(_, premises))
+        out <- at(every, Triangular.triangular(x => s"$It ($x) $T"))
+      } yield out
+    }
+
+    /** The low `k` bits of the `t`-th iterate depend only on the low `k` bits of the start: the first clause, at `n` and its residue. */
     def mapResidues: R[Kernel.Thm] =
       mapRule { hs =>
         val (tv, kv, nv) = (Term.variable("tb", Numbers), Term.variable("kb", Numbers), Term.variable("nb", Numbers))
-        val M = "NUM_POW 2 (kb:num)"
-        def claim(T: String) = s"NUM_MOD ($It (nb:num) ($T)) ($M) = NUM_MOD ($It (NUM_MOD nb ($M)) ($T)) ($M)"
+        val T = "(tb:num)"; val Kb = "(kb:num)"; val Nb = "(nb:num)"; val M = s"NUM_POW 2 $Kb"; val Rn = s"NUM_MOD $Nb ($M)"
         for {
-          residues <- underMap("G_RESIDUES")
-          body <- prop(s"!kb:num. !nb:num. ${claim("tb:num")}")
-          proved <- induct(tv, body)(
-            _ =>
-              for {
-                goal <- prop(claim("0"))
-                own <- at(k("MOD_MOD"), s"NUM_MOD (NUM_MOD (nb:num) ($M)) ($M) = NUM_MOD nb ($M)")
-                out <- rewriting(Seq(hs(2), own), goal)(byBeta).flatMap(gen(_, kv, nv))
-              } yield out,
-            (kk, hyp, _) => {
-              val T = v(kk.name)
-              val X = s"$It (nb:num) $T"; val Y = s"$It (NUM_MOD (nb:num) ($M)) $T"
-              for {
-                goal <- prop(claim(s"SUC $T"))
-                r1 <- at(residues, s"NUM_MOD ($G F F ($X)) ($M) = NUM_MOD ($G F F (NUM_MOD ($X) ($M))) ($M)")
-                r2 <- at(residues, s"NUM_MOD ($G F F ($Y)) ($M) = NUM_MOD ($G F F (NUM_MOD ($Y) ($M))) ($M)")
-                ih <- at(hyp, s"NUM_MOD ($X) ($M) = NUM_MOD ($Y) ($M)")
-                out <- rewriting(Seq(hs(3), r1, r2, ih), goal)(byBeta).flatMap(gen(_, kv, nv))
-              } yield out
-            }
-          )
-          out <- spec(proved, tv, kv, nv).flatMap(gen(_, tv, kv, nv))
+          atT <- iterateTriangular(hs, T)
+          clauses <- split(atT)
+          own <- at(k("MOD_MOD"), s"NUM_MOD ($Rn) ($M) = $Rn").flatMap(Conv.sym)
+          out <- at(clauses(0), s"${Triangular.agree(Nb, Rn, Kb)} ==> ${Triangular.agree(s"$It $Nb $T", s"$It ($Rn) $T", Kb)}")
+            .flatMap(mp(_, own)).flatMap(gen(_, tv, kv, nv))
         } yield out
       }
 
@@ -1485,40 +1359,15 @@ private[theories] object RuleThirty {
         } yield proved
       }
 
-    /** Modulo `2^k` the `t`-th iterate is injective. */
+    /** Modulo `2^k` the `t`-th iterate is injective, by `TRIANGULAR_INJECTIVE`. */
     def mapInjective: R[Kernel.Thm] =
       mapRule { hs =>
-        val (tv, kv, mv, nv) = (Term.variable("tb", Numbers), Term.variable("kb", Numbers), Term.variable("mb", Numbers), Term.variable("nb", Numbers))
-        val M = "NUM_POW 2 (kb:num)"
-        def claim(T: String) =
-          s"NUM_MOD ($It (mb:num) ($T)) ($M) = NUM_MOD ($It (nb:num) ($T)) ($M) ==> NUM_MOD mb ($M) = NUM_MOD nb ($M)"
+        val tv = Term.variable("tb", Numbers); val T = "(tb:num)"
         for {
-          injective <- underMap("G_INJECTIVE")
-          body <- prop(s"!kb:num. !mb:num. !nb:num. ${claim("tb:num")}")
-          proved <- induct(tv, body)(
-            _ =>
-              for {
-                goal <- prop(claim("0"))
-                out <- underHyps(goal)((h, c) => rw(hs(2), h.head).flatMap(landsOn(_)(c))).flatMap(gen(_, kv, mv, nv))
-              } yield out,
-            (kk, hyp, _) => {
-              val T = v(kk.name)
-              val X = s"$It (mb:num) $T"; val Y = s"$It (nb:num) $T"
-              for {
-                goal <- prop(claim(s"SUC $T"))
-                out <- underHyps(goal) { (h, c) =>
-                  for {
-                    opened <- rw(hs(3), h.head)
-                    lower <- at(injective, s"NUM_MOD ($G F F ($X)) ($M) = NUM_MOD ($G F F ($Y)) ($M) ==> NUM_MOD ($X) ($M) = NUM_MOD ($Y) ($M)")
-                      .flatMap(mp(_, opened))
-                    ih <- at(hyp, s"NUM_MOD ($X) ($M) = NUM_MOD ($Y) ($M) ==> NUM_MOD (mb:num) ($M) = NUM_MOD (nb:num) ($M)").flatMap(mp(_, lower))
-                    out <- landsOn(ih)(c)
-                  } yield out
-                }.flatMap(gen(_, kv, mv, nv))
-              } yield out
-            }
-          )
-          out <- spec(proved, tv, kv, mv, nv).flatMap(gen(_, tv, kv, mv, nv))
+          atT <- iterateTriangular(hs, T)
+          out <- at(k("TRIANGULAR_INJECTIVE"), s"${Triangular.triangular(x => s"$It ($x) $T")} ==> " +
+            s"!k:num. !m:num. !n:num. ${Triangular.agree(s"$It m $T", s"$It n $T", "k")} ==> ${Triangular.agree("m", "n", "k")}")
+            .flatMap(mp(_, atT)).flatMap(gen(_, tv))
         } yield out
       }
 
@@ -1655,52 +1504,15 @@ private[theories] object RuleThirty {
         } yield proved
       }
 
-    /** Over the residues modulo `2^(SUC j)`, bit `j` of the `t`-th iterate is on as often as off. */
+    /** Over the residues modulo `2^(SUC j)`, bit `j` of the `t`-th iterate is on as often as off, by `TRIANGULAR_BALANCED`. */
     def mapBalanced: R[Kernel.Thm] =
-      mapRule { _ =>
-        val (tv, jv) = (Term.variable("tb", Numbers), Term.variable("jb", Numbers))
-        val T = "(tb:num)"; val J = "(jb:num)"; val P = s"NUM_POW 2 $J"; val P2 = s"NUM_POW 2 (SUC $J)"
-        def f(n: String) = sign(bit(J, s"$It ($n) $T"))
+      mapRule { hs =>
+        val tv = Term.variable("tb", Numbers); val T = "(tb:num)"
         for {
-          residues <- underMap("RULE_THIRTY_MAP_RESIDUES")
-          injective <- underMap("RULE_THIRTY_MAP_INJECTIVE")
-          goal <- prop(s"Sum (\\n:num. ${f("n")}) ($P2) = 0")
-          double <- for {
-            s1 <- at(fact("NUM_POW_SUC"), s"$P2 = $P * 2")
-            s2 <- num(s"$P * 2 = $P + $P")
-            out <- trans(s1, s2)
-          } yield out
-          halves <- at(fact("SUM_HALVES"), s"Sum (\\n:num. ${f("n")}) ($P + $P) = Sum (\\n:num. ${f("n")}) ($P) + Sum (\\m:num. ${f(s"$P + m")}) ($P)")
-          added <- at(fact("SUM_ADD"), s"Sum (\\m:num. ${f("m")} + ${f(s"$P + m")}) ($P) = Sum (\\n:num. ${f("n")}) ($P) + Sum (\\m:num. ${f(s"$P + m")}) ($P)")
-            .flatMap(Conv.sym)
-          pairedT <- term(s"Sum (\\m:num. ${f("m")} + ${f(s"$P + m")}) ($P)", Reals)
-          paired <- belowBound(pairedT, "\\m:num. (0:real)", P) { (m, mBelow) =>
-            val A = s"$It $m $T"; val B = s"$It ($P + $m) $T"
-            for {
-              own <- at(fact("NUM_DIV_MOD_BELOW"), s"$m < $P ==> NUM_DIV $m ($P) = 0 /\\ NUM_MOD $m ($P) = $m").flatMap(mp(_, mBelow)).flatMap(rules.conjElim2)
-              shifted <- at(fact("NUM_DIV_MOD_STEP"), s"$m < $P ==> NUM_DIV ($P + $m) ($P) = SUC 0 /\\ NUM_MOD ($P + $m) ($P) = $m").flatMap(mp(_, mBelow)).flatMap(rules.conjElim2)
-              rA <- at(residues, s"NUM_MOD ($A) ($P) = NUM_MOD ($It (NUM_MOD $m ($P)) $T) ($P)").flatMap(rw(own, _))
-              rB <- at(residues, s"NUM_MOD ($B) ($P) = NUM_MOD ($It (NUM_MOD ($P + $m) ($P)) $T) ($P)").flatMap(rw(shifted, _))
-              lowSame <- Conv.sym(rB).flatMap(trans(rA, _))
-              apart <- for {
-                held <- assumed(s"(${bit(J, A)}) = (${bit(J, B)})")
-                splitA <- at(k("MOD_EQ_SPLIT"), s"(NUM_MOD ($A) ($P2) = NUM_MOD ($B) ($P2)) = (NUM_MOD ($A) ($P) = NUM_MOD ($B) ($P) /\\ ((${bit(J, A)}) = (${bit(J, B)})))")
-                agreeHigh <- conj(lowSame, held._2).flatMap(c => Conv.sym(splitA).flatMap(s => LogicError.lift(Kernel.eqMp(s, c))))
-                starts <- at(injective, s"NUM_MOD ($A) ($P2) = NUM_MOD ($B) ($P2) ==> NUM_MOD $m ($P2) = NUM_MOD ($P + $m) ($P2)").flatMap(mp(_, agreeHigh))
-                splitS <- at(k("MOD_EQ_SPLIT"), s"(NUM_MOD $m ($P2) = NUM_MOD ($P + $m) ($P2)) = (NUM_MOD $m ($P) = NUM_MOD ($P + $m) ($P) /\\ ((${bit(J, m)}) = (${bit(J, s"$P + $m")})))")
-                bitsSame <- LogicError.lift(Kernel.eqMp(splitS, starts)).flatMap(rules.conjElim2)
-                off <- at(k("BIT_ABOVE"), s"$m < $P ==> ~(${bit(J, m)})").flatMap(mp(_, mBelow))
-                on <- at(k("BIT_TOP"), s"$m < $P ==> ${bit(J, s"$P + $m")}").flatMap(mp(_, mBelow))
-                falsity <- prop("F")
-                contra <- tauto(Seq(bitsSame, off, on), falsity)
-                out <- rules.notIntro(held._1, contra)
-              } yield out
-              atoms <- Seq(bit(J, A), bit(J, B)).foldLeft[R[List[Term]]](Right(Nil))((acc, t_) => for { d <- acc; p_ <- prop(t_) } yield d :+ p_)
-            } yield (Seq.empty, Seq(apart), atoms)
-          }
-          none <- at(fact("SUM_OF_ZERO"), s"Sum (\\m:num. 0) ($P) = 0")
-          chain <- trans(halves, added, paired, none)
-          out <- rewriting(Seq(double), goal)(landsOn(chain)).flatMap(gen(_, tv, jv))
+          atT <- iterateTriangular(hs, T)
+          out <- at(k("TRIANGULAR_BALANCED"), s"${Triangular.triangular(x => s"$It ($x) $T")} ==> " +
+            s"!j:num. Sum (\\n:num. ${sign(bit("j", s"$It n $T"))}) (NUM_POW 2 (SUC j)) = 0")
+            .flatMap(mp(_, atT)).flatMap(gen(_, tv))
         } yield out
       }
 

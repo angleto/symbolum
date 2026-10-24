@@ -58,13 +58,22 @@ import garden.xeno.symbolum.logic.*
  * reading writes the `t`-th iterate of the shortcut Collatz map as a series over the residues modulo
  * `2^t` whose coefficients are the transforms of each class's slope and offset.
  *
+ * == Triangular maps ==
+ *
+ * Published here and derived in [[Triangular]], as `docs/adr/0066` records: a map on the naturals
+ * that keeps agreement modulo every `2^k` and flips bit `k` with bit `k` is injective on residues,
+ * closed under composition and iteration, balanced on every bit, and has orbit periods modulo
+ * `2^(k + 1)` equal to or twice those modulo `2^k`; `n -> a n + b` is one for every odd `a`. Rule 30
+ * reads it, so it is proved first.
+ *
  * == Rule 30 ==
  *
  * Published here and derived in [[RuleThirty]], as `docs/adr/0064` records: the automaton over rows
  * and the map `n XOR (2 n OR 4 n)` on the naturals, each over the equations that characterise it,
  * the inversion of the Walsh transform on the low bits in the form the finite Fourier inversion
- * takes, and the theorem that the two formulations agree. It reads none of the complex numbers;
- * it is here because the steps it is written in are this link's.
+ * takes, and the theorem that the two formulations agree. The map is triangular, and its residues,
+ * injectivity and balance are read off the theorems about triangular maps. It reads none of the
+ * complex numbers; it is here because the steps it is written in are this link's.
  *
  * == Gilbreath's table ==
  *
@@ -272,7 +281,7 @@ object Complex {
       Injective -> "!a:real. !b:real. !c:real. !d:real. (COMPLEX a b = COMPLEX c d) = (a = c /\\ b = d)",
       Extensional -> "!z:complex. !w:complex. (z = w) = (Re z = Re w /\\ Im z = Im w)"
     ) ++ Components ++ Identities ++ Derived ++ Fundamental.Statements ++ FiniteFourier.Statements ++
-      CollatzFourier.Statements ++ RuleThirty.Statements ++ Gilbreath.Statements
+      CollatzFourier.Statements ++ Triangular.Statements ++ RuleThirty.Statements ++ Gilbreath.Statements
 
   /** `complex`. */
   val Complexes: Type = TyApp(TypeName, Nil)
@@ -367,9 +376,10 @@ object Complex {
       semiring <- Semiring.construct(peano)
       fourier <- FiniteFourier.prove(kit, semiring, base ++ fundamental)
       collatz <- CollatzFourier.prove(kit, semiring, recursion, base ++ fundamental ++ fourier)
-      ruleThirty <- RuleThirty.prove(kit, semiring, recursion, base ++ fundamental ++ fourier)
+      triangular <- Triangular.prove(kit, semiring, base)
+      ruleThirty <- RuleThirty.prove(kit, semiring, recursion, base ++ fundamental ++ fourier ++ triangular)
       gilbreath <- Gilbreath.prove(kit, semiring, recursion, base)
-      facts = base ++ fundamental ++ fourier ++ collatz ++ ruleThirty ++ gilbreath
+      facts = base ++ fundamental ++ fourier ++ collatz ++ triangular ++ ruleThirty ++ gilbreath
 
       _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
         for {

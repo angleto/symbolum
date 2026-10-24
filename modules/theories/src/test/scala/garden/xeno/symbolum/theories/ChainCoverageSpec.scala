@@ -196,14 +196,20 @@ class ChainCoverageSpec extends AnyFlatSpec with Matchers {
     // `Gilbreath.Statements` gives. It declares nothing.
     "Gilbreath" -> NotADevelopment,
 
+    // Not a development, for the same reason: triangular maps on the naturals, whose facts are the
+    // map `Triangular.prove` returns and are published in `Complex.facts` under the names
+    // `Triangular.Statements` gives. It declares nothing, and `RuleThirty` reads it.
+    "Triangular" -> NotADevelopment,
+
     // Not a development and no derivation either: the steps the files above are written in,
     // each a line of `Rules`, `Conv` or `Linarith` under a name, proving nothing of its own.
     "ComplexKit" -> NotADevelopment,
 
     // Not a development and no derivation either, for `ComplexKit`'s reason: the steps over the
-    // naturals that `RuleThirty` and `Gilbreath` share. The two facts it proves for itself, an
-    // equation between propositions opened into two implications and `n < m` from `~(m <= n)`,
-    // are proved again in each instance and published by neither.
+    // naturals that `RuleThirty`, `Gilbreath` and `Triangular` share. The facts it proves for itself,
+    // an equation between propositions opened into two implications, `n < m` from `~(m <= n)` and
+    // six about remainders modulo a power of two and the bits they hold, are proved again in each
+    // instance and published by none.
     "NumberSteps" -> NotADevelopment,
 
     // Not a development, for `ExtremeValue`'s reason: continuity relative to `[a, b]` and the
