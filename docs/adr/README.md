@@ -97,3 +97,4 @@ the rejected option attractive, and they will.
 | [0064](0064-rule-30-over-rows-and-as-a-map-on-the-naturals-with-the-walsh-inversion-and-a-bridge.md) | Rule 30 over rows and as a map on the naturals, with the Walsh inversion and a bridge between them | accepted |
 | [0065](0065-gilbreaths-table-over-any-first-row-and-the-conjecture-as-a-condition-on-the-second-entry.md) | Gilbreath's table over any first row, and the conjecture as a condition on the second entry | accepted |
 | [0066](0066-triangular-maps-on-the-naturals-as-a-hypothesis-with-rule-30-and-odd-affine-maps-as-instances.md) | Triangular maps on the naturals as a hypothesis, with Rule 30 and the odd affine maps as instances | accepted |
+| [0067](0067-the-family-of-rules-l-xor-h-c-r-proved-once-with-rule-30-and-the-pascal-map-as-instances.md) | The family of rules `l XOR h(c, r)` proved once, with Rule 30 and the Pascal map as instances | accepted |

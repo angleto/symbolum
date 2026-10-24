@@ -465,7 +465,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // `RediscoverySpec` counts beside the same figure. Plus six.
     // 976 with triangular maps, 2026-10-24, card `09bca345`: the eight `RediscoverySpec` reads off
     // the run beside the same figure. Plus eight.
-    proposals.size shouldBe 976
+    // 984 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`: the eight
+    // `RediscoverySpec` counts beside the same figure. Plus eight.
+    proposals.size shouldBe 984
     proposals.map(_.from).distinct.size should be > 10
     proposals.map(_.source).distinct shouldBe Vector(Propose.Source.Weakened)
     proposals.count(_.change.isEmpty) shouldBe 0
@@ -1918,7 +1920,10 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // 219 with triangular maps, 2026-10-24, card `09bca345`, read off the run and not decomposed:
     // proposals over an arbitrary `f` or `iterate` that no procedure reads, which the first run did
     // not reach because `open` above was red. Plus five.
-    unreadable shouldBe 219
+    // 227 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`, read off the run:
+    // the eight new weakenings, every one over an arbitrary `h` or `g` that no procedure reads, so
+    // `open` above does not move. Plus eight.
+    unreadable shouldBe 227
     open + unreadable + findings.count(_.standing.contains(Novelty.Standing.False)) +
       findings.count(_.standing.contains(Novelty.Standing.Earned)) +
       findings.count(_.standing.contains(Novelty.Standing.Known)) +
@@ -2271,7 +2276,9 @@ class ProposeSpec extends AnyFlatSpec with Matchers {
     // its facts, every one of which keeps `NUM_SUB` or an entry's index. Plus six.
     // 338 with triangular maps, 2026-10-24, card `09bca345`, read off the run and not decomposed:
     // proposals over its eight facts, which keep `NUM_MOD` and `NUM_POW`. Plus seven.
-    aboutNumbers.size shouldBe 338
+    // 346 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`, read off the run:
+    // the eight new weakenings, each of which names a constant of the naturals. Plus eight.
+    aboutNumbers.size shouldBe 346
     before shouldBe 0
     // 32 with the two above, and this is the place the pair SPLITS from `decidedFalse`, which
     // moved by one. `after` is the SAMPLER over `Model.Numbers`, not the procedures: both

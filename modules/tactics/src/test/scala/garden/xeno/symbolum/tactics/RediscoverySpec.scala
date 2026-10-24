@@ -430,7 +430,10 @@ class RediscoverySpec extends AnyFlatSpec with Matchers {
     // 976 with triangular maps, 2026-10-24, card `09bca345`: the seven facts of
     // `Triangular.Statements` and `RULE_THIRTY_MAP_TRIANGULAR`, read off the run and not decomposed.
     // Plus eight.
-    propose.weakenings.size shouldBe 976
+    // 984 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`: the eight facts of
+    // `RuleFamily.Statements` that are implications, all but `PASCAL_MAP_EXISTS`, counted before the
+    // run and equal to it. Plus eight.
+    propose.weakenings.size shouldBe 984
     recoveries.map(_.proposal.source).distinct shouldBe Vector(Propose.Source.Substituted)
   }
 

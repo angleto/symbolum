@@ -66,6 +66,15 @@ import garden.xeno.symbolum.logic.*
  * `2^(k + 1)` equal to or twice those modulo `2^k`; `n -> a n + b` is one for every odd `a`. Rule 30
  * reads it, so it is proved first.
  *
+ * == The family of rules `l XOR h(c, r)` ==
+ *
+ * Published here and derived in [[RuleFamily]], as `docs/adr/0067` records: for every rule of three
+ * cells in which the left one enters only through an XOR, the map on the naturals given by two
+ * equations on halving, the theorem that it is triangular, the three that say which bits it reads,
+ * and its existence whenever the rule keeps a white background white. The Pascal map `n XOR 2 n` is
+ * the instance published beside it, and Rule 30's map is the one [[RuleThirty]] reads, so it is
+ * proved before that.
+ *
  * == Rule 30 ==
  *
  * Published here and derived in [[RuleThirty]], as `docs/adr/0064` records: the automaton over rows
@@ -281,7 +290,7 @@ object Complex {
       Injective -> "!a:real. !b:real. !c:real. !d:real. (COMPLEX a b = COMPLEX c d) = (a = c /\\ b = d)",
       Extensional -> "!z:complex. !w:complex. (z = w) = (Re z = Re w /\\ Im z = Im w)"
     ) ++ Components ++ Identities ++ Derived ++ Fundamental.Statements ++ FiniteFourier.Statements ++
-      CollatzFourier.Statements ++ Triangular.Statements ++ RuleThirty.Statements ++ Gilbreath.Statements
+      CollatzFourier.Statements ++ Triangular.Statements ++ RuleFamily.Statements ++ RuleThirty.Statements ++ Gilbreath.Statements
 
   /** `complex`. */
   val Complexes: Type = TyApp(TypeName, Nil)
@@ -377,9 +386,10 @@ object Complex {
       fourier <- FiniteFourier.prove(kit, semiring, base ++ fundamental)
       collatz <- CollatzFourier.prove(kit, semiring, recursion, base ++ fundamental ++ fourier)
       triangular <- Triangular.prove(kit, semiring, base)
-      ruleThirty <- RuleThirty.prove(kit, semiring, recursion, base ++ fundamental ++ fourier ++ triangular)
+      family <- RuleFamily.prove(kit, semiring, recursion, base ++ triangular)
+      ruleThirty <- RuleThirty.prove(kit, semiring, recursion, base ++ fundamental ++ fourier ++ triangular ++ family)
       gilbreath <- Gilbreath.prove(kit, semiring, recursion, base)
-      facts = base ++ fundamental ++ fourier ++ collatz ++ triangular ++ ruleThirty ++ gilbreath
+      facts = base ++ fundamental ++ fourier ++ collatz ++ triangular ++ family ++ ruleThirty ++ gilbreath
 
       _ <- Statements.foldLeft[Either[LogicError, Unit]](Right(())) { case (acc, (name, text)) =>
         for {

@@ -1240,8 +1240,22 @@ orbit back modulo `2^k` after `p` steps is back modulo `2^(k + 1)` after `2p` (`
 so every period of an orbit modulo a power of two is a power of two, by an induction the kernel does
 not hold. `TRIANGULAR_AFFINE` makes `n -> a n + b` an instance for odd `a`, and
 `RULE_THIRTY_MAP_TRIANGULAR` makes Rule 30's map one; the map's residues, injectivity and balance
-are now read off it. **What is not here**: the linear map `n XOR 2n`, which needs a construction
-and has its own card, and Collatz's own map, which halves and so is not triangular.
+are now read off it. **What is not here**: Collatz's own map, which halves and so is not
+triangular, and its parity vector, which is triangular by Terras' theorem and is not an instance
+yet.
+
+**The rules `l XOR h(c, r)` are one family since 2026-10-24, with Rule 30 and the Pascal map
+`n XOR 2n` as instances.** `docs/adr/0067` is the decision and `RuleFamily.scala` the derivation,
+published by `Complex` between `Triangular` and `RuleThirty`. Over any `h : bool -> bool -> bool` and
+any `g` satisfying the two equations on halving with `COND (h p q)` in them: the step as one equation,
+the three facts about which bits `g p q x` reads, ending in bit `j + 2` being bit `j + 2` of `x` XOR
+`h` of the two bits below (`RULE_FAMILY_BIT_RULE`), and that `g F F` is triangular
+(`RULE_FAMILY_TRIANGULAR`). `RULE_FAMILY_EXISTS` gives the map whenever `h F F` is false, and only
+then can there be one. `PASCAL_MAP_EXISTS`, `_TRIANGULAR` and `_BITS` are the instance `h c r = c`.
+Rule 30's map is the instance `h = OR`: its existence, its step, its bits and its being triangular
+are now read off the family, and what `RuleThirty` proves about the map is what is Rule 30's own.
+**What is not here**: the Pascal map's closed form through Lucas' theorem, and the factor of
+Gilbreath's table modulo 2, which the Pascal map now makes provable.
 
 **Gilbreath's table is in the kernel over any first row since 2026-10-24.** `docs/adr/0065` is the
 decision and `Gilbreath.scala` the derivation, published by `Complex` beside Rule 30. Over any `d`

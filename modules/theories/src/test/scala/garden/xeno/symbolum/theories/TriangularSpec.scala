@@ -13,9 +13,9 @@ import garden.xeno.symbolum.logic.*
  * hypothesis that held of nothing would make every theorem here vacuous, and one that held of
  * everything would make the instances say nothing. So the hypothesis is read off the published
  * `TRIANGULAR_INJECTIVE` and evaluated, as the term it is, on maps computed in `Long`: it has to
- * hold of `3 n + 1`, `n + 1`, Rule 30's map and `n XOR 2 n`, the last of which the kernel has no
- * instance for, and fail of `n * n`, `n / 2` and `2 n`. The evaluation is over the ranges named,
- * which is a reading and not a theorem.
+ * hold of `3 n + 1`, `n + 1`, Rule 30's map and `n XOR 2 n`, the last of which the kernel proves
+ * triangular as `PASCAL_MAP_TRIANGULAR`, and fail of `n * n`, `n / 2` and `2 n`. The evaluation is
+ * over the ranges named, which is a reading and not a theorem.
  */
 class TriangularSpec extends AnyFlatSpec with Matchers {
 
