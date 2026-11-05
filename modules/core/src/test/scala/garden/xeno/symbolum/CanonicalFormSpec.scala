@@ -164,7 +164,14 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
    * The case that made the value property fail on 2026-10-22, pinned for the reason the one above
    * is: a cancelling sum, here exactly zero at the sample point, multiplied by a coefficient of
    * 244140625, so one unit in the last place of the sum is 5.4e-8 after the product. The scale has
-   * to see the coefficient, which is what the `Mul` case of `errorScale` is for.
+   * to see the coefficient through the product, which is what the `Mul` case of `errorScale` is for.
+   *
+   * Simplified under `Minimal`, because that is a rule set keeping the product the generator found,
+   * `244140625 * (x + y - 4)`; `factoring` keeps it too. The default rules distribute it into
+   * `244140625 * x + 244140625 * y - 976562500`, a sum whose `Add` case sees the coefficient on its
+   * own, and the first version of this pin simplified that way: measured on 2026-11-05, it stayed
+   * green with the `Mul` case deleted. So the pin asserts the shape first, both sides a product,
+   * and then that the scale of each side sees the coefficient, which is what fails without the case.
    */
   property("a cancelling sum under a product is compared at the precision it can deliver") {
     val x = Var("x")
@@ -173,13 +180,17 @@ class CanonicalFormSpec extends AnyPropSpec with ScalaCheckPropertyChecks with M
       Sub(Vector(Add(Vector(x, Pow(Num(1), Num(0)), y)), Num(5))),
       Pow(Pow(Pow(Num(-5), Num(2)), Num(3)), Num(2))
     ))
-    val simplified = expr.fullSimplify
+    val simplified = expr.fullSimplify(SimplificationConfig.Minimal)
     val original = valueAt(expr).getOrElse(fail("the compact form does not evaluate"))
     val result = valueAt(simplified).getOrElse(fail("the simplified form does not evaluate"))
     withClue(s"$expr  ->  $simplified\n") {
-      // what makes the case: the result is zero to within rounding, and the scale sees the coefficient
+      // what makes the case: both sides are products, so no `Add` at the top supplies the scale
+      simplified shouldBe a[Mul]
+      expr shouldBe a[Mul]
+      // the result is zero to within rounding, and the scale of each side sees the coefficient
       math.abs(result) should be < 1e-6
       errorScale(simplified) should be > 2e8
+      errorScale(expr) should be > 2e8
       math.abs(original - result) should be < Tolerance * math.max(errorScale(expr), errorScale(simplified))
     }
   }
