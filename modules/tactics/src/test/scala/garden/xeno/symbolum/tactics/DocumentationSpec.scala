@@ -1030,7 +1030,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // The claim is spelled from the bound rather than beside it, so the two cannot disagree.
     val claim = s"under $TrustedBaseLineBound lines"
     architecture should include(claim)
-    read("CLAUDE.md") should include(claim)
+    read("AGENTS.md") should include(claim)
 
     // Two decision records quote the bound as it stands rather than as it stood, and were compared
     // with nothing until 2026-09-24. They are held to it because both argue from it: a bound that
@@ -1056,7 +1056,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // very next paragraph of that file to repair a *different* false sentence about `derive`. That
     // is where this test comes from rather than a worry about the future: what watches a sentence
     // is something in the tree it gets compared against, and until this test every reading of
-    // `CLAUDE.md` here compared a number. This one compares a list, so the shape that had nothing
+    // `AGENTS.md` here compared a number. This one compares a list, so the shape that had nothing
     // watching it was not "prose without a figure" but prose no test had an anchor in.
     //
     // The shape is the one the test below uses on the kernel's directory, pointed at an enumeration
@@ -1103,11 +1103,11 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // Measured the same day, `sbt tactics/doc` exits 0 while naming six of them in
     // `modules/tactics/src/main`; `-Xfatal-warnings` is already set and does not reach them, and
     // neither does `-Wconf:msg=No DRI found:e`. Arming that is a gate of its own and has a card.
-    val document = read("CLAUDE.md")
+    val document = read("AGENTS.md")
     val sentence = """of cells over one `Session`:(.*?)\. The chain is built""".r
       .findFirstMatchIn(document.replace("\n", " "))
       .map(_.group(1))
-      .getOrElse(fail("CLAUDE.md no longer introduces the notebook's cells; this guard reads that sentence"))
+      .getOrElse(fail("AGENTS.md no longer introduces the notebook's cells; this guard reads that sentence"))
 
     val listed = """`([a-z]+)`""".r.findAllMatchIn(sentence).map(_.group(1)).toVector
 
@@ -1155,7 +1155,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // **This is the fourth, fifth, sixth and seventh occurrence of one defect, and the first guard
     // over it.** `Chain.widest` is whatever link extended the theory last, and the field's own
     // docstring says the name is not written in prose anywhere because it had already gone stale
-    // twice by 2026-09-13. On 2026-09-17 it was stale in four more places at once: `CLAUDE.md` said
+    // twice by 2026-09-13. On 2026-09-17 it was stale in four more places at once: `AGENTS.md` said
     // `Inductive` was the widest, `Chain`'s own docstrings said `Transcendental` and `Reaching`
     // were, and two of them added that their link was the last one. The field read `forward`, and
     // two links had landed on top of the newest of those claims on the day it was written.
@@ -1178,7 +1178,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // would demand rewriting history to stay green.
     //
     // **Both halves were seen failing before they were believed**, which for a guard written after
-    // the fact is the whole of the evidence. The prose half was run against `CLAUDE.md` at
+    // the fact is the whole of the evidence. The prose half was run against `AGENTS.md` at
     // `fff7434` and returned `Inductive`; the docstring half was run with
     // "and [[widest]] since 2026-09-16" put back on `reaching` and answered
     // "`widest` is `forward` and these docstrings say otherwise: reaching". Neither perturbation is
@@ -1217,14 +1217,14 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     val shape = """`([A-Z]\w+)`[^`]{0,60}?is `Chain\.widest`""".r
 
     // Fired against the sentence it was written for before being trusted, which is the only thing
-    // that separates a guard from a decoration. This is `CLAUDE.md` as of `fff7434`.
+    // that separates a guard from a decoration. This is `AGENTS.md` as of `fff7434`.
     withClue("the pattern no longer matches the defect it was written against: ") {
       shape
         .findFirstMatchIn("The set defined by rules is `Inductive`, and it is `Chain.widest` since 2026-09-16.")
         .map(_.group(1)) shouldBe Some("Inductive")
     }
 
-    Vector("CLAUDE.md", "README.md", "docs/architecture.md", "docs/proving.md", "docs/evaluation.md",
+    Vector("AGENTS.md", "README.md", "docs/architecture.md", "docs/proving.md", "docs/evaluation.md",
       "docs/where-it-stands.md")
       .foreach { document =>
         val prose = read(document).replaceAll("\\s+", " ")
@@ -1687,16 +1687,16 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     // two-minute run into a twelve-minute one on 2026-09-16. The cap lives outside every checkout,
     // so nothing here can enforce it; what this file can do is make sure the instructions do not
     // send a reader around it. Measured that evening, five of the seven builds running had never
-    // asked the cap for anything, and every one of them was a session running what `CLAUDE.md`
+    // asked the cap for anything, and every one of them was a session running what `AGENTS.md`
     // told it to run. The cap was not exceeded, it was bypassed, by people doing as they were told.
     //
     // So the assertion is on the document rather than on any behaviour: no command in it starts
     // `sbt`, and `tools/sbt` is a file that exists and can be executed. The second half is what
     // keeps the first from being a rename: a document whose commands all name a script that is not
     // there is worse than one naming `sbt`, because it fails at the shell instead of at the cap.
-    val instructions = read("CLAUDE.md")
+    val instructions = read("AGENTS.md")
 
-    withClue("a command in `CLAUDE.md` starts `sbt`, so copying it skips the machine's cap: ") {
+    withClue("a command in `AGENTS.md` starts `sbt`, so copying it skips the machine's cap: ") {
       instructions should not include "`sbt "
     }
 
@@ -1712,7 +1712,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     }
 
     val wrapper = locate("tools/sbt")
-    withClue(s"$wrapper is not executable, so every command in `CLAUDE.md` fails at the shell: ") {
+    withClue(s"$wrapper is not executable, so every command in `AGENTS.md` fails at the shell: ") {
       Files.isExecutable(wrapper) shouldBe true
     }
 
@@ -1730,7 +1730,7 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
     //     git grep -n '`sbt ' -- '*.md'
     //     git grep -n 'val Command: String = "sbt' -- modules
     //
-    // What is asserted is what the card asked for: a session reading `CLAUDE.md` and nothing else
+    // What is asserted is what the card asked for: a session reading `AGENTS.md` and nothing else
     // cannot start a build outside the cap without deciding to. The rest is a decision of its own.
   }
 

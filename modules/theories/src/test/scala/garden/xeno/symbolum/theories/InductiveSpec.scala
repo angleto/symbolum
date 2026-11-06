@@ -30,7 +30,7 @@ import garden.xeno.symbolum.logic.*
  * The membership test is also the guard against the failure that would make everything else here
  * vacuous. `INDUCTIVE f` with an empty extension satisfies the induction principle trivially and
  * every non-membership above it would pass; so a test suite that proved only non-memberships would
- * be green on a definition that says nothing. That is the question `CLAUDE.md` asks of every guard
+ * be green on a definition that says nothing. That is the question `AGENTS.md` asks of every guard
  * — what input makes it trivially true — and the answer is the one test that has to be a
  * membership.
  */

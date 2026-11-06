@@ -515,7 +515,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     // directions rather than only when the document drops a name.
     //
     // These four sentences were all stale on 2026-09-11 and all four were found by hand with
-    // `grep`. The excluded middle's own file said one number, `CLAUDE.md` said the same one, and
+    // `grep`. The excluded middle's own file said one number, `AGENTS.md` said the same one, and
     // `Classical.scala` said a third that was two repairs out of date.
     // Read with the line breaks taken out, because a sentence in a document is wrapped where the
     // column ran out and a figure lands on either side of that break with no warning. The first
@@ -540,8 +540,8 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
       guide should include(s"that is $truthNotFalsity steps and no axiom at all")
     }
 
-    withClue(s"CLAUDE.md does not say the excluded middle is $excludedMiddle steps: ") {
-      read("CLAUDE.md") should include(s"in $excludedMiddle steps")
+    withClue(s"AGENTS.md does not say the excluded middle is $excludedMiddle steps: ") {
+      read("AGENTS.md") should include(s"in $excludedMiddle steps")
     }
 
     val logicFile = read("modules/logic/src/main/scala/garden/xeno/symbolum/logic/Logic.scala")
@@ -597,7 +597,7 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
 
     // What may carry it, and the SENTENCES in each that may, read with the line breaks taken out
     // as the test above reads them. Until 2026-09-24 this was a set of files, and the verification
-    // of card `ad47e293` measured what that cost: a second live sentence written into `CLAUDE.md`
+    // of card `ad47e293` measured what that cost: a second live sentence written into `AGENTS.md`
     // or `docs/proving.md` stayed green, because a carrier was exempt as a whole. A sentence here
     // is removed from its file before the search, ONCE for each time it is listed, so the file
     // may hold these and nothing else: the first version of this removed every occurrence, and the
@@ -606,11 +606,11 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     //
     // Each is one of the readings above. The live ones are the sentences the test above asserts,
     // the generated ones are compared against the derivation by `GuideSpec` and `TheoremsSpec`, and
-    // the rest of `CLAUDE.md` names the figure as the SUBJECT of a lesson about finding it, which
+    // the rest of `AGENTS.md` names the figure as the SUBJECT of a lesson about finding it, which
     // is a dated account and not a count. Every entry is a copy this assertion has stopped
     // watching, so adding one is how the repair comes undone.
     val carriers: Map[String, Vector[String]] = Map(
-      "CLAUDE.md" -> Vector(
+      "AGENTS.md" -> Vector(
         s"in $digits steps", // the live sentence, asserted by the test above
         s"829 to $digits on 2026-09-16", // a dated move
         s"`git grep $digits`", // the instrument a card was opened with, named twice
@@ -663,10 +663,10 @@ class ClassicalSpec extends AnyFlatSpec with Matchers {
     }
 
     // And a sentence exemption removes that sentence and not the file: text holding every
-    // exempted sentence of `CLAUDE.md` once, and the live one a second time, still holds the
+    // exempted sentence of `AGENTS.md` once, and the live one a second time, still holds the
     // figure. Built from the entries rather than read from the file, so that this half stays green
     // when the list above goes red on a drifted sentence and the two are seen failing apart.
-    val exempted = carriers("CLAUDE.md")
+    val exempted = carriers("AGENTS.md")
     val twice = (exempted :+ s"derived in $digits steps").mkString(" ")
     standalone.findFirstIn(exempted.foldLeft(twice)(ClassicalSpec.removeOnce)) shouldBe defined
 

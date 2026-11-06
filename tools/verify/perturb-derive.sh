@@ -38,7 +38,7 @@ run "2-no-fact" "$SESSION" \
   -- ./tools/sbt -batch 'tactics/testOnly garden.xeno.symbolum.tactics.SessionSpec'
 
 # 3. `derive` taken out of the document, code untouched
-run "3-doc-drops-derive" CLAUDE.md \
+run "3-doc-drops-derive" AGENTS.md \
   '`prove`, `derive`, `ask`' '`prove`, `ask`' \
   -- ./tools/sbt -batch 'tactics/testOnly garden.xeno.symbolum.tactics.DocumentationSpec'
 

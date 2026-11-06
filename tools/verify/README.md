@@ -61,7 +61,7 @@ run without it refuses by name rather than starting.
 
 `WT` defaults to the checkout the script sits in and is overridden to point a harness at another
 one. Give it a tree of its own: a perturbation edits a tracked file, and a peer reading that file
-during the window sees a broken source. Two of these edit `CLAUDE.md`.
+during the window sees a broken source. Two of these edit `AGENTS.md`.
 
 Output goes to `$WT/scratch/verify/out`, which is ignored.
 

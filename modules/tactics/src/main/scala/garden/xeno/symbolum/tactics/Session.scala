@@ -557,7 +557,7 @@ object Session {
      * down this same object. This said "which is not written" for the day after it was written, in
      * the file that writes it, and what carried it that far is that nothing in the tree was being
      * compared with it. A figure is the easy case of that, because a test can recount one, and for
-     * a while the only readings of `CLAUDE.md` here did exactly that; `DocumentationSpec` now
+     * a while the only readings of `AGENTS.md` here did exactly that; `DocumentationSpec` now
      * compares a *list* in that document with [[Command.Keywords]], so what a watched sentence
      * needs is an anchor some test can find, and a number is one anchor rather than the only one.
      * A sentence offering neither is watched by nobody, which is what this one was.

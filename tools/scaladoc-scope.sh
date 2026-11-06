@@ -37,7 +37,7 @@
 # already has: its own member, a member it inherits, a name nested inside it, or a top-level entity
 # of the module, which an unqualified name may always denote and which no sibling can shadow.
 # Anything else is written from one entity and lands inside another, and the repair would be the
-# one `CLAUDE.md` prescribes: qualify it from the top-level entity, `[[Cnf.Problem]]` rather than
+# one `AGENTS.md` prescribes: qualify it from the top-level entity, `[[Cnf.Problem]]` rather than
 # `[[Problem]]`.
 #
 # The fourth of those is an assumption and was measured rather than assumed: at `d247b58` no

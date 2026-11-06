@@ -364,7 +364,7 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     //
     // The sentence in `README.md` even said the figures "are asserted by `PropositionalRouteSpec`",
     // which a reader takes for a document being pinned and which was true only of the code's own
-    // count. `CLAUDE.md` cites the excluded middle's step count as the opposite precedent, "written
+    // count. `AGENTS.md` cites the excluded middle's step count as the opposite precedent, "written
     // by hand in four documents **and asserted in all four** by `ClassicalSpec`", and that half of
     // it is true: `ClassicalSpec` spells the figure into three sentences from `Derivation.size`
     // and has since 2026-09-11, which is the arrangement this test copies. What card `ad47e293`
@@ -403,7 +403,7 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "be produced by the procedure the front instructions name at this address" in {
-    // The other half of the same repair, and the one with no figure in it. `CLAUDE.md` went on
+    // The other half of the same repair, and the one with no figure in it. `AGENTS.md` went on
     // saying that the propositional address runs `Minimal` before `Propositional` for the whole of
     // the day the routing moved, in the document every session reads before it does anything, and
     // nothing anywhere read that sentence. It is read here rather than in `DocumentationSpec`
@@ -411,10 +411,10 @@ class PropositionalRouteSpec extends AnyFlatSpec with Matchers {
     //
     // Spelled from `Prove.Search` rather than written out, so a third procedure at this address
     // fails this line instead of leaving the sentence quietly wrong again.
-    val instructions = read("CLAUDE.md")
+    val instructions = read("AGENTS.md")
     val free = Prove.Search.Intuitionistic.spelling
 
-    withClue(s"CLAUDE.md does not say the propositional address runs `$free` first: ") {
+    withClue(s"AGENTS.md does not say the propositional address runs `$free` first: ") {
       instructions should include(s"the propositional address, where `$free`")
     }
     instructions should include(s"`$free` runs before `Propositional`")

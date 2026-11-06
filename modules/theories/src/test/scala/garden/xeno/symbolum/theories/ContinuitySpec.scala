@@ -410,7 +410,7 @@ class ContinuitySpec extends AnyFlatSpec with Matchers {
   it should "spend in each compactness fact exactly what the intermediate value theorem spends, every axiom of the reals and the choice" in {
     // The two assertions above for these five, `contains COMPLETENESS` and `spent -- sixteen = {SELECT}`,
     // are an equality outside the reals and a ceiling inside them: a derivation reaching five of the
-    // sixteen would pass both, while the prose beside them (this file's comments, `CLAUDE.md`, the
+    // sixteen would pass both, while the prose beside them (this file's comments, `AGENTS.md`, the
     // extreme value card's criterion) says each spends all sixteen, the same set as the intermediate
     // value theorem. Added by the verification of 2026-09-25 at `87175842`. Every mismatch is
     // collected before asserting, so one red names all of them rather than the first.

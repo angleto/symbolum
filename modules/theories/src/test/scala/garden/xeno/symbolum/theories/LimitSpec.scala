@@ -840,7 +840,7 @@ class LimitSpec extends AnyFlatSpec with Matchers {
     // `-(s x)`: substitution builds a redex and no rule reduces it on the way past. What came out
     // was a theorem about the sequence a reader means, printed in a form a reader does not write,
     // and the first version of this test compared it against the written form and went red. That
-    // is `CLAUDE.md`'s sentence about `specToReduced` met from the other side -- the instance
+    // is `AGENTS.md`'s sentence about `specToReduced` met from the other side -- the instance
     // carrying a redex is a **different term** -- and it is worth a red test rather than a silent
     // normalisation, because the reduction is a step the caller takes and not one it is given.
     val reduced = force(

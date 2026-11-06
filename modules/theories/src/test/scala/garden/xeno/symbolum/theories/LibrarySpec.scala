@@ -254,31 +254,31 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // not an addition and this count is of entries rather than of characters.
     // 346 with course-of-values induction, and it is the first addition in a while that moves
     // ONLY this figure: it declares no constant, so the register does not move, and it binds one
-    // variable which is a predicate, so neither of `CLAUDE.md`'s two figures moves either.
+    // variable which is a predicate, so neither of `AGENTS.md`'s two figures moves either.
     // 347 with substitution keeping a term a term, which is course-of-values induction's first
     // consumer and the reason it was derived one commit earlier.
     // 348 with the same for formulas, which is what the induction scheme of PA needs before it
     // can be stated: every instance of it is a formula built by substituting into another.
     // 356 with the axioms of PA, eight at once, which is the largest single addition here and the
     // only one whose facts cost no axiom: membership in the axiom set is settled by unfolding a
-    // disjunction. It moves `CLAUDE.md`'s two figures by exactly one each, because of the eight
+    // disjunction. It moves `AGENTS.md`'s two figures by exactly one each, because of the eight
     // only `NUM_PA_INDUCTION` binds two variables of a kind, and it moves the register by one row
     // while the definitional figure stays at six for the eighth consecutive time.
     // 357 with every axiom being a formula, which declares no constant and binds one variable, so
     // it is the rarest kind of addition here: it moves this figure and nothing else at all. The
-    // register does not move and neither of `CLAUDE.md`'s two do.
+    // register does not move and neither of `AGENTS.md`'s two do.
     // 366 with freeness on terms and on formulas, nine clause equations and two constants. Its two
-    // `CLAUDE.md` figures were derived as nine and measured as EIGHT: `NUM_FREE_TERM_ZERO` binds the
+    // `AGENTS.md` figures were derived as nine and measured as EIGHT: `NUM_FREE_TERM_ZERO` binds the
     // index alone, since its code has no parts, and every other clause here binds the index and at
     // least one component beside it. A count of lemmas and a count of binders do not move together
     // and this is the change that shows it by one.
     // 377 with the logical axioms: eight schemes, the two equations that characterise them and
-    // `NUM_CLOSED`, and every axiom being a formula. Its two `CLAUDE.md` figures move by SEVEN, and
+    // `NUM_CLOSED`, and every axiom being a formula. Its two `AGENTS.md` figures move by SEVEN, and
     // this time that was derived rather than found: of the eleven, `NUM_LOGIC_REFLEXIVE` binds one
     // variable because its scheme has one hole, and the three equations bind one each.
     // 382 with `Provability`, the twenty-first link and the first that is about the language
     // rather than in it. Five facts and three constants, and only two of the five bind more than
-    // one variable, which is why `CLAUDE.md`'s two figures move by two where the library moves by
+    // one variable, which is why `AGENTS.md`'s two figures move by two where the library moves by
     // five: three of them are about a single subject.
     // 384 with the shift lemma and the strict monotonicity of addition it rests on, which is the
     // first thing `Provability` has needed from `Peano` that was not there.
@@ -286,30 +286,30 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // order excludes the other one, which is what makes a case split on them a split, and that a
     // summand is at most its sum. Both are general and neither has a consumer in the chain yet.
     // 388 with the closure of `NUM_PROV` under modus ponens and the cancellation of a summand out
-    // of a comparison that it needed. Its two `CLAUDE.md` figures move by two, which is both of
+    // of a comparison that it needed. Its two `AGENTS.md` figures move by two, which is both of
     // them: one binds three variables of a kind and the other binds two. The second was not in the
     // plan for the first. `NUM_ADD_CANCEL_LEFT` cancels a summand out of an EQUATION and nothing
     // cancelled one out of an order, which only showed when the derivation reached for it.
     // 389 with the closure under generalisation, the other rule of the embedded theory's Hilbert
-    // system. One fact and no constant, and it moves both of `CLAUDE.md`'s figures because it
+    // system. One fact and no constant, and it moves both of `AGENTS.md`'s figures because it
     // binds an index and a formula, two of a kind.
     // 391 with `Deduction`, the twenty-third link and the first whose product is derivations of
     // the embedded theory rather than definitions of it. Two facts and no constant, so the register
-    // does not move; `CLAUDE.md`'s two figures move by ONE each and not by two, because the
+    // does not move; `AGENTS.md`'s two figures move by ONE each and not by two, because the
     // identity binds a single formula and only the syllogism binds three of a kind.
     // 393 with Euclid's theorem and the lemma it needed, `NUM_PRIME_FACTOR`, which the library
     // turned out not to have: `NUM_PRIME_DIVISOR` is a letter away and says the other direction.
-    // Neither of `CLAUDE.md`'s figures moves, because both bind a single variable, which this file
+    // Neither of `AGENTS.md`'s figures moves, because both bind a single variable, which this file
     // has called the rarest kind of addition twice before and is the third time.
     // 396 with the three multiplicative lemmas the irrationality of the square root of two needed
     // and `Peano` did not have, though it had all three additive counterparts. Each binds three
-    // variables of a kind, so both of `CLAUDE.md`'s figures move by three as well.
+    // variables of a kind, so both of `AGENTS.md`'s figures move by three as well.
     // 398 with two being prime and with no square being twice a square, which is the arithmetic
-    // content of the irrationality of the square root of two. `CLAUDE.md`'s two figures move by
+    // content of the irrationality of the square root of two. `AGENTS.md`'s two figures move by
     // ONE each, not two: `NUM_PRIME_TWO` binds nothing at all, being a claim about one number.
     // 401 with the three rules the deduction theorem needs: weakening under a hypothesis, modus
     // ponens under one, and generalisation under one. Each binds two or three variables of a kind,
-    // so both of `CLAUDE.md`'s figures move by three as well.
+    // so both of `AGENTS.md`'s figures move by three as well.
     // 404 with the deduction theorem and the two definitions it needed. It is the first addition
     // in a while to DECLARE anything: `NUM_STEP_FROM` and `NUM_PROV_FROM` are constants, so the
     // reading register moves by two rows where nothing else recently has. The definitional figure
@@ -317,23 +317,23 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // development's `facts` and not its `definitions`, so a constant defined in `Provability`
     // reaches the register and not the library.
     // 416 with the first analysis: five facts about `converges` and `lim`, and seven about the six
-    // transcendental constants. Both of `CLAUDE.md`'s figures move by three and by two rather than
+    // transcendental constants. Both of `AGENTS.md`'s figures move by three and by two rather than
     // by twelve, which is the measurement rather than a guess: most of the twelve bind one variable
     // or none, `exp 0 = 1` binding nothing at all. The definitional figure does not move for the
     // reason four paragraphs up: `Library.of` collects `facts` and not `definitions`, so the six
     // new constants reach the reading register and not this count.
     // 417 with the closure of the numerals, which is one fact and is the first thing the library
-    // says is closed at all. Neither of `CLAUDE.md`'s figures moves: it binds a single variable,
+    // says is closed at all. Neither of `AGENTS.md`'s figures moves: it binds a single variable,
     // which this file has called the rarest kind of addition and is now the fourth time.
     // 418 with specialisation as a rule of the embedded theory rather than a scheme about it.
-    // Both of `CLAUDE.md`'s figures move by one, which is the ordinary case for this development:
+    // Both of `AGENTS.md`'s figures move by one, which is the ordinary case for this development:
     // it binds an index, a term and a formula, three of a kind.
     // 419 with the idleness of the substitution, which is one fact and the first thing anywhere
-    // to say when a substitution does NOT move. Both of `CLAUDE.md`'s figures move by one: it
+    // to say when a substitution does NOT move. Both of `AGENTS.md`'s figures move by one: it
     // binds an index, a replacement and a subject, three of a kind.
     // 424 with the monotone convergence theorem: `NOT_FORALL` in `Classical`, the two negated
     // comparisons in `Order`, and `MONOTONE_LE` with `MONOTONE_CONVERGES` here. Both of
-    // `CLAUDE.md`'s figures move by TWO and not by five, and which two is the content: only the
+    // `AGENTS.md`'s figures move by TWO and not by five, and which two is the content: only the
     // pair in `Order` carries two leading quantifiers, and both of theirs are reals.
     //
     // **That last figure was written three times before it was right, and never because the five
@@ -346,17 +346,17 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // 427 with the three rules of the embedded theory's equality, symmetry, transitivity and the
     // congruence of the successor. `Language` has said since it was written that two equality
     // axioms suffice because those three are consequences; they are derived rather than asserted
-    // now. Both of `CLAUDE.md`'s figures move by three, since each binds two or three terms.
+    // now. Both of `AGENTS.md`'s figures move by three, since each binds two or three terms.
     // 434 with PA proving its own addition on numerals and the six facts under it: the four
     // closure introduction rules, which are what a compound closed term needs, and PA's two
-    // addition axioms at closed terms rather than at variables. `CLAUDE.md`'s two figures move by
+    // addition axioms at closed terms rather than at variables. `AGENTS.md`'s two figures move by
     // FOUR rather than by seven, which was derived: three of the seven bind one variable or none.
     // 436 with the two lemmas of the `prime-power-cancellation` branch, which had fallen 24
     // commits behind and was recovered on 2026-09-15: the power's positivity and the cancellation
-    // of a prime power. Both of `CLAUDE.md`'s figures move by two, one binding two variables and
+    // of a prime power. Both of `AGENTS.md`'s figures move by two, one binding two variables and
     // the other four, all of the same type.
     // 454 with `Concatenation`'s fifteen and the three facts about `num` that had to be proved in
-    // front of them, `NUM_ADD_LT_CANCEL`, `NUM_LE_OF_NOT_LT` and `NUM_SUB_SUB`. `CLAUDE.md`'s two
+    // front of them, `NUM_ADD_LT_CANCEL`, `NUM_LE_OF_NOT_LT` and `NUM_SUB_SUB`. `AGENTS.md`'s two
     // figures both move by **twelve**, which is the first delta here where the two move together
     // and all the way: twelve of the eighteen have two or more leading quantifiers, and every one
     // of those twelve has two of one type, because a claim about a concatenation binds two words
@@ -379,7 +379,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // and picking a side is never it. Derived from the base and the two addends before this file
     // was opened, and then measured.
     //
-    // `CLAUDE.md`'s two figures move by six and by five, which is the first delta here where they
+    // `AGENTS.md`'s two figures move by six and by five, which is the first delta here where they
     // move by different amounts in the same change: of the eight, `INDUCTIVE_INDUCT` and all five
     // `REACH` facts have two or more leading binders, and only the five have two of one type,
     // because every `REACH` statement binds the relation and its counted sub-relation at
@@ -391,13 +391,13 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // so the arithmetic that is supposed to reach the figure reached one less than it. A peer
     // reading the two together is what found it. It is worth more than the missing sentence,
     // because a pin whose derivation is absent looks exactly like a pin whose derivation is right,
-    // and the check this file performs is the derivation and not the number. `CLAUDE.md`'s two
+    // and the check this file performs is the derivation and not the number. `AGENTS.md`'s two
     // figures both moved by one: the comparison test binds `f` and `g`, which is two leading
     // quantifiers, and they are both `num -> real`, which is two of one type.
     //
     // 465 with `CONVERGES_ADD` and `CONVERGES_NEG`, the additive half of the algebra of limits,
     // which is what `Limit` had none of: of its eight facts before these, not one related two
-    // convergent sequences to each other. `CLAUDE.md`'s two figures move by **two and by one**,
+    // convergent sequences to each other. `AGENTS.md`'s two figures move by **two and by one**,
     // and the split is the whole reason to write the row rather than the delta. Both new
     // statements have two or more leading quantifiers, so the first moves by two. Only the sum has
     // two of one type, twice over: `s` and `t` are both `num -> real` and `a` and `b` are both
@@ -413,7 +413,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // below do not move and why the whole delta lands on the facts. Derived from that reading of
     // `Library.of` and from the twelve names, before this suite was run.
     //
-    // `CLAUDE.md`'s two figures move by **twelve**, both of them and all the way, which has
+    // `AGENTS.md`'s two figures move by **twelve**, both of them and all the way, which has
     // happened once before, when `Concatenation` landed. Every one of the twelve binds two or more
     // leading variables and every one of those binds them all at `num`: a claim about a code is a
     // claim about numbers, so there is no binder here of any other type to break the run.
@@ -432,7 +432,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `Library.of` collects. Derived from the twelve names before this suite was run, and the
     // suite returned 489, 486, 480 and 6.
     //
-    // `CLAUDE.md`'s two figures move by **twelve** again and for the reason they did then: every
+    // `AGENTS.md`'s two figures move by **twelve** again and for the reason they did then: every
     // one of the twelve binds three or more leading variables and every one of those is a `num`.
     //
     // 493 with the right forward closure: `Forward`'s four, which are the three introduction rules
@@ -441,7 +441,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // `Library.of` collects a development's `facts` and takes `definitions` only from `Classical`
     // and `Real`. Derived from the four names before this suite was run.
     //
-    // `CLAUDE.md`'s two figures move by **four and by three**, and the one that does not move is
+    // `AGENTS.md`'s two figures move by **four and by three**, and the one that does not move is
     // the one worth reading. All four bind two or more leading variables, so the first figure takes
     // all of them. `WORD_RFC_INDUCT` binds the system and the carrier, `word('a)->word('a)->bool`
     // against `word('a)->bool`, which share no type, so it is the second instance in this ledger of
@@ -455,7 +455,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // the same fact as `SUM_REINDEX` since it existed while `NUM_SUM` had three facts and no way
     // to be split.
     //
-    // `CLAUDE.md`'s two figures move by **one and by one**. It binds `f` at `num -> num` and `m`
+    // `AGENTS.md`'s two figures move by **one and by one**. It binds `f` at `num -> num` and `m`
     // and `n` at `num`, so it has two or more leading quantifiers, and `m` and `n` are two of one
     // type. Derived before the run from the statement rather than read off it afterwards.
     //
@@ -464,7 +464,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // above, and the pair is the shape to expect whenever a fact about `num` is added so that a
     // fact about `word` can be stated: two entries, in two developments, one session apart.
     //
-    // `CLAUDE.md`'s two figures move by **one and by one**. It binds `f` at `num -> 'a -> num` and
+    // `AGENTS.md`'s two figures move by **one and by one**. It binds `f` at `num -> 'a -> num` and
     // `u` and `v` at `word('a)`, so it has two or more leading quantifiers and two of one type --
     // and the two of one type are the two halves of a concatenation, which is exactly the pair a
     // positional specialisation would silently swap, giving the tally of the other half.
@@ -476,7 +476,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // family and a length, so the existence and the uniqueness are written with `NUM_PROD` and
     // nothing new had to be declared to say them.
     //
-    // `CLAUDE.md`'s two figures move by **four and by three**, and the one that moves neither is
+    // `AGENTS.md`'s two figures move by **four and by three**, and the one that moves neither is
     // the theorem itself. `NUM_FACTORISATION` binds **one** leading universal, `!n`, and everything
     // else in it is existential, so it is outside the first figure's population altogether; a
     // reader expecting the headline result to be the one that counts has it backwards.
@@ -490,10 +490,10 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // derived before the run: two derived facts under two names nothing held and no constant, so
     // the register does not move and the definitional figure stays at six.
     //
-    // `CLAUDE.md`'s two figures move by **two and by two**, derived from the statements rather than
+    // `AGENTS.md`'s two figures move by **two and by two**, derived from the statements rather than
     // read off the run. Each binds `s` at `num -> real`, `l` and `b` at `real` and `N` at `num`, so
     // both have two or more leading quantifiers, and in both the two reals are alike AND adjacent:
-    // the narrow reading and the broad one agree here, as that paragraph in `CLAUDE.md` says they
+    // the narrow reading and the broad one agree here, as that paragraph in `AGENTS.md` says they
     // have so far.
     //
     // 503 with `WORD_LENGTH_ZERO`, a word of no letters being the empty word. **ONE**, derived
@@ -501,7 +501,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // landed and is published now because a second consumer arrived: a step of a rewriting system
     // splits a word into a context, a left-hand side and a tail, and the branch where the tail is
     // absent needs a length of zero turned back into `WORD_EMPTY`. It binds ONE leading quantifier,
-    // so neither of `CLAUDE.md`'s two figures moves.
+    // so neither of `AGENTS.md`'s two figures moves.
     //
     // **This line is the tip plus this branch's one, and it has been rebased four times tonight
     // onto four different bases.** Twice git offered two numbers of which neither was right,
@@ -531,314 +531,314 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // with another development, so the gap between the two figures does not move. Tip plus this
     // branch's delta, which is what the paragraph above insists a number here is. One of the two
     // binds two leading quantifiers of one type and the other binds none, so exactly one of
-    // `CLAUDE.md`'s two figures-per-lemma moves by one and both move by one in total.
+    // `AGENTS.md`'s two figures-per-lemma moves by one and both move by one in total.
     // 565 and 562 with the dominating series for the exponential, 2026-09-20: one fact under one
     // name, `NUM_POW_LE_FACT` in `Coding`, not shared with another development, so the gap between
     // the two figures does not move. Tip plus this branch's delta. It binds ONE leading quantifier,
-    // so neither of `CLAUDE.md`'s two figures-per-lemma moves and only the library's own total does,
+    // so neither of `AGENTS.md`'s two figures-per-lemma moves and only the library's own total does,
     // which is the case the line above describes from the other side.
     // 566 and 563 with `exp 1 > 2`, the same day: one fact under one name,
     // `EXP_ONE_ABOVE_TWO` in `Transcendental`, not shared with another development, so the gap
     // between the two figures does not move. Tip plus this branch's delta. It binds nothing at
-    // all, being a claim about two constants, so neither figure-per-lemma in `CLAUDE.md` moves.
+    // all, being a claim about two constants, so neither figure-per-lemma in `AGENTS.md` moves.
     // 569 and 566 with the three facts about `abs` that landed on 2026-09-20 for the Cauchy
     // product's sake: `ABS_OF_NONNEG`, `ABS_OF_NONPOS` and `ABS_MUL`, all in `Magnitude`, none
     // shared with another development, so the gap between the two figures does not move. Tip plus
     // this branch's delta. **Only `ABS_MUL` binds two leading quantifiers**, and they are both
-    // reals, so `CLAUDE.md`'s two figures-per-lemma each move by one where the library moves by
+    // reals, so `AGENTS.md`'s two figures-per-lemma each move by one where the library moves by
     // three: the two conditional ones bind a single variable.
     // 570 and 567 with `INT_MUL_CANCEL_NUM`, 2026-09-20: one fact under one name, in `Integer`,
     // not shared with another development, so the gap does not move. Tip plus this branch's delta.
     // It binds three leading quantifiers of which the first two are both `int`, so **both** of
-    // `CLAUDE.md`'s figures-per-lemma move by one where the three `abs` facts of the same day
+    // `AGENTS.md`'s figures-per-lemma move by one where the three `abs` facts of the same day
     // moved them by one between them.
     // 571 and 568 with `CONVERGES_MUL`, the same day: one fact under one name, in `Limit`, not
     // shared with another development, so the gap of three does not move. Tip plus this branch's
     // delta. Its four leading quantifiers are two sequences and two reals, so it has two alike
-    // and both of `CLAUDE.md`'s figures-per-lemma move by one, as the entry above did.
+    // and both of `AGENTS.md`'s figures-per-lemma move by one, as the entry above did.
     // 577 and 574 with the Cauchy product's finite half, 2026-09-20: SIX facts under six names,
     // two in `Peano` and four in `Series`, none shared with another development, so the gap of
-    // three does not move. Tip plus this branch's delta. `CLAUDE.md`'s two figures-per-lemma move
+    // three does not move. Tip plus this branch's delta. `AGENTS.md`'s two figures-per-lemma move
     // by five and by two, and both were derived from the statements before the run: of the six,
     // `NUM_SUC_SUB_SELF` binds one leading quantifier and the other five bind two or more, and of
     // those five only `NUM_SUC_SUB` (two `num`) and `SUM_OF_PRODUCTS` (two `num -> real`) bind two
     // that share a type.
     // 580 and 577 with the binomial coefficients, 2026-09-20: three facts under three names, all
     // in `Peano`, none shared with another development, so the gap of three does not move. Tip
-    // plus this branch's delta. `CLAUDE.md`'s two figures-per-lemma each move by **one**, derived
+    // plus this branch's delta. `AGENTS.md`'s two figures-per-lemma each move by **one**, derived
     // from the statements before the run: `NUM_CHOOSE_ZERO` and `NUM_CHOOSE_EMPTY` bind a single
     // leading quantifier each, and only `NUM_CHOOSE_SUC` binds two, which are both `num`.
     // 582 and 579 with the two facts the binomial theorem asks for in front of it, 2026-09-21:
     // `NUM_CHOOSE_ABOVE` and `NUM_LE_OF_LT_SUC`, both in `Peano`, neither shared, so the gap of
     // three does not move. Tip plus this branch's delta. Each binds two leading quantifiers and
-    // both of each pair are `num`, so `CLAUDE.md`'s two figures-per-lemma move by **two** each,
+    // both of each pair are `num`, so `AGENTS.md`'s two figures-per-lemma move by **two** each,
     // derived from the statements before the run.
     // 583 and 580 with the binomial theorem itself, 2026-09-21: one fact under one name, in
     // `Series`, not shared with another development, so the gap of three does not move. Tip plus
     // this branch's delta. It binds three leading quantifiers of which the first two are both
-    // `real`, so **both** of `CLAUDE.md`'s figures-per-lemma move by one.
+    // `real`, so **both** of `AGENTS.md`'s figures-per-lemma move by one.
     // 584 and 581 with the absolute convergence theorem, 2026-09-21: one fact under one name, in
     // `Limit`, not shared, so the gap of three does not move. Tip plus this branch's delta. It
-    // binds two leading quantifiers and they are a **sequence** and a real, so `CLAUDE.md`'s
+    // binds two leading quantifiers and they are a **sequence** and a real, so `AGENTS.md`'s
     // first figure moves by one and its second does not move at all — the first entry today
     // whose two figures part company, and both were derived from the statement before the run.
     // 586 and 583 with the Cauchy product's partial sum and its gap, 2026-09-21: two facts under
     // two names, both in `Series`, neither shared, so the gap of three does not move. Tip plus
     // this branch's delta. Each binds three leading quantifiers of which the first two are both
-    // `num -> real`, so **both** of `CLAUDE.md`'s figures-per-lemma move by two.
+    // `num -> real`, so **both** of `AGENTS.md`'s figures-per-lemma move by two.
     // 588 and 585 with the two tail facts, 2026-09-21: two facts under two names, both in
     // `Limit`, neither shared, so the gap of three does not move. Tip plus this branch's delta.
     // Each binds two leading quantifiers, a **sequence** and a real, so they do not share a type
-    // and `CLAUDE.md`'s first figure moves by two while its second does not move at all.
+    // and `AGENTS.md`'s first figure moves by two while its second does not move at all.
     // 589 and 586 with the bounded monotone, 2026-09-21: one fact under one name, in `Series`,
     // not shared, so the gap of three does not move. Tip plus this branch's delta. It binds three
     // leading quantifiers of which the first two are both `num -> real`, so **both** of
-    // `CLAUDE.md`'s figures-per-lemma move by one.
+    // `AGENTS.md`'s figures-per-lemma move by one.
     // 593 and 590 with the sandwich and what it wanted in front of it, 2026-09-21: four facts
     // under four names, three in `Limit` and one in `Peano`, none shared, so the gap of three
-    // does not move. Tip plus this branch's delta. `CLAUDE.md`'s two figures move by **three**
+    // does not move. Tip plus this branch's delta. `AGENTS.md`'s two figures move by **three**
     // and not four, derived before the run: `SUM_GROWS` binds a single leading quantifier, and
     // each of the other three binds two that share a type.
     // 594 and 591 with the Cauchy product, 2026-09-21: one fact under one name, not shared, so
-    // the gap of three does not move. Tip plus this branch's delta. `CLAUDE.md`'s two figures
+    // the gap of three does not move. Tip plus this branch's delta. `AGENTS.md`'s two figures
     // move by **one** each, derived before the run: it binds four leading quantifiers and two
     // pairs of those share a type, and that row counts a lemma once however many pairs it has.
     // 598 and 595 with the general Cauchy product and the three lemmas under it, 2026-09-21:
     // four facts under four names, none shared, so the gap of three does not move. Tip plus
-    // this branch's delta. `CLAUDE.md`'s two figures move by **four** and **three**, derived
+    // this branch's delta. `AGENTS.md`'s two figures move by **four** and **three**, derived
     // before the run and met: all four bind two or more leading quantifiers, and `SUM_ABS`
     // binds `num -> real` then `num`, which is the one of the four with no pair sharing a type.
     // 599 and 596 with `ABS_POWER_LE`, 2026-09-21. One fact, one name, not shared.
     // 602 and 599 with the exponential's absolute convergence and the two lemmas under it,
-    // 2026-09-21. `CLAUDE.md`'s two figures move by **two** and **zero**: the halving and the
+    // 2026-09-21. `AGENTS.md`'s two figures move by **two** and **zero**: the halving and the
     // geometric tail each bind `real` then `num`, and the convergence binds one quantifier.
     // 604 and 601 with the triangle's diagonal and the binomial coefficient against the three
-    // factorials, 2026-09-21. `CLAUDE.md`'s two figures move by **one** each: the diagonal binds
+    // factorials, 2026-09-21. `AGENTS.md`'s two figures move by **one** each: the diagonal binds
     // a single quantifier, and the factorial identity binds two that share `num`.
     // 607 and 604 with the addition theorem and the two facts under it, 2026-09-21. All three
     // bind two or more leading quantifiers and all three have a pair sharing `real`, so both of
-    // `CLAUDE.md`'s figures move by three.
+    // `AGENTS.md`'s figures move by three.
     // 609 and 606 with the exponential's reciprocal and the hyperbolic identity. Neither moves
-    // `CLAUDE.md`'s figures: both bind a single leading quantifier.
+    // `AGENTS.md`'s figures: both bind a single leading quantifier.
     // 617 and 614 with the list interface, 2026-09-23. Eight facts under eight names, none shared,
-    // so the gap of three does not move. `CLAUDE.md`'s two figures move by **six** and **one**:
+    // so the gap of three does not move. `AGENTS.md`'s two figures move by **six** and **one**:
     // six of the eight bind two or more leading quantifiers, and of those only `LIST_CASES`'s
     // sibling `LIST_CONS_INJECTIVE` binds a pair sharing a type, `'a` with `'a` and
     // `word('a)` with `word('a)`.
     // 622 and 619 with the structural recursion theorem and the fold, 2026-09-23. Five facts under
-    // five names, none shared, so the gap of three does not move. `CLAUDE.md`'s two figures move by
+    // five names, none shared, so the gap of three does not move. `AGENTS.md`'s two figures move by
     // **five** and **two**, derived before the run and met: all five bind two or more leading
     // quantifiers, and the two with a pair sharing a type are `LIST_RECURSION_UNIQUE`, whose `f`
     // and `h` are both `word('a) -> 'b`, and `LIST_FOLD_CONCAT`, whose `u` and `v` are both
     // `word('a)`. The other three bind a step, a start and at most one word between them.
     // 628 and 625 with the square root, 2026-09-24. Six facts under six names, none shared, so the
-    // gap of three does not move. `CLAUDE.md`'s two figures move by **one** and **one**: of the six
+    // gap of three does not move. `AGENTS.md`'s two figures move by **one** and **one**: of the six
     // only `SQRT_UNIQUE` binds two leading quantifiers, and its `x` and `y` are both `real`; the
     // existence, the read-back and the square bind one and the two values none. Derived from the
     // statements after the first run had named the figures, and it agrees with them.
     // 629 and 626 with the irrationality of the root of two, the same day. One fact under one name,
-    // and `CLAUDE.md`'s two figures move by one each: it binds `p` and `q`, both `num`. Derived
+    // and `AGENTS.md`'s two figures move by one each: it binds `p` and `q`, both `num`. Derived
     // after the run had named the figures, and it agrees with them.
     // 634 and 631 with the trigonometric identity, the same day. Five facts under five names, none
     // shared: `CONVERGES_SHIFT`, `SUM_EVEN_ODD`, and `COS_ABSOLUTE`, `SIN_ABSOLUTE` and
-    // `SIN_COS_SQUARED`. `CLAUDE.md`'s two figures move by **two** and **none**: only the first two
+    // `SIN_COS_SQUARED`. `AGENTS.md`'s two figures move by **two** and **none**: only the first two
     // bind two leading quantifiers, a sequence and a number, and the other three bind one `x`.
     // Derived after the run had named the figures, and it agrees with them.
     // 637 and 634 with continuity, the same day, derived before the run and met. Three facts
-    // under three names, none shared. `CLAUDE.md`'s figures move by **one** and **one** twice:
+    // under three names, none shared. `AGENTS.md`'s figures move by **one** and **one** twice:
     // `CONTINUOUS_CONST` binds `c` and `x`, both `real`, and `INTERMEDIATE_VALUE` binds `f`, `a`,
     // `b` and `y`, three of them `real`; `CONTINUOUS_ID` binds one.
     // 649 and 646 with the logarithm, the same day, derived before the run and met: twelve facts
-    // under twelve names, none shared. `CLAUDE.md`'s figures move by **three** and **three**:
+    // under twelve names, none shared. `AGENTS.md`'s figures move by **three** and **three**:
     // `EXP_LT_MONOTONE`, `EXP_INJECTIVE` and `LN_MUL` each bind two reals, and the other nine
     // bind one or none.
     // 654 and 651 with the extreme value theorem, 2026-09-25, derived before the run: five facts
-    // under five names, none shared. `CLAUDE.md`'s figures move by **five** and **four**: all five
+    // under five names, none shared. `AGENTS.md`'s figures move by **five** and **four**: all five
     // bind two or more leading quantifiers, and all but `CONTINUOUS_NEG`, whose `f` and `x` differ
     // in type, bind two reals among them.
     // 667 and 664 with the convergence criteria, 2026-09-25, derived before the run and met:
     // ten facts in `Limit` and three in `Transcendental`, thirteen names none of them shared, and
-    // `diverges` is a definition, which is the register's rather than this count's. `CLAUDE.md`'s
+    // `diverges` is a definition, which is the register's rather than this count's. `AGENTS.md`'s
     // figures move by **seven** and **one**: seven of the thirteen bind two or more leading
     // quantifiers, and only `SUM_SCALE_CONVERGES` binds two of one type, its `c` and its `l`.
     // 679 and 676 with `Truth`, the same day, derived as that base plus this delta before the run:
-    // twelve facts under twelve names, none shared. `CLAUDE.md`'s figures move by **nine** and
+    // twelve facts under twelve names, none shared. `AGENTS.md`'s figures move by **nine** and
     // **five**: every clause but `NUM_VALUE_ZERO` binds the environment and at least one code,
     // which is the nine, and the five are the ones binding two codes, `a` and `b` or `p` and `q`
     // or `j` and `p`; the environment is `num -> num` and shares its type with nothing.
     // 685 and 682 with the polynomial-times-geometric criteria, 2026-09-25, derived as that base
-    // plus this delta before the run: six facts under six names, none shared. `CLAUDE.md`'s figures
+    // plus this delta before the run: six facts under six names, none shared. `AGENTS.md`'s figures
     // move by **three** and **none**: `CONVERGES_BOUNDED` and the two polynomial facts bind two
     // leading quantifiers each, of different types, and the other three bind one.
     // 691 and 688 with resolution as a link, the same day: twelve facts under twelve names, none
-    // shared, so the gap of three does not move. Tip plus this branch's delta. `CLAUDE.md`'s figures
+    // shared, so the gap of three does not move. Tip plus this branch's delta. `AGENTS.md`'s figures
     // move by **eleven** and **nine**, derived from the twelve statements before the run and not
     // measured by it: every one but `RES_WIDTH_ZERO` binds two or more leading quantifiers, and the
     // three with no pair of one type are that one, `RES_WIDTH_SUC` and `RES_WIDTH_ATTAINED`, which
     // bind a length function and a number. The other nine each bind two numbers, or two
     // `num -> bool`.
     // 703 and 700 with the derivative and Rolle's theorem, the same day, derived before the run:
-    // six facts under six names, none shared. `CLAUDE.md`'s figures move by **five** and **five**:
+    // six facts under six names, none shared. `AGENTS.md`'s figures move by **five** and **five**:
     // every fact but `DERIVATIVE_ID`, which binds one `x`, binds two or more, and each of those five
     // binds two reals among them. Tip plus this branch's delta.
     // 709 and 706 with the closed terms, the same day, tip plus this delta, derived before the
-    // run: six facts under six names, none shared, four in `Deduction` and two in `Truth`. `CLAUDE.md`'s figures move by
+    // run: six facts under six names, none shared, four in `Deduction` and two in `Truth`. `AGENTS.md`'s figures move by
     // **five** and **four**: the three new congruences bind `t`, `u` and `w`, all codes;
     // `NUM_PROV_TRUE_EQ` binds the environment and two codes; `NUM_PROV_VALUE` binds the
     // environment and one code, which share no type; `NUM_PROV_REFL` binds one.
     // 713 and 710 with the mean value theorem, the same day, derived before the run: four facts
     // under four names, none shared, `CONTINUOUS_LINEAR` in `Continuity` and three in `Derivative`.
-    // `CLAUDE.md`'s figures move by **four** and **four**: each binds two functions, or two reals,
+    // `AGENTS.md`'s figures move by **four** and **four**: each binds two functions, or two reals,
     // among two or more leading quantifiers. Tip plus this branch's delta.
     // 715 and 712 with the product rule and the continuity of a differentiable function, the same
-    // day, derived before the run: two facts under two names, none shared. `CLAUDE.md`'s figures
+    // day, derived before the run: two facts under two names, none shared. `AGENTS.md`'s figures
     // move by **two** and **two**: `DERIVATIVE_CONTINUOUS` binds `x` and `m`, both real, and
     // `DERIVATIVE_PRODUCT` two functions.
     // 716 and 713 with the chain rule, the same day, derived before the run: one fact under one
-    // name. `CLAUDE.md`'s figures move by **one** and **one**: it binds two functions.
+    // name. `AGENTS.md`'s figures move by **one** and **one**: it binds two functions.
     // 718 and 715 with the exponential's slope and the estimate under it, the same day, derived
-    // before the run: two facts under two names, none shared. `CLAUDE.md`'s figures do not move:
+    // before the run: two facts under two names, none shared. `AGENTS.md`'s figures do not move:
     // `EXP_NEAR_LINE` binds one `h` and `DERIVATIVE_EXP` one `x`.
     // 721 and 718 with the sign of a derivative on an interval, the same day, derived before the
-    // run: three facts under three names, none shared. `CLAUDE.md`'s figures move by **three** and
+    // run: three facts under three names, none shared. `AGENTS.md`'s figures move by **three** and
     // **three**: each binds `f`, `a` and `b` in front, and the two ends are both real.
     // 729 and 726 with Fermat's little theorem, the same day, derived before the run: eight facts in
-    // `Primes` under eight names, none shared. `CLAUDE.md`'s figures move by **eight** and
+    // `Primes` under eight names, none shared. `AGENTS.md`'s figures move by **eight** and
     // **eight**: every one binds two or more leading quantifiers, and every one has two of `num`
     // among them, `NUM_SUM_ADD` two functions instead. Tip plus this branch's delta.
     // 730 and 727 with uniform continuity, the same day, derived before the run: one fact under one
-    // name. `CLAUDE.md`'s figures move by **one** and **one**: `CONTINUOUS_UNIFORM` binds a function
+    // name. `AGENTS.md`'s figures move by **one** and **one**: `CONTINUOUS_UNIFORM` binds a function
     // and three reals, `a`, `b` and `e`. Tip plus this branch's delta.
     // 739 and 736 with the gauge integral, the same day, derived before the run: nine facts in
-    // `Integral` under nine names, none shared. `CLAUDE.md`'s figures move by **nine** and
+    // `Integral` under nine names, none shared. `AGENTS.md`'s figures move by **nine** and
     // **nine**: every one binds two or more leading quantifiers, and every one binds two functions
     // or two reals among them. Tip plus this branch's delta.
     // 741 and 738 with the two facts `Collatz` crosses onto the lists by, `LIST_FOLD_EVERY` and
     // `LIST_FOLD_EVERY_CONCAT` in `Folding`, derived before the run: two facts under two names,
-    // none shared. `CLAUDE.md`'s figures move by **two** and **one**: the first binds a predicate
+    // none shared. `AGENTS.md`'s figures move by **two** and **one**: the first binds a predicate
     // and a word, two types; the second a predicate and two words, which share one. Tip plus this
     // branch's delta.
     // 748 and 745 with the sine's and the cosine's derivatives, the same day, derived before the
     // run: seven facts under seven names, none shared, two in `Transcendental`, three in
-    // `Logarithm` and two in `Derivative`. `CLAUDE.md`'s figures move by **two** and **two**: the
+    // `Logarithm` and two in `Derivative`. `AGENTS.md`'s figures move by **two** and **two**: the
     // two addition formulas bind `x` and `y`, and the other five bind one leading quantifier each.
     // Tip plus this branch's delta.
     // 757 and 754 with Euler's theorem, the same day, derived before the run: nine facts in `Primes`
     // under nine names, none shared; `NUM_TOTIENT` is a definition of `Modular`, which the library
-    // does not collect. `CLAUDE.md`'s figures move by **nine** and **nine**. Tip plus this branch's
+    // does not collect. `AGENTS.md`'s figures move by **nine** and **nine**. Tip plus this branch's
     // delta.
     // 759 and 756 with the existence of the integral of a continuous function, the same day,
-    // derived before the run: two facts in `Integral` under two names. `CLAUDE.md`'s figures move by
+    // derived before the run: two facts in `Integral` under two names. `AGENTS.md`'s figures move by
     // **two** and **two**: each binds `f`, `a` and `b`, the two ends real. Tip plus this branch's delta.
     // 773 and 770 with the textbook forms of the interval theorems, 2026-09-25, derived before the
     // run: fourteen facts under fourteen names, none shared, eight in `Continuity` and six in
-    // `Derivative`. `CLAUDE.md`'s figures move by **fourteen** and **fourteen**: every one binds two
+    // `Derivative`. `AGENTS.md`'s figures move by **fourteen** and **fourteen**: every one binds two
     // or more leading quantifiers, and every one has two reals, or two functions, among them.
     // 777 and 774 with the fundamental theorem relative to `[a, b]`, the same day, derived before
-    // the run: two facts in `Derivative` and two in `Integral`, under four names. `CLAUDE.md`'s
+    // the run: two facts in `Derivative` and two in `Integral`, under four names. `AGENTS.md`'s
     // figures move by **four** and **four**: each binds at least two reals, or two functions.
     // 778 and 775 with the logarithm's slope, 2026-09-26, derived before the run: one fact under
-    // one name. `CLAUDE.md`'s figures do not move: it binds one leading quantifier.
+    // one name. `AGENTS.md`'s figures do not move: it binds one leading quantifier.
     // 781 and 778 with the integral's linearity, 2026-09-26, derived before the run: three facts
-    // in `Integral` under three names, none shared. `CLAUDE.md`'s figures move by **three** and
+    // in `Integral` under three names, none shared. `AGENTS.md`'s figures move by **three** and
     // **three**: each binds two functions among two or more leading quantifiers.
     // 784 and 781 with additivity and the second half of the fundamental theorem, the same day,
-    // derived before the run: three facts in `Integral` under three names. `CLAUDE.md`'s figures
+    // derived before the run: three facts in `Integral` under three names. `AGENTS.md`'s figures
     // move by **three** and **three**: `HAS_INTEGRAL_JOIN` binds a function and five reals, the other
     // two a function and three reals.
     // 788 and 785 with integration by parts and the change of variables, 2026-09-26, derived before
-    // the run: four facts in `Integral` under four names, none shared. `CLAUDE.md`'s figures move by
+    // the run: four facts in `Integral` under four names, none shared. `AGENTS.md`'s figures move by
     // **four** and **four**: each binds several functions among its leading quantifiers.
     // 802 and 799 with the p-adic valuation, 2026-09-26, derived before the run: fourteen facts in
     // `Primes` under fourteen names, none shared; `NUM_VALUATION` is a definition of `Modular`, which
-    // the library does not collect. `CLAUDE.md`'s figures move by **fourteen** and **fourteen**:
+    // the library does not collect. `AGENTS.md`'s figures move by **fourteen** and **fourteen**:
     // every one binds two or more leading quantifiers, all of them `num`.
     // 805 and 802 with Taylor's theorem, 2026-09-26, derived before the run and confirmed by it:
-    // `CONTINUOUS_MUL`, `DERIVATIVE_POWER` and `TAYLOR`, three names none shared. `CLAUDE.md`'s
+    // `CONTINUOUS_MUL`, `DERIVATIVE_POWER` and `TAYLOR`, three names none shared. `AGENTS.md`'s
     // figures move by three and **two**: `DERIVATIVE_POWER` binds a real and a number.
     // 812 and 809 with the integral's relative forms, 2026-09-26, derived before the run: seven facts
     // in `Integral` under seven names, none shared, three congruences and four `_WITHIN` twins.
-    // `CLAUDE.md`'s figures move by **seven** and **seven**: each binds two functions, or a function
+    // `AGENTS.md`'s figures move by **seven** and **seven**: each binds two functions, or a function
     // and two or more reals. Tip plus this branch's delta.
     // 814 and 811 with Wilson's theorem and the product over paired indices, 2026-09-26, derived
-    // before the run: two facts in `Primes` under two names, none shared. `CLAUDE.md`'s figures move
+    // before the run: two facts in `Primes` under two names, none shared. `AGENTS.md`'s figures move
     // by **one** and **one**: `NUM_PROD_PAIRED` binds `m`, `f`, `t` and `n`, two of them `num` and two
     // `num -> num`, and `NUM_WILSON` binds only `p`. Measured as a delta of two, one and one on the
     // branch before the valuation and Taylor landed. Tip plus this branch's delta.
     // 821 and 818 with the reals built from the cuts, 2026-09-26: the seven primitives of `Real`
     // are defined as the cut operations they name, so seven definitional entries under seven names
-    // that were declared and not defined before. `CLAUDE.md`'s figures do not move: a definition
+    // that were declared and not defined before. `AGENTS.md`'s figures do not move: a definition
     // binds no leading quantifier.
     // 822 and 819 with `TAYLOR_WITHIN`, 2026-09-27, derived before the run: one fact, one name,
-    // and `CLAUDE.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
+    // and `AGENTS.md`'s three figures move by one each, its binders being `D`, `a`, `b` and `n`.
     // 917 and 914 with the rationals and the cuts collected, 2026-09-27, card `e4a90d43`: 44 facts
     // of `Fraction` and 51 of `Cut`, which were links of the chain and in no library. Measured at
     // `7a15f023` as a delta of 95 and 95, the two figures moving together being the measurement
-    // that none of the new names was already held; `CLAUDE.md`'s figures moved by 52 and 52. Tip
+    // that none of the new names was already held; `AGENTS.md`'s figures moved by 52 and 52. Tip
     // plus this branch's delta.
     // 921 and 918 with the limit of a function and L'Hopital, 2026-09-27, measured by the run:
-    // `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE`, its relative form and `LHOPITAL`. `CLAUDE.md`'s figures
+    // `CONTINUOUS_TENDS`, `CAUCHY_MEAN_VALUE`, its relative form and `LHOPITAL`. `AGENTS.md`'s figures
     // move by four, four and **three**: `CONTINUOUS_TENDS` binds a function and a real. Tip plus this
     // branch's delta.
     // 924 and 921 with the sum and the composition of continuous functions and the sum rule,
     // 2026-09-27, derived before the run: three facts under three names, two in `Continuity` and one
-    // in `Derivative`. `CLAUDE.md`'s figures move by **three** and **three**: each binds two
+    // in `Derivative`. `AGENTS.md`'s figures move by **three** and **three**: each binds two
     // functions among two or more leading quantifiers.
     // 929 and 926 with parts and the change of variables relative to `[a, b]`, 2026-09-27, derived
-    // before the run: five facts in `Integral` under five names, none shared. `CLAUDE.md`'s figures
+    // before the run: five facts in `Integral` under five names, none shared. `AGENTS.md`'s figures
     // move by **five** and **five**. Base 924 and 921 plus that branch's delta.
     // 922 and 919 with `EXP_ONE_IRRATIONAL`, 2026-09-27, measured as one entry, one name and one
-    // fact by the run over 7a15f023: `CLAUDE.md`'s three figures move by one each, its binders
+    // fact by the run over 7a15f023: `AGENTS.md`'s three figures move by one each, its binders
     // being two naturals. Plus one over the base above.
     // 951 and 948 with `Circle`, 2026-09-27: twenty-one facts under twenty-one names, none shared.
-    // `CLAUDE.md`'s figures move by **two** and **two**: `COS_DECREASING` and `COS_INJECTIVE` bind
+    // `AGENTS.md`'s figures move by **two** and **two**: `COS_DECREASING` and `COS_INJECTIVE` bind
     // `x` and `y`, both real, and the other nineteen bind at most one. Measured over `2cb685b7` and
     // merged as base 930 and 927 plus that delta.
     // 932 and 929 with `TAYLOR_LEFT` and `TAYLOR_LEFT_WITHIN`, 2026-09-28, derived before the run:
-    // two facts in `Derivative` under two names. `CLAUDE.md`'s figures move by two each: each binds
+    // two facts in `Derivative` under two names. `AGENTS.md`'s figures move by two each: each binds
     // a family, two reals and a natural, and the two reals share a type. Plus two over the base above.
     // 953 and 950 with both, merged on 2026-09-28 as base 930 and 927 plus `Circle`'s twenty-one and
-    // the Taylor pair's two; `CLAUDE.md`'s figures likewise, 953, 632 and 565.
+    // the Taylor pair's two; `AGENTS.md`'s figures likewise, 953, 632 and 565.
     // 955 and 952 with `HAS_INTEGRAL_SUBST_IMAGE` and `INTEGRAL_SUBST_IMAGE`, 2026-10-02, measured by
-    // the run over the branch: two facts in `Integral` under two names. `CLAUDE.md`'s figures move by
+    // the run over the branch: two facts in `Integral` under two names. `AGENTS.md`'s figures move by
     // two each, each binding four functions and four reals. Plus two over the base above.
     // 957 and 954 with `COS_POSITIVE` and `PI_HALF_LEAST_ZERO`, 2026-10-02, card `4bcfc8b9`: two facts
-    // in `Circle` under two names, read off the run over that branch. `CLAUDE.md`'s first figure
+    // in `Circle` under two names, read off the run over that branch. `AGENTS.md`'s first figure
     // moves by two and the other two do not: each binds one real. Plus two over the base above.
     // 1037 and 1034 with `Complex`, 2026-10-05, card `92c368a1`: eighty facts under eighty names,
-    // none shared, derived from `Complex.Statements` before the run and equal to it. `CLAUDE.md`'s
+    // none shared, derived from `Complex.Statements` before the run and equal to it. `AGENTS.md`'s
     // figures move by eighty, thirty-eight and twenty-nine, read off the run.
     // 1044 and 1041 with the fundamental theorem of algebra, 2026-10-21, card `b244157b`: seven facts
     // under seven names, none shared, derived from `Fundamental.Statements` before the run and equal
-    // to it. `CLAUDE.md`'s figures move by seven, five and one, read off the run.
+    // to it. `AGENTS.md`'s figures move by seven, five and one, read off the run.
     // 1049 and 1046 with the finite Fourier inversion and the Collatz iterate, 2026-10-21, card
     // `1ab3b15f`: five facts under five names, none shared, derived from `FiniteFourier.Statements`
-    // and `CollatzFourier.Statements` before the run and equal to them. `CLAUDE.md`'s figures move
+    // and `CollatzFourier.Statements` before the run and equal to them. `AGENTS.md`'s figures move
     // by five, four and two, read off the run.
     // 1058 and 1055 with negation in the embedded arithmetic, 2026-10-22, card `4102f131`: nine
     // facts under nine names, none shared, eight in `Deduction` and `NUM_PROV_FALSE_EQ` in `Truth`.
-    // Seven of them moved `CLAUDE.md`'s figures by seven, five and five, read off a run before the
+    // Seven of them moved `AGENTS.md`'s figures by seven, five and five, read off a run before the
     // two about implication joined them.
     // 1067 and 1064 with `Decision`, 2026-10-22, cards `38b56577`, `a5c6f793`, `443e4c06`: eighteen
     // facts under eighteen names, none shared, derived from `Decision.Statements` before the run and
-    // equal to it. `CLAUDE.md`'s figures move by eighteen, sixteen and ten, read off the run.
+    // equal to it. `AGENTS.md`'s figures move by eighteen, sixteen and ten, read off the run.
     // 1076 and 1073 with both, merged 2026-10-22: nine from negation and implication and eighteen
     // from `Decision`, none shared.
     // 1088 and 1085 with the rest of the distributions and the ground completeness, 2026-10-23:
     // 1076 and 1073 plus seven facts under seven names from `Decision.Statements` (card `38b56577`)
     // and five under five from `Truth.Statements` (card `4102f131`), none shared, each derived before
-    // its run. `CLAUDE.md`'s figures move by twelve, eleven and nine.
+    // its run. `AGENTS.md`'s figures move by twelve, eleven and nine.
     // 1089 and 1086 with `EXPECTATION_LINEAR`, 2026-10-23, card `38b56577`: one fact under a new
-    // name, and six binders of which two pairs share a type, so `CLAUDE.md`'s figures move by one each.
+    // name, and six binders of which two pairs share a type, so `AGENTS.md`'s figures move by one each.
     // 1104 and 1101 with Rule 30, 2026-10-23, card `25c7d137`: fifteen facts under fifteen new names
-    // from `RuleThirty.Statements`, derived before the run and equal to it. `CLAUDE.md`'s figures
+    // from `RuleThirty.Statements`, derived before the run and equal to it. `AGENTS.md`'s figures
     // move by fifteen, eight and two, read off the run.
     // 1110 and 1107 with Gilbreath's table, 2026-10-24, card `ddd1ba96`: six facts under six new
-    // names from `Gilbreath.Statements`. Each has one leading quantifier, so `CLAUDE.md`'s two other
+    // names from `Gilbreath.Statements`. Each has one leading quantifier, so `AGENTS.md`'s two other
     // figures do not move, read off the run.
     // 1118 and 1115 with triangular maps, 2026-10-24, card `09bca345`: seven facts under seven new
     // names from `Triangular.Statements` and one from `RuleThirty.Statements`,
-    // `RULE_THIRTY_MAP_TRIANGULAR`. `CLAUDE.md`'s figures move by eight, five and two, read off the run.
+    // `RULE_THIRTY_MAP_TRIANGULAR`. `AGENTS.md`'s figures move by eight, five and two, read off the run.
     // 1127 and 1124 with the family of rules `l XOR h(c, r)`, 2026-10-24, card `9b41023d`: nine facts
     // under nine new names from `RuleFamily.Statements`; no name of `RuleThirty.Statements` moves.
     library.entries.size shouldBe 1127
@@ -1033,8 +1033,8 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "say in `CLAUDE.md` how wide the positional-specialisation hole is, in numbers it counts" in {
-    // The same repair as the one above, on a different count and for a sharper reason. `CLAUDE.md`
+  it should "say in `AGENTS.md` how wide the positional-specialisation hole is, in numbers it counts" in {
+    // The same repair as the one above, on a different count and for a sharper reason. `AGENTS.md`
     // tells a reader not to specialise a library lemma by position, and the argument for it is a
     // measurement of this library: a reversal of two quantifiers is invisible to the type checker
     // exactly where two of them range over the same type. That figure moves whenever a lemma lands,
@@ -1046,7 +1046,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
     // upper bound on the surface actually at risk, since swapping the first and the fifth is a
     // mistake nobody makes; the narrow reading would be `sliding(2)` and is a different number.
     val document = new String(
-      java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("CLAUDE.md")),
+      java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("AGENTS.md")),
       "UTF-8"
     )
 
@@ -1068,7 +1068,7 @@ class LibrarySpec extends AnyFlatSpec with Matchers {
       s"of the library's ${library.entries.size} lemmas, ${manyBinders.length} have two or more " +
         s"leading quantifiers and **$alike of\nthose have two that share a type**"
 
-    withClue(s"CLAUDE.md does not contain, verbatim:\n  $sentence\n") {
+    withClue(s"AGENTS.md does not contain, verbatim:\n  $sentence\n") {
       document should include(sentence)
     }
   }

@@ -5,7 +5,7 @@ What the proof side reaches today, development by development: what each one der
 spends, what it declares, and what is not written between them, stated as gaps rather than as
 plans. The order in which the gaps get closed is kept in the task tracker, not here. The list of
 every lemma is [lemmas.md](lemmas.md) and the showcase is [theorems.md](theorems.md). Until
-2026-09-25 this text was a section of `CLAUDE.md`, and where it says "this file" about its own
+2026-09-25 this text was a section of `AGENTS.md`, and where it says "this file" about its own
 past it means that section.
 
 *If you modify this file and this excerpt no longer accurately describes its content, you must

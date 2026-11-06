@@ -6,7 +6,7 @@
 # Each worktree is its own compilation, so the machine was running eight sbt JVMs at once: two
 # coverage runs were killed, and a run that takes two minutes took twelve. That much was known and a
 # machine-wide cap on concurrent builds was written to answer it. What was not answered is that the
-# cap lives outside every checkout and the instructions in `CLAUDE.md` did not name it, so the
+# cap lives outside every checkout and the instructions in `AGENTS.md` did not name it, so the
 # sixteen commands a session copies from the project's own documentation started builds that never
 # asked the cap for anything. Measured that evening: five of the seven sbt JVMs running were outside
 # it, while the cap itself read two slots of two held all night. **The cap was not exceeded, it was
@@ -80,7 +80,7 @@
 # IT REPORTS AND NEVER ACTS ON WHAT IT FINDS. Taking a program to exec out of another process's
 # environment would be this file deciding on its own to run something nobody in this session named.
 # The difference between telling a caller what to do and doing it for them is the whole of why this
-# file exists rather than a line in `CLAUDE.md`.
+# file exists rather than a line in `AGENTS.md`.
 
 set -eu
 

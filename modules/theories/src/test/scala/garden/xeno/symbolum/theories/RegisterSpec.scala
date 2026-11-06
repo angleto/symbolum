@@ -65,7 +65,7 @@ class RegisterSpec extends AnyFlatSpec with Matchers {
 
     // Spelled as the sum rather than as a number, so that an axiom added to either of the two files
     // that may assert one moves this without anybody editing it. The number it comes to is the three
-    // `CLAUDE.md` describes, and the literal is here so that a change to the trusted base cannot pass
+    // `AGENTS.md` describes, and the literal is here so that a change to the trusted base cannot pass
     // as a change to a sum. It was nineteen, the sixteen of the reals among them, until
     // `docs/adr/0053` proved those.
     statements.size shouldBe Classical.Axioms.size + Natural.Axioms.size

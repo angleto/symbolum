@@ -10,7 +10,7 @@
 #
 # WHAT IT DOES NOT COVER, named rather than left to be assumed: whether `clean coverage testFull
 # coverageReport` is the right command, and whether scoverage writes where this expects. The
-# first is `build.sbt`'s and `CLAUDE.md`'s; the second is checked by the gate's own real runs,
+# first is `build.sbt`'s and `AGENTS.md`'s; the second is checked by the gate's own real runs,
 # where a wrong path would read as "never asked" on a run that plainly finished.
 
 set -eu

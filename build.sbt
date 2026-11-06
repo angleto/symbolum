@@ -85,7 +85,7 @@ ThisBuild / dynverCurrentDate := new java.util.Date(0)
 // What it does NOT establish: that the resource and the classes beside it were produced by the
 // same sbt invocation. An incremental build rewrites the resource from the tree as it is now and
 // recompiles only what changed, so a class left over from an earlier tree sits under an identity
-// that names this one. That is the `clean` hazard `CLAUDE.md` describes for the coverage report,
+// that names this one. That is the `clean` hazard `AGENTS.md` describes for the coverage report,
 // in a new place, and it is why a certifying run belongs in a fresh checkout. It does not detect
 // it; nothing that reads only the output of an incremental compiler can.
 lazy val buildIdentity = taskKey[Seq[(String, String)]](
@@ -832,7 +832,7 @@ lazy val scan = (project in file("modules/scan"))
     // **Measured 100.00% of statements and 100.00% of branches over 185 statements on 2026-09-16**,
     // by `sbt clean coverage scan/test scan/coverageReport`, seventeen tests.
     //
-    // A hundred is the reading this repository distrusts on sight, and `CLAUDE.md` says why: an
+    // A hundred is the reading this repository distrusts on sight, and `AGENTS.md` says why: an
     // incremental report covers only the files that were recompiled, and `theories` once read
     // 100.00% over 172 statements while the real figure was 97.56% over 22 663. So the denominator
     // is quoted beside the rate, and it is the whole module rather than a fragment of it: the first
@@ -862,7 +862,7 @@ lazy val sat = (project in file("modules/sat"))
   .settings(
     name := "symbolum-sat",
     // Measured 92.99% over 428 statements on the first landing, 2026-09-15, with `sat/clean` in
-    // front of it for the reason `CLAUDE.md` gives about incremental reports. `Solver` is 98.29%
+    // front of it for the reason `AGENTS.md` gives about incremental reports. `Solver` is 98.29%
     // of 292; what is uncovered is mostly the arms that report a defect in this module to its
     // caller, which is the shape of gap to expect and not one to close with a test that asserts a
     // message. The floor is a point under the measurement, which is where the two modules measured
@@ -1369,7 +1369,7 @@ def withoutInstrumentation(options: Seq[String]): Seq[String] =
 // `Def.cacheConfiguration` hands it `state.log`), where neither this logger nor any reporter
 // reaches, since on a hit the compiler never runs. So a green gate prints its one line when the
 // probe was compiled, and the probe's eight `[error]` lines above it when the failure was served;
-// `CLAUDE.md` has the measurement that a served failure is still evidence. Two consequences of the
+// `AGENTS.md` has the measurement that a served failure is still evidence. Two consequences of the
 // silencing, the second being why it is written down: the warning the control produces is
 // swallowed too, and somebody debugging the probe sees nothing until they run `tools/sbt
 // warningProbe/compile`, which every red message below names.
@@ -1554,7 +1554,7 @@ LocalRootProject / fatalWarnings := Def.uncached {
 
   // The one line this gate prints when it passes. It was the whole of its output under sbt 1; under
   // sbt 2 a probe failure served from the cache also prints the diagnostics the cache stored, and
-  // `CLAUDE.md` says why those are the expected ones whenever this line follows them.
+  // `AGENTS.md` says why those are the expected ones whenever this line follows them.
   log.info(
     s"${fatalWarningsNamed(probeOptions)} reaches ${compiled.size} projects, and the compilation " +
       "that had to fail did."

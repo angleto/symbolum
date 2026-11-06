@@ -247,7 +247,7 @@ class NotebookSpec extends AnyFlatSpec with Matchers {
     // rendered a theorem rather than because a theorem had rendered without it. The statement that
     // decides it, `if (rests.isEmpty) ""`, had an invocation count of **zero** in a report where
     // the test beside it was green: the assertion held for a session that could not have failed
-    // it. This is the guard `CLAUDE.md` asks for under "an assertion is only as good as the
+    // it. This is the guard `AGENTS.md` asks for under "an assertion is only as good as the
     // thought somebody gave to what would make it empty", met in the file rather than in the rule.
     //
     // So the negative case is now a **proved** theorem that assumed nothing, which is the only

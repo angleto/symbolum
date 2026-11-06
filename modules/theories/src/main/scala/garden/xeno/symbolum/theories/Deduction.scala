@@ -652,7 +652,7 @@ object Deduction {
    * language would refuse.
    *
    * **Specialisation is by the instance wanted and never by position.** Every scheme here binds two
-   * or three variables of one type, which is exactly the case `CLAUDE.md` records as invisible when
+   * or three variables of one type, which is exactly the case `AGENTS.md` records as invisible when
    * it goes wrong: a positional call would produce a true theorem about the wrong formula. So each
    * call builds the statement it wants and hands it to `Rules.specTo`.
    */

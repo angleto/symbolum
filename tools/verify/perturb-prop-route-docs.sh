@@ -2,7 +2,7 @@
 # Fire the two document guards added on 2026-09-18 at the defects they were written for.
 #
 # They are the repair of card 3f331354: the figures 58 and 98 stood in three documents that no test
-# read, and `CLAUDE.md` named the procedure the routing had stopped using. A guard over a document
+# read, and `AGENTS.md` named the procedure the routing had stopped using. A guard over a document
 # is the kind most likely to be vacuous -- a substring that is not there fails, but a substring that
 # would be there anyway asserts nothing -- so each one is fired at the sentence it is about.
 #
@@ -30,7 +30,7 @@ echo "### exit $? for 1-readme-figure-drifts" >> "$OUT/perturb.log"
 # 2. The front instructions name the procedure that stopped serving the address, which is exactly
 # the sentence that stood from 2026-09-18 until this repair.
 echo "################ 2-instructions-name-the-gate" >> "$OUT/perturb.log"
-"$P" CLAUDE.md \
+"$P" AGENTS.md \
   'where `Intuitionistic`' \
   'where `Minimal` runs' \
   -- ./tools/sbt -batch "tactics/testOnly $SPEC" >> "$OUT/perturb.log" 2>&1

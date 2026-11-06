@@ -895,7 +895,7 @@ object Language {
    * `NUM_LOGIC_REPLACE` twice, and it is a constant rather than a written-out quantifier because
    * of those three occurrences and because a reader meeting it in the register should meet it
    * under a name. This sentence said three schemes until 2026-09-15, which is an occurrence count
-   * read as a scheme count, and `CLAUDE.md` carried the same mistake in the same words.
+   * read as a scheme count, and `AGENTS.md` carried the same mistake in the same words.
    *
    * **A third scheme substitutes and does not need the condition**, which is worth knowing before
    * a reader concludes one was forgotten: PA's induction scheme puts `0` and `S i` where `i`
@@ -5613,7 +5613,7 @@ object Language {
     /**
      * A rule taken at its arguments and then given its premises, in the order it states them.
      *
-     * The arguments go in by position, which is the call `CLAUDE.md` warns about and is safe here
+     * The arguments go in by position, which is the call `AGENTS.md` warns about and is safe here
      * for a reason worth stating rather than assuming: every binder is over `num`, so a reversal
      * would type, but what comes back is checked against the published statement at the end, and a
      * reversal cannot reach it.

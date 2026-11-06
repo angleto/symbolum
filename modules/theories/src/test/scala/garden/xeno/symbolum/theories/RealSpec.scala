@@ -132,7 +132,7 @@ class RealSpec extends AnyFlatSpec with Matchers {
   /**
    * The sources that assert an axiom **this repository itself believes**.
    *
-   * These three are the trusted base as `CLAUDE.md` enumerates it, and each asserts a fixed,
+   * These three are the trusted base as `AGENTS.md` enumerates it, and each asserts a fixed,
    * enumerated proposition written in the file beside the call: choice and eta, infinity. The list
    * grows by one file per axiom, in the commit that adds it; it shrank once, when phase 5 proved the
    * sixteen of the reals and `Real.scala` left it.

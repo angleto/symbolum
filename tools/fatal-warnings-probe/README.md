@@ -39,7 +39,7 @@ build's own log rather than the compile's, so neither the quiet logger nor a com
 reaches them: eight `[error]` lines, all E029 on `NonExhaustiveMatch.scala`, naming the path of
 whichever checkout first compiled the probe, above the gate's line. Counted in five whole runs on
 2026-09-26 and again on 2026-09-28. The count to read a run against is therefore zero where the
-probe was compiled and eight where it was served, and `CLAUDE.md` has the measurement that a served
+probe was compiled and eight where it was served, and `AGENTS.md` has the measurement that a served
 failure is still evidence.
 
 What the silencing costs is that debugging the probe needs `tools/sbt warningProbe/compile` or

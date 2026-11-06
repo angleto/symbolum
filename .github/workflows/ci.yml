@@ -91,7 +91,7 @@ jobs:
       # but sbt 2 caches a compile's outcome, a failed one included, and when it serves the probe's
       # failure from that cache it prints the diagnostics it stored, naming the path of whichever
       # checkout first compiled the probe. Counted on 2026-09-26 and again on 2026-09-28. Those
-      # eight are the expected ones when the gate's own line says it passed; `CLAUDE.md` has the
+      # eight are the expected ones when the gate's own line says it passed; `AGENTS.md` has the
       # measurement that a failure served from the cache is still evidence. Sessions here read a run
       # by counting `[error]` lines, after one reporting `827 succeeded, 0 failed` turned out to be a
       # module that had not compiled: the count to compare against is zero where the probe was
@@ -275,7 +275,7 @@ jobs:
       # `tools/sbt` decides whether a build goes under the machine's cap, and the runner is exactly
       # the place where no such cap exists: the unnamed case is what CI runs every time, so the
       # three that a developer's machine can be in would otherwise be checked by nobody.
-      - name: sbt, the wrapper every command in CLAUDE.md starts at
+      - name: sbt, the wrapper every command in AGENTS.md starts at
         run: sh tools/sbt-test.sh
 
       # The subject of this one cannot be checked by running it: the states it exists to tell
@@ -408,7 +408,7 @@ jobs:
       #
       # What is deliberately NOT here is how long it took, and the first version of this comment
       # carried it. A wall clock is a property of the machine and of what else was on it, which is
-      # the argument `CLAUDE.md` makes where it deleted such a figure rather than correcting it;
+      # the argument `AGENTS.md` makes where it deleted such a figure rather than correcting it;
       # and this one was worse than machine-dependent, because the run that produced it had gone
       # round the machine's build cap while another build held a slot. It was a number nobody
       # could reproduce, offered as though it were one. Then `[[split]]` in `scan/Comments.scala` was made `[[splitTheLinesUp]]`: this step

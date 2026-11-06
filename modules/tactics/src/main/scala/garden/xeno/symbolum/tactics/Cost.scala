@@ -312,7 +312,7 @@ object Cost {
    * through its own `Session.Outcome.Proved`. Until 2026-09-19 only the second said anything, and
    * the first carried the field and never read it: the verification of card 011218be put the
    * pages of a 128-link chain and of Peirce's law side by side and they differed by the claim and
-   * by the inference count and by nothing else, on the surface `CLAUDE.md` names first.
+   * by the inference count and by nothing else, on the surface `AGENTS.md` names first.
    *
    * It is a function here rather than a string on either caller because the two would then be a
    * fact written twice, and this repository has a name for what that does. `Session` reads it off

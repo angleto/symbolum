@@ -327,7 +327,7 @@ class QuotientSpec extends AnyFlatSpec with Matchers {
    * pairing the arguments by **position in the operation** and pairing them by **which relation
    * they come from**.
    *
-   * This specialises **positionally**, which `CLAUDE.md` warns about and which is safe here for a
+   * This specialises **positionally**, which `AGENTS.md` warns about and which is safe here for a
    * reason worth stating rather than relying on: `Rules.specTo` finds the instantiation by matching
    * a body, and the body wanted here is the reordering itself, so there is no target to hand it
    * that is not the answer. What makes the positional call safe is that its correctness is asserted
@@ -466,7 +466,7 @@ class QuotientSpec extends AnyFlatSpec with Matchers {
    *
    * The half that is easy to leave out. Without these three the shape checks inside the builder
    * could be deleted and every other assertion in this file would still pass, which is the test
-   * `CLAUDE.md` asks for under "an assertion is only as good as the thought somebody gave to what
+   * `AGENTS.md` asks for under "an assertion is only as good as the thought somebody gave to what
    * would make it empty": the input that makes the guard trivially true is a **correct** obligation,
    * and that is what the tests above supply.
    */

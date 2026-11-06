@@ -634,7 +634,7 @@ object Resolving {
    * [[StepSoundOfResolvent]], by specialising [[StepSound]] at this statement's own binders.
    *
    * Specialised at the corollary's binders rather than the two statements being matched up, which
-   * is the positional specialisation `CLAUDE.md` records being bitten by: here there are eleven
+   * is the positional specialisation `AGENTS.md` records being bitten by: here there are eleven
    * binders, seven of them sharing a type, and nothing in a name would have caught a swap.
    *
    * The two occurrence conditions are assumed and never used, which is the whole content of the

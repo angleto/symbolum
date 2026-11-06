@@ -80,15 +80,15 @@ run "5-floor-moved" tools/coverage-delta.sh \
   'COVERAGE_DELTA_MIN:-85' \
   -- ./tools/sbt -batch "$FIGURES"
 
-# 6. The binder census in CLAUDE.md, edited by one. The first version of this card added a guard
+# 6. The binder census in AGENTS.md, edited by one. The first version of this card added a guard
 #    for it to `FiguresSpec`, and `LibrarySpec` had held one already, spelled from the library:
 #    the census that chose it looked for the digits, and a guard that spells its figure has none.
 #    The copy was removed the next day and this fires the guard that was there first.
 #    It edited the count, `413`, until 2026-09-24, and stopped applying when the library grew:
 #    a harness that names a figure the library moves goes stale with every lemma. It edits the
 #    words the guard spells around the count instead, which move only when the sentence does.
-# Expect red on: LibrarySpec, "say in `CLAUDE.md` how wide the positional-specialisation hole is"
-run "6-census-miscounted" CLAUDE.md \
+# Expect red on: LibrarySpec, "say in `AGENTS.md` how wide the positional-specialisation hole is"
+run "6-census-miscounted" AGENTS.md \
   'have two or more leading quantifiers and **' \
   'have three or more leading quantifiers and **' \
   -- ./tools/sbt -batch 'theories/testOnly garden.xeno.symbolum.theories.LibrarySpec'

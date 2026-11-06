@@ -242,7 +242,7 @@ different thing from being offered.
 
 From a checkout instead of a distribution, each of the five is
 `sbt "tactics/runMain garden.xeno.symbolum.tactics.Ask ..."` and its siblings, which is the spelling
-the rest of this file and [CLAUDE.md](CLAUDE.md) use.
+the rest of this file and [AGENTS.md](AGENTS.md) use.
 
 ## A REPL without either
 
@@ -732,7 +732,7 @@ Test coverage includes:
 | [docs/releases/](docs/releases/) | One note per release: what a consumer has to change before upgrading, what the release did not contain, and the figures measured at the tag. They are frozen on purpose, being the one kind of figure here that cannot go stale |
 | [SIMPLIFICATION_CONFIG_GUIDE.md](SIMPLIFICATION_CONFIG_GUIDE.md) | The algebra half's rule set and how to configure it |
 | [TESTING.md](TESTING.md) | Running the suite, measuring coverage, and where the tests live |
-| [CLAUDE.md](CLAUDE.md) | The short orientation for anyone, or anything, resuming work here |
+| [AGENTS.md](AGENTS.md) | The short orientation for anyone, or anything, resuming work here |
 | [ROADMAP.md](ROADMAP.md) | The work ahead, grouped by what it is for, and what blocks each part of it |
 | [docs/logo.md](docs/logo.md) | The mark above, why it is made of those eleven operators and not others, and the three checks that tell a correct copy from a corrupted one |
 

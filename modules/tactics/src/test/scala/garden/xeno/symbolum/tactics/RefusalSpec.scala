@@ -241,7 +241,7 @@ class RefusalSpec extends AnyFlatSpec with Matchers {
     //
     // That ground is gone. A symbol stands for more than one constant and the elaborator picks by
     // the type unification settles, so the claim reads as written and the prover settles it. A
-    // reader following `CLAUDE.md`'s sentence about a claim over `num` being one `Ask` now gets
+    // reader following `AGENTS.md`'s sentence about a claim over `num` being one `Ask` now gets
     // what that sentence promises.
     //
     // The list this entry is on is about the shapes a caller actually writes, and this shape is

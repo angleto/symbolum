@@ -31,7 +31,7 @@
 #   2. The copy restored inside `Theorems.Showcase`. Red on the WALK again, naming that file. This
 #      is the one the list could never have caught: nothing put a literal that a generator embeds
 #      on a list of sentences, and the page it builds carries the measured count as well.
-#   3. `CLAUDE.md`'s sentence drifted by one. Red on the LIST: `CLAUDE.md does not say the
+#   3. `AGENTS.md`'s sentence drifted by one. Red on the LIST: `AGENTS.md does not say the
 #      excluded middle is 841 steps`, with the flowed document under it. The walk stays green,
 #      since the file is a carrier and still holds the digits.
 #   4. The walk pointed at a directory that does not exist. Red on the walk's non-vacuity half,
@@ -84,7 +84,7 @@ echo "### exit $? for 2-the-copy-inside-a-generator" >> "$LOG"
 # fired so that the two halves are seen failing apart: the list names the sentence, the walk names
 # the file, and a reader meeting one of them should not have to guess which mechanism spoke.
 echo "################ 3-a-listed-sentence-drifted" >> "$LOG"
-"$P" CLAUDE.md \
+"$P" AGENTS.md \
   '   alone, in 841 steps, and three places in the repository said the opposite until `docs/adr/0009`' \
   '   alone, in 842 steps, and three places in the repository said the opposite until `docs/adr/0009`' \
   -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
@@ -112,7 +112,7 @@ echo "### exit $? for 4-the-walk-that-reads-nothing" >> "$LOG"
 # 5, 6, 7 and 8 redden the walk naming the file; 3 the list; 4 the walk's non-vacuity over
 # modules; 9 its non-vacuity over documents, `Vector() did not contain element "docs/numerics.md"`.
 # On its first run 3 reddened the walk as well: the check that a second live sentence is found read
-# `CLAUDE.md` itself, so a drifted live sentence left it nothing to find. It is built from the
+# `AGENTS.md` itself, so a drifted live sentence left it nothing to find. It is built from the
 # exemption entries now, so 3 is the list alone again.
 
 # 5 and 6. A live copy in a document the list of three did not hold.
@@ -132,7 +132,7 @@ echo "### exit $? for 6-a-copy-in-an-unlisted-document" >> "$LOG"
 
 # 7 and 8. A second live sentence inside a carrier, beside the one the list asserts.
 echo "################ 7-a-second-sentence-in-claude-md" >> "$LOG"
-"$P" CLAUDE.md \
+"$P" AGENTS.md \
   '   read a list of three documents and exempted carriers whole, and this sentence said "every other' \
   '   read a list of three documents and exempted carriers whole (841 steps), and this sentence said "every other' \
   -- ./tools/sbt -batch "$SPECS" >> "$LOG" 2>&1
