@@ -80,7 +80,7 @@ the rejected option attractive, and they will.
 | [0047](0047-a-report-stops-at-a-cited-fact-and-a-checker-does-not.md) | A report stops at a cited fact, and a checker does not | accepted, decides 0016's open choice |
 | [0048](0048-a-width-lower-bound-is-stated-on-a-derived-clause.md) | A width lower bound is stated on a derived clause, and proved by critical assignments without a restriction | accepted, extends 0044; its sentence calling the constant better than asked is corrected by 0055 |
 | [0049](0049-the-integral-is-a-gauge-integral-over-an-inductive-relation-of-fine-sums.md) | The integral is a gauge integral, over an inductive relation of fine sums | accepted |
-| [0050](0050-the-licence-stays-gplv3-for-now.md) | The licence stays GPLv3 for now, and the question is answered rather than left open | accepted |
+| [0050](0050-the-licence-stays-gplv3-for-now.md) | The licence stays GPLv3 for now, and the question is answered rather than left open | superseded by 0068 |
 | [0051](0051-sbt-2-with-test-as-the-whole-suite-and-jdk-21.md) | The build moves to sbt 2, `test` stays the whole suite, and the library asks for JDK 21 | accepted |
 | [0052](0052-the-reals-are-lower-cuts-on-the-rationals.md) | The reals are lower cuts on the rationals, with the sign handled at multiplication | accepted |
 | [0053](0053-the-sixteen-are-theorems-and-real-is-the-cut-type.md) | The sixteen are theorems: `real` is the type of the cuts, and its constants are aliases | accepted, completes 0007, supersedes 0004, extended by 0059 |
@@ -98,3 +98,4 @@ the rejected option attractive, and they will.
 | [0065](0065-gilbreaths-table-over-any-first-row-and-the-conjecture-as-a-condition-on-the-second-entry.md) | Gilbreath's table over any first row, and the conjecture as a condition on the second entry | accepted |
 | [0066](0066-triangular-maps-on-the-naturals-as-a-hypothesis-with-rule-30-and-odd-affine-maps-as-instances.md) | Triangular maps on the naturals as a hypothesis, with Rule 30 and the odd affine maps as instances | accepted |
 | [0067](0067-the-family-of-rules-l-xor-h-c-r-proved-once-with-rule-30-and-the-pascal-map-as-instances.md) | The family of rules `l XOR h(c, r)` proved once, with Rule 30 and the Pascal map as instances | accepted |
+| [0068](0068-the-licence-is-agplv3.md) | The licence is the AGPLv3, so a network service built on this code owes its source too | accepted, supersedes 0050 |

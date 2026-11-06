@@ -1,6 +1,6 @@
 # 0050. The licence stays GPLv3 for now, and the question is answered rather than left open
 
-- **Status:** accepted
+- **Status:** superseded by [0068](0068-the-licence-is-agplv3.md)
 - **Date:** 2026-09-25
 
 ## Context

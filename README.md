@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/angleto/symbolum/actions/workflows/ci.yml"><img src="https://github.com/angleto/symbolum/actions/workflows/ci.yml/badge.svg" alt="CI Status"/></a>
   <a href="https://www.scala-lang.org/"><img src="https://img.shields.io/badge/scala-3.3.5-red.svg" alt="Scala Version"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="License"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License"/></a>
 </p>
 
 **EXCERPT — for anyone scanning the index:**
@@ -843,8 +843,10 @@ sbt doc
 
 ## License
 
-This project is licensed under the GNU General Public License, version 3 or (at your option) any
-later version (`GPL-3.0-or-later`) - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License, version 3 or (at your option)
+any later version (`AGPL-3.0-or-later`) - see the [LICENSE](LICENSE) file for details. Releases up
+to 7.0.4 were published under `GPL-3.0-or-later`; [docs/adr/0068](docs/adr/0068-the-licence-is-agplv3.md)
+records the change and why.
 
 ## Acknowledgments
 

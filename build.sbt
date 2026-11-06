@@ -670,7 +670,7 @@ lazy val publishSettings = Seq(
     sys.env.getOrElse("GITHUB_TOKEN", "")
   ),
 
-  licenses := Seq("GPL-3.0-or-later" -> uri("https://www.gnu.org/licenses/gpl-3.0.html")),
+  licenses := Seq("AGPL-3.0-or-later" -> uri("https://www.gnu.org/licenses/agpl-3.0.html")),
   homepage := Some(uri("https://symbolum.xeno.garden")),
   scmInfo := Some(
     ScmInfo(
