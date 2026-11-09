@@ -132,7 +132,7 @@ built it, because `p` does not occur in `|- F`; `SoundnessAttackSpec` asserts th
 than describing it, beside the axiom half answering no to both.
 
 So a method on `Theory` would have put the check inside the trusted base, for something that must
-not be trusted. `DocumentationSpec` bounds that base at 1240 lines, 1200 when this was decided, and measures it over **the four
+not be trusted. `DocumentationSpec` bounds that base at 1300 lines, 1200 when this was decided, and measures it over **the four
 files a defect in which can produce a false theorem**, which is not the same as the directory:
 `Kernel.scala`, `Term.scala`, `Theory.scala` and `Type.scala`. `Derivation.scala` is one of the four
 that are out, classified as record and display, and the classification is checked rather than
@@ -148,8 +148,8 @@ escape: a second assertion pins the directory's contents to the union of the two
 nobody has classified fails that one instead. The bound had never moved when this was decided —
 raised to 1400 once, on 2026-09-10, and put back the same day, and the two records that spent
 against it deliberately, `0006` for the type definition rule and `0008` for the identity on
-constants, spent lines rather than raising it. It has moved twice since: `0047` raised it to 1220
-for the citation rule, and `0058` to 1240 for one instance per type. Paying for this check means a third such record, which is a cost the table above
+constants, spent lines rather than raising it. It has moved three times since: `0047` raised it to 1220
+for the citation rule, `0058` to 1240 for one instance per type, and `0069` to 1300 for one instance per term. Paying for this check means a fourth such record, which is a cost the table above
 says option 3 does not have.
 
 **This decision is not deferred again.** The lesson of how this record came to be needed is that a

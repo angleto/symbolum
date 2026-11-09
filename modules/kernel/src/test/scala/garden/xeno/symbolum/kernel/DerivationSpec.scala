@@ -155,6 +155,9 @@ class DerivationSpec extends AnyFlatSpec with Matchers {
 
     written.linesIterator.count(_.contains(" cite F ")) shouldBe 1
     written.linesIterator.count(_.startsWith("s ")) shouldBe Derivation.size(Cited.around) + 1
+    // The count without the text is the same count, through the citation as well.
+    Proof.steps(Cited.through) shouldBe written.linesIterator.count(_.startsWith("s "))
+    Proof.steps(Cited.around) shouldBe Proof.write(Cited.around).linesIterator.count(_.startsWith("s "))
   }
 
   /* ----------------------------------------- whether a theorem is one this theory would sign */

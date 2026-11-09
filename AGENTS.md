@@ -406,7 +406,7 @@ to live. `WhatAClaimCosts` is the first one that does.
 
 Everything this system asks anyone to believe:
 
-1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1240 lines. The
+1. **`Kernel`, `Term`, `Type` and `Theory` in `modules/kernel/src/main`**, under 1300 lines. The
    directory also holds a printer, the refusal surface, the proof record and the reader of which
    commit the classes were built from, which are not counted and cannot construct a theorem, which
    a test checks rather than claims. `Kernel.Thm` is a class
@@ -416,8 +416,10 @@ Everything this system asks anyone to believe:
    theory extensions also do: defining a constant, defining a type, and asserting an axiom. Only
    the last of those adds to what has to be believed. `Kernel.cite` builds one too and infers
    nothing: it restates a published fact's sequent under the fact's name, which is where a report
-   on a proof stops walking, and `docs/adr/0047` is why. Term constructors are `private[kernel]`, so a
-   term exists only because a checking constructor built it and is well-typed by construction. Type
+   on a proof stops walking, and `docs/adr/0047` is why. Term constructors are private and their factories `private[kernel]`, so a
+   term exists only because a checking constructor built it and is well-typed by construction; the
+   `fromProduct` Scala 3 makes public on a case class whatever its constructor refuses, which until
+   `docs/adr/0069` it did not. Each distinct term is one instance, held weakly, by the same ADR. Type
    constructors are not private, because naming a type proves nothing: a type entering the system
    from outside is checked by `Theory.checkType`.
 2. **Three axioms added on 2026-09-10**: a choice operator and eta in

@@ -29,11 +29,57 @@ sealed trait Term {
   override def toString: String = Printer.show(this)
 }
 
+/**
+ * One instance per term value, held weakly, one table per class: `docs/adr/0069`. Equality stays
+ * structural, so no rule depends on which instance it holds; a term no theorem holds is collected.
+ */
+private[kernel] final class Interned[T <: Term] {
+  private val queue = new java.lang.ref.ReferenceQueue[T]
+  private final class Entry(term: T) extends java.lang.ref.WeakReference[T](term, queue) {
+    private val hash = term.hashCode
+    override def hashCode(): Int = hash
+    override def equals(other: Any): Boolean = other match {
+      case that: Entry => (this eq that) || Option(get()).exists(_ == that.get())
+      case _ => false
+    }
+  }
+  private val table = new java.util.concurrent.ConcurrentHashMap[Entry, Entry]
+  @scala.annotation.tailrec private def expunge(): Unit = Option(queue.poll()) match {
+    case Some(stale) => table.remove(stale, stale); expunge()
+    case None => ()
+  }
+  def apply(candidate: T): T = {
+    expunge()
+    val entry = new Entry(candidate)
+    Option(table.putIfAbsent(entry, entry)) match {
+      case None => candidate
+      // Cleared between the lookup and the read: drop it and ask again.
+      case Some(held) => Option(held.get()).getOrElse { table.remove(held, held); apply(candidate) }
+    }
+  }
+
+  /** `fromProduct` is public whatever the constructor is, so it refuses rather than skip a check. */
+  def refuse(product: Product): Nothing =
+    throw new UnsupportedOperationException(s"a term is built by the operations in Term: $product")
+}
+
 /** A variable bound by the `index`-th enclosing binder, counting from zero, innermost first. */
-final case class BVar private[kernel] (index: Int) extends Term
+final case class BVar private (index: Int) extends Term
+
+object BVar {
+  private val interned = new Interned[BVar]
+  private[kernel] def apply(index: Int): BVar = interned(new BVar(index))
+  def fromProduct(product: Product): BVar = interned.refuse(product)
+}
 
 /** A free variable. Its name and its type together are its identity. */
-final case class FVar private[kernel] (name: String, ty: Type) extends Term
+final case class FVar private (name: String, ty: Type) extends Term
+
+object FVar {
+  private val interned = new Interned[FVar]
+  private[kernel] def apply(name: String, ty: Type): FVar = interned(new FVar(name, ty))
+  def fromProduct(product: Product): FVar = interned.refuse(product)
+}
 
 /**
  * A constant at a particular type, carrying the term that gave it its identity.
@@ -58,7 +104,7 @@ final case class FVar private[kernel] (name: String, ty: Type) extends Term
  * and the two-field extractor below is what keeps every pattern match in the system reading the
  * name and the type as it always did.
  */
-final class Const private[kernel] (val name: String, val ty: Type, val origin: Option[Term])
+final class Const private (val name: String, val ty: Type, val origin: Option[Term])
     extends Term {
 
   override def equals(other: Any): Boolean = other match {
@@ -71,6 +117,9 @@ final class Const private[kernel] (val name: String, val ty: Type, val origin: O
 }
 
 object Const {
+  private val interned = new Interned[Const]
+  private[kernel] def apply(name: String, ty: Type, origin: Option[Term]): Const =
+    interned(new Const(name, ty, origin))
 
   /** The name and the type, so that every existing pattern match goes on working unchanged. */
   def unapply(constant: Const): Some[(String, Type)] = Some((constant.name, constant.ty))
@@ -95,15 +144,27 @@ object Const {
  * case class's own, computed once from the children's and kept: a term is immutable, and a set of
  * statements asked about every node of a proof rehashed each whole statement per node.
  */
-final case class App private[kernel] (fn: Term, arg: Term) extends Term {
+final case class App private (fn: Term, arg: Term) extends Term {
   private val hash = scala.util.hashing.MurmurHash3.productHash(this)
   override def hashCode(): Int = hash
 }
 
+object App {
+  private val interned = new Interned[App]
+  private[kernel] def apply(fn: Term, arg: Term): App = interned(new App(fn, arg))
+  def fromProduct(product: Product): App = interned.refuse(product)
+}
+
 /** A lambda abstraction. The bound variable has no name, only the type recorded here. */
-final case class Abs private[kernel] (binderType: Type, body: Term) extends Term {
+final case class Abs private (binderType: Type, body: Term) extends Term {
   private val hash = scala.util.hashing.MurmurHash3.productHash(this)
   override def hashCode(): Int = hash
+}
+
+object Abs {
+  private val interned = new Interned[Abs]
+  private[kernel] def apply(binderType: Type, body: Term): Abs = interned(new Abs(binderType, body))
+  def fromProduct(product: Product): Abs = interned.refuse(product)
 }
 
 object Term {
@@ -124,7 +185,7 @@ object Term {
 
   /** Equality at type `ty`, as a constant. */
   def equalityAt(ty: Type): Term =
-    new Const(EqualityName, Type.fun(ty, Type.fun(ty, Type.Bool)), None)
+    Const(EqualityName, Type.fun(ty, Type.fun(ty, Type.Bool)), None)
 
   /** Apply `fn` to `arg`, checking that the types agree. */
   def app(fn: Term, arg: Term): Either[KernelError, Term] =
@@ -363,7 +424,7 @@ object Term {
     // substituting into it would give two instances of one constant two identities and they would
     // stop being the same constant.
     case constant: Const =>
-      new Const(constant.name, Type.substitute(substitution, constant.ty), constant.origin)
+      Const(constant.name, Type.substitute(substitution, constant.ty), constant.origin)
     case App(fn, arg) =>
       App(substituteTypes(substitution, fn), substituteTypes(substitution, arg))
     case Abs(binderType, body) =>

@@ -449,9 +449,13 @@ final class ReachSpec extends AnyFlatSpec with Matchers {
     val theorems = proved.map(statement =>
       cost.prove(statement).fold(error => fail(error.message), _.theorem))
     val library = cost.held.getOrElse(fail("the corpus's Cost holds no library, so its reach is not read"))
-    def replayed(theorem: Kernel.Thm): Int = Proof.write(theorem).linesIterator.count(_.startsWith("s "))
+    // What a checker replays is the step records `Proof.write` puts down, and `Proof.steps` is that
+    // count without the text. Counting the lines of the text instead was this suite's peak: on
+    // 2026-11-09 it filled the fork's 1024 MB from about 480 MB live, because a proof citing the
+    // library is written with the library beneath it. Counted once per theorem and kept.
+    val replays = theorems.map(t => t -> Proof.steps(t))
     val read = theorems.map(t => Derivation.size(t).toLong).sum
-    val whole = theorems.map(t => replayed(t).toLong).sum
+    val whole = replays.map(_._2.toLong).sum
     val citations = theorems.map(t => Derivation.census(t).getOrElse("Citation", 0)).sum
 
     def now(t: Kernel.Thm): Unit = { Derivation.axiomsOf(t); Derivation.size(t); Derivation.census(t) }
@@ -474,6 +478,6 @@ final class ReachSpec extends AnyFlatSpec with Matchers {
     theorems should not be empty
     citations should be > 0
     read should be < whole
-    theorems.foreach(t => Derivation.size(t) should be <= replayed(t))
+    replays.foreach { case (t, replayed) => Derivation.size(t) should be <= replayed }
   }
 }

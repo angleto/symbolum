@@ -99,3 +99,4 @@ the rejected option attractive, and they will.
 | [0066](0066-triangular-maps-on-the-naturals-as-a-hypothesis-with-rule-30-and-odd-affine-maps-as-instances.md) | Triangular maps on the naturals as a hypothesis, with Rule 30 and the odd affine maps as instances | accepted |
 | [0067](0067-the-family-of-rules-l-xor-h-c-r-proved-once-with-rule-30-and-the-pascal-map-as-instances.md) | The family of rules `l XOR h(c, r)` proved once, with Rule 30 and the Pascal map as instances | accepted |
 | [0068](0068-the-licence-is-agplv3.md) | The licence is the AGPLv3, so a network service built on this code owes its source too | accepted, supersedes 0050 |
+| [0069](0069-one-instance-per-term.md) | One instance per term, because a chain held 13.2 million applications spelling 1.68 million | accepted |

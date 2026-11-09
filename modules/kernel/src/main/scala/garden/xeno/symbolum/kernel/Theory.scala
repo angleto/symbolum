@@ -81,7 +81,7 @@ final case class Theory private[kernel] (
           Type.matchType(schema, instance) match {
             // The origin travels with the constant, so a term built against this theory carries
             // which definition introduced each of its constants without any call site saying so.
-            case Some(_) => Right(new Const(name, instance, origins.get(name)))
+            case Some(_) => Right(Const(name, instance, origins.get(name)))
             case None => Left(NotAnInstance(name, schema, instance))
           }
         }

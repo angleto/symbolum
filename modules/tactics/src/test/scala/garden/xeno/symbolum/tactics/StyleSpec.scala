@@ -231,6 +231,13 @@ class StyleSpec extends AnyFlatSpec with Matchers {
    * `Matcher` the caller never shares.
    */
   private val ReviewedMutableState: Map[String, String] = Map(
+    "Term.scala" ->
+      ("one table per class of term that gives every term one instance, since `docs/adr/0069`: a " +
+        "chain held 13.2 million applications spelling 1.68 million, and its copies were about " +
+        "345 MB of the 663 the chain held. Keyed by structural equality, which every comparison " +
+        "still uses, so the instance a caller holds decides nothing; `putIfAbsent` makes the first " +
+        "insertion safe, and the entries are weak, so a term nothing holds is collected and the " +
+        "table is bounded by the terms alive rather than by every term the process spelt"),
     "Type.scala" ->
       ("the table that gives every type one instance, since `docs/adr/0058`: a whole chain spelt 808 " +
         "distinct types with 4.4 million objects, about 280 MB of a 700 MB chain, and the fork of " +

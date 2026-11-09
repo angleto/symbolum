@@ -160,9 +160,15 @@ class TermPropertySpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPr
   /**
    * `App` and `Abs` keep the hash they compute when built, and that is sound only if a term equal
    * to another has the same kept hash however it was built. The term compared here is rebuilt by
-   * abstracting a variable out of it and reducing the application back, so it is a new object
-   * made of new nodes, which the first assertion checks rather than assumes: two references to
-   * one object would pass the second for any hash at all.
+   * abstracting a variable out of it and reducing the application back, so every node of it was
+   * constructed again.
+   *
+   * Until `docs/adr/0069` the first assertion was that the rebuilt term is a **different** object,
+   * since two references to one object would pass a hash comparison for any hash at all. Every
+   * construction now goes through the table that keeps one instance per value, and the table finds
+   * the instance already there only through the kept hash: a rebuilt node whose hash disagreed would
+   * land in another bucket and come back as a second object. So `eq` is now the assertion carrying
+   * the property, and the last line still recomputes the hash from the children.
    */
   "A term's kept hash" should "be the same for an equal term built another way" in {
     forAll(typedTerms) { case (_, term) =>
@@ -170,7 +176,7 @@ class TermPropertySpec extends AnyFlatSpec with Matchers with ScalaCheckDrivenPr
       val rebuilt = Term.app(lam(variable, term), variable).toOption.flatMap(Term.betaReduce)
         .getOrElse(fail("the round trip above did not come back"))
       whenever(term.isInstanceOf[App] || term.isInstanceOf[Abs]) {
-        (rebuilt eq term) shouldBe false
+        (rebuilt eq term) shouldBe true
         rebuilt shouldBe term
         rebuilt.hashCode shouldBe term.hashCode
         term.hashCode shouldBe scala.util.hashing.MurmurHash3.productHash(term.asInstanceOf[Product])

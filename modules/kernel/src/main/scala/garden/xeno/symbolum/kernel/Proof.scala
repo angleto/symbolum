@@ -39,6 +39,18 @@ object Proof {
   /** The format's version, which a reader checks before anything else; two since `cite`. */
   val Version: String = "proof 2"
 
+  /**
+   * How many step records [[write]] puts down for `theorem`, without writing them.
+   *
+   * The same walk `write` numbers its steps by, so the two cannot disagree on what is reached: every
+   * theorem the proof was built from, citations followed. It exists because a caller counting the
+   * `s ` lines of the text paid for the text. Measured on 2026-11-09 in `ReachSpec`, writing the
+   * proofs of the corpus one at a time to count them filled a 1024 MB heap from about 480 MB live
+   * and forced a full compaction, since a proof that cites the library is written with the library
+   * beneath it, and every term it reaches is put in a table to be numbered.
+   */
+  def steps(theorem: Kernel.Thm): Int = topological(theorem).length
+
   /** A theorem, as text. */
   def write(theorem: Kernel.Thm): String = {
     val out = new StringBuilder

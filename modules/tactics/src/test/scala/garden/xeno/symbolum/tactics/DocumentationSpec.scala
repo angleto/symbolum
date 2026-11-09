@@ -1548,13 +1548,14 @@ class DocumentationSpec extends AnyFlatSpec with Matchers {
    * measured is how a bound stops meaning anything.
    *
    * What it protects is that one person can read the whole of what they are asked to believe in a
-   * sitting. Three records have spent against it deliberately, and that is the only way it is
+   * sitting. Five records have spent against it deliberately, and that is the only way it is
    * allowed to move: `docs/adr/0006` for the type definition rule and `docs/adr/0008` for the
    * identity on constants spent headroom, `docs/adr/0047` raised it to 1220 for `Kernel.cite`,
-   * which needed eleven lines where three were left, and `docs/adr/0058` raised it to 1240 for one
-   * instance per type, which needed sixteen where five were left.
+   * which needed eleven lines where three were left, `docs/adr/0058` raised it to 1240 for one
+   * instance per type, which needed sixteen where five were left, and `docs/adr/0069` raised it to
+   * 1300 for one instance per term, which needed sixty-one where two were left.
    */
-  private val TrustedBaseLineBound: Int = 1240
+  private val TrustedBaseLineBound: Int = 1300
 
   private def fileOf(name: String): String =
     read(s"modules/kernel/src/main/scala/garden/xeno/symbolum/kernel/$name")

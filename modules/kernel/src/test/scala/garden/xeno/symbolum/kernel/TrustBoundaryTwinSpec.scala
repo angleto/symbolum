@@ -29,7 +29,7 @@ class TrustBoundaryTwinSpec extends AnyFlatSpec with Matchers {
   }
 
   "A constant" should "be constructible directly" in {
-    assertCompiles("""new Const("T", bool, None)""")
+    assertCompiles("""Const("T", bool, None)""")
   }
 
   "A variable" should "be constructible directly" in {

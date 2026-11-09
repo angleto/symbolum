@@ -43,7 +43,7 @@ class TrustBoundarySpec extends AnyFlatSpec with Matchers {
 
   "A constant" should "come from a theory that declares it" in {
     assertCompiles("""theory.constant("T", bool)""")
-    assertDoesNotCompile("""new Const("T", bool, None)""")
+    assertDoesNotCompile("""Const("T", bool, None)""")
   }
 
   "A variable" should "come from the constructor rather than the case class" in {
@@ -77,6 +77,21 @@ class TrustBoundarySpec extends AnyFlatSpec with Matchers {
     assertDoesNotCompile(
       """Theory(Map.empty[String, Int], Map.empty[String, Type], Map.empty[String, Term], List.empty[Term])"""
     )
+  }
+
+  "A term" should "not come out of a case class's mirror, which visibility does not reach" in {
+    // The route no `assertDoesNotCompile` can cover: Scala 3 makes `fromProduct` public whatever
+    // the constructor is, and refuses a narrower one. Until `docs/adr/0069` it called `new`, so the
+    // lines below built `p x` with `p : bool`, which `Term.app` refuses, and an abstraction over a
+    // loose index; seen on 2026-11-09 at `0fa92517`. They compile, and what they do is refuse.
+    val p = Term.variable("p", bool)
+    assertCompiles("""App.fromProduct((p, x))""")
+    an[UnsupportedOperationException] should be thrownBy App.fromProduct((p, x))
+    an[UnsupportedOperationException] should be thrownBy Abs.fromProduct((bool, p))
+    an[UnsupportedOperationException] should be thrownBy BVar.fromProduct(Tuple1(0))
+    an[UnsupportedOperationException] should be thrownBy
+      summon[scala.deriving.Mirror.ProductOf[Abs]].fromProduct((bool, p))
+    Term.app(p, x).isLeft shouldBe true
   }
 
   "The axioms of a theory" should "be readable, since that is what the trusted base amounts to" in {

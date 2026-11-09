@@ -94,7 +94,7 @@ class TheorySpec extends AnyFlatSpec with Matchers {
   "A declared constant" should "be usable at an instance of its schema" in {
     val theory = force(withReal.declareConstant("zero", A))
 
-    theory.constant("zero", real) shouldBe Right(new Const("zero", real, None))
+    theory.constant("zero", real) shouldBe Right(Const("zero", real, None))
   }
 
   it should "not be usable at a type that is not an instance" in {
